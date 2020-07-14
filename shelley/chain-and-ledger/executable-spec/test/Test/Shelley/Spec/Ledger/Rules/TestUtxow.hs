@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -16,6 +17,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestUtxow
 where
 
 import Cardano.Crypto.Hash (ShortHash)
+import Control.Iterate.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -26,7 +28,6 @@ import Control.State.Transition.Trace
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map (isSubmapOf)
 import qualified Data.Set as Set (fromList, intersection, isSubsetOf, map, null)
-import Shelley.Spec.Ledger.Core (dom, (<|))
 import Shelley.Spec.Ledger.LedgerState (keyRefunds, pattern UTxOState)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Tx
@@ -95,7 +96,7 @@ preserveBalanceRestricted pp tr =
           }
         ) =
         inps u tx == outs stp (_body tx)
-    inps u tx = balance $ (_inputs $ _body tx) <| u
+    inps u tx = balance $ eval ((_inputs $ _body tx) <| u)
     outs stp_ tx =
       balance (txouts tx)
         + _txfee tx
@@ -133,7 +134,7 @@ eliminateTxInputs tr =
         { signal = tx,
           target = UTxOState (UTxO utxo') _ _ _
         } =
-        Set.null $ txins (_body tx) `Set.intersection` dom utxo'
+        Set.null $ eval (txins (_body tx) ∩ dom utxo')
 
 -- | Check that all new entries of a Tx are included in the new UTxO and that
 -- all TxIds are new.
@@ -151,10 +152,10 @@ newEntriesAndUniqueTxIns tr =
           target = (UTxOState (UTxO utxo') _ _ _)
         } =
         let UTxO outs = txouts (_body tx)
-            outIds = Set.map (\(TxIn _id _) -> _id) (dom outs)
-            oldIds = Set.map (\(TxIn _id _) -> _id) (dom utxo)
+            outIds = Set.map (\(TxIn _id _) -> _id) (domain outs)
+            oldIds = Set.map (\(TxIn _id _) -> _id) (domain utxo)
          in null (outIds `Set.intersection` oldIds)
-              && (dom outs) `Set.isSubsetOf` (dom utxo')
+              && eval ((dom outs) ⊆ (dom utxo'))
 
 -- | Check for absence of double spend
 noDoubleSpend ::

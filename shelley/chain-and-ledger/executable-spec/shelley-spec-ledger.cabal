@@ -164,6 +164,7 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.Rules.TestUtxow
                          Test.Shelley.Spec.Ledger.Serialization
                          Test.Shelley.Spec.Ledger.SerializationProperties
+                         Test.Shelley.Spec.Ledger.SetAlgTests
                          Test.Shelley.Spec.Ledger.Shrinkers
                          Test.Shelley.Spec.Ledger.STSTests
                          Test.Shelley.Spec.Ledger.UnitTests
@@ -214,6 +215,7 @@ test-suite shelley-spec-ledger-test
       generic-random,
       hedgehog,
       hedgehog-quickcheck,
+      HUnit,
       iproute,
       multiset,
       process-extras,
@@ -265,7 +267,8 @@ benchmark mainbench
                     random,
                     containers,
                     MonadRandom,
-                    deepseq
+                    deepseq,
+                    scientific
   ghc-options:
       -threaded
       -rtsopts

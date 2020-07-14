@@ -12,6 +12,7 @@ where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Slotting.Slot (WithOrigin (..))
+import Control.Iterate.SetAlgebra (dom, eval, range)
 import Control.State.Transition.Extended (TRC (..))
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import Data.Coerce (coerce)
@@ -29,7 +30,6 @@ import Shelley.Spec.Ledger.BaseTypes
     (⭒),
   )
 import Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
-import Shelley.Spec.Ledger.Core (dom, range)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, genDelegKeyHash, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
@@ -212,7 +212,7 @@ genBlock
             genesisVKHs = Set.map genDelegKeyHash $ range gds
             n' =
               currentIssueNo
-                (OCertEnv (dom poolParams) genesisVKHs)
+                (OCertEnv (eval (dom poolParams)) genesisVKHs)
                 cs
                 ((coerceKeyRole . hashKey . vKey . cold) keys)
             m = getKESPeriodRenewalNo keys kp

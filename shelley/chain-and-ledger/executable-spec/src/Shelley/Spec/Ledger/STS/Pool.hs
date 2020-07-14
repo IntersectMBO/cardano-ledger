@@ -22,6 +22,7 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Iterate.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (≍), (⋪), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Assertion (..),
@@ -34,14 +35,11 @@ import Control.State.Transition
     (?!),
   )
 import Data.Kind (Type)
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Core (addpair, dom, haskey, removekey)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
@@ -91,7 +89,7 @@ instance Typeable crypto => STS (POOL crypto) where
     [ PreCondition
         "_stPools and _pParams must have the same domain"
         ( \(TRC (_, st, _)) ->
-            dom (unStakePools $ _stPools st) == dom (_pParams st)
+            eval (dom (unStakePools $ _stPools st) ≍ dom (_pParams st))
         )
     ]
 
@@ -152,31 +150,30 @@ poolDelegationTransition = do
       poolCost >= minPoolCost ?! StakePoolCostTooLowPOOL poolCost minPoolCost
 
       let hk = _poolPubKey poolParam
-      if not (haskey hk stpools) -- hk ∉ (dom stpools)
+      if eval (hk ∉ (dom stpools))
         then -- register new, Pool-Reg
 
           pure $
             ps
-              { _stPools = StakePools $ stpools ∪ (hk, slot),
-                _pParams = _pParams ps ∪ (hk, poolParam)
+              { _stPools = StakePools $ eval (stpools ∪ (singleton hk slot)),
+                _pParams = eval (_pParams ps ∪ (singleton hk poolParam))
               }
         else do
           pure $
             ps
-              { _fPParams = _fPParams ps ⨃ (hk, poolParam),
-                _retiring = removekey hk (_retiring ps) -- Set.singleton hk ⋪ _retiring ps
+              { _fPParams = eval (_fPParams ps ⨃ (singleton hk poolParam)),
+                _retiring = eval (setSingleton hk ⋪ _retiring ps)
               }
     DCertPool (RetirePool hk (EpochNo e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
-      --  hk ∈ dom stpools  -- Specification code translates below
-      haskey hk stpools ?! StakePoolNotRegisteredOnKeyPOOL hk
+      eval (hk ∈ dom stpools) ?! StakePoolNotRegisteredOnKeyPOOL hk
       EpochNo cepoch <- liftSTS $ do
         ei <- asks epochInfo
         epochInfoEpoch ei slot
       let EpochNo maxEpoch = _eMax pp
       cepoch < e && e <= cepoch + maxEpoch
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
-      pure $ ps {_retiring = _retiring ps ⨃ (hk, EpochNo e)}
+      pure $ ps {_retiring = eval (_retiring ps ⨃ (singleton hk (EpochNo e)))}
     DCertDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 0
       pure ps
@@ -186,20 +183,3 @@ poolDelegationTransition = do
     DCertGenesis _ -> do
       failBecause $ WrongCertificateTypePOOL 2
       pure ps
-
--- Note: we avoid using the Relation operators (⨃) and (∪) here because that
--- would require an Ord instance for PParams, which we don't need otherwise.
--- Instead, we just define these operators here.
-
-(⨃) ::
-  Map (KeyHash kr crypto) a ->
-  (KeyHash kr crypto, a) ->
-  Map (KeyHash kr crypto) a
-m ⨃ (k, v) = Map.insertWith (\x _ -> x) k v m -- we want this to be left biased, hence (\ x _ -> x)
-
-(∪) ::
-  Ord a =>
-  Map (KeyHash kr crypto) a ->
-  (KeyHash kr crypto, a) ->
-  Map (KeyHash kr crypto) a
-m ∪ (k, v) = addpair k v m

@@ -54,6 +54,7 @@ where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
+import Control.Iterate.SetAlgebra (eval, (∪), (⋪))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Data.Coerce (coerce)
@@ -90,7 +91,6 @@ import Shelley.Spec.Ledger.BlockChain
     pattern BlockHash,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Core ((∪), (⋪))
 import Shelley.Spec.Ledger.Credential
   ( pattern KeyHashObj,
     pattern ScriptHashObj,
@@ -634,7 +634,7 @@ applyTxBody ls pp tx =
   ls
     { _utxoState =
         us
-          { _utxo = txins tx ⋪ (_utxo us) ∪ txouts tx,
+          { _utxo = eval (txins tx ⋪ (_utxo us) ∪ txouts tx),
             _deposited = depositPoolChange ls pp tx,
             _fees = (_txfee tx) + (_fees . _utxoState $ ls)
           },

@@ -24,6 +24,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
+import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
 import Control.State.Transition
   ( Assertion (..),
     Embed,
@@ -48,7 +49,6 @@ import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (Addr, getNetwork)
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Core (dom, range, (∪), (⋪))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakePools)
 import Shelley.Spec.Ledger.Keys (GenDelegs)
@@ -237,7 +237,7 @@ utxoInductive ::
   TransitionRule (UTXO crypto)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
-  let UTxOState (utxo@(UTxO v)) deposits' fees ppup = u
+  let UTxOState utxo deposits' fees ppup = u
   let txb = _body tx
 
   _ttl txb >= slot ?! ExpiredUTxO (_ttl txb) slot
@@ -248,9 +248,7 @@ utxoInductive = do
       txFee = _txfee txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  let validInputs = dom utxo
-  --   txins txb ⊆ validInputs  -- Specification translates below
-  all (`Map.member` v) (txins txb) ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
+  eval (txins txb ⊆ dom utxo) ?! BadInputsUTxO (txins txb `Set.difference` eval (dom utxo))
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
@@ -266,11 +264,11 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txb))]
+  let outputCoins = [c | (TxOut _ c) <- Set.toList (eval (rng (txouts txb)))]
   let minUTxOValue = _minUTxOValue pp
   all (minUTxOValue <=) outputCoins
     ?! OutputTooSmallUTxO
-      (filter (\(TxOut _ c) -> c < minUTxOValue) (Set.toList (range (txouts txb))))
+      (filter (\(TxOut _ c) -> c < minUTxOValue) (Set.toList (eval (rng (txouts txb)))))
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx
@@ -282,7 +280,7 @@ utxoInductive = do
 
   pure
     UTxOState
-      { _utxo = (txins txb ⋪ utxo) ∪ txouts txb,
+      { _utxo = eval ((txins txb ⋪ utxo) ∪ txouts txb),
         _deposited = deposits' + depositChange,
         _fees = fees + (_txfee txb),
         _ppups = ppup'

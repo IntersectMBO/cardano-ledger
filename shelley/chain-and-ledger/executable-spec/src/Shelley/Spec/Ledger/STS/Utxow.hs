@@ -26,6 +26,7 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
+import Control.Iterate.SetAlgebra (eval, (∩))
 import Control.State.Transition
   ( Embed,
     IRC (..),
@@ -56,7 +57,6 @@ import Shelley.Spec.Ledger.BaseTypes
     quorum,
     (==>),
   )
-import Shelley.Spec.Ledger.Core ((∩))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import Shelley.Spec.Ledger.Keys
@@ -253,7 +253,7 @@ utxoWitnessed =
       -- check genesis keys signatures for instantaneous rewards certificates
       let genDelegates = Set.fromList $ fmap (asWitness . genDelegKeyHash) $ Map.elems genMapping
           (WitHashes khAsSet) = witsKeyHashes
-          genSig = genDelegates ∩ khAsSet
+          genSig = eval (genDelegates ∩ khAsSet)
           mirCerts =
             StrictSeq.toStrict
               . Seq.filter isInstantaneousRewards

@@ -16,6 +16,7 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
+import Control.Iterate.SetAlgebra (dom, domain, eval, (∈), (∉))
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
 import Data.Maybe (fromMaybe)
@@ -32,7 +33,6 @@ import Shelley.Spec.Ledger.BaseTypes
     interval0,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Core (dom, (∈), (∉))
 import Shelley.Spec.Ledger.Credential (pattern KeyHashObj)
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DCertMir,
@@ -218,7 +218,7 @@ genRegKeyCert
         )
       ]
     where
-      notRegistered k = k ∉ dom (_stkCreds delegSt)
+      notRegistered k = eval (k ∉ dom (_stkCreds delegSt))
       availableKeys = filter (notRegistered . toCred . snd) keys
       availableScripts = filter (notRegistered . scriptToCred . snd) scripts
 
@@ -253,7 +253,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
       )
     ]
   where
-    registered k = k ∈ dom (_stkCreds dState)
+    registered k = eval (k ∈ dom (_stkCreds dState))
     availableKeys =
       filter
         ( \(_, k) ->
@@ -317,12 +317,12 @@ genDelegation
         where
           scriptCert =
             DCertDeleg (Delegate (Delegation (scriptToCred delegatorScript) poolKey))
-      registeredDelegate k = k ∈ dom (_stkCreds (_dstate dpState))
+      registeredDelegate k = eval (k ∈ dom (_stkCreds (_dstate dpState)))
       availableDelegates = filter (registeredDelegate . toCred . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred . snd) scripts
       (StakePools registeredPools) = _stPools (_pstate dpState)
-      availablePools = Set.toList $ dom registeredPools
+      availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
   (HasCallStack, HashAlgorithm h) =>
@@ -355,11 +355,11 @@ genGenesisDelegation coreNodes delegateKeys dpState =
           CoreKeyCred [gkey]
         )
     (GenDelegs genDelegs_) = _genDelegs $ _dstate dpState
-    genesisDelegator k = k ∈ dom genDelegs_
+    genesisDelegator k = eval (k ∈ dom genDelegs_)
     genesisDelegators = filter (genesisDelegator . hashVKey) (fst <$> coreNodes)
-    notActiveDelegatee k = coerceKeyRole k ∉ fmap genDelegKeyHash (Map.elems genDelegs_)
+    notActiveDelegatee k = not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems genDelegs_))
     fGenDelegs = _fGenDelegs $ _dstate dpState
-    notFutureDelegatee k = coerceKeyRole k ∉ fmap genDelegKeyHash (Map.elems fGenDelegs)
+    notFutureDelegatee k = not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems fGenDelegs))
     notDelegatee k = notActiveDelegatee k && notFutureDelegatee k
     availableDelegatees = filter (notDelegatee . hashVKey . cold) allDelegateKeys
 
@@ -442,8 +442,8 @@ genRetirePool Constants {frequencyLowMaxEpoch} poolKeys pState slot =
         <*> (EpochNo <$> genWord64 epochLow epochHigh)
   where
     stakePools = (unStakePools . _stPools) pState
-    registered_ = dom stakePools
-    retiring_ = dom (_retiring pState)
+    registered_ = eval (dom stakePools)
+    retiring_ = domain (_retiring pState)
     retireable = Set.toList (registered_ \\ retiring_)
     lookupHash hk' =
       fromMaybe
