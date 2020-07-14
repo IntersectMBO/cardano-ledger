@@ -103,7 +103,7 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (Bimap,biMapEmpty,forwards, dom, eval, range, (∈), (∪+), (▷), (◁))
+import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Foldable (toList)
