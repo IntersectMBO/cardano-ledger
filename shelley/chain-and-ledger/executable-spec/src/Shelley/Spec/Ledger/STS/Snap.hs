@@ -20,6 +20,7 @@ import Control.State.Transition
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
@@ -30,7 +31,7 @@ import Shelley.Spec.Ledger.LedgerState
 
 data SNAP crypto
 
-instance Typeable crypto => STS (SNAP crypto) where
+instance (Crypto crypto, Typeable crypto) => STS (SNAP crypto) where
   type State (SNAP crypto) = SnapShots crypto
   type Signal (SNAP crypto) = ()
   type Environment (SNAP crypto) = LedgerState crypto
@@ -43,7 +44,7 @@ instance Typeable crypto => STS (SNAP crypto) where
 
 instance NoUnexpectedThunks (PredicateFailure (SNAP crypto))
 
-snapTransition :: TransitionRule (SNAP crypto)
+snapTransition :: Crypto crypto => TransitionRule (SNAP crypto)
 snapTransition = do
   TRC (lstate, s, ()) <- judgmentContext
 

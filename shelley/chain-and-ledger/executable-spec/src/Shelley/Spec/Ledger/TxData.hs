@@ -1,3 +1,4 @@
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -46,8 +47,8 @@ module Shelley.Spec.Ledger.TxData
         extraSize
       ),
     TxId (..),
-    TxIn (..),
-    TxOut (..),
+    TxIn (TxIn), pattern TxInCompact,
+    TxOut (TxOut),
     Url,
     Wdrl (..),
     WitVKey (WitVKey, wvkBytes),
@@ -101,6 +102,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Short as BSS
 import Data.Foldable (fold)
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int64)
@@ -118,7 +120,8 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Quiet
-import Shelley.Spec.Ledger.Address (Addr (..), RewardAcnt (..))
+import Shelley.Spec.Ledger.Address (deserialiseAddr, Addr (..), RewardAcnt (..),
+                                   serialiseAddr)
 import Shelley.Spec.Ledger.BaseTypes
   ( DnsName,
     Port,
@@ -129,7 +132,7 @@ import Shelley.Spec.Ledger.BaseTypes
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (word64ToCoin, Coin (..))
 import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -375,16 +378,50 @@ deriving newtype instance Crypto crypto => ToCBOR (TxId crypto)
 deriving newtype instance Crypto crypto => FromCBOR (TxId crypto)
 
 -- | The input of a UTxO.
-data TxIn crypto
-  = TxIn !(TxId crypto) !Natural -- TODO use our own Natural type
-  deriving (Show, Eq, Generic, Ord, NFData)
+data TxIn crypto = TxInCompact !(TxId crypto) {-# UNPACK #-} !Word64
+   deriving (Show, Eq, Generic, Ord, NFData)
+-- TODO: We will also want to have the TxId be compact, but the representation
+-- depends on the crypto.
+
+pattern TxIn :: Crypto crypto =>
+  TxId crypto ->
+  Natural -> -- TODO We might want to change this to Word64 generally
+  TxIn crypto
+pattern TxIn addr index <-
+  TxInCompact addr (fromIntegral -> index)
+  where
+    TxIn addr index =
+      TxInCompact addr (fromIntegral index)
+
+{-# COMPLETE TxIn #-}
 
 instance NoUnexpectedThunks (TxIn crypto)
 
 -- | The output of a UTxO.
-data TxOut crypto
-  = TxOut !(Addr crypto) !Coin
+data TxOut crypto =
+  TxOutCompact
+  {-# UNPACK #-} !BSS.ShortByteString
+  {-# UNPACK #-} !Word64
   deriving (Show, Eq, Generic, Ord, NFData)
+
+pattern TxOut :: Crypto crypto =>
+  Addr crypto ->
+  Coin ->
+  TxOut crypto
+pattern TxOut addr coin <- (viewCompactTxOut -> (addr, coin))
+  where
+    TxOut addr (Coin coin) =
+      TxOutCompact (BSS.toShort $ serialiseAddr addr) (fromIntegral coin)
+
+{-# COMPLETE TxOut #-}
+
+viewCompactTxOut :: forall crypto . Crypto crypto => TxOut crypto -> (Addr crypto, Coin)
+viewCompactTxOut (TxOutCompact bs c) = (addr, coin)
+  where
+    addr = case deserialiseAddr (BSS.fromShort bs) of
+      Nothing -> panic "viewCompactTxOut: impossible"
+      Just (a :: Addr crypto) -> a
+    coin = word64ToCoin c
 
 instance NoUnexpectedThunks (TxOut crypto)
 

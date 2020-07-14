@@ -924,7 +924,7 @@ reapRewards dStateRewards withdrawals =
 
 -- | Stake distribution
 stakeDistr ::
-  forall crypto.
+  forall crypto. Crypto crypto =>
   UTxO crypto ->
   DState crypto ->
   PState crypto ->
