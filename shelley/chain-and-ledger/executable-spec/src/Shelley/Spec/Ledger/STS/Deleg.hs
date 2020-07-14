@@ -253,7 +253,7 @@ delegationTransition = do
           { _stkCreds = eval (setSingleton hk ⋪ _stkCreds ds),
             _rewards = eval (setSingleton (RewardAcnt network hk) ⋪ _rewards ds),
             _delegations = eval (setSingleton hk ⋪ _delegations ds),
-            _ptrs = eval (_ptrs ds ⋫ Set.singleton hk)
+            _ptrs = eval (_ptrs ds ⋫ setSingleton hk)
             -- TODO make _ptrs a bijection. This operation takes time proportional to (_ptrs ds)
             -- OR turn _stkCreds into a mapping of stake credentials to pointers
             -- note that the slot values in _stkCreds is no longer needed (no decay)
