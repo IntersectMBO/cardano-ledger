@@ -264,11 +264,10 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputCoins = [c | (TxOut _ c) <- Set.toList (eval (rng (txouts txb)))]
-  let minUTxOValue = _minUTxOValue pp
-  all (minUTxOValue <=) outputCoins
-    ?! OutputTooSmallUTxO
-      (filter (\(TxOut _ c) -> c < minUTxOValue) (Set.toList (eval (rng (txouts txb)))))
+  let outputs = Set.toList (eval (rng (txouts txb)))
+      minUTxOValue = _minUTxOValue pp
+      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < minUTxOValue]
+  null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx
