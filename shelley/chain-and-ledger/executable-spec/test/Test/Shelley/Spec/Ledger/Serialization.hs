@@ -54,10 +54,10 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     Nonce (..),
     StrictMaybe (..),
-    UnitInterval (..),
     mkNonceFromNumber,
     textToDns,
     textToUrl,
+    truncateUnitInterval,
   )
 import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
@@ -153,7 +153,6 @@ import Shelley.Spec.Ledger.TxData
     StakePoolRelay (..),
     Wdrl (..),
     WitVKey (..),
-    _TxId,
     _poolCost,
     _poolMD,
     _poolMDHash,
@@ -165,6 +164,7 @@ import Shelley.Spec.Ledger.TxData
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
+    _unTxId,
     pattern DCertDeleg,
     pattern DCertGenesis,
     pattern DCertMir,
@@ -298,7 +298,7 @@ getRawScriptHash :: ScriptHash h -> ByteString
 getRawScriptHash (ScriptHash hsh) = getHash hsh
 
 getRawTxId :: TxId h -> ByteString
-getRawTxId = getHash . _TxId
+getRawTxId = getHash . _unTxId
 
 getRawNonce :: Nonce -> ByteString
 getRawNonce (Nonce hsh) = getHash hsh
@@ -561,7 +561,7 @@ serializationUnitTests =
       testCase "prop_serialize_negative-coin" testNegativeCoin,
       checkEncodingCBOR
         "rational"
-        (UnsafeUnitInterval (1 % 2))
+        (truncateUnitInterval (1 % 2))
         (T (TkTag 30 . TkListLen 2 . TkWord64 1 . TkWord64 2)),
       checkEncodingCBOR
         "slot"
@@ -786,9 +786,9 @@ serializationUnitTests =
           emax = EpochNo 7
           nopt = 8
           a0 = 1 % 6
-          rho = UnsafeUnitInterval $ 1 % 6
-          tau = UnsafeUnitInterval $ 1 % 7
-          d = UnsafeUnitInterval $ 1 % 9
+          rho = truncateUnitInterval $ 1 % 6
+          tau = truncateUnitInterval $ 1 % 7
+          d = truncateUnitInterval $ 1 % 9
           extraEntropy = NeutralNonce
           protocolVersion = ProtVer 0 1
           minUTxOValue = 121

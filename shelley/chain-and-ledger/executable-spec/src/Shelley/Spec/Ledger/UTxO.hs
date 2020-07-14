@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -48,6 +49,7 @@ import qualified Data.Maybe as Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -89,9 +91,9 @@ import Shelley.Spec.Ledger.TxData
   )
 
 -- | The unspent transaction outputs.
-newtype UTxO crypto
-  = UTxO (Map (TxIn crypto) (TxOut crypto))
-  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+newtype UTxO crypto = UTxO {unUTxO :: Map (TxIn crypto) (TxOut crypto)}
+  deriving (Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+  deriving (Show) via Quiet (UTxO crypto)
 
 instance Relation (UTxO crypto) where
   type Domain (UTxO crypto) = TxIn crypto

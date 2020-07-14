@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -73,6 +74,7 @@ import Data.String (fromString)
 import qualified Data.Text.Encoding as Text
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Quiet
 import Shelley.Spec.Ledger.BaseTypes (Network (..), networkToWord8, word8ToNetwork)
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -406,9 +408,12 @@ instance Crypto crypto => ToCBOR (RewardAcnt crypto) where
 instance Crypto crypto => FromCBOR (RewardAcnt crypto) where
   fromCBOR = decoderFromGet "RewardAcnt" getRewardAcnt
 
-newtype BootstrapAddress crypto = BootstrapAddress Byron.Address
-  deriving (Eq, Show, Generic)
+newtype BootstrapAddress crypto = BootstrapAddress
+  { unBootstrapAddress :: Byron.Address
+  }
+  deriving (Eq, Generic)
   deriving newtype (NFData, Ord)
+  deriving (Show) via Quiet (BootstrapAddress crypto)
 
 instance NoUnexpectedThunks (BootstrapAddress crypto)
 

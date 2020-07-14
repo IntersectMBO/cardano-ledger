@@ -19,7 +19,7 @@ module Shelley.Spec.Ledger.BaseTypes
     word8ToNetwork,
     Nonce (..),
     Seed (..),
-    UnitInterval (..),
+    UnitInterval,
     fpEpsilon,
     fpPrecision,
     interval0,

@@ -29,6 +29,7 @@ import qualified Data.Set as Set
 import Data.Word (Word)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Quiet
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
@@ -67,8 +68,9 @@ currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | Set.member (coerceKeyRole hk) genDelegs = Just 0
   | otherwise = Nothing
 
-newtype KESPeriod = KESPeriod Word
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, FromCBOR, ToCBOR)
+newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
+  deriving (Eq, Generic, Ord, NoUnexpectedThunks, FromCBOR, ToCBOR)
+  deriving (Show) via Quiet KESPeriod
 
 data OCert crypto = OCert
   { -- | The operational hot key

@@ -65,6 +65,7 @@ import Cardano.Prelude
   )
 import qualified Data.ByteString.Lazy as LBS
 import Data.Ord (comparing)
+import Quiet
 import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
@@ -87,8 +88,9 @@ data KeyPadding = KeyPadding
 
 instance NoUnexpectedThunks KeyPadding
 
-newtype ChainCode = ChainCode ByteString
-  deriving (Eq, Show, Generic)
+newtype ChainCode = ChainCode {unChainCode :: ByteString}
+  deriving (Eq, Generic)
+  deriving (Show) via Quiet ChainCode
   deriving newtype (NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 data BootstrapWitness crypto = BootstrapWitness'

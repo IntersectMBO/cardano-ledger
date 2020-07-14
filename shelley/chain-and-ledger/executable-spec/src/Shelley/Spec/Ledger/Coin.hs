@@ -18,12 +18,12 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (pack)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import Quiet
 
 -- | The amount of value held by a transaction output.
-newtype Coin = Coin Integer
+newtype Coin = Coin {unCoin :: Integer}
   deriving
-    ( Show,
-      Eq,
+    ( Eq,
       Ord,
       Num,
       Enum,
@@ -33,6 +33,7 @@ newtype Coin = Coin Integer
       FromJSON,
       NFData
     )
+  deriving (Show) via Quiet Coin
 
 word64ToCoin :: Word64 -> Coin
 word64ToCoin w = Coin $ fromIntegral w
