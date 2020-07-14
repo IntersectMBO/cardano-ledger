@@ -63,7 +63,7 @@ import Shelley.Spec.Ledger.STS.Ocert (pattern OCertEnv)
 import Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Test.QuickCheck (Gen)
-import qualified Test.QuickCheck as QC (choose, discard, shuffle)
+import qualified Test.QuickCheck as QC (choose, shuffle)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Block,
     ChainState,
@@ -196,7 +196,7 @@ genBlock
         nes' = runShelleyBase $ applySTSTest @(TICK h) $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
 
     case nes' of
-      Left _ -> QC.discard
+      Left pf -> error ("genBlock TICK rule failed - " <> show pf)
       Right _nes' -> do
         let NewEpochState _ _ _ es _ _ _ = _nes'
             EpochState acnt _ ls _ pp' _ = es
