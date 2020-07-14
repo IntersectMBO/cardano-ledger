@@ -64,7 +64,6 @@ import Cardano.Prelude
     panic,
   )
 import qualified Data.ByteString.Lazy as LBS
-import Data.Coerce (coerce)
 import Data.Ord (comparing)
 import Quiet
 import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
