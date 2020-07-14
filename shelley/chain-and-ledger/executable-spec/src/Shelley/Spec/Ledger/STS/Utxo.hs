@@ -46,7 +46,11 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.Address (Addr, getNetwork)
+import Shelley.Spec.Ledger.Address
+  ( Addr (AddrBootstrap),
+    bootstrapAddressAttrsSize,
+    getNetwork,
+  )
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
@@ -121,6 +125,8 @@ instance
     | OutputTooSmallUTxO
         ![TxOut crypto] -- list of supplied transaction outputs that are too small
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
+    | OutputBootAddrAttrsTooBig
+        ![TxOut crypto] -- list of supplied bad transaction outputs
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -177,6 +183,9 @@ instance
       encodeListLen 3 <> toCBOR (8 :: Word8)
         <> toCBOR right
         <> encodeFoldable wrongs
+    OutputBootAddrAttrsTooBig outs ->
+      encodeListLen 2 <> toCBOR (9 :: Word8)
+        <> encodeFoldable outs
 
 instance
   (Crypto crypto) =>
@@ -224,6 +233,10 @@ instance
               right <- fromCBOR
               wrongs <- decodeSet fromCBOR
               pure $ WrongNetwork right wrongs
+          9 ->
+            (,) 2 <$> do
+              outs <- decodeList fromCBOR
+              pure $ OutputBootAddrAttrsTooBig outs
           k -> invalidKey k
 
 initialLedgerState :: InitialRule (UTXO crypto)
@@ -268,6 +281,12 @@ utxoInductive = do
       minUTxOValue = _minUTxOValue pp
       outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < minUTxOValue]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
+
+  -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
+  -- It is important to limit their overall size.
+  let outputsAttrsTooBig =
+        [out | out@(TxOut (AddrBootstrap addr) _) <- outputs, bootstrapAddressAttrsSize addr > 64]
+  null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx

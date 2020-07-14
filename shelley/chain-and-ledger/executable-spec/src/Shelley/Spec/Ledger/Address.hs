@@ -22,6 +22,7 @@ module Shelley.Spec.Ledger.Address
     deserialiseAddr,
     Addr (..),
     BootstrapAddress (..),
+    bootstrapAddressAttrsSize,
     getNetwork,
     RewardAcnt (..),
     serialiseRewardAcnt,
@@ -67,6 +68,7 @@ import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
 import Data.Bits (setBit, shiftL, shiftR, testBit, (.&.), (.|.))
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldl')
@@ -337,6 +339,20 @@ getByron =
   decodeFull <$> B.getRemainingLazyByteString >>= \case
     Left e -> fail (show e)
     Right r -> pure $ AddrBootstrap $ BootstrapAddress r
+
+-- | The size of the extra attributes in a bootstrp (ie Byron) address. Used
+-- to help enforce that people do not post huge ones on the chain.
+bootstrapAddressAttrsSize :: BootstrapAddress crypto -> Int
+bootstrapAddressAttrsSize (BootstrapAddress addr) =
+  -- I'm sorry this code is formatted so weridly below.
+  -- It is to apease the capricious god Ormolu. A sacrifice is demanded!
+  maybe
+    0
+    (BS.length . Byron.getHDAddressPayload)
+    (Byron.aaVKDerivationPath (Byron.attrData attrs))
+    + Byron.unknownAttributesLength attrs
+  where
+    attrs = Byron.addrAttributes addr
 
 putPtr :: Ptr -> Put
 putPtr (Ptr slot txIx certIx) = do
