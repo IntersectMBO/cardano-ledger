@@ -1,83 +1,4 @@
-\section{Transactions}
-\label{sec:transactions}
-
-In this chapter, we outline the changes necessary to transaction and
-UTxO type structure to introduce native multicurrency functionality
-into the Cardano
-system.
-
-\textbf{Representing Multicurrency.}
-Some new types (and changes to existing types) are required for
-an MC-supporting ledger, see Figure~\ref{fig:defs:utxo-shelley-1}.
-The types not appearing in the Figure below are consistent with the
-current Shelley ledger design.
-
-\begin{itemize}
-
-  \item $\Language$ is a natural number-valued language tag used to represent
-  the type scripting language, e.g.
-  $\mathsf{nativeMSigTag}$ and $\mathsf{nativeMCTag}$
-
-  \item $\PolicyID$ is the identifier of a specific currency. The monetary
-  policy of a currency with the ID $cid$ is given by the monetary policy script
-  (MPS) $s$, such that $\fun{hashScript}~s~=~cid$. The script is called a
-  monetary policy script because when run, it verifies that the tokens of a currency
-  with the corresponding $cid$ are according to the restrictions imposed by the
-  monetary policy. If the restrictions are complied with, it returns
-  $\mathsf{True}$, and
-  $\mathsf{False}$ otherwise. More on MPS below.
-
-  \item $\AssetID$ : for each currency ID $cid$, in the MC model, we can associate
-  some tokens with this currency. A term $t\in\AssetID$ is an identifier of a
-  kind of token in a given currency $cid$. Within the currency $cid$,
-  tokens of the same type (with the same identifier $t\in\AssetID$) are fungible
-  with each other. That is, they are effectively the "same" token, in the same way that
-  every Ada coin is indistinguishable from another Ada coin. Ada
-  has the currency ID $\mathsf{adaID}$. The statement \textit{all of the tokens
-  of this currency must
-  be the same}, in a MC scheme, means that there is only one kind of term of
-  type $\AssetID$ associated
-  with $\mathsf{adaID}$, and we call it $\mathsf{adaToken}$.
-  See below for a more detailed discussion of Ada representation.
-
-  Note that currencies with different IDs may have tokens with the same names.
-  For example, a new currency $\mathsf{NotAda}$ can also have an $\mathsf{adaToken}$.
-  These are not the same tokens and are not fungible with each other.
-
-  \item $\Quantity$ is an integer type representing an amount. This type is used
-  specifically to represent an amount of a specific $\AssetID$. We associate
-  a term $q\in\Quantity$ with a specific token to keep track of how much of
-  this token there is in a given value.
-
-  \item $\Value$ is the multicurrency type used to represent
-  all tokens, including Ada. The key of this finite map type is
-  the hash of the monetary policy script for this currency.
-  A value $v\in\Value$ is a finite map that assciates to each of its
-  currency ID keys a finite map $tkns\in\AssetID \mapsto \Quantity$,
-  which represents all the tokens (of that particular
-  currency) that are contained in $v$.
-
-  The map $tkns$ associates to each key $t\in\AssetID$ the quantity of tokens of
-  this kind (i.e. with this identifier). Tokens are fungible with each other if
-  they belong to the same $\PolicyID$ and $\AssetID$.
-
-  \item $\TxOut$ : The type of outputs carried by a transaction. This type
-  is different from the Shelley $\TxOut$ type because it contains a $\Value$
-  instead of a $\Coin$
-
-  \item $\UTxOOut$ is the type of UTxO entry that gets created when a transaction
-  output is processed. In this specification, it has the same structure as
-  the transaction output $\TxOut$, but we give it a different name, taking into
-  account that $\Value$ is stored differently in the outputs of $\UTxO$ and $\Tx$
-  (due to optimization in the $\UTxO$)
-
-  \item $\UTxO$ entries are stored in the finite map $\TxIn\mapsto \UTxOOut$
-  (this type is also different than the Shelley $\UTxO$ type)
-
-\end{itemize}
-
-
-\begin{figure*}[htb]
+\begin{figure*}[t!]
   %
   \emph{Scripts}
   %
@@ -93,14 +14,15 @@ current Shelley ledger design.
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{lng} & \Language & \N \\
       %\text{script language}
-      \var{pid} & \PolicyID & \PolicyID\\
+      \var{cid} & \CurrencyID & \PolicyID\\
+%       \var{pid} & \PolicyID & \PolicyID\\
        % \text{currency ID}\\
       \var{tok} & \AssetID & \mathbb{H}\\
        % \text{token identifier}\\
       \var{quan} & \Quantity & \Z \\
       %\text{quantity of a token}\\
-      \var{val} & \Value
-      & \PolicyID \mapsto (\AssetID \mapsto \Quantity) \\
+      \var{v}, \var{w} & \Value
+      & \CurrencyID \mapsto ( \AssetID \mapsto \Quantity ) \\
 %      & \text{a collection of tokens}
       \var{txout}
       & \TxOut
@@ -118,65 +40,217 @@ current Shelley ledger design.
     \end{array}
   \end{equation*}
   %
-  \emph{Language Tags}
-  %
-  \begin{align*}
-    & s_{mc} & ~\in~ \ScriptMPS \\
-    & \mathsf{nativeMCTag} & ~=~ \fun{language}~s_{mc}
-  \end{align*}
-  \caption{Definitions used in the UTxO transition system}
+  \caption{Type Definitions used in the UTxO transition system}
   \label{fig:defs:utxo-shelley-1}
 \end{figure*}
 
-\textbf{The Monetary Policy Scripting Language.}
-Recall that the ID of a currency is the hash of its MPS.
-In Figure~\ref{fig:defs:tx-mc-script}, we give the types related to monetary
-policy scripts. The $\Script$ type
-is made up of multisig scripts and monetary policy scripts.
-The monetary policy script type, $\ScriptMPS$, has several constructors, each of which
-is used in a different way during script evaluation (see MPS script evaluation
-discussion below).
+\section{Transactions}
+\label{sec:transactions}
 
-The abstract
-function $\fun{language}$ returns the tag corresponding to
-the type of the language of a given script.
+This section describes the changes that are necessary to the transaction and
+UTxO type structure to support native multicurrency functionality
+in Cardano.
 
-\begin{figure*}[htb]
-  \emph{Script Types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}l@{~}lr}
-      \var{smc} & \ScriptMPS & \text{monetary policy script} \\
-      \var{scr} & \Script &=~ \ScriptMSig \uniondistinct \ScriptMPS
-    \end{array}
-  \end{equation*}
+\subsection*{Representing Multi-currency Types and Values.}
+Some new types (and some changes to existing types) are required for
+the ledger to support multi-currencies, as shown in Figure~\ref{fig:defs:utxo-shelley-1}.
+All other types are as specified in the Shelley ledger design and implementation~\ref{...}.
+A \emph{Currency}, $\mathit{Currency}$, comprises a set of different \emph{Asset Classes}, each of which has
+a unique identifier, $\AssetID$  (of type $\mathbb{H}$, that is \emph{arbitrary length byte strings}). We will informally refer to these identifiers as ``tokens''.
+The set of tokens that are referred to by the underlying monetary policy represents the coinage that the currency supports.  A multi-currency value, $\Value$ is a map over zero or more currencies
+to single currency values.  A single currency value is then a finite map from
+$\AssetID$s to quantities.  Any omitted tokens in the domain of a currency are assumed to be zero.
+
+$$
+ \begin{array}{lcl}
+   \var{token} \in \mathit{Coinage} &=& \{ \AssetID \}
+%% % \\
+%% % v, w \in \mathit{Value} &=& \{ \AssetID \mapsto \Quantity \}
+\end{array}
+$$
+
+%% I'm going to leave this for now.  It would be  nice.
+%% Currency values support arithmetic and equality operations in the obvious way.  They do not, of course, support general
+%% comparisons ($<$, $>$, etc).  We extend the
+
+%% $$
+%% \begin{array}{lcl}
+%%   v \oplus w &=&  \forall (c_1 \mapsto t_1)
+
+%%   (a \arrow \_) \in (\var{coins} v \cup \var{coins} w),~~ a \arrow (v a \oplus w a), \var{currency} v = \var{currency} w \\
+%%   \var{currency} ( c \mapsto \_ ) & = & c \\
+%%   \var{coins}    ( \_ \mapsto \var{tkns}) & = & \var{dom} (\var{tkns})
+%% \end{array}
+%% $$
+
+\begin{itemize}
+
+  \item $\Language$ is a natural number that labels the type scripting language, e.g.
+    $\mathsf{nativeMSigTag}$ or $\mathsf{nativeMCTag}$. \khcomment{Why a number rather than a symbolic label/identifier - ordering
+    and arithmetic are not needed, are they, and you might need to worry about bounding?}
+
+  \item $\CurrencyID$ identifies a specific currency.  As in normal life, two
+    currencies may use the same \emph{coinage} (sets of tokens that distinguish different values in the currency),
+    but are distinguished by their \emph{monetary policy}, which governs how values of the currency may be created,
+    exchanged, destroyed etc.
+    The monetary
+    policy for a currency $\var{cid}$ is given by the \emph{Monetary Policy Script}
+    (MPS) $s$, where $\fun{hashScript}~s~=~cid$. When executed, the script verifies that the coinage for currency $\var{cid}$
+    respects the restrictions that are imposed by the
+    monetary policy. If the restrictions are complied with, it returns
+    $\mathsf{True}$, and
+    $\mathsf{False}$ otherwise.  Monetary Policy Scripts are described in more detail below.
+\khcomment{I need to re-read this - I have a question about when things are executed.}
+
+%% \item $\PolicyID$ identifies a specific monetary policy.  Each monetary policy is distinct. The monetary
+%%   policy for a currency $\var{c} = \{ \var{tok_1} \ldots \var{tok}_n \}$ is given by the \emph{Monetary Policy Script}
+%%   (MPS) $s$, such that $\fun{hashScript}~s~=~pid$. The script is called a
+%%   monetary policy script because when run, it verifies that the tokens of a currency
+%%   with the corresponding $\var{cid}$ are according to the restrictions imposed by the
+%%   monetary policy. If the restrictions are complied with, it returns
+%%   $\mathsf{True}$, and
+%%   $\mathsf{False}$ otherwise.  Monetary Policy Scripts are described in more detail below.
+
+
+\item $\AssetID$ : the coinage for a currency $\var{cid} \in \var{CurrencyID}$ is a set of terms
+  $t\in\AssetID$.  Each $t$ identifies a unique kind of token in $\var{cid}$. Within a single currency $\var{cid}$,
+  tokens of the same type (i.e. those with the same identifier $t\in\AssetID$) are \emph{fungible}
+  with each other. That is, they are completely interchangeable, in the same way that
+  every Ada coin in the standard Shelley specification is indistinguishable from any other Ada coin.
+  We will assume that Ada has the currency ID $\mathsf{adaID}$, and its coinage contains the single token $\mathsf{adaToken}$.
+
+  %%
+  %% The statement \textit{all of the tokens
+  %% of this currency must
+  %% be the same}, in a MC scheme, means that there is only one kind of term of
+  %% type $\AssetID$ associated
+  %% with $\mathsf{adaID}$, and we call it $\mathsf{adaToken}$. \khcomment{The meaning of the statement isn't clear to me.}
+  %% See below for a more detailed discussion of Ada representation.
+
+  Note that multiple currencies may support tokens which have the same names, but which are not interchangeable.
+  For example, a new currency $\mathsf{NotAda}$ can also have an $\mathsf{adaToken}$.
+  This is not the same token as the one in $\mathsf{adaID}$, and the two tokens are therefore not fungible with each other.
+
+  \item $\Quantity$ is an integer type that represents an amount of a specific $\AssetID$. We associate
+  a term $q\in\Quantity$ with a specific token to track how much of   that token is contained in a given currency value.
+
+  \item $\Value$ is the multicurrency type that is used to represent
+    the value of all tokens, including Ada.
+    % The key of this finite map type is
+  %   the hash of the monetary policy script for this currency.
+  A value $v\in\Value$ is a finite map from zero or more currencies to single currency values $\var{tkns}\in\AssetID \mapsto \Quantity$.
+  This represents the values of all the tokens that are contained in $v$.
+
+%  The $tkns$ map gives the quantity of tokens of type $t\in\AssetID.
+%  Values in the same currency are fungible with each other if
+%  they have the same asset id $\AssetID$.
+  %% You don't have the notion of a token defined as currency, token pair, so this definition doesn't work.
+  %% Best not to give it - it's hard to work out.
+
+\item $\TxOut$ : The type of outputs that carried by a transaction. This differs from the base Shelley
+  $\TxOut$ type in that it contains a $\Value$ rather than a $\Coin$
+
+  \item $\UTxOOut$ is the type of UTxO entry that is created when a transaction
+  output is processed. This has the same structure as
+  the transaction output $\TxOut$, but is given a different name to
+  account for the fact that $\Value$ is stored differently in the outputs of $\UTxO$ and $\Tx$
+  (due to optimization in the $\UTxO$).
+
+
+  \item $\UTxO$ entries are stored in the finite map $\TxIn\mapsto \UTxOOut$
+  (this type also differs from the Shelley $\UTxO$ type in \khcomment{How?}).
+
+\end{itemize}
+
+\begin{figure*}[t!]
+  %% \emph{Script Types} \quad
+  %% %
+  %% \begin{equation*}
+  %%   \begin{array}{r@{~\in~}l@{~}lr}
+  %%     \var{smc} & \ScriptMPS & \text{monetary policy script} \\
+  %%     \var{scr} & \Script &=~ \ScriptMSig \uniondistinct \ScriptMPS
+  %%   \end{array}
+  %% \end{equation*}
     %
-  \emph{Helper Functions}
+    \emph{Helper Functions}
   %
   \begin{align*}
     \fun{language} ~\in~& \Script \to \Language \\
-    &\text{returns the language tag, e.g. $\mathsf{mcTag}$ for the MPS language} \\
-  \caption{Languages}
+    &\text{returns the language tag, e.g. $\mathsf{mcTag}$ for the MPS language}
+    % \\
+%   \caption{Languages}
   \end{align*}
   %
   \emph{MPS Script definition}
   %
   \begin{equation*}
-    \begin{array}{rll}
-      \ScriptMPS & \subseteq & \Script \\
-      \\~\\
-      \var{s_{mc}}\in\ScriptMPS & = & \type{JustMSig}~ \ScriptMSig\\
-      & \uniondistinct &
-         \type{MaxMinTimedTotal}~(\AssetID \mapsto (\Slot\times\Slot\times\Quantity\times\Quantity)) \\
-      & \uniondistinct&
-        \type{RequireAll}~\powerset{\ScriptMPS}
+    \begin{array}{rllll}
+ %     \ScriptMPS & \subseteq & \Script \\
+ %     \\~\\
+      \var{s_{mc}}\in\ScriptMPS & = & \powerset{} & ( & \ScriptMSig\\
+      &  & & & \uniondistinct ~~
+         (\AssetID \mapsto (\Slot\times\Slot\times\Quantity\times\Quantity))~~) \\
+%       & \uniondistinct&
+%         \powerset{\ScriptMPS}
     \end{array}
   \end{equation*}
+  %
+  \emph{Language Tags}
+  %
+  \begin{align*}
+%    & s_{mc} & ~\in~ \ScriptMPS \\
+    & \mathsf{nativeMCTag} & ~=~ \fun{language}~s_{mc}
+    \end{align*}
   \caption{The Multicurrency Scripting Language}
   \label{fig:defs:tx-mc-script}
+  %% \emph{Script Types}
+  %% %
+  %% \begin{equation*}
+  %%   \begin{array}{r@{~\in~}l@{~}lr}
+  %%     \var{smc} & \ScriptMPS & \text{monetary policy script} \\
+  %%     \var{scr} & \Script &=~ \ScriptMSig \uniondistinct \ScriptMPS
+  %%   \end{array}
+  %% \end{equation*}
+  %%   %
+  %% \emph{Helper Functions}
+  %% %
+  %% \begin{align*}
+  %%   \fun{language} ~\in~& \Script \to \Language \\
+  %%   &\text{returns the language tag, e.g. $\mathsf{mcTag}$ for the MPS language} \\
+  %% \caption{Languages}
+  %% \end{align*}
+  %% %
+  %% \emph{MPS Script definition}
+  %% %
+  %% \begin{equation*}
+  %%   \begin{array}{rll}
+  %%     \ScriptMPS & \subseteq & \Script \\
+  %%     \\~\\
+  %%     \var{s_{mc}}\in\ScriptMPS & = & \type{JustMSig}~ \ScriptMSig\\
+  %%     & \uniondistinct &
+  %%        \type{MaxMinTimedTotal}~(\AssetID \mapsto (\Slot\times\Slot\times\Quantity\times\Quantity)) \\
+  %%     & \uniondistinct&
+  %%       \type{RequireAll}~\powerset{\ScriptMPS}
+  %%   \end{array}
+  %% \end{equation*}
+  %% \caption{The Multicurrency Scripting Language}
+  %% \label{fig:defs:tx-mc-script}
 \end{figure*}
 
-\textbf{Multicurrency Script Evaluation.}
+\paragraph*{The Monetary Policy Scripting Language.}
+Recall that a currency is identified by the hash of its MPS.
+Figure~\ref{fig:defs:tx-mc-script} gives the types that relate to monetary
+policy scripts. % The $\Script$ type
+% is made up of multisig scripts and monetary policy scripts.
+As discussed below, the monetary policy script type, $\ScriptMPS$, groups multisig scripts
+and resourced scripts.
+% has several constructors, each of which
+% is used in a different way during script evaluation
+The abstract
+function $\fun{language}$ returns a value of type $\type{Language}$,
+corresponding to the language that is used by a given script.
+
+\paragraph*{Multicurrency Script Evaluation.}
 A monetary policy is a collection of restrictions on the tokens of a
 specific multicurrency. MP scripts are evaluated for the purpose of checking that
 the given currency adheres to its monetary policy. The monetary policy scripting
@@ -198,17 +272,17 @@ i.e. the outputs it is spending
 \end{itemize}
 
 
-\textbf{MPS Script Validation.}
+\subsection*{MPS Script Validation.}
 
-In the Shelley spec, there is a script validation function which
+In the Shelley ledger specification, a script validation function
 is used to evaluate all types of native (ledger-rule-defined) scripts.
 In Figure~\ref{fig:defs:tx-mc-valid}, we modify this function to also call the
-evaluation function specific to the MPS script type being added in this spec.
+evaluation function that is specific to our new MPS script type.
 
-The arguments passed to the $\fun{validateScript}$ function include all those
+The arguments that are passed to the $\fun{validateScript}$ function include all those
 needed for MPS and MSig script evaluation. Because of the extra arguments
-(the slot number and the UTxO), we also modify the call to this function, made
-by the UTXOW rule.
+(the slot number and the UTxO), we also modify the call to this function
+within the UTXOW rule.
 
 \begin{figure*}[htb]
     \begin{align*}
@@ -227,7 +301,7 @@ by the UTXOW rule.
   \label{fig:defs:tx-mc-valid}
 \end{figure*}
 
-\textbf{The Forge Field.}
+\subsection*{The Forge Field.}
 
 The body of a transaction with multicurrency support contains one additional
 field, the $\fun{forge}$ field (see Figure~\ref{fig:defs:utxo-shelley-2}).
@@ -242,15 +316,15 @@ fields of the tokens forged, and taking tokens out of circulation can be done
 with negative quantities.
 
 A transaction cannot simply forge arbitrary tokens. Recall that restrictions on
-MC tokens are imposed, for each currency with ID $cid$, by the script
-with the hash $cid$. Whether a given currency adheres to the restrictions
+MC tokens are imposed, for each currency with ID $\var{cid}$, by the script
+with the hash $\var{cid}$. Whether a given currency adheres to the restrictions
 prescribed by its script is verified at forging time (i.e. when the transaction
 forging it is being processed). Another restriction on forging is imposed by
 the preservation of value conditition. Also, no forging Ada
 is permitted. In Section~\ref{sec:utxo}, we specify the mechanism by which
 forging is done, and rules which enforce these restrictions.
 
-\textbf{Transaction Body.}
+\subsection*{Transaction Body.}
 
 Besides the addition of the $\fun{forge}$ field to the transaction body,
 note that the $\TxOut$ type in the body is not the same as
@@ -289,7 +363,7 @@ of MPS scripts to the $\Script$ type, so we do not include the whole $\Tx$ type 
   \label{fig:defs:utxo-shelley-2}
 \end{figure*}
 
-\textbf{Coin and Multicurrency Tokens}
+\subsection*{Coin and Multicurrency Tokens}
 When multicurrency is introduced, Ada is still expected to be
 the most common type of token on the ledger.
 The $\Coin$ type is used to represent an amount of Ada.

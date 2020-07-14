@@ -26,6 +26,7 @@
 \usepackage{enumerate}
 
 
+
 %%
 %% Package `semantic` can be used for writing inference rules.
 %%
@@ -34,22 +35,26 @@
 \setpremisesspace{20pt}
 
 % data for Deliverable header -- added by KH from an EU H2020 project template
-\DeliverableNumber{XX-XX}
-\DeliverableTitle{A Formal Specification of the Cardano Ledger with a Native
-Multicurrency Implementation}
-{Formal Cardano Ledger with MC Spec.}
+\DeliverableNumber{GL-D1}
+\DeliverableTitle{A Formal Specification of the Cardano Ledger with a Native Multicurrency Implementation}
+   {Formal Cardano Ledger with MC Spec.}
+
 \DeliverableResponsible{Formal Methods Team}
-%\EditorName{Jared Corduan, \IOHK}
+
+\DueDate{31$^{\textrm{st}}$ July 2020}
+
+\SubmissionDate{31$^{\textrm{st}}$ July 2020}{31$^{\textrm{st}}$ July 2020}
+
 \Authors{
    Polina Vinogradova \quad \texttt{polina.vinogradova@iohk.io} \\
    Andre Knispel \quad \texttt{andre.knispel@iohk.io}
 }
-%\DueDate{15$^{\textrm{th}}$ October 2019}
-%\SubmissionDate{8th October 2019}{2019/10/08}
+
+\EditorName{Polina Vinogradova}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
 \Version{0.2}
-\Project{Shelley Ledger}
+\Project{Goguen Ledger}
 \DisseminationDR
 
 %%
@@ -327,6 +332,10 @@ Multicurrency Implementation}
 \newtheorem{property}{Property}[section]
 
 \newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
+
+\newcommand{\arrow}{\rightarrow}
+
+\newcommand{\khcomment}[1]{\textbf{ -- KH: #1 -- }}
 
 \begin{document}
 
