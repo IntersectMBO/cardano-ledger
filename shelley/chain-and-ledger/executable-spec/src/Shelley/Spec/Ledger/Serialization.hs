@@ -41,6 +41,8 @@ module Shelley.Spec.Ledger.Serialization
     ipv6FromBytes,
     ipv6ToCBOR,
     ipv6FromCBOR,
+    -- Raw
+    runByteBuilder,
   )
 where
 
@@ -73,6 +75,8 @@ import Control.Monad (replicateM, unless)
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.Binary.Put (putWord32le, runPut)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Builder as BS
+import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
@@ -333,3 +337,20 @@ ipv6ToCBOR = toCBOR . ipv6ToBytes
 
 ipv6FromCBOR :: Decoder s IPv6
 ipv6FromCBOR = byteDecoderToDecoder "IPv6" ipv6FromBytes
+
+--
+-- Raw serialisation
+--
+
+-- | Run a ByteString 'BS.Builder' using a strategy aimed at making smaller
+-- things efficiently.
+--
+-- It takes a size hint and produces a strict 'ByteString'. This will be fast
+-- when the size hint is the same or slightly bigger than the true size.
+runByteBuilder :: Int -> BS.Builder -> BS.ByteString
+runByteBuilder !sizeHint =
+  BSL.toStrict
+    . BS.toLazyByteStringWith
+      (BS.safeStrategy sizeHint (2 * sizeHint))
+      mempty
+{-# NOINLINE runByteBuilder #-}
