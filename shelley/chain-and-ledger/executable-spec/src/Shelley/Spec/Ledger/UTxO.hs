@@ -292,7 +292,6 @@ scriptsNeeded u tx =
   where
     unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ _wdrls $ _body tx
-
     UTxO u'' = (txinsScript (txins $ _body tx) u) ◁ u
     -- u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u)  TODO
     certificates = (toList . _certs . _body) tx

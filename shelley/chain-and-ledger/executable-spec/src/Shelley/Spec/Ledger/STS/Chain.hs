@@ -90,12 +90,12 @@ import Shelley.Spec.Ledger.LedgerState
     OBftSlot,
     PState (..),
     UTxOState (..),
+    _genDelegs,
     emptyDState,
     emptyPPUPState,
     emptyPState,
     getGKeys,
     updateNES,
-    _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams
@@ -231,12 +231,12 @@ chainChecks ::
   m ()
 chainChecks maxpv pp bh = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
-  unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp) $
-    throwError $
-      HeaderSizeTooLargeCHAIN (fromIntegral $ bHeaderSize bh) (_maxBHSize pp)
-  unless (hBbsize (bhbody bh) <= _maxBBSize pp) $
-    throwError $
-      BlockSizeTooLargeCHAIN (hBbsize (bhbody bh)) (_maxBBSize pp)
+  unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp)
+    $ throwError
+    $ HeaderSizeTooLargeCHAIN (fromIntegral $ bHeaderSize bh) (_maxBHSize pp)
+  unless (hBbsize (bhbody bh) <= _maxBBSize pp)
+    $ throwError
+    $ BlockSizeTooLargeCHAIN (hBbsize (bhbody bh)) (_maxBBSize pp)
   where
     (ProtVer m _) = _protocolVersion pp
 

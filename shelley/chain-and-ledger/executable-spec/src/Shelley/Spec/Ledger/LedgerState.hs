@@ -184,12 +184,12 @@ import Shelley.Spec.Ledger.Rewards
   )
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
-  ( Duration (..),
+  ( (+*),
+    Duration (..),
     EpochNo (..),
     SlotNo (..),
     epochInfoFirst,
     epochInfoSize,
-    (+*),
   )
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
@@ -924,7 +924,8 @@ reapRewards dStateRewards withdrawals =
 
 -- | Stake distribution
 stakeDistr ::
-  forall crypto. Crypto crypto =>
+  forall crypto.
+  Crypto crypto =>
   UTxO crypto ->
   DState crypto ->
   PState crypto ->

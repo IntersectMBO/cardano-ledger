@@ -27,6 +27,9 @@ import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
     PPUPState (..),
     PState (..),
+    _delegationState,
+    _ppups,
+    _utxoState,
     emptyAccount,
     emptyLedgerState,
     esAccountState,
@@ -35,9 +38,6 @@ import Shelley.Spec.Ledger.LedgerState
     esPp,
     esPrevPp,
     esSnapshots,
-    _delegationState,
-    _ppups,
-    _utxoState,
     pattern DPState,
     pattern EpochState,
   )
@@ -94,7 +94,9 @@ votedValuePParams (ProposedPPUpdates ppup) pps quorumN =
         1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
         _ -> Nothing
 
-epochTransition :: forall crypto. Crypto crypto =>
+epochTransition ::
+  forall crypto.
+  Crypto crypto =>
   TransitionRule (EPOCH crypto)
 epochTransition = do
   TRC

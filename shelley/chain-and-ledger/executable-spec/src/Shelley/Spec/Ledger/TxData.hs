@@ -1,4 +1,3 @@
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -17,6 +16,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Shelley.Spec.Ledger.TxData
   ( DCert (..),
@@ -47,7 +47,8 @@ module Shelley.Spec.Ledger.TxData
         extraSize
       ),
     TxId (..),
-    TxIn (TxIn), pattern TxInCompact,
+    TxIn (TxIn),
+    pattern TxInCompact,
     TxOut (TxOut),
     Url,
     Wdrl (..),
@@ -94,7 +95,7 @@ import Cardano.Prelude
   )
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Control.Monad (unless)
-import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
+import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (explicitParseField)
 import Data.ByteString (ByteString)
@@ -120,8 +121,12 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Quiet
-import Shelley.Spec.Ledger.Address (deserialiseAddr, Addr (..), RewardAcnt (..),
-                                   serialiseAddr)
+import Shelley.Spec.Ledger.Address
+  ( Addr (..),
+    RewardAcnt (..),
+    deserialiseAddr,
+    serialiseAddr,
+  )
 import Shelley.Spec.Ledger.BaseTypes
   ( DnsName,
     Port,
@@ -132,7 +137,7 @@ import Shelley.Spec.Ledger.BaseTypes
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Coin (word64ToCoin, Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), word64ToCoin)
 import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -379,11 +384,13 @@ deriving newtype instance Crypto crypto => FromCBOR (TxId crypto)
 
 -- | The input of a UTxO.
 data TxIn crypto = TxInCompact !(TxId crypto) {-# UNPACK #-} !Word64
-   deriving (Show, Eq, Generic, Ord, NFData)
+  deriving (Show, Eq, Generic, Ord, NFData)
+
 -- TODO: We will also want to have the TxId be compact, but the representation
 -- depends on the crypto.
 
-pattern TxIn :: Crypto crypto =>
+pattern TxIn ::
+  Crypto crypto =>
   TxId crypto ->
   Natural -> -- TODO We might want to change this to Word64 generally
   TxIn crypto
@@ -398,24 +405,26 @@ pattern TxIn addr index <-
 instance NoUnexpectedThunks (TxIn crypto)
 
 -- | The output of a UTxO.
-data TxOut crypto =
-  TxOutCompact
-  {-# UNPACK #-} !BSS.ShortByteString
-  {-# UNPACK #-} !Word64
+data TxOut crypto
+  = TxOutCompact
+      {-# UNPACK #-} !BSS.ShortByteString
+      {-# UNPACK #-} !Word64
   deriving (Show, Eq, Generic, Ord, NFData)
 
-pattern TxOut :: Crypto crypto =>
+pattern TxOut ::
+  Crypto crypto =>
   Addr crypto ->
   Coin ->
   TxOut crypto
-pattern TxOut addr coin <- (viewCompactTxOut -> (addr, coin))
+pattern TxOut addr coin <-
+  (viewCompactTxOut -> (addr, coin))
   where
     TxOut addr (Coin coin) =
       TxOutCompact (BSS.toShort $ serialiseAddr addr) (fromIntegral coin)
 
 {-# COMPLETE TxOut #-}
 
-viewCompactTxOut :: forall crypto . Crypto crypto => TxOut crypto -> (Addr crypto, Coin)
+viewCompactTxOut :: forall crypto. Crypto crypto => TxOut crypto -> (Addr crypto, Coin)
 viewCompactTxOut (TxOutCompact bs c) = (addr, coin)
   where
     addr = case deserialiseAddr (BSS.fromShort bs) of
@@ -772,10 +781,10 @@ instance
   FromCBOR (Annotator (WitVKey crypto kr))
   where
   fromCBOR =
-    annotatorSlice $
-      decodeRecordNamed "WitVKey" (const 2) $
-        fmap pure $
-          mkWitVKey <$> fromCBOR <*> decodeSignedDSIGN
+    annotatorSlice
+      $ decodeRecordNamed "WitVKey" (const 2)
+      $ fmap pure
+      $ mkWitVKey <$> fromCBOR <*> decodeSignedDSIGN
     where
       mkWitVKey k sig = WitVKey' k sig (asWitness $ hashKey k)
 
@@ -827,8 +836,9 @@ instance
     unless
       (null missingFields)
       (fail $ "missing required transaction component(s): " <> show missingFields)
-    pure $
-      Annotator $ \fullbytes bytes ->
+    pure
+      $ Annotator
+      $ \fullbytes bytes ->
         (foldr ($) basebody (flip runAnnotator fullbytes . snd <$> mapParts)) {bodyBytes = bytes}
     where
       f ::
