@@ -31,7 +31,10 @@ data TicknEnv = TicknEnv
     ticknEnvHashHeaderNonce :: Nonce
   }
 
-data TicknState = TicknState !Nonce !Nonce
+data TicknState = TicknState
+  { ticknStateEpochNonce :: !Nonce,
+    ticknStatePrevHashNonce :: !Nonce
+  }
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks TicknState
@@ -82,6 +85,7 @@ tickTransition = do
     if newEpoch
       then
         TicknState
-          (ηc ⭒ ηh ⭒ _extraEntropy pp)
-          ηph
+          { ticknStateEpochNonce = (ηc ⭒ ηh ⭒ _extraEntropy pp),
+            ticknStatePrevHashNonce = ηph
+          }
       else st

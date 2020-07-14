@@ -322,4 +322,4 @@ updateChainDepState
               csProtocol,
               bh
             )
-      STS.Tickn.TicknState _ epochNonce = csTickn
+      epochNonce = STS.Tickn.ticknStateEpochNonce csTickn
