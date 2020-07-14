@@ -66,7 +66,7 @@ instance SneakilyContainResult Seed where
   type Payload Seed = Seed
   sneakilyExtractResult s sk =
     OutputVRF
-      . getHash
+      . hashToBytes
       . hashWithSerialiser @MD5 id
       $ toCBOR s <> toCBOR sk
   unsneakilyExtractPayload = id
@@ -138,7 +138,7 @@ evalVRF' a sk@(SignKeyFakeVRF n) =
   let y = sneakilyExtractResult a sk
       p = unsneakilyExtractPayload a
       realValue =
-        fromIntegral . fromHash
+        fromIntegral . bytesToNatural . hashToBytes
           . hashWithSerialiser @MD5 id
           $ toCBOR p <> toCBOR sk
    in (y, CertFakeVRF n realValue)

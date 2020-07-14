@@ -5,32 +5,39 @@
 {-# LANGUAGE TypeOperators #-}
 
 -- | An approach to computing the abstract size of data using 'TypeRep'.
---
 module Data.AbstractSize
-  ( HasTypeReps
-  , typeReps
-  , abstractSize
-  , AccountingMap
-  , Size
-  ) where
+  ( HasTypeReps,
+    typeReps,
+    abstractSize,
+    AccountingMap,
+    Size,
+  )
+where
 
+import Cardano.Crypto.DSIGN.Class (SignedDSIGN (SignedDSIGN), VerKeyDSIGN)
+import Cardano.Crypto.DSIGN.Mock (MockDSIGN, SigDSIGN (SigMockDSIGN))
+import Cardano.Crypto.Hash (Hash, hashToBytes)
+import Cardano.Crypto.Hash.Short (ShortHash)
 import qualified Crypto.Hash as Crypto
 import qualified Data.ByteString as BS
-import           Data.Map.Strict (Map)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Sequence (Seq, empty, (<|), (><))
+import Data.Sequence (Seq, empty, (<|), (><))
 import qualified Data.Sequence as Seq
-import           Data.Set (Set)
-import           Data.Typeable (TypeRep, Typeable, typeOf)
-import           Data.Word (Word16, Word32, Word64, Word8)
-import           GHC.Generics ((:*:) ((:*:)), (:+:) (L1, R1), Generic, K1 (K1), M1 (M1), Rep,
-                     U1 (U1), from)
-import           GHC.Natural (Natural)
-
-import           Cardano.Crypto.DSIGN.Class (SignedDSIGN (SignedDSIGN), VerKeyDSIGN)
-import           Cardano.Crypto.DSIGN.Mock (MockDSIGN, SigDSIGN (SigMockDSIGN))
-import           Cardano.Crypto.Hash (Hash(..))
-import           Cardano.Crypto.Hash.Short (ShortHash)
+import Data.Set (Set)
+import Data.Typeable (TypeRep, Typeable, typeOf)
+import Data.Word (Word16, Word32, Word64, Word8)
+import GHC.Generics
+  ( Generic,
+    K1 (K1),
+    M1 (M1),
+    Rep,
+    U1 (U1),
+    from,
+    (:*:) ((:*:)),
+    (:+:) (L1, R1),
+  )
+import GHC.Natural (Natural)
 
 -- | @abstractSize m a@ computes the abstract size of @a@, using the accounting
 -- map @m@. The map @m@ determines the abstract size of each 'TypeRep'
@@ -55,7 +62,6 @@ import           Cardano.Crypto.Hash.Short (ShortHash)
 --
 -- >>> abstractSize [(typeOf (undefined :: [Int]), 3), (typeOf (1 :: Int), -1)] ([0, 1, 2] :: [Int])
 -- 0
---
 abstractSize :: HasTypeReps a => AccountingMap -> a -> Size
 abstractSize m a = sum $ fmap cost trs
   where
@@ -63,6 +69,7 @@ abstractSize m a = sum $ fmap cost trs
     cost t = Map.findWithDefault 0 t m
 
 type Size = Int
+
 type AccountingMap = Map TypeRep Size
 
 --------------------------------------------------------------------------------
@@ -102,15 +109,15 @@ type AccountingMap = Map TypeRep Size
 -- >>> instance HasTypeReps Foo
 -- >>> typeReps $ Foo [1, 2] ('a', 'b')
 -- fromList [Foo,[Int],Int,Int,(Char,Char),Char,Char]
---
 class HasTypeReps a where
   typeReps :: a -> Seq TypeRep
-
-  default typeReps
-    :: ( Generic a
-       , GHasTypeReps (Rep a)
-       , Typeable a
-       ) => a -> Seq TypeRep
+  default typeReps ::
+    ( Generic a,
+      GHasTypeReps (Rep a),
+      Typeable a
+    ) =>
+    a ->
+    Seq TypeRep
   typeReps a = typeOf a <| gTypeReps (from a)
 
 class GHasTypeReps f where
@@ -135,11 +142,11 @@ instance (GHasTypeReps a, GHasTypeReps b) => GHasTypeReps (a :+: b) where
 
 -- | We do need to do anything for the metadata.
 instance (GHasTypeReps a) => GHasTypeReps (M1 i c a) where
-    gTypeReps (M1 x) = gTypeReps x
+  gTypeReps (M1 x) = gTypeReps x
 
 -- | And the only interesting case, get the type of a type constructor
 instance (HasTypeReps a) => GHasTypeReps (K1 i a) where
-    gTypeReps (K1 x) = typeReps x
+  gTypeReps (K1 x) = typeReps x
 
 --------------------------------------------------------------------------------
 -- HasTypeReps instances
@@ -154,11 +161,14 @@ instance (Typeable a, HasTypeReps a) => HasTypeReps [a] where
 instance (Typeable a, HasTypeReps a) => HasTypeReps (Set a) where
   typeReps xs = typeOf xs <| foldMap typeReps xs
 
-instance ( Typeable a
-         , Typeable b
-         , HasTypeReps a
-         , HasTypeReps b
-         ) => HasTypeReps (a, b) where
+instance
+  ( Typeable a,
+    Typeable b,
+    HasTypeReps a,
+    HasTypeReps b
+  ) =>
+  HasTypeReps (a, b)
+  where
   typeReps t@(a, b) = typeOf t <| (typeReps a >< typeReps b)
 
 instance HasTypeReps Bool where
@@ -207,8 +217,8 @@ instance HasTypeReps (SignedDSIGN MockDSIGN a) where
   -- A mock signature consists of a 'ByteString' (which is in turn a short hash)
   -- and a 'Word64'. For the 'ByteString' representation we return one character
   -- per byte.
-  typeReps (SignedDSIGN (SigMockDSIGN (UnsafeHash bs) i)) =
-    typeOf i <| Seq.replicate (BS.length bs) (typeOf (undefined :: Char))
+  typeReps (SignedDSIGN (SigMockDSIGN h i)) =
+    typeOf i <| Seq.replicate (BS.length (hashToBytes h)) (typeOf (undefined :: Char))
 
 instance HasTypeReps (VerKeyDSIGN MockDSIGN) where
   -- A mock verification key is just an 'Int'.

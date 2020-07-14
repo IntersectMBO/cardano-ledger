@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Utils
     epochFromSlotNo,
     evolveKESUntil,
     slotFromEpoch,
+    mkHash,
     mkKeyPair,
     mkKeyPair',
     mkGenKey,
@@ -34,7 +35,13 @@ where
 
 import Cardano.Binary (ToCBOR (..))
 import Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
-import Cardano.Crypto.Hash (Hash (UnsafeHash), HashAlgorithm, MD5, hash)
+import Cardano.Crypto.Hash
+  ( Hash,
+    HashAlgorithm,
+    MD5,
+    hashToBytes,
+    hashWithSerialiser,
+  )
 import Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
@@ -65,7 +72,13 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, updateKES, vKey, pattern KeyPair)
+import Shelley.Spec.Ledger.Keys
+  ( KeyRole (..),
+    hashKey,
+    updateKES,
+    vKey,
+    pattern KeyPair,
+  )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
@@ -98,7 +111,7 @@ mkSeedFromWords ::
   (Word64, Word64, Word64, Word64, Word64) ->
   Seed
 mkSeedFromWords stuff =
-  mkSeedFromBytes . coerce $ hash @MD5 stuff
+  mkSeedFromBytes . hashToBytes $ hashWithSerialiser @MD5 toCBOR stuff
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN h, VKeyGenesis h)
@@ -231,3 +244,6 @@ applySTSTest ctx =
         { asoAssertions = AssertionsAll,
           asoValidation = ValidateAll
         }
+
+mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
+mkHash i = coerce (hashWithSerialiser @h toCBOR i)

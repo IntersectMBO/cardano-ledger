@@ -102,14 +102,12 @@ module Test.Shelley.Spec.Ledger.Examples
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
-import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (asks)
 import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString.Char8 as BS (pack)
-import Data.Coerce (coerce)
 import Data.List (foldl')
 import qualified Data.List
 import Data.Map.Strict (Map)
@@ -180,7 +178,6 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
     asWitness,
     coerceKeyRole,
-    hash,
     hashKey,
     vKey,
   )
@@ -524,7 +521,7 @@ alicePoolParams =
 --  When this transition actually occurs, the consensus layer will do the work of making
 --  sure that the hash gets translated across the fork
 lastByronHeaderHash :: forall proxy h. HashAlgorithm h => proxy h -> HashHeader h
-lastByronHeaderHash _ = HashHeader $ coerce (hash 0 :: Hash (ConcreteCrypto h) Int)
+lastByronHeaderHash _ = HashHeader $ mkHash 0
 
 nonce0 :: HashAlgorithm h => proxy h -> Nonce
 nonce0 p = hashHeaderToNonce (lastByronHeaderHash p)

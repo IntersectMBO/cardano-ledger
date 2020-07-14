@@ -22,7 +22,7 @@ import Cardano.Binary
     toCBOR,
   )
 import Cardano.Crypto.DSIGN (encodeSignedDSIGN, encodeVerKeyDSIGN)
-import Cardano.Crypto.Hash (HashAlgorithm, getHash)
+import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
@@ -105,8 +105,8 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
     asWitness,
     encodeSignedKES,
-    hash,
     hashKey,
+    hashWithSerialiser,
     sKey,
     signedDSIGN,
     signedKES,
@@ -289,19 +289,19 @@ checkEncodingCBORCBORGroup name x t =
    in checkEncoding toCBORGroup d name x t
 
 getRawKeyHash :: KeyHash h 'Payment -> ByteString
-getRawKeyHash (KeyHash hsh) = getHash hsh
+getRawKeyHash (KeyHash hsh) = Monomorphic.hashToBytes hsh
 
 getRawGenKeyHash :: KeyHash h 'Genesis -> ByteString
-getRawGenKeyHash (KeyHash hsh) = getHash hsh
+getRawGenKeyHash (KeyHash hsh) = Monomorphic.hashToBytes hsh
 
 getRawScriptHash :: ScriptHash h -> ByteString
-getRawScriptHash (ScriptHash hsh) = getHash hsh
+getRawScriptHash (ScriptHash hsh) = Monomorphic.hashToBytes hsh
 
 getRawTxId :: TxId h -> ByteString
-getRawTxId = getHash . _unTxId
+getRawTxId = Monomorphic.hashToBytes . _unTxId
 
 getRawNonce :: Nonce -> ByteString
-getRawNonce (Nonce hsh) = getHash hsh
+getRawNonce (Nonce hsh) = Monomorphic.hashToBytes hsh
 getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
 
 testGKey :: GenesisKeyPair h
@@ -417,7 +417,7 @@ testScriptHash2 = hashScript (testScript2 p)
     p = Proxy
 
 testHeaderHash :: forall proxy h. proxy h -> HashAlgorithm h => HashHeader h
-testHeaderHash _ = HashHeader $ coerce (hash 0 :: Hash (ConcreteCrypto h) Int)
+testHeaderHash _ = HashHeader $ coerce (hashWithSerialiser toCBOR 0 :: Hash (ConcreteCrypto h) Int)
 
 testBHB :: forall proxy h. HashAlgorithm h => proxy h -> BHBody h
 testBHB p =

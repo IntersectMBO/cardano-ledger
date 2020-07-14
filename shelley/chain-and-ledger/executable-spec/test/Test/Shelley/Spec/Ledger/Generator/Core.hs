@@ -52,6 +52,7 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   )
 where
 
+import Cardano.Binary (toCBOR)
 import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪))
@@ -185,6 +186,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
+import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
   ( epochFromSlotNo,
     evolveKESUntil,
@@ -602,7 +604,8 @@ genesisId ::
   (Crypto c) => Ledger.TxId c
 genesisId =
   TxId $
-    Hash.hash
+    Hash.hashWithSerialiser
+      toCBOR
       ( TxBody
           Set.empty
           StrictSeq.Empty

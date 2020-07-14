@@ -56,7 +56,7 @@ import Cardano.Binary
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
-import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError, parseBase16)
+import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError, panic, parseBase16)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
@@ -70,6 +70,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldl')
+import Data.Maybe (fromMaybe)
 import Data.String (fromString)
 import qualified Data.Text.Encoding as Text
 import GHC.Generics (Generic)
@@ -303,10 +304,14 @@ getRewardAcnt = do
       pure $ RewardAcnt network cred
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
-getHash = Hash.UnsafeHash <$> B.getByteString (fromIntegral $ Hash.sizeHash ([] @h))
+getHash = do
+  bytes <- B.getByteString . fromIntegral $ Hash.sizeHash ([] @h)
+  case Hash.hashFromBytes bytes of
+    Nothing -> fail "getHash: implausible hash length mismatch"
+    Just h -> pure h
 
 putHash :: Hash.Hash h a -> Put
-putHash (Hash.UnsafeHash b) = B.putByteString b
+putHash = B.putByteString . Hash.hashToBytes
 
 getPayCred :: Crypto crypto => Word8 -> Get (PaymentCredential crypto)
 getPayCred header = case testBit header payCredIsScript of
@@ -419,12 +424,15 @@ instance NoUnexpectedThunks (BootstrapAddress crypto)
 
 bootstrapKeyHash ::
   forall crypto.
+  -- TODO: enforce this constraint
   --(HASH crypto ~ Hash.Blake2b_224) =>
+  Crypto crypto =>
   BootstrapAddress crypto ->
   KeyHash 'Payment crypto
 bootstrapKeyHash (BootstrapAddress byronAddress) =
-  --TODO: this constructs an invalid hash when the hash algorithm has a different hash length
-  -- from Hash.Blake2b_224)
   let root = Byron.addrRoot byronAddress
       bytes = Byron.abstractHashToBytes root
-   in KeyHash (Hash.UnsafeHash bytes)
+      hash =
+        fromMaybe (panic "bootstrapKeyHash: incorrect hash length") $
+          Hash.hashFromBytes bytes
+   in KeyHash hash

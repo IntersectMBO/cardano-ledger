@@ -74,6 +74,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
+import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude
   ( AllowThunksIn (..),
@@ -236,7 +237,7 @@ bbHash (TxSeq' _ bodies wits md) =
     -- This should be directly hashing the provided bytes with no funny business.
     hashStrict :: ByteString -> Hash crypto ByteString
     hashStrict = Hash.hashWithSerialiser encodePreEncoded
-    hashPart = Hash.getHash . hashStrict . BSL.toStrict
+    hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
 -- | HashHeader to Nonce
 hashHeaderToNonce :: HashHeader crypto -> Nonce
@@ -396,6 +397,12 @@ data BHBody crypto = BHBody
     bprotver :: !ProtVer
   }
   deriving (Show, Eq, Generic)
+
+instance
+  Crypto crypto =>
+  SignableRepresentation (BHBody crypto)
+  where
+  getSignableRepresentation = serialize'
 
 instance
   Crypto crypto =>
@@ -619,12 +626,12 @@ mkSeed ucNonce (SlotNo slot) eNonce =
           Nonce h -> Hash.xor (Hash.castHash h)
       )
     . Hash.castHash
-    . Hash.hashRaw id
+    . Hash.hashWith id
     . runByteBuilder (8 + 32)
     $ BS.word64BE slot
       <> ( case eNonce of
              NeutralNonce -> mempty
-             Nonce h -> BS.byteStringCopy (Hash.getHash h)
+             Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
          )
 
 -- | Check that the certified input natural is valid for being slot leader. This

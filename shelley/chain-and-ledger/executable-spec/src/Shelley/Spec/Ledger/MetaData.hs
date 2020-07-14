@@ -37,7 +37,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Keys (Hash, hash)
+import Shelley.Spec.Ledger.Keys (Hash, hashWithSerialiser)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | A generic metadatum type.
@@ -132,4 +132,4 @@ hashMetaData ::
   Crypto crypto =>
   MetaData ->
   MetaDataHash crypto
-hashMetaData = MetaDataHash . hash
+hashMetaData = MetaDataHash . hashWithSerialiser toCBOR

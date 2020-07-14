@@ -25,9 +25,6 @@ import qualified Cardano.Crypto.Wallet as Byron
 import Cardano.Prelude
   ( ByteString,
   )
-import Data.Coerce
-  ( coerce,
-  )
 import Data.Either (fromRight)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
@@ -51,10 +48,10 @@ import Shelley.Spec.Ledger.Credential
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
-    KeyHash (..),
     KeyRole (..),
     VKey (..),
     coerceKeyRole,
+    hashKey,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( PPUPState (..),
@@ -223,9 +220,9 @@ aliceBadWitness =
     (Byron.addrAttributes aliceByronAddr)
 
 bobAddr :: Addr C
-bobAddr = Addr Testnet (KeyHashObj $ coerce someHash) StakeRefNull
+bobAddr = Addr Testnet (KeyHashObj k) StakeRefNull
   where
-    someHash = "someHash" :: ByteString
+    k = coerceKeyRole $ hashKey aliceVKey
 
 coinsToBob :: Coin
 coinsToBob = 1000

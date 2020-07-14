@@ -24,10 +24,6 @@ where
 
 import Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto.Hash.Class as Crypto
-  ( Hash (..),
-    castHash,
-    hashRaw,
-  )
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Prelude (NoUnexpectedThunks)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -211,7 +207,7 @@ initialFundsPseudoTxIn addr =
               Crypto.Hash (HASH c) (Addr c) ->
               Crypto.Hash (HASH c) (TxBody c)
           )
-        . Crypto.hashRaw serialiseAddr
+        . Crypto.hashWith serialiseAddr
 
 {-------------------------------------------------------------------------------
   Genesis validation
