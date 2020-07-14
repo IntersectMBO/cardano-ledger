@@ -130,6 +130,9 @@ import Test.QuickCheck
     shrink,
   )
 import Test.QuickCheck.Hedgehog (hedgehog)
+import Test.Shelley.Spec.Ledger.Address.Bootstrap
+  ( genXSignature,
+  )
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Mock
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( KeySpace (KeySpace_),
@@ -278,7 +281,7 @@ instance Arbitrary (SignedDSIGN MockDSIGN a) where
 instance HashAlgorithm h => Arbitrary (Mock.BootstrapWitness h) where
   arbitrary = do
     key <- arbitrary
-    sig <- arbitrary
+    sig <- genXSignature
     chainCode <- ChainCode <$> arbitrary
     padding <- KeyPadding <$> arbitrary <*> arbitrary
     pure $ BootstrapWitness key sig chainCode padding

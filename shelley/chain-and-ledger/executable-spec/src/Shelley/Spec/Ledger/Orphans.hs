@@ -2,7 +2,8 @@
 
 module Shelley.Spec.Ledger.Orphans where
 
-import Cardano.Prelude (NFData (rnf), NoUnexpectedThunks, readEither)
+import qualified Cardano.Crypto.Wallet as WC
+import Cardano.Prelude (NFData (rnf), NoUnexpectedThunks (..), readEither)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Data.Aeson
 import Data.Foldable
@@ -54,3 +55,7 @@ instance NFData (StrictSeq a) where
 instance NFData a => NFData (WithOrigin a)
 
 instance NFData BlockNo
+
+instance NoUnexpectedThunks WC.XSignature where
+  whnfNoUnexpectedThunks ctxt s = whnfNoUnexpectedThunks ctxt (WC.unXSignature s)
+  showTypeOf _proxy = "XSignature"

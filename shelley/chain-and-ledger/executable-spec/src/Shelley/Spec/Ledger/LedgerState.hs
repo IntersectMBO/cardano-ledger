@@ -115,7 +115,11 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash)
-import Shelley.Spec.Ledger.Address.Bootstrap (bootstrapWitKeyHash)
+import Shelley.Spec.Ledger.Address.Bootstrap
+  ( BootstrapWitness (..),
+    bootstrapWitKeyHash,
+    verifyBootstrapWit,
+  )
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     ShelleyBase,
@@ -854,16 +858,21 @@ verifiedWits ::
   Tx crypto ->
   Either [VKey 'Witness crypto] ()
 verifiedWits (Tx txbody wits _) =
-  case null failed of
-    True -> Right ()
-    False ->
-      Left $
-        fmap (\(WitVKey vk _) -> vk) failed
+  case (failed <> failedBootstrap) of
+    [] -> Right ()
+    nonEmpty -> Left nonEmpty
   where
+    wvkKey (WitVKey k _) = k
     failed =
-      filter
-        (not . verifyWitVKey (hashWithSerialiser toCBOR txbody))
-        (Set.toList $ addrWits wits)
+      wvkKey
+        <$> filter
+          (not . verifyWitVKey (hashWithSerialiser toCBOR txbody))
+          (Set.toList $ addrWits wits)
+    failedBootstrap =
+      bwKey
+        <$> filter
+          (not . verifyBootstrapWit (hashWithSerialiser toCBOR txbody))
+          (Set.toList $ bootWits wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
