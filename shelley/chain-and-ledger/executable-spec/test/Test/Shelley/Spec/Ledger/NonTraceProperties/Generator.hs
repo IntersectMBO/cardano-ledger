@@ -47,13 +47,13 @@ import Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern StakeRefBase)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
+    genesisState,
     _delegationState,
     _dstate,
     _genDelegs,
     _stkCreds,
     _utxo,
     _utxoState,
-    genesisState,
   )
 import Shelley.Spec.Ledger.PParams (PParams, emptyPParams)
 import Shelley.Spec.Ledger.STS.Delegs

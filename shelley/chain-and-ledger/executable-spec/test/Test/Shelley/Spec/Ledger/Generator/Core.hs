@@ -60,7 +60,7 @@ import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Data.Coerce (coerce)
 import Data.List (foldl')
-import qualified Data.List as List ((\\), find, findIndex)
+import qualified Data.List as List (find, findIndex, (\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -110,6 +110,8 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
+    depositPoolChange,
+    reapRewards,
     _delegationState,
     _deposited,
     _dstate,
@@ -117,8 +119,6 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
     _utxo,
     _utxoState,
-    depositPoolChange,
-    reapRewards,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCertSignable (..), pattern OCert)
 import Shelley.Spec.Ledger.PParams
@@ -132,11 +132,11 @@ import Shelley.Spec.Ledger.Scripts
     pattern RequireSignature,
   )
 import Shelley.Spec.Ledger.Slot
-  ( (*-),
-    BlockNo (..),
+  ( BlockNo (..),
     Duration (..),
     SlotNo (..),
     epochInfoFirst,
+    (*-),
   )
 import Shelley.Spec.Ledger.Tx
   ( hashScript,
@@ -147,9 +147,9 @@ import Shelley.Spec.Ledger.Tx
   )
 import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.TxData
-  ( _txfee,
+  ( unWdrl,
+    _txfee,
     _wdrls,
-    unWdrl,
     pattern Wdrl,
   )
 import Shelley.Spec.Ledger.UTxO

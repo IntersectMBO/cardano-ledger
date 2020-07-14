@@ -95,7 +95,7 @@ import Cardano.Prelude
   )
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Control.Monad (unless)
-import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (explicitParseField)
 import Data.ByteString (ByteString)
@@ -781,10 +781,10 @@ instance
   FromCBOR (Annotator (WitVKey crypto kr))
   where
   fromCBOR =
-    annotatorSlice
-      $ decodeRecordNamed "WitVKey" (const 2)
-      $ fmap pure
-      $ mkWitVKey <$> fromCBOR <*> decodeSignedDSIGN
+    annotatorSlice $
+      decodeRecordNamed "WitVKey" (const 2) $
+        fmap pure $
+          mkWitVKey <$> fromCBOR <*> decodeSignedDSIGN
     where
       mkWitVKey k sig = WitVKey' k sig (asWitness $ hashKey k)
 
@@ -836,10 +836,10 @@ instance
     unless
       (null missingFields)
       (fail $ "missing required transaction component(s): " <> show missingFields)
-    pure
-      $ Annotator
-      $ \fullbytes bytes ->
-        (foldr ($) basebody (flip runAnnotator fullbytes . snd <$> mapParts)) {bodyBytes = bytes}
+    pure $
+      Annotator $
+        \fullbytes bytes ->
+          (foldr ($) basebody (flip runAnnotator fullbytes . snd <$> mapParts)) {bodyBytes = bytes}
     where
       f ::
         Int ->

@@ -30,15 +30,15 @@ import Shelley.Spec.Ledger.Delegation.Certificates (unPoolDistr)
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..), Stake (..), poolStake)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Shelley.Spec.Ledger.LedgerState
-  ( _utxo,
-    _utxoState,
-    esLState,
+  ( esLState,
     esNonMyopic,
     esPp,
     nesEL,
     nesEs,
     nesOsched,
     nesPd,
+    _utxo,
+    _utxoState,
   )
 import Shelley.Spec.Ledger.Rewards
   ( NonMyopic (..),
