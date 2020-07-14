@@ -4,27 +4,39 @@ module Shelley.Spec.Ledger.API.Wallet
   ( getNonMyopicMemberRewards,
     getUTxO,
     getFilteredUTxO,
+    getLeaderSchedule,
   )
 where
 
+import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Slotting.EpochInfo (epochInfoRange)
+import Cardano.Slotting.Slot (SlotNo)
+import Data.Functor.Identity (runIdentity)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
 import Shelley.Spec.Ledger.API.Validation (ShelleyState)
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..))
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed)
+import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
+import Shelley.Spec.Ledger.Crypto (Crypto (VRF))
+import Shelley.Spec.Ledger.Delegation.Certificates (unPoolDistr)
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..), Stake (..), poolStake)
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Shelley.Spec.Ledger.LedgerState
   ( esLState,
     esNonMyopic,
     esPp,
+    nesEL,
     nesEs,
+    nesOsched,
+    nesPd,
     _utxo,
     _utxoState,
   )
@@ -36,6 +48,7 @@ import Shelley.Spec.Ledger.Rewards
     nonMyopicStake,
     percentile',
   )
+import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxData (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
@@ -101,3 +114,36 @@ getFilteredUTxO ss addrs =
   UTxO $ Map.filter (\(TxOut addr _) -> addr `Set.member` addrs) fullUTxO
   where
     UTxO fullUTxO = getUTxO ss
+
+-- | Get the (private) leader schedule for this epoch.
+--
+--   Given a private VRF key, returns the set of slots in which this node is
+--   eligible to lead.
+getLeaderSchedule ::
+  ( Crypto crypto,
+    VRF.Signable
+      (VRF crypto)
+      Seed
+  ) =>
+  Globals ->
+  ShelleyState crypto ->
+  ChainDepState crypto ->
+  KeyHash 'StakePool crypto ->
+  SignKeyVRF crypto ->
+  Set SlotNo
+getLeaderSchedule globals ss cds poolHash key = Set.filter isLeader epochSlots
+  where
+    isLeader slotNo =
+      let y = VRF.evalCertified () (mkSeed seedL slotNo epochNonce) key
+       in Map.notMember slotNo overlaySched
+            && checkLeaderValue (VRF.certifiedOutput y) stake f
+    stake = maybe 0 fst $ Map.lookup poolHash poolDistr
+    overlaySched = nesOsched ss
+    poolDistr = unPoolDistr $ nesPd ss
+    TicknState epochNonce _ = csTickn cds
+    currentEpoch = nesEL ss
+    ei = epochInfo globals
+    f = activeSlotCoeff globals
+    epochSlots = Set.fromList [a .. b]
+      where
+        (a, b) = runIdentity $ epochInfoRange ei currentEpoch
