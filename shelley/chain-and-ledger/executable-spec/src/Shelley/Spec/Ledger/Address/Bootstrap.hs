@@ -176,7 +176,7 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) (KeyPadding pr
     hash_SHA3_256 :: ByteString -> ByteString
     hash_SHA3_256 = Hash.digest (Proxy :: Proxy Hash.SHA3_256)
     hash_crypto :: ByteString -> Hash.Hash (ADDRHASH crypto) a
-    hash_crypto = coerce . Hash.hashWith @(ADDRHASH crypto) id
+    hash_crypto = Hash.castHash . Hash.hashWith @(ADDRHASH crypto) id
 
 -- | This calculates the key padding of a Byron address by serializing the
 -- relevant parts.
