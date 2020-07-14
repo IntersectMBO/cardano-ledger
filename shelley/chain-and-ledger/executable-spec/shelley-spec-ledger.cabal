@@ -247,7 +247,13 @@ benchmark mainbench
                     Test.Shelley.Spec.Ledger.Generator.Core,
                     Test.Shelley.Spec.Ledger.Orphans,
                     Test.Shelley.Spec.Ledger.Utils,
-                    Test.Cardano.Crypto.VRF.Fake
+                    Test.Cardano.Crypto.VRF.Fake,
+                    Test.Shelley.Spec.Ledger.Generator.Delegation,
+                    Test.Shelley.Spec.Ledger.Generator.Presets,
+                    Test.Shelley.Spec.Ledger.Generator.Trace.DCert,
+                    Test.Shelley.Spec.Ledger.Generator.Update,
+                    Test.Shelley.Spec.Ledger.Generator.Utxo,
+                    Shelley.Spec.Ledger.Bench.Gen
   build-depends:    base,
                     shelley-spec-ledger,
                     cardano-binary,
