@@ -35,11 +35,6 @@ shrinkTx ::
 shrinkTx (Tx _b _ws _md) =
   [Tx b' _ws _md | b' <- shrinkTxBody _b]
 
-{- TODO @uroboros write shrinker that shrinks to valid transactions
-[ Tx b ws' wm | ws' <- shrinkSet shrinkWitVKey ws ] ++
-[ Tx b ws wm' | wm' <- shrinkMap shrinkScriptHash shrinkMultiSig wm ]
--}
-
 shrinkTxBody :: Crypto crypto => TxBody crypto -> [TxBody crypto]
 shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
