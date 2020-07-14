@@ -12,6 +12,7 @@ where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Slotting.Slot (WithOrigin (..))
+import Control.Iterate.SetAlgebra (dom, eval, range)
 import Control.State.Transition.Extended (TRC (..))
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import Data.Coerce (coerce)
@@ -29,7 +30,6 @@ import Shelley.Spec.Ledger.BaseTypes
     (⭒),
   )
 import Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
-import Shelley.Spec.Ledger.Core (dom, range)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, genDelegKeyHash, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
@@ -63,7 +63,7 @@ import Shelley.Spec.Ledger.STS.Ocert (pattern OCertEnv)
 import Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Test.QuickCheck (Gen)
-import qualified Test.QuickCheck as QC (choose, discard, shuffle)
+import qualified Test.QuickCheck as QC (choose, shuffle)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Block,
     ChainState,
@@ -196,7 +196,7 @@ genBlock
         nes' = runShelleyBase $ applySTSTest @(TICK h) $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
 
     case nes' of
-      Left _ -> QC.discard
+      Left pf -> error ("genBlock TICK rule failed - " <> show pf)
       Right _nes' -> do
         let NewEpochState _ _ _ es _ _ _ = _nes'
             EpochState acnt _ ls _ pp' _ = es
@@ -212,7 +212,7 @@ genBlock
             genesisVKHs = Set.map genDelegKeyHash $ range gds
             n' =
               currentIssueNo
-                (OCertEnv (dom poolParams) genesisVKHs)
+                (OCertEnv (eval (dom poolParams)) genesisVKHs)
                 cs
                 ((coerceKeyRole . hashKey . vKey . cold) keys)
             m = getKESPeriodRenewalNo keys kp

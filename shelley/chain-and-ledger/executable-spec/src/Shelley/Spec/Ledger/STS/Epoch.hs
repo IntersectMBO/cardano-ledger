@@ -14,13 +14,13 @@ module Shelley.Spec.Ledger.STS.Epoch
 where
 
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
+import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
-import Shelley.Spec.Ledger.Core ((⨃))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
@@ -114,7 +114,7 @@ epochTransition = do
     trans @(SNAP crypto) $ TRC (ls, ss, ())
 
   let PState _ pParams fPParams _ = pstate
-      ppp = pParams ⨃ fPParams
+      ppp = eval (pParams ⨃ fPParams)
       pstate' =
         pstate
           { _pParams = ppp,

@@ -423,21 +423,18 @@ applySTSInternal ap goRule ctx =
     applySTSInternal' SInitial env =
       goRule env `traverse` initialRules
     applySTSInternal' STransition jc = do
-      !_ <-
-        when (assertPre ap)
-          $! sfor_ (assertions @s)
-          $! ( \case
+      !_ <- when (assertPre ap)
+            (sfor_ (assertions @s) $!
+               \case
                  PreCondition msg cond ->
-                   if not (cond jc)
-                     then
-                       throw
+                   when (not (cond jc))
+                       (throw
                          $! AssertionViolation
                            { avSTS = show $ typeRep (Proxy @s),
                              avMsg = msg,
                              avCtx = jc,
                              avState = Nothing
-                           }
-                     else pure ()
+                           })
                  _ -> pure ()
              )
       res <- goRule jc `traverse` transitionRules

@@ -26,6 +26,9 @@ library
                      , Control.State.Transition.Extended
                      , Control.State.Transition.Simple
                      , Data.AbstractSize
+                     , Control.Iterate.Collect
+                     , Control.Iterate.SetAlgebra
+                     , Control.Iterate.SetAlgebraInternal
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.11 && <5
@@ -35,6 +38,7 @@ library
                      , free
                      , mtl
                      , transformers >= 0.5
+                     , ansi-wl-pprint
                      -- IOHK deps
                      , cardano-crypto-class
                      , cardano-prelude

@@ -212,14 +212,11 @@ relevantCasesAreCoveredForTrace tr = do
             0.1 < withdrawalRatio txs,
             60
           ),
-          -- TODO @uroboros Restore Updates to generated transactions and restore this coverage requirement 60%.
-          -- see https://github.com/input-output-hk/cardano-ledger-specs/issues/1582
-          ( "at least 2% of transactions have non-trivial protocol param updates",
-            0.98 > noPPUpdateRatio (ppUpdatesByTx txs),
-            0
+          ( "at least 5% of transactions have non-trivial protocol param updates",
+            0.95 > noPPUpdateRatio (ppUpdatesByTx txs),
+            60
           ),
-          -- TODO @uroboros increase the occurence (and coverage requirement) of epoch transitions in chain traces
-          ( "at least 2 epoch changes in trace",
+          ( "at least 2 epoch changes in trace, 10% of the time",
             2 <= epochBoundariesInTrace bs,
             10
           )

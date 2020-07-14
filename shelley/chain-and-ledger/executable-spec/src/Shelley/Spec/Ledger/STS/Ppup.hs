@@ -24,6 +24,7 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Iterate.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
@@ -32,7 +33,6 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Core (dom, (⊆), (⨃))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
@@ -133,7 +133,7 @@ ppupTransitionNonEmpty = do
   case up of
     Nothing -> pure $ PPUPState (ProposedPPUpdates pupS) (ProposedPPUpdates fpupS)
     Just (Update (ProposedPPUpdates pup) te) -> do
-      (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup) (dom _genDelegs)
+      eval (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom _genDelegs))
 
       let goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
       let badPVs = Map.filter (not . goodPV) pup
@@ -157,11 +157,11 @@ ppupTransitionNonEmpty = do
           currentEpoch == te ?! PPUpdateWrongEpoch currentEpoch te VoteForThisEpoch
           pure $
             PPUPState
-              (ProposedPPUpdates (pupS ⨃ pup))
+              (ProposedPPUpdates (eval (pupS ⨃ pup)))
               (ProposedPPUpdates fpupS)
         else do
           currentEpoch + 1 == te ?! PPUpdateWrongEpoch currentEpoch te VoteForNextEpoch
           pure $
             PPUPState
               (ProposedPPUpdates pupS)
-              (ProposedPPUpdates (fpupS ⨃ pup))
+              (ProposedPPUpdates (eval (fpupS ⨃ pup)))

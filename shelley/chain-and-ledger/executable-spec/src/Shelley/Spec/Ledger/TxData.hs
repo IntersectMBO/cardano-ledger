@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -90,6 +91,7 @@ import Cardano.Prelude
     catMaybes,
     panic,
   )
+import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -171,6 +173,13 @@ import Shelley.Spec.Ledger.Serialization
     mapToCBOR,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+
+instance HasExp (StakeCreds crypto) (Map (Credential 'Staking crypto) SlotNo) where
+  toExp (StakeCreds x) = Base MapR x
+
+instance Embed (StakeCreds crypto) (Map (Credential 'Staking crypto) SlotNo) where
+  toBase (StakeCreds x) = x
+  fromBase x = (StakeCreds x)
 
 -- | The delegation of one stake key to another.
 data Delegation crypto = Delegation

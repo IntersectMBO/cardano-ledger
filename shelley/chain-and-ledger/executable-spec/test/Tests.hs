@@ -8,6 +8,7 @@ import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTes
 import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (stsTests)
 import Test.Shelley.Spec.Ledger.Serialization (serializationTests)
+import Test.Shelley.Spec.Ledger.SetAlgTests (setAlgTest)
 import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
@@ -29,7 +30,8 @@ mainTests =
       serializationTests,
       stsTests,
       unitTests,
-      genesis
+      genesis,
+      setAlgTest
     ]
 
 nightlyTests :: TestTree
@@ -49,7 +51,8 @@ fastTests =
       cddlTests 1,
       serializationTests,
       stsTests,
-      unitTests
+      unitTests,
+      setAlgTest
     ]
 
 -- main entry point
