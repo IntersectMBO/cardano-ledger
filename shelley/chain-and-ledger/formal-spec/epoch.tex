@@ -450,9 +450,9 @@ This transition has no preconditions and results in the following state change:
       \begin{array}{r@{~\leteq~}l}
         \var{retired} & \dom{(\var{retiring}^{-1}~\var{e})} \\
         \var{pr} & \left\{
-                   \var{kh}\mapsto(\fun{poolDeposit}~\var{pp})
+                   \var{hk}\mapsto(\fun{poolDeposit}~\var{pp})
                      \mid
-                     \var{kh}\in\var{retired}
+                     \var{hk}\in\var{retired}
                    \right\}\\
         \var{rewardAcnts}
                  & \{\var{hk}\mapsto \fun{poolRAcnt}~\var{pool} \mid
@@ -495,6 +495,7 @@ This transition has no preconditions and results in the following state change:
           ~ \\
           \var{stpools} \\
           \var{poolParams} \\
+          \var{fPoolParams} \\
           \var{retiring} \\
         \end{array}
       \right)
@@ -521,6 +522,7 @@ This transition has no preconditions and results in the following state change:
           ~ \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{stpools}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{poolParams}} \\
+          \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{fPoolParams}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
         \end{array}
       \right)

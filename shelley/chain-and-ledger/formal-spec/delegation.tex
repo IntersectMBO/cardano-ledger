@@ -796,7 +796,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       & \var{pool} \leteq \poolParam{c}
       \\
       hk \notin \dom \var{stpools}
-      & \fun{poolCost}~\var{pool}\leq\fun{minPoolCost}~\var{pp}
+      & \fun{poolCost}~\var{pool}\geq\fun{minPoolCost}~\var{pp}
     }
     {
       \begin{array}{r}
@@ -834,7 +834,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       & \var{pool} \leteq \poolParam{c}
       \\
       hk \in \dom \var{stpools}
-      & \fun{poolCost}~\var{pool}\leq\fun{minPoolCost}~\var{pp}
+      & \fun{poolCost}~\var{pool}\geq\fun{minPoolCost}~\var{pp}
     }
     {
       \begin{array}{r}
