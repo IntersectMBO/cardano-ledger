@@ -8,6 +8,7 @@
 module Test.Shelley.Spec.Ledger.Rules.TestPool where
 
 import Cardano.Crypto.Hash (ShortHash)
+import Control.Iterate.SetAlgebra (dom, eval, (∈), (∉))
 import Control.State.Transition (Environment, State)
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
@@ -22,7 +23,6 @@ import qualified Data.Maybe as Maybe (maybe)
 import qualified Data.Set as S
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes ((==>))
-import Control.Iterate.SetAlgebra (eval, dom, (∈), (∉))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
@@ -95,8 +95,8 @@ rewardZeroAfterReg ssts =
         case poolCWitness c of
           KeyHashObj certWit ->
             let StakePools stp = getStPools p'
-             in ( eval(certWit ∈ dom stp)
-                    && eval(certWit ∉ dom (getRetiring p'))
+             in ( eval (certWit ∈ dom stp)
+                    && eval (certWit ∉ dom (getRetiring p'))
                 )
           _ -> False
     registeredPoolNotRetiring _ = True
@@ -130,8 +130,8 @@ poolRetireInEpoch env ssts =
              in ( cepoch < e
                     && e < EpochNo (ce + emax')
                 )
-                  ==> ( eval(certWit ∈ dom stp)
-                          && eval(certWit ∈ dom stp')
+                  ==> ( eval (certWit ∈ dom stp)
+                          && eval (certWit ∈ dom stp')
                           && Maybe.maybe False ((== cepoch) . epochFromSlotNo) (stp' !? certWit)
                       )
           _ -> False
@@ -162,12 +162,12 @@ registeredPoolIsAdded env ssts =
 
           conjoin
             [ -- If this is a pool re-registration (indicated by presence in `stPools`)...
-              if eval(hk ∈ dom ((unStakePools . _stPools) sSt))
+              if eval (hk ∈ dom ((unStakePools . _stPools) sSt))
                 then
                   conjoin
                     [ counterexample
                         "Pool re-registration: pool should not be in 'retiring' after signal"
-                        ((eval(hk ∉ dom (_retiring tSt)))::Bool),
+                        ((eval (hk ∉ dom (_retiring tSt))) :: Bool),
                       counterexample
                         "PoolParams are registered in future Params map"
                         (M.lookup hk (_fPParams tSt) === Just poolParams)
@@ -209,10 +209,10 @@ poolIsMarkedForRetirement ssts =
           conjoin
             [ counterexample
                 "hk not in stPools"
-                ((eval(hk ∈ dom ((unStakePools . _stPools) (source sst)))) :: Bool),
+                ((eval (hk ∈ dom ((unStakePools . _stPools) (source sst)))) :: Bool),
               counterexample
                 "hk is not in target's retiring"
-                ((eval(hk ∈ dom (_retiring $ target sst))) :: Bool)
+                ((eval (hk ∈ dom (_retiring $ target sst))) :: Bool)
             ]
 
 -- | Assert that PState maps are in sync with each other after each `Signal

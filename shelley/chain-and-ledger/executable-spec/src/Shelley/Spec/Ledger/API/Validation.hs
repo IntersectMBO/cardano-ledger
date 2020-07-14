@@ -19,13 +19,13 @@ where
 
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
+import Control.Iterate.SetAlgebra (dom, eval)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (TRC (..), applySTS, reapplySTS)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.BlockChain
-import Control.Iterate.SetAlgebra (eval,dom)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
@@ -69,7 +69,7 @@ mkBbodyEnv
       LedgerState.nesEs
     } =
     STS.BbodyEnv
-      { STS.bbodySlots = eval(dom nesOsched),
+      { STS.bbodySlots = eval (dom nesOsched),
         STS.bbodyPp = LedgerState.esPp nesEs,
         STS.bbodyAccount = LedgerState.esAccountState nesEs
       }

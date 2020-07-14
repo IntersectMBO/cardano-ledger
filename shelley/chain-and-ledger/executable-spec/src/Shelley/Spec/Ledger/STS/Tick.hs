@@ -16,13 +16,13 @@ module Shelley.Spec.Ledger.STS.Tick
 where
 
 import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
-import Control.Iterate.SetAlgebra (eval,(⨃))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
@@ -88,7 +88,7 @@ adoptGenesisDelegs es slot = es'
     ds' =
       ds
         { _fGenDelegs = fGenDelegs',
-          _genDelegs = GenDelegs $ eval(genDelegs ⨃ genDelegs')
+          _genDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
         }
     dp' = dp {_dstate = ds'}
     ls' = ls {_delegationState = dp'}

@@ -22,6 +22,7 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (≍), (⋪), (⋫))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
@@ -35,7 +36,6 @@ import Shelley.Spec.Ledger.BaseTypes
     invalidKey,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Control.Iterate.SetAlgebra (eval, (∉), (⋫), range, singleton, setSingleton, (∪), dom, (∈), (⋪), (≍))
 import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
@@ -126,13 +126,12 @@ instance Typeable crypto => STS (DELEG crypto) where
   initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
 
-
   assertions =
     [ PreCondition
         "_stkCreds and _rewards must have the same domain"
         ( \(TRC (_, st, _)) ->
             -- eval(dom(_stkCreds st)) == (Set.map getRwdCred $ domain (_rewards st))
-            eval(dom(_stkCreds st) ≍ dom(Map.mapKeys getRwdCred (_rewards st)))
+            eval (dom (_stkCreds st) ≍ dom (Map.mapKeys getRwdCred (_rewards st)))
         )
     ]
 
@@ -234,26 +233,26 @@ delegationTransition = do
     DCertDeleg (RegKey hk) -> do
       -- note that pattern match is used instead of regCred, as in the spec
       eval (hk ∉ dom (_stkCreds ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
-      eval ((RewardAcnt network hk)  ∉  dom(_rewards ds)) ?! StakeKeyInRewardsDELEG hk
+      eval ((RewardAcnt network hk) ∉ dom (_rewards ds)) ?! StakeKeyInRewardsDELEG hk
 
       pure $
         ds
-          { _stkCreds = eval( _stkCreds ds ∪ (singleton hk slot)),
-            _rewards  = eval( _rewards ds  ∪ (singleton (RewardAcnt network hk) (Coin 0) )),
-            _ptrs     = eval( _ptrs ds     ∪ (singleton ptr hk))
+          { _stkCreds = eval (_stkCreds ds ∪ (singleton hk slot)),
+            _rewards = eval (_rewards ds ∪ (singleton (RewardAcnt network hk) (Coin 0))),
+            _ptrs = eval (_ptrs ds ∪ (singleton ptr hk))
           }
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
-      eval( hk ∈ dom (_stkCreds ds) ) ?! StakeKeyNotRegisteredDELEG hk
+      eval (hk ∈ dom (_stkCreds ds)) ?! StakeKeyNotRegisteredDELEG hk
 
       let rewardCoin = Map.lookup (RewardAcnt network hk) (_rewards ds)
       rewardCoin == Just 0 ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
 
       pure $
         ds
-          { _stkCreds = eval(setSingleton hk ⋪ _stkCreds ds),
-            _rewards = eval(setSingleton (RewardAcnt network hk) ⋪ _rewards ds),
-            _delegations = eval(setSingleton hk ⋪ _delegations ds),
+          { _stkCreds = eval (setSingleton hk ⋪ _stkCreds ds),
+            _rewards = eval (setSingleton (RewardAcnt network hk) ⋪ _rewards ds),
+            _delegations = eval (setSingleton hk ⋪ _delegations ds),
             _ptrs = eval (_ptrs ds ⋫ Set.singleton hk)
             -- TODO make _ptrs a bijection. This operation takes time proportional to (_ptrs ds)
             -- OR turn _stkCreds into a mapping of stake credentials to pointers
@@ -262,11 +261,11 @@ delegationTransition = do
           }
     DCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
-      eval(hk ∈ dom (_stkCreds ds)) ?! StakeDelegationImpossibleDELEG hk
+      eval (hk ∈ dom (_stkCreds ds)) ?! StakeDelegationImpossibleDELEG hk
 
       pure $
         ds
-          { _delegations = eval (_delegations ds  ∪  (singleton hk dpool))
+          { _delegations = eval (_delegations ds ∪ (singleton hk dpool))
           }
     DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
@@ -288,14 +287,14 @@ delegationTransition = do
           currentOtherVrfKeyHashes = Set.map genDelegVrfHash currentOtherDelegations
           futureOtherVrfKeyHashes = Set.map genDelegVrfHash futureOtherDelegations
 
-      eval(vkh ∉ (currentOtherColdKeyHashes `Set.union` futureOtherColdKeyHashes))
+      eval (vkh ∉ (currentOtherColdKeyHashes `Set.union` futureOtherColdKeyHashes))
         ?! DuplicateGenesisDelegateDELEG vkh
-      eval(vrf ∉ (currentOtherVrfKeyHashes `Set.union` futureOtherVrfKeyHashes))
+      eval (vrf ∉ (currentOtherVrfKeyHashes `Set.union` futureOtherVrfKeyHashes))
         ?! DuplicateGenesisVRFDELEG vrf
 
       pure $
         ds
-          { _fGenDelegs = eval ((_fGenDelegs ds) ∪ (singleton  (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
+          { _fGenDelegs = eval ((_fGenDelegs ds) ∪ (singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
           }
     DCertMir (MIRCert targetPot credCoinMap) -> do
       sp <- liftSTS $ asks stabilityWindow

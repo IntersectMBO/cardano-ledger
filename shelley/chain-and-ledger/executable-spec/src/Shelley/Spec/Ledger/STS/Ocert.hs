@@ -14,6 +14,7 @@ module Shelley.Spec.Ledger.STS.Ocert
 where
 
 import Cardano.Prelude (NoUnexpectedThunks, asks)
+import Control.Iterate.SetAlgebra (eval, singleton, (⨃))
 import Control.State.Transition
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -25,7 +26,6 @@ import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert
-import Control.Iterate.SetAlgebra (eval, (⨃), singleton)
 
 data OCERT crypto
 
@@ -107,4 +107,4 @@ ocertTransition =
         pure cs
       Just m -> do
         m <= n ?! CounterTooSmallOCERT m n
-        pure( eval (cs ⨃ (singleton hk n)))--  pure $ addpair hk n cs
+        pure (eval (cs ⨃ (singleton hk n))) --  pure $ addpair hk n cs

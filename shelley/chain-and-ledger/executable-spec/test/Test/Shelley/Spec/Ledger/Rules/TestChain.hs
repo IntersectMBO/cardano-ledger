@@ -18,6 +18,7 @@ where
 
 import Cardano.Binary (serialize)
 import Cardano.Crypto.Hash (ShortHash)
+import Control.Iterate.SetAlgebra (dom, domain, eval)
 import Control.Monad (join)
 import Control.State.Transition.Extended (TRC (TRC))
 import Control.State.Transition.Trace
@@ -39,7 +40,6 @@ import Shelley.Spec.Ledger.BlockChain
     bheaderSlotNo,
   )
 import Shelley.Spec.Ledger.Coin
-import Control.Iterate.SetAlgebra(eval, dom, domain  )
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
@@ -100,7 +100,7 @@ rewardStkCredSync =
                   show target
                 ]
             )
-            $ eval(dom (_stkCreds ds))
+            $ eval (dom (_stkCreds ds))
               === (Set.map getRwdCred $ domain (_rewards ds))
 
 adaPreservationChain :: Property

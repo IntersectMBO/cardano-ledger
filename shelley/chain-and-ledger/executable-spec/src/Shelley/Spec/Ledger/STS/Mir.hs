@@ -15,6 +15,7 @@ module Shelley.Spec.Ledger.STS.Mir
 where
 
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
+import Control.Iterate.SetAlgebra (dom, eval, (∪+), (◁))
 import Control.State.Transition
   ( InitialRule,
     STS (..),
@@ -28,13 +29,13 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
-import Control.Iterate.SetAlgebra (eval,dom, (∪+), (◁))
 import Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState,
     InstantaneousRewards (..),
+    RewardAccounts,
     emptyAccount,
     emptyInstantaneousRewards,
     emptyLedgerState,
@@ -50,7 +51,6 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
     _stkCreds,
     pattern EpochState,
-    RewardAccounts,
   )
 import Shelley.Spec.Ledger.PParams (emptyPParams)
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
@@ -108,7 +108,7 @@ mirTransition = do
       totFromTreasury = sum irwdT
       treasury = _treasury acnt
       updateFromTreasury = Map.mapKeys (mkRwdAcnt network) irwdT
-      update =  (eval (updateFromReserves ∪+ updateFromTreasury)) :: RewardAccounts crypto
+      update = (eval (updateFromReserves ∪+ updateFromTreasury)) :: RewardAccounts crypto
 
   if totFromReserves <= reserves && totFromTreasury <= treasury
     then

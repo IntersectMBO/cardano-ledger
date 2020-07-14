@@ -24,6 +24,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
+import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
 import Control.State.Transition
   ( Assertion (..),
     Embed,
@@ -48,7 +49,6 @@ import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (Addr, getNetwork)
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Control.Iterate.SetAlgebra (eval, dom, rng, (∪), (⋪), (⊆))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakePools)
 import Shelley.Spec.Ledger.Keys (GenDelegs)
@@ -248,7 +248,7 @@ utxoInductive = do
       txFee = _txfee txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  eval(txins txb ⊆ dom utxo) ?! BadInputsUTxO (txins txb `Set.difference` eval (dom utxo))
+  eval (txins txb ⊆ dom utxo) ?! BadInputsUTxO (txins txb `Set.difference` eval (dom utxo))
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
@@ -264,11 +264,11 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputCoins = [c | (TxOut _ c) <- Set.toList (eval(rng (txouts txb)))]
+  let outputCoins = [c | (TxOut _ c) <- Set.toList (eval (rng (txouts txb)))]
   let minUTxOValue = _minUTxOValue pp
   all (minUTxOValue <=) outputCoins
     ?! OutputTooSmallUTxO
-         (filter ( \ (TxOut _ c) -> c < minUTxOValue) (Set.toList (eval (rng (txouts txb)))))
+      (filter (\(TxOut _ c) -> c < minUTxOValue) (Set.toList (eval (rng (txouts txb)))))
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx
@@ -280,7 +280,7 @@ utxoInductive = do
 
   pure
     UTxOState
-      { _utxo = eval((txins txb ⋪ utxo) ∪ txouts txb),
+      { _utxo = eval ((txins txb ⋪ utxo) ∪ txouts txb),
         _deposited = deposits' + depositChange,
         _fees = fees + (_txfee txb),
         _ppups = ppup'

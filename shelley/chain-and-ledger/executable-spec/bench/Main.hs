@@ -1,11 +1,13 @@
 module Main where
 
 import Control.DeepSeq (NFData)
+import Control.Iterate.SetAlgebra (keysEqual)
 import Criterion.Main (Benchmark, bench, bgroup, defaultMain, env, whnf)
+import qualified Data.Map as Map
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.LedgerState (DPState (..), UTxOState (..))
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions
-  ( initUTxO, -- How to precompute env for the UTxO transactions
+  ( initUTxO,
     ledgerDeRegisterStakeKeys,
     ledgerDelegateManyKeysOnePool,
     ledgerReRegisterStakePools,
@@ -15,23 +17,22 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerRewardWithdrawals,
     ledgerSpendOneGivenUTxO,
     ledgerSpendOneUTxO,
-    ledgerStateWithNkeysMpools, -- How to precompute env for the Stake Delegation transactions
-    ledgerStateWithNregisteredKeys, -- How to precompute env for the StakeKey transactions
-    ledgerStateWithNregisteredPools, -- How to compute an initial state with N StakePools
+    ledgerStateWithNkeysMpools,
+    ledgerStateWithNregisteredKeys,
+    ledgerStateWithNregisteredPools,
   )
-import Control.Iterate.SetAlgebra(keysEqual)
-import qualified Data.Map as Map
 
+eqf :: String -> (Map.Map Int Int -> Map.Map Int Int -> Bool) -> Int -> Benchmark
+eqf name f n = bgroup (name ++ " " ++ show n) (map runat [n, n * 10, n * 100, n * 1000])
+  where
+    runat m = env (return $ Map.fromList [(k, k) | k <- [1 .. m]]) (\state -> bench (show m) (whnf (f state) state))
 
-eqf:: String -> (Map.Map Int Int -> Map.Map Int Int -> Bool) -> Int -> Benchmark
-eqf name f n = bgroup (name++" "++show n) (map runat [n,n*10,n*100,n*1000])
-  where runat m = env (return $ Map.fromList [ (k,k) | k <- [1..m]]) (\state -> bench (show m) (whnf (f state) state))
-
-mainEq:: IO ()
-mainEq = defaultMain $
+mainEq :: IO ()
+mainEq =
+  defaultMain $
     [ bgroup "KeysEqual tests" $
-        [ eqf "keysEqual" keysEqual (100::Int)
-        , eqf "keys x == keys y" (\ x y -> Map.keys x == Map.keys y) (100::Int)
+        [ eqf "keysEqual" keysEqual (100 :: Int),
+          eqf "keys x == keys y" (\x y -> Map.keys x == Map.keys y) (100 :: Int)
         ]
     ]
 
@@ -72,11 +73,10 @@ profileCreateRegKeys = do
   let touch (x, y) = touchUTxOState x + touchDPState y
   putStrLn ("Exit profiling " ++ show (touch state))
 
-
 -- ============================================
 -- Profiling N keys and M pools
 
-profileNkeysMPools:: IO ()
+profileNkeysMPools :: IO ()
 profileNkeysMPools = do
   putStrLn "Enter N keys and M Pools"
   let unit = ledgerDelegateManyKeysOnePool 50 500 (ledgerStateWithNkeysMpools 5000 500)
@@ -91,7 +91,6 @@ profileCreateRegPools size = do
   let state = ledgerStateWithNregisteredPools 1 size
   let touch (x, y) = touchUTxOState x + touchDPState y
   putStrLn ("Exit profiling " ++ show (touch state))
-
 
 -- =================================================
 -- Some things we might want to profile.

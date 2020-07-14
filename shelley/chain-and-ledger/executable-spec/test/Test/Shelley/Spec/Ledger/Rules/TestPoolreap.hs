@@ -1,9 +1,9 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE DataKinds #-}
 
 module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
   ( constantSumPots,
@@ -13,6 +13,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
 where
 
 import Cardano.Crypto.Hash (ShortHash)
+import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -21,9 +22,9 @@ import Control.State.Transition.Trace
     pattern SourceSignalTarget,
   )
 import Data.List (foldl')
-import qualified Data.Set as Set (Set,null)
+import qualified Data.Set as Set (Set, null)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
-import Control.Iterate.SetAlgebra (eval, dom, (▷), (∩), (⊆), setSingleton)
+import Shelley.Spec.Ledger.Keys (KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
   ( _deposited,
     _fees,
@@ -45,9 +46,8 @@ import Shelley.Spec.Ledger.STS.PoolReap
 import Shelley.Spec.Ledger.TxData (pattern StakePools)
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, conjoin)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (POOLREAP,KeyHash)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (KeyHash, POOLREAP)
 import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring, getStPools)
-import Shelley.Spec.Ledger.Keys(KeyRole(StakePool))
 
 -----------------------------
 -- Properties for POOLREAP --
@@ -73,11 +73,11 @@ removedAfterPoolreap tr =
             StakePools stp' = getStPools p'
             retiring = getRetiring p
             retiring' = getRetiring p'
-            retire :: Set.Set(KeyHash ShortHash 'StakePool)  -- This declaration needed to disambiguate 'eval'
-            retire = eval(dom (retiring ▷ setSingleton e))
-         in eval(retire ⊆ dom stp)
-              && Set.null (eval(retire ∩ dom stp'))
-              && Set.null (eval(retire ∩ dom retiring'))
+            retire :: Set.Set (KeyHash ShortHash 'StakePool) -- This declaration needed to disambiguate 'eval'
+            retire = eval (dom (retiring ▷ setSingleton e))
+         in eval (retire ⊆ dom stp)
+              && Set.null (eval (retire ∩ dom stp'))
+              && Set.null (eval (retire ∩ dom retiring'))
 
 -- | Check that deposits are always non-negative
 nonNegativeDeposits ::

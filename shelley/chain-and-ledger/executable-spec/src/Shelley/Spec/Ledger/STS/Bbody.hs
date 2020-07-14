@@ -18,6 +18,7 @@ module Shelley.Spec.Ledger.STS.Bbody
 where
 
 import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Iterate.SetAlgebra (eval, (∈))
 import Control.State.Transition
   ( Embed (..),
     STS (..),
@@ -43,7 +44,6 @@ import Shelley.Spec.Ledger.BlockChain
     incrBlocks,
     poolIDfromBHBody,
   )
-import Control.Iterate.SetAlgebra (eval, (∈))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
@@ -129,8 +129,7 @@ bbodyTransition =
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
         let hkAsStakePool = coerceKeyRole . poolIDfromBHBody $ bhb
-        pure $ BbodyState ls' (incrBlocks (eval(bheaderSlotNo bhb ∈ oslots)) hkAsStakePool b)
-
+        pure $ BbodyState ls' (incrBlocks (eval (bheaderSlotNo bhb ∈ oslots)) hkAsStakePool b)
 
 instance
   ( Crypto crypto,
