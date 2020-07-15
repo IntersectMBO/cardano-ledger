@@ -24,7 +24,7 @@ to $\fun{txSize}$.
   \begin{align*}
     & \fun{getOut} \in \TxOut \to \UTxOOut \\
     & \text{tx outputs transformed to UTxO outputs} \\
-    g& \fun{getOut} ~{txout}~= (\fun{getAddr}~\var{txout}, \fun{getValue}~\var{txout})
+    & \fun{getOut} ~{txout}~= (\fun{getAddr}~\var{txout}, \fun{getValue}~\var{txout})
     \nextdef
     & \fun{outs} \in \TxBody \to \UTxO \\
     & \text{tx outputs as UTxO} \\
@@ -65,7 +65,7 @@ UTxO transition system with MC:
 
 \begin{itemize}
 
-  \item $\fun{getCoin}$ suns all the Ada in a given output and returns it as a
+  \item $\fun{getCoin}$ sums all the Ada in a given output and returns it as a
   $\Coin$ value
 
   \item $\fun{utxoAda}$ returns the set of all the outputs in a UTxO with only Ada
