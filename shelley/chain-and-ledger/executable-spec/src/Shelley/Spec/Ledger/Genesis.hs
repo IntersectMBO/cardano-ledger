@@ -22,7 +22,6 @@ module Shelley.Spec.Ledger.Genesis
   )
 where
 
-import Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Prelude (NoUnexpectedThunks)
@@ -91,7 +90,6 @@ data ShelleyGenesis c = ShelleyGenesis
   { sgSystemStart :: !UTCTime,
     sgNetworkMagic :: !Word32,
     sgNetworkId :: !Network,
-    sgProtocolMagicId :: !ProtocolMagicId,
     sgActiveSlotsCoeff :: !Rational,
     sgSecurityParam :: !Word64,
     sgEpochLength :: !EpochSize,
@@ -118,11 +116,8 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
   toJSON sg =
     Aeson.object
       [ "systemStart" .= sgSystemStart sg,
-        --TODO: this should not have both network magic and protocol magic
-        -- they are different names for the same thing used in two ways.
         "networkMagic" .= sgNetworkMagic sg,
         "networkId" .= sgNetworkId sg,
-        "protocolMagicId" .= sgProtocolMagicId sg,
         "activeSlotsCoeff" .= (fromRational (sgActiveSlotsCoeff sg) :: Scientific),
         "securityParam" .= sgSecurityParam sg,
         "epochLength" .= sgEpochLength sg,
@@ -144,7 +139,6 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <$> obj .: "systemStart"
         <*> obj .: "networkMagic"
         <*> obj .: "networkId"
-        <*> obj .: "protocolMagicId"
         <*> ( (toRational :: Scientific -> Rational)
                 <$> obj .: "activeSlotsCoeff"
             )

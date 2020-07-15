@@ -24,7 +24,6 @@
         "tau": 0,
         "a0": 0
     },
-    "protocolMagicId": 838299499,
     "genDelegs": {
         "23d51e9123d51e91": {
             "delegate": "839b047f839b047f",
