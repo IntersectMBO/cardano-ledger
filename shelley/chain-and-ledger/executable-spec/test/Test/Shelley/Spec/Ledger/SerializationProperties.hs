@@ -21,6 +21,7 @@ module Test.Shelley.Spec.Ledger.SerializationProperties
     prop_roundtrip_BlockHeaderHash,
     prop_roundtrip_Tx,
     prop_roundtrip_TxId,
+    prop_roundtrip_TxOut,
     prop_roundtrip_LEDGER_PredicateFails,
     prop_roundtrip_PrtclState,
     prop_roundtrip_LedgerState,
@@ -211,6 +212,9 @@ prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_TxId :: Mock.TxId Monomorphic.ShortHash -> Property
 prop_roundtrip_TxId = roundtrip toCBOR fromCBOR
+
+prop_roundtrip_TxOut :: Mock.TxOut Monomorphic.ShortHash -> Property
+prop_roundtrip_TxOut = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_BootstrapWitness ::
   Mock.BootstrapWitness Monomorphic.ShortHash -> Property

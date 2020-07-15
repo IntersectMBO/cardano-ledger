@@ -220,6 +220,7 @@ import Test.Shelley.Spec.Ledger.SerializationProperties
     prop_roundtrip_RewardAcnt,
     prop_roundtrip_Tx,
     prop_roundtrip_TxId,
+    prop_roundtrip_TxOut,
   )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
@@ -538,6 +539,7 @@ serializationPropertyTests =
       QC.testProperty "roundtrip Tx" prop_roundtrip_Tx,
       QC.testProperty "roundtrip Bootstrap Witness" prop_roundtrip_BootstrapWitness,
       QC.testProperty "roundtrip TxId" prop_roundtrip_TxId,
+      QC.testProperty "roundtrip TxOut" prop_roundtrip_TxOut,
       QC.testProperty "roundtrip LEDGER Predicate Failures" prop_roundtrip_LEDGER_PredicateFails,
       QC.testProperty "roundtrip Protocol State" prop_roundtrip_PrtclState,
       QC.testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
