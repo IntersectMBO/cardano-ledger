@@ -65,6 +65,7 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Crypto.Hash
+import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
@@ -214,6 +215,9 @@ mkNonceFromNumber =
 newtype Seed = Seed (Hash Blake2b_256 Seed)
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (NoUnexpectedThunks, ToCBOR)
+
+instance SignableRepresentation Seed where
+  getSignableRepresentation (Seed x) = hashToBytes x
 
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b

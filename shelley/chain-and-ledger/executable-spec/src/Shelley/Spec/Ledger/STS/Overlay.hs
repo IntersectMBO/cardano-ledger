@@ -30,8 +30,8 @@ import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     Nonce,
@@ -58,14 +58,13 @@ import Shelley.Spec.Ledger.Keys
     KESignable,
     KeyHash,
     KeyRole (..),
-    VerKeyKES,
     VerKeyVRF,
     coerceKeyRole,
     hashKey,
     hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.LedgerState (OBftSlot (..))
-import Shelley.Spec.Ledger.OCert (KESPeriod)
+import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
@@ -83,7 +82,7 @@ instance NoUnexpectedThunks (OverlayEnv crypto)
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
   ) =>
@@ -91,7 +90,7 @@ instance
   where
   type
     State (OVERLAY crypto) =
-      Map (KeyHash 'BlockIssuer crypto) Natural
+      Map (KeyHash 'BlockIssuer crypto) Word64
 
   type
     Signal (OVERLAY crypto) =
@@ -224,7 +223,7 @@ pbftVrfChecks vrfHK eta0 bhb = do
 overlayTransition ::
   forall crypto.
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
   ) =>
@@ -267,7 +266,7 @@ instance (VRF.VRFAlgorithm (VRF crypto)) => NoUnexpectedThunks (PredicateFailure
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
   ) =>

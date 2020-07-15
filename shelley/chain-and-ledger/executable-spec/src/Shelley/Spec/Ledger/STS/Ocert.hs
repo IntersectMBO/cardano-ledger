@@ -20,7 +20,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Crypto
@@ -31,14 +30,14 @@ data OCERT crypto
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto)
   ) =>
   STS (OCERT crypto)
   where
   type
     State (OCERT crypto) =
-      Map (KeyHash 'BlockIssuer crypto) Natural
+      Map (KeyHash 'BlockIssuer crypto) Word64
   type
     Signal (OCERT crypto) =
       BHeader crypto
@@ -53,10 +52,10 @@ instance
         !KESPeriod -- OCert Start KES Period
         !Word64 -- Max KES Key Evolutions
     | CounterTooSmallOCERT
-        !Natural -- last KES counter used
-        !Natural -- current KES counter
+        !Word64 -- last KES counter used
+        !Word64 -- current KES counter
     | InvalidSignatureOCERT -- TODO use whole OCert
-        !Natural -- OCert counter
+        !Word64 -- OCert counter
         !KESPeriod -- OCert KES period
     | InvalidKesSignatureOCERT
         !Word -- current KES Period
@@ -74,7 +73,7 @@ instance NoUnexpectedThunks (PredicateFailure (OCERT crypto))
 
 ocertTransition ::
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto)
   ) =>
   TransitionRule (OCERT crypto)
@@ -98,7 +97,7 @@ ocertTransition =
     -- above `KESBeforeStartOCERT`
     -- predicate failure in the
     -- transition.
-    verifySignedDSIGN vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT n c0
+    verifySignedDSIGN vkey (ocertToSignable $ bheaderOCert bhb) tau ?! InvalidSignatureOCERT n c0
     verifySignedKES () vk_hot t bhb sigma ?!: InvalidKesSignatureOCERT kp_ c0_ t
 
     case currentIssueNo env cs hk of

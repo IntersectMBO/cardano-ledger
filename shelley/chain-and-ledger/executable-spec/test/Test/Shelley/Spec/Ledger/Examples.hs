@@ -123,7 +123,6 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
-import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
@@ -568,7 +567,7 @@ utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 dsEx1 :: HashAlgorithm h => DState h
 dsEx1 = emptyDState {_genDelegs = GenDelegs genDelegs}
 
-oCertIssueNosEx1 :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
+oCertIssueNosEx1 :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Word64
 oCertIssueNosEx1 = Map.fromList (fmap f (Map.elems genDelegs))
   where
     f (GenDelegPair vk _) = (coerceKeyRole vk, 0)
@@ -1389,7 +1388,7 @@ acntEx2E p =
       _reserves = maxLLSupply - balance (utxoEx2A p) - carlMIR
     }
 
-oCertIssueNosEx2 :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
+oCertIssueNosEx2 :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Word64
 oCertIssueNosEx2 =
   Map.insert
     (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 220)
@@ -1435,7 +1434,7 @@ ex2E :: HashAlgorithm h => proxy h -> CHAINExample h
 ex2E _ = CHAINExample expectedStEx2D blockEx2E (Right expectedStEx2E)
 
 -- | Example 2F - create a decentralized Praos block (ie one not in the overlay schedule)
-oCertIssueNosEx2F :: forall h. HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
+oCertIssueNosEx2F :: forall h. HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Word64
 oCertIssueNosEx2F = Map.insert (coerceKeyRole $ hk (alicePool p)) 0 oCertIssueNosEx2
   where
     p :: Proxy h
@@ -1570,7 +1569,7 @@ expectedLSEx2G =
         psEx2A
     )
 
-oCertIssueNosEx2G :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
+oCertIssueNosEx2G :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Word64
 oCertIssueNosEx2G =
   Map.insert
     (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 310)
@@ -1645,7 +1644,7 @@ rewardsEx2H =
       (RewardAcnt Testnet bobSHK, bobRAcnt2H)
     ]
 
-oCertIssueNosEx2H :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
+oCertIssueNosEx2H :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Word64
 oCertIssueNosEx2H =
   Map.insert
     (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 390)
@@ -1802,7 +1801,7 @@ snapsEx2I p =
       _feeSS = Coin 0
     }
 
-oCertIssueNosEx2I :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
+oCertIssueNosEx2I :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Word64
 oCertIssueNosEx2I =
   Map.insert
     (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 410)
@@ -1926,7 +1925,7 @@ expectedLSEx2J =
     )
     (DPState dsEx2J psEx2A)
 
-oCertIssueNosEx2J :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
+oCertIssueNosEx2J :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Word64
 oCertIssueNosEx2J =
   Map.insert
     (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 420)
@@ -2196,7 +2195,7 @@ expectedLSEx2L =
     )
     (DPState dsEx2L psEx1) -- Note the stake pool is reaped
 
-oCertIssueNosEx2L :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
+oCertIssueNosEx2L :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Word64
 oCertIssueNosEx2L =
   Map.insert (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 510) 3 oCertIssueNosEx2J
 

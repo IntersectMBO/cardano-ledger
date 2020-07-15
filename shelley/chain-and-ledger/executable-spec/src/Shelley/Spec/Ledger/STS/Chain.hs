@@ -42,6 +42,7 @@ import Control.State.Transition
   )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -77,7 +78,6 @@ import Shelley.Spec.Ledger.Keys
     KESignable,
     KeyHash,
     KeyRole (..),
-    VerKeyKES,
     coerceKeyRole,
   )
 import Shelley.Spec.Ledger.LedgerState
@@ -97,7 +97,7 @@ import Shelley.Spec.Ledger.LedgerState
     updateNES,
     _genDelegs,
   )
-import Shelley.Spec.Ledger.OCert (KESPeriod)
+import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     ProtVer (..),
@@ -124,7 +124,7 @@ data CHAIN crypto
 
 data ChainState crypto = ChainState
   { chainNes :: NewEpochState crypto,
-    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer crypto) Natural,
+    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer crypto) Word64,
     chainEpochNonce :: Nonce,
     chainEvolvingNonce :: Nonce,
     chainCandidateNonce :: Nonce,
@@ -183,7 +183,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
@@ -243,7 +243,7 @@ chainChecks maxpv pp bh = do
 chainTransition ::
   forall crypto.
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
@@ -310,7 +310,7 @@ chainTransition =
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
@@ -321,7 +321,7 @@ instance
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
@@ -332,7 +332,7 @@ instance
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
@@ -343,7 +343,7 @@ instance
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed

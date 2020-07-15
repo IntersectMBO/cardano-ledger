@@ -126,7 +126,7 @@ import Shelley.Spec.Ledger.LedgerState
     pattern RewardUpdate,
   )
 import qualified Shelley.Spec.Ledger.MetaData as MD
-import Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
+import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCertSignable (..), pattern OCert)
 import Shelley.Spec.Ledger.PParams
   ( PParams' (..),
     PParamsUpdate,
@@ -377,7 +377,10 @@ testKey1SigToken p = e
 testOpCertSigTokens :: forall proxy h. HashAlgorithm h => proxy h -> Tokens -> Tokens
 testOpCertSigTokens p = e
   where
-    s = signedDSIGN @(ConcreteCrypto h) (sKey (testKey1 p)) (snd testKESKeys, 0 :: Natural, KESPeriod 0)
+    s =
+      signedDSIGN @(ConcreteCrypto h)
+        (sKey (testKey1 p))
+        (OCertSignable @(ConcreteCrypto h) (snd testKESKeys) 0 (KESPeriod 0))
     Encoding e = encodeSignedDSIGN s
 
 testKeyHash1 :: HashAlgorithm h => proxy h -> KeyHash h 'Payment
@@ -450,7 +453,10 @@ testBHB p =
           (snd testKESKeys)
           0
           (KESPeriod 0)
-          (signedDSIGN @(ConcreteCrypto h) (sKey (testKey1 p)) (snd testKESKeys, 0, KESPeriod 0)),
+          ( signedDSIGN @(ConcreteCrypto h)
+              (sKey (testKey1 p))
+              (OCertSignable (snd testKESKeys) 0 (KESPeriod 0))
+          ),
       bprotver = ProtVer 0 0
     }
 
@@ -1112,7 +1118,10 @@ serializationUnitTests =
               (snd testKESKeys)
               0
               (KESPeriod 0)
-              (signedDSIGN @(ConcreteCrypto Monomorphic.ShortHash) (sKey testBlockIssuerKey) (snd testKESKeys, 0, KESPeriod 0))
+              ( signedDSIGN @(ConcreteCrypto Monomorphic.ShortHash)
+                  (sKey testBlockIssuerKey)
+                  (OCertSignable (snd testKESKeys) 0 (KESPeriod 0))
+              )
           protover = ProtVer 0 0
        in checkEncodingCBOR
             "block_header_body"
@@ -1147,10 +1156,18 @@ serializationUnitTests =
       let vkHot = snd testKESKeys
           counter = 0
           kesperiod = KESPeriod 0
-          signature = signedDSIGN @(ConcreteCrypto Monomorphic.ShortHash) (sKey (testKey1 p)) (snd testKESKeys, 0, KESPeriod 0)
+          signature =
+            signedDSIGN @(ConcreteCrypto Monomorphic.ShortHash)
+              (sKey (testKey1 p))
+              (OCertSignable (snd testKESKeys) 0 (KESPeriod 0))
        in checkEncodingCBORCBORGroup
             "operational_cert"
-            (OCert @(ConcreteCrypto Monomorphic.ShortHash) vkHot counter kesperiod signature)
+            ( OCert @(ConcreteCrypto Monomorphic.ShortHash)
+                vkHot
+                counter
+                kesperiod
+                signature
+            )
             ( S vkHot
                 <> S counter
                 <> S kesperiod

@@ -120,7 +120,7 @@ import Shelley.Spec.Ledger.LedgerState
     _utxo,
     _utxoState,
   )
-import Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
+import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCertSignable (..), pattern OCert)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     ProtVer (..),
@@ -558,7 +558,13 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
 -- we then encode into the fake VRF implementation.
 newtype NatNonce = NatNonce Natural
 
-mkOCert :: forall h r. (HasCallStack, HashAlgorithm h) => AllIssuerKeys h r -> Natural -> KESPeriod -> OCert h
+mkOCert ::
+  forall h r.
+  (HasCallStack, HashAlgorithm h) =>
+  AllIssuerKeys h r ->
+  Word64 ->
+  KESPeriod ->
+  OCert h
 mkOCert pkeys n c0 =
   let (_, (_, vKeyHot)) = head $ hot pkeys
       KeyPair _vKeyCold sKeyCold = cold pkeys
@@ -566,7 +572,7 @@ mkOCert pkeys n c0 =
         vKeyHot
         n
         c0
-        (signedDSIGN @(ConcreteCrypto h) sKeyCold (vKeyHot, n, c0))
+        (signedDSIGN @(ConcreteCrypto h) sKeyCold (OCertSignable vKeyHot n c0))
 
 -- | Takes a set of KES hot keys and checks to see whether there is one whose
 -- range contains the current KES period. If so, return its index in the list of
