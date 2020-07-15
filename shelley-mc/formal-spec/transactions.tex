@@ -3,8 +3,9 @@
   \emph{Abstract Types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{cid} & \PolicyID
+    \begin{array}{r@{~\in~}l@{~}lr}
+      \var{cid} & \PolicyID & \text{Policy ID} \\
+      \var{s_{mc}} & \ScriptMPS & \text{monetary policy script}
      \end{array}
   \end{equation*}
   %
@@ -13,6 +14,7 @@
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{lng} & \Language & \{\mathsf{nativeMSigTag}, \mathsf{nativeMCTag}, \cdots\} \\
+      \var{scr} & \Script &=~ \ScriptMSig \uniondistinct \ScriptMPS \\
 
 %       \var{pid} & \PolicyID & \PolicyID\\
        % \text{currency ID}\\
@@ -39,6 +41,16 @@
     \end{array}
   \end{equation*}
   %
+  \emph{Abstract functions}
+  %
+  \begin{align*}
+    \fun{language} ~\in~    & \Script \to \Language \\
+                            & \text{returns the language tag, e.g. $\mathsf{nativeMCTag}$ for the MPS language} \\
+    \fun{evalMPSScript}~\in~& \ScriptMPS\to\PolicyID\to\Slot\to\powerset\KeyHash \\
+    % \\
+%   \caption{Languages}
+  \end{align*}
+
   \caption{Type Definitions used in the UTxO transition system}
   \label{fig:defs:utxo-shelley-1}
 \end{figure*}
@@ -149,81 +161,6 @@ $$
   This type also differs from the Shelley $\UTxO$ type only in that $\Coin$ is replaced by $\Value$.
 
 \end{itemize}
-
-\begin{figure*}[t!]
-  %% \emph{Script Types} \quad
-  %% %
-  %% \begin{equation*}
-  %%   \begin{array}{r@{~\in~}l@{~}lr}
-  %%     \var{smc} & \ScriptMPS & \text{monetary policy script} \\
-  %%     \var{scr} & \Script &=~ \ScriptMSig \uniondistinct \ScriptMPS
-  %%   \end{array}
-  %% \end{equation*}
-    %
-    \emph{Helper Functions}
-  %
-  \begin{align*}
-    \fun{language} ~\in~& \Script \to \Language \\
-    &\text{returns the language tag, e.g. $\mathsf{mcTag}$ for the MPS language}
-    % \\
-%   \caption{Languages}
-  \end{align*}
-  %
-  \emph{MPS Script definition}
-  %
-  \begin{equation*}
-    \begin{array}{rllll}
- %     \ScriptMPS & \subseteq & \Script \\
- %     \\~\\
-      \var{s_{mc}}\in\ScriptMPS & = & \powerset{} & ( & \ScriptMSig\\
-      &  & & & \uniondistinct ~~
-         (\AssetID \mapsto (\Slot\times\Slot\times\Quantity\times\Quantity))~~) \\
-%       & \uniondistinct&
-%         \powerset{\ScriptMPS}
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Language Tags}
-  %
-  \begin{align*}
-%    & s_{mc} & ~\in~ \ScriptMPS \\
-    & \mathsf{nativeMCTag} & ~=~ \fun{language}~s_{mc}
-    \end{align*}
-  \caption{The Multicurrency Scripting Language}
-  \label{fig:defs:tx-mc-script}
-  %% \emph{Script Types}
-  %% %
-  %% \begin{equation*}
-  %%   \begin{array}{r@{~\in~}l@{~}lr}
-  %%     \var{smc} & \ScriptMPS & \text{monetary policy script} \\
-  %%     \var{scr} & \Script &=~ \ScriptMSig \uniondistinct \ScriptMPS
-  %%   \end{array}
-  %% \end{equation*}
-  %%   %
-  %% \emph{Helper Functions}
-  %% %
-  %% \begin{align*}
-  %%   \fun{language} ~\in~& \Script \to \Language \\
-  %%   &\text{returns the language tag, e.g. $\mathsf{mcTag}$ for the MPS language} \\
-  %% \caption{Languages}
-  %% \end{align*}
-  %% %
-  %% \emph{MPS Script definition}
-  %% %
-  %% \begin{equation*}
-  %%   \begin{array}{rll}
-  %%     \ScriptMPS & \subseteq & \Script \\
-  %%     \\~\\
-  %%     \var{s_{mc}}\in\ScriptMPS & = & \type{JustMSig}~ \ScriptMSig\\
-  %%     & \uniondistinct &
-  %%        \type{MaxMinTimedTotal}~(\AssetID \mapsto (\Slot\times\Slot\times\Quantity\times\Quantity)) \\
-  %%     & \uniondistinct&
-  %%       \type{RequireAll}~\powerset{\ScriptMPS}
-  %%   \end{array}
-  %% \end{equation*}
-  %% \caption{The Multicurrency Scripting Language}
-  %% \label{fig:defs:tx-mc-script}
-\end{figure*}
 
 \paragraph*{The Monetary Policy Scripting Language.}
 Recall that a currency is identified by the hash of its MPS.
