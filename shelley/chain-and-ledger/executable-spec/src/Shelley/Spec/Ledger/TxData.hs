@@ -86,8 +86,9 @@ import Cardano.Binary
 import Cardano.Prelude
   ( AllowThunksIn (..),
     LByteString,
-    NFData (),
+    NFData (rnf),
     NoUnexpectedThunks (..),
+    UseIsNormalFormNamed (..),
     Word64,
     asum,
     catMaybes,
@@ -409,7 +410,12 @@ data TxOut crypto
   = TxOutCompact
       {-# UNPACK #-} !BSS.ShortByteString
       {-# UNPACK #-} !Word64
-  deriving (Show, Eq, Generic, Ord, NFData)
+  deriving (Show, Eq, Ord)
+
+instance NFData (TxOut crypto) where
+  rnf = (`seq` ())
+
+deriving via UseIsNormalFormNamed "TxOut" (TxOut crypto) instance NoUnexpectedThunks (TxOut crypto)
 
 pattern TxOut ::
   Crypto crypto =>
@@ -431,8 +437,6 @@ viewCompactTxOut (TxOutCompact bs c) = (addr, coin)
       Nothing -> panic "viewCompactTxOut: impossible"
       Just (a :: Addr crypto) -> a
     coin = word64ToCoin c
-
-instance NoUnexpectedThunks (TxOut crypto)
 
 data DelegCert crypto
   = -- | A stake key registration certificate.

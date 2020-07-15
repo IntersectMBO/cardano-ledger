@@ -118,6 +118,7 @@ import Shelley.Spec.Ledger.TxData
     StakePoolRelay,
     TxId (TxId),
     TxIn (TxIn),
+    TxOut (TxOut),
   )
 import Test.Cardano.Prelude (genBytes)
 import Test.QuickCheck
@@ -302,9 +303,8 @@ instance Crypto c => Arbitrary (TxIn c) where
       <$> (TxId <$> genHash (Proxy @c))
       <*> arbitrary
 
-instance Arbitrary (Mock.TxOut h) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
+instance HashAlgorithm h => Arbitrary (Mock.TxOut h) where
+  arbitrary = TxOut <$> arbitrary <*> arbitrary
 
 instance Arbitrary Nonce where
   arbitrary =
