@@ -13,7 +13,7 @@ module Test.Shelley.Spec.Ledger.Address.Bootstrap
     testBootstrapSpending,
     testBootstrapNotSpending,
     bootstrapHashTest,
-    genXSignature,
+    genSignature,
   )
 where
 
@@ -25,7 +25,6 @@ import qualified Cardano.Crypto.Wallet as Byron
 import Cardano.Prelude
   ( ByteString,
   )
-import Data.Either (fromRight)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -106,7 +105,7 @@ bootstrapHashTest :: TestTree
 bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witness" $
   do
     (byronVKey, byronAddr) <- genByronVKeyAddr
-    sig <- genXSignature
+    sig <- genSignature
     let addr = BootstrapAddress byronAddr
         (shelleyVKey, chainCode) = unpackByronVKey @C byronVKey
         witness =
@@ -118,11 +117,12 @@ bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witn
             }
     pure $ (coerceKeyRole $ bootstrapKeyHash addr) === bootstrapWitKeyHash witness
 
-genXSignature :: Gen Byron.XSignature
-genXSignature =
-  fromRight (error "wrong number of bytes")
-    . Byron.xsignature
-    <$> hedgehog (genBytes 64)
+genSignature :: forall a b. DSIGN.DSIGNAlgorithm a => Gen (DSIGN.SignedDSIGN a b)
+genSignature =
+  DSIGN.SignedDSIGN
+    . fromJust
+    . DSIGN.rawDeserialiseSigDSIGN
+    <$> hedgehog (genBytes . fromIntegral $ DSIGN.sizeSigDSIGN ([] @a))
 
 genBootstrapAddress :: Gen (BootstrapAddress crypto)
 genBootstrapAddress = BootstrapAddress . snd <$> genByronVKeyAddr
