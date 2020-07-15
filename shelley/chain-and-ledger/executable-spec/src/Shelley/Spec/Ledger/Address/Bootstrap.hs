@@ -20,14 +20,11 @@ module Shelley.Spec.Ledger.Address.Bootstrap
         bwKey,
         bwSig,
         bwChainCode,
-        bwPadding
+        bwAttributes
       ),
-    KeyPadding (..),
     ChainCode (..),
     bootstrapWitKeyHash,
     unpackByronVKey,
-    byronAddressPadding,
-    byronVerKeyAddressPadding,
     makeBootstrapWitness,
     verifyBootstrapWit,
   )
@@ -42,7 +39,6 @@ import Cardano.Binary
     encodePreEncoded,
     serialize',
     serializeEncoding,
-    serializeEncoding',
   )
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
@@ -56,7 +52,6 @@ import Cardano.Prelude
     LByteString,
     NoUnexpectedThunks,
     Proxy (..),
-    Word8,
     panic,
   )
 import qualified Data.ByteString.Lazy as LBS
@@ -77,16 +72,6 @@ import Shelley.Spec.Ledger.TxData
   ( TxBody,
   )
 
--- | This represents the data prepended/appended to a Byron verification key
--- when producing a key hash.
-data KeyPadding = KeyPadding
-  { paddingPrefix :: !ByteString,
-    paddingSuffix :: !ByteString
-  }
-  deriving (Eq, Show, Generic)
-
-instance NoUnexpectedThunks KeyPadding
-
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Eq, Generic)
   deriving (Show) via Quiet ChainCode
@@ -96,7 +81,7 @@ data BootstrapWitness crypto = BootstrapWitness'
   { bwKey' :: !(VKey 'Witness crypto),
     bwSig' :: !(Keys.SignedDSIGN crypto (Hash crypto (TxBody crypto))),
     bwChainCode' :: !ChainCode,
-    bwPadding' :: !KeyPadding,
+    bwAttributes' :: !ByteString,
     bwBytes :: LByteString
   }
   deriving (Eq, Generic, Show)
@@ -109,21 +94,20 @@ pattern BootstrapWitness ::
   (VKey 'Witness crypto) ->
   (Keys.SignedDSIGN crypto (Hash crypto (TxBody crypto))) ->
   ChainCode ->
-  KeyPadding ->
+  ByteString ->
   BootstrapWitness crypto
-pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwPadding} <-
-  BootstrapWitness' bwKey bwSig bwChainCode bwPadding _
+pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes} <-
+  BootstrapWitness' bwKey bwSig bwChainCode bwAttributes _
   where
-    BootstrapWitness key sig cc pad@(KeyPadding prefix suffix) =
+    BootstrapWitness key sig cc attributes =
       let bytes =
             serializeEncoding $
-              encodeListLen 5
+              encodeListLen 4
                 <> toCBOR key
                 <> DSIGN.encodeSignedDSIGN sig
                 <> toCBOR cc
-                <> toCBOR prefix
-                <> toCBOR suffix
-       in BootstrapWitness' key sig cc pad bytes
+                <> toCBOR attributes
+       in BootstrapWitness' key sig cc attributes bytes
 
 {-# COMPLETE BootstrapWitness #-}
 
@@ -139,14 +123,13 @@ instance Crypto crypto => ToCBOR (BootstrapWitness crypto) where
 
 instance Crypto crypto => FromCBOR (Annotator (BootstrapWitness crypto)) where
   fromCBOR = annotatorSlice $
-    decodeRecordNamed "BootstrapWitness" (const 5) $
+    decodeRecordNamed "BootstrapWitness" (const 4) $
       do
         key <- fromCBOR
         sig <- DSIGN.decodeSignedDSIGN
         cc <- fromCBOR
-        prefix <- fromCBOR
-        suffix <- fromCBOR
-        pure . pure $ BootstrapWitness' key sig cc (KeyPadding prefix suffix)
+        attributes <- fromCBOR
+        pure . pure $ BootstrapWitness' key sig cc attributes
 
 -- | Rebuild the addrRoot of the corresponding address.
 bootstrapWitKeyHash ::
@@ -154,54 +137,31 @@ bootstrapWitKeyHash ::
   Crypto crypto =>
   BootstrapWitness crypto ->
   KeyHash 'Witness crypto
-bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) (KeyPadding prefix suffix)) =
+bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
   KeyHash . hash_crypto . hash_SHA3_256 $ bytes
   where
-    -- Here we are reserializing something that we have previously deserialized.
+    -- The payload hashed to create an addrRoot consists of the following:
+    -- 1: a token indicating a list of length 3
+    -- 2: the addrType
+    -- 3: the key
+    -- 3a: token indicating list length 2
+    -- 3b: token indicating address type (which will be a vkey address)
+    -- 3c: a token indicating a bytestring of length 64
+    -- 3d: public key bytes (32)
+    -- 3e: chain code bytes (32)
+    -- 4: the addrAttributes
+    -- the prefix is constant, and hard coded here:
+    prefix :: ByteString
+    prefix = "\131\00\130\00\88\64"
+    -- Here we are reserializing a key which we have previously deserialized.
     -- This is normally naughty. However, this is a blob of bytes -- serializing it
     -- amounts to wrapping the underlying byte array in a ByteString constructor.
     keyBytes = DSIGN.rawSerialiseVerKeyDSIGN key
-    bytes = prefix <> keyBytes <> cc <> suffix
+    bytes = prefix <> keyBytes <> cc <> attributes
     hash_SHA3_256 :: ByteString -> ByteString
     hash_SHA3_256 = Hash.digest (Proxy :: Proxy Hash.SHA3_256)
     hash_crypto :: ByteString -> Hash.Hash (ADDRHASH crypto) a
     hash_crypto = Hash.castHash . Hash.hashWith @(ADDRHASH crypto) id
-
--- | This calculates the key padding of a Byron address by serializing the
--- relevant parts.
---
--- This only supports VKey addresses, not Redeem adresses. You can also use
--- 'byronVerKeyAddressPadding' for the specific case of VKey addresses.
-byronAddressPadding :: Byron.Address -> Maybe KeyPadding
-byronAddressPadding (Byron.Address _ _ Byron.ATRedeem) = Nothing
-byronAddressPadding (Byron.Address _ attributes Byron.ATVerKey) =
-  Just (byronVerKeyAddressPadding attributes)
-
--- | This calculates the key padding of a Byron VKey address based only on the
--- relevant part, which is the address attributes.
-byronVerKeyAddressPadding :: Byron.Attributes Byron.AddrAttributes -> KeyPadding
-byronVerKeyAddressPadding attributes =
-  -- The payload hashed to create an addrRoot consists of the following:
-  -- 1: a token indicating a list of length 3
-  -- 2: the addrType
-  -- 3: the key
-  -- 3a: token indicating list length 2
-  -- 3b: token indicating address type (which will be a vkey address)
-  -- 3c: a token indicating a bytestring of length 64
-  -- 3d: public key bytes (32)
-  -- 3e: chain code bytes (32)
-  -- 4: the addrAttributes
-  -- the prefix is all of the bytes before the bytes for the public key
-  -- the suffix is all of the bytes after the bytes for the chain code
-  KeyPadding
-    { paddingPrefix =
-        serializeEncoding' (encodeListLen 3) -- the surrounding 3-tuple
-          <> serialize' Byron.ATVerKey
-          <> serializeEncoding' (encodeListLen 2) -- the wrapper for the key
-          <> serialize' (0 :: Word8) -- union tag for VKey address
-          <> "\88\64", -- indicates what follows is a bytestring of length 64
-      paddingSuffix = serialize' attributes
-    }
 
 unpackByronVKey ::
   forall crypto.
@@ -244,11 +204,10 @@ makeBootstrapWitness ::
   Byron.SigningKey ->
   Byron.Attributes Byron.AddrAttributes ->
   BootstrapWitness crypto
-makeBootstrapWitness txBodyHash byronSigningKey byronAddress =
-  BootstrapWitness vk signature cc padding
+makeBootstrapWitness txBodyHash byronSigningKey addrAttributes =
+  BootstrapWitness vk signature cc (serialize' addrAttributes)
   where
     (vk, cc) = unpackByronVKey $ Byron.toVerification byronSigningKey
-    padding = byronVerKeyAddressPadding byronAddress
     signature =
       DSIGN.SignedDSIGN . coerceSignature $
         WC.sign
