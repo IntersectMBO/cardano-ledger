@@ -35,8 +35,6 @@ where
 
 import Cardano.Binary
   ( Annotator,
-    Decoder,
-    Encoding,
     FromCBOR (..),
     ToCBOR (..),
     annotatorSlice,
@@ -48,7 +46,6 @@ import Cardano.Binary
   )
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import Cardano.Crypto.DSIGN.Ed25519 as Ed25519
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
@@ -60,18 +57,20 @@ import Cardano.Prelude
     NoUnexpectedThunks,
     Proxy (..),
     Word8,
-    cborError,
     panic,
   )
 import qualified Data.ByteString.Lazy as LBS
+import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Quiet
 import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
+import qualified Shelley.Spec.Ledger.Keys as Keys
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),
     KeyRole (..),
     VKey (..),
+    verifySignedDSIGN,
   )
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxData
@@ -95,7 +94,7 @@ newtype ChainCode = ChainCode {unChainCode :: ByteString}
 
 data BootstrapWitness crypto = BootstrapWitness'
   { bwKey' :: !(VKey 'Witness crypto),
-    bwSig' :: !WC.XSignature,
+    bwSig' :: !(Keys.SignedDSIGN crypto (Hash crypto (TxBody crypto))),
     bwChainCode' :: !ChainCode,
     bwPadding' :: !KeyPadding,
     bwBytes :: LByteString
@@ -108,7 +107,7 @@ data BootstrapWitness crypto = BootstrapWitness'
 pattern BootstrapWitness ::
   Crypto crypto =>
   (VKey 'Witness crypto) ->
-  WC.XSignature ->
+  (Keys.SignedDSIGN crypto (Hash crypto (TxBody crypto))) ->
   ChainCode ->
   KeyPadding ->
   BootstrapWitness crypto
@@ -120,7 +119,7 @@ pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwPadding} <-
             serializeEncoding $
               encodeListLen 5
                 <> toCBOR key
-                <> encodeXSignature sig
+                <> DSIGN.encodeSignedDSIGN sig
                 <> toCBOR cc
                 <> toCBOR prefix
                 <> toCBOR suffix
@@ -143,20 +142,11 @@ instance Crypto crypto => FromCBOR (Annotator (BootstrapWitness crypto)) where
     decodeRecordNamed "BootstrapWitness" (const 5) $
       do
         key <- fromCBOR
-        sig <- decodeXSignature
+        sig <- DSIGN.decodeSignedDSIGN
         cc <- fromCBOR
         prefix <- fromCBOR
         suffix <- fromCBOR
         pure . pure $ BootstrapWitness' key sig cc (KeyPadding prefix suffix)
-
-encodeXSignature :: WC.XSignature -> Encoding
-encodeXSignature = toCBOR . WC.unXSignature
-
-decodeXSignature :: Decoder s WC.XSignature
-decodeXSignature =
-  WC.xsignature <$> fromCBOR >>= \case
-    Left err -> cborError err
-    Right sig -> pure sig
 
 -- | Rebuild the addrRoot of the corresponding address.
 bootstrapWitKeyHash ::
@@ -215,7 +205,7 @@ byronVerKeyAddressPadding attributes =
 
 unpackByronVKey ::
   forall crypto.
-  (DSIGN crypto ~ Ed25519DSIGN) =>
+  (DSIGN crypto ~ DSIGN.Ed25519DSIGN) =>
   Byron.VerificationKey ->
   (VKey 'Witness crypto, ChainCode)
 unpackByronVKey
@@ -229,20 +219,25 @@ unpackByronVKey
     Just vk -> (VKey vk, ChainCode chainCodeBytes)
 
 verifyBootstrapWit ::
-  (Crypto crypto) =>
+  forall crypto.
+  (Crypto crypto, DSIGN.Signable (DSIGN crypto) (Hash crypto (TxBody crypto))) =>
   Hash crypto (TxBody crypto) ->
   BootstrapWitness crypto ->
   Bool
 verifyBootstrapWit txbodyHash witness =
-  WC.verify xpub (Hash.hashToBytes txbodyHash) xsig
-  where
-    xpub = WC.XPub (DSIGN.rawSerialiseVerKeyDSIGN k) (WC.ChainCode mempty)
-    (VKey k) = (bwKey witness)
-    xsig = bwSig witness
+  verifySignedDSIGN
+    (bwKey witness)
+    txbodyHash
+    (bwSig witness)
+
+coerceSignature :: WC.XSignature -> DSIGN.SigDSIGN DSIGN.Ed25519DSIGN
+coerceSignature sig =
+  fromMaybe (panic "coerceSignature: impossible! signature size mismatch") $
+    DSIGN.rawDeserialiseSigDSIGN (WC.unXSignature sig)
 
 makeBootstrapWitness ::
   forall crypto.
-  ( DSIGN crypto ~ Ed25519DSIGN,
+  ( DSIGN crypto ~ DSIGN.Ed25519DSIGN,
     Crypto crypto
   ) =>
   Hash crypto (TxBody crypto) ->
@@ -255,7 +250,8 @@ makeBootstrapWitness txBodyHash byronSigningKey byronAddress =
     (vk, cc) = unpackByronVKey $ Byron.toVerification byronSigningKey
     padding = byronVerKeyAddressPadding byronAddress
     signature =
-      WC.sign
-        (mempty :: ByteString)
-        (Byron.unSigningKey byronSigningKey)
-        (Hash.hashToBytes txBodyHash)
+      DSIGN.SignedDSIGN . coerceSignature $
+        WC.sign
+          (mempty :: ByteString)
+          (Byron.unSigningKey byronSigningKey)
+          (Hash.hashToBytes txBodyHash)

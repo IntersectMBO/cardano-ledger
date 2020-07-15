@@ -215,7 +215,7 @@ vkeywitness = [ $vkey, $signature ]
 ; explicit CBOR list of length 5
 bootstrap_witness =
   [ public_key : $vkey
-  , signature  : $xsignature
+  , signature  : $signature
   , chain_code : bytes .size 32
   , pad_prefix : bytes .size 6
   , pad_suffix : bytes

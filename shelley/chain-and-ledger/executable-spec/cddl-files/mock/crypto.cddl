@@ -13,8 +13,4 @@ signkeyKES = bytes .size 16
 
 $signature /= bytes .size 16
 
-; in the real world, this is the same size as the signature above.
-; in tests, we can shorten most primitives, but but byron signatures.
-$xsignature /= bytes .size 64
-
 $nonce /= [ 0 // 1, bytes .size 32 ]

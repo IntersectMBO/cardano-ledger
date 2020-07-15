@@ -2,5 +2,3 @@ $hash28 /= bytes .size 28
 $hash32 /= bytes .size 32
 
 $vkey /= bytes .size 32
-
-$xsignature /= bytes .size 64
