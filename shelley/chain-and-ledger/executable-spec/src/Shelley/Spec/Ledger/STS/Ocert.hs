@@ -31,7 +31,7 @@ data OCERT crypto
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto)
   ) =>
   STS (OCERT crypto)
@@ -74,7 +74,7 @@ instance NoUnexpectedThunks (PredicateFailure (OCERT crypto))
 
 ocertTransition ::
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto)
   ) =>
   TransitionRule (OCERT crypto)
@@ -98,7 +98,7 @@ ocertTransition =
     -- above `KESBeforeStartOCERT`
     -- predicate failure in the
     -- transition.
-    verifySignedDSIGN vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT n c0
+    verifySignedDSIGN vkey (ocertToSignable $ bheaderOCert bhb) tau ?! InvalidSignatureOCERT n c0
     verifySignedKES () vk_hot t bhb sigma ?!: InvalidKesSignatureOCERT kp_ c0_ t
 
     case currentIssueNo env cs hk of

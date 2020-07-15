@@ -65,6 +65,7 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Crypto.Hash
+import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
@@ -85,7 +86,6 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Serialization (ratioFromCBOR, ratioToCBOR)
 import Shelley.Spec.NonIntegral (ln')
-import Cardano.Crypto.Util (SignableRepresentation(..))
 
 data E34
 

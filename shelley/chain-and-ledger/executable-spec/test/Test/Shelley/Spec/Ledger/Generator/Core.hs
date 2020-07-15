@@ -120,7 +120,7 @@ import Shelley.Spec.Ledger.LedgerState
     _utxo,
     _utxoState,
   )
-import Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
+import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCertSignable (..), pattern OCert)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     ProtVer (..),
@@ -566,7 +566,7 @@ mkOCert pkeys n c0 =
         vKeyHot
         n
         c0
-        (signedDSIGN @(ConcreteCrypto h) sKeyCold (vKeyHot, n, c0))
+        (signedDSIGN @(ConcreteCrypto h) sKeyCold (OCertSignable vKeyHot n c0))
 
 -- | Takes a set of KES hot keys and checks to see whether there is one whose
 -- range contains the current KES period. If so, return its index in the list of

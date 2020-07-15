@@ -58,14 +58,13 @@ import Shelley.Spec.Ledger.Keys
     KESignable,
     KeyHash,
     KeyRole (..),
-    VerKeyKES,
     VerKeyVRF,
     coerceKeyRole,
     hashKey,
     hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.LedgerState (OBftSlot (..))
-import Shelley.Spec.Ledger.OCert (KESPeriod)
+import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
@@ -83,7 +82,7 @@ instance NoUnexpectedThunks (OverlayEnv crypto)
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
   ) =>
@@ -224,7 +223,7 @@ pbftVrfChecks vrfHK eta0 bhb = do
 overlayTransition ::
   forall crypto.
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
   ) =>
@@ -267,7 +266,7 @@ instance (VRF.VRFAlgorithm (VRF crypto)) => NoUnexpectedThunks (PredicateFailure
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
   ) =>

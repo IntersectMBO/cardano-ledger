@@ -3,12 +3,15 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Shelley.Spec.Ledger.OCert
   ( OCert (..),
     OCertEnv (..),
+    OCertSignable (..),
+    ocertToSignable,
     currentIssueNo,
     KESPeriod (..),
     slotsPerKESPeriod,
@@ -19,8 +22,14 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), toCBOR)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
+import Cardano.Crypto.Util
+  ( SignableRepresentation (..),
+    writeBinaryWord64,
+  )
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
+import qualified Data.Binary as Binary (encode)
+import qualified Data.ByteString.Lazy as BSL
 import Data.Functor ((<&>))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -80,7 +89,7 @@ data OCert crypto = OCert
     -- | Start of key evolving signature period
     ocertKESPeriod :: !KESPeriod,
     -- | Signature of block operational certificate content
-    ocertSigma :: !(SignedDSIGN crypto (VerKeyKES crypto, Natural, KESPeriod))
+    ocertSigma :: !(SignedDSIGN crypto (OCertSignable crypto))
   }
   deriving (Generic)
   deriving (ToCBOR) via (CBORGroup (OCert crypto))
@@ -129,3 +138,18 @@ kesPeriod (SlotNo s) =
     if spkp == 0
       then error "kesPeriod: slots per KES period was set to zero"
       else KESPeriod . fromIntegral $ s `div` spkp
+
+-- | Signable part of an operational certificate
+data OCertSignable crypto
+  = OCertSignable !(VerKeyKES crypto) !Natural !KESPeriod
+
+instance Crypto crypto => SignableRepresentation (OCertSignable crypto) where
+  getSignableRepresentation (OCertSignable vk counter period) =
+    KES.rawSerialiseVerKeyKES vk
+      <> BSL.toStrict (Binary.encode counter)
+      <> writeBinaryWord64 (fromIntegral $ unKESPeriod period)
+
+-- | Extract the signable part of an operational certificate (for verification)
+ocertToSignable :: OCert crypto -> OCertSignable crypto
+ocertToSignable OCert {ocertVkHot, ocertN, ocertKESPeriod} =
+  OCertSignable ocertVkHot ocertN ocertKESPeriod

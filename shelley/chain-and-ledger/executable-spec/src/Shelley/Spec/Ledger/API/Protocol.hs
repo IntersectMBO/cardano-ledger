@@ -37,7 +37,6 @@ import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Data.Either (fromRight)
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
-import GHC.Natural
 import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes (Globals, Nonce, Seed)
 import Shelley.Spec.Ledger.BlockChain (BHBody, BHeader, bhbody, bheaderPrev, prevHashToNonce)
@@ -53,7 +52,7 @@ import Shelley.Spec.Ledger.LedgerState
     _dstate,
     _genDelegs,
   )
-import Shelley.Spec.Ledger.OCert (KESPeriod)
+import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
@@ -282,10 +281,7 @@ updateChainDepState ::
     MonadError (ChainTransitionError crypto) m,
     Cardano.Crypto.DSIGN.Class.Signable
       (DSIGN crypto)
-      ( Cardano.Crypto.KES.Class.VerKeyKES (KES crypto),
-        Natural,
-        Shelley.Spec.Ledger.OCert.KESPeriod
-      ),
+      (Shelley.Spec.Ledger.OCert.OCertSignable crypto),
     Cardano.Crypto.KES.Class.Signable
       (KES crypto)
       (Shelley.Spec.Ledger.BlockChain.BHBody crypto),

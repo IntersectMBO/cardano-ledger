@@ -57,10 +57,9 @@ import Shelley.Spec.Ledger.Keys
     KeyHash,
     KeyRole (..),
     VRFSignable,
-    VerKeyKES,
   )
 import Shelley.Spec.Ledger.LedgerState (OBftSlot)
-import Shelley.Spec.Ledger.OCert (KESPeriod)
+import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import Shelley.Spec.Ledger.Slot (BlockNo, SlotNo)
@@ -108,7 +107,7 @@ instance NoUnexpectedThunks (PrtclEnv crypto)
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRFSignable crypto Seed
   ) =>
@@ -144,7 +143,7 @@ deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Eq (PredicateFailure (PRTCL
 prtclTransition ::
   forall crypto.
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRFSignable crypto Seed
   ) =>
@@ -181,7 +180,7 @@ instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (PRTCL crypto))
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRFSignable crypto Seed
   ) =>
@@ -191,7 +190,7 @@ instance
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRFSignable crypto Seed
   ) =>
