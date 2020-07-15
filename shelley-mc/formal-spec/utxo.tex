@@ -24,7 +24,7 @@ to $\fun{txSize}$.
   \begin{align*}
     & \fun{getOut} \in \TxOut \to \UTxOOut \\
     & \text{tx outputs transformed to UTxO outputs} \\
-    & \fun{getOut} ~{txout}~= (\fun{getAddr}~\var{txout}, \fun{getValue}~\var{txout})
+    g& \fun{getOut} ~{txout}~= (\fun{getAddr}~\var{txout}, \fun{getValue}~\var{txout})
     \nextdef
     & \fun{outs} \in \TxBody \to \UTxO \\
     & \text{tx outputs as UTxO} \\
@@ -35,7 +35,7 @@ to $\fun{txSize}$.
           \var{ix} \mapsto \var{txout} \in \txouts{txb}
         \right\} \\
   \end{align*}
-  \caption{Functions on Tx Inputs and Outputs}
+  \caption{Functions on Tx Outputs}
   \label{fig:functions:insouts}
 \end{figure}
 
@@ -65,7 +65,7 @@ UTxO transition system with MC:
 
 \begin{itemize}
 
-  \item $\fun{getCoin}$ adds up all the Ada in a given output and returns it as a
+  \item $\fun{getCoin}$ suns all the Ada in a given output and returns it as a
   $\Coin$ value
 
   \item $\fun{utxoAda}$ returns the set of all the outputs in a UTxO with only Ada
@@ -146,12 +146,12 @@ That step is part of witnessing, i.e. the UTXOW rule, see below.
     & \fun{getCoin} \in \UTxOOut \to \Coin \\
     & \fun{getCoin}~{\var{out}} ~=~\sum_{\mathsf{adaID} \mapsto tkns \in \fun{getValue}~out}
        (\sum_{q \in \range~{tkns}} \fun{co}~q) \\
-    & \text{sum total of amount of Ada in an output}
+    & \text{\emph{-- sum total of amount of Ada in an output}}
     \nextdef
     & \fun{utxoAda} \in \UTxO \to \powerset{(\Addr \times \Coin)} \\
     & \fun{utxoAda}~{\var{utxo}} ~=~\{~(\fun{getAddr}~\var{out},~\fun{getCoin}~{out})
     ~\vert~ \var{out} \in \range~\var{utxo} ~\} \\
-    & \text{returns the outputs in the UTxO with only the Ada coins} \\
+    & \text{\emph{-- returns the outputs in the UTxO with only the Ada coins}} \\
     \nextdef
     & \fun{ubalance} \in \UTxO \to \Value \\
     & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{u}\in~\var{utxo}}
@@ -167,13 +167,13 @@ That step is part of witnessing, i.e. the UTXOW rule, see below.
     &~~  \fun{coinToValue}(\fun{wbalance}~(\fun{txwdrls}~{txb})~\\
         &~~+~ \keyRefunds{pp}{stkCreds}{txb}) +
         ~\fun{forge}~\var{txb} \\
-    & \text{value consumed} \\
+    & \text{\emph{-- value consumed}} \\
     \nextdef
     & \fun{produced} \to \PParams \to \StakePools \to \TxBody \to \Value \\
     & \fun{produced}~\var{pp}~\var{stpools}~\var{txb} = \\
     &~~\ubalance{(\fun{outs}~{txb})}  + \fun{coinToValue}(\txfee{txb} \\
     &~~+ \deposits{pp}{stpools}~{(\txcerts{txb})})\\
-    & \text{value produced} \\
+    & \text{\emph{-- value produced}} \\
   \end{align*}
   \caption{UTxO Calculations}
   \label{fig:functions:utxo}
