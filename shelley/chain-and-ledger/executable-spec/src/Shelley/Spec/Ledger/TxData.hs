@@ -384,7 +384,7 @@ deriving newtype instance Crypto crypto => ToCBOR (TxId crypto)
 deriving newtype instance Crypto crypto => FromCBOR (TxId crypto)
 
 -- | The input of a UTxO.
-data TxIn crypto = TxInCompact !(TxId crypto) {-# UNPACK #-} !Word64
+data TxIn crypto = TxInCompact {-# UNPACK #-} !(TxId crypto) {-# UNPACK #-} !Word64
   deriving (Show, Eq, Generic, Ord, NFData)
 
 -- TODO: We will also want to have the TxId be compact, but the representation
