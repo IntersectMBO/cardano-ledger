@@ -8,9 +8,20 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Control.Iterate.SetAlgebraInternal where
 
+import Codec.CBOR.Decoding(decodeListLenOf)
+import Codec.CBOR.Encoding(encodeListLen)
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..)
+  )
+import Cardano.Prelude
+  ( NoUnexpectedThunks (..),
+    NFData (rnf)
+  )
 import Prelude hiding(lookup)
 
 import qualified Data.Map.Strict as Map
@@ -125,6 +136,31 @@ instance Basic Map.Map where
 
 data BiMap v a b where MkBiMap:: (v ~ b) => !(Map.Map a b) -> !(Map.Map b a) -> BiMap v a b
                                 --  ^   the 1st and 3rd parameter must be the same:   ^   ^
+
+-- ============== begin necessary Cardano.Binary instances ===============
+instance (Ord a, Ord b,ToCBOR a, ToCBOR b) => ToCBOR (BiMap b a b) where
+  toCBOR (MkBiMap l r) = encodeListLen 2 <> toCBOR l <> toCBOR r
+
+instance (Ord a, Ord b,FromCBOR a, FromCBOR b) => FromCBOR (BiMap b a b) where
+  fromCBOR = do
+    decodeListLenOf 2
+    !x <- fromCBOR
+    !y <- fromCBOR
+    return (MkBiMap x y)
+
+instance (NoUnexpectedThunks a,NoUnexpectedThunks b) => NoUnexpectedThunks(BiMap v a b) where
+  showTypeOf _ = "BiMap"
+  whnfNoUnexpectedThunks ctxt (MkBiMap l r) = whnfNoUnexpectedThunks ctxt (l,r)
+
+instance NFData(BiMap v a b) where
+   rnf (MkBiMap l r) = seq l (seq r ())
+-- ============== end Necessary Cardano.Binary instances ===================
+
+instance (Eq k,Eq v) => Eq (BiMap u k v) where
+  (MkBiMap l r) == (MkBiMap x y) = l==x
+
+instance (Show k, Show v) => Show (BiMap u k v) where
+  show (MkBiMap l r) = show l
 
 instance Ord v => Basic (BiMap v) where
   addkv (k,v) (MkBiMap f b) comb =

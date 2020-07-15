@@ -106,6 +106,7 @@ import Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (asks)
 import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
+import Control.Iterate.SetAlgebra (biMapFromList)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.List (foldl')
@@ -830,7 +831,8 @@ dsEx2A :: HashAlgorithm h => DState h
 dsEx2A =
   dsEx1
     { _ptrs =
-        Map.fromList
+        biMapFromList
+          (\l _r -> l)
           [ (Ptr (SlotNo 10) 0 0, aliceSHK),
             (Ptr (SlotNo 10) 0 1, bobSHK),
             (Ptr (SlotNo 10) 0 2, carlSHK)
@@ -1900,7 +1902,8 @@ dsEx2J :: HashAlgorithm h => DState h
 dsEx2J =
   dsEx1
     { _ptrs =
-        Map.fromList
+        biMapFromList
+          (\l _r -> l)
           [ (Ptr (SlotNo 10) 0 0, aliceSHK),
             (Ptr (SlotNo 10) 0 2, carlSHK)
           ],
@@ -2168,7 +2171,8 @@ dsEx2L :: HashAlgorithm h => DState h
 dsEx2L =
   dsEx1
     { _ptrs =
-        Map.fromList
+        biMapFromList
+          (\l _r -> l)
           [ (Ptr (SlotNo 10) 0 0, aliceSHK),
             (Ptr (SlotNo 10) 0 2, carlSHK)
           ],

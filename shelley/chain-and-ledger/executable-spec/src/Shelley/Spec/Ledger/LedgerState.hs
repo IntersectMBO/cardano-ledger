@@ -103,7 +103,7 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (dom, eval, range, (∈), (∪+), (▷), (◁))
+import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Foldable (toList)
@@ -285,7 +285,7 @@ data DState crypto = DState
     -- | The current delegations.
     _delegations :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
     -- | The pointed to hash keys.
-    _ptrs :: !(Map Ptr (Credential 'Staking crypto)),
+    _ptrs :: !(Bimap Ptr (Credential 'Staking crypto)),
     -- | future genesis key delegations
     _fGenDelegs :: !(Map (FutureGenDeleg crypto) (GenDelegPair crypto)),
     -- | Genesis key delegations
@@ -491,7 +491,7 @@ emptyDState =
     (StakeCreds Map.empty)
     Map.empty
     Map.empty
-    Map.empty
+    biMapEmpty
     Map.empty
     (GenDelegs Map.empty)
     emptyInstantaneousRewards
@@ -939,7 +939,7 @@ stakeDistr u ds ps =
     PState (StakePools stpools) poolParams _ _ = ps
     outs = aggregateOuts u
     stakeRelation :: [(Credential 'Staking crypto, Coin)] -- We compute Lists (not Maps) because the duplicate tuples matter, later when we use: Map.fromListWith (+)
-    stakeRelation = (baseStake outs ++ ptrStake outs ptrs' ++ rewardStake rewards')
+    stakeRelation = (baseStake outs ++ ptrStake outs (forwards ptrs') ++ rewardStake rewards')
     activeDelegs :: Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
     activeDelegs = eval ((dom stkcreds ◁ delegs) ▷ dom stpools)
 

@@ -3,7 +3,7 @@ module Control.Iterate.SetAlgebra
   (-- In addition to Data.Map.Map and Data.Set.Set, the following new types can be used in the set algegra
    List,        -- A list type whose constructor is hidden (sorted [(key,value)] pairs, with no duplicate keys).
                 -- Use 'fromList' to constuct concrete values
-   BiMap,       -- Maps for Bijections. Use 'biMapFromList' and 'biMapEmpty' toconstruct concrete values.
+   BiMap,Bimap, -- Maps for Bijections. Use 'biMapFromList' and 'biMapEmpty' toconstruct concrete values.
    Single(..),  -- Sets with a single pair. Visible constructors 'Singleton', 'SetSingleton', and 'Fail'.
 
    -- Classes supporting abstract constructors of Set Algebra Expressions. These show up in the types of overloaded functions.
@@ -24,11 +24,17 @@ module Control.Iterate.SetAlgebra
    eval,
 
    -- Functions to build concrete Set-like things useable as Set Algebra Expressions
-   materialize, biMapFromList, biMapEmpty, fromList, keysEqual,
+   materialize, biMapFromList, biMapEmpty, fromList, keysEqual, forwards, backwards
 
   )
 where
 
 
-
+import Data.Map(Map)
 import Control.Iterate.SetAlgebraInternal
+
+forwards :: BiMap v k v -> Map k v
+forwards (MkBiMap l _r) = l
+
+backwards :: BiMap v k v -> Map v k
+backwards (MkBiMap _l r) = r

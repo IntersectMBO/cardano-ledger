@@ -13,6 +13,7 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
+import Control.Iterate.SetAlgebra (forwards)
 import qualified Data.Either as Either (lefts, rights)
 import Data.List (foldl')
 import Data.Map.Strict (Map)
@@ -480,7 +481,7 @@ genRecipients len keys scripts = do
 
 genPtrAddrs :: HasCallStack => DState h -> [Addr h] -> Gen [Addr h]
 genPtrAddrs ds addrs = do
-  let pointers = _ptrs ds
+  let pointers = forwards (_ptrs ds)
 
   n <- QC.choose (0, min (Map.size pointers) (length addrs))
   pointerList <- take n <$> QC.shuffle (Map.keys pointers)
