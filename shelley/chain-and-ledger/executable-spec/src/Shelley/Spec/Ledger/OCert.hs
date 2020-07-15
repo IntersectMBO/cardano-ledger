@@ -22,13 +22,11 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), toCBOR)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
-import Cardano.Crypto.Util
-  ( SignableRepresentation (..),
-    writeBinaryWord64,
-  )
+import Cardano.Crypto.Util (SignableRepresentation (..))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
-import qualified Data.Binary as Binary (encode)
+import qualified Data.Binary as Binary
+import qualified Data.Binary.Put as Binary
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor ((<&>))
 import Data.Map.Strict (Map)
@@ -145,9 +143,10 @@ data OCertSignable crypto
 
 instance Crypto crypto => SignableRepresentation (OCertSignable crypto) where
   getSignableRepresentation (OCertSignable vk counter period) =
-    KES.rawSerialiseVerKeyKES vk
-      <> BSL.toStrict (Binary.encode counter)
-      <> writeBinaryWord64 (fromIntegral $ unKESPeriod period)
+    BSL.toStrict . Binary.runPut $ do
+      Binary.putByteString (KES.rawSerialiseVerKeyKES vk)
+      Binary.put counter
+      Binary.putWord64be (fromIntegral $ unKESPeriod period)
 
 -- | Extract the signable part of an operational certificate (for verification)
 ocertToSignable :: OCert crypto -> OCertSignable crypto
