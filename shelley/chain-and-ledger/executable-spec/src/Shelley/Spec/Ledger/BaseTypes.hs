@@ -85,6 +85,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Serialization (ratioFromCBOR, ratioToCBOR)
 import Shelley.Spec.NonIntegral (ln')
+import Cardano.Crypto.Util (SignableRepresentation(..))
 
 data E34
 
@@ -214,6 +215,9 @@ mkNonceFromNumber =
 newtype Seed = Seed (Hash Blake2b_256 Seed)
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (NoUnexpectedThunks, ToCBOR)
+
+instance SignableRepresentation Seed where
+  getSignableRepresentation (Seed x) = hashToBytes x
 
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b
