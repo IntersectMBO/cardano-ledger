@@ -102,7 +102,6 @@ module Test.Shelley.Spec.Ledger.Examples
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
-import Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (asks)
 import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
@@ -3516,7 +3515,6 @@ exampleShelleyGenesis =
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),
       sgNetworkMagic = 4036000900,
       sgNetworkId = Testnet,
-      sgProtocolMagicId = ProtocolMagicId 838299499,
       sgActiveSlotsCoeff = 6.259,
       sgSecurityParam = 120842,
       sgEpochLength = EpochSize 1215,

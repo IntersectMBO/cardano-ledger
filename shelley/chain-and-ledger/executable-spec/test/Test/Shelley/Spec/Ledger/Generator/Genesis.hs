@@ -43,7 +43,6 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.TxData
-import Test.Cardano.Crypto.Gen (genProtocolMagicId)
 import Test.Shelley.Spec.Ledger.Serialization (genIPv4, genIPv6)
 import Test.Shelley.Spec.Ledger.Utils (mkHash)
 
@@ -53,7 +52,6 @@ genShelleyGenesis =
     <$> genUTCTime
     <*> genNetworkMagic
     <*> Gen.element [Mainnet, Testnet]
-    <*> genProtocolMagicId
     <*> fmap realToFrac genSlotLength
     <*> Gen.word64 (Range.linear 1 1000000)
     <*> fmap EpochSize genSecurityParam
