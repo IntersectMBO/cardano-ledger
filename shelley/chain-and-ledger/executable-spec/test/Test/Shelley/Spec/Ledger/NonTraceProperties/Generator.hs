@@ -175,7 +175,7 @@ genCoinList minCoin maxCoin lower upper = do
 
 -- | Generator for a list of 'TxOut' where for each 'Addr' of 'addrs' one Coin
 -- value is generated.
-genTxOut :: [Addr h] -> Gen [TxOut h]
+genTxOut :: HashAlgorithm h => [Addr h] -> Gen [TxOut h]
 genTxOut addrs = do
   ys <- genCoinList 100 10000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
@@ -322,7 +322,7 @@ findStakeKeyPair (KeyHashObj hk) keyList =
 findStakeKeyPair _ _ = undefined -- TODO treat script case
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
-getTxOutAddr :: TxOut h -> Addr h
+getTxOutAddr :: HashAlgorithm h => TxOut h -> Addr h
 getTxOutAddr (TxOut addr _) = addr
 
 -- | Generator for arbitrary valid ledger state, discarding any generated

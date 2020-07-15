@@ -21,6 +21,7 @@ import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
@@ -49,7 +50,7 @@ import Shelley.Spec.Ledger.Slot (EpochNo)
 
 data EPOCH crypto
 
-instance Typeable crypto => STS (EPOCH crypto) where
+instance (Crypto crypto, Typeable crypto) => STS (EPOCH crypto) where
   type State (EPOCH crypto) = EpochState crypto
   type Signal (EPOCH crypto) = EpochNo
   type Environment (EPOCH crypto) = ()
@@ -93,7 +94,10 @@ votedValuePParams (ProposedPPUpdates ppup) pps quorumN =
         1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
         _ -> Nothing
 
-epochTransition :: forall crypto. Typeable crypto => TransitionRule (EPOCH crypto)
+epochTransition ::
+  forall crypto.
+  Crypto crypto =>
+  TransitionRule (EPOCH crypto)
 epochTransition = do
   TRC
     ( _,
@@ -139,11 +143,11 @@ epochTransition = do
       pp'
       nm
 
-instance Typeable crypto => Embed (SNAP crypto) (EPOCH crypto) where
+instance (Crypto crypto, Typeable crypto) => Embed (SNAP crypto) (EPOCH crypto) where
   wrapFailed = SnapFailure
 
-instance Typeable crypto => Embed (POOLREAP crypto) (EPOCH crypto) where
+instance (Crypto crypto, Typeable crypto) => Embed (POOLREAP crypto) (EPOCH crypto) where
   wrapFailed = PoolReapFailure
 
-instance Typeable crypto => Embed (NEWPP crypto) (EPOCH crypto) where
+instance (Crypto crypto, Typeable crypto) => Embed (NEWPP crypto) (EPOCH crypto) where
   wrapFailed = NewPpFailure

@@ -107,6 +107,7 @@ getUTxO = _utxo . _utxoState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
+  Crypto crypto =>
   ShelleyState crypto ->
   Set (Addr crypto) ->
   UTxO crypto

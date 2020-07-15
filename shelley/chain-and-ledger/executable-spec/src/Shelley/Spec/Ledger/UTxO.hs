@@ -225,7 +225,7 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
 -- | Determine the total balance contained in the UTxO.
-balance :: UTxO crypto -> Coin
+balance :: Crypto crypto => UTxO crypto -> Coin
 balance (UTxO utxo) = foldr addCoins 0 utxo
   where
     addCoins (TxOut _ a) b = a + b
@@ -292,7 +292,6 @@ scriptsNeeded u tx =
   where
     unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ _wdrls $ _body tx
-
     UTxO u'' = (txinsScript (txins $ _body tx) u) ◁ u
     -- u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u)  TODO
     certificates = (toList . _certs . _body) tx
@@ -300,6 +299,7 @@ scriptsNeeded u tx =
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript ::
+  Crypto crypto =>
   Set (TxIn crypto) ->
   UTxO crypto ->
   Set (TxIn crypto)

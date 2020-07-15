@@ -21,6 +21,7 @@ module Test.Shelley.Spec.Ledger.SerializationProperties
     prop_roundtrip_BlockHeaderHash,
     prop_roundtrip_Tx,
     prop_roundtrip_TxId,
+    prop_roundtrip_TxOut,
     prop_roundtrip_LEDGER_PredicateFails,
     prop_roundtrip_PrtclState,
     prop_roundtrip_LedgerState,
@@ -118,6 +119,7 @@ import Shelley.Spec.Ledger.TxData
     StakePoolRelay,
     TxId (TxId),
     TxIn (TxIn),
+    TxOut (TxOut),
   )
 import Test.Cardano.Prelude (genBytes)
 import Test.QuickCheck
@@ -211,6 +213,9 @@ prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 prop_roundtrip_TxId :: Mock.TxId Monomorphic.ShortHash -> Property
 prop_roundtrip_TxId = roundtrip toCBOR fromCBOR
 
+prop_roundtrip_TxOut :: Mock.TxOut Monomorphic.ShortHash -> Property
+prop_roundtrip_TxOut = roundtrip toCBOR fromCBOR
+
 prop_roundtrip_BootstrapWitness ::
   Mock.BootstrapWitness Monomorphic.ShortHash -> Property
 prop_roundtrip_BootstrapWitness = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
@@ -303,8 +308,7 @@ instance Crypto c => Arbitrary (TxIn c) where
       <*> arbitrary
 
 instance HashAlgorithm h => Arbitrary (Mock.TxOut h) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
+  arbitrary = TxOut <$> arbitrary <*> arbitrary
 
 instance Arbitrary Nonce where
   arbitrary =
