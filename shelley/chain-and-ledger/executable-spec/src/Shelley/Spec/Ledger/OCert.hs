@@ -5,7 +5,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Shelley.Spec.Ledger.OCert
   ( OCert (..),
@@ -25,11 +27,12 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
-import qualified Data.Binary.Put as Binary
-import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Builder as BS
+import qualified Data.ByteString.Builder.Extra as BS
 import Data.Functor ((<&>))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word, Word64)
@@ -52,6 +55,7 @@ import Shelley.Spec.Ledger.Serialization
   ( CBORGroup (..),
     FromCBORGroup (..),
     ToCBORGroup (..),
+    runByteBuilder,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
@@ -139,12 +143,21 @@ kesPeriod (SlotNo s) =
 data OCertSignable crypto
   = OCertSignable !(VerKeyKES crypto) !Word64 !KESPeriod
 
-instance Crypto crypto => SignableRepresentation (OCertSignable crypto) where
+instance
+  forall crypto.
+  Crypto crypto =>
+  SignableRepresentation (OCertSignable crypto)
+  where
   getSignableRepresentation (OCertSignable vk counter period) =
-    BSL.toStrict . Binary.runPut $ do
-      Binary.putByteString (KES.rawSerialiseVerKeyKES vk)
-      Binary.putWord64be counter
-      Binary.putWord64be (fromIntegral $ unKESPeriod period)
+    runByteBuilder
+      ( fromIntegral $
+          KES.sizeVerKeyKES (Proxy @(KES crypto))
+            + 8
+            + 8
+      )
+      $ BS.byteStringCopy (KES.rawSerialiseVerKeyKES vk)
+        <> BS.word64BE counter
+        <> BS.word64BE (fromIntegral $ unKESPeriod period)
 
 -- | Extract the signable part of an operational certificate (for verification)
 ocertToSignable :: OCert crypto -> OCertSignable crypto
