@@ -30,8 +30,8 @@ import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     Nonce,
@@ -90,7 +90,7 @@ instance
   where
   type
     State (OVERLAY crypto) =
-      Map (KeyHash 'BlockIssuer crypto) Natural
+      Map (KeyHash 'BlockIssuer crypto) Word64
 
   type
     Signal (OVERLAY crypto) =

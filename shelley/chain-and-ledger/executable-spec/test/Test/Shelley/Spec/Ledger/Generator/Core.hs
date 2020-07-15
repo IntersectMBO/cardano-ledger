@@ -558,7 +558,13 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
 -- we then encode into the fake VRF implementation.
 newtype NatNonce = NatNonce Natural
 
-mkOCert :: forall h r. (HasCallStack, HashAlgorithm h) => AllIssuerKeys h r -> Natural -> KESPeriod -> OCert h
+mkOCert ::
+  forall h r.
+  (HasCallStack, HashAlgorithm h) =>
+  AllIssuerKeys h r ->
+  Word64 ->
+  KESPeriod ->
+  OCert h
 mkOCert pkeys n c0 =
   let (_, (_, vKeyHot)) = head $ hot pkeys
       KeyPair _vKeyCold sKeyCold = cold pkeys

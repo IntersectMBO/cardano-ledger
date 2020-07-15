@@ -32,8 +32,8 @@ import Cardano.Prelude (MonadError (..), NoUnexpectedThunks (..), unless)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition
 import Data.Map.Strict (Map)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce,
     Seed,
@@ -68,7 +68,7 @@ data PRTCL crypto
 
 data PrtclState crypto
   = PrtclState
-      !(Map (KeyHash 'BlockIssuer crypto) Natural)
+      !(Map (KeyHash 'BlockIssuer crypto) Word64)
       -- ^ Operation Certificate counters
       !Nonce
       -- ^ Evolving nonce

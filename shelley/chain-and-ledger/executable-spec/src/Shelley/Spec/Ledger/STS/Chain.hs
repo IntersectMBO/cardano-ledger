@@ -42,6 +42,7 @@ import Control.State.Transition
   )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -123,7 +124,7 @@ data CHAIN crypto
 
 data ChainState crypto = ChainState
   { chainNes :: NewEpochState crypto,
-    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer crypto) Natural,
+    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer crypto) Word64,
     chainEpochNonce :: Nonce,
     chainEvolvingNonce :: Nonce,
     chainCandidateNonce :: Nonce,
