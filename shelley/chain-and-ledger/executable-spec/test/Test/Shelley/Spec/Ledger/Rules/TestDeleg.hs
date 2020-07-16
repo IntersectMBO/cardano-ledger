@@ -38,7 +38,6 @@ import Shelley.Spec.Ledger.LedgerState
     _delegations,
     _irwd,
     _rewards,
-    _stkCreds,
   )
 import Shelley.Spec.Ledger.TxData
   ( MIRPot (..),
@@ -63,7 +62,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 -------------------------------
 
 getStDelegs :: DState ShortHash -> Set (Credential ShortHash 'Staking)
-getStDelegs = \x -> eval (dom (_stkCreds x))
+getStDelegs = \x -> eval (dom (_rewards x))
 
 getRewards :: DState ShortHash -> Map (Credential ShortHash 'Staking) Coin
 getRewards = _rewards

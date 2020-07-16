@@ -11,7 +11,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
     removedAfterPoolreap,
     -- TestNewEpoch
     adaPreservationChain,
-    rewardStkCredSync,
   )
 where
 
@@ -68,35 +67,6 @@ traceLen = 100
 ----------------------------------------------------------------------
 -- Properties for Chain
 ---------------------------------------------------------------------
-
--- | Verify that the domains for '_rewards' and '_srkCreds' remain in sync.
-rewardStkCredSync :: Property
-rewardStkCredSync =
-  forAllChainTrace $ \tr ->
-    conjoin $
-      map checkSync $
-        sourceSignalTargets tr
-  where
-    checkSync SourceSignalTarget {source, signal, target} =
-      let ds =
-            _dstate
-              . _delegationState
-              . esLState
-              . nesEs
-              . chainNes
-              $ target
-       in counterexample
-            ( mconcat
-                [ "source\n",
-                  show source,
-                  "signal\n",
-                  show signal,
-                  "target\n",
-                  show target
-                ]
-            )
-            $ eval (dom (_stkCreds ds))
-              === domain (_rewards ds)
 
 adaPreservationChain :: Property
 adaPreservationChain =

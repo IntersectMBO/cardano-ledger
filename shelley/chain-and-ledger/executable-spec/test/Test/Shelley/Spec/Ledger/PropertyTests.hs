@@ -17,7 +17,6 @@ import Test.Shelley.Spec.Ledger.Rules.TestChain
     constantSumPots,
     nonNegativeDeposits,
     removedAfterPoolreap,
-    rewardStkCredSync,
   )
 import Test.Shelley.Spec.Ledger.Rules.TestLedger
   ( consumedEqualsProduced,
@@ -51,7 +50,6 @@ minimalPropertyTests =
     "Minimal Property Tests"
     [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered,
       TQC.testProperty "total amount of Ada is preserved (Chain)" adaPreservationChain,
-      TQC.testProperty "reward and stake credential maps stay in sync" rewardStkCredSync,
       TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated,
       bootstrapHashTest
     ]

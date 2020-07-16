@@ -62,7 +62,6 @@ import Shelley.Spec.Ledger.LedgerState
     _retiring,
     _rewards,
     _stPools,
-    _stkCreds,
   )
 import Shelley.Spec.Ledger.PParams (PParams, _d, _minPoolCost)
 import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
@@ -218,7 +217,7 @@ genRegKeyCert
         )
       ]
     where
-      notRegistered k = eval (k ∉ dom (_stkCreds delegSt))
+      notRegistered k = eval (k ∉ dom (_rewards delegSt))
       availableKeys = filter (notRegistered . toCred . snd) keys
       availableScripts = filter (notRegistered . scriptToCred . snd) scripts
 
@@ -253,7 +252,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
       )
     ]
   where
-    registered k = eval (k ∈ dom (_stkCreds dState))
+    registered k = eval (k ∈ dom (_rewards dState))
     availableKeys =
       filter
         ( \(_, k) ->
@@ -317,7 +316,7 @@ genDelegation
         where
           scriptCert =
             DCertDeleg (Delegate (Delegation (scriptToCred delegatorScript) poolKey))
-      registeredDelegate k = eval (k ∈ dom (_stkCreds (_dstate dpState)))
+      registeredDelegate k = eval (k ∈ dom (_rewards (_dstate dpState)))
       availableDelegates = filter (registeredDelegate . toCred . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred . snd) scripts
@@ -475,7 +474,7 @@ genInstantaneousRewards s coreNodes delegateKeys pparams accountState delegSt = 
         fromMaybe
           (error "genInstantaneousRewards: lookupGenDelegate failed")
           (lookupGenDelegate coreNodes delegateKeys gk)
-      StakeCreds credentials = _stkCreds delegSt
+      credentials = _rewards delegSt
 
   winnerCreds <-
     take <$> QC.elements [0 .. (max 0 $ Map.size credentials - 1)]

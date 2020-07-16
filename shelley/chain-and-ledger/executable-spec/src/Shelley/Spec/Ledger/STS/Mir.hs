@@ -46,7 +46,6 @@ import Shelley.Spec.Ledger.LedgerState
     _dstate,
     _irwd,
     _rewards,
-    _stkCreds,
     pattern EpochState,
   )
 import Shelley.Spec.Ledger.PParams (emptyPParams)
@@ -95,11 +94,11 @@ mirTransition = do
     judgmentContext
   let dpState = _delegationState ls
       dState = _dstate dpState
-      StakeCreds stkcreds = _stkCreds dState
-      irwdR = eval $ (dom stkcreds) ◁ (iRReserves $ _irwd dState) :: RewardAccounts crypto
+      rewards = _rewards dState
+      irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd dState) :: RewardAccounts crypto
       totFromReserves = sum irwdR
       reserves = _reserves acnt
-      irwdT = eval $ (dom stkcreds) ◁ (iRTreasury $ _irwd dState) :: RewardAccounts crypto
+      irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd dState) :: RewardAccounts crypto
       totFromTreasury = sum irwdT
       treasury = _treasury acnt
       update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts crypto

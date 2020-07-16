@@ -137,11 +137,11 @@ poolStake hk delegs (Stake stake) =
 -- | Calculate total possible refunds.
 obligation ::
   PParams ->
-  StakeCreds crypto ->
+  Map (Credential 'Staking crypto) Coin ->
   StakePools crypto ->
   Coin
-obligation pp (StakeCreds stakeKeys) (StakePools stakePools) =
-  (_keyDeposit pp) * (fromIntegral $ length stakeKeys)
+obligation pp rewards (StakePools stakePools) =
+  (_keyDeposit pp) * (fromIntegral $ length rewards)
     + (_poolDeposit pp) * (fromIntegral $ length stakePools)
 
 -- | Calculate maximal pool reward
