@@ -33,7 +33,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestLedger
   )
 where
 
-import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
     Trace (..),
@@ -76,7 +75,7 @@ import Shelley.Spec.Ledger.TxData (PoolParams (..), Ptr (..), _certs, _wdrls)
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, Testable, conjoin, property, withMaxSuccess, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( ConcreteCrypto,
+  ( C,
     DELEG,
     DELEGS,
     LEDGER,
@@ -293,19 +292,19 @@ prop_MIRValuesEndUpInMap =
 
 forAllLedgerTrace ::
   (Testable prop) =>
-  (Trace (LEDGER ShortHash) -> prop) ->
+  (Trace (LEDGER C) -> prop) ->
   Property
 forAllLedgerTrace prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
     forAllTraceFromInitState testGlobals traceLen (Preset.genEnv p) (Just $ mkGenesisLedgerState (geConstants (Preset.genEnv p))) prop
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
 
 -- | Transform LEDGER `sourceSignalTargets`s to DELEGS ones.
 ledgerToDelegsSsts ::
-  SourceSignalTarget (LEDGER ShortHash) ->
-  (Wdrl ShortHash, SourceSignalTarget (DELEGS ShortHash))
+  SourceSignalTarget (LEDGER C) ->
+  (Wdrl C, SourceSignalTarget (DELEGS C))
 ledgerToDelegsSsts (SourceSignalTarget (_, dpSt) (_, dpSt') tx) =
   ( (_wdrls . _body) tx,
     SourceSignalTarget dpSt dpSt' ((StrictSeq.getSeq . _certs . _body) tx)
@@ -313,16 +312,16 @@ ledgerToDelegsSsts (SourceSignalTarget (_, dpSt) (_, dpSt') tx) =
 
 -- | Transform LEDGER to UTXO `SourceSignalTargets`s
 ledgerToUtxoSsts ::
-  SourceSignalTarget (LEDGER ShortHash) ->
-  SourceSignalTarget (UTXO ShortHash)
+  SourceSignalTarget (LEDGER C) ->
+  SourceSignalTarget (UTXO C)
 ledgerToUtxoSsts (SourceSignalTarget (utxoSt, _) (utxoSt', _) tx) =
   (SourceSignalTarget utxoSt utxoSt' tx)
 
 -- | Transform LEDGER to UTXOW `SourceSignalTargets`s
 ledgerToUtxowSsts ::
-  SourceSignalTarget (LEDGER ShortHash) ->
-  ( Map (KeyHash 'StakePool (ConcreteCrypto ShortHash)) (PoolParams (ConcreteCrypto ShortHash)),
-    SourceSignalTarget (UTXOW ShortHash)
+  SourceSignalTarget (LEDGER C) ->
+  ( Map (KeyHash 'StakePool C) (PoolParams C),
+    SourceSignalTarget (UTXOW C)
   )
 ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
   ( (_pParams . _pstate) delegSt,
@@ -332,10 +331,10 @@ ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
 -- | Transform a LEDGER Trace to a POOL Trace by extracting the certificates
 -- from the LEDGER transactions and then reconstructing a new POOL trace from
 -- those certificates.
-ledgerToPoolTrace :: Trace (LEDGER ShortHash) -> Trace (POOL ShortHash)
+ledgerToPoolTrace :: Trace (LEDGER C) -> Trace (POOL C)
 ledgerToPoolTrace ledgerTr =
   runShelleyBase $
-    Trace.closure @(POOL ShortHash) poolEnv poolSt0 (certs txs)
+    Trace.closure @(POOL C) poolEnv poolSt0 (certs txs)
   where
     txs = traceSignals NewestFirst ledgerTr
     certs = concatMap (toList . _certs . _body)
@@ -349,10 +348,10 @@ ledgerToPoolTrace ledgerTr =
 -- | Transform a LEDGER Trace to a DELEG Trace by extracting the certificates
 -- from the LEDGER transactions and then reconstructing a new DELEG trace from
 -- those certificates.
-ledgerToDelegTrace :: Trace (LEDGER ShortHash) -> Trace (DELEG ShortHash)
+ledgerToDelegTrace :: Trace (LEDGER C) -> Trace (DELEG C)
 ledgerToDelegTrace ledgerTr =
   runShelleyBase $
-    Trace.closure @(DELEG ShortHash) delegEnv delegSt0 (certs txs)
+    Trace.closure @(DELEG C) delegEnv delegSt0 (certs txs)
   where
     txs = traceSignals NewestFirst ledgerTr
     certs = concatMap (toList . _certs . _body)

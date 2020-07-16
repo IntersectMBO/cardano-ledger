@@ -9,7 +9,6 @@
 
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
-import Cardano.Crypto.Hash (ShortHash)
 import qualified Cardano.Crypto.VRF as VRF
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
@@ -31,6 +30,7 @@ import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys (KeyPair (..))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     WitHashes (..),
@@ -96,26 +96,26 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-alicePay :: KeyPair ShortHash 'Payment
+alicePay :: KeyPair 'Payment C
 alicePay = KeyPair 1 1
 
-aliceStake :: KeyPair ShortHash 'Staking
+aliceStake :: KeyPair 'Staking C
 aliceStake = KeyPair 2 2
 
-aliceAddr :: Addr ShortHash
+aliceAddr :: Addr C
 aliceAddr =
   Addr
     Testnet
     (Credential.KeyHashObj . hashKey $ vKey alicePay)
     (Credential.StakeRefBase . Credential.KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay :: KeyPair ShortHash 'Payment
+bobPay :: KeyPair 'Payment C
 bobPay = KeyPair 3 3
 
-bobStake :: KeyPair ShortHash 'Staking
+bobStake :: KeyPair 'Staking C
 bobStake = KeyPair 4 4
 
-bobAddr :: Addr ShortHash
+bobAddr :: Addr C
 bobAddr =
   Addr
     Testnet
@@ -158,7 +158,7 @@ testNoGenesisOverlay =
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
   checkLeaderValue
-    (VRF.mkTestOutputVRF 0 :: VRF.OutputVRF (VRF (ConcreteCrypto ShortHash)))
+    (VRF.mkTestOutputVRF 0 :: VRF.OutputVRF (VRF (ConcreteCrypto C)))
     (1 % 2)
     (mkActiveSlotCoeff $ unsafeMkUnitInterval 1)
     @?= True
@@ -192,7 +192,7 @@ instance Arbitrary VRFNatVal where
           2
             ^ ( 8
                   * VRF.sizeOutputVRF
-                    (Proxy @(VRF (ConcreteCrypto ShortHash)))
+                    (Proxy @(VRF (ConcreteCrypto C)))
               )
         )
   shrink (VRFNatVal v) = VRFNatVal <$> shrinkIntegral v
@@ -219,7 +219,7 @@ instance Arbitrary StakeProportion where
 -- | Test @checkLeaderVal@ in 'Shelley.Spec.Ledger.BlockChain'
 testCheckLeaderVal ::
   forall v.
-  (v ~ VRF (ConcreteCrypto ShortHash)) =>
+  (v ~ VRF C) =>
   -- (v ~ CLVVRF) =>
   TestTree
 testCheckLeaderVal =
@@ -305,32 +305,32 @@ testCheckLeaderVal =
     maxVRFVal = (2 ^ (8 * VRF.sizeOutputVRF (Proxy @v))) - 1
 
 testLEDGER ::
-  (UTxOState ShortHash, DPState ShortHash) ->
-  Tx ShortHash ->
+  (UTxOState C, DPState C) ->
+  Tx C ->
   LedgerEnv ->
-  Either [[PredicateFailure (LEDGER ShortHash)]] (UTxOState ShortHash, DPState ShortHash) ->
+  Either [[PredicateFailure (LEDGER C)]] (UTxOState C, DPState C) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
-  checkTrace @(LEDGER ShortHash) runShelleyBase env $ pure initSt .- tx .-> expectedSt
+  checkTrace @(LEDGER C) runShelleyBase env $ pure initSt .- tx .-> expectedSt
 testLEDGER initSt tx env predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTSTest @(LEDGER ShortHash) (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTSTest @(LEDGER C) (TRC (env, initSt, tx))
   st @?= predicateFailure
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
 
 data AliceToBob = AliceToBob
-  { input :: TxIn ShortHash,
+  { input :: TxIn C,
     toBob :: Coin,
     fee :: Coin,
     deposits :: Coin,
     refunds :: Coin,
-    certs :: [DCert ShortHash],
+    certs :: [DCert C],
     ttl :: SlotNo,
-    signers :: [KeyPair ShortHash 'Witness]
+    signers :: [KeyPair 'Witness C]
   }
 
-aliceGivesBobLovelace :: AliceToBob -> Tx ShortHash
+aliceGivesBobLovelace :: AliceToBob -> Tx C
 aliceGivesBobLovelace
   AliceToBob
     { input,
@@ -360,7 +360,7 @@ aliceGivesBobLovelace
           SNothing
       awits = makeWitnessesVKey (hashAnnotated txbody) signers
 
-utxoState :: UTxOState ShortHash
+utxoState :: UTxOState C
 utxoState =
   UTxOState
     ( genesisCoins
@@ -372,10 +372,10 @@ utxoState =
     (Coin 0)
     emptyPPUPState
 
-dpState :: DPState ShortHash
+dpState :: DPState C
 dpState = DPState emptyDState emptyPState
 
-addReward :: DPState ShortHash -> Credential ShortHash 'Staking -> Coin -> DPState ShortHash
+addReward :: DPState C -> Credential C 'Staking -> Coin -> DPState C
 addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
   where
     ds = _dstate dp
@@ -385,8 +385,8 @@ ledgerEnv :: LedgerEnv
 ledgerEnv = LedgerEnv (SlotNo 0) 0 pp (AccountState 0 0)
 
 testInvalidTx ::
-  [PredicateFailure (LEDGER ShortHash)] ->
-  Tx ShortHash ->
+  [PredicateFailure (LEDGER C)] ->
+  Tx C ->
   Assertion
 testInvalidTx errs tx =
   testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
@@ -643,12 +643,12 @@ testOutputTooSmall =
           signers = [asWitness alicePay]
         }
 
-alicePoolColdKeys :: KeyPair ShortHash 'StakePool
+alicePoolColdKeys :: KeyPair 'StakePool C
 alicePoolColdKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
 
-alicePoolParamsSmallCost :: PoolParams ShortHash
+alicePoolParamsSmallCost :: PoolParams C
 alicePoolParamsSmallCost =
   PoolParams
     { _poolPubKey = hashKey . vKey $ alicePoolColdKeys,

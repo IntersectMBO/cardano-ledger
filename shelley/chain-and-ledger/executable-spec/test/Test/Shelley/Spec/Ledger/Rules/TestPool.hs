@@ -7,7 +7,6 @@
 
 module Test.Shelley.Spec.Ledger.Rules.TestPool where
 
-import Cardano.Crypto.Hash (ShortHash)
 import Control.Iterate.SetAlgebra (dom, eval, (∈), (∉))
 import Control.State.Transition (Environment, State)
 import Control.State.Transition.Trace
@@ -24,7 +23,10 @@ import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes ((==>))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
-import Shelley.Spec.Ledger.Keys (KeyRole (..))
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash,
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( _fPParams,
     _pParams,
@@ -42,7 +44,7 @@ import Shelley.Spec.Ledger.TxData
   )
 import Test.QuickCheck (Property, conjoin, counterexample, property, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( KeyHash,
+  ( C,
     LEDGER,
     POOL,
     PState,
@@ -54,7 +56,7 @@ import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
 -- helper accessor functions --
 -------------------------------
 
-getRetiring :: PState ShortHash -> Map (KeyHash ShortHash 'StakePool) EpochNo
+getRetiring :: PState C -> Map (KeyHash 'StakePool C) EpochNo
 getRetiring = _retiring
 
 ------------------------------
@@ -73,7 +75,7 @@ traceLen = 100
 
 -- | Check that a newly registered pool key is not in the retiring map.
 rewardZeroAfterReg ::
-  [SourceSignalTarget (POOL ShortHash)] ->
+  [SourceSignalTarget (POOL C)] ->
   Property
 rewardZeroAfterReg ssts =
   conjoin $
@@ -97,8 +99,8 @@ rewardZeroAfterReg ssts =
 -- epoch interval, then the pool key will be added to the retiring map but stays
 -- in the set of stake pools.
 poolRetireInEpoch ::
-  Environment (LEDGER ShortHash) ->
-  [SourceSignalTarget (POOL ShortHash)] ->
+  Environment (LEDGER C) ->
+  [SourceSignalTarget (POOL C)] ->
   Property
 poolRetireInEpoch env ssts =
   conjoin $
@@ -130,21 +132,21 @@ poolRetireInEpoch env ssts =
 
 -- | Check that a `RegPool` certificate properly adds a stake pool.
 registeredPoolIsAdded ::
-  [SourceSignalTarget (POOL ShortHash)] ->
+  [SourceSignalTarget (POOL C)] ->
   Property
 registeredPoolIsAdded ssts =
   conjoin $
     map addedRegPool ssts
   where
     addedRegPool ::
-      SourceSignalTarget (POOL ShortHash) ->
+      SourceSignalTarget (POOL C) ->
       Property
     addedRegPool sst =
       case signal sst of
         DCertPool (RegPool poolParams) -> check poolParams
         _ -> property ()
       where
-        check :: PoolParams ShortHash -> Property
+        check :: PoolParams C -> Property
         check poolParams = do
           let hk = _poolPubKey poolParams
               sSt = source sst
@@ -174,13 +176,13 @@ registeredPoolIsAdded ssts =
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
 -- retirement.
 poolIsMarkedForRetirement ::
-  [SourceSignalTarget (POOL ShortHash)] ->
+  [SourceSignalTarget (POOL C)] ->
   Property
 poolIsMarkedForRetirement ssts =
   conjoin (map check ssts)
   where
     check ::
-      SourceSignalTarget (POOL ShortHash) ->
+      SourceSignalTarget (POOL C) ->
       Property
     check sst =
       case signal sst of
@@ -189,7 +191,7 @@ poolIsMarkedForRetirement ssts =
         DCertPool (RetirePool hk _epoch) -> wasRemoved hk
         _ -> property ()
       where
-        wasRemoved :: KeyHash ShortHash 'StakePool -> Property
+        wasRemoved :: KeyHash 'StakePool C -> Property
         wasRemoved hk =
           conjoin
             [ counterexample
@@ -203,13 +205,13 @@ poolIsMarkedForRetirement ssts =
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
 pStateIsInternallyConsistent ::
-  [SourceSignalTarget (POOL ShortHash)] ->
+  [SourceSignalTarget (POOL C)] ->
   Property
 pStateIsInternallyConsistent ssts =
   conjoin $
     map isConsistent (concatMap (\sst -> [source sst, target sst]) ssts)
   where
-    isConsistent :: State (POOL ShortHash) -> Property
+    isConsistent :: State (POOL C) -> Property
     isConsistent (PState pParams_ _ retiring_) = do
       let poolKeys = M.keysSet pParams_
           pParamKeys = M.keysSet pParams_

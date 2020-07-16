@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.MultiSigExamples
   ( applyTxWithScript,
@@ -15,7 +17,6 @@ module Test.Shelley.Spec.Ledger.MultiSigExamples
   )
 where
 
-import Cardano.Crypto.Hash (HashAlgorithm)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
@@ -34,8 +35,9 @@ import Shelley.Spec.Ledger.Credential
     pattern ScriptHashObj,
     pattern StakeRefBase,
   )
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
-import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness)
+import Shelley.Spec.Ledger.Keys (KeyPair, KeyRole (..), asWitness)
 import Shelley.Spec.Ledger.LedgerState (genesisState, _utxoState)
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.PParams (PParams, emptyPParams, _maxTxSize)
@@ -58,8 +60,8 @@ import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
-    KeyPair,
     LedgerState,
+    Mock,
     MultiSig,
     ScriptHash,
     Tx,
@@ -88,33 +90,33 @@ import Test.Shelley.Spec.Ledger.Utils
 -- Multi-Signature tests
 
 -- Multi-signature scripts
-singleKeyOnly :: HashAlgorithm h => Addr h -> MultiSig h
+singleKeyOnly :: Crypto c => Addr c -> MultiSig c
 singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
-aliceOnly :: HashAlgorithm h => proxy h -> MultiSig h
+aliceOnly :: Crypto c => proxy c -> MultiSig c
 aliceOnly _ = singleKeyOnly aliceAddr
 
-bobOnly :: HashAlgorithm h => proxy h -> MultiSig h
+bobOnly :: Crypto c => proxy c -> MultiSig c
 bobOnly _ = singleKeyOnly bobAddr
 
-aliceOrBob :: HashAlgorithm h => proxy h -> MultiSig h
+aliceOrBob :: Crypto c => proxy c -> MultiSig c
 aliceOrBob p = RequireAnyOf [aliceOnly p, singleKeyOnly bobAddr]
 
-aliceAndBob :: HashAlgorithm h => proxy h -> MultiSig h
+aliceAndBob :: Crypto c => proxy c -> MultiSig c
 aliceAndBob p = RequireAllOf [aliceOnly p, singleKeyOnly bobAddr]
 
-aliceAndBobOrCarl :: HashAlgorithm h => proxy h -> MultiSig h
+aliceAndBobOrCarl :: Crypto c => proxy c -> MultiSig c
 aliceAndBobOrCarl p = RequireMOf 1 [aliceAndBob p, singleKeyOnly carlAddr]
 
-aliceAndBobOrCarlAndDaria :: HashAlgorithm h => proxy h -> MultiSig h
+aliceAndBobOrCarlAndDaria :: Crypto c => proxy c -> MultiSig c
 aliceAndBobOrCarlAndDaria p =
   RequireAnyOf
     [ aliceAndBob p,
       RequireAllOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]
     ]
 
-aliceAndBobOrCarlOrDaria :: HashAlgorithm h => proxy h -> MultiSig h
+aliceAndBobOrCarlOrDaria :: Crypto c => proxy c -> MultiSig c
 aliceAndBobOrCarlOrDaria p =
   RequireMOf
     1
@@ -122,7 +124,7 @@ aliceAndBobOrCarlOrDaria p =
       RequireAnyOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]
     ]
 
-initTxBody :: HashAlgorithm h => [(Addr h, Coin)] -> TxBody h
+initTxBody :: Crypto c => [(Addr c, Coin)] -> TxBody c
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
@@ -134,7 +136,7 @@ initTxBody addrs =
     SNothing
     SNothing
 
-makeTxBody :: HashAlgorithm h => [TxIn h] -> [(Addr h, Coin)] -> Wdrl h -> TxBody h
+makeTxBody :: Crypto c => [TxIn c] -> [(Addr c, Coin)] -> Wdrl c -> TxBody c
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
@@ -146,7 +148,7 @@ makeTxBody inp addrCs wdrl =
     SNothing
     SNothing
 
-makeTx :: HashAlgorithm h => TxBody h -> [KeyPair h 'Witness] -> Map (ScriptHash h) (MultiSig h) -> Maybe MetaData -> Tx h
+makeTx :: Mock c => TxBody c -> [KeyPair 'Witness c] -> Map (ScriptHash c) (MultiSig c) -> Maybe MetaData -> Tx c
 makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
@@ -161,7 +163,7 @@ aliceInitCoin = 10000
 bobInitCoin :: Coin
 bobInitCoin = 1000
 
-genesis :: HashAlgorithm h => LedgerState h
+genesis :: Crypto c => LedgerState c
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty
@@ -179,11 +181,11 @@ initPParams = emptyPParams {_maxTxSize = 1000}
 -- 'aliceKeep' is greater than 0, gives that amount to Alice and creates outputs
 -- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState ::
-  forall h.
-  HashAlgorithm h =>
+  forall c.
+  Mock c =>
   Coin ->
-  [(MultiSig h, Coin)] ->
-  (TxId h, Either [[PredicateFailure (UTXOW h)]] (UTxOState h))
+  [(MultiSig c, Coin)] ->
+  (TxId c, Either [[PredicateFailure (UTXOW c)]] (UTxOState c))
 initialUTxOState aliceKeep msigs =
   let addresses =
         [(aliceAddr, aliceKeep) | aliceKeep > 0]
@@ -205,7 +207,7 @@ initialUTxOState aliceKeep msigs =
               Nothing
        in ( txid $ _body tx,
             runShelleyBase $
-              applySTSTest @(UTXOW h)
+              applySTSTest @(UTXOW c)
                 ( TRC
                     ( UtxoEnv
                         (SlotNo 0)
@@ -226,15 +228,15 @@ initialUTxOState aliceKeep msigs =
 -- 'aliceKeep' in the case of it being non-zero) to spend all funds back to
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript ::
-  forall proxy h.
-  HashAlgorithm h =>
-  proxy h ->
-  [(MultiSig h, Coin)] ->
-  [MultiSig h] ->
-  Wdrl h ->
+  forall proxy c.
+  Mock c =>
+  proxy c ->
+  [(MultiSig c, Coin)] ->
+  [MultiSig c] ->
+  Wdrl c ->
   Coin ->
-  [KeyPair h 'Witness] ->
-  Either [[PredicateFailure (UTXOW h)]] (UTxOState h)
+  [KeyPair 'Witness c] ->
+  Either [[PredicateFailure (UTXOW c)]] (UTxOState c)
 applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
@@ -264,7 +266,7 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         Nothing
     utxoSt' =
       runShelleyBase $
-        applySTSTest @(UTXOW h)
+        applySTSTest @(UTXOW c)
           ( TRC
               ( UtxoEnv
                   (SlotNo 0)

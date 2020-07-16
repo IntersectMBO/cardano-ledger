@@ -14,7 +14,6 @@ module Test.Shelley.Spec.Ledger.Generator.Update
   )
 where
 
-import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Ratio (Ratio, (%))
@@ -28,9 +27,12 @@ import Shelley.Spec.Ledger.BaseTypes
     mkNonceFromNumber,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
+    KeyHash,
+    KeyPair,
     KeyRole (..),
     asWitness,
     hashKey,
@@ -50,8 +52,6 @@ import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( DPState,
     GenesisKeyPair,
-    KeyHash,
-    KeyPair,
     ProposedPPUpdates,
     UTxOState,
     Update,
@@ -204,7 +204,7 @@ genPPUpdate ::
   HasCallStack =>
   Constants ->
   PParams ->
-  [KeyHash h 'Genesis] ->
+  [KeyHash 'Genesis h] ->
   Gen (ProposedPPUpdates h)
 genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) pp genesisKeys = do
   -- TODO generate Maybe tyes so not all updates are full
@@ -250,13 +250,13 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) pp genesisKeys = do
 
 -- | Generate an @Update (where all the given nodes participate)
 genUpdateForNodes ::
-  (HasCallStack, HashAlgorithm h) =>
+  (HasCallStack, Crypto c) =>
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [GenesisKeyPair h] ->
+  [GenesisKeyPair c] ->
   PParams ->
-  Gen (Maybe (Update h))
+  Gen (Maybe (Update c))
 genUpdateForNodes c s e coreKeys pp =
   Just <$> (Update <$> genPPUpdate_ <*> pure e')
   where
@@ -266,14 +266,14 @@ genUpdateForNodes c s e coreKeys pp =
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::
-  (HasCallStack, HashAlgorithm h) =>
+  (HasCallStack, Crypto c) =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair h, AllIssuerKeys h 'GenesisDelegate)] ->
-  [AllIssuerKeys h 'GenesisDelegate] ->
+  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  [AllIssuerKeys c 'GenesisDelegate] ->
   PParams ->
-  (UTxOState h, DPState h) ->
-  Gen (Maybe (Update h), [KeyPair h 'Witness])
+  (UTxOState c, DPState c) ->
+  Gen (Maybe (Update c), [KeyPair 'Witness c])
 genUpdate
   c@(Constants {frequencyTxUpdates})
   s

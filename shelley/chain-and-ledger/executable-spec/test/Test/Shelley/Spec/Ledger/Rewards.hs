@@ -10,7 +10,7 @@ module Test.Shelley.Spec.Ledger.Rewards (rewardTests) where
 
 import Cardano.Binary (toCBOR)
 import qualified Cardano.Crypto.DSIGN as Crypto
-import Cardano.Crypto.Hash (MD5, ShortHash, hashToBytes)
+import Cardano.Crypto.Hash (MD5, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -52,7 +52,7 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.Rewards (reward)
 import Shelley.Spec.Ledger.TxData (PoolParams (..), RewardAcnt (..))
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Generator.Core (genCoin, genNatural)
 import Test.Shelley.Spec.Ledger.Utils
   ( testGlobals,
@@ -213,8 +213,6 @@ genBlocksMade pools = BlocksMade . Map.fromList <$> mapM f pools
     f p = (_poolPubKey p,) <$> genNatural 0 maxPoolBlocks
 
 -- Properties --
-
-type C = ConcreteCrypto ShortHash
 
 rewardsBoundedByPot :: Property
 rewardsBoundedByPot = property $ do

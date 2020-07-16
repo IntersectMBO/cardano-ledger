@@ -24,7 +24,6 @@ import Cardano.Binary
     serialize,
     serializeEncoding,
   )
-import Cardano.Crypto.Hash (ShortHash)
 import Cardano.Prelude
 import Control.Exception (bracket)
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -44,6 +43,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     BHBody,
     BHeader,
     BootstrapWitness,
+    C,
     Credential,
     DCert,
     LaxBlock,
@@ -65,25 +65,25 @@ import Prelude (String)
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlTest' @(BHeader ShortHash) n "header",
-      cddlTest' @(BootstrapWitness ShortHash) n "bootstrap_witness",
-      cddlTest @(BHBody ShortHash) n "header_body",
-      cddlGroupTest @(OCert ShortHash) n "operational_cert",
-      cddlTest @(Addr ShortHash) n "address",
-      cddlTest @(RewardAcnt ShortHash) n "reward_account",
-      cddlTest @(Credential ShortHash 'Staking) n "stake_credential",
-      cddlTest' @(TxBody ShortHash) n "transaction_body",
-      cddlTest @(TxOut ShortHash) n "transaction_output",
+    [ cddlTest' @(BHeader C) n "header",
+      cddlTest' @(BootstrapWitness C) n "bootstrap_witness",
+      cddlTest @(BHBody C) n "header_body",
+      cddlGroupTest @(OCert C) n "operational_cert",
+      cddlTest @(Addr C) n "address",
+      cddlTest @(RewardAcnt C) n "reward_account",
+      cddlTest @(Credential C 'Staking) n "stake_credential",
+      cddlTest' @(TxBody C) n "transaction_body",
+      cddlTest @(TxOut C) n "transaction_output",
       cddlTest @StakePoolRelay n "relay",
-      cddlTest @(DCert ShortHash) n "certificate",
-      cddlTest @(TxIn ShortHash) n "transaction_input",
+      cddlTest @(DCert C) n "certificate",
+      cddlTest @(TxIn C) n "transaction_input",
       cddlTest' @MetaData n "transaction_metadata",
-      cddlTest' @(MultiSig ShortHash) n "multisig_script",
-      cddlTest @(Update ShortHash) n "update",
-      cddlTest @(ProposedPPUpdates ShortHash) n "proposed_protocol_parameter_updates",
+      cddlTest' @(MultiSig C) n "multisig_script",
+      cddlTest @(Update C) n "update",
+      cddlTest @(ProposedPPUpdates C) n "proposed_protocol_parameter_updates",
       cddlTest @PParamsUpdate n "protocol_param_update",
-      cddlTest' @(Tx ShortHash) n "transaction",
-      cddlTest' @(LaxBlock ShortHash) n "block"
+      cddlTest' @(Tx C) n "transaction",
+      cddlTest' @(LaxBlock C) n "block"
     ]
       <*> pure cddl
 

@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
@@ -12,7 +14,6 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
   )
 where
 
-import Cardano.Crypto.Hash (HashAlgorithm)
 import Control.Iterate.SetAlgebra (forwards)
 import qualified Data.Either as Either (lefts, rights)
 import Data.List (foldl')
@@ -38,8 +39,15 @@ import Shelley.Spec.Ledger.Credential
     pattern StakeRefBase,
     pattern StakeRefPtr,
   )
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
-import Shelley.Spec.Ledger.Keys (Hash, KeyRole (..), asWitness)
+import Shelley.Spec.Ledger.Keys
+  ( Hash,
+    KeyHash,
+    KeyPair,
+    KeyRole (..),
+    asWitness,
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( minfeeBound,
     _dstate,
@@ -68,14 +76,12 @@ import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
-    ConcreteCrypto,
     Credential,
     DCert,
     DPState,
     DState,
-    KeyHash,
-    KeyPair,
     KeyPairs,
+    Mock,
     MultiSig,
     MultiSigPairs,
     RewardAcnt,
@@ -108,11 +114,11 @@ import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 -- Selects unspent outputs and spends the funds on a some valid addresses.
 -- Also generates valid certificates.
 genTx ::
-  (HasCallStack, HashAlgorithm h) =>
-  GenEnv h ->
+  (HasCallStack, Mock c) =>
+  GenEnv c ->
   LedgerEnv ->
-  (UTxOState h, DPState h) ->
-  Gen (Tx h)
+  (UTxOState c, DPState c) ->
+  Gen (Tx c)
 genTx
   ge@( GenEnv
          KeySpace_
@@ -285,13 +291,13 @@ genTx
           )
 
 mkTxWits ::
-  (HasCallStack, HashAlgorithm h) =>
-  Map (KeyHash h 'Payment) (KeyPair h 'Payment) ->
-  Map (KeyHash h 'Staking) (KeyPair h 'Staking) ->
-  Hash (ConcreteCrypto h) (TxBody h) ->
-  [KeyPair h 'Witness] ->
-  Map (ScriptHash h) (MultiSig h) ->
-  WitnessSet h
+  (HasCallStack, Mock c) =>
+  Map (KeyHash 'Payment c) (KeyPair 'Payment c) ->
+  Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
+  Hash c (TxBody c) ->
+  [KeyPair 'Witness c] ->
+  Map (ScriptHash c) (MultiSig c) ->
+  WitnessSet c
 mkTxWits
   indexedPaymentKeys
   indexedStakingKeys
@@ -326,15 +332,15 @@ mkTxWits
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody ::
-  (HasCallStack, HashAlgorithm h) =>
-  Set (TxIn h) ->
-  StrictSeq (TxOut h) ->
-  StrictSeq (DCert h) ->
-  Map (RewardAcnt h) Coin ->
-  Maybe (Update h) ->
+  (HasCallStack, Crypto c) =>
+  Set (TxIn c) ->
+  StrictSeq (TxOut c) ->
+  StrictSeq (DCert c) ->
+  Map (RewardAcnt c) Coin ->
+  Maybe (Update c) ->
   Coin ->
   SlotNo ->
-  Gen (TxBody h)
+  Gen (TxBody c)
 genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
   return $
     TxBody
@@ -354,11 +360,11 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
 -- The idea is to have an specified spending balance and fees that must be paid
 -- by the selected addresses.
 calcOutputsFromBalance ::
-  (HasCallStack, HashAlgorithm h) =>
+  (HasCallStack, Crypto c) =>
   Coin ->
-  [Addr h] ->
+  [Addr c] ->
   Coin ->
-  (Coin, StrictSeq (TxOut h))
+  (Coin, StrictSeq (TxOut c))
 calcOutputsFromBalance balance_ addrs fee =
   ( fee + splitCoinRem,
     (`TxOut` amountPerOutput) <$> StrictSeq.fromList addrs
@@ -380,12 +386,12 @@ calcOutputsFromBalance balance_ addrs fee =
 -- spend these outputs). If this is not the case, `findPayKeyPairAddr` /
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 pickSpendingInputs ::
-  (HasCallStack, HashAlgorithm h) =>
+  (HasCallStack, Crypto c) =>
   Constants ->
-  MultiSigPairs h ->
-  Map (KeyHash h 'Payment) (KeyPair h 'Payment) ->
-  UTxO h ->
-  Gen ([(TxIn h, Either (KeyPair h 'Witness) (MultiSig h, MultiSig h))], Coin)
+  MultiSigPairs c ->
+  Map (KeyHash 'Payment c) (KeyPair 'Payment c) ->
+  UTxO c ->
+  Gen ([(TxIn c, Either (KeyPair 'Witness c) (MultiSig c, MultiSig c))], Coin)
 pickSpendingInputs Constants {minNumGenInputs, maxNumGenInputs} scripts keyHashMap (UTxO utxo) = do
   selectedUtxo <-
     take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
@@ -430,11 +436,11 @@ pickWithdrawals
 
 -- | Collect witnesses needed for reward withdrawals.
 mkWdrlWits ::
-  (HasCallStack, HashAlgorithm h) =>
-  MultiSigPairs h ->
-  Map (KeyHash h 'Staking) (KeyPair h 'Staking) ->
-  Credential h 'Staking ->
-  Either (KeyPair h 'Witness) (MultiSig h, MultiSig h)
+  (HasCallStack, Crypto c) =>
+  MultiSigPairs c ->
+  Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
+  Credential c 'Staking ->
+  Either (KeyPair 'Witness c) (MultiSig c, MultiSig c)
 mkWdrlWits scripts _ c@(ScriptHashObj _) =
   Right $
     findStakeScriptFromCred (asWitness c) scripts
@@ -445,11 +451,11 @@ mkWdrlWits _ keyHashMap c@(KeyHashObj _) =
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients ::
-  (HasCallStack, HashAlgorithm h) =>
+  (HasCallStack, Crypto c) =>
   Int ->
-  KeyPairs h ->
-  MultiSigPairs h ->
-  Gen [Addr h]
+  KeyPairs c ->
+  MultiSigPairs c ->
+  Gen [Addr c]
 genRecipients len keys scripts = do
   n' <-
     QC.frequency

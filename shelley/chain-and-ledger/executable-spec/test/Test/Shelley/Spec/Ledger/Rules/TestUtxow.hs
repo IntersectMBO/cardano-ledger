@@ -17,7 +17,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestUtxow
   )
 where
 
-import Cardano.Crypto.Hash (ShortHash)
 import Control.Iterate.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
@@ -54,7 +53,7 @@ import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
 import Test.QuickCheck (Property, conjoin, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( ConcreteCrypto,
+  ( C,
     Tx,
     UTXO,
     UTXOW,
@@ -68,8 +67,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 -- equals the sum of the created value.
 preserveBalance ::
   PParams ->
-  [ ( Map (KeyHash 'StakePool (ConcreteCrypto ShortHash)) (PoolParams (ConcreteCrypto ShortHash)),
-      SourceSignalTarget (UTXOW ShortHash)
+  [ ( Map (KeyHash 'StakePool C) (PoolParams C),
+      SourceSignalTarget (UTXOW C)
     )
   ] ->
   Property
@@ -97,8 +96,8 @@ preserveBalance pp tr =
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted ::
   PParams ->
-  [ ( Map (KeyHash 'StakePool (ConcreteCrypto ShortHash)) (PoolParams (ConcreteCrypto ShortHash)),
-      SourceSignalTarget (UTXOW ShortHash)
+  [ ( Map (KeyHash 'StakePool C) (PoolParams C),
+      SourceSignalTarget (UTXOW C)
     )
   ] ->
   Property
@@ -126,7 +125,7 @@ preserveBalanceRestricted pp tr =
 
 -- | Preserve outputs of Txs
 preserveOutputsTx ::
-  [SourceSignalTarget (UTXO ShortHash)] ->
+  [SourceSignalTarget (UTXO C)] ->
   Property
 preserveOutputsTx tr =
   conjoin $
@@ -142,7 +141,7 @@ preserveOutputsTx tr =
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
-  [SourceSignalTarget (UTXO ShortHash)] ->
+  [SourceSignalTarget (UTXO C)] ->
   Property
 eliminateTxInputs tr =
   conjoin $
@@ -158,7 +157,7 @@ eliminateTxInputs tr =
 -- | Check that all new entries of a Tx are included in the new UTxO and that
 -- all TxIds are new.
 newEntriesAndUniqueTxIns ::
-  [SourceSignalTarget (UTXO ShortHash)] ->
+  [SourceSignalTarget (UTXO C)] ->
   Property
 newEntriesAndUniqueTxIns tr =
   conjoin $
@@ -178,16 +177,16 @@ newEntriesAndUniqueTxIns tr =
 
 -- | Check for absence of double spend
 noDoubleSpend ::
-  [SourceSignalTarget (UTXO ShortHash)] ->
+  [SourceSignalTarget (UTXO C)] ->
   Property
 noDoubleSpend tr =
   [] === getDoubleInputs (map sig tr)
   where
     sig (SourceSignalTarget _ _ s) = s
-    getDoubleInputs :: [Tx ShortHash] -> [(Tx ShortHash, [Tx ShortHash])]
+    getDoubleInputs :: [Tx C] -> [(Tx C, [Tx C])]
     getDoubleInputs [] = []
     getDoubleInputs (t : ts) = lookForDoubleSpends t ts ++ getDoubleInputs ts
-    lookForDoubleSpends :: Tx ShortHash -> [Tx ShortHash] -> [(Tx ShortHash, [Tx ShortHash])]
+    lookForDoubleSpends :: Tx C -> [Tx C] -> [(Tx C, [Tx C])]
     lookForDoubleSpends _ [] = []
     lookForDoubleSpends tx_j ts =
       if null doubles then [] else [(tx_j, doubles)]
@@ -208,7 +207,7 @@ noDoubleSpend tr =
 -- TODO @mgudemann
 -- This property is currenty disabled du to time-out problems with getting all
 -- possible combinations for multi-sig.
-requiredMSigSignaturesSubset :: [SourceSignalTarget (UTXOW ShortHash)] -> Property
+requiredMSigSignaturesSubset :: [SourceSignalTarget (UTXOW C)] -> Property
 requiredMSigSignaturesSubset tr =
   conjoin $
     map signaturesSubset tr
