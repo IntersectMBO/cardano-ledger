@@ -21,6 +21,11 @@ flag development
     default: False
     manual: True
 
+flag sts_assert
+    description: Enable STS assertions by default
+    default: False
+    manual: True
+
 library
   exposed-modules:     Control.State.Transition
                      , Control.State.Transition.Extended
@@ -53,6 +58,8 @@ library
                       -Wredundant-constraints
   if (!flag(development))
     ghc-options:      -Werror
+  if (flag(sts_assert))
+    cpp-options:      -DSTS_ASSERT
 
 test-suite doctests
   hs-source-dirs:      test
