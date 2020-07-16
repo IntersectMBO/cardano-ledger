@@ -18,7 +18,7 @@ import Control.Monad (replicateM)
 import Data.Foldable (fold)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Ratio ((%), Ratio)
+import Data.Ratio (Ratio, (%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
@@ -113,18 +113,18 @@ keyPair seed = KeyPair vk sk
   where
     vk = VKey (Crypto.deriveVerKeyDSIGN sk)
     sk =
-      Crypto.genKeyDSIGN
-        $ mkSeedFromBytes . hashToBytes
-        $ hashWithSerialiser @MD5 toCBOR seed
+      Crypto.genKeyDSIGN $
+        mkSeedFromBytes . hashToBytes $
+          hashWithSerialiser @MD5 toCBOR seed
 
 vrfKeyPair :: forall v. Crypto.VRFAlgorithm v => Int -> (Crypto.SignKeyVRF v, Crypto.VerKeyVRF v)
 vrfKeyPair seed = (sk, vk)
   where
     vk = Crypto.deriveVerKeyVRF sk
     sk =
-      Crypto.genKeyVRF
-        $ mkSeedFromBytes . hashToBytes
-        $ hashWithSerialiser @MD5 toCBOR seed
+      Crypto.genKeyVRF $
+        mkSeedFromBytes . hashToBytes $
+          hashWithSerialiser @MD5 toCBOR seed
 
 data PoolSetUpArgs crypto f = PoolSetUpArgs
   { poolPledge :: f Coin,
@@ -228,10 +228,10 @@ rewardsBoundedByPot = property $ do
   let totalBlocks = sum blocks
   silentSlots <- genNatural 0 (3 * totalBlocks) -- the '3 * sum blocks' is pretty arbitrary
   let stake = fold (members <$> pools)
-      delegs = fold
-        $ flip fmap pools
-        $ \PoolInfo {params, members} ->
-          Map.fromList $ (,_poolPubKey params) <$> Map.keys members
+      delegs = fold $
+        flip fmap pools $
+          \PoolInfo {params, members} ->
+            Map.fromList $ (,_poolPubKey params) <$> Map.keys members
       rewardAcnts = Set.fromList $ Map.keys delegs
       poolParams =
         Map.fromList $

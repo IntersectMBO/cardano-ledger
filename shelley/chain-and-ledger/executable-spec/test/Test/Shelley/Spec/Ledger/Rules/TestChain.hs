@@ -77,9 +77,9 @@ traceLen = 100
 rewardStkCredSync :: Property
 rewardStkCredSync =
   forAllChainTrace $ \tr ->
-    conjoin
-      $ map checkSync
-      $ sourceSignalTargets tr
+    conjoin $
+      map checkSync $
+        sourceSignalTargets tr
   where
     checkSync SourceSignalTarget {source, signal, target} =
       let ds =
@@ -105,9 +105,9 @@ rewardStkCredSync =
 adaPreservationChain :: Property
 adaPreservationChain =
   forAllChainTrace $ \tr ->
-    conjoin . join
-      $ map (\x -> [checkPreservation x, checkWithdrawlBound x])
-      $ sourceSignalTargets tr
+    conjoin . join $
+      map (\x -> [checkPreservation x, checkWithdrawlBound x]) $
+        sourceSignalTargets tr
   where
     checkPreservation SourceSignalTarget {source, signal, target} =
       counterexample
@@ -144,8 +144,8 @@ adaPreservationChain =
                  in c + sum_ wdrls
             )
             (Coin 0)
-            $ txSeqTxns' . bbody
-            $ signal
+            $ txSeqTxns' . bbody $
+              signal
         rewardDelta :: Coin
         rewardDelta =
           sum_
@@ -170,9 +170,9 @@ adaPreservationChain =
 canRoundTripNewEpochState :: Property
 canRoundTripNewEpochState =
   forAllChainTrace $ \tr ->
-    conjoin
-      $ map serialization
-      $ sourceSignalTargets tr
+    conjoin $
+      map serialization $
+        sourceSignalTargets tr
   where
     serialization SourceSignalTarget {target} =
       let nes = chainNes target

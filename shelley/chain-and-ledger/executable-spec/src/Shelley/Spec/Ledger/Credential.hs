@@ -22,7 +22,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeListLen)
 import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8, asum)
-import Data.Aeson ((.:), (.=), FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
+import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import GHC.Generics (Generic)
 import Quiet

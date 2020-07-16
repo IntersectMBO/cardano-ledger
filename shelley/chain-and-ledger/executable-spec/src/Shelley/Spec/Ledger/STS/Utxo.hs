@@ -76,7 +76,7 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut (..))
-import Shelley.Spec.Ledger.TxData (TxBody (..), RewardAcnt, unWdrl)
+import Shelley.Spec.Ledger.TxData (RewardAcnt, TxBody (..), unWdrl)
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,

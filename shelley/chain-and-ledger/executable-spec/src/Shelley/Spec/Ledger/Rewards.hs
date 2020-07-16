@@ -178,9 +178,9 @@ normalize (Histogram values) = Histogram $ (\x -> x - logArea) <$> values
 -- k is a value between 0 and 1. The 0 percentile is 0 and the 1 percentile is 1
 percentile :: Double -> Histogram -> Likelihood -> PerformanceEstimate
 percentile p prior likelihoods =
-  PerformanceEstimate . fst
-    $ fromMaybe (1, 1)
-    $ find (\(_x, fx) -> fx > p) cdf
+  PerformanceEstimate . fst $
+    fromMaybe (1, 1) $
+      find (\(_x, fx) -> fx > p) cdf
   where
     (Histogram values) = posteriorDistribution prior likelihoods
     cdf = Seq.zip (Seq.fromList samplePositions) $ Seq.scanl (+) 0 (fromLogWeight <$> values)
@@ -283,9 +283,9 @@ getTopRankedPools ::
   Map (KeyHash 'StakePool crypto) PerformanceEstimate ->
   Set (KeyHash 'StakePool crypto)
 getTopRankedPools rPot total pp poolParams aps =
-  Set.fromList
-    $ fmap fst
-    $ take (fromIntegral $ _nOpt pp) (sortBy (flip compare `on` snd) rankings)
+  Set.fromList $
+    fmap fst $
+      take (fromIntegral $ _nOpt pp) (sortBy (flip compare `on` snd) rankings)
   where
     pdata = Map.toList $ Map.intersectionWith (,) poolParams aps
     rankings =

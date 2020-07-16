@@ -160,13 +160,13 @@ import Shelley.Spec.Ledger.Delegation.Certificates
   )
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
+    emptySnapShots,
+    unStake,
     _feeSS,
     _pstakeGo,
     _pstakeMark,
     _pstakeSet,
     _stake,
-    emptySnapShots,
-    unStake,
     pattern SnapShot,
     pattern SnapShots,
     pattern Stake,
@@ -185,6 +185,20 @@ import Shelley.Spec.Ledger.LedgerState
     FutureGenDeleg (..),
     InstantaneousRewards (..),
     RewardAccounts,
+    deltaF,
+    deltaR,
+    deltaT,
+    emptyDState,
+    emptyInstantaneousRewards,
+    emptyPPUPState,
+    emptyPState,
+    emptyRewardUpdate,
+    esAccountState,
+    esLState,
+    nesEs,
+    nonMyopic,
+    overlaySchedule,
+    rs,
     _delegationState,
     _delegations,
     _dstate,
@@ -200,20 +214,6 @@ import Shelley.Spec.Ledger.LedgerState
     _stPools,
     _stkCreds,
     _treasury,
-    deltaF,
-    deltaR,
-    deltaT,
-    emptyDState,
-    emptyInstantaneousRewards,
-    emptyPPUPState,
-    emptyPState,
-    emptyRewardUpdate,
-    esAccountState,
-    esLState,
-    nesEs,
-    nonMyopic,
-    overlaySchedule,
-    rs,
     pattern ActiveSlot,
     pattern DPState,
     pattern EpochState,
@@ -261,12 +261,12 @@ import Shelley.Spec.Ledger.STS.Utxow
   ( pattern MIRInsufficientGenesisSigsUTXOW,
   )
 import Shelley.Spec.Ledger.Slot
-  ( (+*),
-    BlockNo (..),
+  ( BlockNo (..),
     Duration (..),
     EpochNo (..),
     SlotNo (..),
     epochInfoSize,
+    (+*),
   )
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), pattern Tx)
 import Shelley.Spec.Ledger.TxData
@@ -274,6 +274,7 @@ import Shelley.Spec.Ledger.TxData
     PoolMetaData (..),
     StakePoolRelay (..),
     Wdrl (..),
+    addStakeCreds,
     _poolCost,
     _poolMD,
     _poolMDHash,
@@ -285,7 +286,6 @@ import Shelley.Spec.Ledger.TxData
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
-    addStakeCreds,
     pattern DCertDeleg,
     pattern DCertGenesis,
     pattern DCertMir,
@@ -2180,7 +2180,7 @@ dsEx2L =
           [ (aliceSHK, aliceRAcnt2H + Coin 250),
             (carlSHK, carlMIR)
           ]
-      -- Note the pool cert refund of 201
+          -- Note the pool cert refund of 201
     }
 
 expectedLSEx2L :: HashAlgorithm h => LedgerState h
@@ -2441,9 +2441,9 @@ utxoEx3B =
 
 ppupEx3B' :: HashAlgorithm h => ProposedPPUpdates h
 ppupEx3B' =
-  ProposedPPUpdates
-    $ Map.fromList
-    $ fmap (\n -> (hashKey $ coreNodeVKG n, ppVote3A)) [0, 1, 3, 4, 5]
+  ProposedPPUpdates $
+    Map.fromList $
+      fmap (\n -> (hashKey $ coreNodeVKG n, ppVote3A)) [0, 1, 3, 4, 5]
 
 expectedLSEx3B :: HashAlgorithm h => LedgerState h
 expectedLSEx3B =

@@ -37,7 +37,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
-import Shelley.Spec.Ledger.TxData (_poolRAcnt, getRwdCred)
+import Shelley.Spec.Ledger.TxData (getRwdCred, _poolRAcnt)
 
 data POOLREAP crypto
 

@@ -26,7 +26,7 @@ import Control.State.Transition.Trace
   )
 import Data.List (foldl')
 import Data.Map (Map)
-import qualified Data.Map.Strict as Map ((\\), difference, filter, keysSet, lookup)
+import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup, (\\))
 import qualified Data.Maybe as Maybe (maybe)
 import Data.Set (Set)
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
