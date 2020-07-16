@@ -1,18 +1,21 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE Rank2Types #-}
 
 module Test.Shelley.Spec.Ledger.NonTraceProperties.Validity where
 
 import Control.Iterate.SetAlgebra (dom, eval, (⊆))
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Address (getRwdCred)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     GenDelegs (..),
     Hash,
+    KeyHash,
+    KeyRole (..),
   )
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
@@ -38,7 +41,8 @@ import Shelley.Spec.Ledger.Slot
   )
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
-  ( TxBody (..),
+  ( PoolParams (..),
+    TxBody (..),
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (txins)
@@ -136,7 +140,7 @@ validFee pc tx =
 --  in an acceptable way by a transaction.
 preserveBalance ::
   (Crypto crypto) =>
-  StakePools crypto ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   PParams ->
   TxBody crypto ->
   UTxOState crypto ->
@@ -163,7 +167,7 @@ correctWithdrawals accs withdrawals =
 validRuleUTXO ::
   (Crypto crypto) =>
   RewardAccounts crypto ->
-  StakePools crypto ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   PParams ->
   SlotNo ->
   Tx crypto ->
@@ -235,7 +239,7 @@ validTx ::
 validTx tx d' slot pp l =
   validRuleUTXO
     ((_rewards . _dstate . _delegationState) l)
-    ((_stPools . _pstate . _delegationState) l)
+    ((_pParams . _pstate . _delegationState) l)
     pp
     slot
     tx

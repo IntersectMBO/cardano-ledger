@@ -24,7 +24,6 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DState (..),
@@ -69,7 +68,6 @@ poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
   let retired = eval (dom ((_retiring ps) ▷ Set.singleton e))
-      StakePools stpools = _stPools ps
       pr = Map.fromList $ fmap (\kh -> (kh, _poolDeposit pp)) (Set.toList retired)
       rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ (_pParams ps))
       rewardAcnts' =
@@ -92,8 +90,7 @@ poolReapTransition = do
           _delegations = eval (_delegations ds ⋫ retired)
         }
       ps
-        { _stPools = StakePools $ eval (retired ⋪ stpools),
-          _pParams = eval (retired ⋪ _pParams ps),
+        { _pParams = eval (retired ⋪ _pParams ps),
           _fPParams = eval (retired ⋪ _fPParams ps),
           _retiring = eval (retired ⋪ _retiring ps)
         }

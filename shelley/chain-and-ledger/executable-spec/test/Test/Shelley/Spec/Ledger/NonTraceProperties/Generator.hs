@@ -85,8 +85,7 @@ import Shelley.Spec.Ledger.Tx
     pattern TxOut,
   )
 import Shelley.Spec.Ledger.TxData
-  ( StakeCreds (..),
-    Wdrl (..),
+  ( Wdrl (..),
     pattern DCertDeleg,
     pattern DCertPool,
     pattern DeRegKey,

@@ -46,10 +46,6 @@ import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Delegation.Certificates
-  ( StakeCreds (..),
-    StakePools (..),
-  )
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
 import Shelley.Spec.Ledger.TxData (PoolParams, TxOut (..))
@@ -138,9 +134,9 @@ poolStake hk delegs (Stake stake) =
 obligation ::
   PParams ->
   Map (Credential 'Staking crypto) Coin ->
-  StakePools crypto ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   Coin
-obligation pp rewards (StakePools stakePools) =
+obligation pp rewards stakePools =
   (_keyDeposit pp) * (fromIntegral $ length rewards)
     + (_poolDeposit pp) * (fromIntegral $ length stakePools)
 

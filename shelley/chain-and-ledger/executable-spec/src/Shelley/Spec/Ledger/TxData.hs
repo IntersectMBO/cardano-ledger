@@ -32,7 +32,6 @@ module Shelley.Spec.Ledger.TxData
     Ptr (..),
     RewardAcnt (..),
     StakeCreds (..),
-    StakePools (..),
     StakePoolRelay (..),
     TxBody
       ( TxBody,
@@ -658,13 +657,6 @@ addStakeCreds ::
   (StakeCreds crypto) ->
   StakeCreds crypto
 addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
-
-newtype StakePools crypto = StakePools
-  { unStakePools :: (Map (KeyHash 'StakePool crypto) SlotNo)
-  }
-  deriving (Eq, Generic)
-  deriving (Show) via Quiet (StakePools crypto)
-  deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
 -- CBOR
 

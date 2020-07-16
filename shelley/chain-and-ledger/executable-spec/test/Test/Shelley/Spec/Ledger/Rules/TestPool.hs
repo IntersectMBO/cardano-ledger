@@ -17,9 +17,8 @@ import Control.State.Transition.Trace
     target,
     pattern SourceSignalTarget,
   )
-import Data.Map (Map, (!?))
+import Data.Map (Map)
 import qualified Data.Map as M
-import qualified Data.Maybe as Maybe (maybe)
 import qualified Data.Set as S
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes ((==>))
@@ -30,19 +29,16 @@ import Shelley.Spec.Ledger.LedgerState
   ( _fPParams,
     _pParams,
     _retiring,
-    _stPools,
     pattern PState,
   )
 import Shelley.Spec.Ledger.PParams (_eMax)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxData
-  ( unStakePools,
-    _poolPubKey,
+  ( _poolPubKey,
     pattern DCertPool,
     pattern RegPool,
     pattern RetirePool,
-    pattern StakePools,
   )
 import Test.QuickCheck (Property, conjoin, counterexample, property, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -51,7 +47,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     POOL,
     PState,
     PoolParams,
-    StakePools,
   )
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
 
@@ -61,9 +56,6 @@ import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
 
 getRetiring :: PState ShortHash -> Map (KeyHash ShortHash 'StakePool) EpochNo
 getRetiring = _retiring
-
-getStPools :: PState ShortHash -> StakePools ShortHash
-getStPools = _stPools
 
 ------------------------------
 -- Constants for Properties --
@@ -94,7 +86,7 @@ rewardZeroAfterReg ssts =
         } =
         case poolCWitness c of
           KeyHashObj certWit ->
-            let StakePools stp = getStPools p'
+            let stp = _pParams p'
              in ( eval (certWit ∈ dom stp)
                     && eval (certWit ∉ dom (getRetiring p'))
                 )
@@ -122,8 +114,8 @@ poolRetireInEpoch env ssts =
         } =
         case poolCWitness c of
           KeyHashObj certWit ->
-            let StakePools stp = getStPools p
-                StakePools stp' = getStPools p'
+            let stp = _pParams p
+                stp' = _pParams p'
                 cepoch = epochFromSlotNo s
                 EpochNo ce = cepoch
                 EpochNo emax' = _eMax pp
@@ -132,17 +124,15 @@ poolRetireInEpoch env ssts =
                 )
                   ==> ( eval (certWit ∈ dom stp)
                           && eval (certWit ∈ dom stp')
-                          && Maybe.maybe False ((== cepoch) . epochFromSlotNo) (stp' !? certWit)
                       )
           _ -> False
     registeredPoolRetired _ _ _ = True
 
 -- | Check that a `RegPool` certificate properly adds a stake pool.
 registeredPoolIsAdded ::
-  Environment (LEDGER ShortHash) ->
   [SourceSignalTarget (POOL ShortHash)] ->
   Property
-registeredPoolIsAdded env ssts =
+registeredPoolIsAdded ssts =
   conjoin $
     map addedRegPool ssts
   where
@@ -162,7 +152,7 @@ registeredPoolIsAdded env ssts =
 
           conjoin
             [ -- If this is a pool re-registration (indicated by presence in `stPools`)...
-              if eval (hk ∈ dom ((unStakePools . _stPools) sSt))
+              if eval (hk ∈ dom (_pParams sSt))
                 then
                   conjoin
                     [ counterexample
@@ -177,12 +167,7 @@ registeredPoolIsAdded env ssts =
                   conjoin
                     [ counterexample
                         "PoolParams are registered in pParams map"
-                        (M.lookup hk (_pParams tSt) === Just poolParams),
-                      counterexample
-                        "Hashkey is registered in stPools map"
-                        ( M.lookup hk ((unStakePools . _stPools) tSt)
-                            === Just (ledgerSlotNo env)
-                        )
+                        (M.lookup hk (_pParams tSt) === Just poolParams)
                     ]
             ]
 
@@ -209,7 +194,7 @@ poolIsMarkedForRetirement ssts =
           conjoin
             [ counterexample
                 "hk not in stPools"
-                ((eval (hk ∈ dom ((unStakePools . _stPools) (source sst)))) :: Bool),
+                ((eval (hk ∈ dom (_pParams (source sst)))) :: Bool),
               counterexample
                 "hk is not in target's retiring"
                 ((eval (hk ∈ dom (_retiring $ target sst))) :: Bool)
@@ -225,9 +210,8 @@ pStateIsInternallyConsistent ssts =
     map isConsistent (concatMap (\sst -> [source sst, target sst]) ssts)
   where
     isConsistent :: State (POOL ShortHash) -> Property
-    isConsistent (PState stPools_ pParams_ _ retiring_) = do
-      let StakePools stPoolsMap = stPools_
-          poolKeys = M.keysSet stPoolsMap
+    isConsistent (PState pParams_ _ retiring_) = do
+      let poolKeys = M.keysSet pParams_
           pParamKeys = M.keysSet pParams_
           retiringKeys = M.keysSet retiring_
 

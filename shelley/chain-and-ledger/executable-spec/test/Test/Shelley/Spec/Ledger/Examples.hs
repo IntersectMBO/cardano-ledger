@@ -122,7 +122,7 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.Address (getRwdCred, mkRwdAcnt, pattern Addr)
+import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     Network (..),
@@ -212,7 +212,6 @@ import Shelley.Spec.Ledger.LedgerState
     _reserves,
     _retiring,
     _rewards,
-    _stPools,
     _treasury,
     pattern ActiveSlot,
     pattern DPState,
@@ -274,7 +273,6 @@ import Shelley.Spec.Ledger.TxData
     PoolMetaData (..),
     StakePoolRelay (..),
     Wdrl (..),
-    addStakeCreds,
     _poolCost,
     _poolMD,
     _poolMDHash,
@@ -293,8 +291,6 @@ import Shelley.Spec.Ledger.TxData
     pattern Delegation,
     pattern PoolParams,
     pattern RewardAcnt,
-    pattern StakeCreds,
-    pattern StakePools,
     pattern TxBody,
     pattern TxIn,
     pattern TxOut,
@@ -855,8 +851,7 @@ dsEx2A =
 psEx2A :: forall h. HashAlgorithm h => PState h
 psEx2A =
   psEx1
-    { _stPools = StakePools $ Map.singleton (hk (alicePool p)) (SlotNo 10),
-      _pParams = Map.singleton (hk (alicePool p)) alicePoolParams
+    { _pParams = Map.singleton (hk (alicePool p)) alicePoolParams
     }
   where
     p :: Proxy h

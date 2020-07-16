@@ -14,7 +14,6 @@ module Shelley.Spec.Ledger.Delegation.Certificates
     GenesisDelegCert (..),
     MIRCert (..),
     StakeCreds (..),
-    StakePools (..),
     PoolDistr (..),
     delegCWitness,
     poolCWitness,
@@ -55,7 +54,6 @@ import Shelley.Spec.Ledger.TxData
     PoolCert (..),
     PoolParams (..),
     StakeCreds (..),
-    StakePools (..),
   )
 
 -- We had to do a bit of type synonym unfolding of VRF and HASH from Shelley.Spec.Ledger.Crypto

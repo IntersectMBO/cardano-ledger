@@ -78,8 +78,7 @@ import Shelley.Spec.Ledger.Tx
     WitnessSetHKD (..),
   )
 import Shelley.Spec.Ledger.TxData
-  ( StakePools (..),
-    TxBody (..),
+  ( TxBody (..),
     TxId (..),
     TxIn (..),
     TxOut (..),
@@ -178,7 +177,7 @@ utxoEnv =
   UtxoEnv
     0
     emptyPParams {_maxTxSize = 1000}
-    (StakePools mempty)
+    mempty
     (GenDelegs mempty)
 
 aliceInitCoin :: Coin

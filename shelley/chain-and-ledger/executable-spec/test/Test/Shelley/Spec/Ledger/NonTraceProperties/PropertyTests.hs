@@ -306,7 +306,7 @@ propPreserveBalance = property $ do
   let created =
         balance ((_utxo . _utxoState) l')
           + fee
-          + (totalDeposits emptyPParams ((_stPools . _pstate . _delegationState) l') $ toList $ (_certs . _body) tx)
+          + (totalDeposits emptyPParams ((_pParams . _pstate . _delegationState) l') $ toList $ (_certs . _body) tx)
   destroyed === created
 
 -- | 'TestTree' of property-based testing properties.

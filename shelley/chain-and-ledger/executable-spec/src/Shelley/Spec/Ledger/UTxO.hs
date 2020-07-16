@@ -58,7 +58,6 @@ import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
-    StakePools (..),
     isRegKey,
     requiresVKeyWitness,
   )
@@ -232,10 +231,10 @@ balance (UTxO utxo) = foldr addCoins 0 utxo
 -- registration certificates would be invalid.
 totalDeposits ::
   PParams ->
-  StakePools crypto ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   [DCert crypto] ->
   Coin
-totalDeposits pp (StakePools stpools) cs =
+totalDeposits pp stpools cs =
   (_keyDeposit pp) * numKeys + (_poolDeposit pp) * numNewPools
   where
     numKeys = intToCoin . length $ filter isRegKey cs

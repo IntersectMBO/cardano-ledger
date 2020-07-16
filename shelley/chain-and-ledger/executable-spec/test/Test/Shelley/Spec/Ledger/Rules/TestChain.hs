@@ -15,7 +15,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
 where
 
 import Cardano.Crypto.Hash (ShortHash)
-import Control.Iterate.SetAlgebra (dom, domain, eval)
 import Control.Monad (join)
 import Control.State.Transition.Extended (TRC (TRC))
 import Control.State.Transition.Trace

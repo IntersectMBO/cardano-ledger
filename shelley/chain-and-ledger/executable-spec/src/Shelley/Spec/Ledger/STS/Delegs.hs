@@ -42,15 +42,24 @@ import Shelley.Spec.Ledger.LedgerState
     DPState (..),
     emptyDelegation,
     _dstate,
+    _pParams,
     _rewards,
-    _stPools,
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..))
-import Shelley.Spec.Ledger.TxData (DCert (..), DelegCert (..), Delegation (..), Ix, Ptr (..), RewardAcnt, StakePools (..), TxBody (..), Wdrl (..))
+import Shelley.Spec.Ledger.TxData
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    Ix,
+    Ptr (..),
+    RewardAcnt,
+    TxBody (..),
+    Wdrl (..),
+  )
 
 data DELEGS crypto
 
@@ -142,7 +151,7 @@ delegsTransition = do
 
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
-              let StakePools stPools_ = _stPools $ _pstate dpstate'
+              let stPools_ = _pParams $ _pstate dpstate'
                   targetPool = _delegatee deleg
                in case eval (targetPool ∈ dom stPools_) of
                     True -> Right ()

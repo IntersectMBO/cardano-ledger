@@ -117,7 +117,7 @@ epochTransition = do
   ss' <-
     trans @(SNAP crypto) $ TRC (ls, ss, ())
 
-  let PState _ pParams fPParams _ = pstate
+  let PState pParams fPParams _ = pstate
       ppp = eval (pParams ⨃ fPParams)
       pstate' =
         pstate

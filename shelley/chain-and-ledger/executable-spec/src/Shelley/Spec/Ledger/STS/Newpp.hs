@@ -83,8 +83,8 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let Coin oblgCurr = obligation pp (_rewards dstate) (_stPools pstate)
-          Coin oblgNew = obligation ppNew' (_rewards dstate) (_stPools pstate)
+      let Coin oblgCurr = obligation pp (_rewards dstate) (_pParams pstate)
+          Coin oblgNew = obligation ppNew' (_rewards dstate) (_pParams pstate)
           diff = oblgCurr - oblgNew
           Coin reserves = _reserves acnt
           Coin requiredInstantaneousRewards = totalInstantaneousReservesRewards (_irwd dstate)

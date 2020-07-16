@@ -136,8 +136,6 @@ import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
     PoolDistr (..),
-    StakeCreds (..),
-    StakePools (..),
     delegCWitness,
     genesisCWitness,
     isDeRegKey,
@@ -320,9 +318,7 @@ instance Crypto crypto => FromCBOR (DState crypto) where
 
 -- | Current state of staking pools and their certificate counters.
 data PState crypto = PState
-  { -- | The active stake pools.
-    _stPools :: !(StakePools crypto),
-    -- | The pool parameters.
+  { -- | The pool parameters.
     _pParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
     -- | The future pool parameters.
     _fPParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
@@ -336,17 +332,16 @@ instance NoUnexpectedThunks (PState crypto)
 instance NFData (PState crypto)
 
 instance Crypto crypto => ToCBOR (PState crypto) where
-  toCBOR (PState a b c d) =
-    encodeListLen 4 <> toCBOR a <> toCBOR b <> toCBOR c <> toCBOR d
+  toCBOR (PState a b c) =
+    encodeListLen 3 <> toCBOR a <> toCBOR b <> toCBOR c
 
 instance Crypto crypto => FromCBOR (PState crypto) where
   fromCBOR = do
-    enforceSize "PState" 4
+    enforceSize "PState" 3
     a <- fromCBOR
     b <- fromCBOR
     c <- fromCBOR
-    d <- fromCBOR
-    pure $ PState a b c d
+    pure $ PState a b c
 
 -- | The state associated with the current stake delegation.
 data DPState crypto = DPState
@@ -493,7 +488,7 @@ emptyDState =
 
 emptyPState :: PState crypto
 emptyPState =
-  PState (StakePools Map.empty) Map.empty Map.empty Map.empty
+  PState Map.empty Map.empty Map.empty
 
 emptyDPState :: DPState crypto
 emptyDPState = DPState emptyDState emptyPState
@@ -742,7 +737,7 @@ minfeeBound pp tx = Coin $ fromIntegral (_minfeeA pp) * txsizeBound tx + fromInt
 produced ::
   (Crypto crypto) =>
   PParams ->
-  StakePools crypto ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   TxBody crypto ->
   Coin
 produced pp stakePools tx =
@@ -901,7 +896,7 @@ depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
 
     currentPool = (_deposited . _utxoState) ls
     txDeposits =
-      totalDeposits pp ((_stPools . _pstate . _delegationState) ls) (toList $ _certs tx)
+      totalDeposits pp ((_pParams . _pstate . _delegationState) ls) (toList $ _certs tx)
     txRefunds = keyRefunds pp tx
 
 reapRewards ::
@@ -932,12 +927,12 @@ stakeDistr u ds ps =
     poolParams
   where
     DState rewards' delegs ptrs' _ _ _ = ds
-    PState (StakePools stpools) poolParams _ _ = ps
+    PState poolParams _ _ = ps
     outs = aggregateOuts u
     stakeRelation :: [(Credential 'Staking crypto, Coin)] -- We compute Lists (not Maps) because the duplicate tuples matter, later when we use: Map.fromListWith (+)
     stakeRelation = (baseStake outs ++ ptrStake outs (forwards ptrs') ++ rewardStake rewards')
     activeDelegs :: Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
-    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom stpools)
+    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
 
 -- | Apply a reward update
 applyRUpd ::
