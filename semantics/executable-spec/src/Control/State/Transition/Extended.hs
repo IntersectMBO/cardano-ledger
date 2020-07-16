@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
@@ -329,11 +330,20 @@ applySTS ctx =
     (st, []) -> Right st
     (_, pfs) -> Left pfs
   where
+
+#ifdef STS_ASSERT
+    defaultOpts =
+      ApplySTSOpts
+        { asoAssertions = AssertionsAll,
+          asoValidation = ValidateAll
+        }
+#else
     defaultOpts =
       ApplySTSOpts
         { asoAssertions = AssertionsOff,
           asoValidation = ValidateAll
         }
+#endif
 
 -- | Re-apply an STS.
 --
@@ -423,20 +433,24 @@ applySTSInternal ap goRule ctx =
     applySTSInternal' SInitial env =
       goRule env `traverse` initialRules
     applySTSInternal' STransition jc = do
-      !_ <- when (assertPre ap)
-            (sfor_ (assertions @s) $!
-               \case
-                 PreCondition msg cond ->
-                   when (not (cond jc))
-                       (throw
-                         $! AssertionViolation
-                           { avSTS = show $ typeRep (Proxy @s),
-                             avMsg = msg,
-                             avCtx = jc,
-                             avState = Nothing
-                           })
-                 _ -> pure ()
-             )
+      !_ <-
+        when
+          (assertPre ap)
+          ( sfor_ (assertions @s)
+              $! \case
+                PreCondition msg cond ->
+                  when
+                    (not (cond jc))
+                    ( throw
+                        $! AssertionViolation
+                          { avSTS = show $ typeRep (Proxy @s),
+                            avMsg = msg,
+                            avCtx = jc,
+                            avState = Nothing
+                          }
+                    )
+                _ -> pure ()
+          )
       res <- goRule jc `traverse` transitionRules
       -- We only care about running postconditions if the state transition was
       -- successful.
