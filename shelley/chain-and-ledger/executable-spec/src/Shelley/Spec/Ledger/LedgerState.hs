@@ -1005,7 +1005,6 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
   ei <- asks epochInfo
   slotsPerEpoch <- epochInfoSize ei e
   asc <- asks activeSlotCoeff
-  network <- asks networkId
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
@@ -1022,7 +1021,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
       _R = Coin $ rPot - deltaT1
       circulation = total - (_reserves acnt)
       (rs_, newLikelihoods) =
-        reward network pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation asc slotsPerEpoch
+        reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation asc slotsPerEpoch
       deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $

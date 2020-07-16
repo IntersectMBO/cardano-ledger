@@ -51,7 +51,6 @@ import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
-    Network,
     UnitInterval,
     activeSlotVal,
     unitIntervalToRational,
@@ -347,7 +346,6 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
 
 -- | Reward one pool
 rewardOnePool ::
-  Network ->
   PParams ->
   Coin ->
   Natural ->
@@ -358,7 +356,7 @@ rewardOnePool ::
   Coin ->
   Set (Credential 'Staking crypto) ->
   Map (Credential 'Staking crypto) Coin
-rewardOnePool _network pp r blocksN blocksTotal pool (Stake stake) sigma (Coin total) addrsRew =
+rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma (Coin total) addrsRew =
   rewards'
   where
     Coin ostake =
@@ -388,7 +386,6 @@ rewardOnePool _network pp r blocksN blocksTotal pool (Stake stake) sigma (Coin t
     rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
 
 reward ::
-  Network ->
   PParams ->
   BlocksMade crypto ->
   Coin ->
@@ -401,7 +398,6 @@ reward ::
   EpochSize ->
   (Map (Credential 'Staking crypto) Coin, Map (KeyHash 'StakePool crypto) Likelihood)
 reward
-  network
   pp
   (BlocksMade b)
   r
@@ -425,7 +421,6 @@ reward
               Just n ->
                 Just $
                   rewardOnePool
-                    network
                     pp
                     r
                     n

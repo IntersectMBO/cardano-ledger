@@ -244,7 +244,6 @@ rewardsBoundedByPot = property $ do
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
       rs =
         reward
-          Testnet
           pp
           bs
           rewardPot
