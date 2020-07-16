@@ -52,7 +52,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
   )
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
-import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxOut (..), getRwdCred)
+import Shelley.Spec.Ledger.TxData (PoolParams, TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Blocks made
@@ -121,12 +121,9 @@ ptrStake vals pointers =
 
 rewardStake ::
   forall crypto.
-  Map (RewardAcnt crypto) Coin ->
+  Map (Credential 'Staking crypto) Coin ->
   [(Credential 'Staking crypto, Coin)]
-rewardStake rewards =
-  map convert $ Map.toList rewards
-  where
-    convert (rwdKey, c) = (getRwdCred rwdKey, c)
+rewardStake = Map.toList
 
 -- | Get stake of one pool
 poolStake ::

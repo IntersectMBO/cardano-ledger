@@ -231,7 +231,7 @@ rewardsBoundedByPot = property $ do
       delegs = fold $
         flip fmap pools $ \PoolInfo {params, members} ->
           Map.fromList $ (,_poolPubKey params) <$> Map.keys members
-      rewardAcnts = Set.fromList $ fmap (RewardAcnt Testnet) (Map.keys delegs)
+      rewardAcnts = Set.fromList $ Map.keys delegs
       poolParams =
         Map.fromList $
           fmap

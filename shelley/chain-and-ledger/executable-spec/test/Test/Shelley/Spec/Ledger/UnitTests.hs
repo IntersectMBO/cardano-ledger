@@ -22,11 +22,11 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (mkVKeyRwdAcnt, pattern Addr)
+import Shelley.Spec.Ledger.Address (getRwdCred, mkVKeyRwdAcnt, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes hiding ((==>))
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Credential (Credential (..), pattern StakeRefBase)
+import qualified Shelley.Spec.Ledger.Credential as Credential (Credential (KeyHashObj), pattern StakeRefBase)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
@@ -105,8 +105,8 @@ aliceAddr :: Addr ShortHash
 aliceAddr =
   Addr
     Testnet
-    (KeyHashObj . hashKey $ vKey alicePay)
-    (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
+    (Credential.KeyHashObj . hashKey $ vKey alicePay)
+    (Credential.StakeRefBase . Credential.KeyHashObj . hashKey $ vKey aliceStake)
 
 bobPay :: KeyPair ShortHash 'Payment
 bobPay = KeyPair 3 3
@@ -118,8 +118,8 @@ bobAddr :: Addr ShortHash
 bobAddr =
   Addr
     Testnet
-    (KeyHashObj . hashKey $ vKey bobPay)
-    (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
+    (Credential.KeyHashObj . hashKey $ vKey bobPay)
+    (Credential.StakeRefBase . Credential.KeyHashObj . hashKey $ vKey bobStake)
 
 pp :: PParams
 pp =
@@ -374,7 +374,7 @@ utxoState =
 dpState :: DPState ShortHash
 dpState = DPState emptyDState emptyPState
 
-addReward :: DPState ShortHash -> RewardAcnt ShortHash -> Coin -> DPState ShortHash
+addReward :: DPState ShortHash -> Credential ShortHash 'Staking -> Coin -> DPState ShortHash
 addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
   where
     ds = _dstate dp
@@ -505,7 +505,7 @@ testEmptyInputSet =
           SNothing
       wits = mempty {addrWits = makeWitnessesVKey (hashTxBody txb) [aliceStake]}
       tx = Tx txb wits SNothing
-      dpState' = addReward dpState (mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
+      dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
         (utxoState, dpState')
         tx
@@ -594,7 +594,7 @@ testWithdrawalNoWit =
       errs =
         [ UtxowFailure . MissingVKeyWitnessesUTXOW $ WitHashes missing
         ]
-      dpState' = addReward dpState (mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
+      dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
    in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
 
 testWithdrawalWrongAmt :: Assertion
@@ -621,7 +621,7 @@ testWithdrawalWrongAmt =
                 [asWitness alicePay, asWitness bobStake]
           }
       rAcnt = mkVKeyRwdAcnt Testnet bobStake
-      dpState' = addReward dpState rAcnt (Coin 10)
+      dpState' = addReward dpState (getRwdCred rAcnt) (Coin 10)
       tx = Tx txb wits SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
    in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
@@ -655,7 +655,7 @@ alicePoolParamsSmallCost =
       _poolPledge = Coin 1,
       _poolCost = Coin 5, -- Too Small!
       _poolMargin = unsafeMkUnitInterval 0.1,
-      _poolRAcnt = RewardAcnt Testnet (KeyHashObj . hashKey . vKey $ aliceStake),
+      _poolRAcnt = RewardAcnt Testnet (Credential.KeyHashObj . hashKey . vKey $ aliceStake),
       _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
       _poolRelays = StrictSeq.empty,
       _poolMD =

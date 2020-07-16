@@ -226,7 +226,7 @@ import Shelley.Spec.Ledger.UTxO
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
 
 type RewardAccounts crypto =
-  Map (RewardAcnt crypto) Coin
+  Map (Credential 'Staking crypto) Coin
 
 data FutureGenDeleg crypto = FutureGenDeleg
   { fGenDelegSlot :: !SlotNo,
@@ -377,7 +377,7 @@ instance Crypto crypto => FromCBOR (DPState crypto) where
 data RewardUpdate crypto = RewardUpdate
   { deltaT :: !Coin,
     deltaR :: !Coin,
-    rs :: !(Map (RewardAcnt crypto) Coin),
+    rs :: !(Map (Credential 'Staking crypto) Coin),
     deltaF :: !Coin,
     nonMyopic :: !(NonMyopic crypto)
   }
@@ -956,7 +956,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     dState = _dstate delegState
     (regRU, unregRU) =
       Map.partitionWithKey
-        (\(RewardAcnt _ k) _ -> eval (k ∈ dom (_stkCreds dState)))
+        (\k _ -> eval (k ∈ dom (_stkCreds dState)))
         (rs ru)
     as' =
       as

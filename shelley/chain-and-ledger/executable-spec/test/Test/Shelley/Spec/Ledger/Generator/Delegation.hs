@@ -269,7 +269,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
         )
         scripts
     zeroRewards k =
-      (Coin 0) == (Map.findWithDefault (Coin 1) (mkRwdAcnt Testnet k) (_rewards dState))
+      (Coin 0) == (Map.findWithDefault (Coin 1) (getRwdCred $ mkRwdAcnt Testnet k) (_rewards dState))
 
 -- | Generate a new delegation certificate by picking a registered staking
 -- credential and pool. The delegation is witnessed by the delegator's

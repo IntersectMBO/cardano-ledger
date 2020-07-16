@@ -25,6 +25,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.Address (scriptToCred, toCred, pattern Addr)
+import qualified Shelley.Spec.Ledger.Address as Address (RewardAcnt (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -134,7 +135,7 @@ genTx
       (witnessedInputs, spendingBalanceUtxo) <-
         pickSpendingInputs constants scripts' ksIndexedPaymentKeys utxo
 
-      wdrls <- pickWithdrawals constants ((_rewards . _dstate) dpState)
+      wdrls <- pickWithdrawals constants (Map.mapKeys (Address.RewardAcnt Testnet) $ (_rewards . _dstate) dpState)
 
       let rwdCreds = fmap getRwdCred (Map.keys wdrls)
           wdrlCredentials = fmap (mkWdrlWits scripts' ksIndexedStakingKeys) rwdCreds

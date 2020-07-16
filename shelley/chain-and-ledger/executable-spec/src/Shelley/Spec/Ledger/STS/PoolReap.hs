@@ -37,7 +37,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
-import Shelley.Spec.Ledger.TxData (_poolRAcnt)
+import Shelley.Spec.Ledger.TxData (_poolRAcnt, getRwdCred)
 
 data POOLREAP crypto
 
@@ -79,7 +79,7 @@ poolReapTransition = do
       (refunds, mRefunds) =
         Map.partitionWithKey
           (\k _ -> eval (k ∈ dom (_rewards ds)))
-          rewardAcnts'
+          (Map.mapKeys getRwdCred rewardAcnts')
       refunded = sum $ Map.elems refunds
       unclaimed = sum $ Map.elems mRefunds
 
