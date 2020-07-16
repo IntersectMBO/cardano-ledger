@@ -33,6 +33,11 @@ import Shelley.Spec.Ledger.LedgerState
     EpochState,
     InstantaneousRewards (..),
     RewardAccounts,
+    _delegationState,
+    _dstate,
+    _irwd,
+    _rewards,
+    _stkCreds,
     emptyAccount,
     emptyInstantaneousRewards,
     emptyLedgerState,
@@ -42,11 +47,6 @@ import Shelley.Spec.Ledger.LedgerState
     esPp,
     esPrevPp,
     esSnapshots,
-    _delegationState,
-    _dstate,
-    _irwd,
-    _rewards,
-    _stkCreds,
     pattern EpochState,
   )
 import Shelley.Spec.Ledger.PParams (emptyPParams)

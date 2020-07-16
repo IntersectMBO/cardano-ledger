@@ -12,7 +12,7 @@ module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 import Cardano.Crypto.Hash (ShortHash)
 import qualified Cardano.Crypto.VRF as VRF
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
-import Control.State.Transition.Trace (checkTrace, (.-), (.->))
+import Control.State.Transition.Trace ((.-), (.->), checkTrace)
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -33,12 +33,12 @@ import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     WitHashes (..),
+    _dstate,
+    _rewards,
     emptyDState,
     emptyPPUPState,
     emptyPState,
     overlaySchedule,
-    _dstate,
-    _rewards,
     pattern DPState,
     pattern UTxOState,
   )
@@ -396,17 +396,17 @@ testSpendNonexistentInput =
     [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000))),
       UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ TxIn genesisId 42))
     ]
-    $ aliceGivesBobLovelace $
-      AliceToBob
-        { input = (TxIn genesisId 42), -- Non Existent
-          toBob = (Coin 3000),
-          fee = (Coin 1500),
-          deposits = (Coin 0),
-          refunds = (Coin 0),
-          certs = [],
-          ttl = (SlotNo 100),
-          signers = [asWitness alicePay]
-        }
+    $ aliceGivesBobLovelace
+    $ AliceToBob
+      { input = (TxIn genesisId 42), -- Non Existent
+        toBob = (Coin 3000),
+        fee = (Coin 1500),
+        deposits = (Coin 0),
+        refunds = (Coin 0),
+        certs = [],
+        ttl = (SlotNo 100),
+        signers = [asWitness alicePay]
+      }
 
 testWitnessNotIncluded :: Assertion
 testWitnessNotIncluded =
@@ -427,9 +427,9 @@ testWitnessNotIncluded =
       tx = Tx txbody mempty SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey alicePay)
    in testInvalidTx
-        [ UtxowFailure $
-            MissingVKeyWitnessesUTXOW $
-              WitHashes wits
+        [ UtxowFailure
+            $ MissingVKeyWitnessesUTXOW
+            $ WitHashes wits
         ]
         tx
 
@@ -449,9 +449,9 @@ testSpendNotOwnedUTxO =
       tx = Tx txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
-        [ UtxowFailure $
-            MissingVKeyWitnessesUTXOW $
-              WitHashes wits
+        [ UtxowFailure
+            $ MissingVKeyWitnessesUTXOW
+            $ WitHashes wits
         ]
         tx
 
@@ -484,9 +484,9 @@ testWitnessWrongUTxO =
         [ UtxowFailure $
             InvalidWitnessesUTXOW
               [asWitness $ vKey alicePay],
-          UtxowFailure $
-            MissingVKeyWitnessesUTXOW $
-              WitHashes wits
+          UtxowFailure
+            $ MissingVKeyWitnessesUTXOW
+            $ WitHashes wits
         ]
         tx
 
@@ -630,17 +630,17 @@ testOutputTooSmall :: Assertion
 testOutputTooSmall =
   testInvalidTx
     [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [TxOut bobAddr (Coin 1)])]
-    $ aliceGivesBobLovelace $
-      AliceToBob
-        { input = (TxIn genesisId 0),
-          toBob = (Coin 1), -- Too Small
-          fee = (Coin 997),
-          deposits = (Coin 0),
-          refunds = (Coin 0),
-          certs = [],
-          ttl = (SlotNo 0),
-          signers = [asWitness alicePay]
-        }
+    $ aliceGivesBobLovelace
+    $ AliceToBob
+      { input = (TxIn genesisId 0),
+        toBob = (Coin 1), -- Too Small
+        fee = (Coin 997),
+        deposits = (Coin 0),
+        refunds = (Coin 0),
+        certs = [],
+        ttl = (SlotNo 0),
+        signers = [asWitness alicePay]
+      }
 
 alicePoolColdKeys :: KeyPair ShortHash 'StakePool
 alicePoolColdKeys = KeyPair vk sk
@@ -679,22 +679,22 @@ testPoolCostTooSmall =
             )
         )
     ]
-    $ aliceGivesBobLovelace $
-      AliceToBob
-        { input = (TxIn genesisId 0),
-          toBob = (Coin 100),
-          fee = (Coin 997),
-          deposits = (Coin 250),
-          refunds = (Coin 0),
-          certs = [DCertPool $ RegPool alicePoolParamsSmallCost],
-          ttl = (SlotNo 0),
-          signers =
-            ( [ asWitness alicePay,
-                asWitness aliceStake,
-                asWitness alicePoolColdKeys
-              ]
-            )
-        }
+    $ aliceGivesBobLovelace
+    $ AliceToBob
+      { input = (TxIn genesisId 0),
+        toBob = (Coin 100),
+        fee = (Coin 997),
+        deposits = (Coin 250),
+        refunds = (Coin 0),
+        certs = [DCertPool $ RegPool alicePoolParamsSmallCost],
+        ttl = (SlotNo 0),
+        signers =
+          ( [ asWitness alicePay,
+              asWitness aliceStake,
+              asWitness alicePoolColdKeys
+            ]
+          )
+      }
 
 testsInvalidLedger :: TestTree
 testsInvalidLedger =

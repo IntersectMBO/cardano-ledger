@@ -51,7 +51,6 @@ import Shelley.Spec.Ledger.LedgerState
     DState,
     FutureGenDeleg (..),
     InstantaneousRewards (..),
-    emptyDState,
     _delegations,
     _fGenDelegs,
     _genDelegs,
@@ -59,15 +58,16 @@ import Shelley.Spec.Ledger.LedgerState
     _ptrs,
     _rewards,
     _stkCreds,
+    emptyDState,
   )
 import Shelley.Spec.Ledger.Slot
-  ( Duration (..),
+  ( (*-),
+    (+*),
+    Duration (..),
     EpochNo (..),
     SlotNo,
     epochInfoEpoch,
     epochInfoFirst,
-    (*-),
-    (+*),
   )
 import Shelley.Spec.Ledger.TxData
   ( DCert (..),
