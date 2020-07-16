@@ -4,7 +4,6 @@
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{~}lr}
-      \var{cid} & \PolicyID & \text{Policy ID} \\
       \var{s_{mc}} & \ScriptMPS & \text{monetary policy script}
      \end{array}
   \end{equation*}
@@ -14,9 +13,8 @@
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{lng} & \Language & \{\mathsf{nativeMSigTag}, \mathsf{nativeMCTag}, \cdots\} \\
-      \var{scr} & \Script &=~ \ScriptMSig \uniondistinct \ScriptMPS \\
-
-%       \var{pid} & \PolicyID & \PolicyID\\
+      \var{scr} & \Script & \ScriptMSig \uniondistinct \ScriptMPS \\
+      \var{cid} & \PolicyID & \ScriptHash \\
        % \text{currency ID}\\
       \var{tok} & \AssetID & \mathbb{H}_{\leq 32}\\
        % \text{token identifier}\\

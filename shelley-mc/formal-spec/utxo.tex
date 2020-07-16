@@ -76,6 +76,10 @@ UTxO transition system with MC:
     The $\fun{ubalance}$ function calculates the (aggregated by $\PolicyID$ and
     $\AssetID$) sum total of all the value in a given UTxO.
 
+  \item
+    The $\fun{valueSize}$ function estimates an upper bound on the size of a value
+    as stored in the UTxO.
+
   \item The $\fun{consumed}$ calculation is still the sum of the reward address
    value consumed, the values of the UTxO entries consumed,
    and the value consumed from the deposit pot due
@@ -157,6 +161,10 @@ That step is part of witnessing, i.e. the UTXOW rule, see below.
     & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{u}\in~\var{utxo}}
     \fun{getValue}~\var{u} \\
     & \text{UTxO balance} \\
+    \nextdef
+    & \fun{valueSize} \in \Value \to \N \\
+    & \fun{valueSize}~\var{v} = k + k' * |\{ (\var{cid}, \var{aid}) : \var{v}~\var{cid}~\var{aid} \neq 0
+      \land (\var{cid}, \var{aid}) \neq (\mathsf{adaID}, \mathsf{adaToken}) \}|
   \end{align*}
   %
   \emph{Produced and Consumed Calculations}
