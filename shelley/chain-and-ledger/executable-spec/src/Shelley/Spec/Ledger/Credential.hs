@@ -22,7 +22,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeListLen)
 import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8, asum)
-import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
+import Data.Aeson ((.:), (.=), FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
 import qualified Data.Aeson as Aeson
 import GHC.Generics (Generic)
 import Quiet
@@ -45,8 +45,8 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 -- | Script hash or key hash for a payment or a staking object.
 data Credential (kr :: KeyRole) crypto
-  = ScriptHashObj !(ScriptHash crypto)
-  | KeyHashObj !(KeyHash kr crypto)
+  = ScriptHashObj {-# UNPACK #-} !(ScriptHash crypto)
+  | KeyHashObj {-# UNPACK #-} !(KeyHash kr crypto)
   deriving (Show, Eq, Generic, NFData, Ord)
 
 instance HasKeyRole Credential where
