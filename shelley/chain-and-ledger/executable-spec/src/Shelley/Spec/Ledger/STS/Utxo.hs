@@ -50,6 +50,7 @@ import Shelley.Spec.Ledger.Address
   ( Addr (AddrBootstrap),
     bootstrapAddressAttrsSize,
     getNetwork,
+    getRwdNetwork,
   )
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -75,7 +76,7 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut (..))
-import Shelley.Spec.Ledger.TxData (TxBody (..), unWdrl)
+import Shelley.Spec.Ledger.TxData (TxBody (..), RewardAcnt, unWdrl)
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
@@ -122,6 +123,9 @@ instance
     | WrongNetwork
         !Network -- the expected network id
         !(Set (Addr crypto)) -- the set of addresses with incorrect network IDs
+    | WrongNetworkWithdrawal
+        !Network -- the expected network id
+        !(Set (RewardAcnt crypto)) -- the set of reward addresses with incorrect network IDs
     | OutputTooSmallUTxO
         ![TxOut crypto] -- list of supplied transaction outputs that are too small
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
@@ -183,8 +187,12 @@ instance
       encodeListLen 3 <> toCBOR (8 :: Word8)
         <> toCBOR right
         <> encodeFoldable wrongs
+    (WrongNetworkWithdrawal right wrongs) ->
+      encodeListLen 3 <> toCBOR (9 :: Word8)
+        <> toCBOR right
+        <> encodeFoldable wrongs
     OutputBootAddrAttrsTooBig outs ->
-      encodeListLen 2 <> toCBOR (9 :: Word8)
+      encodeListLen 2 <> toCBOR (10 :: Word8)
         <> encodeFoldable outs
 
 instance
@@ -234,6 +242,11 @@ instance
               wrongs <- decodeSet fromCBOR
               pure $ WrongNetwork right wrongs
           9 ->
+            (,) 3 <$> do
+              right <- fromCBOR
+              wrongs <- decodeSet fromCBOR
+              pure $ WrongNetworkWithdrawal right wrongs
+          10 ->
             (,) 2 <$> do
               outs <- decodeList fromCBOR
               pure $ OutputBootAddrAttrsTooBig outs
@@ -269,6 +282,11 @@ utxoInductive = do
           (\a -> getNetwork a /= ni)
           (fmap (\(TxOut a _) -> a) $ toList $ _outputs txb)
   null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
+  let wdrlsWrongNetwork =
+        filter
+          (\a -> getRwdNetwork a /= ni)
+          (Map.keys . unWdrl . _wdrls $ txb)
+  null wdrlsWrongNetwork ?! WrongNetworkWithdrawal ni (Set.fromList wdrlsWrongNetwork)
 
   let consumed_ = consumed pp utxo txb
       produced_ = produced pp stakepools txb
