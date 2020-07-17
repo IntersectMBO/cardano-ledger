@@ -7,7 +7,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Serialization where
+-- | Golden tests that check CBOR token encoding.
+module Test.Shelley.Spec.Ledger.Serialisation.Golden.Encoding (tests) where
 
 import Cardano.Binary
   ( Annotator,
@@ -31,7 +32,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Coerce (coerce)
-import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6, toIPv4)
+import Data.IP (toIPv4)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
@@ -40,15 +41,6 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.String (fromString)
-import Hedgehog
-  ( Gen,
-    Property,
-    forAll,
-    property,
-    tripping,
-  )
-import qualified Hedgehog.Gen as Gen
-import Hedgehog.Range (constantBounded)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
@@ -138,15 +130,12 @@ import Shelley.Spec.Ledger.PParams
     pattern Update,
   )
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import Shelley.Spec.Ledger.Scripts (pattern RequireSignature, pattern ScriptHash)
+import Shelley.Spec.Ledger.Scripts (pattern RequireSignature)
 import Shelley.Spec.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
     decodeMapTraverse,
-    ipv4FromBytes,
     ipv4ToBytes,
-    ipv6FromBytes,
-    ipv6ToBytes,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), hashScript)
@@ -167,7 +156,6 @@ import Shelley.Spec.Ledger.TxData
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
-    _unTxId,
     pattern DCertDeleg,
     pattern DCertGenesis,
     pattern DCertMir,
@@ -200,7 +188,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     TxBody,
     TxId,
     TxIn,
-    VKey,
     VRFKeyHash,
     VerKeyKES,
     VerKeyVRF,
@@ -210,26 +197,9 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     pattern VKey,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
-import Test.Shelley.Spec.Ledger.SerializationProperties
-  ( prop_roundtrip_Addr,
-    prop_roundtrip_Block,
-    prop_roundtrip_BlockHeaderHash,
-    prop_roundtrip_BootstrapWitness,
-    prop_roundtrip_Header,
-    prop_roundtrip_LEDGER_PredicateFails,
-    prop_roundtrip_LedgerState,
-    prop_roundtrip_NewEpochState,
-    prop_roundtrip_PrtclState,
-    prop_roundtrip_RewardAcnt,
-    prop_roundtrip_Tx,
-    prop_roundtrip_TxId,
-    prop_roundtrip_TxOut,
-  )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
-import Test.Tasty.Hedgehog (testProperty)
-import qualified Test.Tasty.QuickCheck as QC (testProperty)
 
 roundTrip ::
   (Show a, Eq a) =>
@@ -306,15 +276,6 @@ checkEncodingCBORCBORGroup name x t =
 getRawKeyHash :: KeyHash h 'Payment -> ByteString
 getRawKeyHash (KeyHash hsh) = Monomorphic.hashToBytes hsh
 
-getRawGenKeyHash :: KeyHash h 'Genesis -> ByteString
-getRawGenKeyHash (KeyHash hsh) = Monomorphic.hashToBytes hsh
-
-getRawScriptHash :: ScriptHash h -> ByteString
-getRawScriptHash (ScriptHash hsh) = Monomorphic.hashToBytes hsh
-
-getRawTxId :: TxId h -> ByteString
-getRawTxId = Monomorphic.hashToBytes . _unTxId
-
 getRawNonce :: Nonce -> ByteString
 getRawNonce (Nonce hsh) = Monomorphic.hashToBytes hsh
 getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
@@ -349,11 +310,6 @@ testKey2 _ = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 2)
 
-testKey3 :: proxy h -> KeyPair h kr
-testKey3 _ = KeyPair vk sk
-  where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 3)
-
 testBlockIssuerKey :: KeyPair h 'BlockIssuer
 testBlockIssuerKey = KeyPair vk sk
   where
@@ -368,12 +324,6 @@ testGenesisDelegateKey :: proxy h -> KeyPair h 'GenesisDelegate
 testGenesisDelegateKey _ = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 6)
-
-testKey1Token :: forall proxy h. proxy h -> Tokens -> Tokens
-testKey1Token p = e
-  where
-    (VKey vk) = vKey (testKey1 p) :: VKey h 'Payment
-    Encoding e = encodeVerKeyDSIGN vk
 
 testBlockIssuerKeyTokens :: Tokens -> Tokens
 testBlockIssuerKeyTokens = e
@@ -404,9 +354,6 @@ testKeyHash1 p = (hashKey . vKey) (testKey1 p)
 testKeyHash2 :: HashAlgorithm h => proxy h -> KeyHash h 'Staking
 testKeyHash2 p = (hashKey . vKey) (testKey2 p)
 
-testKeyHash3 :: HashAlgorithm h => proxy h -> KeyHash h 'Payment
-testKeyHash3 p = (hashKey . vKey) (testKey3 p)
-
 testKESKeys :: (SignKeyKES h, VerKeyKES h)
 testKESKeys = mkKESKeyPair (0, 0, 0, 0, 3)
 
@@ -427,12 +374,6 @@ testScriptHash p = hashScript (testScript p)
 
 testScript2 :: HashAlgorithm h => proxy h -> MultiSig h
 testScript2 p = RequireSignature $ asWitness (testKeyHash2 p)
-
-testScriptHash2 :: forall h. HashAlgorithm h => ScriptHash h
-testScriptHash2 = hashScript (testScript2 p)
-  where
-    p :: Proxy h
-    p = Proxy
 
 testHeaderHash :: forall proxy h. proxy h -> HashAlgorithm h => HashHeader h
 testHeaderHash _ = HashHeader $ coerce (hashWithSerialiser toCBOR 0 :: Hash (ConcreteCrypto h) Int)
@@ -508,62 +449,10 @@ testNegativeCoin =
                Right _ -> assertFailure "should not deserialize negative coins"
            )
 
-roundTripIpv4 :: Property
-roundTripIpv4 =
-  -- We are using a QC generator which means we need QC test
-  Hedgehog.property $ do
-    ha <- forAll genIPv4
-    Hedgehog.tripping ha ipv4ToBytes ipv4FromBytes
-
-genIPv4 :: Gen IPv4
-genIPv4 = fromHostAddress <$> (Gen.word32 constantBounded)
-
-roundTripIpv6 :: Property
-roundTripIpv6 =
-  -- We are using a QC generator which means we need QC test
-  Hedgehog.property $ do
-    ha <- forAll genIPv6
-    Hedgehog.tripping ha ipv6ToBytes ipv6FromBytes
-
-genIPv6 :: Hedgehog.Gen IPv6
-genIPv6 = do
-  w1 <- Gen.word32 constantBounded
-  w2 <- Gen.word32 constantBounded
-  w3 <- Gen.word32 constantBounded
-  w4 <- Gen.word32 constantBounded
-  pure $ fromHostAddress6 (w1, w2, w3, w4)
-
-serializationTests :: TestTree
-serializationTests =
+tests :: TestTree
+tests =
   testGroup
-    "Shelley Serialization Tests"
-    [ serializationUnitTests,
-      serializationPropertyTests
-    ]
-
-serializationPropertyTests :: TestTree
-serializationPropertyTests =
-  testGroup
-    "Serialisation roundtrip Property Tests"
-    [ QC.testProperty "roundtrip Block" prop_roundtrip_Block,
-      QC.testProperty "roundtrip Addr" prop_roundtrip_Addr,
-      QC.testProperty "roundtrip RewardAcnt" prop_roundtrip_RewardAcnt,
-      QC.testProperty "roundtrip Header" prop_roundtrip_Header,
-      QC.testProperty "roundtrip Block Header Hash" prop_roundtrip_BlockHeaderHash,
-      QC.testProperty "roundtrip Tx" prop_roundtrip_Tx,
-      QC.testProperty "roundtrip Bootstrap Witness" prop_roundtrip_BootstrapWitness,
-      QC.testProperty "roundtrip TxId" prop_roundtrip_TxId,
-      QC.testProperty "roundtrip TxOut" prop_roundtrip_TxOut,
-      QC.testProperty "roundtrip LEDGER Predicate Failures" prop_roundtrip_LEDGER_PredicateFails,
-      QC.testProperty "roundtrip Protocol State" prop_roundtrip_PrtclState,
-      QC.testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
-      QC.testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState
-    ]
-
-serializationUnitTests :: TestTree
-serializationUnitTests =
-  testGroup
-    "CBOR Serialization Tests"
+    "CBOR Serialization Tests (Encoding)"
     [ checkEncodingCBOR
         "list"
         [1 :: Integer]
@@ -1438,9 +1327,7 @@ serializationUnitTests =
                 <> S ru
                 <> S pd
                 <> S compactOs
-            ),
-      testProperty "Roundtrip IPv4 serialisation Hedghog" roundTripIpv4,
-      testProperty "Roundtrip IPv6 serialisation Hedghog" roundTripIpv6
+            )
     ]
   where
     p :: Proxy Monomorphic.ShortHash

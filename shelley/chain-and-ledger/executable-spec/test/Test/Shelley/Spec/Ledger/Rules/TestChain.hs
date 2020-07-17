@@ -11,12 +11,10 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
     removedAfterPoolreap,
     -- TestNewEpoch
     adaPreservationChain,
-    canRoundTripNewEpochState,
     rewardStkCredSync,
   )
 where
 
-import Cardano.Binary (serialize)
 import Cardano.Crypto.Hash (ShortHash)
 import Control.Iterate.SetAlgebra (dom, domain, eval)
 import Control.Monad (join)
@@ -27,7 +25,6 @@ import Control.State.Transition.Trace
     sourceSignalTargets,
   )
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
-import qualified Data.ByteString.Base16.Lazy as Base16
 import Data.Foldable (foldl')
 import Data.Proxy
 import Data.Word (Word64)
@@ -51,7 +48,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (geConstants))
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
-import Test.Shelley.Spec.Ledger.SerializationProperties (prop_roundtrip_NewEpochState)
 import Test.Shelley.Spec.Ledger.Utils
   ( applySTSTest,
     epochFromSlotNo,
@@ -164,27 +160,6 @@ adaPreservationChain =
                   . chainNes
                   $ target
               )
-
--- | Verify that the New Epoch state has no serialization failures.
--- This is particularly useful for detecting negative Coin value.
-canRoundTripNewEpochState :: Property
-canRoundTripNewEpochState =
-  forAllChainTrace $ \tr ->
-    conjoin $
-      map serialization $
-        sourceSignalTargets tr
-  where
-    serialization SourceSignalTarget {target} =
-      let nes = chainNes target
-       in counterexample
-            ( mconcat
-                [ "target\n",
-                  show target,
-                  "base16 encoding\n",
-                  show . Base16.encode . serialize $ nes
-                ]
-            )
-            $ prop_roundtrip_NewEpochState nes
 
 ----------------------------------------------------------------------
 -- Properties for PoolReap (using the CHAIN Trace) --

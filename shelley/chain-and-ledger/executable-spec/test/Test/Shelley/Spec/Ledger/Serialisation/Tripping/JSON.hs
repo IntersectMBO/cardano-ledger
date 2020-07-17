@@ -1,8 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Genesis.Properties
-  ( genesis,
+module Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON
+  ( tests,
 
     -- * exported since they can be used for different cryptos
     prop_roundtrip_Address_JSON,
@@ -18,19 +18,10 @@ import Data.Proxy
 import Hedgehog (Property)
 import qualified Hedgehog
 import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Genesis
-import Test.Cardano.Prelude
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
-import Test.Shelley.Spec.Ledger.Examples (exampleShelleyGenesis)
-import Test.Shelley.Spec.Ledger.Generator.Genesis
+import Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
 import Test.Tasty
 import Test.Tasty.Hedgehog
-
-prop_golden_ShelleyGenesis :: Property
-prop_golden_ShelleyGenesis = goldenTestJSONPretty example "test/Golden/ShelleyGenesis"
-  where
-    example :: ShelleyGenesis (ConcreteCrypto ShortHash)
-    example = exampleShelleyGenesis
 
 prop_roundtrip_Address_JSON :: forall c. Crypto c => Proxy c -> Property
 prop_roundtrip_Address_JSON _ =
@@ -63,12 +54,11 @@ prop_roundtrip_ShelleyGenesis_JSON _ = Hedgehog.withTests 500 $
       Hedgehog.tripping sg toJSON fromJSON
       Hedgehog.tripping sg encode decode
 
-genesis :: TestTree
-genesis =
+tests :: TestTree
+tests =
   testGroup
     "Shelley Genesis"
-    [ testProperty "Genesis Golden Test" prop_golden_ShelleyGenesis,
-      testProperty "Adress round trip" $
+    [ testProperty "Adress round trip" $
         prop_roundtrip_Address_JSON @(ConcreteCrypto ShortHash) Proxy,
       testProperty "Genesis round trip" $
         prop_roundtrip_ShelleyGenesis_JSON @(ConcreteCrypto ShortHash) Proxy,

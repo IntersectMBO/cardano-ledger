@@ -12,44 +12,20 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Shelley.Spec.Ledger.SerializationProperties
-  ( prop_roundtrip_Addr,
-    prop_roundtrip_RewardAcnt,
-    prop_roundtrip_BootstrapWitness,
-    prop_roundtrip_Block,
-    prop_roundtrip_Header,
-    prop_roundtrip_BlockHeaderHash,
-    prop_roundtrip_Tx,
-    prop_roundtrip_TxId,
-    prop_roundtrip_TxOut,
-    prop_roundtrip_LEDGER_PredicateFails,
-    prop_roundtrip_PrtclState,
-    prop_roundtrip_LedgerState,
-    prop_roundtrip_NewEpochState,
-  )
-where
+module Test.Shelley.Spec.Ledger.Serialisation.Generators () where
 
 import Cardano.Binary
-  ( Annotator (..),
-    FromCBOR (..),
-    FullByteString (..),
-    ToCBOR (..),
+  ( ToCBOR (..),
     toCBOR,
   )
 import Cardano.Crypto.DSIGN.Class (SignedDSIGN (..), rawDeserialiseSigDSIGN, sizeSigDSIGN)
 import Cardano.Crypto.DSIGN.Mock (MockDSIGN, VerKeyDSIGN (..))
-import Cardano.Crypto.Hash (HashAlgorithm)
+import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hash as Monomorphic
-import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import Codec.CBOR.Decoding (Decoder)
-import Codec.CBOR.Encoding (Encoding)
-import Codec.CBOR.Read (deserialiseFromBytes)
-import Codec.CBOR.Write (toLazyByteString)
-import qualified Data.ByteString.Char8 as BS (pack)
-import qualified Data.ByteString.Lazy as Lazy
+import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)
 import qualified Data.Map.Strict as Map (fromList)
@@ -147,90 +123,13 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Generator (genStateTx, genValidStateTx)
-import Test.Tasty.QuickCheck (Gen, Property, choose, counterexample, elements, (===))
-
-roundtrip ::
-  (Eq a, Show a) =>
-  (a -> Encoding) ->
-  (forall s. Decoder s a) ->
-  a ->
-  Property
-roundtrip enc dec = roundtrip' enc (const <$> dec)
-
--- | Roundtrip property for values annotated with their serialized form
---
--- NOTE: Suppose @a@ consists of a pair of the unannotated value @a'@ and some
--- 'Lazy.ByteString'. The roundtrip property will fail if that
--- 'Lazy.ByteString' encoding is not equal to @enc a'@. One way in which this
--- might happen is if the annotation is not canonical CBOR, but @enc@ does
--- produce canonical CBOR.
-roundtrip' ::
-  (Eq a, Show a) =>
-  -- | @enc@
-  (a -> Encoding) ->
-  (forall s. Decoder s (Lazy.ByteString -> a)) ->
-  a ->
-  Property
-roundtrip' enc dec a = case deserialiseFromBytes dec bs of
-  Right (bs', a')
-    | Lazy.null bs' ->
-      a === a' bs
-    | otherwise ->
-      counterexample ("left-over bytes: " <> show bs') False
-  Left e ->
-    counterexample (show e) False
-  where
-    bs = toLazyByteString (enc a)
+import Test.Tasty.QuickCheck (Gen, choose, elements)
 
 genHash :: forall a c. Crypto c => Proxy c -> Gen (Hash c a)
 genHash proxy = mkDummyHash proxy <$> arbitrary
 
 mkDummyHash :: forall c a. Crypto c => Proxy c -> Int -> Hash c a
 mkDummyHash _ = coerce . hashWithSerialiser @(HASH c) toCBOR
-
-{-------------------------------------------------------------------------------
-  Serialization Properties
--------------------------------------------------------------------------------}
-
-prop_roundtrip_Addr :: Mock.Addr Monomorphic.ShortHash -> Property
-prop_roundtrip_Addr = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_RewardAcnt :: Mock.RewardAcnt Monomorphic.ShortHash -> Property
-prop_roundtrip_RewardAcnt = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_Block :: Mock.Block Monomorphic.ShortHash -> Property
-prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_Header :: Mock.BHeader Monomorphic.ShortHash -> Property
-prop_roundtrip_Header = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_BlockHeaderHash :: Mock.HashHeader Monomorphic.ShortHash -> Property
-prop_roundtrip_BlockHeaderHash = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_Tx :: Mock.Tx Monomorphic.ShortHash -> Property
-prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_TxId :: Mock.TxId Monomorphic.ShortHash -> Property
-prop_roundtrip_TxId = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_TxOut :: Mock.TxOut Monomorphic.ShortHash -> Property
-prop_roundtrip_TxOut = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_BootstrapWitness ::
-  Mock.BootstrapWitness Monomorphic.ShortHash -> Property
-prop_roundtrip_BootstrapWitness = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
-prop_roundtrip_LEDGER_PredicateFails :: [STS.PredicateFailure (Mock.LEDGERS Monomorphic.ShortHash)] -> Property
-prop_roundtrip_LEDGER_PredicateFails = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_PrtclState :: STS.PrtclState (Mock.ConcreteCrypto Monomorphic.ShortHash) -> Property
-prop_roundtrip_PrtclState = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_LedgerState :: Mock.LedgerState Monomorphic.ShortHash -> Property
-prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
-
-prop_roundtrip_NewEpochState :: Mock.NewEpochState Monomorphic.ShortHash -> Property
-prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
 
 {-------------------------------------------------------------------------------
   Generators
