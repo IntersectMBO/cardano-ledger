@@ -132,10 +132,12 @@ throughout the rest of the section.
 \begin{figure}[htb]
   \emph{Total possible refunds}
   \begin{align*}
-    & \fun{obligation} \in \PParams \to \StakeCreds \to \StakePools \to \Coin \\
-    & \obligation{pp}{stkCreds}{stpools}{cslot} =
-      (\fun{keyDeposit}~\var{pp}) \cdot|\var{stkCreds}| +
-      (\fun{poolDecayRate}~\var{pp}) \cdot|\var{stpools}| \\
+    & \fun{obligation} \in \PParams \to (\StakeCredential \mapsto \Coin)
+    \to (\KeyHash_{pool}\mapsto\PoolParam) \to \Coin \\
+    & \obligation{pp}{rewards}{poolParams} = \\
+    & ~~~~~
+    (\fun{keyDeposit}~\var{pp}) \cdot|\var{rewards}| +
+    (\fun{poolDeposit}~\var{pp}) \cdot|\var{poolParams}| \\
   \end{align*}
   %
   \emph{Filter Stake to one Pool}
@@ -256,16 +258,16 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
       \restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right),
     ~\var{delegations},~\var{poolParams}\big)\\
       & \where \\
-      & ~~~~ (\var{stkCreds},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard)
+      & ~~~~ (~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard,~\wcard)
         = \var{dstate} \\
-      & ~~~~ (\var{stpools},~\var{poolParams}~\wcard,~\wcard) = \var{pstate} \\
+      & ~~~~ (~\var{poolParams}~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
         \left(\fun{stakeCred_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
         \circ\left(\range{\var{utxo}}\right)
         \right)
         \cup \left(\fun{stakeCred_r}^{-1}\circ\var{rewards}\right) \\
       & ~~~~ \var{activeDelegs} =
-               (\dom{stkCreds}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
+               (\dom{rewards}) \restrictdom \var{delegations} \restrictrange (\dom{poolParams}) \\
   \end{align*}
 
   \caption{Stake Distribution Function}
@@ -485,7 +487,6 @@ This transition has no preconditions and results in the following state change:
           \var{treasury} \\
           \var{reserves} \\
           ~ \\
-          \var{stkCreds} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
@@ -493,7 +494,6 @@ This transition has no preconditions and results in the following state change:
           \var{fGenDelegs} \\
           \var{i_{rwd}} \\
           ~ \\
-          \var{stpools} \\
           \var{poolParams} \\
           \var{fPoolParams} \\
           \var{retiring} \\
@@ -512,7 +512,6 @@ This transition has no preconditions and results in the following state change:
           \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{unclaimed}} \\
           \var{reserves} \\
           ~ \\
-          \var{stkCreds} \\
           \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{refunds}} \\
           \varUpdate{\var{delegations}} & \varUpdate{\subtractrange} & \varUpdate{\var{retired}} \\
           \var{ptrs} \\
@@ -520,7 +519,6 @@ This transition has no preconditions and results in the following state change:
           \var{fGenDelegs} \\
           \var{i_{rwd}}\\
           ~ \\
-          \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{stpools}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{poolParams}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{fPoolParams}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
@@ -655,13 +653,13 @@ for ease of reading.
     {
       \var{pp_{new}}\neq\Nothing \\~\\
       {\begin{array}{rcl}
-         \var{oblg_{cur}} & \leteq & \obligation{pp}{stkCreds}{stpools} \\
-         \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkCreds}{stpools} \\
-         \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}\\
-         \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
-                                                                                      \leteq
-                              & \var{dstate}\\
          (\var{utxo},~\var{deposits},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
+         \var{(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
+         \leteq & \var{dstate}\\
+         \var{(\var{poolParams},~\wcard,~\wcard)} & \leteq & \var{pstate}\\
+         \var{oblg_{cur}} & \leteq & \obligation{pp}{rewards}{poolParams} \\
+         \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{rewards}{poolParams} \\
+         \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}\\
       \end{array}}
       \\~\\~\\
       \var{oblg_{cur}} = \var{deposits} \\
@@ -716,11 +714,12 @@ for ease of reading.
       \end{array}}\right)
       \\~\\~\\
       {\begin{array}{rcl}
-          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkCreds}{stpools} \\
-          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkCreds}{stpools} \\
-         \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
-                                                                                 \leteq
-                              & \var{dstate}\\
+         (\var{utxo},~\var{deposits},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
+          \var{(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
+          \leteq & \var{dstate}\\
+         \var{(\var{poolParams},~\wcard,~\wcard)} & \leteq & \var{pstate}\\
+          \var{oblg_{cur}} & \leteq & \obligation{pp}{rewards}{poolParams} \\
+          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{rewards}{poolParams} \\
          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}
       \end{array}}
       \\~\\~\\
@@ -851,9 +850,9 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       { \var{ss'} }
       \\~\\
       (\var{utxoSt},~(\var{dstate},~\var{pstate}))\leteq\var{ls} \\
-      (\var{stpools},~\var{poolParams},~\var{fPoolParams},~\var{retiring})\leteq\var{pstate}
+      (\var{poolParams},~\var{fPoolParams},~\var{retiring})\leteq\var{pstate}
       \\
-      \var{pstate'}\leteq(\var{stpools},~\var{poolParams}\unionoverrideRight\var{fPoolParams},
+      \var{pstate'}\leteq(\var{poolParams}\unionoverrideRight\var{fPoolParams},
       ~\emptyset,~\var{retiring})
       \\~\\~\\
       \var{pp}
@@ -1323,7 +1322,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\left(
       \wcard,~
       \left(
-      \left(\wcard,~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard\right)~
+      \left(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard\right)~
       \wcard
       \right)
       \right) = \var{ls} \\
@@ -1364,15 +1363,15 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{treasury} \\
           \var{reserves} \\
           ~ \\
-          \var{stkCreds} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
           \var{genDelegs} \\
+          \var{fGenDelegs} \\
           \var{i_{rwd}}
           \\~ \\
-          \var{stpools} \\
           \var{poolParams} \\
+          \var{fPoolParams} \\
           \var{retiring} \\
           ~ \\
           \var{utxo} \\
@@ -1390,15 +1389,15 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \varUpdate{\var{treasury} + \Delta t + \var{unregRU'}}\\
           \varUpdate{\var{reserves} + \Delta r}\\
           ~ \\
-          \var{\var{stkCreds}} \\
           \varUpdate{\var{rewards}\unionoverridePlus\var{regRU}} \\
           \var{delegations} \\
           \var{ptrs} \\
           \var{genDelegs} \\
+          \var{fGenDelegs} \\
           \var{i_{rwd}}
           \\~ \\
-          \var{stpools} \\
           \var{poolParams} \\
+          \var{fPoolParams} \\
           \var{retiring} \\
           ~ \\
           \var{utxo} \\
@@ -1411,8 +1410,8 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
         \end{array}
     \right) \\
     & ~~~\where \\
-    & ~~~~~~~\var{regRU}=(\dom{stkCreds})\restrictdom rs\\
-    & ~~~~~~~\var{unregRU}=(\dom{stkCreds})\subtractdom rs\\
+    & ~~~~~~~\var{regRU}=(\dom{rewards})\restrictdom rs\\
+    & ~~~~~~~\var{unregRU}=(\dom{rewards})\subtractdom rs\\
     & ~~~~~~~\var{unregRU'}=\sum\limits_{\wcard\mapsto c\in\var{unregRU}} \var{c}\\
   \end{align*}
 

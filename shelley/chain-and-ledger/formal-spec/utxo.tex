@@ -58,10 +58,8 @@ See Figure~\ref{fig:defs:utxo-shelley} for most of the definitions used in the t
     current UTxO on the ledger and the registered stake credentials. This
     calculation is a sum of all coin in the inputs of $\var{tx}$, reward
     withdrawals and stake credential deposit refunds. Some of the definitions
-    used in this function will be defined in Section~\ref{sec:deps-refunds}. In
-    particular, $\fun{keyRefunds}$ is defined in
-    Figure~\ref{fig:functions:deposits-refunds} and $\StakeCreds$ is defined in
-    Figure~\ref{fig:delegation-defs}.
+    used in this function will be defined in Section~\ref{sec:deps-refunds}. In particular,
+    $\fun{keyRefunds}$ is defined in Figure~\ref{fig:functions:deposits-refunds}.
 
   \item The calculation $\fun{produced}$ gives the value produced by the transaction $\var{tx}$
     in the context of the protocol parameters and the registered stake pools.
@@ -69,8 +67,7 @@ See Figure~\ref{fig:defs:utxo-shelley} for most of the definitions used in the t
     the transaction fee and all needed deposits.
     Some of the definitions used in this function will be defined in
     Section~\ref{sec:deps-refunds}.
-    In particular, $\fun{totalDeposits}$ is defined in Figure~\ref{fig:functions:deposits-refunds}
-    and $\StakePools$ is defined in Figure~\ref{fig:delegation-defs}.
+    In particular, $\fun{totalDeposits}$ is defined in Figure~\ref{fig:functions:deposits-refunds}.
 \end{itemize}
 
 For a transaction and a given ledger state, the preservation of value property holds
@@ -78,7 +75,7 @@ exactly when the results of $\fun{consumed}$ equal the results of $\fun{produced
 Moreover, when the property holds, value is only moved between transaction outputs,
 the reward accounts, the fee pot and the deposit pot.
 
-Note that the $\fun{produced}$ function takes the registered stake pools ($\var{stpools}$)
+Note that the $\fun{produced}$ function takes the registered stake pools ($\var{poolParams}$)
 as a parameter only in order to determine which pool registration certificates are
 new (and thus require a deposit) and which ones are updates.
 Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
@@ -109,11 +106,11 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
         \fun{wbalance}~(\fun{txwdrls}~{tx}) \\
     & ~~ + \keyRefunds{pp}{tx} \\
     \nextdef
-    & \fun{produced} \in \PParams \to \StakePools \to \TxBody \to \Coin
+    & \fun{produced} \in \PParams \to (\KeyHash_{pool}\mapsto\PoolParam) \to \TxBody \to \Coin
     & \text{value produced} \\
-    & \fun{produced}~\var{pp}~\var{stpools}~\var{tx} = \\
+    & \fun{produced}~\var{pp}~\var{poolParams}~\var{tx} = \\
     &~~\ubalance{(\outs{tx})}
-    + \txfee{tx} + \totalDeposits{pp}{stpools}{(\txcerts{tx})}\\
+    + \txfee{tx} + \totalDeposits{pp}{poolParams}{(\txcerts{tx})}\\
   \end{align*}
 
   \caption{Functions used in UTxO rules}
@@ -155,7 +152,7 @@ The signal for the UTxO transition is a transaction.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{stpools} & \StakePools & \text{stake pool}\\
+        \var{poolParams} & \KeyHash_{pool}\mapsto\PoolParam & \text{stake pools}\\
         \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations} \\
       \end{array}
     \right)
@@ -278,7 +275,7 @@ accounts where a reward is accumulated to a specific address.
       & \minfee{pp}{tx} \leq \txfee{txb}
       & \txins{txb} \subseteq \dom \var{utxo}
       \\
-      \consumed{pp}{utxo}{rewards}~{txb} = \produced{pp}{stpools}~{txb}
+      \consumed{pp}{utxo}{rewards}~{txb} = \produced{pp}{poolParams}~{txb}
       \\
       ~
       \\
@@ -306,13 +303,13 @@ accounts where a reward is accumulated to a specific address.
       \var{refunded} \leteq \keyRefunds{pp}{txb}
       \\
       \var{depositChange} \leteq
-        \totalDeposits{pp}{stpools}{(\txcerts{txb})} - \var{refunded}
+        \totalDeposits{pp}{poolParams}{(\txcerts{txb})} - \var{refunded}
     }
     {
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
-        \var{stpools}\\
+        \var{poolParams}\\
         \var{genDelegs}\\
       \end{array}
       \vdash
@@ -372,9 +369,9 @@ defined later.  Figure~\ref{fig:functions:deposits-refunds} defines the deposit
 and refund functions.
 \begin{itemize}
   \item The function $\fun{totalDeposits}$ returns the total deposits that have to be
-    made by a transaction.  This calculation is based on the protocol parameters.
-    Specifically, for a given transaction, it sums up the values of the stake
-    credential deposits and the stake pool deposits. Those certificates which are
+    made by a transaction.  This calculation uses two protocol parameters, namely
+    the key deposit value and the pool deposit value.
+    Note that those certificates which are
     updates of stake pool parameters of already registered pool keys should not
     (and are, in fact, not allowed to) make a deposit.
   \item The function $\fun{keyRefunds}$, calculates the total amount of returned
@@ -393,13 +390,14 @@ and refund functions.
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{totalDeposits} \in \PParams \to \StakePools \to \seqof{\DCert} \to \Coin
+    & \fun{totalDeposits} \in \PParams \to (\KeyHash_{pool}\mapsto\PoolParam) \\
+    & ~~~~\to \seqof{\DCert} \to \Coin
     & \text{total deposits for transaction} \\
-    & \totalDeposits{pp}{stpools}{certs} = \\
-    &  \sum\limits_{c\in\var{certs} \cap \DCertRegKey}(\fun{keyDeposit}~pp)
-    +  \sum\limits_{\substack{
-    c\in\var{certs}\cap\DCertRegPool \\ (\cwitness{c})\notin \var{stpools}}}
-    (\fun{poolDeposit}~pp)
+    & \totalDeposits{pp}{poolParams}{certs} = \\
+    &  ~~~ (\fun{keyDeposit}~pp)\cdot|\var{certs}\cap\DCertRegKey| \\
+    &  ~~~~~ + (\fun{poolDeposit}~pp)\cdot|\var{newPools}| \\
+    & ~~~\where \\
+    &  ~~~~~~~ \var{newPools} = \{\var{certs}\cap\DCertRegPool ~\mid~ \cwitness{c}\notin \var{poolParams}\}
     \nextdef
       & \fun{keyRefunds} \in \PParams \to \TxBody \to \Coin
       & \text{key refunds for a transaction} \\
@@ -557,8 +555,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
         \begin{array}{r}
           \var{slot}\\
           \var{pp}\\
-          \var{stkCreds}\\
-          \var{stpools}\\
+          \var{poolParams}\\
           \var{genDelegs}\\
         \end{array}
       }
@@ -569,8 +566,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
-        \var{stkCreds}\\
-        \var{stpools}\\
+        \var{poolParams}\\
         \var{genDelegs}\\
       \end{array}
       \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
