@@ -51,7 +51,6 @@ import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
-    Network,
     UnitInterval,
     activeSlotVal,
     unitIntervalToRational,
@@ -75,7 +74,7 @@ import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeSeq, encodeFoldable)
-import Shelley.Spec.Ledger.TxData (PoolParams (..), RewardAcnt (..))
+import Shelley.Spec.Ledger.TxData (PoolParams (..), getRwdCred)
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
   deriving (Eq, Generic, Ord, Num, NFData, NoUnexpectedThunks, ToCBOR, FromCBOR)
@@ -347,7 +346,6 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
 
 -- | Reward one pool
 rewardOnePool ::
-  Network ->
   PParams ->
   Coin ->
   Natural ->
@@ -356,9 +354,9 @@ rewardOnePool ::
   Stake crypto ->
   Rational ->
   Coin ->
-  Set (RewardAcnt crypto) ->
-  Map (RewardAcnt crypto) Coin
-rewardOnePool network pp r blocksN blocksTotal pool (Stake stake) sigma (Coin total) addrsRew =
+  Set (Credential 'Staking crypto) ->
+  Map (Credential 'Staking crypto) Coin
+rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma (Coin total) addrsRew =
   rewards'
   where
     Coin ostake =
@@ -377,31 +375,29 @@ rewardOnePool network pp r blocksN blocksTotal pool (Stake stake) sigma (Coin to
     tot = fromIntegral total
     mRewards =
       Map.fromList
-        [ ( RewardAcnt network hk,
+        [ ( hk,
             memberRew poolR pool (StakeShare (fromIntegral c % tot)) (StakeShare sigma)
           )
           | (hk, Coin c) <- Map.toList stake,
             hk `Set.notMember` (KeyHashObj `Set.map` _poolOwners pool)
         ]
     iReward = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
-    potentialRewards = Map.insert (_poolRAcnt pool) iReward mRewards
+    potentialRewards = Map.insert (getRwdCred $ _poolRAcnt pool) iReward mRewards
     rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
 
 reward ::
-  Network ->
   PParams ->
   BlocksMade crypto ->
   Coin ->
-  Set (RewardAcnt crypto) ->
+  Set (Credential 'Staking crypto) ->
   Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   Stake crypto ->
   Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
-  (Map (RewardAcnt crypto) Coin, Map (KeyHash 'StakePool crypto) Likelihood)
+  (Map (Credential 'Staking crypto) Coin, Map (KeyHash 'StakePool crypto) Likelihood)
 reward
-  network
   pp
   (BlocksMade b)
   r
@@ -425,7 +421,6 @@ reward
               Just n ->
                 Just $
                   rewardOnePool
-                    network
                     pp
                     r
                     n

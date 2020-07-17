@@ -226,7 +226,7 @@ import Shelley.Spec.Ledger.UTxO
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
 
 type RewardAccounts crypto =
-  Map (RewardAcnt crypto) Coin
+  Map (Credential 'Staking crypto) Coin
 
 data FutureGenDeleg crypto = FutureGenDeleg
   { fGenDelegSlot :: !SlotNo,
@@ -377,7 +377,7 @@ instance Crypto crypto => FromCBOR (DPState crypto) where
 data RewardUpdate crypto = RewardUpdate
   { deltaT :: !Coin,
     deltaR :: !Coin,
-    rs :: !(Map (RewardAcnt crypto) Coin),
+    rs :: !(Map (Credential 'Staking crypto) Coin),
     deltaF :: !Coin,
     nonMyopic :: !(NonMyopic crypto)
   }
@@ -956,7 +956,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     dState = _dstate delegState
     (regRU, unregRU) =
       Map.partitionWithKey
-        (\(RewardAcnt _ k) _ -> eval (k ∈ dom (_stkCreds dState)))
+        (\k _ -> eval (k ∈ dom (_stkCreds dState)))
         (rs ru)
     as' =
       as
@@ -1005,7 +1005,6 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
   ei <- asks epochInfo
   slotsPerEpoch <- epochInfoSize ei e
   asc <- asks activeSlotCoeff
-  network <- asks networkId
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
@@ -1022,7 +1021,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
       _R = Coin $ rPot - deltaT1
       circulation = total - (_reserves acnt)
       (rs_, newLikelihoods) =
-        reward network pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation asc slotsPerEpoch
+        reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation asc slotsPerEpoch
       deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $

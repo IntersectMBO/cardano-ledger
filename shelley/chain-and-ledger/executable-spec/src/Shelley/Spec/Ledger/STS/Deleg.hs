@@ -77,7 +77,6 @@ import Shelley.Spec.Ledger.TxData
     MIRCert (..),
     MIRPot (..),
     Ptr,
-    RewardAcnt (..),
   )
 
 data DELEG crypto
@@ -131,7 +130,7 @@ instance Typeable crypto => STS (DELEG crypto) where
         "_stkCreds and _rewards must have the same domain"
         ( \(TRC (_, st, _)) ->
             -- eval(dom(_stkCreds st)) == (Set.map getRwdCred $ domain (_rewards st))
-            eval (dom (_stkCreds st) ≍ dom (Map.mapKeys getRwdCred (_rewards st)))
+            eval (dom (_stkCreds st) ≍ dom (_rewards st))
         )
     ]
 
@@ -228,30 +227,29 @@ delegationTransition ::
   TransitionRule (DELEG crypto)
 delegationTransition = do
   TRC (DelegEnv slot ptr acnt, ds, c) <- judgmentContext
-  network <- liftSTS $ asks networkId
   case c of
     DCertDeleg (RegKey hk) -> do
       -- note that pattern match is used instead of regCred, as in the spec
       eval (hk ∉ dom (_stkCreds ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
-      eval ((RewardAcnt network hk) ∉ dom (_rewards ds)) ?! StakeKeyInRewardsDELEG hk
+      eval (hk ∉ dom (_rewards ds)) ?! StakeKeyInRewardsDELEG hk
 
       pure $
         ds
           { _stkCreds = eval (_stkCreds ds ∪ (singleton hk slot)),
-            _rewards = eval (_rewards ds ∪ (singleton (RewardAcnt network hk) (Coin 0))),
+            _rewards = eval (_rewards ds ∪ (singleton hk (Coin 0))),
             _ptrs = eval (_ptrs ds ∪ (singleton ptr hk))
           }
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       eval (hk ∈ dom (_stkCreds ds)) ?! StakeKeyNotRegisteredDELEG hk
 
-      let rewardCoin = Map.lookup (RewardAcnt network hk) (_rewards ds)
+      let rewardCoin = Map.lookup hk (_rewards ds)
       rewardCoin == Just 0 ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
 
       pure $
         ds
           { _stkCreds = eval (setSingleton hk ⋪ _stkCreds ds),
-            _rewards = eval (setSingleton (RewardAcnt network hk) ⋪ _rewards ds),
+            _rewards = eval (setSingleton hk ⋪ _rewards ds),
             _delegations = eval (setSingleton hk ⋪ _delegations ds),
             _ptrs = eval (_ptrs ds ⋫ setSingleton hk)
             -- TODO make _ptrs a bijection. This operation takes time proportional to (_ptrs ds)

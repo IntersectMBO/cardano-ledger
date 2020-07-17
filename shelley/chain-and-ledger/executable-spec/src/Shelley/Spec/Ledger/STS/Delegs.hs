@@ -24,15 +24,16 @@ import Cardano.Binary
     encodeListLen,
     matchSize,
   )
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
-import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, trans, (?!), (?!:))
+import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans, (?!), (?!:))
 import Data.Map as Map
 import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
+import Shelley.Spec.Ledger.Address (getRwdCred, mkRwdAcnt)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
@@ -121,18 +122,19 @@ delegsTransition ::
   TransitionRule (DELEGS crypto)
 delegsTransition = do
   TRC (env@(DelegsEnv slot txIx pp tx reserves), dpstate, certificates) <- judgmentContext
+  network <- liftSTS $ asks networkId
 
   case certificates of
     Empty -> do
       let ds = _dstate dpstate
           wdrls_ = unWdrl $ _wdrls (_body tx)
-          rewards = _rewards ds
+          rewards = Map.mapKeys (mkRwdAcnt network) $ _rewards ds
 
       Map.isSubmapOfBy (==) wdrls_ rewards -- wdrls_ ⊆ rewards
         ?! WithdrawalsNotInRewardsDELEGS
           (Map.differenceWith (\x y -> if x /= y then Just x else Nothing) wdrls_ rewards)
 
-      let rewards' = eval (rewards ⨃ (fmap (\_x -> 0) wdrls_))
+      let rewards' = Map.mapKeys getRwdCred $ eval (rewards ⨃ (fmap (\_x -> 0) wdrls_))
       pure $ dpstate {_dstate = ds {_rewards = rewards'}}
     gamma :|> c -> do
       dpstate' <-

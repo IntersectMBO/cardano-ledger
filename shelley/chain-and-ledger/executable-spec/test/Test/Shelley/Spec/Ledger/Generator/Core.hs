@@ -70,7 +70,7 @@ import Data.Tuple (swap)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (toAddr, toCred, pattern Addr)
+import Shelley.Spec.Ledger.Address (getRwdCred, toAddr, toCred, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (..),
     StrictMaybe (..),
@@ -659,4 +659,4 @@ applyTxBody ls pp tx =
     newAccounts =
       reapRewards
         ((_rewards . _dstate . _delegationState) ls)
-        (unWdrl $ _wdrls tx)
+        (Map.mapKeys getRwdCred . unWdrl $ _wdrls tx)

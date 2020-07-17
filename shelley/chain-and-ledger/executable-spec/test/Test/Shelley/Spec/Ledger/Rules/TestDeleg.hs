@@ -30,8 +30,7 @@ import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup, (\
 import qualified Data.Maybe as Maybe (maybe)
 import Data.Set (Set)
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
-import Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import Shelley.Spec.Ledger.BaseTypes (Network (..), (==>))
+import Shelley.Spec.Ledger.BaseTypes ((==>))
 import Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
@@ -57,7 +56,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     DELEG,
     DState,
     KeyHash,
-    RewardAcnt,
   )
 
 -------------------------------
@@ -67,7 +65,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 getStDelegs :: DState ShortHash -> Set (Credential ShortHash 'Staking)
 getStDelegs = \x -> eval (dom (_stkCreds x))
 
-getRewards :: DState ShortHash -> Map (RewardAcnt ShortHash) Coin
+getRewards :: DState ShortHash -> Map (Credential ShortHash 'Staking) Coin
 getRewards = _rewards
 
 getDelegations :: DState ShortHash -> Map (Credential ShortHash 'Staking) (KeyHash ShortHash 'StakePool)
@@ -90,7 +88,7 @@ rewardZeroAfterReg tr =
         "a newly registered key should have a reward of 0"
         ( eval (hk ∉ getStDelegs d)
             ==> ( eval (hk ∈ getStDelegs d')
-                    && Maybe.maybe True (== 0) (Map.lookup (mkRwdAcnt Testnet hk) (getRewards d'))
+                    && Maybe.maybe True (== 0) (Map.lookup hk (getRewards d'))
                 )
         )
     credNewlyRegisteredAndRewardZero _ = property ()
@@ -112,7 +110,7 @@ credentialRemovedAfterDereg tr =
         counterexample
           "a deregistered stake key should not be in the reward and delegation mappings"
           ( eval (cred ∉ getStDelegs d')
-              && eval (mkRwdAcnt Testnet cred ∉ dom (getRewards d'))
+              && eval (cred ∉ dom (getRewards d'))
               && eval (cred ∉ dom (getDelegations d'))
           )
     removedDeregCredential _ = property ()

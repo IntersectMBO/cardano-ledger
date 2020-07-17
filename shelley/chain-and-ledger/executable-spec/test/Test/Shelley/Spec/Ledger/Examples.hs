@@ -122,7 +122,7 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.Address (mkRwdAcnt, pattern Addr)
+import Shelley.Spec.Ledger.Address (getRwdCred, mkRwdAcnt, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     Network (..),
@@ -184,6 +184,7 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     FutureGenDeleg (..),
     InstantaneousRewards (..),
+    RewardAccounts,
     deltaF,
     deltaR,
     deltaT,
@@ -321,7 +322,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     PoolDistr,
     PoolParams,
     ProposedPPUpdates,
-    RewardAcnt,
     RewardUpdate,
     SignKeyDSIGN,
     SnapShot,
@@ -844,9 +844,9 @@ dsEx2A =
             ],
       _rewards =
         Map.fromList
-          [ (RewardAcnt Testnet aliceSHK, Coin 0),
-            (RewardAcnt Testnet bobSHK, Coin 0),
-            (RewardAcnt Testnet carlSHK, Coin 0)
+          [ (aliceSHK, Coin 0),
+            (bobSHK, Coin 0),
+            (carlSHK, Coin 0)
           ],
       _irwd =
         InstantaneousRewards
@@ -1131,7 +1131,7 @@ expectedLSEx2C =
         dsEx2B
           { _irwd = emptyInstantaneousRewards,
             _stkCreds = addStakeCreds carlSHK (SlotNo 10) $ _stkCreds dsEx2B,
-            _rewards = Map.insert (mkRwdAcnt Testnet carlSHK) 110 $ _rewards dsEx2B
+            _rewards = Map.insert (carlSHK) 110 $ _rewards dsEx2B
           }
         psEx2A
     )
@@ -1372,7 +1372,7 @@ expectedLSEx2E =
         dsEx2D
           { _irwd = emptyInstantaneousRewards,
             _stkCreds = addStakeCreds carlSHK (SlotNo 10) $ _stkCreds dsEx2B,
-            _rewards = Map.insert (mkRwdAcnt Testnet carlSHK) 110 $ _rewards dsEx2B
+            _rewards = Map.insert carlSHK 110 $ _rewards dsEx2B
           }
         psEx2A
     )
@@ -1636,11 +1636,11 @@ aliceRAcnt2H = Coin 5827393939
 bobRAcnt2H :: Coin
 bobRAcnt2H = Coin 519272726
 
-rewardsEx2H :: HashAlgorithm h => Map (RewardAcnt h) Coin
+rewardsEx2H :: HashAlgorithm h => RewardAccounts (ConcreteCrypto h)
 rewardsEx2H =
   Map.fromList
-    [ (RewardAcnt Testnet aliceSHK, aliceRAcnt2H),
-      (RewardAcnt Testnet bobSHK, bobRAcnt2H)
+    [ (aliceSHK, aliceRAcnt2H),
+      (bobSHK, bobRAcnt2H)
     ]
 
 oCertIssueNosEx2H :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Word64
@@ -1766,7 +1766,7 @@ acntEx2I p =
     }
 
 dsEx2I :: HashAlgorithm h => DState h
-dsEx2I = dsEx2D {_rewards = Map.insert (mkRwdAcnt Testnet carlSHK) 110 rewardsEx2H}
+dsEx2I = dsEx2D {_rewards = Map.insert carlSHK 110 rewardsEx2H}
 
 expectedLSEx2I :: HashAlgorithm h => LedgerState h
 expectedLSEx2I =
@@ -1907,7 +1907,7 @@ dsEx2J =
           ],
       _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, SlotNo 10), (carlSHK, SlotNo 10)],
       _delegations = Map.fromList [(aliceSHK, hk (alicePool p)), (carlSHK, hk (alicePool p))],
-      _rewards = Map.fromList [(RewardAcnt Testnet aliceSHK, aliceRAcnt2H), (RewardAcnt Testnet carlSHK, carlMIR)]
+      _rewards = Map.fromList [(aliceSHK, aliceRAcnt2H), (carlSHK, carlMIR)]
     }
   where
     p :: Proxy h
@@ -2177,8 +2177,8 @@ dsEx2L =
       _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, SlotNo 10), (carlSHK, SlotNo 10)],
       _rewards =
         Map.fromList
-          [ (RewardAcnt Testnet aliceSHK, aliceRAcnt2H + Coin 250),
-            (RewardAcnt Testnet carlSHK, carlMIR)
+          [ (aliceSHK, aliceRAcnt2H + Coin 250),
+            (carlSHK, carlMIR)
           ]
           -- Note the pool cert refund of 201
     }
@@ -3323,7 +3323,7 @@ test5D p pot = do
           ds = getDState ex5DState
           StakeCreds stkCreds = _stkCreds ds
           rews = _rewards ds
-          rewEntry = rews Map.!? (mkRwdAcnt Testnet aliceSHK)
+          rewEntry = rews Map.!? (getRwdCred $ mkRwdAcnt Testnet aliceSHK)
       assertBool "Alice's credential not in stkCreds" (aliceSHK `Map.member` stkCreds)
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry

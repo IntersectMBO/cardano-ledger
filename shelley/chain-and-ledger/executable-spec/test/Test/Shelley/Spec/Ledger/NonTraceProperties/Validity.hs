@@ -5,6 +5,7 @@ module Test.Shelley.Spec.Ledger.NonTraceProperties.Validity where
 import Control.Iterate.SetAlgebra (dom, eval, (⊆))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Shelley.Spec.Ledger.Address (getRwdCred)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
@@ -174,7 +175,7 @@ validRuleUTXO accs stakePools pc slot tx u =
     <> validNoReplay txb
     <> validFee pc tx
     <> preserveBalance stakePools pc txb u
-    <> correctWithdrawals accs (unWdrl $ _wdrls txb)
+    <> correctWithdrawals accs (Map.mapKeys getRwdCred . unWdrl $ _wdrls txb)
   where
     txb = _body tx
 

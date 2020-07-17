@@ -229,9 +229,10 @@ rewardsBoundedByPot = property $ do
   silentSlots <- genNatural 0 (3 * totalBlocks) -- the '3 * sum blocks' is pretty arbitrary
   let stake = fold (members <$> pools)
       delegs = fold $
-        flip fmap pools $ \PoolInfo {params, members} ->
-          Map.fromList $ (,_poolPubKey params) <$> Map.keys members
-      rewardAcnts = Set.fromList $ fmap (RewardAcnt Testnet) (Map.keys delegs)
+        flip fmap pools $
+          \PoolInfo {params, members} ->
+            Map.fromList $ (,_poolPubKey params) <$> Map.keys members
+      rewardAcnts = Set.fromList $ Map.keys delegs
       poolParams =
         Map.fromList $
           fmap
@@ -243,7 +244,6 @@ rewardsBoundedByPot = property $ do
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
       rs =
         reward
-          Testnet
           pp
           bs
           rewardPot

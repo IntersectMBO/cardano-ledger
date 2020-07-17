@@ -45,8 +45,8 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 -- | Script hash or key hash for a payment or a staking object.
 data Credential (kr :: KeyRole) crypto
-  = ScriptHashObj !(ScriptHash crypto)
-  | KeyHashObj !(KeyHash kr crypto)
+  = ScriptHashObj {-# UNPACK #-} !(ScriptHash crypto)
+  | KeyHashObj {-# UNPACK #-} !(KeyHash kr crypto)
   deriving (Show, Eq, Generic, NFData, Ord)
 
 instance HasKeyRole Credential where

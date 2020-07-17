@@ -30,7 +30,6 @@ import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitS
 import qualified Data.ByteString.Base16.Lazy as Base16
 import Data.Foldable (foldl')
 import Data.Proxy
-import qualified Data.Set as Set
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
@@ -101,7 +100,7 @@ rewardStkCredSync =
                 ]
             )
             $ eval (dom (_stkCreds ds))
-              === (Set.map getRwdCred $ domain (_rewards ds))
+              === domain (_rewards ds)
 
 adaPreservationChain :: Property
 adaPreservationChain =
@@ -145,7 +144,8 @@ adaPreservationChain =
                  in c + sum_ wdrls
             )
             (Coin 0)
-            $ txSeqTxns' . bbody $ signal
+            $ txSeqTxns' . bbody $
+              signal
         rewardDelta :: Coin
         rewardDelta =
           sum_
