@@ -8,8 +8,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Shelley.Spec.Ledger.Address
-  ( addressTests,
+module Test.Shelley.Spec.Ledger.Serialisation.Golden.Address
+  ( tests,
   )
 where
 
@@ -47,13 +47,12 @@ import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
 
-addressTests :: TestTree
-addressTests =
+tests :: TestTree
+tests =
   T.testGroup
     "Address golden tests"
     [ goldenTests_MockCrypto,
       goldenTests_ShelleyCrypto
-      -- roundTripTests,
     ]
 
 {------------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Generator.Genesis where
+module Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis where
 
 import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.Hash hiding (Hash)
@@ -13,6 +13,7 @@ import Cardano.Crypto.VRF.Class
 import Cardano.Prelude (Natural, Word32, Word64, Word8)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
+import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
@@ -43,7 +44,6 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.TxData
-import Test.Shelley.Spec.Ledger.Serialization (genIPv4, genIPv6)
 import Test.Shelley.Spec.Ledger.Utils (mkHash)
 
 genShelleyGenesis :: Crypto c => Gen (ShelleyGenesis c)
@@ -302,3 +302,14 @@ genSlotLength = conv <$> Gen.integral (Range.linear 2000 60000)
 genUTCTime :: Gen UTCTime
 genUTCTime =
   posixSecondsToUTCTime . realToFrac <$> Gen.int (Range.linear 1000000000 5000000000)
+
+genIPv4 :: Gen IPv4
+genIPv4 = fromHostAddress <$> (Gen.word32 Range.constantBounded)
+
+genIPv6 :: Hedgehog.Gen IPv6
+genIPv6 = do
+  w1 <- Gen.word32 Range.constantBounded
+  w2 <- Gen.word32 Range.constantBounded
+  w3 <- Gen.word32 Range.constantBounded
+  w4 <- Gen.word32 Range.constantBounded
+  pure $ fromHostAddress6 (w1, w2, w3, w4)

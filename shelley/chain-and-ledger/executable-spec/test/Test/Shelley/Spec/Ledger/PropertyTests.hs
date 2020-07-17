@@ -14,7 +14,6 @@ import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   )
 import Test.Shelley.Spec.Ledger.Rules.TestChain
   ( adaPreservationChain,
-    canRoundTripNewEpochState,
     constantSumPots,
     nonNegativeDeposits,
     removedAfterPoolreap,
@@ -122,10 +121,7 @@ propertyTests =
         "STS Rules - NewEpoch Properties"
         [ TQC.testProperty
             "total amount of Ada is preserved"
-            adaPreservationChain,
-          TQC.testProperty
-            "can serialize the NewEpochState (Chain)"
-            canRoundTripNewEpochState
+            adaPreservationChain
         ],
       testGroup
         "STS Rules - MIR certificates"

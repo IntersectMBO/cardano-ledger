@@ -8,8 +8,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Test.Shelley.Spec.Ledger.CDDL
-  ( cddlTests,
+module Test.Shelley.Spec.Ledger.Serialisation.CDDL
+  ( tests,
   )
 where
 
@@ -62,8 +62,8 @@ import Test.Tasty.HUnit
 import qualified Prelude
 import Prelude (String)
 
-cddlTests :: Int -> TestTree
-cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
+tests :: Int -> TestTree
+tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
     [ cddlTest' @(BHeader ShortHash) n "header",
       cddlTest' @(BootstrapWitness ShortHash) n "bootstrap_witness",
