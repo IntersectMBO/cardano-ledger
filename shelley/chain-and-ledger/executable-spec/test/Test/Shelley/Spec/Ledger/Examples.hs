@@ -172,6 +172,7 @@ import Shelley.Spec.Ledger.EpochBoundary
     pattern Stake,
   )
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesis (..), ShelleyGenesisStaking (..), sgsPools)
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyRole (..),
@@ -300,7 +301,7 @@ import Shelley.Spec.Ledger.TxData
     pattern TxOut,
   )
 import qualified Shelley.Spec.Ledger.TxData as TxData (TxBody (..))
-import Shelley.Spec.Ledger.UTxO (balance, hashTxBody, makeWitnessesVKey, txid, pattern UTxO)
+import Shelley.Spec.Ledger.UTxO (balance, makeWitnessesVKey, txid, pattern UTxO)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
     Block,
@@ -758,7 +759,7 @@ txEx2A =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashTxBody txbodyEx2A)
+            (hashAnnotated txbodyEx2A)
             ( (asWitness <$> [alicePay, carlPay])
                 <> (asWitness <$> [aliceStake])
                 <> [asWitness $ cold (alicePool p)]
@@ -964,7 +965,7 @@ txEx2B =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashTxBody txbodyEx2B)
+            (hashAnnotated txbodyEx2B)
             [asWitness alicePay, asWitness aliceStake, asWitness bobStake]
       }
     SNothing
@@ -1207,7 +1208,7 @@ txEx2D =
     txbodyEx2D
     mempty
       { addrWits =
-          makeWitnessesVKey (hashTxBody txbodyEx2D) [asWitness alicePay, asWitness carlStake]
+          makeWitnessesVKey (hashAnnotated txbodyEx2D) [asWitness alicePay, asWitness carlStake]
       }
     SNothing
 
@@ -1863,7 +1864,7 @@ txEx2J =
     txbodyEx2J
     mempty
       { addrWits =
-          makeWitnessesVKey (hashTxBody txbodyEx2J) [asWitness bobPay, asWitness bobStake]
+          makeWitnessesVKey (hashAnnotated txbodyEx2J) [asWitness bobPay, asWitness bobStake]
       }
     SNothing
 
@@ -1990,7 +1991,7 @@ txEx2K =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashTxBody txbodyEx2K)
+            (hashAnnotated txbodyEx2K)
             ( [asWitness alicePay]
                 <> [asWitness $ cold (alicePool p)]
             )
@@ -2289,7 +2290,7 @@ txEx3A =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashTxBody txbodyEx3A)
+            (hashAnnotated txbodyEx3A)
             ( [asWitness alicePay]
                 <> [ asWitness . cold $ coreNodeKeys p 0,
                      asWitness . cold $ coreNodeKeys p 3,
@@ -2402,7 +2403,7 @@ txEx3B =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashTxBody txbodyEx3B)
+            (hashAnnotated txbodyEx3B)
             ( [asWitness alicePay]
                 <> [ asWitness . cold $ coreNodeKeys p 1,
                      asWitness . cold $ coreNodeKeys p 5
@@ -2544,7 +2545,7 @@ txEx3C =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashTxBody txbodyEx3C)
+            (hashAnnotated txbodyEx3C)
             [asWitness alicePay, asWitness . cold $ coreNodeKeys p 1]
       }
     SNothing
@@ -2730,7 +2731,7 @@ txEx4A =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashTxBody txbodyEx4A)
+            (hashAnnotated txbodyEx4A)
             ( [asWitness alicePay]
                 <> [asWitness $ KeyPair (coreNodeVKG 0) (coreNodeSKG p 0)]
             )
@@ -2919,7 +2920,7 @@ txEx5A pot =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashTxBody $ txbodyEx5A pot)
+            (hashAnnotated $ txbodyEx5A pot)
             ( [asWitness alicePay]
                 <> ( asWitness
                        <$> [ cold (coreNodeKeys p 0),
@@ -3054,7 +3055,7 @@ txEx5B pot =
     ( mempty
         { addrWits =
             makeWitnessesVKey
-              (hashTxBody $ txbodyEx5A pot)
+              (hashAnnotated $ txbodyEx5A pot)
               ( [asWitness alicePay]
                   <> ( asWitness
                          <$> [ cold (coreNodeKeys p 0),
@@ -3166,7 +3167,7 @@ txEx5D pot =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashTxBody $ txbodyEx5D pot)
+            (hashAnnotated $ txbodyEx5D pot)
             ( [asWitness alicePay, asWitness aliceStake]
                 <> ( asWitness
                        <$> [ cold (coreNodeKeys p 0),
@@ -3226,7 +3227,7 @@ txEx5D' pot =
   Tx
     (txbodyEx5D' pot)
     mempty
-      { addrWits = makeWitnessesVKey (hashTxBody $ txbodyEx5D' pot) [alicePay]
+      { addrWits = makeWitnessesVKey (hashAnnotated $ txbodyEx5D' pot) [alicePay]
       }
     SNothing
 
@@ -3273,7 +3274,7 @@ txEx5D'' :: HashAlgorithm h => MIRPot -> Tx h
 txEx5D'' pot =
   Tx
     (txbodyEx5D'' pot)
-    mempty {addrWits = makeWitnessesVKey (hashTxBody $ txbodyEx5D'' pot) [alicePay]}
+    mempty {addrWits = makeWitnessesVKey (hashAnnotated $ txbodyEx5D'' pot) [alicePay]}
     SNothing
 
 blockEx5D'' :: HashAlgorithm h => MIRPot -> Nonce -> Block h
@@ -3371,7 +3372,7 @@ txEx6A =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashTxBody txbodyEx6A)
+            (hashAnnotated txbodyEx6A)
             ( (asWitness <$> [alicePay])
                 <> (asWitness <$> [aliceStake])
                 <> [asWitness $ cold (alicePool p)]

@@ -101,7 +101,6 @@ import Cardano.Binary
     enforceSize,
     peekTokenType,
   )
-import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
@@ -156,6 +155,7 @@ import Shelley.Spec.Ledger.EpochBoundary
     ptrStake,
     rewardStake,
   )
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -868,12 +868,12 @@ verifiedWits (Tx txbody wits _) =
     failed =
       wvkKey
         <$> filter
-          (not . verifyWitVKey (hashWithSerialiser toCBOR txbody))
+          (not . verifyWitVKey (hashAnnotated txbody))
           (Set.toList $ addrWits wits)
     failedBootstrap =
       bwKey
         <$> filter
-          (not . verifyBootstrapWit (hashWithSerialiser toCBOR txbody))
+          (not . verifyBootstrapWit (hashAnnotated txbody))
           (Set.toList $ bootWits wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update

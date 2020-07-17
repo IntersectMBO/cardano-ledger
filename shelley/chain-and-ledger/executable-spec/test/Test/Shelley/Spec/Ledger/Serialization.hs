@@ -11,6 +11,7 @@ module Test.Shelley.Spec.Ledger.Serialization where
 
 import Cardano.Binary
   ( Annotator,
+    Decoder,
     DecoderError,
     FromCBOR (..),
     ToCBOR (..),
@@ -100,6 +101,7 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShots (..),
     Stake (..),
   )
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyRole (..),
@@ -140,6 +142,7 @@ import Shelley.Spec.Ledger.Scripts (pattern RequireSignature, pattern ScriptHash
 import Shelley.Spec.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
+    decodeMapTraverse,
     ipv4FromBytes,
     ipv4ToBytes,
     ipv6FromBytes,
@@ -176,7 +179,7 @@ import Shelley.Spec.Ledger.TxData
     pattern TxIn,
     pattern TxOut,
   )
-import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey)
+import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
@@ -279,6 +282,17 @@ checkEncodingCBORAnnotated name x t =
   where
     annTokens = T $ TkEncoded $ serialize' t
 
+type MultiSigMap =
+  Map.Map
+    (ScriptHash Monomorphic.ShortHash)
+    (MultiSig Monomorphic.ShortHash)
+
+decodeMultiSigMap :: Decoder s (Annotator MultiSigMap)
+decodeMultiSigMap = decodeMapTraverse (pure <$> fromCBOR) fromCBOR
+
+deserializeMultiSigMap :: LByteString -> Either DecoderError MultiSigMap
+deserializeMultiSigMap = decodeAnnotator ("Map ScriptHash MultiSig") decodeMultiSigMap
+
 checkEncodingCBORCBORGroup ::
   (FromCBORGroup a, ToCBORGroup a, Show a, Eq a) =>
   String ->
@@ -323,7 +337,7 @@ testTxb :: HashAlgorithm h => TxBody h
 testTxb = TxBody Set.empty StrictSeq.empty StrictSeq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) SNothing SNothing
 
 testTxbHash :: HashAlgorithm h => Hash (ConcreteCrypto h) (TxBody h)
-testTxbHash = hashTxBody testTxb
+testTxbHash = hashAnnotated testTxb
 
 testKey1 :: proxy h -> KeyPair h 'Payment
 testKey1 _ = KeyPair vk sk
@@ -612,7 +626,9 @@ serializationUnitTests =
                 <> S vk -- vkey
                 <> T (testKey1SigToken p) -- signature
             ),
-      checkEncodingCBOR
+      checkEncoding
+        toCBOR
+        deserializeMultiSigMap
         "script_hash_to_scripts"
         (Map.singleton (hashScript (testScript p) :: ScriptHash Monomorphic.ShortHash) (testScript p)) -- Transaction _witnessMSigMap
         ( T (TkMapLen 1)
@@ -1061,7 +1077,7 @@ serializationUnitTests =
               (SlotNo 500)
               SNothing
               SNothing
-          txbh = hashTxBody txb
+          txbh = hashAnnotated txb
           w = makeWitnessVKey txbh (testKey1 p)
        in checkEncodingCBORAnnotated
             "tx_min"
@@ -1085,7 +1101,7 @@ serializationUnitTests =
               (SlotNo 500)
               SNothing
               SNothing
-          txbh = hashTxBody txb
+          txbh = hashAnnotated txb
           w = makeWitnessVKey txbh (testKey1 p)
           s = Map.singleton (hashScript (testScript p)) (testScript p)
           wits = mempty {addrWits = Set.singleton w, msigWits = s}
@@ -1206,8 +1222,8 @@ serializationUnitTests =
           txb3 = txb 502
           txb4 = txb 503
           txb5 = txb 504
-          w1 = makeWitnessVKey (hashTxBody txb1) (testKey1 p)
-          w2 = makeWitnessVKey (hashTxBody txb1) (testKey2 p :: KeyPair Monomorphic.ShortHash 'Payment)
+          w1 = makeWitnessVKey (hashAnnotated txb1) (testKey1 p)
+          w2 = makeWitnessVKey (hashAnnotated txb1) (testKey2 p :: KeyPair Monomorphic.ShortHash 'Payment)
           ws = Set.fromList [w1, w2]
           tx1 = Tx txb1 mempty {addrWits = Set.singleton w1} SNothing
           tx2 = Tx txb2 mempty {addrWits = ws} SNothing

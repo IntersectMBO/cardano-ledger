@@ -40,6 +40,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     pattern Delegate,
     pattern RegKey,
   )
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyRole (..),
     asWitness,
@@ -77,7 +78,7 @@ import Shelley.Spec.Ledger.TxData
     pattern TxOut,
     pattern Wdrl,
   )
-import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessesVKey)
+import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
     Credential,
@@ -184,7 +185,7 @@ txSpendOneUTxO =
   Tx
     txbSpendOneUTxO
     mempty
-      { addrWits = makeWitnessesVKey (hashTxBody txbSpendOneUTxO) [asWitness alicePay]
+      { addrWits = makeWitnessesVKey (hashAnnotated txbSpendOneUTxO) [asWitness alicePay]
       }
     SNothing
 
@@ -241,7 +242,7 @@ makeSimpleTx body keysAddr =
   Tx
     body
     mempty
-      { addrWits = makeWitnessesVKey (hashTxBody body) keysAddr
+      { addrWits = makeWitnessesVKey (hashAnnotated body) keysAddr
       }
     SNothing
 

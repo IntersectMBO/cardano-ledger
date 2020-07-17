@@ -34,6 +34,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     pattern RegPool,
     pattern RetirePool,
   )
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState (txsize)
 import qualified Shelley.Spec.Ledger.MetaData as MD
@@ -79,7 +80,7 @@ import Shelley.Spec.Ledger.TxData
     pattern TxIn,
     pattern TxOut,
   )
-import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessesVKey)
+import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
     ConcreteCrypto,
@@ -192,7 +193,7 @@ txSimpleUTxO =
     { _body = txbSimpleUTxO,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashTxBody txbSimpleUTxO) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated txbSimpleUTxO) [alicePay]
           },
       _metadata = SNothing
     }
@@ -234,7 +235,7 @@ txMutiUTxO =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashTxBody txbMutiUTxO)
+                (hashAnnotated txbMutiUTxO)
                 [ alicePay,
                   bobPay
                 ]
@@ -265,7 +266,7 @@ txRegisterStake =
     { _body = txbRegisterStake,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashTxBody txbRegisterStake) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated txbRegisterStake) [alicePay]
           },
       _metadata = SNothing
     }
@@ -295,7 +296,7 @@ txDelegateStake =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashTxBody txbDelegateStake)
+                (hashAnnotated txbDelegateStake)
                 [asWitness alicePay, asWitness bobStake]
           },
       _metadata = SNothing
@@ -324,7 +325,7 @@ txDeregisterStake =
     { _body = txbDeregisterStake,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashTxBody txbDeregisterStake) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated txbDeregisterStake) [alicePay]
           },
       _metadata = SNothing
     }
@@ -352,7 +353,7 @@ txRegisterPool =
     { _body = txbRegisterPool,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashTxBody txbRegisterPool) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated txbRegisterPool) [alicePay]
           },
       _metadata = SNothing
     }
@@ -380,7 +381,7 @@ txRetirePool =
     { _body = txbRetirePool,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashTxBody txbRetirePool) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated txbRetirePool) [alicePay]
           },
       _metadata = SNothing
     }
@@ -412,7 +413,7 @@ txWithMD =
     { _body = txbWithMD,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashTxBody txbWithMD) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated txbWithMD) [alicePay]
           },
       _metadata = SJust md
     }
@@ -449,7 +450,7 @@ txWithMultiSig p =
     { _body = txbWithMultiSig,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashTxBody txbWithMultiSig) [alicePay, bobPay],
+          { addrWits = makeWitnessesVKey (hashAnnotated txbWithMultiSig) [alicePay, bobPay],
             msigWits = Map.singleton (hashScript (msig p)) (msig p)
           },
       _metadata = SNothing
@@ -480,7 +481,7 @@ txWithWithdrawal =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashTxBody txbWithWithdrawal)
+                (hashAnnotated txbWithWithdrawal)
                 [asWitness alicePay, asWitness aliceStake]
           },
       _metadata = SNothing

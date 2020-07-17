@@ -23,7 +23,6 @@ module Shelley.Spec.Ledger.UTxO
     UTxO (..),
 
     -- * Functions
-    hashTxBody,
     txid,
     txins,
     txinLookup,
@@ -41,7 +40,6 @@ module Shelley.Spec.Ledger.UTxO
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Foldable (toList)
@@ -64,6 +62,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     isRegKey,
     requiresVKeyWitness,
   )
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     Hash,
@@ -137,19 +136,12 @@ instance Relation (UTxO crypto) where
   {-# INLINE removekey #-}
   removekey k (UTxO m) = UTxO (Map.delete k m)
 
--- | Compute the hash of a transaction body.
-hashTxBody ::
-  Crypto crypto =>
-  TxBody crypto ->
-  Hash crypto (TxBody crypto)
-hashTxBody = hashWithSerialiser toCBOR
-
 -- | Compute the id of a transaction.
 txid ::
   Crypto crypto =>
   TxBody crypto ->
   TxId crypto
-txid = TxId . hashTxBody
+txid = TxId . hashAnnotated
 
 -- | Compute the UTxO inputs of a transaction.
 txins ::

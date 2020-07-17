@@ -38,6 +38,7 @@ import Shelley.Spec.Ledger.Credential
     pattern StakeRefBase,
     pattern StakeRefPtr,
   )
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (Hash, KeyRole (..), asWitness)
 import Shelley.Spec.Ledger.LedgerState
   ( minfeeBound,
@@ -59,7 +60,6 @@ import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData (Wdrl (..), getRwdCred, _outputs, _txfee)
 import Shelley.Spec.Ledger.UTxO
   ( balance,
-    hashTxBody,
     makeWitnessesFromScriptKeys,
     makeWitnessesVKey,
     pattern UTxO,
@@ -211,7 +211,7 @@ genTx
                 mkTxWits
                   ksIndexedPaymentKeys
                   ksIndexedStakingKeys
-                  (hashTxBody txBody)
+                  (hashAnnotated txBody)
                   ( spendWitnesses
                       ++ wdrlWitnesses
                       ++ certWitnesses
@@ -242,7 +242,7 @@ genTx
                     mkTxWits
                       ksIndexedPaymentKeys
                       ksIndexedStakingKeys
-                      (hashTxBody txBody')
+                      (hashAnnotated txBody')
                       ( spendWitnesses
                           ++ wdrlWitnesses
                           ++ certWitnesses

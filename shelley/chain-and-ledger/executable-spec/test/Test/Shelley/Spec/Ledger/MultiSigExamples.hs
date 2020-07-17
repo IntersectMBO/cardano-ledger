@@ -34,6 +34,7 @@ import Shelley.Spec.Ledger.Credential
     pattern ScriptHashObj,
     pattern StakeRefBase,
   )
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness)
 import Shelley.Spec.Ledger.LedgerState (genesisState, _utxoState)
 import Shelley.Spec.Ledger.MetaData (MetaData)
@@ -55,7 +56,7 @@ import Shelley.Spec.Ledger.TxData
     pattern TxOut,
     pattern Wdrl,
   )
-import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessesVKey, txid)
+import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
     KeyPair,
@@ -151,7 +152,7 @@ makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
       mempty
-        { addrWits = makeWitnessesVKey (hashTxBody txBody) keyPairs,
+        { addrWits = makeWitnessesVKey (hashAnnotated txBody) keyPairs,
           msigWits = msigs
         }
 

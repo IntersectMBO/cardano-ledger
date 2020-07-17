@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -33,30 +34,36 @@ import Cardano.Binary
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
     annotatorSlice,
-    decodeListLen,
     decodeWord,
     encodeListLen,
     encodePreEncoded,
     encodeWord,
-    matchSize,
+    serialize',
     serializeEncoding,
   )
-import Cardano.Crypto.Hash (hashWithSerialiser)
-import Cardano.Prelude (AllowThunksIn (..), Generic, LByteString, NFData, NoUnexpectedThunks (..))
+import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Prelude
+  ( AllowThunksIn (..),
+    Generic,
+    LByteString,
+    NFData,
+    NoUnexpectedThunks (..),
+  )
 import Data.Aeson
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List (concat, concatMap, permutations)
-import Data.Word (Word8)
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys (Hash, KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordNamed, encodeFoldable)
 
 -- | Magic number representing the tag of the native multi-signature script
 -- language. For each script language included, a new tag is chosen and the tag
 -- is included in the script hash for a script.
-nativeMultiSigTag :: Word8
-nativeMultiSigTag = 0
+nativeMultiSigTag :: BS.ByteString
+nativeMultiSigTag = "\00"
 
 -- | A simple language for expressing conditions under which it is valid to
 -- withdraw from a normal UTxO payment address or to use a stake address.
@@ -154,15 +161,12 @@ countMSigNodes (RequireAllOf msigs) = 1 + sum (map countMSigNodes msigs)
 countMSigNodes (RequireAnyOf msigs) = 1 + sum (map countMSigNodes msigs)
 countMSigNodes (RequireMOf _ msigs) = 1 + sum (map countMSigNodes msigs)
 
--- | Hashes native multi-signature script. We serialize it as a Script, which
--- includes the type tag.
+-- | Hashes native multi-signature script.
 hashMultiSigScript ::
   Crypto crypto =>
   MultiSig crypto ->
   ScriptHash crypto
-hashMultiSigScript msig =
-  ScriptHash $
-    hashWithSerialiser toCBOR (MultiSigScript msig)
+hashMultiSigScript msig = ScriptHash $ Hash.castHash $ hashAnnotated msig
 
 hashAnyScript ::
   Crypto crypto =>
@@ -195,6 +199,9 @@ getKeyCombinations (RequireMOf m msigs) =
   let perms = map (take m) $ List.permutations msigs
    in map (concat . List.concatMap getKeyCombinations) perms
 
+instance Crypto c => HashAnnotated (MultiSig c) c where
+  hashAnnotated = Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
+
 -- CBOR
 
 instance
@@ -202,23 +209,6 @@ instance
   ToCBOR (MultiSig crypto)
   where
   toCBOR (MultiSig' _ bytes) = encodePreEncoded $ BSL.toStrict bytes
-
-instance
-  (Crypto crypto) =>
-  FromCBOR (MultiSig crypto)
-  where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
-      0 -> matchSize "RequireSignature" 2 n >> (RequireSignature . KeyHash) <$> fromCBOR
-      1 -> matchSize "RequireAllOf" 2 n >> RequireAllOf <$> decodeList fromCBOR
-      2 -> matchSize "RequireAnyOf" 2 n >> RequireAnyOf <$> decodeList fromCBOR
-      3 -> do
-        matchSize "RequireMOf" 3 n
-        m <- fromCBOR
-        msigs <- decodeList fromCBOR
-        pure $ RequireMOf m msigs
-      k -> invalidKey k
 
 instance
   Crypto crypto =>
@@ -246,20 +236,3 @@ instance
             multiSigs <- sequence <$> decodeList fromCBOR
             pure $ (3, RequireMOf' m <$> multiSigs)
           k -> invalidKey k
-
-instance
-  (Crypto crypto) =>
-  ToCBOR (Script crypto)
-  where
-  toCBOR (MultiSigScript msig) =
-    --TODO make valid encoding or use CBORGroup
-    toCBOR nativeMultiSigTag <> toCBOR msig
-
-instance
-  (Crypto crypto) =>
-  FromCBOR (Script crypto)
-  where
-  fromCBOR = do
-    decodeWord >>= \case
-      0 -> MultiSigScript <$> fromCBOR
-      k -> invalidKey k
