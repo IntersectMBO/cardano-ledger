@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -40,6 +41,7 @@ import Control.State.Transition
     (?!),
   )
 import Data.Foldable (foldl', toList)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -55,8 +57,7 @@ import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Delegation.Certificates (StakePools)
-import Shelley.Spec.Ledger.Keys (GenDelegs)
+import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
     consumed,
@@ -76,7 +77,7 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut (..))
-import Shelley.Spec.Ledger.TxData (RewardAcnt, TxBody (..), unWdrl)
+import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxBody (..), unWdrl)
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
@@ -92,7 +93,7 @@ data UtxoEnv crypto
   = UtxoEnv
       SlotNo
       PParams
-      (StakePools crypto)
+      (Map (KeyHash 'StakePool crypto) (PoolParams crypto))
       (GenDelegs crypto)
   deriving (Show)
 

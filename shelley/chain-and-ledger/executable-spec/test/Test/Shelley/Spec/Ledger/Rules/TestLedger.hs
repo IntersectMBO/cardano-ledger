@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -46,17 +47,22 @@ import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import Data.Foldable (toList)
 import Data.List (foldl')
+import Data.Map (Map)
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash (..),
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( _deposited,
     _dstate,
     _fees,
+    _pParams,
     _pstate,
     _rewards,
-    _stPools,
     _utxo,
     pattern DPState,
     pattern DState,
@@ -66,15 +72,15 @@ import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Pool (PoolEnv (..))
 import Shelley.Spec.Ledger.Tx (_body)
-import Shelley.Spec.Ledger.TxData (Ptr (..), _certs, _wdrls)
+import Shelley.Spec.Ledger.TxData (PoolParams (..), Ptr (..), _certs, _wdrls)
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, Testable, conjoin, property, withMaxSuccess, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( DELEG,
+  ( ConcreteCrypto,
+    DELEG,
     DELEGS,
     LEDGER,
     POOL,
-    StakePools,
     UTXO,
     UTXOW,
     Wdrl,
@@ -237,7 +243,7 @@ registeredPoolIsAdded :: Property
 registeredPoolIsAdded =
   forAllLedgerTrace $ \tr ->
     let sst = sourceSignalTargets (ledgerToPoolTrace tr)
-     in TestPool.registeredPoolIsAdded (_traceEnv tr) sst
+     in TestPool.registeredPoolIsAdded sst
 
 -- | Check that a newly registered pool has a reward of 0.
 rewardZeroAfterRegPool :: Property
@@ -315,9 +321,11 @@ ledgerToUtxoSsts (SourceSignalTarget (utxoSt, _) (utxoSt', _) tx) =
 -- | Transform LEDGER to UTXOW `SourceSignalTargets`s
 ledgerToUtxowSsts ::
   SourceSignalTarget (LEDGER ShortHash) ->
-  (StakePools ShortHash, SourceSignalTarget (UTXOW ShortHash))
+  ( Map (KeyHash 'StakePool (ConcreteCrypto ShortHash)) (PoolParams (ConcreteCrypto ShortHash)),
+    SourceSignalTarget (UTXOW ShortHash)
+  )
 ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
-  ( (_stPools . _pstate) delegSt,
+  ( (_pParams . _pstate) delegSt,
     SourceSignalTarget utxoSt utxoSt' tx
   )
 

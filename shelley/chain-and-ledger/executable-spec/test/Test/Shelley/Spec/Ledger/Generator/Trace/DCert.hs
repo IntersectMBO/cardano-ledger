@@ -46,8 +46,8 @@ import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
+    _pParams,
     _pstate,
-    _stPools,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Delpl (DelplEnv (..))
@@ -162,7 +162,7 @@ genDCerts
     pure
       ( StrictSeq.fromList certs,
         withScriptCreds,
-        totalDeposits pparams (_stPools (_pstate dpState)) certs,
+        totalDeposits pparams (_pParams (_pstate dpState)) certs,
         (_keyDeposit pparams) * (fromIntegral $ length deRegStakeCreds),
         lastState_
       )

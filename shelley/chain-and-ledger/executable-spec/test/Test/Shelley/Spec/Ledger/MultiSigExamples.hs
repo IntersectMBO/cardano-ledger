@@ -50,7 +50,6 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), hashScript, _body, pattern Tx)
 import Shelley.Spec.Ledger.TxData
   ( unWdrl,
-    pattern StakePools,
     pattern TxBody,
     pattern TxIn,
     pattern TxOut,
@@ -211,7 +210,7 @@ initialUTxOState aliceKeep msigs =
                     ( UtxoEnv
                         (SlotNo 0)
                         initPParams
-                        (StakePools Map.empty)
+                        Map.empty
                         (GenDelegs Map.empty),
                       _utxoState genesis,
                       tx
@@ -270,7 +269,7 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
               ( UtxoEnv
                   (SlotNo 0)
                   initPParams
-                  (StakePools Map.empty)
+                  Map.empty
                   (GenDelegs Map.empty),
                 utxoSt,
                 tx

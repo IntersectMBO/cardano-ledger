@@ -28,6 +28,7 @@ import Shelley.Spec.Ledger.Keys (KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
   ( _deposited,
     _fees,
+    _pParams,
     _reserves,
     _rewards,
     _treasury,
@@ -43,11 +44,10 @@ import Shelley.Spec.Ledger.STS.PoolReap
     prUTxOSt,
     pattern PoolreapState,
   )
-import Shelley.Spec.Ledger.TxData (pattern StakePools)
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, conjoin)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (KeyHash, POOLREAP)
-import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring, getStPools)
+import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring)
 
 -----------------------------
 -- Properties for POOLREAP --
@@ -69,8 +69,8 @@ removedAfterPoolreap tr =
             target = PoolreapState {prPState = p'}
           }
         ) =
-        let StakePools stp = getStPools p
-            StakePools stp' = getStPools p'
+        let stp = _pParams p
+            stp' = _pParams p'
             retiring = getRetiring p
             retiring' = getRetiring p'
             retire :: Set.Set (KeyHash ShortHash 'StakePool) -- This declaration needed to disambiguate 'eval'

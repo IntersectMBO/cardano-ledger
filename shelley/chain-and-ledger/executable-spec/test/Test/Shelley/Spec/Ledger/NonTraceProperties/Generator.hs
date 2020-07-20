@@ -52,7 +52,7 @@ import Shelley.Spec.Ledger.LedgerState
     _delegationState,
     _dstate,
     _genDelegs,
-    _stkCreds,
+    _rewards,
     _utxo,
     _utxoState,
   )
@@ -85,8 +85,7 @@ import Shelley.Spec.Ledger.Tx
     pattern TxOut,
   )
 import Shelley.Spec.Ledger.TxData
-  ( StakeCreds (..),
-    Wdrl (..),
+  ( Wdrl (..),
     pattern DCertDeleg,
     pattern DCertPool,
     pattern DeRegKey,
@@ -405,11 +404,9 @@ genDCertRetirePool keys epoch = do
 
 genDelegation :: HashAlgorithm h => KeyPairs h -> DPState h -> Gen (Delegation h)
 genDelegation keys d = do
-  poolKey <- Gen.element $ Map.keys stkCreds'
+  poolKey <- Gen.element $ Map.keys $ _rewards . _dstate $ d
   delegatorKey <- getAnyStakeKey keys
   pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (unsafeCoerce . hashKey $ vKey $ findStakeKeyPair poolKey keys)
-  where
-    (StakeCreds stkCreds') = (_stkCreds . _dstate) d
 
 genDCertDelegate :: HashAlgorithm h => KeyPairs h -> DPState h -> Gen (DCert h)
 genDCertDelegate keys ds = (DCertDeleg . Delegate) <$> genDelegation keys ds

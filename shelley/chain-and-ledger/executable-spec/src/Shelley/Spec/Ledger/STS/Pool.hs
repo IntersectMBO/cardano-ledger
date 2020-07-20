@@ -22,11 +22,10 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (≍), (⋪), (⨃))
+import Control.Iterate.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
-  ( Assertion (..),
-    STS (..),
+  ( STS (..),
     TRC (..),
     TransitionRule,
     failBecause,
@@ -49,7 +48,6 @@ import Shelley.Spec.Ledger.TxData
   ( DCert (..),
     PoolCert (..),
     PoolParams (..),
-    StakePools (..),
   )
 
 data POOL (crypto :: Type)
@@ -84,14 +82,6 @@ instance Typeable crypto => STS (POOL crypto) where
   initialRules = [pure emptyPState]
 
   transitionRules = [poolDelegationTransition]
-
-  assertions =
-    [ PreCondition
-        "_stPools and _pParams must have the same domain"
-        ( \(TRC (_, st, _)) ->
-            eval (dom (unStakePools $ _stPools st) ≍ dom (_pParams st))
-        )
-    ]
 
 instance NoUnexpectedThunks (PredicateFailure (POOL crypto))
 
@@ -140,7 +130,7 @@ instance
 poolDelegationTransition :: Typeable crypto => TransitionRule (POOL crypto)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
-  let StakePools stpools = _stPools ps
+  let stpools = _pParams ps
   case c of
     DCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
@@ -155,8 +145,7 @@ poolDelegationTransition = do
 
           pure $
             ps
-              { _stPools = StakePools $ eval (stpools ∪ (singleton hk slot)),
-                _pParams = eval (_pParams ps ∪ (singleton hk poolParam))
+              { _pParams = eval (_pParams ps ∪ (singleton hk poolParam))
               }
         else do
           pure $

@@ -62,8 +62,6 @@ type PoolParams h = TxData.PoolParams (ConcreteCrypto h)
 
 type RewardAcnt h = TxData.RewardAcnt (ConcreteCrypto h)
 
-type StakePools h = TxData.StakePools (ConcreteCrypto h)
-
 type KeyHash h kr = Keys.KeyHash kr (ConcreteCrypto h)
 
 pattern KeyHash ::

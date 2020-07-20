@@ -43,7 +43,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     pattern RegKey,
     pattern RegPool,
     pattern RetirePool,
-    pattern StakeCreds,
   )
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
@@ -58,24 +57,21 @@ import Shelley.Spec.Ledger.LedgerState
     _dstate,
     _fGenDelegs,
     _genDelegs,
+    _pParams,
     _pstate,
     _retiring,
     _rewards,
-    _stPools,
-    _stkCreds,
   )
 import Shelley.Spec.Ledger.PParams (PParams, _d, _minPoolCost)
 import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Shelley.Spec.Ledger.TxData
   ( MIRPot (..),
     RewardAcnt (..),
-    unStakePools,
     pattern DCertDeleg,
     pattern DCertGenesis,
     pattern DCertPool,
     pattern Delegation,
     pattern PoolParams,
-    pattern StakePools,
   )
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -218,7 +214,7 @@ genRegKeyCert
         )
       ]
     where
-      notRegistered k = eval (k ∉ dom (_stkCreds delegSt))
+      notRegistered k = eval (k ∉ dom (_rewards delegSt))
       availableKeys = filter (notRegistered . toCred . snd) keys
       availableScripts = filter (notRegistered . scriptToCred . snd) scripts
 
@@ -253,7 +249,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
       )
     ]
   where
-    registered k = eval (k ∈ dom (_stkCreds dState))
+    registered k = eval (k ∈ dom (_rewards dState))
     availableKeys =
       filter
         ( \(_, k) ->
@@ -317,11 +313,11 @@ genDelegation
         where
           scriptCert =
             DCertDeleg (Delegate (Delegation (scriptToCred delegatorScript) poolKey))
-      registeredDelegate k = eval (k ∈ dom (_stkCreds (_dstate dpState)))
+      registeredDelegate k = eval (k ∈ dom (_rewards (_dstate dpState)))
       availableDelegates = filter (registeredDelegate . toCred . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred . snd) scripts
-      (StakePools registeredPools) = _stPools (_pstate dpState)
+      registeredPools = _pParams (_pstate dpState)
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
@@ -441,7 +437,7 @@ genRetirePool Constants {frequencyLowMaxEpoch} poolKeys pState slot =
         <$> QC.elements retireable
         <*> (EpochNo <$> genWord64 epochLow epochHigh)
   where
-    stakePools = (unStakePools . _stPools) pState
+    stakePools = _pParams pState
     registered_ = eval (dom stakePools)
     retiring_ = domain (_retiring pState)
     retireable = Set.toList (registered_ \\ retiring_)
@@ -475,7 +471,7 @@ genInstantaneousRewards s coreNodes delegateKeys pparams accountState delegSt = 
         fromMaybe
           (error "genInstantaneousRewards: lookupGenDelegate failed")
           (lookupGenDelegate coreNodes delegateKeys gk)
-      StakeCreds credentials = _stkCreds delegSt
+      credentials = _rewards delegSt
 
   winnerCreds <-
     take <$> QC.elements [0 .. (max 0 $ Map.size credentials - 1)]

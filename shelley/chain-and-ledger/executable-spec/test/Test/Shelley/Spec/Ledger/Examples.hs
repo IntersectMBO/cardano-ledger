@@ -122,7 +122,7 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.Address (getRwdCred, mkRwdAcnt, pattern Addr)
+import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     Network (..),
@@ -212,8 +212,6 @@ import Shelley.Spec.Ledger.LedgerState
     _reserves,
     _retiring,
     _rewards,
-    _stPools,
-    _stkCreds,
     _treasury,
     pattern ActiveSlot,
     pattern DPState,
@@ -275,7 +273,6 @@ import Shelley.Spec.Ledger.TxData
     PoolMetaData (..),
     StakePoolRelay (..),
     Wdrl (..),
-    addStakeCreds,
     _poolCost,
     _poolMD,
     _poolMDHash,
@@ -294,8 +291,6 @@ import Shelley.Spec.Ledger.TxData
     pattern Delegation,
     pattern PoolParams,
     pattern RewardAcnt,
-    pattern StakeCreds,
-    pattern StakePools,
     pattern TxBody,
     pattern TxIn,
     pattern TxOut,
@@ -836,13 +831,6 @@ dsEx2A =
             (Ptr (SlotNo 10) 0 1, bobSHK),
             (Ptr (SlotNo 10) 0 2, carlSHK)
           ],
-      _stkCreds =
-        StakeCreds $
-          Map.fromList
-            [ (aliceSHK, SlotNo 10),
-              (bobSHK, SlotNo 10),
-              (carlSHK, SlotNo 10)
-            ],
       _rewards =
         Map.fromList
           [ (aliceSHK, Coin 0),
@@ -863,8 +851,7 @@ dsEx2A =
 psEx2A :: forall h. HashAlgorithm h => PState h
 psEx2A =
   psEx1
-    { _stPools = StakePools $ Map.singleton (hk (alicePool p)) (SlotNo 10),
-      _pParams = Map.singleton (hk (alicePool p)) alicePoolParams
+    { _pParams = Map.singleton (hk (alicePool p)) alicePoolParams
     }
   where
     p :: Proxy h
@@ -1131,7 +1118,6 @@ expectedLSEx2C =
     ( DPState
         dsEx2B
           { _irwd = emptyInstantaneousRewards,
-            _stkCreds = addStakeCreds carlSHK (SlotNo 10) $ _stkCreds dsEx2B,
             _rewards = Map.insert (carlSHK) 110 $ _rewards dsEx2B
           }
         psEx2A
@@ -1372,7 +1358,6 @@ expectedLSEx2E =
     ( DPState
         dsEx2D
           { _irwd = emptyInstantaneousRewards,
-            _stkCreds = addStakeCreds carlSHK (SlotNo 10) $ _stkCreds dsEx2B,
             _rewards = Map.insert carlSHK 110 $ _rewards dsEx2B
           }
         psEx2A
@@ -1906,7 +1891,6 @@ dsEx2J =
           [ (Ptr (SlotNo 10) 0 0, aliceSHK),
             (Ptr (SlotNo 10) 0 2, carlSHK)
           ],
-      _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, SlotNo 10), (carlSHK, SlotNo 10)],
       _delegations = Map.fromList [(aliceSHK, hk (alicePool p)), (carlSHK, hk (alicePool p))],
       _rewards = Map.fromList [(aliceSHK, aliceRAcnt2H), (carlSHK, carlMIR)]
     }
@@ -2175,7 +2159,6 @@ dsEx2L =
           [ (Ptr (SlotNo 10) 0 0, aliceSHK),
             (Ptr (SlotNo 10) 0 2, carlSHK)
           ],
-      _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, SlotNo 10), (carlSHK, SlotNo 10)],
       _rewards =
         Map.fromList
           [ (aliceSHK, aliceRAcnt2H + Coin 250),
@@ -3320,12 +3303,8 @@ test5D p pot = do
   case ex5D' p pot of
     Left e -> assertFailure (show e)
     Right ex5DState -> do
-      let getDState = _dstate . _delegationState . esLState . nesEs . chainNes
-          ds = getDState ex5DState
-          StakeCreds stkCreds = _stkCreds ds
-          rews = _rewards ds
-          rewEntry = rews Map.!? (getRwdCred $ mkRwdAcnt Testnet aliceSHK)
-      assertBool "Alice's credential not in stkCreds" (aliceSHK `Map.member` stkCreds)
+      let rews = _rewards . _dstate . _delegationState . esLState . nesEs . chainNes $ ex5DState
+          rewEntry = rews Map.!? aliceSHK
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry
       assertBool "Total amount of ADA is not preserved" $ maxLLSupply == totalAda ex5DState

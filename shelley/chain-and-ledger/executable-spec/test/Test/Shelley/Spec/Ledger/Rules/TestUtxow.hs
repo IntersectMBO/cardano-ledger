@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -26,8 +27,13 @@ import Control.State.Transition.Trace
     pattern SourceSignalTarget,
   )
 import Data.Foldable (toList)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (isSubmapOf)
 import qualified Data.Set as Set (fromList, intersection, isSubsetOf, map, null)
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash (..),
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.LedgerState (keyRefunds, pattern UTxOState)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Tx
@@ -37,11 +43,18 @@ import Shelley.Spec.Ledger.Tx
     _body,
     _witnessSet,
   )
-import Shelley.Spec.Ledger.TxData (witKeyHash, _certs, _inputs, _txfee, pattern TxIn)
+import Shelley.Spec.Ledger.TxData
+  ( PoolParams (..),
+    witKeyHash,
+    _certs,
+    _inputs,
+    _txfee,
+    pattern TxIn,
+  )
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
 import Test.QuickCheck (Property, conjoin, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( StakePools,
+  ( ConcreteCrypto,
     Tx,
     UTXO,
     UTXOW,
@@ -55,7 +68,10 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 -- equals the sum of the created value.
 preserveBalance ::
   PParams ->
-  [(StakePools ShortHash, SourceSignalTarget (UTXOW ShortHash))] ->
+  [ ( Map (KeyHash 'StakePool (ConcreteCrypto ShortHash)) (PoolParams (ConcreteCrypto ShortHash)),
+      SourceSignalTarget (UTXOW ShortHash)
+    )
+  ] ->
   Property
 preserveBalance pp tr =
   conjoin $
@@ -81,7 +97,10 @@ preserveBalance pp tr =
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted ::
   PParams ->
-  [(StakePools ShortHash, SourceSignalTarget (UTXOW ShortHash))] ->
+  [ ( Map (KeyHash 'StakePool (ConcreteCrypto ShortHash)) (PoolParams (ConcreteCrypto ShortHash)),
+      SourceSignalTarget (UTXOW ShortHash)
+    )
+  ] ->
   Property
 preserveBalanceRestricted pp tr =
   conjoin $

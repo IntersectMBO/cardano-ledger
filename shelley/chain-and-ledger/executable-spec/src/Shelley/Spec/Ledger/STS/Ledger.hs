@@ -143,7 +143,7 @@ ledgerTransition = do
 
   let DPState dstate pstate = dpstate
       genDelegs = _genDelegs dstate
-      stpools = _stPools pstate
+      stpools = _pParams pstate
 
   utxoSt' <-
     trans @(UTXOW crypto) $

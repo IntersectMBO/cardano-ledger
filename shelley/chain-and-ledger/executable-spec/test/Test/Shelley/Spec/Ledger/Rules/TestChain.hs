@@ -11,12 +11,10 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
     removedAfterPoolreap,
     -- TestNewEpoch
     adaPreservationChain,
-    rewardStkCredSync,
   )
 where
 
 import Cardano.Crypto.Hash (ShortHash)
-import Control.Iterate.SetAlgebra (dom, domain, eval)
 import Control.Monad (join)
 import Control.State.Transition.Extended (TRC (TRC))
 import Control.State.Transition.Trace
@@ -68,35 +66,6 @@ traceLen = 100
 ----------------------------------------------------------------------
 -- Properties for Chain
 ---------------------------------------------------------------------
-
--- | Verify that the domains for '_rewards' and '_srkCreds' remain in sync.
-rewardStkCredSync :: Property
-rewardStkCredSync =
-  forAllChainTrace $ \tr ->
-    conjoin $
-      map checkSync $
-        sourceSignalTargets tr
-  where
-    checkSync SourceSignalTarget {source, signal, target} =
-      let ds =
-            _dstate
-              . _delegationState
-              . esLState
-              . nesEs
-              . chainNes
-              $ target
-       in counterexample
-            ( mconcat
-                [ "source\n",
-                  show source,
-                  "signal\n",
-                  show signal,
-                  "target\n",
-                  show target
-                ]
-            )
-            $ eval (dom (_stkCreds ds))
-              === domain (_rewards ds)
 
 adaPreservationChain :: Property
 adaPreservationChain =
