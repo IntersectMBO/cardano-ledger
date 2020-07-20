@@ -77,21 +77,29 @@ initialEpoch =
       emptyPParams
       emptyNonMyopic
 
-votedValuePParams ::
+votedValue ::
   ProposedPPUpdates crypto ->
   PParams ->
   Int ->
   Maybe PParams
-votedValuePParams (ProposedPPUpdates ppup) pps quorumN =
+votedValue (ProposedPPUpdates pup) pps quorumN =
   let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
       votes =
         Map.foldr
           (\vote tally -> Map.insert vote (incrTally vote tally) tally)
           (Map.empty :: Map PParamsUpdate Int)
-          ppup
+          pup
       consensus = Map.filter (>= quorumN) votes
    in case length consensus of
+        -- NOTE that `quorumN` is a global constant, and that we require
+        -- it to be strictly greater than half the number of genesis nodes.
+        -- The keys in the `pup` correspond to the genesis nodes,
+        -- and therefore either:
+        --   1) `consensus` is empty, or
+        --   2) `consensus` has exactly one element.
         1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
+        -- NOTE that `updatePParams` corresponds to the union override right
+        -- operation in the formal spec.
         _ -> Nothing
 
 epochTransition ::
@@ -129,8 +137,8 @@ epochTransition = do
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
-  let ppup = proposals . _ppups $ utxoSt
-  let ppNew = votedValuePParams ppup pp (fromIntegral coreNodeQuorum)
+  let pup = proposals . _ppups $ utxoSt'
+  let ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
   NewppState utxoSt'' acnt'' pp' <-
     trans @(NEWPP crypto) $
       TRC (NewppEnv dstate' pstate'', NewppState utxoSt' acnt' pp, ppNew)

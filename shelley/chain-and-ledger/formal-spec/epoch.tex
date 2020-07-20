@@ -766,7 +766,7 @@ protocol parameters.
 The transition uses a helper function $\fun{votedValue}$ which returns
 the consensus value of update proposals in the event that consensus is met.
 \textbf{Note that} $\fun{votedValue}$
-\textbf{is only well-defined if } $\Quorum$
+\textbf{is only well-defined if } $\var{quorum}$
 \textbf{is greater than half the number of core nodes, i.e.}
 $\Quorum > |\var{genDelegs}|/2$ \textbf{.}
 
@@ -805,12 +805,13 @@ $\Quorum > |\var{genDelegs}|/2$ \textbf{.}
   %
   \emph{Helper Functions}
   \begin{align*}
-      & \fun{votedValue} \in (\KeyHashGen\mapsto\PParamsUpdate) \to \PParamsUpdate^?\\
-      & \fun{votedValue}~\var{vs} =
-        \begin{cases}
-          p & \exists p\in\range{vs}~(|vs\restrictrange p|\geq \Quorum) \\
-          \Nothing & \text{otherwise} \\
-        \end{cases}
+      & \fun{votedValue} \in (\KeyHashGen\mapsto\PParamsUpdate) \to \PParams \to \N \to \PParamsUpdate^?\\
+      & \fun{votedValue}~\var{pup}~\var{pps}~\var{quorum} =
+      \begin{cases}
+        \var{pps}\unionoverrideRight\var{p}
+          & \exists! p\in\range{vs}~(|vs\restrictrange p|\geq \var{quorum}) \\
+        \Nothing & \text{otherwise} \\
+      \end{cases}
   \end{align*}
   %
   \caption{Epoch transition-system types}
@@ -881,7 +882,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       \\~\\~\\
       \var{(\wcard,~\wcard,~\wcard,~(\var{pup},\wcard))}\leteq\var{utxoSt'}\\
       \var{pp_{new}}\leteq\var{pp}\unionoverrideRight
-      \fun{votedValue}~\var{pup}\\
+      \fun{votedValue}~\var{pup}~\var{pps}~\Quorum\\
       {
         \begin{array}{r}
           \var{dstate'}\\
