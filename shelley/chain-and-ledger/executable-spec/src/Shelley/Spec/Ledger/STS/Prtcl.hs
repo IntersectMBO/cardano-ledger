@@ -77,17 +77,17 @@ data PrtclState crypto
   deriving (Generic, Show, Eq)
 
 instance Crypto crypto => ToCBOR (PrtclState crypto) where
-  toCBOR (PrtclState m n2 n3) =
+  toCBOR (PrtclState m n1 n2) =
     mconcat
-      [ encodeListLen 5,
+      [ encodeListLen 3,
         toCBOR m,
-        toCBOR n2,
-        toCBOR n3
+        toCBOR n1,
+        toCBOR n2
       ]
 
 instance Crypto crypto => FromCBOR (PrtclState crypto) where
   fromCBOR =
-    decodeListLenOf 5
+    decodeListLenOf 3
       >> PrtclState
       <$> fromCBOR
       <*> fromCBOR
