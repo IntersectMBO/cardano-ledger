@@ -806,10 +806,10 @@ $\Quorum > |\var{genDelegs}|/2$ \textbf{.}
   \emph{Helper Functions}
   \begin{align*}
       & \fun{votedValue} \in (\KeyHashGen\mapsto\PParamsUpdate) \to \PParams \to \N \to \PParamsUpdate^?\\
-      & \fun{votedValue}~\var{pup}~\var{pps}~\var{quorum} =
+      & \fun{votedValue}~\var{pup}~\var{pp}~\var{quorum} =
       \begin{cases}
-        \var{pps}\unionoverrideRight\var{p}
-          & \exists! p\in\range{vs}~(|vs\restrictrange p|\geq \var{quorum}) \\
+        \var{pp}\unionoverrideRight\var{p}
+          & \exists! p\in\range{pup}~(|pup\restrictrange p|\geq \var{quorum}) \\
         \Nothing & \text{otherwise} \\
       \end{cases}
   \end{align*}
@@ -882,7 +882,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       \\~\\~\\
       \var{(\wcard,~\wcard,~\wcard,~(\var{pup},\wcard))}\leteq\var{utxoSt'}\\
       \var{pp_{new}}\leteq\var{pp}\unionoverrideRight
-      \fun{votedValue}~\var{pup}~\var{pps}~\Quorum\\
+      \fun{votedValue}~\var{pup}~\var{pp}~\Quorum\\
       {
         \begin{array}{r}
           \var{dstate'}\\
