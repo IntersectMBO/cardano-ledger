@@ -13,16 +13,19 @@
 , profiling ? config.haskellNix.profiling or false
 }:
 let
+
+  src = haskell-nix.haskellLib.cleanGit {
+      name = "cardano-ledger-specs";
+      src = ../.;
+  };
+
   # The cardano-mainnet-mirror used during testing
   cardano-mainnet-mirror = import ./cardano-mainnet-mirror.nix {inherit pkgs;};
 
   # This creates the Haskell package set.
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
   pkgSet = haskell-nix.cabalProject {
-    src = haskell-nix.haskellLib.cleanGit {
-      name = "cardano-ledger-specs" ;
-      src = ../. ;
-      };
+    inherit src;
     compiler-nix-name = compiler;
     modules = [
       {

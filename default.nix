@@ -16,7 +16,7 @@ with pkgs; with commonLib;
 let
 
   haskellPackages = recRecurseIntoAttrs
-    # we are only intersted in listing the project packages:
+    # we are only interested in listing the project packages:
     (selectProjectPackages cardanoLedgerSpecsHaskellPackages);
 
   self = {
