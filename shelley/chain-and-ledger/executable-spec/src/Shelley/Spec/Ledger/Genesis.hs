@@ -30,6 +30,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (..))
 import Data.Scientific (Scientific)
 import Data.Text (Text)
@@ -210,6 +211,7 @@ initialFundsPseudoTxIn addr =
 data ValidationErr
   = EpochNotLongEnough EpochSize Word64 Rational EpochSize
   | MaxKESEvolutionsUnsupported Word64 Word
+  | QuorumTooSmall Word64 Word64 Word64
   deriving (Eq, Show)
 
 describeValidationErr :: ValidationErr -> Text
@@ -234,6 +236,17 @@ describeValidationErr (MaxKESEvolutionsUnsupported reqKES supportedKES) =
       " but the algorithm supports a maximum of ",
       Text.pack (show supportedKES)
     ]
+describeValidationErr (QuorumTooSmall q maxTooSmal nodes) =
+  mconcat
+    [ "You have specified an 'updateQuorum' which is",
+      " too small compared to the number of genesis nodes.",
+      " You requested ",
+      Text.pack (show q),
+      ", but given ",
+      Text.pack (show nodes),
+      " genesis nodes 'updateQuorum' must be greater than ",
+      Text.pack (show maxTooSmal)
+    ]
 
 -- | Do some basic sanity checking on the Shelley genesis file.
 validateGenesis ::
@@ -246,16 +259,19 @@ validateGenesis
     { sgEpochLength,
       sgActiveSlotsCoeff,
       sgMaxKESEvolutions,
-      sgSecurityParam
+      sgSecurityParam,
+      sgUpdateQuorum,
+      sgGenDelegs
     } =
-    case [ x
-           | Just cel <- [checkEpochLength],
-             Just cke <- [checkKesEvolutions],
-             x <- [cel, cke]
-         ] of
+    case catMaybes errors of
       [] -> Right ()
       xs -> Left xs
     where
+      errors =
+        [ checkEpochLength,
+          checkKesEvolutions,
+          checkQuorumSize
+        ]
       checkEpochLength =
         let minLength =
               EpochSize . ceiling $
@@ -278,3 +294,9 @@ validateGenesis
               MaxKESEvolutionsUnsupported
                 sgMaxKESEvolutions
                 (totalPeriodsKES (Proxy @(KES c)))
+      checkQuorumSize =
+        let numGenesisNodes = fromIntegral $ length sgGenDelegs
+            maxTooSmal = numGenesisNodes `div` 2
+         in if numGenesisNodes == 0 || sgUpdateQuorum > maxTooSmal
+              then Nothing
+              else Just $ QuorumTooSmall sgUpdateQuorum maxTooSmal numGenesisNodes

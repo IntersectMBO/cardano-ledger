@@ -427,7 +427,7 @@ data EpochState crypto = EpochState
     esLState :: !(LedgerState crypto),
     esPrevPp :: !PParams,
     esPp :: !PParams,
-    esNonMyopic :: !(NonMyopic crypto)
+    esNonMyopic :: !(NonMyopic crypto) -- TODO document this in the formal spec, see github #1319
   }
   deriving (Show, Eq, Generic)
 
