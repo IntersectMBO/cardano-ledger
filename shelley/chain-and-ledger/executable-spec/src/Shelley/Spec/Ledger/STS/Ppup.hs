@@ -18,10 +18,8 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeListLen,
     decodeWord,
     encodeListLen,
-    matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (⊆), (⨃))
@@ -37,6 +35,7 @@ import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
 import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.Serialization(decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
 
 data PPUP crypto
@@ -101,24 +100,20 @@ instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (PPUP crypto))
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
+  fromCBOR = decodeRecordSum "PredicateFailure (PPUP crypto)" $
+    \case
       0 -> do
-        matchSize "NonGenesisUpdatePPUP" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ NonGenesisUpdatePPUP a b
+        pure (3,NonGenesisUpdatePPUP a b)
       1 -> do
-        matchSize "PPUpdateWrongEpoch" 4 n
         a <- fromCBOR
         b <- fromCBOR
         c <- fromCBOR
-        pure $ PPUpdateWrongEpoch a b c
+        pure (4,PPUpdateWrongEpoch a b c)
       2 -> do
-        matchSize "PVCannotFollowPPUP" 2 n
         p <- fromCBOR
-        pure $ PVCannotFollowPPUP p
+        pure (2,PVCannotFollowPPUP p)
       k -> invalidKey k
 
 ppupTransitionNonEmpty :: Typeable crypto => TransitionRule (PPUP crypto)

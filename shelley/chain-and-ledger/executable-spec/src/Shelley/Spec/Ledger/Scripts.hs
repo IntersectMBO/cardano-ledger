@@ -34,7 +34,6 @@ import Cardano.Binary
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
     annotatorSlice,
-    decodeWord,
     encodeListLen,
     encodePreEncoded,
     encodeWord,
@@ -57,7 +56,7 @@ import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys (Hash, KeyHash (..), KeyRole (Witness))
-import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordNamed, encodeFoldable)
+import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 
 -- | Magic number representing the tag of the native multi-signature script
 -- language. For each script language included, a new tag is chosen and the tag
@@ -220,10 +219,8 @@ instance
   Crypto crypto =>
   FromCBOR (Annotator (MultiSig' crypto))
   where
-  fromCBOR =
-    fmap snd $
-      decodeRecordNamed "MultiSig" fst $
-        decodeWord >>= \case
+  fromCBOR = decodeRecordSum "MultiSig" $
+        \case
           0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> fromCBOR
           1 -> do
             multiSigs <- sequence <$> decodeList fromCBOR

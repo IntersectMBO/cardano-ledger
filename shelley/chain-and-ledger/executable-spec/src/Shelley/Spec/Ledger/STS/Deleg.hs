@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Shelley.Spec.Ledger.STS.Deleg
   ( DELEG,
@@ -16,10 +17,7 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeListLen,
-    decodeWord,
     encodeListLen,
-    matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫))
@@ -59,6 +57,7 @@ import Shelley.Spec.Ledger.LedgerState
     _ptrs,
     _rewards,
   )
+import Shelley.Spec.Ledger.Serialization(decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
   ( Duration (..),
     EpochNo (..),
@@ -161,55 +160,43 @@ instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (DELEG crypto))
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
+  fromCBOR = decodeRecordSum "PredicateFailure (DELEG crypto)" $
+    \case
       0 -> do
-        matchSize "StakeKeyAlreadyRegisteredDELEG" 2 n
         kh <- fromCBOR
-        pure $ StakeKeyAlreadyRegisteredDELEG kh
+        pure (2,StakeKeyAlreadyRegisteredDELEG kh)
       10 -> do
-        matchSize "StakeKeyInRewardsDELEG" 2 n
         kh <- fromCBOR
-        pure $ StakeKeyInRewardsDELEG kh
+        pure (2,StakeKeyInRewardsDELEG kh)
       1 -> do
-        matchSize "StakeKeyNotRegisteredDELEG" 2 n
         kh <- fromCBOR
-        pure $ StakeKeyNotRegisteredDELEG kh
+        pure (2,StakeKeyNotRegisteredDELEG kh)
       2 -> do
-        matchSize "StakeKeyNonZeroAccountBalanceDELEG" 2 n
         b <- fromCBOR
-        pure $ StakeKeyNonZeroAccountBalanceDELEG b
+        pure (2,StakeKeyNonZeroAccountBalanceDELEG b)
       3 -> do
-        matchSize "StakeDelegationImpossibleDELEG" 2 n
         kh <- fromCBOR
-        pure $ StakeDelegationImpossibleDELEG kh
+        pure (2,StakeDelegationImpossibleDELEG kh)
       4 -> do
-        matchSize "WrongCertificateTypeDELEG" 1 n
-        pure WrongCertificateTypeDELEG
+        pure (1,WrongCertificateTypeDELEG)
       5 -> do
-        matchSize "GenesisKeyNotInpMappingDELEG" 2 n
         gkh <- fromCBOR
-        pure $ GenesisKeyNotInpMappingDELEG gkh
+        pure (2,GenesisKeyNotInpMappingDELEG gkh)
       6 -> do
-        matchSize "DuplicateGenesisDelegateDELEG" 2 n
         kh <- fromCBOR
-        pure $ DuplicateGenesisDelegateDELEG kh
+        pure (2,DuplicateGenesisDelegateDELEG kh)
       7 -> do
-        matchSize "InsufficientForInstantaneousRewardsDELEG" 4 n
         pot <- fromCBOR
         needed <- fromCBOR
         potAmount <- fromCBOR
-        pure $ InsufficientForInstantaneousRewardsDELEG pot needed potAmount
+        pure (4,InsufficientForInstantaneousRewardsDELEG pot needed potAmount)
       8 -> do
-        matchSize "MIRCertificateTooLateinEpochDELEG" 3 n
         sNow <- fromCBOR
         sTooLate <- fromCBOR
-        pure $ MIRCertificateTooLateinEpochDELEG sNow sTooLate
+        pure (3,MIRCertificateTooLateinEpochDELEG sNow sTooLate)
       9 -> do
-        matchSize "DuplicateGenesisVRFDELEG" 2 n
         vrf <- fromCBOR
-        pure $ DuplicateGenesisVRFDELEG vrf
+        pure (2,DuplicateGenesisVRFDELEG vrf)
       k -> invalidKey k
 
 delegationTransition ::

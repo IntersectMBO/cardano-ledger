@@ -5,6 +5,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- | Integration between the Shelley ledger and its corresponding (Transitional
 -- Praos) protocol.
@@ -25,7 +26,7 @@ module Shelley.Spec.Ledger.API.Protocol
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLenOf, encodeListLen)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.KES.Class
 import Cardano.Crypto.VRF.Class
@@ -54,6 +55,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.Serialization(decodeRecordNamed)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
@@ -72,12 +74,12 @@ instance NoUnexpectedThunks (LedgerView crypto)
 
 instance Crypto crypto => FromCBOR (LedgerView crypto) where
   fromCBOR =
-    decodeListLenOf 4
-      >> LedgerView
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+    decodeRecordNamed "LedgerView" (const 4)
+      (LedgerView
+       <$> fromCBOR
+       <*> fromCBOR
+       <*> fromCBOR
+       <*> fromCBOR)
 
 instance Crypto crypto => ToCBOR (LedgerView crypto) where
   toCBOR
@@ -214,11 +216,11 @@ instance Crypto c => NoUnexpectedThunks (ChainDepState c)
 
 instance Crypto crypto => FromCBOR (ChainDepState crypto) where
   fromCBOR =
-    decodeListLenOf 3
-      >> ChainDepState
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+    decodeRecordNamed "ChainDepState" (const 3)
+      (ChainDepState
+       <$> fromCBOR
+       <*> fromCBOR
+       <*> fromCBOR)
 
 instance Crypto crypto => ToCBOR (ChainDepState crypto) where
   toCBOR

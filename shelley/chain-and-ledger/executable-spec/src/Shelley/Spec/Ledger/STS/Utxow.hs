@@ -20,10 +20,7 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeListLen,
-    decodeWord,
     encodeListLen,
-    matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (eval, (∩))
@@ -81,7 +78,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable)
+import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable, decodeRecordSum)
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     hashScript,
@@ -155,46 +152,36 @@ instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (UTXOW crypto))
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
+  fromCBOR = decodeRecordSum "PredicateFailure (UTXOW crypto)" $
+    \case
       0 -> do
-        matchSize "InvalidWitnessesUTXOW" 2 n
         wits <- decodeList fromCBOR
-        pure $ InvalidWitnessesUTXOW wits
+        pure (2,InvalidWitnessesUTXOW wits)
       1 -> do
-        matchSize "MissingVKeyWitnessesUTXOW" 2 n
         missing <- decodeSet fromCBOR
-        pure $ MissingVKeyWitnessesUTXOW $ WitHashes missing
+        pure (2,MissingVKeyWitnessesUTXOW $ WitHashes missing)
       2 -> do
-        matchSize "MissingScriptWitnessesUTXOW" 2 n
         ss <- decodeSet fromCBOR
-        pure $ MissingScriptWitnessesUTXOW ss
+        pure (2,MissingScriptWitnessesUTXOW ss)
       3 -> do
-        matchSize "ScriptWitnessNotValidatingUTXOW" 2 n
         ss <- decodeSet fromCBOR
-        pure $ ScriptWitnessNotValidatingUTXOW ss
+        pure (2,ScriptWitnessNotValidatingUTXOW ss)
       4 -> do
-        matchSize "UtxoFailure" 2 n
         a <- fromCBOR
-        pure $ UtxoFailure a
+        pure (2,UtxoFailure a)
       5 -> do
-        matchSize "MIRInsufficientGenesisSigsUTXOW" 2 n
         s <- decodeSet fromCBOR
-        pure $ MIRInsufficientGenesisSigsUTXOW s
+        pure (2,MIRInsufficientGenesisSigsUTXOW s)
       6 -> do
-        matchSize "MissingTxBodyMetaDataHash" 2 n
         h <- fromCBOR
-        pure $ MissingTxBodyMetaDataHash h
+        pure (2,MissingTxBodyMetaDataHash h)
       7 -> do
-        matchSize "MissingTxMetaData" 2 n
         h <- fromCBOR
-        pure $ MissingTxMetaData h
+        pure (2,MissingTxMetaData h)
       8 -> do
-        matchSize "ConflictingMetaDataHash" 3 n
         bodyHash <- fromCBOR
         fullMDHash <- fromCBOR
-        pure $ ConflictingMetaDataHash bodyHash fullMDHash
+        pure (3,ConflictingMetaDataHash bodyHash fullMDHash)
       k -> invalidKey k
 
 initialLedgerStateUTXOW ::

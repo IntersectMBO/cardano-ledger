@@ -21,10 +21,7 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeListLen,
-    decodeWord,
     encodeListLen,
-    matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
@@ -51,6 +48,7 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
   )
 import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.Serialization(decodeRecordSum)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..))
 import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
@@ -111,18 +109,15 @@ instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (LEDGER crypto))
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
+  fromCBOR = decodeRecordSum "PredicateFailure (LEDGER crypto)" $
+    (\case
       0 -> do
-        matchSize "UtxowFailure" 2 n
         a <- fromCBOR
-        pure $ UtxowFailure a
+        pure (2,UtxowFailure a)
       1 -> do
-        matchSize "DelegsFailure" 2 n
         a <- fromCBOR
-        pure $ DelegsFailure a
-      k -> invalidKey k
+        pure (2,DelegsFailure a)
+      k -> invalidKey k)
 
 ledgerTransition ::
   forall crypto.

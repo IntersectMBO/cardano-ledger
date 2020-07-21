@@ -21,7 +21,6 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeWord,
     encodeListLen,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
@@ -71,7 +70,7 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..))
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
-    decodeRecordNamed,
+    decodeRecordSum,
     decodeSet,
     encodeFoldable,
   )
@@ -201,57 +200,37 @@ instance
   FromCBOR (PredicateFailure (UTXO crypto))
   where
   fromCBOR =
-    fmap snd $
-      decodeRecordNamed "PredicateFailureUTXO" fst $
-        decodeWord >>= \case
-          0 ->
-            (,) 2 <$> do
-              ins <- decodeSet fromCBOR
-              pure $ BadInputsUTxO ins
-          1 ->
-            (,) 3 <$> do
-              a <- fromCBOR
-              b <- fromCBOR
-              pure $ ExpiredUTxO a b
-          2 ->
-            (,) 3 <$> do
-              a <- fromCBOR
-              b <- fromCBOR
-              pure $ MaxTxSizeUTxO a b
-          3 -> (,) 1 <$> pure InputSetEmptyUTxO
-          4 ->
-            (,) 3 <$> do
-              a <- fromCBOR
-              b <- fromCBOR
-              pure $ FeeTooSmallUTxO a b
-          5 ->
-            (,) 3 <$> do
-              a <- fromCBOR
-              b <- fromCBOR
-              pure $ ValueNotConservedUTxO a b
-          6 ->
-            (,) 2 <$> do
-              outs <- decodeList fromCBOR
-              pure $ OutputTooSmallUTxO outs
-          7 ->
-            (,) 2 <$> do
-              a <- fromCBOR
-              pure $ UpdateFailure a
-          8 ->
-            (,) 3 <$> do
-              right <- fromCBOR
-              wrongs <- decodeSet fromCBOR
-              pure $ WrongNetwork right wrongs
-          9 ->
-            (,) 3 <$> do
-              right <- fromCBOR
-              wrongs <- decodeSet fromCBOR
-              pure $ WrongNetworkWithdrawal right wrongs
-          10 ->
-            (,) 2 <$> do
-              outs <- decodeList fromCBOR
-              pure $ OutputBootAddrAttrsTooBig outs
+    decodeRecordSum "PredicateFailureUTXO" $
+        \case
+          0 -> do ins <- decodeSet fromCBOR
+                  pure (2,BadInputsUTxO ins)   -- The (2,..) indicates the number of things decoded, INCLUDING the tags, which are decoded by decodeRecordSumNamed
+          1 -> do a <- fromCBOR
+                  b <- fromCBOR
+                  pure (3,ExpiredUTxO a b)
+          2 -> do a <- fromCBOR
+                  b <- fromCBOR
+                  pure (3,MaxTxSizeUTxO a b)
+          3 -> pure (1,InputSetEmptyUTxO)
+          4 -> do a <- fromCBOR
+                  b <- fromCBOR
+                  pure (3,FeeTooSmallUTxO a b)
+          5 -> do a <- fromCBOR
+                  b <- fromCBOR
+                  pure (3,ValueNotConservedUTxO a b)
+          6 -> do outs <- decodeList fromCBOR
+                  pure (2,OutputTooSmallUTxO outs)
+          7 -> do a <- fromCBOR
+                  pure (2,UpdateFailure a)
+          8 -> do right <- fromCBOR
+                  wrongs <- decodeSet fromCBOR
+                  pure (3,WrongNetwork right wrongs)
+          9 -> do right <- fromCBOR
+                  wrongs <- decodeSet fromCBOR
+                  pure (3,WrongNetworkWithdrawal right wrongs)
+          10-> do outs <- decodeList fromCBOR
+                  pure (2,OutputBootAddrAttrsTooBig outs)
           k -> invalidKey k
+
 
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do

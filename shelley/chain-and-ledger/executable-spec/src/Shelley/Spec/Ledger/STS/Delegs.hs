@@ -8,6 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Shelley.Spec.Ledger.STS.Delegs
   ( DELEGS,
@@ -19,10 +20,7 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeListLen,
-    decodeWord,
     encodeListLen,
-    matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
@@ -47,7 +45,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))
-import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
+import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR,decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
@@ -108,22 +106,18 @@ instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (DELEGS crypto))
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
+  fromCBOR = decodeRecordSum "PredicateFailure" $
+   (\case
       0 -> do
-        matchSize "DelegateeNotRegisteredDELEG" 2 n
         kh <- fromCBOR
-        pure $ DelegateeNotRegisteredDELEG kh
+        pure (2, DelegateeNotRegisteredDELEG kh)
       1 -> do
-        matchSize "WithdrawalsNotInRewardsDELEGS" 2 n
         ws <- mapFromCBOR
-        pure $ WithdrawalsNotInRewardsDELEGS ws
+        pure (2,WithdrawalsNotInRewardsDELEGS ws)
       2 -> do
-        matchSize "DelplFailure" 2 n
         a <- fromCBOR
-        pure $ DelplFailure a
-      k -> invalidKey k
+        pure (2,DelplFailure a)
+      k -> invalidKey k)
 
 delegsTransition ::
   forall crypto.

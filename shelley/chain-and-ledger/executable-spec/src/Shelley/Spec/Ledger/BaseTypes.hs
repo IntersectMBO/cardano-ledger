@@ -59,10 +59,7 @@ import Cardano.Binary
     DecoderError (..),
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
-    decodeListLen,
-    decodeWord,
     encodeListLen,
-    matchSize,
   )
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -84,7 +81,7 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Word (Word16, Word64, Word8)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Serialization (ratioFromCBOR, ratioToCBOR)
+import Shelley.Spec.Ledger.Serialization (ratioFromCBOR, ratioToCBOR, decodeRecordSum)
 import Shelley.Spec.NonIntegral (ln')
 
 data E34
@@ -171,15 +168,11 @@ invalidKey :: Word -> Decoder s a
 invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)
 
 instance FromCBOR Nonce where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
-      0 -> do
-        matchSize "NeutralNonce" 1 n
-        pure NeutralNonce
-      1 -> do
-        matchSize "Nonce" 2 n
-        Nonce <$> fromCBOR
+  fromCBOR = decodeRecordSum "Nonce" $
+    \case
+      0 -> pure (1,NeutralNonce)
+      1 -> do x <- fromCBOR
+              pure(2,Nonce x)
       k -> invalidKey k
 
 deriving anyclass instance ToJSON Nonce
@@ -263,11 +256,11 @@ instance ToCBOR a => ToCBOR (StrictMaybe a) where
   toCBOR (SJust x) = encodeListLen 1 <> toCBOR x
 
 instance FromCBOR a => FromCBOR (StrictMaybe a) where
-  fromCBOR = do
-    n <- decodeListLen
-    case n of
-      0 -> pure SNothing
-      1 -> SJust <$> fromCBOR
+  fromCBOR = decodeRecordSum "StrictMaybe" $
+    \case
+      0 -> pure(1,SNothing)
+      1 -> do x <- fromCBOR
+              pure(2,SJust x)
       _ -> fail "unknown tag"
 
 instance ToJSON a => ToJSON (StrictMaybe a) where
