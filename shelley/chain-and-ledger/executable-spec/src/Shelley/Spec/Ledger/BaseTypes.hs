@@ -60,6 +60,8 @@ import Cardano.Binary
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
     encodeListLen,
+    decodeListLenOrIndef,
+    decodeBreakOr,
   )
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -256,12 +258,19 @@ instance ToCBOR a => ToCBOR (StrictMaybe a) where
   toCBOR (SJust x) = encodeListLen 1 <> toCBOR x
 
 instance FromCBOR a => FromCBOR (StrictMaybe a) where
-  fromCBOR = decodeRecordSum "StrictMaybe" $
-    \case
-      0 -> pure(1,SNothing)
-      1 -> do x <- fromCBOR
-              pure(2,SJust x)
-      _ -> fail "unknown tag"
+ fromCBOR = do
+    maybeN <- decodeListLenOrIndef
+    case maybeN of
+      Just 0 -> pure SNothing
+      Just 1 -> SJust <$> fromCBOR
+      Just _ -> fail "too many elements in length-style decoding of StrictMaybe."
+      Nothing -> do
+         isBreak <- decodeBreakOr
+         if isBreak then pure SNothing
+                    else do x <- fromCBOR
+                            isBreak2 <- decodeBreakOr
+                            if isBreak2 then pure(SJust x)
+                                        else fail "too many elements in break-style decoding of StrictMaybe."
 
 instance ToJSON a => ToJSON (StrictMaybe a) where
   toJSON = toJSON . strictMaybeToMaybe
