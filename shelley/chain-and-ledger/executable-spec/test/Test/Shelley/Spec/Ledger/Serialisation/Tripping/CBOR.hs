@@ -29,6 +29,7 @@ module Test.Shelley.Spec.Ledger.Serialisation.Tripping.CBOR
     prop_roundtrip_PrtclState,
     prop_roundtrip_LedgerState,
     prop_roundtrip_NewEpochState,
+    prop_roundtrip_Script,
   )
 where
 
@@ -128,6 +129,9 @@ prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
 prop_roundtrip_NewEpochState :: Mock.NewEpochState Mock.C -> Property
 prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
 
+prop_roundtrip_Script :: Mock.Block Mock.C -> Property
+prop_roundtrip_Script = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
+
 -- TODO
 
 -- roundTripIpv4 :: Property
@@ -160,5 +164,6 @@ tests =
       testProperty "roundtrip LEDGER Predicate Failures" prop_roundtrip_LEDGER_PredicateFails,
       testProperty "roundtrip Protocol State" prop_roundtrip_PrtclState,
       testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
-      testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState
+      testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState,
+      testProperty "roundtrip Script" prop_roundtrip_Script
     ]

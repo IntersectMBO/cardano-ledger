@@ -86,7 +86,11 @@ import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Ppup as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS
-import Shelley.Spec.Ledger.Scripts (ScriptHash (ScriptHash))
+import Shelley.Spec.Ledger.Scripts
+  ( MultiSig (..),
+    Script (..),
+    ScriptHash (ScriptHash),
+  )
 import Shelley.Spec.Ledger.TxData
   ( MIRPot,
     PoolMetaData (PoolMetaData),
@@ -461,3 +465,21 @@ instance Arbitrary DnsName where
 instance Arbitrary AccountState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
+
+instance
+  HashAlgorithm h =>
+  Arbitrary (MultiSig (Mock.ConcreteCrypto h))
+  where
+  arbitrary =
+    oneof
+      [ RequireSignature <$> arbitrary,
+        RequireAllOf <$> arbitrary,
+        RequireAnyOf <$> arbitrary,
+        RequireMOf <$> arbitrary <*> arbitrary
+      ]
+
+instance
+  HashAlgorithm h =>
+  Arbitrary (Script (Mock.ConcreteCrypto h))
+  where
+  arbitrary = MultiSigScript <$> arbitrary
