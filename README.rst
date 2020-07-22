@@ -3,7 +3,8 @@
    <p align="center">
      <a href="https://buildkite.com/input-output-hk/cardano-ledger-specs"><img alt="Build Status" src="https://img.shields.io/buildkite/a94c23758aeb2858869d5e256e466fc78e03a5baf1954cb8cc.svg?style=for-the-badge"/></a>
      <a href="https://coveralls.io/github/input-output-hk/cardano-ledger-specs?branch=master"><img alt="Coverage Status" src="https://img.shields.io/coveralls/github/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/></a>
-     <a href='https://docs.cardano.org/projects/cardano-ledger-specs/en/latest/?badge=latest'><img src='https://readthedocs.com/projects/cardano-foundation-cardano-ledger-specs/badge/?version=latest?style=for-the-badge' alt='Documentation Status'/></a>  
+     <a href='https://docs.cardano.org/projects/cardano-ledger-specs/en/latest/?badge=latest'><img src='https://readthedocs.com/projects/cardano-foundation-cardano-ledger-specs/badge/?version=latest?style=for-the-badge' alt='Documentation Status'/></a>
+     <a href="https://github.com/input-output-hk/cardano-ledger-specs/blob/master/LICENSE"><img src="https://img.shields.io/github/license/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/></a>
    </p>
 
 *********************************
@@ -56,32 +57,3 @@ nix-build Infrastructure
 The artifacts in this repository can be built and tested using nix. This
 is additionally used by the Hydra CI to test building, including
 cross-compilation for other systems.
-
-
-
-Additional documentation
-------------------------
-
-You can find additional documentation on the nix infrastructure used in
-this repo in the following places:
-
--  `The haskell.nix user
-   guide <https://github.com/input-output-hk/haskell.nix/blob/documentation/docs/user-guide.md>`__
--  `The nix-tools
-   repository <https://github.com/input-output-hk/nix-tools>`__
--  `The iohk-nix
-   repository <https://github.com/input-output-hk/iohk-nix>`__
-
-Note that the user guide linked above is incomplete and does not
-correctly refer to projects built using ``iohk-nix``, as this one is. A
-certain amount of trial and error may be required to make substantive
-changes!
-
-.. raw:: html
-
-   <p align="center">
-     <a href="https://github.com/input-output-hk/cardano-ledger-specs/blob/master/LICENSE">
-       <img src="https://img.shields.io/github/license/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/>
-     </a>
-   </p>
-
