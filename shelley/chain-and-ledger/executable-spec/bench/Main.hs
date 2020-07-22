@@ -3,7 +3,7 @@ module Main where
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (keysEqual)
 import Criterion.Main (Benchmark, bench, bgroup, defaultMain, env, whnf)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.LedgerState (DPState (..), UTxOState (..))
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions

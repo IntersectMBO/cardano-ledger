@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -24,7 +25,7 @@ where
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
-import Cardano.Prelude (NoUnexpectedThunks)
+import Cardano.Prelude (NoUnexpectedThunks, forceElemsToWHNF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -35,7 +36,7 @@ import Data.Proxy (Proxy (..))
 import Data.Scientific (Scientific)
 import Data.Text (Text)
 import qualified Data.Text as Text
-import Data.Time (NominalDiffTime, UTCTime)
+import Data.Time (NominalDiffTime, UTCTime (..))
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address
@@ -137,7 +138,7 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
   parseJSON =
     Aeson.withObject "ShelleyGenesis" $ \obj ->
       ShelleyGenesis
-        <$> obj .: "systemStart"
+        <$> (forceUTCTime <$> obj .: "systemStart")
         <*> obj .: "networkMagic"
         <*> obj .: "networkId"
         <*> ( (toRational :: Scientific -> Rational)
@@ -151,9 +152,14 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "updateQuorum"
         <*> obj .: "maxLovelaceSupply"
         <*> obj .: "protocolParams"
-        <*> obj .: "genDelegs"
-        <*> obj .: "initialFunds"
+        <*> (forceElemsToWHNF <$> obj .: "genDelegs")
+        <*> (forceElemsToWHNF <$> obj .: "initialFunds")
         <*> obj .:? "staking" .!= emptyGenesisStaking
+    where
+      forceUTCTime date =
+        let !day = utctDay date
+            !time = utctDayTime date
+         in UTCTime day time
 
 instance Crypto c => ToJSON (ShelleyGenesisStaking c) where
   toJSON sgs =
@@ -166,8 +172,8 @@ instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
   parseJSON =
     Aeson.withObject "ShelleyGenesisStaking" $ \obj ->
       ShelleyGenesisStaking
-        <$> obj .: "pools"
-        <*> obj .: "stake"
+        <$> (forceElemsToWHNF <$> obj .: "pools")
+        <*> (forceElemsToWHNF <$> obj .: "stake")
 
 {-------------------------------------------------------------------------------
   Genesis UTxO
