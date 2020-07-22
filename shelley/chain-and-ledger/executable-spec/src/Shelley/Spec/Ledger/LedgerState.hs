@@ -98,7 +98,6 @@ import Cardano.Binary
     decodeNull,
     encodeListLen,
     encodeNull,
-    enforceSize,
     peekTokenType,
   )
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
@@ -180,7 +179,7 @@ import Shelley.Spec.Ledger.Rewards
     emptyNonMyopic,
     reward,
   )
-import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
+import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR, decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot
   ( Duration (..),
     EpochNo (..),
@@ -242,10 +241,10 @@ instance Crypto crypto => ToCBOR (FutureGenDeleg crypto) where
 
 instance Crypto crypto => FromCBOR (FutureGenDeleg crypto) where
   fromCBOR = do
-    enforceSize "FutureGenDeleg" 2
-    a <- fromCBOR
-    b <- fromCBOR
-    pure $ FutureGenDeleg a b
+    decodeRecordNamed "FutureGenDeleg" (const 2) $ do
+      a <- fromCBOR
+      b <- fromCBOR
+      pure $ FutureGenDeleg a b
 
 data InstantaneousRewards crypto = InstantaneousRewards
   { iRReserves :: !(Map (Credential 'Staking crypto) Coin),
@@ -269,10 +268,10 @@ instance Crypto crypto => ToCBOR (InstantaneousRewards crypto) where
 
 instance Crypto crypto => FromCBOR (InstantaneousRewards crypto) where
   fromCBOR = do
-    enforceSize "InstantaneousRewards" 2
-    irR <- mapFromCBOR
-    irT <- mapFromCBOR
-    pure $ InstantaneousRewards irR irT
+    decodeRecordNamed "InstantaneousRewards" (const 2) $ do
+      irR <- mapFromCBOR
+      irT <- mapFromCBOR
+      pure $ InstantaneousRewards irR irT
 
 -- | State of staking pool delegations and rewards
 data DState crypto = DState
@@ -307,14 +306,14 @@ instance Crypto crypto => ToCBOR (DState crypto) where
 
 instance Crypto crypto => FromCBOR (DState crypto) where
   fromCBOR = do
-    enforceSize "DState" 6
-    rw <- fromCBOR
-    dlg <- fromCBOR
-    p <- fromCBOR
-    fgs <- fromCBOR
-    gs <- fromCBOR
-    ir <- fromCBOR
-    pure $ DState rw dlg p fgs gs ir
+    decodeRecordNamed "DState" (const 6) $ do
+      rw <- fromCBOR
+      dlg <- fromCBOR
+      p <- fromCBOR
+      fgs <- fromCBOR
+      gs <- fromCBOR
+      ir <- fromCBOR
+      pure $ DState rw dlg p fgs gs ir
 
 -- | Current state of staking pools and their certificate counters.
 data PState crypto = PState
@@ -337,11 +336,11 @@ instance Crypto crypto => ToCBOR (PState crypto) where
 
 instance Crypto crypto => FromCBOR (PState crypto) where
   fromCBOR = do
-    enforceSize "PState" 3
-    a <- fromCBOR
-    b <- fromCBOR
-    c <- fromCBOR
-    pure $ PState a b c
+    decodeRecordNamed "PState" (const 3) $ do
+       a <- fromCBOR
+       b <- fromCBOR
+       c <- fromCBOR
+       pure $ PState a b c
 
 -- | The state associated with the current stake delegation.
 data DPState crypto = DPState
@@ -360,10 +359,10 @@ instance Crypto crypto => ToCBOR (DPState crypto) where
 
 instance Crypto crypto => FromCBOR (DPState crypto) where
   fromCBOR = do
-    enforceSize "DPState" 2
-    ds <- fromCBOR
-    ps <- fromCBOR
-    pure $ DPState ds ps
+    decodeRecordNamed "DPState" (const 2) $ do
+       ds <- fromCBOR
+       ps <- fromCBOR
+       pure $ DPState ds ps
 
 data RewardUpdate crypto = RewardUpdate
   { deltaT :: !Coin,
@@ -389,13 +388,13 @@ instance Crypto crypto => ToCBOR (RewardUpdate crypto) where
 
 instance Crypto crypto => FromCBOR (RewardUpdate crypto) where
   fromCBOR = do
-    enforceSize "RewardUpdate" 5
-    dt <- fromCBOR
-    dr <- fromCBOR -- TODO change Coin serialization to use integers?
-    rw <- fromCBOR
-    df <- fromCBOR -- TODO change Coin serialization to use integers?
-    nm <- fromCBOR
-    pure $ RewardUpdate dt (- dr) rw (- df) nm
+    decodeRecordNamed "RewardUpdate" (const 5) $ do
+       dt <- fromCBOR
+       dr <- fromCBOR -- TODO change Coin serialization to use integers?
+       rw <- fromCBOR
+       df <- fromCBOR -- TODO change Coin serialization to use integers?
+       nm <- fromCBOR
+       pure $ RewardUpdate dt (- dr) rw (- df) nm
 
 emptyRewardUpdate :: RewardUpdate crypto
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) emptyNonMyopic
@@ -412,10 +411,10 @@ instance ToCBOR AccountState where
 
 instance FromCBOR AccountState where
   fromCBOR = do
-    enforceSize "AccountState" 2
-    t <- fromCBOR
-    r <- fromCBOR
-    pure $ AccountState t r
+    decodeRecordNamed "AccountState" (const 2) $ do
+       t <- fromCBOR
+       r <- fromCBOR
+       pure $ AccountState t r
 
 instance NoUnexpectedThunks AccountState
 
@@ -441,14 +440,14 @@ instance Crypto crypto => ToCBOR (EpochState crypto) where
 
 instance Crypto crypto => FromCBOR (EpochState crypto) where
   fromCBOR = do
-    enforceSize "EpochState" 6
-    a <- fromCBOR
-    s <- fromCBOR
-    l <- fromCBOR
-    r <- fromCBOR
-    p <- fromCBOR
-    n <- fromCBOR
-    pure $ EpochState a s l r p n
+    decodeRecordNamed "EpochState" (const 6) $ do
+       a <- fromCBOR
+       s <- fromCBOR
+       l <- fromCBOR
+       r <- fromCBOR
+       p <- fromCBOR
+       n <- fromCBOR
+       pure $ EpochState a s l r p n
 
 emptyPPUPState :: PPUPState crypto
 emptyPPUPState = PPUPState emptyPPPUpdates emptyPPPUpdates
@@ -505,10 +504,10 @@ instance Crypto crypto => ToCBOR (PPUPState crypto) where
 
 instance Crypto crypto => FromCBOR (PPUPState crypto) where
   fromCBOR = do
-    enforceSize "PPUPState" 2
-    ppup <- fromCBOR
-    fppup <- fromCBOR
-    pure $ PPUPState ppup fppup
+    decodeRecordNamed "PPUPState" (const 2) $ do
+       ppup <- fromCBOR
+       fppup <- fromCBOR
+       pure $ PPUPState ppup fppup
 
 pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
 pvCanFollow _ SNothing = True
@@ -541,12 +540,12 @@ instance Crypto crypto => ToCBOR (UTxOState crypto) where
 
 instance Crypto crypto => FromCBOR (UTxOState crypto) where
   fromCBOR = do
-    enforceSize "UTxOState" 4
-    ut <- fromCBOR
-    dp <- fromCBOR
-    fs <- fromCBOR
-    us <- fromCBOR
-    pure $ UTxOState ut dp fs us
+    decodeRecordNamed "UTxOState" (const 4) $ do
+       ut <- fromCBOR
+       dp <- fromCBOR
+       fs <- fromCBOR
+       us <- fromCBOR
+       pure $ UTxOState ut dp fs us
 
 data OBftSlot crypto
   = NonActiveSlot
@@ -607,15 +606,15 @@ instance Crypto crypto => ToCBOR (NewEpochState crypto) where
 
 instance Crypto crypto => FromCBOR (NewEpochState crypto) where
   fromCBOR = do
-    enforceSize "NewEpochState" 7
-    e <- fromCBOR
-    bp <- fromCBOR
-    bc <- fromCBOR
-    es <- fromCBOR
-    ru <- fromCBOR
-    pd <- fromCBOR
-    os <- decompactOverlaySchedule <$> fromCBOR
-    pure $ NewEpochState e bp bc es ru pd os
+    decodeRecordNamed "NewEpochState" (const 7) $ do
+       e <- fromCBOR
+       bp <- fromCBOR
+       bc <- fromCBOR
+       es <- fromCBOR
+       ru <- fromCBOR
+       pd <- fromCBOR
+       os <- decompactOverlaySchedule <$> fromCBOR
+       pure $ NewEpochState e bp bc es ru pd os
 
 -- | Convert the overlay schedule to a representation that is more compact
 -- when serialised to a bytestring, but less efficient for lookups.
@@ -679,10 +678,10 @@ instance Crypto crypto => ToCBOR (LedgerState crypto) where
 
 instance Crypto crypto => FromCBOR (LedgerState crypto) where
   fromCBOR = do
-    enforceSize "LedgerState" 2
-    u <- fromCBOR
-    dp <- fromCBOR
-    pure $ LedgerState u dp
+    decodeRecordNamed "LedgerState" (const 2) $ do
+       u <- fromCBOR
+       dp <- fromCBOR
+       pure $ LedgerState u dp
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.

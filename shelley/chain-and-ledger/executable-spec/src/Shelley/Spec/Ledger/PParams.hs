@@ -34,7 +34,6 @@ import Cardano.Binary
     encodeListLen,
     encodeMapLen,
     encodeWord,
-    enforceSize,
   )
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), mapMaybe)
 import Control.Monad (unless)
@@ -66,6 +65,7 @@ import Shelley.Spec.Ledger.Serialization
     FromCBORGroup (..),
     ToCBORGroup (..),
     decodeMapContents,
+    decodeRecordNamed,
     mapFromCBOR,
     mapToCBOR,
     ratioFromCBOR,
@@ -232,25 +232,25 @@ instance ToCBOR PParams where
 
 instance FromCBOR PParams where
   fromCBOR = do
-    enforceSize "PParams" 18
-    PParams
-      <$> fromCBOR -- _minfeeA         :: Integer
-      <*> fromCBOR -- _minfeeB         :: Natural
-      <*> fromCBOR -- _maxBBSize       :: Natural
-      <*> fromCBOR -- _maxTxSize       :: Natural
-      <*> fromCBOR -- _maxBHSize       :: Natural
-      <*> fromCBOR -- _keyDeposit      :: Coin
-      <*> fromCBOR -- _poolDeposit     :: Coin
-      <*> fromCBOR -- _eMax            :: EpochNo
-      <*> fromCBOR -- _nOpt            :: Natural
-      <*> ratioFromCBOR -- _a0         :: Rational
-      <*> fromCBOR -- _rho             :: UnitInterval
-      <*> fromCBOR -- _tau             :: UnitInterval
-      <*> fromCBOR -- _d               :: UnitInterval
-      <*> fromCBOR -- _extraEntropy    :: Nonce
-      <*> fromCBORGroup -- _protocolVersion :: ProtVer
-      <*> fromCBOR -- _minUTxOValue    :: Natural
-      <*> fromCBOR -- _minPoolCost     :: Natural
+    decodeRecordNamed "PParams" (const 18) $
+      PParams
+        <$> fromCBOR -- _minfeeA         :: Integer
+        <*> fromCBOR -- _minfeeB         :: Natural
+        <*> fromCBOR -- _maxBBSize       :: Natural
+        <*> fromCBOR -- _maxTxSize       :: Natural
+        <*> fromCBOR -- _maxBHSize       :: Natural
+        <*> fromCBOR -- _keyDeposit      :: Coin
+        <*> fromCBOR -- _poolDeposit     :: Coin
+        <*> fromCBOR -- _eMax            :: EpochNo
+        <*> fromCBOR -- _nOpt            :: Natural
+        <*> ratioFromCBOR -- _a0         :: Rational
+        <*> fromCBOR -- _rho             :: UnitInterval
+        <*> fromCBOR -- _tau             :: UnitInterval
+        <*> fromCBOR -- _d               :: UnitInterval
+        <*> fromCBOR -- _extraEntropy    :: Nonce
+        <*> fromCBORGroup -- _protocolVersion :: ProtVer
+        <*> fromCBOR -- _minUTxOValue    :: Natural
+        <*> fromCBOR -- _minPoolCost     :: Natural
 
 instance ToJSON PParams where
   toJSON pp =
@@ -333,10 +333,10 @@ instance Crypto crypto => ToCBOR (Update crypto) where
     encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
 
 instance Crypto crypto => FromCBOR (Update crypto) where
-  fromCBOR =
-    Update <$ enforceSize "Update" 2
-      <*> fromCBOR
-      <*> fromCBOR
+  fromCBOR = decodeRecordNamed "Update" (const 2) $ do
+      x <- fromCBOR
+      y <- fromCBOR
+      pure (Update x y)
 
 data PPUpdateEnv crypto = PPUpdateEnv SlotNo (GenDelegs crypto)
   deriving (Show, Eq, Generic)

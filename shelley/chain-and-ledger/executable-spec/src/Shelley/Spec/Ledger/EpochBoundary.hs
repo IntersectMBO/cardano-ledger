@@ -31,7 +31,7 @@ module Shelley.Spec.Ledger.EpochBoundary
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (▷), (◁))
 import Data.Map.Strict (Map)
@@ -48,6 +48,7 @@ import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
+import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxData (PoolParams, TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
@@ -201,11 +202,11 @@ instance
   FromCBOR (SnapShot crypto)
   where
   fromCBOR = do
-    enforceSize "SnapShot" 3
-    s <- fromCBOR
-    d <- fromCBOR
-    p <- fromCBOR
-    pure $ SnapShot s d p
+    decodeRecordNamed "SnapShot" (const 3) $ do
+      s <- fromCBOR
+      d <- fromCBOR
+      p <- fromCBOR
+      pure $ SnapShot s d p
 
 -- | Snapshots of the stake distribution.
 data SnapShots crypto = SnapShots
@@ -236,12 +237,12 @@ instance
   FromCBOR (SnapShots crypto)
   where
   fromCBOR = do
-    enforceSize "SnapShots" 4
-    mark <- fromCBOR
-    set <- fromCBOR
-    go <- fromCBOR
-    f <- fromCBOR
-    pure $ SnapShots mark set go f
+    decodeRecordNamed "SnapShots" (const 4) $ do
+      mark <- fromCBOR
+      set <- fromCBOR
+      go <- fromCBOR
+      f <- fromCBOR
+      pure $ SnapShots mark set go f
 
 emptySnapShot :: SnapShot crypto
 emptySnapShot = SnapShot (Stake Map.empty) Map.empty Map.empty

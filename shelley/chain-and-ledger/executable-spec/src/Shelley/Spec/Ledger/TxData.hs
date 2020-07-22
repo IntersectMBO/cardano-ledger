@@ -75,7 +75,6 @@ import Cardano.Binary
     encodeMapLen,
     encodePreEncoded,
     encodeWord,
-    enforceSize,
     serializeEncoding,
     serializeEncoding',
     szCases,
@@ -746,10 +745,10 @@ instance
   FromCBOR (TxIn crypto)
   where
   fromCBOR = do
-    enforceSize "TxIn" 2
-    a <- fromCBOR
-    (b :: Word64) <- fromCBOR
-    pure $ TxIn a (fromInteger $ toInteger b)
+    decodeRecordNamed "TxIn" (const 2) $ do
+       a <- fromCBOR
+       (b :: Word64) <- fromCBOR
+       pure $ TxIn a (fromInteger $ toInteger b)
 
 instance
   (Typeable crypto, Crypto crypto) =>
@@ -872,10 +871,10 @@ instance ToCBOR PoolMetaData where
 
 instance FromCBOR PoolMetaData where
   fromCBOR = do
-    enforceSize "PoolMetaData" 2
-    u <- fromCBOR
-    h <- fromCBOR
-    pure $ PoolMetaData u h
+    decodeRecordNamed "PoolMetaData" (const 2) $ do
+       u <- fromCBOR
+       h <- fromCBOR
+       pure $ PoolMetaData u h
 
 -- | The size of the '_poolOwners' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.
