@@ -1,11 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 -- | Integration between the Shelley ledger and its corresponding (Transitional
 -- Praos) protocol.
@@ -55,10 +55,10 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams (PParams)
-import Shelley.Spec.Ledger.Serialization(decodeRecordNamed)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
+import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
@@ -74,12 +74,15 @@ instance NoUnexpectedThunks (LedgerView crypto)
 
 instance Crypto crypto => FromCBOR (LedgerView crypto) where
   fromCBOR =
-    decodeRecordNamed "LedgerView" (const 4)
-      (LedgerView
-       <$> fromCBOR
-       <*> fromCBOR
-       <*> fromCBOR
-       <*> fromCBOR)
+    decodeRecordNamed
+      "LedgerView"
+      (const 4)
+      ( LedgerView
+          <$> fromCBOR
+          <*> fromCBOR
+          <*> fromCBOR
+          <*> fromCBOR
+      )
 
 instance Crypto crypto => ToCBOR (LedgerView crypto) where
   toCBOR
@@ -216,11 +219,14 @@ instance Crypto c => NoUnexpectedThunks (ChainDepState c)
 
 instance Crypto crypto => FromCBOR (ChainDepState crypto) where
   fromCBOR =
-    decodeRecordNamed "ChainDepState" (const 3)
-      (ChainDepState
-       <$> fromCBOR
-       <*> fromCBOR
-       <*> fromCBOR)
+    decodeRecordNamed
+      "ChainDepState"
+      (const 3)
+      ( ChainDepState
+          <$> fromCBOR
+          <*> fromCBOR
+          <*> fromCBOR
+      )
 
 instance Crypto crypto => ToCBOR (ChainDepState crypto) where
   toCBOR
