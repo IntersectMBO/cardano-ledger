@@ -1053,6 +1053,7 @@ compute (e@(Intersect a b)) = run(compile e)
 
 compute (UnionOverrideLeft (Base rep x) (Singleton k v))  = addkv (k,v) x (\ new old -> old) -- The value on the left is preferred over the right, so 'addkv' chooses 'old'
 compute (UnionOverrideLeft (Base MapR d0) (Base MapR d1)) = Map.union d0 d1  -- 'Map.union' is left biased, just what we want.
+compute (UnionOverrideLeft (DExclude (Base SetR (Sett s1)) (Base MapR m2)) (Base MapR m3)) =  Map.union (Map.withoutKeys m2 s1) m3
 compute (e@(UnionOverrideLeft a b)) = run(compile e)
 
 compute (UnionOverrideRight (Base rep x) (Singleton k v)) = addkv (k,v) x (\ new old -> new) -- The value on the right is preferred over the left, so 'addkv' chooses 'new'
