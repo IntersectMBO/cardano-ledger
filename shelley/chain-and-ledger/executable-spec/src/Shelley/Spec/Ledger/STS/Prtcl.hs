@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,7 +25,6 @@ where
 import Cardano.Binary
   ( FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
-    decodeListLenOf,
     encodeListLen,
   )
 import qualified Cardano.Crypto.VRF as VRF
@@ -62,6 +62,7 @@ import Shelley.Spec.Ledger.LedgerState (OBftSlot)
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
+import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (BlockNo, SlotNo)
 
 data PRTCL crypto
@@ -87,11 +88,14 @@ instance Crypto crypto => ToCBOR (PrtclState crypto) where
 
 instance Crypto crypto => FromCBOR (PrtclState crypto) where
   fromCBOR =
-    decodeListLenOf 3
-      >> PrtclState
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+    decodeRecordNamed
+      "PrtclState"
+      (const 3)
+      ( PrtclState
+          <$> fromCBOR
+          <*> fromCBOR
+          <*> fromCBOR
+      )
 
 instance Crypto crypto => NoUnexpectedThunks (PrtclState crypto)
 

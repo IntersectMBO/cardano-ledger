@@ -16,10 +16,7 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeListLen,
-    decodeWord,
     encodeListLen,
-    matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
@@ -43,6 +40,7 @@ import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Shelley.Spec.Ledger.TxData
   ( DCert (..),
@@ -103,28 +101,23 @@ instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (POOL crypto))
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
+  fromCBOR = decodeRecordSum "PredicateFailure (POOL crypto)" $
+    \case
       0 -> do
-        matchSize "StakePoolNotRegisteredOnKeyPOOL" 2 n
         kh <- fromCBOR
-        pure $ StakePoolNotRegisteredOnKeyPOOL kh
+        pure (2, StakePoolNotRegisteredOnKeyPOOL kh)
       1 -> do
         ce <- fromCBOR
         e <- fromCBOR
         em <- fromCBOR
-        matchSize "StakePoolRetirementWrongEpochPOOL" 4 n
-        pure $ StakePoolRetirementWrongEpochPOOL ce e em
+        pure (4, StakePoolRetirementWrongEpochPOOL ce e em)
       2 -> do
-        matchSize "WrongCertificateTypePOOL" 2 n
         ct <- fromCBOR
-        pure $ WrongCertificateTypePOOL ct
+        pure (2, WrongCertificateTypePOOL ct)
       3 -> do
-        matchSize "StakePoolCostTooLowPOOL" 3 n
         pc <- fromCBOR
         mc <- fromCBOR
-        pure $ StakePoolCostTooLowPOOL pc mc
+        pure (3, StakePoolCostTooLowPOOL pc mc)
       k -> invalidKey k
 
 poolDelegationTransition :: Typeable crypto => TransitionRule (POOL crypto)

@@ -20,7 +20,7 @@ module Shelley.Spec.Ledger.Credential
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeListLen)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8, asum)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -39,7 +39,7 @@ import Shelley.Spec.Ledger.Serialization
   ( CBORGroup (..),
     FromCBORGroup (..),
     ToCBORGroup (..),
-    decodeRecordNamed,
+    decodeRecordSum,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
@@ -112,12 +112,15 @@ instance
   (Typeable kr, Crypto crypto) =>
   FromCBOR (Credential kr crypto)
   where
-  fromCBOR =
-    decodeRecordNamed "Credential" (const 2) $
-      decodeWord >>= \case
-        0 -> KeyHashObj <$> fromCBOR
-        1 -> ScriptHashObj <$> fromCBOR
-        k -> invalidKey k
+  fromCBOR = decodeRecordSum "Credential" $
+    \case
+      0 -> do
+        x <- fromCBOR
+        pure (2, KeyHashObj x)
+      1 -> do
+        x <- fromCBOR
+        pure (2, ScriptHashObj x)
+      k -> invalidKey k
 
 instance ToCBORGroup Ptr where
   toCBORGroup (Ptr sl txIx certIx) =

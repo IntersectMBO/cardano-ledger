@@ -59,10 +59,9 @@ import Cardano.Binary
     DecoderError (..),
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
-    decodeListLen,
-    decodeWord,
+    decodeBreakOr,
+    decodeListLenOrIndef,
     encodeListLen,
-    matchSize,
   )
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -84,7 +83,7 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Word (Word16, Word64, Word8)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Serialization (ratioFromCBOR, ratioToCBOR)
+import Shelley.Spec.Ledger.Serialization (decodeRecordSum, ratioFromCBOR, ratioToCBOR)
 import Shelley.Spec.NonIntegral (ln')
 
 data E34
@@ -171,15 +170,12 @@ invalidKey :: Word -> Decoder s a
 invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)
 
 instance FromCBOR Nonce where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
-      0 -> do
-        matchSize "NeutralNonce" 1 n
-        pure NeutralNonce
+  fromCBOR = decodeRecordSum "Nonce" $
+    \case
+      0 -> pure (1, NeutralNonce)
       1 -> do
-        matchSize "Nonce" 2 n
-        Nonce <$> fromCBOR
+        x <- fromCBOR
+        pure (2, Nonce x)
       k -> invalidKey k
 
 deriving anyclass instance ToJSON Nonce
@@ -264,11 +260,21 @@ instance ToCBOR a => ToCBOR (StrictMaybe a) where
 
 instance FromCBOR a => FromCBOR (StrictMaybe a) where
   fromCBOR = do
-    n <- decodeListLen
-    case n of
-      0 -> pure SNothing
-      1 -> SJust <$> fromCBOR
-      _ -> fail "unknown tag"
+    maybeN <- decodeListLenOrIndef
+    case maybeN of
+      Just 0 -> pure SNothing
+      Just 1 -> SJust <$> fromCBOR
+      Just _ -> fail "too many elements in length-style decoding of StrictMaybe."
+      Nothing -> do
+        isBreak <- decodeBreakOr
+        if isBreak
+          then pure SNothing
+          else do
+            x <- fromCBOR
+            isBreak2 <- decodeBreakOr
+            if isBreak2
+              then pure (SJust x)
+              else fail "too many elements in break-style decoding of StrictMaybe."
 
 instance ToJSON a => ToJSON (StrictMaybe a) where
   toJSON = toJSON . strictMaybeToMaybe
