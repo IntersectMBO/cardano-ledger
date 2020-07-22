@@ -19,7 +19,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫))
+import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
@@ -232,7 +232,7 @@ delegationTransition = do
 
       pure $
         ds
-          { _delegations = eval (_delegations ds ∪ (singleton hk dpool))
+          { _delegations = eval (_delegations ds ⨃ (singleton hk dpool))
           }
     DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
@@ -261,7 +261,7 @@ delegationTransition = do
 
       pure $
         ds
-          { _fGenDelegs = eval ((_fGenDelegs ds) ∪ (singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
+          { _fGenDelegs = eval ((_fGenDelegs ds) ⨃ (singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
           }
     DCertMir (MIRCert targetPot credCoinMap) -> do
       sp <- liftSTS $ asks stabilityWindow
