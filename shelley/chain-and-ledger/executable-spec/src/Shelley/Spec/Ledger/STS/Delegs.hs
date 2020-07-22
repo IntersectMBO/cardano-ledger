@@ -27,7 +27,7 @@ import Cardano.Binary
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans, (?!), (?!:))
-import Data.Map as Map
+import Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word8)

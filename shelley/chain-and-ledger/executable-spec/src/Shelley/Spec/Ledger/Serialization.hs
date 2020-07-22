@@ -88,8 +88,8 @@ import Data.IP
     toHostAddress,
     toHostAddress6,
   )
-import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
