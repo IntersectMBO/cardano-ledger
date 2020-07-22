@@ -30,7 +30,6 @@ import Data.Char (ord)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import qualified Data.Set as Set
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -148,6 +147,19 @@ ex6 = rng (singleton 'z' 2) ⋪ m0
 ex7 :: Exp Bool
 ex7 = 70 ∉ (dom m1)
 
+
+z1:: Map Int String
+z1 = Map.fromList [(3, "c"), (4, "d"), (5, "e"), (6, "f"), (10, "j"), (11, "k"), (21, "v")]
+
+z2 :: Set.Set Int
+z2 = Set.fromList [4,6,11,13,2]
+
+z3 :: Map Int String
+z3 = Map.fromList [(9,"3"),(10,"j"),(30,"a")]
+
+z4::Map Int String
+z4 =  Map.fromList [(3, "c"), (5, "e"), (10, "j"), (21, "v"), (9,"3"),(30,"a")]
+
 -- ===================== test that compute works ======================
 
 -- Test that computing  x::(Exp t) computes to the given object with type t.
@@ -182,6 +194,8 @@ eval_tests =
       evalTest "Range exclude 1" (l4 ⋫ Set.empty) (UnSafeList l4),
       evalTest "Range exclude 2" (l4 ⋫ Fail) (UnSafeList l4),
       evalTest "Range exclude 3" (l4 ⋫ (Set.fromList ["m", "Z"])) (UnSafeList [(2, "a"), (5, "z"), (6, "b"), (7, "r"), (12, "w"), (34, "a"), (50, "q"), (51, "l")]),
+      evalTest "DomExclude Union" ((z2 ⋪ z1) ∪ z3) z4,
+
       eval_compile (((dom stkcred) ◁ deleg) ▷ (dom stpool)),
       eval_compile (l4 ⋫ (Set.fromList ["m", "Z"])),
       eval_compile (m0 ∪ (singleton 3 'b')),
