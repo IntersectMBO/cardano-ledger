@@ -261,7 +261,7 @@ delegationTransition = do
 
       pure $
         ds
-          { _fGenDelegs = eval ((_fGenDelegs ds) ∪ (singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
+          { _fGenDelegs = eval ((_fGenDelegs ds) ⨃ (singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
           }
     DCertMir (MIRCert targetPot credCoinMap) -> do
       sp <- liftSTS $ asks stabilityWindow
