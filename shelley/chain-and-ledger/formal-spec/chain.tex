@@ -246,22 +246,22 @@ It has no environment or signal, and the state is $\EpochState$.
   %
   \emph{Helper function}
   \begin{align*}
-      & \fun{mirUpdates} \in \InstantaneousRewards \to \StakeCreds \to
-      (\AddrRWD \mapsto \Coin)\times(\AddrRWD \mapsto \Coin)
+      & \fun{mirUpdates} \in \InstantaneousRewards \to (\StakeCredential\mapsto\Coin) \to \\
+      & ~~~(\AddrRWD \mapsto \Coin)\times(\AddrRWD \mapsto \Coin)
       \\
-      & \fun{mirUpdates}~(\var{irReserves},~\var{irTreasury})~\var{stkCreds} =
+      & \fun{mirUpdates}~(\var{irReserves},~\var{irTreasury})~\var{rewards} =
       (\var{updateR},~\var{updateT})\\
       & ~~~~\where \\
       & ~~~~~~~~~\var{updateR} =
         \left\{
         \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
-        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{stkCreds})\restrictdom\var{irReserves}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irReserves}
         \right\}
         \\
       & ~~~~~~~~~\var{updateT} =
         \left\{
         \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
-        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{stkCreds})\restrictdom\var{irTreasury}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irTreasury}
         \right\}
         \\
   \end{align*}
@@ -285,13 +285,13 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
   \begin{equation}\label{eq:mir}
     \inference[MIR]
     {
-      (\var{stkCreds},~\var{rewards},~\var{delegations},~
+      (\var{rewards},~\var{delegations},~
       \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
         \leteq \var{ds}
       \\
       (\var{treasury},~\var{reserves})\leteq\var{acnt}
       &
-      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{stkCreds}
+      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{rewards}
       \\
       \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateR}}v
       &
@@ -307,8 +307,7 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
       \var{rewards'}\leteq\var{rewards}\unionoverridePlus\var{updateR}\unionoverridePlus\var{updateT}
       \\
       \var{ds'} \leteq
-      (\var{stkCreds},~
-      \varUpdate{\var{rewards}'},~\var{delegations},~
+      (\varUpdate{\var{rewards}'},~\var{delegations},~
       \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},
       ~(\varUpdate{\emptyset},~\varUpdate{\emptyset}))
     }
@@ -337,13 +336,13 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
   \begin{equation}\label{eq:mir-skip}
     \inference[MIR-Skip]
     {
-      (\var{stkCreds},~\var{rewards},~\var{delegations},~
+      (\var{rewards},~\var{delegations},~
       \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
         \leteq \var{ds}
       \\
       (\var{treasury},~\var{reserves})\leteq\var{acnt}
       &
-      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{stkCreds}
+      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{rewards}
       \\
       \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateR}}v
       &
@@ -352,7 +351,7 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
       \var{totR}>\var{reserves}~\lor~\var{totT}>\var{treasury}
       \\~\\
       \var{ds'} \leteq
-      (\var{stkCreds},~\var{rewards},~\var{delegations},~
+      (\var{rewards},~\var{delegations},~
       \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},
       ~(\varUpdate{\emptyset},~\varUpdate{\emptyset}))
     }
@@ -519,7 +518,7 @@ In the first case, the new epoch state is updated as follows:
       }
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
-          (\var{acnt},~\var{ss},~\var{ls},~\wcard,~\var{pp}) & \var{es'''} \\
+          (\var{acnt},~\var{ss},~\wcard,~\wcard,~\var{pp}) & \var{es'''} \\
          (\wcard,~\var{pstake_{set}},~\wcard,~\wcard) & \var{ss} \\
          (\var{stake},~\var{delegs},~\var{poolPrms}) & \var{pstake_{set}} \\
          total & \sum_{\_ \mapsto c\in\var{stake}} c \\
@@ -955,7 +954,7 @@ slot is removed. The helper function $\fun{adoptGenesisDelegs}$ accomplishes the
       \leteq\var{es}
       \\
       & ~~~~~~~~~~
-      (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
+      (~\var{rewards},~\var{delegations},~\var{ptrs},
       ~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})\leteq\var{ds}
       \\
       & ~~~~~~~~~~\var{curr}\leteq
@@ -1774,7 +1773,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           & (\wcard,~\wcard,~\var{ls},~\wcard)
           & \var{es}
           \\
-          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~\wcard))
+          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs},~\wcard),~\wcard))
           & \var{ls}
       \end{array}
   \end{align*}
@@ -1862,7 +1861,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \leteq\var{nes'} \\
         (\var{acnt},~\wcard,\var{ls},~\wcard,~\var{pp'})\leteq\var{es}\\
         ( \wcard,
-          ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~
+          ( (\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs},~\wcard),~
           (\wcard,~\wcard,~\wcard)))\leteq\var{ls}\\
           \var{ne} \leteq  \var{e_1} \neq \var{e_2}\\
           \eta_{ph} \leteq \prevHashToNonce{(\lastAppliedHash{lab})} \\
@@ -2049,8 +2048,8 @@ candidate nonces for Shelley.
                             \emptyset \\
                             \emptyset \\
                             \emptyset \\
-                            \emptyset \\
                             \var{genDelegs} \\
+                            \emptyset \\
                           \end{array}
                         \right) \\
                         \left(
