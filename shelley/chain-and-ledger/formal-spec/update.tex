@@ -41,13 +41,13 @@ We use the abstract type $\KeyHashGen$ to represent hashes of genesis
 (public verification) keys, which have type $\VKeyGen$.
 Genesis keys are the keys belonging to the federated
 nodes running the Cardano system currently (also referred to as core nodes).
-The the regular user verification keys are of a type $\VKey$, distinct from the
+The regular user verification keys are of a type $\VKey$, distinct from the
 genesis key type, $\VKeyGen$. Similarly, the type hashes of these
 are distinct, $\KeyHash$ and $\KeyHashGen$ respectively.
 
 Currently, updates can only be proposed and voted on by the owners of the genesis keys.
 The process of decentralization will result in the core nodes gradually giving up
-some of their priviledges and responsibilities to the network,
+some of their privileges and responsibilities to the network,
 eventually give them \textit{all} up.
 The update proposal mechanism will not be decentralization in the Shelley era, however.
 For more on the decentralization process, see Section~\ref{sec:new-epoch-trans}.
@@ -74,7 +74,7 @@ The transition $\mathsf{PPUP}$ has three rules:
 \begin{itemize}
   \item PP-Update-Empty : No new updates were proposed, do nothing.
   \item PP-Update-Current : Some new updates $\var{up}$ were proposed
-    for the current epoch, and the current slot is not toor far into the epoch.
+    for the current epoch, and the current slot is not too far into the epoch.
     Add these to the existing proposals using a right override. That is, if a genesis key
     has previously submitted an update proposal, replace it with its new
     proposal in $\var{pup}$.
@@ -85,9 +85,10 @@ The transition $\mathsf{PPUP}$ has three rules:
     proposal in $\var{pup}$.
 
     The future update proposals will become update proposals on the next epoch,
-    provided they protocal versions can follow.
-    See the $\mathsf{NEWPP}$ transition in Figure~\ref{fig:rules:new-proto-param}
-
+    provided they contain no proposals for a protocol version which cannot follow
+    from the current protocol version.
+    See the $\mathsf{NEWPP}$ transition in Figure~\ref{fig:rules:new-proto-param},
+    and the function $\fun{updatePpup}$ from Figure~\ref{fig:ts-types:new-proto-param}.
 \end{itemize}
 
 This rule has the following predicate failures:
@@ -98,8 +99,9 @@ This rule has the following predicate failures:
 \item In the case of \var{pup} being non-empty, if the check $\dom pup \subseteq
   \dom genDelegs$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
   can be used in the protocol parameter update.
-\item If a protocol parameter update in \var{pup} cannot follow the current
-  protocol parameter, there is a \emph{PVCannotFollow} failure.
+\item If a protocol parameter update in \var{pup} contains a proposal for a
+  protocol version which cannot follow from the current protocol version,
+  there is a \emph{PVCannotFollow} failure.
   Note that $\fun{pvCanFollow}$ is defined in Figure~\ref{fig:ts-types:pp-update}.
 \end{enumerate}
 
