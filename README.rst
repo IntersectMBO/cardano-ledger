@@ -3,7 +3,7 @@
    <p align="center">
      <a href="https://buildkite.com/input-output-hk/cardano-ledger-specs"><img alt="Build Status" src="https://img.shields.io/buildkite/a94c23758aeb2858869d5e256e466fc78e03a5baf1954cb8cc.svg?style=for-the-badge"/></a>
      <a href="https://coveralls.io/github/input-output-hk/cardano-ledger-specs?branch=master"><img alt="Coverage Status" src="https://img.shields.io/coveralls/github/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/></a>
-     <a href='https://docs.cardano.org/projects/cardano-ledger-specs/en/latest/?badge=latest'><img src='https://readthedocs.com/projects/cardano-foundation-cardano-ledger-specs/badge/?version=latest?style=for-the-badge' alt='Documentation Status'/></a>
+     <a href='https://docs.cardano.org/projects/cardano-ledger-specs/en/latest/?badge=latest'><img src='https://readthedocs.com/projects/cardano-foundation-cardano-ledger-specs/badge/?version=latest&style=for-the-badge' alt='Documentation Status'/></a>
      <a href="https://github.com/input-output-hk/cardano-ledger-specs/blob/master/LICENSE"><img src="https://img.shields.io/github/license/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/></a>
    </p>
 
