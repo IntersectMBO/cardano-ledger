@@ -8,7 +8,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -46,6 +45,7 @@ module Shelley.Spec.Ledger.Tx
     hashScript,
     txwitsScript,
     extractKeyHash,
+    extractKeyHashWitnessSet,
     extractScriptHash,
     getKeyCombinations,
     getKeyCombination,
@@ -92,6 +92,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.Scripts
@@ -118,7 +119,7 @@ type family HKD f a where
   HKD f a = f a
 
 data WitnessSetHKD f crypto = WitnessSet'
-  { addrWits' :: !(HKD f (Set (WitVKey crypto))),
+  { addrWits' :: !(HKD f (Set (WitVKey crypto 'Witness))),
     msigWits' :: !(HKD f (Map (ScriptHash crypto) (MultiSig crypto))),
     bootWits' :: !(HKD f (Set (BootstrapWitness crypto))),
     txWitsBytes :: LByteString
@@ -144,14 +145,15 @@ instance Crypto crypto => ToCBOR (WitnessSetHKD Identity crypto) where
   toCBOR = encodePreEncoded . BSL.toStrict . txWitsBytes
 
 instance Crypto crypto => Semigroup (WitnessSetHKD Identity crypto) where
-  (WitnessSet a b c) <> (WitnessSet a' b' c') = WitnessSet (a <> a') (b <> b') (c <> c')
+  (WitnessSet a b c) <> (WitnessSet a' b' c') =
+    WitnessSet (a <> a') (b <> b') (c <> c')
 
 instance Crypto crypto => Monoid (WitnessSetHKD Identity crypto) where
   mempty = WitnessSet mempty mempty mempty
 
 pattern WitnessSet ::
   Crypto crypto =>
-  Set (WitVKey crypto) ->
+  Set (WitVKey crypto 'Witness) ->
   Map (ScriptHash crypto) (MultiSig crypto) ->
   Set (BootstrapWitness crypto) ->
   WitnessSet crypto
@@ -221,6 +223,8 @@ pattern Tx {_body, _witnessSet, _metadata} <-
 
 {-# COMPLETE Tx #-}
 
+instance Crypto c => HashAnnotated (Tx c) c
+
 segwitTx ::
   Crypto crypto =>
   Annotator (TxBody crypto) ->
@@ -251,15 +255,20 @@ segwitTx
 
 decodeWits :: forall crypto s. Crypto crypto => Decoder s (Annotator (WitnessSet crypto))
 decodeWits = do
-  (mapParts, annBytes) <- withSlice $ decodeMapContents $
-    decodeWord >>= \case
-      0 -> decodeList fromCBOR >>= \x ->
-        pure (\ws -> ws {addrWits' = Set.fromList <$> sequence x})
-      1 -> decodeList fromCBOR >>= \x ->
-        pure (\ws -> ws {msigWits' = keyBy hashScript <$> sequence x})
-      2 -> decodeList fromCBOR >>= \x ->
-        pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
-      k -> invalidKey k
+  (mapParts, annBytes) <-
+    withSlice $
+      decodeMapContents $
+        decodeWord >>= \case
+          0 ->
+            decodeList fromCBOR >>= \x ->
+              pure (\ws -> ws {addrWits' = Set.fromList <$> sequence x})
+          1 ->
+            decodeList fromCBOR >>= \x ->
+              pure (\ws -> ws {msigWits' = keyBy hashScript <$> sequence x})
+          2 ->
+            decodeList fromCBOR >>= \x ->
+              pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
+          k -> invalidKey k
   let witSet = foldr ($) emptyWitnessSetHKD mapParts
       emptyWitnessSetHKD :: WitnessSetHKD Annotator crypto
       emptyWitnessSetHKD =
@@ -286,17 +295,19 @@ instance
   toCBOR tx = encodePreEncoded . BSL.toStrict $ txFullBytes tx
 
 instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
-  fromCBOR = annotatorSlice $ decodeRecordNamed "Tx" (const 3) $ do
-    body <- fromCBOR
-    wits <- decodeWits
-    meta <- (decodeNullMaybe fromCBOR :: Decoder s (Maybe (Annotator MetaData)))
-    pure $ Annotator $ \fullBytes bytes ->
-      Tx'
-        { _body' = runAnnotator body fullBytes,
-          _witnessSet' = runAnnotator wits fullBytes,
-          _metadata' = (maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta),
-          txFullBytes = bytes
-        }
+  fromCBOR = annotatorSlice $
+    decodeRecordNamed "Tx" (const 3) $ do
+      body <- fromCBOR
+      wits <- decodeWits
+      meta <- (decodeNullMaybe fromCBOR :: Decoder s (Maybe (Annotator MetaData)))
+      pure $
+        Annotator $ \fullBytes bytes ->
+          Tx'
+            { _body' = runAnnotator body fullBytes,
+              _witnessSet' = runAnnotator wits fullBytes,
+              _metadata' = (maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta),
+              txFullBytes = bytes
+            }
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -313,7 +324,7 @@ instance
   MultiSignatureScript (MultiSig crypto) crypto
   where
   validateScript = validateNativeMultiSigScript
-  hashScript = \x -> hashAnyScript (MultiSigScript x)
+  hashScript = hashMultiSigScript
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
@@ -358,6 +369,15 @@ extractKeyHash =
         KeyHashObj hk -> Just hk
         _ -> Nothing
     )
+
+extractKeyHashWitnessSet ::
+  forall (r :: KeyRole) crypto.
+  [Credential r crypto] ->
+  Set (KeyHash 'Witness crypto)
+extractKeyHashWitnessSet credentials = foldr accum Set.empty credentials
+  where
+    accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans
+    accum _other ans = ans
 
 extractScriptHash ::
   [Credential 'Payment crypto] ->

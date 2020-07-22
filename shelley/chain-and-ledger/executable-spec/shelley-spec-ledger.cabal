@@ -26,26 +26,24 @@ library
                      Shelley.Spec.Ledger.BaseTypes
                      Shelley.Spec.Ledger.BlockChain
                      Shelley.Spec.Ledger.Coin
+                     Shelley.Spec.Ledger.Core
                      Shelley.Spec.Ledger.Credential
-                     Shelley.Spec.Ledger.Genesis
-                     Shelley.Spec.Ledger.Keys
-                     Shelley.Spec.Ledger.UTxO
-                     Shelley.Spec.Ledger.Slot
-                     Shelley.Spec.Ledger.PParams
-                     Shelley.Spec.Ledger.Rewards
+                     Shelley.Spec.Ledger.Delegation.Certificates
+                     Shelley.Spec.Ledger.Delegation.PoolParams
                      Shelley.Spec.Ledger.EpochBoundary
+                     Shelley.Spec.Ledger.Genesis
+                     Shelley.Spec.Ledger.Hashing
+                     Shelley.Spec.Ledger.Keys
                      Shelley.Spec.Ledger.LedgerState
                      Shelley.Spec.Ledger.MetaData
-                     Shelley.Spec.Ledger.Serialization
-                     Shelley.Spec.Ledger.Delegation.PoolParams
-                     Shelley.Spec.Ledger.Delegation.Certificates
                      Shelley.Spec.Ledger.OCert
                      Shelley.Spec.Ledger.Orphans
-                     Shelley.Spec.Ledger.Tx
-                     Shelley.Spec.Ledger.TxData
+                     Shelley.Spec.Ledger.PParams
+                     Shelley.Spec.Ledger.Rewards
                      Shelley.Spec.Ledger.Scripts
+                     Shelley.Spec.Ledger.Serialization
+                     Shelley.Spec.Ledger.Slot
                      Shelley.Spec.Ledger.STS.Bbody
-                     Shelley.Spec.Ledger.STS.Tick
                      Shelley.Spec.Ledger.STS.Chain
                      Shelley.Spec.Ledger.STS.Deleg
                      Shelley.Spec.Ledger.STS.Delegs
@@ -64,9 +62,14 @@ library
                      Shelley.Spec.Ledger.STS.Prtcl
                      Shelley.Spec.Ledger.STS.Rupd
                      Shelley.Spec.Ledger.STS.Snap
+                     Shelley.Spec.Ledger.STS.Tick
+                     Shelley.Spec.Ledger.STS.Tickn
                      Shelley.Spec.Ledger.STS.Updn
                      Shelley.Spec.Ledger.STS.Utxo
                      Shelley.Spec.Ledger.STS.Utxow
+                     Shelley.Spec.Ledger.Tx
+                     Shelley.Spec.Ledger.TxData
+                     Shelley.Spec.Ledger.UTxO
 
                      Shelley.Spec.Ledger.Crypto
 
@@ -91,8 +94,6 @@ library
     base >= 4.7 && < 5,
     base16-bytestring,
     binary,
-    binary,
-    byron-spec-ledger,
     bytestring,
     cardano-binary,
     cardano-crypto,
@@ -109,60 +110,70 @@ library
     iproute,
     mtl,
     network,
+    quiet,
+    scientific,
     shelley-spec-non-integral,
     small-steps,
     stm,
     text,
     time,
-    transformers
+    transformers,
+    -- Added for clone of Core
+    bimap,
+    hashable,
+    goblins
 
 test-suite shelley-spec-ledger-test
     type:                exitcode-stdio-1.0
     main-is:             Tests.hs
-    other-modules:       Test.Shelley.Spec.Ledger.Orphans
-                         Test.Shelley.Spec.Ledger.Utils
-                         Test.Cardano.Crypto.VRF.Fake
-                         Test.Shelley.Spec.Ledger.Address
-                         Test.Shelley.Spec.Ledger.Address.Bootstrap
-                         Test.Shelley.Spec.Ledger.CDDL
-                         Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-                         Test.Shelley.Spec.Ledger.Examples
-                         Test.Shelley.Spec.Ledger.Fees
-                         Test.Shelley.Spec.Ledger.Generator.Block
-                         Test.Shelley.Spec.Ledger.Generator.Constants
-                         Test.Shelley.Spec.Ledger.Generator.Core
-                         Test.Shelley.Spec.Ledger.Generator.Delegation
-                         Test.Shelley.Spec.Ledger.Generator.Genesis
-                         Test.Shelley.Spec.Ledger.Generator.Presets
-                         Test.Shelley.Spec.Ledger.Generator.Trace.Chain
-                         Test.Shelley.Spec.Ledger.Generator.Trace.DCert
-                         Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
-                         Test.Shelley.Spec.Ledger.Generator.Update
-                         Test.Shelley.Spec.Ledger.Generator.Utxo
-                         Test.Shelley.Spec.Ledger.Genesis.Example
-                         Test.Shelley.Spec.Ledger.Genesis.Properties
-                         Test.Shelley.Spec.Ledger.MultiSigExamples
-                         Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
-                         Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
-                         Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests
-                         Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
-                         Test.Shelley.Spec.Ledger.PropertyTests
-                         Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
-                         Test.Shelley.Spec.Ledger.Rules.TestChain
-                         Test.Shelley.Spec.Ledger.Rules.TestDeleg
-                         Test.Shelley.Spec.Ledger.Rules.TestDelegs
-                         Test.Shelley.Spec.Ledger.Rules.TestLedger
-                         Test.Shelley.Spec.Ledger.Rules.TestNewEpoch
-                         Test.Shelley.Spec.Ledger.Rules.TestPool
-                         Test.Shelley.Spec.Ledger.Rules.TestPoolreap
-                         Test.Shelley.Spec.Ledger.Rules.TestUtxo
-                         Test.Shelley.Spec.Ledger.Rules.TestUtxow
-                         Test.Shelley.Spec.Ledger.Serialization
-                         Test.Shelley.Spec.Ledger.SerializationProperties
-                         Test.Shelley.Spec.Ledger.Shrinkers
-                         Test.Shelley.Spec.Ledger.STSTests
-                         Test.Shelley.Spec.Ledger.UnitTests
-                         Test.TestScenario
+    other-modules:
+      Test.Cardano.Crypto.VRF.Fake
+      Test.Shelley.Spec.Ledger.Address.Bootstrap
+      Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+      Test.Shelley.Spec.Ledger.Examples
+      Test.Shelley.Spec.Ledger.Fees
+      Test.Shelley.Spec.Ledger.Generator.Block
+      Test.Shelley.Spec.Ledger.Generator.Constants
+      Test.Shelley.Spec.Ledger.Generator.Core
+      Test.Shelley.Spec.Ledger.Generator.Delegation
+      Test.Shelley.Spec.Ledger.Generator.Presets
+      Test.Shelley.Spec.Ledger.Generator.Trace.Chain
+      Test.Shelley.Spec.Ledger.Generator.Trace.DCert
+      Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
+      Test.Shelley.Spec.Ledger.Generator.Update
+      Test.Shelley.Spec.Ledger.Generator.Utxo
+      Test.Shelley.Spec.Ledger.MultiSigExamples
+      Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
+      Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
+      Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests
+      Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
+      Test.Shelley.Spec.Ledger.Orphans
+      Test.Shelley.Spec.Ledger.PropertyTests
+      Test.Shelley.Spec.Ledger.Rewards
+      Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
+      Test.Shelley.Spec.Ledger.Rules.TestChain
+      Test.Shelley.Spec.Ledger.Rules.TestDeleg
+      Test.Shelley.Spec.Ledger.Rules.TestDelegs
+      Test.Shelley.Spec.Ledger.Rules.TestLedger
+      Test.Shelley.Spec.Ledger.Rules.TestPool
+      Test.Shelley.Spec.Ledger.Rules.TestPoolreap
+      Test.Shelley.Spec.Ledger.Rules.TestUtxo
+      Test.Shelley.Spec.Ledger.Rules.TestUtxow
+      Test.Shelley.Spec.Ledger.Serialisation
+      Test.Shelley.Spec.Ledger.Serialisation.CDDL
+      Test.Shelley.Spec.Ledger.Serialisation.Generators
+      Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
+      Test.Shelley.Spec.Ledger.Serialisation.Golden.Address
+      Test.Shelley.Spec.Ledger.Serialisation.Golden.Encoding
+      Test.Shelley.Spec.Ledger.Serialisation.Golden.Genesis
+      Test.Shelley.Spec.Ledger.Serialisation.Tripping.CBOR
+      Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON
+      Test.Shelley.Spec.Ledger.SetAlgTests
+      Test.Shelley.Spec.Ledger.Shrinkers
+      Test.Shelley.Spec.Ledger.STSTests
+      Test.Shelley.Spec.Ledger.UnitTests
+      Test.Shelley.Spec.Ledger.Utils
+      Test.TestScenario
     hs-source-dirs:      test
     ghc-options:
       -threaded
@@ -191,6 +202,7 @@ test-suite shelley-spec-ledger-test
       bytestring,
       bytestring-conversion,
       cardano-binary,
+      cardano-crypto,
       cardano-crypto-class,
       cardano-crypto-test,
       cardano-crypto-wrapper,
@@ -208,10 +220,13 @@ test-suite shelley-spec-ledger-test
       generic-random,
       hedgehog,
       hedgehog-quickcheck,
+      HUnit,
       iproute,
       multiset,
       process-extras,
+      scientific,
       small-steps,
+      small-steps-test,
       tasty,
       tasty-hedgehog,
       tasty-hunit,
@@ -230,6 +245,7 @@ benchmark mainbench
                     Test.Shelley.Spec.Ledger.Examples,
                     Test.Shelley.Spec.Ledger.Generator.Constants,
                     Test.Shelley.Spec.Ledger.Generator.Core,
+                    Test.Shelley.Spec.Ledger.Orphans,
                     Test.Shelley.Spec.Ledger.Utils,
                     Test.Cardano.Crypto.VRF.Fake
   build-depends:    base,
@@ -237,6 +253,7 @@ benchmark mainbench
                     cardano-binary,
                     cardano-crypto,
                     cardano-crypto-class,
+                    cardano-crypto-wrapper,
                     cardano-prelude,
                     cardano-slotting,
                     cryptonite,
@@ -248,11 +265,16 @@ benchmark mainbench
                     tasty-quickcheck,
                     tasty-hunit,
                     tasty,
+                    time,
+                    scientific,
                     small-steps,
+                    small-steps-test,
                     criterion,
                     random,
                     containers,
-                    MonadRandom
+                    MonadRandom,
+                    deepseq,
+                    scientific
   ghc-options:
       -threaded
       -rtsopts
@@ -262,6 +284,7 @@ benchmark mainbench
       -Wincomplete-record-updates
       -Wincomplete-uni-patterns
       -Wredundant-constraints
+      -O
   if (!flag(development))
     ghc-options:
       -Werror

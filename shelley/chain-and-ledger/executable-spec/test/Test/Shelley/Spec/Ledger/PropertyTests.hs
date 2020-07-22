@@ -4,15 +4,18 @@
 
 module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTests) where
 
+import Test.Shelley.Spec.Ledger.Address.Bootstrap
+  ( bootstrapHashTest,
+  )
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
     onlyValidLedgerSignalsAreGenerated,
     relevantCasesAreCovered,
   )
 import Test.Shelley.Spec.Ledger.Rules.TestChain
-  ( constantSumPots,
+  ( adaPreservationChain,
+    constantSumPots,
     nonNegativeDeposits,
-    preservationOfAda,
     removedAfterPoolreap,
   )
 import Test.Shelley.Spec.Ledger.Rules.TestLedger
@@ -46,8 +49,9 @@ minimalPropertyTests =
   testGroup
     "Minimal Property Tests"
     [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered,
-      TQC.testProperty "total amount of Ada is preserved" preservationOfAda,
-      TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated
+      TQC.testProperty "total amount of Ada is preserved (Chain)" adaPreservationChain,
+      TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated,
+      bootstrapHashTest
     ]
 
 -- | 'TestTree' of property-based testing properties.
@@ -115,7 +119,7 @@ propertyTests =
         "STS Rules - NewEpoch Properties"
         [ TQC.testProperty
             "total amount of Ada is preserved"
-            preservationOfAda
+            adaPreservationChain
         ],
       testGroup
         "STS Rules - MIR certificates"

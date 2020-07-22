@@ -14,13 +14,13 @@ as much as possible,
 except for the following changes and additions:
 
 \begin{itemize}
-  \item $\ScriptHash$ is the type of hashes
+  \item $\PolicyID$ is the type of hashes
   of Plutus and MSig scripts (and any other scripts added in the future)
 
   \item $\RdmrsHash$ is the type of hashes of the indexed redeemer structure
   included in the transaction (details about this structure below)
 
-  \item $\Token,~\Quantity$ are types
+  \item $\AssetID,~\Quantity$ are types
   related to native multicurrency on the ledger.
 
   \item  $\ScriptMSig$ is the native multisignature scripts already supported.
@@ -58,10 +58,10 @@ except for the following changes and additions:
   \item $\Value$ is the multicurrency type used to represent
   both fungible and non fungible tokens. The key of this finite map type is
   the hash of the monetary policy script for tokens of this currency.
-  This hash is referred to as the ID of the currency. Within a single
-  currency, there may be tokens with different token identifiers
-  (of type $\Token$). Tokens with different currency IDs
-  or different token identifiers are not fungible with each other.
+  This hash is referred to as the $\PolicyID$ of the currency. Within a single
+  currency, tokens belong to an $\AssetID$, which is assigned at the creation
+  the token and can be controlled by monetary policy script. Tokens with different
+  $\PolicyID$s or different $\AssetID$s are not fungible with each other.
   See the note below for a discussion of Ada representation.
 
   \item $\IsFee$ is a tag that indicates when an input has been marked
@@ -152,11 +152,11 @@ except for the following changes and additions:
   below.
 
   \item $\CurItem$ is either the hash of a
-  forging script, the current transaction input being
+  forging script (currency ID), the current transaction input being
   spent, the current reward
   withdrawal, or the current certificate being validated.
-  This current item is a sum type of all the types of things we want to
-  look up $\Data$ for.
+  This current item is a sum type of all the types of things for which we want to
+  run scripts to validate.
 
 \end{itemize}
 
@@ -166,14 +166,15 @@ except for the following changes and additions:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{h} &\ScriptHash & \text{ script hash}\\
+      \var{polid} &\PolicyID & \text{hash of policy scripts}\\
       \var{hdv} &\RdmrsHash & \text{hash of the indexed redeemers structure}\\
-      \var{tok} & \Token & \text{token identifier}\\
+      \var{assetid} & \AssetID & \text{asset identifier}\\
       \var{quan} & \Quantity & \text{quantity of a token}\\
       \var{msig} & \ScriptMSig & \text{Multisig scripts} \\
       \var{plc} & \ScriptPlutus & \text{Plutus scripts of initial Plutus version} \\
       \var{yes} & \Yes & \text{tag type for yes} \\
       \var{no} & \Nope & \text{tag type for no} \\
+      \var{dat} & \Data & \text{the $\Data$ type} \\
     \end{array}
   \end{equation*}
   %
@@ -188,11 +189,6 @@ except for the following changes and additions:
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{scr} & \Script & \ScriptPlutus \uniondistinct \ScriptMSig \\
       \var{isv} & \IsValidating & \Yes \uniondistinct \Nope \\
-      \var{dat}
-      & \Data
-      & \mathbb{N}\uniondistinct\mathbb{H}\uniondistinct(\mathbb{N}\times\seqof{\Data})
-        \uniondistinct\seqof{\Data}\uniondistinct\seqof{\Data \times \Data}
-%      & \text{the $\Data$ type}\\
     \end{array}
   \end{equation*}
 %
@@ -201,7 +197,7 @@ except for the following changes and additions:
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{val} & \Value
-      & \ScriptHash \mapsto (\Token \mapsto \Quantity)
+      & \PolicyID \mapsto (\AssetID \mapsto \Quantity)
 %      & \text{a collection of tokens}
       \\
       \var{isf}
@@ -257,7 +253,7 @@ except for the following changes and additions:
       \\
       \var{cur}
       & \CurItem
-      & \ScriptHash \uniondistinct \TxIn \uniondistinct \Wdrl \uniondistinct \DCert
+      & \CurrencyId \uniondistinct (\TxId \times \Ix) \uniondistinct \AddrRWD \uniondistinct \DCert
 %      & \text{item the script is validated for}
     \end{array}
   \end{equation*}
@@ -269,18 +265,7 @@ except for the following changes and additions:
 \textbf{Data Representation.}
 The type $\Data$ is a Plutus type, however, there is a similar type in the
 ledger. We do not assume these are the same $\Data$, but we do assume there
-is structural equality between them. Often we must represent the empty type,
-$\Nothing$, as a term of type $\Data$. We use the notation defined in
-Figure \ref{fig:defs:todata} to do this.
-
-\begin{figure*}[htb]
-  \begin{align*}
-    \Nothing_d ~\in~& \Data \\
-    & \text{the Data representation of empty type} \\
-  \end{align*}
-  \caption{Empty Data Representation}
-  \label{fig:defs:todata}
-\end{figure*}
+is structural equality between them.
 
 \textbf{Witnessing.}
 In Figure \ref{fig:defs:utxo-shelley-2}, the type $\TxWitness$ contains everything
@@ -556,7 +541,7 @@ The exact representation of tokens in the UTxO and inside transactions
 is an implementation detail, which we omit here.
 Note that it necessarily is equivalent to $\Value$, optimized
 for Ada-only cases, has a unique representation for the Ada token class,
-and does not allow tokens of the Ada currency to have a $\Token$ value
+and does not allow tokens of the Ada currency to have a $\AssetID$ value
 of anything other than $\mathsf{adaToken}$.
 In Figure \ref{fig:defs:functions-helper} are the following helper functions,
 
@@ -599,9 +584,9 @@ $v~ =~ \fun{coinToValue}~ c$ for some $c~\in~\Coin$.
   \emph{Abstract Functions and Values}
   %
   \begin{align*}
-    \mathsf{adaID} \in& ~\ScriptHash
+    \mathsf{adaID} \in& ~\PolicyID
     & \text{Ada currency ID} \\
-    \mathsf{adaToken} \in& ~\Token
+    \mathsf{adaToken} \in& ~\AssetID
     & \text{Ada Token} \\
     \mathsf{co} \in& ~\Quantity \to \Coin
     & \text{type conversion} \\
@@ -664,7 +649,7 @@ are passed to it via this list.
   \emph{Abstract Script Validation Functions}
   %
   \begin{align*}
-     &\fun{hashScript} \in  ~\Script\to \ScriptHash \\
+     &\fun{hashScript} \in  ~\Script\to \PolicyID \\
      &\text{compute script hash} \\~\\
      &\fun{hashData} \in  ~\Data \to \DataHash \\
      &\text{compute hash of data} \\~\\

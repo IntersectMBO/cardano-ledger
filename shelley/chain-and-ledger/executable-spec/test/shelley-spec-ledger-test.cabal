@@ -17,30 +17,39 @@ flag development
 
 library
   exposed-modules:   Test.Cardano.Crypto.VRF.Fake
+                     Test.Shelley.Spec.Ledger.Address.Bootstrap
                      Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
                      Test.Shelley.Spec.Ledger.Examples
+                     Test.Shelley.Spec.Ledger.Fees
                      Test.Shelley.Spec.Ledger.Generator.Block
                      Test.Shelley.Spec.Ledger.Generator.Constants
                      Test.Shelley.Spec.Ledger.Generator.Core
                      Test.Shelley.Spec.Ledger.Generator.Delegation
-                     Test.Shelley.Spec.Ledger.Generator.Genesis
                      Test.Shelley.Spec.Ledger.Generator.Presets
                      Test.Shelley.Spec.Ledger.Generator.Trace.Chain
                      Test.Shelley.Spec.Ledger.Generator.Trace.DCert
                      Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
                      Test.Shelley.Spec.Ledger.Generator.Update
                      Test.Shelley.Spec.Ledger.Generator.Utxo
-                     Test.Shelley.Spec.Ledger.Genesis.Example
-                     Test.Shelley.Spec.Ledger.Genesis.Properties
                      Test.Shelley.Spec.Ledger.MultiSigExamples
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
-                     Test.Shelley.Spec.Ledger.Serialization
-                     Test.Shelley.Spec.Ledger.SerializationProperties
                      Test.Shelley.Spec.Ledger.Shrinkers
                      Test.Shelley.Spec.Ledger.Orphans
                      Test.Shelley.Spec.Ledger.Utils
+                     Test.Shelley.Spec.Ledger.SetAlgTests
+
+                     Test.Shelley.Spec.Ledger.Serialisation
+                     Test.Shelley.Spec.Ledger.Serialisation.CDDL
+                     Test.Shelley.Spec.Ledger.Serialisation.Generators
+                     Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
+                     Test.Shelley.Spec.Ledger.Serialisation.Golden.Address
+                     Test.Shelley.Spec.Ledger.Serialisation.Golden.Encoding
+                     Test.Shelley.Spec.Ledger.Serialisation.Golden.Genesis
+                     Test.Shelley.Spec.Ledger.Serialisation.Tripping.CBOR
+                     Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON
+
   ghc-options:
     -Wall
     -Wcompat
@@ -53,19 +62,25 @@ library
   build-depends:
     aeson,
     base,
+    base16-bytestring,
+    binary,
     byron-spec-ledger,
     bytestring,
     bytestring-conversion,
     cardano-binary,
+    cardano-crypto,
     cardano-crypto-class,
     cardano-crypto-test,
     cardano-crypto-wrapper,
+    cardano-ledger,
+    cardano-ledger-test,
     cardano-prelude,
     cardano-prelude-test,
     cardano-slotting,
     cborg,
     containers,
     cryptonite,
+    directory,
     generic-random,
     hedgehog,
     hedgehog-quickcheck,
@@ -73,8 +88,10 @@ library
     multiset,
     process-extras,
     QuickCheck,
+    scientific,
     shelley-spec-ledger,
     small-steps,
+    small-steps-test,
     tasty,
     tasty-hedgehog,
     tasty-hunit,

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -30,9 +31,9 @@ module Shelley.Spec.Ledger.EpochBoundary
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (▷), (◁))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
+import Control.Iterate.SetAlgebra (dom, eval, (▷), (◁))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -40,27 +41,28 @@ import Data.Ratio ((%))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Delegation.Certificates
-  ( StakeCreds (..),
-    StakePools (..),
-  )
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
-import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxOut (..), getRwdCred)
+import Shelley.Spec.Ledger.TxData (PoolParams, TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Blocks made
-newtype BlocksMade crypto
-  = BlocksMade (Map (KeyHash 'StakePool crypto) Natural)
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
+newtype BlocksMade crypto = BlocksMade
+  { unBlocksMade :: Map (KeyHash 'StakePool crypto) Natural
+  }
+  deriving (Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+  deriving (Show) via Quiet (BlocksMade crypto)
 
 -- | Type of stake as map from hash key to coins associated.
-newtype Stake crypto = Stake {unStake :: (Map (Credential 'Staking crypto) Coin)}
-  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks)
+newtype Stake crypto = Stake
+  { unStake :: (Map (Credential 'Staking crypto) Coin)
+  }
+  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, NFData)
 
 -- | Add two stake distributions
 (⊎) ::
@@ -74,7 +76,7 @@ getStakeHK :: Addr crypto -> Maybe (Credential 'Staking crypto)
 getStakeHK (Addr _ _ (StakeRefBase hk)) = Just hk
 getStakeHK _ = Nothing
 
-aggregateOuts :: UTxO crypto -> Map (Addr crypto) Coin
+aggregateOuts :: Crypto crypto => UTxO crypto -> Map (Addr crypto) Coin
 aggregateOuts (UTxO u) =
   Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
 
@@ -115,12 +117,9 @@ ptrStake vals pointers =
 
 rewardStake ::
   forall crypto.
-  Map (RewardAcnt crypto) Coin ->
+  Map (Credential 'Staking crypto) Coin ->
   [(Credential 'Staking crypto, Coin)]
-rewardStake rewards =
-  map convert $ Map.toList rewards
-  where
-    convert (rwdKey, c) = (getRwdCred rwdKey, c)
+rewardStake = Map.toList
 
 -- | Get stake of one pool
 poolStake ::
@@ -129,28 +128,28 @@ poolStake ::
   Stake crypto ->
   Stake crypto
 poolStake hk delegs (Stake stake) =
-  Stake $ dom (delegs ▷ Set.singleton hk) ◁ stake
+  Stake $ eval (dom (delegs ▷ Set.singleton hk) ◁ stake)
 
 -- | Calculate total possible refunds.
 obligation ::
   PParams ->
-  StakeCreds crypto ->
-  StakePools crypto ->
+  Map (Credential 'Staking crypto) Coin ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   Coin
-obligation pp (StakeCreds stakeKeys) (StakePools stakePools) =
-  (_keyDeposit pp) * (fromIntegral $ length stakeKeys)
+obligation pp rewards stakePools =
+  (_keyDeposit pp) * (fromIntegral $ length rewards)
     + (_poolDeposit pp) * (fromIntegral $ length stakePools)
 
 -- | Calculate maximal pool reward
 maxPool :: PParams -> Coin -> Rational -> Rational -> Coin
-maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
+maxPool pc r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
   where
     a0 = _a0 pc
     nOpt = _nOpt pc
     z0 = 1 % fromIntegral nOpt
     sigma' = min sigma z0
     p' = min pR z0
-    factor1 = fromIntegral r / (1 + a0)
+    factor1 = coinToRational r / (1 + a0)
     factor2 = sigma' + p' * a0 * factor3
     factor3 = (sigma' - p' * factor4) / z0
     factor4 = (z0 - sigma') / z0
@@ -165,7 +164,7 @@ groupByPool ::
 groupByPool active delegs =
   Map.fromListWith
     Map.union
-    [ (pool, Set.singleton hk ◁ active)
+    [ (pool, eval (Set.singleton hk ◁ active))
       | (hk, pool) <- Map.toList delegs
     ]
 
@@ -178,6 +177,8 @@ data SnapShot crypto = SnapShot
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (SnapShot crypto)
+
+instance NFData (SnapShot crypto)
 
 instance
   Crypto crypto =>
@@ -216,6 +217,8 @@ data SnapShots crypto = SnapShots
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (SnapShots crypto)
+
+instance NFData (SnapShots crypto)
 
 instance
   Crypto crypto =>

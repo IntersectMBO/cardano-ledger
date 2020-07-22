@@ -5,7 +5,10 @@
 
 module Shelley.Spec.Ledger.Coin
   ( Coin (..),
+    word64ToCoin,
     splitCoin,
+    coinToRational,
+    rationalToCoinViaFloor,
   )
 where
 
@@ -15,16 +18,14 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (pack)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import Quiet
 
 -- | The amount of value held by a transaction output.
-newtype Coin = Coin Integer
+newtype Coin = Coin {unCoin :: Integer}
   deriving
-    ( Show,
-      Eq,
+    ( Eq,
       Ord,
       Num,
-      Integral,
-      Real,
       Enum,
       NoUnexpectedThunks,
       Generic,
@@ -32,19 +33,32 @@ newtype Coin = Coin Integer
       FromJSON,
       NFData
     )
+  deriving (Show) via Quiet Coin
+
+word64ToCoin :: Word64 -> Coin
+word64ToCoin w = Coin $ fromIntegral w
+
+coinToRational :: Coin -> Rational
+coinToRational (Coin c) = fromIntegral c
+
+rationalToCoinViaFloor :: Rational -> Coin
+rationalToCoinViaFloor r = Coin . floor $ r
+
+isValidCoinValue :: Integer -> Bool
+isValidCoinValue c = 0 <= c && c <= (fromIntegral (maxBound :: Word64))
 
 instance ToCBOR Coin where
   toCBOR (Coin c) =
-    if c >= 0
+    if isValidCoinValue c
       then toCBOR (fromInteger c :: Word64)
       else toCBOR c
 
 instance FromCBOR Coin where
   fromCBOR = do
     c <- fromCBOR
-    if c >= 0
+    if isValidCoinValue c
       then pure (Coin c)
-      else cborError $ DecoderErrorCustom "Negative Coin" (pack $ show c)
+      else cborError $ DecoderErrorCustom "Invalid Coin Value" (pack $ show c)
 
 splitCoin :: Coin -> Integer -> (Coin, Coin)
 splitCoin (Coin n) 0 = (Coin 0, Coin n)

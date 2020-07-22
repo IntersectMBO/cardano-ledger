@@ -32,8 +32,8 @@ validation tag is verified, and script fees are collected.
                      \fun{txcerts}~\var{txb}} dpstate'
       \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
-      (\var{stkCreds}, \_, \_, \_, \_, \var{genDelegs}) \leteq \var{dstate} \\
-      (\var{stpools}, \_, \_, \_) \leteq \var{pstate} \\
+      (\var{stkCreds}, \_, \_, \_, \_, \var{genDelegs}, \_) \leteq \var{dstate} \\
+      (\var{stpools}, \_, \_) \leteq \var{pstate} \\
       \\~\\
       {
         \begin{array}{c}
@@ -78,8 +78,8 @@ validation tag is verified, and script fees are collected.
     {
       \fun{txvaltag}~{tx} \in \Nope \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
-      (\var{stkCreds}, \_, \_, \_, \_, \var{genDelegs}) \leteq \var{dstate} \\
-      (\var{stpools}, \_, \_, \_) \leteq \var{pstate} \\
+      (\var{stkCreds}, \_, \_, \_, \_, \var{genDelegs}, \_) \leteq \var{dstate} \\
+      (\var{stpools}, \_, \_) \leteq \var{pstate} \\
       \\~\\
       {
         \begin{array}{c}

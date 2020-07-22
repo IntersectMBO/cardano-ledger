@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -40,12 +41,13 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin)
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
+    _pParams,
     _pstate,
-    _stPools,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Delpl (DelplEnv (..))
@@ -62,23 +64,23 @@ import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
 -- | This is a non-spec STS used to generate a sequence of certificates with
 -- witnesses.
-data CERTS
+data CERTS c
 
-instance STS CERTS where
-  type Environment CERTS = (SlotNo, Ix, PParams, AccountState)
-  type State CERTS = (DPState, Ix)
-  type Signal CERTS = Maybe (DCert, CertCred)
+instance Crypto c => STS (CERTS c) where
+  type Environment (CERTS c) = (SlotNo, Ix, PParams, AccountState)
+  type State (CERTS c) = (DPState c, Ix)
+  type Signal (CERTS c) = Maybe (DCert c, CertCred c)
 
-  type BaseM CERTS = ShelleyBase
+  type BaseM (CERTS c) = ShelleyBase
 
-  data PredicateFailure CERTS
-    = CertsFailure (PredicateFailure DELPL)
+  data PredicateFailure (CERTS c)
+    = CertsFailure (PredicateFailure (DELPL c))
     deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [certsTransition]
 
-certsTransition :: TransitionRule CERTS
+certsTransition :: forall c. Crypto c => TransitionRule (CERTS c)
 certsTransition = do
   TRC
     ( (slot, txIx, pp, acnt),
@@ -90,38 +92,28 @@ certsTransition = do
   case c of
     Just (cert, _wits) -> do
       let ptr = Ptr slot txIx nextCertIx
-      dpState' <- trans @DELPL $ TRC (DelplEnv slot ptr pp acnt, dpState, cert)
+      dpState' <- trans @(DELPL c) $ TRC (DelplEnv slot ptr pp acnt, dpState, cert)
 
       pure (dpState', nextCertIx + 1)
     Nothing ->
       pure (dpState, nextCertIx)
 
-instance Embed DELPL CERTS where
+instance Crypto c => Embed (DELPL c) (CERTS c) where
   wrapFailed = CertsFailure
 
-instance QC.HasTrace CERTS GenEnv where
+instance Crypto c => QC.HasTrace (CERTS c) (GenEnv c) where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
   sigGen
     ( GenEnv
-        ( ks@KeySpace_
-            { ksCoreNodes,
-              ksKeyPairs,
-              ksMSigScripts,
-              ksVRFKeyPairs
-            }
-          )
+        ks
         constants
       )
     (slot, _txIx, pparams, accountState)
     (dpState, _certIx) =
       genDCert
         constants
-        ksKeyPairs
-        ksMSigScripts
-        ksCoreNodes
-        ksVRFKeyPairs
-        (ksKeyPairsByStakeHash ks)
+        ks
         pparams
         accountState
         dpState
@@ -129,22 +121,24 @@ instance QC.HasTrace CERTS GenEnv where
 
   shrinkSignal = const []
 
-  type BaseEnv CERTS = Globals
+  type BaseEnv (CERTS c) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
 genDCerts ::
-  GenEnv ->
+  forall c.
+  Crypto c =>
+  GenEnv c ->
   PParams ->
-  DPState ->
+  DPState c ->
   SlotNo ->
   Natural ->
   AccountState ->
-  Gen (StrictSeq DCert, [CertCred], Coin, Coin, DPState)
+  Gen (StrictSeq (DCert c), [CertCred c], Coin, Coin, DPState c)
 genDCerts
   ge@( GenEnv
-         KeySpace_ {ksKeyPairsByHash}
+         KeySpace_ {ksIndexedStakingKeys}
          Constants {maxCertsPerTx}
        )
   pparams
@@ -156,7 +150,7 @@ genDCerts
         st0 = (dpState, 0)
 
     certsTrace <-
-      QC.traceFrom @CERTS testGlobals maxCertsPerTx ge env st0
+      QC.traceFrom @(CERTS c) testGlobals maxCertsPerTx ge env st0
 
     let certsCreds = catMaybes . traceSignals OldestFirst $ certsTrace
         (lastState_, _) = lastState certsTrace
@@ -168,7 +162,7 @@ genDCerts
     pure
       ( StrictSeq.fromList certs,
         withScriptCreds,
-        totalDeposits pparams (_stPools (_pstate dpState)) certs,
+        totalDeposits pparams (_pParams (_pstate dpState)) certs,
         (_keyDeposit pparams) * (fromIntegral $ length deRegStakeCreds),
         lastState_
       )
@@ -180,8 +174,8 @@ genDCerts
                 witnessHashes' = fmap coerceKeyRole witnessHashes
                 foo = catMaybes (map lookupWit witnessHashes')
                 witnessHashes'' = fmap coerceKeyRole foo
-                witnesses = KeyCred <$> witnessHashes''
+                witnesses = StakeCred <$> witnessHashes''
             pure (witnesses ++ [cred])
           _ ->
             return [cred]
-      lookupWit = flip Map.lookup ksKeyPairsByHash
+      lookupWit = flip Map.lookup ksIndexedStakingKeys

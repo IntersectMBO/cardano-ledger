@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -21,10 +22,11 @@ module Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     lastAppliedHash,
     BHBody (..),
+    poolIDfromBHBody,
     BHeader (BHeader),
     Block (Block),
     LaxBlock (..),
-    TxSeq (TxSeq),
+    TxSeq (TxSeq, txSeqTxns'),
     HashBBody,
     bhHash,
     bbHash,
@@ -44,7 +46,7 @@ module Shelley.Spec.Ledger.BlockChain
     seedL,
     incrBlocks,
     mkSeed,
-    checkVRFValue,
+    checkLeaderValue,
   )
 where
 
@@ -71,24 +73,28 @@ import Cardano.Binary
     withSlice,
     withWordSize,
   )
-import Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
+import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude
   ( AllowThunksIn (..),
     ByteString,
     LByteString,
+    NFData,
     NoUnexpectedThunks (..),
   )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad (unless)
+import qualified Data.ByteString.Builder as BS
+import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
+import Data.Ratio ((%))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -98,18 +104,18 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    FixedPoint,
     Nonce (..),
     Seed (..),
-    UnitInterval,
     activeSlotLog,
     activeSlotVal,
     intervalValue,
-    mkNonce,
+    mkNonceFromNumber,
     strictMaybeToMaybe,
-    unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
   ( CertifiedVRF,
     Hash,
@@ -117,13 +123,12 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
     SignedKES,
     VKey,
-    VRFValue (..),
     VerKeyVRF,
     decodeSignedKES,
     decodeVerKeyVRF,
     encodeSignedKES,
     encodeVerKeyVRF,
-    hash,
+    hashKey,
   )
 import Shelley.Spec.Ledger.OCert (OCert (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -134,6 +139,7 @@ import Shelley.Spec.Ledger.Serialization
     decodeSeq,
     encodeFoldableEncoder,
     encodeFoldableMapEncoder,
+    runByteBuilder,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), decodeWits, segwitTx, txWitsBytes)
@@ -142,12 +148,11 @@ import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 -- | The hash of a Block Header
 newtype HashHeader crypto = HashHeader {unHashHeader :: (Hash crypto (BHeader crypto))}
   deriving (Show, Eq, Generic, Ord)
+  deriving newtype (NFData, NoUnexpectedThunks)
 
 deriving instance Crypto crypto => ToCBOR (HashHeader crypto)
 
 deriving instance Crypto crypto => FromCBOR (HashHeader crypto)
-
-instance NoUnexpectedThunks (HashHeader crypto)
 
 data TxSeq crypto = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Tx crypto)),
@@ -195,8 +200,9 @@ instance
   ToCBORGroup (TxSeq crypto)
   where
   toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes) =
-    encodePreEncoded $ BSL.toStrict $
-      bodyBytes <> witsBytes <> metadataBytes
+    encodePreEncoded $
+      BSL.toStrict $
+        bodyBytes <> witsBytes <> metadataBytes
   encodedGroupSizeExpr size _proxy =
     encodedSizeExpr size (Proxy :: Proxy ByteString)
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
@@ -217,7 +223,7 @@ bhHash ::
   Crypto crypto =>
   BHeader crypto ->
   HashHeader crypto
-bhHash = HashHeader . Hash.hashWithSerialiser toCBOR
+bhHash = HashHeader . hashAnnotated
 
 -- | Hash a given block body
 bbHash ::
@@ -229,11 +235,9 @@ bbHash (TxSeq' _ bodies wits md) =
   (HashBBody . coerce) $
     hashStrict (hashPart bodies <> hashPart wits <> hashPart md)
   where
-    -- FIXME: hash this with less indirection
-    -- This should be directly hashing the provided bytes with no funny business.
     hashStrict :: ByteString -> Hash crypto ByteString
-    hashStrict = Hash.hashWithSerialiser encodePreEncoded
-    hashPart = Hash.getHash . hashStrict . BSL.toStrict
+    hashStrict = Hash.hashWith id
+    hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
 -- | HashHeader to Nonce
 hashHeaderToNonce :: HashHeader crypto -> Nonce
@@ -248,6 +252,8 @@ data BHeader crypto = BHeader'
   deriving
     (NoUnexpectedThunks)
     via AllowThunksIn '["bHeaderBytes"] (BHeader crypto)
+
+instance Crypto crypto => HashAnnotated (BHeader crypto) crypto
 
 deriving instance Crypto crypto => Eq (BHeader crypto)
 
@@ -350,6 +356,8 @@ data LastAppliedBlock crypto = LastAppliedBlock
 
 instance Crypto crypto => NoUnexpectedThunks (LastAppliedBlock crypto)
 
+instance NFData (LastAppliedBlock crypto)
+
 instance Crypto crypto => ToCBOR (LastAppliedBlock crypto) where
   toCBOR (LastAppliedBlock b s h) =
     encodeListLen 3 <> toCBOR b <> toCBOR s <> toCBOR h
@@ -380,7 +388,7 @@ data BHBody crypto = BHBody
     -- | block nonce
     bheaderEta :: !(CertifiedVRF crypto Nonce),
     -- | leader election value
-    bheaderL :: !(CertifiedVRF crypto UnitInterval),
+    bheaderL :: !(CertifiedVRF crypto Natural),
     -- | Size of the block body
     bsize :: !Natural,
     -- | Hash of block body
@@ -391,6 +399,12 @@ data BHBody crypto = BHBody
     bprotver :: !ProtVer
   }
   deriving (Show, Eq, Generic)
+
+instance
+  Crypto crypto =>
+  SignableRepresentation (BHBody crypto)
+  where
+  getSignableRepresentation = serialize'
 
 instance
   Crypto crypto =>
@@ -468,6 +482,11 @@ instance
           bheaderOCert,
           bprotver
         }
+
+-- | Retrieve the pool id (the hash of the pool operator's cold key)
+-- from the body of the block header.
+poolIDfromBHBody :: Crypto crypto => BHBody crypto -> KeyHash 'BlockIssuer crypto
+poolIDfromBHBody = hashKey . bheaderVk
 
 data Block crypto
   = Block' !(BHeader crypto) !(TxSeq crypto) LByteString
@@ -571,7 +590,7 @@ bBodySize ::
 bBodySize = BS.length . serializeEncoding' . toCBORGroup
 
 slotToNonce :: SlotNo -> Nonce
-slotToNonce (SlotNo s) = mkNonce (fromIntegral s)
+slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 bheader ::
   Crypto crypto =>
@@ -602,10 +621,20 @@ mkSeed ::
   -- | Epoch nonce
   Nonce ->
   Seed
-mkSeed (Nonce uc) slot nonce =
-  Seed . coerce $ uc `Hash.xor` coerce (hash @SHA256 (slot, nonce))
-mkSeed NeutralNonce slot nonce =
-  Seed . coerce $ hash @SHA256 (slot, nonce)
+mkSeed ucNonce (SlotNo slot) eNonce =
+  Seed
+    . ( case ucNonce of
+          NeutralNonce -> id
+          Nonce h -> Hash.xor (Hash.castHash h)
+      )
+    . Hash.castHash
+    . Hash.hashWith id
+    . runByteBuilder (8 + 32)
+    $ BS.word64BE slot
+      <> ( case eNonce of
+             NeutralNonce -> mempty
+             Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
+         )
 
 -- | Check that the certified input natural is valid for being slot leader. This
 -- means we check that
@@ -618,14 +647,20 @@ mkSeed NeutralNonce slot nonce =
 -- let p = fromNat (certNat) and c = ln(1 - f)
 --
 -- then           p < 1 - (1 - f)^σ
--- <=>  1 / (1 - p) > exp(-σ * c)
+-- <=>  1 / (1 - p) < exp(-σ * c)
 --
 -- this can be efficiently be computed by `taylorExpCmp` which returns `ABOVE`
 -- in case the reference value `1 / (1 - p)` is above the exponential function
 -- at `-σ * c`, `BELOW` if it is below or `MaxReached` if it couldn't
 -- conclusively compute this within the given iteration bounds.
-checkVRFValue :: Natural -> Rational -> ActiveSlotCoeff -> Bool
-checkVRFValue certNat σ f =
+checkLeaderValue ::
+  forall v.
+  (VRF.VRFAlgorithm v) =>
+  VRF.OutputVRF v ->
+  Rational ->
+  ActiveSlotCoeff ->
+  Bool
+checkLeaderValue certVRF σ f =
   if (intervalValue $ activeSlotVal f) == 1
     then -- If the active slot coefficient is equal to one,
     -- then nearly every stake pool can produce a block every slot.
@@ -634,26 +669,25 @@ checkVRFValue certNat σ f =
     -- This is a testing convenience, the active slot coefficient should not
     -- bet set above one half otherwise.
       True
-    else
-      if leaderVal == 1
-        then -- Having a VRF value of one is always a failure.
-        -- Moreover, it would cause division by zero.
-          False
-        else case taylorExpCmp 3 (1 / q) x of
-          ABOVE _ _ -> False
-          BELOW _ _ -> True
-          MaxReached _ -> False
+    else case taylorExpCmp 3 recip_q x of
+      ABOVE _ _ -> False
+      BELOW _ _ -> True
+      MaxReached _ -> False
   where
-    leaderVal = (unitIntervalToRational . fromNatural) certNat
+    certNatMax :: Natural
+    certNatMax = (2 :: Natural) ^ (8 * VRF.sizeOutputVRF (Proxy @v))
+    c, recip_q, x :: FixedPoint
     c = activeSlotLog f
-    q = fromRational $ 1 - leaderVal
+    recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
     x = (- fromRational σ * c)
+    certNat :: Natural
+    certNat = VRF.getOutputVRFNatural certVRF
 
 seedEta :: Nonce
-seedEta = mkNonce 0
+seedEta = mkNonceFromNumber 0
 
 seedL :: Nonce
-seedL = mkNonce 1
+seedL = mkNonceFromNumber 1
 
 hBbsize :: BHBody crypto -> Natural
 hBbsize = bsize

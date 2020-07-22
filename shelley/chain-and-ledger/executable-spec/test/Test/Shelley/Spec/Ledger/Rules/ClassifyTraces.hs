@@ -2,6 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
@@ -17,7 +18,8 @@ import Cardano.Binary (serialize')
 import Cardano.Slotting.Slot (EpochSize (..))
 import qualified Control.State.Transition.Extended
 import Control.State.Transition.Trace
-  ( TraceOrder (OldestFirst),
+  ( Trace,
+    TraceOrder (OldestFirst),
     traceLength,
     traceSignals,
   )
@@ -29,6 +31,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck
 import qualified Data.ByteString as BS
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import Data.Sequence.Strict (StrictSeq)
 import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo), StrictMaybe (..))
@@ -49,7 +52,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     isRetirePool,
     isTreasuryMIRCert,
   )
-import Shelley.Spec.Ledger.LedgerState (txsize)
+import Shelley.Spec.Ledger.LedgerState (txsizeBound)
 import Shelley.Spec.Ledger.PParams
   ( PParamsUpdate,
     pattern ProposedPPUpdates,
@@ -79,9 +82,10 @@ import Test.QuickCheck
     property,
     withMaxSuccess,
   )
-import qualified Test.QuickCheck.Gen
+import qualified Test.QuickCheck.Gen as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Block,
+    C,
     CHAIN,
     ChainState,
     DCert,
@@ -100,142 +104,132 @@ import Test.Shelley.Spec.Ledger.Utils
 
 genesisChainState ::
   Maybe
-    ( Control.State.Transition.Extended.IRC CHAIN ->
-      Test.QuickCheck.Gen.Gen
+    ( Control.State.Transition.Extended.IRC (CHAIN C) ->
+      QC.Gen
         ( Either
             a
-            Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.ChainState
+            (Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.ChainState C)
         )
     )
-genesisChainState = Just $ mkGenesisChainState (geConstants genEnv)
+genesisChainState = Just $ mkGenesisChainState (geConstants (genEnv p))
+  where
+    p :: Proxy C
+    p = Proxy
 
 genesisLedgerState ::
   Maybe
-    ( Control.State.Transition.Extended.IRC LEDGER ->
-      Test.QuickCheck.Gen.Gen
+    ( Control.State.Transition.Extended.IRC (LEDGER C) ->
+      QC.Gen
         ( Either
             a
-            ( Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.UTxOState,
-              Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.DPState
+            ( Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.UTxOState C,
+              Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.DPState C
             )
         )
     )
-genesisLedgerState = Just $ mkGenesisLedgerState (geConstants genEnv)
+genesisLedgerState = Just $ mkGenesisLedgerState (geConstants (genEnv p))
+  where
+    p :: Proxy C
+    p = Proxy
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = do
   let tl = 100
-      GenEnv _ c@(Constants {maxCertsPerTx}) = genEnv
+  checkCoverage $
+    forAllBlind
+      (traceFromInitState @(CHAIN C) testGlobals tl (genEnv p) genesisChainState)
+      relevantCasesAreCoveredForTrace
+  where
+    p :: Proxy C
+    p = Proxy
 
-  forAllBlind (traceFromInitState @CHAIN testGlobals tl genEnv genesisChainState) $ \tr -> do
-    let blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
-        bs = traceSignals OldestFirst tr
-        txs = concat (blockTxs <$> bs)
-        tl' = traceLength tr
-        certs_ = allCerts txs
-
-    property $ conjoin $
-      [ checkCoverage $
-          cover
+relevantCasesAreCoveredForTrace ::
+  Trace (CHAIN C) ->
+  Property
+relevantCasesAreCoveredForTrace tr = do
+  let p :: Proxy C
+      p = Proxy
+      GenEnv _ c@Constants {maxCertsPerTx} = genEnv p
+      blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
+      bs = traceSignals OldestFirst tr
+      txs = concat (blockTxs <$> bs)
+      tl' = traceLength tr
+      certs_ = allCerts txs
+      classifications =
+        [ ( "there is at least 1 certificate for every 3 transactions",
+            tl' < 1 * length certs_,
             60
-            (tl' < 1 * length certs_)
-            "there is at least 1 certificate for every 3 transactions"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "there is at least 1 RegKey certificate for every 10 transactions",
+            tl' < 10 * length (filter isRegKey certs_),
             60
-            (tl' < 10 * length (filter isRegKey certs_))
-            "there is at least 1 RegKey certificate for every 10 transactions"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "there is at least 1 DeRegKey certificate for every 10 transactions",
+            tl' < 10 * length (filter isDeRegKey certs_),
             60
-            (tl' < 10 * length (filter isDeRegKey certs_))
-            "there is at least 1 DeRegKey certificate for every 10 transactions"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "there is at least 1 Delegation certificate for every 10 transactions",
+            tl' < 10 * length (filter isDelegation certs_),
             60
-            (traceLength tr < 10 * length (filter isDelegation certs_))
-            "there is at least 1 Delegation certificate for every 10 transactions"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "there is at least 1 Genesis Delegation certificate for every 20 transactions",
+            tl' < 20 * length (filter isGenesisDelegation certs_),
             60
-            (traceLength tr < 20 * length (filter isGenesisDelegation certs_))
-            "there is at least 1 Genesis Delegation certificate for every 20 transactions"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "there is at least 1 RetirePool certificate for every 10 transactions",
+            tl' < 10 * length (filter isRetirePool certs_),
             60
-            (traceLength tr < 10 * length (filter isRetirePool certs_))
-            "there is at least 1 RetirePool certificate for every 10 transactions"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "there is at least 1 Reserves MIR certificate (spending Reserves) for every 60 transactions",
+            tl' < 60 * length (filter isReservesMIRCert certs_),
             40
-            (traceLength tr < 60 * length (filter isReservesMIRCert certs_))
-            "there is at least 1 Reserves MIR certificate (spending Reserves) for every 60 transactions"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "there is at least 1 MIR certificate (spending Treasury) for every 60 transactions",
+            tl' < 60 * length (filter isTreasuryMIRCert certs_),
             40
-            (traceLength tr < 60 * length (filter isTreasuryMIRCert certs_))
-            "there is at least 1 MIR certificate (spending Treasury) for every 60 transactions"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "at most 60% of transactions have no certificates",
+            0.6 > noCertsRatio (certsByTx txs),
             60
-            (0.6 > noCertsRatio (certsByTx txs))
-            "at most 60% of transactions have no certificates"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "at least 10% of transactions have " <> show maxCertsPerTx <> " certificates",
+            0.1 < maxCertsRatio c (certsByTx txs),
             60
-            (0.1 < maxCertsRatio c (certsByTx txs))
-            ("at least 10% of transactions have " <> (show maxCertsPerTx) <> " certificates")
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "there is at least 1 RegPool certificate for every 10 transactions",
+            tl' < 10 * length (filter isRegPool certs_),
             60
-            (traceLength tr < 10 * length (filter isRegPool certs_))
-            "there is at least 1 RegPool certificate for every 10 transactions"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "at least 10% of transactions have script TxOuts",
+            0.1 < txScriptOutputsRatio (map (_outputs . _body) txs),
             20
-            (0.1 < txScriptOutputsRatio (map (_outputs . _body) txs))
-            "at least 10% of transactions have script TxOuts"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "at least 10% of `DCertDeleg` certificates have script credentials",
+            0.1 < scriptCredentialCertsRatio certs_,
             60
-            (0.1 < scriptCredentialCertsRatio certs_)
-            "at least 10% of `DCertDeleg` certificates have script credentials"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "at least 10% of transactions have a reward withdrawal",
+            0.1 < withdrawalRatio txs,
             60
-            (0.1 < withdrawalRatio txs)
-            "at least 10% of transactions have a reward withdrawal"
-            (property ()),
-        checkCoverage $
-          cover
+          ),
+          ( "at least 5% of transactions have non-trivial protocol param updates",
+            0.95 > noPPUpdateRatio (ppUpdatesByTx txs),
             60
-            (0.98 > noPPUpdateRatio (ppUpdatesByTx txs))
-            "at least 2% of transactions have non-trivial protocol param updates"
-            (property ()),
-        checkCoverage $
-          cover
-            40
-            (2 <= epochBoundariesInTrace bs)
-            "at least 2 epoch changes in trace"
-            (property ())
-      ]
+          ),
+          ( "at least 2 epoch changes in trace, 10% of the time",
+            2 <= epochBoundariesInTrace bs,
+            10
+          )
+        ]
+
+  conjoin $ cover_ <$> classifications
+  where
+    cover_ (label, predicate, coveragePc) =
+      cover coveragePc predicate label (property ())
 
 -- | Ratio of certificates with script credentials to the number of certificates
 -- that could have script credentials.
-scriptCredentialCertsRatio :: [DCert] -> Double
+scriptCredentialCertsRatio :: [DCert C] -> Double
 scriptCredentialCertsRatio certs =
   ratioInt haveScriptCerts couldhaveScriptCerts
   where
@@ -260,23 +254,23 @@ scriptCredentialCertsRatio certs =
           certs
 
 -- | Extract the certificates from the transactions
-certsByTx :: [Tx] -> [[DCert]]
+certsByTx :: [Tx C] -> [[DCert C]]
 certsByTx txs = toList . _certs . _body <$> txs
 
 -- | Flattended list of DCerts for the given transactions
-allCerts :: [Tx] -> [DCert]
+allCerts :: [Tx C] -> [DCert C]
 allCerts = concat . certsByTx
 
 -- | Ratio of the number of empty certificate groups and the number of groups
-noCertsRatio :: [[DCert]] -> Double
+noCertsRatio :: [[DCert C]] -> Double
 noCertsRatio = lenRatio (filter null)
 
 -- | Ratio of the number of certificate groups of max size and the number of groups
-maxCertsRatio :: Constants -> [[DCert]] -> Double
+maxCertsRatio :: Constants -> [[DCert C]] -> Double
 maxCertsRatio Constants {maxCertsPerTx} = lenRatio (filter ((== maxCertsPerTx) . fromIntegral . length))
 
 -- | Extract non-trivial protocol param  updates from the given transactions
-ppUpdatesByTx :: [Tx] -> [[PParamsUpdate]]
+ppUpdatesByTx :: [Tx C] -> [[PParamsUpdate]]
 ppUpdatesByTx txs = ppUpdates . _txUpdate . _body <$> txs
   where
     ppUpdates SNothing = mempty
@@ -291,7 +285,7 @@ ratioInt x y =
   fromIntegral x / fromIntegral y
 
 -- | Transaction has script locked TxOuts
-txScriptOutputsRatio :: [StrictSeq TxOut] -> Double
+txScriptOutputsRatio :: [StrictSeq (TxOut C)] -> Double
 txScriptOutputsRatio txoutsList =
   ratioInt
     (sum (map countScriptOuts txoutsList))
@@ -307,7 +301,7 @@ txScriptOutputsRatio txoutsList =
           txouts
 
 -- | Transaction has a reward withdrawal
-withdrawalRatio :: [Tx] -> Double
+withdrawalRatio :: [Tx C] -> Double
 withdrawalRatio = lenRatio (filter $ not . null . unWdrl . _wdrls . _body)
 
 -- | Transforms the list and returns the ratio of lengths of
@@ -321,7 +315,10 @@ lenRatio f xs =
 onlyValidLedgerSignalsAreGenerated :: Property
 onlyValidLedgerSignalsAreGenerated =
   withMaxSuccess 200 $
-    onlyValidSignalsAreGeneratedFromInitState @LEDGER testGlobals 100 genEnv genesisLedgerState
+    onlyValidSignalsAreGeneratedFromInitState @(LEDGER C) testGlobals 100 (genEnv p) genesisLedgerState
+  where
+    p :: Proxy C
+    p = Proxy
 
 -- | Check that the abstract transaction size function
 -- actually bounds the number of bytes in the serialized transaction.
@@ -329,10 +326,13 @@ propAbstractSizeBoundsBytes :: Property
 propAbstractSizeBoundsBytes = property $ do
   let tl = 100
       numBytes = toInteger . BS.length . serialize'
-  forAllTraceFromInitState @LEDGER testGlobals tl genEnv genesisLedgerState $ \tr -> do
-    let txs :: [Tx]
+  forAllTraceFromInitState @(LEDGER C) testGlobals tl (genEnv p) genesisLedgerState $ \tr -> do
+    let txs :: [Tx C]
         txs = traceSignals OldestFirst tr
-    all (\tx -> txsize tx >= numBytes tx) txs
+    all (\tx -> txsizeBound tx >= numBytes tx) txs
+  where
+    p :: Proxy C
+    p = Proxy
 
 -- | Check that the abstract transaction size function
 -- is not off by an acceptable order of magnitude.
@@ -346,18 +346,24 @@ propAbstractSizeNotTooBig = property $ do
       -- an acceptableMagnitude of three, though.
       acceptableMagnitude = (3 :: Integer)
       numBytes = toInteger . BS.length . serialize'
-      notTooBig txb = txsize txb <= acceptableMagnitude * numBytes txb
-  forAllTraceFromInitState @LEDGER testGlobals tl genEnv genesisLedgerState $ \tr -> do
-    let txs :: [Tx]
+      notTooBig txb = txsizeBound txb <= acceptableMagnitude * numBytes txb
+  forAllTraceFromInitState @(LEDGER C) testGlobals tl (genEnv p) genesisLedgerState $ \tr -> do
+    let txs :: [Tx C]
         txs = traceSignals OldestFirst tr
     all notTooBig txs
+  where
+    p :: Proxy C
+    p = Proxy
 
 onlyValidChainSignalsAreGenerated :: Property
 onlyValidChainSignalsAreGenerated =
   withMaxSuccess 100 $
-    onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 100 genEnv genesisChainState
+    onlyValidSignalsAreGeneratedFromInitState @(CHAIN C) testGlobals 100 (genEnv p) genesisChainState
+  where
+    p :: Proxy C
+    p = Proxy
 
-epochBoundariesInTrace :: [Block] -> Int
+epochBoundariesInTrace :: [Block C] -> Int
 epochBoundariesInTrace bs =
   length $
     filter atEpochBoundary (blockSlot <$> bs)

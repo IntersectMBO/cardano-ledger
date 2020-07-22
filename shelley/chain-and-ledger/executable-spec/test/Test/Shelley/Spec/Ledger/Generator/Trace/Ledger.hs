@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -16,12 +17,13 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.State.Transition.Extended (IRC, TRC (..), applySTS)
+import Control.State.Transition.Extended (IRC, TRC (..))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Functor.Identity (runIdentity)
 import qualified Data.Sequence as Seq
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.LedgerState (AccountState (..), genesisState, pattern LedgerState)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
@@ -32,6 +34,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( DPState,
     LEDGER,
     LEDGERS,
+    Mock,
     Tx,
     UTxOState,
   )
@@ -41,7 +44,7 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkTx)
-import Test.Shelley.Spec.Ledger.Utils (runShelleyBase)
+import Test.Shelley.Spec.Ledger.Utils (applySTSTest, runShelleyBase)
 
 genAccountState :: HasCallStack => Constants -> Gen AccountState
 genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
@@ -51,7 +54,7 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
-instance TQC.HasTrace LEDGER GenEnv where
+instance Mock c => TQC.HasTrace (LEDGER c) (GenEnv c) where
   envGen GenEnv {geConstants} =
     LedgerEnv <$> pure (SlotNo 0)
       <*> pure 0
@@ -62,10 +65,10 @@ instance TQC.HasTrace LEDGER GenEnv where
 
   shrinkSignal = shrinkTx
 
-  type BaseEnv LEDGER = Globals
+  type BaseEnv (LEDGER c) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
-instance TQC.HasTrace LEDGERS GenEnv where
+instance Mock c => TQC.HasTrace (LEDGERS c) (GenEnv c) where
   envGen GenEnv {geConstants} =
     LedgersEnv <$> pure (SlotNo 0)
       <*> genPParams geConstants
@@ -85,14 +88,14 @@ instance TQC.HasTrace LEDGERS GenEnv where
       pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
       where
         genAndApplyTx ::
-          (UTxOState, DPState, [Tx]) ->
+          (UTxOState c, DPState c, [Tx c]) ->
           Ix ->
-          Gen (UTxOState, DPState, [Tx])
+          Gen (UTxOState c, DPState c, [Tx c])
         genAndApplyTx (u, dp, txs) ix = do
           let ledgerEnv = LedgerEnv slotNo ix pParams reserves
           tx <- genTx ge ledgerEnv (u, dp)
 
-          let res = runShelleyBase $ applySTS @LEDGER (TRC (ledgerEnv, (u, dp), tx))
+          let res = runShelleyBase $ applySTSTest @(LEDGER c) (TRC (ledgerEnv, (u, dp), tx))
           pure $ case res of
             Left _ ->
               (u, dp, txs)
@@ -101,7 +104,7 @@ instance TQC.HasTrace LEDGERS GenEnv where
 
   shrinkSignal = const []
 
-  type BaseEnv LEDGERS = Globals
+  type BaseEnv (LEDGERS c) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | Generate initial state for the LEDGER STS using the STS environment.
@@ -111,9 +114,10 @@ instance TQC.HasTrace LEDGERS GenEnv where
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
+  Crypto c =>
   Constants ->
-  IRC LEDGER ->
-  Gen (Either a (UTxOState, DPState))
+  IRC (LEDGER c) ->
+  Gen (Either a (UTxOState c, DPState c))
 mkGenesisLedgerState c _ = do
   utxo0 <- genUtxo0 c
   let (LedgerState utxoSt dpSt) = genesisState (genesisDelegs0 c) utxo0

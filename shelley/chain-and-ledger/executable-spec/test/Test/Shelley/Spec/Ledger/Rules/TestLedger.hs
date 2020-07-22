@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -45,16 +46,22 @@ import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import Data.Foldable (toList)
 import Data.List (foldl')
+import Data.Map (Map)
+import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash (..),
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( _deposited,
     _dstate,
     _fees,
+    _pParams,
     _pstate,
     _rewards,
-    _stPools,
     _utxo,
     pattern DPState,
     pattern DState,
@@ -63,17 +70,16 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Pool (PoolEnv (..))
-import Shelley.Spec.Ledger.STS.Pool ()
 import Shelley.Spec.Ledger.Tx (_body)
-import Shelley.Spec.Ledger.TxData (Ptr (..), _certs, _wdrls)
+import Shelley.Spec.Ledger.TxData (PoolParams (..), Ptr (..), _certs, _wdrls)
 import Shelley.Spec.Ledger.UTxO (balance)
-import Test.QuickCheck ((===), Property, Testable, conjoin, property, withMaxSuccess)
+import Test.QuickCheck (Property, Testable, conjoin, property, withMaxSuccess, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( DELEG,
+  ( C,
+    DELEG,
     DELEGS,
     LEDGER,
     POOL,
-    StakePools,
     UTXO,
     UTXOW,
     Wdrl,
@@ -236,7 +242,7 @@ registeredPoolIsAdded :: Property
 registeredPoolIsAdded =
   forAllLedgerTrace $ \tr ->
     let sst = sourceSignalTargets (ledgerToPoolTrace tr)
-     in TestPool.registeredPoolIsAdded (_traceEnv tr) sst
+     in TestPool.registeredPoolIsAdded sst
 
 -- | Check that a newly registered pool has a reward of 0.
 rewardZeroAfterRegPool :: Property
@@ -286,16 +292,19 @@ prop_MIRValuesEndUpInMap =
 
 forAllLedgerTrace ::
   (Testable prop) =>
-  (Trace LEDGER -> prop) ->
+  (Trace (LEDGER C) -> prop) ->
   Property
 forAllLedgerTrace prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
-    forAllTraceFromInitState testGlobals traceLen Preset.genEnv (Just $ mkGenesisLedgerState (geConstants Preset.genEnv)) prop
+    forAllTraceFromInitState testGlobals traceLen (Preset.genEnv p) (Just $ mkGenesisLedgerState (geConstants (Preset.genEnv p))) prop
+  where
+    p :: Proxy C
+    p = Proxy
 
 -- | Transform LEDGER `sourceSignalTargets`s to DELEGS ones.
 ledgerToDelegsSsts ::
-  SourceSignalTarget LEDGER ->
-  (Wdrl, SourceSignalTarget DELEGS)
+  SourceSignalTarget (LEDGER C) ->
+  (Wdrl C, SourceSignalTarget (DELEGS C))
 ledgerToDelegsSsts (SourceSignalTarget (_, dpSt) (_, dpSt') tx) =
   ( (_wdrls . _body) tx,
     SourceSignalTarget dpSt dpSt' ((StrictSeq.getSeq . _certs . _body) tx)
@@ -303,27 +312,29 @@ ledgerToDelegsSsts (SourceSignalTarget (_, dpSt) (_, dpSt') tx) =
 
 -- | Transform LEDGER to UTXO `SourceSignalTargets`s
 ledgerToUtxoSsts ::
-  SourceSignalTarget LEDGER ->
-  SourceSignalTarget UTXO
+  SourceSignalTarget (LEDGER C) ->
+  SourceSignalTarget (UTXO C)
 ledgerToUtxoSsts (SourceSignalTarget (utxoSt, _) (utxoSt', _) tx) =
   (SourceSignalTarget utxoSt utxoSt' tx)
 
 -- | Transform LEDGER to UTXOW `SourceSignalTargets`s
 ledgerToUtxowSsts ::
-  SourceSignalTarget LEDGER ->
-  (StakePools, SourceSignalTarget UTXOW)
+  SourceSignalTarget (LEDGER C) ->
+  ( Map (KeyHash 'StakePool C) (PoolParams C),
+    SourceSignalTarget (UTXOW C)
+  )
 ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
-  ( (_stPools . _pstate) delegSt,
+  ( (_pParams . _pstate) delegSt,
     SourceSignalTarget utxoSt utxoSt' tx
   )
 
 -- | Transform a LEDGER Trace to a POOL Trace by extracting the certificates
 -- from the LEDGER transactions and then reconstructing a new POOL trace from
 -- those certificates.
-ledgerToPoolTrace :: Trace LEDGER -> Trace POOL
+ledgerToPoolTrace :: Trace (LEDGER C) -> Trace (POOL C)
 ledgerToPoolTrace ledgerTr =
   runShelleyBase $
-    Trace.closure @POOL poolEnv poolSt0 (certs txs)
+    Trace.closure @(POOL C) poolEnv poolSt0 (certs txs)
   where
     txs = traceSignals NewestFirst ledgerTr
     certs = concatMap (toList . _certs . _body)
@@ -337,10 +348,10 @@ ledgerToPoolTrace ledgerTr =
 -- | Transform a LEDGER Trace to a DELEG Trace by extracting the certificates
 -- from the LEDGER transactions and then reconstructing a new DELEG trace from
 -- those certificates.
-ledgerToDelegTrace :: Trace LEDGER -> Trace DELEG
+ledgerToDelegTrace :: Trace (LEDGER C) -> Trace (DELEG C)
 ledgerToDelegTrace ledgerTr =
   runShelleyBase $
-    Trace.closure @DELEG delegEnv delegSt0 (certs txs)
+    Trace.closure @(DELEG C) delegEnv delegSt0 (certs txs)
   where
     txs = traceSignals NewestFirst ledgerTr
     certs = concatMap (toList . _certs . _body)

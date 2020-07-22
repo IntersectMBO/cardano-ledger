@@ -23,8 +23,8 @@ import Test.QuickCheck (shrinkIntegral, shrinkList)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block)
 
 shrinkBlock ::
-  Block ->
-  [Block]
+  Block h ->
+  [Block h]
 shrinkBlock _ = []
 
 shrinkTx ::
@@ -34,11 +34,6 @@ shrinkTx ::
   [Tx crypto]
 shrinkTx (Tx _b _ws _md) =
   [Tx b' _ws _md | b' <- shrinkTxBody _b]
-
-{- TODO @uroboros write shrinker that shrinks to valid transactions
-[ Tx b ws' wm | ws' <- shrinkSet shrinkWitVKey ws ] ++
-[ Tx b ws wm' | wm' <- shrinkMap shrinkScriptHash shrinkMultiSig wm ]
--}
 
 shrinkTxBody :: Crypto crypto => TxBody crypto -> [TxBody crypto]
 shrinkTxBody (TxBody is os cs ws tf tl tu md) =
@@ -58,13 +53,13 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
     -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
     outBalance = outputBalance os
 
-outputBalance :: StrictSeq (TxOut crypto) -> Coin
+outputBalance :: Crypto crypto => StrictSeq (TxOut crypto) -> Coin
 outputBalance = foldl' (\v (TxOut _ c) -> v + c) (Coin 0)
 
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
 shrinkTxIn = const []
 
-shrinkTxOut :: TxOut crypto -> [TxOut crypto]
+shrinkTxOut :: Crypto crypto => TxOut crypto -> [TxOut crypto]
 shrinkTxOut (TxOut addr coin) =
   TxOut addr <$> shrinkCoin coin
 
@@ -86,7 +81,7 @@ shrinkSlotNo (SlotNo x) = SlotNo <$> shrinkIntegral x
 shrinkUpdate :: Update crypto -> [Update crypto]
 shrinkUpdate = const []
 
-shrinkWitVKey :: WitVKey crypto -> [WitVKey crypto]
+shrinkWitVKey :: WitVKey crypto kr -> [WitVKey crypto kr]
 shrinkWitVKey = const []
 
 shrinkScriptHash :: ScriptHash crypto -> [ScriptHash crypto]

@@ -17,7 +17,6 @@ module Shelley.Spec.Ledger.STS.Overlay
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude
   ( MonadError (..),
@@ -25,13 +24,14 @@ import Cardano.Prelude
     asks,
     unless,
   )
+import Control.Iterate.SetAlgebra (dom, eval, range)
 import Control.State.Transition
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     Nonce,
@@ -42,8 +42,9 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
-    checkVRFValue,
+    checkLeaderValue,
     mkSeed,
+    poolIDfromBHBody,
     seedEta,
     seedL,
   )
@@ -51,19 +52,19 @@ import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
+    GenDelegPair (..),
     GenDelegs (..),
     Hash,
     KESignable,
     KeyHash,
     KeyRole (..),
-    VerKeyKES,
     VerKeyVRF,
     coerceKeyRole,
     hashKey,
     hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.LedgerState (OBftSlot (..))
-import Shelley.Spec.Ledger.OCert (KESPeriod)
+import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
@@ -81,7 +82,7 @@ instance NoUnexpectedThunks (OverlayEnv crypto)
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
   ) =>
@@ -89,7 +90,7 @@ instance
   where
   type
     State (OVERLAY crypto) =
-      Map (KeyHash 'BlockIssuer crypto) Natural
+      Map (KeyHash 'BlockIssuer crypto) Word64
 
   type
     Signal (OVERLAY crypto) =
@@ -116,7 +117,7 @@ instance
         !Nonce -- Epoch nonce used for VRF calculation
         !(VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated leader value
     | VRFLeaderValueTooBig
-        !Natural -- VRF Leader value
+        !(VRF.OutputVRF (VRF crypto)) -- VRF Leader value
         !Rational -- stake pool's relative stake
         !ActiveSlotCoeff -- Praos active slot coefficient value
     | NotActiveSlotOVERLAY
@@ -166,7 +167,7 @@ vrfChecks eta0 bhb = do
         (mkSeed seedL slot eta0)
         (coerce $ bheaderL bhb)
     )
-    (throwError $ VRFKeyBadLeaderValue seedEta slot eta0 (coerce $ bheaderL bhb))
+    (throwError $ VRFKeyBadLeaderValue seedL slot eta0 (coerce $ bheaderL bhb))
   where
     vrfK = bheaderVrfVk bhb
     slot = bheaderSlotNo bhb
@@ -192,37 +193,37 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
         (throwError $ VRFKeyWrongVRFKey hk vrfHK (hashVerKeyVRF vrfK))
       vrfChecks eta0 bhb
       unless
-        (checkVRFValue (VRF.certifiedNatural $ bheaderL bhb) sigma f)
-        (throwError $ VRFLeaderValueTooBig (VRF.certifiedNatural $ bheaderL bhb) sigma f)
+        (checkLeaderValue (VRF.certifiedOutput $ bheaderL bhb) sigma f)
+        (throwError $ VRFLeaderValueTooBig (VRF.certifiedOutput $ bheaderL bhb) sigma f)
       pure ()
   where
-    hk = coerceKeyRole . hashKey $ bheaderVk bhb
+    hk = coerceKeyRole . poolIDfromBHBody $ bhb
     vrfK = bheaderVrfVk bhb
 
--- pbftVrfChecks ::
---   forall crypto.
---   ( Crypto crypto,
---     VRF.Signable (VRF crypto) Seed,
---     VRF.ContextVRF (VRF crypto) ~ ()
---   ) =>
---   Hash crypto (VerKeyVRF crypto) ->
---   Nonce ->
---   BHBody crypto ->
---   Either (PredicateFailure (OVERLAY crypto)) ()
--- pbftVrfChecks vrfHK eta0 bhb = do
---   unless
---     (vrfHK == hashVerKeyVRF vrfK)
---     (throwError $ WrongGenesisVRFKeyOVERLAY hk vrfHK (hashVerKeyVRF vrfK))
---   vrfChecks eta0 bhb
---   pure ()
---   where
---     hk = coerceKeyRole . hashKey $ bheaderVk bhb
---     vrfK = bheaderVrfVk bhb
+pbftVrfChecks ::
+  forall crypto.
+  ( Crypto crypto,
+    VRF.Signable (VRF crypto) Seed,
+    VRF.ContextVRF (VRF crypto) ~ ()
+  ) =>
+  Hash crypto (VerKeyVRF crypto) ->
+  Nonce ->
+  BHBody crypto ->
+  Either (PredicateFailure (OVERLAY crypto)) ()
+pbftVrfChecks vrfHK eta0 bhb = do
+  unless
+    (vrfHK == hashVerKeyVRF vrfK)
+    (throwError $ WrongGenesisVRFKeyOVERLAY hk vrfHK (hashVerKeyVRF vrfK))
+  vrfChecks eta0 bhb
+  pure ()
+  where
+    hk = poolIDfromBHBody bhb
+    vrfK = bheaderVrfVk bhb
 
 overlayTransition ::
   forall crypto.
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
   ) =>
@@ -249,14 +250,14 @@ overlayTransition =
             case Map.lookup gkey genDelegs of
               Nothing ->
                 failBecause $ UnknownGenesisKeyOVERLAY gkey
-              Just (genDelegsKey, _genesisVrfKH) -> do
+              Just (GenDelegPair genDelegsKey genesisVrfKH) -> do
                 vkh == coerceKeyRole genDelegsKey ?! WrongGenesisColdKeyOVERLAY vkh genDelegsKey
-        -- pbftVrfChecks genesisVrfKH eta0 bhb ?!: id
+                pbftVrfChecks genesisVrfKH eta0 bhb ?!: id
 
         let oce =
               OCertEnv
-                { ocertEnvStPools = dom pd,
-                  ocertEnvGenDelegs = Set.map fst $ range genDelegs
+                { ocertEnvStPools = eval (dom pd),
+                  ocertEnvGenDelegs = Set.map genDelegKeyHash $ (range genDelegs)
                 }
 
         trans @(OCERT crypto) $ TRC (oce, cs, bh)
@@ -265,7 +266,7 @@ instance (VRF.VRFAlgorithm (VRF crypto)) => NoUnexpectedThunks (PredicateFailure
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
   ) =>

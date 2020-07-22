@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,12 +16,19 @@ module Shelley.Spec.Ledger.STS.Chain
     PredicateFailure (..),
     initialShelleyState,
     totalAda,
+    totalAdaPots,
     chainChecks,
   )
 where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Prelude (MonadError (..), NoUnexpectedThunks, asks, unless)
+import Cardano.Prelude
+  ( MonadError (..),
+    NFData,
+    NoUnexpectedThunks,
+    asks,
+    unless,
+  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition
   ( Embed (..),
@@ -34,6 +42,7 @@ import Control.State.Transition
   )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -63,13 +72,12 @@ import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
+    GenDelegPair (..),
     GenDelegs (..),
     Hash,
     KESignable,
     KeyHash,
     KeyRole (..),
-    VerKeyKES,
-    VerKeyVRF,
     coerceKeyRole,
   )
 import Shelley.Spec.Ledger.LedgerState
@@ -82,16 +90,16 @@ import Shelley.Spec.Ledger.LedgerState
     OBftSlot,
     PState (..),
     UTxOState (..),
-    _genDelegs,
     emptyDState,
+    emptyPPUPState,
     emptyPState,
     getGKeys,
     updateNES,
+    _genDelegs,
   )
-import Shelley.Spec.Ledger.OCert (KESPeriod)
+import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
-    ProposedPPUpdates (..),
     ProtVer (..),
     _maxBBSize,
     _maxBHSize,
@@ -107,6 +115,7 @@ import Shelley.Spec.Ledger.STS.Prtcl
     prtlSeqChecks,
   )
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
+import Shelley.Spec.Ledger.STS.Tickn
 import Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
@@ -115,14 +124,16 @@ data CHAIN crypto
 
 data ChainState crypto = ChainState
   { chainNes :: NewEpochState crypto,
-    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer crypto) Natural,
+    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer crypto) Word64,
     chainEpochNonce :: Nonce,
     chainEvolvingNonce :: Nonce,
     chainCandidateNonce :: Nonce,
     chainPrevEpochNonce :: Nonce,
     chainLastAppliedBlock :: WithOrigin (LastAppliedBlock crypto)
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance NFData (ChainState crypto)
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
@@ -130,9 +141,7 @@ initialShelleyState ::
   EpochNo ->
   UTxO crypto ->
   Coin ->
-  Map
-    (KeyHash 'Genesis crypto)
-    (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto)) ->
+  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
   Map SlotNo (OBftSlot crypto) ->
   PParams ->
   Nonce ->
@@ -151,7 +160,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
                     utxo
                     (Coin 0)
                     (Coin 0)
-                    (ProposedPPUpdates Map.empty)
+                    emptyPPUPState
                 )
                 (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
             )
@@ -170,11 +179,11 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
     NeutralNonce
     lab
   where
-    cs = Map.fromList (fmap (\(hk, _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
+    cs = Map.fromList (fmap (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
@@ -204,6 +213,7 @@ instance
         !Natural -- max protocol version
     | BbodyFailure !(PredicateFailure (BBODY crypto)) -- Subtransition Failures
     | TickFailure !(PredicateFailure (TICK crypto)) -- Subtransition Failures
+    | TicknFailure !(PredicateFailure TICKN) -- Subtransition Failures
     | PrtclFailure !(PredicateFailure (PRTCL crypto)) -- Subtransition Failures
     | PrtclSeqFailure !(PrtlSeqFailure crypto) -- Subtransition Failures
     deriving (Show, Eq, Generic)
@@ -221,19 +231,19 @@ chainChecks ::
   m ()
 chainChecks maxpv pp bh = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
-  unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp)
-    $ throwError
-    $ HeaderSizeTooLargeCHAIN (fromIntegral $ bHeaderSize bh) (_maxBHSize pp)
-  unless (hBbsize (bhbody bh) <= _maxBBSize pp)
-    $ throwError
-    $ BlockSizeTooLargeCHAIN (hBbsize (bhbody bh)) (_maxBBSize pp)
+  unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp) $
+    throwError $
+      HeaderSizeTooLargeCHAIN (fromIntegral $ bHeaderSize bh) (_maxBHSize pp)
+  unless (hBbsize (bhbody bh) <= _maxBBSize pp) $
+    throwError $
+      BlockSizeTooLargeCHAIN (hBbsize (bhbody bh)) (_maxBBSize pp)
   where
     (ProtVer m _) = _protocolVersion pp
 
 chainTransition ::
   forall crypto.
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
@@ -262,15 +272,24 @@ chainTransition =
       let NewEpochState e1 _ _ _ _ _ _ = nes
           NewEpochState e2 _ bcur es _ _pd osched = nes'
       let EpochState account _ ls _ pp' _ = es
-      let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _ _)) = ls
+      let LedgerState _ (DPState (DState _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
 
       let ph = lastAppliedHash lab
           etaPH = prevHashToNonce ph
-      PrtclState cs' eta0' etaV' etaC' etaH' <-
+
+      TicknState eta0' etaH' <-
+        trans @TICKN $
+          TRC
+            ( TicknEnv pp' etaC etaPH,
+              TicknState eta0 etaH,
+              (e1 /= e2)
+            )
+
+      PrtclState cs' etaV' etaC' <-
         trans @(PRTCL crypto) $
           TRC
-            ( PrtclEnv pp' osched _pd _genDelegs (e1 /= e2) etaPH,
-              PrtclState cs eta0 etaV etaC etaH,
+            ( PrtclEnv osched _pd _genDelegs eta0',
+              PrtclState cs etaV etaC,
               bh
             )
 
@@ -291,7 +310,7 @@ chainTransition =
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
@@ -302,7 +321,18 @@ instance
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
+    DSignable crypto (Hash crypto (TxBody crypto)),
+    KESignable crypto (BHBody crypto),
+    VRF.Signable (VRF crypto) Seed
+  ) =>
+  Embed TICKN (CHAIN crypto)
+  where
+  wrapFailed = TicknFailure
+
+instance
+  ( Crypto crypto,
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
@@ -313,7 +343,7 @@ instance
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     DSignable crypto (Hash crypto (TxBody crypto)),
     KESignable crypto (BHBody crypto),
     VRF.Signable (VRF crypto) Seed
@@ -322,13 +352,44 @@ instance
   where
   wrapFailed = PrtclFailure
 
--- | Calculate the total ada in the chain state
-totalAda :: ChainState crypto -> Coin
-totalAda (ChainState nes _ _ _ _ _ _) =
-  treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
+data AdaPots = AdaPots
+  { treasuryAdaPot :: Coin,
+    reservesAdaPot :: Coin,
+    rewardsAdaPot :: Coin,
+    utxoAdaPot :: Coin,
+    depositsAdaPot :: Coin,
+    feesAdaPot :: Coin
+  }
+  deriving (Show, Eq)
+
+-- | Calculate the total ada pots in the chain state
+totalAdaPots :: Crypto crypto => ChainState crypto -> AdaPots
+totalAdaPots (ChainState nes _ _ _ _ _ _) =
+  AdaPots
+    { treasuryAdaPot = treasury_,
+      reservesAdaPot = reserves_,
+      rewardsAdaPot = rewards_,
+      utxoAdaPot = circulation,
+      depositsAdaPot = deposits,
+      feesAdaPot = fees_
+    }
   where
     (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) = nesEs nes
     (UTxOState u deposits fees_ _) = _utxoState ls
     (DPState ds _) = _delegationState ls
     rewards_ = sum (Map.elems (_rewards ds))
     circulation = balance u
+
+-- | Calculate the total ada in the chain state
+totalAda :: Crypto crypto => ChainState crypto -> Coin
+totalAda cs =
+  treasuryAdaPot + reservesAdaPot + rewardsAdaPot + utxoAdaPot + depositsAdaPot + feesAdaPot
+  where
+    AdaPots
+      { treasuryAdaPot,
+        reservesAdaPot,
+        rewardsAdaPot,
+        utxoAdaPot,
+        depositsAdaPot,
+        feesAdaPot
+      } = totalAdaPots cs

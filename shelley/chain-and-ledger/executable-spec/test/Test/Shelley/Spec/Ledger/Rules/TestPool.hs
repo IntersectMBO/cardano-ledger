@@ -7,7 +7,7 @@
 
 module Test.Shelley.Spec.Ledger.Rules.TestPool where
 
-import Byron.Spec.Ledger.Core (dom, (∈), (∉))
+import Control.Iterate.SetAlgebra (dom, eval, (∈), (∉))
 import Control.State.Transition (Environment, State)
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
@@ -16,20 +16,21 @@ import Control.State.Transition.Trace
     target,
     pattern SourceSignalTarget,
   )
-import Data.Map ((!?), Map)
+import Data.Map (Map)
 import qualified Data.Map as M
-import qualified Data.Maybe as Maybe (maybe)
 import qualified Data.Set as S
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes ((==>))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
-import Shelley.Spec.Ledger.Keys (KeyRole (..))
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash,
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.LedgerState
-  ( _pParams,
+  ( _fPParams,
+    _pParams,
     _retiring,
-    _stPools,
-    _stPools,
     pattern PState,
   )
 import Shelley.Spec.Ledger.PParams (_eMax)
@@ -37,20 +38,17 @@ import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxData
   ( _poolPubKey,
-    unStakePools,
     pattern DCertPool,
     pattern RegPool,
     pattern RetirePool,
-    pattern StakePools,
   )
-import Test.QuickCheck ((===), Property, conjoin, counterexample, property)
+import Test.QuickCheck (Property, conjoin, counterexample, property, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( KeyHash,
+  ( C,
     LEDGER,
     POOL,
     PState,
     PoolParams,
-    StakePools,
   )
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
 
@@ -58,11 +56,8 @@ import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
 -- helper accessor functions --
 -------------------------------
 
-getRetiring :: PState -> Map (KeyHash 'StakePool) EpochNo
+getRetiring :: PState C -> Map (KeyHash 'StakePool C) EpochNo
 getRetiring = _retiring
-
-getStPools :: PState -> StakePools
-getStPools = _stPools
 
 ------------------------------
 -- Constants for Properties --
@@ -80,7 +75,7 @@ traceLen = 100
 
 -- | Check that a newly registered pool key is not in the retiring map.
 rewardZeroAfterReg ::
-  [SourceSignalTarget POOL] ->
+  [SourceSignalTarget (POOL C)] ->
   Property
 rewardZeroAfterReg ssts =
   conjoin $
@@ -93,9 +88,9 @@ rewardZeroAfterReg ssts =
         } =
         case poolCWitness c of
           KeyHashObj certWit ->
-            let StakePools stp = getStPools p'
-             in ( certWit ∈ dom stp
-                    && certWit ∉ dom (getRetiring p')
+            let stp = _pParams p'
+             in ( eval (certWit ∈ dom stp)
+                    && eval (certWit ∉ dom (getRetiring p'))
                 )
           _ -> False
     registeredPoolNotRetiring _ = True
@@ -104,8 +99,8 @@ rewardZeroAfterReg ssts =
 -- epoch interval, then the pool key will be added to the retiring map but stays
 -- in the set of stake pools.
 poolRetireInEpoch ::
-  Environment LEDGER ->
-  [SourceSignalTarget POOL] ->
+  Environment (LEDGER C) ->
+  [SourceSignalTarget (POOL C)] ->
   Property
 poolRetireInEpoch env ssts =
   conjoin $
@@ -121,79 +116,73 @@ poolRetireInEpoch env ssts =
         } =
         case poolCWitness c of
           KeyHashObj certWit ->
-            let StakePools stp = getStPools p
-                StakePools stp' = getStPools p'
+            let stp = _pParams p
+                stp' = _pParams p'
                 cepoch = epochFromSlotNo s
                 EpochNo ce = cepoch
                 EpochNo emax' = _eMax pp
              in ( cepoch < e
                     && e < EpochNo (ce + emax')
                 )
-                  ==> ( certWit ∈ dom stp
-                          && certWit ∈ dom stp'
-                          && Maybe.maybe False ((== cepoch) . epochFromSlotNo) (stp' !? certWit)
+                  ==> ( eval (certWit ∈ dom stp)
+                          && eval (certWit ∈ dom stp')
                       )
           _ -> False
     registeredPoolRetired _ _ _ = True
 
 -- | Check that a `RegPool` certificate properly adds a stake pool.
 registeredPoolIsAdded ::
-  Environment LEDGER ->
-  [SourceSignalTarget POOL] ->
+  [SourceSignalTarget (POOL C)] ->
   Property
-registeredPoolIsAdded env ssts =
+registeredPoolIsAdded ssts =
   conjoin $
     map addedRegPool ssts
   where
     addedRegPool ::
-      SourceSignalTarget POOL ->
+      SourceSignalTarget (POOL C) ->
       Property
     addedRegPool sst =
       case signal sst of
         DCertPool (RegPool poolParams) -> check poolParams
         _ -> property ()
       where
-        check :: PoolParams -> Property
+        check :: PoolParams C -> Property
         check poolParams = do
           let hk = _poolPubKey poolParams
               sSt = source sst
               tSt = target sst
 
           conjoin
-            [ -- Check for pool re-registration. If we register a pool which was already
-              -- registered (indicated by presence in `stPools`), then we check that it
-              -- is not in `retiring` after the signal has been processed.
-              if hk ∈ dom ((unStakePools . _stPools) sSt)
+            [ -- If this is a pool re-registration (indicated by presence in `stPools`)...
+              if eval (hk ∈ dom (_pParams sSt))
                 then
                   conjoin
                     [ counterexample
-                        "Pool re-registration: pool should be in 'retiring' before signal"
-                        (hk ∈ dom (_retiring sSt)),
-                      counterexample
                         "Pool re-registration: pool should not be in 'retiring' after signal"
-                        (hk ∉ dom (_retiring tSt))
+                        ((eval (hk ∉ dom (_retiring tSt))) :: Bool),
+                      counterexample
+                        "PoolParams are registered in future Params map"
+                        (M.lookup hk (_fPParams tSt) === Just poolParams)
                     ]
-                else property (),
-              counterexample
-                "PoolParams are registered in pParams map"
-                (M.lookup hk (_pParams tSt) === Just poolParams),
-              counterexample
-                "Hashkey is registered in stPools map"
-                ( M.lookup hk ((unStakePools . _stPools) tSt)
-                    === Just (ledgerSlotNo env)
-                )
+                else -- This is the first registration of a pool...
+
+                  conjoin
+                    [ counterexample
+                        "PoolParams are registered in pParams map"
+                        (M.lookup hk (_pParams tSt) === Just poolParams)
+                    ]
             ]
 
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
 -- retirement.
 poolIsMarkedForRetirement ::
-  [SourceSignalTarget POOL] ->
+  [SourceSignalTarget (POOL C)] ->
   Property
 poolIsMarkedForRetirement ssts =
   conjoin (map check ssts)
   where
     check ::
-      SourceSignalTarget POOL ->
+      SourceSignalTarget (POOL C) ->
       Property
     check sst =
       case signal sst of
@@ -202,30 +191,29 @@ poolIsMarkedForRetirement ssts =
         DCertPool (RetirePool hk _epoch) -> wasRemoved hk
         _ -> property ()
       where
-        wasRemoved :: KeyHash 'StakePool -> Property
+        wasRemoved :: KeyHash 'StakePool C -> Property
         wasRemoved hk =
           conjoin
             [ counterexample
                 "hk not in stPools"
-                (hk ∈ dom ((unStakePools . _stPools) (source sst))),
+                ((eval (hk ∈ dom (_pParams (source sst)))) :: Bool),
               counterexample
                 "hk is not in target's retiring"
-                (hk ∈ dom (_retiring $ target sst))
+                ((eval (hk ∈ dom (_retiring $ target sst))) :: Bool)
             ]
 
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
 pStateIsInternallyConsistent ::
-  [SourceSignalTarget POOL] ->
+  [SourceSignalTarget (POOL C)] ->
   Property
 pStateIsInternallyConsistent ssts =
   conjoin $
     map isConsistent (concatMap (\sst -> [source sst, target sst]) ssts)
   where
-    isConsistent :: State POOL -> Property
-    isConsistent (PState stPools_ pParams_ _ retiring_) = do
-      let StakePools stPoolsMap = stPools_
-          poolKeys = M.keysSet stPoolsMap
+    isConsistent :: State (POOL C) -> Property
+    isConsistent (PState pParams_ _ retiring_) = do
+      let poolKeys = M.keysSet pParams_
           pParamKeys = M.keysSet pParams_
           retiringKeys = M.keysSet retiring_
 

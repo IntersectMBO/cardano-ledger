@@ -32,9 +32,14 @@ import Cardano.Prelude (MonadError (..), NoUnexpectedThunks (..), unless)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition
 import Data.Map.Strict (Map)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes (Nonce, Seed, ShelleyBase)
+import Shelley.Spec.Ledger.BaseTypes
+  ( Nonce,
+    Seed,
+    ShelleyBase,
+    mkNonceFromOutputVRF,
+  )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
@@ -52,12 +57,9 @@ import Shelley.Spec.Ledger.Keys
     KeyHash,
     KeyRole (..),
     VRFSignable,
-    VerKeyKES,
-    fromNatural,
   )
 import Shelley.Spec.Ledger.LedgerState (OBftSlot)
-import Shelley.Spec.Ledger.OCert (KESPeriod)
-import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import Shelley.Spec.Ledger.Slot (BlockNo, SlotNo)
@@ -66,49 +68,38 @@ data PRTCL crypto
 
 data PrtclState crypto
   = PrtclState
-      !(Map (KeyHash 'BlockIssuer crypto) Natural)
+      !(Map (KeyHash 'BlockIssuer crypto) Word64)
       -- ^ Operation Certificate counters
-      !Nonce
-      -- ^ Current epoch nonce
       !Nonce
       -- ^ Evolving nonce
       !Nonce
       -- ^ Candidate nonce
-      !Nonce
-      -- ^ Prev epoch hash nonce
   deriving (Generic, Show, Eq)
 
 instance Crypto crypto => ToCBOR (PrtclState crypto) where
-  toCBOR (PrtclState m n1 n2 n3 n4) =
+  toCBOR (PrtclState m n1 n2) =
     mconcat
-      [ encodeListLen 5,
+      [ encodeListLen 3,
         toCBOR m,
         toCBOR n1,
-        toCBOR n2,
-        toCBOR n3,
-        toCBOR n4
+        toCBOR n2
       ]
 
 instance Crypto crypto => FromCBOR (PrtclState crypto) where
   fromCBOR =
-    decodeListLenOf 5
+    decodeListLenOf 3
       >> PrtclState
       <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
 
 instance Crypto crypto => NoUnexpectedThunks (PrtclState crypto)
 
 data PrtclEnv crypto
-  = -- | New epoch marker
-    PrtclEnv
-      PParams
+  = PrtclEnv
       (Map SlotNo (OBftSlot crypto))
       (PoolDistr crypto)
       (GenDelegs crypto)
-      Bool
       Nonce
   deriving (Generic)
 
@@ -116,7 +107,7 @@ instance NoUnexpectedThunks (PrtclEnv crypto)
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRFSignable crypto Seed
   ) =>
@@ -152,46 +143,44 @@ deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Eq (PredicateFailure (PRTCL
 prtclTransition ::
   forall crypto.
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRFSignable crypto Seed
   ) =>
   TransitionRule (PRTCL crypto)
 prtclTransition = do
   TRC
-    ( PrtclEnv pp osched pd dms ne etaPH,
-      PrtclState cs eta0 etaV etaC etaH,
+    ( PrtclEnv osched pd dms eta0,
+      PrtclState cs etaV etaC,
       bh
       ) <-
     judgmentContext
   let bhb = bhbody bh
       slot = bheaderSlotNo bhb
-      eta = fromNatural . VRF.certifiedNatural $ bheaderEta bhb
+      eta = mkNonceFromOutputVRF . VRF.certifiedOutput $ bheaderEta bhb
 
-  UpdnState eta0' etaV' etaC' etaH' <-
+  UpdnState etaV' etaC' <-
     trans @(UPDN crypto) $
       TRC
-        ( UpdnEnv eta pp etaPH ne,
-          UpdnState eta0 etaV etaC etaH,
+        ( UpdnEnv eta,
+          UpdnState etaV etaC,
           slot
         )
   cs' <-
     trans @(OVERLAY crypto) $
-      TRC (OverlayEnv osched eta0' pd dms, cs, bh)
+      TRC (OverlayEnv osched eta0 pd dms, cs, bh)
 
   pure $
     PrtclState
       cs'
-      eta0'
       etaV'
       etaC'
-      etaH'
 
 instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (PRTCL crypto))
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRFSignable crypto Seed
   ) =>
@@ -201,7 +190,7 @@ instance
 
 instance
   ( Crypto crypto,
-    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (OCertSignable crypto),
     KESignable crypto (BHBody crypto),
     VRFSignable crypto Seed
   ) =>

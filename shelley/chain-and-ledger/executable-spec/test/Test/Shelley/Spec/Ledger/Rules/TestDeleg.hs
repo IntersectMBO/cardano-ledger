@@ -15,7 +15,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestDeleg
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, (∈), (∉), (◁))
+import Control.Iterate.SetAlgebra (dom, eval, rng, (∈), (∉), (◁))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -25,20 +25,21 @@ import Control.State.Transition.Trace
   )
 import Data.List (foldl')
 import Data.Map (Map)
-import qualified Data.Map.Strict as Map ((\\), difference, filter, keysSet, lookup)
+import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup, (\\))
 import qualified Data.Maybe as Maybe (maybe)
 import Data.Set (Set)
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
-import Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import Shelley.Spec.Ledger.BaseTypes ((==>), Network (..))
+import Shelley.Spec.Ledger.BaseTypes ((==>))
 import Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
-import Shelley.Spec.Ledger.Keys (KeyRole (..))
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash,
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( InstantaneousRewards (..),
     _delegations,
     _irwd,
     _rewards,
-    _stkCreds,
   )
 import Shelley.Spec.Ledger.TxData
   ( MIRPot (..),
@@ -52,24 +53,23 @@ import Shelley.Spec.Ledger.TxData
   )
 import Test.QuickCheck (Property, conjoin, counterexample, property)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Credential,
+  ( C,
+    Credential,
     DELEG,
     DState,
-    KeyHash,
-    RewardAcnt,
   )
 
 -------------------------------
 -- helper accessor functions --
 -------------------------------
 
-getStDelegs :: DState -> Set (Credential 'Staking)
-getStDelegs = dom . _stkCreds
+getStDelegs :: DState C -> Set (Credential C 'Staking)
+getStDelegs = \x -> eval (dom (_rewards x))
 
-getRewards :: DState -> Map RewardAcnt Coin
+getRewards :: DState C -> Map (Credential C 'Staking) Coin
 getRewards = _rewards
 
-getDelegations :: DState -> Map (Credential 'Staking) (KeyHash 'StakePool)
+getDelegations :: DState C -> Map (Credential C 'Staking) (KeyHash 'StakePool C)
 getDelegations = _delegations
 
 --------------------------
@@ -78,7 +78,7 @@ getDelegations = _delegations
 
 -- | Check that a newly registered key has a reward of 0.
 rewardZeroAfterReg ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 rewardZeroAfterReg tr =
   conjoin $
@@ -87,9 +87,9 @@ rewardZeroAfterReg tr =
     credNewlyRegisteredAndRewardZero (SourceSignalTarget d d' (DCertDeleg (RegKey hk))) =
       counterexample
         "a newly registered key should have a reward of 0"
-        ( (hk ∉ getStDelegs d)
-            ==> ( hk ∈ getStDelegs d'
-                    && Maybe.maybe True (== 0) (Map.lookup (mkRwdAcnt Testnet hk) (getRewards d'))
+        ( eval (hk ∉ getStDelegs d)
+            ==> ( eval (hk ∈ getStDelegs d')
+                    && Maybe.maybe True (== 0) (Map.lookup hk (getRewards d'))
                 )
         )
     credNewlyRegisteredAndRewardZero _ = property ()
@@ -97,7 +97,7 @@ rewardZeroAfterReg tr =
 -- | Check that when a stake credential is deregistered, it will not be in the
 -- rewards mapping or delegation mapping of the target state.
 credentialRemovedAfterDereg ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 credentialRemovedAfterDereg tr =
   conjoin $
@@ -110,16 +110,16 @@ credentialRemovedAfterDereg tr =
         } =
         counterexample
           "a deregistered stake key should not be in the reward and delegation mappings"
-          ( cred ∉ getStDelegs d'
-              && mkRwdAcnt Testnet cred ∉ dom (getRewards d')
-              && cred ∉ dom (getDelegations d')
+          ( eval (cred ∉ getStDelegs d')
+              && eval (cred ∉ dom (getRewards d'))
+              && eval (cred ∉ dom (getDelegations d'))
           )
     removedDeregCredential _ = property ()
 
 -- | Check that a registered stake credential get correctly delegated when
 --  applying a delegation certificate.
 credentialMappingAfterDelegation ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 credentialMappingAfterDelegation tr =
   conjoin $
@@ -130,16 +130,16 @@ credentialMappingAfterDelegation tr =
         { signal = DCertDeleg (Delegate (Delegation cred to)),
           target = d'
         } =
-        let credImage = range (Set.singleton cred ◁ getDelegations d')
-         in cred ∈ getStDelegs d'
-              && to ∈ credImage
+        let credImage = eval (rng (Set.singleton cred ◁ getDelegations d'))
+         in eval (cred ∈ getStDelegs d')
+              && eval (to ∈ credImage)
               && Set.size credImage == 1
     delegatedCredential _ = True
 
 -- | Check that the sum of rewards does not change and that each element that is
 -- either removed or added has a zero balance.
 rewardsSumInvariant ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 rewardsSumInvariant tr =
   conjoin $
@@ -160,12 +160,12 @@ rewardsSumInvariant tr =
 
 -- | Check that an accepted MIR certificate adds all entries to the `irwd` mapping
 instantaneousRewardsAdded ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 instantaneousRewardsAdded ssts =
   conjoin (map checkMIR ssts)
   where
-    checkMIR :: SourceSignalTarget DELEG -> Property
+    checkMIR :: SourceSignalTarget (DELEG C) -> Property
     checkMIR (SourceSignalTarget _ t sig) =
       case sig of
         DCertMir (MIRCert ReservesMIR irwd) ->
@@ -178,12 +178,12 @@ instantaneousRewardsAdded ssts =
 -- certificate to the existing value in the `irwd` map, overwriting any entries
 -- that already existed.
 instantaneousRewardsValue ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 instantaneousRewardsValue ssts =
   conjoin (map checkMIR ssts)
   where
-    checkMIR :: SourceSignalTarget DELEG -> Property
+    checkMIR :: SourceSignalTarget (DELEG C) -> Property
     checkMIR (SourceSignalTarget s t sig) =
       case sig of
         DCertMir (MIRCert ReservesMIR irwd) ->

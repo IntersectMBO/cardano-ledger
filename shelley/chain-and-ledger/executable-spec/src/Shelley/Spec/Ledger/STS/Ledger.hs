@@ -135,11 +135,15 @@ ledgerTransition = do
 
   dpstate' <-
     trans @(DELEGS crypto) $
-      TRC (DelegsEnv slot txIx pp tx account, dpstate, StrictSeq.getSeq $ _certs $ _body tx)
+      TRC
+        ( DelegsEnv slot txIx pp tx account,
+          dpstate,
+          StrictSeq.getSeq $ _certs $ _body tx
+        )
 
   let DPState dstate pstate = dpstate
       genDelegs = _genDelegs dstate
-      stpools = _stPools pstate
+      stpools = _pParams pstate
 
   utxoSt' <-
     trans @(UTXOW crypto) $

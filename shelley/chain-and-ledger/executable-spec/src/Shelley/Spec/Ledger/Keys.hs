@@ -4,17 +4,23 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Shelley.Spec.Ledger.Keys
   ( KeyRole (..),
     HasKeyRole (..),
+    asWitness,
 
     -- * DSIGN
     DSignable,
@@ -28,6 +34,7 @@ module Shelley.Spec.Ledger.Keys
     hashKey,
 
     -- * Genesis delegations
+    GenDelegPair (..),
     GenDelegs (..),
     GKeys (..),
 
@@ -36,12 +43,11 @@ module Shelley.Spec.Ledger.Keys
 
     -- * VRF
     VRFSignable,
-    VRFValue (..),
 
     -- * Re-exports from cardano-crypto-class
     DSIGN.decodeSignedDSIGN,
     DSIGN.encodeSignedDSIGN,
-    Hash.hash,
+    Hash.hashWithSerialiser,
     KES.decodeSignedKES,
     KES.decodeVerKeyKES,
     KES.encodeSignedKES,
@@ -68,21 +74,21 @@ module Shelley.Spec.Ledger.Keys
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
+import qualified Data.Aeson as Aeson
 import Data.Coerce (Coercible, coerce)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
-import Data.Ratio ((%))
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes (Nonce, UnitInterval, mkNonce, truncateUnitInterval)
+import Quiet
 import Shelley.Spec.Ledger.Crypto
 
 -- | The role of a key.
@@ -105,30 +111,34 @@ data KeyRole
   | Payment
   | Staking
   | StakePool
-  | -- | A block issuer might be either a genesis delegate or a stake pool
-    BlockIssuer
+  | BlockIssuer
   | Witness
   deriving (Show)
 
-class HasKeyRole a where
+class HasKeyRole (a :: KeyRole -> Type -> Type) where
   -- | General coercion of key roles.
   --
   --   The presence of this function is mostly to help the user realise where they
   --   are converting key roles.
-  coerceKeyRole :: a r crypto -> a r' crypto
+  coerceKeyRole ::
+    a r crypto ->
+    a r' crypto
   default coerceKeyRole ::
     Coercible (a r crypto) (a r' crypto) =>
     a r crypto ->
     a r' crypto
   coerceKeyRole = coerce
 
-  -- | Use a key as a witness.
-  --
-  --   This is the most common coercion between key roles, because most keys can
-  --   be used as witnesses to some types of transaction. As such, we provide an
-  --   explicit coercion for it.
-  asWitness :: a r crypto -> a 'Witness crypto
-  asWitness = coerceKeyRole
+-- | Use a key as a witness.
+--
+--   This is the most common coercion between key roles, because most keys can
+--   be used as witnesses to some types of transaction. As such, we provide an
+--   explicit coercion for it.
+asWitness ::
+  (HasKeyRole a) =>
+  a r crypto ->
+  a 'Witness crypto
+asWitness = coerceKeyRole
 
 --------------------------------------------------------------------------------
 -- Verification keys
@@ -139,22 +149,31 @@ type DSignable c = DSIGN.Signable (DSIGN c)
 -- | Discriminated verification key
 --
 --   We wrap the basic `VerKeyDSIGN` in order to add the key role.
-newtype VKey (kd :: KeyRole) crypto = VKey (DSIGN.VerKeyDSIGN (DSIGN crypto))
+newtype VKey (kd :: KeyRole) crypto = VKey {unVKey :: DSIGN.VerKeyDSIGN (DSIGN crypto)}
+  deriving (Generic)
 
-deriving instance Crypto crypto => Show (VKey kd crypto)
+deriving via Quiet (VKey kd crypto) instance Crypto crypto => Show (VKey kd crypto)
 
 deriving instance Crypto crypto => Eq (VKey kd crypto)
 
-deriving instance (Crypto crypto, NFData (DSIGN.VerKeyDSIGN (DSIGN crypto))) => NFData (VKey kd crypto)
+deriving instance
+  (Crypto crypto, NFData (DSIGN.VerKeyDSIGN (DSIGN crypto))) =>
+  NFData (VKey kd crypto)
 
 deriving instance Crypto crypto => NoUnexpectedThunks (VKey kd crypto)
 
 instance HasKeyRole VKey
 
-instance (Crypto crypto, Typeable kd) => FromCBOR (VKey kd crypto) where
+instance
+  (Crypto crypto, Typeable kd) =>
+  FromCBOR (VKey kd crypto)
+  where
   fromCBOR = VKey <$> DSIGN.decodeVerKeyDSIGN
 
-instance (Crypto crypto, Typeable kd) => ToCBOR (VKey kd crypto) where
+instance
+  (Crypto crypto, Typeable kd) =>
+  ToCBOR (VKey kd crypto)
+  where
   toCBOR (VKey vk) = DSIGN.encodeVerKeyDSIGN vk
   encodedSizeExpr _size proxy = DSIGN.encodedVerKeyDSIGNSizeExpr ((\(VKey k) -> k) <$> proxy)
 
@@ -200,31 +219,36 @@ verifySignedDSIGN (VKey vk) vd sigDSIGN =
 
 -- | Discriminated hash of public Key
 newtype KeyHash (discriminator :: KeyRole) crypto
-  = KeyHash (Hash crypto (DSIGN.VerKeyDSIGN (DSIGN crypto)))
+  = KeyHash (Hash.Hash (ADDRHASH crypto) (DSIGN.VerKeyDSIGN (DSIGN crypto)))
   deriving (Show, Eq, Ord)
   deriving newtype (NFData, NoUnexpectedThunks, Generic)
 
-deriving instance (Crypto crypto, Typeable disc) => ToCBOR (KeyHash disc crypto)
+deriving instance
+  (Crypto crypto, Typeable disc) =>
+  ToCBOR (KeyHash disc crypto)
 
-deriving instance (Crypto crypto, Typeable disc) => FromCBOR (KeyHash disc crypto)
+deriving instance
+  (Crypto crypto, Typeable disc) =>
+  FromCBOR (KeyHash disc crypto)
 
 deriving newtype instance ToJSONKey (KeyHash disc crypto)
 
 deriving newtype instance
-  Crypto crypto =>
+  (Crypto crypto) =>
   FromJSONKey (KeyHash disc crypto)
 
 deriving newtype instance ToJSON (KeyHash disc crypto)
 
 deriving newtype instance
-  Crypto crypto =>
+  (Crypto crypto) =>
   FromJSON (KeyHash disc crypto)
 
 instance HasKeyRole KeyHash
 
 -- | Hash a given public key
 hashKey ::
-  Crypto crypto =>
+  ( Crypto crypto
+  ) =>
   VKey kd crypto ->
   KeyHash kd crypto
 hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
@@ -241,35 +265,58 @@ type KESignable c = KES.Signable (KES c)
 
 type VRFSignable c = VRF.Signable (VRF c)
 
--- | Our VRFAlgorithm provides a 'Natural', so we must exhibit an extractor to
---   use the bits as some other type
-class VRFValue a where
-  -- | Extract a value from a natural number derived from the VRF computation.
-  fromNatural :: Natural -> a
-
-instance VRFValue Nonce where
-  fromNatural = mkNonce
-
-instance VRFValue UnitInterval where
-  -- TODO Consider whether this is a reasonable thing to do
-  fromNatural k = truncateUnitInterval $ fromIntegral k % 10000
-
 --------------------------------------------------------------------------------
 -- Genesis delegation
 --
 -- TODO should this really live in here?
 --------------------------------------------------------------------------------
 
-newtype GenDelegs crypto
-  = GenDelegs
-      ( Map
-          (KeyHash 'Genesis crypto)
-          (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto))
-      )
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic)
+data GenDelegPair crypto = GenDelegPair
+  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate crypto),
+    genDelegVrfHash :: !(Hash crypto (VerKeyVRF crypto))
+  }
+  deriving (Show, Eq, Ord, Generic)
 
-newtype GKeys crypto = GKeys (Set (VKey 'Genesis crypto))
-  deriving (Show, Eq, NoUnexpectedThunks, Generic)
+instance NoUnexpectedThunks (GenDelegPair crypto)
+
+instance NFData (GenDelegPair crypto)
+
+instance Crypto crypto => ToCBOR (GenDelegPair crypto) where
+  toCBOR (GenDelegPair hk vrf) =
+    encodeListLen 2 <> toCBOR hk <> toCBOR vrf
+
+instance Crypto crypto => FromCBOR (GenDelegPair crypto) where
+  fromCBOR = do
+    enforceSize "GenDelegPair" 2
+    GenDelegPair <$> fromCBOR <*> fromCBOR
+
+instance Crypto crypto => ToJSON (GenDelegPair crypto) where
+  toJSON (GenDelegPair d v) =
+    Aeson.object
+      [ "delegate" .= d,
+        "vrf" .= v
+      ]
+
+instance Crypto crypto => FromJSON (GenDelegPair crypto) where
+  parseJSON =
+    Aeson.withObject "GenDelegPair" $ \obj ->
+      GenDelegPair
+        <$> obj .: "delegate"
+        <*> obj .: "vrf"
+
+newtype GenDelegs crypto = GenDelegs
+  { unGenDelegs :: Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
+  }
+  deriving (Eq, FromCBOR, NoUnexpectedThunks, NFData, Generic)
+  deriving (Show) via Quiet (GenDelegs crypto)
+
+deriving instance
+  (Crypto crypto) =>
+  ToCBOR (GenDelegs crypto)
+
+newtype GKeys crypto = GKeys {unGKeys :: Set (VKey 'Genesis crypto)}
+  deriving (Eq, NoUnexpectedThunks, Generic)
+  deriving (Show) via Quiet (GKeys crypto)
 
 --------------------------------------------------------------------------------
 -- crypto-parametrised types

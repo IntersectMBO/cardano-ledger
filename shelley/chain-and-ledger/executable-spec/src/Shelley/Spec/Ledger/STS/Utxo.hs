@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -17,7 +18,6 @@ module Shelley.Spec.Ledger.STS.Utxo
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -25,8 +25,9 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
+import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
 import Control.State.Transition
-  ( (?!),
+  ( Assertion (..),
     Embed,
     IRC (..),
     InitialRule,
@@ -37,29 +38,36 @@ import Control.State.Transition
     liftSTS,
     trans,
     wrapFailed,
+    (?!),
   )
-import Data.Foldable (toList)
+import Data.Foldable (foldl', toList)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.Address (Addr, getNetwork)
+import Shelley.Spec.Ledger.Address
+  ( Addr (AddrBootstrap),
+    bootstrapAddressAttrsSize,
+    getNetwork,
+    getRwdNetwork,
+  )
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Delegation.Certificates (StakePools)
-import Shelley.Spec.Ledger.Keys (GenDelegs)
+import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
     consumed,
+    emptyPPUPState,
     keyRefunds,
     minfee,
     produced,
     txsize,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPPPUpdates)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..))
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
@@ -69,8 +77,15 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut (..))
-import Shelley.Spec.Ledger.TxData (TxBody (..))
-import Shelley.Spec.Ledger.UTxO (UTxO (..), totalDeposits, txins, txouts, txup)
+import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxBody (..), unWdrl)
+import Shelley.Spec.Ledger.UTxO
+  ( UTxO (..),
+    balance,
+    totalDeposits,
+    txins,
+    txouts,
+    txup,
+  )
 
 data UTXO crypto
 
@@ -78,7 +93,7 @@ data UtxoEnv crypto
   = UtxoEnv
       SlotNo
       PParams
-      (StakePools crypto)
+      (Map (KeyHash 'StakePool crypto) (PoolParams crypto))
       (GenDelegs crypto)
   deriving (Show)
 
@@ -109,12 +124,33 @@ instance
     | WrongNetwork
         !Network -- the expected network id
         !(Set (Addr crypto)) -- the set of addresses with incorrect network IDs
+    | WrongNetworkWithdrawal
+        !Network -- the expected network id
+        !(Set (RewardAcnt crypto)) -- the set of reward addresses with incorrect network IDs
     | OutputTooSmallUTxO
         ![TxOut crypto] -- list of supplied transaction outputs that are too small
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
+    | OutputBootAddrAttrsTooBig
+        ![TxOut crypto] -- list of supplied bad transaction outputs
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
+
+  assertions =
+    [ PostCondition
+        "UTxO must increase fee pot"
+        (\(TRC (_, st, _)) st' -> _fees st' >= _fees st),
+      PostCondition
+        "Deposit pot must not be negative"
+        (\_ st' -> _deposited st' >= 0),
+      let utxoBalance us = _deposited us + _fees us + balance (_utxo us)
+          withdrawals txb = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txb
+       in PostCondition
+            "Should preserve ADA in the UTxO state"
+            ( \(TRC (_, us, tx)) us' ->
+                utxoBalance us + withdrawals (_body tx) == utxoBalance us'
+            )
+    ]
 
 instance NoUnexpectedThunks (PredicateFailure (UTXO crypto))
 
@@ -152,50 +188,75 @@ instance
       encodeListLen 3 <> toCBOR (8 :: Word8)
         <> toCBOR right
         <> encodeFoldable wrongs
+    (WrongNetworkWithdrawal right wrongs) ->
+      encodeListLen 3 <> toCBOR (9 :: Word8)
+        <> toCBOR right
+        <> encodeFoldable wrongs
+    OutputBootAddrAttrsTooBig outs ->
+      encodeListLen 2 <> toCBOR (10 :: Word8)
+        <> encodeFoldable outs
 
 instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (UTXO crypto))
   where
   fromCBOR =
-    fmap snd $ decodeRecordNamed "PredicateFailureUTXO" fst $
-      decodeWord >>= \case
-        0 -> (,) 2 <$> do
-          ins <- decodeSet fromCBOR
-          pure $ BadInputsUTxO ins
-        1 -> (,) 3 <$> do
-          a <- fromCBOR
-          b <- fromCBOR
-          pure $ ExpiredUTxO a b
-        2 -> (,) 3 <$> do
-          a <- fromCBOR
-          b <- fromCBOR
-          pure $ MaxTxSizeUTxO a b
-        3 -> (,) 1 <$> pure InputSetEmptyUTxO
-        4 -> (,) 3 <$> do
-          a <- fromCBOR
-          b <- fromCBOR
-          pure $ FeeTooSmallUTxO a b
-        5 -> (,) 3 <$> do
-          a <- fromCBOR
-          b <- fromCBOR
-          pure $ ValueNotConservedUTxO a b
-        6 -> (,) 2 <$> do
-          outs <- decodeList fromCBOR
-          pure $ OutputTooSmallUTxO outs
-        7 -> (,) 2 <$> do
-          a <- fromCBOR
-          pure $ UpdateFailure a
-        8 -> (,) 3 <$> do
-          right <- fromCBOR
-          wrongs <- decodeSet fromCBOR
-          pure $ WrongNetwork right wrongs
-        k -> invalidKey k
+    fmap snd $
+      decodeRecordNamed "PredicateFailureUTXO" fst $
+        decodeWord >>= \case
+          0 ->
+            (,) 2 <$> do
+              ins <- decodeSet fromCBOR
+              pure $ BadInputsUTxO ins
+          1 ->
+            (,) 3 <$> do
+              a <- fromCBOR
+              b <- fromCBOR
+              pure $ ExpiredUTxO a b
+          2 ->
+            (,) 3 <$> do
+              a <- fromCBOR
+              b <- fromCBOR
+              pure $ MaxTxSizeUTxO a b
+          3 -> (,) 1 <$> pure InputSetEmptyUTxO
+          4 ->
+            (,) 3 <$> do
+              a <- fromCBOR
+              b <- fromCBOR
+              pure $ FeeTooSmallUTxO a b
+          5 ->
+            (,) 3 <$> do
+              a <- fromCBOR
+              b <- fromCBOR
+              pure $ ValueNotConservedUTxO a b
+          6 ->
+            (,) 2 <$> do
+              outs <- decodeList fromCBOR
+              pure $ OutputTooSmallUTxO outs
+          7 ->
+            (,) 2 <$> do
+              a <- fromCBOR
+              pure $ UpdateFailure a
+          8 ->
+            (,) 3 <$> do
+              right <- fromCBOR
+              wrongs <- decodeSet fromCBOR
+              pure $ WrongNetwork right wrongs
+          9 ->
+            (,) 3 <$> do
+              right <- fromCBOR
+              wrongs <- decodeSet fromCBOR
+              pure $ WrongNetworkWithdrawal right wrongs
+          10 ->
+            (,) 2 <$> do
+              outs <- decodeList fromCBOR
+              pure $ OutputBootAddrAttrsTooBig outs
+          k -> invalidKey k
 
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do
   IRC _ <- judgmentContext
-  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
+  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
   forall crypto.
@@ -214,8 +275,7 @@ utxoInductive = do
       txFee = _txfee txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  let validInputs = dom utxo
-  txins txb ⊆ validInputs ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
+  eval (txins txb ⊆ dom utxo) ?! BadInputsUTxO (txins txb `Set.difference` eval (dom utxo))
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
@@ -223,6 +283,11 @@ utxoInductive = do
           (\a -> getNetwork a /= ni)
           (fmap (\(TxOut a _) -> a) $ toList $ _outputs txb)
   null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
+  let wdrlsWrongNetwork =
+        filter
+          (\a -> getRwdNetwork a /= ni)
+          (Map.keys . unWdrl . _wdrls $ txb)
+  null wdrlsWrongNetwork ?! WrongNetworkWithdrawal ni (Set.fromList wdrlsWrongNetwork)
 
   let consumed_ = consumed pp utxo txb
       produced_ = produced pp stakepools txb
@@ -231,11 +296,16 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txb))]
-  let minUTxOValue = fromIntegral $ _minUTxOValue pp
-  all (minUTxOValue <=) outputCoins
-    ?! OutputTooSmallUTxO
-      (filter (\(TxOut _ c) -> c < minUTxOValue) (Set.toList (range (txouts txb))))
+  let outputs = Set.toList (eval (rng (txouts txb)))
+      minUTxOValue = _minUTxOValue pp
+      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < minUTxOValue]
+  null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
+
+  -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
+  -- It is important to limit their overall size.
+  let outputsAttrsTooBig =
+        [out | out@(TxOut (AddrBootstrap addr) _) <- outputs, bootstrapAddressAttrsSize addr > 64]
+  null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx
@@ -247,7 +317,7 @@ utxoInductive = do
 
   pure
     UTxOState
-      { _utxo = (txins txb ⋪ utxo) ∪ txouts txb,
+      { _utxo = eval ((txins txb ⋪ utxo) ∪ txouts txb),
         _deposited = deposits' + depositChange,
         _fees = fees + (_txfee txb),
         _ppups = ppup'

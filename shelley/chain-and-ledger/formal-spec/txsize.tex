@@ -2,48 +2,6 @@
 \label{sec:txSize}
 
 The minimum fee calculation in Figure~\ref{fig:defs:protocol-parameters-helpers}
-depends on an abstract $\fun{txSize}$ function, which we describe here.
-
-We define $\fun{txSize}$ as:
-$$\fun{txSize}~tx~=~\var{numInputs} \cdot 40 + \var{numOutputs} \cdot 65 + \var{rest},$$
-where
-\begin{itemize}
-  \item $\var{numInputs}$ is the number of transaction inputs in $\var{tx}$,
-  \item $\var{numOutputs}$ is the number of transaction outputs in $\var{tx}$,
-  \item $\var{tx'}$ is identical to $\var{tx}$, except that it has
-    \begin{itemize}
-      \item no inputs,
-      \item no outputs,
-      \item a fee of zero
-    \end{itemize}
-  \item $\var{rest}$ is the number of serialized bytes in $\var{tx'}$,
-    as defined in Appendix~\ref{sec:cddl},
-\end{itemize}
-
-
-We now justify this calculation.
-Using the number of bytes in the serialized transaction is problematic for a couple of reasons.
-First, the fee is listed in the transaction, so there is a circularity problem.
-Second, algorithms implementing coin selection
-(choosing which unspent transaction outputs to consume)
-would have to make heavy use of serialization.
-Besides these two issues, however, the number of serialized bytes
-does exactly what we want.
-
-Therefore we calculate the transaction size by first computing
-the number of bytes in a modifed version of the transaction
-that has no inputs, no outputs, and has a fee of zero,
-and then we adjust accordingly by the number of inputs and outputs.
-
-As given by the CDDL spec in Appendix~\ref{sec:cddl},
-a transaction input is serialized as:
-\begin{lstlisting}[backgroundcolor = \color{lightgray}]
-transaction_input = [ transaction_id : $hash32 , index : uint ]
-\end{lstlisting}
-which is bounded by 40 bytes.
-
-Similarly, a transaction output is serialized as:
-\begin{lstlisting}[backgroundcolor = \color{lightgray}]
-transaction_output = [address, amount : uint]
-\end{lstlisting}
-which is bounded by 65 bytes.
+depends on an abstract $\fun{txSize}$ function.
+We have implemented $\fun{txSize}$ as the number of bytes in the CBOR serialization
+of the transaction, as defined in Appendix~\ref{sec:cddl}.

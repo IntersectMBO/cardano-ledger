@@ -19,7 +19,7 @@ module Shelley.Spec.Ledger.BaseTypes
     word8ToNetwork,
     Nonce (..),
     Seed (..),
-    UnitInterval (..),
+    UnitInterval,
     fpEpsilon,
     fpPrecision,
     interval0,
@@ -28,7 +28,8 @@ module Shelley.Spec.Ledger.BaseTypes
     unitIntervalToRational,
     unitIntervalFromRational,
     invalidKey,
-    mkNonce,
+    mkNonceFromOutputVRF,
+    mkNonceFromNumber,
     mkUnitInterval,
     truncateUnitInterval,
     StrictMaybe (..),
@@ -41,8 +42,7 @@ module Shelley.Spec.Ledger.BaseTypes
     DnsName,
     dnsToText,
     textToDns,
-    Port,
-    portToWord16,
+    Port (..),
     ActiveSlotCoeff,
     mkActiveSlotCoeff,
     activeSlotVal,
@@ -65,16 +65,19 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Crypto.Hash
+import Cardano.Crypto.Util (SignableRepresentation (..))
+import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Aeson (FromJSON (..), ToJSON (..))
-import qualified Data.Aeson.Types as Aeson
+import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
-import Data.Coerce (coerce)
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
-import Data.Ratio ((%), Ratio, denominator, numerator)
+import Data.Ratio (Ratio, denominator, numerator, (%))
+import Data.Scientific (Scientific)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
@@ -115,12 +118,14 @@ instance FromCBOR UnitInterval where
       Just u -> pure u
 
 instance ToJSON UnitInterval where
-  toJSON ui = toJSON (fromRational (unitIntervalToRational ui) :: Double)
+  toJSON ui = toJSON (fromRational (unitIntervalToRational ui) :: Scientific)
 
 instance FromJSON UnitInterval where
-  parseJSON v =
-    truncateUnitInterval . realToFrac
-      <$> (parseJSON v :: Aeson.Parser Double)
+  parseJSON v = do
+    d <- parseJSON v
+    case mkUnitInterval (realToFrac (d :: Scientific) :: Ratio Word64) of
+      Just u -> return u
+      Nothing -> fail "The value must be between 0 and 1 (inclusive)"
 
 unitIntervalToRational :: UnitInterval -> Rational
 unitIntervalToRational (UnsafeUnitInterval x) =
@@ -151,7 +156,7 @@ interval1 = UnsafeUnitInterval 1
 
 -- | Evolving nonce type.
 data Nonce
-  = Nonce !(Hash SHA256 Nonce)
+  = Nonce !(Hash Blake2b_256 Nonce)
   | -- | Identity element
     NeutralNonce
   deriving (Eq, Generic, Ord, Show, NFData)
@@ -183,21 +188,36 @@ deriving anyclass instance FromJSON Nonce
 
 -- | Evolve the nonce
 (⭒) :: Nonce -> Nonce -> Nonce
-(Nonce a) ⭒ (Nonce b) = Nonce . coerce $ hash @SHA256 (getHash a <> getHash b)
+Nonce a ⭒ Nonce b =
+  Nonce . castHash $
+    hashWith id (hashToBytes a <> hashToBytes b)
 x ⭒ NeutralNonce = x
 NeutralNonce ⭒ x = x
 
--- | Make a nonce from a natural number
-mkNonce :: Natural -> Nonce
-mkNonce = Nonce . coerce . hash @SHA256
+-- | Make a nonce from the VRF output bytes
+mkNonceFromOutputVRF :: VRF.OutputVRF v -> Nonce
+mkNonceFromOutputVRF =
+  Nonce
+    . (castHash :: Hash Blake2b_256 (VRF.OutputVRF v) -> Hash Blake2b_256 Nonce)
+    . hashWith VRF.getOutputVRFBytes
+
+-- | Make a nonce from a number.
+mkNonceFromNumber :: Word64 -> Nonce
+mkNonceFromNumber =
+  Nonce
+    . (castHash :: Hash Blake2b_256 Word64 -> Hash Blake2b_256 Nonce)
+    . hashWith (BSL.toStrict . B.runPut . B.putWord64be)
 
 -- | Seed to the verifiable random function.
 --
 --   We do not expose the constructor to `Seed`. Instead, a `Seed` should be
 --   created using `mkSeed` for a VRF calculation.
-newtype Seed = Seed (Hash SHA256 Seed)
+newtype Seed = Seed (Hash Blake2b_256 Seed)
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (NoUnexpectedThunks, ToCBOR)
+
+instance SignableRepresentation Seed where
+  getSignableRepresentation (Seed x) = hashToBytes x
 
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b
@@ -250,6 +270,12 @@ instance FromCBOR a => FromCBOR (StrictMaybe a) where
       1 -> SJust <$> fromCBOR
       _ -> fail "unknown tag"
 
+instance ToJSON a => ToJSON (StrictMaybe a) where
+  toJSON = toJSON . strictMaybeToMaybe
+
+instance FromJSON a => FromJSON (StrictMaybe a) where
+  parseJSON v = maybeToStrictMaybe <$> parseJSON v
+
 strictMaybeToMaybe :: StrictMaybe a -> Maybe a
 strictMaybeToMaybe SNothing = Nothing
 strictMaybeToMaybe (SJust x) = Just x
@@ -285,7 +311,7 @@ text64FromCBOR = do
 
 newtype Url = Url {urlToText :: Text}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (ToCBOR, NoUnexpectedThunks)
+  deriving newtype (ToCBOR, NFData, NoUnexpectedThunks, FromJSON, ToJSON)
 
 textToUrl :: Text -> Maybe Url
 textToUrl t = Url <$> text64 t
@@ -295,7 +321,7 @@ instance FromCBOR Url where
 
 newtype DnsName = DnsName {dnsToText :: Text}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (ToCBOR, NoUnexpectedThunks)
+  deriving newtype (ToCBOR, NoUnexpectedThunks, NFData, FromJSON, ToJSON)
 
 textToDns :: Text -> Maybe DnsName
 textToDns t = DnsName <$> text64 t
@@ -305,7 +331,7 @@ instance FromCBOR DnsName where
 
 newtype Port = Port {portToWord16 :: Word16}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (Num, FromCBOR, ToCBOR, NoUnexpectedThunks)
+  deriving newtype (Num, FromCBOR, ToCBOR, NFData, NoUnexpectedThunks, ToJSON, FromJSON)
 
 --------------------------------------------------------------------------------
 -- Active Slot Coefficent, named f in
@@ -417,6 +443,7 @@ instance ToCBOR Network where
   toCBOR = toCBOR . networkToWord8
 
 instance FromCBOR Network where
-  fromCBOR = word8ToNetwork <$> fromCBOR >>= \case
-    Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
-    Just n -> pure n
+  fromCBOR =
+    word8ToNetwork <$> fromCBOR >>= \case
+      Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
+      Just n -> pure n

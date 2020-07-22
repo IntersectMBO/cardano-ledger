@@ -41,6 +41,8 @@ module Shelley.Spec.Ledger.Serialization
     ipv6FromBytes,
     ipv6ToCBOR,
     ipv6FromCBOR,
+    -- Raw
+    runByteBuilder,
   )
 where
 
@@ -73,6 +75,8 @@ import Control.Monad (replicateM, unless)
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.Binary.Put (putWord32le, runPut)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Builder as BS
+import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
@@ -84,9 +88,9 @@ import Data.IP
     toHostAddress,
     toHostAddress6,
   )
-import Data.Map (Map)
-import qualified Data.Map as Map
-import Data.Ratio ((%), Ratio, denominator, numerator)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -97,6 +101,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Typeable
 import Network.Socket (HostAddress6)
+import Prelude
 
 class Typeable a => ToCBORGroup a where
   toCBORGroup :: a -> Encoding
@@ -225,14 +230,15 @@ decodeList :: Decoder s a -> Decoder s [a]
 decodeList = decodeCollection decodeListLenOrIndef
 
 decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
-decodeMaybe d = decodeList d >>= \case
-  [] -> pure Nothing
-  [x] -> pure $ Just x
-  _ ->
-    cborError $
-      DecoderErrorCustom
-        "Maybe"
-        "Expected an array of length 0 or 1"
+decodeMaybe d =
+  decodeList d >>= \case
+    [] -> pure Nothing
+    [x] -> pure $ Just x
+    _ ->
+      cborError $
+        DecoderErrorCustom
+          "Maybe"
+          "Expected an array of length 0 or 1"
 
 decodeMapContents :: Decoder s a -> Decoder s [a]
 decodeMapContents = decodeCollection decodeMapLenOrIndef
@@ -249,9 +255,10 @@ decodeCollectionWithLen lenOrIndef el = do
     Just len -> (,) len <$> replicateM len el
     Nothing -> loop (0, []) (not <$> decodeBreakOr) el
   where
-    loop (n, acc) condition action = condition >>= \case
-      False -> pure (n, reverse acc)
-      True -> action >>= \v -> loop (n + 1, (v : acc)) condition action
+    loop (n, acc) condition action =
+      condition >>= \case
+        False -> pure (n, reverse acc)
+        True -> action >>= \v -> loop (n + 1, (v : acc)) condition action
 
 ratioToCBOR :: ToCBOR a => Ratio a -> Encoding
 ratioToCBOR r =
@@ -330,3 +337,20 @@ ipv6ToCBOR = toCBOR . ipv6ToBytes
 
 ipv6FromCBOR :: Decoder s IPv6
 ipv6FromCBOR = byteDecoderToDecoder "IPv6" ipv6FromBytes
+
+--
+-- Raw serialisation
+--
+
+-- | Run a ByteString 'BS.Builder' using a strategy aimed at making smaller
+-- things efficiently.
+--
+-- It takes a size hint and produces a strict 'ByteString'. This will be fast
+-- when the size hint is the same or slightly bigger than the true size.
+runByteBuilder :: Int -> BS.Builder -> BS.ByteString
+runByteBuilder !sizeHint =
+  BSL.toStrict
+    . BS.toLazyByteStringWith
+      (BS.safeStrategy sizeHint (2 * sizeHint))
+      mempty
+{-# NOINLINE runByteBuilder #-}

@@ -1,17 +1,21 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE Rank2Types #-}
 
 module Test.Shelley.Spec.Ledger.NonTraceProperties.Validity where
 
-import Byron.Spec.Ledger.Core (dom)
+import Control.Iterate.SetAlgebra (dom, eval, (⊆))
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Shelley.Spec.Ledger.Address (getRwdCred)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     GenDelegs (..),
     Hash,
+    KeyHash,
+    KeyRole (..),
   )
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
@@ -21,9 +25,12 @@ import Shelley.Spec.Ledger.LedgerState
     RewardAccounts,
     UTxOState (..),
     consumed,
+    diffWitHashes,
     minfee,
+    nullWitHashes,
     produced,
     verifiedWits,
+    witsFromWitnessSet,
     witsVKeyNeeded,
   )
 import Shelley.Spec.Ledger.PParams
@@ -32,14 +39,13 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot
   ( SlotNo (..),
   )
-import Shelley.Spec.Ledger.Tx (Tx (..), addrWits)
+import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
-  ( TxBody (..),
+  ( PoolParams (..),
+    TxBody (..),
     Wdrl (..),
-    witKeyHash,
   )
 import Shelley.Spec.Ledger.UTxO (txins)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
 
 -- | Validation errors represent the failures of a transaction to be valid
 --  for a given ledger state.
@@ -89,8 +95,8 @@ instance Monoid Validity where
 
 -- | A ledger validation state consists of a ledger state 't' and the list of
 -- validation errors that occurred from a valid 's' to reach 't'.
-data LedgerValidation
-  = LedgerValidation [ValidationError] (LedgerState ConcreteCrypto)
+data LedgerValidation c
+  = LedgerValidation [ValidationError] (LedgerState c)
   deriving (Show, Eq)
 
 -- | Determine if the inputs in a transaction are valid for a given ledger state.
@@ -100,7 +106,7 @@ validInputs ::
   UTxOState crypto ->
   Validity
 validInputs tx u =
-  if txins tx `Set.isSubsetOf` dom (_utxo u)
+  if eval (txins tx ⊆ dom (_utxo u))
     then Valid
     else Invalid [BadInputs]
 
@@ -133,7 +139,7 @@ validFee pc tx =
 --  in an acceptable way by a transaction.
 preserveBalance ::
   (Crypto crypto) =>
-  StakePools crypto ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   PParams ->
   TxBody crypto ->
   UTxOState crypto ->
@@ -160,7 +166,7 @@ correctWithdrawals accs withdrawals =
 validRuleUTXO ::
   (Crypto crypto) =>
   RewardAccounts crypto ->
-  StakePools crypto ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   PParams ->
   SlotNo ->
   Tx crypto ->
@@ -172,7 +178,7 @@ validRuleUTXO accs stakePools pc slot tx u =
     <> validNoReplay txb
     <> validFee pc tx
     <> preserveBalance stakePools pc txb u
-    <> correctWithdrawals accs (unWdrl $ _wdrls txb)
+    <> correctWithdrawals accs (Map.mapKeys getRwdCred . unWdrl $ _wdrls txb)
   where
     txb = _body tx
 
@@ -201,11 +207,11 @@ enoughWits ::
   UTxOState crypto ->
   Validity
 enoughWits tx@(Tx _ wits _) d' u =
-  if witsVKeyNeeded (_utxo u) tx d' `Set.isSubsetOf` signers
+  if nullWitHashes $ witsVKeyNeeded (_utxo u) tx d' `diffWitHashes` signers
     then Valid
     else Invalid [MissingWitnesses]
   where
-    signers = Set.map witKeyHash (addrWits wits)
+    signers = witsFromWitnessSet wits
 
 validRuleUTXOW ::
   ( Crypto crypto,
@@ -232,7 +238,7 @@ validTx ::
 validTx tx d' slot pp l =
   validRuleUTXO
     ((_rewards . _dstate . _delegationState) l)
-    ((_stPools . _pstate . _delegationState) l)
+    ((_pParams . _pstate . _delegationState) l)
     pp
     slot
     tx

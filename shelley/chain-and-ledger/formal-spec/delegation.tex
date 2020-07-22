@@ -56,10 +56,6 @@ Here we introduce the following primitive datatypes used in delegation:
 \end{itemize}
 The following derived types are introduced:
 \begin{itemize}
-\item $\type{StakeCreds}$ represents registered stake delegations and is
-  represented by a finite map from stake credentials to slot when it was
-  registered.
-\item$\type{StakePools}$ represents registered stake pools
 \item $\PoolParam$ represents the parameters found in a stake pool registration certificate
   that must be tracked:
   \begin{itemize}
@@ -130,16 +126,6 @@ It does the following:
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{lclr}
-      \StakeCreds
-      & ~=~
-      & \Credential \mapsto \Slot
-      & \text{registered stake credential} \\
-      %
-      \StakePools
-      & ~=~
-      & \KeyHash \mapsto \Slot
-      & \text{registered stake pools} \\
-      %
       \PoolMD
       & ~=~
       & \URL \times \type{PoolMDHash}
@@ -220,8 +206,6 @@ state transition types. We define two separate parts of the ledger state.
 \begin{itemize}
   \item $\DState$ keeps track of the delegation state, consisting of:
     \begin{itemize}
-    \item $\var{stkCreds}$ tracks the registered stake credentials. It consists
-      of a finite mapping from hashkeys to the slot of the registration.
     \item $\var{rewards}$ stores the rewards accumulated by stake credentials.
       These are represented by a finite map from reward addresses to the
       accumulated rewards.
@@ -243,13 +227,11 @@ state transition types. We define two separate parts of the ledger state.
     \end{itemize}
   \item $\PState$ keeps track of the stake pool information:
     \begin{itemize}
-      \item $\var{stpools}$ tracks the registered stake pools. It consists of a finite
-        mapping from hashkeys to the slot of the registration.
       \item $\var{poolParams}$ tracks the parameters associated with each stake pool, such as
         their costs and margin.
       \item When changes are made to the pool parameters late in an epoch, they are staged
         in $\var{fPoolParams}$.
-        These parameters will be updated by another transaction (namely $\mathsf{EPOCH}$)
+        These parameters will be updated by another transition (namely $\mathsf{EPOCH}$)
         when the next epoch starts.
       \item $\var{retiring}$ tracks stake pool retirements, using a map from hashkeys to
         the epoch in which it will retire.
@@ -291,8 +273,7 @@ and the protocol parameters.
     \begin{array}{l}
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
-            \var{stkCreds} & \StakeCreds & \text{registered stake delegators}\\
-            \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
+            \var{rewards} & \StakeCredential \mapsto \Coin & \text{rewards}\\
             \var{delegations} & \StakeCredential \mapsto \KeyHash_{pool} & \text{delegations}\\
             \var{ptrs} & \Ptr \mapsto \StakeCredential & \text{pointer to stake credential}\\
             \var{fGenDelegs} & \FutGenesisDelegation & \text{future genesis key delegations}\\
@@ -304,7 +285,6 @@ and the protocol parameters.
     \\
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stpools} & \StakePools & \text{registered pools to creation time}\\
       \var{poolParams} & \KeyHash_{pool} \mapsto \PoolParam
         & \text{registered pools to pool parameters}\\
       \var{fPoolParams} & \KeyHash_{pool} \mapsto \PoolParam
@@ -369,9 +349,11 @@ concerns are independent of the ledger rules.
   the equations in $\mathsf{DELEG}$ and $\mathsf{POOL}$ follow this same pattern
   of matching on certificate type.
 
-  There is also a precondition on registration that the hashkey associated with
+  There are also preconditions on registration that the hashkey associated with
   the certificate witness of the certificate is not already found in the current
-  list of stake credentials.
+  list of stake credentials or the current reward accounts.
+  We expect that the stake credentials and the reward accounts contain the
+  same key hashes, making one of the checks redundant.
 
     Registration causes the following state transformation:
     \begin{itemize}
@@ -379,10 +361,6 @@ concerns are independent of the ledger rules.
       \item A reward account is created for this key, with a starting balance of zero.
         Note that \cref{eq:deleg-reg} uses a union override left to add
         a zero balance reward account.
-        We could have used a normal union, since the system as a whole enjoys the property that
-        $\var{hk}\in\dom{\var{stkCreds}}\iff \addrRw \var{hk}\in\dom{\var{rewards}}$.
-        The union override left, however, gives us a \textit{local}
-        preservation of value property, see Section~\cref{sec:preservation-of-value}.
       \item The certificate pointer is mapped to the new stake credential.
     \end{itemize}
 
@@ -432,7 +410,9 @@ concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-      \var{c}\in\DCertRegKey & hk \leteq \fun{regCred}~{c} & hk \notin \dom \var{stkCreds}
+      \var{c}\in\DCertRegKey &
+      hk \leteq \fun{regCred}~{c} &
+      \var{hk} \notin \dom \var{rewards}
     }
     {
       \begin{array}{r}
@@ -443,7 +423,6 @@ concerns are independent of the ledger rules.
       \vdash
       \left(
         \begin{array}{r}
-        \var{stkCreds} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -455,8 +434,7 @@ concerns are independent of the ledger rules.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \varUpdate{\var{stkCreds}} & \varUpdate{\union} & \varUpdate{\{\var{hk} \mapsto slot\}} \\
-        \varUpdate{\var{rewards}} & \varUpdate{\unionoverrideLeft} & \varUpdate{\{\addrRw \var{hk} \mapsto 0\}}\\
+        \varUpdate{\var{rewards}} & \varUpdate{\unionoverrideLeft} & \varUpdate{\{\var{hk} \mapsto 0\}}\\
         \var{delegations} \\
         \varUpdate{\var{ptrs}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}} \\
         \var{fGenDelegs} \\
@@ -470,8 +448,9 @@ concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-dereg}
     \inference[Deleg-Dereg]
     {
-      \var{c}\in \DCertDeRegKey  & hk \leteq \cwitness{c} \\
-    hk \in \dom \var{stkCreds} & \addrRw \var{hk} \mapsto 0 \in \var{rewards}
+      \var{c}\in \DCertDeRegKey &
+      hk \leteq \cwitness{c} &
+      \var{hk} \mapsto 0 \in \var{rewards}
     }
     {
       \begin{array}{r}
@@ -482,7 +461,6 @@ concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkCreds} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -494,8 +472,7 @@ concerns are independent of the ledger rules.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{stkCreds}} \\
-        \varUpdate{\{\addrRw \var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{rewards}} \\
+        \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{rewards}} \\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{delegations}} \\
         \varUpdate{\var{ptrs}} & \varUpdate{\subtractrange} & \varUpdate{\{\var{hk}\}} \\
         \var{fGenDelegs} \\
@@ -509,7 +486,7 @@ concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-deleg}
     \inference[Deleg-Deleg]
     {
-      \var{c}\in \DCertDeleg & hk \leteq \cwitness{c} & hk \in \dom \var{stkCreds}
+      \var{c}\in \DCertDeleg & hk \leteq \cwitness{c} & hk \in \dom \var{rewards}
     }
     {
       \begin{array}{r}
@@ -520,7 +497,6 @@ concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkCreds} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -532,7 +508,6 @@ concerns are independent of the ledger rules.
       \trans{deleg}{c}
       \left(
       \begin{array}{rcl}
-        \var{stkCreds} \\
         \var{rewards} \\
         \varUpdate{\var{delegations}} & \varUpdate{\unionoverrideRight}
                                       & \varUpdate{\{\var{hk} \mapsto \dpool c\}} \\
@@ -576,7 +551,6 @@ concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkCreds} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -588,7 +562,6 @@ concerns are independent of the ledger rules.
       \trans{deleg}{c}
       \left(
       \begin{array}{rcl}
-        \var{stkCreds} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -630,7 +603,6 @@ concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkCreds} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -642,7 +614,6 @@ concerns are independent of the ledger rules.
       \trans{deleg}{c}
       \left(
       \begin{array}{c}
-        \var{stkCreds}\\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -676,7 +647,6 @@ concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkCreds} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -688,7 +658,6 @@ concerns are independent of the ledger rules.
       \trans{deleg}{c}
       \left(
       \begin{array}{c}
-        \var{stkCreds}\\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -756,7 +725,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     (see Figure~\cref{fig:rules:epoch}).
 
     This rule also ends stake pool retirements.
-    Note that $\var{stpools}$ is \textbf{not} updated.
+    Note that $\var{poolParams}$ is \textbf{not} updated.
     The registration creation slot does does not change.
   \item Stake pool retirements are handled by \cref{eq:pool-ret}.
     Given a slot number $\var{slot}$, the application of this rule requires that the
@@ -790,7 +759,10 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     {
       \var{c}\in\DCertRegPool
       & \var{hk} \leteq \cwitness{c}
-      & hk \notin \dom \var{stpools}
+      & \var{pool} \leteq \poolParam{c}
+      \\
+      hk \notin \dom \var{poolParams}
+      & \fun{poolCost}~\var{pool}\geq\fun{minPoolCost}~\var{pp}
     }
     {
       \begin{array}{r}
@@ -800,7 +772,6 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \vdash
       \left(
       \begin{array}{r}
-        \var{stpools} \\
         \var{poolParams} \\
         \var{fPoolParams} \\
         \var{retiring} \\
@@ -809,10 +780,8 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \trans{pool}{c}
       \left(
       \begin{array}{rcl}
-        \varUpdate{\var{stpools}} & \varUpdate{\union}
-                                  & \varUpdate{\{\var{hk} \mapsto \var{slot}\}} \\
         \varUpdate{\var{poolParams}} & \varUpdate{\union}
-                                    & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}} \\
+                                    & \varUpdate{\{\var{hk} \mapsto \var{pool}\}} \\
        \var{fPoolParams} \\
        \var{retiring} \\
       \end{array}
@@ -825,7 +794,10 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     {
       \var{c}\in\DCertRegPool
       & \var{hk} \leteq \cwitness{c}
-      & hk \in \dom \var{stpools}
+      & \var{pool} \leteq \poolParam{c}
+      \\
+      hk \in \dom \var{poolParams}
+      & \fun{poolCost}~\var{pool}\geq\fun{minPoolCost}~\var{pp}
     }
     {
       \begin{array}{r}
@@ -835,7 +807,6 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \vdash
       \left(
         \begin{array}{r}
-          \var{stpools} \\
           \var{poolParams} \\
           \var{fPoolParams} \\
           \var{retiring} \\
@@ -844,10 +815,9 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \trans{pool}{c}
       \left(
         \begin{array}{rcl}
-          \var{stpools} \\
           \var{poolParams} \\
           \varUpdate{\var{fPoolParams}} & \varUpdate{\unionoverrideRight}
-                                        & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}}\\
+                                        & \varUpdate{\{\var{hk} \mapsto \var{pool}\}}\\
           \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
         \end{array}
       \right)
@@ -859,7 +829,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     {
     \var{c} \in \DCertRetirePool
     & hk \leteq \cwitness{c}
-    & \var{hk} \in \dom \var{stpools} \\
+    & \var{hk} \in \dom \var{poolParams} \\
     \var{e} \leteq \retire{c}
     & \var{cepoch} \leteq \epoch{slot}
     & \var{cepoch} < \var{e} \leq \var{cepoch} + (\fun{emax}~{pp})
@@ -872,7 +842,6 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     \vdash
     \left(
       \begin{array}{r}
-        \var{stpools} \\
         \var{poolParams} \\
         \var{fPoolParams} \\
         \var{retiring} \\
@@ -881,7 +850,6 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     \trans{pool}{c}
     \left(
       \begin{array}{rcl}
-        \var{stpools} \\
         \var{poolParams} \\
         \var{fPoolParams} \\
         \varUpdate{\var{retiring}} & \varUpdate{\unionoverrideRight}
@@ -896,8 +864,11 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
 
 \end{figure}
 
-The POOL rule has three predicate failures:
+The POOL rule has four predicate failures:
 \begin{itemize}
+\item In the case of a pool registration or re-registration certificate,
+  if specified pool cost parameter is smaller than the value of the
+  protocol parameter $\mathsf{minPoolCost}$, there is a \emph{StakePoolCostTooLow} failure.
 \item In the case of a pool retirement certificate, if the pool key is not in
   the domain of the stake pools mapping, there is a
   \emph{StakePoolNotRegisteredOnKey} failure.
@@ -1121,7 +1092,6 @@ will be invalid.
       \begin{array}{c}
         \left(
         \begin{array}{r}
-          \var{stkCreds} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
@@ -1132,8 +1102,8 @@ will be invalid.
         \right) \\~\\
         \left(
         \begin{array}{c}
-          \var{stpools} \\
           \var{poolParams} \\
+          \var{fPoolParams} \\
           \var{retiring} \\
         \end{array}
         \right) \\
@@ -1144,7 +1114,6 @@ will be invalid.
       \begin{array}{c}
         \left(
         \begin{array}{c}
-          \var{stkCreds} \\
           \varUpdate{\var{rewards'}} \\
           \var{delegations} \\
           \var{ptrs} \\
@@ -1155,8 +1124,8 @@ will be invalid.
         \right) \\~\\
         \left(
         \begin{array}{c}
-          \var{stpools} \\
           \var{poolParams} \\
+          \var{fPoolParams} \\
           \var{retiring} \\
         \end{array}
         \right) \\
@@ -1185,7 +1154,7 @@ will be invalid.
       \trans{delegs}{\Gamma}
       \var{dpstate'}
     \\~\\~\\
-      \var{c}\in\DCertDeleg \Rightarrow \fun{dpool}~{c} \in \dom \var{stpools} \\
+      \var{c}\in\DCertDeleg \Rightarrow \fun{dpool}~{c} \in \dom \var{poolParams} \\
       ptr \leteq (\var{slot},~\var{txIx},~\mathsf{len}~\Gamma) \\~\\
     {
       \begin{array}{c}

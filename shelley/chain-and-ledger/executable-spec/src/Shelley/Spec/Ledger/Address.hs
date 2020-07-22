@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -21,6 +22,7 @@ module Shelley.Spec.Ledger.Address
     deserialiseAddr,
     Addr (..),
     BootstrapAddress (..),
+    bootstrapAddressAttrsSize,
     getNetwork,
     RewardAcnt (..),
     serialiseRewardAcnt,
@@ -55,8 +57,8 @@ import Cardano.Binary
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
-import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError, parseBase16)
-import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..))
+import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError, panic, parseBase16)
+import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.Aeson.Types as Aeson
@@ -64,15 +66,18 @@ import Data.Binary (Get, Put, Word8)
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
-import Data.Bits ((.&.), (.|.), setBit, shiftL, shiftR, testBit)
+import Data.Bits (setBit, shiftL, shiftR, testBit, (.&.), (.|.))
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldl')
+import Data.Maybe (fromMaybe)
 import Data.String (fromString)
 import qualified Data.Text.Encoding as Text
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Quiet
 import Shelley.Spec.Ledger.BaseTypes (Network (..), networkToWord8, word8ToNetwork)
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -81,7 +86,12 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyPair (..), KeyRole (..), hashKey)
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash (..),
+    KeyPair (..),
+    KeyRole (..),
+    hashKey,
+  )
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
@@ -107,7 +117,7 @@ toAddr ::
 toAddr n (payKey, stakeKey) = Addr n (toCred payKey) (StakeRefBase $ toCred stakeKey)
 
 toCred ::
-  Crypto crypto =>
+  (Crypto crypto) =>
   KeyPair kr crypto ->
   Credential kr crypto
 toCred k = KeyHashObj . hashKey $ vKey k
@@ -166,7 +176,21 @@ data RewardAcnt crypto = RewardAcnt
   { getRwdNetwork :: Network,
     getRwdCred :: Credential 'Staking crypto
   }
-  deriving (Show, Eq, Generic, Ord, NFData)
+  deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
+
+instance Crypto crypto => ToJSON (RewardAcnt crypto) where
+  toJSON ra =
+    Aeson.object
+      [ "network" .= getRwdNetwork ra,
+        "credential" .= getRwdCred ra
+      ]
+
+instance Crypto crypto => FromJSON (RewardAcnt crypto) where
+  parseJSON =
+    Aeson.withObject "RewardAcnt" $ \obj ->
+      RewardAcnt
+        <$> obj .: "network"
+        <*> obj .: "credential"
 
 instance NoUnexpectedThunks (RewardAcnt crypto)
 
@@ -282,10 +306,14 @@ getRewardAcnt = do
       pure $ RewardAcnt network cred
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
-getHash = Hash.UnsafeHash <$> B.getByteString (fromIntegral $ Hash.sizeHash ([] @h))
+getHash = do
+  bytes <- B.getByteString . fromIntegral $ Hash.sizeHash ([] @h)
+  case Hash.hashFromBytes bytes of
+    Nothing -> fail "getHash: implausible hash length mismatch"
+    Just h -> pure h
 
 putHash :: Hash.Hash h a -> Put
-putHash (Hash.UnsafeHash b) = B.putByteString b
+putHash = B.putByteString . Hash.hashToBytes
 
 getPayCred :: Crypto crypto => Word8 -> Get (PaymentCredential crypto)
 getPayCred header = case testBit header payCredIsScript of
@@ -295,7 +323,7 @@ getPayCred header = case testBit header payCredIsScript of
 getScriptHash :: Crypto crypto => Get (Credential kr crypto)
 getScriptHash = ScriptHashObj . ScriptHash <$> getHash
 
-getKeyHash :: Crypto crypto => Get (Credential kr crypto)
+getKeyHash :: (Crypto crypto) => Get (Credential kr crypto)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
 
 getStakeReference :: Crypto crypto => Word8 -> Get (StakeReference crypto)
@@ -312,9 +340,24 @@ putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
 
 getByron :: Get (Addr crypto)
-getByron = decodeFull <$> B.getRemainingLazyByteString >>= \case
-  Left e -> fail (show e)
-  Right r -> pure $ AddrBootstrap $ BootstrapAddress r
+getByron =
+  decodeFull <$> B.getRemainingLazyByteString >>= \case
+    Left e -> fail (show e)
+    Right r -> pure $ AddrBootstrap $ BootstrapAddress r
+
+-- | The size of the extra attributes in a bootstrp (ie Byron) address. Used
+-- to help enforce that people do not post huge ones on the chain.
+bootstrapAddressAttrsSize :: BootstrapAddress crypto -> Int
+bootstrapAddressAttrsSize (BootstrapAddress addr) =
+  -- I'm sorry this code is formatted so weridly below.
+  -- It is to apease the capricious god Ormolu. A sacrifice is demanded!
+  maybe
+    0
+    (BS.length . Byron.getHDAddressPayload)
+    (Byron.aaVKDerivationPath (Byron.attrData attrs))
+    + Byron.unknownAttributesLength attrs
+  where
+    attrs = Byron.addrAttributes addr
 
 putPtr :: Ptr -> Put
 putPtr (Ptr slot txIx certIx) = do
@@ -386,20 +429,26 @@ instance Crypto crypto => ToCBOR (RewardAcnt crypto) where
 instance Crypto crypto => FromCBOR (RewardAcnt crypto) where
   fromCBOR = decoderFromGet "RewardAcnt" getRewardAcnt
 
-newtype BootstrapAddress crypto = BootstrapAddress Byron.Address
-  deriving (Eq, Show, Generic)
+newtype BootstrapAddress crypto = BootstrapAddress
+  { unBootstrapAddress :: Byron.Address
+  }
+  deriving (Eq, Generic)
   deriving newtype (NFData, Ord)
+  deriving (Show) via Quiet (BootstrapAddress crypto)
 
 instance NoUnexpectedThunks (BootstrapAddress crypto)
 
 bootstrapKeyHash ::
   forall crypto.
+  -- TODO: enforce this constraint
   --(HASH crypto ~ Hash.Blake2b_224) =>
+  Crypto crypto =>
   BootstrapAddress crypto ->
   KeyHash 'Payment crypto
 bootstrapKeyHash (BootstrapAddress byronAddress) =
-  --TODO: this constructs an invalid hash when the hash algorithm has a different hash length
-  -- from Hash.Blake2b_224)
   let root = Byron.addrRoot byronAddress
       bytes = Byron.abstractHashToBytes root
-   in KeyHash (Hash.UnsafeHash bytes)
+      hash =
+        fromMaybe (panic "bootstrapKeyHash: incorrect hash length") $
+          Hash.hashFromBytes bytes
+   in KeyHash hash

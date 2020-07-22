@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDecls #-}
@@ -24,23 +25,24 @@ import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)
 import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
-import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalForm (..))
+import Cardano.Prelude (NoUnexpectedThunks)
 import Data.Bits
-import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Builder as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.Proxy (Proxy (..))
 import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes (Seed)
 
 data FakeVRF
 
--- | A class for seeds which sneakily contain the certified natural we wish to
+-- | A class for seeds which sneakily contain the certified output we wish to
 -- "randomly" derive from them.
 class ToCBOR (Payload a) => SneakilyContainResult a where
   type Payload a
-  sneakilyExtractResult :: a -> Natural
+  sneakilyExtractResult :: a -> SignKeyVRF FakeVRF -> OutputVRF FakeVRF
   unsneakilyExtractPayload :: a -> Payload a
 
 data WithResult a = WithResult !a !Word64
@@ -48,14 +50,25 @@ data WithResult a = WithResult !a !Word64
 
 instance ToCBOR a => SneakilyContainResult (WithResult a) where
   type Payload (WithResult a) = a
-  sneakilyExtractResult (WithResult _ nat) = fromIntegral nat
+
+  -- Note that this instance completely ignores the key.
+  sneakilyExtractResult (WithResult _ nat) _ =
+    -- Fill in the word64 as the low 8 bytes of a 16 byte string
+    OutputVRF (toBytes (BS.word64BE 0 <> BS.word64BE nat))
+    where
+      toBytes = LBS.toStrict . BS.toLazyByteString
+
   unsneakilyExtractPayload (WithResult p _) = p
 
 -- | An instance to allow this to be used in the way of `Mock` where no result
--- has been provided. Though note that the key isn't used at all here.
+-- has been provided.
 instance SneakilyContainResult Seed where
   type Payload Seed = Seed
-  sneakilyExtractResult = fromHash . hashWithSerialiser @MD5 id . toCBOR
+  sneakilyExtractResult s sk =
+    OutputVRF
+      . hashToBytes
+      . hashWithSerialiser @MD5 id
+      $ toCBOR s <> toCBOR sk
   unsneakilyExtractPayload = id
 
 instance VRFAlgorithm FakeVRF where
@@ -65,18 +78,19 @@ instance VRFAlgorithm FakeVRF where
   type Signable FakeVRF = SneakilyContainResult
 
   newtype VerKeyVRF FakeVRF = VerKeyFakeVRF Word64
-    deriving (Show, Eq, Ord, Generic, NoUnexpectedThunks)
+    deriving stock (Show, Generic)
+    deriving newtype (Eq, Ord, NoUnexpectedThunks)
   newtype SignKeyVRF FakeVRF = SignKeyFakeVRF Word64
-    deriving (Show, Eq, Ord, Generic, NoUnexpectedThunks)
+    deriving stock (Show, Generic)
+    deriving newtype (Eq, Ord, NoUnexpectedThunks)
 
-  data CertVRF FakeVRF = CertFakeVRF Word64 Word16
-    deriving (Show, Eq, Ord, Generic)
-    deriving (NoUnexpectedThunks) via UseIsNormalForm (CertVRF FakeVRF)
+  data CertVRF FakeVRF = CertFakeVRF !Word64 !Word16
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (NoUnexpectedThunks)
 
-  maxVRF _ = 2 ^ (8 * sizeHash (Proxy :: Proxy MD5)) - 1
   genKeyVRF seed = SignKeyFakeVRF $ runMonadRandomWithSeed seed getRandomWord64
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n
-  evalVRF () a sk = return $ evalVRF' a sk
+  evalVRF () a sk = evalVRF' a sk
 
   -- This implementation of `verifyVRF` checks the real result, which is hidden
   -- in the certificate, but ignores the produced value, which is set to be the
@@ -86,6 +100,7 @@ instance VRFAlgorithm FakeVRF where
   sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
   sizeCertVRF _ = 10
+  sizeOutputVRF _ = sizeHash (Proxy :: Proxy MD5)
 
   rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
   rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k
@@ -118,11 +133,14 @@ evalVRF' ::
   SneakilyContainResult a =>
   a ->
   SignKeyVRF FakeVRF ->
-  (Natural, CertVRF FakeVRF)
-evalVRF' a (SignKeyFakeVRF n) =
-  let y = sneakilyExtractResult a
+  (OutputVRF FakeVRF, CertVRF FakeVRF)
+evalVRF' a sk@(SignKeyFakeVRF n) =
+  let y = sneakilyExtractResult a sk
       p = unsneakilyExtractPayload a
-      realValue = fromIntegral . fromHash . hashWithSerialiser @MD5 id $ toCBOR p
+      realValue =
+        fromIntegral . bytesToNatural . hashToBytes
+          . hashWithSerialiser @MD5 id
+          $ toCBOR p <> toCBOR sk
    in (y, CertFakeVRF n realValue)
 
 instance FromCBOR (VerKeyVRF FakeVRF) where

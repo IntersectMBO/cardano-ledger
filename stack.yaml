@@ -10,6 +10,7 @@ packages:
 - byron/crypto
 - byron/crypto/test
 - semantics/executable-spec
+- semantics/small-steps-test
 - shelley/chain-and-ledger/dependencies/non-integer
 
 ghc-options:
@@ -36,7 +37,7 @@ extra-deps:
     - test
 
 - git: https://github.com/input-output-hk/cardano-base
-  commit: cba2a46086b824f413d7fb71c140da2a83483cd4
+  commit: 7d795c3040ea7785812efa1c97864bbb41b15d3e
   subdirs:
     - binary
     - binary/test
@@ -44,7 +45,7 @@ extra-deps:
     - slotting
 
 - git: https://github.com/input-output-hk/iohk-monitoring-framework
-  commit: 71df15f7b888d2671f619cc632080aaaaca48087
+  commit: efa4b5ecd7f0a13124616b12679cd42517cd905a
   subdirs:
     - contra-tracer
 

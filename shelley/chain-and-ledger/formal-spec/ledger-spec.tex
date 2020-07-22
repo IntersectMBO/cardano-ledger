@@ -90,7 +90,6 @@
 \newcommand{\MaxLovelaceSupply}{\ensuremath{\mathsf{MaxLovelaceSupply}}}
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
-\newcommand{\StakeCreds}{\type{StakeCreds}}
 \newcommand{\Seed}{\type{Seed}}
 \newcommand{\seedOp}{\star}
 \newcommand{\Ppm}{\type{Ppm}}
@@ -186,6 +185,7 @@
 \newcommand{\Gkeys}{\var{G_{keys}}}
 \newcommand{\Block}{\type{Block}}
 \newcommand{\SlotId}{\type{SlotId}}
+\newcommand{\PPUpdateState}{\type{PPUpdateState}}
 \newcommand{\PPUpdateEnv}{\type{PPUpdateEnv}}
 \newcommand{\UTxOEnv}{\type{UTxOEnv}}
 \newcommand{\CEEnv}{\type{CEEnv}}
@@ -229,7 +229,6 @@
 \newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
 \newcommand{\epoch}[1]{\fun{epoch}~\var{#1}}
 \newcommand{\kesPeriod}[1]{\fun{kesPeriod}~\var{#1}}
-\newcommand{\pps}[1]{\fun{pps}~ \var{#1}}
 
 %% UTxO witnesses
 \newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
@@ -315,6 +314,7 @@
 \include{sts-overview}
 \include{properties}
 \include{non-integral}
+\include{leader-value}
 
 \clearpage
 
@@ -326,6 +326,7 @@
 \begin{appendix}
   \input{crypto-details}
   \input{address-binary}
+  \input{bootstrap-witnesses}
   \input{cddl}
   \input{txsize}
   \input{proofs}

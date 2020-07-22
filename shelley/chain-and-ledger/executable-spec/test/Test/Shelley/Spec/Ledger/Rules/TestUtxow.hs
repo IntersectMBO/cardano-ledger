@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -15,7 +17,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestUtxow
   )
 where
 
-import Byron.Spec.Ledger.Core ((<|), dom)
+import Control.Iterate.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -24,22 +26,34 @@ import Control.State.Transition.Trace
     pattern SourceSignalTarget,
   )
 import Data.Foldable (toList)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (isSubmapOf)
 import qualified Data.Set as Set (fromList, intersection, isSubsetOf, map, null)
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash (..),
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.LedgerState (keyRefunds, pattern UTxOState)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Tx
-  ( _body,
-    _witnessSet,
-    addrWits,
+  ( addrWits,
     getKeyCombinations,
     msigWits,
+    _body,
+    _witnessSet,
   )
-import Shelley.Spec.Ledger.TxData (_certs, _inputs, _txfee, witKeyHash, pattern TxIn)
+import Shelley.Spec.Ledger.TxData
+  ( PoolParams (..),
+    witKeyHash,
+    _certs,
+    _inputs,
+    _txfee,
+    pattern TxIn,
+  )
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
-import Test.QuickCheck ((===), Property, conjoin)
+import Test.QuickCheck (Property, conjoin, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( StakePools,
+  ( C,
     Tx,
     UTXO,
     UTXOW,
@@ -53,7 +67,10 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 -- equals the sum of the created value.
 preserveBalance ::
   PParams ->
-  [(StakePools, SourceSignalTarget UTXOW)] ->
+  [ ( Map (KeyHash 'StakePool C) (PoolParams C),
+      SourceSignalTarget (UTXOW C)
+    )
+  ] ->
   Property
 preserveBalance pp tr =
   conjoin $
@@ -79,7 +96,10 @@ preserveBalance pp tr =
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted ::
   PParams ->
-  [(StakePools, SourceSignalTarget UTXOW)] ->
+  [ ( Map (KeyHash 'StakePool C) (PoolParams C),
+      SourceSignalTarget (UTXOW C)
+    )
+  ] ->
   Property
 preserveBalanceRestricted pp tr =
   conjoin $
@@ -94,7 +114,7 @@ preserveBalanceRestricted pp tr =
           }
         ) =
         inps u tx == outs stp (_body tx)
-    inps u tx = balance $ (_inputs $ _body tx) <| u
+    inps u tx = balance $ eval ((_inputs $ _body tx) <| u)
     outs stp_ tx =
       balance (txouts tx)
         + _txfee tx
@@ -105,7 +125,7 @@ preserveBalanceRestricted pp tr =
 
 -- | Preserve outputs of Txs
 preserveOutputsTx ::
-  [SourceSignalTarget UTXO] ->
+  [SourceSignalTarget (UTXO C)] ->
   Property
 preserveOutputsTx tr =
   conjoin $
@@ -121,7 +141,7 @@ preserveOutputsTx tr =
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
-  [SourceSignalTarget UTXO] ->
+  [SourceSignalTarget (UTXO C)] ->
   Property
 eliminateTxInputs tr =
   conjoin $
@@ -132,12 +152,12 @@ eliminateTxInputs tr =
         { signal = tx,
           target = UTxOState (UTxO utxo') _ _ _
         } =
-        Set.null $ txins (_body tx) `Set.intersection` dom utxo'
+        Set.null $ eval (txins (_body tx) ∩ dom utxo')
 
 -- | Check that all new entries of a Tx are included in the new UTxO and that
 -- all TxIds are new.
 newEntriesAndUniqueTxIns ::
-  [SourceSignalTarget UTXO] ->
+  [SourceSignalTarget (UTXO C)] ->
   Property
 newEntriesAndUniqueTxIns tr =
   conjoin $
@@ -150,23 +170,23 @@ newEntriesAndUniqueTxIns tr =
           target = (UTxOState (UTxO utxo') _ _ _)
         } =
         let UTxO outs = txouts (_body tx)
-            outIds = Set.map (\(TxIn _id _) -> _id) (dom outs)
-            oldIds = Set.map (\(TxIn _id _) -> _id) (dom utxo)
+            outIds = Set.map (\(TxIn _id _) -> _id) (domain outs)
+            oldIds = Set.map (\(TxIn _id _) -> _id) (domain utxo)
          in null (outIds `Set.intersection` oldIds)
-              && (dom outs) `Set.isSubsetOf` (dom utxo')
+              && eval ((dom outs) ⊆ (dom utxo'))
 
 -- | Check for absence of double spend
 noDoubleSpend ::
-  [SourceSignalTarget UTXO] ->
+  [SourceSignalTarget (UTXO C)] ->
   Property
 noDoubleSpend tr =
   [] === getDoubleInputs (map sig tr)
   where
     sig (SourceSignalTarget _ _ s) = s
-    getDoubleInputs :: [Tx] -> [(Tx, [Tx])]
+    getDoubleInputs :: [Tx C] -> [(Tx C, [Tx C])]
     getDoubleInputs [] = []
     getDoubleInputs (t : ts) = lookForDoubleSpends t ts ++ getDoubleInputs ts
-    lookForDoubleSpends :: Tx -> [Tx] -> [(Tx, [Tx])]
+    lookForDoubleSpends :: Tx C -> [Tx C] -> [(Tx C, [Tx C])]
     lookForDoubleSpends _ [] = []
     lookForDoubleSpends tx_j ts =
       if null doubles then [] else [(tx_j, doubles)]
@@ -187,7 +207,7 @@ noDoubleSpend tr =
 -- TODO @mgudemann
 -- This property is currenty disabled du to time-out problems with getting all
 -- possible combinations for multi-sig.
-requiredMSigSignaturesSubset :: [SourceSignalTarget UTXOW] -> Property
+requiredMSigSignaturesSubset :: [SourceSignalTarget (UTXOW C)] -> Property
 requiredMSigSignaturesSubset tr =
   conjoin $
     map signaturesSubset tr

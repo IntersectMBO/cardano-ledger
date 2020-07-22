@@ -14,31 +14,24 @@ module Shelley.Spec.Ledger.STS.Mir
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∪+), (◁))
-import Cardano.Prelude (NoUnexpectedThunks (..), asks)
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Iterate.SetAlgebra (dom, eval, (∪+), (◁))
 import Control.State.Transition
   ( InitialRule,
     STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
-    liftSTS,
   )
-import qualified Data.Map.Strict as Map
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
-import Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..))
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState,
     InstantaneousRewards (..),
-    _delegationState,
-    _dstate,
-    _irwd,
-    _rewards,
-    _stkCreds,
+    RewardAccounts,
     emptyAccount,
     emptyInstantaneousRewards,
     emptyLedgerState,
@@ -48,6 +41,10 @@ import Shelley.Spec.Ledger.LedgerState
     esPp,
     esPrevPp,
     esSnapshots,
+    _delegationState,
+    _dstate,
+    _irwd,
+    _rewards,
     pattern EpochState,
   )
 import Shelley.Spec.Ledger.PParams (emptyPParams)
@@ -55,7 +52,7 @@ import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 
 data MIR crypto
 
-instance STS (MIR crypto) where
+instance Typeable crypto => STS (MIR crypto) where
   type State (MIR crypto) = EpochState crypto
   type Signal (MIR crypto) = ()
   type Environment (MIR crypto) = ()
@@ -94,19 +91,16 @@ mirTransition = do
       ()
       ) <-
     judgmentContext
-  network <- liftSTS $ asks networkId
   let dpState = _delegationState ls
       dState = _dstate dpState
-      StakeCreds stkcreds = _stkCreds dState
-      irwdR = (dom stkcreds) ◁ (iRReserves $ _irwd dState)
+      rewards = _rewards dState
+      irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd dState) :: RewardAccounts crypto
       totFromReserves = sum irwdR
       reserves = _reserves acnt
-      updateFromReserves = Map.mapKeys (mkRwdAcnt network) irwdR
-      irwdT = (dom stkcreds) ◁ (iRTreasury $ _irwd dState)
+      irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd dState) :: RewardAccounts crypto
       totFromTreasury = sum irwdT
       treasury = _treasury acnt
-      updateFromTreasury = Map.mapKeys (mkRwdAcnt network) irwdT
-      update = Map.unionWith (+) updateFromReserves updateFromTreasury
+      update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts crypto
 
   if totFromReserves <= reserves && totFromTreasury <= treasury
     then
@@ -122,7 +116,7 @@ mirTransition = do
                 dpState
                   { _dstate =
                       dState
-                        { _rewards = (_rewards dState) ∪+ update,
+                        { _rewards = eval ((_rewards dState) ∪+ update),
                           _irwd = emptyInstantaneousRewards
                         }
                   }

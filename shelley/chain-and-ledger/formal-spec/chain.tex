@@ -43,6 +43,8 @@
 \newcommand{\OverlayEnv}{\type{OverlayEnv}}
 \newcommand{\VRFState}{\type{VRFState}}
 \newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
+\newcommand{\TickNonceState}{\type{TickNonceState}}
+\newcommand{\TickNonceEnv}{\type{TickNonceEnv}}
 \newcommand{\NewEpochState}{\type{NewEpochState}}
 \newcommand{\UpdateNonceState}{\type{UpdateNonceState}}
 \newcommand{\UpdateNonceEnv}{\type{UpdateNonceEnv}}
@@ -153,7 +155,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
     \BHBody =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{prev} & \HashHeader^? & \text{hash of previous block body}\\
+        \var{prev} & \HashHeader^? & \text{hash of previous block header}\\
         \var{vk} & \VKey & \text{block issuer}\\
         \var{vrfVk} & \VKey & \text{VRF verification key}\\
         \var{slot} & \Slot & \text{block slot}\\
@@ -214,7 +216,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
       \fun{bblockno} & \BHBody \to \BlockNo &
       \fun{bnonce} & \BHBody \to \Seed \\
       \fun{\bprfn{}} & \BHBody \to \Proof &
-      \fun{bleader} & \BHBody \to \unitInterval \\
+      \fun{bleader} & \BHBody \to \N \\
       \fun{\bprfl{}} & \BHBody \to \Proof &
       \fun{hBbsize} & \BHBody \to \N \\
       \fun{bhash} & \BHBody \to \HashBBody &
@@ -244,22 +246,22 @@ It has no environment or signal, and the state is $\EpochState$.
   %
   \emph{Helper function}
   \begin{align*}
-      & \fun{mirUpdates} \in \InstantaneousRewards \to \StakeCreds \to
-      (\AddrRWD \mapsto \Coin)\times(\AddrRWD \mapsto \Coin)
+      & \fun{mirUpdates} \in \InstantaneousRewards \to (\StakeCredential\mapsto\Coin) \to \\
+      & ~~~(\AddrRWD \mapsto \Coin)\times(\AddrRWD \mapsto \Coin)
       \\
-      & \fun{mirUpdates}~(\var{irReserves},~\var{irTreasury})~\var{stkCreds} =
+      & \fun{mirUpdates}~(\var{irReserves},~\var{irTreasury})~\var{rewards} =
       (\var{updateR},~\var{updateT})\\
       & ~~~~\where \\
       & ~~~~~~~~~\var{updateR} =
         \left\{
         \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
-        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{stkCreds})\restrictdom\var{irReserves}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irReserves}
         \right\}
         \\
       & ~~~~~~~~~\var{updateT} =
         \left\{
         \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
-        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{stkCreds})\restrictdom\var{irTreasury}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irTreasury}
         \right\}
         \\
   \end{align*}
@@ -283,13 +285,13 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
   \begin{equation}\label{eq:mir}
     \inference[MIR]
     {
-      (\var{stkCreds},~\var{rewards},~\var{delegations},~
+      (\var{rewards},~\var{delegations},~
       \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
         \leteq \var{ds}
       \\
       (\var{treasury},~\var{reserves})\leteq\var{acnt}
       &
-      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{stkCreds}
+      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{rewards}
       \\
       \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateR}}v
       &
@@ -305,8 +307,7 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
       \var{rewards'}\leteq\var{rewards}\unionoverridePlus\var{updateR}\unionoverridePlus\var{updateT}
       \\
       \var{ds'} \leteq
-      (\var{stkCreds},~
-      \varUpdate{\var{rewards}'},~\var{delegations},~
+      (\varUpdate{\var{rewards}'},~\var{delegations},~
       \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},
       ~(\varUpdate{\emptyset},~\varUpdate{\emptyset}))
     }
@@ -335,13 +336,13 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
   \begin{equation}\label{eq:mir-skip}
     \inference[MIR-Skip]
     {
-      (\var{stkCreds},~\var{rewards},~\var{delegations},~
+      (\var{rewards},~\var{delegations},~
       \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
         \leteq \var{ds}
       \\
       (\var{treasury},~\var{reserves})\leteq\var{acnt}
       &
-      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{stkCreds}
+      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{rewards}
       \\
       \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateR}}v
       &
@@ -350,7 +351,7 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
       \var{totR}>\var{reserves}~\lor~\var{totT}>\var{treasury}
       \\~\\
       \var{ds'} \leteq
-      (\var{stkCreds},~\var{rewards},~\var{delegations},~
+      (\var{rewards},~\var{delegations},~
       \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},
       ~(\varUpdate{\emptyset},~\varUpdate{\emptyset}))
     }
@@ -517,7 +518,7 @@ In the first case, the new epoch state is updated as follows:
       }
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
-          (\var{acnt},~\var{ss},~\var{ls},~\wcard,~\var{pp}) & \var{es'''} \\
+          (\var{acnt},~\var{ss},~\wcard,~\wcard,~\var{pp}) & \var{es'''} \\
          (\wcard,~\var{pstake_{set}},~\wcard,~\wcard) & \var{ss} \\
          (\var{stake},~\var{delegs},~\var{poolPrms}) & \var{pstake_{set}} \\
          total & \sum_{\_ \mapsto c\in\var{stake}} c \\
@@ -610,16 +611,107 @@ In the first case, the new epoch state is updated as follows:
 
 \clearpage
 
+\subsection{Tick Nonce Transition}
+\label{sec:tick-nonce-trans}
+
+The Tick Nonce Transition is responsible for updating the epoch nonce and the
+previous hash nonce at the start of an epoch. Its environment is shown in
+Figure~\ref{fig:ts-types:ticknonce} and consists of the protocol parameters
+$\var{pp}$, the candidate nonce $\eta_c$ and the previous header hash as a
+nonce. Its state consists of the epoch nonce $\eta_0$ and the previous hash
+nonce.
+
+\begin{figure}
+  \emph{Tick Nonce environments}
+  \begin{equation*}
+    \TickNonceEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pp} & \PParams & \text{protocol parameters} \\
+        \eta_c & \Seed & \text{candidate nonce} \\
+        \eta_\var{ph} & \Seed & \text{previous header hash as nonce} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Tick Nonce states}
+  \begin{equation*}
+    \TickNonceState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \eta_0 & \Seed & \text{epoch nonce} \\
+        \eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  \label{fig:ts-types:ticknonce}
+\end{figure}
+
+The signal to the transition rule $\mathsf{TICKN}$ is a marker indicating
+whether we are in a new epoch. If we are in a new epoch, we update the epoch
+nonce and the previous hash. Otherwise, we do nothing.
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:tick-nonce-notnewepoch}
+   \inference[Not-New-Epoch]
+   { }
+   {
+     {\begin{array}{c}
+        \var{pp} \\
+        \eta_c \\
+        \eta_\var{ph} \\
+      \end{array}}
+     \vdash
+     {\left(\begin{array}{c}
+           \eta_0 \\
+           \eta_h \\
+     \end{array}\right)}
+     \trans{tickn}{\mathsf{False}}
+     {\left(\begin{array}{c}
+           \eta_0 \\
+           \eta_h \\
+     \end{array}\right)}
+   }
+ \end{equation}
+
+ \nextdef
+
+ \begin{equation}\label{eq:tick-nonce-newepoch}
+   \inference[New-Epoch]
+   {
+     \eta_e \leteq \fun{extraEntropy}~\var{pp}
+   }
+   {
+     {\begin{array}{c}
+        \var{pp} \\
+        \eta_c \\
+        \eta_\var{ph} \\
+      \end{array}}
+     \vdash
+     {\left(\begin{array}{c}
+           \eta_0 \\
+           \eta_h \\
+     \end{array}\right)}
+     \trans{tickn}{\mathsf{True}}
+     {\left(\begin{array}{c}
+           \varUpdate{\eta_c \seedOp \eta_h \seedOp \eta_e} \\
+           \varUpdate{\eta_\var{ph}} \\
+     \end{array}\right)}
+   }
+ \end{equation}
+
+ \caption{Tick Nonce rules}
+ \label{fig:rules:tick-nonce}
+\end{figure}
+
 \subsection{Update Nonce Transition}
 \label{sec:update-nonces-trans}
 
 The Update Nonce Transition updates the nonces until the randomness gets fixed.
 The environment is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
-the block nonce $\eta$, the protocol parameters $\var{pp}$, the current previous hash
-nonce $\eta_\var{ph}$,
-and a marker $\var{ne}$ determining whether we are in a new epoch.
+the block nonce $\eta$.
 The update nonce state is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
-the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
+the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
 
 \begin{figure}
   \emph{Update Nonce environments}
@@ -628,9 +720,6 @@ the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\
     \left(
       \begin{array}{r@{~\in~}lr}
         \eta & \Seed & \text{new nonce} \\
-        \var{pp} & \PParams & \text{protocol parameters} \\
-        \eta_\var{ph} & \Seed & \text{previous header hash as nonce} \\
-        \var{ne} & \Bool & \text{is new epoch} \\
       \end{array}
     \right)
   \end{equation*}
@@ -640,10 +729,8 @@ the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\
     \UpdateNonceState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \eta_0 & \Seed & \text{epoch nonce} \\
-        \eta_c & \Seed & \text{candidate nonce} \\
         \eta_v & \Seed & \text{evolving nonce} \\
-        \eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
+        \eta_c & \Seed & \text{candidate nonce} \\
       \end{array}
     \right)
   \end{equation*}
@@ -662,13 +749,9 @@ the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\
 \end{figure}
 
 The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal. There are
-three different cases for $\mathsf{UPDN}$: one where we are in a new epoch, one
-where \var{s} is not yet \StabilityWindow{} slots from the beginning of the next
-epoch and one where \var{s} is less than \StabilityWindow{} slots until the start of
-the next epoch.
-
-This does assume that the first block in an epoch will occur before
-\StabilityWindow{} slots before the beginning of the next epoch.
+two different cases for $\mathsf{UPDN}$: one where \var{s} is not yet
+\StabilityWindow{} slots from the beginning of the next epoch and one where
+\var{s} is less than \StabilityWindow{} slots until the start of the next epoch.
 
 Note that in \ref{eq:update-both}, the nonce candidate $\eta_c$ transitions to
 $\eta_v\seedOp\eta$, not $\eta_c\seedOp\eta$. The reason for this is that even
@@ -677,35 +760,6 @@ nonces to again be equal at the start of a new epoch (so that the entropy added
 near the end of the epoch is not discarded).
 
 \begin{figure}[ht]
-   \begin{equation}\label{eq:update-all}
-    \inference[Update-All]
-    { \eta_e \leteq \fun{extraEntropy}~\var{pp}
-    }
-    {
-      {\begin{array}{c}
-         \eta \\
-         \var{pp} \\
-         \eta_\var{ph} \\
-         \mathsf{True}
-       \end{array}}
-      \vdash
-      {\left(\begin{array}{c}
-            \eta_0 \\
-            \eta_v \\
-            \eta_c \\
-            \eta_h \\
-      \end{array}\right)}
-      \trans{updn}{\var{s}}
-      {\left(\begin{array}{c}
-            \varUpdate{\eta_c \seedOp \eta_h \seedOp \eta_e} \\
-            \varUpdate{\eta_v\seedOp\eta} \\
-            \varUpdate{\eta_v\seedOp\eta} \\
-            \varUpdate{\eta_\var{ph}} \\
-      \end{array}\right)}
-    }
-  \end{equation}
-
-  \nextdef
 
   \begin{equation}\label{eq:update-both}
     \inference[Update-Both]
@@ -715,23 +769,16 @@ near the end of the epoch is not discarded).
     {
       {\begin{array}{c}
          \eta \\
-         \var{pp} \\
-         \eta_\var{ph} \\
-         \mathsf{False}
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
-            \eta_0 \\
             \eta_v \\
             \eta_c \\
-            \eta_h \\
       \end{array}\right)}
       \trans{updn}{\var{s}}
       {\left(\begin{array}{c}
-            \eta_0 \\
             \varUpdate{\eta_v\seedOp\eta} \\
             \varUpdate{\eta_v\seedOp\eta} \\
-            \eta_h \\
       \end{array}\right)}
     }
   \end{equation}
@@ -746,23 +793,16 @@ near the end of the epoch is not discarded).
     {
       {\begin{array}{c}
          \eta \\
-         \var{pp} \\
-         \eta_\var{ph} \\
-         \mathsf{False}
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
-            \eta_0 \\
             \eta_v \\
             \eta_c \\
-            \eta_h \\
       \end{array}\right)}
       \trans{updn}{\var{s}}
       {\left(\begin{array}{c}
-            \eta_0 \\
             \varUpdate{\eta_v\seedOp\eta} \\
             \eta_c \\
-            \eta_h \\
       \end{array}\right)}
     }
   \end{equation}
@@ -914,7 +954,7 @@ slot is removed. The helper function $\fun{adoptGenesisDelegs}$ accomplishes the
       \leteq\var{es}
       \\
       & ~~~~~~~~~~
-      (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
+      (~\var{rewards},~\var{delegations},~\var{ptrs},
       ~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})\leteq\var{ds}
       \\
       & ~~~~~~~~~~\var{curr}\leteq
@@ -1068,15 +1108,16 @@ Using this we verify the preconditions of the operational certificate state
 transition which are the following:
 
 \begin{itemize}
-\item The KES period start \var{c_0} is greater than or equal to the KES period of
-  the slot of the block header body and less than $\MaxKESEvo$-many KES periods after \var{c_0}.
+\item The KES period of the slot in the block header body must be greater than or equal to
+  the start value \var{c_0} listed in the operational certificate,
+  and less than $\MaxKESEvo$-many KES periods after \var{c_0}.
   The value of $\MaxKESEvo$ is the agreed-upon lifetime of an operational certificate,
   see \cite{delegation_design}.
 \item \var{hk} exists as key in the mapping of certificate issues numbers to a KES
   period \var{m} and that period is less than or equal to \var{n}.
-\item The signature $\sigma$ can be verified with the cold verification key
+\item The signature $\tau$ can be verified with the cold verification key
   \var{vk_{cold}}.
-\item The KES signature $\tau$ can be verified with the hot verification key
+\item The KES signature $\sigma$ can be verified with the hot verification key
   \var{vk_{hot}}.
 \end{itemize}
 
@@ -1127,7 +1168,7 @@ The OCERT rule has six predicate failures:
 \item If the KES period is greater than or equal to the KES period end (start +
   $\MaxKESEvo$) in the certificate, there is a \emph{KESAfterEnd} failure.
 \item If the period counter in the original key hash counter mapping is larger
-  than the period number in the certificate, there is a \emph{KESPeriodWrong}
+  than the period number in the certificate, there is a \emph{CounterTooSmall}
   failure.
 \item If the signature of the hot key, KES period number and period start is
   incorrect, there is an \emph{InvalidSignature} failure.
@@ -1150,7 +1191,7 @@ parameters. The function checks:
 \item The validity of the proofs for the leader value and the new nonce.
 \item The verification key is associated with relative stake $\sigma$ in the stake distribution.
 \item The $\fun{bleader}$ value of \var{bhb} indicates a possible leader for
-  this slot.
+  this slot. The function $\fun{checkLeaderVal}$ is defined in \ref{sec:leader-value-calc}.
 \end{itemize}
 
 \begin{figure}
@@ -1177,7 +1218,7 @@ parameters. The function checks:
       & \begin{array}{cl}
         ~~~~ & \var{hk}\mapsto (\sigma,~\var{hk_{vrf}})\in\var{pd} \\
         ~~~~ \land & \fun{vrfChecks}~\eta_0~\var{bhb} \\
-        ~~~~ \land & \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma} \\
+        ~~~~ \land & \fun{checkLeaderVal}~(\fun{bleader}~\var{bhb})~\sigma~\var{f} \\
       \end{array} \\
       & ~~~~\where \\
       & ~~~~~~~~~~\var{hk} \leteq \hashKey{(\bvkcold bhb)} \\
@@ -1388,12 +1429,9 @@ followed by the transition to update the evolving and candidate nonces.
     \PrtclEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{pp} & \PParams & \text{protocol parameters} \\
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
-        \var{ne} & \Bool & \text{new epoch marker} \\
-        \eta_\var{ph} & \Seed & \text{nonce from previous header hash} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1404,10 +1442,8 @@ followed by the transition to update the evolving and candidate nonces.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{cs} & \KeyHash_{pool} \mapsto \N & \text{operational certificate issues numbers} \\
-        \eta_0 & \Seed & \text{current epoch nonce} \\
         \eta_v & \Seed & \text{evolving nonce} \\
         \eta_c & \Seed & \text{candidate nonce} \\
-        \eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1423,7 +1459,6 @@ followed by the transition to update the evolving and candidate nonces.
 
 The environments for this transition are:
 \begin{itemize}
-  \item The protocol parameters $\var{pp}$.
   \item A mapping $\var{osched}$ of slots to an optional genesis key.
     In the terminology of \cite{delegation_design},
     the slots in $\var{osched}$ are the ``OBFT slots''.
@@ -1432,18 +1467,15 @@ The environments for this transition are:
     responsible for producing the block.
   \item The stake pool stake distribution $\var{pd}$.
   \item The mapping $\var{dms}$ of genesis keys to their cold keys.
-  \item A marker indicating whether we are in a new epoch $\var{ne}$.
-  \item The current previous header hash as a nonce, $\eta_\var{ph}$.
+  \item The epoch nonce $\eta_0$.
 \end{itemize}
 
 The states for this transition consists of:
 \begin{itemize}
   \item The operational certificate issue number mapping.
   \item The last applied block information.
-  \item The current epoch nonce.
   \item The evolving nonce.
   \item The canditate nonce for the next epoch.
-  \item The stored nonce for hash of the last epoch.
 \end{itemize}
 
 \begin{figure}[ht]
@@ -1453,31 +1485,22 @@ The states for this transition consists of:
       \eta\leteq\fun{bnonce}~(\bhbody{bhb})
       \\~\\
       {
-        {\left(\begin{array}{c}
-        \eta \\
-        \var{pp} \\
-        \eta_\var{ph} \\
-        \var{ne} \\
-        \end{array}\right)}
+        \eta
         \vdash
         {\left(\begin{array}{c}
-        \eta_0 \\
         \eta_v \\
         \eta_c \\
-        \eta_h \\
         \end{array}\right)}
         \trans{\hyperref[fig:rules:update-nonce]{updn}}{\var{slot}}
         {\left(\begin{array}{c}
-        \eta_0' \\
         \eta_v' \\
         \eta_c' \\
-        \eta_h' \\
         \end{array}\right)}
       }\\~\\
       {
         {\begin{array}{c}
           \var{osched} \\
-          \eta_0' \\
+          \eta_0 \\
           \var{pd} \\
           \var{dms} \\
         \end{array}
@@ -1487,28 +1510,22 @@ The states for this transition consists of:
     }
     {
       {\begin{array}{c}
-         \var{pp} \\
          \var{osched} \\
          \var{pd} \\
          \var{dms} \\
-         \var{ne} \\
-         \eta_\var{ph}
+         \eta_0 \\
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{cs} \\
-            \eta_0 \\
             \eta_v \\
             \eta_c \\
-            \eta_h \\
       \end{array}\right)}
       \trans{prtcl}{\var{bh}}
       {\left(\begin{array}{c}
             \varUpdate{cs'} \\
-            \varUpdate{\eta_0'} \\
             \varUpdate{\eta_v'} \\
             \varUpdate{\eta_c'} \\
-            \varUpdate{\eta_h'} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -1717,7 +1734,7 @@ following:
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{nes} & \NewEpochState & \text{epoch specific state} \\
-        \var{cs} & \KeyHash_{pool} \mapsto \N & \text{operaional certificate issue numbers} \\
+        \var{cs} & \KeyHash_{pool} \mapsto \N & \text{operational certificate issue numbers} \\
         ~\eta_0 & \Seed & \text{epoch nonce} \\
         ~\eta_v & \Seed & \text{evolving nonce} \\
         ~\eta_c & \Seed & \text{candidate nonce} \\
@@ -1756,7 +1773,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           & (\wcard,~\wcard,~\var{ls},~\wcard)
           & \var{es}
           \\
-          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~\wcard))
+          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs},~\wcard),~\wcard))
           & \var{ls}
       \end{array}
   \end{align*}
@@ -1844,34 +1861,45 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \leteq\var{nes'} \\
         (\var{acnt},~\wcard,\var{ls},~\wcard,~\var{pp'})\leteq\var{es}\\
         ( \wcard,
-          ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~
+          ( (\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs},~\wcard),~
           (\wcard,~\wcard,~\wcard)))\leteq\var{ls}\\
           \var{ne} \leteq  \var{e_1} \neq \var{e_2}\\
           \eta_{ph} \leteq \prevHashToNonce{(\lastAppliedHash{lab})} \\
       {
         {\begin{array}{c}
-            \var{pp'} \\
+        \var{pp'} \\
+        \eta_c \\
+        \eta_\var{ph} \\
+        \end{array}}
+        \vdash
+        {\left(\begin{array}{c}
+        \eta_0 \\
+        \eta_h \\
+        \end{array}\right)}
+        \trans{\hyperref[fig:rules:tick-nonce]{tickn}}{\var{ne}}
+        {\left(\begin{array}{c}
+        \eta_0' \\
+        \eta_h' \\
+        \end{array}\right)}
+      }\\~\\~\\
+      {
+        {\begin{array}{c}
             \var{osched} \\
             \var{pd} \\
             \var{genDelegs} \\
-            \var{ne} \\
-            \eta_{ph} \\
+            \eta_0' \\
          \end{array}}
         \vdash
         {\left(\begin{array}{c}
               \var{cs} \\
-              \eta_0 \\
               \eta_v \\
               \eta_c \\
-              \eta_h \\
         \end{array}\right)}
         \trans{\hyperref[fig:rules:prtcl]{prtcl}}{\var{bh}}
         {\left(\begin{array}{c}
               \var{cs'} \\
-              \eta_0' \\
               \eta_v' \\
               \eta_c' \\
-              \eta_h' \\
         \end{array}\right)}
       } \\~\\~\\
       {
@@ -2009,7 +2037,7 @@ candidate nonces for Shelley.
                           \var{utxo} \\
                           0 \\
                           0 \\
-                          \emptyset \\
+                          (\emptyset,~\emptyset) \\
                         \end{array}
                       \right) \\
                       \left(
@@ -2020,8 +2048,8 @@ candidate nonces for Shelley.
                             \emptyset \\
                             \emptyset \\
                             \emptyset \\
-                            \emptyset \\
                             \var{genDelegs} \\
+                            \emptyset \\
                           \end{array}
                         \right) \\
                         \left(
@@ -2096,7 +2124,7 @@ candidate nonces for Shelley.
       \right) \\
       & ~~~~\where \\
       & ~~~~~~~~~e = \epoch{s_{last}} \\
-      & ~~~~~~~~~pp = \pps{us} \\
+      & ~~~~~~~~~pp = \fun{pps}~{us} \\   % this pps function is defined in the Byron chain spec
   \end{align*}
 
   \caption{Byron to Shelley State Transtition}

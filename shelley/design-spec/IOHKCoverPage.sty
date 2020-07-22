@@ -262,3 +262,10 @@
 \newcommand{\change}[4]{\stepcounter{change}%
 \\\hline%
 \arabic{change}&#1&#2&#3&#4}
+
+\newcommand{\changePageBreak}{%
+\end{tabular}%
+\clearpage%
+\begin{tabular}{||p{0.8cm}|p{1.8cm}|p{3cm}|p{1.5cm}|p{7.4cm}||}%
+\textbf{Rev.} & \textbf{Date} & \textbf{Who} & \textbf{Team} & \textbf{What}%
+}

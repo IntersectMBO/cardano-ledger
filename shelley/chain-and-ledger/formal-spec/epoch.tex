@@ -132,10 +132,12 @@ throughout the rest of the section.
 \begin{figure}[htb]
   \emph{Total possible refunds}
   \begin{align*}
-    & \fun{obligation} \in \PParams \to \StakeCreds \to \StakePools \to \Coin \\
-    & \obligation{pp}{stkCreds}{stpools}{cslot} =
-      (\fun{keyDeposit}~\var{pp}) \cdot|\var{stkCreds}| +
-      (\fun{poolDecayRate}~\var{pp}) \cdot|\var{stpools}| \\
+    & \fun{obligation} \in \PParams \to (\StakeCredential \mapsto \Coin)
+    \to (\KeyHash_{pool}\mapsto\PoolParam) \to \Coin \\
+    & \obligation{pp}{rewards}{poolParams} = \\
+    & ~~~~~
+    (\fun{keyDeposit}~\var{pp}) \cdot|\var{rewards}| +
+    (\fun{poolDeposit}~\var{pp}) \cdot|\var{poolParams}| \\
   \end{align*}
   %
   \emph{Filter Stake to one Pool}
@@ -256,16 +258,16 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
       \restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right),
     ~\var{delegations},~\var{poolParams}\big)\\
       & \where \\
-      & ~~~~ (\var{stkCreds},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard)
+      & ~~~~ (~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard,~\wcard)
         = \var{dstate} \\
-      & ~~~~ (\var{stpools},~\var{poolParams}~\wcard,~\wcard) = \var{pstate} \\
+      & ~~~~ (~\var{poolParams}~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
         \left(\fun{stakeCred_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
         \circ\left(\range{\var{utxo}}\right)
         \right)
         \cup \left(\fun{stakeCred_r}^{-1}\circ\var{rewards}\right) \\
       & ~~~~ \var{activeDelegs} =
-               (\dom{stkCreds}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
+               (\dom{rewards}) \restrictdom \var{delegations} \restrictrange (\dom{poolParams}) \\
   \end{align*}
 
   \caption{Stake Distribution Function}
@@ -450,9 +452,9 @@ This transition has no preconditions and results in the following state change:
       \begin{array}{r@{~\leteq~}l}
         \var{retired} & \dom{(\var{retiring}^{-1}~\var{e})} \\
         \var{pr} & \left\{
-                   \var{kh}\mapsto(\fun{poolDeposit}~\var{pp})
+                   \var{hk}\mapsto(\fun{poolDeposit}~\var{pp})
                      \mid
-                     \var{kh}\in\var{retired}
+                     \var{hk}\in\var{retired}
                    \right\}\\
         \var{rewardAcnts}
                  & \{\var{hk}\mapsto \fun{poolRAcnt}~\var{pool} \mid
@@ -485,7 +487,6 @@ This transition has no preconditions and results in the following state change:
           \var{treasury} \\
           \var{reserves} \\
           ~ \\
-          \var{stkCreds} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
@@ -493,8 +494,8 @@ This transition has no preconditions and results in the following state change:
           \var{fGenDelegs} \\
           \var{i_{rwd}} \\
           ~ \\
-          \var{stpools} \\
           \var{poolParams} \\
+          \var{fPoolParams} \\
           \var{retiring} \\
         \end{array}
       \right)
@@ -511,7 +512,6 @@ This transition has no preconditions and results in the following state change:
           \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{unclaimed}} \\
           \var{reserves} \\
           ~ \\
-          \var{stkCreds} \\
           \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{refunds}} \\
           \varUpdate{\var{delegations}} & \varUpdate{\subtractrange} & \varUpdate{\var{retired}} \\
           \var{ptrs} \\
@@ -519,8 +519,8 @@ This transition has no preconditions and results in the following state change:
           \var{fGenDelegs} \\
           \var{i_{rwd}}\\
           ~ \\
-          \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{stpools}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{poolParams}} \\
+          \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{fPoolParams}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
         \end{array}
       \right)
@@ -577,6 +577,27 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
   %
   \caption{New Proto Param transition-system types}
   \label{fig:ts-types:new-proto-param}
+  %
+  \emph{Helper Functions}
+  \begin{align*}
+      & \fun{updatePpup} \in \UTxOState \to \PParams \to \UTxOState\\
+      & \fun{updatePpup}~\var{utxoSt}~\var{pp} =
+      \begin{cases}
+        (\var{utxo},\var{deposits},\var{fees},(\var{fpup},~\emptyset))
+        &
+        \var{canFollow}
+        \\
+        (\var{utxo},\var{deposits},\var{fees},(\emptyset,~\emptyset))
+        &
+        \text{otherwise} \\
+      \end{cases}\\
+      & ~~~\where \\
+      & ~~~~~~~\var{canFollow} =
+        \forall\var{ps}\in\range{pup},~
+        \var{pv}\mapsto\var{v}\in\var{ps}\implies\fun{pvCanFollow}~(\fun{pv}~\var{pp})~\var{v}
+        \\
+      & ~~~~~~~(\var{utxo},\var{deposits},\var{fees},(\var{pup},~\var{fpup})) = \var{utxoSt} \\
+  \end{align*}
 \end{figure}
 
 
@@ -589,6 +610,15 @@ max transaction size and the max header size.
 If the requirements are met, the new protocol parameters are accepted, the proposal is reset,
 and the reserves are adjusted to account for changes in the deposits.
 Otherwise, the only change is that the proposal is reset.
+
+The $\mathsf{NEWPP}$ rule also cleans up the protocol parameter update proposals,
+by calling $\fun{updatePpup}$ on the UTxO state.
+The $\fun{updatePpup}$ sets the protocol parameter updates to the future protocol
+parameter updates provided the protocol versions all can follow from the
+version given in the protocol parameters, or the emptyset otherwise.
+In any case, the future protocol parameters update proposals are set to the empty set.
+If new protocol parameters are being adopted, then these is the value given to
+$\fun{updatePpup}$, otherwise the old parameters are given.
 
 Regarding adjusting the reserves for changes in the deposits, one of three things happens:
 
@@ -623,13 +653,13 @@ for ease of reading.
     {
       \var{pp_{new}}\neq\Nothing \\~\\
       {\begin{array}{rcl}
-         \var{oblg_{cur}} & \leteq & \obligation{pp}{stkCreds}{stpools} \\
-         \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkCreds}{stpools} \\
+         (\var{utxo},~\var{deposits},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
+         \var{(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
+         \leteq & \var{dstate}\\
+         \var{(\var{poolParams},~\wcard,~\wcard)} & \leteq & \var{pstate}\\
+         \var{oblg_{cur}} & \leteq & \obligation{pp}{rewards}{poolParams} \\
+         \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{rewards}{poolParams} \\
          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}\\
-         \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
-                                                                                      \leteq
-                              & \var{dstate}\\
-         (\var{utxo},~\var{deposits},~\var{fees},~\wcard) & \leteq & \var{utxoSt} \\
       \end{array}}
       \\~\\~\\
       \var{oblg_{cur}} = \var{deposits} \\
@@ -638,7 +668,9 @@ for ease of reading.
         \fun{maxBlockSize}~\var{pp_{new}}
       \\~\\
         \var{utxoSt'} \leteq
-        \left(\var{utxo},~\varUpdate{oblg_{new}},~\var{fees},~\varUpdate{\emptyset}\right)
+        \left(\var{utxo},~\varUpdate{oblg_{new}},~\var{fees},~\var{pup}\right)
+      \\
+      \var{utxoSt''} \leteq \fun{updatePpup}~\var{utxoSt'}~\var{pp_{new}}
       \\~\\
       (\var{treasury},~\var{reserves})\leteq \var{acnt} \\
       \var{acnt'} \leteq (\var{treasury},~\varUpdate{reserves + diff}) \\
@@ -659,7 +691,7 @@ for ease of reading.
       \trans{newpp}{\var{pp_{new}}}
       \left(
         \begin{array}{rcl}
-          \varUpdate{utxoSt'}\\
+          \varUpdate{utxoSt''}\\
           \varUpdate{acnt'} \\
           \varUpdate{\var{pp_{new}}} \\
         \end{array}
@@ -682,18 +714,16 @@ for ease of reading.
       \end{array}}\right)
       \\~\\~\\
       {\begin{array}{rcl}
-          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkCreds}{stpools} \\
-          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkCreds}{stpools} \\
-         \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
-                                                                                 \leteq
-                              & \var{dstate}\\
+         (\var{utxo},~\var{deposits},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
+          \var{(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
+          \leteq & \var{dstate}\\
+         \var{(\var{poolParams},~\wcard,~\wcard)} & \leteq & \var{pstate}\\
+          \var{oblg_{cur}} & \leteq & \obligation{pp}{rewards}{poolParams} \\
+          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{rewards}{poolParams} \\
          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}
       \end{array}}
       \\~\\~\\
-      \left(\var{utxo},~\var{oblg},~\var{fees},~\wcard\right)
-        \leteq \var{utxoSt} \\
-        \var{utxoSt'} \leteq
-        \left(\var{utxo},~\var{oblg},~\var{fees},~\varUpdate{\emptyset}\right)
+      \var{utxoSt'} \leteq \fun{updatePpup}~\var{utxoSt}~\var{pp} \\
     }
     {
       \begin{array}{l}
@@ -735,7 +765,7 @@ protocol parameters.
 The transition uses a helper function $\fun{votedValue}$ which returns
 the consensus value of update proposals in the event that consensus is met.
 \textbf{Note that} $\fun{votedValue}$
-\textbf{is only well-defined if } $\Quorum$
+\textbf{is only well-defined if } $\var{quorum}$
 \textbf{is greater than half the number of core nodes, i.e.}
 $\Quorum > |\var{genDelegs}|/2$ \textbf{.}
 
@@ -774,12 +804,13 @@ $\Quorum > |\var{genDelegs}|/2$ \textbf{.}
   %
   \emph{Helper Functions}
   \begin{align*}
-      & \fun{votedValue} \in (\KeyHashGen\mapsto\PParamsUpdate) \to \PParamsUpdate^?\\
-      & \fun{votedValue}~\var{vs} =
-        \begin{cases}
-          p & \exists p\in\range{vs}~(|vs\restrictrange p|\geq \Quorum) \\
-          \Nothing & \text{otherwise} \\
-        \end{cases}
+      & \fun{votedValue} \in (\KeyHashGen\mapsto\PParamsUpdate) \to \PParams \to \N \to \PParamsUpdate^?\\
+      & \fun{votedValue}~\var{pup}~\var{pp}~\var{quorum} =
+      \begin{cases}
+        \var{pp}\unionoverrideRight\var{p}
+          & \exists! p\in\range{pup}~(|pup\restrictrange p|\geq \var{quorum}) \\
+        \Nothing & \text{otherwise} \\
+      \end{cases}
   \end{align*}
   %
   \caption{Epoch transition-system types}
@@ -819,9 +850,9 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       { \var{ss'} }
       \\~\\
       (\var{utxoSt},~(\var{dstate},~\var{pstate}))\leteq\var{ls} \\
-      (\var{stpools},~\var{poolParams},~\var{fPoolParams},~\var{retiring})\leteq\var{pstate}
+      (\var{poolParams},~\var{fPoolParams},~\var{retiring})\leteq\var{pstate}
       \\
-      \var{pstate'}\leteq(\var{stpools},~\var{poolParams}\unionoverrideRight\var{fPoolParams},
+      \var{pstate'}\leteq(\var{poolParams}\unionoverrideRight\var{fPoolParams},
       ~\emptyset,~\var{retiring})
       \\~\\~\\
       \var{pp}
@@ -848,9 +879,9 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       }
       \right)
       \\~\\~\\
-      \var{(\wcard,~\wcard,~\wcard,~\var{pup})}\leteq\var{utxoSt'}\\
+      \var{(\wcard,~\wcard,~\wcard,~(\var{pup},\wcard))}\leteq\var{utxoSt'}\\
       \var{pp_{new}}\leteq\var{pp}\unionoverrideRight
-      \fun{votedValue}~\var{pup}\\
+      \fun{votedValue}~\var{pup}~\var{pp}~\Quorum\\
       {
         \begin{array}{r}
           \var{dstate'}\\
@@ -1259,6 +1290,13 @@ The $\fun{applyRUpd}$ function does the following:
     \begin{itemize}
       \item Adjust the treasury, reserves and fee pots by the appropriate amounts.
       \item Add each individual reward to the global reward mapping.
+        We must be careful, though, not to give out rewards to accounts
+        that have been deregistered after the reward update was created.
+        \begin{itemize}
+          \item Rewards for accounts that are still registered are added to the reward mappings.
+          \item The sum of the unregistered rewards are added to the reserves.
+            % TODO - We may want to add these to the treasury instead, to be consistent with our other choices.
+        \end{itemize}
     \end{itemize}
 
 These two functions will be used in the blockchain transition systems in Section~\ref{sec:chain}.
@@ -1284,7 +1322,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\left(
       \wcard,~
       \left(
-      \left(\wcard,~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard\right)~
+      \left(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard\right)~
       \wcard
       \right)
       \right) = \var{ls} \\
@@ -1325,15 +1363,15 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{treasury} \\
           \var{reserves} \\
           ~ \\
-          \var{stkCreds} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
           \var{genDelegs} \\
+          \var{fGenDelegs} \\
           \var{i_{rwd}}
           \\~ \\
-          \var{stpools} \\
           \var{poolParams} \\
+          \var{fPoolParams} \\
           \var{retiring} \\
           ~ \\
           \var{utxo} \\
@@ -1348,18 +1386,18 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       =
       \left(
         \begin{array}{c}
-          \varUpdate{\var{treasury} + \Delta t}\\
+          \varUpdate{\var{treasury} + \Delta t + \var{unregRU'}}\\
           \varUpdate{\var{reserves} + \Delta r}\\
           ~ \\
-          \var{\var{stkCreds}} \\
-          \varUpdate{\var{rewards}\unionoverridePlus\var{rs}} \\
+          \varUpdate{\var{rewards}\unionoverridePlus\var{regRU}} \\
           \var{delegations} \\
           \var{ptrs} \\
           \var{genDelegs} \\
+          \var{fGenDelegs} \\
           \var{i_{rwd}}
           \\~ \\
-          \var{stpools} \\
           \var{poolParams} \\
+          \var{fPoolParams} \\
           \var{retiring} \\
           ~ \\
           \var{utxo} \\
@@ -1370,7 +1408,11 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{prevPp} \\
           \var{pp} \\
         \end{array}
-    \right)
+    \right) \\
+    & ~~~\where \\
+    & ~~~~~~~\var{regRU}=(\dom{rewards})\restrictdom rs\\
+    & ~~~~~~~\var{unregRU}=(\dom{rewards})\subtractdom rs\\
+    & ~~~~~~~\var{unregRU'}=\sum\limits_{\wcard\mapsto c\in\var{unregRU}} \var{c}\\
   \end{align*}
 
   \caption{Reward Update Application}

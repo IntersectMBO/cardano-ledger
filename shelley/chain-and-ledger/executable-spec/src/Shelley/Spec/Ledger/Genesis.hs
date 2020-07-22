@@ -1,40 +1,50 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.Genesis
   ( ShelleyGenesisStaking (..),
     ShelleyGenesis (..),
+    ValidationErr (..),
     emptyGenesisStaking,
     sgActiveSlotCoeff,
     genesisUtxO,
     initialFundsPseudoTxIn,
+    validateGenesis,
+    describeValidationErr,
   )
 where
 
-import Cardano.Crypto (ProtocolMagicId)
-import qualified Cardano.Crypto.Hash.Class as Crypto (Hash (..))
-import Cardano.Prelude (NoUnexpectedThunks)
-import Cardano.Slotting.Slot (EpochSize)
-import Data.Aeson ((.:), (.=), FromJSON (..), ToJSON (..), Value (..))
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import Cardano.Crypto.KES.Class (totalPeriodsKES)
+import Cardano.Prelude (NoUnexpectedThunks, forceElemsToWHNF)
+import Cardano.Slotting.Slot (EpochSize (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Time (NominalDiffTime, UTCTime)
+import Data.Maybe (catMaybes)
+import Data.Proxy (Proxy (..))
+import Data.Scientific (Scientific)
+import Data.Text (Text)
+import qualified Data.Text as Text
+import Data.Time (NominalDiffTime, UTCTime (..))
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Credential
-import Shelley.Spec.Ledger.Crypto (Crypto, HASH)
+import Shelley.Spec.Ledger.Crypto (Crypto, HASH, KES)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO
 
@@ -82,8 +92,7 @@ data ShelleyGenesis c = ShelleyGenesis
   { sgSystemStart :: !UTCTime,
     sgNetworkMagic :: !Word32,
     sgNetworkId :: !Network,
-    sgProtocolMagicId :: !ProtocolMagicId,
-    sgActiveSlotsCoeff :: !Double,
+    sgActiveSlotsCoeff :: !Rational,
     sgSecurityParam :: !Word64,
     sgEpochLength :: !EpochSize,
     sgSlotsPerKESPeriod :: !Word64,
@@ -92,11 +101,7 @@ data ShelleyGenesis c = ShelleyGenesis
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
     sgProtocolParams :: !PParams,
-    sgGenDelegs ::
-      !( Map
-           (KeyHash 'Genesis c)
-           (KeyHash 'GenesisDelegate c, Hash c (VerKeyVRF c))
-       ),
+    sgGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPair c)),
     sgInitialFunds :: !(Map (Addr c) Coin),
     sgStaking :: !(ShelleyGenesisStaking c)
   }
@@ -107,19 +112,15 @@ sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff =
   mkActiveSlotCoeff
     . unitIntervalFromRational
-    . toRational
     . sgActiveSlotsCoeff
 
 instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
   toJSON sg =
     Aeson.object
       [ "systemStart" .= sgSystemStart sg,
-        --TODO: this should not have both network magic and protocol magic
-        -- they are different names for the same thing used in two ways.
         "networkMagic" .= sgNetworkMagic sg,
         "networkId" .= sgNetworkId sg,
-        "protocolMagicId" .= sgProtocolMagicId sg,
-        "activeSlotsCoeff" .= sgActiveSlotsCoeff sg,
+        "activeSlotsCoeff" .= (fromRational (sgActiveSlotsCoeff sg) :: Scientific),
         "securityParam" .= sgSecurityParam sg,
         "epochLength" .= sgEpochLength sg,
         "slotsPerKESPeriod" .= sgSlotsPerKESPeriod sg,
@@ -128,22 +129,21 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
         "updateQuorum" .= sgUpdateQuorum sg,
         "maxLovelaceSupply" .= sgMaxLovelaceSupply sg,
         "protocolParams" .= sgProtocolParams sg,
-        "genDelegs" .= Map.map toGenDelegPair (sgGenDelegs sg),
+        "genDelegs" .= sgGenDelegs sg,
         "initialFunds" .= sgInitialFunds sg,
-        "staking" .= Null
+        "staking" .= sgStaking sg
       ]
-    where
-      toGenDelegPair (d, v) = GenDelegPair d v
 
 instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
   parseJSON =
     Aeson.withObject "ShelleyGenesis" $ \obj ->
       ShelleyGenesis
-        <$> obj .: "systemStart"
+        <$> (forceUTCTime <$> obj .: "systemStart")
         <*> obj .: "networkMagic"
         <*> obj .: "networkId"
-        <*> obj .: "protocolMagicId"
-        <*> obj .: "activeSlotsCoeff"
+        <*> ( (toRational :: Scientific -> Rational)
+                <$> obj .: "activeSlotsCoeff"
+            )
         <*> obj .: "securityParam"
         <*> obj .: "epochLength"
         <*> obj .: "slotsPerKESPeriod"
@@ -152,39 +152,34 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "updateQuorum"
         <*> obj .: "maxLovelaceSupply"
         <*> obj .: "protocolParams"
-        <*> ( Map.map fromGenDelegPair
-                <$> obj .: "genDelegs"
-            )
-        <*> obj .: "initialFunds"
-        <*> pure emptyGenesisStaking --TODO
+        <*> (forceElemsToWHNF <$> obj .: "genDelegs")
+        <*> (forceElemsToWHNF <$> obj .: "initialFunds")
+        <*> obj .:? "staking" .!= emptyGenesisStaking
     where
-      fromGenDelegPair (GenDelegPair d v) = (d, v)
+      forceUTCTime date =
+        let !day = utctDay date
+            !time = utctDayTime date
+         in UTCTime day time
 
--- | Type to adjust the JSON presentation of the genesis delegate mapping.
-data GenDelegPair crypto
-  = GenDelegPair
-      (KeyHash 'GenesisDelegate crypto)
-      (Hash crypto (VerKeyVRF crypto))
-
-instance Crypto crypto => ToJSON (GenDelegPair crypto) where
-  toJSON (GenDelegPair d v) =
+instance Crypto c => ToJSON (ShelleyGenesisStaking c) where
+  toJSON sgs =
     Aeson.object
-      [ "delegate" .= d,
-        "vrf" .= v
+      [ "pools" .= sgsPools sgs,
+        "stake" .= sgsStake sgs
       ]
 
-instance Crypto crypto => FromJSON (GenDelegPair crypto) where
+instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
   parseJSON =
-    Aeson.withObject "GenDelegPair" $ \obj ->
-      GenDelegPair
-        <$> obj .: "delegate"
-        <*> obj .: "vrf"
+    Aeson.withObject "ShelleyGenesisStaking" $ \obj ->
+      ShelleyGenesisStaking
+        <$> (forceElemsToWHNF <$> obj .: "pools")
+        <*> (forceElemsToWHNF <$> obj .: "stake")
 
 {-------------------------------------------------------------------------------
   Genesis UTxO
 -------------------------------------------------------------------------------}
 
-genesisUtxO :: ShelleyGenesis c -> UTxO c
+genesisUtxO :: Crypto c => ShelleyGenesis c -> UTxO c
 genesisUtxO genesis =
   UTxO $
     Map.fromList
@@ -203,19 +198,111 @@ genesisUtxO genesis =
 -- This gets turned into a UTxO by making a pseudo-transaction for each address,
 -- with the 0th output being the coin value. So to spend from the initial UTxO
 -- we need this same 'TxIn' to use as an input to the spending transaction.
-initialFundsPseudoTxIn :: forall c. Addr c -> TxIn c
+initialFundsPseudoTxIn :: forall c. Crypto c => Addr c -> TxIn c
 initialFundsPseudoTxIn addr =
-  case addr of
-    Addr _networkId (KeyHashObj (KeyHash h)) _sref -> pseudoTxIn h
-    Addr _networkId (ScriptHashObj (ScriptHash h)) _sref -> pseudoTxIn h
-    AddrBootstrap byronAddr ->
-      error $
-        "Unsupported Byron address in the genesis UTxO: " <> show byronAddr
+  TxIn (pseudoTxId addr) 0
   where
-    pseudoTxIn :: Crypto.Hash (HASH c) a -> TxIn c
-    pseudoTxIn h = TxIn (pseudoTxId h) 0
-    pseudoTxId :: Crypto.Hash (HASH c) a -> TxId c
-    pseudoTxId = TxId . castHash
-    --TODO: move this to the hash API module
-    castHash :: Crypto.Hash (HASH c) a -> Crypto.Hash (HASH c) b
-    castHash (Crypto.UnsafeHash h) = Crypto.UnsafeHash h
+    pseudoTxId =
+      TxId
+        . ( Crypto.castHash ::
+              Crypto.Hash (HASH c) (Addr c) ->
+              Crypto.Hash (HASH c) (TxBody c)
+          )
+        . Crypto.hashWith serialiseAddr
+
+{-------------------------------------------------------------------------------
+  Genesis validation
+-------------------------------------------------------------------------------}
+
+data ValidationErr
+  = EpochNotLongEnough EpochSize Word64 Rational EpochSize
+  | MaxKESEvolutionsUnsupported Word64 Word
+  | QuorumTooSmall Word64 Word64 Word64
+  deriving (Eq, Show)
+
+describeValidationErr :: ValidationErr -> Text
+describeValidationErr (EpochNotLongEnough es secParam asc minEpochSize) =
+  mconcat
+    [ "Epoch length is too low. Your epoch length of ",
+      Text.pack (show es),
+      " does not meet the minimum epoch length of ",
+      Text.pack (show minEpochSize),
+      " required by your choice of parameters for k and f: ",
+      Text.pack (show secParam),
+      " and ",
+      Text.pack (show asc),
+      ". Epochs should be at least 10k/f slots long."
+    ]
+describeValidationErr (MaxKESEvolutionsUnsupported reqKES supportedKES) =
+  mconcat
+    [ "You have specified a 'maxKESEvolutions' higher",
+      " than that supported by the underlying algorithm.",
+      " You requested ",
+      Text.pack (show reqKES),
+      " but the algorithm supports a maximum of ",
+      Text.pack (show supportedKES)
+    ]
+describeValidationErr (QuorumTooSmall q maxTooSmal nodes) =
+  mconcat
+    [ "You have specified an 'updateQuorum' which is",
+      " too small compared to the number of genesis nodes.",
+      " You requested ",
+      Text.pack (show q),
+      ", but given ",
+      Text.pack (show nodes),
+      " genesis nodes 'updateQuorum' must be greater than ",
+      Text.pack (show maxTooSmal)
+    ]
+
+-- | Do some basic sanity checking on the Shelley genesis file.
+validateGenesis ::
+  forall c.
+  Crypto c =>
+  ShelleyGenesis c ->
+  Either [ValidationErr] ()
+validateGenesis
+  ShelleyGenesis
+    { sgEpochLength,
+      sgActiveSlotsCoeff,
+      sgMaxKESEvolutions,
+      sgSecurityParam,
+      sgUpdateQuorum,
+      sgGenDelegs
+    } =
+    case catMaybes errors of
+      [] -> Right ()
+      xs -> Left xs
+    where
+      errors =
+        [ checkEpochLength,
+          checkKesEvolutions,
+          checkQuorumSize
+        ]
+      checkEpochLength =
+        let minLength =
+              EpochSize . ceiling $
+                fromIntegral @_ @Double (3 * sgSecurityParam)
+                  / fromRational sgActiveSlotsCoeff
+         in if minLength > sgEpochLength
+              then
+                Just $
+                  EpochNotLongEnough
+                    sgEpochLength
+                    sgSecurityParam
+                    sgActiveSlotsCoeff
+                    minLength
+              else Nothing
+      checkKesEvolutions =
+        if sgMaxKESEvolutions <= fromIntegral (totalPeriodsKES (Proxy @(KES c)))
+          then Nothing
+          else
+            Just $
+              MaxKESEvolutionsUnsupported
+                sgMaxKESEvolutions
+                (totalPeriodsKES (Proxy @(KES c)))
+      checkQuorumSize =
+        let numGenesisNodes = fromIntegral $ length sgGenDelegs
+            maxTooSmal = numGenesisNodes `div` 2
+         in if numGenesisNodes == 0 || sgUpdateQuorum > maxTooSmal
+              then Nothing
+              else Just $ QuorumTooSmall sgUpdateQuorum maxTooSmal numGenesisNodes

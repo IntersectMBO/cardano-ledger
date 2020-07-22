@@ -221,7 +221,7 @@ genRegistrationError = Gen.choice
         slotNo <- SlotNumber <$> Gen.word64 Range.constantBounded
         meta <- Gen.map (Range.linear 1 10) $
           (,) <$> genSystemTag <*> genInstallerHash
-        pure (name, (version, slotNo, meta))
+        pure (name, (Registration.ApplicationVersion version slotNo meta))
     ) <*> genSoftwareVersion
   , Registration.MaxBlockSizeTooLarge <$> (Registration.TooLarge <$> genNatural <*> genNatural)
   , Registration.MaxTxSizeTooLarge <$> (Registration.TooLarge <$> genNatural <*> genNatural)

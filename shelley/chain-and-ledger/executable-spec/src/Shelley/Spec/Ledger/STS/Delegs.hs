@@ -16,7 +16,6 @@ module Shelley.Spec.Ledger.STS.Delegs
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∈), (⊆), (⨃))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -25,32 +24,42 @@ import Cardano.Binary
     encodeListLen,
     matchSize,
   )
-import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.State.Transition ((?!), (?!:), Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, trans)
-import Data.Map as Map
+import Cardano.Prelude (NoUnexpectedThunks (..), asks)
+import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
+import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans, (?!), (?!:))
+import Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
+import Shelley.Spec.Ledger.Address (getRwdCred, mkRwdAcnt)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DPState (..),
-    _dstate,
-    _rewards,
-    _stPools,
     emptyDelegation,
+    _dstate,
+    _pParams,
+    _rewards,
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..))
-import Shelley.Spec.Ledger.TxData (DCert (..), DelegCert (..), Delegation (..), Ix, Ptr (..), RewardAcnt, StakePools (..), TxBody (..), Wdrl (..))
+import Shelley.Spec.Ledger.TxData
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    Ix,
+    Ptr (..),
+    RewardAcnt,
+    TxBody (..),
+    Wdrl (..),
+  )
 
 data DELEGS crypto
 
@@ -122,19 +131,19 @@ delegsTransition ::
   TransitionRule (DELEGS crypto)
 delegsTransition = do
   TRC (env@(DelegsEnv slot txIx pp tx reserves), dpstate, certificates) <- judgmentContext
+  network <- liftSTS $ asks networkId
 
   case certificates of
     Empty -> do
       let ds = _dstate dpstate
           wdrls_ = unWdrl $ _wdrls (_body tx)
-          rewards = _rewards ds
+          rewards = Map.mapKeys (mkRwdAcnt network) $ _rewards ds
 
-      wdrls_ ⊆ rewards
+      Map.isSubmapOfBy (==) wdrls_ rewards -- wdrls_ ⊆ rewards
         ?! WithdrawalsNotInRewardsDELEGS
           (Map.differenceWith (\x y -> if x /= y then Just x else Nothing) wdrls_ rewards)
 
-      let rewards' = rewards ⨃ [(w, 0) | w <- Set.toList (dom wdrls_)]
-
+      let rewards' = Map.mapKeys getRwdCred $ eval (rewards ⨃ (fmap (\_x -> 0) wdrls_))
       pure $ dpstate {_dstate = ds {_rewards = rewards'}}
     gamma :|> c -> do
       dpstate' <-
@@ -142,9 +151,9 @@ delegsTransition = do
 
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
-              let StakePools stPools_ = _stPools $ _pstate dpstate'
+              let stPools_ = _pParams $ _pstate dpstate'
                   targetPool = _delegatee deleg
-               in case targetPool ∈ dom stPools_ of
+               in case eval (targetPool ∈ dom stPools_) of
                     True -> Right ()
                     False -> Left $ DelegateeNotRegisteredDELEG targetPool
             _ -> Right ()

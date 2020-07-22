@@ -4,8 +4,7 @@
 
 -- | Simple state transition system over the Identity monad.
 module Control.State.Transition.Simple
-  ( applyRuleIndifferently
-  , applySTSIndifferently
+  ( applySTSIndifferently
   , applySTS
   , module Extended
   )
@@ -13,19 +12,7 @@ where
 
 import           Control.Monad.Identity (Identity(..))
 import qualified Control.State.Transition.Extended as X
-import           Control.State.Transition.Extended as Extended hiding (applySTS, applySTSIndifferently, applyRuleIndifferently)
-
--- | Apply a rule even if its predicates fail.
---
---   If the rule successfully applied, the list of predicate failures will be
---   empty.
-applyRuleIndifferently
-  :: forall s rtype
-   . (STS s, RuleTypeRep rtype, Identity ~ BaseM s)
-  => RuleContext rtype s
-  -> Rule s rtype (State s)
-  -> (State s, [PredicateFailure s])
-applyRuleIndifferently jc r = runIdentity $ X.applyRuleIndifferently jc r
+import           Control.State.Transition.Extended as Extended hiding (applySTS, applySTSIndifferently)
 
 applySTSIndifferently
   :: forall s rtype

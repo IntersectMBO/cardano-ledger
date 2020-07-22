@@ -76,9 +76,9 @@ mkAttributes dat = Attributes dat (UnparsedFields M.empty)
 -- | Convenient wrapper for the datatype to represent it (in binary format) as
 --   k-v map
 data Attributes h = Attributes
-  { attrData   :: h
+  { attrData   :: !h
   -- ^ Data, containing known keys (deserialized)
-  , attrRemain :: UnparsedFields
+  , attrRemain :: !UnparsedFields
   -- ^ Remaining, unparsed fields
   } deriving (Eq, Ord, Generic, NoUnexpectedThunks)
     deriving anyclass NFData

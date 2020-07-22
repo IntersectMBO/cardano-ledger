@@ -38,15 +38,15 @@ import Cardano.Binary
   )
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), mapMaybe)
 import Control.Monad (unless)
-import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Scientific (Scientific)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -134,7 +134,9 @@ data PParams' f = PParams
     -- | Protocol version
     _protocolVersion :: !(HKD f ProtVer),
     -- | Minimum UTxO value
-    _minUTxOValue :: !(HKD f Natural)
+    _minUTxOValue :: !(HKD f Coin),
+    -- | Minimum Stake Pool Cost
+    _minPoolCost :: !(HKD f Coin)
   }
   deriving (Generic)
 
@@ -205,10 +207,11 @@ instance ToCBOR PParams where
           _d = d',
           _extraEntropy = extraEntropy',
           _protocolVersion = protocolVersion',
-          _minUTxOValue = minUTxOValue'
+          _minUTxOValue = minUTxOValue',
+          _minPoolCost = minPoolCost'
         }
       ) =
-      encodeListLen 17
+      encodeListLen 18
         <> toCBOR minfeeA'
         <> toCBOR minfeeB'
         <> toCBOR maxBBSize'
@@ -225,10 +228,11 @@ instance ToCBOR PParams where
         <> toCBOR extraEntropy'
         <> toCBORGroup protocolVersion'
         <> toCBOR minUTxOValue'
+        <> toCBOR minPoolCost'
 
 instance FromCBOR PParams where
   fromCBOR = do
-    enforceSize "PParams" 17
+    enforceSize "PParams" 18
     PParams
       <$> fromCBOR -- _minfeeA         :: Integer
       <*> fromCBOR -- _minfeeB         :: Natural
@@ -246,6 +250,7 @@ instance FromCBOR PParams where
       <*> fromCBOR -- _extraEntropy    :: Nonce
       <*> fromCBORGroup -- _protocolVersion :: ProtVer
       <*> fromCBOR -- _minUTxOValue    :: Natural
+      <*> fromCBOR -- _minPoolCost     :: Natural
 
 instance ToJSON PParams where
   toJSON pp =
@@ -259,13 +264,14 @@ instance ToJSON PParams where
         "poolDeposit" .= _poolDeposit pp,
         "eMax" .= _eMax pp,
         "nOpt" .= _nOpt pp,
-        "a0" .= (fromRational $ _a0 pp :: Double),
+        "a0" .= (fromRational (_a0 pp) :: Scientific),
         "rho" .= _rho pp,
         "tau" .= _tau pp,
         "decentralisationParam" .= _d pp,
         "extraEntropy" .= _extraEntropy pp,
         "protocolVersion" .= _protocolVersion pp,
-        "minUTxOValue" .= _minUTxOValue pp
+        "minUTxOValue" .= _minUTxOValue pp,
+        "minPoolCost" .= _minPoolCost pp
       ]
 
 instance FromJSON PParams where
@@ -281,16 +287,16 @@ instance FromJSON PParams where
         <*> obj .: "poolDeposit"
         <*> obj .: "eMax"
         <*> obj .: "nOpt"
-        <*> parseRationalFromDouble (obj .: "a0")
+        <*> ( (toRational :: Scientific -> Rational)
+                <$> obj .: "a0"
+            )
         <*> obj .: "rho"
         <*> obj .: "tau"
         <*> obj .: "decentralisationParam"
         <*> obj .: "extraEntropy"
         <*> obj .: "protocolVersion"
         <*> obj .:? "minUTxOValue" .!= 0
-    where
-      parseRationalFromDouble :: Aeson.Parser Double -> Aeson.Parser Rational
-      parseRationalFromDouble p = realToFrac <$> p
+        <*> obj .:? "minPoolCost" .!= 0
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams
@@ -311,7 +317,8 @@ emptyPParams =
       _d = interval0,
       _extraEntropy = NeutralNonce,
       _protocolVersion = ProtVer 0 0,
-      _minUTxOValue = 0
+      _minUTxOValue = 0,
+      _minPoolCost = 0
     }
 
 -- | Update Proposal
@@ -368,7 +375,8 @@ instance ToCBOR PParamsUpdate where
               encodeMapElement 12 toCBOR =<< _d ppup,
               encodeMapElement 13 toCBOR =<< _extraEntropy ppup,
               encodeMapElement 14 toCBOR =<< _protocolVersion ppup,
-              encodeMapElement 15 toCBOR =<< _minUTxOValue ppup
+              encodeMapElement 15 toCBOR =<< _minUTxOValue ppup,
+              encodeMapElement 16 toCBOR =<< _minPoolCost ppup
             ]
         n = fromIntegral $ length l
      in encodeMapLen n <> fold l
@@ -393,30 +401,33 @@ emptyPParamsUpdate =
       _d = SNothing,
       _extraEntropy = SNothing,
       _protocolVersion = SNothing,
-      _minUTxOValue = SNothing
+      _minUTxOValue = SNothing,
+      _minPoolCost = SNothing
     }
 
 instance FromCBOR PParamsUpdate where
   fromCBOR = do
-    mapParts <- decodeMapContents $
-      decodeWord >>= \case
-        0 -> fromCBOR >>= \x -> pure (0, \up -> up {_minfeeA = SJust x})
-        1 -> fromCBOR >>= \x -> pure (1, \up -> up {_minfeeB = SJust x})
-        2 -> fromCBOR >>= \x -> pure (2, \up -> up {_maxBBSize = SJust x})
-        3 -> fromCBOR >>= \x -> pure (3, \up -> up {_maxTxSize = SJust x})
-        4 -> fromCBOR >>= \x -> pure (4, \up -> up {_maxBHSize = SJust x})
-        5 -> fromCBOR >>= \x -> pure (5, \up -> up {_keyDeposit = SJust x})
-        6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
-        7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
-        8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
-        9 -> ratioFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
-        10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
-        11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
-        12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
-        13 -> fromCBOR >>= \x -> pure (13, \up -> up {_extraEntropy = SJust x})
-        14 -> fromCBOR >>= \x -> pure (14, \up -> up {_protocolVersion = SJust x})
-        15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minUTxOValue = SJust x})
-        k -> invalidKey k
+    mapParts <-
+      decodeMapContents $
+        decodeWord >>= \case
+          0 -> fromCBOR >>= \x -> pure (0, \up -> up {_minfeeA = SJust x})
+          1 -> fromCBOR >>= \x -> pure (1, \up -> up {_minfeeB = SJust x})
+          2 -> fromCBOR >>= \x -> pure (2, \up -> up {_maxBBSize = SJust x})
+          3 -> fromCBOR >>= \x -> pure (3, \up -> up {_maxTxSize = SJust x})
+          4 -> fromCBOR >>= \x -> pure (4, \up -> up {_maxBHSize = SJust x})
+          5 -> fromCBOR >>= \x -> pure (5, \up -> up {_keyDeposit = SJust x})
+          6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
+          7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
+          8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
+          9 -> ratioFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
+          10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
+          11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
+          12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
+          13 -> fromCBOR >>= \x -> pure (13, \up -> up {_extraEntropy = SJust x})
+          14 -> fromCBOR >>= \x -> pure (14, \up -> up {_protocolVersion = SJust x})
+          15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minUTxOValue = SJust x})
+          16 -> fromCBOR >>= \x -> pure (16, \up -> up {_minPoolCost = SJust x})
+          k -> invalidKey k
     let fields = fst <$> mapParts :: [Int]
     unless
       (nub fields == fields)
@@ -457,7 +468,8 @@ updatePParams pp ppup =
       _d = fromMaybe' (_d pp) (_d ppup),
       _extraEntropy = fromMaybe' (_extraEntropy pp) (_extraEntropy ppup),
       _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
-      _minUTxOValue = fromMaybe' (_minUTxOValue pp) (_minUTxOValue ppup)
+      _minUTxOValue = fromMaybe' (_minUTxOValue pp) (_minUTxOValue ppup),
+      _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup)
     }
   where
     fromMaybe' :: a -> StrictMaybe a -> a

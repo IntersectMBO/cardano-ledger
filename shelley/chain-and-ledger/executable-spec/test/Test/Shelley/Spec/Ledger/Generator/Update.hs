@@ -14,10 +14,9 @@ module Test.Shelley.Spec.Ledger.Generator.Update
   )
 where
 
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
-import Data.Ratio ((%), Ratio)
+import Data.Maybe (catMaybes)
+import Data.Ratio (Ratio, (%))
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
@@ -25,31 +24,25 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
-    mkNonce,
+    mkNonceFromNumber,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, hashKey, vKey)
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Keys
+  ( GenDelegPair (..),
+    GenDelegs (..),
+    KeyHash,
+    KeyPair,
+    KeyRole (..),
+    asWitness,
+    hashKey,
+    vKey,
+  )
 import Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
-    PParams' (PParams),
+    PParams' (..),
     ProtVer (..),
-    _a0,
-    _d,
-    _eMax,
-    _extraEntropy,
-    _keyDeposit,
-    _maxBBSize,
-    _maxBHSize,
-    _maxTxSize,
-    _minUTxOValue,
-    _minfeeA,
-    _minfeeB,
-    _nOpt,
-    _poolDeposit,
-    _protocolVersion,
-    _rho,
-    _tau,
     pattern ProposedPPUpdates,
     pattern Update,
   )
@@ -57,11 +50,8 @@ import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( CoreKeyPair,
-    DPState,
-    KeyHash,
-    KeyHash,
-    KeyPair,
+  ( DPState,
+    GenesisKeyPair,
     ProposedPPUpdates,
     UTxOState,
     Update,
@@ -69,11 +59,12 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( AllPoolKeys (cold),
+  ( AllIssuerKeys (cold),
     genInteger,
     genNatural,
     genWord64,
     increasingProbabilityAt,
+    lookupGenDelegate,
     tooLateInEpoch,
   )
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
@@ -106,6 +97,7 @@ genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
     <*> genExtraEntropy
     <*> genProtocolVersion
     <*> genMinUTxOValue
+    <*> genMinPoolCost
   where
     szGen :: Gen (Natural, Natural, Natural)
     szGen = do
@@ -135,7 +127,7 @@ genExtraEntropy :: HasCallStack => Gen Nonce
 genExtraEntropy =
   QC.frequency
     [ (1, pure NeutralNonce),
-      (1, mkNonce <$> genNatural 1 123)
+      (1, mkNonceFromNumber <$> genWord64 1 123)
     ]
 
 -- Note: we keep the lower bound high enough so that we can more likely
@@ -186,8 +178,11 @@ genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
 genProtocolVersion :: HasCallStack => Gen ProtVer
 genProtocolVersion = ProtVer <$> genNatural 1 10 <*> genNatural 1 50
 
-genMinUTxOValue :: HasCallStack => Gen Natural
-genMinUTxOValue = pure 0 -- TODO generate nonzero minimum UTxO values
+genMinUTxOValue :: HasCallStack => Gen Coin
+genMinUTxOValue = Coin <$> genInteger 1 20
+
+genMinPoolCost :: HasCallStack => Gen Coin
+genMinPoolCost = Coin <$> genInteger 10 50
 
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
@@ -208,110 +203,102 @@ genNextProtocolVersion pp = do
 genPPUpdate ::
   HasCallStack =>
   Constants ->
-  SlotNo ->
   PParams ->
-  [KeyHash 'Genesis] ->
-  Gen ProposedPPUpdates
-genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
-  if (tooLateInEpoch s)
-    then pure (ProposedPPUpdates Map.empty)
-    else do
-      -- TODO generate Maybe tyes so not all updates are full
-      minFeeA <- genNatural 0 maxMinFeeA
-      minFeeB <- genNatural 0 maxMinFeeB
-      maxBBSize <- genNatural low hi
-      maxTxSize <- genNatural low hi
-      maxBHSize <- genNatural low hi
-      keyDeposit <- genKeyDeposit
-      poolDeposit <- genPoolDeposit
-      eMax <- genEMax c
-      nopt <- genNOpt
-      a0 <- genA0
-      rho <- genRho
-      tau <- genTau
-      d <- genDecentralisationParam
-      extraEntropy <- genExtraEntropy
-      protocolVersion <- genNextProtocolVersion pp
-      minUTxOValue <- genMinUTxOValue
-      let pps =
-            PParams
-              { _minfeeA = SJust minFeeA,
-                _minfeeB = SJust minFeeB,
-                _maxBBSize = SJust maxBBSize,
-                _maxTxSize = SJust maxTxSize,
-                _maxBHSize = SJust maxBHSize,
-                _keyDeposit = SJust keyDeposit,
-                _poolDeposit = SJust poolDeposit,
-                _eMax = SJust eMax,
-                _nOpt = SJust nopt,
-                _a0 = SJust a0,
-                _rho = SJust rho,
-                _tau = SJust tau,
-                _d = SJust d,
-                _extraEntropy = SJust extraEntropy,
-                _protocolVersion = SJust protocolVersion,
-                _minUTxOValue = SJust minUTxOValue
-              }
-      let ppUpdate = zip genesisKeys (repeat pps)
-      pure $
-        (ProposedPPUpdates . Map.fromList) ppUpdate
+  [KeyHash 'Genesis h] ->
+  Gen (ProposedPPUpdates h)
+genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) pp genesisKeys = do
+  -- TODO generate Maybe tyes so not all updates are full
+  minFeeA <- genNatural 0 maxMinFeeA
+  minFeeB <- genNatural 0 maxMinFeeB
+  maxBBSize <- genNatural low hi
+  maxTxSize <- genNatural low hi
+  maxBHSize <- genNatural low hi
+  keyDeposit <- genKeyDeposit
+  poolDeposit <- genPoolDeposit
+  eMax <- genEMax c
+  nopt <- genNOpt
+  a0 <- genA0
+  rho <- genRho
+  tau <- genTau
+  d <- genDecentralisationParam
+  extraEntropy <- genExtraEntropy
+  protocolVersion <- genNextProtocolVersion pp
+  minUTxOValue <- genMinUTxOValue
+  minPoolCost <- genMinPoolCost
+  let pps =
+        PParams
+          { _minfeeA = SJust minFeeA,
+            _minfeeB = SJust minFeeB,
+            _maxBBSize = SJust maxBBSize,
+            _maxTxSize = SJust maxTxSize,
+            _maxBHSize = SJust maxBHSize,
+            _keyDeposit = SJust keyDeposit,
+            _poolDeposit = SJust poolDeposit,
+            _eMax = SJust eMax,
+            _nOpt = SJust nopt,
+            _a0 = SJust a0,
+            _rho = SJust rho,
+            _tau = SJust tau,
+            _d = SJust d,
+            _extraEntropy = SJust extraEntropy,
+            _protocolVersion = SJust protocolVersion,
+            _minUTxOValue = SJust minUTxOValue,
+            _minPoolCost = SJust minPoolCost
+          }
+  let ppUpdate = zip genesisKeys (repeat pps)
+  pure $ ProposedPPUpdates . Map.fromList $ ppUpdate
 
 -- | Generate an @Update (where all the given nodes participate)
--- with a 50% chance of having non-empty PPUpdates or AVUpdates
--- and a 25% chance of both being empty or non-empty
 genUpdateForNodes ::
-  HasCallStack =>
+  (HasCallStack, Crypto c) =>
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [CoreKeyPair] ->
+  [GenesisKeyPair c] ->
   PParams ->
-  Gen (Maybe Update)
+  Gen (Maybe (Update c))
 genUpdateForNodes c s e coreKeys pp =
-  Just <$> (Update <$> genPPUpdate_ <*> pure e)
+  Just <$> (Update <$> genPPUpdate_ <*> pure e')
   where
     genesisKeys = hashKey . vKey <$> coreKeys
-    genPPUpdate_ = genPPUpdate c s pp genesisKeys
+    genPPUpdate_ = genPPUpdate c pp genesisKeys
+    e' = if tooLateInEpoch s then e + 1 else e
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::
-  HasCallStack =>
+  (HasCallStack, Crypto c) =>
   Constants ->
   SlotNo ->
-  [(CoreKeyPair, AllPoolKeys)] ->
-  Map (KeyHash 'Staking) (KeyPair 'Staking) -> -- indexed keys By StakeHash
+  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  [AllIssuerKeys c 'GenesisDelegate] ->
   PParams ->
-  (UTxOState, DPState) ->
-  Gen (Maybe Update, [KeyPair 'Witness])
+  (UTxOState c, DPState c) ->
+  Gen (Maybe (Update c), [KeyPair 'Witness c])
 genUpdate
   c@(Constants {frequencyTxUpdates})
   s
-  coreKeyPairs
-  keysByStakeHash
+  delegateKeys
+  genesisDelegateKeys
   pp
   (_utxoSt, delegPoolSt) =
     do
-      nodes <- take 5 <$> QC.shuffle coreKeyPairs
+      nodes <- take 5 <$> QC.shuffle delegateKeys
 
       let e = epochFromSlotNo s
           (GenDelegs genDelegs) = (_genDelegs . _dstate) delegPoolSt
-          genesisKeys = (fst . unzip) nodes
-          updateWitnesses = latestPoolColdKey genDelegs <$> nodes
-
-      QC.frequency
-        [ ( frequencyTxUpdates,
-            (,updateWitnesses) <$> genUpdateForNodes c s e genesisKeys pp
-          ),
-          ( 100 - frequencyTxUpdates,
-            pure (Nothing, [])
-          )
-        ]
-    where
-      latestPoolColdKey genDelegs_ (gkey, pkeys) = coerceKeyRole $
-        case Map.lookup (hashKey . vKey $ gkey) genDelegs_ of
-          Nothing ->
-            error "genUpdate: NoGenesisStaking"
-          Just (gkeyHash, _) ->
-            fromMaybe
-              (cold pkeys)
-              (coerceKeyRole <$> Map.lookup (coerceKeyRole gkeyHash) keysByStakeHash)
+          genesisKeys = fst <$> nodes
+          coreSigners = catMaybes $ lookupGenDelegate nodes genesisDelegateKeys . genDelegKeyHash <$> Map.elems genDelegs
+          failedWitnessLookup = length coreSigners < Map.size genDelegs
+      if failedWitnessLookup
+        then -- discard
+          pure (Nothing, [])
+        else
+          let wits = asWitness . cold <$> coreSigners
+           in QC.frequency
+                [ ( frequencyTxUpdates,
+                    (,wits) <$> genUpdateForNodes c s e genesisKeys pp
+                  ),
+                  ( 100 - frequencyTxUpdates,
+                    pure (Nothing, [])
+                  )
+                ]

@@ -1,0 +1,50 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf600
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red251\green2\blue7;}
+{\*\expandedcolortbl;;\cssrgb\c100000\c14913\c0;}
+\margl1440\margr1440\vieww10800\viewh14280\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs24 \cf0 A Formal Specification of the Cardano Ledger with Plutus Integration\
+Review 5\
+\
+Figure 14\
+- In the line \'93(isVal, remExU\'92\'92) := [[fst \'85\'94, the term remExU\'92 does not exist yet when it is used. Should the SVAL transition be done first?\
+\cf2 Yeah\cf0 \
+\
+- I am a bit confused about the use of SVAL. It is supposed to check that the validation tag is applied correctly, but how does one know this (from remExU?)\
+\cf2 The check that it is applied correctly means that if some script does not validate or runs out of ExUnits, the tag is Nope, and if all scripts validate, the tag is Yes. It does not matter if there are ExUnits left over\cf0 \
+\
+Figure 16\
+- \'93txup tx\'94 -> should be \'93txUpdates txb\'94?\
+\cf2 This was changed\
+\cf0 \
+- \'93refunded := \'85 txb\'94 -> should be tx instead of txb?\
+\cf2 This was changed\
+\cf0 \
+- \'93decayed := \'85 txb\'94 -> should be tx instead of txb?\
+\cf2 This was changed\
+\cf0 \
+- Similarly, in Figure 9 the definition of \'93consumed\'94, the line \'93+ keyRefunds  \'85 txb) + forge txb\'94 should be \'93+ keyRefunds  \'85 tx) + forge txb\'94 right?\
+\cf2 This was changed\
+\cf0 \
+Figure 17\
+- In line \'93\\forall txout \\in txouts txb, getValue\'85\'94 there is an extra \'93\}\'94 bracket. Also, I\'92m not sure if the notation \'93\\geq \\epsilon\'94 defined. Should this line be instead \'93\\forall txout \\in txouts txb, _ |-> (_ |-> q) := getValue txout, q \\geq 0\'94?\
+\cf2 Yup\cf0 \
+\
+Figure 18\
+\cf2 I changed the return type in this figure, it is just ScriptHash now, adjusted other things\
+\cf0 - The line \'93\{i |-> validatorHash (getAddr \'85\'94 - How do we know that \'93getAddr txout\'94 will be a script address? The requirement that \'93i \\in txinsScript\'85\'94 only refers to the inputs right?\
+\
+- There is an extra right parens \'93)\'94 in the line \'93\{(a |-> c) |-> stakeCred_r a\'85\'94\
+\
+- The output of \'93stakeCred_r a\'94 can be both KeyHash_stake or ScriptHash (Credential_stake type). Should there be something which ensures it is of type ScriptHash? ie. \'93\{(a |-> c) |-> stakeCred_r a | stakeCred_r a \\in ScriptHash,  a |-> c \\in txwdrls txb\'85\'94\
+\
+- The \'93cert\'94 in the line \'93\{ cert |-> a | a \\in ScriptHash \'85\'94 is not defined.\
+\
+- The line \'93\{ (cid |-> tkns) \'85\'94 - The type of \'93( cid |-> tkns )\'94 is \'93Value\'94, but \'93CurItem\'94 doesn\'92t include \'93Value\'94 as one of its types. \
+\cf2 I will make CurItem consistent everywhere. It should be just cid, which is a script hash.\
+\cf0 \
+- The term \'93txw\'94 is defined but not used.\
+\cf2 Removed}

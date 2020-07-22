@@ -40,7 +40,8 @@ Integration}{Formal Cardano Ledger with Plutus Spec.}
 \DeliverableResponsible{Formal Methods Team}
 %\EditorName{Jared Corduan, \IOHK}
 \Authors{
-   Polina Vinogradova \quad \texttt{polina.vinogradova@iohk.io}
+   Polina Vinogradova \quad \texttt{polina.vinogradova@iohk.io} \\
+   Andre Knispel \quad \texttt{andre.knispel@iohk.io}
 }
 %\DueDate{15$^{\textrm{th}}$ October 2019}
 %\SubmissionDate{8th October 2019}{2019/10/08}
@@ -162,7 +163,7 @@ Integration}{Formal Cardano Ledger with Plutus Spec.}
 \newcommand{\MetaDataHash}{\type{MetaDataHash}}
 \newcommand{\MetaData}{\type{MetaData}}
 \newcommand{\DataHash}{\type{DataHash}}
-\newcommand{\ScriptHash}{\type{ScriptHash}}
+\newcommand{\PolicyID}{\type{PolicyID}}
 \newcommand{\PPHash}{\type{PPHash}}
 \newcommand{\RdmrsHash}{\type{RdmrsHash}}
 \newcommand{\Script}{\type{Script}}
@@ -182,7 +183,7 @@ Integration}{Formal Cardano Ledger with Plutus Spec.}
 \newcommand{\MSig}{\type{MSig}}
 \newcommand{\Credential}{\type{Credential}}
 \newcommand{\CurrencyId}{\type{CurrencyId}}
-\newcommand{\Token}{\type{Token}}
+\newcommand{\AssetID}{\type{AssetID}}
 \newcommand{\Quantity}{\type{Quantity}}
 \newcommand{\QuantityPM}{\type{Quantity}^{\pm}}
 \newcommand{\ValuePM}{\type{Value}^{\pm}}
@@ -352,5 +353,9 @@ Integration}{Formal Cardano Ledger with Plutus Spec.}
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{plainnat}
 \bibliography{references}
+
+\begin{appendix}
+  \include{properties}
+\end{appendix}
 
 \end{document}

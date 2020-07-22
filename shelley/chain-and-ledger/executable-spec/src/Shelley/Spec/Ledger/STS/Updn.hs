@@ -3,6 +3,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -20,22 +21,16 @@ import Control.State.Transition
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot
 
 data UPDN crypto
 
-data UpdnEnv
-  = UpdnEnv
+newtype UpdnEnv
+  = -- | New nonce
+    UpdnEnv
       Nonce
-      -- ^ New nonce
-      PParams
-      Nonce
-      -- ^ Current previous hash nonce
-      Bool
-      -- ^ Is new epoch
 
-data UpdnState = UpdnState Nonce Nonce Nonce Nonce
+data UpdnState = UpdnState Nonce Nonce
   deriving (Show, Eq)
 
 instance
@@ -48,24 +43,30 @@ instance
   type BaseM (UPDN crypto) = ShelleyBase
   data PredicateFailure (UPDN crypto) -- No predicate failures
     deriving (Generic, Show, Eq)
-  initialRules = [pure (UpdnState (mkNonce 0) (mkNonce 0) (mkNonce 0) (mkNonce 0))]
+  initialRules =
+    [ pure
+        ( UpdnState
+            initialNonce
+            initialNonce
+        )
+    ]
+    where
+      initialNonce = mkNonceFromNumber 0
   transitionRules = [updTransition]
 
 instance NoUnexpectedThunks (PredicateFailure (UPDN crypto))
 
 updTransition :: Crypto crypto => TransitionRule (UPDN crypto)
 updTransition = do
-  TRC (UpdnEnv eta pp eta_ph ne, UpdnState eta_0 eta_v eta_c eta_h, s) <- judgmentContext
+  TRC (UpdnEnv eta, UpdnState eta_v eta_c, s) <- judgmentContext
   ei <- liftSTS $ asks epochInfo
   sp <- liftSTS $ asks stabilityWindow
   EpochNo e <- liftSTS $ epochInfoEpoch ei s
   firstSlotNextEpoch <- liftSTS $ epochInfoFirst ei (EpochNo (e + 1))
   pure $
     UpdnState
-      (if ne then eta_c ⭒ eta_h ⭒ _extraEntropy pp else eta_0)
       (eta_v ⭒ eta)
       ( if s +* Duration sp < firstSlotNextEpoch
           then eta_v ⭒ eta
           else eta_c
       )
-      (if ne then eta_ph else eta_h)

@@ -12,9 +12,6 @@ module Shelley.Spec.Ledger.Slot
     EpochNo (..),
     EpochSize (..),
     EpochInfo,
-    -- conversion between Byron / Shelley
-    slotByronToShelley,
-    slotShelleyToByron,
     -- Block number
     BlockNo (..),
     epochInfoEpoch,
@@ -23,7 +20,6 @@ module Shelley.Spec.Ledger.Slot
   )
 where
 
-import qualified Byron.Spec.Ledger.Core as Byron (Slot (..))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -32,11 +28,14 @@ import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.Monad.Trans (lift)
 import Data.Functor.Identity (Identity)
 import Data.Word (Word64)
+import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
+import Quiet
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 
-newtype Duration = Duration Word64
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, Num, Integral, Real, Enum)
+newtype Duration = Duration {unDuration :: Word64}
+  deriving (Eq, Generic, Ord, NoUnexpectedThunks, Num, Integral, Real, Enum)
+  deriving (Show) via Quiet Duration
 
 instance Semigroup Duration where
   (Duration x) <> (Duration y) = Duration $ x + y
@@ -54,13 +53,6 @@ instance Monoid Duration where
 -- | Subtract a duration from a slot
 (*-) :: SlotNo -> Duration -> SlotNo
 (SlotNo s) *- (Duration d) = SlotNo (if s > d then s - d else 0)
-
--- | Convert `SlotNo` data from Byron to Shelley.
-slotByronToShelley :: Byron.Slot -> SlotNo
-slotByronToShelley (Byron.Slot s) = SlotNo s
-
-slotShelleyToByron :: SlotNo -> Byron.Slot
-slotShelleyToByron (SlotNo s) = Byron.Slot s
 
 epochInfoEpoch ::
   HasCallStack =>

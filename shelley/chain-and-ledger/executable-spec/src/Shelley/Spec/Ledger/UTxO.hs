@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -21,7 +23,6 @@ module Shelley.Spec.Ledger.UTxO
     UTxO (..),
 
     -- * Functions
-    hashTxBody,
     txid,
     txins,
     txinLookup,
@@ -38,38 +39,40 @@ module Shelley.Spec.Ledger.UTxO
   )
 where
 
-import Byron.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
+import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Foldable (toList)
-import Data.List (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
+import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
-    StakePools (..),
-    dvalue,
+    isRegKey,
     requiresVKeyWitness,
   )
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     Hash,
     KeyHash (..),
     KeyPair (..),
+    KeyRole (StakePool, Witness),
     asWitness,
     signedDSIGN,
     verifySignedDSIGN,
   )
-import Shelley.Spec.Ledger.PParams (PParams, Update)
+import Shelley.Spec.Ledger.PParams (PParams, Update, _keyDeposit, _poolDeposit)
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
@@ -87,10 +90,17 @@ import Shelley.Spec.Ledger.TxData
     pattern Delegation,
   )
 
+instance HasExp (UTxO crypto) (Map (TxIn crypto) (TxOut crypto)) where
+  toExp (UTxO x) = Base MapR x
+
+instance Embed (UTxO crypto) (Map (TxIn crypto) (TxOut crypto)) where
+  toBase (UTxO x) = x
+  fromBase x = (UTxO x)
+
 -- | The unspent transaction outputs.
-newtype UTxO crypto
-  = UTxO (Map (TxIn crypto) (TxOut crypto))
-  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+newtype UTxO crypto = UTxO {unUTxO :: Map (TxIn crypto) (TxOut crypto)}
+  deriving (Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+  deriving (Show) via Quiet (UTxO crypto)
 
 instance Relation (UTxO crypto) where
   type Domain (UTxO crypto) = TxIn crypto
@@ -112,29 +122,25 @@ instance Relation (UTxO crypto) where
 
   (UTxO a) ∪ (UTxO b) = UTxO $ a ∪ b
 
-  (UTxO a) ⨃ b = UTxO $ a ⨃ b
-
-  vmax <=◁ (UTxO utxo) = UTxO $ vmax <=◁ utxo
-
-  (UTxO utxo) ▷<= vmax = UTxO $ utxo ▷<= vmax
-
-  (UTxO utxo) ▷>= vmin = UTxO $ utxo ▷>= vmin
+  (UTxO a) ⨃ (UTxO b) = UTxO $ a ⨃ b
 
   size (UTxO utxo) = size utxo
 
--- | Compute the hash of a transaction body.
-hashTxBody ::
-  Crypto crypto =>
-  TxBody crypto ->
-  Hash crypto (TxBody crypto)
-hashTxBody = hashWithSerialiser toCBOR
+  {-# INLINE haskey #-}
+  haskey k (UTxO x) = case Map.lookup k x of Just _ -> True; Nothing -> False
+
+  {-# INLINE addpair #-}
+  addpair k v (UTxO x) = UTxO (Map.insertWith (\y _z -> y) k v x)
+
+  {-# INLINE removekey #-}
+  removekey k (UTxO m) = UTxO (Map.delete k m)
 
 -- | Compute the id of a transaction.
 txid ::
   Crypto crypto =>
   TxBody crypto ->
   TxId crypto
-txid = TxId . hashTxBody
+txid = TxId . hashAnnotated
 
 -- | Compute the UTxO inputs of a transaction.
 txins ::
@@ -163,11 +169,12 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 
 -- | Verify a transaction body witness
 verifyWitVKey ::
-  ( Crypto crypto,
+  ( Typeable kr,
+    Crypto crypto,
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Hash crypto (TxBody crypto) ->
-  WitVKey crypto ->
+  WitVKey crypto kr ->
   Bool
 verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash sig
 
@@ -179,18 +186,19 @@ makeWitnessVKey ::
   ) =>
   Hash crypto (TxBody crypto) ->
   KeyPair kr crypto ->
-  WitVKey crypto
+  WitVKey crypto 'Witness
 makeWitnessVKey txbodyHash keys =
   WitVKey (asWitness $ vKey keys) (signedDSIGN @crypto (sKey keys) txbodyHash)
 
 -- | Create witnesses for transaction
 makeWitnessesVKey ::
+  forall crypto kr.
   ( Crypto crypto,
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Hash crypto (TxBody crypto) ->
-  [KeyPair a crypto] ->
-  Set (WitVKey crypto)
+  [KeyPair kr crypto] ->
+  Set (WitVKey crypto ('Witness))
 makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
@@ -202,30 +210,41 @@ makeWitnessesFromScriptKeys ::
   Hash crypto (TxBody crypto) ->
   Map (KeyHash kr crypto) (KeyPair kr crypto) ->
   Set (KeyHash kr crypto) ->
-  Set (WitVKey crypto)
+  Set (WitVKey crypto ('Witness))
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
 -- | Determine the total balance contained in the UTxO.
-balance :: UTxO crypto -> Coin
+balance :: Crypto crypto => UTxO crypto -> Coin
 balance (UTxO utxo) = foldr addCoins 0 utxo
   where
     addCoins (TxOut _ a) b = a + b
 
--- | Determine the total deposit amount needed
+-- | Determine the total deposit amount needed.
+-- The block may (legitimately) contain multiple registration certificates
+-- for the same pool, where the first will be treated as a registration and
+-- any subsequent ones as re-registration. As such, we must only take a
+-- deposit for the first such registration.
+--
+-- Note that this is not an issue for key registrations since subsequent
+-- registration certificates would be invalid.
 totalDeposits ::
   PParams ->
-  StakePools crypto ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   [DCert crypto] ->
   Coin
-totalDeposits pc (StakePools stpools) cs = foldl' f (Coin 0) cs'
+totalDeposits pp stpools cs =
+  (_keyDeposit pp) * numKeys + (_poolDeposit pp) * numNewPools
   where
-    f coin cert = coin + dvalue cert pc
-    notRegisteredPool (DCertPool (RegPool pool)) =
-      Map.notMember (_poolPubKey pool) stpools
-    notRegisteredPool _ = True
-    cs' = filter notRegisteredPool cs
+    numKeys = intToCoin . length $ filter isRegKey cs
+    pools = Set.fromList . Maybe.catMaybes $ fmap getKeyHashFromRegPool cs
+    numNewPools = intToCoin . length $ pools `Set.difference` (Map.keysSet stpools)
+    intToCoin = Coin . toInteger
+
+getKeyHashFromRegPool :: DCert crypto -> Maybe (KeyHash 'StakePool crypto)
+getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolPubKey $ p
+getKeyHashFromRegPool _ = Nothing
 
 txup :: Crypto crypto => Tx crypto -> Maybe (Update crypto)
 txup (Tx txbody _ _) = strictMaybeToMaybe (_txUpdate txbody)
@@ -264,23 +283,21 @@ scriptsNeeded u tx =
   where
     unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ _wdrls $ _body tx
-    UTxO u'' = txinsScript (txins $ _body tx) u <| u
+    UTxO u'' = (txinsScript (txins $ _body tx) u) ◁ u
+    -- u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u)  TODO
     certificates = (toList . _certs . _body) tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript ::
+  Crypto crypto =>
   Set (TxIn crypto) ->
   UTxO crypto ->
   Set (TxIn crypto)
-txinsScript txInps (UTxO u) =
-  txInps
-    `Set.intersection` Map.keysSet
-      ( Map.filter
-          ( \(TxOut a _) ->
-              case a of
-                Addr _ (ScriptHashObj _) _ -> True
-                _ -> False
-          )
-          u
-      )
+txinsScript txInps (UTxO u) = foldr add Set.empty txInps
+  where
+    -- to get subset, start with empty, and only insert those inputs in txInps that are locked in u
+    add input ans = case Map.lookup input u of
+      Just (TxOut (Addr _ (ScriptHashObj _) _) _) -> Set.insert input ans
+      Just _ -> ans
+      Nothing -> ans

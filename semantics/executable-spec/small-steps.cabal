@@ -21,16 +21,19 @@ flag development
     default: False
     manual: True
 
+flag sts_assert
+    description: Enable STS assertions by default
+    default: False
+    manual: True
+
 library
   exposed-modules:     Control.State.Transition
                      , Control.State.Transition.Extended
                      , Control.State.Transition.Simple
-                     , Control.State.Transition.Invalid.Trace
-                     , Control.State.Transition.Generator
-                     , Control.State.Transition.Trace
-                     , Control.State.Transition.Trace.Generator.QuickCheck
-                     , Hedgehog.Extra.Manual
                      , Data.AbstractSize
+                     , Control.Iterate.Collect
+                     , Control.Iterate.SetAlgebra
+                     , Control.Iterate.SetAlgebraInternal
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.11 && <5
@@ -38,16 +41,14 @@ library
                      , containers
                      , cryptonite
                      , free
-                     , goblins
-                     , hedgehog >= 1.0
-                     , tasty-hunit
-                     , lens
                      , mtl
                      , transformers >= 0.5
-                     , QuickCheck
+                     , ansi-wl-pprint
                      -- IOHK deps
-                     , cardano-prelude
                      , cardano-crypto-class
+                     , cardano-prelude
+                     , cardano-binary
+                     , cborg
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:        -Wall
@@ -57,6 +58,8 @@ library
                       -Wredundant-constraints
   if (!flag(development))
     ghc-options:      -Werror
+  if (flag(sts_assert))
+    cpp-options:      -DSTS_ASSERT
 
 test-suite doctests
   hs-source-dirs:      test
@@ -78,41 +81,6 @@ test-suite doctests
                      , small-steps
 
   build-tool-depends: doctest-discover:doctest-discover
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wredundant-constraints
-                      -threaded
-
-  if (!flag(development))
-    ghc-options:      -Werror
-
-
-test-suite examples
-  hs-source-dirs:      test
-  main-is:             examples/Main.hs
-  other-modules:       Control.State.Transition.Examples.Sum
-  other-modules:       Control.State.Transition.Examples.GlobalSum
-                     , Control.State.Transition.Examples.CommitReveal
-  type:                exitcode-stdio-1.0
-  default-language:    Haskell2010
-  build-depends:       base
-                     , containers
-                     , hedgehog >= 1.0
-                     , mtl
-                     , tasty
-                     , tasty-hedgehog
-                     , tasty-expected-failure
-                     , QuickCheck
-                     , tasty-quickcheck
-                     , tasty-hunit
-                     , Unique
-                     -- IOHK deps
-                     , cardano-crypto-class
-                     , cardano-binary
-                     -- Local deps
-                     , small-steps
   ghc-options:        -Wall
                       -Wcompat
                       -Wincomplete-record-updates

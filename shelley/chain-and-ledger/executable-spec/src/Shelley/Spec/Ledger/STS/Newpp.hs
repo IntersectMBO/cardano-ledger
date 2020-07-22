@@ -15,14 +15,15 @@ where
 
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
-  ( (?!),
-    InitialRule,
+  ( InitialRule,
     STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
+    (?!),
   )
 import qualified Data.Map.Strict as Map
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -32,15 +33,16 @@ import Shelley.Spec.Ledger.LedgerState
     DState (..),
     PState (..),
     UTxOState,
+    emptyAccount,
+    emptyPPUPState,
+    totalInstantaneousReservesRewards,
+    updatePpup,
     _deposited,
     _irwd,
     _reserves,
-    clearPpup,
-    emptyAccount,
-    totalInstantaneousReservesRewards,
     pattern UTxOState,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPPPUpdates, emptyPParams)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 data NEWPP crypto
@@ -51,7 +53,7 @@ data NewppState crypto
 data NewppEnv crypto
   = NewppEnv (DState crypto) (PState crypto)
 
-instance STS (NEWPP crypto) where
+instance Typeable crypto => STS (NEWPP crypto) where
   type State (NEWPP crypto) = NewppState crypto
   type Signal (NEWPP crypto) = Maybe PParams
   type Environment (NEWPP crypto) = NewppEnv crypto
@@ -71,7 +73,7 @@ initialNewPp :: InitialRule (NEWPP crypto)
 initialNewPp =
   pure $
     NewppState
-      (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates)
+      (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState)
       emptyAccount
       emptyPParams
 
@@ -81,8 +83,8 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let Coin oblgCurr = obligation pp (_stkCreds dstate) (_stPools pstate)
-          Coin oblgNew = obligation ppNew' (_stkCreds dstate) (_stPools pstate)
+      let Coin oblgCurr = obligation pp (_rewards dstate) (_pParams pstate)
+          Coin oblgNew = obligation ppNew' (_rewards dstate) (_pParams pstate)
           diff = oblgCurr - oblgNew
           Coin reserves = _reserves acnt
           Coin requiredInstantaneousRewards = totalInstantaneousReservesRewards (_irwd dstate)
@@ -96,6 +98,6 @@ newPpTransition = do
         then
           let utxoSt' = utxoSt {_deposited = Coin oblgNew}
            in let acnt' = acnt {_reserves = Coin $ reserves + diff}
-               in pure $ NewppState (clearPpup utxoSt') acnt' ppNew'
-        else pure $ NewppState (clearPpup utxoSt) acnt pp
-    Nothing -> pure $ NewppState (clearPpup utxoSt) acnt pp
+               in pure $ NewppState (updatePpup utxoSt' ppNew') acnt' ppNew'
+        else pure $ NewppState (updatePpup utxoSt pp) acnt pp
+    Nothing -> pure $ NewppState (updatePpup utxoSt pp) acnt pp

@@ -17,7 +17,6 @@ module Shelley.Spec.Ledger.STS.Utxow
   )
 where
 
-import Byron.Spec.Ledger.Core ((∩))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -27,10 +26,9 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
+import Control.Iterate.SetAlgebra (eval, (∩))
 import Control.State.Transition
-  ( (?!),
-    (?!:),
-    Embed,
+  ( Embed,
     IRC (..),
     InitialRule,
     STS (..),
@@ -41,6 +39,8 @@ import Control.State.Transition
     liftSTS,
     trans,
     wrapFailed,
+    (?!),
+    (?!:),
   )
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
@@ -50,18 +50,18 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.Address.Bootstrap (bootstrapWitKeyHash)
 import Shelley.Spec.Ledger.BaseTypes
-  ( (==>),
-    ShelleyBase,
+  ( ShelleyBase,
     StrictMaybe (..),
     invalidKey,
     quorum,
+    (==>),
   )
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
+    GenDelegPair (..),
     GenDelegs (..),
     Hash,
     KeyHash,
@@ -69,19 +69,26 @@ import Shelley.Spec.Ledger.Keys
     VKey,
     asWitness,
   )
-import Shelley.Spec.Ledger.LedgerState (UTxOState (..), verifiedWits, witsVKeyNeeded)
+import Shelley.Spec.Ledger.LedgerState
+  ( UTxOState (..),
+    WitHashes (..),
+    diffWitHashes,
+    nullWitHashes,
+    verifiedWits,
+    witsFromWitnessSet,
+    witsVKeyNeeded,
+  )
 import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable)
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
-    WitnessSetHKD (..),
     hashScript,
     txwitsScript,
     validateScript,
   )
-import Shelley.Spec.Ledger.TxData (TxBody (..), witKeyHash)
+import Shelley.Spec.Ledger.TxData (TxBody (..))
 import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
 data UTXOW crypto
@@ -98,9 +105,10 @@ instance
   type BaseM (UTXOW crypto) = ShelleyBase
   data PredicateFailure (UTXOW crypto)
     = InvalidWitnessesUTXOW
-        ![VKey 'Witness crypto] -- witnesses which failed in verifiedWits function
-    | MissingVKeyWitnessesUTXOW
-        !(Set (KeyHash 'Witness crypto)) -- witnesses which were needed and not supplied
+        ![VKey 'Witness crypto]
+    | -- witnesses which failed in verifiedWits function
+      MissingVKeyWitnessesUTXOW
+        !(WitHashes crypto) -- witnesses which were needed and not supplied
     | MissingScriptWitnessesUTXOW
         !(Set (ScriptHash crypto)) -- missing scripts
     | ScriptWitnessNotValidatingUTXOW
@@ -128,7 +136,7 @@ instance
   toCBOR = \case
     InvalidWitnessesUTXOW wits ->
       encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable wits
-    MissingVKeyWitnessesUTXOW missing ->
+    MissingVKeyWitnessesUTXOW (WitHashes missing) ->
       encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable missing
     MissingScriptWitnessesUTXOW ss -> encodeListLen 2 <> toCBOR (2 :: Word8) <> encodeFoldable ss
     ScriptWitnessNotValidatingUTXOW ss -> encodeListLen 2 <> toCBOR (3 :: Word8) <> encodeFoldable ss
@@ -157,7 +165,7 @@ instance
       1 -> do
         matchSize "MissingVKeyWitnessesUTXOW" 2 n
         missing <- decodeSet fromCBOR
-        pure $ MissingVKeyWitnessesUTXOW missing
+        pure $ MissingVKeyWitnessesUTXOW $ WitHashes missing
       2 -> do
         matchSize "MissingScriptWitnessesUTXOW" 2 n
         ss <- decodeSet fromCBOR
@@ -209,9 +217,8 @@ utxoWitnessed =
   judgmentContext
     >>= \(TRC (UtxoEnv slot pp stakepools genDelegs, u, tx@(Tx txbody wits md))) -> do
       let utxo = _utxo u
-      let witsKeyHashes =
-            (Set.map witKeyHash $ addrWits wits)
-              `Set.union` (Set.map bootstrapWitKeyHash $ bootWits wits)
+      let witsKeyHashes = witsFromWitnessSet wits
+
       -- check multi-signature scripts
       let failedScripts =
             filter
@@ -229,8 +236,8 @@ utxoWitnessed =
       verifiedWits tx ?!: InvalidWitnessesUTXOW
 
       let needed = witsVKeyNeeded utxo tx genDelegs
-          missingWitnesses = needed `Set.difference` witsKeyHashes
-          haveNeededWitnesses = case missingWitnesses == Set.empty of
+          missingWitnesses = diffWitHashes needed witsKeyHashes
+          haveNeededWitnesses = case nullWitHashes missingWitnesses of
             True -> Right ()
             False -> Left missingWitnesses
       haveNeededWitnesses ?!: MissingVKeyWitnessesUTXOW
@@ -244,8 +251,9 @@ utxoWitnessed =
           hashMetaData md' == mdh ?! ConflictingMetaDataHash mdh (hashMetaData md')
 
       -- check genesis keys signatures for instantaneous rewards certificates
-      let genDelegates = Set.fromList $ fmap (asWitness . fst) $ Map.elems genMapping
-          genSig = genDelegates ∩ witsKeyHashes
+      let genDelegates = Set.fromList $ fmap (asWitness . genDelegKeyHash) $ Map.elems genMapping
+          (WitHashes khAsSet) = witsKeyHashes
+          genSig = eval (genDelegates ∩ khAsSet)
           mirCerts =
             StrictSeq.toStrict
               . Seq.filter isInstantaneousRewards

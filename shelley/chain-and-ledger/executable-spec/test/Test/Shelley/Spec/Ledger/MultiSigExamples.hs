@@ -1,6 +1,9 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.MultiSigExamples
   ( applyTxWithScript,
@@ -14,7 +17,7 @@ module Test.Shelley.Spec.Ledger.MultiSigExamples
   )
 where
 
-import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Sequence.Strict (StrictSeq (..))
@@ -32,10 +35,12 @@ import Shelley.Spec.Ledger.Credential
     pattern ScriptHashObj,
     pattern StakeRefBase,
   )
-import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness)
-import Shelley.Spec.Ledger.LedgerState (_utxoState, genesisCoins, genesisId, genesisState)
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
+import Shelley.Spec.Ledger.Keys (KeyPair, KeyRole (..), asWitness)
+import Shelley.Spec.Ledger.LedgerState (genesisState, _utxoState)
 import Shelley.Spec.Ledger.MetaData (MetaData)
-import Shelley.Spec.Ledger.PParams (PParams, _maxTxSize, emptyPParams)
+import Shelley.Spec.Ledger.PParams (PParams, emptyPParams, _maxTxSize)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts
   ( pattern RequireAllOf,
@@ -44,20 +49,19 @@ import Shelley.Spec.Ledger.Scripts
     pattern RequireSignature,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), _body, hashScript, pattern Tx)
+import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), hashScript, _body, pattern Tx)
 import Shelley.Spec.Ledger.TxData
   ( unWdrl,
-    pattern StakePools,
     pattern TxBody,
     pattern TxIn,
     pattern TxOut,
     pattern Wdrl,
   )
-import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessesVKey, txid)
+import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
-    KeyPair,
     LedgerState,
+    Mock,
     MultiSig,
     ScriptHash,
     Tx,
@@ -77,46 +81,50 @@ import Test.Shelley.Spec.Ledger.Examples
     carlAddr,
     dariaAddr,
   )
+import Test.Shelley.Spec.Ledger.Generator.Core
+  ( genesisCoins,
+    genesisId,
+  )
 import Test.Shelley.Spec.Ledger.Utils
 
 -- Multi-Signature tests
 
 -- Multi-signature scripts
-singleKeyOnly :: Addr -> MultiSig
+singleKeyOnly :: Crypto c => Addr c -> MultiSig c
 singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
-aliceOnly :: MultiSig
-aliceOnly = singleKeyOnly aliceAddr
+aliceOnly :: Crypto c => proxy c -> MultiSig c
+aliceOnly _ = singleKeyOnly aliceAddr
 
-bobOnly :: MultiSig
-bobOnly = singleKeyOnly bobAddr
+bobOnly :: Crypto c => proxy c -> MultiSig c
+bobOnly _ = singleKeyOnly bobAddr
 
-aliceOrBob :: MultiSig
-aliceOrBob = RequireAnyOf [aliceOnly, singleKeyOnly bobAddr]
+aliceOrBob :: Crypto c => proxy c -> MultiSig c
+aliceOrBob p = RequireAnyOf [aliceOnly p, singleKeyOnly bobAddr]
 
-aliceAndBob :: MultiSig
-aliceAndBob = RequireAllOf [aliceOnly, singleKeyOnly bobAddr]
+aliceAndBob :: Crypto c => proxy c -> MultiSig c
+aliceAndBob p = RequireAllOf [aliceOnly p, singleKeyOnly bobAddr]
 
-aliceAndBobOrCarl :: MultiSig
-aliceAndBobOrCarl = RequireMOf 1 [aliceAndBob, singleKeyOnly carlAddr]
+aliceAndBobOrCarl :: Crypto c => proxy c -> MultiSig c
+aliceAndBobOrCarl p = RequireMOf 1 [aliceAndBob p, singleKeyOnly carlAddr]
 
-aliceAndBobOrCarlAndDaria :: MultiSig
-aliceAndBobOrCarlAndDaria =
+aliceAndBobOrCarlAndDaria :: Crypto c => proxy c -> MultiSig c
+aliceAndBobOrCarlAndDaria p =
   RequireAnyOf
-    [ aliceAndBob,
+    [ aliceAndBob p,
       RequireAllOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]
     ]
 
-aliceAndBobOrCarlOrDaria :: MultiSig
-aliceAndBobOrCarlOrDaria =
+aliceAndBobOrCarlOrDaria :: Crypto c => proxy c -> MultiSig c
+aliceAndBobOrCarlOrDaria p =
   RequireMOf
     1
-    [ aliceAndBob,
+    [ aliceAndBob p,
       RequireAnyOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]
     ]
 
-initTxBody :: [(Addr, Coin)] -> TxBody
+initTxBody :: Crypto c => [(Addr c, Coin)] -> TxBody c
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
@@ -128,7 +136,7 @@ initTxBody addrs =
     SNothing
     SNothing
 
-makeTxBody :: [TxIn] -> [(Addr, Coin)] -> Wdrl -> TxBody
+makeTxBody :: Crypto c => [TxIn c] -> [(Addr c, Coin)] -> Wdrl c -> TxBody c
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
@@ -140,12 +148,12 @@ makeTxBody inp addrCs wdrl =
     SNothing
     SNothing
 
-makeTx :: TxBody -> [KeyPair 'Witness] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
+makeTx :: Mock c => TxBody c -> [KeyPair 'Witness c] -> Map (ScriptHash c) (MultiSig c) -> Maybe MetaData -> Tx c
 makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
       mempty
-        { addrWits = makeWitnessesVKey (hashTxBody txBody) keyPairs,
+        { addrWits = makeWitnessesVKey (hashAnnotated txBody) keyPairs,
           msigWits = msigs
         }
 
@@ -155,7 +163,7 @@ aliceInitCoin = 10000
 bobInitCoin :: Coin
 bobInitCoin = 1000
 
-genesis :: LedgerState
+genesis :: Crypto c => LedgerState c
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty
@@ -173,9 +181,11 @@ initPParams = emptyPParams {_maxTxSize = 1000}
 -- 'aliceKeep' is greater than 0, gives that amount to Alice and creates outputs
 -- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState ::
+  forall c.
+  Mock c =>
   Coin ->
-  [(MultiSig, Coin)] ->
-  (TxId, Either [[PredicateFailure UTXOW]] UTxOState)
+  [(MultiSig c, Coin)] ->
+  (TxId c, Either [[PredicateFailure (UTXOW c)]] (UTxOState c))
 initialUTxOState aliceKeep msigs =
   let addresses =
         [(aliceAddr, aliceKeep) | aliceKeep > 0]
@@ -197,12 +207,12 @@ initialUTxOState aliceKeep msigs =
               Nothing
        in ( txid $ _body tx,
             runShelleyBase $
-              applySTS @UTXOW
+              applySTSTest @(UTXOW c)
                 ( TRC
                     ( UtxoEnv
                         (SlotNo 0)
                         initPParams
-                        (StakePools Map.empty)
+                        Map.empty
                         (GenDelegs Map.empty),
                       _utxoState genesis,
                       tx
@@ -218,13 +228,16 @@ initialUTxOState aliceKeep msigs =
 -- 'aliceKeep' in the case of it being non-zero) to spend all funds back to
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript ::
-  [(MultiSig, Coin)] ->
-  [MultiSig] ->
-  Wdrl ->
+  forall proxy c.
+  Mock c =>
+  proxy c ->
+  [(MultiSig c, Coin)] ->
+  [MultiSig c] ->
+  Wdrl c ->
   Coin ->
-  [KeyPair 'Witness] ->
-  Either [[PredicateFailure UTXOW]] UTxOState
-applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
+  [KeyPair 'Witness c] ->
+  Either [[PredicateFailure (UTXOW c)]] (UTxOState c)
+applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
     utxoSt = case initUtxo of
@@ -253,12 +266,12 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         Nothing
     utxoSt' =
       runShelleyBase $
-        applySTS @UTXOW
+        applySTSTest @(UTXOW c)
           ( TRC
               ( UtxoEnv
                   (SlotNo 0)
                   initPParams
-                  (StakePools Map.empty)
+                  Map.empty
                   (GenDelegs Map.empty),
                 utxoSt,
                 tx

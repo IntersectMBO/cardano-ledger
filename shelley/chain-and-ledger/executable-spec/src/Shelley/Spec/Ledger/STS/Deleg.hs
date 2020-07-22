@@ -13,7 +13,6 @@ module Shelley.Spec.Ledger.STS.Deleg
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -23,16 +22,9 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
-  ( (?!),
-    STS (..),
-    TRC (..),
-    TransitionRule,
-    failBecause,
-    judgmentContext,
-    liftSTS,
-  )
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -47,7 +39,8 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
-  ( GenDelegs (..),
+  ( GenDelegPair (..),
+    GenDelegs (..),
     Hash,
     KeyHash,
     KeyRole (..),
@@ -58,23 +51,22 @@ import Shelley.Spec.Ledger.LedgerState
     DState,
     FutureGenDeleg (..),
     InstantaneousRewards (..),
+    emptyDState,
     _delegations,
     _fGenDelegs,
     _genDelegs,
     _irwd,
     _ptrs,
     _rewards,
-    _stkCreds,
-    emptyDState,
   )
 import Shelley.Spec.Ledger.Slot
-  ( (*-),
-    (+*),
-    Duration (..),
+  ( Duration (..),
     EpochNo (..),
     SlotNo,
     epochInfoEpoch,
     epochInfoFirst,
+    (*-),
+    (+*),
   )
 import Shelley.Spec.Ledger.TxData
   ( DCert (..),
@@ -84,7 +76,6 @@ import Shelley.Spec.Ledger.TxData
     MIRCert (..),
     MIRPot (..),
     Ptr,
-    RewardAcnt (..),
   )
 
 data DELEG crypto
@@ -96,13 +87,17 @@ data DelegEnv = DelegEnv
   }
   deriving (Show, Eq)
 
-instance STS (DELEG crypto) where
+instance Typeable crypto => STS (DELEG crypto) where
   type State (DELEG crypto) = DState crypto
   type Signal (DELEG crypto) = DCert crypto
   type Environment (DELEG crypto) = DelegEnv
   type BaseM (DELEG crypto) = ShelleyBase
   data PredicateFailure (DELEG crypto)
     = StakeKeyAlreadyRegisteredDELEG
+        !(Credential 'Staking crypto) -- Credential which is already registered
+    | -- | Indicates that the stake key is somehow already in the rewards map.
+      --   This error being seen indicates a potential bug in the rules.
+      StakeKeyInRewardsDELEG
         !(Credential 'Staking crypto) -- Credential which is already registered
     | StakeKeyNotRegisteredDELEG
         !(Credential 'Staking crypto) -- Credential which is not registered
@@ -138,6 +133,8 @@ instance
   toCBOR = \case
     StakeKeyAlreadyRegisteredDELEG cred ->
       encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR cred
+    StakeKeyInRewardsDELEG cred ->
+      encodeListLen 2 <> toCBOR (10 :: Word8) <> toCBOR cred
     StakeKeyNotRegisteredDELEG cred ->
       encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR cred
     StakeKeyNonZeroAccountBalanceDELEG rewardBalance ->
@@ -171,6 +168,10 @@ instance
         matchSize "StakeKeyAlreadyRegisteredDELEG" 2 n
         kh <- fromCBOR
         pure $ StakeKeyAlreadyRegisteredDELEG kh
+      10 -> do
+        matchSize "StakeKeyInRewardsDELEG" 2 n
+        kh <- fromCBOR
+        pure $ StakeKeyInRewardsDELEG kh
       1 -> do
         matchSize "StakeKeyNotRegisteredDELEG" 2 n
         kh <- fromCBOR
@@ -212,42 +213,40 @@ instance
       k -> invalidKey k
 
 delegationTransition ::
+  Typeable crypto =>
   TransitionRule (DELEG crypto)
 delegationTransition = do
   TRC (DelegEnv slot ptr acnt, ds, c) <- judgmentContext
-  network <- liftSTS $ asks networkId
   case c of
     DCertDeleg (RegKey hk) -> do
       -- note that pattern match is used instead of regCred, as in the spec
-      hk ∉ dom (_stkCreds ds) ?! StakeKeyAlreadyRegisteredDELEG hk
+      eval (hk ∉ dom (_rewards ds)) ?! StakeKeyInRewardsDELEG hk
 
       pure $
         ds
-          { _stkCreds = _stkCreds ds ∪ singleton hk slot,
-            _rewards = _rewards ds ∪ Map.singleton (RewardAcnt network hk) (Coin 0), -- ∪ is override left
-            _ptrs = _ptrs ds ∪ Map.singleton ptr hk
+          { _rewards = eval (_rewards ds ∪ (singleton hk (Coin 0))),
+            _ptrs = eval (_ptrs ds ∪ (singleton ptr hk))
           }
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
-      hk ∈ dom (_stkCreds ds) ?! StakeKeyNotRegisteredDELEG hk
+      eval (hk ∈ dom (_rewards ds)) ?! StakeKeyNotRegisteredDELEG hk
 
-      let rewardCoin = Map.lookup (RewardAcnt network hk) (_rewards ds)
+      let rewardCoin = Map.lookup hk (_rewards ds)
       rewardCoin == Just 0 ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
 
       pure $
         ds
-          { _stkCreds = Set.singleton hk ⋪ _stkCreds ds,
-            _rewards = Set.singleton (RewardAcnt network hk) ⋪ _rewards ds,
-            _delegations = Set.singleton hk ⋪ _delegations ds,
-            _ptrs = _ptrs ds ⋫ Set.singleton hk
+          { _rewards = eval (setSingleton hk ⋪ _rewards ds),
+            _delegations = eval (setSingleton hk ⋪ _delegations ds),
+            _ptrs = eval (_ptrs ds ⋫ setSingleton hk)
           }
     DCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
-      hk ∈ dom (_stkCreds ds) ?! StakeDelegationImpossibleDELEG hk
+      eval (hk ∈ dom (_rewards ds)) ?! StakeDelegationImpossibleDELEG hk
 
       pure $
         ds
-          { _delegations = _delegations ds ⨃ [(hk, dpool)]
+          { _delegations = eval (_delegations ds ∪ (singleton hk dpool))
           }
     DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
@@ -255,7 +254,8 @@ delegationTransition = do
       let s' = slot +* Duration sp
           (GenDelegs genDelegs) = _genDelegs ds
 
-      gkh ∈ dom genDelegs ?! GenesisKeyNotInpMappingDELEG gkh
+      -- gkh ∈ dom genDelegs ?! GenesisKeyNotInpMappingDELEG gkh
+      (case Map.lookup gkh genDelegs of Just _ -> True; Nothing -> False) ?! GenesisKeyNotInpMappingDELEG gkh
 
       let currentOtherDelegations =
             range $
@@ -263,19 +263,19 @@ delegationTransition = do
           futureOtherDelegations =
             range $
               Map.filterWithKey (\(FutureGenDeleg _ k) _ -> k /= gkh) (_fGenDelegs ds)
-          currentOtherColdKeyHashes = Set.map fst currentOtherDelegations
-          futureOtherColdKeyHashes = Set.map fst futureOtherDelegations
-          currentOtherVrfKeyHashes = Set.map snd currentOtherDelegations
-          futureOtherVrfKeyHashes = Set.map snd futureOtherDelegations
+          currentOtherColdKeyHashes = Set.map genDelegKeyHash currentOtherDelegations
+          futureOtherColdKeyHashes = Set.map genDelegKeyHash futureOtherDelegations
+          currentOtherVrfKeyHashes = Set.map genDelegVrfHash currentOtherDelegations
+          futureOtherVrfKeyHashes = Set.map genDelegVrfHash futureOtherDelegations
 
-      vkh ∉ (currentOtherColdKeyHashes `Set.union` futureOtherColdKeyHashes)
+      eval (vkh ∉ (currentOtherColdKeyHashes `Set.union` futureOtherColdKeyHashes))
         ?! DuplicateGenesisDelegateDELEG vkh
-      vrf ∉ (currentOtherVrfKeyHashes `Set.union` futureOtherVrfKeyHashes)
+      eval (vrf ∉ (currentOtherVrfKeyHashes `Set.union` futureOtherVrfKeyHashes))
         ?! DuplicateGenesisVRFDELEG vrf
 
       pure $
         ds
-          { _fGenDelegs = _fGenDelegs ds ⨃ [(FutureGenDeleg s' gkh, (vkh, vrf))]
+          { _fGenDelegs = eval ((_fGenDelegs ds) ∪ (singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
           }
     DCertMir (MIRCert targetPot credCoinMap) -> do
       sp <- liftSTS $ asks stabilityWindow

@@ -18,7 +18,7 @@ current Shelley ledger design.
   the type scripting language, e.g.
   $\mathsf{nativeMSigTag}$ and $\mathsf{nativeMCTag}$
 
-  \item $\CurrencyId$ is the identifier of a specific currency. The monetary
+  \item $\PolicyID$ is the identifier of a specific currency. The monetary
   policy of a currency with the ID $cid$ is given by the monetary policy script
   (MPS) $s$, such that $\fun{hashScript}~s~=~cid$. The script is called a
   monetary policy script because when run, it verifies that the tokens of a currency
@@ -27,16 +27,16 @@ current Shelley ledger design.
   $\mathsf{True}$, and
   $\mathsf{False}$ otherwise. More on MPS below.
 
-  \item $\Token$ : for each currency ID $cid$, in the MC model, we can associate
-  some tokens with this currency. A term $t\in\Token$ is an identifier of a
+  \item $\AssetID$ : for each currency ID $cid$, in the MC model, we can associate
+  some tokens with this currency. A term $t\in\AssetID$ is an identifier of a
   kind of token in a given currency $cid$. Within the currency $cid$,
-  tokens of the same type (with the same identifier $t\in\Token$) are fungible
+  tokens of the same type (with the same identifier $t\in\AssetID$) are fungible
   with each other. That is, they are effectively the "same" token, in the same way that
   every Ada coin is indistinguishable from another Ada coin. Ada
   has the currency ID $\mathsf{adaID}$. The statement \textit{all of the tokens
   of this currency must
   be the same}, in a MC scheme, means that there is only one kind of term of
-  type $\Token$ associated
+  type $\AssetID$ associated
   with $\mathsf{adaID}$, and we call it $\mathsf{adaToken}$.
   See below for a more detailed discussion of Ada representation.
 
@@ -45,7 +45,7 @@ current Shelley ledger design.
   These are not the same tokens and are not fungible with each other.
 
   \item $\Quantity$ is an integer type representing an amount. This type is used
-  specifically to represent an amount of a specific $\Token$. We associate
+  specifically to represent an amount of a specific $\AssetID$. We associate
   a term $q\in\Quantity$ with a specific token to keep track of how much of
   this token there is in a given value.
 
@@ -53,12 +53,13 @@ current Shelley ledger design.
   all tokens, including Ada. The key of this finite map type is
   the hash of the monetary policy script for this currency.
   A value $v\in\Value$ is a finite map that assciates to each of its
-  currency ID keys a finite map $tkns\in\Token \mapsto \Quantity$,
+  currency ID keys a finite map $tkns\in\AssetID \mapsto \Quantity$,
   which represents all the tokens (of that particular
   currency) that are contained in $v$.
 
-  The map $tkns$ associates to each key $t\in\Token$ the quantity of tokens of
-  this kind (i.e. with this identifier).
+  The map $tkns$ associates to each key $t\in\AssetID$ the quantity of tokens of
+  this kind (i.e. with this identifier). Tokens are fungible with each other if
+  they belong to the same $\PolicyID$ and $\AssetID$.
 
   \item $\TxOut$ : The type of outputs carried by a transaction. This type
   is different from the Shelley $\TxOut$ type because it contains a $\Value$
@@ -92,14 +93,14 @@ current Shelley ledger design.
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{lng} & \Language & \N \\
       %\text{script language}
-      \var{cid} & \CurrencyId & \ScriptHash\\
+      \var{pid} & \PolicyID & \PolicyID\\
        % \text{currency ID}\\
-      \var{tok} & \Token & \mathbb{H}\\
+      \var{tok} & \AssetID & \mathbb{H}\\
        % \text{token identifier}\\
       \var{quan} & \Quantity & \Z \\
       %\text{quantity of a token}\\
       \var{val} & \Value
-      & \ScriptHash \mapsto (\Token \mapsto \Quantity) \\
+      & \PolicyID \mapsto (\AssetID \mapsto \Quantity) \\
 %      & \text{a collection of tokens}
       \var{txout}
       & \TxOut
@@ -166,7 +167,7 @@ the type of the language of a given script.
       \\~\\
       \var{s_{mc}}\in\ScriptMPS & = & \type{JustMSig}~ \ScriptMSig\\
       & \uniondistinct &
-         \type{MaxMinTimedTotal}~(\Token \mapsto (\Slot\times\Slot\times\Quantity\times\Quantity)) \\
+         \type{MaxMinTimedTotal}~(\AssetID \mapsto (\Slot\times\Slot\times\Quantity\times\Quantity)) \\
       & \uniondistinct&
         \type{RequireAll}~\powerset{\ScriptMPS}
     \end{array}
@@ -178,12 +179,13 @@ the type of the language of a given script.
 \textbf{Multicurrency Script Evaluation.}
 A monetary policy is a collection of restrictions on the tokens of a
 specific multicurrency. MP scripts are evaluated for the purpose of checking that
-the given currency adheres to its monetary policy.
-Here we define a basic scripting language that
+the given currency adheres to its monetary policy. The monetary policy scripting
+language is a basic scripting language that
 allows for expressing some of the most common restrictions, e.g.
 the maximum total number of different kinds of tokens of a given currency.
-The type function $\fun{evalMPSScript}$, which evaluates MPS scripts, is given in
-Figure~\ref{fig:defs:tx-mc-eval}. As inputs, it takes
+A suggestion for $\ScriptMPS$ and the implementation of the function
+$\fun{evalMPSScript}$, which evaluates MPS scripts, is given in
+Appendix~\ref{sec:mps-lang}. As inputs, $\fun{evalMPSScript}$ takes
 
 \begin{itemize}
 \item the script getting evaluated
@@ -194,134 +196,6 @@ Figure~\ref{fig:defs:tx-mc-eval}. As inputs, it takes
 \item the inputs of the transaction as a UTxO finite map (with addresses and values),
 i.e. the outputs it is spending
 \end{itemize}
-
-The constructors which make up the MPS script scheme are used to express the following
-aspects of monetary policy :
-
-\begin{itemize}
-\item $\type{JustMSig}$~ :~ evaluates an MSig script
-
-\item $\type{RequireAll}$~:~evaluates all MPS scripts in the given set
-
-\item Others will be here once decided on
-\end{itemize}
-
-The Figures~\ref{fig:defs:tx-mc-eval},~\ref{fig:whitelist-example},
-~\ref{fig:defs:tx-mc-eval-2}, and~\ref{fig:defs:tx-mc-eval-3} give
-possible constructors of the MPS language.
-
-\begin{note}
-  sort out the constructors
-\end{note}
-
-\begin{figure*}[htb]
-  \begin{align*}
-    & \fun{evalMPSScript} \in\ScriptMPS\to\ScriptHash\to\Slot\to\powerset\KeyHash \\
-    &~~~~\to\TxBody\to\UTxO \to\Bool  \\
-    & \text{UTxO is only for the outputs THIS tx is spending, not global UTxO, i.e.} \\
-    & \text{when called,}~\var{spentouts}~=~(\fun{txins}~\var{txb}) ~\restrictdom~\var{utxo} \\~\\
-    %
-    & \fun{evalMPSScript}  ~(\type{JustMSig}~s)~\var{cid}~\var{slot}~\var{vhks}
-     ~\var{txb}~\var{spentouts} \\
-    &~~~~ =~ \fun{evalMultiSigScript}~s~\var{vhks} \\
-    & \text {checks the msig script}\\~\\
-    %
-    & \fun{evalMPSScript}
-     ~\type{DoForge}~\var{cid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
-    &~~~~ =~ \var{cid} \notin \dom~(\fun{forge}~\var{txb}) \\
-    & \text {checks that script hash of this script is not a currency ID being forged by tx}  \\~\\
-    %
-    & \fun{evalMPSScript}
-     ~\type{SignedByCIDToken}~\var{cid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
-    &~~~~ =~ \exists~t\mapsto ~\_~\in~ \fun{range}~(\var{cid}~ \restrictdom~(\fun{ubalance}~\var{spentouts})) ~:~ t~\in~\var{vhks} \\
-    & \text{checks that tx is signed by a key whose hash is the name of a token in this currency}
-    \\~\\
-    & \fun{evalMPSScript}
-     ~(\type{SpendsCur}~\var{cid'})~\var{cid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
-    &~~~~ =~ (\var{cid'}~\neq~\Nothing ~\wedge ~\var{cid'}~\in~ \dom~(\fun{ubalance}~\var{spentouts}))\\
-    &~~~~~~ \vee (\var{cid'}~=~\Nothing ~\wedge ~\var{cid}~\in~ \dom~(\fun{ubalance}~\var{spentouts})) \\
-    & \text{checks that this transaction spends currency cid' OR itself if}~\var{cid'}~=~\Nothing
-    \\~\\
-    &\fun{evalMPSScript}~(\type{Not}~s)~\var{cid}~\var{slot}~\var{vhks}
-    ~\var{txb}~\var{spentouts}
-   \\
-    &~~~~ = \neg ~\fun{evalMPSScript}~s~\var{cid}~\var{slot}~\var{vhks}
-    ~\var{txb}~\var{spentouts}\\~\\
-    %
-    &\fun{evalMPSScript}~(\type{RequireAll}~ls)~\var{cid}~\var{slot}~\var{vhks}
-    ~\var{txb}~\var{spentouts}
-   \\
-    &~~~~ = \forall ~s'~ \in~ ls~:~\fun{evalMPSScript}~s'~\var{cid}~\var{slot}~\var{vhks}
-    ~\var{txb}~\var{spentouts}\\~\\
-    %
-    &\fun{evalMPSScript}~(\type{RequireOr}~ls)~\var{cid}~\var{slot}~\var{vhks}
-    ~\var{txb}~\var{spentouts}
-   \\
-    &~~~~ = \exists ~s'~ \in~ ls~:~\fun{evalMPSScript}~s'~\var{cid}~\var{slot}~\var{vhks}
-    ~\var{txb}~\var{spentouts}\\
-  \end{align*}
-  \caption{Multicurrency Script Evaluation}
-  \label{fig:defs:tx-mc-eval}
-\end{figure*}
-
-
-
-\begin{figure*}[htb]
-  \begin{align*}
-    & \fun{evalMPSScript}
-     ~(\type{CurrencyToAddress}~\var{cid'}~\var{addr})~\var{cid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
-    &~~~~ =~ \forall~(a, v)~\in~\fun{range}~(\fun{outs}~txb),~\\
-    &~~~~~~ \var{c}~\in~\dom~v~\Rightarrow~(a~=~ \var{a'} ~\wedge~
-                       v~=~\var{c}~ \restrictdom~(\fun{ubalance}~(\fun{outs}~txb)) \\
-    & \where \\
-    & ~~~~~~~ \var{a'}~=~\fun{if}~ \var{addr}~\neq~\Nothing~\fun{then}~\var{addr}~\fun{else}~\var{(cid',cid')} \\
-    & ~~~~~~~ \var{c}~=~\fun{if}~ \var{cid'}~\neq~\Nothing~\fun{then}~\var{cid'}~\fun{else}~\var{cid} \\
-    & \text{checks that tx outputs any cid tokens by themselves to the specified address} \\
-    & \text {the script address of the given currency when addr unspecified}
-    \end{align*}
-    \caption{Multicurrency Script Evaluation, cont.}
-    \label{fig:defs:tx-mc-eval-2}
-\end{figure*}
-
-\begin{figure*}[htb]
-  \begin{align*}
-    & \fun{evalMPSScript}
-     ~(\type{TrancheTokens}~\var{tts}~\var{txin})~\var{cid}~\var{slot}~\var{vhks}
-     ~\var{txb}~\var{spentouts}  \\
-    &~~~~ =~(\var{cid}\mapsto\var{tts}~\in~\var{val})~ \wedge~(\var{txin}~\in~\fun{txins}~{txb}) \\
-    & \text{tranche tokens is incomplete} \\~\\
-    %
-    & \fun{evalMPSScript}
-     ~(\type{FreshTokens})~\var{cid}~\var{slot}~\var{vhks}
-     ~\var{txb}~\var{spentouts}
-      \\
-    &~~~~ =~\forall~\var{cid}~ \mapsto ~tkns ~\in~ \var{val}~:~ \\
-    &~~~~ \forall~t~\in~\var{tkns},~
-        \fun{nameToken}~(\fun{indexof}~\var{t}~\var{tkns},~\fun{txins}~{txb})~=~t
-    \end{align*}
-    \caption{Multicurrency Script Evaluation, cont.}
-    \label{fig:defs:tx-mc-eval-3}
-\end{figure*}
-
-\begin{figure*}[htb]
-  \begin{align*}
-    & \fun{whitelist} \in\ScriptMSig\to\Script  \\~\\
-    %
-    & \type{whitelist}  ~\var{msig}~ =~ \type{RequireOr}~
-    (\type{RequireAll}~(\type{DoForge};~\type{JustMSig}~\var{msig});~\\
-    &~~~~~~ \type{RequireAll}~(\type{CurrencyToAddress}~\Nothing~\Nothing ;\\
-    &~~~~~~ (\type{Not}~\type{DoForge});~\type{SignedByCIDToken})) \\
-    %
-    & \text{msig is some MSig script containing signatures of some accreditation authority} \\
-    & \text{i.e. this authority can do any forging or spending of this token} \\~\\
-    %
-    & (\fun{hashScript}~(\type{SpendsCur}~(\fun{hashScript}~(\type{whitelist}~\var{msig}))),~ \var{tkns}) \\
-    & \text{an example of an output spending which requires to be on a whitelist made by msig authority}
-  \end{align*}
-  \caption{Whitelist Script Example}
-  \label{fig:whitelist-example}
-\end{figure*}
-
 
 
 \textbf{MPS Script Validation.}
@@ -338,7 +212,7 @@ by the UTXOW rule.
 
 \begin{figure*}[htb]
     \begin{align*}
-      \fun{validateScript} & \in\Script\to\ScriptHash\to\Slot\to
+      \fun{validateScript} & \in\Script\to\PolicyID\to\Slot\to
       \powerset{\KeyHash}\to\TxBody\to\UTxO\to\Bool \\
       \fun{validateScript} & ~s~\var{cid}~\var{slot}~\var{vhks}
        ~\var{txb}~\var{spentouts} =
@@ -352,14 +226,6 @@ by the UTXOW rule.
   \caption{Script Validation}
   \label{fig:defs:tx-mc-valid}
 \end{figure*}
-
-\begin{note}
-  give right arguments to validateScript in UTXOW rule
-
-  check about validation interval - ok with just ttl?
-
-  Fresh tokens - can’t unforge, quantity 1
-\end{note}
 
 \textbf{The Forge Field.}
 
@@ -472,9 +338,9 @@ preservation of value calculations.
   \emph{Abstract Functions and Values}
   %
   \begin{align*}
-    \mathsf{adaID} \in& ~\ScriptHash
+    \mathsf{adaID} \in& ~\PolicyID
     & \text{Ada currency ID} \\
-    \mathsf{adaToken} \in& ~\Token
+    \mathsf{adaToken} \in& ~\AssetID
     & \text{Ada Token} \\
     \mathsf{co} \in& ~\Quantity \to \Coin
     & \text{type conversion} \\

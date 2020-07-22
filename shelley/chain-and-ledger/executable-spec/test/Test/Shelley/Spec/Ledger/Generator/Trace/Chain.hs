@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -25,10 +26,10 @@ import Control.State.Transition.Trace.Generator.QuickCheck
     shrinkSignal,
     sigGen,
   )
-import Data.Coerce (coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, fromList, keysSet)
+import Data.Proxy
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.BlockChain
@@ -36,8 +37,13 @@ import Shelley.Spec.Ledger.BlockChain
     hashHeaderToNonce,
     pattern HashHeader,
   )
-import Shelley.Spec.Ledger.Keys (Hash, KeyRole (BlockIssuer), coerceKeyRole, hash)
-import Shelley.Spec.Ledger.LedgerState (_treasury, esAccountState, nesEs, overlaySchedule)
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash,
+    KeyRole (BlockIssuer),
+    coerceKeyRole,
+  )
+import Shelley.Spec.Ledger.LedgerState (esAccountState, nesEs, overlaySchedule, _treasury)
 import Shelley.Spec.Ledger.STS.Chain (chainNes, initialShelleyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
@@ -46,10 +52,10 @@ import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( CHAIN,
     ChainState,
-    ConcreteCrypto,
     GenDelegs,
     HashHeader,
-    KeyHash,
+    Mock,
+    pattern GenDelegPair,
     pattern GenDelegs,
   )
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
@@ -58,35 +64,37 @@ import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
 import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
-import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, runShelleyBase)
+import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash, runShelleyBase)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
-instance HasTrace CHAIN GenEnv where
+instance Mock c => HasTrace (CHAIN c) (GenEnv c) where
   envGen _ = pure ()
 
   sigGen ge _env st = genBlock ge st
 
   shrinkSignal = shrinkBlock
 
-  type BaseEnv CHAIN = Globals
+  type BaseEnv (CHAIN c) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | The first block of the Shelley era will point back to the last block of the Byron era.
 -- For our purposes we can bootstrap the chain by just coercing the value.
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
-lastByronHeaderHash :: HashHeader
-lastByronHeaderHash = HashHeader $ coerce (hash 0 :: Hash ConcreteCrypto Int)
+lastByronHeaderHash :: forall proxy c. Crypto c => proxy c -> HashHeader c
+lastByronHeaderHash _ = HashHeader $ mkHash 0
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align
 -- with the signature 'RuleContext sts -> Gen (Either [[PredicateFailure sts]] (State sts))'.
 -- To achieve this we (1) use 'IRC CHAIN' (the "initial rule context") instead of simply 'Chain Env'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
+  forall c a.
+  Crypto c =>
   Constants ->
-  IRC CHAIN ->
-  Gen (Either a ChainState)
+  IRC (CHAIN c) ->
+  Gen (Either a (ChainState c))
 mkGenesisChainState constants (IRC _slotNo) = do
   utxo0 <- genUtxo0 constants
 
@@ -100,20 +108,20 @@ mkGenesisChainState constants (IRC _slotNo) = do
 
   pure . Right . withRewards $
     initialShelleyState
-      (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
+      (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
       epoch0
       utxo0
       (maxLLSupply - balance utxo0)
       delegs0
       osched_
       pParams
-      (hashHeaderToNonce lastByronHeaderHash)
+      (hashHeaderToNonce (lastByronHeaderHash p))
   where
     epoch0 = EpochNo 0
     delegs0 = genesisDelegs0 constants
     -- We preload the initial state with some Treasury to enable generation
     -- of things dependent on Treasury (e.g. MIR Treasury certificates)
-    withRewards :: ChainState -> ChainState
+    withRewards :: ChainState h -> ChainState h
     withRewards st@STS.ChainState {..} =
       st
         { chainNes =
@@ -127,11 +135,13 @@ mkGenesisChainState constants (IRC _slotNo) = do
                     }
               }
         }
+    p :: Proxy c
+    p = Proxy
 
 mkOCertIssueNos ::
-  GenDelegs ->
-  Map (KeyHash 'BlockIssuer) Natural
+  GenDelegs h ->
+  Map (KeyHash 'BlockIssuer h) Natural
 mkOCertIssueNos (GenDelegs delegs0) =
   Map.fromList (fmap f (Map.elems delegs0))
   where
-    f (vk, _) = (coerceKeyRole vk, 0)
+    f (GenDelegPair vk _) = (coerceKeyRole vk, 0)

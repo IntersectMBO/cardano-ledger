@@ -21,11 +21,18 @@ module Shelley.Spec.Ledger.Credential
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeListLen)
-import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8)
+import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8, asum)
+import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
+import qualified Data.Aeson as Aeson
 import GHC.Generics (Generic)
+import Quiet
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Keys (HasKeyRole (..), KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.Keys
+  ( HasKeyRole (..),
+    KeyHash,
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization
@@ -38,8 +45,8 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 -- | Script hash or key hash for a payment or a staking object.
 data Credential (kr :: KeyRole) crypto
-  = ScriptHashObj !(ScriptHash crypto)
-  | KeyHashObj !(KeyHash kr crypto)
+  = ScriptHashObj {-# UNPACK #-} !(ScriptHash crypto)
+  | KeyHashObj {-# UNPACK #-} !(KeyHash kr crypto)
   deriving (Show, Eq, Generic, NFData, Ord)
 
 instance HasKeyRole Credential where
@@ -47,6 +54,31 @@ instance HasKeyRole Credential where
   coerceKeyRole (KeyHashObj x) = KeyHashObj $ coerceKeyRole x
 
 instance NoUnexpectedThunks (Credential kr crypto)
+
+instance
+  Crypto crypto =>
+  ToJSON (Credential kr crypto)
+  where
+  toJSON (ScriptHashObj hash) =
+    Aeson.object
+      [ "script hash" .= hash
+      ]
+  toJSON (KeyHashObj hash) =
+    Aeson.object
+      [ "key hash" .= hash
+      ]
+
+instance Crypto crypto => FromJSON (Credential kr crypto) where
+  parseJSON =
+    Aeson.withObject "Credential" $ \obj ->
+      asum [parser1 obj, parser2 obj]
+    where
+      parser1 obj = ScriptHashObj <$> obj .: "script hash"
+      parser2 obj = KeyHashObj <$> obj .: "key hash"
+
+instance Crypto crypto => ToJSONKey (Credential kr crypto)
+
+instance Crypto crypto => FromJSONKey (Credential kr crypto)
 
 type PaymentCredential crypto = Credential 'Payment crypto
 
@@ -69,7 +101,7 @@ data Ptr
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
 instance
-  (Typeable kr, Typeable crypto, Crypto crypto) =>
+  (Typeable kr, Crypto crypto) =>
   ToCBOR (Credential kr crypto)
   where
   toCBOR = \case
@@ -80,11 +112,12 @@ instance
   (Typeable kr, Crypto crypto) =>
   FromCBOR (Credential kr crypto)
   where
-  fromCBOR = decodeRecordNamed "Credential" (const 2) $
-    decodeWord >>= \case
-      0 -> KeyHashObj <$> fromCBOR
-      1 -> ScriptHashObj <$> fromCBOR
-      k -> invalidKey k
+  fromCBOR =
+    decodeRecordNamed "Credential" (const 2) $
+      decodeWord >>= \case
+        0 -> KeyHashObj <$> fromCBOR
+        1 -> ScriptHashObj <$> fromCBOR
+        k -> invalidKey k
 
 instance ToCBORGroup Ptr where
   toCBORGroup (Ptr sl txIx certIx) =
@@ -108,8 +141,12 @@ instance ToCBORGroup Ptr where
 instance FromCBORGroup Ptr where
   fromCBORGroup = Ptr <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
-newtype GenesisCredential crypto = GenesisCredential (KeyHash 'Genesis crypto)
-  deriving (Show, Generic)
+newtype GenesisCredential crypto = GenesisCredential
+  { unGenesisCredential ::
+      KeyHash 'Genesis crypto
+  }
+  deriving (Generic)
+  deriving (Show) via Quiet (GenesisCredential crypto)
 
 instance Ord (GenesisCredential crypto) where
   compare (GenesisCredential gh) (GenesisCredential gh') = compare gh gh'

@@ -31,6 +31,7 @@ import Numeric.Natural
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..))
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,
     pattern Delegate,
@@ -40,7 +41,12 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     pattern RegPool,
     pattern RetirePool,
   )
-import Shelley.Spec.Ledger.Keys (KeyRole (..), coerceKeyRole, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys
+  ( KeyRole (..),
+    VKey,
+    hashKey,
+    vKey,
+  )
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( _body,
@@ -65,6 +71,8 @@ import Shelley.Spec.Ledger.TxData
     pattern Delegation,
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+-- Used grudgingly for keys.
+import Unsafe.Coerce (unsafeCoerce)
 
 -- | Identity mutator that does not change the input value.
 mutateId :: a -> Gen a
@@ -94,14 +102,14 @@ mutateCoin lower upper (Coin val) =
   Coin . fromIntegral <$> mutateNat lower upper (fromIntegral val)
 
 -- | Mutator of 'Tx' which mutates the contained transaction
-mutateTx :: Tx -> Gen Tx
+mutateTx :: Crypto c => Tx c -> Gen (Tx c)
 mutateTx txwits = do
   body' <- mutateTxBody $ _body txwits
   pure $ Tx body' (_witnessSet txwits) SNothing
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.
-mutateTxBody :: TxBody -> Gen TxBody
+mutateTxBody :: Crypto c => TxBody c -> Gen (TxBody c)
 mutateTxBody tx = do
   inputs' <- mutateInputs $ Set.toList (_inputs tx)
   outputs' <- mutateOutputs $ _outputs tx
@@ -117,7 +125,7 @@ mutateTxBody tx = do
       SNothing
 
 -- | Mutator for a list of 'TxIn'.
-mutateInputs :: [TxIn] -> Gen [TxIn]
+mutateInputs :: Crypto c => [TxIn c] -> Gen [TxIn c]
 mutateInputs [] = pure []
 mutateInputs (txin : txins) = do
   mtxin <- mutateInput txin
@@ -127,13 +135,13 @@ mutateInputs (txin : txins) = do
 
 -- | Mutator for a single 'TxIn', which mutates the index of the output to
 -- spend.
-mutateInput :: TxIn -> Gen TxIn
+mutateInput :: Crypto c => TxIn c -> Gen (TxIn c)
 mutateInput (TxIn idx index) = do
   index' <- mutateNat 0 100 index
   pure $ TxIn idx index'
 
 -- | Mutator for a list of 'TxOut'.
-mutateOutputs :: StrictSeq TxOut -> Gen (StrictSeq TxOut)
+mutateOutputs :: Crypto c => StrictSeq (TxOut c) -> Gen (StrictSeq (TxOut c))
 mutateOutputs StrictSeq.Empty = pure StrictSeq.Empty
 mutateOutputs (txout :<| txouts) = do
   mtxout <- mutateOutput txout
@@ -143,7 +151,7 @@ mutateOutputs (txout :<| txouts) = do
 
 -- | Mutator for a single 'TxOut' which mutates the associated 'Coin' value of
 -- the output.
-mutateOutput :: TxOut -> Gen TxOut
+mutateOutput :: Crypto c => TxOut c -> Gen (TxOut c)
 mutateOutput (TxOut addr c) = do
   c' <- mutateCoin 0 100 c
   pure $ TxOut addr c'
@@ -154,7 +162,7 @@ mutateOutput (TxOut addr c) = do
 -- 'Generator.hs' in order to prevent cyclic imports.
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-getAnyStakeKey :: KeyPairs -> Gen (VKey 'Staking)
+getAnyStakeKey :: KeyPairs h -> Gen (VKey 'Staking h)
 getAnyStakeKey keys = vKey . snd <$> Gen.element keys
 
 -- | Mutate 'Epoch' analogously to 'Coin' data.
@@ -170,7 +178,7 @@ mutateEpoch lower upper (EpochNo val) =
 -- A 'RegPool' certificate mutates the staking key, the pool's cost and margin.
 -- A 'Delegate' certificates selects randomly keys for delegator and delegatee
 -- from the supplied list of keypairs.
-mutateDCert :: KeyPairs -> DPState -> DCert -> Gen DCert
+mutateDCert :: Crypto c => KeyPairs c -> DPState c -> DCert c -> Gen (DCert c)
 mutateDCert keys _ (DCertDeleg (RegKey _)) =
   DCertDeleg . RegKey . KeyHashObj . hashKey . vKey . snd <$> Gen.element keys
 mutateDCert keys _ (DCertDeleg (DeRegKey _)) =
@@ -178,7 +186,7 @@ mutateDCert keys _ (DCertDeleg (DeRegKey _)) =
 mutateDCert keys _ (DCertPool (RetirePool _ epoch@(EpochNo e))) = do
   epoch' <- mutateEpoch 0 (fromIntegral e) epoch
   key' <- getAnyStakeKey keys
-  pure $ DCertPool (RetirePool (coerceKeyRole $ hashKey key') epoch')
+  pure $ DCertPool (RetirePool (unsafeCoerce $ hashKey key') epoch')
 mutateDCert
   keys
   _
@@ -193,14 +201,14 @@ mutateDCert
     let interval = fromMaybe interval0 (mkUnitInterval $ fromIntegral p' % 100)
     pure $
       (DCertPool . RegPool)
-        (PoolParams (coerceKeyRole $ hashKey key') vrfHk pledge cost' interval rwdacnt owners relays poolMD)
+        (PoolParams (unsafeCoerce $ hashKey key') vrfHk pledge cost' interval rwdacnt owners relays poolMD)
 mutateDCert keys _ (DCertDeleg (Delegate (Delegation _ _))) = do
   delegator' <- getAnyStakeKey keys
   delegatee' <- getAnyStakeKey keys
-  pure $ DCertDeleg $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (coerceKeyRole $ hashKey delegatee')
+  pure $ DCertDeleg $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (unsafeCoerce $ hashKey delegatee')
 mutateDCert keys _ (DCertGenesis (GenesisDelegCert gk _ vrfKH)) = do
   _delegatee <- getAnyStakeKey keys
-  pure $ DCertGenesis $ GenesisDelegCert gk (coerceKeyRole $ hashKey _delegatee) vrfKH
+  pure $ DCertGenesis $ GenesisDelegCert gk (unsafeCoerce $ hashKey _delegatee) vrfKH
 mutateDCert _ _ (DCertMir (MIRCert pot credCoinMap)) = do
   let credCoinList = Map.toList credCoinMap
       coins = List.map snd credCoinList

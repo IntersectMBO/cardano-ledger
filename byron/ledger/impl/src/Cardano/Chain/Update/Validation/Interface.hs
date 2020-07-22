@@ -327,14 +327,14 @@ registerVotes env st votes = do
         registeredSoftwareUpdateProposals
         (M.keysSet confirmedProposals)
     appVersions' =
-      currentSlot `seq`
-      M.fromList $! [ let !svAppName' = svAppName sv
-                          !svNumber' = svNumber sv
-                      in (svAppName', (svNumber', currentSlot, metadata))
-                    | (!pid, (!sv, !metadata)) <- M.toList registeredSoftwareUpdateProposals
-                    , pid `elem` M.keys confirmedApplicationUpdates
-                    ]
-  pure $!
+      M.fromList $
+        [ (svAppName sv, av)
+        | (pid, sup) <- M.toList registeredSoftwareUpdateProposals
+        , pid `elem` M.keys confirmedApplicationUpdates
+        , let Registration.SoftwareUpdateProposal sv metadata = sup
+              av = Registration.ApplicationVersion (svNumber sv) currentSlot metadata
+        ]
+  pure $
     st' { -- Note that it's important that the new application versions are passed
           -- as the first argument of @M.union@, since the values in this first
           -- argument overwrite the values in the second.
@@ -418,7 +418,8 @@ registerEndorsement env st endorsement = do
     registeredProtocolUpdateProposals' =
       M.restrictKeys registeredProtocolUpdateProposals pidsKeep
 
-    vsKeep = S.fromList $ fst <$> M.elems registeredProtocolUpdateProposals'
+    vsKeep = S.fromList $ Registration.pupProtocolVersion
+                            <$> M.elems registeredProtocolUpdateProposals'
 
   pure $!
     st { candidateProtocolUpdates = forceElemsToWHNF candidateProtocolUpdates'
