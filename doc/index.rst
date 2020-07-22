@@ -12,6 +12,26 @@ shelley-ledger-specs
 
 .. toctree::
    :maxdepth: 3
+   :caption: Getting Started
+   :titlesonly:
+   :hidden:
+
+   getting-started/repository-structure
+   getting-started/build-tools
+   getting-started/building-latex
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Contributing
+   :titlesonly:
+   :hidden:
+
+   getting-started/contributing
+   getting-started/adding-haskell
+   getting-started/adding-latex
+   
+.. toctree::
+   :maxdepth: 3
    :caption: Reference
    :titlesonly:
    :hidden:
