@@ -17,3 +17,6 @@ shelley-ledger-specs
    :hidden:
 
    reference/ledger-failures
+   ledger rules diagram <https://github.com/input-output-hk/cardano-ledger-specs/blob/master/shelley/chain-and-ledger/formal-spec/rules.pdf>
+   deliverables <https://github.com/input-output-hk/cardano-ledger-specs/blob/master/shelley/Deliverables.pdf>
+   addresses <https://github.com/input-output-hk/cardano-ledger-specs/blob/master/shelley/design-spec/addresses.pdf>
