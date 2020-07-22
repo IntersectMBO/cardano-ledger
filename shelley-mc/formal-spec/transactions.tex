@@ -14,7 +14,7 @@
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{lng} & \Language & \{\mathsf{nativeMSigTag}, \mathsf{nativeMCTag}, \cdots\} \\
       \var{scr} & \Script & \ScriptMSig \uniondistinct \ScriptMPS \\
-      \var{cid} & \PolicyID & \ScriptHash \\
+      \var{pid} & \PolicyID & \ScriptHash \\
        % \text{currency ID}\\
       \var{tok} & \AssetID & \mathbb{H}_{\leq 32}\\
        % \text{token identifier}\\
@@ -65,7 +65,7 @@ Some new types (and some changes to existing types) are required for
 the ledger to support multi-currencies, as shown in Figure~\ref{fig:defs:utxo-shelley-1}.
 All other types are as specified in the Shelley ledger design and implementation~\ref{...}.
 A \emph{Currency} comprises a set of different \emph{Asset Classes}, each of which has
-a unique identifier, $\AssetID$  (of type $\mathbb{H}_{\leq 32}$, that is \emph{byte strings of length $\leq 32$}). We will informally refer to a pair $(\var{cid}, \var{tok})$ of a Policy ID and an Asset ID as a ``token''.
+a unique identifier, $\AssetID$  (of type $\mathbb{H}_{\leq 32}$, that is \emph{byte strings of length $\leq 32$}). We will informally refer to a pair $(\var{pid}, \var{tok})$ of a Policy ID and an Asset ID as a ``token''.
 The set of tokens that are referred to by the underlying monetary policy represents the coinage that the currency supports.  A multi-currency value, $\Value$ is a map over zero or more currencies
 to single currency values.  A single currency value is then a finite map from
 $\AssetID$s to quantities.  Any omitted tokens in the domain of a currency are assumed to be zero.
@@ -101,9 +101,9 @@ $$
     currencies may use the same \emph{coinage} (sets of tokens that distinguish different values in the currency),
     but are distinguished by their \emph{monetary policy}, which governs how tokens of the currency may be created
     and destroyed.
-    The monetary policy for a currency $\var{cid}$ is given by the \emph{Monetary Policy Script}
-    (MPS) $s$, where $\fun{hashScript}~s~=~cid$. When a transaction attempts to create or destroy tokens,
-    the script verifies that the coinage for currency $\var{cid}$
+    The monetary policy for a currency $\var{pid}$ is given by the \emph{Monetary Policy Script}
+    (MPS) $s$, where $\fun{hashScript}~s~=~pid$. When a transaction attempts to create or destroy tokens,
+    the script verifies that the coinage for currency $\var{pid}$
     respects the restrictions that are imposed by the
     monetary policy. If the restrictions are complied with, it returns
     $\mathsf{True}$, and
@@ -113,22 +113,22 @@ $$
 %%   policy for a currency $\var{c} = \{ \var{tok_1} \ldots \var{tok}_n \}$ is given by the \emph{Monetary Policy Script}
 %%   (MPS) $s$, such that $\fun{hashScript}~s~=~pid$. The script is called a
 %%   monetary policy script because when run, it verifies that the tokens of a currency
-%%   with the corresponding $\var{cid}$ are according to the restrictions imposed by the
+%%   with the corresponding $\var{pid}$ are according to the restrictions imposed by the
 %%   monetary policy. If the restrictions are complied with, it returns
 %%   $\mathsf{True}$, and
 %%   $\mathsf{False}$ otherwise.  Monetary Policy Scripts are described in more detail below.
 
 
-  \item $\AssetID$ : the coinage for a currency $\var{cid} \in \var{PolicyID}$ is a set of terms
-    $t\in\AssetID$.  Each $t$ identifies a unique kind of token in $\var{cid}$.
+  \item $\AssetID$ : the coinage for a currency $\var{pid} \in \var{PolicyID}$ is a set of terms
+    $t\in\AssetID$.  Each $t$ identifies a unique kind of token in $\var{pid}$.
     We will assume that the token for Ada is $(\mathsf{adaID}, \mathsf{adaToken})$.
 
   \item $\Quantity$ is an integer type that represents an amount of a specific $\AssetID$. We associate
     a term $q\in\Quantity$ with a specific token to track how much of that token is contained in a given currency value.
 
   \item $\Value$ is the multicurrency type that is used to represent
-    an amount of a collection of tokens, including Ada. If $(\var{cid}, \var{tok})$ is a token and $v \in \Value$,
-    the amount in $v$ belonging to that token is $v \var{cid} \var{tok}$ if defined, or zero otherwise.
+    an amount of a collection of tokens, including Ada. If $(\var{pid}, \var{tok})$ is a token and $v \in \Value$,
+    the amount in $v$ belonging to that token is $v \var{pid} \var{tok}$ if defined, or zero otherwise.
     Token amounts are fungible with each other if and only if they belong to the same token,
     i.e. they have the same $\PolicyID$ and $\AssetID$.
 
@@ -186,7 +186,7 @@ Appendix~\ref{sec:mps-lang}. As inputs, $\fun{evalMPSScript}$ takes
 
 \begin{itemize}
 \item the script getting evaluated
-\item the currency ID of the currency being forged
+\item the $\PolicyID$ of the currency being forged
 \item the current slot number,
 \item a set of key hashes (needed to use MSig scripts as MPS scripts)
 \item the transaction body
@@ -211,11 +211,11 @@ within the UTXOW rule.
     \begin{align*}
       \fun{validateScript} & \in\Script\to\PolicyID\to\Slot\to
       \powerset{\KeyHash}\to\TxBody\to\UTxO\to\Bool \\
-      \fun{validateScript} & ~s~\var{cid}~\var{slot}~\var{vhks}
-       ~\var{txb}~\var{spentouts} =
+      \fun{validateScript} & ~s~\var{pid}~\var{slot}~\var{vhks}
+       ~\var{txb}~\var{utxo} =
                              \begin{cases}
-                               \fun{evalMultiSigScript}~s~vhks & \text{if}~s \in\MSig \\
-                               \fun{evalMPSScript}~s~\var{cid}~\var{slot}~\var{vhks} \\
+                               \fun{evalMultiSigScript}~s~vhks & \text{if}~s \in\ScriptMSig \\
+                               \fun{evalMPSScript}~s~\var{pid}~\var{slot}~\var{vhks} \\
                                 ~~~~txb~\var{utxo} & \text{if}~s \in\ScriptMPS \\
                                \mathsf{False} & \text{otherwise}
                              \end{cases} \\
@@ -239,8 +239,8 @@ fields of the tokens forged, and taking tokens out of circulation can be done
 with negative quantities.
 
 A transaction cannot simply forge arbitrary tokens. Recall that restrictions on
-MC tokens are imposed, for each currency with ID $\var{cid}$, by the script
-with the hash $\var{cid}$. Whether a given currency adheres to the restrictions
+MC tokens are imposed, for each currency with ID $\var{pid}$, by the script
+with the hash $\var{pid}$. Whether a given currency adheres to the restrictions
 prescribed by its script is verified at forging time (i.e. when the transaction
 forging it is being processed). Another restriction on forging is imposed by
 the preservation of value conditition. Also, no forging Ada
@@ -294,7 +294,7 @@ It is the only
 type of token which can be used for all non-UTxO ledger accounting, including deposits,
 fees, rewards, treasury, and the proof of stake protocol. Under no circumstances
 are these administrative fields and calculations ever expected to operate on
-any types of tokens besides Ada. These fiels will continue to have the type $\Coin$.
+any types of tokens besides Ada. These fields will continue to have the type $\Coin$.
 
 The exact representation of tokens in the UTxO and inside transactions
 is an implementation detail, which we omit here.
@@ -307,12 +307,12 @@ and constants, needed for using Ada in a multicurrency setting.
 
 \begin{itemize}
   \item $\mathsf{adaID}$ is a random script hash value with no known associated
-  script. It is the currency ID of Ada. Even if a
+  script. It is the policy ID of Ada. Even if a
   script that hashes to this value
   and validates is found, the UTXO rule forbids forging Ada
   \item $\mathsf{adaToken}$ is a byte string representation of the word "Ada".
   The ledger should never allow the use of any other token name associated
-  with Ada's currency ID
+  with Ada's policy ID
   \item $\fun{qu}$ and $\fun{co}$ are type conversions from quantity to
   coin. Both of these types are synonyms for $\Z$, so they are
   type re-naming conversions that are mutual inverses, with

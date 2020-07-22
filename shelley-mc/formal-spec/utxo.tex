@@ -68,10 +68,6 @@ UTxO transition system with MC:
   \item $\fun{getCoin}$ sums all the Ada in a given output and returns it as a
   $\Coin$ value
 
-  \item $\fun{utxoAda}$ returns the set of all the outputs in a UTxO with only Ada
-  tokens (the other tokens are ignored). This is used in the stake distribution
-  calculation at the epoch boundary
-
   \item
     The $\fun{ubalance}$ function calculates the (aggregated by $\PolicyID$ and
     $\AssetID$) sum total of all the value in a given UTxO.
@@ -116,20 +112,20 @@ values in the
 outputs that will be added to the ledger UTxO by the transaction. These outputs are
 where the
 forged value is "put into of circulation", i.e. how it ends up in the UTxO.
-Suppose a transaction $tx$ contains a single output $(a, cid \mapsto tkns)$. Suppose
+Suppose a transaction $tx$ contains a single output $(a, pid \mapsto tkns)$. Suppose
 also that it does not
-have any inputs spending any UTxO outputs with currency ID $cid$.
+have any inputs spending any UTxO outputs with policy ID $pid$.
 
 A valid transaction $tx$ satisfies the preservation of value
-condition by adding the value $cid \mapsto tkns$ to the \textit{consumed} side as well.
-To do this, the $tx$ declares that it is forging the tokens $cid \mapsto tkns$
+condition by adding the value $pid \mapsto tkns$ to the \textit{consumed} side as well.
+To do this, the $tx$ declares that it is forging the tokens $pid \mapsto tkns$
 via the $\fun{forge}$ field, i.e. $tx$ must have
 
-\[cid \mapsto tkns\in\fun{forge}~tx\]
+\[pid \mapsto tkns\in\fun{forge}~tx\]
 
 The forge field value is then added to the consumed side. This approach
 to balancing the POV equation extends
-to cases where the transaction might also be consuming some existing $cid$ tokens,
+to cases where the transaction might also be consuming some existing $pid$ tokens,
 or taking the out of circulation with negative quantities in the forge field.
 
 The forge field value represents the change in total existing tokens of each given currency
@@ -149,13 +145,8 @@ That step is part of witnessing, i.e. the UTXOW rule, see below.
   \begin{align*}
     & \fun{getCoin} \in \UTxOOut \to \Coin \\
     & \fun{getCoin}~{\var{out}} ~=~\sum_{\mathsf{adaID} \mapsto tkns \in \fun{getValue}~out}
-       (\sum_{q \in \range~{tkns}} \fun{co}~q) \\
+       \sum_{q \in \range~{tkns}} \fun{co}~q \\
     & \text{\emph{-- sum total of amount of Ada in an output}}
-    \nextdef
-    & \fun{utxoAda} \in \UTxO \to \powerset{(\Addr \times \Coin)} \\
-    & \fun{utxoAda}~{\var{utxo}} ~=~\{~(\fun{getAddr}~\var{out},~\fun{getCoin}~{out})
-    ~\vert~ \var{out} \in \range~\var{utxo} ~\} \\
-    & \text{\emph{-- returns the outputs in the UTxO with only the Ada coins}} \\
     \nextdef
     & \fun{ubalance} \in \UTxO \to \Value \\
     & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{u}\in~\var{utxo}}
@@ -163,8 +154,8 @@ That step is part of witnessing, i.e. the UTXOW rule, see below.
     & \text{UTxO balance} \\
     \nextdef
     & \fun{valueSize} \in \Value \to \N \\
-    & \fun{valueSize}~\var{v} = k + k' * |\{ (\var{cid}, \var{aid}) : \var{v}~\var{cid}~\var{aid} \neq 0
-      \land (\var{cid}, \var{aid}) \neq (\mathsf{adaID}, \mathsf{adaToken}) \}|
+    & \fun{valueSize}~\var{v} = k + k' * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
+      \land (\var{pid}, \var{aid}) \neq (\mathsf{adaID}, \mathsf{adaToken}) \}|
   \end{align*}
   %
   \emph{Produced and Consumed Calculations}
