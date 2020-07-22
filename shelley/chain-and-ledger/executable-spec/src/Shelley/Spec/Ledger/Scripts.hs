@@ -52,6 +52,7 @@ import Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List (concat, concatMap, permutations)
+import Data.Word (Word8)
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
@@ -202,6 +203,24 @@ instance Crypto c => HashAnnotated (MultiSig c) c where
   hashAnnotated = Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
 -- CBOR
+
+instance
+  (Crypto crypto) =>
+  ToCBOR (Script crypto)
+  where
+  toCBOR (MultiSigScript s) =
+    encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR s
+
+instance
+  Crypto crypto =>
+  FromCBOR (Annotator (Script crypto))
+  where
+  fromCBOR = decodeRecordSum "Script" $
+    \case
+      0 -> do
+        s <- fromCBOR
+        pure (0, MultiSigScript <$> s)
+      k -> invalidKey k
 
 instance
   (Crypto crypto) =>
