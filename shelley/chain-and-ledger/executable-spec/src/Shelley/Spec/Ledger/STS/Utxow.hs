@@ -78,7 +78,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable, decodeRecordSum)
+import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, decodeSet, encodeFoldable)
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     hashScript,
@@ -156,32 +156,32 @@ instance
     \case
       0 -> do
         wits <- decodeList fromCBOR
-        pure (2,InvalidWitnessesUTXOW wits)
+        pure (2, InvalidWitnessesUTXOW wits)
       1 -> do
         missing <- decodeSet fromCBOR
-        pure (2,MissingVKeyWitnessesUTXOW $ WitHashes missing)
+        pure (2, MissingVKeyWitnessesUTXOW $ WitHashes missing)
       2 -> do
         ss <- decodeSet fromCBOR
-        pure (2,MissingScriptWitnessesUTXOW ss)
+        pure (2, MissingScriptWitnessesUTXOW ss)
       3 -> do
         ss <- decodeSet fromCBOR
-        pure (2,ScriptWitnessNotValidatingUTXOW ss)
+        pure (2, ScriptWitnessNotValidatingUTXOW ss)
       4 -> do
         a <- fromCBOR
-        pure (2,UtxoFailure a)
+        pure (2, UtxoFailure a)
       5 -> do
         s <- decodeSet fromCBOR
-        pure (2,MIRInsufficientGenesisSigsUTXOW s)
+        pure (2, MIRInsufficientGenesisSigsUTXOW s)
       6 -> do
         h <- fromCBOR
-        pure (2,MissingTxBodyMetaDataHash h)
+        pure (2, MissingTxBodyMetaDataHash h)
       7 -> do
         h <- fromCBOR
-        pure (2,MissingTxMetaData h)
+        pure (2, MissingTxMetaData h)
       8 -> do
         bodyHash <- fromCBOR
         fullMDHash <- fromCBOR
-        pure (3,ConflictingMetaDataHash bodyHash fullMDHash)
+        pure (3, ConflictingMetaDataHash bodyHash fullMDHash)
       k -> invalidKey k
 
 initialLedgerStateUTXOW ::

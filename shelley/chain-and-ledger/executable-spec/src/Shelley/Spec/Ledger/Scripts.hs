@@ -220,16 +220,16 @@ instance
   FromCBOR (Annotator (MultiSig' crypto))
   where
   fromCBOR = decodeRecordSum "MultiSig" $
-        \case
-          0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> fromCBOR
-          1 -> do
-            multiSigs <- sequence <$> decodeList fromCBOR
-            pure (2, RequireAllOf' <$> multiSigs)
-          2 -> do
-            multiSigs <- sequence <$> decodeList fromCBOR
-            pure (2, RequireAnyOf' <$> multiSigs)
-          3 -> do
-            m <- fromCBOR
-            multiSigs <- sequence <$> decodeList fromCBOR
-            pure $ (3, RequireMOf' m <$> multiSigs)
-          k -> invalidKey k
+    \case
+      0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> fromCBOR
+      1 -> do
+        multiSigs <- sequence <$> decodeList fromCBOR
+        pure (2, RequireAllOf' <$> multiSigs)
+      2 -> do
+        multiSigs <- sequence <$> decodeList fromCBOR
+        pure (2, RequireAnyOf' <$> multiSigs)
+      3 -> do
+        m <- fromCBOR
+        multiSigs <- sequence <$> decodeList fromCBOR
+        pure $ (3, RequireMOf' m <$> multiSigs)
+      k -> invalidKey k

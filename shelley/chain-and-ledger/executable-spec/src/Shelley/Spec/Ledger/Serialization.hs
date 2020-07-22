@@ -118,7 +118,6 @@ class Typeable a => ToCBORGroup a where
   -- | an upper bound for 'listLen', used in 'Size' expressions.
   listLenBound :: Proxy a -> Word
 
-
 listLenInt :: ToCBORGroup a => a -> Int
 listLenInt x = fromIntegral (listLen x)
 
@@ -149,14 +148,13 @@ decodeRecordNamed name getRecordSize decode = do
       unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
   pure x
 
-
-decodeRecordSum:: String -> (Word -> Decoder s (Int, a)) -> Decoder s a
+decodeRecordSum :: String -> (Word -> Decoder s (Int, a)) -> Decoder s a
 decodeRecordSum name decode = do
   lenOrIndef <- decodeListLenOrIndef
   tag <- decodeWord
   (size, x) <- decode tag -- we decode all the stuff we want
   case lenOrIndef of
-    Just n -> matchSize (Text.pack(name++" tag="++show size)) size n
+    Just n -> matchSize (Text.pack (name ++ " tag=" ++ show size)) size n
     Nothing -> do
       isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
       unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"

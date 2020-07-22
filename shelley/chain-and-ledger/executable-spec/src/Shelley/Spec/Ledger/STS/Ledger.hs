@@ -48,7 +48,6 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
   )
 import Shelley.Spec.Ledger.PParams (PParams)
-import Shelley.Spec.Ledger.Serialization(decodeRecordSum)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..))
 import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
@@ -62,6 +61,7 @@ import Shelley.Spec.Ledger.STS.Utxo
     pattern ValueNotConservedUTxO,
   )
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..), UTXOW)
+import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxBody (..))
 
@@ -109,15 +109,17 @@ instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (LEDGER crypto))
   where
-  fromCBOR = decodeRecordSum "PredicateFailure (LEDGER crypto)" $
-    (\case
-      0 -> do
-        a <- fromCBOR
-        pure (2,UtxowFailure a)
-      1 -> do
-        a <- fromCBOR
-        pure (2,DelegsFailure a)
-      k -> invalidKey k)
+  fromCBOR =
+    decodeRecordSum "PredicateFailure (LEDGER crypto)" $
+      ( \case
+          0 -> do
+            a <- fromCBOR
+            pure (2, UtxowFailure a)
+          1 -> do
+            a <- fromCBOR
+            pure (2, DelegsFailure a)
+          k -> invalidKey k
+      )
 
 ledgerTransition ::
   forall crypto.

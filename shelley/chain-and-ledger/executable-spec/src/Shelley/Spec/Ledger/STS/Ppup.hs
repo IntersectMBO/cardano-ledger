@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
 import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.Serialization(decodeRecordSum)
+import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
 
 data PPUP crypto
@@ -105,15 +105,15 @@ instance
       0 -> do
         a <- fromCBOR
         b <- fromCBOR
-        pure (3,NonGenesisUpdatePPUP a b)
+        pure (3, NonGenesisUpdatePPUP a b)
       1 -> do
         a <- fromCBOR
         b <- fromCBOR
         c <- fromCBOR
-        pure (4,PPUpdateWrongEpoch a b c)
+        pure (4, PPUpdateWrongEpoch a b c)
       2 -> do
         p <- fromCBOR
-        pure (2,PVCannotFollowPPUP p)
+        pure (2, PVCannotFollowPPUP p)
       k -> invalidKey k
 
 ppupTransitionNonEmpty :: Typeable crypto => TransitionRule (PPUP crypto)

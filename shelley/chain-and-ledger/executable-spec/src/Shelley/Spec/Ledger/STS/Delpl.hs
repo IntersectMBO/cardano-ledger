@@ -37,7 +37,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Pool (POOL, PoolEnv (..))
-import Shelley.Spec.Ledger.Serialization(decodeRecordSum)
+import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.TxData
   ( DCert (..),
@@ -91,15 +91,17 @@ instance
   FromCBOR (PredicateFailure (DELPL crypto))
   where
   fromCBOR =
-    decodeRecordSum "PredicateFailure (DELPL crypto)"
-    (\case
-      0 -> do
-        a <- fromCBOR
-        pure (2,PoolFailure a)
-      1 -> do
-        a <- fromCBOR
-        pure (2,DelegFailure a)
-      k -> invalidKey k)
+    decodeRecordSum
+      "PredicateFailure (DELPL crypto)"
+      ( \case
+          0 -> do
+            a <- fromCBOR
+            pure (2, PoolFailure a)
+          1 -> do
+            a <- fromCBOR
+            pure (2, DelegFailure a)
+          k -> invalidKey k
+      )
 
 delplTransition ::
   forall crypto.

@@ -6,7 +6,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Shelley.Spec.Ledger.STS.Tickn
   ( TICKN,
@@ -22,7 +21,7 @@ import Control.State.Transition
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.Serialization(decodeRecordNamed)
+import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 
 data TICKN
 
@@ -43,10 +42,13 @@ instance NoUnexpectedThunks TicknState
 
 instance FromCBOR TicknState where
   fromCBOR =
-    decodeRecordNamed "TicknState" (const 2)
-      (TicknState
-       <$> fromCBOR
-       <*> fromCBOR)
+    decodeRecordNamed
+      "TicknState"
+      (const 2)
+      ( TicknState
+          <$> fromCBOR
+          <*> fromCBOR
+      )
 
 instance ToCBOR TicknState where
   toCBOR

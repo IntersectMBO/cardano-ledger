@@ -113,12 +113,14 @@ instance
   FromCBOR (Credential kr crypto)
   where
   fromCBOR = decodeRecordSum "Credential" $
-     \case
-        0 -> do x <- fromCBOR
-                pure (2,KeyHashObj x)
-        1 -> do x <- fromCBOR
-                pure (2, ScriptHashObj x)
-        k -> invalidKey k
+    \case
+      0 -> do
+        x <- fromCBOR
+        pure (2, KeyHashObj x)
+      1 -> do
+        x <- fromCBOR
+        pure (2, ScriptHashObj x)
+      k -> invalidKey k
 
 instance ToCBORGroup Ptr where
   toCBORGroup (Ptr sl txIx certIx) =

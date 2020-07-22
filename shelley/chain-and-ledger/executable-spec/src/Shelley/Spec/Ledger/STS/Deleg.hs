@@ -5,7 +5,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Shelley.Spec.Ledger.STS.Deleg
   ( DELEG,
@@ -57,7 +56,7 @@ import Shelley.Spec.Ledger.LedgerState
     _ptrs,
     _rewards,
   )
-import Shelley.Spec.Ledger.Serialization(decodeRecordSum)
+import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
   ( Duration (..),
     EpochNo (..),
@@ -164,39 +163,39 @@ instance
     \case
       0 -> do
         kh <- fromCBOR
-        pure (2,StakeKeyAlreadyRegisteredDELEG kh)
+        pure (2, StakeKeyAlreadyRegisteredDELEG kh)
       10 -> do
         kh <- fromCBOR
-        pure (2,StakeKeyInRewardsDELEG kh)
+        pure (2, StakeKeyInRewardsDELEG kh)
       1 -> do
         kh <- fromCBOR
-        pure (2,StakeKeyNotRegisteredDELEG kh)
+        pure (2, StakeKeyNotRegisteredDELEG kh)
       2 -> do
         b <- fromCBOR
-        pure (2,StakeKeyNonZeroAccountBalanceDELEG b)
+        pure (2, StakeKeyNonZeroAccountBalanceDELEG b)
       3 -> do
         kh <- fromCBOR
-        pure (2,StakeDelegationImpossibleDELEG kh)
+        pure (2, StakeDelegationImpossibleDELEG kh)
       4 -> do
-        pure (1,WrongCertificateTypeDELEG)
+        pure (1, WrongCertificateTypeDELEG)
       5 -> do
         gkh <- fromCBOR
-        pure (2,GenesisKeyNotInpMappingDELEG gkh)
+        pure (2, GenesisKeyNotInpMappingDELEG gkh)
       6 -> do
         kh <- fromCBOR
-        pure (2,DuplicateGenesisDelegateDELEG kh)
+        pure (2, DuplicateGenesisDelegateDELEG kh)
       7 -> do
         pot <- fromCBOR
         needed <- fromCBOR
         potAmount <- fromCBOR
-        pure (4,InsufficientForInstantaneousRewardsDELEG pot needed potAmount)
+        pure (4, InsufficientForInstantaneousRewardsDELEG pot needed potAmount)
       8 -> do
         sNow <- fromCBOR
         sTooLate <- fromCBOR
-        pure (3,MIRCertificateTooLateinEpochDELEG sNow sTooLate)
+        pure (3, MIRCertificateTooLateinEpochDELEG sNow sTooLate)
       9 -> do
         vrf <- fromCBOR
-        pure (2,DuplicateGenesisVRFDELEG vrf)
+        pure (2, DuplicateGenesisVRFDELEG vrf)
       k -> invalidKey k
 
 delegationTransition ::

@@ -14,10 +14,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE TupleSections #-}
 
 module Shelley.Spec.Ledger.TxData
   ( DCert (..),
@@ -303,15 +303,18 @@ instance ToCBOR StakePoolRelay where
 instance FromCBOR StakePoolRelay where
   fromCBOR = decodeRecordSum "StakePoolRelay" $
     \case
-      0 -> (\ x y z -> (4,SingleHostAddr x y z))
-           <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
-           <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv4FromCBOR)
-           <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv6FromCBOR)
-      1 -> (\ x y -> (3,SingleHostName x y))
-           <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
-           <*> fromCBOR
-      2 -> do x <- fromCBOR
-              pure(2,MultiHostName x)
+      0 ->
+        (\x y z -> (4, SingleHostAddr x y z))
+          <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
+          <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv4FromCBOR)
+          <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv6FromCBOR)
+      1 ->
+        (\x y -> (3, SingleHostName x y))
+          <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
+          <*> fromCBOR
+      2 -> do
+        x <- fromCBOR
+        pure (2, MultiHostName x)
       k -> invalidKey k
 
 -- | A stake pool.
@@ -704,29 +707,29 @@ instance
     \case
       0 -> do
         x <- fromCBOR
-        pure(2, DCertDeleg . RegKey $ x)
+        pure (2, DCertDeleg . RegKey $ x)
       1 -> do
         x <- fromCBOR
-        pure(2, DCertDeleg . DeRegKey $ x)
+        pure (2, DCertDeleg . DeRegKey $ x)
       2 -> do
         a <- fromCBOR
         b <- fromCBOR
-        pure (3,DCertDeleg $ Delegate (Delegation a b))
+        pure (3, DCertDeleg $ Delegate (Delegation a b))
       3 -> do
         group <- fromCBORGroup
-        pure (fromIntegral(1 + listLenInt group),DCertPool(RegPool group))
+        pure (fromIntegral (1 + listLenInt group), DCertPool (RegPool group))
       4 -> do
         a <- fromCBOR
         b <- fromCBOR
-        pure (3,DCertPool $ RetirePool a (EpochNo b))
+        pure (3, DCertPool $ RetirePool a (EpochNo b))
       5 -> do
         a <- fromCBOR
         b <- fromCBOR
         c <- fromCBOR
-        pure (4,DCertGenesis $ GenesisDelegCert a b c)
+        pure (4, DCertGenesis $ GenesisDelegCert a b c)
       6 -> do
         x <- fromCBOR
-        pure(2,DCertMir x)
+        pure (2, DCertMir x)
       k -> invalidKey k
 
 instance

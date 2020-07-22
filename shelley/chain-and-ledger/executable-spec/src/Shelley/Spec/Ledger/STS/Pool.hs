@@ -40,8 +40,8 @@ import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
-import Shelley.Spec.Ledger.Serialization(decodeRecordSum)
 import Shelley.Spec.Ledger.TxData
   ( DCert (..),
     PoolCert (..),
@@ -102,22 +102,22 @@ instance
   FromCBOR (PredicateFailure (POOL crypto))
   where
   fromCBOR = decodeRecordSum "PredicateFailure (POOL crypto)" $
-   \case
+    \case
       0 -> do
         kh <- fromCBOR
-        pure (2,StakePoolNotRegisteredOnKeyPOOL kh)
+        pure (2, StakePoolNotRegisteredOnKeyPOOL kh)
       1 -> do
         ce <- fromCBOR
         e <- fromCBOR
         em <- fromCBOR
-        pure (4,StakePoolRetirementWrongEpochPOOL ce e em)
+        pure (4, StakePoolRetirementWrongEpochPOOL ce e em)
       2 -> do
         ct <- fromCBOR
-        pure (2,WrongCertificateTypePOOL ct)
+        pure (2, WrongCertificateTypePOOL ct)
       3 -> do
         pc <- fromCBOR
         mc <- fromCBOR
-        pure (3,StakePoolCostTooLowPOOL pc mc)
+        pure (3, StakePoolCostTooLowPOOL pc mc)
       k -> invalidKey k
 
 poolDelegationTransition :: Typeable crypto => TransitionRule (POOL crypto)

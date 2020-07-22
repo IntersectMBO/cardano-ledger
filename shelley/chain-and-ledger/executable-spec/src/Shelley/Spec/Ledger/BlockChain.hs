@@ -286,10 +286,11 @@ instance
   Crypto crypto =>
   FromCBOR (Annotator (BHeader crypto))
   where
-  fromCBOR = annotatorSlice $ decodeRecordNamed "Header" (const 2) $ do
-    bhb <- fromCBOR
-    sig <- decodeSignedKES
-    pure $ BHeader' <$> pure bhb <*> pure sig
+  fromCBOR = annotatorSlice $
+    decodeRecordNamed "Header" (const 2) $ do
+      bhb <- fromCBOR
+      sig <- decodeSignedKES
+      pure $ BHeader' <$> pure bhb <*> pure sig
 
 -- | The previous hash of a block
 data PrevHash crypto = GenesisHash | BlockHash !(HashHeader crypto)
@@ -361,11 +362,14 @@ instance Crypto crypto => ToCBOR (LastAppliedBlock crypto) where
 
 instance Crypto crypto => FromCBOR (LastAppliedBlock crypto) where
   fromCBOR =
-    decodeRecordNamed "lastAppliedBlock" (const 3)
-      (LastAppliedBlock
-       <$> fromCBOR
-       <*> fromCBOR
-       <*> fromCBOR)
+    decodeRecordNamed
+      "lastAppliedBlock"
+      (const 3)
+      ( LastAppliedBlock
+          <$> fromCBOR
+          <*> fromCBOR
+          <*> fromCBOR
+      )
 
 lastAppliedHash :: WithOrigin (LastAppliedBlock crypto) -> PrevHash crypto
 lastAppliedHash Origin = GenesisHash
@@ -451,36 +455,34 @@ instance
   Crypto crypto =>
   FromCBOR (BHBody crypto)
   where
-   fromCBOR = decodeRecordNamed "BHBody" bhBodySize  $ do
-     bheaderBlockNo <- fromCBOR
-     bheaderSlotNo <- fromCBOR
-     bheaderPrev <- fromCBOR
-     bheaderVk <- fromCBOR
-     bheaderVrfVk <- decodeVerKeyVRF
-     bheaderEta <- fromCBOR
-     bheaderL <- fromCBOR
-     bsize <- fromCBOR
-     bhash <- fromCBOR
-     bheaderOCert <- fromCBORGroup
-     bprotver <- fromCBORGroup
-     pure $
-       BHBody
-         { bheaderBlockNo,
-           bheaderSlotNo,
-           bheaderPrev,
-           bheaderVk,
-           bheaderVrfVk,
-           bheaderEta,
-           bheaderL,
-           bsize,
-           bhash,
-           bheaderOCert,
-           bprotver
-         }
-       where bhBodySize body = 9 + listLenInt (bheaderOCert body) + listLenInt (bprotver body)
-
-
-
+  fromCBOR = decodeRecordNamed "BHBody" bhBodySize $ do
+    bheaderBlockNo <- fromCBOR
+    bheaderSlotNo <- fromCBOR
+    bheaderPrev <- fromCBOR
+    bheaderVk <- fromCBOR
+    bheaderVrfVk <- decodeVerKeyVRF
+    bheaderEta <- fromCBOR
+    bheaderL <- fromCBOR
+    bsize <- fromCBOR
+    bhash <- fromCBOR
+    bheaderOCert <- fromCBORGroup
+    bprotver <- fromCBORGroup
+    pure $
+      BHBody
+        { bheaderBlockNo,
+          bheaderSlotNo,
+          bheaderPrev,
+          bheaderVk,
+          bheaderVrfVk,
+          bheaderEta,
+          bheaderL,
+          bsize,
+          bhash,
+          bheaderOCert,
+          bprotver
+        }
+    where
+      bhBodySize body = 9 + listLenInt (bheaderOCert body) + listLenInt (bprotver body)
 
 -- | Retrieve the pool id (the hash of the pool operator's cold key)
 -- from the body of the block header.
@@ -516,11 +518,11 @@ instance
   toCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
 
 blockDecoder :: Crypto crypto => Bool -> forall s. Decoder s (Annotator (Block crypto))
-blockDecoder lax = annotatorSlice $ decodeRecordNamed "Block" (const 4) $ do
-  header <- fromCBOR
-  txns <- txSeqDecoder lax
-  pure $ Block' <$> header <*> txns
-
+blockDecoder lax = annotatorSlice $
+  decodeRecordNamed "Block" (const 4) $ do
+    header <- fromCBOR
+    txns <- txSeqDecoder lax
+    pure $ Block' <$> header <*> txns
 
 txSeqDecoder :: Crypto crypto => Bool -> forall s. Decoder s (Annotator (TxSeq crypto))
 txSeqDecoder lax = do

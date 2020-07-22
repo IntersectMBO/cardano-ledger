@@ -201,36 +201,45 @@ instance
   where
   fromCBOR =
     decodeRecordSum "PredicateFailureUTXO" $
-        \case
-          0 -> do ins <- decodeSet fromCBOR
-                  pure (2,BadInputsUTxO ins)   -- The (2,..) indicates the number of things decoded, INCLUDING the tags, which are decoded by decodeRecordSumNamed
-          1 -> do a <- fromCBOR
-                  b <- fromCBOR
-                  pure (3,ExpiredUTxO a b)
-          2 -> do a <- fromCBOR
-                  b <- fromCBOR
-                  pure (3,MaxTxSizeUTxO a b)
-          3 -> pure (1,InputSetEmptyUTxO)
-          4 -> do a <- fromCBOR
-                  b <- fromCBOR
-                  pure (3,FeeTooSmallUTxO a b)
-          5 -> do a <- fromCBOR
-                  b <- fromCBOR
-                  pure (3,ValueNotConservedUTxO a b)
-          6 -> do outs <- decodeList fromCBOR
-                  pure (2,OutputTooSmallUTxO outs)
-          7 -> do a <- fromCBOR
-                  pure (2,UpdateFailure a)
-          8 -> do right <- fromCBOR
-                  wrongs <- decodeSet fromCBOR
-                  pure (3,WrongNetwork right wrongs)
-          9 -> do right <- fromCBOR
-                  wrongs <- decodeSet fromCBOR
-                  pure (3,WrongNetworkWithdrawal right wrongs)
-          10-> do outs <- decodeList fromCBOR
-                  pure (2,OutputBootAddrAttrsTooBig outs)
-          k -> invalidKey k
-
+      \case
+        0 -> do
+          ins <- decodeSet fromCBOR
+          pure (2, BadInputsUTxO ins) -- The (2,..) indicates the number of things decoded, INCLUDING the tags, which are decoded by decodeRecordSumNamed
+        1 -> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure (3, ExpiredUTxO a b)
+        2 -> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure (3, MaxTxSizeUTxO a b)
+        3 -> pure (1, InputSetEmptyUTxO)
+        4 -> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure (3, FeeTooSmallUTxO a b)
+        5 -> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure (3, ValueNotConservedUTxO a b)
+        6 -> do
+          outs <- decodeList fromCBOR
+          pure (2, OutputTooSmallUTxO outs)
+        7 -> do
+          a <- fromCBOR
+          pure (2, UpdateFailure a)
+        8 -> do
+          right <- fromCBOR
+          wrongs <- decodeSet fromCBOR
+          pure (3, WrongNetwork right wrongs)
+        9 -> do
+          right <- fromCBOR
+          wrongs <- decodeSet fromCBOR
+          pure (3, WrongNetworkWithdrawal right wrongs)
+        10 -> do
+          outs <- decodeList fromCBOR
+          pure (2, OutputBootAddrAttrsTooBig outs)
+        k -> invalidKey k
 
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do

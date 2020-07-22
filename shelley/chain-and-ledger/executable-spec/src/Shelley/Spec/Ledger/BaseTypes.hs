@@ -59,9 +59,9 @@ import Cardano.Binary
     DecoderError (..),
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
-    encodeListLen,
-    decodeListLenOrIndef,
     decodeBreakOr,
+    decodeListLenOrIndef,
+    encodeListLen,
   )
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -83,7 +83,7 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Word (Word16, Word64, Word8)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Serialization (ratioFromCBOR, ratioToCBOR, decodeRecordSum)
+import Shelley.Spec.Ledger.Serialization (decodeRecordSum, ratioFromCBOR, ratioToCBOR)
 import Shelley.Spec.NonIntegral (ln')
 
 data E34
@@ -172,9 +172,10 @@ invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ sh
 instance FromCBOR Nonce where
   fromCBOR = decodeRecordSum "Nonce" $
     \case
-      0 -> pure (1,NeutralNonce)
-      1 -> do x <- fromCBOR
-              pure(2,Nonce x)
+      0 -> pure (1, NeutralNonce)
+      1 -> do
+        x <- fromCBOR
+        pure (2, Nonce x)
       k -> invalidKey k
 
 deriving anyclass instance ToJSON Nonce
@@ -258,19 +259,22 @@ instance ToCBOR a => ToCBOR (StrictMaybe a) where
   toCBOR (SJust x) = encodeListLen 1 <> toCBOR x
 
 instance FromCBOR a => FromCBOR (StrictMaybe a) where
- fromCBOR = do
+  fromCBOR = do
     maybeN <- decodeListLenOrIndef
     case maybeN of
       Just 0 -> pure SNothing
       Just 1 -> SJust <$> fromCBOR
       Just _ -> fail "too many elements in length-style decoding of StrictMaybe."
       Nothing -> do
-         isBreak <- decodeBreakOr
-         if isBreak then pure SNothing
-                    else do x <- fromCBOR
-                            isBreak2 <- decodeBreakOr
-                            if isBreak2 then pure(SJust x)
-                                        else fail "too many elements in break-style decoding of StrictMaybe."
+        isBreak <- decodeBreakOr
+        if isBreak
+          then pure SNothing
+          else do
+            x <- fromCBOR
+            isBreak2 <- decodeBreakOr
+            if isBreak2
+              then pure (SJust x)
+              else fail "too many elements in break-style decoding of StrictMaybe."
 
 instance ToJSON a => ToJSON (StrictMaybe a) where
   toJSON = toJSON . strictMaybeToMaybe
