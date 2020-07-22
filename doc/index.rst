@@ -1,9 +1,19 @@
-.. 
-cardano-ledger-specs  Node
+############
+cardano-node
+############
 
+.. include:: ../README.rst
 
-cardano-ledger-specs
-=============================================
+.. toctree::
+   :titlesonly:
+   :hidden:
 
-This repo contains the technical documentation for 
-cardano-ledger-specs 
+   Go Back to Cardano Documentation <https://cardano.readthedocs.io>
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Reference
+   :titlesonly:
+   :hidden:
+
+   ledger-failures
