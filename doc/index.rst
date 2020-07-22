@@ -1,6 +1,6 @@
-############
-cardano-node
-############
+####################
+shelley-ledger-specs
+####################
 
 .. include:: ../README.rst
 
@@ -16,4 +16,4 @@ cardano-node
    :titlesonly:
    :hidden:
 
-   ledger-failures
+   reference/ledger-failures
