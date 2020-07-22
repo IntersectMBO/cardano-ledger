@@ -46,7 +46,6 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (txins)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
 
 -- | Validation errors represent the failures of a transaction to be valid
 --  for a given ledger state.
@@ -96,8 +95,8 @@ instance Monoid Validity where
 
 -- | A ledger validation state consists of a ledger state 't' and the list of
 -- validation errors that occurred from a valid 's' to reach 't'.
-data LedgerValidation h
-  = LedgerValidation [ValidationError] (LedgerState (ConcreteCrypto h))
+data LedgerValidation c
+  = LedgerValidation [ValidationError] (LedgerState c)
   deriving (Show, Eq)
 
 -- | Determine if the inputs in a transaction are valid for a given ledger state.

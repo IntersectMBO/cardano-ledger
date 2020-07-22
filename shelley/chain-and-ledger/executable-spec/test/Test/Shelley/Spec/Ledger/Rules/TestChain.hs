@@ -14,7 +14,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
   )
 where
 
-import Cardano.Crypto.Hash (ShortHash)
 import Control.Monad (join)
 import Control.State.Transition.Extended (TRC (TRC))
 import Control.State.Transition.Trace
@@ -41,7 +40,12 @@ import Shelley.Spec.Ledger.STS.Tick (TickEnv (TickEnv))
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
 import Test.QuickCheck
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, POOLREAP, TICK)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+  ( C,
+    CHAIN,
+    POOLREAP,
+    TICK,
+  )
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (geConstants))
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
@@ -158,19 +162,19 @@ removedAfterPoolreap =
 
 forAllChainTrace ::
   (Testable prop) =>
-  (Trace (CHAIN ShortHash) -> prop) ->
+  (Trace (CHAIN C) -> prop) ->
   Property
 forAllChainTrace prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
     forAllTraceFromInitState testGlobals traceLen (Preset.genEnv p) (Just $ mkGenesisChainState (geConstants (Preset.genEnv p))) prop
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
 
 -- | Transform CHAIN `sourceSignalTargets`s to POOLREAP ones.
 chainToPoolreapSst ::
-  SourceSignalTarget (CHAIN ShortHash) ->
-  SourceSignalTarget (POOLREAP ShortHash)
+  SourceSignalTarget (CHAIN C) ->
+  SourceSignalTarget (POOLREAP C)
 chainToPoolreapSst
   ( SourceSignalTarget
       ChainState {chainNes = nes}
@@ -204,21 +208,21 @@ chainToPoolreapSst
 --
 -- This allows for testing properties on traces that exclude effects of the
 -- "UTXO branches" of the STS Rule tree.
-chainSstWithTick :: Trace (CHAIN ShortHash) -> [SourceSignalTarget (CHAIN ShortHash)]
+chainSstWithTick :: Trace (CHAIN C) -> [SourceSignalTarget (CHAIN C)]
 chainSstWithTick ledgerTr =
   map applyTick ssts
   where
     ssts = sourceSignalTargets ledgerTr
     applyTick ::
-      SourceSignalTarget (CHAIN ShortHash) ->
-      SourceSignalTarget (CHAIN ShortHash)
+      SourceSignalTarget (CHAIN C) ->
+      SourceSignalTarget (CHAIN C)
     applyTick
       ( SourceSignalTarget
           chainSt@ChainState {chainNes = nes}
           _
           b@(Block bh _)
         ) =
-        case runShelleyBase (applySTSTest @(TICK ShortHash) (TRC (TickEnv (getGKeys nes), nes, (bheaderSlotNo . bhbody) bh))) of
+        case runShelleyBase (applySTSTest @(TICK C) (TRC (TickEnv (getGKeys nes), nes, (bheaderSlotNo . bhbody) bh))) of
           Left pf ->
             error ("chainSstWithTick.applyTick Predicate failure " <> show pf)
           Right nes' ->

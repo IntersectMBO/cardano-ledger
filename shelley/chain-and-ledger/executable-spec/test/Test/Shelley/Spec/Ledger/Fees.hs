@@ -10,7 +10,6 @@ module Test.Shelley.Spec.Ledger.Fees
 where
 
 import Cardano.Binary (serialize)
-import Cardano.Crypto.Hash
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
@@ -27,6 +26,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (pattern KeyHashObj)
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,
     pattern Delegate,
@@ -35,7 +35,14 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     pattern RetirePool,
   )
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
-import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash,
+    KeyPair (..),
+    KeyRole (..),
+    asWitness,
+    hashKey,
+    vKey,
+  )
 import Shelley.Spec.Ledger.LedgerState (txsize)
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.Scripts (pattern RequireMOf, pattern RequireSignature)
@@ -83,10 +90,8 @@ import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
-    ConcreteCrypto,
+    C,
     Credential,
-    KeyHash,
-    KeyPair,
     MultiSig,
     PoolParams,
     SignKeyVRF,
@@ -94,42 +99,41 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     TxBody,
     VerKeyVRF,
     hashKeyVRF,
-    pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
-sizeTest :: HashAlgorithm h => proxy h -> BSL.ByteString -> Tx h -> Integer -> Assertion
+sizeTest :: Crypto c => proxy c -> BSL.ByteString -> Tx c -> Integer -> Assertion
 sizeTest _ b16 tx s = do
   (Base16.encode (serialize tx) @?= b16) >> (txsize tx @?= s)
 
-alicePay :: KeyPair h 'Payment
+alicePay :: KeyPair 'Payment C
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
 
-aliceStake :: KeyPair h 'Staking
+aliceStake :: KeyPair 'Staking C
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
 
-aliceSHK :: HashAlgorithm h => Credential h 'Staking
+aliceSHK :: Credential C 'Staking
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
-alicePool :: KeyPair h 'StakePool
+alicePool :: KeyPair 'StakePool C
 alicePool = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 2)
 
-alicePoolKH :: HashAlgorithm h => KeyHash h 'StakePool
+alicePoolKH :: KeyHash 'StakePool C
 alicePoolKH = (hashKey . vKey) alicePool
 
-aliceVRF :: (SignKeyVRF h, VerKeyVRF h)
+aliceVRF :: (SignKeyVRF C, VerKeyVRF C)
 aliceVRF = mkVRFKeyPair (0, 0, 0, 0, 3)
 
-alicePoolParams :: HashAlgorithm h => PoolParams h
+alicePoolParams :: PoolParams C
 alicePoolParams =
   PoolParams
     { _poolPubKey = alicePoolKH,
@@ -148,33 +152,33 @@ alicePoolParams =
             }
     }
 
-aliceAddr :: HashAlgorithm h => Addr h
+aliceAddr :: Addr C
 aliceAddr = mkAddr (alicePay, aliceStake)
 
-bobPay :: KeyPair h 'Payment
+bobPay :: KeyPair 'Payment C
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (1, 0, 0, 0, 0)
 
-bobStake :: KeyPair h 'Staking
+bobStake :: KeyPair 'Staking C
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (1, 0, 0, 0, 1)
 
-bobSHK :: HashAlgorithm h => Credential h 'Staking
+bobSHK :: Credential C 'Staking
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
-bobAddr :: HashAlgorithm h => Addr h
+bobAddr :: Addr C
 bobAddr = mkAddr (bobPay, bobStake)
 
-carlPay :: KeyPair h 'Payment
+carlPay :: KeyPair 'Payment C
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (2, 0, 0, 0, 0)
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
-txbSimpleUTxO :: HashAlgorithm h => TxBody h
+txbSimpleUTxO :: TxBody C
 txbSimpleUTxO =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -187,7 +191,7 @@ txbSimpleUTxO =
       _mdHash = SNothing
     }
 
-txSimpleUTxO :: HashAlgorithm h => Tx h
+txSimpleUTxO :: Tx C
 txSimpleUTxO =
   Tx
     { _body = txbSimpleUTxO,
@@ -203,7 +207,7 @@ txSimpleUTxOBytes16 = "83a4008182489db8a41713ad2024000181825100d58133b22743fae3a
 
 -- | Transaction which consumes two UTxO and creates five UTxO
 -- | and has two witness
-txbMutiUTxO :: HashAlgorithm h => TxBody h
+txbMutiUTxO :: TxBody C
 txbMutiUTxO =
   TxBody
     { _inputs =
@@ -227,7 +231,7 @@ txbMutiUTxO =
       _mdHash = SNothing
     }
 
-txMutiUTxO :: HashAlgorithm h => Tx h
+txMutiUTxO :: Tx C
 txMutiUTxO =
   Tx
     { _body = txbMutiUTxO,
@@ -247,7 +251,7 @@ txMutiUTxOBytes16 :: BSL.ByteString
 txMutiUTxOBytes16 = "83a4008282489db8a41713ad20240082489db8a41713ad2024010185825100d58133b22743fae3ac6eb45e783a9cd90a825100d58133b22743fae3ac6eb45e783a9cd914825100d58133b22743fae3ac6eb45e783a9cd9181e825100595ced90e8df7cda4b9d3b869eab9a271828825100595ced90e8df7cda4b9d3b869eab9a2718320218c7030aa100828248933c542202176b765048afa776af8a3729933c542202176b7682487c6ffc08d6fa98ad5048afa776af8a37297c6ffc08d6fa98adf6"
 
 -- | Transaction which registers a stake key
-txbRegisterStake :: HashAlgorithm h => TxBody h
+txbRegisterStake :: TxBody C
 txbRegisterStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -260,7 +264,7 @@ txbRegisterStake =
       _mdHash = SNothing
     }
 
-txRegisterStake :: HashAlgorithm h => Tx h
+txRegisterStake :: Tx C
 txRegisterStake =
   Tx
     { _body = txbRegisterStake,
@@ -275,7 +279,7 @@ txRegisterStakeBytes16 :: BSL.ByteString
 txRegisterStakeBytes16 = "83a5008182489db8a41713ad2024000181825100d58133b22743fae3ac6eb45e783a9cd90a02185e030a04818200820048ac6eb45e783a9cd9a1008182487c6ffc08d6fa98ad50ddfb872ba72a945c7c6ffc08d6fa98adf6"
 
 -- | Transaction which delegates a stake key
-txbDelegateStake :: HashAlgorithm h => TxBody h
+txbDelegateStake :: TxBody C
 txbDelegateStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -288,7 +292,7 @@ txbDelegateStake =
       _mdHash = SNothing
     }
 
-txDelegateStake :: HashAlgorithm h => Tx h
+txDelegateStake :: Tx C
 txDelegateStake =
   Tx
     { _body = txbDelegateStake,
@@ -306,7 +310,7 @@ txDelegateStakeBytes16 :: BSL.ByteString
 txDelegateStakeBytes16 = "83a5008182489db8a41713ad2024000181825100d58133b22743fae3ac6eb45e783a9cd90a02185e030a048183028200484b9d3b869eab9a2748089b36543d810124a100828248573bf7473760f6b350159b18405d44466b573bf7473760f6b382487c6ffc08d6fa98ad50159b18405d44466b7c6ffc08d6fa98adf6"
 
 -- | Transaction which de-registers a stake key
-txbDeregisterStake :: HashAlgorithm h => TxBody h
+txbDeregisterStake :: TxBody C
 txbDeregisterStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -319,7 +323,7 @@ txbDeregisterStake =
       _mdHash = SNothing
     }
 
-txDeregisterStake :: HashAlgorithm h => Tx h
+txDeregisterStake :: Tx C
 txDeregisterStake =
   Tx
     { _body = txbDeregisterStake,
@@ -334,7 +338,7 @@ txDeregisterStakeBytes16 :: BSL.ByteString
 txDeregisterStakeBytes16 = "83a5008182489db8a41713ad2024000181825100d58133b22743fae3ac6eb45e783a9cd90a02185e030a04818201820048ac6eb45e783a9cd9a1008182487c6ffc08d6fa98ad50de99c767682e0d477c6ffc08d6fa98adf6"
 
 -- | Transaction which registers a stake pool
-txbRegisterPool :: HashAlgorithm h => TxBody h
+txbRegisterPool :: TxBody C
 txbRegisterPool =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -347,7 +351,7 @@ txbRegisterPool =
       _mdHash = SNothing
     }
 
-txRegisterPool :: HashAlgorithm h => Tx h
+txRegisterPool :: Tx C
 txRegisterPool =
   Tx
     { _body = txbRegisterPool,
@@ -362,7 +366,7 @@ txRegisterPoolBytes16 :: BSL.ByteString
 txRegisterPoolBytes16 = "83a5008182489db8a41713ad2024000181825100d58133b22743fae3ac6eb45e783a9cd90a02185e030a04818a0348089b36543d81012448c6242f6c7faccf7b0105d81e82010a49e0ac6eb45e783a9cd98148ac6eb45e783a9cd9818301f66872656c61792e696f826a616c6963652e706f6f6c427b7da1008182487c6ffc08d6fa98ad50bbd60c42b34ad7fd7c6ffc08d6fa98adf6"
 
 -- | Transaction which retires a stake pool
-txbRetirePool :: HashAlgorithm h => TxBody h
+txbRetirePool :: TxBody C
 txbRetirePool =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -375,7 +379,7 @@ txbRetirePool =
       _mdHash = SNothing
     }
 
-txRetirePool :: HashAlgorithm h => Tx h
+txRetirePool :: Tx C
 txRetirePool =
   Tx
     { _body = txbRetirePool,
@@ -394,7 +398,7 @@ txRetirePoolBytes16 = "83a5008182489db8a41713ad2024000181825100d58133b22743fae3a
 md :: MD.MetaData
 md = MD.MetaData $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
 
-txbWithMD :: forall h. HashAlgorithm h => TxBody h
+txbWithMD :: TxBody C
 txbWithMD =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -404,10 +408,10 @@ txbWithMD =
       _txfee = Coin 94,
       _ttl = SlotNo 10,
       _txUpdate = SNothing,
-      _mdHash = SJust $ MD.hashMetaData @(ConcreteCrypto h) md
+      _mdHash = SJust $ MD.hashMetaData md
     }
 
-txWithMD :: HashAlgorithm h => Tx h
+txWithMD :: Tx C
 txWithMD =
   Tx
     { _body = txbWithMD,
@@ -422,8 +426,8 @@ txWithMDBytes16 :: BSL.ByteString
 txWithMDBytes16 = "83a5008182489db8a41713ad2024000181825100d58133b22743fae3ac6eb45e783a9cd90a02185e030a07484eece6527f366cfaa1008182487c6ffc08d6fa98ad5046519a847ff016bc7c6ffc08d6fa98ada10082056568656c6c6f"
 
 -- | Spending from a multi-sig address
-msig :: HashAlgorithm h => proxy h -> MultiSig h
-msig _ =
+msig :: MultiSig C
+msig =
   RequireMOf
     2
     [ (RequireSignature . asWitness . hashKey . vKey) alicePay,
@@ -431,7 +435,7 @@ msig _ =
       (RequireSignature . asWitness . hashKey . vKey) carlPay
     ]
 
-txbWithMultiSig :: HashAlgorithm h => TxBody h
+txbWithMultiSig :: TxBody C
 txbWithMultiSig =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0], -- acting as if this is multi-sig
@@ -444,14 +448,14 @@ txbWithMultiSig =
       _mdHash = SNothing
     }
 
-txWithMultiSig :: HashAlgorithm h => proxy h -> Tx h
-txWithMultiSig p =
+txWithMultiSig :: Tx C
+txWithMultiSig =
   Tx
     { _body = txbWithMultiSig,
       _witnessSet =
         mempty
           { addrWits = makeWitnessesVKey (hashAnnotated txbWithMultiSig) [alicePay, bobPay],
-            msigWits = Map.singleton (hashScript (msig p)) (msig p)
+            msigWits = Map.singleton (hashScript msig) msig
           },
       _metadata = SNothing
     }
@@ -460,7 +464,7 @@ txWithMultiSigBytes16 :: BSL.ByteString
 txWithMultiSigBytes16 = "83a4008182489db8a41713ad2024000181825100d58133b22743fae3ac6eb45e783a9cd90a02185e030aa200828248933c542202176b7650fb797ba5f94e620a933c542202176b7682487c6ffc08d6fa98ad50fb797ba5f94e620a7c6ffc08d6fa98ad018183030283820048d58133b22743fae3820048595ced90e8df7cda8200484afb593da12003f4f6"
 
 -- | Transaction with a Reward Withdrawal
-txbWithWithdrawal :: HashAlgorithm h => TxBody h
+txbWithWithdrawal :: TxBody C
 txbWithWithdrawal =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -473,7 +477,7 @@ txbWithWithdrawal =
       _mdHash = SNothing
     }
 
-txWithWithdrawal :: HashAlgorithm h => Tx h
+txWithWithdrawal :: Tx C
 txWithWithdrawal =
   Tx
     { _body = txbWithWithdrawal,
@@ -508,9 +512,9 @@ sizeTests =
       testCase "register stake pool" $ sizeTest p txRegisterPoolBytes16 txRegisterPool 150,
       testCase "retire stake pool" $ sizeTest p txRetirePoolBytes16 txRetirePool 87,
       testCase "metadata" $ sizeTest p txWithMDBytes16 txWithMD 92,
-      testCase "multisig" $ sizeTest p txWithMultiSigBytes16 (txWithMultiSig p) 139,
+      testCase "multisig" $ sizeTest p txWithMultiSigBytes16 txWithMultiSig 139,
       testCase "reward withdrawal" $ sizeTest p txWithWithdrawalBytes16 txWithWithdrawal 114
     ]
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy

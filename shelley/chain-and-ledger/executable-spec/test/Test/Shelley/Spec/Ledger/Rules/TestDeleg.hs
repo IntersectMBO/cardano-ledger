@@ -15,7 +15,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestDeleg
   )
 where
 
-import Cardano.Crypto.Hash (ShortHash)
 import Control.Iterate.SetAlgebra (dom, eval, rng, (∈), (∉), (◁))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
@@ -32,7 +31,10 @@ import Data.Set (Set)
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
 import Shelley.Spec.Ledger.BaseTypes ((==>))
 import Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
-import Shelley.Spec.Ledger.Keys (KeyRole (..))
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash,
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( InstantaneousRewards (..),
     _delegations,
@@ -51,23 +53,23 @@ import Shelley.Spec.Ledger.TxData
   )
 import Test.QuickCheck (Property, conjoin, counterexample, property)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Credential,
+  ( C,
+    Credential,
     DELEG,
     DState,
-    KeyHash,
   )
 
 -------------------------------
 -- helper accessor functions --
 -------------------------------
 
-getStDelegs :: DState ShortHash -> Set (Credential ShortHash 'Staking)
+getStDelegs :: DState C -> Set (Credential C 'Staking)
 getStDelegs = \x -> eval (dom (_rewards x))
 
-getRewards :: DState ShortHash -> Map (Credential ShortHash 'Staking) Coin
+getRewards :: DState C -> Map (Credential C 'Staking) Coin
 getRewards = _rewards
 
-getDelegations :: DState ShortHash -> Map (Credential ShortHash 'Staking) (KeyHash ShortHash 'StakePool)
+getDelegations :: DState C -> Map (Credential C 'Staking) (KeyHash 'StakePool C)
 getDelegations = _delegations
 
 --------------------------
@@ -76,7 +78,7 @@ getDelegations = _delegations
 
 -- | Check that a newly registered key has a reward of 0.
 rewardZeroAfterReg ::
-  [SourceSignalTarget (DELEG ShortHash)] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 rewardZeroAfterReg tr =
   conjoin $
@@ -95,7 +97,7 @@ rewardZeroAfterReg tr =
 -- | Check that when a stake credential is deregistered, it will not be in the
 -- rewards mapping or delegation mapping of the target state.
 credentialRemovedAfterDereg ::
-  [SourceSignalTarget (DELEG ShortHash)] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 credentialRemovedAfterDereg tr =
   conjoin $
@@ -117,7 +119,7 @@ credentialRemovedAfterDereg tr =
 -- | Check that a registered stake credential get correctly delegated when
 --  applying a delegation certificate.
 credentialMappingAfterDelegation ::
-  [SourceSignalTarget (DELEG ShortHash)] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 credentialMappingAfterDelegation tr =
   conjoin $
@@ -137,7 +139,7 @@ credentialMappingAfterDelegation tr =
 -- | Check that the sum of rewards does not change and that each element that is
 -- either removed or added has a zero balance.
 rewardsSumInvariant ::
-  [SourceSignalTarget (DELEG ShortHash)] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 rewardsSumInvariant tr =
   conjoin $
@@ -158,12 +160,12 @@ rewardsSumInvariant tr =
 
 -- | Check that an accepted MIR certificate adds all entries to the `irwd` mapping
 instantaneousRewardsAdded ::
-  [SourceSignalTarget (DELEG ShortHash)] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 instantaneousRewardsAdded ssts =
   conjoin (map checkMIR ssts)
   where
-    checkMIR :: SourceSignalTarget (DELEG ShortHash) -> Property
+    checkMIR :: SourceSignalTarget (DELEG C) -> Property
     checkMIR (SourceSignalTarget _ t sig) =
       case sig of
         DCertMir (MIRCert ReservesMIR irwd) ->
@@ -176,12 +178,12 @@ instantaneousRewardsAdded ssts =
 -- certificate to the existing value in the `irwd` map, overwriting any entries
 -- that already existed.
 instantaneousRewardsValue ::
-  [SourceSignalTarget (DELEG ShortHash)] ->
+  [SourceSignalTarget (DELEG C)] ->
   Property
 instantaneousRewardsValue ssts =
   conjoin (map checkMIR ssts)
   where
-    checkMIR :: SourceSignalTarget (DELEG ShortHash) -> Property
+    checkMIR :: SourceSignalTarget (DELEG C) -> Property
     checkMIR (SourceSignalTarget s t sig) =
       case sig of
         DCertMir (MIRCert ReservesMIR irwd) ->

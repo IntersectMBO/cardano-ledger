@@ -13,7 +13,6 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts) where
 
-import Cardano.Crypto.Hash (HashAlgorithm)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
   ( BaseM,
@@ -42,6 +41,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin)
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole))
 import Shelley.Spec.Ledger.LedgerState
@@ -64,23 +64,23 @@ import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
 -- | This is a non-spec STS used to generate a sequence of certificates with
 -- witnesses.
-data CERTS h
+data CERTS c
 
-instance HashAlgorithm h => STS (CERTS h) where
-  type Environment (CERTS h) = (SlotNo, Ix, PParams, AccountState)
-  type State (CERTS h) = (DPState h, Ix)
-  type Signal (CERTS h) = Maybe (DCert h, CertCred h)
+instance Crypto c => STS (CERTS c) where
+  type Environment (CERTS c) = (SlotNo, Ix, PParams, AccountState)
+  type State (CERTS c) = (DPState c, Ix)
+  type Signal (CERTS c) = Maybe (DCert c, CertCred c)
 
-  type BaseM (CERTS h) = ShelleyBase
+  type BaseM (CERTS c) = ShelleyBase
 
-  data PredicateFailure (CERTS h)
-    = CertsFailure (PredicateFailure (DELPL h))
+  data PredicateFailure (CERTS c)
+    = CertsFailure (PredicateFailure (DELPL c))
     deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [certsTransition]
 
-certsTransition :: forall h. HashAlgorithm h => TransitionRule (CERTS h)
+certsTransition :: forall c. Crypto c => TransitionRule (CERTS c)
 certsTransition = do
   TRC
     ( (slot, txIx, pp, acnt),
@@ -92,16 +92,16 @@ certsTransition = do
   case c of
     Just (cert, _wits) -> do
       let ptr = Ptr slot txIx nextCertIx
-      dpState' <- trans @(DELPL h) $ TRC (DelplEnv slot ptr pp acnt, dpState, cert)
+      dpState' <- trans @(DELPL c) $ TRC (DelplEnv slot ptr pp acnt, dpState, cert)
 
       pure (dpState', nextCertIx + 1)
     Nothing ->
       pure (dpState, nextCertIx)
 
-instance HashAlgorithm h => Embed (DELPL h) (CERTS h) where
+instance Crypto c => Embed (DELPL c) (CERTS c) where
   wrapFailed = CertsFailure
 
-instance HashAlgorithm h => QC.HasTrace (CERTS h) (GenEnv h) where
+instance Crypto c => QC.HasTrace (CERTS c) (GenEnv c) where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
   sigGen
@@ -121,21 +121,21 @@ instance HashAlgorithm h => QC.HasTrace (CERTS h) (GenEnv h) where
 
   shrinkSignal = const []
 
-  type BaseEnv (CERTS h) = Globals
+  type BaseEnv (CERTS c) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
 genDCerts ::
-  forall h.
-  HashAlgorithm h =>
-  GenEnv h ->
+  forall c.
+  Crypto c =>
+  GenEnv c ->
   PParams ->
-  DPState h ->
+  DPState c ->
   SlotNo ->
   Natural ->
   AccountState ->
-  Gen (StrictSeq (DCert h), [CertCred h], Coin, Coin, DPState h)
+  Gen (StrictSeq (DCert c), [CertCred c], Coin, Coin, DPState c)
 genDCerts
   ge@( GenEnv
          KeySpace_ {ksIndexedStakingKeys}
@@ -150,7 +150,7 @@ genDCerts
         st0 = (dpState, 0)
 
     certsTrace <-
-      QC.traceFrom @(CERTS h) testGlobals maxCertsPerTx ge env st0
+      QC.traceFrom @(CERTS c) testGlobals maxCertsPerTx ge env st0
 
     let certsCreds = catMaybes . traceSignals OldestFirst $ certsTrace
         (lastState_, _) = lastState certsTrace

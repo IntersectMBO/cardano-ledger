@@ -8,6 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Core
@@ -39,7 +40,7 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     toCred,
     zero,
     unitIntervalToNatural,
-    mkBlock,
+    mkBlock, -- The only function I could not get type correct, Uses import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
     mkOCert,
     getKESPeriodRenewalNo,
     tooLateInEpoch,
@@ -52,7 +53,10 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   )
 where
 
+import Cardano.Binary (toCBOR)
+import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash (HashAlgorithm)
+import qualified Cardano.Crypto.Hash as Hash
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
@@ -68,9 +72,10 @@ import Data.Tuple (swap)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (getRwdCred, toAddr, toCred, pattern Addr)
+import Shelley.Spec.Ledger.Address (Addr (..), getRwdCred, toAddr, toCred)
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (..),
+    Seed,
     StrictMaybe (..),
     UnitInterval,
     epochInfo,
@@ -78,7 +83,9 @@ import Shelley.Spec.Ledger.BaseTypes
     stabilityWindow,
   )
 import Shelley.Spec.Ledger.BlockChain
-  ( TxSeq (..),
+  ( Block (Block),
+    HashHeader,
+    TxSeq (..),
     bBodySize,
     bbHash,
     mkSeed,
@@ -91,7 +98,8 @@ import Shelley.Spec.Ledger.BlockChain
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential
-  ( pattern KeyHashObj,
+  ( Credential (..),
+    pattern KeyHashObj,
     pattern ScriptHashObj,
     pattern StakeRefBase,
     pattern StakeRefPtr,
@@ -100,7 +108,14 @@ import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( HasKeyRole (coerceKeyRole),
+    KeyHash,
+    KeyPair (..),
     KeyRole (..),
+    SignKeyKES,
+    SignKeyVRF,
+    VKey,
+    VerKeyKES,
+    VerKeyVRF,
     asWitness,
     hashKey,
     signedDSIGN,
@@ -109,6 +124,8 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
+    KeyPairs,
+    LedgerState,
     depositPoolChange,
     reapRewards,
     _delegationState,
@@ -119,13 +136,14 @@ import Shelley.Spec.Ledger.LedgerState
     _utxo,
     _utxoState,
   )
-import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCertSignable (..), pattern OCert)
+import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCert, OCertSignable (..), pattern OCert)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     ProtVer (..),
   )
 import Shelley.Spec.Ledger.Scripts
-  ( pattern RequireAllOf,
+  ( MultiSig,
+    pattern RequireAllOf,
     pattern RequireAnyOf,
     pattern RequireMOf,
     pattern RequireSignature,
@@ -138,7 +156,9 @@ import Shelley.Spec.Ledger.Slot
     (*-),
   )
 import Shelley.Spec.Ledger.Tx
-  ( hashScript,
+  ( Tx,
+    TxBody,
+    hashScript,
     pattern TxBody,
     pattern TxId,
     pattern TxIn,
@@ -146,48 +166,30 @@ import Shelley.Spec.Ledger.Tx
   )
 import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.TxData
-  ( unWdrl,
+  ( TxOut,
+    unWdrl,
     _txfee,
     _wdrls,
     pattern Wdrl,
   )
 import Shelley.Spec.Ledger.UTxO
-  ( txins,
+  ( UTxO,
+    txins,
     txouts,
     pattern UTxO,
   )
+-- import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
+
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Addr,
-    Block,
-    ConcreteCrypto,
-    Credential,
-    GenesisKeyPair,
-    HashHeader,
-    KeyHash,
-    KeyPair,
-    KeyPairs,
-    LedgerState,
-    MultiSig,
-    MultiSigPairs,
-    OCert,
-    SignKeyKES,
-    SignKeyVRF,
-    Tx,
-    TxBody,
-    TxOut,
-    UTxO,
-    VKey,
-    VerKeyKES,
-    VerKeyVRF,
-    pattern KeyPair,
-  )
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
-  ( epochFromSlotNo,
+  ( GenesisKeyPair,
+    MultiSigPairs,
+    epochFromSlotNo,
     evolveKESUntil,
     maxKESIterations,
     maxLLSupply,
@@ -198,48 +200,50 @@ import Test.Shelley.Spec.Ledger.Utils
     unsafeMkUnitInterval,
   )
 
-data AllIssuerKeys h r = AllIssuerKeys
-  { cold :: KeyPair h r,
-    vrf :: (SignKeyVRF h, VerKeyVRF h),
-    hot :: [(KESPeriod, (SignKeyKES h, VerKeyKES h))],
-    hk :: KeyHash h r
+-- ===========================================================================
+
+data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
+  { cold :: KeyPair r v,
+    vrf :: (SignKeyVRF v, VerKeyVRF v),
+    hot :: [(KESPeriod, (SignKeyKES v, VerKeyKES v))],
+    hk :: KeyHash r v
   }
   deriving (Show)
 
 -- | Generator environment.
-data GenEnv h = GenEnv
-  { geKeySpace :: KeySpace h,
+data GenEnv crypto = GenEnv
+  { geKeySpace :: KeySpace crypto,
     geConstants :: Constants
   }
 
 -- | Collection of all keys which are required to generate a trace.
 --
 --   These are the _only_ keys which should be involved in the trace.
-data KeySpace h = KeySpace_
-  { ksCoreNodes :: [(GenesisKeyPair h, AllIssuerKeys h 'GenesisDelegate)],
+data KeySpace crypto = KeySpace_
+  { ksCoreNodes :: [(GenesisKeyPair crypto, AllIssuerKeys crypto 'GenesisDelegate)],
     -- | Bag of keys to be used for future genesis delegates
-    ksGenesisDelegates :: [AllIssuerKeys h 'GenesisDelegate],
+    ksGenesisDelegates :: [AllIssuerKeys crypto 'GenesisDelegate],
     -- | Bag of keys to be used for future stake pools
-    ksStakePools :: [AllIssuerKeys h 'StakePool],
+    ksStakePools :: [AllIssuerKeys crypto 'StakePool],
     -- | Bag of keys to be used for future payment/staking addresses
-    ksKeyPairs :: KeyPairs h,
+    ksKeyPairs :: KeyPairs crypto,
     -- | Index over the payment keys in 'ksKeyPairs'
-    ksIndexedPaymentKeys :: Map (KeyHash h 'Payment) (KeyPair h 'Payment),
+    ksIndexedPaymentKeys :: Map (KeyHash 'Payment crypto) (KeyPair 'Payment crypto),
     -- | Index over the staking keys in 'ksKeyPairs'
-    ksIndexedStakingKeys :: Map (KeyHash h 'Staking) (KeyPair h 'Staking),
-    ksMSigScripts :: MultiSigPairs h
+    ksIndexedStakingKeys :: Map (KeyHash 'Staking crypto) (KeyPair 'Staking crypto),
+    ksMSigScripts :: MultiSigPairs crypto
   }
 
-deriving instance HashAlgorithm h => Show (KeySpace h)
+deriving instance (Crypto c) => Show (KeySpace c)
 
 pattern KeySpace ::
-  HashAlgorithm h =>
-  [(GenesisKeyPair h, AllIssuerKeys h 'GenesisDelegate)] ->
-  [AllIssuerKeys h 'GenesisDelegate] ->
-  [AllIssuerKeys h 'StakePool] ->
-  KeyPairs h ->
-  MultiSigPairs h ->
-  KeySpace h
+  (Crypto c) =>
+  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  [AllIssuerKeys c 'GenesisDelegate] ->
+  [AllIssuerKeys c 'StakePool] ->
+  KeyPairs c ->
+  MultiSigPairs c ->
+  KeySpace c
 pattern KeySpace
   ksCoreNodes
   ksGenesisDelegates
@@ -268,11 +272,11 @@ pattern KeySpace
 -- | Look up the given GenesisDelegate key in the combined list of
 -- core nodes and potential genesis delegate keys.
 lookupGenDelegate ::
-  HashAlgorithm h =>
-  [(GenesisKeyPair h, AllIssuerKeys h 'GenesisDelegate)] ->
-  [AllIssuerKeys h 'GenesisDelegate] ->
-  KeyHash h 'GenesisDelegate ->
-  Maybe (AllIssuerKeys h 'GenesisDelegate)
+  (Crypto crypto) =>
+  [(GenesisKeyPair crypto, AllIssuerKeys crypto 'GenesisDelegate)] ->
+  [AllIssuerKeys crypto 'GenesisDelegate] ->
+  KeyHash 'GenesisDelegate crypto ->
+  Maybe (AllIssuerKeys crypto 'GenesisDelegate)
 lookupGenDelegate coreNodes genesisDelegates gkey =
   let allDelegateKeys = (snd <$> coreNodes) <> genesisDelegates
    in List.find (\a -> (hashKey . vKey . cold) a == gkey) allDelegateKeys
@@ -296,7 +300,10 @@ genWord64 lower upper =
   fromIntegral
     <$> genNatural (fromIntegral lower) (fromIntegral upper)
 
-mkKeyPairs :: HasCallStack => Word64 -> (KeyPair h kr, KeyPair h kr')
+mkKeyPairs ::
+  (HasCallStack, DSIGNAlgorithm (DSIGN c)) =>
+  Word64 ->
+  (KeyPair kr c, KeyPair kr' c)
 mkKeyPairs n =
   (mkKeyPair_ (2 * n), mkKeyPair_ (2 * n + 1))
   where
@@ -306,8 +313,7 @@ mkKeyPairs n =
 
 -- | Generate a mapping from stake key hash to stake key pair, from a list of
 -- (payment, staking) key pairs.
-mkStakeKeyHashMap ::
-  (HasCallStack, HashAlgorithm h) => KeyPairs h -> Map (KeyHash h 'Staking) (KeyPair h 'Staking)
+mkStakeKeyHashMap :: (HasCallStack, Crypto c) => KeyPairs c -> Map (KeyHash 'Staking c) (KeyPair 'Staking c)
 mkStakeKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
@@ -316,22 +322,22 @@ mkStakeKeyHashMap keyPairs =
 -- | Generate a mapping from payment key hash to keypair
 -- from a list of (payment, staking) key pairs.
 mkPayKeyHashMap ::
-  (HasCallStack, HashAlgorithm h) =>
-  KeyPairs h ->
-  Map (KeyHash h 'Payment) (KeyPair h 'Payment)
+  (HasCallStack, Crypto c) =>
+  KeyPairs c ->
+  Map (KeyHash 'Payment c) (KeyPair 'Payment c)
 mkPayKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
     f (payK, _stakeK) = ((hashKey . vKey) payK, payK)
 
 -- | Multi-Sig Scripts based on the given key pairs
-mkMSigScripts :: (HasCallStack, HashAlgorithm h) => KeyPairs h -> MultiSigPairs h
+mkMSigScripts :: (HasCallStack, Crypto c) => KeyPairs c -> MultiSigPairs c
 mkMSigScripts = map mkScriptsFromKeyPair
 
 -- | Combine a list of multisig pairs into hierarchically structured multi-sig
 -- scripts, list must have at least length 3. Be careful not to call with too
 -- many pairs in order not to create too many of the possible combinations.
-mkMSigCombinations :: (HasCallStack, HashAlgorithm h) => MultiSigPairs h -> MultiSigPairs h
+mkMSigCombinations :: (HasCallStack, Crypto c) => MultiSigPairs c -> MultiSigPairs c
 mkMSigCombinations msigs =
   if length msigs < 3
     then error "length of input msigs must be at least 3"
@@ -360,13 +366,13 @@ mkMSigCombinations msigs =
           ]
 
 mkScriptsFromKeyPair ::
-  (HasCallStack, HashAlgorithm h) =>
-  (KeyPair h 'Payment, KeyPair h 'Staking) ->
-  (MultiSig h, MultiSig h)
+  (HasCallStack, Crypto c) =>
+  (KeyPair 'Payment c, KeyPair 'Staking c) ->
+  (MultiSig c, MultiSig c)
 mkScriptsFromKeyPair (k0, k1) =
   (mkScriptFromKey $ asWitness k0, mkScriptFromKey $ asWitness k1)
 
-mkScriptFromKey :: (HasCallStack, HashAlgorithm h) => KeyPair h 'Witness -> MultiSig h
+mkScriptFromKey :: (HasCallStack, Crypto c) => KeyPair 'Witness c -> MultiSig c
 mkScriptFromKey = (RequireSignature . hashKey . vKey)
 
 -- | Find first matching key pair for a credential. Returns the matching key pair
@@ -390,10 +396,9 @@ findPayKeyPairCred c keyHashMap =
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPairAddr ::
-  HasCallStack =>
-  Addr h ->
-  Map (KeyHash h 'Payment) (KeyPair h 'Payment) ->
-  KeyPair h 'Payment
+  Addr kr ->
+  Map (KeyHash 'Payment kr) (KeyPair 'Payment kr) ->
+  KeyPair 'Payment kr
 findPayKeyPairAddr a keyHashMap =
   case a of
     Addr _ addr (StakeRefBase _) -> findPayKeyPairCred addr keyHashMap
@@ -402,7 +407,11 @@ findPayKeyPairAddr a keyHashMap =
       error "findPayKeyPairAddr: expects only Base or Ptr addresses"
 
 -- | Find first matching script for a credential.
-findPayScriptFromCred :: (HasCallStack, HashAlgorithm h) => Credential h 'Witness -> MultiSigPairs h -> (MultiSig h, MultiSig h)
+findPayScriptFromCred ::
+  (HasCallStack, Crypto c) =>
+  Credential 'Witness c ->
+  MultiSigPairs c ->
+  (MultiSig c, MultiSig c)
 findPayScriptFromCred c scripts =
   case c of
     ScriptHashObj scriptHash -> lookForScriptHash scriptHash
@@ -415,7 +424,11 @@ findPayScriptFromCred c scripts =
         Just i -> scripts !! i
 
 -- | Find first matching script for a credential.
-findStakeScriptFromCred :: (HasCallStack, HashAlgorithm h) => Credential h 'Witness -> MultiSigPairs h -> (MultiSig h, MultiSig h)
+findStakeScriptFromCred ::
+  (HasCallStack, Crypto c) =>
+  Credential 'Witness c ->
+  MultiSigPairs c ->
+  (MultiSig c, MultiSig c)
 findStakeScriptFromCred c scripts =
   case c of
     ScriptHashObj scriptHash -> lookForScriptHash scriptHash
@@ -428,7 +441,7 @@ findStakeScriptFromCred c scripts =
         Just i -> scripts !! i
 
 -- | Find first matching script for address.
-findPayScriptFromAddr :: (HasCallStack, HashAlgorithm h) => Addr h -> MultiSigPairs h -> (MultiSig h, MultiSig h)
+findPayScriptFromAddr :: (HasCallStack, Crypto c) => Addr c -> MultiSigPairs c -> (MultiSig c, MultiSig c)
 findPayScriptFromAddr a scripts =
   case a of
     Addr _ scriptHash (StakeRefBase _) ->
@@ -439,7 +452,7 @@ findPayScriptFromAddr a scripts =
       error "findPayScriptFromAddr: expects only base and pointer script addresses"
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-pickStakeKey :: HasCallStack => KeyPairs h -> Gen (VKey h 'Staking)
+pickStakeKey :: HasCallStack => KeyPairs c -> Gen (VKey 'Staking c)
 pickStakeKey keys = vKey . snd <$> QC.elements keys
 
 -- | Generates a list of coins for the given 'Addr' and produced a 'TxOut' for each 'Addr'
@@ -447,7 +460,7 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- Note: we need to keep the initial utxo coin sizes large enough so that
 -- when we simulate sequences of transactions, we have enough funds available
 -- to include certificates that require deposits.
-genTxOut :: (HasCallStack, HashAlgorithm h) => Constants -> [Addr h] -> Gen [TxOut h]
+genTxOut :: (HasCallStack, Crypto c) => Constants -> [Addr c] -> Gen [TxOut c]
 genTxOut Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
   ys <- genCoinList minGenesisOutputVal maxGenesisOutputVal (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
@@ -491,13 +504,15 @@ unitIntervalToNatural :: HasCallStack => UnitInterval -> Natural
 unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
 
 mkBlock ::
-  (HasCallStack, HashAlgorithm h) =>
+  ( HasCallStack,
+    Mock c
+  ) =>
   -- | Hash of previous block
-  HashHeader h ->
+  HashHeader c ->
   -- | All keys in the stake pool
-  AllIssuerKeys h r ->
+  AllIssuerKeys c r ->
   -- | Transactions to record
-  [Tx h] ->
+  [Tx c] ->
   -- | Current slot
   SlotNo ->
   -- | Block number/chain length/chain "difficulty"
@@ -513,8 +528,8 @@ mkBlock ::
   -- | KES period of key registration
   Word ->
   -- | Operational certificate
-  OCert h ->
-  Block h
+  OCert c ->
+  Block c
 mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert =
   let (_, (sHot, _)) = head $ hot pkeys
       KeyPair vKeyCold _ = cold pkeys
@@ -527,15 +542,13 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
           (BlockHash prev)
           (coerceKeyRole vKeyCold)
           (snd $ vrf pkeys)
-          ( coerce $
-              mkCertifiedVRF
-                (WithResult nonceNonce (fromIntegral bnonce))
-                (fst $ vrf pkeys)
+          ( mkCertifiedVRF
+              (WithResult nonceNonce (fromIntegral bnonce))
+              (fst $ vrf pkeys)
           )
-          ( coerce $
-              mkCertifiedVRF
-                (WithResult leaderNonce (fromIntegral $ unitIntervalToNatural l))
-                (fst $ vrf pkeys)
+          ( mkCertifiedVRF
+              (WithResult leaderNonce (fromIntegral $ unitIntervalToNatural l))
+              (fst $ vrf pkeys)
           )
           (fromIntegral $ bBodySize $ (TxSeq . StrictSeq.fromList) txns)
           (bbHash $ TxSeq $ StrictSeq.fromList txns)
@@ -558,12 +571,12 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
 newtype NatNonce = NatNonce Natural
 
 mkOCert ::
-  forall h r.
-  (HasCallStack, HashAlgorithm h) =>
-  AllIssuerKeys h r ->
+  forall c r.
+  (HasCallStack, Crypto c, Signable (DSIGN c) (OCertSignable c)) =>
+  AllIssuerKeys c r ->
   Word64 ->
   KESPeriod ->
-  OCert h
+  OCert c
 mkOCert pkeys n c0 =
   let (_, (_, vKeyHot)) = head $ hot pkeys
       KeyPair _vKeyCold sKeyCold = cold pkeys
@@ -571,7 +584,7 @@ mkOCert pkeys n c0 =
         vKeyHot
         n
         c0
-        (signedDSIGN @(ConcreteCrypto h) sKeyCold (OCertSignable vKeyHot n c0))
+        (signedDSIGN @c sKeyCold (OCertSignable vKeyHot n c0))
 
 -- | Takes a set of KES hot keys and checks to see whether there is one whose
 -- range contains the current KES period. If so, return its index in the list of
@@ -623,20 +636,20 @@ genesisId =
 
 -- | Creates the UTxO for a new ledger with the specified transaction outputs.
 genesisCoins ::
-  (HashAlgorithm h) =>
-  [TxOut h] ->
-  UTxO h
+  (Crypto c) =>
+  [TxOut c] ->
+  UTxO c
 genesisCoins outs =
   UTxO $
     Map.fromList [(TxIn genesisId idx, out) | (idx, out) <- zip [0 ..] outs]
 
 -- | Apply a transaction body as a state transition function on the ledger state.
 applyTxBody ::
-  (HashAlgorithm h) =>
-  LedgerState h ->
+  (Crypto c) =>
+  LedgerState c ->
   PParams ->
-  TxBody h ->
-  LedgerState h
+  TxBody c ->
+  LedgerState c
 applyTxBody ls pp tx =
   ls
     { _utxoState =

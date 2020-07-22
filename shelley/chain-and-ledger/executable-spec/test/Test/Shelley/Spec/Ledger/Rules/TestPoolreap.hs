@@ -12,7 +12,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
   )
 where
 
-import Cardano.Crypto.Hash (ShortHash)
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
@@ -24,7 +23,7 @@ import Control.State.Transition.Trace
 import Data.List (foldl')
 import qualified Data.Set as Set (Set, null)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
-import Shelley.Spec.Ledger.Keys (KeyRole (StakePool))
+import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
   ( _deposited,
     _fees,
@@ -46,7 +45,7 @@ import Shelley.Spec.Ledger.STS.PoolReap
   )
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, conjoin)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (KeyHash, POOLREAP)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, POOLREAP)
 import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring)
 
 -----------------------------
@@ -56,7 +55,7 @@ import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring)
 -- | Check that after a POOLREAP certificate transition the pool is removed from
 -- the stake pool and retiring maps.
 removedAfterPoolreap ::
-  [SourceSignalTarget (POOLREAP ShortHash)] ->
+  [SourceSignalTarget (POOLREAP C)] ->
   Property
 removedAfterPoolreap tr =
   conjoin $
@@ -73,7 +72,7 @@ removedAfterPoolreap tr =
             stp' = _pParams p'
             retiring = getRetiring p
             retiring' = getRetiring p'
-            retire :: Set.Set (KeyHash ShortHash 'StakePool) -- This declaration needed to disambiguate 'eval'
+            retire :: Set.Set (KeyHash 'StakePool C) -- This declaration needed to disambiguate 'eval'
             retire = eval (dom (retiring ▷ setSingleton e))
          in eval (retire ⊆ dom stp)
               && Set.null (eval (retire ∩ dom stp'))
@@ -81,7 +80,7 @@ removedAfterPoolreap tr =
 
 -- | Check that deposits are always non-negative
 nonNegativeDeposits ::
-  [SourceSignalTarget (POOLREAP ShortHash)] ->
+  [SourceSignalTarget (POOLREAP C)] ->
   Property
 nonNegativeDeposits tr =
   conjoin $
@@ -96,7 +95,7 @@ nonNegativeDeposits tr =
 -- | Check that the sum of circulation, deposits, fees, treasury, rewards and
 -- reserves is constant.
 constantSumPots ::
-  [SourceSignalTarget (POOLREAP ShortHash)] ->
+  [SourceSignalTarget (POOLREAP C)] ->
   Property
 constantSumPots tr =
   conjoin $

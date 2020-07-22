@@ -39,7 +39,6 @@ import Cardano.Binary
     ToCBOR (..),
     toCBOR,
   )
-import qualified Cardano.Crypto.Hash as Monomorphic
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
 import Codec.CBOR.Read (deserialiseFromBytes)
@@ -89,44 +88,44 @@ roundtrip' enc dec a = case deserialiseFromBytes dec bs of
   Serialization Properties
 -------------------------------------------------------------------------------}
 
-prop_roundtrip_Addr :: Mock.Addr Monomorphic.ShortHash -> Property
+prop_roundtrip_Addr :: Mock.Addr Mock.C -> Property
 prop_roundtrip_Addr = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_RewardAcnt :: Mock.RewardAcnt Monomorphic.ShortHash -> Property
+prop_roundtrip_RewardAcnt :: Mock.RewardAcnt Mock.C -> Property
 prop_roundtrip_RewardAcnt = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_Block :: Mock.Block Monomorphic.ShortHash -> Property
+prop_roundtrip_Block :: Mock.Block Mock.C -> Property
 prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_Header :: Mock.BHeader Monomorphic.ShortHash -> Property
+prop_roundtrip_Header :: Mock.BHeader Mock.C -> Property
 prop_roundtrip_Header = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_BlockHeaderHash :: Mock.HashHeader Monomorphic.ShortHash -> Property
+prop_roundtrip_BlockHeaderHash :: Mock.HashHeader Mock.C -> Property
 prop_roundtrip_BlockHeaderHash = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_Tx :: Mock.Tx Monomorphic.ShortHash -> Property
+prop_roundtrip_Tx :: Mock.Tx Mock.C -> Property
 prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_TxId :: Mock.TxId Monomorphic.ShortHash -> Property
+prop_roundtrip_TxId :: Mock.TxId Mock.C -> Property
 prop_roundtrip_TxId = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_TxOut :: Mock.TxOut Monomorphic.ShortHash -> Property
+prop_roundtrip_TxOut :: Mock.TxOut Mock.C -> Property
 prop_roundtrip_TxOut = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_BootstrapWitness ::
-  Mock.BootstrapWitness Monomorphic.ShortHash -> Property
+  Mock.BootstrapWitness Mock.C -> Property
 prop_roundtrip_BootstrapWitness = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_LEDGER_PredicateFails :: [STS.PredicateFailure (Mock.LEDGERS Monomorphic.ShortHash)] -> Property
+prop_roundtrip_LEDGER_PredicateFails :: [STS.PredicateFailure (Mock.LEDGERS Mock.C)] -> Property
 prop_roundtrip_LEDGER_PredicateFails = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_PrtclState :: STS.PrtclState (Mock.ConcreteCrypto Monomorphic.ShortHash) -> Property
+prop_roundtrip_PrtclState :: STS.PrtclState (Mock.C) -> Property
 prop_roundtrip_PrtclState = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_LedgerState :: Mock.LedgerState Monomorphic.ShortHash -> Property
+prop_roundtrip_LedgerState :: Mock.LedgerState Mock.C -> Property
 prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_NewEpochState :: Mock.NewEpochState Monomorphic.ShortHash -> Property
+prop_roundtrip_NewEpochState :: Mock.NewEpochState Mock.C -> Property
 prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
 
 -- TODO

@@ -4,7 +4,6 @@
 
 module Test.Shelley.Spec.Ledger.STSTests (stsTests) where
 
-import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition.Extended (TRC (..))
 import Data.Either (fromRight, isRight)
 import Data.Map.Strict (Map)
@@ -13,7 +12,13 @@ import Data.Proxy
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
-import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash,
+    KeyRole (..),
+    asWitness,
+    hashKey,
+    vKey,
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( WitHashes (..),
     esLState,
@@ -35,8 +40,8 @@ import Test.Shelley.Spec.Ledger.Address.Bootstrap
     testBootstrapSpending,
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( CHAIN,
-    KeyHash,
+  ( C,
+    CHAIN,
     NewEpochState,
     PoolParams,
     TICK,
@@ -104,40 +109,40 @@ import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
 
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.
-testCHAINExample :: CHAINExample ShortHash -> Assertion
+testCHAINExample :: CHAINExample C -> Assertion
 testCHAINExample (CHAINExample initSt block expectedSt) =
-  testSTS @(CHAIN ShortHash) () initSt block expectedSt
+  testSTS @(CHAIN C) () initSt block expectedSt
 
 -- | Applies the TICK transition to a given chain state,
 -- and check that some component of the result is as expected.
 testTICKChainState ::
   (Show a, Eq a) =>
-  NewEpochState ShortHash ->
-  TickEnv ShortHash ->
+  NewEpochState C ->
+  TickEnv C ->
   SlotNo ->
-  (NewEpochState ShortHash -> a) ->
+  (NewEpochState C -> a) ->
   a ->
   Assertion
 testTICKChainState initSt env slot focus expectedSt = do
-  let result = runShelleyBase $ applySTSTest @(TICK ShortHash) (TRC (env, initSt, slot))
+  let result = runShelleyBase $ applySTSTest @(TICK C) (TRC (env, initSt, slot))
   case result of
     Right res -> focus res @?= expectedSt
     Left err -> assertFailure $ show err
 
-testPreservationOfAda :: CHAINExample ShortHash -> Assertion
+testPreservationOfAda :: CHAINExample C -> Assertion
 testPreservationOfAda (CHAINExample _ _ (Right expectedSt)) =
   totalAda expectedSt @?= maxLLSupply
 testPreservationOfAda (CHAINExample _ _ (Left predicateFailure)) =
   assertFailure $ "Ada not preserved " ++ show predicateFailure
 
 newEpochToPoolParams ::
-  NewEpochState ShortHash ->
-  (Map (KeyHash ShortHash 'StakePool) (PoolParams ShortHash))
+  NewEpochState C ->
+  (Map (KeyHash 'StakePool C) (PoolParams C))
 newEpochToPoolParams = _pParams . _pstate . _delegationState . esLState . nesEs
 
 newEpochToFuturePoolParams ::
-  NewEpochState ShortHash ->
-  (Map (KeyHash ShortHash 'StakePool) (PoolParams ShortHash))
+  NewEpochState C ->
+  (Map (KeyHash 'StakePool C) (PoolParams C))
 newEpochToFuturePoolParams = _fPParams . _pstate . _delegationState . esLState . nesEs
 
 testAdoptEarlyPoolRegistration :: Assertion
@@ -255,14 +260,14 @@ stsTests =
       testCase "don't spend from a bootstrap address" testBootstrapNotSpending
     ]
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
 
 testAliceSignsAlone :: Assertion
 testAliceSignsAlone =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl Map.empty) 0 [asWitness alicePay]
@@ -272,7 +277,7 @@ testAliceDoesntSign :: Assertion
 testAliceDoesntSign =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript (aliceOnly p))]]
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl Map.empty) 0 [asWitness bobPay, asWitness carlPay, asWitness dariaPay]
@@ -281,7 +286,7 @@ testEverybodySigns :: Assertion
 testEverybodySigns =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay, asWitness carlPay, asWitness dariaPay]
@@ -291,7 +296,7 @@ testWrongScript :: Assertion
 testWrongScript =
   utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript (aliceOnly p))]]
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOnly p, 11000)] [aliceOrBob p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
@@ -300,7 +305,7 @@ testAliceOrBob :: Assertion
 testAliceOrBob =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOrBob p, 11000)] [aliceOrBob p] (Wdrl Map.empty) 0 [asWitness alicePay]
@@ -310,7 +315,7 @@ testAliceOrBob' :: Assertion
 testAliceOrBob' =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOrBob p, 11000)] [aliceOrBob p] (Wdrl Map.empty) 0 [asWitness bobPay]
@@ -320,7 +325,7 @@ testAliceAndBob :: Assertion
 testAliceAndBob =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceAndBob p, 11000)] [aliceAndBob p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
@@ -330,7 +335,7 @@ testAliceAndBob' :: Assertion
 testAliceAndBob' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript (aliceAndBob p))]]
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceAndBob p, 11000)] [aliceAndBob p] (Wdrl Map.empty) 0 [asWitness alicePay]
@@ -339,7 +344,7 @@ testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript (aliceAndBob p))]]
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceAndBob p, 11000)] [aliceAndBob p] (Wdrl Map.empty) 0 [asWitness bobPay]
@@ -348,7 +353,7 @@ testAliceAndBobOrCarl :: Assertion
 testAliceAndBobOrCarl =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceAndBobOrCarl p, 11000)] [aliceAndBobOrCarl p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
@@ -358,7 +363,7 @@ testAliceAndBobOrCarl' :: Assertion
 testAliceAndBobOrCarl' =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceAndBobOrCarl p, 11000)] [aliceAndBobOrCarl p] (Wdrl Map.empty) 0 [asWitness carlPay]
@@ -368,7 +373,7 @@ testAliceAndBobOrCarlAndDaria :: Assertion
 testAliceAndBobOrCarlAndDaria =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceAndBobOrCarlAndDaria p, 11000)] [aliceAndBobOrCarlAndDaria p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
@@ -378,7 +383,7 @@ testAliceAndBobOrCarlAndDaria' :: Assertion
 testAliceAndBobOrCarlAndDaria' =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceAndBobOrCarlAndDaria p, 11000)] [aliceAndBobOrCarlAndDaria p] (Wdrl Map.empty) 0 [asWitness carlPay, asWitness dariaPay]
@@ -388,7 +393,7 @@ testAliceAndBobOrCarlOrDaria :: Assertion
 testAliceAndBobOrCarlOrDaria =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceAndBobOrCarlOrDaria p, 11000)] [aliceAndBobOrCarlOrDaria p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
@@ -398,7 +403,7 @@ testAliceAndBobOrCarlOrDaria' :: Assertion
 testAliceAndBobOrCarlOrDaria' =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceAndBobOrCarlOrDaria p, 11000)] [aliceAndBobOrCarlOrDaria p] (Wdrl Map.empty) 0 [asWitness carlPay]
@@ -408,7 +413,7 @@ testAliceAndBobOrCarlOrDaria'' :: Assertion
 testAliceAndBobOrCarlOrDaria'' =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceAndBobOrCarlOrDaria p, 11000)] [aliceAndBobOrCarlOrDaria p] (Wdrl Map.empty) 0 [asWitness dariaPay]
@@ -420,7 +425,7 @@ testTwoScripts :: Assertion
 testTwoScripts =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript
@@ -440,7 +445,7 @@ testTwoScripts' :: Assertion
 testTwoScripts' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript (aliceAndBob p))]]
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript
@@ -461,7 +466,7 @@ testScriptAndSKey :: Assertion
 testScriptAndSKey =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript
@@ -482,7 +487,7 @@ testScriptAndSKey' =
         ]
       ]
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript
@@ -498,7 +503,7 @@ testScriptAndSKey'' :: Assertion
 testScriptAndSKey'' =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript
@@ -514,7 +519,7 @@ testScriptAndSKey''' :: Assertion
 testScriptAndSKey''' =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript
@@ -532,7 +537,7 @@ testRwdAliceSignsAlone :: Assertion
 testRwdAliceSignsAlone =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (aliceOnly p))) 1000) 0 [asWitness alicePay]
@@ -542,7 +547,7 @@ testRwdAliceSignsAlone' :: Assertion
 testRwdAliceSignsAlone' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript (bobOnly p))]]
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p, bobOnly p] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000) 0 [asWitness alicePay]
@@ -551,7 +556,7 @@ testRwdAliceSignsAlone'' :: Assertion
 testRwdAliceSignsAlone'' =
   assertBool s (isRight utxoSt')
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p, bobOnly p] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000) 0 [asWitness alicePay, asWitness bobPay]
@@ -561,7 +566,7 @@ testRwdAliceSignsAlone''' :: Assertion
 testRwdAliceSignsAlone''' =
   utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript (bobOnly p))]]
   where
-    p :: Proxy ShortHash
+    p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000) 0 [asWitness alicePay, asWitness bobPay]

@@ -16,14 +16,16 @@ module Test.Shelley.Spec.Ledger.Generator.Presets
   )
 where
 
-import Cardano.Crypto.Hash (HashAlgorithm)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.Address (scriptsToAddr, toAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Keys (KeyPair (..))
 import Shelley.Spec.Ledger.Keys
-  ( KeyRole (..),
+  ( KeyHash,
+    KeyRole (..),
     coerceKeyRole,
     hashKey,
     vKey,
@@ -34,13 +36,11 @@ import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( GenDelegPair,
     GenesisKeyPair,
-    KeyHash,
     KeyPairs,
     MultiSigPairs,
     UTxO,
     hashKeyVRF,
     pattern GenDelegPair,
-    pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
@@ -58,14 +58,14 @@ import Test.Shelley.Spec.Ledger.Utils
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
-genEnv :: HashAlgorithm h => proxy h -> GenEnv h
+genEnv :: Crypto c => proxy c -> GenEnv c
 genEnv _ =
   GenEnv
     (keySpace defaultConstants)
     defaultConstants
 
 -- | Example keyspace for use in generators
-keySpace :: HashAlgorithm h => Constants -> KeySpace h
+keySpace :: Crypto c => Constants -> KeySpace c
 keySpace c =
   KeySpace
     (coreNodeKeys c)
@@ -75,26 +75,26 @@ keySpace c =
     (mSigCombinedScripts c)
 
 -- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: Constants -> KeyPairs h
+keyPairs :: Crypto c => Constants -> KeyPairs c
 keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: Constants -> Int -> Int -> Gen (KeyPairs h)
+someKeyPairs :: Crypto c => Constants -> Int -> Int -> Gen (KeyPairs c)
 someKeyPairs c lower upper =
   take
     <$> QC.choose (lower, upper)
     <*> QC.shuffle (keyPairs c)
 
-mSigBaseScripts :: HashAlgorithm h => Constants -> MultiSigPairs h
+mSigBaseScripts :: Crypto c => Constants -> MultiSigPairs c
 mSigBaseScripts c = mkMSigScripts (keyPairs c)
 
-mSigCombinedScripts :: HashAlgorithm h => Constants -> MultiSigPairs h
+mSigCombinedScripts :: Crypto c => Constants -> MultiSigPairs c
 mSigCombinedScripts c@(Constants {numBaseScripts}) =
   mkMSigCombinations . take numBaseScripts $ mSigBaseScripts c
 
 -- | Select between _lower_ and _upper_ scripts from the possible combinations
 -- of the first `numBaseScripts` multi-sig scripts of `mSigScripts`.
-someScripts :: HashAlgorithm h => Constants -> Int -> Int -> Gen (MultiSigPairs h)
+someScripts :: Crypto c => Constants -> Int -> Int -> Gen (MultiSigPairs c)
 someScripts c lower upper =
   take
     <$> QC.choose (lower, upper)
@@ -104,7 +104,7 @@ someScripts c lower upper =
 --
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
-coreNodeKeys :: HashAlgorithm h => Constants -> [(GenesisKeyPair h, AllIssuerKeys h 'GenesisDelegate)]
+coreNodeKeys :: Crypto c => Constants -> [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
 coreNodeKeys c@Constants {numCoreNodes} =
   [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0),
       issuerKeys c 0 x
@@ -114,7 +114,7 @@ coreNodeKeys c@Constants {numCoreNodes} =
   where
     toKeyPair (sk, vk) = KeyPair vk sk
 
-genUtxo0 :: HashAlgorithm h => Constants -> Gen (UTxO h)
+genUtxo0 :: Crypto c => Constants -> Gen (UTxO c)
 genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts
@@ -125,14 +125,14 @@ genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   return (genesisCoins outs)
 
 -- Pre-generate a set of keys to use for genesis delegates.
-genesisDelegates :: HashAlgorithm h => Constants -> [AllIssuerKeys h 'GenesisDelegate]
+genesisDelegates :: Crypto c => Constants -> [AllIssuerKeys c 'GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
     | x <- [0 .. 50]
   ]
 
 -- Pre-generate a set of keys to use for stake pools.
-stakePoolKeys :: HashAlgorithm h => Constants -> [AllIssuerKeys h 'StakePool]
+stakePoolKeys :: Crypto c => Constants -> [AllIssuerKeys c 'StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
     | x <- [0 .. 50]
@@ -140,13 +140,13 @@ stakePoolKeys c =
 
 -- | Generate all keys for any entity which will be issuing blocks.
 issuerKeys ::
-  (HashAlgorithm h) =>
+  (Crypto c) =>
   Constants ->
   -- | Namespace parameter. Can be used to differentiate between different
   --   "types" of issuer.
   Word64 ->
   Word64 ->
-  AllIssuerKeys h r
+  AllIssuerKeys c r
 issuerKeys Constants {maxSlotTrace} ns x =
   let (skCold, vkCold) = mkKeyPair (x, 0, 0, 0, ns + 1)
    in AllIssuerKeys
@@ -170,7 +170,7 @@ issuerKeys Constants {maxSlotTrace} ns x =
           hk = hashKey vkCold
         }
 
-genesisDelegs0 :: HashAlgorithm h => Constants -> Map (KeyHash h 'Genesis) (GenDelegPair h)
+genesisDelegs0 :: Crypto c => Constants -> Map (KeyHash 'Genesis c) (GenDelegPair c)
 genesisDelegs0 c =
   Map.fromList
     [ ( hashVKey gkey,

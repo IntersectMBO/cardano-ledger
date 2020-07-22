@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,7 +11,6 @@ module Test.Shelley.Spec.Ledger.Generator.Block
   )
 where
 
-import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Iterate.SetAlgebra (dom, eval, range)
 import Control.State.Transition.Extended (TRC (..))
@@ -31,7 +31,15 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
-import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, genDelegKeyHash, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys
+  ( GenDelegs (..),
+    KeyHash,
+    KeyRole (..),
+    coerceKeyRole,
+    genDelegKeyHash,
+    hashKey,
+    vKey,
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( esLState,
     esPp,
@@ -68,8 +76,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Block,
     ChainState,
     GenDelegPair,
-    KeyHash,
     LEDGERS,
+    Mock,
     OBftSlot,
     TICK,
   )
@@ -95,10 +103,10 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 
 nextCoreNode ::
-  Map SlotNo (OBftSlot h) ->
-  Map SlotNo (OBftSlot h) ->
+  Map SlotNo (OBftSlot c) ->
+  Map SlotNo (OBftSlot c) ->
   SlotNo ->
-  (SlotNo, KeyHash h 'Genesis)
+  (SlotNo, KeyHash 'Genesis c)
 nextCoreNode os nextOs s =
   let getNextOSlot os' =
         let (_, nextSlots) = Map.split s os'
@@ -115,19 +123,19 @@ nextCoreNode os nextOs s =
 getPraosSlot ::
   SlotNo ->
   SlotNo ->
-  Map SlotNo (OBftSlot h) ->
-  Map SlotNo (OBftSlot h) ->
+  Map SlotNo (OBftSlot c) ->
+  Map SlotNo (OBftSlot c) ->
   Maybe SlotNo
 getPraosSlot start tooFar os nos =
   let schedules = os `Map.union` nos
    in List.find (not . (`Map.member` schedules)) [start .. tooFar -1]
 
 genBlock ::
-  forall h.
-  HashAlgorithm h =>
-  GenEnv h ->
-  ChainState h ->
-  Gen (Block h)
+  forall c.
+  Mock c =>
+  GenEnv c ->
+  ChainState c ->
+  Gen (Block c)
 genBlock
   ge@(GenEnv KeySpace_ {ksCoreNodes, ksStakePools, ksGenesisDelegates} _)
   chainSt = do
@@ -193,7 +201,7 @@ genBlock
 
     -- ran genDelegs
     let nes = chainNes chainSt
-        nes' = runShelleyBase $ applySTSTest @(TICK h) $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
+        nes' = runShelleyBase $ applySTSTest @(TICK c) $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
 
     case nes' of
       Left pf -> error ("genBlock TICK rule failed - " <> show pf)
@@ -202,7 +210,7 @@ genBlock
             EpochState acnt _ ls _ pp' _ = es
             GenDelegs gds = _genDelegs . _dstate . _delegationState . esLState . nesEs $ _nes'
             -- Keys need to be coerced to block issuer keys
-            keys :: AllIssuerKeys h 'BlockIssuer
+            keys :: AllIssuerKeys c 'BlockIssuer
             keys = case ks of
               -- We chose an overlay slot, and need to lookup the given
               -- keys from the genesis key hash.
@@ -247,9 +255,9 @@ genBlock
         Origin -> error "block generator does not support from Origin"
         At (LastAppliedBlock b s hh) -> (b, s, hh)
       gkeys ::
-        KeyHash h 'Genesis ->
-        Map (KeyHash h 'Genesis) (GenDelegPair h) ->
-        AllIssuerKeys h 'GenesisDelegate
+        KeyHash 'Genesis c ->
+        Map (KeyHash 'Genesis c) (GenDelegPair c) ->
+        AllIssuerKeys c 'GenesisDelegate
       gkeys gkey gds =
         fromMaybe
           (error "genBlock: lookupGenDelegate failed")
@@ -285,4 +293,4 @@ genBlock
       genTxs pp reserves ls s = do
         let ledgerEnv = LedgersEnv s pp reserves
 
-        sigGen @(LEDGERS h) ge ledgerEnv ls
+        sigGen @(LEDGERS c) ge ledgerEnv ls
