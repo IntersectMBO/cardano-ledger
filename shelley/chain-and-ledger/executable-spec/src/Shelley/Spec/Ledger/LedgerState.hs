@@ -998,25 +998,26 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
       -- reserves and rewards change
-      deltaR_ = (rationalToCoinViaFloor $ min 1 eta * unitIntervalToRational (_rho pr) * fromIntegral reserves)
+      maxExpansion = (rationalToCoinViaFloor $ min 1 eta * unitIntervalToRational (_rho pr) * fromIntegral reserves)
       expectedBlocks =
         floor $
           unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
       eta = blocksMade % expectedBlocks
-      Coin rPot = _feeSS ss + deltaR_
-      deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
-      _R = Coin $ rPot - deltaT1
+      Coin rPot = _feeSS ss + maxExpansion
+      deltaT = floor $ intervalValue (_tau pr) * fromIntegral rPot
+      _R = Coin $ rPot - deltaT
       circulation = total - (_reserves acnt)
       (rs_, newLikelihoods) =
         reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation asc slotsPerEpoch
-      deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
+      totalRewards = Map.foldr (+) (Coin 0) rs_
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
+      deltaR = _feeSS ss - (Coin deltaT + totalRewards)
   pure $
     RewardUpdate
-      (Coin deltaT1 + deltaT2)
-      (- deltaR_)
+      (Coin deltaT)
+      deltaR
       rs_
       (- (_feeSS ss))
       (updateNonMypopic nm _R newLikelihoods (_pstakeGo ss))
