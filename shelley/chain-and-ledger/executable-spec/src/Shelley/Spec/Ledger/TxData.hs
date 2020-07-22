@@ -746,9 +746,9 @@ instance
   where
   fromCBOR = do
     decodeRecordNamed "TxIn" (const 2) $ do
-       a <- fromCBOR
-       (b :: Word64) <- fromCBOR
-       pure $ TxIn a (fromInteger $ toInteger b)
+      a <- fromCBOR
+      (b :: Word64) <- fromCBOR
+      pure $ TxIn a (fromInteger $ toInteger b)
 
 instance
   (Typeable crypto, Crypto crypto) =>
@@ -872,9 +872,9 @@ instance ToCBOR PoolMetaData where
 instance FromCBOR PoolMetaData where
   fromCBOR = do
     decodeRecordNamed "PoolMetaData" (const 2) $ do
-       u <- fromCBOR
-       h <- fromCBOR
-       pure $ PoolMetaData u h
+      u <- fromCBOR
+      h <- fromCBOR
+      pure $ PoolMetaData u h
 
 -- | The size of the '_poolOwners' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.

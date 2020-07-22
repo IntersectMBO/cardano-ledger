@@ -92,7 +92,6 @@ import Quiet
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 
-
 -- | The role of a key.
 --
 --   Note that a role is not _fixed_, nor is it unique. In particular, keys may
@@ -289,7 +288,9 @@ instance Crypto crypto => ToCBOR (GenDelegPair crypto) where
 
 instance Crypto crypto => FromCBOR (GenDelegPair crypto) where
   fromCBOR = do
-    decodeRecordNamed "GenDelegPair" (const 2)
+    decodeRecordNamed
+      "GenDelegPair"
+      (const 2)
       (GenDelegPair <$> fromCBOR <*> fromCBOR)
 
 instance Crypto crypto => ToJSON (GenDelegPair crypto) where

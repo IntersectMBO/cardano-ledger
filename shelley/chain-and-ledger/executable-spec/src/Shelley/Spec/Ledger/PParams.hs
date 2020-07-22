@@ -334,9 +334,9 @@ instance Crypto crypto => ToCBOR (Update crypto) where
 
 instance Crypto crypto => FromCBOR (Update crypto) where
   fromCBOR = decodeRecordNamed "Update" (const 2) $ do
-      x <- fromCBOR
-      y <- fromCBOR
-      pure (Update x y)
+    x <- fromCBOR
+    y <- fromCBOR
+    pure (Update x y)
 
 data PPUpdateEnv crypto = PPUpdateEnv SlotNo (GenDelegs crypto)
   deriving (Show, Eq, Generic)

@@ -72,7 +72,7 @@ import Shelley.Spec.Ledger.EpochBoundary
   )
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
-import Shelley.Spec.Ledger.Serialization (decodeSeq, encodeFoldable, decodeRecordNamed)
+import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, decodeSeq, encodeFoldable)
 import Shelley.Spec.Ledger.TxData (PoolParams (..), getRwdCred)
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
@@ -234,15 +234,15 @@ instance Crypto crypto => ToCBOR (NonMyopic crypto) where
 instance Crypto crypto => FromCBOR (NonMyopic crypto) where
   fromCBOR = do
     decodeRecordNamed "NonMyopic" (const 3) $ do
-       aps <- fromCBOR
-       rp <- fromCBOR
-       s <- fromCBOR
-       pure $
-          NonMyopic
-           { likelihoodsNM = aps,
-             rewardPotNM = rp,
-             snapNM = s
-           }
+      aps <- fromCBOR
+      rp <- fromCBOR
+      s <- fromCBOR
+      pure $
+        NonMyopic
+          { likelihoodsNM = aps,
+            rewardPotNM = rp,
+            snapNM = s
+          }
 
 -- | Desirability calculation for non-myopic utily,
 -- corresponding to f^~ in section 5.6.1 of
