@@ -12,11 +12,11 @@
    \\[1em]
    Duncan Coutts  \quad \texttt{<duncan.coutts@iohk.io>}
 }
-\DueDate{06$^{\textrm{th}}$ July 2020}
-\SubmissionDate{06$^{\textrm{th}}$ July 2020}{2020/07/06}
+\DueDate{23$^{\textrm{th}}$ July 2020}
+\SubmissionDate{23$^{\textrm{th}}$ July 2020}{2020/07/23}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
-\Version{1.20}
+\Version{1.21}
 \Project{Shelley Ledger}
 \DisseminationPU
 
@@ -187,6 +187,8 @@ First version officially published on the IOHK blog.}
   create blocks when they fafil to meet their pledge.}
 \change{2020-07-06}{PK}{FM (IOHK)}{Minor changes after audit. Nothing that
   affects the implementation.}
+\change{2020-07-23}{PK}{FM (IOHK)}{Change: undistributed rewards go to the
+  reserves, not to the treasury.}
 \end{changelog}
 
 \clearpage%
@@ -1145,8 +1147,8 @@ The certificate contains the following:
 
   Should the reward address be unregistered, the stake pool operator will be
   unable to receive rewards. In that case, any rewards that they would be due
-  are instead paid to the treasury (but the stake pool members would still get
-  their usual rewards).
+  are instead sent back to the reserves (but the stake pool members would still
+  get their usual rewards).
 
 \item
   A list of stake addresses controlled by the pool owner(s),
@@ -3011,7 +3013,7 @@ Note that
     \(\sum_{\text{pools}}\beta=1\).}.
 
   The difference \(R - \sum_{\text{pools}} \hat{f}(s,\sigma,\pbar)\) will be
-  sent to the treasury.
+  sent back to the reserves.
 \end{itemize}
 
 \subsubsection{Reward Splitting inside a pool}
