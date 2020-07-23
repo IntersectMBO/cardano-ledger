@@ -34,7 +34,8 @@ library
                      , goblins
                      , hedgehog >= 1.0
                      , tasty-hunit
-                     , lens
+                     , microlens
+                     , microlens-th
                      , mtl
                      , transformers >= 0.5
                      , QuickCheck
@@ -63,7 +64,7 @@ test-suite doctests
                      , free
                      , hedgehog >= 1.0
                      , tasty-hunit
-                     , lens
+                     , microlens
                      , mtl
                      , sequence
                      , transformers >= 0.5

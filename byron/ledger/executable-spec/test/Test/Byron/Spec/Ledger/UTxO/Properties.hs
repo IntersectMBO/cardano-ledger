@@ -7,11 +7,12 @@
 module Test.Byron.Spec.Ledger.UTxO.Properties where
 
 import           Control.Arrow (second, (***))
-import           Control.Lens (view, (&), (^.), _2)
 import           Control.Monad (when)
 import           Data.Foldable (foldl', traverse_)
 import           Hedgehog (MonadTest, Property, classify, cover, forAll, property, success,
                      withTests, (===))
+import           Lens.Micro ((&), (^.), _2)
+import           Lens.Micro.Extras (view)
 
 import           Control.State.Transition.Generator (classifyTraceLength, trace, traceOfLength)
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), firstAndLastState,

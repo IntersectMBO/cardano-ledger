@@ -5,7 +5,6 @@
 module Byron.Spec.Chain.STS.Rule.SigCnt where
 
 import           Control.Arrow ((|||))
-import           Control.Lens ((^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import           Data.Data (Data, Typeable)
@@ -15,6 +14,7 @@ import           Data.Word (Word8)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import           Lens.Micro ((^.))
 
 import           Control.State.Transition
 

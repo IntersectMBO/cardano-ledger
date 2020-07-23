@@ -268,7 +268,7 @@ test-suite cardano-ledger-test
                      , formatting
                      , generic-monoid
                      , hedgehog
-                     , lens
+                     , microlens
                      , mtl
                      , optparse-applicative
                      , resourcet

@@ -94,7 +94,6 @@ where
 
 import           Cardano.Prelude (NoUnexpectedThunks(..), allNoUnexpectedThunks, noUnexpectedThunksInKeysAndValues)
 import           Control.Arrow ((&&&))
-import           Control.Lens (Lens', lens, makeFields, to, (%~), (&), (.~), (<>~), (^.), _1)
 import           Data.AbstractSize
 import           Data.Bimap (Bimap, (!>))
 import qualified Data.Bimap as Bimap
@@ -113,7 +112,8 @@ import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-
+import           Lens.Micro (Lens', lens, to, (%~), (&), (.~), (<>~), (^.), _1)
+import           Lens.Micro.TH (makeFields)
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,

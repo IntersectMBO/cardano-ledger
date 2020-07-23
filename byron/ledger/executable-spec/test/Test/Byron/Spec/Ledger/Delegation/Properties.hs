@@ -24,7 +24,6 @@ where
 
 
 import           Control.Arrow (first, (***))
-import           Control.Lens (makeLenses, to, view, (&), (.~), (^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import           Data.Data (Data, Typeable)
@@ -36,6 +35,9 @@ import           Hedgehog (Gen, MonadTest, Property, assert, cover, forAll, prop
                      withTests, (===))
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import           Lens.Micro (to, (&), (.~), (^.))
+import           Lens.Micro.Extras (view)
+import           Lens.Micro.TH (makeLenses)
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
