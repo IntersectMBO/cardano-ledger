@@ -43,7 +43,7 @@ with (import pkgs.iohkNix.release-lib) {
 with pkgs.lib;
 
 let
-  testsSupportedSystems = [ "x86_64-linux" "x86_64-darwin" ];
+  testsSupportedSystems = [ "x86_64-linux" ];
   # Recurse through an attrset, returning all test derivations in a list.
   collectTests' = ds: filter (d: elem d.system testsSupportedSystems) (collect isDerivation ds);
   # Adds the package name to the test derivations for windows-testing-bundle.nix

@@ -1262,8 +1262,8 @@ expectedStEx2D =
         )
         ( SJust
             RewardUpdate
-              { deltaT = Coin 7,
-                deltaR = Coin 0,
+              { deltaT = Coin 1,
+                deltaR = Coin 6,
                 rs = Map.empty,
                 deltaF = Coin (-7),
                 nonMyopic = emptyNonMyopic {rewardPotNM = Coin 6}
@@ -1360,8 +1360,8 @@ blockEx2EHash = bhHash (bheader blockEx2E)
 acntEx2E :: Crypto c => proxy c -> AccountState
 acntEx2E p =
   AccountState
-    { _treasury = Coin 7,
-      _reserves = maxLLSupply - balance (utxoEx2A p) - carlMIR
+    { _treasury = Coin 1,
+      _reserves = maxLLSupply - balance (utxoEx2A p) - carlMIR + Coin 6
     }
 
 oCertIssueNosEx2 :: Crypto c => Map (KeyHash 'BlockIssuer c) Word64
@@ -1456,8 +1456,8 @@ expectedStEx2F =
         (EpochState (acntEx2E p) (snapsEx2E p) expectedLSEx2E ppsEx1 ppsEx1 nonMyopicEx2E)
         ( SJust
             RewardUpdate
-              { deltaT = Coin 5,
-                deltaR = Coin 0,
+              { deltaT = Coin 1,
+                deltaR = Coin 4,
                 rs = Map.empty,
                 deltaF = Coin (-5),
                 nonMyopic = nonMyopicEx2F
@@ -1553,7 +1553,11 @@ oCertIssueNosEx2G =
     oCertIssueNosEx2F
 
 acntEx2G :: Crypto c => proxy c -> AccountState
-acntEx2G p = (acntEx2E p) {_treasury = Coin 12}
+acntEx2G p =
+  (acntEx2E p)
+    { _treasury = Coin 2,
+      _reserves = maxLLSupply - balance (utxoEx2A p) - carlMIR + Coin 10
+    }
 
 expectedStEx2G :: forall c. Mock c => ChainState c
 expectedStEx2G =
@@ -1642,10 +1646,10 @@ alicePerfEx2H p = likelihood blocks t slotsPerEpoch
     f = runShelleyBase (asks activeSlotCoeff)
 
 deltaT2H :: Coin
-deltaT2H = Coin 786986666668
+deltaT2H = Coin 158666666666
 
 deltaR2H :: Coin
-deltaR2H = Coin (-793333333333)
+deltaR2H = Coin (-165013333331)
 
 nonMyopicEx2H :: forall c. Crypto c => NonMyopic c
 nonMyopicEx2H =
