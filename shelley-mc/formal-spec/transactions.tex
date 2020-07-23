@@ -68,29 +68,18 @@ A \emph{Currency} comprises a set of different \emph{Asset Classes}, each of whi
 a unique identifier, $\AssetID$  (of type $\mathbb{H}_{\leq 32}$, that is \emph{byte strings of length $\leq 32$}). We will informally refer to a pair $(\var{pid}, \var{tok})$ of a Policy ID and an Asset ID as a ``token''.
 The set of tokens that are referred to by the underlying monetary policy represents the coinage that the currency supports.  A multi-currency value, $\Value$ is a map over zero or more currencies
 to single currency values.  A single currency value is then a finite map from
-$\AssetID$s to quantities.  Any omitted tokens in the domain of a currency are assumed to be zero.
+$\AssetID$s to quantities.
 
-$$
- \begin{array}{lcl}
-   \var{token} \in \mathit{Coinage} &=& \{ \AssetID \}
-%% % \\
-%% % v, w \in \mathit{Value} &=& \{ \AssetID \mapsto \Quantity \}
-\end{array}
-$$
+\subsection*{Value Operations and Partial Order.}
+We require basic operations on $\Value$, which include, equality, addition and $\leq$ comparison.
+For convenience, here and in the rest of the document, we
+will also treat values of type $\Value$ as non-partial functions where
+any omitted tokens in the domain of a currency are assumed to be zero.
 
-%% I'm going to leave this for now.  It would be  nice.
-%% Currency values support arithmetic and equality operations in the obvious way.  They do not, of course, support general
-%% comparisons ($<$, $>$, etc).  We extend the
+Addition and binary relations are extended pointwise from $\Coin$ to $\Value$, so if $R$ is a binary relation defined on $\Coin$, like $=$ or $\leq$, and $v, w$ are values, we define
 
-%% $$
-%% \begin{array}{lcl}
-%%   v \oplus w &=&  \forall (c_1 \mapsto t_1)
-
-%%   (a \arrow \_) \in (\var{coins} v \cup \var{coins} w),~~ a \arrow (v a \oplus w a), \var{currency} v = \var{currency} w \\
-%%   \var{currency} ( c \mapsto \_ ) & = & c \\
-%%   \var{coins}    ( \_ \mapsto \var{tkns}) & = & \var{dom} (\var{tkns})
-%% \end{array}
-%% $$
+\[ v~R~w :\Leftrightarrow \forall~\var{pid}~\var{aid}, (v~\var{pid}~\var{aid})~R~(w~\var{pid}~\var{aid}) \]
+\[(v + w)~\var{pid}~\var{aid} := (v~\var{pid}~\var{aid}) + (w~\var{pid}~\var{aid}) \].
 
 \begin{itemize}
 
@@ -128,9 +117,10 @@ $$
 
   \item $\Value$ is the multicurrency type that is used to represent
     an amount of a collection of tokens, including Ada. If $(\var{pid}, \var{tok})$ is a token and $v \in \Value$,
-    the amount in $v$ belonging to that token is $v \var{pid} \var{tok}$ if defined, or zero otherwise.
+    the amount in $v$ belonging to that token is $v~\var{pid}~\var{tok}$ if defined, or zero otherwise.
     Token amounts are fungible with each other if and only if they belong to the same token,
-    i.e. they have the same $\PolicyID$ and $\AssetID$.
+    i.e. they have the same $\PolicyID$ and $\AssetID$. Terms of type $\Value$ are sometimes also referred to as
+    \emph{token bundles}.
 
 %  The $tkns$ map gives the quantity of tokens of type $t\in\AssetID$.
 %  Values in the same currency are fungible with each other if
@@ -209,7 +199,7 @@ within the UTXOW rule.
 
 \begin{figure*}[htb]
     \begin{align*}
-      \fun{validateScript} & \in\Script\to\PolicyID\to\Slot\to
+      \fun{validateScript} & \in\Script\to\ScriptHash\to\Slot\to
       \powerset{\KeyHash}\to\TxBody\to\UTxO\to\Bool \\
       \fun{validateScript} & ~s~\var{pid}~\var{slot}~\var{vhks}
        ~\var{txb}~\var{utxo} =
