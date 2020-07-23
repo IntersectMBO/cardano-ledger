@@ -205,10 +205,10 @@ transaction_metadatum =
   / bytes .size 64
   / text .size 64
 
-transaction_metadadum_label = uint
+transaction_metadatum_label = uint
 
 transaction_metadata =
-  { * transaction_metadadum_label => transaction_metadatum }
+  { * transaction_metadatum_label => transaction_metadatum }
 
 vkeywitness = [ $vkey, $signature ]
 
