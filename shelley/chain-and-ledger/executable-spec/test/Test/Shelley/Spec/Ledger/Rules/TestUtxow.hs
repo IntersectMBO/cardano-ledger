@@ -29,6 +29,10 @@ import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (isSubmapOf)
 import qualified Data.Set as Set (fromList, intersection, isSubsetOf, map, null)
+import Shelley.Spec.Ledger.API
+  ( UTXO,
+    UTXOW,
+  )
 import Shelley.Spec.Ledger.Keys
   ( KeyHash (..),
     KeyRole (..),
@@ -36,7 +40,8 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState (keyRefunds, pattern UTxOState)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Tx
-  ( addrWits,
+  ( Tx,
+    addrWits,
     getKeyCombinations,
     msigWits,
     _body,
@@ -44,19 +49,16 @@ import Shelley.Spec.Ledger.Tx
   )
 import Shelley.Spec.Ledger.TxData
   ( PoolParams (..),
+    TxIn (..),
     witKeyHash,
     _certs,
     _inputs,
     _txfee,
-    pattern TxIn,
   )
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
 import Test.QuickCheck (Property, conjoin, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( C,
-    Tx,
-    UTXO,
-    UTXOW,
   )
 
 --------------------------

@@ -20,6 +20,10 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.Word (Word64)
+import Shelley.Spec.Ledger.API
+  ( LEDGER,
+    POOL,
+  )
 import Shelley.Spec.Ledger.BaseTypes ((==>))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
@@ -28,16 +32,14 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( _fPParams,
-    _pParams,
-    _retiring,
-    pattern PState,
+  ( PState (..),
   )
 import Shelley.Spec.Ledger.PParams (_eMax)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxData
-  ( _poolPubKey,
+  ( PoolParams,
+    _poolPubKey,
     pattern DCertPool,
     pattern RegPool,
     pattern RetirePool,
@@ -45,10 +47,6 @@ import Shelley.Spec.Ledger.TxData
 import Test.QuickCheck (Property, conjoin, counterexample, property, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( C,
-    LEDGER,
-    POOL,
-    PState,
-    PoolParams,
   )
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
 

@@ -18,6 +18,24 @@ import Data.Maybe (fromJust)
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Shelley.Spec.Ledger.API
+  ( Addr,
+    Credential (..),
+    DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    MultiSig (..),
+    PoolCert (..),
+    PoolParams (..),
+    RewardAcnt (..),
+    SignKeyVRF,
+    Tx (..),
+    TxBody (..),
+    TxIn (..),
+    TxOut (..),
+    VerKeyVRF,
+    hashVerKeyVRF,
+  )
 import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -25,15 +43,7 @@ import Shelley.Spec.Ledger.BaseTypes
     textToUrl,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Credential (pattern KeyHashObj)
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Delegation.Certificates
-  ( pattern DeRegKey,
-    pattern Delegate,
-    pattern RegKey,
-    pattern RegPool,
-    pattern RetirePool,
-  )
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
@@ -45,61 +55,18 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.LedgerState (txsize)
 import qualified Shelley.Spec.Ledger.MetaData as MD
-import Shelley.Spec.Ledger.Scripts (pattern RequireMOf, pattern RequireSignature)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( WitnessSetHKD (..),
     hashScript,
-    _body,
-    _metadata,
-    _witnessSet,
-    pattern Tx,
   )
 import Shelley.Spec.Ledger.TxData
   ( PoolMetaData (..),
     StakePoolRelay (..),
     Wdrl (..),
-    _certs,
-    _inputs,
-    _mdHash,
-    _outputs,
-    _poolCost,
-    _poolMD,
-    _poolMDHash,
-    _poolMDUrl,
-    _poolMargin,
-    _poolOwners,
-    _poolPledge,
-    _poolPubKey,
-    _poolRAcnt,
-    _poolRelays,
-    _poolVrf,
-    _ttl,
-    _txUpdate,
-    _txfee,
-    _wdrls,
-    pattern DCertDeleg,
-    pattern DCertPool,
-    pattern Delegation,
-    pattern PoolParams,
-    pattern RewardAcnt,
-    pattern TxBody,
-    pattern TxIn,
-    pattern TxOut,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Addr,
-    C,
-    Credential,
-    MultiSig,
-    PoolParams,
-    SignKeyVRF,
-    Tx,
-    TxBody,
-    VerKeyVRF,
-    hashKeyVRF,
-  )
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
@@ -119,7 +86,7 @@ aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
 
-aliceSHK :: Credential C 'Staking
+aliceSHK :: Credential 'Staking C
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
 alicePool :: KeyPair 'StakePool C
@@ -137,7 +104,7 @@ alicePoolParams :: PoolParams C
 alicePoolParams =
   PoolParams
     { _poolPubKey = alicePoolKH,
-      _poolVrf = hashKeyVRF . snd $ aliceVRF,
+      _poolVrf = hashVerKeyVRF . snd $ aliceVRF,
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeMkUnitInterval 0.1,
@@ -165,7 +132,7 @@ bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (1, 0, 0, 0, 1)
 
-bobSHK :: Credential C 'Staking
+bobSHK :: Credential 'Staking C
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 bobAddr :: Addr C

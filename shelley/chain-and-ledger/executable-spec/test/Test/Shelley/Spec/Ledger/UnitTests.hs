@@ -21,18 +21,38 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (getRwdCred, mkVKeyRwdAcnt, pattern Addr)
+import Shelley.Spec.Ledger.API
+  ( DCert (..),
+    LEDGER,
+    LedgerEnv (..),
+  )
+import Shelley.Spec.Ledger.Address
+  ( Addr (..),
+    getRwdCred,
+    mkVKeyRwdAcnt,
+  )
 import Shelley.Spec.Ledger.BaseTypes hiding ((==>))
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
 import Shelley.Spec.Ledger.Coin
-import qualified Shelley.Spec.Ledger.Credential as Credential (Credential (KeyHashObj), pattern StakeRefBase)
+import Shelley.Spec.Ledger.Credential
+  ( Credential (..),
+    StakeReference (..),
+  )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
-import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
-import Shelley.Spec.Ledger.Keys (KeyPair (..))
+import Shelley.Spec.Ledger.Keys
+  ( KeyPair (..),
+    KeyRole (..),
+    asWitness,
+    hashKey,
+    hashVerKeyVRF,
+    vKey,
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
+    DPState (..),
+    UTxOState (..),
     WitHashes (..),
     emptyDState,
     emptyPPUPState,
@@ -40,15 +60,12 @@ import Shelley.Spec.Ledger.LedgerState
     overlaySchedule,
     _dstate,
     _rewards,
-    pattern DPState,
-    pattern UTxOState,
   )
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.STS.Delegs (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Delpl (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Ledger
   ( pattern DelegsFailure,
-    pattern LedgerEnv,
     pattern UtxoFailure,
     pattern UtxowFailure,
   )
@@ -57,15 +74,16 @@ import Shelley.Spec.Ledger.STS.Utxo (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
-  ( WitnessSetHKD (..),
+  ( Tx (..),
+    TxBody (..),
+    TxIn (..),
+    TxOut (..),
+    WitnessSetHKD (..),
     _ttl,
-    pattern Tx,
-    pattern TxBody,
-    pattern TxIn,
-    pattern TxOut,
   )
 import Shelley.Spec.Ledger.TxData
   ( PoolMetaData (..),
+    PoolParams (..),
     Wdrl (..),
     _poolCost,
     _poolMD,
@@ -79,7 +97,6 @@ import Shelley.Spec.Ledger.TxData
     _poolRelays,
     _poolVrf,
     pattern DCertPool,
-    pattern PoolParams,
     pattern RewardAcnt,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
@@ -106,8 +123,8 @@ aliceAddr :: Addr C
 aliceAddr =
   Addr
     Testnet
-    (Credential.KeyHashObj . hashKey $ vKey alicePay)
-    (Credential.StakeRefBase . Credential.KeyHashObj . hashKey $ vKey aliceStake)
+    (KeyHashObj . hashKey $ vKey alicePay)
+    (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
 bobPay :: KeyPair 'Payment C
 bobPay = KeyPair 3 3
@@ -119,8 +136,8 @@ bobAddr :: Addr C
 bobAddr =
   Addr
     Testnet
-    (Credential.KeyHashObj . hashKey $ vKey bobPay)
-    (Credential.StakeRefBase . Credential.KeyHashObj . hashKey $ vKey bobStake)
+    (KeyHashObj . hashKey $ vKey bobPay)
+    (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
 
 pp :: PParams
 pp =
@@ -375,7 +392,7 @@ utxoState =
 dpState :: DPState C
 dpState = DPState emptyDState emptyPState
 
-addReward :: DPState C -> Credential C 'Staking -> Coin -> DPState C
+addReward :: DPState C -> Credential 'Staking C -> Coin -> DPState C
 addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
   where
     ds = _dstate dp
@@ -652,11 +669,11 @@ alicePoolParamsSmallCost :: PoolParams C
 alicePoolParamsSmallCost =
   PoolParams
     { _poolPubKey = hashKey . vKey $ alicePoolColdKeys,
-      _poolVrf = hashKeyVRF vkVrf,
+      _poolVrf = hashVerKeyVRF vkVrf,
       _poolPledge = Coin 1,
       _poolCost = Coin 5, -- Too Small!
       _poolMargin = unsafeMkUnitInterval 0.1,
-      _poolRAcnt = RewardAcnt Testnet (Credential.KeyHashObj . hashKey . vKey $ aliceStake),
+      _poolRAcnt = RewardAcnt Testnet (KeyHashObj . hashKey . vKey $ aliceStake),
       _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
       _poolRelays = StrictSeq.empty,
       _poolMD =

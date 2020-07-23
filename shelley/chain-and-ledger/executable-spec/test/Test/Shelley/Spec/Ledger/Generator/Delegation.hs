@@ -26,69 +26,47 @@ import Data.Set ((\\))
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
-import Shelley.Spec.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-    interval0,
-  )
-import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Credential (pattern KeyHashObj)
-import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Delegation.Certificates
-  ( pattern DCertMir,
-    pattern DeRegKey,
-    pattern Delegate,
-    pattern GenesisDelegCert,
-    pattern MIRCert,
-    pattern RegKey,
-    pattern RegPool,
-    pattern RetirePool,
-  )
-import Shelley.Spec.Ledger.Keys
-  ( GenDelegPair (..),
+import Shelley.Spec.Ledger.API
+  ( AccountState (..),
+    Coin (..),
+    Credential (..),
+    DCert (..),
+    DPState (..),
+    DState (..),
+    DelegCert (..),
+    Delegation (..),
+    GenDelegPair (..),
     GenDelegs (..),
+    GenesisDelegCert (..),
     KeyHash,
     KeyPair,
+    KeyPairs,
     KeyRole (..),
+    MIRCert (..),
+    MIRPot (..),
+    MultiSig,
+    Network (..),
+    PParams,
+    PParams' (..),
+    PState (..),
+    PoolCert (..),
+    PoolParams (..),
+    RewardAcnt (..),
+    StrictMaybe (..),
     VKey,
-    coerceKeyRole,
+  )
+import Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
+import Shelley.Spec.Ledger.BaseTypes (interval0)
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Keys
+  ( coerceKeyRole,
     hashKey,
+    hashVerKeyVRF,
     vKey,
   )
-import Shelley.Spec.Ledger.LedgerState
-  ( AccountState (..),
-    _dstate,
-    _fGenDelegs,
-    _genDelegs,
-    _pParams,
-    _pstate,
-    _retiring,
-    _rewards,
-  )
-import Shelley.Spec.Ledger.PParams (PParams, _d, _minPoolCost)
 import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
-import Shelley.Spec.Ledger.TxData
-  ( MIRPot (..),
-    RewardAcnt (..),
-    pattern DCertDeleg,
-    pattern DCertGenesis,
-    pattern DCertPool,
-    pattern Delegation,
-    pattern PoolParams,
-  )
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( DCert,
-    DPState,
-    DState,
-    KeyPairs,
-    MultiSig,
-    PState,
-    PoolParams,
-    hashKeyVRF,
-  )
 import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -345,7 +323,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
             ( GenesisDelegCert
                 (hashVKey gkey)
                 (hashVKey key)
-                (hashKeyVRF vrf)
+                (hashVerKeyVRF vrf)
             ),
           CoreKeyCred [gkey]
         )
@@ -388,7 +366,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
           pps =
             PoolParams
               (hashKey . vKey . cold $ allPoolKeys)
-              (hashKeyVRF . snd . vrf $ allPoolKeys)
+              (hashVerKeyVRF . snd . vrf $ allPoolKeys)
               pledge
               cost
               interval

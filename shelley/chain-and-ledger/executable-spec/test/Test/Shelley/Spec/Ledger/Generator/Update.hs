@@ -21,6 +21,10 @@ import Data.Ratio (Ratio, (%))
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.API
+  ( ProposedPPUpdates,
+    Update,
+  )
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (NeutralNonce),
     StrictMaybe (..),
@@ -39,7 +43,11 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     vKey,
   )
-import Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
+import Shelley.Spec.Ledger.LedgerState
+  ( DPState (..),
+    DState (..),
+    UTxOState (..),
+  )
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
@@ -50,13 +58,6 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( DPState,
-    GenesisKeyPair,
-    ProposedPPUpdates,
-    UTxOState,
-    Update,
-  )
 import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -67,7 +68,10 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     increasingProbabilityAt,
     tooLateInEpoch,
   )
-import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
+import Test.Shelley.Spec.Ledger.Utils
+  ( GenesisKeyPair,
+    epochFromSlotNo,
+  )
 
 genRationalInThousands :: HasCallStack => Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
@@ -254,7 +258,7 @@ genUpdateForNodes ::
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [GenesisKeyPair c] ->
+  [KeyPair 'Genesis c] ->
   PParams ->
   Gen (Maybe (Update c))
 genUpdateForNodes c s e coreKeys pp =

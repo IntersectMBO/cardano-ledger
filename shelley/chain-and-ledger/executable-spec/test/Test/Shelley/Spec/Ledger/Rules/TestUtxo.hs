@@ -17,6 +17,7 @@ import Control.State.Transition.Trace
     pattern SourceSignalTarget,
   )
 import Data.List (foldl')
+import Shelley.Spec.Ledger.API (UTXO)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.LedgerState (_deposited, _fees, _utxo, pattern UTxOState)
@@ -24,7 +25,7 @@ import Shelley.Spec.Ledger.Tx (_body, pattern Tx)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), _wdrls)
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, conjoin)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, UTXO)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 
 --------------------------
 -- Properties for UTXOW --

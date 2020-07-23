@@ -29,17 +29,17 @@ import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup, (\
 import qualified Data.Maybe as Maybe (maybe)
 import Data.Set (Set)
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
+import Shelley.Spec.Ledger.API (DELEG)
 import Shelley.Spec.Ledger.BaseTypes ((==>))
 import Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
+import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
     KeyRole (..),
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( InstantaneousRewards (..),
-    _delegations,
-    _irwd,
-    _rewards,
+  ( DState (..),
+    InstantaneousRewards (..),
   )
 import Shelley.Spec.Ledger.TxData
   ( MIRPot (..),
@@ -54,22 +54,19 @@ import Shelley.Spec.Ledger.TxData
 import Test.QuickCheck (Property, conjoin, counterexample, property)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( C,
-    Credential,
-    DELEG,
-    DState,
   )
 
 -------------------------------
 -- helper accessor functions --
 -------------------------------
 
-getStDelegs :: DState C -> Set (Credential C 'Staking)
+getStDelegs :: DState C -> Set (Credential 'Staking C)
 getStDelegs = \x -> eval (dom (_rewards x))
 
-getRewards :: DState C -> Map (Credential C 'Staking) Coin
+getRewards :: DState C -> Map (Credential 'Staking C) Coin
 getRewards = _rewards
 
-getDelegations :: DState C -> Map (Credential C 'Staking) (KeyHash 'StakePool C)
+getDelegations :: DState C -> Map (Credential 'Staking C) (KeyHash 'StakePool C)
 getDelegations = _delegations
 
 --------------------------

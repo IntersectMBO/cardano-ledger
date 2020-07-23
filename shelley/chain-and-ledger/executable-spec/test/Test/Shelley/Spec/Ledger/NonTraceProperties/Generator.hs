@@ -39,16 +39,27 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Numeric.Natural
-import Shelley.Spec.Ledger.Address (pattern Addr)
+import Shelley.Spec.Ledger.API
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    LEDGER,
+    PoolCert (..),
+    Wdrl (..),
+  )
+import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern StakeRefBase)
+import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyPair (..))
 import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
+    DPState (..),
+    KeyPairs,
+    LedgerState (..),
     genesisState,
     _delegationState,
     _dstate,
@@ -79,38 +90,15 @@ import Shelley.Spec.Ledger.STS.Utxow
   )
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
-  ( WitnessSetHKD (..),
-    _body,
-    pattern Tx,
-    pattern TxBody,
-    pattern TxOut,
-  )
-import Shelley.Spec.Ledger.TxData
-  ( Wdrl (..),
-    pattern DCertDeleg,
-    pattern DCertPool,
-    pattern DeRegKey,
-    pattern Delegate,
-    pattern Delegation,
-    pattern RegKey,
-    pattern RetirePool,
-  )
-import Shelley.Spec.Ledger.UTxO (balance, makeWitnessVKey, pattern UTxO)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Addr,
-    Credential,
-    DCert,
-    DPState,
-    Delegation,
-    KeyPairs,
-    LEDGER,
-    LedgerState,
-    Mock,
-    StakeReference,
-    Tx,
+  ( Tx (..),
+    TxBody (..),
     TxIn,
-    TxOut,
-    UTxO,
+    TxOut (..),
+    WitnessSetHKD (..),
+  )
+import Shelley.Spec.Ledger.UTxO (UTxO (..), balance, makeWitnessVKey)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+  ( Mock,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( applyTxBody,
@@ -166,7 +154,7 @@ genKeyPairs lower upper = do
 
 -- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
 -- hashed keys
-hashKeyPairs :: Crypto c => KeyPairs c -> [(Credential c 'Payment, StakeReference c)]
+hashKeyPairs :: Crypto c => KeyPairs c -> [(Credential 'Payment c, StakeReference c)]
 hashKeyPairs keyPairs =
   ( \(a, b) ->
       ( KeyHashObj . hashKey $ vKey a,
@@ -332,7 +320,7 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
     repeatCollectTx' (n - 1) keyPairs (txfee' + fees) ls' (tx : txs) (validationErrors ++ errors')
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
-findStakeKeyPair :: Crypto c => Credential c 'Staking -> KeyPairs c -> KeyPair 'Staking c
+findStakeKeyPair :: Crypto c => Credential 'Staking c -> KeyPairs c -> KeyPair 'Staking c
 findStakeKeyPair (KeyHashObj hk) keyList =
   snd $ head $ filter (\(_, stake) -> hk == hashKey (vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case

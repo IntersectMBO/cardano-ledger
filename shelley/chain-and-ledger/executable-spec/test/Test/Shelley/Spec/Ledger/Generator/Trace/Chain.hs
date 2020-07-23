@@ -31,15 +31,21 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, fromList, keysSet)
 import Data.Proxy
 import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.API
+  ( CHAIN,
+    ChainState,
+  )
 import Shelley.Spec.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.BlockChain
-  ( LastAppliedBlock (..),
+  ( HashHeader (..),
+    LastAppliedBlock (..),
     hashHeaderToNonce,
-    pattern HashHeader,
   )
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
-  ( KeyHash,
+  ( GenDelegPair (..),
+    GenDelegs (..),
+    KeyHash,
     KeyRole (BlockIssuer),
     coerceKeyRole,
   )
@@ -50,13 +56,7 @@ import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( CHAIN,
-    ChainState,
-    GenDelegs,
-    HashHeader,
-    Mock,
-    pattern GenDelegPair,
-    pattern GenDelegs,
+  ( Mock,
   )
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))

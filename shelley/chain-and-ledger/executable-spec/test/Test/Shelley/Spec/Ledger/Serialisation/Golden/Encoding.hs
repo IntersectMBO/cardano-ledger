@@ -41,7 +41,14 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.String (fromString)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (pattern Addr)
+import Shelley.Spec.Ledger.API
+  ( MultiSig,
+    PoolDistr,
+    ScriptHash,
+  )
+import Shelley.Spec.Ledger.Address
+  ( Addr (..),
+  )
 import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     Nonce (..),
@@ -52,7 +59,11 @@ import Shelley.Spec.Ledger.BaseTypes
     truncateUnitInterval,
   )
 import Shelley.Spec.Ledger.BlockChain
-  ( Block (..),
+  ( BHBody (..),
+    BHeader (..),
+    Block (..),
+    HashHeader (..),
+    PrevHash (..),
     TxSeq (..),
     bbHash,
     bhash,
@@ -69,13 +80,9 @@ import Shelley.Spec.Ledger.BlockChain
     mkSeed,
     seedEta,
     seedL,
-    pattern BHBody,
-    pattern BHeader,
-    pattern BlockHash,
-    pattern HashHeader,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern ScriptHashObj, pattern StakeRefNull)
+import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,
@@ -99,10 +106,16 @@ import Shelley.Spec.Ledger.Keys
     KeyHash (..),
     KeyPair (..),
     KeyRole (..),
+    SignKeyKES,
+    SignKeyVRF,
+    SignedDSIGN,
     VKey (..),
+    VerKeyKES,
+    VerKeyVRF,
     asWitness,
     encodeSignedKES,
     hashKey,
+    hashVerKeyVRF,
     hashWithSerialiser,
     sKey,
     signedDSIGN,
@@ -113,14 +126,9 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState (..),
     NewEpochState (..),
-    deltaF,
-    deltaR,
-    deltaT,
+    RewardUpdate (..),
     emptyLedgerState,
-    nonMyopic,
-    rs,
     pattern ActiveSlot,
-    pattern RewardUpdate,
   )
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCertSignable (..), pattern OCert)
@@ -146,6 +154,10 @@ import Shelley.Spec.Ledger.TxData
   ( MIRPot (..),
     PoolMetaData (..),
     StakePoolRelay (..),
+    TxBody (..),
+    TxId,
+    TxIn (..),
+    TxOut (..),
     Wdrl (..),
     WitVKey (..),
     _poolCost,
@@ -166,34 +178,10 @@ import Shelley.Spec.Ledger.TxData
     pattern Delegation,
     pattern PoolParams,
     pattern RewardAcnt,
-    pattern TxBody,
-    pattern TxIn,
-    pattern TxOut,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Addr,
-    BHBody,
-    C,
-    Credential,
-    HashHeader,
-    Mock,
-    MultiSig,
-    PoolDistr,
-    RewardUpdate,
-    ScriptHash,
-    SignKeyKES,
-    SignKeyVRF,
-    SignedDSIGN,
-    TxBody,
-    TxId,
-    TxIn,
-    VRFKeyHash,
-    VerKeyKES,
-    VerKeyVRF,
-    hashKeyVRF,
-  )
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
@@ -286,8 +274,8 @@ testGKeyHash _ = (hashKey . vKey) testGKey
 testVRF :: Crypto c => proxy c -> (SignKeyVRF c, VerKeyVRF c)
 testVRF _ = mkVRFKeyPair (0, 0, 0, 0, 5)
 
-testVRFKH :: Crypto c => proxy c -> VRFKeyHash c
-testVRFKH p = hashKeyVRF $ snd (testVRF p)
+testVRFKH :: Crypto c => proxy c -> Hash c (VerKeyVRF c)
+testVRFKH p = hashVerKeyVRF $ snd (testVRF p)
 
 testTxb :: Crypto c => TxBody c
 testTxb = TxBody Set.empty StrictSeq.empty StrictSeq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) SNothing SNothing
@@ -355,10 +343,10 @@ testKESKeys _ = mkKESKeyPair (0, 0, 0, 0, 3)
 testAddrE :: Crypto c => Proxy c -> Addr c
 testAddrE p = Addr Testnet (KeyHashObj (testKeyHash1 p)) StakeRefNull
 
-testPayCred :: Crypto c => proxy c -> Credential c 'Payment
+testPayCred :: Crypto c => proxy c -> Credential 'Payment c
 testPayCred p = KeyHashObj (testKeyHash1 p)
 
-testStakeCred :: Crypto c => proxy c -> Credential c 'Staking
+testStakeCred :: Crypto c => proxy c -> Credential 'Staking c
 testStakeCred p = KeyHashObj (testKeyHash2 p)
 
 testScript :: Crypto c => proxy c -> MultiSig c

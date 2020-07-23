@@ -12,6 +12,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as S
+import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.PParams
@@ -20,7 +21,6 @@ import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
 import Test.QuickCheck (shrinkIntegral, shrinkList)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block)
 
 shrinkBlock ::
   Block h ->

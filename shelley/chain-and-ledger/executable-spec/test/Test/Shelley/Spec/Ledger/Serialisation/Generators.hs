@@ -37,7 +37,23 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64, Word8)
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.API
+  ( DELEG,
+    DELEGS,
+    DELPL,
+    EpochState (..),
+    LEDGER,
+    LEDGERS,
+    NonMyopic,
+    POOL,
+    PPUP,
+    SnapShot,
+    SnapShots,
+    UTXO,
+    UTXOW,
+  )
 import Shelley.Spec.Ledger.Address (Addr (Addr))
+import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.Address.Bootstrap
   ( ChainCode (..),
     pattern BootstrapWitness,
@@ -55,7 +71,11 @@ import Shelley.Spec.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
-import Shelley.Spec.Ledger.BlockChain (HashHeader (..), pattern Block)
+import Shelley.Spec.Ledger.BlockChain
+  ( BHeader,
+    Block (..),
+    HashHeader (..),
+  )
 import Shelley.Spec.Ledger.Coin (Coin (Coin))
 import Shelley.Spec.Ledger.Credential (Credential (..), Ptr, StakeReference)
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
@@ -67,7 +87,8 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
-    EpochState (..),
+    LedgerState,
+    NewEpochState (..),
     OBftSlot,
     RewardUpdate,
     WitHashes (..),
@@ -90,6 +111,7 @@ import Shelley.Spec.Ledger.Scripts
     Script (..),
     ScriptHash (ScriptHash),
   )
+import Shelley.Spec.Ledger.Tx (Tx)
 import Shelley.Spec.Ledger.TxData
   ( MIRPot,
     PoolMetaData (PoolMetaData),
@@ -113,7 +135,6 @@ import Test.QuickCheck.Hedgehog (hedgehog)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( genSignature,
   )
-import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Mock
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( KeySpace (KeySpace_),
@@ -146,11 +167,11 @@ type MockGen c = (Mock c, Arbitrary (VerKeyDSIGN (DSIGN c)))
 
 instance
   Mock c =>
-  Arbitrary (Mock.Block c)
+  Arbitrary (Block c)
   where
   arbitrary = do
     let KeySpace_ {ksCoreNodes} = geKeySpace (genEnv p)
-    prevHash <- arbitrary :: Gen (Mock.HashHeader c)
+    prevHash <- arbitrary :: Gen (HashHeader c)
     allPoolKeys <- elements (map snd ksCoreNodes)
     txs <- arbitrary
     curSlotNo <- SlotNo <$> choose (0, 10)
@@ -178,9 +199,9 @@ instance
       p :: Proxy c
       p = Proxy
 
-instance Mock c => Arbitrary (Mock.BHeader c) where
+instance Mock c => Arbitrary (BHeader c) where
   arbitrary = do
-    res <- arbitrary :: Gen (Mock.Block c)
+    res <- arbitrary :: Gen (Block c)
     return $ case res of
       Block header _ -> header
       _ -> error "SerializationProperties::BHeader - failed to deconstruct header from block"
@@ -190,7 +211,7 @@ instance Arbitrary (SignedDSIGN MockDSIGN a) where
     SignedDSIGN . fromJust . rawDeserialiseSigDSIGN
       <$> hedgehog (genBytes . fromIntegral $ sizeSigDSIGN (Proxy :: Proxy MockDSIGN))
 
-instance MockGen c => Arbitrary (Mock.BootstrapWitness c) where
+instance MockGen c => Arbitrary (BootstrapWitness c) where
   arbitrary = do
     key <- arbitrary
     sig <- genSignature
@@ -201,7 +222,7 @@ instance MockGen c => Arbitrary (Mock.BootstrapWitness c) where
 instance Crypto c => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> genHash
 
-instance Mock c => Arbitrary (Mock.Tx c) where
+instance Mock c => Arbitrary (Tx c) where
   arbitrary = do
     (_ledgerState, _steps, _txfee, tx, _lv) <- hedgehog (genStateTx (Proxy @c))
     return tx
@@ -215,7 +236,7 @@ instance Crypto c => Arbitrary (TxIn c) where
       <$> (TxId <$> genHash)
       <*> arbitrary
 
-instance Mock c => Arbitrary (Mock.TxOut c) where
+instance Mock c => Arbitrary (TxOut c) where
   arbitrary = TxOut <$> arbitrary <*> arbitrary
 
 instance Arbitrary Nonce where
@@ -247,39 +268,39 @@ instance Arbitrary STS.VotingPeriod where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (STS.PredicateFailure (Mock.PPUP c)) where
+instance Crypto c => Arbitrary (STS.PredicateFailure (PPUP c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (STS.PredicateFailure (Mock.UTXO c)) where
+instance Mock c => Arbitrary (STS.PredicateFailure (UTXO c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance MockGen c => Arbitrary (STS.PredicateFailure (Mock.UTXOW c)) where
+instance MockGen c => Arbitrary (STS.PredicateFailure (UTXOW c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (STS.PredicateFailure (Mock.POOL c)) where
+instance Crypto c => Arbitrary (STS.PredicateFailure (POOL c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (STS.PredicateFailure (Mock.DELPL c)) where
+instance Mock c => Arbitrary (STS.PredicateFailure (DELPL c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (STS.PredicateFailure (Mock.DELEG c)) where
+instance Mock c => Arbitrary (STS.PredicateFailure (DELEG c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (STS.PredicateFailure (Mock.DELEGS c)) where
+instance Mock c => Arbitrary (STS.PredicateFailure (DELEGS c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance MockGen c => Arbitrary (STS.PredicateFailure (Mock.LEDGER c)) where
+instance MockGen c => Arbitrary (STS.PredicateFailure (LEDGER c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance MockGen c => Arbitrary (STS.PredicateFailure (Mock.LEDGERS c)) where
+instance MockGen c => Arbitrary (STS.PredicateFailure (LEDGERS c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -295,7 +316,7 @@ instance Arbitrary EpochNo where
   -- Cannot be negative even though it is an 'Integer'
   arbitrary = EpochNo <$> choose (1, 100000)
 
-instance Mock c => Arbitrary (Mock.Addr c) where
+instance Mock c => Arbitrary (Addr c) where
   arbitrary =
     oneof
       [ Addr <$> arbitrary <*> arbitrary <*> arbitrary
@@ -356,12 +377,12 @@ instance Crypto c => Arbitrary (STS.PrtclState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (Mock.LedgerState c) where
+instance Mock c => Arbitrary (LedgerState c) where
   arbitrary = do
     (_ledgerState, _steps, _txfee, _tx, ledgerState) <- hedgehog (genValidStateTx (Proxy @c))
     return ledgerState
 
-instance Mock c => Arbitrary (Mock.NewEpochState c) where
+instance Mock c => Arbitrary (NewEpochState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -375,7 +396,7 @@ instance Crypto c => Arbitrary (PoolDistr c) where
     where
       genVal = IndividualPoolStake <$> arbitrary <*> genHash
 
-instance Mock c => Arbitrary (Mock.EpochState c) where
+instance Mock c => Arbitrary (EpochState c) where
   arbitrary =
     EpochState
       <$> arbitrary
@@ -405,22 +426,22 @@ instance Arbitrary Likelihood where
 instance Arbitrary LogWeight where
   arbitrary = LogWeight <$> arbitrary
 
-instance Mock c => Arbitrary (Mock.NonMyopic c) where
+instance Mock c => Arbitrary (NonMyopic c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (Mock.SnapShot c) where
+instance Mock c => Arbitrary (SnapShot c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (Mock.SnapShots c) where
+instance Mock c => Arbitrary (SnapShots c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance Arbitrary PerformanceEstimate where
   arbitrary = PerformanceEstimate <$> arbitrary
 
-instance Mock c => Arbitrary (Mock.Stake c) where
+instance Mock c => Arbitrary (Stake c) where
   arbitrary = Stake <$> arbitrary
 
 instance Mock c => Arbitrary (PoolParams c) where

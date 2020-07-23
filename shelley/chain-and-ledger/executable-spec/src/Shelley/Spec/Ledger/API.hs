@@ -6,5 +6,6 @@ where
 
 import Shelley.Spec.Ledger.API.Mempool as X
 import Shelley.Spec.Ledger.API.Protocol as X
+import Shelley.Spec.Ledger.API.Types as X
 import Shelley.Spec.Ledger.API.Validation as X
 import Shelley.Spec.Ledger.API.Wallet as X

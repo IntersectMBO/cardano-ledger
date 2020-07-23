@@ -24,6 +24,11 @@ import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitS
 import Data.Foldable (foldl')
 import Data.Proxy
 import Data.Word (Word64)
+import Shelley.Spec.Ledger.API
+  ( CHAIN,
+    POOLREAP,
+    TICK,
+  )
 import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
     TxSeq (..),
@@ -41,9 +46,6 @@ import Shelley.Spec.Ledger.TxData
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( C,
-    CHAIN,
-    POOLREAP,
-    TICK,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (geConstants))
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)

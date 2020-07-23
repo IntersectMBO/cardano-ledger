@@ -24,24 +24,21 @@ import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyPair (..))
 import Shelley.Spec.Ledger.Keys
-  ( KeyHash,
+  ( GenDelegPair (..),
+    KeyHash,
     KeyRole (..),
     coerceKeyRole,
     hashKey,
+    hashVerKeyVRF,
     vKey,
   )
+import Shelley.Spec.Ledger.LedgerState
+  ( KeyPairs,
+  )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( GenDelegPair,
-    GenesisKeyPair,
-    KeyPairs,
-    MultiSigPairs,
-    UTxO,
-    hashKeyVRF,
-    pattern GenDelegPair,
-  )
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
     defaultConstants,
@@ -55,6 +52,7 @@ import Test.Shelley.Spec.Ledger.Utils
     mkVRFKeyPair,
     slotsPerKESIteration,
   )
+import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs)
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
@@ -110,7 +108,7 @@ someScripts c lower upper =
 --
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
-coreNodeKeys :: Crypto c => Constants -> [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+coreNodeKeys :: Crypto c => Constants -> [(KeyPair 'Genesis c, AllIssuerKeys c 'GenesisDelegate)]
 coreNodeKeys c@Constants {numCoreNodes} =
   [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0),
       issuerKeys c 0 x
@@ -182,7 +180,7 @@ genesisDelegs0 c =
     [ ( hashVKey gkey,
         GenDelegPair
           (coerceKeyRole $ hashVKey (cold pkeys))
-          (hashKeyVRF . snd . vrf $ pkeys)
+          (hashVerKeyVRF . snd . vrf $ pkeys)
       )
       | (gkey, pkeys) <- coreNodeKeys c
     ]
