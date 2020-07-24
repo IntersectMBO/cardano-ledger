@@ -71,6 +71,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     UTXOW,
     UTxOState,
     Wdrl,
+    Value,
     pattern GenDelegs,
   )
 import Test.Shelley.Spec.Ledger.Examples
@@ -86,6 +87,11 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genesisId,
   )
 import Test.Shelley.Spec.Ledger.Utils
+import Shelley.Spec.Ledger.Value
+  ( coinToValue,
+    zeroV,
+    gt,
+  )
 
 -- Multi-Signature tests
 
@@ -124,24 +130,26 @@ aliceAndBobOrCarlOrDaria p =
       RequireAnyOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]
     ]
 
-initTxBody :: Crypto c => [(Addr c, Coin)] -> TxBody c
+initTxBody :: Crypto c => [(Addr c, Value c)] -> TxBody c
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
     (StrictSeq.fromList $ map (uncurry TxOut) addrs)
     Empty
+    zeroV
     (Wdrl Map.empty)
     (Coin 0)
     (SlotNo 0)
     SNothing
     SNothing
 
-makeTxBody :: Crypto c => [TxIn c] -> [(Addr c, Coin)] -> Wdrl c -> TxBody c
+makeTxBody :: Crypto c => [TxIn c] -> [(Addr c, Value c)] -> Wdrl c -> TxBody c
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
     (StrictSeq.fromList [uncurry TxOut addrC | addrC <- addrCs])
     Empty
+    zeroV
     wdrl
     (Coin 0)
     (SlotNo 10)
@@ -157,11 +165,11 @@ makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
           msigWits = msigs
         }
 
-aliceInitCoin :: Coin
-aliceInitCoin = 10000
+aliceInitCoin :: Value h
+aliceInitCoin = coinToValue 10000
 
-bobInitCoin :: Coin
-bobInitCoin = 1000
+bobInitCoin :: Value h
+bobInitCoin = coinToValue 1000
 
 genesis :: Crypto c => LedgerState c
 genesis = genesisState genDelegs0 utxo0
@@ -183,19 +191,19 @@ initPParams = emptyPParams {_maxTxSize = 1000}
 initialUTxOState ::
   forall c.
   Mock c =>
-  Coin ->
-  [(MultiSig c, Coin)] ->
+  Value c ->
+  [(MultiSig c, Value c)] ->
   (TxId c, Either [[PredicateFailure (UTXOW c)]] (UTxOState c))
 initialUTxOState aliceKeep msigs =
   let addresses =
-        [(aliceAddr, aliceKeep) | aliceKeep > 0]
+        [(aliceAddr, aliceKeep) | gt aliceKeep zeroV]
           ++ map
-            ( \(msig, c) ->
+            ( \(msig, v) ->
                 ( Addr
                     Testnet
                     (ScriptHashObj $ hashScript msig)
                     (StakeRefBase $ ScriptHashObj $ hashScript msig),
-                  c
+                  v
                 )
             )
             msigs
@@ -231,10 +239,10 @@ applyTxWithScript ::
   forall proxy c.
   Mock c =>
   proxy c ->
-  [(MultiSig c, Coin)] ->
+  [(MultiSig c, Value c)] ->
   [MultiSig c] ->
   Wdrl c ->
-  Coin ->
+  Value c ->
   [KeyPair 'Witness c] ->
   Either [[PredicateFailure (UTXOW c)]] (UTxOState c)
 applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
@@ -250,12 +258,12 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
     txbody =
       makeTxBody
         inputs
-        [(aliceAddr, aliceInitCoin + bobInitCoin + sum (unWdrl wdrl))]
+        [(aliceAddr, aliceInitCoin <> bobInitCoin <> (coinToValue $ sum (unWdrl wdrl)))]
         wdrl
     inputs =
       [ TxIn txId (fromIntegral n)
         | n <-
-            [0 .. length lockScripts - (if aliceKeep > 0 then 0 else 1)]
+            [0 .. length lockScripts - (if (gt aliceKeep zeroV) then 0 else 1)]
       ]
     -- alice? + scripts
     tx =

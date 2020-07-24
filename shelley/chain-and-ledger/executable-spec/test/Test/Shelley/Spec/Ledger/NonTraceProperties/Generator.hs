@@ -12,7 +12,6 @@
 
 module Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
   ( utxoSize,
-    utxoMap,
     genNonEmptyAndAdvanceTx,
     genNonEmptyAndAdvanceTx',
     genNonemptyGenesisState,
@@ -29,7 +28,8 @@ module Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
 where
 
 import Control.State.Transition.Extended (TRC (..))
-import Data.Map.Strict (Map)
+import Data.ByteString.Char8 (pack)
+
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as StrictSeq
@@ -70,6 +70,7 @@ import Shelley.Spec.Ledger.STS.Utxo
     pattern FeeTooSmallUTxO,
     pattern InputSetEmptyUTxO,
     pattern ValueNotConservedUTxO,
+    pattern ForgingAda,
   )
 import Shelley.Spec.Ledger.STS.Utxow
   ( PredicateFailure (..),
@@ -87,6 +88,7 @@ import Shelley.Spec.Ledger.Tx
   )
 import Shelley.Spec.Ledger.TxData
   ( Wdrl (..),
+    getAddress,
     pattern DCertDeleg,
     pattern DCertPool,
     pattern DeRegKey,
@@ -96,6 +98,11 @@ import Shelley.Spec.Ledger.TxData
     pattern RetirePool,
   )
 import Shelley.Spec.Ledger.UTxO (balance, makeWitnessVKey, pattern UTxO)
+import Shelley.Spec.Ledger.Value
+  ( coinToValue,
+    splitValueFee,
+    zeroV,
+  )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
     Credential,
@@ -108,9 +115,9 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     Mock,
     StakeReference,
     Tx,
-    TxIn,
     TxOut,
     UTxO,
+    Value,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( applyTxBody,
@@ -144,10 +151,6 @@ genWord64 lower upper = Gen.integral $ Range.linear lower upper
 -- | Returns the number of entries of the UTxO set.
 utxoSize :: UTxO h -> Int
 utxoSize (UTxO m) = Map.size m
-
--- | Extract the map in an 'UTxO'.
-utxoMap :: UTxO h -> Map (TxIn h) (TxOut h)
-utxoMap (UTxO m) = m
 
 -- | Generates a list of '(pay, stake)' key pairs.
 genKeyPairs :: Mock c => Int -> Int -> Gen (KeyPairs c)
@@ -189,11 +192,17 @@ genCoinList minCoin maxCoin lower upper = do
       Gen.integral (Range.exponential minCoin maxCoin)
   return (Coin <$> xs)
 
+--TODO make correct
+genValueList :: Integer -> Integer -> Int -> Int -> Gen [Value c]
+genValueList minCoin maxCoin lower upper = do
+  xs <- genCoinList minCoin maxCoin lower upper
+  return (fmap coinToValue xs)
+
 -- | Generator for a list of 'TxOut' where for each 'Addr' of 'addrs' one Coin
 -- value is generated.
 genTxOut :: Crypto c => [Addr c] -> Gen [TxOut c]
 genTxOut addrs = do
-  ys <- genCoinList 100 10000 (length addrs) (length addrs)
+  ys <- genValueList 100 10000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- TODO generate sensible protocol constants
@@ -207,6 +216,12 @@ genNonemptyGenesisState _ = do
   keyPairs <- genKeyPairs 1 10
   (genesisState Map.empty . genesisCoins) <$> genTxOut (addrTxins keyPairs)
 
+-- TODO make witnesses for forges -- TODO use the one from Utxo
+-- generate value properly
+genValue :: Integer -> Integer -> Gen (Value c)
+genValue _ _ = do
+  pure zeroV
+
 -- | Generator for a new 'Tx' and fee value for executing the
 -- transaction. Selects one valid input from the UTxO, sums up all funds of the
 -- address associated to that input, selects a random subsequence of other valid
@@ -215,18 +230,21 @@ genNonemptyGenesisState _ = do
 -- 'rem b n'.
 genTx :: Mock c => KeyPairs c -> UTxO c -> SlotNo -> Gen (Coin, Tx c)
 genTx keyList (UTxO m) cslot = do
+  -- pick a forge value
+  txforge <- genValue 20 20
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
-  let !selectedAddr = addr $ head selectedInputs
-  let !selectedUTxO = Map.filter (\(TxOut a _) -> a == selectedAddr) m
+  let !selectedAddr    = addr $ head selectedInputs
+  let !selectedUTxO    = Map.filter (\out -> getAddress out == selectedAddr) m
   let !selectedKeyPair = findPayKeyPair selectedAddr keyList
-  let !selectedBalance = balance $ UTxO selectedUTxO
+  let !selectedBalance = (balance $ UTxO selectedUTxO) <> txforge
 
   -- select receipients, distribute balance of selected UTxO set
+  -- TODO whats up with coin vs value here
   n <- genNatural 1 10 -- (fromIntegral $ length keyList) -- TODO make this variable, but uses too much RAM atm
   receipients <- Seq.fromList . take (fromIntegral n) <$> Gen.shuffle keyList
   let realN = length receipients
-  let (perReceipient, txfee') = splitCoin selectedBalance (fromIntegral realN)
+  let (perReceipient, txfee') = splitValueFee selectedBalance (fromIntegral realN)
   let !receipientAddrs =
         fmap
           ( \(p, d) ->
@@ -242,6 +260,7 @@ genTx keyList (UTxO m) cslot = do
           (Map.keysSet selectedUTxO)
           (StrictSeq.toStrict ((`TxOut` perReceipient) <$> receipientAddrs))
           StrictSeq.Empty
+          txforge
           (Wdrl Map.empty) -- TODO generate witdrawals
           txfee'
           (cslot + SlotNo txttl)
@@ -252,7 +271,7 @@ genTx keyList (UTxO m) cslot = do
   pure (txfee', Tx txbody mempty {addrWits = Set.fromList [txwit]} SNothing)
   where
     utxoInputs = Map.keys m
-    addr inp = getTxOutAddr $ m Map.! inp
+    addr inp = getAddress $ m Map.! inp
 
 -- | Generator for new transaction state transition, starting from a
 -- 'LedgerState' and using a list of pairs of 'KeyPair'. Returns either the
@@ -337,9 +356,9 @@ findStakeKeyPair (KeyHashObj hk) keyList =
   snd $ head $ filter (\(_, stake) -> hk == hashKey (vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case
 
--- | Returns the hashed 'addr' part of a 'TxOut'.
-getTxOutAddr :: Crypto c => TxOut c -> Addr c
-getTxOutAddr (TxOut addr _) = addr
+-- -- | Returns the hashed 'addr' part of a 'TxOut'.
+-- getTxOutAddr :: HashAlgorithm h => TxOut h -> Addr h
+-- getTxOutAddr (TxOut addr _) = addr
 
 -- | Generator for arbitrary valid ledger state, discarding any generated
 -- invalid one.
@@ -495,7 +514,9 @@ predicateFailureToValidationError (UtxowFailure (UtxoFailure (BadInputsUTxO _)))
 predicateFailureToValidationError (UtxowFailure (UtxoFailure (FeeTooSmallUTxO a b))) =
   FeeTooSmall a b
 predicateFailureToValidationError (UtxowFailure (UtxoFailure (ValueNotConservedUTxO a b))) =
-  ValueNotConserved a b
+  ValueNotConserved (pack $ show a) (pack $ show b)
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (ForgingAda _))) =
+  UserForgingAda
 predicateFailureToValidationError (DelegsFailure (DelegateeNotRegisteredDELEG _)) =
   StakeDelegationImpossible
 predicateFailureToValidationError (DelegsFailure (WithdrawalsNotInRewardsDELEGS _)) =

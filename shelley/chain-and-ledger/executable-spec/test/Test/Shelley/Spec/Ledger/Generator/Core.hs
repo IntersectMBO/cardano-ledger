@@ -176,7 +176,7 @@ import Shelley.Spec.Ledger.UTxO
   ( UTxO,
     txins,
     txouts,
-    pattern UTxO,
+    fromTxUTxO,
   )
 -- import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 
@@ -198,6 +198,10 @@ import Test.Shelley.Spec.Ledger.Utils
     mkKeyPair,
     runShelleyBase,
     unsafeMkUnitInterval,
+  )
+import Shelley.Spec.Ledger.Value
+  ( coinToValue,
+    zeroV,
   )
 
 -- ===========================================================================
@@ -460,10 +464,11 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- Note: we need to keep the initial utxo coin sizes large enough so that
 -- when we simulate sequences of transactions, we have enough funds available
 -- to include certificates that require deposits.
+-- TODO - make this work with value
 genTxOut :: (HasCallStack, Crypto c) => Constants -> [Addr c] -> Gen [TxOut c]
 genTxOut Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
   ys <- genCoinList minGenesisOutputVal maxGenesisOutputVal (length addrs) (length addrs)
-  return (uncurry TxOut <$> zip addrs ys)
+  return (uncurry TxOut <$> zip addrs (fmap coinToValue ys))
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
 -- and with values between 'minCoin' and 'maxCoin'.
@@ -627,6 +632,7 @@ genesisId =
           Set.empty
           StrictSeq.Empty
           StrictSeq.Empty
+          zeroV
           (Wdrl Map.empty)
           (Coin 0)
           (SlotNo 0)
@@ -640,8 +646,8 @@ genesisCoins ::
   [TxOut c] ->
   UTxO c
 genesisCoins outs =
-  UTxO $
-    Map.fromList [(TxIn genesisId idx, out) | (idx, out) <- zip [0 ..] outs]
+  fromTxUTxO $
+    [(TxIn genesisId idx, out) | (idx, out) <- zip [0 ..] outs]
 
 -- | Apply a transaction body as a state transition function on the ledger state.
 applyTxBody ::

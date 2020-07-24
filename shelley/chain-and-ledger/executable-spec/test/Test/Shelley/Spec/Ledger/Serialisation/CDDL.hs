@@ -55,6 +55,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     TxBody,
     TxIn,
     TxOut,
+    Value,
     Update,
   )
 import Test.Tasty
@@ -74,6 +75,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(Credential C 'Staking) n "stake_credential",
       cddlTest' @(TxBody C) n "transaction_body",
       cddlTest @(TxOut C) n "transaction_output",
+      cddlTest @(Value C) n "value",
       cddlTest @StakePoolRelay n "relay",
       cddlTest @(DCert C) n "certificate",
       cddlTest @(TxIn C) n "transaction_input",

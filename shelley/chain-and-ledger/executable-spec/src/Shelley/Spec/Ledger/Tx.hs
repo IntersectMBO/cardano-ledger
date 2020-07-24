@@ -26,6 +26,7 @@ module Shelley.Spec.Ledger.Tx
       ),
     TxBody (..),
     TxOut (..),
+    UTxOOut (..),
     TxIn (..),
     TxId (..),
     decodeWits,
@@ -109,6 +110,7 @@ import Shelley.Spec.Ledger.TxData
     TxId (..),
     TxIn (..),
     TxOut (..),
+    UTxOOut (..),
     WitVKey (..),
     witKeyHash,
   )

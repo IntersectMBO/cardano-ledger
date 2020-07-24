@@ -36,6 +36,8 @@ module Shelley.Spec.Ledger.UTxO
     verifyWitVKey,
     scriptsNeeded,
     txinsScript,
+    toTxUTxO,
+    fromTxUTxO,
   )
 where
 
@@ -43,7 +45,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Foldable (toList)
-import Data.Map.Strict (Map)
+import Data.Map.Strict (Map, keys)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import Data.Set (Set)
@@ -74,6 +76,7 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.PParams (PParams, Update, _keyDeposit, _poolDeposit)
 import Shelley.Spec.Ledger.Scripts
+import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
   ( PoolCert (..),
@@ -82,29 +85,35 @@ import Shelley.Spec.Ledger.TxData
     TxId (..),
     TxIn (..),
     TxOut (..),
+    UTxOOut (..),
     Wdrl (..),
     WitVKey (..),
     getRwdCred,
+    getAddress,
+    getAddressTx,
+    getValue,
+    getValueTx,
     pattern DeRegKey,
     pattern Delegate,
     pattern Delegation,
   )
 
-instance HasExp (UTxO crypto) (Map (TxIn crypto) (TxOut crypto)) where
+instance HasExp (UTxO crypto) (Map (TxIn crypto) (UTxOOut crypto)) where
   toExp (UTxO x) = Base MapR x
 
-instance Embed (UTxO crypto) (Map (TxIn crypto) (TxOut crypto)) where
+instance Embed (UTxO crypto) (Map (TxIn crypto) (UTxOOut crypto)) where
   toBase (UTxO x) = x
   fromBase x = (UTxO x)
 
--- | The unspent transaction outputs.
-newtype UTxO crypto = UTxO {unUTxO :: Map (TxIn crypto) (TxOut crypto)}
-  deriving (Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+-- |The unspent transaction outputs.
+newtype UTxO crypto
+  = UTxO {unUTxO :: Map (TxIn crypto) (UTxOOut crypto)}
+  deriving (Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
   deriving (Show) via Quiet (UTxO crypto)
 
 instance Relation (UTxO crypto) where
   type Domain (UTxO crypto) = TxIn crypto
-  type Range (UTxO crypto) = TxOut crypto
+  type Range (UTxO crypto) = UTxOOut crypto
 
   singleton k v = UTxO $ Map.singleton k v
 
@@ -149,22 +158,32 @@ txins ::
   Set (TxIn crypto)
 txins = _inputs
 
--- | Compute the transaction outputs of a transaction.
-txouts ::
-  Crypto crypto =>
-  TxBody crypto ->
-  UTxO crypto
-txouts tx =
-  UTxO $
-    Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (toList $ _outputs tx) [0 ..]]
+-- | convert UTxO to the format of tx-input tx-output pairs
+-- used in testing
+toTxUTxO :: Crypto crypto => UTxO crypto -> [(TxIn crypto, TxOut crypto)]
+toTxUTxO (UTxO utxo) =  Map.toList $ Map.map (\(UTxOOut a v) -> (TxOut a (compactValueToValue v))) utxo
+
+-- | convert from tx-input tx-output pairs back to UTxO
+-- used in testing
+fromTxUTxO :: Crypto crypto => [(TxIn crypto, TxOut crypto)] -> UTxO crypto
+fromTxUTxO utxo = UTxO $ Map.fromList $ fmap (\(i, TxOut a v) -> (i, UTxOOut a (valueToCompactValue v))) utxo
+
+-- |Compute the transaction outputs of a transaction.
+txouts
+  :: Crypto crypto
+  => TxBody crypto
+  -> UTxO crypto
+txouts tx = UTxO $
+  Map.fromList [(TxIn transId idx, UTxOOut (getAddressTx out) (valueToCompactValue $ getValueTx out)) |
+    (out, idx) <- zip (toList $ _outputs tx) [0..]]
   where
     transId = txid tx
 
--- | Lookup a txin for a given UTxO collection
-txinLookup ::
-  TxIn crypto ->
-  UTxO crypto ->
-  Maybe (TxOut crypto)
+-- |Lookup a txin for a given UTxO collection
+txinLookup
+  :: TxIn crypto
+  -> UTxO crypto
+  -> Maybe (UTxOOut crypto)
 txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 
 -- | Verify a transaction body witness
@@ -187,8 +206,8 @@ makeWitnessVKey ::
   Hash crypto (TxBody crypto) ->
   KeyPair kr crypto ->
   WitVKey crypto 'Witness
-makeWitnessVKey txbodyHash keys =
-  WitVKey (asWitness $ vKey keys) (signedDSIGN @crypto (sKey keys) txbodyHash)
+makeWitnessVKey txbodyHash ks =
+  WitVKey (asWitness $ vKey ks) (signedDSIGN @crypto (sKey ks) txbodyHash)
 
 -- | Create witnesses for transaction
 makeWitnessesVKey ::
@@ -215,11 +234,9 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
--- | Determine the total balance contained in the UTxO.
-balance :: Crypto crypto => UTxO crypto -> Coin
-balance (UTxO utxo) = foldr addCoins 0 utxo
-  where
-    addCoins (TxOut _ a) b = a + b
+-- |Determine the total balance contained in the UTxO.
+balance :: UTxO crypto -> Value crypto
+balance (UTxO utxo) = foldr addv zeroV (fmap getValue utxo)
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
@@ -277,11 +294,11 @@ scriptsNeeded ::
   Tx crypto ->
   Set (ScriptHash crypto)
 scriptsNeeded u tx =
-  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
+  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . getAddress) u'')
     `Set.union` Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
     `Set.union` Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
+    `Set.union` Set.fromList (fmap policyID (keys $ val $ _forge $ _body tx))
   where
-    unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ _wdrls $ _body tx
     UTxO u'' = (txinsScript (txins $ _body tx) u) ◁ u
     -- u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u)  TODO
@@ -290,7 +307,6 @@ scriptsNeeded u tx =
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript ::
-  Crypto crypto =>
   Set (TxIn crypto) ->
   UTxO crypto ->
   Set (TxIn crypto)
@@ -298,6 +314,6 @@ txinsScript txInps (UTxO u) = foldr add Set.empty txInps
   where
     -- to get subset, start with empty, and only insert those inputs in txInps that are locked in u
     add input ans = case Map.lookup input u of
-      Just (TxOut (Addr _ (ScriptHashObj _) _) _) -> Set.insert input ans
+      Just (UTxOOut (Addr _ (ScriptHashObj _) _) _) -> Set.insert input ans
       Just _ -> ans
       Nothing -> ans

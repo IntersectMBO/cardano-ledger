@@ -49,7 +49,7 @@ import Shelley.Spec.Ledger.Rewards
     percentile',
   )
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
-import Shelley.Spec.Ledger.TxData (PoolParams (..), TxOut (..))
+import Shelley.Spec.Ledger.TxData (PoolParams (..), getAddress)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Calculate the Non-Myopic Pool Member Rewards for a set of credentials.
@@ -107,12 +107,11 @@ getUTxO = _utxo . _utxoState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
-  Crypto crypto =>
   ShelleyState crypto ->
   Set (Addr crypto) ->
   UTxO crypto
 getFilteredUTxO ss addrs =
-  UTxO $ Map.filter (\(TxOut addr _) -> addr `Set.member` addrs) fullUTxO
+  UTxO $ Map.filter (\utxoout -> (getAddress utxoout) `Set.member` addrs) fullUTxO
   where
     UTxO fullUTxO = getUTxO ss
 

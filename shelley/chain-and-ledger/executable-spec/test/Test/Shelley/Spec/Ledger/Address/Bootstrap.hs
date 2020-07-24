@@ -77,11 +77,19 @@ import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     WitnessSetHKD (..),
   )
+import Shelley.Spec.Ledger.Value
+  ( Value (..) ,
+  coinToValue,
+  valueToCompactValue,
+  scalev,
+  zeroV,
+  )
 import Shelley.Spec.Ledger.TxData
   ( TxBody (..),
     TxId (..),
     TxIn (..),
     TxOut (..),
+    UTxOOut (..),
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO
@@ -142,7 +150,7 @@ utxo0 =
   UTxO $
     Map.singleton
       (TxIn genesisId 0)
-      (TxOut aliceAddr aliceInitCoin)
+      (UTxOOut aliceAddr (valueToCompactValue aliceInitCoin))
 
 utxoState0 :: UTxOState C
 utxoState0 =
@@ -169,8 +177,8 @@ utxoState1 =
     }
   where
     txid = TxId $ hashAnnotated txBody
-    bobResult = (TxIn txid 0, TxOut bobAddr coinsToBob)
-    aliceResult = (TxIn txid 1, TxOut aliceAddr (Coin 998990))
+    bobResult = (TxIn txid 0, UTxOOut bobAddr (valueToCompactValue coinsToBob))
+    aliceResult = (TxIn txid 1, UTxOOut aliceAddr (valueToCompactValue $ coinToValue $ Coin 998990))
 
 utxoEnv :: UtxoEnv C
 utxoEnv =
@@ -180,8 +188,8 @@ utxoEnv =
     mempty
     (GenDelegs mempty)
 
-aliceInitCoin :: Coin
-aliceInitCoin = 1000000
+aliceInitCoin :: Value C
+aliceInitCoin = coinToValue 1000000
 
 aliceSigningKey :: Byron.SigningKey
 aliceSigningKey = Byron.SigningKey $ Byron.generate seed (mempty :: ByteString)
@@ -224,8 +232,8 @@ bobAddr = Addr Testnet (KeyHashObj k) StakeRefNull
   where
     k = coerceKeyRole $ hashKey aliceVKey
 
-coinsToBob :: Coin
-coinsToBob = 1000
+coinsToBob :: Value C
+coinsToBob = coinToValue 1000
 
 txBody :: TxBody C
 txBody =
@@ -233,6 +241,7 @@ txBody =
     { _inputs = Set.fromList [TxIn genesisId 0],
       _outputs = StrictSeq.fromList [TxOut bobAddr coinsToBob, TxOut aliceAddr change],
       _certs = StrictSeq.fromList mempty,
+      _forge = zeroV, --TODO forge something?
       _wdrls = Wdrl Map.empty,
       _txfee = fee,
       _ttl = SlotNo 10,
@@ -240,7 +249,7 @@ txBody =
       _mdHash = SNothing
     }
   where
-    change = aliceInitCoin - coinsToBob - fee
+    change = aliceInitCoin <> (scalev (-1) coinsToBob) <> (scalev (-1) (coinToValue fee))
     fee = 10
 
 testBootstrapSpending :: Assertion

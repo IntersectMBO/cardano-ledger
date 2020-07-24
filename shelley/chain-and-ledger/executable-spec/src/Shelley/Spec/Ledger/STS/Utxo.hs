@@ -24,7 +24,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
-import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
+import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
 import Control.State.Transition
   ( Assertion (..),
     Embed,
@@ -65,6 +65,7 @@ import Shelley.Spec.Ledger.LedgerState
     minfee,
     produced,
     txsize,
+    scaledSizeCompactValue,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..))
@@ -75,8 +76,9 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut (..))
-import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxBody (..), unWdrl)
+import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxBody (..), unWdrl, UTxOOut(..))
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
@@ -118,8 +120,8 @@ instance
         !Coin -- the minimum fee for this transaction
         !Coin -- the fee supplied in this transaction
     | ValueNotConservedUTxO
-        !Coin -- the Coin consumed by this transaction
-        !Coin -- the Coin produced by this transaction
+        !(Value crypto) -- the Value consumed by this transaction
+        !(Value crypto) -- the Value produced by this transaction
     | WrongNetwork
         !Network -- the expected network id
         !(Set (Addr crypto)) -- the set of addresses with incorrect network IDs
@@ -127,10 +129,12 @@ instance
         !Network -- the expected network id
         !(Set (RewardAcnt crypto)) -- the set of reward addresses with incorrect network IDs
     | OutputTooSmallUTxO
-        ![TxOut crypto] -- list of supplied transaction outputs that are too small
+        ![UTxOOut crypto] -- list of supplied transaction outputs that are too small
+    | ForgingAda
+        !(Value crypto) -- the forge value containing Ada
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
     | OutputBootAddrAttrsTooBig
-        ![TxOut crypto] -- list of supplied bad transaction outputs
+        ![UTxOOut crypto] -- list of supplied bad transaction outputs
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -142,7 +146,7 @@ instance
       PostCondition
         "Deposit pot must not be negative"
         (\_ st' -> _deposited st' >= 0),
-      let utxoBalance us = _deposited us + _fees us + balance (_utxo us)
+      let utxoBalance us = _deposited us + _fees us + (getAdaAmount $ balance (_utxo us))
           withdrawals txb = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txb
        in PostCondition
             "Should preserve ADA in the UTxO state"
@@ -194,6 +198,9 @@ instance
     OutputBootAddrAttrsTooBig outs ->
       encodeListLen 2 <> toCBOR (10 :: Word8)
         <> encodeFoldable outs
+    (ForgingAda v) ->
+      encodeListLen 2 <> toCBOR (11 :: Word8)
+        <> toCBOR v
 
 instance
   (Crypto crypto) =>
@@ -239,6 +246,9 @@ instance
         10 -> do
           outs <- decodeList fromCBOR
           pure (2, OutputBootAddrAttrsTooBig outs)
+        11 -> do
+          v <- fromCBOR
+          pure (2, ForgingAda v)
         k -> invalidKey k
 
 initialLedgerState :: InitialRule (UTXO crypto)
@@ -284,16 +294,26 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputs = Set.toList (eval (rng (txouts txb)))
-      minUTxOValue = _minUTxOValue pp
-      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < minUTxOValue]
-  null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
+  let outputs = Map.elems $ unUTxO (txouts txb)
+      outputValues = [v | (UTxOOut _ v) <- outputs] -- TODO why does rng still require Ord?!
+      minUTxOValue = map (\ov -> (getAdaAmount $ compactValueToValue ov) < ((Coin $ scaledSizeCompactValue ov) * (_minUTxOValue pp))) outputValues
+    -- TODO check this, uint? price it as compact value?
+    -- TODO make this calc right
+
+  all (True ==) minUTxOValue
+    ?! OutputTooSmallUTxO
+      (filter (\(UTxOOut _ v) -> (getAdaAmount $ compactValueToValue v) < ((Coin $ scaledSizeCompactValue v) * (_minUTxOValue pp))) outputs )
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =
-        [out | out@(TxOut (AddrBootstrap addr) _) <- outputs, bootstrapAddressAttrsSize addr > 64]
+        [out | out@(UTxOOut (AddrBootstrap addr) _) <- outputs, bootstrapAddressAttrsSize addr > 64]
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
+
+  let (Value vls) = _forge txb
+  let cids = Map.keys vls
+  all (adaID /=) cids  ?! (ForgingAda (Value vls))
+
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx

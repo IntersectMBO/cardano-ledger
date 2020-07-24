@@ -20,6 +20,15 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Quiet
 
+instance Semigroup Coin where
+    {-# INLINABLE (<>) #-}
+    (<>) = (+)
+
+instance Monoid Coin where
+    {-# INLINABLE mempty #-}
+    mempty  = Coin 0
+    mappend = (<>)
+
 -- | The amount of value held by a transaction output.
 newtype Coin = Coin {unCoin :: Integer}
   deriving

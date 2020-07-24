@@ -73,6 +73,7 @@ import Shelley.Spec.Ledger.STS.Pool (PoolEnv (..))
 import Shelley.Spec.Ledger.Tx (_body)
 import Shelley.Spec.Ledger.TxData (PoolParams (..), Ptr (..), _certs, _wdrls)
 import Shelley.Spec.Ledger.UTxO (balance)
+import Shelley.Spec.Ledger.Value (coinToValue, getAdaAmount)
 import Test.QuickCheck (Property, Testable, conjoin, property, withMaxSuccess, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( C,
@@ -174,8 +175,9 @@ consumedEqualsProduced =
                 }
               )
         } =
-        (balance u + d + fees + foldl' (+) (Coin 0) rewards)
-          === (balance u' + d' + fees' + foldl' (+) (Coin 0) rewards')
+        (getAdaAmount $ balance u <> (coinToValue $ d + fees + foldl' (+) (Coin 0) rewards))
+          === (getAdaAmount $ balance u'<> (coinToValue $ d' + fees' + foldl' (+) (Coin 0) rewards'))
+          -- TODO this is a property only about Ada, need an MA one
 
 feesNonDecreasing :: Property
 feesNonDecreasing =

@@ -39,6 +39,7 @@ module Shelley.Spec.Ledger.TxData
         _inputs,
         _outputs,
         _certs,
+        _forge,
         _wdrls,
         _txfee,
         _ttl,
@@ -50,12 +51,18 @@ module Shelley.Spec.Ledger.TxData
     TxIn (TxIn),
     pattern TxInCompact,
     TxOut (TxOut),
+    UTxOOut (..),
     Url,
     Wdrl (..),
     WitVKey (WitVKey, wvkBytes),
     --
     witKeyHash,
     addStakeCreds,
+    getValue,
+    getAddress,
+    getValueTx,
+    getAddressTx,
+    getCoin,
     --
     SizeOfPoolOwners (..),
     SizeOfPoolRelays (..),
@@ -105,7 +112,7 @@ import qualified Data.ByteString.Short as BSS
 import Data.Foldable (fold)
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int64)
-import Data.Map.Strict (Map)
+import Data.Map.Strict (Map, filterWithKey)
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
@@ -135,7 +142,7 @@ import Shelley.Spec.Ledger.BaseTypes
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), word64ToCoin)
+import Shelley.Spec.Ledger.Coin (Coin (..)) --, word64ToCoin)
 import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -182,6 +189,7 @@ import Shelley.Spec.Ledger.Serialization
     mapToCBOR,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Shelley.Spec.Ledger.Value
 
 instance HasExp (StakeCreds crypto) (Map (Credential 'Staking crypto) SlotNo) where
   toExp (StakeCreds x) = Base MapR x
@@ -372,6 +380,29 @@ instance Crypto crypto => FromJSON (PoolParams crypto) where
         <*> obj .: "relays"
         <*> obj .: "metadata"
 
+-- | get value from UTxO output
+getValue :: UTxOOut crypto -> Value crypto
+getValue (UTxOOut _ v) = compactValueToValue v
+
+-- | get address from UTxO output
+getAddress :: UTxOOut crypto -> Addr crypto
+getAddress (UTxOOut a _) = a
+
+-- | get value from Tx output
+getValueTx :: Crypto crypto => TxOut crypto -> Value crypto
+getValueTx (TxOut _ v) = v
+
+-- | get address from Tx output
+getAddressTx :: Crypto crypto => TxOut crypto -> Addr crypto
+getAddressTx (TxOut a _) = a
+
+-- | get coin amount from UTxO output
+getCoin :: UTxOOut crypto -> Coin
+getCoin (UTxOOut _ v) =
+  getAdaAmount $ Value $ filterWithKey (\k _ -> k == adaID) v'
+  where
+    Value v' = compactValueToValue v
+
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto = TxId {_unTxId :: Hash crypto (TxBody crypto)}
   deriving (Show, Eq, Ord, Generic)
@@ -403,12 +434,12 @@ pattern TxIn addr index <-
 
 instance NoUnexpectedThunks (TxIn crypto)
 
--- | The output of a UTxO.
+-- | The output of a Tx.
 data TxOut crypto
   = TxOutCompact
       {-# UNPACK #-} !BSS.ShortByteString
-      {-# UNPACK #-} !Word64
-  deriving (Show, Eq, Ord)
+      !(Value crypto) -- TODO something about this (see Shelley def)
+  deriving (Show, Eq)
 
 instance NFData (TxOut crypto) where
   rnf = (`seq` ())
@@ -418,26 +449,34 @@ deriving via UseIsNormalFormNamed "TxOut" (TxOut crypto) instance NoUnexpectedTh
 pattern TxOut ::
   Crypto crypto =>
   Addr crypto ->
-  Coin ->
+  Value crypto ->
   TxOut crypto
-pattern TxOut addr coin <-
-  (viewCompactTxOut -> (addr, coin))
+pattern TxOut addr v <-
+  (viewCompactTxOut -> (addr, v))
   where
-    TxOut addr (Coin coin) =
-      TxOutCompact (BSS.toShort $ serialiseAddr addr) (fromIntegral coin)
+    TxOut addr v =
+      TxOutCompact (BSS.toShort $ serialiseAddr addr) v
 
 {-# COMPLETE TxOut #-}
 
-viewCompactTxOut :: forall crypto. Crypto crypto => TxOut crypto -> (Addr crypto, Coin)
-viewCompactTxOut (TxOutCompact bs c) = (addr, coin)
+viewCompactTxOut :: forall crypto. Crypto crypto => TxOut crypto -> (Addr crypto, Value crypto)
+viewCompactTxOut (TxOutCompact bs v) = (addr, v)
   where
     addr = case deserialiseAddr (BSS.fromShort bs) of
       Nothing -> panic "viewCompactTxOut: impossible"
       Just (a :: Addr crypto) -> a
-    coin = word64ToCoin c
 
-data DelegCert crypto
-  = -- | A stake key registration certificate.
+
+-- |The output of a UTxO.
+data UTxOOut crypto
+  = UTxOOut !(Addr crypto) !(CompactValue crypto)
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (UTxOOut crypto)
+instance NFData (UTxOOut crypto)
+
+data DelegCert crypto =
+    -- | A stake key registration certificate.
     RegKey !(StakeCredential crypto)
   | -- | A stake key deregistration certificate.
     DeRegKey !(StakeCredential crypto)
@@ -516,6 +555,7 @@ data TxBody crypto = TxBody'
   { _inputs' :: !(Set (TxIn crypto)),
     _outputs' :: !(StrictSeq (TxOut crypto)),
     _certs' :: !(StrictSeq (DCert crypto)),
+    _forge'    :: !(Value crypto),
     _wdrls' :: !(Wdrl crypto),
     _txfee' :: !Coin,
     _ttl' :: !SlotNo,
@@ -536,17 +576,19 @@ pattern TxBody ::
   Set (TxIn crypto) ->
   StrictSeq (TxOut crypto) ->
   StrictSeq (DCert crypto) ->
+  Value crypto ->
   Wdrl crypto ->
   Coin ->
   SlotNo ->
   StrictMaybe (Update crypto) ->
   StrictMaybe (MetaDataHash crypto) ->
   TxBody crypto
-pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
+pattern TxBody {_inputs, _outputs, _certs, _forge, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
   TxBody'
     { _inputs' = _inputs,
       _outputs' = _outputs,
       _certs' = _certs,
+      _forge' = _forge,
       _wdrls' = _wdrls,
       _txfee' = _txfee,
       _ttl' = _ttl,
@@ -554,7 +596,7 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
       _mdHash' = _mdHash
     }
   where
-    TxBody _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash =
+    TxBody _inputs _outputs _certs _forge _wdrls _txfee _ttl _txUpdate _mdHash =
       let encodeMapElement ix enc x = Just (encodeWord ix <> enc x)
           encodeMapElementUnless condition ix enc x =
             if condition x
@@ -565,11 +607,12 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
               [ encodeMapElement 0 encodePreEncoded inputBytes,
                 encodeMapElement 1 encodePreEncoded outputBytes,
                 encodeMapElement 2 encodePreEncoded feeBytes,
-                encodeMapElement 3 toCBOR _ttl,
-                encodeMapElementUnless null 4 encodeFoldable _certs,
-                encodeMapElementUnless (null . unWdrl) 5 toCBOR _wdrls,
+                encodeMapElementUnless null 3 encodeFoldable _certs,
+                encodeMapElementUnless (null . unWdrl) 4 toCBOR _wdrls,
+                encodeMapElement 5 toCBOR _ttl,
                 encodeMapElement 6 toCBOR =<< strictMaybeToMaybe _txUpdate,
-                encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _mdHash
+                encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _mdHash,
+                encodeMapElementUnless (null . val) 8 toCBOR _forge
               ]
           inputBytes = serializeEncoding' $ encodeFoldable _inputs
           outputBytes = serializeEncoding' $ encodeFoldable _outputs
@@ -585,6 +628,7 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
             _inputs
             _outputs
             _certs
+            _forge
             _wdrls
             _txfee
             _ttl
@@ -750,23 +794,38 @@ instance
       (b :: Word64) <- fromCBOR
       pure $ TxIn a (fromInteger $ toInteger b)
 
-instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (TxOut crypto)
-  where
-  toCBOR (TxOut addr coin) =
-    encodeListLen 2
-      <> toCBOR addr
-      <> toCBOR coin
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (TxOut crypto)
-  where
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (UTxOOut crypto)
+ where
+  toCBOR (UTxOOut addr value) =
+    encodeListLen 2
+      <> toCBOR addr
+      <> toCBOR value
+
+instance (Crypto crypto) =>
+  FromCBOR (UTxOOut crypto) where
+  fromCBOR = decodeRecordNamed "UTxOOut" (const 2) $ do
+    addr <- fromCBOR
+    b <- fromCBOR
+    pure $ UTxOOut addr b
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (TxOut crypto)
+ where
+  toCBOR (TxOut addr value) =
+    encodeListLen 2
+      <> toCBOR addr
+      <> toCBOR (valueToCompactValue value)
+
+instance (Crypto crypto) =>
+  FromCBOR (TxOut crypto) where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
     addr <- fromCBOR
-    (b :: Word64) <- fromCBOR
-    pure $ TxOut addr (Coin $ toInteger b)
+    b <- fromCBOR
+    pure $ TxOut addr (compactValueToValue b)
 
 instance
   (Typeable kr, Crypto crypto) =>
@@ -820,6 +879,7 @@ instance
           5 -> f 5 fromCBOR $ \_ x t -> t {_wdrls' = x}
           6 -> f 6 fromCBOR $ \_ x t -> t {_txUpdate' = SJust x}
           7 -> f 7 fromCBOR $ \_ x t -> t {_mdHash' = SJust x}
+          8 -> f 8 fromCBOR $ \_ x t -> t {_forge' = x}
           k -> invalidKey k
     let requiredFields :: Map Int String
         requiredFields =
@@ -856,6 +916,7 @@ instance
             _txfee' = Coin 0,
             _ttl' = SlotNo 0,
             _certs' = StrictSeq.empty,
+            _forge'   = Value Map.empty,
             _wdrls' = Wdrl Map.empty,
             _txUpdate' = SNothing,
             _mdHash' = SNothing,

@@ -171,6 +171,8 @@ import Shelley.Spec.Ledger.TxData
     pattern TxOut,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
+import Shelley.Spec.Ledger.Value (zeroV, coinToValue)
+
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
@@ -290,7 +292,7 @@ testVRFKH :: Crypto c => proxy c -> VRFKeyHash c
 testVRFKH p = hashKeyVRF $ snd (testVRF p)
 
 testTxb :: Crypto c => TxBody c
-testTxb = TxBody Set.empty StrictSeq.empty StrictSeq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) SNothing SNothing
+testTxb = TxBody Set.empty StrictSeq.empty StrictSeq.empty zeroV (Wdrl Map.empty) (Coin 0) (SlotNo 0) SNothing SNothing
 
 testTxbHash :: Crypto c => Hash c (TxBody c)
 testTxbHash = hashAnnotated testTxb
@@ -494,7 +496,7 @@ tests =
       let a = Addr Testnet (testPayCred p) StakeRefNull
        in checkEncodingCBOR
             "txout"
-            (TxOut a (Coin 2))
+            (TxOut a (coinToValue $ Coin 2))
             ( T (TkListLen 2)
                 <> S a
                 <> S (Coin 2)
@@ -794,13 +796,14 @@ tests =
             ),
       -- checkEncodingCBOR "minimal_txn_body"
       let tin = TxIn genesisId 1
-          tout = TxOut (testAddrE p) (Coin 2)
+          tout = TxOut (testAddrE p) (coinToValue $ Coin 2)
        in checkEncodingCBORAnnotated
             "txbody"
             ( TxBody -- minimal transaction body
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
+                zeroV -- TODO what about w/ non-0 value
                 (Wdrl Map.empty)
                 (Coin 9)
                 (SlotNo 500)
@@ -821,7 +824,7 @@ tests =
             ),
       -- checkEncodingCBOR "transaction_mixed"
       let tin = TxIn genesisId 1
-          tout = TxOut (testAddrE p) (Coin 2)
+          tout = TxOut (testAddrE p) (coinToValue $ Coin 2)
           ra = RewardAcnt Testnet (KeyHashObj (testKeyHash2 p))
           ras = Map.singleton ra (Coin 123)
           up =
@@ -858,6 +861,7 @@ tests =
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 StrictSeq.Empty
+                zeroV -- TODO forge goes at the end
                 (Wdrl ras)
                 (Coin 9)
                 (SlotNo 500)
@@ -882,7 +886,7 @@ tests =
             ),
       -- checkEncodingCBOR "full_txn_body"
       let tin = TxIn genesisId 1
-          tout = TxOut (testAddrE p) (Coin 2)
+          tout = TxOut (testAddrE p) (coinToValue $ Coin 2)
           reg = DCertDeleg (RegKey (testStakeCred p))
           ra = RewardAcnt Testnet (KeyHashObj (testKeyHash2 p))
           ras = Map.singleton ra (Coin 123)
@@ -921,6 +925,7 @@ tests =
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])
+                zeroV
                 (Wdrl ras)
                 (Coin 9)
                 (SlotNo 500)
@@ -952,8 +957,9 @@ tests =
       let txb =
             TxBody
               (Set.fromList [TxIn genesisId 1])
-              (StrictSeq.singleton $ TxOut (testAddrE p) (Coin 2))
+              (StrictSeq.singleton $ TxOut (testAddrE p) (coinToValue $ Coin 2))
               StrictSeq.empty
+              zeroV -- TODO non-0
               (Wdrl Map.empty)
               (Coin 9)
               (SlotNo 500)
@@ -976,8 +982,9 @@ tests =
       let txb =
             TxBody
               (Set.fromList [TxIn genesisId 1])
-              (StrictSeq.singleton $ TxOut (testAddrE p) (Coin 2))
+              (StrictSeq.singleton $ TxOut (testAddrE p) (coinToValue $ Coin 2))
               StrictSeq.empty
+              zeroV -- TODO non-0
               (Wdrl Map.empty)
               (Coin 9)
               (SlotNo 500)
@@ -1097,8 +1104,8 @@ tests =
       let sig = signedKES () 0 (testBHB p) (fst (testKESKeys p))
           bh = BHeader (testBHB p) sig
           tin = Set.fromList [TxIn genesisId 1]
-          tout = StrictSeq.singleton $ TxOut (testAddrE p) (Coin 2)
-          txb s = TxBody tin tout StrictSeq.empty (Wdrl Map.empty) (Coin 9) (SlotNo s) SNothing SNothing
+          tout = StrictSeq.singleton $ TxOut (testAddrE p) (coinToValue $ Coin 2)
+          txb s = TxBody tin tout StrictSeq.empty zeroV (Wdrl Map.empty) (Coin 9) (SlotNo s) SNothing SNothing
           txb1 = txb 500
           txb2 = txb 501
           txb3 = txb 502

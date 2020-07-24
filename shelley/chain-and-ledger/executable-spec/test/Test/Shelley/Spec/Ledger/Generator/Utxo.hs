@@ -32,7 +32,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     maybeToStrictMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
+import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential
   ( pattern KeyHashObj,
     pattern ScriptHashObj,
@@ -71,7 +71,10 @@ import Shelley.Spec.Ledger.UTxO
     makeWitnessesFromScriptKeys,
     makeWitnessesVKey,
     pattern UTxO,
+    toTxUTxO,
+    fromTxUTxO,
   )
+import Shelley.Spec.Ledger.Value (zeroV, coinToValue, splitValueFee, getAdaAmount, subv, geq)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -94,6 +97,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     UTxOState,
     Update,
     WitnessSet,
+    Value,
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -108,6 +112,12 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..))
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
+
+-- TODO make witnesses for forges
+-- generate value properly
+genValue :: Integer -> Integer -> Gen (Value h)
+genValue _ _ = do
+  pure zeroV
 
 -- | Generate a new transaction in the context of the LEDGER STS environment and state.
 --
@@ -148,7 +158,9 @@ genTx
           wdrlWitnesses = Either.lefts wdrlCredentials
           wdrlScripts = Either.rights wdrlCredentials
 
-      let spendingBalance = spendingBalanceUtxo + (sum wdrls)
+      txforge <- genValue 20 20
+
+      let spendingBalance = spendingBalanceUtxo <> coinToValue (sum wdrls) <> txforge
 
       let (inputs, spendCredentials) = unzip witnessedInputs
           spendWitnesses = Either.lefts spendCredentials
@@ -161,14 +173,15 @@ genTx
       recipientAddrs <- genPtrAddrs (_dstate dpState) recipientAddrs'
 
       ttl <- genNatural 50 100
+
       let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
       -- certificates
       (certs, certCreds, deposits_, refunds_, dpState') <-
         genDCerts ge pparams dpState slot txIx reserves
 
-      let balance_ = spendingBalance - deposits_ + refunds_
-      if balance_ <= 0
+      let balance_ = spendingBalance <> coinToValue (refunds_ - deposits_ )
+      if not (geq balance_ zeroV)
         then QC.discard
         else do
           -- attempt to make provision for certificate deposits (otherwise discard this generator)
@@ -192,7 +205,7 @@ genTx
           -- Once the transaction body and the witnesses are constructed, we can use
           -- this model to calculate the real fee value and update the fees and
           -- transaction outputs in the final, generated transaction.
-          txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls update (Coin 0) slotWithTTL
+          txBody <- genTxBody (Set.fromList inputs) outputs certs txforge wdrls update (Coin 0) slotWithTTL
           let multiSig =
                 Map.fromList $
                   ( map
@@ -233,7 +246,7 @@ genTx
           let minimalFees = minfeeBound pparams (Tx txBody wits metadata)
 
           -- discard generated transaction if the balance cannot cover the fees
-          if minimalFees > balance_
+          if minimalFees > getAdaAmount balance_
             then QC.discard
             else do
               -- update model transaction with real fees and outputs
@@ -336,17 +349,19 @@ genTxBody ::
   Set (TxIn c) ->
   StrictSeq (TxOut c) ->
   StrictSeq (DCert c) ->
+  Value c ->
   Map (RewardAcnt c) Coin ->
   Maybe (Update c) ->
   Coin ->
   SlotNo ->
   Gen (TxBody c)
-genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
+genTxBody inputs outputs certs forge wdrls update fee slotWithTTL = do
   return $
     TxBody
       inputs
       outputs
       certs
+      forge
       (Wdrl wdrls)
       fee
       slotWithTTL
@@ -354,26 +369,26 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
       SNothing -- TODO generate metadata
 
 -- | Distribute the sum of `balance_` and `fee` over the addresses, return the
--- sum of `fee` and the remainder of the equal distribution and the list ouf
+-- sum of `fee` and the remainder of the equal distribution and the list of
 -- transaction outputs that cover the balance and fees.
 --
 -- The idea is to have an specified spending balance and fees that must be paid
 -- by the selected addresses.
 calcOutputsFromBalance ::
   (HasCallStack, Crypto c) =>
-  Coin ->
+  Value c ->
   [Addr c] ->
   Coin ->
   (Coin, StrictSeq (TxOut c))
 calcOutputsFromBalance balance_ addrs fee =
-  ( fee + splitCoinRem,
+  ( fee <> splitCoinRem,
     (`TxOut` amountPerOutput) <$> StrictSeq.fromList addrs
   )
   where
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.
-    balanceAfterFee = balance_ - fee
-    (amountPerOutput, splitCoinRem) = splitCoin balanceAfterFee (fromIntegral $ length addrs)
+    balanceAfterFee = subv balance_ $ coinToValue fee
+    (amountPerOutput, splitCoinRem) = splitValueFee balanceAfterFee (fromIntegral $ length addrs)
 
 -- | Select unspent output(s) to serve as inputs for a new transaction
 --
@@ -391,15 +406,15 @@ pickSpendingInputs ::
   MultiSigPairs c ->
   Map (KeyHash 'Payment c) (KeyPair 'Payment c) ->
   UTxO c ->
-  Gen ([(TxIn c, Either (KeyPair 'Witness c) (MultiSig c, MultiSig c))], Coin)
+  Gen ([(TxIn c, Either (KeyPair 'Witness c) (MultiSig c, MultiSig c))], Value c)
 pickSpendingInputs Constants {minNumGenInputs, maxNumGenInputs} scripts keyHashMap (UTxO utxo) = do
   selectedUtxo <-
     take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
-      <*> QC.shuffle (Map.toList utxo)
+      <*> QC.shuffle (toTxUTxO (UTxO utxo))
 
   return
     ( witnessedInput <$> selectedUtxo,
-      balance (UTxO (Map.fromList selectedUtxo))
+      balance (fromTxUTxO selectedUtxo)
     )
   where
     witnessedInput (input, TxOut addr@(Addr _ (KeyHashObj _) _) _) =

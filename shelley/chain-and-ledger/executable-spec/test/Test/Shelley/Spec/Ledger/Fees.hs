@@ -47,6 +47,7 @@ import Shelley.Spec.Ledger.LedgerState (txsize)
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.Scripts (pattern RequireMOf, pattern RequireSignature)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Shelley.Spec.Ledger.Value (coinToValue, zeroV)
 import Shelley.Spec.Ledger.Tx
   ( WitnessSetHKD (..),
     hashScript,
@@ -78,6 +79,7 @@ import Shelley.Spec.Ledger.TxData
     _txUpdate,
     _txfee,
     _wdrls,
+    _forge,
     pattern DCertDeleg,
     pattern DCertPool,
     pattern Delegation,
@@ -182,8 +184,9 @@ txbSimpleUTxO :: TxBody C
 txbSimpleUTxO =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (coinToValue $ Coin 10)],
       _certs = StrictSeq.empty,
+      _forge = zeroV, -- TODO some other forge
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
       _ttl = SlotNo 10,
@@ -217,13 +220,14 @@ txbMutiUTxO =
           ],
       _outputs =
         StrictSeq.fromList
-          [ TxOut aliceAddr (Coin 10),
-            TxOut aliceAddr (Coin 20),
-            TxOut aliceAddr (Coin 30),
-            TxOut bobAddr (Coin 40),
-            TxOut bobAddr (Coin 50)
+          [ TxOut aliceAddr (coinToValue $ Coin 10),
+            TxOut aliceAddr (coinToValue $ Coin 20),
+            TxOut aliceAddr (coinToValue $ Coin 30),
+            TxOut bobAddr (coinToValue $ Coin 40),
+            TxOut bobAddr (coinToValue $ Coin 50)
           ],
       _certs = StrictSeq.empty,
+      _forge = zeroV, -- TODO some other forge
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 199,
       _ttl = SlotNo 10,
@@ -255,8 +259,9 @@ txbRegisterStake :: TxBody C
 txbRegisterStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (coinToValue $ Coin 10)],
       _certs = StrictSeq.fromList [DCertDeleg (RegKey aliceSHK)],
+      _forge = zeroV, -- TODO some other forge
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
       _ttl = SlotNo 10,
@@ -283,8 +288,9 @@ txbDelegateStake :: TxBody C
 txbDelegateStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (coinToValue $ Coin 10)],
       _certs = StrictSeq.fromList [DCertDeleg (Delegate $ Delegation bobSHK alicePoolKH)],
+      _forge = zeroV, -- TODO some other forge
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
       _ttl = SlotNo 10,
@@ -314,8 +320,9 @@ txbDeregisterStake :: TxBody C
 txbDeregisterStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (coinToValue $ Coin 10)],
       _certs = StrictSeq.fromList [DCertDeleg (DeRegKey aliceSHK)],
+      _forge = zeroV, -- TODO some other forge
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
       _ttl = SlotNo 10,
@@ -342,8 +349,9 @@ txbRegisterPool :: TxBody C
 txbRegisterPool =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (coinToValue $ Coin 10)],
       _certs = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)],
+      _forge = zeroV, -- TODO some other forge
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
       _ttl = SlotNo 10,
@@ -370,8 +378,9 @@ txbRetirePool :: TxBody C
 txbRetirePool =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (coinToValue $ Coin 10)],
       _certs = StrictSeq.fromList [DCertPool (RetirePool alicePoolKH (EpochNo 5))],
+      _forge = zeroV, -- TODO some other forge
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
       _ttl = SlotNo 10,
@@ -402,8 +411,9 @@ txbWithMD :: TxBody C
 txbWithMD =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (coinToValue $ Coin 10)],
       _certs = StrictSeq.empty,
+      _forge = zeroV, -- TODO some other forge
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
       _ttl = SlotNo 10,
@@ -439,8 +449,9 @@ txbWithMultiSig :: TxBody C
 txbWithMultiSig =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0], -- acting as if this is multi-sig
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (coinToValue $ Coin 10)],
       _certs = StrictSeq.empty,
+      _forge = zeroV, -- TODO some other forge
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
       _ttl = SlotNo 10,
@@ -468,8 +479,9 @@ txbWithWithdrawal :: TxBody C
 txbWithWithdrawal =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (coinToValue $ Coin 10)],
       _certs = StrictSeq.empty,
+      _forge = zeroV, -- TODO some other forge
       _wdrls = Wdrl $ Map.singleton (RewardAcnt Testnet aliceSHK) 100,
       _txfee = Coin 94,
       _ttl = SlotNo 10,

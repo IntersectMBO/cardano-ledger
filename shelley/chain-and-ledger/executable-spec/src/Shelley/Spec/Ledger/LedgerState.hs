@@ -88,6 +88,8 @@ module Shelley.Spec.Ledger.LedgerState
     overlaySchedule,
     getGKeys,
     updateNES,
+    --size
+    scaledSizeCompactValue,
   )
 where
 
@@ -130,6 +132,7 @@ import Shelley.Spec.Ledger.BaseTypes
     unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..), rationalToCoinViaFloor)
+import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -202,11 +205,12 @@ import Shelley.Spec.Ledger.TxData
     Ptr (..),
     RewardAcnt (..),
     TxBody (..),
-    TxOut (..),
+    UTxOOut (..),
     Wdrl (..),
     WitVKey (..),
     getRwdCred,
     witKeyHash,
+    getValueTx,
   )
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
@@ -701,27 +705,65 @@ genesisState genDelegs0 utxo0 =
   where
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
+-- get total size of outputs in a Tx
+allOutputsSize :: forall crypto . (Crypto crypto) => TxBody crypto -> Integer -> Integer
+allOutputsSize txb address
+  = foldl (\s o -> s + smallArray + uint + address + (valueSize (getValueTx o))) 0 (_outputs txb)
+
+-- estimate upper bound on Value size
+valueSize :: Value crypto -> Integer
+valueSize (Value v)
+  = foldl (\_ tkns -> policyHashLen + (addTkns tkns)) 0 v -- TODO should be nicer, but size of map returns Int
+    where
+      addTkns ts = foldl (\_ _ -> maxAssetIDBytes + uint) 0 ts
+
+-- get actual compact value size
+-- TODO should this be different and the real size?
+scaledSizeCompactValue :: CompactValue crypto -> Integer
+scaledSizeCompactValue (MixValue v)
+  | ((snd $ quotRem (valueSize v) uint) == 0) = fst $ quotRem (valueSize v) uint
+  | otherwise = 1 + (fst $ quotRem (valueSize v) uint)
+scaledSizeCompactValue (AdaOnly  _) = 1
+-- TODO fix constants uint, adjust for extra constructor?
+
+-- TODO find the right place for these constants
+uint :: Integer
+uint = 5
+
+smallArray :: Integer
+smallArray = 1
+
+hashLen :: Integer
+hashLen = 32
+
+addrHashLen :: Integer
+addrHashLen = 28
+
+policyHashLen :: Integer
+policyHashLen = 28
+
+addrHeader :: Integer
+addrHeader = 1
+
+maxAssetIDBytes :: Integer
+maxAssetIDBytes = 32 -- maybe we want forging script hashes also 32?
+
 -- | Implementation of abstract transaction size
 txsize :: Tx crypto -> Integer
 txsize = fromIntegral . BSL.length . txFullBytes
 
 -- | Convenience Function to bound the txsize function.
 -- | It can be helpful for coin selection.
-txsizeBound :: forall crypto. (Crypto crypto) => Tx crypto -> Integer
-txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
+-- TODO forge value and proper outputs size!
+txsizeBound :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
+txsizeBound tx = numInputs * inputSize + (allOutputsSize txbody (address addrHeader addrHashLen)) + rest
   where
-    uint = 5
-    smallArray = 1
-    hashLen = 32
-    hashObj = 2 + hashLen
-    addrHashLen = 28
-    addrHeader = 1
-    address = 2 + addrHeader + 2 * addrHashLen
+    address ah ahl = 2 + ah + 2 * ahl -- addrHashLen same as script hash length always? TODO
     txbody = _body tx
     numInputs = toInteger . length . _inputs $ txbody
     inputSize = smallArray + uint + hashObj
-    numOutputs = toInteger . length . _outputs $ txbody
-    outputSize = smallArray + uint + address
+    hashObj = 2 + hashLen
+
     rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
 
 -- | Minimum fee calculation
@@ -732,15 +774,15 @@ minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_mi
 minfeeBound :: forall crypto. (Crypto crypto) => PParams -> Tx crypto -> Coin
 minfeeBound pp tx = Coin $ fromIntegral (_minfeeA pp) * txsizeBound tx + fromIntegral (_minfeeB pp)
 
--- | Compute the lovelace which are created by the transaction
-produced ::
-  (Crypto crypto) =>
-  PParams ->
-  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
-  TxBody crypto ->
-  Coin
+-- |Compute the lovelace which are created by the transaction
+produced
+  :: (Crypto crypto)
+  => PParams
+  -> Map (KeyHash 'StakePool crypto) (PoolParams crypto)
+  -> TxBody crypto
+  -> Value crypto
 produced pp stakePools tx =
-  balance (txouts tx) + _txfee tx + totalDeposits pp stakePools (toList $ _certs tx)
+    balance (txouts tx) <> coinToValue (_txfee tx <> totalDeposits pp stakePools (toList $ _certs tx))
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
@@ -752,15 +794,18 @@ keyRefunds pp tx = (_keyDeposit pp) * (fromIntegral $ length deregistrations)
   where
     deregistrations = filter isDeRegKey (toList $ _certs tx)
 
--- | Compute the lovelace which are destroyed by the transaction
+-- |Compute the lovelace which are destroyed by the transaction
 consumed ::
   Crypto crypto =>
   PParams ->
   UTxO crypto ->
   TxBody crypto ->
-  Coin
+  Value crypto
 consumed pp u tx =
-  balance (eval (txins tx ◁ u)) + refunds + withdrawals
+  -- balance (txins tx ◁ _u) + refunds + withdrawals
+  -- We do not call ◁, as this causes an identity call to toSet(txins tx)
+  -- To be fixed in a following PR
+    _forge tx <> (balance (eval (txins tx ◁ u))) <> coinToValue (refunds + withdrawals)
   where
     -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
     refunds = keyRefunds pp tx
@@ -813,8 +858,8 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
       where
         accum txin ans =
           case txinLookup txin utxo' of
-            Just (TxOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert (asWitness pay) ans
-            Just (TxOut (AddrBootstrap bootAddr) _) -> Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
+            Just (UTxOOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert (asWitness pay) ans
+            Just (UTxOOut (AddrBootstrap bootAddr) _) -> Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
             _other -> ans
     wdrlAuthors :: Set (KeyHash 'Witness crypto)
     wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (_wdrls txbody))
@@ -914,7 +959,6 @@ reapRewards dStateRewards withdrawals =
 -- | Stake distribution
 stakeDistr ::
   forall crypto.
-  Crypto crypto =>
   UTxO crypto ->
   DState crypto ->
   PState crypto ->

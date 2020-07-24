@@ -74,6 +74,7 @@ import Shelley.Spec.Ledger.LedgerState
     WitHashes (..),
     emptyRewardUpdate,
   )
+import Shelley.Spec.Ledger.Value (Quantity (..), valueToCompactValue, PolicyID (..), AssetID (..))
 import Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams, ProtVer)
@@ -127,6 +128,7 @@ import Test.Tasty.QuickCheck (Gen, choose, elements)
 
 genHash :: forall a c. Crypto c => Proxy c -> Gen (Hash c a)
 genHash proxy = mkDummyHash proxy <$> arbitrary
+
 
 mkDummyHash :: forall c a. Crypto c => Proxy c -> Int -> Hash c a
 mkDummyHash _ = coerce . hashWithSerialiser @(HASH c) toCBOR
@@ -195,6 +197,22 @@ instance HashAlgorithm h => Arbitrary (Mock.BootstrapWitness (Mock.ConcreteCrypt
 instance Crypto c => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> genHash (Proxy @c)
 
+-- TODO distinguish forge and output Arbitrary cases if possible
+instance Arbitrary Quantity where
+  -- Can be negative for negative forge
+  arbitrary = Quantity <$> choose (-500, 500)
+
+instance Arbitrary AssetID where
+  arbitrary = AssetID <$>
+    oneof
+      [ return $ BS.pack "Ada",
+        return $ BS.pack "DefinitelyAda"
+      ]
+
+-- TODO this
+instance HashAlgorithm h => Arbitrary (Mock.CompactValue (Mock.ConcreteCrypto h)) where
+  arbitrary = valueToCompactValue <$> arbitrary
+
 instance HashAlgorithm h => Arbitrary (Mock.Tx (Mock.ConcreteCrypto h)) where
   arbitrary = do
     (_ledgerState, _steps, _txfee, tx, _lv) <- hedgehog (genStateTx (Proxy @(Mock.ConcreteCrypto h)))
@@ -211,6 +229,14 @@ instance Crypto c => Arbitrary (TxIn c) where
 
 instance HashAlgorithm h => Arbitrary (Mock.TxOut (Mock.ConcreteCrypto h)) where
   arbitrary = TxOut <$> arbitrary <*> arbitrary
+
+instance HashAlgorithm h => Arbitrary (Mock.UTxOOut (Mock.ConcreteCrypto h)) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance HashAlgorithm h => Arbitrary (Mock.Value (Mock.ConcreteCrypto h)) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
 
 instance Arbitrary Nonce where
   arbitrary =
@@ -337,6 +363,10 @@ instance HashAlgorithm h => Arbitrary (ScriptHash (Mock.ConcreteCrypto h)) where
 
 instance HashAlgorithm h => Arbitrary (MetaDataHash (Mock.ConcreteCrypto h)) where
   arbitrary = MetaDataHash <$> genHash (Proxy @(Mock.ConcreteCrypto h))
+
+instance HashAlgorithm h => Arbitrary (PolicyID (Mock.ConcreteCrypto h)) where
+  arbitrary = PolicyID <$> arbitrary
+
 
 instance Arbitrary (Crypto.Hash Monomorphic.ShortHash a) where
   arbitrary = genHash (Proxy @(Mock.ConcreteCrypto Monomorphic.ShortHash))
