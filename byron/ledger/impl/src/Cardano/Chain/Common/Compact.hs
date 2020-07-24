@@ -9,6 +9,7 @@ module Cardano.Chain.Common.Compact
   ( CompactAddress
   , toCompactAddress
   , fromCompactAddress
+  , unsafeGetCompactAddress
   )
 where
 
@@ -49,3 +50,6 @@ fromCompactAddress (CompactAddress addr) =
   case decodeFull' (BSS.fromShort addr) of
     Left err      -> panic ("fromCompactAddress: impossible: " <> show err)
     Right decAddr -> decAddr
+
+unsafeGetCompactAddress :: CompactAddress -> ShortByteString
+unsafeGetCompactAddress (CompactAddress sbs) = sbs

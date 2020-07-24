@@ -50,6 +50,7 @@ module Shelley.Spec.Ledger.TxData
     TxIn (TxIn),
     pattern TxInCompact,
     TxOut (TxOut),
+    pattern TxOutCompact,
     Url,
     Wdrl (..),
     WitVKey (WitVKey, wvkBytes),
