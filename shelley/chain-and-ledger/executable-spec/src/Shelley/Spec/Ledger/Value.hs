@@ -124,6 +124,10 @@ valueToCompactValue vl@(Value v)
     where
       removeZeros vv = Value $ fmap (filterWithKey (\_ q -> q /= (Quantity 0))) vv
 
+-- returns the non-Ada tokens part of a Value token bundle
+removeAda :: Value crypto -> Value crypto
+removeAda (Value v) = Value $ filterWithKey (\k _ -> k /= adaID) v
+
 -- | convert to Value
 compactValueToValue :: CompactValue crypto -> Value crypto
 compactValueToValue (AdaOnly c)  = coinToValue c

@@ -721,8 +721,8 @@ valueSize (Value v)
 -- TODO should this be different and the real size?
 scaledSizeCompactValue :: CompactValue crypto -> Integer
 scaledSizeCompactValue (MixValue v)
-  | ((snd $ quotRem (valueSize v) uint) == 0) = fst $ quotRem (valueSize v) uint
-  | otherwise = 1 + (fst $ quotRem (valueSize v) uint)
+  | ((snd $ quotRem (valueSize $ removeAda v) uint) == 0) = fst $ quotRem (valueSize v) uint
+  | otherwise = 1 + (fst $ quotRem (valueSize $ removeAda v) uint)
 scaledSizeCompactValue (AdaOnly  _) = 1
 -- TODO fix constants uint, adjust for extra constructor?
 
