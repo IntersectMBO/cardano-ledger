@@ -999,12 +999,15 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
       ds = _dstate $ _delegationState ls
       -- reserves and rewards change
       deltaR1 = (rationalToCoinViaFloor $ min 1 eta * unitIntervalToRational (_rho pr) * fromIntegral reserves)
+      d = unitIntervalToRational (_d pr)
       expectedBlocks =
         floor $
-          unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
+          (1 - d) * unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
-      eta = blocksMade % expectedBlocks
+      eta
+        | intervalValue (_d pr) >= 0.8 = 1
+        | otherwise = blocksMade % expectedBlocks
       Coin rPot = _feeSS ss + deltaR1
       deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
