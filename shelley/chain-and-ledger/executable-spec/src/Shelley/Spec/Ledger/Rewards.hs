@@ -352,10 +352,11 @@ rewardOnePool ::
   PoolParams crypto ->
   Stake crypto ->
   Rational ->
+  Rational ->
   Coin ->
   Set (Credential 'Staking crypto) ->
   Map (Credential 'Staking crypto) Coin
-rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma (Coin total) addrsRew =
+rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma sigmaA (Coin total) addrsRew =
   rewards'
   where
     Coin ostake =
@@ -369,7 +370,7 @@ rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma (Coin total) add
       if pledge <= ostake
         then maxPool pp r sigma pr
         else 0
-    appPerf = mkApparentPerformance (_d pp) sigma blocksN blocksTotal
+    appPerf = mkApparentPerformance (_d pp) sigmaA blocksN blocksTotal
     poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
     tot = fromIntegral total
     mRewards =
@@ -409,9 +410,11 @@ reward
   slotsPerEpoch = (rewards', hs)
     where
       totalBlocks = sum b
+      Coin totalActive = sum . unStake $ stake
       results = do
         (hk, pparams) <- Map.toList poolParams
         let sigma = fromIntegral pstake % fromIntegral total
+            sigmaA = fromIntegral pstake % fromIntegral totalActive
             blocksProduced = Map.lookup hk b
             actgr@(Stake s) = poolStake hk delegs stake
             Coin pstake = sum s
@@ -427,6 +430,7 @@ reward
                     pparams
                     actgr
                     sigma
+                    sigmaA
                     (Coin total)
                     addrsRew
             ls =
