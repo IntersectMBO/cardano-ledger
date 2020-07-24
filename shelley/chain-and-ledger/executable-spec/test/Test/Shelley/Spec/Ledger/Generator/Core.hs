@@ -52,7 +52,6 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   )
 where
 
-import Data.Maybe (fromMaybe)
 import Cardano.Binary (toCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash (HashAlgorithm)
@@ -65,6 +64,7 @@ import Data.List (foldl')
 import qualified Data.List as List (find, findIndex, (\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -309,18 +309,17 @@ mkKeyPairs n =
       (uncurry KeyPair . swap)
         (mkKeyPair (n_, n_, n_, n_, n_))
 
-
 -- | Generate a mapping from genesis delegate cold key hash to the issuer keys.
 -- Note: we index all possible genesis delegate keys, that is,
 -- core nodes and all potential keys.
-mkGenesisDelegatesHashMap :: 
-  (HasCallStack, Crypto c) => 
+mkGenesisDelegatesHashMap ::
+  (HasCallStack, Crypto c) =>
   [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
   [AllIssuerKeys c 'GenesisDelegate] ->
   Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate)
-mkGenesisDelegatesHashMap coreNodes genesisDelegates = 
+mkGenesisDelegatesHashMap coreNodes genesisDelegates =
   Map.fromList (f <$> allDelegateKeys)
-  where 
+  where
     f issuerKeys = ((hashKey . vKey . cold) issuerKeys, issuerKeys)
     allDelegateKeys = (snd <$> coreNodes) <> genesisDelegates
 
@@ -416,8 +415,9 @@ findPayKeyPairCred ::
   Map (KeyHash h kr) (KeyPair h kr) ->
   KeyPair h kr
 findPayKeyPairCred (KeyHashObj addr) keyHashMap =
-  fromMaybe (error $ "findPayKeyPairCred: could not find a match for the given credential: " <> show addr)
-            (Map.lookup addr keyHashMap)
+  fromMaybe
+    (error $ "findPayKeyPairCred: could not find a match for the given credential: " <> show addr)
+    (Map.lookup addr keyHashMap)
 findPayKeyPairCred _ _ =
   error "findPayKeyPairCred: expects only KeyHashObj"
 
@@ -441,8 +441,9 @@ findPayScriptFromCred ::
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   (MultiSig c, MultiSig c)
 findPayScriptFromCred (ScriptHashObj scriptHash) scriptsByPayHash =
-  fromMaybe (error "findPayScript: could not find matching script for given credential") 
-            (Map.lookup scriptHash scriptsByPayHash)
+  fromMaybe
+    (error "findPayScript: could not find matching script for given credential")
+    (Map.lookup scriptHash scriptsByPayHash)
 findPayScriptFromCred _ _ =
   error "findPayScriptFromCred: expects only ScriptHashObj"
 
@@ -453,15 +454,16 @@ findStakeScriptFromCred ::
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   (MultiSig c, MultiSig c)
 findStakeScriptFromCred (ScriptHashObj scriptHash) scriptsByStakeHash =
-  fromMaybe (error "findStakeScriptFromCred: could not find matching script for given credential") 
-            (Map.lookup scriptHash scriptsByStakeHash)
+  fromMaybe
+    (error "findStakeScriptFromCred: could not find matching script for given credential")
+    (Map.lookup scriptHash scriptsByStakeHash)
 findStakeScriptFromCred _ _ =
   error "findStakeScriptFromCred: expects only ScriptHashObj"
 
 -- | Find first matching multisig script for an address.
-findPayScriptFromAddr :: 
-  (HasCallStack, Crypto c) => 
-  Addr c -> 
+findPayScriptFromAddr ::
+  (HasCallStack, Crypto c) =>
+  Addr c ->
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   (MultiSig c, MultiSig c)
 findPayScriptFromAddr (Addr _ scriptHash (StakeRefBase _)) scriptsByPayHash =

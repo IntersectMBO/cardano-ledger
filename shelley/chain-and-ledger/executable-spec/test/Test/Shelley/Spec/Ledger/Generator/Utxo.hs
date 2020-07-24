@@ -1,10 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -137,10 +137,10 @@ genTx
       -- Generate the building blocks of a TxBody
       -------------------------------------------------------------------------
       (inputs, spendingBalanceUtxo, (spendWits, spendScripts)) <-
-        genInputs constants scripts' ksIndexedPaymentKeys ksIndexedPayScripts utxo
+        genInputs constants ksIndexedPaymentKeys ksIndexedPayScripts utxo
       (wdrls, (wdrlWits, wdrlScripts)) <-
-        genWithdrawals constants ksIndexedStakeScripts ksIndexedStakingKeys scripts' ((_rewards . _dstate) dpState)
-      (update, updateWits) <- 
+        genWithdrawals constants ksIndexedStakeScripts ksIndexedStakingKeys ((_rewards . _dstate) dpState)
+      (update, updateWits) <-
         genUpdate constants slot ksCoreNodes ksIndexedGenDelegates pparams (utxoSt, dpState)
       (certs, deposits, refunds, dpState', (certWits, certScripts)) <-
         genDCerts ge pparams dpState slot txIx reserves
@@ -158,8 +158,9 @@ genTx
       -------------------------------------------------------------------------
       let spendingBalance = assertPositive $ spendingBalanceUtxo + (sum (snd <$> wdrls)) - deposits + refunds
           assertPositive b = if b > 0 then b else error ("genTx: zero or negative balance " <> show b)
-      outputAddrs <- genRecipients (length inputs) keys' scripts' 
-                     >>= genPtrAddrs (_dstate dpState')
+      outputAddrs <-
+        genRecipients (length inputs) keys' scripts'
+          >>= genPtrAddrs (_dstate dpState')
       let mkOutputs = calcOutputsFromBalance spendingBalance outputAddrs
       -------------------------------------------------------------------------
       -- Build a Draft Tx and use it to calculate transaction fees
@@ -170,31 +171,30 @@ genTx
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
           fees = minfeeBound pparams draftTx
       -------------------------------------------------------------------------
-      -- Generate final Tx now that we have the real fees. We need to recompute 
+      -- Generate final Tx now that we have the real fees. We need to recompute
       -- the output amounts and in turn the txBody and its witness set.
       -------------------------------------------------------------------------
       -- "discard" if the balance cannot cover the fees
       let assertFees fee_ bal_ = if fee_ < bal_ then fee_ else error ("genTx minimalFees: " <> show fee_ <> " >= " <> show bal_)
           realFees = assertFees fees spendingBalance
       let (actualFees', outputs') = mkOutputs realFees
-          txBody = draftTxBody { _txfee = actualFees', _outputs = outputs'}
+          txBody = draftTxBody {_txfee = actualFees', _outputs = outputs'}
       pure $ Tx txBody (mkTxWits' txBody) metadata
-  where 
-    genTimeToLive = do 
-      ttl <- genNatural 50 100
-      pure $ slot + SlotNo (fromIntegral ttl)
+    where
+      genTimeToLive = do
+        ttl <- genNatural 50 100
+        pure $ slot + SlotNo (fromIntegral ttl)
 
-mkScriptWits :: 
+mkScriptWits ::
   (HasCallStack, Crypto c) =>
-  [(MultiSig c, MultiSig c)] -> 
-  [(MultiSig c, MultiSig c)] -> 
+  [(MultiSig c, MultiSig c)] ->
+  [(MultiSig c, MultiSig c)] ->
   Map (ScriptHash c) (MultiSig c)
 mkScriptWits payScripts stakeScripts =
   Map.fromList $
     (hashPayScript <$> payScripts)
-    ++ 
-    (hashStakeScript <$> stakeScripts)
-  where 
+      ++ (hashStakeScript <$> stakeScripts)
+  where
     hashPayScript (payScript, _) = (hashScript payScript, payScript)
     hashStakeScript (_, sScript) = (hashScript sScript, sScript)
 
@@ -210,7 +210,7 @@ mkTxWits
   indexedPaymentKeys
   indexedStakingKeys
   awits
-  msigs 
+  msigs
   txBodyHash =
     WitnessSet
       { addrWits =
@@ -296,12 +296,11 @@ calcOutputsFromBalance balance_ addrs fee =
 genInputs ::
   (HasCallStack, Crypto c) =>
   Constants ->
-  MultiSigPairs c ->
   Map (KeyHash 'Payment c) (KeyPair 'Payment c) ->
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   UTxO c ->
   Gen ([TxIn c], Coin, ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)]))
-genInputs Constants {minNumGenInputs, maxNumGenInputs} scripts keyHashMap payScriptMap (UTxO utxo) = do
+genInputs Constants {minNumGenInputs, maxNumGenInputs} keyHashMap payScriptMap (UTxO utxo) = do
   selectedUtxo <-
     take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
       <*> QC.shuffle (Map.toList utxo)
@@ -325,11 +324,11 @@ genWithdrawals ::
   Constants ->
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
-  MultiSigPairs c ->
   Map (Credential c 'Staking) Coin ->
-  Gen ([(RewardAcnt c, Coin)], 
-       ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)])
-      )
+  Gen
+    ( [(RewardAcnt c, Coin)],
+      ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)])
+    )
 genWithdrawals
   Constants
     { frequencyNoWithdrawals,
@@ -339,7 +338,6 @@ genWithdrawals
     }
   ksIndexedStakeScripts
   ksIndexedStakingKeys
-  scripts  
   wdrls =
     QC.frequency
       [ ( frequencyNoWithdrawals,
@@ -352,9 +350,9 @@ genWithdrawals
           genWrdls (Map.toList wdrls)
         )
       ]
-    where 
+    where
       toRewardAcnt (rwd, coin) = (Address.RewardAcnt Testnet rwd, coin)
-      genWrdls wdrls_ = do 
+      genWrdls wdrls_ = do
         selectedWrdls <- map toRewardAcnt <$> QC.sublistOf wdrls_
         let wits = (mkWdrlWits ksIndexedStakeScripts ksIndexedStakingKeys . getRwdCred . fst) <$> selectedWrdls
         return (selectedWrdls, Either.partitionEithers wits)

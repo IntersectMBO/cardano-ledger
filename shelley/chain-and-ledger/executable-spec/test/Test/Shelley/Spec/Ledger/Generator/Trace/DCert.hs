@@ -13,8 +13,6 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts) where
 
-import GHC.Stack (HasCallStack)
-import Data.List (partition)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
   ( BaseM,
@@ -35,17 +33,19 @@ import Control.State.Transition
 import Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, traceSignals)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (runIdentity)
+import Data.List (partition)
 import qualified Data.Map.Strict as Map (lookup)
 import Data.Maybe (catMaybes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
-import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyRole (..), asWitness, KeyPair)
+import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyPair, KeyRole (..), asWitness)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DPState,
@@ -53,14 +53,13 @@ import Shelley.Spec.Ledger.LedgerState
     _pstate,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
-import Shelley.Spec.Ledger.STS.Delpl (DelplEnv (..))
+import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))
+import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (getKeyCombination)
-import Shelley.Spec.Ledger.TxData (Ix, Ptr (..), DCert)
+import Shelley.Spec.Ledger.TxData (DCert, Ix, Ptr (..))
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
 import Test.QuickCheck (Gen)
-import Shelley.Spec.Ledger.STS.Delpl (DELPL)
-import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..))
 import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..), genDCert)
@@ -139,11 +138,13 @@ genDCerts ::
   SlotNo ->
   Natural ->
   AccountState ->
-  Gen (StrictSeq (DCert c), 
-       Coin, 
-       Coin, 
-       DPState c,
-       ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)]))
+  Gen
+    ( StrictSeq (DCert c),
+      Coin,
+      Coin,
+      DPState c,
+      ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)])
+    )
 genDCerts
   ge@( GenEnv
          KeySpace_ {ksIndexedStakingKeys}
@@ -165,15 +166,16 @@ genDCerts
         (certs, creds) = unzip certsCreds
         deRegStakeCreds = filter isDeRegKey certs
         (scriptCreds, keyCreds) = partition isScript creds
-        keyCreds' = concat (keyCreds: map scriptWitnesses scriptCreds)
+        keyCreds' = concat (keyCreds : map scriptWitnesses scriptCreds)
 
     pure
       ( StrictSeq.fromList certs,
         totalDeposits pparams (_pParams (_pstate dpState)) certs,
         (_keyDeposit pparams) * (fromIntegral $ length deRegStakeCreds),
         lastState_,
-        (concat (keyCredAsWitness <$> keyCreds'), 
-         scriptCredMultisig <$> scriptCreds)
+        ( concat (keyCredAsWitness <$> keyCreds'),
+          scriptCredMultisig <$> scriptCreds
+        )
       )
     where
       isScript (ScriptCred _) = True
@@ -182,7 +184,7 @@ genDCerts
       scriptWitnesses :: CertCred c -> [CertCred c]
       scriptWitnesses (ScriptCred (_, stakeScript)) =
         StakeCred <$> witnessHashes''
-        where 
+        where
           witnessHashes = getKeyCombination stakeScript
           witnessHashes' = fmap coerceKeyRole witnessHashes
           witnessHashes'' = fmap coerceKeyRole (catMaybes (map lookupWit witnessHashes'))
@@ -198,6 +200,6 @@ keyCredAsWitness :: (HasCallStack, Crypto c) => CertCred c -> [KeyPair 'Witness 
 keyCredAsWitness (DelegateCred c) = asWitness <$> c
 keyCredAsWitness (CoreKeyCred c) = asWitness <$> c
 keyCredAsWitness (StakeCred c) = [asWitness c]
-keyCredAsWitness (PoolCred c ) = [asWitness c]
+keyCredAsWitness (PoolCred c) = [asWitness c]
 keyCredAsWitness NoCred = []
 keyCredAsWitness x = error $ "keyCredAsWitness: use only for Script Credentials - " <> show x

@@ -48,10 +48,10 @@ import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
+    KeyHash,
     KeyPair,
     KeyRole (..),
     VKey,
-    KeyHash,
     coerceKeyRole,
     hashKey,
     vKey,
