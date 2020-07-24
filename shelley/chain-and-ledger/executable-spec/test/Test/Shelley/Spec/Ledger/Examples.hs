@@ -1612,10 +1612,10 @@ blockEx2HHash :: Mock c => proxy c -> HashHeader c
 blockEx2HHash _ = bhHash (bheader blockEx2H)
 
 aliceRAcnt2H :: Coin
-aliceRAcnt2H = Coin 5827393939
+aliceRAcnt2H = Coin 11654787878
 
 bobRAcnt2H :: Coin
-bobRAcnt2H = Coin 519272726
+bobRAcnt2H = Coin 1038545454
 
 rewardsEx2H :: Crypto c => RewardAccounts c
 rewardsEx2H =
@@ -1646,16 +1646,16 @@ alicePerfEx2H p = likelihood blocks t slotsPerEpoch
     f = runShelleyBase (asks activeSlotCoeff)
 
 deltaT2H :: Coin
-deltaT2H = Coin 158666666666
+deltaT2H = Coin 317333333333
 
 deltaR2H :: Coin
-deltaR2H = Coin (-165013333331)
+deltaR2H = Coin (-330026666665)
 
 nonMyopicEx2H :: forall c. Crypto c => NonMyopic c
 nonMyopicEx2H =
   NonMyopic
     (Map.singleton (hk (alicePool p)) (alicePerfEx2H p))
-    (Coin 634666666667)
+    (Coin 1269333333333)
     snapEx2C
   where
     p :: Proxy c
