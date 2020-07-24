@@ -17,6 +17,7 @@ where
 
 import Control.Iterate.SetAlgebra (dom, domain, eval, (∈), (∉))
 import qualified Data.List as List
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
@@ -50,6 +51,7 @@ import Shelley.Spec.Ledger.Keys
     KeyPair,
     KeyRole (..),
     VKey,
+    KeyHash,
     coerceKeyRole,
     hashKey,
     vKey,
@@ -95,7 +97,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genCoinList,
     genInteger,
     genWord64,
-    lookupGenDelegate,
     toCred,
     tooLateInEpoch,
   )
@@ -145,7 +146,8 @@ genDCert
       ksKeyPairs,
       ksMSigScripts,
       ksStakePools,
-      ksGenesisDelegates
+      ksGenesisDelegates,
+      ksIndexedGenDelegates
     }
   pparams
   accountState
@@ -163,8 +165,7 @@ genDCert
         ( frequencyMIRCert,
           genInstantaneousRewards
             slot
-            ksCoreNodes
-            ksGenesisDelegates
+            ksIndexedGenDelegates
             pparams
             accountState
             dState
@@ -455,20 +456,18 @@ genRetirePool Constants {frequencyLowMaxEpoch} poolKeys pState slot =
 genInstantaneousRewards ::
   (HasCallStack, Crypto c) =>
   SlotNo ->
-  -- | Core nodes
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
-  -- | All potential genesis delegate keys
-  [AllIssuerKeys c 'GenesisDelegate] ->
+  -- | Index over the cold key hashes of all possible Genesis Delegates
+  Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams ->
   AccountState ->
   DState c ->
   Gen (Maybe (DCert c, CertCred c))
-genInstantaneousRewards s coreNodes delegateKeys pparams accountState delegSt = do
+genInstantaneousRewards s genesisDelegatesByHash pparams accountState delegSt = do
   let (GenDelegs genDelegs_) = _genDelegs delegSt
       lookupGenDelegate' gk =
         fromMaybe
           (error "genInstantaneousRewards: lookupGenDelegate failed")
-          (lookupGenDelegate coreNodes delegateKeys gk)
+          (Map.lookup gk genesisDelegatesByHash)
       credentials = _rewards delegSt
 
   winnerCreds <-

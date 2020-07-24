@@ -14,6 +14,7 @@ module Test.Shelley.Spec.Ledger.Generator.Update
   )
 where
 
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Ratio (Ratio, (%))
@@ -64,7 +65,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genNatural,
     genWord64,
     increasingProbabilityAt,
-    lookupGenDelegate,
     tooLateInEpoch,
   )
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
@@ -270,24 +270,24 @@ genUpdate ::
   Constants ->
   SlotNo ->
   [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
-  [AllIssuerKeys c 'GenesisDelegate] ->
+  Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams ->
   (UTxOState c, DPState c) ->
   Gen (Maybe (Update c), [KeyPair 'Witness c])
 genUpdate
   c@(Constants {frequencyTxUpdates})
   s
-  delegateKeys
-  genesisDelegateKeys
+  coreNodes
+  genesisDelegatesByHash
   pp
   (_utxoSt, delegPoolSt) =
     do
-      nodes <- take 5 <$> QC.shuffle delegateKeys
+      nodes <- take 5 <$> QC.shuffle coreNodes
 
       let e = epochFromSlotNo s
           (GenDelegs genDelegs) = (_genDelegs . _dstate) delegPoolSt
           genesisKeys = fst <$> nodes
-          coreSigners = catMaybes $ lookupGenDelegate nodes genesisDelegateKeys . genDelegKeyHash <$> Map.elems genDelegs
+          coreSigners = catMaybes $ (flip Map.lookup) genesisDelegatesByHash . genDelegKeyHash <$> Map.elems genDelegs
           failedWitnessLookup = length coreSigners < Map.size genDelegs
       if failedWitnessLookup
         then -- discard

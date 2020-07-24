@@ -33,7 +33,6 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     genesisCoins,
     genesisId,
     increasingProbabilityAt,
-    lookupGenDelegate,
     mkScriptsFromKeyPair,
     pickStakeKey,
     toAddr,
@@ -53,6 +52,7 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   )
 where
 
+import Data.Maybe (fromMaybe)
 import Cardano.Binary (toCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash (HashAlgorithm)
@@ -143,6 +143,7 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.Scripts
   ( MultiSig,
+    ScriptHash,
     pattern RequireAllOf,
     pattern RequireAnyOf,
     pattern RequireMOf,
@@ -227,11 +228,17 @@ data KeySpace crypto = KeySpace_
     ksStakePools :: [AllIssuerKeys crypto 'StakePool],
     -- | Bag of keys to be used for future payment/staking addresses
     ksKeyPairs :: KeyPairs crypto,
+    ksMSigScripts :: MultiSigPairs crypto,
     -- | Index over the payment keys in 'ksKeyPairs'
     ksIndexedPaymentKeys :: Map (KeyHash 'Payment crypto) (KeyPair 'Payment crypto),
     -- | Index over the staking keys in 'ksKeyPairs'
     ksIndexedStakingKeys :: Map (KeyHash 'Staking crypto) (KeyPair 'Staking crypto),
-    ksMSigScripts :: MultiSigPairs crypto
+    -- | Index over the cold key hashes in Genesis Delegates
+    ksIndexedGenDelegates :: Map (KeyHash 'GenesisDelegate crypto) (AllIssuerKeys crypto 'GenesisDelegate),
+    -- | Index over the pay script hashes in MultiSig pairs
+    ksIndexedPayScripts :: Map (ScriptHash crypto) (MultiSig crypto, MultiSig crypto),
+    -- | Index over the stake script hashes in MultiSig pairs
+    ksIndexedStakeScripts :: Map (ScriptHash crypto) (MultiSig crypto, MultiSig crypto)
   }
 
 deriving instance (Crypto c) => Show (KeySpace c)
@@ -266,20 +273,11 @@ pattern KeySpace
           ksKeyPairs,
           ksIndexedPaymentKeys = mkPayKeyHashMap ksKeyPairs,
           ksIndexedStakingKeys = mkStakeKeyHashMap ksKeyPairs,
+          ksIndexedGenDelegates = mkGenesisDelegatesHashMap ksCoreNodes ksGenesisDelegates,
+          ksIndexedPayScripts = mkPayScriptHashMap ksMSigScripts,
+          ksIndexedStakeScripts = mkStakeScriptHashMap ksMSigScripts,
           ksMSigScripts
         }
-
--- | Look up the given GenesisDelegate key in the combined list of
--- core nodes and potential genesis delegate keys.
-lookupGenDelegate ::
-  (Crypto crypto) =>
-  [(GenesisKeyPair crypto, AllIssuerKeys crypto 'GenesisDelegate)] ->
-  [AllIssuerKeys crypto 'GenesisDelegate] ->
-  KeyHash 'GenesisDelegate crypto ->
-  Maybe (AllIssuerKeys crypto 'GenesisDelegate)
-lookupGenDelegate coreNodes genesisDelegates gkey =
-  let allDelegateKeys = (snd <$> coreNodes) <> genesisDelegates
-   in List.find (\a -> (hashKey . vKey . cold) a == gkey) allDelegateKeys
 
 genBool :: HasCallStack => Gen Bool
 genBool = QC.arbitraryBoundedRandom
@@ -311,6 +309,21 @@ mkKeyPairs n =
       (uncurry KeyPair . swap)
         (mkKeyPair (n_, n_, n_, n_, n_))
 
+
+-- | Generate a mapping from genesis delegate cold key hash to the issuer keys.
+-- Note: we index all possible genesis delegate keys, that is,
+-- core nodes and all potential keys.
+mkGenesisDelegatesHashMap :: 
+  (HasCallStack, Crypto c) => 
+  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  [AllIssuerKeys c 'GenesisDelegate] ->
+  Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate)
+mkGenesisDelegatesHashMap coreNodes genesisDelegates = 
+  Map.fromList (f <$> allDelegateKeys)
+  where 
+    f issuerKeys = ((hashKey . vKey . cold) issuerKeys, issuerKeys)
+    allDelegateKeys = (snd <$> coreNodes) <> genesisDelegates
+
 -- | Generate a mapping from stake key hash to stake key pair, from a list of
 -- (payment, staking) key pairs.
 mkStakeKeyHashMap :: (HasCallStack, Crypto c) => KeyPairs c -> Map (KeyHash 'Staking c) (KeyPair 'Staking c)
@@ -329,6 +342,26 @@ mkPayKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
     f (payK, _stakeK) = ((hashKey . vKey) payK, payK)
+
+-- | Generate a mapping from pay script hash to multisig pair.
+mkPayScriptHashMap ::
+  (HasCallStack, Crypto c) =>
+  [(MultiSig c, MultiSig c)] ->
+  Map (ScriptHash c) (MultiSig c, MultiSig c)
+mkPayScriptHashMap scripts =
+  Map.fromList (f <$> scripts)
+  where
+    f script@(pay, _stake) = (hashScript pay, script)
+
+-- | Generate a mapping from stake script hash to multisig pair.
+mkStakeScriptHashMap ::
+  (HasCallStack, Crypto c) =>
+  [(MultiSig c, MultiSig c)] ->
+  Map (ScriptHash c) (MultiSig c, MultiSig c)
+mkStakeScriptHashMap scripts =
+  Map.fromList (f <$> scripts)
+  where
+    f script@(_pay, stake) = (hashScript stake, script)
 
 -- | Multi-Sig Scripts based on the given key pairs
 mkMSigScripts :: (HasCallStack, Crypto c) => KeyPairs c -> MultiSigPairs c
@@ -382,16 +415,11 @@ findPayKeyPairCred ::
   Credential h kr ->
   Map (KeyHash h kr) (KeyPair h kr) ->
   KeyPair h kr
-findPayKeyPairCred c keyHashMap =
-  case c of
-    KeyHashObj addr -> lookforKeyHash addr
-    _ ->
-      error "findPayKeyPairCred: expects only KeyHashObj"
-  where
-    lookforKeyHash addr' =
-      case Map.lookup addr' keyHashMap of
-        Nothing -> error $ "findPayKeyPairCred: could not find a match for the given credential: " <> show addr'
-        Just kp -> kp
+findPayKeyPairCred (KeyHashObj addr) keyHashMap =
+  fromMaybe (error $ "findPayKeyPairCred: could not find a match for the given credential: " <> show addr)
+            (Map.lookup addr keyHashMap)
+findPayKeyPairCred _ _ =
+  error "findPayKeyPairCred: expects only KeyHashObj"
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
@@ -406,50 +434,42 @@ findPayKeyPairAddr a keyHashMap =
     _ ->
       error "findPayKeyPairAddr: expects only Base or Ptr addresses"
 
--- | Find first matching script for a credential.
+-- | Find matching multisig scripts for a credential.
 findPayScriptFromCred ::
   (HasCallStack, Crypto c) =>
   Credential 'Witness c ->
-  MultiSigPairs c ->
+  Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   (MultiSig c, MultiSig c)
-findPayScriptFromCred c scripts =
-  case c of
-    ScriptHashObj scriptHash -> lookForScriptHash scriptHash
-    _ ->
-      error "findPayScriptFromCred: expects only ScriptHashObj"
-  where
-    lookForScriptHash scriptHash =
-      case List.findIndex (\(pay, _) -> scriptHash == hashScript pay) scripts of
-        Nothing -> error "findPayScript: could not find matching script for given credential"
-        Just i -> scripts !! i
+findPayScriptFromCred (ScriptHashObj scriptHash) scriptsByPayHash =
+  fromMaybe (error "findPayScript: could not find matching script for given credential") 
+            (Map.lookup scriptHash scriptsByPayHash)
+findPayScriptFromCred _ _ =
+  error "findPayScriptFromCred: expects only ScriptHashObj"
 
 -- | Find first matching script for a credential.
 findStakeScriptFromCred ::
   (HasCallStack, Crypto c) =>
   Credential 'Witness c ->
-  MultiSigPairs c ->
+  Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   (MultiSig c, MultiSig c)
-findStakeScriptFromCred c scripts =
-  case c of
-    ScriptHashObj scriptHash -> lookForScriptHash scriptHash
-    _ ->
-      error "findStakeScriptFromCred: expects only ScriptHashObj"
-  where
-    lookForScriptHash scriptHash =
-      case List.findIndex (\(_, scr) -> scriptHash == hashScript scr) scripts of
-        Nothing -> error $ "findStakeScriptFromCred: could not find matching script for given credential"
-        Just i -> scripts !! i
+findStakeScriptFromCred (ScriptHashObj scriptHash) scriptsByStakeHash =
+  fromMaybe (error "findStakeScriptFromCred: could not find matching script for given credential") 
+            (Map.lookup scriptHash scriptsByStakeHash)
+findStakeScriptFromCred _ _ =
+  error "findStakeScriptFromCred: expects only ScriptHashObj"
 
--- | Find first matching script for address.
-findPayScriptFromAddr :: (HasCallStack, Crypto c) => Addr c -> MultiSigPairs c -> (MultiSig c, MultiSig c)
-findPayScriptFromAddr a scripts =
-  case a of
-    Addr _ scriptHash (StakeRefBase _) ->
-      findPayScriptFromCred (asWitness scriptHash) scripts
-    Addr _ scriptHash (StakeRefPtr _) ->
-      findPayScriptFromCred (asWitness scriptHash) scripts
-    _ ->
-      error "findPayScriptFromAddr: expects only base and pointer script addresses"
+-- | Find first matching multisig script for an address.
+findPayScriptFromAddr :: 
+  (HasCallStack, Crypto c) => 
+  Addr c -> 
+  Map (ScriptHash c) (MultiSig c, MultiSig c) ->
+  (MultiSig c, MultiSig c)
+findPayScriptFromAddr (Addr _ scriptHash (StakeRefBase _)) scriptsByPayHash =
+  findPayScriptFromCred (asWitness scriptHash) scriptsByPayHash
+findPayScriptFromAddr (Addr _ scriptHash (StakeRefPtr _)) scriptsByPayHash =
+  findPayScriptFromCred (asWitness scriptHash) scriptsByPayHash
+findPayScriptFromAddr _ _ =
+  error "findPayScriptFromAddr: expects only base and pointer script addresses"
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
 pickStakeKey :: HasCallStack => KeyPairs c -> Gen (VKey 'Staking c)
