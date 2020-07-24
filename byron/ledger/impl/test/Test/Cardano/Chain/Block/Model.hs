@@ -32,7 +32,6 @@ import Cardano.Prelude hiding (trace, State, state)
 import Data.String (fromString)
 import Test.Cardano.Prelude
 
-import Control.Lens ((^.))
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Hedgehog
@@ -53,6 +52,7 @@ import Hedgehog
   )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import Lens.Micro ((^.))
 
 import Cardano.Chain.Block
   ( ABlock

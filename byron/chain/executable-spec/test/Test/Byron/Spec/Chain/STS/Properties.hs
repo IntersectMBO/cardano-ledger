@@ -5,10 +5,11 @@
 module Test.Byron.Spec.Chain.STS.Properties where
 
 import           Control.Arrow ((***))
-import           Control.Lens (view, (&), (^.), (^..), _1, _5)
 import           Data.Foldable (traverse_)
 import           Data.List.Ordered (nubSortBy)
 import           Data.Ord (Down (Down), comparing)
+import           Lens.Micro ((&), (^.), (^..), _1, _5)
+import           Lens.Micro.Extras (view)
 
 import           Hedgehog (MonadTest, Property, assert, cover, failure, forAll, property, withTests,
                      (===))

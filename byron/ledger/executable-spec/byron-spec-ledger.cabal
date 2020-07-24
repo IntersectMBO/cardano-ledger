@@ -46,7 +46,8 @@ library
                      , goblins
                      , hashable
                      , hedgehog >= 1.0
-                     , lens
+                     , microlens
+                     , microlens-th
                      , template-haskell
                      , Unique >= 0.4.7.6
                      -- IOHK deps
@@ -76,8 +77,8 @@ test-suite doctests
                        -- to ensure they are in scope.
                      , containers
                      , hedgehog >= 1.0
-                     , lens
                      , memory
+                     , microlens
                      , text
                      -- Local deps
                      , small-steps
@@ -111,8 +112,9 @@ test-suite byron-spec-ledger-test
   build-depends: base
                , bimap >=0.4 && <0.5
                , containers
-               , lens
                , hedgehog >= 1.0
+               , microlens
+               , microlens-th
                , tasty
                , tasty-hunit
                , tasty-hedgehog

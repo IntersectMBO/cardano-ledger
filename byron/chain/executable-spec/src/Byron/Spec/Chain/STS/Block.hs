@@ -10,7 +10,6 @@
 
 module Byron.Spec.Chain.STS.Block where
 
-import           Control.Lens (makeLenses, view, (^.))
 import           Data.AbstractSize
 import           Data.ByteString (ByteString)
 import           Data.Data (Data, Typeable)
@@ -20,6 +19,9 @@ import qualified Data.Map.Strict as Map
 import           Data.Sequence ((<|))
 import           Data.Typeable (typeOf)
 import           GHC.Generics (Generic)
+import           Lens.Micro ((^.))
+import           Lens.Micro.Extras (view)
+import           Lens.Micro.TH (makeLenses)
 import           Numeric.Natural (Natural)
 
 import           Control.State.Transition.Generator

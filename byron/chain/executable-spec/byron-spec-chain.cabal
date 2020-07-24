@@ -38,7 +38,8 @@ library
                      , goblins
                      , hashable
                      , hedgehog >= 1.0
-                     , lens
+                     , microlens
+                     , microlens-th
                      , small-steps
                      , small-steps-test
   ghc-options:         -Wall
@@ -60,7 +61,7 @@ test-suite chain-rules-test
                      , containers
                      , data-ordlist
                      , hedgehog >= 1.0
-                     , lens
+                     , microlens
                      , tasty
                      , tasty-hedgehog
                      , tasty-hunit
