@@ -86,9 +86,22 @@ module Shelley.Spec.Ledger.LedgerState
     --
     NewEpochState (..),
     NewEpochEnv (..),
-    overlaySchedule,
     getGKeys,
     updateNES,
+
+    -- * Overlay schedule
+    OverlaySchedule,
+    OverlaySlots,
+    compactOverlaySchedule,
+    decompactOverlaySchedule,
+    emptyOverlaySchedule,
+    isOverlaySlot,
+    lookupInOverlaySchedule,
+    overlaySchedule,
+    overlayScheduleHelper,
+    overlayScheduleIsEmpty,
+    overlayScheduleToMap,
+    overlaySlots,
   )
 where
 
@@ -123,9 +136,11 @@ import Shelley.Spec.Ledger.Address.Bootstrap
     verifyBootstrapWit,
   )
 import Shelley.Spec.Ledger.BaseTypes
-  ( Globals (..),
+  ( ActiveSlotCoeff,
+    Globals (..),
     ShelleyBase,
     StrictMaybe (..),
+    UnitInterval,
     activeSlotVal,
     intervalValue,
     unitIntervalToRational,
@@ -588,7 +603,7 @@ data NewEpochState crypto = NewEpochState
     -- | Stake distribution within the stake pool
     nesPd :: !(PoolDistr crypto),
     -- | Overlay schedule for PBFT vs Praos
-    nesOsched :: !(Map SlotNo (OBftSlot crypto))
+    nesOsched :: !(OverlaySchedule crypto)
   }
   deriving (Show, Eq, Generic)
 
@@ -601,7 +616,7 @@ instance Crypto crypto => ToCBOR (NewEpochState crypto) where
     encodeListLen 7 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
       <> toCBOR ru
       <> toCBOR pd
-      <> toCBOR (compactOverlaySchedule os)
+      <> toCBOR os
 
 instance Crypto crypto => FromCBOR (NewEpochState crypto) where
   fromCBOR = do
@@ -612,34 +627,8 @@ instance Crypto crypto => FromCBOR (NewEpochState crypto) where
       es <- fromCBOR
       ru <- fromCBOR
       pd <- fromCBOR
-      os <- decompactOverlaySchedule <$> fromCBOR
+      os <- fromCBOR
       pure $ NewEpochState e bp bc es ru pd os
-
--- | Convert the overlay schedule to a representation that is more compact
--- when serialised to a bytestring, but less efficient for lookups.
---
--- Each genesis key hash will only be stored once, instead of each time it is
--- assigned to a slot.
-compactOverlaySchedule ::
-  Map SlotNo (OBftSlot crypto) ->
-  Map (OBftSlot crypto) (NonEmpty SlotNo)
-compactOverlaySchedule =
-  Map.foldrWithKey'
-    ( \slot obftSlot ->
-        Map.insertWith (<>) obftSlot (pure slot)
-    )
-    Map.empty
-
--- | Inverse of 'compactOverlaySchedule'
-decompactOverlaySchedule ::
-  Map (OBftSlot crypto) (NonEmpty SlotNo) ->
-  Map SlotNo (OBftSlot crypto)
-decompactOverlaySchedule compact =
-  Map.fromList
-    [ (slot, obftSlot)
-      | (obftSlot, slots) <- Map.toList compact,
-        slot <- NonEmpty.toList slots
-    ]
 
 getGKeys ::
   NewEpochState crypto ->
@@ -1020,44 +1009,6 @@ createRUpd slotsPerEpoch b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total
         nonMyopic = (updateNonMypopic nm _R newLikelihoods (_pstakeGo ss))
       }
 
--- | Overlay schedule
--- This is just a very simple round-robin, evenly spaced schedule.
-overlaySchedule ::
-  EpochNo ->
-  Set (KeyHash 'Genesis crypto) ->
-  PParams ->
-  ShelleyBase (Map SlotNo (OBftSlot crypto))
-overlaySchedule e gkeys pp = do
-  let dval = intervalValue $ _d pp
-  if dval == 0
-    then pure Map.empty
-    else do
-      ei <- asks epochInfo
-      slotsPerEpoch <- epochInfoSize ei e
-      firstSlotNo <- epochInfoFirst ei e
-      asc <- asks activeSlotCoeff
-      let numActive = dval * fromIntegral slotsPerEpoch
-          dInv = 1 / dval
-          ascValue = (intervalValue . activeSlotVal) asc
-          toRelativeSlotNo x = (Duration . floor) (dInv * fromInteger x)
-          toSlotNo x = firstSlotNo +* toRelativeSlotNo x
-          genesisSlots = [toSlotNo x | x <- [0 .. (floor numActive - 1)]]
-          numInactivePerActive = floor (1 / ascValue) - 1
-          activitySchedule = cycle (True : replicate numInactivePerActive False)
-          unassignedSched = zip activitySchedule genesisSlots
-          genesisCycle = if Set.null gkeys then [] else cycle (Set.toList gkeys)
-          active =
-            Map.fromList $
-              fmap
-                (\(gk, (_, s)) -> (s, ActiveSlot gk))
-                (zip genesisCycle (filter fst unassignedSched))
-          inactive =
-            Map.fromList $
-              fmap
-                (\x -> (snd x, NonActiveSlot))
-                (filter (not . fst) unassignedSched)
-      pure $ Map.union active inactive
-
 -- | Update new epoch state
 updateNES ::
   NewEpochState crypto ->
@@ -1077,3 +1028,115 @@ updateNES
   bcur
   ls =
     NewEpochState eL bprev bcur (EpochState acnt ss ls pr pp nm) ru pd osched
+
+newtype OverlaySchedule crypto = OverlaySchedule (Map SlotNo (OBftSlot crypto))
+  deriving stock (Show, Eq)
+  deriving newtype (NoUnexpectedThunks, NFData)
+
+emptyOverlaySchedule :: OverlaySchedule crypto
+emptyOverlaySchedule = OverlaySchedule Map.empty
+
+lookupInOverlaySchedule ::
+  SlotNo ->
+  OverlaySchedule crypto ->
+  Maybe (OBftSlot crypto)
+lookupInOverlaySchedule slot (OverlaySchedule oSched) = Map.lookup slot oSched
+
+overlayScheduleIsEmpty :: OverlaySchedule crypto -> Bool
+overlayScheduleIsEmpty (OverlaySchedule oSched) = Map.null oSched
+
+-- | Overlay schedule
+-- This is just a very simple round-robin, evenly spaced schedule.
+overlaySchedule ::
+  EpochNo ->
+  Set (KeyHash 'Genesis crypto) ->
+  PParams ->
+  ShelleyBase (OverlaySchedule crypto)
+overlaySchedule e gkeys pp = do
+  ei <- asks epochInfo
+  slotsPerEpoch <- epochInfoSize ei e
+  firstSlotNo <- epochInfoFirst ei e
+  asc <- asks activeSlotCoeff
+  pure $ overlayScheduleHelper slotsPerEpoch firstSlotNo gkeys (_d pp) asc
+
+overlayScheduleHelper ::
+  EpochSize ->
+  -- | First slot of the epoch
+  SlotNo ->
+  Set (KeyHash 'Genesis crypto) ->
+  -- | Decentralization parameter @d@
+  UnitInterval ->
+  ActiveSlotCoeff ->
+  OverlaySchedule crypto
+overlayScheduleHelper slotsPerEpoch firstSlotNo gkeys d asc
+  | dval == 0 =
+    OverlaySchedule $ Map.empty
+  | otherwise =
+    OverlaySchedule $ Map.union active inactive
+  where
+    dval = intervalValue d
+    numActive = dval * fromIntegral slotsPerEpoch
+    dInv = 1 / dval
+    ascValue = (intervalValue . activeSlotVal) asc
+    toRelativeSlotNo x = (Duration . floor) (dInv * fromInteger x)
+    toSlotNo x = firstSlotNo +* toRelativeSlotNo x
+    genesisSlots = [toSlotNo x | x <- [0 .. (floor numActive - 1)]]
+    numInactivePerActive = floor (1 / ascValue) - 1
+    activitySchedule = cycle (True : replicate numInactivePerActive False)
+    unassignedSched = zip activitySchedule genesisSlots
+    genesisCycle = if Set.null gkeys then [] else cycle (Set.toList gkeys)
+    active =
+      Map.fromList $
+        fmap
+          (\(gk, (_, s)) -> (s, ActiveSlot gk))
+          (zip genesisCycle (filter fst unassignedSched))
+    inactive =
+      Map.fromList $
+        fmap
+          (\x -> (snd x, NonActiveSlot))
+          (filter (not . fst) unassignedSched)
+
+overlayScheduleToMap :: OverlaySchedule crypto -> Map SlotNo (OBftSlot crypto)
+overlayScheduleToMap (OverlaySchedule oSched) = oSched
+
+-- | Convert the overlay schedule to a representation that is more compact
+-- when serialised to a bytestring, but less efficient for lookups.
+--
+-- Each genesis key hash will only be stored once, instead of each time it is
+-- assigned to a slot.
+compactOverlaySchedule ::
+  OverlaySchedule crypto ->
+  Map (OBftSlot crypto) (NonEmpty SlotNo)
+compactOverlaySchedule (OverlaySchedule oSched) =
+  Map.foldrWithKey'
+    ( \slot obftSlot ->
+        Map.insertWith (<>) obftSlot (pure slot)
+    )
+    Map.empty
+    oSched
+
+-- | Inverse of 'compactOverlaySchedule'
+decompactOverlaySchedule ::
+  Map (OBftSlot crypto) (NonEmpty SlotNo) ->
+  OverlaySchedule crypto
+decompactOverlaySchedule compact =
+  OverlaySchedule $
+    Map.fromList
+      [ (slot, obftSlot)
+        | (obftSlot, slots) <- Map.toList compact,
+          slot <- NonEmpty.toList slots
+      ]
+
+instance Crypto crypto => ToCBOR (OverlaySchedule crypto) where
+  toCBOR = toCBOR . compactOverlaySchedule
+
+instance Crypto crypto => FromCBOR (OverlaySchedule crypto) where
+  fromCBOR = decompactOverlaySchedule <$> fromCBOR
+
+newtype OverlaySlots = OverlaySlots (Set SlotNo)
+
+overlaySlots :: OverlaySchedule crypto -> OverlaySlots
+overlaySlots (OverlaySchedule oSched) = OverlaySlots (Map.keysSet oSched)
+
+isOverlaySlot :: SlotNo -> OverlaySlots -> Bool
+isOverlaySlot slot (OverlaySlots oslots) = Set.member slot oslots

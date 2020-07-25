@@ -60,7 +60,7 @@ instance
           emptyEpochState
           SNothing
           (PoolDistr Map.empty)
-          Map.empty
+          emptyOverlaySchedule
     ]
 
   transitionRules = [newEpochTransition]

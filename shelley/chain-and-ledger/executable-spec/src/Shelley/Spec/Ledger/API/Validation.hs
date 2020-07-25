@@ -19,7 +19,6 @@ where
 
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
-import Control.Iterate.SetAlgebra (dom, eval)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (TRC (..), applySTS, reapplySTS)
@@ -69,7 +68,7 @@ mkBbodyEnv
       LedgerState.nesEs
     } =
     STS.BbodyEnv
-      { STS.bbodySlots = eval (dom nesOsched),
+      { STS.bbodySlots = LedgerState.overlaySlots nesOsched,
         STS.bbodyPp = LedgerState.esPp nesEs,
         STS.bbodyAccount = LedgerState.esAccountState nesEs
       }

@@ -127,6 +127,7 @@ import Shelley.Spec.Ledger.LedgerState
     EpochState (..),
     NewEpochState (..),
     RewardUpdate (..),
+    decompactOverlaySchedule,
     emptyLedgerState,
     pattern ActiveSlot,
   )
@@ -1286,8 +1287,8 @@ tests =
             ) ::
               StrictMaybe (RewardUpdate C)
           pd = (PoolDistr Map.empty) :: PoolDistr C
-          os = Map.singleton (SlotNo 1) (ActiveSlot (testGKeyHash p))
           compactOs = Map.singleton (ActiveSlot (testGKeyHash p)) (SlotNo 1 :| [])
+          os = decompactOverlaySchedule compactOs
           nes =
             NewEpochState
               e

@@ -66,7 +66,11 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
-import Shelley.Spec.Ledger.LedgerState (OBftSlot (..))
+import Shelley.Spec.Ledger.LedgerState
+  ( OBftSlot (..),
+    OverlaySchedule,
+    lookupInOverlaySchedule,
+  )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
@@ -75,7 +79,7 @@ data OVERLAY crypto
 
 data OverlayEnv crypto
   = OverlayEnv
-      (Map SlotNo (OBftSlot crypto))
+      (OverlaySchedule crypto)
       Nonce
       (PoolDistr crypto)
       (GenDelegs crypto)
@@ -244,7 +248,7 @@ overlayTransition =
 
         asc <- liftSTS $ asks activeSlotCoeff
 
-        case Map.lookup (bheaderSlotNo bhb) osched of
+        case lookupInOverlaySchedule (bheaderSlotNo bhb) osched of
           Nothing ->
             praosVrfChecks eta0 pd asc bhb ?!: id
           Just NonActiveSlot ->
