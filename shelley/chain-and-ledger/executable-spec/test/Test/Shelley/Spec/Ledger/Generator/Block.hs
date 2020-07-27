@@ -89,7 +89,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genNatural,
     genWord64,
     getKESPeriodRenewalNo,
-    lookupGenDelegate,
     mkBlock,
     mkOCert,
   )
@@ -137,7 +136,7 @@ genBlock ::
   ChainState c ->
   Gen (Block c)
 genBlock
-  ge@(GenEnv KeySpace_ {ksCoreNodes, ksStakePools, ksGenesisDelegates} _)
+  ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
   chainSt = do
     let os = (nesOsched . chainNes) chainSt
         dpstate = (_delegationState . esLState . nesEs . chainNes) chainSt
@@ -260,9 +259,9 @@ genBlock
         AllIssuerKeys c 'GenesisDelegate
       gkeys gkey gds =
         fromMaybe
-          (error "genBlock: lookupGenDelegate failed")
+          (error "genBlock: lookup of Genesis Delegate cold key hash failed")
           ( Map.lookup gkey gds
-              >>= lookupGenDelegate ksCoreNodes ksGenesisDelegates . genDelegKeyHash
+              >>= (flip Map.lookup) ksIndexedGenDelegates . genDelegKeyHash
           )
       genPraosLeader stake =
         if stake >= 0 && stake <= 1
