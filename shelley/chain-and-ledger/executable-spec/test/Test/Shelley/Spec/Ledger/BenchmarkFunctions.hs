@@ -8,6 +8,7 @@ module Test.Shelley.Spec.Ledger.BenchmarkFunctions
   ( ledgerSpendOneUTxO,
     ledgerSpendOneGivenUTxO,
     initUTxO, -- How to precompute env for the UTxO transactions
+    ledgerEnv,
     ledgerRegisterStakeKeys,
     ledgerDeRegisterStakeKeys,
     ledgerRewardWithdrawals,

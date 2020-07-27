@@ -5,6 +5,13 @@ import Control.Iterate.SetAlgebra (keysEqual)
 import Criterion.Main (Benchmark, bench, bgroup, defaultMain, env, whnf)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
+-- How to precompute env for the UTxO transactions
+
+-- How to precompute env for the Stake Delegation transactions
+-- How to precompute env for the StakeKey transactions
+-- How to compute an initial state with N StakePools
+
+import Shelley.Spec.Ledger.Bench.Gen (genTx)
 import Shelley.Spec.Ledger.LedgerState (DPState (..), UTxOState (..))
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions
   ( initUTxO,
@@ -176,5 +183,12 @@ main =
           varyState "reregister pool" 5001 [50, 500, 5000] ledgerStateWithNregisteredPools ledgerReRegisterStakePools,
           varyState "retire pool" 50 [50, 500, 5000] ledgerStateWithNregisteredPools ledgerRetireStakePools,
           varyDelegState "manyKeysOnePool" 50 [50, 500, 5000] ledgerStateWithNkeysMpools ledgerDelegateManyKeysOnePool
+        ],
+      bgroup "generator benchmarking" $
+        [ bgroup
+            "genTx"
+            [ bench "UTxO size 10" $ whnf genTx 10,
+              bench "UTxO size 100" $ whnf genTx 100
+            ]
         ]
     ]
