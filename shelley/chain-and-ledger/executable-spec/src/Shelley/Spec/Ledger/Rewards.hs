@@ -208,7 +208,7 @@ instance FromCBOR PerformanceEstimate where
 data NonMyopic crypto = NonMyopic
   { likelihoodsNM :: !(Map (KeyHash 'StakePool crypto) Likelihood),
     rewardPotNM :: !Coin,
-    snapNM :: !(SnapShot crypto)
+    snapNM :: !(SnapShot crypto) -- TODO we can remove this map
   }
   deriving (Show, Eq, Generic)
 
