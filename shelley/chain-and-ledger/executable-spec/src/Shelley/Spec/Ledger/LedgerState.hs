@@ -493,8 +493,8 @@ emptyDPState :: DPState crypto
 emptyDPState = DPState emptyDState emptyPState
 
 data PPUPState crypto = PPUPState
-  { proposals :: ProposedPPUpdates crypto,
-    futureProposals :: ProposedPPUpdates crypto
+  { proposals :: !(ProposedPPUpdates crypto),
+    futureProposals :: !(ProposedPPUpdates crypto)
   }
   deriving (Show, Eq, Generic, NFData, NoUnexpectedThunks)
 
