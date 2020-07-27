@@ -114,7 +114,7 @@ calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
                 -- particular when shrinking)
               | (hk, Coin c) <- Map.toList stake
             ]
-   in PoolDistr $ Map.intersectionWith (,) sd (Map.map _poolVrf poolParams)
+   in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
 
 instance
   Crypto crypto =>
