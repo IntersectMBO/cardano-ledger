@@ -173,8 +173,8 @@ instance NoUnexpectedThunks (Addr crypto)
 
 -- | An account based address for rewards
 data RewardAcnt crypto = RewardAcnt
-  { getRwdNetwork :: Network,
-    getRwdCred :: Credential 'Staking crypto
+  { getRwdNetwork :: !Network,
+    getRwdCred :: !(Credential 'Staking crypto)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
