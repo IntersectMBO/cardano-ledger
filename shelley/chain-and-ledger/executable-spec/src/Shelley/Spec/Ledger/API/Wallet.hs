@@ -27,18 +27,15 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto (VRF))
 import Shelley.Spec.Ledger.Delegation.Certificates (unPoolDistr)
-import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..), Stake (..), poolStake)
+import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Shelley.Spec.Ledger.LedgerState
-  ( esLState,
-    esNonMyopic,
-    esPp,
-    nesEL,
-    nesEs,
-    nesOsched,
-    nesPd,
-    _utxo,
-    _utxoState,
+  ( DPState (..),
+    EpochState (..),
+    LedgerState (..),
+    NewEpochState (..),
+    UTxOState (..),
+    stakeDistr,
   )
 import Shelley.Spec.Ledger.Rewards
   ( NonMyopic (..),
@@ -57,6 +54,7 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- pool (identified by the key hash of the pool operator) to the
 -- non-myopic pool member reward for that stake pool.
 getNonMyopicMemberRewards ::
+  Crypto crypto =>
   Globals ->
   ShelleyState crypto ->
   Set (Either Coin (Credential 'Staking crypto)) ->
@@ -69,20 +67,23 @@ getNonMyopicMemberRewards globals ss creds =
   where
     total = fromIntegral $ maxLovelaceSupply globals
     toShare (Coin x) = StakeShare (x % total)
-    memShare (Right cred) = toShare $ Map.findWithDefault (Coin 0) cred (unStake stake)
+    memShare (Right cred) = toShare $ Map.findWithDefault (Coin 0) cred (EB.unStake stake)
     memShare (Left coin) = toShare coin
     es = nesEs ss
     pp = esPp es
     NonMyopic
       { likelihoodsNM = ls,
-        rewardPotNM = rPot,
-        snapNM = (SnapShot stake delegs poolParams)
+        rewardPotNM = rPot
       } = esNonMyopic es
+    utxo = _utxo . _utxoState . esLState $ es
+    dstate = _dstate . _delegationState . esLState $ es
+    pstate = _pstate . _delegationState . esLState $ es
+    EB.SnapShot stake delegs poolParams = stakeDistr utxo dstate pstate
     poolData =
-      Map.intersectionWithKey
-        (\k h p -> (percentile' h, p, toShare . sum . unStake $ poolStake k delegs stake))
-        ls
+      Map.mapWithKey
+        (\k p -> (percentile' (histLookup k), p, toShare . sum . EB.unStake $ EB.poolStake k delegs stake))
         poolParams
+    histLookup k = fromMaybe mempty (Map.lookup k ls)
     topPools = getTopRankedPools rPot (Coin total) pp poolParams (fmap percentile' ls)
     mkNMMRewards ms k (ap, poolp, sigma) =
       if checkPledge poolp
@@ -94,7 +95,7 @@ getNonMyopicMemberRewards globals ss creds =
         checkPledge pool =
           let ostake =
                 Set.foldl'
-                  (\c o -> c + (fromMaybe (Coin 0) $ Map.lookup (KeyHashObj o) (unStake stake)))
+                  (\c o -> c + (fromMaybe (Coin 0) $ Map.lookup (KeyHashObj o) (EB.unStake stake)))
                   (Coin 0)
                   (_poolOwners pool)
            in _poolPledge poolp <= ostake
