@@ -197,7 +197,7 @@ addv (Value v1) (Value v2) = Value (unionWith (unionWith (+)) v1 v2)
 
 -- | subtract values
 subv :: Value crypto -> Value crypto -> Value crypto
-subv (Value v1) (Value v2) = Value (unionWith (unionWith (-)) v1 v2)
+subv (Value v1) (Value v2) = Value (unionWith (unionWith (\q1 q2 -> (+) q1 (-1 * q2))) v1 v2)
 
 -- | scale values
 scalev :: Integer -> Value crypto -> Value crypto
