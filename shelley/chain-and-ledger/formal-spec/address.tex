@@ -31,10 +31,9 @@ outputs in Section~\ref{sec:utxo}. The notations
 $\Credential_{pay}$ and $\Credential_{stake}$ do not represent distinct types.
 The subscripts are annotations indicating how the credential is being used.
 
-For an explanation of why enterprise addresses do not have staking rights,
-and how they could potentially circumvent this restriction and delegate to a
-stake pool, see \ref{sec:delegation-shelley}.
-The bootstrap addresses are needed for the Byron-Shelley transition in order to
+Section 5.5.2 of~\cite{delegation_design} provides the motivation behind enterprise
+addresses and explains why one might forgo staking rights.
+Bootstrap addresses are needed for the Byron-Shelley transition in order to
 accommodate having UTxO entries from the Byron era during the Shelley era.
 
 There are also subtypes of the address types which correspond to the credential
