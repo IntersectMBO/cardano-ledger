@@ -132,6 +132,9 @@ import Test.Tasty.QuickCheck (Gen, choose, elements)
 genHash :: forall a c. Crypto c => Proxy c -> Gen (Hash c a)
 genHash proxy = mkDummyHash proxy <$> arbitrary
 
+genAddrHash :: forall a c. Crypto c => Proxy c -> Gen (Crypto.Hash (ADDRHASH c) a)
+genAddrHash _ = coerce . hashWithSerialiser @(ADDRHASH c) toCBOR <$> arbitrary @Int
+
 mkDummyHash :: forall c a. Crypto c => Proxy c -> Int -> Hash c a
 mkDummyHash _ = coerce . hashWithSerialiser @(HASH c) toCBOR
 
@@ -227,12 +230,10 @@ instance Arbitrary UnitInterval where
   arbitrary = fromJust . mkUnitInterval . (% 100) <$> choose (1, 99)
 
 instance
-  ( Crypto c,
-    HASH c ~ ADDRHASH c
-  ) =>
+  (Crypto c) =>
   Arbitrary (KeyHash a c)
   where
-  arbitrary = KeyHash <$> genHash (Proxy @c)
+  arbitrary = KeyHash <$> genAddrHash (Proxy @c)
 
 instance HashAlgorithm h => Arbitrary (WitHashes (Mock.ConcreteCrypto h)) where
   arbitrary = genericArbitraryU

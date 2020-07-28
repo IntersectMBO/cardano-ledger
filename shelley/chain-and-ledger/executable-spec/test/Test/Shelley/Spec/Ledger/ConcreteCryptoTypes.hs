@@ -61,8 +61,7 @@ type Mock c =
     Num (VerKeyDSIGN (DSIGN c)),
     (VRF c) ~ FakeVRF,
     KES.Signable (KES c) ~ SignableRepresentation,
-    DSIGN.Signable (DSIGN c) ~ SignableRepresentation,
-    HASH c ~ ADDRHASH c
+    DSIGN.Signable (DSIGN c) ~ SignableRepresentation
   )
 
 instance HashAlgorithm h => Crypto (ConcreteCrypto h) where
