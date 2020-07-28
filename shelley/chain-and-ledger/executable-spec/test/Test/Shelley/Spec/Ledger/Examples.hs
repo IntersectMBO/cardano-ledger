@@ -10,7 +10,6 @@
 
 module Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
-    ex1,
     ex2A,
     ex2B,
     ex2C,
@@ -47,21 +46,8 @@ module Test.Shelley.Spec.Ledger.Examples
     ppsEx1,
     exampleShelleyGenesis,
     -- key pairs and example addresses
-    alicePay,
-    aliceStake,
-    aliceAddr,
-    bobPay,
-    bobStake,
-    bobAddr,
-    carlPay,
-    carlStake,
-    carlAddr,
-    dariaPay,
-    dariaStake,
-    dariaAddr,
     coreNodeSKG, -- TODO remove
     -- blocks
-    blockEx1,
     blockEx2A,
     blockEx2B,
     blockEx2C,
@@ -328,10 +314,10 @@ import Shelley.Spec.Ledger.UTxO
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
   )
+import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
-    genesisAccountState,
     genesisCoins,
     genesisId,
     mkBlock,
@@ -438,68 +424,11 @@ genDelegs =
     p :: Proxy c
     p = Proxy
 
-alicePay :: Crypto c => KeyPair 'Payment c
-alicePay = KeyPair vk sk
-  where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
-
-aliceStake :: Crypto c => KeyPair 'Staking c
-aliceStake = KeyPair vk sk
-  where
-    (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
-
-alicePool :: Crypto c => proxy c -> AllIssuerKeys c 'StakePool
-alicePool _ = mkAllIssuerKeys 1
-
-aliceAddr :: Crypto c => Addr c
-aliceAddr = mkAddr (alicePay, aliceStake)
-
-aliceSHK :: Crypto c => Credential 'Staking c
-aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
-
-bobPay :: Crypto c => KeyPair 'Payment c
-bobPay = KeyPair vk sk
-  where
-    (sk, vk) = mkKeyPair (2, 2, 2, 2, 2)
-
-bobStake :: Crypto c => KeyPair 'Staking c
-bobStake = KeyPair vk sk
-  where
-    (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
-
-bobAddr :: Crypto c => Addr c
-bobAddr = mkAddr (bobPay, bobStake)
-
-bobSHK :: Crypto c => Credential 'Staking c
-bobSHK = (KeyHashObj . hashKey . vKey) bobStake
-
 aliceInitCoin :: Coin
 aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
 bobInitCoin :: Coin
 bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
-
-alicePoolParams :: forall c. Crypto c => PoolParams c
-alicePoolParams =
-  PoolParams
-    { _poolPubKey = (hashKey . vKey . cold) (alicePool p),
-      _poolVrf = hashVerKeyVRF . snd $ vrf (alicePool p),
-      _poolPledge = Coin 1,
-      _poolCost = Coin 5,
-      _poolMargin = unsafeMkUnitInterval 0.1,
-      _poolRAcnt = RewardAcnt Testnet aliceSHK,
-      _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
-      _poolRelays = StrictSeq.empty,
-      _poolMD =
-        SJust $
-          PoolMetaData
-            { _poolMDUrl = fromJust $ textToUrl "alice.pool",
-              _poolMDHash = BS.pack "{}"
-            }
-    }
-  where
-    p :: Proxy c
-    p = Proxy
 
 -- | Helper Functions
 
@@ -513,43 +442,7 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 nonce0 :: Crypto c => proxy c -> Nonce
 nonce0 p = hashHeaderToNonce (lastByronHeaderHash p)
 
-carlPay :: Crypto c => KeyPair 'Payment c
-carlPay = KeyPair vk sk
-  where
-    (sk, vk) = mkKeyPair (4, 4, 4, 4, 4)
-
-carlStake :: Crypto c => KeyPair 'Staking c
-carlStake = KeyPair vk sk
-  where
-    (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
-
-carlAddr :: Crypto c => Addr c
-carlAddr = mkAddr (carlPay, carlStake)
-
-carlSHK :: Crypto c => Credential 'Staking c
-carlSHK = (KeyHashObj . hashKey . vKey) carlStake
-
-dariaPay :: Crypto c => KeyPair 'Payment c
-dariaPay = KeyPair vk sk
-  where
-    (sk, vk) = mkKeyPair (6, 6, 6, 6, 6)
-
-dariaStake :: Crypto c => KeyPair 'Staking c
-dariaStake = KeyPair vk sk
-  where
-    (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
-
-dariaAddr :: Crypto c => Addr c
-dariaAddr = mkAddr (dariaPay, dariaStake)
-
-dariaSHK :: Crypto c => Credential 'Staking c
-dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake
-
 -- * Example 1 - apply CHAIN transition to an empty block
-
--- | Empty set of UTxOs. No coins to be spent.
-utxostEx1 :: UTxOState h
-utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 dsEx1 :: Crypto c => DState c
 dsEx1 = emptyDState {_genDelegs = GenDelegs genDelegs}
@@ -561,10 +454,6 @@ oCertIssueNosEx1 = Map.fromList (fmap f (Map.elems genDelegs))
 
 psEx1 :: PState h
 psEx1 = emptyPState
-
--- | Ledger state
-lsEx1 :: Crypto c => LedgerState c
-lsEx1 = LedgerState utxostEx1 (DPState dsEx1 psEx1)
 
 ppsEx1 :: PParams
 ppsEx1 =
@@ -581,87 +470,12 @@ ppsEx1 =
       _minUTxOValue = 100
     }
 
--- | Account with empty treasury.
-acntEx1 :: AccountState
-acntEx1 = genesisAccountState
-
--- | Epoch state with no snapshots.
-esEx1 :: Crypto c => EpochState c
-esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1 ppsEx1 emptyNonMyopic
-
-initStEx1 :: forall c. Crypto c => ChainState c
-initStEx1 =
-  initialShelleyState
-    (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
-    (EpochNo 0)
-    (UTxO Map.empty)
-    maxLLSupply
-    genDelegs
-    (Map.singleton (SlotNo 1) (ActiveSlot . hashKey $ coreNodeVKG 0))
-    ppsEx1
-    (hashHeaderToNonce (lastByronHeaderHash p))
-  where
-    p :: Proxy c
-    p = Proxy
-
--- | Null initial block. Just records the Byron hash, and contains no transactions.
-blockEx1 :: forall c. Mock c => Block c
-blockEx1 =
-  mkBlock
-    (lastByronHeaderHash p)
-    (coreNodeKeys p 0)
-    []
-    (SlotNo 1)
-    (BlockNo 1)
-    (nonce0 p)
-    (NatNonce 1)
-    zero
-    0
-    0
-    (mkOCert (coreNodeKeys p 0) 0 (KESPeriod 0))
-  where
-    p :: Proxy c
-    p = Proxy
-
-getBlockNonce :: forall c. Crypto c => Proxy c -> Block c -> Nonce
-getBlockNonce _ =
+getBlockNonce' :: forall c. Crypto c => Proxy c -> Block c -> Nonce
+getBlockNonce' _ =
   mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta . bhbody . bheader
 
 makeEvolvedNonce :: forall c. Crypto c => Proxy c -> Nonce -> [Block c] -> Nonce
-makeEvolvedNonce p n bs = foldl' (\n' b -> n' ⭒ getBlockNonce p b) n bs
-
--- | Expected chain state after successful processing of null block.
-expectedStEx1 :: forall c. Mock c => ChainState c
-expectedStEx1 =
-  ChainState
-    ( NewEpochState
-        (EpochNo 0)
-        (BlocksMade Map.empty)
-        (BlocksMade Map.empty)
-        -- Note that blocks in the overlay schedule do not add to this count.
-        esEx1
-        SNothing
-        (PoolDistr Map.empty)
-        (Map.singleton (SlotNo 1) (ActiveSlot . hashKey $ coreNodeVKG 0))
-    )
-    oCertIssueNosEx1
-    (nonce0 p)
-    (makeEvolvedNonce p (nonce0 p) [blockEx1])
-    (makeEvolvedNonce p (nonce0 p) [blockEx1])
-    NeutralNonce
-    ( At $
-        LastAppliedBlock
-          (BlockNo 1)
-          (SlotNo 1)
-          (bhHash . bheader $ blockEx1)
-    )
-  where
-    p :: Proxy c
-    p = Proxy
-
--- | Wraps example all together.
-ex1 :: Mock c => proxy c -> CHAINExample c
-ex1 _ = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)
+makeEvolvedNonce p n bs = foldl' (\n' b -> n' ⭒ getBlockNonce' p b) n bs
 
 -- * Example 2A - apply CHAIN transition to register stake keys and a pool
 
@@ -670,8 +484,8 @@ ex1 _ = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)
 utxoEx2A :: Crypto c => proxy c -> UTxO c
 utxoEx2A _ =
   genesisCoins
-    [ TxOut aliceAddr aliceInitCoin,
-      TxOut bobAddr bobInitCoin
+    [ TxOut Cast.aliceAddr aliceInitCoin,
+      TxOut Cast.bobAddr bobInitCoin
     ]
 
 -- | Register a single pool with 255 coins of deposit
@@ -714,19 +528,19 @@ txbodyEx2A :: Crypto c => TxBody c
 txbodyEx2A =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.fromList [TxOut aliceAddr aliceCoinEx2A])
+    (StrictSeq.fromList [TxOut Cast.aliceAddr aliceCoinEx2A])
     ( StrictSeq.fromList
-        ( [ DCertDeleg (RegKey aliceSHK),
-            DCertDeleg (RegKey bobSHK),
-            DCertDeleg (RegKey carlSHK),
-            DCertPool (RegPool alicePoolParams)
+        ( [ DCertDeleg (RegKey Cast.aliceSHK),
+            DCertDeleg (RegKey Cast.bobSHK),
+            DCertDeleg (RegKey Cast.carlSHK),
+            DCertPool (RegPool Cast.alicePoolParams)
           ]
             ++ [ DCertMir
                    ( MIRCert
                        ReservesMIR
                        ( Map.fromList
-                           [ (carlSHK, 110),
-                             (dariaSHK, 99)
+                           [ (Cast.carlSHK, 110),
+                             (Cast.dariaSHK, 99)
                            ]
                        )
                    )
@@ -747,9 +561,9 @@ txEx2A =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated txbodyEx2A)
-            ( (asWitness <$> [alicePay, carlPay])
-                <> (asWitness <$> [aliceStake])
-                <> [asWitness $ cold (alicePool p)]
+            ( (asWitness <$> [Cast.alicePay, Cast.carlPay])
+                <> (asWitness <$> [Cast.aliceStake])
+                <> [asWitness $ cold Cast.alicePoolKeys]
                 <> ( asWitness
                        <$> [ cold (coreNodeKeys p 0),
                              cold (coreNodeKeys p 1),
@@ -770,7 +584,7 @@ alicePtrAddr :: Crypto c => Addr c
 alicePtrAddr =
   Addr
     Testnet
-    (KeyHashObj . hashKey $ vKey alicePay)
+    (KeyHashObj . hashKey $ vKey Cast.alicePay)
     (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
 
 acntEx2A :: Crypto c => Proxy c -> AccountState
@@ -819,22 +633,22 @@ dsEx2A =
     { _ptrs =
         biMapFromList
           (\l _r -> l)
-          [ (Ptr (SlotNo 10) 0 0, aliceSHK),
-            (Ptr (SlotNo 10) 0 1, bobSHK),
-            (Ptr (SlotNo 10) 0 2, carlSHK)
+          [ (Ptr (SlotNo 10) 0 0, Cast.aliceSHK),
+            (Ptr (SlotNo 10) 0 1, Cast.bobSHK),
+            (Ptr (SlotNo 10) 0 2, Cast.carlSHK)
           ],
       _rewards =
         Map.fromList
-          [ (aliceSHK, Coin 0),
-            (bobSHK, Coin 0),
-            (carlSHK, Coin 0)
+          [ (Cast.aliceSHK, Coin 0),
+            (Cast.bobSHK, Coin 0),
+            (Cast.carlSHK, Coin 0)
           ],
       _irwd =
         InstantaneousRewards
           { iRReserves =
               Map.fromList
-                [ (carlSHK, 110),
-                  (dariaSHK, 99)
+                [ (Cast.carlSHK, 110),
+                  (Cast.dariaSHK, 99)
                 ],
             iRTreasury = Map.empty
           }
@@ -843,19 +657,16 @@ dsEx2A =
 psEx2A :: forall c. Crypto c => PState c
 psEx2A =
   psEx1
-    { _pParams = Map.singleton (hk (alicePool p)) alicePoolParams
+    { _pParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams
     }
-  where
-    p :: Proxy c
-    p = Proxy
 
 expectedLSEx2A :: Crypto c => LedgerState c
 expectedLSEx2A =
   LedgerState
     ( UTxOState
         ( UTxO . Map.fromList $
-            [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-              (TxIn (txid txbodyEx2A) 0, TxOut aliceAddr aliceCoinEx2A)
+            [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
+              (TxIn (txid txbodyEx2A) 0, TxOut Cast.aliceAddr aliceCoinEx2A)
             ]
         )
         (Coin 271)
@@ -918,14 +729,14 @@ txbodyEx2B =
     { TxData._inputs = Set.fromList [TxIn (txid txbodyEx2A) 0],
       TxData._outputs =
         StrictSeq.fromList
-          [ TxOut aliceAddr aliceCoinEx2BBase,
+          [ TxOut Cast.aliceAddr aliceCoinEx2BBase,
             TxOut alicePtrAddr aliceCoinEx2BPtr
           ],
       --  Delegation certificates
       TxData._certs =
         StrictSeq.fromList
-          [ DCertDeleg (Delegate $ Delegation aliceSHK (hk (alicePool p))),
-            DCertDeleg (Delegate $ Delegation bobSHK (hk (alicePool p)))
+          [ DCertDeleg (Delegate $ Delegation Cast.aliceSHK (hk Cast.alicePoolKeys)),
+            DCertDeleg (Delegate $ Delegation Cast.bobSHK (hk Cast.alicePoolKeys))
           ],
       TxData._wdrls = Wdrl Map.empty,
       TxData._txfee = Coin 4,
@@ -933,9 +744,6 @@ txbodyEx2B =
       TxData._txUpdate = SNothing,
       TxData._mdHash = SNothing
     }
-  where
-    p :: Proxy c
-    p = Proxy
 
 txEx2B :: Mock c => Tx c
 txEx2B =
@@ -945,7 +753,7 @@ txEx2B =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated txbodyEx2B)
-            [asWitness alicePay, asWitness aliceStake, asWitness bobStake]
+            [asWitness Cast.alicePay, asWitness Cast.aliceStake, asWitness Cast.bobStake]
       }
     SNothing
 
@@ -973,8 +781,8 @@ blockEx2BHash _ = bhHash (bheader blockEx2B)
 utxoEx2B :: Crypto c => UTxO c
 utxoEx2B =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx2B) 0, TxOut aliceAddr aliceCoinEx2BBase),
+    [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
+      (TxIn (txid txbodyEx2B) 0, TxOut Cast.aliceAddr aliceCoinEx2BBase),
       (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr aliceCoinEx2BPtr)
     ]
 
@@ -982,12 +790,9 @@ utxoEx2B =
 delegsEx2B :: forall c. Crypto c => Map (Credential 'Staking c) (KeyHash 'StakePool c)
 delegsEx2B =
   Map.fromList
-    [ (aliceSHK, hk (alicePool p)),
-      (bobSHK, hk (alicePool p))
+    [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
+      (Cast.bobSHK, hk Cast.alicePoolKeys)
     ]
-  where
-    p :: Proxy c
-    p = Proxy
 
 carlMIR :: Coin
 carlMIR = Coin 110
@@ -1003,8 +808,8 @@ dsEx2B =
         InstantaneousRewards
           { iRReserves =
               Map.fromList
-                [ (carlSHK, carlMIR),
-                  (dariaSHK, dariaMIR)
+                [ (Cast.carlSHK, carlMIR),
+                  (Cast.dariaSHK, dariaMIR)
                 ],
             iRTreasury = Map.empty
           }
@@ -1079,16 +884,13 @@ snapEx2C =
   SnapShot
     ( Stake
         ( Map.fromList
-            [ (aliceSHK, aliceCoinEx2BBase + aliceCoinEx2BPtr),
-              (bobSHK, bobInitCoin)
+            [ (Cast.aliceSHK, aliceCoinEx2BBase + aliceCoinEx2BPtr),
+              (Cast.bobSHK, bobInitCoin)
             ]
         )
     )
     delegsEx2B
-    (Map.singleton (hk (alicePool p)) alicePoolParams)
-  where
-    p :: Proxy c
-    p = Proxy
+    (Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams)
 
 -- | Snapshots with given fees.
 snapsEx2C :: Crypto c => SnapShots c
@@ -1110,7 +912,7 @@ expectedLSEx2C =
     ( DPState
         dsEx2B
           { _irwd = emptyInstantaneousRewards,
-            _rewards = Map.insert (carlSHK) 110 $ _rewards dsEx2B
+            _rewards = Map.insert (Cast.carlSHK) 110 $ _rewards dsEx2B
           }
         psEx2A
     )
@@ -1167,18 +969,15 @@ txbodyEx2D :: forall c. Crypto c => TxBody c
 txbodyEx2D =
   TxBody
     { TxData._inputs = Set.fromList [TxIn (txid txbodyEx2B) 0],
-      TxData._outputs = StrictSeq.fromList [TxOut aliceAddr aliceCoinEx2DBase],
+      TxData._outputs = StrictSeq.fromList [TxOut Cast.aliceAddr aliceCoinEx2DBase],
       TxData._certs =
-        StrictSeq.fromList [DCertDeleg (Delegate $ Delegation carlSHK (hk (alicePool p)))],
+        StrictSeq.fromList [DCertDeleg (Delegate $ Delegation Cast.carlSHK (hk Cast.alicePoolKeys))],
       TxData._wdrls = Wdrl Map.empty,
       TxData._txfee = Coin 5,
       TxData._ttl = SlotNo 500,
       TxData._txUpdate = SNothing,
       TxData._mdHash = SNothing
     }
-  where
-    p :: Proxy c
-    p = Proxy
 
 txEx2D :: Mock c => Tx c
 txEx2D =
@@ -1186,7 +985,7 @@ txEx2D =
     txbodyEx2D
     mempty
       { addrWits =
-          makeWitnessesVKey (hashAnnotated txbodyEx2D) [asWitness alicePay, asWitness carlStake]
+          makeWitnessesVKey (hashAnnotated txbodyEx2D) [asWitness Cast.alicePay, asWitness Cast.carlStake]
       }
     SNothing
 
@@ -1214,21 +1013,18 @@ blockEx2DHash _ = bhHash (bheader blockEx2D)
 utxoEx2D :: Crypto c => UTxO c
 utxoEx2D =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx2D) 0, TxOut aliceAddr aliceCoinEx2DBase),
+    [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
+      (TxIn (txid txbodyEx2D) 0, TxOut Cast.aliceAddr aliceCoinEx2DBase),
       (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr aliceCoinEx2BPtr)
     ]
 
 delegsEx2D :: forall c. Crypto c => Map (Credential 'Staking c) (KeyHash 'StakePool c)
 delegsEx2D =
   Map.fromList
-    [ (aliceSHK, hk (alicePool p)),
-      (bobSHK, hk (alicePool p)),
-      (carlSHK, hk (alicePool p))
+    [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
+      (Cast.bobSHK, hk Cast.alicePoolKeys),
+      (Cast.carlSHK, hk Cast.alicePoolKeys)
     ]
-  where
-    p :: Proxy c
-    p = Proxy
 
 dsEx2D :: Crypto c => DState c
 dsEx2D = (dsEx2C) {_delegations = delegsEx2D}
@@ -1318,17 +1114,14 @@ snapEx2E =
   SnapShot
     ( Stake
         ( Map.fromList
-            [ (aliceSHK, aliceCoinEx2DBase + aliceCoinEx2BPtr),
-              (carlSHK, carlMIR),
-              (bobSHK, bobInitCoin)
+            [ (Cast.aliceSHK, aliceCoinEx2DBase + aliceCoinEx2BPtr),
+              (Cast.carlSHK, carlMIR),
+              (Cast.bobSHK, bobInitCoin)
             ]
         )
     )
     delegsEx2D
-    (Map.singleton (hk (alicePool p)) alicePoolParams)
-  where
-    p :: Proxy c
-    p = Proxy
+    (Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams)
 
 snapsEx2E :: Crypto c => proxy c -> SnapShots c
 snapsEx2E _ =
@@ -1350,7 +1143,7 @@ expectedLSEx2E =
     ( DPState
         dsEx2D
           { _irwd = emptyInstantaneousRewards,
-            _rewards = Map.insert carlSHK 110 $ _rewards dsEx2B
+            _rewards = Map.insert Cast.carlSHK 110 $ _rewards dsEx2B
           }
         psEx2A
     )
@@ -1386,8 +1179,8 @@ expectedStEx2E =
         SNothing
         ( PoolDistr
             ( Map.singleton
-                (hk (alicePool p))
-                (IndividualPoolStake 1 (hashVerKeyVRF (snd $ vrf (alicePool p))))
+                (hk Cast.alicePoolKeys)
+                (IndividualPoolStake 1 (hashVerKeyVRF (snd $ vrf (Cast.alicePoolKeys @c))))
             )
         )
         (overlayScheduleFor (EpochNo 2))
@@ -1412,16 +1205,13 @@ ex2E _ = CHAINExample expectedStEx2D blockEx2E (Right expectedStEx2E)
 
 -- | Example 2F - create a decentralized Praos block (ie one not in the overlay schedule)
 oCertIssueNosEx2F :: forall c. Crypto c => Map (KeyHash 'BlockIssuer c) Word64
-oCertIssueNosEx2F = Map.insert (coerceKeyRole $ hk (alicePool p)) 0 oCertIssueNosEx2
-  where
-    p :: Proxy c
-    p = Proxy
+oCertIssueNosEx2F = Map.insert (coerceKeyRole $ hk Cast.alicePoolKeys) 0 oCertIssueNosEx2
 
 blockEx2F :: forall c. Mock c => Block c
 blockEx2F =
   mkBlock
     blockEx2EHash
-    (alicePool p)
+    Cast.alicePoolKeys
     []
     (SlotNo 295) -- odd slots open for decentralization in epoch1OSchedEx2E
     (BlockNo 6)
@@ -1430,7 +1220,7 @@ blockEx2F =
     zero
     14
     14
-    (mkOCert (alicePool p) 0 (KESPeriod 14))
+    (mkOCert Cast.alicePoolKeys 0 (KESPeriod 14))
   where
     p :: Proxy c
     p = Proxy
@@ -1439,10 +1229,16 @@ blockEx2FHash :: Mock c => proxy c -> HashHeader c
 blockEx2FHash _ = bhHash (bheader blockEx2F)
 
 pdEx2F :: forall c. Crypto c => PoolDistr c
-pdEx2F = PoolDistr $ Map.singleton (hk (alicePool p)) (IndividualPoolStake 1 (hashVerKeyVRF $ snd $ vrf (alicePool p)))
-  where
-    p :: Proxy c
-    p = Proxy
+pdEx2F =
+  PoolDistr $
+    Map.singleton
+      (hk Cast.alicePoolKeys)
+      ( IndividualPoolStake
+          1
+          ( hashVerKeyVRF $
+              snd $ vrf (Cast.alicePoolKeys @c)
+          )
+      )
 
 nonMyopicEx2F :: NonMyopic h
 nonMyopicEx2F = emptyNonMyopic {rewardPotNM = Coin 4}
@@ -1453,7 +1249,7 @@ expectedStEx2F =
     ( NewEpochState
         (EpochNo 2)
         (BlocksMade Map.empty)
-        (BlocksMade $ Map.singleton (hk (alicePool p)) 1)
+        (BlocksMade $ Map.singleton (hk Cast.alicePoolKeys) 1)
         (EpochState (acntEx2E p) (snapsEx2E p) expectedLSEx2E ppsEx1 ppsEx1 nonMyopicEx2E)
         ( SJust
             RewardUpdate
@@ -1565,7 +1361,7 @@ expectedStEx2G =
   ChainState
     ( NewEpochState
         (EpochNo 3)
-        (BlocksMade $ Map.singleton (hk (alicePool p)) 1)
+        (BlocksMade $ Map.singleton (hk Cast.alicePoolKeys) 1)
         (BlocksMade Map.empty)
         (EpochState (acntEx2G p) (snapsEx2G p) expectedLSEx2G ppsEx1 ppsEx1 nonMyopicEx2F)
         SNothing
@@ -1621,8 +1417,8 @@ bobRAcnt2H = Coin 1038545454
 rewardsEx2H :: Crypto c => RewardAccounts c
 rewardsEx2H =
   Map.fromList
-    [ (aliceSHK, aliceRAcnt2H),
-      (bobSHK, bobRAcnt2H)
+    [ (Cast.aliceSHK, aliceRAcnt2H),
+      (Cast.bobSHK, bobRAcnt2H)
     ]
 
 oCertIssueNosEx2H :: Crypto c => Map (KeyHash 'BlockIssuer c) Word64
@@ -1655,7 +1451,7 @@ deltaR2H = Coin (-330026666665)
 nonMyopicEx2H :: forall c. Crypto c => NonMyopic c
 nonMyopicEx2H =
   NonMyopic
-    (Map.singleton (hk (alicePool p)) (alicePerfEx2H p))
+    (Map.singleton (hk Cast.alicePoolKeys) (alicePerfEx2H p))
     (Coin 1269333333333)
     snapEx2C
   where
@@ -1674,7 +1470,7 @@ expectedStEx2H =
   ChainState
     ( NewEpochState
         (EpochNo 3)
-        (BlocksMade $ Map.singleton (hk (alicePool p)) 1)
+        (BlocksMade $ Map.singleton (hk Cast.alicePoolKeys) 1)
         (BlocksMade Map.empty)
         (EpochState (acntEx2G p) (snapsEx2G p) expectedLSEx2G ppsEx1 ppsEx1 nonMyopicEx2F)
         ( SJust
@@ -1748,7 +1544,7 @@ acntEx2I p =
     }
 
 dsEx2I :: Crypto c => DState c
-dsEx2I = dsEx2D {_rewards = Map.insert carlSHK 110 rewardsEx2H}
+dsEx2I = dsEx2D {_rewards = Map.insert Cast.carlSHK 110 rewardsEx2H}
 
 expectedLSEx2I :: Crypto c => LedgerState c
 expectedLSEx2I =
@@ -1768,14 +1564,14 @@ snapsEx2I p =
         SnapShot
           ( Stake
               ( Map.fromList
-                  [ (bobSHK, bobInitCoin + bobRAcnt2H),
-                    (aliceSHK, aliceCoinEx2DBase + aliceCoinEx2BPtr + aliceRAcnt2H),
-                    (carlSHK, carlMIR)
+                  [ (Cast.bobSHK, bobInitCoin + bobRAcnt2H),
+                    (Cast.aliceSHK, aliceCoinEx2DBase + aliceCoinEx2BPtr + aliceRAcnt2H),
+                    (Cast.carlSHK, carlMIR)
                   ]
               )
           )
           delegsEx2D
-          (Map.singleton (hk (alicePool p)) alicePoolParams),
+          (Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams),
       -- The stake snapshots have bigger values now, due to the new rewards
       _pstakeSet = snapEx2E,
       _pstakeGo = snapEx2E,
@@ -1831,9 +1627,9 @@ txbodyEx2J :: Crypto c => TxBody c
 txbodyEx2J =
   TxBody
     (Set.fromList [TxIn genesisId 1])
-    (StrictSeq.singleton $ TxOut bobAddr bobAda2J)
-    (StrictSeq.fromList [DCertDeleg (DeRegKey bobSHK)])
-    (Wdrl $ Map.singleton (RewardAcnt Testnet bobSHK) bobRAcnt2H)
+    (StrictSeq.singleton $ TxOut Cast.bobAddr bobAda2J)
+    (StrictSeq.fromList [DCertDeleg (DeRegKey Cast.bobSHK)])
+    (Wdrl $ Map.singleton (RewardAcnt Testnet Cast.bobSHK) bobRAcnt2H)
     (Coin 9)
     (SlotNo 500)
     SNothing
@@ -1845,7 +1641,7 @@ txEx2J =
     txbodyEx2J
     mempty
       { addrWits =
-          makeWitnessesVKey (hashAnnotated txbodyEx2J) [asWitness bobPay, asWitness bobStake]
+          makeWitnessesVKey (hashAnnotated txbodyEx2J) [asWitness Cast.bobPay, asWitness Cast.bobStake]
       }
     SNothing
 
@@ -1873,8 +1669,8 @@ blockEx2JHash = bhHash (bheader blockEx2J)
 utxoEx2J :: Crypto c => UTxO c
 utxoEx2J =
   UTxO . Map.fromList $
-    [ (TxIn (txid txbodyEx2J) 0, TxOut bobAddr bobAda2J),
-      (TxIn (txid txbodyEx2D) 0, TxOut aliceAddr aliceCoinEx2DBase),
+    [ (TxIn (txid txbodyEx2J) 0, TxOut Cast.bobAddr bobAda2J),
+      (TxIn (txid txbodyEx2D) 0, TxOut Cast.aliceAddr aliceCoinEx2DBase),
       (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr aliceCoinEx2BPtr)
     ]
 
@@ -1884,15 +1680,12 @@ dsEx2J =
     { _ptrs =
         biMapFromList
           (\l _r -> l)
-          [ (Ptr (SlotNo 10) 0 0, aliceSHK),
-            (Ptr (SlotNo 10) 0 2, carlSHK)
+          [ (Ptr (SlotNo 10) 0 0, Cast.aliceSHK),
+            (Ptr (SlotNo 10) 0 2, Cast.carlSHK)
           ],
-      _delegations = Map.fromList [(aliceSHK, hk (alicePool p)), (carlSHK, hk (alicePool p))],
-      _rewards = Map.fromList [(aliceSHK, aliceRAcnt2H), (carlSHK, carlMIR)]
+      _delegations = Map.fromList [(Cast.aliceSHK, hk Cast.alicePoolKeys), (Cast.carlSHK, hk Cast.alicePoolKeys)],
+      _rewards = Map.fromList [(Cast.aliceSHK, aliceRAcnt2H), (Cast.carlSHK, carlMIR)]
     }
-  where
-    p :: Proxy c
-    p = Proxy
 
 expectedLSEx2J :: Crypto c => LedgerState c
 expectedLSEx2J =
@@ -1954,15 +1747,12 @@ txbodyEx2K =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx2D) 0])
     (StrictSeq.singleton $ TxOut alicePtrAddr aliceCoinEx2KPtr)
-    (StrictSeq.fromList [DCertPool (RetirePool (hk (alicePool p)) (EpochNo 5))])
+    (StrictSeq.fromList [DCertPool (RetirePool (hk Cast.alicePoolKeys) (EpochNo 5))])
     (Wdrl Map.empty)
     (Coin 2)
     (SlotNo 500)
     SNothing
     SNothing
-  where
-    p :: Proxy c
-    p = Proxy
 
 txEx2K :: Mock c => Tx c
 txEx2K =
@@ -1972,14 +1762,11 @@ txEx2K =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated txbodyEx2K)
-            ( [asWitness alicePay]
-                <> [asWitness $ cold (alicePool p)]
+            ( [asWitness Cast.alicePay]
+                <> [asWitness $ cold Cast.alicePoolKeys]
             )
       }
     SNothing
-  where
-    p :: Proxy c
-    p = Proxy
 
 blockEx2K :: forall c. Mock c => Block c
 blockEx2K =
@@ -2005,16 +1792,13 @@ blockEx2KHash _ = bhHash (bheader blockEx2K)
 utxoEx2K :: Crypto c => UTxO c
 utxoEx2K =
   UTxO . Map.fromList $
-    [ (TxIn (txid txbodyEx2J) 0, TxOut bobAddr bobAda2J),
+    [ (TxIn (txid txbodyEx2J) 0, TxOut Cast.bobAddr bobAda2J),
       (TxIn (txid txbodyEx2K) 0, TxOut alicePtrAddr aliceCoinEx2KPtr),
       (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr aliceCoinEx2BPtr)
     ]
 
 psEx2K :: Crypto c => PState c
-psEx2K = psEx2A {_retiring = Map.singleton (hk (alicePool p)) (EpochNo 5)}
-  where
-    p :: Proxy c
-    p = Proxy
+psEx2K = psEx2A {_retiring = Map.singleton (hk Cast.alicePoolKeys) (EpochNo 5)}
 
 expectedLSEx2K :: Crypto c => LedgerState c
 expectedLSEx2K =
@@ -2044,7 +1828,7 @@ alicePerfEx2K p = (alicePerfEx2H p) <> epoch4Likelihood
 nonMyopicEx2K :: forall c. Crypto c => NonMyopic c
 nonMyopicEx2K =
   NonMyopic
-    (Map.singleton (hk (alicePool p)) (alicePerfEx2K p))
+    (Map.singleton (hk Cast.alicePoolKeys) (alicePerfEx2K p))
     (Coin 0)
     snapEx2E
   where
@@ -2131,13 +1915,13 @@ snapsEx2L =
         SnapShot
           ( Stake
               ( Map.fromList
-                  [ (aliceSHK, aliceRAcnt2H + aliceCoinEx2BPtr + aliceCoinEx2KPtr),
-                    (carlSHK, carlMIR)
+                  [ (Cast.aliceSHK, aliceRAcnt2H + aliceCoinEx2BPtr + aliceCoinEx2KPtr),
+                    (Cast.carlSHK, carlMIR)
                   ]
               )
           )
-          (Map.fromList [(aliceSHK, hk (alicePool p)), (carlSHK, hk (alicePool p))])
-          (Map.singleton (hk (alicePool p)) alicePoolParams),
+          (Map.fromList [(Cast.aliceSHK, hk Cast.alicePoolKeys), (Cast.carlSHK, hk Cast.alicePoolKeys)])
+          (Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams),
       _pstakeSet = _pstakeMark (snapsEx2I p),
       _pstakeGo = _pstakeSet (snapsEx2I p),
       _feeSS = Coin 11
@@ -2152,13 +1936,13 @@ dsEx2L =
     { _ptrs =
         biMapFromList
           (\l _r -> l)
-          [ (Ptr (SlotNo 10) 0 0, aliceSHK),
-            (Ptr (SlotNo 10) 0 2, carlSHK)
+          [ (Ptr (SlotNo 10) 0 0, Cast.aliceSHK),
+            (Ptr (SlotNo 10) 0 2, Cast.carlSHK)
           ],
       _rewards =
         Map.fromList
-          [ (aliceSHK, aliceRAcnt2H + Coin 250),
-            (carlSHK, carlMIR)
+          [ (Cast.aliceSHK, aliceRAcnt2H + Coin 250),
+            (Cast.carlSHK, carlMIR)
           ]
           -- Note the pool cert refund of 201
     }
@@ -2254,7 +2038,7 @@ txbodyEx3A :: Crypto c => TxBody c
 txbodyEx3A =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3A)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx3A)
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)
@@ -2270,7 +2054,7 @@ txEx3A =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated txbodyEx3A)
-            ( [asWitness alicePay]
+            ( [asWitness Cast.alicePay]
                 <> [ asWitness . cold $ coreNodeKeys p 0,
                      asWitness . cold $ coreNodeKeys p 3,
                      asWitness . cold $ coreNodeKeys p 4
@@ -2305,8 +2089,8 @@ expectedLSEx3A =
   LedgerState
     ( UTxOState
         ( UTxO . Map.fromList $
-            [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-              (TxIn (txid txbodyEx3A) 0, TxOut aliceAddr aliceCoinEx3A)
+            [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
+              (TxIn (txid txbodyEx3A) 0, TxOut Cast.aliceAddr aliceCoinEx3A)
             ]
         )
         (Coin 0)
@@ -2367,7 +2151,7 @@ txbodyEx3B :: Crypto c => TxBody c
 txbodyEx3B =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx3A) 0])
-    (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3B)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx3B)
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)
@@ -2383,7 +2167,7 @@ txEx3B =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated txbodyEx3B)
-            ( [asWitness alicePay]
+            ( [asWitness Cast.alicePay]
                 <> [ asWitness . cold $ coreNodeKeys p 1,
                      asWitness . cold $ coreNodeKeys p 5
                    ]
@@ -2415,8 +2199,8 @@ blockEx3B =
 utxoEx3B :: Crypto c => UTxO c
 utxoEx3B =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx3B) 0, TxOut aliceAddr aliceCoinEx3B)
+    [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
+      (TxIn (txid txbodyEx3B) 0, TxOut Cast.aliceAddr aliceCoinEx3B)
     ]
 
 ppupEx3B' :: Crypto c => ProposedPPUpdates c
@@ -2509,7 +2293,7 @@ txbodyEx3C :: Crypto c => TxBody c
 txbodyEx3C =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx3B) 0])
-    (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3C)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx3C)
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)
@@ -2525,7 +2309,7 @@ txEx3C =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated txbodyEx3C)
-            [asWitness alicePay, asWitness . cold $ coreNodeKeys p 1]
+            [asWitness Cast.alicePay, asWitness . cold $ coreNodeKeys p 1]
       }
     SNothing
   where
@@ -2553,8 +2337,8 @@ blockEx3C =
 utxoEx3C :: Crypto c => UTxO c
 utxoEx3C =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx3C) 0, TxOut aliceAddr aliceCoinEx3C)
+    [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
+      (TxIn (txid txbodyEx3C) 0, TxOut Cast.aliceAddr aliceCoinEx3C)
     ]
 
 expectedLSEx3C :: Crypto c => LedgerState c
@@ -2690,7 +2474,7 @@ txbodyEx4A :: Crypto c => TxBody c
 txbodyEx4A =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx4A)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx4A)
     ( StrictSeq.fromList
         [ DCertGenesis
             ( GenesisDelegCert
@@ -2714,7 +2498,7 @@ txEx4A =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated txbodyEx4A)
-            ( [asWitness alicePay]
+            ( [asWitness Cast.alicePay]
                 <> [asWitness $ KeyPair (coreNodeVKG 0) (coreNodeSKG p 0)]
             )
       }
@@ -2756,8 +2540,8 @@ dsEx4A =
 utxoEx4A :: Crypto c => UTxO c
 utxoEx4A =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx4A) 0, TxOut aliceAddr aliceCoinEx4A)
+    [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
+      (TxIn (txid txbodyEx4A) 0, TxOut Cast.aliceAddr aliceCoinEx4A)
     ]
 
 expectedLSEx4A :: Crypto c => LedgerState c
@@ -2878,7 +2662,7 @@ ex4B _ = CHAINExample expectedStEx4A blockEx4B (Right expectedStEx4B)
 
 -- | Example 5A - Genesis key delegation
 ir :: Crypto c => Map (Credential 'Staking c) Coin
-ir = Map.fromList [(aliceSHK, Coin 100)]
+ir = Map.fromList [(Cast.aliceSHK, Coin 100)]
 
 aliceCoinEx5A :: Coin
 aliceCoinEx5A = aliceInitCoin - 1
@@ -2887,7 +2671,7 @@ txbodyEx5A :: Crypto c => MIRPot -> TxBody c
 txbodyEx5A pot =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5A)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx5A)
     (StrictSeq.fromList [DCertMir (MIRCert pot ir)])
     (Wdrl Map.empty)
     (Coin 1)
@@ -2903,7 +2687,7 @@ txEx5A pot =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated $ txbodyEx5A pot)
-            ( [asWitness alicePay]
+            ( [asWitness Cast.alicePay]
                 <> ( asWitness
                        <$> [ cold (coreNodeKeys p 0),
                              cold (coreNodeKeys p 1),
@@ -2943,16 +2727,16 @@ blockEx5AHash pot = bhHash (bheader $ blockEx5A pot)
 utxoEx5A :: Crypto c => MIRPot -> UTxO c
 utxoEx5A pot =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid $ txbodyEx5A pot) 0, TxOut aliceAddr aliceCoinEx5A)
+    [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
+      (TxIn (txid $ txbodyEx5A pot) 0, TxOut Cast.aliceAddr aliceCoinEx5A)
     ]
 
 dsEx5A :: Crypto c => MIRPot -> DState c
 dsEx5A pot = dsEx1 {_irwd = InstantaneousRewards {iRReserves = r, iRTreasury = t}}
   where
     (r, t) = case pot of
-      ReservesMIR -> (Map.fromList [(aliceSHK, Coin 100)], Map.empty)
-      TreasuryMIR -> (Map.empty, Map.fromList [(aliceSHK, Coin 100)])
+      ReservesMIR -> (Map.fromList [(Cast.aliceSHK, Coin 100)], Map.empty)
+      TreasuryMIR -> (Map.empty, Map.fromList [(Cast.aliceSHK, Coin 100)])
 
 expectedLSEx5A :: Crypto c => MIRPot -> LedgerState c
 expectedLSEx5A pot =
@@ -3038,7 +2822,7 @@ txEx5B pot =
         { addrWits =
             makeWitnessesVKey
               (hashAnnotated $ txbodyEx5A pot)
-              ( [asWitness alicePay]
+              ( [asWitness Cast.alicePay]
                   <> ( asWitness
                          <$> [ cold (coreNodeKeys p 0),
                                cold (coreNodeKeys p 1),
@@ -3134,8 +2918,8 @@ txbodyEx5D :: Crypto c => MIRPot -> TxBody c
 txbodyEx5D pot =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5D)
-    (StrictSeq.fromList [DCertDeleg (RegKey aliceSHK), DCertMir (MIRCert pot ir)])
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx5D)
+    (StrictSeq.fromList [DCertDeleg (RegKey Cast.aliceSHK), DCertMir (MIRCert pot ir)])
     (Wdrl Map.empty)
     (Coin 1)
     (SlotNo 99)
@@ -3150,7 +2934,7 @@ txEx5D pot =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated $ txbodyEx5D pot)
-            ( [asWitness alicePay, asWitness aliceStake]
+            ( [asWitness Cast.alicePay, asWitness Cast.aliceStake]
                 <> ( asWitness
                        <$> [ cold (coreNodeKeys p 0),
                              cold (coreNodeKeys p 1),
@@ -3194,7 +2978,7 @@ txbodyEx5D' :: Crypto c => MIRPot -> TxBody c
 txbodyEx5D' pot =
   TxBody
     (Set.fromList [TxIn (txid $ txbodyEx5D pot) 0])
-    (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5D')
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx5D')
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)
@@ -3209,7 +2993,7 @@ txEx5D' pot =
   Tx
     (txbodyEx5D' pot)
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated $ txbodyEx5D' pot) [alicePay]
+      { addrWits = makeWitnessesVKey (hashAnnotated $ txbodyEx5D' pot) [Cast.alicePay]
       }
     SNothing
 
@@ -3244,7 +3028,7 @@ txbodyEx5D'' :: Crypto c => MIRPot -> TxBody c
 txbodyEx5D'' pot =
   TxBody
     (Set.fromList [TxIn (txid $ txbodyEx5D' pot) 0])
-    (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5D'')
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx5D'')
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)
@@ -3256,7 +3040,7 @@ txEx5D'' :: Mock c => MIRPot -> Tx c
 txEx5D'' pot =
   Tx
     (txbodyEx5D'' pot)
-    mempty {addrWits = makeWitnessesVKey (hashAnnotated $ txbodyEx5D'' pot) [alicePay]}
+    mempty {addrWits = makeWitnessesVKey (hashAnnotated $ txbodyEx5D'' pot) [Cast.alicePay]}
     SNothing
 
 blockEx5D'' :: Mock c => MIRPot -> Nonce -> Block c
@@ -3303,7 +3087,7 @@ test5D p pot = do
     Left e -> assertFailure (show e)
     Right ex5DState -> do
       let rews = _rewards . _dstate . _delegationState . esLState . nesEs . chainNes $ ex5DState
-          rewEntry = rews Map.!? aliceSHK
+          rewEntry = rews Map.!? Cast.aliceSHK
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry
       assertBool "Total amount of ADA is not preserved" $ maxLLSupply == totalAda ex5DState
@@ -3325,13 +3109,13 @@ aliceCoinEx6A :: Coin
 aliceCoinEx6A = aliceCoinEx2A - feeEx6A
 
 alicePoolParams6A :: Crypto c => PoolParams c
-alicePoolParams6A = alicePoolParams {_poolCost = Coin 500}
+alicePoolParams6A = Cast.alicePoolParams {_poolCost = Coin 500}
 
 txbodyEx6A :: Crypto c => TxBody c
 txbodyEx6A =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx2A) 0])
-    (StrictSeq.fromList [TxOut aliceAddr aliceCoinEx6A])
+    (StrictSeq.fromList [TxOut Cast.aliceAddr aliceCoinEx6A])
     ( StrictSeq.fromList
         ( [ DCertPool (RegPool alicePoolParams6A)
           ]
@@ -3351,15 +3135,12 @@ txEx6A =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated txbodyEx6A)
-            ( (asWitness <$> [alicePay])
-                <> (asWitness <$> [aliceStake])
-                <> [asWitness $ cold (alicePool p)]
+            ( (asWitness <$> [Cast.alicePay])
+                <> (asWitness <$> [Cast.aliceStake])
+                <> [asWitness $ cold Cast.alicePoolKeys]
             )
       }
     SNothing
-  where
-    p :: Proxy c
-    p = Proxy
 
 earlySlotEx6 :: Word64
 earlySlotEx6 = 20
@@ -3393,18 +3174,15 @@ blockEx6AHash :: Mock c => Word64 -> HashHeader c
 blockEx6AHash slot = bhHash (bheader $ blockEx6A slot)
 
 psEx6A :: Crypto c => PState c
-psEx6A = psEx2A {_fPParams = Map.singleton (hk (alicePool p)) alicePoolParams6A}
-  where
-    p :: Proxy c
-    p = Proxy
+psEx6A = psEx2A {_fPParams = Map.singleton (hk Cast.alicePoolKeys) alicePoolParams6A}
 
 expectedLSEx6A :: Crypto c => LedgerState c
 expectedLSEx6A =
   LedgerState
     ( UTxOState
         ( UTxO . Map.fromList $
-            [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-              (TxIn (txid txbodyEx6A) 0, TxOut aliceAddr aliceCoinEx6A)
+            [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
+              (TxIn (txid txbodyEx6A) 0, TxOut Cast.aliceAddr aliceCoinEx6A)
             ]
         )
         (Coin 271)
@@ -3483,10 +3261,7 @@ ex6BExpectedNES' = chainNes (expectedStEx6A lateSlotEx6 rewardUpdateEx6A' (candi
     p = Proxy
 
 ex6BPoolParams :: Crypto c => Map (KeyHash 'StakePool c) (PoolParams c)
-ex6BPoolParams = Map.singleton (hk (alicePool p)) alicePoolParams6A
-  where
-    p :: Proxy c
-    p = Proxy
+ex6BPoolParams = Map.singleton (hk Cast.alicePoolKeys) alicePoolParams6A
 
 exampleShelleyGenesis :: forall c. Mock c => ShelleyGenesis c
 exampleShelleyGenesis =
@@ -3549,8 +3324,8 @@ exampleShelleyGenesis =
           _poolPledge = Coin 1,
           _poolCost = Coin 5,
           _poolMargin = unsafeMkUnitInterval 0.25,
-          _poolRAcnt = RewardAcnt Testnet aliceSHK,
-          _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
+          _poolRAcnt = RewardAcnt Testnet Cast.aliceSHK,
+          _poolOwners = Set.singleton $ (hashKey . vKey) Cast.aliceStake,
           _poolRelays = relays,
           _poolMD =
             SJust $
