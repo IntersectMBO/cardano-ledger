@@ -66,6 +66,7 @@ import Shelley.Spec.Ledger.TxData
     _outputs,
     _txUpdate,
     _wdrls,
+    _mdHash,
     pattern DCertDeleg,
     pattern DeRegKey,
     pattern Delegate,
@@ -101,6 +102,7 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
+import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 
 genesisChainState ::
   Maybe
@@ -216,6 +218,10 @@ relevantCasesAreCoveredForTrace tr = do
             0.95 > noPPUpdateRatio (ppUpdatesByTx txs),
             60
           ),
+          ( "at least 5% of transactions have metadata",
+            0.05 < metaDataRatio (metaDataByTx txs),
+            60
+          ),
           ( "at least 2 epoch changes in trace, 10% of the time",
             2 <= epochBoundariesInTrace bs,
             10
@@ -268,6 +274,18 @@ noCertsRatio = lenRatio (filter null)
 -- | Ratio of the number of certificate groups of max size and the number of groups
 maxCertsRatio :: Constants -> [[DCert C]] -> Double
 maxCertsRatio Constants {maxCertsPerTx} = lenRatio (filter ((== maxCertsPerTx) . fromIntegral . length))
+
+-- | Extract the metadata from the transactions
+metaDataByTx :: [Tx C] -> [[MetaDataHash C]]
+metaDataByTx txs = 
+  f . _mdHash . _body <$> txs
+  where 
+    f SNothing = []
+    f (SJust md) = [md]
+
+-- | Ratio of the number of transactions with metadata and total transactions
+metaDataRatio :: [[MetaDataHash C]] -> Double
+metaDataRatio = lenRatio (filter (not . null))
 
 -- | Extract non-trivial protocol param  updates from the given transactions
 ppUpdatesByTx :: [Tx C] -> [[PParamsUpdate]]

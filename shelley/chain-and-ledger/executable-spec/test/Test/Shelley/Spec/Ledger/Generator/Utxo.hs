@@ -106,15 +106,39 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
+import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 
--- | Generates a transaction in the context of the LEDGER STS environment and state.
+-- | Generates a transaction in the context of the LEDGER STS environment 
+-- and state.
+--
+--  A generated transaction may not have sufficient spending balance and 
+-- need to be discarded. In this case we retry the generator, 
+-- up to 'genTxRetries' times, before failing hard with an error. 
+--
+-- Note: the spending balance emerges from inputs, refund withdrawals, 
+-- certificate deposits and fees (which in turn depend on number of 
+-- inputs, outputs, witnesses, metadata etc.). It's hard to avoid this 
+-- completely, but in practice it is relatively easy to calibrate 
+-- the generator 'Constants' so that there is sufficient spending balance.
 genTx ::
   (HasCallStack, Mock c) =>
   GenEnv c ->
   LedgerEnv ->
   (UTxOState c, DPState c) ->
   Gen (Tx c)
-genTx
+genTx ge@(GenEnv _ (Constants {genTxRetries})) =
+  genTxRetry genTxRetries ge
+
+genTxRetry ::
+  (HasCallStack, Mock c) =>
+  Int -> 
+  GenEnv c ->
+  LedgerEnv ->
+  (UTxOState c, DPState c) ->
+  Gen (Tx c)
+genTxRetry
+  n
   ge@( GenEnv
          KeySpace_
            { ksKeyPairs,
@@ -128,8 +152,8 @@ genTx
            }
          constants
        )
-  (LedgerEnv slot txIx pparams reserves)
-  (utxoSt@(UTxOState utxo _ _ _), dpState) =
+  env@(LedgerEnv slot txIx pparams reserves)
+  st@(utxoSt@(UTxOState utxo _ _ _), dpState) =
     do
       keys' <- QC.shuffle ksKeyPairs
       scripts' <- QC.shuffle ksMSigScripts
@@ -144,8 +168,8 @@ genTx
         genUpdate constants slot ksCoreNodes ksIndexedGenDelegates pparams (utxoSt, dpState)
       (certs, deposits, refunds, dpState', (certWits, certScripts)) <-
         genDCerts ge pparams dpState slot txIx reserves
-      let metadata = SNothing -- TODO generate metadata
-      ttl <- genTimeToLive
+      (metadata, metadataHash) <- genMetaData constants
+      ttl <- genTimeToLive slot
       -------------------------------------------------------------------------
       -- Gather Key Witnesses and Scripts, prepare a constructor for Tx Wits
       -------------------------------------------------------------------------
@@ -156,8 +180,7 @@ genTx
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
       -- and a Outputs builder that distributes the given balance over addresses.
       -------------------------------------------------------------------------
-      let spendingBalance = assertPositive $ spendingBalanceUtxo + (sum (snd <$> wdrls)) - deposits + refunds
-          assertPositive b = if b > 0 then b else error ("genTx: zero or negative balance " <> show b)
+      let spendingBalance = spendingBalanceUtxo + (sum (snd <$> wdrls)) - deposits + refunds
       outputAddrs <-
         genRecipients (length inputs) keys' scripts'
           >>= genPtrAddrs (_dstate dpState')
@@ -167,23 +190,28 @@ genTx
       -------------------------------------------------------------------------
       let draftFee = Coin 0
           draftOutputs = snd (mkOutputs draftFee)
-      draftTxBody <- genTxBody inputs draftOutputs certs wdrls update draftFee ttl
+      draftTxBody <- genTxBody inputs draftOutputs certs wdrls update draftFee ttl metadataHash
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
           fees = minfeeBound pparams draftTx
       -------------------------------------------------------------------------
       -- Generate final Tx now that we have the real fees. We need to recompute
       -- the output amounts and in turn the txBody and its witness set.
       -------------------------------------------------------------------------
-      -- "discard" if the balance cannot cover the fees
-      let assertFees fee_ bal_ = if fee_ < bal_ then fee_ else error ("genTx minimalFees: " <> show fee_ <> " >= " <> show bal_)
-          realFees = assertFees fees spendingBalance
-      let (actualFees', outputs') = mkOutputs realFees
-          txBody = draftTxBody {_txfee = actualFees', _outputs = outputs'}
-      pure $ Tx txBody (mkTxWits' txBody) metadata
-    where
-      genTimeToLive = do
-        ttl <- genNatural 50 100
-        pure $ slot + SlotNo (fromIntegral ttl)
+      if spendingBalance >= fees
+        then do
+          let (actualFees', outputs') = mkOutputs fees
+              txBody = draftTxBody {_txfee = actualFees', _outputs = outputs'}
+          pure $ Tx txBody (mkTxWits' txBody) metadata
+        else
+          retryOrFail n
+  where 
+    retryOrFail 0 = error "genTx: insufficient spending balance" 
+    retryOrFail n' = genTxRetry (n' - 1) ge env st
+
+genTimeToLive :: SlotNo -> Gen SlotNo
+genTimeToLive currentSlot = do
+  ttl <- genNatural 50 100
+  pure $ currentSlot + SlotNo (fromIntegral ttl)
 
 mkScriptWits ::
   (HasCallStack, Crypto c) =>
@@ -248,8 +276,9 @@ genTxBody ::
   Maybe (Update c) ->
   Coin ->
   SlotNo ->
+  StrictMaybe (MetaDataHash c) ->
   Gen (TxBody c)
-genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
+genTxBody inputs outputs certs wdrls update fee slotWithTTL mdHash = do
   return $
     TxBody
       (Set.fromList inputs)
@@ -259,7 +288,7 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
       fee
       slotWithTTL
       (maybeToStrictMaybe update)
-      SNothing -- TODO generate metadata
+      mdHash
 
 -- | Distribute the sum of `balance_` and `fee` over the addresses, return the
 -- sum of `fee` and the remainder of the equal distribution and the list ouf

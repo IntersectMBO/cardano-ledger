@@ -97,8 +97,8 @@ instance Mock c => TQC.HasTrace (LEDGERS c) (GenEnv c) where
 
           let res = runShelleyBase $ applySTSTest @(LEDGER c) (TRC (ledgerEnv, (u, dp), tx))
           pure $ case res of
-            Left _ ->
-              (u, dp, txs)
+            Left pf -> 
+              error ("LEDGERS sigGen: " <> show pf)
             Right (u', dp') ->
               (u', dp', tx : txs)
 

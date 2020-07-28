@@ -46,6 +46,8 @@ data Constants = Constants
     frequencyKeyCredDelegation :: Int,
     -- | Relative frequency of Prototol/Application Updates in a transaction
     frequencyTxUpdates :: Int,
+    -- | Relative frequency of Metadata in a transaction
+    frequencyTxWithMetaData :: Int,
     -- | minimal number of genesis UTxO outputs
     minGenesisUTxOouts :: Int,
     -- | maximal number of genesis UTxO outputs
@@ -84,7 +86,9 @@ data Constants = Constants
     minTreasury :: Integer,
     maxTreasury :: Integer,
     minReserves :: Integer,
-    maxReserves :: Integer
+    maxReserves :: Integer,
+    -- | How many times the LEDGERS Trace transaction generator must retry before failing hard with an error.
+    genTxRetries :: Int
   }
   deriving (Show)
 
@@ -107,6 +111,7 @@ defaultConstants =
       frequencyScriptCredDelegation = 1,
       frequencyKeyCredDelegation = 2,
       frequencyTxUpdates = 10,
+      frequencyTxWithMetaData = 10,
       minGenesisUTxOouts = 10,
       maxGenesisUTxOouts = 100,
       maxCertsPerTx = 3,
@@ -128,5 +133,6 @@ defaultConstants =
       minTreasury = 1000000,
       maxTreasury = 10000000,
       minReserves = 1000000,
-      maxReserves = 10000000
+      maxReserves = 10000000,
+      genTxRetries = 3
     }
