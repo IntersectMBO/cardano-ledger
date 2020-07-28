@@ -672,12 +672,14 @@ concerns are independent of the ledger rules.
   \label{fig:dcert-mir}
 \end{figure}
 
-The DELEG rule has seven possible predicate failures:
+The DELEG rule has ten possible predicate failures:
 \begin{itemize}
 \item In the case of a key registration certificate, if the staking credential
-  is already registered, there is a a \emph{StakeKeyAlreadyRegistered} failure.
+  is already registered, there is a \emph{StakeKeyAlreadyRegistered} failure.
 \item In the case of a key deregistration certificate, if the key is not
   registered, there is a \emph{StakeKeyNotRegistered} failure.
+\item In the case of a key deregistration certificate, if the associated
+  reward account is non-zero, there is a \emph{StakeKeyNonZeroAccountBalance} failure.
 \item In the case of a non-existing stake pool key in a delegation certificate,
   there is a \emph{StakeDelegationImpossible} failure.
 \item In the case of a pool delegation certificate, there is a
@@ -690,6 +692,12 @@ The DELEG rule has seven possible predicate failures:
   \emph{DuplicateGenesisDelegate} failure.
 \item In the case of insufficient reserves to pay the instantaneous rewards,
   there is a \emph{InsufficientForInstantaneousRewards} failure.
+\item In the case that a MIR certificate is issued during the last
+  $\StabilityWindow$-many slots of the epoch,
+  there is a \emph{MIRCertificateTooLateinEpoch} failure.
+\item  In the case of a genesis key delegation certificate, if the VRF key is
+  in the range of the genesis delegation mapping, there is a
+  \emph{DuplicateGenesisVRF} failure.
 \end{itemize}
 
 \clearpage
