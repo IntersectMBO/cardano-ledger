@@ -146,12 +146,12 @@ mkDummyHash _ = coerce . hashWithSerialiser @(HASH c) toCBOR
 -------------------------------------------------------------------------------}
 
 instance
-  HashAlgorithm h =>
-  Arbitrary (Mock.Block (Mock.ConcreteCrypto h))
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Arbitrary (Mock.Block (Mock.ConcreteCrypto_ ah h))
   where
   arbitrary = do
     let KeySpace_ {ksCoreNodes} = geKeySpace (genEnv p)
-    prevHash <- arbitrary :: Gen (Mock.HashHeader (Mock.ConcreteCrypto h))
+    prevHash <- arbitrary :: Gen (Mock.HashHeader (Mock.ConcreteCrypto_ ah h))
     allPoolKeys <- elements (map snd ksCoreNodes)
     txs <- arbitrary
     curSlotNo <- SlotNo <$> choose (0, 10)
@@ -176,12 +176,15 @@ instance
         keyRegKesPeriod
         ocert
     where
-      p :: Proxy (Mock.ConcreteCrypto h)
+      p :: Proxy (Mock.ConcreteCrypto_ ah h)
       p = Proxy
 
-instance HashAlgorithm h => Arbitrary (Mock.BHeader (Mock.ConcreteCrypto h)) where
+instance
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Arbitrary (Mock.BHeader (Mock.ConcreteCrypto_ ah h))
+  where
   arbitrary = do
-    res <- arbitrary :: Gen (Mock.Block (Mock.ConcreteCrypto h))
+    res <- arbitrary :: Gen (Mock.Block (Mock.ConcreteCrypto_ ah h))
     return $ case res of
       Block header _ -> header
       _ -> error "SerializationProperties::BHeader - failed to deconstruct header from block"
@@ -191,7 +194,10 @@ instance Arbitrary (SignedDSIGN MockDSIGN a) where
     SignedDSIGN . fromJust . rawDeserialiseSigDSIGN
       <$> hedgehog (genBytes . fromIntegral $ sizeSigDSIGN (Proxy :: Proxy MockDSIGN))
 
-instance HashAlgorithm h => Arbitrary (Mock.BootstrapWitness (Mock.ConcreteCrypto h)) where
+instance
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Arbitrary (Mock.BootstrapWitness (Mock.ConcreteCrypto_ ah h))
+  where
   arbitrary = do
     key <- arbitrary
     sig <- genSignature
@@ -202,9 +208,12 @@ instance HashAlgorithm h => Arbitrary (Mock.BootstrapWitness (Mock.ConcreteCrypt
 instance Crypto c => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> genHash (Proxy @c)
 
-instance HashAlgorithm h => Arbitrary (Mock.Tx (Mock.ConcreteCrypto h)) where
+instance
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Arbitrary (Mock.Tx (Mock.ConcreteCrypto_ ah h))
+  where
   arbitrary = do
-    (_ledgerState, _steps, _txfee, tx, _lv) <- hedgehog (genStateTx (Proxy @(Mock.ConcreteCrypto h)))
+    (_ledgerState, _steps, _txfee, tx, _lv) <- hedgehog (genStateTx (Proxy @(Mock.ConcreteCrypto_ ah h)))
     return tx
 
 instance Crypto c => Arbitrary (TxId c) where
@@ -216,7 +225,10 @@ instance Crypto c => Arbitrary (TxIn c) where
       <$> (TxId <$> genHash (Proxy @c))
       <*> arbitrary
 
-instance HashAlgorithm h => Arbitrary (Mock.TxOut (Mock.ConcreteCrypto h)) where
+instance
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Arbitrary (Mock.TxOut (Mock.ConcreteCrypto_ ah h))
+  where
   arbitrary = TxOut <$> arbitrary <*> arbitrary
 
 instance Arbitrary Nonce where
@@ -235,7 +247,10 @@ instance
   where
   arbitrary = KeyHash <$> genAddrHash (Proxy @c)
 
-instance HashAlgorithm h => Arbitrary (WitHashes (Mock.ConcreteCrypto h)) where
+instance
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Arbitrary (WitHashes (Mock.ConcreteCrypto_ ah h))
+  where
   arbitrary = genericArbitraryU
 
 instance Arbitrary MIRPot where
@@ -248,39 +263,42 @@ instance Arbitrary STS.VotingPeriod where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (STS.PredicateFailure (Mock.PPUP (Mock.ConcreteCrypto h))) where
+instance
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Arbitrary (STS.PredicateFailure (Mock.PPUP (Mock.ConcreteCrypto_ ah h)))
+  where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (STS.PredicateFailure (Mock.UTXO (Mock.ConcreteCrypto h))) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (STS.PredicateFailure (Mock.UTXO (Mock.ConcreteCrypto_ ah h))) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (STS.PredicateFailure (Mock.UTXOW (Mock.ConcreteCrypto h))) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (STS.PredicateFailure (Mock.UTXOW (Mock.ConcreteCrypto_ ah h))) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (STS.PredicateFailure (Mock.POOL (Mock.ConcreteCrypto h))) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (STS.PredicateFailure (Mock.POOL (Mock.ConcreteCrypto_ ah h))) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.DELPL (Mock.ConcreteCrypto h))) where
+instance (HashAlgorithm ah, HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.DELPL (Mock.ConcreteCrypto_ ah h))) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.DELEG (Mock.ConcreteCrypto h))) where
+instance (HashAlgorithm ah, HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.DELEG (Mock.ConcreteCrypto_ ah h))) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.DELEGS (Mock.ConcreteCrypto h))) where
+instance (HashAlgorithm ah, HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.DELEGS (Mock.ConcreteCrypto_ ah h))) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.LEDGER (Mock.ConcreteCrypto h))) where
+instance (HashAlgorithm ah, HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.LEDGER (Mock.ConcreteCrypto_ ah h))) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.LEDGERS (Mock.ConcreteCrypto h))) where
+instance (HashAlgorithm ah, HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.LEDGERS (Mock.ConcreteCrypto_ ah h))) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -296,7 +314,7 @@ instance Arbitrary EpochNo where
   -- Cannot be negative even though it is an 'Integer'
   arbitrary = EpochNo <$> choose (1, 100000)
 
-instance HashAlgorithm h => Arbitrary (Mock.Addr (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (Mock.Addr (Mock.ConcreteCrypto_ ah h)) where
   arbitrary =
     oneof
       [ Addr <$> arbitrary <*> arbitrary <*> arbitrary
@@ -304,18 +322,17 @@ instance HashAlgorithm h => Arbitrary (Mock.Addr (Mock.ConcreteCrypto h)) where
       -- SL.AddrBootstrap
       ]
 
-instance HashAlgorithm h => Arbitrary (StakeReference (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (StakeReference (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
-  ( HashAlgorithm h
-  ) =>
-  Arbitrary (Credential r (Mock.ConcreteCrypto h))
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Arbitrary (Credential r (Mock.ConcreteCrypto_ ah h))
   where
   arbitrary =
     oneof
-      [ ScriptHashObj . ScriptHash <$> genHash (Proxy @(Mock.ConcreteCrypto h)),
+      [ ScriptHashObj . ScriptHash <$> genHash (Proxy @(Mock.ConcreteCrypto_ ah h)),
         KeyHashObj <$> arbitrary
       ]
 
@@ -323,25 +340,25 @@ instance Arbitrary Ptr where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (RewardAcnt (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (RewardAcnt (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = RewardAcnt <$> arbitrary <*> arbitrary
 
 instance Arbitrary Network where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (VKey kd (Mock.ConcreteCrypto h)) where
+instance Arbitrary (VKey kd (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = VKey . VerKeyMockDSIGN <$> arbitrary
 
 instance Arbitrary ProtVer where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (ScriptHash (Mock.ConcreteCrypto h)) where
-  arbitrary = ScriptHash <$> genHash (Proxy @(Mock.ConcreteCrypto h))
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (ScriptHash (Mock.ConcreteCrypto_ ah h)) where
+  arbitrary = ScriptHash <$> genHash (Proxy @(Mock.ConcreteCrypto_ ah h))
 
-instance HashAlgorithm h => Arbitrary (MetaDataHash (Mock.ConcreteCrypto h)) where
-  arbitrary = MetaDataHash <$> genHash (Proxy @(Mock.ConcreteCrypto h))
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (MetaDataHash (Mock.ConcreteCrypto_ ah h)) where
+  arbitrary = MetaDataHash <$> genHash (Proxy @(Mock.ConcreteCrypto_ ah h))
 
 instance Arbitrary (Crypto.Hash Monomorphic.ShortHash a) where
   arbitrary = genHash (Proxy @(Mock.ConcreteCrypto Monomorphic.ShortHash))
@@ -350,30 +367,30 @@ instance Arbitrary STS.TicknState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (STS.PrtclState (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (STS.PrtclState (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (Mock.LedgerState (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (Mock.LedgerState (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = do
-    (_ledgerState, _steps, _txfee, _tx, ledgerState) <- hedgehog (genValidStateTx (Proxy @(Mock.ConcreteCrypto h)))
+    (_ledgerState, _steps, _txfee, _tx, ledgerState) <- hedgehog (genValidStateTx (Proxy @(Mock.ConcreteCrypto_ ah h)))
     return ledgerState
 
-instance HashAlgorithm h => Arbitrary (Mock.NewEpochState (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (Mock.NewEpochState (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (BlocksMade (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (BlocksMade (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = BlocksMade <$> arbitrary
 
-instance HashAlgorithm h => Arbitrary (PoolDistr (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (PoolDistr (Mock.ConcreteCrypto_ ah h)) where
   arbitrary =
     PoolDistr . Map.fromList
       <$> listOf ((,) <$> arbitrary <*> genVal)
     where
-      genVal = IndividualPoolStake <$> arbitrary <*> genHash (Proxy @(Mock.ConcreteCrypto h))
+      genVal = IndividualPoolStake <$> arbitrary <*> genHash (Proxy @(Mock.ConcreteCrypto_ ah h))
 
-instance HashAlgorithm h => Arbitrary (Mock.EpochState (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (Mock.EpochState (Mock.ConcreteCrypto_ ah h)) where
   arbitrary =
     EpochState
       <$> arbitrary
@@ -383,14 +400,14 @@ instance HashAlgorithm h => Arbitrary (Mock.EpochState (Mock.ConcreteCrypto h)) 
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary (RewardUpdate (Mock.ConcreteCrypto h)) where
+instance Arbitrary (RewardUpdate (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = return emptyRewardUpdate
 
 instance Arbitrary a => Arbitrary (StrictMaybe a) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (OBftSlot (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (OBftSlot (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -406,29 +423,29 @@ instance Arbitrary Likelihood where
 instance Arbitrary LogWeight where
   arbitrary = LogWeight <$> arbitrary
 
-instance HashAlgorithm h => Arbitrary (Mock.NonMyopic (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (Mock.NonMyopic (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (Mock.SnapShot (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (Mock.SnapShot (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance HashAlgorithm h => Arbitrary (Mock.SnapShots (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (Mock.SnapShots (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance Arbitrary PerformanceEstimate where
   arbitrary = PerformanceEstimate <$> arbitrary
 
-instance HashAlgorithm h => Arbitrary (Mock.Stake (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (Mock.Stake (Mock.ConcreteCrypto_ ah h)) where
   arbitrary = Stake <$> arbitrary
 
-instance HashAlgorithm h => Arbitrary (PoolParams (Mock.ConcreteCrypto h)) where
+instance (HashAlgorithm ah, HashAlgorithm h) => Arbitrary (PoolParams (Mock.ConcreteCrypto_ ah h)) where
   arbitrary =
     PoolParams
       <$> arbitrary
-      <*> genHash (Proxy @(Mock.ConcreteCrypto h))
+      <*> genHash (Proxy @(Mock.ConcreteCrypto_ ah h))
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -468,8 +485,8 @@ instance Arbitrary AccountState where
   shrink = genericShrink
 
 instance
-  HashAlgorithm h =>
-  Arbitrary (MultiSig (Mock.ConcreteCrypto h))
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Arbitrary (MultiSig (Mock.ConcreteCrypto_ ah h))
   where
   arbitrary =
     oneof
@@ -480,7 +497,7 @@ instance
       ]
 
 instance
-  HashAlgorithm h =>
-  Arbitrary (Script (Mock.ConcreteCrypto h))
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Arbitrary (Script (Mock.ConcreteCrypto_ ah h))
   where
   arbitrary = MultiSigScript <$> arbitrary

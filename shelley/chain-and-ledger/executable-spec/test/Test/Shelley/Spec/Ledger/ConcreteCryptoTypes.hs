@@ -53,7 +53,9 @@ import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 
 type C = ConcreteCrypto ShortHash
 
-data ConcreteCrypto (h :: *)
+data ConcreteCrypto_ (ah :: *) (h :: *)
+
+type ConcreteCrypto h = ConcreteCrypto_ h h
 
 type Mock c =
   ( Crypto c,
@@ -64,12 +66,15 @@ type Mock c =
     DSIGN.Signable (DSIGN c) ~ SignableRepresentation
   )
 
-instance HashAlgorithm h => Crypto (ConcreteCrypto h) where
-  type HASH (ConcreteCrypto h) = h
-  type ADDRHASH (ConcreteCrypto h) = h
-  type DSIGN (ConcreteCrypto h) = MockDSIGN
-  type KES (ConcreteCrypto h) = MockKES 10
-  type VRF (ConcreteCrypto h) = FakeVRF
+instance
+  (HashAlgorithm ah, HashAlgorithm h) =>
+  Crypto (ConcreteCrypto_ ah h)
+  where
+  type HASH (ConcreteCrypto_ ah h) = h
+  type ADDRHASH (ConcreteCrypto_ ah h) = ah
+  type DSIGN (ConcreteCrypto_ ah h) = MockDSIGN
+  type KES (ConcreteCrypto_ ah h) = MockKES 10
+  type VRF (ConcreteCrypto_ ah h) = FakeVRF
 
 type DCert c = Delegation.Certificates.DCert c
 
