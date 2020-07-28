@@ -32,6 +32,7 @@ module Test.Shelley.Spec.Ledger.Utils
     applySTSTest,
     GenesisKeyPair,
     MultiSigPairs,
+    getBlockNonce,
   )
 where
 
@@ -48,6 +49,7 @@ import Cardano.Crypto.Hash
 import Cardano.Crypto.KES (KESAlgorithm, SignKeyKES, VerKeyKES, deriveVerKeyKES, genKeyKES)
 import Cardano.Crypto.KES.Class (ContextKES)
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
+import Cardano.Crypto.VRF (certifiedOutput)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Crypto.VRF
   ( CertifiedVRF,
@@ -78,11 +80,14 @@ import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     Network (..),
+    Nonce,
     ShelleyBase,
     UnitInterval,
     mkActiveSlotCoeff,
+    mkNonceFromOutputVRF,
     mkUnitInterval,
   )
+import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, bhbody, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
@@ -266,3 +271,7 @@ testSTS env initSt block predicateFailure@(Left _) = do
 
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
 mkHash i = coerce (hashWithSerialiser @h toCBOR i)
+
+getBlockNonce :: forall c. Crypto c => Block c -> Nonce
+getBlockNonce =
+  mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader

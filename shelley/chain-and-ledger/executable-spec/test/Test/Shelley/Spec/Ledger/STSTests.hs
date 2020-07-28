@@ -88,6 +88,8 @@ import Test.Shelley.Spec.Ledger.Examples
     test5DReserves,
     test5DTreasury,
   )
+import Test.Shelley.Spec.Ledger.Examples.EmptyBlock (exEmptyBlock)
+import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (ex2A)
 import Test.Shelley.Spec.Ledger.MultiSigExamples
   ( aliceAndBob,
     aliceAndBobOrCarl,
@@ -167,8 +169,8 @@ stsTests :: TestTree
 stsTests =
   testGroup
     "STS Tests"
-    [ testCase "CHAIN example 1 - empty block" $ testCHAINExample (ex1 p),
-      testCase "CHAIN example 2A - register stake key" $ testCHAINExample (ex2A p),
+    [ testCase "CHAIN example 1 - empty block" $ testCHAINExample exEmptyBlock,
+      testCase "CHAIN example 2A - register stake key" $ testCHAINExample (ex2A),
       testCase "CHAIN example 2B - delegate stake and create reward update" $ testCHAINExample (ex2B p),
       testCase "CHAIN example 2C - new epoch changes" $ testCHAINExample (ex2C p),
       testCase "CHAIN example 2D - second reward update" $ testCHAINExample (ex2D p),
@@ -202,8 +204,8 @@ stsTests =
       testCase "CHAIN example 6A' - Late Pool Re-registration" $ testCHAINExample (ex6A' p),
       testCase "CHAIN example 6B - Adopt Early Pool Re-registration" $ testAdoptEarlyPoolRegistration,
       testCase "CHAIN example 6B' - Adopt Late Pool Re-registration" $ testAdoptLatePoolRegistration,
-      testCase "CHAIN example 1 - Preservation of ADA" $ testPreservationOfAda (ex1 p),
-      testCase "CHAIN example 2A - Preservation of ADA" $ testPreservationOfAda (ex2A p),
+      testCase "CHAIN example 1 - Preservation of ADA" $ testPreservationOfAda exEmptyBlock,
+      testCase "CHAIN example 2A - Preservation of ADA" $ testPreservationOfAda (ex2A),
       testCase "CHAIN example 2B - Preservation of ADA" $ testPreservationOfAda (ex2B p),
       testCase "CHAIN example 2C - Preservation of ADA" $ testPreservationOfAda (ex2C p),
       testCase "CHAIN example 2D - Preservation of ADA" $ testPreservationOfAda (ex2D p),
@@ -289,7 +291,17 @@ testEverybodySigns =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay, asWitness carlPay, asWitness dariaPay]
+      applyTxWithScript
+        p
+        [(aliceOnly p, 11000)]
+        [aliceOnly p]
+        (Wdrl Map.empty)
+        0
+        [ asWitness alicePay,
+          asWitness bobPay,
+          asWitness carlPay,
+          asWitness dariaPay
+        ]
     s = "problem: " ++ show utxoSt'
 
 testWrongScript :: Assertion
@@ -299,7 +311,13 @@ testWrongScript =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOnly p, 11000)] [aliceOrBob p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript
+        p
+        [(aliceOnly p, 11000)]
+        [aliceOrBob p]
+        (Wdrl Map.empty)
+        0
+        [asWitness alicePay, asWitness bobPay]
 
 testAliceOrBob :: Assertion
 testAliceOrBob =
@@ -328,7 +346,13 @@ testAliceAndBob =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBob p, 11000)] [aliceAndBob p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript
+        p
+        [(aliceAndBob p, 11000)]
+        [aliceAndBob p]
+        (Wdrl Map.empty)
+        0
+        [asWitness alicePay, asWitness bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBob' :: Assertion
@@ -356,7 +380,13 @@ testAliceAndBobOrCarl =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBobOrCarl p, 11000)] [aliceAndBobOrCarl p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript
+        p
+        [(aliceAndBobOrCarl p, 11000)]
+        [aliceAndBobOrCarl p]
+        (Wdrl Map.empty)
+        0
+        [asWitness alicePay, asWitness bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarl' :: Assertion
@@ -376,7 +406,13 @@ testAliceAndBobOrCarlAndDaria =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBobOrCarlAndDaria p, 11000)] [aliceAndBobOrCarlAndDaria p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript
+        p
+        [(aliceAndBobOrCarlAndDaria p, 11000)]
+        [aliceAndBobOrCarlAndDaria p]
+        (Wdrl Map.empty)
+        0
+        [asWitness alicePay, asWitness bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlAndDaria' :: Assertion
@@ -386,7 +422,13 @@ testAliceAndBobOrCarlAndDaria' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBobOrCarlAndDaria p, 11000)] [aliceAndBobOrCarlAndDaria p] (Wdrl Map.empty) 0 [asWitness carlPay, asWitness dariaPay]
+      applyTxWithScript
+        p
+        [(aliceAndBobOrCarlAndDaria p, 11000)]
+        [aliceAndBobOrCarlAndDaria p]
+        (Wdrl Map.empty)
+        0
+        [asWitness carlPay, asWitness dariaPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria :: Assertion
@@ -396,7 +438,13 @@ testAliceAndBobOrCarlOrDaria =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBobOrCarlOrDaria p, 11000)] [aliceAndBobOrCarlOrDaria p] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript
+        p
+        [(aliceAndBobOrCarlOrDaria p, 11000)]
+        [aliceAndBobOrCarlOrDaria p]
+        (Wdrl Map.empty)
+        0
+        [asWitness alicePay, asWitness bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria' :: Assertion
@@ -406,7 +454,13 @@ testAliceAndBobOrCarlOrDaria' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBobOrCarlOrDaria p, 11000)] [aliceAndBobOrCarlOrDaria p] (Wdrl Map.empty) 0 [asWitness carlPay]
+      applyTxWithScript
+        p
+        [(aliceAndBobOrCarlOrDaria p, 11000)]
+        [aliceAndBobOrCarlOrDaria p]
+        (Wdrl Map.empty)
+        0
+        [asWitness carlPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria'' :: Assertion
@@ -416,7 +470,13 @@ testAliceAndBobOrCarlOrDaria'' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBobOrCarlOrDaria p, 11000)] [aliceAndBobOrCarlOrDaria p] (Wdrl Map.empty) 0 [asWitness dariaPay]
+      applyTxWithScript
+        p
+        [(aliceAndBobOrCarlOrDaria p, 11000)]
+        [aliceAndBobOrCarlOrDaria p]
+        (Wdrl Map.empty)
+        0
+        [asWitness dariaPay]
     s = "problem: " ++ show utxoSt'
 
 -- multiple script-locked outputs
@@ -540,7 +600,13 @@ testRwdAliceSignsAlone =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (aliceOnly p))) 1000) 0 [asWitness alicePay]
+      applyTxWithScript
+        p
+        [(aliceOnly p, 11000)]
+        [aliceOnly p]
+        (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (aliceOnly p))) 1000)
+        0
+        [asWitness alicePay]
     s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone' :: Assertion
@@ -550,7 +616,13 @@ testRwdAliceSignsAlone' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p, bobOnly p] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000) 0 [asWitness alicePay]
+      applyTxWithScript
+        p
+        [(aliceOnly p, 11000)]
+        [aliceOnly p, bobOnly p]
+        (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000)
+        0
+        [asWitness alicePay]
 
 testRwdAliceSignsAlone'' :: Assertion
 testRwdAliceSignsAlone'' =
@@ -559,7 +631,13 @@ testRwdAliceSignsAlone'' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p, bobOnly p] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript
+        p
+        [(aliceOnly p, 11000)]
+        [aliceOnly p, bobOnly p]
+        (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000)
+        0
+        [asWitness alicePay, asWitness bobPay]
     s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone''' :: Assertion
@@ -569,4 +647,10 @@ testRwdAliceSignsAlone''' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript
+        p
+        [(aliceOnly p, 11000)]
+        [aliceOnly p]
+        (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000)
+        0
+        [asWitness alicePay, asWitness bobPay]

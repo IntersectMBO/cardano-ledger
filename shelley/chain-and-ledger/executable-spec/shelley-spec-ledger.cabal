@@ -131,6 +131,12 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Address.Bootstrap
       Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
       Test.Shelley.Spec.Ledger.Examples
+      Test.Shelley.Spec.Ledger.Examples.Cast
+      Test.Shelley.Spec.Ledger.Examples.Combinators
+      Test.Shelley.Spec.Ledger.Examples.Federation
+      Test.Shelley.Spec.Ledger.Examples.Init
+      Test.Shelley.Spec.Ledger.Examples.EmptyBlock
+      Test.Shelley.Spec.Ledger.Examples.PoolLifetime
       Test.Shelley.Spec.Ledger.Fees
       Test.Shelley.Spec.Ledger.Generator.Block
       Test.Shelley.Spec.Ledger.Generator.Constants
@@ -243,6 +249,7 @@ benchmark mainbench
   other-modules:    Test.Shelley.Spec.Ledger.BenchmarkFunctions,
                     Test.Shelley.Spec.Ledger.ConcreteCryptoTypes,
                     Test.Shelley.Spec.Ledger.Examples,
+                    Test.Shelley.Spec.Ledger.Examples.Cast,
                     Test.Shelley.Spec.Ledger.Generator.Constants,
                     Test.Shelley.Spec.Ledger.Generator.Core,
                     Test.Shelley.Spec.Ledger.Orphans,
