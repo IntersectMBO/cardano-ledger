@@ -59,7 +59,7 @@ import Shelley.Spec.Ledger.BlockChain (HashHeader (..), pattern Block)
 import Shelley.Spec.Ledger.Coin (Coin (Coin))
 import Shelley.Spec.Ledger.Credential (Credential (..), Ptr, StakeReference)
 import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, HASH)
-import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
+import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), Stake (..))
 import Shelley.Spec.Ledger.Keys
   ( Hash,
@@ -370,7 +370,7 @@ instance HashAlgorithm h => Arbitrary (PoolDistr (Mock.ConcreteCrypto h)) where
     PoolDistr . Map.fromList
       <$> listOf ((,) <$> arbitrary <*> genVal)
     where
-      genVal = (,) <$> arbitrary <*> genHash (Proxy @(Mock.ConcreteCrypto h))
+      genVal = IndividualPoolStake <$> arbitrary <*> genHash (Proxy @(Mock.ConcreteCrypto h))
 
 instance HashAlgorithm h => Arbitrary (Mock.EpochState (Mock.ConcreteCrypto h)) where
   arbitrary =

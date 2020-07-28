@@ -157,7 +157,8 @@ import Shelley.Spec.Ledger.Credential
   )
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
-  ( PoolDistr (..),
+  ( IndividualPoolStake (..),
+    PoolDistr (..),
     pattern DeRegKey,
     pattern Delegate,
     pattern GenesisDelegCert,
@@ -1386,7 +1387,7 @@ expectedStEx2E =
         ( PoolDistr
             ( Map.singleton
                 (hk (alicePool p))
-                (1, hashVerKeyVRF (snd $ vrf (alicePool p)))
+                (IndividualPoolStake 1 (hashVerKeyVRF (snd $ vrf (alicePool p))))
             )
         )
         (overlayScheduleFor (EpochNo 2))
@@ -1438,7 +1439,7 @@ blockEx2FHash :: Mock c => proxy c -> HashHeader c
 blockEx2FHash _ = bhHash (bheader blockEx2F)
 
 pdEx2F :: forall c. Crypto c => PoolDistr c
-pdEx2F = PoolDistr $ Map.singleton (hk (alicePool p)) (1, hashVerKeyVRF $ snd $ vrf (alicePool p))
+pdEx2F = PoolDistr $ Map.singleton (hk (alicePool p)) (IndividualPoolStake 1 (hashVerKeyVRF $ snd $ vrf (alicePool p)))
   where
     p :: Proxy c
     p = Proxy

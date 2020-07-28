@@ -1,9 +1,13 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
@@ -15,6 +19,7 @@ module Shelley.Spec.Ledger.Delegation.Certificates
     MIRCert (..),
     StakeCreds (..),
     PoolDistr (..),
+    IndividualPoolStake (..),
     delegCWitness,
     poolCWitness,
     genesisCWitness,
@@ -32,18 +37,18 @@ module Shelley.Spec.Ledger.Delegation.Certificates
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import qualified Cardano.Crypto.Hash as Hash
-import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Map.Strict (Map)
+import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Crypto (HASH, VRF)
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxData
   ( DCert (..),
     DelegCert (..),
@@ -56,20 +61,10 @@ import Shelley.Spec.Ledger.TxData
     StakeCreds (..),
   )
 
--- We had to do a bit of type synonym unfolding of VRF and HASH from Shelley.Spec.Ledger.Crypto
--- These unfoldings need the types VerKeyVRF from Cardano.Crypto.VRF and Hash from Cardano.Crypto.Hash
--- We also had to move (VRF crypto) and (HASH crypto) to the context, since they are both type synonym families.
-
-instance
-  (u ~ (VRF crypto), v ~ (HASH crypto)) =>
-  HasExp (PoolDistr crypto) (Map (KeyHash 'StakePool crypto) (Rational, Hash.Hash v (VRF.VerKeyVRF u)))
-  where
+instance HasExp (PoolDistr crypto) (Map (KeyHash 'StakePool crypto) (IndividualPoolStake crypto)) where
   toExp (PoolDistr x) = Base MapR x
 
-instance
-  (u ~ (VRF crypto), v ~ (HASH crypto)) =>
-  Embed (PoolDistr crypto) (Map (KeyHash 'StakePool crypto) (Rational, Hash.Hash v (VRF.VerKeyVRF u)))
-  where
+instance Embed (PoolDistr crypto) (Map (KeyHash 'StakePool crypto) (IndividualPoolStake crypto)) where
   toBase (PoolDistr x) = x
   fromBase x = (PoolDistr x)
 
@@ -124,12 +119,32 @@ isRetirePool _ = False
 
 newtype PoolDistr crypto = PoolDistr
   { unPoolDistr ::
-      ( Map
-          (KeyHash 'StakePool crypto)
-          (Rational, Hash crypto (VerKeyVRF crypto))
-      )
+      Map (KeyHash 'StakePool crypto) (IndividualPoolStake crypto)
   }
-  deriving (Show, Eq, ToCBOR, FromCBOR, NFData, NoUnexpectedThunks, Relation)
+  deriving stock (Show, Eq)
+  deriving newtype (ToCBOR, FromCBOR, NFData, NoUnexpectedThunks, Relation)
+
+data IndividualPoolStake crypto = IndividualPoolStake
+  { individualPoolStake :: !Rational,
+    individualPoolStakeVrf :: !(Hash crypto (VerKeyVRF crypto))
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData, NoUnexpectedThunks)
+
+instance Crypto crypto => ToCBOR (IndividualPoolStake crypto) where
+  toCBOR (IndividualPoolStake stake vrf) =
+    mconcat
+      [ encodeListLen 2,
+        toCBOR stake,
+        toCBOR vrf
+      ]
+
+instance Crypto crypto => FromCBOR (IndividualPoolStake crypto) where
+  fromCBOR =
+    decodeRecordNamed "IndividualPoolStake" (const 2) $
+      IndividualPoolStake
+        <$> fromCBOR
+        <*> fromCBOR
 
 isInstantaneousRewards :: DCert crypto -> Bool
 isInstantaneousRewards (DCertMir _) = True

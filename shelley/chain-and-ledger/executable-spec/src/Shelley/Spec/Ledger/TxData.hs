@@ -523,7 +523,7 @@ data TxBody crypto = TxBody'
     _txUpdate' :: !(StrictMaybe (Update crypto)),
     _mdHash' :: !(StrictMaybe (MetaDataHash crypto)),
     bodyBytes :: LByteString,
-    extraSize :: Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
+    extraSize :: !Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
   }
   deriving (Show, Eq, Generic)
   deriving

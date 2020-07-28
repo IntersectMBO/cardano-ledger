@@ -49,7 +49,10 @@ import Shelley.Spec.Ledger.BlockChain
     seedL,
   )
 import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
+import Shelley.Spec.Ledger.Delegation.Certificates
+  ( IndividualPoolStake (..),
+    PoolDistr (..),
+  )
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -187,7 +190,7 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
   let sigma' = Map.lookup hk pd
   case sigma' of
     Nothing -> throwError $ VRFKeyUnknown hk
-    Just (sigma, vrfHK) -> do
+    Just (IndividualPoolStake sigma vrfHK) -> do
       unless
         (vrfHK == hashVerKeyVRF vrfK)
         (throwError $ VRFKeyWrongVRFKey hk vrfHK (hashVerKeyVRF vrfK))

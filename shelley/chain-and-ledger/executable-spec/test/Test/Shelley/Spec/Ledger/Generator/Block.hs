@@ -30,7 +30,7 @@ import Shelley.Spec.Ledger.BaseTypes
     (⭒),
   )
 import Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
-import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
+import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
     KeyHash,
@@ -166,7 +166,7 @@ genBlock
      -}
 
     lookForPraosStart <- genSlotIncrease
-    let poolParams = (Map.toList . Map.filter ((> 0) . fst) . unPoolDistr . nesPd . chainNes) chainSt
+    let poolParams = (Map.toList . Map.filter ((> 0) . individualPoolStake) . unPoolDistr . nesPd . chainNes) chainSt
     poolParams' <- take 1 <$> QC.shuffle poolParams
 
     -- Look for a good future slot to make a block for.
@@ -184,7 +184,7 @@ genBlock
     -- some chose stake pool that has non-zero stake.
     let (nextSlot, poolStake, ks) = case poolParams' of
           [] -> (nextOSlot, 0, Left gkh)
-          (pkh, (stake, _)) : _ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
+          (pkh, IndividualPoolStake stake _) : _ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
             Nothing -> (nextOSlot, 0, Left gkh)
             Just ps ->
               let apks =

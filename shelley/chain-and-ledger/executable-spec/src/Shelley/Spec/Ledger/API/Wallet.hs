@@ -26,7 +26,7 @@ import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto (VRF))
-import Shelley.Spec.Ledger.Delegation.Certificates (unPoolDistr)
+import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), unPoolDistr)
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Shelley.Spec.Ledger.LedgerState
@@ -139,7 +139,7 @@ getLeaderSchedule globals ss cds poolHash key = Set.filter isLeader epochSlots
       let y = VRF.evalCertified () (mkSeed seedL slotNo epochNonce) key
        in Map.notMember slotNo overlaySched
             && checkLeaderValue (VRF.certifiedOutput y) stake f
-    stake = maybe 0 fst $ Map.lookup poolHash poolDistr
+    stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
     overlaySched = nesOsched ss
     poolDistr = unPoolDistr $ nesPd ss
     TicknState epochNonce _ = csTickn cds
