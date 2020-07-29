@@ -63,14 +63,15 @@ state is unaffected.
 %%
 \begin{figure}[htb]
   \begin{align*}
-      & \fun{mkUTxO} ~\in~ \Slot \to \ShelleyUTxO  \to \UTxO  \\
-      & \fun{mkUTxO}~s~\var{utxo} ~=~ \{~ \var{txin} \mapsto (a,\fun{coinToValue}~c) ~\vert~
+      & \fun{mkUTxO} ~\in~ \ShelleyUTxO  \to \UTxO  \\
+      & \fun{mkUTxO}~\var{utxo} ~=~ \{~ \var{txin} \mapsto (a,\fun{coinToValue}~c) ~\vert~
       \var{txin} \mapsto \var{(a,c)}\in ~\var{utxo}~\} \\
       & \text{make UTxO with MC}
       \nextdef
       & \fun{toMC} \in ~ \ShelleyChainState \to \ChainState \\
-      & \fun{toMC}~cs : \\
-      & ~~~~ cs_{utxo} = \fun{mkUTxO}~\var{utxo} \\
+      & \fun{toMC}~cs = cs' \\
+      & \where \\
+      & ~~~~ cs'_{utxo} = \fun{mkUTxO}~\var{utxo} \\
       & \text{transform Shelley chain state to a MC-supporting state}
   \end{align*}
   \caption{Shelley to MC Chain State Transtition}

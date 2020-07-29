@@ -32,12 +32,20 @@
 In order to handle rewards and staking, we must change the stake distribution
 calculation function to add up only the Ada in the UTxO
  before performing any calculations. In Figure~\ref{fig:functions:stake-distribution}
- below, we do so using the $\fun{utxoAda}$ defined in Section~\ref{sec:utxo}.
+ below, we do so using the function $\fun{utxoAda}$, which returns the amount of Ada
+ tokens in an address.
 
 %%
 %% Figure Functions for Stake Distribution
 %%
 \begin{figure}[htb]
+  \emph{Helper function}
+  %
+  \begin{align*}
+    & \fun{utxoAda} \in \UTxO \to \Addr \to \Coin \\
+    & \fun{utxoAda}~{\var{utxo}}~\var{addr} ~=~\sum_{\var{out} \in \range \var{utxo}, \fun{getAddr}~\var{out} = \var{addr}} \fun{getCoin}~\var{out}
+  \end{align*}
+  %
   \emph{Stake Distribution (using functions and maps as relations)}
   %
   \begin{align*}

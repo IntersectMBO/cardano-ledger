@@ -35,28 +35,9 @@ to $\fun{txSize}$.
           \var{ix} \mapsto \var{txout} \in \txouts{txb}
         \right\} \\
   \end{align*}
-  \caption{Functions on Tx Inputs and Outputs}
+  \caption{Functions on Tx Outputs}
   \label{fig:functions:insouts}
 \end{figure}
-
-\textbf{Value Operations and Partial Order.}
-Some of the UTxO update and precondition functions now operate on the $\Value$
-type instead of $\Coin$ (sometimes on a combination of $\Value$ and $\Coin$).
-To make this precise, we must define basic operations on $\Value$, which
-include, most notably, addition and $\leq$ comparison.
-
-Because the absence of a token in a $\Value$ has the same semantics as
-the token being present with an amount of $0$, we regard two elements of
-type $\Value$ as the same if they only differ by some tokens with
-amount $0$. This means that we can equivalently regard values as total
-maps that map all except a finite amount of its inputs to $0$.
-
-This way, when adding two partial maps, $m_1$ and $m_2$, $m_1 + m_2$ is defined
-by $(m_1 + m_2)~\var{pid}~\var{aid} := (m_1~\var{pid}~\var{aid}) + (m_2~\var{pid}~\var{aid})$.
-
-Similarly, if we compare two maps, we compare them as follows:
-
-\[ m_1 \leq m_2 \Leftrightarrow \forall~\var{pid}~\var{aid}, m_1~\var{pid}~\var{aid} \leq m_2~\var{pid}~\var{aid} \]
 
 \textbf{UTxO Helper Functions.}
 
@@ -65,16 +46,16 @@ UTxO transition system with MC:
 
 \begin{itemize}
 
-  \item $\fun{getCoin}$ adds up all the Ada in a given output and returns it as a
+  \item $\fun{getCoin}$ sums all the Ada in a given output and returns it as a
   $\Coin$ value
-
-  \item $\fun{utxoAda}$ returns the set of all the outputs in a UTxO with only Ada
-  tokens (the other tokens are ignored). This is used in the stake distribution
-  calculation at the epoch boundary
 
   \item
     The $\fun{ubalance}$ function calculates the (aggregated by $\PolicyID$ and
     $\AssetID$) sum total of all the value in a given UTxO.
+
+  \item
+    The $\fun{valueSize}$ function estimates an upper bound on the size of a value
+    as stored in the UTxO.
 
   \item The $\fun{consumed}$ calculation is still the sum of the reward address
    value consumed, the values of the UTxO entries consumed,
@@ -112,20 +93,20 @@ values in the
 outputs that will be added to the ledger UTxO by the transaction. These outputs are
 where the
 forged value is "put into of circulation", i.e. how it ends up in the UTxO.
-Suppose a transaction $tx$ contains a single output $(a, cid \mapsto tkns)$. Suppose
+Suppose a transaction $tx$ contains a single output $(a, pid \mapsto tkns)$. Suppose
 also that it does not
-have any inputs spending any UTxO outputs with currency ID $cid$.
+have any inputs spending any UTxO outputs with policy ID $pid$.
 
 A valid transaction $tx$ satisfies the preservation of value
-condition by adding the value $cid \mapsto tkns$ to the \textit{consumed} side as well.
-To do this, the $tx$ declares that it is forging the tokens $cid \mapsto tkns$
+condition by adding the value $pid \mapsto tkns$ to the \textit{consumed} side as well.
+To do this, the $tx$ declares that it is forging the tokens $pid \mapsto tkns$
 via the $\fun{forge}$ field, i.e. $tx$ must have
 
-\[cid \mapsto tkns\in\fun{forge}~tx\]
+\[pid \mapsto tkns\in\fun{forge}~tx\]
 
 The forge field value is then added to the consumed side. This approach
 to balancing the POV equation extends
-to cases where the transaction might also be consuming some existing $cid$ tokens,
+to cases where the transaction might also be consuming some existing $pid$ tokens,
 or taking the out of circulation with negative quantities in the forge field.
 
 The forge field value represents the change in total existing tokens of each given currency
@@ -144,19 +125,16 @@ That step is part of witnessing, i.e. the UTXOW rule, see below.
   \emph{Helper Functions}
   \begin{align*}
     & \fun{getCoin} \in \UTxOOut \to \Coin \\
-    & \fun{getCoin}~{\var{out}} ~=~\sum_{\mathsf{adaID} \mapsto tkns \in \fun{getValue}~out}
-       (\sum_{q \in \range~{tkns}} \fun{co}~q) \\
-    & \text{sum total of amount of Ada in an output}
-    \nextdef
-    & \fun{utxoAda} \in \UTxO \to \powerset{(\Addr \times \Coin)} \\
-    & \fun{utxoAda}~{\var{utxo}} ~=~\{~(\fun{getAddr}~\var{out},~\fun{getCoin}~{out})
-    ~\vert~ \var{out} \in \range~\var{utxo} ~\} \\
-    & \text{returns the outputs in the UTxO with only the Ada coins} \\
+    & \fun{getCoin}~{\var{out}} ~=~\fun{co}~(\var{out}~\mathsf{adaID}~\mathsf{adaToken}) \\
     \nextdef
     & \fun{ubalance} \in \UTxO \to \Value \\
     & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{u}\in~\var{utxo}}
     \fun{getValue}~\var{u} \\
     & \text{UTxO balance} \\
+    \nextdef
+    & \fun{valueSize} \in \Value \to \N \\
+    & \fun{valueSize}~\var{v} = k + k' * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
+      \land (\var{pid}, \var{aid}) \neq (\mathsf{adaID}, \mathsf{adaToken}) \}|
   \end{align*}
   %
   \emph{Produced and Consumed Calculations}
@@ -167,13 +145,13 @@ That step is part of witnessing, i.e. the UTXOW rule, see below.
     &~~  \fun{coinToValue}(\fun{wbalance}~(\fun{txwdrls}~{txb})~\\
         &~~+~ \keyRefunds{pp}{stkCreds}{txb}) +
         ~\fun{forge}~\var{txb} \\
-    & \text{value consumed} \\
+    & \text{\emph{-- value consumed}} \\
     \nextdef
     & \fun{produced} \to \PParams \to \StakePools \to \TxBody \to \Value \\
     & \fun{produced}~\var{pp}~\var{stpools}~\var{txb} = \\
     &~~\ubalance{(\fun{outs}~{txb})}  + \fun{coinToValue}(\txfee{txb} \\
     &~~+ \deposits{pp}{stpools}~{(\txcerts{txb})})\\
-    & \text{value produced} \\
+    & \text{\emph{-- value produced}} \\
   \end{align*}
   \caption{UTxO Calculations}
   \label{fig:functions:utxo}
@@ -296,7 +274,7 @@ also be a forging script.
 \begin{figure}[htb]
   \begin{align*}
     & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to
-      \powerset{\PolicyID}
+      \powerset{\ScriptHash}
     & \text{required script hashes} \\
     &  \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
     & ~~\{ \fun{validatorHash}~a \mid i \mapsto (a, \wcard) \in \var{utxo},\\
