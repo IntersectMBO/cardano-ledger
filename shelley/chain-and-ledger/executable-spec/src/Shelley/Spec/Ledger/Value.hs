@@ -1,9 +1,12 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE FlexibleInstances          #-}
+
 
 module Shelley.Spec.Ledger.Value
  where
@@ -18,18 +21,110 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           GHC.Generics (Generic)
 import           Data.Word (Word8)
 import           Cardano.Crypto.Hash (Hash, ShortHash)
-import           Data.Map.Strict (Map, elems, empty, toList, filterWithKey, keys,
-                 toList, singleton, lookup, unionWith)
+import           Data.Map.Strict(Map, lookup, toList, elems, filterWithKey, keys)
+import qualified Data.Map as Map
+import           Data.Map.Internal(Map(..),balanceL,balanceR,singleton,link,splitLookup,link2)
+
 import           Shelley.Spec.Ledger.Crypto
 import           Data.ByteString (ByteString) -- TODO is this the right Bytestring
 import           Shelley.Spec.Ledger.Scripts
 
+{-
+General function and type class definitions used in Value
+-}
+
+data Op = Gt | Lt | Gteq | Lteq | Neq | Equal
+
+class Val t where
+  zeroV :: t                          -- This is an identity of addv
+  addv :: t -> t -> t                 -- This must be associative and commutative
+  vnegate:: t -> t                    -- addv x (vnegate x) == zeroV
+  scalev:: Integer -> t -> t          --
+  checkBinRel:: Op -> t -> t -> Bool  -- This will define a PARTIAL order using pointwise comparisons (If all the keys don't match returns False)
+  visZero:: t -> Bool                 -- is the argument zeroV?
 
 
+class Default f t where
+  apply:: Ord k => f k t -> k -> t
+
+instance Val Integer where
+  zeroV = 0
+  addv x y = x+y
+  vnegate x = -x
+  scalev n x = n * x
+  checkBinRel Gt x y = x>y
+  checkBinRel Lt x y = x<y
+  checkBinRel Gteq x y = x >= y
+  checkBinRel Lteq x y = x <= y
+  checkBinRel Neq x y = not(x==y)
+  checkBinRel Equal x y = x==y
+  visZero x = x==0
+
+instance Val t => Default Map t where
+   apply map k = case Map.lookup k map of { Just t -> t; Nothing -> zeroV }
+
+instance (Ord k,Val t) => Val (Map k t) where
+  zeroV = Map.empty
+  addv x y = unionWithV addv x y  -- There is an assumption that if the range is zeroV, it is not stored in the Map
+  vnegate x = mapV vnegate x        -- We enforce this by using our own versions of map and union: unionWithV and mapV
+  scalev n x = mapV (scalev n) x
+  checkBinRel op x y = pointWise (checkBinRel op) x y
+  visZero x = Map.null x
+
+
+pointWise:: Ord k => (v -> v -> Bool) -> Map k v -> Map k v -> Bool
+pointWise p Tip Tip = True
+pointWise p Tip (Bin _ k _ ls rs) = False
+pointWise p (Bin _ k _ ls rs) Tip = False
+pointWise p m (Bin _ k v2 ls rs) =
+   case Map.splitLookup k m of
+      (lm,Just v1,rm) -> p v1 v2 && pointWise p ls lm && pointWise p rs rm
+      other -> False
+
+
+-- The following functions enforce the invariant that zeroV is never stored in a Map
+insertWithV :: (Ord k,Val a) => (a -> a -> a) -> k -> a -> Map k a -> Map k a
+insertWithV = go
+  where
+    go :: (Ord k,Val a) => (a -> a -> a) -> k -> a -> Map k a -> Map k a
+    go _ !kx x Tip = if visZero x then Tip else singleton kx x
+    go f !kx x (Bin sy ky y l r) =
+        case compare kx ky of
+            LT -> balanceL ky y (go f kx x l) r
+            GT -> balanceR ky y l (go f kx x r)
+            EQ -> if visZero new then link2 l r else Bin sy kx new l r
+               where new = f x y
+
+
+{-# INLINABLE insertWithV #-}
+unionWithV :: (Ord k,Val a) => (a -> a -> a) -> Map k a -> Map k a -> Map k a
+unionWithV _f t1 Tip = t1
+unionWithV f t1 (Bin _ k x Tip Tip) = insertWithV f k x t1
+unionWithV f (Bin _ k x Tip Tip) t2 = insertWithV f k x t2
+unionWithV _f Tip t2 = t2
+unionWithV f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
+  (l2, mb, r2) -> case mb of
+      Nothing -> if visZero x1 then link2 l1l2 r1r2 else link k1 x1 l1l2 r1r2
+      Just x2 -> if visZero new then link2 l1l2 r1r2 else link k1 new l1l2 r1r2
+        where new = (f x1 x2)
+    where !l1l2 = unionWithV f l1 l2
+          !r1r2 = unionWithV f r1 r2
+{-# INLINABLE unionWithV #-}
+
+
+mapV:: (Ord k,Val a) => (a -> a) -> Map k a -> Map k a
+mapV f m = Map.foldrWithKey accum Map.empty m
+   where accum k v ans = if visZero new then ans else Map.insert k new ans
+            where new = f v
+{-# INLINABLE mapV #-}
+
+{-
+Value definitions
+-}
 
 -- | Quantity
 newtype Quantity = Quantity {unInt :: Integer}
-  deriving (Show, Eq, Generic, ToCBOR, FromCBOR, Ord, Integral, Real, Num, Enum, NoUnexpectedThunks, NFData)
+  deriving (Show, Eq, Generic, ToCBOR, FromCBOR, Ord, Integral, Real, Num, Enum, NoUnexpectedThunks, NFData, Val)
 
 -- | Asset ID
 newtype AssetID = AssetID {assetID :: ByteString}
@@ -71,9 +166,9 @@ similar to 'Ledger.Ada' for their own assets.
 -}
 
 -- | Value type
-data Value crypto = Value
+newtype Value crypto = Value
   { val :: Map  (PolicyID crypto) (Map AssetID Quantity) }
-  deriving (Show, Generic)
+  deriving (Show, Generic, Val)
 
 instance NoUnexpectedThunks (Value crypto)
 instance NFData (Value crypto)
@@ -88,10 +183,6 @@ instance NFData (CompactValue crypto)
 -- get the quantities of the tokens of a value term
 getQs :: Value crypto -> [Quantity]
 getQs (Value v) = fmap snd (concat $ fmap toList (elems v))
-
--- zero value
-zeroV :: Value crypto
-zeroV = Value empty
 
 -- | make a Value out of a Coin
 coinToValue :: Coin -> Value crypto
@@ -134,8 +225,7 @@ compactValueToValue (AdaOnly c)  = coinToValue c
 compactValueToValue (MixValue v) = v
 
 instance Eq (Value crypto) where
-    (==) = eq
-
+    (==) = checkBinRel Equal
 
 instance Semigroup (Value crypto) where
     (<>) = addv
@@ -187,54 +277,12 @@ singleType c tn i = Value (singleton c (singleton tn i))
 
 -- Num operations
 
--- | Check whether a 'Value' is zero.
-isZero :: Value crypto -> Bool
-isZero (Value xs) = all (all (\i -> 0 == i)) xs
-
--- | add values
-addv :: Value crypto -> Value crypto -> Value crypto
-addv (Value v1) (Value v2) = Value (unionWith (unionWith (+)) v1 v2)
-
 -- | subtract values
 subv :: Value crypto -> Value crypto -> Value crypto
-subv (Value v1) (Value v2) = Value (unionWith (unionWith (\q1 q2 -> (+) q1 (-1 * q2))) v1 v2)
+subv v1 v2 = addv v1 (vnegate v2)
 
--- | scale values
-scalev :: Integer -> Value crypto -> Value crypto
-scalev s (Value v) = Value (fmap (fmap ((Quantity s) *)) v)
-
--- | Check whether a binary relation holds for value pairs of two 'Value' maps,
---   supplying 0 where a key is only present in one of them.
--- geq/leq/etc. only
--- TODO ^^
-checkBinRel :: (Quantity -> Quantity -> Bool) -> Value crypto -> Value crypto -> Bool
-checkBinRel f l r = and $ fmap (f 0) (getQs $ subv l r)
-
-
--- | Check whether one 'Value' is greater than or equal to another. See 'Value' for an explanation of how operations on 'Value's work.
-geq :: Value crypto -> Value crypto -> Bool
--- If both are zero then checkBinRel will be vacuously true, but this is fine.
-geq = checkBinRel (>=)
-
--- | Check whether one 'Value' is strictly greater than another. See 'Value' for an explanation of how operations on 'Value's work.
-gt :: Value crypto -> Value crypto -> Bool
--- If both are zero then checkBinRel will be vacuously true. So we have a special case.
-gt = checkBinRel (>)
-
--- | Check whether one 'Value' is less than or equal to another. See 'Value' for an explanation of how operations on 'Value's work.
-leq :: Value crypto -> Value crypto -> Bool
--- If both are zero then checkBinRel will be vacuously true, but this is fine.
-leq = checkBinRel (<=)
-
--- | Check whether one 'Value' is strictly less than another. See 'Value' for an explanation of how operations on 'Value's work.
-lt :: Value crypto -> Value crypto -> Bool
--- If both are zero then checkBinRel will be vacuously true. So we have a special case.
-lt = checkBinRel (<)
-
--- | Check whether one 'Value' is equal to another. See 'Value' for an explanation of how operations on 'Value's work.
-eq :: Value crypto -> Value crypto -> Bool
--- If both are zero then checkBinRel will be vacuously true, but this is fine.
-eq = checkBinRel (==)
+vinsert:: PolicyID crypto -> AssetID -> Quantity -> Value crypto -> Value crypto
+vinsert pid aid q old = addv old (Value (Map.singleton pid (Map.singleton aid q)))
 
 -- | Split a value into its positive and negative parts. The first element of
 --   the tuple contains the negative parts of the value, the second element
