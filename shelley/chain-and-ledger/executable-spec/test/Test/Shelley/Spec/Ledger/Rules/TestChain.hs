@@ -14,7 +14,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
   )
 where
 
-import Control.Monad (join)
 import Control.State.Transition.Extended (TRC (TRC))
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
@@ -73,11 +72,18 @@ traceLen = 100
 
 adaPreservationChain :: Property
 adaPreservationChain =
-  forAllChainTrace $ \tr ->
-    conjoin . join $
-      map (\x -> [checkPreservation x, checkWithdrawlBound x]) $
-        sourceSignalTargets tr
+  forAllChainTrace $ \tr -> do
+    let ssts = sourceSignalTargets tr
+    conjoin $
+      [ conjoin (map checkPreservation ssts),
+        conjoin (map checkWithdrawlBound (filter sameEpoch ssts))
+      ]
   where
+    epoch s = nesEL . chainNes $ s
+    sameEpoch :: SourceSignalTarget (CHAIN C) -> Bool
+    sameEpoch (SourceSignalTarget {source, target}) =
+      epoch source == epoch target
+    -- ADA should be preserved for all state transitions in the generated trace
     checkPreservation SourceSignalTarget {source, signal, target} =
       counterexample
         ( mconcat
@@ -97,10 +103,11 @@ adaPreservationChain =
       where
         sourcePots = totalAdaPots source
         targetPots = totalAdaPots target
+    -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
+    -- then the total rewards should change only by withdrawals
     checkWithdrawlBound SourceSignalTarget {source, signal, target} =
-      epoch source == epoch target ==> rewardDelta === withdrawls
+      rewardDelta === withdrawls
       where
-        epoch s = nesEL . chainNes $ s
         sum_ :: Foldable f => f Coin -> Coin
         sum_ = foldl' (+) (Coin 0)
         withdrawls :: Coin
