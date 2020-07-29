@@ -54,6 +54,7 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
     pattern UTxOState,
   )
+import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
@@ -104,22 +105,21 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     findStakeScriptFromCred,
     genNatural,
   )
+import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
-import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 
--- | Generates a transaction in the context of the LEDGER STS environment 
+-- | Generates a transaction in the context of the LEDGER STS environment
 -- and state.
 --
---  A generated transaction may not have sufficient spending balance and 
--- need to be discarded. In this case we retry the generator, 
--- up to 'genTxRetries' times, before failing hard with an error. 
+--  A generated transaction may not have sufficient spending balance and
+-- need to be discarded. In this case we retry the generator,
+-- up to 'genTxRetries' times, before failing hard with an error.
 --
--- Note: the spending balance emerges from inputs, refund withdrawals, 
--- certificate deposits and fees (which in turn depend on number of 
--- inputs, outputs, witnesses, metadata etc.). It's hard to avoid this 
--- completely, but in practice it is relatively easy to calibrate 
+-- Note: the spending balance emerges from inputs, refund withdrawals,
+-- certificate deposits and fees (which in turn depend on number of
+-- inputs, outputs, witnesses, metadata etc.). It's hard to avoid this
+-- completely, but in practice it is relatively easy to calibrate
 -- the generator 'Constants' so that there is sufficient spending balance.
 genTx ::
   (HasCallStack, Mock c) =>
@@ -132,7 +132,7 @@ genTx ge@(GenEnv _ (Constants {genTxRetries})) =
 
 genTxRetry ::
   (HasCallStack, Mock c) =>
-  Int -> 
+  Int ->
   GenEnv c ->
   LedgerEnv ->
   (UTxOState c, DPState c) ->
@@ -202,11 +202,10 @@ genTxRetry
           let (actualFees', outputs') = mkOutputs fees
               txBody = draftTxBody {_txfee = actualFees', _outputs = outputs'}
           pure $ Tx txBody (mkTxWits' txBody) metadata
-        else
-          retryOrFail n
-  where 
-    retryOrFail 0 = error "genTx: insufficient spending balance" 
-    retryOrFail n' = genTxRetry (n' - 1) ge env st
+        else retryOrFail n
+    where
+      retryOrFail 0 = error "genTx: insufficient spending balance"
+      retryOrFail n' = genTxRetry (n' - 1) ge env st
 
 genTimeToLive :: SlotNo -> Gen SlotNo
 genTimeToLive currentSlot = do

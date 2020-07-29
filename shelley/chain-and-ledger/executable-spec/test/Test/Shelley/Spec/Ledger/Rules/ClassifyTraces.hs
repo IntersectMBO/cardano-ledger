@@ -53,6 +53,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     isTreasuryMIRCert,
   )
 import Shelley.Spec.Ledger.LedgerState (txsizeBound)
+import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.PParams
   ( PParamsUpdate,
     pattern ProposedPPUpdates,
@@ -63,10 +64,10 @@ import Shelley.Spec.Ledger.Tx (_body)
 import Shelley.Spec.Ledger.TxData
   ( Wdrl (..),
     _certs,
+    _mdHash,
     _outputs,
     _txUpdate,
     _wdrls,
-    _mdHash,
     pattern DCertDeleg,
     pattern DeRegKey,
     pattern Delegate,
@@ -102,7 +103,6 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 
 genesisChainState ::
   Maybe
@@ -277,9 +277,9 @@ maxCertsRatio Constants {maxCertsPerTx} = lenRatio (filter ((== maxCertsPerTx) .
 
 -- | Extract the metadata from the transactions
 metaDataByTx :: [Tx C] -> [[MetaDataHash C]]
-metaDataByTx txs = 
+metaDataByTx txs =
   f . _mdHash . _body <$> txs
-  where 
+  where
     f SNothing = []
     f (SJust md) = [md]
 
