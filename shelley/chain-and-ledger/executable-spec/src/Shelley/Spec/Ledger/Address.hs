@@ -224,8 +224,9 @@ parseAddr t = do
 
 addrUsesScript :: Addr crypto -> Bool
 addrUsesScript (AddrBootstrap _) = False
-addrUsesScript (Addr _ pc sr)    = credentialUsesScript pc
-                                || stakeReferenceUsesScript sr
+addrUsesScript (Addr _ pc sr) =
+  credentialUsesScript pc
+    || stakeReferenceUsesScript sr
 
 rewardAcntUsesScript :: RewardAcnt crypto -> Bool
 rewardAcntUsesScript = credentialUsesScript . getRwdCred

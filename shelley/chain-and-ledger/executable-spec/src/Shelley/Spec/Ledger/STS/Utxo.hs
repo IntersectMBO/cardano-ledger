@@ -86,10 +86,10 @@ import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
     totalDeposits,
+    txCreatesScriptAddrs,
     txins,
     txouts,
     txup,
-    txCreatesScriptAddrs,
   )
 
 data UTXO crypto
@@ -137,7 +137,7 @@ instance
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
     | OutputBootAddrAttrsTooBig
         ![TxOut crypto] -- list of supplied bad transaction outputs
-    | ScriptsEmbargoed  -- blocking use of scripts for the moment
+    | ScriptsEmbargoed -- blocking use of scripts for the moment
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]

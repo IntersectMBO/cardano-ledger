@@ -167,10 +167,10 @@ instance
     toCBOR kh
 
 credentialUsesScript :: Credential kr crypto -> Bool
-credentialUsesScript ScriptHashObj{} = True
-credentialUsesScript KeyHashObj{}    = False
+credentialUsesScript ScriptHashObj {} = True
+credentialUsesScript KeyHashObj {} = False
 
 stakeReferenceUsesScript :: StakeReference crypto -> Bool
 stakeReferenceUsesScript (StakeRefBase cred) = credentialUsesScript cred
-stakeReferenceUsesScript (StakeRefPtr _)     = False
-stakeReferenceUsesScript  StakeRefNull       = False
+stakeReferenceUsesScript (StakeRefPtr _) = False
+stakeReferenceUsesScript StakeRefNull = False
