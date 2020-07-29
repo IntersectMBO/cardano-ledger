@@ -136,6 +136,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Generator.Constants
       Test.Shelley.Spec.Ledger.Generator.Core
       Test.Shelley.Spec.Ledger.Generator.Delegation
+      Test.Shelley.Spec.Ledger.Generator.MetaData
       Test.Shelley.Spec.Ledger.Generator.Presets
       Test.Shelley.Spec.Ledger.Generator.Trace.Chain
       Test.Shelley.Spec.Ledger.Generator.Trace.DCert
@@ -249,6 +250,7 @@ benchmark mainbench
                     Test.Shelley.Spec.Ledger.Utils,
                     Test.Cardano.Crypto.VRF.Fake,
                     Test.Shelley.Spec.Ledger.Generator.Delegation,
+                    Test.Shelley.Spec.Ledger.Generator.MetaData,
                     Test.Shelley.Spec.Ledger.Generator.Presets,
                     Test.Shelley.Spec.Ledger.Generator.Trace.DCert,
                     Test.Shelley.Spec.Ledger.Generator.Update,
@@ -271,6 +273,7 @@ benchmark mainbench
                     tasty-quickcheck,
                     tasty-hunit,
                     tasty,
+                    text,
                     time,
                     scientific,
                     small-steps,
