@@ -32,11 +32,17 @@ import qualified Data.ByteString as BS
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
+import Data.Sequence.Strict (StrictSeq)
 import Shelley.Spec.Ledger.API
-  ( CHAIN,
+  ( Addr (..),
+    CHAIN,
     ChainState,
-    DCert,
+    Credential (..),
+    DCert (..),
+    DelegCert (..),
+    Delegation (..),
     LEDGER,
+    TxOut (..),
   )
 import Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo), StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain
@@ -82,9 +88,7 @@ import Test.QuickCheck
     withMaxSuccess,
   )
 import qualified Test.QuickCheck.Gen as QC
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( C,
-  )
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
@@ -192,15 +196,20 @@ relevantCasesAreCoveredForTrace tr = do
           ),
           {- TODO re-enable after the script embargo has been lifted
            -
+           - in other words, turn "0 == txScriptOutputsRatio" back to "0.1 < txScriptOutputsRatio "
+          -}
           ( "at least 10% of transactions have script TxOuts",
-            0.1 < txScriptOutputsRatio (map (_outputs . _body) txs),
+            0 == txScriptOutputsRatio (map (_outputs . _body) txs),
             20
           ),
+          {- TODO re-enable after the script embargo has been lifted
+           -
+           - in other words, turn "0 == scriptCredentialCertsRatio" back to "0.1 < scriptCredentialCertsRatio "
+          -}
           ( "at least 10% of `DCertDeleg` certificates have script credentials",
-            0.1 < scriptCredentialCertsRatio certs_,
+            0 == scriptCredentialCertsRatio certs_,
             60
           ),
-          -}
           ( "at least 10% of transactions have a reward withdrawal",
             0.1 < withdrawalRatio txs,
             60
@@ -226,7 +235,6 @@ relevantCasesAreCoveredForTrace tr = do
 
 -- | Ratio of certificates with script credentials to the number of certificates
 -- that could have script credentials.
-{- TODO re-enable after the script embargo has been lifted
 scriptCredentialCertsRatio :: [DCert C] -> Double
 scriptCredentialCertsRatio certs =
   ratioInt haveScriptCerts couldhaveScriptCerts
@@ -250,7 +258,6 @@ scriptCredentialCertsRatio certs =
               _ -> False
           )
           certs
--}
 
 -- | Extract the certificates from the transactions
 certsByTx :: [Tx C] -> [[DCert C]]
@@ -296,7 +303,6 @@ ratioInt x y =
   fromIntegral x / fromIntegral y
 
 -- | Transaction has script locked TxOuts
-{- TODO re-enable after the script embargo has been lifted
 txScriptOutputsRatio :: [StrictSeq (TxOut C)] -> Double
 txScriptOutputsRatio txoutsList =
   ratioInt
@@ -311,7 +317,6 @@ txScriptOutputsRatio txoutsList =
               _ -> 0
           )
           txouts
--}
 
 -- | Transaction has a reward withdrawal
 withdrawalRatio :: [Tx C] -> Double
