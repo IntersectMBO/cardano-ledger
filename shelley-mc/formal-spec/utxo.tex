@@ -57,8 +57,8 @@ UTxO transition system with MC:
     The $\fun{valueSize}$ function estimates an upper bound on the size of a value
     as stored in the UTxO.
 
-  \item The $\fun{consumed}$ calculation is still the sum of the reward address
-   value consumed, the values of the UTxO entries consumed,
+  \item The $\fun{consumed}$ calculation is still the sum of the values of the
+   UTxO entries consumed, the reward address value consumed,
    and the value consumed from the deposit pot due
    to the transaction collecting deposit refunds. There is an additional
    summand in this calculation, the value forged by a transaction.
@@ -125,7 +125,7 @@ That step is part of witnessing, i.e. the UTXOW rule, see below.
   \emph{Helper Functions}
   \begin{align*}
     & \fun{getCoin} \in \UTxOOut \to \Coin \\
-    & \fun{getCoin}~{\var{out}} ~=~\fun{co}~(\var{out}~\mathsf{adaID}~\mathsf{adaToken}) \\
+    & \fun{getCoin}~{(\wcard,~\var{out})} ~=~\fun{co}~(\var{out}~\mathsf{adaID}~\mathsf{adaToken}) \\
     \nextdef
     & \fun{ubalance} \in \UTxO \to \Value \\
     & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{u}\in~\var{utxo}}
@@ -142,15 +142,14 @@ That step is part of witnessing, i.e. the UTXOW rule, see below.
     & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \Wdrl \to \TxBody \to \Value \\
     & \consumed{pp}{utxo}{stkCreds}{rewards}~{txb} = \\
     & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} + \\
-    &~~  \fun{coinToValue}(\fun{wbalance}~(\fun{txwdrls}~{txb})~\\
-        &~~+~ \keyRefunds{pp}{stkCreds}{txb}) +
-        ~\fun{forge}~\var{txb} \\
+    &~~  \fun{coinToValue}(\fun{wbalance}~(\fun{txwdrls}~{txb})~+~ \keyRefunds{pp}{stkCreds}{txb}) \\
+    &~~+~\fun{forge}~\var{txb} \\
     & \text{\emph{-- value consumed}} \\
     \nextdef
     & \fun{produced} \to \PParams \to \StakePools \to \TxBody \to \Value \\
     & \fun{produced}~\var{pp}~\var{stpools}~\var{txb} = \\
-    &~~\ubalance{(\fun{outs}~{txb})}  + \fun{coinToValue}(\txfee{txb} \\
-    &~~+ \deposits{pp}{stpools}~{(\txcerts{txb})})\\
+    &~~\ubalance{(\fun{outs}~{txb})} \\
+    &~~+ \fun{coinToValue}(\txfee{txb} + \totalDeposits{pp}{stpools}{(\txcerts{txb})})\\
     & \text{\emph{-- value produced}} \\
   \end{align*}
   \caption{UTxO Calculations}
@@ -172,7 +171,7 @@ of this rule as compared to the original Shelley UTXO rule:
   $\Coin$ amounts in the Shelley ledger rules)
 
   \item In the preservation of value calculation (which looks the same as in
-  Shelly), the value in the $\fun{forge}$ field is taken into account
+  Shelley), the value in the $\fun{forge}$ field is taken into account
 \end{itemize}
 
 Note that updating the $\UTxO$ with the inputs and the outputs of the transaction
@@ -206,18 +205,18 @@ $\Coin$. Moreover, the $\fun{outs}$ map converts $\TxOut$ terms into $\UTxOOut$.
       ~
       \\
       \mathsf{adaID}~\notin \dom~{\fun{forge}~tx} \\
-      \forall txout \in \txouts{txb}, ~ \fun{getValue}~txout  ~\geq ~ 0 \\~
-      \forall txout \in \txouts{txb}, ~ \fun{getCoin}~txout ~\geq \\
-      \fun{valueSize}~(\fun{getValue}~txout) * \fun{minUTxOValue}~pp \\~
+      ~\\
+      \forall txout \in \txouts{txb}, ~ \fun{getValue}~txout  ~\geq ~ 0, \\~
+      \fun{getCoin}~txout ~\geq ~\fun{valueSize}~(\fun{getValue}~txout) * \fun{minUTxOValue}~pp \\~
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp}
       \\
       ~
       \\
-      \var{refunded} \leteq \keyRefunds{pp}{stkCreds}~{txb}
+      \var{refunded} \leteq \keyRefunds{pp}{stkCreds}{txb}
       \\
       \var{depositChange} \leteq
-        \fun{totalDeposits}~{pp}~{stpools}~{(\txcerts{txb})} - \var{refunded}
+        \totalDeposits{pp}{stpools}{(\txcerts{txb})} - \var{refunded}
     }
     {
       \begin{array}{r}
@@ -239,7 +238,7 @@ $\Coin$. Moreover, the $\fun{outs}$ map converts $\TxOut$ terms into $\UTxOOut$.
       \trans{utxo}{tx}
       \left(
       \begin{array}{r}
-        \varUpdate{(\txins{txb} \subtractdom \var{utxo}) \cup \fun{outs}{txb}}  \\
+        \varUpdate{(\txins{txb} \subtractdom \var{utxo}) \cup \fun{outs}~{txb}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
         \varUpdate{\var{fees} + \txfee{txb}} \\
         \varUpdate{ups'}\\

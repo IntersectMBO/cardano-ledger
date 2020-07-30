@@ -1,3 +1,9 @@
+\begin{note}
+  If you are reviewing this document, please have a look at the TODO
+  file. It mentions some things that are still up for discussion and
+  we'd like your opinion.
+\end{note}
+
 \begin{figure*}[t!]
   %
   \emph{Abstract Types}
@@ -16,7 +22,7 @@
       \var{scr} & \Script & \ScriptMSig \uniondistinct \ScriptMPS \\
       \var{pid} & \PolicyID & \ScriptHash \\
        % \text{currency ID}\\
-      \var{tok} & \AssetID & \mathbb{H}_{\leq 32}\\
+      \var{aid} & \AssetID & \mathbb{H}_{\leq 32}\\
        % \text{token identifier}\\
       \var{quan} & \Quantity & \Z \\
       %\text{quantity of a token}\\
@@ -65,7 +71,7 @@ Some new types (and some changes to existing types) are required for
 the ledger to support multi-currencies, as shown in Figure~\ref{fig:defs:utxo-shelley-1}.
 All other types are as specified in the Shelley ledger design and implementation~\ref{...}.
 A \emph{Currency} comprises a set of different \emph{Asset Classes}, each of which has
-a unique identifier, $\AssetID$  (of type $\mathbb{H}_{\leq 32}$, that is \emph{byte strings of length $\leq 32$}). We will informally refer to a pair $(\var{pid}, \var{tok})$ of a Policy ID and an Asset ID as a ``token''.
+a unique identifier, $\AssetID$  (of type $\mathbb{H}_{\leq 32}$, that is \emph{byte strings of length $\leq 32$}). We will informally refer to a pair $(\var{pid}, \var{aid})$ of a Policy ID and an Asset ID as a ``token''.
 The set of tokens that are referred to by the underlying monetary policy represents the coinage that the currency supports.  A multi-currency value, $\Value$ is a map over zero or more currencies
 to single currency values.  A single currency value is then a finite map from
 $\AssetID$s to quantities.
@@ -116,8 +122,8 @@ Addition and binary relations are extended pointwise from $\Coin$ to $\Value$, s
     a term $q\in\Quantity$ with a specific token to track how much of that token is contained in a given currency value.
 
   \item $\Value$ is the multicurrency type that is used to represent
-    an amount of a collection of tokens, including Ada. If $(\var{pid}, \var{tok})$ is a token and $v \in \Value$,
-    the amount in $v$ belonging to that token is $v~\var{pid}~\var{tok}$ if defined, or zero otherwise.
+    an amount of a collection of tokens, including Ada. If $(\var{pid}, \var{aid})$ is a token and $v \in \Value$,
+    the amount in $v$ belonging to that token is $v~\var{pid}~\var{aid}$ if defined, or zero otherwise.
     Token amounts are fungible with each other if and only if they belong to the same token,
     i.e. they have the same $\PolicyID$ and $\AssetID$. Terms of type $\Value$ are sometimes also referred to as
     \emph{token bundles}.
