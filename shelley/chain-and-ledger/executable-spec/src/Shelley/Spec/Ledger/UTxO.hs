@@ -36,12 +36,13 @@ module Shelley.Spec.Ledger.UTxO
     verifyWitVKey,
     scriptsNeeded,
     txinsScript,
+    txCreatesNoScriptAddrs,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
+import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp), eval, rng)
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -50,11 +51,15 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Quiet
-import Shelley.Spec.Ledger.Address (Addr (..))
+import Shelley.Spec.Ledger.Address
+  ( Addr (..),
+    addrUsesScript,
+    rewardAcntUsesScript,
+  )
 import Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Core (Relation (..))
-import Shelley.Spec.Ledger.Credential (Credential (..))
+import Shelley.Spec.Ledger.Credential (Credential (..), credentialUsesScript)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
@@ -76,7 +81,9 @@ import Shelley.Spec.Ledger.PParams (PParams, Update, _keyDeposit, _poolDeposit)
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
-  ( PoolCert (..),
+  ( DelegCert (..),
+    MIRCert (..),
+    PoolCert (..),
     PoolParams (..),
     TxBody (..),
     TxId (..),
@@ -301,3 +308,19 @@ txinsScript txInps (UTxO u) = foldr add Set.empty txInps
       Just (TxOut (Addr _ (ScriptHashObj _) _) _) -> Set.insert input ans
       Just _ -> ans
       Nothing -> ans
+
+txCreatesNoScriptAddrs :: Crypto crypto => TxBody crypto -> Bool
+txCreatesNoScriptAddrs txb =
+  null outputsUsingScripts
+    && null stakeAddrCertsUsingScripts
+    && null poolRegCertsUsingScripts
+    && null mirCertsUsingScripts
+  where
+    outputsUsingScripts =
+      [out | out@(TxOut addr _) <- Set.toList (eval (rng (txouts txb))), addrUsesScript addr]
+    stakeAddrCertsUsingScripts =
+      [cert | cert@(DCertDeleg (RegKey sc)) <- toList (_certs txb), credentialUsesScript sc]
+    poolRegCertsUsingScripts =
+      [cert | cert@(DCertPool (RegPool pparams)) <- toList (_certs txb), rewardAcntUsesScript (_poolRAcnt pparams)]
+    mirCertsUsingScripts =
+      [cert | cert@(DCertMir mir) <- toList (_certs txb), any credentialUsesScript (Map.keys (mirRewards mir))]

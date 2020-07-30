@@ -5,23 +5,16 @@
 module Test.Shelley.Spec.Ledger.STSTests (stsTests) where
 
 import Control.State.Transition.Extended (TRC (..))
-import Data.Either (fromRight, isRight)
+import Data.Either (fromRight)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (empty, singleton)
+import qualified Data.Map.Strict as Map (empty)
 import Data.Proxy
-import qualified Data.Set as Set
-import Shelley.Spec.Ledger.BaseTypes (Network (..))
-import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
     KeyRole (..),
-    asWitness,
-    hashKey,
-    vKey,
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( WitHashes (..),
-    esLState,
+  ( esLState,
     getGKeys,
     nesEs,
     _delegationState,
@@ -31,10 +24,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.STS.Chain (totalAda)
 import Shelley.Spec.Ledger.STS.Tick (pattern TickEnv)
-import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (hashScript)
-import Shelley.Spec.Ledger.TxData (Wdrl (..), pattern RewardAcnt)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( testBootstrapNotSpending,
     testBootstrapSpending,
@@ -49,10 +39,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   )
 import Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
-    alicePay,
-    bobPay,
-    carlPay,
-    dariaPay,
     ex1,
     ex2A,
     ex2B,
@@ -88,16 +74,6 @@ import Test.Shelley.Spec.Ledger.Examples
     test5DReserves,
     test5DTreasury,
   )
-import Test.Shelley.Spec.Ledger.MultiSigExamples
-  ( aliceAndBob,
-    aliceAndBobOrCarl,
-    aliceAndBobOrCarlAndDaria,
-    aliceAndBobOrCarlOrDaria,
-    aliceOnly,
-    aliceOrBob,
-    applyTxWithScript,
-    bobOnly,
-  )
 import Test.Shelley.Spec.Ledger.Utils
   ( applySTSTest,
     maxLLSupply,
@@ -105,7 +81,7 @@ import Test.Shelley.Spec.Ledger.Utils
     testSTS,
   )
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.
@@ -230,6 +206,9 @@ stsTests =
       testCase "CHAIN example 5D Treasury - Preservation of ADA" $
         (totalAda (fromRight (error "CHAIN example 5D") (ex5DTreasury' p)) @?= maxLLSupply),
       testCase "CHAIN example 6A - Preservation of ADA" $ testPreservationOfAda (ex6A p),
+      {-
+       - TODO re-enable after the script embargo has been lifted
+       -
       testCase "Alice uses SingleSig script" testAliceSignsAlone,
       testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign,
       testCase "Everybody signs in multi-sig" testEverybodySigns,
@@ -256,6 +235,7 @@ stsTests =
       testCase "FAIL: withdraw from script locked account" testRwdAliceSignsAlone',
       testCase "withdraw from script locked account, different script" testRwdAliceSignsAlone'',
       testCase "FAIL: withdraw from script locked account, signed, missing script" testRwdAliceSignsAlone''',
+      -}
       testCase "spend from a bootstrap address" testBootstrapSpending,
       testCase "don't spend from a bootstrap address" testBootstrapNotSpending
     ]
@@ -263,6 +243,9 @@ stsTests =
     p :: Proxy C
     p = Proxy
 
+{-
+ - TODO re-enable after the script embargo has been lifted
+ -
 testAliceSignsAlone :: Assertion
 testAliceSignsAlone =
   assertBool s (isRight utxoSt')
@@ -570,3 +553,4 @@ testRwdAliceSignsAlone''' =
     p = Proxy
     utxoSt' =
       applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000) 0 [asWitness alicePay, asWitness bobPay]
+-}

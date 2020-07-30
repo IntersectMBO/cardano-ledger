@@ -17,6 +17,8 @@ module Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeCredential,
     StakeReference (..),
+    credentialUsesScript,
+    stakeReferenceUsesScript,
   )
 where
 
@@ -163,3 +165,12 @@ instance
   where
   toCBOR (GenesisCredential kh) =
     toCBOR kh
+
+credentialUsesScript :: Credential kr crypto -> Bool
+credentialUsesScript ScriptHashObj {} = True
+credentialUsesScript KeyHashObj {} = False
+
+stakeReferenceUsesScript :: StakeReference crypto -> Bool
+stakeReferenceUsesScript (StakeRefBase cred) = credentialUsesScript cred
+stakeReferenceUsesScript (StakeRefPtr _) = False
+stakeReferenceUsesScript StakeRefNull = False
