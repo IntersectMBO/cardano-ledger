@@ -75,10 +75,11 @@ module Shelley.Spec.Ledger.LedgerState
     verifiedWits,
     witsVKeyNeeded,
     witsFromWitnessSet,
-    -- DelegationState
-    -- refunds
+
+    -- * DelegationState
     keyRefunds,
-    -- epoch boundary
+
+    -- * Epoch boundary
     stakeDistr,
     applyRUpd,
     createRUpd,
@@ -146,11 +147,8 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShot (..),
     SnapShots (..),
     Stake (..),
-    aggregateOuts,
-    baseStake,
+    aggregateUtxoCoinByCredential,
     emptySnapShots,
-    ptrStake,
-    rewardStake,
   )
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
@@ -911,7 +909,6 @@ reapRewards dStateRewards withdrawals =
 -- epoch boundary calculations --
 ---------------------------------
 
--- | Stake distribution
 stakeDistr ::
   forall crypto.
   Crypto crypto =>
@@ -921,15 +918,14 @@ stakeDistr ::
   SnapShot crypto
 stakeDistr u ds ps =
   SnapShot
-    (Stake $ eval (dom activeDelegs ◁ Map.fromListWith (+) stakeRelation))
+    (Stake $ eval (dom activeDelegs ◁ stakeRelation))
     delegs
     poolParams
   where
     DState rewards' delegs ptrs' _ _ _ = ds
     PState poolParams _ _ = ps
-    outs = aggregateOuts u
-    stakeRelation :: [(Credential 'Staking crypto, Coin)] -- We compute Lists (not Maps) because the duplicate tuples matter, later when we use: Map.fromListWith (+)
-    stakeRelation = (baseStake outs ++ ptrStake outs (forwards ptrs') ++ rewardStake rewards')
+    stakeRelation :: Map (Credential 'Staking crypto) Coin
+    stakeRelation = aggregateUtxoCoinByCredential (forwards ptrs') u rewards'
     activeDelegs :: Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
 

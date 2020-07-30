@@ -1179,7 +1179,7 @@ expectedStEx2E =
         ( PoolDistr
             ( Map.singleton
                 (hk Cast.alicePoolKeys)
-                (IndividualPoolStake 1 (hashVerKeyVRF (snd $ vrf (Cast.alicePoolKeys @c))))
+                (1, hashVerKeyVRF (snd $ vrf (Cast.alicePoolKeys @c)))
             )
         )
         (overlayScheduleFor (EpochNo 2))
@@ -1232,11 +1232,10 @@ pdEx2F =
   PoolDistr $
     Map.singleton
       (hk Cast.alicePoolKeys)
-      ( IndividualPoolStake
-          1
-          ( hashVerKeyVRF $
-              snd $ vrf (Cast.alicePoolKeys @c)
-          )
+      ( 1,
+        ( hashVerKeyVRF $
+            snd $ vrf (Cast.alicePoolKeys @c)
+        )
       )
 
 nonMyopicEx2F :: NonMyopic h

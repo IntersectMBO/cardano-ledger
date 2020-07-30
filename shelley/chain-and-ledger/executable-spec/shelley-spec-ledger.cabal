@@ -30,6 +30,7 @@ library
                      Shelley.Spec.Ledger.Credential
                      Shelley.Spec.Ledger.Delegation.Certificates
                      Shelley.Spec.Ledger.Delegation.PoolParams
+                     Shelley.Spec.Ledger.DeserializeShort
                      Shelley.Spec.Ledger.EpochBoundary
                      Shelley.Spec.Ledger.Genesis
                      Shelley.Spec.Ledger.Hashing
@@ -152,6 +153,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
       Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
       Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests
+      Test.Shelley.Spec.Ledger.NonTraceProperties.Serialization
       Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
       Test.Shelley.Spec.Ledger.Orphans
       Test.Shelley.Spec.Ledger.PropertyTests
@@ -246,42 +248,68 @@ benchmark mainbench
   hs-source-dirs:   bench,
                     test
   main-is:          Main.hs
-  other-modules:    Test.Shelley.Spec.Ledger.BenchmarkFunctions,
+  other-modules:    BenchUTxOAggregate,
+                    Shelley.Spec.Ledger.Bench.Gen
+                    Test.Cardano.Crypto.VRF.Fake,
+                    Test.Shelley.Spec.Ledger.Address.Bootstrap,
+                    Test.Shelley.Spec.Ledger.BenchmarkFunctions,
                     Test.Shelley.Spec.Ledger.ConcreteCryptoTypes,
                     Test.Shelley.Spec.Ledger.Examples,
                     Test.Shelley.Spec.Ledger.Examples.Cast,
                     Test.Shelley.Spec.Ledger.Generator.Constants,
                     Test.Shelley.Spec.Ledger.Generator.Core,
+                    Test.Shelley.Spec.Ledger.Generator.Delegation
+                    Test.Shelley.Spec.Ledger.Generator.MetaData
+                    Test.Shelley.Spec.Ledger.Generator.Presets,
+                    Test.Shelley.Spec.Ledger.Generator.Trace.DCert
+                    Test.Shelley.Spec.Ledger.Generator.Update,
+                    Test.Shelley.Spec.Ledger.Generator.Utxo
+                    Test.Shelley.Spec.Ledger.NonTraceProperties.Generator,
+                    Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator,
+                    Test.Shelley.Spec.Ledger.NonTraceProperties.Validity,
                     Test.Shelley.Spec.Ledger.Orphans,
-                    Test.Shelley.Spec.Ledger.Utils,
-                    Test.Cardano.Crypto.VRF.Fake
-  build-depends:    base,
-                    shelley-spec-ledger,
+                    Test.Shelley.Spec.Ledger.Serialisation.Generators,
+                    Test.Shelley.Spec.Ledger.Utils
+
+
+  build-depends:    MonadRandom,
+                    QuickCheck,
+                    base,
+                    bytestring,
+                    bytestring-conversion,
                     cardano-binary,
                     cardano-crypto,
                     cardano-crypto-class,
+                    cardano-crypto-test,
                     cardano-crypto-wrapper,
+                    cardano-ledger,
+                    cardano-ledger-test,
                     cardano-prelude,
+                    cardano-prelude-test,
                     cardano-slotting,
+                    containers,
+                    criterion,
                     cryptonite,
-                    transformers,
-                    bytestring,
-                    bytestring-conversion,
+                    deepseq,
+                    generic-random,
                     hedgehog,
                     QuickCheck,
                     tasty-quickcheck,
                     tasty-hunit,
                     tasty,
                     time,
+                    hedgehog-quickcheck,
+                    iproute,
+                    random,
                     scientific,
+                    shelley-spec-ledger,
                     small-steps,
                     small-steps-test,
-                    criterion,
-                    random,
-                    containers,
-                    MonadRandom,
-                    deepseq,
-                    scientific
+                    tasty,
+                    tasty-hunit,
+                    tasty-quickcheck,
+                    time,
+                    transformers
   ghc-options:
       -threaded
       -rtsopts

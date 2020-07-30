@@ -373,13 +373,14 @@ rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma sigmaA (Coin tot
     appPerf = mkApparentPerformance (_d pp) sigmaA blocksN blocksTotal
     poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
     tot = fromIntegral total
+    poolHashes = (KeyHashObj `Set.map` _poolOwners pool)
     mRewards =
       Map.fromList
         [ ( hk,
             memberRew poolR pool (StakeShare (fromIntegral c % tot)) (StakeShare sigma)
           )
           | (hk, Coin c) <- Map.toList stake,
-            hk `Set.notMember` (KeyHashObj `Set.map` _poolOwners pool)
+            hk `Set.notMember` poolHashes
         ]
     iReward = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
     potentialRewards = Map.insert (getRwdCred $ _poolRAcnt pool) iReward mRewards

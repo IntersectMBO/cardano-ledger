@@ -49,12 +49,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   )
 import Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
-    alicePay,
-    bobPay,
-    carlPay,
-    dariaPay,
-    ex1,
-    ex2A,
     ex2B,
     ex2C,
     ex2D,
@@ -87,6 +81,12 @@ import Test.Shelley.Spec.Ledger.Examples
     ex6BPoolParams,
     test5DReserves,
     test5DTreasury,
+  )
+import Test.Shelley.Spec.Ledger.Examples.Cast
+  ( alicePay,
+    bobPay,
+    carlPay,
+    dariaPay,
   )
 import Test.Shelley.Spec.Ledger.Examples.EmptyBlock (exEmptyBlock)
 import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (ex2A)
