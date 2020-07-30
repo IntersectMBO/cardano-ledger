@@ -85,16 +85,22 @@ someKeyPairs c lower upper =
     <$> QC.choose (lower, upper)
     <*> QC.shuffle (keyPairs c)
 
-mSigBaseScripts :: Crypto c => Constants -> MultiSigPairs c
-mSigBaseScripts c = mkMSigScripts (keyPairs c)
+mSigCombinedScripts :: Constants -> MultiSigPairs c
+mSigCombinedScripts _ = []
 
-mSigCombinedScripts :: Crypto c => Constants -> MultiSigPairs c
-mSigCombinedScripts c@(Constants {numBaseScripts}) =
-  mkMSigCombinations . take numBaseScripts $ mSigBaseScripts c
+{- TODO re-enable after the script embargo has been lifted
+ -
+ - mSigBaseScripts :: Crypto c => Constants -> MultiSigPairs c
+ - mSigBaseScripts c = mkMSigScripts (keyPairs c)
+ -
+ - mSigCombinedScripts :: Crypto c => Constants -> MultiSigPairs c
+ - mSigCombinedScripts c@(Constants {numBaseScripts}) =
+ -   mkMSigCombinations . take numBaseScripts $ mSigBaseScripts c
+ -}
 
 -- | Select between _lower_ and _upper_ scripts from the possible combinations
 -- of the first `numBaseScripts` multi-sig scripts of `mSigScripts`.
-someScripts :: Crypto c => Constants -> Int -> Int -> Gen (MultiSigPairs c)
+someScripts :: Constants -> Int -> Int -> Gen (MultiSigPairs c)
 someScripts c lower upper =
   take
     <$> QC.choose (lower, upper)
