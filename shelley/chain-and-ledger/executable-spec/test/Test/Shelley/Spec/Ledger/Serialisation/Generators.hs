@@ -13,7 +13,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Shelley.Spec.Ledger.Serialisation.Generators () where
+module Test.Shelley.Spec.Ledger.Serialisation.Generators (genPParams) where
 
 import Cardano.Binary
   ( ToCBOR (..),
