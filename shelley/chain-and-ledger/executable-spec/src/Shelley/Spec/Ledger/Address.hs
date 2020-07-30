@@ -32,6 +32,9 @@ module Shelley.Spec.Ledger.Address
     -- internals exported for testing
     getAddr,
     getKeyHash,
+    BootstrapKeyHash,
+    BootstrapVerKey (..),
+    BootstrapVerKey_,
     bootstrapKeyHash,
     getPtr,
     getRewardAcnt,
@@ -57,6 +60,8 @@ import Cardano.Binary
     serialize,
   )
 import qualified Cardano.Chain.Common as Byron
+import Cardano.Crypto.DSIGN (Ed25519DSIGN)
+import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError, panic, parseBase16)
@@ -451,17 +456,35 @@ newtype BootstrapAddress crypto = BootstrapAddress
 
 instance NoUnexpectedThunks (BootstrapAddress crypto)
 
+type BootstrapVerKey_ = DSIGN.VerKeyDSIGN Ed25519DSIGN
+
+newtype BootstrapVerKey = BootstrapVerKey {unBootstrapVerKey :: BootstrapVerKey_}
+  deriving (Eq, Generic)
+  deriving newtype (NFData)
+  deriving (Show) via Quiet BootstrapVerKey_
+
+instance NoUnexpectedThunks BootstrapVerKey
+
+instance FromCBOR BootstrapVerKey where
+  fromCBOR = BootstrapVerKey <$> DSIGN.decodeVerKeyDSIGN
+
+instance ToCBOR BootstrapVerKey where
+  toCBOR (BootstrapVerKey vk) = DSIGN.encodeVerKeyDSIGN vk
+  encodedSizeExpr _size proxy = DSIGN.encodedVerKeyDSIGNSizeExpr (unBootstrapVerKey <$> proxy)
+
+type BootstrapKeyHash crypto = Hash.Hash (ADDRHASH crypto) BootstrapVerKey_
+
 bootstrapKeyHash ::
   forall crypto.
   -- TODO: enforce this constraint
   --(HASH crypto ~ Hash.Blake2b_224) =>
   Crypto crypto =>
   BootstrapAddress crypto ->
-  KeyHash 'Payment crypto
+  BootstrapKeyHash crypto
 bootstrapKeyHash (BootstrapAddress byronAddress) =
   let root = Byron.addrRoot byronAddress
       bytes = Byron.abstractHashToBytes root
       hash =
         fromMaybe (panic "bootstrapKeyHash: incorrect hash length") $
           Hash.hashFromBytes bytes
-   in KeyHash hash
+   in hash

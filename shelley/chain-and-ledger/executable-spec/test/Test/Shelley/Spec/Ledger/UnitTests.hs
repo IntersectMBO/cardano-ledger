@@ -447,7 +447,10 @@ testWitnessNotIncluded =
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW $
-              WitHashes wits
+              WitHashes
+                { bootstrapWitHashes = Set.empty,
+                  properWitHashes = wits
+                }
         ]
         tx
 
@@ -469,7 +472,10 @@ testSpendNotOwnedUTxO =
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW $
-              WitHashes wits
+              WitHashes
+                { bootstrapWitHashes = Set.empty,
+                  properWitHashes = wits
+                }
         ]
         tx
 
@@ -501,10 +507,14 @@ testWitnessWrongUTxO =
    in testInvalidTx
         [ UtxowFailure $
             InvalidWitnessesUTXOW
-              [asWitness $ vKey alicePay],
+              [asWitness $ vKey alicePay]
+              [],
           UtxowFailure $
             MissingVKeyWitnessesUTXOW $
-              WitHashes wits
+              WitHashes
+                { bootstrapWitHashes = Set.empty,
+                  properWitHashes = wits
+                }
         ]
         tx
 
@@ -587,6 +597,7 @@ testInvalidWintess =
         [ UtxowFailure $
             InvalidWitnessesUTXOW
               [asWitness $ vKey alicePay]
+              []
         ]
    in testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
 
@@ -608,9 +619,12 @@ testWithdrawalNoWit =
           SNothing
       wits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashAnnotated txb) alicePay}
       tx = Tx txb wits SNothing
-      missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
-        [ UtxowFailure . MissingVKeyWitnessesUTXOW $ WitHashes missing
+        [ UtxowFailure . MissingVKeyWitnessesUTXOW $
+            WitHashes
+              { bootstrapWitHashes = Set.empty,
+                properWitHashes = Set.singleton (asWitness $ hashKey $ vKey bobStake)
+              }
         ]
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
    in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])

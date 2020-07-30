@@ -472,7 +472,7 @@ predicateFailureToValidationError (UtxowFailure (MissingVKeyWitnessesUTXOW _)) =
   MissingWitnesses
 predicateFailureToValidationError (UtxowFailure (MissingScriptWitnessesUTXOW _)) =
   MissingWitnesses
-predicateFailureToValidationError (UtxowFailure (InvalidWitnessesUTXOW [])) =
+predicateFailureToValidationError (UtxowFailure (InvalidWitnessesUTXOW [] [])) =
   InvalidWitness
 predicateFailureToValidationError (UtxowFailure (UtxoFailure InputSetEmptyUTxO)) =
   InputSetEmpty

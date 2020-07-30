@@ -13,6 +13,7 @@ module Test.Shelley.Spec.Ledger.Address.Bootstrap
     testBootstrapSpending,
     testBootstrapNotSpending,
     bootstrapHashTest,
+    genByronVKey,
     genSignature,
   )
 where
@@ -106,8 +107,9 @@ bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witn
   do
     (byronVKey, byronAddr) <- genByronVKeyAddr
     sig <- genSignature
-    let addr = BootstrapAddress byronAddr
-        (shelleyVKey, chainCode) = unpackByronVKey @C byronVKey
+    let addr = BootstrapAddress @C byronAddr
+        (shelleyVKey, chainCode) = unpackByronVKey byronVKey
+        witness :: BootstrapWitness C
         witness =
           BootstrapWitness
             { bwKey = shelleyVKey,
@@ -115,7 +117,7 @@ bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witn
               bwSig = sig,
               bwAttributes = serialize' $ Byron.addrAttributes byronAddr
             }
-    pure $ (coerceKeyRole $ bootstrapKeyHash addr) === bootstrapWitKeyHash witness
+    pure $ bootstrapKeyHash addr === bootstrapWitKeyHash witness
 
 genSignature :: forall a b. DSIGN.DSIGNAlgorithm a => Gen (DSIGN.SignedDSIGN a b)
 genSignature =
@@ -127,9 +129,12 @@ genSignature =
 genBootstrapAddress :: Gen (BootstrapAddress crypto)
 genBootstrapAddress = BootstrapAddress . snd <$> genByronVKeyAddr
 
+genByronVKey :: Gen Byron.VerificationKey
+genByronVKey = hedgehog Byron.genVerificationKey
+
 genByronVKeyAddr :: Gen (Byron.VerificationKey, Byron.Address)
 genByronVKeyAddr = do
-  vkey <- hedgehog Byron.genVerificationKey
+  vkey <- genByronVKey
   addr <- genByronAddrFromVKey vkey
   pure (vkey, addr)
 
@@ -189,8 +194,11 @@ aliceSigningKey = Byron.SigningKey $ Byron.generate seed (mempty :: ByteString)
     seed :: ByteString -- 32 bytes
     seed = "12345678901234567890123456789012"
 
+aliceBootstrapVerKey :: BootstrapVerKey
+aliceBootstrapVerKey = fst . unpackByronVKey . Byron.toVerification $ aliceSigningKey
+
 aliceVKey :: VKey 'Witness C
-aliceVKey = fst . unpackByronVKey . Byron.toVerification $ aliceSigningKey
+aliceVKey = VKey . unBootstrapVerKey $ aliceBootstrapVerKey
 
 aliceByronAddr :: Byron.Address
 aliceByronAddr = Byron.makeAddress asd attrs
@@ -257,7 +265,7 @@ testBootstrapNotSpending =
     utxoEnv
     utxoState0
     txBad
-    (Left [[InvalidWitnessesUTXOW [aliceVKey]]])
+    (Left [[InvalidWitnessesUTXOW [] [aliceBootstrapVerKey]]])
 
 data C
 

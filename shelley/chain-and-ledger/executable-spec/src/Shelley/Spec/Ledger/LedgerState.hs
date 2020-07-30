@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -117,7 +118,9 @@ import GHC.Generics (Generic)
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Shelley.Spec.Ledger.Address.Bootstrap
-  ( BootstrapWitness (..),
+  ( BootstrapKeyHash,
+    BootstrapVerKey,
+    BootstrapWitness (..),
     bootstrapWitKeyHash,
     verifyBootstrapWit,
   )
@@ -766,8 +769,10 @@ consumed pp u tx =
     refunds = keyRefunds pp tx
     withdrawals = sum . unWdrl $ _wdrls tx
 
-newtype WitHashes crypto = WitHashes
-  {unWitHashes :: Set (KeyHash 'Witness crypto)}
+data WitHashes crypto = WitHashes
+  { bootstrapWitHashes :: !(Set (BootstrapKeyHash crypto)),
+    properWitHashes :: !(Set (KeyHash 'Witness crypto))
+  }
   deriving (Eq, Generic)
   deriving (Show) via Quiet (WitHashes crypto)
 
@@ -775,20 +780,21 @@ instance Crypto crypto => NoUnexpectedThunks (WitHashes crypto)
 
 -- | Check if a set of witness hashes is empty.
 nullWitHashes :: WitHashes crypto -> Bool
-nullWitHashes (WitHashes a) = Set.null a
+nullWitHashes (WitHashes a b) = Set.null a && Set.null b
 
 -- | Extract the difference between two sets of witness hashes.
 diffWitHashes :: WitHashes crypto -> WitHashes crypto -> WitHashes crypto
-diffWitHashes (WitHashes x) (WitHashes x') =
-  WitHashes (x `Set.difference` x')
+diffWitHashes (WitHashes x y) (WitHashes x' y') =
+  WitHashes (x `Set.difference` x') (y `Set.difference` y')
 
 -- | Extract the witness hashes from the Witness set.
 witsFromWitnessSet ::
   Crypto crypto => WitnessSet crypto -> WitHashes crypto
 witsFromWitnessSet (WitnessSet aWits _ bsWits) =
-  WitHashes $
-    Set.map witKeyHash aWits
-      `Set.union` Set.map bootstrapWitKeyHash bsWits
+  WitHashes
+    { bootstrapWitHashes = Set.map bootstrapWitKeyHash bsWits,
+      properWitHashes = Set.map witKeyHash aWits
+    }
 
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,
@@ -801,20 +807,30 @@ witsVKeyNeeded ::
   GenDelegs crypto ->
   WitHashes crypto
 witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
-  WitHashes $
-    certAuthors
-      `Set.union` inputAuthors
-      `Set.union` owners
-      `Set.union` wdrlAuthors
-      `Set.union` updateKeys
+  WitHashes
+    { bootstrapWitHashes = bootstrapInputAuthors,
+      properWitHashes =
+        certAuthors
+          `Set.union` inputAuthors
+          `Set.union` owners
+          `Set.union` wdrlAuthors
+          `Set.union` updateKeys
+    }
   where
     inputAuthors :: Set (KeyHash 'Witness crypto)
-    inputAuthors = foldr accum Set.empty (_inputs txbody)
+    bootstrapInputAuthors :: Set (BootstrapKeyHash crypto)
+    (inputAuthors, bootstrapInputAuthors) =
+      foldr accum (Set.empty, Set.empty) (_inputs txbody)
       where
-        accum txin ans =
+        accum txin ans@(whs, bootstrapWhs) =
           case txinLookup txin utxo' of
-            Just (TxOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert (asWitness pay) ans
-            Just (TxOut (AddrBootstrap bootAddr) _) -> Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
+            Just (TxOut (Addr _ (KeyHashObj pay) _) _) -> (whs', bootstrapWhs)
+              where
+                !whs' = Set.insert (asWitness pay) whs
+            Just (TxOut (AddrBootstrap bootAddr) _) -> (whs, bootstrapWhs')
+              where
+                !bootstrapWhs' =
+                  Set.insert (bootstrapKeyHash bootAddr) bootstrapWhs
             _other -> ans
     wdrlAuthors :: Set (KeyHash 'Witness crypto)
     wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (_wdrls txbody))
@@ -847,11 +863,11 @@ verifiedWits ::
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Tx crypto ->
-  Either [VKey 'Witness crypto] ()
+  Either ([VKey 'Witness crypto], [BootstrapVerKey]) ()
 verifiedWits (Tx txbody wits _) =
-  case (failed <> failedBootstrap) of
-    [] -> Right ()
-    nonEmpty -> Left nonEmpty
+  if null failed && null failedBootstrap
+    then Right ()
+    else Left (failed, failedBootstrap)
   where
     wvkKey (WitVKey k _) = k
     failed =

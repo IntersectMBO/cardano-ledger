@@ -13,4 +13,7 @@ signkeyKES = bytes .size 16
 
 $signature /= bytes .size 16
 
+$bootstrap_vkey /= bytes .size 32
+$bootstrap_signature /= bytes .size 64
+
 $nonce /= [ 0 // 1, bytes .size 32 ]

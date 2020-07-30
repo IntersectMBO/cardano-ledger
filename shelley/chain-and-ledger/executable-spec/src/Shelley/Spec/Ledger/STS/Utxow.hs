@@ -47,6 +47,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.Address (BootstrapVerKey)
 import Shelley.Spec.Ledger.BaseTypes
   ( ShelleyBase,
     StrictMaybe (..),
@@ -103,6 +104,7 @@ instance
   data PredicateFailure (UTXOW crypto)
     = InvalidWitnessesUTXOW
         ![VKey 'Witness crypto]
+        ![BootstrapVerKey]
     | -- witnesses which failed in verifiedWits function
       MissingVKeyWitnessesUTXOW
         !(WitHashes crypto) -- witnesses which were needed and not supplied
@@ -131,10 +133,10 @@ instance
   ToCBOR (PredicateFailure (UTXOW crypto))
   where
   toCBOR = \case
-    InvalidWitnessesUTXOW wits ->
-      encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable wits
-    MissingVKeyWitnessesUTXOW (WitHashes missing) ->
-      encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable missing
+    InvalidWitnessesUTXOW wits bootstrapWits ->
+      encodeListLen 3 <> toCBOR (0 :: Word8) <> encodeFoldable wits <> encodeFoldable bootstrapWits
+    MissingVKeyWitnessesUTXOW (WitHashes missing bootstrapMissing) ->
+      encodeListLen 3 <> toCBOR (1 :: Word8) <> encodeFoldable missing <> encodeFoldable bootstrapMissing
     MissingScriptWitnessesUTXOW ss -> encodeListLen 2 <> toCBOR (2 :: Word8) <> encodeFoldable ss
     ScriptWitnessNotValidatingUTXOW ss -> encodeListLen 2 <> toCBOR (3 :: Word8) <> encodeFoldable ss
     (UtxoFailure a) ->
@@ -156,10 +158,12 @@ instance
     \case
       0 -> do
         wits <- decodeList fromCBOR
-        pure (2, InvalidWitnessesUTXOW wits)
+        bootstrapWits <- decodeList fromCBOR
+        pure (3, InvalidWitnessesUTXOW wits bootstrapWits)
       1 -> do
         missing <- decodeSet fromCBOR
-        pure (2, MissingVKeyWitnessesUTXOW $ WitHashes missing)
+        bootstrapMissing <- decodeSet fromCBOR
+        pure (3, MissingVKeyWitnessesUTXOW $ WitHashes missing bootstrapMissing)
       2 -> do
         ss <- decodeSet fromCBOR
         pure (2, MissingScriptWitnessesUTXOW ss)
@@ -220,7 +224,7 @@ utxoWitnessed =
       sNeeded == sReceived ?! MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
 
       -- check VKey witnesses
-      verifiedWits tx ?!: InvalidWitnessesUTXOW
+      verifiedWits tx ?!: uncurry InvalidWitnessesUTXOW
 
       let needed = witsVKeyNeeded utxo tx genDelegs
           missingWitnesses = diffWitHashes needed witsKeyHashes
@@ -239,7 +243,7 @@ utxoWitnessed =
 
       -- check genesis keys signatures for instantaneous rewards certificates
       let genDelegates = Set.fromList $ fmap (asWitness . genDelegKeyHash) $ Map.elems genMapping
-          (WitHashes khAsSet) = witsKeyHashes
+          WitHashes {properWitHashes = khAsSet} = witsKeyHashes
           genSig = eval (genDelegates ∩ khAsSet)
           mirCerts =
             StrictSeq.toStrict

@@ -55,7 +55,9 @@ import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.Address (Addr (Addr))
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.Address.Bootstrap
-  ( ChainCode (..),
+  ( BootstrapVerKey (..),
+    ChainCode (..),
+    unpackByronVKey,
     pattern BootstrapWitness,
   )
 import Shelley.Spec.Ledger.BaseTypes
@@ -133,7 +135,8 @@ import Test.QuickCheck
   )
 import Test.QuickCheck.Hedgehog (hedgehog)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
-  ( genSignature,
+  ( genByronVKey,
+    genSignature,
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -164,6 +167,9 @@ mkDummyHash = coerce . hashWithSerialiser @h toCBOR
 -------------------------------------------------------------------------------}
 
 type MockGen c = (Mock c, Arbitrary (VerKeyDSIGN (DSIGN c)))
+
+instance Arbitrary BootstrapVerKey where
+  arbitrary = fst . unpackByronVKey <$> genByronVKey
 
 instance
   Mock c =>

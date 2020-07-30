@@ -15,7 +15,9 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.Address.Bootstrap
-  ( BootstrapWitness
+  ( BootstrapKeyHash,
+    BootstrapVerKey (..),
+    BootstrapWitness
       ( BootstrapWitness,
         bwKey,
         bwSig,
@@ -41,6 +43,7 @@ import Cardano.Binary
     serializeEncoding,
   )
 import qualified Cardano.Chain.Common as Byron
+import Cardano.Crypto.DSIGN (Ed25519DSIGN)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
@@ -58,15 +61,9 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Quiet
-import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
-import qualified Shelley.Spec.Ledger.Keys as Keys
-import Shelley.Spec.Ledger.Keys
-  ( Hash,
-    KeyHash (..),
-    KeyRole (..),
-    VKey (..),
-    verifySignedDSIGN,
-  )
+import Shelley.Spec.Ledger.Address (BootstrapKeyHash, BootstrapVerKey (..))
+import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto)
+import Shelley.Spec.Ledger.Keys (Hash)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxData
   ( TxBody,
@@ -78,8 +75,8 @@ newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving newtype (NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 data BootstrapWitness crypto = BootstrapWitness'
-  { bwKey' :: !(VKey 'Witness crypto),
-    bwSig' :: !(Keys.SignedDSIGN crypto (Hash crypto (TxBody crypto))),
+  { bwKey' :: !BootstrapVerKey,
+    bwSig' :: !(DSIGN.SignedDSIGN Ed25519DSIGN (Hash crypto (TxBody crypto))),
     bwChainCode' :: !ChainCode,
     bwAttributes' :: !ByteString,
     bwBytes :: LByteString
@@ -91,8 +88,8 @@ data BootstrapWitness crypto = BootstrapWitness'
 
 pattern BootstrapWitness ::
   Crypto crypto =>
-  (VKey 'Witness crypto) ->
-  (Keys.SignedDSIGN crypto (Hash crypto (TxBody crypto))) ->
+  BootstrapVerKey ->
+  (DSIGN.SignedDSIGN Ed25519DSIGN (Hash crypto (TxBody crypto))) ->
   ChainCode ->
   ByteString ->
   BootstrapWitness crypto
@@ -136,9 +133,9 @@ bootstrapWitKeyHash ::
   forall crypto.
   Crypto crypto =>
   BootstrapWitness crypto ->
-  KeyHash 'Witness crypto
-bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
-  KeyHash . hash_crypto . hash_SHA3_256 $ bytes
+  BootstrapKeyHash crypto
+bootstrapWitKeyHash (BootstrapWitness key _ (ChainCode cc) attributes) =
+  hash_crypto . hash_SHA3_256 $ bytes
   where
     -- The payload hashed to create an addrRoot consists of the following:
     -- 1: a token indicating a list of length 3
@@ -156,7 +153,7 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
     -- Here we are reserializing a key which we have previously deserialized.
     -- This is normally naughty. However, this is a blob of bytes -- serializing it
     -- amounts to wrapping the underlying byte array in a ByteString constructor.
-    keyBytes = DSIGN.rawSerialiseVerKeyDSIGN key
+    keyBytes = DSIGN.rawSerialiseVerKeyDSIGN (unBootstrapVerKey key)
     bytes = prefix <> keyBytes <> cc <> attributes
     hash_SHA3_256 :: ByteString -> ByteString
     hash_SHA3_256 = Hash.digest (Proxy :: Proxy Hash.SHA3_256)
@@ -164,10 +161,8 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
     hash_crypto = Hash.castHash . Hash.hashWith @(ADDRHASH crypto) id
 
 unpackByronVKey ::
-  forall crypto.
-  (DSIGN crypto ~ DSIGN.Ed25519DSIGN) =>
   Byron.VerificationKey ->
-  (VKey 'Witness crypto, ChainCode)
+  (BootstrapVerKey, ChainCode)
 unpackByronVKey
   ( Byron.VerificationKey
       (WC.XPub vkeyBytes (WC.ChainCode chainCodeBytes))
@@ -176,19 +171,21 @@ unpackByronVKey
     -- is the correct one. (32 bytes). If the XPub was constructed correctly,
     -- we already know that it has this length.
     Nothing -> panic "unpackByronVKey: impossible!"
-    Just vk -> (VKey vk, ChainCode chainCodeBytes)
+    Just vk -> (BootstrapVerKey vk, ChainCode chainCodeBytes)
 
 verifyBootstrapWit ::
   forall crypto.
-  (Crypto crypto, DSIGN.Signable (DSIGN crypto) (Hash crypto (TxBody crypto))) =>
+  (Crypto crypto, DSIGN.Signable DSIGN.Ed25519DSIGN (Hash crypto (TxBody crypto))) =>
   Hash crypto (TxBody crypto) ->
   BootstrapWitness crypto ->
   Bool
 verifyBootstrapWit txbodyHash witness =
-  verifySignedDSIGN
-    (bwKey witness)
-    txbodyHash
-    (bwSig witness)
+  either (const False) (const True) $
+    DSIGN.verifySignedDSIGN
+      ()
+      (unBootstrapVerKey (bwKey witness))
+      txbodyHash
+      (bwSig witness)
 
 coerceSignature :: WC.XSignature -> DSIGN.SigDSIGN DSIGN.Ed25519DSIGN
 coerceSignature sig =
@@ -197,9 +194,7 @@ coerceSignature sig =
 
 makeBootstrapWitness ::
   forall crypto.
-  ( DSIGN crypto ~ DSIGN.Ed25519DSIGN,
-    Crypto crypto
-  ) =>
+  Crypto crypto =>
   Hash crypto (TxBody crypto) ->
   Byron.SigningKey ->
   Byron.Attributes Byron.AddrAttributes ->
