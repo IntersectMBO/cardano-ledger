@@ -36,7 +36,7 @@ module Shelley.Spec.Ledger.UTxO
     verifyWitVKey,
     scriptsNeeded,
     txinsScript,
-    txCreatesScriptAddrs,
+    txCreatesNoScriptAddrs,
   )
 where
 
@@ -309,13 +309,12 @@ txinsScript txInps (UTxO u) = foldr add Set.empty txInps
       Just _ -> ans
       Nothing -> ans
 
-txCreatesScriptAddrs :: Crypto crypto => TxBody crypto -> Bool
-txCreatesScriptAddrs txb =
-  not $
-    null outputsUsingScripts
-      && null stakeAddrCertsUsingScripts
-      && null poolRegCertsUsingScripts
-      && null mirCertsUsingScripts
+txCreatesNoScriptAddrs :: Crypto crypto => TxBody crypto -> Bool
+txCreatesNoScriptAddrs txb =
+  null outputsUsingScripts
+    && null stakeAddrCertsUsingScripts
+    && null poolRegCertsUsingScripts
+    && null mirCertsUsingScripts
   where
     outputsUsingScripts =
       [out | out@(TxOut addr _) <- Set.toList (eval (rng (txouts txb))), addrUsesScript addr]

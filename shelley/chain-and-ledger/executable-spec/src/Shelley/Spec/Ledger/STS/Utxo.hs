@@ -307,7 +307,7 @@ utxoInductive = do
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   -- Block use of script addresses until we fix the ScriptHash size mismatch.
-  txCreatesScriptAddrs txb ?! ScriptsEmbargoed
+  txCreatesNoScriptAddrs txb ?! ScriptsEmbargoed
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx
