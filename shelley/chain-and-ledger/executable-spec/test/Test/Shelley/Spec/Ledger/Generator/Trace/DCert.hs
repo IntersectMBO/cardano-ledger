@@ -41,23 +41,27 @@ import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.API
+  ( AccountState,
+    DCert,
+    DELPL,
+    DPState (..),
+    DelplEnv (..),
+    KeyPair (..),
+    KeyRole (..),
+    PState (..),
+    Ptr (..),
+  )
 import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
-import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyPair, KeyRole (..), asWitness)
-import Shelley.Spec.Ledger.LedgerState
-  ( AccountState,
-    DPState,
-    _pParams,
-    _pstate,
-  )
+import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
-import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (getKeyCombination)
-import Shelley.Spec.Ledger.TxData (DCert, Ix, Ptr (..))
+import Shelley.Spec.Ledger.TxData (Ix)
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))

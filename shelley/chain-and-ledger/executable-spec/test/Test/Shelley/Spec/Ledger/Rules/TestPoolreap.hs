@@ -22,6 +22,7 @@ import Control.State.Transition.Trace
   )
 import Data.List (foldl')
 import qualified Data.Set as Set (Set, null)
+import Shelley.Spec.Ledger.API (POOLREAP)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
@@ -45,7 +46,7 @@ import Shelley.Spec.Ledger.STS.PoolReap
   )
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, conjoin)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, POOLREAP)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring)
 
 -----------------------------

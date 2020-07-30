@@ -23,7 +23,14 @@ import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
+import Shelley.Spec.Ledger.API
+  ( ScriptHash,
+    UTXOW,
+  )
 import Shelley.Spec.Ledger.Address (pattern Addr)
+import Shelley.Spec.Ledger.Address
+  ( Addr,
+  )
 import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -37,41 +44,43 @@ import Shelley.Spec.Ledger.Credential
   )
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
-import Shelley.Spec.Ledger.Keys (KeyPair, KeyRole (..), asWitness)
-import Shelley.Spec.Ledger.LedgerState (genesisState, _utxoState)
+import Shelley.Spec.Ledger.Keys
+  ( GenDelegs (..),
+    KeyPair,
+    KeyRole (..),
+    asWitness,
+  )
+import Shelley.Spec.Ledger.LedgerState
+  ( LedgerState (..),
+    UTxOState,
+    genesisState,
+  )
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.PParams (PParams, emptyPParams, _maxTxSize)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts
-  ( pattern RequireAllOf,
+  ( MultiSig,
+    pattern RequireAllOf,
     pattern RequireAnyOf,
     pattern RequireMOf,
     pattern RequireSignature,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), hashScript, _body, pattern Tx)
+import Shelley.Spec.Ledger.Tx
+  ( Tx (..),
+    TxId,
+    WitnessSetHKD (..),
+    hashScript,
+  )
 import Shelley.Spec.Ledger.TxData
-  ( unWdrl,
-    pattern TxBody,
-    pattern TxIn,
-    pattern TxOut,
-    pattern Wdrl,
+  ( TxBody (..),
+    TxIn (..),
+    TxOut (..),
+    Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Addr,
-    LedgerState,
-    Mock,
-    MultiSig,
-    ScriptHash,
-    Tx,
-    TxBody,
-    TxId,
-    TxIn,
-    UTXOW,
-    UTxOState,
-    Wdrl,
-    pattern GenDelegs,
+  ( Mock,
   )
 import Test.Shelley.Spec.Ledger.Examples
   ( aliceAddr,

@@ -5,6 +5,7 @@ module Shelley.Spec.Ledger.Bench.Gen where
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import Data.Proxy (Proxy (..))
+import Shelley.Spec.Ledger.API (Tx)
 import Shelley.Spec.Ledger.LedgerState
   ( emptyDPState,
   )
@@ -13,7 +14,7 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
   ( initUTxO,
     ledgerEnv,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto, Tx)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import qualified Test.Shelley.Spec.Ledger.Generator.Utxo as GenUTxO
 

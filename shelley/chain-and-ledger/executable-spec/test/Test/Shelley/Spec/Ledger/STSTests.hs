@@ -9,33 +9,35 @@ import Data.Either (fromRight)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty)
 import Data.Proxy
+import Shelley.Spec.Ledger.API
+  ( CHAIN,
+    DPState (..),
+    EpochState (..),
+    LedgerState (..),
+    NewEpochState (..),
+    PState (..),
+    TICK,
+    TickEnv,
+  )
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
     KeyRole (..),
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( esLState,
-    getGKeys,
-    nesEs,
-    _delegationState,
-    _fPParams,
-    _pParams,
-    _pstate,
+  ( getGKeys,
   )
 import Shelley.Spec.Ledger.STS.Chain (totalAda)
 import Shelley.Spec.Ledger.STS.Tick (pattern TickEnv)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Shelley.Spec.Ledger.TxData
+  ( PoolParams,
+  )
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( testBootstrapNotSpending,
     testBootstrapSpending,
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( C,
-    CHAIN,
-    NewEpochState,
-    PoolParams,
-    TICK,
-    TickEnv,
   )
 import Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),

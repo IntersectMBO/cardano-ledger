@@ -32,12 +32,18 @@ import qualified Data.ByteString as BS
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
+import Shelley.Spec.Ledger.API
+  ( CHAIN,
+    ChainState,
+    DCert,
+    LEDGER,
+  )
 import Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo), StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain
-  ( bhbody,
+  ( Block (..),
+    TxSeq (..),
+    bhbody,
     bheaderSlotNo,
-    pattern Block,
-    pattern TxSeq,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( isDeRegKey,
@@ -49,7 +55,11 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     isRetirePool,
     isTreasuryMIRCert,
   )
-import Shelley.Spec.Ledger.LedgerState (txsizeBound)
+import Shelley.Spec.Ledger.LedgerState
+  ( DPState,
+    UTxOState (..),
+    txsizeBound,
+  )
 import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.PParams
   ( PParamsUpdate,
@@ -57,13 +67,10 @@ import Shelley.Spec.Ledger.PParams
     pattern Update,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
-import Shelley.Spec.Ledger.Tx (_body)
+import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
-  ( Wdrl (..),
-    _certs,
-    _mdHash,
-    _txUpdate,
-    _wdrls,
+  ( TxBody (..),
+    Wdrl (..),
   )
 import Test.QuickCheck
   ( Property,
@@ -76,15 +83,7 @@ import Test.QuickCheck
   )
 import qualified Test.QuickCheck.Gen as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Block,
-    C,
-    CHAIN,
-    ChainState,
-    DCert,
-    DPState,
-    LEDGER,
-    Tx,
-    UTxOState,
+  ( C,
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
@@ -99,7 +98,7 @@ genesisChainState ::
       QC.Gen
         ( Either
             a
-            (Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.ChainState C)
+            (ChainState C)
         )
     )
 genesisChainState = Just $ mkGenesisChainState (geConstants (genEnv p))
@@ -113,8 +112,8 @@ genesisLedgerState ::
       QC.Gen
         ( Either
             a
-            ( Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.UTxOState C,
-              Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.DPState C
+            ( UTxOState C,
+              DPState C
             )
         )
     )

@@ -50,6 +50,14 @@ import Data.Map (Map)
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
+import Shelley.Spec.Ledger.API
+  ( DELEG,
+    DELEGS,
+    LEDGER,
+    POOL,
+    UTXO,
+    UTXOW,
+  )
 import Shelley.Spec.Ledger.Coin (pattern Coin)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash (..),
@@ -71,18 +79,17 @@ import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Pool (PoolEnv (..))
 import Shelley.Spec.Ledger.Tx (_body)
-import Shelley.Spec.Ledger.TxData (PoolParams (..), Ptr (..), _certs, _wdrls)
+import Shelley.Spec.Ledger.TxData
+  ( PoolParams (..),
+    Ptr (..),
+    Wdrl,
+    _certs,
+    _wdrls,
+  )
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, Testable, conjoin, property, withMaxSuccess, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( C,
-    DELEG,
-    DELEGS,
-    LEDGER,
-    POOL,
-    UTXO,
-    UTXOW,
-    Wdrl,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (geConstants))
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)

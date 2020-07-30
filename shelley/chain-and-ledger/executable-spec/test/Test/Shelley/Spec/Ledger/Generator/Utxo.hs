@@ -24,20 +24,25 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.Address (scriptToCred, toCred, pattern Addr)
-import qualified Shelley.Spec.Ledger.Address as Address (RewardAcnt (..))
+import Shelley.Spec.Ledger.API
+  ( DCert,
+    MultiSig,
+    ScriptHash,
+    Update,
+  )
+import Shelley.Spec.Ledger.Address
+  ( Addr (..),
+    RewardAcnt (..),
+    scriptToCred,
+    toCred,
+  )
 import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     maybeToStrictMaybe,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
-import Shelley.Spec.Ledger.Credential
-  ( pattern KeyHashObj,
-    pattern ScriptHashObj,
-    pattern StakeRefBase,
-    pattern StakeRefPtr,
-  )
+import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
@@ -48,52 +53,39 @@ import Shelley.Spec.Ledger.Keys
     asWitness,
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( minfeeBound,
+  ( DPState (..),
+    DState (..),
+    KeyPairs,
+    UTxOState (..),
+    minfeeBound,
     _dstate,
     _ptrs,
     _rewards,
-    pattern UTxOState,
   )
 import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
-  ( WitnessSetHKD (..),
+  ( Tx (..),
+    TxBody (..),
+    TxIn,
+    TxOut (..),
+    WitnessSet,
+    WitnessSetHKD (..),
     getKeyCombination,
     hashScript,
-    pattern Tx,
-    pattern TxBody,
-    pattern TxOut,
   )
-import Shelley.Spec.Ledger.TxData (Wdrl (..), getRwdCred, _outputs, _txfee)
+import Shelley.Spec.Ledger.TxData (Wdrl (..), getRwdCred)
 import Shelley.Spec.Ledger.UTxO
-  ( balance,
+  ( UTxO (..),
+    balance,
     makeWitnessesFromScriptKeys,
     makeWitnessesVKey,
-    pattern UTxO,
   )
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Addr,
-    Credential,
-    DCert,
-    DPState,
-    DState,
-    KeyPairs,
-    Mock,
-    MultiSig,
-    MultiSigPairs,
-    RewardAcnt,
-    ScriptHash,
-    Tx,
-    TxBody,
-    TxIn,
-    TxOut,
-    UTxO,
-    UTxOState,
-    Update,
-    WitnessSet,
+  ( Mock,
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -108,6 +100,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
+import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs)
 
 -- | Generates a transaction in the context of the LEDGER STS environment
 -- and state.
@@ -352,7 +345,7 @@ genWithdrawals ::
   Constants ->
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
-  Map (Credential c 'Staking) Coin ->
+  Map (Credential 'Staking c) Coin ->
   Gen
     ( [(RewardAcnt c, Coin)],
       ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)])
@@ -379,7 +372,7 @@ genWithdrawals
         )
       ]
     where
-      toRewardAcnt (rwd, coin) = (Address.RewardAcnt Testnet rwd, coin)
+      toRewardAcnt (rwd, coin) = (RewardAcnt Testnet rwd, coin)
       genWrdls wdrls_ = do
         selectedWrdls <- map toRewardAcnt <$> QC.sublistOf wdrls_
         let wits = (mkWdrlWits ksIndexedStakeScripts ksIndexedStakingKeys . getRwdCred . fst) <$> selectedWrdls
@@ -390,7 +383,7 @@ mkWdrlWits ::
   (HasCallStack, Crypto c) =>
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
-  Credential c 'Staking ->
+  Credential 'Staking c ->
   Either (KeyPair 'Witness c) (MultiSig c, MultiSig c)
 mkWdrlWits scriptsByStakeHash _ c@(ScriptHashObj _) =
   Right $

@@ -28,6 +28,10 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Numeric.Natural
+import Shelley.Spec.Ledger.API
+  ( DCert (..),
+    Delegation (..),
+  )
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..))
@@ -47,9 +51,17 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     vKey,
   )
+import Shelley.Spec.Ledger.LedgerState
+  ( DPState,
+    KeyPairs,
+  )
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
-  ( _body,
+  ( Tx (..),
+    TxBody (..),
+    TxIn (..),
+    TxOut (..),
+    _body,
     _certs,
     _inputs,
     _outputs,
@@ -57,20 +69,11 @@ import Shelley.Spec.Ledger.Tx
     _txfee,
     _wdrls,
     _witnessSet,
-    pattern Tx,
-    pattern TxBody,
-    pattern TxIn,
-    pattern TxOut,
   )
 import Shelley.Spec.Ledger.TxData
   ( PoolParams (..),
-    pattern DCertDeleg,
-    pattern DCertGenesis,
-    pattern DCertMir,
-    pattern DCertPool,
-    pattern Delegation,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes ()
 -- Used grudgingly for keys.
 import Unsafe.Coerce (unsafeCoerce)
 

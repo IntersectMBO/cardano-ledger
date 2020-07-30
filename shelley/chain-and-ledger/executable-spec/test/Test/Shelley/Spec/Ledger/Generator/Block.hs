@@ -23,6 +23,21 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Ratio (denominator, numerator, (%))
 import qualified Data.Set as Set
+import Shelley.Spec.Ledger.API
+  ( Block,
+    ChainState (..),
+    DPState (..),
+    DState (..),
+    EpochState (..),
+    GenDelegPair,
+    LEDGERS,
+    LedgerState (..),
+    NewEpochState (..),
+    OBftSlot (..),
+    OCertEnv (..),
+    PParams' (..),
+    TICK,
+  )
 import Shelley.Spec.Ledger.BaseTypes
   ( activeSlotCoeff,
     activeSlotVal,
@@ -41,45 +56,17 @@ import Shelley.Spec.Ledger.Keys
     vKey,
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( esLState,
-    esPp,
-    getGKeys,
-    nesEL,
-    nesEs,
-    nesOsched,
-    nesPd,
+  ( getGKeys,
     overlaySchedule,
-    _delegationState,
-    _dstate,
-    _genDelegs,
-    pattern ActiveSlot,
-    pattern EpochState,
-    pattern NewEpochState,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
-import Shelley.Spec.Ledger.PParams (_extraEntropy)
-import Shelley.Spec.Ledger.STS.Chain
-  ( chainCandidateNonce,
-    chainEpochNonce,
-    chainLastAppliedBlock,
-    chainNes,
-    chainOCertIssue,
-    chainPrevEpochNonce,
-  )
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
-import Shelley.Spec.Ledger.STS.Ocert (pattern OCertEnv)
 import Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, shuffle)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Block,
-    ChainState,
-    GenDelegPair,
-    LEDGERS,
-    Mock,
-    OBftSlot,
-    TICK,
+  ( Mock,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),

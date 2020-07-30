@@ -26,23 +26,25 @@ import Hedgehog
 import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Property (LabelName (..))
+import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
-  ( addrWits,
-    _body,
+  ( Tx (..),
+    TxIn (..),
+    TxOut (..),
+    addrWits,
     _certs,
     _inputs,
     _outputs,
     _witnessSet,
-    pattern TxIn,
-    pattern TxOut,
   )
 import Shelley.Spec.Ledger.UTxO
-  ( balance,
+  ( UTxO,
+    balance,
     makeWitnessVKey,
     totalDeposits,
     txid,
@@ -50,7 +52,7 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     verifyWitVKey,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
 import Test.Tasty (TestTree, testGroup)

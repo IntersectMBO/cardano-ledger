@@ -24,20 +24,20 @@ import qualified Data.Sequence as Seq
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.LedgerState (AccountState (..), genesisState, pattern LedgerState)
-import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
-import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
+import Shelley.Spec.Ledger.LedgerState
+  ( AccountState (..),
+    DPState,
+    LedgerState (..),
+    UTxOState,
+    genesisState,
+  )
+import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
+import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Shelley.Spec.Ledger.Tx (Tx)
 import Shelley.Spec.Ledger.TxData (Ix)
 import Test.QuickCheck (Gen)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( DPState,
-    LEDGER,
-    LEDGERS,
-    Mock,
-    Tx,
-    UTxOState,
-  )
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), genCoin)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)

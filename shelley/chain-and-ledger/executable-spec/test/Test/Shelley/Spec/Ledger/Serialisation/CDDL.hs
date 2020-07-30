@@ -29,34 +29,40 @@ import Control.Exception (bracket)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
+import Shelley.Spec.Ledger.API
+  ( Credential,
+    DCert,
+    MultiSig,
+    OCert,
+    ProposedPPUpdates,
+    Tx,
+    Update,
+  )
+import Shelley.Spec.Ledger.Address
+  ( Addr,
+    RewardAcnt,
+  )
+import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
+import Shelley.Spec.Ledger.BlockChain
+  ( BHBody,
+    BHeader,
+    LaxBlock,
+  )
 import Shelley.Spec.Ledger.Keys (KeyRole (Staking))
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.Serialization
-import Shelley.Spec.Ledger.TxData (StakePoolRelay)
+import Shelley.Spec.Ledger.TxData
+  ( StakePoolRelay,
+    TxBody,
+    TxIn,
+    TxOut,
+  )
 import qualified System.Directory as Sys
 import qualified System.IO as Sys
 import qualified System.IO.Error as Sys
 import System.Process.ByteString.Lazy
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Addr,
-    BHBody,
-    BHeader,
-    BootstrapWitness,
-    C,
-    Credential,
-    DCert,
-    LaxBlock,
-    MultiSig,
-    OCert,
-    ProposedPPUpdates,
-    RewardAcnt,
-    Tx,
-    TxBody,
-    TxIn,
-    TxOut,
-    Update,
-  )
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Prelude
@@ -71,7 +77,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlGroupTest @(OCert C) n "operational_cert",
       cddlTest @(Addr C) n "address",
       cddlTest @(RewardAcnt C) n "reward_account",
-      cddlTest @(Credential C 'Staking) n "stake_credential",
+      cddlTest @(Credential 'Staking C) n "stake_credential",
       cddlTest' @(TxBody C) n "transaction_body",
       cddlTest @(TxOut C) n "transaction_output",
       cddlTest @StakePoolRelay n "relay",
