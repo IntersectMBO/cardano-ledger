@@ -86,7 +86,7 @@ import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
     totalDeposits,
-    txCreatesScriptAddrs,
+    txCreatesNoScriptAddrs,
     txins,
     txouts,
     txup,
