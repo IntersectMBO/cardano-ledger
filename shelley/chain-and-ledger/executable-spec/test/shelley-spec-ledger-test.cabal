@@ -42,6 +42,7 @@ library
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
+                     Test.Shelley.Spec.Ledger.NonTraceProperties.Serialization
                      Test.Shelley.Spec.Ledger.Shrinkers
                      Test.Shelley.Spec.Ledger.Orphans
                      Test.Shelley.Spec.Ledger.Utils

@@ -19,15 +19,11 @@ module Shelley.Spec.Ledger.EpochBoundary
     SnapShots (..),
     emptySnapShot,
     emptySnapShots,
-    rewardStake,
-    aggregateOuts,
-    baseStake,
-    ptrStake,
+    aggregateUtxoCoinByCredential,
     poolStake,
     obligation,
     maxPool,
     groupByPool,
-    (⊎),
   )
 where
 
@@ -36,20 +32,19 @@ import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (▷), (◁))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
 import Data.Ratio ((%))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Quiet
-import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.DeserializeShort (deserialiseAddrStakeRef)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
-import Shelley.Spec.Ledger.TxData (PoolParams, TxOut (..))
+import Shelley.Spec.Ledger.TxData (PoolParams, TxOut (TxOutCompact))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Blocks made
@@ -65,62 +60,33 @@ newtype Stake crypto = Stake
   }
   deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, NFData)
 
--- | Add two stake distributions
-(⊎) ::
-  Stake crypto ->
-  Stake crypto ->
-  Stake crypto
-(Stake lhs) ⊎ (Stake rhs) = Stake $ Map.unionWith (+) lhs rhs
+-- A TxOut has 4 different shapes, depending on the shape its embedded of Addr.
+-- Credentials are stored in only 2 of the 4 cases.
+-- 1) TxOut (Addr _ _ (StakeRefBase cred)) coin   -> HERE
+-- 2) TxOut (Addr _ _ (StakeRefPtr ptr)) coin     -> HERE
+-- 3) TxOut (Addr _ _ StakeRefNull) coin          -> NOT HERE
+-- 4) TxOut (AddrBootstrap _) coin                -> NOT HERE
+-- Unfortunately TxOut is a pattern, that deserializes the address. This can be expensive, so if
+-- we only deserialize the parts that we need, for the 2 cases that count, we can speed
+-- things up considerably. That is the role of deserialiseAddrStakeRef. It returns (Just stake)
+-- for the two cases that matter, and Nothing for the other two cases.
 
--- | Extract hash of staking key from base address.
-getStakeHK :: Addr crypto -> Maybe (Credential 'Staking crypto)
-getStakeHK (Addr _ _ (StakeRefBase hk)) = Just hk
-getStakeHK _ = Nothing
-
-aggregateOuts :: Crypto crypto => UTxO crypto -> Map (Addr crypto) Coin
-aggregateOuts (UTxO u) =
-  Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
-
--- | Get Stake of base addresses in TxOut set.
-baseStake ::
-  Map (Addr crypto) Coin ->
-  [(Credential 'Staking crypto, Coin)]
-baseStake vals =
-  mapMaybe convert $ Map.toList vals
-  where
-    convert ::
-      (Addr crypto, Coin) ->
-      Maybe (Credential 'Staking crypto, Coin)
-    convert (a, c) =
-      (,c) <$> getStakeHK a
-
--- | Extract pointer from pointer address.
-getStakePtr :: Addr crypto -> Maybe Ptr
-getStakePtr (Addr _ _ (StakeRefPtr ptr)) = Just ptr
-getStakePtr _ = Nothing
-
--- | Calculate stake of pointer addresses in TxOut set.
-ptrStake ::
-  forall crypto.
-  Map (Addr crypto) Coin ->
+-- | Sum up all the Coin for each staking Credential
+aggregateUtxoCoinByCredential ::
+  Crypto crypto =>
   Map Ptr (Credential 'Staking crypto) ->
-  [(Credential 'Staking crypto, Coin)]
-ptrStake vals pointers =
-  mapMaybe convert $ Map.toList vals
-  where
-    convert ::
-      (Addr crypto, Coin) ->
-      Maybe (Credential 'Staking crypto, Coin)
-    convert (a, c) =
-      case getStakePtr a of
-        Nothing -> Nothing
-        Just s -> (,c) <$> Map.lookup s pointers
-
-rewardStake ::
-  forall crypto.
+  UTxO crypto ->
   Map (Credential 'Staking crypto) Coin ->
-  [(Credential 'Staking crypto, Coin)]
-rewardStake = Map.toList
+  Map (Credential 'Staking crypto) Coin
+aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
+  Map.foldr accum initial u
+  where
+    accum (TxOutCompact addr c) ans = case deserialiseAddrStakeRef addr of
+      Just (StakeRefPtr p) -> case Map.lookup p ptrs of
+        Just cred -> Map.insertWith (+) cred (fromIntegral c) ans
+        Nothing -> ans
+      Just (StakeRefBase hk) -> Map.insertWith (+) hk (fromIntegral c) ans
+      _other -> ans
 
 -- | Get stake of one pool
 poolStake ::
