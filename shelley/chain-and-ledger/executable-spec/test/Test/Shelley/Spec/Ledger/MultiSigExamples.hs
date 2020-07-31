@@ -82,14 +82,7 @@ import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
   )
-import Test.Shelley.Spec.Ledger.Examples
-  ( aliceAddr,
-    alicePay,
-    bobAddr,
-    bobPay,
-    carlAddr,
-    dariaAddr,
-  )
+import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
     genesisId,
@@ -104,25 +97,25 @@ singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
 aliceOnly :: Crypto c => proxy c -> MultiSig c
-aliceOnly _ = singleKeyOnly aliceAddr
+aliceOnly _ = singleKeyOnly Cast.aliceAddr
 
 bobOnly :: Crypto c => proxy c -> MultiSig c
-bobOnly _ = singleKeyOnly bobAddr
+bobOnly _ = singleKeyOnly Cast.bobAddr
 
 aliceOrBob :: Crypto c => proxy c -> MultiSig c
-aliceOrBob p = RequireAnyOf [aliceOnly p, singleKeyOnly bobAddr]
+aliceOrBob p = RequireAnyOf [aliceOnly p, singleKeyOnly Cast.bobAddr]
 
 aliceAndBob :: Crypto c => proxy c -> MultiSig c
-aliceAndBob p = RequireAllOf [aliceOnly p, singleKeyOnly bobAddr]
+aliceAndBob p = RequireAllOf [aliceOnly p, singleKeyOnly Cast.bobAddr]
 
 aliceAndBobOrCarl :: Crypto c => proxy c -> MultiSig c
-aliceAndBobOrCarl p = RequireMOf 1 [aliceAndBob p, singleKeyOnly carlAddr]
+aliceAndBobOrCarl p = RequireMOf 1 [aliceAndBob p, singleKeyOnly Cast.carlAddr]
 
 aliceAndBobOrCarlAndDaria :: Crypto c => proxy c -> MultiSig c
 aliceAndBobOrCarlAndDaria p =
   RequireAnyOf
     [ aliceAndBob p,
-      RequireAllOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]
+      RequireAllOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
 aliceAndBobOrCarlOrDaria :: Crypto c => proxy c -> MultiSig c
@@ -130,7 +123,7 @@ aliceAndBobOrCarlOrDaria p =
   RequireMOf
     1
     [ aliceAndBob p,
-      RequireAnyOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]
+      RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
 initTxBody :: Crypto c => [(Addr c, Coin)] -> TxBody c
@@ -178,8 +171,8 @@ genesis = genesisState genDelegs0 utxo0
     genDelegs0 = Map.empty
     utxo0 =
       genesisCoins
-        [ TxOut aliceAddr aliceInitCoin,
-          TxOut bobAddr bobInitCoin
+        [ TxOut Cast.aliceAddr aliceInitCoin,
+          TxOut Cast.bobAddr bobInitCoin
         ]
 
 initPParams :: PParams
@@ -197,7 +190,7 @@ initialUTxOState ::
   (TxId c, Either [[PredicateFailure (UTXOW c)]] (UTxOState c))
 initialUTxOState aliceKeep msigs =
   let addresses =
-        [(aliceAddr, aliceKeep) | aliceKeep > 0]
+        [(Cast.aliceAddr, aliceKeep) | aliceKeep > 0]
           ++ map
             ( \(msig, c) ->
                 ( Addr
@@ -211,7 +204,7 @@ initialUTxOState aliceKeep msigs =
    in let tx =
             makeTx
               (initTxBody addresses)
-              (asWitness <$> [alicePay, bobPay])
+              (asWitness <$> [Cast.alicePay, Cast.bobPay])
               Map.empty
               Nothing
        in ( txid $ _body tx,
@@ -259,7 +252,7 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
     txbody =
       makeTxBody
         inputs
-        [(aliceAddr, aliceInitCoin + bobInitCoin + sum (unWdrl wdrl))]
+        [(Cast.aliceAddr, aliceInitCoin + bobInitCoin + sum (unWdrl wdrl))]
         wdrl
     inputs =
       [ TxIn txId (fromIntegral n)
