@@ -202,8 +202,8 @@ transaction_metadatum =
     { * transaction_metadatum => transaction_metadatum }
   / [ * transaction_metadatum ]
   / int
-  / bytes .size 64
-  / text .size 64
+  / bytes .size (0..64)
+  / text .size (0..64)
 
 transaction_metadatum_label = uint
 
