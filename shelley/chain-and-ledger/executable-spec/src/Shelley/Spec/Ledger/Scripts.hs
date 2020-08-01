@@ -167,8 +167,8 @@ hashMultiSigScript ::
   ScriptHash crypto
 hashMultiSigScript =
   ScriptHash
-  . Hash.castHash
-  . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
+    . Hash.castHash
+    . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
 hashAnyScript ::
   Crypto crypto =>
