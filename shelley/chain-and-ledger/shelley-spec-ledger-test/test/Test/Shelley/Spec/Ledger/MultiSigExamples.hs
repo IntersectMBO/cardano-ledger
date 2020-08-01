@@ -17,6 +17,7 @@ module Test.Shelley.Spec.Ledger.MultiSigExamples
   )
 where
 
+import qualified Cardano.Crypto.Hash as Hash
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
@@ -46,6 +47,7 @@ import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
+    KeyHash (..),
     KeyPair,
     KeyRole (..),
     asWitness,
@@ -64,6 +66,7 @@ import Shelley.Spec.Ledger.Scripts
     pattern RequireAnyOf,
     pattern RequireMOf,
     pattern RequireSignature,
+    pattern ScriptHash,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
@@ -90,6 +93,16 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Utils
 
 -- Multi-Signature tests
+
+-- This compile-time test asserts that the script hash and key hash use the
+-- same hash size and indeed hash function. We do this by checking we can
+-- type-check the following code that converts between them by using the hash
+-- casting function which changes what the hash is of, without changing the
+-- hashing algorithm.
+--
+_assertScriptHashSizeMatchesAddrHashSize :: ScriptHash c -> KeyHash r c
+_assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
+    KeyHash (Hash.castHash h)
 
 -- Multi-signature scripts
 singleKeyOnly :: Crypto c => Addr c -> MultiSig c
