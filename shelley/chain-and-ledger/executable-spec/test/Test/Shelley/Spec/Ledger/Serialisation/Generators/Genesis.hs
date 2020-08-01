@@ -7,7 +7,7 @@
 module Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis where
 
 import Cardano.Crypto.DSIGN.Class
-import Cardano.Crypto.Hash hiding (Hash)
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF.Class
 import Cardano.Prelude (Natural, Word32, Word64, Word8)
@@ -143,14 +143,14 @@ genUrl = do
 genRewardAcnt :: Crypto c => Gen (RewardAcnt c)
 genRewardAcnt = RewardAcnt Testnet <$> genCredential
 
-genCredential :: forall c. Crypto c => Gen (Credential 'Staking c)
+genCredential :: Crypto c => Gen (Credential 'Staking c)
 genCredential =
   Gen.choice
-    [ ScriptHashObj . ScriptHash <$> genHash @c,
+    [ ScriptHashObj . ScriptHash <$> genHash,
       KeyHashObj <$> genKeyHash
     ]
 
-genHash :: forall c a. HashAlgorithm (HASH c) => Gen (Hash c a)
+genHash :: Hash.HashAlgorithm v => Gen (Hash.Hash v a)
 genHash = mkHash <$> Gen.int (Range.linear 0 1000)
 
 genWords :: Natural -> Gen [Word8]

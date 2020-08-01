@@ -55,8 +55,7 @@ import qualified Data.List as List (concat, concatMap, permutations)
 import Data.Word (Word8)
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
-import Shelley.Spec.Ledger.Keys (Hash, KeyHash (..), KeyRole (Witness))
+import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 
 -- | Magic number representing the tag of the native multi-signature script
@@ -136,7 +135,7 @@ pattern RequireMOf n ms <-
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
 newtype ScriptHash crypto
-  = ScriptHash (Hash crypto (Script crypto))
+  = ScriptHash (Hash.Hash (HASH crypto) (Script crypto))
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoUnexpectedThunks)
 
@@ -166,7 +165,10 @@ hashMultiSigScript ::
   Crypto crypto =>
   MultiSig crypto ->
   ScriptHash crypto
-hashMultiSigScript msig = ScriptHash $ Hash.castHash $ hashAnnotated msig
+hashMultiSigScript =
+  ScriptHash
+  . Hash.castHash
+  . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
 hashAnyScript ::
   Crypto crypto =>
@@ -198,9 +200,6 @@ getKeyCombinations (RequireAnyOf msigs) = List.concatMap getKeyCombinations msig
 getKeyCombinations (RequireMOf m msigs) =
   let perms = map (take m) $ List.permutations msigs
    in map (concat . List.concatMap getKeyCombinations) perms
-
-instance Crypto c => HashAnnotated (MultiSig c) c where
-  hashAnnotated = Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
 -- CBOR
 
