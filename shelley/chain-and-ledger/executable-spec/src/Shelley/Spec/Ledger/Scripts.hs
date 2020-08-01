@@ -135,7 +135,7 @@ pattern RequireMOf n ms <-
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
 newtype ScriptHash crypto
-  = ScriptHash (Hash.Hash (HASH crypto) (Script crypto))
+  = ScriptHash (Hash.Hash (ADDRHASH crypto) (Script crypto))
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoUnexpectedThunks)
 
