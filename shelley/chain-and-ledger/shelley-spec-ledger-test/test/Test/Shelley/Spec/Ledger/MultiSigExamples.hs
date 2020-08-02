@@ -102,7 +102,7 @@ import Test.Shelley.Spec.Ledger.Utils
 --
 _assertScriptHashSizeMatchesAddrHashSize :: ScriptHash c -> KeyHash r c
 _assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
-    KeyHash (Hash.castHash h)
+  KeyHash (Hash.castHash h)
 
 -- Multi-signature scripts
 singleKeyOnly :: Crypto c => Addr c -> MultiSig c
