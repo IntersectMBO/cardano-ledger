@@ -18,6 +18,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE GADTs #-}
 
 module Shelley.Spec.Ledger.TxData
   ( DCert (..),
@@ -136,6 +137,9 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..), word64ToCoin)
+
+import Shelley.Spec.Ledger.Value
+
 import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -373,26 +377,29 @@ instance Crypto crypto => FromJSON (PoolParams crypto) where
         <*> obj .: "metadata"
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId crypto = TxId {_unTxId :: Hash crypto (TxBody crypto)}
-  deriving (Show, Eq, Ord, Generic)
+newtype CV crypto v => TxId crypto v = TxId {_unTxId :: Hash crypto (TxBody crypto v)}
+  deriving (Show, Eq, Ord)
   deriving newtype (NFData, NoUnexpectedThunks)
 
-deriving newtype instance Crypto crypto => ToCBOR (TxId crypto)
+deriving newtype instance CV crypto v => ToCBOR (TxId crypto v)
 
-deriving newtype instance Crypto crypto => FromCBOR (TxId crypto)
+deriving newtype instance CV crypto v => FromCBOR (TxId crypto v)
 
 -- | The input of a UTxO.
-data TxIn crypto = TxInCompact {-# UNPACK #-} !(TxId crypto) {-# UNPACK #-} !Word64
-  deriving (Show, Eq, Generic, Ord, NFData)
+data CV crypto v => TxIn crypto v = TxInCompact {-# UNPACK #-} !(TxId crypto v) {-# UNPACK #-} !Word64
+  deriving (Show, Eq, Ord)
 
 -- TODO: We will also want to have the TxId be compact, but the representation
 -- depends on the crypto.
 
+
+deriving instance NFData v => NFData (TxIn crypto v)
+
 pattern TxIn ::
-  Crypto crypto =>
-  TxId crypto ->
+  CV crypto v =>
+  TxId crypto v ->
   Natural -> -- TODO We might want to change this to Word64 generally
-  TxIn crypto
+  TxIn crypto v
 pattern TxIn addr index <-
   TxInCompact addr (fromIntegral -> index)
   where
@@ -401,34 +408,47 @@ pattern TxIn addr index <-
 
 {-# COMPLETE TxIn #-}
 
-instance NoUnexpectedThunks (TxIn crypto)
+instance NoUnexpectedThunks (TxIn crypto v)
 
 -- | The output of a UTxO.
-data TxOut crypto
-  = TxOutCompact
-      {-# UNPACK #-} !BSS.ShortByteString
-      {-# UNPACK #-} !Word64
-  deriving (Show, Eq, Ord)
+-- data TxOut crypto
+--   = TxOutCompact
+--       {-# UNPACK #-} !BSS.ShortByteString
+--       {-# UNPACK #-} !Word64
+--   deriving (Show, Eq, Ord)
 
-instance NFData (TxOut crypto) where
+-- | Parametrized tx output
+data TxOut crypto v where
+   TxOutCompact :: CV crypto v =>
+     {-# UNPACK #-} !BSS.ShortByteString ->
+     v ->
+     TxOut crypto v
+
+deriving instance Show v => Show (TxOut crypto v)
+
+deriving instance Eq v => Eq (TxOut crypto v)
+
+deriving instance NoUnexpectedThunks v => NoUnexpectedThunks (TxOut crypto v)
+
+instance NFData v => NFData (TxOut crypto v) where
   rnf = (`seq` ())
 
-deriving via UseIsNormalFormNamed "TxOut" (TxOut crypto) instance NoUnexpectedThunks (TxOut crypto)
+-- deriving via UseIsNormalFormNamed "TxOut" (TxOut crypto v) instance NoUnexpectedThunks (TxOut crypto v)
 
 pattern TxOut ::
-  Crypto crypto =>
+  CV crypto v =>
   Addr crypto ->
-  Coin ->
-  TxOut crypto
-pattern TxOut addr coin <-
-  (viewCompactTxOut -> (addr, coin))
+  v ->
+  TxOut crypto v
+pattern TxOut addr v <-
+  (viewCompactTxOut -> (addr, v))
   where
-    TxOut addr (Coin coin) =
-      TxOutCompact (BSS.toShort $ serialiseAddr addr) (fromIntegral coin)
+    TxOut addr v =
+      TxOutCompact (BSS.toShort $ serialiseAddr addr) v
 
 {-# COMPLETE TxOut #-}
 
-viewCompactTxOut :: forall crypto. Crypto crypto => TxOut crypto -> (Addr crypto, Coin)
+viewCompactTxOut :: forall crypto v. CV crypto v => TxOut crypto v -> (Addr crypto, Coin)
 viewCompactTxOut (TxOutCompact bs c) = (addr, coin)
   where
     addr = case deserialiseAddr (BSS.fromShort bs) of
@@ -512,9 +532,9 @@ instance NoUnexpectedThunks (MIRCert crypto)
 instance NoUnexpectedThunks (DCert crypto)
 
 -- | A raw transaction
-data TxBody crypto = TxBody'
-  { _inputs' :: !(Set (TxIn crypto)),
-    _outputs' :: !(StrictSeq (TxOut crypto)),
+data CV crypto v => TxBody crypto v = TxBody'
+  { _inputs' :: !(Set (TxIn crypto v)),
+    _outputs' :: !(StrictSeq (TxOut crypto v)),
     _certs' :: !(StrictSeq (DCert crypto)),
     _wdrls' :: !(Wdrl crypto),
     _txfee' :: !Coin,
@@ -524,24 +544,26 @@ data TxBody crypto = TxBody'
     bodyBytes :: LByteString,
     extraSize :: !Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
   }
-  deriving (Show, Eq, Generic)
-  deriving
-    (NoUnexpectedThunks)
-    via AllowThunksIn '["bodyBytes"] (TxBody crypto)
+  deriving (Show, Eq)
+  -- deriving
+  --   (NoUnexpectedThunks)
+  --   via AllowThunksIn '["bodyBytes"] (TxBody crypto v)
 
-instance Crypto c => HashAnnotated (TxBody c) c
+instance CV c v => HashAnnotated (TxBody c v) c
+
+deriving instance NoUnexpectedThunks v => NoUnexpectedThunks (TxBody crypto v)
 
 pattern TxBody ::
-  Crypto crypto =>
-  Set (TxIn crypto) ->
-  StrictSeq (TxOut crypto) ->
+  CV crypto v =>
+  Set (TxIn crypto v) ->
+  StrictSeq (TxOut crypto v) ->
   StrictSeq (DCert crypto) ->
   Wdrl crypto ->
   Coin ->
   SlotNo ->
   StrictMaybe (Update crypto) ->
   StrictMaybe (MetaDataHash crypto) ->
-  TxBody crypto
+  TxBody crypto v
 pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
   TxBody'
     { _inputs' = _inputs,
@@ -596,24 +618,24 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
 {-# COMPLETE TxBody #-}
 
 -- | Proof/Witness that a transaction is authorized by the given key holder.
-data WitVKey crypto kr = WitVKey'
+data WitVKey crypto v kr = WitVKey'
   { wvkKey' :: !(VKey kr crypto),
-    wvkSig' :: !(SignedDSIGN crypto (Hash crypto (TxBody crypto))),
+    wvkSig' :: !(SignedDSIGN crypto (Hash crypto (TxBody crypto v))),
     -- | Hash of the witness vkey. We store this here to avoid repeated hashing
     --   when used in ordering.
     wvkKeyHash :: KeyHash 'Witness crypto,
     wvkBytes :: LByteString
   }
   deriving (Show, Eq, Generic)
-  deriving (NoUnexpectedThunks) via AllowThunksIn '["wvkBytes"] (WitVKey crypto kr)
+  deriving (NoUnexpectedThunks) via AllowThunksIn '["wvkBytes"] (WitVKey crypto v kr)
 
-instance (Crypto c, Typeable k) => HashAnnotated (WitVKey c k) c
+instance (CV c v, Typeable k) => HashAnnotated (WitVKey c v k) c
 
 pattern WitVKey ::
-  (Typeable kr, Crypto crypto) =>
+  (Typeable kr, CV crypto v) =>
   VKey kr crypto ->
-  SignedDSIGN crypto (Hash crypto (TxBody crypto)) ->
-  WitVKey crypto kr
+  SignedDSIGN crypto (Hash crypto (TxBody crypto v)) ->
+  WitVKey crypto v kr
 pattern WitVKey k s <-
   WitVKey' k s _ _
   where
@@ -629,14 +651,14 @@ pattern WitVKey k s <-
 {-# COMPLETE WitVKey #-}
 
 witKeyHash ::
-  WitVKey crypto kr ->
+  WitVKey crypto v kr ->
   KeyHash 'Witness crypto
 witKeyHash (WitVKey' _ _ kh _) = kh
 
 instance
-  forall crypto kr.
-  (Typeable kr, Crypto crypto) =>
-  Ord (WitVKey crypto kr)
+  forall crypto kr v.
+  (Typeable kr, CV crypto v) =>
+  Ord (WitVKey crypto v kr)
   where
   compare = comparing wvkKeyHash
 
@@ -732,8 +754,8 @@ instance
       k -> invalidKey k
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (TxIn crypto)
+  (Typeable crypto, CV crypto v) =>
+  ToCBOR (TxIn crypto v)
   where
   toCBOR (TxIn txId index) =
     encodeListLen 2
@@ -741,8 +763,8 @@ instance
       <> toCBOR (fromIntegral index :: Word64)
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (TxIn crypto)
+  (CV crypto v) =>
+  FromCBOR (TxIn crypto v)
   where
   fromCBOR = do
     decodeRecordNamed "TxIn" (const 2) $ do
@@ -751,8 +773,8 @@ instance
       pure $ TxIn a (fromInteger $ toInteger b)
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (TxOut crypto)
+  (Typeable crypto, CV crypto v) =>
+  ToCBOR (TxOut crypto v)
   where
   toCBOR (TxOut addr coin) =
     encodeListLen 2
@@ -760,8 +782,8 @@ instance
       <> toCBOR coin
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (TxOut crypto)
+  (CV crypto v) =>
+  FromCBOR (TxOut crypto v)
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
     addr <- fromCBOR
@@ -769,14 +791,14 @@ instance
     pure $ TxOut addr (Coin $ toInteger b)
 
 instance
-  (Typeable kr, Crypto crypto) =>
-  ToCBOR (WitVKey crypto kr)
+  (Typeable kr, CV crypto v) =>
+  ToCBOR (WitVKey crypto v kr)
   where
   toCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
 
 instance
-  (Typeable kr, Crypto crypto) =>
-  FromCBOR (Annotator (WitVKey crypto kr))
+  (Typeable kr, CV crypto v) =>
+  FromCBOR (Annotator (WitVKey crypto v kr))
   where
   fromCBOR =
     annotatorSlice $
@@ -788,13 +810,13 @@ instance
 
 instance
   (Crypto crypto) =>
-  ToCBOR (TxBody crypto)
+  ToCBOR (TxBody crypto v)
   where
   toCBOR = encodePreEncoded . BSL.toStrict . bodyBytes
 
 instance
   (Crypto crypto) =>
-  FromCBOR (Annotator (TxBody crypto))
+  FromCBOR (Annotator (TxBody crypto v))
   where
   fromCBOR = annotatorSlice $ do
     mapParts <-
@@ -842,8 +864,8 @@ instance
       f ::
         Int ->
         Decoder s a ->
-        (LByteString -> a -> TxBody crypto -> TxBody crypto) ->
-        Decoder s (Int, Annotator (TxBody crypto -> TxBody crypto))
+        (LByteString -> a -> TxBody crypto v -> TxBody crypto v) ->
+        Decoder s (Int, Annotator (TxBody crypto v -> TxBody crypto v))
       f key decoder updater = do
         (x, annBytes) <- withSlice decoder
         let result = Annotator $ \fullbytes txbody ->
