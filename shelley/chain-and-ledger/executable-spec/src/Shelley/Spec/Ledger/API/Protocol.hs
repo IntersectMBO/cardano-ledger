@@ -73,6 +73,7 @@ import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Value
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto = LedgerView
@@ -132,7 +133,7 @@ mkPrtclEnv
       lvPoolDistr
       lvGenDelegs
 
-view :: ShelleyState crypto -> LedgerView crypto
+view :: ShelleyState crypto v -> LedgerView crypto
 view
   NewEpochState
     { nesPd,
@@ -151,7 +152,7 @@ view
       }
 
 -- | Alias of 'view' for export
-currentLedgerView :: ShelleyState crypto -> LedgerView crypto
+currentLedgerView :: ShelleyState crypto v -> LedgerView crypto
 currentLedgerView = view
 
 -- $timetravel
@@ -182,8 +183,8 @@ currentLedgerView = view
 --  A future ledger view (within the stability window) is equal to the
 --  application of the TICK rule at the target slot to the curernt ledger state.
 
-newtype FutureLedgerViewError crypto
-  = FutureLedgerViewError [PredicateFailure (TICK crypto)]
+newtype FutureLedgerViewError crypto v
+  = FutureLedgerViewError [PredicateFailure (TICK crypto v)]
   deriving (Eq, Show)
 
 -- | Anachronistic ledger view
@@ -192,12 +193,12 @@ newtype FutureLedgerViewError crypto
 --   slot corresponding to the passed-in 'ShelleyState'), return a 'LedgerView'
 --   appropriate to that slot.
 futureLedgerView ::
-  forall crypto m.
-  ( Crypto crypto,
-    MonadError (FutureLedgerViewError crypto) m
+  forall crypto m v.
+  ( CV crypto v,
+    MonadError (FutureLedgerViewError crypto v) m
   ) =>
   Globals ->
-  ShelleyState crypto ->
+  ShelleyState crypto v ->
   SlotNo ->
   m (LedgerView crypto)
 futureLedgerView globals ss slot =
@@ -208,7 +209,7 @@ futureLedgerView globals ss slot =
   where
     res =
       flip runReader globals
-        . applySTS @(TICK crypto)
+        . applySTS @(TICK crypto v)
         $ TRC (tickEnv, ss, slot)
     tickEnv =
       TickEnv
@@ -255,15 +256,15 @@ instance Crypto crypto => ToCBOR (ChainDepState crypto) where
           toCBOR csLabNonce
         ]
 
-newtype ChainTransitionError crypto
-  = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL crypto)]
+newtype ChainTransitionError crypto v
+  = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL crypto v)]
   deriving (Generic)
 
-instance (Crypto crypto) => NoUnexpectedThunks (ChainTransitionError crypto)
+instance (Crypto crypto) => NoUnexpectedThunks (ChainTransitionError crypto v)
 
-deriving instance (Crypto crypto) => Eq (ChainTransitionError crypto)
+deriving instance (Crypto crypto) => Eq (ChainTransitionError crypto v)
 
-deriving instance (Crypto crypto) => Show (ChainTransitionError crypto)
+deriving instance (Crypto crypto) => Show (ChainTransitionError crypto v)
 
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::
@@ -297,22 +298,22 @@ tickChainDepState
 --
 --   This also updates the last applied block hash.
 updateChainDepState ::
-  forall crypto m.
-  ( Crypto crypto,
-    MonadError (ChainTransitionError crypto) m,
+  forall crypto m v.
+  ( CV crypto v,
+    MonadError (ChainTransitionError crypto v) m,
     Cardano.Crypto.DSIGN.Class.Signable
       (DSIGN crypto)
       (Shelley.Spec.Ledger.OCert.OCertSignable crypto),
     Cardano.Crypto.KES.Class.Signable
       (KES crypto)
-      (Shelley.Spec.Ledger.BlockChain.BHBody crypto),
+      (Shelley.Spec.Ledger.BlockChain.BHBody crypto v),
     Cardano.Crypto.VRF.Class.Signable
       (VRF crypto)
       Shelley.Spec.Ledger.BaseTypes.Seed
   ) =>
   Globals ->
   LedgerView crypto ->
-  BHeader crypto ->
+  BHeader crypto v ->
   ChainDepState crypto ->
   m (ChainDepState crypto)
 updateChainDepState
@@ -333,7 +334,7 @@ updateChainDepState
     where
       res =
         flip runReader globals
-          . applySTS @(STS.Prtcl.PRTCL crypto)
+          . applySTS @(STS.Prtcl.PRTCL crypto v)
           $ TRC
             ( mkPrtclEnv lv epochNonce,
               csProtocol,
@@ -347,21 +348,21 @@ updateChainDepState
 --   or consistent with the chain it is being applied to; the caller must ensure
 --   that this is valid through having previously applied it.
 reupdateChainDepState ::
-  forall crypto.
-  ( Crypto crypto,
+  forall crypto v.
+  ( CV crypto v,
     Cardano.Crypto.DSIGN.Class.Signable
       (DSIGN crypto)
       (Shelley.Spec.Ledger.OCert.OCertSignable crypto),
     Cardano.Crypto.KES.Class.Signable
       (KES crypto)
-      (Shelley.Spec.Ledger.BlockChain.BHBody crypto),
+      (Shelley.Spec.Ledger.BlockChain.BHBody crypto v),
     Cardano.Crypto.VRF.Class.Signable
       (VRF crypto)
       Shelley.Spec.Ledger.BaseTypes.Seed
   ) =>
   Globals ->
   LedgerView crypto ->
-  BHeader crypto ->
+  BHeader crypto v ->
   ChainDepState crypto ->
   ChainDepState crypto
 reupdateChainDepState
@@ -376,7 +377,7 @@ reupdateChainDepState
     where
       res =
         flip runReader globals
-          . reapplySTS @(STS.Prtcl.PRTCL crypto)
+          . reapplySTS @(STS.Prtcl.PRTCL crypto v)
           $ TRC
             ( mkPrtclEnv lv epochNonce,
               csProtocol,

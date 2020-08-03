@@ -50,6 +50,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
+import Shelley.Spec.Ledger.Value(Val(..),CV,vminus)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -74,26 +75,26 @@ import Test.Shelley.Spec.Ledger.Utils (getBlockNonce, testGlobals)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
-aliceInitCoin :: Coin
-aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin :: Val v => v
+aliceInitCoin = vinject (Coin (10 * 1000 * 1000 * 1000 * 1000 * 1000))
 
-initUTxO :: Crypto c => UTxO c
+initUTxO :: CV c v => UTxO c v
 initUTxO = genesisCoins [ TxOut Cast.aliceAddr aliceInitCoin ]
 
-initStPoolReReg :: forall c. Crypto c => ChainState c
+initStPoolReReg :: forall c v. CV c v => ChainState c v
 initStPoolReReg = initSt initUTxO
 
 --
 -- Block 1, Slot 10, Epoch 0
 --
 
-feeTx1 :: Coin
-feeTx1 = Coin 3
+feeTx1 :: Val v => v
+feeTx1 = vinject (Coin 3)
 
-aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin - _poolDeposit ppEx - feeTx1
+aliceCoinEx1 :: Val v => v
+aliceCoinEx1 = (aliceInitCoin `vminus` vinject(_poolDeposit ppEx)) `vminus` feeTx1
 
-txbodyEx1 :: Crypto c => TxBody c
+txbodyEx1 :: CV c v => TxBody c v
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -105,7 +106,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: forall c. ExMock c => Tx c
+txEx1 :: forall c v. (ExMock c,CV c v) => Tx c v
 txEx1 =
   Tx
     txbodyEx1
@@ -120,7 +121,7 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. (HasCallStack, ExMock c) => Block c
+blockEx1 :: forall c v. (HasCallStack, ExMock c,CV c v) => Block c v
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -128,16 +129,16 @@ blockEx1 =
     [txEx1]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @c)
+    (nonce0 @c @v)
     (NatNonce 1)
     zero
     0
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
 
-expectedStEx1 :: forall c. ExMock c => ChainState c
+expectedStEx1 :: forall c v. (ExMock c,CV c v) => ChainState c v
 expectedStEx1 =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
+  C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c @v))
     . C.newLab blockEx1
     . C.feesAndDeposits feeTx1 (_poolDeposit ppEx)
     . C.newUTxO txbodyEx1
@@ -147,23 +148,23 @@ expectedStEx1 =
 -- === Block 1, Slot 10, Epoch 0
 --
 -- In the first block Alice registers a stake pool.
-poolReReg1 :: ExMock c => CHAINExample c
+poolReReg1 :: (ExMock c,CV c v) => CHAINExample c v
 poolReReg1 = CHAINExample initStPoolReReg blockEx1 (Right expectedStEx1)
 
 --
 -- Block 2, Slot 20, Epoch 0
 --
 
-feeTx2 :: Coin
-feeTx2 = Coin 3
+feeTx2 :: Val v => v
+feeTx2 = vinject (Coin 3)
 
-aliceCoinEx2 :: Coin
-aliceCoinEx2 = aliceCoinEx1 - feeTx2
+aliceCoinEx2 :: Val v => v
+aliceCoinEx2 = aliceCoinEx1 `vminus` feeTx2
 
 newPoolParams :: Crypto c => PoolParams c
 newPoolParams = Cast.alicePoolParams {_poolCost = Coin 500}
 
-txbodyEx2 :: Crypto c => TxBody c
+txbodyEx2 :: CV c v => TxBody c v
 txbodyEx2 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx1) 0])
@@ -179,7 +180,7 @@ txbodyEx2 =
     SNothing
     SNothing
 
-txEx2 :: ExMock c => Tx c
+txEx2 :: (CV c v,ExMock c) => Tx c v
 txEx2 =
   Tx
     txbodyEx2
@@ -198,34 +199,34 @@ word64SlotToKesPeriodWord :: Word64 -> Word
 word64SlotToKesPeriodWord slot =
   (fromIntegral $ toInteger slot) `div` (fromIntegral $ toInteger $ slotsPerKESPeriod testGlobals)
 
-blockEx2 :: forall c. ExMock c => Word64 -> Block c
+blockEx2 :: forall c v. (ExMock c,CV c v) => Word64 -> Block c v
 blockEx2 slot =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
+    (bhHash $ bheader (blockEx1 @c @v))
     (coreNodeKeysBySchedule ppEx slot)
     [txEx2]
     (SlotNo slot)
     (BlockNo 2)
-    (nonce0 @c)
+    (nonce0 @c @v)
     (NatNonce 2)
     zero
     (word64SlotToKesPeriodWord slot)
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 20) 0 (KESPeriod 0))
 
-blockEx2A :: forall c. ExMock c => Block c
-blockEx2A = blockEx2 20
+blockEx2A :: forall c v. (ExMock c,CV c v) => Block c v
+blockEx2A = blockEx2 @c @v 20
 
-expectedStEx2 :: forall c. ExMock c => ChainState c
+expectedStEx2 :: forall c v. (ExMock c,CV c v) => ChainState c v
 expectedStEx2 =
   C.feesAndDeposits feeTx2 (Coin 0)
     . C.newUTxO txbodyEx2
     . C.reregPool newPoolParams
     $ expectedStEx1
 
-expectedStEx2A :: forall c. ExMock c => ChainState c
+expectedStEx2A :: forall c v. (ExMock c,CV c v) => ChainState c v
 expectedStEx2A =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx2A @c))
+  C.evolveNonceUnfrozen (getBlockNonce (blockEx2A @c @v))
     . C.newLab blockEx2A
     $ expectedStEx2
 
@@ -233,42 +234,42 @@ expectedStEx2A =
 --
 -- In the second block Alice re-registers with new pool parameters
 -- early in the epoch.
-poolReReg2A :: ExMock c => CHAINExample c
+poolReReg2A :: (ExMock c,CV c v) => CHAINExample c v
 poolReReg2A = CHAINExample expectedStEx1 blockEx2A (Right expectedStEx2A)
 
-expectedStEx2B :: forall c. ExMock c => ChainState c
+expectedStEx2B :: forall c v. (ExMock c,CV c v) => ChainState c v
 expectedStEx2B =
-  C.evolveNonceFrozen (getBlockNonce (blockEx2B @c))
+  C.evolveNonceFrozen (getBlockNonce (blockEx2B @c @v))
     . C.newLab blockEx2B
     . C.rewardUpdate emptyRewardUpdate
     $ expectedStEx2
 
-blockEx2B :: forall c. ExMock c => Block c
-blockEx2B = blockEx2 90
+blockEx2B :: forall c v. (ExMock c,CV c v) => Block c v
+blockEx2B = blockEx2 @c @v 90
 
 -- === Block 2, Slot 90, Epoch 0
 --
 -- In the second block Alice re-registers with new pool parameters
 -- late in the epoch.
-poolReReg2B :: ExMock c => CHAINExample c
-poolReReg2B = CHAINExample expectedStEx1 blockEx2B (Right expectedStEx2B)
+poolReReg2B :: forall c v. (ExMock c,CV c v) => CHAINExample c v
+poolReReg2B = CHAINExample expectedStEx1 (blockEx2B @c @v) (Right expectedStEx2B)
 
 --
 -- Block 3, Slot 110, Epoch 1
 --
 
-epoch1Nonce :: forall c. ExMock c => Nonce
-epoch1Nonce = chainCandidateNonce (expectedStEx2B @c)
+epoch1Nonce :: forall c v. (ExMock c,CV c v)  => Nonce
+epoch1Nonce = chainCandidateNonce (expectedStEx2B @c @v)
 
-blockEx3 :: forall c. ExMock c => Block c
+blockEx3 :: forall c v. (ExMock c,CV c v) => Block c v
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx2B)
+    (bhHash $ bheader (blockEx2B @c @v))
     (coreNodeKeysBySchedule ppEx 110)
     []
     (SlotNo 110)
     (BlockNo 3)
-    (epoch1Nonce @c)
+    (epoch1Nonce @c @v)
     (NatNonce 3)
     zero
     5
@@ -279,7 +280,7 @@ snapEx3 :: Crypto c => SnapShot c
 snapEx3 =
   emptySnapShot {_poolParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams}
 
-expectedStEx3 :: forall c. ExMock c => ChainState c
+expectedStEx3 :: forall c v. (ExMock c, CV c v) => ChainState c v
 expectedStEx3 =
   C.newEpoch blockEx3
     . C.newSnapshot snapEx3 (feeTx1 + feeTx2)
@@ -291,7 +292,7 @@ expectedStEx3 =
 --
 -- The third block is empty and trigger the epoch change,
 -- and Alice's new pool parameters are adopted.
-poolReReg3 :: ExMock c => CHAINExample c
+poolReReg3 :: (ExMock c,CV c v) => CHAINExample c v
 poolReReg3 = CHAINExample expectedStEx2B blockEx3 (Right expectedStEx3)
 
 --

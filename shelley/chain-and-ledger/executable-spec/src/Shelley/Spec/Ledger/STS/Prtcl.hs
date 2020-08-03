@@ -64,8 +64,9 @@ import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (BlockNo, SlotNo)
+import Shelley.Spec.Ledger.Value
 
-data PRTCL crypto
+data PRTCL crypto v
 
 data PrtclState crypto
   = PrtclState
@@ -110,29 +111,29 @@ data PrtclEnv crypto
 instance NoUnexpectedThunks (PrtclEnv crypto)
 
 instance
-  ( Crypto crypto,
+  ( CV crypto v,
     DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
+    KESignable crypto (BHBody crypto v),
     VRFSignable crypto Seed
   ) =>
-  STS (PRTCL crypto)
+  STS (PRTCL crypto v)
   where
   type
-    State (PRTCL crypto) =
+    State (PRTCL crypto v) =
       PrtclState crypto
 
   type
-    Signal (PRTCL crypto) =
-      BHeader crypto
+    Signal (PRTCL crypto v) =
+      BHeader crypto v
 
   type
-    Environment (PRTCL crypto) =
+    Environment (PRTCL crypto v) =
       PrtclEnv crypto
 
-  type BaseM (PRTCL crypto) = ShelleyBase
+  type BaseM (PRTCL crypto v) = ShelleyBase
 
-  data PredicateFailure (PRTCL crypto)
-    = OverlayFailure (PredicateFailure (OVERLAY crypto)) -- Subtransition Failures
+  data PredicateFailure (PRTCL crypto v)
+    = OverlayFailure (PredicateFailure (OVERLAY crypto v)) -- Subtransition Failures
     | UpdnFailure (PredicateFailure (UPDN crypto)) -- Subtransition Failures
     deriving (Generic)
 
@@ -140,18 +141,18 @@ instance
 
   transitionRules = [prtclTransition]
 
-deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Show (PredicateFailure (PRTCL crypto))
+deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Show (PredicateFailure (PRTCL crypto v))
 
-deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Eq (PredicateFailure (PRTCL crypto))
+deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Eq (PredicateFailure (PRTCL crypto v))
 
 prtclTransition ::
-  forall crypto.
-  ( Crypto crypto,
+  forall crypto v.
+  ( CV crypto v,
     DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
+    KESignable crypto (BHBody crypto v),
     VRFSignable crypto Seed
   ) =>
-  TransitionRule (PRTCL crypto)
+  TransitionRule (PRTCL crypto v)
 prtclTransition = do
   TRC
     ( PrtclEnv osched pd dms eta0,
@@ -171,7 +172,7 @@ prtclTransition = do
           slot
         )
   cs' <-
-    trans @(OVERLAY crypto) $
+    trans @(OVERLAY crypto v) $
       TRC (OverlayEnv osched pd dms eta0, cs, bh)
 
   pure $
@@ -180,52 +181,52 @@ prtclTransition = do
       etaV'
       etaC'
 
-instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (PRTCL crypto))
+instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (PRTCL crypto v))
 
 instance
-  ( Crypto crypto,
+  ( CV crypto v,
     DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
+    KESignable crypto (BHBody crypto v),
     VRFSignable crypto Seed
   ) =>
-  Embed (OVERLAY crypto) (PRTCL crypto)
+  Embed (OVERLAY crypto v) (PRTCL crypto v)
   where
   wrapFailed = OverlayFailure
 
 instance
-  ( Crypto crypto,
+  ( CV crypto v,
     DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
+    KESignable crypto (BHBody crypto v),
     VRFSignable crypto Seed
   ) =>
-  Embed (UPDN crypto) (PRTCL crypto)
+  Embed (UPDN crypto) (PRTCL crypto v)
   where
   wrapFailed = UpdnFailure
 
-data PrtlSeqFailure crypto
+data PrtlSeqFailure crypto v
   = WrongSlotIntervalPrtclSeq
       SlotNo
       -- ^ Last slot number.
       SlotNo
       -- ^ Current slot number.
   | WrongBlockNoPrtclSeq
-      (WithOrigin (LastAppliedBlock crypto))
+      (WithOrigin (LastAppliedBlock crypto v))
       -- ^ Last applied block.
       BlockNo
       -- ^ Current block number.
   | WrongBlockSequencePrtclSeq
-      (PrevHash crypto)
+      (PrevHash crypto v)
       -- ^ Last applied hash
-      (PrevHash crypto)
+      (PrevHash crypto v)
       -- ^ Current block's previous hash
   deriving (Show, Eq, Generic)
 
-instance Crypto crypto => NoUnexpectedThunks (PrtlSeqFailure crypto)
+instance Crypto crypto => NoUnexpectedThunks (PrtlSeqFailure crypto v)
 
 prtlSeqChecks ::
-  (MonadError (PrtlSeqFailure crypto) m, Crypto crypto) =>
-  WithOrigin (LastAppliedBlock crypto) ->
-  BHeader crypto ->
+  (MonadError (PrtlSeqFailure crypto v) m, CV crypto v) =>
+  WithOrigin (LastAppliedBlock crypto v) ->
+  BHeader crypto v ->
   m ()
 prtlSeqChecks lab bh =
   case lab of

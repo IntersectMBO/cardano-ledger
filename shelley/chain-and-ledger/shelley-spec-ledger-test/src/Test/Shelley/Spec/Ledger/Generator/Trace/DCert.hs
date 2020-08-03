@@ -150,7 +150,7 @@ genDCerts ::
       ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)])
     )
 genDCerts
-  ge@( GenEnv
+   ge@( GenEnv
          KeySpace_ {ksIndexedStakingKeys}
          Constants {maxCertsPerTx}
        )

@@ -276,7 +276,7 @@ genUpdate ::
   [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
   Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams ->
-  (UTxOState c, DPState c) ->
+  (UTxOState c v, DPState c) ->
   Gen (Maybe (Update c), [KeyPair 'Witness c])
 genUpdate
   c@(Constants {frequencyTxUpdates})
@@ -298,11 +298,12 @@ genUpdate
           pure (Nothing, [])
         else
           let wits = asWitness . cold <$> coreSigners
-           in QC.frequency
-                [ ( frequencyTxUpdates,
-                    (,wits) <$> genUpdateForNodes c s e genesisKeys pp
-                  ),
-                  ( 100 - frequencyTxUpdates,
-                    pure (Nothing, [])
-                  )
-                ]
+           in do (a,b) <- QC.frequency
+                           [ ( frequencyTxUpdates,
+                              (,wits) <$> genUpdateForNodes c s e genesisKeys pp
+                              ),
+                            ( 100 - frequencyTxUpdates,
+                             pure (Nothing, [])
+                            )
+                           ]
+                 pure(a,b)

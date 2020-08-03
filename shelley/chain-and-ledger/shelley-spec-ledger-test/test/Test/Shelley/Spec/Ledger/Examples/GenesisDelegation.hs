@@ -80,14 +80,14 @@ aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Crypto c => UTxO c
+initUTxO :: Crypto c => UTxO c Coin
 initUTxO =
   genesisCoins
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStGenesisDeleg :: forall c. Crypto c => ChainState c
+initStGenesisDeleg :: forall c. Crypto c => ChainState c Coin
 initStGenesisDeleg = initSt initUTxO
 
 --
@@ -111,7 +111,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin - feeTx1
 
-txbodyEx1 :: Crypto c => TxBody c
+txbodyEx1 :: Crypto c => TxBody c Coin
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -131,7 +131,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: forall c. Mock c => Tx c
+txEx1 :: forall c. (Mock c) => Tx c Coin
 txEx1 =
   Tx
     txbodyEx1
@@ -145,7 +145,7 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. ExMock c => Block c
+blockEx1 :: forall c. (ExMock c) => Block c Coin
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -153,7 +153,7 @@ blockEx1 =
     [txEx1]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @c)
+    (nonce0 @c @Coin)
     (NatNonce 1)
     zero
     0
@@ -166,7 +166,7 @@ newGenDeleg =
     GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH
   )
 
-expectedStEx1 :: forall c. ExMock c => ChainState c
+expectedStEx1 :: forall c . (ExMock c) => ChainState c Coin
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
@@ -178,14 +178,14 @@ expectedStEx1 =
 -- === Block 1, Slot 10, Epoch 0
 --
 -- In the first block, stage a new future genesis delegate
-genesisDelegation1 :: ExMock c => CHAINExample c
+genesisDelegation1 :: (ExMock c) => CHAINExample c Coin
 genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStEx1)
 
 --
 -- Block 2, Slot 50, Epoch 0
 --
 
-blockEx2 :: forall c. ExMock c => Block c
+blockEx2 :: forall c. (ExMock c) => Block c Coin
 blockEx2 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
@@ -193,14 +193,14 @@ blockEx2 =
     []
     (SlotNo 50)
     (BlockNo 2)
-    (nonce0 @c)
+    (nonce0 @c @Coin)
     (NatNonce 2)
     zero
     2
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 50) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall c. ExMock c => ChainState c
+expectedStEx2 :: forall c . (ExMock c) => ChainState c Coin
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c))
     . C.newLab blockEx2
@@ -211,7 +211,7 @@ expectedStEx2 =
 -- === Block 2, Slot 50, Epoch 0
 --
 -- Submit an empty block to trigger adopting the genesis delegation.
-genesisDelegation2 :: ExMock c => CHAINExample c
+genesisDelegation2 :: (ExMock c) => CHAINExample c Coin
 genesisDelegation2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --

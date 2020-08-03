@@ -13,7 +13,7 @@ import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Nonce)
 import Shelley.Spec.Ledger.BlockChain (Block)
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
+import Shelley.Spec.Ledger.Coin(Coin)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.Slot
@@ -21,6 +21,7 @@ import Shelley.Spec.Ledger.Slot
     SlotNo (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Shelley.Spec.Ledger.Value(CV)  -- type CV c v = (Crypto c,Val v)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..))
 import Test.Shelley.Spec.Ledger.Examples.Combinators
@@ -42,10 +43,10 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Utils (getBlockNonce)
 
-initStEx1 :: forall c. Crypto c => ChainState c
+initStEx1 :: forall c v. CV c v => ChainState c v
 initStEx1 = initSt (UTxO Map.empty)
 
-blockEx1 :: forall c. (HasCallStack, ExMock c) => Block c
+blockEx1 :: forall c. (HasCallStack, ExMock c) => Block c Coin
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -53,17 +54,18 @@ blockEx1 =
     []
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @c)
+    (nonce0 @c @Coin)
     (NatNonce 1)
     zero
     0
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
 
+
 blockNonce :: forall c. (HasCallStack, ExMock c) => Nonce
 blockNonce = getBlockNonce (blockEx1 @c)
 
-expectedStEx1 :: forall c. ExMock c => ChainState c
+expectedStEx1 :: forall c. (ExMock c) => ChainState c Coin
 expectedStEx1 =
   (evolveNonceUnfrozen (blockNonce @c))
     . (newLab blockEx1)
@@ -76,5 +78,5 @@ expectedStEx1 =
 --
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
-exEmptyBlock :: ExMock c => CHAINExample c
+exEmptyBlock ::(ExMock c) => CHAINExample c Coin
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

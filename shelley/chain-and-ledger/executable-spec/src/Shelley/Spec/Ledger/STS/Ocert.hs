@@ -22,28 +22,28 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert
+import Shelley.Spec.Ledger.Value
 
-data OCERT crypto
+data OCERT crypto v
 
 instance
-  ( Crypto crypto,
+  ( CV crypto v,
     DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto)
+    KESignable crypto (BHBody crypto v)
   ) =>
-  STS (OCERT crypto)
+  STS (OCERT crypto v)
   where
   type
-    State (OCERT crypto) =
+    State (OCERT crypto v) =
       Map (KeyHash 'BlockIssuer crypto) Word64
   type
-    Signal (OCERT crypto) =
-      BHeader crypto
-  type Environment (OCERT crypto) = OCertEnv crypto
-  type BaseM (OCERT crypto) = ShelleyBase
-  data PredicateFailure (OCERT crypto)
+    Signal (OCERT crypto v) =
+      BHeader crypto v
+  type Environment (OCERT crypto v) = OCertEnv crypto
+  type BaseM (OCERT crypto v) = ShelleyBase
+  data PredicateFailure (OCERT crypto v)
     = KESBeforeStartOCERT
         !KESPeriod -- OCert Start KES Period
         !KESPeriod -- Current KES Period
@@ -69,14 +69,14 @@ instance
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (OCERT crypto))
+instance NoUnexpectedThunks (PredicateFailure (OCERT crypto v))
 
 ocertTransition ::
-  ( Crypto crypto,
+  ( CV crypto v,
     DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto)
+    KESignable crypto (BHBody crypto v)
   ) =>
-  TransitionRule (OCERT crypto)
+  TransitionRule (OCERT crypto v)
 ocertTransition =
   judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
     let OCert vk_hot n c0@(KESPeriod c0_) tau = bheaderOCert bhb

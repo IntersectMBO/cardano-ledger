@@ -25,7 +25,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
-import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
+import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -46,7 +46,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address
@@ -57,7 +56,6 @@ import Shelley.Spec.Ledger.Address
   )
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
@@ -92,8 +90,9 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     txup,
   )
+import Shelley.Spec.Ledger.Value
 
-data UTXO crypto
+data UTXO crypto v
 
 data UtxoEnv crypto
   = UtxoEnv
@@ -104,16 +103,16 @@ data UtxoEnv crypto
   deriving (Show)
 
 instance
-  (Crypto crypto) =>
-  STS (UTXO crypto)
+  CV crypto v =>
+  STS (UTXO crypto v)
   where
-  type State (UTXO crypto) = UTxOState crypto
-  type Signal (UTXO crypto) = Tx crypto
-  type Environment (UTXO crypto) = UtxoEnv crypto
-  type BaseM (UTXO crypto) = ShelleyBase
-  data PredicateFailure (UTXO crypto)
+  type State (UTXO crypto v) = UTxOState crypto v
+  type Signal (UTXO crypto v) = Tx crypto v
+  type Environment (UTXO crypto v) = UtxoEnv crypto
+  type BaseM (UTXO crypto v) = ShelleyBase
+  data PredicateFailure (UTXO crypto v)
     = BadInputsUTxO
-        !(Set (TxIn crypto)) -- The bad transaction inputs
+        !(Set (TxIn crypto v)) -- The bad transaction inputs
     | ExpiredUTxO
         !SlotNo -- transaction's time to live
         !SlotNo -- current slot
@@ -125,8 +124,8 @@ instance
         !Coin -- the minimum fee for this transaction
         !Coin -- the fee supplied in this transaction
     | ValueNotConservedUTxO
-        !Coin -- the Coin consumed by this transaction
-        !Coin -- the Coin produced by this transaction
+        !v -- the Coin consumed by this transaction
+        !v -- the Coin produced by this transaction
     | WrongNetwork
         !Network -- the expected network id
         !(Set (Addr crypto)) -- the set of addresses with incorrect network IDs
@@ -134,10 +133,11 @@ instance
         !Network -- the expected network id
         !(Set (RewardAcnt crypto)) -- the set of reward addresses with incorrect network IDs
     | OutputTooSmallUTxO
-        ![TxOut crypto] -- list of supplied transaction outputs that are too small
+        ![TxOut crypto v] -- list of supplied transaction outputs that are too small
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
     | OutputBootAddrAttrsTooBig
-        ![TxOut crypto] -- list of supplied bad transaction outputs
+        ![TxOut crypto v] -- list of supplied bad transaction outputs
+    | ScriptsEmbargoed -- blocking use of scripts for the moment
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -159,20 +159,20 @@ instance
       PostCondition
         "Deposit pot must not be negative (post)"
         (\_ st' -> _deposited st' >= 0),
-      let utxoBalance us = _deposited us + _fees us + balance (_utxo us)
+      let utxoBalance us = vplus (vinject $ _deposited us + _fees us) (balance (_utxo us))
           withdrawals txb = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txb
        in PostCondition
             "Should preserve ADA in the UTxO state"
             ( \(TRC (_, us, tx)) us' ->
-                utxoBalance us + withdrawals (_body tx) == utxoBalance us'
+                vplus (utxoBalance us) (vinject $ withdrawals (_body tx)) == utxoBalance us'
             )
     ]
 
-instance NoUnexpectedThunks (PredicateFailure (UTXO crypto))
+instance (CV crypto v) => NoUnexpectedThunks (PredicateFailure (UTXO crypto v))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (UTXO crypto))
+  (CV crypto v) =>
+  ToCBOR (PredicateFailure (UTXO crypto v))
   where
   toCBOR = \case
     BadInputsUTxO ins ->
@@ -211,10 +211,12 @@ instance
     OutputBootAddrAttrsTooBig outs ->
       encodeListLen 2 <> toCBOR (10 :: Word8)
         <> encodeFoldable outs
+    ScriptsEmbargoed ->
+      encodeListLen 1 <> toCBOR (11 :: Word8)
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (UTXO crypto))
+  (CV crypto v) =>
+  FromCBOR (PredicateFailure (UTXO crypto v))
   where
   fromCBOR =
     decodeRecordSum "PredicateFailureUTXO" $
@@ -256,17 +258,18 @@ instance
         10 -> do
           outs <- decodeList fromCBOR
           pure (2, OutputBootAddrAttrsTooBig outs)
+        11 -> pure (1, ScriptsEmbargoed)
         k -> invalidKey k
 
-initialLedgerState :: InitialRule (UTXO crypto)
+initialLedgerState :: InitialRule (UTXO crypto v)
 initialLedgerState = do
   IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
-  forall crypto.
-  Crypto crypto =>
-  TransitionRule (UTXO crypto)
+  forall crypto v.
+  CV crypto v =>
+  TransitionRule (UTXO crypto v)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo deposits' fees ppup = u
@@ -301,10 +304,17 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputs = Set.toList (eval (rng (txouts txb)))
+  -- TODO check voper
+  let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
-      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < minUTxOValue]
+      outputsTooSmall = [out | out@(TxOut _ vl) <- outputs, (voper Gt) (vinject $ scaleVl vl minUTxOValue) vl]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
+
+  -- TODO add forge
+  -- TODO add forge errors
+  -- let (Value vls) = _forge txb
+  -- let cids = Map.keys vls
+  -- all (adaID /=) cids  ?! (ForgingAda (Value vls))
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.
@@ -329,7 +339,7 @@ utxoInductive = do
       }
 
 instance
-  Crypto crypto =>
-  Embed (PPUP crypto) (UTXO crypto)
+  CV crypto v =>
+  Embed (PPUP crypto) (UTXO crypto v)
   where
   wrapFailed = UpdateFailure

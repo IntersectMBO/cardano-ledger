@@ -28,10 +28,8 @@ import Control.State.Transition
   )
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
@@ -44,8 +42,9 @@ import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx, TxBody)
+import Shelley.Spec.Ledger.Value
 
-data LEDGERS crypto
+data LEDGERS crypto v
 
 data LedgersEnv = LedgersEnv
   { ledgersSlotNo :: SlotNo,
@@ -54,49 +53,49 @@ data LedgersEnv = LedgersEnv
   }
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  STS (LEDGERS crypto)
+  STS (LEDGERS crypto v)
   where
-  type State (LEDGERS crypto) = LedgerState crypto
-  type Signal (LEDGERS crypto) = Seq (Tx crypto)
-  type Environment (LEDGERS crypto) = LedgersEnv
-  type BaseM (LEDGERS crypto) = ShelleyBase
-  data PredicateFailure (LEDGERS crypto)
-    = LedgerFailure (PredicateFailure (LEDGER crypto)) -- Subtransition Failures
+  type State (LEDGERS crypto v) = LedgerState crypto v
+  type Signal (LEDGERS crypto v) = Seq (Tx crypto v)
+  type Environment (LEDGERS crypto v) = LedgersEnv
+  type BaseM (LEDGERS crypto v) = ShelleyBase
+  data PredicateFailure (LEDGERS crypto v)
+    = LedgerFailure (PredicateFailure (LEDGER crypto v)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyLedgerState]
   transitionRules = [ledgersTransition]
 
-instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (LEDGERS crypto))
+instance (CV crypto v) => NoUnexpectedThunks (PredicateFailure (LEDGERS crypto v))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (LEDGERS crypto))
+  (CV crypto v) =>
+  ToCBOR (PredicateFailure (LEDGERS crypto v))
   where
   toCBOR (LedgerFailure e) = toCBOR e
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (LEDGERS crypto))
+  (CV crypto v) =>
+  FromCBOR (PredicateFailure (LEDGERS crypto v))
   where
   fromCBOR = LedgerFailure <$> fromCBOR
 
 ledgersTransition ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  forall crypto v.
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  TransitionRule (LEDGERS crypto)
+  TransitionRule (LEDGERS crypto v)
 ledgersTransition = do
   TRC (LedgersEnv slot pp account, ls, txwits) <- judgmentContext
   let (u, dp) = (_utxoState ls, _delegationState ls)
   (u'', dp'') <-
     foldM
       ( \(u', dp') (ix, tx) ->
-          trans @(LEDGER crypto) $
+          trans @(LEDGER crypto v) $
             TRC (LedgerEnv slot ix pp account, (u', dp'), tx)
       )
       (u, dp)
@@ -106,9 +105,9 @@ ledgersTransition = do
   pure $ LedgerState u'' dp''
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  Embed (LEDGER crypto) (LEDGERS crypto)
+  Embed (LEDGER crypto v) (LEDGERS crypto v)
   where
   wrapFailed = LedgerFailure

@@ -73,6 +73,7 @@ import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
   ( PoolParams (..),
   )
+import Shelley.Spec.Ledger.Value(CV,vmodify)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes ()
 -- Used grudgingly for keys.
 import Unsafe.Coerce (unsafeCoerce)
@@ -105,14 +106,14 @@ mutateCoin lower upper (Coin val) =
   Coin . fromIntegral <$> mutateNat lower upper (fromIntegral val)
 
 -- | Mutator of 'Tx' which mutates the contained transaction
-mutateTx :: Crypto c => Tx c -> Gen (Tx c)
+mutateTx :: CV c v => Tx c v -> Gen (Tx c v)
 mutateTx txwits = do
   body' <- mutateTxBody $ _body txwits
   pure $ Tx body' (_witnessSet txwits) SNothing
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.
-mutateTxBody :: Crypto c => TxBody c -> Gen (TxBody c)
+mutateTxBody :: CV c v => TxBody c v -> Gen (TxBody c v)
 mutateTxBody tx = do
   inputs' <- mutateInputs $ Set.toList (_inputs tx)
   outputs' <- mutateOutputs $ _outputs tx
@@ -128,7 +129,7 @@ mutateTxBody tx = do
       SNothing
 
 -- | Mutator for a list of 'TxIn'.
-mutateInputs :: Crypto c => [TxIn c] -> Gen [TxIn c]
+mutateInputs :: CV c v => [TxIn c v] -> Gen [TxIn c v]
 mutateInputs [] = pure []
 mutateInputs (txin : txins) = do
   mtxin <- mutateInput txin
@@ -138,13 +139,13 @@ mutateInputs (txin : txins) = do
 
 -- | Mutator for a single 'TxIn', which mutates the index of the output to
 -- spend.
-mutateInput :: Crypto c => TxIn c -> Gen (TxIn c)
+mutateInput :: CV c v => TxIn c v -> Gen (TxIn c v)
 mutateInput (TxIn idx index) = do
   index' <- mutateNat 0 100 index
   pure $ TxIn idx index'
 
 -- | Mutator for a list of 'TxOut'.
-mutateOutputs :: Crypto c => StrictSeq (TxOut c) -> Gen (StrictSeq (TxOut c))
+mutateOutputs :: (CV c v) => StrictSeq (TxOut c v) -> Gen (StrictSeq (TxOut c v))
 mutateOutputs StrictSeq.Empty = pure StrictSeq.Empty
 mutateOutputs (txout :<| txouts) = do
   mtxout <- mutateOutput txout
@@ -154,9 +155,9 @@ mutateOutputs (txout :<| txouts) = do
 
 -- | Mutator for a single 'TxOut' which mutates the associated 'Coin' value of
 -- the output.
-mutateOutput :: Crypto c => TxOut c -> Gen (TxOut c)
+mutateOutput :: CV c v => TxOut c v -> Gen (TxOut c v)
 mutateOutput (TxOut addr c) = do
-  c' <- mutateCoin 0 100 c
+  c' <- vmodify (mutateCoin 0 100) c
   pure $ TxOut addr c'
 
 -- Mutators for 'DelegationData'

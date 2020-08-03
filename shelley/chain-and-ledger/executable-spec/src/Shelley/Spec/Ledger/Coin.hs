@@ -16,6 +16,7 @@ import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (pack)
+import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Quiet
@@ -31,7 +32,8 @@ newtype Coin = Coin {unCoin :: Integer}
       Generic,
       ToJSON,
       FromJSON,
-      NFData
+      NFData,
+      Typeable
     )
   deriving (Show) via Quiet Coin
 
@@ -46,6 +48,13 @@ rationalToCoinViaFloor r = Coin . floor $ r
 
 isValidCoinValue :: Integer -> Bool
 isValidCoinValue c = 0 <= c && c <= (fromIntegral (maxBound :: Word64))
+
+instance Semigroup Coin where
+  (<>) = (+)
+
+instance Monoid Coin where
+  mempty = Coin 0
+  mappend = (<>)
 
 instance ToCBOR Coin where
   toCBOR (Coin c) =

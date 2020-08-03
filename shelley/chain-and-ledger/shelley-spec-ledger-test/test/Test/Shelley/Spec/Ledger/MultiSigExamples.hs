@@ -82,6 +82,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
+import Shelley.Spec.Ledger.Value(CV)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
   )
@@ -139,7 +140,7 @@ aliceAndBobOrCarlOrDaria p =
       RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: Crypto c => [(Addr c, Coin)] -> TxBody c
+initTxBody :: Crypto c => [(Addr c, Coin)] -> TxBody c Coin
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
@@ -151,7 +152,7 @@ initTxBody addrs =
     SNothing
     SNothing
 
-makeTxBody :: Crypto c => [TxIn c] -> [(Addr c, Coin)] -> Wdrl c -> TxBody c
+makeTxBody :: Crypto c => [TxIn c Coin] -> [(Addr c, Coin)] -> Wdrl c -> TxBody c Coin
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
@@ -163,7 +164,11 @@ makeTxBody inp addrCs wdrl =
     SNothing
     SNothing
 
-makeTx :: Mock c => TxBody c -> [KeyPair 'Witness c] -> Map (ScriptHash c) (MultiSig c) -> Maybe MetaData -> Tx c
+makeTx :: forall c v. (Mock c,CV c v) =>
+           TxBody c v ->
+           [KeyPair 'Witness c] ->
+           Map (ScriptHash c) (MultiSig c) ->
+           Maybe MetaData -> Tx c v
 makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
@@ -178,7 +183,7 @@ aliceInitCoin = 10000
 bobInitCoin :: Coin
 bobInitCoin = 1000
 
-genesis :: Crypto c => LedgerState c
+genesis :: Crypto c => LedgerState c Coin
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty
@@ -200,7 +205,7 @@ initialUTxOState ::
   Mock c =>
   Coin ->
   [(MultiSig c, Coin)] ->
-  (TxId c, Either [[PredicateFailure (UTXOW c)]] (UTxOState c))
+  (TxId c Coin, Either [[PredicateFailure (UTXOW c Coin)]] (UTxOState c Coin))
 initialUTxOState aliceKeep msigs =
   let addresses =
         [(Cast.aliceAddr, aliceKeep) | aliceKeep > 0]
@@ -222,7 +227,7 @@ initialUTxOState aliceKeep msigs =
               Nothing
        in ( txid $ _body tx,
             runShelleyBase $
-              applySTSTest @(UTXOW c)
+              applySTSTest @(UTXOW c Coin)
                 ( TRC
                     ( UtxoEnv
                         (SlotNo 0)
@@ -251,7 +256,7 @@ applyTxWithScript ::
   Wdrl c ->
   Coin ->
   [KeyPair 'Witness c] ->
-  Either [[PredicateFailure (UTXOW c)]] (UTxOState c)
+  Either [[PredicateFailure (UTXOW c Coin)]] (UTxOState c Coin)
 applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
@@ -281,7 +286,7 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         Nothing
     utxoSt' =
       runShelleyBase $
-        applySTSTest @(UTXOW c)
+        applySTSTest @(UTXOW c Coin)
           ( TRC
               ( UtxoEnv
                   (SlotNo 0)

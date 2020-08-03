@@ -58,7 +58,7 @@ import Shelley.Spec.Ledger.API
     UTXO,
     UTXOW,
   )
-import Shelley.Spec.Ledger.Coin (pattern Coin)
+import Shelley.Spec.Ledger.Coin (Coin,pattern Coin)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash (..),
     KeyRole (..),
@@ -100,6 +100,7 @@ import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
 import qualified Test.Shelley.Spec.Ledger.Rules.TestUtxo as TestUtxo
 import qualified Test.Shelley.Spec.Ledger.Rules.TestUtxow as TestUtxow
 import Test.Shelley.Spec.Ledger.Utils (runShelleyBase, testGlobals)
+import Test.Shelley.Spec.Ledger.Serialisation.Generators() -- Arbitrary Coin instance
 
 ------------------------------
 -- Constants for Properties --
@@ -299,7 +300,7 @@ prop_MIRValuesEndUpInMap =
 
 forAllLedgerTrace ::
   (Testable prop) =>
-  (Trace (LEDGER C) -> prop) ->
+  (Trace (LEDGER C Coin) -> prop) ->
   Property
 forAllLedgerTrace prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
@@ -310,8 +311,8 @@ forAllLedgerTrace prop =
 
 -- | Transform LEDGER `sourceSignalTargets`s to DELEGS ones.
 ledgerToDelegsSsts ::
-  SourceSignalTarget (LEDGER C) ->
-  (Wdrl C, SourceSignalTarget (DELEGS C))
+  SourceSignalTarget (LEDGER C Coin) ->
+  (Wdrl C, SourceSignalTarget (DELEGS C Coin))
 ledgerToDelegsSsts (SourceSignalTarget (_, dpSt) (_, dpSt') tx) =
   ( (_wdrls . _body) tx,
     SourceSignalTarget dpSt dpSt' ((StrictSeq.getSeq . _certs . _body) tx)
@@ -319,16 +320,16 @@ ledgerToDelegsSsts (SourceSignalTarget (_, dpSt) (_, dpSt') tx) =
 
 -- | Transform LEDGER to UTXO `SourceSignalTargets`s
 ledgerToUtxoSsts ::
-  SourceSignalTarget (LEDGER C) ->
-  SourceSignalTarget (UTXO C)
+  SourceSignalTarget (LEDGER C Coin) ->
+  SourceSignalTarget (UTXO C Coin)
 ledgerToUtxoSsts (SourceSignalTarget (utxoSt, _) (utxoSt', _) tx) =
   (SourceSignalTarget utxoSt utxoSt' tx)
 
 -- | Transform LEDGER to UTXOW `SourceSignalTargets`s
 ledgerToUtxowSsts ::
-  SourceSignalTarget (LEDGER C) ->
+  SourceSignalTarget (LEDGER C Coin) ->
   ( Map (KeyHash 'StakePool C) (PoolParams C),
-    SourceSignalTarget (UTXOW C)
+    SourceSignalTarget (UTXOW C Coin)
   )
 ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
   ( (_pParams . _pstate) delegSt,
@@ -338,7 +339,7 @@ ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
 -- | Transform a LEDGER Trace to a POOL Trace by extracting the certificates
 -- from the LEDGER transactions and then reconstructing a new POOL trace from
 -- those certificates.
-ledgerToPoolTrace :: Trace (LEDGER C) -> Trace (POOL C)
+ledgerToPoolTrace :: Trace (LEDGER C Coin) -> Trace (POOL C)
 ledgerToPoolTrace ledgerTr =
   runShelleyBase $
     Trace.closure @(POOL C) poolEnv poolSt0 (certs txs)
@@ -355,7 +356,7 @@ ledgerToPoolTrace ledgerTr =
 -- | Transform a LEDGER Trace to a DELEG Trace by extracting the certificates
 -- from the LEDGER transactions and then reconstructing a new DELEG trace from
 -- those certificates.
-ledgerToDelegTrace :: Trace (LEDGER C) -> Trace (DELEG C)
+ledgerToDelegTrace :: Trace (LEDGER C Coin) -> Trace (DELEG C)
 ledgerToDelegTrace ledgerTr =
   runShelleyBase $
     Trace.closure @(DELEG C) delegEnv delegSt0 (certs txs)

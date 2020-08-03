@@ -91,14 +91,14 @@ aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Crypto c => UTxO c
+initUTxO :: Crypto c => UTxO c Coin
 initUTxO =
   genesisCoins
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStMIR :: forall c. Crypto c => Coin -> ChainState c
+initStMIR :: forall c. Crypto c => Coin -> ChainState c Coin
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt initUTxO
@@ -126,7 +126,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin - (feeTx1 + _keyDeposit ppEx)
 
-txbodyEx1 :: Crypto c => MIRPot -> TxBody c
+txbodyEx1 :: Crypto c => MIRPot -> TxBody c Coin
 txbodyEx1 pot =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -151,7 +151,7 @@ sufficientMIRWits = mirWits [0 .. 4]
 insufficientMIRWits :: Mock c => [KeyPair 'Witness c]
 insufficientMIRWits = mirWits [0 .. 3]
 
-txEx1 :: Mock c => [KeyPair 'Witness c] -> MIRPot -> Tx c
+txEx1 :: Mock c => [KeyPair 'Witness c] -> MIRPot -> Tx c Coin
 txEx1 wits pot =
   Tx
     (txbodyEx1 pot)
@@ -163,7 +163,7 @@ txEx1 wits pot =
       }
     SNothing
 
-blockEx1' :: forall c. ExMock c => [KeyPair 'Witness c] -> MIRPot -> Block c
+blockEx1' :: forall c. ExMock c => [KeyPair 'Witness c] -> MIRPot -> Block c Coin
 blockEx1' wits pot =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -171,17 +171,17 @@ blockEx1' wits pot =
     [txEx1 wits pot]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @c)
+    (nonce0 @c @Coin)
     (NatNonce 1)
     zero
     0
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
 
-blockEx1 :: forall c. ExMock c => MIRPot -> Block c
+blockEx1 :: forall c. ExMock c => MIRPot -> Block c Coin
 blockEx1 = blockEx1' sufficientMIRWits
 
-expectedStEx1' :: forall c. ExMock c => [KeyPair 'Witness c] -> MIRPot -> ChainState c
+expectedStEx1' :: forall c. ExMock c => [KeyPair 'Witness c] -> MIRPot -> ChainState c Coin
 expectedStEx1' wits pot =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1' @c wits pot))
     . C.newLab (blockEx1' wits pot)
@@ -191,13 +191,13 @@ expectedStEx1' wits pot =
     . C.mir Cast.aliceSHK pot aliceMIRCoin
     $ initStMIR 1000
 
-expectedStEx1 :: forall c. ExMock c => MIRPot -> ChainState c
+expectedStEx1 :: forall c. ExMock c => MIRPot -> ChainState c Coin
 expectedStEx1 = expectedStEx1' sufficientMIRWits
 
 -- === Block 1, Slot 10, Epoch 0, Successful MIR Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
-mir1 :: ExMock c => MIRPot -> CHAINExample c
+mir1 :: ExMock c => MIRPot -> CHAINExample c Coin
 mir1 pot =
   CHAINExample
     (initStMIR 1000)
@@ -207,7 +207,7 @@ mir1 pot =
 -- === Block 1, Slot 10, Epoch 0, Insufficient MIR Wits, Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
-mirFailWits :: ExMock c => MIRPot -> CHAINExample c
+mirFailWits :: ExMock c => MIRPot -> CHAINExample c Coin
 mirFailWits pot =
   CHAINExample
     (initStMIR 1000)
@@ -230,7 +230,7 @@ mirFailWits pot =
 -- === Block 1, Slot 10, Epoch 0, Insufficient MIR funds, Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
-mirFailFunds :: ExMock c => MIRPot -> Coin -> Coin -> Coin -> CHAINExample c
+mirFailFunds :: ExMock c => MIRPot -> Coin -> Coin -> Coin -> CHAINExample c Coin
 mirFailFunds pot treasury llNeeded llReceived =
   CHAINExample
     (initStMIR treasury)
@@ -254,7 +254,7 @@ mirFailFunds pot treasury llNeeded llReceived =
 -- Block 2, Slot 50, Epoch 0
 --
 
-blockEx2 :: forall c. ExMock c => MIRPot -> Block c
+blockEx2 :: forall c. ExMock c => MIRPot -> Block c Coin
 blockEx2 pot =
   mkBlockFakeVRF
     (bhHash $ bheader (blockEx1 pot))
@@ -262,14 +262,14 @@ blockEx2 pot =
     []
     (SlotNo 50)
     (BlockNo 2)
-    (nonce0 @c)
+    (nonce0 @c @Coin)
     (NatNonce 2)
     zero
     2
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 50) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall c. ExMock c => MIRPot -> ChainState c
+expectedStEx2 :: forall c. ExMock c => MIRPot -> ChainState c Coin
 expectedStEx2 pot =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c pot))
     . C.newLab (blockEx2 pot)
@@ -279,7 +279,7 @@ expectedStEx2 pot =
 -- === Block 2, Slot 50, Epoch 0
 --
 -- Submit an empty block to create an empty reward update.
-mir2 :: ExMock c => MIRPot -> CHAINExample c
+mir2 :: ExMock c => MIRPot -> CHAINExample c Coin
 mir2 pot = CHAINExample (expectedStEx1 pot) (blockEx2 pot) (Right $ expectedStEx2 pot)
 
 --
@@ -289,7 +289,7 @@ mir2 pot = CHAINExample (expectedStEx1 pot) (blockEx2 pot) (Right $ expectedStEx
 epoch1Nonce :: forall c. ExMock c => MIRPot -> Nonce
 epoch1Nonce pot = chainCandidateNonce (expectedStEx2 @c pot)
 
-blockEx3 :: forall c. ExMock c => MIRPot -> Block c
+blockEx3 :: forall c. ExMock c => MIRPot -> Block c Coin
 blockEx3 pot =
   mkBlockFakeVRF
     (bhHash $ bheader (blockEx2 pot))
@@ -304,7 +304,7 @@ blockEx3 pot =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 110) 0 (KESPeriod 0))
 
-expectedStEx3 :: forall c. ExMock c => MIRPot -> ChainState c
+expectedStEx3 :: forall c. ExMock c => MIRPot -> ChainState c Coin
 expectedStEx3 pot =
   C.newEpoch (blockEx3 pot)
     . C.newSnapshot emptySnapShot feeTx1
@@ -315,7 +315,7 @@ expectedStEx3 pot =
 -- === Block 3, Slot 110, Epoch 1
 --
 -- Submit an empty block in the next epoch to apply the MIR rewards.
-mir3 :: ExMock c => MIRPot -> CHAINExample c
+mir3 :: ExMock c => MIRPot -> CHAINExample c Coin
 mir3 pot = CHAINExample (expectedStEx2 pot) (blockEx3 pot) (Right $ expectedStEx3 pot)
 
 --

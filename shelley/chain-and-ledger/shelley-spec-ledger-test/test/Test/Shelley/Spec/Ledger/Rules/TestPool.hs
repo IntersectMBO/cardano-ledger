@@ -25,6 +25,7 @@ import Shelley.Spec.Ledger.API
     POOL,
   )
 import Shelley.Spec.Ledger.BaseTypes ((==>))
+import Shelley.Spec.Ledger.Coin(Coin)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
 import Shelley.Spec.Ledger.Keys
@@ -97,7 +98,7 @@ rewardZeroAfterReg ssts =
 -- epoch interval, then the pool key will be added to the retiring map but stays
 -- in the set of stake pools.
 poolRetireInEpoch ::
-  Environment (LEDGER C) ->
+  Environment (LEDGER C Coin) ->
   [SourceSignalTarget (POOL C)] ->
   Property
 poolRetireInEpoch env ssts =

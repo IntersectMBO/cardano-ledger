@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 module Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis where
 
@@ -43,9 +44,16 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.Value
 import Test.Shelley.Spec.Ledger.Utils (mkHash)
 
-genShelleyGenesis :: Crypto c => Gen (ShelleyGenesis c)
+-- TODO this is temporary until I look through the Hedgehog docs
+class Val t => Generatable t where
+  generate :: Gen t
+
+type CVG crypto v = (CV crypto v, Generatable v)
+
+genShelleyGenesis :: CVG crypto v => Gen (ShelleyGenesis crypto v)
 genShelleyGenesis =
   ShelleyGenesis
     <$> genUTCTime
@@ -190,6 +198,9 @@ genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 500)
 genMinUTxOValue :: Gen Coin
 genMinUTxOValue = Coin <$> Gen.integral (Range.linear 1 1000)
 
+instance Generatable Coin where
+  generate = genMinUTxOValue
+
 genNonce :: Gen Nonce
 genNonce =
   Gen.choice
@@ -235,7 +246,7 @@ genVRFKeyPair = do
   where
     seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF c)))
 
-genFundsList :: Crypto c => Gen [(Addr c, Coin)]
+genFundsList :: CVG crypto v => Gen [(Addr crypto, v)]
 genFundsList = Gen.list (Range.linear 1 100) genGenesisFundPair
 
 genSeed :: Int -> Gen Seed
@@ -264,9 +275,9 @@ genKeyPair = do
     seedSize :: Int
     seedSize = fromIntegral (seedSizeDSIGN (Proxy :: Proxy (DSIGN c)))
 
-genGenesisFundPair :: Crypto c => Gen (Addr c, Coin)
+genGenesisFundPair :: (CVG c v) => Gen (Addr c, v)
 genGenesisFundPair =
-  (,) <$> genAddress <*> genCoin
+  (,) <$> genAddress <*> generate
 
 genAddress :: Crypto c => Gen (Addr c)
 genAddress = do

@@ -45,6 +45,7 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxData (PoolParams, TxOut (TxOutCompact))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Shelley.Spec.Ledger.Value
 
 -- | Blocks made
 newtype BlocksMade crypto = BlocksMade
@@ -72,19 +73,21 @@ newtype Stake crypto = Stake
 
 -- | Sum up all the Coin for each staking Credential
 aggregateUtxoCoinByCredential ::
-  Crypto crypto =>
+  forall crypto v.
+  CV crypto v =>
   Map Ptr (Credential 'Staking crypto) ->
-  UTxO crypto ->
+  UTxO crypto v ->
   Map (Credential 'Staking crypto) Coin ->
   Map (Credential 'Staking crypto) Coin
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldr accum initial u
   where
-    accum (TxOutCompact addr c) ans = case deserialiseAddrStakeRef addr of
+    accum :: TxOut crypto v -> Map (Credential 'Staking crypto) Coin -> Map (Credential 'Staking crypto) Coin
+    accum (TxOutCompact addr vl) ans = case deserialiseAddrStakeRef addr of
       Just (StakeRefPtr p) -> case Map.lookup p ptrs of
-        Just cred -> Map.insertWith (+) cred (fromIntegral c) ans
+        Just cred -> Map.insertWith (+) cred (vcoin vl) ans
         Nothing -> ans
-      Just (StakeRefBase hk) -> Map.insertWith (+) hk (fromIntegral c) ans
+      Just (StakeRefBase hk) -> Map.insertWith (+) hk (vcoin vl) ans
       _other -> ans
 
 -- | Get stake of one pool

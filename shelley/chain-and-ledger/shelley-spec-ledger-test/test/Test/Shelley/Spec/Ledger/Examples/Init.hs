@@ -25,7 +25,6 @@ import Shelley.Spec.Ledger.BlockChain
     hashHeaderToNonce,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
@@ -41,6 +40,7 @@ import Shelley.Spec.Ledger.Slot
     SlotNo (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
+import Shelley.Spec.Ledger.Value(CV,vcoin)  -- type CV c v = (Crypto c,Val v)
 import Test.Shelley.Spec.Ledger.Examples.Federation (genDelegs, overlayScheduleFor)
 import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash, unsafeMkUnitInterval)
 
@@ -84,26 +84,28 @@ ppEx =
 -- When this transition actually occurs,
 -- the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork.
-lastByronHeaderHash :: forall c. Crypto c => HashHeader c
+lastByronHeaderHash :: forall c v. CV c v => HashHeader c v
 lastByronHeaderHash = HashHeader $ mkHash 0
 
 -- | === Initial Nonce
-nonce0 :: forall c. Crypto c => Nonce
-nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
+nonce0 :: forall c v . CV c v => Nonce
+nonce0 = hashHeaderToNonce (lastByronHeaderHash @c @v)
+
+
 
 -- | === Initial Chain State
 --
 -- The initial state for the examples uses the function
 -- 'initialShelleyState' with the genesis delegation
 -- 'genDelegs' and any given starting 'UTxO' set.
-initSt :: forall c. Crypto c => UTxO c -> ChainState c
+initSt :: forall c v. CV c v => UTxO c v -> ChainState c v
 initSt utxo =
   initialShelleyState
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
     (EpochNo 0)
     utxo
-    (maxLLSupply - (balance utxo))
+    (maxLLSupply - (vcoin(balance utxo)))
     genDelegs
     (overlayScheduleFor (EpochNo 0) ppEx)
     ppEx
-    (nonce0 @c)
+    (nonce0 @c @v)

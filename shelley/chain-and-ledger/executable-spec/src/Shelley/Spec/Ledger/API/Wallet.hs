@@ -50,15 +50,16 @@ import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxData (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Shelley.Spec.Ledger.Value
 
 -- | Calculate the Non-Myopic Pool Member Rewards for a set of credentials.
 -- For each given credential, this function returns a map from each stake
 -- pool (identified by the key hash of the pool operator) to the
 -- non-myopic pool member reward for that stake pool.
 getNonMyopicMemberRewards ::
-  Crypto crypto =>
+  CV crypto v =>
   Globals ->
-  ShelleyState crypto ->
+  ShelleyState crypto v ->
   Set (Either Coin (Credential 'Staking crypto)) ->
   Map (Either Coin (Credential 'Staking crypto)) (Map (KeyHash 'StakePool crypto) Coin)
 getNonMyopicMemberRewards globals ss creds =
@@ -104,15 +105,15 @@ getNonMyopicMemberRewards globals ss creds =
 
 -- | Get the full UTxO.
 getUTxO ::
-  ShelleyState crypto ->
-  UTxO crypto
+  ShelleyState crypto v ->
+  UTxO crypto v
 getUTxO = _utxo . _utxoState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
-  ShelleyState crypto ->
+  ShelleyState crypto v ->
   Set (Addr crypto) ->
-  UTxO crypto
+  UTxO crypto v
 getFilteredUTxO ss addrs =
   UTxO $ Map.filter (\(TxOutCompact addrSBS _) -> addrSBS `Set.member` addrSBSs) fullUTxO
   where
@@ -132,7 +133,7 @@ getLeaderSchedule ::
       Seed
   ) =>
   Globals ->
-  ShelleyState crypto ->
+  ShelleyState crypto v ->
   ChainDepState crypto ->
   KeyHash 'StakePool crypto ->
   SignKeyVRF crypto ->

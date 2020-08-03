@@ -32,10 +32,11 @@ genMetaData ::
   Constants ->
   Gen (StrictMaybe MetaData, StrictMaybe (MetaDataHash c))
 genMetaData (Constants {frequencyTxWithMetaData}) =
-  QC.frequency
-    [ (frequencyTxWithMetaData, genMetaData'),
-      (100 - frequencyTxWithMetaData, pure (SNothing, SNothing))
-    ]
+  do (a,b) <- QC.frequency
+                [ (frequencyTxWithMetaData, genMetaData'),
+                  (100 - frequencyTxWithMetaData, pure (SNothing, SNothing))
+                ]
+     pure(a,b)
 
 -- | Generate Metadata (and compute hash) of size up to 'metadataMaxSize'
 genMetaData' ::

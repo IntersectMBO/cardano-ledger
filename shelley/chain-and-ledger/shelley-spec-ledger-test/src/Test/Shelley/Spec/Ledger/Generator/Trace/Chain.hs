@@ -55,7 +55,9 @@ import Shelley.Spec.Ledger.STS.Chain (chainNes, initialShelleyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.UTxO (balance)
-import Test.QuickCheck (Gen)
+import Shelley.Spec.Ledger.Value
+
+import Test.QuickCheck (Gen, Arbitrary)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
   )
@@ -69,21 +71,21 @@ import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash, runShelleyBase)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
-instance Mock c => HasTrace (CHAIN c) (GenEnv c) where
+instance (CVNC c v, Mock c) => HasTrace (CHAIN c v) (GenEnv c) where
   envGen _ = pure ()
 
   sigGen ge _env st = genBlock ge st
 
   shrinkSignal = shrinkBlock
 
-  type BaseEnv (CHAIN c) = Globals
+  type BaseEnv (CHAIN c v) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | The first block of the Shelley era will point back to the last block of the Byron era.
 -- For our purposes we can bootstrap the chain by just coercing the value.
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
-lastByronHeaderHash :: forall proxy c. Crypto c => proxy c -> HashHeader c
+lastByronHeaderHash :: forall proxy c v. Crypto c => proxy c -> HashHeader c v
 lastByronHeaderHash _ = HashHeader $ mkHash 0
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align
@@ -91,11 +93,11 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- To achieve this we (1) use 'IRC CHAIN' (the "initial rule context") instead of simply 'Chain Env'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
-  forall c a.
-  Crypto c =>
+  forall c v a.
+  (CV c v, Arbitrary v) =>
   Constants ->
-  IRC (CHAIN c) ->
-  Gen (Either a (ChainState c))
+  IRC (CHAIN c v) ->
+  Gen (Either a (ChainState c v))
 mkGenesisChainState constants (IRC _slotNo) = do
   utxo0 <- genUtxo0 constants
 
@@ -112,7 +114,7 @@ mkGenesisChainState constants (IRC _slotNo) = do
       (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
       epoch0
       utxo0
-      (maxLLSupply - balance utxo0)
+      (maxLLSupply - (vcoin $ balance utxo0))
       delegs0
       osched_
       pParams
@@ -122,7 +124,7 @@ mkGenesisChainState constants (IRC _slotNo) = do
     delegs0 = genesisDelegs0 constants
     -- We preload the initial state with some Treasury to enable generation
     -- of things dependent on Treasury (e.g. MIR Treasury certificates)
-    withRewards :: ChainState h -> ChainState h
+    withRewards :: ChainState h v -> ChainState h v
     withRewards st@STS.ChainState {..} =
       st
         { chainNes =

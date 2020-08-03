@@ -11,6 +11,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -198,6 +199,7 @@ instance HasKeyRole KeyPair
 
 -- | Produce a digital signature
 signedDSIGN ::
+  forall crypto a.
   (Crypto crypto, DSIGN.Signable (DSIGN crypto) a) =>
   DSIGN.SignKeyDSIGN (DSIGN crypto) ->
   a ->

@@ -44,7 +44,6 @@ import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
@@ -54,7 +53,6 @@ import Shelley.Spec.Ledger.BaseTypes
     quorum,
     (==>),
   )
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
@@ -87,20 +85,21 @@ import Shelley.Spec.Ledger.Tx
   )
 import Shelley.Spec.Ledger.TxData (TxBody (..))
 import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
+import Shelley.Spec.Ledger.Value
 
-data UTXOW crypto
+data UTXOW crypto v
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  STS (UTXOW crypto)
+  STS (UTXOW crypto v)
   where
-  type State (UTXOW crypto) = UTxOState crypto
-  type Signal (UTXOW crypto) = Tx crypto
-  type Environment (UTXOW crypto) = UtxoEnv crypto
-  type BaseM (UTXOW crypto) = ShelleyBase
-  data PredicateFailure (UTXOW crypto)
+  type State (UTXOW crypto v) = UTxOState crypto v
+  type Signal (UTXOW crypto v) = Tx crypto v
+  type Environment (UTXOW crypto v) = UtxoEnv crypto
+  type BaseM (UTXOW crypto v) = ShelleyBase
+  data PredicateFailure (UTXOW crypto v)
     = InvalidWitnessesUTXOW
         ![VKey 'Witness crypto]
     | -- witnesses which failed in verifiedWits function
@@ -110,7 +109,7 @@ instance
         !(Set (ScriptHash crypto)) -- missing scripts
     | ScriptWitnessNotValidatingUTXOW
         !(Set (ScriptHash crypto)) -- failed scripts
-    | UtxoFailure (PredicateFailure (UTXO crypto))
+    | UtxoFailure (PredicateFailure (UTXO crypto v))
     | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness crypto))
     | MissingTxBodyMetaDataHash
         !(MetaDataHash crypto) -- hash of the full metadata
@@ -124,11 +123,11 @@ instance
   transitionRules = [utxoWitnessed]
   initialRules = [initialLedgerStateUTXOW]
 
-instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (UTXOW crypto))
+instance (CV crypto v) => NoUnexpectedThunks (PredicateFailure (UTXOW crypto v))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (UTXOW crypto))
+  (CV crypto v) =>
+  ToCBOR (PredicateFailure (UTXOW crypto v))
   where
   toCBOR = \case
     InvalidWitnessesUTXOW wits ->
@@ -149,10 +148,10 @@ instance
       encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR bodyHash <> toCBOR fullMDHash
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (UTXOW crypto))
+  (CV crypto v) =>
+  FromCBOR (PredicateFailure (UTXOW crypto v))
   where
-  fromCBOR = decodeRecordSum "PredicateFailure (UTXOW crypto)" $
+  fromCBOR = decodeRecordSum "PredicateFailure (UTXOW crypto v)" $
     \case
       0 -> do
         wits <- decodeList fromCBOR
@@ -185,21 +184,21 @@ instance
       k -> invalidKey k
 
 initialLedgerStateUTXOW ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  forall crypto v.
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  InitialRule (UTXOW crypto)
+  InitialRule (UTXOW crypto v)
 initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
-  trans @(UTXO crypto) $ IRC (UtxoEnv slots pp stakepools genDelegs)
+  trans @(UTXO crypto v) $ IRC (UtxoEnv slots pp stakepools genDelegs)
 
 utxoWitnessed ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  forall crypto v.
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  TransitionRule (UTXOW crypto)
+  TransitionRule (UTXOW crypto v)
 utxoWitnessed =
   judgmentContext
     >>= \(TRC (UtxoEnv slot pp stakepools genDelegs, u, tx@(Tx txbody wits md))) -> do
@@ -254,13 +253,13 @@ utxoWitnessed =
         )
         ?! MIRInsufficientGenesisSigsUTXOW genSig
 
-      trans @(UTXO crypto) $
+      trans @(UTXO crypto v) $
         TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  Embed (UTXO crypto) (UTXOW crypto)
+  Embed (UTXO crypto v) (UTXOW crypto v)
   where
   wrapFailed = UtxoFailure

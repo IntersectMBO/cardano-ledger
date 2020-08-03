@@ -45,6 +45,7 @@ import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Shelley.Spec.Ledger.Value(CV)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -69,11 +70,11 @@ import Test.Shelley.Spec.Ledger.Utils
 
 -- | Generate a valid block.
 genBlock ::
-  forall c.
-  Mock c =>
+  forall c v.
+  (Mock c, CV c v) =>
   GenEnv c ->
-  ChainState c ->
-  Gen (Block c)
+  ChainState c v ->
+  Gen (Block c v)
 genBlock
   ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
   origChainState = do
@@ -132,16 +133,16 @@ genBlock
       genTxs pp reserves ls s = do
         let ledgerEnv = LedgersEnv s pp reserves
 
-        sigGen @(LEDGERS c) ge ledgerEnv ls
+        sigGen @(LEDGERS c v) ge ledgerEnv ls
 
 selectNextSlotWithLeader ::
-  forall c.
-  Mock c =>
+  forall c v.
+  (Mock c, CV c v) =>
   GenEnv c ->
-  ChainState c ->
+  ChainState c v ->
   -- Starting slot
   SlotNo ->
-  Maybe (SlotNo, ChainState c, AllIssuerKeys c 'BlockIssuer)
+  Maybe (SlotNo, ChainState c v, AllIssuerKeys c 'BlockIssuer)
 selectNextSlotWithLeader
   (GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
   origChainState
@@ -154,7 +155,7 @@ selectNextSlotWithLeader
       selectNextSlotWithLeaderThisEpoch ::
         -- Slot number whence we begin our search
         SlotNo ->
-        Maybe (SlotNo, ChainState c, AllIssuerKeys c 'BlockIssuer)
+        Maybe (SlotNo, ChainState c v, AllIssuerKeys c 'BlockIssuer)
       selectNextSlotWithLeaderThisEpoch fromSlot =
         findJust selectLeaderForSlot [fromSlot .. toSlot]
         where
@@ -169,7 +170,7 @@ selectNextSlotWithLeader
       -- Try to select a leader for the given slot
       selectLeaderForSlot ::
         SlotNo ->
-        Maybe (ChainState c, AllIssuerKeys c 'BlockIssuer)
+        Maybe (ChainState c v, AllIssuerKeys c 'BlockIssuer)
       selectLeaderForSlot slotNo =
         (chainSt,)
           <$> case lookupInOverlaySchedule slotNo overlaySched of
@@ -204,7 +205,7 @@ selectNextSlotWithLeader
 
 -- | The chain state is a composite of the new epoch state and the chain dep
 -- state. We tick both.
-tickChainState :: Crypto c => SlotNo -> ChainState c -> ChainState c
+tickChainState :: CV c v => SlotNo -> ChainState c v -> ChainState c v
 tickChainState
   slotNo
   ChainState

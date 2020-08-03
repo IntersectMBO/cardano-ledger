@@ -29,6 +29,7 @@ import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
 import Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
+import Shelley.Spec.Ledger.Coin (Coin)
 import Test.Cardano.Prelude
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -43,7 +44,8 @@ import Test.Tasty.Hedgehog
 prop_golden_ShelleyGenesis :: Property
 prop_golden_ShelleyGenesis = goldenTestJSONPretty example "test/Golden/ShelleyGenesis"
   where
-    example :: ShelleyGenesis C
+    -- TODO do this with Val
+    example :: ShelleyGenesis C Coin
     example = exampleShelleyGenesis
 
 tests :: TestTree
@@ -53,7 +55,7 @@ tests =
     [ testProperty "ShelleyGenesis golden test" prop_golden_ShelleyGenesis
     ]
 
-exampleShelleyGenesis :: forall c. Mock c => ShelleyGenesis c
+exampleShelleyGenesis :: forall c. Mock c => ShelleyGenesis c Coin
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),

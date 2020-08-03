@@ -47,6 +47,7 @@ import Shelley.Spec.Ledger.BlockChain
     BHeader,
     LaxBlock,
   )
+import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (KeyRole (Staking))
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
@@ -70,25 +71,25 @@ import Prelude (String)
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlTest' @(BHeader C) n "header",
-      cddlTest' @(BootstrapWitness C) n "bootstrap_witness",
-      cddlTest @(BHBody C) n "header_body",
+    [ cddlTest' @(BHeader C Coin) n "header",
+      cddlTest' @(BootstrapWitness C Coin) n "bootstrap_witness",
+      cddlTest @(BHBody C Coin) n "header_body",
       cddlGroupTest @(OCert C) n "operational_cert",
       cddlTest @(Addr C) n "address",
       cddlTest @(RewardAcnt C) n "reward_account",
       cddlTest @(Credential 'Staking C) n "stake_credential",
-      cddlTest' @(TxBody C) n "transaction_body",
-      cddlTest @(TxOut C) n "transaction_output",
+      cddlTest' @(TxBody C Coin) n "transaction_body",
+      cddlTest @(TxOut C Coin) n "transaction_output",
       cddlTest @StakePoolRelay n "relay",
       cddlTest @(DCert C) n "certificate",
-      cddlTest @(TxIn C) n "transaction_input",
+      cddlTest @(TxIn C Coin) n "transaction_input",
       cddlTest' @MetaData n "transaction_metadata",
       cddlTest' @(MultiSig C) n "multisig_script",
       cddlTest @(Update C) n "update",
       cddlTest @(ProposedPPUpdates C) n "proposed_protocol_parameter_updates",
       cddlTest @PParamsUpdate n "protocol_param_update",
-      cddlTest' @(Tx C) n "transaction",
-      cddlTest' @(LaxBlock C) n "block"
+      cddlTest' @(Tx C Coin) n "transaction",
+      cddlTest' @(LaxBlock C Coin) n "block"
     ]
       <*> pure cddl
 

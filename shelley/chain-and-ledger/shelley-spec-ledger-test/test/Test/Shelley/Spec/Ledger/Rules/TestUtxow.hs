@@ -33,6 +33,7 @@ import Shelley.Spec.Ledger.API
   ( UTXO,
     UTXOW,
   )
+import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash (..),
     KeyRole (..),
@@ -70,7 +71,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 preserveBalance ::
   PParams ->
   [ ( Map (KeyHash 'StakePool C) (PoolParams C),
-      SourceSignalTarget (UTXOW C)
+      SourceSignalTarget (UTXOW C Coin)
     )
   ] ->
   Property
@@ -99,7 +100,7 @@ preserveBalance pp tr =
 preserveBalanceRestricted ::
   PParams ->
   [ ( Map (KeyHash 'StakePool C) (PoolParams C),
-      SourceSignalTarget (UTXOW C)
+      SourceSignalTarget (UTXOW C Coin)
     )
   ] ->
   Property
@@ -127,7 +128,7 @@ preserveBalanceRestricted pp tr =
 
 -- | Preserve outputs of Txs
 preserveOutputsTx ::
-  [SourceSignalTarget (UTXO C)] ->
+  [SourceSignalTarget (UTXO C Coin)] ->
   Property
 preserveOutputsTx tr =
   conjoin $
@@ -143,7 +144,7 @@ preserveOutputsTx tr =
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
-  [SourceSignalTarget (UTXO C)] ->
+  [SourceSignalTarget (UTXO C Coin)] ->
   Property
 eliminateTxInputs tr =
   conjoin $
@@ -159,7 +160,7 @@ eliminateTxInputs tr =
 -- | Check that all new entries of a Tx are included in the new UTxO and that
 -- all TxIds are new.
 newEntriesAndUniqueTxIns ::
-  [SourceSignalTarget (UTXO C)] ->
+  [SourceSignalTarget (UTXO C Coin)] ->
   Property
 newEntriesAndUniqueTxIns tr =
   conjoin $
@@ -179,16 +180,16 @@ newEntriesAndUniqueTxIns tr =
 
 -- | Check for absence of double spend
 noDoubleSpend ::
-  [SourceSignalTarget (UTXO C)] ->
+  [SourceSignalTarget (UTXO C Coin)] ->
   Property
 noDoubleSpend tr =
   [] === getDoubleInputs (map sig tr)
   where
     sig (SourceSignalTarget _ _ s) = s
-    getDoubleInputs :: [Tx C] -> [(Tx C, [Tx C])]
+    getDoubleInputs :: [Tx C Coin] -> [(Tx C Coin, [Tx C Coin])]
     getDoubleInputs [] = []
     getDoubleInputs (t : ts) = lookForDoubleSpends t ts ++ getDoubleInputs ts
-    lookForDoubleSpends :: Tx C -> [Tx C] -> [(Tx C, [Tx C])]
+    lookForDoubleSpends :: Tx C Coin -> [Tx C Coin] -> [(Tx C Coin, [Tx C Coin])]
     lookForDoubleSpends _ [] = []
     lookForDoubleSpends tx_j ts =
       if null doubles then [] else [(tx_j, doubles)]
@@ -209,7 +210,7 @@ noDoubleSpend tr =
 -- TODO @mgudemann
 -- This property is currenty disabled du to time-out problems with getting all
 -- possible combinations for multi-sig.
-requiredMSigSignaturesSubset :: [SourceSignalTarget (UTXOW C)] -> Property
+requiredMSigSignaturesSubset :: [SourceSignalTarget (UTXOW C Coin)] -> Property
 requiredMSigSignaturesSubset tr =
   conjoin $
     map signaturesSubset tr
