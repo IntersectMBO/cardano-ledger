@@ -25,28 +25,11 @@ source-repository-package
   location: https://github.com/input-output-hk/cardano-base
   tag: 7d795c3040ea7785812efa1c97864bbb41b15d3e
   --sha256: 130i0yj4y9br1m2bhisi6wni3f40i31nfhg878hv0kwi17chl9sz
-  subdir: binary
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-base
-  tag: 7d795c3040ea7785812efa1c97864bbb41b15d3e
-  --sha256: 130i0yj4y9br1m2bhisi6wni3f40i31nfhg878hv0kwi17chl9sz
-  subdir: binary/test
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-base
-  tag: 7d795c3040ea7785812efa1c97864bbb41b15d3e
-  --sha256: 130i0yj4y9br1m2bhisi6wni3f40i31nfhg878hv0kwi17chl9sz
-  subdir: cardano-crypto-class
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-base
-  tag: 7d795c3040ea7785812efa1c97864bbb41b15d3e
-  --sha256: 130i0yj4y9br1m2bhisi6wni3f40i31nfhg878hv0kwi17chl9sz
-  subdir: slotting
+  subdir:
+    binary
+    binary/test
+    cardano-crypto-class
+    slotting
 
 source-repository-package
   type: git
@@ -65,7 +48,8 @@ source-repository-package
   location: https://github.com/input-output-hk/cardano-prelude
   tag: 316c854d1d3089f480708ad5cd5ecf8a74423ddd
   --sha256: 1srbl3jrkmpwypdz0yrx4nmah3qcsr93dp48zx2bamg51c4hcsyj
-  subdir: test
+  subdir:
+    test
 
 source-repository-package
   type: git
