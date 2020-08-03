@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Test.Shelley.Spec.Ledger.SetAlgTests where
+module Test.Control.Iterate.SetAlgebra where
 
 import Control.Iterate.Collect
 import Control.Iterate.SetAlgebra
