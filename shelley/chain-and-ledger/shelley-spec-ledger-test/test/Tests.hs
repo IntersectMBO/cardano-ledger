@@ -5,7 +5,7 @@ import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTes
 import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (stsTests)
 import qualified Test.Shelley.Spec.Ledger.Serialisation as Serialisation
-import Test.Shelley.Spec.Ledger.SetAlgTests (setAlgTest)
+import Test.Control.Iterate.SetAlgebra (setAlgTest)
 import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)

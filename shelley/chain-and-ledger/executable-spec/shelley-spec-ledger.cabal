@@ -5,10 +5,6 @@ author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
 build-type:          Simple
 cabal-version:       >=1.8
-extra-source-files:
-  cddl-files/shelley.cddl
-  cddl-files/mock/crypto.cddl
-  cddl-files/mock/extras.cddl
 
 source-repository head
   type: git
@@ -124,85 +120,3 @@ library
     bimap,
     hashable,
     goblins
-
-benchmark mainbench
-  type:             exitcode-stdio-1.0
-  hs-source-dirs:   bench,
-                    test
-  main-is:          Main.hs
-  other-modules:    BenchUTxOAggregate,
-                    Shelley.Spec.Ledger.Bench.Gen
-                    Test.Cardano.Crypto.VRF.Fake,
-                    Test.Shelley.Spec.Ledger.Address.Bootstrap,
-                    Test.Shelley.Spec.Ledger.BenchmarkFunctions,
-                    Test.Shelley.Spec.Ledger.ConcreteCryptoTypes,
-                    Test.Shelley.Spec.Ledger.Examples,
-                    Test.Shelley.Spec.Ledger.Examples.Cast,
-                    Test.Shelley.Spec.Ledger.Generator.Constants,
-                    Test.Shelley.Spec.Ledger.Generator.Core,
-                    Test.Shelley.Spec.Ledger.Generator.Delegation
-                    Test.Shelley.Spec.Ledger.Generator.MetaData
-                    Test.Shelley.Spec.Ledger.Generator.Presets,
-                    Test.Shelley.Spec.Ledger.Generator.Trace.DCert
-                    Test.Shelley.Spec.Ledger.Generator.Update,
-                    Test.Shelley.Spec.Ledger.Generator.Utxo
-                    Test.Shelley.Spec.Ledger.NonTraceProperties.Generator,
-                    Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator,
-                    Test.Shelley.Spec.Ledger.NonTraceProperties.Validity,
-                    Test.Shelley.Spec.Ledger.Orphans,
-                    Test.Shelley.Spec.Ledger.Serialisation.Generators,
-                    Test.Shelley.Spec.Ledger.Utils
-
-
-  build-depends:    MonadRandom,
-                    QuickCheck,
-                    base,
-                    bytestring,
-                    bytestring-conversion,
-                    cardano-binary,
-                    cardano-crypto,
-                    cardano-crypto-class,
-                    cardano-crypto-test,
-                    cardano-crypto-wrapper,
-                    cardano-ledger,
-                    cardano-ledger-test,
-                    cardano-prelude,
-                    cardano-prelude-test,
-                    cardano-slotting,
-                    containers,
-                    criterion,
-                    cryptonite,
-                    deepseq,
-                    generic-random,
-                    hedgehog,
-                    QuickCheck,
-                    tasty-quickcheck,
-                    tasty-hunit,
-                    tasty,
-                    text,
-                    time,
-                    hedgehog-quickcheck,
-                    iproute,
-                    random,
-                    scientific,
-                    shelley-spec-ledger,
-                    small-steps,
-                    small-steps-test,
-                    tasty,
-                    tasty-hunit,
-                    tasty-quickcheck,
-                    time,
-                    transformers
-  ghc-options:
-      -threaded
-      -rtsopts
-      -with-rtsopts=-N
-      -Wall
-      -Wcompat
-      -Wincomplete-record-updates
-      -Wincomplete-uni-patterns
-      -Wredundant-constraints
-      -O
-  if (!flag(development))
-    ghc-options:
-      -Werror
