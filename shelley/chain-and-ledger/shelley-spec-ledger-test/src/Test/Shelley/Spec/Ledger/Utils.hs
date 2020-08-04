@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Utils
     epochFromSlotNo,
     evolveKESUntil,
     slotFromEpoch,
+    epochSize,
     mkHash,
     mkKeyPair,
     mkKeyPair',
@@ -61,7 +62,12 @@ import Cardano.Crypto.VRF
     genKeyVRF,
   )
 import Cardano.Prelude (Coercible, asks)
-import Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
+import Cardano.Slotting.EpochInfo
+  ( epochInfoEpoch,
+    epochInfoFirst,
+    epochInfoSize,
+    fixedSizeEpochInfo,
+  )
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace
@@ -211,6 +217,9 @@ epochFromSlotNo = runIdentity . epochInfoEpoch (epochInfo testGlobals)
 
 slotFromEpoch :: EpochNo -> SlotNo
 slotFromEpoch = runIdentity . epochInfoFirst (epochInfo testGlobals)
+
+epochSize :: EpochNo -> EpochSize
+epochSize = runIdentity . epochInfoSize (epochInfo testGlobals)
 
 -- | Try to evolve KES key until specific KES period is reached, given the
 -- current KES period.

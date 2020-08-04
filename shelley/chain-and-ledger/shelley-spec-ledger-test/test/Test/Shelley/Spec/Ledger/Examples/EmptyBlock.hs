@@ -5,14 +5,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.Examples.EmptyBlock
-  ( -- | = Empty Block Example
-    --
-    -- This is the most minimal example of using the CHAIN STS transition.
-    -- It applies an empty block to an initial shelley chain state.
-    --
-    -- The only things that change in the chain state are the
-    -- evolving and candidate nonces, and the last applied block.
-    exEmptyBlock,
+  ( exEmptyBlock,
   )
 where
 
@@ -76,5 +69,12 @@ expectedStEx1 =
     . (newLab blockEx1)
     $ initStEx1
 
+-- | = Empty Block Example
+--
+-- This is the most minimal example of using the CHAIN STS transition.
+-- It applies an empty block to an initial shelley chain state.
+--
+-- The only things that change in the chain state are the
+-- evolving and candidate nonces, and the last applied block.
 exEmptyBlock :: Mock c => CHAINExample c
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

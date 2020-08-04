@@ -9,35 +9,12 @@
 --
 -- The genesis/core nodes for Shelley Ledger Examples.
 module Test.Shelley.Spec.Ledger.Examples.Federation
-  ( -- | Number of Core Node
-    numCoreNodes,
-    -- | = Core Node Keys
-    --
-    -- === Signing (Secret) Keys
-    -- Retrieve the signing key for a core node by providing
-    -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
+  ( numCoreNodes,
     coreNodeSK,
-    -- | === Verification (Public) Keys
-    -- Retrieve the verification key for a core node by providing
-    -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
     coreNodeVK,
-    -- | === Block Issuer Keys
-    -- Retrieve the block issuer keys (cold, VRF, and hot KES keys)
-    -- for a core node by providing
-    -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
     coreNodeIssuerKeys,
-    -- | === Keys by Overlay Schedule
-    -- Retrieve all the keys associated with a core node
-    -- for a given slot and protocol parameters.
-    -- It will return an error if there is not a core node scheduled
-    -- for the given slot.
     coreNodeKeysBySchedule,
-    -- | === Genesis Delegation Mapping
-    -- The map from genesis/core node (verification) key hashes
-    -- to their delegate's (verification) key hashe.
     genDelegs,
-    -- | === Overlay Schedule
-    -- Retrieve the overlay schedule for a given epoch and protocol parameters.
     overlayScheduleFor,
   )
 where
@@ -77,6 +54,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Utils
 
+-- | Number of Core Node
 numCoreNodes :: Word64
 numCoreNodes = 7
 
@@ -96,12 +74,22 @@ mkAllCoreNodeKeys w =
 coreNodes :: forall c. Crypto c => [((SignKeyDSIGN c, VKey 'Genesis c), AllIssuerKeys c 'GenesisDelegate)]
 coreNodes = [(mkGenKey (x, 0, 0, 0, 0), mkAllCoreNodeKeys x) | x <- [101 .. 100 + numCoreNodes]]
 
+-- === Signing (Secret) Keys
+-- Retrieve the signing key for a core node by providing
+-- a number in the range @[0, ... ('numCoreNodes'-1)]@.
 coreNodeSK :: forall c. Crypto c => Int -> SignKeyDSIGN c
 coreNodeSK = fst . fst . (coreNodes @c !!)
 
+-- | === Verification (Public) Keys
+-- Retrieve the verification key for a core node by providing
+-- a number in the range @[0, ... ('numCoreNodes'-1)]@.
 coreNodeVK :: forall c. Crypto c => Int -> VKey 'Genesis c
 coreNodeVK = snd . fst . (coreNodes @c !!)
 
+-- | === Block Issuer Keys
+-- Retrieve the block issuer keys (cold, VRF, and hot KES keys)
+-- for a core node by providing
+-- a number in the range @[0, ... ('numCoreNodes'-1)]@.
 coreNodeIssuerKeys :: forall c. Crypto c => Int -> AllIssuerKeys c 'GenesisDelegate
 coreNodeIssuerKeys = snd . (coreNodes @c !!)
 
@@ -119,6 +107,8 @@ coreNodeKeysForSlot overlay slot = case Map.lookup (SlotNo slot) overlay of
       Nothing -> error $ "coreNodesForSlot: Cannot find key hash in coreNodes: " <> show gkh
       Just ((_, _), ak) -> ak
 
+-- | === Overlay Schedule
+-- Retrieve the overlay schedule for a given epoch and protocol parameters.
 overlayScheduleFor :: Crypto c => EpochNo -> PParams -> Map SlotNo (OBftSlot c)
 overlayScheduleFor e pp =
   runShelleyBase $
@@ -127,6 +117,11 @@ overlayScheduleFor e pp =
       (Map.keysSet genDelegs)
       pp
 
+-- | === Keys by Overlay Schedule
+-- Retrieve all the keys associated with a core node
+-- for a given slot and protocol parameters.
+-- It will return an error if there is not a core node scheduled
+-- for the given slot.
 coreNodeKeysBySchedule ::
   (HasCallStack, Crypto c) =>
   PParams ->
@@ -136,6 +131,9 @@ coreNodeKeysBySchedule = coreNodeKeysForSlot . fullOSched
   where
     fullOSched pp = Map.unions $ [overlayScheduleFor e pp | e <- [0 .. 10]]
 
+-- | === Genesis Delegation Mapping
+-- The map from genesis/core node (verification) key hashes
+-- to their delegate's (verification) key hash.
 genDelegs :: forall c. Crypto c => Map (KeyHash 'Genesis c) (GenDelegPair c)
 genDelegs =
   Map.fromList

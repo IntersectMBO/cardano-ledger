@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,51 +12,25 @@
 -- (excluding the genesis/cord nodes,
 -- which are in Test.Shelley.Spec.Ledger.Examples.Federation).
 module Test.Shelley.Spec.Ledger.Examples.Cast
-  ( -- | = Alice
-    --
-    -- === Alice's payment key pair
-    alicePay,
-    -- | === Alice's stake key pair
+  ( alicePay,
     aliceStake,
-    -- | === Alice's stake credential
     aliceSHK,
-    -- | === Alice's base address
     aliceAddr,
-    -- | === Alice's base address
     alicePtrAddr,
-    -- | === Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
     alicePoolKeys,
-    -- | === Alice's stake pool parameters
     alicePoolParams,
-    -- | = Bob
-    --
-    -- === Bob's payment key pair
+    aliceVRFKeyHash,
     bobPay,
-    -- | === Bob's stake key pair
     bobStake,
-    -- | === Bob's stake credential
     bobSHK,
-    -- | === Bob's address
     bobAddr,
-    -- | = Carl
-    --
-    -- === Carl's payment key pair
     carlPay,
-    -- | === Carl's stake key pair
     carlStake,
-    -- | === Carl's stake credential
     carlSHK,
-    -- | === Carl's address
     carlAddr,
-    -- | = Daria
-    --
-    -- === Daria's payment key pair
     dariaPay,
-    -- | === Daria's stake key pair
     dariaStake,
-    -- | === Daria's stake credential
     dariaSHK,
-    -- | === Daria's address
     dariaAddr,
   )
 where
@@ -78,8 +53,10 @@ import Shelley.Spec.Ledger.Credential
   )
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys
-  ( KeyPair (..),
+  ( Hash,
+    KeyPair (..),
     KeyRole (..),
+    VerKeyVRF,
     hashKey,
     hashVerKeyVRF,
   )
@@ -101,16 +78,19 @@ import Test.Shelley.Spec.Ledger.Utils
     unsafeMkUnitInterval,
   )
 
+-- | Alice's payment key pair
 alicePay :: Crypto c => KeyPair 'Payment c
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
 
+-- | Alice's stake key pair
 aliceStake :: Crypto c => KeyPair 'Staking c
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
 
+-- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
 alicePoolKeys :: Crypto c => AllIssuerKeys c 'StakePool
 alicePoolKeys =
   AllIssuerKeys
@@ -121,18 +101,22 @@ alicePoolKeys =
   where
     (skCold, vkCold) = mkKeyPair (1, 0, 0, 0, 1)
 
+-- | Alice's base address
 aliceAddr :: Crypto c => Addr c
 aliceAddr = mkAddr (alicePay, aliceStake)
 
 alicePHK :: Crypto c => Credential 'Payment c
 alicePHK = (KeyHashObj . hashKey . vKey) alicePay
 
+-- | Alice's stake credential
 aliceSHK :: Crypto c => Credential 'Staking c
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
+-- | Alice's base address
 alicePtrAddr :: Crypto c => Addr c
 alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
 
+-- | Alice's stake pool parameters
 alicePoolParams :: forall c. Crypto c => PoolParams c
 alicePoolParams =
   PoolParams
@@ -152,50 +136,66 @@ alicePoolParams =
             }
     }
 
+-- | Alice's VRF key hash
+aliceVRFKeyHash :: forall c. Crypto c => Hash c (VerKeyVRF c)
+aliceVRFKeyHash = hashVerKeyVRF (snd $ vrf (alicePoolKeys @c))
+
+-- | Bob's payment key pair
 bobPay :: Crypto c => KeyPair 'Payment c
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (2, 2, 2, 2, 2)
 
+-- | Bob's stake key pair
 bobStake :: Crypto c => KeyPair 'Staking c
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
 
+-- | Bob's address
 bobAddr :: Crypto c => Addr c
 bobAddr = mkAddr (bobPay, bobStake)
 
+-- | Bob's stake credential
 bobSHK :: Crypto c => Credential 'Staking c
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
+-- Carl's payment key pair
 carlPay :: Crypto c => KeyPair 'Payment c
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (4, 4, 4, 4, 4)
 
+-- | Carl's stake key pair
 carlStake :: Crypto c => KeyPair 'Staking c
 carlStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
 
+-- | Carl's address
 carlAddr :: Crypto c => Addr c
 carlAddr = mkAddr (carlPay, carlStake)
 
+-- | Carl's stake credential
 carlSHK :: Crypto c => Credential 'Staking c
 carlSHK = (KeyHashObj . hashKey . vKey) carlStake
 
+-- | Daria's payment key pair
 dariaPay :: Crypto c => KeyPair 'Payment c
 dariaPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (6, 6, 6, 6, 6)
 
+-- | Daria's stake key pair
 dariaStake :: Crypto c => KeyPair 'Staking c
 dariaStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
 
+-- | Daria's address
 dariaAddr :: Crypto c => Addr c
 dariaAddr = mkAddr (dariaPay, dariaStake)
 
+-- | Daria's stake credential
 dariaSHK :: Crypto c => Credential 'Staking c
 dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake
