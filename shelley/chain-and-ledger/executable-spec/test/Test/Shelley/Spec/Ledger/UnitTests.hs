@@ -175,7 +175,7 @@ testNoGenesisOverlay =
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
   checkLeaderValue
-    (VRF.mkTestOutputVRF 0 :: VRF.OutputVRF (VRF (ConcreteCrypto C)))
+    (VRF.mkTestOutputVRF 0 :: VRF.OutputVRF (VRF C))
     (1 % 2)
     (mkActiveSlotCoeff $ unsafeMkUnitInterval 1)
     @?= True
@@ -209,7 +209,7 @@ instance Arbitrary VRFNatVal where
           2
             ^ ( 8
                   * VRF.sizeOutputVRF
-                    (Proxy @(VRF (ConcreteCrypto C)))
+                    (Proxy @(VRF C))
               )
         )
   shrink (VRFNatVal v) = VRFNatVal <$> shrinkIntegral v

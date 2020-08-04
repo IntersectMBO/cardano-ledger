@@ -1,8 +1,11 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Shelley.Spec.Ledger.BenchmarkFunctions
   ( ledgerSpendOneUTxO,
@@ -19,6 +22,7 @@ module Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerStateWithNregisteredPools, -- How to precompute env for the Stake Pool transactions
     ledgerDelegateManyKeysOnePool,
     ledgerStateWithNkeysMpools, -- How to precompute env for the Stake Delegation transactions
+    B, -- Crypto instance for Benchmarking
   )
 where
 
@@ -37,6 +41,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
+import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
@@ -82,7 +87,7 @@ import Shelley.Spec.Ledger.TxData
     _poolVrf,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
+import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original (C)
 import Test.Shelley.Spec.Ledger.Examples (ppsEx1)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
@@ -97,7 +102,14 @@ import Test.Shelley.Spec.Ledger.Utils
     unsafeMkUnitInterval,
   )
 
-type B = ConcreteCrypto Blake2b_256
+data B
+
+instance Crypto B where
+  type KES B = KES Original.C
+  type VRF B = VRF Original.C
+  type DSIGN B = DSIGN Original.C
+  type HASH B = Blake2b_256
+  type ADDRHASH B = Blake2b_256
 
 -- =========================================================
 

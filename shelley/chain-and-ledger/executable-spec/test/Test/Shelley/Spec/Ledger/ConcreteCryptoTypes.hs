@@ -12,16 +12,14 @@ module Test.Shelley.Spec.Ledger.ConcreteCryptoTypes where
 
 import Cardano.Crypto.DSIGN (MockDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
-import Cardano.Crypto.Hash (HashAlgorithm, ShortHash)
+import Cardano.Crypto.Hash (ShortHash)
 import Cardano.Crypto.KES (MockKES)
 import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import Shelley.Spec.Ledger.Crypto
 import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 
-type C = ConcreteCrypto ShortHash
-
-data ConcreteCrypto (h :: *)
+data C
 
 type Mock c =
   ( Crypto c,
@@ -32,9 +30,9 @@ type Mock c =
     DSIGN.Signable (DSIGN c) ~ SignableRepresentation
   )
 
-instance HashAlgorithm h => Crypto (ConcreteCrypto h) where
-  type HASH (ConcreteCrypto h) = h
-  type ADDRHASH (ConcreteCrypto h) = h
-  type DSIGN (ConcreteCrypto h) = MockDSIGN
-  type KES (ConcreteCrypto h) = MockKES 10
-  type VRF (ConcreteCrypto h) = FakeVRF
+instance Crypto C where
+  type HASH C = ShortHash
+  type ADDRHASH C = ShortHash
+  type DSIGN C = MockDSIGN
+  type KES C = MockKES 10
+  type VRF C = FakeVRF

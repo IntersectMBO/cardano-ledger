@@ -92,7 +92,7 @@ import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Prelude (genBytes)
 import Test.QuickCheck (Gen)
 import Test.QuickCheck.Hedgehog (hedgehog)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
+import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original (C)
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils (testSTS)
 import Test.Tasty (TestTree)
@@ -262,8 +262,8 @@ testBootstrapNotSpending =
 data C
 
 instance Crypto C where
-  type KES C = KES (ConcreteCrypto Hash.ShortHash)
-  type VRF C = VRF (ConcreteCrypto Hash.ShortHash)
+  type KES C = KES Original.C
+  type VRF C = VRF Original.C
   type DSIGN C = DSIGN.Ed25519DSIGN
-  type HASH C = HASH (ConcreteCrypto Hash.ShortHash)
+  type HASH C = HASH Original.C
   type ADDRHASH C = Hash.Blake2b_224
