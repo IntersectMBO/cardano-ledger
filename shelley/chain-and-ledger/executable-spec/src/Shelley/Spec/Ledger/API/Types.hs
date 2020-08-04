@@ -99,6 +99,7 @@ import Shelley.Spec.Ledger.STS.Utxo as X (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow as X (UTXOW)
 import Shelley.Spec.Ledger.Scripts as X
   ( MultiSig (..),
+    Script (..),
     ScriptHash (..),
   )
 import Shelley.Spec.Ledger.Tx as X

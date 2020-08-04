@@ -32,6 +32,7 @@ import Cardano.Crypto.DSIGN.Class
     sizeSigDSIGN,
     sizeVerKeyDSIGN,
   )
+import qualified Data.Text as T
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
@@ -118,7 +119,7 @@ import Shelley.Spec.Ledger.Scripts
     Script (..),
     ScriptHash (ScriptHash),
   )
-import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet))
+import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
 import Shelley.Spec.Ledger.TxData
   ( MIRPot,
     PoolMetaData (PoolMetaData),
@@ -136,6 +137,7 @@ import Test.QuickCheck
     genericShrink,
     listOf,
     oneof,
+    resize,
     shrink,
     vectorOf,
   )
@@ -238,12 +240,15 @@ instance (Typeable kr, Mock c) => Arbitrary (WitVKey c kr) where
       <$> arbitrary
       <*> arbitrary
 
+
 instance Mock c => Arbitrary (WitnessSet c) where
   arbitrary =
     WitnessSet
       <$> arbitrary
+      <*> (mscriptsToWits <$> arbitrary)
       <*> arbitrary
-      <*> arbitrary
+    where
+      mscriptsToWits = Map.fromList . map (\s -> (hashScript s, s))
 
 instance Mock c => Arbitrary (Wdrl c) where
   arbitrary = genericArbitraryU
@@ -270,18 +275,39 @@ instance Mock c => Arbitrary (TxBody c) where
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary MetaDatum where
-  arbitrary =
+maxMetaDatumDepth :: Int
+maxMetaDatumDepth = 2
+
+maxMetaDatumListLens :: Int
+maxMetaDatumListLens = 5
+
+sizedMetaDatum :: Int -> Gen MetaDatum
+sizedMetaDatum 0 = 
+  oneof
+    [ MD.I <$> arbitrary,
+      MD.B <$> arbitrary,
+      MD.S <$> (T.pack <$> arbitrary)
+    ]
+sizedMetaDatum n = 
     oneof
-      [ MD.Map <$> arbitrary,
-        MD.List <$> arbitrary,
+      [ MD.Map <$>
+          (zip
+            <$> (resize maxMetaDatumListLens (listOf (sizedMetaDatum (n-1))))
+            <*> (listOf (sizedMetaDatum (n-1)))),
+        MD.List <$> resize maxMetaDatumListLens (listOf (sizedMetaDatum (n-1))),
         MD.I <$> arbitrary,
         MD.B <$> arbitrary,
-        MD.S <$> pure "hello world"
+        MD.S <$> (T.pack <$> arbitrary)
       ]
+
+instance Arbitrary MetaDatum where
+  arbitrary = sizedMetaDatum maxMetaDatumDepth
 
 instance Arbitrary MetaData where
   arbitrary = MD.MetaData <$> arbitrary
+
+maxTxWits :: Int
+maxTxWits = 5
 
 instance Mock c => Arbitrary (Tx c) where
   -- Our arbitrary instance constructs things using the pattern in order to have
@@ -289,7 +315,7 @@ instance Mock c => Arbitrary (Tx c) where
   arbitrary =
     Tx
       <$> arbitrary
-      <*> arbitrary
+      <*> (resize maxTxWits arbitrary)
       <*> arbitrary
 
 instance Crypto c => Arbitrary (TxId c) where
@@ -617,17 +643,27 @@ instance Arbitrary AccountState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
+maxMultiSigDepth :: Int
+maxMultiSigDepth = 3
+
+maxMultiSigListLens :: Int
+maxMultiSigListLens = 5
+
+sizedMultiSig :: Mock c => Int -> Gen (MultiSig c)
+sizedMultiSig 0 = RequireSignature <$> arbitrary
+sizedMultiSig n = 
+    oneof
+      [ RequireSignature <$> arbitrary,
+        RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1))),
+        RequireAnyOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1))),
+        RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1)))
+      ]
+
 instance
   Mock c =>
   Arbitrary (MultiSig c)
   where
-  arbitrary =
-    oneof
-      [ RequireSignature <$> arbitrary,
-        RequireAllOf <$> arbitrary,
-        RequireAnyOf <$> arbitrary,
-        RequireMOf <$> arbitrary <*> arbitrary
-      ]
+  arbitrary = sizedMultiSig maxMultiSigDepth
 
 instance
   Mock c =>

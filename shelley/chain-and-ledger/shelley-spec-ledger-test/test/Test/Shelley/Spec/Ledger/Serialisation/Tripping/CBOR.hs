@@ -105,6 +105,9 @@ prop_roundtrip_Header = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 prop_roundtrip_BlockHeaderHash :: Ledger.HashHeader Mock.C -> Property
 prop_roundtrip_BlockHeaderHash = roundtrip toCBOR fromCBOR
 
+prop_roundtrip_TxBody :: Ledger.TxBody Mock.C -> Property
+prop_roundtrip_TxBody = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
+
 prop_roundtrip_Tx :: Ledger.Tx Mock.C -> Property
 prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
@@ -130,7 +133,10 @@ prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
 prop_roundtrip_NewEpochState :: Ledger.NewEpochState Mock.C -> Property
 prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_Script :: Ledger.Block Mock.C -> Property
+prop_roundtrip_MultiSig :: Ledger.MultiSig Mock.C -> Property
+prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
+
+prop_roundtrip_Script :: Ledger.Script Mock.C -> Property
 prop_roundtrip_Script = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 -- TODO
@@ -158,6 +164,7 @@ tests =
       testProperty "roundtrip RewardAcnt" prop_roundtrip_RewardAcnt,
       testProperty "roundtrip Header" prop_roundtrip_Header,
       testProperty "roundtrip Block Header Hash" prop_roundtrip_BlockHeaderHash,
+      testProperty "roundtrip TxBody" prop_roundtrip_TxBody,
       testProperty "roundtrip Tx" prop_roundtrip_Tx,
       testProperty "roundtrip Bootstrap Witness" prop_roundtrip_BootstrapWitness,
       testProperty "roundtrip TxId" prop_roundtrip_TxId,
@@ -166,5 +173,6 @@ tests =
       testProperty "roundtrip Protocol State" prop_roundtrip_PrtclState,
       testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
       testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState,
+      testProperty "roundtrip MultiSig" prop_roundtrip_MultiSig,
       testProperty "roundtrip Script" prop_roundtrip_Script
     ]
