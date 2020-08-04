@@ -5,6 +5,8 @@
 module Main where
 
 import BenchUTxOAggregate (expr, genTestCase)
+import BenchValidation(validateInput,benchValidate,benchvalid)
+
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (dom, forwards, keysEqual, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
@@ -179,6 +181,25 @@ time                 280.6 ms   (256.0 ms .. 297.3 ms)
 
 -}
 
+-- =================================================================
+
+benchValid :: IO ()
+benchValid =
+  defaultMain $
+    [ bgroup "validate block transition" $
+      [env validateInput $  \arg -> bench "Only one" (whnf benchValidate arg)
+      ]
+    ]
+
+
+profileValid :: IO ()
+profileValid = do
+  state <-  validateInput
+  ns <- sequence [ fmap (length . show) (benchValidate state) | _n <- ([1..50]::[Int]) ]
+  putStrLn (show (sum ns))
+  pure()
+
+
 -- ========================================================
 -- Profile algorithms for  ((dom d ◁ r) ▷ dom rg)
 
@@ -274,7 +295,10 @@ varyDelegState tag fixed changes initstate action =
 -- =============================================================================
 
 main :: IO ()
-main =
+main = profileValid
+
+main2:: IO()
+main2 =
   defaultMain $
     [ bgroup "vary input size" $
         [ varyInput "deregister key" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerDeRegisterStakeKeys,

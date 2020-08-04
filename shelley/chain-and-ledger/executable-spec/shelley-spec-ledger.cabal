@@ -71,12 +71,10 @@ library
                      Shelley.Spec.Ledger.Tx
                      Shelley.Spec.Ledger.TxData
                      Shelley.Spec.Ledger.UTxO
-
                      Shelley.Spec.Ledger.Crypto
-
                      Shelley.Spec.Ledger.API
-  other-modules:     Shelley.Spec.Ledger.API.Validation
-                     Shelley.Spec.Ledger.API.Mempool
+                     Shelley.Spec.Ledger.API.Validation
+  other-modules:     Shelley.Spec.Ledger.API.Mempool
                      Shelley.Spec.Ledger.API.Protocol
                      Shelley.Spec.Ledger.API.Wallet
                      Shelley.Spec.Ledger.API.Types
@@ -251,6 +249,7 @@ benchmark mainbench
                     test
   main-is:          Main.hs
   other-modules:    BenchUTxOAggregate,
+                    BenchValidation,
                     Shelley.Spec.Ledger.Bench.Gen
                     Test.Cardano.Crypto.VRF.Fake,
                     Test.Shelley.Spec.Ledger.Address.Bootstrap,
@@ -258,14 +257,19 @@ benchmark mainbench
                     Test.Shelley.Spec.Ledger.ConcreteCryptoTypes,
                     Test.Shelley.Spec.Ledger.Examples,
                     Test.Shelley.Spec.Ledger.Examples.Cast,
+                    Test.Shelley.Spec.Ledger.Generator.Block,
                     Test.Shelley.Spec.Ledger.Generator.Constants,
                     Test.Shelley.Spec.Ledger.Generator.Core,
-                    Test.Shelley.Spec.Ledger.Generator.Delegation
-                    Test.Shelley.Spec.Ledger.Generator.MetaData
+                    Test.Shelley.Spec.Ledger.Generator.Delegation,
+                    Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
+                    Test.Shelley.Spec.Ledger.Generator.MetaData,
                     Test.Shelley.Spec.Ledger.Generator.Presets,
-                    Test.Shelley.Spec.Ledger.Generator.Trace.DCert
+                    Test.Shelley.Spec.Ledger.Generator.Presets,
+                    Test.Shelley.Spec.Ledger.Shrinkers,
+                    Test.Shelley.Spec.Ledger.Generator.Trace.DCert,
+                    Test.Shelley.Spec.Ledger.Generator.Trace.Chain,
                     Test.Shelley.Spec.Ledger.Generator.Update,
-                    Test.Shelley.Spec.Ledger.Generator.Utxo
+                    Test.Shelley.Spec.Ledger.Generator.Utxo,
                     Test.Shelley.Spec.Ledger.NonTraceProperties.Generator,
                     Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator,
                     Test.Shelley.Spec.Ledger.NonTraceProperties.Validity,
@@ -295,6 +299,7 @@ benchmark mainbench
                     deepseq,
                     generic-random,
                     hedgehog,
+                    mtl,
                     QuickCheck,
                     tasty-quickcheck,
                     tasty-hunit,

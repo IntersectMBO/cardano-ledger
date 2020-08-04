@@ -12,6 +12,7 @@
 
 module Control.Iterate.SetAlgebraInternal where
 
+-- import Debug.Trace(trace)
 import Codec.CBOR.Decoding(decodeListLenOf)
 import Codec.CBOR.Encoding(encodeListLen)
 import Cardano.Binary
@@ -1287,6 +1288,7 @@ instance Show (BaseRep f k v) where
   show BiMapR = "BiMap"
 
 instance Show (Exp t) where
+  show (Base MapR x) = "Map("++show(Map.size x)++")?"
   show (Base rep x) = show rep++"?"
   show (Dom x) = "(dom "++show x++")"
   show (Rng x) = "(rng "++show x++")"
