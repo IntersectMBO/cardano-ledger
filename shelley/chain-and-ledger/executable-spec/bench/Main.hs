@@ -5,7 +5,10 @@
 module Main where
 
 import BenchUTxOAggregate (expr, genTestCase)
-import BenchValidation(validateInput,benchValidate,benchvalid)
+import BenchValidation
+  ( validateInput,benchValidate,benchreValidate,benchvalid,sizes,
+    runUpdate, updateChain, genUpdateInputs, profileUpdate,
+  )
 
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (dom, forwards, keysEqual, (▷), (◁))
@@ -184,12 +187,16 @@ time                 280.6 ms   (256.0 ms .. 297.3 ms)
 -- =================================================================
 
 benchValid :: IO ()
-benchValid =
-  defaultMain $
-    [ bgroup "validate block transition" $
-      [env validateInput $  \arg -> bench "Only one" (whnf benchValidate arg)
+benchValid = defaultMain [ validGroup ]
+
+validGroup :: Benchmark
+validGroup =
+    bgroup "block transition" $
+      [env validateInput $  \arg -> bgroup ""
+                                     [ bench "Validate" (whnf benchValidate arg),
+                                       bench "ReValidate" (whnf benchreValidate arg)
+                                     ]
       ]
-    ]
 
 
 profileValid :: IO ()
@@ -199,6 +206,15 @@ profileValid = do
   putStrLn (show (sum ns))
   pure()
 
+
+benchUpdateChain :: IO ()
+benchUpdateChain = defaultMain [ updateGroup ]
+
+updateGroup :: Benchmark
+updateGroup =
+   bgroup "update block chain" $
+      [env genUpdateInputs $  \arg ->  bench "Validate" (whnf updateChain arg)
+      ]
 
 -- ========================================================
 -- Profile algorithms for  ((dom d ◁ r) ▷ dom rg)
@@ -295,10 +311,13 @@ varyDelegState tag fixed changes initstate action =
 -- =============================================================================
 
 main :: IO ()
-main = profileValid
+-- main = benchUpdateChain
+-- main = benchValid
+-- main = profileUpdate
 
-main2:: IO()
-main2 =
+
+-- main2:: IO()
+main =
   defaultMain $
     [ bgroup "vary input size" $
         [ varyInput "deregister key" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerDeRegisterStakeKeys,
@@ -320,5 +339,7 @@ main2 =
           varyDelegState "manyKeysOnePool" 50 [50, 500, 5000] ledgerStateWithNkeysMpools ledgerDelegateManyKeysOnePool
         ],
       bgroup "vary utxo at epoch boundary" $ (epochAt <$> [5000, 50000, 500000]),
-      bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000]
+      bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
+      updateGroup,
+      validGroup
     ]
