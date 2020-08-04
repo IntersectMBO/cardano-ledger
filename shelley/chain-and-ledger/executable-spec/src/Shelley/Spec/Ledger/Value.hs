@@ -16,6 +16,7 @@ import           Cardano.Binary (ToCBOR, FromCBOR, toCBOR, fromCBOR, encodeListL
                   decodeWord)
 import           Cardano.Prelude (NoUnexpectedThunks(..), NFData ())
 import           Data.Coerce (coerce)
+import           Data.Typeable (Typeable)
 
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -36,8 +37,9 @@ General function and type class definitions used in Value
 
 data Op = Gt | Lt | Gteq | Lteq | Neq | Equal
 
-class (NFData t, Show t, Eq t, NoUnexpectedThunks t) => Val t where
+class (Typeable t, NFData t, Show t, Eq t, NoUnexpectedThunks t, ToCBOR t, FromCBOR t, ProjectToBase t b) => Val t where
   zeroV :: t                          -- This is an identity of addv
+  adaTag :: c                         -- tag to look up the Ada part
   addv :: t -> t -> t                 -- This must be associative and commutative
   vnegate:: t -> t                    -- addv x (vnegate x) == zeroV
   scalev:: Integer -> t -> t          --
@@ -47,6 +49,9 @@ class (NFData t, Show t, Eq t, NoUnexpectedThunks t) => Val t where
 
 class Default f t where
   apply:: Ord k => f k t -> k -> t
+
+class ProjectToBase t b where
+  projectB :: t -> b
 
 instance Val Integer where
   zeroV = 0
@@ -64,14 +69,25 @@ instance Val Integer where
 instance Val t => Default Map t where
    apply mp k = case Map.lookup k mp of { Just t -> t; Nothing -> zeroV }
 
-instance (Ord k,Val t, NFData k, Show k, NoUnexpectedThunks k) => Val (Map k t) where
+instance ProjectToBase b b where
+   projectB x = x
+
+instance (ProjectToBase b b, Val b) => ProjectToBase (Map k b) b where
+   projectB x = findWithDefault zeroV adaTag x
+
+instance (ProjectToBase (Map k b) b) => ProjectToBase (Map k (Map k b)) b where
+   projectB = projectB . projectB 
+
+instance (Ord k, Val t, NFData k, Show k, NoUnexpectedThunks k, Typeable k, Typeable t, ToCBOR t, FromCBOR t, ToCBOR k, FromCBOR k, ProjectToBase (Map k t) t) => Val (Map k t) where
   zeroV = Map.empty
   addv x y = unionWithV addv x y  -- There is an assumption that if the range is zeroV, it is not stored in the Map
   vnegate x = mapV vnegate x        -- We enforce this by using our own versions of map and union: unionWithV and mapV
   scalev n x = mapV (scalev n) x
   checkBinRel op x y = pointWise (checkBinRel op) x y
   visZero x = Map.null x
-
+  -- getAdaAmount v = Coin $ c
+  --   where
+  --     c = apply v  -- foldl (+) 0 (fmap ((foldl (+) 0) . elems) (elems $ filterWithKey (\k _ -> k == adaID) v))
 
 pointWise:: Ord k => (v -> v -> Bool) -> Map k v -> Map k v -> Bool
 pointWise _ Tip Tip = True
@@ -126,15 +142,15 @@ Value definitions
 
 -- | Quantity
 newtype Quantity = Quantity {unInt :: Integer}
-  deriving (Show, Eq, Generic, ToCBOR, FromCBOR, Ord, Integral, Real, Num, Enum, NoUnexpectedThunks, NFData, Val)
+  deriving (Show, Eq, Generic, ToCBOR, FromCBOR, Ord, Integral, Real, Num, Enum, NoUnexpectedThunks, NFData, Val, Typeable)
 
 -- | Asset ID
 newtype AssetID = AssetID {assetID :: ByteString}
-  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks, NFData)
+  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks, NFData, Typeable)
 
 -- | Policy ID
 newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
-  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks, NFData)
+  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks, NFData, Typeable)
 
 {- note [Assets]
 
@@ -170,14 +186,14 @@ similar to 'Ledger.Ada' for their own assets.
 -- | Value type
 newtype Value crypto = Value
   { val :: Map  (PolicyID crypto) (Map AssetID Quantity) }
-  deriving (Show, Generic, Val)
+  deriving (Show, Generic, Val, Typeable)
 
 instance NoUnexpectedThunks (Value crypto)
 instance NFData (Value crypto)
 
 -- | compact representation of Value
 data CompactValue crypto = AdaOnly Coin | MixValue (Value crypto)
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Typeable)
 
 instance NoUnexpectedThunks (CompactValue crypto)
 instance NFData (CompactValue crypto)
@@ -190,7 +206,7 @@ getQs (Value v) = fmap snd (concat $ fmap toList (elems v))
 coinToValue :: Coin -> Value crypto
 coinToValue (Coin c) = Value $ singleton adaID (singleton adaToken (Quantity c))
 
--- | add up all the ada in a Value
+-- -- | add up all the ada in a Value
 getAdaAmount :: Value crypto -> Coin
 getAdaAmount (Value v) = Coin $ c
   where
@@ -226,26 +242,26 @@ compactValueToValue :: CompactValue crypto -> Value crypto
 compactValueToValue (AdaOnly c)  = coinToValue c
 compactValueToValue (MixValue v) = v
 
-instance Eq (Value crypto) where
+instance (Typeable crypto, Crypto crypto) => Eq (Value crypto) where
     (==) = checkBinRel Equal
 
-instance Semigroup (Value crypto) where
+instance (Typeable crypto, Crypto crypto) => Semigroup (Value crypto) where
     (<>) = addv
 
-instance Monoid (Value crypto) where
+instance (Typeable crypto, Crypto crypto) => Monoid (Value crypto) where
     mempty  = zeroV
     mappend = (<>)
 
 -- instances for CompactValue
-instance Semigroup (CompactValue crypto) where
+instance (Typeable crypto, Crypto crypto) => Semigroup (CompactValue crypto) where
     (<>) v1 v2 = valueToCompactValue $ addv (compactValueToValue v1) (compactValueToValue v2)
 
-instance Monoid (CompactValue crypto) where
+instance (Typeable crypto, Crypto crypto) => Monoid (CompactValue crypto) where
     mempty  = MixValue zeroV
     mappend = (<>)
 
 -- constraint used for all parametrized functions
-type CV c v = (Val v, Crypto c)
+type CV c v = (Typeable c, Val v, Crypto c, Generic v, NoUnexpectedThunks v)
 
 --
 -- instance Group (Value crypto) where
@@ -283,10 +299,10 @@ singleType c tn i = Value (singleton c (singleton tn i))
 -- Num operations
 
 -- | subtract values
-subv :: Value crypto -> Value crypto -> Value crypto
+subv :: (Crypto crypto) => Value crypto -> Value crypto -> Value crypto
 subv v1 v2 = addv v1 (vnegate v2)
 
-vinsert:: PolicyID crypto -> AssetID -> Quantity -> Value crypto -> Value crypto
+vinsert:: (Crypto crypto) => PolicyID crypto -> AssetID -> Quantity -> Value crypto -> Value crypto
 vinsert pid aid q old = addv old (Value (Map.singleton pid (Map.singleton aid q)))
 
 -- | Split a value into its positive and negative parts. The first element of
@@ -312,7 +328,7 @@ splitValueFee (Value v) n
 -- CBOR
 
 instance
-  (Crypto crypto)
+  (Typeable crypto, Crypto crypto)
   => ToCBOR (CompactValue crypto)
  where
    toCBOR = \case
@@ -326,7 +342,7 @@ instance
            <> toCBOR v
 
 instance
-  (Crypto crypto)
+  (Typeable crypto, Crypto crypto)
   => FromCBOR (CompactValue crypto)
  where
   fromCBOR = do
@@ -341,7 +357,7 @@ instance
 
 
 instance
-  (Crypto crypto)
+  (Typeable crypto, Crypto crypto)
   => ToCBOR (Value crypto)
  where
    toCBOR = (\case
@@ -355,7 +371,7 @@ instance
            <> toCBOR v) . valueToCompactValue
 
 instance
-  (Crypto crypto)
+  (Typeable crypto, Crypto crypto)
   => FromCBOR (Value crypto)
  where
   fromCBOR = do

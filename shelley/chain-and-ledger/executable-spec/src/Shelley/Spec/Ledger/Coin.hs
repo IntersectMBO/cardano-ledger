@@ -15,6 +15,7 @@ where
 import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Typeable (Typeable)
 import Data.Text (pack)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -31,7 +32,8 @@ newtype Coin = Coin {unCoin :: Integer}
       Generic,
       ToJSON,
       FromJSON,
-      NFData
+      NFData,
+      Typeable
     )
   deriving (Show) via Quiet Coin
 

@@ -381,9 +381,9 @@ newtype CV crypto v => TxId crypto v = TxId {_unTxId :: Hash crypto (TxBody cryp
   deriving (Show, Eq, Ord)
   deriving newtype (NFData, NoUnexpectedThunks)
 
-deriving newtype instance CV crypto v => ToCBOR (TxId crypto v)
+deriving newtype instance (Typeable crypto, CV crypto v) => ToCBOR (TxId crypto v)
 
-deriving newtype instance CV crypto v => FromCBOR (TxId crypto v)
+deriving newtype instance (Typeable crypto, CV crypto v) => FromCBOR (TxId crypto v)
 
 -- | The input of a UTxO.
 data CV crypto v => TxIn crypto v = TxInCompact {-# UNPACK #-} !(TxId crypto v) {-# UNPACK #-} !Word64
@@ -393,7 +393,7 @@ data CV crypto v => TxIn crypto v = TxInCompact {-# UNPACK #-} !(TxId crypto v) 
 -- depends on the crypto.
 
 
-deriving instance NFData v => NFData (TxIn crypto v)
+deriving instance (NFData v, CV crypto v) => NFData (TxIn crypto v)
 
 pattern TxIn ::
   CV crypto v =>
@@ -408,7 +408,9 @@ pattern TxIn addr index <-
 
 {-# COMPLETE TxIn #-}
 
-instance NoUnexpectedThunks (TxIn crypto v)
+instance Generic (TxIn crypto v)
+
+instance (CV crypto v) => NoUnexpectedThunks (TxIn crypto v)
 
 -- | The output of a UTxO.
 -- data TxOut crypto
@@ -428,12 +430,12 @@ deriving instance Show v => Show (TxOut crypto v)
 
 deriving instance Eq v => Eq (TxOut crypto v)
 
-deriving instance NoUnexpectedThunks v => NoUnexpectedThunks (TxOut crypto v)
+-- deriving instance (NoUnexpectedThunks v, CV crypto v) => NoUnexpectedThunks (TxOut crypto v)
 
-instance NFData v => NFData (TxOut crypto v) where
+instance (NFData v, CV crypto v) => NFData (TxOut crypto v) where
   rnf = (`seq` ())
 
--- deriving via UseIsNormalFormNamed "TxOut" (TxOut crypto v) instance NoUnexpectedThunks (TxOut crypto v)
+deriving via UseIsNormalFormNamed "TxOut" (TxOut crypto v) instance (Generic v, NoUnexpectedThunks v, CV crypto v) => NoUnexpectedThunks (TxOut crypto v)
 
 pattern TxOut ::
   CV crypto v =>
@@ -449,12 +451,12 @@ pattern TxOut addr v <-
 {-# COMPLETE TxOut #-}
 
 viewCompactTxOut :: forall crypto v. CV crypto v => TxOut crypto v -> (Addr crypto, Coin)
-viewCompactTxOut (TxOutCompact bs c) = (addr, coin)
+viewCompactTxOut (TxOutCompact bs c) = (addr, vl)
   where
     addr = case deserialiseAddr (BSS.fromShort bs) of
       Nothing -> panic "viewCompactTxOut: impossible"
       Just (a :: Addr crypto) -> a
-    coin = word64ToCoin c
+    vl = word64ToCoin c
 
 data DelegCert crypto
   = -- | A stake key registration certificate.
@@ -551,7 +553,9 @@ data CV crypto v => TxBody crypto v = TxBody'
 
 instance CV c v => HashAnnotated (TxBody c v) c
 
-deriving instance NoUnexpectedThunks v => NoUnexpectedThunks (TxBody crypto v)
+deriving via AllowThunksIn '["bodyBytes"] (TxBody crypto v) instance (CV crypto v) => NoUnexpectedThunks (TxBody crypto v)
+
+instance Generic (TxBody crypto v)
 
 pattern TxBody ::
   CV crypto v =>
@@ -787,8 +791,8 @@ instance
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
     addr <- fromCBOR
-    (b :: Word64) <- fromCBOR
-    pure $ TxOut addr (Coin $ toInteger b)
+    vl <- fromCBOR
+    pure $ TxOut addr vl
 
 instance
   (Typeable kr, CV crypto v) =>
@@ -809,13 +813,13 @@ instance
       mkWitVKey k sig = WitVKey' k sig (asWitness $ hashKey k)
 
 instance
-  (Crypto crypto) =>
+  (CV crypto v) =>
   ToCBOR (TxBody crypto v)
   where
   toCBOR = encodePreEncoded . BSL.toStrict . bodyBytes
 
 instance
-  (Crypto crypto) =>
+  (CV crypto v) =>
   FromCBOR (Annotator (TxBody crypto v))
   where
   fromCBOR = annotatorSlice $ do
