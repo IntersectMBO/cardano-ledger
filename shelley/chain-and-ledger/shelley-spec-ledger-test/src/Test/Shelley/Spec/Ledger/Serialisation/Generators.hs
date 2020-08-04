@@ -47,6 +47,7 @@ import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
@@ -117,6 +118,7 @@ import Shelley.Spec.Ledger.Scripts
     Script (..),
     ScriptHash (ScriptHash),
   )
+import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet))
 import Shelley.Spec.Ledger.TxData
   ( MIRPot,
     PoolMetaData (PoolMetaData),
@@ -230,13 +232,18 @@ instance MockGen c => Arbitrary (BootstrapWitness c) where
 instance Crypto c => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> genHash
 
-instance Mock c => Arbitrary (WitVKey c kr) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
+instance (Typeable kr, Mock c) => Arbitrary (WitVKey c kr) where
+  arbitrary =
+    WitVKey
+      <$> arbitrary
+      <*> arbitrary
 
 instance Mock c => Arbitrary (WitnessSet c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
+  arbitrary =
+    WitnessSet
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance Mock c => Arbitrary (Wdrl c) where
   arbitrary = genericArbitraryU
@@ -250,8 +257,18 @@ instance Mock c => Arbitrary (Update c) where
   shrink = genericShrink
 
 instance Mock c => Arbitrary (TxBody c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
+  -- Our arbitrary instance constructs things using the pattern in order to have
+  -- the correct serialised bytes.
+  arbitrary =
+    TxBody
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary MetaDatum where
   arbitrary =
@@ -264,12 +281,16 @@ instance Arbitrary MetaDatum where
       ]
 
 instance Arbitrary MetaData where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
+  arbitrary = MD.MetaData <$> arbitrary
 
 instance Mock c => Arbitrary (Tx c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
+  -- Our arbitrary instance constructs things using the pattern in order to have
+  -- the correct serialised bytes.
+  arbitrary =
+    Tx
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance Crypto c => Arbitrary (TxId c) where
   arbitrary = TxId <$> genHash
