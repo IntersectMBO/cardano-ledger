@@ -219,7 +219,7 @@ instance
     \case
       0 -> do
         s <- fromCBOR
-        pure (0, MultiSigScript <$> s)
+        pure (2, MultiSigScript <$> s)
       k -> invalidKey k
 
 instance
