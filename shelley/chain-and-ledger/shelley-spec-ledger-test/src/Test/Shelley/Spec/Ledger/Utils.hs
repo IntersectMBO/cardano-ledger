@@ -43,7 +43,7 @@ import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash
   ( Hash,
     HashAlgorithm,
-    MD5,
+    Blake2b_256,
     hashToBytes,
     hashWithSerialiser,
   )
@@ -135,7 +135,7 @@ mkSeedFromWords ::
   (Word64, Word64, Word64, Word64, Word64) ->
   Seed
 mkSeedFromWords stuff =
-  mkSeedFromBytes . hashToBytes $ hashWithSerialiser @MD5 toCBOR stuff
+  mkSeedFromBytes . hashToBytes $ hashWithSerialiser @Blake2b_256 toCBOR stuff
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey :: DSIGNAlgorithm (DSIGN crypto) => (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN (DSIGN crypto), VKey kd crypto)
