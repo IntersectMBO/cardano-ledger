@@ -24,6 +24,7 @@
 \usepackage{tikz}
 \usepackage{booktabs}
 \usepackage{enumerate}
+\usepackage{fancyvrb}
 
 
 
@@ -37,7 +38,7 @@
 % data for Deliverable header -- added by KH from an EU H2020 project template
 \DeliverableNumber{GL-D1}
 \DeliverableTitle{A Formal Specification of the Cardano Ledger with a Native Multicurrency Implementation}
-   {Formal Cardano Ledger with MC Spec.}
+   {Formal Cardano Ledger with Multi-Asset Spec.}
 
 \DeliverableResponsible{Formal Methods Team}
 
@@ -53,9 +54,9 @@
 \EditorName{Polina Vinogradova}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
-\Version{0.2}
+\Version{1.0}
 \Project{Goguen Ledger}
-\DisseminationDR
+\DisseminationPU
 
 %%
 %% Types
@@ -334,11 +335,13 @@
 \newcommand{\arrow}{\rightarrow}
 
 \newcommand{\khcomment}[1]{\textbf{ -- KH: #1 -- }}
+\renewcommand{\khcomment}[1]{} % For publication
 
 \begin{document}
 
 \input{frontmatter}
 
+\pagebreak
 \tableofcontents
 \listoffigures
 
@@ -357,6 +360,11 @@
 
 \begin{appendix}
   \include{mps-language}
+\end{appendix}
+
+\begin{appendix}
+  \section*{Appendix B: Outstanding Design Decisions}
+  \VerbatimInput{TODO}
 \end{appendix}
 
 \end{document}
