@@ -14,7 +14,7 @@ module Test.Shelley.Spec.Ledger.Serialisation.Golden.Address
 where
 
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
-import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), ShortHash, hashFromBytes)
+import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), hashFromBytes)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
 import Cardano.Crypto.KES.Sum
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
@@ -42,7 +42,7 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
@@ -62,7 +62,7 @@ tests =
 goldenTests_MockCrypto :: TestTree
 goldenTests_MockCrypto =
   T.testGroup
-    "ConcreteCrypto golden tests"
+    "MockCrypto golden tests"
     [ golden "keyHash" putCredential keyHash "01020304",
       golden "scriptHash" putCredential scriptHash "05060708",
       golden "ptr" putPtr ptr "81000203",
@@ -118,11 +118,11 @@ goldenTests_MockCrypto =
         "f005060708"
     ]
   where
-    keyHash :: Credential kh (ConcreteCrypto ShortHash)
+    keyHash :: Credential kh C
     keyHash =
       KeyHashObj . KeyHash . UnsafeHash $
         SBS.toShort . fst . B16.decode $ "01020304"
-    scriptHash :: Credential kh (ConcreteCrypto ShortHash)
+    scriptHash :: Credential kh C
     scriptHash =
       ScriptHashObj . ScriptHash . UnsafeHash $
         SBS.toShort . fst . B16.decode $ "05060708"

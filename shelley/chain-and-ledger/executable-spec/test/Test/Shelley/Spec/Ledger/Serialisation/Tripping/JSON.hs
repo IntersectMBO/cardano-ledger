@@ -12,13 +12,12 @@ module Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON
   )
 where
 
-import Cardano.Crypto.Hash
 import Data.Aeson (decode, encode, fromJSON, toJSON)
 import Data.Proxy
 import Hedgehog (Property)
 import qualified Hedgehog
 import Shelley.Spec.Ledger.Crypto
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
 import Test.Tasty
 import Test.Tasty.Hedgehog
@@ -59,11 +58,11 @@ tests =
   testGroup
     "Shelley Genesis"
     [ testProperty "Adress round trip" $
-        prop_roundtrip_Address_JSON @(ConcreteCrypto ShortHash) Proxy,
+        prop_roundtrip_Address_JSON @C Proxy,
       testProperty "Genesis round trip" $
-        prop_roundtrip_ShelleyGenesis_JSON @(ConcreteCrypto ShortHash) Proxy,
+        prop_roundtrip_ShelleyGenesis_JSON @C Proxy,
       testProperty "fund pair round trip" $
-        prop_roundtrip_FundPair_JSON @(ConcreteCrypto ShortHash) Proxy,
+        prop_roundtrip_FundPair_JSON @C Proxy,
       testProperty "delegation pair round trip" $
-        prop_roundtrip_GenesisDelegationPair_JSON @(ConcreteCrypto ShortHash) Proxy
+        prop_roundtrip_GenesisDelegationPair_JSON @C Proxy
     ]
