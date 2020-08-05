@@ -10,13 +10,24 @@ import BenchValidation
     benchreValidate,
     genUpdateInputs,
     sizes,
+    updateAndTickChain,
     updateChain,
     validateInput,
   )
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (dom, forwards, keysEqual, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
-import Criterion.Main (Benchmark, bench, bgroup, defaultMain, env, whnf)
+import Criterion.Main
+  ( Benchmark,
+    bench,
+    bgroup,
+    defaultMain,
+    env,
+    nf,
+    nfIO,
+    whnf,
+    whnfIO,
+  )
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
@@ -158,9 +169,7 @@ action2m :: Crypto c => (DState c, PState c, UTxO c) -> SnapShot c
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 dstate' :: DState C
-
 pstate' :: PState C
-
 utxo' :: UTxO C
 (dstate', pstate', utxo') = unsafePerformIO $ QC.generate (genTestCase 1000000 (5000 :: Int))
 
@@ -194,21 +203,26 @@ time                 280.6 ms   (256.0 ms .. 297.3 ms)
 validGroup :: Benchmark
 validGroup =
   bgroup "validation" $
-    [ runAtUTxOSize 1000
-    , runAtUTxOSize 100000
-    , runAtUTxOSize 1000000
+    [ runAtUTxOSize 1000,
+      runAtUTxOSize 100000,
+      runAtUTxOSize 1000000
     ]
   where
-    runAtUTxOSize n = bgroup (show n) $
-      [ env (validateInput n) $ \arg ->
-          bgroup
-            "block"
-            [ bench "applyBlockTransition" (whnf benchValidate arg),
-              bench "reapplyBlockTransition" (whnf benchreValidate arg)
-            ],
-        env (genUpdateInputs n) $ \arg ->
-          bench "updateChainDepState" (whnf updateChain arg)
-      ]
+    runAtUTxOSize n =
+      bgroup (show n) $
+        [ env (validateInput n) $ \arg ->
+            bgroup
+              "block"
+              [ bench "applyBlockTransition" (nfIO $ benchValidate arg),
+                bench "reapplyBlockTransition" (nfIO $ benchreValidate arg)
+              ],
+          env (genUpdateInputs n) $ \arg ->
+            bgroup
+              "protocol"
+              [ bench "updateChainDepState" (nf updateChain arg),
+                bench "updateAndTickChainDepState" (nf updateAndTickChain arg)
+              ]
+        ]
 
 profileValid :: IO ()
 profileValid = do

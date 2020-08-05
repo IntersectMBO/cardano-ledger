@@ -16,6 +16,7 @@ module BenchValidation
     benchreValidate,
     sizes,
     updateChain,
+    updateAndTickChain,
     genUpdateInputs,
   )
 where
@@ -34,6 +35,7 @@ import Shelley.Spec.Ledger.API.Protocol
     ChainTransitionError,
     LedgerView (..),
     currentLedgerView,
+    tickChainDepState,
     updateChainDepState,
   )
 import Shelley.Spec.Ledger.API.Validation
@@ -161,6 +163,9 @@ instance NFData (ChainDepState c) where
 instance NFData Globals where
   rnf (Globals _ _ _ _ _ _ _ _ _ _ _) = ()
 
+instance NFData (ChainTransitionError c) where
+  rnf _ = ()
+
 instance NFData UpdateInputs where
   rnf (UpdateInputs g lv bh st) = seq (rnf g) (seq (rnf lv) (seq (rnf bh) (rnf st)))
 
@@ -177,5 +182,15 @@ genUpdateInputs utxoSize = do
         Nothing -> error "Empty Slot"
   pure (UpdateInputs testGlobals ledgerview blockheader (ChainDepState prtclState ticknState nonce))
 
-updateChain :: UpdateInputs -> Either (ChainTransitionError BenchCrypto) (ChainDepState BenchCrypto)
+updateChain ::
+  UpdateInputs ->
+  Either (ChainTransitionError BenchCrypto) (ChainDepState BenchCrypto)
 updateChain (UpdateInputs gl lv bh st) = updateChainDepState gl lv bh st
+
+updateAndTickChain ::
+  UpdateInputs ->
+  Either (ChainTransitionError BenchCrypto) (ChainDepState BenchCrypto)
+updateAndTickChain (UpdateInputs gl lv bh st) =
+  updateChainDepState gl lv bh
+    . tickChainDepState gl lv True
+    $ st
