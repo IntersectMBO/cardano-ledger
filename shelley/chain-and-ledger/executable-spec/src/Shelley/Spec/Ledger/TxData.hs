@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
@@ -136,7 +135,7 @@ import Shelley.Spec.Ledger.BaseTypes
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), word64ToCoin)
+import Shelley.Spec.Ledger.Coin (Coin (..))
 
 import Shelley.Spec.Ledger.Value
 
@@ -207,7 +206,12 @@ data PoolMetaData = PoolMetaData
   { _poolMDUrl :: !Url,
     _poolMDHash :: !ByteString
   }
-  deriving (Eq, Ord, Generic, Show, NFData)
+  deriving (Eq, Ord, Generic, Show)
+
+deriving via UseIsNormalFormNamed "PoolMetaData" PoolMetaData instance NoUnexpectedThunks PoolMetaData
+
+instance NFData PoolMetaData where
+  rnf (PoolMetaData url bs) = seq (rnf url) (rnf bs)
 
 instance ToJSON PoolMetaData where
   toJSON pmd =
@@ -222,8 +226,6 @@ instance FromJSON PoolMetaData where
       PoolMetaData
         <$> obj .: "url"
         <*> explicitParseField (fmap (fst . Base16.decode . Char8.pack) . parseJSON) obj "hash"
-
-instance NoUnexpectedThunks PoolMetaData
 
 data StakePoolRelay
   = -- | One or both of IPv4 & IPv6
@@ -332,11 +334,21 @@ data PoolParams crypto = PoolParams
     _poolRelays :: !(StrictSeq StakePoolRelay),
     _poolMD :: !(StrictMaybe PoolMetaData)
   }
-  deriving (Show, Generic, Eq, Ord, NFData)
+  deriving (Show, Generic, Eq, Ord)
   deriving (ToCBOR) via CBORGroup (PoolParams crypto)
   deriving (FromCBOR) via CBORGroup (PoolParams crypto)
 
 instance NoUnexpectedThunks (PoolParams crypto)
+
+instance NFData (PoolParams crypto) where
+  rnf (PoolParams a b c d e f g h i) = seq (rnf a)
+                                      (seq (rnf b)
+                                      (seq (rnf c)
+                                      (seq (rnf d)
+                                      (seq (rnf e)
+                                      (seq (rnf f)
+                                      (seq (rnf g)
+                                      (seq (rnf h) (rnf i))))))))
 
 newtype Wdrl crypto = Wdrl {unWdrl :: Map (RewardAcnt crypto) Coin}
   deriving (Show, Eq, Generic)
@@ -377,23 +389,41 @@ instance Crypto crypto => FromJSON (PoolParams crypto) where
         <*> obj .: "metadata"
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype CV crypto v => TxId crypto v = TxId {_unTxId :: Hash crypto (TxBody crypto v)}
-  deriving (Show, Eq, Ord)
-  deriving newtype (NFData, NoUnexpectedThunks)
+-- newtype (Val v) => TxId crypto v = TxId {_unTxId :: Hash crypto (TxBody crypto v)}
+--   deriving newtype (NFData, NoUnexpectedThunks)
 
-deriving newtype instance (Typeable crypto, CV crypto v) => ToCBOR (TxId crypto v)
+instance (CV crypto v) => NFData (TxId crypto v) where
+  rnf (TxId hs) = rnf hs
 
-deriving newtype instance (Typeable crypto, CV crypto v) => FromCBOR (TxId crypto v)
+newtype TxId crypto v where
+  TxId ::
+    Hash crypto (TxBody crypto v) ->
+    TxId crypto v
+
+deriving instance Ord (TxId crypto v)
+deriving instance Eq (TxId crypto v)
+deriving instance Show (TxId crypto v)
+
+deriving instance (CV crypto v) => ToCBOR (TxId crypto v)
+
+deriving instance (CV crypto v) => FromCBOR (TxId crypto v)
 
 -- | The input of a UTxO.
-data CV crypto v => TxIn crypto v = TxInCompact {-# UNPACK #-} !(TxId crypto v) {-# UNPACK #-} !Word64
-  deriving (Show, Eq, Ord)
+data TxIn crypto v where
+  TxInCompact :: CV crypto v =>
+    {-# UNPACK #-} !(TxId crypto v) ->
+    {-# UNPACK #-} !Word64 ->
+    TxIn crypto v
 
 -- TODO: We will also want to have the TxId be compact, but the representation
 -- depends on the crypto.
 
+deriving instance Ord (TxIn crypto v)
+deriving instance Eq (TxIn crypto v)
+deriving instance Show (TxIn crypto v)
 
-deriving instance (NFData v, CV crypto v) => NFData (TxIn crypto v)
+instance (CV crypto v) => NFData (TxIn crypto v) where
+  rnf (TxInCompact i ind) = seq (rnf i) (rnf ind)
 
 pattern TxIn ::
   CV crypto v =>
@@ -408,9 +438,8 @@ pattern TxIn addr index <-
 
 {-# COMPLETE TxIn #-}
 
-instance Generic (TxIn crypto v)
 
-instance (CV crypto v) => NoUnexpectedThunks (TxIn crypto v)
+deriving via UseIsNormalFormNamed "TxIn" (TxIn crypto v) instance NoUnexpectedThunks (TxIn crypto v)
 
 -- | The output of a UTxO.
 -- data TxOut crypto
@@ -433,9 +462,9 @@ deriving instance Eq v => Eq (TxOut crypto v)
 -- deriving instance (NoUnexpectedThunks v, CV crypto v) => NoUnexpectedThunks (TxOut crypto v)
 
 instance (NFData v, CV crypto v) => NFData (TxOut crypto v) where
-  rnf = (`seq` ())
+  rnf (TxOutCompact addr vl) = seq (rnf addr) (rnf vl)
 
-deriving via UseIsNormalFormNamed "TxOut" (TxOut crypto v) instance (Generic v, NoUnexpectedThunks v, CV crypto v) => NoUnexpectedThunks (TxOut crypto v)
+deriving via UseIsNormalFormNamed "TxOut" (TxOut crypto v) instance NoUnexpectedThunks (TxOut crypto v)
 
 pattern TxOut ::
   CV crypto v =>
@@ -450,13 +479,13 @@ pattern TxOut addr v <-
 
 {-# COMPLETE TxOut #-}
 
-viewCompactTxOut :: forall crypto v. CV crypto v => TxOut crypto v -> (Addr crypto, Coin)
+viewCompactTxOut :: forall crypto v. CV crypto v => TxOut crypto v -> (Addr crypto, v)
 viewCompactTxOut (TxOutCompact bs c) = (addr, vl)
   where
     addr = case deserialiseAddr (BSS.fromShort bs) of
       Nothing -> panic "viewCompactTxOut: impossible"
       Just (a :: Addr crypto) -> a
-    vl = word64ToCoin c
+    vl = c
 
 data DelegCert crypto
   = -- | A stake key registration certificate.
@@ -483,7 +512,9 @@ data GenesisDelegCert crypto
   deriving (Show, Generic, Eq)
 
 data MIRPot = ReservesMIR | TreasuryMIR
-  deriving (Show, Generic, Eq, NoUnexpectedThunks)
+  deriving (Show, Generic, Eq)
+
+deriving via UseIsNormalFormNamed "MIRPot" MIRPot instance NoUnexpectedThunks MIRPot
 
 instance ToCBOR MIRPot where
   toCBOR ReservesMIR = toCBOR (0 :: Word8)
@@ -534,7 +565,7 @@ instance NoUnexpectedThunks (MIRCert crypto)
 instance NoUnexpectedThunks (DCert crypto)
 
 -- | A raw transaction
-data CV crypto v => TxBody crypto v = TxBody'
+data TxBody crypto v = TxBody'
   { _inputs' :: !(Set (TxIn crypto v)),
     _outputs' :: !(StrictSeq (TxOut crypto v)),
     _certs' :: !(StrictSeq (DCert crypto)),
@@ -546,19 +577,16 @@ data CV crypto v => TxBody crypto v = TxBody'
     bodyBytes :: LByteString,
     extraSize :: !Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
   }
-  deriving (Show, Eq)
-  -- deriving
-  --   (NoUnexpectedThunks)
-  --   via AllowThunksIn '["bodyBytes"] (TxBody crypto v)
 
 instance CV c v => HashAnnotated (TxBody c v) c
 
-deriving via AllowThunksIn '["bodyBytes"] (TxBody crypto v) instance (CV crypto v) => NoUnexpectedThunks (TxBody crypto v)
+-- TODO combine this deriving with deriving via AllowThunksIn '["bodyBytes"] (TxBody crypto v) instance NoUnexpectedThunks (TxBody crypto v)
+deriving via UseIsNormalFormNamed "TxBody" (TxBody crypto v) instance NoUnexpectedThunks (TxBody crypto v)
 
-instance Generic (TxBody crypto v)
+deriving instance (Show v) => Show (TxBody crypto v)
 
 pattern TxBody ::
-  CV crypto v =>
+  (CV crypto v) =>
   Set (TxIn crypto v) ->
   StrictSeq (TxOut crypto v) ->
   StrictSeq (DCert crypto) ->
@@ -758,7 +786,7 @@ instance
       k -> invalidKey k
 
 instance
-  (Typeable crypto, CV crypto v) =>
+  (CV crypto v) =>
   ToCBOR (TxIn crypto v)
   where
   toCBOR (TxIn txId index) =
@@ -777,7 +805,7 @@ instance
       pure $ TxIn a (fromInteger $ toInteger b)
 
 instance
-  (Typeable crypto, CV crypto v) =>
+  (CV crypto v) =>
   ToCBOR (TxOut crypto v)
   where
   toCBOR (TxOut addr coin) =
