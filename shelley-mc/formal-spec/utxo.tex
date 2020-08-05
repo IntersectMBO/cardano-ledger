@@ -41,7 +41,7 @@ to $\fun{txSize}$.
 
 \textbf{UTxO Helper Functions.}
 
-Figure~\ref{fig:functions:utxo} defines additional calculations needed for the
+Figure~\ref{fig:functions:utxo} defines additional calculations that are needed for the
 UTxO transition system with MC:
 
 \begin{itemize}
@@ -57,22 +57,22 @@ UTxO transition system with MC:
     The $\fun{valueSize}$ function estimates an upper bound on the size of a value
     as stored in the UTxO.
 
-  \item The $\fun{consumed}$ calculation is still the sum of the values of the
-   UTxO entries consumed, the reward address value consumed,
-   and the value consumed from the deposit pot due
-   to the transaction collecting deposit refunds. There is an additional
-   summand in this calculation, the value forged by a transaction.
+  \item As in Shelley, the $\fun{consumed}$ calculation is the sum of: i) the values of the
+   UTxO entries consumed; ii) the reward address value consumed;
+   and iii) the amount that is removed from the deposit pot as a result of
+   the transaction collecting the deposit refunds that are due. There is an additional
+   summand in this calculation, namely the value forged by a transaction.
    This calculation now returns a $\Value$.
 
-  \item The $\fun{produced}$ calculation sums up the same things
-  as the corresponding $\fun{produced}$ calculation in Shelley.
+  \item The $\fun{produced}$ calculation sums the same values
+  as its Shelley counterpart.
   This calculation also returns a $\Value$.
 \end{itemize}
 
 \textbf{Produced and Consumed Calculations and Preservation of Value.}
 Note that
 the $\fun{consumed}$ and $\fun{produced}$ calculations both produce a $\Value$.
-The reason for this is that the outputs of a transaction, as well as UTxO outputs,
+This is because the outputs of a transaction, as well as UTxO outputs,
 are of the $\Value$ type. The administrative amounts (of the $\Coin$ type)
 are converted into MC values for these summations.
 
@@ -105,7 +105,7 @@ via the $\fun{forge}$ field, i.e. $tx$ must have
 \[pid \mapsto tkns\in\fun{forge}~tx\]
 
 The forge field value is then added to the consumed side. This approach
-to balancing the POV equation extends
+to balancing the \emph{preservation of value} (POV) equation (Equation~\ref{eqn:pov}) extends
 to cases where the transaction might also be consuming some existing $pid$ tokens,
 or taking the out of circulation with negative quantities in the forge field.
 

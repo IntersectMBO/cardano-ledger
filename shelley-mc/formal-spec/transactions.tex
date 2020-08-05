@@ -1,8 +1,8 @@
-\begin{note}
-  If you are reviewing this document, please have a look at the TODO
-  file. It mentions some things that are still up for discussion and
-  we'd like your opinion.
-\end{note}
+%% \begin{note}
+%%   If you are reviewing this document, please have a look at the TODO
+%%   file. It mentions some things that are still up for discussion and
+%%   we'd like your opinion.
+%% \end{note}
 
 \begin{figure*}[t!]
   %
@@ -55,7 +55,7 @@
 %   \caption{Languages}
   \end{align*}
 
-  \caption{Type Definitions used in the UTxO transition system}
+  \caption{Type Definitions used in the UTxO transition system ($\mathbb{H}_{\leq 32}$ is a string of exactly 32 bytes)}
   \label{fig:defs:utxo-shelley-1}
 \end{figure*}
 
@@ -100,9 +100,9 @@ Addition and binary relations are extended pointwise from $\Coin$ to $\Value$, s
     (MPS) $s$, where $\fun{hashScript}~s~=~pid$. When a transaction attempts to create or destroy tokens,
     the script verifies that the coinage for currency $\var{pid}$
     respects the restrictions that are imposed by the
-    monetary policy. If the restrictions are complied with, it returns
-    $\mathsf{True}$, and
-    $\mathsf{False}$ otherwise.  Monetary Policy Scripts are described in more detail below.
+    monetary policy. If the restrictions are complied with, then it returns
+    $\mathsf{True}$, and if they are not then it returns
+    $\mathsf{False}$.  Monetary Policy Scripts are described in more detail below.
 
 %% \item $\PolicyID$ identifies a specific monetary policy.  Each monetary policy is distinct. The monetary
 %%   policy for a currency $\var{c} = \{ \var{tok_1} \ldots \var{tok}_n \}$ is given by the \emph{Monetary Policy Script}
@@ -199,7 +199,7 @@ In Figure~\ref{fig:defs:tx-mc-valid}, we modify this function to also call the
 evaluation function that is specific to our new MPS script type.
 
 The arguments that are passed to the $\fun{validateScript}$ function include all those
-needed for MPS and MSig script evaluation. Because of the extra arguments
+that are needed for MPS and MSig script evaluation. Because of the extra arguments
 (the slot number and the UTxO), we also modify the call to this function
 within the UTXOW rule.
 
@@ -241,7 +241,7 @@ prescribed by its script is verified at forging time (i.e. when the transaction
 forging it is being processed). Another restriction on forging is imposed by
 the preservation of value conditition. Also, no forging Ada
 is permitted. In Section~\ref{sec:utxo}, we specify the mechanism by which
-forging is done, and rules which enforce these restrictions.
+forging is done, and rules that enforce these restrictions.
 
 \subsection*{Transaction Body.}
 
@@ -278,7 +278,7 @@ of MPS scripts to the $\Script$ type, so we do not include the whole $\Tx$ type 
       \fun{getAddr} & \TxOut \uniondistinct \UTxOOut \to \Addr & \text{output address} \\
     \end{array}
   \end{equation*}
-  \caption{Definitions used in the UTxO transition system, cont.}
+  \caption{Definitions used in the UTxO transition system (continued).}
   \label{fig:defs:utxo-shelley-2}
 \end{figure*}
 
@@ -287,7 +287,7 @@ When multicurrency is introduced, Ada is still expected to be
 the most common type of token on the ledger.
 The $\Coin$ type is used to represent an amount of Ada.
 It is the only
-type of token which can be used for all non-UTxO ledger accounting, including deposits,
+type of token that can be used for all non-UTxO ledger accounting, including deposits,
 fees, rewards, treasury, and the proof of stake protocol. Under no circumstances
 are these administrative fields and calculations ever expected to operate on
 any types of tokens besides Ada. These fields will continue to have the type $\Coin$.
@@ -299,7 +299,7 @@ for Ada-only cases, has a unique representation for Ada tokens,
 and does not allow Ada to have tokens denoted by anything other than $\mathsf{adaToken}$.
 
 In Figure \ref{fig:defs:functions-helper} we give the following helper functions
-and constants, needed for using Ada in a multicurrency setting.
+and constants.  These are needed to use Ada in a multicurrency setting.
 
 \begin{itemize}
   \item $\mathsf{adaID}$ is a random script hash value with no known associated
@@ -315,7 +315,7 @@ and constants, needed for using Ada in a multicurrency setting.
 
   $\fun{qu} ~(\fun{co} ~q )~= ~q$, and
 
-  $\fun{co}~ (\fun{qu}~ c) ~=~ c$, for $c \in \Coin,~q \in \Quantity$.
+  $\fun{co}~ (\fun{qu}~ c) ~=~ c$, for all $c \in \Coin,~q \in \Quantity$.
 
   \item $\fun{coinToValue}$ takes a coin value and generates a $\Value$ type representation
   of it
@@ -325,7 +325,7 @@ An amount of Ada can also be represented as a multicurrency value
 using the notation in Figure \ref{fig:defs:functions-helper}, as
 $\fun{coinToValue}~c$ where $c \in \Coin$. We must use this representation
 when adding or subtracting Ada and other tokens as $\Value$, e.g. in the
-preservation of value calculations.
+\emph{preservation of value} calculations.
 
 \begin{figure*}[htb]
   \emph{Abstract Functions and Values}
