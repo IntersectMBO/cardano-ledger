@@ -96,6 +96,7 @@ import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.Scripts
+import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
     decodeMapContents,
@@ -118,10 +119,10 @@ type family HKD f a where
   HKD Identity a = a
   HKD f a = f a
 
-data WitnessSetHKD f crypto = WitnessSet'
-  { addrWits' :: !(HKD f (Set (WitVKey crypto 'Witness))),
+data WitnessSetHKD f crypto v = WitnessSet'
+  { addrWits' :: !(HKD f (Set (WitVKey crypto v 'Witness))),
     msigWits' :: !(HKD f (Map (ScriptHash crypto) (MultiSig crypto))),
-    bootWits' :: !(HKD f (Set (BootstrapWitness crypto))),
+    bootWits' :: !(HKD f (Set (BootstrapWitness crypto v))),
     txWitsBytes :: LByteString
   }
 
@@ -137,18 +138,18 @@ deriving via
      ]
     (WitnessSetHKD Identity crypto)
   instance
-    Crypto crypto => (NoUnexpectedThunks (WitnessSetHKD Identity crypto))
+    Crypto crypto => (NoUnexpectedThunks (WitnessSetHKD Identity crypto v))
 
 type WitnessSet = WitnessSetHKD Identity
 
-instance Crypto crypto => ToCBOR (WitnessSetHKD Identity crypto) where
+instance CV crypto v => ToCBOR (WitnessSetHKD Identity crypto v) where
   toCBOR = encodePreEncoded . BSL.toStrict . txWitsBytes
 
-instance Crypto crypto => Semigroup (WitnessSetHKD Identity crypto) where
+instance CV crypto v => Semigroup (WitnessSetHKD Identity crypto v) where
   (WitnessSet a b c) <> (WitnessSet a' b' c') =
     WitnessSet (a <> a') (b <> b') (c <> c')
 
-instance Crypto crypto => Monoid (WitnessSetHKD Identity crypto) where
+instance CV crypto v => Monoid (WitnessSetHKD Identity crypto v) where
   mempty = WitnessSet mempty mempty mempty
 
 pattern WitnessSet ::
@@ -181,9 +182,9 @@ pattern WitnessSet {addrWits, msigWits, bootWits} <-
 {-# COMPLETE WitnessSet #-}
 
 -- | A fully formed transaction.
-data Tx crypto = Tx'
-  { _body' :: !(TxBody crypto),
-    _witnessSet' :: !(WitnessSet crypto),
+data Tx crypto v = Tx'
+  { _body' :: !(TxBody crypto v),
+    _witnessSet' :: !(WitnessSet crypto v),
     _metadata' :: !(StrictMaybe MetaData),
     txFullBytes :: LByteString
   }
@@ -223,7 +224,7 @@ pattern Tx {_body, _witnessSet, _metadata} <-
 
 {-# COMPLETE Tx #-}
 
-instance Crypto c => HashAnnotated (Tx c) c
+instance CV c v => HashAnnotated (Tx c v) c
 
 segwitTx ::
   Crypto crypto =>
@@ -289,12 +290,12 @@ keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 
 instance
-  (Crypto crypto) =>
-  ToCBOR (Tx crypto)
+  (CV crypto v) =>
+  ToCBOR (Tx crypto v)
   where
   toCBOR tx = encodePreEncoded . BSL.toStrict $ txFullBytes tx
 
-instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
+instance CV crypto v => FromCBOR (Annotator (Tx crypto v)) where
   fromCBOR = annotatorSlice $
     decodeRecordNamed "Tx" (const 3) $ do
       body <- fromCBOR
@@ -312,10 +313,10 @@ instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
 class
-  (Crypto crypto, ToCBOR a) =>
+  (CV crypto v, ToCBOR a) =>
   MultiSignatureScript a crypto
   where
-  validateScript :: a -> Tx crypto -> Bool
+  validateScript :: a -> Tx crypto v -> Bool
   hashScript :: a -> ScriptHash crypto
 
 -- | instance of MultiSignatureScript type class

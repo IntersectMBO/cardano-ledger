@@ -171,14 +171,14 @@ similar to 'Ledger.Ada' for their own assets.
 -- | Value type
 newtype Value crypto = Value
   { val :: Map  (PolicyID crypto) (Map AssetID Quantity) }
-  deriving (Show, Generic, Val)
+  deriving (Show, Generic, Val, Typeable)
 
 instance NoUnexpectedThunks (Value crypto)
 instance NFData (Value crypto)
 
 -- | compact representation of Value
 data CompactValue crypto = AdaOnly Coin | MixValue (Value crypto)
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Typeable)
 
 instance NoUnexpectedThunks (CompactValue crypto)
 instance NFData (CompactValue crypto)
@@ -247,18 +247,6 @@ instance Monoid (CompactValue crypto) where
 
 -- constraint used for all parametrized functions
 type CV c v = (Val v, Crypto c, Typeable c, Typeable v, FromCBOR v, ToCBOR v)
-
---
--- instance Group (Value crypto) where
---     inv = scale Integer (Value crypto) (-1)
-
--- deriving via (Additive (Value crypto)) instance AdditiveSemigroup (Value crypto)
--- deriving via (Additive (Value crypto)) instance AdditiveMonoid (Value crypto)
--- deriving via (Additive (Value crypto)) instance AdditiveGroup (Value crypto)
-
--- instance Module Integer (Value crypto) where
---     {-# INLINABLE scale #-}
---     scale i (Value xs) = Value (fmap (fmap (\i' -> i * i')) xs)
 
 -- Linear Map instance
 

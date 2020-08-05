@@ -388,13 +388,11 @@ instance Crypto crypto => FromJSON (PoolParams crypto) where
         <*> obj .: "relays"
         <*> obj .: "metadata"
 
--- | A unique ID of a transaction, which is computable from the transaction.
--- newtype (Val v) => TxId crypto v = TxId {_unTxId :: Hash crypto (TxBody crypto v)}
---   deriving newtype (NFData, NoUnexpectedThunks)
 
 instance (CV crypto v) => NFData (TxId crypto v) where
   rnf (TxId hs) = rnf hs
 
+-- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto v where
   TxId ::
     Hash crypto (TxBody crypto v) ->
@@ -441,14 +439,8 @@ pattern TxIn addr index <-
 
 deriving via UseIsNormalFormNamed "TxIn" (TxIn crypto v) instance NoUnexpectedThunks (TxIn crypto v)
 
--- | The output of a UTxO.
--- data TxOut crypto
---   = TxOutCompact
---       {-# UNPACK #-} !BSS.ShortByteString
---       {-# UNPACK #-} !Word64
---   deriving (Show, Eq, Ord)
-
 -- | Parametrized tx output
+-- TODO make v compact too
 data TxOut crypto v where
    TxOutCompact :: CV crypto v =>
      {-# UNPACK #-} !BSS.ShortByteString ->
@@ -458,8 +450,6 @@ data TxOut crypto v where
 deriving instance Show v => Show (TxOut crypto v)
 
 deriving instance Eq v => Eq (TxOut crypto v)
-
--- deriving instance (NoUnexpectedThunks v, CV crypto v) => NoUnexpectedThunks (TxOut crypto v)
 
 instance (NFData v, CV crypto v) => NFData (TxOut crypto v) where
   rnf (TxOutCompact addr vl) = seq (rnf addr) (rnf vl)
@@ -564,6 +554,7 @@ instance NoUnexpectedThunks (MIRCert crypto)
 
 instance NoUnexpectedThunks (DCert crypto)
 
+-- =========
 -- | A raw transaction
 data TxBody crypto v = TxBody'
   { _inputs' :: !(Set (TxIn crypto v)),
@@ -579,11 +570,10 @@ data TxBody crypto v = TxBody'
   }
 
 instance CV c v => HashAnnotated (TxBody c v) c
-
--- TODO combine this deriving with deriving via AllowThunksIn '["bodyBytes"] (TxBody crypto v) instance NoUnexpectedThunks (TxBody crypto v)
+-- TODO no thunks in bodyBytes is ok?
 deriving via UseIsNormalFormNamed "TxBody" (TxBody crypto v) instance NoUnexpectedThunks (TxBody crypto v)
-
 deriving instance (Show v) => Show (TxBody crypto v)
+-- ===========
 
 pattern TxBody ::
   (CV crypto v) =>
