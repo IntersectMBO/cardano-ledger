@@ -58,7 +58,6 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
-import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (cold),
@@ -71,6 +70,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Utils
   ( GenesisKeyPair,
     epochFromSlotNo,
+    unsafeMkUnitInterval
   )
 
 genRationalInThousands :: HasCallStack => Integer -> Integer -> Gen Rational

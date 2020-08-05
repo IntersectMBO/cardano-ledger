@@ -2,7 +2,7 @@ resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/316c
 
 packages:
 - shelley/chain-and-ledger/executable-spec
-- shelley/chain-and-ledger/executable-spec/test
+- shelley/chain-and-ledger/shelley-spec-ledger-test
 - byron/chain/executable-spec
 - byron/ledger/executable-spec
 - byron/ledger/impl

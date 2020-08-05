@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -23,39 +24,35 @@ import Cardano.Binary
   ( ToCBOR (..),
     toCBOR,
   )
-import Cardano.Crypto.DSIGN.Class (SignedDSIGN (..), rawDeserialiseSigDSIGN, sizeSigDSIGN)
-import Cardano.Crypto.DSIGN.Mock (MockDSIGN, VerKeyDSIGN (..))
+import Cardano.Crypto.DSIGN.Class
+  ( DSIGNAlgorithm,
+    SignedDSIGN (..),
+    rawDeserialiseSigDSIGN,
+    rawDeserialiseVerKeyDSIGN,
+    sizeSigDSIGN,
+    sizeVerKeyDSIGN,
+  )
+import qualified Data.Text as T
+import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Control.Iterate.SetAlgebra (biMapFromList)
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)
-import qualified Data.Map.Strict as Map (fromList)
+import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.API
-  ( DELEG,
-    DELEGS,
-    DELPL,
-    EpochState (..),
-    LEDGER,
-    LEDGERS,
-    NonMyopic,
-    POOL,
-    PPUP,
-    SnapShot,
-    SnapShots,
-    UTXO,
-    UTXOW,
-  )
+import Shelley.Spec.Ledger.API hiding (SignedDSIGN)
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Address.Bootstrap
   ( BootstrapWitness (..),
@@ -90,14 +87,22 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
+    FutureGenDeleg,
+    InstantaneousRewards,
     LedgerState,
     NewEpochState (..),
     OBftSlot,
+    PPUPState,
     RewardUpdate,
     WitHashes (..),
     emptyRewardUpdate,
   )
-import Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
+import Shelley.Spec.Ledger.MetaData
+  ( MetaData,
+    MetaDataHash (..),
+    MetaDatum,
+  )
+import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams, ProtVer)
 import Shelley.Spec.Ledger.Rewards
@@ -114,7 +119,7 @@ import Shelley.Spec.Ledger.Scripts
     Script (..),
     ScriptHash (ScriptHash),
   )
-import Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
 import Shelley.Spec.Ledger.TxData
   ( MIRPot,
     PoolMetaData (PoolMetaData),
@@ -125,20 +130,18 @@ import Shelley.Spec.Ledger.TxData
     TxIn (TxIn),
     TxOut (TxOut),
   )
-import Test.Cardano.Prelude (genBytes)
+import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck
   ( Arbitrary,
     arbitrary,
     genericShrink,
     listOf,
     oneof,
+    resize,
     shrink,
+    vectorOf,
   )
-import Test.QuickCheck.Hedgehog (hedgehog)
-import Test.Shelley.Spec.Ledger.Address.Bootstrap (genBootstrapAddress)
-import Test.Shelley.Spec.Ledger.Address.Bootstrap
-  ( genSignature,
-  )
+import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( KeySpace (KeySpace_),
@@ -151,7 +154,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import qualified Test.Shelley.Spec.Ledger.Generator.Update as Update
-import Test.Shelley.Spec.Ledger.NonTraceProperties.Generator (genStateTx, genValidStateTx)
+import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap (genBootstrapAddress, genSignature)
 import Test.Tasty.QuickCheck (Gen, choose, elements)
 
 genHash :: forall a h. HashAlgorithm h => Gen (Hash.Hash h a)
@@ -210,10 +213,15 @@ instance Mock c => Arbitrary (BHeader c) where
       Block header _ -> header
       _ -> error "SerializationProperties::BHeader - failed to deconstruct header from block"
 
-instance Arbitrary (SignedDSIGN MockDSIGN a) where
+instance DSIGNAlgorithm c => Arbitrary (SignedDSIGN c a) where
   arbitrary =
     SignedDSIGN . fromJust . rawDeserialiseSigDSIGN
-      <$> hedgehog (genBytes . fromIntegral $ sizeSigDSIGN (Proxy :: Proxy MockDSIGN))
+      <$> (genByteString . fromIntegral $ sizeSigDSIGN (Proxy @c))
+
+instance DSIGNAlgorithm c => Arbitrary (VerKeyDSIGN c) where
+  arbitrary =
+    fromJust . rawDeserialiseVerKeyDSIGN
+      <$> (genByteString . fromIntegral $ sizeVerKeyDSIGN (Proxy @c))
 
 instance MockGen c => Arbitrary (BootstrapWitness c) where
   arbitrary = do
@@ -226,10 +234,89 @@ instance MockGen c => Arbitrary (BootstrapWitness c) where
 instance Crypto c => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> genHash
 
+instance (Typeable kr, Mock c) => Arbitrary (WitVKey c kr) where
+  arbitrary =
+    WitVKey
+      <$> arbitrary
+      <*> arbitrary
+
+
+instance Mock c => Arbitrary (WitnessSet c) where
+  arbitrary =
+    WitnessSet
+      <$> arbitrary
+      <*> (mscriptsToWits <$> arbitrary)
+      <*> arbitrary
+    where
+      mscriptsToWits = Map.fromList . map (\s -> (hashScript s, s))
+
+instance Mock c => Arbitrary (Wdrl c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (ProposedPPUpdates c) where
+  arbitrary = ProposedPPUpdates <$> pure Map.empty
+
+instance Mock c => Arbitrary (Update c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (TxBody c) where
+  -- Our arbitrary instance constructs things using the pattern in order to have
+  -- the correct serialised bytes.
+  arbitrary =
+    TxBody
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+maxMetaDatumDepth :: Int
+maxMetaDatumDepth = 2
+
+maxMetaDatumListLens :: Int
+maxMetaDatumListLens = 5
+
+sizedMetaDatum :: Int -> Gen MetaDatum
+sizedMetaDatum 0 = 
+  oneof
+    [ MD.I <$> arbitrary,
+      MD.B <$> arbitrary,
+      MD.S <$> (T.pack <$> arbitrary)
+    ]
+sizedMetaDatum n = 
+    oneof
+      [ MD.Map <$>
+          (zip
+            <$> (resize maxMetaDatumListLens (listOf (sizedMetaDatum (n-1))))
+            <*> (listOf (sizedMetaDatum (n-1)))),
+        MD.List <$> resize maxMetaDatumListLens (listOf (sizedMetaDatum (n-1))),
+        MD.I <$> arbitrary,
+        MD.B <$> arbitrary,
+        MD.S <$> (T.pack <$> arbitrary)
+      ]
+
+instance Arbitrary MetaDatum where
+  arbitrary = sizedMetaDatum maxMetaDatumDepth
+
+instance Arbitrary MetaData where
+  arbitrary = MD.MetaData <$> arbitrary
+
+maxTxWits :: Int
+maxTxWits = 5
+
 instance Mock c => Arbitrary (Tx c) where
-  arbitrary = do
-    (_ledgerState, _steps, _txfee, tx, _lv) <- hedgehog (genStateTx (Proxy @c))
-    return tx
+  -- Our arbitrary instance constructs things using the pattern in order to have
+  -- the correct serialised bytes.
+  arbitrary =
+    Tx
+      <$> arbitrary
+      <*> (resize maxTxWits arbitrary)
+      <*> arbitrary
 
 instance Crypto c => Arbitrary (TxId c) where
   arbitrary = TxId <$> genHash
@@ -356,9 +443,6 @@ instance Arbitrary Network where
 instance (Arbitrary (VerKeyDSIGN (DSIGN c))) => Arbitrary (VKey kd c) where
   arbitrary = VKey <$> arbitrary
 
-instance Arbitrary (VerKeyDSIGN MockDSIGN) where
-  arbitrary = VerKeyMockDSIGN <$> arbitrary
-
 instance Arbitrary ProtVer where
   arbitrary = genericArbitraryU
   shrink = genericShrink
@@ -380,10 +464,79 @@ instance Crypto c => Arbitrary (STS.PrtclState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
+instance Mock c => Arbitrary (UTxO c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (PState c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (InstantaneousRewards c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (FutureGenDeleg c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (GenDelegs c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (GenDelegPair c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (DState c) where
+  arbitrary =
+    DState
+      <$> arbitrary
+      <*> arbitrary
+      <*> (biMapFromList const <$> arbitrary)
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance Mock c => Arbitrary (DelegCert c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (Delegation c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (PoolCert c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (GenesisDelegCert c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (MIRCert c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (DCert c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (PPUPState c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (DPState c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance Mock c => Arbitrary (UTxOState c) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
 instance Mock c => Arbitrary (LedgerState c) where
-  arbitrary = do
-    (_ledgerState, _steps, _txfee, _tx, ledgerState) <- hedgehog (genValidStateTx (Proxy @c))
-    return ledgerState
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
 
 instance Mock c => Arbitrary (NewEpochState c) where
   arbitrary = genericArbitraryU
@@ -490,20 +643,37 @@ instance Arbitrary AccountState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
+maxMultiSigDepth :: Int
+maxMultiSigDepth = 3
+
+maxMultiSigListLens :: Int
+maxMultiSigListLens = 5
+
+sizedMultiSig :: Mock c => Int -> Gen (MultiSig c)
+sizedMultiSig 0 = RequireSignature <$> arbitrary
+sizedMultiSig n = 
+    oneof
+      [ RequireSignature <$> arbitrary,
+        RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1))),
+        RequireAnyOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1))),
+        RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1)))
+      ]
+
 instance
   Mock c =>
   Arbitrary (MultiSig c)
   where
-  arbitrary =
-    oneof
-      [ RequireSignature <$> arbitrary,
-        RequireAllOf <$> arbitrary,
-        RequireAnyOf <$> arbitrary,
-        RequireMOf <$> arbitrary <*> arbitrary
-      ]
+  arbitrary = sizedMultiSig maxMultiSigDepth
 
 instance
   Mock c =>
   Arbitrary (Script c)
   where
   arbitrary = MultiSigScript <$> arbitrary
+
+-- |
+-- Generate a byte string of a given size.
+genByteString :: Int -> Gen BS.ByteString
+genByteString size = do
+  ws <- vectorOf size (chooseAny @Char)
+  return $ BS.pack ws

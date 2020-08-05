@@ -62,7 +62,7 @@ import Shelley.Spec.Ledger.LedgerState
     emptyDPState,
     emptyPPUPState,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..))
@@ -88,7 +88,6 @@ import Shelley.Spec.Ledger.TxData
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original (C)
-import Test.Shelley.Spec.Ledger.Examples (ppsEx1)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
     genesisId,
@@ -145,13 +144,19 @@ initUTxO n =
 -- ease of creating transactions.
 ppsBench :: PParams
 ppsBench =
-  ppsEx1
-    { _minUTxOValue = 10,
+  emptyPParams
+    { _maxBBSize = 50000,
+      _d = unsafeMkUnitInterval 0.5,
+      _eMax = EpochNo 10000,
       _keyDeposit = Coin 0,
-      _poolDeposit = Coin 0,
+      _maxBHSize = 10000,
+      _maxTxSize = 1000000000,
       _minfeeA = 0,
       _minfeeB = 0,
-      _maxTxSize = 1000000000
+      _minUTxOValue = 10,
+      _poolDeposit = Coin 0,
+      _rho = unsafeMkUnitInterval 0.0021,
+      _tau = unsafeMkUnitInterval 0.2
     }
 
 ledgerEnv :: LedgerEnv

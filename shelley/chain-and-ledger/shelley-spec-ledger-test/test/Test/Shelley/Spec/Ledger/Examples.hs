@@ -83,8 +83,6 @@ module Test.Shelley.Spec.Ledger.Examples
     txEx5D,
     txEx5D',
     txEx5D'',
-    -- helpers
-    unsafeMkUnitInterval,
   )
 where
 
