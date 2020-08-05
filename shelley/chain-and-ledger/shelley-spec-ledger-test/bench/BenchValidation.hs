@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-binds #-}
 
@@ -13,13 +15,15 @@ module BenchValidation
     benchValidate,
     benchreValidate,
     sizes,
-    runUpdate,
     updateChain,
     genUpdateInputs,
-    profileUpdate,
   )
 where
 
+import Cardano.Crypto.DSIGN
+import Cardano.Crypto.Hash
+import Cardano.Crypto.KES
+import Cardano.Crypto.VRF.Praos
 import Cardano.Prelude (NFData (rnf))
 import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.Monad.Except ()
@@ -32,22 +36,39 @@ import Shelley.Spec.Ledger.API.Protocol
     currentLedgerView,
     updateChainDepState,
   )
-import Shelley.Spec.Ledger.API.Validation (ShelleyState, applyBlockTransition, reapplyBlockTransition)
+import Shelley.Spec.Ledger.API.Validation
+  ( ShelleyState,
+    applyBlockTransition,
+    reapplyBlockTransition,
+  )
 import Shelley.Spec.Ledger.BaseTypes (Globals (..))
-import Shelley.Spec.Ledger.BlockChain (BHeader (..), Block (..), LastAppliedBlock (..), slotToNonce)
-import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.BlockChain
+  ( BHeader (..),
+    Block (..),
+    LastAppliedBlock (..),
+    slotToNonce,
+  )
+import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
 import Shelley.Spec.Ledger.LedgerState (nesBcur)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Test.QuickCheck.Gen (generate)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
+
+data BenchCrypto
+
+instance Crypto BenchCrypto where
+  type DSIGN BenchCrypto = Ed25519DSIGN
+  type KES BenchCrypto = Sum6KES Ed25519DSIGN Blake2b_256
+  type VRF BenchCrypto = PraosVRF
+  type HASH BenchCrypto = Blake2b_256
+  type ADDRHASH BenchCrypto = Blake2b_224
 
 cs ::
   -- | Size of the genesis UTxO
@@ -97,7 +118,7 @@ cs utxoSize =
       genTxRetries = 5
     }
 
-data ValidateInput = ValidateInput Globals (ShelleyState C) (Block C)
+data ValidateInput = ValidateInput Globals (ShelleyState BenchCrypto) (Block BenchCrypto)
 
 sizes :: ValidateInput -> String
 sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocksMade (nesBcur ss)))
@@ -105,25 +126,25 @@ sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocks
 instance NFData ValidateInput where
   rnf (ValidateInput a b c) = seq a (seq b (seq c ()))
 
-  block <- generate (genBlock (genEnv ([] :: [C])) chainstate)
 validateInput :: Int -> IO ValidateInput
 validateInput utxoSize = do
   Right chainstate <- generate (mkGenesisChainState (cs utxoSize) (IRC ()))
+  block <- generate (genBlock (genEnv ([] :: [BenchCrypto])) chainstate)
   pure (ValidateInput testGlobals (chainNes chainstate) block)
 
-benchValidate :: ValidateInput -> IO (ShelleyState C)
+benchValidate :: ValidateInput -> IO (ShelleyState BenchCrypto)
 benchValidate (ValidateInput globals state block) =
   case applyBlockTransition globals state block of
     Right x -> pure x
     Left x -> error (show x)
 
-benchreValidate :: ValidateInput -> IO (ShelleyState C)
+benchreValidate :: ValidateInput -> IO (ShelleyState BenchCrypto)
 benchreValidate (ValidateInput globals state block) =
   pure $ reapplyBlockTransition globals state block
 
 -- ==============================================================
 
-data UpdateInputs = UpdateInputs !Globals !(LedgerView C) !(BHeader C) !(ChainDepState C)
+data UpdateInputs = UpdateInputs !Globals !(LedgerView BenchCrypto) !(BHeader BenchCrypto) !(ChainDepState BenchCrypto)
 
 instance Show UpdateInputs where
   show (UpdateInputs _globals vl bh st) = show vl ++ "\n" ++ show bh ++ "\n" ++ show st
@@ -143,10 +164,10 @@ instance NFData Globals where
 instance NFData UpdateInputs where
   rnf (UpdateInputs g lv bh st) = seq (rnf g) (seq (rnf lv) (seq (rnf bh) (rnf st)))
 
-  Block blockheader _ <- generate (genBlock (genEnv ([] :: [C])) chainstate)
 genUpdateInputs :: Int -> IO UpdateInputs
 genUpdateInputs utxoSize = do
   Right chainstate <- generate (mkGenesisChainState (cs utxoSize) (IRC ()))
+  Block blockheader _ <- generate (genBlock (genEnv ([] :: [BenchCrypto])) chainstate)
   let ledgerview = currentLedgerView (chainNes chainstate)
   let (ChainState newepochState keys eta0 etaV etaC etaH slot) = chainstate
   let prtclState = PrtclState keys eta0 etaV
@@ -156,22 +177,5 @@ genUpdateInputs utxoSize = do
         Nothing -> error "Empty Slot"
   pure (UpdateInputs testGlobals ledgerview blockheader (ChainDepState prtclState ticknState nonce))
 
-updateChain :: UpdateInputs -> Either (ChainTransitionError C) (ChainDepState C)
+updateChain :: UpdateInputs -> Either (ChainTransitionError BenchCrypto) (ChainDepState BenchCrypto)
 updateChain (UpdateInputs gl lv bh st) = updateChainDepState gl lv bh st
-
-runUpdate :: IO ()
-runUpdate = do
-  state <- genUpdateInputs
-  case updateChain state of
-    Left s -> error (show s)
-    Right n -> putStrLn (show n)
-  pure ()
-
-profileUpdate :: IO ()
-profileUpdate = do
-  state <- genUpdateInputs
-  let eithers = [updateChain state | _n <- ([1 .. 1000] :: [Int])]
-  let size (Left _) = 0
-      size (Right _) = 1 :: Int
-  putStrLn (show (sum (map size eithers)))
-  pure ()
