@@ -201,11 +201,14 @@ test-suite shelley-spec-ledger-test
 
 benchmark mainbench
   type:             exitcode-stdio-1.0
-  hs-source-dirs:   bench,
-                    test
+  hs-source-dirs:
+    bench
+    test
   main-is:          Main.hs
-  other-modules:    BenchUTxOAggregate,
-                    Shelley.Spec.Ledger.Bench.Gen
+  other-modules:
+    BenchUTxOAggregate,
+    Shelley.Spec.Ledger.Bench.Gen
+    Test.Shelley.Spec.Ledger.Examples.Cast
 
   build-depends:    MonadRandom,
                     QuickCheck,
