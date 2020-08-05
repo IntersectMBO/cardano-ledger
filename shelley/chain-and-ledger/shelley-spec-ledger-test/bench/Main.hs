@@ -9,8 +9,6 @@ import BenchValidation
   ( benchValidate,
     benchreValidate,
     genUpdateInputs,
-    profileUpdate,
-    runUpdate,
     sizes,
     updateChain,
     validateInput,
@@ -196,19 +194,25 @@ time                 280.6 ms   (256.0 ms .. 297.3 ms)
 validGroup :: Benchmark
 validGroup =
   bgroup "validation" $
-    [ env validateInput $ \arg ->
-        bgroup
-          "block"
-          [ bench "applyBlockTransition" (whnf benchValidate arg),
-            bench "reapplyBlockTransition" (whnf benchreValidate arg)
-          ],
-      env genUpdateInputs $ \arg ->
-        bench "updateChainDepState" (whnf updateChain arg)
+    [ runAtUTxOSize 1000
+    , runAtUTxOSize 100000
+    , runAtUTxOSize 1000000
     ]
+  where
+    runAtUTxOSize n = bgroup (show n) $
+      [ env (validateInput n) $ \arg ->
+          bgroup
+            "block"
+            [ bench "applyBlockTransition" (whnf benchValidate arg),
+              bench "reapplyBlockTransition" (whnf benchreValidate arg)
+            ],
+        env (genUpdateInputs n) $ \arg ->
+          bench "updateChainDepState" (whnf updateChain arg)
+      ]
 
 profileValid :: IO ()
 profileValid = do
-  state <- validateInput
+  state <- validateInput 1000000
   ns <-
     sequence
       [ fmap (length . show) (benchValidate state)

@@ -49,8 +49,11 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
-cs :: Constants
-cs =
+cs ::
+  -- | Size of the genesis UTxO
+  Int ->
+  Constants
+cs utxoSize =
   Constants
     { minNumGenInputs = 10,
       maxNumGenInputs = 25,
@@ -69,8 +72,8 @@ cs =
       frequencyKeyCredDelegation = 2,
       frequencyTxUpdates = 10,
       frequencyTxWithMetaData = 10,
-      minGenesisUTxOouts = 100000,
-      maxGenesisUTxOouts = 1000000,
+      minGenesisUTxOouts = utxoSize,
+      maxGenesisUTxOouts = utxoSize,
       maxCertsPerTx = 3,
       maxTxsPerBlock = 10,
       maxNumKeyPairs = 150,
@@ -102,10 +105,10 @@ sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocks
 instance NFData ValidateInput where
   rnf (ValidateInput a b c) = seq a (seq b (seq c ()))
 
-validateInput :: IO ValidateInput
-validateInput = do
-  Right chainstate <- generate (mkGenesisChainState cs (IRC ()))
   block <- generate (genBlock (genEnv ([] :: [C])) chainstate)
+validateInput :: Int -> IO ValidateInput
+validateInput utxoSize = do
+  Right chainstate <- generate (mkGenesisChainState (cs utxoSize) (IRC ()))
   pure (ValidateInput testGlobals (chainNes chainstate) block)
 
 benchValidate :: ValidateInput -> IO (ShelleyState C)
@@ -140,10 +143,10 @@ instance NFData Globals where
 instance NFData UpdateInputs where
   rnf (UpdateInputs g lv bh st) = seq (rnf g) (seq (rnf lv) (seq (rnf bh) (rnf st)))
 
-genUpdateInputs :: IO UpdateInputs
-genUpdateInputs = do
-  Right chainstate <- generate (mkGenesisChainState cs (IRC ()))
   Block blockheader _ <- generate (genBlock (genEnv ([] :: [C])) chainstate)
+genUpdateInputs :: Int -> IO UpdateInputs
+genUpdateInputs utxoSize = do
+  Right chainstate <- generate (mkGenesisChainState (cs utxoSize) (IRC ()))
   let ledgerview = currentLedgerView (chainNes chainstate)
   let (ChainState newepochState keys eta0 etaV etaC etaH slot) = chainstate
   let prtclState = PrtclState keys eta0 etaV
