@@ -81,11 +81,11 @@ aggregateUtxoCoinByCredential ::
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldr accum initial u
   where
-    accum (TxOutCompact addr c) ans = case deserialiseAddrStakeRef addr of
+    accum (TxOutCompact addr vl) ans = case deserialiseAddrStakeRef addr of
       Just (StakeRefPtr p) -> case Map.lookup p ptrs of
-        Just cred -> Map.insertWith (+) cred (fromIntegral c) ans
+        Just cred -> Map.insertWith (+) cred vl ans
         Nothing -> ans
-      Just (StakeRefBase hk) -> Map.insertWith (+) hk (fromIntegral c) ans
+      Just (StakeRefBase hk) -> Map.insertWith (+) hk vl ans
       _other -> ans
 
 -- | Get stake of one pool
