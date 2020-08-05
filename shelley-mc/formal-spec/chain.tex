@@ -52,28 +52,28 @@
 \newcommand{\ChainSig}{\type{ChainSig}}
 
 In Figure~\ref{fig:functions:to-mc}, we give the functions that will be used
-to transition from a Shelley chain state into a chain state that supports MC.
+to transition from a Shelley chain state into a chain state that provides multi-asset support.
 The only part of the state that is affected by the transition is the UTxO. For ease of
 reading, we use different notation here to define the UTxO update, and specify
 explicitly only the change to the UTxO, implying that every other part of the
 state is unaffected.
 
 %%
-%% Figure - Shelley to MC Transition
+%% Figure - Shelley to MA Transition
 %%
 \begin{figure}[htb]
   \begin{align*}
       & \fun{mkUTxO} ~\in~ \ShelleyUTxO  \to \UTxO  \\
       & \fun{mkUTxO}~\var{utxo} ~=~ \{~ \var{txin} \mapsto (a,\fun{coinToValue}~c) ~\vert~
       \var{txin} \mapsto \var{(a,c)}\in ~\var{utxo}~\} \\
-      & \text{make UTxO with MC}
+      & \text{make UTxO with MA}
       \nextdef
-      & \fun{toMC} \in ~ \ShelleyChainState \to \ChainState \\
-      & \fun{toMC}~cs = cs' \\
+      & \fun{toMA} \in ~ \ShelleyChainState \to \ChainState \\
+      & \fun{toMA}~cs = cs' \\
       & \where \\
       & ~~~~ cs'_{utxo} = \fun{mkUTxO}~\var{utxo} \\
-      & \text{transform Shelley chain state to a MC-supporting state}
+      & \text{transform Shelley chain state to a MA-supporting state}
   \end{align*}
-  \caption{Shelley to MC Chain State Transtition}
+  \caption{Shelley to Multi-Asset Chain State Transtition}
   \label{fig:functions:to-shelley}
 \end{figure}

@@ -11,7 +11,7 @@ UTxO transition system, see Figure~\ref{fig:functions:insouts}. These include:
 \begin{itemize}
   \item the function $\fun{getOut}$ builds a UTxO-type output out of a
   transaction output
-  \item the function $\fun{outs}$ builds the MC UTxO entries from the outputs
+  \item the function $\fun{outs}$ builds the MA UTxO entries from the outputs
   of a transaction
 \end{itemize}
 
@@ -42,7 +42,7 @@ to $\fun{txSize}$.
 \textbf{UTxO Helper Functions.}
 
 Figure~\ref{fig:functions:utxo} defines additional calculations that are needed for the
-UTxO transition system with MC:
+UTxO transition system with MA:
 
 \begin{itemize}
 
@@ -74,7 +74,7 @@ Note that
 the $\fun{consumed}$ and $\fun{produced}$ calculations both produce a $\Value$.
 This is because the outputs of a transaction, as well as UTxO outputs,
 are of the $\Value$ type. The administrative amounts (of the $\Coin$ type)
-are converted into MC values for these summations.
+are converted into MA values for these summations.
 
 While the preservation of value is a single
 equality, it is really a comparison of token quantities aggregated by
@@ -109,7 +109,7 @@ to balancing the \emph{preservation of value} (POV) equation (Equation~\ref{eqn:
 to cases where the transaction might also be consuming some existing $pid$ tokens,
 or taking the out of circulation with negative quantities in the forge field.
 
-The forge field value represents the change in total existing tokens of each given currency
+The forge field value represents the change in total existing tokens of each given asset
 as a result of processing the transaction. It is always added to the
 \textit{consumed} side of the POV equation because of this side, the signs of the
 quantities in the forge field match the signs of the change. That is,
@@ -160,7 +160,7 @@ That step is part of witnessing, i.e. the UTXOW rule, see below.
 
 \textbf{The UTXO Transition Rule.}
 In Figure \ref{fig:rules:utxo-shelley}, we give the UTXO transition rule,
-updated for MC support. There are the following changes to the preconditions
+updated for MA support. There are the following changes to the preconditions
 of this rule as compared to the original Shelley UTXO rule:
 
 \begin{itemize}
@@ -264,9 +264,9 @@ Note that there are no restrictions on the use of forging scripts. Their hashes 
 be used as credentials in UTxO entries, certificates, and withdrawals.
 Non-MPS type scripts can also be used for forging, e.g. MSig scripts.
 
-Note also that UTxO entries containing MC tokens, just like Shelley UTxO entries,
+Note also that UTxO entries containing MA tokens, just like Shelley UTxO entries,
 can be locked by a script. This script will add an additional set of
-restrictions to the use of MC tokens (additional to the forging script
+restrictions to the use of MA tokens (additional to the forging script
 requirements, but enforced at spending time). This output-locking script can itself
 also be a forging script.
 

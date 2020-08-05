@@ -37,18 +37,18 @@ possible constructors of the MPS language.
     & \fun{evalMPSScript}
      ~\type{DoForge}~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
     &~~~~ =~ \var{pid} \notin \dom~(\fun{forge}~\var{txb}) \\
-    & \text {checks that script hash of this script is not a currency ID being forged by tx}  \\~\\
+    & \text {checks that script hash of this script is not an asset ID being forged by tx}  \\~\\
     %
     & \fun{evalMPSScript}
      ~\type{SignedByPIDToken}~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
     &~~~~ =~ \exists~t\mapsto ~\_~\in~ \fun{range}~(\var{pid}~ \restrictdom~(\fun{ubalance}~\var{spentouts})) ~:~ t~\in~\var{vhks} \\
-    & \text{checks that tx is signed by a key whose hash is the name of a token in this currency}
+    & \text{checks that tx is signed by a key whose hash is the name of a token in this asset}
     \\~\\
     & \fun{evalMPSScript}
      ~(\type{SpendsCur}~\var{pid'})~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
     &~~~~ =~ (\var{pid'}~\neq~\Nothing ~\wedge ~\var{pid'}~\in~ \dom~(\fun{ubalance}~\var{spentouts}))\\
     &~~~~~~ \vee (\var{pid'}~=~\Nothing ~\wedge ~\var{pid}~\in~ \dom~(\fun{ubalance}~\var{spentouts})) \\
-    & \text{checks that this transaction spends currency pid' OR itself if}~\var{pid'}~=~\Nothing
+    & \text{checks that this transaction spends asset pid' OR itself if}~\var{pid'}~=~\Nothing
     \\~\\
     &\fun{evalMPSScript}~(\type{Not}~s)~\var{pid}~\var{slot}~\var{vhks}
     ~\var{txb}~\var{spentouts}
@@ -68,14 +68,14 @@ possible constructors of the MPS language.
     &~~~~ = \exists ~s'~ \in~ ls~:~\fun{evalMPSScript}~s'~\var{pid}~\var{slot}~\var{vhks}
     ~\var{txb}~\var{spentouts}\\
   \end{align*}
-  \caption{Multicurrency Script Evaluation}
+  \caption{Multi-asset Script Evaluation}
   \label{fig:defs:tx-mc-eval}
 \end{figure*}
 
 \begin{figure*}[htb]
   \begin{align*}
     & \fun{evalMPSScript}
-     ~(\type{CurrencyToAddress}~\var{pid'}~\var{addr})~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
+     ~(\type{AssetToAddress}~\var{pid'}~\var{addr})~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
     &~~~~ =~ \forall~(a, v)~\in~\fun{range}~(\fun{outs}~txb),~\\
     &~~~~~~ \var{c}~\in~\dom~v~\Rightarrow~(a~=~ \var{a'} ~\wedge~
                        v~=~\var{c}~ \restrictdom~(\fun{ubalance}~(\fun{outs}~txb)) \\
@@ -83,7 +83,7 @@ possible constructors of the MPS language.
     & ~~~~~~~ \var{a'}~=~\fun{if}~ \var{addr}~\neq~\Nothing~\fun{then}~\var{addr}~\fun{else}~\var{(pid',pid')} \\
     & ~~~~~~~ \var{c}~=~\fun{if}~ \var{pid'}~\neq~\Nothing~\fun{then}~\var{pid'}~\fun{else}~\var{pid} \\
     & \text{checks that tx outputs any pid tokens by themselves to the specified address} \\
-    & \text {the script address of the given currency when addr unspecified} \\~\\
+    & \text {the script address of the given asset when addr unspecified} \\~\\
     & \fun{evalMPSScript}
      ~(\type{TrancheTokens}~\var{tts}~\var{txin})~\var{pid}~\var{slot}~\var{vhks}
      ~\var{txb}~\var{spentouts}  \\
@@ -98,7 +98,7 @@ possible constructors of the MPS language.
     &~~~~ \forall~t~\in~\var{tkns},~
         \fun{nameToken}~(\fun{indexof}~\var{t}~\var{tkns},~\fun{txins}~{txb})~=~t
     \end{align*}
-    \caption{Multicurrency Script Evaluation, cont.}
+    \caption{Multi-asset Script Evaluation, cont.}
     \label{fig:defs:tx-mc-eval-3}
 \end{figure*}
 
@@ -108,7 +108,7 @@ possible constructors of the MPS language.
     %
     & \type{whitelist}  ~\var{msig}~ =~ \type{RequireOr}~
       (\type{RequireAll}~(\type{DoForge};~\type{JustMSig}~\var{msig});~\\
-    &~~~~~~ \type{RequireAll}~(\type{CurrencyToAddress}~\Nothing~\Nothing ;\\
+    &~~~~~~ \type{RequireAll}~(\type{AssetToAddress}~\Nothing~\Nothing ;\\
     &~~~~~~ (\type{Not}~\type{DoForge});~\type{SignedByPIDToken})) \\
     %
     & \text{msig is some MSig script containing signatures of some accreditation authority} \\
