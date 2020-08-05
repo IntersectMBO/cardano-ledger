@@ -6,10 +6,15 @@ module Main where
 
 import BenchUTxOAggregate (expr, genTestCase)
 import BenchValidation
-  ( validateInput,benchValidate,benchreValidate,benchvalid,sizes,
-    runUpdate, updateChain, genUpdateInputs, profileUpdate,
+  ( benchValidate,
+    benchreValidate,
+    genUpdateInputs,
+    profileUpdate,
+    runUpdate,
+    sizes,
+    updateChain,
+    validateInput,
   )
-
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (dom, forwards, keysEqual, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
@@ -27,13 +32,14 @@ import Shelley.Spec.Ledger.Bench.Gen (genTx)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
-import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..))
+import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
-import Shelley.Spec.Ledger.LedgerState (DPState (..), UTxOState (..))
 import Shelley.Spec.Ledger.LedgerState
-  ( DState (..),
+  ( DPState (..),
+    DState (..),
     PState (..),
+    UTxOState (..),
     stakeDistr,
   )
 import Shelley.Spec.Ledger.UTxO (UTxO)
@@ -186,35 +192,30 @@ time                 280.6 ms   (256.0 ms .. 297.3 ms)
 
 -- =================================================================
 
-benchValid :: IO ()
-benchValid = defaultMain [ validGroup ]
-
+-- | Benchmarks for the various validation transitions exposed by the API
 validGroup :: Benchmark
 validGroup =
-    bgroup "block transition" $
-      [env validateInput $  \arg -> bgroup ""
-                                     [ bench "Validate" (whnf benchValidate arg),
-                                       bench "ReValidate" (whnf benchreValidate arg)
-                                     ]
-      ]
-
+  bgroup "validation" $
+    [ env validateInput $ \arg ->
+        bgroup
+          "block"
+          [ bench "applyBlockTransition" (whnf benchValidate arg),
+            bench "reapplyBlockTransition" (whnf benchreValidate arg)
+          ],
+      env genUpdateInputs $ \arg ->
+        bench "updateChainDepState" (whnf updateChain arg)
+    ]
 
 profileValid :: IO ()
 profileValid = do
-  state <-  validateInput
-  ns <- sequence [ fmap (length . show) (benchValidate state) | _n <- ([1..50]::[Int]) ]
-  putStrLn (show (sum ns))
-  pure()
-
-
-benchUpdateChain :: IO ()
-benchUpdateChain = defaultMain [ updateGroup ]
-
-updateGroup :: Benchmark
-updateGroup =
-   bgroup "update block chain" $
-      [env genUpdateInputs $  \arg ->  bench "Validate" (whnf updateChain arg)
+  state <- validateInput
+  ns <-
+    sequence
+      [ fmap (length . show) (benchValidate state)
+        | _n <- ([1 .. 50] :: [Int])
       ]
+  putStrLn (show (sum ns))
+  pure ()
 
 -- ========================================================
 -- Profile algorithms for  ((dom d ◁ r) ▷ dom rg)
@@ -311,12 +312,6 @@ varyDelegState tag fixed changes initstate action =
 -- =============================================================================
 
 main :: IO ()
--- main = benchUpdateChain
--- main = benchValid
--- main = profileUpdate
-
-
--- main2:: IO()
 main =
   defaultMain $
     [ bgroup "vary input size" $
@@ -340,6 +335,5 @@ main =
         ],
       bgroup "vary utxo at epoch boundary" $ (epochAt <$> [5000, 50000, 500000]),
       bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
-      updateGroup,
       validGroup
     ]
