@@ -903,7 +903,7 @@ data Query k v where
 -- ======================================================================================
 
 smart :: Bool
-smart = False -- True  -- for debugging purposes, this can be set to False, in which case no rewrites occurr.
+smart = True  -- for debugging purposes, this can be set to False, in which case no rewrites occurr.
 
 projD ::  Ord k => Query k v -> Fun (k -> v -> u) -> Query k u
 projD x y = case (x,y) of
