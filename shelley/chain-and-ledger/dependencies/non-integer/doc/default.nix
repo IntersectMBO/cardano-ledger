@@ -1,11 +1,16 @@
-{ pkgs ? (import  ../../../../../nix/default.nix {}).pkgs
-}:
+{ lib, latex, texlive, gitMinimal }:
 
-with pkgs;
+latex.buildLatex {
+  name = "non-integer-calculations-spec";
+  texFiles = [ "non-integer-calculations" ];
+  meta = with lib; {
+    description = "Non-integer Calculations Specification";
+    license = licenses.asl20;
+    platforms = platforms.linux;
+  };
+  src = latex.filterLatex ./.;
 
-stdenv.mkDerivation {
-  name = "docsEnv";
-  buildInputs = [ (texlive.combine {
+  texInputs = {
                     inherit (texlive)
                       scheme-small
 
@@ -29,14 +34,6 @@ stdenv.mkDerivation {
                       zref
 
                       ;
-                  })
-                ];
-  src = ./.;
-  buildPhase = "make";
-
-  meta = with lib; {
-    description = "Non-integer Calculations Specification";
-    license = licenses.bsd3;
-    platforms = platforms.linux;
   };
+  buildInputs = [ gitMinimal ];
 }
