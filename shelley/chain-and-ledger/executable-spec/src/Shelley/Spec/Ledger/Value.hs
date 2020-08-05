@@ -37,7 +37,7 @@ General function and type class definitions used in Value
 
 data Op = Gt | Lt | Gteq | Lteq | Neq | Equal
 
-class (NFData t, Show t, Eq t, NoUnexpectedThunks t) => Val t where
+class (NFData t, Show t, NoUnexpectedThunks t) => Val t where
   zeroV :: t                          -- This is an identity of addv
   addv :: t -> t -> t                 -- This must be associative and commutative
   vnegate:: t -> t                    -- addv x (vnegate x) == zeroV
@@ -178,7 +178,7 @@ instance NFData (Value crypto)
 
 -- | compact representation of Value
 data CompactValue crypto = AdaOnly Coin | MixValue (Value crypto)
-  deriving (Show, Eq, Generic, Typeable)
+  deriving (Show, Generic, Typeable)
 
 instance NoUnexpectedThunks (CompactValue crypto)
 instance NFData (CompactValue crypto)

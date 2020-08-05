@@ -75,7 +75,7 @@ newtype Stake crypto = Stake
 aggregateUtxoCoinByCredential ::
   Crypto crypto =>
   Map Ptr (Credential 'Staking crypto) ->
-  UTxO crypto ->
+  UTxO crypto v ->
   Map (Credential 'Staking crypto) Coin ->
   Map (Credential 'Staking crypto) Coin
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =

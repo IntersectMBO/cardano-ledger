@@ -72,6 +72,7 @@ import Cardano.Prelude
   ( AllowThunksIn (..),
     LByteString,
     NoUnexpectedThunks (..),
+    UseIsNormalFormNamed (..),
     catMaybes,
   )
 import qualified Data.ByteString.Lazy as BSL
@@ -126,19 +127,21 @@ data WitnessSetHKD f crypto v = WitnessSet'
     txWitsBytes :: LByteString
   }
 
-deriving instance Crypto crypto => Show (WitnessSetHKD Identity crypto)
+deriving instance Crypto crypto => Show (WitnessSetHKD Identity crypto v)
 
-deriving instance Crypto crypto => Eq (WitnessSetHKD Identity crypto)
+deriving instance Crypto crypto => Eq (WitnessSetHKD Identity crypto v)
 
-deriving instance Crypto crypto => Generic (WitnessSetHKD Identity crypto)
+-- deriving instance Crypto crypto => Generic (WitnessSetHKD Identity crypto v)
 
-deriving via
-  AllowThunksIn
-    '[ "txWitsBytes"
-     ]
-    (WitnessSetHKD Identity crypto)
-  instance
-    Crypto crypto => (NoUnexpectedThunks (WitnessSetHKD Identity crypto v))
+-- deriving via
+--   AllowThunksIn
+--     '[ "txWitsBytes"
+--      ]
+--     (WitnessSetHKD Identity crypto v)
+--   instance
+--     Crypto crypto => (NoUnexpectedThunks (WitnessSetHKD Identity crypto v))
+
+deriving via UseIsNormalFormNamed "WitnessSetHKD" (WitnessSetHKD Identity crypto v) instance Crypto crypto => NoUnexpectedThunks (WitnessSetHKD Identity crypto v)
 
 type WitnessSet = WitnessSetHKD Identity
 
@@ -153,11 +156,11 @@ instance CV crypto v => Monoid (WitnessSetHKD Identity crypto v) where
   mempty = WitnessSet mempty mempty mempty
 
 pattern WitnessSet ::
-  Crypto crypto =>
-  Set (WitVKey crypto 'Witness) ->
+  CV crypto v =>
+  Set (WitVKey crypto v 'Witness) ->
   Map (ScriptHash crypto) (MultiSig crypto) ->
-  Set (BootstrapWitness crypto) ->
-  WitnessSet crypto
+  Set (BootstrapWitness crypto v) ->
+  WitnessSet crypto v
 pattern WitnessSet {addrWits, msigWits, bootWits} <-
   WitnessSet' addrWits msigWits bootWits _
   where
@@ -188,20 +191,20 @@ data Tx crypto v = Tx'
     _metadata' :: !(StrictMaybe MetaData),
     txFullBytes :: LByteString
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Generic)
   deriving
     (NoUnexpectedThunks)
     via AllowThunksIn
           '[ "txFullBytes"
            ]
-          (Tx crypto)
+          (Tx crypto v)
 
 pattern Tx ::
-  Crypto crypto =>
-  TxBody crypto ->
-  WitnessSet crypto ->
+  CV crypto v =>
+  TxBody crypto v ->
+  WitnessSet crypto v ->
   StrictMaybe MetaData ->
-  Tx crypto
+  Tx crypto v
 pattern Tx {_body, _witnessSet, _metadata} <-
   Tx' _body _witnessSet _metadata _
   where
@@ -227,11 +230,11 @@ pattern Tx {_body, _witnessSet, _metadata} <-
 instance CV c v => HashAnnotated (Tx c v) c
 
 segwitTx ::
-  Crypto crypto =>
-  Annotator (TxBody crypto) ->
-  Annotator (WitnessSet crypto) ->
+  CV crypto v =>
+  Annotator (TxBody crypto v) ->
+  Annotator (WitnessSet crypto v) ->
   Maybe (Annotator MetaData) ->
-  Annotator (Tx crypto)
+  Annotator (Tx crypto v)
 segwitTx
   bodyAnn
   witsAnn
@@ -254,7 +257,7 @@ segwitTx
             txFullBytes = fullBytes
           }
 
-decodeWits :: forall crypto s. Crypto crypto => Decoder s (Annotator (WitnessSet crypto))
+decodeWits :: forall crypto s v. (CV crypto v) => Decoder s (Annotator (WitnessSet crypto v))
 decodeWits = do
   (mapParts, annBytes) <-
     withSlice $
@@ -271,7 +274,7 @@ decodeWits = do
               pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
           k -> invalidKey k
   let witSet = foldr ($) emptyWitnessSetHKD mapParts
-      emptyWitnessSetHKD :: WitnessSetHKD Annotator crypto
+      emptyWitnessSetHKD :: WitnessSetHKD Annotator crypto v
       emptyWitnessSetHKD =
         WitnessSet'
           { addrWits' = pure mempty,
@@ -313,15 +316,15 @@ instance CV crypto v => FromCBOR (Annotator (Tx crypto v)) where
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
 class
-  (CV crypto v, ToCBOR a) =>
+  (ToCBOR a, Crypto crypto) =>
   MultiSignatureScript a crypto
   where
-  validateScript :: a -> Tx crypto v -> Bool
+  validateScript :: forall v. (CV crypto v) => a -> Tx crypto v -> Bool
   hashScript :: a -> ScriptHash crypto
 
 -- | instance of MultiSignatureScript type class
 instance
-  Crypto crypto =>
+  (Crypto crypto) =>
   MultiSignatureScript (MultiSig crypto) crypto
   where
   validateScript = validateNativeMultiSigScript
@@ -344,9 +347,9 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
-  (Crypto crypto) =>
+  CV crypto v =>
   MultiSig crypto ->
-  Tx crypto ->
+  Tx crypto v ->
   Bool
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
@@ -356,8 +359,8 @@ validateNativeMultiSigScript msig tx =
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
-  Crypto crypto =>
-  Tx crypto ->
+  CV crypto v =>
+  Tx crypto v ->
   Map (ScriptHash crypto) (MultiSig crypto)
 txwitsScript = msigWits . _witnessSet
 

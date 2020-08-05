@@ -136,7 +136,7 @@ instance CV crypto v => FromCBOR (Annotator (BootstrapWitness crypto v)) where
 -- | Rebuild the addrRoot of the corresponding address.
 bootstrapWitKeyHash ::
   forall crypto v.
-  (Crypto crypto, Val v) =>
+  Crypto crypto =>
   BootstrapWitness crypto v ->
   KeyHash 'Witness crypto
 bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
@@ -182,7 +182,7 @@ unpackByronVKey
 
 verifyBootstrapWit ::
   forall crypto v.
-  (Val v, Crypto crypto, DSIGN.Signable (DSIGN crypto) (Hash crypto (TxBody crypto v))) =>
+  (Crypto crypto, DSIGN.Signable (DSIGN crypto) (Hash crypto (TxBody crypto v))) =>
   Hash crypto (TxBody crypto v) ->
   BootstrapWitness crypto v ->
   Bool
@@ -199,7 +199,7 @@ coerceSignature sig =
 
 makeBootstrapWitness ::
   forall crypto v.
-  ( Val v, DSIGN crypto ~ DSIGN.Ed25519DSIGN,
+  (DSIGN crypto ~ DSIGN.Ed25519DSIGN,
     Crypto crypto
   ) =>
   Hash crypto (TxBody crypto v) ->
