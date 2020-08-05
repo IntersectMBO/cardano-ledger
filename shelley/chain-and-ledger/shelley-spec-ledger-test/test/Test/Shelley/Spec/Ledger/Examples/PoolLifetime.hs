@@ -56,7 +56,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..))
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Examples.Combinators
@@ -83,7 +83,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     NatNonce (..),
     genesisCoins,
     genesisId,
-    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     zero,
   )
@@ -148,7 +148,7 @@ txbodyEx2A =
     SNothing
     SNothing
 
-txEx2A :: forall c. Mock c => Tx c
+txEx2A :: forall c. ExMock c => Tx c
 txEx2A =
   Tx
     txbodyEx2A
@@ -171,9 +171,9 @@ txEx2A =
       }
     SNothing
 
-blockEx2A :: forall c. (HasCallStack, Mock c) => Block c
+blockEx2A :: forall c. (HasCallStack, ExMock c) => Block c
 blockEx2A =
-  mkBlock
+  mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule ppEx 10)
     [txEx2A]
@@ -186,10 +186,10 @@ blockEx2A =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
 
-blockNonce2A :: forall c. (HasCallStack, Mock c) => Nonce
+blockNonce2A :: forall c. (HasCallStack, ExMock c) => Nonce
 blockNonce2A = getBlockNonce (blockEx2A @c)
 
-expectedStEx2A :: forall c. Mock c => ChainState c
+expectedStEx2A :: forall c. ExMock c => ChainState c
 expectedStEx2A =
   (evolveNonceUnfrozen (blockNonce2A @c))
     . (newLab blockEx2A)
@@ -203,5 +203,5 @@ expectedStEx2A =
     . (mir Cast.dariaSHK ReservesMIR dariaMIR)
     $ initStEx2
 
-ex2A :: Mock c => CHAINExample c
+ex2A :: ExMock c => CHAINExample c
 ex2A = CHAINExample initStEx2 blockEx2A (Right expectedStEx2A)

@@ -310,7 +310,7 @@ import Shelley.Spec.Ledger.UTxO
     txid,
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Mock,
+  ( ExMock,
   )
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -318,7 +318,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     NatNonce (..),
     genesisCoins,
     genesisId,
-    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     zero,
   )
@@ -551,7 +551,7 @@ txbodyEx2A =
     (SJust updateEx2A)
     SNothing
 
-txEx2A :: forall c. Mock c => Tx c
+txEx2A :: forall c. ExMock c => Tx c
 txEx2A =
   Tx
     txbodyEx2A
@@ -607,9 +607,9 @@ initStEx2A =
     p :: Proxy c
     p = Proxy
 
-blockEx2A :: forall c. Mock c => Block c
+blockEx2A :: forall c. ExMock c => Block c
 blockEx2A =
-  mkBlock
+  mkBlockFakeVRF
     (lastByronHeaderHash p)
     (slotKeys 10)
     [txEx2A]
@@ -673,11 +673,11 @@ expectedLSEx2A =
     )
     (DPState dsEx2A psEx2A)
 
-blockEx2AHash :: Mock c => HashHeader c
+blockEx2AHash :: ExMock c => HashHeader c
 blockEx2AHash = bhHash (bheader blockEx2A)
 
 -- | Expected state after update is processed and STS applied.
-expectedStEx2A :: forall c. Mock c => ChainState c
+expectedStEx2A :: forall c. ExMock c => ChainState c
 expectedStEx2A =
   ChainState
     ( NewEpochState
@@ -708,7 +708,7 @@ expectedStEx2A =
     p :: Proxy c
     p = Proxy
 
-ex2A :: Mock c => proxy c -> CHAINExample c
+ex2A :: ExMock c => proxy c -> CHAINExample c
 ex2A _ = CHAINExample initStEx2A blockEx2A (Right expectedStEx2A)
 
 -- * Example 2B - process a block late enough in the epoch in order to create a reward update.
@@ -743,7 +743,7 @@ txbodyEx2B =
       TxData._mdHash = SNothing
     }
 
-txEx2B :: Mock c => Tx c
+txEx2B :: ExMock c => Tx c
 txEx2B =
   Tx
     txbodyEx2B -- Body of the transaction
@@ -755,9 +755,9 @@ txEx2B =
       }
     SNothing
 
-blockEx2B :: forall c. Mock c => Block c
+blockEx2B :: forall c. ExMock c => Block c
 blockEx2B =
-  mkBlock
+  mkBlockFakeVRF
     blockEx2AHash -- Hash of previous block
     (slotKeys 90)
     [txEx2B] -- Single transaction to record
@@ -773,7 +773,7 @@ blockEx2B =
     p :: Proxy c
     p = Proxy
 
-blockEx2BHash :: Mock c => proxy c -> HashHeader c
+blockEx2BHash :: ExMock c => proxy c -> HashHeader c
 blockEx2BHash _ = bhHash (bheader blockEx2B)
 
 utxoEx2B :: Crypto c => UTxO c
@@ -825,7 +825,7 @@ expectedLSEx2B =
     (DPState dsEx2B psEx2A)
 
 -- | Expected state after transition
-expectedStEx2B :: forall c. Mock c => ChainState c
+expectedStEx2B :: forall c. ExMock c => ChainState c
 expectedStEx2B =
   ChainState
     ( NewEpochState
@@ -853,14 +853,14 @@ expectedStEx2B =
     p :: Proxy c
     p = Proxy
 
-ex2B :: Mock c => proxy c -> CHAINExample c
+ex2B :: ExMock c => proxy c -> CHAINExample c
 ex2B _ = CHAINExample expectedStEx2A blockEx2B (Right expectedStEx2B)
 
 -- | Example 2C - process an empty block in the next epoch
 -- so that the (empty) reward update is applied and a stake snapshot is made.
-blockEx2C :: forall c. Mock c => Block c
+blockEx2C :: forall c. ExMock c => Block c
 blockEx2C =
-  mkBlock
+  mkBlockFakeVRF
     (blockEx2BHash p) -- Hash of previous block
     (slotKeys 110)
     [] -- No transactions at all (empty block)
@@ -915,10 +915,10 @@ expectedLSEx2C =
         psEx2A
     )
 
-blockEx2CHash :: Mock c => HashHeader c
+blockEx2CHash :: ExMock c => HashHeader c
 blockEx2CHash = bhHash (bheader blockEx2C)
 
-expectedStEx2Cgeneric :: forall c. Mock c => SnapShots c -> LedgerState c -> PParams -> ChainState c
+expectedStEx2Cgeneric :: forall c. ExMock c => SnapShots c -> LedgerState c -> PParams -> ChainState c
 expectedStEx2Cgeneric ss ls pp =
   ChainState
     ( NewEpochState
@@ -947,10 +947,10 @@ expectedStEx2Cgeneric ss ls pp =
 
 -- ** Expected chain state after STS
 
-expectedStEx2C :: Mock c => ChainState c
+expectedStEx2C :: ExMock c => ChainState c
 expectedStEx2C = expectedStEx2Cgeneric snapsEx2C expectedLSEx2C ppsEx1
 
-ex2C :: Mock c => proxy c -> CHAINExample c
+ex2C :: ExMock c => proxy c -> CHAINExample c
 ex2C _ = CHAINExample expectedStEx2B blockEx2C (Right expectedStEx2C)
 
 -- | Example 2D - process a block late enough
@@ -977,7 +977,7 @@ txbodyEx2D =
       TxData._mdHash = SNothing
     }
 
-txEx2D :: Mock c => Tx c
+txEx2D :: ExMock c => Tx c
 txEx2D =
   Tx
     txbodyEx2D
@@ -987,9 +987,9 @@ txEx2D =
       }
     SNothing
 
-blockEx2D :: forall c. Mock c => Block c
+blockEx2D :: forall c. ExMock c => Block c
 blockEx2D =
-  mkBlock
+  mkBlockFakeVRF
     blockEx2CHash
     (slotKeys 190)
     [txEx2D]
@@ -1005,7 +1005,7 @@ blockEx2D =
     p :: Proxy c
     p = Proxy
 
-blockEx2DHash :: Mock c => proxy c -> HashHeader c
+blockEx2DHash :: ExMock c => proxy c -> HashHeader c
 blockEx2DHash _ = bhHash (bheader blockEx2D)
 
 utxoEx2D :: Crypto c => UTxO c
@@ -1040,7 +1040,7 @@ expectedLSEx2D =
     )
     (DPState dsEx2D psEx2A)
 
-expectedStEx2D :: forall c. Mock c => ChainState c
+expectedStEx2D :: forall c. ExMock c => ChainState c
 expectedStEx2D =
   ChainState
     ( NewEpochState
@@ -1082,14 +1082,14 @@ expectedStEx2D =
     p :: Proxy c
     p = Proxy
 
-ex2D :: Mock c => proxy c -> CHAINExample c
+ex2D :: ExMock c => proxy c -> CHAINExample c
 ex2D _ = CHAINExample expectedStEx2C blockEx2D (Right expectedStEx2D)
 
 -- | Example 2E - create the first non-empty pool distribution
 -- by creating a block in the third epoch of this running example.
-blockEx2E :: forall c. Mock c => Block c
+blockEx2E :: forall c. ExMock c => Block c
 blockEx2E =
-  mkBlock
+  mkBlockFakeVRF
     (blockEx2DHash p)
     (slotKeys 220)
     []
@@ -1146,7 +1146,7 @@ expectedLSEx2E =
         psEx2A
     )
 
-blockEx2EHash :: Mock c => HashHeader c
+blockEx2EHash :: ExMock c => HashHeader c
 blockEx2EHash = bhHash (bheader blockEx2E)
 
 acntEx2E :: Crypto c => proxy c -> AccountState
@@ -1166,7 +1166,7 @@ oCertIssueNosEx2 =
 nonMyopicEx2E :: NonMyopic h
 nonMyopicEx2E = emptyNonMyopic {rewardPotNM = Coin 6}
 
-expectedStEx2E :: forall c. Mock c => ChainState c
+expectedStEx2E :: forall c. ExMock c => ChainState c
 expectedStEx2E =
   ChainState
     ( NewEpochState
@@ -1198,16 +1198,16 @@ expectedStEx2E =
     p :: Proxy c
     p = Proxy
 
-ex2E :: Mock c => proxy c -> CHAINExample c
+ex2E :: ExMock c => proxy c -> CHAINExample c
 ex2E _ = CHAINExample expectedStEx2D blockEx2E (Right expectedStEx2E)
 
 -- | Example 2F - create a decentralized Praos block (ie one not in the overlay schedule)
 oCertIssueNosEx2F :: forall c. Crypto c => Map (KeyHash 'BlockIssuer c) Word64
 oCertIssueNosEx2F = Map.insert (coerceKeyRole $ hk Cast.alicePoolKeys) 0 oCertIssueNosEx2
 
-blockEx2F :: forall c. Mock c => Block c
+blockEx2F :: forall c. ExMock c => Block c
 blockEx2F =
-  mkBlock
+  mkBlockFakeVRF
     blockEx2EHash
     Cast.alicePoolKeys
     []
@@ -1223,7 +1223,7 @@ blockEx2F =
     p :: Proxy c
     p = Proxy
 
-blockEx2FHash :: Mock c => proxy c -> HashHeader c
+blockEx2FHash :: ExMock c => proxy c -> HashHeader c
 blockEx2FHash _ = bhHash (bheader blockEx2F)
 
 pdEx2F :: forall c. Crypto c => PoolDistr c
@@ -1241,7 +1241,7 @@ pdEx2F =
 nonMyopicEx2F :: NonMyopic h
 nonMyopicEx2F = emptyNonMyopic {rewardPotNM = Coin 4}
 
-expectedStEx2F :: forall c. Mock c => ChainState c
+expectedStEx2F :: forall c. ExMock c => ChainState c
 expectedStEx2F =
   ChainState
     ( NewEpochState
@@ -1276,10 +1276,10 @@ expectedStEx2F =
     p :: Proxy c
     p = Proxy
 
-ex2F :: Mock c => Proxy c -> CHAINExample c
+ex2F :: ExMock c => Proxy c -> CHAINExample c
 ex2F _ = CHAINExample expectedStEx2E blockEx2F (Right expectedStEx2F)
 
-epochNonceEx2G :: Mock c => Proxy c -> Nonce
+epochNonceEx2G :: ExMock c => Proxy c -> Nonce
 epochNonceEx2G p =
   makeEvolvedNonce
     p
@@ -1287,7 +1287,7 @@ epochNonceEx2G p =
     [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E]
     ⭒ hashHeaderToNonce (blockEx2DHash p)
 
-evolNonceEx2G :: Mock c => Proxy c -> Nonce
+evolNonceEx2G :: ExMock c => Proxy c -> Nonce
 evolNonceEx2G p =
   makeEvolvedNonce
     p
@@ -1296,9 +1296,9 @@ evolNonceEx2G p =
 
 -- | Example 2G - create an empty block in the next epoch
 -- to prepare the way for the first non-trivial reward update
-blockEx2G :: forall c. Mock c => Block c
+blockEx2G :: forall c. ExMock c => Block c
 blockEx2G =
-  mkBlock
+  mkBlockFakeVRF
     (blockEx2FHash p)
     (slotKeys 310)
     []
@@ -1314,7 +1314,7 @@ blockEx2G =
     p :: Proxy c
     p = Proxy
 
-blockEx2GHash :: Mock c => HashHeader c
+blockEx2GHash :: ExMock c => HashHeader c
 blockEx2GHash = bhHash (bheader blockEx2G)
 
 snapsEx2G :: Crypto c => proxy c -> SnapShots c
@@ -1354,7 +1354,7 @@ acntEx2G p =
       _reserves = maxLLSupply - balance (utxoEx2A p) - carlMIR + Coin 10
     }
 
-expectedStEx2G :: forall c. Mock c => ChainState c
+expectedStEx2G :: forall c. ExMock c => ChainState c
 expectedStEx2G =
   ChainState
     ( NewEpochState
@@ -1381,13 +1381,13 @@ expectedStEx2G =
     p :: Proxy c
     p = Proxy
 
-ex2G :: Mock c => proxy c -> CHAINExample c
+ex2G :: ExMock c => proxy c -> CHAINExample c
 ex2G _ = CHAINExample expectedStEx2F blockEx2G (Right expectedStEx2G)
 
 -- | Example 2H - create the first non-trivial reward update
-blockEx2H :: forall c. Mock c => Block c
+blockEx2H :: forall c. ExMock c => Block c
 blockEx2H =
-  mkBlock
+  mkBlockFakeVRF
     blockEx2GHash
     (slotKeys 390)
     []
@@ -1403,7 +1403,7 @@ blockEx2H =
     p :: Proxy c
     p = Proxy
 
-blockEx2HHash :: Mock c => proxy c -> HashHeader c
+blockEx2HHash :: ExMock c => proxy c -> HashHeader c
 blockEx2HHash _ = bhHash (bheader blockEx2H)
 
 aliceRAcnt2H :: Coin
@@ -1456,14 +1456,14 @@ nonMyopicEx2H =
     p :: Proxy c
     p = Proxy
 
-evolNonceEx2H :: Mock c => Proxy c -> Nonce
+evolNonceEx2H :: ExMock c => Proxy c -> Nonce
 evolNonceEx2H p =
   makeEvolvedNonce
     p
     (nonce0 p)
     [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E, blockEx2F, blockEx2G, blockEx2H]
 
-expectedStEx2H :: forall c. Mock c => ChainState c
+expectedStEx2H :: forall c. ExMock c => ChainState c
 expectedStEx2H =
   ChainState
     ( NewEpochState
@@ -1498,10 +1498,10 @@ expectedStEx2H =
     p :: Proxy c
     p = Proxy
 
-ex2H :: Mock c => proxy c -> CHAINExample c
+ex2H :: ExMock c => proxy c -> CHAINExample c
 ex2H _ = CHAINExample expectedStEx2G blockEx2H (Right expectedStEx2H)
 
-epochNonceEx2I :: Mock c => Proxy c -> Nonce
+epochNonceEx2I :: ExMock c => Proxy c -> Nonce
 epochNonceEx2I p =
   makeEvolvedNonce
     p
@@ -1509,13 +1509,13 @@ epochNonceEx2I p =
     [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E, blockEx2F, blockEx2G]
     ⭒ hashHeaderToNonce (blockEx2FHash p)
 
-evolNonceEx2I :: Mock c => Proxy c -> Nonce
+evolNonceEx2I :: ExMock c => Proxy c -> Nonce
 evolNonceEx2I p = makeEvolvedNonce p (evolNonceEx2G p) [blockEx2H, blockEx2I]
 
 -- | Example 2I - apply the first non-trivial reward update
-blockEx2I :: forall c. Mock c => Block c
+blockEx2I :: forall c. ExMock c => Block c
 blockEx2I =
-  mkBlock
+  mkBlockFakeVRF
     (blockEx2HHash p)
     (slotKeys 410)
     []
@@ -1531,7 +1531,7 @@ blockEx2I =
     p :: Proxy c
     p = Proxy
 
-blockEx2IHash :: Mock c => HashHeader c
+blockEx2IHash :: ExMock c => HashHeader c
 blockEx2IHash = bhHash (bheader blockEx2I)
 
 acntEx2I :: Crypto c => proxy c -> AccountState
@@ -1583,7 +1583,7 @@ oCertIssueNosEx2I =
     2
     oCertIssueNosEx2H
 
-expectedStEx2I :: forall c. Mock c => ChainState c
+expectedStEx2I :: forall c. ExMock c => ChainState c
 expectedStEx2I =
   ChainState
     ( NewEpochState
@@ -1610,7 +1610,7 @@ expectedStEx2I =
     p :: Proxy c
     p = Proxy
 
-ex2I :: Mock c => proxy c -> CHAINExample c
+ex2I :: ExMock c => proxy c -> CHAINExample c
 ex2I _ = CHAINExample expectedStEx2H blockEx2I (Right expectedStEx2I)
 
 -- | Example 2J - drain reward account and de-register stake key
@@ -1633,7 +1633,7 @@ txbodyEx2J =
     SNothing
     SNothing
 
-txEx2J :: Mock c => Tx c
+txEx2J :: ExMock c => Tx c
 txEx2J =
   Tx
     txbodyEx2J
@@ -1643,9 +1643,9 @@ txEx2J =
       }
     SNothing
 
-blockEx2J :: forall c. Mock c => Block c
+blockEx2J :: forall c. ExMock c => Block c
 blockEx2J =
-  mkBlock
+  mkBlockFakeVRF
     blockEx2IHash
     (slotKeys 420)
     [txEx2J]
@@ -1661,7 +1661,7 @@ blockEx2J =
     p :: Proxy c
     p = Proxy
 
-blockEx2JHash :: Mock c => HashHeader c
+blockEx2JHash :: ExMock c => HashHeader c
 blockEx2JHash = bhHash (bheader blockEx2J)
 
 utxoEx2J :: Crypto c => UTxO c
@@ -1703,10 +1703,10 @@ oCertIssueNosEx2J =
     2
     oCertIssueNosEx2I
 
-evolNonceEx2J :: Mock c => Proxy c -> Nonce
+evolNonceEx2J :: ExMock c => Proxy c -> Nonce
 evolNonceEx2J p = makeEvolvedNonce p (evolNonceEx2I p) [blockEx2J]
 
-expectedStEx2J :: forall c. Mock c => ChainState c
+expectedStEx2J :: forall c. ExMock c => ChainState c
 expectedStEx2J =
   ChainState
     ( NewEpochState
@@ -1733,7 +1733,7 @@ expectedStEx2J =
     p :: Proxy c
     p = Proxy
 
-ex2J :: Mock c => proxy c -> CHAINExample c
+ex2J :: ExMock c => proxy c -> CHAINExample c
 ex2J _ = CHAINExample expectedStEx2I blockEx2J (Right expectedStEx2J)
 
 -- | Example 2K - start stake pool retirement
@@ -1752,7 +1752,7 @@ txbodyEx2K =
     SNothing
     SNothing
 
-txEx2K :: Mock c => Tx c
+txEx2K :: ExMock c => Tx c
 txEx2K =
   Tx
     txbodyEx2K
@@ -1766,9 +1766,9 @@ txEx2K =
       }
     SNothing
 
-blockEx2K :: forall c. Mock c => Block c
+blockEx2K :: forall c. ExMock c => Block c
 blockEx2K =
-  mkBlock
+  mkBlockFakeVRF
     blockEx2JHash
     (slotKeys 490)
     [txEx2K]
@@ -1784,7 +1784,7 @@ blockEx2K =
     p :: Proxy c
     p = Proxy
 
-blockEx2KHash :: Mock c => proxy c -> HashHeader c
+blockEx2KHash :: ExMock c => proxy c -> HashHeader c
 blockEx2KHash _ = bhHash (bheader blockEx2K)
 
 utxoEx2K :: Crypto c => UTxO c
@@ -1833,10 +1833,10 @@ nonMyopicEx2K =
     p :: Proxy c
     p = Proxy
 
-evolNonceEx2K :: Mock c => Proxy c -> Nonce
+evolNonceEx2K :: ExMock c => Proxy c -> Nonce
 evolNonceEx2K p = makeEvolvedNonce p (evolNonceEx2J p) [blockEx2K]
 
-expectedStEx2K :: forall c. Mock c => ChainState c
+expectedStEx2K :: forall c. ExMock c => ChainState c
 expectedStEx2K =
   ChainState
     ( NewEpochState
@@ -1871,16 +1871,16 @@ expectedStEx2K =
     p :: Proxy c
     p = Proxy
 
-ex2K :: Mock c => proxy c -> CHAINExample c
+ex2K :: ExMock c => proxy c -> CHAINExample c
 ex2K _ = CHAINExample expectedStEx2J blockEx2K (Right expectedStEx2K)
 
 -- | Example 2L - reap a stake pool
-epochNonceEx2L :: Mock c => Proxy c -> Nonce
+epochNonceEx2L :: ExMock c => Proxy c -> Nonce
 epochNonceEx2L p = (evolNonceEx2J p) ⭒ hashHeaderToNonce (blockEx2HHash p)
 
-blockEx2L :: forall c. Mock c => Block c
+blockEx2L :: forall c. ExMock c => Block c
 blockEx2L =
-  mkBlock
+  mkBlockFakeVRF
     (blockEx2KHash p)
     (slotKeys 510)
     []
@@ -1896,7 +1896,7 @@ blockEx2L =
     p :: Proxy c
     p = Proxy
 
-blockEx2LHash :: Mock c => HashHeader c
+blockEx2LHash :: ExMock c => HashHeader c
 blockEx2LHash = bhHash (bheader blockEx2L)
 
 acntEx2L :: Crypto c => proxy c -> AccountState
@@ -1960,10 +1960,10 @@ oCertIssueNosEx2L :: Crypto c => Map (KeyHash 'BlockIssuer c) Word64
 oCertIssueNosEx2L =
   Map.insert (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 510) 3 oCertIssueNosEx2J
 
-evolNonceEx2L :: Mock c => Proxy c -> Nonce
+evolNonceEx2L :: ExMock c => Proxy c -> Nonce
 evolNonceEx2L p = makeEvolvedNonce p (evolNonceEx2K p) [blockEx2L]
 
-expectedStEx2L :: forall c. Mock c => ChainState c
+expectedStEx2L :: forall c. ExMock c => ChainState c
 expectedStEx2L =
   ChainState
     ( NewEpochState
@@ -1990,7 +1990,7 @@ expectedStEx2L =
     p :: Proxy c
     p = Proxy
 
-ex2L :: Mock c => proxy c -> CHAINExample c
+ex2L :: ExMock c => proxy c -> CHAINExample c
 ex2L _ = CHAINExample expectedStEx2K blockEx2L (Right expectedStEx2L)
 
 -- | Example 3A - Setting up for a successful protocol parameter update,
@@ -2044,7 +2044,7 @@ txbodyEx3A =
     (SJust updateEx3A)
     SNothing
 
-txEx3A :: Mock c => Tx c
+txEx3A :: ExMock c => Tx c
 txEx3A =
   Tx
     txbodyEx3A
@@ -2064,9 +2064,9 @@ txEx3A =
     p :: Proxy c
     p = Proxy
 
-blockEx3A :: forall c. Mock c => Block c
+blockEx3A :: forall c. ExMock c => Block c
 blockEx3A =
-  mkBlock
+  mkBlockFakeVRF
     (lastByronHeaderHash p)
     (slotKeys 10)
     [txEx3A]
@@ -2097,10 +2097,10 @@ expectedLSEx3A =
     )
     (DPState dsEx1 psEx1)
 
-blockEx3AHash :: Mock c => HashHeader c
+blockEx3AHash :: ExMock c => HashHeader c
 blockEx3AHash = bhHash (bheader blockEx3A)
 
-expectedStEx3A :: forall c. Mock c => ChainState c
+expectedStEx3A :: forall c. ExMock c => ChainState c
 expectedStEx3A =
   ChainState
     ( NewEpochState
@@ -2127,7 +2127,7 @@ expectedStEx3A =
     p :: Proxy c
     p = Proxy
 
-ex3A :: Mock c => proxy c -> CHAINExample c
+ex3A :: ExMock c => proxy c -> CHAINExample c
 ex3A _ = CHAINExample initStEx2A blockEx3A (Right expectedStEx3A)
 
 -- | Example 3B - Finish getting enough votes for the protocol parameter update.
@@ -2157,7 +2157,7 @@ txbodyEx3B =
     (SJust updateEx3B)
     SNothing
 
-txEx3B :: Mock c => Tx c
+txEx3B :: ExMock c => Tx c
 txEx3B =
   Tx
     txbodyEx3B
@@ -2176,9 +2176,9 @@ txEx3B =
     p :: Proxy c
     p = Proxy
 
-blockEx3B :: forall c. Mock c => Block c
+blockEx3B :: forall c. ExMock c => Block c
 blockEx3B =
-  mkBlock
+  mkBlockFakeVRF
     blockEx3AHash
     (slotKeys 20)
     [txEx3B]
@@ -2218,10 +2218,10 @@ expectedLSEx3B =
     )
     (DPState dsEx1 psEx1)
 
-blockEx3BHash :: Mock c => proxy c -> HashHeader c
+blockEx3BHash :: ExMock c => proxy c -> HashHeader c
 blockEx3BHash _ = bhHash (bheader blockEx3B)
 
-expectedStEx3B :: forall c. Mock c => ChainState c
+expectedStEx3B :: forall c. ExMock c => ChainState c
 expectedStEx3B =
   ChainState
     ( NewEpochState
@@ -2248,7 +2248,7 @@ expectedStEx3B =
     p :: Proxy c
     p = Proxy
 
-ex3B :: Mock c => proxy c -> CHAINExample c
+ex3B :: ExMock c => proxy c -> CHAINExample c
 ex3B _ = CHAINExample expectedStEx3A blockEx3B (Right expectedStEx3B)
 
 -- | Example 3C - Vote Late in the epoch
@@ -2299,7 +2299,7 @@ txbodyEx3C =
     (SJust updateEx3C)
     SNothing
 
-txEx3C :: Mock c => Tx c
+txEx3C :: ExMock c => Tx c
 txEx3C =
   Tx
     txbodyEx3C
@@ -2314,9 +2314,9 @@ txEx3C =
     p :: Proxy c
     p = Proxy
 
-blockEx3C :: forall c. Mock c => Block c
+blockEx3C :: forall c. ExMock c => Block c
 blockEx3C =
-  mkBlock
+  mkBlockFakeVRF
     (blockEx3BHash p)
     (slotKeys 80)
     [txEx3C]
@@ -2350,10 +2350,10 @@ expectedLSEx3C =
     )
     (DPState dsEx1 psEx1)
 
-blockEx3CHash :: Mock c => proxy c -> HashHeader c
+blockEx3CHash :: ExMock c => proxy c -> HashHeader c
 blockEx3CHash _ = bhHash (bheader blockEx3C)
 
-expectedStEx3C :: forall c. Mock c => ChainState c
+expectedStEx3C :: forall c. ExMock c => ChainState c
 expectedStEx3C =
   ChainState
     ( NewEpochState
@@ -2380,14 +2380,14 @@ expectedStEx3C =
     p :: Proxy c
     p = Proxy
 
-ex3C :: Mock c => proxy c -> CHAINExample c
+ex3C :: ExMock c => proxy c -> CHAINExample c
 ex3C _ = CHAINExample expectedStEx3B blockEx3C (Right expectedStEx3C)
 
 -- | Example 3D - Adopt protocol parameter update
 -- | And make future updates become the new proposals
-blockEx3D :: forall c. Mock c => Block c
+blockEx3D :: forall c. ExMock c => Block c
 blockEx3D =
-  mkBlock
+  mkBlockFakeVRF
     (blockEx3CHash p)
     (slotKeys 110)
     []
@@ -2403,7 +2403,7 @@ blockEx3D =
     p :: Proxy c
     p = Proxy
 
-blockEx3DHash :: Mock c => HashHeader c
+blockEx3DHash :: ExMock c => HashHeader c
 blockEx3DHash = bhHash (bheader blockEx3D)
 
 snapsEx3D :: SnapShots h
@@ -2423,7 +2423,7 @@ expectedLSEx3D =
 ppsEx3D :: PParams
 ppsEx3D = ppsEx1 {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 123}
 
-expectedStEx3D :: forall c. Mock c => ChainState c
+expectedStEx3D :: forall c. ExMock c => ChainState c
 expectedStEx3D =
   ChainState
     ( NewEpochState
@@ -2450,7 +2450,7 @@ expectedStEx3D =
     p :: Proxy c
     p = Proxy
 
-ex3D :: Mock c => proxy c -> CHAINExample c
+ex3D :: ExMock c => proxy c -> CHAINExample c
 ex3D _ = CHAINExample expectedStEx3C blockEx3D (Right expectedStEx3D)
 
 -- | Example 4A - Genesis key delegation
@@ -2488,7 +2488,7 @@ txbodyEx4A =
     SNothing
     SNothing
 
-txEx4A :: forall c. Mock c => Tx c
+txEx4A :: forall c. ExMock c => Tx c
 txEx4A =
   Tx
     txbodyEx4A
@@ -2505,9 +2505,9 @@ txEx4A =
     p :: Proxy c
     p = Proxy
 
-blockEx4A :: forall c. Mock c => Block c
+blockEx4A :: forall c. ExMock c => Block c
 blockEx4A =
-  mkBlock
+  mkBlockFakeVRF
     (lastByronHeaderHash p)
     (slotKeys 10)
     [txEx4A]
@@ -2523,7 +2523,7 @@ blockEx4A =
     p :: Proxy c
     p = Proxy
 
-blockEx4AHash :: Mock c => HashHeader c
+blockEx4AHash :: ExMock c => HashHeader c
 blockEx4AHash = bhHash (bheader blockEx4A)
 
 dsEx4A :: Crypto c => DState c
@@ -2553,7 +2553,7 @@ expectedLSEx4A =
     )
     (DPState dsEx4A psEx1)
 
-expectedStEx4A :: forall c. Mock c => ChainState c
+expectedStEx4A :: forall c. ExMock c => ChainState c
 expectedStEx4A =
   ChainState
     ( NewEpochState
@@ -2580,13 +2580,13 @@ expectedStEx4A =
     p :: Proxy c
     p = Proxy
 
-ex4A :: Mock c => proxy c -> CHAINExample c
+ex4A :: ExMock c => proxy c -> CHAINExample c
 ex4A _ = CHAINExample initStEx2A blockEx4A (Right expectedStEx4A)
 
 -- | Example 4B - New genesis key delegation updated from future delegations
-blockEx4B :: forall c. Mock c => Block c
+blockEx4B :: forall c. ExMock c => Block c
 blockEx4B =
-  mkBlock
+  mkBlockFakeVRF
     blockEx4AHash
     (slotKeys 50)
     []
@@ -2602,7 +2602,7 @@ blockEx4B =
     p :: Proxy c
     p = Proxy
 
-blockEx4BHash :: Mock c => HashHeader c
+blockEx4BHash :: ExMock c => HashHeader c
 blockEx4BHash = bhHash (bheader blockEx4B)
 
 dsEx4B :: Crypto c => DState c
@@ -2628,7 +2628,7 @@ expectedLSEx4B =
     )
     (DPState dsEx4B psEx1)
 
-expectedStEx4B :: forall c. Mock c => ChainState c
+expectedStEx4B :: forall c. ExMock c => ChainState c
 expectedStEx4B =
   ChainState
     ( NewEpochState
@@ -2655,7 +2655,7 @@ expectedStEx4B =
     p :: Proxy c
     p = Proxy
 
-ex4B :: Mock c => proxy c -> CHAINExample c
+ex4B :: ExMock c => proxy c -> CHAINExample c
 ex4B _ = CHAINExample expectedStEx4A blockEx4B (Right expectedStEx4B)
 
 -- | Example 5A - Genesis key delegation
@@ -2677,7 +2677,7 @@ txbodyEx5A pot =
     SNothing
     SNothing
 
-txEx5A :: Mock c => MIRPot -> Tx c
+txEx5A :: ExMock c => MIRPot -> Tx c
 txEx5A pot =
   Tx
     (txbodyEx5A pot)
@@ -2701,9 +2701,9 @@ txEx5A pot =
     p :: Proxy c
     p = Proxy
 
-blockEx5A :: forall c. Mock c => MIRPot -> Block c
+blockEx5A :: forall c. ExMock c => MIRPot -> Block c
 blockEx5A pot =
-  mkBlock
+  mkBlockFakeVRF
     (lastByronHeaderHash p)
     (slotKeys 10)
     [txEx5A pot]
@@ -2719,7 +2719,7 @@ blockEx5A pot =
     p :: Proxy c
     p = Proxy
 
-blockEx5AHash :: Mock c => MIRPot -> HashHeader c
+blockEx5AHash :: ExMock c => MIRPot -> HashHeader c
 blockEx5AHash pot = bhHash (bheader $ blockEx5A pot)
 
 utxoEx5A :: Crypto c => MIRPot -> UTxO c
@@ -2775,7 +2775,7 @@ acntEx5A p =
       _reserves = maxLLSupply - (balance (utxoEx2A p) + treasuryEx5A)
     }
 
-expectedStEx5A :: forall c. Mock c => MIRPot -> ChainState c
+expectedStEx5A :: forall c. ExMock c => MIRPot -> ChainState c
 expectedStEx5A pot =
   ChainState
     ( NewEpochState
@@ -2802,17 +2802,17 @@ expectedStEx5A pot =
     p :: Proxy c
     p = Proxy
 
-ex5A :: Mock c => proxy c -> MIRPot -> CHAINExample c
+ex5A :: ExMock c => proxy c -> MIRPot -> CHAINExample c
 ex5A _ pot = CHAINExample initStEx5A (blockEx5A pot) (Right $ expectedStEx5A pot)
 
-ex5AReserves :: Mock c => proxy c -> CHAINExample c
+ex5AReserves :: ExMock c => proxy c -> CHAINExample c
 ex5AReserves p = ex5A p ReservesMIR
 
-ex5ATreasury :: Mock c => proxy c -> CHAINExample c
+ex5ATreasury :: ExMock c => proxy c -> CHAINExample c
 ex5ATreasury p = ex5A p TreasuryMIR
 
 -- | Example 5B - Instantaneous rewards with insufficient core node signatures
-txEx5B :: Mock c => MIRPot -> Tx c
+txEx5B :: ExMock c => MIRPot -> Tx c
 txEx5B pot =
   Tx
     (txbodyEx5A pot)
@@ -2836,9 +2836,9 @@ txEx5B pot =
     p :: Proxy c
     p = Proxy
 
-blockEx5B :: forall c. Mock c => MIRPot -> Block c
+blockEx5B :: forall c. ExMock c => MIRPot -> Block c
 blockEx5B pot =
-  mkBlock
+  mkBlockFakeVRF
     (lastByronHeaderHash p)
     (slotKeys 10)
     [txEx5B pot]
@@ -2863,13 +2863,13 @@ mirWitsEx5B = Set.fromList [asWitness . hk . coreNodeKeys p $ i | i <- [0 .. 3]]
 expectedStEx5B :: Crypto c => PredicateFailure (CHAIN c)
 expectedStEx5B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure $ MIRInsufficientGenesisSigsUTXOW mirWitsEx5B)))
 
-ex5B :: Mock c => proxy c -> MIRPot -> CHAINExample c
+ex5B :: ExMock c => proxy c -> MIRPot -> CHAINExample c
 ex5B _ pot = CHAINExample initStEx5A (blockEx5B pot) (Left [[expectedStEx5B]])
 
-ex5BReserves :: Mock c => proxy c -> CHAINExample c
+ex5BReserves :: ExMock c => proxy c -> CHAINExample c
 ex5BReserves p = ex5B p ReservesMIR
 
-ex5BTreasury :: Mock c => proxy c -> CHAINExample c
+ex5BTreasury :: ExMock c => proxy c -> CHAINExample c
 ex5BTreasury p = ex5B p TreasuryMIR
 
 -- | Example 5C - Instantaneous rewards that overrun the available reserves
@@ -2879,7 +2879,7 @@ initStEx5C =
     (AccountState {_treasury = 99, _reserves = 99})
     initStEx2A
 
-ex5C :: Mock c => proxy c -> MIRPot -> CHAINExample c
+ex5C :: ExMock c => proxy c -> MIRPot -> CHAINExample c
 ex5C _ pot =
   CHAINExample
     initStEx5C
@@ -2899,10 +2899,10 @@ ex5C _ pot =
         ]
     )
 
-ex5CReserves :: Mock c => proxy c -> CHAINExample c
+ex5CReserves :: ExMock c => proxy c -> CHAINExample c
 ex5CReserves p = ex5C p ReservesMIR
 
-ex5CTreasury :: Mock c => proxy c -> CHAINExample c
+ex5CTreasury :: ExMock c => proxy c -> CHAINExample c
 ex5CTreasury p = ex5C p TreasuryMIR
 
 -- | Example 5D - Apply instantaneous rewards at epoch boundary
@@ -2924,7 +2924,7 @@ txbodyEx5D pot =
     SNothing
     SNothing
 
-txEx5D :: Mock c => MIRPot -> Tx c
+txEx5D :: ExMock c => MIRPot -> Tx c
 txEx5D pot =
   Tx
     (txbodyEx5D pot)
@@ -2948,9 +2948,9 @@ txEx5D pot =
     p :: Proxy c
     p = Proxy
 
-blockEx5D :: forall c. Mock c => MIRPot -> Block c
+blockEx5D :: forall c. ExMock c => MIRPot -> Block c
 blockEx5D pot =
-  mkBlock
+  mkBlockFakeVRF
     (lastByronHeaderHash p)
     (slotKeys 10)
     [txEx5D pot]
@@ -2986,7 +2986,7 @@ txbodyEx5D' pot =
     SNothing
     SNothing
 
-txEx5D' :: Mock c => MIRPot -> Tx c
+txEx5D' :: ExMock c => MIRPot -> Tx c
 txEx5D' pot =
   Tx
     (txbodyEx5D' pot)
@@ -2995,9 +2995,9 @@ txEx5D' pot =
       }
     SNothing
 
-blockEx5D' :: forall c. Mock c => MIRPot -> Block c
+blockEx5D' :: forall c. ExMock c => MIRPot -> Block c
 blockEx5D' pot =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash (bheader $ blockEx5D pot))
     (slotKeys s)
     [txEx5D' pot]
@@ -3034,16 +3034,16 @@ txbodyEx5D'' pot =
     SNothing
     SNothing
 
-txEx5D'' :: Mock c => MIRPot -> Tx c
+txEx5D'' :: ExMock c => MIRPot -> Tx c
 txEx5D'' pot =
   Tx
     (txbodyEx5D'' pot)
     mempty {addrWits = makeWitnessesVKey (hashAnnotated $ txbodyEx5D'' pot) [Cast.alicePay]}
     SNothing
 
-blockEx5D'' :: Mock c => MIRPot -> Nonce -> Block c
+blockEx5D'' :: ExMock c => MIRPot -> Nonce -> Block c
 blockEx5D'' pot epochNonce =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash (bheader $ blockEx5D' pot))
     (slotKeys s)
     [txEx5D'' pot]
@@ -3058,7 +3058,7 @@ blockEx5D'' pot epochNonce =
   where
     slot@(SlotNo s) = (slotFromEpoch $ EpochNo 2) + SlotNo 10
 
-ex5D' :: forall proxy c. Mock c => proxy c -> MIRPot -> Either [[PredicateFailure (CHAIN c)]] (ChainState c)
+ex5D' :: forall proxy c. ExMock c => proxy c -> MIRPot -> Either [[PredicateFailure (CHAIN c)]] (ChainState c)
 ex5D' _p pot = do
   nextState <- runShelleyBase $ applySTSTest @(CHAIN c) (TRC ((), initStEx5A, blockEx5D pot))
   midState <-
@@ -3070,16 +3070,16 @@ ex5D' _p pot = do
 
   pure finalState
 
-ex5DReserves' :: Mock c => proxy c -> Either [[PredicateFailure (CHAIN c)]] (ChainState c)
+ex5DReserves' :: ExMock c => proxy c -> Either [[PredicateFailure (CHAIN c)]] (ChainState c)
 ex5DReserves' p = ex5D' p ReservesMIR
 
-ex5DTreasury' :: Mock c => proxy c -> Either [[PredicateFailure (CHAIN c)]] (ChainState c)
+ex5DTreasury' :: ExMock c => proxy c -> Either [[PredicateFailure (CHAIN c)]] (ChainState c)
 ex5DTreasury' p = ex5D' p TreasuryMIR
 
 -- | Tests that after getting instantaneous rewards, creating the update and
 -- then applying the update, Alice's key is actually registered, the key deposit
 -- value deducted and the remaining value credited as reward.
-test5D :: Mock c => proxy c -> MIRPot -> Assertion
+test5D :: ExMock c => proxy c -> MIRPot -> Assertion
 test5D p pot = do
   case ex5D' p pot of
     Left e -> assertFailure (show e)
@@ -3090,10 +3090,10 @@ test5D p pot = do
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry
       assertBool "Total amount of ADA is not preserved" $ maxLLSupply == totalAda ex5DState
 
-test5DReserves :: Mock c => proxy c -> Assertion
+test5DReserves :: ExMock c => proxy c -> Assertion
 test5DReserves p = test5D p ReservesMIR
 
-test5DTreasury :: Mock c => proxy c -> Assertion
+test5DTreasury :: ExMock c => proxy c -> Assertion
 test5DTreasury p = test5D p TreasuryMIR
 
 -- * Example 6A - apply CHAIN transition to re-register a stake pool late in the epoch
@@ -3125,7 +3125,7 @@ txbodyEx6A =
     SNothing
     SNothing
 
-txEx6A :: Mock c => Tx c
+txEx6A :: ExMock c => Tx c
 txEx6A =
   Tx
     txbodyEx6A
@@ -3150,9 +3150,9 @@ word64SlotToKesPeriodWord :: Word64 -> Word
 word64SlotToKesPeriodWord slot =
   (fromIntegral $ toInteger slot) `div` (fromIntegral $ toInteger $ slotsPerKESPeriod testGlobals)
 
-blockEx6A :: forall c. Mock c => Word64 -> Block c
+blockEx6A :: forall c. ExMock c => Word64 -> Block c
 blockEx6A slot =
-  mkBlock
+  mkBlockFakeVRF
     blockEx2AHash
     (slotKeys slot)
     [txEx6A]
@@ -3168,7 +3168,7 @@ blockEx6A slot =
     p :: Proxy c
     p = Proxy
 
-blockEx6AHash :: Mock c => Word64 -> HashHeader c
+blockEx6AHash :: ExMock c => Word64 -> HashHeader c
 blockEx6AHash slot = bhHash (bheader $ blockEx6A slot)
 
 psEx6A :: Crypto c => PState c
@@ -3195,13 +3195,13 @@ rewardUpdateEx6A = SNothing
 rewardUpdateEx6A' :: StrictMaybe (RewardUpdate h)
 rewardUpdateEx6A' = SJust emptyRewardUpdate
 
-candidateNonceEx6A :: Mock c => Proxy c -> Nonce
+candidateNonceEx6A :: ExMock c => Proxy c -> Nonce
 candidateNonceEx6A p = makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B]
 
-candidateNonceEx6A' :: Mock c => Proxy c -> Nonce
+candidateNonceEx6A' :: ExMock c => Proxy c -> Nonce
 candidateNonceEx6A' p = makeEvolvedNonce p (nonce0 p) [blockEx2A]
 
-expectedStEx6A :: forall c. Mock c => Word64 -> StrictMaybe (RewardUpdate c) -> Nonce -> ChainState c
+expectedStEx6A :: forall c. ExMock c => Word64 -> StrictMaybe (RewardUpdate c) -> Nonce -> ChainState c
 expectedStEx6A slot ru cn =
   ChainState
     ( NewEpochState
@@ -3228,14 +3228,14 @@ expectedStEx6A slot ru cn =
     p :: Proxy c
     p = Proxy
 
-ex6A :: Mock c => Proxy c -> CHAINExample c
+ex6A :: ExMock c => Proxy c -> CHAINExample c
 ex6A p =
   CHAINExample
     expectedStEx2A
     (blockEx6A earlySlotEx6)
     (Right $ expectedStEx6A earlySlotEx6 rewardUpdateEx6A (candidateNonceEx6A p))
 
-ex6A' :: Mock c => Proxy c -> CHAINExample c
+ex6A' :: ExMock c => Proxy c -> CHAINExample c
 ex6A' p =
   CHAINExample
     expectedStEx2A
@@ -3246,13 +3246,13 @@ ex6A' p =
 
 -- in expectedStEx6A, then the future pool parameters should be adopted
 
-ex6BExpectedNES :: forall c. Mock c => NewEpochState c
+ex6BExpectedNES :: forall c. ExMock c => NewEpochState c
 ex6BExpectedNES = chainNes (expectedStEx6A earlySlotEx6 rewardUpdateEx6A (candidateNonceEx6A p))
   where
     p :: Proxy c
     p = Proxy
 
-ex6BExpectedNES' :: forall c. Mock c => NewEpochState c
+ex6BExpectedNES' :: forall c. ExMock c => NewEpochState c
 ex6BExpectedNES' = chainNes (expectedStEx6A lateSlotEx6 rewardUpdateEx6A' (candidateNonceEx6A' p))
   where
     p :: Proxy c
@@ -3261,7 +3261,7 @@ ex6BExpectedNES' = chainNes (expectedStEx6A lateSlotEx6 rewardUpdateEx6A' (candi
 ex6BPoolParams :: Crypto c => Map (KeyHash 'StakePool c) (PoolParams c)
 ex6BPoolParams = Map.singleton (hk Cast.alicePoolKeys) alicePoolParams6A
 
-exampleShelleyGenesis :: forall c. Mock c => ShelleyGenesis c
+exampleShelleyGenesis :: forall c. ExMock c => ShelleyGenesis c
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),

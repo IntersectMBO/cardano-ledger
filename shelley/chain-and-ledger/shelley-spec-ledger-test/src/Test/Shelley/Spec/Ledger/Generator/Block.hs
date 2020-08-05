@@ -21,7 +21,6 @@ import qualified Data.List as List (find)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, listToMaybe)
-import Data.Ratio (denominator, numerator, (%))
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API
   ( Block,
@@ -39,10 +38,7 @@ import Shelley.Spec.Ledger.API
     TICK,
   )
 import Shelley.Spec.Ledger.BaseTypes
-  ( activeSlotCoeff,
-    activeSlotVal,
-    intervalValue,
-    (⭒),
+  ( (⭒),
   )
 import Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
@@ -72,9 +68,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     GenEnv (..),
     KeySpace (..),
-    NatNonce (..),
-    genNatural,
-    genWord64,
     getKESPeriodRenewalNo,
     mkBlock,
     mkOCert,
@@ -84,8 +77,6 @@ import Test.Shelley.Spec.Ledger.Utils
   ( applySTSTest,
     maxKESIterations,
     runShelleyBase,
-    testGlobals,
-    unsafeMkUnitInterval,
   )
 
 nextCoreNode ::
@@ -169,10 +160,10 @@ genBlock
     -- Otherwise, if we choose a Praos solt, we return the chosen slot number,
     -- and the corresponding stake pool's stake and Right AllIssuerKeys for
     -- some chose stake pool that has non-zero stake.
-    let (nextSlot, poolStake, ks) = case poolParams' of
-          [] -> (nextOSlot, 0, Left gkh)
-          (pkh, IndividualPoolStake stake _) : _ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
-            Nothing -> (nextOSlot, 0, Left gkh)
+    let (nextSlot, ks) = case poolParams' of
+          [] -> (nextOSlot, Left gkh)
+          (pkh, _) : _ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
+            Nothing -> (nextOSlot, Left gkh)
             Just ps ->
               let apks =
                     fromMaybe
@@ -180,7 +171,7 @@ genBlock
                       $ List.find
                         (\x -> hk x == pkh)
                         ksStakePools
-               in (ps, stake, Right apks)
+               in (ps, Right apks)
 
     let kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
         cs = chainOCertIssue chainSt
@@ -230,8 +221,6 @@ genBlock
           <*> pure nextSlot
           <*> pure (block + 1)
           <*> pure epochNonce
-          <*> genBlockNonce
-          <*> genPraosLeader poolStake
           <*> pure kesPeriod_
           -- This seems to be trying to work out the start of the KES "era", e.g. the KES period in which this key starts to be valid.
           <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
@@ -250,32 +239,9 @@ genBlock
           ( Map.lookup gkey gds
               >>= (flip Map.lookup) ksIndexedGenDelegates . genDelegKeyHash
           )
-      genPraosLeader stake =
-        if stake >= 0 && stake <= 1
-          then do
-            -- we subtract one from the numerator for a non-zero stake e.g. for a
-            -- stake of 3/20, we would go with 2/20 and then divide by a random
-            -- integer in [1,10]. This value is guaranteed to be below the ϕ
-            -- function for the VRF value comparison and generates a valid leader
-            -- value for Praos.
-            let (stNumer, stDenom) = (fromIntegral $ numerator stake, fromIntegral $ denominator stake)
-            let stake' =
-                  if stake > 0
-                    then (stNumer - 1) % stDenom
-                    else stNumer % stDenom
-                asc = activeSlotCoeff testGlobals
-            n <- genWord64 1 10
-            pure
-              ( unsafeMkUnitInterval
-                  ( (stake' / fromIntegral n)
-                      * ((intervalValue . activeSlotVal) asc)
-                  )
-              )
-          else error "stake not in [0; 1]"
       -- we assume small gaps in slot numbers
       genSlotIncrease = SlotNo . (lastSlotNo +) <$> QC.choose (1, 5)
       lastSlotNo = unSlotNo slot
-      genBlockNonce = NatNonce <$> genNatural 1 100
       genTxs pp reserves ls s = do
         let ledgerEnv = LedgersEnv s pp reserves
 

@@ -98,7 +98,7 @@ import Shelley.Spec.Ledger.Tx
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance, makeWitnessVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Mock,
+  ( ExMock,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( applyTxBody,
@@ -138,7 +138,7 @@ utxoMap :: UTxO h -> Map (TxIn h) (TxOut h)
 utxoMap (UTxO m) = m
 
 -- | Generates a list of '(pay, stake)' key pairs.
-genKeyPairs :: Mock c => Int -> Int -> Gen (KeyPairs c)
+genKeyPairs :: ExMock c => Int -> Int -> Gen (KeyPairs c)
 genKeyPairs lower upper = do
   xs <-
     Gen.list (Range.linear lower upper) $
@@ -190,7 +190,7 @@ defPCs = emptyPParams
 
 -- | Generator of a non-empty genesis ledger state, i.e., at least one valid
 -- address and non-zero UTxO.
-genNonemptyGenesisState :: Mock c => proxy c -> Gen (LedgerState c)
+genNonemptyGenesisState :: ExMock c => proxy c -> Gen (LedgerState c)
 genNonemptyGenesisState _ = do
   keyPairs <- genKeyPairs 1 10
   (genesisState Map.empty . genesisCoins) <$> genTxOut (addrTxins keyPairs)
@@ -201,7 +201,7 @@ genNonemptyGenesisState _ = do
 -- addresses and spends the UTxO. If 'n' addresses are selected to spent 'b'
 -- coins, the amount spent to each address is 'div b n' and the fees are set to
 -- 'rem b n'.
-genTx :: Mock c => KeyPairs c -> UTxO c -> SlotNo -> Gen (Coin, Tx c)
+genTx :: ExMock c => KeyPairs c -> UTxO c -> SlotNo -> Gen (Coin, Tx c)
 genTx keyList (UTxO m) cslot = do
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
@@ -247,7 +247,7 @@ genTx keyList (UTxO m) cslot = do
 -- accumulated fees and a resulting ledger state or the 'ValidationError'
 -- information in case of an invalid transaction.
 genLedgerStateTx ::
-  Mock c =>
+  ExMock c =>
   KeyPairs c ->
   SlotNo ->
   LedgerState c ->
@@ -263,7 +263,7 @@ genLedgerStateTx keyList (SlotNo _slot) sourceState = do
 -- initial ledger state and the final ledger state or the validation error if an
 -- invalid transaction has been generated.
 genNonEmptyAndAdvanceTx ::
-  Mock c => proxy c -> Gen (KeyPairs c, Natural, Coin, LedgerState c, [Tx c], Either [ValidationError] (LedgerState c))
+  ExMock c => proxy c -> Gen (KeyPairs c, Natural, Coin, LedgerState c, [Tx c], Either [ValidationError] (LedgerState c))
 genNonEmptyAndAdvanceTx _ = do
   keyPairs <- genKeyPairs 1 10
   steps <- genNatural 1 10
@@ -273,7 +273,7 @@ genNonEmptyAndAdvanceTx _ = do
 
 -- | Mutated variant of above, collects validation errors in 'LedgerValidation'.
 genNonEmptyAndAdvanceTx' ::
-  Mock c => proxy c -> Gen (KeyPairs c, Natural, Coin, LedgerState c, [Tx c], LedgerValidation c)
+  ExMock c => proxy c -> Gen (KeyPairs c, Natural, Coin, LedgerState c, [Tx c], LedgerValidation c)
 genNonEmptyAndAdvanceTx' _ = do
   keyPairs <- genKeyPairs 1 10
   steps <- genNatural 1 10
@@ -286,7 +286,7 @@ genNonEmptyAndAdvanceTx' _ = do
 -- 'ls' and returns the result of the repeated generation and application of
 -- transactions.
 repeatCollectTx ::
-  Mock c =>
+  ExMock c =>
   Natural ->
   KeyPairs c ->
   SlotNo ->
@@ -304,7 +304,7 @@ repeatCollectTx n keyPairs (SlotNo _slot) fees ls txs = do
 -- | Mutated variant of `repeatCollectTx'`, stops at recursion depth or after
 -- exhausting the UTxO set to prevent calling 'head' on empty input list.
 repeatCollectTx' ::
-  Mock c =>
+  ExMock c =>
   Natural ->
   KeyPairs c ->
   Coin ->
@@ -331,7 +331,7 @@ getTxOutAddr (TxOut addr _) = addr
 
 -- | Generator for arbitrary valid ledger state, discarding any generated
 -- invalid one.
-genValidLedgerState :: Mock c => proxy c -> Gen (KeyPairs c, Natural, [Tx c], LedgerState c)
+genValidLedgerState :: ExMock c => proxy c -> Gen (KeyPairs c, Natural, [Tx c], LedgerState c)
 genValidLedgerState p = do
   (keyPairs, steps, _, _, txs, newState) <- genNonEmptyAndAdvanceTx p
   case newState of
@@ -339,7 +339,7 @@ genValidLedgerState p = do
     Right ls -> pure (keyPairs, steps, txs, ls)
 
 genValidSuccessorState ::
-  Mock c =>
+  ExMock c =>
   KeyPairs c ->
   SlotNo ->
   LedgerState c ->
@@ -350,25 +350,25 @@ genValidSuccessorState keyPairs _slot sourceState = do
     Left _ -> Gen.discard
     Right ls -> pure (txfee', entry, ls)
 
-genValidStateTx :: Mock c => proxy c -> Gen (LedgerState c, Natural, Coin, Tx c, LedgerState c)
+genValidStateTx :: ExMock c => proxy c -> Gen (LedgerState c, Natural, Coin, Tx c, LedgerState c)
 genValidStateTx p = do
   (ls, steps, txfee', entry, ls', _) <- genValidStateTxKeys p
   pure (ls, steps, txfee', entry, ls')
 
-genValidStateTxKeys :: Mock c => proxy c -> Gen (LedgerState c, Natural, Coin, Tx c, LedgerState c, KeyPairs c)
+genValidStateTxKeys :: ExMock c => proxy c -> Gen (LedgerState c, Natural, Coin, Tx c, LedgerState c, KeyPairs c)
 genValidStateTxKeys p = do
   (keyPairs, steps, _, ls) <- genValidLedgerState p
   (txfee', entry, ls') <- genValidSuccessorState keyPairs (SlotNo $ fromIntegral steps + 1) ls
   pure (ls, steps, txfee', entry, ls', keyPairs)
 
-genStateTx :: Mock c => proxy c -> Gen (LedgerState c, Natural, Coin, Tx c, LedgerValidation c)
+genStateTx :: ExMock c => proxy c -> Gen (LedgerState c, Natural, Coin, Tx c, LedgerValidation c)
 genStateTx p = do
   (keyPairs, steps, _, ls) <- genValidLedgerState p
   (txfee', entry, lv) <- genLedgerStateTx' keyPairs ls
   pure (ls, steps, txfee', entry, lv)
 
 genLedgerStateTx' ::
-  Mock c =>
+  ExMock c =>
   KeyPairs c ->
   LedgerState c ->
   Gen (Coin, Tx c, LedgerValidation c)
@@ -420,7 +420,7 @@ genDCertDelegate keys ds = (DCertDeleg . Delegate) <$> genDelegation keys ds
 --  Otherwise, return a list of validation errors.
 asStateTransition ::
   forall c.
-  Mock c =>
+  ExMock c =>
   SlotNo ->
   PParams ->
   LedgerState c ->
@@ -449,7 +449,7 @@ asStateTransition _slot pp ls tx acnt =
 -- | Apply transition independent of validity, collect validation errors on the
 -- way.
 asStateTransition' ::
-  Mock c =>
+  ExMock c =>
   SlotNo ->
   PParams ->
   LedgerValidation c ->

@@ -28,7 +28,7 @@ import Shelley.Spec.Ledger.Slot
     SlotNo (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..))
 import Test.Shelley.Spec.Ledger.Examples.Combinators
   ( evolveNonceUnfrozen,
@@ -43,7 +43,7 @@ import Test.Shelley.Spec.Ledger.Examples.Init
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( NatNonce (..),
-    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     zero,
   )
@@ -52,9 +52,9 @@ import Test.Shelley.Spec.Ledger.Utils (getBlockNonce)
 initStEx1 :: forall c. Crypto c => ChainState c
 initStEx1 = initSt (UTxO Map.empty)
 
-blockEx1 :: forall c. (HasCallStack, Mock c) => Block c
+blockEx1 :: forall c. (HasCallStack, ExMock c) => Block c
 blockEx1 =
-  mkBlock
+  mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule ppEx 10)
     []
@@ -67,14 +67,14 @@ blockEx1 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
 
-blockNonce :: forall c. (HasCallStack, Mock c) => Nonce
+blockNonce :: forall c. (HasCallStack, ExMock c) => Nonce
 blockNonce = getBlockNonce (blockEx1 @c)
 
-expectedStEx1 :: forall c. Mock c => ChainState c
+expectedStEx1 :: forall c. ExMock c => ChainState c
 expectedStEx1 =
   (evolveNonceUnfrozen (blockNonce @c))
     . (newLab blockEx1)
     $ initStEx1
 
-exEmptyBlock :: Mock c => CHAINExample c
+exEmptyBlock :: ExMock c => CHAINExample c
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)
