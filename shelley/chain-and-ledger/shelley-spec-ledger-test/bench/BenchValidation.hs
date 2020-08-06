@@ -140,9 +140,9 @@ benchValidate (ValidateInput globals state block) =
     Right x -> pure x
     Left x -> error (show x)
 
-benchreValidate :: ValidateInput -> IO (ShelleyState BenchCrypto)
+benchreValidate :: ValidateInput -> ShelleyState BenchCrypto
 benchreValidate (ValidateInput globals state block) =
-  pure $ reapplyBlockTransition globals state block
+  reapplyBlockTransition globals state block
 
 -- ==============================================================
 

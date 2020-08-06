@@ -214,7 +214,7 @@ validGroup =
             bgroup
               "block"
               [ bench "applyBlockTransition" (nfIO $ benchValidate arg),
-                bench "reapplyBlockTransition" (nfIO $ benchreValidate arg)
+                bench "reapplyBlockTransition" (nf benchreValidate arg)
               ],
           env (genUpdateInputs n) $ \arg ->
             bgroup
