@@ -904,7 +904,7 @@ data Query k v where
 -- ======================================================================================
 
 smart :: Bool
-smart = True -- True  -- for debugging purposes, this can be set to False, in which case no rewrites occurr.
+smart = True  -- for debugging purposes, this can be set to False, in which case no rewrites occurr.
 
 projD ::  Ord k => Query k v -> Fun (k -> v -> u) -> Query k u
 projD x y = case (x,y) of
@@ -938,6 +938,10 @@ guardD qry test = GuardD qry test
 --   can be used to constuct many things using runCollect, but here we want
 --   to materialize it to the same type as the (Exp (f k v)), i.e. (f k v).
 -- ================================================================================
+
+compileExp:: Exp (f k v) -> (Query k v,BaseRep f k v)
+compileExp e = -- compile (trace ("Compile "++show e++"\n") e)
+               compile e
 
 compile:: Exp (f k v) -> (Query k v,BaseRep f k v)
 compile (Base rep relation) = (BaseD rep relation,rep)
@@ -1000,16 +1004,17 @@ compute:: Exp t -> t
 compute (Base rep relation) = relation
 
 compute (Dom (Base SetR rel)) = rel
+compute (Dom (Base MapR x)) = Sett (Map.keysSet x)
 compute (Dom (Singleton k v)) = Sett (Set.singleton k)
 compute (Dom (SetSingleton k)) = Sett (Set.singleton k)
 compute (Dom (Base rep rel)) = Sett(domain rel)
-compute (e@(Dom _)) = run(compile e)
+compute (e@(Dom _)) = run(compileExp e)
 
 compute (Rng (Base SetR rel)) = Sett (Set.singleton ())
 compute (Rng (Singleton k v)) = Sett (Set.singleton v)
 compute (Rng (SetSingleton k)) = Sett (Set.singleton ())
 compute (Rng (Base rep rel)) = Sett(range rel)
-compute (e@(Rng _ )) = run(compile e)
+compute (e@(Rng _ )) = run(compileExp e)
 
 
 compute (DRestrict (Base SetR (Sett set)) (Base MapR m)) = Map.restrictKeys m set
@@ -1027,7 +1032,7 @@ compute (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base 
    materialize MapR (do { (x,y,z) <- delegs `domEq` state; when (not (y==hk)); one(x,z) })
   -- This case inspired by set expression ((dom rewards' ◁ delegs) ▷ dom poolParams)  in LedgerState.hs
 compute (RRestrict (DRestrict (Dom (Base MapR x)) (Base MapR y)) (Dom (Base MapR z))) = intersectDomP (\ _k v -> Map.member v z) x y
-compute (e@(DRestrict _ _ )) = run(compile e)
+compute (e@(DRestrict _ _ )) = run(compileExp e)
 
 compute (DExclude (SetSingleton n) (Base MapR m)) = Map.withoutKeys m (Set.singleton n)
 compute (DExclude (Dom (Singleton n v)) (Base MapR m)) = Map.withoutKeys m (Set.singleton n)
@@ -1037,7 +1042,7 @@ compute (DExclude (Dom (Base MapR x1)) (Base MapR x2)) = noKeys x2 x1
 compute (DExclude (SetSingleton k) (Base BiMapR x)) = removekey k x
 compute (DExclude (Dom (Singleton k _)) (Base BiMapR x)) = removekey k x
 compute (DExclude (Rng (Singleton _ v)) (Base BiMapR x)) = removekey v x
-compute (e@(DExclude _ _ )) = run(compile e)
+compute (e@(DExclude _ _ )) = run(compileExp e)
 
 compute (RExclude (Base BiMapR x) (SetSingleton k)) = removeval k x
 compute (RExclude (Base BiMapR x) (Dom (Singleton k v))) = removeval k x
@@ -1045,12 +1050,12 @@ compute (RExclude (Base BiMapR x) (Rng (Singleton k v))) = removeval v x
 compute (RExclude (Base rep lhs) (Base SetR (Sett rhs))) | Set.null rhs = lhs
 compute (RExclude (Base rep lhs) (Base SingleR Fail)) = lhs
 compute (RExclude (Base rep lhs) y) =
-   materialize rep $ do { (a,b) <- fifo lhs; when (not(haskey b rhs)); one (a,b)} where (rhs,_) = compile y
-compute (e@(RExclude _ _ )) = run(compile e)
+   materialize rep $ do { (a,b) <- fifo lhs; when (not(haskey b rhs)); one (a,b)} where (rhs,_) = compileExp  y
+compute (e@(RExclude _ _ )) = run(compileExp e)
 
 compute (RRestrict (DRestrict (Dom (Base r1 stkcreds)) (Base r2 delegs)) (Dom (Base r3 stpools))) =
    materialize r2 $ do { (x,z,y) <- stkcreds `domEq` delegs; y `element` stpools; one (x,y)}
-compute (e@(RRestrict _ _ )) = run(compile e)
+compute (e@(RRestrict _ _ )) = run(compileExp e)
 
 compute (Elem k (Dom (Base rep x))) = haskey k x
 compute (Elem k (Base rep rel)) = haskey k rel
@@ -1068,27 +1073,30 @@ compute (NotElem k set) = not $ haskey k (compute set)
 
 compute (Subset (Base SetR (Sett x)) (Base SetR (Sett y))) = Set.isSubsetOf x y
 compute (Subset (Base SetR (Sett x)) (Base MapR y)) = all (`Map.member` y) x
+compute (Subset (Base SetR (Sett x)) (Dom (Base MapR y))) = all (`Map.member` y) x
 compute (Subset (Base MapR x) (Base MapR y)) = Map.foldrWithKey accum True x
    where accum k a ans = Map.member k y && ans
+compute (Subset (Dom (Base MapR x)) (Dom (Base MapR y))) = Map.foldrWithKey accum True x
+   where accum k a ans = Map.member k y && ans
 compute (Subset x y) = runCollect (lifo left) True (\ (k,v) ans -> haskey k right && ans)
-  where left = (fst(compile x))
-        right = (fst(compile y))
+  where left = (fst(compileExp x))
+        right = (fst(compileExp y))
 
 compute (Intersect (Base SetR (Sett x)) (Base SetR (Sett y))) = Sett (Set.intersection x y)
 compute (Intersect (Base MapR x) (Base MapR y)) = Sett (Map.keysSet(Map.intersection x y))
-compute (e@(Intersect a b)) = run(compile e)
+compute (e@(Intersect a b)) = run(compileExp e)
 
 compute (UnionOverrideLeft (Base rep x) (Singleton k v))  = addkv (k,v) x (\ new old -> old) -- The value on the left is preferred over the right, so 'addkv' chooses 'old'
 compute (UnionOverrideLeft (Base MapR d0) (Base MapR d1)) = Map.union d0 d1  -- 'Map.union' is left biased, just what we want.
 compute (UnionOverrideLeft (DExclude (Base SetR (Sett s1)) (Base MapR m2)) (Base MapR m3)) =  Map.union (Map.withoutKeys m2 s1) m3
-compute (e@(UnionOverrideLeft a b)) = run(compile e)
+compute (e@(UnionOverrideLeft a b)) = run(compileExp e)
 
 compute (UnionOverrideRight (Base rep x) (Singleton k v)) = addkv (k,v) x (\ new old -> new) -- The value on the right is preferred over the left, so 'addkv' chooses 'new'
 compute ((UnionOverrideRight (Base MapR d0) (Base MapR d1))) = Map.union d1 d0   -- we pass @d1@ as first argument, since 'Map.union' is left biased.
-compute (e@(UnionOverrideRight a b)) = run(compile e)
+compute (e@(UnionOverrideRight a b)) = run(compileExp  e)
 
 compute (UnionPlus (Base MapR x) (Base MapR y)) = Map.unionWith (+) x y
-compute (e@(UnionPlus a b)) = run(compile e)
+compute (e@(UnionPlus a b)) = run(compileExp e)
 
 compute (Singleton k v) = Single k v
 compute (SetSingleton k) = (SetSingle k)
@@ -1099,8 +1107,8 @@ compute (KeyEqual (Dom (Base MapR m)) (Dom (Base MapR n))) = keysEqual m n
 compute (KeyEqual (Dom (Base BiMapR (MkBiMap m _))) (Dom (Base BiMapR (MkBiMap n _)))) = keysEqual m n
 compute (KeyEqual (Base SetR (Sett m)) (Base SetR (Sett n))) = n==m
 compute (KeyEqual x y ) = sameDomain left right  -- This is way slower than the
-   where left = (fst(compile x))
-         right = (fst(compile y))
+   where left = (fst(compileExp x))
+         right = (fst(compileExp y))
 
 
 eval :: Embed s t => Exp t -> s

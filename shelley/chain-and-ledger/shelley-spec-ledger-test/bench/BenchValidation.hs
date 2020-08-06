@@ -14,6 +14,7 @@ module BenchValidation
     validateInput,
     benchValidate,
     benchreValidate,
+    applyBlock,
     sizes,
     updateChain,
     updateAndTickChain,
@@ -138,6 +139,12 @@ benchValidate :: ValidateInput -> IO (ShelleyState BenchCrypto)
 benchValidate (ValidateInput globals state block) =
   case applyBlockTransition globals state block of
     Right x -> pure x
+    Left x -> error (show x)
+
+applyBlock :: ValidateInput -> Int -> Int
+applyBlock (ValidateInput globals state block) n =
+  case applyBlockTransition globals state block of
+    Right x -> seq (rnf x) (n+1)
     Left x -> error (show x)
 
 benchreValidate :: ValidateInput -> ShelleyState BenchCrypto

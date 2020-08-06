@@ -94,6 +94,7 @@ library
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class,
+    cardano-crypto-praos,
     cardano-crypto-wrapper,
     cardano-ledger,
     cardano-prelude,
