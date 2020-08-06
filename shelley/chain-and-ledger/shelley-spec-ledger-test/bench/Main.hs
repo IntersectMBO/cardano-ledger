@@ -9,6 +9,7 @@ import BenchValidation
   ( benchValidate,
     benchreValidate,
     genUpdateInputs,
+    applyBlock,
     sizes,
     updateAndTickChain,
     updateChain,
@@ -226,13 +227,9 @@ validGroup =
 
 profileValid :: IO ()
 profileValid = do
-  state <- validateInput 1000000
-  ns <-
-    sequence
-      [ fmap (length . show) (benchValidate state)
-        | _n <- ([1 .. 50] :: [Int])
-      ]
-  putStrLn (show (sum ns))
+  state <- validateInput 10000
+  let ans = sum [ applyBlock state n | n <- [1..10000::Int]]
+  putStrLn (show ans)
   pure ()
 
 -- ========================================================
@@ -330,6 +327,7 @@ varyDelegState tag fixed changes initstate action =
 -- =============================================================================
 
 main :: IO ()
+-- main=profileValid
 main =
   defaultMain $
     [ bgroup "vary input size" $

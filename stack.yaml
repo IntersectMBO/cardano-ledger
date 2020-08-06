@@ -42,6 +42,7 @@ extra-deps:
     - binary
     - binary/test
     - cardano-crypto-class
+    - cardano-crypto-praos
     - slotting
 
 - git: https://github.com/input-output-hk/iohk-monitoring-framework
