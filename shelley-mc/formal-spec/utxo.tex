@@ -1,61 +1,53 @@
 \section{UTxO}
 \label{sec:utxo}
 
-
-\subsection{UTxO Transitions}
-\label{sec:utxo-trans}
-
-We have added the following helper functions, which are used in defining the
-UTxO transition system, see Figure~\ref{fig:functions:insouts}. These include:
-
-\begin{itemize}
-  \item the function $\fun{getOut}$ builds a UTxO-type output out of a
-  transaction output
-  \item the function $\fun{outs}$ builds the MA UTxO entries from the outputs
-  of a transaction
-\end{itemize}
-
-For calculating the minimum size of an output, we also need the
-function $\fun{valueSize}$ that computes the size of a $\Value$. It is
-defined as the size of the serialization of the $\Value$, in analogy
-to $\fun{txSize}$.
+\subsection*{UTxO Helper Functions}
 
 \begin{figure}[htb]
+  \emph{Helper Functions}
   \begin{align*}
-    & \fun{getOut} \in \TxOut \to \UTxOOut \\
-    & \text{tx outputs transformed to UTxO outputs} \\
-    & \fun{getOut} ~{txout}~= (\fun{getAddr}~\var{txout}, \fun{getValue}~\var{txout})
+    & \fun{getCoin} \in \UTxOOut \to \Coin \\
+    & \fun{getCoin}~{(\wcard,~\var{out})} ~=~\fun{co}~(\var{out}~\mathsf{adaID}~\mathsf{adaToken}) \\
     \nextdef
-    & \fun{outs} \in \TxBody \to \UTxO \\
-    & \text{tx outputs as UTxO} \\
-    & \fun{outs} ~\var{txb} =
-        \left\{
-          (\fun{txid} ~ \var{txb}, \var{ix}) \mapsto \fun{getOut}~\var{txout} ~
-          \middle|~
-          \var{ix} \mapsto \var{txout} \in \txouts{txb}
-        \right\} \\
+    & \fun{ubalance} \in \UTxO \to \Value \\
+    & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{u}\in~\var{utxo}}
+    \fun{getValue}~\var{u} \\
+    \nextdef
+    & \fun{valueSize} \in \Value \to \N \\
+    & \fun{valueSize}~\var{v} = k + k' * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
+      \land (\var{pid}, \var{aid}) \neq (\mathsf{adaID}, \mathsf{adaToken}) \}|
   \end{align*}
-  \caption{Functions on Tx Outputs}
-  \label{fig:functions:insouts}
+  %
+  \emph{Produced and Consumed Calculations}
+  \begin{align*}
+    & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \Wdrl \to \TxBody \to \Value \\
+    & \consumed{pp}{utxo}{stkCreds}{rewards}~{txb} = \\
+    & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} + \\
+    &~~  \fun{coinToValue}(\fun{wbalance}~(\fun{txwdrls}~{txb})~+~ \keyRefunds{pp}{stkCreds}{txb}) \\
+    &~~+~\fun{forge}~\var{txb} \\
+    \nextdef
+    & \fun{produced} \to \PParams \to \StakePools \to \TxBody \to \Value \\
+    & \fun{produced}~\var{pp}~\var{stpools}~\var{txb} = \\
+    &~~\ubalance{(\fun{outs}~{txb})} \\
+    &~~+ \fun{coinToValue}(\txfee{txb} + \totalDeposits{pp}{stpools}{(\txcerts{txb})})\\
+  \end{align*}
+  \caption{UTxO Calculations}
+  \label{fig:functions:utxo}
 \end{figure}
 
-\textbf{UTxO Helper Functions.}
-
 Figure~\ref{fig:functions:utxo} defines additional calculations that are needed for the
-UTxO transition system with MA:
+UTxO transition system with multi-assets:
 
 \begin{itemize}
 
-  \item $\fun{getCoin}$ sums all the Ada in a given output and returns it as a
-  $\Coin$ value
+  \item The function $\fun{getCoin}$ returns the Ada in a given output as a $\Coin$ value.
 
   \item
-    The $\fun{ubalance}$ function calculates the (aggregated by $\PolicyID$ and
-    $\AssetID$) sum total of all the value in a given UTxO.
+    The $\fun{ubalance}$ function calculates the sum total in a given UTxO,
+    aggregated by $\PolicyID$ and $\AssetID$.
 
-  \item
-    The $\fun{valueSize}$ function estimates an upper bound on the size of a value
-    as stored in the UTxO.
+  \item The $\fun{valueSize}$ function provides a rough estimate of
+    the amount of memory the storage of a certain value will consume.
 
   \item As in Shelley, the $\fun{consumed}$ calculation is the sum of: i) the values of the
    UTxO entries consumed; ii) the reward address value consumed;
@@ -69,12 +61,12 @@ UTxO transition system with MA:
   This calculation also returns a $\Value$.
 \end{itemize}
 
-\textbf{Produced and Consumed Calculations and Preservation of Value.}
-Note that
-the $\fun{consumed}$ and $\fun{produced}$ calculations both produce a $\Value$.
-This is because the outputs of a transaction, as well as UTxO outputs,
-are of the $\Value$ type. The administrative amounts (of the $\Coin$ type)
-are converted into MA values for these summations.
+\subsection*{Produced and Consumed Calculations and Preservation of Value}
+Note that because the outputs of a transaction, as well as UTxO
+outputs, are of the $\Value$ type, the $\fun{consumed}$ and
+$\fun{produced}$ calculations both have to produce a $\Value$. The
+administrative amounts (of $\Coin$ type) thus have to be converted
+into $\Value$.
 
 While the preservation of value is a single
 equality, it is really a comparison of token quantities aggregated by
@@ -82,7 +74,7 @@ $\AssetID$ and by $\PolicyID$. In particular, ensuring that the produced
 amount equals the consumed amount also implies that the total quantity of
 Ada tokens is preserved.
 
-\textbf{Forging and the Preservation of Value.}
+\subsection*{Forging and the Preservation of Value}
 What does it mean to preserve the value of non-Ada tokens, since they
 are put in and taken out of circulation by the users themselves?
 This is expressed by including the $\fun{forge}$ value of the transaction
@@ -110,73 +102,36 @@ to cases where the transaction might also be consuming some existing $pid$ token
 or taking the out of circulation with negative quantities in the forge field.
 
 The forge field value represents the change in total existing tokens of each given asset
-as a result of processing the transaction. It is always added to the
-\textit{consumed} side of the POV equation because of this side, the signs of the
-quantities in the forge field match the signs of the change. That is,
-when tokens are added into the UTxO, their quantities are positive, and when they are
-taken out of circulation via the forge field, the signs are negative.
+as a result of processing the transaction. It is added to the
+\textit{consumed} side of the POV equation, because the signs of the
+quantities in the forge field match the signs of the change. Thus, to add tokens to the UTxO,
+their quantities in the forge field are positive, and to
+take them out of circulation, the signs are negative.
 
 Note also that the UTXO rule only checks that the transaction is forging the
-amount it has declared using the forge field (and that no Ada is forged).
-The forging scripts themselves are not evaluated in this transition rule.
-That step is part of witnessing, i.e. the UTXOW rule, see below.
+amount it has declared using the forge field, and that no Ada is forged.
+The forging scripts themselves are not evaluated there, but instead
+as part of witnessing, i.e. in the UTXOW rule, see Figure~\ref{fig:functions-witnesses}.
 
-\begin{figure}[htb]
-  \emph{Helper Functions}
-  \begin{align*}
-    & \fun{getCoin} \in \UTxOOut \to \Coin \\
-    & \fun{getCoin}~{(\wcard,~\var{out})} ~=~\fun{co}~(\var{out}~\mathsf{adaID}~\mathsf{adaToken}) \\
-    \nextdef
-    & \fun{ubalance} \in \UTxO \to \Value \\
-    & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{u}\in~\var{utxo}}
-    \fun{getValue}~\var{u} \\
-    & \text{UTxO balance} \\
-    \nextdef
-    & \fun{valueSize} \in \Value \to \N \\
-    & \fun{valueSize}~\var{v} = k + k' * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
-      \land (\var{pid}, \var{aid}) \neq (\mathsf{adaID}, \mathsf{adaToken}) \}|
-  \end{align*}
-  %
-  \emph{Produced and Consumed Calculations}
-  \begin{align*}
-    & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \Wdrl \to \TxBody \to \Value \\
-    & \consumed{pp}{utxo}{stkCreds}{rewards}~{txb} = \\
-    & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} + \\
-    &~~  \fun{coinToValue}(\fun{wbalance}~(\fun{txwdrls}~{txb})~+~ \keyRefunds{pp}{stkCreds}{txb}) \\
-    &~~+~\fun{forge}~\var{txb} \\
-    & \text{\emph{-- value consumed}} \\
-    \nextdef
-    & \fun{produced} \to \PParams \to \StakePools \to \TxBody \to \Value \\
-    & \fun{produced}~\var{pp}~\var{stpools}~\var{txb} = \\
-    &~~\ubalance{(\fun{outs}~{txb})} \\
-    &~~+ \fun{coinToValue}(\txfee{txb} + \totalDeposits{pp}{stpools}{(\txcerts{txb})})\\
-    & \text{\emph{-- value produced}} \\
-  \end{align*}
-  \caption{UTxO Calculations}
-  \label{fig:functions:utxo}
-\end{figure}
-
-\clearpage
-
-\textbf{The UTXO Transition Rule.}
+\subsection*{The UTXO Transition Rule}
 In Figure \ref{fig:rules:utxo-shelley}, we give the UTXO transition rule,
-updated for MA support. There are the following changes to the preconditions
+updated for multi-asset support. There are the following changes to the preconditions
 of this rule as compared to the original Shelley UTXO rule:
 
 \begin{itemize}
-  \item The transaction is not forging any Ada
+  \item The transaction is not forging any Ada.
 
   \item All outputs of the transaction contain only non-negative quantities
   (this is the $\Value$-type version to the corresponding rule about non-negative
-  $\Coin$ amounts in the Shelley ledger rules)
+  $\Coin$ amounts in the Shelley ledger rules).
 
   \item In the preservation of value calculation (which looks the same as in
-  Shelley), the value in the $\fun{forge}$ field is taken into account
+  Shelley), the value in the $\fun{forge}$ field is taken into account.
 \end{itemize}
 
 Note that updating the $\UTxO$ with the inputs and the outputs of the transaction
-looks the same as in the Shelley rule, however, there is a type-level difference.
-Recall that the outputs of a transaction contain a $\Value$ term, rather than
+looks the same as in the Shelley rule, however, there is a type-level difference, as
+the outputs of a transaction contain a $\Value$ term, rather than
 $\Coin$. Moreover, the $\fun{outs}$ map converts $\TxOut$ terms into $\UTxOOut$.
 
 
@@ -251,31 +206,12 @@ $\Coin$. Moreover, the $\fun{outs}$ map converts $\TxOut$ terms into $\UTxOOut$.
 \end{figure}
 
 
-\clearpage
-
-\textbf{Witnessing.}
-
-We have changed the definition of the function
-$\fun{scriptsNeeded}$, see Figure~\ref{fig:functions-witnesses}. There is
-now an additional category of scripts that are needed for transaction validation,
-the forging scripts.
-
-Note that there are no restrictions on the use of forging scripts. Their hashes may
-be used as credentials in UTxO entries, certificates, and withdrawals.
-Non-MPS type scripts can also be used for forging, e.g. MSig scripts.
-
-Note also that UTxO entries containing MA tokens, just like Shelley UTxO entries,
-can be locked by a script. This script will add an additional set of
-restrictions to the use of MA tokens (additional to the forging script
-requirements, but enforced at spending time). This output-locking script can itself
-also be a forging script.
+\subsection*{Witnessing and Monetary Policy Script Validation}
 
 \begin{figure}[htb]
   \begin{align*}
-    & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to
-      \powerset{\ScriptHash}
-    & \text{required script hashes} \\
-    &  \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
+    \fun{scriptsNeeded} & \in \UTxO \to \Tx \to \powerset{\ScriptHash} \hspace{2cm} \text{required script hashes} \\
+    \fun{scriptsNeeded} &~\var{utxo}~\var{tx} = \\
     & ~~\{ \fun{validatorHash}~a \mid i \mapsto (a, \wcard) \in \var{utxo},\\
     & ~~~~~i\in\fun{txinsScript}~{(\fun{txins~\var{txb}})}~{utxo}\} \\
     \cup & ~~\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
@@ -283,12 +219,47 @@ also be a forging script.
       \cup & ~~(\AddrScr \cap \fun{certWitsNeeded}~{txb}) \\
       \cup & ~~\dom~(\fun{forge}~{txb}) \\
       & \where \\
-      & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
+    & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
+    \nextdef
+      \fun{validateScript} & \in\Script\to\ScriptHash\to\Slot\to
+      \powerset{\KeyHash}\to\TxBody\to\UTxO\to\Bool \\
+      \fun{validateScript} & ~s~\var{pid}~\var{slot}~\var{vhks}
+       ~\var{txb}~\var{utxo} =
+                             \begin{cases}
+                               \fun{evalMultiSigScript}~s~vhks & \text{if}~s \in\ScriptMSig \\
+                               \fun{evalMPSScript}~s~\var{pid}~\var{slot}~\var{vhks} \\
+                                ~~~~txb~\var{utxo} & \text{if}~s \in\ScriptMPS \\
+                               \mathsf{False} & \text{otherwise}
+                             \end{cases} \\
   \end{align*}
   \caption{Scripts Needed}
   \label{fig:functions-witnesses}
 \end{figure}
 
+Figure~\ref{fig:functions-witnesses} contains the changed definition
+of the function $\fun{scriptsNeeded}$, to also collect the scripts
+necessary for forging. It is also necessary to update the
+$\fun{validateScripts}$ function, to allow for the validation of
+monetary policy scripts.
+
+The arguments that are passed to the $\fun{validateScript}$ function include all those
+that are needed for MPS and MSig script evaluation. Because of the extra arguments
+(the slot number and the UTxO), we also modify the call to this function
+within the UTXOW rule.
+
+As inputs, $\fun{evalMPSScript}$ takes:
+
+\begin{itemize}
+\item The script getting evaluated.
+\item The $\PolicyID$ of the asset being forged.
+  \begin{note}
+    What do we put here if we don't forge anything? Do we make this argument optional?
+  \end{note}
+\item The current slot number.
+\item The set of key hashes (needed to use MSig scripts as MP scripts).
+\item The transaction body.
+\item The inputs of the transaction as a UTxO.
+\end{itemize}
 
 
 \clearpage

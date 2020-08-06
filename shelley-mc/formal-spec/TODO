@@ -1,6 +1,9 @@
 - Decide if TxOut and UTxOOut should be merged into a single
   type. There is disagreement on if they have the same semantics or
-  not, and they actually are different in Goguen.
+  not, and they actually are different in Goguen. Also, in the Goguen
+  spec there is TxIn and UTxOIn (which are different), and they are
+  not split here, and the same arguments apply to both, so either both
+  should be split up or none.
 
 - Finalize `valueSize`. We need to decide if it should count the
   number of pid's. The tradeoff here is accuracy vs. ease of
@@ -19,3 +22,21 @@
 
 - Remove the MPS language if/when we're certain that it's not going to
   happen.
+
+- Should we replace `Value` with an abstract type, as that's closer to
+  what we're implementing?
+
+- Should we make `AssetID` abstract, as we never use its concrete
+  representation for anything?
+
+- It's probably nice to highlight changes to Shelley in the figures
+  somehow, but how to do that in a way that isn't too heavy? I can
+  think of underlining or putting a light grey box around it, but both
+  of them seem non-ideal.
+
+- Make a note that using MP scripts for other stuff has some semantics
+  issues with PIDs.
+
+- Move the properties from the shelley spec over in an appropriate
+  way. In particular, Lemma 15.2 can be adopted by adding a forged
+  value to a block.
