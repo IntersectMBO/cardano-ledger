@@ -133,8 +133,8 @@ initUTxO =
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStEx2 :: forall c. Crypto c => ChainState c
-initStEx2 = initSt initUTxO
+initStPoolLifetime :: forall c. Crypto c => ChainState c
+initStPoolLifetime = initSt initUTxO
 
 --
 -- Block 1, Slot 10, Epoch 0
@@ -231,7 +231,7 @@ expectedStEx1 =
     . C.newPool Cast.alicePoolParams
     . C.mir Cast.carlSHK ReservesMIR carlMIR
     . C.mir Cast.dariaSHK ReservesMIR dariaMIR
-    $ initStEx2
+    $ initStPoolLifetime
 
 -- === Block 1, Slot 10, Epoch 0
 --
@@ -240,7 +240,7 @@ expectedStEx1 =
 -- Additionally, a MIR certificate is issued to draw from the reserves
 -- and give Carl and Daria (who is unregistered) rewards.
 poolLifetime1 :: Mock c => CHAINExample c
-poolLifetime1 = CHAINExample initStEx2 blockEx1 (Right expectedStEx1)
+poolLifetime1 = CHAINExample initStPoolLifetime blockEx1 (Right expectedStEx1)
 
 --
 -- Block 2, Slot 90, Epoch 0

@@ -29,6 +29,9 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
     newSnapshot,
     incrBlockCount,
     newEpoch,
+    setCurrentProposals,
+    setFutureProposals,
+    setPParams,
   )
 where
 
@@ -66,13 +69,14 @@ import Shelley.Spec.Ledger.LedgerState
     InstantaneousRewards (..),
     LedgerState (..),
     NewEpochState (..),
+    PPUPState (..),
     PState (..),
     RewardUpdate (..),
     UTxOState (..),
     applyRUpd,
     emptyInstantaneousRewards,
   )
-import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.PParams (PParams' (..), ProposedPPUpdates, PParams)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.TxData (MIRPot (..), PoolParams (..), RewardAcnt (..), TxBody (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
@@ -528,3 +532,60 @@ newEpoch b cs = cs'
           chainPrevEpochNonce = prevHashToNonce . lastAppliedHash $ lab,
           chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)
         }
+
+-- | = Set Current Proposals
+--
+-- Set the current protocol parameter proposals.
+setCurrentProposals ::
+  forall c.
+  ProposedPPUpdates c ->
+  ChainState c ->
+  ChainState c
+setCurrentProposals ps cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    ls = esLState es
+    utxoSt = _utxoState ls
+    ppupSt = _ppups utxoSt
+    ppupSt' = ppupSt { proposals = ps }
+    utxoSt' = utxoSt { _ppups = ppupSt'}
+    ls' = ls {_utxoState = utxoSt'}
+    es' = es {esLState = ls'}
+    nes' = nes {nesEs = es'}
+
+-- | = Set Future Proposals
+--
+-- Set the future protocol parameter proposals.
+setFutureProposals ::
+  forall c.
+  ProposedPPUpdates c ->
+  ChainState c ->
+  ChainState c
+setFutureProposals ps cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    ls = esLState es
+    utxoSt = _utxoState ls
+    ppupSt = _ppups utxoSt
+    ppupSt' = ppupSt { futureProposals = ps }
+    utxoSt' = utxoSt { _ppups = ppupSt'}
+    ls' = ls {_utxoState = utxoSt'}
+    es' = es {esLState = ls'}
+    nes' = nes {nesEs = es'}
+
+-- | = Set the Protocol Proposals
+--
+-- Set the protocol parameters.
+setPParams ::
+  forall c.
+  PParams ->
+  ChainState c ->
+  ChainState c
+setPParams pp cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    es' = es {esPp = pp}
+    nes' = nes {nesEs = es'}

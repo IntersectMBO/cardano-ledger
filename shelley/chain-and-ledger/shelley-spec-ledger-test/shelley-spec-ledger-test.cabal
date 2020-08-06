@@ -108,6 +108,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Examples.Federation
       Test.Shelley.Spec.Ledger.Examples.Init
       Test.Shelley.Spec.Ledger.Examples.PoolLifetime
+      Test.Shelley.Spec.Ledger.Examples.Updates
       Test.Shelley.Spec.Ledger.Fees
       Test.Shelley.Spec.Ledger.MultiSigExamples
       Test.Shelley.Spec.Ledger.NonTraceProperties.Generator

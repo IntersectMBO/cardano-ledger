@@ -48,11 +48,7 @@ import Shelley.Spec.Ledger.TxData
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Examples
-  ( ex3A,
-    ex3B,
-    ex3C,
-    ex3D,
-    ex4A,
+  ( ex4A,
     ex4B,
     ex5AReserves,
     ex5ATreasury,
@@ -74,6 +70,7 @@ import Test.Shelley.Spec.Ledger.Examples
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Examples.EmptyBlock (exEmptyBlock)
 import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (poolLifetimeExample)
+import Test.Shelley.Spec.Ledger.Examples.Updates (updatesExample)
 import Test.Shelley.Spec.Ledger.MultiSigExamples
   ( aliceAndBob,
     aliceAndBobOrCarl,
@@ -135,19 +132,6 @@ testAdoptLatePoolRegistration =
     (SlotNo 110)
     (\n -> (newEpochToPoolParams n, newEpochToFuturePoolParams n))
     (ex6BPoolParams, Map.empty)
-
-pparamUpdateExample :: TestTree
-pparamUpdateExample =
-  testGroup
-    "protocol param update"
-    [ testCase "get 3/7 votes for a pparam update" $ testCHAINExample (ex3A p),
-      testCase "get 5/7 votes for a pparam update" $ testCHAINExample (ex3B p),
-      testCase "votes for the next epoch" $ testCHAINExample (ex3C p),
-      testCase "processes a pparam update" $ testCHAINExample (ex3D p)
-    ]
-  where
-    p :: Proxy C
-    p = Proxy
 
 genesisDelegExample :: TestTree
 genesisDelegExample =
@@ -213,7 +197,7 @@ chainExamples =
     "CHAIN examples"
     [ testCase "empty block" $ testCHAINExample exEmptyBlock,
       poolLifetimeExample,
-      pparamUpdateExample,
+      updatesExample,
       genesisDelegExample,
       mirExample,
       latePoolRegExample,
