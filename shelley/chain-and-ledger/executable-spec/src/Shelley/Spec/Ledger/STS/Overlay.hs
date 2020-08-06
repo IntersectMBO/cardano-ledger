@@ -70,8 +70,9 @@ import Shelley.Spec.Ledger.LedgerState (OBftSlot (..))
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Value
 
-data OVERLAY crypto
+data OVERLAY crypto v
 
 data OverlayEnv crypto
   = OverlayEnv
@@ -84,25 +85,25 @@ data OverlayEnv crypto
 instance NoUnexpectedThunks (OverlayEnv crypto)
 
 instance
-  ( Crypto crypto,
+  ( CV crypto v,
     DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
+    KESignable crypto (BHBody crypto v),
     VRF.Signable (VRF crypto) Seed
   ) =>
-  STS (OVERLAY crypto)
+  STS (OVERLAY crypto v)
   where
   type
-    State (OVERLAY crypto) =
+    State (OVERLAY crypto v) =
       Map (KeyHash 'BlockIssuer crypto) Word64
 
   type
-    Signal (OVERLAY crypto) =
-      BHeader crypto
+    Signal (OVERLAY crypto v) =
+      BHeader crypto v
 
-  type Environment (OVERLAY crypto) = OverlayEnv crypto
-  type BaseM (OVERLAY crypto) = ShelleyBase
+  type Environment (OVERLAY crypto v) = OverlayEnv crypto
+  type BaseM (OVERLAY crypto v) = ShelleyBase
 
-  data PredicateFailure (OVERLAY crypto)
+  data PredicateFailure (OVERLAY crypto v)
     = VRFKeyUnknown
         !(KeyHash 'StakePool crypto) -- unknown VRF keyhash (not registered)
     | VRFKeyWrongVRFKey
@@ -134,26 +135,26 @@ instance
         !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash from Header
     | UnknownGenesisKeyOVERLAY
         !(KeyHash 'Genesis crypto) -- KeyHash which does not correspond to o genesis node
-    | OcertFailure (PredicateFailure (OCERT crypto)) -- Subtransition Failures
+    | OcertFailure (PredicateFailure (OCERT crypto v)) -- Subtransition Failures
     deriving (Generic)
 
   initialRules = []
 
   transitionRules = [overlayTransition]
 
-deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Show (PredicateFailure (OVERLAY crypto))
+deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Show (PredicateFailure (OVERLAY crypto v))
 
-deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Eq (PredicateFailure (OVERLAY crypto))
+deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Eq (PredicateFailure (OVERLAY crypto v))
 
 vrfChecks ::
-  forall crypto.
+  forall crypto v.
   ( Crypto crypto,
     VRF.Signable (VRF crypto) Seed,
     VRF.ContextVRF (VRF crypto) ~ ()
   ) =>
   Nonce ->
-  BHBody crypto ->
-  Either (PredicateFailure (OVERLAY crypto)) ()
+  BHBody crypto v ->
+  Either (PredicateFailure (OVERLAY crypto v)) ()
 vrfChecks eta0 bhb = do
   unless
     ( VRF.verifyCertified
@@ -176,7 +177,7 @@ vrfChecks eta0 bhb = do
     slot = bheaderSlotNo bhb
 
 praosVrfChecks ::
-  forall crypto.
+  forall crypto v.
   ( Crypto crypto,
     VRF.Signable (VRF crypto) Seed,
     VRF.ContextVRF (VRF crypto) ~ ()
@@ -184,8 +185,8 @@ praosVrfChecks ::
   Nonce ->
   PoolDistr crypto ->
   ActiveSlotCoeff ->
-  BHBody crypto ->
-  Either (PredicateFailure (OVERLAY crypto)) ()
+  BHBody crypto v ->
+  Either (PredicateFailure (OVERLAY crypto v)) ()
 praosVrfChecks eta0 (PoolDistr pd) f bhb = do
   let sigma' = Map.lookup hk pd
   case sigma' of
@@ -204,15 +205,15 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
     vrfK = bheaderVrfVk bhb
 
 pbftVrfChecks ::
-  forall crypto.
+  forall crypto v.
   ( Crypto crypto,
     VRF.Signable (VRF crypto) Seed,
     VRF.ContextVRF (VRF crypto) ~ ()
   ) =>
   Hash crypto (VerKeyVRF crypto) ->
   Nonce ->
-  BHBody crypto ->
-  Either (PredicateFailure (OVERLAY crypto)) ()
+  BHBody crypto v ->
+  Either (PredicateFailure (OVERLAY crypto v)) ()
 pbftVrfChecks vrfHK eta0 bhb = do
   unless
     (vrfHK == hashVerKeyVRF vrfK)
@@ -224,13 +225,13 @@ pbftVrfChecks vrfHK eta0 bhb = do
     vrfK = bheaderVrfVk bhb
 
 overlayTransition ::
-  forall crypto.
-  ( Crypto crypto,
+  forall crypto v.
+  ( CV crypto v,
     DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
+    KESignable crypto (BHBody crypto v),
     VRF.Signable (VRF crypto) Seed
   ) =>
-  TransitionRule (OVERLAY crypto)
+  TransitionRule (OVERLAY crypto v)
 overlayTransition =
   judgmentContext
     >>= \( TRC
@@ -263,16 +264,16 @@ overlayTransition =
                   ocertEnvGenDelegs = Set.map genDelegKeyHash $ (range genDelegs)
                 }
 
-        trans @(OCERT crypto) $ TRC (oce, cs, bh)
+        trans @(OCERT crypto v) $ TRC (oce, cs, bh)
 
-instance (VRF.VRFAlgorithm (VRF crypto)) => NoUnexpectedThunks (PredicateFailure (OVERLAY crypto))
+instance (VRF.VRFAlgorithm (VRF crypto)) => NoUnexpectedThunks (PredicateFailure (OVERLAY crypto v))
 
 instance
-  ( Crypto crypto,
+  ( CV crypto v,
     DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
+    KESignable crypto (BHBody crypto v),
     VRF.Signable (VRF crypto) Seed
   ) =>
-  Embed (OCERT crypto) (OVERLAY crypto)
+  Embed (OCERT crypto v) (OVERLAY crypto v)
   where
   wrapFailed = OcertFailure

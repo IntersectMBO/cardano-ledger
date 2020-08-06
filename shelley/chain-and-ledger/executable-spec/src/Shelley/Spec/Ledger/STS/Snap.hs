@@ -28,23 +28,24 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState (..),
     stakeDistr,
   )
+import Shelley.Spec.Ledger.Value
 
-data SNAP crypto
+data SNAP crypto v
 
-instance (Crypto crypto, Typeable crypto) => STS (SNAP crypto) where
-  type State (SNAP crypto) = SnapShots crypto
-  type Signal (SNAP crypto) = ()
-  type Environment (SNAP crypto) = LedgerState crypto
-  type BaseM (SNAP crypto) = ShelleyBase
-  data PredicateFailure (SNAP crypto) -- No predicate failures
+instance (CV crypto v) => STS (SNAP crypto v) where
+  type State (SNAP crypto v) = SnapShots crypto
+  type Signal (SNAP crypto v) = ()
+  type Environment (SNAP crypto v) = LedgerState crypto v
+  type BaseM (SNAP crypto v) = ShelleyBase
+  data PredicateFailure (SNAP crypto v) -- No predicate failures
     deriving (Show, Generic, Eq)
 
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (SNAP crypto))
+instance NoUnexpectedThunks (PredicateFailure (SNAP crypto v))
 
-snapTransition :: Crypto crypto => TransitionRule (SNAP crypto)
+snapTransition :: CV crypto v => TransitionRule (SNAP crypto v)
 snapTransition = do
   TRC (lstate, s, ()) <- judgmentContext
 

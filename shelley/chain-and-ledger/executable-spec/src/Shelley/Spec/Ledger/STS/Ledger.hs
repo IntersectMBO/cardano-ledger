@@ -33,7 +33,6 @@ import Control.State.Transition
     trans,
   )
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
@@ -64,8 +63,9 @@ import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..), UTXOW)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxBody (..))
+import Shelley.Spec.Ledger.Value
 
-data LEDGER crypto
+data LEDGER crypto v
 
 data LedgerEnv = LedgerEnv
   { ledgerSlotNo :: SlotNo,
@@ -76,41 +76,41 @@ data LedgerEnv = LedgerEnv
   deriving (Show)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  STS (LEDGER crypto)
+  STS (LEDGER crypto v)
   where
   type
-    State (LEDGER crypto) =
-      (UTxOState crypto, DPState crypto)
-  type Signal (LEDGER crypto) = Tx crypto
-  type Environment (LEDGER crypto) = LedgerEnv
-  type BaseM (LEDGER crypto) = ShelleyBase
-  data PredicateFailure (LEDGER crypto)
-    = UtxowFailure (PredicateFailure (UTXOW crypto)) -- Subtransition Failures
-    | DelegsFailure (PredicateFailure (DELEGS crypto)) -- Subtransition Failures
+    State (LEDGER crypto v) =
+      (UTxOState crypto v, DPState crypto)
+  type Signal (LEDGER crypto v) = Tx crypto v
+  type Environment (LEDGER crypto v) = LedgerEnv
+  type BaseM (LEDGER crypto v) = ShelleyBase
+  data PredicateFailure (LEDGER crypto v)
+    = UtxowFailure (PredicateFailure (UTXOW crypto v)) -- Subtransition Failures
+    | DelegsFailure (PredicateFailure (DELEGS crypto v)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [ledgerTransition]
 
-instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (LEDGER crypto))
+instance (CV crypto v) => NoUnexpectedThunks (PredicateFailure (LEDGER crypto v))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (LEDGER crypto))
+  (CV crypto v) =>
+  ToCBOR (PredicateFailure (LEDGER crypto v))
   where
   toCBOR = \case
     (UtxowFailure a) -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR a
     (DelegsFailure a) -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR a
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (LEDGER crypto))
+  (CV crypto v) =>
+  FromCBOR (PredicateFailure (LEDGER crypto v))
   where
   fromCBOR =
-    decodeRecordSum "PredicateFailure (LEDGER crypto)" $
+    decodeRecordSum "PredicateFailure (LEDGER crypto v)" $
       ( \case
           0 -> do
             a <- fromCBOR
@@ -122,16 +122,16 @@ instance
       )
 
 ledgerTransition ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  forall crypto v.
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  TransitionRule (LEDGER crypto)
+  TransitionRule (LEDGER crypto v)
 ledgerTransition = do
   TRC (LedgerEnv slot txIx pp account, (utxoSt, dpstate), tx) <- judgmentContext
 
   dpstate' <-
-    trans @(DELEGS crypto) $
+    trans @(DELEGS crypto v) $
       TRC
         ( DelegsEnv slot txIx pp tx account,
           dpstate,
@@ -143,7 +143,7 @@ ledgerTransition = do
       stpools = _pParams pstate
 
   utxoSt' <-
-    trans @(UTXOW crypto) $
+    trans @(UTXOW crypto v) $
       TRC
         ( UtxoEnv slot pp stpools genDelegs,
           utxoSt,
@@ -152,17 +152,17 @@ ledgerTransition = do
   pure (utxoSt', dpstate')
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  Embed (DELEGS crypto) (LEDGER crypto)
+  Embed (DELEGS crypto v) (LEDGER crypto v)
   where
   wrapFailed = DelegsFailure
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  Embed (UTXOW crypto) (LEDGER crypto)
+  Embed (UTXOW crypto v) (LEDGER crypto v)
   where
   wrapFailed = UtxowFailure

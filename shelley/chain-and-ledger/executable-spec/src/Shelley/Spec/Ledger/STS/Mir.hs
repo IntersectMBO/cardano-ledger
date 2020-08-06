@@ -23,7 +23,6 @@ import Control.State.Transition
     TransitionRule,
     judgmentContext,
   )
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
@@ -49,23 +48,24 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (emptyPParams)
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
+import Shelley.Spec.Ledger.Value
 
-data MIR crypto
+data MIR crypto v
 
-instance Typeable crypto => STS (MIR crypto) where
-  type State (MIR crypto) = EpochState crypto
-  type Signal (MIR crypto) = ()
-  type Environment (MIR crypto) = ()
-  type BaseM (MIR crypto) = ShelleyBase
-  data PredicateFailure (MIR crypto) -- No Failures
+instance CV crypto v => STS (MIR crypto v) where
+  type State (MIR crypto v) = EpochState crypto v
+  type Signal (MIR crypto v) = ()
+  type Environment (MIR crypto v) = ()
+  type BaseM (MIR crypto v) = ShelleyBase
+  data PredicateFailure (MIR crypto v) -- No Failures
     deriving (Show, Generic, Eq)
 
   initialRules = [initialMir]
   transitionRules = [mirTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (MIR crypto))
+instance NoUnexpectedThunks (PredicateFailure (MIR crypto v))
 
-initialMir :: InitialRule (MIR crypto)
+initialMir :: InitialRule (MIR crypto v)
 initialMir =
   pure $
     EpochState
@@ -76,7 +76,7 @@ initialMir =
       emptyPParams
       emptyNonMyopic
 
-mirTransition :: forall crypto. TransitionRule (MIR crypto)
+mirTransition :: forall crypto v. TransitionRule (MIR crypto v)
 mirTransition = do
   TRC
     ( _,

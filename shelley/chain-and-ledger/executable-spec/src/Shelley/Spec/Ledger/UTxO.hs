@@ -107,7 +107,7 @@ instance Embed (UTxO crypto v) (Map (TxIn crypto v) (TxOut crypto v)) where
 
 -- | The unspent transaction outputs.
 newtype UTxO crypto v = UTxO {unUTxO :: Map (TxIn crypto v) (TxOut crypto v)}
-  deriving (ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+  deriving (ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData, Eq)
   deriving (Show) via Quiet (UTxO crypto v)
 
 -- instance Ord (UTxO crypto v)
@@ -227,9 +227,9 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 
 -- | Determine the total balance contained in the UTxO.
 balance :: CV crypto v => UTxO crypto v -> v
-balance (UTxO utxo) = foldr addCoins zeroV utxo
+balance (UTxO utxo) = foldr addCoins vzero utxo
   where
-    addCoins (TxOut _ a) b = addv a b
+    addCoins (TxOut _ a) b = vplus a b
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
@@ -281,6 +281,7 @@ scriptCred (ScriptHashObj hs) = Just hs
 
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
+-- TODO add forging scripts
 scriptsNeeded ::
   CV crypto v =>
   UTxO crypto v ->

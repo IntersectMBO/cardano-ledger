@@ -573,6 +573,7 @@ instance CV c v => HashAnnotated (TxBody c v) c
 -- TODO no thunks in bodyBytes is ok?
 deriving via UseIsNormalFormNamed "TxBody" (TxBody crypto v) instance NoUnexpectedThunks (TxBody crypto v)
 deriving instance (Show v) => Show (TxBody crypto v)
+deriving instance (Eq v) => Eq (TxBody crypto v)
 -- ===========
 
 pattern TxBody ::

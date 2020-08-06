@@ -49,6 +49,13 @@ rationalToCoinViaFloor r = Coin . floor $ r
 isValidCoinValue :: Integer -> Bool
 isValidCoinValue c = 0 <= c && c <= (fromIntegral (maxBound :: Word64))
 
+instance Semigroup Coin where
+    (<>) = (+)
+
+instance Monoid Coin where
+    mempty  = Coin 0
+    mappend = (<>)
+
 instance ToCBOR Coin where
   toCBOR (Coin c) =
     if isValidCoinValue c

@@ -26,7 +26,6 @@ import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans, (?!), (?!:))
 import Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (getRwdCred, mkRwdAcnt)
@@ -57,27 +56,28 @@ import Shelley.Spec.Ledger.TxData
     TxBody (..),
     Wdrl (..),
   )
+import Shelley.Spec.Ledger.Value
 
-data DELEGS crypto
+data DELEGS crypto v
 
-data DelegsEnv crypto = DelegsEnv
+data DelegsEnv crypto v = DelegsEnv
   { delegsSlotNo :: SlotNo,
     delegsIx :: Ix,
     delegspp :: PParams,
-    delegsTx :: (Tx crypto),
+    delegsTx :: (Tx crypto v),
     delegsAccount :: AccountState
   }
   deriving (Show)
 
 instance
-  Crypto crypto =>
-  STS (DELEGS crypto)
+  CV crypto v =>
+  STS (DELEGS crypto v)
   where
-  type State (DELEGS crypto) = DPState crypto
-  type Signal (DELEGS crypto) = Seq (DCert crypto)
-  type Environment (DELEGS crypto) = DelegsEnv crypto
-  type BaseM (DELEGS crypto) = ShelleyBase
-  data PredicateFailure (DELEGS crypto)
+  type State (DELEGS crypto v) = DPState crypto
+  type Signal (DELEGS crypto v) = Seq (DCert crypto)
+  type Environment (DELEGS crypto v) = DelegsEnv crypto v
+  type BaseM (DELEGS crypto v) = ShelleyBase
+  data PredicateFailure (DELEGS crypto v)
     = DelegateeNotRegisteredDELEG
         !(KeyHash 'StakePool crypto) -- target pool which is not registered
     | WithdrawalsNotInRewardsDELEGS
@@ -88,11 +88,11 @@ instance
   initialRules = [pure emptyDelegation]
   transitionRules = [delegsTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (DELEGS crypto))
+instance NoUnexpectedThunks (PredicateFailure (DELEGS crypto v))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (DELEGS crypto))
+  (CV crypto v) =>
+  ToCBOR (PredicateFailure (DELEGS crypto v))
   where
   toCBOR = \case
     DelegateeNotRegisteredDELEG kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
@@ -102,8 +102,8 @@ instance
         <> toCBOR a
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (DELEGS crypto))
+  (CV crypto v) =>
+  FromCBOR (PredicateFailure (DELEGS crypto v))
   where
   fromCBOR =
     decodeRecordSum "PredicateFailure" $
@@ -121,9 +121,9 @@ instance
       )
 
 delegsTransition ::
-  forall crypto.
-  Crypto crypto =>
-  TransitionRule (DELEGS crypto)
+  forall crypto v.
+  CV crypto v =>
+  TransitionRule (DELEGS crypto v)
 delegsTransition = do
   TRC (env@(DelegsEnv slot txIx pp tx reserves), dpstate, certificates) <- judgmentContext
   network <- liftSTS $ asks networkId
@@ -142,7 +142,7 @@ delegsTransition = do
       pure $ dpstate {_dstate = ds {_rewards = rewards'}}
     gamma :|> c -> do
       dpstate' <-
-        trans @(DELEGS crypto) $ TRC (env, dpstate, gamma)
+        trans @(DELEGS crypto v) $ TRC (env, dpstate, gamma)
 
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
@@ -159,7 +159,7 @@ delegsTransition = do
         TRC (DelplEnv slot ptr pp reserves, dpstate', c)
 
 instance
-  Crypto crypto =>
-  Embed (DELPL crypto) (DELEGS crypto)
+  CV crypto v =>
+  Embed (DELPL crypto) (DELEGS crypto v)
   where
   wrapFailed = DelplFailure

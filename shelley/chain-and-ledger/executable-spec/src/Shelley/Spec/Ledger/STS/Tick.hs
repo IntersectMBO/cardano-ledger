@@ -23,7 +23,6 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
@@ -37,38 +36,39 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH)
 import Shelley.Spec.Ledger.STS.Rupd (RUPD, RupdEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo, epochInfoEpoch)
+import Shelley.Spec.Ledger.Value
 
-data TICK crypto
+data TICK crypto v
 
 data TickEnv crypto
   = TickEnv (Set (KeyHash 'Genesis crypto))
 
 instance
-  Crypto crypto =>
-  STS (TICK crypto)
+  CV crypto v =>
+  STS (TICK crypto v)
   where
   type
-    State (TICK crypto) =
-      NewEpochState crypto
+    State (TICK crypto v) =
+      NewEpochState crypto v
   type
-    Signal (TICK crypto) =
+    Signal (TICK crypto v) =
       SlotNo
-  type Environment (TICK crypto) = TickEnv crypto
-  type BaseM (TICK crypto) = ShelleyBase
-  data PredicateFailure (TICK crypto)
-    = NewEpochFailure (PredicateFailure (NEWEPOCH crypto)) -- Subtransition Failures
-    | RupdFailure (PredicateFailure (RUPD crypto)) -- Subtransition Failures
+  type Environment (TICK crypto v) = TickEnv crypto
+  type BaseM (TICK crypto v) = ShelleyBase
+  data PredicateFailure (TICK crypto v)
+    = NewEpochFailure (PredicateFailure (NEWEPOCH crypto v)) -- Subtransition Failures
+    | RupdFailure (PredicateFailure (RUPD crypto v)) -- Subtransition Failures
     deriving (Show, Generic, Eq)
 
   initialRules = []
   transitionRules = [bheadTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (TICK crypto))
+instance NoUnexpectedThunks (PredicateFailure (TICK crypto v))
 
 adoptGenesisDelegs ::
-  EpochState crypto ->
+  EpochState crypto v ->
   SlotNo ->
-  EpochState crypto
+  EpochState crypto v
 adoptGenesisDelegs es slot = es'
   where
     ls = esLState es
@@ -95,9 +95,9 @@ adoptGenesisDelegs es slot = es'
     es' = es {esLState = ls'}
 
 bheadTransition ::
-  forall crypto.
-  (Crypto crypto) =>
-  TransitionRule (TICK crypto)
+  forall crypto v.
+  (CV crypto v) =>
+  TransitionRule (TICK crypto v)
 bheadTransition = do
   TRC (TickEnv gkeys, nes@(NewEpochState _ bprev _ es _ _ _), slot) <-
     judgmentContext
@@ -107,10 +107,10 @@ bheadTransition = do
     epochInfoEpoch ei slot
 
   nes' <-
-    trans @(NEWEPOCH crypto) $
+    trans @(NEWEPOCH crypto v) $
       TRC (NewEpochEnv slot gkeys, nes, epoch)
 
-  ru' <- trans @(RUPD crypto) $ TRC (RupdEnv bprev es, nesRu nes', slot)
+  ru' <- trans @(RUPD crypto v) $ TRC (RupdEnv bprev es, nesRu nes', slot)
 
   let es' = adoptGenesisDelegs (nesEs nes') slot
       nes'' =
@@ -121,13 +121,13 @@ bheadTransition = do
   pure nes''
 
 instance
-  Crypto crypto =>
-  Embed (NEWEPOCH crypto) (TICK crypto)
+  CV crypto v =>
+  Embed (NEWEPOCH crypto v) (TICK crypto v)
   where
   wrapFailed = NewEpochFailure
 
 instance
-  Crypto crypto =>
-  Embed (RUPD crypto) (TICK crypto)
+  CV crypto v =>
+  Embed (RUPD crypto v) (TICK crypto v)
   where
   wrapFailed = RupdFailure

@@ -18,7 +18,6 @@ import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.Crypto (Crypto)
@@ -47,26 +46,27 @@ import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP)
 import Shelley.Spec.Ledger.Slot (EpochNo)
+import Shelley.Spec.Ledger.Value
 
-data EPOCH crypto
+data EPOCH crypto v
 
-instance (Crypto crypto, Typeable crypto) => STS (EPOCH crypto) where
-  type State (EPOCH crypto) = EpochState crypto
-  type Signal (EPOCH crypto) = EpochNo
-  type Environment (EPOCH crypto) = ()
-  type BaseM (EPOCH crypto) = ShelleyBase
-  data PredicateFailure (EPOCH crypto)
-    = PoolReapFailure (PredicateFailure (POOLREAP crypto)) -- Subtransition Failures
-    | SnapFailure (PredicateFailure (SNAP crypto)) -- Subtransition Failures
-    | NewPpFailure (PredicateFailure (NEWPP crypto)) -- Subtransition Failures
+instance (CV crypto v) => STS (EPOCH crypto v) where
+  type State (EPOCH crypto v) = EpochState crypto v
+  type Signal (EPOCH crypto v) = EpochNo
+  type Environment (EPOCH crypto v) = ()
+  type BaseM (EPOCH crypto v) = ShelleyBase
+  data PredicateFailure (EPOCH crypto v)
+    = PoolReapFailure (PredicateFailure (POOLREAP crypto v)) -- Subtransition Failures
+    | SnapFailure (PredicateFailure (SNAP crypto v)) -- Subtransition Failures
+    | NewPpFailure (PredicateFailure (NEWPP crypto v)) -- Subtransition Failures
     deriving (Show, Generic, Eq)
 
   initialRules = [initialEpoch]
   transitionRules = [epochTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (EPOCH crypto))
+instance NoUnexpectedThunks (PredicateFailure (EPOCH crypto v))
 
-initialEpoch :: InitialRule (EPOCH crypto)
+initialEpoch :: InitialRule (EPOCH crypto v)
 initialEpoch =
   pure $
     EpochState
@@ -103,9 +103,9 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
         _ -> Nothing
 
 epochTransition ::
-  forall crypto.
-  Crypto crypto =>
-  TransitionRule (EPOCH crypto)
+  forall crypto v.
+  CV crypto v =>
+  TransitionRule (EPOCH crypto v)
 epochTransition = do
   TRC
     ( _,
@@ -123,7 +123,7 @@ epochTransition = do
   let utxoSt = _utxoState ls
   let DPState dstate pstate = _delegationState ls
   ss' <-
-    trans @(SNAP crypto) $ TRC (ls, ss, ())
+    trans @(SNAP crypto v) $ TRC (ls, ss, ())
 
   let PState pParams fPParams _ = pstate
       ppp = eval (pParams ⨃ fPParams)
@@ -133,14 +133,14 @@ epochTransition = do
             _fPParams = Map.empty
           }
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
-    trans @(POOLREAP crypto) $ TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
+    trans @(POOLREAP crypto v) $ TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
   let pup = proposals . _ppups $ utxoSt'
   let ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
   NewppState utxoSt'' acnt'' pp' <-
-    trans @(NEWPP crypto) $
+    trans @(NEWPP crypto v) $
       TRC (NewppEnv dstate' pstate'', NewppState utxoSt' acnt' pp, ppNew)
   pure $
     EpochState
@@ -151,11 +151,11 @@ epochTransition = do
       pp'
       nm
 
-instance (Crypto crypto, Typeable crypto) => Embed (SNAP crypto) (EPOCH crypto) where
+instance (CV crypto v) => Embed (SNAP crypto v) (EPOCH crypto v) where
   wrapFailed = SnapFailure
 
-instance (Crypto crypto, Typeable crypto) => Embed (POOLREAP crypto) (EPOCH crypto) where
+instance (CV crypto v) => Embed (POOLREAP crypto v) (EPOCH crypto v) where
   wrapFailed = PoolReapFailure
 
-instance (Crypto crypto, Typeable crypto) => Embed (NEWPP crypto) (EPOCH crypto) where
+instance (CV crypto v) => Embed (NEWPP crypto v) (EPOCH crypto v) where
   wrapFailed = NewPpFailure

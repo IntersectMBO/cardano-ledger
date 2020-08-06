@@ -21,7 +21,6 @@ import Control.State.Transition
     liftSTS,
   )
 import Data.Functor ((<&>))
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
   ( ShelleyBase,
@@ -40,26 +39,27 @@ import Shelley.Spec.Ledger.Slot
     epochInfoFirst,
     (+*),
   )
+import Shelley.Spec.Ledger.Value
 
-data RUPD crypto
+data RUPD crypto v
 
-data RupdEnv crypto
-  = RupdEnv (BlocksMade crypto) (EpochState crypto)
+data RupdEnv crypto v
+  = RupdEnv (BlocksMade crypto) (EpochState crypto v)
 
-instance Typeable crypto => STS (RUPD crypto) where
-  type State (RUPD crypto) = StrictMaybe (RewardUpdate crypto)
-  type Signal (RUPD crypto) = SlotNo
-  type Environment (RUPD crypto) = RupdEnv crypto
-  type BaseM (RUPD crypto) = ShelleyBase
-  data PredicateFailure (RUPD crypto) -- No predicate failures
+instance CV crypto v => STS (RUPD crypto v) where
+  type State (RUPD crypto v) = StrictMaybe (RewardUpdate crypto)
+  type Signal (RUPD crypto v) = SlotNo
+  type Environment (RUPD crypto v) = RupdEnv crypto v
+  type BaseM (RUPD crypto v) = ShelleyBase
+  data PredicateFailure (RUPD crypto v) -- No predicate failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (RUPD crypto))
+instance NoUnexpectedThunks (PredicateFailure (RUPD crypto v))
 
-rupdTransition :: Typeable crypto => TransitionRule (RUPD crypto)
+rupdTransition :: CV crypto v => TransitionRule (RUPD crypto v)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (epoch, slot, maxLL) <- liftSTS $ do

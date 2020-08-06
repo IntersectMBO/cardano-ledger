@@ -37,41 +37,46 @@ General function and type class definitions used in Value
 
 data Op = Gt | Lt | Gteq | Lteq | Neq | Equal
 
-class (NFData t, Show t, NoUnexpectedThunks t) => Val t where
-  zeroV :: t                          -- This is an identity of addv
-  addv :: t -> t -> t                 -- This must be associative and commutative
-  vnegate:: t -> t                    -- addv x (vnegate x) == zeroV
+class (NFData t, Show t, Eq t, NoUnexpectedThunks t) => Val t where
+  vzero :: t                          -- This is an identity of vplus
+  vplus :: t -> t -> t                 -- This must be associative and commutative
+  vnegate:: t -> t                    -- vplus x (vnegate x) == vzero
   scalev:: Integer -> t -> t          --
   -- Equal must be the same as Eq instance
-  checkBinRel:: Op -> t -> t -> Bool  -- This will define a PARTIAL order using pointwise comparisons (If all the keys don't match returns False)
-  visZero:: t -> Bool                 -- is the argument zeroV?
+  voper:: Op -> t -> t -> Bool  -- This will define a PARTIAL order using pointwise comparisons (If all the keys don't match returns False)
+  visZero:: t -> Bool                 -- is the argument vzero?
+  vcoin :: t -> Coin
+  vinject :: Coin -> t
 
 class Default f t where
   apply:: Ord k => f k t -> k -> t
 
 instance Val Integer where
-  zeroV = 0
-  addv x y = x+y
+  vzero = 0
+  vplus x y = x+y
   vnegate x = -x
   scalev n x = n * x
-  checkBinRel Gt x y = x>y
-  checkBinRel Lt x y = x<y
-  checkBinRel Gteq x y = x >= y
-  checkBinRel Lteq x y = x <= y
-  checkBinRel Neq x y = not(x==y)
-  checkBinRel Equal x y = x==y
+  voper Gt x y = x>y
+  voper Lt x y = x<y
+  voper Gteq x y = x >= y
+  voper Lteq x y = x <= y
+  voper Neq x y = not(x==y)
+  voper Equal x y = x==y
   visZero x = x==0
+  vcoin x = Coin x
+  vinject (Coin x) = x
 
 instance Val t => Default Map t where
-   apply mp k = case Map.lookup k mp of { Just t -> t; Nothing -> zeroV }
+   apply mp k = case Map.lookup k mp of { Just t -> t; Nothing -> vzero }
 
 instance (Ord k,Val t, NFData k, Show k, NoUnexpectedThunks k) => Val (Map k t) where
-  zeroV = Map.empty
-  addv x y = unionWithV addv x y  -- There is an assumption that if the range is zeroV, it is not stored in the Map
+  vzero = Map.empty
+  vplus x y = unionWithV vplus x y  -- There is an assumption that if the range is vzero, it is not stored in the Map
   vnegate x = mapV vnegate x        -- We enforce this by using our own versions of map and union: unionWithV and mapV
   scalev n x = mapV (scalev n) x
-  checkBinRel op x y = pointWise (checkBinRel op) x y
+  voper op x y = pointWise (voper op) x y
   visZero x = Map.null x
+--  getAdaAmount = getAdaAmount
 
 
 pointWise:: Ord k => (v -> v -> Bool) -> Map k v -> Map k v -> Bool
@@ -84,7 +89,7 @@ pointWise p m (Bin _ k v2 ls rs) =
       _ -> False
 
 
--- The following functions enforce the invariant that zeroV is never stored in a Map
+-- The following functions enforce the invariant that vzero is never stored in a Map
 insertWithV :: (Ord k,Val a) => (a -> a -> a) -> k -> a -> Map k a -> Map k a
 insertWithV = go
   where
@@ -178,7 +183,7 @@ instance NFData (Value crypto)
 
 -- | compact representation of Value
 data CompactValue crypto = AdaOnly Coin | MixValue (Value crypto)
-  deriving (Show, Generic, Typeable)
+  deriving (Show, Generic, Typeable, Eq)
 
 instance NoUnexpectedThunks (CompactValue crypto)
 instance NFData (CompactValue crypto)
@@ -228,21 +233,21 @@ compactValueToValue (AdaOnly c)  = coinToValue c
 compactValueToValue (MixValue v) = v
 
 instance Eq (Value crypto) where
-    (==) = checkBinRel Equal
+    (==) = voper Equal
 
 instance Semigroup (Value crypto) where
-    (<>) = addv
+    (<>) = vplus
 
 instance Monoid (Value crypto) where
-    mempty  = zeroV
+    mempty  = vzero
     mappend = (<>)
 
 -- instances for CompactValue
 instance Semigroup (CompactValue crypto) where
-    (<>) v1 v2 = valueToCompactValue $ addv (compactValueToValue v1) (compactValueToValue v2)
+    (<>) v1 v2 = valueToCompactValue $ vplus (compactValueToValue v1) (compactValueToValue v2)
 
 instance Monoid (CompactValue crypto) where
-    mempty  = MixValue zeroV
+    mempty  = MixValue vzero
     mappend = (<>)
 
 -- constraint used for all parametrized functions
@@ -273,10 +278,10 @@ singleType c tn i = Value (singleton c (singleton tn i))
 
 -- | subtract values
 subv :: Value crypto -> Value crypto -> Value crypto
-subv v1 v2 = addv v1 (vnegate v2)
+subv v1 v2 = vplus v1 (vnegate v2)
 
 vinsert:: PolicyID crypto -> AssetID -> Quantity -> Value crypto -> Value crypto
-vinsert pid aid q old = addv old (Value (Map.singleton pid (Map.singleton aid q)))
+vinsert pid aid q old = vplus old (Value (Map.singleton pid (Map.singleton aid q)))
 
 -- | Split a value into its positive and negative parts. The first element of
 --   the tuple contains the negative parts of the value, the second element

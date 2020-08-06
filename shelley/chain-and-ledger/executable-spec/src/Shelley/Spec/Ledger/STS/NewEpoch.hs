@@ -29,26 +29,27 @@ import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.Value
 
-data NEWEPOCH crypto
+data NEWEPOCH crypto v
 
 instance
-  Crypto crypto =>
-  STS (NEWEPOCH crypto)
+  CV crypto v =>
+  STS (NEWEPOCH crypto v)
   where
-  type State (NEWEPOCH crypto) = NewEpochState crypto
+  type State (NEWEPOCH crypto v) = NewEpochState crypto v
 
-  type Signal (NEWEPOCH crypto) = EpochNo
+  type Signal (NEWEPOCH crypto v) = EpochNo
 
-  type Environment (NEWEPOCH crypto) = NewEpochEnv crypto
+  type Environment (NEWEPOCH crypto v) = NewEpochEnv crypto
 
-  type BaseM (NEWEPOCH crypto) = ShelleyBase
+  type BaseM (NEWEPOCH crypto v) = ShelleyBase
 
-  data PredicateFailure (NEWEPOCH crypto)
-    = EpochFailure (PredicateFailure (EPOCH crypto)) -- Subtransition Failures
+  data PredicateFailure (NEWEPOCH crypto v)
+    = EpochFailure (PredicateFailure (EPOCH crypto v)) -- Subtransition Failures
     | CorruptRewardUpdate
         !(RewardUpdate crypto) -- The reward update which violates an invariant
-    | MirFailure (PredicateFailure (MIR crypto)) -- Subtransition Failures
+    | MirFailure (PredicateFailure (MIR crypto v)) -- Subtransition Failures
     deriving (Show, Generic, Eq)
 
   initialRules =
@@ -65,12 +66,12 @@ instance
 
   transitionRules = [newEpochTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (NEWEPOCH crypto))
+instance NoUnexpectedThunks (PredicateFailure (NEWEPOCH crypto v))
 
 newEpochTransition ::
-  forall crypto.
-  Crypto crypto =>
-  TransitionRule (NEWEPOCH crypto)
+  forall crypto v.
+  CV crypto v =>
+  TransitionRule (NEWEPOCH crypto v)
 newEpochTransition = do
   TRC
     ( NewEpochEnv _s gkeys,
@@ -88,8 +89,8 @@ newEpochTransition = do
           dt + dr + (sum rs_) + df == 0 ?! CorruptRewardUpdate ru'
           pure $ applyRUpd ru' es
 
-      es'' <- trans @(MIR crypto) $ TRC ((), es', ())
-      es''' <- trans @(EPOCH crypto) $ TRC ((), es'', e)
+      es'' <- trans @(MIR crypto v) $ TRC ((), es', ())
+      es''' <- trans @(EPOCH crypto v) $ TRC ((), es'', e)
       let EpochState _acnt ss _ls _pr pp _ = es'''
           pd' = calculatePoolDistr (_pstakeSet ss)
       osched' <- liftSTS $ overlaySchedule e gkeys pp
@@ -117,13 +118,13 @@ calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
    in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
 
 instance
-  Crypto crypto =>
-  Embed (EPOCH crypto) (NEWEPOCH crypto)
+  CV crypto v =>
+  Embed (EPOCH crypto v) (NEWEPOCH crypto v)
   where
   wrapFailed = EpochFailure
 
 instance
-  Crypto crypto =>
-  Embed (MIR crypto) (NEWEPOCH crypto)
+  CV crypto v =>
+  Embed (MIR crypto v) (NEWEPOCH crypto v)
   where
   wrapFailed = MirFailure

@@ -52,11 +52,12 @@ import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
+import Shelley.Spec.Ledger.Value
 
-data BBODY crypto
+data BBODY crypto v
 
-data BbodyState crypto
-  = BbodyState (LedgerState crypto) (BlocksMade crypto)
+data BbodyState crypto v
+  = BbodyState (LedgerState crypto v) (BlocksMade crypto)
   deriving (Eq, Show)
 
 data BbodyEnv = BbodyEnv
@@ -66,44 +67,44 @@ data BbodyEnv = BbodyEnv
   }
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  STS (BBODY crypto)
+  STS (BBODY crypto v)
   where
   type
-    State (BBODY crypto) =
-      BbodyState crypto
+    State (BBODY crypto v) =
+      BbodyState crypto v
 
   type
-    Signal (BBODY crypto) =
-      Block crypto
+    Signal (BBODY crypto v) =
+      Block crypto v
 
-  type Environment (BBODY crypto) = BbodyEnv
+  type Environment (BBODY crypto v) = BbodyEnv
 
-  type BaseM (BBODY crypto) = ShelleyBase
+  type BaseM (BBODY crypto v) = ShelleyBase
 
-  data PredicateFailure (BBODY crypto)
+  data PredicateFailure (BBODY crypto v)
     = WrongBlockBodySizeBBODY
         !Int -- Actual Body Size
         !Int -- Claimed Body Size in Header
     | InvalidBodyHashBBODY
-        !(HashBBody crypto) -- Actual Hash
-        !(HashBBody crypto) -- Claimed Hash
-    | LedgersFailure (PredicateFailure (LEDGERS crypto)) -- Subtransition Failures
+        !(HashBBody crypto v) -- Actual Hash
+        !(HashBBody crypto v) -- Claimed Hash
+    | LedgersFailure (PredicateFailure (LEDGERS crypto v)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [bbodyTransition]
 
-instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (BBODY crypto))
+instance (CV crypto v) => NoUnexpectedThunks (PredicateFailure (BBODY crypto v))
 
 bbodyTransition ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  forall crypto v.
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  TransitionRule (BBODY crypto)
+  TransitionRule (BBODY crypto v)
 bbodyTransition =
   judgmentContext
     >>= \( TRC
@@ -122,7 +123,7 @@ bbodyTransition =
         actualBodyHash == bhash bhb ?! InvalidBodyHashBBODY actualBodyHash (bhash bhb)
 
         ls' <-
-          trans @(LEDGERS crypto) $
+          trans @(LEDGERS crypto v) $
             TRC (LedgersEnv (bheaderSlotNo bhb) pp account, ls, StrictSeq.getSeq txs)
 
         -- Note that this may not actually be a stake pool - it could be a genesis key
@@ -132,9 +133,9 @@ bbodyTransition =
         pure $ BbodyState ls' (incrBlocks (eval (bheaderSlotNo bhb ∈ oslots)) hkAsStakePool b)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  Embed (LEDGERS crypto) (BBODY crypto)
+  Embed (LEDGERS crypto v) (BBODY crypto v)
   where
   wrapFailed = LedgersFailure

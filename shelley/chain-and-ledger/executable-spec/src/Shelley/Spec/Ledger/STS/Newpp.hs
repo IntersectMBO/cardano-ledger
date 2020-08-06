@@ -23,7 +23,6 @@ import Control.State.Transition
     (?!),
   )
 import qualified Data.Map.Strict as Map
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -44,21 +43,22 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Shelley.Spec.Ledger.Value
 
-data NEWPP crypto
+data NEWPP crypto v
 
-data NewppState crypto
-  = NewppState (UTxOState crypto) AccountState PParams
+data NewppState crypto v
+  = NewppState (UTxOState crypto v) AccountState PParams
 
 data NewppEnv crypto
   = NewppEnv (DState crypto) (PState crypto)
 
-instance Typeable crypto => STS (NEWPP crypto) where
-  type State (NEWPP crypto) = NewppState crypto
-  type Signal (NEWPP crypto) = Maybe PParams
-  type Environment (NEWPP crypto) = NewppEnv crypto
-  type BaseM (NEWPP crypto) = ShelleyBase
-  data PredicateFailure (NEWPP crypto)
+instance CV crypto v => STS (NEWPP crypto v) where
+  type State (NEWPP crypto v) = NewppState crypto v
+  type Signal (NEWPP crypto v) = Maybe PParams
+  type Environment (NEWPP crypto v) = NewppEnv crypto
+  type BaseM (NEWPP crypto v) = ShelleyBase
+  data PredicateFailure (NEWPP crypto v)
     = UnexpectedDepositPot
         !Coin -- The total outstanding deposits
         !Coin -- The deposit pot
@@ -67,9 +67,9 @@ instance Typeable crypto => STS (NEWPP crypto) where
   initialRules = [initialNewPp]
   transitionRules = [newPpTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (NEWPP crypto))
+instance NoUnexpectedThunks (PredicateFailure (NEWPP crypto v))
 
-initialNewPp :: InitialRule (NEWPP crypto)
+initialNewPp :: InitialRule (NEWPP crypto v)
 initialNewPp =
   pure $
     NewppState
@@ -77,7 +77,7 @@ initialNewPp =
       emptyAccount
       emptyPParams
 
-newPpTransition :: TransitionRule (NEWPP crypto)
+newPpTransition :: TransitionRule (NEWPP crypto v)
 newPpTransition = do
   TRC (NewppEnv dstate pstate, NewppState utxoSt acnt pp, ppNew) <- judgmentContext
 

@@ -38,6 +38,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
+import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.DeserializeShort (deserialiseAddrStakeRef)
@@ -73,7 +74,7 @@ newtype Stake crypto = Stake
 
 -- | Sum up all the Coin for each staking Credential
 aggregateUtxoCoinByCredential ::
-  Crypto crypto =>
+  forall crypto v. CV crypto v =>
   Map Ptr (Credential 'Staking crypto) ->
   UTxO crypto v ->
   Map (Credential 'Staking crypto) Coin ->
@@ -81,11 +82,12 @@ aggregateUtxoCoinByCredential ::
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldr accum initial u
   where
+    accum :: TxOut crypto v -> Map (Credential 'Staking crypto) Coin -> Map (Credential 'Staking crypto) Coin
     accum (TxOutCompact addr vl) ans = case deserialiseAddrStakeRef addr of
       Just (StakeRefPtr p) -> case Map.lookup p ptrs of
-        Just cred -> Map.insertWith (+) cred vl ans
+        Just cred -> Map.insertWith (+) cred (vcoin vl) ans
         Nothing -> ans
-      Just (StakeRefBase hk) -> Map.insertWith (+) hk vl ans
+      Just (StakeRefBase hk) -> Map.insertWith (+) hk (vcoin vl) ans
       _other -> ans
 
 -- | Get stake of one pool

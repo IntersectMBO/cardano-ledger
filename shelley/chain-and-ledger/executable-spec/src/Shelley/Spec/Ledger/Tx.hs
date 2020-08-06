@@ -131,16 +131,6 @@ deriving instance Crypto crypto => Show (WitnessSetHKD Identity crypto v)
 
 deriving instance Crypto crypto => Eq (WitnessSetHKD Identity crypto v)
 
--- deriving instance Crypto crypto => Generic (WitnessSetHKD Identity crypto v)
-
--- deriving via
---   AllowThunksIn
---     '[ "txWitsBytes"
---      ]
---     (WitnessSetHKD Identity crypto v)
---   instance
---     Crypto crypto => (NoUnexpectedThunks (WitnessSetHKD Identity crypto v))
-
 deriving via UseIsNormalFormNamed "WitnessSetHKD" (WitnessSetHKD Identity crypto v) instance Crypto crypto => NoUnexpectedThunks (WitnessSetHKD Identity crypto v)
 
 type WitnessSet = WitnessSetHKD Identity
@@ -198,6 +188,8 @@ data Tx crypto v = Tx'
           '[ "txFullBytes"
            ]
           (Tx crypto v)
+
+deriving instance (Crypto crypto, Eq v) => Eq (Tx crypto v)
 
 pattern Tx ::
   CV crypto v =>
