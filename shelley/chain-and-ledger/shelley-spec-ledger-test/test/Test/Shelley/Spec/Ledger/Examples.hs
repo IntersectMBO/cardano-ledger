@@ -54,6 +54,7 @@ module Test.Shelley.Spec.Ledger.Examples
     txEx5D,
     txEx5D',
     txEx5D'',
+    testCHAINExample,
   )
 where
 
@@ -63,6 +64,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
 import Control.Iterate.SetAlgebra (biMapFromList)
 import Control.State.Transition.Extended hiding (Assertion)
+import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.List (foldl')
 import qualified Data.List
@@ -251,9 +253,7 @@ import Shelley.Spec.Ledger.UTxO
     makeWitnessesVKey,
     txid,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( Mock,
-  )
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
@@ -265,7 +265,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     zero,
   )
 import Test.Shelley.Spec.Ledger.Utils
-import Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
+import Test.Tasty.HUnit ((@?=), Assertion, assertBool, assertFailure)
 
 data CHAINExample h = CHAINExample
   { -- | State to start testing with
@@ -275,6 +275,16 @@ data CHAINExample h = CHAINExample
     -- | type of fatal error, if failure expected and final chain state if success expected
     intendedResult :: Either [[PredicateFailure (CHAIN h)]] (ChainState h)
   }
+
+-- | Runs example, applies chain state transition system rule (STS),
+--   and checks that trace ends with expected state or expected error.
+testCHAINExample :: CHAINExample C -> Assertion
+testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
+  (checkTrace @(CHAIN C) runShelleyBase () $ pure initSt .- block .-> expectedSt)
+    >> (totalAda expectedSt @?= maxLLSupply)
+testCHAINExample (CHAINExample initSt block predicateFailure@(Left _)) = do
+  let st = runShelleyBase $ applySTSTest @(CHAIN C) (TRC ((), initSt, block))
+  st @?= predicateFailure
 
 data MIRExample h = MIRExample
   { mirStkCred :: Credential 'Staking h,

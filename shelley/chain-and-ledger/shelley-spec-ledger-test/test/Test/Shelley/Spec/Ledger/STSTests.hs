@@ -2,16 +2,21 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.STSTests (stsTests) where
+module Test.Shelley.Spec.Ledger.STSTests
+  ( multisigExamples,
+    chainExamples,
+  )
+where
 
 import Control.State.Transition.Extended (TRC (..))
-import Data.Either (fromRight)
+import Data.Either (fromRight, isRight)
+import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty)
 import Data.Proxy
+import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API
-  ( CHAIN,
-    DPState (..),
+  ( DPState (..),
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
@@ -19,29 +24,31 @@ import Shelley.Spec.Ledger.API
     TICK,
     TickEnv,
   )
+import Shelley.Spec.Ledger.BaseTypes (Network (..))
+import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
     KeyRole (..),
+    asWitness,
+    hashKey,
+    vKey,
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( getGKeys,
+  ( WitHashes (..),
+    getGKeys,
   )
 import Shelley.Spec.Ledger.STS.Chain (totalAda)
 import Shelley.Spec.Ledger.STS.Tick (pattern TickEnv)
+import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Shelley.Spec.Ledger.Tx (hashScript)
+import Shelley.Spec.Ledger.TxData (Wdrl (..), pattern RewardAcnt)
 import Shelley.Spec.Ledger.TxData
   ( PoolParams,
   )
-import Test.Shelley.Spec.Ledger.Address.Bootstrap
-  ( testBootstrapNotSpending,
-    testBootstrapSpending,
-  )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( C,
-  )
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Examples
-  ( CHAINExample (..),
-    ex3A,
+  ( ex3A,
     ex3B,
     ex3C,
     ex3D,
@@ -62,36 +69,28 @@ import Test.Shelley.Spec.Ledger.Examples
     ex6BPoolParams,
     test5DReserves,
     test5DTreasury,
+    testCHAINExample,
   )
+import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Examples.EmptyBlock (exEmptyBlock)
-import Test.Shelley.Spec.Ledger.Examples.PoolLifetime
-  ( poolLifetime1,
-    poolLifetime10,
-    poolLifetime11,
-    poolLifetime12,
-    poolLifetime2,
-    poolLifetime3,
-    poolLifetime4,
-    poolLifetime5,
-    poolLifetime6,
-    poolLifetime7,
-    poolLifetime8,
-    poolLifetime9,
+import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (poolLifetimeExample)
+import Test.Shelley.Spec.Ledger.MultiSigExamples
+  ( aliceAndBob,
+    aliceAndBobOrCarl,
+    aliceAndBobOrCarlAndDaria,
+    aliceAndBobOrCarlOrDaria,
+    aliceOnly,
+    aliceOrBob,
+    applyTxWithScript,
+    bobOnly,
   )
 import Test.Shelley.Spec.Ledger.Utils
   ( applySTSTest,
     maxLLSupply,
     runShelleyBase,
-    testSTS,
   )
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
-
--- | Runs example, applies chain state transition system rule (STS),
---   and checks that trace ends with expected state or expected error.
-testCHAINExample :: CHAINExample C -> Assertion
-testCHAINExample (CHAINExample initSt block expectedSt) =
-  testSTS @(CHAIN C) () initSt block expectedSt
+import Test.Tasty.HUnit ((@?=), Assertion, assertBool, assertFailure, testCase)
 
 -- | Applies the TICK transition to a given chain state,
 -- and check that some component of the result is as expected.
@@ -108,12 +107,6 @@ testTICKChainState initSt env slot focus expectedSt = do
   case result of
     Right res -> focus res @?= expectedSt
     Left err -> assertFailure $ show err
-
-testPreservationOfAda :: CHAINExample C -> Assertion
-testPreservationOfAda (CHAINExample _ _ (Right expectedSt)) =
-  totalAda expectedSt @?= maxLLSupply
-testPreservationOfAda (CHAINExample _ _ (Left predicateFailure)) =
-  assertFailure $ "Ada not preserved " ++ show predicateFailure
 
 newEpochToPoolParams ::
   NewEpochState C ->
@@ -143,77 +136,95 @@ testAdoptLatePoolRegistration =
     (\n -> (newEpochToPoolParams n, newEpochToFuturePoolParams n))
     (ex6BPoolParams, Map.empty)
 
-stsTests :: TestTree
-stsTests =
+pparamUpdateExample :: TestTree
+pparamUpdateExample =
   testGroup
-    "STS Tests"
-    [ testCase "CHAIN example - empty block" $ testCHAINExample exEmptyBlock,
-      testCase "CHAIN example - pool lifetime - register stake key" $ testCHAINExample poolLifetime1,
-      testCase "CHAIN example - pool lifetime - delegate stake and create reward update" $ testCHAINExample poolLifetime2,
-      testCase "CHAIN example - pool lifetime - new epoch changes" $ testCHAINExample poolLifetime3,
-      testCase "CHAIN example - pool lifetime - second reward update" $ testCHAINExample poolLifetime4,
-      testCase "CHAIN example - pool lifetime - nonempty pool distr" $ testCHAINExample poolLifetime5,
-      testCase "CHAIN example - pool lifetime - decentralized block" $ testCHAINExample poolLifetime6,
-      testCase "CHAIN example - pool lifetime - prelude to the first nontrivial rewards" $ testCHAINExample poolLifetime7,
-      testCase "CHAIN example - pool lifetime - create a nontrivial rewards" $ testCHAINExample poolLifetime8,
-      testCase "CHAIN example - pool lifetime - apply a nontrivial rewards" $ testCHAINExample poolLifetime9,
-      testCase "CHAIN example - pool lifetime - drain reward account and deregister" $ testCHAINExample poolLifetime10,
-      testCase "CHAIN example - pool lifetime - stage stake pool retirement" $ testCHAINExample poolLifetime11,
-      testCase "CHAIN example - pool lifetime - reap stake pool" $ testCHAINExample poolLifetime12,
-      testCase "CHAIN example 3A - get 3/7 votes for a pparam update" $ testCHAINExample (ex3A p),
-      testCase "CHAIN example 3B - get 5/7 votes for a pparam update" $ testCHAINExample (ex3B p),
-      testCase "CHAIN example 3C - votes for the next epoch" $ testCHAINExample (ex3C p),
-      testCase "CHAIN example 3D - processes a pparam update" $ testCHAINExample (ex3D p),
-      testCase "CHAIN example 4A - stage genesis key delegation" $ testCHAINExample (ex4A p),
-      testCase "CHAIN example 4B - adopt genesis key delegation" $ testCHAINExample (ex4B p),
-      testCase "CHAIN example 5A - create MIR cert - reserves" $ testCHAINExample (ex5AReserves p),
-      testCase "CHAIN example 5A - create MIR cert - treasury" $ testCHAINExample (ex5ATreasury p),
-      testCase "CHAIN example 5B - FAIL: insufficient core node signatures MIR reserves" $
+    "protocol param update"
+    [ testCase "get 3/7 votes for a pparam update" $ testCHAINExample (ex3A p),
+      testCase "get 5/7 votes for a pparam update" $ testCHAINExample (ex3B p),
+      testCase "votes for the next epoch" $ testCHAINExample (ex3C p),
+      testCase "processes a pparam update" $ testCHAINExample (ex3D p)
+    ]
+  where
+    p :: Proxy C
+    p = Proxy
+
+genesisDelegExample :: TestTree
+genesisDelegExample =
+  testGroup
+    "genesis delegation"
+    [ testCase "stage genesis key delegation" $ testCHAINExample (ex4A p),
+      testCase "adopt genesis key delegation" $ testCHAINExample (ex4B p)
+    ]
+  where
+    p :: Proxy C
+    p = Proxy
+
+mirExample :: TestTree
+mirExample =
+  testGroup
+    "move inst rewards"
+    [ testCase "create MIR cert - reserves" $ testCHAINExample (ex5AReserves p),
+      testCase "create MIR cert - treasury" $ testCHAINExample (ex5ATreasury p),
+      testCase "FAIL: insufficient core node signatures MIR reserves" $
         testCHAINExample (ex5BReserves p),
-      testCase "CHAIN example 5B - FAIL: insufficient core node signatures MIR treasury" $
+      testCase "FAIL: insufficient core node signatures MIR treasury" $
         testCHAINExample (ex5BTreasury p),
-      testCase "CHAIN example 5C - FAIL: MIR insufficient reserves" $
+      testCase "FAIL: MIR insufficient reserves" $
         testCHAINExample (ex5CReserves p),
-      testCase "CHAIN example 5C - FAIL: MIR insufficient treasury" $
+      testCase "FAIL: MIR insufficient treasury" $
         testCHAINExample (ex5CTreasury p),
-      testCase "CHAIN example 5D - apply reserves MIR at epoch boundary" (test5DReserves p),
-      testCase "CHAIN example 5D - apply treasury MIR at epoch boundary" (test5DTreasury p),
-      testCase "CHAIN example 6A - Early Pool Re-registration" $ testCHAINExample (ex6A p),
-      testCase "CHAIN example 6A' - Late Pool Re-registration" $ testCHAINExample (ex6A' p),
-      testCase "CHAIN example 6B - Adopt Early Pool Re-registration" $ testAdoptEarlyPoolRegistration,
-      testCase "CHAIN example 6B' - Adopt Late Pool Re-registration" $ testAdoptLatePoolRegistration,
-      testCase "CHAIN example - empty block - Preservation of ADA" $ testPreservationOfAda exEmptyBlock,
-      testCase "CHAIN example - pool lifetime 1 - Preservation of ADA" $ testPreservationOfAda (poolLifetime1),
-      testCase "CHAIN example - pool lifetime 2 - Preservation of ADA" $ testPreservationOfAda poolLifetime2,
-      testCase "CHAIN example - pool lifetime 3 - Preservation of ADA" $ testPreservationOfAda poolLifetime3,
-      testCase "CHAIN example - pool lifetime 4 - Preservation of ADA" $ testPreservationOfAda poolLifetime4,
-      testCase "CHAIN example - pool lifetime 5 - Preservation of ADA" $ testPreservationOfAda poolLifetime5,
-      testCase "CHAIN example - pool lifetime 6 - Preservation of ADA" $ testPreservationOfAda poolLifetime6,
-      testCase "CHAIN example - pool lifetime 7 - Preservation of ADA" $ testPreservationOfAda poolLifetime7,
-      testCase "CHAIN example - pool lifetime 8 - Preservation of ADA" $ testPreservationOfAda poolLifetime8,
-      testCase "CHAIN example - pool lifetime 9 - Preservation of ADA" $ testPreservationOfAda poolLifetime9,
-      testCase "CHAIN example - pool lifetime 10 - Preservation of ADA" $ testPreservationOfAda poolLifetime10,
-      testCase "CHAIN example - pool lifetime 11 - Preservation of ADA" $ testPreservationOfAda poolLifetime11,
-      testCase "CHAIN example - pool lifetime 12 - Preservation of ADA" $ testPreservationOfAda poolLifetime12,
-      testCase "CHAIN example 3A - Preservation of ADA" $ testPreservationOfAda (ex3A p),
-      testCase "CHAIN example 3B - Preservation of ADA" $ testPreservationOfAda (ex3B p),
-      testCase "CHAIN example 3C - Preservation of ADA" $ testPreservationOfAda (ex3C p),
-      testCase "CHAIN example 3D - Preservation of ADA" $ testPreservationOfAda (ex3D p),
-      testCase "CHAIN example 4A - Preservation of ADA" $ testPreservationOfAda (ex4A p),
-      testCase "CHAIN example 4B - Preservation of ADA" $ testPreservationOfAda (ex4B p),
-      testCase "CHAIN example 5A Reserves - Preservation of ADA" $
-        testPreservationOfAda (ex5AReserves p),
-      testCase "CHAIN example 5A Treasury - Preservation of ADA" $
-        testPreservationOfAda (ex5ATreasury p),
-      testCase "CHAIN example 5D Reserves - Preservation of ADA" $
+      testCase "apply reserves MIR at epoch boundary" (test5DReserves p),
+      testCase "apply treasury MIR at epoch boundary" (test5DTreasury p)
+    ]
+  where
+    p :: Proxy C
+    p = Proxy
+
+latePoolRegExample :: TestTree
+latePoolRegExample =
+  testGroup
+    "late pool registration"
+    [ testCase "Early Pool Re-registration" $ testCHAINExample (ex6A p),
+      testCase "Late Pool Re-registration" $ testCHAINExample (ex6A' p),
+      testCase "Adopt Early Pool Re-registration" $ testAdoptEarlyPoolRegistration,
+      testCase "Adopt Late Pool Re-registration" $ testAdoptLatePoolRegistration
+    ]
+  where
+    p :: Proxy C
+    p = Proxy
+
+miscPresOfAdaInExamples :: TestTree
+miscPresOfAdaInExamples =
+  testGroup
+    "misc preservation of ADA"
+    [ testCase "CHAIN example 5D Reserves" $
         (totalAda (fromRight (error "CHAIN example 5D") (ex5DReserves' p)) @?= maxLLSupply),
-      testCase "CHAIN example 5D Treasury - Preservation of ADA" $
-        (totalAda (fromRight (error "CHAIN example 5D") (ex5DTreasury' p)) @?= maxLLSupply),
-      testCase "CHAIN example 6A - Preservation of ADA" $ testPreservationOfAda (ex6A p),
-      {-
-       - TODO re-enable after the script embargo has been lifted
-       -
-      testCase "Alice uses SingleSig script" testAliceSignsAlone,
+      testCase "CHAIN example 5D Treasury" $
+        (totalAda (fromRight (error "CHAIN example 5D") (ex5DTreasury' p)) @?= maxLLSupply)
+    ]
+  where
+    p :: Proxy C
+    p = Proxy
+
+chainExamples :: TestTree
+chainExamples =
+  testGroup
+    "CHAIN examples"
+    [ testCase "empty block" $ testCHAINExample exEmptyBlock,
+      poolLifetimeExample,
+      pparamUpdateExample,
+      genesisDelegExample,
+      mirExample,
+      latePoolRegExample,
+      miscPresOfAdaInExamples
+    ]
+
+multisigExamples :: TestTree
+multisigExamples =
+  testGroup
+    "MultiSig Examples"
+    [ testCase "Alice uses SingleSig script" testAliceSignsAlone,
       testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign,
       testCase "Everybody signs in multi-sig" testEverybodySigns,
       testCase "FAIL: Wrong script for correct signatures" testWrongScript,
@@ -238,18 +249,9 @@ stsTests =
       testCase "withdraw from script locked account, same script" testRwdAliceSignsAlone,
       testCase "FAIL: withdraw from script locked account" testRwdAliceSignsAlone',
       testCase "withdraw from script locked account, different script" testRwdAliceSignsAlone'',
-      testCase "FAIL: withdraw from script locked account, signed, missing script" testRwdAliceSignsAlone''',
-      -}
-      testCase "spend from a bootstrap address" testBootstrapSpending,
-      testCase "don't spend from a bootstrap address" testBootstrapNotSpending
+      testCase "FAIL: withdraw from script locked account, signed, missing script" testRwdAliceSignsAlone'''
     ]
-  where
-    p :: Proxy C
-    p = Proxy
 
-{-
- - TODO re-enable after the script embargo has been lifted
- -
 testAliceSignsAlone :: Assertion
 testAliceSignsAlone =
   assertBool s (isRight utxoSt')
@@ -257,7 +259,7 @@ testAliceSignsAlone =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl Map.empty) 0 [asWitness alicePay]
+      applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl Map.empty) 0 [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
 
 testAliceDoesntSign :: Assertion
@@ -267,7 +269,13 @@ testAliceDoesntSign =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl Map.empty) 0 [asWitness bobPay, asWitness carlPay, asWitness dariaPay]
+      applyTxWithScript
+        p
+        [(aliceOnly p, 11000)]
+        [aliceOnly p]
+        (Wdrl Map.empty)
+        0
+        [asWitness Cast.bobPay, asWitness Cast.carlPay, asWitness Cast.dariaPay]
 
 testEverybodySigns :: Assertion
 testEverybodySigns =
@@ -282,10 +290,10 @@ testEverybodySigns =
         [aliceOnly p]
         (Wdrl Map.empty)
         0
-        [ asWitness alicePay,
-          asWitness bobPay,
-          asWitness carlPay,
-          asWitness dariaPay
+        [ asWitness Cast.alicePay,
+          asWitness Cast.bobPay,
+          asWitness Cast.carlPay,
+          asWitness Cast.dariaPay
         ]
     s = "problem: " ++ show utxoSt'
 
@@ -302,7 +310,7 @@ testWrongScript =
         [aliceOrBob p]
         (Wdrl Map.empty)
         0
-        [asWitness alicePay, asWitness bobPay]
+        [asWitness Cast.alicePay, asWitness Cast.bobPay]
 
 testAliceOrBob :: Assertion
 testAliceOrBob =
@@ -311,7 +319,7 @@ testAliceOrBob =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOrBob p, 11000)] [aliceOrBob p] (Wdrl Map.empty) 0 [asWitness alicePay]
+      applyTxWithScript p [(aliceOrBob p, 11000)] [aliceOrBob p] (Wdrl Map.empty) 0 [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
 
 testAliceOrBob' :: Assertion
@@ -321,7 +329,7 @@ testAliceOrBob' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOrBob p, 11000)] [aliceOrBob p] (Wdrl Map.empty) 0 [asWitness bobPay]
+      applyTxWithScript p [(aliceOrBob p, 11000)] [aliceOrBob p] (Wdrl Map.empty) 0 [asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBob :: Assertion
@@ -337,7 +345,7 @@ testAliceAndBob =
         [aliceAndBob p]
         (Wdrl Map.empty)
         0
-        [asWitness alicePay, asWitness bobPay]
+        [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBob' :: Assertion
@@ -347,7 +355,7 @@ testAliceAndBob' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBob p, 11000)] [aliceAndBob p] (Wdrl Map.empty) 0 [asWitness alicePay]
+      applyTxWithScript p [(aliceAndBob p, 11000)] [aliceAndBob p] (Wdrl Map.empty) 0 [asWitness Cast.alicePay]
 
 testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
@@ -356,7 +364,7 @@ testAliceAndBob'' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBob p, 11000)] [aliceAndBob p] (Wdrl Map.empty) 0 [asWitness bobPay]
+      applyTxWithScript p [(aliceAndBob p, 11000)] [aliceAndBob p] (Wdrl Map.empty) 0 [asWitness Cast.bobPay]
 
 testAliceAndBobOrCarl :: Assertion
 testAliceAndBobOrCarl =
@@ -371,7 +379,7 @@ testAliceAndBobOrCarl =
         [aliceAndBobOrCarl p]
         (Wdrl Map.empty)
         0
-        [asWitness alicePay, asWitness bobPay]
+        [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarl' :: Assertion
@@ -381,7 +389,7 @@ testAliceAndBobOrCarl' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBobOrCarl p, 11000)] [aliceAndBobOrCarl p] (Wdrl Map.empty) 0 [asWitness carlPay]
+      applyTxWithScript p [(aliceAndBobOrCarl p, 11000)] [aliceAndBobOrCarl p] (Wdrl Map.empty) 0 [asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlAndDaria :: Assertion
@@ -397,7 +405,7 @@ testAliceAndBobOrCarlAndDaria =
         [aliceAndBobOrCarlAndDaria p]
         (Wdrl Map.empty)
         0
-        [asWitness alicePay, asWitness bobPay]
+        [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlAndDaria' :: Assertion
@@ -413,7 +421,7 @@ testAliceAndBobOrCarlAndDaria' =
         [aliceAndBobOrCarlAndDaria p]
         (Wdrl Map.empty)
         0
-        [asWitness carlPay, asWitness dariaPay]
+        [asWitness Cast.carlPay, asWitness Cast.dariaPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria :: Assertion
@@ -429,7 +437,7 @@ testAliceAndBobOrCarlOrDaria =
         [aliceAndBobOrCarlOrDaria p]
         (Wdrl Map.empty)
         0
-        [asWitness alicePay, asWitness bobPay]
+        [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria' :: Assertion
@@ -445,7 +453,7 @@ testAliceAndBobOrCarlOrDaria' =
         [aliceAndBobOrCarlOrDaria p]
         (Wdrl Map.empty)
         0
-        [asWitness carlPay]
+        [asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria'' :: Assertion
@@ -461,7 +469,7 @@ testAliceAndBobOrCarlOrDaria'' =
         [aliceAndBobOrCarlOrDaria p]
         (Wdrl Map.empty)
         0
-        [asWitness dariaPay]
+        [asWitness Cast.dariaPay]
     s = "problem: " ++ show utxoSt'
 
 -- multiple script-locked outputs
@@ -483,7 +491,7 @@ testTwoScripts =
         ]
         (Wdrl Map.empty)
         0
-        [asWitness bobPay, asWitness carlPay]
+        [asWitness Cast.bobPay, asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
 
 testTwoScripts' :: Assertion
@@ -503,7 +511,7 @@ testTwoScripts' =
         ]
         (Wdrl Map.empty)
         0
-        [asWitness bobPay, asWitness carlPay]
+        [asWitness Cast.bobPay, asWitness Cast.carlPay]
 
 -- script and skey locked
 
@@ -520,7 +528,7 @@ testScriptAndSKey =
         [aliceAndBob p]
         (Wdrl Map.empty)
         1000
-        [asWitness alicePay, asWitness bobPay]
+        [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
 testScriptAndSKey' :: Assertion
@@ -541,8 +549,8 @@ testScriptAndSKey' =
         [aliceOrBob p]
         (Wdrl Map.empty)
         1000
-        [asWitness bobPay]
-    wits = Set.singleton $ asWitness $ hashKey $ vKey alicePay
+        [asWitness Cast.bobPay]
+    wits = Set.singleton $ asWitness $ hashKey $ vKey Cast.alicePay
 
 testScriptAndSKey'' :: Assertion
 testScriptAndSKey'' =
@@ -557,7 +565,7 @@ testScriptAndSKey'' =
         [aliceOrBob p]
         (Wdrl Map.empty)
         1000
-        [asWitness alicePay]
+        [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
 
 testScriptAndSKey''' :: Assertion
@@ -573,7 +581,7 @@ testScriptAndSKey''' =
         [aliceAndBobOrCarl p]
         (Wdrl Map.empty)
         1000
-        [asWitness alicePay, asWitness carlPay]
+        [asWitness Cast.alicePay, asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
 
 -- Withdrawals
@@ -591,7 +599,7 @@ testRwdAliceSignsAlone =
         [aliceOnly p]
         (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (aliceOnly p))) 1000)
         0
-        [asWitness alicePay]
+        [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone' :: Assertion
@@ -607,7 +615,7 @@ testRwdAliceSignsAlone' =
         [aliceOnly p, bobOnly p]
         (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000)
         0
-        [asWitness alicePay]
+        [asWitness Cast.alicePay]
 
 testRwdAliceSignsAlone'' :: Assertion
 testRwdAliceSignsAlone'' =
@@ -622,7 +630,7 @@ testRwdAliceSignsAlone'' =
         [aliceOnly p, bobOnly p]
         (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000)
         0
-        [asWitness alicePay, asWitness bobPay]
+        [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone''' :: Assertion
@@ -638,5 +646,4 @@ testRwdAliceSignsAlone''' =
         [aliceOnly p]
         (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000)
         0
-        [asWitness alicePay, asWitness bobPay]
--}
+        [asWitness Cast.alicePay, asWitness Cast.bobPay]

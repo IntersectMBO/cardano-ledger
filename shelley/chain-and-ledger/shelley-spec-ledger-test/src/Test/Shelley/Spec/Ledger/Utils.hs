@@ -71,9 +71,9 @@ import Cardano.Slotting.EpochInfo
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace
-  ( checkTrace,
-    (.-),
+  ( (.-),
     (.->),
+    checkTrace,
   )
 import Data.Coerce (coerce)
 import Data.Functor ((<&>))
@@ -81,7 +81,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
 import Data.Word (Word64)
-import Hedgehog (MonadTest, (===))
+import Hedgehog ((===), MonadTest)
 import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
@@ -112,8 +112,8 @@ import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Test.Tasty.HUnit
-  ( Assertion,
-    (@?=),
+  ( (@?=),
+    Assertion,
   )
 
 -- =======================================================
@@ -274,8 +274,8 @@ testSTS ::
   Assertion
 testSTS env initSt signal (Right expectedSt) = do
   checkTrace @s runShelleyBase env $ pure initSt .- signal .-> expectedSt
-testSTS env initSt block predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTSTest @s (TRC (env, initSt, block))
+testSTS env initSt sig predicateFailure@(Left _) = do
+  let st = runShelleyBase $ applySTSTest @s (TRC (env, initSt, sig))
   st @?= predicateFailure
 
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a

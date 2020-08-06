@@ -23,6 +23,7 @@ module Test.Shelley.Spec.Ledger.Examples.PoolLifetime
     poolLifetime10,
     poolLifetime11,
     poolLifetime12,
+    poolLifetimeExample,
   )
 where
 
@@ -88,7 +89,7 @@ import Shelley.Spec.Ledger.TxData
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
-import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..))
+import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import qualified Test.Shelley.Spec.Ledger.Examples.Combinators as C
 import Test.Shelley.Spec.Ledger.Examples.Federation
@@ -116,6 +117,8 @@ import Test.Shelley.Spec.Ledger.Utils
     maxLLSupply,
     testGlobals,
   )
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase)
 
 aliceInitCoin :: Coin
 aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -965,3 +968,25 @@ expectedStEx12 =
 -- Reap Alice's stake pool.
 poolLifetime12 :: Mock c => CHAINExample c
 poolLifetime12 = CHAINExample expectedStEx11 blockEx12 (Right expectedStEx12)
+
+--
+-- Pool Lifetime Test Group
+--
+
+poolLifetimeExample :: TestTree
+poolLifetimeExample =
+  testGroup
+    "pool lifetime"
+    [ testCase "initial registrations" $ testCHAINExample poolLifetime1,
+      testCase "delegate stake and create reward update" $ testCHAINExample poolLifetime2,
+      testCase "new epoch changes" $ testCHAINExample poolLifetime3,
+      testCase "second reward update" $ testCHAINExample poolLifetime4,
+      testCase "nonempty pool distr" $ testCHAINExample poolLifetime5,
+      testCase "decentralized block" $ testCHAINExample poolLifetime6,
+      testCase "prelude to the first nontrivial rewards" $ testCHAINExample poolLifetime7,
+      testCase "create a nontrivial rewards" $ testCHAINExample poolLifetime8,
+      testCase "apply a nontrivial rewards" $ testCHAINExample poolLifetime9,
+      testCase "drain reward account and deregister" $ testCHAINExample poolLifetime10,
+      testCase "stage stake pool retirement" $ testCHAINExample poolLifetime11,
+      testCase "reap stake pool" $ testCHAINExample poolLifetime12
+    ]
