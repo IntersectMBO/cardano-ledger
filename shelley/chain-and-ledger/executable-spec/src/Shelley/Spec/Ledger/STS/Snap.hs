@@ -17,10 +17,8 @@ import Control.State.Transition
     TransitionRule,
     judgmentContext,
   )
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),

@@ -20,7 +20,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,

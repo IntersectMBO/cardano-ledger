@@ -44,7 +44,6 @@ import Shelley.Spec.Ledger.BlockChain
     incrBlocks,
     poolIDfromBHBody,
   )
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState (AccountState, LedgerState)

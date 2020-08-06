@@ -36,7 +36,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,

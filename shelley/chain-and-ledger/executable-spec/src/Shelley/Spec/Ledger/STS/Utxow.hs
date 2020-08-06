@@ -44,7 +44,6 @@ import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
@@ -54,7 +53,6 @@ import Shelley.Spec.Ledger.BaseTypes
     quorum,
     (==>),
   )
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,

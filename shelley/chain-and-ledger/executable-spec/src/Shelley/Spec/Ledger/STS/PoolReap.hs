@@ -21,7 +21,6 @@ import Control.State.Transition
   )
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState

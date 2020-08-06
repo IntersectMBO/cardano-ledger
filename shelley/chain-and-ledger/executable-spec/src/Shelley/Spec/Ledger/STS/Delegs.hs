@@ -31,7 +31,6 @@ import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (getRwdCred, mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,

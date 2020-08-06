@@ -30,7 +30,6 @@ import Data.Foldable (toList)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
