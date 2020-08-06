@@ -1,11 +1,16 @@
-{ pkgs ? (import  ../../../nix/default.nix {}).pkgs
-}:
+{ lib, latex, texlive, gitMinimal }:
 
-with pkgs;
+latex.buildLatex {
+  name = "shelley-ledger-spec";
+  texFiles = [ "ledger-spec" ];
+  meta = with lib; {
+    description = "Shelley Ledger Specification";
+    license = licenses.asl20;
+    platforms = platforms.linux;
+  };
+  src = latex.filterLatex ./.;
 
-stdenv.mkDerivation {
-  name = "docsEnv";
-  buildInputs = [ (texlive.combine {
+  texInputs = {
                     inherit (texlive)
                       scheme-small
 
@@ -31,15 +36,7 @@ stdenv.mkDerivation {
                       zref
 
                       ;
-                  })
-                  gitMinimal
-                ];
-  src = ./.;
-  buildPhase = "make";
 
-  meta = with lib; {
-    description = "Shelley Ledger Specification";
-    license = licenses.bsd3;
-    platforms = platforms.linux;
   };
+  buildInputs = [ gitMinimal ];
 }

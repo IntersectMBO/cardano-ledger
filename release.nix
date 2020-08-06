@@ -58,25 +58,20 @@ let
   } // (mkRequiredJob (
       collectTests jobs.native.checks.tests ++
       collectTests jobs.native.benchmarks ++
-      [ jobs.native.byronLedgerSpec.x86_64-linux
-        jobs.native.byronChainSpec.x86_64-linux
-        jobs.native.semanticsSpec.x86_64-linux
-        jobs.native.shelleyLedgerSpec.x86_64-linux
-        jobs.native.delegationDesignSpec.x86_64-linux
-        jobs.native.nonIntegerCalculations.x86_64-linux
-        jobs.native.blocksCDDLSpec.x86_64-linux
-      ]
+      mapAttrsToList (_: spec: spec.x86_64-linux or null) jobs.native.specs
     ))
 
-  # Collect all spec PDFs, without system suffix
-  // { inherit (project)
-         byronLedgerSpec
-         byronChainSpec
-         semanticsSpec
-         shelleyLedgerSpec
-         delegationDesignSpec
-         nonIntegerCalculations
-         blocksCDDLSpec
-       ; };
+  // {
+    # Collect all spec PDFs, without system suffix.
+    specs = removeAttrs project.specs ["recurseForDerivations"];
+    # Compatibility with old names
+    byronLedgerSpec = project.specs.byron-ledger;
+    byronChainSpec = project.specs.byron-chain;
+    semanticsSpec = project.specs.small-step-semantics;
+    shelleyLedgerSpec = project.specs.shelley-ledger;
+    delegationDesignSpec = project.specs.delegation-design;
+    nonIntegerCalculations = project.specs.non-integer-calculations;
+    blocksCDDLSpec = project.specs.blocks-cddl;
+  };
 
 in jobs
