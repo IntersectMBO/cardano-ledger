@@ -327,7 +327,8 @@ varyDelegState tag fixed changes initstate action =
 -- =============================================================================
 
 main :: IO ()
--- main=profileValid
+main=profileValid
+{-
 main =
   defaultMain $
     [ bgroup "vary input size" $
@@ -353,3 +354,4 @@ main =
       bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
       validGroup
     ]
+-}
