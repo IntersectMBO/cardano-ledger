@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Utils
     epochFromSlotNo,
     evolveKESUntil,
     slotFromEpoch,
+    epochSize,
     mkHash,
     mkKeyPair,
     mkKeyPair',
@@ -61,13 +62,18 @@ import Cardano.Crypto.VRF
     genKeyVRF,
   )
 import Cardano.Prelude (Coercible, asks)
-import Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
+import Cardano.Slotting.EpochInfo
+  ( epochInfoEpoch,
+    epochInfoFirst,
+    epochInfoSize,
+    fixedSizeEpochInfo,
+  )
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace
-  ( checkTrace,
-    (.-),
+  ( (.-),
     (.->),
+    checkTrace,
   )
 import Data.Coerce (coerce)
 import Data.Functor ((<&>))
@@ -75,7 +81,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
 import Data.Word (Word64)
-import Hedgehog (MonadTest, (===))
+import Hedgehog ((===), MonadTest)
 import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
@@ -106,8 +112,8 @@ import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Test.Tasty.HUnit
-  ( Assertion,
-    (@?=),
+  ( (@?=),
+    Assertion,
   )
 
 -- =======================================================
@@ -212,6 +218,9 @@ epochFromSlotNo = runIdentity . epochInfoEpoch (epochInfo testGlobals)
 slotFromEpoch :: EpochNo -> SlotNo
 slotFromEpoch = runIdentity . epochInfoFirst (epochInfo testGlobals)
 
+epochSize :: EpochNo -> EpochSize
+epochSize = runIdentity . epochInfoSize (epochInfo testGlobals)
+
 -- | Try to evolve KES key until specific KES period is reached, given the
 -- current KES period.
 evolveKESUntil ::
@@ -265,8 +274,8 @@ testSTS ::
   Assertion
 testSTS env initSt signal (Right expectedSt) = do
   checkTrace @s runShelleyBase env $ pure initSt .- signal .-> expectedSt
-testSTS env initSt block predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTSTest @s (TRC (env, initSt, block))
+testSTS env initSt sig predicateFailure@(Left _) = do
+  let st = runShelleyBase $ applySTSTest @s (TRC (env, initSt, sig))
   st @?= predicateFailure
 
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a

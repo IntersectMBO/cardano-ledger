@@ -7,7 +7,7 @@ ghcid: ## Run ghcid
 ghcid-test: ## Have ghcid run the test suite
 # Note, to run just tests matching the pattern "foo", run "TASTY_PATTERN=foo make ghcid-test"
 	ghcid \
-          --command "stack ghci shelley-spec-ledger:lib shelley-spec-ledger:test:shelley-spec-ledger-test --ghci-options='-fobject-code -w'" \
+          --command "stack ghci shelley-spec-ledger-test:lib shelley-spec-ledger-test:test:shelley-spec-ledger-test --ghci-options='-fobject-code -w'" \
           --test "main"
 
 .PHONY: ghcid ghcid-test help
