@@ -42,6 +42,7 @@ module Shelley.Spec.Ledger.Address
     getRewardAcnt,
     getScriptHash,
     getVariableLengthNat,
+    payCredIsScript,
     putAddr,
     putCredential,
     putPtr,
