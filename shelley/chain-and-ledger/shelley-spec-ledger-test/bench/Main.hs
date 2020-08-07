@@ -6,10 +6,10 @@ module Main where
 
 import BenchUTxOAggregate (expr, genTestCase)
 import BenchValidation
-  ( benchValidate,
+  ( applyBlock,
+    benchValidate,
     benchreValidate,
     genUpdateInputs,
-    applyBlock,
     sizes,
     updateAndTickChain,
     updateChain,
@@ -38,7 +38,12 @@ import Data.Word (Word64)
 -- How to precompute env for the StakeKey transactions
 -- How to compute an initial state with N StakePools
 
-import Shelley.Spec.Ledger.Bench.Gen (genTx)
+import Shelley.Spec.Ledger.Bench.Gen
+  ( genBlock,
+    genBlock2,
+    genChainState,
+    genTx,
+  )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
@@ -228,7 +233,7 @@ validGroup =
 profileValid :: IO ()
 profileValid = do
   state <- validateInput 10000
-  let ans = sum [ applyBlock state n | n <- [1..10000::Int]]
+  let ans = sum [applyBlock state n | n <- [1 .. 10000 :: Int]]
   putStrLn (show ans)
   pure ()
 
@@ -327,7 +332,6 @@ varyDelegState tag fixed changes initstate action =
 -- =============================================================================
 
 main :: IO ()
--- main=profileValid
 main =
   defaultMain $
     [ bgroup "vary input size" $
@@ -351,5 +355,21 @@ main =
         ],
       bgroup "vary utxo at epoch boundary" $ (epochAt <$> [5000, 50000, 500000]),
       bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
-      validGroup
+      validGroup,
+      -- Benchmarks for the various generators
+      bgroup "gen" $
+        [ env
+            (genChainState 100000)
+            ( \cs ->
+                bgroup
+                  "block"
+                  [ bench "genBlock" $ whnfIO $ genBlock cs,
+                    bench "genBlock2" $ whnfIO $ genBlock2 cs
+                  ]
+            ),
+          bgroup
+            "genTx"
+            [ bench "1000" $ whnfIO $ genTx 1000
+            ]
+        ]
     ]
