@@ -11,7 +11,7 @@ module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
-import Control.State.Transition.Trace (checkTrace, (.-), (.->))
+import Control.State.Transition.Trace ((.-), (.->), checkTrace)
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -101,6 +101,10 @@ import Shelley.Spec.Ledger.TxData
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import qualified Test.QuickCheck.Gen as Gen
+import Test.Shelley.Spec.Ledger.Address.Bootstrap
+  ( testBootstrapNotSpending,
+    testBootstrapSpending,
+  )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -732,6 +736,14 @@ testsInvalidLedger =
       testCase "Invalid Ledger - PoolCostTooSmall" testPoolCostTooSmall
     ]
 
+testBootstrap :: TestTree
+testBootstrap =
+  testGroup
+    "bootstrap witnesses"
+    [ testCase "spend from a bootstrap address" testBootstrapSpending,
+      testCase "don't spend from a bootstrap address" testBootstrapNotSpending
+    ]
+
 unitTests :: TestTree
 unitTests =
   testGroup
@@ -740,5 +752,6 @@ unitTests =
       testsPParams,
       sizeTests,
       testTruncateUnitInterval,
-      testCheckLeaderVal
+      testCheckLeaderVal,
+      testBootstrap
     ]
