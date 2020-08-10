@@ -76,7 +76,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     NatNonce (..),
     genesisCoins,
     genesisId,
-    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     zero,
   )
@@ -169,7 +169,7 @@ txEx1 =
 
 blockEx1 :: forall c. ExMock c => Block c
 blockEx1 =
-  mkBlock
+  mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule ppEx 10)
     [txEx1]
@@ -243,7 +243,7 @@ txEx2 =
 
 blockEx2 :: forall c. ExMock c => Block c
 blockEx2 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
     (coreNodeKeysBySchedule ppEx 20)
     [txEx2]
@@ -332,7 +332,7 @@ txEx3 =
 
 blockEx3 :: forall c. ExMock c => Block c
 blockEx3 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx2)
     (coreNodeKeysBySchedule ppEx 80)
     [txEx3]
@@ -370,7 +370,7 @@ epoch1Nonce = (chainCandidateNonce (expectedStEx3 @c)) ⭒ mkNonceFromNumber 123
 
 blockEx4 :: forall c. ExMock c => Block c
 blockEx4 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx3)
     (coreNodeKeysBySchedule ppEx 110)
     []
