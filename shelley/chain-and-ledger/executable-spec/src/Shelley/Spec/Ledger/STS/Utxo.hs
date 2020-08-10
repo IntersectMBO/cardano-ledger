@@ -64,7 +64,6 @@ import Shelley.Spec.Ledger.LedgerState
     minfee,
     produced,
     txsize,
-    scaledSizeCompactValue,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..))
@@ -295,21 +294,11 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
+-- TODO check voper
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
-      outputsTooSmall = [out | out@(TxOut _ vl) <- outputs, (voper Lt) vl (vinject $ (Coin $ scaledSizeCompactValue vl) * minUTxOValue)]
+      outputsTooSmall = [out | out@(TxOut _ vl) <- outputs, (voper Gt) (vinject $ (Coin $ vsize vl) * minUTxOValue) vl]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
-
--- .
---   let outputs = Map.elems $ unUTxO (txouts txb)
---       outputValues = [v | (UTxOOut _ v) <- outputs] -- TODO why does rng still require Ord?!
---       minUTxOValue = map (\ov -> (getAdaAmount $ compactValueToValue ov) < ((Coin $ scaledSizeCompactValue ov) * (_minUTxOValue pp))) outputValues
---     -- TODO check this, uint? price it as compact value?
---     -- TODO make this calc right
---
---   all (True ==) minUTxOValue
---     ?! OutputTooSmallUTxO
---       (filter (\(UTxOOut _ v) -> (getAdaAmount $ compactValueToValue v) < ((Coin $ scaledSizeCompactValue v) * (_minUTxOValue pp))) outputs )
 
 -- TODO add forge
 -- TODO add forge errors

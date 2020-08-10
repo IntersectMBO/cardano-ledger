@@ -23,10 +23,8 @@ import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Data.Sequence (Seq)
-import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes (Globals)
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
@@ -34,6 +32,7 @@ import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
 import qualified Shelley.Spec.Ledger.Tx as Tx
+import Shelley.Spec.Ledger.Value
 
 type MempoolEnv = Ledgers.LedgersEnv
 
@@ -53,7 +52,7 @@ type MempoolState = LedgerState.LedgerState
 --   included until a certain number of slots before the end of the epoch. A
 --   protocol update proposal submitted after this is considered invalid.
 mkMempoolEnv ::
-  ShelleyState crypto ->
+  ShelleyState crypto v ->
   SlotNo ->
   MempoolEnv
 mkMempoolEnv
@@ -72,40 +71,40 @@ mkMempoolEnv
 --   The given mempool state may then be evolved using 'applyTxs', but should be
 --   regenerated when the ledger state gets updated (e.g. through application of
 --   a new block).
-mkMempoolState :: ShelleyState crypto -> MempoolState crypto
+mkMempoolState :: ShelleyState crypto v -> MempoolState crypto v
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
   LedgerState.esLState nesEs
 
-data ApplyTxError crypto = ApplyTxError [PredicateFailure (LEDGERS crypto)]
+data ApplyTxError crypto v = ApplyTxError [PredicateFailure (LEDGERS crypto v)]
   deriving (Eq, Show)
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (ApplyTxError crypto)
+  (CV crypto v) =>
+  ToCBOR (ApplyTxError crypto v)
   where
   toCBOR (ApplyTxError es) = toCBOR es
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (ApplyTxError crypto)
+  (CV crypto v) =>
+  FromCBOR (ApplyTxError crypto v)
   where
   fromCBOR = ApplyTxError <$> fromCBOR
 
 applyTxs ::
-  forall crypto m.
-  ( Crypto crypto,
-    MonadError (ApplyTxError crypto) m,
-    DSignable crypto (Hash crypto (Tx.TxBody crypto))
+  forall crypto m v.
+  ( CV crypto v,
+    MonadError (ApplyTxError crypto v) m,
+    DSignable crypto (Hash crypto (Tx.TxBody crypto v))
   ) =>
   Globals ->
   MempoolEnv ->
-  Seq (Tx crypto) ->
-  MempoolState crypto ->
-  m (MempoolState crypto)
+  Seq (Tx crypto v) ->
+  MempoolState crypto v ->
+  m (MempoolState crypto v)
 applyTxs globals env txs state =
   let res =
         flip runReader globals
-          . applySTS @(LEDGERS crypto)
+          . applySTS @(LEDGERS crypto v)
           $ TRC (env, state, txs)
    in liftEither
         . left (ApplyTxError . join)
@@ -115,9 +114,9 @@ applyTxs globals env txs state =
 -- state.
 overShelleyState ::
   Applicative f =>
-  (MempoolState c -> f (MempoolState c)) ->
-  ShelleyState c ->
-  f (ShelleyState c)
+  (MempoolState c v -> f (MempoolState c v)) ->
+  ShelleyState c v ->
+  f (ShelleyState c v)
 overShelleyState f st = do
   res <- f $ mkMempoolState st
   pure $

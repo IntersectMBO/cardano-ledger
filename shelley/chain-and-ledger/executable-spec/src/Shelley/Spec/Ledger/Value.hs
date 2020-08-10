@@ -7,23 +7,20 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE ConstraintKinds            #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 
 
 module Shelley.Spec.Ledger.Value
  where
 
-import           Cardano.Binary (ToCBOR, FromCBOR, toCBOR, fromCBOR, encodeListLen,
-                  decodeWord)
+import           Cardano.Binary (ToCBOR, FromCBOR, toCBOR, fromCBOR, encodeListLen)
 import           Cardano.Prelude (NoUnexpectedThunks(..), NFData ())
-import           Data.Coerce (coerce)
 import           Data.Typeable (Typeable)
+import           Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 
-import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           GHC.Generics (Generic)
-import           Data.Word (Word8)
-import           Cardano.Crypto.Hash (Hash, ShortHash)
-import           Data.Map.Strict(Map, lookup, toList, elems, filterWithKey, keys)
+import           Data.Map.Strict(Map)
 import qualified Data.Map as Map
 import           Data.Map.Internal(Map(..),balanceL,balanceR,singleton,link,splitLookup,link2)
 
@@ -45,11 +42,9 @@ class (NFData t, Show t, Eq t, NoUnexpectedThunks t) => Val t where
   -- Equal must be the same as Eq instance
   voper:: Op -> t -> t -> Bool  -- This will define a PARTIAL order using pointwise comparisons (If all the keys don't match returns False)
   visZero:: t -> Bool                 -- is the argument vzero?
-  vcoin :: t -> Coin
-  vinject :: Coin -> t
-
-class Default f t where
-  apply:: Ord k => f k t -> k -> t
+  vcoin :: t -> Coin                -- get the Coin amount
+  vinject :: Coin -> t                -- inject Coin into the Val instance
+  vsize :: t -> Integer               -- compute size of Val instance
 
 instance Val Integer where
   vzero = 0
@@ -65,6 +60,7 @@ instance Val Integer where
   visZero x = x==0
   vcoin x = Coin x
   vinject (Coin x) = x
+  vsize _ = 1
 
 instance Val t => Default Map t where
    apply mp k = case Map.lookup k mp of { Just t -> t; Nothing -> vzero }
@@ -76,13 +72,15 @@ instance (Ord k,Val t, NFData k, Show k, NoUnexpectedThunks k) => Val (Map k t) 
   scalev n x = mapV (scalev n) x
   voper op x y = pointWise (voper op) x y
   visZero x = Map.null x
---  getAdaAmount = getAdaAmount
+  vcoin _ = Coin 0
+  vinject _ = Map.empty -- TODO Should not be any Coin in map
+  vsize x = fromIntegral $ Map.size x -- TODO shouldnt use this for Value
 
 
-pointWise:: Ord k => (v -> v -> Bool) -> Map k v -> Map k v -> Bool
+pointWise:: (Ord k, Val v) => (v -> v -> Bool) -> Map k v -> Map k v -> Bool
 pointWise _ Tip Tip = True
-pointWise _ Tip (Bin _ _ _ _ _) = False
-pointWise _ (Bin _ _ _ _ _) Tip = False
+pointWise p Tip (m@(Bin _ _ _ _ _)) = all (p vzero) m
+pointWise p (m@(Bin _ _ _ _ _)) Tip = all (p vzero) m
 pointWise p m (Bin _ k v2 ls rs) =
    case Map.splitLookup k m of
       (lm,Just v1,rm) -> p v1 v2 && pointWise p ls lm && pointWise p rs rm
@@ -173,67 +171,40 @@ similar to 'Ledger.Ada' for their own assets.
 
 -}
 
--- | Value type
-newtype Value crypto = Value
-  { val :: Map  (PolicyID crypto) (Map AssetID Quantity) }
-  deriving (Show, Generic, Val, Typeable)
+data Value crypto = Value Coin (Map (PolicyID crypto) (Map AssetID Quantity))
+  deriving (Show, Generic)
 
-instance NoUnexpectedThunks (Value crypto)
 instance NFData (Value crypto)
+deriving instance Val Coin
+instance NoUnexpectedThunks (Value crypto)
 
--- | compact representation of Value
-data CompactValue crypto = AdaOnly Coin | MixValue (Value crypto)
-  deriving (Show, Generic, Typeable, Eq)
+instance Val (Value crypto) where
+  vzero = Value (Coin 0) vzero
+  vplus (Value c1 v1) (Value c2 v2) = Value (vplus c1 c2) (vplus v1 v2)
+  vnegate (Value c1 v1) = Value (vnegate c1) (vnegate v1)
+  scalev s (Value c1 v1) = Value (scalev s c1) (scalev s v1)
+  voper op (Value c1 v1) (Value c2 v2) = (voper op c1 c2) && (voper op v1 v2)
+  visZero (Value c1 v1) = (visZero c1) && (visZero v1)
+  vcoin (Value c1 _) = c1
+  vinject c1 = Value c1 vzero
+  vsize (Value _ v) = foldr accum 1 v where
+    accum u ans = foldr accumIns (ans + addrHashLen) u where
+      accumIns _ ans1 = ans1 + assetIdLen + uint
 
-instance NoUnexpectedThunks (CompactValue crypto)
-instance NFData (CompactValue crypto)
+addrHashLen :: Integer
+addrHashLen = 28
 
--- get the quantities of the tokens of a value term
-getQs :: Value crypto -> [Quantity]
-getQs (Value v) = fmap snd (concat $ fmap toList (elems v))
+assetIdLen :: Integer
+assetIdLen = 32
 
--- | make a Value out of a Coin
-coinToValue :: Coin -> Value crypto
-coinToValue (Coin c) = Value $ singleton adaID (singleton adaToken (Quantity c))
+uint :: Integer
+uint = 9
 
--- | add up all the ada in a Value
-getAdaAmount :: Value crypto -> Coin
-getAdaAmount (Value v) = Coin $ c
-  where
-    Quantity c = foldl (+) (Quantity 0) (getQs $ Value $ filterWithKey (\k _ -> k == adaID) v)
-
--- | policy ID of Ada
--- NOTE : this is an arbitrary choice of hash value - there is no known script that will
--- need to hash to this value. If a user finds one, there is still a check
--- in the STS rules to make sure it is not used
-adaID :: PolicyID crypto
-adaID = PolicyID $ ScriptHash $ coerce ("" :: Hash ShortHash (Script crypto))
-
--- | asset ID of Ada
--- this is an arbitrary choice of asset ID name!
-adaToken :: AssetID
-adaToken = AssetID $ "Ada"
-
--- | makes a compact representation of Value for in-memory storage
--- removes 0 values and adds a special case for ada-only values
-valueToCompactValue :: Value crypto -> CompactValue crypto
-valueToCompactValue vl@(Value v)
-  | keys v == [adaID] = AdaOnly $ getAdaAmount vl
-  | otherwise         = MixValue $ removeZeros v
-    where
-      removeZeros vv = Value $ fmap (filterWithKey (\_ q -> q /= (Quantity 0))) vv
-
--- returns the non-Ada tokens part of a Value token bundle
-removeAda :: Value crypto -> Value crypto
-removeAda (Value v) = Value $ filterWithKey (\k _ -> k /= adaID) v
-
--- | convert to Value
-compactValueToValue :: CompactValue crypto -> Value crypto
-compactValueToValue (AdaOnly c)  = coinToValue c
-compactValueToValue (MixValue v) = v
+class Default f t where
+  apply:: Ord k => f k t -> k -> t
 
 instance Eq (Value crypto) where
-    (==) = voper Equal
+    (==) (Value c v) (Value c1 v1) = (voper Equal c c1) && (voper Equal v v1)
 
 instance Semigroup (Value crypto) where
     (<>) = vplus
@@ -242,36 +213,29 @@ instance Monoid (Value crypto) where
     mempty  = vzero
     mappend = (<>)
 
--- instances for CompactValue
-instance Semigroup (CompactValue crypto) where
-    (<>) v1 v2 = valueToCompactValue $ vplus (compactValueToValue v1) (compactValueToValue v2)
-
-instance Monoid (CompactValue crypto) where
-    mempty  = MixValue vzero
-    mappend = (<>)
 
 -- constraint used for all parametrized functions
 type CV c v = (Val v, Crypto c, Typeable c, Typeable v, FromCBOR v, ToCBOR v)
 
 -- Linear Map instance
 
-
--- | Get the quantity of the given currency in the 'Value'.
-valueOf :: Value crypto -> PolicyID crypto -> AssetID -> Quantity
-valueOf (Value mp) cur tn =
-    case Data.Map.Strict.lookup cur mp of
-        Nothing -> (Quantity 0)
-        Just i  -> case Data.Map.Strict.lookup tn i of
-            Nothing -> (Quantity 0)
-            Just v  -> v
-
--- | The list of 'PolicyID's of a 'Value'.
-policyIDs :: Value crypto -> [PolicyID crypto]
-policyIDs (Value mp) = keys mp
-
--- | Make a 'Value' containing only the given quantity of the given currency.
-singleType :: PolicyID crypto -> AssetID -> Quantity -> Value crypto
-singleType c tn i = Value (singleton c (singleton tn i))
+--
+-- -- | Get the quantity of the given currency in the 'Value'.
+-- valueOf :: Value crypto -> PolicyID crypto -> AssetID -> Quantity
+-- valueOf (Value mp) cur tn =
+--     case Data.Map.Strict.lookup cur mp of
+--         Nothing -> (Quantity 0)
+--         Just i  -> case Data.Map.Strict.lookup tn i of
+--             Nothing -> (Quantity 0)
+--             Just v  -> v
+--
+-- -- | The list of 'PolicyID's of a 'Value'.
+-- policyIDs :: Value crypto -> [PolicyID crypto]
+-- policyIDs (Value mp) = keys mp
+--
+-- -- | Make a 'Value' containing only the given quantity of the given currency.
+-- singleType :: PolicyID crypto -> AssetID -> Quantity -> Value crypto
+-- singleType c tn i = Value (singleton c (singleton tn i))
 
 
 -- Num operations
@@ -279,9 +243,9 @@ singleType c tn i = Value (singleton c (singleton tn i))
 -- | subtract values
 subv :: Value crypto -> Value crypto -> Value crypto
 subv v1 v2 = vplus v1 (vnegate v2)
-
-vinsert:: PolicyID crypto -> AssetID -> Quantity -> Value crypto -> Value crypto
-vinsert pid aid q old = vplus old (Value (Map.singleton pid (Map.singleton aid q)))
+--
+-- vinsert:: PolicyID crypto -> AssetID -> Quantity -> Value crypto -> Value crypto
+-- vinsert pid aid q old = vplus old (Value (Map.singleton pid (Map.singleton aid q)))
 
 -- | Split a value into its positive and negative parts. The first element of
 --   the tuple contains the negative parts of the value, the second element
@@ -298,66 +262,29 @@ vinsert pid aid q old = vplus old (Value (Map.singleton pid (Map.singleton aid q
 --       (l, r) = Map.mapThese (\i -> if i <= 0 then This i else That i) mp'
 
 -- TODO do this right - is this supposed to add up to v?
-splitValueFee :: Value crypto -> Integer -> (Value crypto, Coin)
-splitValueFee (Value v) n
-    | n <= 0 = error "must split coins into positive parts"
-    | otherwise = (Value $ fmap (fmap (Quantity . (div n) . unInt)) v, getAdaAmount (Value v))
+-- splitValueFee :: Value crypto -> Integer -> (Value crypto, Coin)
+-- splitValueFee (Value v) n
+--     | n <= 0 = error "must split coins into positive parts"
+--     | otherwise = (Value $ fmap (fmap (Quantity . (div n) . unInt)) v, getAdaAmount (Value v))
 
 -- CBOR
-
-instance
-  (Crypto crypto)
-  => ToCBOR (CompactValue crypto)
- where
-   toCBOR = \case
-     AdaOnly c ->
-           encodeListLen 2
-           <> toCBOR (0 :: Word8)
-           <> toCBOR c
-     MixValue (Value v) ->
-           encodeListLen 2
-           <> toCBOR (1 :: Word8)
-           <> toCBOR v
-
-instance
-  (Crypto crypto)
-  => FromCBOR (CompactValue crypto)
- where
-  fromCBOR = do
-    decodeWord >>= \case
-      0 -> do
-        c <- fromCBOR
-        pure $ AdaOnly c
-      1 -> do
-        v <- fromCBOR
-        pure $ MixValue $ Value v
-      k -> invalidKey k
 
 
 instance
   (Crypto crypto)
   => ToCBOR (Value crypto)
  where
-   toCBOR = (\case
-     AdaOnly c ->
+   toCBOR (Value c v) =
            encodeListLen 2
-           <> toCBOR (0 :: Word8)
            <> toCBOR c
-     MixValue (Value v) ->
-           encodeListLen 2
-           <> toCBOR (1 :: Word8)
-           <> toCBOR v) . valueToCompactValue
+           <> toCBOR v
 
 instance
   (Crypto crypto)
   => FromCBOR (Value crypto)
  where
   fromCBOR = do
-    decodeWord >>= \case
-      0 -> do
-        c <- fromCBOR
-        pure $ compactValueToValue $ AdaOnly c
-      1 -> do
-        v <- fromCBOR
-        pure $ compactValueToValue $ MixValue $ Value v
-      k -> invalidKey k
+    decodeRecordNamed "Value" (const 2) $ do
+      c <- fromCBOR
+      v <- fromCBOR
+      pure $ Value c v

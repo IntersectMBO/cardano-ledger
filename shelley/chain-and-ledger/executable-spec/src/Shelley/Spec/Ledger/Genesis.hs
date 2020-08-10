@@ -41,12 +41,12 @@ import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Crypto (Crypto, HASH, KES)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO
+import Shelley.Spec.Ledger.Value
 
 -- | Genesis Shelley staking configuration.
 --
@@ -88,7 +88,7 @@ emptyGenesisStaking =
 -- defined here rather than in its own module. In mainnet, Shelley will
 -- transition naturally from Byron, and thus will never have its own genesis
 -- information.
-data ShelleyGenesis c = ShelleyGenesis
+data ShelleyGenesis c v = ShelleyGenesis
   { sgSystemStart :: !UTCTime,
     sgNetworkMagic :: !Word32,
     sgNetworkId :: !Network,
@@ -102,19 +102,20 @@ data ShelleyGenesis c = ShelleyGenesis
     sgMaxLovelaceSupply :: !Word64,
     sgProtocolParams :: !PParams,
     sgGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPair c)),
-    sgInitialFunds :: !(Map (Addr c) Coin),
+    sgInitialFunds :: !(Map (Addr c) v),
     sgStaking :: !(ShelleyGenesisStaking c)
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NoUnexpectedThunks)
 
-sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
+sgActiveSlotCoeff :: ShelleyGenesis c v -> ActiveSlotCoeff
 sgActiveSlotCoeff =
   mkActiveSlotCoeff
     . unitIntervalFromRational
     . sgActiveSlotsCoeff
 
-instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
+-- TODO JSON for v? 
+instance (CV crypto v, ToJSON v) => ToJSON (ShelleyGenesis crypto v) where
   toJSON sg =
     Aeson.object
       [ "systemStart" .= sgSystemStart sg,
@@ -134,7 +135,8 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
         "staking" .= sgStaking sg
       ]
 
-instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
+-- TODO JSON for v?
+instance (CV crypto v, FromJSON v) => FromJSON (ShelleyGenesis crypto v) where
   parseJSON =
     Aeson.withObject "ShelleyGenesis" $ \obj ->
       ShelleyGenesis
@@ -179,7 +181,7 @@ instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
   Genesis UTxO
 -------------------------------------------------------------------------------}
 
-genesisUtxO :: Crypto c => ShelleyGenesis c -> UTxO c
+genesisUtxO :: (CV c v) => ShelleyGenesis c v -> UTxO c v
 genesisUtxO genesis =
   UTxO $
     Map.fromList
@@ -198,7 +200,7 @@ genesisUtxO genesis =
 -- This gets turned into a UTxO by making a pseudo-transaction for each address,
 -- with the 0th output being the coin value. So to spend from the initial UTxO
 -- we need this same 'TxIn' to use as an input to the spending transaction.
-initialFundsPseudoTxIn :: forall c. Crypto c => Addr c -> TxIn c
+initialFundsPseudoTxIn :: forall c v. (CV c v) => Addr c -> TxIn c v
 initialFundsPseudoTxIn addr =
   TxIn (pseudoTxId addr) 0
   where
@@ -206,7 +208,7 @@ initialFundsPseudoTxIn addr =
       TxId
         . ( Crypto.castHash ::
               Crypto.Hash (HASH c) (Addr c) ->
-              Crypto.Hash (HASH c) (TxBody c)
+              Crypto.Hash (HASH c) (TxBody c v)
           )
         . Crypto.hashWith serialiseAddr
 
@@ -256,9 +258,9 @@ describeValidationErr (QuorumTooSmall q maxTooSmal nodes) =
 
 -- | Do some basic sanity checking on the Shelley genesis file.
 validateGenesis ::
-  forall c.
+  forall c v.
   Crypto c =>
-  ShelleyGenesis c ->
+  ShelleyGenesis c v ->
   Either [ValidationErr] ()
 validateGenesis
   ShelleyGenesis

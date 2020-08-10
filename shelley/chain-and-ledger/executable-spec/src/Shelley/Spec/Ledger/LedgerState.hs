@@ -69,7 +69,6 @@ module Shelley.Spec.Ledger.LedgerState
     minfee,
     minfeeBound,
     txsize,
-    scaledSizeCompactValue,
     txsizeBound,
     produced,
     consumed,
@@ -701,12 +700,6 @@ genesisState genDelegs0 utxo0 =
   where
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
--- | estimation of size of a multiasset output
--- TODO make correct calc!
-scaledSizeCompactValue :: (Val v) => v -> Integer
-scaledSizeCompactValue vl
-  | vl == (vinject $ vcoin vl) = 1
-  | otherwise = 1 + 1 -- TODO use this value in the calc : (vplus vl (vnegate $ vinject $ vcoin vl))
 
 -- | Implementation of abstract transaction size
 txsize :: Tx crypto v -> Integer
@@ -717,11 +710,9 @@ txsize = fromIntegral . BSL.length . txFullBytes
 txsizeBound :: forall crypto v. (CV crypto v) => Tx crypto v -> Integer
 txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
   where
-    uint = 5
     smallArray = 1
     hashLen = 32
     hashObj = 2 + hashLen
-    addrHashLen = 28
     addrHeader = 1
     address = 2 + addrHeader + 2 * addrHashLen
     txbody = _body tx
