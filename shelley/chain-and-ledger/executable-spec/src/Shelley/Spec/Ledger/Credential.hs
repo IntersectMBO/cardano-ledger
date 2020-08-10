@@ -10,7 +10,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 module Shelley.Spec.Ledger.Credential
-  ( Credential(KeyHashObj,ScriptHashObj),
+  ( Credential (KeyHashObj, ScriptHashObj),
     GenesisCredential (..),
     Ix,
     PaymentCredential,

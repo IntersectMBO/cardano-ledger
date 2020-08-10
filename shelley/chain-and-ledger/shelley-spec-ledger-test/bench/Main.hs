@@ -357,11 +357,6 @@ main =
         ],
       bgroup "vary utxo at epoch boundary" $ (epochAt <$> [5000, 50000, 500000]),
       bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
-<<<<<<< HEAD
-      validGroup
-    ]
--}
-=======
       validGroup,
       -- Benchmarks for the various generators
       bgroup "gen" $
@@ -380,4 +375,3 @@ main =
             ]
         ]
     ]
->>>>>>> 19197146b0cf76d57634c722e3407cc619d26d9e

@@ -1,14 +1,13 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE MagicHash       #-}
 
 module Shelley.Spec.Ledger.DeserializeShort
   ( deserialiseAddrStakeRef,
     deserializeShortAddr,
   )
 where
-
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Control.Monad (ap)
@@ -18,8 +17,8 @@ import Data.ByteString.Short as SBS
 import Data.Word (Word8)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address
-  ( Word7 (..),
-    Addr(..),
+  ( Addr (..),
+    Word7 (..),
     byron,
     isEnterpriseAddr,
     notBaseAddr,
@@ -30,10 +29,10 @@ import Shelley.Spec.Ledger.Address
   )
 import Shelley.Spec.Ledger.BaseTypes (word8ToNetwork)
 import Shelley.Spec.Ledger.Credential
-  ( Credential(KeyHashObj,ScriptHashObj),
+  ( Credential (KeyHashObj, ScriptHashObj),
+    PaymentCredential,
     Ptr (..),
     StakeReference (..),
-    PaymentCredential,
   )
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys (KeyHash (..))
@@ -63,11 +62,11 @@ getAddrStakeReference = do
     then pure Nothing
     else skipHash ([] @(HASH crypto)) >> Just <$> getStakeReference header
 
-deserializeShortAddr:: Crypto crypto => ShortByteString -> Maybe (Addr crypto)
+deserializeShortAddr :: Crypto crypto => ShortByteString -> Maybe (Addr crypto)
 deserializeShortAddr short =
-   case runGetShort getShortAddr 0 short of
-     Just(_,maybe_addr) -> maybe_addr
-     Nothing -> Nothing
+  case runGetShort getShortAddr 0 short of
+    Just (_, maybe_addr) -> maybe_addr
+    Nothing -> Nothing
 
 getShortAddr :: forall crypto. Crypto crypto => GetShort (Maybe (Addr crypto))
 getShortAddr = do
@@ -78,7 +77,7 @@ getShortAddr = do
       _ <- getWord -- read past the header byte
       let addrNetId = header .&. 0x0F -- 0b00001111 is the mask for the network id
       case word8ToNetwork addrNetId of
-        Just n -> do { c <- getPayCred header; h <- getStakeReference header ; pure(Just(Addr n c h))}
+        Just n -> do c <- getPayCred header; h <- getStakeReference header; pure (Just (Addr n c h))
         Nothing ->
           fail $
             concat
@@ -92,7 +91,8 @@ getWord = GetShort $ \i sbs ->
 
 peekWord8 :: GetShort Word8
 peekWord8 = GetShort peek
-  where peek i sbs =  if i < SBS.length sbs then Just(i,SBS.index sbs i) else Nothing
+  where
+    peek i sbs = if i < SBS.length sbs then Just (i, SBS.index sbs i) else Nothing
 
 skipHash :: forall proxy h. Hash.HashAlgorithm h => proxy h -> GetShort ()
 skipHash p = skip . fromIntegral $ Hash.sizeHash p

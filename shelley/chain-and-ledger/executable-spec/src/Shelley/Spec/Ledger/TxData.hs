@@ -144,7 +144,7 @@ import Shelley.Spec.Ledger.Credential
     StakeCredential,
   )
 import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.DeserializeShort(deserializeShortAddr)
+import Shelley.Spec.Ledger.DeserializeShort (deserializeShortAddr)
 import Shelley.Spec.Ledger.Hashing
 import Shelley.Spec.Ledger.Keys
   ( Hash,
@@ -432,11 +432,11 @@ pattern TxOut addr coin <-
 viewCompactTxOut :: forall crypto. Crypto crypto => TxOut crypto -> (Addr crypto, Coin)
 viewCompactTxOut (TxOutCompact bs c) = (addr, coin)
   where
-    addr = case deserializeShortAddr bs of  -- Try to deserialize a Shelley style Addr directly from ShortByteString
-             Just(a :: Addr crypto) -> a
-             Nothing -> case deserialiseAddr (BSS.fromShort bs) of   -- It is a Byron Address, try the more expensive route.
-                          Nothing -> panic "viewCompactTxOut: impossible"
-                          Just (a :: Addr crypto) -> a
+    addr = case deserializeShortAddr bs of -- Try to deserialize a Shelley style Addr directly from ShortByteString
+      Just (a :: Addr crypto) -> a
+      Nothing -> case deserialiseAddr (BSS.fromShort bs) of -- It is a Byron Address, try the more expensive route.
+        Nothing -> panic "viewCompactTxOut: impossible"
+        Just (a :: Addr crypto) -> a
     coin = word64ToCoin c
 
 data DelegCert crypto
