@@ -16,12 +16,12 @@ following links:
 
 - [Shelley design specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec): the primary design document for Cardano Shelley.
 - [Shelley ledger formal specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec): the formal mathematical specification of the Shelley era ledger rules.
-- [Shelley binary format specification (CDDL)](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/executable-spec/cddl-files): the binary formats for the Shelley ledger using CBOR CDDL schema notation.
+- [Shelley binary format specification (CDDL)](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/shelley-spec-ledger-test/cddl-files): the binary formats for the Shelley ledger using CBOR CDDL schema notation.
 - [Non-integer calculations specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/nonIntegerCalculations/latest/download-by-type/doc-pdf/non-integer-calculations): details on the parts of the Shelley specification that use real numbers.
 - [Byron chain specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronChainSpec/latest/download-by-type/doc-pdf/blockchain-spec): the formal mathematical specification of the Byron era chain-level rules.
 - [Byron ledger specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec): the formal mathematical specification of the Byron era ledger rules.
 - [Byron binary format specification (CDDL)](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/blocksCDDLSpec/latest/download-by-type/doc-pdf/binary): the binary formats for the Byron ledger using CBOR CDDL schema notation.
-- [Explanation of the small-step-semantics framework](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/semanticsSpec/latest/download-by-type/doc-pdf/semantics-spec): a guide to the notation and style used by our ledger rules.
+- [Explanation of the small-step-semantics framework](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/semanticsSpec/latest/download-by-type/doc-pdf/small-step-semantics): a guide to the notation and style used by our ledger rules.
 
 In addition, there is a formalization of the Ledger Specification in Isabelle/HOL which can be found [here](https://github.com/input-output-hk/fm-ledger-formalization).
 
@@ -117,10 +117,10 @@ nix-shell --pure --run "make watch"
 
 ## Testing the Haskell executable specifications
 
-Change to the directory where the executable specifications are (e.g.
-`shelley/chain-and-ledger/executable-spec` for the executable ledger specifications corresponding to
-the Shelley release, or `byron/ledger/executable-spec` for the executable ledger specifications
-corresponding to the Byron release). Then the tests can be run by executing:
+Change to the directory where the executable specifications tests are (e.g.
+`shelley/chain-and-ledger/shelley-spec-ledger-test` for the the Shelley release,
+or `byron/ledger/executable-spec` for the Byron release.
+Then the tests can be run by executing:
 
 ```shell
 stack test
@@ -152,8 +152,9 @@ which can be run with the `--scenario` flag. For example:
 stack test shelley-spec-ledger --ta --scenario=Nightly
 ```
 
-Alternatively, it is also possible to use `ghcid` if it is installed in your system. In this case,
-it can be helpful to run ghcid in a separate shell:
+Alternatively, it is also possible to use `ghcid` if it is installed in your system.
+There is a [makefile](https://github.com/input-output-hk/cardano-ledger-specs/blob/master/shelley/chain-and-ledger/Makefile)
+for the Shelley release, which can be helpful to run in a separate shell:
 
 ```shell
 make ghcid
@@ -163,6 +164,12 @@ or with tests included:
 
 ```shell
 make ghcid-test
+```
+
+You can use the `TASTY_PATTERN` environment variable to set the tasty pattern:
+
+```shell
+TASTY_PATTERN=roundtrip make ghcid-test
 ```
 
 ---
@@ -244,17 +251,6 @@ We use [`editorconfig`](https://editorconfig.org/) to ensure consistency in the 
 Haskell code. There are editorconfig plugins for several text editors, so make sure that your editor
 honors the configuration in [`.editorconfig`](.editorconfig).
 
-Additionally, we use [`stylish-haskell`](https://github.com/jaspervdj/stylish-haskell/) to format
-grouped imports and language pragmas. There is a [`.stylish-haskell.yaml`](.stylish-haskell.yaml)
-configuration file that determines how `stylish-haskell` formats the code. Make sure that you have a
-recent version of `stylish-haskell` installed and that your editor enforces the rules defined by the
-`.stylish-haskell.yaml` configuration file.
-
-The `stylish-haskell` configuration prioritizes "diff-safety": it should introduce only minimal
-changes, to avoid polluting our diffs with irrelevant information.
-
-
-For Emacs, we provide [directory
-variables](https://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html) to
-set the `stylish-haskell` options for this project, so that `stylish-haskell` does not need to be
-enabled globally (see [`.dir-locals.el`](.dir-locals.el)).
+Additionally, we use [`ormolu`](https://github.com/tweag/ormolu/) for formatting.
+There is a script [here](https://github.com/input-output-hk/cardano-ledger-specs/blob/master/scripts/ormolise.sh)
+which uses nix to format the appropriate directories.
