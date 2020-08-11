@@ -194,6 +194,7 @@ class
   renderTRC :: TRC a -> String
   renderTRC = const mempty
 
+
 -- | Embed one STS within another.
 class (STS sub, STS super, BaseM sub ~ BaseM super) => Embed sub super where
   -- | Wrap a predicate failure of the subsystem in a failure of the super-system.

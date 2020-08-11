@@ -28,6 +28,7 @@ import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
 import Control.State.Transition
   ( Assertion (..),
+    AssertionViolation (..),
     Embed,
     IRC (..),
     InitialRule,
