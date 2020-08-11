@@ -871,7 +871,7 @@ execution of the transition role is as follows:
       &
       ru = \Nothing
       \\~\\
-      ru' \leteq \createRUpd{b}{es}{\MaxLovelaceSupply}
+      ru' \leteq \createRUpd{\SlotsPerEpoch}{b}{es}{\MaxLovelaceSupply}
     }
     {
       {\begin{array}{c}
@@ -1012,12 +1012,12 @@ Three transitions are done:
     {
       {
         {\begin{array}{c}
-           \var{s} \\
+           \var{slot} \\
            \var{gkeys} \\
          \end{array}}
         \vdash
         \var{nes}
-        \trans{\hyperref[fig:rules:new-epoch]{newepoch}}{\epoch{s}}
+        \trans{\hyperref[fig:rules:new-epoch]{newepoch}}{\epoch{slot}}
         \var{nes}'
       }
       \\~\\
@@ -1028,13 +1028,13 @@ Three transitions are done:
            \var{b_{prev}} \\
            \var{es} \\
          \end{array}}
-        \vdash \var{ru'}\trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{s}} \var{ru''}
+        \vdash \var{ru'}\trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{slot}} \var{ru''}
       }
       \\~\\
       (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es'},~\var{ru'},~\var{pd'},\var{osched'})
       \leteq\var{nes'}
       \\
-      \var{es''}\leteq\fun{adoptGenesisDelegs}~\var{es'}~\var{s}
+      \var{es''}\leteq\fun{adoptGenesisDelegs}~\var{es'}~\var{slot}
       \\
       \var{nes''}\leteq
       (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es''},~\var{ru''},~\var{pd'},\var{osched'})
@@ -1044,7 +1044,7 @@ Three transitions are done:
       {\begin{array}{c}
          \var{gkeys} \\
        \end{array}}
-      \vdash\var{nes}\trans{tick}{\var{s}}\varUpdate{\var{nes''}}
+      \vdash\var{nes}\trans{tick}{\var{slot}}\varUpdate{\var{nes''}}
     }
   \end{equation}
   \caption{Tick rules}

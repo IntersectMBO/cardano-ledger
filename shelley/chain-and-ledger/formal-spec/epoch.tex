@@ -27,7 +27,7 @@
 \newcommand{\lReward}[4]{\fun{r_{operator}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\poolReward}[5]{\fun{poolReward}~\var{#1}~{#2}~\var{#3}~\var{#4}~\var{#5}}
-\newcommand{\createRUpd}[3]{\fun{createRUpd}~\var{#1}~\var{#2}~\var{#3}}
+\newcommand{\createRUpd}[4]{\fun{createRUpd}~\var{#1}~\var{#2}~\var{#3}~\var{#4}}
 \newcommand{\getIR}[1]{\fun{getIR}~\var{#1}}
 
 This chapter introduces the epoch boundary transition system and the related reward calculation.
@@ -1309,8 +1309,8 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \emph{Calculation to create a reward update}
   %
   \begin{align*}
-    & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \Coin \to \RewardUpdate \\
-    & \createRUpd{b}{es}{total} = \left(
+    & \fun{createRUpd} \in \N \to \BlocksMade \to \EpochState \to \Coin \to \RewardUpdate \\
+    & \createRUpd{slotsPerEpoch}{b}{es}{total} = \left(
       \Delta t_1,-~\Delta r_1+\Delta r_2,~\var{rs},~-\var{feeSS}\right) \\
     & ~~~\where \\
     & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{prevPp},~\wcard) = \var{es} \\
@@ -1327,7 +1327,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\Delta r_1 = \floor*{\min(1,\eta) \cdot (\fun{rho}~\var{prevPp}) \cdot
       \var{reserves}}
     \\
-    & ~~~~~~~\eta = \frac{blocksMade}{\SlotsPerEpoch \cdot \ActiveSlotCoeff} \\
+    & ~~~~~~~\eta = \frac{blocksMade}{\var{slotsPerEpoch} \cdot \ActiveSlotCoeff} \\
     & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r_1 \\
     & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~\var{prevPp}) \cdot \var{rewardPot}} \\
     & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
