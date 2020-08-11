@@ -585,7 +585,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
 \end{figure}
 
 The UTXOW rule has eight predicate failures:
-\begin{itemize}                 %TODO: add multi-sig script failure predicates
+\begin{itemize}
 \item In the case of an incorrect witness,
   there is a \emph{InvalidWitnesses} failure.
 \item In the case of a missing witness,
@@ -594,12 +594,17 @@ The UTXOW rule has eight predicate failures:
   there is a \emph{MissingScriptWitnesses} failure.
 \item In the case of an invalid script,
   there is a \emph{ScriptWitnessNotValidating} failure.
-\item In the case that the $\mathsf{}$ rule fails,
-  there is a \emph{UtxoFailure} failure.
 \item In the case of a lack of quorum on an instantaneous reward certificate,
   there is a \emph{MIRInsufficientGenesisSigs} failure.
-\item In the case of inconsist metadata hashes,
-  there is a \emph{BadMetaDataHash} failure.
+\item In the case the transaction contains metadata,
+  but the transaction body does not contain a metadata hash,
+  there is a \emph{MissingTxBodyMetaDataHash} failure.
+\item In the case that the transaction body contains a metadata hash,
+  but there is no metadata outside the body,
+  there is a \emph{MissingTxMetaData} failure.
+\item In the case that the metadata hash in the transaction body
+  is not equal to the hash of the metadata outside the body,
+  there is a \emph{ConflictingMetaDataHash} failure.
 \end{itemize}
 
 \clearpage
