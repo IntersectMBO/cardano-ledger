@@ -30,6 +30,7 @@ module Control.State.Transition.Extended
     TransitionRule,
     InitialRule,
     Assertion (..),
+    AssertionViolation (..),
     STS (..),
     Embed (..),
     (?!),
@@ -192,7 +193,7 @@ class
   --   Defaults to using 'show', but note that this does not know how to render
   --   the context. So for more information you should define your own renderer
   --   here.
-  renderAssertionViolation :: AssertionViolation sts -> String
+  renderAssertionViolation :: AssertionViolation a -> String
   renderAssertionViolation = show
 
 -- | Embed one STS within another.
