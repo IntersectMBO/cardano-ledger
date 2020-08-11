@@ -135,12 +135,12 @@ data AssertionViolation sts = AssertionViolation
     avState :: Maybe (State sts)
   }
 
-instance Show (AssertionViolation sts) where
-  show (AssertionViolation sts msg _ _) =
-    "AssertionViolation (" <> sts <> "): " <> msg
+instance STS sts => Show (AssertionViolation sts) where
+  show (AssertionViolation sts msg ctx _) =
+    "AssertionViolation (" <> sts <> "): " <> msg <> renderTRC ctx
 
 instance
-  (Typeable sts) =>
+  (STS sts) =>
   Exception (AssertionViolation sts)
 
 -- | State transition system.
@@ -188,13 +188,11 @@ class
   assertions :: [Assertion a]
   assertions = []
 
-  -- | Render an assertion violation.
+  -- | Render the context.
   --
-  --   Defaults to using 'show', but note that this does not know how to render
-  --   the context. So for more information you should define your own renderer
-  --   here.
-  renderAssertionViolation :: AssertionViolation a -> String
-  renderAssertionViolation = show
+  --   This is used to show assertion violations.
+  renderTRC :: TRC a -> String
+  renderTRC = const mempty
 
 -- | Embed one STS within another.
 class (STS sub, STS super, BaseM sub ~ BaseM super) => Embed sub super where
