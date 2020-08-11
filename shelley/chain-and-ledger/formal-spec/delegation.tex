@@ -433,7 +433,7 @@ concerns are independent of the ledger rules.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \varUpdate{\var{rewards}} & \varUpdate{\unionoverrideLeft} & \varUpdate{\{\var{hk} \mapsto 0\}}\\
+        \varUpdate{\var{rewards}} & \varUpdate{\union} & \varUpdate{\{\var{hk} \mapsto 0\}}\\
         \var{delegations} \\
         \varUpdate{\var{ptrs}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}} \\
         \var{fGenDelegs} \\
