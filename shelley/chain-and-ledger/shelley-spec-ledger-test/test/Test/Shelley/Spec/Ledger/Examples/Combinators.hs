@@ -18,6 +18,8 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
     deregStakeCred,
     delegation,
     newPool,
+    reregPool,
+    updatePoolParams,
     stageRetirement,
     reapPool,
     mir,
@@ -32,6 +34,8 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
     setCurrentProposals,
     setFutureProposals,
     setPParams,
+    setFutureGenDeleg,
+    adoptFutureGenDeleg,
   )
 where
 
@@ -60,12 +64,18 @@ import Shelley.Spec.Ledger.Credential
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot, SnapShots (..))
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.Keys
+  ( GenDelegPair,
+    GenDelegs (..),
+    KeyHash,
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState (..),
     DState (..),
     EpochState (..),
+    FutureGenDeleg (..),
     InstantaneousRewards (..),
     LedgerState (..),
     NewEpochState (..),
@@ -76,7 +86,7 @@ import Shelley.Spec.Ledger.LedgerState
     applyRUpd,
     emptyInstantaneousRewards,
   )
-import Shelley.Spec.Ledger.PParams (PParams' (..), ProposedPPUpdates, PParams)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.TxData (MIRPot (..), PoolParams (..), RewardAcnt (..), TxBody (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
@@ -273,6 +283,51 @@ newPool pool cs = cs {chainNes = nes'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
+-- | = Re-Register Stake Pool
+reregPool ::
+  forall c.
+  PoolParams c ->
+  ChainState c ->
+  ChainState c
+reregPool pool cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    ls = esLState es
+    dps = _delegationState ls
+    ps = _pstate dps
+    ps' =
+      ps
+        { _fPParams = Map.insert (_poolPubKey pool) pool (_pParams ps)
+        }
+    dps' = dps {_pstate = ps'}
+    ls' = ls {_delegationState = dps'}
+    es' = es {esLState = ls'}
+    nes' = nes {nesEs = es'}
+
+-- | = Re-Register Stake Pool
+updatePoolParams ::
+  forall c.
+  PoolParams c ->
+  ChainState c ->
+  ChainState c
+updatePoolParams pool cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    ls = esLState es
+    dps = _delegationState ls
+    ps = _pstate dps
+    ps' =
+      ps
+        { _pParams = Map.insert (_poolPubKey pool) pool (_pParams ps),
+          _fPParams = Map.delete (_poolPubKey pool) (_pParams ps)
+        }
+    dps' = dps {_pstate = ps'}
+    ls' = ls {_delegationState = dps'}
+    es' = es {esLState = ls'}
+    nes' = nes {nesEs = es'}
+
 -- | = Pool Retirement
 --
 -- Stage a stake pool for retirement.
@@ -372,10 +427,11 @@ mir cred pot amnt cs = cs {chainNes = nes'}
 -- On the epoch boundary, reset the MIR mappings and augment the rewards.
 applyMIR ::
   forall c.
+  MIRPot ->
   Map (Credential 'Staking c) Coin ->
   ChainState c ->
   ChainState c
-applyMIR rewards cs = cs {chainNes = nes'}
+applyMIR pot rewards cs = cs {chainNes = nes'}
   where
     tot = sum rewards
     nes = chainNes cs
@@ -391,7 +447,10 @@ applyMIR rewards cs = cs {chainNes = nes'}
     dps' = dps {_dstate = ds'}
     ls' = ls {_delegationState = dps'}
     as = esAccountState es
-    as' = as {_reserves = (_reserves as) - tot}
+    as' =
+      if pot == ReservesMIR
+        then as {_reserves = (_reserves as) - tot}
+        else as {_treasury = (_treasury as) - tot}
     es' = es {esAccountState = as', esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -548,8 +607,8 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
     ls = esLState es
     utxoSt = _utxoState ls
     ppupSt = _ppups utxoSt
-    ppupSt' = ppupSt { proposals = ps }
-    utxoSt' = utxoSt { _ppups = ppupSt'}
+    ppupSt' = ppupSt {proposals = ps}
+    utxoSt' = utxoSt {_ppups = ppupSt'}
     ls' = ls {_utxoState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -569,8 +628,8 @@ setFutureProposals ps cs = cs {chainNes = nes'}
     ls = esLState es
     utxoSt = _utxoState ls
     ppupSt = _ppups utxoSt
-    ppupSt' = ppupSt { futureProposals = ps }
-    utxoSt' = utxoSt { _ppups = ppupSt'}
+    ppupSt' = ppupSt {futureProposals = ps}
+    utxoSt' = utxoSt {_ppups = ppupSt'}
     ls' = ls {_utxoState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -588,4 +647,47 @@ setPParams pp cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     es' = es {esPp = pp}
+    nes' = nes {nesEs = es'}
+
+-- | = Set a future genesis delegation.
+setFutureGenDeleg ::
+  forall c.
+  (FutureGenDeleg c, GenDelegPair c) ->
+  ChainState c ->
+  ChainState c
+setFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    ls = esLState es
+    dps = _delegationState ls
+    ds = _dstate dps
+    ds' = ds {_fGenDelegs = Map.insert fg gd (_fGenDelegs ds)}
+    dps' = dps {_dstate = ds'}
+    ls' = ls {_delegationState = dps'}
+    es' = es {esLState = ls'}
+    nes' = nes {nesEs = es'}
+
+-- | = Set a future genesis delegation.
+adoptFutureGenDeleg ::
+  forall c.
+  (FutureGenDeleg c, GenDelegPair c) ->
+  ChainState c ->
+  ChainState c
+adoptFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    ls = esLState es
+    dps = _delegationState ls
+    ds = _dstate dps
+    gds = GenDelegs $ (Map.insert (fGenDelegGenKeyHash fg) gd (unGenDelegs (_genDelegs ds)))
+    ds' =
+      ds
+        { _fGenDelegs = Map.delete fg (_fGenDelegs ds),
+          _genDelegs = gds
+        }
+    dps' = dps {_dstate = ds'}
+    ls' = ls {_delegationState = dps'}
+    es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}

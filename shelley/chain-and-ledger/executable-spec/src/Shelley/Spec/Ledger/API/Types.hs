@@ -12,6 +12,7 @@ import Shelley.Spec.Ledger.Address.Bootstrap as X
   )
 import Shelley.Spec.Ledger.BaseTypes as X
   ( Network (..),
+    Port (..),
     StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.BlockChain as X
@@ -114,9 +115,11 @@ import Shelley.Spec.Ledger.TxData as X
     GenesisDelegCert (..),
     MIRCert (..),
     MIRPot (..),
+    PoolMetaData (..),
     PoolParams (..),
     Ptr (..),
     StakeCreds (..),
+    StakePoolRelay (..),
     TxId (..),
     Wdrl (..),
     WitVKey (..),
