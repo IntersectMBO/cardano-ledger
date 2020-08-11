@@ -292,6 +292,8 @@ accounts where a reward is accumulated to a specific address.
       \\
       \forall (\wcard\mapsto (\wcard,~c)) \in \txouts{txb}, c \geq (\fun{minUTxOValue}~\var{pp})
       \\
+      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, a \in \AddrBS \to \fun{bootstrapAttrsSize}~a \leq 64
+      \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a =\NetworkId
       \\
       \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a =\NetworkId
@@ -336,7 +338,7 @@ accounts where a reward is accumulated to a specific address.
   \label{fig:rules:utxo-shelley}
 \end{figure}
 
-The UTXO rule has seven predicate failures:
+The UTXO rule has ten predicate failures:
 \begin{itemize}
 \item In the case of any input not being valid, there is a \emph{BadInput}
   failure.
@@ -350,8 +352,14 @@ The UTXO rule has seven predicate failures:
   \emph{FeeTooSmall} failure.
 \item If the transaction does not correctly conserve the balance, there is a
   \emph{ValueNotConserved} failure.
+\item If the transaction creates any outputs with the wrong network ID,
+  there is a \emph{WrongNetwork} failure.
+\item If the transaction contains any withdrawals with the wrong network ID,
+  there is a \emph{WrongNetworkWithdrawal} failure.
 \item If the transaction creates an output below the allowed minimum value,
   there is a \emph{OutputTooSmall} failure.
+\item If the transaction creates any boostrap outputs whose attributes have
+  size bigger than 64, there is a \emph{OutputBootAddrAttrsTooBig} failure.
 \end{itemize}
 
 \clearpage
