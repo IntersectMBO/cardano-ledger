@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -223,10 +224,10 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
 -- | Determine the total balance contained in the UTxO.
-balance :: Crypto crypto => UTxO crypto -> Coin
-balance (UTxO utxo) = foldr addCoins 0 utxo
+balance :: UTxO crypto -> Coin
+balance (UTxO utxo) = fromIntegral $ Map.foldl' addCoins 0 utxo
   where
-    addCoins (TxOut _ a) b = a + b
+    addCoins !b (TxOutCompact _ a) = a + b
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
