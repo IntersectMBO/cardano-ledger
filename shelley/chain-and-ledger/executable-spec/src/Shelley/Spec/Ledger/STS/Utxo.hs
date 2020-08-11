@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -27,6 +28,7 @@ import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
 import Control.State.Transition
   ( Assertion (..),
+    AssertionViolation (..),
     Embed,
     IRC (..),
     InitialRule,
@@ -103,7 +105,7 @@ data UtxoEnv crypto
   deriving (Show)
 
 instance
-  Crypto crypto =>
+  (Crypto crypto) =>
   STS (UTXO crypto)
   where
   type State (UTXO crypto) = UTxOState crypto
@@ -141,6 +143,9 @@ instance
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
+
+  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx} =
+    "AssertionViolation (" <> avSTS <> "): " <> avMsg <> "\n" <> show avCtx
 
   assertions =
     [ PostCondition
