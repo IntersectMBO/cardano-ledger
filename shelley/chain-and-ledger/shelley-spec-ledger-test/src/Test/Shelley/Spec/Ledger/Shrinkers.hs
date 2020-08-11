@@ -20,22 +20,23 @@ import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.Value
 import Test.QuickCheck (shrinkIntegral, shrinkList)
 
 shrinkBlock ::
-  Block h ->
-  [Block h]
+  Block h v ->
+  [Block h v]
 shrinkBlock _ = []
 
 shrinkTx ::
-  forall crypto.
-  Crypto crypto =>
-  Tx crypto ->
-  [Tx crypto]
+  forall crypto v.
+  CV crypto v =>
+  Tx crypto v ->
+  [Tx crypto v]
 shrinkTx (Tx _b _ws _md) =
   [Tx b' _ws _md | b' <- shrinkTxBody _b]
 
-shrinkTxBody :: Crypto crypto => TxBody crypto -> [TxBody crypto]
+shrinkTxBody :: CV crypto v => TxBody crypto v -> [TxBody crypto v]
 shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
   -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
@@ -53,13 +54,13 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
     -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
     outBalance = outputBalance os
 
-outputBalance :: Crypto crypto => StrictSeq (TxOut crypto) -> Coin
+outputBalance :: CV crypto v => StrictSeq (TxBody crypto v) -> v
 outputBalance = foldl' (\v (TxOut _ c) -> v + c) (Coin 0)
 
-shrinkTxIn :: TxIn crypto -> [TxIn crypto]
+shrinkTxIn :: TxIn crypto v -> [TxIn crypto v]
 shrinkTxIn = const []
 
-shrinkTxOut :: Crypto crypto => TxOut crypto -> [TxOut crypto]
+shrinkTxOut :: Crypto crypto => TxBody crypto v -> [TxBody crypto v]
 shrinkTxOut (TxOut addr coin) =
   TxOut addr <$> shrinkCoin coin
 
@@ -81,7 +82,7 @@ shrinkSlotNo (SlotNo x) = SlotNo <$> shrinkIntegral x
 shrinkUpdate :: Update crypto -> [Update crypto]
 shrinkUpdate = const []
 
-shrinkWitVKey :: WitVKey crypto kr -> [WitVKey crypto kr]
+shrinkWitVKey :: WitVKey crypto v kr -> [WitVKey crypto v kr]
 shrinkWitVKey = const []
 
 shrinkScriptHash :: ScriptHash crypto -> [ScriptHash crypto]

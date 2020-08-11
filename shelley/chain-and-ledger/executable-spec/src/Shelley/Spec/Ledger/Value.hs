@@ -76,11 +76,11 @@ instance (Ord k,Val t, NFData k, Show k, NoUnexpectedThunks k) => Val (Map k t) 
   vinject _ = Map.empty -- TODO Should not be any Coin in map
   vsize x = fromIntegral $ Map.size x -- TODO shouldnt use this for Value
 
-
+-- Pointwise comparison assuming the map is the Default value everywhere except where it is defined
 pointWise:: (Ord k, Val v) => (v -> v -> Bool) -> Map k v -> Map k v -> Bool
 pointWise _ Tip Tip = True
-pointWise p Tip (m@(Bin _ _ _ _ _)) = all (p vzero) m
-pointWise p (m@(Bin _ _ _ _ _)) Tip = all (p vzero) m
+pointWise p Tip (m@(Bin _ _ _ _ _)) = all (vzero `p`) m
+pointWise p (m@(Bin _ _ _ _ _)) Tip = all ( `p` vzero) m
 pointWise p m (Bin _ k v2 ls rs) =
    case Map.splitLookup k m of
       (lm,Just v1,rm) -> p v1 v2 && pointWise p ls lm && pointWise p rs rm
