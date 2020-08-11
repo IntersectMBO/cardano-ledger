@@ -135,12 +135,11 @@ data AssertionViolation sts = AssertionViolation
     avState :: Maybe (State sts)
   }
 
-instance Show (AssertionViolation sts) where
-  show (AssertionViolation sts msg _ _) =
-    "AssertionViolation (" <> sts <> "): " <> msg
+instance STS sts => Show (AssertionViolation sts) where
+  show = renderAssertionViolation
 
 instance
-  (Typeable sts) =>
+  (STS sts) =>
   Exception (AssertionViolation sts)
 
 -- | State transition system.
@@ -194,8 +193,8 @@ class
   --   the context. So for more information you should define your own renderer
   --   here.
   renderAssertionViolation :: AssertionViolation a -> String
-  renderAssertionViolation = show
-
+  renderAssertionViolation (AssertionViolation sts msg _ _) =
+    "AssertionViolation (" <> sts <> "): " <> msg
 
 -- | Embed one STS within another.
 class (STS sub, STS super, BaseM sub ~ BaseM super) => Embed sub super where
