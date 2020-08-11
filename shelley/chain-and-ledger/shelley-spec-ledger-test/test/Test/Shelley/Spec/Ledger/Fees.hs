@@ -170,8 +170,7 @@ txSimpleUTxO =
     }
 
 txSimpleUTxOBytes16 :: BSL.ByteString
-txSimpleUTxOBytes16 = "83a4008182489db8a41713ad202400018182510075c40f44e1c155bedab80d3ec7c2190b0a02185e030aa10081824873ed39075e40d2a650ede0521e6e06fad873ed39075e40d2a6f6
-"
+txSimpleUTxOBytes16 = "83a4008182489db8a41713ad202400018182510075c40f44e1c155bedab80d3ec7c2190b0a02185e030aa10081824873ed39075e40d2a650ede0521e6e06fad873ed39075e40d2a6f6"
 
 -- | Transaction which consumes two UTxO and creates five UTxO
 -- | and has two witness
