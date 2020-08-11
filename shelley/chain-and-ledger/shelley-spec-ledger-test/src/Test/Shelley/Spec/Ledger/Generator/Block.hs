@@ -63,6 +63,8 @@ import Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Shelley.Spec.Ledger.Value
+
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, shuffle)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -117,11 +119,11 @@ getPraosSlot start tooFar os nos =
    in List.find (not . (`Map.member` schedules)) [start .. tooFar -1]
 
 genBlock ::
-  forall c.
-  Mock c =>
+  forall c v.
+  (CVNC c v, Mock c) =>
   GenEnv c ->
-  ChainState c ->
-  Gen (Block c)
+  ChainState c v ->
+  Gen (Block c v)
 genBlock
   ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
   chainSt = do
@@ -187,7 +189,7 @@ genBlock
 
     -- ran genDelegs
     let nes = chainNes chainSt
-        nes' = runShelleyBase $ applySTSTest @(TICK c) $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
+        nes' = runShelleyBase $ applySTSTest @(TICK c v) $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
 
     case nes' of
       Left pf -> error ("genBlock TICK rule failed - " <> show pf)
@@ -279,4 +281,4 @@ genBlock
       genTxs pp reserves ls s = do
         let ledgerEnv = LedgersEnv s pp reserves
 
-        sigGen @(LEDGERS c) ge ledgerEnv ls
+        sigGen @(LEDGERS c v) ge ledgerEnv ls

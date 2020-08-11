@@ -131,6 +131,8 @@ import Shelley.Spec.Ledger.TxData
     TxOut (TxOut),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO)
+import Shelley.Spec.Ledger.Value
+
 import Test.QuickCheck
   ( Arbitrary,
     arbitrary,
@@ -170,15 +172,17 @@ mkDummyHash = coerce . hashWithSerialiser @h toCBOR
   necessarily valid
 -------------------------------------------------------------------------------}
 
+type CVNCA c v = (CVNC c v, Arbitrary v, Mock c)
+
 type MockGen c = (Mock c, Arbitrary (VerKeyDSIGN (DSIGN c)))
 
 instance
-  Mock c =>
-  Arbitrary (Block c)
+  (CVNCA c v) =>
+  Arbitrary (Block c v)
   where
   arbitrary = do
     let KeySpace_ {ksCoreNodes} = geKeySpace (genEnv p)
-    prevHash <- arbitrary :: Gen (HashHeader c)
+    prevHash <- arbitrary :: Gen (HashHeader c v)
     allPoolKeys <- elements (map snd ksCoreNodes)
     txs <- arbitrary
     curSlotNo <- SlotNo <$> choose (0, 10)
@@ -206,9 +210,9 @@ instance
       p :: Proxy c
       p = Proxy
 
-instance Mock c => Arbitrary (BHeader c) where
+instance (CVNCA c v) => Arbitrary (BHeader c v) where
   arbitrary = do
-    res <- arbitrary :: Gen (Block c)
+    res <- arbitrary :: Gen (Block c v)
     return $ case res of
       Block header _ -> header
       _ -> error "SerializationProperties::BHeader - failed to deconstruct header from block"
@@ -223,7 +227,7 @@ instance DSIGNAlgorithm c => Arbitrary (VerKeyDSIGN c) where
     fromJust . rawDeserialiseVerKeyDSIGN
       <$> (genByteString . fromIntegral $ sizeVerKeyDSIGN (Proxy @c))
 
-instance MockGen c => Arbitrary (BootstrapWitness c) where
+instance MockGen c => Arbitrary (BootstrapWitness c v) where
   arbitrary = do
     key <- arbitrary
     sig <- genSignature
@@ -231,17 +235,17 @@ instance MockGen c => Arbitrary (BootstrapWitness c) where
     attributes <- arbitrary
     pure $ BootstrapWitness key sig chainCode attributes
 
-instance Crypto c => Arbitrary (HashHeader c) where
+instance Crypto c => Arbitrary (HashHeader c v) where
   arbitrary = HashHeader <$> genHash
 
-instance (Typeable kr, Mock c) => Arbitrary (WitVKey c kr) where
+instance (Typeable kr, CVNCA c v) => Arbitrary (WitVKey c v kr) where
   arbitrary =
     WitVKey
       <$> arbitrary
       <*> arbitrary
 
 
-instance Mock c => Arbitrary (WitnessSet c) where
+instance CVNCA c v => Arbitrary (WitnessSet c v) where
   arbitrary =
     WitnessSet
       <$> arbitrary
@@ -261,7 +265,7 @@ instance Mock c => Arbitrary (Update c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (TxBody c) where
+instance CVNCA c v => Arbitrary (TxBody c v) where
   -- Our arbitrary instance constructs things using the pattern in order to have
   -- the correct serialised bytes.
   arbitrary =
@@ -282,13 +286,13 @@ maxMetaDatumListLens :: Int
 maxMetaDatumListLens = 5
 
 sizedMetaDatum :: Int -> Gen MetaDatum
-sizedMetaDatum 0 = 
+sizedMetaDatum 0 =
   oneof
     [ MD.I <$> arbitrary,
       MD.B <$> arbitrary,
       MD.S <$> (T.pack <$> arbitrary)
     ]
-sizedMetaDatum n = 
+sizedMetaDatum n =
     oneof
       [ MD.Map <$>
           (zip
@@ -309,7 +313,7 @@ instance Arbitrary MetaData where
 maxTxWits :: Int
 maxTxWits = 5
 
-instance Mock c => Arbitrary (Tx c) where
+instance CVNCA c v => Arbitrary (Tx c v) where
   -- Our arbitrary instance constructs things using the pattern in order to have
   -- the correct serialised bytes.
   arbitrary =
@@ -318,16 +322,16 @@ instance Mock c => Arbitrary (Tx c) where
       <*> (resize maxTxWits arbitrary)
       <*> arbitrary
 
-instance Crypto c => Arbitrary (TxId c) where
+instance Crypto c => Arbitrary (TxId c v) where
   arbitrary = TxId <$> genHash
 
-instance Crypto c => Arbitrary (TxIn c) where
+instance CVNCA c v => Arbitrary (TxIn c v) where
   arbitrary =
     TxIn
       <$> (TxId <$> genHash)
       <*> arbitrary
 
-instance Mock c => Arbitrary (TxOut c) where
+instance CVNCA c v => Arbitrary (TxOut c v) where
   arbitrary = TxOut <$> arbitrary <*> arbitrary
 
 instance Arbitrary Nonce where
@@ -363,11 +367,11 @@ instance Crypto c => Arbitrary (STS.PredicateFailure (PPUP c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (STS.PredicateFailure (UTXO c)) where
+instance CVNCA c v => Arbitrary (STS.PredicateFailure (UTXO c v)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance MockGen c => Arbitrary (STS.PredicateFailure (UTXOW c)) where
+instance (CVNC c v, Arbitrary v, MockGen c) => Arbitrary (STS.PredicateFailure (UTXOW c v)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -383,15 +387,15 @@ instance Mock c => Arbitrary (STS.PredicateFailure (DELEG c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (STS.PredicateFailure (DELEGS c)) where
+instance (MockGen c) => Arbitrary (STS.PredicateFailure (DELEGS c v)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance MockGen c => Arbitrary (STS.PredicateFailure (LEDGER c)) where
+instance (CVNC c v, Arbitrary v, MockGen c) => Arbitrary (STS.PredicateFailure (LEDGER c v)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance MockGen c => Arbitrary (STS.PredicateFailure (LEDGERS c)) where
+instance (CVNC c v, Arbitrary v, MockGen c) => Arbitrary (STS.PredicateFailure (LEDGERS c v)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -464,7 +468,7 @@ instance Crypto c => Arbitrary (STS.PrtclState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (UTxO c) where
+instance CVNCA c v => Arbitrary (UTxO c v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -530,15 +534,15 @@ instance Mock c => Arbitrary (DPState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (UTxOState c) where
+instance CVNCA c v => Arbitrary (UTxOState c v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (LedgerState c) where
+instance CVNCA c v => Arbitrary (LedgerState c v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Mock c => Arbitrary (NewEpochState c) where
+instance CVNCA c v => Arbitrary (NewEpochState c v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -552,7 +556,7 @@ instance Crypto c => Arbitrary (PoolDistr c) where
     where
       genVal = IndividualPoolStake <$> arbitrary <*> genHash
 
-instance Mock c => Arbitrary (EpochState c) where
+instance CVNCA c v => Arbitrary (EpochState c v) where
   arbitrary =
     EpochState
       <$> arbitrary
@@ -651,7 +655,7 @@ maxMultiSigListLens = 5
 
 sizedMultiSig :: Mock c => Int -> Gen (MultiSig c)
 sizedMultiSig 0 = RequireSignature <$> arbitrary
-sizedMultiSig n = 
+sizedMultiSig n =
     oneof
       [ RequireSignature <$> arbitrary,
         RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1))),

@@ -45,6 +45,7 @@ class (NFData t, Show t, Eq t, NoUnexpectedThunks t) => Val t where
   vcoin :: t -> Coin                -- get the Coin amount
   vinject :: Coin -> t                -- inject Coin into the Val instance
   vsize :: t -> Integer               -- compute size of Val instance
+  vsplit :: t -> Integer -> (t, Coin)
 
 instance Val Integer where
   vzero = 0
@@ -61,6 +62,9 @@ instance Val Integer where
   vcoin x = Coin x
   vinject (Coin x) = x
   vsize _ = 1
+  vsplit n m
+    | m <= 0 = error "must split coins into positive parts"
+    | otherwise = (n `div` m, Coin $ n `rem` m)
 
 instance Val t => Default Map t where
    apply mp k = case Map.lookup k mp of { Just t -> t; Nothing -> vzero }
@@ -75,6 +79,7 @@ instance (Ord k,Val t, NFData k, Show k, NoUnexpectedThunks k) => Val (Map k t) 
   vcoin _ = Coin 0
   vinject _ = Map.empty -- TODO Should not be any Coin in map
   vsize x = fromIntegral $ Map.size x -- TODO shouldnt use this for Value
+  vsplit _ _ = (vzero, Coin 0) -- TODO fix
 
 -- Pointwise comparison assuming the map is the Default value everywhere except where it is defined
 pointWise:: (Ord k, Val v) => (v -> v -> Bool) -> Map k v -> Map k v -> Bool
@@ -190,6 +195,7 @@ instance Val (Value crypto) where
   vsize (Value _ v) = foldr accum 1 v where
     accum u ans = foldr accumIns (ans + addrHashLen) u where
       accumIns _ ans1 = ans1 + assetIdLen + uint
+  vsplit _ _ = (vzero, Coin 0) -- TODO fix
 
 addrHashLen :: Integer
 addrHashLen = 28
@@ -216,6 +222,7 @@ instance Monoid (Value crypto) where
 
 -- constraint used for all parametrized functions
 type CV c v = (Val v, Crypto c, Typeable c, Typeable v, FromCBOR v, ToCBOR v)
+type CVNC c v = (Val v, Typeable c, Typeable v, FromCBOR v, ToCBOR v)
 
 -- Linear Map instance
 
@@ -240,9 +247,9 @@ type CV c v = (Val v, Crypto c, Typeable c, Typeable v, FromCBOR v, ToCBOR v)
 
 -- Num operations
 
--- | subtract values
-subv :: Value crypto -> Value crypto -> Value crypto
-subv v1 v2 = vplus v1 (vnegate v2)
+-- | subtract Val
+vminus :: (Val v) => v -> v -> v
+vminus v1 v2 = vplus v1 (vnegate v2)
 --
 -- vinsert:: PolicyID crypto -> AssetID -> Quantity -> Value crypto -> Value crypto
 -- vinsert pid aid q old = vplus old (Value (Map.singleton pid (Map.singleton aid q)))

@@ -178,10 +178,11 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     pattern UTxO,
   )
+import Shelley.Spec.Ledger.Value
 -- import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen, Arbitrary)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
@@ -199,6 +200,7 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
+import Test.Shelley.Spec.Ledger.Shrinkers (CVT)
 
 -- ===========================================================================
 
@@ -481,10 +483,17 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- Note: we need to keep the initial utxo coin sizes large enough so that
 -- when we simulate sequences of transactions, we have enough funds available
 -- to include certificates that require deposits.
-genTxOut :: (HasCallStack, Crypto c) => Constants -> [Addr c] -> Gen [TxOut c]
+genTxOut :: (HasCallStack, CVT c v) => Constants -> [Addr c] -> Gen [TxOut c v]
 genTxOut Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
-  ys <- genCoinList minGenesisOutputVal maxGenesisOutputVal (length addrs) (length addrs)
+  ys <- genValList minGenesisOutputVal maxGenesisOutputVal (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
+
+-- | Generates a list of 'v' values according to v generator
+-- TODO make this correct
+genValList :: (Val v, Arbitrary v) => Integer -> Integer -> Int -> Int -> Gen [v]
+genValList _ _ lower upper = do
+  len <- QC.choose (lower, upper)
+  replicateM len $ QC.arbitrary
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
 -- and with values between 'minCoin' and 'maxCoin'.
@@ -525,15 +534,16 @@ unitIntervalToNatural :: HasCallStack => UnitInterval -> Natural
 unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
 
 mkBlock ::
-  ( HasCallStack,
+  ( CVNC c v,
+    HasCallStack,
     Mock c
   ) =>
   -- | Hash of previous block
-  HashHeader c ->
+  HashHeader c v ->
   -- | All keys in the stake pool
   AllIssuerKeys c r ->
   -- | Transactions to record
-  [Tx c] ->
+  [Tx c v] ->
   -- | Current slot
   SlotNo ->
   -- | Block number/chain length/chain "difficulty"
@@ -550,7 +560,7 @@ mkBlock ::
   Word ->
   -- | Operational certificate
   OCert c ->
-  Block c
+  Block c v
 mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert =
   let (_, (sHot, _)) = head $ hot pkeys
       KeyPair vKeyCold _ = cold pkeys
@@ -640,7 +650,7 @@ genesisAccountState =
 
 -- | The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId ::
-  (Crypto c) => Ledger.TxId c
+  (CV c v) => Ledger.TxId c v
 genesisId =
   TxId $
     hashAnnotated
@@ -657,20 +667,20 @@ genesisId =
 
 -- | Creates the UTxO for a new ledger with the specified transaction outputs.
 genesisCoins ::
-  (Crypto c) =>
-  [TxOut c] ->
-  UTxO c
+  (CV c v) =>
+  [TxOut c v] ->
+  UTxO c v
 genesisCoins outs =
   UTxO $
     Map.fromList [(TxIn genesisId idx, out) | (idx, out) <- zip [0 ..] outs]
 
 -- | Apply a transaction body as a state transition function on the ledger state.
 applyTxBody ::
-  (Crypto c) =>
-  LedgerState c ->
+  (CV c v) =>
+  LedgerState c v ->
   PParams ->
-  TxBody c ->
-  LedgerState c
+  TxBody c v ->
+  LedgerState c v
 applyTxBody ls pp tx =
   ls
     { _utxoState =

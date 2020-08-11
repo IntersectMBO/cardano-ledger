@@ -276,7 +276,7 @@ genUpdate ::
   [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
   Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams ->
-  (UTxOState c, DPState c) ->
+  (UTxOState c v, DPState c) ->
   Gen (Maybe (Update c), [KeyPair 'Witness c])
 genUpdate
   c@(Constants {frequencyTxUpdates})

@@ -37,6 +37,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.UTxO (UTxO)
+
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants
@@ -53,6 +54,7 @@ import Test.Shelley.Spec.Ledger.Utils
     slotsPerKESIteration,
   )
 import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs)
+import Test.Shelley.Spec.Ledger.Shrinkers (CVT)
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
@@ -118,7 +120,7 @@ coreNodeKeys c@Constants {numCoreNodes} =
   where
     toKeyPair (sk, vk) = KeyPair vk sk
 
-genUtxo0 :: Crypto c => Constants -> Gen (UTxO c)
+genUtxo0 :: CVT c v => Constants -> Gen (UTxO c v)
 genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts

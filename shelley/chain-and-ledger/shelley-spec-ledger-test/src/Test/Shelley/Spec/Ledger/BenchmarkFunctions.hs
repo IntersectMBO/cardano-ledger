@@ -87,6 +87,8 @@ import Shelley.Spec.Ledger.TxData
     _poolVrf,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
+import Shelley.Spec.Ledger.Value
+
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original (C)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
@@ -127,14 +129,14 @@ aliceAddr = mkAddr (alicePay, aliceStake)
 
 -- ==========================================================
 
-coins :: Integer -> [TxOut B]
-coins n = fmap (\_ -> TxOut aliceAddr (Coin 100)) [0 .. n]
+injcoins :: Integer -> [TxOut B (Value B)]
+injcoins n = fmap (\_ -> TxOut aliceAddr (vinject $ Coin 100)) [0 .. n]
 
 -- Cretae an initial UTxO set with n-many transaction outputs
-initUTxO :: Integer -> UTxOState B
+initUTxO :: Integer -> UTxOState B (Value B)
 initUTxO n =
   UTxOState
-    (genesisCoins (coins n))
+    (genesisCoins (injcoins n))
     (Coin 0)
     (Coin 0)
     emptyPPUPState
@@ -163,21 +165,21 @@ ledgerEnv :: LedgerEnv
 ledgerEnv = LedgerEnv (SlotNo 0) 0 ppsBench (AccountState 0 0)
 
 testLEDGER ::
-  (UTxOState B, DPState B) ->
-  Tx B ->
+  (UTxOState B (Value B), DPState B) ->
+  Tx B (Value B) ->
   LedgerEnv ->
   ()
 testLEDGER initSt tx env = do
-  let st = runShelleyBase $ applySTS @(LEDGER B) (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTS @(LEDGER B (Value B)) (TRC (env, initSt, tx))
   case st of
     Right _ -> ()
     Left e -> error $ show e
 
-txbSpendOneUTxO :: TxBody B
+txbSpendOneUTxO :: TxBody B (Value B)
 txbSpendOneUTxO =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.fromList [TxOut aliceAddr (Coin 10), TxOut aliceAddr 89])
+    (StrictSeq.fromList [TxOut aliceAddr (vinject $ Coin 10), TxOut aliceAddr (vinject $ Coin 89)])
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)
@@ -185,7 +187,7 @@ txbSpendOneUTxO =
     SNothing
     SNothing
 
-txSpendOneUTxO :: Tx B
+txSpendOneUTxO :: Tx B (Value B)
 txSpendOneUTxO =
   Tx
     txbSpendOneUTxO
@@ -197,7 +199,7 @@ txSpendOneUTxO =
 ledgerSpendOneUTxO :: Integer -> ()
 ledgerSpendOneUTxO n = testLEDGER (initUTxO n, emptyDPState) txSpendOneUTxO ledgerEnv
 
-ledgerSpendOneGivenUTxO :: UTxOState B -> ()
+ledgerSpendOneGivenUTxO :: UTxOState B (Value B) -> ()
 ledgerSpendOneGivenUTxO state = testLEDGER (state, emptyDPState) txSpendOneUTxO ledgerEnv
 
 -- ===========================================================================
@@ -227,11 +229,11 @@ stakeKeyRegistrations keys =
 
 -- Create a transaction body given a sequence of certificates.
 -- It spends the genesis coin given by the index ix.
-txbFromCerts :: Natural -> StrictSeq (DCert B) -> TxBody B
+txbFromCerts :: Natural -> StrictSeq (DCert B) -> TxBody B (Value B)
 txbFromCerts ix regCerts =
   TxBody
     (Set.fromList [TxIn genesisId ix])
-    (StrictSeq.fromList [TxOut aliceAddr (Coin 100)])
+    (StrictSeq.fromList [TxOut aliceAddr (vinject $ Coin 100)])
     regCerts
     (Wdrl Map.empty)
     (Coin 0)
@@ -240,9 +242,9 @@ txbFromCerts ix regCerts =
     SNothing
 
 makeSimpleTx ::
-  TxBody B ->
+  TxBody B (Value B) ->
   [KeyPair 'Witness B] ->
-  Tx B
+  Tx B (Value B)
 makeSimpleTx body keysAddr =
   Tx
     body
@@ -252,30 +254,30 @@ makeSimpleTx body keysAddr =
     SNothing
 
 -- Create a transaction that registers stake credentials.
-txRegStakeKeys :: Natural -> [KeyPair 'Staking B] -> Tx B
+txRegStakeKeys :: Natural -> [KeyPair 'Staking B] -> Tx B (Value B)
 txRegStakeKeys ix keys =
   makeSimpleTx
     (txbFromCerts ix $ stakeKeyRegistrations keys)
     [asWitness alicePay]
 
-initLedgerState :: Integer -> (UTxOState B, DPState B)
+initLedgerState :: Integer -> (UTxOState B (Value B), DPState B)
 initLedgerState n = (initUTxO n, emptyDPState)
 
 makeLEDGERState ::
-  (UTxOState B, DPState B) ->
-  Tx B ->
-  (UTxOState B, DPState B)
+  (UTxOState B (Value B), DPState B) ->
+  Tx B (Value B) ->
+  (UTxOState B (Value B), DPState B)
 makeLEDGERState start tx =
-  let st = applySTS @(LEDGER B) (TRC (ledgerEnv, start, tx))
+  let st = applySTS @(LEDGER B (Value B)) (TRC (ledgerEnv, start, tx))
    in case runShelleyBase st of
         Right st' -> st'
         Left e -> error $ show e
 
 -- Create a ledger state that has registered stake credentials that
 -- are seeded with (n, 0, 0, 0, 0) to (m, 0, 0, 0, 0).
--- It is pre-populated with 2 genesis coins.
+-- It is pre-populated with 2 genesis injcoins.
 ledgerStateWithNregisteredKeys ::
-  Word64 -> Word64 -> (UTxOState B, DPState B)
+  Word64 -> Word64 -> (UTxOState B (Value B), DPState B)
 ledgerStateWithNregisteredKeys n m =
   makeLEDGERState (initLedgerState 1) $ txRegStakeKeys 0 (stakeKeys n m)
 
@@ -286,7 +288,7 @@ ledgerStateWithNregisteredKeys n m =
 -- so that keys (n, 0, 0, 0, 0) through (m, 0, 0, 0, 0) are already registered,
 -- register new keys (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
 -- Note that [n, m] must be disjoint from [x, y].
-ledgerRegisterStakeKeys :: Word64 -> Word64 -> (UTxOState B, DPState B) -> ()
+ledgerRegisterStakeKeys :: Word64 -> Word64 -> (UTxOState B (Value B), DPState B) -> ()
 ledgerRegisterStakeKeys x y state =
   testLEDGER
     state
@@ -298,11 +300,11 @@ ledgerRegisterStakeKeys x y state =
 
 -- Create a transaction body that de-registers stake credentials,
 -- corresponding to the keys seeded with (x, 0, 0, 0, 0) to (y, 0, 0, 0, 0)
-txbDeRegStakeKey :: Word64 -> Word64 -> TxBody B
+txbDeRegStakeKey :: Word64 -> Word64 -> TxBody B (Value B)
 txbDeRegStakeKey x y =
   TxBody
     (Set.fromList [TxIn genesisId 1])
-    (StrictSeq.fromList [TxOut aliceAddr (Coin 100)])
+    (StrictSeq.fromList [TxOut aliceAddr (vinject $ Coin 100)])
     ( StrictSeq.fromList $
         fmap (DCertDeleg . DeRegKey . stakeKeyToCred) (stakeKeys x y)
     )
@@ -314,7 +316,7 @@ txbDeRegStakeKey x y =
 
 -- Create a transaction that deregisters stake credentials numbered x through y.
 -- It spends the genesis coin indexed by 1.
-txDeRegStakeKeys :: Word64 -> Word64 -> Tx B
+txDeRegStakeKeys :: Word64 -> Word64 -> Tx B (Value B)
 txDeRegStakeKeys x y =
   makeSimpleTx
     (txbDeRegStakeKey x y)
@@ -324,7 +326,7 @@ txDeRegStakeKeys x y =
 -- so that keys (n, 0, 0, 0, 0) through (m, 0, 0, 0, 0) are already registered,
 -- deregister keys (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
 -- Note that [x, y] must be contained in [n, m].
-ledgerDeRegisterStakeKeys :: Word64 -> Word64 -> (UTxOState B, DPState B) -> ()
+ledgerDeRegisterStakeKeys :: Word64 -> Word64 -> (UTxOState B (Value B), DPState B) -> ()
 ledgerDeRegisterStakeKeys x y state =
   testLEDGER
     state
@@ -336,11 +338,11 @@ ledgerDeRegisterStakeKeys x y state =
 
 -- Create a transaction body that withdrawls from reward accounts,
 -- corresponding to the keys seeded with (x, 0, 0, 0, 0) to (y, 0, 0, 0, 0).
-txbWithdrawals :: Word64 -> Word64 -> TxBody B
+txbWithdrawals :: Word64 -> Word64 -> TxBody B (Value B)
 txbWithdrawals x y =
   TxBody
     (Set.fromList [TxIn genesisId 1])
-    (StrictSeq.fromList [TxOut aliceAddr (Coin 100)])
+    (StrictSeq.fromList [TxOut aliceAddr (vinject $ Coin 100)])
     StrictSeq.empty
     ( Wdrl $
         Map.fromList $
@@ -353,7 +355,7 @@ txbWithdrawals x y =
 
 -- Create a transaction that withdrawls from a reward accounts.
 -- It spends the genesis coin indexed by 1.
-txWithdrawals :: Word64 -> Word64 -> Tx B
+txWithdrawals :: Word64 -> Word64 -> Tx B (Value B)
 txWithdrawals x y =
   makeSimpleTx
     (txbWithdrawals x y)
@@ -363,7 +365,7 @@ txWithdrawals x y =
 -- so that keys (n, 0, 0, 0, 0) through (m, 0, 0, 0, 0) are already registered,
 -- make reward withdrawls for keys (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
 -- Note that [x, y] must be contained in [n, m].
-ledgerRewardWithdrawals :: Word64 -> Word64 -> (UTxOState B, DPState B) -> ()
+ledgerRewardWithdrawals :: Word64 -> Word64 -> (UTxOState B (Value B), DPState B) -> ()
 ledgerRewardWithdrawals x y state = testLEDGER state (txWithdrawals x y) ledgerEnv
 
 -- ===========================================================================
@@ -407,7 +409,7 @@ poolRegCerts :: [KeyPair 'StakePool B] -> StrictSeq (DCert B)
 poolRegCerts = StrictSeq.fromList . fmap (DCertPool . RegPool . mkPoolParameters)
 
 -- Create a transaction that registers stake pools.
-txRegStakePools :: Natural -> [KeyPair 'StakePool B] -> Tx B
+txRegStakePools :: Natural -> [KeyPair 'StakePool B] -> Tx B (Value B)
 txRegStakePools ix keys =
   makeSimpleTx
     (txbFromCerts ix $ poolRegCerts keys)
@@ -415,8 +417,8 @@ txRegStakePools ix keys =
 
 -- Create a ledger state that has n registered stake pools.
 -- The keys are seeded with (n, 1, 0, 0, 0) to (m, 1, 0, 0, 0)
--- It is pre-populated with 2 genesis coins.
-ledgerStateWithNregisteredPools :: Word64 -> Word64 -> (UTxOState B, DPState B)
+-- It is pre-populated with 2 genesis injcoins.
+ledgerStateWithNregisteredPools :: Word64 -> Word64 -> (UTxOState B (Value B), DPState B)
 ledgerStateWithNregisteredPools n m =
   makeLEDGERState (initLedgerState 1) $ txRegStakePools 0 (poolColdKeys n m)
 
@@ -427,7 +429,7 @@ ledgerStateWithNregisteredPools n m =
 -- so that pool keys (n, 1, 0, 0, 0) through (m, 1, 0, 0, 0) are already registered,
 -- register new pools (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
 -- Note that [n, m] must be disjoint from [x, y].
-ledgerRegisterStakePools :: Word64 -> Word64 -> (UTxOState B, DPState B) -> ()
+ledgerRegisterStakePools :: Word64 -> Word64 -> (UTxOState B (Value B), DPState B) -> ()
 ledgerRegisterStakePools x y state =
   testLEDGER
     state
@@ -441,7 +443,7 @@ ledgerRegisterStakePools x y state =
 -- so that pool keys (n, 1, 0, 0, 0) through (m, 1, 0, 0, 0) are already registered,
 -- re-register pools (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
 -- Note that [n, m] must be contained in [x, y].
-ledgerReRegisterStakePools :: Word64 -> Word64 -> (UTxOState B, DPState B) -> ()
+ledgerReRegisterStakePools :: Word64 -> Word64 -> (UTxOState B (Value B), DPState B) -> ()
 ledgerReRegisterStakePools x y state =
   testLEDGER
     state
@@ -453,11 +455,11 @@ ledgerReRegisterStakePools x y state =
 
 -- Create a transaction body that retires stake pools,
 -- corresponding to the keys seeded with (x, 1, 0, 0, 0) to (y, 1, 0, 0, 0)
-txbRetireStakePool :: Word64 -> Word64 -> TxBody B
+txbRetireStakePool :: Word64 -> Word64 -> TxBody B (Value B)
 txbRetireStakePool x y =
   TxBody
     (Set.fromList [TxIn genesisId 1])
-    (StrictSeq.fromList [TxOut aliceAddr (Coin 100)])
+    (StrictSeq.fromList [TxOut aliceAddr (vinject $ Coin 100)])
     ( StrictSeq.fromList $
         fmap
           (\ks -> DCertPool $ RetirePool (mkPoolKeyHash ks) (EpochNo 1))
@@ -471,7 +473,7 @@ txbRetireStakePool x y =
 
 -- Create a transaction that retires stake pools x through y.
 -- It spends the genesis coin indexed by 1.
-txRetireStakePool :: Word64 -> Word64 -> Tx B
+txRetireStakePool :: Word64 -> Word64 -> Tx B (Value B)
 txRetireStakePool x y =
   makeSimpleTx
     (txbRetireStakePool x y)
@@ -481,7 +483,7 @@ txRetireStakePool x y =
 -- so that pool keys (n, 1, 0, 0, 0) through (m, 1, 0, 0, 0) are already registered,
 -- retire pools (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
 -- Note that [n, m] must be contained in [x, y].
-ledgerRetireStakePools :: Word64 -> Word64 -> (UTxOState B, DPState B) -> ()
+ledgerRetireStakePools :: Word64 -> Word64 -> (UTxOState B (Value B), DPState B) -> ()
 ledgerRetireStakePools x y state = testLEDGER state (txRetireStakePool x y) ledgerEnv
 
 -- ===========================================================================
@@ -492,8 +494,8 @@ ledgerRetireStakePools x y state = testLEDGER state (txRetireStakePool x y) ledg
 -- Create a ledger state that has n registered stake keys and m stake pools.
 -- The stake keys are seeded with (1, 0, 0, 0, 0) to (n, 0, 0, 0, 0)
 -- The stake pools are seeded with (1, 1, 0, 0, 0) to (m, 1, 0, 0, 0)
--- It is pre-populated with 3 genesis coins.
-ledgerStateWithNkeysMpools :: Word64 -> Word64 -> (UTxOState B, DPState B)
+-- It is pre-populated with 3 genesis injcoins.
+ledgerStateWithNkeysMpools :: Word64 -> Word64 -> (UTxOState B (Value B), DPState B)
 ledgerStateWithNkeysMpools n m =
   makeLEDGERState
     (makeLEDGERState (initLedgerState 2) $ txRegStakeKeys 0 (stakeKeys 1 n))
@@ -501,11 +503,11 @@ ledgerStateWithNkeysMpools n m =
 
 -- Create a transaction body that delegates several keys to ONE stake pool,
 -- corresponding to the keys seeded with (n, 0, 0, 0, 0) to (m, 0, 0, 0, 0)
-txbDelegate :: Word64 -> Word64 -> TxBody B
+txbDelegate :: Word64 -> Word64 -> TxBody B (Value B)
 txbDelegate n m =
   TxBody
     (Set.fromList [TxIn genesisId 2])
-    (StrictSeq.fromList [TxOut aliceAddr (Coin 100)])
+    (StrictSeq.fromList [TxOut aliceAddr (vinject $ Coin 100)])
     ( StrictSeq.fromList $
         fmap
           (\ks -> DCertDeleg $ Delegate (Delegation (stakeKeyToCred ks) firstStakePoolKeyHash))
@@ -518,7 +520,7 @@ txbDelegate n m =
     SNothing
 
 -- Create a transaction that delegates stake.
-txDelegate :: Word64 -> Word64 -> Tx B
+txDelegate :: Word64 -> Word64 -> Tx B (Value B)
 txDelegate n m =
   makeSimpleTx
     (txbDelegate n m)
@@ -530,5 +532,5 @@ txDelegate n m =
 -- delegate stake keys (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0) to ONE pool.
 -- Note that [x, y] must be contained in [1, n].
 ledgerDelegateManyKeysOnePool ::
-  Word64 -> Word64 -> (UTxOState B, DPState B) -> ()
+  Word64 -> Word64 -> (UTxOState B (Value B), DPState B) -> ()
 ledgerDelegateManyKeysOnePool x y state = testLEDGER state (txDelegate x y) ledgerEnv

@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 module Test.Shelley.Spec.Ledger.Shrinkers where
 
@@ -14,14 +15,15 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.Value
-import Test.QuickCheck (shrinkIntegral, shrinkList)
+import Test.QuickCheck (shrinkIntegral, shrinkList, Arbitrary, shrink)
+
+type CVT crypto v = (CV crypto v, Arbitrary v)
 
 shrinkBlock ::
   Block h v ->
@@ -30,20 +32,21 @@ shrinkBlock _ = []
 
 shrinkTx ::
   forall crypto v.
-  CV crypto v =>
+  CVT crypto v =>
   Tx crypto v ->
   [Tx crypto v]
 shrinkTx (Tx _b _ws _md) =
   [Tx b' _ws _md | b' <- shrinkTxBody _b]
 
-shrinkTxBody :: CV crypto v => TxBody crypto v -> [TxBody crypto v]
+shrinkTxBody :: (CVT crypto v) => TxBody crypto v -> [TxBody crypto v]
 shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
   -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
 
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
-  [ TxBody is os' cs ws (tf + (outBalance - outputBalance os')) tl tu md
+  -- TODO make sure this preserves the invariant
+  [ TxBody is os' cs ws (tf + (vcoin $ vminus outBalance (outputBalance os'))) tl tu md
     | os' <- toList $ shrinkStrictSeq shrinkTxOut os
   ]
   where
@@ -54,15 +57,15 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
     -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
     outBalance = outputBalance os
 
-outputBalance :: CV crypto v => StrictSeq (TxBody crypto v) -> v
-outputBalance = foldl' (\v (TxOut _ c) -> v + c) (Coin 0)
+outputBalance :: CVT crypto v => StrictSeq (TxOut crypto v) -> v
+outputBalance = foldl' (\v (TxOut _ c) -> vplus v c) vzero
 
 shrinkTxIn :: TxIn crypto v -> [TxIn crypto v]
 shrinkTxIn = const []
 
-shrinkTxOut :: Crypto crypto => TxBody crypto v -> [TxBody crypto v]
-shrinkTxOut (TxOut addr coin) =
-  TxOut addr <$> shrinkCoin coin
+shrinkTxOut :: (CVT crypto v) => TxOut crypto v -> [TxOut crypto v]
+shrinkTxOut (TxOut addr vl) =
+  TxOut addr <$> shrink vl
 
 shrinkCoin :: Coin -> [Coin]
 shrinkCoin (Coin x) = Coin <$> shrinkIntegral x

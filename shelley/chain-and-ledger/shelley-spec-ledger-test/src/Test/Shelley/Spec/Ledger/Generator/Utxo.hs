@@ -41,7 +41,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     maybeToStrictMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
+import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
@@ -82,6 +82,8 @@ import Shelley.Spec.Ledger.UTxO
     makeWitnessesFromScriptKeys,
     makeWitnessesVKey,
   )
+import Shelley.Spec.Ledger.Value
+
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -115,21 +117,21 @@ import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs)
 -- completely, but in practice it is relatively easy to calibrate
 -- the generator 'Constants' so that there is sufficient spending balance.
 genTx ::
-  (HasCallStack, Mock c) =>
+  (HasCallStack, Mock c, CVNC c v) =>
   GenEnv c ->
   LedgerEnv ->
-  (UTxOState c, DPState c) ->
-  Gen (Tx c)
+  (UTxOState c v, DPState c) ->
+  Gen (Tx c v)
 genTx ge@(GenEnv _ (Constants {genTxRetries})) =
   genTxRetry genTxRetries ge
 
 genTxRetry ::
-  (HasCallStack, Mock c) =>
+  (HasCallStack, Mock c, CVNC c v) =>
   Int ->
   GenEnv c ->
   LedgerEnv ->
-  (UTxOState c, DPState c) ->
-  Gen (Tx c)
+  (UTxOState c v, DPState c) ->
+  Gen (Tx c v)
 genTxRetry
   n
   ge@( GenEnv
@@ -173,7 +175,7 @@ genTxRetry
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
       -- and a Outputs builder that distributes the given balance over addresses.
       -------------------------------------------------------------------------
-      let spendingBalance = spendingBalanceUtxo + (sum (snd <$> wdrls)) - deposits + refunds
+      let spendingBalance = vplus spendingBalanceUtxo (vinject $ (sum (snd <$> wdrls)) - deposits + refunds)
       outputAddrs <-
         genRecipients (length inputs) keys' scripts'
           >>= genPtrAddrs (_dstate dpState')
@@ -190,7 +192,7 @@ genTxRetry
       -- Generate final Tx now that we have the real fees. We need to recompute
       -- the output amounts and in turn the txBody and its witness set.
       -------------------------------------------------------------------------
-      if spendingBalance >= fees
+      if voper Gteq spendingBalance (vinject fees)
         then do
           let (actualFees', outputs') = mkOutputs fees
               txBody = draftTxBody {_txfee = actualFees', _outputs = outputs'}
@@ -219,13 +221,13 @@ mkScriptWits payScripts stakeScripts =
     hashStakeScript (_, sScript) = (hashScript sScript, sScript)
 
 mkTxWits ::
-  (HasCallStack, Mock c) =>
+  (HasCallStack, Mock c, CVNC c v) =>
   Map (KeyHash 'Payment c) (KeyPair 'Payment c) ->
   Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
   [KeyPair 'Witness c] ->
   Map (ScriptHash c) (MultiSig c) ->
-  Hash c (TxBody c) ->
-  WitnessSet c
+  Hash c (TxBody c v) ->
+  WitnessSet c v
 mkTxWits
   indexedPaymentKeys
   indexedStakingKeys
@@ -260,16 +262,16 @@ mkTxWits
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody ::
-  (HasCallStack, Crypto c) =>
-  [TxIn c] ->
-  StrictSeq (TxOut c) ->
+  (HasCallStack, CV c v) =>
+  [TxIn c v] ->
+  StrictSeq (TxOut c v) ->
   StrictSeq (DCert c) ->
   [(RewardAcnt c, Coin)] ->
   Maybe (Update c) ->
   Coin ->
   SlotNo ->
   StrictMaybe (MetaDataHash c) ->
-  Gen (TxBody c)
+  Gen (TxBody c v)
 genTxBody inputs outputs certs wdrls update fee slotWithTTL mdHash = do
   return $
     TxBody
@@ -288,12 +290,13 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL mdHash = do
 --
 -- The idea is to have an specified spending balance and fees that must be paid
 -- by the selected addresses.
+-- TODO need right splitting of v!
 calcOutputsFromBalance ::
-  (HasCallStack, Crypto c) =>
-  Coin ->
+  (HasCallStack, CV c v) =>
+  v ->
   [Addr c] ->
   Coin ->
-  (Coin, StrictSeq (TxOut c))
+  (Coin, StrictSeq (TxOut c v))
 calcOutputsFromBalance balance_ addrs fee =
   ( fee + splitCoinRem,
     (`TxOut` amountPerOutput) <$> StrictSeq.fromList addrs
@@ -301,8 +304,8 @@ calcOutputsFromBalance balance_ addrs fee =
   where
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.
-    balanceAfterFee = balance_ - fee
-    (amountPerOutput, splitCoinRem) = splitCoin balanceAfterFee (fromIntegral $ length addrs)
+    balanceAfterFee = vminus balance_ (vinject fee)
+    (amountPerOutput, splitCoinRem) = vsplit balanceAfterFee (fromIntegral $ length addrs)
 
 -- | Select unspent output(s) to serve as inputs for a new transaction
 --
@@ -315,12 +318,12 @@ calcOutputsFromBalance balance_ addrs fee =
 -- spend these outputs). If this is not the case, `findPayKeyPairAddr` /
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 genInputs ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, CV c v) =>
   Constants ->
   Map (KeyHash 'Payment c) (KeyPair 'Payment c) ->
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
-  UTxO c ->
-  Gen ([TxIn c], Coin, ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)]))
+  UTxO c v ->
+  Gen ([TxIn c v], v, ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)]))
 genInputs Constants {minNumGenInputs, maxNumGenInputs} keyHashMap payScriptMap (UTxO utxo) = do
   selectedUtxo <-
     take <$> QC.choose (minNumGenInputs, maxNumGenInputs)

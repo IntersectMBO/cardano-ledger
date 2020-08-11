@@ -111,6 +111,7 @@ import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
+import Shelley.Spec.Ledger.Value
 import Test.Tasty.HUnit
   ( (@?=),
     Assertion,
@@ -281,6 +282,6 @@ testSTS env initSt sig predicateFailure@(Left _) = do
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
 mkHash i = coerce (hashWithSerialiser @h toCBOR i)
 
-getBlockNonce :: forall c. Crypto c => Block c -> Nonce
+getBlockNonce :: forall c v. CV c v => Block c v -> Nonce
 getBlockNonce =
   mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader
