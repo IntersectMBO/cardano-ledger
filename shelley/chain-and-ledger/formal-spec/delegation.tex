@@ -106,7 +106,6 @@ It does the following:
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{url} & \URL & \text{a url}\\
-      \var{pmd} & \PoolMD & \text{pool metadata}\\
       \var{mp} & \MIRPot & \text{either $\ReservesMIR$ or $\TreasuryMIR$}\\
     \end{array}
   \end{equation*}
@@ -530,16 +529,23 @@ concerns are independent of the ledger rules.
       & \var{gkh}\in\dom{genDelegs}
       \\~\\
       {
-        \begin{array}{ l @{~\leteq~\{} c @{~\mid~} r @{\mapsto} l @{,~\var{g}\neq\var{gkh}\}} }
-          \var{currentOtherColdKeyHashes} & \var{k}  & \var{g} & (\var{k},~\wcard) \\
-          \var{currentOtherVrfKeyHashes}  & \var{v} & \var{g} & (\wcard,~\var{v}) \\
-          \var{futureOtherColdKeyHashes}  & \var{k}  & (\var{g},~\wcard) & (\var{k},~\wcard) \\
-          \var{futureOtherVrfKeyHashe}    & \var{v} & (\var{g},~\wcard) & (\wcard,~\var{v}) \\
+        \begin{array}{ l @{\leteq \{(k,~v) ~\mid~(} c @{\mapsto(k,~v))\in~} l @{,~\var{g}\neq\var{gkh}\}} }
+          \var{cod} & \var{g} & \var{genDelegs} \\
+          \var{fod} & (\wcard,~\var{g}) & \var{fGenDelegs}
+        \end{array}
+      }
+      \\~\\
+      {
+        \begin{array}{ l @{~\leteq~\{} c @{~\mid~\wcard\mapsto} c @{\in~} l @{\}}}
+          \var{currentOtherColdKeyHashes} & \var{k} & (\var{k},~\wcard) & \var{cod}\\
+          \var{currentOtherVrfKeyHashes}  & \var{v} & (\wcard,~\var{v}) & \var{cod}\\
+          \var{futureOtherColdKeyHashes}  & \var{k} & (\var{k},~\wcard) & \var{fod}\\
+          \var{futureOtherVrfKeyHashes}   & \var{v} & (\wcard,~\var{v}) & \var{fod}\\
       \end{array}
       }
       \\
       \var{vkh}\notin\var{currentOtherColdKeyHashes}\union\var{futureOtherColdKeyHashes} \\
-      \var{vrf}\notin\var{currentOtherVrfKeyHashes}\union\var{futureOtherVrfKeyHashe} \\
+      \var{vrf}\notin\var{currentOtherVrfKeyHashes}\union\var{futureOtherVrfKeyHashes} \\
       \var{fdeleg}\leteq\{(\var{s'},~\var{gkh}) \mapsto (\var{vkh},~\var{vrf})\}
     }
     {
