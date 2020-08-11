@@ -62,6 +62,7 @@ instance Val Integer where
   vcoin x = Coin x
   vinject (Coin x) = x
   vsize _ = 1
+  vsplit n 0 = (Coin 0, n)
   vsplit n m
     | m <= 0 = error "must split coins into positive parts"
     | otherwise = (n `div` m, Coin $ n `rem` m)
