@@ -14,7 +14,8 @@ where
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Control.State.Transition
-  ( STS (..),
+  ( Assertion (..),
+    STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
@@ -24,6 +25,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
+import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DState (..),
@@ -60,6 +62,15 @@ instance Typeable crypto => STS (POOLREAP crypto) where
         PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState
     ]
   transitionRules = [poolReapTransition]
+
+  assertions =
+    [ PostCondition
+        "Deposit pot must equal obligation"
+        ( \(TRC (pp, _, _)) st ->
+            obligation pp (_rewards $ prDState st) (_pParams $ prPState st)
+              == _deposited (prUTxOSt st)
+        )
+    ]
 
 instance NoUnexpectedThunks (PredicateFailure (POOLREAP crypto))
 
