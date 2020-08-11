@@ -28,6 +28,7 @@ import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
 import Control.State.Transition
   ( Assertion (..),
+    AssertionViolation (..),
     Embed,
     IRC (..),
     InitialRule,
@@ -143,7 +144,8 @@ instance
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
 
-  renderTRC = show
+  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx} =
+    "AssertionViolation (" <> avSTS <> "): " <> avMsg <> "\n" <> show avCtx
 
   assertions =
     [ PostCondition
