@@ -295,7 +295,7 @@ chainTransition =
 
       BbodyState ls' bcur' <-
         trans @(BBODY crypto) $
-          TRC (BbodyEnv (Map.keysSet osched) pp' account, BbodyState ls bcur, block)
+          TRC (BbodyEnv (`Map.member` osched) pp' account, BbodyState ls bcur, block)
 
       let nes'' = updateNES nes' bcur' ls'
           bhb = bhbody bh

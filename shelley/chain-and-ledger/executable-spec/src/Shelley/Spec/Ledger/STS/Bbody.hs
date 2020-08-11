@@ -18,7 +18,6 @@ module Shelley.Spec.Ledger.STS.Bbody
 where
 
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (eval, (∈))
 import Control.State.Transition
   ( Embed (..),
     STS (..),
@@ -29,7 +28,6 @@ import Control.State.Transition
     (?!),
   )
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set (Set)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain
@@ -60,7 +58,7 @@ data BbodyState crypto
   deriving (Eq, Show)
 
 data BbodyEnv = BbodyEnv
-  { bbodySlots :: (Set SlotNo),
+  { bbodySlots :: SlotNo -> Bool,
     bbodyPp :: PParams,
     bbodyAccount :: AccountState
   }
@@ -107,7 +105,7 @@ bbodyTransition ::
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-             ( BbodyEnv oslots pp account,
+             ( BbodyEnv isBodySlot pp account,
                BbodyState ls b,
                Block (BHeader bhb _) txsSeq
                )
@@ -129,7 +127,7 @@ bbodyTransition =
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
         let hkAsStakePool = coerceKeyRole . poolIDfromBHBody $ bhb
-        pure $ BbodyState ls' (incrBlocks (eval (bheaderSlotNo bhb ∈ oslots)) hkAsStakePool b)
+        pure $ BbodyState ls' (incrBlocks (isBodySlot (bheaderSlotNo bhb)) hkAsStakePool b)
 
 instance
   ( Crypto crypto,
