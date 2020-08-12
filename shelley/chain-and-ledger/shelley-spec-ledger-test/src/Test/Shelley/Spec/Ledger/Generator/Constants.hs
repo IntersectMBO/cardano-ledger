@@ -134,5 +134,5 @@ defaultConstants =
       maxTreasury = 10000000,
       minReserves = 1000000,
       maxReserves = 10000000,
-      genTxRetries = 5
+      genTxRetries = 6
     }

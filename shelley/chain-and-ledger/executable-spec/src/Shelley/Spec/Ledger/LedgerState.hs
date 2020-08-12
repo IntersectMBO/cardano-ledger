@@ -181,6 +181,7 @@ import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, mapFromCBOR, mapToC
 import Shelley.Spec.Ledger.Slot
   ( Duration (..),
     EpochNo (..),
+    EpochSize,
     SlotNo (..),
     epochInfoFirst,
     epochInfoSize,
@@ -981,14 +982,12 @@ updateNonMypopic nm rPot newLikelihoods ss =
 
 -- | Create a reward update
 createRUpd ::
-  EpochNo ->
+  EpochSize ->
   BlocksMade crypto ->
   EpochState crypto ->
   Coin ->
   ShelleyBase (RewardUpdate crypto)
-createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
-  ei <- asks epochInfo
-  slotsPerEpoch <- epochInfoSize ei e
+createRUpd slotsPerEpoch b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
   asc <- asks activeSlotCoeff
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
