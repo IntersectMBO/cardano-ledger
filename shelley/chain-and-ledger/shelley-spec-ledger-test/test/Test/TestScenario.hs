@@ -20,6 +20,7 @@ data TestScenario
   | Development
   | Nightly
   | Fast
+  | Show
   deriving (Read, Show)
 
 instance IsOption TestScenario where

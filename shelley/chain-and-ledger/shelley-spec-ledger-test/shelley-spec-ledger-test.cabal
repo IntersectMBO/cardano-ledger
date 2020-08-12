@@ -110,6 +110,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Examples.PoolLifetime
       Test.Shelley.Spec.Ledger.Examples.Updates
       Test.Shelley.Spec.Ledger.Fees
+      Test.Shelley.Spec.Ledger.MetaData.ShowSpec
       Test.Shelley.Spec.Ledger.MultiSigExamples
       Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
       Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
@@ -134,6 +135,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Serialisation.Golden.Genesis
       Test.Shelley.Spec.Ledger.Serialisation.Tripping.CBOR
       Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON
+      Test.Shelley.Spec.Ledger.ShowTests
       Test.Shelley.Spec.Ledger.STSTests
       Test.Shelley.Spec.Ledger.UnitTests
       Test.TestScenario
@@ -184,6 +186,7 @@ test-suite shelley-spec-ledger-test
       generic-random,
       hedgehog,
       hedgehog-quickcheck,
+      hint,
       HUnit,
       iproute,
       multiset,

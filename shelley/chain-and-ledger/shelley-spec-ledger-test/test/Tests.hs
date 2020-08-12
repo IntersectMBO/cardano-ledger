@@ -6,6 +6,7 @@ import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTes
 import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (chainExamples)
 import qualified Test.Shelley.Spec.Ledger.Serialisation as Serialisation
+import Test.Shelley.Spec.Ledger.ShowTests (showTests)
 import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
@@ -14,6 +15,7 @@ tests :: TestTree
 tests = askOption $ \case
   Nightly -> nightlyTests
   Fast -> fastTests
+  Show -> showTests
   _ -> mainTests
 
 mainTests :: TestTree
@@ -26,7 +28,8 @@ mainTests =
       chainExamples,
       --multisigExamples, - TODO re-enable after the script embargo has been lifted
       unitTests,
-      setAlgTest
+      setAlgTest,
+      showTests
     ]
 
 nightlyTests :: TestTree
@@ -35,7 +38,8 @@ nightlyTests =
     "Ledger with Delegation nightly"
     [ propertyTests,
       nonTracePropertyTests,
-      Serialisation.tests 50
+      Serialisation.tests 50,
+      showTests
     ]
 
 fastTests :: TestTree
