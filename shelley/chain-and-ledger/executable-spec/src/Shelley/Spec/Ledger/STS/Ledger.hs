@@ -107,7 +107,13 @@ instance
       <> show avState
 
   assertions =
-    [ PostCondition
+    [ PreCondition
+        "Deposit pot must equal obligation (pre)"
+        ( \(TRC (LedgerEnv {ledgerPp}, (utxoSt, DPState {_dstate, _pstate}), _)) ->
+            obligation ledgerPp (_rewards _dstate) (_pParams _pstate)
+              == _deposited utxoSt
+        ),
+      PostCondition
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
            (utxoSt, DPState {_dstate, _pstate}) ->
