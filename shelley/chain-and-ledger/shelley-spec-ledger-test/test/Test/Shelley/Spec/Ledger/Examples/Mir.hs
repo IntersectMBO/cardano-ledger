@@ -77,7 +77,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     NatNonce (..),
     genesisCoins,
     genesisId,
-    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     zero,
   )
@@ -165,7 +165,7 @@ txEx1 wits pot =
 
 blockEx1' :: forall c. Mock c => [KeyPair 'Witness c] -> MIRPot -> Block c
 blockEx1' wits pot =
-  mkBlock
+  mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule ppEx 10)
     [txEx1 wits pot]
@@ -256,7 +256,7 @@ mirFailFunds pot treasury llNeeded llReceived =
 
 blockEx2 :: forall c. Mock c => MIRPot -> Block c
 blockEx2 pot =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader (blockEx1 pot))
     (coreNodeKeysBySchedule ppEx 50)
     []
@@ -291,7 +291,7 @@ epoch1Nonce pot = chainCandidateNonce (expectedStEx2 @c pot)
 
 blockEx3 :: forall c. Mock c => MIRPot -> Block c
 blockEx3 pot =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader (blockEx2 pot))
     (coreNodeKeysBySchedule ppEx 110)
     []

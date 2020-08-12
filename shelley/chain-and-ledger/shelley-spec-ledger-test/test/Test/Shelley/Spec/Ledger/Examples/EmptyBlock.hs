@@ -36,7 +36,7 @@ import Test.Shelley.Spec.Ledger.Examples.Init
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( NatNonce (..),
-    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     zero,
   )
@@ -47,7 +47,7 @@ initStEx1 = initSt (UTxO Map.empty)
 
 blockEx1 :: forall c. (HasCallStack, Mock c) => Block c
 blockEx1 =
-  mkBlock
+  mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule ppEx 10)
     []

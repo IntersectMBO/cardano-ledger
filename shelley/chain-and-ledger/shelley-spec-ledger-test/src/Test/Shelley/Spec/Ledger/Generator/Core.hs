@@ -39,7 +39,8 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     toCred,
     zero,
     unitIntervalToNatural,
-    mkBlock, -- The only function I could not get type correct, Uses import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
+    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     getKESPeriodRenewalNo,
     tooLateInEpoch,
@@ -54,6 +55,7 @@ where
 
 import Cardano.Binary (toCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
+import Cardano.Crypto.VRF (evalCertified)
 import qualified Cardano.Crypto.Hash as Hash
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪))
 import Control.Monad (replicateM)
@@ -135,7 +137,12 @@ import Shelley.Spec.Ledger.LedgerState
     _utxo,
     _utxoState,
   )
-import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCert, OCertSignable (..), pattern OCert)
+import Shelley.Spec.Ledger.OCert
+  ( KESPeriod (..),
+    OCert,
+    OCertSignable (..),
+    pattern OCert,
+  )
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     ProtVer (..),
@@ -540,6 +547,57 @@ mkBlock ::
   BlockNo ->
   -- | EpochNo nonce
   Nonce ->
+  -- | Period of KES (key evolving signature scheme)
+  Word ->
+  -- | KES period of key registration
+  Word ->
+  -- | Operational certificate
+  OCert c ->
+  Block c
+mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
+  let (_, (sHot, _)) = head $ hot pkeys
+      KeyPair vKeyCold _ = cold pkeys
+      nonceNonce = mkSeed seedEta s enonce
+      leaderNonce = mkSeed seedL s enonce
+      bhb =
+        BHBody
+          blockNo
+          s
+          (BlockHash prev)
+          (coerceKeyRole vKeyCold)
+          (snd $ vrf pkeys)
+          (coerce $ evalCertified () nonceNonce (fst $ vrf pkeys))
+          (coerce $ evalCertified () leaderNonce (fst $ vrf pkeys))
+          (fromIntegral $ bBodySize $ (TxSeq . StrictSeq.fromList) txns)
+          (bbHash $ TxSeq $ StrictSeq.fromList txns)
+          oCert
+          (ProtVer 0 0)
+      kpDiff = kesPeriod - c0
+      hotKey = case evolveKESUntil sHot (KESPeriod 0) (KESPeriod kpDiff) of
+        Nothing ->
+          error ("could not evolve key to iteration " ++ show (c0, kesPeriod, kpDiff))
+        Just hkey -> hkey
+      sig = signedKES () kpDiff bhb hotKey
+      bh = BHeader bhb sig
+   in Block bh (TxSeq $ StrictSeq.fromList txns)
+
+-- | Create a block with a faked VRF result.
+mkBlockFakeVRF ::
+  ( HasCallStack,
+    Mock c
+  ) =>
+  -- | Hash of previous block
+  HashHeader c ->
+  -- | All keys in the stake pool
+  AllIssuerKeys c r ->
+  -- | Transactions to record
+  [Tx c] ->
+  -- | Current slot
+  SlotNo ->
+  -- | Block number/chain length/chain "difficulty"
+  BlockNo ->
+  -- | EpochNo nonce
+  Nonce ->
   -- | Block nonce
   NatNonce ->
   -- | Praos leader value
@@ -551,7 +609,7 @@ mkBlock ::
   -- | Operational certificate
   OCert c ->
   Block c
-mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert =
+mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert =
   let (_, (sHot, _)) = head $ hot pkeys
       KeyPair vKeyCold _ = cold pkeys
       nonceNonce = mkSeed seedEta s enonce

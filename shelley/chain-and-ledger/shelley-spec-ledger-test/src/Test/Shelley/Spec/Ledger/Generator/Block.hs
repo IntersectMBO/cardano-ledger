@@ -8,9 +8,11 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Block
   ( genBlock,
+    genBlockOld,
   )
 where
 
+import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Iterate.SetAlgebra (dom, eval, range)
 import Control.State.Transition.Extended (TRC (..))
@@ -20,31 +22,22 @@ import Data.Foldable (toList)
 import qualified Data.List as List (find)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, listToMaybe)
-import Data.Ratio (denominator, numerator, (%))
+import Data.Maybe (catMaybes, fromMaybe, listToMaybe)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API
-  ( Block,
-    ChainState (..),
-    DPState (..),
-    DState (..),
-    EpochState (..),
-    GenDelegPair,
-    LEDGERS,
-    LedgerState (..),
-    NewEpochState (..),
-    OBftSlot (..),
-    OCertEnv (..),
-    PParams' (..),
-    TICK,
-  )
 import Shelley.Spec.Ledger.BaseTypes
-  ( activeSlotCoeff,
-    activeSlotVal,
-    intervalValue,
+  ( Nonce (NeutralNonce),
+    activeSlotCoeff,
     (⭒),
   )
-import Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
+import Shelley.Spec.Ledger.BlockChain
+  ( LastAppliedBlock (..),
+    checkLeaderValue,
+    hashHeaderToNonce,
+    mkSeed,
+    seedL,
+  )
+import Shelley.Spec.Ledger.Crypto (Crypto (VRF))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
@@ -61,7 +54,9 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
+import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
+import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, shuffle)
@@ -72,9 +67,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     GenEnv (..),
     KeySpace (..),
-    NatNonce (..),
-    genNatural,
-    genWord64,
     getKESPeriodRenewalNo,
     mkBlock,
     mkOCert,
@@ -82,10 +74,11 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
 import Test.Shelley.Spec.Ledger.Utils
   ( applySTSTest,
+    epochFromSlotNo,
     maxKESIterations,
     runShelleyBase,
+    slotFromEpoch,
     testGlobals,
-    unsafeMkUnitInterval,
   )
 
 nextCoreNode ::
@@ -116,13 +109,13 @@ getPraosSlot start tooFar os nos =
   let schedules = os `Map.union` nos
    in List.find (not . (`Map.member` schedules)) [start .. tooFar -1]
 
-genBlock ::
+genBlockOld ::
   forall c.
   Mock c =>
   GenEnv c ->
   ChainState c ->
   Gen (Block c)
-genBlock
+genBlockOld
   ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
   chainSt = do
     let os = (nesOsched . chainNes) chainSt
@@ -169,10 +162,10 @@ genBlock
     -- Otherwise, if we choose a Praos solt, we return the chosen slot number,
     -- and the corresponding stake pool's stake and Right AllIssuerKeys for
     -- some chose stake pool that has non-zero stake.
-    let (nextSlot, poolStake, ks) = case poolParams' of
-          [] -> (nextOSlot, 0, Left gkh)
-          (pkh, IndividualPoolStake stake _) : _ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
-            Nothing -> (nextOSlot, 0, Left gkh)
+    let (nextSlot, ks) = case poolParams' of
+          [] -> (nextOSlot, Left gkh)
+          (pkh, _) : _ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
+            Nothing -> (nextOSlot, Left gkh)
             Just ps ->
               let apks =
                     fromMaybe
@@ -180,7 +173,7 @@ genBlock
                       $ List.find
                         (\x -> hk x == pkh)
                         ksStakePools
-               in (ps, stake, Right apks)
+               in (ps, Right apks)
 
     let kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
         cs = chainOCertIssue chainSt
@@ -230,10 +223,9 @@ genBlock
           <*> pure nextSlot
           <*> pure (block + 1)
           <*> pure epochNonce
-          <*> genBlockNonce
-          <*> genPraosLeader poolStake
           <*> pure kesPeriod_
-          -- This seems to be trying to work out the start of the KES "era", e.g. the KES period in which this key starts to be valid.
+          -- This seems to be trying to work out the start of the KES "era",
+          -- e.g. the KES period in which this key starts to be valid.
           <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
           <*> pure oCert
     where
@@ -250,33 +242,180 @@ genBlock
           ( Map.lookup gkey gds
               >>= (flip Map.lookup) ksIndexedGenDelegates . genDelegKeyHash
           )
-      genPraosLeader stake =
-        if stake >= 0 && stake <= 1
-          then do
-            -- we subtract one from the numerator for a non-zero stake e.g. for a
-            -- stake of 3/20, we would go with 2/20 and then divide by a random
-            -- integer in [1,10]. This value is guaranteed to be below the ϕ
-            -- function for the VRF value comparison and generates a valid leader
-            -- value for Praos.
-            let (stNumer, stDenom) = (fromIntegral $ numerator stake, fromIntegral $ denominator stake)
-            let stake' =
-                  if stake > 0
-                    then (stNumer - 1) % stDenom
-                    else stNumer % stDenom
-                asc = activeSlotCoeff testGlobals
-            n <- genWord64 1 10
-            pure
-              ( unsafeMkUnitInterval
-                  ( (stake' / fromIntegral n)
-                      * ((intervalValue . activeSlotVal) asc)
-                  )
-              )
-          else error "stake not in [0; 1]"
       -- we assume small gaps in slot numbers
       genSlotIncrease = SlotNo . (lastSlotNo +) <$> QC.choose (1, 5)
       lastSlotNo = unSlotNo slot
-      genBlockNonce = NatNonce <$> genNatural 1 100
       genTxs pp reserves ls s = do
         let ledgerEnv = LedgersEnv s pp reserves
 
         sigGen @(LEDGERS c) ge ledgerEnv ls
+
+-- | Rewrite of 'genBlock', which does not use fake VRF but instead finds a
+-- valid (slot, issuer) pair with which to forge.
+--
+-- It should also be more comprehensible!
+genBlock ::
+  forall c.
+  Mock c =>
+  GenEnv c ->
+  ChainState c ->
+  Gen (Block c)
+genBlock
+  ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
+  origChainState = do
+    -- Firstly, we must choose a slot in which to lead.
+    firstConsideredSlot <- (slot +) . SlotNo <$> QC.choose (1, 5)
+    let (nextSlot, chainSt, issuerKeys) =
+          fromMaybe
+            (error "Cannot find a slot to create a block in")
+            $ selectNextSlotWithLeader ge origChainState firstConsideredSlot
+
+    -- Now we need to compute the KES period and get the set of hot keys.
+    let NewEpochState _ _ _ es _ _ _ = chainNes chainSt
+        EpochState acnt _ ls _ pp _ = es
+        kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
+        cs = chainOCertIssue chainSt
+        m = getKESPeriodRenewalNo issuerKeys kp
+        hotKeys = drop (fromIntegral m) (hot issuerKeys)
+        keys = issuerKeys {hot = hotKeys}
+
+        -- And issue a new ocert
+        n' =
+          currentIssueNo
+            ( OCertEnv
+                (Set.fromList $ hk <$> ksStakePools)
+                (eval (dom ksIndexedGenDelegates))
+            )
+            cs
+            ((coerceKeyRole . hashKey . vKey . cold) issuerKeys)
+        issueNumber =
+          if n' == Nothing
+            then error "no issue number available"
+            else fromIntegral m
+        oCert = mkOCert keys issueNumber ((fst . head) hotKeys)
+
+    mkBlock
+      <$> pure hashheader
+      <*> pure keys
+      <*> toList
+      <$> genTxs pp acnt ls nextSlot
+      <*> pure nextSlot
+      <*> pure (block + 1)
+      <*> pure (chainEpochNonce chainSt)
+      <*> pure kesPeriod_
+      -- This seems to be trying to work out the start of the KES "era",
+      -- e.g. the KES period in which this key starts to be valid.
+      <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
+      <*> pure oCert
+    where
+      -- This is safe to take form the original chain state, since we only tick
+      -- it forward; no new blocks will have been applied.
+      (block, slot, hashheader) = case chainLastAppliedBlock origChainState of
+        Origin -> error "block generator does not support from Origin"
+        At (LastAppliedBlock b s hh) -> (b, s, hh)
+      genTxs pp reserves ls s = do
+        let ledgerEnv = LedgersEnv s pp reserves
+
+        sigGen @(LEDGERS c) ge ledgerEnv ls
+
+selectNextSlotWithLeader ::
+  forall c.
+  Mock c =>
+  GenEnv c ->
+  ChainState c ->
+  -- Starting slot
+  SlotNo ->
+  Maybe (SlotNo, ChainState c, AllIssuerKeys c 'BlockIssuer)
+selectNextSlotWithLeader
+  (GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
+  origChainState
+  startSlot =
+    List.find (const True) . catMaybes $
+      selectNextSlotWithLeaderThisEpoch
+        <$> (startSlot : [slotFromEpoch x | x <- [startEpoch + 1 ..]])
+    where
+      startEpoch = epochFromSlotNo startSlot
+      selectNextSlotWithLeaderThisEpoch ::
+        -- Slot number whence we begin our search
+        SlotNo ->
+        Maybe (SlotNo, ChainState c, AllIssuerKeys c 'BlockIssuer)
+      selectNextSlotWithLeaderThisEpoch fromSlot =
+        findJust selectLeaderForSlot [fromSlot .. toSlot]
+        where
+          chainSt = tickChainState fromSlot origChainState
+          currentEpoch = epochFromSlotNo fromSlot
+          toSlot = slotFromEpoch (currentEpoch + 1) - 1
+          epochNonce = chainEpochNonce chainSt
+          overlaySched = nesOsched $ chainNes chainSt
+          poolDistr = unPoolDistr . nesPd . chainNes $ chainSt
+          dpstate = (_delegationState . esLState . nesEs . chainNes) chainSt
+          (GenDelegs cores) = (_genDelegs . _dstate) dpstate
+
+          findJust _ [] = Nothing
+          findJust f (x : xs) = case f x of
+            Just y -> Just (x, chainSt, y)
+            Nothing -> findJust f xs
+
+          isLeader slotNo poolHash vrfKey =
+            let y = VRF.evalCertified @(VRF c) () (mkSeed seedL slotNo epochNonce) vrfKey
+                stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
+                f = activeSlotCoeff testGlobals
+             in case Map.lookup slotNo overlaySched of
+                  Nothing -> checkLeaderValue (VRF.certifiedOutput y) stake f
+                  Just (ActiveSlot x) | coerceKeyRole x == poolHash -> True
+                  _ -> False
+
+          -- Try to select a leader for the given slot
+          selectLeaderForSlot :: SlotNo -> Maybe (AllIssuerKeys c 'BlockIssuer)
+          selectLeaderForSlot slotNo =
+            case Map.lookup slotNo overlaySched of
+              Nothing ->
+                coerce
+                  <$> List.find
+                    ( \(AllIssuerKeys {vrf, hk}) ->
+                        isLeader slotNo hk (fst vrf)
+                    )
+                    ksStakePools
+              Just (ActiveSlot x) ->
+                fmap coerce $
+                  Map.lookup x cores
+                    >>= \y -> Map.lookup (genDelegKeyHash y) ksIndexedGenDelegates
+              _ -> Nothing
+
+-- | The chain state is a composite of the new epoch state and the chain dep
+-- state. We tick both.
+tickChainState :: Crypto c => SlotNo -> ChainState c -> ChainState c
+tickChainState
+  slotNo
+  ChainState
+    { chainNes,
+      chainOCertIssue,
+      chainEpochNonce,
+      chainEvolvingNonce,
+      chainCandidateNonce,
+      chainPrevEpochNonce,
+      chainLastAppliedBlock
+    } =
+    let cds =
+          ChainDepState
+            { csProtocol = PrtclState chainOCertIssue chainEvolvingNonce chainCandidateNonce,
+              csTickn = TicknState chainEpochNonce chainPrevEpochNonce,
+              csLabNonce = case chainLastAppliedBlock of
+                Origin -> NeutralNonce
+                At (LastAppliedBlock {labHash}) -> hashHeaderToNonce labHash
+            }
+        lv = either (error . show) id $ futureLedgerView testGlobals chainNes slotNo
+        isNewEpoch = epochFromSlotNo slotNo /= nesEL chainNes
+        ChainDepState {csProtocol, csTickn} =
+          tickChainDepState testGlobals lv isNewEpoch cds
+        PrtclState ocertIssue evNonce candNonce = csProtocol
+        nes' = applyTickTransition testGlobals chainNes slotNo
+     in ChainState
+          { chainNes = nes',
+            chainOCertIssue = ocertIssue,
+            chainEpochNonce = ticknStateEpochNonce csTickn,
+            chainEvolvingNonce = evNonce,
+            chainCandidateNonce = candNonce,
+            chainPrevEpochNonce = ticknStatePrevHashNonce csTickn,
+            chainLastAppliedBlock = chainLastAppliedBlock
+          }
