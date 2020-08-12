@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -25,7 +26,9 @@ import Cardano.Binary
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
-  ( Embed (..),
+  ( Assertion (..),
+    AssertionViolation (..),
+    Embed (..),
     STS (..),
     TRC (..),
     TransitionRule,
@@ -38,6 +41,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
@@ -45,7 +49,7 @@ import Shelley.Spec.Ledger.LedgerState
     DState (..),
     Ix,
     PState (..),
-    UTxOState,
+    UTxOState (..),
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..))
@@ -94,6 +98,23 @@ instance
 
   initialRules = []
   transitionRules = [ledgerTransition]
+
+  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
+    "AssertionViolation (" <> avSTS <> "): " <> avMsg
+      <> "\n"
+      <> show avCtx
+      <> "\n"
+      <> show avState
+
+  assertions =
+    [ PostCondition
+        "Deposit pot must equal obligation"
+        ( \(TRC (LedgerEnv {ledgerPp}, _, _))
+           (utxoSt, DPState {_dstate, _pstate}) ->
+              obligation ledgerPp (_rewards _dstate) (_pParams _pstate)
+                == _deposited utxoSt
+        )
+    ]
 
 instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (LEDGER crypto))
 
