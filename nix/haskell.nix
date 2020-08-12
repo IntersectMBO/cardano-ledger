@@ -34,7 +34,6 @@ let
         packages.delegation.configureFlags = [ "--ghc-option=-Werror" ];
         packages.shelley-spec-non-integral.configureFlags = [ "--ghc-option=-Werror" ];
         packages.small-steps.configureFlags = [ "--ghc-option=-Werror" ];
-        packages.shelley-spec-ledger-test.components.tests.shelley-spec-ledger-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         enableLibraryProfiling = profiling;
         # Disable doctests for now (waiting for https://github.com/input-output-hk/haskell.nix/pull/427):
         packages.small-steps.components.tests.doctests.buildable = lib.mkForce false;
@@ -55,6 +54,16 @@ let
           };
         };
 
+        packages.shelley-spec-ledger-test = {
+          components = {
+            tests.shelley-spec-ledger-test = {
+              build-tools = [pkgs.cddl pkgs.cbor-diag];
+              preCheck = ''
+                export SHELLEY_SPEC_LEDGER_TEST_ROOT=${ ./. }
+              '';
+            };
+          };
+        };
       }
     ];
   };
