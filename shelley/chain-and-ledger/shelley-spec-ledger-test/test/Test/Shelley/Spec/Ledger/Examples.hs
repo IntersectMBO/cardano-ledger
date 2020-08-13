@@ -239,6 +239,8 @@ import Shelley.Spec.Ledger.UTxO
     makeWitnessesVKey,
     txid,
   )
+import Shelley.Spec.Ledger.Value
+
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -253,29 +255,31 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty.HUnit ((@?=), Assertion, assertBool, assertFailure)
 
-data CHAINExample h = CHAINExample
+--type CVSG c v = (VRF.Signable v, CV c v)
+
+data CHAINExample h v = CHAINExample
   { -- | State to start testing with
-    startState :: ChainState h,
+    startState :: ChainState h v,
     -- | Block to run chain state transition system on
-    newBlock :: Block h,
+    newBlock :: Block h v,
     -- | type of fatal error, if failure expected and final chain state if success expected
-    intendedResult :: Either [[PredicateFailure (CHAIN h)]] (ChainState h)
+    intendedResult :: Either [[PredicateFailure (CHAIN h v)]] (ChainState h v)
   }
 
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.
-testCHAINExample :: CHAINExample C -> Assertion
+testCHAINExample :: forall c v. CV c v => CHAINExample c v -> Assertion
 testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
-  (checkTrace @(CHAIN C) runShelleyBase () $ pure initSt .- block .-> expectedSt)
+  (checkTrace @(CHAIN c v) runShelleyBase () $ pure initSt .- block .-> expectedSt)
     >> (totalAda expectedSt @?= maxLLSupply)
 testCHAINExample (CHAINExample initSt block predicateFailure@(Left _)) = do
-  let st = runShelleyBase $ applySTSTest @(CHAIN C) (TRC ((), initSt, block))
+  let st = runShelleyBase $ applySTSTest @(CHAIN c v) (TRC ((), initSt, block))
   st @?= predicateFailure
 
-data MIRExample h = MIRExample
+data MIRExample h v = MIRExample
   { mirStkCred :: Credential 'Staking h,
     mirRewards :: Coin,
-    target :: Either [[PredicateFailure (CHAIN h)]] (ChainState h)
+    target :: Either [[PredicateFailure (CHAIN h v)]] (ChainState h v)
   }
   deriving (Show, Eq)
 
@@ -372,7 +376,7 @@ bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
 --  For our purposes in this test we can bootstrap the chain by just coercing the value.
 --  When this transition actually occurs, the consensus layer will do the work of making
 --  sure that the hash gets translated across the fork
-lastByronHeaderHash :: forall proxy c. Crypto c => proxy c -> HashHeader c
+lastByronHeaderHash :: Crypto c => proxy c -> HashHeader c v
 lastByronHeaderHash _ = HashHeader $ mkHash 0
 
 nonce0 :: Crypto c => proxy c -> Nonce
@@ -406,22 +410,22 @@ ppsEx1 =
       _minUTxOValue = 100
     }
 
-getBlockNonce' :: forall c. Crypto c => Proxy c -> Block c -> Nonce
+getBlockNonce' :: forall c v. CV c v => Proxy c -> Block c v -> Nonce
 getBlockNonce' _ =
   mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta . bhbody . bheader
 
-makeEvolvedNonce :: forall c. Crypto c => Proxy c -> Nonce -> [Block c] -> Nonce
+makeEvolvedNonce :: CV c v => Proxy c -> Nonce -> [Block c v] -> Nonce
 makeEvolvedNonce p n bs = foldl' (\n' b -> n' ⭒ getBlockNonce' p b) n bs
 
 -- * Example 2A - apply CHAIN transition to register stake keys and a pool
 
 -- | Unspent transaction output for example 2A,
 --   so that users actually have coins to spend.
-utxoEx2A :: Crypto c => proxy c -> UTxO c
+utxoEx2A :: CV c v => proxy c -> UTxO c v
 utxoEx2A _ =
   genesisCoins
-    [ TxOut Cast.aliceAddr aliceInitCoin,
-      TxOut Cast.bobAddr bobInitCoin
+    [ TxOut Cast.aliceAddr (vinject $ aliceInitCoin),
+      TxOut Cast.bobAddr (vinject $ bobInitCoin)
     ]
 
 -- | Register a single pool with 255 coins of deposit
@@ -460,11 +464,11 @@ aliceCoinEx2A :: Coin
 aliceCoinEx2A = aliceInitCoin - (_poolDeposit ppsEx1) - 3 * (_keyDeposit ppsEx1) - 3
 
 -- | Transaction body to be processed.
-txbodyEx2A :: Crypto c => TxBody c
+txbodyEx2A :: CV c v => TxBody c v
 txbodyEx2A =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.fromList [TxOut Cast.aliceAddr aliceCoinEx2A])
+    (StrictSeq.fromList [TxOut Cast.aliceAddr (vinject $ aliceCoinEx2A)])
     ( StrictSeq.fromList
         ( [ DCertDeleg (RegKey Cast.aliceSHK),
             DCertDeleg (RegKey Cast.bobSHK),
@@ -489,7 +493,7 @@ txbodyEx2A =
     (SJust updateEx2A)
     SNothing
 
-txEx2A :: forall c. Mock c => Tx c
+txEx2A :: forall c v. (Mock c, CVNC c v) => Tx c v
 txEx2A =
   Tx
     txbodyEx2A
@@ -530,7 +534,7 @@ acntEx2A p =
       _reserves = maxLLSupply - balance (utxoEx2A p)
     }
 
-initStEx2A :: forall c. Crypto c => ChainState c
+initStEx2A :: forall c v. CV c v => ChainState c v
 initStEx2A =
   initialShelleyState
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
@@ -545,7 +549,7 @@ initStEx2A =
     p :: Proxy c
     p = Proxy
 
-blockEx2A :: forall c. Mock c => Block c
+blockEx2A :: forall c v. (Mock c, CVNC c v) => Block c v
 blockEx2A =
   mkBlock
     (lastByronHeaderHash p)
@@ -596,13 +600,13 @@ psEx2A =
     { _pParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams
     }
 
-expectedLSEx2A :: Crypto c => LedgerState c
+expectedLSEx2A :: CV c v => LedgerState c v
 expectedLSEx2A =
   LedgerState
     ( UTxOState
         ( UTxO . Map.fromList $
-            [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
-              (TxIn (txid txbodyEx2A) 0, TxOut Cast.aliceAddr aliceCoinEx2A)
+            [ (TxIn genesisId 1, TxOut Cast.bobAddr (vinject $ bobInitCoin)),
+              (TxIn (txid txbodyEx2A) 0, TxOut Cast.aliceAddr (vinject $ aliceCoinEx2A))
             ]
         )
         (Coin 271)
@@ -611,11 +615,11 @@ expectedLSEx2A =
     )
     (DPState dsEx2A psEx2A)
 
-blockEx2AHash :: Mock c => HashHeader c
+blockEx2AHash :: (Mock c, CVNC c v) => HashHeader c v
 blockEx2AHash = bhHash (bheader blockEx2A)
 
 -- | Expected state after update is processed and STS applied.
-expectedStEx2A :: forall c. Mock c => ChainState c
+expectedStEx2A :: forall c v. (CVNC c v) => ChainState c v
 expectedStEx2A =
   ChainState
     ( NewEpochState
@@ -656,14 +660,14 @@ aliceCoinEx2BPtr = aliceCoinEx2A - (aliceCoinEx2BBase + 4)
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
-txbodyEx2B :: forall c. Crypto c => TxBody c
+txbodyEx2B :: forall c v. CV c v => TxBody c v
 txbodyEx2B =
   TxBody
     { TxData._inputs = Set.fromList [TxIn (txid txbodyEx2A) 0],
       TxData._outputs =
         StrictSeq.fromList
-          [ TxOut Cast.aliceAddr aliceCoinEx2BBase,
-            TxOut alicePtrAddr aliceCoinEx2BPtr
+          [ TxOut Cast.aliceAddr (vinject $ aliceCoinEx2BBase),
+            TxOut alicePtrAddr (vinject $ aliceCoinEx2BPtr)
           ],
       --  Delegation certificates
       TxData._certs =
@@ -678,7 +682,7 @@ txbodyEx2B =
       TxData._mdHash = SNothing
     }
 
-txEx2B :: Mock c => Tx c
+txEx2B :: (Mock c, CVNC c v) => Tx c v
 txEx2B =
   Tx
     txbodyEx2B -- Body of the transaction
@@ -690,7 +694,7 @@ txEx2B =
       }
     SNothing
 
-blockEx2B :: forall c. Mock c => Block c
+blockEx2B :: forall c v. (Mock c, CVNC c v) => Block c v
 blockEx2B =
   mkBlock
     blockEx2AHash -- Hash of previous block
@@ -723,11 +727,11 @@ newGenesisVrfKH = hashVerKeyVRF . snd $ mkVRFKeyPair (9, 8, 7, 6, 5)
 aliceCoinEx4A :: Coin
 aliceCoinEx4A = aliceInitCoin - 1
 
-txbodyEx4A :: Crypto c => TxBody c
+txbodyEx4A :: CV c v => TxBody c v
 txbodyEx4A =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx4A)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr (vinject $ aliceCoinEx4A))
     ( StrictSeq.fromList
         [ DCertGenesis
             ( GenesisDelegCert
@@ -743,7 +747,7 @@ txbodyEx4A =
     SNothing
     SNothing
 
-txEx4A :: forall c. Mock c => Tx c
+txEx4A :: forall c v. (Mock c, CVNC c v) => Tx c v
 txEx4A =
   Tx
     txbodyEx4A
@@ -760,7 +764,7 @@ txEx4A =
     p :: Proxy c
     p = Proxy
 
-blockEx4A :: forall c. Mock c => Block c
+blockEx4A :: forall c v. (Mock c, CVNC c v) => Block c v
 blockEx4A =
   mkBlock
     (lastByronHeaderHash p)
@@ -778,7 +782,7 @@ blockEx4A =
     p :: Proxy c
     p = Proxy
 
-blockEx4AHash :: Mock c => HashHeader c
+blockEx4AHash :: (Mock c, CVNC c v) => HashHeader c v
 blockEx4AHash = bhHash (bheader blockEx4A)
 
 dsEx4A :: Crypto c => DState c
@@ -790,14 +794,14 @@ dsEx4A =
           (GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH)
     }
 
-utxoEx4A :: Crypto c => UTxO c
+utxoEx4A :: CV c v => UTxO c v
 utxoEx4A =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx4A) 0, TxOut Cast.aliceAddr aliceCoinEx4A)
+    [ (TxIn genesisId 1, TxOut Cast.bobAddr (vinject $ bobInitCoin)),
+      (TxIn (txid txbodyEx4A) 0, TxOut Cast.aliceAddr (vinject $ aliceCoinEx4A))
     ]
 
-expectedLSEx4A :: Crypto c => LedgerState c
+expectedLSEx4A :: CV c v => LedgerState c v
 expectedLSEx4A =
   LedgerState
     ( UTxOState
@@ -808,7 +812,7 @@ expectedLSEx4A =
     )
     (DPState dsEx4A psEx1)
 
-expectedStEx4A :: forall c. Mock c => ChainState c
+expectedStEx4A :: forall c v. (Mock c, CVNC c v) => ChainState c v
 expectedStEx4A =
   ChainState
     ( NewEpochState
@@ -835,11 +839,11 @@ expectedStEx4A =
     p :: Proxy c
     p = Proxy
 
-ex4A :: Mock c => proxy c -> CHAINExample c
+ex4A :: (Mock c, CVNC c v) => proxy c -> CHAINExample c v
 ex4A _ = CHAINExample initStEx2A blockEx4A (Right expectedStEx4A)
 
 -- | Example 4B - New genesis key delegation updated from future delegations
-blockEx4B :: forall c. Mock c => Block c
+blockEx4B :: forall c v. (Mock c, CVNC c v) => Block c v
 blockEx4B =
   mkBlock
     blockEx4AHash
@@ -857,7 +861,7 @@ blockEx4B =
     p :: Proxy c
     p = Proxy
 
-blockEx4BHash :: Mock c => HashHeader c
+blockEx4BHash :: (Mock c, CVNC c v) => HashHeader c v
 blockEx4BHash = bhHash (bheader blockEx4B)
 
 dsEx4B :: Crypto c => DState c
@@ -872,7 +876,7 @@ dsEx4B =
             genDelegs
     }
 
-expectedLSEx4B :: Crypto c => LedgerState c
+expectedLSEx4B :: CV c v => LedgerState c v
 expectedLSEx4B =
   LedgerState
     ( UTxOState
@@ -883,7 +887,7 @@ expectedLSEx4B =
     )
     (DPState dsEx4B psEx1)
 
-expectedStEx4B :: forall c. Mock c => ChainState c
+expectedStEx4B :: forall c v. (Mock c, CVNC c v) => ChainState c v
 expectedStEx4B =
   ChainState
     ( NewEpochState
@@ -910,7 +914,7 @@ expectedStEx4B =
     p :: Proxy c
     p = Proxy
 
-ex4B :: Mock c => proxy c -> CHAINExample c
+ex4B :: (Mock c, CVNC c v) => proxy c -> CHAINExample c v
 ex4B _ = CHAINExample expectedStEx4A blockEx4B (Right expectedStEx4B)
 
 -- | Example 5A - Genesis key delegation
@@ -920,11 +924,11 @@ ir = Map.fromList [(Cast.aliceSHK, Coin 100)]
 aliceCoinEx5A :: Coin
 aliceCoinEx5A = aliceInitCoin - 1
 
-txbodyEx5A :: Crypto c => MIRPot -> TxBody c
+txbodyEx5A :: CV c v => MIRPot -> TxBody c v
 txbodyEx5A pot =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx5A)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr (vinject $ aliceCoinEx5A))
     (StrictSeq.fromList [DCertMir (MIRCert pot ir)])
     (Wdrl Map.empty)
     (Coin 1)
@@ -932,7 +936,7 @@ txbodyEx5A pot =
     SNothing
     SNothing
 
-txEx5A :: Mock c => MIRPot -> Tx c
+txEx5A :: (Mock c, CVNC c v) => MIRPot -> Tx c v
 txEx5A pot =
   Tx
     (txbodyEx5A pot)
@@ -956,7 +960,7 @@ txEx5A pot =
     p :: Proxy c
     p = Proxy
 
-blockEx5A :: forall c. Mock c => MIRPot -> Block c
+blockEx5A :: forall c v. (Mock c, CVNC c v) => MIRPot -> Block c v
 blockEx5A pot =
   mkBlock
     (lastByronHeaderHash p)
@@ -974,14 +978,14 @@ blockEx5A pot =
     p :: Proxy c
     p = Proxy
 
-blockEx5AHash :: Mock c => MIRPot -> HashHeader c
+blockEx5AHash :: (Mock c, CVNC c v) => MIRPot -> HashHeader c v
 blockEx5AHash pot = bhHash (bheader $ blockEx5A pot)
 
-utxoEx5A :: Crypto c => MIRPot -> UTxO c
+utxoEx5A :: CV c v => MIRPot -> UTxO c v
 utxoEx5A pot =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
-      (TxIn (txid $ txbodyEx5A pot) 0, TxOut Cast.aliceAddr aliceCoinEx5A)
+    [ (TxIn genesisId 1, TxOut Cast.bobAddr (vinject $ bobInitCoin)),
+      (TxIn (txid $ txbodyEx5A pot) 0, TxOut Cast.aliceAddr (vinject $ aliceCoinEx5A))
     ]
 
 dsEx5A :: Crypto c => MIRPot -> DState c
@@ -991,7 +995,7 @@ dsEx5A pot = dsEx1 {_irwd = InstantaneousRewards {iRReserves = r, iRTreasury = t
       ReservesMIR -> (Map.fromList [(Cast.aliceSHK, Coin 100)], Map.empty)
       TreasuryMIR -> (Map.empty, Map.fromList [(Cast.aliceSHK, Coin 100)])
 
-expectedLSEx5A :: Crypto c => MIRPot -> LedgerState c
+expectedLSEx5A :: CV c v => MIRPot -> LedgerState c v
 expectedLSEx5A pot =
   LedgerState
     ( UTxOState
@@ -1005,12 +1009,12 @@ expectedLSEx5A pot =
 treasuryEx5A :: Coin
 treasuryEx5A = Coin 1000
 
-setChainStateAccountState :: AccountState -> ChainState h -> ChainState h
+setChainStateAccountState :: AccountState -> ChainState h v -> ChainState h v
 setChainStateAccountState as cs = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     es' = (nesEs $ chainNes cs) {esAccountState = as}
 
-initStEx5A :: forall c. Crypto c => ChainState c
+initStEx5A :: forall c v. CV c v => ChainState c v
 initStEx5A =
   setChainStateAccountState
     ( AccountState
@@ -1030,7 +1034,7 @@ acntEx5A p =
       _reserves = maxLLSupply - (balance (utxoEx2A p) + treasuryEx5A)
     }
 
-expectedStEx5A :: forall c. Mock c => MIRPot -> ChainState c
+expectedStEx5A :: forall c v. (Mock c, CVNC c v) => MIRPot -> ChainState c v
 expectedStEx5A pot =
   ChainState
     ( NewEpochState
@@ -1057,17 +1061,17 @@ expectedStEx5A pot =
     p :: Proxy c
     p = Proxy
 
-ex5A :: Mock c => proxy c -> MIRPot -> CHAINExample c
+ex5A :: (Mock c, CVNC c v) => proxy c -> MIRPot -> CHAINExample c v
 ex5A _ pot = CHAINExample initStEx5A (blockEx5A pot) (Right $ expectedStEx5A pot)
 
-ex5AReserves :: Mock c => proxy c -> CHAINExample c
+ex5AReserves :: (Mock c, CVNC c v) => proxy c -> CHAINExample c v
 ex5AReserves p = ex5A p ReservesMIR
 
-ex5ATreasury :: Mock c => proxy c -> CHAINExample c
+ex5ATreasury :: (Mock c, CVNC c v) => proxy c -> CHAINExample c v
 ex5ATreasury p = ex5A p TreasuryMIR
 
 -- | Example 5B - Instantaneous rewards with insufficient core node signatures
-txEx5B :: Mock c => MIRPot -> Tx c
+txEx5B :: (Mock c, CVNC c v) => MIRPot -> Tx c v
 txEx5B pot =
   Tx
     (txbodyEx5A pot)
@@ -1091,7 +1095,7 @@ txEx5B pot =
     p :: Proxy c
     p = Proxy
 
-blockEx5B :: forall c. Mock c => MIRPot -> Block c
+blockEx5B :: forall c v. (Mock c, CVNC c v) => MIRPot -> Block c v
 blockEx5B pot =
   mkBlock
     (lastByronHeaderHash p)
@@ -1115,26 +1119,26 @@ mirWitsEx5B = Set.fromList [asWitness . hk . coreNodeKeys p $ i | i <- [0 .. 3]]
     p :: Proxy c
     p = Proxy
 
-expectedStEx5B :: Crypto c => PredicateFailure (CHAIN c)
+expectedStEx5B :: CV c v => PredicateFailure (CHAIN c v)
 expectedStEx5B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure $ MIRInsufficientGenesisSigsUTXOW mirWitsEx5B)))
 
-ex5B :: Mock c => proxy c -> MIRPot -> CHAINExample c
+ex5B :: (Mock c, CVNC c v) => proxy c -> MIRPot -> CHAINExample c v
 ex5B _ pot = CHAINExample initStEx5A (blockEx5B pot) (Left [[expectedStEx5B]])
 
-ex5BReserves :: Mock c => proxy c -> CHAINExample c
+ex5BReserves :: (Mock c, CVNC c v) => proxy c -> CHAINExample c v
 ex5BReserves p = ex5B p ReservesMIR
 
-ex5BTreasury :: Mock c => proxy c -> CHAINExample c
+ex5BTreasury :: (Mock c, CVNC c v) => proxy c -> CHAINExample c v
 ex5BTreasury p = ex5B p TreasuryMIR
 
 -- | Example 5C - Instantaneous rewards that overrun the available reserves
-initStEx5C :: Crypto c => ChainState c
+initStEx5C :: CV c v => ChainState c v
 initStEx5C =
   setChainStateAccountState
     (AccountState {_treasury = 99, _reserves = 99})
     initStEx2A
 
-ex5C :: Mock c => proxy c -> MIRPot -> CHAINExample c
+ex5C :: (Mock c, CVNC c v) => proxy c -> MIRPot -> CHAINExample c v
 ex5C _ pot =
   CHAINExample
     initStEx5C
@@ -1154,10 +1158,10 @@ ex5C _ pot =
         ]
     )
 
-ex5CReserves :: Mock c => proxy c -> CHAINExample c
+ex5CReserves :: (Mock c, CVNC c v) => proxy c -> CHAINExample c v
 ex5CReserves p = ex5C p ReservesMIR
 
-ex5CTreasury :: Mock c => proxy c -> CHAINExample c
+ex5CTreasury :: (Mock c, CVNC c v) => proxy c -> CHAINExample c v
 ex5CTreasury p = ex5C p TreasuryMIR
 
 -- | Example 5D - Apply instantaneous rewards at epoch boundary
@@ -1167,11 +1171,11 @@ ex5CTreasury p = ex5C p TreasuryMIR
 aliceCoinEx5D :: Coin
 aliceCoinEx5D = aliceInitCoin - (_keyDeposit ppsEx1) - 1
 
-txbodyEx5D :: Crypto c => MIRPot -> TxBody c
+txbodyEx5D :: CV c v => MIRPot -> TxBody c v
 txbodyEx5D pot =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx5D)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr (vinject $ aliceCoinEx5D))
     (StrictSeq.fromList [DCertDeleg (RegKey Cast.aliceSHK), DCertMir (MIRCert pot ir)])
     (Wdrl Map.empty)
     (Coin 1)
@@ -1179,7 +1183,7 @@ txbodyEx5D pot =
     SNothing
     SNothing
 
-txEx5D :: Mock c => MIRPot -> Tx c
+txEx5D :: (Mock c, CVNC c v) => MIRPot -> Tx c v
 txEx5D pot =
   Tx
     (txbodyEx5D pot)
@@ -1203,7 +1207,7 @@ txEx5D pot =
     p :: Proxy c
     p = Proxy
 
-blockEx5D :: forall c. Mock c => MIRPot -> Block c
+blockEx5D :: forall c v. (Mock c, CVNC c v) => MIRPot -> Block c v
 blockEx5D pot =
   mkBlock
     (lastByronHeaderHash p)
@@ -1227,11 +1231,11 @@ blockEx5D pot =
 aliceCoinEx5D' :: Coin
 aliceCoinEx5D' = aliceCoinEx5D - 1
 
-txbodyEx5D' :: Crypto c => MIRPot -> TxBody c
+txbodyEx5D' :: CV c v => MIRPot -> TxBody c v
 txbodyEx5D' pot =
   TxBody
     (Set.fromList [TxIn (txid $ txbodyEx5D pot) 0])
-    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx5D')
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr (vinject $ aliceCoinEx5D'))
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)
@@ -1241,7 +1245,7 @@ txbodyEx5D' pot =
     SNothing
     SNothing
 
-txEx5D' :: Mock c => MIRPot -> Tx c
+txEx5D' :: (Mock c, CVNC c v) => MIRPot -> Tx c v
 txEx5D' pot =
   Tx
     (txbodyEx5D' pot)
@@ -1250,7 +1254,7 @@ txEx5D' pot =
       }
     SNothing
 
-blockEx5D' :: forall c. Mock c => MIRPot -> Block c
+blockEx5D' :: forall c v. (Mock c) => MIRPot -> Block c v
 blockEx5D' pot =
   mkBlock
     (bhHash (bheader $ blockEx5D pot))
@@ -1277,11 +1281,11 @@ blockEx5D' pot =
 aliceCoinEx5D'' :: Coin
 aliceCoinEx5D'' = aliceCoinEx5D' - 1
 
-txbodyEx5D'' :: Crypto c => MIRPot -> TxBody c
+txbodyEx5D'' :: CV c v => MIRPot -> TxBody c v
 txbodyEx5D'' pot =
   TxBody
     (Set.fromList [TxIn (txid $ txbodyEx5D' pot) 0])
-    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx5D'')
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr (vinject $ aliceCoinEx5D''))
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)
@@ -1289,14 +1293,14 @@ txbodyEx5D'' pot =
     SNothing
     SNothing
 
-txEx5D'' :: Mock c => MIRPot -> Tx c
+txEx5D'' :: (Mock c, CVNC c v) => MIRPot -> Tx c v
 txEx5D'' pot =
   Tx
     (txbodyEx5D'' pot)
     mempty {addrWits = makeWitnessesVKey (hashAnnotated $ txbodyEx5D'' pot) [Cast.alicePay]}
     SNothing
 
-blockEx5D'' :: Mock c => MIRPot -> Nonce -> Block c
+blockEx5D'' :: (Mock c, CVNC c v) => MIRPot -> Nonce -> Block c v
 blockEx5D'' pot epochNonce =
   mkBlock
     (bhHash (bheader $ blockEx5D' pot))
@@ -1313,28 +1317,28 @@ blockEx5D'' pot epochNonce =
   where
     slot@(SlotNo s) = (slotFromEpoch $ EpochNo 2) + SlotNo 10
 
-ex5D' :: forall proxy c. Mock c => proxy c -> MIRPot -> Either [[PredicateFailure (CHAIN c)]] (ChainState c)
+ex5D' :: forall proxy c v. (Mock c, CVNC c v) => proxy c -> MIRPot -> Either [[PredicateFailure (CHAIN c v)]] (ChainState c v)
 ex5D' _p pot = do
-  nextState <- runShelleyBase $ applySTSTest @(CHAIN c) (TRC ((), initStEx5A, blockEx5D pot))
+  nextState <- runShelleyBase $ applySTSTest @(CHAIN c v) (TRC ((), initStEx5A, blockEx5D pot))
   midState <-
     runShelleyBase $
-      applySTSTest @(CHAIN c) (TRC ((), nextState, blockEx5D' pot))
+      applySTSTest @(CHAIN c v) (TRC ((), nextState, blockEx5D' pot))
   let finalEpochNonce = (chainCandidateNonce midState) ⭒ (chainPrevEpochNonce midState)
   finalState <-
-    runShelleyBase $ applySTSTest @(CHAIN c) (TRC ((), midState, blockEx5D'' pot finalEpochNonce))
+    runShelleyBase $ applySTSTest @(CHAIN c v) (TRC ((), midState, blockEx5D'' pot finalEpochNonce))
 
   pure finalState
 
-ex5DReserves' :: Mock c => proxy c -> Either [[PredicateFailure (CHAIN c)]] (ChainState c)
+ex5DReserves' :: (Mock c, CVNC c v) => proxy c -> Either [[PredicateFailure (CHAIN c v)]] (ChainState c v)
 ex5DReserves' p = ex5D' p ReservesMIR
 
-ex5DTreasury' :: Mock c => proxy c -> Either [[PredicateFailure (CHAIN c)]] (ChainState c)
+ex5DTreasury' :: (Mock c, CVNC c v) => proxy c -> Either [[PredicateFailure (CHAIN c v)]] (ChainState c v)
 ex5DTreasury' p = ex5D' p TreasuryMIR
 
 -- | Tests that after getting instantaneous rewards, creating the update and
 -- then applying the update, Alice's key is actually registered, the key deposit
 -- value deducted and the remaining value credited as reward.
-test5D :: Mock c => proxy c -> MIRPot -> Assertion
+test5D :: (Mock c, CVNC c v) => proxy c -> MIRPot -> Assertion
 test5D p pot = do
   case ex5D' p pot of
     Left e -> assertFailure (show e)
@@ -1343,12 +1347,12 @@ test5D p pot = do
           rewEntry = rews Map.!? Cast.aliceSHK
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry
-      assertBool "Total amount of ADA is not preserved" $ maxLLSupply == totalAda ex5DState
+      assertBool "Total amount of ADA is not preserved" $ maxLLSupply == (vcoin $ totalAda ex5DState)
 
-test5DReserves :: Mock c => proxy c -> Assertion
+test5DReserves :: (Mock c) => proxy c -> Assertion
 test5DReserves p = test5D p ReservesMIR
 
-test5DTreasury :: Mock c => proxy c -> Assertion
+test5DTreasury :: (Mock c) => proxy c -> Assertion
 test5DTreasury p = test5D p TreasuryMIR
 
 -- * Example 6A - apply CHAIN transition to re-register a stake pool late in the epoch
@@ -1364,11 +1368,11 @@ aliceCoinEx6A = aliceCoinEx2A - feeEx6A
 alicePoolParams6A :: Crypto c => PoolParams c
 alicePoolParams6A = Cast.alicePoolParams {_poolCost = Coin 500}
 
-txbodyEx6A :: Crypto c => TxBody c
+txbodyEx6A :: CV c v => TxBody c v
 txbodyEx6A =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx2A) 0])
-    (StrictSeq.fromList [TxOut Cast.aliceAddr aliceCoinEx6A])
+    (StrictSeq.fromList [TxOut Cast.aliceAddr (vinject $ aliceCoinEx6A)])
     ( StrictSeq.fromList
         ( [ DCertPool (RegPool alicePoolParams6A)
           ]
@@ -1380,7 +1384,7 @@ txbodyEx6A =
     SNothing
     SNothing
 
-txEx6A :: Mock c => Tx c
+txEx6A :: (Mock c, CVNC c v) => Tx c v
 txEx6A =
   Tx
     txbodyEx6A
@@ -1405,7 +1409,7 @@ word64SlotToKesPeriodWord :: Word64 -> Word
 word64SlotToKesPeriodWord slot =
   (fromIntegral $ toInteger slot) `div` (fromIntegral $ toInteger $ slotsPerKESPeriod testGlobals)
 
-blockEx6A :: forall c. Mock c => Word64 -> Block c
+blockEx6A :: forall c v. (Mock c, CVNC c v) => Word64 -> Block c v
 blockEx6A slot =
   mkBlock
     blockEx2AHash
@@ -1423,19 +1427,19 @@ blockEx6A slot =
     p :: Proxy c
     p = Proxy
 
-blockEx6AHash :: Mock c => Word64 -> HashHeader c
+blockEx6AHash :: (Mock c, CVNC c v) => Word64 -> HashHeader c v
 blockEx6AHash slot = bhHash (bheader $ blockEx6A slot)
 
 psEx6A :: Crypto c => PState c
 psEx6A = psEx2A {_fPParams = Map.singleton (hk Cast.alicePoolKeys) alicePoolParams6A}
 
-expectedLSEx6A :: Crypto c => LedgerState c
+expectedLSEx6A :: CV c v => LedgerState c v
 expectedLSEx6A =
   LedgerState
     ( UTxOState
         ( UTxO . Map.fromList $
-            [ (TxIn genesisId 1, TxOut Cast.bobAddr bobInitCoin),
-              (TxIn (txid txbodyEx6A) 0, TxOut Cast.aliceAddr aliceCoinEx6A)
+            [ (TxIn genesisId 1, TxOut Cast.bobAddr (vinject $ bobInitCoin)),
+              (TxIn (txid txbodyEx6A) 0, TxOut Cast.aliceAddr (vinject $ aliceCoinEx6A))
             ]
         )
         (Coin 271)
@@ -1456,7 +1460,7 @@ candidateNonceEx6A p = makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B]
 candidateNonceEx6A' :: Mock c => Proxy c -> Nonce
 candidateNonceEx6A' p = makeEvolvedNonce p (nonce0 p) [blockEx2A]
 
-expectedStEx6A :: forall c. Mock c => Word64 -> StrictMaybe (RewardUpdate c) -> Nonce -> ChainState c
+expectedStEx6A :: forall c v. (Mock c, CVNC c v) => Word64 -> StrictMaybe (RewardUpdate c) -> Nonce -> ChainState c v
 expectedStEx6A slot ru cn =
   ChainState
     ( NewEpochState
@@ -1483,14 +1487,14 @@ expectedStEx6A slot ru cn =
     p :: Proxy c
     p = Proxy
 
-ex6A :: Mock c => Proxy c -> CHAINExample c
+ex6A :: (Mock c, CVNC c v) => Proxy c -> CHAINExample c v
 ex6A p =
   CHAINExample
     expectedStEx2A
     (blockEx6A earlySlotEx6)
     (Right $ expectedStEx6A earlySlotEx6 rewardUpdateEx6A (candidateNonceEx6A p))
 
-ex6A' :: Mock c => Proxy c -> CHAINExample c
+ex6A' :: (Mock c, CVNC c v) => Proxy c -> CHAINExample c v
 ex6A' p =
   CHAINExample
     expectedStEx2A
@@ -1501,13 +1505,13 @@ ex6A' p =
 
 -- in expectedStEx6A, then the future pool parameters should be adopted
 
-ex6BExpectedNES :: forall c. Mock c => NewEpochState c
+ex6BExpectedNES :: forall c v. (Mock c, CVNC c v) => NewEpochState c v
 ex6BExpectedNES = chainNes (expectedStEx6A earlySlotEx6 rewardUpdateEx6A (candidateNonceEx6A p))
   where
     p :: Proxy c
     p = Proxy
 
-ex6BExpectedNES' :: forall c. Mock c => NewEpochState c
+ex6BExpectedNES' :: forall c v. (Mock c, CVNC c v) => NewEpochState c v
 ex6BExpectedNES' = chainNes (expectedStEx6A lateSlotEx6 rewardUpdateEx6A' (candidateNonceEx6A' p))
   where
     p :: Proxy c
@@ -1516,7 +1520,7 @@ ex6BExpectedNES' = chainNes (expectedStEx6A lateSlotEx6 rewardUpdateEx6A' (candi
 ex6BPoolParams :: Crypto c => Map (KeyHash 'StakePool c) (PoolParams c)
 ex6BPoolParams = Map.singleton (hk Cast.alicePoolKeys) alicePoolParams6A
 
-exampleShelleyGenesis :: forall c. Mock c => ShelleyGenesis c
+exampleShelleyGenesis :: forall c v. (Mock c, CVNC c v) => ShelleyGenesis c v
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),
@@ -1537,7 +1541,7 @@ exampleShelleyGenesis =
             _maxBHSize = 217569
           },
       sgGenDelegs = Map.fromList [(genesisVerKeyHash, genDelegPair)],
-      sgInitialFunds = Map.fromList [(initialFundedAddress, initialFunds)],
+      sgInitialFunds = Map.fromList [(initialFundedAddress, vinject initialFunds)],
       sgStaking = staking
     }
   where
