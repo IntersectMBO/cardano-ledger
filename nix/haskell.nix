@@ -59,7 +59,7 @@ let
             tests.shelley-spec-ledger-test = {
               build-tools = [pkgs.cddl pkgs.cbor-diag];
               preCheck = ''
-                export SHELLEY_SPEC_LEDGER_TEST_ROOT=${ ./. }
+                export SHELLEY_SPEC_LEDGER_TEST_ROOT=${ ./.. }
               '';
             };
           };
