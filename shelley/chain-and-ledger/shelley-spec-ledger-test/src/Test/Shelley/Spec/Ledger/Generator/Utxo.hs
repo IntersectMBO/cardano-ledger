@@ -299,7 +299,7 @@ calcOutputsFromBalance ::
   (Coin, StrictSeq (TxOut c v))
 calcOutputsFromBalance balance_ addrs fee =
   ( fee + splitCoinRem,
-    (`TxOut` amountPerOutput) <$> StrictSeq.fromList addrs
+    StrictSeq.fromList $ zipWith TxOut addrs amountPerOutput
   )
   where
     -- split the available balance into equal portions (one for each address),

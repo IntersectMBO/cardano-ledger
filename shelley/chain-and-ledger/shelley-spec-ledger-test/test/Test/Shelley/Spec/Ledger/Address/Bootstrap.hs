@@ -87,6 +87,8 @@ import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
   )
+import Shelley.Spec.Ledger.Value
+
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Prelude (genBytes)
@@ -137,14 +139,14 @@ genByronAddrFromVKey :: Byron.VerificationKey -> Gen Byron.Address
 genByronAddrFromVKey vkey =
   Byron.makeAddress (Byron.VerKeyASD vkey) <$> hedgehog Byron.genAddrAttributes
 
-utxo0 :: UTxO C
+utxo0 :: UTxO C (Value C)
 utxo0 =
   UTxO $
     Map.singleton
       (TxIn genesisId 0)
       (TxOut aliceAddr aliceInitCoin)
 
-utxoState0 :: UTxOState C
+utxoState0 :: UTxOState C (Value C)
 utxoState0 =
   UTxOState
     { _utxo = utxo0,
@@ -153,13 +155,13 @@ utxoState0 =
       _ppups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
     }
 
-tx :: Tx C
+tx :: Tx C (Value C)
 tx = Tx txBody mempty {bootWits = Set.fromList [aliceWitness]} SNothing
 
-txBad :: Tx C
+txBad :: Tx C (Value C)
 txBad = Tx txBody mempty {bootWits = Set.fromList [aliceBadWitness]} SNothing
 
-utxoState1 :: UTxOState C
+utxoState1 :: UTxOState C (Value C)
 utxoState1 =
   UTxOState
     { _utxo = UTxO $ Map.fromList [bobResult, aliceResult],
@@ -169,8 +171,8 @@ utxoState1 =
     }
   where
     txid = TxId $ hashAnnotated txBody
-    bobResult = (TxIn txid 0, TxOut bobAddr coinsToBob)
-    aliceResult = (TxIn txid 1, TxOut aliceAddr (Coin 998990))
+    bobResult = (TxIn txid 0, TxOut bobAddr (vinject $ coinsToBob))
+    aliceResult = (TxIn txid 1, TxOut aliceAddr (vinject $ Coin 998990))
 
 utxoEnv :: UtxoEnv C
 utxoEnv =
@@ -180,8 +182,8 @@ utxoEnv =
     mempty
     (GenDelegs mempty)
 
-aliceInitCoin :: Coin
-aliceInitCoin = 1000000
+aliceInitCoin :: (Val v) => v
+aliceInitCoin = vinject $ 1000000
 
 aliceSigningKey :: Byron.SigningKey
 aliceSigningKey = Byron.SigningKey $ Byron.generate seed (mempty :: ByteString)
@@ -205,14 +207,14 @@ aliceByronAddr = Byron.makeAddress asd attrs
 aliceAddr :: Addr C
 aliceAddr = AddrBootstrap (BootstrapAddress aliceByronAddr)
 
-aliceWitness :: BootstrapWitness C
+aliceWitness :: BootstrapWitness C (Value C)
 aliceWitness =
   makeBootstrapWitness
     (hashAnnotated txBody)
     aliceSigningKey
     (Byron.addrAttributes aliceByronAddr)
 
-aliceBadWitness :: BootstrapWitness C
+aliceBadWitness :: BootstrapWitness C (Value C)
 aliceBadWitness =
   makeBootstrapWitness
     (hashAnnotated txBody {_ttl = SlotNo 100000000})
@@ -227,11 +229,11 @@ bobAddr = Addr Testnet (KeyHashObj k) StakeRefNull
 coinsToBob :: Coin
 coinsToBob = 1000
 
-txBody :: TxBody C
+txBody :: TxBody C (Value C)
 txBody =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut bobAddr coinsToBob, TxOut aliceAddr change],
+      _outputs = StrictSeq.fromList [TxOut bobAddr (vinject $ coinsToBob), TxOut aliceAddr (vinject $ change)],
       _certs = StrictSeq.fromList mempty,
       _wdrls = Wdrl Map.empty,
       _txfee = fee,
@@ -245,7 +247,7 @@ txBody =
 
 testBootstrapSpending :: Assertion
 testBootstrapSpending =
-  testSTS @(UTXOW C)
+  testSTS @(UTXOW C (Value C))
     utxoEnv
     utxoState0
     tx
@@ -253,7 +255,7 @@ testBootstrapSpending =
 
 testBootstrapNotSpending :: Assertion
 testBootstrapNotSpending =
-  testSTS @(UTXOW C)
+  testSTS @(UTXOW C (Value C))
     utxoEnv
     utxoState0
     txBad
