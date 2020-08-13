@@ -17,7 +17,8 @@ where
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (∪+), (◁))
 import Control.State.Transition
-  ( InitialRule,
+  ( Assertion (..),
+    InitialRule,
     STS (..),
     TRC (..),
     TransitionRule,
@@ -62,6 +63,15 @@ instance Typeable crypto => STS (MIR crypto) where
 
   initialRules = [initialMir]
   transitionRules = [mirTransition]
+
+  assertions =
+    [ PostCondition
+        "MIR may not create or remove reward accounts"
+        ( \(TRC (_, st, _)) st' ->
+            let r = _rewards . _dstate . _delegationState . esLState
+             in length (r st) == length (r st')
+        )
+    ]
 
 instance NoUnexpectedThunks (PredicateFailure (MIR crypto))
 
