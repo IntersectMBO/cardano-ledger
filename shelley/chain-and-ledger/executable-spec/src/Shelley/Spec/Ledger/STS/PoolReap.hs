@@ -69,8 +69,8 @@ instance Typeable crypto => STS (POOLREAP crypto) where
         ( \(TRC (pp, _, _)) st ->
             obligation pp (_rewards $ prDState st) (_pParams $ prPState st)
               == _deposited (prUTxOSt st)
-        )
-    , PostCondition
+        ),
+      PostCondition
         "PoolReap may not create or remove reward accounts"
         ( \(TRC (_, st, _)) st' ->
             let r = _rewards . prDState
