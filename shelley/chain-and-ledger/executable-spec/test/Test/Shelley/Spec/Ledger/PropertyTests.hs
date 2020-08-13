@@ -7,7 +7,6 @@ module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTes
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
-import Test.Shelley.Spec.Ledger.NonTraceProperties.Serialization
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
     onlyValidLedgerSignalsAreGenerated,
@@ -52,12 +51,7 @@ minimalPropertyTests =
     [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered,
       TQC.testProperty "total amount of Ada is preserved (Chain)" adaPreservationChain,
       TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated,
-      bootstrapHashTest,
-      testGroup
-        "Deserialize stake address reference"
-        [ TQC.testProperty "wstake reference from bytestrings" propDeserializeAddrStakeReference,
-          TQC.testProperty "stake reference from short bytestring" propDeserializeAddrStakeReferenceShortIncrediblyLongName
-        ]
+      bootstrapHashTest
     ]
 
 -- | 'TestTree' of property-based testing properties.

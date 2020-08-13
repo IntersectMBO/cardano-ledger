@@ -12,11 +12,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Shelley.Spec.Ledger.Serialisation.Generators
-  ( genPParams,
-    mkDummyHash,
-  )
-where
+module Test.Shelley.Spec.Ledger.Serialisation.Generators () where
 
 import Cardano.Binary
   ( ToCBOR (..),
@@ -41,10 +37,10 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64, Word8)
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (Addr (..))
+import Shelley.Spec.Ledger.Address (Addr (Addr))
 import Shelley.Spec.Ledger.Address.Bootstrap
-  ( BootstrapWitness (..),
-    ChainCode (..),
+  ( ChainCode (..),
+    pattern BootstrapWitness,
   )
 import Shelley.Spec.Ledger.BaseTypes
   ( DnsName,
@@ -115,7 +111,6 @@ import Test.QuickCheck
     shrink,
   )
 import Test.QuickCheck.Hedgehog (hedgehog)
-import Test.Shelley.Spec.Ledger.Address.Bootstrap (genBootstrapAddress)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( genSignature,
   )
@@ -303,8 +298,9 @@ instance Arbitrary EpochNo where
 instance HashAlgorithm h => Arbitrary (Mock.Addr (Mock.ConcreteCrypto h)) where
   arbitrary =
     oneof
-      [ Addr <$> arbitrary <*> arbitrary <*> arbitrary,
-        AddrBootstrap <$> genBootstrapAddress
+      [ Addr <$> arbitrary <*> arbitrary <*> arbitrary
+      -- TODO generate Byron addresses too
+      -- SL.AddrBootstrap
       ]
 
 instance HashAlgorithm h => Arbitrary (StakeReference (Mock.ConcreteCrypto h)) where

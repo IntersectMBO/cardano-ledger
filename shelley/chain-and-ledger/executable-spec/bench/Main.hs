@@ -1,33 +1,11 @@
-{-# LANGUAGE DataKinds #-}
-{-# OPTIONS_GHC -Wno-unused-binds #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Main where
 
-import BenchUTxOAggregate (expr, genTestCase)
 import Control.DeepSeq (NFData)
-import Control.Iterate.SetAlgebra (dom, forwards, keysEqual, (▷), (◁))
-import Control.Iterate.SetAlgebraInternal (compile, compute, run)
+import Control.Iterate.SetAlgebra (keysEqual)
 import Criterion.Main (Benchmark, bench, bgroup, defaultMain, env, whnf)
-import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.Bench.Gen (genTx)
-import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
-import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..))
-import Shelley.Spec.Ledger.Keys (KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (DPState (..), UTxOState (..))
-import Shelley.Spec.Ledger.LedgerState
-  ( DState (..),
-    PState (..),
-    stakeDistr,
-  )
-import Shelley.Spec.Ledger.UTxO (UTxO)
-import System.IO.Unsafe (unsafePerformIO)
-import Test.QuickCheck.Gen as QC
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions
   ( initUTxO,
     ledgerDeRegisterStakeKeys,
@@ -43,9 +21,6 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerStateWithNregisteredKeys,
     ledgerStateWithNregisteredPools,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
-
--- ==========================================================
 
 eqf :: String -> (Map.Map Int Int -> Map.Map Int Int -> Bool) -> Int -> Benchmark
 eqf name f n = bgroup (name ++ " " ++ show n) (map runat [n, n * 10, n * 100, n * 1000])
@@ -117,91 +92,6 @@ profileCreateRegPools size = do
   let touch (x, y) = touchUTxOState x + touchDPState y
   putStrLn ("Exit profiling " ++ show (touch state))
 
--- ==========================================
--- Epoch Boundary
-
-profileEpochBoundary :: IO ()
-profileEpochBoundary =
-  defaultMain $
-    [ bgroup "aggregate stake" $
-        epochAt <$> benchParameters
-    ]
-  where
-    benchParameters :: [Int]
-    benchParameters = [10000, 100000, 1000000]
-
-epochAt :: Int -> Benchmark
-epochAt x =
-  env (QC.generate (genTestCase x (10000 :: Int))) $
-    \arg ->
-      bgroup
-        ("UTxO=" ++ show x ++ ",  address=" ++ show (10000 :: Int))
-        [ bench "Using maps" (whnf action2m arg)
-        ]
-
-action2m :: Crypto c => (DState c, PState c, UTxO c) -> SnapShot c
-action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
-
-dstate' :: DState C
-
-pstate' :: PState C
-
-utxo' :: UTxO C
-(dstate', pstate', utxo') = unsafePerformIO $ QC.generate (genTestCase 1000000 (5000 :: Int))
-
-profile_Maps :: Int -> IO ()
-profile_Maps _x = do
-  let snap = stakeDistr utxo' dstate' pstate'
-  putStrLn ("Size = " ++ show (Map.size (EB._delegations snap)) ++ " " ++ show (Map.size (_poolParams snap)))
-
-{- At least while running in GHCI Maps use less allocation than lists
-*Main> profile_Lists 1
-Size = 122 61
-(0.24 secs, 630,016,752 bytes)
-
-*Main> profile_Maps 1
-Size = 122 61
-(0.23 secs, 519,132,520 bytes)
-
-Compiled, Maps also seem to be a little bit faster. Maps win
-
-benchmarking aggregate stake/UTxO=1000000,  address=10000/Using lists
-time                 292.9 ms   (269.6 ms .. 316.3 ms)
-
-benchmarking aggregate stake/UTxO=1000000,  address=10000/Using maps
-time                 280.6 ms   (256.0 ms .. 297.3 ms)
-
--}
-
--- ========================================================
--- Profile algorithms for  ((dom d ◁ r) ▷ dom rg)
-
-domainRangeRestrict :: IO ()
-domainRangeRestrict =
-  defaultMain $
-    [ bgroup "domain-range restict" $
-        drrAt <$> benchParameters
-    ]
-  where
-    benchParameters :: [Int]
-    benchParameters = [1000, 10000, 100000]
-
-drrAt :: Int -> Benchmark
-drrAt x =
-  env (expr x) $
-    \arg ->
-      bgroup
-        ("size=" ++ show x)
-        [ bench "compute" (whnf alg1 arg),
-          bench "run . compile" (whnf alg2 arg)
-        ]
-
-alg1 :: (Map Int Int, Map Int Char, Map Char Char) -> Map Int Char
-alg1 (d, r, rg) = compute ((dom d ◁ r) ▷ dom rg)
-
-alg2 :: (Map Int Int, Map Int Char, Map Char Char) -> Map Int Char
-alg2 (d, r, rg) = run $ compile ((dom d ◁ r) ▷ dom rg)
-
 -- =================================================
 -- Some things we might want to profile.
 
@@ -212,8 +102,6 @@ alg2 (d, r, rg) = run $ compile ((dom d ◁ r) ▷ dom rg)
 -- main = profileCreateRegPools 10000
 -- main = profileCreateRegPools 100000
 -- main = profileNkeysMPools
--- main = profile_stakeDistr
--- main = profileEpochBoundary
 
 -- =========================================================
 
@@ -280,7 +168,7 @@ main =
           varyInput "manyKeysOnePool" (5000, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNkeysMpools ledgerDelegateManyKeysOnePool
         ],
       bgroup "vary initial state" $
-        [ varyState "spendOne" 1 [50, 500, 5000] (\_m n -> initUTxO (fromIntegral n)) (\_m _ -> ledgerSpendOneGivenUTxO),
+        [ varyState "spendOne" 1 [50, 500, 5000] (\_ n -> initUTxO (fromIntegral n)) (\_ _ -> ledgerSpendOneGivenUTxO),
           varyState "register key" 5001 [50, 500, 5000] ledgerStateWithNregisteredKeys ledgerRegisterStakeKeys,
           varyState "deregister key" 50 [50, 500, 5000] ledgerStateWithNregisteredKeys ledgerDeRegisterStakeKeys,
           varyState "withdrawal" 50 [50, 500, 5000] ledgerStateWithNregisteredKeys ledgerRewardWithdrawals,
@@ -288,7 +176,5 @@ main =
           varyState "reregister pool" 5001 [50, 500, 5000] ledgerStateWithNregisteredPools ledgerReRegisterStakePools,
           varyState "retire pool" 50 [50, 500, 5000] ledgerStateWithNregisteredPools ledgerRetireStakePools,
           varyDelegState "manyKeysOnePool" 50 [50, 500, 5000] ledgerStateWithNkeysMpools ledgerDelegateManyKeysOnePool
-        ],
-      bgroup "vary utxo at epoch boundary" $ (epochAt <$> [5000, 50000, 500000]),
-      bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000]
+        ]
     ]
