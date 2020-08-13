@@ -9,7 +9,7 @@ haskell.lib.buildStackProject {
   buildInputs =
     # Development libraries which may be necessary for the build.
     # Add remove libraries as necessary
-    [ zlib gmp ncurses lzma openssl git systemd.dev ] ++
+    [ libsodium zlib gmp ncurses lzma openssl git systemd.dev ] ++
     # MacOS-specific librararies which may be necessary for the build.
     (lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [ Cocoa CoreServices libcxx libiconv ]));
 
