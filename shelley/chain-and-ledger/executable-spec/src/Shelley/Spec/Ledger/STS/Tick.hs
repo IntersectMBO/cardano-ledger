@@ -110,13 +110,13 @@ bheadTransition = do
     trans @(NEWEPOCH crypto) $
       TRC (NewEpochEnv slot gkeys, nes, epoch)
 
-  ru' <- trans @(RUPD crypto) $ TRC (RupdEnv bprev es, nesRu nes', slot)
+  ru'' <- trans @(RUPD crypto) $ TRC (RupdEnv bprev es, nesRu nes', slot)
 
-  let es' = adoptGenesisDelegs (nesEs nes') slot
+  let es'' = adoptGenesisDelegs (nesEs nes') slot
       nes'' =
         nes'
-          { nesRu = ru',
-            nesEs = es'
+          { nesRu = ru'',
+            nesEs = es''
           }
   pure nes''
 

@@ -125,7 +125,7 @@ delegsTransition ::
   Crypto crypto =>
   TransitionRule (DELEGS crypto)
 delegsTransition = do
-  TRC (env@(DelegsEnv slot txIx pp tx reserves), dpstate, certificates) <- judgmentContext
+  TRC (env@(DelegsEnv slot txIx pp tx acnt), dpstate, certificates) <- judgmentContext
   network <- liftSTS $ asks networkId
 
   case certificates of
@@ -156,7 +156,7 @@ delegsTransition = do
 
       let ptr = Ptr slot txIx (fromIntegral $ length gamma)
       trans @(DELPL crypto) $
-        TRC (DelplEnv slot ptr pp reserves, dpstate', c)
+        TRC (DelplEnv slot ptr pp acnt, dpstate', c)
 
 instance
   Crypto crypto =>

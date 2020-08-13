@@ -246,16 +246,16 @@ delegationTransition = do
       -- gkh ∈ dom genDelegs ?! GenesisKeyNotInpMappingDELEG gkh
       (case Map.lookup gkh genDelegs of Just _ -> True; Nothing -> False) ?! GenesisKeyNotInpMappingDELEG gkh
 
-      let currentOtherDelegations =
+      let cod =
             range $
-              Map.filterWithKey (\k _ -> k /= gkh) genDelegs
-          futureOtherDelegations =
+              Map.filterWithKey (\g _ -> g /= gkh) genDelegs
+          fod =
             range $
-              Map.filterWithKey (\(FutureGenDeleg _ k) _ -> k /= gkh) (_fGenDelegs ds)
-          currentOtherColdKeyHashes = Set.map genDelegKeyHash currentOtherDelegations
-          futureOtherColdKeyHashes = Set.map genDelegKeyHash futureOtherDelegations
-          currentOtherVrfKeyHashes = Set.map genDelegVrfHash currentOtherDelegations
-          futureOtherVrfKeyHashes = Set.map genDelegVrfHash futureOtherDelegations
+              Map.filterWithKey (\(FutureGenDeleg _ g) _ -> g /= gkh) (_fGenDelegs ds)
+          currentOtherColdKeyHashes = Set.map genDelegKeyHash cod
+          currentOtherVrfKeyHashes = Set.map genDelegVrfHash cod
+          futureOtherColdKeyHashes = Set.map genDelegKeyHash fod
+          futureOtherVrfKeyHashes = Set.map genDelegVrfHash fod
 
       eval (vkh ∉ (currentOtherColdKeyHashes `Set.union` futureOtherColdKeyHashes))
         ?! DuplicateGenesisDelegateDELEG vkh

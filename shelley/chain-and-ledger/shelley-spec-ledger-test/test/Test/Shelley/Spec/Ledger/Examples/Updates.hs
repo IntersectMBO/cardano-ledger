@@ -10,8 +10,7 @@
 --
 -- Example demonstrating using the protocol parameter update system.
 module Test.Shelley.Spec.Ledger.Examples.Updates
-  ( updates1,
-    updatesExample,
+  ( updatesExample,
   )
 where
 
@@ -83,6 +82,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Utils (getBlockNonce)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
+
 aliceInitCoin :: Coin
 aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
 

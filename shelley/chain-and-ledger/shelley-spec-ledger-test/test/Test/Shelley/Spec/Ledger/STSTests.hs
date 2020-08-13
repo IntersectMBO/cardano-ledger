@@ -3,73 +3,30 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.STSTests
-  ( multisigExamples,
-    chainExamples,
+  ( chainExamples,
+    multisigExamples,
   )
 where
 
-import Control.State.Transition.Extended (TRC (..))
-import Data.Either (fromRight, isRight)
+import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (empty)
 import Data.Proxy
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.API
-  ( DPState (..),
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    PState (..),
-    TICK,
-    TickEnv,
-  )
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
-import Shelley.Spec.Ledger.Keys
-  ( KeyHash,
-    KeyRole (..),
-    asWitness,
-    hashKey,
-    vKey,
-  )
-import Shelley.Spec.Ledger.LedgerState
-  ( WitHashes (..),
-    getGKeys,
-  )
-import Shelley.Spec.Ledger.STS.Chain (totalAda)
-import Shelley.Spec.Ledger.STS.Tick (pattern TickEnv)
+import Shelley.Spec.Ledger.Keys (asWitness, hashKey, vKey)
+import Shelley.Spec.Ledger.LedgerState (WitHashes (..))
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
-import Shelley.Spec.Ledger.TxData (Wdrl (..), pattern RewardAcnt)
-import Shelley.Spec.Ledger.TxData
-  ( PoolParams,
-  )
+import Shelley.Spec.Ledger.TxData (RewardAcnt (..), Wdrl (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
-import Test.Shelley.Spec.Ledger.Examples
-  ( ex4A,
-    ex4B,
-    ex5AReserves,
-    ex5ATreasury,
-    ex5BReserves,
-    ex5BTreasury,
-    ex5CReserves,
-    ex5CTreasury,
-    ex5DReserves',
-    ex5DTreasury',
-    ex6A,
-    ex6A',
-    ex6BExpectedNES,
-    ex6BExpectedNES',
-    ex6BPoolParams,
-    test5DReserves,
-    test5DTreasury,
-    testCHAINExample,
-  )
+import Test.Shelley.Spec.Ledger.Examples (testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Examples.EmptyBlock (exEmptyBlock)
+import Test.Shelley.Spec.Ledger.Examples.GenesisDelegation (genesisDelegExample)
+import Test.Shelley.Spec.Ledger.Examples.Mir (mirExample)
 import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (poolLifetimeExample)
+import Test.Shelley.Spec.Ledger.Examples.PoolReReg (poolReRegExample)
 import Test.Shelley.Spec.Ledger.Examples.Updates (updatesExample)
 import Test.Shelley.Spec.Ledger.MultiSigExamples
   ( aliceAndBob,
@@ -81,115 +38,8 @@ import Test.Shelley.Spec.Ledger.MultiSigExamples
     applyTxWithScript,
     bobOnly,
   )
-import Test.Shelley.Spec.Ledger.Utils
-  ( applySTSTest,
-    maxLLSupply,
-    runShelleyBase,
-  )
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit ((@?=), Assertion, assertBool, assertFailure, testCase)
-
--- | Applies the TICK transition to a given chain state,
--- and check that some component of the result is as expected.
-testTICKChainState ::
-  (Show a, Eq a) =>
-  NewEpochState C ->
-  TickEnv C ->
-  SlotNo ->
-  (NewEpochState C -> a) ->
-  a ->
-  Assertion
-testTICKChainState initSt env slot focus expectedSt = do
-  let result = runShelleyBase $ applySTSTest @(TICK C) (TRC (env, initSt, slot))
-  case result of
-    Right res -> focus res @?= expectedSt
-    Left err -> assertFailure $ show err
-
-newEpochToPoolParams ::
-  NewEpochState C ->
-  (Map (KeyHash 'StakePool C) (PoolParams C))
-newEpochToPoolParams = _pParams . _pstate . _delegationState . esLState . nesEs
-
-newEpochToFuturePoolParams ::
-  NewEpochState C ->
-  (Map (KeyHash 'StakePool C) (PoolParams C))
-newEpochToFuturePoolParams = _fPParams . _pstate . _delegationState . esLState . nesEs
-
-testAdoptEarlyPoolRegistration :: Assertion
-testAdoptEarlyPoolRegistration =
-  testTICKChainState
-    ex6BExpectedNES'
-    (TickEnv $ getGKeys ex6BExpectedNES')
-    (SlotNo 110)
-    (\n -> (newEpochToPoolParams n, newEpochToFuturePoolParams n))
-    (ex6BPoolParams, Map.empty)
-
-testAdoptLatePoolRegistration :: Assertion
-testAdoptLatePoolRegistration =
-  testTICKChainState
-    ex6BExpectedNES
-    (TickEnv $ getGKeys ex6BExpectedNES)
-    (SlotNo 110)
-    (\n -> (newEpochToPoolParams n, newEpochToFuturePoolParams n))
-    (ex6BPoolParams, Map.empty)
-
-genesisDelegExample :: TestTree
-genesisDelegExample =
-  testGroup
-    "genesis delegation"
-    [ testCase "stage genesis key delegation" $ testCHAINExample (ex4A p),
-      testCase "adopt genesis key delegation" $ testCHAINExample (ex4B p)
-    ]
-  where
-    p :: Proxy C
-    p = Proxy
-
-mirExample :: TestTree
-mirExample =
-  testGroup
-    "move inst rewards"
-    [ testCase "create MIR cert - reserves" $ testCHAINExample (ex5AReserves p),
-      testCase "create MIR cert - treasury" $ testCHAINExample (ex5ATreasury p),
-      testCase "FAIL: insufficient core node signatures MIR reserves" $
-        testCHAINExample (ex5BReserves p),
-      testCase "FAIL: insufficient core node signatures MIR treasury" $
-        testCHAINExample (ex5BTreasury p),
-      testCase "FAIL: MIR insufficient reserves" $
-        testCHAINExample (ex5CReserves p),
-      testCase "FAIL: MIR insufficient treasury" $
-        testCHAINExample (ex5CTreasury p),
-      testCase "apply reserves MIR at epoch boundary" (test5DReserves p),
-      testCase "apply treasury MIR at epoch boundary" (test5DTreasury p)
-    ]
-  where
-    p :: Proxy C
-    p = Proxy
-
-latePoolRegExample :: TestTree
-latePoolRegExample =
-  testGroup
-    "late pool registration"
-    [ testCase "Early Pool Re-registration" $ testCHAINExample (ex6A p),
-      testCase "Late Pool Re-registration" $ testCHAINExample (ex6A' p),
-      testCase "Adopt Early Pool Re-registration" $ testAdoptEarlyPoolRegistration,
-      testCase "Adopt Late Pool Re-registration" $ testAdoptLatePoolRegistration
-    ]
-  where
-    p :: Proxy C
-    p = Proxy
-
-miscPresOfAdaInExamples :: TestTree
-miscPresOfAdaInExamples =
-  testGroup
-    "misc preservation of ADA"
-    [ testCase "CHAIN example 5D Reserves" $
-        (totalAda (fromRight (error "CHAIN example 5D") (ex5DReserves' p)) @?= maxLLSupply),
-      testCase "CHAIN example 5D Treasury" $
-        (totalAda (fromRight (error "CHAIN example 5D") (ex5DTreasury' p)) @?= maxLLSupply)
-    ]
-  where
-    p :: Proxy C
-    p = Proxy
+import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
 chainExamples :: TestTree
 chainExamples =
@@ -197,11 +47,10 @@ chainExamples =
     "CHAIN examples"
     [ testCase "empty block" $ testCHAINExample exEmptyBlock,
       poolLifetimeExample,
+      poolReRegExample,
       updatesExample,
       genesisDelegExample,
-      mirExample,
-      latePoolRegExample,
-      miscPresOfAdaInExamples
+      mirExample
     ]
 
 multisigExamples :: TestTree
