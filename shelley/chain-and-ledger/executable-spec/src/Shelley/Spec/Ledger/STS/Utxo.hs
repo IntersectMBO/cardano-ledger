@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -27,6 +28,7 @@ import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
 import Control.State.Transition
   ( Assertion (..),
+    AssertionViolation (..),
     Embed,
     IRC (..),
     InitialRule,
@@ -103,7 +105,7 @@ data UtxoEnv crypto
   deriving (Show)
 
 instance
-  Crypto crypto =>
+  (Crypto crypto) =>
   STS (UTXO crypto)
   where
   type State (UTXO crypto) = UTxOState crypto
@@ -142,12 +144,22 @@ instance
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
 
+  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
+    "AssertionViolation (" <> avSTS <> "): " <> avMsg
+      <> "\n"
+      <> show avCtx
+      <> "\n"
+      <> show avState
+
   assertions =
-    [ PostCondition
+    [ PreCondition
+        "Deposit pot must not be negative (pre)"
+        (\(TRC (_, st, _)) -> _deposited st >= 0),
+      PostCondition
         "UTxO must increase fee pot"
         (\(TRC (_, st, _)) st' -> _fees st' >= _fees st),
       PostCondition
-        "Deposit pot must not be negative"
+        "Deposit pot must not be negative (post)"
         (\_ st' -> _deposited st' >= 0),
       let utxoBalance us = _deposited us + _fees us + balance (_utxo us)
           withdrawals txb = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txb
