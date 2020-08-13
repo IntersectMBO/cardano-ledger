@@ -240,7 +240,7 @@ bbHash (TxSeq' _ bodies wits md) =
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
 -- | HashHeader to Nonce
-hashHeaderToNonce :: HashHeader crypto v -> Nonce
+hashHeaderToNonce :: forall crypto v. HashHeader crypto v -> Nonce
 hashHeaderToNonce = Nonce . coerce
 
 data BHeader crypto v = BHeader'
