@@ -11,19 +11,7 @@
 -- Example demonstrating the creation of a new stake pool,
 -- block production under Praos, rewards, and pool retirement.
 module Test.Shelley.Spec.Ledger.Examples.PoolLifetime
-  ( poolLifetime1,
-    poolLifetime2,
-    poolLifetime3,
-    poolLifetime4,
-    poolLifetime5,
-    poolLifetime6,
-    poolLifetime7,
-    poolLifetime8,
-    poolLifetime9,
-    poolLifetime10,
-    poolLifetime11,
-    poolLifetime12,
-    poolLifetimeExample,
+  ( poolLifetimeExample,
   )
 where
 
@@ -365,7 +353,7 @@ expectedStEx3 :: forall c. Mock c => ChainState c
 expectedStEx3 =
   C.newEpoch blockEx3
     . C.newSnapshot snapEx3 (feeTx1 + feeTx2)
-    . C.applyMIR (Map.singleton Cast.carlSHK carlMIR)
+    . C.applyMIR ReservesMIR (Map.singleton Cast.carlSHK carlMIR)
     . C.applyRewardUpdate emptyRewardUpdate
     $ expectedStEx2
 
