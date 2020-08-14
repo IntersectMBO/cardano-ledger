@@ -54,7 +54,7 @@ getAddrStakeReference = do
   header <- getWord
   if testBit header byron
     then pure Nothing
-    else skipHash ([] @(HASH crypto)) >> Just <$> getStakeReference header
+    else skipHash ([] @(ADDRHASH crypto)) >> Just <$> getStakeReference header
 
 getWord :: GetShort Word8
 getWord = GetShort $ \i sbs ->
