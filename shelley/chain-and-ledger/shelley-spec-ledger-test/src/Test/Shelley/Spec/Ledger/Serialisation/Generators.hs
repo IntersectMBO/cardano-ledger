@@ -145,7 +145,6 @@ import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( KeySpace (KeySpace_),
-    NatNonce (..),
     geConstants,
     geKeySpace,
     ksCoreNodes,
@@ -184,8 +183,6 @@ instance
     curSlotNo <- SlotNo <$> choose (0, 10)
     curBlockNo <- BlockNo <$> choose (0, 100)
     epochNonce <- arbitrary :: Gen Nonce
-    blockNonce <- NatNonce . fromIntegral <$> choose (1, 100 :: Int)
-    praosLeaderValue <- arbitrary :: Gen UnitInterval
     let kesPeriod = 1
         keyRegKesPeriod = 1
         ocert = mkOCert allPoolKeys 1 (KESPeriod kesPeriod)
@@ -197,8 +194,6 @@ instance
         curSlotNo
         curBlockNo
         epochNonce
-        blockNonce
-        praosLeaderValue
         kesPeriod
         keyRegKesPeriod
         ocert
@@ -282,13 +277,13 @@ maxMetaDatumListLens :: Int
 maxMetaDatumListLens = 5
 
 sizedMetaDatum :: Int -> Gen MetaDatum
-sizedMetaDatum 0 = 
+sizedMetaDatum 0 =
   oneof
     [ MD.I <$> arbitrary,
       MD.B <$> arbitrary,
       MD.S <$> (T.pack <$> arbitrary)
     ]
-sizedMetaDatum n = 
+sizedMetaDatum n =
     oneof
       [ MD.Map <$>
           (zip
@@ -651,7 +646,7 @@ maxMultiSigListLens = 5
 
 sizedMultiSig :: Mock c => Int -> Gen (MultiSig c)
 sizedMultiSig 0 = RequireSignature <$> arbitrary
-sizedMultiSig n = 
+sizedMultiSig n =
     oneof
       [ RequireSignature <$> arbitrary,
         RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1))),

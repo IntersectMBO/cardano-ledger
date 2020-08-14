@@ -66,7 +66,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( NatNonce (..),
     genesisCoins,
     genesisId,
-    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     zero,
   )
@@ -147,7 +147,7 @@ txEx1 =
 
 blockEx1 :: forall c. Mock c => Block c
 blockEx1 =
-  mkBlock
+  mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule ppEx 10)
     [txEx1]
@@ -187,7 +187,7 @@ genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStE
 
 blockEx2 :: forall c. Mock c => Block c
 blockEx2 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
     (coreNodeKeysBySchedule ppEx 50)
     []

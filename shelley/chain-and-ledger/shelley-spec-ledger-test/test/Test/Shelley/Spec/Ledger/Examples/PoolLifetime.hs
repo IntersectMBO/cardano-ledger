@@ -95,7 +95,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     NatNonce (..),
     genesisCoins,
     genesisId,
-    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     zero,
   )
@@ -194,7 +194,7 @@ txEx1 =
 
 blockEx1 :: forall c. (HasCallStack, Mock c) => Block c
 blockEx1 =
-  mkBlock
+  mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule ppEx 10)
     [txEx1]
@@ -280,7 +280,7 @@ txEx2 =
 
 blockEx2 :: forall c. Mock c => Block c
 blockEx2 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
     (coreNodeKeysBySchedule ppEx 90)
     [txEx2]
@@ -319,7 +319,7 @@ epoch1Nonce = chainCandidateNonce (expectedStEx2 @c)
 
 blockEx3 :: forall c. Mock c => Block c
 blockEx3 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx2)
     (coreNodeKeysBySchedule ppEx 110)
     []
@@ -403,7 +403,7 @@ txEx4 =
 
 blockEx4 :: forall c. Mock c => Block c
 blockEx4 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx3)
     (coreNodeKeysBySchedule ppEx 190)
     [txEx4]
@@ -455,7 +455,7 @@ epoch2Nonce =
 
 blockEx5 :: forall c. Mock c => Block c
 blockEx5 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx4)
     (coreNodeKeysBySchedule ppEx 220)
     []
@@ -518,7 +518,7 @@ poolLifetime5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 
 blockEx6 :: forall c. Mock c => Block c
 blockEx6 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx5)
     Cast.alicePoolKeys
     []
@@ -567,7 +567,7 @@ epoch3Nonce =
 
 blockEx7 :: forall c. Mock c => Block c
 blockEx7 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx6)
     (coreNodeKeysBySchedule ppEx 310)
     []
@@ -603,7 +603,7 @@ poolLifetime7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 
 blockEx8 :: forall c. Mock c => Block c
 blockEx8 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx7)
     (coreNodeKeysBySchedule ppEx 390)
     []
@@ -692,7 +692,7 @@ epoch4Nonce =
 
 blockEx9 :: forall c. Mock c => Block c
 blockEx9 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx8)
     (coreNodeKeysBySchedule ppEx 410)
     []
@@ -771,7 +771,7 @@ txEx10 =
 
 blockEx10 :: forall c. Mock c => Block c
 blockEx10 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx9)
     (coreNodeKeysBySchedule ppEx 420)
     [txEx10]
@@ -840,7 +840,7 @@ txEx11 =
 
 blockEx11 :: forall c. Mock c => Block c
 blockEx11 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx10)
     (coreNodeKeysBySchedule ppEx 490)
     [txEx11]
@@ -911,7 +911,7 @@ epoch5Nonce =
 
 blockEx12 :: forall c. Mock c => Block c
 blockEx12 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx11)
     (coreNodeKeysBySchedule ppEx 510)
     []

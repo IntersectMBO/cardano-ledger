@@ -66,7 +66,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     NatNonce (..),
     genesisCoins,
     genesisId,
-    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     zero,
   )
@@ -122,7 +122,7 @@ txEx1 =
 
 blockEx1 :: forall c. (HasCallStack, Mock c) => Block c
 blockEx1 =
-  mkBlock
+  mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule ppEx 10)
     [txEx1]
@@ -200,7 +200,7 @@ word64SlotToKesPeriodWord slot =
 
 blockEx2 :: forall c. Mock c => Word64 -> Block c
 blockEx2 slot =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
     (coreNodeKeysBySchedule ppEx slot)
     [txEx2]
@@ -262,7 +262,7 @@ epoch1Nonce = chainCandidateNonce (expectedStEx2B @c)
 
 blockEx3 :: forall c. Mock c => Block c
 blockEx3 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx2B)
     (coreNodeKeysBySchedule ppEx 110)
     []
