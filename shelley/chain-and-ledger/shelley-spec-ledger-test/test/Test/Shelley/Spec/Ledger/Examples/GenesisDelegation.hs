@@ -47,7 +47,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import qualified Test.Shelley.Spec.Ledger.Examples.Combinators as C
@@ -66,7 +66,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( NatNonce (..),
     genesisCoins,
     genesisId,
-    mkBlock,
+    mkBlockFakeVRF,
     mkOCert,
     zero,
   )
@@ -145,9 +145,9 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. Mock c => Block c
+blockEx1 :: forall c. ExMock c => Block c
 blockEx1 =
-  mkBlock
+  mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule ppEx 10)
     [txEx1]
@@ -166,7 +166,7 @@ newGenDeleg =
     GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH
   )
 
-expectedStEx1 :: forall c. Mock c => ChainState c
+expectedStEx1 :: forall c. ExMock c => ChainState c
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
@@ -178,16 +178,16 @@ expectedStEx1 =
 -- === Block 1, Slot 10, Epoch 0
 --
 -- In the first block, stage a new future genesis delegate
-genesisDelegation1 :: Mock c => CHAINExample c
+genesisDelegation1 :: ExMock c => CHAINExample c
 genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStEx1)
 
 --
 -- Block 2, Slot 50, Epoch 0
 --
 
-blockEx2 :: forall c. Mock c => Block c
+blockEx2 :: forall c. ExMock c => Block c
 blockEx2 =
-  mkBlock
+  mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
     (coreNodeKeysBySchedule ppEx 50)
     []
@@ -200,7 +200,7 @@ blockEx2 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 50) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall c. Mock c => ChainState c
+expectedStEx2 :: forall c. ExMock c => ChainState c
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c))
     . C.newLab blockEx2
@@ -211,7 +211,7 @@ expectedStEx2 =
 -- === Block 2, Slot 50, Epoch 0
 --
 -- Submit an empty block to trigger adopting the genesis delegation.
-genesisDelegation2 :: Mock c => CHAINExample c
+genesisDelegation2 :: ExMock c => CHAINExample c
 genesisDelegation2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --

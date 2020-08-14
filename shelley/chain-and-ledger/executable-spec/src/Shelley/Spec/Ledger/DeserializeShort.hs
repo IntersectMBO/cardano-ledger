@@ -60,7 +60,7 @@ getAddrStakeReference = do
   header <- getWord
   if testBit header byron
     then pure Nothing
-    else skipHash ([] @(HASH crypto)) >> Just <$> getStakeReference header
+    else skipHash ([] @(ADDRHASH crypto)) >> Just <$> getStakeReference header
 
 deserializeShortAddr :: Crypto crypto => ShortByteString -> Maybe (Addr crypto)
 deserializeShortAddr short =
