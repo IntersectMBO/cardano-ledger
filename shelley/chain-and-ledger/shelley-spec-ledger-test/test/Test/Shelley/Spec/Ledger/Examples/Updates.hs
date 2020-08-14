@@ -55,7 +55,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import qualified Test.Shelley.Spec.Ledger.Examples.Combinators as C
@@ -150,7 +150,7 @@ txbodyEx1 =
     (SJust (Update ppVotes1 (EpochNo 0)))
     SNothing
 
-txEx1 :: Mock c => Tx c
+txEx1 :: ExMock c => Tx c
 txEx1 =
   Tx
     txbodyEx1
@@ -167,7 +167,7 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. Mock c => Block c
+blockEx1 :: forall c. ExMock c => Block c
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -182,7 +182,7 @@ blockEx1 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
 
-expectedStEx1 :: forall c. Mock c => ChainState c
+expectedStEx1 :: forall c. ExMock c => ChainState c
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
@@ -194,7 +194,7 @@ expectedStEx1 =
 -- === Block 1, Slot 10, Epoch 0
 --
 -- In the first block, three genesis keys vote on the same new parameters.
-updates1 :: Mock c => CHAINExample c
+updates1 :: ExMock c => CHAINExample c
 updates1 = CHAINExample initStUpdates blockEx1 (Right expectedStEx1)
 
 --
@@ -225,7 +225,7 @@ txbodyEx2 =
     (SJust updateEx3B)
     SNothing
 
-txEx2 :: Mock c => Tx c
+txEx2 :: ExMock c => Tx c
 txEx2 =
   Tx
     txbodyEx2
@@ -241,7 +241,7 @@ txEx2 =
       }
     SNothing
 
-blockEx2 :: forall c. Mock c => Block c
+blockEx2 :: forall c. ExMock c => Block c
 blockEx2 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
@@ -256,7 +256,7 @@ blockEx2 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 20) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall c. Mock c => ChainState c
+expectedStEx2 :: forall c. ExMock c => ChainState c
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c))
     . C.newLab blockEx2
@@ -268,7 +268,7 @@ expectedStEx2 =
 -- === Block 2, Slot 20, Epoch 0
 --
 -- In the second block, two more genesis keys vote for the same new parameters.
-updates2 :: Mock c => CHAINExample c
+updates2 :: ExMock c => CHAINExample c
 updates2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
@@ -318,7 +318,7 @@ txbodyEx3 =
     (SJust (Update ppVotes3 (EpochNo 1)))
     SNothing
 
-txEx3 :: Mock c => Tx c
+txEx3 :: ExMock c => Tx c
 txEx3 =
   Tx
     txbodyEx3
@@ -330,7 +330,7 @@ txEx3 =
       }
     SNothing
 
-blockEx3 :: forall c. Mock c => Block c
+blockEx3 :: forall c. ExMock c => Block c
 blockEx3 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx2)
@@ -345,7 +345,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 80) 0 (KESPeriod 0))
 
-expectedStEx3 :: forall c. Mock c => ChainState c
+expectedStEx3 :: forall c. ExMock c => ChainState c
 expectedStEx3 =
   C.evolveNonceFrozen (getBlockNonce (blockEx3 @c))
     . C.newLab blockEx3
@@ -358,17 +358,17 @@ expectedStEx3 =
 -- === Block 3, Slot 80, Epoch 0
 --
 -- In the third block, one genesis keys votes for the next epoch
-updates3 :: Mock c => CHAINExample c
+updates3 :: ExMock c => CHAINExample c
 updates3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
 -- Block 4, Slot 110, Epoch 1
 --
 
-epoch1Nonce :: forall c. Mock c => Nonce
+epoch1Nonce :: forall c. ExMock c => Nonce
 epoch1Nonce = (chainCandidateNonce (expectedStEx3 @c)) ⭒ mkNonceFromNumber 123
 
-blockEx4 :: forall c. Mock c => Block c
+blockEx4 :: forall c. ExMock c => Block c
 blockEx4 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx3)
@@ -386,7 +386,7 @@ blockEx4 =
 ppExUpdated :: PParams
 ppExUpdated = ppEx {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 123}
 
-expectedStEx4 :: forall c. Mock c => ChainState c
+expectedStEx4 :: forall c. ExMock c => ChainState c
 expectedStEx4 =
   C.newEpoch blockEx4
     . C.newSnapshot EB.emptySnapShot (feeTx1 + feeTx2 + feeTx3)
@@ -402,7 +402,7 @@ expectedStEx4 =
 -- and the future vote becomes a current vote.
 -- Since the extra entropy was voted on, notice that it is a part
 -- of the new epoch nonce.
-updates4 :: Mock c => CHAINExample c
+updates4 :: ExMock c => CHAINExample c
 updates4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
 --

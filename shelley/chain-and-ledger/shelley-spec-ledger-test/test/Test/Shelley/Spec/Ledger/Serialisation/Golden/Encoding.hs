@@ -181,7 +181,7 @@ import Shelley.Spec.Ledger.TxData
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock, ExMock)
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
@@ -361,7 +361,7 @@ testScript2 p = RequireSignature $ asWitness (testKeyHash2 p)
 testHeaderHash :: forall proxy c. Crypto c => proxy c -> HashHeader c
 testHeaderHash _ = HashHeader $ coerce (hashWithSerialiser toCBOR 0 :: Hash c Int)
 
-testBHB :: forall proxy c. Mock c => proxy c -> BHBody c
+testBHB :: forall proxy c. ExMock c => proxy c -> BHBody c
 testBHB p =
   BHBody
     { bheaderBlockNo = BlockNo 44,
@@ -397,7 +397,7 @@ testBHB p =
       bprotver = ProtVer 0 0
     }
 
-testBHBSigTokens :: Mock c => proxy c -> Tokens -> Tokens
+testBHBSigTokens :: ExMock c => proxy c -> Tokens -> Tokens
 testBHBSigTokens p = e
   where
     s = signedKES () 0 (testBHB p) (fst (testKESKeys p))
