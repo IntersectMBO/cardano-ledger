@@ -67,13 +67,11 @@ library
                      Shelley.Spec.Ledger.Tx
                      Shelley.Spec.Ledger.TxData
                      Shelley.Spec.Ledger.UTxO
-
                      Shelley.Spec.Ledger.Crypto
-
                      Shelley.Spec.Ledger.API
-  other-modules:     Shelley.Spec.Ledger.API.Validation
-                     Shelley.Spec.Ledger.API.Mempool
+                     Shelley.Spec.Ledger.API.Validation
                      Shelley.Spec.Ledger.API.Protocol
+  other-modules:     Shelley.Spec.Ledger.API.Mempool
                      Shelley.Spec.Ledger.API.Wallet
                      Shelley.Spec.Ledger.API.Types
   hs-source-dirs: src
