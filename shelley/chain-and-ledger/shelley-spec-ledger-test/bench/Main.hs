@@ -40,7 +40,6 @@ import Data.Word (Word64)
 
 import Shelley.Spec.Ledger.Bench.Gen
   ( genBlock,
-    genBlock2,
     genChainState,
     genTx,
   )
@@ -366,7 +365,6 @@ main =
                 bgroup
                   "block"
                   [ bench "genBlock" $ whnfIO $ genBlock cs,
-                    bench "genBlock2" $ whnfIO $ genBlock2 cs
                   ]
             ),
           bgroup

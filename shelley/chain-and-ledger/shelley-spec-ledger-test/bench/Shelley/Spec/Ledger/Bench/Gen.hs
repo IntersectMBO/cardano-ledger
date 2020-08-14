@@ -24,8 +24,8 @@ import qualified Test.Shelley.Spec.Ledger.Generator.Block as GenBlock
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants
       ( maxGenesisUTxOouts,
-        minGenesisUTxOouts,
-        maxMinFeeA
+        maxMinFeeA,
+        minGenesisUTxOouts
       ),
   )
 import Test.Shelley.Spec.Ledger.Generator.Core (geConstants)
@@ -61,12 +61,5 @@ genChainState n =
 -- | Benchmark generating a block given a chain state.
 genBlock :: ChainState B -> IO (Block B)
 genBlock cs =
-  let ge = genEnv (Proxy @B)
-   in generate $ GenBlock.genBlockOld ge cs
-
--- | Benchmark generating a block given a chain state, using new block
--- generation code.
-genBlock2 :: ChainState B -> IO (Block B)
-genBlock2 cs =
   let ge = genEnv (Proxy @B)
    in generate $ GenBlock.genBlock ge cs
