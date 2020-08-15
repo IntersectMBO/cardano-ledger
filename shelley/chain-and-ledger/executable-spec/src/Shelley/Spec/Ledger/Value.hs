@@ -34,18 +34,23 @@ General function and type class definitions used in Value
 
 data Op = Gt | Lt | Gteq | Lteq | Neq | Equal
 
-class (NFData t, Show t, Eq t, NoUnexpectedThunks t) => Val t where
+class (NFData t, Show t, Eq t, NoUnexpectedThunks t)
+      => Val t  where
   vzero :: t                          -- This is an identity of vplus
-  vplus :: t -> t -> t                 -- This must be associative and commutative
+  vplus :: t -> t -> t                -- This must be associative and commutative
   vnegate:: t -> t                    -- vplus x (vnegate x) == vzero
   scalev:: Integer -> t -> t          --
-  -- Equal must be the same as Eq instance
-  voper:: Op -> t -> t -> Bool  -- This will define a PARTIAL order using pointwise comparisons (If all the keys don't match returns False)
+  voper:: Op -> t -> t -> Bool
+     -- This will define a PARTIAL order using pointwise comparisons
+     -- Semantic Equality (i.e. the Eq instance) should be (voperEqual)
   visZero:: t -> Bool                 -- is the argument vzero?
-  vcoin :: t -> Coin                -- get the Coin amount
+  vcoin :: t -> Coin                  -- get the Coin amount
   vinject :: Coin -> t                -- inject Coin into the Val instance
   vsize :: t -> Integer               -- compute size of Val instance
-  vsplit :: t -> Integer -> ([t], Coin)
+
+-- | subtract Val
+vminus :: (Val v) => v -> v -> v
+vminus v1 v2 = vplus v1 (vnegate v2)
 
 instance Val Integer where
   vzero = 0
@@ -62,15 +67,9 @@ instance Val Integer where
   vcoin x = Coin x
   vinject (Coin x) = x
   vsize _ = 1
-  vsplit n 0 = ([], Coin n)
-  vsplit n m  -- TODO fix this?
-    | m <= 0 = error "must split coins into positive parts"
-    | otherwise = (take (fromIntegral m) (repeat (n `div` m)), Coin $ n `rem` m)
 
-instance Val t => Default Map t where
-   apply mp k = case Map.lookup k mp of { Just t -> t; Nothing -> vzero }
-
-instance (Ord k,Val t, NFData k, Show k, NoUnexpectedThunks k) => Val (Map k t) where
+instance (Ord k,Val t, NFData k, Show k, NoUnexpectedThunks k)
+      => Val (Map k t) where
   vzero = Map.empty
   vplus x y = unionWithV vplus x y  -- There is an assumption that if the range is vzero, it is not stored in the Map
   vnegate x = mapV vnegate x        -- We enforce this by using our own versions of map and union: unionWithV and mapV
@@ -80,10 +79,9 @@ instance (Ord k,Val t, NFData k, Show k, NoUnexpectedThunks k) => Val (Map k t) 
   vcoin _ = Coin 0
   vinject _ = Map.empty -- TODO Should not be any Coin in map
   vsize x = fromIntegral $ Map.size x -- TODO shouldnt use this for Value
-  vsplit vl 0 = ([], vcoin vl)  -- Wrong (doesnt maintain adding-up-to-n invariant)
-  vsplit vl m
-    | voper Lteq vl vzero = error "must split coins into positive parts"
-    | otherwise = (vl : (take (fromIntegral $ m - 1) (repeat vzero)), Coin 0) -- TODO split up more evenly the MA assets
+
+-- ================================================================
+-- Operations on Map, so we cam make Map a Val instance.
 
 -- Pointwise comparison assuming the map is the Default value everywhere except where it is defined
 pointWise:: (Ord k, Val v) => (v -> v -> Bool) -> Map k v -> Map k v -> Bool
@@ -132,10 +130,33 @@ mapV f m = Map.foldrWithKey accum Map.empty m
             where new = f v
 {-# INLINABLE mapV #-}
 
-{-
-Value definitions
--}
 
+-- ======================================================================
+-- Multi Assests
+--
+-- A Value is a map from 'PolicyID's to a quantity of assets with this policy.
+-- This map implements a finitely supported functions ovr PolicyId.
+-- A PolicyID is not stored in the Map, then its quantity is assumed to be 0.
+--
+-- Operations on assets are usually implemented 'pointwise'. That is,
+-- we apply the operation to the quantities for each asset in turn. So
+-- when we add two 'Value's the resulting 'Value' has, for each asset,
+-- the sum of the quantities of /that particular/ asset in the argument
+-- 'Value'. The effect of this is that the assets in the 'Value' are "independent",
+-- and are operated on separately.
+--
+-- We can think of 'Value' as a vector space whose dimensions are
+-- assets. At the moment there is only a single asset type (Ada), so 'Value'
+-- contains one-dimensional vectors. When asset-creating transactions are
+-- implemented, this will change and the definition of 'Value' will change to a
+-- 'Map Asset Int', effectively a vector with infinitely many dimensions whose
+-- non-zero values are recorded in the map.
+--
+-- To create a value of 'Value', we need to specifiy an asset policy. This can be done
+-- using 'Ledger.Ada.adaValueOf'. To get the ada dimension of 'Value' we use
+-- 'Ledger.Ada.fromValue'. Plutus contract authors will be able to define modules
+-- similar to 'Ledger.Ada' for their own assets.
+-- ======================================================================================
 
 -- | Quantity
 newtype Quantity = Quantity {unInt :: Integer}
@@ -149,43 +170,32 @@ newtype AssetID = AssetID {assetID :: ByteString}
 newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
   deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks, NFData)
 
-{- note [Assets]
-
-A Value is a map from 'PolicyID's to aquantity of assets with this policy.
-
-Terms of type Value are finitely supported functions. This means :
-
-Operations on assets are usually implemented /pointwise/. That is,
-we apply the operation to the quantities for each asset in turn. So
-when we add two 'Value's the resulting 'Value' has, for each asset,
-the sum of the quantities of /that particular/ asset in the argument
-'Value'. The effect of this is that the assets in the 'Value' are "independent",
-and are operated on separately.
-
-Whenever we need to get the quantity of an asset in a 'Value' where there
-is no explicit quantity of that asset in the 'Value', then the quantity is
-taken to be zero.
-
-We can think of 'Value' as a vector space whose dimensions are
-assets. At the moment there is only a single asset type (Ada), so 'Value'
-contains one-dimensional vectors. When asset-creating transactions are
-implemented, this will change and the definition of 'Value' will change to a
-'Map Asset Int', effectively a vector with infinitely many dimensions whose
-non-zero values are recorded in the map.
-
-To create a value of 'Value', we need to specifiy an asset policy. This can be done
-using 'Ledger.Ada.adaValueOf'. To get the ada dimension of 'Value' we use
-'Ledger.Ada.fromValue'. Plutus contract authors will be able to define modules
-similar to 'Ledger.Ada' for their own assets.
-
--}
-
+-- | The Value representing MultiAssets
 data Value crypto = Value Coin (Map (PolicyID crypto) (Map AssetID Quantity))
   deriving (Show, Generic)
+
+-- =============================================
+-- Operations, and class instances on Value
+
+class Default f t where
+  apply:: Ord k => f k t -> k -> t
 
 instance NFData (Value crypto)
 deriving instance Val Coin
 instance NoUnexpectedThunks (Value crypto)
+
+instance Val t => Default Map t where
+   apply mp k = case Map.lookup k mp of { Just t -> t; Nothing -> vzero }
+
+instance Eq (Value crypto) where
+    (==) (Value c v) (Value c1 v1) = (voper Equal c c1) && (voper Equal v v1)
+
+instance Semigroup (Value crypto) where
+    (<>) = vplus
+
+instance Monoid (Value crypto) where
+    mempty  = vzero
+    mappend = (<>)
 
 instance Val (Value crypto) where
   vzero = Value (Coin 0) vzero
@@ -199,11 +209,9 @@ instance Val (Value crypto) where
   vsize (Value _ v) = foldr accum 1 v where
     accum u ans = foldr accumIns (ans + addrHashLen) u where
       accumIns _ ans1 = ans1 + assetIdLen + uint
-  vsplit (Value c _) 0 = ([], c) -- invariant doesnt hold here either
-  vsplit (Value c v) m = (zipWith Value cl vl, rmn)
-    where
-      (cl, rmn) = vsplit c m
-      (vl, _) = vsplit v m
+
+-- ============================================
+-- Constants needed to compute size.
 
 addrHashLen :: Integer
 addrHashLen = 28
@@ -214,23 +222,34 @@ assetIdLen = 32
 uint :: Integer
 uint = 9
 
-class Default f t where
-  apply:: Ord k => f k t -> k -> t
+-- =============================================================
+-- Operations needed for Tests
 
-instance Eq (Value crypto) where
-    (==) (Value c v) (Value c1 v1) = (voper Equal c c1) && (voper Equal v v1)
+class Val t => ValTest t where
+   vsplit :: t -> Integer -> ([t], Coin)
+   vmodify:: Monad m => (Coin -> m Coin) -> t -> m t
 
-instance Semigroup (Value crypto) where
-    (<>) = vplus
+instance ValTest Coin where
+  vsplit (Coin n) 0 = ([], Coin n)
+  vsplit (Coin n) m  -- TODO fix this?
+    | m <= 0 = error "must split coins into positive parts"
+    | otherwise = (take (fromIntegral m) (repeat (Coin(n `div` m))), Coin (n `rem` m))
+  vmodify f coin = f coin
 
-instance Monoid (Value crypto) where
-    mempty  = vzero
-    mappend = (<>)
+instance ValTest (Value crypto) where
+  vsplit (Value coin _) 0 = ([], coin) -- The sum invariant may not hold, but no other way to split into 0 groups
+  vsplit (Value coin assets) m = (zipWith Value coins maps,remainder)
+    where
+      maps = assets : (take (fromIntegral $ m - 1) (repeat vzero))
+      (coins, remainder) = vsplit coin m
+  vmodify f (Value coin assets) = do { coin2 <- f coin; pure(Value coin2 assets)}
 
-
+-- ===============================================================
 -- constraint used for all parametrized functions
-type CV c v = (Val v, Crypto c, Typeable c, Typeable v, FromCBOR v, ToCBOR v)
-type CVNC c v = (Val v, Typeable c, Typeable v, FromCBOR v, ToCBOR v)
+
+
+type CV c v = (Val v, Crypto c, Typeable c, Typeable v, FromCBOR v, ToCBOR v,ValTest v)
+type CVNC c v = (Val v, Typeable c, Typeable v, FromCBOR v, ToCBOR v,ValTest v)
 
 -- Linear Map instance
 
@@ -255,9 +274,7 @@ type CVNC c v = (Val v, Typeable c, Typeable v, FromCBOR v, ToCBOR v)
 
 -- Num operations
 
--- | subtract Val
-vminus :: (Val v) => v -> v -> v
-vminus v1 v2 = vplus v1 (vnegate v2)
+
 --
 -- vinsert:: PolicyID crypto -> AssetID -> Quantity -> Value crypto -> Value crypto
 -- vinsert pid aid q old = vplus old (Value (Map.singleton pid (Map.singleton aid q)))

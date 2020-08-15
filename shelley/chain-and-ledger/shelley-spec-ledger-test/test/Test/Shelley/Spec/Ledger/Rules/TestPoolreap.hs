@@ -23,7 +23,7 @@ import Control.State.Transition.Trace
 import Data.List (foldl')
 import qualified Data.Set as Set (Set, null)
 import Shelley.Spec.Ledger.API (POOLREAP)
-import Shelley.Spec.Ledger.Coin (pattern Coin)
+import Shelley.Spec.Ledger.Coin (Coin,pattern Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
   ( _deposited,
@@ -56,7 +56,7 @@ import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring)
 -- | Check that after a POOLREAP certificate transition the pool is removed from
 -- the stake pool and retiring maps.
 removedAfterPoolreap ::
-  [SourceSignalTarget (POOLREAP C)] ->
+  [SourceSignalTarget (POOLREAP C Coin)] ->
   Property
 removedAfterPoolreap tr =
   conjoin $
@@ -81,7 +81,7 @@ removedAfterPoolreap tr =
 
 -- | Check that deposits are always non-negative
 nonNegativeDeposits ::
-  [SourceSignalTarget (POOLREAP C)] ->
+  [SourceSignalTarget (POOLREAP C Coin)] ->
   Property
 nonNegativeDeposits tr =
   conjoin $
@@ -96,7 +96,7 @@ nonNegativeDeposits tr =
 -- | Check that the sum of circulation, deposits, fees, treasury, rewards and
 -- reserves is constant.
 constantSumPots ::
-  [SourceSignalTarget (POOLREAP C)] ->
+  [SourceSignalTarget (POOLREAP C Coin)] ->
   Property
 constantSumPots tr =
   conjoin $

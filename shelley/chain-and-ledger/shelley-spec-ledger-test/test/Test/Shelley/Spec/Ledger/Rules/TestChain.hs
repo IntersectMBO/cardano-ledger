@@ -49,6 +49,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   )
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (geConstants))
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
+import Test.Shelley.Spec.Ledger.Serialisation.Generators()-- Arbitrary Coin instance
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
 import Test.Shelley.Spec.Ledger.Utils
@@ -82,7 +83,7 @@ adaPreservationChain =
       ]
   where
     epoch s = nesEL . chainNes $ s
-    sameEpoch :: SourceSignalTarget (CHAIN C) -> Bool
+    sameEpoch :: SourceSignalTarget (CHAIN C Coin) -> Bool
     sameEpoch (SourceSignalTarget {source, target}) =
       epoch source == epoch target
     -- ADA should be preserved for all state transitions in the generated trace
@@ -171,7 +172,7 @@ removedAfterPoolreap =
 
 forAllChainTrace ::
   (Testable prop) =>
-  (Trace (CHAIN C) -> prop) ->
+  (Trace (CHAIN C Coin) -> prop) ->
   Property
 forAllChainTrace prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
@@ -182,8 +183,8 @@ forAllChainTrace prop =
 
 -- | Transform CHAIN `sourceSignalTargets`s to POOLREAP ones.
 chainToPoolreapSst ::
-  SourceSignalTarget (CHAIN C) ->
-  SourceSignalTarget (POOLREAP C)
+  SourceSignalTarget (CHAIN C Coin) ->
+  SourceSignalTarget (POOLREAP C Coin)
 chainToPoolreapSst
   ( SourceSignalTarget
       ChainState {chainNes = nes}
@@ -217,21 +218,21 @@ chainToPoolreapSst
 --
 -- This allows for testing properties on traces that exclude effects of the
 -- "UTXO branches" of the STS Rule tree.
-chainSstWithTick :: Trace (CHAIN C) -> [SourceSignalTarget (CHAIN C)]
+chainSstWithTick :: Trace (CHAIN C Coin) -> [SourceSignalTarget (CHAIN C Coin)]
 chainSstWithTick ledgerTr =
   map applyTick ssts
   where
     ssts = sourceSignalTargets ledgerTr
     applyTick ::
-      SourceSignalTarget (CHAIN C) ->
-      SourceSignalTarget (CHAIN C)
+      SourceSignalTarget (CHAIN C Coin) ->
+      SourceSignalTarget (CHAIN C Coin)
     applyTick
       ( SourceSignalTarget
           chainSt@ChainState {chainNes = nes}
           _
           b@(Block bh _)
         ) =
-        case runShelleyBase (applySTSTest @(TICK C) (TRC (TickEnv (getGKeys nes), nes, (bheaderSlotNo . bhbody) bh))) of
+        case runShelleyBase (applySTSTest @(TICK C Coin) (TRC (TickEnv (getGKeys nes), nes, (bheaderSlotNo . bhbody) bh))) of
           Left pf ->
             error ("chainSstWithTick.applyTick Predicate failure " <> show pf)
           Right nes' ->

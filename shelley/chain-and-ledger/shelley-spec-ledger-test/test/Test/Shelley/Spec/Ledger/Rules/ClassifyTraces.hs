@@ -51,6 +51,7 @@ import Shelley.Spec.Ledger.BlockChain
     bhbody,
     bheaderSlotNo,
   )
+import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( isDeRegKey,
     isDelegation,
@@ -95,14 +96,15 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
+import Test.Shelley.Spec.Ledger.Serialisation.Generators()
 
 genesisChainState ::
   Maybe
-    ( Control.State.Transition.Extended.IRC (CHAIN C) ->
+    ( Control.State.Transition.Extended.IRC (CHAIN C Coin) ->
       QC.Gen
         ( Either
             a
-            (ChainState C)
+            (ChainState C Coin)
         )
     )
 genesisChainState = Just $ mkGenesisChainState (geConstants (genEnv p))
@@ -112,11 +114,11 @@ genesisChainState = Just $ mkGenesisChainState (geConstants (genEnv p))
 
 genesisLedgerState ::
   Maybe
-    ( Control.State.Transition.Extended.IRC (LEDGER C) ->
+    ( Control.State.Transition.Extended.IRC (LEDGER C Coin) ->
       QC.Gen
         ( Either
             a
-            ( UTxOState C,
+            ( UTxOState C Coin,
               DPState C
             )
         )
@@ -131,14 +133,14 @@ relevantCasesAreCovered = do
   let tl = 100
   checkCoverage $
     forAllBlind
-      (traceFromInitState @(CHAIN C) testGlobals tl (genEnv p) genesisChainState)
+      (traceFromInitState @(CHAIN C Coin) testGlobals tl (genEnv p) genesisChainState)
       relevantCasesAreCoveredForTrace
   where
     p :: Proxy C
     p = Proxy
 
 relevantCasesAreCoveredForTrace ::
-  Trace (CHAIN C) ->
+  Trace (CHAIN C Coin) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
   let p :: Proxy C
@@ -260,11 +262,11 @@ scriptCredentialCertsRatio certs =
           certs
 
 -- | Extract the certificates from the transactions
-certsByTx :: [Tx C] -> [[DCert C]]
+certsByTx :: [Tx C Coin] -> [[DCert C]]
 certsByTx txs = toList . _certs . _body <$> txs
 
 -- | Flattended list of DCerts for the given transactions
-allCerts :: [Tx C] -> [DCert C]
+allCerts :: [Tx C Coin] -> [DCert C]
 allCerts = concat . certsByTx
 
 -- | Ratio of the number of empty certificate groups and the number of groups
@@ -276,7 +278,7 @@ maxCertsRatio :: Constants -> [[DCert C]] -> Double
 maxCertsRatio Constants {maxCertsPerTx} = lenRatio (filter ((== maxCertsPerTx) . fromIntegral . length))
 
 -- | Extract the metadata from the transactions
-metaDataByTx :: [Tx C] -> [[MetaDataHash C]]
+metaDataByTx :: [Tx C Coin] -> [[MetaDataHash C]]
 metaDataByTx txs =
   f . _mdHash . _body <$> txs
   where
@@ -288,7 +290,7 @@ metaDataRatio :: [[MetaDataHash C]] -> Double
 metaDataRatio = lenRatio (filter (not . null))
 
 -- | Extract non-trivial protocol param  updates from the given transactions
-ppUpdatesByTx :: [Tx C] -> [[PParamsUpdate]]
+ppUpdatesByTx :: [Tx C Coin] -> [[PParamsUpdate]]
 ppUpdatesByTx txs = ppUpdates . _txUpdate . _body <$> txs
   where
     ppUpdates SNothing = mempty
@@ -303,7 +305,7 @@ ratioInt x y =
   fromIntegral x / fromIntegral y
 
 -- | Transaction has script locked TxOuts
-txScriptOutputsRatio :: [StrictSeq (TxOut C)] -> Double
+txScriptOutputsRatio :: [StrictSeq (TxOut C Coin)] -> Double
 txScriptOutputsRatio txoutsList =
   ratioInt
     (sum (map countScriptOuts txoutsList))
@@ -319,7 +321,7 @@ txScriptOutputsRatio txoutsList =
           txouts
 
 -- | Transaction has a reward withdrawal
-withdrawalRatio :: [Tx C] -> Double
+withdrawalRatio :: [Tx C Coin] -> Double
 withdrawalRatio = lenRatio (filter $ not . null . unWdrl . _wdrls . _body)
 
 -- | Transforms the list and returns the ratio of lengths of
@@ -333,7 +335,7 @@ lenRatio f xs =
 onlyValidLedgerSignalsAreGenerated :: Property
 onlyValidLedgerSignalsAreGenerated =
   withMaxSuccess 200 $
-    onlyValidSignalsAreGeneratedFromInitState @(LEDGER C) testGlobals 100 (genEnv p) genesisLedgerState
+    onlyValidSignalsAreGeneratedFromInitState @(LEDGER C Coin) testGlobals 100 (genEnv p) genesisLedgerState
   where
     p :: Proxy C
     p = Proxy
@@ -344,8 +346,8 @@ propAbstractSizeBoundsBytes :: Property
 propAbstractSizeBoundsBytes = property $ do
   let tl = 100
       numBytes = toInteger . BS.length . serialize'
-  forAllTraceFromInitState @(LEDGER C) testGlobals tl (genEnv p) genesisLedgerState $ \tr -> do
-    let txs :: [Tx C]
+  forAllTraceFromInitState @(LEDGER C Coin) testGlobals tl (genEnv p) genesisLedgerState $ \tr -> do
+    let txs :: [Tx C Coin]
         txs = traceSignals OldestFirst tr
     all (\tx -> txsizeBound tx >= numBytes tx) txs
   where
@@ -365,8 +367,8 @@ propAbstractSizeNotTooBig = property $ do
       acceptableMagnitude = (3 :: Integer)
       numBytes = toInteger . BS.length . serialize'
       notTooBig txb = txsizeBound txb <= acceptableMagnitude * numBytes txb
-  forAllTraceFromInitState @(LEDGER C) testGlobals tl (genEnv p) genesisLedgerState $ \tr -> do
-    let txs :: [Tx C]
+  forAllTraceFromInitState @(LEDGER C Coin) testGlobals tl (genEnv p) genesisLedgerState $ \tr -> do
+    let txs :: [Tx C Coin]
         txs = traceSignals OldestFirst tr
     all notTooBig txs
   where
@@ -376,12 +378,12 @@ propAbstractSizeNotTooBig = property $ do
 onlyValidChainSignalsAreGenerated :: Property
 onlyValidChainSignalsAreGenerated =
   withMaxSuccess 100 $
-    onlyValidSignalsAreGeneratedFromInitState @(CHAIN C) testGlobals 100 (genEnv p) genesisChainState
+    onlyValidSignalsAreGeneratedFromInitState @(CHAIN C Coin) testGlobals 100 (genEnv p) genesisChainState
   where
     p :: Proxy C
     p = Proxy
 
-epochBoundariesInTrace :: [Block C] -> Int
+epochBoundariesInTrace :: [Block C Coin] -> Int
 epochBoundariesInTrace bs =
   length $
     filter atEpochBoundary (blockSlot <$> bs)

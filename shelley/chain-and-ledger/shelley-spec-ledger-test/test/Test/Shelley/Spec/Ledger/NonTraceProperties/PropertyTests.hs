@@ -60,7 +60,7 @@ import Test.Tasty.Hedgehog (testProperty)
 
 -- | Take 'addr |-> c' pair from 'TxOut' and insert into map or add 'c' to value
 -- already present. Used to fold over 'UTxO' to accumulate funds per address.
-insertOrUpdate :: TxOut C -> Map (Addr C) Coin -> Map (Addr C) Coin
+insertOrUpdate :: TxOut C Coin -> Map (Addr C) Coin -> Map (Addr C) Coin
 insertOrUpdate (TxOut a c) m =
   Map.insert
     a
@@ -72,7 +72,7 @@ insertOrUpdate (TxOut a c) m =
 
 -- | Return True if at least half of the keys have non-trivial coin values to
 -- spent, i.e., at least 2 coins per 50% of addresses.
-isNotDustDist :: UTxO C -> UTxO C -> Bool
+isNotDustDist :: UTxO C Coin -> UTxO C Coin -> Bool
 isNotDustDist initUtxo utxo' =
   utxoSize initUtxo
     <= 2 * Map.size (Map.filter (> Coin 1) coinMap)
@@ -84,7 +84,7 @@ isNotDustDist initUtxo utxo' =
 propPositiveBalance :: Property
 propPositiveBalance =
   property $ do
-    initialState <- Hedgehog.forAll (genNonemptyGenesisState (Proxy @C))
+    initialState <- Hedgehog.forAll (genNonemptyGenesisState @C @Coin Proxy)
     utxoSize ((_utxo . _utxoState) initialState) /== 0
     Coin 0 /== balance ((_utxo . _utxoState) initialState)
 
@@ -93,7 +93,7 @@ propPositiveBalance =
 propPreserveBalanceInitTx :: Property
 propPreserveBalanceInitTx =
   property $ do
-    (_, steps, fee, ls, _, next) <- Hedgehog.forAll (genNonEmptyAndAdvanceTx (Proxy @C))
+    (_, steps, fee, ls, _, next) <- Hedgehog.forAll (genNonEmptyAndAdvanceTx @C @Coin Proxy)
     classify "non-trivial number of steps" (steps > 1)
     case next of
       Left _ -> failure
@@ -106,7 +106,7 @@ propPreserveBalanceInitTx =
 -- | Property (Preserve Balance Restricted to TxIns in Balance of TxOuts)
 propBalanceTxInTxOut :: Property
 propBalanceTxInTxOut = property $ do
-  (l, steps, fee, txwits, l') <- Hedgehog.forAll (genValidStateTx (Proxy @C))
+  (l, steps, fee, txwits, l') <- Hedgehog.forAll (genValidStateTx @C @Coin Proxy)
   let tx = _body txwits
   let inps = txins tx
   classify "non-trivial valid ledger state" (steps > 1)
@@ -118,7 +118,7 @@ propBalanceTxInTxOut = property $ do
 -- | Property (Preserve Outputs of Transaction)
 propPreserveOutputs :: Property
 propPreserveOutputs = property $ do
-  (l, steps, _, txwits, l') <- Hedgehog.forAll (genValidStateTx (Proxy @C))
+  (l, steps, _, txwits, l') <- Hedgehog.forAll (genValidStateTx @C @Coin Proxy)
   let tx = _body txwits
   classify "non-trivial valid ledger state" (steps > 1)
   classify
@@ -129,7 +129,7 @@ propPreserveOutputs = property $ do
 -- | Property (Eliminate Inputs of Transaction)
 propEliminateInputs :: Property
 propEliminateInputs = property $ do
-  (l, steps, _, txwits, l') <- Hedgehog.forAll (genValidStateTx (Proxy @C))
+  (l, steps, _, txwits, l') <- Hedgehog.forAll (genValidStateTx @C @Coin Proxy)
   let tx = _body txwits
   classify "non-trivial valid ledger state" (steps > 1)
   classify
@@ -141,7 +141,7 @@ propEliminateInputs = property $ do
 -- | Property (Completeness and Collision-Freeness of new TxIds)
 propUniqueTxIds :: Property
 propUniqueTxIds = property $ do
-  (l, steps, _, txwits, l') <- Hedgehog.forAll (genValidStateTx (Proxy @C))
+  (l, steps, _, txwits, l') <- Hedgehog.forAll (genValidStateTx @C @Coin Proxy)
   let tx = _body txwits
   let origTxIds = collectIds <$> Map.keys (utxoMap ((_utxo . _utxoState) l))
   let newTxIds = collectIds <$> Map.keys (utxoMap (txouts tx))
@@ -163,7 +163,7 @@ propUniqueTxIds = property $ do
 propNoDoubleSpend :: Property
 propNoDoubleSpend = withTests 1000 $
   property $ do
-    (_, _, _, _, txs, next) <- Hedgehog.forAll (genNonEmptyAndAdvanceTx (Proxy @C))
+    (_, _, _, _, txs, next) <- Hedgehog.forAll (genNonEmptyAndAdvanceTx @C @Coin Proxy)
     case next of
       Left _ -> failure
       Right _ -> do
@@ -182,7 +182,7 @@ classifyInvalidDoubleSpend :: Property
 classifyInvalidDoubleSpend = withTests 1000 $
   property $ do
     (_, _, _, _, txs, LedgerValidation validationErrors _) <-
-      Hedgehog.forAll (genNonEmptyAndAdvanceTx' (Proxy @C))
+      Hedgehog.forAll (genNonEmptyAndAdvanceTx' @C @Coin Proxy)
     let inputIndicesSet = unions $ map (\txwit -> fromSet $ (_inputs . _body) txwit) txs
     let multiSpentInputs =
           Data.MultiSet.size $
@@ -250,7 +250,7 @@ propBalanceTxInTxOut' =
 -- validate.
 propCheckRedundantWitnessSet :: Property
 propCheckRedundantWitnessSet = property $ do
-  (l, steps, _, txwits, _, keyPairs) <- Hedgehog.forAll (genValidStateTxKeys (Proxy @C))
+  (l, steps, _, txwits, _, keyPairs) <- Hedgehog.forAll (genValidStateTxKeys @C @Coin Proxy)
   let keyPair = fst $ head keyPairs
   let tx = _body txwits
   let witness = makeWitnessVKey (hashAnnotated tx) keyPair
@@ -272,7 +272,7 @@ propCheckRedundantWitnessSet = property $ do
 -- | Check that we correctly report missing witnesses.
 propCheckMissingWitness :: Property
 propCheckMissingWitness = property $ do
-  (l, steps, _, txwits, _) <- Hedgehog.forAll (genValidStateTx (Proxy @C))
+  (l, steps, _, txwits, _) <- Hedgehog.forAll (genValidStateTx @C @Coin Proxy)
   witnessList <-
     Hedgehog.forAll
       ( Gen.subsequence $
@@ -300,7 +300,7 @@ propCheckMissingWitness = property $ do
 -- | Property (Preserve Balance)
 propPreserveBalance :: Property
 propPreserveBalance = property $ do
-  (l, _, fee, tx, l') <- Hedgehog.forAll (genValidStateTx (Proxy @C))
+  (l, _, fee, tx, l') <- Hedgehog.forAll (genValidStateTx @C @Coin Proxy)
   let destroyed =
         balance ((_utxo . _utxoState) l)
           + (keyRefunds emptyPParams $ _body tx)

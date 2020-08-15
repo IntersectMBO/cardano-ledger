@@ -18,7 +18,7 @@ import Control.State.Transition.Trace
   )
 import Data.List (foldl')
 import Shelley.Spec.Ledger.API (UTXO)
-import Shelley.Spec.Ledger.Coin (pattern Coin)
+import Shelley.Spec.Ledger.Coin (Coin,pattern Coin)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.LedgerState (_deposited, _fees, _utxo, pattern UTxOState)
 import Shelley.Spec.Ledger.Tx (_body, pattern Tx)
@@ -33,7 +33,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 
 -- | Property that checks that the fees are non-decreasing
 feesNonDecreasing ::
-  [SourceSignalTarget (UTXO C)] ->
+  [SourceSignalTarget (UTXO C Coin)] ->
   Property
 feesNonDecreasing ssts =
   conjoin $
@@ -50,7 +50,7 @@ feesNonDecreasing ssts =
 -- fees increases by the sum of withdrawals of a transaction.
 potsSumIncreaseWdrls ::
   Crypto c =>
-  [SourceSignalTarget (UTXO c)] ->
+  [SourceSignalTarget (UTXO c Coin)] ->
   Property
 potsSumIncreaseWdrls ssts =
   conjoin $

@@ -25,6 +25,7 @@ import Shelley.Spec.Ledger.API
     TickEnv,
   )
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
+import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
@@ -93,25 +94,25 @@ import Test.Tasty.HUnit ((@?=), Assertion, assertBool, assertFailure, testCase)
 -- and check that some component of the result is as expected.
 testTICKChainState ::
   (Show a, Eq a) =>
-  NewEpochState C ->
+  NewEpochState C Coin ->
   TickEnv C ->
   SlotNo ->
-  (NewEpochState C -> a) ->
+  (NewEpochState C Coin -> a) ->
   a ->
   Assertion
 testTICKChainState initSt env slot focus expectedSt = do
-  let result = runShelleyBase $ applySTSTest @(TICK C) (TRC (env, initSt, slot))
+  let result = runShelleyBase $ applySTSTest @(TICK C Coin) (TRC (env, initSt, slot))
   case result of
     Right res -> focus res @?= expectedSt
     Left err -> assertFailure $ show err
 
 newEpochToPoolParams ::
-  NewEpochState C ->
+  NewEpochState C Coin ->
   (Map (KeyHash 'StakePool C) (PoolParams C))
 newEpochToPoolParams = _pParams . _pstate . _delegationState . esLState . nesEs
 
 newEpochToFuturePoolParams ::
-  NewEpochState C ->
+  NewEpochState C Coin ->
   (Map (KeyHash 'StakePool C) (PoolParams C))
 newEpochToFuturePoolParams = _fPParams . _pstate . _delegationState . esLState . nesEs
 
@@ -119,7 +120,7 @@ testAdoptEarlyPoolRegistration :: Assertion
 testAdoptEarlyPoolRegistration =
   testTICKChainState
     ex6BExpectedNES'
-    (TickEnv $ getGKeys ex6BExpectedNES')
+    (TickEnv $ getGKeys (ex6BExpectedNES' @C @Coin))
     (SlotNo 110)
     (\n -> (newEpochToPoolParams n, newEpochToFuturePoolParams n))
     (ex6BPoolParams, Map.empty)
@@ -128,7 +129,7 @@ testAdoptLatePoolRegistration :: Assertion
 testAdoptLatePoolRegistration =
   testTICKChainState
     ex6BExpectedNES
-    (TickEnv $ getGKeys ex6BExpectedNES)
+    (TickEnv $ getGKeys (ex6BExpectedNES @C @Coin))
     (SlotNo 110)
     (\n -> (newEpochToPoolParams n, newEpochToFuturePoolParams n))
     (ex6BPoolParams, Map.empty)
@@ -137,8 +138,8 @@ genesisDelegExample :: TestTree
 genesisDelegExample =
   testGroup
     "genesis delegation"
-    [ testCase "stage genesis key delegation" $ testCHAINExample (ex4A p),
-      testCase "adopt genesis key delegation" $ testCHAINExample (ex4B p)
+    [ testCase "stage genesis key delegation" $ testCHAINExample @C @Coin (ex4A p),
+      testCase "adopt genesis key delegation" $ testCHAINExample @C @Coin (ex4B p)
     ]
   where
     p :: Proxy C
@@ -148,18 +149,18 @@ mirExample :: TestTree
 mirExample =
   testGroup
     "move inst rewards"
-    [ testCase "create MIR cert - reserves" $ testCHAINExample (ex5AReserves p),
-      testCase "create MIR cert - treasury" $ testCHAINExample (ex5ATreasury p),
+    [ testCase "create MIR cert - reserves" $ testCHAINExample @C @Coin (ex5AReserves p),
+      testCase "create MIR cert - treasury" $ testCHAINExample @C @Coin (ex5ATreasury p),
       testCase "FAIL: insufficient core node signatures MIR reserves" $
-        testCHAINExample (ex5BReserves p),
+        testCHAINExample @C @Coin (ex5BReserves p),
       testCase "FAIL: insufficient core node signatures MIR treasury" $
-        testCHAINExample (ex5BTreasury p),
+        testCHAINExample @C @Coin (ex5BTreasury p),
       testCase "FAIL: MIR insufficient reserves" $
-        testCHAINExample (ex5CReserves p),
+        testCHAINExample @C @Coin (ex5CReserves p),
       testCase "FAIL: MIR insufficient treasury" $
-        testCHAINExample (ex5CTreasury p),
-      testCase "apply reserves MIR at epoch boundary" (test5DReserves p),
-      testCase "apply treasury MIR at epoch boundary" (test5DTreasury p)
+        testCHAINExample @C @Coin (ex5CTreasury p),
+      testCase "apply reserves MIR at epoch boundary" (test5DReserves (Proxy::Proxy(C,Coin))),
+      testCase "apply treasury MIR at epoch boundary" (test5DTreasury (Proxy::Proxy(C,Coin)))
     ]
   where
     p :: Proxy C
@@ -169,8 +170,8 @@ latePoolRegExample :: TestTree
 latePoolRegExample =
   testGroup
     "late pool registration"
-    [ testCase "Early Pool Re-registration" $ testCHAINExample (ex6A p),
-      testCase "Late Pool Re-registration" $ testCHAINExample (ex6A' p),
+    [ testCase "Early Pool Re-registration" $ testCHAINExample @C @Coin (ex6A p),
+      testCase "Late Pool Re-registration" $ testCHAINExample @C @Coin (ex6A' p),
       testCase "Adopt Early Pool Re-registration" $ testAdoptEarlyPoolRegistration,
       testCase "Adopt Late Pool Re-registration" $ testAdoptLatePoolRegistration
     ]
@@ -183,9 +184,9 @@ miscPresOfAdaInExamples =
   testGroup
     "misc preservation of ADA"
     [ testCase "CHAIN example 5D Reserves" $
-        (totalAda (fromRight (error "CHAIN example 5D") (ex5DReserves' p)) @?= maxLLSupply),
+        (totalAda @C @Coin (fromRight (error "CHAIN example 5D") (ex5DReserves' p)) @?= maxLLSupply),
       testCase "CHAIN example 5D Treasury" $
-        (totalAda (fromRight (error "CHAIN example 5D") (ex5DTreasury' p)) @?= maxLLSupply)
+        (totalAda @C @Coin (fromRight (error "CHAIN example 5D") (ex5DTreasury' p)) @?= maxLLSupply)
     ]
   where
     p :: Proxy C
@@ -195,7 +196,7 @@ chainExamples :: TestTree
 chainExamples =
   testGroup
     "CHAIN examples"
-    [ testCase "empty block" $ testCHAINExample exEmptyBlock,
+    [ testCase "empty block" $ testCHAINExample @C @Coin exEmptyBlock,
       poolLifetimeExample,
       updatesExample,
       genesisDelegExample,

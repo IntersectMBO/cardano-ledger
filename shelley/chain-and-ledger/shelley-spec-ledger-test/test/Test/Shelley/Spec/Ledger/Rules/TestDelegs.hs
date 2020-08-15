@@ -14,7 +14,7 @@ import Control.State.Transition.Trace
   )
 import Data.List (foldl')
 import Shelley.Spec.Ledger.API (DELEGS)
-import Shelley.Spec.Ledger.Coin (pattern Coin)
+import Shelley.Spec.Ledger.Coin (Coin,pattern Coin)
 import Shelley.Spec.Ledger.LedgerState (_dstate, _rewards)
 import qualified Shelley.Spec.Ledger.TxData as T
 import Test.QuickCheck (Property, conjoin)
@@ -27,7 +27,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 -- | Check that the rewards pot decreases by the sum of withdrawals in the
 -- transaction.
 rewardsDecreasesByWithdrawals ::
-  [(T.Wdrl C, SourceSignalTarget (DELEGS C))] ->
+  [(T.Wdrl C, SourceSignalTarget (DELEGS C Coin))] ->
   Property
 rewardsDecreasesByWithdrawals tr =
   conjoin $

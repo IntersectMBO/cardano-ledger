@@ -180,6 +180,7 @@ import Shelley.Spec.Ledger.TxData
     pattern RewardAcnt,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
+import Shelley.Spec.Ledger.Value(CV)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
@@ -277,10 +278,10 @@ testVRF _ = mkVRFKeyPair (0, 0, 0, 0, 5)
 testVRFKH :: Crypto c => proxy c -> Hash c (VerKeyVRF c)
 testVRFKH p = hashVerKeyVRF $ snd (testVRF p)
 
-testTxb :: Crypto c => TxBody c
+testTxb :: CV c v => TxBody c v
 testTxb = TxBody Set.empty StrictSeq.empty StrictSeq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) SNothing SNothing
 
-testTxbHash :: Crypto c => Hash c (TxBody c)
+testTxbHash :: CV c v => Hash c (TxBody c v)
 testTxbHash = hashAnnotated testTxb
 
 testKey1 :: Crypto c => proxy c -> KeyPair 'Payment c
@@ -314,12 +315,12 @@ testBlockIssuerKeyTokens = e
     (VKey vk) = vKey (testBlockIssuerKey @C)
     Encoding e = encodeVerKeyDSIGN vk
 
-testKey1SigToken :: forall proxy c. Mock c => proxy c -> Tokens -> Tokens
+testKey1SigToken :: forall c. Mock c => Proxy c -> Tokens -> Tokens
 testKey1SigToken p = e
   where
     s =
       signedDSIGN @c (sKey (testKey1 p)) testTxbHash ::
-        SignedDSIGN c (Hash c (TxBody c))
+        SignedDSIGN c (Hash c (TxBody c v))
     Encoding e = encodeSignedDSIGN s
 
 testOpCertSigTokens :: forall proxy c. Mock c => proxy c -> Tokens -> Tokens
@@ -358,10 +359,10 @@ testScriptHash p = hashScript (testScript p)
 testScript2 :: Crypto c => proxy c -> MultiSig c
 testScript2 p = RequireSignature $ asWitness (testKeyHash2 p)
 
-testHeaderHash :: forall proxy c. Crypto c => proxy c -> HashHeader c
+testHeaderHash :: forall c v. CV c v => Proxy c -> HashHeader c v
 testHeaderHash _ = HashHeader $ coerce (hashWithSerialiser toCBOR 0 :: Hash c Int)
 
-testBHB :: forall proxy c. Mock c => proxy c -> BHBody c
+testBHB :: forall c v. (Mock c,CV c v) => Proxy c -> BHBody c v
 testBHB p =
   BHBody
     { bheaderBlockNo = BlockNo 44,
@@ -477,7 +478,7 @@ tests =
         (T (TkListLen 2 . TkWord 0) <> S (testKeyHash1 p)),
       checkEncodingCBOR
         "txin"
-        (TxIn genesisId 0 :: TxIn C)
+        (TxIn genesisId 0 :: TxIn C Coin)
         (T (TkListLen 2) <> S (genesisId :: TxId C) <> T (TkWord64 0)),
       let a = Addr Testnet (testPayCred p) StakeRefNull
        in checkEncodingCBOR

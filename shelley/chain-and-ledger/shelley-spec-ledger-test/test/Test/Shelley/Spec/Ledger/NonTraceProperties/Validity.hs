@@ -9,7 +9,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Address (getRwdCred)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     GenDelegs (..),
@@ -46,6 +45,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (txins)
+import Shelley.Spec.Ledger.Value(CV,vcoin)
 
 -- | Validation errors represent the failures of a transaction to be valid
 --  for a given ledger state.
@@ -95,15 +95,15 @@ instance Monoid Validity where
 
 -- | A ledger validation state consists of a ledger state 't' and the list of
 -- validation errors that occurred from a valid 's' to reach 't'.
-data LedgerValidation c
-  = LedgerValidation [ValidationError] (LedgerState c)
+data LedgerValidation c v
+  = LedgerValidation [ValidationError] (LedgerState c v)
   deriving (Show, Eq)
 
 -- | Determine if the inputs in a transaction are valid for a given ledger state.
 validInputs ::
-  Crypto crypto =>
-  TxBody crypto ->
-  UTxOState crypto ->
+  CV crypto v =>
+  TxBody crypto v ->
+  UTxOState crypto v ->
   Validity
 validInputs tx u =
   if eval (txins tx ⊆ dom (_utxo u))
@@ -111,7 +111,7 @@ validInputs tx u =
     else Invalid [BadInputs]
 
 -- | Determine if the transaction has expired
-current :: Crypto crypto => TxBody crypto -> SlotNo -> Validity
+current :: CV crypto v => TxBody crypto v -> SlotNo -> Validity
 current tx slot =
   if _ttl tx < slot
     then Invalid [Expired (_ttl tx) slot]
@@ -119,14 +119,14 @@ current tx slot =
 
 -- | Determine if the input set of a transaction consumes at least one input,
 -- else it would be possible to do a replay attack using this transaction.
-validNoReplay :: Crypto crypto => TxBody crypto -> Validity
+validNoReplay :: CV crypto v => TxBody crypto v -> Validity
 validNoReplay tx =
   if txins tx == Set.empty
     then Invalid [InputSetEmpty]
     else Valid
 
 -- | Determine if the fee is large enough
-validFee :: forall crypto. (Crypto crypto) => PParams -> Tx crypto -> Validity
+validFee :: forall crypto v. (CV crypto v) => PParams -> Tx crypto v -> Validity
 validFee pc tx =
   if needed <= given
     then Valid
@@ -138,16 +138,16 @@ validFee pc tx =
 -- | Determine if the balance of the ledger state would be effected
 --  in an acceptable way by a transaction.
 preserveBalance ::
-  (Crypto crypto) =>
+  (CV crypto v) =>
   Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   PParams ->
-  TxBody crypto ->
-  UTxOState crypto ->
+  TxBody crypto v ->
+  UTxOState crypto v ->
   Validity
 preserveBalance stakePools pp tx u =
   if destroyed' == created'
     then Valid
-    else Invalid [ValueNotConserved destroyed' created']
+    else Invalid [ValueNotConserved (vcoin destroyed') (vcoin created')]
   where
     destroyed' = consumed pp (_utxo u) tx
     created' = produced pp stakePools tx
@@ -164,13 +164,13 @@ correctWithdrawals accs withdrawals =
     else Invalid [IncorrectRewards]
 
 validRuleUTXO ::
-  (Crypto crypto) =>
+  (CV crypto v) =>
   RewardAccounts crypto ->
   Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   PParams ->
   SlotNo ->
-  Tx crypto ->
-  UTxOState crypto ->
+  Tx crypto v->
+  UTxOState crypto v ->
   Validity
 validRuleUTXO accs stakePools pc slot tx u =
   validInputs txb u
@@ -185,10 +185,10 @@ validRuleUTXO accs stakePools pc slot tx u =
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 verifiedWits' ::
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  Tx crypto ->
+  Tx crypto v ->
   Validity
 verifiedWits' tx =
   case verifiedWits tx of
@@ -201,10 +201,10 @@ verifiedWits' tx =
 --  from the same address are used, it is not strictly necessary to include more
 --  than one witness.
 enoughWits ::
-  Crypto crypto =>
-  Tx crypto ->
+  CV crypto v =>
+  Tx crypto v ->
   GenDelegs crypto ->
-  UTxOState crypto ->
+  UTxOState crypto v  ->
   Validity
 enoughWits tx@(Tx _ wits _) d' u =
   if nullWitHashes $ witsVKeyNeeded (_utxo u) tx d' `diffWitHashes` signers
@@ -214,26 +214,26 @@ enoughWits tx@(Tx _ wits _) d' u =
     signers = witsFromWitnessSet wits
 
 validRuleUTXOW ::
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  Tx crypto ->
+  Tx crypto v ->
   GenDelegs crypto ->
-  LedgerState crypto ->
+  LedgerState crypto v ->
   Validity
 validRuleUTXOW tx d' l =
   verifiedWits' tx
     <> enoughWits tx d' (_utxoState l)
 
 validTx ::
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( CV crypto v,
+    DSignable crypto (Hash crypto (TxBody crypto v))
   ) =>
-  Tx crypto ->
+  Tx crypto v->
   GenDelegs crypto ->
   SlotNo ->
   PParams ->
-  LedgerState crypto ->
+  LedgerState crypto v ->
   Validity
 validTx tx d' slot pp l =
   validRuleUTXO
