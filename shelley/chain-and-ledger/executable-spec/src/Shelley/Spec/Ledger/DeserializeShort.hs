@@ -13,6 +13,8 @@ import Control.Monad (ap)
 import Control.Monad (join)
 import Data.Bits (testBit, (.&.))
 import Data.ByteString.Short as SBS
+import Data.ByteString.Short.Internal (ShortByteString (SBS))
+import qualified Data.Primitive.ByteArray as BA
 import Data.Word (Word8)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address
@@ -105,7 +107,9 @@ getHash = GetShort $ \i sbs ->
         else Nothing
 
 substring :: ShortByteString -> Int -> Int -> ShortByteString
-substring sbs start stop = SBS.pack [SBS.index sbs n | n <- [start .. stop -1]]
+substring (SBS ba) start stop =
+  case BA.cloneByteArray (BA.ByteArray ba) start (stop - start) of
+    BA.ByteArray ba' -> SBS ba'
 
 skip :: Int -> GetShort ()
 skip n = GetShort $ \i sbs ->
