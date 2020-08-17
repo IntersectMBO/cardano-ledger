@@ -58,8 +58,8 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
     VRFSignable,
   )
-import Shelley.Spec.Ledger.LedgerState (OverlaySchedule)
 import Shelley.Spec.Ledger.OCert (OCertSignable)
+import Shelley.Spec.Ledger.OverlaySchedule (OverlaySchedule)
 import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)

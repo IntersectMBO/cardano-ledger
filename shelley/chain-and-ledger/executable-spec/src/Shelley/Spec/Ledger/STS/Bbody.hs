@@ -48,7 +48,9 @@ import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     LedgerState,
-    OverlaySlots,
+  )
+import Shelley.Spec.Ledger.OverlaySchedule
+  ( OverlaySlots,
     isOverlaySlot,
   )
 import Shelley.Spec.Ledger.PParams (PParams)

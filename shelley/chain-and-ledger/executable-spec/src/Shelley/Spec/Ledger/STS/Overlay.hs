@@ -66,12 +66,12 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
-import Shelley.Spec.Ledger.LedgerState
+import Shelley.Spec.Ledger.OCert (OCertSignable)
+import Shelley.Spec.Ledger.OverlaySchedule
   ( OBftSlot (..),
     OverlaySchedule,
     lookupInOverlaySchedule,
   )
-import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
 

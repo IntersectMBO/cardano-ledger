@@ -87,18 +87,17 @@ import Shelley.Spec.Ledger.LedgerState
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
-    OverlaySchedule,
     PState (..),
     UTxOState (..),
     emptyDState,
     emptyPPUPState,
     emptyPState,
     getGKeys,
-    overlaySlots,
     updateNES,
     _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     ProtVer (..),

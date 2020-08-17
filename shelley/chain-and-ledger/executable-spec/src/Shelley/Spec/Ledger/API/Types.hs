@@ -66,19 +66,19 @@ import Shelley.Spec.Ledger.LedgerState as X
     LedgerState (..),
     NewEpochEnv (..),
     NewEpochState (..),
-    OBftSlot (..),
     PState (..),
     RewardUpdate (..),
     UTxOState (..),
     WitHashes (..),
   )
 import Shelley.Spec.Ledger.OCert as X (OCert (..))
+import Shelley.Spec.Ledger.OverlaySchedule as X
+  ( OBftSlot (..),
+  )
 import Shelley.Spec.Ledger.PParams as X
   ( PParams,
     PParams' (..),
-  )
-import Shelley.Spec.Ledger.PParams as X
-  ( ProposedPPUpdates (..),
+    ProposedPPUpdates (..),
     Update (..),
   )
 import Shelley.Spec.Ledger.Rewards as X

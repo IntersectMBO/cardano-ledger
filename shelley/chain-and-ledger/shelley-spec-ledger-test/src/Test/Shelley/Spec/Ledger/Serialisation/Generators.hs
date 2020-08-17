@@ -93,14 +93,12 @@ import Shelley.Spec.Ledger.LedgerState
     InstantaneousRewards,
     LedgerState,
     NewEpochState (..),
-    OBftSlot,
     PPUPState,
-    OverlaySchedule,
     RewardUpdate,
     WitHashes (..),
     emptyRewardUpdate,
-    overlayScheduleHelper,
   )
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.MetaData
   ( MetaData,
     MetaDataHash (..),

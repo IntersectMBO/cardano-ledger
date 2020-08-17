@@ -49,6 +49,7 @@ import Shelley.Spec.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -57,8 +58,6 @@ import Shelley.Spec.Ledger.LedgerState
     emptyDState,
     emptyPPUPState,
     emptyPState,
-    overlaySchedule,
-    overlayScheduleIsEmpty,
     _dstate,
     _rewards,
   )

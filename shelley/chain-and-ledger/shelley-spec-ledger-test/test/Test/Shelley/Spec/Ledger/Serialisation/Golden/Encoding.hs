@@ -122,14 +122,13 @@ import Shelley.Spec.Ledger.Keys
     signedKES,
     vKey,
   )
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState (..),
     NewEpochState (..),
     RewardUpdate (..),
-    decompactOverlaySchedule,
     emptyLedgerState,
-    pattern ActiveSlot,
   )
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCertSignable (..), pattern OCert)

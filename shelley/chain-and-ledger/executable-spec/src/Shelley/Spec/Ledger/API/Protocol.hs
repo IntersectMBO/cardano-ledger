@@ -46,13 +46,15 @@ import Shelley.Spec.Ledger.Keys (GenDelegs)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
     NewEpochState (..),
-    OverlaySchedule,
     getGKeys,
     _delegationState,
     _dstate,
     _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
+import Shelley.Spec.Ledger.OverlaySchedule
+  ( OverlaySchedule,
+  )
 import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))

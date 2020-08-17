@@ -14,7 +14,7 @@ import Cardano.Slotting.Slot (SlotNo)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, isNothing)
+import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -35,9 +35,9 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
     UTxOState (..),
-    lookupInOverlaySchedule,
     stakeDistr,
   )
+import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.Rewards
   ( NonMyopic (..),
     StakeShare (..),
@@ -138,7 +138,7 @@ getLeaderSchedule globals ss cds poolHash key = Set.filter isLeader epochSlots
   where
     isLeader slotNo =
       let y = VRF.evalCertified () (mkSeed seedL slotNo epochNonce) key
-       in isNothing (lookupInOverlaySchedule slotNo overlaySched)
+       in not (isOverlaySlot slotNo overlaySched)
             && checkLeaderValue (VRF.certifiedOutput y) stake f
     stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
     overlaySched = nesOsched ss
