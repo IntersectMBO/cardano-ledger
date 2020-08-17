@@ -46,6 +46,8 @@ import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Write (toLazyByteString)
 import qualified Data.ByteString.Lazy as Lazy
 import qualified Shelley.Spec.Ledger.API as Ledger
+import Shelley.Spec.Ledger.Coin (Coin)
+
 import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Mock
@@ -90,47 +92,49 @@ roundtrip' enc dec a = case deserialiseFromBytes dec bs of
   Serialization Properties
 -------------------------------------------------------------------------------}
 
+-- TODO do these with Val parameter!
+
 prop_roundtrip_Addr :: Ledger.Addr Mock.C -> Property
 prop_roundtrip_Addr = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_RewardAcnt :: Ledger.RewardAcnt Mock.C -> Property
 prop_roundtrip_RewardAcnt = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_Block :: Ledger.Block Mock.C -> Property
+prop_roundtrip_Block :: Ledger.Block Mock.C Coin -> Property
 prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_Header :: Ledger.BHeader Mock.C -> Property
+prop_roundtrip_Header :: Ledger.BHeader Mock.C Coin -> Property
 prop_roundtrip_Header = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_BlockHeaderHash :: Ledger.HashHeader Mock.C -> Property
+prop_roundtrip_BlockHeaderHash :: Ledger.HashHeader Mock.C Coin -> Property
 prop_roundtrip_BlockHeaderHash = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_TxBody :: Ledger.TxBody Mock.C -> Property
+prop_roundtrip_TxBody :: Ledger.TxBody Mock.C Coin -> Property
 prop_roundtrip_TxBody = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_Tx :: Ledger.Tx Mock.C -> Property
+prop_roundtrip_Tx :: Ledger.Tx Mock.C Coin -> Property
 prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_TxId :: Ledger.TxId Mock.C -> Property
+prop_roundtrip_TxId :: Ledger.TxId Mock.C Coin -> Property
 prop_roundtrip_TxId = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_TxOut :: Ledger.TxOut Mock.C -> Property
+prop_roundtrip_TxOut :: Ledger.TxOut Mock.C Coin -> Property
 prop_roundtrip_TxOut = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_BootstrapWitness ::
-  Ledger.BootstrapWitness Mock.C -> Property
+  Ledger.BootstrapWitness Mock.C Coin -> Property
 prop_roundtrip_BootstrapWitness = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_LEDGER_PredicateFails :: [STS.PredicateFailure (STS.LEDGERS Mock.C)] -> Property
+prop_roundtrip_LEDGER_PredicateFails :: [STS.PredicateFailure (STS.LEDGERS Mock.C Coin)] -> Property
 prop_roundtrip_LEDGER_PredicateFails = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_PrtclState :: STS.PrtclState (Mock.C) -> Property
 prop_roundtrip_PrtclState = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_LedgerState :: Ledger.LedgerState Mock.C -> Property
+prop_roundtrip_LedgerState :: Ledger.LedgerState Mock.C Coin -> Property
 prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_NewEpochState :: Ledger.NewEpochState Mock.C -> Property
+prop_roundtrip_NewEpochState :: Ledger.NewEpochState Mock.C Coin -> Property
 prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_MultiSig :: Ledger.MultiSig Mock.C -> Property

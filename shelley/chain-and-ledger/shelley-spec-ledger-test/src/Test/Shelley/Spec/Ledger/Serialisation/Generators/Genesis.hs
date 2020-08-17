@@ -199,6 +199,9 @@ genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 500)
 genMinUTxOValue :: Gen Coin
 genMinUTxOValue = Coin <$> Gen.integral (Range.linear 1 1000)
 
+instance Generatable Coin where
+  generate = genMinUTxOValue
+
 genNonce :: Gen Nonce
 genNonce =
   Gen.choice

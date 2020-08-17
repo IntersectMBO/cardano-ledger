@@ -326,22 +326,23 @@ testCheckLeaderVal =
     maxVRFVal = (2 ^ (8 * VRF.sizeOutputVRF (Proxy @v))) - 1
 
 testLEDGER ::
-  (UTxOState C, DPState C) ->
-  Tx C ->
+  (UTxOState C Coin, DPState C) ->
+  Tx C Coin ->
   LedgerEnv ->
-  Either [[PredicateFailure (LEDGER C)]] (UTxOState C, DPState C) ->
+  Either [[PredicateFailure (LEDGER C Coin)]] (UTxOState C Coin, DPState C) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
-  checkTrace @(LEDGER C) runShelleyBase env $ pure initSt .- tx .-> expectedSt
+  checkTrace @(LEDGER C Coin) runShelleyBase env $ pure initSt .- tx .-> expectedSt
 testLEDGER initSt tx env predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTSTest @(LEDGER C) (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTSTest @(LEDGER C Coin) (TRC (env, initSt, tx))
   st @?= predicateFailure
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
 
+-- TODO generalize to Val?
 data AliceToBob = AliceToBob
-  { input :: TxIn C,
+  { input :: TxIn C Coin,
     toBob :: Coin,
     fee :: Coin,
     deposits :: Coin,
@@ -351,7 +352,7 @@ data AliceToBob = AliceToBob
     signers :: [KeyPair 'Witness C]
   }
 
-aliceGivesBobLovelace :: AliceToBob -> Tx C
+aliceGivesBobLovelace :: AliceToBob -> Tx C Coin
 aliceGivesBobLovelace
   AliceToBob
     { input,
@@ -381,7 +382,7 @@ aliceGivesBobLovelace
           SNothing
       awits = makeWitnessesVKey (hashAnnotated txbody) signers
 
-utxoState :: UTxOState C
+utxoState :: UTxOState C Coin
 utxoState =
   UTxOState
     ( genesisCoins
@@ -406,8 +407,8 @@ ledgerEnv :: LedgerEnv
 ledgerEnv = LedgerEnv (SlotNo 0) 0 pp (AccountState 0 0)
 
 testInvalidTx ::
-  [PredicateFailure (LEDGER C)] ->
-  Tx C ->
+  [PredicateFailure (LEDGER C Coin)] ->
+  Tx C Coin ->
   Assertion
 testInvalidTx errs tx =
   testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
