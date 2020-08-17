@@ -50,7 +50,7 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState,
   )
 import Shelley.Spec.Ledger.OverlaySchedule
-  ( OverlaySlots,
+  ( OverlaySchedule,
     isOverlaySlot,
   )
 import Shelley.Spec.Ledger.PParams (PParams)
@@ -63,8 +63,8 @@ data BbodyState crypto
   = BbodyState (LedgerState crypto) (BlocksMade crypto)
   deriving (Eq, Show)
 
-data BbodyEnv = BbodyEnv
-  { bbodySlots :: OverlaySlots,
+data BbodyEnv crypto = BbodyEnv
+  { bbodySlots :: OverlaySchedule crypto,
     bbodyPp :: PParams,
     bbodyAccount :: AccountState
   }
@@ -83,7 +83,7 @@ instance
     Signal (BBODY crypto) =
       Block crypto
 
-  type Environment (BBODY crypto) = BbodyEnv
+  type Environment (BBODY crypto) = BbodyEnv crypto
 
   type BaseM (BBODY crypto) = ShelleyBase
 

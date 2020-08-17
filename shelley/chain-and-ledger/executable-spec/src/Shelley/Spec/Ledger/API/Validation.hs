@@ -28,7 +28,6 @@ import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
-import Shelley.Spec.Ledger.OverlaySchedule (overlaySlots)
 import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
@@ -62,14 +61,14 @@ mkTickEnv = STS.TickEnv . LedgerState.getGKeys
 
 mkBbodyEnv ::
   ShelleyState crypto ->
-  STS.BbodyEnv
+  STS.BbodyEnv crypto
 mkBbodyEnv
   LedgerState.NewEpochState
     { LedgerState.nesOsched,
       LedgerState.nesEs
     } =
     STS.BbodyEnv
-      { STS.bbodySlots = overlaySlots nesOsched,
+      { STS.bbodySlots = nesOsched,
         STS.bbodyPp = LedgerState.esPp nesEs,
         STS.bbodyAccount = LedgerState.esAccountState nesEs
       }

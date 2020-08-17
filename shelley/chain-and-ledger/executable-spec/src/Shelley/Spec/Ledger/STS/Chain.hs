@@ -295,7 +295,7 @@ chainTransition =
 
       BbodyState ls' bcur' <-
         trans @(BBODY crypto) $
-          TRC (BbodyEnv (overlaySlots osched) pp' account, BbodyState ls bcur, block)
+          TRC (BbodyEnv osched pp' account, BbodyState ls bcur, block)
 
       let nes'' = updateNES nes' bcur' ls'
           bhb = bhbody bh

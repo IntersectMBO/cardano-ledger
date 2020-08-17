@@ -7,7 +7,6 @@
 module Shelley.Spec.Ledger.OverlaySchedule
   ( -- * Overlay schedule
     OverlaySchedule,
-    OverlaySlots,
     compactOverlaySchedule,
     decompactOverlaySchedule,
     emptyOverlaySchedule,
@@ -17,7 +16,6 @@ module Shelley.Spec.Ledger.OverlaySchedule
     overlayScheduleHelper,
     overlayScheduleIsEmpty,
     overlayScheduleToMap,
-    overlaySlots,
 
     -- * OBftSlot
     OBftSlot (..),
@@ -182,10 +180,5 @@ instance Crypto crypto => ToCBOR (OverlaySchedule crypto) where
 instance Crypto crypto => FromCBOR (OverlaySchedule crypto) where
   fromCBOR = decompactOverlaySchedule <$> fromCBOR
 
-newtype OverlaySlots = OverlaySlots (Set SlotNo)
-
-overlaySlots :: OverlaySchedule crypto -> OverlaySlots
-overlaySlots (OverlaySchedule oSched) = OverlaySlots (Map.keysSet oSched)
-
-isOverlaySlot :: SlotNo -> OverlaySlots -> Bool
-isOverlaySlot slot (OverlaySlots oslots) = Set.member slot oslots
+isOverlaySlot :: SlotNo -> OverlaySchedule c -> Bool
+isOverlaySlot slot (OverlaySchedule oslots) = Map.member slot oslots
