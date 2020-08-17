@@ -37,6 +37,7 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState (..),
     stakeDistr,
   )
+import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.Rewards
   ( NonMyopic (..),
     StakeShare (..),
@@ -137,7 +138,7 @@ getLeaderSchedule globals ss cds poolHash key = Set.filter isLeader epochSlots
   where
     isLeader slotNo =
       let y = VRF.evalCertified () (mkSeed seedL slotNo epochNonce) key
-       in Map.notMember slotNo overlaySched
+       in not (isOverlaySlot slotNo overlaySched)
             && checkLeaderValue (VRF.certifiedOutput y) stake f
     stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
     overlaySched = nesOsched ss

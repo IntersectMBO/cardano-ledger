@@ -37,7 +37,7 @@ import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.Iterate.SetAlgebra (biMapFromList)
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
@@ -59,13 +59,15 @@ import Shelley.Spec.Ledger.Address.Bootstrap
     ChainCode (..),
   )
 import Shelley.Spec.Ledger.BaseTypes
-  ( DnsName,
+  ( ActiveSlotCoeff,
+    DnsName,
     Network,
     Nonce (..),
     Port,
     StrictMaybe,
     UnitInterval,
     Url,
+    mkActiveSlotCoeff,
     mkNonceFromNumber,
     mkUnitInterval,
     textToDns,
@@ -91,12 +93,12 @@ import Shelley.Spec.Ledger.LedgerState
     InstantaneousRewards,
     LedgerState,
     NewEpochState (..),
-    OBftSlot,
     PPUPState,
     RewardUpdate,
     WitHashes (..),
     emptyRewardUpdate,
   )
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.MetaData
   ( MetaData,
     MetaDataHash (..),
@@ -564,12 +566,25 @@ instance Arbitrary a => Arbitrary (StrictMaybe a) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
+genPParams :: Mock c => proxy c -> Gen PParams
+genPParams p = Update.genPParams (geConstants (genEnv p))
+
 instance Crypto c => Arbitrary (OBftSlot c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-genPParams :: Mock c => proxy c -> Gen PParams
-genPParams p = Update.genPParams (geConstants (genEnv p))
+instance Arbitrary ActiveSlotCoeff where
+  arbitrary = mkActiveSlotCoeff <$> arbitrary
+
+instance Crypto c => Arbitrary (OverlaySchedule c) where
+  arbitrary =
+    -- Pick the parameters from specific random to avoid huge overlay schedules
+    overlayScheduleHelper
+      <$> (EpochSize <$> choose (1, 100))
+      <*> (SlotNo <$> choose (0, 100000))
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary Likelihood where
   arbitrary = Likelihood <$> arbitrary

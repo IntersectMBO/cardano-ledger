@@ -44,6 +44,7 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     vKey,
   )
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
@@ -174,7 +175,7 @@ selectNextSlotWithLeader
         Maybe (ChainState c, AllIssuerKeys c 'BlockIssuer)
       selectLeaderForSlot slotNo =
         (chainSt,)
-          <$> case Map.lookup slotNo overlaySched of
+          <$> case lookupInOverlaySchedule slotNo overlaySched of
             Nothing ->
               coerce
                 <$> List.find
@@ -199,7 +200,7 @@ selectNextSlotWithLeader
             let y = VRF.evalCertified @(VRF c) () (mkSeed seedL slotNo epochNonce) vrfKey
                 stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
                 f = activeSlotCoeff testGlobals
-             in case Map.lookup slotNo overlaySched of
+             in case lookupInOverlaySchedule slotNo overlaySched of
                   Nothing -> checkLeaderValue (VRF.certifiedOutput y) stake f
                   Just (ActiveSlot x) | coerceKeyRole x == poolHash -> True
                   _ -> False

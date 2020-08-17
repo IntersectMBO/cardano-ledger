@@ -36,7 +36,6 @@ import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Data.Either (fromRight)
-import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes (Globals, Nonce, Seed)
@@ -47,13 +46,15 @@ import Shelley.Spec.Ledger.Keys (GenDelegs)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
     NewEpochState (..),
-    OBftSlot,
     getGKeys,
     _delegationState,
     _dstate,
     _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
+import Shelley.Spec.Ledger.OverlaySchedule
+  ( OverlaySchedule,
+  )
 import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
@@ -64,7 +65,7 @@ import Shelley.Spec.Ledger.Slot (SlotNo)
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto = LedgerView
   { lvProtParams :: PParams,
-    lvOverlaySched :: Map SlotNo (OBftSlot crypto),
+    lvOverlaySched :: OverlaySchedule crypto,
     lvPoolDistr :: PoolDistr crypto,
     lvGenDelegs :: GenDelegs crypto
   }

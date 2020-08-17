@@ -37,11 +37,8 @@ import Shelley.Spec.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
-import Shelley.Spec.Ledger.LedgerState
-  ( OBftSlot (..),
-    overlaySchedule,
-  )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams
   ( PParams,
   )
@@ -109,7 +106,7 @@ coreNodeKeysForSlot overlay slot = case Map.lookup (SlotNo slot) overlay of
 
 -- | === Overlay Schedule
 -- Retrieve the overlay schedule for a given epoch and protocol parameters.
-overlayScheduleFor :: Crypto c => EpochNo -> PParams -> Map SlotNo (OBftSlot c)
+overlayScheduleFor :: Crypto c => EpochNo -> PParams -> OverlaySchedule c
 overlayScheduleFor e pp =
   runShelleyBase $
     overlaySchedule
@@ -129,7 +126,12 @@ coreNodeKeysBySchedule ::
   AllIssuerKeys c 'GenesisDelegate
 coreNodeKeysBySchedule = coreNodeKeysForSlot . fullOSched
   where
-    fullOSched pp = Map.unions $ [overlayScheduleFor e pp | e <- [0 .. 10]]
+    fullOSched pp =
+      Map.unions $
+        [ overlayScheduleToMap $
+            overlayScheduleFor e pp
+          | e <- [0 .. 10]
+        ]
 
 -- | === Genesis Delegation Mapping
 -- The map from genesis/core node (verification) key hashes

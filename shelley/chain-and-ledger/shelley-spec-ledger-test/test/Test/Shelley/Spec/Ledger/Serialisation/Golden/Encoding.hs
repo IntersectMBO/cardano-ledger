@@ -122,13 +122,13 @@ import Shelley.Spec.Ledger.Keys
     signedKES,
     vKey,
   )
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState (..),
     NewEpochState (..),
     RewardUpdate (..),
     emptyLedgerState,
-    pattern ActiveSlot,
   )
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCertSignable (..), pattern OCert)
@@ -1286,8 +1286,8 @@ tests =
             ) ::
               StrictMaybe (RewardUpdate C)
           pd = (PoolDistr Map.empty) :: PoolDistr C
-          os = Map.singleton (SlotNo 1) (ActiveSlot (testGKeyHash p))
           compactOs = Map.singleton (ActiveSlot (testGKeyHash p)) (SlotNo 1 :| [])
+          os = decompactOverlaySchedule compactOs
           nes =
             NewEpochState
               e

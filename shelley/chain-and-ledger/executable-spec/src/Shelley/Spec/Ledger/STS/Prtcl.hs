@@ -58,8 +58,8 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
     VRFSignable,
   )
-import Shelley.Spec.Ledger.LedgerState (OBftSlot)
 import Shelley.Spec.Ledger.OCert (OCertSignable)
+import Shelley.Spec.Ledger.OverlaySchedule (OverlaySchedule)
 import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
@@ -101,7 +101,7 @@ instance Crypto crypto => NoUnexpectedThunks (PrtclState crypto)
 
 data PrtclEnv crypto
   = PrtclEnv
-      (Map SlotNo (OBftSlot crypto))
+      (OverlaySchedule crypto)
       (PoolDistr crypto)
       (GenDelegs crypto)
       Nonce

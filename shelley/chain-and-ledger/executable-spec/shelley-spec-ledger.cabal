@@ -35,6 +35,7 @@ library
                      Shelley.Spec.Ledger.MetaData
                      Shelley.Spec.Ledger.OCert
                      Shelley.Spec.Ledger.Orphans
+                     Shelley.Spec.Ledger.OverlaySchedule
                      Shelley.Spec.Ledger.PParams
                      Shelley.Spec.Ledger.Rewards
                      Shelley.Spec.Ledger.Scripts

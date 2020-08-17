@@ -49,6 +49,7 @@ import Shelley.Spec.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -57,7 +58,6 @@ import Shelley.Spec.Ledger.LedgerState
     emptyDState,
     emptyPPUPState,
     emptyPState,
-    overlaySchedule,
     _dstate,
     _rewards,
   )
@@ -164,7 +164,7 @@ testOverlayScheduleZero =
             (EpochNo 0)
             mempty
             (emptyPParams {_d = unsafeMkUnitInterval 0})
-   in os @?= Map.empty
+   in assertBool "Overlay schedule is not empty" (overlayScheduleIsEmpty os)
 
 testNoGenesisOverlay :: Assertion
 testNoGenesisOverlay =
@@ -174,7 +174,7 @@ testNoGenesisOverlay =
             (EpochNo 0)
             mempty
             (emptyPParams {_d = unsafeMkUnitInterval 0.5})
-   in os @?= Map.empty
+   in assertBool "Overlay schedule is not empty" (overlayScheduleIsEmpty os)
 
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
