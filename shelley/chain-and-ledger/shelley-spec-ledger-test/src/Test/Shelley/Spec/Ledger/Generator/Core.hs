@@ -190,7 +190,7 @@ import Shelley.Spec.Ledger.UTxO
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
@@ -584,7 +584,7 @@ mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
   ( HasCallStack,
-    Mock c
+    ExMock c
   ) =>
   -- | Hash of previous block
   HashHeader c ->

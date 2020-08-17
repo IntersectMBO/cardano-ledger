@@ -76,7 +76,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import qualified Test.Shelley.Spec.Ledger.Examples.Combinators as C
@@ -169,7 +169,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: forall c. Mock c => Tx c
+txEx1 :: forall c. ExMock c => Tx c
 txEx1 =
   Tx
     txbodyEx1
@@ -192,7 +192,7 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. (HasCallStack, Mock c) => Block c
+blockEx1 :: forall c. (HasCallStack, ExMock c) => Block c
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -207,7 +207,7 @@ blockEx1 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
 
-expectedStEx1 :: forall c. Mock c => ChainState c
+expectedStEx1 :: forall c. ExMock c => ChainState c
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
@@ -227,7 +227,7 @@ expectedStEx1 =
 -- all register stake credentials, and Alice registers a stake pool.
 -- Additionally, a MIR certificate is issued to draw from the reserves
 -- and give Carl and Daria (who is unregistered) rewards.
-poolLifetime1 :: Mock c => CHAINExample c
+poolLifetime1 :: ExMock c => CHAINExample c
 poolLifetime1 = CHAINExample initStPoolLifetime blockEx1 (Right expectedStEx1)
 
 --
@@ -266,7 +266,7 @@ txbodyEx2 =
       _mdHash = SNothing
     }
 
-txEx2 :: Mock c => Tx c
+txEx2 :: ExMock c => Tx c
 txEx2 =
   Tx
     txbodyEx2
@@ -278,7 +278,7 @@ txEx2 =
       }
     SNothing
 
-blockEx2 :: forall c. Mock c => Block c
+blockEx2 :: forall c. ExMock c => Block c
 blockEx2 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
@@ -293,7 +293,7 @@ blockEx2 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 90) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall c. Mock c => ChainState c
+expectedStEx2 :: forall c. ExMock c => ChainState c
 expectedStEx2 =
   C.evolveNonceFrozen (getBlockNonce (blockEx2 @c))
     . C.newLab blockEx2
@@ -307,17 +307,17 @@ expectedStEx2 =
 -- === Block 2, Slot 90, Epoch 0
 --
 -- In the second block Alice and Bob both delegation to Alice's Pool.
-poolLifetime2 :: Mock c => CHAINExample c
+poolLifetime2 :: ExMock c => CHAINExample c
 poolLifetime2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
 -- Block 3, Slot 110, Epoch 1
 --
 
-epoch1Nonce :: forall c. Mock c => Nonce
+epoch1Nonce :: forall c. ExMock c => Nonce
 epoch1Nonce = chainCandidateNonce (expectedStEx2 @c)
 
-blockEx3 :: forall c. Mock c => Block c
+blockEx3 :: forall c. ExMock c => Block c
 blockEx3 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx2)
@@ -349,7 +349,7 @@ snapEx3 =
       EB._poolParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams
     }
 
-expectedStEx3 :: forall c. Mock c => ChainState c
+expectedStEx3 :: forall c. ExMock c => ChainState c
 expectedStEx3 =
   C.newEpoch blockEx3
     . C.newSnapshot snapEx3 (feeTx1 + feeTx2)
@@ -361,7 +361,7 @@ expectedStEx3 =
 --
 -- In the third block, an empty block in a new epoch, the first snapshot is created.
 -- The rewards accounts from the MIR certificate in block 1 are now increased.
-poolLifetime3 :: Mock c => CHAINExample c
+poolLifetime3 :: ExMock c => CHAINExample c
 poolLifetime3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
@@ -389,7 +389,7 @@ txbodyEx4 =
       _mdHash = SNothing
     }
 
-txEx4 :: Mock c => Tx c
+txEx4 :: ExMock c => Tx c
 txEx4 =
   Tx
     txbodyEx4
@@ -401,7 +401,7 @@ txEx4 =
       }
     SNothing
 
-blockEx4 :: forall c. Mock c => Block c
+blockEx4 :: forall c. ExMock c => Block c
 blockEx4 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx3)
@@ -426,7 +426,7 @@ rewardUpdateEx4 =
       nonMyopic = emptyNonMyopic {rewardPotNM = Coin 6}
     }
 
-expectedStEx4 :: forall c. Mock c => ChainState c
+expectedStEx4 :: forall c. ExMock c => ChainState c
 expectedStEx4 =
   C.evolveNonceFrozen (getBlockNonce (blockEx4 @c))
     . C.newLab blockEx4
@@ -441,10 +441,10 @@ expectedStEx4 =
 -- We process a block late enough in the epoch in order to create a second reward update,
 -- preparing the way for the first non-empty pool distribution in this running example.
 -- Additionally, in order to have the stake distribution change, Carl delegates his stake.
-poolLifetime4 :: Mock c => CHAINExample c
+poolLifetime4 :: ExMock c => CHAINExample c
 poolLifetime4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
-epoch2Nonce :: forall c. Mock c => Nonce
+epoch2Nonce :: forall c. ExMock c => Nonce
 epoch2Nonce =
   chainCandidateNonce (expectedStEx4 @c)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx2 @c))
@@ -453,7 +453,7 @@ epoch2Nonce =
 -- Block 5, Slot 220, Epoch 2
 --
 
-blockEx5 :: forall c. Mock c => Block c
+blockEx5 :: forall c. ExMock c => Block c
 blockEx5 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx4)
@@ -494,7 +494,7 @@ pdEx5 =
       (hk Cast.alicePoolKeys)
       (IndividualPoolStake 1 (Cast.aliceVRFKeyHash @c))
 
-expectedStEx5 :: forall c. Mock c => ChainState c
+expectedStEx5 :: forall c. ExMock c => ChainState c
 expectedStEx5 =
   C.newEpoch blockEx5
     . C.newSnapshot snapEx5 feeTx4
@@ -509,14 +509,14 @@ expectedStEx5 =
 --
 -- Create the first non-empty pool distribution
 -- by creating a block in the third epoch of this running example.
-poolLifetime5 :: Mock c => CHAINExample c
+poolLifetime5 :: ExMock c => CHAINExample c
 poolLifetime5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 
 --
 -- Block 6, Slot 295, Epoch 2
 --
 
-blockEx6 :: forall c. Mock c => Block c
+blockEx6 :: forall c. ExMock c => Block c
 blockEx6 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx5)
@@ -541,7 +541,7 @@ rewardUpdateEx6 =
       nonMyopic = emptyNonMyopic {rewardPotNM = Coin 4}
     }
 
-expectedStEx6 :: forall c. Mock c => ChainState c
+expectedStEx6 :: forall c. ExMock c => ChainState c
 expectedStEx6 =
   C.evolveNonceFrozen (getBlockNonce (blockEx6 @c))
     . C.newLab blockEx6
@@ -553,19 +553,19 @@ expectedStEx6 =
 -- === Block 6, Slot 295, Epoch 2
 --
 -- Create a decentralized Praos block (ie one not in the overlay schedule)
-poolLifetime6 :: Mock c => CHAINExample c
+poolLifetime6 :: ExMock c => CHAINExample c
 poolLifetime6 = CHAINExample expectedStEx5 blockEx6 (Right expectedStEx6)
 
 --
 -- Block 7, Slot 310, Epoch 3
 --
 
-epoch3Nonce :: forall c. Mock c => Nonce
+epoch3Nonce :: forall c. ExMock c => Nonce
 epoch3Nonce =
   chainCandidateNonce (expectedStEx6 @c)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx4 @c))
 
-blockEx7 :: forall c. Mock c => Block c
+blockEx7 :: forall c. ExMock c => Block c
 blockEx7 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx6)
@@ -580,7 +580,7 @@ blockEx7 =
     15
     (mkOCert (coreNodeKeysBySchedule ppEx 310) 1 (KESPeriod 15))
 
-expectedStEx7 :: forall c. Mock c => ChainState c
+expectedStEx7 :: forall c. ExMock c => ChainState c
 expectedStEx7 =
   C.newEpoch blockEx7
     . C.newSnapshot snapEx5 (Coin 0)
@@ -594,14 +594,14 @@ expectedStEx7 =
 --
 -- Create an empty block in the next epoch
 -- to prepare the way for the first non-trivial reward update
-poolLifetime7 :: Mock c => CHAINExample c
+poolLifetime7 :: ExMock c => CHAINExample c
 poolLifetime7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 
 --
 -- Block 8, Slot 390, Epoch 3
 --
 
-blockEx8 :: forall c. Mock c => Block c
+blockEx8 :: forall c. ExMock c => Block c
 blockEx8 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx7)
@@ -665,7 +665,7 @@ rewardUpdateEx8 =
       nonMyopic = nonMyopicEx8
     }
 
-expectedStEx8 :: forall c. Mock c => ChainState c
+expectedStEx8 :: forall c. ExMock c => ChainState c
 expectedStEx8 =
   C.evolveNonceFrozen (getBlockNonce (blockEx8 @c))
     . C.newLab blockEx8
@@ -678,19 +678,19 @@ expectedStEx8 =
 -- === Block 8, Slot 390, Epoch 3
 --
 -- Create the first non-trivial reward update.
-poolLifetime8 :: Mock c => CHAINExample c
+poolLifetime8 :: ExMock c => CHAINExample c
 poolLifetime8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
 
 --
 -- Block 9, Slot 410, Epoch 4
 --
 
-epoch4Nonce :: forall c. Mock c => Nonce
+epoch4Nonce :: forall c. ExMock c => Nonce
 epoch4Nonce =
   chainCandidateNonce (expectedStEx8 @c)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx6 @c))
 
-blockEx9 :: forall c. Mock c => Block c
+blockEx9 :: forall c. ExMock c => Block c
 blockEx9 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx8)
@@ -717,7 +717,7 @@ snapEx9 =
             ]
     }
 
-expectedStEx9 :: forall c. Mock c => ChainState c
+expectedStEx9 :: forall c. ExMock c => ChainState c
 expectedStEx9 =
   C.newEpoch blockEx9
     . C.newSnapshot snapEx9 (Coin 0)
@@ -730,7 +730,7 @@ expectedStEx9 =
 -- === Block 9, Slot 410, Epoch 4
 --
 -- Apply the first non-trivial reward update.
-poolLifetime9 :: Mock c => CHAINExample c
+poolLifetime9 :: ExMock c => CHAINExample c
 poolLifetime9 = CHAINExample expectedStEx8 blockEx9 (Right expectedStEx9)
 
 --
@@ -759,7 +759,7 @@ txbodyEx10 =
     SNothing
     SNothing
 
-txEx10 :: Mock c => Tx c
+txEx10 :: ExMock c => Tx c
 txEx10 =
   Tx
     txbodyEx10
@@ -769,7 +769,7 @@ txEx10 =
       }
     SNothing
 
-blockEx10 :: forall c. Mock c => Block c
+blockEx10 :: forall c. ExMock c => Block c
 blockEx10 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx9)
@@ -784,7 +784,7 @@ blockEx10 =
     19
     (mkOCert (coreNodeKeysBySchedule ppEx 420) 2 (KESPeriod 19))
 
-expectedStEx10 :: forall c. Mock c => ChainState c
+expectedStEx10 :: forall c. ExMock c => ChainState c
 expectedStEx10 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx10 @c))
     . C.newLab blockEx10
@@ -796,7 +796,7 @@ expectedStEx10 =
 -- === Block 10, Slot 420, Epoch 4
 --
 -- Drain Bob's reward account and de-register Bob's stake key.
-poolLifetime10 :: Mock c => CHAINExample c
+poolLifetime10 :: ExMock c => CHAINExample c
 poolLifetime10 = CHAINExample expectedStEx9 blockEx10 (Right expectedStEx10)
 
 --
@@ -824,7 +824,7 @@ txbodyEx11 =
     SNothing
     SNothing
 
-txEx11 :: Mock c => Tx c
+txEx11 :: ExMock c => Tx c
 txEx11 =
   Tx
     txbodyEx11
@@ -838,7 +838,7 @@ txEx11 =
       }
     SNothing
 
-blockEx11 :: forall c. Mock c => Block c
+blockEx11 :: forall c. ExMock c => Block c
 blockEx11 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx10)
@@ -884,7 +884,7 @@ rewardUpdateEx11 =
       nonMyopic = nonMyopicEx11
     }
 
-expectedStEx11 :: forall c. Mock c => ChainState c
+expectedStEx11 :: forall c. ExMock c => ChainState c
 expectedStEx11 =
   C.evolveNonceFrozen (getBlockNonce (blockEx11 @c))
     . C.newLab blockEx11
@@ -897,19 +897,19 @@ expectedStEx11 =
 -- === Block 11, Slot 490, Epoch 4
 --
 -- Stage the retirement of Alice's stake pool.
-poolLifetime11 :: Mock c => CHAINExample c
+poolLifetime11 :: ExMock c => CHAINExample c
 poolLifetime11 = CHAINExample expectedStEx10 blockEx11 (Right expectedStEx11)
 
 --
 -- Block 12, Slot 510, Epoch 5
 --
 
-epoch5Nonce :: forall c. Mock c => Nonce
+epoch5Nonce :: forall c. ExMock c => Nonce
 epoch5Nonce =
   chainCandidateNonce (expectedStEx11 @c)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx8 @c))
 
-blockEx12 :: forall c. Mock c => Block c
+blockEx12 :: forall c. ExMock c => Block c
 blockEx12 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx11)
@@ -940,7 +940,7 @@ snapEx12 =
           ]
     }
 
-expectedStEx12 :: forall c. Mock c => ChainState c
+expectedStEx12 :: forall c. ExMock c => ChainState c
 expectedStEx12 =
   C.newEpoch blockEx12
     . C.newSnapshot snapEx12 (Coin 11)
@@ -954,7 +954,7 @@ expectedStEx12 =
 -- === Block 12, Slot 510, Epoch 5
 --
 -- Reap Alice's stake pool.
-poolLifetime12 :: Mock c => CHAINExample c
+poolLifetime12 :: ExMock c => CHAINExample c
 poolLifetime12 = CHAINExample expectedStEx11 blockEx12 (Right expectedStEx12)
 
 --

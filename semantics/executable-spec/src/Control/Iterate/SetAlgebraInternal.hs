@@ -999,6 +999,7 @@ compute:: Exp t -> t
 compute (Base rep relation) = relation
 
 compute (Dom (Base SetR rel)) = rel
+compute (Dom (Base MapR x)) = Sett (Map.keysSet x)
 compute (Dom (Singleton k v)) = Sett (Set.singleton k)
 compute (Dom (SetSingleton k)) = Sett (Set.singleton k)
 compute (Dom (Base rep rel)) = Sett(domain rel)
@@ -1067,7 +1068,10 @@ compute (NotElem k set) = not $ haskey k (compute set)
 
 compute (Subset (Base SetR (Sett x)) (Base SetR (Sett y))) = Set.isSubsetOf x y
 compute (Subset (Base SetR (Sett x)) (Base MapR y)) = all (`Map.member` y) x
+compute (Subset (Base SetR (Sett x)) (Dom (Base MapR y))) = all (`Map.member` y) x
 compute (Subset (Base MapR x) (Base MapR y)) = Map.foldrWithKey accum True x
+   where accum k a ans = Map.member k y && ans
+compute (Subset (Dom (Base MapR x)) (Dom (Base MapR y))) = Map.foldrWithKey accum True x
    where accum k a ans = Map.member k y && ans
 compute (Subset x y) = runCollect (lifo left) True (\ (k,v) ans -> haskey k right && ans)
   where left = (fst(compile x))
@@ -1287,6 +1291,7 @@ instance Show (BaseRep f k v) where
   show BiMapR = "BiMap"
 
 instance Show (Exp t) where
+  show (Base MapR x) = "Map("++show(Map.size x)++")?"
   show (Base rep x) = show rep++"?"
   show (Dom x) = "(dom "++show x++")"
   show (Rng x) = "(rng "++show x++")"

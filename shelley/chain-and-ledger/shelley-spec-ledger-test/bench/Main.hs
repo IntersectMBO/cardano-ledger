@@ -5,10 +5,30 @@
 module Main where
 
 import BenchUTxOAggregate (expr, genTestCase)
+import BenchValidation
+  ( applyBlock,
+    benchValidate,
+    benchreValidate,
+    genUpdateInputs,
+    sizes,
+    updateAndTickChain,
+    updateChain,
+    validateInput,
+  )
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (dom, forwards, keysEqual, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
-import Criterion.Main (Benchmark, bench, bgroup, defaultMain, env, whnf)
+import Criterion.Main
+  ( Benchmark,
+    bench,
+    bgroup,
+    defaultMain,
+    env,
+    nf,
+    nfIO,
+    whnf,
+    whnfIO,
+  )
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
@@ -18,17 +38,22 @@ import Data.Word (Word64)
 -- How to precompute env for the StakeKey transactions
 -- How to compute an initial state with N StakePools
 
-import Shelley.Spec.Ledger.Bench.Gen (genTx)
+import Shelley.Spec.Ledger.Bench.Gen
+  ( genBlock,
+    genChainState,
+    genTx,
+  )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
-import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..))
+import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
-import Shelley.Spec.Ledger.LedgerState (DPState (..), UTxOState (..))
 import Shelley.Spec.Ledger.LedgerState
-  ( DState (..),
+  ( DPState (..),
+    DState (..),
     PState (..),
+    UTxOState (..),
     stakeDistr,
   )
 import Shelley.Spec.Ledger.UTxO (UTxO)
@@ -149,9 +174,7 @@ action2m :: Crypto c => (DState c, PState c, UTxO c) -> SnapShot c
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 dstate' :: DState C
-
 pstate' :: PState C
-
 utxo' :: UTxO C
 (dstate', pstate', utxo') = unsafePerformIO $ QC.generate (genTestCase 1000000 (5000 :: Int))
 
@@ -178,6 +201,40 @@ benchmarking aggregate stake/UTxO=1000000,  address=10000/Using maps
 time                 280.6 ms   (256.0 ms .. 297.3 ms)
 
 -}
+
+-- =================================================================
+
+-- | Benchmarks for the various validation transitions exposed by the API
+validGroup :: Benchmark
+validGroup =
+  bgroup "validation" $
+    [ runAtUTxOSize 1000,
+      runAtUTxOSize 100000,
+      runAtUTxOSize 1000000
+    ]
+  where
+    runAtUTxOSize n =
+      bgroup (show n) $
+        [ env (validateInput n) $ \arg ->
+            bgroup
+              "block"
+              [ bench "applyBlockTransition" (nfIO $ benchValidate arg),
+                bench "reapplyBlockTransition" (nf benchreValidate arg)
+              ],
+          env (genUpdateInputs n) $ \arg ->
+            bgroup
+              "protocol"
+              [ bench "updateChainDepState" (nf updateChain arg),
+                bench "updateAndTickChainDepState" (nf updateAndTickChain arg)
+              ]
+        ]
+
+profileValid :: IO ()
+profileValid = do
+  state <- validateInput 10000
+  let ans = sum [applyBlock state n | n <- [1 .. 10000 :: Int]]
+  putStrLn (show ans)
+  pure ()
 
 -- ========================================================
 -- Profile algorithms for  ((dom d ◁ r) ▷ dom rg)
@@ -273,7 +330,9 @@ varyDelegState tag fixed changes initstate action =
 
 -- =============================================================================
 
+
 main :: IO ()
+-- main=profileValid
 main =
   defaultMain $
     [ bgroup "vary input size" $
@@ -296,5 +355,21 @@ main =
           varyDelegState "manyKeysOnePool" 50 [50, 500, 5000] ledgerStateWithNkeysMpools ledgerDelegateManyKeysOnePool
         ],
       bgroup "vary utxo at epoch boundary" $ (epochAt <$> [5000, 50000, 500000]),
-      bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000]
+      bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
+      validGroup,
+      -- Benchmarks for the various generators
+      bgroup "gen" $
+        [ env
+            (genChainState 100000)
+            ( \cs ->
+                bgroup
+                  "block"
+                  [ bench "genBlock" $ whnfIO $ genBlock cs
+                  ]
+            ),
+          bgroup
+            "genTx"
+            [ bench "1000" $ whnfIO $ genTx 1000
+            ]
+        ]
     ]
