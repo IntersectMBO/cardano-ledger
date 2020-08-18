@@ -39,7 +39,6 @@ where
 import Cardano.Prelude
 
 import Data.Aeson (ToJSON)
-import Data.Bits (Bits(..))
 import Data.ByteString.Builder (Builder, byteString, word8)
 import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as LBS

@@ -13,7 +13,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError)
 import Formatting (formatToString)
 import Formatting.Buildable (Buildable)
 import Text.JSON.Canonical

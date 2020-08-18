@@ -18,7 +18,6 @@ where
 import Cardano.Prelude
 import qualified Prelude
 
-import Control.Monad.Except (MonadError)
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
 import Formatting (bprint, build, formatToString, int, stext)

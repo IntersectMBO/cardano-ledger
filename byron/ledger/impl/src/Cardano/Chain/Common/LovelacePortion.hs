@@ -20,7 +20,6 @@ import Cardano.Prelude
 import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 import Control.Monad (fail)
-import Control.Monad.Except (MonadError(..))
 
 import qualified Data.Aeson as Aeson
 

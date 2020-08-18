@@ -8,7 +8,7 @@ module Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis where
 
 import Cardano.Crypto.DSIGN.Class
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
+import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.VRF.Class
 import Cardano.Prelude (Natural, Word32, Word64, Word8)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
@@ -39,7 +39,6 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
     VKey (..),
     hashKey,
-    hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts

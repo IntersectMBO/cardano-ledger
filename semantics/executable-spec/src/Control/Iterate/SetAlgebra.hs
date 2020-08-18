@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 
 module Control.Iterate.SetAlgebra
   (-- In addition to Data.Map.Map and Data.Set.Set, the following new types can be used in the set algegra

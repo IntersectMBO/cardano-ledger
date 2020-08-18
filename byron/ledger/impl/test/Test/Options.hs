@@ -21,8 +21,6 @@ where
 import Cardano.Prelude hiding (Option)
 import Test.Cardano.Prelude
 
-import GHC.Stack (withFrozenCallStack)
-
 import Hedgehog (Gen, Group(..), Property, PropertyT, TestLimit, withTests)
 import Hedgehog.Internal.Property (GroupName(..), PropertyName(..))
 import Test.Tasty

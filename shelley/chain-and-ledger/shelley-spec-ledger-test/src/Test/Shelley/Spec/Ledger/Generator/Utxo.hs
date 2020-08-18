@@ -75,7 +75,7 @@ import Shelley.Spec.Ledger.Tx
     getKeyCombination,
     hashScript,
   )
-import Shelley.Spec.Ledger.TxData (Wdrl (..), getRwdCred)
+import Shelley.Spec.Ledger.TxData (Wdrl (..))
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,

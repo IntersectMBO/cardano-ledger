@@ -30,6 +30,7 @@ import Control.State.Transition
   )
 import qualified Control.State.Transition.Trace as Trace
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
+import Data.Kind (Type)
 import Data.List.Unique (allUnique)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -49,7 +50,7 @@ import Prelude hiding (id)
 --
 -- The third parameter is the data that will be associated to the 'Commit'
 -- signal.
-data CR hashAlgo (hashToDataMap :: * -> * -> *) commitData
+data CR hashAlgo (hashToDataMap :: Type -> Type -> Type) commitData
 
 -- | Commit-reveal transition system state.
 data CRSt hashAlgo hashToDataMap commitData = CRSt

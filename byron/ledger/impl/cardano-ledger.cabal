@@ -129,7 +129,6 @@ library
   build-depends:       base >=4.11 && <5
                      , aeson
                      , base58-bytestring
-                     , base64-bytestring-type
                      , bimap >=0.4 && <0.5
                      , binary
                      , bytestring
@@ -141,7 +140,6 @@ library
                      , cborg
                      , containers
                      , contra-tracer
-                     , concurrency
                      , cryptonite
                      , Cabal
                      , deepseq
@@ -149,8 +147,6 @@ library
                      , directory
                      , filepath
                      , formatting
-                     , megaparsec
-                     , memory
                      , mtl
                      , quiet
                      , resourcet
@@ -169,7 +165,11 @@ library
                        -fno-warn-missing-import-lists
                        -fno-warn-safe
                        -fno-warn-unsafe
-
+  if impl(ghc >=8.8)
+    ghc-options:       -fno-warn-missing-deriving-strategies
+  if impl(ghc >=8.10)
+    ghc-options:       -fno-warn-missing-safe-haskell-mode
+                       -fno-warn-prepositive-qualified-module
   if (!flag(development))
     ghc-options:         -Werror
 
@@ -290,7 +290,12 @@ test-suite cardano-ledger-test
                        -fno-warn-safe
                        -fno-warn-unsafe
                        "-with-rtsopts=-K5M -M500M"
-
+  if impl(ghc >=8.8)
+    ghc-options:       -Wno-missing-deriving-strategies
+  if impl(ghc >=8.10)
+    ghc-options:       -Wno-missing-safe-haskell-mode
+                       -Wno-prepositive-qualified-module
+                       -Wno-unused-packages
   if (!flag(development))
     ghc-options:         -Werror
 

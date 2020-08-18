@@ -252,6 +252,8 @@ instance Monad StrictMaybe where
   (>>) = (*>)
 
   return = SJust
+
+instance MonadFail StrictMaybe where
   fail _ = SNothing
 
 instance ToCBOR a => ToCBOR (StrictMaybe a) where

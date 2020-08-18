@@ -49,7 +49,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson
 import Data.ByteString.Base58
   (Alphabet(..), bitcoinAlphabet, decodeBase58, encodeBase58)

@@ -51,7 +51,7 @@ extra-deps:
     - contra-tracer
 
 - git: https://github.com/input-output-hk/goblins
-  commit: 312198a1523736181ef7ddab15958bb32a9d9052
+  commit: 4c7bff1b8e72afb5f50c6cb1900e57369cbd4c6e
 - moo-1.2
 - gray-code-0.3.1
 

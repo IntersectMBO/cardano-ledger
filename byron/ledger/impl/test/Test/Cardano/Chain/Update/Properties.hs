@@ -9,7 +9,6 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Data.Char (isAscii)
 import Data.Data (Constr, toConstr)
 import qualified Data.Text as T
 

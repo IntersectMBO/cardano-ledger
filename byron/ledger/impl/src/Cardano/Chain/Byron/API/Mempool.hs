@@ -17,7 +17,6 @@ import qualified Codec.CBOR.Encoding                            as CBOR
 import qualified Codec.CBOR.Write                               as CBOR
 import           Control.Monad.Except
 import           Control.Monad.Reader
-import           Data.ByteString                                (ByteString)
 import qualified Data.Set                                       as Set
 import           Data.Word
 

@@ -53,6 +53,9 @@ instance Monad GetShort where
       Nothing -> Nothing
       Just (i', x) -> runGetShort (f x) i' sbs
 
+instance MonadFail GetShort where
+  fail _ = GetShort $ \_ _ -> Nothing
+
 deserialiseAddrStakeRef :: Crypto crypto => ShortByteString -> Maybe (StakeReference crypto)
 deserialiseAddrStakeRef sbs = join $ snd <$> runGetShort getAddrStakeReference 0 sbs
 

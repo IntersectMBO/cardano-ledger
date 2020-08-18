@@ -13,10 +13,8 @@ where
 import Cardano.Prelude
 
 import Control.Arrow (left)
-import Control.Monad (mzero)
 import Data.Coerce
 import Data.IORef
-import Data.Word (Word64)
 
 import Hedgehog
 import qualified Hedgehog.Gen as Gen

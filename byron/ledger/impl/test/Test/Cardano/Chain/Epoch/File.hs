@@ -8,7 +8,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
-import Data.Maybe (isJust)
 import Hedgehog (Group, Property, (===), discover)
 import qualified Hedgehog as H
 import Streaming (Of((:>)))

@@ -14,7 +14,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as M
 import Formatting (bprint)

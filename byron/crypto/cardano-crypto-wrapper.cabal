@@ -73,7 +73,11 @@ library
                        -fno-warn-missing-import-lists
                        -fno-warn-safe
                        -fno-warn-unsafe
-
+  if impl(ghc >=8.8)
+    ghc-options:       -Wno-missing-deriving-strategies
+  if impl(ghc >=8.10)
+    ghc-options:       -Wno-missing-safe-haskell-mode
+                       -Wno-prepositive-qualified-module
   if (!flag(development))
     ghc-options:         -Werror
 
@@ -120,7 +124,11 @@ test-suite test
                        -fno-warn-missing-import-lists
                        -fno-warn-safe
                        -fno-warn-unsafe
-
+  if impl(ghc >=8.8)
+    ghc-options:       -Wno-missing-deriving-strategies
+  if impl(ghc >=8.10)
+    ghc-options:       -Wno-missing-safe-haskell-mode
+                       -Wno-prepositive-qualified-module
   if (!flag(development))
     ghc-options:         -Werror
 

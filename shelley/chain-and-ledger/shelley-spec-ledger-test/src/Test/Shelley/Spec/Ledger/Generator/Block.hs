@@ -35,18 +35,13 @@ import Shelley.Spec.Ledger.BlockChain
     seedL,
   )
 import Shelley.Spec.Ledger.Crypto (Crypto (VRF))
-import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
+import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.Keys
-  ( GenDelegs (..),
-    KeyRole (..),
-    coerceKeyRole,
-    genDelegKeyHash,
+  ( coerceKeyRole,
     hashKey,
-    vKey,
   )
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
-import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))

@@ -7,10 +7,8 @@ where
 
 import Cardano.Prelude
 
-import Data.List (sort)
 import System.Directory (doesDirectoryExist, getDirectoryContents)
 import System.Environment (lookupEnv)
-import System.Exit (exitFailure)
 import System.FilePath ((</>), isExtensionOf)
 
 

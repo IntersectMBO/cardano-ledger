@@ -17,7 +17,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError)
 import Formatting (Format, bprint, build, bytes, shortest)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)

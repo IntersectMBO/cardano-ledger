@@ -18,7 +18,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.List (lookup)

@@ -15,7 +15,6 @@ where
 import Cardano.Prelude
 
 import qualified Data.ByteString.Base16 as B16
-import Data.Either (fromRight)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set

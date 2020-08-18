@@ -16,7 +16,6 @@ where
 import Cardano.Prelude
 
 import qualified Data.Aeson as Aeson
-import Control.Monad.Except (MonadError)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)

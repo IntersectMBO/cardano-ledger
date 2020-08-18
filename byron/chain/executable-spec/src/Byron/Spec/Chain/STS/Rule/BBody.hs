@@ -20,7 +20,7 @@ import           Byron.Spec.Ledger.Delegation (DELEG, DIState, DSEnv (DSEnv), _d
                      _dSEnvAllowedDelegators, _dSEnvEpoch, _dSEnvK, _dSEnvSlot)
 import           Byron.Spec.Ledger.Update (PParams, UPIState, maxBkSz)
 import           Byron.Spec.Ledger.UTxO (UTxO)
-import           Control.State.Transition (Embed, Environment, PredicateFailure, STS, Signal, State,
+import           Control.State.Transition (Embed, Environment, STS (..), Signal, State,
                      TRC (TRC), initialRules, judgmentContext, trans, transitionRules, wrapFailed,
                      (?!))
 

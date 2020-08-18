@@ -22,7 +22,6 @@ module Cardano.Chain.Byron.API.Validation (
 
 import           Control.Monad.Except
 import           Control.Monad.Reader
-import           Data.ByteString (ByteString)
 
 import           Cardano.Prelude
 

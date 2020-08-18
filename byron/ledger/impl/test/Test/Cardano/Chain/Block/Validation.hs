@@ -12,7 +12,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
-import Data.Maybe (isJust)
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
