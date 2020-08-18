@@ -23,6 +23,7 @@ module Shelley.Spec.Ledger.API.Protocol
     ChainTransitionError (..),
     tickChainDepState,
     updateChainDepState,
+    reupdateChainDepState,
   )
 where
 
@@ -34,12 +35,23 @@ import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Control.State.Transition.Extended
+  ( PredicateFailure,
+    TRC (..),
+    applySTS,
+    reapplySTS,
+  )
 import Data.Either (fromRight)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes (Globals, Nonce, Seed)
-import Shelley.Spec.Ledger.BlockChain (BHBody, BHeader, bhbody, bheaderPrev, prevHashToNonce)
+import Shelley.Spec.Ledger.BlockChain
+  ( BHBody,
+    BHeader,
+    bhbody,
+    bheaderPrev,
+    prevHashToNonce,
+  )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
 import Shelley.Spec.Ledger.Keys (GenDelegs)
@@ -322,6 +334,49 @@ updateChainDepState
       res =
         flip runReader globals
           . applySTS @(STS.Prtcl.PRTCL crypto)
+          $ TRC
+            ( mkPrtclEnv lv epochNonce,
+              csProtocol,
+              bh
+            )
+      epochNonce = STS.Tickn.ticknStateEpochNonce csTickn
+
+-- | Re-update the chain state based upon a new block header.
+--
+--   This function does no validation of whether the header is internally valid
+--   or consistent with the chain it is being applied to; the caller must ensure
+--   that this is valid through having previously applied it.
+reupdateChainDepState ::
+  forall crypto.
+  ( Crypto crypto,
+    Cardano.Crypto.DSIGN.Class.Signable
+      (DSIGN crypto)
+      (Shelley.Spec.Ledger.OCert.OCertSignable crypto),
+    Cardano.Crypto.KES.Class.Signable
+      (KES crypto)
+      (Shelley.Spec.Ledger.BlockChain.BHBody crypto),
+    Cardano.Crypto.VRF.Class.Signable
+      (VRF crypto)
+      Shelley.Spec.Ledger.BaseTypes.Seed
+  ) =>
+  Globals ->
+  LedgerView crypto ->
+  BHeader crypto ->
+  ChainDepState crypto ->
+  ChainDepState crypto
+reupdateChainDepState
+  globals
+  lv
+  bh
+  cs@ChainDepState {csProtocol, csTickn} =
+    cs
+      { csProtocol = res,
+        csLabNonce = prevHashToNonce (bheaderPrev . bhbody $ bh)
+      }
+    where
+      res =
+        flip runReader globals
+          . reapplySTS @(STS.Prtcl.PRTCL crypto)
           $ TRC
             ( mkPrtclEnv lv epochNonce,
               csProtocol,
