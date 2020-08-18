@@ -738,10 +738,10 @@ instance
   (Typeable crypto, Crypto crypto) =>
   ToCBOR (TxIn crypto)
   where
-  toCBOR (TxIn txId index) =
+  toCBOR (TxInCompact txId index) =
     encodeListLen 2
       <> toCBOR txId
-      <> toCBOR (fromIntegral index :: Word64)
+      <> toCBOR index
 
 instance
   (Crypto crypto) =>
@@ -750,14 +750,14 @@ instance
   fromCBOR = do
     decodeRecordNamed "TxIn" (const 2) $ do
       a <- fromCBOR
-      (b :: Word64) <- fromCBOR
-      pure $ TxIn a (fromInteger $ toInteger b)
+      b <- fromCBOR
+      pure $ TxInCompact a b
 
 instance
   (Typeable crypto, Crypto crypto) =>
   ToCBOR (TxOut crypto)
   where
-  toCBOR (TxOut addr coin) =
+  toCBOR (TxOutCompact addr coin) =
     encodeListLen 2
       <> toCBOR addr
       <> toCBOR coin
@@ -768,8 +768,8 @@ instance
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
     addr <- fromCBOR
-    (b :: Word64) <- fromCBOR
-    pure $ TxOut addr (Coin $ toInteger b)
+    coin <- fromCBOR
+    pure $ TxOutCompact addr coin
 
 instance
   (Typeable kr, Crypto crypto) =>
