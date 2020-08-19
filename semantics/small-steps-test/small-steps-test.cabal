@@ -89,14 +89,18 @@ test-suite examples
   hs-source-dirs:      test
   main-is:             examples/Main.hs
   other-modules:       Control.State.Transition.Examples.Sum
-  other-modules:       Control.State.Transition.Examples.GlobalSum
+                     , Control.State.Transition.Examples.GlobalSum
                      , Control.State.Transition.Examples.CommitReveal
+                     , Control.State.Transition.Examples.Modular.Base
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
+                     , acts
                      , containers
+                     , groups >= 0.4
                      , hedgehog >= 1.0
                      , mtl
+                     , optics
                      , tasty
                      , tasty-hedgehog
                      , tasty-expected-failure
