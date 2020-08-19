@@ -1,50 +1,15 @@
-%% \begin{note}
-%%   If you are reviewing this document, please have a look at the TODO
-%%   file. It mentions some things that are still up for discussion and
-%%   we'd like your opinion.
-%% \end{note}
-
 \begin{figure*}[t!]
-  %
-  \emph{Abstract Types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}l@{~}lr}
-      \var{s_{mc}} & \ScriptMPS & \text{monetary policy script}
-     \end{array}
-  \end{equation*}
   %
   \emph{Derived types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{lng} & \Language & \{\mathsf{nativeMSigTag}, \mathsf{nativeMATag}, \cdots\} \\
-      \var{scr} & \Script & \ScriptMSig \uniondistinct \ScriptMPS \\
-      \var{txout}
-      & \TxOut
-      & \Addr \times \Value
+      \var{txout} & \TxOut & \Addr \times \hldiff{\Value}
 %      & \text{tx outputs}
       \\
-      \var{utxoout}
-      & \UTxOOut
-      & \Addr \times \Value \\
-%      & \text{utxo outputs}
-      \var{utxo}
-      & \UTxO
-      & \TxIn \to \UTxOOut
-%      & \text{unspent tx outputs}
     \end{array}
   \end{equation*}
   %
-  \emph{Abstract functions}
-  %
-  \begin{align*}
-    \fun{language} ~\in~    & \Script \to \Language \\
-                            & \text{returns the language tag, e.g. $\mathsf{nativeMATag}$ for the MPS language} \\
-    \fun{evalMPSScript}~\in~& \ScriptMPS\to\PolicyID\to\Slot\to\powerset\KeyHash \\
-    %
-  \end{align*}
-
   \emph{Transaction Type}
   %
   \begin{equation*}
@@ -53,20 +18,20 @@
       & \powerset{\TxIn} & \fun{txinputs}& \text{inputs}\\
       &\times ~(\Ix \mapsto \TxOut) & \fun{txouts}& \text{outputs}\\
       & \times~ \seqof{\DCert} & \fun{txcerts}& \text{certificates}\\
-       & \times ~\Value  & \fun{forge} &\text{value forged}\\
+       & \times ~\hldiff{\Value}  & \hldiff{\fun{forge}} &\text{value forged}\\
        & \times ~\Coin & \fun{txfee} &\text{non-script fee}\\
        & \times ~\Slot & \fun{txttl} & \text{time to live}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{reward withdrawals}\\
        & \times ~\Update  & \fun{txUpdates} & \text{update proposals}\\
-       & \times ~\MetaDataHash^? & \fun{txMDhash} & \text{metadata hash}\\
+       & \times ~\MetaDataHash^? & \fun{txMDhash} & \text{metadata hash}
     \end{array}
   \end{equation*}
   %
   \emph{Accessor Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{getValue} & \TxOut \uniondistinct \UTxOOut \to \Value & \text{output value} \\
-      \fun{getAddr} & \TxOut \uniondistinct \UTxOOut \to \Addr & \text{output address} \\
+      \fun{getValue} & \TxOut \to \Value & \text{output value} \\
+      \fun{getAddr} & \TxOut \to \Addr & \text{output address}
     \end{array}
   \end{equation*}
   \caption{Type Definitions used in the UTxO transition system}
@@ -76,39 +41,11 @@
 \section{Transactions}
 \label{sec:transactions}
 
-This section describes the changes that are necessary to the transaction and
-UTxO type structure to support native multi-asset functionality
-in Cardano.
-
-\begin{itemize}
-
-  \item $\Language$ is a type of labels for scripting languages, e.g.
-    $\mathsf{nativeMSigTag}$ or $\mathsf{nativeMATag}$.
-
-  \item $\Script$ is the type of scripts allowed on the ledger. These
-    include the multi-signature scripts from the Shelley era, as well
-    as monetary policy scripts. The monetary policy scripting language
-    is a basic scripting language that allows for expressing some of
-    the most common monetary policies. Note however, that there are no
-    restrictions on using a certain kind of script for a certain
-    purpose, meaning that any script the ledger can be used
-    anywhere. A suggestion for $\ScriptMPS$ and the implementation of
-    the function $\fun{evalMPSScript}$, which evaluates MPS scripts,
-    is given in Appendix~\ref{sec:mps-lang}.
-    
-\item $\TxOut$ is the type of outputs that are carried by a transaction. This differs from the base Shelley
-  $\TxOut$ type in that it contains a $\Value$ rather than a $\Coin$.
-
-  \item $\UTxOOut$ is the type of UTxO entry that is created when a transaction
-  output is processed. This has the same structure as
-  the transaction output $\TxOut$, but is given a different name to
-  account for the fact that $\Value$ is stored differently in the outputs of $\UTxO$ and $\Tx$
-  (due to optimization in the $\UTxO$).
-
-  \item $\UTxO$ entries are stored in the finite map $\TxIn\mapsto \UTxOOut$.
-  This type also differs from the Shelley $\UTxO$ type only in that $\Coin$ is replaced by $\Value$.
-
-\end{itemize}
+This section describes the changes that are necessary to the
+transaction structure to support native multi-asset functionality in
+Cardano. The main differences are that $\TxOut$ contains a $\Value$
+rather than a $\Coin$, and the $\fun{forge}$ field as part of the
+transaction body.
 
 \subsection*{The Forge Field}
 
@@ -122,11 +59,11 @@ and Ada cannot be forged (this is enforced by the UTxO rule, see Figure~\ref{fig
 they are not affected in any way by forging.
 
 Putting tokens into circulation is done with positive values in the $\Quantity$
-fields of the tokens forged, and taking tokens out of circulation can be done
+fields $\fun{forge}$ field, and taking tokens out of circulation can be done
 with negative quantities.
 
 A transaction cannot simply forge arbitrary tokens. Restrictions on
-Multi-Asset tokens are imposed, for each asset with ID $\var{pid}$, by the script
+Multi-Asset tokens are imposed, for each asset with ID $\var{pid}$, by a script
 with the hash $\var{pid}$. Whether a given transaction adheres to the restrictions
 prescribed by its script is verified as part of the processing of the transaction.
 The forging mechanism is detailed in Section~\ref{sec:utxo}.
@@ -139,6 +76,4 @@ the $\TxOut$ in the system without multi-asset support. Instead of
 $\Coin$, the transaction outputs now have type $\Value$.
 
 The only change to the types related to transaction witnessing is the addition
-of MPS scripts to the $\Script$ type, so we do not include the whole $\Tx$ type here.
-
-\clearpage
+of monetary policy scripts to the $\Script$ type, so we do not include the whole $\Tx$ type here.

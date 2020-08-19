@@ -4,18 +4,31 @@
 This section describes the type $\Value$, the operations required on
 it, and its relation to $\Coin$.
 
+When multi-asset support on the ledger is introduced, Ada is still expected to be
+the most common type of token on the ledger.
+The $\Coin$ type is used to represent an amount of Ada.
+It is the only
+type of token that can be used for all non-UTxO ledger accounting, including deposits,
+fees, rewards, treasury, and the proof of stake protocol. Under no circumstances
+are these administrative fields and calculations ever expected to operate on
+any types of tokens besides Ada, and this will continue to have the type $\Coin$.
+
 \begin{figure*}[t!]
+  \emph{Abstract Types}
+  %
+  \begin{align*}
+    \var{aid} \in& ~\AssetID & \text{Asset IDs}
+  \end{align*}
   %
   \emph{Derived types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{pid} & \PolicyID & \ScriptHash \\
-      \var{aid} & \AssetID & \mathbb{H}_{32}\\
       \var{quan} & \Quantity & \Z \\
       %\text{quantity of a token}\\
       \var{v}, \var{w} & \Value
-      & \PolicyID \mapsto ( \AssetID \mapsto \Quantity ) \\
+      & \PolicyID \to_0 ( \AssetID \to_0 \Quantity )
 %      & \text{a collection of tokens}
     \end{array}
   \end{equation*}
@@ -26,18 +39,24 @@ it, and its relation to $\Coin$.
     \mathsf{adaID} \in& ~\PolicyID
     & \text{Ada asset ID} \\
     \mathsf{adaToken} \in& ~\AssetID
-    & \text{Ada Token} \\
-    \mathsf{co} \in& ~\Quantity \to \Coin
-    & \text{type conversion} \\
-    \mathsf{qu} \in& ~\Coin \to \Quantity
-    & \text{type conversion} \\
+    & \text{Ada Token}
   \end{align*}
   \emph{Helper Functions}
   %
   \begin{align*}
-    \fun{coinToValue} \in & ~\Coin\to \Value \\
-    \fun{coinToValue}~ c = & ~\{\mathsf{adaID} \mapsto \{\mathsf{adaToken} \mapsto \fun{qu}~c\}\} \\
-    &\text{convert a Coin amount to a Value} \\
+    & \fun{coinToValue} \in \Coin\to \Value \\
+    & \fun{coinToValue}~c = \lambda~\var{pid}~\var{aid}.
+      \begin{cases}
+        c & \var{pid} = \mathsf{adaID}~\text{and}~\var{aid} = \mathsf{adaToken} \\
+        0 & \text{otherwise}
+      \end{cases}
+    \nextdef
+    & \fun{valueToCoin} \in \Value \to \Coin \\
+    & \fun{valueToCoin}~v = v~\mathsf{adaID}~\mathsf{adaToken}
+    \nextdef
+    & \fun{valueSize} \in \Value \to \N \\
+    & \fun{valueSize}~\var{v} = k + k' * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
+      \land (\var{pid}, \var{aid}) \neq (\mathsf{adaID}, \mathsf{adaToken}) \}|
   \end{align*}
   \caption{Type Definitions and auxiliary functions for Value}
   \label{fig:defs:value}
@@ -45,35 +64,26 @@ it, and its relation to $\Coin$.
 
 \subsection*{Representing Multi-asset Types and Values}
 An \emph{Asset} comprises a set of different \emph{Asset Classes}, each of which has
-a unique identifier, $\AssetID$. We will informally refer to a pair $(\var{pid}, \var{aid})$ of a Policy ID and an Asset ID as a ``token''.
+a unique identifier, $\AssetID$. We will informally refer to a pair $(\var{pid}, \var{aid})$ of a Policy ID and an Asset ID as a ``token''. The token for Ada is $(\mathsf{adaID}, \mathsf{adaToken})$.
+
 The set of tokens that are referred to by the underlying monetary policy represents the coinage that the asset supports.  A multi-asset value, $\Value$ is a map over zero or more assets
 to single asset values.  A single asset value is then a finite map from
 $\AssetID$s to quantities.
 
+For convenience, here and in the rest of the document, we
+will treat values of type $\Value$ also as non-partial functions where
+any omitted tokens in the domain are assumed to be zero.
+
 \begin{itemize}
-  \item $\PolicyID$ identifies a specific asset.  As in normal life, two
-    assets may use the same \emph{coinage} (sets of tokens that distinguish different values in the asset),
-    but are distinguished by their \emph{monetary policy}, which governs how tokens of the asset may be created
-    and destroyed.
-    The monetary policy for an asset $\var{pid}$ is given by a script
-    $s$, where $\fun{hashScript}~s~=~pid$. When a transaction attempts to create or destroy tokens,
-    the script verifies that the coinage for asset $\var{pid}$
-    respects the restrictions that are imposed by the
-    monetary policy.
+  \item $\PolicyID$ identifies monetary policies. A policy ID $\var{pid}$ is associated with a script
+    $s$ such that $\fun{hashScript}~s~=~pid$. When a transaction attempts to create or destroy tokens
+    that fall under the policy ID $\var{pid}$,
+    $s$ verifies that the transaction
+    respects the restrictions that are imposed by the monetary policy.
+    See sections \ref{sec:transactions} and \ref{sec:utxo} for details.
 
-%% \item $\PolicyID$ identifies a specific monetary policy.  Each monetary policy is distinct. The monetary
-%%   policy for a asset $\var{c} = \{ \var{tok_1} \ldots \var{tok}_n \}$ is given by the \emph{Monetary Policy Script}
-%%   (MPS) $s$, such that $\fun{hashScript}~s~=~pid$. The script is called a
-%%   monetary policy script because when run, it verifies that the tokens of a asset
-%%   with the corresponding $\var{pid}$ are according to the restrictions imposed by the
-%%   monetary policy. If the restrictions are complied with, it returns
-%%   $\mathsf{True}$, and
-%%   $\mathsf{False}$ otherwise.  Monetary Policy Scripts are described in more detail below.
-
-
-  \item $\AssetID$ is the coinage for an asset $\var{pid} \in \var{PolicyID}$ is a set of terms
-    $t\in\AssetID$.  Each $t$ identifies a unique kind of token in $\var{pid}$.
-    We will assume that the token for Ada is $(\mathsf{adaID}, \mathsf{adaToken})$.
+  \item $\AssetID$ is a type used to distinguish different tokens with the same $\PolicyID$.
+    Each $aid$ identifies a unique kind of token in $\var{pid}$.
 
   \item $\Quantity$ is an integer type that represents an amount of a specific $\AssetID$. We associate
     a term $q\in\Quantity$ with a specific token to track how much of that token is contained in a given asset value.
@@ -85,61 +95,19 @@ $\AssetID$s to quantities.
     i.e. they have the same $\PolicyID$ and $\AssetID$. Terms of type $\Value$ are sometimes also referred to as
     \emph{token bundles}.
 
-%  The $tkns$ map gives the quantity of tokens of type $t\in\AssetID$.
-%  Values in the same asset are fungible with each other if
-%  they have the same asset id $\AssetID$.
-  %% You don't have the notion of a token defined as asset, token pair, so this definition doesn't work.
-  %% Best not to give it - it's hard to work out.
+  \item $\mathsf{adaID}$ and $\mathsf{adaToken}$ are the $\PolicyID$ and $\AssetID$ of Ada respectively.
 
-  %%
-  %% The statement \textit{all of the tokens
-  %% of this asset must
-  %% be the same}, in a MA scheme, means that there is only one kind of term of
-  %% type $\AssetID$ associated
-  %% with $\mathsf{adaID}$, and we call it $\mathsf{adaToken}$. \khcomment{The meaning of the statement isn't clear to me.}
-  %% See below for a more detailed discussion of Ada representation.
+  \item $\fun{coinToValue}$ and $\fun{valueToCoin}$ convert between the two types,
+  by taking a $\Coin$ to a $\Value$ that only contains Ada, and extracting the amount of Ada from a $\Value$ respectively.
+
+  \item The $\fun{valueSize}$ function provides a rough estimate of
+    the amount of memory the storage of a certain value will consume.
 \end{itemize}
 
 \subsection*{Value Operations and Partial Order}
 We require some operations on $\Value$, including equality, addition and $\leq$ comparison.
-For convenience, here and in the rest of the document, we
-will also treat values of type $\Value$ as non-partial functions where
-any omitted tokens in the domain are assumed to be zero.
 
 Addition and binary relations are extended pointwise from $\Coin$ to $\Value$, so if $R$ is a binary relation defined on $\Coin$, like $=$ or $\leq$, and $v, w$ are values, we define
 
 \[ v~R~w :\Leftrightarrow \forall~\var{pid}~\var{aid}, (v~\var{pid}~\var{aid})~R~(w~\var{pid}~\var{aid}) \]
 \[ (v + w)~\var{pid}~\var{aid} := (v~\var{pid}~\var{aid}) + (w~\var{pid}~\var{aid}). \]
-
-\subsection*{Coin and Multi-Asset Tokens}
-When multi-asset support on the ledger is introduced, Ada is still expected to be
-the most common type of token on the ledger.
-The $\Coin$ type is used to represent an amount of Ada.
-It is the only
-type of token that can be used for all non-UTxO ledger accounting, including deposits,
-fees, rewards, treasury, and the proof of stake protocol. Under no circumstances
-are these administrative fields and calculations ever expected to operate on
-any types of tokens besides Ada, and this will continue to have the type $\Coin$.
-
-In Figure \ref{fig:defs:value} we give the following helper functions
-and constants.  These are needed to use Ada in a multi-asset setting.
-
-\begin{itemize}
-  \item $\mathsf{adaID}$ is the policy ID of Ada and is a script hash with no known associated
-  script. Even if a script that hashes to this value
-  and validates is found, the UTXO rule forbids forging Ada.
-  \item $\mathsf{adaToken}$ is a byte string representation of the word "Ada".
-  The ledger should never allow the use of any other token name associated
-  with Ada's policy ID.
-\item $\fun{qu}$ and $\fun{co}$ are type conversions from quantity to
-  coin. Both of these types are synonyms for $\Z$, so they are
-  type re-naming conversions that are mutual inverses, with
-
-  $\fun{qu} ~(\fun{co} ~q )~= ~q$, and
-
-  $\fun{co}~ (\fun{qu}~ c) ~=~ c$, for all $c \in \Coin,~q \in \Quantity$.
-
-  \item $\fun{coinToValue}$ takes a coin value and generates a $\Value$ type representation
-  of it. This is often used for adding or subtracting Ada and other tokens as $\Value$, e.g. in the
-  \emph{preservation of value} calculations.
-\end{itemize}
