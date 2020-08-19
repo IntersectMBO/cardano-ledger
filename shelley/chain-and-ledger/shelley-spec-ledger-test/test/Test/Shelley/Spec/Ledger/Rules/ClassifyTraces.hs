@@ -194,20 +194,12 @@ relevantCasesAreCoveredForTrace tr = do
             tl' < 10 * length (filter isRegPool certs_),
             60
           ),
-          {- TODO re-enable after the script embargo has been lifted
-           -
-           - in other words, turn "0 == txScriptOutputsRatio" back to "0.1 < txScriptOutputsRatio "
-          -}
           ( "at least 10% of transactions have script TxOuts",
-            0 == txScriptOutputsRatio (map (_outputs . _body) txs),
+            0.1 < txScriptOutputsRatio (map (_outputs . _body) txs),
             20
           ),
-          {- TODO re-enable after the script embargo has been lifted
-           -
-           - in other words, turn "0 == scriptCredentialCertsRatio" back to "0.1 < scriptCredentialCertsRatio "
-          -}
           ( "at least 10% of `DCertDeleg` certificates have script credentials",
-            0 == scriptCredentialCertsRatio certs_,
+            0.1 < scriptCredentialCertsRatio certs_,
             60
           ),
           ( "at least 10% of transactions have a reward withdrawal",
