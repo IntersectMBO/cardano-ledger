@@ -83,7 +83,9 @@ genBlock
   ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
   origChainState = do
     -- Firstly, we must choose a slot in which to lead.
-    firstConsideredSlot <- (slot +) . SlotNo <$> QC.choose (1, 5)
+    -- Caution: the number of slots we jump here will affect the number
+    -- of epochs that a chain of blocks will span
+    firstConsideredSlot <- (slot +) . SlotNo <$> QC.choose (5, 10)
     let (nextSlot, chainSt, issuerKeys) =
           fromMaybe
             (error "Cannot find a slot to create a block in")
