@@ -20,7 +20,6 @@ import qualified Control.State.Transition.Extended
 import Control.State.Transition.Trace
   ( Trace,
     TraceOrder (OldestFirst),
-    traceLength,
     traceSignals,
   )
 import Control.State.Transition.Trace.Generator.QuickCheck
@@ -66,10 +65,8 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState (..),
     txsizeBound,
   )
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.PParams
-  ( PParamsUpdate,
-    pattern ProposedPPUpdates,
+  ( pattern ProposedPPUpdates,
     pattern Update,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
@@ -89,7 +86,6 @@ import Test.QuickCheck
   )
 import qualified Test.QuickCheck.Gen as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
-import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
@@ -141,57 +137,47 @@ relevantCasesAreCoveredForTrace ::
   Trace (CHAIN C) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let p :: Proxy C
-      p = Proxy
-      GenEnv _ c@Constants {maxCertsPerTx} = genEnv p
-      blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
+  let blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
-      tl' = traceLength tr
-      certs_ = allCerts txs
+      certsByTx_ = certsByTx txs
+      certs_ = concat certsByTx_
+
       classifications =
-        [ ( "there is at least 1 certificate for every 3 transactions",
-            tl' < 1 * length certs_,
+        [ ( "there is at least 1 certificate for every 2 transactions",
+            length txs < 2 * length certs_,
             60
           ),
           ( "there is at least 1 RegKey certificate for every 10 transactions",
-            tl' < 10 * length (filter isRegKey certs_),
+            length txs < 10 * length (filter isRegKey certs_),
             60
           ),
-          ( "there is at least 1 DeRegKey certificate for every 10 transactions",
-            tl' < 10 * length (filter isDeRegKey certs_),
+          ( "there is at least 1 DeRegKey certificate for every 20 transactions",
+            length txs < 20 * length (filter isDeRegKey certs_),
             60
           ),
           ( "there is at least 1 Delegation certificate for every 10 transactions",
-            tl' < 10 * length (filter isDelegation certs_),
+            length txs < 10 * length (filter isDelegation certs_),
             60
           ),
           ( "there is at least 1 Genesis Delegation certificate for every 20 transactions",
-            tl' < 20 * length (filter isGenesisDelegation certs_),
+            length txs < 20 * length (filter isGenesisDelegation certs_),
             60
           ),
           ( "there is at least 1 RetirePool certificate for every 10 transactions",
-            tl' < 10 * length (filter isRetirePool certs_),
+            length txs < 10 * length (filter isRetirePool certs_),
             60
           ),
-          ( "there is at least 1 Reserves MIR certificate (spending Reserves) for every 60 transactions",
-            tl' < 60 * length (filter isReservesMIRCert certs_),
+          ( "there is at least 1 MIR certificate (spending Reserves) for every 60 transactions",
+            length txs < 60 * length (filter isReservesMIRCert certs_),
             40
           ),
           ( "there is at least 1 MIR certificate (spending Treasury) for every 60 transactions",
-            tl' < 60 * length (filter isTreasuryMIRCert certs_),
+            length txs < 60 * length (filter isTreasuryMIRCert certs_),
             40
           ),
-          ( "at most 60% of transactions have no certificates",
-            0.6 > noCertsRatio (certsByTx txs),
-            60
-          ),
-          ( "at least 10% of transactions have " <> show maxCertsPerTx <> " certificates",
-            0.1 < maxCertsRatio c (certsByTx txs),
-            60
-          ),
           ( "there is at least 1 RegPool certificate for every 10 transactions",
-            tl' < 10 * length (filter isRegPool certs_),
+            length txs < 10 * length (filter isRegPool certs_),
             60
           ),
           {- TODO re-enable after the script embargo has been lifted
@@ -210,21 +196,21 @@ relevantCasesAreCoveredForTrace tr = do
             0 == scriptCredentialCertsRatio certs_,
             60
           ),
-          ( "at least 10% of transactions have a reward withdrawal",
-            0.1 < withdrawalRatio txs,
+          ( "at least 1 in 10 transactions have a reward withdrawal",
+            length txs < 10 * length (filter hasWithdrawal txs),
             60
           ),
-          ( "at least 5% of transactions have non-trivial protocol param updates",
-            0.95 > noPPUpdateRatio (ppUpdatesByTx txs),
+          ( "at least 1 in 20 transactions have non-trivial protocol param updates",
+            length txs < 20 * length (filter hasPParamUpdate txs),
             60
           ),
-          ( "at least 5% of transactions have metadata",
-            0.05 < metaDataRatio (metaDataByTx txs),
+          ( "at least 1 in 20 transactions have metadata",
+            length txs < 20 * length (filter hasMetaData txs),
             60
           ),
-          ( "at least 2 epoch changes in trace, 10% of the time",
-            2 <= epochBoundariesInTrace bs,
-            10
+          ( "at least 5 epochs in a trace, 20% of the time",
+            5 <= epochsInTrace bs,
+            20
           )
         ]
 
@@ -263,41 +249,6 @@ scriptCredentialCertsRatio certs =
 certsByTx :: [Tx C] -> [[DCert C]]
 certsByTx txs = toList . _certs . _body <$> txs
 
--- | Flattended list of DCerts for the given transactions
-allCerts :: [Tx C] -> [DCert C]
-allCerts = concat . certsByTx
-
--- | Ratio of the number of empty certificate groups and the number of groups
-noCertsRatio :: [[DCert C]] -> Double
-noCertsRatio = lenRatio (filter null)
-
--- | Ratio of the number of certificate groups of max size and the number of groups
-maxCertsRatio :: Constants -> [[DCert C]] -> Double
-maxCertsRatio Constants {maxCertsPerTx} = lenRatio (filter ((== maxCertsPerTx) . fromIntegral . length))
-
--- | Extract the metadata from the transactions
-metaDataByTx :: [Tx C] -> [[MetaDataHash C]]
-metaDataByTx txs =
-  f . _mdHash . _body <$> txs
-  where
-    f SNothing = []
-    f (SJust md) = [md]
-
--- | Ratio of the number of transactions with metadata and total transactions
-metaDataRatio :: [[MetaDataHash C]] -> Double
-metaDataRatio = lenRatio (filter (not . null))
-
--- | Extract non-trivial protocol param  updates from the given transactions
-ppUpdatesByTx :: [Tx C] -> [[PParamsUpdate]]
-ppUpdatesByTx txs = ppUpdates . _txUpdate . _body <$> txs
-  where
-    ppUpdates SNothing = mempty
-    ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.elems ppUpd
-
--- | Ratio of the number of empty PParamsUpdate to Updates
-noPPUpdateRatio :: [[PParamsUpdate]] -> Double
-noPPUpdateRatio = lenRatio (filter null)
-
 ratioInt :: Int -> Int -> Double
 ratioInt x y =
   fromIntegral x / fromIntegral y
@@ -318,17 +269,22 @@ txScriptOutputsRatio txoutsList =
           )
           txouts
 
--- | Transaction has a reward withdrawal
-withdrawalRatio :: [Tx C] -> Double
-withdrawalRatio = lenRatio (filter $ not . null . unWdrl . _wdrls . _body)
+hasWithdrawal :: Tx C -> Bool
+hasWithdrawal = not . null . unWdrl . _wdrls . _body
 
--- | Transforms the list and returns the ratio of lengths of
--- the transformed and original lists.
-lenRatio :: ([a] -> [b]) -> [a] -> Double
-lenRatio f xs =
-  ratioInt
-    (length (f xs))
-    (length xs)
+hasPParamUpdate :: Tx C -> Bool
+hasPParamUpdate tx =
+  ppUpdates . _txUpdate . _body $ tx
+  where
+    ppUpdates SNothing = False
+    ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
+
+hasMetaData :: Tx C -> Bool
+hasMetaData tx =
+  f . _mdHash . _body $ tx
+  where
+    f SNothing = False
+    f (SJust _) = True
 
 onlyValidLedgerSignalsAreGenerated :: Property
 onlyValidLedgerSignalsAreGenerated =
@@ -381,11 +337,14 @@ onlyValidChainSignalsAreGenerated =
     p :: Proxy C
     p = Proxy
 
-epochBoundariesInTrace :: [Block C] -> Int
-epochBoundariesInTrace bs =
-  length $
-    filter atEpochBoundary (blockSlot <$> bs)
+-- | Counts the epochs spanned by this trace
+epochsInTrace :: [Block C] -> Int
+epochsInTrace [] = 0
+epochsInTrace bs =
+  fromIntegral $ toEpoch - fromEpoch + 1
   where
+    fromEpoch = atEpoch . blockSlot $ head bs
+    toEpoch = atEpoch . blockSlot $ last bs
     EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfo) testGlobals undefined
     blockSlot (Block bh _) = (bheaderSlotNo . bhbody) bh
-    atEpochBoundary (SlotNo s) = s `rem` slotsPerEpoch == 0
+    atEpoch (SlotNo s) = s `div` slotsPerEpoch
