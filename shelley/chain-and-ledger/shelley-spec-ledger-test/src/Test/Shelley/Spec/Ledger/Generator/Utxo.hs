@@ -303,13 +303,13 @@ calcOutputsFromBalance ::
   (Coin, StrictSeq (TxOut c v))
 calcOutputsFromBalance balance_ addrs fee =
   ( fee + splitCoinRem,
-    StrictSeq.fromList $ zipWith TxOut addrs amountPerOutput
+    StrictSeq.fromList $ [] -- zipWith TxOut addrs amountPerOutput
   )
   where
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.
     balanceAfterFee = vminus balance_ (vinject fee)
-    (amountPerOutput, splitCoinRem) = vsplit balanceAfterFee (fromIntegral $ length addrs)
+    (_, splitCoinRem) = vsplit balanceAfterFee (fromIntegral $ length addrs)
 
 -- | Select unspent output(s) to serve as inputs for a new transaction
 --
