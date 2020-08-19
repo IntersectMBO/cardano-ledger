@@ -61,6 +61,8 @@ import Shelley.Spec.Ledger.LedgerState
     _dstate,
     _ptrs,
     _rewards,
+    -- txsizeBound,
+    -- txsize,
   )
 import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
@@ -103,6 +105,8 @@ import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs)
+
+import Debug.Trace (trace)
 
 -- | Generates a transaction in the context of the LEDGER STS environment
 -- and state.
@@ -192,7 +196,7 @@ genTxRetry
       -- Generate final Tx now that we have the real fees. We need to recompute
       -- the output amounts and in turn the txBody and its witness set.
       -------------------------------------------------------------------------
-      if voper Gteq spendingBalance (vinject fees)
+      if voper (trace ("show fees : " ++ show fees ++ "\n") Gteq) (trace ("draft fee outputs : " ++ show (mkOutputs draftFee) ++ "\n real fee outputs : " ++ show (mkOutputs fees)) spendingBalance) (vinject fees) --  ++ "\n tx size : " ++ show (txsize $ Tx (draftTxBody {_txfee = fst (mkOutputs fees), _outputs = snd (mkOutputs fees)}) (mkTxWits' (draftTxBody {_txfee = fst (mkOutputs fees), _outputs = snd (mkOutputs fees)})) metadata) ++ "\n tx size bound : " ++ show (txsizeBound $ Tx (draftTxBody {_txfee = fst (mkOutputs fees), _outputs = snd (mkOutputs fees)}) (mkTxWits' (draftTxBody {_txfee = fst (mkOutputs fees), _outputs = snd (mkOutputs fees)})) metadata)) spendingBalance) (vinject fees)
         then do
           let (actualFees', outputs') = mkOutputs fees
               txBody = draftTxBody {_txfee = actualFees', _outputs = outputs'}

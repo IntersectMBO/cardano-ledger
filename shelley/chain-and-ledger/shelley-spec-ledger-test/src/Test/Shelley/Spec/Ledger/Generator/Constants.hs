@@ -95,7 +95,7 @@ data Constants = Constants
 defaultConstants :: Constants
 defaultConstants =
   Constants
-    { minNumGenInputs = 1,
+    { minNumGenInputs = 5,
       maxNumGenInputs = 10,
       frequencyRegKeyCert = 2,
       frequencyRegPoolCert = 2,
@@ -112,8 +112,8 @@ defaultConstants =
       frequencyKeyCredDelegation = 2,
       frequencyTxUpdates = 10,
       frequencyTxWithMetaData = 10,
-      minGenesisUTxOouts = 10,
-      maxGenesisUTxOouts = 100,
+      minGenesisUTxOouts = 5,
+      maxGenesisUTxOouts = 10,
       maxCertsPerTx = 3,
       maxTxsPerBlock = 10,
       maxNumKeyPairs = 150,
