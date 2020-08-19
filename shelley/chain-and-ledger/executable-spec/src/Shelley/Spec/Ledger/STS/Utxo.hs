@@ -88,7 +88,6 @@ import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
     totalDeposits,
-    txCreatesNoScriptAddrs,
     txins,
     txouts,
     txup,
@@ -139,7 +138,6 @@ instance
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
     | OutputBootAddrAttrsTooBig
         ![TxOut crypto] -- list of supplied bad transaction outputs
-    | ScriptsEmbargoed -- blocking use of scripts for the moment
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -213,8 +211,6 @@ instance
     OutputBootAddrAttrsTooBig outs ->
       encodeListLen 2 <> toCBOR (10 :: Word8)
         <> encodeFoldable outs
-    ScriptsEmbargoed ->
-      encodeListLen 1 <> toCBOR (11 :: Word8)
 
 instance
   (Crypto crypto) =>
@@ -260,8 +256,6 @@ instance
         10 -> do
           outs <- decodeList fromCBOR
           pure (2, OutputBootAddrAttrsTooBig outs)
-        11 ->
-          pure (1, ScriptsEmbargoed)
         k -> invalidKey k
 
 initialLedgerState :: InitialRule (UTXO crypto)
@@ -317,9 +311,6 @@ utxoInductive = do
   let outputsAttrsTooBig =
         [out | out@(TxOut (AddrBootstrap addr) _) <- outputs, bootstrapAddressAttrsSize addr > 64]
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
-
-  -- Block use of script addresses until we fix the ScriptHash size mismatch.
-  txCreatesNoScriptAddrs txb ?! ScriptsEmbargoed
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx
