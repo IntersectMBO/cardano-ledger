@@ -92,6 +92,8 @@ test-suite examples
                      , Control.State.Transition.Examples.GlobalSum
                      , Control.State.Transition.Examples.CommitReveal
                      , Control.State.Transition.Examples.Modular.Base
+                     , Control.State.Transition.Examples.Modular.Base.Types
+                     , Control.State.Transition.Examples.Modular.Extension
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base

@@ -6,14 +6,17 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Base for a modular STS example
 module Control.State.Transition.Examples.Modular.Base where
 
 import Control.State.Transition
+import qualified Control.State.Transition.Examples.Modular.Base.Types as BT
 import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -21,49 +24,84 @@ import Data.Maybe (isJust)
 import Data.Monoid (Sum (..))
 import Optics
 
+data Era_0
+
 newtype Coin = Coin Int
   deriving newtype (Eq, Ord, Show)
   deriving
     (Group, Semigroup, Monoid)
     via Sum Int
 
+type instance BT.Coin Era_0 = Coin
+
 newtype AccountName = AccountName String
   deriving newtype (Eq, Ord, Show)
 
-data Account = Account
-  { name :: AccountName,
-    balance :: Coin
-  }
-  deriving stock (Eq, Show)
+type instance BT.AccountName Era_0 = AccountName
 
-data Tx = Tx
-  { fromAcnt :: AccountName,
-    toAcnt :: AccountName,
-    amount :: Coin
+data Account e = Account
+  { name :: BT.AccountName e,
+    balance :: BT.Coin e
   }
 
-data Admin
-  = OpenAccount AccountName Coin
-  | Withdraw AccountName Coin
-  | CloseAccount AccountName
+deriving stock instance
+  ( Eq (BT.AccountName e),
+    Eq (BT.Coin e)
+  ) =>
+  Eq (Account e)
 
-data Op
-  = OpTx Tx
-  | OpAdmin Admin
+deriving stock instance
+  ( Show (BT.AccountName e),
+    Show (BT.Coin e)
+  ) =>
+  Show (Account e)
 
-newtype Accounting = Accounting {unAccounting :: Map AccountName Account}
+type instance BT.Account Era_0 = Account Era_0
+
+data Tx e = Tx
+  { fromAcnt :: BT.AccountName e,
+    toAcnt :: BT.AccountName e,
+    amount :: BT.Coin e
+  }
+
+type instance BT.Tx Era_0 = Tx Era_0
+
+data Admin e
+  = OpenAccount (BT.AccountName e) (BT.Coin e)
+  | Withdraw (BT.AccountName e) (BT.Coin e)
+  | CloseAccount (BT.AccountName e)
+
+type instance BT.Admin Era_0 = Admin Era_0
+
+data Op e
+  = OpTx (BT.Tx e)
+  | OpAdmin (BT.Admin e)
+
+type instance BT.Op Era_0 = Op Era_0
+
+newtype Accounting e = Accounting
+  { unAccounting :: Map (BT.AccountName e) (BT.Account e)
+  }
+
+type instance BT.Accounting Era_0 = Accounting Era_0
 
 newtype BlockId = BlockId String
 
-data Block = Block
-  { blockId :: BlockId,
-    blockOps :: [Op]
+type instance BT.BlockId Era_0 = BlockId
+
+data Block e = Block
+  { blockId :: BT.BlockId e,
+    blockOps :: [BT.Op e]
   }
 
-data ChainState = ChainState
-  { accountState :: Accounting,
-    lastBlock :: BlockId
+type instance BT.Block Era_0 = Block Era_0
+
+data ChainState e = ChainState
+  { accountState :: BT.Accounting e,
+    lastBlock :: BT.BlockId e
   }
+
+type instance BT.ChainState Era_0 = ChainState Era_0
 
 -------------------------------------------------------------------------------
 -- STS plumbing
@@ -72,23 +110,23 @@ data ChainState = ChainState
 -------------------------------------------------------------------------------
 -- Transaction processing
 -------------------------------------------------------------------------------
-data TX
+data TX e
 
-instance STS TX where
-  type Environment TX = ()
-  type State TX = Accounting
-  type Signal TX = Tx
+instance STS (TX Era_0) where
+  type Environment (TX Era_0) = ()
+  type State (TX Era_0) = BT.Accounting Era_0
+  type Signal (TX Era_0) = BT.Tx Era_0
 
-  data PredicateFailure TX
-    = InsufficientMoney Account Coin
-    | NoSuchAccount AccountName
+  data PredicateFailure (TX Era_0)
+    = InsufficientMoney (BT.Account Era_0) (BT.Coin Era_0)
+    | NoSuchAccount (BT.AccountName Era_0)
     deriving stock (Eq, Show)
 
   initialRules = []
 
   transitionRules = [processTx]
 
-processTx :: TransitionRule TX
+processTx :: TransitionRule (TX Era_0)
 processTx = do
   TRC
     ( (),
@@ -113,24 +151,24 @@ processTx = do
 
   pure $! Accounting accounting'
 
-data ADMIN
+data ADMIN e
 
-instance STS ADMIN where
-  type Environment ADMIN = ()
-  type State ADMIN = Accounting
-  type Signal ADMIN = Admin
+instance STS (ADMIN Era_0) where
+  type Environment (ADMIN Era_0) = ()
+  type State (ADMIN Era_0) = (BT.Accounting Era_0)
+  type Signal (ADMIN Era_0) = (BT.Admin Era_0)
 
-  data PredicateFailure ADMIN
-    = AccountAlreadyExists AccountName
-    | CloseNonEmptyAccount Account
-    | NonExistingAccount AccountName
-    | WithdrawInsufficientBalance Account Coin
+  data PredicateFailure (ADMIN Era_0)
+    = AccountAlreadyExists (BT.AccountName Era_0)
+    | CloseNonEmptyAccount (BT.Account Era_0)
+    | NonExistingAccount (BT.AccountName Era_0)
+    | WithdrawInsufficientBalance (BT.Account Era_0) (BT.Coin Era_0)
     deriving stock (Eq, Show)
 
   initialRules = []
   transitionRules = [processAdmin]
 
-processAdmin :: TransitionRule ADMIN
+processAdmin :: TransitionRule (ADMIN Era_0)
 processAdmin = do
   TRC ((), unAccounting -> accounting, admin) <- judgmentContext
   case admin of
@@ -168,26 +206,27 @@ processAdmin = do
               (x {balance = balance x <> invert amt})
               accounting
 
-data OPS
+data OPS e
 
-instance STS OPS where
-  type Environment OPS = ()
-  type State OPS = Accounting
-  type Signal OPS = [Op]
+instance STS (OPS Era_0) where
+  type Environment (OPS Era_0) = ()
+  type State (OPS Era_0) = (BT.Accounting Era_0)
+  type Signal (OPS Era_0) = [BT.Op Era_0]
 
-  data PredicateFailure OPS
-    = TXFailure (PredicateFailure TX)
-    | ADMINFailure (PredicateFailure ADMIN)
+  data PredicateFailure (OPS Era_0)
+    = TXFailure (PredicateFailure (TX Era_0))
+    | ADMINFailure (PredicateFailure (ADMIN Era_0))
     deriving stock (Eq, Show)
 
   initialRules = []
 
-  transitionRules = [processOps @OPS @TX @ADMIN]
+  transitionRules =
+    [processOps @(OPS Era_0) @(TX Era_0) @(ADMIN Era_0)]
 
-instance Embed TX OPS where
+instance Embed (TX Era_0) (OPS Era_0) where
   wrapFailed = TXFailure
 
-instance Embed ADMIN OPS where
+instance Embed (ADMIN Era_0) (OPS Era_0) where
   wrapFailed = ADMINFailure
 
 class (HasGetter a b, HasSetter a b) => HasLens a b where
@@ -217,13 +256,13 @@ instance HasLens a a where
 
 processOps ::
   forall ops tx admin.
-  ( HasLens (Signal ops) [Op],
-    HasLens (State ops) Accounting,
-    HasGetter Tx (Signal tx),
-    HasGetter Accounting (State tx),
+  ( HasLens (Signal ops) [BT.Op Era_0],
+    HasLens (State ops) (BT.Accounting Era_0),
+    HasGetter (BT.Tx Era_0) (Signal tx),
+    HasGetter (BT.Accounting Era_0) (State tx),
     HasGetter (Environment ops) (Environment tx),
-    HasGetter Admin (Signal admin),
-    HasGetter Accounting (State admin),
+    HasGetter (BT.Admin Era_0) (Signal admin),
+    HasGetter (BT.Accounting Era_0) (State admin),
     HasGetter (Environment ops) (Environment admin),
     HasSetter (State ops) (State tx),
     HasSetter (State ops) (State admin),
@@ -235,27 +274,45 @@ processOps = do
   TRC (env, st, ops) <-
     judgmentContext
 
-  case extract ops of
+  case extract @_ @([BT.Op Era_0]) ops of
     x : xs -> case x of
       OpTx tx ->
         do
-          txs <- trans @tx (TRC (extract env, extract $ extract @_ @Accounting st, extract tx))
+          txs <-
+            trans @tx
+              ( TRC
+                  ( extract env,
+                    extract $
+                      extract @_ @(BT.Accounting Era_0)
+                        st,
+                    extract tx
+                  )
+              )
           trans @ops (TRC (env, inject txs st, inject xs ops))
       OpAdmin admin ->
         do
-          st' <- trans @admin (TRC (extract env, extract $ extract @_ @Accounting st, extract admin))
+          st' <-
+            trans @admin
+              ( TRC
+                  ( extract env,
+                    extract $
+                      extract @_ @(BT.Accounting Era_0)
+                        st,
+                    extract admin
+                  )
+              )
           trans @ops (TRC (env, inject st' st, inject xs ops))
     [] -> pure st
 
-data CHAIN
+data CHAIN e
 
-instance STS CHAIN where
-  type Environment CHAIN = ()
-  type State CHAIN = ChainState
-  type Signal CHAIN = Block
+instance STS (CHAIN Era_0) where
+  type Environment (CHAIN Era_0) = ()
+  type State (CHAIN Era_0) = BT.ChainState Era_0
+  type Signal (CHAIN Era_0) = BT.Block Era_0
 
-  data PredicateFailure CHAIN
-    = OPFailure (PredicateFailure OPS)
+  data PredicateFailure (CHAIN Era_0)
+    = OPFailure (PredicateFailure (OPS Era_0))
     deriving stock (Eq, Show)
 
   initialRules = []
