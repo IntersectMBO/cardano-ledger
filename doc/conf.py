@@ -21,7 +21,7 @@ if rtd_version not in ["stable", "latest"]:
 
 # -- Project information -----------------------------------------------------
 
-project = 'shelley-ledger-specs Documentation'
+project = 'cardano-ledger-specs Documentation'
 copyright = '2020, IOHK'
 author = 'IOHK'
 
