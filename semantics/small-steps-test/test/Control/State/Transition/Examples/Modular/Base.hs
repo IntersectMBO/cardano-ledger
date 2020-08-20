@@ -221,7 +221,7 @@ instance STS (OPS Era_0) where
   initialRules = []
 
   transitionRules =
-    [processOps @(OPS Era_0) @(TX Era_0) @(ADMIN Era_0)]
+    [processOps @(OPS Era_0) @(TX Era_0) @(ADMIN Era_0) @Era_0]
 
 instance Embed (TX Era_0) (OPS Era_0) where
   wrapFailed = TXFailure
@@ -255,14 +255,14 @@ instance HasLens a a where
   lensy = castOptic equality
 
 processOps ::
-  forall ops tx admin.
-  ( HasLens (Signal ops) [BT.Op Era_0],
-    HasLens (State ops) (BT.Accounting Era_0),
-    HasGetter (BT.Tx Era_0) (Signal tx),
-    HasGetter (BT.Accounting Era_0) (State tx),
+  forall ops tx admin e.
+  ( HasLens (Signal ops) [Op e],
+    HasLens (State ops) (BT.Accounting e),
+    HasGetter (BT.Tx e) (Signal tx),
+    HasGetter (BT.Accounting e) (State tx),
     HasGetter (Environment ops) (Environment tx),
-    HasGetter (BT.Admin Era_0) (Signal admin),
-    HasGetter (BT.Accounting Era_0) (State admin),
+    HasGetter (BT.Admin e) (Signal admin),
+    HasGetter (BT.Accounting e) (State admin),
     HasGetter (Environment ops) (Environment admin),
     HasSetter (State ops) (State tx),
     HasSetter (State ops) (State admin),
@@ -274,7 +274,7 @@ processOps = do
   TRC (env, st, ops) <-
     judgmentContext
 
-  case extract @_ @([BT.Op Era_0]) ops of
+  case extract @_ @([Op e]) ops of
     x : xs -> case x of
       OpTx tx ->
         do
@@ -283,7 +283,7 @@ processOps = do
               ( TRC
                   ( extract env,
                     extract $
-                      extract @_ @(BT.Accounting Era_0)
+                      extract @_ @(BT.Accounting e)
                         st,
                     extract tx
                   )
@@ -296,7 +296,7 @@ processOps = do
               ( TRC
                   ( extract env,
                     extract $
-                      extract @_ @(BT.Accounting Era_0)
+                      extract @_ @(BT.Accounting e)
                         st,
                     extract admin
                   )
