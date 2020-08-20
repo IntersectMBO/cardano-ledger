@@ -66,6 +66,7 @@ import Cardano.Binary
   ( Annotator (..),
     Case (..),
     Decoder,
+    DecoderError (..),
     FromCBOR (fromCBOR),
     Size,
     ToCBOR (..),
@@ -89,6 +90,7 @@ import Cardano.Prelude
     Word64,
     asum,
     catMaybes,
+    cborError,
     panic,
   )
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
@@ -432,12 +434,18 @@ pattern TxOut addr coin <-
 viewCompactTxOut :: forall crypto. Crypto crypto => TxOut crypto -> (Addr crypto, Coin)
 viewCompactTxOut (TxOutCompact bs c) = (addr, coin)
   where
-    addr = case deserializeShortAddr bs of -- Try to deserialize a Shelley style Addr directly from ShortByteString
-      Just (a :: Addr crypto) -> a
-      Nothing -> case deserialiseAddr (BSS.fromShort bs) of -- It is a Byron Address, try the more expensive route.
-        Nothing -> panic "viewCompactTxOut: impossible"
-        Just (a :: Addr crypto) -> a
+    addr = case decompactAddr bs of
+      Nothing -> panic "viewCompactTxOut: impossible"
+      Just a -> a
     coin = word64ToCoin c
+
+decompactAddr :: Crypto crypto => BSS.ShortByteString -> Maybe (Addr crypto)
+decompactAddr bs =
+  -- Try to deserialize a Shelley style Addr directly from ShortByteString
+  case deserializeShortAddr bs of
+    Just a -> Just a
+    -- It is a Byron Address, try the more expensive route.
+    Nothing -> deserialiseAddr (BSS.fromShort bs)
 
 data DelegCert crypto
   = -- | A stake key registration certificate.
@@ -738,10 +746,10 @@ instance
   (Typeable crypto, Crypto crypto) =>
   ToCBOR (TxIn crypto)
   where
-  toCBOR (TxIn txId index) =
+  toCBOR (TxInCompact txId index) =
     encodeListLen 2
       <> toCBOR txId
-      <> toCBOR (fromIntegral index :: Word64)
+      <> toCBOR index
 
 instance
   (Crypto crypto) =>
@@ -750,14 +758,14 @@ instance
   fromCBOR = do
     decodeRecordNamed "TxIn" (const 2) $ do
       a <- fromCBOR
-      (b :: Word64) <- fromCBOR
-      pure $ TxIn a (fromInteger $ toInteger b)
+      b <- fromCBOR
+      pure $ TxInCompact a b
 
 instance
   (Typeable crypto, Crypto crypto) =>
   ToCBOR (TxOut crypto)
   where
-  toCBOR (TxOut addr coin) =
+  toCBOR (TxOutCompact addr coin) =
     encodeListLen 2
       <> toCBOR addr
       <> toCBOR coin
@@ -767,9 +775,14 @@ instance
   FromCBOR (TxOut crypto)
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
-    addr <- fromCBOR
-    (b :: Word64) <- fromCBOR
-    pure $ TxOut addr (Coin $ toInteger b)
+    bs <- fromCBOR
+    coin <- fromCBOR
+    -- Check that the address is valid by decompacting it instead of decoding
+    -- it as an address, as that would require compacting (re-encoding) it
+    -- afterwards.
+    case decompactAddr bs of
+      Just (_ :: Addr crypto) -> pure $ TxOutCompact bs coin
+      Nothing -> cborError $ DecoderErrorCustom "TxOut" "invalid address"
 
 instance
   (Typeable kr, Crypto crypto) =>
