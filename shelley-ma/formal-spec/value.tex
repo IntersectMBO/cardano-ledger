@@ -36,10 +36,9 @@ any types of tokens besides Ada, and this will continue to have the type $\Coin$
   \emph{Abstract Functions and Values}
   %
   \begin{align*}
-    \mathsf{adaID} \in& ~\PolicyID
-    & \text{Ada asset ID} \\
-    \mathsf{adaToken} \in& ~\AssetID
-    & \text{Ada Token}
+    \mathsf{adaID} \in& ~\PolicyID & \text{Ada asset ID} \\
+    \mathsf{adaToken} \in& ~\AssetID & \text{Ada Token} \\
+    \fun{valueSize} \in& ~\Value \to \N & \text{Memory estimate for}~\Value
   \end{align*}
   \emph{Helper Functions}
   %
@@ -53,10 +52,6 @@ any types of tokens besides Ada, and this will continue to have the type $\Coin$
     \nextdef
     & \fun{valueToCoin} \in \Value \to \Coin \\
     & \fun{valueToCoin}~v = v~\mathsf{adaID}~\mathsf{adaToken}
-    \nextdef
-    & \fun{valueSize} \in \Value \to \N \\
-    & \fun{valueSize}~\var{v} = k + k' * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
-      \land (\var{pid}, \var{aid}) \neq (\mathsf{adaID}, \mathsf{adaToken}) \}|
   \end{align*}
   \caption{Type Definitions and auxiliary functions for Value}
   \label{fig:defs:value}
@@ -97,11 +92,12 @@ any omitted tokens in the domain are assumed to be zero.
 
   \item $\mathsf{adaID}$ and $\mathsf{adaToken}$ are the $\PolicyID$ and $\AssetID$ of Ada respectively.
 
+  \item The $\fun{valueSize}$ function provides a rough estimate of
+    the amount of memory the storage of a certain value will consume, which is used in the UTXO rule.
+    Its implementation is described in Appendix \ref{sec:value-size}.
+
   \item $\fun{coinToValue}$ and $\fun{valueToCoin}$ convert between the two types,
   by taking a $\Coin$ to a $\Value$ that only contains Ada, and extracting the amount of Ada from a $\Value$ respectively.
-
-  \item The $\fun{valueSize}$ function provides a rough estimate of
-    the amount of memory the storage of a certain value will consume.
 \end{itemize}
 
 \subsection*{Value Operations and Partial Order}
