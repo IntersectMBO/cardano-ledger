@@ -11,6 +11,7 @@ where
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (SlotNo)
+import qualified Data.ByteString.Short as BSS
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -20,7 +21,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
 import Shelley.Spec.Ledger.API.Validation (ShelleyState)
-import Shelley.Spec.Ledger.Address (Addr (..))
+import Shelley.Spec.Ledger.Address (Addr (..), serialiseAddr)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -109,14 +110,16 @@ getUTxO = _utxo . _utxoState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
-  Crypto crypto =>
   ShelleyState crypto ->
   Set (Addr crypto) ->
   UTxO crypto
 getFilteredUTxO ss addrs =
-  UTxO $ Map.filter (\(TxOut addr _) -> addr `Set.member` addrs) fullUTxO
+  UTxO $ Map.filter (\(TxOutCompact addrSBS _) -> addrSBS `Set.member` addrSBSs) fullUTxO
   where
     UTxO fullUTxO = getUTxO ss
+    -- Instead of decompacting each address in the huge UTxO, compact each
+    -- address in the small set of address.
+    addrSBSs = Set.map (BSS.toShort . serialiseAddr) addrs
 
 -- | Get the (private) leader schedule for this epoch.
 --
