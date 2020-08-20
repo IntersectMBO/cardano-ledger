@@ -300,7 +300,7 @@ getAddrStakeReference = do
   header <- B.getWord8
   if testBit header byron
     then pure Nothing
-    else skipHash ([] @(HASH crypto)) >> Just <$> getStakeReference header
+    else skipHash ([] @(ADDRHASH crypto)) >> Just <$> getStakeReference header
 
 putRewardAcnt :: RewardAcnt crypto -> Put
 putRewardAcnt (RewardAcnt network cred) = do

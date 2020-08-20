@@ -86,7 +86,7 @@ exampleShelleyGenesis =
     delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate c
     delegVerKeyHash = L.KeyHash "839b047f839b047f"
     delegVrfKeyHash :: Hash.Hash (HASH c) (L.VerKeyVRF c)
-    delegVrfKeyHash = "231391e7231391e7"
+    delegVrfKeyHash = "231391e7231391e70123"
     initialFundedAddress :: L.Addr c
     initialFundedAddress = L.Addr L.Testnet paymentCredential (L.StakeRefBase stakingCredential)
       where

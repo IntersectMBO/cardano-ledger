@@ -12,7 +12,7 @@ module Test.Shelley.Spec.Ledger.ConcreteCryptoTypes where
 
 import Cardano.Crypto.DSIGN (MockDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
-import Cardano.Crypto.Hash (ShortHash)
+import Cardano.Crypto.Hash (MD5Prefix)
 import Cardano.Crypto.KES (MockKES)
 import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.Util (SignableRepresentation)
@@ -43,8 +43,8 @@ type ExMock c =
   )
 
 instance Crypto C where
-  type HASH C = ShortHash
-  type ADDRHASH C = ShortHash
+  type HASH C = MD5Prefix 10
+  type ADDRHASH C = MD5Prefix 8
   type DSIGN C = MockDSIGN
   type KES C = MockKES 10
   type VRF C = FakeVRF

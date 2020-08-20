@@ -1,5 +1,5 @@
 $hash28 /= bytes .size 8
-$hash32 /= bytes .size 8
+$hash32 /= bytes .size 10
 
 $vkey /= bytes .size 8
 
