@@ -176,7 +176,7 @@ class
   -- the disjunction of all rules' preconditions is equal to `True`. That is,
   -- either one rule will throw a structural `PredicateFailure` and the other
   -- will succeed, or vice-versa.
-  data PredicateFailure a :: Type
+  type PredicateFailure a = (b :: Type) | b -> a
 
   -- | Rules governing transition under this system.
   initialRules :: [InitialRule a]

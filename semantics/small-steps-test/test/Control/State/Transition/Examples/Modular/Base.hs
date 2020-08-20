@@ -24,6 +24,38 @@ import Data.Maybe (isJust)
 import Data.Monoid (Sum (..))
 import Optics
 
+-------------------------------------------------------------------------------
+-- Lens stuff
+-------------------------------------------------------------------------------
+class (HasGetter a b, HasSetter a b) => HasLens a b where
+  lensy :: Lens' a b
+  lensy = lens (view gettery) (flip $ set settery)
+
+extract :: HasGetter a b => a -> b
+extract = view gettery
+
+inject :: HasSetter a b => b -> a -> a
+inject = set settery
+
+class HasGetter a b where
+  gettery :: Getter a b
+
+class HasSetter a b where
+  settery :: Setter' a b
+
+instance HasGetter a a where
+  gettery = castOptic equality
+
+instance HasSetter a a where
+  settery = castOptic equality
+
+instance HasLens a a where
+  lensy = castOptic equality
+
+-------------------------------------------------------------------------------
+-- Era_0
+-------------------------------------------------------------------------------
+
 data Era_0
 
 newtype Coin = Coin Int
@@ -110,23 +142,30 @@ type instance BT.ChainState Era_0 = ChainState Era_0
 -------------------------------------------------------------------------------
 -- Transaction processing
 -------------------------------------------------------------------------------
-data TX e
+data TX
 
-instance STS (TX Era_0) where
-  type Environment (TX Era_0) = ()
-  type State (TX Era_0) = BT.Accounting Era_0
-  type Signal (TX Era_0) = BT.Tx Era_0
+data TXPredicateFailure e
+  = InsufficientMoney (BT.Account e) (BT.Coin e)
+  | NoSuchAccount (BT.AccountName e)
 
-  data PredicateFailure (TX Era_0)
-    = InsufficientMoney (BT.Account Era_0) (BT.Coin Era_0)
-    | NoSuchAccount (BT.AccountName Era_0)
-    deriving stock (Eq, Show)
+deriving stock instance Eq (TXPredicateFailure Era_0)
+
+deriving stock instance Show (TXPredicateFailure Era_0)
+
+instance STS (TX) where
+  type Environment (TX) = ()
+  type State (TX) = BT.Accounting Era_0
+  type Signal (TX) = BT.Tx Era_0
+
+  type
+    PredicateFailure (TX) =
+      TXPredicateFailure Era_0
 
   initialRules = []
 
   transitionRules = [processTx]
 
-processTx :: TransitionRule (TX Era_0)
+processTx :: TransitionRule (TX)
 processTx = do
   TRC
     ( (),
@@ -151,33 +190,49 @@ processTx = do
 
   pure $! Accounting accounting'
 
-data ADMIN e
+data ADMIN
 
-instance STS (ADMIN Era_0) where
-  type Environment (ADMIN Era_0) = ()
-  type State (ADMIN Era_0) = (BT.Accounting Era_0)
-  type Signal (ADMIN Era_0) = (BT.Admin Era_0)
+data AdminPredicateFailure e
+  = AccountAlreadyExists (BT.AccountName e)
+  | CloseNonEmptyAccount (BT.Account e)
+  | NonExistingAccount (BT.AccountName e)
+  | WithdrawInsufficientBalance (BT.Account e) (BT.Coin e)
 
-  data PredicateFailure (ADMIN Era_0)
-    = AccountAlreadyExists (BT.AccountName Era_0)
-    | CloseNonEmptyAccount (BT.Account Era_0)
-    | NonExistingAccount (BT.AccountName Era_0)
-    | WithdrawInsufficientBalance (BT.Account Era_0) (BT.Coin Era_0)
-    deriving stock (Eq, Show)
+deriving stock instance Eq (AdminPredicateFailure Era_0)
+
+deriving stock instance Show (AdminPredicateFailure Era_0)
+
+instance STS (ADMIN) where
+  type Environment (ADMIN) = ()
+  type State (ADMIN) = (BT.Accounting Era_0)
+  type Signal (ADMIN) = (BT.Admin Era_0)
+
+  type PredicateFailure (ADMIN) = AdminPredicateFailure Era_0
 
   initialRules = []
-  transitionRules = [processAdmin]
+  transitionRules = [processAdmin @ADMIN @Era_0]
 
-processAdmin :: TransitionRule (ADMIN Era_0)
+processAdmin ::
+  forall admin e.
+  ( HasLens (State admin) (Accounting e),
+    HasGetter (Signal admin) (Admin e),
+    PredicateFailure admin ~ AdminPredicateFailure e,
+    BT.Account e ~ Account e,
+    Ord (BT.AccountName e),
+    Ord (BT.Coin e),
+    Group (BT.Coin e)
+  ) =>
+  TransitionRule admin
 processAdmin = do
-  TRC ((), unAccounting -> accounting, admin) <- judgmentContext
+  TRC (_, st, extract @_ @(Admin e) -> admin) <- judgmentContext
+  let accounting = unAccounting $ extract @_ @(Accounting e) st
   case admin of
     OpenAccount withName withBalance -> do
       Map.notMember withName accounting ?! AccountAlreadyExists withName
-      pure . Accounting $
+      pure . flip inject st . Accounting @e $
         Map.insert
           withName
-          (Account withName withBalance)
+          (Account @e withName withBalance)
           accounting
     CloseAccount withName -> do
       accounting' <- case Map.lookup withName accounting of
@@ -189,9 +244,9 @@ processAdmin = do
             (failBecause $ CloseNonEmptyAccount x) >> pure accounting
         _ -> pure $ Map.delete withName accounting
 
-      pure $! Accounting accounting'
+      pure $! inject (Accounting @e accounting') st
     Withdraw fromAcnt amt ->
-      Accounting <$> case Map.lookup fromAcnt accounting of
+      flip inject st . Accounting @e <$> case Map.lookup fromAcnt accounting of
         Nothing ->
           (failBecause $ NonExistingAccount fromAcnt)
             >> pure accounting
@@ -206,53 +261,33 @@ processAdmin = do
               (x {balance = balance x <> invert amt})
               accounting
 
-data OPS e
+data OPS
 
-instance STS (OPS Era_0) where
-  type Environment (OPS Era_0) = ()
-  type State (OPS Era_0) = (BT.Accounting Era_0)
-  type Signal (OPS Era_0) = [BT.Op Era_0]
+data OPSPredicateFailure e
+  = TXFailure (TXPredicateFailure e)
+  | ADMINFailure (AdminPredicateFailure e)
 
-  data PredicateFailure (OPS Era_0)
-    = TXFailure (PredicateFailure (TX Era_0))
-    | ADMINFailure (PredicateFailure (ADMIN Era_0))
-    deriving stock (Eq, Show)
+deriving stock instance Eq (OPSPredicateFailure Era_0)
+
+deriving stock instance Show (OPSPredicateFailure Era_0)
+
+instance STS (OPS) where
+  type Environment (OPS) = ()
+  type State (OPS) = (BT.Accounting Era_0)
+  type Signal (OPS) = [BT.Op Era_0]
+
+  type PredicateFailure (OPS) = OPSPredicateFailure Era_0
 
   initialRules = []
 
   transitionRules =
-    [processOps @(OPS Era_0) @(TX Era_0) @(ADMIN Era_0) @Era_0]
+    [processOps @(OPS) @TX @(ADMIN) @Era_0]
 
-instance Embed (TX Era_0) (OPS Era_0) where
+instance Embed (TX) (OPS) where
   wrapFailed = TXFailure
 
-instance Embed (ADMIN Era_0) (OPS Era_0) where
+instance Embed (ADMIN) (OPS) where
   wrapFailed = ADMINFailure
-
-class (HasGetter a b, HasSetter a b) => HasLens a b where
-  lensy :: Lens' a b
-  lensy = lens (view gettery) (flip $ set settery)
-
-extract :: HasGetter a b => a -> b
-extract = view gettery
-
-inject :: HasSetter a b => b -> a -> a
-inject = set settery
-
-class HasGetter a b where
-  gettery :: Getter a b
-
-class HasSetter a b where
-  settery :: Setter' a b
-
-instance HasGetter a a where
-  gettery = castOptic equality
-
-instance HasSetter a a where
-  settery = castOptic equality
-
-instance HasLens a a where
-  lensy = castOptic equality
 
 processOps ::
   forall ops tx admin e.
@@ -304,16 +339,20 @@ processOps = do
           trans @ops (TRC (env, inject st' st, inject xs ops))
     [] -> pure st
 
-data CHAIN e
+data CHAIN
 
-instance STS (CHAIN Era_0) where
-  type Environment (CHAIN Era_0) = ()
-  type State (CHAIN Era_0) = BT.ChainState Era_0
-  type Signal (CHAIN Era_0) = BT.Block Era_0
+data CHAINPredicateFailure
+  = OPFailure (PredicateFailure (OPS))
+  deriving stock (Eq, Show)
 
-  data PredicateFailure (CHAIN Era_0)
-    = OPFailure (PredicateFailure (OPS Era_0))
-    deriving stock (Eq, Show)
+instance STS (CHAIN) where
+  type Environment (CHAIN) = ()
+  type State (CHAIN) = BT.ChainState Era_0
+  type Signal (CHAIN) = BT.Block Era_0
+
+  type
+    PredicateFailure (CHAIN) =
+      CHAINPredicateFailure
 
   initialRules = []
 

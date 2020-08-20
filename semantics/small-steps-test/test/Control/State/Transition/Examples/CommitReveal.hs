@@ -105,6 +105,10 @@ newtype Data = Data {getData :: (Id, Int)}
 newtype Id = Id {getId :: Int}
   deriving (Eq, Show, ToCBOR, Ord, QC.Arbitrary)
 
+data CRPredicateFailure hashAlgo (hashToDataMap :: * -> * -> *) commitData
+  = InvalidReveal Data
+  | AlreadyComitted (Hash hashAlgo Data)
+  deriving (Eq, Show)
 instance
   ( HashAlgorithm hashAlgo,
     Typeable hashToDataMap,
@@ -120,10 +124,8 @@ instance
 
   type Signal (CR hashAlgo hashToDataMap commitData) = CRSignal hashAlgo commitData
 
-  data PredicateFailure (CR hashAlgo hashToDataMap commitData)
-    = InvalidReveal Data
-    | AlreadyComitted (Hash hashAlgo Data)
-    deriving (Eq, Show)
+  type PredicateFailure (CR hashAlgo hashToDataMap commitData)
+    = CRPredicateFailure hashAlgo hashToDataMap commitData
 
   initialRules =
     [ pure

@@ -22,6 +22,8 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
 
 data SUM
 
+data NoFailure = NoFailure deriving (Eq, Show)
+
 instance STS SUM where
 
   type Environment SUM = ()
@@ -30,7 +32,7 @@ instance STS SUM where
 
   type Signal SUM = [Int]
 
-  data PredicateFailure SUM = NoFailure deriving (Eq, Show)
+  type PredicateFailure SUM = NoFailure
 
   initialRules = [pure 0]
 
