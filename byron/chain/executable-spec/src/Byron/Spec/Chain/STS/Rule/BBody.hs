@@ -7,11 +7,11 @@
 module Byron.Spec.Chain.STS.Rule.BBody where
 
 import           Byron.Spec.Chain.STS.Rule.Bupi
-import           Control.Lens ((^.))
 import           Data.Bimap (keys)
 import           Data.Data (Data, Typeable)
 import           Data.Set (fromList)
 import           Data.Word (Word8)
+import           Lens.Micro ((^.))
 
 import           Byron.Spec.Ledger.STS.UTXO (UTxOEnv (UTxOEnv, pps, utxo0), UTxOState)
 import           Byron.Spec.Ledger.STS.UTXOWS (UTXOWS)

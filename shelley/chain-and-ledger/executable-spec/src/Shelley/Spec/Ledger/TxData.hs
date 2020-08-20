@@ -14,6 +14,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -48,7 +49,7 @@ module Shelley.Spec.Ledger.TxData
     TxId (..),
     TxIn (TxIn),
     pattern TxInCompact,
-    TxOut (TxOut),
+    TxOut (TxOut, TxOutCompact),
     Url,
     Wdrl (..),
     WitVKey (WitVKey, wvkBytes),
@@ -65,18 +66,16 @@ import Cardano.Binary
   ( Annotator (..),
     Case (..),
     Decoder,
+    DecoderError (..),
     FromCBOR (fromCBOR),
     Size,
     ToCBOR (..),
     annotatorSlice,
-    decodeListLen,
     decodeWord,
     encodeListLen,
     encodeMapLen,
     encodePreEncoded,
     encodeWord,
-    enforceSize,
-    matchSize,
     serializeEncoding,
     serializeEncoding',
     szCases,
@@ -91,6 +90,7 @@ import Cardano.Prelude
     Word64,
     asum,
     catMaybes,
+    cborError,
     panic,
   )
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
@@ -146,6 +146,7 @@ import Shelley.Spec.Ledger.Credential
     StakeCredential,
   )
 import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.DeserializeShort (deserializeShortAddr)
 import Shelley.Spec.Ledger.Hashing
 import Shelley.Spec.Ledger.Keys
   ( Hash,
@@ -170,6 +171,7 @@ import Shelley.Spec.Ledger.Serialization
     decodeMapContents,
     decodeNullMaybe,
     decodeRecordNamed,
+    decodeRecordSum,
     decodeSet,
     decodeStrictSeq,
     encodeFoldable,
@@ -178,6 +180,7 @@ import Shelley.Spec.Ledger.Serialization
     ipv4ToCBOR,
     ipv6FromCBOR,
     ipv6ToCBOR,
+    listLenInt,
     mapFromCBOR,
     mapToCBOR,
   )
@@ -300,22 +303,20 @@ instance ToCBOR StakePoolRelay where
       <> toCBOR n
 
 instance FromCBOR StakePoolRelay where
-  fromCBOR = do
-    n <- decodeListLen
-    w <- decodeWord
-    case w of
+  fromCBOR = decodeRecordSum "StakePoolRelay" $
+    \case
       0 ->
-        matchSize "SingleHostAddr" 4 n
-          >> SingleHostAddr
+        (\x y z -> (4, SingleHostAddr x y z))
           <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
           <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv4FromCBOR)
           <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv6FromCBOR)
       1 ->
-        matchSize "SingleHostName" 3 n
-          >> SingleHostName
+        (\x y -> (3, SingleHostName x y))
           <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
           <*> fromCBOR
-      2 -> matchSize "MultiHostName" 2 n >> MultiHostName <$> fromCBOR
+      2 -> do
+        x <- fromCBOR
+        pure (2, MultiHostName x)
       k -> invalidKey k
 
 -- | A stake pool.
@@ -433,10 +434,18 @@ pattern TxOut addr coin <-
 viewCompactTxOut :: forall crypto. Crypto crypto => TxOut crypto -> (Addr crypto, Coin)
 viewCompactTxOut (TxOutCompact bs c) = (addr, coin)
   where
-    addr = case deserialiseAddr (BSS.fromShort bs) of
+    addr = case decompactAddr bs of
       Nothing -> panic "viewCompactTxOut: impossible"
-      Just (a :: Addr crypto) -> a
+      Just a -> a
     coin = word64ToCoin c
+
+decompactAddr :: Crypto crypto => BSS.ShortByteString -> Maybe (Addr crypto)
+decompactAddr bs =
+  -- Try to deserialize a Shelley style Addr directly from ShortByteString
+  case deserializeShortAddr bs of
+    Just a -> Just a
+    -- It is a Byron Address, try the more expensive route.
+    Nothing -> deserialiseAddr (BSS.fromShort bs)
 
 data DelegCert crypto
   = -- | A stake key registration certificate.
@@ -484,9 +493,7 @@ data MIRCert crypto = MIRCert
   deriving (Show, Generic, Eq)
 
 instance Crypto crypto => FromCBOR (MIRCert crypto) where
-  fromCBOR = do
-    n <- decodeListLen
-    matchSize "SingleHostAddr" 2 n
+  fromCBOR = decodeRecordNamed "SingleHostAddr" (const 2) $ do
     pot <- fromCBOR
     values <- mapFromCBOR
     pure $ MIRCert pot values
@@ -526,7 +533,7 @@ data TxBody crypto = TxBody'
     _txUpdate' :: !(StrictMaybe (Update crypto)),
     _mdHash' :: !(StrictMaybe (MetaDataHash crypto)),
     bodyBytes :: LByteString,
-    extraSize :: Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
+    extraSize :: !Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
   }
   deriving (Show, Eq, Generic)
   deriving
@@ -706,58 +713,59 @@ instance
   (Crypto crypto) =>
   FromCBOR (DCert crypto)
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
-      0 -> matchSize "RegKey" 2 n >> (DCertDeleg . RegKey) <$> fromCBOR
-      1 -> matchSize "DeRegKey" 2 n >> (DCertDeleg . DeRegKey) <$> fromCBOR
+  fromCBOR = decodeRecordSum "DCert crypto" $
+    \case
+      0 -> do
+        x <- fromCBOR
+        pure (2, DCertDeleg . RegKey $ x)
+      1 -> do
+        x <- fromCBOR
+        pure (2, DCertDeleg . DeRegKey $ x)
       2 -> do
-        matchSize "Delegate" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ DCertDeleg $ Delegate (Delegation a b)
+        pure (3, DCertDeleg $ Delegate (Delegation a b))
       3 -> do
         group <- fromCBORGroup
-        matchSize "RegPool" (fromIntegral $ 1 + listLen group) n
-        pure $ DCertPool $ RegPool group
+        pure (fromIntegral (1 + listLenInt group), DCertPool (RegPool group))
       4 -> do
-        matchSize "RetirePool" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ DCertPool $ RetirePool a (EpochNo b)
+        pure (3, DCertPool $ RetirePool a (EpochNo b))
       5 -> do
-        matchSize "GenesisDelegate" 4 n
         a <- fromCBOR
         b <- fromCBOR
         c <- fromCBOR
-        pure $ DCertGenesis $ GenesisDelegCert a b c
-      6 -> matchSize "MIRCert" 2 n >> DCertMir <$> fromCBOR
+        pure (4, DCertGenesis $ GenesisDelegCert a b c)
+      6 -> do
+        x <- fromCBOR
+        pure (2, DCertMir x)
       k -> invalidKey k
 
 instance
   (Typeable crypto, Crypto crypto) =>
   ToCBOR (TxIn crypto)
   where
-  toCBOR (TxIn txId index) =
+  toCBOR (TxInCompact txId index) =
     encodeListLen 2
       <> toCBOR txId
-      <> toCBOR (fromIntegral index :: Word64)
+      <> toCBOR index
 
 instance
   (Crypto crypto) =>
   FromCBOR (TxIn crypto)
   where
   fromCBOR = do
-    enforceSize "TxIn" 2
-    a <- fromCBOR
-    (b :: Word64) <- fromCBOR
-    pure $ TxIn a (fromInteger $ toInteger b)
+    decodeRecordNamed "TxIn" (const 2) $ do
+      a <- fromCBOR
+      b <- fromCBOR
+      pure $ TxInCompact a b
 
 instance
   (Typeable crypto, Crypto crypto) =>
   ToCBOR (TxOut crypto)
   where
-  toCBOR (TxOut addr coin) =
+  toCBOR (TxOutCompact addr coin) =
     encodeListLen 2
       <> toCBOR addr
       <> toCBOR coin
@@ -767,9 +775,14 @@ instance
   FromCBOR (TxOut crypto)
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
-    addr <- fromCBOR
-    (b :: Word64) <- fromCBOR
-    pure $ TxOut addr (Coin $ toInteger b)
+    bs <- fromCBOR
+    coin <- fromCBOR
+    -- Check that the address is valid by decompacting it instead of decoding
+    -- it as an address, as that would require compacting (re-encoding) it
+    -- afterwards.
+    case decompactAddr bs of
+      Just (_ :: Addr crypto) -> pure $ TxOutCompact bs coin
+      Nothing -> cborError $ DecoderErrorCustom "TxOut" "invalid address"
 
 instance
   (Typeable kr, Crypto crypto) =>
@@ -874,10 +887,10 @@ instance ToCBOR PoolMetaData where
 
 instance FromCBOR PoolMetaData where
   fromCBOR = do
-    enforceSize "PoolMetaData" 2
-    u <- fromCBOR
-    h <- fromCBOR
-    pure $ PoolMetaData u h
+    decodeRecordNamed "PoolMetaData" (const 2) $ do
+      u <- fromCBOR
+      h <- fromCBOR
+      pure $ PoolMetaData u h
 
 -- | The size of the '_poolOwners' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.

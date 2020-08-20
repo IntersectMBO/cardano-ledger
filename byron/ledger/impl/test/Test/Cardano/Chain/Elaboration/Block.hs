@@ -26,7 +26,6 @@ where
 import Cardano.Prelude hiding (to)
 
 import Control.Arrow ((&&&))
-import Control.Lens ((^.), to, (^..))
 import Data.Bimap (Bimap)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
@@ -35,6 +34,7 @@ import Data.Monoid.Generic (GenericSemigroup (GenericSemigroup), GenericMonoid (
 import qualified Data.Set as Set
 import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
 import GHC.Generics (Generic)
+import Lens.Micro ((^.), to, (^..))
 
 import qualified Cardano.Binary as Binary
 import qualified Cardano.Crypto.Hashing as H

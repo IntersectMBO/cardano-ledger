@@ -2,7 +2,7 @@ resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/316c
 
 packages:
 - shelley/chain-and-ledger/executable-spec
-- shelley/chain-and-ledger/executable-spec/test
+- shelley/chain-and-ledger/shelley-spec-ledger-test
 - byron/chain/executable-spec
 - byron/ledger/executable-spec
 - byron/ledger/impl
@@ -37,11 +37,12 @@ extra-deps:
     - test
 
 - git: https://github.com/input-output-hk/cardano-base
-  commit: 7d795c3040ea7785812efa1c97864bbb41b15d3e
+  commit: df8687488449f71dce3d881800c21e41fe1b7fc1
   subdirs:
     - binary
     - binary/test
     - cardano-crypto-class
+    - cardano-crypto-praos
     - slotting
 
 - git: https://github.com/input-output-hk/iohk-monitoring-framework
@@ -50,7 +51,7 @@ extra-deps:
     - contra-tracer
 
 - git: https://github.com/input-output-hk/goblins
-  commit: 26d35ad52fe9ade3391532dbfeb2f416f07650bc
+  commit: 312198a1523736181ef7ddab15958bb32a9d9052
 - moo-1.2
 - gray-code-0.3.1
 

@@ -106,7 +106,6 @@ It does the following:
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{url} & \URL & \text{a url}\\
-      \var{pmd} & \PoolMD & \text{pool metadata}\\
       \var{mp} & \MIRPot & \text{either $\ReservesMIR$ or $\TreasuryMIR$}\\
     \end{array}
   \end{equation*}
@@ -434,7 +433,7 @@ concerns are independent of the ledger rules.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \varUpdate{\var{rewards}} & \varUpdate{\unionoverrideLeft} & \varUpdate{\{\var{hk} \mapsto 0\}}\\
+        \varUpdate{\var{rewards}} & \varUpdate{\union} & \varUpdate{\{\var{hk} \mapsto 0\}}\\
         \var{delegations} \\
         \varUpdate{\var{ptrs}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}} \\
         \var{fGenDelegs} \\
@@ -530,16 +529,23 @@ concerns are independent of the ledger rules.
       & \var{gkh}\in\dom{genDelegs}
       \\~\\
       {
-        \begin{array}{ l @{~\leteq~\{} c @{~\mid~} r @{\mapsto} l @{,~\var{g}\neq\var{gkh}\}} }
-          \var{currentOtherColdKeyHashes} & \var{k}  & \var{g} & (\var{k},~\wcard) \\
-          \var{currentOtherVrfKeyHashes}  & \var{v} & \var{g} & (\wcard,~\var{v}) \\
-          \var{futureOtherColdKeyHashes}  & \var{k}  & (\var{g},~\wcard) & (\var{k},~\wcard) \\
-          \var{futureOtherVrfKeyHashe}    & \var{v} & (\var{g},~\wcard) & (\wcard,~\var{v}) \\
+        \begin{array}{ l @{\leteq \{(k,~v) ~\mid~(} c @{\mapsto(k,~v))\in~} l @{,~\var{g}\neq\var{gkh}\}} }
+          \var{cod} & \var{g} & \var{genDelegs} \\
+          \var{fod} & (\wcard,~\var{g}) & \var{fGenDelegs}
+        \end{array}
+      }
+      \\~\\
+      {
+        \begin{array}{ l @{~\leteq~\{} c @{~\mid~\wcard\mapsto} c @{\in~} l @{\}}}
+          \var{currentOtherColdKeyHashes} & \var{k} & (\var{k},~\wcard) & \var{cod}\\
+          \var{currentOtherVrfKeyHashes}  & \var{v} & (\wcard,~\var{v}) & \var{cod}\\
+          \var{futureOtherColdKeyHashes}  & \var{k} & (\var{k},~\wcard) & \var{fod}\\
+          \var{futureOtherVrfKeyHashes}   & \var{v} & (\wcard,~\var{v}) & \var{fod}\\
       \end{array}
       }
       \\
       \var{vkh}\notin\var{currentOtherColdKeyHashes}\union\var{futureOtherColdKeyHashes} \\
-      \var{vrf}\notin\var{currentOtherVrfKeyHashes}\union\var{futureOtherVrfKeyHashe} \\
+      \var{vrf}\notin\var{currentOtherVrfKeyHashes}\union\var{futureOtherVrfKeyHashes} \\
       \var{fdeleg}\leteq\{(\var{s'},~\var{gkh}) \mapsto (\var{vkh},~\var{vrf})\}
     }
     {
@@ -672,12 +678,14 @@ concerns are independent of the ledger rules.
   \label{fig:dcert-mir}
 \end{figure}
 
-The DELEG rule has seven possible predicate failures:
+The DELEG rule has ten possible predicate failures:
 \begin{itemize}
 \item In the case of a key registration certificate, if the staking credential
-  is already registered, there is a a \emph{StakeKeyAlreadyRegistered} failure.
+  is already registered, there is a \emph{StakeKeyAlreadyRegistered} failure.
 \item In the case of a key deregistration certificate, if the key is not
   registered, there is a \emph{StakeKeyNotRegistered} failure.
+\item In the case of a key deregistration certificate, if the associated
+  reward account is non-zero, there is a \emph{StakeKeyNonZeroAccountBalance} failure.
 \item In the case of a non-existing stake pool key in a delegation certificate,
   there is a \emph{StakeDelegationImpossible} failure.
 \item In the case of a pool delegation certificate, there is a
@@ -690,6 +698,12 @@ The DELEG rule has seven possible predicate failures:
   \emph{DuplicateGenesisDelegate} failure.
 \item In the case of insufficient reserves to pay the instantaneous rewards,
   there is a \emph{InsufficientForInstantaneousRewards} failure.
+\item In the case that a MIR certificate is issued during the last
+  $\StabilityWindow$-many slots of the epoch,
+  there is a \emph{MIRCertificateTooLateinEpoch} failure.
+\item  In the case of a genesis key delegation certificate, if the VRF key is
+  in the range of the genesis delegation mapping, there is a
+  \emph{DuplicateGenesisVRF} failure.
 \end{itemize}
 
 \clearpage

@@ -87,7 +87,6 @@ import Shelley.Spec.Ledger.LedgerState
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
-    OBftSlot,
     PState (..),
     UTxOState (..),
     emptyDState,
@@ -98,6 +97,7 @@ import Shelley.Spec.Ledger.LedgerState
     _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     ProtVer (..),
@@ -116,7 +116,7 @@ import Shelley.Spec.Ledger.STS.Prtcl
   )
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
 import Shelley.Spec.Ledger.STS.Tickn
-import Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
+import Shelley.Spec.Ledger.Slot (EpochNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
@@ -142,7 +142,7 @@ initialShelleyState ::
   UTxO crypto ->
   Coin ->
   Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
-  Map SlotNo (OBftSlot crypto) ->
+  OverlaySchedule crypto ->
   PParams ->
   Nonce ->
   ChainState crypto
@@ -295,7 +295,7 @@ chainTransition =
 
       BbodyState ls' bcur' <-
         trans @(BBODY crypto) $
-          TRC (BbodyEnv (Map.keysSet osched) pp' account, BbodyState ls bcur, block)
+          TRC (BbodyEnv osched pp' account, BbodyState ls bcur, block)
 
       let nes'' = updateNES nes' bcur' ls'
           bhb = bhbody bh
@@ -363,7 +363,7 @@ data AdaPots = AdaPots
   deriving (Show, Eq)
 
 -- | Calculate the total ada pots in the chain state
-totalAdaPots :: Crypto crypto => ChainState crypto -> AdaPots
+totalAdaPots :: ChainState crypto -> AdaPots
 totalAdaPots (ChainState nes _ _ _ _ _ _) =
   AdaPots
     { treasuryAdaPot = treasury_,
@@ -381,7 +381,7 @@ totalAdaPots (ChainState nes _ _ _ _ _ _) =
     circulation = balance u
 
 -- | Calculate the total ada in the chain state
-totalAda :: Crypto crypto => ChainState crypto -> Coin
+totalAda :: ChainState crypto -> Coin
 totalAda cs =
   treasuryAdaPot + reservesAdaPot + rewardsAdaPot + utxoAdaPot + depositsAdaPot + feesAdaPot
   where

@@ -16,13 +16,10 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeListLen,
-    decodeWord,
     encodeListLen,
-    matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫))
+import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
@@ -59,6 +56,7 @@ import Shelley.Spec.Ledger.LedgerState
     _ptrs,
     _rewards,
   )
+import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
   ( Duration (..),
     EpochNo (..),
@@ -96,7 +94,8 @@ instance Typeable crypto => STS (DELEG crypto) where
     = StakeKeyAlreadyRegisteredDELEG
         !(Credential 'Staking crypto) -- Credential which is already registered
     | -- | Indicates that the stake key is somehow already in the rewards map.
-      --   This error being seen indicates a potential bug in the rules.
+      --   This error is now redundant with StakeKeyAlreadyRegisteredDELEG.
+      --   We should remove it and replace its one use with StakeKeyAlreadyRegisteredDELEG.
       StakeKeyInRewardsDELEG
         !(Credential 'Staking crypto) -- Credential which is already registered
     | StakeKeyNotRegisteredDELEG
@@ -161,55 +160,43 @@ instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (DELEG crypto))
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
+  fromCBOR = decodeRecordSum "PredicateFailure (DELEG crypto)" $
+    \case
       0 -> do
-        matchSize "StakeKeyAlreadyRegisteredDELEG" 2 n
         kh <- fromCBOR
-        pure $ StakeKeyAlreadyRegisteredDELEG kh
+        pure (2, StakeKeyAlreadyRegisteredDELEG kh)
       10 -> do
-        matchSize "StakeKeyInRewardsDELEG" 2 n
         kh <- fromCBOR
-        pure $ StakeKeyInRewardsDELEG kh
+        pure (2, StakeKeyInRewardsDELEG kh)
       1 -> do
-        matchSize "StakeKeyNotRegisteredDELEG" 2 n
         kh <- fromCBOR
-        pure $ StakeKeyNotRegisteredDELEG kh
+        pure (2, StakeKeyNotRegisteredDELEG kh)
       2 -> do
-        matchSize "StakeKeyNonZeroAccountBalanceDELEG" 2 n
         b <- fromCBOR
-        pure $ StakeKeyNonZeroAccountBalanceDELEG b
+        pure (2, StakeKeyNonZeroAccountBalanceDELEG b)
       3 -> do
-        matchSize "StakeDelegationImpossibleDELEG" 2 n
         kh <- fromCBOR
-        pure $ StakeDelegationImpossibleDELEG kh
+        pure (2, StakeDelegationImpossibleDELEG kh)
       4 -> do
-        matchSize "WrongCertificateTypeDELEG" 1 n
-        pure WrongCertificateTypeDELEG
+        pure (1, WrongCertificateTypeDELEG)
       5 -> do
-        matchSize "GenesisKeyNotInpMappingDELEG" 2 n
         gkh <- fromCBOR
-        pure $ GenesisKeyNotInpMappingDELEG gkh
+        pure (2, GenesisKeyNotInpMappingDELEG gkh)
       6 -> do
-        matchSize "DuplicateGenesisDelegateDELEG" 2 n
         kh <- fromCBOR
-        pure $ DuplicateGenesisDelegateDELEG kh
+        pure (2, DuplicateGenesisDelegateDELEG kh)
       7 -> do
-        matchSize "InsufficientForInstantaneousRewardsDELEG" 4 n
         pot <- fromCBOR
         needed <- fromCBOR
         potAmount <- fromCBOR
-        pure $ InsufficientForInstantaneousRewardsDELEG pot needed potAmount
+        pure (4, InsufficientForInstantaneousRewardsDELEG pot needed potAmount)
       8 -> do
-        matchSize "MIRCertificateTooLateinEpochDELEG" 3 n
         sNow <- fromCBOR
         sTooLate <- fromCBOR
-        pure $ MIRCertificateTooLateinEpochDELEG sNow sTooLate
+        pure (3, MIRCertificateTooLateinEpochDELEG sNow sTooLate)
       9 -> do
-        matchSize "DuplicateGenesisVRFDELEG" 2 n
         vrf <- fromCBOR
-        pure $ DuplicateGenesisVRFDELEG vrf
+        pure (2, DuplicateGenesisVRFDELEG vrf)
       k -> invalidKey k
 
 delegationTransition ::
@@ -220,6 +207,8 @@ delegationTransition = do
   case c of
     DCertDeleg (RegKey hk) -> do
       -- note that pattern match is used instead of regCred, as in the spec
+      -- TODO we can remove the failure StakeKeyInRewardsDELEG and replace
+      -- the use below with StakeKeyAlreadyRegisteredDELEG
       eval (hk ∉ dom (_rewards ds)) ?! StakeKeyInRewardsDELEG hk
 
       pure $
@@ -246,7 +235,7 @@ delegationTransition = do
 
       pure $
         ds
-          { _delegations = eval (_delegations ds ∪ (singleton hk dpool))
+          { _delegations = eval (_delegations ds ⨃ (singleton hk dpool))
           }
     DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
@@ -257,16 +246,16 @@ delegationTransition = do
       -- gkh ∈ dom genDelegs ?! GenesisKeyNotInpMappingDELEG gkh
       (case Map.lookup gkh genDelegs of Just _ -> True; Nothing -> False) ?! GenesisKeyNotInpMappingDELEG gkh
 
-      let currentOtherDelegations =
+      let cod =
             range $
-              Map.filterWithKey (\k _ -> k /= gkh) genDelegs
-          futureOtherDelegations =
+              Map.filterWithKey (\g _ -> g /= gkh) genDelegs
+          fod =
             range $
-              Map.filterWithKey (\(FutureGenDeleg _ k) _ -> k /= gkh) (_fGenDelegs ds)
-          currentOtherColdKeyHashes = Set.map genDelegKeyHash currentOtherDelegations
-          futureOtherColdKeyHashes = Set.map genDelegKeyHash futureOtherDelegations
-          currentOtherVrfKeyHashes = Set.map genDelegVrfHash currentOtherDelegations
-          futureOtherVrfKeyHashes = Set.map genDelegVrfHash futureOtherDelegations
+              Map.filterWithKey (\(FutureGenDeleg _ g) _ -> g /= gkh) (_fGenDelegs ds)
+          currentOtherColdKeyHashes = Set.map genDelegKeyHash cod
+          currentOtherVrfKeyHashes = Set.map genDelegVrfHash cod
+          futureOtherColdKeyHashes = Set.map genDelegKeyHash fod
+          futureOtherVrfKeyHashes = Set.map genDelegVrfHash fod
 
       eval (vkh ∉ (currentOtherColdKeyHashes `Set.union` futureOtherColdKeyHashes))
         ?! DuplicateGenesisDelegateDELEG vkh
@@ -275,7 +264,7 @@ delegationTransition = do
 
       pure $
         ds
-          { _fGenDelegs = eval ((_fGenDelegs ds) ∪ (singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
+          { _fGenDelegs = eval ((_fGenDelegs ds) ⨃ (singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
           }
     DCertMir (MIRCert targetPot credCoinMap) -> do
       sp <- liftSTS $ asks stabilityWindow

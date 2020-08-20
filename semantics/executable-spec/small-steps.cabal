@@ -72,7 +72,7 @@ test-suite doctests
                      , free
                      , hedgehog >= 1.0
                      , tasty-hunit
-                     , lens
+                     , microlens
                      , mtl
                      , sequence
                      , transformers >= 0.5

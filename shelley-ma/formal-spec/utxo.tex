@@ -1,0 +1,196 @@
+\section{UTxO}
+\label{sec:utxo}
+
+\subsection*{UTxO Helper Functions}
+
+\begin{figure}[htb]
+  \emph{Helper Functions}
+  \begin{align*}
+    & \fun{getCoin} \in \TxOut \to \Coin \\
+    & \fun{getCoin}~{(\wcard,~\var{out})} ~=~\fun{valueToCoin}~\var{out}
+    \nextdef
+    & \fun{ubalance} \in \UTxO \to \hldiff{\Value} \\
+    & \fun{ubalance} ~ utxo = \hldiff{\sum_{\wcard\mapsto\var{u}\in~\var{utxo}} \fun{getValue}~\var{u}}
+  \end{align*}
+  %
+  \emph{Produced and Consumed Calculations}
+  \begin{align*}
+    & \fun{consumed} \in \PParams \to \UTxO \to \TxBody \to \hldiff{\Value} \\
+    & \consumed{pp}{utxo}{txb} = \\
+    & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} ~+~ \hldiff{\fun{forge}~\var{txb}} \\
+    &~~+~\hldiff{\fun{coinToValue}}(\fun{wbalance}~(\fun{txwdrls}~{txb})~+~ \keyRefunds{pp}{txb})
+    \nextdef
+    & \fun{produced} \in \PParams \to \StakePools \to \TxBody \to \hldiff{\Value} \\
+    & \fun{produced}~\var{pp}~\var{stpools}~\var{txb} = \\
+    &~~\ubalance{(\fun{outs}~{txb})} \\
+    &~~+ \hldiff{\fun{coinToValue}}(\txfee{txb} + \totalDeposits{pp}{stpools}{(\txcerts{txb})})
+  \end{align*}
+  \caption{UTxO Calculations}
+  \label{fig:functions:utxo}
+\end{figure}
+
+Figure~\ref{fig:functions:utxo} defines additional calculations that are needed for the
+UTxO transition system with multi-assets:
+
+\begin{itemize}
+
+  \item The function $\fun{getCoin}$ returns the Ada in a given output as a $\Coin$ value.
+
+  \item The $\fun{ubalance}$ function calculates the sum total in a given UTxO.
+
+  \item The $\fun{consumed}$ and $\fun{produced}$ calculations are similar to their Shelley
+    counterparts, with the following changes: 1) They return elements of $\Value$, which
+    the administrative fields of type $\Coin$ have to be converted to, via $\fun{coinToValue}$.
+    2) $\fun{consumed}$ also contains the $\fun{forge}$ field of the transaction.
+    This is explained below.
+\end{itemize}
+
+\subsection*{Forging and the Preservation of Value}
+What does it mean to preserve the value of non-Ada tokens, since they
+are put in and taken out of circulation by the users themselves?
+
+For the following discussion, we focus on a single arbitrary
+$\var{pid}$ that is not $\mathsf{adaID}$. If a transaction $\var{tx}$
+does not forge any tokens with policy ID $\var{pid}$, the preservation
+of value reduces to an equation that the sum of inputs and the sum of
+outputs are equal, which is exactly the same condition as for Shelley,
+except that there are no administrative fields. If a transactions
+forges tokens of that policy ID, then the sum of inputs and the sum of
+outputs will differ, and that difference has to be exactly the value
+of the $\fun{forge}$ field. Note that this means that the
+$\fun{forge}$ field can also contain negative quantities.
+
+To balance the preservation of value equation, the $\fun{forge}$ field
+could be included in either $\fun{consumed}$ or $\fun{produced}$, with
+the only difference being the sign of the $\fun{forge}$ field. We
+include it on the $\fun{consumed}$ side, because this means that
+forging a positive amount increases the amount of tokens on the
+ledger, and forging a negative amount reduces the amount of tokens on
+the ledger.
+
+Note that the UTXO rule specifically forbids the forging of Ada, and
+thus in the case of Ada, the preservation of value equation is exactly
+the same as in Shelley.
+
+The forging scripts themselves are not evaluated at part of the UTXO, but instead
+as part of witnessing, i.e. in the UTXOW rule, see Figure~\ref{fig:functions-witnesses}.
+
+\subsection*{The UTXO Transition Rule}
+In Figure \ref{fig:rules:utxo-shelley}, we give the UTXO transition rule,
+updated for multi-asset support. There are the following changes to the preconditions
+of this rule as compared to the original Shelley UTXO rule:
+
+\begin{itemize}
+  \item In the preservation of value calculation (which looks the same as in
+  Shelley), the value in the $\fun{forge}$ field is taken into account.
+
+  \item The transaction is not forging any Ada.
+
+  \item The $\Value$ of each output is constrained from below by a
+    $\Value$ that contains the product of $\var{minUTxOValue}$ and the
+    estimated size of the output as Ada, and zero otherwise. Note that
+    this implies that no quantity appearing in that output can be
+    negative.
+\end{itemize}
+
+Note that updating the $\UTxO$ with the inputs and the outputs of the transaction
+looks the same as in the Shelley rule. There is a type-level difference however, as
+the outputs of a transaction contain a $\Value$ term, rather than
+$\Coin$.
+
+
+\begin{figure}[htb]
+  \begin{equation}\label{eq:utxo-inductive-shelley}
+    \inference[UTxO-inductive]
+    { \var{txb}\leteq\txbody{tx}
+      & \txttl txb \geq \var{slot}
+      \\ \txins{txb} \neq \emptyset
+      & \minfee{pp}{tx} \leq \txfee{txb}
+      & \txins{txb} \subseteq \dom \var{utxo}
+      \\
+      \consumed{pp}{utxo}~{txb} = \produced{pp}{stpools}~{txb}
+      \\
+      ~
+      \\
+      {
+        \begin{array}{r}
+          \var{slot} \\
+          \var{pp} \\
+          \var{genDelegs} \\
+        \end{array}
+      }
+      \vdash \var{pup} \trans{\hyperref[fig:rules:update]{ppup}}{\fun{txup}~\var{tx}} \var{pup'}
+      \\
+      ~
+      \\
+      \hldiff{\mathsf{adaID}~\notin \supp{\fun{forge}~tx}} \\
+      ~\\
+      \hldiff{\forall txout \in \txouts{txb},} \\
+      \hldiff{txout \geq \fun{coinToValue}(\fun{valueSize}~(\fun{getValue}~txout) * \fun{minUTxOValue}~pp)} \\~
+      \\
+      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a =\NetworkId
+      \\
+      \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a =\NetworkId
+      \\
+      \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp}
+      \\
+      ~
+      \\
+      \var{refunded} \leteq \keyRefunds{pp}{txb}
+      \\
+      \var{depositChange} \leteq
+        \totalDeposits{pp}{stpools}{(\txcerts{txb})} - \var{refunded}
+    }
+    {
+      \begin{array}{r}
+        \var{slot}\\
+        \var{pp}\\
+        \var{stkCreds}\\
+        \var{stpools}\\
+        \var{genDelegs}\\
+      \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{deposits} \\
+        \var{fees} \\
+        \var{pup}\\
+      \end{array}
+      \right)
+      \trans{utxo}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{(\txins{txb} \subtractdom \var{utxo}) \cup \fun{outs}~{txb}}  \\
+        \varUpdate{\var{deposits} + \var{depositChange}} \\
+        \varUpdate{\var{fees} + \txfee{txb}} \\
+        \varUpdate{pup'}\\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{UTxO inference rules}
+  \label{fig:rules:utxo-shelley}
+\end{figure}
+
+
+\subsection*{Witnessing}
+
+\begin{figure}[htb]
+  \begin{align*}
+    \fun{scriptsNeeded} & \in \UTxO \to \Tx \to \powerset{\ScriptHash} \hspace{2cm} \text{required script hashes} \\
+    \fun{scriptsNeeded} &~\var{utxo}~\var{tx} = \\
+    & ~~\{ \fun{validatorHash}~a \mid i \mapsto (a, \wcard) \in \var{utxo},\\
+    & ~~~~~i\in\fun{txinsScript}~{(\fun{txins~\var{txb}})}~{utxo}\} \\
+    \cup & ~~\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
+           \restrictdom \fun{txwdrls}~\var{txb}) \} \\
+      \cup & ~~(\AddrScr \cap \fun{certWitsNeeded}~{txb}) \\
+      \cup & ~~\hldiff{\supp~(\fun{forge}~(\txbody{tx}))}
+  \end{align*}
+  \caption{Scripts Needed}
+  \label{fig:functions-witnesses}
+\end{figure}
+
+Figure~\ref{fig:functions-witnesses} contains the changed definition
+of the function $\fun{scriptsNeeded}$, to also collect the scripts
+necessary for forging. This is the only change to the UTXOW rule.

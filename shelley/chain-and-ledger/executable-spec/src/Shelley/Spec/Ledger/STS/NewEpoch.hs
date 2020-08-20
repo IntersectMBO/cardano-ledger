@@ -25,6 +25,7 @@ import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
@@ -60,7 +61,7 @@ instance
           emptyEpochState
           SNothing
           (PoolDistr Map.empty)
-          Map.empty
+          emptyOverlaySchedule
     ]
 
   transitionRules = [newEpochTransition]
@@ -114,7 +115,7 @@ calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
                 -- particular when shrinking)
               | (hk, Coin c) <- Map.toList stake
             ]
-   in PoolDistr $ Map.intersectionWith (,) sd (Map.map _poolVrf poolParams)
+   in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
 
 instance
   Crypto crypto =>

@@ -17,7 +17,8 @@ where
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (∪+), (◁))
 import Control.State.Transition
-  ( InitialRule,
+  ( Assertion (..),
+    InitialRule,
     STS (..),
     TRC (..),
     TransitionRule,
@@ -63,6 +64,15 @@ instance Typeable crypto => STS (MIR crypto) where
   initialRules = [initialMir]
   transitionRules = [mirTransition]
 
+  assertions =
+    [ PostCondition
+        "MIR may not create or remove reward accounts"
+        ( \(TRC (_, st, _)) st' ->
+            let r = _rewards . _dstate . _delegationState . esLState
+             in length (r st) == length (r st')
+        )
+    ]
+
 instance NoUnexpectedThunks (PredicateFailure (MIR crypto))
 
 initialMir :: InitialRule (MIR crypto)
@@ -92,31 +102,31 @@ mirTransition = do
       ) <-
     judgmentContext
   let dpState = _delegationState ls
-      dState = _dstate dpState
-      rewards = _rewards dState
-      irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd dState) :: RewardAccounts crypto
-      totFromReserves = sum irwdR
+      ds = _dstate dpState
+      rewards = _rewards ds
       reserves = _reserves acnt
-      irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd dState) :: RewardAccounts crypto
-      totFromTreasury = sum irwdT
       treasury = _treasury acnt
+      irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd ds) :: RewardAccounts crypto
+      irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd ds) :: RewardAccounts crypto
+      totR = sum irwdR
+      totT = sum irwdT
       update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts crypto
 
-  if totFromReserves <= reserves && totFromTreasury <= treasury
+  if totR <= reserves && totT <= treasury
     then
       pure $
         EpochState
           acnt
-            { _reserves = reserves - totFromReserves,
-              _treasury = treasury - totFromTreasury
+            { _reserves = reserves - totR,
+              _treasury = treasury - totT
             }
           ss
           ls
             { _delegationState =
                 dpState
                   { _dstate =
-                      dState
-                        { _rewards = eval ((_rewards dState) ∪+ update),
+                      ds
+                        { _rewards = eval ((_rewards ds) ∪+ update),
                           _irwd = emptyInstantaneousRewards
                         }
                   }
@@ -133,7 +143,7 @@ mirTransition = do
             { _delegationState =
                 dpState
                   { _dstate =
-                      dState {_irwd = emptyInstantaneousRewards}
+                      ds {_irwd = emptyInstantaneousRewards}
                   }
             }
           pr

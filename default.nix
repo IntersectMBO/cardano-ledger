@@ -13,10 +13,10 @@
 , gitrev ? pkgs.iohkNix.commitIdFromGitRepoOrZero ./.git
 }:
 with pkgs; with commonLib;
-let
 
+let
   haskellPackages = recRecurseIntoAttrs
-    # we are only intersted in listing the project packages:
+    # we are only interested in listing the project packages:
     (selectProjectPackages cardanoLedgerSpecsHaskellPackages);
 
   self = {
@@ -41,14 +41,29 @@ let
       withHoogle = true;
     };
 
+    #
+    # PDF builds of LaTeX documentation.
+    #
+    # To download the latest PDF build from Hydra, use this link:
+    #   https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.NAME/latest/download/1/NAME.pdf
+    #
+    # To get a shell where you can run pdflatex to build it yourself, use:
+    #   nix-shell default.nix -A specs.NAME
+    #
+    # To build all specs locally with Nix:
+    #  nix-build -A specs -o spec
+    #
+    specs = recurseIntoAttrs {
+      byron-ledger = pkgs.callPackage ./byron/ledger/formal-spec {};
+      byron-chain = pkgs.callPackage ./byron/chain/formal-spec {};
+      small-step-semantics = pkgs.callPackage ./semantics/formal-spec {};
+      shelley-ledger = pkgs.callPackage ./shelley/chain-and-ledger/formal-spec {};
+      shelley-ma = pkgs.callPackage ./shelley-ma/formal-spec {};
+      delegation-design = pkgs.callPackage ./shelley/design-spec {};
+      non-integer-calculations = pkgs.callPackage ./shelley/chain-and-ledger/dependencies/non-integer/doc {};
+      blocks-cddl = pkgs.callPackage ./byron/cddl-spec {};
+    };
+  };
 
-    # Attributes of PDF builds of LaTeX documentation.
-    byronLedgerSpec = import ./byron/ledger/formal-spec { inherit pkgs; };
-    byronChainSpec = import ./byron/chain/formal-spec { inherit pkgs; };
-    semanticsSpec = import ./semantics/formal-spec { inherit pkgs; };
-    shelleyLedgerSpec = import ./shelley/chain-and-ledger/formal-spec { inherit pkgs; };
-    delegationDesignSpec = import ./shelley/design-spec { inherit pkgs; };
-    nonIntegerCalculations = import ./shelley/chain-and-ledger/dependencies/non-integer/doc {inherit pkgs; };
-    blocksCDDLSpec = import ./byron/cddl-spec {inherit pkgs; };
-};
-in self
+in
+  self

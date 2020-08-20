@@ -49,7 +49,10 @@ import Shelley.Spec.Ledger.BlockChain
     seedL,
   )
 import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
+import Shelley.Spec.Ledger.Delegation.Certificates
+  ( IndividualPoolStake (..),
+    PoolDistr (..),
+  )
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -63,8 +66,12 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
-import Shelley.Spec.Ledger.LedgerState (OBftSlot (..))
 import Shelley.Spec.Ledger.OCert (OCertSignable)
+import Shelley.Spec.Ledger.OverlaySchedule
+  ( OBftSlot (..),
+    OverlaySchedule,
+    lookupInOverlaySchedule,
+  )
 import Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
@@ -72,7 +79,7 @@ data OVERLAY crypto
 
 data OverlayEnv crypto
   = OverlayEnv
-      (Map SlotNo (OBftSlot crypto))
+      (OverlaySchedule crypto)
       Nonce
       (PoolDistr crypto)
       (GenDelegs crypto)
@@ -187,7 +194,7 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
   let sigma' = Map.lookup hk pd
   case sigma' of
     Nothing -> throwError $ VRFKeyUnknown hk
-    Just (sigma, vrfHK) -> do
+    Just (IndividualPoolStake sigma vrfHK) -> do
       unless
         (vrfHK == hashVerKeyVRF vrfK)
         (throwError $ VRFKeyWrongVRFKey hk vrfHK (hashVerKeyVRF vrfK))
@@ -241,7 +248,7 @@ overlayTransition =
 
         asc <- liftSTS $ asks activeSlotCoeff
 
-        case Map.lookup (bheaderSlotNo bhb) osched of
+        case lookupInOverlaySchedule (bheaderSlotNo bhb) osched of
           Nothing ->
             praosVrfChecks eta0 pd asc bhb ?!: id
           Just NonActiveSlot ->

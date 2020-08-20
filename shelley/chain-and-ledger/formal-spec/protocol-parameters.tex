@@ -1,7 +1,7 @@
 \section{Protocol Parameters}
 \label{sec:protocol-parameters}
 
-\subsection{Updatble Protocol Parameters}
+\subsection{Updatable Protocol Parameters}
 \label{sec:updatable-protocol-parameters}
 
 The Shelley protocol parameters are listed in Figure~\ref{fig:defs:protocol-parameters}.
@@ -10,7 +10,7 @@ specifically, the common ones are $\var{a}$, $\var{b}$, $\var{maxTxSize}$, and
 $\var{maxHeaderSize}$ (see the document~\cite{byron_ledger_spec}).
 
 The type $\Ppm$ represents the names of the protocol parameters,
-and $\mathsf{T_{ppm}}$ is the type of a protocol parameter
+and $\mathsf{T_{ppm}}$ is the type of the protocol parameter $\var{ppm}$.
 The type $\PParams$ is a finite map containing all the Shelley parameters,
 indexed by their names.
 We will explain the significance of each parameter as it comes up in
@@ -159,7 +159,7 @@ protocol parameter updates and the application version updates.
 The constant $\MaxMajorPV$ provides a mechanism for halting outdated nodes.
 Once the major component of the protocol version in the protocol parameters
 exceeds this value, every subsequent block is invalid.
-See Figure~\ref{fig:rules:chain}.
+See Figures~\ref{fig:funcs:chain-helper} and~\ref{fig:rules:chain}.
 
 The constant $\MaxLovelaceSupply$ gives the total number of lovelace in the system,
 which is used in the reward calculation.

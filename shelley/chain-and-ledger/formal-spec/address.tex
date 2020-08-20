@@ -15,9 +15,9 @@ There are four types of UTxO addresses:
   etc.).
   The staking credential
   must be a (registered) delegation credential (see Section~\ref{sec:delegation-shelley}
-  for a discussion of the delegation mechanism)
+  for a discussion of the delegation mechanism).
 \item Pointer addresses, $\AddrP$, containing the hash of a payment credential
-  and a pointer to a stake credential registration certificate,
+  and a pointer to a stake credential registration certificate.
 \item Enterprise addresses, $\AddrE$,
   containing only the hash of a payment credential (and which have no staking rights).
 \item Bootstrap addresses, $\AddrBS$, corresponding to the addresses in
@@ -25,16 +25,15 @@ There are four types of UTxO addresses:
   payment credential.
 \end{itemize}
 
-\noindent Where a credential is either key or a multi-signature script. Together, these
-three address types make up the $\Addr$ type, which will be used in transaction
+\noindent Where a credential is either a key or a multi-signature script. Together, these
+four address types make up the $\Addr$ type, which will be used in transaction
 outputs in Section~\ref{sec:utxo}. The notations
 $\Credential_{pay}$ and $\Credential_{stake}$ do not represent distinct types.
 The subscripts are annotations indicating how the credential is being used.
 
-For an explanation of why enterprise addresses do not have staking rights,
-and how they could potentially circumvent this restriction and delegate to a
-stake pool, see \ref{sec:delegation-shelley}.
-The boostrap addresses are needed for the Byron-Shelley transition in order to
+Section 5.5.2 of~\cite{delegation_design} provides the motivation behind enterprise
+addresses and explains why one might forgo staking rights.
+Bootstrap addresses are needed for the Byron-Shelley transition in order to
 accommodate having UTxO entries from the Byron era during the Shelley era.
 
 There are also subtypes of the address types which correspond to the credential
@@ -61,7 +60,7 @@ document~\cite{chimeric}.
 
 Note that, even though in the Cardano system, most of the
 accounting is UTxO-style, the reward addresses are a special case. Their
-use restricted to only special cases (e.g. collecting rewards from them),
+use is restricted to only special cases (e.g. collecting rewards from them),
 outlined in the rules in Sections~\ref{sec:utxo} and Section~\ref{sec:epoch}.
 For each staking credential, we use the function $\fun{addr_{rwd}}$ to create
 the reward address corresponding to the credential, or to access an existing one
@@ -96,22 +95,22 @@ which is also either a key hash or a script hash.
       \\
       \var{addr}
       & \AddrB
-      & \NetworkId\times\Credential_{pay}\times\Credential_{stake}
+      & \Network\times\Credential_{pay}\times\Credential_{stake}
       & \text{base address}
       \\
       \var{addr}
       & \AddrP
-      & \NetworkId\times\Credential_{pay}\times\Ptr
+      & \Network\times\Credential_{pay}\times\Ptr
       & \text{pointer address}
       \\
       \var{addr}
       & \AddrE
-      & \NetworkId\times\Credential_{pay}
+      & \Network\times\Credential_{pay}
       & \text{enterprise address}
       \\
       \var{addr}
       & \AddrBS
-      & \NetworkId\times\KeyHash_{pay}
+      & \Network\times\KeyHash_{pay}
       & \text{bootstrap address}
       \\
       \var{addr}
@@ -125,7 +124,7 @@ which is also either a key hash or a script hash.
       \\
       \var{acct}
       & \AddrRWD
-      & \NetworkId\times\Credential_{stake}
+      & \Network\times\Credential_{stake}
       & \text{reward account}
       \\
     \end{array}
@@ -189,7 +188,7 @@ which is also either a key hash or a script hash.
                                                    from reward addr}\\
       \fun{addrPtr} & \AddrP \to \Ptr
                     & \text{pointer from pointer addr}\\
-      \fun{netId} & \Addr \to \NetworkId
+      \fun{netId} & \Addr \to \Network
                     & \text{network Id from addr}\\
     \end{array}
   \end{equation*}

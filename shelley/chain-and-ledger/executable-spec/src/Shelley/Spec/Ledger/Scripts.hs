@@ -34,7 +34,6 @@ import Cardano.Binary
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
     annotatorSlice,
-    decodeWord,
     encodeListLen,
     encodePreEncoded,
     encodeWord,
@@ -53,11 +52,11 @@ import Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List (concat, concatMap, permutations)
+import Data.Word (Word8)
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
-import Shelley.Spec.Ledger.Keys (Hash, KeyHash (..), KeyRole (Witness))
-import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordNamed, encodeFoldable)
+import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
+import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 
 -- | Magic number representing the tag of the native multi-signature script
 -- language. For each script language included, a new tag is chosen and the tag
@@ -136,7 +135,7 @@ pattern RequireMOf n ms <-
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
 newtype ScriptHash crypto
-  = ScriptHash (Hash crypto (Script crypto))
+  = ScriptHash (Hash.Hash (ADDRHASH crypto) (Script crypto))
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoUnexpectedThunks)
 
@@ -166,7 +165,10 @@ hashMultiSigScript ::
   Crypto crypto =>
   MultiSig crypto ->
   ScriptHash crypto
-hashMultiSigScript msig = ScriptHash $ Hash.castHash $ hashAnnotated msig
+hashMultiSigScript =
+  ScriptHash
+    . Hash.castHash
+    . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
 hashAnyScript ::
   Crypto crypto =>
@@ -199,10 +201,25 @@ getKeyCombinations (RequireMOf m msigs) =
   let perms = map (take m) $ List.permutations msigs
    in map (concat . List.concatMap getKeyCombinations) perms
 
-instance Crypto c => HashAnnotated (MultiSig c) c where
-  hashAnnotated = Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
-
 -- CBOR
+
+instance
+  (Crypto crypto) =>
+  ToCBOR (Script crypto)
+  where
+  toCBOR (MultiSigScript s) =
+    encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR s
+
+instance
+  Crypto crypto =>
+  FromCBOR (Annotator (Script crypto))
+  where
+  fromCBOR = decodeRecordSum "Script" $
+    \case
+      0 -> do
+        s <- fromCBOR
+        pure (2, MultiSigScript <$> s)
+      k -> invalidKey k
 
 instance
   (Crypto crypto) =>
@@ -220,19 +237,17 @@ instance
   Crypto crypto =>
   FromCBOR (Annotator (MultiSig' crypto))
   where
-  fromCBOR =
-    fmap snd $
-      decodeRecordNamed "MultiSig" fst $
-        decodeWord >>= \case
-          0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> fromCBOR
-          1 -> do
-            multiSigs <- sequence <$> decodeList fromCBOR
-            pure (2, RequireAllOf' <$> multiSigs)
-          2 -> do
-            multiSigs <- sequence <$> decodeList fromCBOR
-            pure (2, RequireAnyOf' <$> multiSigs)
-          3 -> do
-            m <- fromCBOR
-            multiSigs <- sequence <$> decodeList fromCBOR
-            pure $ (3, RequireMOf' m <$> multiSigs)
-          k -> invalidKey k
+  fromCBOR = decodeRecordSum "MultiSig" $
+    \case
+      0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> fromCBOR
+      1 -> do
+        multiSigs <- sequence <$> decodeList fromCBOR
+        pure (2, RequireAllOf' <$> multiSigs)
+      2 -> do
+        multiSigs <- sequence <$> decodeList fromCBOR
+        pure (2, RequireAnyOf' <$> multiSigs)
+      3 -> do
+        m <- fromCBOR
+        multiSigs <- sequence <$> decodeList fromCBOR
+        pure $ (3, RequireMOf' m <$> multiSigs)
+      k -> invalidKey k

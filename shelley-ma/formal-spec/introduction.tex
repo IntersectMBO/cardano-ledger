@@ -1,0 +1,12 @@
+\section{Introduction}
+
+The focus of this document is to give a description of the changes
+required to support multi-assets on the Shelley ledger as described in
+\cite{utxo_ma}. These multi-assets are implemented via token bundles,
+given by a type called $\Value$, which replace the type $\Coin$ of the
+Shelley ledger in many (but not all) cases.
+
+All aspects of the ledger not given in this document are as specified
+in the Shelley ledger design and implementation~\cite{shelley_spec},
+but if they depend on something that is changed in this version of the
+ledger they must use the definitions from this document.

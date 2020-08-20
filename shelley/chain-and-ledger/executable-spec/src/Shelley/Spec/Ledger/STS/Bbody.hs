@@ -18,7 +18,6 @@ module Shelley.Spec.Ledger.STS.Bbody
 where
 
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (eval, (∈))
 import Control.State.Transition
   ( Embed (..),
     STS (..),
@@ -29,7 +28,6 @@ import Control.State.Transition
     (?!),
   )
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set (Set)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain
@@ -47,10 +45,16 @@ import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
-import Shelley.Spec.Ledger.LedgerState (AccountState, LedgerState)
+import Shelley.Spec.Ledger.LedgerState
+  ( AccountState,
+    LedgerState,
+  )
+import Shelley.Spec.Ledger.OverlaySchedule
+  ( OverlaySchedule,
+    isOverlaySlot,
+  )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
-import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
 
 data BBODY crypto
@@ -59,8 +63,8 @@ data BbodyState crypto
   = BbodyState (LedgerState crypto) (BlocksMade crypto)
   deriving (Eq, Show)
 
-data BbodyEnv = BbodyEnv
-  { bbodySlots :: (Set SlotNo),
+data BbodyEnv crypto = BbodyEnv
+  { bbodySlots :: OverlaySchedule crypto,
     bbodyPp :: PParams,
     bbodyAccount :: AccountState
   }
@@ -79,7 +83,7 @@ instance
     Signal (BBODY crypto) =
       Block crypto
 
-  type Environment (BBODY crypto) = BbodyEnv
+  type Environment (BBODY crypto) = BbodyEnv crypto
 
   type BaseM (BBODY crypto) = ShelleyBase
 
@@ -129,7 +133,7 @@ bbodyTransition =
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
         let hkAsStakePool = coerceKeyRole . poolIDfromBHBody $ bhb
-        pure $ BbodyState ls' (incrBlocks (eval (bheaderSlotNo bhb ∈ oslots)) hkAsStakePool b)
+        pure $ BbodyState ls' (incrBlocks (isOverlaySlot (bheaderSlotNo bhb) oslots) hkAsStakePool b)
 
 instance
   ( Crypto crypto,

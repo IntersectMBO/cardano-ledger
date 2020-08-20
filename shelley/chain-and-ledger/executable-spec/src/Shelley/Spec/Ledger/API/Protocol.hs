@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StrictData #-}
@@ -22,10 +23,11 @@ module Shelley.Spec.Ledger.API.Protocol
     ChainTransitionError (..),
     tickChainDepState,
     updateChainDepState,
+    reupdateChainDepState,
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLenOf, encodeListLen)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.KES.Class
 import Cardano.Crypto.VRF.Class
@@ -33,36 +35,49 @@ import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Control.State.Transition.Extended
+  ( PredicateFailure,
+    TRC (..),
+    applySTS,
+    reapplySTS,
+  )
 import Data.Either (fromRight)
-import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes (Globals, Nonce, Seed)
-import Shelley.Spec.Ledger.BlockChain (BHBody, BHeader, bhbody, bheaderPrev, prevHashToNonce)
+import Shelley.Spec.Ledger.BlockChain
+  ( BHBody,
+    BHeader,
+    bhbody,
+    bheaderPrev,
+    prevHashToNonce,
+  )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
 import Shelley.Spec.Ledger.Keys (GenDelegs)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
     NewEpochState (..),
-    OBftSlot,
     getGKeys,
     _delegationState,
     _dstate,
     _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
+import Shelley.Spec.Ledger.OverlaySchedule
+  ( OverlaySchedule,
+  )
 import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
+import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto = LedgerView
   { lvProtParams :: PParams,
-    lvOverlaySched :: Map SlotNo (OBftSlot crypto),
+    lvOverlaySched :: OverlaySchedule crypto,
     lvPoolDistr :: PoolDistr crypto,
     lvGenDelegs :: GenDelegs crypto
   }
@@ -72,12 +87,15 @@ instance NoUnexpectedThunks (LedgerView crypto)
 
 instance Crypto crypto => FromCBOR (LedgerView crypto) where
   fromCBOR =
-    decodeListLenOf 4
-      >> LedgerView
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+    decodeRecordNamed
+      "LedgerView"
+      (const 4)
+      ( LedgerView
+          <$> fromCBOR
+          <*> fromCBOR
+          <*> fromCBOR
+          <*> fromCBOR
+      )
 
 instance Crypto crypto => ToCBOR (LedgerView crypto) where
   toCBOR
@@ -214,11 +232,14 @@ instance Crypto c => NoUnexpectedThunks (ChainDepState c)
 
 instance Crypto crypto => FromCBOR (ChainDepState crypto) where
   fromCBOR =
-    decodeListLenOf 3
-      >> ChainDepState
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+    decodeRecordNamed
+      "ChainDepState"
+      (const 3)
+      ( ChainDepState
+          <$> fromCBOR
+          <*> fromCBOR
+          <*> fromCBOR
+      )
 
 instance Crypto crypto => ToCBOR (ChainDepState crypto) where
   toCBOR
@@ -313,6 +334,49 @@ updateChainDepState
       res =
         flip runReader globals
           . applySTS @(STS.Prtcl.PRTCL crypto)
+          $ TRC
+            ( mkPrtclEnv lv epochNonce,
+              csProtocol,
+              bh
+            )
+      epochNonce = STS.Tickn.ticknStateEpochNonce csTickn
+
+-- | Re-update the chain state based upon a new block header.
+--
+--   This function does no validation of whether the header is internally valid
+--   or consistent with the chain it is being applied to; the caller must ensure
+--   that this is valid through having previously applied it.
+reupdateChainDepState ::
+  forall crypto.
+  ( Crypto crypto,
+    Cardano.Crypto.DSIGN.Class.Signable
+      (DSIGN crypto)
+      (Shelley.Spec.Ledger.OCert.OCertSignable crypto),
+    Cardano.Crypto.KES.Class.Signable
+      (KES crypto)
+      (Shelley.Spec.Ledger.BlockChain.BHBody crypto),
+    Cardano.Crypto.VRF.Class.Signable
+      (VRF crypto)
+      Shelley.Spec.Ledger.BaseTypes.Seed
+  ) =>
+  Globals ->
+  LedgerView crypto ->
+  BHeader crypto ->
+  ChainDepState crypto ->
+  ChainDepState crypto
+reupdateChainDepState
+  globals
+  lv
+  bh
+  cs@ChainDepState {csProtocol, csTickn} =
+    cs
+      { csProtocol = res,
+        csLabNonce = prevHashToNonce (bheaderPrev . bhbody $ bh)
+      }
+    where
+      res =
+        flip runReader globals
+          . reapplySTS @(STS.Prtcl.PRTCL crypto)
           $ TRC
             ( mkPrtclEnv lv epochNonce,
               csProtocol,

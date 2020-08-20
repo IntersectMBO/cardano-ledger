@@ -18,9 +18,9 @@ where
 import Cardano.Prelude hiding (trace, traceM, traceShow)
 import Test.Cardano.Prelude
 
-import Control.Lens ((^.))
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
+import Lens.Micro ((^.))
 
 import Hedgehog (MonadTest, evalEither, forAll, property)
 

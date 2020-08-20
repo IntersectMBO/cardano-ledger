@@ -94,7 +94,7 @@ This function must produce a unique id for each unique transaction body.
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{pup}
       & \ProposedPPUpdates
-      & \KeyHashGen \mapsto \PPUpdate
+      & \KeyHashGen \mapsto \PParamsUpdate
       & \text{proposed updates}
       \\
       \var{up}
@@ -138,7 +138,7 @@ This function must produce a unique id for each unique transaction body.
       \fun{txwitsScript} & \Tx \to (\HashScr \mapsto \Script) & \text{script witnesses}\\
       \fun{txup} & \Tx \to \Update^? & \text{protocol parameter update}\\
       \fun{txMD} & \Tx \to \MetaData^? & \text{metadata}\\
-      \fun{txMDhash} & \Tx \to \MetaDataHash & \text{metadata hash}\\
+      \fun{txMDhash} & \Tx \to \MetaDataHash^? & \text{metadata hash}\\
     \end{array}
   \end{equation*}
   %
@@ -148,6 +148,7 @@ This function must produce a unique id for each unique transaction body.
       \txid{} & \TxBody \to \TxId & \text{compute transaction id}\\
       \fun{validateScript} & \Script \to \Tx \to \Bool & \text{script interpreter}\\
       \fun{hashMD} & \MetaData \to \MetaDataHash & \text{hash the metadata}\\
+      \fun{bootstrapAttrSize} & \AddrBS \to \N & \text{bootstrap attribute size}\\
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}

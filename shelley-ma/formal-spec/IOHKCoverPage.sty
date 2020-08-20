@@ -1,0 +1,266 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{IOHKCoverPage}[2019/09/12]
+
+\RequirePackage{fancyhdr}
+%\RequirePackage{xcolor}
+
+\newif\if@deliverable
+\newif\if@teamreport
+\newif\if@wpreport
+\newif\if@techreport
+\DeclareOption{deliverable}
+  {\@deliverabletrue}
+\DeclareOption{teamreport}
+  {\@teamreporttrue}
+\DeclareOption{wpreport}
+  {\@wpreporttrue}
+\DeclareOption{techreport}
+  {\@techreporttrue}
+  \ProcessOptions
+%
+\def\IOHK{IOHK}
+%
+\def\reportnumber#1{\def\@reportnumber{#1}}
+\def\reportmonth#1{\def\@reportmonth{#1}}
+\def\reportyear#1{\def\@reportyear{#1}}
+\def\email#1{\def\@email{#1}}
+\def\@reportnumber{?}
+\def\@reportmonth{}
+\def\@reportyear{}
+%
+\def\Project#1{\def\@Project{#1}}
+\def\ReportNumber#1{\def\@ReportNumber{#1}}
+\def\DeliverableNumber#1{\def\@DeliverableNumber{#1}}
+\def\DeliverableTitle#1#2{\def\@DeliverableTitle{#1}\def\@ShortDelTitle{#2}}
+\def\DueDate#1{\def\@DueDate{#1}}
+%% should be possible to convert! KH
+\def\SubmissionDate#1#2{\def\@SubmissionDate{#1}\def\@ShortSubmissionDate{#2}}
+\def\VersionDate#1{\def\@VersionDate{#1}}
+\def\LeaderName#1{\def\@LeaderName{#1}}
+\def\Authors#1{\def\@Authors{#1}}
+\def\DeliverableResponsible#1{\def\@DeliverableResponsible{#1}}
+\def\Institution#1{\def\@Institution{#1}}
+\def\InstitutionAddress#1{\def\@InstitutionAddress{#1}}
+\def\EditorName#1{\def\@EditorName{#1}}
+\def\WorkPackage#1{\def\@WorkPackage{#1}}
+\def\TaskNumber#1{\def\@TaskNumber{{\@emph Task number:} #1}}
+\def\Version#1{\def\@Version{#1}}
+\def\SVNRevision#1{\def\@SVNRevision{#1}}
+\def\LastEditor#1{\def\@LastEditor{#1}}
+%\def\Reviewers#1{\def\@ReviewersTitle{\@bold Reviewers:}\def\@Reviewers{#1}}
+\def\Reviewers#1{\@Reviewerstrue\def\@Reviewers{#1}}
+\def\LastDate#1{\def\@LastDate{#1}}
+\def\DisseminationPU{\def\@IsPU{$\surd$}}
+\def\DisseminationCO{\def\@IsCO{$\surd$}}
+\def\DisseminationDR{\def\@IsDR{$\surd$}}
+\newcommand{\Revision}[5]{\@writefile{cov}{\hline \hfil #1\hfil&#2&#3&#4&#5\\}}
+\newcommand{\Task}[3]{\@Taskstrue\@writefile{par}{\hline #1&#2&#3\\}}
+
+\def\@Project{Cardano}
+\def\@Authors{XXXX}
+\def\@ReportNumber{XXXX}
+\def\@DeliverableNumber{XXXX}
+\def\@DeliverableTitle{XXXX}
+\def\@ShortDelTitle{\@DeliverableTitle}
+\def\@DueDate{XXXX}
+\def\@SubmissionDate{XXXX}
+\def\@ShortSubmissionDate{\@SubmissionDate}
+\def\@LeaderName{XXXX}
+\def\@DeliverableResponsible{XXXX}
+\def\@Institution{XXXX}
+\def\@InstitutionAddress{XXXX}
+\def\@EditorName{XXXX}
+\def\@WorkPackage{XXXX}
+\def\@TaskNumber{~}
+\def\@Version{XXXX}
+\def\@SVNRevision{XXXX}
+\def\@LastEditor{XXXX}
+\def\@Reviewers{~}
+\newif\if@Reviewers
+\newif\if@Tasks
+\@Tasksfalse
+\def\@LastDate{XXXX}
+\def\@IsDR{}
+\def\@IsPP{}
+\def\@IsPU{}
+\def\@IsRE{}
+\def\@IsCO{}
+\def\@Revision{}
+\def\@Task{}
+
+%%cover fonts
+\def\@ProjFont{\fontsize{24}{28}\usefont{T1}{ptm}{b}{n}\selectfont}
+\def\@TitleFont{\fontsize{18}{24}\usefont{T1}{ptm}{b}{n}\selectfont}
+\def\@Large{\fontsize{18}{21}\usefont{T1}{ptm}{m}{n}\selectfont}
+\def\@Small{\fontsize{9}{11}\usefont{T1}{ptm}{m}{n}\selectfont}
+\def\@font{\fontsize{12}{12}\usefont{T1}{ptm}{m}{n}\selectfont}
+\def\@sc{\fontshape{sc}\selectfont}
+\def\@emph{\fontshape{sl}\selectfont}
+\def\@bold{\fontseries{b}\selectfont}
+
+
+\newdimen\@CoverPageWidth
+\newdimen\@CoverPageHeight
+\newdimen\@TableWidth
+\@CoverPageWidth=\paperwidth
+\@CoverPageHeight=\paperheight
+\@TableWidth=\paperwidth
+\advance\@CoverPageWidth by -1.5in
+\advance\@CoverPageHeight by -2in
+\advance\@TableWidth by -5cm
+\newdimen\TableWidth
+\TableWidth=\@TableWidth
+
+
+\newcommand{\@CoverBody}{
+\@font
+\parbox{\linewidth}{\centering
+ \vspace{15mm}
+% {Project no. 644235}\par
+ \vspace{6mm}
+ {\@ProjFont \Project{}}\par
+ \vspace{6mm}
+% {Research \& Innovation Action (RIA)}\par
+% {\@sc \large{\textbf{Refactoring Parallel Heterogeneous Resource-Aware Applications -- a Software Engineering Approach}}}\par
+ \vspace{10mm}
+ \if@deliverable
+  {\@TitleFont  \@DeliverableTitle\\
+   \vspace{18mm}
+   {Deliverable }\@DeliverableNumber}\par
+ \vspace{16mm}
+ \begin{large}
+ \begin{center}
+   {\@Authors }
+ \end{center}
+ \end{large}
+ \par
+  \vspace{1cm}
+%  \begin{tabular}{r@{: }l}
+%   Due date of deliverable& \@DueDate\\
+%   Actual submission date& \@SubmissionDate
+%    \end{tabular}
+  \par
+ \fi
+ \if@techreport
+  {\@TitleFont  \@DeliverableTitle\\
+   \vspace{3mm}}
+  {\Project{} Technical Report \# \@ReportNumber}\par
+  \vspace{6mm}
+  {\@Authors \vspace{1cm} }\par
+ \fi
+
+}
+\parbox{\linewidth}{\flushright
+ \vspace{10mm}
+ \if@techreport
+    Report Registration Date: \@SubmissionDate
+    \else
+   {\@emph Project:} \@Project \par
+   \vspace{5mm}
+ \fi
+ \if@deliverable
+  {\@emph Type:} Deliverable\par
+  {\@emph Due Date:} \@DueDate\par
+  % {\@emph WP number:} \@WorkPackage\par
+  %{\@TaskNumber}\par
+  \vspace{5mm}
+  {\@emph Responsible team:} \@DeliverableResponsible\par
+  {\@emph Editor:} \@EditorName\par
+  {\@emph Team Leader:} \@LeaderName\par
+ \fi
+ \if@teamreport
+  \vspace{5mm}
+  {\@emph Report type:} Team Leader's Progress Report\par
+  \vspace{5mm}
+  {\@emph Name of Team leader:} \@LeaderName\par
+  {\@emph Institution \& address:} \@InstitutionAddress\par
+ \fi
+ \if@wpreport
+  {\@emph Report type:} WP Leader's Progress Report\par
+  {\@emph WP number:} \@WorkPackage\par
+  \vspace{5mm}
+  {\@emph Name of WP leader:} \@LeaderName\par
+  {\@emph Institution \& address:} \@InstitutionAddress\par
+ \fi
+}
+\vfill
+\parbox{\linewidth}{\centering
+{Version \@Version}\par
+ {\@SubmissionDate}\par
+ \vspace{5mm}}
+{
+\newdimen\@msize
+\@msize=\linewidth
+\advance\@msize by -1cm
+\advance\@msize by -6\tabcolsep
+\begin{tabular}{ | p{0.7cm} | p{\@msize} | p{0.3cm} |}
+ \hline
+ \multicolumn{3}{|c|}{{\@bold Dissemination Level}}\\
+ \hline
+ {\@bold PU} & Public & \@IsPU\\
+ \hline
+ {{\@bold CO}} & Confidential, only for company distribution & \@IsCO\\
+ \hline
+ {\@bold DR} & Draft, not for general circulation & \@IsDR\\
+ \hline
+ \end{tabular}
+ }
+}
+
+\newcommand{\@PrintCoverPage}{\bgroup\global\setbox255\vbox{%
+ \vspace*{-.25in}%
+ \noindent\hspace*{-.25in}%
+ \renewcommand{\thepage}{\roman{page}}
+ \pagestyle{myheadings} \markboth{}{}
+
+ \rlap{
+  \begin{minipage}[t][\@CoverPageHeight][t]{\@CoverPageWidth}%
+   \parbox{\linewidth}{
+    \begin{minipage}[c]{6cm}
+    \includegraphics[width=6cm]{iohk-share-logo.jpg}
+    \end{minipage}
+    \hfill
+%    \begin{minipage}[c]{3.5cm}
+%     \includegraphics[width=3.5cm]{figures/H2020.jpg}
+%    \end{minipage}
+   }
+   \@CoverBody
+  \end{minipage}
+ }%
+}\egroup\shipout\box255}
+
+
+\newcommand{\@PrintBackCoverPage}{%
+\pagestyle{myheadings}%
+\markboth{\@Project: \@ShortDelTitle~(v.\@Version, \@ShortSubmissionDate)}%
+         {\@Project: \@ShortDelTitle~(v.\@Version, \@ShortSubmissionDate)}%
+}
+
+
+
+\AtBeginDocument{\@PrintCoverPage\@PrintBackCoverPage%
+  \renewcommand{\thepage}{\roman{page}}%
+%  \setcounter{page}{1}%
+}
+
+%% Added change log -- KH
+
+\newcounter{change}
+
+\newenvironment{changelog}{%
+\clearpage
+\setcounter{change}{0}
+\section*{Change Log}
+%
+\begin{tabular}{||p{0.8cm}|p{1.6cm}|p{3cm}|p{1.5cm}|p{7.6cm}||}%
+\hline\hline%
+\textbf{Rev.} & \textbf{Date} & \textbf{Who} & \textbf{Team} & \textbf{What}%
+}{%
+\\\hline\hline%
+\end{tabular}%
+\clearpage%
+}
+
+\newcommand{\change}[4]{\stepcounter{change}%
+\\\hline%
+\arabic{change}&#1&#2&#3&#4}

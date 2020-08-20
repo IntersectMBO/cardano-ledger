@@ -243,36 +243,11 @@ It has no environment or signal, and the state is $\EpochState$.
     \vdash \var{\_} \trans{mir}{} \var{\_} \subseteq
     \powerset (\EpochState \times \EpochState)
   \end{equation*}
-  %
-  \emph{Helper function}
-  \begin{align*}
-      & \fun{mirUpdates} \in \InstantaneousRewards \to (\StakeCredential\mapsto\Coin) \to \\
-      & ~~~(\AddrRWD \mapsto \Coin)\times(\AddrRWD \mapsto \Coin)
-      \\
-      & \fun{mirUpdates}~(\var{irReserves},~\var{irTreasury})~\var{rewards} =
-      (\var{updateR},~\var{updateT})\\
-      & ~~~~\where \\
-      & ~~~~~~~~~\var{updateR} =
-        \left\{
-        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
-        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irReserves}
-        \right\}
-        \\
-      & ~~~~~~~~~\var{updateT} =
-        \left\{
-        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
-        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irTreasury}
-        \right\}
-        \\
-  \end{align*}
   \caption{MIR transition-system types}
   \label{fig:ts-types:mir}
 \end{figure}
 
 Figure~\ref{fig:rules:mir} defines the MIR state transition.
-The transition uses the function $\fun{mirUpdates}$ to restrict
-the two instantaneous rewards mappings to the registered stake keys,
-and transforms the keys of the mappiing to reward accouts.
 
 If the reserve and treasury pots are large enough to cover the sum
 of the corresponding instantaneous rewards,
@@ -291,20 +266,29 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
       \\
       (\var{treasury},~\var{reserves})\leteq\var{acnt}
       &
-      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{rewards}
+      (\var{irReserves},~\var{irTreasury})\leteq\var{i_{rwd}}
+      \\~\\
+      \var{irwdR}\leteq
+        \left\{
+        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irReserves}
+        \right\}
       \\
-      \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateR}}v
+      \var{irwdT}\leteq
+        \left\{
+        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irTreasury}
+        \right\}
+      \\~\\
+      \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{irwdR}}v
       &
-      \var{totT}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateT}}v
+      \var{totT}\leteq\sum\limits_{\wcard\mapsto v\in\var{irwdT}}v
       \\
       \var{totR}\leq\var{reserves}
       &
       \var{totT}\leq\var{treasury}
       \\~\\
-      \var{acnt'}\leteq
-        (\varUpdate{\var{treasury}-\var{totT}},~\varUpdate{\var{reserves}-\var{totR}})
-      \\
-      \var{rewards'}\leteq\var{rewards}\unionoverridePlus\var{updateR}\unionoverridePlus\var{updateT}
+      \var{rewards'}\leteq\var{rewards}\unionoverridePlus\var{irwdR}\unionoverridePlus\var{irwdT}
       \\
       \var{ds'} \leteq
       (\varUpdate{\var{rewards}'},~\var{delegations},~
@@ -322,7 +306,7 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
       \end{array}\right)}
       \trans{mir}{}
       {\left(\begin{array}{c}
-            \varUpdate{\var{acnt'}} \\
+            \varUpdate{(\varUpdate{\var{treasury}-\var{totT}},~\varUpdate{\var{reserves}-\var{totR}})} \\
             \var{ss} \\
             (\var{us},~(\varUpdate{\var{ds'}},~\var{ps})) \\
             \var{prevPP} \\
@@ -342,11 +326,23 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
       \\
       (\var{treasury},~\var{reserves})\leteq\var{acnt}
       &
-      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{rewards}
+      (\var{irReserves},~\var{irTreasury})\leteq\var{i_{rwd}}
+      \\~\\
+      \var{irwdR}\leteq
+        \left\{
+        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irReserves}
+        \right\}
       \\
-      \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateR}}v
+      \var{irwdT}\leteq
+        \left\{
+        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irTreasury}
+        \right\}
+      \\~\\
+      \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{irwdR}}v
       &
-      \var{totT}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateT}}v
+      \var{totT}\leteq\sum\limits_{\wcard\mapsto v\in\var{irwdT}}v
       \\
       \var{totR}>\var{reserves}~\lor~\var{totT}>\var{treasury}
       \\~\\
@@ -403,7 +399,7 @@ of
 
 Figure~\ref{fig:ts-types:newepoch} also defines an abstract pseudorandom function
 $\fun{overlaySchedule}$ for creating the OBFT overlay schedule for each new epoch,
-as explained in section 3.9.2 of~\cite{delegation_design}.
+as explained in section 3.8.2 of~\cite{delegation_design}.
 The function takes a set of genesis keys, a seed, and the protocol parameters
 (of which the decentralization parameter $d$ and the active slot coeffient $f$ are used).
 It must create $(d\cdot\SlotsPerEpoch)$-many OBFT slots, $(f\cdot d\cdot \SlotsPerEpoch)$
@@ -458,6 +454,30 @@ of which are active.
     \_ \vdash \var{\_} \trans{newepoch}{\_} \var{\_} \subseteq
     \powerset (\NewEpochEnv \times \NewEpochState \times \Epoch \times \NewEpochState)
   \end{equation*}
+  %
+  \emph{Helper function}
+  \begin{align*}
+      & \fun{calculatePoolDistr} \in \Snapshot \to \PoolDistr \\
+      & \fun{calculatePoolDistr}~(\var{stake},~\var{delegs},~\var{poolParams}) = \\
+      & ~~~\left\{\var{hk_p}\mapsto(\sigma,~\fun{poolVRF}~\var{p})
+            ~\Big\vert~
+            {
+              \begin{array}{r@{~\in~}l}
+                \var{hk_p}\mapsto\sigma & \var{sd} \\
+                \var{hk_p}\mapsto\var{p} & \var{poolParams}
+              \end{array}
+            }
+            \right\}\\
+      & ~~~~\where \\
+      & ~~~~~~~~~\var{total} = \sum_{\_ \mapsto c\in\var{stake}} c \\
+      & ~~~~~~~~~\var{sd} = \fun{aggregate_{+}}~\left(\var{delegs}^{-1}\circ
+                     \left\{\left(
+                       \var{hk}, \frac{\var{c}}{\var{total}}
+                     \right) \vert (\var{hk},
+                     \var{c}) \in \var{stake}
+                     \right\}\right) \\
+  \end{align*}
+
   \caption{NewEpoch transition-system types}
   \label{fig:ts-types:newepoch}
 \end{figure}
@@ -518,26 +538,10 @@ In the first case, the new epoch state is updated as follows:
       }
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
-          (\var{acnt},~\var{ss},~\wcard,~\wcard,~\var{pp}) & \var{es'''} \\
+         (\var{acnt},~\var{ss},~\wcard,~\wcard,~\var{pp}) & \var{es'''} \\
          (\wcard,~\var{pstake_{set}},~\wcard,~\wcard) & \var{ss} \\
-         (\var{stake},~\var{delegs},~\var{poolPrms}) & \var{pstake_{set}} \\
-         total & \sum_{\_ \mapsto c\in\var{stake}} c \\
-          \var{sd} & \fun{aggregate_{+}}~\left(\var{delegs}^{-1}\circ
-                     \left\{
-                     (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
-                     \var{c}) \in \var{stake}
-                 \right\}\right) \\
-          \var{pd'} &
-            \left\{\var{hk_p}\mapsto(\sigma,~\fun{poolVRF}~\var{p})
-            ~\Big\vert~
-            {
-              \begin{array}{r@{~\in~}l}
-                \var{hk_p}\mapsto\sigma & \var{sd} \\
-                \var{hk_p}\mapsto\var{p} & \var{poolPrms}
-              \end{array}
-            }
-            \right\}\\
-          \var{osched'} & \overlaySchedule{e}{gkeys}{pp} \\
+         \var{pd'} & \fun{calculatePoolDistr}~\var{pstake_{set}} \\
+         \var{osched'} & \overlaySchedule{e}{gkeys}{pp} \\
        \end{array}}
     }
     {
@@ -867,7 +871,7 @@ execution of the transition role is as follows:
       &
       ru = \Nothing
       \\~\\
-      ru' \leteq \createRUpd{b}{es}{\MaxLovelaceSupply}
+      ru' \leteq \createRUpd{\SlotsPerEpoch}{b}{es}{\MaxLovelaceSupply}
     }
     {
       {\begin{array}{c}
@@ -1008,12 +1012,12 @@ Three transitions are done:
     {
       {
         {\begin{array}{c}
-           \var{s} \\
+           \var{slot} \\
            \var{gkeys} \\
          \end{array}}
         \vdash
         \var{nes}
-        \trans{\hyperref[fig:rules:new-epoch]{newepoch}}{\epoch{s}}
+        \trans{\hyperref[fig:rules:new-epoch]{newepoch}}{\epoch{slot}}
         \var{nes}'
       }
       \\~\\
@@ -1024,13 +1028,13 @@ Three transitions are done:
            \var{b_{prev}} \\
            \var{es} \\
          \end{array}}
-        \vdash \var{ru'}\trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{s}} \var{ru''}
+        \vdash \var{ru'}\trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{slot}} \var{ru''}
       }
       \\~\\
       (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es'},~\var{ru'},~\var{pd'},\var{osched'})
       \leteq\var{nes'}
       \\
-      \var{es''}\leteq\fun{adoptGenesisDelegs}~\var{es'}~\var{s}
+      \var{es''}\leteq\fun{adoptGenesisDelegs}~\var{es'}~\var{slot}
       \\
       \var{nes''}\leteq
       (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es''},~\var{ru''},~\var{pd'},\var{osched'})
@@ -1040,7 +1044,7 @@ Three transitions are done:
       {\begin{array}{c}
          \var{gkeys} \\
        \end{array}}
-      \vdash\var{nes}\trans{tick}{\var{s}}\varUpdate{\var{nes''}}
+      \vdash\var{nes}\trans{tick}{\var{slot}}\varUpdate{\var{nes''}}
     }
   \end{equation}
   \caption{Tick rules}
@@ -1241,7 +1245,7 @@ parameters. The function checks:
 \subsection{Overlay Schedule}
 \label{sec:overlay-schedule}
 
-The transition from the boostrap era to a fully decentralized network is explained in
+The transition from the bootstrap era to a fully decentralized network is explained in
 section 3.9.2 of~\cite{delegation_design}.
 Key to this transition is a protocol parameter $d$ which controls how many slots are governed by
 the genesis nodes via OBFT, and which slots are open to any registered stake pool.
@@ -2106,7 +2110,7 @@ candidate nonces for Shelley.
           \wcard \\
           \var{us}
         \end{array}
-      \right)~\var{bn}~\var{gd}
+      \right)~\var{gd}~\var{bn}
       =
       \fun{initialShelleyState}~
       \left(

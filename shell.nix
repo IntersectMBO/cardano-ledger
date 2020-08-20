@@ -20,13 +20,16 @@ let
 
     # These programs will be available inside the nix-shell.
     buildInputs = with haskellPackages; [
-      cabal-install
       niv
       pkg-config
       hlint
       weeder
       ormolu.ormolu
     ];
+
+    tools = {
+      cabal = "3.2.0.0";
+    };
 
     # Prevents cabal from choosing alternate plans, so that
     # *all* dependencies are provided by Nix.

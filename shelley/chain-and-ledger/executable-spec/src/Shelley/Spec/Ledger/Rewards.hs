@@ -30,7 +30,6 @@ import Cardano.Binary
     decodeDouble,
     encodeDouble,
     encodeListLen,
-    enforceSize,
   )
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Cardano.Slotting.Slot (EpochSize)
@@ -73,7 +72,7 @@ import Shelley.Spec.Ledger.EpochBoundary
   )
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
-import Shelley.Spec.Ledger.Serialization (decodeSeq, encodeFoldable)
+import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, decodeSeq, encodeFoldable)
 import Shelley.Spec.Ledger.TxData (PoolParams (..), getRwdCred)
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
@@ -209,7 +208,7 @@ instance FromCBOR PerformanceEstimate where
 data NonMyopic crypto = NonMyopic
   { likelihoodsNM :: !(Map (KeyHash 'StakePool crypto) Likelihood),
     rewardPotNM :: !Coin,
-    snapNM :: !(SnapShot crypto)
+    snapNM :: !(SnapShot crypto) -- TODO we can remove this map
   }
   deriving (Show, Eq, Generic)
 
@@ -234,16 +233,16 @@ instance Crypto crypto => ToCBOR (NonMyopic crypto) where
 
 instance Crypto crypto => FromCBOR (NonMyopic crypto) where
   fromCBOR = do
-    enforceSize "NonMyopic" 3
-    aps <- fromCBOR
-    rp <- fromCBOR
-    s <- fromCBOR
-    pure $
-      NonMyopic
-        { likelihoodsNM = aps,
-          rewardPotNM = rp,
-          snapNM = s
-        }
+    decodeRecordNamed "NonMyopic" (const 3) $ do
+      aps <- fromCBOR
+      rp <- fromCBOR
+      s <- fromCBOR
+      pure $
+        NonMyopic
+          { likelihoodsNM = aps,
+            rewardPotNM = rp,
+            snapNM = s
+          }
 
 -- | Desirability calculation for non-myopic utily,
 -- corresponding to f^~ in section 5.6.1 of
@@ -353,10 +352,11 @@ rewardOnePool ::
   PoolParams crypto ->
   Stake crypto ->
   Rational ->
+  Rational ->
   Coin ->
   Set (Credential 'Staking crypto) ->
   Map (Credential 'Staking crypto) Coin
-rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma (Coin total) addrsRew =
+rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma sigmaA (Coin total) addrsRew =
   rewards'
   where
     Coin ostake =
@@ -370,7 +370,7 @@ rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma (Coin total) add
       if pledge <= ostake
         then maxPool pp r sigma pr
         else 0
-    appPerf = mkApparentPerformance (_d pp) sigma blocksN blocksTotal
+    appPerf = mkApparentPerformance (_d pp) sigmaA blocksN blocksTotal
     poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
     tot = fromIntegral total
     mRewards =
@@ -379,8 +379,10 @@ rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma (Coin total) add
             memberRew poolR pool (StakeShare (fromIntegral c % tot)) (StakeShare sigma)
           )
           | (hk, Coin c) <- Map.toList stake,
-            hk `Set.notMember` (KeyHashObj `Set.map` _poolOwners pool)
+            notPoolOwner hk
         ]
+    notPoolOwner (KeyHashObj hk) = hk `Set.notMember` _poolOwners pool
+    notPoolOwner (ScriptHashObj _) = False
     iReward = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
     potentialRewards = Map.insert (getRwdCred $ _poolRAcnt pool) iReward mRewards
     rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
@@ -410,9 +412,11 @@ reward
   slotsPerEpoch = (rewards', hs)
     where
       totalBlocks = sum b
+      Coin totalActive = sum . unStake $ stake
       results = do
         (hk, pparams) <- Map.toList poolParams
         let sigma = fromIntegral pstake % fromIntegral total
+            sigmaA = fromIntegral pstake % fromIntegral totalActive
             blocksProduced = Map.lookup hk b
             actgr@(Stake s) = poolStake hk delegs stake
             Coin pstake = sum s
@@ -428,6 +432,7 @@ reward
                     pparams
                     actgr
                     sigma
+                    sigmaA
                     (Coin total)
                     addrsRew
             ls =

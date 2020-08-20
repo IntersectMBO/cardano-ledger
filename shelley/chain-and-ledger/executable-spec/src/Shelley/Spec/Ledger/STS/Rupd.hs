@@ -38,6 +38,7 @@ import Shelley.Spec.Ledger.Slot
     SlotNo,
     epochInfoEpoch,
     epochInfoFirst,
+    epochInfoSize,
     (+*),
   )
 
@@ -62,15 +63,16 @@ instance NoUnexpectedThunks (PredicateFailure (RUPD crypto))
 rupdTransition :: Typeable crypto => TransitionRule (RUPD crypto)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
-  (epoch, slot, maxLL) <- liftSTS $ do
+  (slotsPerEpoch, slot, maxLL) <- liftSTS $ do
     ei <- asks epochInfo
     sr <- asks randomnessStabilisationWindow
     e <- epochInfoEpoch ei s
+    slotsPerEpoch <- epochInfoSize ei e
     slot <- epochInfoFirst ei e <&> (+* (Duration sr))
     maxLL <- asks maxLovelaceSupply
-    return (e, slot, maxLL)
+    return (slotsPerEpoch, slot, maxLL)
   if s <= slot
     then pure ru
     else case ru of
-      SNothing -> SJust <$> (liftSTS $ createRUpd epoch b es (Coin $ fromIntegral maxLL))
+      SNothing -> SJust <$> (liftSTS $ createRUpd slotsPerEpoch b es (Coin $ fromIntegral maxLL))
       SJust _ -> pure ru

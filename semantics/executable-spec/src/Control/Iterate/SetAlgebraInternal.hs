@@ -28,6 +28,7 @@ import qualified Data.Map.Strict as Map
 import Data.Map.Strict(Map)
 import Data.Map.Internal(Map(..),link2,link)
 
+
 import qualified Data.Set as Set
 import Data.Set(Set)
 
@@ -355,7 +356,12 @@ instance Iter Map.Map where
 -- ===========================================================
 -- Some times we need to write our own version of functions
 -- over  Map.Map that do not appear in the library
--- A version of Map.withoutKeys where both parts are Map.Map
+-- For example
+-- 1) version of Map.withoutKeys where both parts are Map.Map
+-- 2) Comparing that two maps have exactly the same set of keys
+-- 3) The intersection of two maps guarded by a predicate.
+--    ((dom stkcred) ◁ deleg) ▷ (dom stpool))   ==>
+--    intersectDomP (\ k v -> Map.member v stpool) stkcred deleg
 -- ============================================================
 
 noKeys :: Ord k => Map k a -> Map k b -> Map k a
@@ -418,6 +424,21 @@ splitMember k0 m = case go k0 m of
 {-# INLINABLE splitMember #-}
 
 data StrictTriple a b c = StrictTriple !a !b !c
+
+-- | intersetDomP p m1 m2 == Keep the key and value from m2, iff (the key is in the dom of m1) && ((p key value) is true)
+intersectDomP:: Ord k => (k -> v2 -> Bool) -> Map k v1 -> Map k v2 -> Map k v2
+intersectDomP p Tip _ = Tip
+intersectDomP p  _ Tip = Tip
+intersectDomP p t1 t2@(Bin _ k v l2 r2) =
+   if mb && (p k v)
+      then link k v l1l2 r1r2
+      else link2 l1l2 r1r2
+  where
+    !(l1, mb, r1) = splitMember k t1
+    !l1l2 = intersectDomP p l1 l2
+    !r1r2 = intersectDomP p r1 r2
+{-# INLINABLE intersectDomP #-}
+
 
 -- ============== Iter BiMap ====================
 
@@ -493,6 +514,8 @@ data Exp t where
    Singleton:: (Ord k) => k -> v -> Exp(Single k v)
    SetSingleton:: (Ord k) => k -> Exp(Single k ())
    KeyEqual:: (Ord k,Iter f,Iter g) => Exp (f k v) -> Exp(g k u) -> Exp Bool
+
+-- deriving instance NFData t => NFData(Exp t)
 
 -- =================================================================
 -- | Basic types are those that can be embedded into Exp.
@@ -976,6 +999,7 @@ compute:: Exp t -> t
 compute (Base rep relation) = relation
 
 compute (Dom (Base SetR rel)) = rel
+compute (Dom (Base MapR x)) = Sett (Map.keysSet x)
 compute (Dom (Singleton k v)) = Sett (Set.singleton k)
 compute (Dom (SetSingleton k)) = Sett (Set.singleton k)
 compute (Dom (Base rep rel)) = Sett(domain rel)
@@ -992,6 +1016,7 @@ compute (DRestrict (Base SetR (Sett set)) (Base MapR m)) = Map.restrictKeys m se
 compute (DRestrict (SetSingleton k) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Singleton k v) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Base SetR (Sett s1)) (Base SetR (Sett s2))) = Sett(Set.intersection s1 s2)
+compute (DRestrict (Dom (Base MapR x)) (Base MapR y)) = Map.intersection y x
 compute (DRestrict (Base SetR x1) (Base rep x2)) = materialize rep $ do { (x,y,z) <- x1 `domEq` x2; one (x,z) }
 compute (DRestrict (Dom (Base _ x1)) (Base rep x2)) = materialize rep $ do { (x,y,z) <- x1 `domEq` x2; one (x,z) }
 compute (DRestrict (SetSingleton k) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle k) `domEq` x2; one (x,z) }
@@ -1000,6 +1025,8 @@ compute (DRestrict (Rng (Singleton _ v)) (Base rep x2)) = materialize rep $  do 
   -- This case inspired by set expression in EpochBoundary.hs
 compute (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR state)) =
    materialize MapR (do { (x,y,z) <- delegs `domEq` state; when (not (y==hk)); one(x,z) })
+  -- This case inspired by set expression ((dom rewards' ◁ delegs) ▷ dom poolParams)  in LedgerState.hs
+compute (RRestrict (DRestrict (Dom (Base MapR x)) (Base MapR y)) (Dom (Base MapR z))) = intersectDomP (\ _k v -> Map.member v z) x y
 compute (e@(DRestrict _ _ )) = run(compile e)
 
 compute (DExclude (SetSingleton n) (Base MapR m)) = Map.withoutKeys m (Set.singleton n)
@@ -1041,7 +1068,10 @@ compute (NotElem k set) = not $ haskey k (compute set)
 
 compute (Subset (Base SetR (Sett x)) (Base SetR (Sett y))) = Set.isSubsetOf x y
 compute (Subset (Base SetR (Sett x)) (Base MapR y)) = all (`Map.member` y) x
+compute (Subset (Base SetR (Sett x)) (Dom (Base MapR y))) = all (`Map.member` y) x
 compute (Subset (Base MapR x) (Base MapR y)) = Map.foldrWithKey accum True x
+   where accum k a ans = Map.member k y && ans
+compute (Subset (Dom (Base MapR x)) (Dom (Base MapR y))) = Map.foldrWithKey accum True x
    where accum k a ans = Map.member k y && ans
 compute (Subset x y) = runCollect (lifo left) True (\ (k,v) ans -> haskey k right && ans)
   where left = (fst(compile x))
@@ -1053,6 +1083,7 @@ compute (e@(Intersect a b)) = run(compile e)
 
 compute (UnionOverrideLeft (Base rep x) (Singleton k v))  = addkv (k,v) x (\ new old -> old) -- The value on the left is preferred over the right, so 'addkv' chooses 'old'
 compute (UnionOverrideLeft (Base MapR d0) (Base MapR d1)) = Map.union d0 d1  -- 'Map.union' is left biased, just what we want.
+compute (UnionOverrideLeft (DExclude (Base SetR (Sett s1)) (Base MapR m2)) (Base MapR m3)) =  Map.union (Map.withoutKeys m2 s1) m3
 compute (e@(UnionOverrideLeft a b)) = run(compile e)
 
 compute (UnionOverrideRight (Base rep x) (Singleton k v)) = addkv (k,v) x (\ new old -> new) -- The value on the right is preferred over the left, so 'addkv' chooses 'new'
@@ -1105,12 +1136,11 @@ chainStep
   :: (Ord b, Ord a) =>
      (a, b, Query a b)
      -> Query b w -> Fun (a -> (b, w) -> u) -> Collect (a, u, Query a u)
-chainStep (f@(d,r1,f1)) g comb = do
-   (r2,w,g1) <- lubQuery r1 g
-   case compare r1 r2 of
-      EQ -> one (d,apply comb d (r2,w),ChainD f1 g comb)
-      LT -> do { trip <- nxtQuery f1; chainStep trip g comb}
-      GT -> error ("lub makes this unreachable")
+chainStep (f@(d,r1,f1)) g comb =
+   case lookup r1 g of   -- recall that the values 'r1' from f, are not iterated in ascending order, only the keys 'd' are ascending
+     Just w -> one(d,apply comb d (r1,w),ChainD f1 g comb)
+     Nothing -> do { trip <- nxtQuery f1; chainStep trip g comb}
+
 
 -- ==== And with Projection ====
 andPstep
@@ -1261,6 +1291,7 @@ instance Show (BaseRep f k v) where
   show BiMapR = "BiMap"
 
 instance Show (Exp t) where
+  show (Base MapR x) = "Map("++show(Map.size x)++")?"
   show (Base rep x) = show rep++"?"
   show (Dom x) = "(dom "++show x++")"
   show (Rng x) = "(rng "++show x++")"

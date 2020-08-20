@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -21,14 +22,13 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeListLen,
-    decodeWord,
     encodeListLen,
-    matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
-  ( Embed (..),
+  ( Assertion (..),
+    AssertionViolation (..),
+    Embed (..),
     STS (..),
     TRC (..),
     TransitionRule,
@@ -41,6 +41,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
@@ -48,7 +49,7 @@ import Shelley.Spec.Ledger.LedgerState
     DState (..),
     Ix,
     PState (..),
-    UTxOState,
+    UTxOState (..),
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..))
@@ -64,6 +65,7 @@ import Shelley.Spec.Ledger.STS.Utxo
     pattern ValueNotConservedUTxO,
   )
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..), UTXOW)
+import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxBody (..))
 
@@ -97,6 +99,23 @@ instance
   initialRules = []
   transitionRules = [ledgerTransition]
 
+  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
+    "AssertionViolation (" <> avSTS <> "): " <> avMsg
+      <> "\n"
+      <> show avCtx
+      <> "\n"
+      <> show avState
+
+  assertions =
+    [ PostCondition
+        "Deposit pot must equal obligation"
+        ( \(TRC (LedgerEnv {ledgerPp}, _, _))
+           (utxoSt, DPState {_dstate, _pstate}) ->
+              obligation ledgerPp (_rewards _dstate) (_pParams _pstate)
+                == _deposited utxoSt
+        )
+    ]
+
 instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (LEDGER crypto))
 
 instance
@@ -111,18 +130,17 @@ instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (LEDGER crypto))
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
-      0 -> do
-        matchSize "UtxowFailure" 2 n
-        a <- fromCBOR
-        pure $ UtxowFailure a
-      1 -> do
-        matchSize "DelegsFailure" 2 n
-        a <- fromCBOR
-        pure $ DelegsFailure a
-      k -> invalidKey k
+  fromCBOR =
+    decodeRecordSum "PredicateFailure (LEDGER crypto)" $
+      ( \case
+          0 -> do
+            a <- fromCBOR
+            pure (2, UtxowFailure a)
+          1 -> do
+            a <- fromCBOR
+            pure (2, DelegsFailure a)
+          k -> invalidKey k
+      )
 
 ledgerTransition ::
   forall crypto.

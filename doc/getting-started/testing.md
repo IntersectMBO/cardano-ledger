@@ -1,9 +1,8 @@
 ## Testing the Haskell executable specifications
 
-Change to the directory where the executable specifications are (e.g.
-`shelley/chain-and-ledger/executable-spec` for the executable ledger specifications corresponding to
-the Shelley release, or `byron/ledger/executable-spec` for the executable ledger specifications
-corresponding to the Byron release). Then the tests can be run by executing:
+Change to the directory where the executable specifications tests are (e.g. `shelley/chain-and-ledger/shelley-spec-ledger-test` for the the Shelley release, or `byron/ledger/executable-spec` for the Byron release.
+
+Then the tests can be run by executing:
 
 ```shell
 stack test
@@ -35,8 +34,7 @@ which can be run with the `--scenario` flag. For example:
 stack test shelley-spec-ledger --ta --scenario=Nightly
 ```
 
-Alternatively, it is also possible to use `ghcid` if it is installed in your system. In this case,
-it can be helpful to run ghcid in a separate shell:
+Alternatively, it is also possible to use `ghcid` if it is installed in your system. There is a [makefile](https://github.com/input-output-hk/cardano-ledger-specs/blob/master/shelley/chain-and-ledger/Makefile) for the Shelley release, which can be helpful to run in a separate shell:
 
 ```shell
 make ghcid
@@ -47,3 +45,11 @@ or with tests included:
 ```shell
 make ghcid-test
 ```
+
+You can use the `TASTY_PATTERN` environment variable to set the tasty pattern:
+
+```shell
+TASTY_PATTERN=roundtrip make ghcid-test
+```
+
+---

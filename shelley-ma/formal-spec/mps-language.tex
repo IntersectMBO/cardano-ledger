@@ -1,0 +1,163 @@
+\section{Example MPS Language}
+\label{sec:mps-lang}
+
+
+\begin{figure}[htb]
+  \begin{align*}
+    \fun{validateScript} & \in\Script\to\ScriptHash\to\Slot\to
+    \powerset{\KeyHash}\to\TxBody\to\UTxO\to\Bool \\
+    \fun{validateScript} & ~s~\var{pid}~\var{slot}~\var{vhks}
+     ~\var{txb}~\var{utxo} =
+                           \begin{cases}
+                             \fun{evalMultiSigScript}~s~vhks & \text{if}~s \in\ScriptMSig \\
+                             \fun{evalMPS}~s~\var{pid}~\var{slot}~\var{vhks} \\
+                              ~~~~txb~\var{utxo} & \text{if}~s \in\ScriptMPS \\
+                             \mathsf{False} & \text{otherwise}
+                           \end{cases}
+  \end{align*}
+  \caption{Validation Script}
+  \label{fig:functions-validate}
+\end{figure}
+
+It is necessary to update the
+$\fun{validateScripts}$ function, to allow for the validation of
+monetary policy scripts.
+
+The arguments that are passed to the $\fun{validateScript}$ function include all those
+that are needed for MPS and MSig script evaluation. Because of the extra arguments
+(the slot number and the UTxO), we also modify the call to this function
+within the UTXOW rule.
+
+As inputs, $\fun{evalMPS}$ takes:
+
+\begin{itemize}
+\item The script getting evaluated.
+\item The $\PolicyID$ of the asset being forged.
+  \begin{note}
+    What do we put here if we don't forge anything? Do we make this argument optional?
+  \end{note}
+\item The current slot number.
+\item The set of key hashes (needed to use MSig scripts as MP scripts).
+\item The transaction body.
+\item The inputs of the transaction as a UTxO.
+\end{itemize}
+
+ The language for MP scripts given here is only a suggestion and its
+implementation may differ from the one given here. The constructors which make
+up the MPS script scheme are used to express the following
+aspects of monetary policy:
+
+\begin{itemize}
+\item $\type{JustMSig}$~ :~ evaluates an MSig script
+
+\item $\type{RequireAll}$~:~evaluates all MPS scripts in the given set
+
+\item Others will be here once decided on
+\end{itemize}
+
+The Figures~\ref{fig:defs:tx-mc-eval},~\ref{fig:defs:tx-mc-eval-2},
+and~\ref{fig:whitelist-example} give
+possible constructors of the MPS language.
+
+%% \begin{note}
+%%   sort out the constructors
+%% \end{note}
+
+\begin{figure*}[htb]
+  \begin{align*}
+    & \fun{evalMPS} \in\ScriptMPS\to\PolicyID\to\Slot\to\powerset\KeyHash \\
+    &~~~~\to\TxBody\to\UTxO \to\Bool  \\
+    & \text{UTxO is only for the outputs THIS tx is spending, not global UTxO, i.e.} \\
+    & \text{when called,}~\var{spentouts}~=~(\fun{txins}~\var{txb}) ~\restrictdom~\var{utxo} \\~\\
+    %
+    & \fun{evalMPS}  ~(\type{JustMSig}~s)~\var{pid}~\var{slot}~\var{vhks}
+     ~\var{txb}~\var{spentouts} \\
+    &~~~~ =~ \fun{evalMultiSigScript}~s~\var{vhks} \\
+    & \text {checks the msig script}\\~\\
+    %
+    & \fun{evalMPS}
+     ~\type{DoForge}~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
+    &~~~~ =~ \var{pid} \notin \dom~(\fun{forge}~\var{txb}) \\
+    & \text {checks that script hash of this script is not an asset ID being forged by tx}  \\~\\
+    %
+    & \fun{evalMPS}
+     ~\type{SignedByPIDToken}~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
+    &~~~~ =~ \exists~t\mapsto ~\_~\in~ \fun{range}~(\var{pid}~ \restrictdom~(\fun{ubalance}~\var{spentouts})) ~:~ t~\in~\var{vhks} \\
+    & \text{checks that tx is signed by a key whose hash is the name of a token in this asset}
+    \\~\\
+    & \fun{evalMPS}
+     ~(\type{SpendsCur}~\var{pid'})~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
+    &~~~~ =~ (\var{pid'}~\neq~\Nothing ~\wedge ~\var{pid'}~\in~ \dom~(\fun{ubalance}~\var{spentouts}))\\
+    &~~~~~~ \vee (\var{pid'}~=~\Nothing ~\wedge ~\var{pid}~\in~ \dom~(\fun{ubalance}~\var{spentouts})) \\
+    & \text{checks that this transaction spends asset pid' OR itself if}~\var{pid'}~=~\Nothing
+    \\~\\
+    &\fun{evalMPS}~(\type{Not}~s)~\var{pid}~\var{slot}~\var{vhks}
+    ~\var{txb}~\var{spentouts}
+   \\
+    &~~~~ = \neg ~\fun{evalMPS}~s~\var{pid}~\var{slot}~\var{vhks}
+    ~\var{txb}~\var{spentouts}\\~\\
+    %
+    &\fun{evalMPS}~(\type{RequireAll}~ls)~\var{pid}~\var{slot}~\var{vhks}
+    ~\var{txb}~\var{spentouts}
+   \\
+    &~~~~ = \forall ~s'~ \in~ ls~:~\fun{evalMPS}~s'~\var{pid}~\var{slot}~\var{vhks}
+    ~\var{txb}~\var{spentouts}\\~\\
+    %
+    &\fun{evalMPS}~(\type{RequireOr}~ls)~\var{pid}~\var{slot}~\var{vhks}
+    ~\var{txb}~\var{spentouts}
+   \\
+    &~~~~ = \exists ~s'~ \in~ ls~:~\fun{evalMPS}~s'~\var{pid}~\var{slot}~\var{vhks}
+    ~\var{txb}~\var{spentouts}\\
+  \end{align*}
+  \caption{Multi-asset Script Evaluation}
+  \label{fig:defs:tx-mc-eval}
+\end{figure*}
+
+\begin{figure*}[htb]
+  \begin{align*}
+    & \fun{evalMPS}
+     ~(\type{AssetToAddress}~\var{pid'}~\var{addr})~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
+    &~~~~ =~ \forall~(a, v)~\in~\fun{range}~(\fun{outs}~txb),~\\
+    &~~~~~~ \var{c}~\in~\dom~v~\Rightarrow~(a~=~ \var{a'} ~\wedge~
+                       v~=~\var{c}~ \restrictdom~(\fun{ubalance}~(\fun{outs}~txb)) \\
+    & \where \\
+    & ~~~~~~~ \var{a'}~=~\fun{if}~ \var{addr}~\neq~\Nothing~\fun{then}~\var{addr}~\fun{else}~\var{(pid',pid')} \\
+    & ~~~~~~~ \var{c}~=~\fun{if}~ \var{pid'}~\neq~\Nothing~\fun{then}~\var{pid'}~\fun{else}~\var{pid} \\
+    & \text{checks that tx outputs any pid tokens by themselves to the specified address} \\
+    & \text {the script address of the given asset when addr unspecified} \\~\\
+    & \fun{evalMPS}
+     ~(\type{TrancheTokens}~\var{tts}~\var{txin})~\var{pid}~\var{slot}~\var{vhks}
+     ~\var{txb}~\var{spentouts}  \\
+    &~~~~ =~(\var{pid}\mapsto\var{tts}~\in~\var{val})~ \wedge~(\var{txin}~\in~\fun{txins}~{txb}) \\
+    & \text{tranche tokens is incomplete} \\~\\
+    %
+    & \fun{evalMPS}
+     ~(\type{FreshTokens})~\var{pid}~\var{slot}~\var{vhks}
+     ~\var{txb}~\var{spentouts}
+      \\
+    &~~~~ =~\forall~\var{pid}~ \mapsto ~tkns ~\in~ \var{val}~:~ \\
+    &~~~~ \forall~t~\in~\var{tkns},~
+        \fun{nameToken}~(\fun{indexof}~\var{t}~\var{tkns},~\fun{txins}~{txb})~=~t
+    \end{align*}
+    \caption{Multi-asset Script Evaluation, cont.}
+    \label{fig:defs:tx-mc-eval-2}
+\end{figure*}
+
+\begin{figure*}[htb]
+  \begin{align*}
+    & \fun{whitelist} \in\ScriptMSig\to\Script  \\~\\
+    %
+    & \type{whitelist}  ~\var{msig}~ =~ \type{RequireOr}~
+      (\type{RequireAll}~(\type{DoForge};~\type{JustMSig}~\var{msig});~\\
+    &~~~~~~ \type{RequireAll}~(\type{AssetToAddress}~\Nothing~\Nothing ;\\
+    &~~~~~~ (\type{Not}~\type{DoForge});~\type{SignedByPIDToken})) \\
+    %
+    & \text{msig is some MSig script containing signatures of some accreditation authority} \\
+    & \text{i.e. this authority can do any forging or spending of this token} \\~\\
+    %
+    & (\fun{hashScript}~(\type{SpendsCur}~(\fun{hashScript}~(\type{whitelist}~\var{msig}))),~ \var{tkns}) \\
+    & \text{an example of an output spending which requires to be on a whitelist made by msig authority}
+  \end{align*}
+  \caption{Whitelist Script Example}
+  \label{fig:whitelist-example}
+\end{figure*}

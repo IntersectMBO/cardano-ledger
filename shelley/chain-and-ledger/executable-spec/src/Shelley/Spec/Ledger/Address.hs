@@ -20,6 +20,7 @@ module Shelley.Spec.Ledger.Address
     toCred,
     serialiseAddr,
     deserialiseAddr,
+    deserialiseAddrStakeRef,
     Addr (..),
     BootstrapAddress (..),
     bootstrapAddressAttrsSize,
@@ -27,6 +28,11 @@ module Shelley.Spec.Ledger.Address
     RewardAcnt (..),
     serialiseRewardAcnt,
     deserialiseRewardAcnt,
+    --  Bits
+    byron,
+    notBaseAddr,
+    isEnterpriseAddr,
+    stakeCredIsScript,
     -- internals exported for testing
     getAddr,
     getKeyHash,
@@ -35,14 +41,17 @@ module Shelley.Spec.Ledger.Address
     getRewardAcnt,
     getScriptHash,
     getVariableLengthNat,
+    payCredIsScript,
     putAddr,
     putCredential,
     putPtr,
     putRewardAcnt,
     putVariableLengthNat,
+    -- TODO: these should live somewhere else
     natToWord7s,
     word7sToNat,
     Word7 (..),
+    toWord7,
   )
 where
 
@@ -145,6 +154,13 @@ deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
   Right (_remaining, _offset, result) -> Just result
 
+-- | Deserialise a stake refence from a address. This will fail if this
+-- is a Bootstrap address (or malformed).
+deserialiseAddrStakeRef :: Crypto crypto => ByteString -> Maybe (StakeReference crypto)
+deserialiseAddrStakeRef bs = case B.runGetOrFail getAddrStakeReference (BSL.fromStrict bs) of
+  Left (_remaining, _offset, _message) -> Nothing
+  Right (_remaining, _offset, result) -> result
+
 -- | Serialise a reward account to the external format.
 serialiseRewardAcnt :: RewardAcnt crypto -> ByteString
 serialiseRewardAcnt = BSL.toStrict . B.runPut . putRewardAcnt
@@ -173,8 +189,8 @@ instance NoUnexpectedThunks (Addr crypto)
 
 -- | An account based address for rewards
 data RewardAcnt crypto = RewardAcnt
-  { getRwdNetwork :: Network,
-    getRwdCred :: Credential 'Staking crypto
+  { getRwdNetwork :: !Network,
+    getRwdCred :: !(Credential 'Staking crypto)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
@@ -277,6 +293,15 @@ getAddr = do
             concat
               ["Address with unknown network Id. (", show addrNetId, ")"]
 
+-- | We are "expecting" an address, but we are only interested in the StakeReference.
+--   If the Addr is A Byron style address, there are no Stake References, return Nothing.
+getAddrStakeReference :: forall crypto. Crypto crypto => Get (Maybe (StakeReference crypto))
+getAddrStakeReference = do
+  header <- B.getWord8
+  if testBit header byron
+    then pure Nothing
+    else skipHash ([] @(HASH crypto)) >> Just <$> getStakeReference header
+
 putRewardAcnt :: RewardAcnt crypto -> Put
 putRewardAcnt (RewardAcnt network cred) = do
   let setPayCredBit = case cred of
@@ -304,6 +329,9 @@ getRewardAcnt = do
         True -> getScriptHash
         False -> getKeyHash
       pure $ RewardAcnt network cred
+
+skipHash :: forall proxy h. Hash.HashAlgorithm h => proxy h -> Get ()
+skipHash p = B.skip . fromIntegral $ Hash.sizeHash p
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
 getHash = do

@@ -5,10 +5,10 @@
 
 module Byron.Spec.Chain.STS.Rule.Pbft where
 
-import           Control.Lens ((^.))
 import           Data.Bimap (Bimap)
 import           Data.Data (Data, Typeable)
 import           Data.Sequence (Seq)
+import           Lens.Micro ((^.))
 
 import           Control.State.Transition
 

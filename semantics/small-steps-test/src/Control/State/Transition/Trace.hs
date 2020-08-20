@@ -47,7 +47,6 @@ module Control.State.Transition.Trace
 where
 
 import           Cardano.Prelude (NoUnexpectedThunks(..))
-import           Control.Lens (Lens',lens, makeLenses, to, (^.), (^..))
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
@@ -58,6 +57,8 @@ import           Data.Sequence.Strict (StrictSeq ((:<|), Empty))
 import qualified Data.Sequence.Strict as StrictSeq
 import           GHC.Generics (Generic)
 import           GHC.Stack (HasCallStack)
+import           Lens.Micro (Lens', lens, to, (^.), (^..))
+import           Lens.Micro.TH (makeLenses)
 import           Test.Tasty.HUnit (assertFailure, (@?=))
 
 import           Control.State.Transition.Extended hiding (Assertion, trans)

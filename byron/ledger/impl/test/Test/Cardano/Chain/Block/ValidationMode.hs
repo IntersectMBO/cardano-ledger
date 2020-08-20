@@ -11,11 +11,11 @@ where
 import Cardano.Prelude hiding (State, trace)
 import Test.Cardano.Prelude
 
-import Control.Lens ((^.))
 import qualified Data.Bimap as BM
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Data.Word (Word64)
+import Lens.Micro ((^.))
 
 import Cardano.Binary (Annotated (..))
 import Cardano.Chain.Block

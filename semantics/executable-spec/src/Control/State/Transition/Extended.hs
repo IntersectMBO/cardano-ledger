@@ -15,7 +15,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -31,6 +30,7 @@ module Control.State.Transition.Extended
     TransitionRule,
     InitialRule,
     Assertion (..),
+    AssertionViolation (..),
     STS (..),
     Embed (..),
     (?!),
@@ -135,12 +135,11 @@ data AssertionViolation sts = AssertionViolation
     avState :: Maybe (State sts)
   }
 
-instance Show (AssertionViolation sts) where
-  show (AssertionViolation sts msg _ _) =
-    "AssertionViolation (" <> sts <> "): " <> msg
+instance STS sts => Show (AssertionViolation sts) where
+  show = renderAssertionViolation
 
 instance
-  (Typeable sts) =>
+  (STS sts) =>
   Exception (AssertionViolation sts)
 
 -- | State transition system.
@@ -193,8 +192,9 @@ class
   --   Defaults to using 'show', but note that this does not know how to render
   --   the context. So for more information you should define your own renderer
   --   here.
-  renderAssertionViolation :: AssertionViolation sts -> String
-  renderAssertionViolation = show
+  renderAssertionViolation :: AssertionViolation a -> String
+  renderAssertionViolation (AssertionViolation sts msg _ _) =
+    "AssertionViolation (" <> sts <> "): " <> msg
 
 -- | Embed one STS within another.
 class (STS sub, STS super, BaseM sub ~ BaseM super) => Embed sub super where

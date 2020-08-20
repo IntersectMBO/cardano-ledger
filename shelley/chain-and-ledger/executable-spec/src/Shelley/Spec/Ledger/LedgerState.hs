@@ -33,7 +33,6 @@ module Shelley.Spec.Ledger.LedgerState
     Ix,
     KeyPairs,
     LedgerState (..),
-    OBftSlot (..),
     PPUPState (..),
     PState (..),
     RewardAccounts,
@@ -75,17 +74,17 @@ module Shelley.Spec.Ledger.LedgerState
     verifiedWits,
     witsVKeyNeeded,
     witsFromWitnessSet,
-    -- DelegationState
-    -- refunds
+
+    -- * DelegationState
     keyRefunds,
-    -- epoch boundary
+
+    -- * Epoch boundary
     stakeDistr,
     applyRUpd,
     createRUpd,
     --
     NewEpochState (..),
     NewEpochEnv (..),
-    overlaySchedule,
     getGKeys,
     updateNES,
   )
@@ -94,20 +93,13 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    TokenType (TypeNull),
-    decodeNull,
     encodeListLen,
-    encodeNull,
-    enforceSize,
-    peekTokenType,
   )
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Foldable (toList)
-import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -147,11 +139,8 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShot (..),
     SnapShots (..),
     Stake (..),
-    aggregateOuts,
-    baseStake,
+    aggregateUtxoCoinByCredential,
     emptySnapShots,
-    ptrStake,
-    rewardStake,
   )
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
@@ -165,6 +154,7 @@ import Shelley.Spec.Ledger.Keys
     VKey,
     asWitness,
   )
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
@@ -180,14 +170,11 @@ import Shelley.Spec.Ledger.Rewards
     emptyNonMyopic,
     reward,
   )
-import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
+import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
-  ( Duration (..),
-    EpochNo (..),
+  ( EpochNo (..),
+    EpochSize,
     SlotNo (..),
-    epochInfoFirst,
-    epochInfoSize,
-    (+*),
   )
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
@@ -242,10 +229,10 @@ instance Crypto crypto => ToCBOR (FutureGenDeleg crypto) where
 
 instance Crypto crypto => FromCBOR (FutureGenDeleg crypto) where
   fromCBOR = do
-    enforceSize "FutureGenDeleg" 2
-    a <- fromCBOR
-    b <- fromCBOR
-    pure $ FutureGenDeleg a b
+    decodeRecordNamed "FutureGenDeleg" (const 2) $ do
+      a <- fromCBOR
+      b <- fromCBOR
+      pure $ FutureGenDeleg a b
 
 data InstantaneousRewards crypto = InstantaneousRewards
   { iRReserves :: !(Map (Credential 'Staking crypto) Coin),
@@ -269,10 +256,10 @@ instance Crypto crypto => ToCBOR (InstantaneousRewards crypto) where
 
 instance Crypto crypto => FromCBOR (InstantaneousRewards crypto) where
   fromCBOR = do
-    enforceSize "InstantaneousRewards" 2
-    irR <- mapFromCBOR
-    irT <- mapFromCBOR
-    pure $ InstantaneousRewards irR irT
+    decodeRecordNamed "InstantaneousRewards" (const 2) $ do
+      irR <- mapFromCBOR
+      irT <- mapFromCBOR
+      pure $ InstantaneousRewards irR irT
 
 -- | State of staking pool delegations and rewards
 data DState crypto = DState
@@ -307,14 +294,14 @@ instance Crypto crypto => ToCBOR (DState crypto) where
 
 instance Crypto crypto => FromCBOR (DState crypto) where
   fromCBOR = do
-    enforceSize "DState" 6
-    rw <- fromCBOR
-    dlg <- fromCBOR
-    p <- fromCBOR
-    fgs <- fromCBOR
-    gs <- fromCBOR
-    ir <- fromCBOR
-    pure $ DState rw dlg p fgs gs ir
+    decodeRecordNamed "DState" (const 6) $ do
+      rw <- fromCBOR
+      dlg <- fromCBOR
+      p <- fromCBOR
+      fgs <- fromCBOR
+      gs <- fromCBOR
+      ir <- fromCBOR
+      pure $ DState rw dlg p fgs gs ir
 
 -- | Current state of staking pools and their certificate counters.
 data PState crypto = PState
@@ -337,11 +324,11 @@ instance Crypto crypto => ToCBOR (PState crypto) where
 
 instance Crypto crypto => FromCBOR (PState crypto) where
   fromCBOR = do
-    enforceSize "PState" 3
-    a <- fromCBOR
-    b <- fromCBOR
-    c <- fromCBOR
-    pure $ PState a b c
+    decodeRecordNamed "PState" (const 3) $ do
+      a <- fromCBOR
+      b <- fromCBOR
+      c <- fromCBOR
+      pure $ PState a b c
 
 -- | The state associated with the current stake delegation.
 data DPState crypto = DPState
@@ -360,10 +347,10 @@ instance Crypto crypto => ToCBOR (DPState crypto) where
 
 instance Crypto crypto => FromCBOR (DPState crypto) where
   fromCBOR = do
-    enforceSize "DPState" 2
-    ds <- fromCBOR
-    ps <- fromCBOR
-    pure $ DPState ds ps
+    decodeRecordNamed "DPState" (const 2) $ do
+      ds <- fromCBOR
+      ps <- fromCBOR
+      pure $ DPState ds ps
 
 data RewardUpdate crypto = RewardUpdate
   { deltaT :: !Coin,
@@ -389,13 +376,13 @@ instance Crypto crypto => ToCBOR (RewardUpdate crypto) where
 
 instance Crypto crypto => FromCBOR (RewardUpdate crypto) where
   fromCBOR = do
-    enforceSize "RewardUpdate" 5
-    dt <- fromCBOR
-    dr <- fromCBOR -- TODO change Coin serialization to use integers?
-    rw <- fromCBOR
-    df <- fromCBOR -- TODO change Coin serialization to use integers?
-    nm <- fromCBOR
-    pure $ RewardUpdate dt (- dr) rw (- df) nm
+    decodeRecordNamed "RewardUpdate" (const 5) $ do
+      dt <- fromCBOR
+      dr <- fromCBOR -- TODO change Coin serialization to use integers?
+      rw <- fromCBOR
+      df <- fromCBOR -- TODO change Coin serialization to use integers?
+      nm <- fromCBOR
+      pure $ RewardUpdate dt (- dr) rw (- df) nm
 
 emptyRewardUpdate :: RewardUpdate crypto
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) emptyNonMyopic
@@ -412,10 +399,10 @@ instance ToCBOR AccountState where
 
 instance FromCBOR AccountState where
   fromCBOR = do
-    enforceSize "AccountState" 2
-    t <- fromCBOR
-    r <- fromCBOR
-    pure $ AccountState t r
+    decodeRecordNamed "AccountState" (const 2) $ do
+      t <- fromCBOR
+      r <- fromCBOR
+      pure $ AccountState t r
 
 instance NoUnexpectedThunks AccountState
 
@@ -441,14 +428,14 @@ instance Crypto crypto => ToCBOR (EpochState crypto) where
 
 instance Crypto crypto => FromCBOR (EpochState crypto) where
   fromCBOR = do
-    enforceSize "EpochState" 6
-    a <- fromCBOR
-    s <- fromCBOR
-    l <- fromCBOR
-    r <- fromCBOR
-    p <- fromCBOR
-    n <- fromCBOR
-    pure $ EpochState a s l r p n
+    decodeRecordNamed "EpochState" (const 6) $ do
+      a <- fromCBOR
+      s <- fromCBOR
+      l <- fromCBOR
+      r <- fromCBOR
+      p <- fromCBOR
+      n <- fromCBOR
+      pure $ EpochState a s l r p n
 
 emptyPPUPState :: PPUPState crypto
 emptyPPUPState = PPUPState emptyPPPUpdates emptyPPPUpdates
@@ -494,8 +481,8 @@ emptyDPState :: DPState crypto
 emptyDPState = DPState emptyDState emptyPState
 
 data PPUPState crypto = PPUPState
-  { proposals :: ProposedPPUpdates crypto,
-    futureProposals :: ProposedPPUpdates crypto
+  { proposals :: !(ProposedPPUpdates crypto),
+    futureProposals :: !(ProposedPPUpdates crypto)
   }
   deriving (Show, Eq, Generic, NFData, NoUnexpectedThunks)
 
@@ -505,10 +492,10 @@ instance Crypto crypto => ToCBOR (PPUPState crypto) where
 
 instance Crypto crypto => FromCBOR (PPUPState crypto) where
   fromCBOR = do
-    enforceSize "PPUPState" 2
-    ppup <- fromCBOR
-    fppup <- fromCBOR
-    pure $ PPUPState ppup fppup
+    decodeRecordNamed "PPUPState" (const 2) $ do
+      ppup <- fromCBOR
+      fppup <- fromCBOR
+      pure $ PPUPState ppup fppup
 
 pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
 pvCanFollow _ SNothing = True
@@ -541,39 +528,12 @@ instance Crypto crypto => ToCBOR (UTxOState crypto) where
 
 instance Crypto crypto => FromCBOR (UTxOState crypto) where
   fromCBOR = do
-    enforceSize "UTxOState" 4
-    ut <- fromCBOR
-    dp <- fromCBOR
-    fs <- fromCBOR
-    us <- fromCBOR
-    pure $ UTxOState ut dp fs us
-
-data OBftSlot crypto
-  = NonActiveSlot
-  | ActiveSlot !(KeyHash 'Genesis crypto)
-  deriving (Show, Eq, Ord, Generic)
-
-instance
-  Crypto crypto =>
-  ToCBOR (OBftSlot crypto)
-  where
-  toCBOR NonActiveSlot = encodeNull
-  toCBOR (ActiveSlot k) = toCBOR k
-
-instance
-  Crypto crypto =>
-  FromCBOR (OBftSlot crypto)
-  where
-  fromCBOR = do
-    peekTokenType >>= \case
-      TypeNull -> do
-        decodeNull
-        pure NonActiveSlot
-      _ -> ActiveSlot <$> fromCBOR
-
-instance NoUnexpectedThunks (OBftSlot crypto)
-
-instance NFData (OBftSlot crypto)
+    decodeRecordNamed "UTxOState" (const 4) $ do
+      ut <- fromCBOR
+      dp <- fromCBOR
+      fs <- fromCBOR
+      us <- fromCBOR
+      pure $ UTxOState ut dp fs us
 
 -- | New Epoch state and environment
 data NewEpochState crypto = NewEpochState
@@ -590,7 +550,7 @@ data NewEpochState crypto = NewEpochState
     -- | Stake distribution within the stake pool
     nesPd :: !(PoolDistr crypto),
     -- | Overlay schedule for PBFT vs Praos
-    nesOsched :: !(Map SlotNo (OBftSlot crypto))
+    nesOsched :: !(OverlaySchedule crypto)
   }
   deriving (Show, Eq, Generic)
 
@@ -603,45 +563,19 @@ instance Crypto crypto => ToCBOR (NewEpochState crypto) where
     encodeListLen 7 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
       <> toCBOR ru
       <> toCBOR pd
-      <> toCBOR (compactOverlaySchedule os)
+      <> toCBOR os
 
 instance Crypto crypto => FromCBOR (NewEpochState crypto) where
   fromCBOR = do
-    enforceSize "NewEpochState" 7
-    e <- fromCBOR
-    bp <- fromCBOR
-    bc <- fromCBOR
-    es <- fromCBOR
-    ru <- fromCBOR
-    pd <- fromCBOR
-    os <- decompactOverlaySchedule <$> fromCBOR
-    pure $ NewEpochState e bp bc es ru pd os
-
--- | Convert the overlay schedule to a representation that is more compact
--- when serialised to a bytestring, but less efficient for lookups.
---
--- Each genesis key hash will only be stored once, instead of each time it is
--- assigned to a slot.
-compactOverlaySchedule ::
-  Map SlotNo (OBftSlot crypto) ->
-  Map (OBftSlot crypto) (NonEmpty SlotNo)
-compactOverlaySchedule =
-  Map.foldrWithKey'
-    ( \slot obftSlot ->
-        Map.insertWith (<>) obftSlot (pure slot)
-    )
-    Map.empty
-
--- | Inverse of 'compactOverlaySchedule'
-decompactOverlaySchedule ::
-  Map (OBftSlot crypto) (NonEmpty SlotNo) ->
-  Map SlotNo (OBftSlot crypto)
-decompactOverlaySchedule compact =
-  Map.fromList
-    [ (slot, obftSlot)
-      | (obftSlot, slots) <- Map.toList compact,
-        slot <- NonEmpty.toList slots
-    ]
+    decodeRecordNamed "NewEpochState" (const 7) $ do
+      e <- fromCBOR
+      bp <- fromCBOR
+      bc <- fromCBOR
+      es <- fromCBOR
+      ru <- fromCBOR
+      pd <- fromCBOR
+      os <- fromCBOR
+      pure $ NewEpochState e bp bc es ru pd os
 
 getGKeys ::
   NewEpochState crypto ->
@@ -679,10 +613,10 @@ instance Crypto crypto => ToCBOR (LedgerState crypto) where
 
 instance Crypto crypto => FromCBOR (LedgerState crypto) where
   fromCBOR = do
-    enforceSize "LedgerState" 2
-    u <- fromCBOR
-    dp <- fromCBOR
-    pure $ LedgerState u dp
+    decodeRecordNamed "LedgerState" (const 2) $ do
+      u <- fromCBOR
+      dp <- fromCBOR
+      pure $ LedgerState u dp
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
@@ -912,7 +846,6 @@ reapRewards dStateRewards withdrawals =
 -- epoch boundary calculations --
 ---------------------------------
 
--- | Stake distribution
 stakeDistr ::
   forall crypto.
   Crypto crypto =>
@@ -922,15 +855,14 @@ stakeDistr ::
   SnapShot crypto
 stakeDistr u ds ps =
   SnapShot
-    (Stake $ eval (dom activeDelegs ◁ Map.fromListWith (+) stakeRelation))
+    (Stake $ eval (dom activeDelegs ◁ stakeRelation))
     delegs
     poolParams
   where
     DState rewards' delegs ptrs' _ _ _ = ds
     PState poolParams _ _ = ps
-    outs = aggregateOuts u
-    stakeRelation :: [(Credential 'Staking crypto, Coin)] -- We compute Lists (not Maps) because the duplicate tuples matter, later when we use: Map.fromListWith (+)
-    stakeRelation = (baseStake outs ++ ptrStake outs (forwards ptrs') ++ rewardStake rewards')
+    stakeRelation :: Map (Credential 'Staking crypto) Coin
+    stakeRelation = aggregateUtxoCoinByCredential (forwards ptrs') u rewards'
     activeDelegs :: Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
 
@@ -986,79 +918,43 @@ updateNonMypopic nm rPot newLikelihoods ss =
 
 -- | Create a reward update
 createRUpd ::
-  EpochNo ->
+  EpochSize ->
   BlocksMade crypto ->
   EpochState crypto ->
   Coin ->
   ShelleyBase (RewardUpdate crypto)
-createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
-  ei <- asks epochInfo
-  slotsPerEpoch <- epochInfoSize ei e
+createRUpd slotsPerEpoch b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
   asc <- asks activeSlotCoeff
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
       -- reserves and rewards change
-      deltaR_ = (rationalToCoinViaFloor $ min 1 eta * unitIntervalToRational (_rho pr) * fromIntegral reserves)
+      deltaR1 = (rationalToCoinViaFloor $ min 1 eta * unitIntervalToRational (_rho pr) * fromIntegral reserves)
+      d = unitIntervalToRational (_d pr)
       expectedBlocks =
         floor $
-          unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
+          (1 - d) * unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
-      eta = blocksMade % expectedBlocks
-      Coin rPot = _feeSS ss + deltaR_
+      eta
+        | intervalValue (_d pr) >= 0.8 = 1
+        | otherwise = blocksMade % expectedBlocks
+      Coin rPot = _feeSS ss + deltaR1
       deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       circulation = total - (_reserves acnt)
       (rs_, newLikelihoods) =
         reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation asc slotsPerEpoch
-      deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
+      deltaR2 = _R - (Map.foldr (+) (Coin 0) rs_)
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $
     RewardUpdate
-      (Coin deltaT1 + deltaT2)
-      (- deltaR_)
-      rs_
-      (- (_feeSS ss))
-      (updateNonMypopic nm _R newLikelihoods (_pstakeGo ss))
-
--- | Overlay schedule
--- This is just a very simple round-robin, evenly spaced schedule.
-overlaySchedule ::
-  EpochNo ->
-  Set (KeyHash 'Genesis crypto) ->
-  PParams ->
-  ShelleyBase (Map SlotNo (OBftSlot crypto))
-overlaySchedule e gkeys pp = do
-  let dval = intervalValue $ _d pp
-  if dval == 0
-    then pure Map.empty
-    else do
-      ei <- asks epochInfo
-      slotsPerEpoch <- epochInfoSize ei e
-      firstSlotNo <- epochInfoFirst ei e
-      asc <- asks activeSlotCoeff
-      let numActive = dval * fromIntegral slotsPerEpoch
-          dInv = 1 / dval
-          ascValue = (intervalValue . activeSlotVal) asc
-          toRelativeSlotNo x = (Duration . floor) (dInv * fromInteger x)
-          toSlotNo x = firstSlotNo +* toRelativeSlotNo x
-          genesisSlots = [toSlotNo x | x <- [0 .. (floor numActive - 1)]]
-          numInactivePerActive = floor (1 / ascValue) - 1
-          activitySchedule = cycle (True : replicate numInactivePerActive False)
-          unassignedSched = zip activitySchedule genesisSlots
-          genesisCycle = if Set.null gkeys then [] else cycle (Set.toList gkeys)
-          active =
-            Map.fromList $
-              fmap
-                (\(gk, (_, s)) -> (s, ActiveSlot gk))
-                (zip genesisCycle (filter fst unassignedSched))
-          inactive =
-            Map.fromList $
-              fmap
-                (\x -> (snd x, NonActiveSlot))
-                (filter (not . fst) unassignedSched)
-      pure $ Map.union active inactive
+      { deltaT = (Coin deltaT1),
+        deltaR = (- deltaR1 + deltaR2),
+        rs = rs_,
+        deltaF = (- (_feeSS ss)),
+        nonMyopic = (updateNonMypopic nm _R newLikelihoods (_pstakeGo ss))
+      }
 
 -- | Update new epoch state
 updateNES ::
