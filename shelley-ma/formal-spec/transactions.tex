@@ -1,0 +1,79 @@
+\begin{figure*}[t!]
+  %
+  \emph{Derived types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{txout} & \TxOut & \Addr \times \hldiff{\Value}
+%      & \text{tx outputs}
+      \\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Transaction Type}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
+      \var{txbody} ~\in~ \TxBody ~=~
+      & \powerset{\TxIn} & \fun{txinputs}& \text{inputs}\\
+      &\times ~(\Ix \mapsto \TxOut) & \fun{txouts}& \text{outputs}\\
+      & \times~ \seqof{\DCert} & \fun{txcerts}& \text{certificates}\\
+       & \times ~\hldiff{\Value}  & \hldiff{\fun{forge}} &\text{value forged}\\
+       & \times ~\Coin & \fun{txfee} &\text{non-script fee}\\
+       & \times ~\Slot & \fun{txttl} & \text{time to live}\\
+       & \times~ \Wdrl  & \fun{txwdrls} &\text{reward withdrawals}\\
+       & \times ~\Update  & \fun{txUpdates} & \text{update proposals}\\
+       & \times ~\MetaDataHash^? & \fun{txMDhash} & \text{metadata hash}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Accessor Functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{getValue} & \TxOut \to \Value & \text{output value} \\
+      \fun{getAddr} & \TxOut \to \Addr & \text{output address}
+    \end{array}
+  \end{equation*}
+  \caption{Type Definitions used in the UTxO transition system}
+  \label{fig:defs:utxo-shelley}
+\end{figure*}
+
+\section{Transactions}
+\label{sec:transactions}
+
+This section describes the changes that are necessary to the
+transaction structure to support native multi-asset functionality in
+Cardano. The main differences are that $\TxOut$ contains a $\Value$
+rather than a $\Coin$, and the $\fun{forge}$ field as part of the
+transaction body.
+
+\subsection*{The Forge Field}
+
+The body of a transaction with multi-asset support contains one additional
+field, the $\fun{forge}$ field.
+The $\fun{forge}$ field is a term of type $\Value$, which contains
+tokens the transaction is putting into or taking out of
+circulation. Here, by "circulation", we mean specifically "the UTxO on the
+ledger". Since the administrative fields cannot contain tokens other than Ada,
+and Ada cannot be forged (this is enforced by the UTxO rule, see Figure~\ref{fig:rules:utxo-shelley}),
+they are not affected in any way by forging.
+
+Putting tokens into circulation is done with positive values in the $\Quantity$
+fields $\fun{forge}$ field, and taking tokens out of circulation can be done
+with negative quantities.
+
+A transaction cannot simply forge arbitrary tokens. Restrictions on
+Multi-Asset tokens are imposed, for each asset with ID $\var{pid}$, by a script
+with the hash $\var{pid}$. Whether a given transaction adheres to the restrictions
+prescribed by its script is verified as part of the processing of the transaction.
+The forging mechanism is detailed in Section~\ref{sec:utxo}.
+
+\subsection*{Transaction Body}
+
+Besides the addition of the $\fun{forge}$ field to the transaction body,
+note that the $\TxOut$ type in the body is not the same as
+the $\TxOut$ in the system without multi-asset support. Instead of
+$\Coin$, the transaction outputs now have type $\Value$.
+
+The only change to the types related to transaction witnessing is the addition
+of monetary policy scripts to the $\Script$ type, so we do not include the whole $\Tx$ type here.

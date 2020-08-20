@@ -1,10 +1,10 @@
 { lib, latex, texlive }:
 
 latex.buildLatex {
-  name = "shelley-mc-spec";
-  texFiles = [ "multi-asset" ];
+  name = "shelley-ma-spec";
+  texFiles = [ "shelley-ma" ];
   meta = with lib; {
-    description = "Shelley multi-currency specification";
+    description = "Shelley multi-asset specification";
     license = licenses.asl20;
     platforms = platforms.linux;
   };

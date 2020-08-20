@@ -25,7 +25,7 @@
 \usepackage{booktabs}
 \usepackage{enumerate}
 \usepackage{fancyvrb}
-
+\usepackage{xcolor}
 
 
 %%
@@ -37,14 +37,14 @@
 
 % data for Deliverable header -- added by KH from an EU H2020 project template
 \DeliverableNumber{GL-D1}
-\DeliverableTitle{A Formal Specification of the Cardano Ledger with a Native Multicurrency Implementation}
+\DeliverableTitle{A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation}
    {Formal Cardano Ledger with Multi-Asset Spec.}
 
 \DeliverableResponsible{Formal Methods Team}
 
 \DueDate{31$^{\textrm{st}}$ July 2020}
 
-\SubmissionDate{31$^{\textrm{st}}$ July 2020}{31$^{\textrm{st}}$ July 2020}
+\SubmissionDate{20$^{\textrm{st}}$ August 2020}{20$^{\textrm{st}}$ August 2020}
 
 \Authors{
    Polina Vinogradova \quad \texttt{polina.vinogradova@iohk.io} \\
@@ -147,6 +147,7 @@
 \newcommand{\DPoolReap}{\ensuremath{\type{poolreap}}}
 \newcommand{\UPIState}{\type{UPIState}}
 \newcommand{\UpdatePayload}{\type{UpdatePayload}}
+\newcommand{\NetworkId}{\mathsf{NetworkId}}
 
 % multi-signature
 \newcommand{\StakeCredential}{\type{Credential}_{stake}}
@@ -262,8 +263,8 @@
 \newcommand{\decayedTx}[3]{\fun{decayedTx}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\keyRefund}[6]{\fun{keyRefund}~ {#1}~{#2}~{#3}~\var{#4}~\var{#5}~\var{#6}}
 \newcommand{\refund}[4]{\fun{refund}~ \var{#1}~ \var{#2}~ {#3}~ {#4}}
-\newcommand{\keyRefunds}[3]{\fun{keyRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
-\newcommand{\consumed}[4]{\fun{consumed}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\keyRefunds}[2]{\fun{keyRefunds}~ \var{#1}~ \var{#2}}
+\newcommand{\consumed}[2]{\fun{consumed}~ \var{#1}~ \var{#2}}
 \newcommand{\produced}[2]{\fun{produced}~ \var{#1}~ \var{#2}}
 \newcommand{\applyFun}[2]{\fun{#1}~\var{#2}}
 
@@ -334,6 +335,14 @@
 
 \newcommand{\arrow}{\rightarrow}
 
+\definecolor{hldiffcolor}{rgb}{0.95, 0.93, 0}
+\newcommand{\hldiff}[1]{\mathchoice
+  {\colorbox{hldiffcolor}{$\displaystyle#1$}}
+  {\colorbox{hldiffcolor}{$\textstyle#1$}}
+  {\colorbox{hldiffcolor}{$\scriptstyle#1$}}
+  {\colorbox{hldiffcolor}{$\scriptscriptstyle#1$}}}
+\DeclareMathOperator{\supp}{supp}
+
 \newcommand{\khcomment}[1]{\textbf{ -- KH: #1 -- }}
 \renewcommand{\khcomment}[1]{} % For publication
 
@@ -345,6 +354,9 @@
 \tableofcontents
 \listoffigures
 
+\include{introduction}
+\include{notation}
+\include{value}
 \include{transactions}
 
 \include{utxo}
@@ -360,10 +372,8 @@
 
 \begin{appendix}
   \include{mps-language}
-\end{appendix}
-
-\begin{appendix}
-  \section*{Appendix B: Outstanding Design Decisions}
+  \include{value-size}
+  \section{Outstanding Design Decisions}
   \VerbatimInput{TODO}
 \end{appendix}
 

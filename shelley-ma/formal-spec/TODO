@@ -1,6 +1,6 @@
-- Decide if TxOut and UTxOOut should be merged into a single
-  type. There is disagreement on if they have the same semantics or
-  not, and they actually are different in Goguen.
+- Move the properties from the shelley spec over in an appropriate
+  way. In particular, Lemma 15.2 can be adopted by adding a forged
+  value to a block.
 
 - Finalize `valueSize`. We need to decide if it should count the
   number of pid's. The tradeoff here is accuracy vs. ease of
@@ -13,9 +13,4 @@
   and having 'some constant amount plus some amount for every non-ada
   token' is easily understood.
 
-- Fix the discrepancies between `stakeDistr` in the shelley and
-  shelley-mc specs. Should the one in shelley-mc just be the same as in
-  shelley, just with using `utxoAda`?
-
-- Remove the MPS language if/when we're certain that it's not going to
-  happen.
+- Decide what to do with the MPS language

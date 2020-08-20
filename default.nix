@@ -58,7 +58,7 @@ let
       byron-chain = pkgs.callPackage ./byron/chain/formal-spec {};
       small-step-semantics = pkgs.callPackage ./semantics/formal-spec {};
       shelley-ledger = pkgs.callPackage ./shelley/chain-and-ledger/formal-spec {};
-      shelley-mc = pkgs.callPackage ./shelley-mc/formal-spec {};
+      shelley-ma = pkgs.callPackage ./shelley-ma/formal-spec {};
       delegation-design = pkgs.callPackage ./shelley/design-spec {};
       non-integer-calculations = pkgs.callPackage ./shelley/chain-and-ledger/dependencies/non-integer/doc {};
       blocks-cddl = pkgs.callPackage ./byron/cddl-spec {};

@@ -51,7 +51,7 @@
 \newcommand{\ChainState}{\type{ChainState}}
 \newcommand{\ChainSig}{\type{ChainSig}}
 
-In Figure~\ref{fig:functions:to-mc}, we give the functions that will be used
+In Figure~\ref{fig:functions:to-ma}, we give the functions that will be used
 to transition from a Shelley chain state into a chain state that provides multi-asset support.
 The only part of the state that is affected by the transition is the UTxO. For ease of
 reading, we use different notation here to define the UTxO update, and specify
@@ -75,5 +75,5 @@ state is unaffected.
       & \text{transform Shelley chain state to a MA-supporting state}
   \end{align*}
   \caption{Shelley to Multi-Asset Chain State Transtition}
-  \label{fig:functions:to-shelley}
+  \label{fig:functions:to-ma}
 \end{figure}

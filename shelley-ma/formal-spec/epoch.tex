@@ -11,7 +11,7 @@
 \newcommand{\NewPParamState}{\type{NewPParamState}}
 \newcommand{\EpochState}{\type{EpochState}}
 \newcommand{\BlocksMade}{\type{BlocksMade}}
-\newcommand{\Stake}{\type{Stake}}
+\newcommand{\Snapshot}{\type{Snapshot}}
 \newcommand{\RewardUpdate}{\type{RewardUpdate}}
 
 \newcommand{\obligation}[4]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
@@ -49,20 +49,22 @@ calculation function to add up only the Ada in the UTxO
   \emph{Stake Distribution (using functions and maps as relations)}
   %
   \begin{align*}
-      & \fun{stakeDistr} \in \UTxO \to \DState \to \PState \to \Stake \\
-      & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} =
-      (\dom{\var{activeDelegs}})\restrictdom\left(\sum\var{stakeRelation}\right)\\
+      & \fun{stakeDistr} \in \UTxO \to \DState \to \PState \to \Snapshot \\
+      & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} = \\
+      & ~~~~ \big((\dom{\var{activeDelegs}})
+      \restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right),
+    ~\var{delegations},~\var{poolParams}\big)\\
       & \where \\
-      & ~~~~ (\var{stdelegs},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard)
+      & ~~~~ (~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard,~\wcard)
         = \var{dstate} \\
-      & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) = \var{pstate} \\
+      & ~~~~ (~\var{poolParams}~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
         \left(\fun{stakeCred_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
-        \circ\left(\fun{utxoAda}~{\var{utxo}}\right)
+        \circ\left(\hldiff{\fun{utxoAda}}~{\var{utxo}}\right)
         \right)
         \cup \left(\fun{stakeCred_r}^{-1}\circ\var{rewards}\right) \\
       & ~~~~ \var{activeDelegs} =
-               (\dom{stdelegs}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
+               (\dom{rewards}) \restrictdom \var{delegations} \restrictrange (\dom{poolParams})
   \end{align*}
 
   \caption{Stake Distribution Function}
