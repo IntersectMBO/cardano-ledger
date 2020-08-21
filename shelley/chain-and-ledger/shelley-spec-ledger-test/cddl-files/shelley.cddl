@@ -240,6 +240,6 @@ scripthash            = $hash28
 genesis_delegate_hash = $hash28
 pool_keyhash          = $hash28
 genesishash           = $hash28
-vrf_keyhash           = $hash28
 
+vrf_keyhash           = $hash32
 metadata_hash         = $hash32

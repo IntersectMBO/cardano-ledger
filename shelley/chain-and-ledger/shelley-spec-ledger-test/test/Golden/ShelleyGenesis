@@ -27,7 +27,7 @@
     "genDelegs": {
         "23d51e9123d51e91": {
             "delegate": "839b047f839b047f",
-            "vrf": "231391e7231391e7"
+            "vrf": "231391e7231391e70123"
         }
     },
     "updateQuorum": 16991,
@@ -48,7 +48,7 @@
                 "margin": 0.25,
                 "publicKey": "a084ba8f6c83c1a5",
                 "pledge": 1,
-                "vrf": "edc9079a4f371cac",
+                "vrf": "edc9079a4f371cac310f",
                 "metadata": {
                     "hash": "31303061627b7d31303061627b7d",
                     "url": "best.pool.com"
