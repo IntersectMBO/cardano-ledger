@@ -44,10 +44,13 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Examples.Cast (alicePoolParams)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators (mkDummyHash)
 
+--TODO set this in one place (where?)
+type FixedValType = Coin
+
 genTestCase ::
   Int -> -- The size of the utxo
   Int -> -- the number of addresses
-  Gen (DState C, PState C, UTxO C)
+  Gen (DState C, PState C, UTxO C FixedValType)
 genTestCase numUTxO numAddr = do
   addrs <- (sequence $ replicate numAddr arbitrary) :: Gen [Addr C]
   let packedAddrs = Seq.fromList addrs

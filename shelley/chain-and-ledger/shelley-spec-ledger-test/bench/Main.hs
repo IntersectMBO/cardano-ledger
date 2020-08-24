@@ -20,6 +20,7 @@ import Data.Word (Word64)
 
 import Shelley.Spec.Ledger.Bench.Gen (genTx)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Value (CV)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
@@ -52,6 +53,9 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 
 -- ==========================================================
+
+--TODO set this in one place (where?)
+type FixedValType = Coin
 
 eqf :: String -> (Map.Map Int Int -> Map.Map Int Int -> Bool) -> Int -> Benchmark
 eqf name f n = bgroup (name ++ " " ++ show n) (map runat [n, n * 10, n * 100, n * 1000])
@@ -91,7 +95,7 @@ profileUTxO = do
 touchDPState :: DPState crypto -> Int
 touchDPState (DPState _x _y) = 1
 
-touchUTxOState :: Shelley.Spec.Ledger.LedgerState.UTxOState cryto -> Int
+touchUTxOState :: Shelley.Spec.Ledger.LedgerState.UTxOState crypto v -> Int
 touchUTxOState (UTxOState _utxo _deposited _fees _ppups) = 2
 
 profileCreateRegKeys :: IO ()
@@ -145,14 +149,14 @@ epochAt x =
         [ bench "Using maps" (whnf action2m arg)
         ]
 
-action2m :: Crypto c => (DState c, PState c, UTxO c) -> SnapShot c
+action2m :: CV c v => (DState c, PState c, UTxO c v) -> SnapShot c
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 dstate' :: DState C
 
 pstate' :: PState C
 
-utxo' :: UTxO C
+utxo' :: UTxO C FixedValType
 (dstate', pstate', utxo') = unsafePerformIO $ QC.generate (genTestCase 1000000 (5000 :: Int))
 
 profile_Maps :: Int -> IO ()
