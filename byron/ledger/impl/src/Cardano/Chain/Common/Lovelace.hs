@@ -19,7 +19,7 @@
 
 -- This is for 'mkKnownLovelace''s @n <= 45000000000000000@ constraint, which is
 -- considered redundant. TODO: investigate this.
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Chain.Common.Lovelace
   (

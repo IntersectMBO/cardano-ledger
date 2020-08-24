@@ -161,15 +161,15 @@ library
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
-                       -fno-warn-all-missed-specialisations
-                       -fno-warn-missing-import-lists
-                       -fno-warn-safe
-                       -fno-warn-unsafe
+                       -Wno-all-missed-specialisations
+                       -Wno-missing-import-lists
+                       -Wno-safe
+                       -Wno-unsafe
   if impl(ghc >=8.8)
-    ghc-options:       -fno-warn-missing-deriving-strategies
+    ghc-options:       -Wno-missing-deriving-strategies
   if impl(ghc >=8.10)
-    ghc-options:       -fno-warn-missing-safe-haskell-mode
-                       -fno-warn-prepositive-qualified-module
+    ghc-options:       -Wno-missing-safe-haskell-mode
+                       -Wno-prepositive-qualified-module
   if (!flag(development))
     ghc-options:         -Werror
 
@@ -285,10 +285,10 @@ test-suite cardano-ledger-test
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
-                       -fno-warn-all-missed-specialisations
-                       -fno-warn-missing-import-lists
-                       -fno-warn-safe
-                       -fno-warn-unsafe
+                       -Wno-all-missed-specialisations
+                       -Wno-missing-import-lists
+                       -Wno-safe
+                       -Wno-unsafe
                        "-with-rtsopts=-K5M -M500M"
   if impl(ghc >=8.8)
     ghc-options:       -Wno-missing-deriving-strategies
@@ -338,10 +338,10 @@ test-suite epoch-validation-normal-form-test
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
-                       -fno-warn-all-missed-specialisations
-                       -fno-warn-missing-import-lists
-                       -fno-warn-safe
-                       -fno-warn-unsafe
+                       -Wno-all-missed-specialisations
+                       -Wno-missing-import-lists
+                       -Wno-safe
+                       -Wno-unsafe
                        "-with-rtsopts=-K450K -M500M"
 
   if (!flag(development))

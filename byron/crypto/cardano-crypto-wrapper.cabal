@@ -69,10 +69,10 @@ library
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
-                       -fno-warn-all-missed-specialisations
-                       -fno-warn-missing-import-lists
-                       -fno-warn-safe
-                       -fno-warn-unsafe
+                       -Wno-all-missed-specialisations
+                       -Wno-missing-import-lists
+                       -Wno-safe
+                       -Wno-unsafe
   if impl(ghc >=8.8)
     ghc-options:       -Wno-missing-deriving-strategies
   if impl(ghc >=8.10)
@@ -120,10 +120,10 @@ test-suite test
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
-                       -fno-warn-all-missed-specialisations
-                       -fno-warn-missing-import-lists
-                       -fno-warn-safe
-                       -fno-warn-unsafe
+                       -Wno-all-missed-specialisations
+                       -Wno-missing-import-lists
+                       -Wno-safe
+                       -Wno-unsafe
   if impl(ghc >=8.8)
     ghc-options:       -Wno-missing-deriving-strategies
   if impl(ghc >=8.10)

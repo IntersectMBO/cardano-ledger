@@ -16,7 +16,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- This is for the Hashable Set instance
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Byron.Spec.Ledger.Update
   ( module Byron.Spec.Ledger.Update

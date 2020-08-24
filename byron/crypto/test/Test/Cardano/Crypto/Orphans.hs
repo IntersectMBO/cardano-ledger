@@ -1,5 +1,5 @@
 {-# LANGUAGE StandaloneDeriving   #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Crypto.Orphans
   ()
@@ -34,4 +34,3 @@ instance Ord Ed25519.Signature where
 
 toByteString :: (BA.ByteArrayAccess bin) => bin -> ByteString
 toByteString = BA.convert
-
