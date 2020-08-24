@@ -38,7 +38,6 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Nonce,
     Seed,
     ShelleyBase,
-    mkNonceFromOutputVRF,
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
@@ -46,6 +45,7 @@ import Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     PrevHash,
     bhbody,
+    bnonce,
     lastAppliedHash,
   )
 import Shelley.Spec.Ledger.Crypto (Crypto, VRF)
@@ -161,7 +161,7 @@ prtclTransition = do
     judgmentContext
   let bhb = bhbody bh
       slot = bheaderSlotNo bhb
-      eta = mkNonceFromOutputVRF . VRF.certifiedOutput $ bheaderEta bhb
+      eta = bnonce bhb
 
   UpdnState etaV' etaC' <-
     trans @(UPDN crypto) $
@@ -172,7 +172,7 @@ prtclTransition = do
         )
   cs' <-
     trans @(OVERLAY crypto) $
-      TRC (OverlayEnv osched eta0 pd dms, cs, bh)
+      TRC (OverlayEnv osched pd dms eta0, cs, bh)
 
   pure $
     PrtclState

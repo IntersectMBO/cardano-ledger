@@ -1342,9 +1342,9 @@ check the correct cold key hash and vrf key hash.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
-        \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations} \\
+        \eta_0 & \Seed & \text{epoch nonce} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1476,6 +1476,7 @@ followed by the transition to update the evolving and candidate nonces.
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \eta_0 & \Seed & \text{epoch nonce} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1517,7 +1518,6 @@ The environments for this transition are:
 The states for this transition consists of:
 \begin{itemize}
   \item The operational certificate issue number mapping.
-  \item The last applied block information.
   \item The evolving nonce.
   \item The canditate nonce for the next epoch.
 \end{itemize}
@@ -1544,9 +1544,9 @@ The states for this transition consists of:
       {
         {\begin{array}{c}
           \var{osched} \\
-          \eta_0 \\
           \var{pd} \\
           \var{dms} \\
+          \eta_0 \\
         \end{array}
         }
         \vdash \var{cs}\trans{\hyperref[fig:rules:overlay]{overlay}}{\var{bh}} \var{cs}'
@@ -1577,7 +1577,7 @@ The states for this transition consists of:
   \label{fig:rules:prtcl}
 \end{figure}
 
-The PRTCL rule has no predicate failures.
+The PRTCL rule has no predicate failures, besides those of the two sub-transitons.
 
 \clearpage
 
