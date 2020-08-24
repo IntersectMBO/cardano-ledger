@@ -13,10 +13,10 @@
 module Shelley.Spec.Ledger.Value
  where
 
-import           Cardano.Binary (ToCBOR, FromCBOR, toCBOR, fromCBOR)
+import           Cardano.Binary (ToCBOR, FromCBOR, toCBOR, fromCBOR, encodeListLen)
 import           Cardano.Prelude (NoUnexpectedThunks(..), NFData ())
 import           Data.Typeable (Typeable)
--- import           Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
+import           Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           GHC.Generics (Generic)
@@ -306,18 +306,17 @@ instance
   (Crypto crypto)
   => ToCBOR (Value crypto)
  where
-   toCBOR (Value c _) = toCBOR c
-           -- encodeListLen 2
-           -- <> toCBOR c
-           -- <> toCBOR v
+   toCBOR (Value c v) =
+           encodeListLen 2
+           <> toCBOR c
+           <> toCBOR v
 
 instance
   (Crypto crypto)
   => FromCBOR (Value crypto)
  where
-  fromCBOR = vinject <$> fromCBOR
-    -- do
-    -- decodeRecordNamed "Value" (const 2) $ do
-    --   c <- fromCBOR
-    --   v <- fromCBOR
-    --   pure $ Value c v
+  fromCBOR = do
+    decodeRecordNamed "Value" (const 2) $ do
+      c <- fromCBOR
+      v <- fromCBOR
+      pure $ Value c v

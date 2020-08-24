@@ -56,7 +56,7 @@ import Cardano.Binary (toCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import qualified Cardano.Crypto.Hash as Hash
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪))
-import Control.Monad (replicateM)
+import Control.Monad (replicateM, liftM2)
 import Control.Monad.Trans.Reader (asks)
 import Data.Coerce (coerce)
 import Data.List (foldl')
@@ -491,9 +491,9 @@ genTxOut Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
 -- | Generates a list of 'v' values according to v generator
 -- TODO make this correct
 genValList :: (Val v, Arbitrary v) => Integer -> Integer -> Int -> Int -> Gen [v]
-genValList _ _ lower upper = do
+genValList minCoin maxCoin lower upper = do
   len <- QC.choose (lower, upper)
-  replicateM len $ QC.arbitrary
+  replicateM len $ liftM2 vplus (vinject <$> genCoin minCoin maxCoin) QC.arbitrary
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
 -- and with values between 'minCoin' and 'maxCoin'.
