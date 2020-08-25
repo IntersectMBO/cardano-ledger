@@ -16,7 +16,6 @@ import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
 import Data.ByteString (ByteString) -- TODO is this the right Bytestring
 import qualified Data.Map as Map
 import Data.Map.Internal (Map (..), balanceL, balanceR, link, link2, singleton, splitLookup)
-import Data.Map.Strict (Map)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Coin (Coin (..))
