@@ -68,6 +68,7 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
+import qualified Control.Monad.Fail
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Binary.Put as B
@@ -253,7 +254,7 @@ instance Monad StrictMaybe where
 
   return = SJust
 
-instance MonadFail StrictMaybe where
+instance Control.Monad.Fail.MonadFail StrictMaybe where
   fail _ = SNothing
 
 instance ToCBOR a => ToCBOR (StrictMaybe a) where
