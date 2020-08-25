@@ -40,6 +40,7 @@ module Shelley.Spec.Ledger.BlockChain
     bheader,
     bhbody,
     bbody,
+    bnonce,
     hsig,
     --
     seedEta,
@@ -108,6 +109,7 @@ import Shelley.Spec.Ledger.BaseTypes
     activeSlotVal,
     intervalValue,
     mkNonceFromNumber,
+    mkNonceFromOutputVRF,
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Crypto
@@ -488,6 +490,10 @@ instance
 -- from the body of the block header.
 poolIDfromBHBody :: Crypto crypto => BHBody crypto -> KeyHash 'BlockIssuer crypto
 poolIDfromBHBody = hashKey . bheaderVk
+
+-- | Retrieve the new nonce from the block header body.
+bnonce :: BHBody crypto -> Nonce
+bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
 data Block crypto
   = Block' !(BHeader crypto) !(TxSeq crypto) LByteString

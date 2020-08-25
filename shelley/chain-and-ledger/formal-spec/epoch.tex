@@ -260,7 +260,7 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
       & \where \\
       & ~~~~ (~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard,~\wcard)
         = \var{dstate} \\
-      & ~~~~ (~\var{poolParams}~\wcard,~\wcard) = \var{pstate} \\
+      & ~~~~ (~\var{poolParams},~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
         \left(\fun{stakeCred_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
         \circ\left(\range{\var{utxo}}\right)
@@ -1320,7 +1320,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\left(
       \wcard,~
       \left(
-      \left(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard\right)~
+      \left(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard\right),~
       \wcard
       \right)
       \right) = \var{ls} \\

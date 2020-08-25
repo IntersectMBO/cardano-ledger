@@ -80,9 +80,9 @@ data OVERLAY crypto
 data OverlayEnv crypto
   = OverlayEnv
       (OverlaySchedule crypto)
-      Nonce
       (PoolDistr crypto)
       (GenDelegs crypto)
+      Nonce
   deriving (Generic)
 
 instance NoUnexpectedThunks (OverlayEnv crypto)
@@ -238,7 +238,7 @@ overlayTransition ::
 overlayTransition =
   judgmentContext
     >>= \( TRC
-             ( OverlayEnv osched eta0 pd (GenDelegs genDelegs),
+             ( OverlayEnv osched pd (GenDelegs genDelegs) eta0,
                cs,
                bh@(BHeader bhb _)
                )

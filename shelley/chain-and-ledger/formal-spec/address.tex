@@ -156,7 +156,7 @@ which is also either a key hash or a script hash.
       \\
       \var{addr^{script}_{enterprise}}
                  & \Addr^{vkey}_{enterprise}
-                               & \Addr_{enterprise}\HashScr
+                               & \Addr_{enterprise}\cap\HashScr
       \\[0.5cm]
       \var{addr^{vkey}} &
              \Addr^{vkey} &
@@ -209,7 +209,7 @@ which is also either a key hash or a script hash.
   \emph{Constraints}
   %
   \begin{equation*}
-    \var{hk_1} = \var{hk_2} \iff \fun{addr_{rwd}}~\var{hk_2} = \fun{addr_{rwd}}~\var{hk_2}
+    \var{hk_1} = \var{hk_2} \iff \fun{addr_{rwd}}~\var{hk_1} = \fun{addr_{rwd}}~\var{hk_2}
     ~~~ \left( \fun{addr_{rwd}} \text{ is injective} \right)
   \end{equation*}
   \caption{Definitions used in Addresses}

@@ -491,8 +491,10 @@ and is present only for extra assurance and for help in proving
 that Ada is preserved by this transition.
 The second rule deals with the case when the epoch signal $e$ is not one greater than the
 current epoch \var{e_\ell}. This rule does not change the state.
-The third one deals with the case when the reward update is equal to $\Nothing$.
-This rule also does not change the state.
+The third rule is nearly the same as the first rule, only there is no reward update to apply.
+This third rule is defined for completeness, but in practice we hope that it is never used,
+since it only applies in the case that epoch $e$ processed no blocks after the first
+$\StabilityWindow$-many slots.
 
 In the first case, the new epoch state is updated as follows:
 
@@ -600,13 +602,51 @@ In the first case, the new epoch state is updated as follows:
       e = e_\ell + 1
       &
       \var{ru} = \Nothing
+      \\
+      {
+        \vdash
+        \var{es}
+          \trans{\hyperref[fig:rules:mir]{mir}}{}\var{es''}
+      }
+      &
+      {
+        \vdash
+        \var{es''}
+          \trans{\hyperref[fig:rules:epoch]{epoch}}{\var{e}}\var{es'''}
+      }
+      \\~\\
+      {\begin{array}{r@{~\leteq~}l}
+         (\var{acnt},~\var{ss},~\wcard,~\wcard,~\var{pp}) & \var{es'''} \\
+         (\wcard,~\var{pstake_{set}},~\wcard,~\wcard) & \var{ss} \\
+         \var{pd'} & \fun{calculatePoolDistr}~\var{pstake_{set}} \\
+         \var{osched'} & \overlaySchedule{e}{gkeys}{pp} \\
+       \end{array}}
     }
     {
       {\begin{array}{c}
-          \var{s} \\
-          \var{gkeys} \\
-      \end{array}}
-      \vdash\var{nes}\trans{newepoch}{\var{e}} \var{nes}
+         \var{s} \\
+         \var{gkeys} \\
+       \end{array}}
+      \vdash
+      {\left(\begin{array}{c}
+            \var{e_\ell} \\
+            \var{b_{prev}} \\
+            \var{b_{cur}} \\
+            \var{es} \\
+            \var{ru} \\
+            \var{pd} \\
+            \var{osched} \\
+      \end{array}\right)}
+      \trans{newepoch}{\var{e}}
+      {\left(\begin{array}{c}
+            \varUpdate{\var{e}} \\
+            \varUpdate{\var{b_{cur}}} \\
+            \varUpdate{\emptyset} \\
+            \varUpdate{\var{es'''}} \\
+            \var{ru} \\
+            \varUpdate{\var{pd}'} \\
+            \varUpdate{\var{osched}'} \\
+      \end{array}\right)}
     }
   \end{equation}
   \caption{New Epoch rules}
@@ -984,7 +1024,7 @@ slot is removed. The helper function $\fun{adoptGenesisDelegs}$ accomplishes the
           \right\}
       \\
       & ~~~~~~~~~~\var{ds'}\leteq
-          (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
+          (\var{rewards},~\var{delegations},~\var{ptrs},
           ~\var{fGenDelegs'},~\var{genDelegs}\unionoverrideRight\var{genDelegs'},~\var{i_{rwd}})
       \\
       & ~~~~~~~~~~\var{es'}\leteq
@@ -1302,9 +1342,9 @@ check the correct cold key hash and vrf key hash.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
-        \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations} \\
+        \eta_0 & \Seed & \text{epoch nonce} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1436,6 +1476,7 @@ followed by the transition to update the evolving and candidate nonces.
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \eta_0 & \Seed & \text{epoch nonce} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1477,7 +1518,6 @@ The environments for this transition are:
 The states for this transition consists of:
 \begin{itemize}
   \item The operational certificate issue number mapping.
-  \item The last applied block information.
   \item The evolving nonce.
   \item The canditate nonce for the next epoch.
 \end{itemize}
@@ -1504,9 +1544,9 @@ The states for this transition consists of:
       {
         {\begin{array}{c}
           \var{osched} \\
-          \eta_0 \\
           \var{pd} \\
           \var{dms} \\
+          \eta_0 \\
         \end{array}
         }
         \vdash \var{cs}\trans{\hyperref[fig:rules:overlay]{overlay}}{\var{bh}} \var{cs}'
@@ -1537,7 +1577,7 @@ The states for this transition consists of:
   \label{fig:rules:prtcl}
 \end{figure}
 
-The PRTCL rule has no predicate failures.
+The PRTCL rule has no predicate failures, besides those of the two sub-transitons.
 
 \clearpage
 
