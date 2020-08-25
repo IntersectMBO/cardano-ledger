@@ -102,8 +102,6 @@ library
     cborg,
     cborg-json,
     containers,
-    cryptonite,
-    hedgehog,
     iproute,
     mtl,
     network,
@@ -115,8 +113,4 @@ library
     stm,
     text,
     time,
-    transformers,
-    -- Added for clone of Core
-    bimap,
-    hashable,
-    goblins
+    transformers
