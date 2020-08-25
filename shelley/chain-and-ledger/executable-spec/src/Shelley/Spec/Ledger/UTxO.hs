@@ -110,8 +110,6 @@ newtype UTxO crypto v = UTxO {unUTxO :: Map (TxIn crypto v) (TxOut crypto v)}
   deriving (ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData, Eq)
   deriving (Show) via Quiet (UTxO crypto v)
 
--- instance Ord (UTxO crypto v)
-
 instance Relation (UTxO crypto v) where
   type Domain (UTxO crypto v) = TxIn crypto v
   type Range (UTxO crypto v) = TxOut crypto v
