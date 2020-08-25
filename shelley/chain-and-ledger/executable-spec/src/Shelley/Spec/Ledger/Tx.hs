@@ -97,7 +97,6 @@ import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.Scripts
-import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
     decodeMapContents,
@@ -114,6 +113,7 @@ import Shelley.Spec.Ledger.TxData
     WitVKey (..),
     witKeyHash,
   )
+import Shelley.Spec.Ledger.Value
 
 -- | Higher Kinded Data
 type family HKD f a where

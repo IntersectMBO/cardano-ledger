@@ -54,7 +54,6 @@ import Shelley.Spec.Ledger.Address
   )
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
@@ -90,6 +89,7 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     txup,
   )
+import Shelley.Spec.Ledger.Value
 
 data UTXO crypto v
 
@@ -294,17 +294,17 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
--- TODO check voper
+  -- TODO check voper
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
       outputsTooSmall = [out | out@(TxOut _ vl) <- outputs, (voper Gt) (vinject $ (Coin $ vsize vl) * minUTxOValue) vl]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
--- TODO add forge
--- TODO add forge errors
--- let (Value vls) = _forge txb
--- let cids = Map.keys vls
--- all (adaID /=) cids  ?! (ForgingAda (Value vls))
+  -- TODO add forge
+  -- TODO add forge errors
+  -- let (Value vls) = _forge txb
+  -- let cids = Map.keys vls
+  -- all (adaID /=) cids  ?! (ForgingAda (Value vls))
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.

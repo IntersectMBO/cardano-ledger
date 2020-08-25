@@ -79,7 +79,6 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.PParams (PParams, Update, _keyDeposit, _poolDeposit)
 import Shelley.Spec.Ledger.Scripts
-import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
   ( DelegCert (..),
@@ -97,6 +96,7 @@ import Shelley.Spec.Ledger.TxData
     pattern Delegate,
     pattern Delegation,
   )
+import Shelley.Spec.Ledger.Value
 
 instance HasExp (UTxO crypto v) (Map (TxIn crypto v) (TxOut crypto v)) where
   toExp (UTxO x) = Base MapR x

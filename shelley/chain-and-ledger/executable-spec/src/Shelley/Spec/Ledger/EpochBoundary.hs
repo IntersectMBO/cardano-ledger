@@ -38,7 +38,6 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
-import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.DeserializeShort (deserialiseAddrStakeRef)
@@ -47,6 +46,7 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxData (PoolParams, TxOut (TxOutCompact))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Shelley.Spec.Ledger.Value
 
 -- | Blocks made
 newtype BlocksMade crypto = BlocksMade
@@ -74,7 +74,8 @@ newtype Stake crypto = Stake
 
 -- | Sum up all the Coin for each staking Credential
 aggregateUtxoCoinByCredential ::
-  forall crypto v. CV crypto v =>
+  forall crypto v.
+  CV crypto v =>
   Map Ptr (Credential 'Staking crypto) ->
   UTxO crypto v ->
   Map (Credential 'Staking crypto) Coin ->

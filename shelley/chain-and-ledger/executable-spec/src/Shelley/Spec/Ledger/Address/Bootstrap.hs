@@ -73,7 +73,6 @@ import Shelley.Spec.Ledger.TxData
   )
 import Shelley.Spec.Ledger.Value
 
-
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Eq, Generic)
   deriving (Show) via Quiet ChainCode
@@ -199,7 +198,7 @@ coerceSignature sig =
 
 makeBootstrapWitness ::
   forall crypto v.
-  (DSIGN crypto ~ DSIGN.Ed25519DSIGN,
+  ( DSIGN crypto ~ DSIGN.Ed25519DSIGN,
     Crypto crypto
   ) =>
   Hash crypto (TxBody crypto v) ->

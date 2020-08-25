@@ -114,7 +114,7 @@ sgActiveSlotCoeff =
     . unitIntervalFromRational
     . sgActiveSlotsCoeff
 
--- TODO JSON for v? 
+-- TODO JSON for v?
 instance (CV crypto v, ToJSON v) => ToJSON (ShelleyGenesis crypto v) where
   toJSON sg =
     Aeson.object

@@ -11,12 +11,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
-{-# LANGUAGE RankNTypes #-}
 
 module Shelley.Spec.Ledger.Keys
   ( KeyRole (..),
@@ -198,7 +198,8 @@ instance Crypto crypto => NoUnexpectedThunks (KeyPair kd crypto)
 instance HasKeyRole KeyPair
 
 -- | Produce a digital signature
-signedDSIGN :: forall crypto a.
+signedDSIGN ::
+  forall crypto a.
   (Crypto crypto, DSIGN.Signable (DSIGN crypto) a) =>
   DSIGN.SignKeyDSIGN (DSIGN crypto) ->
   a ->

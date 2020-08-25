@@ -15,8 +15,8 @@ where
 import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Typeable (Typeable)
 import Data.Text (pack)
+import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Quiet
@@ -50,11 +50,11 @@ isValidCoinValue :: Integer -> Bool
 isValidCoinValue c = 0 <= c && c <= (fromIntegral (maxBound :: Word64))
 
 instance Semigroup Coin where
-    (<>) = (+)
+  (<>) = (+)
 
 instance Monoid Coin where
-    mempty  = Coin 0
-    mappend = (<>)
+  mempty = Coin 0
+  mappend = (<>)
 
 instance ToCBOR Coin where
   toCBOR (Coin c) =

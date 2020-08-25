@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -17,7 +18,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE GADTs #-}
 
 module Shelley.Spec.Ledger.TxData
   ( DCert (..),
@@ -136,9 +136,6 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-
-import Shelley.Spec.Ledger.Value
-
 import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -185,6 +182,7 @@ import Shelley.Spec.Ledger.Serialization
     mapToCBOR,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Shelley.Spec.Ledger.Value
 
 instance HasExp (StakeCreds crypto) (Map (Credential 'Staking crypto) SlotNo) where
   toExp (StakeCreds x) = Base MapR x
@@ -341,14 +339,28 @@ data PoolParams crypto = PoolParams
 instance NoUnexpectedThunks (PoolParams crypto)
 
 instance NFData (PoolParams crypto) where
-  rnf (PoolParams a b c d e f g h i) = seq (rnf a)
-                                      (seq (rnf b)
-                                      (seq (rnf c)
-                                      (seq (rnf d)
-                                      (seq (rnf e)
-                                      (seq (rnf f)
-                                      (seq (rnf g)
-                                      (seq (rnf h) (rnf i))))))))
+  rnf (PoolParams a b c d e f g h i) =
+    seq
+      (rnf a)
+      ( seq
+          (rnf b)
+          ( seq
+              (rnf c)
+              ( seq
+                  (rnf d)
+                  ( seq
+                      (rnf e)
+                      ( seq
+                          (rnf f)
+                          ( seq
+                              (rnf g)
+                              (seq (rnf h) (rnf i))
+                          )
+                      )
+                  )
+              )
+          )
+      )
 
 newtype Wdrl crypto = Wdrl {unWdrl :: Map (RewardAcnt crypto) Coin}
   deriving (Show, Eq, Generic)
@@ -388,7 +400,6 @@ instance Crypto crypto => FromJSON (PoolParams crypto) where
         <*> obj .: "relays"
         <*> obj .: "metadata"
 
-
 instance (CV crypto v) => NFData (TxId crypto v) where
   rnf (TxId hs) = rnf hs
 
@@ -399,7 +410,9 @@ newtype TxId crypto v where
     TxId crypto v
 
 deriving instance Ord (TxId crypto v)
+
 deriving instance Eq (TxId crypto v)
+
 deriving instance Show (TxId crypto v)
 
 deriving instance (CV crypto v) => ToCBOR (TxId crypto v)
@@ -408,7 +421,8 @@ deriving instance (CV crypto v) => FromCBOR (TxId crypto v)
 
 -- | The input of a UTxO.
 data TxIn crypto v where
-  TxInCompact :: CV crypto v =>
+  TxInCompact ::
+    CV crypto v =>
     {-# UNPACK #-} !(TxId crypto v) ->
     {-# UNPACK #-} !Word64 ->
     TxIn crypto v
@@ -417,7 +431,9 @@ data TxIn crypto v where
 -- depends on the crypto.
 
 deriving instance Ord (TxIn crypto v)
+
 deriving instance Eq (TxIn crypto v)
+
 deriving instance Show (TxIn crypto v)
 
 instance (CV crypto v) => NFData (TxIn crypto v) where
@@ -436,16 +452,16 @@ pattern TxIn addr index <-
 
 {-# COMPLETE TxIn #-}
 
-
 deriving via UseIsNormalFormNamed "TxIn" (TxIn crypto v) instance NoUnexpectedThunks (TxIn crypto v)
 
 -- | Parametrized tx output
 -- TODO make v compact too
 data TxOut crypto v where
-   TxOutCompact :: CV crypto v =>
-     {-# UNPACK #-} !BSS.ShortByteString ->
-     v ->
-     TxOut crypto v
+  TxOutCompact ::
+    CV crypto v =>
+    {-# UNPACK #-} !BSS.ShortByteString ->
+    v ->
+    TxOut crypto v
 
 deriving instance Show v => Show (TxOut crypto v)
 
@@ -555,6 +571,7 @@ instance NoUnexpectedThunks (MIRCert crypto)
 instance NoUnexpectedThunks (DCert crypto)
 
 -- =========
+
 -- | A raw transaction
 data TxBody crypto v = TxBody'
   { _inputs' :: !(Set (TxIn crypto v)),
@@ -570,10 +587,14 @@ data TxBody crypto v = TxBody'
   }
 
 instance CV c v => HashAnnotated (TxBody c v) c
+
 -- TODO no thunks in bodyBytes is ok?
 deriving via UseIsNormalFormNamed "TxBody" (TxBody crypto v) instance NoUnexpectedThunks (TxBody crypto v)
+
 deriving instance (Show v) => Show (TxBody crypto v)
+
 deriving instance (Eq v) => Eq (TxBody crypto v)
+
 -- ===========
 
 pattern TxBody ::

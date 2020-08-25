@@ -131,7 +131,6 @@ import Shelley.Spec.Ledger.BaseTypes
     unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..), rationalToCoinViaFloor)
-import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -217,6 +216,7 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
+import Shelley.Spec.Ledger.Value
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
@@ -700,7 +700,6 @@ genesisState genDelegs0 utxo0 =
   where
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
-
 -- | Implementation of abstract transaction size
 txsize :: Tx crypto v -> Integer
 txsize = fromIntegral . BSL.length . txFullBytes
@@ -751,6 +750,7 @@ keyRefunds pp tx = (_keyDeposit pp) * (fromIntegral $ length deregistrations)
     deregistrations = filter isDeRegKey (toList $ _certs tx)
 
 -- TODO add forge
+
 -- | Compute the lovelace which are destroyed by the transaction
 consumed ::
   CV crypto v =>
