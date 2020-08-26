@@ -41,7 +41,6 @@ module Shelley.Spec.Ledger.BlockChain
     bhbody,
     bbody,
     bnonce,
-    hsig,
     --
     seedEta,
     seedL,
@@ -612,12 +611,6 @@ bhbody ::
   BHeader crypto ->
   BHBody crypto
 bhbody (BHeader b _) = b
-
-hsig ::
-  Crypto crypto =>
-  BHeader crypto ->
-  SignedKES crypto (BHBody crypto)
-hsig (BHeader _ s) = s
 
 -- | Construct a seed to use in the VRF computation.
 mkSeed ::

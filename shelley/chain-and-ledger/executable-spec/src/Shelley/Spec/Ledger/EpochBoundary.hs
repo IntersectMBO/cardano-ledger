@@ -23,7 +23,6 @@ module Shelley.Spec.Ledger.EpochBoundary
     poolStake,
     obligation,
     maxPool,
-    groupByPool,
   )
 where
 
@@ -120,20 +119,6 @@ maxPool pc r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
     factor2 = sigma' + p' * a0 * factor3
     factor3 = (sigma' - p' * factor4) / z0
     factor4 = (z0 - sigma') / z0
-
--- | Pool individual reward
-groupByPool ::
-  Map (KeyHash 'Staking crypto) Coin ->
-  Map (KeyHash 'Staking crypto) (KeyHash 'StakePool crypto) ->
-  Map
-    (KeyHash 'StakePool crypto)
-    (Map (KeyHash 'Staking crypto) Coin)
-groupByPool active delegs =
-  Map.fromListWith
-    Map.union
-    [ (pool, eval (Set.singleton hk ◁ active))
-      | (hk, pool) <- Map.toList delegs
-    ]
 
 -- | Snapshot of the stake distribution.
 data SnapShot crypto = SnapShot

@@ -52,7 +52,6 @@ module Shelley.Spec.Ledger.LedgerState
     pvCanFollow,
     reapRewards,
     totalInstantaneousReservesRewards,
-    totalInstantaneousTreasuryRewards,
     updatePpup,
 
     -- * state transitions
@@ -242,9 +241,6 @@ data InstantaneousRewards crypto = InstantaneousRewards
 
 totalInstantaneousReservesRewards :: InstantaneousRewards crypto -> Coin
 totalInstantaneousReservesRewards (InstantaneousRewards irR _) = sum irR
-
-totalInstantaneousTreasuryRewards :: InstantaneousRewards crypto -> Coin
-totalInstantaneousTreasuryRewards (InstantaneousRewards _ irT) = sum irT
 
 instance NoUnexpectedThunks (InstantaneousRewards crypto)
 

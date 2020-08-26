@@ -20,10 +20,8 @@ module Shelley.Spec.Ledger.BaseTypes
     Nonce (..),
     Seed (..),
     UnitInterval,
-    fpEpsilon,
     fpPrecision,
     interval0,
-    interval1,
     intervalValue,
     unitIntervalToRational,
     unitIntervalFromRational,
@@ -99,9 +97,6 @@ type FixedPoint = Digits34
 fpPrecision :: FixedPoint
 fpPrecision = (10 :: FixedPoint) ^ (34 :: Integer)
 
-fpEpsilon :: FixedPoint
-fpEpsilon = (10 :: FixedPoint) ^ (17 :: Integer) / fpPrecision
-
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnsafeUnitInterval (Ratio Word64)
   deriving (Show, Ord, Eq, Generic)
@@ -150,9 +145,6 @@ intervalValue (UnsafeUnitInterval v) = v
 
 interval0 :: UnitInterval
 interval0 = UnsafeUnitInterval 0
-
-interval1 :: UnitInterval
-interval1 = UnsafeUnitInterval 1
 
 -- | Evolving nonce type.
 data Nonce

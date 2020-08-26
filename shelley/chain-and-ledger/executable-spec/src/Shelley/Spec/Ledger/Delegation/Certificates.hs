@@ -23,7 +23,6 @@ module Shelley.Spec.Ledger.Delegation.Certificates
     delegCWitness,
     poolCWitness,
     genesisCWitness,
-    dvalue,
     isRegKey,
     isDeRegKey,
     isDelegation,
@@ -42,12 +41,10 @@ import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxData
   ( DCert (..),
@@ -80,12 +77,6 @@ poolCWitness (RetirePool k _) = KeyHashObj k
 
 genesisCWitness :: GenesisDelegCert crypto -> KeyHash 'Genesis crypto
 genesisCWitness (GenesisDelegCert gk _ _) = gk
-
--- | Retrieve the deposit amount for a certificate
-dvalue :: DCert crypto -> PParams -> Coin
-dvalue (DCertDeleg (RegKey _)) = _keyDeposit
-dvalue (DCertPool (RegPool _)) = _poolDeposit
-dvalue _ = const $ Coin 0
 
 -- | Check for `RegKey` constructor
 isRegKey :: DCert crypto -> Bool
