@@ -656,42 +656,8 @@ data Lam t where
   Both:: Lam (Bool -> Bool -> Bool)
   Lift:: (a -> b -> c) -> Lam (a -> b -> c)  -- For use n the tests only!
 
-
--- ====================== Evaluating ================
-env0 :: (d,c,b,a)
-env0 = (undefined,undefined,undefined,undefined)
-
-reify:: Lam t -> t
-reify (Lam p1 p2 e) = \ x y -> evaluate (bind p1 x (bind p2 y env0)) e
-reify Add = (+)
-reify Eql = (==)
-reify Both = (&&)
-reify (Lift f) = f
-
-evaluate:: (a,b,c,d) -> Expr (a,b,c,d) t -> t
-evaluate (x1,x2,x3,x4) X1 = x1
-evaluate (x1,x2,x3,x4) X2 = x2
-evaluate (x1,x2,x3,x4) X3 = x3
-evaluate (x1,x2,x3,x4) X4 = x4
-evaluate env (EPair p q) = (evaluate env p, evaluate env q)
-evaluate env (HasKey k datum) = haskey (evaluate env k) datum
-evaluate env (Neg x) = not(evaluate env x)
-evaluate env (Ap oper f g) = (reify oper) (evaluate env f) (evaluate env g)
-evaluate env (FST f) = fst (evaluate env f)
-evaluate env (SND f) = snd (evaluate env f)
-evaluate env (Lit x) = x
-
--- Be carefull, if you create a lambda where P1,P2,P3, or P4, appears more than once
--- The rightmost binding of the repeated Pat will over ride the ones to the left.
-
-bind :: Pat env t -> t -> env -> env
-bind P1 v (d,c,b,a) = (v,c,b,a)
-bind P2 v (d,c,b,a) = (d,v,b,a)
-bind P3 v (d,c,b,a) = (d,c,v,a)
-bind P4 v (d,c,b,a) = (d,c,b,v)
-bind (PPair p q) (v1,v2) (d,c,b,a) = bind q v2 (bind p v1 (d,c,b,a))
-
 -- ============= Printing in 𝜷-Normal Form =========================
+
 type StringEnv = (String,String,String,String)
 
 bindE :: Pat (a,b,c,d) t -> Expr (w,x,y,z) t -> StringEnv -> StringEnv
