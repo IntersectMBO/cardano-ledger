@@ -54,7 +54,7 @@ import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyPair (..))
-import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, vKey)
+import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -75,19 +75,6 @@ import Shelley.Spec.Ledger.STS.Delegs
     pattern WithdrawalsNotInRewardsDELEGS,
   )
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..), PredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Utxo
-  ( pattern BadInputsUTxO,
-    pattern ExpiredUTxO,
-    pattern FeeTooSmallUTxO,
-    pattern InputSetEmptyUTxO,
-    pattern ValueNotConservedUTxO,
-  )
-import Shelley.Spec.Ledger.STS.Utxow
-  ( PredicateFailure (..),
-    pattern InvalidWitnessesUTXOW,
-    pattern MissingScriptWitnessesUTXOW,
-    pattern MissingVKeyWitnessesUTXOW,
-  )
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),

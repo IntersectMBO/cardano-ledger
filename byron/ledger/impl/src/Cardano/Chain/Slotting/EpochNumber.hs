@@ -16,7 +16,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson
 import Data.Data (Data)
 import Data.Ix (Ix)

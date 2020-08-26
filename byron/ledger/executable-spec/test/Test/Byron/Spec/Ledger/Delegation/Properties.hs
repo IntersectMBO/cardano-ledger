@@ -27,7 +27,7 @@ import           Control.Arrow (first, (***))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import           Data.Data (Data, Typeable)
-import           Data.List (foldl', last)
+import           Data.List (foldl')
 import           Data.List.Unique (repeated)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set

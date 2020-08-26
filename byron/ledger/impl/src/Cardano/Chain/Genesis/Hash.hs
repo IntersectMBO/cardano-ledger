@@ -9,7 +9,6 @@ module Cardano.Chain.Genesis.Hash
   )
 where
 
-import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 
 import Cardano.Prelude

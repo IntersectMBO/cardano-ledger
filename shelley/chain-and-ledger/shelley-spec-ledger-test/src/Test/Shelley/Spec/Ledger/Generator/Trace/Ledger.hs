@@ -11,7 +11,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 -- The HasTrace instance relies on test generators and so cannot
 -- be included with the LEDGER STS
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 

@@ -129,7 +129,6 @@ library
   build-depends:       base >=4.11 && <5
                      , aeson
                      , base58-bytestring
-                     , base64-bytestring-type
                      , bimap >=0.4 && <0.5
                      , binary
                      , bytestring
@@ -141,7 +140,6 @@ library
                      , cborg
                      , containers
                      , contra-tracer
-                     , concurrency
                      , cryptonite
                      , Cabal
                      , deepseq
@@ -149,8 +147,6 @@ library
                      , directory
                      , filepath
                      , formatting
-                     , megaparsec
-                     , memory
                      , mtl
                      , quiet
                      , resourcet
@@ -165,11 +161,15 @@ library
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
-                       -fno-warn-all-missed-specialisations
-                       -fno-warn-missing-import-lists
-                       -fno-warn-safe
-                       -fno-warn-unsafe
-
+                       -Wno-all-missed-specialisations
+                       -Wno-missing-import-lists
+                       -Wno-safe
+                       -Wno-unsafe
+  if impl(ghc >=8.8)
+    ghc-options:       -Wno-missing-deriving-strategies
+  if impl(ghc >=8.10)
+    ghc-options:       -Wno-missing-safe-haskell-mode
+                       -Wno-prepositive-qualified-module
   if (!flag(development))
     ghc-options:         -Werror
 
@@ -285,12 +285,17 @@ test-suite cardano-ledger-test
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
-                       -fno-warn-all-missed-specialisations
-                       -fno-warn-missing-import-lists
-                       -fno-warn-safe
-                       -fno-warn-unsafe
+                       -Wno-all-missed-specialisations
+                       -Wno-missing-import-lists
+                       -Wno-safe
+                       -Wno-unsafe
                        "-with-rtsopts=-K5M -M500M"
-
+  if impl(ghc >=8.8)
+    ghc-options:       -Wno-missing-deriving-strategies
+  if impl(ghc >=8.10)
+    ghc-options:       -Wno-missing-safe-haskell-mode
+                       -Wno-prepositive-qualified-module
+                       -Wno-unused-packages
   if (!flag(development))
     ghc-options:         -Werror
 
@@ -333,10 +338,10 @@ test-suite epoch-validation-normal-form-test
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
-                       -fno-warn-all-missed-specialisations
-                       -fno-warn-missing-import-lists
-                       -fno-warn-safe
-                       -fno-warn-unsafe
+                       -Wno-all-missed-specialisations
+                       -Wno-missing-import-lists
+                       -Wno-safe
+                       -Wno-unsafe
                        "-with-rtsopts=-K450K -M500M"
 
   if (!flag(development))

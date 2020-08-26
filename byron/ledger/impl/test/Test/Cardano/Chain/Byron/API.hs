@@ -15,7 +15,6 @@ module Test.Cardano.Chain.Byron.API
 import Cardano.Prelude
 
 import           Data.Coerce (coerce)
-import           Data.Maybe (maybeToList)
 import qualified Data.Map   as Map
 import qualified Data.Set   as Set
 

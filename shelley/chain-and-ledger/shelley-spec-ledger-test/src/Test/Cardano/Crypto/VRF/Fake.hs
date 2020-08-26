@@ -27,7 +27,6 @@ import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
 import Cardano.Prelude (NoUnexpectedThunks)
 import Data.Bits
-import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as LBS

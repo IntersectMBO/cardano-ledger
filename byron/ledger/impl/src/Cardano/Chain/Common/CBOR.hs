@@ -39,9 +39,6 @@ where
 
 import Cardano.Prelude
 
-import Data.Word (Word32)
-import Data.Typeable (typeOf)
-import Data.Proxy (Proxy(Proxy))
 import Formatting (Format, sformat, shown)
 
 import Data.Digest.CRC32 (CRC32(..))

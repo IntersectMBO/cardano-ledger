@@ -35,7 +35,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Word (Word, Word64)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes

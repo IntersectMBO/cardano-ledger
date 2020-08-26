@@ -11,6 +11,7 @@ where
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Control.Monad (ap)
 import Control.Monad (join)
+import qualified Control.Monad.Fail
 import Data.Bits (testBit, (.&.))
 import Data.ByteString.Short as SBS
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
@@ -52,6 +53,9 @@ instance Monad GetShort where
     case g i sbs of
       Nothing -> Nothing
       Just (i', x) -> runGetShort (f x) i' sbs
+
+instance Control.Monad.Fail.MonadFail GetShort where
+  fail _ = GetShort $ \_ _ -> Nothing
 
 deserialiseAddrStakeRef :: Crypto crypto => ShortByteString -> Maybe (StakeReference crypto)
 deserialiseAddrStakeRef sbs = join $ snd <$> runGetShort getAddrStakeReference 0 sbs

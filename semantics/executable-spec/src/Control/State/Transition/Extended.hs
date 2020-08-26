@@ -40,7 +40,7 @@ module Control.State.Transition.Extended
     trans,
     liftSTS,
 
-    -- * Apply STS
+    -- Type Apply STS
     AssertionPolicy (..),
     ValidationPolicy (..),
     ApplySTSOpts (..),
@@ -152,16 +152,16 @@ class
   STS a
   where
   -- | Type of the state which the system transitions between.
-  type State a :: *
+  type State a :: Type
 
   -- | Signal triggering a state change.
-  type Signal a :: *
+  type Signal a :: Type
 
   -- | Environment type.
-  type Environment a :: *
+  type Environment a :: Type
 
   -- | Monad into which to interpret the rules.
-  type BaseM a :: * -> *
+  type BaseM a :: Type -> Type
 
   type BaseM a = Identity
 
@@ -176,7 +176,7 @@ class
   -- the disjunction of all rules' preconditions is equal to `True`. That is,
   -- either one rule will throw a structural `PredicateFailure` and the other
   -- will succeed, or vice-versa.
-  data PredicateFailure a :: *
+  data PredicateFailure a :: Type
 
   -- | Rules governing transition under this system.
   initialRules :: [InitialRule a]

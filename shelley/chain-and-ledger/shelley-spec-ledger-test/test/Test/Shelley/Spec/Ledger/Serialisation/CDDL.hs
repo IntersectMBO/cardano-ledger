@@ -25,7 +25,6 @@ import Cardano.Binary
     serializeEncoding,
   )
 import Cardano.Prelude
-import Control.Exception (bracket)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)

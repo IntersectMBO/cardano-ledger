@@ -19,18 +19,17 @@ where
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.Address (scriptsToAddr, toAddr)
+import Shelley.Spec.Ledger.Address (scriptsToAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Keys (KeyPair (..))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash,
+    KeyPair (..),
     KeyRole (..),
     coerceKeyRole,
     hashKey,
     hashVerKeyVRF,
-    vKey,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( KeyPairs,
@@ -44,15 +43,7 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
     defaultConstants,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
-import Test.Shelley.Spec.Ledger.Utils
-  ( maxKESIterations,
-    mkGenKey,
-    mkKESKeyPair,
-    mkKeyPair,
-    mkVRFKeyPair,
-    slotsPerKESIteration,
-  )
-import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs)
+import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs, maxKESIterations, mkKESKeyPair, mkVRFKeyPair, slotsPerKESIteration)
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.

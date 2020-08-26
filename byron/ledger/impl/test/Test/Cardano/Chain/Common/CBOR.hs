@@ -12,7 +12,6 @@ import Cardano.Prelude hiding (check)
 import Test.Cardano.Prelude
 
 import qualified Data.Map as M
-import Data.Typeable (typeRep)
 import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 

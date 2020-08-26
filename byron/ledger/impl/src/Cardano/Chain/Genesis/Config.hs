@@ -24,7 +24,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError(..))
 import Data.Time (UTCTime)
 
 import Cardano.Binary (Annotated(..), Raw)

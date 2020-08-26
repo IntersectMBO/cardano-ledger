@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
-{-# OPTIONS_GHC -fno-warn-missing-export-lists #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
 -- | Module containing the imports needed to test that a given abstract trace
 -- passes the concrete validation. This is useful when debugging

@@ -23,7 +23,6 @@ let
       niv
       pkg-config
       hlint
-      weeder
       ormolu.ormolu
     ];
 

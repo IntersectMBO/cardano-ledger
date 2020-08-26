@@ -16,7 +16,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError(..))
 import qualified Data.Map.Strict as M
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B

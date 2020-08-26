@@ -33,7 +33,6 @@ import qualified Data.Map as Map
 import Data.Monoid.Generic (GenericSemigroup (GenericSemigroup), GenericMonoid (GenericMonoid))
 import qualified Data.Set as Set
 import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
-import GHC.Generics (Generic)
 import Lens.Micro ((^.), to, (^..))
 
 import qualified Cardano.Binary as Binary

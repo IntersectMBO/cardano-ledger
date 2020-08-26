@@ -18,7 +18,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, build, formatToString)
 import qualified Formatting.Buildable as B

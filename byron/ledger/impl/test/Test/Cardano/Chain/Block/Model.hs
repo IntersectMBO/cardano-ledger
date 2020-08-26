@@ -33,7 +33,6 @@ import Data.String (fromString)
 import Test.Cardano.Prelude
 
 import qualified Data.Set as Set
-import Data.Word (Word64)
 import Hedgehog
   ( Gen
   , MonadTest

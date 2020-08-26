@@ -29,14 +29,10 @@ module Cardano.Chain.Byron.API.Common (
   , abobMatchesBody
   ) where
 
-import           Codec.CBOR.Decoding                           (Decoder)
 import qualified Codec.CBOR.Read                               as CBOR
 import qualified Codec.CBOR.Write                              as CBOR
 import           Control.Monad.Except
-import           Data.ByteString                               (ByteString)
 import qualified Data.ByteString.Lazy                          as Lazy
-import           Data.Either                                   (isRight)
-import           Data.Set                                      (Set)
 import qualified Data.Text                                     as T
 import           Data.Word
 

@@ -11,14 +11,11 @@ module Cardano.Chain.Block.Boundary
   )
 where
 
-import Control.Monad (return)
-import Data.Word (Word64)
-
 import Cardano.Binary
   (Decoder, Dropper, decodeWord64, dropBytes, dropList, enforceSize, fromCBOR)
-import Cardano.Chain.Common 
+import Cardano.Chain.Common
   (ChainDifficulty, attrData, dropAttributes, fromCBORAttributes)
-import Cardano.Prelude 
+import Cardano.Prelude
 
 --------------------------------------------------------------------------------
 -- BoundaryConsensusData

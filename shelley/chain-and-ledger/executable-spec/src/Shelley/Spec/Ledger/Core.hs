@@ -35,7 +35,8 @@ module Shelley.Spec.Ledger.Core
   )
 where
 
-import Data.Foldable (elem, toList)
+import Data.Foldable (toList)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set, intersection, isSubsetOf)
@@ -46,8 +47,8 @@ import qualified Data.Set as Set
 ---------------------------------------------------------------------------------
 
 class Relation m where
-  type Domain m :: *
-  type Range m :: *
+  type Domain m :: Type
+  type Range m :: Type
 
   singleton :: Domain m -> Range m -> m
 

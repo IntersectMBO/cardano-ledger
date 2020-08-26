@@ -11,7 +11,7 @@ module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
-import Control.State.Transition.Trace ((.-), (.->), checkTrace)
+import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -49,7 +49,6 @@ import Shelley.Spec.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -61,12 +60,12 @@ import Shelley.Spec.Ledger.LedgerState
     _dstate,
     _rewards,
   )
+import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.STS.Delegs (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Delpl (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Ledger
   ( pattern DelegsFailure,
-    pattern UtxoFailure,
     pattern UtxowFailure,
   )
 import Shelley.Spec.Ledger.STS.Pool (PredicateFailure (..))
@@ -96,7 +95,6 @@ import Shelley.Spec.Ledger.TxData
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
-    pattern DCertPool,
     pattern RewardAcnt,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)

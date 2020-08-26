@@ -15,7 +15,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Byron.Spec.Ledger.UTxO where
 

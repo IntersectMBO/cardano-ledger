@@ -17,7 +17,7 @@ where
 
 import Cardano.Prelude hiding (State)
 
-import Data.Sequence (Seq, (|>))
+import Data.Sequence ((|>))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 

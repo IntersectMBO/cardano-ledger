@@ -19,10 +19,11 @@ module Byron.Spec.Ledger.Core where
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import           Data.Data (Data, Typeable)
-import           Data.Foldable (elem, toList)
+import           Data.Foldable (toList)
 import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import           Data.Int (Int64)
+import           Data.Kind (Type)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
@@ -257,8 +258,8 @@ lovelaceCap = Lovelace $ 45 * fromIntegral ((10 :: Int64) ^ (15 :: Int64))
 ---------------------------------------------------------------------------------
 
 class Relation m where
-  type Domain m :: *
-  type Range m :: *
+  type Domain m :: Type
+  type Range m :: Type
 
   singleton :: Domain m -> Range m -> m
 

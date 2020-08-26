@@ -12,7 +12,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Shelley.Spec.Ledger.Serialisation.Generators
   ( genPParams,
@@ -32,7 +32,6 @@ import Cardano.Crypto.DSIGN.Class
     sizeSigDSIGN,
     sizeVerKeyDSIGN,
   )
-import qualified Data.Text as T
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
@@ -48,23 +47,19 @@ import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API hiding (SignedDSIGN)
-import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Address.Bootstrap
-  ( BootstrapWitness (..),
-    ChainCode (..),
+  ( ChainCode (..),
   )
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     DnsName,
-    Network,
     Nonce (..),
-    Port,
-    StrictMaybe,
     UnitInterval,
     Url,
     mkActiveSlotCoeff,
@@ -73,32 +68,15 @@ import Shelley.Spec.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
-import Shelley.Spec.Ledger.BlockChain
-  ( BHeader,
-    Block (..),
-    HashHeader (..),
-  )
-import Shelley.Spec.Ledger.Coin (Coin (Coin))
-import Shelley.Spec.Ledger.Credential (Credential (..), Ptr, StakeReference)
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
-import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
-import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), Stake (..))
-import Shelley.Spec.Ledger.Keys
-  ( KeyHash (KeyHash),
-    VKey (VKey),
-  )
+import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
+import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState
-  ( AccountState,
-    FutureGenDeleg,
+  ( FutureGenDeleg,
     InstantaneousRewards,
-    LedgerState,
-    NewEpochState (..),
     PPUPState,
-    RewardUpdate,
-    WitHashes (..),
     emptyRewardUpdate,
   )
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.MetaData
   ( MetaData,
     MetaDataHash (..),
@@ -106,7 +84,8 @@ import Shelley.Spec.Ledger.MetaData
   )
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.PParams (PParams, ProtVer)
+import Shelley.Spec.Ledger.OverlaySchedule
+import Shelley.Spec.Ledger.PParams (ProtVer)
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     LogWeight (..),
@@ -116,22 +95,7 @@ import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Ppup as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS
-import Shelley.Spec.Ledger.Scripts
-  ( MultiSig (..),
-    Script (..),
-    ScriptHash (ScriptHash),
-  )
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
-import Shelley.Spec.Ledger.TxData
-  ( MIRPot,
-    PoolMetaData (PoolMetaData),
-    PoolParams (PoolParams),
-    RewardAcnt (RewardAcnt),
-    StakePoolRelay,
-    TxId (TxId),
-    TxIn (TxIn),
-    TxOut (TxOut),
-  )
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck
   ( Arbitrary,
@@ -208,7 +172,6 @@ instance Mock c => Arbitrary (BHeader c) where
     res <- arbitrary :: Gen (Block c)
     return $ case res of
       Block header _ -> header
-      _ -> error "SerializationProperties::BHeader - failed to deconstruct header from block"
 
 instance DSIGNAlgorithm c => Arbitrary (SignedDSIGN c a) where
   arbitrary =
@@ -236,7 +199,6 @@ instance (Typeable kr, Mock c) => Arbitrary (WitVKey c kr) where
     WitVKey
       <$> arbitrary
       <*> arbitrary
-
 
 instance Mock c => Arbitrary (WitnessSet c) where
   arbitrary =
@@ -286,16 +248,17 @@ sizedMetaDatum 0 =
       MD.S <$> (T.pack <$> arbitrary)
     ]
 sizedMetaDatum n =
-    oneof
-      [ MD.Map <$>
-          (zip
-            <$> (resize maxMetaDatumListLens (listOf (sizedMetaDatum (n-1))))
-            <*> (listOf (sizedMetaDatum (n-1)))),
-        MD.List <$> resize maxMetaDatumListLens (listOf (sizedMetaDatum (n-1))),
-        MD.I <$> arbitrary,
-        MD.B <$> arbitrary,
-        MD.S <$> (T.pack <$> arbitrary)
-      ]
+  oneof
+    [ MD.Map
+        <$> ( zip
+                <$> (resize maxMetaDatumListLens (listOf (sizedMetaDatum (n -1))))
+                <*> (listOf (sizedMetaDatum (n -1)))
+            ),
+      MD.List <$> resize maxMetaDatumListLens (listOf (sizedMetaDatum (n -1))),
+      MD.I <$> arbitrary,
+      MD.B <$> arbitrary,
+      MD.S <$> (T.pack <$> arbitrary)
+    ]
 
 instance Arbitrary MetaDatum where
   arbitrary = sizedMetaDatum maxMetaDatumDepth
@@ -662,12 +625,12 @@ maxMultiSigListLens = 5
 sizedMultiSig :: Mock c => Int -> Gen (MultiSig c)
 sizedMultiSig 0 = RequireSignature <$> arbitrary
 sizedMultiSig n =
-    oneof
-      [ RequireSignature <$> arbitrary,
-        RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1))),
-        RequireAnyOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1))),
-        RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n-1)))
-      ]
+  oneof
+    [ RequireSignature <$> arbitrary,
+      RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n -1))),
+      RequireAnyOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n -1))),
+      RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n -1)))
+    ]
 
 instance
   Mock c =>

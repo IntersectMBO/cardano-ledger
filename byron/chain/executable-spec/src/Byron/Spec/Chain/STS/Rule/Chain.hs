@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 -- For the Field5 instance
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Byron.Spec.Chain.STS.Rule.Chain where
 
@@ -26,7 +26,7 @@ import           Hedgehog (Gen, MonadTest)
 import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (CoverPercentage)
 import qualified Hedgehog.Range as Range
-import           Lens.Micro (Lens', (&), (.~), (^.), _1, _5)
+import           Lens.Micro (Lens', (&), (.~), (^.))
 import           Lens.Micro.Internal (Field1 (..), Field5 (..))
 import           Numeric.Natural (Natural)
 

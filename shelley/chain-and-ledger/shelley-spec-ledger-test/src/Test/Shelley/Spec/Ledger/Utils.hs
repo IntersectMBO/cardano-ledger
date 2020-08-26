@@ -38,7 +38,6 @@ module Test.Shelley.Spec.Ledger.Utils
 where
 
 import Cardano.Binary (ToCBOR (..))
-import Cardano.Crypto.DSIGN (SignKeyDSIGN, deriveVerKeyDSIGN, genKeyDSIGN)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash
   ( Hash,

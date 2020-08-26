@@ -12,12 +12,8 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Data.Proxy (Proxy (..))
 import Data.String (IsString (..))
 import qualified Data.ByteString as BS
-import Numeric.Natural (Natural)
-import Codec.CBOR.Encoding (Encoding)
-import Codec.CBOR.Write (toStrictByteString)
 
 import Cardano.Binary hiding (label)
 

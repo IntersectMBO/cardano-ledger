@@ -12,9 +12,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad (guard)
-import Control.Monad.Except (MonadError(..), runExceptT)
-import Control.Monad.Trans (MonadTrans(..))
 import Control.Monad.Trans.Resource (ResIO)
 import qualified Data.Binary as B
 import Data.Binary.Get (getWord32be)

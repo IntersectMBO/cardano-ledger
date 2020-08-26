@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
 
-{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Test.Cardano.Chain.UTxO.Example
   ( exampleTxAux
