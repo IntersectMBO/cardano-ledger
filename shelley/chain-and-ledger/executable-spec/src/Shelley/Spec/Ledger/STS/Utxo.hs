@@ -297,7 +297,7 @@ utxoInductive = do
   -- TODO check voper
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
-      outputsTooSmall = [out | out@(TxOut _ vl) <- outputs, (voper Gt) (vinject $ (Coin $ vsize vl) * minUTxOValue) vl]
+      outputsTooSmall = [out | out@(TxOut _ vl) <- outputs, (voper Gt) (vinject $ scaleVl vl minUTxOValue) vl]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   -- TODO add forge

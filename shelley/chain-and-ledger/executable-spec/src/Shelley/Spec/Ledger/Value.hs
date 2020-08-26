@@ -1,27 +1,33 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE ConstraintKinds            #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE EmptyDataDecls #-}
 
-module Shelley.Spec.Ledger.Value where
+module Shelley.Spec.Ledger.Value
+ where
 
-import Cardano.Binary (FromCBOR, ToCBOR, encodeListLen, fromCBOR, toCBOR)
-import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
-import Data.ByteString (ByteString) -- TODO is this the right Bytestring
+import           Cardano.Binary (ToCBOR, FromCBOR, toCBOR, fromCBOR, encodeListLen)
+import           Cardano.Prelude (NoUnexpectedThunks(..), NFData ())
+import           Data.Typeable (Typeable)
+import           Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
+
+import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           GHC.Generics (Generic)
+import           Data.Map.Strict(Map)
 import qualified Data.Map as Map
-import Data.Map.Internal (Map (..), balanceL, balanceR, link, link2, singleton, splitLookup)
-import Data.Typeable (Typeable)
-import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Scripts
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
+import           Data.Map.Internal(Map(..),balanceL,balanceR,singleton,link,splitLookup,link2)
+
+import           Shelley.Spec.Ledger.Crypto
+import           Data.ByteString (ByteString) -- TODO is this the right Bytestring
+import           Shelley.Spec.Ledger.Scripts
 
 {-
 General function and type class definitions used in Value
@@ -29,22 +35,19 @@ General function and type class definitions used in Value
 
 data Op = Gt | Lt | Gteq | Lteq | Neq | Equal
 
-class
-  (NFData t, Show t, Eq t, NoUnexpectedThunks t) =>
-  Val t
-  where
-  vzero :: t -- This is an identity of vplus
-  vplus :: t -> t -> t -- This must be associative and commutative
-  vnegate :: t -> t -- vplus x (vnegate x) == vzero
-  scalev :: Integer -> t -> t --
-  voper :: Op -> t -> t -> Bool
-
-  -- This will define a PARTIAL order using pointwise comparisons
-  -- Semantic Equality (i.e. the Eq instance) should be (voperEqual)
-  visZero :: t -> Bool -- is the argument vzero?
-  vcoin :: t -> Coin -- get the Coin amount
-  vinject :: Coin -> t -- inject Coin into the Val instance
-  vsize :: t -> Integer -- compute size of Val instance
+class (NFData t, Show t, Eq t, NoUnexpectedThunks t)
+      => Val t  where
+  vzero :: t                          -- This is an identity of vplus
+  vplus :: t -> t -> t                -- This must be associative and commutative
+  vnegate:: t -> t                    -- vplus x (vnegate x) == vzero
+  scalev:: Integer -> t -> t          --
+  voper:: Op -> t -> t -> Bool
+     -- This will define a PARTIAL order using pointwise comparisons
+     -- Semantic Equality (i.e. the Eq instance) should be (voperEqual)
+  visZero:: t -> Bool                 -- is the argument vzero?
+  vcoin :: t -> Coin                  -- get the Coin amount
+  vinject :: Coin -> t                -- inject Coin into the Val instance
+  vsize :: t -> Integer               -- compute size of Val instance
 
 -- | subtract Val
 vminus :: (Val v) => v -> v -> v
@@ -52,27 +55,25 @@ vminus v1 v2 = vplus v1 (vnegate v2)
 
 instance Val Integer where
   vzero = 0
-  vplus x y = x + y
-  vnegate x = - x
+  vplus x y = x+y
+  vnegate x = -x
   scalev n x = n * x
-  voper Gt x y = x > y
-  voper Lt x y = x < y
+  voper Gt x y = x>y
+  voper Lt x y = x<y
   voper Gteq x y = x >= y
   voper Lteq x y = x <= y
-  voper Neq x y = not (x == y)
-  voper Equal x y = x == y
-  visZero x = x == 0
+  voper Neq x y = not(x==y)
+  voper Equal x y = x==y
+  visZero x = x==0
   vcoin x = Coin x
   vinject (Coin x) = x
   vsize _ = 1
 
-instance
-  (Ord k, Val t, NFData k, Show k, NoUnexpectedThunks k) =>
-  Val (Map k t)
-  where
+instance (Ord k,Val t, NFData k, Show k, NoUnexpectedThunks k)
+      => Val (Map k t) where
   vzero = Map.empty
-  vplus x y = unionWithV vplus x y -- There is an assumption that if the range is vzero, it is not stored in the Map
-  vnegate x = mapV vnegate x -- We enforce this by using our own versions of map and union: unionWithV and mapV
+  vplus x y = unionWithV vplus x y  -- There is an assumption that if the range is vzero, it is not stored in the Map
+  vnegate x = mapV vnegate x        -- We enforce this by using our own versions of map and union: unionWithV and mapV
   scalev n x = mapV (scalev n) x
   voper op x y = pointWise (voper op) x y
   visZero x = Map.null x
@@ -84,53 +85,52 @@ instance
 -- Operations on Map, so we cam make Map a Val instance.
 
 -- Pointwise comparison assuming the map is the Default value everywhere except where it is defined
-pointWise :: (Ord k, Val v) => (v -> v -> Bool) -> Map k v -> Map k v -> Bool
+pointWise:: (Ord k, Val v) => (v -> v -> Bool) -> Map k v -> Map k v -> Bool
 pointWise _ Tip Tip = True
 pointWise p Tip (m@(Bin _ _ _ _ _)) = all (vzero `p`) m
-pointWise p (m@(Bin _ _ _ _ _)) Tip = all (`p` vzero) m
+pointWise p (m@(Bin _ _ _ _ _)) Tip = all ( `p` vzero) m
 pointWise p m (Bin _ k v2 ls rs) =
-  case Map.splitLookup k m of
-    (lm, Just v1, rm) -> p v1 v2 && pointWise p ls lm && pointWise p rs rm
-    _ -> False
+   case Map.splitLookup k m of
+      (lm,Just v1,rm) -> p v1 v2 && pointWise p ls lm && pointWise p rs rm
+      _ -> False
+
 
 -- The following functions enforce the invariant that vzero is never stored in a Map
-insertWithV :: (Ord k, Val a) => (a -> a -> a) -> k -> a -> Map k a -> Map k a
+insertWithV :: (Ord k,Val a) => (a -> a -> a) -> k -> a -> Map k a -> Map k a
 insertWithV = go
   where
-    go :: (Ord k, Val a) => (a -> a -> a) -> k -> a -> Map k a -> Map k a
+    go :: (Ord k,Val a) => (a -> a -> a) -> k -> a -> Map k a -> Map k a
     go _ !kx x Tip = if visZero x then Tip else singleton kx x
     go f !kx x (Bin sy ky y l r) =
-      case compare kx ky of
-        LT -> balanceL ky y (go f kx x l) r
-        GT -> balanceR ky y l (go f kx x r)
-        EQ -> if visZero new then link2 l r else Bin sy kx new l r
-          where
-            new = f x y
-{-# INLINEABLE insertWithV #-}
+        case compare kx ky of
+            LT -> balanceL ky y (go f kx x l) r
+            GT -> balanceR ky y l (go f kx x r)
+            EQ -> if visZero new then link2 l r else Bin sy kx new l r
+               where new = f x y
 
-unionWithV :: (Ord k, Val a) => (a -> a -> a) -> Map k a -> Map k a -> Map k a
+
+{-# INLINABLE insertWithV #-}
+unionWithV :: (Ord k,Val a) => (a -> a -> a) -> Map k a -> Map k a -> Map k a
 unionWithV _f t1 Tip = t1
 unionWithV f t1 (Bin _ k x Tip Tip) = insertWithV f k x t1
 unionWithV f (Bin _ k x Tip Tip) t2 = insertWithV f k x t2
 unionWithV _f Tip t2 = t2
 unionWithV f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
   (l2, mb, r2) -> case mb of
-    Nothing -> if visZero x1 then link2 l1l2 r1r2 else link k1 x1 l1l2 r1r2
-    Just x2 -> if visZero new then link2 l1l2 r1r2 else link k1 new l1l2 r1r2
-      where
-        new = (f x1 x2)
-    where
-      !l1l2 = unionWithV f l1 l2
-      !r1r2 = unionWithV f r1 r2
-{-# INLINEABLE unionWithV #-}
+      Nothing -> if visZero x1 then link2 l1l2 r1r2 else link k1 x1 l1l2 r1r2
+      Just x2 -> if visZero new then link2 l1l2 r1r2 else link k1 new l1l2 r1r2
+        where new = (f x1 x2)
+    where !l1l2 = unionWithV f l1 l2
+          !r1r2 = unionWithV f r1 r2
+{-# INLINABLE unionWithV #-}
 
-mapV :: (Ord k, Val a) => (a -> a) -> Map k a -> Map k a
+
+mapV:: (Ord k,Val a) => (a -> a) -> Map k a -> Map k a
 mapV f m = Map.foldrWithKey accum Map.empty m
-  where
-    accum k v ans = if visZero new then ans else Map.insert k new ans
-      where
-        new = f v
-{-# INLINEABLE mapV #-}
+   where accum k v ans = if visZero new then ans else Map.insert k new ans
+            where new = f v
+{-# INLINABLE mapV #-}
+
 
 -- ======================================================================
 -- Multi Assests
@@ -179,26 +179,24 @@ data Value crypto = Value Coin (Map (PolicyID crypto) (Map AssetID Quantity))
 -- Operations, and class instances on Value
 
 class Default f t where
-  apply :: Ord k => f k t -> k -> t
+  apply:: Ord k => f k t -> k -> t
 
 instance NFData (Value crypto)
-
 deriving instance Val Coin
-
 instance NoUnexpectedThunks (Value crypto)
 
 instance Val t => Default Map t where
-  apply mp k = case Map.lookup k mp of Just t -> t; Nothing -> vzero
+   apply mp k = case Map.lookup k mp of { Just t -> t; Nothing -> vzero }
 
 instance Eq (Value crypto) where
-  (==) (Value c v) (Value c1 v1) = (voper Equal c c1) && (voper Equal v v1)
+    (==) (Value c v) (Value c1 v1) = (voper Equal c c1) && (voper Equal v v1)
 
 instance Semigroup (Value crypto) where
-  (<>) = vplus
+    (<>) = vplus
 
 instance Monoid (Value crypto) where
-  mempty = vzero
-  mappend = (<>)
+    mempty  = vzero
+    mappend = (<>)
 
 instance Val (Value crypto) where
   vzero = Value (Coin 0) vzero
@@ -209,52 +207,89 @@ instance Val (Value crypto) where
   visZero (Value c1 v1) = (visZero c1) && (visZero v1)
   vcoin (Value c1 _) = c1
   vinject c1 = Value c1 vzero
-  vsize (Value _ v) = foldr accum 1 v
-    where
-      accum u ans = foldr accumIns (ans + addrHashLen) u
-        where
-          accumIns _ ans1 = ans1 + assetIdLen + uint
+  vsize (Value _ v) = foldr accum uint v where                     -- add uint for the Coin portion in this size calculation
+    accum u ans = foldr accumIns (ans + addrHashLen) u where       -- add addrHashLen for each Policy ID
+      accumIns _ ans1 = ans1 + assetIdLen + uint                   -- add assetIdLen and uint for each asset of that Policy ID
 
 -- ============================================
--- Constants needed to compute size.
+-- Constants needed to compute size and size-scaling operation
 
+-- address hash length is always same as Policy ID length
 addrHashLen :: Integer
 addrHashLen = 28
+
+smallArray :: Integer
+smallArray = 1
+
+hashLen :: Integer
+hashLen = 32
 
 assetIdLen :: Integer
 assetIdLen = 32
 
 uint :: Integer
-uint = 9
+uint = 5
+
+hashObj :: Integer
+hashObj = 2 + hashLen
+
+addrHeader :: Integer
+addrHeader = 1
+
+address :: Integer
+address = 2 + addrHeader + 2 * addrHashLen
+
+-- input size
+inputSize :: Integer
+inputSize = smallArray + uint + hashObj
+
+-- size of output not including the Val (compute that part with vsize later)
+outputSizeWithoutVal :: Integer
+outputSizeWithoutVal = smallArray + address
+
+-- size of the UTxO entry (ie the space the scaled minUTxOValue deposit pays)
+utxoEntrySizeWithoutVal :: Integer
+utxoEntrySizeWithoutVal = inputSize + outputSizeWithoutVal
+
+-- This scaling function is right for UTxO, not EUTxO
+scaleVl :: (Val v) => v -> Coin -> Coin
+scaleVl v (Coin mv)
+  | vinject (vcoin v) == v = Coin mv  -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
+  | otherwise              = Coin $ fst $ quotRem mv (utxoEntrySizeWithoutVal + vsize v) -- round down
+
+-- compare the outputs as Values (finitely supported functions)
+-- ada must be greater than scaled min value deposit
+-- rest of tokens must be greater than 0
+-- outputsTooSmall = [out | out@(TxOut _ vl) <- outputs, (voper Gt) (vinject $ scaleVl vl minUTxOValue) vl]
 
 -- =============================================================
 -- Operations needed for Tests
 
 class Val t => ValTest t where
-  vsplit :: t -> Integer -> ([t], Coin)
-  vmodify :: Monad m => (Coin -> m Coin) -> t -> m t
+   vsplit :: t -> Integer -> ([t], Coin)
+   vmodify:: Monad m => (Coin -> m Coin) -> t -> m t
 
 instance ValTest Coin where
   vsplit (Coin n) 0 = ([], Coin n)
-  vsplit (Coin n) m -- TODO fix this?
+  vsplit (Coin n) m  -- TODO fix this?
     | m <= 0 = error "must split coins into positive parts"
-    | otherwise = (take (fromIntegral m) (repeat (Coin (n `div` m))), Coin (n `rem` m))
+    | otherwise = (take (fromIntegral m) (repeat (Coin(n `div` m))), Coin (n `rem` m))
   vmodify f coin = f coin
 
 instance ValTest (Value crypto) where
   vsplit (Value coin _) 0 = ([], coin) -- The sum invariant may not hold, but no other way to split into 0 groups
-  vsplit (Value coin assets) m = (zipWith Value coins maps, remainder)
+  vsplit (Value coin assets) m = (zipWith Value coins maps,remainder)
     where
       maps = assets : (take (fromIntegral $ m - 1) (repeat vzero))
       (coins, remainder) = vsplit coin m
-  vmodify f (Value coin assets) = do coin2 <- f coin; pure (Value coin2 assets)
+  vmodify f (Value coin assets) = do { coin2 <- f coin; pure(Value coin2 assets)}
 
 -- ===============================================================
 -- constraint used for all parametrized functions
 
-type CV c v = (Val v, Crypto c, Typeable c, Typeable v, FromCBOR v, ToCBOR v, ValTest v)
 
-type CVNC c v = (Val v, Typeable c, Typeable v, FromCBOR v, ToCBOR v, ValTest v)
+type CV c v = (Val v, Crypto c, Typeable c, Typeable v, FromCBOR v, ToCBOR v,ValTest v)
+type CVNC c v = (Val v, Typeable c, Typeable v, FromCBOR v, ToCBOR v,ValTest v)
 
 -- Linear Map instance
 
@@ -276,7 +311,9 @@ type CVNC c v = (Val v, Typeable c, Typeable v, FromCBOR v, ToCBOR v, ValTest v)
 -- singleType :: PolicyID crypto -> AssetID -> Quantity -> Value crypto
 -- singleType c tn i = Value (singleton c (singleton tn i))
 
+
 -- Num operations
+
 
 --
 -- vinsert:: PolicyID crypto -> AssetID -> Quantity -> Value crypto -> Value crypto
@@ -304,19 +341,20 @@ type CVNC c v = (Val v, Typeable c, Typeable v, FromCBOR v, ToCBOR v, ValTest v)
 
 -- CBOR
 
-instance
-  (Crypto crypto) =>
-  ToCBOR (Value crypto)
-  where
-  toCBOR (Value c v) =
-    encodeListLen 2
-      <> toCBOR c
-      <> toCBOR v
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (Value crypto)
-  where
+  (Crypto crypto)
+  => ToCBOR (Value crypto)
+ where
+   toCBOR (Value c v) =
+           encodeListLen 2
+           <> toCBOR c
+           <> toCBOR v
+
+instance
+  (Crypto crypto)
+  => FromCBOR (Value crypto)
+ where
   fromCBOR = do
     decodeRecordNamed "Value" (const 2) $ do
       c <- fromCBOR

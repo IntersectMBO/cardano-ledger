@@ -709,14 +709,8 @@ txsize = fromIntegral . BSL.length . txFullBytes
 txsizeBound :: forall crypto v. (CV crypto v) => Tx crypto v -> Integer
 txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
   where
-    smallArray = 1
-    hashLen = 32
-    hashObj = 2 + hashLen
-    addrHeader = 1
-    address = 2 + addrHeader + 2 * addrHashLen
     txbody = _body tx
     numInputs = toInteger . length . _inputs $ txbody
-    inputSize = smallArray + uint + hashObj
     numOutputs = toInteger . length . _outputs $ txbody
     outputSize = smallArray + uint + address
     rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
