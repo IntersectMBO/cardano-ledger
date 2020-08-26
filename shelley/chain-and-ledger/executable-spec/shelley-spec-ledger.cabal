@@ -27,6 +27,7 @@ library
     Shelley.Spec.Ledger.API.Validation
     Shelley.Spec.Ledger.BaseTypes
     Shelley.Spec.Ledger.BlockChain
+    Shelley.Spec.Ledger.ByronTranslation
     Shelley.Spec.Ledger.Coin
     Shelley.Spec.Ledger.Credential
     Shelley.Spec.Ledger.Delegation.Certificates

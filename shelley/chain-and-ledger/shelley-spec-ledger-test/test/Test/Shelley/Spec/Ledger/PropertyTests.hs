@@ -7,6 +7,7 @@ module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTes
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
+import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Serialization
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
@@ -146,5 +147,6 @@ propertyTests =
           TQC.testProperty
             "Only valid CHAIN STS signals are generated"
             onlyValidChainSignalsAreGenerated
-        ]
+        ],
+      testGroupByronTranslation
     ]
