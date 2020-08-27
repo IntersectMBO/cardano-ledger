@@ -339,7 +339,7 @@ main :: IO ()
 -- main=profileValid
 main =
   defaultMain $
-    [ bgroup "vary input size" $
+    [ {- bgroup "vary input size" $
         [ varyInput "deregister key" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerDeRegisterStakeKeys,
           varyInput "register key" (20001, 25001) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerRegisterStakeKeys,
           varyInput "withdrawal" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerRewardWithdrawals,
@@ -362,6 +362,7 @@ main =
       bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
       validGroup,
       -- Benchmarks for the various generators
+      -}
       bgroup "gen" $
         [ env
             (genChainState 100000)

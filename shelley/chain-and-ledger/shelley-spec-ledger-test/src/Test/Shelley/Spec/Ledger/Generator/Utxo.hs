@@ -245,7 +245,7 @@ genNextDelta :: forall c v.
 genNextDelta
   utxo
   pparams
-  ( KeySpace_
+  keySpace@( KeySpace_
       { ksIndexedStakingKeys,
         ksIndexedPaymentKeys,
         ksIndexedPayScripts
@@ -301,7 +301,7 @@ genNextDelta
                         vkeyPairs
                         (mkScriptWits msigPairs mempty)
                         (hashAnnotated $ _body tx)
-                pure $
+                pure $ trace ("\n****************\n"++show ksIndexedPaymentKeys++"\n\n"++show ksIndexedStakingKeys++"\n\n"++show keySpace) $
                   delta
                     { extraWitnesses = extraWitnesses <> newWits,
                       extraInputs = extraInputs <> Set.fromList inputs,

@@ -34,6 +34,8 @@ import Test.Shelley.Spec.Ledger.Generator.Core (geConstants)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import qualified Test.Shelley.Spec.Ledger.Generator.Utxo as GenUTxO
+import Test.Shelley.Spec.Ledger.Serialisation.Generators()  -- Arbitrary Coin
+
 
 --TODO set this in one place (where?)
 type FixedValType = Coin
@@ -46,7 +48,7 @@ genTx n =
    in generate $ GenUTxO.genTx ge ledgerEnv st
 
 -- | Generate a genesis chain state given a UTxO size
-genChainState :: Int -> IO (ChainState B)
+genChainState :: Int -> IO (ChainState B Coin)
 genChainState n =
   let ge = genEnv (Proxy @B)
       cs =
@@ -64,7 +66,7 @@ genChainState n =
             )
 
 -- | Benchmark generating a block given a chain state.
-genBlock :: ChainState B -> IO (Block B)
+genBlock :: ChainState B Coin -> IO (Block B Coin)
 genBlock cs =
   let ge = genEnv (Proxy @B)
    in generate $ GenBlock.genBlock ge cs

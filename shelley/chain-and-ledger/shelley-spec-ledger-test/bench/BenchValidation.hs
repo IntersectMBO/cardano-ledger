@@ -31,6 +31,7 @@ import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.Monad.Except ()
 import Control.State.Transition.Extended (IRC (..))
 import qualified Data.Map as Map
+import Shelley.Spec.Ledger.Coin(Coin)
 import Shelley.Spec.Ledger.API.Protocol
   ( ChainDepState (..),
     ChainTransitionError,
@@ -63,6 +64,7 @@ import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
+import Test.Shelley.Spec.Ledger.Serialisation.Generators()  -- Arbitrary Coin
 
 data BenchCrypto
 
@@ -118,10 +120,11 @@ cs utxoSize =
       maxTreasury = 10000000,
       minReserves = 1000000,
       maxReserves = 10000000,
-      genTxRetries = 5
+      genTxRetries = 5,
+      genTxBudget = 0
     }
 
-data ValidateInput = ValidateInput Globals (ShelleyState BenchCrypto) (Block BenchCrypto)
+data ValidateInput = ValidateInput Globals (ShelleyState BenchCrypto Coin) (Block BenchCrypto Coin)
 
 sizes :: ValidateInput -> String
 sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocksMade (nesBcur ss)))
@@ -135,7 +138,7 @@ validateInput utxoSize = do
   block <- generate (genBlock (genEnv ([] :: [BenchCrypto])) chainstate)
   pure (ValidateInput testGlobals (chainNes chainstate) block)
 
-benchValidate :: ValidateInput -> IO (ShelleyState BenchCrypto)
+benchValidate :: ValidateInput -> IO (ShelleyState BenchCrypto Coin)
 benchValidate (ValidateInput globals state block) =
   case applyBlockTransition globals state block of
     Right x -> pure x
@@ -147,13 +150,13 @@ applyBlock (ValidateInput globals state block) n =
     Right x -> seq (rnf x) (n+1)
     Left x -> error (show x)
 
-benchreValidate :: ValidateInput -> ShelleyState BenchCrypto
+benchreValidate :: ValidateInput -> ShelleyState BenchCrypto Coin
 benchreValidate (ValidateInput globals state block) =
   reapplyBlockTransition globals state block
 
 -- ==============================================================
 
-data UpdateInputs = UpdateInputs !Globals !(LedgerView BenchCrypto) !(BHeader BenchCrypto) !(ChainDepState BenchCrypto)
+data UpdateInputs = UpdateInputs !Globals !(LedgerView BenchCrypto) !(BHeader BenchCrypto Coin) !(ChainDepState BenchCrypto)
 
 instance Show UpdateInputs where
   show (UpdateInputs _globals vl bh st) = show vl ++ "\n" ++ show bh ++ "\n" ++ show st
@@ -161,7 +164,7 @@ instance Show UpdateInputs where
 instance NFData (LedgerView c) where
   rnf (LedgerView _pp _ov _pool _delegs) = ()
 
-instance Crypto c => NFData (BHeader c) where
+instance Crypto c => NFData (BHeader c Coin) where
   rnf (BHeader _ _) = ()
 
 instance NFData (ChainDepState c) where
@@ -170,7 +173,7 @@ instance NFData (ChainDepState c) where
 instance NFData Globals where
   rnf (Globals _ _ _ _ _ _ _ _ _ _ _) = ()
 
-instance NFData (ChainTransitionError c) where
+instance NFData (ChainTransitionError c Coin) where
   rnf _ = ()
 
 instance NFData UpdateInputs where
@@ -191,12 +194,12 @@ genUpdateInputs utxoSize = do
 
 updateChain ::
   UpdateInputs ->
-  Either (ChainTransitionError BenchCrypto) (ChainDepState BenchCrypto)
+  Either (ChainTransitionError BenchCrypto Coin) (ChainDepState BenchCrypto)
 updateChain (UpdateInputs gl lv bh st) = updateChainDepState gl lv bh st
 
 updateAndTickChain ::
   UpdateInputs ->
-  Either (ChainTransitionError BenchCrypto) (ChainDepState BenchCrypto)
+  Either (ChainTransitionError BenchCrypto Coin) (ChainDepState BenchCrypto)
 updateAndTickChain (UpdateInputs gl lv bh st) =
   updateChainDepState gl lv bh
     . tickChainDepState gl lv True
