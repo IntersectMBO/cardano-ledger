@@ -65,9 +65,7 @@ import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
-    SnapShot (..),
     Stake (..),
-    emptySnapShot,
     maxPool,
     poolStake,
   )
@@ -208,13 +206,12 @@ instance FromCBOR PerformanceEstimate where
 
 data NonMyopic era = NonMyopic
   { likelihoodsNM :: !(Map (KeyHash 'StakePool era) Likelihood),
-    rewardPotNM :: !Coin,
-    snapNM :: !(SnapShot era) -- TODO we can remove this map
+    rewardPotNM :: !Coin
   }
   deriving (Show, Eq, Generic)
 
 emptyNonMyopic :: NonMyopic era
-emptyNonMyopic = NonMyopic Map.empty (Coin 0) emptySnapShot
+emptyNonMyopic = NonMyopic Map.empty (Coin 0)
 
 instance NoUnexpectedThunks (NonMyopic era)
 
@@ -224,25 +221,21 @@ instance Era era => ToCBOR (NonMyopic era) where
   toCBOR
     NonMyopic
       { likelihoodsNM = aps,
-        rewardPotNM = rp,
-        snapNM = s
+        rewardPotNM = rp
       } =
       encodeListLen 3
         <> toCBOR aps
         <> toCBOR rp
-        <> toCBOR s
 
 instance Era era => FromCBOR (NonMyopic era) where
   fromCBOR = do
     decodeRecordNamed "NonMyopic" (const 3) $ do
       aps <- fromCBOR
       rp <- fromCBOR
-      s <- fromCBOR
       pure $
         NonMyopic
           { likelihoodsNM = aps,
-            rewardPotNM = rp,
-            snapNM = s
+            rewardPotNM = rp
           }
 
 -- | Desirability calculation for non-myopic utily,
