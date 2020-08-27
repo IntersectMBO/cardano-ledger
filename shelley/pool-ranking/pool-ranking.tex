@@ -1,0 +1,276 @@
+\documentclass[11pt,a4paper,dvipsnames,twosided]{article}
+
+\usepackage{amsmath}
+\usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
+\usepackage{xcolor}
+
+\newcommand\pbar{\overline{p}}
+
+\begin{document}
+
+\title{Stake Pool Ranking in Cardano}
+
+\author{Alexander Byaly  \\ {\small \texttt{alexander.byaly@iohk.io}} \\
+   \and Jared Corduan  \\ {\small \texttt{jared.corduan@iohk.io}}}
+
+%\date{}
+
+\hypersetup{
+  pdftitle={Stake Pool Ranking in Cardano},
+  breaklinks=true,
+  bookmarks=true,
+  colorlinks=false,
+  linkcolor={blue},
+  citecolor={blue},
+  urlcolor={blue},
+  linkbordercolor={white},
+  citebordercolor={white},
+  urlbordercolor={white}
+}
+
+\maketitle
+
+\section{Introduction}
+
+The purpose of stake pool ranking is to provide a recommendation to users
+(wallets, people who own ADA, etc)
+for the stake pools which are expected to yield the greatest rewards.
+The ranking is based upon past performance but should be a useful predictor of future performance.
+
+A naive approach would be to rank pools based on the rewards that are
+currently being paid out to its delegators.
+There are at least two problems with this approach.
+
+First, the naive approach is short-sighted in the sense that it does not take into
+account what a newly formed stake pool would yield when it reaches saturation.
+This issue is explained in detail in \cite{bkks2018}. The problem as applied to
+Cardano is explained in the delegation design doc \cite[Section 5.6]{delegation_design}.
+
+The second problem is that sometimes a stake pool has the opportunity to produce blocks,
+but doesn't due to things like a bad network connection or untimely downtime. The rate at
+which a pool uses their opportunities to make blocks, which we will call hit rate, affects rewards.
+It needs to be taken into account.
+
+Our aim is to address both concerns.
+
+\section{Hit Rate}
+
+The pool operator is the only one who knows their
+hit rate since others do not have access to their VRF calculation.
+Others can only try to divine it using the public knowledge of the
+pool's relative stake and number of blocks produced.
+
+\subsection{Estimation}
+
+Each slot, a stake pool with relative (active) stake $\sigma_a$ has probability
+\[ 1 - (1-f)^{\sigma_a} \]
+of producing a block, where $f$ is the active slot coefficient.
+We can use this to estimate the hit rate.
+
+We represent such an estimate as a probability distribution on the interval $[0,1]$.
+
+After each epoch, we refine our estimate into a more accurate one as follows.
+
+Let's say we
+observe the output of a stake pool during an epoch. We have a previous estimate, $w$, the
+epoch has $E$ slots, the pool produces $n$ blocks, and we calculate that on a given slot
+the chance they're allowed to produce a block is $t$.
+
+We compute the likelihood function, $L$, where $L(x)$ is the probability of producing exactly $n$ blocks,
+
+\[ L(x) = \left( E \atop n \right) S(x)^{n} (1-S(x))^{E - n}, \]
+
+and $S(x)$ is the probability that the pool produces a block at a given slot under the assumption that the
+hit rate, $p$, is equal to $x$.
+
+\[
+\begin{array}{r@{=}l}
+S(x) & P( \text{made block} | p = x) \\
+     & t \cdot P( \text{made block} | p = x,~\text{can}) + (1-t) \cdot P( \text{made block} | p = x,~\text{can't}) \\
+     & tx                              + (1-t) \cdot 0 \\
+     & tx \\
+\end{array}
+\]
+
+Our refined estimate is then $q(x) = \frac{w(x)L(x)}{\int w(x)L(x)}$.
+
+By calculating a running product, $\mathcal{L}$, of likelihood functions, we can defer this computation.
+
+At the time that a user wishes to produce a ranking, they will
+supply a prior distribution. This is a default estimate applied to pools for which we don't have any historical data.
+
+To make the rankings we use the posterior distribution,
+
+\begin{equation}
+\label{post}
+q(x) = \frac{w_(x)\mathcal{L}(x)}{\int w(x)\mathcal{L}(x)}.
+\end{equation}
+
+\subsection{Implementation}
+
+We approximate a probability density function, $g$, using a sequence of sample points,
+
+\[ A(g) = \big(\ln(g(0.005)),~ \ln(g(0.015)),~ \ldots,~ \ln(g(0.995))\big). \]
+
+This lets us use multiplication rather than exponentiation for most of our calculations.
+
+Because of the normalization step in \eqref{post}, any scalar multiple of $g$
+will yield the same result in the end. So any constant shift of $A(g)$ will as well.
+To ensure that our numbers don't grow too large, we use the normal form
+
+\[ A'(g) = \big(\ln(g(0.005)) - m,~ \ln(g(0.015)) - m,~ \ldots,~ \ln(g(0.995)) - m\big), \]
+where $m$ is the minimal sample point. We use $g_i$ to denote the $i$'th term of $A'(g)$.
+
+For each stake pool, every epoch we compute this approximation, add it to our previous sum, and convert it to this normal form.
+
+To calculate the final pdf used in ranking, we approximate \eqref{post}.
+If $\mathcal{L}$ is our cumulative likelihood
+and $w$ is our prior, we use
+
+\[ q_i = e^{w_i + \mathcal{L}_i} / S, \]
+where
+\[ S = \sum (0.01) e^{w_i + \mathcal{L}_i}. \]
+
+In the ranking calculation, we use the $k$'th percentile of this distribution for some $k$.
+We do so by computing the minimal $i$ such that the sum of $[q_0,~\ldots,q_i]$ is at least $k$.
+Then $i/100$ is the $k$'th percentile.
+
+Putting it all together, given some prior distribution,
+a percentile, and a cumulative likelihood,
+we estimate the hit rate to be $i/100$.
+
+
+\subsection{Example}
+
+Let's say Alice's pool has been active for two epochs.
+There are 432,000 slots per epoch, and the active slot coefficient is 0.05
+(the mainnet values at the time of writing).
+
+During the first epoch, the relative stake was $0.001$ and 10 blocks were produced.
+
+During the second epoch, the relative stake was $0.01$ and 200 blocks were produced.
+
+We calculate $\ln(L_1(x))$ for the first epoch as follows.
+
+With relative stake $0.001$, the probability of being allowed to produce a block on
+each slot is
+
+\[ t_1 = 1-(1-0.05)^{0.001}, \]
+and $S_1(x)= t_1x$
+
+Since 10 blocks were produced, the real likelihood function is
+
+\[ L_1(x) =  \left( 432,000 \atop 10 \right) (t_1x)^{10} (1-t_1x)^{431,990} \]
+
+and we will use
+\[
+\begin{array}{rl}
+  \ell_1(x) &= \ln\left( (t_1x)^{10} (t_1x)^{431,990} \right) \\
+            &= 10 \ln(t_1 x) + 431,990 \ln(1 - t_1 x) \\
+\end{array}
+\]
+for storing information about Alice's pool's performance this epoch.
+In particular, we store
+
+\[ A'(L_1) = [\ell_1(0.005)-m_1,~\ell_1(0.015)-m_1,~\ldots,~\ell_1(.995)-m_1] \]
+where $m_1=\min\{\ell_1(0.005),\ldots,\ell_1(0.995)\}$
+
+For the second epoch,
+\[
+\begin{array}{rl}
+  t_2 &= 1-(1-0.05)^{0.01} \\
+  \ell_2(x) &= 200 \ln(t_2 x) + 431,800 \ln(1 - t_2 x).\\
+\end{array}
+\]
+Then for the second epoch we store:
+\[ A'(L_2) = [\ell_2(0.005)+\ell_1(0.005)-m_2,~\ldots,~\ell_2(.995)+\ell_1(.995)-m_2] \]
+where $m_2=\min\{\ell_2(0.005)+\ell_1(0.005),\ldots,\ell_2(0.995)+\ell_1(0.995)\}$.
+
+\section{Ranking and Saturation}
+
+We now describe how to use the hit rate estimation to calculate the stake pool ranking
+described in \cite{bkks2018} and \cite[Section 5.6]{delegation_design}.
+
+First we must turn the sampling of the likelihood functions into a concrete value.
+Given a percentage, $k$, we will calculate the $k$'th percentile of the hit rates.
+Currently we're using the 10\%, but we aim for this to be user configurable.
+For a given pool, let $h_k$ denote the $k$'th percentile.
+
+Following \cite[Section 5.6.1]{delegation_design},
+we can compute any given stake pool's rewards at saturation with:
+\[
+    \tilde{f}(s, \pbar) :=
+    \hat{f}(s,z_0,\pbar)=
+    \frac{\pbar R}{1 + a_0}
+    \cdot
+    \left(z_0 + \min(s,z_0)\cdot a_0\right).
+\]
+
+where $\bar{p}$ is the \textit{apparent performance} defined in
+\cite[Section 5.5.2]{delegation_design}.
+We will substitute our hit rate estimation $h_k$ for the apparent performance $\bar{p}$,
+Given a pool with pledged owner stake \(s\), costs \(c\) and margin \(m\),
+the desirability function of \cite[Section 5.6.1]{delegation_design} becomes:
+\[
+    d(c, m, s, h_k) :=
+    \left\{
+    \begin{array}{ll}
+        \displaystyle 0 &
+        \text{if $\tilde{f}(s,h_k)\leq c$,} \\
+        \displaystyle\left(\tilde{f}(s,h_k) - c\right)\cdot(1-m) &
+        \text{otherwise.}
+    \end{array}
+    \right.
+\]
+From here, we proceed exactly as in
+\cite[Section 5.6.2]{delegation_design} and
+\cite[Section 5.6.4]{delegation_design}.
+
+The desirability function provides a ranking of stake pools.
+For a stake pool with pledged owner stake $s$, total stake $\sigma$ and rank
+$r$, we define its \emph{non-myopic stake} $\sigma_\mathrm{nm}$ as
+\[
+    \sigma_\mathrm{nm}(s,\sigma,r) :=
+    \left\{
+    \begin{array}{ll}
+        \max(\sigma,z_0) &
+        \text{if $r\leq k$,} \\
+        s &
+        \text{otherwise,}
+    \end{array}
+    \right.
+\]
+where $k$ is the parameter defined in \cite[Section 5.2]{delegation_design}
+which represents the desired number of stake pools.
+
+The non-myopic pool member rewards of a pool with costs $c$, margin $m$,
+pledged owner stake $s$, stake $\sigma$, rank $r$, and apparent
+performance $\pbar$, for a member contributing member stake $t$, are
+\[
+    r_\mathrm{member, nm}(c, m, s, \sigma, t, r, \pbar) :=
+    r_\mathrm{member}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r),
+    \pbar\bigr),
+    c, m, t, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr),
+\label{eq:non-myopic-member-rewards}
+\]
+where
+\[
+    r_\mathrm{member}(\hat{f}, c, m, t, \sigma) :=
+    \left\{
+    \begin{array}{ll}
+        \displaystyle 0 &
+        \text{if $\hat{f}\leq c$,} \\
+        \displaystyle (\hat{f} - c)\cdot(1-m)\cdot\frac{t}{\sigma} &
+        \text{otherwise.}
+    \end{array}
+    \right.
+\]
+
+Finally, users can use $r_\mathrm{member, nm}$ to select a pool
+that maximizes their rewards.
+
+\addcontentsline{toc}{section}{References}
+\bibliographystyle{habbrv}
+\bibliography{references}
+
+\end{document}
