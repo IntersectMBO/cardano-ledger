@@ -43,6 +43,14 @@ newtype Coin = Coin {unCoin :: Map Token Quantity}
 instance Group Coin where
   invert (Coin m) = Coin $! Map.map invert m
 
+-- | Override transaction to include a new field.
+data Tx e = Tx
+  { fromAcnt :: BT.AccountName e,
+    toAcnt :: BT.AccountName e,
+    amount :: BT.Coin e,
+    flibbertigibbet :: Int
+  }
+
 -------------------------------------------------------------------------------
 -- Era instances
 -------------------------------------------------------------------------------
@@ -53,7 +61,7 @@ type instance BT.AccountName Era_1 = Base.AccountName
 
 type instance BT.Account Era_1 = Base.Account Era_1
 
-type instance BT.Tx Era_1 = Base.Tx Era_1
+type instance BT.Tx Era_1 = Tx Era_1
 
 type instance BT.Admin Era_1 = Base.Admin Era_1
 
@@ -102,11 +110,7 @@ instance STS (TX) where
 
   initialRules = []
 
-  transitionRules = [processTx]
-
--- | This is the thing we actually want to override
-processTx :: TransitionRule TX
-processTx = undefined
+  transitionRules = [Base.processTx @TX @Era_1]
 
 data ADMIN
 
@@ -129,6 +133,7 @@ data OPS
 deriving stock instance Eq (Base.OPSPredicateFailure Era_1)
 
 deriving stock instance Show (Base.OPSPredicateFailure Era_1)
+
 instance STS OPS where
   type Environment (OPS) = ()
   type State (OPS) = (BT.Accounting Era_1)

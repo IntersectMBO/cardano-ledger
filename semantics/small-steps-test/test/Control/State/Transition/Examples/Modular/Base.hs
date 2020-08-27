@@ -1,10 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -22,6 +24,8 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import Data.Monoid (Sum (..))
+import GHC.Records
+import GHC.TypeLits
 import Optics
 
 -------------------------------------------------------------------------------
@@ -51,6 +55,17 @@ instance HasSetter a a where
 
 instance HasLens a a where
   lensy = castOptic equality
+
+-- | For use with `DerivingVia`, when we have the common case of a given field.
+newtype NamedOptic (name :: Symbol) s a = NamedOptic {unNamedOptic :: s}
+
+instance LabelOptic name A_Lens s s a a => HasGetter (NamedOptic name s a) a where
+  gettery = to unNamedOptic % labelOptic @name
+
+instance LabelOptic name A_Lens s s a a => HasSetter (NamedOptic name s a) a where
+  settery = castOptic $ coercedTo @s % labelOptic @name % coercedTo
+
+instance LabelOptic name A_Lens s s a a => HasLens (NamedOptic name s a) a
 
 -------------------------------------------------------------------------------
 -- Era_0
@@ -136,10 +151,6 @@ data ChainState e = ChainState
 type instance BT.ChainState Era_0 = ChainState Era_0
 
 -------------------------------------------------------------------------------
--- STS plumbing
--------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------
 -- Transaction processing
 -------------------------------------------------------------------------------
 data TX
@@ -163,22 +174,35 @@ instance STS (TX) where
 
   initialRules = []
 
-  transitionRules = [processTx]
+  transitionRules = [processTx @TX @Era_0]
 
-processTx :: TransitionRule (TX)
+processTx ::
+  forall tx e.
+  ( HasField "fromAcnt" (BT.Tx e) (BT.AccountName e),
+    HasField "toAcnt" (BT.Tx e) (BT.AccountName e),
+    HasField "amount" (BT.Tx e) (BT.Coin e),
+    HasLens (State tx) (Accounting e),
+    PredicateFailure tx ~ TXPredicateFailure e,
+    BT.Account e ~ Account e,
+    Signal tx ~ BT.Tx e,
+    Ord (BT.AccountName e),
+    Ord (BT.Coin e),
+    Group (BT.Coin e)
+  ) =>
+  TransitionRule tx
 processTx = do
-  TRC
-    ( (),
-      unAccounting -> accounting,
-      Tx {fromAcnt, toAcnt, amount}
-      ) <-
-    judgmentContext
+  TRC (_, st, tx) <- judgmentContext
+
+  let accounting = unAccounting $ extract @_ @(Accounting e) st
+      fromAcnt = getField @"fromAcnt" tx
+      toAcnt = getField @"toAcnt" tx
+      amount = getField @"amount" @_ @(BT.Coin e) tx
 
   accounting' <- case ( Map.lookup fromAcnt accounting,
                         Map.lookup toAcnt accounting
                       ) of
     (Just f, Just t) -> do
-      balance f >= amount ?! InsufficientMoney f amount
+      balance @e f >= amount ?! InsufficientMoney f amount
       pure $
         Map.insert fromAcnt (f {balance = balance f <> invert amount})
           . Map.insert toAcnt (t {balance = balance t <> amount})
@@ -188,7 +212,7 @@ processTx = do
       isJust mt ?! NoSuchAccount toAcnt
       pure accounting
 
-  pure $! Accounting accounting'
+  pure . flip inject st $! Accounting @e accounting'
 
 data ADMIN
 
