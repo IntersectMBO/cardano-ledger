@@ -1,5 +1,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Shelley.Spec.Ledger.ByronTranslation
   ( mkInitialShelleyLedgerView,
@@ -14,11 +16,12 @@ where
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.Hash.Class as Byron
+import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
+import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era
 import Control.Monad.Reader (runReader)
-import qualified Data.ByteString as Strict
+import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import GHC.Stack (HasCallStack)
@@ -35,20 +38,23 @@ import Shelley.Spec.Ledger.UTxO
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
 -- We don't care about the type that is hashed, which will differ going from
 -- Byron to Shelley, we just use the hashes as IDs.
-translateTxIdByronToShelley :: Era era => Byron.TxId -> TxId era
+translateTxIdByronToShelley ::
+  (Era era, ADDRHASH (Crypto era) ~ Crypto.Blake2b_224) =>
+  Byron.TxId ->
+  TxId era
 translateTxIdByronToShelley =
-  TxId . hashFromBytesE . Hashing.hashToBytes
+  TxId . hashFromShortBytesE . Hashing.abstractHashToShort
 
-hashFromBytesE ::
+hashFromShortBytesE ::
   forall h a.
-  (Byron.HashAlgorithm h, HasCallStack) =>
-  Strict.ByteString ->
-  Byron.Hash h a
-hashFromBytesE bs = fromMaybe (error msg) $ Byron.hashFromBytes bs
+  (Crypto.HashAlgorithm h, HasCallStack) =>
+  SBS.ShortByteString ->
+  Crypto.Hash h a
+hashFromShortBytesE sbs = fromMaybe (error msg) $ Crypto.hashFromBytesShort sbs
   where
     msg =
-      "hashFromBytes called with ByteString of the wrong length: "
-        <> show bs
+      "hashFromBytesShort called with ShortByteString of the wrong length: "
+        <> show sbs
 
 translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> TxOut era
 translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
@@ -56,13 +62,20 @@ translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
     (Byron.unsafeGetCompactAddress compactAddr)
     (Byron.unsafeGetLovelace amount)
 
-translateCompactTxInByronToShelley :: Era era => Byron.CompactTxIn -> TxIn era
+translateCompactTxInByronToShelley ::
+  (Era era, ADDRHASH (Crypto era) ~ Crypto.Blake2b_224) =>
+  Byron.CompactTxIn ->
+  TxIn era
 translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
   TxInCompact
     (translateTxIdByronToShelley (Byron.fromCompactTxId compactTxId))
     (fromIntegral idx)
 
-translateUTxOByronToShelley :: forall era. Era era => Byron.UTxO -> UTxO era
+translateUTxOByronToShelley ::
+  forall era.
+  (Era era, ADDRHASH (Crypto era) ~ Crypto.Blake2b_224) =>
+  Byron.UTxO ->
+  UTxO era
 translateUTxOByronToShelley (Byron.UTxO utxoByron) =
   UTxO $
     Map.fromList
@@ -74,7 +87,7 @@ translateUTxOByronToShelley (Byron.UTxO utxoByron) =
 
 translateToShelleyLedgerState ::
   forall era.
-  Era era =>
+  (Era era, ADDRHASH (Crypto era) ~ Crypto.Blake2b_224) =>
   ShelleyGenesis era ->
   Globals ->
   EpochNo ->
