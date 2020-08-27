@@ -44,9 +44,7 @@ module Shelley.Spec.Ledger.Tx
     validateScript,
     hashScript,
     txwitsScript,
-    extractKeyHash,
     extractKeyHashWitnessSet,
-    extractScriptHash,
     getKeyCombinations,
     getKeyCombination,
   )
@@ -79,7 +77,6 @@ import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -360,16 +357,6 @@ txwitsScript ::
   Map (ScriptHash crypto) (MultiSig crypto)
 txwitsScript = msigWits . _witnessSet
 
-extractKeyHash ::
-  [Credential kr crypto] ->
-  [KeyHash kr crypto]
-extractKeyHash =
-  mapMaybe
-    ( \case
-        KeyHashObj hk -> Just hk
-        _ -> Nothing
-    )
-
 extractKeyHashWitnessSet ::
   forall (r :: KeyRole) crypto.
   [Credential r crypto] ->
@@ -378,13 +365,3 @@ extractKeyHashWitnessSet credentials = foldr accum Set.empty credentials
   where
     accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans
     accum _other ans = ans
-
-extractScriptHash ::
-  [Credential 'Payment crypto] ->
-  [ScriptHash crypto]
-extractScriptHash =
-  mapMaybe
-    ( \case
-        ScriptHashObj hk -> Just hk
-        _ -> Nothing
-    )

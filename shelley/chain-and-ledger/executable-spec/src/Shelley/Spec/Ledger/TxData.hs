@@ -55,7 +55,6 @@ module Shelley.Spec.Ledger.TxData
     WitVKey (WitVKey, wvkBytes),
     --
     witKeyHash,
-    addStakeCreds,
     --
     SizeOfPoolOwners (..),
     SizeOfPoolRelays (..),
@@ -657,13 +656,6 @@ newtype StakeCreds crypto = StakeCreds
   deriving (Eq, Generic)
   deriving (Show) via (Quiet (StakeCreds crypto))
   deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR, ToJSON, FromJSON)
-
-addStakeCreds ::
-  (Credential 'Staking crypto) ->
-  SlotNo ->
-  (StakeCreds crypto) ->
-  StakeCreds crypto
-addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
 
 -- CBOR
 

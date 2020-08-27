@@ -21,7 +21,6 @@ module Shelley.Spec.Ledger.Scripts
       ),
     Script (..),
     ScriptHash (..),
-    countMSigNodes,
     getKeyCombination,
     getKeyCombinations,
     hashAnyScript,
@@ -152,13 +151,6 @@ data Script crypto = MultiSigScript (MultiSig crypto)
   deriving (Show, Eq, Ord, Generic)
 
 instance Crypto crypto => NoUnexpectedThunks (Script crypto)
-
--- | Count nodes and leaves of multi signature script
-countMSigNodes :: Crypto crypto => MultiSig crypto -> Int
-countMSigNodes (RequireSignature _) = 1
-countMSigNodes (RequireAllOf msigs) = 1 + sum (map countMSigNodes msigs)
-countMSigNodes (RequireAnyOf msigs) = 1 + sum (map countMSigNodes msigs)
-countMSigNodes (RequireMOf _ msigs) = 1 + sum (map countMSigNodes msigs)
 
 -- | Hashes native multi-signature script.
 hashMultiSigScript ::
