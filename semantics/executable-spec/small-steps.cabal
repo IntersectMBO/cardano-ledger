@@ -31,6 +31,7 @@ library
                      , Control.State.Transition.Extended
                      , Control.State.Transition.Simple
                      , Data.AbstractSize
+                     , Data.Relation
                      , Control.Iterate.Collect
                      , Control.Iterate.SetAlgebra
                      , Control.Iterate.SetAlgebraInternal

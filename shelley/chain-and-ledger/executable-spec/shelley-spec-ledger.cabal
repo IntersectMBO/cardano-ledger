@@ -22,7 +22,6 @@ library
                      Shelley.Spec.Ledger.BaseTypes
                      Shelley.Spec.Ledger.BlockChain
                      Shelley.Spec.Ledger.Coin
-                     Shelley.Spec.Ledger.Core
                      Shelley.Spec.Ledger.Credential
                      Shelley.Spec.Ledger.Delegation.Certificates
                      Shelley.Spec.Ledger.Delegation.PoolParams
