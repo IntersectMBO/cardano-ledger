@@ -25,7 +25,8 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness, hashKey)
@@ -89,14 +90,14 @@ aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Crypto c => UTxO c
+initUTxO :: Era era => UTxO c
 initUTxO =
   genesisCoins
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStUpdates :: forall c. Crypto c => ChainState c
+initStUpdates :: forall c. Era era => ChainState c
 initStUpdates = initSt initUTxO
 
 --
@@ -125,11 +126,11 @@ ppVoteA =
       _minPoolCost = SNothing
     }
 
-collectVotes :: Crypto c => PParamsUpdate -> [Int] -> ProposedPPUpdates c
+collectVotes :: Era era => PParamsUpdate -> [Int] -> ProposedPPUpdates c
 collectVotes vote =
   ProposedPPUpdates . Map.fromList . (fmap (\n -> (hashKey $ coreNodeVK n, vote)))
 
-ppVotes1 :: Crypto c => ProposedPPUpdates c
+ppVotes1 :: Era era => ProposedPPUpdates c
 ppVotes1 = collectVotes ppVoteA [0, 3, 4]
 
 feeTx1 :: Coin
@@ -138,7 +139,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin - feeTx1
 
-txbodyEx1 :: Crypto c => TxBody c
+txbodyEx1 :: Era era => TxBody c
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -201,10 +202,10 @@ updates1 = CHAINExample initStUpdates blockEx1 (Right expectedStEx1)
 -- Block 2, Slot 20, Epoch 0
 --
 
-ppVotes2 :: Crypto c => ProposedPPUpdates c
+ppVotes2 :: Era era => ProposedPPUpdates c
 ppVotes2 = collectVotes ppVoteA [1, 5]
 
-updateEx3B :: Crypto c => Update c
+updateEx3B :: Era era => Update c
 updateEx3B = Update ppVotes2 (EpochNo 0)
 
 feeTx2 :: Coin
@@ -213,7 +214,7 @@ feeTx2 = Coin 1
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 - feeTx2
 
-txbodyEx2 :: Crypto c => TxBody c
+txbodyEx2 :: Era era => TxBody c
 txbodyEx2 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx1) 0])
@@ -297,7 +298,7 @@ ppVoteB =
       _minPoolCost = SNothing
     }
 
-ppVotes3 :: Crypto c => ProposedPPUpdates c
+ppVotes3 :: Era era => ProposedPPUpdates c
 ppVotes3 = collectVotes ppVoteB [1]
 
 feeTx3 :: Coin
@@ -306,7 +307,7 @@ feeTx3 = Coin 1
 aliceCoinEx3 :: Coin
 aliceCoinEx3 = aliceCoinEx2 - feeTx3
 
-txbodyEx3 :: Crypto c => TxBody c
+txbodyEx3 :: Era era => TxBody c
 txbodyEx3 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx2) 0])

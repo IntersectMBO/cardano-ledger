@@ -35,7 +35,8 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyRole (..),
     pattern KeyHash,

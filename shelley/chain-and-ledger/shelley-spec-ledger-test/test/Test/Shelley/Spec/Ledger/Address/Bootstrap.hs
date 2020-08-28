@@ -45,7 +45,8 @@ import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
@@ -124,7 +125,7 @@ genSignature =
     . DSIGN.rawDeserialiseSigDSIGN
     <$> hedgehog (genBytes . fromIntegral $ DSIGN.sizeSigDSIGN ([] @a))
 
-genBootstrapAddress :: Gen (BootstrapAddress crypto)
+genBootstrapAddress :: Gen (BootstrapAddress era)
 genBootstrapAddress = BootstrapAddress . snd <$> genByronVKeyAddr
 
 genByronVKeyAddr :: Gen (Byron.VerificationKey, Byron.Address)

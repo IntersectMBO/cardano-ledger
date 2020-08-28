@@ -45,20 +45,20 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
-data NEWPP crypto
+data NEWPP era
 
-data NewppState crypto
-  = NewppState (UTxOState crypto) AccountState PParams
+data NewppState era
+  = NewppState (UTxOState era) AccountState PParams
 
-data NewppEnv crypto
-  = NewppEnv (DState crypto) (PState crypto)
+data NewppEnv era
+  = NewppEnv (DState era) (PState era)
 
-instance Typeable crypto => STS (NEWPP crypto) where
-  type State (NEWPP crypto) = NewppState crypto
-  type Signal (NEWPP crypto) = Maybe PParams
-  type Environment (NEWPP crypto) = NewppEnv crypto
-  type BaseM (NEWPP crypto) = ShelleyBase
-  data PredicateFailure (NEWPP crypto)
+instance Typeable era => STS (NEWPP era) where
+  type State (NEWPP era) = NewppState era
+  type Signal (NEWPP era) = Maybe PParams
+  type Environment (NEWPP era) = NewppEnv era
+  type BaseM (NEWPP era) = ShelleyBase
+  data PredicateFailure (NEWPP era)
     = UnexpectedDepositPot
         !Coin -- The total outstanding deposits
         !Coin -- The deposit pot
@@ -67,9 +67,9 @@ instance Typeable crypto => STS (NEWPP crypto) where
   initialRules = [initialNewPp]
   transitionRules = [newPpTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (NEWPP crypto))
+instance NoUnexpectedThunks (PredicateFailure (NEWPP era))
 
-initialNewPp :: InitialRule (NEWPP crypto)
+initialNewPp :: InitialRule (NEWPP era)
 initialNewPp =
   pure $
     NewppState
@@ -77,7 +77,7 @@ initialNewPp =
       emptyAccount
       emptyPParams
 
-newPpTransition :: TransitionRule (NEWPP crypto)
+newPpTransition :: TransitionRule (NEWPP era)
 newPpTransition = do
   TRC (NewppEnv dstate pstate, NewppState utxoSt acnt pp, ppNew) <- judgmentContext
 

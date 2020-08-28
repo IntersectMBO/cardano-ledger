@@ -13,7 +13,7 @@ module Shelley.Spec.Ledger.STS.Epoch
   )
 where
 
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
@@ -48,25 +48,25 @@ import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP)
 import Shelley.Spec.Ledger.Slot (EpochNo)
 
-data EPOCH crypto
+data EPOCH era
 
-instance (Crypto crypto, Typeable crypto) => STS (EPOCH crypto) where
-  type State (EPOCH crypto) = EpochState crypto
-  type Signal (EPOCH crypto) = EpochNo
-  type Environment (EPOCH crypto) = ()
-  type BaseM (EPOCH crypto) = ShelleyBase
-  data PredicateFailure (EPOCH crypto)
-    = PoolReapFailure (PredicateFailure (POOLREAP crypto)) -- Subtransition Failures
-    | SnapFailure (PredicateFailure (SNAP crypto)) -- Subtransition Failures
-    | NewPpFailure (PredicateFailure (NEWPP crypto)) -- Subtransition Failures
+instance (Era era, Typeable era) => STS (EPOCH era) where
+  type State (EPOCH era) = EpochState era
+  type Signal (EPOCH era) = EpochNo
+  type Environment (EPOCH era) = ()
+  type BaseM (EPOCH era) = ShelleyBase
+  data PredicateFailure (EPOCH era)
+    = PoolReapFailure (PredicateFailure (POOLREAP era)) -- Subtransition Failures
+    | SnapFailure (PredicateFailure (SNAP era)) -- Subtransition Failures
+    | NewPpFailure (PredicateFailure (NEWPP era)) -- Subtransition Failures
     deriving (Show, Generic, Eq)
 
   initialRules = [initialEpoch]
   transitionRules = [epochTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (EPOCH crypto))
+instance NoUnexpectedThunks (PredicateFailure (EPOCH era))
 
-initialEpoch :: InitialRule (EPOCH crypto)
+initialEpoch :: InitialRule (EPOCH era)
 initialEpoch =
   pure $
     EpochState
@@ -78,7 +78,7 @@ initialEpoch =
       emptyNonMyopic
 
 votedValue ::
-  ProposedPPUpdates crypto ->
+  ProposedPPUpdates era ->
   PParams ->
   Int ->
   Maybe PParams
@@ -103,9 +103,9 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
         _ -> Nothing
 
 epochTransition ::
-  forall crypto.
-  Crypto crypto =>
-  TransitionRule (EPOCH crypto)
+  forall era.
+  Era era =>
+  TransitionRule (EPOCH era)
 epochTransition = do
   TRC
     ( _,
@@ -123,7 +123,7 @@ epochTransition = do
   let utxoSt = _utxoState ls
   let DPState dstate pstate = _delegationState ls
   ss' <-
-    trans @(SNAP crypto) $ TRC (ls, ss, ())
+    trans @(SNAP era) $ TRC (ls, ss, ())
 
   let PState pParams fPParams _ = pstate
       ppp = eval (pParams ⨃ fPParams)
@@ -133,14 +133,14 @@ epochTransition = do
             _fPParams = Map.empty
           }
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
-    trans @(POOLREAP crypto) $ TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
+    trans @(POOLREAP era) $ TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
   let pup = proposals . _ppups $ utxoSt'
   let ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
   NewppState utxoSt'' acnt'' pp' <-
-    trans @(NEWPP crypto) $
+    trans @(NEWPP era) $
       TRC (NewppEnv dstate' pstate'', NewppState utxoSt' acnt' pp, ppNew)
   pure $
     EpochState
@@ -151,11 +151,11 @@ epochTransition = do
       pp'
       nm
 
-instance (Crypto crypto, Typeable crypto) => Embed (SNAP crypto) (EPOCH crypto) where
+instance (Era era, Typeable era) => Embed (SNAP era) (EPOCH era) where
   wrapFailed = SnapFailure
 
-instance (Crypto crypto, Typeable crypto) => Embed (POOLREAP crypto) (EPOCH crypto) where
+instance (Era era, Typeable era) => Embed (POOLREAP era) (EPOCH era) where
   wrapFailed = PoolReapFailure
 
-instance (Crypto crypto, Typeable crypto) => Embed (NEWPP crypto) (EPOCH crypto) where
+instance (Era era, Typeable era) => Embed (NEWPP era) (EPOCH era) where
   wrapFailed = NewPpFailure

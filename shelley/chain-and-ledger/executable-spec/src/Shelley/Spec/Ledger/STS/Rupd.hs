@@ -42,25 +42,25 @@ import Shelley.Spec.Ledger.Slot
     (+*),
   )
 
-data RUPD crypto
+data RUPD era
 
-data RupdEnv crypto
-  = RupdEnv (BlocksMade crypto) (EpochState crypto)
+data RupdEnv era
+  = RupdEnv (BlocksMade era) (EpochState era)
 
-instance Typeable crypto => STS (RUPD crypto) where
-  type State (RUPD crypto) = StrictMaybe (RewardUpdate crypto)
-  type Signal (RUPD crypto) = SlotNo
-  type Environment (RUPD crypto) = RupdEnv crypto
-  type BaseM (RUPD crypto) = ShelleyBase
-  data PredicateFailure (RUPD crypto) -- No predicate failures
+instance Typeable era => STS (RUPD era) where
+  type State (RUPD era) = StrictMaybe (RewardUpdate era)
+  type Signal (RUPD era) = SlotNo
+  type Environment (RUPD era) = RupdEnv era
+  type BaseM (RUPD era) = ShelleyBase
+  data PredicateFailure (RUPD era) -- No predicate failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (RUPD crypto))
+instance NoUnexpectedThunks (PredicateFailure (RUPD era))
 
-rupdTransition :: Typeable crypto => TransitionRule (RUPD crypto)
+rupdTransition :: Typeable era => TransitionRule (RUPD era)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (slotsPerEpoch, slot, maxLL) <- liftSTS $ do

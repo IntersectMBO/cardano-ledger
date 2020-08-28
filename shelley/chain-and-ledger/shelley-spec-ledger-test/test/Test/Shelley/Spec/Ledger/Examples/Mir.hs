@@ -23,7 +23,8 @@ import Shelley.Spec.Ledger.BaseTypes (Nonce, StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential, Ptr (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
@@ -91,14 +92,14 @@ aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Crypto c => UTxO c
+initUTxO :: Era era => UTxO c
 initUTxO =
   genesisCoins
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStMIR :: forall c. Crypto c => Coin -> ChainState c
+initStMIR :: forall c. Era era => Coin -> ChainState c
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt initUTxO
@@ -117,7 +118,7 @@ initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
 aliceMIRCoin :: Coin
 aliceMIRCoin = Coin 100
 
-ir :: Crypto c => Map (Credential 'Staking c) Coin
+ir :: Era era => Map (Credential 'Staking c) Coin
 ir = Map.fromList [(Cast.aliceSHK, aliceMIRCoin)]
 
 feeTx1 :: Coin
@@ -126,7 +127,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin - (feeTx1 + _keyDeposit ppEx)
 
-txbodyEx1 :: Crypto c => MIRPot -> TxBody c
+txbodyEx1 :: Era era => MIRPot -> TxBody c
 txbodyEx1 pot =
   TxBody
     (Set.fromList [TxIn genesisId 0])

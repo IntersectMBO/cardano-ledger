@@ -43,7 +43,8 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
@@ -206,7 +207,7 @@ genTimeToLive currentSlot = do
   pure $ currentSlot + SlotNo (fromIntegral ttl)
 
 mkScriptWits ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   [(MultiSig c, MultiSig c)] ->
   [(MultiSig c, MultiSig c)] ->
   Map (ScriptHash c) (MultiSig c)
@@ -260,7 +261,7 @@ mkTxWits
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   [TxIn c] ->
   StrictSeq (TxOut c) ->
   StrictSeq (DCert c) ->
@@ -289,7 +290,7 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL mdHash = do
 -- The idea is to have an specified spending balance and fees that must be paid
 -- by the selected addresses.
 calcOutputsFromBalance ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Coin ->
   [Addr c] ->
   Coin ->
@@ -315,7 +316,7 @@ calcOutputsFromBalance balance_ addrs fee =
 -- spend these outputs). If this is not the case, `findPayKeyPairAddr` /
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 genInputs ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Constants ->
   Map (KeyHash 'Payment c) (KeyPair 'Payment c) ->
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
@@ -341,7 +342,7 @@ genInputs Constants {minNumGenInputs, maxNumGenInputs} keyHashMap payScriptMap (
 
 -- | Select a subset of the reward accounts to use for reward withdrawals.
 genWithdrawals ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Constants ->
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
@@ -380,7 +381,7 @@ genWithdrawals
 
 -- | Collect witnesses needed for reward withdrawals.
 mkWdrlWits ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Map (ScriptHash c) (MultiSig c, MultiSig c) ->
   Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
   Credential 'Staking c ->
@@ -395,7 +396,7 @@ mkWdrlWits _ keyHashMap c@(KeyHashObj _) =
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Int ->
   KeyPairs c ->
   MultiSigPairs c ->

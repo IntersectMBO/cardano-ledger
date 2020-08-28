@@ -22,7 +22,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (eval, (∩))
 import Control.State.Transition
@@ -88,47 +88,47 @@ import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData (TxBody (..))
 import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
-data UTXOW crypto
+data UTXOW era
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  STS (UTXOW crypto)
+  STS (UTXOW era)
   where
-  type State (UTXOW crypto) = UTxOState crypto
-  type Signal (UTXOW crypto) = Tx crypto
-  type Environment (UTXOW crypto) = UtxoEnv crypto
-  type BaseM (UTXOW crypto) = ShelleyBase
-  data PredicateFailure (UTXOW crypto)
+  type State (UTXOW era) = UTxOState era
+  type Signal (UTXOW era) = Tx era
+  type Environment (UTXOW era) = UtxoEnv era
+  type BaseM (UTXOW era) = ShelleyBase
+  data PredicateFailure (UTXOW era)
     = InvalidWitnessesUTXOW
-        ![VKey 'Witness crypto]
+        ![VKey 'Witness era]
     | -- witnesses which failed in verifiedWits function
       MissingVKeyWitnessesUTXOW
-        !(WitHashes crypto) -- witnesses which were needed and not supplied
+        !(WitHashes era) -- witnesses which were needed and not supplied
     | MissingScriptWitnessesUTXOW
-        !(Set (ScriptHash crypto)) -- missing scripts
+        !(Set (ScriptHash era)) -- missing scripts
     | ScriptWitnessNotValidatingUTXOW
-        !(Set (ScriptHash crypto)) -- failed scripts
-    | UtxoFailure (PredicateFailure (UTXO crypto))
-    | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness crypto))
+        !(Set (ScriptHash era)) -- failed scripts
+    | UtxoFailure (PredicateFailure (UTXO era))
+    | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness era))
     | MissingTxBodyMetaDataHash
-        !(MetaDataHash crypto) -- hash of the full metadata
+        !(MetaDataHash era) -- hash of the full metadata
     | MissingTxMetaData
-        !(MetaDataHash crypto) -- hash of the metadata included in the transaction body
+        !(MetaDataHash era) -- hash of the metadata included in the transaction body
     | ConflictingMetaDataHash
-        !(MetaDataHash crypto) -- hash of the metadata included in the transaction body
-        !(MetaDataHash crypto) -- hash of the full metadata
+        !(MetaDataHash era) -- hash of the metadata included in the transaction body
+        !(MetaDataHash era) -- hash of the full metadata
     deriving (Eq, Generic, Show)
 
   transitionRules = [utxoWitnessed]
   initialRules = [initialLedgerStateUTXOW]
 
-instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (UTXOW crypto))
+instance (Era era) => NoUnexpectedThunks (PredicateFailure (UTXOW era))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (UTXOW crypto))
+  (Typeable era, Era era) =>
+  ToCBOR (PredicateFailure (UTXOW era))
   where
   toCBOR = \case
     InvalidWitnessesUTXOW wits ->
@@ -149,10 +149,10 @@ instance
       encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR bodyHash <> toCBOR fullMDHash
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (UTXOW crypto))
+  (Era era) =>
+  FromCBOR (PredicateFailure (UTXOW era))
   where
-  fromCBOR = decodeRecordSum "PredicateFailure (UTXOW crypto)" $
+  fromCBOR = decodeRecordSum "PredicateFailure (UTXOW era)" $
     \case
       0 -> do
         wits <- decodeList fromCBOR
@@ -185,21 +185,21 @@ instance
       k -> invalidKey k
 
 initialLedgerStateUTXOW ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  forall era.
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  InitialRule (UTXOW crypto)
+  InitialRule (UTXOW era)
 initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
-  trans @(UTXO crypto) $ IRC (UtxoEnv slots pp stakepools genDelegs)
+  trans @(UTXO era) $ IRC (UtxoEnv slots pp stakepools genDelegs)
 
 utxoWitnessed ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  forall era.
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  TransitionRule (UTXOW crypto)
+  TransitionRule (UTXOW era)
 utxoWitnessed =
   judgmentContext
     >>= \(TRC (UtxoEnv slot pp stakepools genDelegs, u, tx@(Tx txbody wits md))) -> do
@@ -254,13 +254,13 @@ utxoWitnessed =
         )
         ?! MIRInsufficientGenesisSigsUTXOW genSig
 
-      trans @(UTXO crypto) $
+      trans @(UTXO era) $
         TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  Embed (UTXO crypto) (UTXOW crypto)
+  Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = UtxoFailure

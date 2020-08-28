@@ -40,7 +40,8 @@ import Cardano.Binary
     serializeEncoding,
   )
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Crypto (ADDRHASH)
+import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Prelude
   ( AllowThunksIn (..),
     Generic,
@@ -77,27 +78,27 @@ nativeMultiSigTag = "\00"
 -- This makes it easy to express multi-signature addresses, and provides an
 -- extension point to express other validity conditions, e.g., as needed for
 -- locking funds used with lightning.
-data MultiSig' crypto
+data MultiSig' era
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
-    RequireSignature' !(KeyHash 'Witness crypto)
+    RequireSignature' !(KeyHash 'Witness era)
   | -- | Require all the sub-terms to be satisfied.
-    RequireAllOf' ![MultiSig crypto]
+    RequireAllOf' ![MultiSig era]
   | -- | Require any one of the sub-terms to be satisfied.
-    RequireAnyOf' ![MultiSig crypto]
+    RequireAnyOf' ![MultiSig era]
   | -- | Require M of the given sub-terms to be satisfied.
-    RequireMOf' !Int ![MultiSig crypto]
+    RequireMOf' !Int ![MultiSig era]
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NoUnexpectedThunks)
 
-data MultiSig crypto = MultiSig'
-  { multiSig :: !(MultiSig' crypto),
+data MultiSig era = MultiSig'
+  { multiSig :: !(MultiSig' era),
     multiSigBytes :: LByteString
   }
   deriving (Show, Eq, Ord, Generic)
-  deriving (NoUnexpectedThunks) via AllowThunksIn '["multiSigBytes"] (MultiSig crypto)
+  deriving (NoUnexpectedThunks) via AllowThunksIn '["multiSigBytes"] (MultiSig era)
 
-pattern RequireSignature :: Crypto crypto => KeyHash 'Witness crypto -> MultiSig crypto
+pattern RequireSignature :: Era era => KeyHash 'Witness era -> MultiSig era
 pattern RequireSignature akh <-
   MultiSig' (RequireSignature' akh) _
   where
@@ -105,7 +106,7 @@ pattern RequireSignature akh <-
       let bytes = serializeEncoding $ encodeListLen 2 <> encodeWord 0 <> toCBOR akh
        in MultiSig' (RequireSignature' akh) bytes
 
-pattern RequireAllOf :: Crypto crypto => [MultiSig crypto] -> MultiSig crypto
+pattern RequireAllOf :: Era era => [MultiSig era] -> MultiSig era
 pattern RequireAllOf ms <-
   MultiSig' (RequireAllOf' ms) _
   where
@@ -113,7 +114,7 @@ pattern RequireAllOf ms <-
       let bytes = serializeEncoding $ encodeListLen 2 <> encodeWord 1 <> encodeFoldable ms
        in MultiSig' (RequireAllOf' ms) bytes
 
-pattern RequireAnyOf :: Crypto crypto => [MultiSig crypto] -> MultiSig crypto
+pattern RequireAnyOf :: Era era => [MultiSig era] -> MultiSig era
 pattern RequireAnyOf ms <-
   MultiSig' (RequireAnyOf' ms) _
   where
@@ -121,7 +122,7 @@ pattern RequireAnyOf ms <-
       let bytes = serializeEncoding $ encodeListLen 2 <> encodeWord 2 <> encodeFoldable ms
        in MultiSig' (RequireAnyOf' ms) bytes
 
-pattern RequireMOf :: Crypto crypto => Int -> [MultiSig crypto] -> MultiSig crypto
+pattern RequireMOf :: Era era => Int -> [MultiSig era] -> MultiSig era
 pattern RequireMOf n ms <-
   MultiSig' (RequireMOf' n ms) _
   where
@@ -133,43 +134,43 @@ pattern RequireMOf n ms <-
 
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
-newtype ScriptHash crypto
-  = ScriptHash (Hash.Hash (ADDRHASH crypto) (Script crypto))
+newtype ScriptHash era
+  = ScriptHash (Hash.Hash (ADDRHASH (Crypto era)) (Script era))
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoUnexpectedThunks)
 
-deriving newtype instance Crypto crypto => ToCBOR (ScriptHash crypto)
+deriving newtype instance Era era => ToCBOR (ScriptHash era)
 
-deriving newtype instance Crypto crypto => FromCBOR (ScriptHash crypto)
+deriving newtype instance Era era => FromCBOR (ScriptHash era)
 
-deriving newtype instance Crypto crypto => ToJSON (ScriptHash crypto)
+deriving newtype instance Era era => ToJSON (ScriptHash era)
 
-deriving newtype instance Crypto crypto => FromJSON (ScriptHash crypto)
+deriving newtype instance Era era => FromJSON (ScriptHash era)
 
-data Script crypto = MultiSigScript (MultiSig crypto)
+data Script era = MultiSigScript (MultiSig era)
   -- new languages go here
   deriving (Show, Eq, Ord, Generic)
 
-instance Crypto crypto => NoUnexpectedThunks (Script crypto)
+instance Era era => NoUnexpectedThunks (Script era)
 
 -- | Hashes native multi-signature script.
 hashMultiSigScript ::
-  Crypto crypto =>
-  MultiSig crypto ->
-  ScriptHash crypto
+  Era era =>
+  MultiSig era ->
+  ScriptHash era
 hashMultiSigScript =
   ScriptHash
     . Hash.castHash
     . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
 hashAnyScript ::
-  Crypto crypto =>
-  Script crypto ->
-  ScriptHash crypto
+  Era era =>
+  Script era ->
+  ScriptHash era
 hashAnyScript (MultiSigScript msig) = hashMultiSigScript msig
 
 -- | Get one possible combination of keys for multi signature script
-getKeyCombination :: Crypto crypto => MultiSig crypto -> [KeyHash 'Witness crypto]
+getKeyCombination :: Era era => MultiSig era -> [KeyHash 'Witness era]
 getKeyCombination (RequireSignature hk) = [hk]
 getKeyCombination (RequireAllOf msigs) =
   List.concatMap getKeyCombination msigs
@@ -182,7 +183,7 @@ getKeyCombination (RequireMOf m msigs) =
 
 -- | Get all valid combinations of keys for given multi signature. This is
 -- mainly useful for testing.
-getKeyCombinations :: Crypto crypto => MultiSig crypto -> [[KeyHash 'Witness crypto]]
+getKeyCombinations :: Era era => MultiSig era -> [[KeyHash 'Witness era]]
 getKeyCombinations (RequireSignature hk) = [[hk]]
 getKeyCombinations (RequireAllOf msigs) =
   [ List.concat $
@@ -196,15 +197,15 @@ getKeyCombinations (RequireMOf m msigs) =
 -- CBOR
 
 instance
-  (Crypto crypto) =>
-  ToCBOR (Script crypto)
+  (Era era) =>
+  ToCBOR (Script era)
   where
   toCBOR (MultiSigScript s) =
     encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR s
 
 instance
-  Crypto crypto =>
-  FromCBOR (Annotator (Script crypto))
+  Era era =>
+  FromCBOR (Annotator (Script era))
   where
   fromCBOR = decodeRecordSum "Script" $
     \case
@@ -214,20 +215,20 @@ instance
       k -> invalidKey k
 
 instance
-  (Crypto crypto) =>
-  ToCBOR (MultiSig crypto)
+  (Era era) =>
+  ToCBOR (MultiSig era)
   where
   toCBOR (MultiSig' _ bytes) = encodePreEncoded $ BSL.toStrict bytes
 
 instance
-  Crypto crypto =>
-  FromCBOR (Annotator (MultiSig crypto))
+  Era era =>
+  FromCBOR (Annotator (MultiSig era))
   where
   fromCBOR = annotatorSlice $ fmap MultiSig' <$> fromCBOR
 
 instance
-  Crypto crypto =>
-  FromCBOR (Annotator (MultiSig' crypto))
+  Era era =>
+  FromCBOR (Annotator (MultiSig' era))
   where
   fromCBOR = decodeRecordSum "MultiSig" $
     \case

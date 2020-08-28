@@ -94,7 +94,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
@@ -207,50 +207,50 @@ import Shelley.Spec.Ledger.UTxO
   )
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
-type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
+type KeyPairs era = [(KeyPair 'Payment era, KeyPair 'Staking era)]
 
-type RewardAccounts crypto =
-  Map (Credential 'Staking crypto) Coin
+type RewardAccounts era =
+  Map (Credential 'Staking era) Coin
 
-data FutureGenDeleg crypto = FutureGenDeleg
+data FutureGenDeleg era = FutureGenDeleg
   { fGenDelegSlot :: !SlotNo,
-    fGenDelegGenKeyHash :: !(KeyHash 'Genesis crypto)
+    fGenDelegGenKeyHash :: !(KeyHash 'Genesis era)
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoUnexpectedThunks (FutureGenDeleg crypto)
+instance NoUnexpectedThunks (FutureGenDeleg era)
 
-instance NFData (FutureGenDeleg crypto)
+instance NFData (FutureGenDeleg era)
 
-instance Crypto crypto => ToCBOR (FutureGenDeleg crypto) where
+instance Era era => ToCBOR (FutureGenDeleg era) where
   toCBOR (FutureGenDeleg a b) =
     encodeListLen 2 <> toCBOR a <> toCBOR b
 
-instance Crypto crypto => FromCBOR (FutureGenDeleg crypto) where
+instance Era era => FromCBOR (FutureGenDeleg era) where
   fromCBOR = do
     decodeRecordNamed "FutureGenDeleg" (const 2) $ do
       a <- fromCBOR
       b <- fromCBOR
       pure $ FutureGenDeleg a b
 
-data InstantaneousRewards crypto = InstantaneousRewards
-  { iRReserves :: !(Map (Credential 'Staking crypto) Coin),
-    iRTreasury :: !(Map (Credential 'Staking crypto) Coin)
+data InstantaneousRewards era = InstantaneousRewards
+  { iRReserves :: !(Map (Credential 'Staking era) Coin),
+    iRTreasury :: !(Map (Credential 'Staking era) Coin)
   }
   deriving (Show, Eq, Generic)
 
-totalInstantaneousReservesRewards :: InstantaneousRewards crypto -> Coin
+totalInstantaneousReservesRewards :: InstantaneousRewards era -> Coin
 totalInstantaneousReservesRewards (InstantaneousRewards irR _) = sum irR
 
-instance NoUnexpectedThunks (InstantaneousRewards crypto)
+instance NoUnexpectedThunks (InstantaneousRewards era)
 
-instance NFData (InstantaneousRewards crypto)
+instance NFData (InstantaneousRewards era)
 
-instance Crypto crypto => ToCBOR (InstantaneousRewards crypto) where
+instance Era era => ToCBOR (InstantaneousRewards era) where
   toCBOR (InstantaneousRewards irR irT) =
     encodeListLen 2 <> mapToCBOR irR <> mapToCBOR irT
 
-instance Crypto crypto => FromCBOR (InstantaneousRewards crypto) where
+instance Era era => FromCBOR (InstantaneousRewards era) where
   fromCBOR = do
     decodeRecordNamed "InstantaneousRewards" (const 2) $ do
       irR <- mapFromCBOR
@@ -258,27 +258,27 @@ instance Crypto crypto => FromCBOR (InstantaneousRewards crypto) where
       pure $ InstantaneousRewards irR irT
 
 -- | State of staking pool delegations and rewards
-data DState crypto = DState
+data DState era = DState
   { -- | The active reward accounts.
-    _rewards :: !(RewardAccounts crypto),
+    _rewards :: !(RewardAccounts era),
     -- | The current delegations.
-    _delegations :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
+    _delegations :: !(Map (Credential 'Staking era) (KeyHash 'StakePool era)),
     -- | The pointed to hash keys.
-    _ptrs :: !(Bimap Ptr (Credential 'Staking crypto)),
+    _ptrs :: !(Bimap Ptr (Credential 'Staking era)),
     -- | future genesis key delegations
-    _fGenDelegs :: !(Map (FutureGenDeleg crypto) (GenDelegPair crypto)),
+    _fGenDelegs :: !(Map (FutureGenDeleg era) (GenDelegPair era)),
     -- | Genesis key delegations
-    _genDelegs :: !(GenDelegs crypto),
+    _genDelegs :: !(GenDelegs era),
     -- | Instantaneous Rewards
-    _irwd :: !(InstantaneousRewards crypto)
+    _irwd :: !(InstantaneousRewards era)
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (DState crypto)
+instance NoUnexpectedThunks (DState era)
 
-instance NFData (DState crypto)
+instance NFData (DState era)
 
-instance Crypto crypto => ToCBOR (DState crypto) where
+instance Era era => ToCBOR (DState era) where
   toCBOR (DState rw dlg p fgs gs ir) =
     encodeListLen 6
       <> toCBOR rw
@@ -288,7 +288,7 @@ instance Crypto crypto => ToCBOR (DState crypto) where
       <> toCBOR gs
       <> toCBOR ir
 
-instance Crypto crypto => FromCBOR (DState crypto) where
+instance Era era => FromCBOR (DState era) where
   fromCBOR = do
     decodeRecordNamed "DState" (const 6) $ do
       rw <- fromCBOR
@@ -300,25 +300,25 @@ instance Crypto crypto => FromCBOR (DState crypto) where
       pure $ DState rw dlg p fgs gs ir
 
 -- | Current state of staking pools and their certificate counters.
-data PState crypto = PState
+data PState era = PState
   { -- | The pool parameters.
-    _pParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
+    _pParams :: !(Map (KeyHash 'StakePool era) (PoolParams era)),
     -- | The future pool parameters.
-    _fPParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
+    _fPParams :: !(Map (KeyHash 'StakePool era) (PoolParams era)),
     -- | A map of retiring stake pools to the epoch when they retire.
-    _retiring :: !(Map (KeyHash 'StakePool crypto) EpochNo)
+    _retiring :: !(Map (KeyHash 'StakePool era) EpochNo)
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PState crypto)
+instance NoUnexpectedThunks (PState era)
 
-instance NFData (PState crypto)
+instance NFData (PState era)
 
-instance Crypto crypto => ToCBOR (PState crypto) where
+instance Era era => ToCBOR (PState era) where
   toCBOR (PState a b c) =
     encodeListLen 3 <> toCBOR a <> toCBOR b <> toCBOR c
 
-instance Crypto crypto => FromCBOR (PState crypto) where
+instance Era era => FromCBOR (PState era) where
   fromCBOR = do
     decodeRecordNamed "PState" (const 3) $ do
       a <- fromCBOR
@@ -327,41 +327,41 @@ instance Crypto crypto => FromCBOR (PState crypto) where
       pure $ PState a b c
 
 -- | The state associated with the current stake delegation.
-data DPState crypto = DPState
-  { _dstate :: !(DState crypto),
-    _pstate :: !(PState crypto)
+data DPState era = DPState
+  { _dstate :: !(DState era),
+    _pstate :: !(PState era)
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (DPState crypto)
+instance NoUnexpectedThunks (DPState era)
 
-instance NFData (DPState crypto)
+instance NFData (DPState era)
 
-instance Crypto crypto => ToCBOR (DPState crypto) where
+instance Era era => ToCBOR (DPState era) where
   toCBOR (DPState ds ps) =
     encodeListLen 2 <> toCBOR ds <> toCBOR ps
 
-instance Crypto crypto => FromCBOR (DPState crypto) where
+instance Era era => FromCBOR (DPState era) where
   fromCBOR = do
     decodeRecordNamed "DPState" (const 2) $ do
       ds <- fromCBOR
       ps <- fromCBOR
       pure $ DPState ds ps
 
-data RewardUpdate crypto = RewardUpdate
+data RewardUpdate era = RewardUpdate
   { deltaT :: !Coin,
     deltaR :: !Coin,
-    rs :: !(Map (Credential 'Staking crypto) Coin),
+    rs :: !(Map (Credential 'Staking era) Coin),
     deltaF :: !Coin,
-    nonMyopic :: !(NonMyopic crypto)
+    nonMyopic :: !(NonMyopic era)
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (RewardUpdate crypto)
+instance NoUnexpectedThunks (RewardUpdate era)
 
-instance NFData (RewardUpdate crypto)
+instance NFData (RewardUpdate era)
 
-instance Crypto crypto => ToCBOR (RewardUpdate crypto) where
+instance Era era => ToCBOR (RewardUpdate era) where
   toCBOR (RewardUpdate dt dr rw df nm) =
     encodeListLen 5
       <> toCBOR dt
@@ -370,7 +370,7 @@ instance Crypto crypto => ToCBOR (RewardUpdate crypto) where
       <> toCBOR (- df) -- TODO change Coin serialization to use integers?
       <> toCBOR nm
 
-instance Crypto crypto => FromCBOR (RewardUpdate crypto) where
+instance Era era => FromCBOR (RewardUpdate era) where
   fromCBOR = do
     decodeRecordNamed "RewardUpdate" (const 5) $ do
       dt <- fromCBOR
@@ -380,7 +380,7 @@ instance Crypto crypto => FromCBOR (RewardUpdate crypto) where
       nm <- fromCBOR
       pure $ RewardUpdate dt (- dr) rw (- df) nm
 
-emptyRewardUpdate :: RewardUpdate crypto
+emptyRewardUpdate :: RewardUpdate era
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) emptyNonMyopic
 
 data AccountState = AccountState
@@ -404,25 +404,25 @@ instance NoUnexpectedThunks AccountState
 
 instance NFData AccountState
 
-data EpochState crypto = EpochState
+data EpochState era = EpochState
   { esAccountState :: !AccountState,
-    esSnapshots :: !(SnapShots crypto),
-    esLState :: !(LedgerState crypto),
+    esSnapshots :: !(SnapShots era),
+    esLState :: !(LedgerState era),
     esPrevPp :: !PParams,
     esPp :: !PParams,
-    esNonMyopic :: !(NonMyopic crypto) -- TODO document this in the formal spec, see github #1319
+    esNonMyopic :: !(NonMyopic era) -- TODO document this in the formal spec, see github #1319
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (EpochState crypto)
+instance NoUnexpectedThunks (EpochState era)
 
-instance NFData (EpochState crypto)
+instance NFData (EpochState era)
 
-instance Crypto crypto => ToCBOR (EpochState crypto) where
+instance Era era => ToCBOR (EpochState era) where
   toCBOR (EpochState a s l r p n) =
     encodeListLen 6 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR r <> toCBOR p <> toCBOR n
 
-instance Crypto crypto => FromCBOR (EpochState crypto) where
+instance Era era => FromCBOR (EpochState era) where
   fromCBOR = do
     decodeRecordNamed "EpochState" (const 6) $ do
       a <- fromCBOR
@@ -433,17 +433,17 @@ instance Crypto crypto => FromCBOR (EpochState crypto) where
       n <- fromCBOR
       pure $ EpochState a s l r p n
 
-emptyPPUPState :: PPUPState crypto
+emptyPPUPState :: PPUPState era
 emptyPPUPState = PPUPState emptyPPPUpdates emptyPPPUpdates
 
-emptyUTxOState :: UTxOState crypto
+emptyUTxOState :: UTxOState era
 emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
-emptyEpochState :: EpochState crypto
+emptyEpochState :: EpochState era
 emptyEpochState =
   EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams emptyPParams emptyNonMyopic
 
-emptyLedgerState :: LedgerState crypto
+emptyLedgerState :: LedgerState era
 emptyLedgerState =
   LedgerState
     emptyUTxOState
@@ -452,14 +452,14 @@ emptyLedgerState =
 emptyAccount :: AccountState
 emptyAccount = AccountState (Coin 0) (Coin 0)
 
-emptyDelegation :: DPState crypto
+emptyDelegation :: DPState era
 emptyDelegation =
   DPState emptyDState emptyPState
 
-emptyInstantaneousRewards :: InstantaneousRewards crypto
+emptyInstantaneousRewards :: InstantaneousRewards era
 emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty
 
-emptyDState :: DState crypto
+emptyDState :: DState era
 emptyDState =
   DState
     Map.empty
@@ -469,24 +469,24 @@ emptyDState =
     (GenDelegs Map.empty)
     emptyInstantaneousRewards
 
-emptyPState :: PState crypto
+emptyPState :: PState era
 emptyPState =
   PState Map.empty Map.empty Map.empty
 
-emptyDPState :: DPState crypto
+emptyDPState :: DPState era
 emptyDPState = DPState emptyDState emptyPState
 
-data PPUPState crypto = PPUPState
-  { proposals :: !(ProposedPPUpdates crypto),
-    futureProposals :: !(ProposedPPUpdates crypto)
+data PPUPState era = PPUPState
+  { proposals :: !(ProposedPPUpdates era),
+    futureProposals :: !(ProposedPPUpdates era)
   }
   deriving (Show, Eq, Generic, NFData, NoUnexpectedThunks)
 
-instance Crypto crypto => ToCBOR (PPUPState crypto) where
+instance Era era => ToCBOR (PPUPState era) where
   toCBOR (PPUPState ppup fppup) =
     encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
 
-instance Crypto crypto => FromCBOR (PPUPState crypto) where
+instance Era era => FromCBOR (PPUPState era) where
   fromCBOR = do
     decodeRecordNamed "PPUPState" (const 2) $ do
       ppup <- fromCBOR
@@ -501,28 +501,28 @@ pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
 -- | Update the protocol parameter updates by clearing out the proposals
 -- and making the future proposals become the new proposals,
 -- provided the new proposals can follow (otherwise reset them).
-updatePpup :: UTxOState crypto -> PParams -> UTxOState crypto
+updatePpup :: UTxOState era -> PParams -> UTxOState era
 updatePpup utxoSt pp = utxoSt {_ppups = PPUPState ps emptyPPPUpdates}
   where
     (ProposedPPUpdates newProposals) = futureProposals . _ppups $ utxoSt
     goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
     ps = if all goodPV newProposals then ProposedPPUpdates newProposals else emptyPPPUpdates
 
-data UTxOState crypto = UTxOState
-  { _utxo :: !(UTxO crypto),
+data UTxOState era = UTxOState
+  { _utxo :: !(UTxO era),
     _deposited :: !Coin,
     _fees :: !Coin,
-    _ppups :: !(PPUPState crypto)
+    _ppups :: !(PPUPState era)
   }
   deriving (Show, Eq, Generic, NFData)
 
-instance NoUnexpectedThunks (UTxOState crypto)
+instance NoUnexpectedThunks (UTxOState era)
 
-instance Crypto crypto => ToCBOR (UTxOState crypto) where
+instance Era era => ToCBOR (UTxOState era) where
   toCBOR (UTxOState ut dp fs us) =
     encodeListLen 4 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us
 
-instance Crypto crypto => FromCBOR (UTxOState crypto) where
+instance Era era => FromCBOR (UTxOState era) where
   fromCBOR = do
     decodeRecordNamed "UTxOState" (const 4) $ do
       ut <- fromCBOR
@@ -532,36 +532,36 @@ instance Crypto crypto => FromCBOR (UTxOState crypto) where
       pure $ UTxOState ut dp fs us
 
 -- | New Epoch state and environment
-data NewEpochState crypto = NewEpochState
+data NewEpochState era = NewEpochState
   { -- | Last epoch
     nesEL :: !EpochNo,
     -- | Blocks made before current epoch
-    nesBprev :: !(BlocksMade crypto),
+    nesBprev :: !(BlocksMade era),
     -- | Blocks made in current epoch
-    nesBcur :: !(BlocksMade crypto),
+    nesBcur :: !(BlocksMade era),
     -- | Epoch state before current
-    nesEs :: !(EpochState crypto),
+    nesEs :: !(EpochState era),
     -- | Possible reward update
-    nesRu :: !(StrictMaybe (RewardUpdate crypto)),
+    nesRu :: !(StrictMaybe (RewardUpdate era)),
     -- | Stake distribution within the stake pool
-    nesPd :: !(PoolDistr crypto),
+    nesPd :: !(PoolDistr era),
     -- | Overlay schedule for PBFT vs Praos
-    nesOsched :: !(OverlaySchedule crypto)
+    nesOsched :: !(OverlaySchedule era)
   }
   deriving (Show, Eq, Generic)
 
-instance NFData (NewEpochState crypto)
+instance NFData (NewEpochState era)
 
-instance NoUnexpectedThunks (NewEpochState crypto)
+instance NoUnexpectedThunks (NewEpochState era)
 
-instance Crypto crypto => ToCBOR (NewEpochState crypto) where
+instance Era era => ToCBOR (NewEpochState era) where
   toCBOR (NewEpochState e bp bc es ru pd os) =
     encodeListLen 7 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
       <> toCBOR ru
       <> toCBOR pd
       <> toCBOR os
 
-instance Crypto crypto => FromCBOR (NewEpochState crypto) where
+instance Era era => FromCBOR (NewEpochState era) where
   fromCBOR = do
     decodeRecordNamed "NewEpochState" (const 7) $ do
       e <- fromCBOR
@@ -574,40 +574,40 @@ instance Crypto crypto => FromCBOR (NewEpochState crypto) where
       pure $ NewEpochState e bp bc es ru pd os
 
 getGKeys ::
-  NewEpochState crypto ->
-  Set (KeyHash 'Genesis crypto)
+  NewEpochState era ->
+  Set (KeyHash 'Genesis era)
 getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ _ ls _ _ _ = es
     LedgerState _ (DPState (DState _ _ _ _ (GenDelegs genDelegs) _) _) = ls
 
-data NewEpochEnv crypto = NewEpochEnv
+data NewEpochEnv era = NewEpochEnv
   { neeS :: SlotNo,
-    neeGkeys :: Set (KeyHash 'Genesis crypto)
+    neeGkeys :: Set (KeyHash 'Genesis era)
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (NewEpochEnv crypto)
+instance NoUnexpectedThunks (NewEpochEnv era)
 
 -- | The state associated with a 'Ledger'.
-data LedgerState crypto = LedgerState
+data LedgerState era = LedgerState
   { -- | The current unspent transaction outputs.
-    _utxoState :: !(UTxOState crypto),
+    _utxoState :: !(UTxOState era),
     -- | The current delegation state
-    _delegationState :: !(DPState crypto)
+    _delegationState :: !(DPState era)
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (LedgerState crypto)
+instance NoUnexpectedThunks (LedgerState era)
 
-instance NFData (LedgerState crypto)
+instance NFData (LedgerState era)
 
-instance Crypto crypto => ToCBOR (LedgerState crypto) where
+instance Era era => ToCBOR (LedgerState era) where
   toCBOR (LedgerState u dp) =
     encodeListLen 2 <> toCBOR u <> toCBOR dp
 
-instance Crypto crypto => FromCBOR (LedgerState crypto) where
+instance Era era => FromCBOR (LedgerState era) where
   fromCBOR = do
     decodeRecordNamed "LedgerState" (const 2) $ do
       u <- fromCBOR
@@ -617,9 +617,9 @@ instance Crypto crypto => FromCBOR (LedgerState crypto) where
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
-  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
-  UTxO crypto ->
-  LedgerState crypto
+  Map (KeyHash 'Genesis era) (GenDelegPair era) ->
+  UTxO era ->
+  LedgerState era
 genesisState genDelegs0 utxo0 =
   LedgerState
     ( UTxOState
@@ -633,12 +633,12 @@ genesisState genDelegs0 utxo0 =
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
 -- | Implementation of abstract transaction size
-txsize :: Tx crypto -> Integer
+txsize :: Tx era -> Integer
 txsize = fromIntegral . BSL.length . txFullBytes
 
 -- | Convenience Function to bound the txsize function.
 -- | It can be helpful for coin selection.
-txsizeBound :: forall crypto. (Crypto crypto) => Tx crypto -> Integer
+txsizeBound :: forall era. (Era era) => Tx era -> Integer
 txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
   where
     uint = 5
@@ -656,28 +656,28 @@ txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
     rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
 
 -- | Minimum fee calculation
-minfee :: PParams -> Tx crypto -> Coin
+minfee :: PParams -> Tx era -> Coin
 minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_minfeeB pp)
 
 -- | Minimum fee bound using txsizeBound
-minfeeBound :: forall crypto. (Crypto crypto) => PParams -> Tx crypto -> Coin
+minfeeBound :: forall era. (Era era) => PParams -> Tx era -> Coin
 minfeeBound pp tx = Coin $ fromIntegral (_minfeeA pp) * txsizeBound tx + fromIntegral (_minfeeB pp)
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
-  (Crypto crypto) =>
+  (Era era) =>
   PParams ->
-  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
-  TxBody crypto ->
+  Map (KeyHash 'StakePool era) (PoolParams era) ->
+  TxBody era ->
   Coin
 produced pp stakePools tx =
   balance (txouts tx) + _txfee tx + totalDeposits pp stakePools (toList $ _certs tx)
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
-  Crypto crypto =>
+  Era era =>
   PParams ->
-  TxBody crypto ->
+  TxBody era ->
   Coin
 keyRefunds pp tx = (_keyDeposit pp) * (fromIntegral $ length deregistrations)
   where
@@ -685,10 +685,10 @@ keyRefunds pp tx = (_keyDeposit pp) * (fromIntegral $ length deregistrations)
 
 -- | Compute the lovelace which are destroyed by the transaction
 consumed ::
-  Crypto crypto =>
+  Era era =>
   PParams ->
-  UTxO crypto ->
-  TxBody crypto ->
+  UTxO era ->
+  TxBody era ->
   Coin
 consumed pp u tx =
   balance (eval (txins tx ◁ u)) + refunds + withdrawals
@@ -697,25 +697,25 @@ consumed pp u tx =
     refunds = keyRefunds pp tx
     withdrawals = sum . unWdrl $ _wdrls tx
 
-newtype WitHashes crypto = WitHashes
-  {unWitHashes :: Set (KeyHash 'Witness crypto)}
+newtype WitHashes era = WitHashes
+  {unWitHashes :: Set (KeyHash 'Witness era)}
   deriving (Eq, Generic)
-  deriving (Show) via Quiet (WitHashes crypto)
+  deriving (Show) via Quiet (WitHashes era)
 
-instance Crypto crypto => NoUnexpectedThunks (WitHashes crypto)
+instance Era era => NoUnexpectedThunks (WitHashes era)
 
 -- | Check if a set of witness hashes is empty.
-nullWitHashes :: WitHashes crypto -> Bool
+nullWitHashes :: WitHashes era -> Bool
 nullWitHashes (WitHashes a) = Set.null a
 
 -- | Extract the difference between two sets of witness hashes.
-diffWitHashes :: WitHashes crypto -> WitHashes crypto -> WitHashes crypto
+diffWitHashes :: WitHashes era -> WitHashes era -> WitHashes era
 diffWitHashes (WitHashes x) (WitHashes x') =
   WitHashes (x `Set.difference` x')
 
 -- | Extract the witness hashes from the Witness set.
 witsFromWitnessSet ::
-  Crypto crypto => WitnessSet crypto -> WitHashes crypto
+  Era era => WitnessSet era -> WitHashes era
 witsFromWitnessSet (WitnessSet aWits _ bsWits) =
   WitHashes $
     Set.map witKeyHash aWits
@@ -725,12 +725,12 @@ witsFromWitnessSet (WitnessSet aWits _ bsWits) =
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded ::
-  forall crypto.
-  Crypto crypto =>
-  UTxO crypto ->
-  Tx crypto ->
-  GenDelegs crypto ->
-  WitHashes crypto
+  forall era.
+  Era era =>
+  UTxO era ->
+  Tx era ->
+  GenDelegs era ->
+  WitHashes era
 witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
   WitHashes $
     certAuthors
@@ -739,7 +739,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
       `Set.union` wdrlAuthors
       `Set.union` updateKeys
   where
-    inputAuthors :: Set (KeyHash 'Witness crypto)
+    inputAuthors :: Set (KeyHash 'Witness era)
     inputAuthors = foldr accum Set.empty (_inputs txbody)
       where
         accum txin ans =
@@ -747,11 +747,11 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
             Just (TxOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert (asWitness pay) ans
             Just (TxOut (AddrBootstrap bootAddr) _) -> Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
             _other -> ans
-    wdrlAuthors :: Set (KeyHash 'Witness crypto)
+    wdrlAuthors :: Set (KeyHash 'Witness era)
     wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (_wdrls txbody))
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
-    owners :: Set (KeyHash 'Witness crypto)
+    owners :: Set (KeyHash 'Witness era)
     owners = foldr accum Set.empty (_certs txbody)
       where
         accum (DCertPool (RegPool pool)) ans = Set.union (Set.map asWitness (_poolOwners pool)) ans
@@ -763,22 +763,22 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
     -- key reg requires no witness but this is already filtered outby requiresVKeyWitness
     -- before the call to `cwitness`, so this error should never be reached.
 
-    certAuthors :: Set (KeyHash 'Witness crypto)
+    certAuthors :: Set (KeyHash 'Witness era)
     certAuthors = foldr accum Set.empty (_certs txbody)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
-    updateKeys :: Set (KeyHash 'Witness crypto)
+    updateKeys :: Set (KeyHash 'Witness era)
     updateKeys = asWitness `Set.map` propWits (txup tx) genDelegs
 
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 verifiedWits ::
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  Tx crypto ->
-  Either [VKey 'Witness crypto] ()
+  Tx era ->
+  Either [VKey 'Witness era] ()
 verifiedWits (Tx txbody wits _) =
   case (failed <> failedBootstrap) of
     [] -> Right ()
@@ -799,9 +799,9 @@ verifiedWits (Tx txbody wits _) =
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits ::
-  Maybe (Update crypto) ->
-  GenDelegs crypto ->
-  Set (KeyHash 'Witness crypto)
+  Maybe (Update era) ->
+  GenDelegs era ->
+  Set (KeyHash 'Witness era)
 propWits Nothing _ = Set.empty
 propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys
@@ -813,10 +813,10 @@ propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
 
 -- | Calculate the change to the deposit pool for a given transaction.
 depositPoolChange ::
-  Crypto crypto =>
-  LedgerState crypto ->
+  Era era =>
+  LedgerState era ->
   PParams ->
-  TxBody crypto ->
+  TxBody era ->
   Coin
 depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
   where
@@ -830,9 +830,9 @@ depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
     txRefunds = keyRefunds pp tx
 
 reapRewards ::
-  RewardAccounts crypto ->
-  RewardAccounts crypto ->
-  RewardAccounts crypto
+  RewardAccounts era ->
+  RewardAccounts era ->
+  RewardAccounts era
 reapRewards dStateRewards withdrawals =
   Map.mapWithKey removeRewards dStateRewards
   where
@@ -843,12 +843,12 @@ reapRewards dStateRewards withdrawals =
 ---------------------------------
 
 stakeDistr ::
-  forall crypto.
-  Crypto crypto =>
-  UTxO crypto ->
-  DState crypto ->
-  PState crypto ->
-  SnapShot crypto
+  forall era.
+  Era era =>
+  UTxO era ->
+  DState era ->
+  PState era ->
+  SnapShot era
 stakeDistr u ds ps =
   SnapShot
     (Stake $ eval (dom activeDelegs ◁ stakeRelation))
@@ -857,16 +857,16 @@ stakeDistr u ds ps =
   where
     DState rewards' delegs ptrs' _ _ _ = ds
     PState poolParams _ _ = ps
-    stakeRelation :: Map (Credential 'Staking crypto) Coin
+    stakeRelation :: Map (Credential 'Staking era) Coin
     stakeRelation = aggregateUtxoCoinByCredential (forwards ptrs') u rewards'
-    activeDelegs :: Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
+    activeDelegs :: Map (Credential 'Staking era) (KeyHash 'StakePool era)
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
 
 -- | Apply a reward update
 applyRUpd ::
-  RewardUpdate crypto ->
-  EpochState crypto ->
-  EpochState crypto
+  RewardUpdate era ->
+  EpochState era ->
+  EpochState era
 applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
   where
     utxoState_ = _utxoState ls
@@ -896,11 +896,11 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     nm' = nonMyopic ru
 
 updateNonMypopic ::
-  NonMyopic crypto ->
+  NonMyopic era ->
   Coin ->
-  Map (KeyHash 'StakePool crypto) Likelihood ->
-  SnapShot crypto ->
-  NonMyopic crypto
+  Map (KeyHash 'StakePool era) Likelihood ->
+  SnapShot era ->
+  NonMyopic era
 updateNonMypopic nm rPot newLikelihoods ss =
   nm
     { likelihoodsNM = updatedLikelihoods,
@@ -915,10 +915,10 @@ updateNonMypopic nm rPot newLikelihoods ss =
 -- | Create a reward update
 createRUpd ::
   EpochSize ->
-  BlocksMade crypto ->
-  EpochState crypto ->
+  BlocksMade era ->
+  EpochState era ->
   Coin ->
-  ShelleyBase (RewardUpdate crypto)
+  ShelleyBase (RewardUpdate era)
 createRUpd slotsPerEpoch b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
   asc <- asks activeSlotCoeff
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
@@ -954,10 +954,10 @@ createRUpd slotsPerEpoch b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total
 
 -- | Update new epoch state
 updateNES ::
-  NewEpochState crypto ->
-  BlocksMade crypto ->
-  LedgerState crypto ->
-  NewEpochState crypto
+  NewEpochState era ->
+  BlocksMade era ->
+  LedgerState era ->
+  NewEpochState era
 updateNES
   ( NewEpochState
       eL

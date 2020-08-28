@@ -41,7 +41,8 @@ import Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     hashHeaderToNonce,
   )
-import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
@@ -83,7 +84,7 @@ instance Mock c => HasTrace (CHAIN c) (GenEnv c) where
 -- For our purposes we can bootstrap the chain by just coercing the value.
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
-lastByronHeaderHash :: forall proxy c. Crypto c => proxy c -> HashHeader c
+lastByronHeaderHash :: forall proxy c. Era era => proxy c -> HashHeader c
 lastByronHeaderHash _ = HashHeader $ mkHash 0
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align
@@ -92,7 +93,7 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall c a.
-  Crypto c =>
+  Era era =>
   Constants ->
   IRC (CHAIN c) ->
   Gen (Either a (ChainState c))

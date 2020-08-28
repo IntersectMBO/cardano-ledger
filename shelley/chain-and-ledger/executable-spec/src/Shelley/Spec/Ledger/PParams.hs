@@ -35,7 +35,7 @@ import Cardano.Binary
     encodeMapLen,
     encodeWord,
   )
-import Cardano.Ledger.Crypto
+import Cardano.Ledger.Era
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), mapMaybe)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -322,26 +322,26 @@ emptyPParams =
     }
 
 -- | Update Proposal
-data Update crypto
-  = Update !(ProposedPPUpdates crypto) !EpochNo
+data Update era
+  = Update !(ProposedPPUpdates era) !EpochNo
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (Update crypto)
+instance NoUnexpectedThunks (Update era)
 
-instance Crypto crypto => ToCBOR (Update crypto) where
+instance Era era => ToCBOR (Update era) where
   toCBOR (Update ppUpdate e) =
     encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
 
-instance Crypto crypto => FromCBOR (Update crypto) where
+instance Era era => FromCBOR (Update era) where
   fromCBOR = decodeRecordNamed "Update" (const 2) $ do
     x <- fromCBOR
     y <- fromCBOR
     pure (Update x y)
 
-data PPUpdateEnv crypto = PPUpdateEnv SlotNo (GenDelegs crypto)
+data PPUpdateEnv era = PPUpdateEnv SlotNo (GenDelegs era)
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PPUpdateEnv crypto)
+instance NoUnexpectedThunks (PPUpdateEnv era)
 
 type PParamsUpdate = PParams' StrictMaybe
 
@@ -435,19 +435,19 @@ instance FromCBOR PParamsUpdate where
     pure $ foldr ($) emptyPParamsUpdate (snd <$> mapParts)
 
 -- | Update operation for protocol parameters structure @PParams
-newtype ProposedPPUpdates crypto
-  = ProposedPPUpdates (Map (KeyHash 'Genesis crypto) PParamsUpdate)
+newtype ProposedPPUpdates era
+  = ProposedPPUpdates (Map (KeyHash 'Genesis era) PParamsUpdate)
   deriving (Show, Eq, Generic, NFData)
 
-instance NoUnexpectedThunks (ProposedPPUpdates crypto)
+instance NoUnexpectedThunks (ProposedPPUpdates era)
 
-instance Crypto crypto => ToCBOR (ProposedPPUpdates crypto) where
+instance Era era => ToCBOR (ProposedPPUpdates era) where
   toCBOR (ProposedPPUpdates m) = mapToCBOR m
 
-instance Crypto crypto => FromCBOR (ProposedPPUpdates crypto) where
+instance Era era => FromCBOR (ProposedPPUpdates era) where
   fromCBOR = ProposedPPUpdates <$> mapFromCBOR
 
-emptyPPPUpdates :: ProposedPPUpdates crypto
+emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty
 
 updatePParams :: PParams -> PParamsUpdate -> PParams

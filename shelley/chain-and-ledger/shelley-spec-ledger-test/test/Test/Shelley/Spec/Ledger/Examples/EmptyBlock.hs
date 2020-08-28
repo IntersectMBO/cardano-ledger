@@ -13,7 +13,8 @@ import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Nonce)
 import Shelley.Spec.Ledger.BlockChain (Block)
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.Slot
@@ -42,7 +43,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Utils (getBlockNonce)
 
-initStEx1 :: forall c. Crypto c => ChainState c
+initStEx1 :: forall c. Era era => ChainState c
 initStEx1 = initSt (UTxO Map.empty)
 
 blockEx1 :: forall c. (HasCallStack, ExMock c) => Block c

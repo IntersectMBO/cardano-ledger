@@ -32,7 +32,8 @@ import Shelley.Spec.Ledger.BaseTypes
     mkNonceFromNumber,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
@@ -254,7 +255,7 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) pp genesisKeys = do
 
 -- | Generate an @Update (where all the given nodes participate)
 genUpdateForNodes ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
@@ -270,7 +271,7 @@ genUpdateForNodes c s e coreKeys pp =
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Constants ->
   SlotNo ->
   [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->

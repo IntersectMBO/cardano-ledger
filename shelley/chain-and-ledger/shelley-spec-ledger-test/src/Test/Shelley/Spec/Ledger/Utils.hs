@@ -95,7 +95,8 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, bhbody, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyPair,
     KeyRole (..),
@@ -137,7 +138,7 @@ mkSeedFromWords stuff =
   mkSeedFromBytes . hashToBytes $ hashWithSerialiser @Blake2b_256 toCBOR stuff
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
-mkGenKey :: DSIGNAlgorithm (DSIGN crypto) => (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN (DSIGN crypto), VKey kd crypto)
+mkGenKey :: DSIGNAlgorithm (DSIGN (Crypto era)) => (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN (DSIGN (Crypto era)), VKey kd era)
 mkGenKey seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
@@ -180,7 +181,7 @@ mkKESKeyPair seed =
   let sk = genKeyKES $ mkSeedFromWords seed
    in (sk, deriveVerKeyKES sk)
 
-mkAddr :: Crypto c => (KeyPair 'Payment c, KeyPair 'Staking c) -> Addr c
+mkAddr :: Era era => (KeyPair 'Payment c, KeyPair 'Staking c) -> Addr c
 mkAddr (payKey, stakeKey) =
   Addr
     Testnet
@@ -280,6 +281,6 @@ testSTS env initSt sig predicateFailure@(Left _) = do
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
 mkHash i = coerce (hashWithSerialiser @h toCBOR i)
 
-getBlockNonce :: forall c. Crypto c => Block c -> Nonce
+getBlockNonce :: forall c. Era era => Block c -> Nonce
 getBlockNonce =
   mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader

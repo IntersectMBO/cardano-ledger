@@ -27,7 +27,8 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness)
@@ -77,10 +78,10 @@ import Test.Tasty.HUnit (testCase)
 aliceInitCoin :: Coin
 aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Crypto c => UTxO c
+initUTxO :: Era era => UTxO c
 initUTxO = genesisCoins [ TxOut Cast.aliceAddr aliceInitCoin ]
 
-initStPoolReReg :: forall c. Crypto c => ChainState c
+initStPoolReReg :: forall c. Era era => ChainState c
 initStPoolReReg = initSt initUTxO
 
 --
@@ -93,7 +94,7 @@ feeTx1 = Coin 3
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin - _poolDeposit ppEx - feeTx1
 
-txbodyEx1 :: Crypto c => TxBody c
+txbodyEx1 :: Era era => TxBody c
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -160,10 +161,10 @@ feeTx2 = Coin 3
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 - feeTx2
 
-newPoolParams :: Crypto c => PoolParams c
+newPoolParams :: Era era => PoolParams c
 newPoolParams = Cast.alicePoolParams {_poolCost = Coin 500}
 
-txbodyEx2 :: Crypto c => TxBody c
+txbodyEx2 :: Era era => TxBody c
 txbodyEx2 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx1) 0])
@@ -275,7 +276,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: Crypto c => SnapShot c
+snapEx3 :: Era era => SnapShot c
 snapEx3 =
   emptySnapShot {_poolParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams}
 

@@ -25,7 +25,8 @@ import Shelley.Spec.Ledger.BlockChain
     hashHeaderToNonce,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
@@ -84,11 +85,11 @@ ppEx =
 -- When this transition actually occurs,
 -- the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork.
-lastByronHeaderHash :: forall c. Crypto c => HashHeader c
+lastByronHeaderHash :: forall c. Era era => HashHeader c
 lastByronHeaderHash = HashHeader $ mkHash 0
 
 -- | === Initial Nonce
-nonce0 :: forall c. Crypto c => Nonce
+nonce0 :: forall c. Era era => Nonce
 nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
 
 -- | === Initial Chain State
@@ -96,7 +97,7 @@ nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
 -- The initial state for the examples uses the function
 -- 'initialShelleyState' with the genesis delegation
 -- 'genDelegs' and any given starting 'UTxO' set.
-initSt :: forall c. Crypto c => UTxO c -> ChainState c
+initSt :: forall c. Era era => UTxO c -> ChainState c
 initSt utxo =
   initialShelleyState
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)

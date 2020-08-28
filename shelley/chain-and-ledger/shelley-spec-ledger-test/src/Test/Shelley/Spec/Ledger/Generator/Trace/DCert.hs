@@ -54,7 +54,8 @@ import Shelley.Spec.Ledger.API
   )
 import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
@@ -73,7 +74,7 @@ import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 -- witnesses.
 data CERTS c
 
-instance Crypto c => STS (CERTS c) where
+instance Era era => STS (CERTS c) where
   type Environment (CERTS c) = (SlotNo, Ix, PParams, AccountState)
   type State (CERTS c) = (DPState c, Ix)
   type Signal (CERTS c) = Maybe (DCert c, CertCred c)
@@ -87,7 +88,7 @@ instance Crypto c => STS (CERTS c) where
   initialRules = []
   transitionRules = [certsTransition]
 
-certsTransition :: forall c. Crypto c => TransitionRule (CERTS c)
+certsTransition :: forall c. Era era => TransitionRule (CERTS c)
 certsTransition = do
   TRC
     ( (slot, txIx, pp, acnt),
@@ -105,10 +106,10 @@ certsTransition = do
     Nothing ->
       pure (dpState, nextCertIx)
 
-instance Crypto c => Embed (DELPL c) (CERTS c) where
+instance Era era => Embed (DELPL c) (CERTS c) where
   wrapFailed = CertsFailure
 
-instance Crypto c => QC.HasTrace (CERTS c) (GenEnv c) where
+instance Era era => QC.HasTrace (CERTS c) (GenEnv c) where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
   sigGen
@@ -135,7 +136,7 @@ instance Crypto c => QC.HasTrace (CERTS c) (GenEnv c) where
 -- deposits and refunds required.
 genDCerts ::
   forall c.
-  Crypto c =>
+  Era era =>
   GenEnv c ->
   PParams ->
   DPState c ->
@@ -196,11 +197,11 @@ genDCerts
 
       lookupWit = flip Map.lookup ksIndexedStakingKeys
 
-scriptCredMultisig :: (HasCallStack, Crypto c) => CertCred c -> (MultiSig c, MultiSig c)
+scriptCredMultisig :: (HasCallStack, Era era) => CertCred c -> (MultiSig c, MultiSig c)
 scriptCredMultisig (ScriptCred c) = c
 scriptCredMultisig x = error $ "scriptCredMultisig: use only for Script Credentials - " <> show x
 
-keyCredAsWitness :: (HasCallStack, Crypto c) => CertCred c -> [KeyPair 'Witness c]
+keyCredAsWitness :: (HasCallStack, Era era) => CertCred c -> [KeyPair 'Witness c]
 keyCredAsWitness (DelegateCred c) = asWitness <$> c
 keyCredAsWitness (CoreKeyCred c) = asWitness <$> c
 keyCredAsWitness (StakeCred c) = [asWitness c]

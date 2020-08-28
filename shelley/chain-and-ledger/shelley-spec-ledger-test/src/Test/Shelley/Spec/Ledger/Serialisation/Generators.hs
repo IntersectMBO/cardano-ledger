@@ -68,7 +68,8 @@ import Shelley.Spec.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState
@@ -191,7 +192,7 @@ instance MockGen c => Arbitrary (BootstrapWitness c) where
     attributes <- arbitrary
     pure $ BootstrapWitness key sig chainCode attributes
 
-instance Crypto c => Arbitrary (HashHeader c) where
+instance Era era => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> genHash
 
 instance (Typeable kr, Mock c) => Arbitrary (WitVKey c kr) where
@@ -278,10 +279,10 @@ instance Mock c => Arbitrary (Tx c) where
       <*> (resize maxTxWits arbitrary)
       <*> arbitrary
 
-instance Crypto c => Arbitrary (TxId c) where
+instance Era era => Arbitrary (TxId c) where
   arbitrary = TxId <$> genHash
 
-instance Crypto c => Arbitrary (TxIn c) where
+instance Era era => Arbitrary (TxIn c) where
   arbitrary =
     TxIn
       <$> (TxId <$> genHash)
@@ -301,12 +302,12 @@ instance Arbitrary UnitInterval where
   arbitrary = fromJust . mkUnitInterval . (% 100) <$> choose (1, 99)
 
 instance
-  (Crypto c) =>
+  (Era era) =>
   Arbitrary (KeyHash a c)
   where
   arbitrary = KeyHash <$> genHash
 
-instance Crypto c => Arbitrary (WitHashes c) where
+instance Era era => Arbitrary (WitHashes c) where
   arbitrary = genericArbitraryU
 
 instance Arbitrary MIRPot where
@@ -319,7 +320,7 @@ instance Arbitrary STS.VotingPeriod where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (STS.PredicateFailure (PPUP c)) where
+instance Era era => Arbitrary (STS.PredicateFailure (PPUP c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -331,7 +332,7 @@ instance MockGen c => Arbitrary (STS.PredicateFailure (UTXOW c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (STS.PredicateFailure (POOL c)) where
+instance Era era => Arbitrary (STS.PredicateFailure (POOL c)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -407,10 +408,10 @@ instance Arbitrary ProtVer where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (ScriptHash c) where
+instance Era era => Arbitrary (ScriptHash c) where
   arbitrary = ScriptHash <$> genHash
 
-instance Crypto c => Arbitrary (MetaDataHash c) where
+instance Era era => Arbitrary (MetaDataHash c) where
   arbitrary = MetaDataHash <$> genHash
 
 instance HashAlgorithm h => Arbitrary (Hash.Hash h a) where
@@ -420,7 +421,7 @@ instance Arbitrary STS.TicknState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (STS.PrtclState c) where
+instance Era era => Arbitrary (STS.PrtclState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -502,10 +503,10 @@ instance Mock c => Arbitrary (NewEpochState c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (BlocksMade c) where
+instance Era era => Arbitrary (BlocksMade c) where
   arbitrary = BlocksMade <$> arbitrary
 
-instance Crypto c => Arbitrary (PoolDistr c) where
+instance Era era => Arbitrary (PoolDistr c) where
   arbitrary =
     PoolDistr . Map.fromList
       <$> listOf ((,) <$> arbitrary <*> genVal)
@@ -532,14 +533,14 @@ instance Arbitrary a => Arbitrary (StrictMaybe a) where
 genPParams :: Mock c => proxy c -> Gen PParams
 genPParams p = Update.genPParams (geConstants (genEnv p))
 
-instance Crypto c => Arbitrary (OBftSlot c) where
+instance Era era => Arbitrary (OBftSlot c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance Arbitrary ActiveSlotCoeff where
   arbitrary = mkActiveSlotCoeff <$> arbitrary
 
-instance Crypto c => Arbitrary (OverlaySchedule c) where
+instance Era era => Arbitrary (OverlaySchedule c) where
   arbitrary =
     -- Pick the parameters from specific random to avoid huge overlay schedules
     overlayScheduleHelper

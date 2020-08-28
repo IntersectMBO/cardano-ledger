@@ -51,7 +51,8 @@ import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyPair (..))
 import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey)
@@ -99,7 +100,7 @@ import Unsafe.Coerce
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPair :: Crypto c => Addr c -> KeyPairs c -> KeyPair 'Payment c
+findPayKeyPair :: Era era => Addr c -> KeyPairs c -> KeyPair 'Payment c
 findPayKeyPair (Addr _ (KeyHashObj addr) _) keyList =
   case matches of
     [] -> error "findPayKeyPair: could not find a match for the given address"
@@ -141,7 +142,7 @@ genKeyPairs lower upper = do
 
 -- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
 -- hashed keys
-hashKeyPairs :: Crypto c => KeyPairs c -> [(Credential 'Payment c, StakeReference c)]
+hashKeyPairs :: Era era => KeyPairs c -> [(Credential 'Payment c, StakeReference c)]
 hashKeyPairs keyPairs =
   ( \(a, b) ->
       ( KeyHashObj . hashKey $ vKey a,
@@ -152,7 +153,7 @@ hashKeyPairs keyPairs =
 
 -- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
 -- stake'
-addrTxins :: Crypto c => KeyPairs c -> [Addr c]
+addrTxins :: Era era => KeyPairs c -> [Addr c]
 addrTxins keyPairs = uncurry (Addr Testnet) <$> hashKeyPairs keyPairs
 
 -- | Generator for List of 'Coin' values. Generates between 'lower' and 'upper'
@@ -166,7 +167,7 @@ genCoinList minCoin maxCoin lower upper = do
 
 -- | Generator for a list of 'TxOut' where for each 'Addr' of 'addrs' one Coin
 -- value is generated.
-genTxOut :: Crypto c => [Addr c] -> Gen [TxOut c]
+genTxOut :: Era era => [Addr c] -> Gen [TxOut c]
 genTxOut addrs = do
   ys <- genCoinList 100 10000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
@@ -307,13 +308,13 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
     repeatCollectTx' (n - 1) keyPairs (txfee' + fees) ls' (tx : txs) (validationErrors ++ errors')
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
-findStakeKeyPair :: Crypto c => Credential 'Staking c -> KeyPairs c -> KeyPair 'Staking c
+findStakeKeyPair :: Era era => Credential 'Staking c -> KeyPairs c -> KeyPair 'Staking c
 findStakeKeyPair (KeyHashObj hk) keyList =
   snd $ head $ filter (\(_, stake) -> hk == hashKey (vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
-getTxOutAddr :: Crypto c => TxOut c -> Addr c
+getTxOutAddr :: Era era => TxOut c -> Addr c
 getTxOutAddr (TxOut addr _) = addr
 
 -- | Generator for arbitrary valid ledger state, discarding any generated
@@ -372,7 +373,7 @@ genLedgerStateTx' keyList sourceState = do
 
 -- Generators for 'DelegationData'
 
-genDelegationData :: Crypto c => KeyPairs c -> EpochNo -> Gen (DCert c)
+genDelegationData :: Era era => KeyPairs c -> EpochNo -> Gen (DCert c)
 genDelegationData keys epoch =
   Gen.choice
     [ genDCertRegKey keys,
@@ -380,26 +381,26 @@ genDelegationData keys epoch =
       genDCertRetirePool keys epoch
     ]
 
-genDCertRegKey :: Crypto c => KeyPairs c -> Gen (DCert c)
+genDCertRegKey :: Era era => KeyPairs c -> Gen (DCert c)
 genDCertRegKey keys =
   DCertDeleg . RegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
 
-genDCertDeRegKey :: Crypto c => KeyPairs c -> Gen (DCert c)
+genDCertDeRegKey :: Era era => KeyPairs c -> Gen (DCert c)
 genDCertDeRegKey keys =
   DCertDeleg . DeRegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
 
-genDCertRetirePool :: Crypto c => KeyPairs c -> EpochNo -> Gen (DCert c)
+genDCertRetirePool :: Era era => KeyPairs c -> EpochNo -> Gen (DCert c)
 genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
   pure $ DCertPool $ RetirePool (unsafeCoerce $ hashKey key) epoch
 
-genDelegation :: Crypto c => KeyPairs c -> DPState c -> Gen (Delegation c)
+genDelegation :: Era era => KeyPairs c -> DPState c -> Gen (Delegation c)
 genDelegation keys d = do
   poolKey <- Gen.element $ Map.keys $ _rewards . _dstate $ d
   delegatorKey <- getAnyStakeKey keys
   pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (unsafeCoerce . hashKey $ vKey $ findStakeKeyPair poolKey keys)
 
-genDCertDelegate :: Crypto c => KeyPairs c -> DPState c -> Gen (DCert c)
+genDCertDelegate :: Era era => KeyPairs c -> DPState c -> Gen (DCert c)
 genDCertDelegate keys ds = (DCertDeleg . Delegate) <$> genDelegation keys ds
 
 -- | In the case where a transaction is valid for a given ledger state,

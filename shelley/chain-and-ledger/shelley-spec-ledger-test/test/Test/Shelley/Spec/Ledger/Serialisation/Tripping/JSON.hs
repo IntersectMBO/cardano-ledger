@@ -16,13 +16,14 @@ import Data.Aeson (decode, encode, fromJSON, toJSON)
 import Data.Proxy
 import Hedgehog (Property)
 import qualified Hedgehog
-import Cardano.Ledger.Crypto
+
+import Cardano.Ledger.Era
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
 import Test.Tasty
 import Test.Tasty.Hedgehog
 
-prop_roundtrip_Address_JSON :: forall c. Crypto c => Proxy c -> Property
+prop_roundtrip_Address_JSON :: forall c. Era era => Proxy c -> Property
 prop_roundtrip_Address_JSON _ =
   -- If this fails, FundPair and ShelleyGenesis can also fail.
   Hedgehog.property $ do
@@ -30,14 +31,14 @@ prop_roundtrip_Address_JSON _ =
     Hedgehog.tripping addr toJSON fromJSON
     Hedgehog.tripping addr encode decode
 
-prop_roundtrip_GenesisDelegationPair_JSON :: forall c. Crypto c => Proxy c -> Property
+prop_roundtrip_GenesisDelegationPair_JSON :: forall c. Era era => Proxy c -> Property
 prop_roundtrip_GenesisDelegationPair_JSON _ =
   Hedgehog.property $ do
     dp <- Hedgehog.forAll $ genGenesisDelegationPair @c
     Hedgehog.tripping dp toJSON fromJSON
     Hedgehog.tripping dp encode decode
 
-prop_roundtrip_FundPair_JSON :: forall c. Crypto c => Proxy c -> Property
+prop_roundtrip_FundPair_JSON :: forall c. Era era => Proxy c -> Property
 prop_roundtrip_FundPair_JSON _ =
   -- If this fails, ShelleyGenesis can also fail.
   Hedgehog.property $ do
@@ -45,7 +46,7 @@ prop_roundtrip_FundPair_JSON _ =
     Hedgehog.tripping fp toJSON fromJSON
     Hedgehog.tripping fp encode decode
 
-prop_roundtrip_ShelleyGenesis_JSON :: forall c. Crypto c => Proxy c -> Property
+prop_roundtrip_ShelleyGenesis_JSON :: forall c. Era era => Proxy c -> Property
 prop_roundtrip_ShelleyGenesis_JSON _ = Hedgehog.withTests 500 $
   Hedgehog.property $
     do

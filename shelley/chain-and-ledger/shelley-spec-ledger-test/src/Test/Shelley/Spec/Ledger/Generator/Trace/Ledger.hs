@@ -23,7 +23,8 @@ import Data.Functor.Identity (runIdentity)
 import qualified Data.Sequence as Seq
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
-import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState,
@@ -114,7 +115,7 @@ instance Mock c => TQC.HasTrace (LEDGERS c) (GenEnv c) where
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
-  Crypto c =>
+  Era era =>
   Constants ->
   IRC (LEDGER c) ->
   Gen (Either a (UTxOState c, DPState c))

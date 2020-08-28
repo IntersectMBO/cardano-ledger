@@ -40,22 +40,22 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxData (getRwdCred, _poolRAcnt)
 
-data POOLREAP crypto
+data POOLREAP era
 
-data PoolreapState crypto = PoolreapState
-  { prUTxOSt :: UTxOState crypto,
+data PoolreapState era = PoolreapState
+  { prUTxOSt :: UTxOState era,
     prAcnt :: AccountState,
-    prDState :: DState crypto,
-    prPState :: PState crypto
+    prDState :: DState era,
+    prPState :: PState era
   }
   deriving (Show, Eq)
 
-instance Typeable crypto => STS (POOLREAP crypto) where
-  type State (POOLREAP crypto) = PoolreapState crypto
-  type Signal (POOLREAP crypto) = EpochNo
-  type Environment (POOLREAP crypto) = PParams
-  type BaseM (POOLREAP crypto) = ShelleyBase
-  data PredicateFailure (POOLREAP crypto) -- No predicate Falures
+instance Typeable era => STS (POOLREAP era) where
+  type State (POOLREAP era) = PoolreapState era
+  type Signal (POOLREAP era) = EpochNo
+  type Environment (POOLREAP era) = PParams
+  type BaseM (POOLREAP era) = ShelleyBase
+  data PredicateFailure (POOLREAP era) -- No predicate Falures
     deriving (Show, Eq, Generic)
   initialRules =
     [ pure $
@@ -78,9 +78,9 @@ instance Typeable crypto => STS (POOLREAP crypto) where
         )
     ]
 
-instance NoUnexpectedThunks (PredicateFailure (POOLREAP crypto))
+instance NoUnexpectedThunks (PredicateFailure (POOLREAP era))
 
-poolReapTransition :: TransitionRule (POOLREAP crypto)
+poolReapTransition :: TransitionRule (POOLREAP era)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 

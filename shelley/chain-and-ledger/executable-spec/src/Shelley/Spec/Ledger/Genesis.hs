@@ -25,7 +25,8 @@ where
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
-import Cardano.Ledger.Crypto (Crypto, HASH, KES)
+import Cardano.Ledger.Crypto (HASH, KES)
+import Cardano.Ledger.Era
 import Cardano.Prelude (NoUnexpectedThunks, forceElemsToWHNF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -114,7 +115,7 @@ sgActiveSlotCoeff =
     . unitIntervalFromRational
     . sgActiveSlotsCoeff
 
-instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
+instance Era era => ToJSON (ShelleyGenesis era) where
   toJSON sg =
     Aeson.object
       [ "systemStart" .= sgSystemStart sg,
@@ -134,7 +135,7 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
         "staking" .= sgStaking sg
       ]
 
-instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
+instance Era era => FromJSON (ShelleyGenesis era) where
   parseJSON =
     Aeson.withObject "ShelleyGenesis" $ \obj ->
       ShelleyGenesis
@@ -161,14 +162,14 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
             !time = utctDayTime date
          in UTCTime day time
 
-instance Crypto c => ToJSON (ShelleyGenesisStaking c) where
+instance Era era => ToJSON (ShelleyGenesisStaking era) where
   toJSON sgs =
     Aeson.object
       [ "pools" .= sgsPools sgs,
         "stake" .= sgsStake sgs
       ]
 
-instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
+instance Era era => FromJSON (ShelleyGenesisStaking era) where
   parseJSON =
     Aeson.withObject "ShelleyGenesisStaking" $ \obj ->
       ShelleyGenesisStaking
@@ -179,7 +180,7 @@ instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
   Genesis UTxO
 -------------------------------------------------------------------------------}
 
-genesisUtxO :: Crypto c => ShelleyGenesis c -> UTxO c
+genesisUtxO :: Era era => ShelleyGenesis era -> UTxO era
 genesisUtxO genesis =
   UTxO $
     Map.fromList
@@ -198,15 +199,15 @@ genesisUtxO genesis =
 -- This gets turned into a UTxO by making a pseudo-transaction for each address,
 -- with the 0th output being the coin value. So to spend from the initial UTxO
 -- we need this same 'TxIn' to use as an input to the spending transaction.
-initialFundsPseudoTxIn :: forall c. Crypto c => Addr c -> TxIn c
+initialFundsPseudoTxIn :: forall era. Era era => Addr era -> TxIn era
 initialFundsPseudoTxIn addr =
   TxIn (pseudoTxId addr) 0
   where
     pseudoTxId =
       TxId
         . ( Crypto.castHash ::
-              Crypto.Hash (HASH c) (Addr c) ->
-              Crypto.Hash (HASH c) (TxBody c)
+              Crypto.Hash (HASH (Crypto era)) (Addr era) ->
+              Crypto.Hash (HASH (Crypto era)) (TxBody era)
           )
         . Crypto.hashWith serialiseAddr
 
@@ -256,9 +257,9 @@ describeValidationErr (QuorumTooSmall q maxTooSmal nodes) =
 
 -- | Do some basic sanity checking on the Shelley genesis file.
 validateGenesis ::
-  forall c.
-  Crypto c =>
-  ShelleyGenesis c ->
+  forall era.
+  Era era =>
+  ShelleyGenesis era ->
   Either [ValidationErr] ()
 validateGenesis
   ShelleyGenesis
@@ -293,13 +294,14 @@ validateGenesis
                     minLength
               else Nothing
       checkKesEvolutions =
-        if sgMaxKESEvolutions <= fromIntegral (totalPeriodsKES (Proxy @(KES c)))
+        if sgMaxKESEvolutions
+          <= fromIntegral (totalPeriodsKES (Proxy @(KES (Crypto era))))
           then Nothing
           else
             Just $
               MaxKESEvolutionsUnsupported
                 sgMaxKESEvolutions
-                (totalPeriodsKES (Proxy @(KES c)))
+                (totalPeriodsKES (Proxy @(KES (Crypto era))))
       checkQuorumSize =
         let numGenesisNodes = fromIntegral $ length sgGenDelegs
             maxTooSmal = numGenesisNodes `div` 2

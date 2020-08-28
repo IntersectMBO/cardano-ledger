@@ -14,7 +14,8 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Coin
-import Cardano.Ledger.Crypto
+
+import Cardano.Ledger.Era
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Slot
@@ -28,14 +29,14 @@ shrinkBlock ::
 shrinkBlock _ = []
 
 shrinkTx ::
-  forall crypto.
-  Crypto crypto =>
-  Tx crypto ->
-  [Tx crypto]
+  forall era.
+  Era era =>
+  Tx era ->
+  [Tx era]
 shrinkTx (Tx _b _ws _md) =
   [Tx b' _ws _md | b' <- shrinkTxBody _b]
 
-shrinkTxBody :: Crypto crypto => TxBody crypto -> [TxBody crypto]
+shrinkTxBody :: Era era => TxBody era -> [TxBody era]
 shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
   -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
@@ -53,41 +54,41 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
     -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
     outBalance = outputBalance os
 
-outputBalance :: Crypto crypto => StrictSeq (TxOut crypto) -> Coin
+outputBalance :: Era era => StrictSeq (TxOut era) -> Coin
 outputBalance = foldl' (\v (TxOut _ c) -> v + c) (Coin 0)
 
-shrinkTxIn :: TxIn crypto -> [TxIn crypto]
+shrinkTxIn :: TxIn era -> [TxIn era]
 shrinkTxIn = const []
 
-shrinkTxOut :: Crypto crypto => TxOut crypto -> [TxOut crypto]
+shrinkTxOut :: Era era => TxOut era -> [TxOut era]
 shrinkTxOut (TxOut addr coin) =
   TxOut addr <$> shrinkCoin coin
 
 shrinkCoin :: Coin -> [Coin]
 shrinkCoin (Coin x) = Coin <$> shrinkIntegral x
 
-shrinkDCert :: DCert crypto -> [DCert crypto]
+shrinkDCert :: DCert era -> [DCert era]
 shrinkDCert = const []
 
-shrinkWdrl :: Wdrl crypto -> [Wdrl crypto]
+shrinkWdrl :: Wdrl era -> [Wdrl era]
 shrinkWdrl (Wdrl m) = Wdrl <$> shrinkMap shrinkRewardAcnt shrinkCoin m
 
-shrinkRewardAcnt :: RewardAcnt crypto -> [RewardAcnt crypto]
+shrinkRewardAcnt :: RewardAcnt era -> [RewardAcnt era]
 shrinkRewardAcnt = const []
 
 shrinkSlotNo :: SlotNo -> [SlotNo]
 shrinkSlotNo (SlotNo x) = SlotNo <$> shrinkIntegral x
 
-shrinkUpdate :: Update crypto -> [Update crypto]
+shrinkUpdate :: Update era -> [Update era]
 shrinkUpdate = const []
 
-shrinkWitVKey :: WitVKey crypto kr -> [WitVKey crypto kr]
+shrinkWitVKey :: WitVKey era kr -> [WitVKey era kr]
 shrinkWitVKey = const []
 
-shrinkScriptHash :: ScriptHash crypto -> [ScriptHash crypto]
+shrinkScriptHash :: ScriptHash era -> [ScriptHash era]
 shrinkScriptHash = const []
 
-shrinkMultiSig :: MultiSig crypto -> [MultiSig crypto]
+shrinkMultiSig :: MultiSig era -> [MultiSig era]
 shrinkMultiSig = const []
 
 shrinkSet :: Ord a => (a -> [a]) -> Set a -> [Set a]

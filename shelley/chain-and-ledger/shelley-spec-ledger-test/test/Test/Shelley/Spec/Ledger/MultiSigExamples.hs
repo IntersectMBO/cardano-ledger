@@ -43,7 +43,8 @@ import Shelley.Spec.Ledger.Credential
     pattern ScriptHashObj,
     pattern StakeRefBase,
   )
-import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
@@ -105,33 +106,33 @@ _assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
   KeyHash (Hash.castHash h)
 
 -- Multi-signature scripts
-singleKeyOnly :: Crypto c => Addr c -> MultiSig c
+singleKeyOnly :: Era era => Addr c -> MultiSig c
 singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
-aliceOnly :: Crypto c => proxy c -> MultiSig c
+aliceOnly :: Era era => proxy c -> MultiSig c
 aliceOnly _ = singleKeyOnly Cast.aliceAddr
 
-bobOnly :: Crypto c => proxy c -> MultiSig c
+bobOnly :: Era era => proxy c -> MultiSig c
 bobOnly _ = singleKeyOnly Cast.bobAddr
 
-aliceOrBob :: Crypto c => proxy c -> MultiSig c
+aliceOrBob :: Era era => proxy c -> MultiSig c
 aliceOrBob p = RequireAnyOf [aliceOnly p, singleKeyOnly Cast.bobAddr]
 
-aliceAndBob :: Crypto c => proxy c -> MultiSig c
+aliceAndBob :: Era era => proxy c -> MultiSig c
 aliceAndBob p = RequireAllOf [aliceOnly p, singleKeyOnly Cast.bobAddr]
 
-aliceAndBobOrCarl :: Crypto c => proxy c -> MultiSig c
+aliceAndBobOrCarl :: Era era => proxy c -> MultiSig c
 aliceAndBobOrCarl p = RequireMOf 1 [aliceAndBob p, singleKeyOnly Cast.carlAddr]
 
-aliceAndBobOrCarlAndDaria :: Crypto c => proxy c -> MultiSig c
+aliceAndBobOrCarlAndDaria :: Era era => proxy c -> MultiSig c
 aliceAndBobOrCarlAndDaria p =
   RequireAnyOf
     [ aliceAndBob p,
       RequireAllOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-aliceAndBobOrCarlOrDaria :: Crypto c => proxy c -> MultiSig c
+aliceAndBobOrCarlOrDaria :: Era era => proxy c -> MultiSig c
 aliceAndBobOrCarlOrDaria p =
   RequireMOf
     1
@@ -139,7 +140,7 @@ aliceAndBobOrCarlOrDaria p =
       RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: Crypto c => [(Addr c, Coin)] -> TxBody c
+initTxBody :: Era era => [(Addr c, Coin)] -> TxBody c
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
@@ -151,7 +152,7 @@ initTxBody addrs =
     SNothing
     SNothing
 
-makeTxBody :: Crypto c => [TxIn c] -> [(Addr c, Coin)] -> Wdrl c -> TxBody c
+makeTxBody :: Era era => [TxIn c] -> [(Addr c, Coin)] -> Wdrl c -> TxBody c
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
@@ -178,7 +179,7 @@ aliceInitCoin = 10000
 bobInitCoin :: Coin
 bobInitCoin = 1000
 
-genesis :: Crypto c => LedgerState c
+genesis :: Era era => LedgerState c
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty

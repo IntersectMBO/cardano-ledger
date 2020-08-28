@@ -57,7 +57,8 @@ import Shelley.Spec.Ledger.API
   )
 import Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
 import Shelley.Spec.Ledger.BaseTypes (interval0)
-import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Keys
   ( coerceKeyRole,
     hashKey,
@@ -99,7 +100,7 @@ data CertCred h
 -- Note: we register keys and pools more often than deregistering/retiring them,
 -- and we generate more delegations than registrations of keys/pools.
 genDCert ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Constants ->
   KeySpace c ->
   PParams ->
@@ -154,7 +155,7 @@ genDCert
 
 -- | Generate a RegKey certificate
 genRegKeyCert ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Constants ->
   KeyPairs c ->
   MultiSigPairs c ->
@@ -197,7 +198,7 @@ genRegKeyCert
 -- | Generate a DeRegKey certificate along with the staking credential, which is
 -- needed to witness the certificate.
 genDeRegKeyCert ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Constants ->
   KeyPairs c ->
   MultiSigPairs c ->
@@ -250,7 +251,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
 -- Returns nothing if there are no registered staking credentials or no
 -- registered pools.
 genDelegation ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Constants ->
   KeyPairs c ->
   MultiSigPairs c ->
@@ -297,7 +298,7 @@ genDelegation
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   -- | Core nodes
   [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
@@ -337,7 +338,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
 
 -- | Generate PoolParams and the key witness.
 genStakePool ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   -- | Available keys for stake pool registration
   [AllIssuerKeys c 'StakePool] ->
   -- | KeyPairs containing staking keys to act as owners/reward account
@@ -377,7 +378,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
 
 -- | Generate `RegPool` and the key witness.
 genRegPool ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   [AllIssuerKeys c 'StakePool] ->
   KeyPairs c ->
   Coin ->
@@ -431,7 +432,7 @@ genRetirePool Constants {frequencyLowMaxEpoch} poolKeys pState slot =
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewards ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate) ->

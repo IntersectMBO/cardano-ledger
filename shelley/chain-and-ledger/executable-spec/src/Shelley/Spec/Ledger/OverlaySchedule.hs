@@ -30,7 +30,7 @@ import Cardano.Binary
     encodeNull,
     peekTokenType,
   )
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NFData, NoUnexpectedThunks)
 import Cardano.Slotting.Slot
 import Control.Monad.Trans.Reader (asks)
@@ -49,21 +49,21 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams (PParams, _d)
 import Shelley.Spec.Ledger.Slot
 
-data OBftSlot crypto
+data OBftSlot era
   = NonActiveSlot
-  | ActiveSlot !(KeyHash 'Genesis crypto)
+  | ActiveSlot !(KeyHash 'Genesis era)
   deriving (Show, Eq, Ord, Generic)
 
 instance
-  Crypto crypto =>
-  ToCBOR (OBftSlot crypto)
+  Era era =>
+  ToCBOR (OBftSlot era)
   where
   toCBOR NonActiveSlot = encodeNull
   toCBOR (ActiveSlot k) = toCBOR k
 
 instance
-  Crypto crypto =>
-  FromCBOR (OBftSlot crypto)
+  Era era =>
+  FromCBOR (OBftSlot era)
   where
   fromCBOR = do
     peekTokenType >>= \case
@@ -72,33 +72,33 @@ instance
         pure NonActiveSlot
       _ -> ActiveSlot <$> fromCBOR
 
-instance NoUnexpectedThunks (OBftSlot crypto)
+instance NoUnexpectedThunks (OBftSlot era)
 
-instance NFData (OBftSlot crypto)
+instance NFData (OBftSlot era)
 
-newtype OverlaySchedule crypto = OverlaySchedule (Map SlotNo (OBftSlot crypto))
+newtype OverlaySchedule era = OverlaySchedule (Map SlotNo (OBftSlot era))
   deriving stock (Show, Eq)
   deriving newtype (NoUnexpectedThunks, NFData)
 
-emptyOverlaySchedule :: OverlaySchedule crypto
+emptyOverlaySchedule :: OverlaySchedule era
 emptyOverlaySchedule = OverlaySchedule Map.empty
 
 lookupInOverlaySchedule ::
   SlotNo ->
-  OverlaySchedule crypto ->
-  Maybe (OBftSlot crypto)
+  OverlaySchedule era ->
+  Maybe (OBftSlot era)
 lookupInOverlaySchedule slot (OverlaySchedule oSched) = Map.lookup slot oSched
 
-overlayScheduleIsEmpty :: OverlaySchedule crypto -> Bool
+overlayScheduleIsEmpty :: OverlaySchedule era -> Bool
 overlayScheduleIsEmpty (OverlaySchedule oSched) = Map.null oSched
 
 -- | Overlay schedule
 -- This is just a very simple round-robin, evenly spaced schedule.
 overlaySchedule ::
   EpochNo ->
-  Set (KeyHash 'Genesis crypto) ->
+  Set (KeyHash 'Genesis era) ->
   PParams ->
-  ShelleyBase (OverlaySchedule crypto)
+  ShelleyBase (OverlaySchedule era)
 overlaySchedule e gkeys pp = do
   ei <- asks epochInfo
   slotsPerEpoch <- epochInfoSize ei e
@@ -110,11 +110,11 @@ overlayScheduleHelper ::
   EpochSize ->
   -- | First slot of the epoch
   SlotNo ->
-  Set (KeyHash 'Genesis crypto) ->
+  Set (KeyHash 'Genesis era) ->
   -- | Decentralization parameter @d@
   UnitInterval ->
   ActiveSlotCoeff ->
-  OverlaySchedule crypto
+  OverlaySchedule era
 overlayScheduleHelper slotsPerEpoch firstSlotNo gkeys d asc
   | dval == 0 =
     OverlaySchedule $ Map.empty
@@ -143,7 +143,7 @@ overlayScheduleHelper slotsPerEpoch firstSlotNo gkeys d asc
           (\x -> (snd x, NonActiveSlot))
           (filter (not . fst) unassignedSched)
 
-overlayScheduleToMap :: OverlaySchedule crypto -> Map SlotNo (OBftSlot crypto)
+overlayScheduleToMap :: OverlaySchedule era -> Map SlotNo (OBftSlot era)
 overlayScheduleToMap (OverlaySchedule oSched) = oSched
 
 -- | Convert the overlay schedule to a representation that is more compact
@@ -152,8 +152,8 @@ overlayScheduleToMap (OverlaySchedule oSched) = oSched
 -- Each genesis key hash will only be stored once, instead of each time it is
 -- assigned to a slot.
 compactOverlaySchedule ::
-  OverlaySchedule crypto ->
-  Map (OBftSlot crypto) (NonEmpty SlotNo)
+  OverlaySchedule era ->
+  Map (OBftSlot era) (NonEmpty SlotNo)
 compactOverlaySchedule (OverlaySchedule oSched) =
   Map.foldrWithKey'
     ( \slot obftSlot ->
@@ -164,8 +164,8 @@ compactOverlaySchedule (OverlaySchedule oSched) =
 
 -- | Inverse of 'compactOverlaySchedule'
 decompactOverlaySchedule ::
-  Map (OBftSlot crypto) (NonEmpty SlotNo) ->
-  OverlaySchedule crypto
+  Map (OBftSlot era) (NonEmpty SlotNo) ->
+  OverlaySchedule era
 decompactOverlaySchedule compact =
   OverlaySchedule $
     Map.fromList
@@ -174,10 +174,10 @@ decompactOverlaySchedule compact =
           slot <- NonEmpty.toList slots
       ]
 
-instance Crypto crypto => ToCBOR (OverlaySchedule crypto) where
+instance Era era => ToCBOR (OverlaySchedule era) where
   toCBOR = toCBOR . compactOverlaySchedule
 
-instance Crypto crypto => FromCBOR (OverlaySchedule crypto) where
+instance Era era => FromCBOR (OverlaySchedule era) where
   fromCBOR = decompactOverlaySchedule <$> fromCBOR
 
 isOverlaySlot :: SlotNo -> OverlaySchedule c -> Bool

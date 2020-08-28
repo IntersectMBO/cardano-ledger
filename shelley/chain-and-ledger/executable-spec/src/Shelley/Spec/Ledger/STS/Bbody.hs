@@ -17,7 +17,7 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( Embed (..),
@@ -57,57 +57,57 @@ import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Tx (TxBody)
 
-data BBODY crypto
+data BBODY era
 
-data BbodyState crypto
-  = BbodyState (LedgerState crypto) (BlocksMade crypto)
+data BbodyState era
+  = BbodyState (LedgerState era) (BlocksMade era)
   deriving (Eq, Show)
 
-data BbodyEnv crypto = BbodyEnv
-  { bbodySlots :: OverlaySchedule crypto,
+data BbodyEnv era = BbodyEnv
+  { bbodySlots :: OverlaySchedule era,
     bbodyPp :: PParams,
     bbodyAccount :: AccountState
   }
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  STS (BBODY crypto)
+  STS (BBODY era)
   where
   type
-    State (BBODY crypto) =
-      BbodyState crypto
+    State (BBODY era) =
+      BbodyState era
 
   type
-    Signal (BBODY crypto) =
-      Block crypto
+    Signal (BBODY era) =
+      Block era
 
-  type Environment (BBODY crypto) = BbodyEnv crypto
+  type Environment (BBODY era) = BbodyEnv era
 
-  type BaseM (BBODY crypto) = ShelleyBase
+  type BaseM (BBODY era) = ShelleyBase
 
-  data PredicateFailure (BBODY crypto)
+  data PredicateFailure (BBODY era)
     = WrongBlockBodySizeBBODY
         !Int -- Actual Body Size
         !Int -- Claimed Body Size in Header
     | InvalidBodyHashBBODY
-        !(HashBBody crypto) -- Actual Hash
-        !(HashBBody crypto) -- Claimed Hash
-    | LedgersFailure (PredicateFailure (LEDGERS crypto)) -- Subtransition Failures
+        !(HashBBody era) -- Actual Hash
+        !(HashBBody era) -- Claimed Hash
+    | LedgersFailure (PredicateFailure (LEDGERS era)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [bbodyTransition]
 
-instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (BBODY crypto))
+instance (Era era) => NoUnexpectedThunks (PredicateFailure (BBODY era))
 
 bbodyTransition ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  forall era.
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  TransitionRule (BBODY crypto)
+  TransitionRule (BBODY era)
 bbodyTransition =
   judgmentContext
     >>= \( TRC
@@ -126,7 +126,7 @@ bbodyTransition =
         actualBodyHash == bhash bhb ?! InvalidBodyHashBBODY actualBodyHash (bhash bhb)
 
         ls' <-
-          trans @(LEDGERS crypto) $
+          trans @(LEDGERS era) $
             TRC (LedgersEnv (bheaderSlotNo bhb) pp account, ls, StrictSeq.getSeq txs)
 
         -- Note that this may not actually be a stake pool - it could be a genesis key
@@ -136,9 +136,9 @@ bbodyTransition =
         pure $ BbodyState ls' (incrBlocks (isOverlaySlot (bheaderSlotNo bhb) oslots) hkAsStakePool b)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  Embed (LEDGERS crypto) (BBODY crypto)
+  Embed (LEDGERS era) (BBODY era)
   where
   wrapFailed = LedgersFailure

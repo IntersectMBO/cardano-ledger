@@ -45,7 +45,8 @@ import Shelley.Spec.Ledger.Bench.Gen
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
@@ -113,7 +114,7 @@ profileUTxO = do
 -- ==========================================
 -- Registering Stake Keys
 
-touchDPState :: DPState crypto -> Int
+touchDPState :: DPState era -> Int
 touchDPState (DPState _x _y) = 1
 
 touchUTxOState :: Shelley.Spec.Ledger.LedgerState.UTxOState cryto -> Int
@@ -170,7 +171,7 @@ epochAt x =
         [ bench "Using maps" (whnf action2m arg)
         ]
 
-action2m :: Crypto c => (DState c, PState c, UTxO c) -> SnapShot c
+action2m :: Era era => (DState c, PState c, UTxO c) -> SnapShot c
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 dstate' :: DState C

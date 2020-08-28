@@ -34,7 +34,8 @@ import Shelley.Spec.Ledger.BlockChain
     mkSeed,
     seedL,
   )
-import Cardano.Ledger.Crypto (Crypto (VRF))
+
+import Cardano.Ledger.Era (Crypto (VRF))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.Keys
   ( coerceKeyRole,
@@ -204,7 +205,7 @@ selectNextSlotWithLeader
 
 -- | The chain state is a composite of the new epoch state and the chain dep
 -- state. We tick both.
-tickChainState :: Crypto c => SlotNo -> ChainState c -> ChainState c
+tickChainState :: Era era => SlotNo -> ChainState c -> ChainState c
 tickChainState
   slotNo
   ChainState

@@ -38,7 +38,8 @@ import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
-import Cardano.Ledger.Crypto
+
+import Cardano.Ledger.Era
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys

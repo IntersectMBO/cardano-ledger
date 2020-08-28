@@ -51,7 +51,8 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyPair (..),
@@ -79,19 +80,19 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 
 -- | Alice's payment key pair
-alicePay :: Crypto c => KeyPair 'Payment c
+alicePay :: Era era => KeyPair 'Payment c
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
 
 -- | Alice's stake key pair
-aliceStake :: Crypto c => KeyPair 'Staking c
+aliceStake :: Era era => KeyPair 'Staking c
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
 
 -- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
-alicePoolKeys :: Crypto c => AllIssuerKeys c 'StakePool
+alicePoolKeys :: Era era => AllIssuerKeys c 'StakePool
 alicePoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -102,22 +103,22 @@ alicePoolKeys =
     (skCold, vkCold) = mkKeyPair (1, 0, 0, 0, 1)
 
 -- | Alice's base address
-aliceAddr :: Crypto c => Addr c
+aliceAddr :: Era era => Addr c
 aliceAddr = mkAddr (alicePay, aliceStake)
 
-alicePHK :: Crypto c => Credential 'Payment c
+alicePHK :: Era era => Credential 'Payment c
 alicePHK = (KeyHashObj . hashKey . vKey) alicePay
 
 -- | Alice's stake credential
-aliceSHK :: Crypto c => Credential 'Staking c
+aliceSHK :: Era era => Credential 'Staking c
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
 -- | Alice's base address
-alicePtrAddr :: Crypto c => Addr c
+alicePtrAddr :: Era era => Addr c
 alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
 
 -- | Alice's stake pool parameters
-alicePoolParams :: forall c. Crypto c => PoolParams c
+alicePoolParams :: forall c. Era era => PoolParams c
 alicePoolParams =
   PoolParams
     { _poolPubKey = (hashKey . vKey . cold) alicePoolKeys,
@@ -137,65 +138,65 @@ alicePoolParams =
     }
 
 -- | Alice's VRF key hash
-aliceVRFKeyHash :: forall c. Crypto c => Hash c (VerKeyVRF c)
+aliceVRFKeyHash :: forall c. Era era => Hash c (VerKeyVRF c)
 aliceVRFKeyHash = hashVerKeyVRF (snd $ vrf (alicePoolKeys @c))
 
 -- | Bob's payment key pair
-bobPay :: Crypto c => KeyPair 'Payment c
+bobPay :: Era era => KeyPair 'Payment c
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (2, 2, 2, 2, 2)
 
 -- | Bob's stake key pair
-bobStake :: Crypto c => KeyPair 'Staking c
+bobStake :: Era era => KeyPair 'Staking c
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
 
 -- | Bob's address
-bobAddr :: Crypto c => Addr c
+bobAddr :: Era era => Addr c
 bobAddr = mkAddr (bobPay, bobStake)
 
 -- | Bob's stake credential
-bobSHK :: Crypto c => Credential 'Staking c
+bobSHK :: Era era => Credential 'Staking c
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 -- Carl's payment key pair
-carlPay :: Crypto c => KeyPair 'Payment c
+carlPay :: Era era => KeyPair 'Payment c
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (4, 4, 4, 4, 4)
 
 -- | Carl's stake key pair
-carlStake :: Crypto c => KeyPair 'Staking c
+carlStake :: Era era => KeyPair 'Staking c
 carlStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
 
 -- | Carl's address
-carlAddr :: Crypto c => Addr c
+carlAddr :: Era era => Addr c
 carlAddr = mkAddr (carlPay, carlStake)
 
 -- | Carl's stake credential
-carlSHK :: Crypto c => Credential 'Staking c
+carlSHK :: Era era => Credential 'Staking c
 carlSHK = (KeyHashObj . hashKey . vKey) carlStake
 
 -- | Daria's payment key pair
-dariaPay :: Crypto c => KeyPair 'Payment c
+dariaPay :: Era era => KeyPair 'Payment c
 dariaPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (6, 6, 6, 6, 6)
 
 -- | Daria's stake key pair
-dariaStake :: Crypto c => KeyPair 'Staking c
+dariaStake :: Era era => KeyPair 'Staking c
 dariaStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
 
 -- | Daria's address
-dariaAddr :: Crypto c => Addr c
+dariaAddr :: Era era => Addr c
 dariaAddr = mkAddr (dariaPay, dariaStake)
 
 -- | Daria's stake credential
-dariaSHK :: Crypto c => Credential 'Staking c
+dariaSHK :: Era era => Credential 'Staking c
 dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake

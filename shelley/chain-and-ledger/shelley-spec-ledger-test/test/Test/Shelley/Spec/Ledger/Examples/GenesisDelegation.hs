@@ -23,7 +23,8 @@ import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
@@ -80,21 +81,21 @@ aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Crypto c => UTxO c
+initUTxO :: Era era => UTxO c
 initUTxO =
   genesisCoins
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStGenesisDeleg :: forall c. Crypto c => ChainState c
+initStGenesisDeleg :: forall c. Era era => ChainState c
 initStGenesisDeleg = initSt initUTxO
 
 --
 -- Block 1, Slot 10, Epoch 0
 --
 
-newGenDelegate :: Crypto c => KeyPair 'GenesisDelegate c
+newGenDelegate :: Era era => KeyPair 'GenesisDelegate c
 newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (108, 0, 0, 0, 1)
@@ -111,7 +112,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin - feeTx1
 
-txbodyEx1 :: Crypto c => TxBody c
+txbodyEx1 :: Era era => TxBody c
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -160,7 +161,7 @@ blockEx1 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
 
-newGenDeleg :: forall c. Crypto c => (FutureGenDeleg c, GenDelegPair c)
+newGenDeleg :: forall c. Era era => (FutureGenDeleg c, GenDelegPair c)
 newGenDeleg =
   ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVK 0),
     GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH

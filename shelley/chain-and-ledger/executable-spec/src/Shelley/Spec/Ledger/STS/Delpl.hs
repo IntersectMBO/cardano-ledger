@@ -20,7 +20,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
 import Data.Typeable (Typeable)
@@ -47,7 +47,7 @@ import Shelley.Spec.Ledger.TxData
     Ptr,
   )
 
-data DELPL crypto
+data DELPL era
 
 data DelplEnv = DelplEnv
   { delplSlotNo :: SlotNo,
@@ -57,26 +57,26 @@ data DelplEnv = DelplEnv
   }
 
 instance
-  Crypto crypto =>
-  STS (DELPL crypto)
+  Era era =>
+  STS (DELPL era)
   where
-  type State (DELPL crypto) = DPState crypto
-  type Signal (DELPL crypto) = DCert crypto
-  type Environment (DELPL crypto) = DelplEnv
-  type BaseM (DELPL crypto) = ShelleyBase
-  data PredicateFailure (DELPL crypto)
-    = PoolFailure (PredicateFailure (POOL crypto)) -- Subtransition Failures
-    | DelegFailure (PredicateFailure (DELEG crypto)) -- Subtransition Failures
+  type State (DELPL era) = DPState era
+  type Signal (DELPL era) = DCert era
+  type Environment (DELPL era) = DelplEnv
+  type BaseM (DELPL era) = ShelleyBase
+  data PredicateFailure (DELPL era)
+    = PoolFailure (PredicateFailure (POOL era)) -- Subtransition Failures
+    | DelegFailure (PredicateFailure (DELEG era)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyDelegation]
   transitionRules = [delplTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (DELPL crypto))
+instance NoUnexpectedThunks (PredicateFailure (DELPL era))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (DELPL crypto))
+  (Typeable era, Era era) =>
+  ToCBOR (PredicateFailure (DELPL era))
   where
   toCBOR = \case
     (PoolFailure a) ->
@@ -87,12 +87,12 @@ instance
         <> toCBOR a
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (DELPL crypto))
+  (Era era) =>
+  FromCBOR (PredicateFailure (DELPL era))
   where
   fromCBOR =
     decodeRecordSum
-      "PredicateFailure (DELPL crypto)"
+      "PredicateFailure (DELPL era)"
       ( \case
           0 -> do
             a <- fromCBOR
@@ -104,48 +104,48 @@ instance
       )
 
 delplTransition ::
-  forall crypto.
-  Crypto crypto =>
-  TransitionRule (DELPL crypto)
+  forall era.
+  Era era =>
+  TransitionRule (DELPL era)
 delplTransition = do
   TRC (DelplEnv slot ptr pp acnt, d, c) <- judgmentContext
   case c of
     DCertPool (RegPool _) -> do
       ps <-
-        trans @(POOL crypto) $ TRC (PoolEnv slot pp, _pstate d, c)
+        trans @(POOL era) $ TRC (PoolEnv slot pp, _pstate d, c)
       pure $ d {_pstate = ps}
     DCertPool (RetirePool _ _) -> do
       ps <-
-        trans @(POOL crypto) $ TRC (PoolEnv slot pp, _pstate d, c)
+        trans @(POOL era) $ TRC (PoolEnv slot pp, _pstate d, c)
       pure $ d {_pstate = ps}
     DCertGenesis (GenesisDelegCert {}) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
+        trans @(DELEG era) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertDeleg (RegKey _) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
+        trans @(DELEG era) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertDeleg (DeRegKey _) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
+        trans @(DELEG era) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertDeleg (Delegate _) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
+        trans @(DELEG era) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertMir _ -> do
-      ds <- trans @(DELEG crypto) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
+      ds <- trans @(DELEG era) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
       pure $ d {_dstate = ds}
 
 instance
-  Crypto crypto =>
-  Embed (POOL crypto) (DELPL crypto)
+  Era era =>
+  Embed (POOL era) (DELPL era)
   where
   wrapFailed = PoolFailure
 
 instance
-  Crypto crypto =>
-  Embed (DELEG crypto) (DELPL crypto)
+  Era era =>
+  Embed (DELEG era) (DELPL era)
   where
   wrapFailed = DelegFailure

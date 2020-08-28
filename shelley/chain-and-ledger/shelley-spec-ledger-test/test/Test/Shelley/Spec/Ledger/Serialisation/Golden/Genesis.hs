@@ -25,7 +25,8 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Hedgehog (Property)
 import qualified Shelley.Spec.Ledger.API as L
 import Shelley.Spec.Ledger.BaseTypes (textToDns, textToUrl, truncateUnitInterval)
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
 import Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)

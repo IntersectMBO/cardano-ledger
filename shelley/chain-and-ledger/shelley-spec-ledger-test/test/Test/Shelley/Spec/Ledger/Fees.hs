@@ -43,7 +43,8 @@ import Shelley.Spec.Ledger.BaseTypes
     textToUrl,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
@@ -72,7 +73,7 @@ import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
-sizeTest :: Crypto c => proxy c -> BSL.ByteString -> Tx c -> Integer -> Assertion
+sizeTest :: Era era => proxy c -> BSL.ByteString -> Tx c -> Integer -> Assertion
 sizeTest _ b16 tx s = do
   (Base16.encode (serialize tx) @?= b16) >> (txsize tx @?= s)
 

@@ -8,7 +8,8 @@ module BenchUTxOAggregate where
 
 import Control.Iterate.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
--- import Cardano.Ledger.Crypto (Crypto (..))
+--
+import Cardano.Ledger.Era (Crypto (..))
 
 import qualified Data.ByteString.Short as SBS
 import Data.Map (Map)
@@ -78,11 +79,11 @@ genTestCase numUTxO numAddr = do
   pure (dstate, pstate, UTxO utxo)
 
 makeStatePair ::
-  Map (Credential 'Staking crypto) Coin ->
-  Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
-  Bimap Ptr (Credential 'Staking crypto) ->
-  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
-  (DState crypto, PState crypto)
+  Map (Credential 'Staking era) Coin ->
+  Map (Credential 'Staking era) (KeyHash 'StakePool era) ->
+  Bimap Ptr (Credential 'Staking era) ->
+  Map (KeyHash 'StakePool era) (PoolParams era) ->
+  (DState era, PState era)
 makeStatePair rewards' delegs ptrs' poolParams =
   ( DState rewards' delegs ptrs' Map.empty (GenDelegs Map.empty) (InstantaneousRewards Map.empty Map.empty),
     PState poolParams Map.empty Map.empty

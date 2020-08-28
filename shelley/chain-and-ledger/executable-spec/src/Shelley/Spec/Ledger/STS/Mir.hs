@@ -51,14 +51,14 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (emptyPParams)
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 
-data MIR crypto
+data MIR era
 
-instance Typeable crypto => STS (MIR crypto) where
-  type State (MIR crypto) = EpochState crypto
-  type Signal (MIR crypto) = ()
-  type Environment (MIR crypto) = ()
-  type BaseM (MIR crypto) = ShelleyBase
-  data PredicateFailure (MIR crypto) -- No Failures
+instance Typeable era => STS (MIR era) where
+  type State (MIR era) = EpochState era
+  type Signal (MIR era) = ()
+  type Environment (MIR era) = ()
+  type BaseM (MIR era) = ShelleyBase
+  data PredicateFailure (MIR era) -- No Failures
     deriving (Show, Generic, Eq)
 
   initialRules = [initialMir]
@@ -73,9 +73,9 @@ instance Typeable crypto => STS (MIR crypto) where
         )
     ]
 
-instance NoUnexpectedThunks (PredicateFailure (MIR crypto))
+instance NoUnexpectedThunks (PredicateFailure (MIR era))
 
-initialMir :: InitialRule (MIR crypto)
+initialMir :: InitialRule (MIR era)
 initialMir =
   pure $
     EpochState
@@ -86,7 +86,7 @@ initialMir =
       emptyPParams
       emptyNonMyopic
 
-mirTransition :: forall crypto. TransitionRule (MIR crypto)
+mirTransition :: forall era. TransitionRule (MIR era)
 mirTransition = do
   TRC
     ( _,
@@ -106,11 +106,11 @@ mirTransition = do
       rewards = _rewards ds
       reserves = _reserves acnt
       treasury = _treasury acnt
-      irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd ds) :: RewardAccounts crypto
-      irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd ds) :: RewardAccounts crypto
+      irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd ds) :: RewardAccounts era
+      irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd ds) :: RewardAccounts era
       totR = sum irwdR
       totT = sum irwdT
-      update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts crypto
+      update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts era
 
   if totR <= reserves && totT <= treasury
     then

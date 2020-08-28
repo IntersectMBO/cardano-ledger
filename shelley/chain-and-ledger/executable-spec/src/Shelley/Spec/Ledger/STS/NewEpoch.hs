@@ -14,7 +14,7 @@ module Shelley.Spec.Ledger.STS.NewEpoch
   )
 where
 
-import Cardano.Ledger.Crypto
+import Cardano.Ledger.Era
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
@@ -31,25 +31,25 @@ import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.TxData
 
-data NEWEPOCH crypto
+data NEWEPOCH era
 
 instance
-  Crypto crypto =>
-  STS (NEWEPOCH crypto)
+  Era era =>
+  STS (NEWEPOCH era)
   where
-  type State (NEWEPOCH crypto) = NewEpochState crypto
+  type State (NEWEPOCH era) = NewEpochState era
 
-  type Signal (NEWEPOCH crypto) = EpochNo
+  type Signal (NEWEPOCH era) = EpochNo
 
-  type Environment (NEWEPOCH crypto) = NewEpochEnv crypto
+  type Environment (NEWEPOCH era) = NewEpochEnv era
 
-  type BaseM (NEWEPOCH crypto) = ShelleyBase
+  type BaseM (NEWEPOCH era) = ShelleyBase
 
-  data PredicateFailure (NEWEPOCH crypto)
-    = EpochFailure (PredicateFailure (EPOCH crypto)) -- Subtransition Failures
+  data PredicateFailure (NEWEPOCH era)
+    = EpochFailure (PredicateFailure (EPOCH era)) -- Subtransition Failures
     | CorruptRewardUpdate
-        !(RewardUpdate crypto) -- The reward update which violates an invariant
-    | MirFailure (PredicateFailure (MIR crypto)) -- Subtransition Failures
+        !(RewardUpdate era) -- The reward update which violates an invariant
+    | MirFailure (PredicateFailure (MIR era)) -- Subtransition Failures
     deriving (Show, Generic, Eq)
 
   initialRules =
@@ -66,12 +66,12 @@ instance
 
   transitionRules = [newEpochTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (NEWEPOCH crypto))
+instance NoUnexpectedThunks (PredicateFailure (NEWEPOCH era))
 
 newEpochTransition ::
-  forall crypto.
-  Crypto crypto =>
-  TransitionRule (NEWEPOCH crypto)
+  forall era.
+  Era era =>
+  TransitionRule (NEWEPOCH era)
 newEpochTransition = do
   TRC
     ( NewEpochEnv _s gkeys,
@@ -89,8 +89,8 @@ newEpochTransition = do
           dt + dr + (sum rs_) + df == 0 ?! CorruptRewardUpdate ru'
           pure $ applyRUpd ru' es
 
-      es'' <- trans @(MIR crypto) $ TRC ((), es', ())
-      es''' <- trans @(EPOCH crypto) $ TRC ((), es'', e)
+      es'' <- trans @(MIR era) $ TRC ((), es', ())
+      es''' <- trans @(EPOCH era) $ TRC ((), es'', e)
       let EpochState _acnt ss _ls _pr pp _ = es'''
           pd' = calculatePoolDistr (_pstakeSet ss)
       osched' <- liftSTS $ overlaySchedule e gkeys pp
@@ -104,7 +104,7 @@ newEpochTransition = do
           pd'
           osched'
 
-calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
+calculatePoolDistr :: SnapShot era -> PoolDistr era
 calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
   let Coin total = Map.foldl' (+) (Coin 0) stake
       sd =
@@ -118,13 +118,13 @@ calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
    in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
 
 instance
-  Crypto crypto =>
-  Embed (EPOCH crypto) (NEWEPOCH crypto)
+  Era era =>
+  Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = EpochFailure
 
 instance
-  Crypto crypto =>
-  Embed (MIR crypto) (NEWEPOCH crypto)
+  Era era =>
+  Embed (MIR era) (NEWEPOCH era)
   where
   wrapFailed = MirFailure

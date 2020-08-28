@@ -30,7 +30,8 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader, hashHeaderToNonce)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Ptr (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
     PoolDistr (..),
@@ -114,14 +115,14 @@ aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Crypto c => UTxO c
+initUTxO :: Era era => UTxO c
 initUTxO =
   genesisCoins
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStPoolLifetime :: forall c. Crypto c => ChainState c
+initStPoolLifetime :: forall c. Era era => ChainState c
 initStPoolLifetime = initSt initUTxO
 
 --
@@ -140,7 +141,7 @@ dariaMIR = Coin 99
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-txbodyEx1 :: Crypto c => TxBody c
+txbodyEx1 :: Era era => TxBody c
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -245,7 +246,7 @@ aliceCoinEx2Ptr = aliceCoinEx1 - (aliceCoinEx2Base + feeTx2)
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
-txbodyEx2 :: forall c. Crypto c => TxBody c
+txbodyEx2 :: forall c. Era era => TxBody c
 txbodyEx2 =
   TxBody
     { _inputs = Set.fromList [TxIn (txid txbodyEx1) 0],
@@ -332,7 +333,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: Crypto c => EB.SnapShot c
+snapEx3 :: Era era => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
     { EB._stake =
@@ -374,7 +375,7 @@ feeTx4 = Coin 5
 aliceCoinEx4Base :: Coin
 aliceCoinEx4Base = aliceCoinEx2Base - feeTx4
 
-txbodyEx4 :: forall c. Crypto c => TxBody c
+txbodyEx4 :: forall c. Era era => TxBody c
 txbodyEx4 =
   TxBody
     { _inputs = Set.fromList [TxIn (txid txbodyEx2) 0],
@@ -468,7 +469,7 @@ blockEx5 =
     10
     (mkOCert (coreNodeKeysBySchedule ppEx 220) 1 (KESPeriod 10))
 
-snapEx5 :: forall c. Crypto c => EB.SnapShot c
+snapEx5 :: forall c. Era era => EB.SnapShot c
 snapEx5 =
   EB.SnapShot
     { EB._stake =
@@ -487,7 +488,7 @@ snapEx5 =
       EB._poolParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams
     }
 
-pdEx5 :: forall c. Crypto c => PoolDistr c
+pdEx5 :: forall c. Era era => PoolDistr c
 pdEx5 =
   PoolDistr $
     Map.singleton
@@ -644,14 +645,14 @@ alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
     relativeStake = fromRational (stake % tot)
     f = activeSlotCoeff testGlobals
 
-nonMyopicEx8 :: forall c. Crypto c => NonMyopic c
+nonMyopicEx8 :: forall c. Era era => NonMyopic c
 nonMyopicEx8 =
   NonMyopic
     (Map.singleton (hk Cast.alicePoolKeys) alicePerfEx8)
     rewardPot8
     snapEx3
 
-rewardUpdateEx8 :: forall c. Crypto c => RewardUpdate c
+rewardUpdateEx8 :: forall c. Era era => RewardUpdate c
 rewardUpdateEx8 =
   RewardUpdate
     { deltaT = deltaT8,
@@ -705,7 +706,7 @@ blockEx9 =
     20
     (mkOCert (coreNodeKeysBySchedule ppEx 410) 2 (KESPeriod 20))
 
-snapEx9 :: forall c. Crypto c => EB.SnapShot c
+snapEx9 :: forall c. Era era => EB.SnapShot c
 snapEx9 =
   snapEx5
     { EB._stake =
@@ -747,7 +748,7 @@ bobAda10 =
     + _keyDeposit ppEx
     - feeTx10
 
-txbodyEx10 :: Crypto c => TxBody c
+txbodyEx10 :: Era era => TxBody c
 txbodyEx10 =
   TxBody
     (Set.fromList [TxIn genesisId 1])
@@ -812,7 +813,7 @@ aliceCoinEx11Ptr = aliceCoinEx4Base - feeTx11
 aliceRetireEpoch :: EpochNo
 aliceRetireEpoch = EpochNo 5
 
-txbodyEx11 :: Crypto c => TxBody c
+txbodyEx11 :: Era era => TxBody c
 txbodyEx11 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx4) 0])
@@ -856,7 +857,7 @@ blockEx11 =
 reserves12 :: Coin
 reserves12 = reserves7 + deltaR8
 
-alicePerfEx11 :: forall c. Crypto c => Likelihood
+alicePerfEx11 :: forall c. Era era => Likelihood
 alicePerfEx11 = alicePerfEx8 <> epoch4Likelihood
   where
     epoch4Likelihood = likelihood blocks t (epochSize $ EpochNo 4)
@@ -867,14 +868,14 @@ alicePerfEx11 = alicePerfEx8 <> epoch4Likelihood
     (Coin supply) = maxLLSupply - reserves12
     f = activeSlotCoeff testGlobals
 
-nonMyopicEx11 :: forall c. Crypto c => NonMyopic c
+nonMyopicEx11 :: forall c. Era era => NonMyopic c
 nonMyopicEx11 =
   NonMyopic
     (Map.singleton (hk Cast.alicePoolKeys) (alicePerfEx11 @c))
     (Coin 0)
     snapEx5
 
-rewardUpdateEx11 :: forall c. Crypto c => RewardUpdate c
+rewardUpdateEx11 :: forall c. Era era => RewardUpdate c
 rewardUpdateEx11 =
   RewardUpdate
     { deltaT = Coin 0,
@@ -924,7 +925,7 @@ blockEx12 =
     25
     (mkOCert (coreNodeKeysBySchedule ppEx 510) 3 (KESPeriod 25))
 
-snapEx12 :: forall c. Crypto c => EB.SnapShot c
+snapEx12 :: forall c. Era era => EB.SnapShot c
 snapEx12 =
   snapEx9
     { EB._stake =

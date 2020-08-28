@@ -18,7 +18,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
 import Control.Monad.Trans.Reader (asks)
@@ -48,24 +48,24 @@ import Shelley.Spec.Ledger.TxData
     PoolParams (..),
   )
 
-data POOL (crypto :: Type)
+data POOL (era :: Type)
 
 data PoolEnv
   = PoolEnv SlotNo PParams
   deriving (Show, Eq)
 
-instance Typeable crypto => STS (POOL crypto) where
-  type State (POOL crypto) = PState crypto
+instance Typeable era => STS (POOL era) where
+  type State (POOL era) = PState era
 
-  type Signal (POOL crypto) = DCert crypto
+  type Signal (POOL era) = DCert era
 
-  type Environment (POOL crypto) = PoolEnv
+  type Environment (POOL era) = PoolEnv
 
-  type BaseM (POOL crypto) = ShelleyBase
+  type BaseM (POOL era) = ShelleyBase
 
-  data PredicateFailure (POOL crypto)
+  data PredicateFailure (POOL era)
     = StakePoolNotRegisteredOnKeyPOOL
-        !(KeyHash 'StakePool crypto) -- KeyHash which cannot be retired since it is not registered
+        !(KeyHash 'StakePool era) -- KeyHash which cannot be retired since it is not registered
     | StakePoolRetirementWrongEpochPOOL
         !Word64 -- Current Epoch
         !Word64 -- The epoch listed in the Pool Retirement Certificate
@@ -81,11 +81,11 @@ instance Typeable crypto => STS (POOL crypto) where
 
   transitionRules = [poolDelegationTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (POOL crypto))
+instance NoUnexpectedThunks (PredicateFailure (POOL era))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (POOL crypto))
+  (Typeable era, Era era) =>
+  ToCBOR (PredicateFailure (POOL era))
   where
   toCBOR = \case
     StakePoolNotRegisteredOnKeyPOOL kh ->
@@ -98,10 +98,10 @@ instance
       encodeListLen 3 <> toCBOR (3 :: Word8) <> toCBOR pc <> toCBOR mc
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (POOL crypto))
+  (Era era) =>
+  FromCBOR (PredicateFailure (POOL era))
   where
-  fromCBOR = decodeRecordSum "PredicateFailure (POOL crypto)" $
+  fromCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
     \case
       0 -> do
         kh <- fromCBOR
@@ -120,7 +120,7 @@ instance
         pure (3, StakePoolCostTooLowPOOL pc mc)
       k -> invalidKey k
 
-poolDelegationTransition :: Typeable crypto => TransitionRule (POOL crypto)
+poolDelegationTransition :: Typeable era => TransitionRule (POOL era)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let stpools = _pParams ps

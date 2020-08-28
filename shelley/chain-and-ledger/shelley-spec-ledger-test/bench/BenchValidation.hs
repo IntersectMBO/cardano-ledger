@@ -51,7 +51,8 @@ import Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     slotToNonce,
   )
-import Cardano.Ledger.Crypto
+
+import Cardano.Ledger.Era
 import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
 import Shelley.Spec.Ledger.LedgerState (nesBcur)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
@@ -161,7 +162,7 @@ instance Show UpdateInputs where
 instance NFData (LedgerView c) where
   rnf (LedgerView _pp _ov _pool _delegs) = ()
 
-instance Crypto c => NFData (BHeader c) where
+instance Era era => NFData (BHeader c) where
   rnf (BHeader _ _) = ()
 
 instance NFData (ChainDepState c) where

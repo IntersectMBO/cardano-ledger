@@ -9,7 +9,8 @@ module Shelley.Spec.Ledger.API.Wallet
 where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Crypto (Crypto (VRF))
+import Cardano.Ledger.Crypto (VRF)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (SlotNo)
 import qualified Data.ByteString.Short as BSS
@@ -56,11 +57,11 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- pool (identified by the key hash of the pool operator) to the
 -- non-myopic pool member reward for that stake pool.
 getNonMyopicMemberRewards ::
-  Crypto crypto =>
+  Era era =>
   Globals ->
-  ShelleyState crypto ->
-  Set (Either Coin (Credential 'Staking crypto)) ->
-  Map (Either Coin (Credential 'Staking crypto)) (Map (KeyHash 'StakePool crypto) Coin)
+  ShelleyState era ->
+  Set (Either Coin (Credential 'Staking era)) ->
+  Map (Either Coin (Credential 'Staking era)) (Map (KeyHash 'StakePool era) Coin)
 getNonMyopicMemberRewards globals ss creds =
   Map.fromList $
     fmap
@@ -104,15 +105,15 @@ getNonMyopicMemberRewards globals ss creds =
 
 -- | Get the full UTxO.
 getUTxO ::
-  ShelleyState crypto ->
-  UTxO crypto
+  ShelleyState era ->
+  UTxO era
 getUTxO = _utxo . _utxoState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
-  ShelleyState crypto ->
-  Set (Addr crypto) ->
-  UTxO crypto
+  ShelleyState era ->
+  Set (Addr era) ->
+  UTxO era
 getFilteredUTxO ss addrs =
   UTxO $ Map.filter (\(TxOutCompact addrSBS _) -> addrSBS `Set.member` addrSBSs) fullUTxO
   where
@@ -126,16 +127,16 @@ getFilteredUTxO ss addrs =
 --   Given a private VRF key, returns the set of slots in which this node is
 --   eligible to lead.
 getLeaderSchedule ::
-  ( Crypto crypto,
+  ( Era era,
     VRF.Signable
-      (VRF crypto)
+      (VRF (Crypto era))
       Seed
   ) =>
   Globals ->
-  ShelleyState crypto ->
-  ChainDepState crypto ->
-  KeyHash 'StakePool crypto ->
-  SignKeyVRF crypto ->
+  ShelleyState era ->
+  ChainDepState era ->
+  KeyHash 'StakePool era ->
+  SignKeyVRF era ->
   Set SlotNo
 getLeaderSchedule globals ss cds poolHash key = Set.filter isLeader epochSlots
   where

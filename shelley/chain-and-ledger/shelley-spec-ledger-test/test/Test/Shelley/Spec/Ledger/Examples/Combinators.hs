@@ -61,7 +61,8 @@ import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ptr,
   )
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot, SnapShots (..))
 import Shelley.Spec.Ledger.Keys
@@ -121,7 +122,7 @@ evolveNonceUnfrozen n cs =
 -- instead use 'newEpoch'.
 newLab ::
   forall c.
-  Crypto c =>
+  Era era =>
   Block c ->
   ChainState c ->
   ChainState c
@@ -164,7 +165,7 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
 -- Update the UTxO for given transaction body.
 newUTxO ::
   forall c.
-  Crypto c =>
+  Era era =>
   TxBody c ->
   ChainState c ->
   ChainState c
@@ -556,7 +557,7 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
   forall c.
-  Crypto c =>
+  Era era =>
   Block c ->
   ChainState c ->
   ChainState c

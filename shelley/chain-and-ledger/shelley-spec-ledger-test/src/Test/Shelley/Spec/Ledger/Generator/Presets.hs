@@ -21,7 +21,8 @@ import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.Address (scriptsToAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
-import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash,
@@ -47,14 +48,14 @@ import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs, maxKESIterations, mkKESKey
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
-genEnv :: Crypto c => proxy c -> GenEnv c
+genEnv :: Era era => proxy c -> GenEnv c
 genEnv _ =
   GenEnv
     (keySpace defaultConstants)
     defaultConstants
 
 -- | Example keyspace for use in generators
-keySpace :: Crypto c => Constants -> KeySpace c
+keySpace :: Era era => Constants -> KeySpace c
 keySpace c =
   KeySpace
     (coreNodeKeys c)
@@ -64,26 +65,26 @@ keySpace c =
     (mSigCombinedScripts c)
 
 -- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: Crypto c => Constants -> KeyPairs c
+keyPairs :: Era era => Constants -> KeyPairs c
 keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: Crypto c => Constants -> Int -> Int -> Gen (KeyPairs c)
+someKeyPairs :: Era era => Constants -> Int -> Int -> Gen (KeyPairs c)
 someKeyPairs c lower upper =
   take
     <$> QC.choose (lower, upper)
     <*> QC.shuffle (keyPairs c)
 
-mSigBaseScripts :: Crypto c => Constants -> MultiSigPairs c
+mSigBaseScripts :: Era era => Constants -> MultiSigPairs c
 mSigBaseScripts c = mkMSigScripts (keyPairs c)
 
-mSigCombinedScripts :: Crypto c => Constants -> MultiSigPairs c
+mSigCombinedScripts :: Era era => Constants -> MultiSigPairs c
 mSigCombinedScripts c@(Constants {numBaseScripts}) =
   mkMSigCombinations . take numBaseScripts $ mSigBaseScripts c
 
 -- | Select between _lower_ and _upper_ scripts from the possible combinations
 -- of the first `numBaseScripts` multi-sig scripts of `mSigScripts`.
-someScripts :: Crypto c => Constants -> Int -> Int -> Gen (MultiSigPairs c)
+someScripts :: Era era => Constants -> Int -> Int -> Gen (MultiSigPairs c)
 someScripts c lower upper =
   take
     <$> QC.choose (lower, upper)
@@ -93,7 +94,7 @@ someScripts c lower upper =
 --
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
-coreNodeKeys :: Crypto c => Constants -> [(KeyPair 'Genesis c, AllIssuerKeys c 'GenesisDelegate)]
+coreNodeKeys :: Era era => Constants -> [(KeyPair 'Genesis c, AllIssuerKeys c 'GenesisDelegate)]
 coreNodeKeys c@Constants {numCoreNodes} =
   [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0),
       issuerKeys c 0 x
@@ -103,7 +104,7 @@ coreNodeKeys c@Constants {numCoreNodes} =
   where
     toKeyPair (sk, vk) = KeyPair vk sk
 
-genUtxo0 :: Crypto c => Constants -> Gen (UTxO c)
+genUtxo0 :: Era era => Constants -> Gen (UTxO c)
 genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts
@@ -114,14 +115,14 @@ genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   return (genesisCoins outs)
 
 -- Pre-generate a set of keys to use for genesis delegates.
-genesisDelegates :: Crypto c => Constants -> [AllIssuerKeys c 'GenesisDelegate]
+genesisDelegates :: Era era => Constants -> [AllIssuerKeys c 'GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
     | x <- [0 .. 50]
   ]
 
 -- Pre-generate a set of keys to use for stake pools.
-stakePoolKeys :: Crypto c => Constants -> [AllIssuerKeys c 'StakePool]
+stakePoolKeys :: Era era => Constants -> [AllIssuerKeys c 'StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
     | x <- [0 .. 50]
@@ -129,7 +130,7 @@ stakePoolKeys c =
 
 -- | Generate all keys for any entity which will be issuing blocks.
 issuerKeys ::
-  (Crypto c) =>
+  (Era era) =>
   Constants ->
   -- | Namespace parameter. Can be used to differentiate between different
   --   "types" of issuer.
@@ -159,7 +160,7 @@ issuerKeys Constants {maxSlotTrace} ns x =
           hk = hashKey vkCold
         }
 
-genesisDelegs0 :: Crypto c => Constants -> Map (KeyHash 'Genesis c) (GenDelegPair c)
+genesisDelegs0 :: Era era => Constants -> Map (KeyHash 'Genesis c) (GenDelegPair c)
 genesisDelegs0 c =
   Map.fromList
     [ ( hashVKey gkey,

@@ -83,7 +83,8 @@ import Shelley.Spec.Ledger.BlockChain
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+
+import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,
     pattern Delegate,
@@ -263,47 +264,47 @@ getRawNonce :: Nonce -> ByteString
 getRawNonce (Nonce hsh) = Monomorphic.hashToBytes hsh
 getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
 
-testGKey :: Crypto c => GenesisKeyPair c
+testGKey :: Era era => GenesisKeyPair c
 testGKey = KeyPair vk sk
   where
     (sk, vk) = mkGenKey (0, 0, 0, 0, 0)
 
-testGKeyHash :: Crypto c => Proxy c -> KeyHash 'Genesis c
+testGKeyHash :: Era era => Proxy c -> KeyHash 'Genesis c
 testGKeyHash _ = (hashKey . vKey) testGKey
 
-testVRF :: Crypto c => proxy c -> (SignKeyVRF c, VerKeyVRF c)
+testVRF :: Era era => proxy c -> (SignKeyVRF c, VerKeyVRF c)
 testVRF _ = mkVRFKeyPair (0, 0, 0, 0, 5)
 
-testVRFKH :: Crypto c => proxy c -> Hash c (VerKeyVRF c)
+testVRFKH :: Era era => proxy c -> Hash c (VerKeyVRF c)
 testVRFKH p = hashVerKeyVRF $ snd (testVRF p)
 
-testTxb :: Crypto c => TxBody c
+testTxb :: Era era => TxBody c
 testTxb = TxBody Set.empty StrictSeq.empty StrictSeq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) SNothing SNothing
 
-testTxbHash :: Crypto c => Hash c (TxBody c)
+testTxbHash :: Era era => Hash c (TxBody c)
 testTxbHash = hashAnnotated testTxb
 
-testKey1 :: Crypto c => proxy c -> KeyPair 'Payment c
+testKey1 :: Era era => proxy c -> KeyPair 'Payment c
 testKey1 _ = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
 
-testKey2 :: Crypto c => proxy c -> KeyPair kr c
+testKey2 :: Era era => proxy c -> KeyPair kr c
 testKey2 _ = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 2)
 
-testBlockIssuerKey :: Crypto c => KeyPair 'BlockIssuer c
+testBlockIssuerKey :: Era era => KeyPair 'BlockIssuer c
 testBlockIssuerKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 4)
 
-testStakePoolKey :: Crypto c => KeyPair 'StakePool c
+testStakePoolKey :: Era era => KeyPair 'StakePool c
 testStakePoolKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 5)
 
-testGenesisDelegateKey :: Crypto c => proxy c -> KeyPair 'GenesisDelegate c
+testGenesisDelegateKey :: Era era => proxy c -> KeyPair 'GenesisDelegate c
 testGenesisDelegateKey _ = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 6)
@@ -331,34 +332,34 @@ testOpCertSigTokens p = e
         (OCertSignable @c (snd (testKESKeys p)) 0 (KESPeriod 0))
     Encoding e = encodeSignedDSIGN s
 
-testKeyHash1 :: Crypto c => proxy c -> KeyHash 'Payment c
+testKeyHash1 :: Era era => proxy c -> KeyHash 'Payment c
 testKeyHash1 p = (hashKey . vKey) (testKey1 p)
 
-testKeyHash2 :: Crypto c => proxy c -> KeyHash 'Staking c
+testKeyHash2 :: Era era => proxy c -> KeyHash 'Staking c
 testKeyHash2 p = (hashKey . vKey) (testKey2 p)
 
-testKESKeys :: Crypto c => proxy c -> (SignKeyKES c, VerKeyKES c)
+testKESKeys :: Era era => proxy c -> (SignKeyKES c, VerKeyKES c)
 testKESKeys _ = mkKESKeyPair (0, 0, 0, 0, 3)
 
-testAddrE :: Crypto c => Proxy c -> Addr c
+testAddrE :: Era era => Proxy c -> Addr c
 testAddrE p = Addr Testnet (KeyHashObj (testKeyHash1 p)) StakeRefNull
 
-testPayCred :: Crypto c => proxy c -> Credential 'Payment c
+testPayCred :: Era era => proxy c -> Credential 'Payment c
 testPayCred p = KeyHashObj (testKeyHash1 p)
 
-testStakeCred :: Crypto c => proxy c -> Credential 'Staking c
+testStakeCred :: Era era => proxy c -> Credential 'Staking c
 testStakeCred p = KeyHashObj (testKeyHash2 p)
 
-testScript :: Crypto c => proxy c -> MultiSig c
+testScript :: Era era => proxy c -> MultiSig c
 testScript p = RequireSignature $ asWitness (testKeyHash1 p)
 
-testScriptHash :: Crypto c => proxy c -> ScriptHash c
+testScriptHash :: Era era => proxy c -> ScriptHash c
 testScriptHash p = hashScript (testScript p)
 
-testScript2 :: Crypto c => proxy c -> MultiSig c
+testScript2 :: Era era => proxy c -> MultiSig c
 testScript2 p = RequireSignature $ asWitness (testKeyHash2 p)
 
-testHeaderHash :: forall proxy c. Crypto c => proxy c -> HashHeader c
+testHeaderHash :: forall proxy c. Era era => proxy c -> HashHeader c
 testHeaderHash _ = HashHeader $ coerce (hashWithSerialiser toCBOR 0 :: Hash c Int)
 
 testBHB :: forall proxy c. ExMock c => proxy c -> BHBody c
