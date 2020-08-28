@@ -17,7 +17,7 @@ import Cardano.Crypto.KES (MockKES)
 import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
-import Shelley.Spec.Ledger.Crypto
+import Cardano.Ledger.Crypto
 import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 import Shelley.Spec.Ledger.BaseTypes (Seed)
 

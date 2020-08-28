@@ -45,7 +45,7 @@ import Shelley.Spec.Ledger.Bench.Gen
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyRole (..))

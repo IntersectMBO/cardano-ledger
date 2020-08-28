@@ -32,7 +32,7 @@ import Shelley.Spec.Ledger.BaseTypes
     mkNonceFromNumber,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),

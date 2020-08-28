@@ -14,6 +14,7 @@ module Shelley.Spec.Ledger.STS.NewEpoch
   )
 where
 
+import Cardano.Ledger.Crypto
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
@@ -21,7 +22,6 @@ import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState

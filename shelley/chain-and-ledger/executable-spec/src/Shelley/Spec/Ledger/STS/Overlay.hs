@@ -18,6 +18,7 @@ module Shelley.Spec.Ledger.STS.Overlay
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Crypto
 import Cardano.Prelude
   ( MonadError (..),
     NoUnexpectedThunks (..),
@@ -48,7 +49,6 @@ import Shelley.Spec.Ledger.BlockChain
     seedEta,
     seedL,
   )
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
     PoolDistr (..),

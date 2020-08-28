@@ -9,6 +9,7 @@ module Shelley.Spec.Ledger.DeserializeShort
 where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
+import Cardano.Ledger.Crypto (Crypto (..))
 import Control.Monad (ap)
 import Control.Monad (join)
 import qualified Control.Monad.Fail
@@ -36,7 +37,6 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys (KeyHash (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))

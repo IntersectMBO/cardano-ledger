@@ -19,7 +19,7 @@ import Control.State.Transition.Trace
 import Data.List (foldl')
 import Shelley.Spec.Ledger.API (UTXO)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
-import Shelley.Spec.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.LedgerState (_deposited, _fees, _utxo, pattern UTxOState)
 import Shelley.Spec.Ledger.Tx (_body, pattern Tx)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), _wdrls)

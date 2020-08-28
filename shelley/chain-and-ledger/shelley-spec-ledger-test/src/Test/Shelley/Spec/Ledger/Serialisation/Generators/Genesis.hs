@@ -29,7 +29,7 @@ import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes hiding (Seed)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential
-import Shelley.Spec.Ledger.Crypto
+import Cardano.Ledger.Crypto
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),

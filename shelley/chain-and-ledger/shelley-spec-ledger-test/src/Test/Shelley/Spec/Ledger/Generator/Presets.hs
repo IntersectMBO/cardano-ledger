@@ -21,7 +21,7 @@ import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.Address (scriptsToAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
-import Shelley.Spec.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash,

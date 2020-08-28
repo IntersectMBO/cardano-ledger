@@ -12,7 +12,7 @@ import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
-import Shelley.Spec.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.MetaData (MetaData (..), MetaDataHash, MetaDatum (..), hashMetaData)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC

@@ -45,6 +45,7 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
+import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
 import Cardano.Prelude
   ( AllowThunksIn (..),
     ByteString,
@@ -58,7 +59,6 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Quiet
-import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
 import qualified Shelley.Spec.Ledger.Keys as Keys
 import Shelley.Spec.Ledger.Keys
   ( Hash,

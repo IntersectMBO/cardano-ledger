@@ -30,6 +30,7 @@ import Cardano.Binary
     encodeNull,
     peekTokenType,
   )
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Prelude (NFData, NoUnexpectedThunks)
 import Cardano.Slotting.Slot
 import Control.Monad.Trans.Reader (asks)
@@ -41,7 +42,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash (..),
     KeyRole (..),

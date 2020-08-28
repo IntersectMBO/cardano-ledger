@@ -34,7 +34,7 @@ import Shelley.Spec.Ledger.BlockChain
     mkSeed,
     seedL,
   )
-import Shelley.Spec.Ledger.Crypto (Crypto (VRF))
+import Cardano.Ledger.Crypto (Crypto (VRF))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.Keys
   ( coerceKeyRole,

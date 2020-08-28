@@ -80,6 +80,7 @@ import Cardano.Binary
     szCases,
     withSlice,
   )
+import Cardano.Ledger.Crypto
 import Cardano.Prelude
   ( AllowThunksIn (..),
     LByteString,
@@ -144,7 +145,6 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeCredential,
   )
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.DeserializeShort (deserializeShortAddr)
 import Shelley.Spec.Ledger.Hashing
 import Shelley.Spec.Ledger.Keys

@@ -11,7 +11,7 @@ where
 
 import Cardano.Binary (ToCBOR (..))
 import qualified Cardano.Crypto.Hash as Hash
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Crypto (Crypto (..))
 
 class Crypto c => HashAnnotated a c | a -> c where
   hashAnnotated :: a -> Hash.Hash (HASH c) a

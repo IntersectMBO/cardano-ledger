@@ -61,7 +61,7 @@ import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ptr,
   )
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot, SnapShots (..))
 import Shelley.Spec.Ledger.Keys

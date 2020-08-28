@@ -40,6 +40,7 @@ import Cardano.Binary
     serializeEncoding,
   )
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Prelude
   ( AllowThunksIn (..),
     Generic,
@@ -53,7 +54,6 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List (concat, concatMap, permutations)
 import Data.Word (Word8)
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 

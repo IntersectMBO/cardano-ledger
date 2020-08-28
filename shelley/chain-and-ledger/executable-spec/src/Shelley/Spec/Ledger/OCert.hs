@@ -25,6 +25,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), toCBOR)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
+import Cardano.Ledger.Crypto
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
@@ -39,7 +40,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
     KeyRole (..),

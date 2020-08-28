@@ -79,6 +79,7 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Crypto
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -89,7 +90,6 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Quiet
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 
 -- | The role of a key.

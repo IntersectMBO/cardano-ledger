@@ -22,6 +22,7 @@ module Shelley.Spec.Ledger.STS.Chain
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Crypto (Crypto, VRF)
 import Cardano.Prelude
   ( MonadError (..),
     NFData,
@@ -67,7 +68,6 @@ import Shelley.Spec.Ledger.BlockChain
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto (Crypto, VRF)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 import Shelley.Spec.Ledger.Keys

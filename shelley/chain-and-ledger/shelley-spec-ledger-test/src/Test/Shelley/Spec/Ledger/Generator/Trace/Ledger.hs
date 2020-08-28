@@ -23,7 +23,7 @@ import Data.Functor.Identity (runIdentity)
 import qualified Data.Sequence as Seq
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
-import Shelley.Spec.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState,

@@ -13,6 +13,7 @@ module Shelley.Spec.Ledger.STS.Ocert
   )
 where
 
+import Cardano.Ledger.Crypto
 import Cardano.Prelude (NoUnexpectedThunks, asks)
 import Control.Iterate.SetAlgebra (eval, singleton, (⨃))
 import Control.State.Transition
@@ -22,7 +23,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert
 

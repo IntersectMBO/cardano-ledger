@@ -15,6 +15,7 @@ module Shelley.Spec.Ledger.STS.Tick
   )
 where
 
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.Monad.Trans.Reader (asks)
@@ -23,7 +24,6 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),

@@ -14,7 +14,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Crypto
+import Cardano.Ledger.Crypto
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Slot

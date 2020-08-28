@@ -31,6 +31,7 @@ import Cardano.Binary
     encodeDouble,
     encodeListLen,
   )
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.Iterate.SetAlgebra (eval, (◁))
@@ -60,7 +61,6 @@ import Shelley.Spec.Ledger.Coin
     rationalToCoinViaFloor,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),

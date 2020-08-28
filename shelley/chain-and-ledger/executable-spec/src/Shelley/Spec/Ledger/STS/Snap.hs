@@ -10,6 +10,7 @@ module Shelley.Spec.Ledger.STS.Snap
   )
 where
 
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( STS (..),
@@ -20,7 +21,6 @@ import Control.State.Transition
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),

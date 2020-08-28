@@ -57,7 +57,7 @@ import Shelley.Spec.Ledger.API
   )
 import Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
 import Shelley.Spec.Ledger.BaseTypes (interval0)
-import Shelley.Spec.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
   ( coerceKeyRole,
     hashKey,

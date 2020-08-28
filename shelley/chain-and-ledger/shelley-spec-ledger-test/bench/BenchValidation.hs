@@ -51,7 +51,7 @@ import Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     slotToNonce,
   )
-import Shelley.Spec.Ledger.Crypto
+import Cardano.Ledger.Crypto
 import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
 import Shelley.Spec.Ledger.LedgerState (nesBcur)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))

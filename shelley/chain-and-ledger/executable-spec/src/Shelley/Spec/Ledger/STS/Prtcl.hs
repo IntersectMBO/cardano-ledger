@@ -28,6 +28,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Crypto (Crypto, VRF)
 import Cardano.Prelude (MonadError (..), NoUnexpectedThunks (..), unless)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition
@@ -48,7 +49,6 @@ import Shelley.Spec.Ledger.BlockChain
     bnonce,
     lastAppliedHash,
   )
-import Shelley.Spec.Ledger.Crypto (Crypto, VRF)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,

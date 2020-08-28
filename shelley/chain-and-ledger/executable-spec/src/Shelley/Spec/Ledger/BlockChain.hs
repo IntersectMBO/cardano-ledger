@@ -74,6 +74,7 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Crypto
 import Cardano.Prelude
   ( AllowThunksIn (..),
     ByteString,
@@ -111,7 +112,6 @@ import Shelley.Spec.Ledger.BaseTypes
     mkNonceFromOutputVRF,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys

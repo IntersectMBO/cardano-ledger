@@ -25,6 +25,7 @@ where
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
+import Cardano.Ledger.Crypto (Crypto, HASH, KES)
 import Cardano.Prelude (NoUnexpectedThunks, forceElemsToWHNF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -42,7 +43,6 @@ import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Crypto (Crypto, HASH, KES)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.TxData

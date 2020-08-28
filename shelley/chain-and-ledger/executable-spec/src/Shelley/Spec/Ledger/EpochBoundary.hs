@@ -27,6 +27,7 @@ module Shelley.Spec.Ledger.EpochBoundary
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.Crypto
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (▷), (◁))
 import Data.Map.Strict (Map)
@@ -38,7 +39,6 @@ import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.DeserializeShort (deserialiseAddrStakeRef)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
