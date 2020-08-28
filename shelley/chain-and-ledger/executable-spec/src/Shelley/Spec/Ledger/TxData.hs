@@ -110,6 +110,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
+import Data.Relation (Relation (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -137,7 +138,6 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..), word64ToCoin)
-import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ix,

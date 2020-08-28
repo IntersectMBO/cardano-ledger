@@ -4,7 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Shelley.Spec.Ledger.Core
+module Data.Relation
   ( Relation
       ( (⨃),
         (∪),
@@ -91,15 +91,18 @@ class Relation m where
   -- | Size of the relation
   size :: Integral n => m -> n
 
-  -- | Is this key in the Domain,  Instances should overide this default with something more efficient
+  -- | Is this key in the Domain,  Instances should overide this default with
+  -- something more efficient
   haskey :: Ord (Domain m) => Domain m -> m -> Bool
   haskey key m = key `elem` (dom m)
 
-  -- | Insert (key,value) pair into the Relation.  Instances should overide this default with something more efficient
+  -- | Insert (key,value) pair into the Relation.  Instances should overide this
+  -- default with something more efficient
   addpair :: (Ord (Domain m), Ord (Range m)) => Domain m -> Range m -> m -> m
   addpair key val m = m ∪ (singleton key val)
 
-  -- | Remove a key (and its associted value at that key) from the Relation. Instances should overide this default with something more efficient
+  -- | Remove a key (and its associted value at that key) from the Relation.
+  -- Instances should overide this default with something more efficient
   removekey :: Ord (Domain m) => Domain m -> m -> m
   removekey k m = Set.singleton k ⋪ m
 
@@ -151,7 +154,8 @@ instance Relation (Map k v) where
   removekey k m = Map.delete k m
 
 -- | Union override plus is (A\B)∪(B\A)∪{k|->v1+v2 | k|->v1 : A /\ k|->v2 : B}
--- The library function Map.unionWith is more general, it allows any type for `b` as long as (+) :: b -> b -> b
+-- The library function Map.unionWith is more general, it allows any type for
+-- `b` as long as (+) :: b -> b -> b
 (∪+) :: (Ord a, Num b) => Map a b -> Map a b -> Map a b
 a ∪+ b = (Map.unionWith (+) a b)
 
