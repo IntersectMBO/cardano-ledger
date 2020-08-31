@@ -23,6 +23,8 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron
+import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Era
 import Cardano.Prelude
   ( ByteString,
   )
@@ -45,8 +47,6 @@ import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
-
-import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
@@ -93,7 +93,9 @@ import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Prelude (genBytes)
 import Test.QuickCheck (Gen)
 import Test.QuickCheck.Hedgehog (hedgehog)
-import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original (C)
+import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
+  ( C_Crypto,
+  )
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils (testSTS)
 import Test.Tasty (TestTree)
@@ -262,9 +264,14 @@ testBootstrapNotSpending =
 
 data C
 
-instance Crypto C where
-  type KES C = KES Original.C
-  type VRF C = VRF Original.C
-  type DSIGN C = DSIGN.Ed25519DSIGN
-  type HASH C = HASH Original.C
-  type ADDRHASH C = Hash.Blake2b_224
+instance Era C where
+  type Crypto C = C_crypto
+
+data C_crypto
+
+instance Cardano.Ledger.Crypto.Crypto C_crypto where
+  type KES C_crypto = KES Original.C_Crypto
+  type VRF C_crypto = VRF Original.C_Crypto
+  type DSIGN C_crypto = DSIGN.Ed25519DSIGN
+  type HASH C_crypto = HASH Original.C_Crypto
+  type ADDRHASH C_crypto = Hash.Blake2b_224

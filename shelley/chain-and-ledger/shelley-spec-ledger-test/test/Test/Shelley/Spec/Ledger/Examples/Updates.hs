@@ -90,14 +90,14 @@ aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Era era => UTxO c
+initUTxO :: Era era => UTxO era
 initUTxO =
   genesisCoins
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStUpdates :: forall c. Era era => ChainState c
+initStUpdates :: forall era. Era era => ChainState era
 initStUpdates = initSt initUTxO
 
 --
@@ -126,11 +126,11 @@ ppVoteA =
       _minPoolCost = SNothing
     }
 
-collectVotes :: Era era => PParamsUpdate -> [Int] -> ProposedPPUpdates c
+collectVotes :: Era era => PParamsUpdate -> [Int] -> ProposedPPUpdates era
 collectVotes vote =
   ProposedPPUpdates . Map.fromList . (fmap (\n -> (hashKey $ coreNodeVK n, vote)))
 
-ppVotes1 :: Era era => ProposedPPUpdates c
+ppVotes1 :: Era era => ProposedPPUpdates era
 ppVotes1 = collectVotes ppVoteA [0, 3, 4]
 
 feeTx1 :: Coin
@@ -139,7 +139,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin - feeTx1
 
-txbodyEx1 :: Era era => TxBody c
+txbodyEx1 :: Era era => TxBody era
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -151,7 +151,7 @@ txbodyEx1 =
     (SJust (Update ppVotes1 (EpochNo 0)))
     SNothing
 
-txEx1 :: ExMock c => Tx c
+txEx1 :: (Era era, ExMock (Crypto era)) => Tx era
 txEx1 =
   Tx
     txbodyEx1
@@ -168,7 +168,7 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. ExMock c => Block c
+blockEx1 :: forall era. (Era era, ExMock (Crypto era)) => Block era
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -176,16 +176,16 @@ blockEx1 =
     [txEx1]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @c)
+    (nonce0 @era)
     (NatNonce 1)
     zero
     0
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
 
-expectedStEx1 :: forall c. ExMock c => ChainState c
+expectedStEx1 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
 expectedStEx1 =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
+  C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @era))
     . C.newLab blockEx1
     . C.feesAndDeposits feeTx1 (Coin 0)
     . C.newUTxO txbodyEx1
@@ -195,17 +195,17 @@ expectedStEx1 =
 -- === Block 1, Slot 10, Epoch 0
 --
 -- In the first block, three genesis keys vote on the same new parameters.
-updates1 :: ExMock c => CHAINExample c
+updates1 :: (Era era, ExMock (Crypto era)) => CHAINExample era
 updates1 = CHAINExample initStUpdates blockEx1 (Right expectedStEx1)
 
 --
 -- Block 2, Slot 20, Epoch 0
 --
 
-ppVotes2 :: Era era => ProposedPPUpdates c
+ppVotes2 :: Era era => ProposedPPUpdates era
 ppVotes2 = collectVotes ppVoteA [1, 5]
 
-updateEx3B :: Era era => Update c
+updateEx3B :: Era era => Update era
 updateEx3B = Update ppVotes2 (EpochNo 0)
 
 feeTx2 :: Coin
@@ -214,7 +214,7 @@ feeTx2 = Coin 1
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 - feeTx2
 
-txbodyEx2 :: Era era => TxBody c
+txbodyEx2 :: Era era => TxBody era
 txbodyEx2 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx1) 0])
@@ -226,7 +226,7 @@ txbodyEx2 =
     (SJust updateEx3B)
     SNothing
 
-txEx2 :: ExMock c => Tx c
+txEx2 :: (Era era, ExMock (Crypto era)) => Tx era
 txEx2 =
   Tx
     txbodyEx2
@@ -242,7 +242,7 @@ txEx2 =
       }
     SNothing
 
-blockEx2 :: forall c. ExMock c => Block c
+blockEx2 :: forall era. (Era era, ExMock (Crypto era)) => Block era
 blockEx2 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
@@ -250,16 +250,16 @@ blockEx2 =
     [txEx2]
     (SlotNo 20)
     (BlockNo 2)
-    (nonce0 @c)
+    (nonce0 @era)
     (NatNonce 2)
     zero
     1
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 20) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall c. ExMock c => ChainState c
+expectedStEx2 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
 expectedStEx2 =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c))
+  C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @era))
     . C.newLab blockEx2
     . C.feesAndDeposits feeTx2 (Coin 0)
     . C.newUTxO txbodyEx2
@@ -269,7 +269,7 @@ expectedStEx2 =
 -- === Block 2, Slot 20, Epoch 0
 --
 -- In the second block, two more genesis keys vote for the same new parameters.
-updates2 :: ExMock c => CHAINExample c
+updates2 :: (Era era, ExMock (Crypto era)) => CHAINExample era
 updates2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
@@ -298,7 +298,7 @@ ppVoteB =
       _minPoolCost = SNothing
     }
 
-ppVotes3 :: Era era => ProposedPPUpdates c
+ppVotes3 :: Era era => ProposedPPUpdates era
 ppVotes3 = collectVotes ppVoteB [1]
 
 feeTx3 :: Coin
@@ -307,7 +307,7 @@ feeTx3 = Coin 1
 aliceCoinEx3 :: Coin
 aliceCoinEx3 = aliceCoinEx2 - feeTx3
 
-txbodyEx3 :: Era era => TxBody c
+txbodyEx3 :: Era era => TxBody era
 txbodyEx3 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx2) 0])
@@ -319,7 +319,7 @@ txbodyEx3 =
     (SJust (Update ppVotes3 (EpochNo 1)))
     SNothing
 
-txEx3 :: ExMock c => Tx c
+txEx3 :: (Era era, ExMock (Crypto era)) => Tx era
 txEx3 =
   Tx
     txbodyEx3
@@ -331,7 +331,7 @@ txEx3 =
       }
     SNothing
 
-blockEx3 :: forall c. ExMock c => Block c
+blockEx3 :: forall era. (Era era, ExMock (Crypto era)) => Block era
 blockEx3 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx2)
@@ -339,16 +339,16 @@ blockEx3 =
     [txEx3]
     (SlotNo 80)
     (BlockNo 3)
-    (nonce0 @c)
+    (nonce0 @era)
     (NatNonce 3)
     zero
     4
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 80) 0 (KESPeriod 0))
 
-expectedStEx3 :: forall c. ExMock c => ChainState c
+expectedStEx3 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
 expectedStEx3 =
-  C.evolveNonceFrozen (getBlockNonce (blockEx3 @c))
+  C.evolveNonceFrozen (getBlockNonce (blockEx3 @era))
     . C.newLab blockEx3
     . C.feesAndDeposits feeTx3 (Coin 0)
     . C.newUTxO txbodyEx3
@@ -359,17 +359,17 @@ expectedStEx3 =
 -- === Block 3, Slot 80, Epoch 0
 --
 -- In the third block, one genesis keys votes for the next epoch
-updates3 :: ExMock c => CHAINExample c
+updates3 :: (Era era, ExMock (Crypto era)) => CHAINExample era
 updates3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
 -- Block 4, Slot 110, Epoch 1
 --
 
-epoch1Nonce :: forall c. ExMock c => Nonce
-epoch1Nonce = (chainCandidateNonce (expectedStEx3 @c)) ⭒ mkNonceFromNumber 123
+epoch1Nonce :: forall era. (Era era, ExMock (Crypto era)) => Nonce
+epoch1Nonce = (chainCandidateNonce (expectedStEx3 @era)) ⭒ mkNonceFromNumber 123
 
-blockEx4 :: forall c. ExMock c => Block c
+blockEx4 :: forall era. (Era era, ExMock (Crypto era)) => Block era
 blockEx4 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx3)
@@ -377,7 +377,7 @@ blockEx4 =
     []
     (SlotNo 110)
     (BlockNo 4)
-    (epoch1Nonce @c)
+    (epoch1Nonce @era)
     (NatNonce 4)
     zero
     5
@@ -387,7 +387,7 @@ blockEx4 =
 ppExUpdated :: PParams
 ppExUpdated = ppEx {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 123}
 
-expectedStEx4 :: forall c. ExMock c => ChainState c
+expectedStEx4 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
 expectedStEx4 =
   C.newEpoch blockEx4
     . C.newSnapshot EB.emptySnapShot (feeTx1 + feeTx2 + feeTx3)
@@ -403,7 +403,7 @@ expectedStEx4 =
 -- and the future vote becomes a current vote.
 -- Since the extra entropy was voted on, notice that it is a part
 -- of the new epoch nonce.
-updates4 :: ExMock c => CHAINExample c
+updates4 :: (Era era, ExMock (Crypto era)) => CHAINExample era
 updates4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
 --

@@ -13,6 +13,8 @@ import qualified Cardano.Crypto.DSIGN as Crypto
 import Cardano.Crypto.Hash (MD5, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
+import Cardano.Ledger.Crypto (VRF)
+import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Data.Foldable (fold)
@@ -32,8 +34,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-
-import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
     Stake (..),
@@ -109,7 +109,7 @@ rhoRange = [0, 0.05 .. 0.3]
 
 -- Helpers --
 
-keyPair :: Era era => Int -> KeyPair r c
+keyPair :: Era era => Int -> KeyPair r era
 keyPair seed = KeyPair vk sk
   where
     vk = VKey (Crypto.deriveVerKeyDSIGN sk)
@@ -154,7 +154,7 @@ data PoolInfo era = PoolInfo
 
 -- Generators --
 
-genNonOwnerMembers :: Era era => Gen (Map (Credential 'Staking c) Coin)
+genNonOwnerMembers :: Era era => Gen (Map (Credential 'Staking era) Coin)
 genNonOwnerMembers = do
   numMembers <- choose (0, maxNumMembers)
   fmap Map.fromList . replicateM numMembers $ do
@@ -172,12 +172,12 @@ genMargin = do
   numer <- choose (0, denom)
   pure $ unsafeMkUnitInterval (numer % denom)
 
-genPoolInfo :: forall c. Era era => PoolSetUpArgs c Maybe -> Gen (PoolInfo c)
+genPoolInfo :: forall era. Era era => PoolSetUpArgs era Maybe -> Gen (PoolInfo era)
 genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   pledge <- getOrGen poolPledge $ genCoin 0 maxPoolPledeg
   cost <- getOrGen poolCost $ genCoin 0 maxPoolCost
   margin <- getOrGen poolMargin genMargin
-  vrfKey <- vrfKeyPair @(VRF c) <$> arbitrary
+  vrfKey <- vrfKeyPair @(VRF (Crypto era)) <$> arbitrary
   coldKey <- keyPair <$> arbitrary
   ownerKey <- keyPair <$> arbitrary
   rewardKey <- keyPair <$> arbitrary

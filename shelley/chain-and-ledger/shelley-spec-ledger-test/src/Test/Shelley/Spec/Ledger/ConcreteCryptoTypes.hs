@@ -17,16 +17,14 @@ import Cardano.Crypto.KES (MockKES)
 import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
-
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Era
-import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 import Shelley.Spec.Ledger.BaseTypes (Seed)
-
-data C
+import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 
 -- | Mocking constraints used in generators
 type Mock c =
-  ( Era era,
+  ( Cardano.Ledger.Crypto.Crypto c,
     KES.Signable (KES c) ~ SignableRepresentation,
     DSIGN.Signable (DSIGN c)
       ~ SignableRepresentation,
@@ -43,9 +41,16 @@ type ExMock c =
     (VRF c) ~ FakeVRF
   )
 
-instance Crypto C where
-  type HASH C = MD5Prefix 10
-  type ADDRHASH C = MD5Prefix 8
-  type DSIGN C = MockDSIGN
-  type KES C = MockKES 10
-  type VRF C = FakeVRF
+data C
+
+instance Era C where
+  type Crypto C = C_Crypto
+
+data C_Crypto
+
+instance Cardano.Ledger.Crypto.Crypto C_Crypto where
+  type HASH C_Crypto = MD5Prefix 10
+  type ADDRHASH C_Crypto = MD5Prefix 8
+  type DSIGN C_Crypto = MockDSIGN
+  type KES C_Crypto = MockKES 10
+  type VRF C_Crypto = FakeVRF

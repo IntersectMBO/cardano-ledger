@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Examples.Init
   )
 where
 
+import Cardano.Ledger.Era (Era)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (..),
@@ -25,8 +26,6 @@ import Shelley.Spec.Ledger.BlockChain
     hashHeaderToNonce,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-
-import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
@@ -85,19 +84,19 @@ ppEx =
 -- When this transition actually occurs,
 -- the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork.
-lastByronHeaderHash :: forall c. Era era => HashHeader c
+lastByronHeaderHash :: forall era. Era era => HashHeader era
 lastByronHeaderHash = HashHeader $ mkHash 0
 
 -- | === Initial Nonce
-nonce0 :: forall c. Era era => Nonce
-nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
+nonce0 :: forall era. Era era => Nonce
+nonce0 = hashHeaderToNonce (lastByronHeaderHash @era)
 
 -- | === Initial Chain State
 --
 -- The initial state for the examples uses the function
 -- 'initialShelleyState' with the genesis delegation
 -- 'genDelegs' and any given starting 'UTxO' set.
-initSt :: forall c. Era era => UTxO c -> ChainState c
+initSt :: forall era. Era era => UTxO era -> ChainState era
 initSt utxo =
   initialShelleyState
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
@@ -107,4 +106,4 @@ initSt utxo =
     genDelegs
     (overlayScheduleFor (EpochNo 0) ppEx)
     ppEx
-    (nonce0 @c)
+    (nonce0 @era)

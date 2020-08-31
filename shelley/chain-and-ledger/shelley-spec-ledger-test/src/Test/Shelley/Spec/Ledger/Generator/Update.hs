@@ -259,9 +259,9 @@ genUpdateForNodes ::
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [KeyPair 'Genesis c] ->
+  [KeyPair 'Genesis era] ->
   PParams ->
-  Gen (Maybe (Update c))
+  Gen (Maybe (Update era))
 genUpdateForNodes c s e coreKeys pp =
   Just <$> (Update <$> genPPUpdate_ <*> pure e')
   where
@@ -274,11 +274,11 @@ genUpdate ::
   (HasCallStack, Era era) =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
-  Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate) ->
+  [(GenesisKeyPair era, AllIssuerKeys era 'GenesisDelegate)] ->
+  Map (KeyHash 'GenesisDelegate era) (AllIssuerKeys era 'GenesisDelegate) ->
   PParams ->
-  (UTxOState c, DPState c) ->
-  Gen (Maybe (Update c), [KeyPair 'Witness c])
+  (UTxOState era, DPState era) ->
+  Gen (Maybe (Update era), [KeyPair 'Witness era])
 genUpdate
   c@(Constants {frequencyTxUpdates})
   s

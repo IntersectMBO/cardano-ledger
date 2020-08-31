@@ -40,26 +40,28 @@ where
 import Cardano.Binary (ToCBOR (..))
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash
-  ( Hash,
+  ( Blake2b_256,
+    Hash,
     HashAlgorithm,
-    Blake2b_256,
     hashToBytes,
     hashWithSerialiser,
   )
 import Cardano.Crypto.KES (KESAlgorithm, SignKeyKES, VerKeyKES, deriveVerKeyKES, genKeyKES)
 import Cardano.Crypto.KES.Class (ContextKES)
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
-import Cardano.Crypto.VRF (certifiedOutput)
-import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Crypto.VRF
   ( CertifiedVRF,
     SignKeyVRF,
     VRFAlgorithm (..),
     VerKeyVRF,
+    certifiedOutput,
     deriveVerKeyVRF,
     evalCertified,
     genKeyVRF,
   )
+import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Crypto (DSIGN)
+import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Prelude (Coercible, asks)
 import Cardano.Slotting.EpochInfo
   ( epochInfoEpoch,
@@ -70,9 +72,9 @@ import Cardano.Slotting.EpochInfo
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace
-  ( (.-),
+  ( checkTrace,
+    (.-),
     (.->),
-    checkTrace,
   )
 import Data.Coerce (coerce)
 import Data.Functor ((<&>))
@@ -80,7 +82,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
 import Data.Word (Word64)
-import Hedgehog ((===), MonadTest)
+import Hedgehog (MonadTest, (===))
 import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
@@ -95,8 +97,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, bhbody, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-
-import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyPair,
     KeyRole (..),
@@ -112,8 +112,8 @@ import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Test.Tasty.HUnit
-  ( (@?=),
-    Assertion,
+  ( Assertion,
+    (@?=),
   )
 
 -- =======================================================
@@ -138,20 +138,29 @@ mkSeedFromWords stuff =
   mkSeedFromBytes . hashToBytes $ hashWithSerialiser @Blake2b_256 toCBOR stuff
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
-mkGenKey :: DSIGNAlgorithm (DSIGN (Crypto era)) => (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN (DSIGN (Crypto era)), VKey kd era)
+mkGenKey ::
+  DSIGNAlgorithm (DSIGN (Crypto era)) =>
+  (Word64, Word64, Word64, Word64, Word64) ->
+  (SignKeyDSIGN (DSIGN (Crypto era)), VKey kd era)
 mkGenKey seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
-mkKeyPair :: DSIGNAlgorithm (DSIGN c) => (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN (DSIGN c), VKey kd c)
+mkKeyPair ::
+  DSIGNAlgorithm (DSIGN (Crypto era)) =>
+  (Word64, Word64, Word64, Word64, Word64) ->
+  (SignKeyDSIGN (DSIGN (Crypto era)), VKey kd era)
 mkKeyPair seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
 -- mkKeyPair' :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair kr
-mkKeyPair' :: DSIGNAlgorithm (DSIGN c) => (Word64, Word64, Word64, Word64, Word64) -> KeyPair kd c
+mkKeyPair' ::
+  DSIGNAlgorithm (DSIGN (Crypto era)) =>
+  (Word64, Word64, Word64, Word64, Word64) ->
+  KeyPair kd era
 mkKeyPair' seed = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair seed
@@ -181,7 +190,7 @@ mkKESKeyPair seed =
   let sk = genKeyKES $ mkSeedFromWords seed
    in (sk, deriveVerKeyKES sk)
 
-mkAddr :: Era era => (KeyPair 'Payment c, KeyPair 'Staking c) -> Addr c
+mkAddr :: Era era => (KeyPair 'Payment era, KeyPair 'Staking era) -> Addr era
 mkAddr (payKey, stakeKey) =
   Addr
     Testnet
@@ -281,6 +290,6 @@ testSTS env initSt sig predicateFailure@(Left _) = do
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
 mkHash i = coerce (hashWithSerialiser @h toCBOR i)
 
-getBlockNonce :: forall c. Era era => Block c -> Nonce
+getBlockNonce :: forall era. Era era => Block era -> Nonce
 getBlockNonce =
   mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader

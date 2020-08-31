@@ -15,6 +15,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition (IRC (..))
@@ -41,8 +42,6 @@ import Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     hashHeaderToNonce,
   )
-
-import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
@@ -70,21 +69,24 @@ import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash, runShelleyBase)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
-instance Mock c => HasTrace (CHAIN c) (GenEnv c) where
+instance
+  (Era era, Mock (Crypto era)) =>
+  HasTrace (CHAIN era) (GenEnv era)
+  where
   envGen _ = pure ()
 
   sigGen ge _env st = genBlock ge st
 
   shrinkSignal = shrinkBlock
 
-  type BaseEnv (CHAIN c) = Globals
+  type BaseEnv (CHAIN era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | The first block of the Shelley era will point back to the last block of the Byron era.
 -- For our purposes we can bootstrap the chain by just coercing the value.
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
-lastByronHeaderHash :: forall proxy c. Era era => proxy c -> HashHeader c
+lastByronHeaderHash :: forall proxy era. Era era => proxy era -> HashHeader era
 lastByronHeaderHash _ = HashHeader $ mkHash 0
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align
@@ -92,11 +94,11 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- To achieve this we (1) use 'IRC CHAIN' (the "initial rule context") instead of simply 'Chain Env'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
-  forall c a.
+  forall era a.
   Era era =>
   Constants ->
-  IRC (CHAIN c) ->
-  Gen (Either a (ChainState c))
+  IRC (CHAIN era) ->
+  Gen (Either a (ChainState era))
 mkGenesisChainState constants (IRC _slotNo) = do
   utxo0 <- genUtxo0 constants
 
@@ -137,7 +139,7 @@ mkGenesisChainState constants (IRC _slotNo) = do
                     }
               }
         }
-    p :: Proxy c
+    p :: Proxy era
     p = Proxy
 
 mkOCertIssueNos ::

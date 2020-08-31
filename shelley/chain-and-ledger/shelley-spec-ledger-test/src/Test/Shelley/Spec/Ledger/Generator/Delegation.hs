@@ -102,12 +102,12 @@ data CertCred h
 genDCert ::
   (HasCallStack, Era era) =>
   Constants ->
-  KeySpace c ->
+  KeySpace era ->
   PParams ->
   AccountState ->
-  DPState c ->
+  DPState era ->
   SlotNo ->
-  Gen (Maybe (DCert c, CertCred c))
+  Gen (Maybe (DCert era, CertCred era))
 genDCert
   c@( Constants
         { frequencyRegKeyCert,
@@ -157,10 +157,10 @@ genDCert
 genRegKeyCert ::
   (HasCallStack, Era era) =>
   Constants ->
-  KeyPairs c ->
-  MultiSigPairs c ->
-  DState c ->
-  Gen (Maybe (DCert c, CertCred c))
+  KeyPairs era ->
+  MultiSigPairs era ->
+  DState era ->
+  Gen (Maybe (DCert era, CertCred era))
 genRegKeyCert
   Constants {frequencyKeyCredReg, frequencyScriptCredReg}
   keys
@@ -200,10 +200,10 @@ genRegKeyCert
 genDeRegKeyCert ::
   (HasCallStack, Era era) =>
   Constants ->
-  KeyPairs c ->
-  MultiSigPairs c ->
-  DState c ->
-  Gen (Maybe (DCert c, CertCred c))
+  KeyPairs era ->
+  MultiSigPairs era ->
+  DState era ->
+  Gen (Maybe (DCert era, CertCred era))
 genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys scripts dState =
   QC.frequency
     [ ( frequencyKeyCredDeReg,
@@ -253,10 +253,10 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
 genDelegation ::
   (HasCallStack, Era era) =>
   Constants ->
-  KeyPairs c ->
-  MultiSigPairs c ->
-  DPState c ->
-  Gen (Maybe (DCert c, CertCred c))
+  KeyPairs era ->
+  MultiSigPairs era ->
+  DPState era ->
+  Gen (Maybe (DCert era, CertCred era))
 genDelegation
   Constants {frequencyKeyCredDelegation, frequencyScriptCredDelegation}
   keys
@@ -300,11 +300,11 @@ genDelegation
 genGenesisDelegation ::
   (HasCallStack, Era era) =>
   -- | Core nodes
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  [(GenesisKeyPair era, AllIssuerKeys era 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
-  [AllIssuerKeys c 'GenesisDelegate] ->
-  DPState c ->
-  Gen (Maybe (DCert c, CertCred c))
+  [AllIssuerKeys era 'GenesisDelegate] ->
+  DPState era ->
+  Gen (Maybe (DCert era, CertCred era))
 genGenesisDelegation coreNodes delegateKeys dpState =
   if null genesisDelegators || null availableDelegatees
     then pure Nothing
@@ -340,12 +340,12 @@ genGenesisDelegation coreNodes delegateKeys dpState =
 genStakePool ::
   (HasCallStack, Era era) =>
   -- | Available keys for stake pool registration
-  [AllIssuerKeys c 'StakePool] ->
+  [AllIssuerKeys era 'StakePool] ->
   -- | KeyPairs containing staking keys to act as owners/reward account
-  KeyPairs c ->
+  KeyPairs era ->
   -- | Minimum pool cost Protocol Param
   Coin ->
-  Gen (PoolParams c, KeyPair 'StakePool c)
+  Gen (PoolParams era, KeyPair 'StakePool era)
 genStakePool poolKeys skeys (Coin minPoolCost) =
   mkPoolParams
     <$> QC.elements poolKeys
@@ -379,10 +379,10 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
 -- | Generate `RegPool` and the key witness.
 genRegPool ::
   (HasCallStack, Era era) =>
-  [AllIssuerKeys c 'StakePool] ->
-  KeyPairs c ->
+  [AllIssuerKeys era 'StakePool] ->
+  KeyPairs era ->
   Coin ->
-  Gen (Maybe (DCert c, CertCred c))
+  Gen (Maybe (DCert era, CertCred era))
 genRegPool poolKeys keyPairs minPoolCost = do
   (pps, poolKey) <- genStakePool poolKeys keyPairs minPoolCost
   pure $ Just (DCertPool (RegPool pps), PoolCred poolKey)
@@ -435,11 +435,11 @@ genInstantaneousRewards ::
   (HasCallStack, Era era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate) ->
+  Map (KeyHash 'GenesisDelegate era) (AllIssuerKeys era 'GenesisDelegate) ->
   PParams ->
   AccountState ->
-  DState c ->
-  Gen (Maybe (DCert c, CertCred c))
+  DState era ->
+  Gen (Maybe (DCert era, CertCred era))
 genInstantaneousRewards s genesisDelegatesByHash pparams accountState delegSt = do
   let (GenDelegs genDelegs_) = _genDelegs delegSt
       lookupGenDelegate' gk =

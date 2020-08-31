@@ -106,14 +106,14 @@ mutateCoin lower upper (Coin val) =
   Coin . fromIntegral <$> mutateNat lower upper (fromIntegral val)
 
 -- | Mutator of 'Tx' which mutates the contained transaction
-mutateTx :: Era era => Tx c -> Gen (Tx c)
+mutateTx :: Era era => Tx era -> Gen (Tx era)
 mutateTx txwits = do
   body' <- mutateTxBody $ _body txwits
   pure $ Tx body' (_witnessSet txwits) SNothing
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.
-mutateTxBody :: Era era => TxBody c -> Gen (TxBody c)
+mutateTxBody :: Era era => TxBody era -> Gen (TxBody era)
 mutateTxBody tx = do
   inputs' <- mutateInputs $ Set.toList (_inputs tx)
   outputs' <- mutateOutputs $ _outputs tx
@@ -129,7 +129,7 @@ mutateTxBody tx = do
       SNothing
 
 -- | Mutator for a list of 'TxIn'.
-mutateInputs :: Era era => [TxIn c] -> Gen [TxIn c]
+mutateInputs :: Era era => [TxIn era] -> Gen [TxIn era]
 mutateInputs [] = pure []
 mutateInputs (txin : txins) = do
   mtxin <- mutateInput txin
@@ -139,13 +139,13 @@ mutateInputs (txin : txins) = do
 
 -- | Mutator for a single 'TxIn', which mutates the index of the output to
 -- spend.
-mutateInput :: Era era => TxIn c -> Gen (TxIn c)
+mutateInput :: Era era => TxIn era -> Gen (TxIn era)
 mutateInput (TxIn idx index) = do
   index' <- mutateNat 0 100 index
   pure $ TxIn idx index'
 
 -- | Mutator for a list of 'TxOut'.
-mutateOutputs :: Era era => StrictSeq (TxOut c) -> Gen (StrictSeq (TxOut c))
+mutateOutputs :: Era era => StrictSeq (TxOut era) -> Gen (StrictSeq (TxOut era))
 mutateOutputs StrictSeq.Empty = pure StrictSeq.Empty
 mutateOutputs (txout :<| txouts) = do
   mtxout <- mutateOutput txout
@@ -155,10 +155,10 @@ mutateOutputs (txout :<| txouts) = do
 
 -- | Mutator for a single 'TxOut' which mutates the associated 'Coin' value of
 -- the output.
-mutateOutput :: Era era => TxOut c -> Gen (TxOut c)
-mutateOutput (TxOut addr c) = do
-  c' <- mutateCoin 0 100 c
-  pure $ TxOut addr c'
+mutateOutput :: Era era => TxOut era -> Gen (TxOut era)
+mutateOutput (TxOut addr era) = do
+  era' <- mutateCoin 0 100 era
+  pure $ TxOut addr era'
 
 -- Mutators for 'DelegationData'
 
@@ -182,7 +182,7 @@ mutateEpoch lower upper (EpochNo val) =
 -- A 'RegPool' certificate mutates the staking key, the pool's cost and margin.
 -- A 'Delegate' certificates selects randomly keys for delegator and delegatee
 -- from the supplied list of keypairs.
-mutateDCert :: Era era => KeyPairs c -> DPState c -> DCert c -> Gen (DCert c)
+mutateDCert :: Era era => KeyPairs era -> DPState era -> DCert era -> Gen (DCert era)
 mutateDCert keys _ (DCertDeleg (RegKey _)) =
   DCertDeleg . RegKey . KeyHashObj . hashKey . vKey . snd <$> Gen.element keys
 mutateDCert keys _ (DCertDeleg (DeRegKey _)) =

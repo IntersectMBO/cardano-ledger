@@ -35,6 +35,7 @@ module Test.Shelley.Spec.Ledger.Examples.Cast
   )
 where
 
+import Cardano.Ledger.Era
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -51,8 +52,6 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-
-import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyPair (..),
@@ -80,19 +79,19 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 
 -- | Alice's payment key pair
-alicePay :: Era era => KeyPair 'Payment c
+alicePay :: Era era => KeyPair 'Payment era
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
 
 -- | Alice's stake key pair
-aliceStake :: Era era => KeyPair 'Staking c
+aliceStake :: Era era => KeyPair 'Staking era
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
 
 -- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
-alicePoolKeys :: Era era => AllIssuerKeys c 'StakePool
+alicePoolKeys :: Era era => AllIssuerKeys era 'StakePool
 alicePoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -103,26 +102,26 @@ alicePoolKeys =
     (skCold, vkCold) = mkKeyPair (1, 0, 0, 0, 1)
 
 -- | Alice's base address
-aliceAddr :: Era era => Addr c
+aliceAddr :: Era era => Addr era
 aliceAddr = mkAddr (alicePay, aliceStake)
 
-alicePHK :: Era era => Credential 'Payment c
+alicePHK :: Era era => Credential 'Payment era
 alicePHK = (KeyHashObj . hashKey . vKey) alicePay
 
 -- | Alice's stake credential
-aliceSHK :: Era era => Credential 'Staking c
+aliceSHK :: Era era => Credential 'Staking era
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
 -- | Alice's base address
-alicePtrAddr :: Era era => Addr c
+alicePtrAddr :: Era era => Addr era
 alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
 
 -- | Alice's stake pool parameters
-alicePoolParams :: forall c. Era era => PoolParams c
+alicePoolParams :: forall era. Era era => PoolParams era
 alicePoolParams =
   PoolParams
     { _poolPubKey = (hashKey . vKey . cold) alicePoolKeys,
-      _poolVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @c),
+      _poolVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @era),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeMkUnitInterval 0.1,
@@ -138,65 +137,65 @@ alicePoolParams =
     }
 
 -- | Alice's VRF key hash
-aliceVRFKeyHash :: forall c. Era era => Hash c (VerKeyVRF c)
-aliceVRFKeyHash = hashVerKeyVRF (snd $ vrf (alicePoolKeys @c))
+aliceVRFKeyHash :: forall era. Era era => Hash era (VerKeyVRF era)
+aliceVRFKeyHash = hashVerKeyVRF (snd $ vrf (alicePoolKeys @era))
 
 -- | Bob's payment key pair
-bobPay :: Era era => KeyPair 'Payment c
+bobPay :: Era era => KeyPair 'Payment era
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (2, 2, 2, 2, 2)
 
 -- | Bob's stake key pair
-bobStake :: Era era => KeyPair 'Staking c
+bobStake :: Era era => KeyPair 'Staking era
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
 
 -- | Bob's address
-bobAddr :: Era era => Addr c
+bobAddr :: Era era => Addr era
 bobAddr = mkAddr (bobPay, bobStake)
 
 -- | Bob's stake credential
-bobSHK :: Era era => Credential 'Staking c
+bobSHK :: Era era => Credential 'Staking era
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 -- Carl's payment key pair
-carlPay :: Era era => KeyPair 'Payment c
+carlPay :: Era era => KeyPair 'Payment era
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (4, 4, 4, 4, 4)
 
 -- | Carl's stake key pair
-carlStake :: Era era => KeyPair 'Staking c
+carlStake :: Era era => KeyPair 'Staking era
 carlStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
 
 -- | Carl's address
-carlAddr :: Era era => Addr c
+carlAddr :: Era era => Addr era
 carlAddr = mkAddr (carlPay, carlStake)
 
 -- | Carl's stake credential
-carlSHK :: Era era => Credential 'Staking c
+carlSHK :: Era era => Credential 'Staking era
 carlSHK = (KeyHashObj . hashKey . vKey) carlStake
 
 -- | Daria's payment key pair
-dariaPay :: Era era => KeyPair 'Payment c
+dariaPay :: Era era => KeyPair 'Payment era
 dariaPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (6, 6, 6, 6, 6)
 
 -- | Daria's stake key pair
-dariaStake :: Era era => KeyPair 'Staking c
+dariaStake :: Era era => KeyPair 'Staking era
 dariaStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
 
 -- | Daria's address
-dariaAddr :: Era era => Addr c
+dariaAddr :: Era era => Addr era
 dariaAddr = mkAddr (dariaPay, dariaStake)
 
 -- | Daria's stake credential
-dariaSHK :: Era era => Credential 'Staking c
+dariaSHK :: Era era => Credential 'Staking era
 dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake

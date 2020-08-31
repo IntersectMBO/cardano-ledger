@@ -31,7 +31,7 @@ metadataMaxSize = 3
 genMetaData ::
   Era era =>
   Constants ->
-  Gen (StrictMaybe MetaData, StrictMaybe (MetaDataHash c))
+  Gen (StrictMaybe MetaData, StrictMaybe (MetaDataHash era))
 genMetaData (Constants {frequencyTxWithMetaData}) =
   QC.frequency
     [ (frequencyTxWithMetaData, genMetaData'),
@@ -41,7 +41,7 @@ genMetaData (Constants {frequencyTxWithMetaData}) =
 -- | Generate Metadata (and compute hash) of size up to 'metadataMaxSize'
 genMetaData' ::
   Era era =>
-  Gen (StrictMaybe MetaData, StrictMaybe (MetaDataHash c))
+  Gen (StrictMaybe MetaData, StrictMaybe (MetaDataHash era))
 genMetaData' = do
   n <- QC.choose (1, metadataMaxSize)
   md <-

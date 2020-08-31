@@ -8,7 +8,7 @@
 module Test.Shelley.Spec.Ledger.Orphans () where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
-
+import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Era
 import Shelley.Spec.Ledger.Keys
 

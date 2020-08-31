@@ -51,7 +51,7 @@ feesNonDecreasing ssts =
 -- fees increases by the sum of withdrawals of a transaction.
 potsSumIncreaseWdrls ::
   Era era =>
-  [SourceSignalTarget (UTXO c)] ->
+  [SourceSignalTarget (UTXO era)] ->
   Property
 potsSumIncreaseWdrls ssts =
   conjoin $

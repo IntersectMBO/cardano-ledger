@@ -27,6 +27,8 @@ module Test.Shelley.Spec.Ledger.BenchmarkFunctions
 where
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
+import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Era (Era (..))
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import qualified Data.Map as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -41,8 +43,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-
-import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
@@ -88,7 +88,9 @@ import Shelley.Spec.Ledger.TxData
     _poolVrf,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
-import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original (C)
+import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
+  ( C_Crypto,
+  )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
     genesisId,
@@ -104,12 +106,17 @@ import Test.Shelley.Spec.Ledger.Utils
 
 data B
 
-instance Crypto B where
-  type KES B = KES Original.C
-  type VRF B = VRF Original.C
-  type DSIGN B = DSIGN Original.C
-  type HASH B = Blake2b_256
-  type ADDRHASH B = Blake2b_256
+instance Era B where
+  type Crypto B = B_Crypto
+
+data B_Crypto
+
+instance Cardano.Ledger.Crypto.Crypto B_Crypto where
+  type KES B_Crypto = KES Original.C_Crypto
+  type VRF B_Crypto = VRF Original.C_Crypto
+  type DSIGN B_Crypto = DSIGN Original.C_Crypto
+  type HASH B_Crypto = Blake2b_256
+  type ADDRHASH B_Crypto = Blake2b_256
 
 -- =========================================================
 

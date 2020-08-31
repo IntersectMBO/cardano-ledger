@@ -16,13 +16,12 @@ module Test.Shelley.Spec.Ledger.Generator.Presets
   )
 where
 
+import Cardano.Ledger.Era (Era)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.Address (scriptsToAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
-
-import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash,
@@ -48,14 +47,14 @@ import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs, maxKESIterations, mkKESKey
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
-genEnv :: Era era => proxy c -> GenEnv c
+genEnv :: Era era => proxy era -> GenEnv era
 genEnv _ =
   GenEnv
     (keySpace defaultConstants)
     defaultConstants
 
 -- | Example keyspace for use in generators
-keySpace :: Era era => Constants -> KeySpace c
+keySpace :: Era era => Constants -> KeySpace era
 keySpace c =
   KeySpace
     (coreNodeKeys c)
@@ -65,26 +64,26 @@ keySpace c =
     (mSigCombinedScripts c)
 
 -- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: Era era => Constants -> KeyPairs c
+keyPairs :: Era era => Constants -> KeyPairs era
 keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: Era era => Constants -> Int -> Int -> Gen (KeyPairs c)
+someKeyPairs :: Era era => Constants -> Int -> Int -> Gen (KeyPairs era)
 someKeyPairs c lower upper =
   take
     <$> QC.choose (lower, upper)
     <*> QC.shuffle (keyPairs c)
 
-mSigBaseScripts :: Era era => Constants -> MultiSigPairs c
+mSigBaseScripts :: Era era => Constants -> MultiSigPairs era
 mSigBaseScripts c = mkMSigScripts (keyPairs c)
 
-mSigCombinedScripts :: Era era => Constants -> MultiSigPairs c
+mSigCombinedScripts :: Era era => Constants -> MultiSigPairs era
 mSigCombinedScripts c@(Constants {numBaseScripts}) =
   mkMSigCombinations . take numBaseScripts $ mSigBaseScripts c
 
 -- | Select between _lower_ and _upper_ scripts from the possible combinations
 -- of the first `numBaseScripts` multi-sig scripts of `mSigScripts`.
-someScripts :: Era era => Constants -> Int -> Int -> Gen (MultiSigPairs c)
+someScripts :: Era era => Constants -> Int -> Int -> Gen (MultiSigPairs era)
 someScripts c lower upper =
   take
     <$> QC.choose (lower, upper)
@@ -94,7 +93,10 @@ someScripts c lower upper =
 --
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
-coreNodeKeys :: Era era => Constants -> [(KeyPair 'Genesis c, AllIssuerKeys c 'GenesisDelegate)]
+coreNodeKeys ::
+  Era era =>
+  Constants ->
+  [(KeyPair 'Genesis era, AllIssuerKeys era 'GenesisDelegate)]
 coreNodeKeys c@Constants {numCoreNodes} =
   [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0),
       issuerKeys c 0 x
@@ -104,7 +106,7 @@ coreNodeKeys c@Constants {numCoreNodes} =
   where
     toKeyPair (sk, vk) = KeyPair vk sk
 
-genUtxo0 :: Era era => Constants -> Gen (UTxO c)
+genUtxo0 :: Era era => Constants -> Gen (UTxO era)
 genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts
@@ -115,14 +117,14 @@ genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   return (genesisCoins outs)
 
 -- Pre-generate a set of keys to use for genesis delegates.
-genesisDelegates :: Era era => Constants -> [AllIssuerKeys c 'GenesisDelegate]
+genesisDelegates :: Era era => Constants -> [AllIssuerKeys era 'GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
     | x <- [0 .. 50]
   ]
 
 -- Pre-generate a set of keys to use for stake pools.
-stakePoolKeys :: Era era => Constants -> [AllIssuerKeys c 'StakePool]
+stakePoolKeys :: Era era => Constants -> [AllIssuerKeys era 'StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
     | x <- [0 .. 50]
@@ -136,7 +138,7 @@ issuerKeys ::
   --   "types" of issuer.
   Word64 ->
   Word64 ->
-  AllIssuerKeys c r
+  AllIssuerKeys era r
 issuerKeys Constants {maxSlotTrace} ns x =
   let (skCold, vkCold) = mkKeyPair (x, 0, 0, 0, ns + 1)
    in AllIssuerKeys
@@ -160,7 +162,10 @@ issuerKeys Constants {maxSlotTrace} ns x =
           hk = hashKey vkCold
         }
 
-genesisDelegs0 :: Era era => Constants -> Map (KeyHash 'Genesis c) (GenDelegPair c)
+genesisDelegs0 ::
+  Era era =>
+  Constants ->
+  Map (KeyHash 'Genesis era) (GenDelegPair era)
 genesisDelegs0 c =
   Map.fromList
     [ ( hashVKey gkey,
