@@ -11,11 +11,14 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Utxo
-  ( genTx,
+  ( GenTxException (..),
+    genTx,
+    tryGenTx,
   )
 where
 
 import Cardano.Ledger.Era (Crypto, Era)
+import qualified Control.Exception as Exn
 import Control.Iterate.SetAlgebra (forwards)
 import qualified Data.Either as Either (partitionEithers)
 import Data.List (foldl')
@@ -24,6 +27,7 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API
   ( DCert,
@@ -120,18 +124,47 @@ genTx ::
   LedgerEnv ->
   (UTxOState era, DPState era) ->
   Gen (Tx era)
-genTx ge@(GenEnv _ (Constants {genTxRetries})) =
-  genTxRetry genTxRetries ge
+genTx ge le st =
+  tryGenTx ge le st >>= \case
+    Left exn -> Exn.throw exn
+    Right tx -> pure tx
+
+data GenTxException
+  = -- | Every transaction that the generator attempted had fees that exceeded
+    -- the available balance.
+    GenTxExceptionInsufficientSpendingBalance !InsufficientSpendingBalanceInfo
+  deriving (Show)
+
+instance Exn.Exception GenTxException
+
+-- | The data for 'GenTxExceptionInsufficientSpendingBalance'.
+data InsufficientSpendingBalanceInfo = InsufficientSpendingBalanceInfo
+  { -- | The smallest amount by which the fees exceeded the unspent balance for
+    -- any of the transactions attempted.
+    isbiDiff :: !Coin
+  }
+  deriving (Show)
+
+tryGenTx ::
+  (HasCallStack, Era era, Mock (Crypto era)) =>
+  GenEnv era ->
+  LedgerEnv ->
+  (UTxOState era, DPState era) ->
+  Gen (Either GenTxException (Tx era))
+tryGenTx ge@(GenEnv _ (Constants {genTxRetries})) =
+  genTxRetry genTxRetries (Coin (fromIntegral (maxBound :: Word64))) ge
 
 genTxRetry ::
   (HasCallStack, Era era, Mock (Crypto era)) =>
   Int ->
+  Coin ->
   GenEnv era ->
   LedgerEnv ->
   (UTxOState era, DPState era) ->
-  Gen (Tx era)
+  Gen (Either GenTxException (Tx era))
 genTxRetry
   n
+  minDiffSoFar
   ge@( GenEnv
          KeySpace_
            { ksKeyPairs,
@@ -200,11 +233,18 @@ genTxRetry
         then do
           let (actualFees', outputs') = mkOutputs fees
               txBody = draftTxBody {_txfee = actualFees', _outputs = outputs'}
-          pure $ Tx txBody (mkTxWits' txBody) metadata
-        else retryOrFail n
-    where
-      retryOrFail 0 = error "genTx: insufficient spending balance"
-      retryOrFail n' = genTxRetry (n' - 1) ge env st
+          pure $ Right $ Tx txBody (mkTxWits' txBody) metadata
+        else do
+          let minDiffSoFar' = min minDiffSoFar (fees - spendingBalance)
+          if n < 1
+            then
+              pure $
+                Left $
+                  GenTxExceptionInsufficientSpendingBalance
+                    InsufficientSpendingBalanceInfo
+                      { isbiDiff = minDiffSoFar'
+                      }
+            else genTxRetry (n - 1) minDiffSoFar' ge env st
 
 genTimeToLive :: SlotNo -> Gen SlotNo
 genTimeToLive currentSlot = do
