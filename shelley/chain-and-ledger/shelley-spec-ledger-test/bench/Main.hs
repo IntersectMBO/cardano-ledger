@@ -15,6 +15,13 @@ import BenchValidation
     updateChain,
     validateInput,
   )
+-- How to precompute env for the UTxO transactions
+
+-- How to precompute env for the Stake Delegation transactions
+-- How to precompute env for the StakeKey transactions
+-- How to compute an initial state with N StakePools
+
+import Cardano.Ledger.Era (Crypto (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (dom, forwards, keysEqual, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
@@ -32,12 +39,6 @@ import Criterion.Main
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
--- How to precompute env for the UTxO transactions
-
--- How to precompute env for the Stake Delegation transactions
--- How to precompute env for the StakeKey transactions
--- How to compute an initial state with N StakePools
-
 import Shelley.Spec.Ledger.Bench.Gen
   ( genBlock,
     genChainState,
@@ -45,7 +46,6 @@ import Shelley.Spec.Ledger.Bench.Gen
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
@@ -113,7 +113,7 @@ profileUTxO = do
 -- ==========================================
 -- Registering Stake Keys
 
-touchDPState :: DPState crypto -> Int
+touchDPState :: DPState era -> Int
 touchDPState (DPState _x _y) = 1
 
 touchUTxOState :: Shelley.Spec.Ledger.LedgerState.UTxOState cryto -> Int
@@ -170,7 +170,7 @@ epochAt x =
         [ bench "Using maps" (whnf action2m arg)
         ]
 
-action2m :: Crypto c => (DState c, PState c, UTxO c) -> SnapShot c
+action2m :: Era era => (DState era, PState era, UTxO era) -> SnapShot era
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 dstate' :: DState C
@@ -329,7 +329,6 @@ varyDelegState tag fixed changes initstate action =
         (\state -> bench (show n) (whnf (action 1 fixed) state))
 
 -- =============================================================================
-
 
 main :: IO ()
 -- main=profileValid

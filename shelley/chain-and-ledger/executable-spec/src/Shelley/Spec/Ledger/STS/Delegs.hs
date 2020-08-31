@@ -21,6 +21,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans, (?!), (?!:))
@@ -37,7 +38,6 @@ import Shelley.Spec.Ledger.BaseTypes
     networkId,
   )
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
@@ -64,41 +64,41 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 
-data DELEGS crypto
+data DELEGS era
 
-data DelegsEnv crypto = DelegsEnv
+data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: SlotNo,
     delegsIx :: Ix,
     delegspp :: PParams,
-    delegsTx :: (Tx crypto),
+    delegsTx :: (Tx era),
     delegsAccount :: AccountState
   }
   deriving (Show)
 
 instance
-  Crypto crypto =>
-  STS (DELEGS crypto)
+  Era era =>
+  STS (DELEGS era)
   where
-  type State (DELEGS crypto) = DPState crypto
-  type Signal (DELEGS crypto) = Seq (DCert crypto)
-  type Environment (DELEGS crypto) = DelegsEnv crypto
-  type BaseM (DELEGS crypto) = ShelleyBase
-  data PredicateFailure (DELEGS crypto)
+  type State (DELEGS era) = DPState era
+  type Signal (DELEGS era) = Seq (DCert era)
+  type Environment (DELEGS era) = DelegsEnv era
+  type BaseM (DELEGS era) = ShelleyBase
+  data PredicateFailure (DELEGS era)
     = DelegateeNotRegisteredDELEG
-        !(KeyHash 'StakePool crypto) -- target pool which is not registered
+        !(KeyHash 'StakePool era) -- target pool which is not registered
     | WithdrawalsNotInRewardsDELEGS
-        !(Map (RewardAcnt crypto) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
-    | DelplFailure (PredicateFailure (DELPL crypto)) -- Subtransition Failures
+        !(Map (RewardAcnt era) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
+    | DelplFailure (PredicateFailure (DELPL era)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyDelegation]
   transitionRules = [delegsTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (DELEGS crypto))
+instance NoUnexpectedThunks (PredicateFailure (DELEGS era))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (DELEGS crypto))
+  (Typeable era, Era era) =>
+  ToCBOR (PredicateFailure (DELEGS era))
   where
   toCBOR = \case
     DelegateeNotRegisteredDELEG kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
@@ -108,8 +108,8 @@ instance
         <> toCBOR a
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (DELEGS crypto))
+  (Era era) =>
+  FromCBOR (PredicateFailure (DELEGS era))
   where
   fromCBOR =
     decodeRecordSum "PredicateFailure" $
@@ -127,9 +127,9 @@ instance
       )
 
 delegsTransition ::
-  forall crypto.
-  Crypto crypto =>
-  TransitionRule (DELEGS crypto)
+  forall era.
+  Era era =>
+  TransitionRule (DELEGS era)
 delegsTransition = do
   TRC (env@(DelegsEnv slot txIx pp tx acnt), dpstate, certificates) <- judgmentContext
   network <- liftSTS $ asks networkId
@@ -148,7 +148,7 @@ delegsTransition = do
               (Map.mapKeys (mkRwdAcnt network) rewards)
           )
 
-      let wdrls_' :: RewardAccounts crypto
+      let wdrls_' :: RewardAccounts era
           wdrls_' =
             Map.foldrWithKey
               ( \(RewardAcnt _ cred) _coin ->
@@ -160,7 +160,7 @@ delegsTransition = do
       pure $ dpstate {_dstate = ds {_rewards = rewards'}}
     gamma :|> c -> do
       dpstate' <-
-        trans @(DELEGS crypto) $ TRC (env, dpstate, gamma)
+        trans @(DELEGS era) $ TRC (env, dpstate, gamma)
 
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
@@ -173,12 +173,12 @@ delegsTransition = do
       isDelegationRegistered ?!: id
 
       let ptr = Ptr slot txIx (fromIntegral $ length gamma)
-      trans @(DELPL crypto) $
+      trans @(DELPL era) $
         TRC (DelplEnv slot ptr pp acnt, dpstate', c)
   where
     -- @wdrls_@ is small and @rewards@ big, better to transform the former
     -- than the latter into the right shape so we can call 'Map.isSubmapOf'.
-    isSubmapOf :: Map (RewardAcnt crypto) Coin -> RewardAccounts crypto -> Bool
+    isSubmapOf :: Map (RewardAcnt era) Coin -> RewardAccounts era -> Bool
     isSubmapOf wdrls_ rewards = wdrls_' `Map.isSubmapOf` rewards
       where
         wdrls_' =
@@ -188,7 +188,7 @@ delegsTransition = do
             ]
 
 instance
-  Crypto crypto =>
-  Embed (DELPL crypto) (DELEGS crypto)
+  Era era =>
+  Embed (DELPL era) (DELEGS era)
   where
   wrapFailed = DelplFailure

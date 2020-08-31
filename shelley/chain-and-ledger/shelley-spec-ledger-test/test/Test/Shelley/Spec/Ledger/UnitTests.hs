@@ -10,6 +10,7 @@
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Crypto (VRF)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -38,7 +39,6 @@ import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
@@ -177,7 +177,7 @@ testNoGenesisOverlay =
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
   checkLeaderValue
-    (VRF.mkTestOutputVRF 0 :: VRF.OutputVRF (VRF C))
+    (VRF.mkTestOutputVRF 0 :: VRF.OutputVRF (VRF C_Crypto))
     (1 % 2)
     (mkActiveSlotCoeff $ unsafeMkUnitInterval 1)
     @?= True
@@ -211,7 +211,7 @@ instance Arbitrary VRFNatVal where
           2
             ^ ( 8
                   * VRF.sizeOutputVRF
-                    (Proxy @(VRF C))
+                    (Proxy @(VRF C_Crypto))
               )
         )
   shrink (VRFNatVal v) = VRFNatVal <$> shrinkIntegral v
@@ -238,7 +238,7 @@ instance Arbitrary StakeProportion where
 -- | Test @checkLeaderVal@ in 'Shelley.Spec.Ledger.BlockChain'
 testCheckLeaderVal ::
   forall v.
-  (v ~ VRF C) =>
+  (v ~ VRF C_Crypto) =>
   -- (v ~ CLVVRF) =>
   TestTree
 testCheckLeaderVal =

@@ -11,9 +11,10 @@ where
 
 import Cardano.Binary (ToCBOR (..))
 import qualified Cardano.Crypto.Hash as Hash
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Crypto (HASH)
+import Cardano.Ledger.Era (Crypto (..))
 
-class Crypto c => HashAnnotated a c | a -> c where
-  hashAnnotated :: a -> Hash.Hash (HASH c) a
-  default hashAnnotated :: ToCBOR a => a -> Hash.Hash (HASH c) a
-  hashAnnotated = Hash.hashWithSerialiser @(HASH c) toCBOR
+class Era e => HashAnnotated a e | a -> e where
+  hashAnnotated :: a -> Hash.Hash (HASH (Crypto e)) a
+  default hashAnnotated :: ToCBOR a => a -> Hash.Hash (HASH (Crypto e)) a
+  hashAnnotated = Hash.hashWithSerialiser @(HASH (Crypto e)) toCBOR

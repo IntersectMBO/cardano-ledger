@@ -15,6 +15,7 @@ module Shelley.Spec.Ledger.STS.Tick
   )
 where
 
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.Monad.Trans.Reader (asks)
@@ -23,7 +24,6 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
@@ -38,37 +38,37 @@ import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH)
 import Shelley.Spec.Ledger.STS.Rupd (RUPD, RupdEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo, epochInfoEpoch)
 
-data TICK crypto
+data TICK era
 
-data TickEnv crypto
-  = TickEnv (Set (KeyHash 'Genesis crypto))
+data TickEnv era
+  = TickEnv (Set (KeyHash 'Genesis era))
 
 instance
-  Crypto crypto =>
-  STS (TICK crypto)
+  Era era =>
+  STS (TICK era)
   where
   type
-    State (TICK crypto) =
-      NewEpochState crypto
+    State (TICK era) =
+      NewEpochState era
   type
-    Signal (TICK crypto) =
+    Signal (TICK era) =
       SlotNo
-  type Environment (TICK crypto) = TickEnv crypto
-  type BaseM (TICK crypto) = ShelleyBase
-  data PredicateFailure (TICK crypto)
-    = NewEpochFailure (PredicateFailure (NEWEPOCH crypto)) -- Subtransition Failures
-    | RupdFailure (PredicateFailure (RUPD crypto)) -- Subtransition Failures
+  type Environment (TICK era) = TickEnv era
+  type BaseM (TICK era) = ShelleyBase
+  data PredicateFailure (TICK era)
+    = NewEpochFailure (PredicateFailure (NEWEPOCH era)) -- Subtransition Failures
+    | RupdFailure (PredicateFailure (RUPD era)) -- Subtransition Failures
     deriving (Show, Generic, Eq)
 
   initialRules = []
   transitionRules = [bheadTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (TICK crypto))
+instance NoUnexpectedThunks (PredicateFailure (TICK era))
 
 adoptGenesisDelegs ::
-  EpochState crypto ->
+  EpochState era ->
   SlotNo ->
-  EpochState crypto
+  EpochState era
 adoptGenesisDelegs es slot = es'
   where
     ls = esLState es
@@ -95,9 +95,9 @@ adoptGenesisDelegs es slot = es'
     es' = es {esLState = ls'}
 
 bheadTransition ::
-  forall crypto.
-  (Crypto crypto) =>
-  TransitionRule (TICK crypto)
+  forall era.
+  (Era era) =>
+  TransitionRule (TICK era)
 bheadTransition = do
   TRC (TickEnv gkeys, nes@(NewEpochState _ bprev _ es _ _ _), slot) <-
     judgmentContext
@@ -107,10 +107,10 @@ bheadTransition = do
     epochInfoEpoch ei slot
 
   nes' <-
-    trans @(NEWEPOCH crypto) $
+    trans @(NEWEPOCH era) $
       TRC (NewEpochEnv slot gkeys, nes, epoch)
 
-  ru'' <- trans @(RUPD crypto) $ TRC (RupdEnv bprev es, nesRu nes', slot)
+  ru'' <- trans @(RUPD era) $ TRC (RupdEnv bprev es, nesRu nes', slot)
 
   let es'' = adoptGenesisDelegs (nesEs nes') slot
       nes'' =
@@ -121,13 +121,13 @@ bheadTransition = do
   pure nes''
 
 instance
-  Crypto crypto =>
-  Embed (NEWEPOCH crypto) (TICK crypto)
+  Era era =>
+  Embed (NEWEPOCH era) (TICK era)
   where
   wrapFailed = NewEpochFailure
 
 instance
-  Crypto crypto =>
-  Embed (RUPD crypto) (TICK crypto)
+  Era era =>
+  Embed (RUPD era) (TICK era)
   where
   wrapFailed = RupdFailure

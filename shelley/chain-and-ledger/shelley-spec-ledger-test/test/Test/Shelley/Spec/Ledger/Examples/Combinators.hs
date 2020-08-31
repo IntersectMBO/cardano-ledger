@@ -39,6 +39,7 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
   )
 where
 
+import Cardano.Ledger.Era (Era)
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.Iterate.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
 import Data.Map.Strict (Map)
@@ -61,7 +62,6 @@ import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ptr,
   )
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot, SnapShots (..))
 import Shelley.Spec.Ledger.Keys
@@ -97,7 +97,7 @@ import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
 --
 -- Evolve the appropriate nonces under the assumption
 -- that the candidate nonce is now frozen.
-evolveNonceFrozen :: forall c. Nonce -> ChainState c -> ChainState c
+evolveNonceFrozen :: forall era. Nonce -> ChainState era -> ChainState era
 evolveNonceFrozen n cs = cs {chainEvolvingNonce = chainEvolvingNonce cs ⭒ n}
 
 -- | = Evolve Nonces - Unfrozen
@@ -106,7 +106,7 @@ evolveNonceFrozen n cs = cs {chainEvolvingNonce = chainEvolvingNonce cs ⭒ n}
 -- that the candidate nonce is not frozen.
 -- Note: do not use this function when crossing the epoch boundary,
 -- instead use 'newEpoch'.
-evolveNonceUnfrozen :: forall c. Nonce -> ChainState c -> ChainState c
+evolveNonceUnfrozen :: forall era. Nonce -> ChainState era -> ChainState era
 evolveNonceUnfrozen n cs =
   cs
     { chainCandidateNonce = chainCandidateNonce cs ⭒ n,
@@ -120,11 +120,11 @@ evolveNonceUnfrozen n cs =
 -- Note: do not use this function when crossing the epoch boundary,
 -- instead use 'newEpoch'.
 newLab ::
-  forall c.
-  Crypto c =>
-  Block c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  Era era =>
+  Block era ->
+  ChainState era ->
+  ChainState era
 newLab b cs =
   cs {chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)}
   where
@@ -139,11 +139,11 @@ newLab b cs =
 -- Note: do not use this function when crossing the epoch boundary,
 -- instead use 'newEpoch'.
 feesAndDeposits ::
-  forall c.
+  forall era.
   Coin ->
   Coin ->
-  ChainState c ->
-  ChainState c
+  ChainState era ->
+  ChainState era
 feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -163,11 +163,11 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
 --
 -- Update the UTxO for given transaction body.
 newUTxO ::
-  forall c.
-  Crypto c =>
-  TxBody c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  Era era =>
+  TxBody era ->
+  ChainState era ->
+  ChainState era
 newUTxO txb cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -185,11 +185,11 @@ newUTxO txb cs = cs {chainNes = nes'}
 --
 -- Add a newly registered stake credential
 newStakeCred ::
-  forall c.
-  Credential 'Staking c ->
+  forall era.
+  Credential 'Staking era ->
   Ptr ->
-  ChainState c ->
-  ChainState c
+  ChainState era ->
+  ChainState era
 newStakeCred cred ptr cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -211,10 +211,10 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
 --
 -- De-register a stake credential and all associated data.
 deregStakeCred ::
-  forall c.
-  Credential 'Staking c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  Credential 'Staking era ->
+  ChainState era ->
+  ChainState era
 deregStakeCred cred cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -238,11 +238,11 @@ deregStakeCred cred cs = cs {chainNes = nes'}
 -- Create a delegation from the given stake credential to the given
 -- stake pool.
 delegation ::
-  forall c.
-  Credential 'Staking c ->
-  KeyHash 'StakePool c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  Credential 'Staking era ->
+  KeyHash 'StakePool era ->
+  ChainState era ->
+  ChainState era
 delegation cred pool cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -263,10 +263,10 @@ delegation cred pool cs = cs {chainNes = nes'}
 --
 -- Add a newly registered stake pool
 newPool ::
-  forall c.
-  PoolParams c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  PoolParams era ->
+  ChainState era ->
+  ChainState era
 newPool pool cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -285,10 +285,10 @@ newPool pool cs = cs {chainNes = nes'}
 
 -- | = Re-Register Stake Pool
 reregPool ::
-  forall c.
-  PoolParams c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  PoolParams era ->
+  ChainState era ->
+  ChainState era
 reregPool pool cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -307,10 +307,10 @@ reregPool pool cs = cs {chainNes = nes'}
 
 -- | = Re-Register Stake Pool
 updatePoolParams ::
-  forall c.
-  PoolParams c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  PoolParams era ->
+  ChainState era ->
+  ChainState era
 updatePoolParams pool cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -332,11 +332,11 @@ updatePoolParams pool cs = cs {chainNes = nes'}
 --
 -- Stage a stake pool for retirement.
 stageRetirement ::
-  forall c.
-  KeyHash 'StakePool c ->
+  forall era.
+  KeyHash 'StakePool era ->
   EpochNo ->
-  ChainState c ->
-  ChainState c
+  ChainState era ->
+  ChainState era
 stageRetirement kh e cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -354,10 +354,10 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 --
 -- Remove a stake pool.
 reapPool ::
-  forall c.
-  PoolParams c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  PoolParams era ->
+  ChainState era ->
+  ChainState era
 reapPool pool cs = cs {chainNes = nes'}
   where
     kh = _poolPubKey pool
@@ -377,7 +377,7 @@ reapPool pool cs = cs {chainNes = nes'}
     (rewards, unclaimed) =
       case Map.lookup rewardAddr (_rewards ds) of
         Nothing -> (_rewards ds, _poolDeposit pp)
-        Just c -> (Map.insert rewardAddr (c + _poolDeposit pp) (_rewards ds), Coin 0)
+        Just era -> (Map.insert rewardAddr (era + _poolDeposit pp) (_rewards ds), Coin 0)
     ds' =
       ds
         { _delegations = eval (_delegations ds ⋫ Set.singleton kh),
@@ -396,12 +396,12 @@ reapPool pool cs = cs {chainNes = nes'}
 --
 -- Add a credential to the MIR mapping for the given pot (reserves or treasury)
 mir ::
-  forall c.
-  Credential 'Staking c ->
+  forall era.
+  Credential 'Staking era ->
   MIRPot ->
   Coin ->
-  ChainState c ->
-  ChainState c
+  ChainState era ->
+  ChainState era
 mir cred pot amnt cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -426,11 +426,11 @@ mir cred pot amnt cs = cs {chainNes = nes'}
 --
 -- On the epoch boundary, reset the MIR mappings and augment the rewards.
 applyMIR ::
-  forall c.
+  forall era.
   MIRPot ->
-  Map (Credential 'Staking c) Coin ->
-  ChainState c ->
-  ChainState c
+  Map (Credential 'Staking era) Coin ->
+  ChainState era ->
+  ChainState era
 applyMIR pot rewards cs = cs {chainNes = nes'}
   where
     tot = sum rewards
@@ -458,10 +458,10 @@ applyMIR pot rewards cs = cs {chainNes = nes'}
 --
 -- Update the chain state with the given reward update
 rewardUpdate ::
-  forall c.
-  RewardUpdate c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  RewardUpdate era ->
+  ChainState era ->
+  ChainState era
 rewardUpdate ru cs = cs {chainNes = nes'}
   where
     nes' = (chainNes cs) {nesRu = SJust ru}
@@ -470,10 +470,10 @@ rewardUpdate ru cs = cs {chainNes = nes'}
 --
 -- Apply the given reward update to the chain state
 applyRewardUpdate ::
-  forall c.
-  RewardUpdate c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  RewardUpdate era ->
+  ChainState era ->
+  ChainState era
 applyRewardUpdate ru cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -484,11 +484,11 @@ applyRewardUpdate ru cs = cs {chainNes = nes'}
 --
 -- Add a new snapshot and rotate the others
 newSnapshot ::
-  forall c.
-  SnapShot c ->
+  forall era.
+  SnapShot era ->
   Coin ->
-  ChainState c ->
-  ChainState c
+  ChainState era ->
+  ChainState era
 newSnapshot snap fee cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -511,10 +511,10 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
 --
 -- Set the stake pool distribution to the given one.
 setPoolDistr ::
-  forall c.
-  PoolDistr c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  PoolDistr era ->
+  ChainState era ->
+  ChainState era
 setPoolDistr pd cs = cs {chainNes = nes'}
   where
     nes' = (chainNes cs) {nesPd = pd}
@@ -523,11 +523,11 @@ setPoolDistr pd cs = cs {chainNes = nes'}
 --
 -- Set the operational certificates counter for a given stake pool.
 setOCertCounter ::
-  forall c.
-  KeyHash 'BlockIssuer c ->
+  forall era.
+  KeyHash 'BlockIssuer era ->
   Word64 ->
-  ChainState c ->
-  ChainState c
+  ChainState era ->
+  ChainState era
 setOCertCounter kh n cs = cs {chainOCertIssue = counters}
   where
     counters = Map.insert kh n (chainOCertIssue cs)
@@ -536,10 +536,10 @@ setOCertCounter kh n cs = cs {chainOCertIssue = counters}
 --
 -- Record that the given stake pool (non-core node) produced a block.
 incrBlockCount ::
-  forall c.
-  KeyHash 'StakePool c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  KeyHash 'StakePool era ->
+  ChainState era ->
+  ChainState era
 incrBlockCount kh cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -555,11 +555,11 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- Note: This function subsumes the manipulations done by
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
-  forall c.
-  Crypto c =>
-  Block c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  Era era =>
+  Block era ->
+  ChainState era ->
+  ChainState era
 newEpoch b cs = cs'
   where
     ChainState
@@ -596,10 +596,10 @@ newEpoch b cs = cs'
 --
 -- Set the current protocol parameter proposals.
 setCurrentProposals ::
-  forall c.
-  ProposedPPUpdates c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  ProposedPPUpdates era ->
+  ChainState era ->
+  ChainState era
 setCurrentProposals ps cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -617,10 +617,10 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
 --
 -- Set the future protocol parameter proposals.
 setFutureProposals ::
-  forall c.
-  ProposedPPUpdates c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  ProposedPPUpdates era ->
+  ChainState era ->
+  ChainState era
 setFutureProposals ps cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -638,10 +638,10 @@ setFutureProposals ps cs = cs {chainNes = nes'}
 --
 -- Set the protocol parameters.
 setPParams ::
-  forall c.
+  forall era.
   PParams ->
-  ChainState c ->
-  ChainState c
+  ChainState era ->
+  ChainState era
 setPParams pp cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -651,10 +651,10 @@ setPParams pp cs = cs {chainNes = nes'}
 
 -- | = Set a future genesis delegation.
 setFutureGenDeleg ::
-  forall c.
-  (FutureGenDeleg c, GenDelegPair c) ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  (FutureGenDeleg era, GenDelegPair era) ->
+  ChainState era ->
+  ChainState era
 setFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
@@ -670,10 +670,10 @@ setFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
 
 -- | = Set a future genesis delegation.
 adoptFutureGenDeleg ::
-  forall c.
-  (FutureGenDeleg c, GenDelegPair c) ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  (FutureGenDeleg era, GenDelegPair era) ->
+  ChainState era ->
+  ChainState era
 adoptFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
   where
     nes = chainNes cs

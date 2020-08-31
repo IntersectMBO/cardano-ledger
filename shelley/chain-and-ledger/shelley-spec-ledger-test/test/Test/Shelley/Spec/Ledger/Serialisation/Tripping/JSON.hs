@@ -12,44 +12,63 @@ module Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON
   )
 where
 
+import Cardano.Ledger.Era
 import Data.Aeson (decode, encode, fromJSON, toJSON)
 import Data.Proxy
 import Hedgehog (Property)
 import qualified Hedgehog
-import Shelley.Spec.Ledger.Crypto
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
 import Test.Tasty
 import Test.Tasty.Hedgehog
 
-prop_roundtrip_Address_JSON :: forall c. Crypto c => Proxy c -> Property
+prop_roundtrip_Address_JSON ::
+  forall era.
+  Era era =>
+  Proxy era ->
+  Property
 prop_roundtrip_Address_JSON _ =
   -- If this fails, FundPair and ShelleyGenesis can also fail.
   Hedgehog.property $ do
-    addr <- Hedgehog.forAll $ genAddress @c
+    addr <- Hedgehog.forAll $ genAddress @era
+
     Hedgehog.tripping addr toJSON fromJSON
     Hedgehog.tripping addr encode decode
 
-prop_roundtrip_GenesisDelegationPair_JSON :: forall c. Crypto c => Proxy c -> Property
+prop_roundtrip_GenesisDelegationPair_JSON ::
+  forall era.
+  Era era =>
+  Proxy era ->
+  Property
 prop_roundtrip_GenesisDelegationPair_JSON _ =
   Hedgehog.property $ do
-    dp <- Hedgehog.forAll $ genGenesisDelegationPair @c
+    dp <- Hedgehog.forAll $ genGenesisDelegationPair @era
+
     Hedgehog.tripping dp toJSON fromJSON
     Hedgehog.tripping dp encode decode
 
-prop_roundtrip_FundPair_JSON :: forall c. Crypto c => Proxy c -> Property
+prop_roundtrip_FundPair_JSON ::
+  forall era.
+  Era era =>
+  Proxy era ->
+  Property
 prop_roundtrip_FundPair_JSON _ =
   -- If this fails, ShelleyGenesis can also fail.
   Hedgehog.property $ do
-    fp <- Hedgehog.forAll $ genGenesisFundPair @c
+    fp <- Hedgehog.forAll $ genGenesisFundPair @era
+
     Hedgehog.tripping fp toJSON fromJSON
     Hedgehog.tripping fp encode decode
 
-prop_roundtrip_ShelleyGenesis_JSON :: forall c. Crypto c => Proxy c -> Property
+prop_roundtrip_ShelleyGenesis_JSON ::
+  forall era.
+  Era era =>
+  Proxy era ->
+  Property
 prop_roundtrip_ShelleyGenesis_JSON _ = Hedgehog.withTests 500 $
   Hedgehog.property $
     do
-      sg <- Hedgehog.forAll $ genShelleyGenesis @c
+      sg <- Hedgehog.forAll $ genShelleyGenesis @era
       Hedgehog.tripping sg toJSON fromJSON
       Hedgehog.tripping sg encode decode
 

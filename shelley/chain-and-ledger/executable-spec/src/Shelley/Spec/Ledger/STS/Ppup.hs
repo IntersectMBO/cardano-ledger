@@ -21,6 +21,7 @@ import Cardano.Binary
     decodeWord,
     encodeListLen,
   )
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.Monad.Trans.Reader (asks)
@@ -31,17 +32,16 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
 
-data PPUP crypto
+data PPUP era
 
-data PPUPEnv crypto
-  = PPUPEnv SlotNo PParams (GenDelegs crypto)
+data PPUPEnv era
+  = PPUPEnv SlotNo PParams (GenDelegs era)
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)
@@ -59,15 +59,15 @@ instance FromCBOR VotingPeriod where
       1 -> pure VoteForNextEpoch
       k -> invalidKey k
 
-instance Typeable crypto => STS (PPUP crypto) where
-  type State (PPUP crypto) = PPUPState crypto
-  type Signal (PPUP crypto) = Maybe (Update crypto)
-  type Environment (PPUP crypto) = PPUPEnv crypto
-  type BaseM (PPUP crypto) = ShelleyBase
-  data PredicateFailure (PPUP crypto)
+instance Typeable era => STS (PPUP era) where
+  type State (PPUP era) = PPUPState era
+  type Signal (PPUP era) = Maybe (Update era)
+  type Environment (PPUP era) = PPUPEnv era
+  type BaseM (PPUP era) = ShelleyBase
+  data PredicateFailure (PPUP era)
     = NonGenesisUpdatePPUP
-        !(Set (KeyHash 'Genesis crypto)) -- KeyHashes which are voting
-        !(Set (KeyHash 'Genesis crypto)) -- KeyHashes which should be voting
+        !(Set (KeyHash 'Genesis era)) -- KeyHashes which are voting
+        !(Set (KeyHash 'Genesis era)) -- KeyHashes which should be voting
     | PPUpdateWrongEpoch
         !EpochNo -- current epoch
         !EpochNo -- intended epoch of update
@@ -80,11 +80,11 @@ instance Typeable crypto => STS (PPUP crypto) where
 
   transitionRules = [ppupTransitionNonEmpty]
 
-instance NoUnexpectedThunks (PredicateFailure (PPUP crypto))
+instance NoUnexpectedThunks (PredicateFailure (PPUP era))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (PPUP crypto))
+  (Typeable era, Era era) =>
+  ToCBOR (PredicateFailure (PPUP era))
   where
   toCBOR = \case
     (NonGenesisUpdatePPUP a b) ->
@@ -97,10 +97,10 @@ instance
     PVCannotFollowPPUP p -> encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR p
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (PPUP crypto))
+  (Era era) =>
+  FromCBOR (PredicateFailure (PPUP era))
   where
-  fromCBOR = decodeRecordSum "PredicateFailure (PPUP crypto)" $
+  fromCBOR = decodeRecordSum "PredicateFailure (PPUP era)" $
     \case
       0 -> do
         a <- fromCBOR
@@ -116,7 +116,7 @@ instance
         pure (2, PVCannotFollowPPUP p)
       k -> invalidKey k
 
-ppupTransitionNonEmpty :: Typeable crypto => TransitionRule (PPUP crypto)
+ppupTransitionNonEmpty :: Typeable era => TransitionRule (PPUP era)
 ppupTransitionNonEmpty = do
   TRC
     ( PPUPEnv slot pp (GenDelegs _genDelegs),

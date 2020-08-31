@@ -16,6 +16,7 @@ module Shelley.Spec.Ledger.STS.Ledgers
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad (foldM)
 import Control.State.Transition
@@ -31,7 +32,6 @@ import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
@@ -45,7 +45,7 @@ import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx, TxBody)
 
-data LEDGERS crypto
+data LEDGERS era
 
 data LedgersEnv = LedgersEnv
   { ledgersSlotNo :: SlotNo,
@@ -54,49 +54,49 @@ data LedgersEnv = LedgersEnv
   }
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  STS (LEDGERS crypto)
+  STS (LEDGERS era)
   where
-  type State (LEDGERS crypto) = LedgerState crypto
-  type Signal (LEDGERS crypto) = Seq (Tx crypto)
-  type Environment (LEDGERS crypto) = LedgersEnv
-  type BaseM (LEDGERS crypto) = ShelleyBase
-  data PredicateFailure (LEDGERS crypto)
-    = LedgerFailure (PredicateFailure (LEDGER crypto)) -- Subtransition Failures
+  type State (LEDGERS era) = LedgerState era
+  type Signal (LEDGERS era) = Seq (Tx era)
+  type Environment (LEDGERS era) = LedgersEnv
+  type BaseM (LEDGERS era) = ShelleyBase
+  data PredicateFailure (LEDGERS era)
+    = LedgerFailure (PredicateFailure (LEDGER era)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyLedgerState]
   transitionRules = [ledgersTransition]
 
-instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (LEDGERS crypto))
+instance (Era era) => NoUnexpectedThunks (PredicateFailure (LEDGERS era))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (LEDGERS crypto))
+  (Typeable era, Era era) =>
+  ToCBOR (PredicateFailure (LEDGERS era))
   where
   toCBOR (LedgerFailure e) = toCBOR e
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (LEDGERS crypto))
+  (Era era) =>
+  FromCBOR (PredicateFailure (LEDGERS era))
   where
   fromCBOR = LedgerFailure <$> fromCBOR
 
 ledgersTransition ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  forall era.
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  TransitionRule (LEDGERS crypto)
+  TransitionRule (LEDGERS era)
 ledgersTransition = do
   TRC (LedgersEnv slot pp account, ls, txwits) <- judgmentContext
   let (u, dp) = (_utxoState ls, _delegationState ls)
   (u'', dp'') <-
     foldM
       ( \(u', dp') (ix, tx) ->
-          trans @(LEDGER crypto) $
+          trans @(LEDGER era) $
             TRC (LedgerEnv slot ix pp account, (u', dp'), tx)
       )
       (u, dp)
@@ -106,9 +106,9 @@ ledgersTransition = do
   pure $ LedgerState u'' dp''
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  Embed (LEDGER crypto) (LEDGERS crypto)
+  Embed (LEDGER era) (LEDGERS era)
   where
   wrapFailed = LedgerFailure

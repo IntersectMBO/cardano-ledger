@@ -12,7 +12,8 @@ import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
-import Shelley.Spec.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.MetaData (MetaData (..), MetaDataHash, MetaDatum (..), hashMetaData)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -28,9 +29,9 @@ metadataMaxSize = 3
 
 -- | Generate Metadata (and compute hash) with frequency 'frequencyTxWithMetaData'
 genMetaData ::
-  Crypto c =>
+  Era era =>
   Constants ->
-  Gen (StrictMaybe MetaData, StrictMaybe (MetaDataHash c))
+  Gen (StrictMaybe MetaData, StrictMaybe (MetaDataHash era))
 genMetaData (Constants {frequencyTxWithMetaData}) =
   QC.frequency
     [ (frequencyTxWithMetaData, genMetaData'),
@@ -39,8 +40,8 @@ genMetaData (Constants {frequencyTxWithMetaData}) =
 
 -- | Generate Metadata (and compute hash) of size up to 'metadataMaxSize'
 genMetaData' ::
-  Crypto c =>
-  Gen (StrictMaybe MetaData, StrictMaybe (MetaDataHash c))
+  Era era =>
+  Gen (StrictMaybe MetaData, StrictMaybe (MetaDataHash era))
 genMetaData' = do
   n <- QC.choose (1, metadataMaxSize)
   md <-

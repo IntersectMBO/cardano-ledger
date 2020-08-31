@@ -10,6 +10,7 @@ module Test.Shelley.Spec.Ledger.Fees
 where
 
 import Cardano.Binary (serialize)
+import Cardano.Ledger.Era (Era)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
@@ -43,7 +44,6 @@ import Shelley.Spec.Ledger.BaseTypes
     textToUrl,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
@@ -72,7 +72,13 @@ import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
-sizeTest :: Crypto c => proxy c -> BSL.ByteString -> Tx c -> Integer -> Assertion
+sizeTest ::
+  Era era =>
+  proxy era ->
+  BSL.ByteString ->
+  Tx era ->
+  Integer ->
+  Assertion
 sizeTest _ b16 tx s = do
   (Base16.encode (serialize tx) @?= b16) >> (txsize tx @?= s)
 
@@ -110,7 +116,10 @@ alicePoolParams =
       _poolMargin = unsafeMkUnitInterval 0.1,
       _poolRAcnt = RewardAcnt Testnet aliceSHK,
       _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
-      _poolRelays = StrictSeq.singleton $ SingleHostName SNothing $ fromJust $ textToDns "relay.io",
+      _poolRelays =
+        StrictSeq.singleton $
+          SingleHostName SNothing $
+            fromJust $ textToDns "relay.io",
       _poolMD =
         SJust $
           PoolMetaData
@@ -251,7 +260,11 @@ txbDelegateStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
-      _certs = StrictSeq.fromList [DCertDeleg (Delegate $ Delegation bobSHK alicePoolKH)],
+      _certs =
+        StrictSeq.fromList
+          [ DCertDeleg
+              (Delegate $ Delegation bobSHK alicePoolKH)
+          ],
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
       _ttl = SlotNo 10,

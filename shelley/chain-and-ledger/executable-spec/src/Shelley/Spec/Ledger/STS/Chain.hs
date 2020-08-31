@@ -22,6 +22,8 @@ module Shelley.Spec.Ledger.STS.Chain
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Crypto (VRF)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Prelude
   ( MonadError (..),
     NFData,
@@ -67,7 +69,6 @@ import Shelley.Spec.Ledger.BlockChain
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto (Crypto, VRF)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 import Shelley.Spec.Ledger.Keys
@@ -120,32 +121,32 @@ import Shelley.Spec.Ledger.Slot (EpochNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
-data CHAIN crypto
+data CHAIN era
 
-data ChainState crypto = ChainState
-  { chainNes :: NewEpochState crypto,
-    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer crypto) Word64,
+data ChainState era = ChainState
+  { chainNes :: NewEpochState era,
+    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer era) Word64,
     chainEpochNonce :: Nonce,
     chainEvolvingNonce :: Nonce,
     chainCandidateNonce :: Nonce,
     chainPrevEpochNonce :: Nonce,
-    chainLastAppliedBlock :: WithOrigin (LastAppliedBlock crypto)
+    chainLastAppliedBlock :: WithOrigin (LastAppliedBlock era)
   }
   deriving (Show, Eq, Generic)
 
-instance NFData (ChainState crypto)
+instance NFData (ChainState era)
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
-  WithOrigin (LastAppliedBlock crypto) ->
+  WithOrigin (LastAppliedBlock era) ->
   EpochNo ->
-  UTxO crypto ->
+  UTxO era ->
   Coin ->
-  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
-  OverlaySchedule crypto ->
+  Map (KeyHash 'Genesis era) (GenDelegPair era) ->
+  OverlaySchedule era ->
   PParams ->
   Nonce ->
-  ChainState crypto
+  ChainState era
 initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
   ChainState
     ( NewEpochState
@@ -182,26 +183,26 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
     cs = Map.fromList (fmap (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    DSignable crypto (Hash crypto (TxBody crypto)),
-    KESignable crypto (BHBody crypto),
-    VRF.Signable (VRF crypto) Seed
+  ( Era era,
+    DSignable era (OCertSignable era),
+    DSignable era (Hash era (TxBody era)),
+    KESignable era (BHBody era),
+    VRF.Signable (VRF (Crypto era)) Seed
   ) =>
-  STS (CHAIN crypto)
+  STS (CHAIN era)
   where
   type
-    State (CHAIN crypto) =
-      ChainState crypto
+    State (CHAIN era) =
+      ChainState era
 
   type
-    Signal (CHAIN crypto) =
-      Block crypto
+    Signal (CHAIN era) =
+      Block era
 
-  type Environment (CHAIN crypto) = ()
-  type BaseM (CHAIN crypto) = ShelleyBase
+  type Environment (CHAIN era) = ()
+  type BaseM (CHAIN era) = ShelleyBase
 
-  data PredicateFailure (CHAIN crypto)
+  data PredicateFailure (CHAIN era)
     = HeaderSizeTooLargeCHAIN
         !Natural -- Header Size
         !Natural -- Max Header Size
@@ -211,23 +212,23 @@ instance
     | ObsoleteNodeCHAIN
         !Natural -- protocol version used
         !Natural -- max protocol version
-    | BbodyFailure !(PredicateFailure (BBODY crypto)) -- Subtransition Failures
-    | TickFailure !(PredicateFailure (TICK crypto)) -- Subtransition Failures
+    | BbodyFailure !(PredicateFailure (BBODY era)) -- Subtransition Failures
+    | TickFailure !(PredicateFailure (TICK era)) -- Subtransition Failures
     | TicknFailure !(PredicateFailure TICKN) -- Subtransition Failures
-    | PrtclFailure !(PredicateFailure (PRTCL crypto)) -- Subtransition Failures
-    | PrtclSeqFailure !(PrtlSeqFailure crypto) -- Subtransition Failures
+    | PrtclFailure !(PredicateFailure (PRTCL era)) -- Subtransition Failures
+    | PrtclSeqFailure !(PrtlSeqFailure era) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [chainTransition]
 
-instance Crypto crypto => NoUnexpectedThunks (PredicateFailure (CHAIN crypto))
+instance Era era => NoUnexpectedThunks (PredicateFailure (CHAIN era))
 
 chainChecks ::
-  (Crypto crypto, MonadError (PredicateFailure (CHAIN crypto)) m) =>
+  (Era era, MonadError (PredicateFailure (CHAIN era)) m) =>
   Natural ->
   PParams ->
-  BHeader crypto ->
+  BHeader era ->
   m ()
 chainChecks maxpv pp bh = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
@@ -241,14 +242,14 @@ chainChecks maxpv pp bh = do
     (ProtVer m _) = _protocolVersion pp
 
 chainTransition ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    DSignable crypto (Hash crypto (TxBody crypto)),
-    KESignable crypto (BHBody crypto),
-    VRF.Signable (VRF crypto) Seed
+  forall era.
+  ( Era era,
+    DSignable era (OCertSignable era),
+    DSignable era (Hash era (TxBody era)),
+    KESignable era (BHBody era),
+    VRF.Signable (VRF (Crypto era)) Seed
   ) =>
-  TransitionRule (CHAIN crypto)
+  TransitionRule (CHAIN era)
 chainTransition =
   judgmentContext
     >>= \(TRC ((), ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _))) -> do
@@ -267,7 +268,7 @@ chainTransition =
       let gkeys = getGKeys nes
 
       nes' <-
-        trans @(TICK crypto) $ TRC (TickEnv gkeys, nes, s)
+        trans @(TICK era) $ TRC (TickEnv gkeys, nes, s)
 
       let NewEpochState e1 _ _ _ _ _ _ = nes
           NewEpochState e2 _ bcur es _ _pd osched = nes'
@@ -286,7 +287,7 @@ chainTransition =
             )
 
       PrtclState cs' etaV' etaC' <-
-        trans @(PRTCL crypto) $
+        trans @(PRTCL era) $
           TRC
             ( PrtclEnv osched _pd _genDelegs eta0',
               PrtclState cs etaV etaC,
@@ -294,7 +295,7 @@ chainTransition =
             )
 
       BbodyState ls' bcur' <-
-        trans @(BBODY crypto) $
+        trans @(BBODY era) $
           TRC (BbodyEnv osched pp' account, BbodyState ls bcur, block)
 
       let nes'' = updateNES nes' bcur' ls'
@@ -309,46 +310,46 @@ chainTransition =
       pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    DSignable crypto (Hash crypto (TxBody crypto)),
-    KESignable crypto (BHBody crypto),
-    VRF.Signable (VRF crypto) Seed
+  ( Era era,
+    DSignable era (OCertSignable era),
+    DSignable era (Hash era (TxBody era)),
+    KESignable era (BHBody era),
+    VRF.Signable (VRF (Crypto era)) Seed
   ) =>
-  Embed (BBODY crypto) (CHAIN crypto)
+  Embed (BBODY era) (CHAIN era)
   where
   wrapFailed = BbodyFailure
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    DSignable crypto (Hash crypto (TxBody crypto)),
-    KESignable crypto (BHBody crypto),
-    VRF.Signable (VRF crypto) Seed
+  ( Era era,
+    DSignable era (OCertSignable era),
+    DSignable era (Hash era (TxBody era)),
+    KESignable era (BHBody era),
+    VRF.Signable (VRF (Crypto era)) Seed
   ) =>
-  Embed TICKN (CHAIN crypto)
+  Embed TICKN (CHAIN era)
   where
   wrapFailed = TicknFailure
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    DSignable crypto (Hash crypto (TxBody crypto)),
-    KESignable crypto (BHBody crypto),
-    VRF.Signable (VRF crypto) Seed
+  ( Era era,
+    DSignable era (OCertSignable era),
+    DSignable era (Hash era (TxBody era)),
+    KESignable era (BHBody era),
+    VRF.Signable (VRF (Crypto era)) Seed
   ) =>
-  Embed (TICK crypto) (CHAIN crypto)
+  Embed (TICK era) (CHAIN era)
   where
   wrapFailed = TickFailure
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    DSignable crypto (Hash crypto (TxBody crypto)),
-    KESignable crypto (BHBody crypto),
-    VRF.Signable (VRF crypto) Seed
+  ( Era era,
+    DSignable era (OCertSignable era),
+    DSignable era (Hash era (TxBody era)),
+    KESignable era (BHBody era),
+    VRF.Signable (VRF (Crypto era)) Seed
   ) =>
-  Embed (PRTCL crypto) (CHAIN crypto)
+  Embed (PRTCL era) (CHAIN era)
   where
   wrapFailed = PrtclFailure
 
@@ -363,7 +364,7 @@ data AdaPots = AdaPots
   deriving (Show, Eq)
 
 -- | Calculate the total ada pots in the chain state
-totalAdaPots :: ChainState crypto -> AdaPots
+totalAdaPots :: ChainState era -> AdaPots
 totalAdaPots (ChainState nes _ _ _ _ _ _) =
   AdaPots
     { treasuryAdaPot = treasury_,
@@ -381,7 +382,7 @@ totalAdaPots (ChainState nes _ _ _ _ _ _) =
     circulation = balance u
 
 -- | Calculate the total ada in the chain state
-totalAda :: ChainState crypto -> Coin
+totalAda :: ChainState era -> Coin
 totalAda cs =
   treasuryAdaPot + reservesAdaPot + rewardsAdaPot + utxoAdaPot + depositsAdaPot + feesAdaPot
   where

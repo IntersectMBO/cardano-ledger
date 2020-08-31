@@ -10,6 +10,8 @@ import Cardano.Crypto.DSIGN.Class
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.VRF.Class
+import Cardano.Ledger.Crypto (DSIGN, VRF)
+import Cardano.Ledger.Era
 import Cardano.Prelude (Natural, Word32, Word64, Word8)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
@@ -29,7 +31,6 @@ import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes hiding (Seed)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
@@ -45,7 +46,7 @@ import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.TxData
 import Test.Shelley.Spec.Ledger.Utils (mkHash)
 
-genShelleyGenesis :: Crypto c => Gen (ShelleyGenesis c)
+genShelleyGenesis :: Era era => Gen (ShelleyGenesis era)
 genShelleyGenesis =
   ShelleyGenesis
     <$> genUTCTime
@@ -64,17 +65,17 @@ genShelleyGenesis =
     <*> fmap Map.fromList genFundsList
     <*> genStaking
 
-genStaking :: Crypto c => Gen (ShelleyGenesisStaking c)
+genStaking :: Era era => Gen (ShelleyGenesisStaking era)
 genStaking =
   ShelleyGenesisStaking
     <$> fmap Map.fromList genPools
     <*> fmap Map.fromList genStake
 
 genPools ::
-  Crypto c =>
+  Era era =>
   Gen
-    [ ( KeyHash 'StakePool c,
-        PoolParams c
+    [ ( KeyHash 'StakePool era,
+        PoolParams era
       )
     ]
 genPools =
@@ -82,21 +83,21 @@ genPools =
     (,) <$> genKeyHash <*> genPoolParams
 
 genStake ::
-  Crypto c =>
+  Era era =>
   Gen
-    [ ( KeyHash 'Staking c,
-        KeyHash 'StakePool c
+    [ ( KeyHash 'Staking era,
+        KeyHash 'StakePool era
       )
     ]
 genStake =
   Gen.list (Range.linear 1 10) $
     (,) <$> genKeyHash <*> genKeyHash
 
-genPoolParams :: forall c. Crypto c => Gen (PoolParams c)
+genPoolParams :: forall era. Era era => Gen (PoolParams era)
 genPoolParams =
   PoolParams
     <$> genKeyHash
-    <*> genVRFKeyHash @c
+    <*> genVRFKeyHash @era
     <*> genCoin
     <*> genCoin
     <*> genUnitInterval
@@ -139,10 +140,10 @@ genUrl = do
     Nothing -> error "wrong generator for Url"
     Just url -> return url
 
-genRewardAcnt :: Crypto c => Gen (RewardAcnt c)
+genRewardAcnt :: Era era => Gen (RewardAcnt era)
 genRewardAcnt = RewardAcnt Testnet <$> genCredential
 
-genCredential :: Crypto c => Gen (Credential 'Staking c)
+genCredential :: Era era => Gen (Credential 'Staking era)
 genCredential =
   Gen.choice
     [ ScriptHashObj . ScriptHash <$> genHash,
@@ -209,51 +210,54 @@ genUnitInterval =
     <$> Gen.realFrac_ (Range.linearFrac 0.01 1)
 
 genGenesisDelegationList ::
-  Crypto c =>
-  Gen [(KeyHash 'Genesis c, GenDelegPair c)]
+  Era era =>
+  Gen [(KeyHash 'Genesis era, GenDelegPair era)]
 genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
 genGenesisDelegationPair ::
-  forall c.
-  Crypto c =>
-  Gen (KeyHash 'Genesis c, GenDelegPair c)
+  forall era.
+  Era era =>
+  Gen (KeyHash 'Genesis era, GenDelegPair era)
 genGenesisDelegationPair =
-  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> genVRFKeyHash @c)
+  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> genVRFKeyHash @era)
 
-genVRFKeyHash :: forall c. Crypto c => Gen (Hash c (VerKeyVRF (VRF c)))
-genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @c)
+genVRFKeyHash ::
+  forall era.
+  Era era =>
+  Gen (Hash era (VerKeyVRF (VRF (Crypto era))))
+genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @era)
 
 genVRFKeyPair ::
-  forall c.
-  Crypto c =>
-  Gen (SignKeyVRF (VRF c), VerKeyVRF (VRF c))
+  forall era.
+  Era era =>
+  Gen (SignKeyVRF (VRF (Crypto era)), VerKeyVRF (VRF (Crypto era)))
 genVRFKeyPair = do
   seed <- genSeed seedSize
   let sk = genKeyVRF seed
       vk = deriveVerKeyVRF sk
   pure (sk, vk)
   where
-    seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF c)))
+    seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF (Crypto era))))
 
-genFundsList :: Crypto c => Gen [(Addr c, Coin)]
+genFundsList :: Era era => Gen [(Addr era, Coin)]
 genFundsList = Gen.list (Range.linear 1 100) genGenesisFundPair
 
 genSeed :: Int -> Gen Seed
 genSeed n = mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
 
 genKeyHash ::
-  ( Crypto c
+  ( Era era
   ) =>
-  Gen (KeyHash disc c)
+  Gen (KeyHash disc era)
 genKeyHash = hashKey . snd <$> genKeyPair
 
 -- | Generate a deterministic key pair given a seed.
 genKeyPair ::
-  forall c krole.
-  DSIGNAlgorithm (DSIGN c) =>
+  forall era krole.
+  DSIGNAlgorithm (DSIGN (Crypto era)) =>
   Gen
-    ( SignKeyDSIGN (DSIGN c),
-      VKey krole c
+    ( SignKeyDSIGN (DSIGN (Crypto era)),
+      VKey krole era
     )
 genKeyPair = do
   seed <- genSeed seedSize
@@ -262,13 +266,19 @@ genKeyPair = do
   pure (sk, VKey vk)
   where
     seedSize :: Int
-    seedSize = fromIntegral (seedSizeDSIGN (Proxy :: Proxy (DSIGN c)))
+    seedSize =
+      fromIntegral
+        ( seedSizeDSIGN
+            ( Proxy ::
+                Proxy (DSIGN (Crypto era))
+            )
+        )
 
-genGenesisFundPair :: Crypto c => Gen (Addr c, Coin)
+genGenesisFundPair :: Era era => Gen (Addr era, Coin)
 genGenesisFundPair =
   (,) <$> genAddress <*> genCoin
 
-genAddress :: Crypto c => Gen (Addr c)
+genAddress :: Era era => Gen (Addr era)
 genAddress = do
   (secKey1, verKey1) <- genKeyPair
   (secKey2, verKey2) <- genKeyPair

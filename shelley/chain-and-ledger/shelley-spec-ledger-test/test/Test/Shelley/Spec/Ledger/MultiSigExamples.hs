@@ -18,6 +18,7 @@ module Test.Shelley.Spec.Ledger.MultiSigExamples
 where
 
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Era (Crypto, Era)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
@@ -28,9 +29,9 @@ import Shelley.Spec.Ledger.API
   ( ScriptHash,
     UTXOW,
   )
-import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.Address
   ( Addr,
+    pattern Addr,
   )
 import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
@@ -43,7 +44,6 @@ import Shelley.Spec.Ledger.Credential
     pattern ScriptHashObj,
     pattern StakeRefBase,
   )
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
@@ -100,38 +100,38 @@ import Test.Shelley.Spec.Ledger.Utils
 -- casting function which changes what the hash is of, without changing the
 -- hashing algorithm.
 --
-_assertScriptHashSizeMatchesAddrHashSize :: ScriptHash c -> KeyHash r c
+_assertScriptHashSizeMatchesAddrHashSize :: ScriptHash era -> KeyHash r era
 _assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
   KeyHash (Hash.castHash h)
 
 -- Multi-signature scripts
-singleKeyOnly :: Crypto c => Addr c -> MultiSig c
+singleKeyOnly :: Era era => Addr era -> MultiSig era
 singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
-aliceOnly :: Crypto c => proxy c -> MultiSig c
+aliceOnly :: Era era => proxy era -> MultiSig era
 aliceOnly _ = singleKeyOnly Cast.aliceAddr
 
-bobOnly :: Crypto c => proxy c -> MultiSig c
+bobOnly :: Era era => proxy era -> MultiSig era
 bobOnly _ = singleKeyOnly Cast.bobAddr
 
-aliceOrBob :: Crypto c => proxy c -> MultiSig c
+aliceOrBob :: Era era => proxy era -> MultiSig era
 aliceOrBob p = RequireAnyOf [aliceOnly p, singleKeyOnly Cast.bobAddr]
 
-aliceAndBob :: Crypto c => proxy c -> MultiSig c
+aliceAndBob :: Era era => proxy era -> MultiSig era
 aliceAndBob p = RequireAllOf [aliceOnly p, singleKeyOnly Cast.bobAddr]
 
-aliceAndBobOrCarl :: Crypto c => proxy c -> MultiSig c
+aliceAndBobOrCarl :: Era era => proxy era -> MultiSig era
 aliceAndBobOrCarl p = RequireMOf 1 [aliceAndBob p, singleKeyOnly Cast.carlAddr]
 
-aliceAndBobOrCarlAndDaria :: Crypto c => proxy c -> MultiSig c
+aliceAndBobOrCarlAndDaria :: Era era => proxy era -> MultiSig era
 aliceAndBobOrCarlAndDaria p =
   RequireAnyOf
     [ aliceAndBob p,
       RequireAllOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-aliceAndBobOrCarlOrDaria :: Crypto c => proxy c -> MultiSig c
+aliceAndBobOrCarlOrDaria :: Era era => proxy era -> MultiSig era
 aliceAndBobOrCarlOrDaria p =
   RequireMOf
     1
@@ -139,7 +139,7 @@ aliceAndBobOrCarlOrDaria p =
       RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: Crypto c => [(Addr c, Coin)] -> TxBody c
+initTxBody :: Era era => [(Addr era, Coin)] -> TxBody era
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
@@ -151,7 +151,7 @@ initTxBody addrs =
     SNothing
     SNothing
 
-makeTxBody :: Crypto c => [TxIn c] -> [(Addr c, Coin)] -> Wdrl c -> TxBody c
+makeTxBody :: Era era => [TxIn era] -> [(Addr era, Coin)] -> Wdrl era -> TxBody era
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
@@ -163,7 +163,7 @@ makeTxBody inp addrCs wdrl =
     SNothing
     SNothing
 
-makeTx :: Mock c => TxBody c -> [KeyPair 'Witness c] -> Map (ScriptHash c) (MultiSig c) -> Maybe MetaData -> Tx c
+makeTx :: (Era era, Mock (Crypto era)) => TxBody era -> [KeyPair 'Witness era] -> Map (ScriptHash era) (MultiSig era) -> Maybe MetaData -> Tx era
 makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
@@ -178,7 +178,7 @@ aliceInitCoin = 10000
 bobInitCoin :: Coin
 bobInitCoin = 1000
 
-genesis :: Crypto c => LedgerState c
+genesis :: Era era => LedgerState era
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty
@@ -196,21 +196,21 @@ initPParams = emptyPParams {_maxTxSize = 1000}
 -- 'aliceKeep' is greater than 0, gives that amount to Alice and creates outputs
 -- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState ::
-  forall c.
-  Mock c =>
+  forall era.
+  (Era era, Mock (Crypto era)) =>
   Coin ->
-  [(MultiSig c, Coin)] ->
-  (TxId c, Either [[PredicateFailure (UTXOW c)]] (UTxOState c))
+  [(MultiSig era, Coin)] ->
+  (TxId era, Either [[PredicateFailure (UTXOW era)]] (UTxOState era))
 initialUTxOState aliceKeep msigs =
   let addresses =
         [(Cast.aliceAddr, aliceKeep) | aliceKeep > 0]
           ++ map
-            ( \(msig, c) ->
+            ( \(msig, era) ->
                 ( Addr
                     Testnet
                     (ScriptHashObj $ hashScript msig)
                     (StakeRefBase $ ScriptHashObj $ hashScript msig),
-                  c
+                  era
                 )
             )
             msigs
@@ -222,7 +222,7 @@ initialUTxOState aliceKeep msigs =
               Nothing
        in ( txid $ _body tx,
             runShelleyBase $
-              applySTSTest @(UTXOW c)
+              applySTSTest @(UTXOW era)
                 ( TRC
                     ( UtxoEnv
                         (SlotNo 0)
@@ -243,15 +243,15 @@ initialUTxOState aliceKeep msigs =
 -- 'aliceKeep' in the case of it being non-zero) to spend all funds back to
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript ::
-  forall proxy c.
-  Mock c =>
-  proxy c ->
-  [(MultiSig c, Coin)] ->
-  [MultiSig c] ->
-  Wdrl c ->
+  forall proxy era.
+  (Era era, Mock (Crypto era)) =>
+  proxy era ->
+  [(MultiSig era, Coin)] ->
+  [MultiSig era] ->
+  Wdrl era ->
   Coin ->
-  [KeyPair 'Witness c] ->
-  Either [[PredicateFailure (UTXOW c)]] (UTxOState c)
+  [KeyPair 'Witness era] ->
+  Either [[PredicateFailure (UTXOW era)]] (UTxOState era)
 applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
@@ -281,7 +281,7 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         Nothing
     utxoSt' =
       runShelleyBase $
-        applySTSTest @(UTXOW c)
+        applySTSTest @(UTXOW era)
           ( TRC
               ( UtxoEnv
                   (SlotNo 0)

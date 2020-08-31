@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
   )
 where
 
+import Cardano.Ledger.Era (Crypto, Era)
 import Control.Iterate.SetAlgebra (forwards)
 import qualified Data.Either as Either (partitionEithers)
 import Data.List (foldl')
@@ -43,7 +44,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
@@ -115,21 +115,21 @@ import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs)
 -- completely, but in practice it is relatively easy to calibrate
 -- the generator 'Constants' so that there is sufficient spending balance.
 genTx ::
-  (HasCallStack, Mock c) =>
-  GenEnv c ->
+  (HasCallStack, Era era, Mock (Crypto era)) =>
+  GenEnv era ->
   LedgerEnv ->
-  (UTxOState c, DPState c) ->
-  Gen (Tx c)
+  (UTxOState era, DPState era) ->
+  Gen (Tx era)
 genTx ge@(GenEnv _ (Constants {genTxRetries})) =
   genTxRetry genTxRetries ge
 
 genTxRetry ::
-  (HasCallStack, Mock c) =>
+  (HasCallStack, Era era, Mock (Crypto era)) =>
   Int ->
-  GenEnv c ->
+  GenEnv era ->
   LedgerEnv ->
-  (UTxOState c, DPState c) ->
-  Gen (Tx c)
+  (UTxOState era, DPState era) ->
+  Gen (Tx era)
 genTxRetry
   n
   ge@( GenEnv
@@ -168,7 +168,13 @@ genTxRetry
       -------------------------------------------------------------------------
       let wits = spendWits ++ wdrlWits ++ certWits ++ updateWits
           scripts = mkScriptWits spendScripts (certScripts ++ wdrlScripts)
-          mkTxWits' = mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys wits scripts . hashAnnotated
+          mkTxWits' =
+            mkTxWits
+              ksIndexedPaymentKeys
+              ksIndexedStakingKeys
+              wits
+              scripts
+              . hashAnnotated
       -------------------------------------------------------------------------
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
       -- and a Outputs builder that distributes the given balance over addresses.
@@ -206,10 +212,10 @@ genTimeToLive currentSlot = do
   pure $ currentSlot + SlotNo (fromIntegral ttl)
 
 mkScriptWits ::
-  (HasCallStack, Crypto c) =>
-  [(MultiSig c, MultiSig c)] ->
-  [(MultiSig c, MultiSig c)] ->
-  Map (ScriptHash c) (MultiSig c)
+  (HasCallStack, Era era) =>
+  [(MultiSig era, MultiSig era)] ->
+  [(MultiSig era, MultiSig era)] ->
+  Map (ScriptHash era) (MultiSig era)
 mkScriptWits payScripts stakeScripts =
   Map.fromList $
     (hashPayScript <$> payScripts)
@@ -219,13 +225,13 @@ mkScriptWits payScripts stakeScripts =
     hashStakeScript (_, sScript) = (hashScript sScript, sScript)
 
 mkTxWits ::
-  (HasCallStack, Mock c) =>
-  Map (KeyHash 'Payment c) (KeyPair 'Payment c) ->
-  Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
-  [KeyPair 'Witness c] ->
-  Map (ScriptHash c) (MultiSig c) ->
-  Hash c (TxBody c) ->
-  WitnessSet c
+  (Era era, HasCallStack, Mock (Crypto era)) =>
+  Map (KeyHash 'Payment era) (KeyPair 'Payment era) ->
+  Map (KeyHash 'Staking era) (KeyPair 'Staking era) ->
+  [KeyPair 'Witness era] ->
+  Map (ScriptHash era) (MultiSig era) ->
+  Hash era (TxBody era) ->
+  WitnessSet era
 mkTxWits
   indexedPaymentKeys
   indexedStakingKeys
@@ -260,16 +266,16 @@ mkTxWits
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody ::
-  (HasCallStack, Crypto c) =>
-  [TxIn c] ->
-  StrictSeq (TxOut c) ->
-  StrictSeq (DCert c) ->
-  [(RewardAcnt c, Coin)] ->
-  Maybe (Update c) ->
+  (HasCallStack, Era era) =>
+  [TxIn era] ->
+  StrictSeq (TxOut era) ->
+  StrictSeq (DCert era) ->
+  [(RewardAcnt era, Coin)] ->
+  Maybe (Update era) ->
   Coin ->
   SlotNo ->
-  StrictMaybe (MetaDataHash c) ->
-  Gen (TxBody c)
+  StrictMaybe (MetaDataHash era) ->
+  Gen (TxBody era)
 genTxBody inputs outputs certs wdrls update fee slotWithTTL mdHash = do
   return $
     TxBody
@@ -289,11 +295,11 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL mdHash = do
 -- The idea is to have an specified spending balance and fees that must be paid
 -- by the selected addresses.
 calcOutputsFromBalance ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Coin ->
-  [Addr c] ->
+  [Addr era] ->
   Coin ->
-  (Coin, StrictSeq (TxOut c))
+  (Coin, StrictSeq (TxOut era))
 calcOutputsFromBalance balance_ addrs fee =
   ( fee + splitCoinRem,
     (`TxOut` amountPerOutput) <$> StrictSeq.fromList addrs
@@ -315,12 +321,12 @@ calcOutputsFromBalance balance_ addrs fee =
 -- spend these outputs). If this is not the case, `findPayKeyPairAddr` /
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 genInputs ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Constants ->
-  Map (KeyHash 'Payment c) (KeyPair 'Payment c) ->
-  Map (ScriptHash c) (MultiSig c, MultiSig c) ->
-  UTxO c ->
-  Gen ([TxIn c], Coin, ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)]))
+  Map (KeyHash 'Payment era) (KeyPair 'Payment era) ->
+  Map (ScriptHash era) (MultiSig era, MultiSig era) ->
+  UTxO era ->
+  Gen ([TxIn era], Coin, ([KeyPair 'Witness era], [(MultiSig era, MultiSig era)]))
 genInputs Constants {minNumGenInputs, maxNumGenInputs} keyHashMap payScriptMap (UTxO utxo) = do
   selectedUtxo <-
     take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
@@ -341,14 +347,14 @@ genInputs Constants {minNumGenInputs, maxNumGenInputs} keyHashMap payScriptMap (
 
 -- | Select a subset of the reward accounts to use for reward withdrawals.
 genWithdrawals ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Constants ->
-  Map (ScriptHash c) (MultiSig c, MultiSig c) ->
-  Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
-  Map (Credential 'Staking c) Coin ->
+  Map (ScriptHash era) (MultiSig era, MultiSig era) ->
+  Map (KeyHash 'Staking era) (KeyPair 'Staking era) ->
+  Map (Credential 'Staking era) Coin ->
   Gen
-    ( [(RewardAcnt c, Coin)],
-      ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)])
+    ( [(RewardAcnt era, Coin)],
+      ([KeyPair 'Witness era], [(MultiSig era, MultiSig era)])
     )
 genWithdrawals
   Constants
@@ -380,26 +386,26 @@ genWithdrawals
 
 -- | Collect witnesses needed for reward withdrawals.
 mkWdrlWits ::
-  (HasCallStack, Crypto c) =>
-  Map (ScriptHash c) (MultiSig c, MultiSig c) ->
-  Map (KeyHash 'Staking c) (KeyPair 'Staking c) ->
-  Credential 'Staking c ->
-  Either (KeyPair 'Witness c) (MultiSig c, MultiSig c)
-mkWdrlWits scriptsByStakeHash _ c@(ScriptHashObj _) =
+  (HasCallStack, Era era) =>
+  Map (ScriptHash era) (MultiSig era, MultiSig era) ->
+  Map (KeyHash 'Staking era) (KeyPair 'Staking era) ->
+  Credential 'Staking era ->
+  Either (KeyPair 'Witness era) (MultiSig era, MultiSig era)
+mkWdrlWits scriptsByStakeHash _ era@(ScriptHashObj _) =
   Right $
-    findStakeScriptFromCred (asWitness c) scriptsByStakeHash
-mkWdrlWits _ keyHashMap c@(KeyHashObj _) =
+    findStakeScriptFromCred (asWitness era) scriptsByStakeHash
+mkWdrlWits _ keyHashMap era@(KeyHashObj _) =
   Left $
     asWitness $
-      findPayKeyPairCred c keyHashMap
+      findPayKeyPairCred era keyHashMap
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   Int ->
-  KeyPairs c ->
-  MultiSigPairs c ->
-  Gen [Addr c]
+  KeyPairs era ->
+  MultiSigPairs era ->
+  Gen [Addr era]
 genRecipients len keys scripts = do
   n' <-
     QC.frequency

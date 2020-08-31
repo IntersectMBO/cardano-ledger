@@ -25,6 +25,8 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), toCBOR)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
+import Cardano.Ledger.Crypto (KES)
+import Cardano.Ledger.Era
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
@@ -39,7 +41,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
     KeyRole (..),
@@ -59,17 +60,17 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
-data OCertEnv crypto = OCertEnv
-  { ocertEnvStPools :: Set (KeyHash 'StakePool crypto),
-    ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate crypto)
+data OCertEnv era = OCertEnv
+  { ocertEnvStPools :: Set (KeyHash 'StakePool era),
+    ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate era)
   }
   deriving (Show, Eq)
 
 currentIssueNo ::
-  OCertEnv crypto ->
-  (Map (KeyHash 'BlockIssuer crypto) Word64) ->
+  OCertEnv era ->
+  (Map (KeyHash 'BlockIssuer era) Word64) ->
   -- | Pool hash
-  KeyHash 'BlockIssuer crypto ->
+  KeyHash 'BlockIssuer era ->
   Maybe Word64
 currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | Map.member hk cs = Map.lookup hk cs
@@ -81,28 +82,28 @@ newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
   deriving (Eq, Generic, Ord, NoUnexpectedThunks, FromCBOR, ToCBOR)
   deriving (Show) via Quiet KESPeriod
 
-data OCert crypto = OCert
+data OCert era = OCert
   { -- | The operational hot key
-    ocertVkHot :: !(VerKeyKES crypto),
+    ocertVkHot :: !(VerKeyKES era),
     -- | counter
     ocertN :: !Word64,
     -- | Start of key evolving signature period
     ocertKESPeriod :: !KESPeriod,
     -- | Signature of block operational certificate content
-    ocertSigma :: !(SignedDSIGN crypto (OCertSignable crypto))
+    ocertSigma :: !(SignedDSIGN era (OCertSignable era))
   }
   deriving (Generic)
-  deriving (ToCBOR) via (CBORGroup (OCert crypto))
+  deriving (ToCBOR) via (CBORGroup (OCert era))
 
-deriving instance Crypto crypto => Eq (OCert crypto)
+deriving instance Era era => Eq (OCert era)
 
-deriving instance Crypto crypto => Show (OCert crypto)
+deriving instance Era era => Show (OCert era)
 
-instance Crypto crypto => NoUnexpectedThunks (OCert crypto)
+instance Era era => NoUnexpectedThunks (OCert era)
 
 instance
-  (Crypto crypto) =>
-  ToCBORGroup (OCert crypto)
+  (Era era) =>
+  ToCBORGroup (OCert era)
   where
   toCBORGroup ocert =
     encodeVerKeyKES (ocertVkHot ocert)
@@ -122,8 +123,8 @@ instance
   listLenBound _ = 4
 
 instance
-  (Crypto crypto) =>
-  FromCBORGroup (OCert crypto)
+  (Era era) =>
+  FromCBORGroup (OCert era)
   where
   fromCBORGroup =
     OCert
@@ -140,18 +141,18 @@ kesPeriod (SlotNo s) =
       else KESPeriod . fromIntegral $ s `div` spkp
 
 -- | Signable part of an operational certificate
-data OCertSignable crypto
-  = OCertSignable !(VerKeyKES crypto) !Word64 !KESPeriod
+data OCertSignable era
+  = OCertSignable !(VerKeyKES era) !Word64 !KESPeriod
 
 instance
-  forall crypto.
-  Crypto crypto =>
-  SignableRepresentation (OCertSignable crypto)
+  forall era.
+  Era era =>
+  SignableRepresentation (OCertSignable era)
   where
   getSignableRepresentation (OCertSignable vk counter period) =
     runByteBuilder
       ( fromIntegral $
-          KES.sizeVerKeyKES (Proxy @(KES crypto))
+          KES.sizeVerKeyKES (Proxy @(KES (Crypto era)))
             + 8
             + 8
       )
@@ -160,6 +161,6 @@ instance
         <> BS.word64BE (fromIntegral $ unKESPeriod period)
 
 -- | Extract the signable part of an operational certificate (for verification)
-ocertToSignable :: OCert crypto -> OCertSignable crypto
+ocertToSignable :: OCert era -> OCertSignable era
 ocertToSignable OCert {ocertVkHot, ocertN, ocertKESPeriod} =
   OCertSignable ocertVkHot ocertN ocertKESPeriod

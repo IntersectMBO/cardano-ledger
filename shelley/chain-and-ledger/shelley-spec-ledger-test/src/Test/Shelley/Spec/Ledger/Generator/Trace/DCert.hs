@@ -13,6 +13,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts) where
 
+import Cardano.Ledger.Era (Era)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
   ( BaseM,
@@ -54,7 +55,6 @@ import Shelley.Spec.Ledger.API
   )
 import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
@@ -71,23 +71,23 @@ import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
 -- | This is a non-spec STS used to generate a sequence of certificates with
 -- witnesses.
-data CERTS c
+data CERTS era
 
-instance Crypto c => STS (CERTS c) where
-  type Environment (CERTS c) = (SlotNo, Ix, PParams, AccountState)
-  type State (CERTS c) = (DPState c, Ix)
-  type Signal (CERTS c) = Maybe (DCert c, CertCred c)
+instance Era era => STS (CERTS era) where
+  type Environment (CERTS era) = (SlotNo, Ix, PParams, AccountState)
+  type State (CERTS era) = (DPState era, Ix)
+  type Signal (CERTS era) = Maybe (DCert era, CertCred era)
 
-  type BaseM (CERTS c) = ShelleyBase
+  type BaseM (CERTS era) = ShelleyBase
 
-  data PredicateFailure (CERTS c)
-    = CertsFailure (PredicateFailure (DELPL c))
+  data PredicateFailure (CERTS era)
+    = CertsFailure (PredicateFailure (DELPL era))
     deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [certsTransition]
 
-certsTransition :: forall c. Crypto c => TransitionRule (CERTS c)
+certsTransition :: forall era. Era era => TransitionRule (CERTS era)
 certsTransition = do
   TRC
     ( (slot, txIx, pp, acnt),
@@ -99,16 +99,16 @@ certsTransition = do
   case c of
     Just (cert, _wits) -> do
       let ptr = Ptr slot txIx nextCertIx
-      dpState' <- trans @(DELPL c) $ TRC (DelplEnv slot ptr pp acnt, dpState, cert)
+      dpState' <- trans @(DELPL era) $ TRC (DelplEnv slot ptr pp acnt, dpState, cert)
 
       pure (dpState', nextCertIx + 1)
     Nothing ->
       pure (dpState, nextCertIx)
 
-instance Crypto c => Embed (DELPL c) (CERTS c) where
+instance Era era => Embed (DELPL era) (CERTS era) where
   wrapFailed = CertsFailure
 
-instance Crypto c => QC.HasTrace (CERTS c) (GenEnv c) where
+instance Era era => QC.HasTrace (CERTS era) (GenEnv era) where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
   sigGen
@@ -128,26 +128,26 @@ instance Crypto c => QC.HasTrace (CERTS c) (GenEnv c) where
 
   shrinkSignal = const []
 
-  type BaseEnv (CERTS c) = Globals
+  type BaseEnv (CERTS era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
 genDCerts ::
-  forall c.
-  Crypto c =>
-  GenEnv c ->
+  forall era.
+  Era era =>
+  GenEnv era ->
   PParams ->
-  DPState c ->
+  DPState era ->
   SlotNo ->
   Natural ->
   AccountState ->
   Gen
-    ( StrictSeq (DCert c),
+    ( StrictSeq (DCert era),
       Coin,
       Coin,
-      DPState c,
-      ([KeyPair 'Witness c], [(MultiSig c, MultiSig c)])
+      DPState era,
+      ([KeyPair 'Witness era], [(MultiSig era, MultiSig era)])
     )
 genDCerts
   ge@( GenEnv
@@ -163,7 +163,7 @@ genDCerts
         st0 = (dpState, 0)
 
     certsTrace <-
-      QC.traceFrom @(CERTS c) testGlobals maxCertsPerTx ge env st0
+      QC.traceFrom @(CERTS era) testGlobals maxCertsPerTx ge env st0
 
     let certsCreds = catMaybes . traceSignals OldestFirst $ certsTrace
         (lastState_, _) = lastState certsTrace
@@ -185,7 +185,7 @@ genDCerts
       isScript (ScriptCred _) = True
       isScript _ = False
 
-      scriptWitnesses :: CertCred c -> [CertCred c]
+      scriptWitnesses :: CertCred era -> [CertCred era]
       scriptWitnesses (ScriptCred (_, stakeScript)) =
         StakeCred <$> witnessHashes''
         where
@@ -196,14 +196,26 @@ genDCerts
 
       lookupWit = flip Map.lookup ksIndexedStakingKeys
 
-scriptCredMultisig :: (HasCallStack, Crypto c) => CertCred c -> (MultiSig c, MultiSig c)
+scriptCredMultisig ::
+  (HasCallStack, Era era) =>
+  CertCred era ->
+  (MultiSig era, MultiSig era)
 scriptCredMultisig (ScriptCred c) = c
-scriptCredMultisig x = error $ "scriptCredMultisig: use only for Script Credentials - " <> show x
+scriptCredMultisig x =
+  error $
+    "scriptCredMultisig: use only for Script Credentials - "
+      <> show x
 
-keyCredAsWitness :: (HasCallStack, Crypto c) => CertCred c -> [KeyPair 'Witness c]
+keyCredAsWitness ::
+  (HasCallStack, Era era) =>
+  CertCred era ->
+  [KeyPair 'Witness era]
 keyCredAsWitness (DelegateCred c) = asWitness <$> c
 keyCredAsWitness (CoreKeyCred c) = asWitness <$> c
 keyCredAsWitness (StakeCred c) = [asWitness c]
 keyCredAsWitness (PoolCred c) = [asWitness c]
 keyCredAsWitness NoCred = []
-keyCredAsWitness x = error $ "keyCredAsWitness: use only for Script Credentials - " <> show x
+keyCredAsWitness x =
+  error $
+    "keyCredAsWitness: use only for Script Credentials - "
+      <> show x

@@ -18,6 +18,8 @@ import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), hashFromBytes)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
 import Cardano.Crypto.KES.Sum
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
+import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Era
 import qualified Data.Binary as B
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
@@ -35,7 +37,6 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyRole (..),
     pattern KeyHash,
@@ -133,12 +134,17 @@ goldenTests_MockCrypto =
 -- This should match that defined at https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
 data ShelleyCrypto
 
-instance Crypto ShelleyCrypto where
+instance Cardano.Ledger.Crypto.Crypto ShelleyCrypto where
   type DSIGN ShelleyCrypto = Ed25519DSIGN
   type KES ShelleyCrypto = Sum7KES Ed25519DSIGN Blake2b_256
   type VRF ShelleyCrypto = SimpleVRF
   type HASH ShelleyCrypto = Blake2b_256
   type ADDRHASH ShelleyCrypto = Blake2b_224
+
+data Shelley
+
+instance Era Shelley where
+  type Crypto Shelley = ShelleyCrypto
 
 goldenTests_ShelleyCrypto :: TestTree
 goldenTests_ShelleyCrypto =
@@ -181,16 +187,16 @@ goldenTests_ShelleyCrypto =
         "e008b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4"
     ]
   where
-    paymentKey :: Credential 'Payment ShelleyCrypto
+    paymentKey :: Credential 'Payment Shelley
     paymentKey = keyBlake2b224 $ B16.encode "1a2a3a4a5a6a7a8a"
-    stakeKey :: Credential 'Staking ShelleyCrypto
+    stakeKey :: Credential 'Staking Shelley
     stakeKey = keyBlake2b224 $ B16.encode "1c2c3c4c5c6c7c8c"
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
     -- 32-byte verification key is expected, vk, ie., public key without chain code.
     -- The verification key undergoes Blake2b_224 hashing
     -- and should be 28-byte in the aftermath
-    keyBlake2b224 :: BS.ByteString -> Credential kh ShelleyCrypto
+    keyBlake2b224 :: BS.ByteString -> Credential kh Shelley
     keyBlake2b224 vk =
       KeyHashObj . KeyHash . fromJust . hashFromBytes $ hk
       where

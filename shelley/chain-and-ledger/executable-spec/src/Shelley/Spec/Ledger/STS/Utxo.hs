@@ -24,6 +24,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
 import Control.State.Transition
@@ -57,7 +58,6 @@ import Shelley.Spec.Ledger.Address
   )
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
@@ -93,27 +93,27 @@ import Shelley.Spec.Ledger.UTxO
     txup,
   )
 
-data UTXO crypto
+data UTXO era
 
-data UtxoEnv crypto
+data UtxoEnv era
   = UtxoEnv
       SlotNo
       PParams
-      (Map (KeyHash 'StakePool crypto) (PoolParams crypto))
-      (GenDelegs crypto)
+      (Map (KeyHash 'StakePool era) (PoolParams era))
+      (GenDelegs era)
   deriving (Show)
 
 instance
-  (Crypto crypto) =>
-  STS (UTXO crypto)
+  (Era era) =>
+  STS (UTXO era)
   where
-  type State (UTXO crypto) = UTxOState crypto
-  type Signal (UTXO crypto) = Tx crypto
-  type Environment (UTXO crypto) = UtxoEnv crypto
-  type BaseM (UTXO crypto) = ShelleyBase
-  data PredicateFailure (UTXO crypto)
+  type State (UTXO era) = UTxOState era
+  type Signal (UTXO era) = Tx era
+  type Environment (UTXO era) = UtxoEnv era
+  type BaseM (UTXO era) = ShelleyBase
+  data PredicateFailure (UTXO era)
     = BadInputsUTxO
-        !(Set (TxIn crypto)) -- The bad transaction inputs
+        !(Set (TxIn era)) -- The bad transaction inputs
     | ExpiredUTxO
         !SlotNo -- transaction's time to live
         !SlotNo -- current slot
@@ -129,15 +129,15 @@ instance
         !Coin -- the Coin produced by this transaction
     | WrongNetwork
         !Network -- the expected network id
-        !(Set (Addr crypto)) -- the set of addresses with incorrect network IDs
+        !(Set (Addr era)) -- the set of addresses with incorrect network IDs
     | WrongNetworkWithdrawal
         !Network -- the expected network id
-        !(Set (RewardAcnt crypto)) -- the set of reward addresses with incorrect network IDs
+        !(Set (RewardAcnt era)) -- the set of reward addresses with incorrect network IDs
     | OutputTooSmallUTxO
-        ![TxOut crypto] -- list of supplied transaction outputs that are too small
-    | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
+        ![TxOut era] -- list of supplied transaction outputs that are too small
+    | UpdateFailure (PredicateFailure (PPUP era)) -- Subtransition Failures
     | OutputBootAddrAttrsTooBig
-        ![TxOut crypto] -- list of supplied bad transaction outputs
+        ![TxOut era] -- list of supplied bad transaction outputs
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -168,11 +168,11 @@ instance
             )
     ]
 
-instance NoUnexpectedThunks (PredicateFailure (UTXO crypto))
+instance NoUnexpectedThunks (PredicateFailure (UTXO era))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (UTXO crypto))
+  (Typeable era, Era era) =>
+  ToCBOR (PredicateFailure (UTXO era))
   where
   toCBOR = \case
     BadInputsUTxO ins ->
@@ -213,8 +213,8 @@ instance
         <> encodeFoldable outs
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (UTXO crypto))
+  (Era era) =>
+  FromCBOR (PredicateFailure (UTXO era))
   where
   fromCBOR =
     decodeRecordSum "PredicateFailureUTXO" $
@@ -258,15 +258,15 @@ instance
           pure (2, OutputBootAddrAttrsTooBig outs)
         k -> invalidKey k
 
-initialLedgerState :: InitialRule (UTXO crypto)
+initialLedgerState :: InitialRule (UTXO era)
 initialLedgerState = do
   IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
-  forall crypto.
-  Crypto crypto =>
-  TransitionRule (UTXO crypto)
+  forall era.
+  Era era =>
+  TransitionRule (UTXO era)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo deposits' fees ppup = u
@@ -299,7 +299,7 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Protocol Parameter Update Proposals
-  ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
+  ppup' <- trans @(PPUP era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
   let outputs = Set.toList (eval (rng (txouts txb)))
       minUTxOValue = _minUTxOValue pp
@@ -329,7 +329,7 @@ utxoInductive = do
       }
 
 instance
-  Crypto crypto =>
-  Embed (PPUP crypto) (UTXO crypto)
+  Era era =>
+  Embed (PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure

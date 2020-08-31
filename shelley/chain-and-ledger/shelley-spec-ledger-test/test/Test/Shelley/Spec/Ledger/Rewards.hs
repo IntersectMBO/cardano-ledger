@@ -13,6 +13,8 @@ import qualified Cardano.Crypto.DSIGN as Crypto
 import Cardano.Crypto.Hash (MD5, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
+import Cardano.Ledger.Crypto (VRF)
+import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Data.Foldable (fold)
@@ -32,7 +34,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
     Stake (..),
@@ -108,7 +109,7 @@ rhoRange = [0, 0.05 .. 0.3]
 
 -- Helpers --
 
-keyPair :: Crypto c => Int -> KeyPair r c
+keyPair :: Era era => Int -> KeyPair r era
 keyPair seed = KeyPair vk sk
   where
     vk = VKey (Crypto.deriveVerKeyDSIGN sk)
@@ -126,14 +127,14 @@ vrfKeyPair seed = (sk, vk)
         mkSeedFromBytes . hashToBytes $
           hashWithSerialiser @MD5 toCBOR seed
 
-data PoolSetUpArgs crypto f = PoolSetUpArgs
+data PoolSetUpArgs era f = PoolSetUpArgs
   { poolPledge :: f Coin,
     poolCost :: f Coin,
     poolMargin :: f UnitInterval,
-    poolMembers :: f (Map (Credential 'Staking crypto) Coin)
+    poolMembers :: f (Map (Credential 'Staking era) Coin)
   }
 
-emptySetupArgs :: PoolSetUpArgs crypto Maybe
+emptySetupArgs :: PoolSetUpArgs era Maybe
 emptySetupArgs =
   PoolSetUpArgs
     { poolPledge = Nothing,
@@ -142,18 +143,18 @@ emptySetupArgs =
       poolMembers = Nothing
     }
 
-data PoolInfo crypto = PoolInfo
-  { params :: PoolParams crypto,
-    coldKey :: KeyPair 'StakePool crypto,
-    ownerKey :: KeyPair 'Staking crypto,
+data PoolInfo era = PoolInfo
+  { params :: PoolParams era,
+    coldKey :: KeyPair 'StakePool era,
+    ownerKey :: KeyPair 'Staking era,
     ownerStake :: Coin,
-    rewardKey :: KeyPair 'Staking crypto,
-    members :: Map (Credential 'Staking crypto) Coin
+    rewardKey :: KeyPair 'Staking era,
+    members :: Map (Credential 'Staking era) Coin
   }
 
 -- Generators --
 
-genNonOwnerMembers :: Crypto c => Gen (Map (Credential 'Staking c) Coin)
+genNonOwnerMembers :: Era era => Gen (Map (Credential 'Staking era) Coin)
 genNonOwnerMembers = do
   numMembers <- choose (0, maxNumMembers)
   fmap Map.fromList . replicateM numMembers $ do
@@ -171,12 +172,12 @@ genMargin = do
   numer <- choose (0, denom)
   pure $ unsafeMkUnitInterval (numer % denom)
 
-genPoolInfo :: forall c. Crypto c => PoolSetUpArgs c Maybe -> Gen (PoolInfo c)
+genPoolInfo :: forall era. Era era => PoolSetUpArgs era Maybe -> Gen (PoolInfo era)
 genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   pledge <- getOrGen poolPledge $ genCoin 0 maxPoolPledeg
   cost <- getOrGen poolCost $ genCoin 0 maxPoolCost
   margin <- getOrGen poolMargin genMargin
-  vrfKey <- vrfKeyPair @(VRF c) <$> arbitrary
+  vrfKey <- vrfKeyPair @(VRF (Crypto era)) <$> arbitrary
   coldKey <- keyPair <$> arbitrary
   ownerKey <- keyPair <$> arbitrary
   rewardKey <- keyPair <$> arbitrary
@@ -207,7 +208,7 @@ genRewardPPs = do
   where
     g xs = unsafeMkUnitInterval <$> elements xs
 
-genBlocksMade :: [PoolParams crypto] -> Gen (BlocksMade crypto)
+genBlocksMade :: [PoolParams era] -> Gen (BlocksMade era)
 genBlocksMade pools = BlocksMade . Map.fromList <$> mapM f pools
   where
     f p = (_poolPubKey p,) <$> genNatural 0 maxPoolBlocks

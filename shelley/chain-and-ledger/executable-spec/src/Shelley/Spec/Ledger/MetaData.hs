@@ -26,6 +26,7 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedThunks (..), Word64, cborError)
 import qualified Codec.CBOR.Term as CBOR
 import Data.Bifunctor (bimap)
@@ -36,7 +37,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (Hash, hashWithSerialiser)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
@@ -121,15 +121,15 @@ instance FromCBOR MetaDatum where
       Right d -> pure d
       Left e -> (cborError . DecoderErrorCustom "metadata" . T.pack) e
 
-newtype MetaDataHash crypto = MetaDataHash {unsafeMetaDataHash :: Hash crypto MetaData}
+newtype MetaDataHash era = MetaDataHash {unsafeMetaDataHash :: Hash era MetaData}
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
-deriving instance Crypto crypto => ToCBOR (MetaDataHash crypto)
+deriving instance Era era => ToCBOR (MetaDataHash era)
 
-deriving instance Crypto crypto => FromCBOR (MetaDataHash crypto)
+deriving instance Era era => FromCBOR (MetaDataHash era)
 
 hashMetaData ::
-  Crypto crypto =>
+  Era era =>
   MetaData ->
-  MetaDataHash crypto
+  MetaDataHash era
 hashMetaData = MetaDataHash . hashWithSerialiser toCBOR

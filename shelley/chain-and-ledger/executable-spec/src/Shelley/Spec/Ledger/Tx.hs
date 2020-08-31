@@ -66,6 +66,7 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
+import Cardano.Ledger.Era
 import Cardano.Prelude
   ( AllowThunksIn (..),
     LByteString,
@@ -88,7 +89,6 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.MetaData (MetaData)
@@ -115,45 +115,45 @@ type family HKD f a where
   HKD Identity a = a
   HKD f a = f a
 
-data WitnessSetHKD f crypto = WitnessSet'
-  { addrWits' :: !(HKD f (Set (WitVKey crypto 'Witness))),
-    msigWits' :: !(HKD f (Map (ScriptHash crypto) (MultiSig crypto))),
-    bootWits' :: !(HKD f (Set (BootstrapWitness crypto))),
+data WitnessSetHKD f era = WitnessSet'
+  { addrWits' :: !(HKD f (Set (WitVKey era 'Witness))),
+    msigWits' :: !(HKD f (Map (ScriptHash era) (MultiSig era))),
+    bootWits' :: !(HKD f (Set (BootstrapWitness era))),
     txWitsBytes :: LByteString
   }
 
-deriving instance Crypto crypto => Show (WitnessSetHKD Identity crypto)
+deriving instance Era era => Show (WitnessSetHKD Identity era)
 
-deriving instance Crypto crypto => Eq (WitnessSetHKD Identity crypto)
+deriving instance Era era => Eq (WitnessSetHKD Identity era)
 
-deriving instance Crypto crypto => Generic (WitnessSetHKD Identity crypto)
+deriving instance Era era => Generic (WitnessSetHKD Identity era)
 
 deriving via
   AllowThunksIn
     '[ "txWitsBytes"
      ]
-    (WitnessSetHKD Identity crypto)
+    (WitnessSetHKD Identity era)
   instance
-    Crypto crypto => (NoUnexpectedThunks (WitnessSetHKD Identity crypto))
+    Era era => (NoUnexpectedThunks (WitnessSetHKD Identity era))
 
 type WitnessSet = WitnessSetHKD Identity
 
-instance Crypto crypto => ToCBOR (WitnessSetHKD Identity crypto) where
+instance Era era => ToCBOR (WitnessSetHKD Identity era) where
   toCBOR = encodePreEncoded . BSL.toStrict . txWitsBytes
 
-instance Crypto crypto => Semigroup (WitnessSetHKD Identity crypto) where
+instance Era era => Semigroup (WitnessSetHKD Identity era) where
   (WitnessSet a b c) <> (WitnessSet a' b' c') =
     WitnessSet (a <> a') (b <> b') (c <> c')
 
-instance Crypto crypto => Monoid (WitnessSetHKD Identity crypto) where
+instance Era era => Monoid (WitnessSetHKD Identity era) where
   mempty = WitnessSet mempty mempty mempty
 
 pattern WitnessSet ::
-  Crypto crypto =>
-  Set (WitVKey crypto 'Witness) ->
-  Map (ScriptHash crypto) (MultiSig crypto) ->
-  Set (BootstrapWitness crypto) ->
-  WitnessSet crypto
+  Era era =>
+  Set (WitVKey era 'Witness) ->
+  Map (ScriptHash era) (MultiSig era) ->
+  Set (BootstrapWitness era) ->
+  WitnessSet era
 pattern WitnessSet {addrWits, msigWits, bootWits} <-
   WitnessSet' addrWits msigWits bootWits _
   where
@@ -178,9 +178,9 @@ pattern WitnessSet {addrWits, msigWits, bootWits} <-
 {-# COMPLETE WitnessSet #-}
 
 -- | A fully formed transaction.
-data Tx crypto = Tx'
-  { _body' :: !(TxBody crypto),
-    _witnessSet' :: !(WitnessSet crypto),
+data Tx era = Tx'
+  { _body' :: !(TxBody era),
+    _witnessSet' :: !(WitnessSet era),
     _metadata' :: !(StrictMaybe MetaData),
     txFullBytes :: LByteString
   }
@@ -190,14 +190,14 @@ data Tx crypto = Tx'
     via AllowThunksIn
           '[ "txFullBytes"
            ]
-          (Tx crypto)
+          (Tx era)
 
 pattern Tx ::
-  Crypto crypto =>
-  TxBody crypto ->
-  WitnessSet crypto ->
+  Era era =>
+  TxBody era ->
+  WitnessSet era ->
   StrictMaybe MetaData ->
-  Tx crypto
+  Tx era
 pattern Tx {_body, _witnessSet, _metadata} <-
   Tx' _body _witnessSet _metadata _
   where
@@ -220,14 +220,14 @@ pattern Tx {_body, _witnessSet, _metadata} <-
 
 {-# COMPLETE Tx #-}
 
-instance Crypto c => HashAnnotated (Tx c) c
+instance Era era => HashAnnotated (Tx era) era
 
 segwitTx ::
-  Crypto crypto =>
-  Annotator (TxBody crypto) ->
-  Annotator (WitnessSet crypto) ->
+  Era era =>
+  Annotator (TxBody era) ->
+  Annotator (WitnessSet era) ->
   Maybe (Annotator MetaData) ->
-  Annotator (Tx crypto)
+  Annotator (Tx era)
 segwitTx
   bodyAnn
   witsAnn
@@ -250,7 +250,7 @@ segwitTx
             txFullBytes = fullBytes
           }
 
-decodeWits :: forall crypto s. Crypto crypto => Decoder s (Annotator (WitnessSet crypto))
+decodeWits :: forall era s. Era era => Decoder s (Annotator (WitnessSet era))
 decodeWits = do
   (mapParts, annBytes) <-
     withSlice $
@@ -267,7 +267,7 @@ decodeWits = do
               pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
           k -> invalidKey k
   let witSet = foldr ($) emptyWitnessSetHKD mapParts
-      emptyWitnessSetHKD :: WitnessSetHKD Annotator crypto
+      emptyWitnessSetHKD :: WitnessSetHKD Annotator era
       emptyWitnessSetHKD =
         WitnessSet'
           { addrWits' = pure mempty,
@@ -286,12 +286,12 @@ keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 
 instance
-  (Crypto crypto) =>
-  ToCBOR (Tx crypto)
+  (Era era) =>
+  ToCBOR (Tx era)
   where
   toCBOR tx = encodePreEncoded . BSL.toStrict $ txFullBytes tx
 
-instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
+instance Era era => FromCBOR (Annotator (Tx era)) where
   fromCBOR = annotatorSlice $
     decodeRecordNamed "Tx" (const 3) $ do
       body <- fromCBOR
@@ -309,16 +309,16 @@ instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
 class
-  (Crypto crypto, ToCBOR a) =>
-  MultiSignatureScript a crypto
+  (Era era, ToCBOR a) =>
+  MultiSignatureScript a era
   where
-  validateScript :: a -> Tx crypto -> Bool
-  hashScript :: a -> ScriptHash crypto
+  validateScript :: a -> Tx era -> Bool
+  hashScript :: a -> ScriptHash era
 
 -- | instance of MultiSignatureScript type class
 instance
-  Crypto crypto =>
-  MultiSignatureScript (MultiSig crypto) crypto
+  Era era =>
+  MultiSignatureScript (MultiSig era) era
   where
   validateScript = validateNativeMultiSigScript
   hashScript = hashMultiSigScript
@@ -326,9 +326,9 @@ instance
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
 evalNativeMultiSigScript ::
-  Crypto crypto =>
-  MultiSig crypto ->
-  Set (KeyHash 'Witness crypto) ->
+  Era era =>
+  MultiSig era ->
+  Set (KeyHash 'Witness era) ->
   Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -340,9 +340,9 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
-  (Crypto crypto) =>
-  MultiSig crypto ->
-  Tx crypto ->
+  (Era era) =>
+  MultiSig era ->
+  Tx era ->
   Bool
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
@@ -352,15 +352,15 @@ validateNativeMultiSigScript msig tx =
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
-  Crypto crypto =>
-  Tx crypto ->
-  Map (ScriptHash crypto) (MultiSig crypto)
+  Era era =>
+  Tx era ->
+  Map (ScriptHash era) (MultiSig era)
 txwitsScript = msigWits . _witnessSet
 
 extractKeyHashWitnessSet ::
-  forall (r :: KeyRole) crypto.
-  [Credential r crypto] ->
-  Set (KeyHash 'Witness crypto)
+  forall (r :: KeyRole) era.
+  [Credential r era] ->
+  Set (KeyHash 'Witness era)
 extractKeyHashWitnessSet credentials = foldr accum Set.empty credentials
   where
     accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans

@@ -18,6 +18,7 @@ module Shelley.Spec.Ledger.API.Mempool
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Era
 import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -26,7 +27,6 @@ import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes (Globals)
-import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
@@ -53,7 +53,7 @@ type MempoolState = LedgerState.LedgerState
 --   included until a certain number of slots before the end of the epoch. A
 --   protocol update proposal submitted after this is considered invalid.
 mkMempoolEnv ::
-  ShelleyState crypto ->
+  ShelleyState era ->
   SlotNo ->
   MempoolEnv
 mkMempoolEnv
@@ -72,40 +72,40 @@ mkMempoolEnv
 --   The given mempool state may then be evolved using 'applyTxs', but should be
 --   regenerated when the ledger state gets updated (e.g. through application of
 --   a new block).
-mkMempoolState :: ShelleyState crypto -> MempoolState crypto
+mkMempoolState :: ShelleyState era -> MempoolState era
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
   LedgerState.esLState nesEs
 
-data ApplyTxError crypto = ApplyTxError [PredicateFailure (LEDGERS crypto)]
+data ApplyTxError era = ApplyTxError [PredicateFailure (LEDGERS era)]
   deriving (Eq, Show)
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (ApplyTxError crypto)
+  (Typeable era, Era era) =>
+  ToCBOR (ApplyTxError era)
   where
   toCBOR (ApplyTxError es) = toCBOR es
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (ApplyTxError crypto)
+  (Era era) =>
+  FromCBOR (ApplyTxError era)
   where
   fromCBOR = ApplyTxError <$> fromCBOR
 
 applyTxs ::
-  forall crypto m.
-  ( Crypto crypto,
-    MonadError (ApplyTxError crypto) m,
-    DSignable crypto (Hash crypto (Tx.TxBody crypto))
+  forall era m.
+  ( Era era,
+    MonadError (ApplyTxError era) m,
+    DSignable era (Hash era (Tx.TxBody era))
   ) =>
   Globals ->
   MempoolEnv ->
-  Seq (Tx crypto) ->
-  MempoolState crypto ->
-  m (MempoolState crypto)
+  Seq (Tx era) ->
+  MempoolState era ->
+  m (MempoolState era)
 applyTxs globals env txs state =
   let res =
         flip runReader globals
-          . applySTS @(LEDGERS crypto)
+          . applySTS @(LEDGERS era)
           $ TRC (env, state, txs)
    in liftEither
         . left (ApplyTxError . join)

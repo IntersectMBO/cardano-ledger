@@ -10,6 +10,7 @@ module Shelley.Spec.Ledger.STS.Snap
   )
 where
 
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( STS (..),
@@ -20,7 +21,6 @@ import Control.State.Transition
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
@@ -29,22 +29,22 @@ import Shelley.Spec.Ledger.LedgerState
     stakeDistr,
   )
 
-data SNAP crypto
+data SNAP era
 
-instance (Crypto crypto, Typeable crypto) => STS (SNAP crypto) where
-  type State (SNAP crypto) = SnapShots crypto
-  type Signal (SNAP crypto) = ()
-  type Environment (SNAP crypto) = LedgerState crypto
-  type BaseM (SNAP crypto) = ShelleyBase
-  data PredicateFailure (SNAP crypto) -- No predicate failures
+instance (Era era, Typeable era) => STS (SNAP era) where
+  type State (SNAP era) = SnapShots era
+  type Signal (SNAP era) = ()
+  type Environment (SNAP era) = LedgerState era
+  type BaseM (SNAP era) = ShelleyBase
+  data PredicateFailure (SNAP era) -- No predicate failures
     deriving (Show, Generic, Eq)
 
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (SNAP crypto))
+instance NoUnexpectedThunks (PredicateFailure (SNAP era))
 
-snapTransition :: Crypto crypto => TransitionRule (SNAP crypto)
+snapTransition :: Era era => TransitionRule (SNAP era)
 snapTransition = do
   TRC (lstate, s, ()) <- judgmentContext
 

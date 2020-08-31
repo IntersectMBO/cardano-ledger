@@ -18,6 +18,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Control.Monad.Trans.Reader (asks)
@@ -34,7 +35,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
@@ -76,7 +76,7 @@ import Shelley.Spec.Ledger.TxData
     Ptr,
   )
 
-data DELEG crypto
+data DELEG era
 
 data DelegEnv = DelegEnv
   { slotNo :: SlotNo,
@@ -85,30 +85,30 @@ data DelegEnv = DelegEnv
   }
   deriving (Show, Eq)
 
-instance Typeable crypto => STS (DELEG crypto) where
-  type State (DELEG crypto) = DState crypto
-  type Signal (DELEG crypto) = DCert crypto
-  type Environment (DELEG crypto) = DelegEnv
-  type BaseM (DELEG crypto) = ShelleyBase
-  data PredicateFailure (DELEG crypto)
+instance Typeable era => STS (DELEG era) where
+  type State (DELEG era) = DState era
+  type Signal (DELEG era) = DCert era
+  type Environment (DELEG era) = DelegEnv
+  type BaseM (DELEG era) = ShelleyBase
+  data PredicateFailure (DELEG era)
     = StakeKeyAlreadyRegisteredDELEG
-        !(Credential 'Staking crypto) -- Credential which is already registered
+        !(Credential 'Staking era) -- Credential which is already registered
     | -- | Indicates that the stake key is somehow already in the rewards map.
       --   This error is now redundant with StakeKeyAlreadyRegisteredDELEG.
       --   We should remove it and replace its one use with StakeKeyAlreadyRegisteredDELEG.
       StakeKeyInRewardsDELEG
-        !(Credential 'Staking crypto) -- Credential which is already registered
+        !(Credential 'Staking era) -- Credential which is already registered
     | StakeKeyNotRegisteredDELEG
-        !(Credential 'Staking crypto) -- Credential which is not registered
+        !(Credential 'Staking era) -- Credential which is not registered
     | StakeKeyNonZeroAccountBalanceDELEG
         !(Maybe Coin) -- The remaining reward account balance, if it exists
     | StakeDelegationImpossibleDELEG
-        !(Credential 'Staking crypto) -- Credential that is not registered
+        !(Credential 'Staking era) -- Credential that is not registered
     | WrongCertificateTypeDELEG -- The DCertPool constructor should not be used by this transition
     | GenesisKeyNotInpMappingDELEG
-        !(KeyHash 'Genesis crypto) -- Unknown Genesis KeyHash
+        !(KeyHash 'Genesis era) -- Unknown Genesis KeyHash
     | DuplicateGenesisDelegateDELEG
-        !(KeyHash 'GenesisDelegate crypto) -- Keyhash which is already delegated to
+        !(KeyHash 'GenesisDelegate era) -- Keyhash which is already delegated to
     | InsufficientForInstantaneousRewardsDELEG
         !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
         !Coin -- amount of rewards to be given out
@@ -117,17 +117,17 @@ instance Typeable crypto => STS (DELEG crypto) where
         !SlotNo -- current slot
         !SlotNo -- MIR must be submitted before this slot
     | DuplicateGenesisVRFDELEG
-        !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash which is already delegated to
+        !(Hash era (VerKeyVRF era)) --VRF KeyHash which is already delegated to
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (DELEG crypto))
+instance NoUnexpectedThunks (PredicateFailure (DELEG era))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (DELEG crypto))
+  (Typeable era, Era era) =>
+  ToCBOR (PredicateFailure (DELEG era))
   where
   toCBOR = \case
     StakeKeyAlreadyRegisteredDELEG cred ->
@@ -157,10 +157,10 @@ instance
       encodeListLen 2 <> toCBOR (9 :: Word8) <> toCBOR vrf
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (DELEG crypto))
+  (Era era) =>
+  FromCBOR (PredicateFailure (DELEG era))
   where
-  fromCBOR = decodeRecordSum "PredicateFailure (DELEG crypto)" $
+  fromCBOR = decodeRecordSum "PredicateFailure (DELEG era)" $
     \case
       0 -> do
         kh <- fromCBOR
@@ -200,8 +200,8 @@ instance
       k -> invalidKey k
 
 delegationTransition ::
-  Typeable crypto =>
-  TransitionRule (DELEG crypto)
+  Typeable era =>
+  TransitionRule (DELEG era)
 delegationTransition = do
   TRC (DelegEnv slot ptr acnt, ds, c) <- judgmentContext
   case c of

@@ -14,6 +14,8 @@ module Test.Shelley.Spec.Ledger.Serialisation.Golden.Genesis
 where
 
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Crypto (HASH)
+import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Slotting.Slot (EpochSize (..))
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.Map.Strict as Map
@@ -25,12 +27,11 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Hedgehog (Property)
 import qualified Shelley.Spec.Ledger.API as L
 import Shelley.Spec.Ledger.BaseTypes (textToDns, textToUrl, truncateUnitInterval)
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
 import Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import Test.Cardano.Prelude
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Utils
   ( mkKeyPair,
@@ -53,7 +54,10 @@ tests =
     [ testProperty "ShelleyGenesis golden test" prop_golden_ShelleyGenesis
     ]
 
-exampleShelleyGenesis :: forall c. Mock c => ShelleyGenesis c
+exampleShelleyGenesis ::
+  forall era.
+  (Era era) =>
+  ShelleyGenesis era
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),
@@ -79,15 +83,15 @@ exampleShelleyGenesis =
     }
   where
     -- hash of the genesis verification key
-    genesisVerKeyHash :: L.KeyHash 'L.Genesis c
+    genesisVerKeyHash :: L.KeyHash 'L.Genesis era
     genesisVerKeyHash = L.KeyHash "23d51e9123d51e91"
     -- hash of the delegators verififation key
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
-    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate c
+    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate era
     delegVerKeyHash = L.KeyHash "839b047f839b047f"
-    delegVrfKeyHash :: Hash.Hash (HASH c) (L.VerKeyVRF c)
+    delegVrfKeyHash :: Hash.Hash (HASH (Crypto era)) (L.VerKeyVRF era)
     delegVrfKeyHash = "231391e7231391e70123"
-    initialFundedAddress :: L.Addr c
+    initialFundedAddress :: L.Addr era
     initialFundedAddress = L.Addr L.Testnet paymentCredential (L.StakeRefBase stakingCredential)
       where
         paymentCredential =
@@ -109,7 +113,7 @@ exampleShelleyGenesis =
           L.SingleHostName L.SNothing (fromJust $ textToDns "cool.domain.com"),
           L.MultiHostName (fromJust $ textToDns "cool.domain.com")
         ]
-    poolParams :: L.PoolParams c
+    poolParams :: L.PoolParams era
     poolParams =
       L.PoolParams
         { L._poolPubKey = hashKey . snd $ mkKeyPair (1, 0, 0, 0, 1),

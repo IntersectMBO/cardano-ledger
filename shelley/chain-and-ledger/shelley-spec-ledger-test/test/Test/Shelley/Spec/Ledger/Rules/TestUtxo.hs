@@ -19,7 +19,8 @@ import Control.State.Transition.Trace
 import Data.List (foldl')
 import Shelley.Spec.Ledger.API (UTXO)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
-import Shelley.Spec.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.LedgerState (_deposited, _fees, _utxo, pattern UTxOState)
 import Shelley.Spec.Ledger.Tx (_body, pattern Tx)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), _wdrls)
@@ -49,8 +50,8 @@ feesNonDecreasing ssts =
 -- | Property that checks that the sum of the pots circulation, deposits and
 -- fees increases by the sum of withdrawals of a transaction.
 potsSumIncreaseWdrls ::
-  Crypto c =>
-  [SourceSignalTarget (UTXO c)] ->
+  Era era =>
+  [SourceSignalTarget (UTXO era)] ->
   Property
 potsSumIncreaseWdrls ssts =
   conjoin $

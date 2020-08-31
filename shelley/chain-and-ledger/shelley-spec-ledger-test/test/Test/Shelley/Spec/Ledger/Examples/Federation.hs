@@ -19,12 +19,12 @@ module Test.Shelley.Spec.Ledger.Examples.Federation
   )
 where
 
+import Cardano.Ledger.Era (Era)
 import qualified Data.List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash (..),
@@ -56,9 +56,9 @@ numCoreNodes :: Word64
 numCoreNodes = 7
 
 mkAllCoreNodeKeys ::
-  (Crypto c) =>
+  (Era era) =>
   Word64 ->
-  AllIssuerKeys c r
+  AllIssuerKeys era r
 mkAllCoreNodeKeys w =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -68,45 +68,61 @@ mkAllCoreNodeKeys w =
   where
     (skCold, vkCold) = mkKeyPair (w, 0, 0, 0, 1)
 
-coreNodes :: forall c. Crypto c => [((SignKeyDSIGN c, VKey 'Genesis c), AllIssuerKeys c 'GenesisDelegate)]
-coreNodes = [(mkGenKey (x, 0, 0, 0, 0), mkAllCoreNodeKeys x) | x <- [101 .. 100 + numCoreNodes]]
+coreNodes ::
+  forall era.
+  Era era =>
+  [ ( (SignKeyDSIGN era, VKey 'Genesis era),
+      AllIssuerKeys era 'GenesisDelegate
+    )
+  ]
+coreNodes =
+  [ (mkGenKey (x, 0, 0, 0, 0), mkAllCoreNodeKeys x)
+    | x <- [101 .. 100 + numCoreNodes]
+  ]
 
 -- === Signing (Secret) Keys
 -- Retrieve the signing key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeSK :: forall c. Crypto c => Int -> SignKeyDSIGN c
-coreNodeSK = fst . fst . (coreNodes @c !!)
+coreNodeSK :: forall era. Era era => Int -> SignKeyDSIGN era
+coreNodeSK = fst . fst . (coreNodes @era !!)
 
 -- | === Verification (Public) Keys
 -- Retrieve the verification key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeVK :: forall c. Crypto c => Int -> VKey 'Genesis c
-coreNodeVK = snd . fst . (coreNodes @c !!)
+coreNodeVK :: forall era. Era era => Int -> VKey 'Genesis era
+coreNodeVK = snd . fst . (coreNodes @era !!)
 
 -- | === Block Issuer Keys
 -- Retrieve the block issuer keys (cold, VRF, and hot KES keys)
 -- for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeIssuerKeys :: forall c. Crypto c => Int -> AllIssuerKeys c 'GenesisDelegate
-coreNodeIssuerKeys = snd . (coreNodes @c !!)
+coreNodeIssuerKeys ::
+  forall era.
+  Era era =>
+  Int ->
+  AllIssuerKeys era 'GenesisDelegate
+coreNodeIssuerKeys = snd . (coreNodes @era !!)
 
 coreNodeKeysForSlot ::
-  forall c.
-  (HasCallStack, Crypto c) =>
-  Map SlotNo (OBftSlot c) ->
+  forall era.
+  (HasCallStack, Era era) =>
+  Map SlotNo (OBftSlot era) ->
   Word64 ->
-  AllIssuerKeys c 'GenesisDelegate
+  AllIssuerKeys era 'GenesisDelegate
 coreNodeKeysForSlot overlay slot = case Map.lookup (SlotNo slot) overlay of
   Nothing -> error $ "coreNodesForSlot: Cannot find keys for slot " <> show slot
   Just NonActiveSlot -> error $ "coreNodesForSlot: Non-active slot " <> show slot
   Just (ActiveSlot gkh) ->
     case Data.List.find (\((_, gk), _) -> hashKey gk == gkh) coreNodes of
-      Nothing -> error $ "coreNodesForSlot: Cannot find key hash in coreNodes: " <> show gkh
+      Nothing ->
+        error $
+          "coreNodesForSlot: Cannot find key hash in coreNodes: "
+            <> show gkh
       Just ((_, _), ak) -> ak
 
 -- | === Overlay Schedule
 -- Retrieve the overlay schedule for a given epoch and protocol parameters.
-overlayScheduleFor :: Crypto c => EpochNo -> PParams -> OverlaySchedule c
+overlayScheduleFor :: Era era => EpochNo -> PParams -> OverlaySchedule era
 overlayScheduleFor e pp =
   runShelleyBase $
     overlaySchedule
@@ -120,10 +136,10 @@ overlayScheduleFor e pp =
 -- It will return an error if there is not a core node scheduled
 -- for the given slot.
 coreNodeKeysBySchedule ::
-  (HasCallStack, Crypto c) =>
+  (HasCallStack, Era era) =>
   PParams ->
   Word64 ->
-  AllIssuerKeys c 'GenesisDelegate
+  AllIssuerKeys era 'GenesisDelegate
 coreNodeKeysBySchedule = coreNodeKeysForSlot . fullOSched
   where
     fullOSched pp =
@@ -136,7 +152,10 @@ coreNodeKeysBySchedule = coreNodeKeysForSlot . fullOSched
 -- | === Genesis Delegation Mapping
 -- The map from genesis/core node (verification) key hashes
 -- to their delegate's (verification) key hash.
-genDelegs :: forall c. Crypto c => Map (KeyHash 'Genesis c) (GenDelegPair c)
+genDelegs ::
+  forall era.
+  Era era =>
+  Map (KeyHash 'Genesis era) (GenDelegPair era)
 genDelegs =
   Map.fromList
     [ ( hashKey $ snd gkey,

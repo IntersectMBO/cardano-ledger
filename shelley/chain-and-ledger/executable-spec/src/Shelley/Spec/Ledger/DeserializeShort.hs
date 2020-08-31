@@ -9,6 +9,8 @@ module Shelley.Spec.Ledger.DeserializeShort
 where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
+import Cardano.Ledger.Crypto (ADDRHASH)
+import Cardano.Ledger.Era (Crypto (..))
 import Control.Monad (ap)
 import Control.Monad (join)
 import qualified Control.Monad.Fail
@@ -36,7 +38,6 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys (KeyHash (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -57,23 +58,23 @@ instance Monad GetShort where
 instance Control.Monad.Fail.MonadFail GetShort where
   fail _ = GetShort $ \_ _ -> Nothing
 
-deserialiseAddrStakeRef :: Crypto crypto => ShortByteString -> Maybe (StakeReference crypto)
+deserialiseAddrStakeRef :: Era era => ShortByteString -> Maybe (StakeReference era)
 deserialiseAddrStakeRef sbs = join $ snd <$> runGetShort getAddrStakeReference 0 sbs
 
-getAddrStakeReference :: forall crypto. Crypto crypto => GetShort (Maybe (StakeReference crypto))
+getAddrStakeReference :: forall era. Era era => GetShort (Maybe (StakeReference era))
 getAddrStakeReference = do
   header <- getWord
   if testBit header byron
     then pure Nothing
-    else skipHash ([] @(ADDRHASH crypto)) >> Just <$> getStakeReference header
+    else skipHash ([] @(ADDRHASH (Crypto era))) >> Just <$> getStakeReference header
 
-deserializeShortAddr :: Crypto crypto => ShortByteString -> Maybe (Addr crypto)
+deserializeShortAddr :: Era era => ShortByteString -> Maybe (Addr era)
 deserializeShortAddr short =
   case runGetShort getShortAddr 0 short of
     Just (_, maybe_addr) -> maybe_addr
     Nothing -> Nothing
 
-getShortAddr :: forall crypto. Crypto crypto => GetShort (Maybe (Addr crypto))
+getShortAddr :: forall era. Era era => GetShort (Maybe (Addr era))
 getShortAddr = do
   header <- peekWord8
   if testBit header byron
@@ -141,13 +142,13 @@ getPtr =
     <*> getVariableLengthNat
     <*> getVariableLengthNat
 
-getKeyHash :: Crypto crypto => GetShort (Credential kr crypto)
+getKeyHash :: Era era => GetShort (Credential kr era)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
 
-getScriptHash :: Crypto crypto => GetShort (Credential kr crypto)
+getScriptHash :: Era era => GetShort (Credential kr era)
 getScriptHash = ScriptHashObj . ScriptHash <$> getHash
 
-getStakeReference :: Crypto crypto => Word8 -> GetShort (StakeReference crypto)
+getStakeReference :: Era era => Word8 -> GetShort (StakeReference era)
 getStakeReference header = case testBit header notBaseAddr of
   True -> case testBit header isEnterpriseAddr of
     True -> pure StakeRefNull
@@ -156,7 +157,7 @@ getStakeReference header = case testBit header notBaseAddr of
     True -> StakeRefBase <$> getScriptHash
     False -> StakeRefBase <$> getKeyHash
 
-getPayCred :: Crypto crypto => Word8 -> GetShort (PaymentCredential crypto)
+getPayCred :: Era era => Word8 -> GetShort (PaymentCredential era)
 getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash

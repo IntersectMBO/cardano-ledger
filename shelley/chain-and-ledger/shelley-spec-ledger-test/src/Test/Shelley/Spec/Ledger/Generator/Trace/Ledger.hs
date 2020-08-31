@@ -15,6 +15,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
+import Cardano.Ledger.Era (Crypto, Era)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended (IRC, TRC (..))
@@ -23,7 +24,6 @@ import Data.Functor.Identity (runIdentity)
 import qualified Data.Sequence as Seq
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState,
@@ -54,7 +54,10 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
-instance Mock c => TQC.HasTrace (LEDGER c) (GenEnv c) where
+instance
+  (Era era, Mock (Crypto era)) =>
+  TQC.HasTrace (LEDGER era) (GenEnv era)
+  where
   envGen GenEnv {geConstants} =
     LedgerEnv <$> pure (SlotNo 0)
       <*> pure 0
@@ -65,10 +68,13 @@ instance Mock c => TQC.HasTrace (LEDGER c) (GenEnv c) where
 
   shrinkSignal = shrinkTx
 
-  type BaseEnv (LEDGER c) = Globals
+  type BaseEnv (LEDGER era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
-instance Mock c => TQC.HasTrace (LEDGERS c) (GenEnv c) where
+instance
+  (Era era, Mock (Crypto era)) =>
+  TQC.HasTrace (LEDGERS era) (GenEnv era)
+  where
   envGen GenEnv {geConstants} =
     LedgersEnv <$> pure (SlotNo 0)
       <*> genPParams geConstants
@@ -88,14 +94,17 @@ instance Mock c => TQC.HasTrace (LEDGERS c) (GenEnv c) where
       pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
       where
         genAndApplyTx ::
-          (UTxOState c, DPState c, [Tx c]) ->
+          (UTxOState era, DPState era, [Tx era]) ->
           Ix ->
-          Gen (UTxOState c, DPState c, [Tx c])
+          Gen (UTxOState era, DPState era, [Tx era])
         genAndApplyTx (u, dp, txs) ix = do
           let ledgerEnv = LedgerEnv slotNo ix pParams reserves
           tx <- genTx ge ledgerEnv (u, dp)
 
-          let res = runShelleyBase $ applySTSTest @(LEDGER c) (TRC (ledgerEnv, (u, dp), tx))
+          let res =
+                runShelleyBase $
+                  applySTSTest @(LEDGER era)
+                    (TRC (ledgerEnv, (u, dp), tx))
           pure $ case res of
             Left pf ->
               error ("LEDGERS sigGen: " <> show pf)
@@ -104,7 +113,7 @@ instance Mock c => TQC.HasTrace (LEDGERS c) (GenEnv c) where
 
   shrinkSignal = const []
 
-  type BaseEnv (LEDGERS c) = Globals
+  type BaseEnv (LEDGERS era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | Generate initial state for the LEDGER STS using the STS environment.
@@ -114,10 +123,10 @@ instance Mock c => TQC.HasTrace (LEDGERS c) (GenEnv c) where
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
-  Crypto c =>
+  Era era =>
   Constants ->
-  IRC (LEDGER c) ->
-  Gen (Either a (UTxOState c, DPState c))
+  IRC (LEDGER era) ->
+  Gen (Either a (UTxOState era, DPState era))
 mkGenesisLedgerState c _ = do
   utxo0 <- genUtxo0 c
   let (LedgerState utxoSt dpSt) = genesisState (genesisDelegs0 c) utxo0

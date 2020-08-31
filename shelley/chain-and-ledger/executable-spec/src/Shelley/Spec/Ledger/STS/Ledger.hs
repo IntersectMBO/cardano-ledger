@@ -24,6 +24,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( Assertion (..),
@@ -40,7 +41,6 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
-import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
@@ -69,7 +69,7 @@ import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxBody (..))
 
-data LEDGER crypto
+data LEDGER era
 
 data LedgerEnv = LedgerEnv
   { ledgerSlotNo :: SlotNo,
@@ -80,20 +80,20 @@ data LedgerEnv = LedgerEnv
   deriving (Show)
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  STS (LEDGER crypto)
+  STS (LEDGER era)
   where
   type
-    State (LEDGER crypto) =
-      (UTxOState crypto, DPState crypto)
-  type Signal (LEDGER crypto) = Tx crypto
-  type Environment (LEDGER crypto) = LedgerEnv
-  type BaseM (LEDGER crypto) = ShelleyBase
-  data PredicateFailure (LEDGER crypto)
-    = UtxowFailure (PredicateFailure (UTXOW crypto)) -- Subtransition Failures
-    | DelegsFailure (PredicateFailure (DELEGS crypto)) -- Subtransition Failures
+    State (LEDGER era) =
+      (UTxOState era, DPState era)
+  type Signal (LEDGER era) = Tx era
+  type Environment (LEDGER era) = LedgerEnv
+  type BaseM (LEDGER era) = ShelleyBase
+  data PredicateFailure (LEDGER era)
+    = UtxowFailure (PredicateFailure (UTXOW era)) -- Subtransition Failures
+    | DelegsFailure (PredicateFailure (DELEGS era)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = []
@@ -116,22 +116,22 @@ instance
         )
     ]
 
-instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (LEDGER crypto))
+instance (Era era) => NoUnexpectedThunks (PredicateFailure (LEDGER era))
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (PredicateFailure (LEDGER crypto))
+  (Typeable era, Era era) =>
+  ToCBOR (PredicateFailure (LEDGER era))
   where
   toCBOR = \case
     (UtxowFailure a) -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR a
     (DelegsFailure a) -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR a
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (PredicateFailure (LEDGER crypto))
+  (Era era) =>
+  FromCBOR (PredicateFailure (LEDGER era))
   where
   fromCBOR =
-    decodeRecordSum "PredicateFailure (LEDGER crypto)" $
+    decodeRecordSum "PredicateFailure (LEDGER era)" $
       ( \case
           0 -> do
             a <- fromCBOR
@@ -143,16 +143,16 @@ instance
       )
 
 ledgerTransition ::
-  forall crypto.
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  forall era.
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  TransitionRule (LEDGER crypto)
+  TransitionRule (LEDGER era)
 ledgerTransition = do
   TRC (LedgerEnv slot txIx pp account, (utxoSt, dpstate), tx) <- judgmentContext
 
   dpstate' <-
-    trans @(DELEGS crypto) $
+    trans @(DELEGS era) $
       TRC
         ( DelegsEnv slot txIx pp tx account,
           dpstate,
@@ -164,7 +164,7 @@ ledgerTransition = do
       stpools = _pParams pstate
 
   utxoSt' <-
-    trans @(UTXOW crypto) $
+    trans @(UTXOW era) $
       TRC
         ( UtxoEnv slot pp stpools genDelegs,
           utxoSt,
@@ -173,17 +173,17 @@ ledgerTransition = do
   pure (utxoSt', dpstate')
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  Embed (DELEGS crypto) (LEDGER crypto)
+  Embed (DELEGS era) (LEDGER era)
   where
   wrapFailed = DelegsFailure
 
 instance
-  ( Crypto crypto,
-    DSignable crypto (Hash crypto (TxBody crypto))
+  ( Era era,
+    DSignable era (Hash era (TxBody era))
   ) =>
-  Embed (UTXOW crypto) (LEDGER crypto)
+  Embed (UTXOW era) (LEDGER era)
   where
   wrapFailed = UtxowFailure
