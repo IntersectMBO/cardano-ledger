@@ -20,6 +20,7 @@ module Shelley.Spec.Ledger.Genesis
     initialFundsPseudoTxIn,
     validateGenesis,
     describeValidationErr,
+    mkShelleyGlobals,
   )
 where
 
@@ -28,9 +29,11 @@ import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Crypto (HASH, KES)
 import Cardano.Ledger.Era
 import Cardano.Prelude (NoUnexpectedThunks, forceElemsToWHNF)
+import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -41,11 +44,13 @@ import qualified Data.Text as Text
 import Data.Time (NominalDiffTime, UTCTime (..))
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
+import GHC.Natural (Natural)
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.StabilityWindow
 import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO
 
@@ -308,3 +313,33 @@ validateGenesis
          in if numGenesisNodes == 0 || sgUpdateQuorum > maxTooSmal
               then Nothing
               else Just $ QuorumTooSmall sgUpdateQuorum maxTooSmal numGenesisNodes
+
+{-------------------------------------------------------------------------------
+  Construct 'Globals' using 'ShelleyGenesis'
+-------------------------------------------------------------------------------}
+
+mkShelleyGlobals ::
+  ShelleyGenesis c ->
+  EpochInfo Identity ->
+  Natural ->
+  Globals
+mkShelleyGlobals genesis epochInfo maxMajorPV =
+  Globals
+    { activeSlotCoeff = sgActiveSlotCoeff genesis,
+      epochInfo = epochInfo,
+      maxKESEvo = sgMaxKESEvolutions genesis,
+      maxLovelaceSupply = sgMaxLovelaceSupply genesis,
+      maxMajorPV = maxMajorPV,
+      networkId = sgNetworkId genesis,
+      quorum = sgUpdateQuorum genesis,
+      randomnessStabilisationWindow,
+      securityParameter = k,
+      slotsPerKESPeriod = sgSlotsPerKESPeriod genesis,
+      stabilityWindow
+    }
+  where
+    k = sgSecurityParam genesis
+    stabilityWindow =
+      computeStabilityWindow k (sgActiveSlotCoeff genesis)
+    randomnessStabilisationWindow =
+      computeRandomnessStabilisationWindow k (sgActiveSlotCoeff genesis)

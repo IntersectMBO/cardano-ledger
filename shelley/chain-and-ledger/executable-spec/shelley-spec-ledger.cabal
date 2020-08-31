@@ -46,6 +46,7 @@ library
     Shelley.Spec.Ledger.Scripts
     Shelley.Spec.Ledger.Serialization
     Shelley.Spec.Ledger.Slot
+    Shelley.Spec.Ledger.StabilityWindow
     Shelley.Spec.Ledger.STS.Bbody
     Shelley.Spec.Ledger.STS.Chain
     Shelley.Spec.Ledger.STS.Deleg
