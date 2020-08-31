@@ -8,9 +8,6 @@ module BenchUTxOAggregate where
 
 import Control.Iterate.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
---
-import Cardano.Ledger.Era (Crypto (..))
-
 import qualified Data.ByteString.Short as SBS
 import Data.Map (Map)
 import qualified Data.Map as Map
