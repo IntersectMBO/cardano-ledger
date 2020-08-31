@@ -260,6 +260,7 @@ scaleVl v (Coin mv)
 -- compare the outputs as Values (finitely supported functions)
 -- ada must be greater than scaled min value deposit
 -- rest of tokens must be greater than 0
+-- by :
 -- outputsTooSmall = [out | out@(TxOut _ vl) <- outputs, (voper Gt) (vinject $ scaleVl vl minUTxOValue) vl]
 
 -- =============================================================
@@ -351,6 +352,8 @@ instance
            <> toCBOR c
            <> toCBOR v
 
+-- filter out 0s right at deserialization
+-- 
 instance
   (Crypto crypto)
   => FromCBOR (Value crypto)
