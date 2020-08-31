@@ -14,14 +14,8 @@ as much as possible,
 except for the following changes and additions:
 
 \begin{itemize}
-  \item $\PolicyID$ is the type of hashes
-  of Plutus and MSig scripts (and any other scripts added in the future)
-
   \item $\RdmrsHash$ is the type of hashes of the indexed redeemer structure
   included in the transaction (details about this structure below)
-
-  \item $\AssetID,~\Quantity$ are types
-  related to native multicurrency on the ledger.
 
   \item  $\ScriptMSig$ is the native multisignature scripts already supported.
 
@@ -56,13 +50,7 @@ except for the following changes and additions:
   related to a ledger type (see note "Data Representation" below)
 
   \item $\Value$ is the multicurrency type used to represent
-  both fungible and non fungible tokens. The key of this finite map type is
-  the hash of the monetary policy script for tokens of this currency.
-  This hash is referred to as the $\PolicyID$ of the currency. Within a single
-  currency, tokens belong to an $\AssetID$, which is assigned at the creation
-  the token and can be controlled by monetary policy script. Tokens with different
-  $\PolicyID$s or different $\AssetID$s are not fungible with each other.
-  See the note below for a discussion of Ada representation.
+  both fungible and non fungible tokens. For details, see the MA spec.
 
   \item $\IsFee$ is a tag that indicates when an input has been marked
   to be used for paying transaction fees ($\Yes$ for when it is for fees,
@@ -166,9 +154,8 @@ except for the following changes and additions:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{polid} &\PolicyID & \text{hash of policy scripts}\\
+      \var{v} &\Value & \text{Multi-asset value}\\
       \var{hdv} &\RdmrsHash & \text{hash of the indexed redeemers structure}\\
-      \var{assetid} & \AssetID & \text{asset identifier}\\
       \var{quan} & \Quantity & \text{quantity of a token}\\
       \var{msig} & \ScriptMSig & \text{Multisig scripts} \\
       \var{plc} & \ScriptPlutus & \text{Plutus scripts of initial Plutus version} \\
@@ -196,10 +183,6 @@ except for the following changes and additions:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{val} & \Value
-      & \PolicyID \mapsto (\AssetID \mapsto \Quantity)
-%      & \text{a collection of tokens}
-      \\
       \var{isf}
       & \IsFee
       & \Yes \uniondistinct \Nope
@@ -525,83 +508,6 @@ for script interpreter versions of the scripts inside the transaction.
   \end{align*}
   \caption{Languages and Plutus Versions}
   \label{fig:defs:functions-chain-helper}
-\end{figure*}
-
-\textbf{Coin and Multicurrency Tokens}
-In the Goguen era, multicurrency is intorduced, but Ada is still expected to be
-the most common type of token on the ledger.
-The $\Coin$ type is used to represent an amount of Ada.
-It is the only
-type of token which can be used for all non-UTxO ledger accounting, including deposits,
-fees, rewards, treasury, and the proof of stake protocol. Under no circumstances
-are these administrative fields and calculations ever expected to operate on
-any types of tokens besides Ada. These fiels will continue to have the type $\Coin$.
-
-The exact representation of tokens in the UTxO and inside transactions
-is an implementation detail, which we omit here.
-Note that it necessarily is equivalent to $\Value$, optimized
-for Ada-only cases, has a unique representation for the Ada token class,
-and does not allow tokens of the Ada currency to have a $\AssetID$ value
-of anything other than $\mathsf{adaToken}$.
-In Figure \ref{fig:defs:functions-helper} are the following helper functions,
-
-\begin{itemize}
-  \item $\mathsf{adaID}$ is a fixed bytestring value with no known associated
-  script (i.e. no known script hashes to this bytestring). It is the currency ID of Ada.
-  Note that as part of transaction validation, we explicitly check that there is no
-  value with currency ID $\mathsf{adaID}$ in its forge field.
-
-  It is very unlikely
-  that a script with the hash $\mathsf{adaID}$ will be found, and even less likely
-  that it is a meaningful forging script that can ever validate. If this does
-  happen, however, making a small change to the script, leaving its semantic meaning
-  intact, will change its hash and likely allow the forge to take place.
-
-  \item $\mathsf{adaToken}$ is a byte string representation of the word "Ada".
-  The ledger should never allow the use of any other token name associated
-  with Ada's currency ID
-  \item $\fun{qu}$ and $\fun{co}$ are type conversions from quantity to
-  coin. Both of these types are synonyms for $\Z$, so they are
-  type re-naming conversions that are mutual inverses, with
-
-  $\fun{qu} ~(\fun{co} ~q )~= ~q$, and
-
-  $\fun{co}~ (\fun{qu}~ c) ~=~ c$, for $c \in \Coin,~q \in \Quantity$.
-
-  \item $\fun{coinToValue}$ takes a coin value and generates a $\Value$ type representation
-  of it
-\end{itemize}
-
-An amount of Ada can also be represented as a multicurrency value
-using the notation in Figure \ref{fig:defs:functions-helper}, as
-$\fun{coinToValue}~c$ where $c \in \Coin$. We must use this representation
-when adding or subtracting Ada and other tokens as $\Value$, e.g. in the
-preservation of value calculations. However, we will abuse notation and
-write shorthand that $v ~\in~ \Coin$ is $\type{True}$ when
-$v~ =~ \fun{coinToValue}~ c$ for some $c~\in~\Coin$.
-
-\begin{figure*}[htb]
-  \emph{Abstract Functions and Values}
-  %
-  \begin{align*}
-    \mathsf{adaID} \in& ~\PolicyID
-    & \text{Ada currency ID} \\
-    \mathsf{adaToken} \in& ~\AssetID
-    & \text{Ada Token} \\
-    \mathsf{co} \in& ~\Quantity \to \Coin
-    & \text{type conversion} \\
-    \mathsf{qu} \in& ~\Coin \to \Quantity
-    & \text{type conversion} \\
-  \end{align*}
-  \emph{Helper Functions}
-  %
-  \begin{align*}
-    \fun{coinToValue} \in & ~\Coin\to \Value \\
-    \fun{coinToValue}~ c = & \{\mathsf{adaID} \mapsto \{\mathsf{adaToken} \mapsto \fun{qu}~c\}\} \\
-    &\text{convert a Coin amount to a Value} \\
-  \end{align*}
-  \caption{Multicurrency}
-  \label{fig:defs:functions-helper}
 \end{figure*}
 
 \textbf{Plutus Script Validation}
