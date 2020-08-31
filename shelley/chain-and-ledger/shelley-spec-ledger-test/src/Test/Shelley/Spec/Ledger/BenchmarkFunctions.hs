@@ -26,7 +26,8 @@ module Test.Shelley.Spec.Ledger.BenchmarkFunctions
   )
 where
 
-import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
+-- import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
+-- import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import qualified Data.Map as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -41,7 +42,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Crypto (Crypto (..))
+
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
@@ -103,16 +104,20 @@ import Test.Shelley.Spec.Ledger.Utils
     unsafeMkUnitInterval,
   )
 
-data B
+
 type VB = Coin -- TODO Value B?
 
+{-
+data B
 instance Crypto B where
   type KES B = KES Original.C
   type VRF B = VRF Original.C
   type DSIGN B = DSIGN Original.C
   type HASH B = Blake2b_256
   type ADDRHASH B = Blake2b_256
+-}
 
+type B = Original.C
 -- =========================================================
 
 aliceStake :: KeyPair 'Staking B

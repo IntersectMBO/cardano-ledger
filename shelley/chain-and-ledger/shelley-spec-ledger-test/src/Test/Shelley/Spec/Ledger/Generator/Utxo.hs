@@ -15,8 +15,8 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
   )
 where
 
-import Data.Hashable(hash)
 import Debug.Trace
+import Data.Hashable(hash)
 import Cardano.Binary (serialize)
 import Cardano.Slotting.Slot(SlotNo(..))
 import Control.Iterate.SetAlgebra (forwards)
@@ -245,7 +245,7 @@ genNextDelta :: forall c v.
 genNextDelta
   utxo
   pparams
-  keySpace@( KeySpace_
+  ( KeySpace_
       { ksIndexedStakingKeys,
         ksIndexedPaymentKeys,
         ksIndexedPayScripts
@@ -301,7 +301,7 @@ genNextDelta
                         vkeyPairs
                         (mkScriptWits msigPairs mempty)
                         (hashAnnotated $ _body tx)
-                pure $ trace ("\n****************\n"++show ksIndexedPaymentKeys++"\n\n"++show ksIndexedStakingKeys++"\n\n"++show keySpace) $
+                pure $
                   delta
                     { extraWitnesses = extraWitnesses <> newWits,
                       extraInputs = extraInputs <> Set.fromList inputs,
