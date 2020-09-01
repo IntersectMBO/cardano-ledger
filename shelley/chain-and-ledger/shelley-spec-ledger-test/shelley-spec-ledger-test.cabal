@@ -101,6 +101,7 @@ test-suite shelley-spec-ledger-test
     other-modules:
       Test.Control.Iterate.SetAlgebra
       Test.Shelley.Spec.Ledger.Address.Bootstrap
+      Test.Shelley.Spec.Ledger.ByronTranslation
       Test.Shelley.Spec.Ledger.Examples
       Test.Shelley.Spec.Ledger.Examples.Cast
       Test.Shelley.Spec.Ledger.Examples.Combinators
