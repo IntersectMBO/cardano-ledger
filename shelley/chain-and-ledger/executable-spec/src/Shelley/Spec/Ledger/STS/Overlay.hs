@@ -12,8 +12,9 @@
 
 module Shelley.Spec.Ledger.STS.Overlay
   ( OVERLAY,
-    PredicateFailure (..),
+    PredicateFailure,
     OverlayEnv (..),
+    OverlayPredicateFailure (..),
   )
 where
 
@@ -88,6 +89,41 @@ data OverlayEnv era
 
 instance NoUnexpectedThunks (OverlayEnv era)
 
+data OverlayPredicateFailure era
+  = VRFKeyUnknown
+      !(KeyHash 'StakePool era) -- unknown VRF keyhash (not registered)
+  | VRFKeyWrongVRFKey
+      !(KeyHash 'StakePool era) -- KeyHash of block issuer
+      !(Hash era (VerKeyVRF era)) --VRF KeyHash registered with stake pool
+      !(Hash era (VerKeyVRF era)) --VRF KeyHash from Header
+  | VRFKeyBadNonce
+      !Nonce -- Nonce constant to distinguish VRF nonce values
+      !SlotNo -- Slot used for VRF calculation
+      !Nonce -- Epoch nonce used for VRF calculation
+      !(VRF.CertifiedVRF (VRF (Crypto era)) Nonce) -- VRF calculated nonce value
+  | VRFKeyBadLeaderValue
+      !Nonce -- Leader constant to distinguish VRF leader values
+      !SlotNo -- Slot used for VRF calculation
+      !Nonce -- Epoch nonce used for VRF calculation
+      !(VRF.CertifiedVRF (VRF (Crypto era)) Nonce) -- VRF calculated leader value
+  | VRFLeaderValueTooBig
+      !(VRF.OutputVRF (VRF (Crypto era))) -- VRF Leader value
+      !Rational -- stake pool's relative stake
+      !ActiveSlotCoeff -- Praos active slot coefficient value
+  | NotActiveSlotOVERLAY
+      !SlotNo -- Slot which is supposed to be silent
+  | WrongGenesisColdKeyOVERLAY
+      !(KeyHash 'BlockIssuer era) -- KeyHash of block issuer
+      !(KeyHash 'GenesisDelegate era) -- KeyHash genesis delegate keyhash assigned to this slot
+  | WrongGenesisVRFKeyOVERLAY
+      !(KeyHash 'BlockIssuer era) -- KeyHash of block issuer
+      !(Hash era (VerKeyVRF era)) --VRF KeyHash registered with genesis delegation
+      !(Hash era (VerKeyVRF era)) --VRF KeyHash from Header
+  | UnknownGenesisKeyOVERLAY
+      !(KeyHash 'Genesis era) -- KeyHash which does not correspond to o genesis node
+  | OcertFailure (PredicateFailure (OCERT era)) -- Subtransition Failures
+  deriving (Generic)
+
 instance
   ( Era era,
     DSignable era (OCertSignable era),
@@ -106,49 +142,19 @@ instance
 
   type Environment (OVERLAY era) = OverlayEnv era
   type BaseM (OVERLAY era) = ShelleyBase
-
-  data PredicateFailure (OVERLAY era)
-    = VRFKeyUnknown
-        !(KeyHash 'StakePool era) -- unknown VRF keyhash (not registered)
-    | VRFKeyWrongVRFKey
-        !(KeyHash 'StakePool era) -- KeyHash of block issuer
-        !(Hash era (VerKeyVRF era)) --VRF KeyHash registered with stake pool
-        !(Hash era (VerKeyVRF era)) --VRF KeyHash from Header
-    | VRFKeyBadNonce
-        !Nonce -- Nonce constant to distinguish VRF nonce values
-        !SlotNo -- Slot used for VRF calculation
-        !Nonce -- Epoch nonce used for VRF calculation
-        !(VRF.CertifiedVRF (VRF (Crypto era)) Nonce) -- VRF calculated nonce value
-    | VRFKeyBadLeaderValue
-        !Nonce -- Leader constant to distinguish VRF leader values
-        !SlotNo -- Slot used for VRF calculation
-        !Nonce -- Epoch nonce used for VRF calculation
-        !(VRF.CertifiedVRF (VRF (Crypto era)) Nonce) -- VRF calculated leader value
-    | VRFLeaderValueTooBig
-        !(VRF.OutputVRF (VRF (Crypto era))) -- VRF Leader value
-        !Rational -- stake pool's relative stake
-        !ActiveSlotCoeff -- Praos active slot coefficient value
-    | NotActiveSlotOVERLAY
-        !SlotNo -- Slot which is supposed to be silent
-    | WrongGenesisColdKeyOVERLAY
-        !(KeyHash 'BlockIssuer era) -- KeyHash of block issuer
-        !(KeyHash 'GenesisDelegate era) -- KeyHash genesis delegate keyhash assigned to this slot
-    | WrongGenesisVRFKeyOVERLAY
-        !(KeyHash 'BlockIssuer era) -- KeyHash of block issuer
-        !(Hash era (VerKeyVRF era)) --VRF KeyHash registered with genesis delegation
-        !(Hash era (VerKeyVRF era)) --VRF KeyHash from Header
-    | UnknownGenesisKeyOVERLAY
-        !(KeyHash 'Genesis era) -- KeyHash which does not correspond to o genesis node
-    | OcertFailure (PredicateFailure (OCERT era)) -- Subtransition Failures
-    deriving (Generic)
+  type PredicateFailure (OVERLAY era) = OverlayPredicateFailure era
 
   initialRules = []
 
   transitionRules = [overlayTransition]
 
-deriving instance (VRF.VRFAlgorithm (VRF (Crypto era))) => Show (PredicateFailure (OVERLAY era))
+deriving instance
+  (VRF.VRFAlgorithm (VRF (Crypto era))) =>
+  Show (OverlayPredicateFailure era)
 
-deriving instance (VRF.VRFAlgorithm (VRF (Crypto era))) => Eq (PredicateFailure (OVERLAY era))
+deriving instance
+  (VRF.VRFAlgorithm (VRF (Crypto era))) =>
+  Eq (OverlayPredicateFailure era)
 
 vrfChecks ::
   forall era.
@@ -270,7 +276,9 @@ overlayTransition =
 
         trans @(OCERT era) $ TRC (oce, cs, bh)
 
-instance (VRF.VRFAlgorithm (VRF (Crypto era))) => NoUnexpectedThunks (PredicateFailure (OVERLAY era))
+instance
+  (VRF.VRFAlgorithm (VRF (Crypto era))) =>
+  NoUnexpectedThunks (OverlayPredicateFailure era)
 
 instance
   ( Era era,

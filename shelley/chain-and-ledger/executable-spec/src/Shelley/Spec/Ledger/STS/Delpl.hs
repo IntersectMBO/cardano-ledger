@@ -11,7 +11,8 @@
 module Shelley.Spec.Ledger.STS.Delpl
   ( DELPL,
     DelplEnv (..),
-    PredicateFailure (..),
+    DelplPredicateFailure (..),
+    PredicateFailure,
   )
 where
 
@@ -56,6 +57,11 @@ data DelplEnv = DelplEnv
     delPlAcnt :: AccountState
   }
 
+data DelplPredicateFailure era
+  = PoolFailure (PredicateFailure (POOL era)) -- Subtransition Failures
+  | DelegFailure (PredicateFailure (DELEG era)) -- Subtransition Failures
+  deriving (Show, Eq, Generic)
+
 instance
   Era era =>
   STS (DELPL era)
@@ -64,19 +70,16 @@ instance
   type Signal (DELPL era) = DCert era
   type Environment (DELPL era) = DelplEnv
   type BaseM (DELPL era) = ShelleyBase
-  data PredicateFailure (DELPL era)
-    = PoolFailure (PredicateFailure (POOL era)) -- Subtransition Failures
-    | DelegFailure (PredicateFailure (DELEG era)) -- Subtransition Failures
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (DELPL era) = DelplPredicateFailure era
 
   initialRules = [pure emptyDelegation]
   transitionRules = [delplTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (DELPL era))
+instance NoUnexpectedThunks (DelplPredicateFailure era)
 
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PredicateFailure (DELPL era))
+  ToCBOR (DelplPredicateFailure era)
   where
   toCBOR = \case
     (PoolFailure a) ->
@@ -88,7 +91,7 @@ instance
 
 instance
   (Era era) =>
-  FromCBOR (PredicateFailure (DELPL era))
+  FromCBOR (DelplPredicateFailure era)
   where
   fromCBOR =
     decodeRecordSum

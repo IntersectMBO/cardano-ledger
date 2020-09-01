@@ -23,6 +23,15 @@ import           Byron.Spec.Ledger.Update hiding (NotADelegate)
 
 data SIGCNT deriving (Data, Typeable)
 
+-- | These `PredicateFailure`s are all throwable.
+data SigcntPredicateFailure
+  = TooManyIssuedBlocks VKeyGenesis
+  -- ^ The given genesis key issued too many blocks.
+  | NotADelegate
+  -- ^ The key signing the block is not a delegate of a genesis key.
+  deriving (Eq, Show, Data, Typeable)
+
+
 instance STS SIGCNT where
   type Environment SIGCNT
     = ( PParams
@@ -33,14 +42,7 @@ instance STS SIGCNT where
   type State SIGCNT = Seq VKeyGenesis
 
   type Signal SIGCNT = VKey
-
-  -- | These `PredicateFailure`s are all throwable.
-  data PredicateFailure SIGCNT
-    = TooManyIssuedBlocks VKeyGenesis
-    -- ^ The given genesis key issued too many blocks.
-    | NotADelegate
-    -- ^ The key signing the block is not a delegate of a genesis key.
-    deriving (Eq, Show, Data, Typeable)
+  type PredicateFailure SIGCNT = SigcntPredicateFailure
 
   initialRules = []
 

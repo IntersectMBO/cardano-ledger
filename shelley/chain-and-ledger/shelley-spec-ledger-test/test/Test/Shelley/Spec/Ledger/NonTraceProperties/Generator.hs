@@ -69,11 +69,16 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, emptyPParams)
 import Shelley.Spec.Ledger.STS.Delegs
-  ( PredicateFailure (..),
+  ( DelegsPredicateFailure (..),
     pattern DelegateeNotRegisteredDELEG,
     pattern WithdrawalsNotInRewardsDELEGS,
   )
-import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..), PredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Ledger
+  ( LedgerEnv (..),
+    LedgerPredicateFailure (..),
+  )
+import Shelley.Spec.Ledger.STS.Utxo (UtxoPredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
@@ -310,7 +315,11 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
     repeatCollectTx' (n - 1) keyPairs (txfee' + fees) ls' (tx : txs) (validationErrors ++ errors')
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
-findStakeKeyPair :: Era era => Credential 'Staking era -> KeyPairs era -> KeyPair 'Staking era
+findStakeKeyPair ::
+  Era era =>
+  Credential 'Staking era ->
+  KeyPairs era ->
+  KeyPair 'Staking era
 findStakeKeyPair (KeyHashObj hk) keyList =
   snd $ head $ filter (\(_, stake) -> hk == hashKey (vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case
@@ -340,18 +349,27 @@ genValidSuccessorState keyPairs _slot sourceState = do
     Left _ -> Gen.discard
     Right ls -> pure (txfee', entry, ls)
 
-genValidStateTx :: (Era era, ExMock (Crypto era)) => proxy era -> Gen (LedgerState era, Natural, Coin, Tx era, LedgerState era)
+genValidStateTx ::
+  (Era era, ExMock (Crypto era)) =>
+  proxy era ->
+  Gen (LedgerState era, Natural, Coin, Tx era, LedgerState era)
 genValidStateTx p = do
   (ls, steps, txfee', entry, ls', _) <- genValidStateTxKeys p
   pure (ls, steps, txfee', entry, ls')
 
-genValidStateTxKeys :: (Era era, ExMock (Crypto era)) => proxy era -> Gen (LedgerState era, Natural, Coin, Tx era, LedgerState era, KeyPairs era)
+genValidStateTxKeys ::
+  (Era era, ExMock (Crypto era)) =>
+  proxy era ->
+  Gen (LedgerState era, Natural, Coin, Tx era, LedgerState era, KeyPairs era)
 genValidStateTxKeys p = do
   (keyPairs, steps, _, ls) <- genValidLedgerState p
   (txfee', entry, ls') <- genValidSuccessorState keyPairs (SlotNo $ fromIntegral steps + 1) ls
   pure (ls, steps, txfee', entry, ls', keyPairs)
 
-genStateTx :: (Era era, ExMock (Crypto era)) => proxy era -> Gen (LedgerState era, Natural, Coin, Tx era, LedgerValidation era)
+genStateTx ::
+  (Era era, ExMock (Crypto era)) =>
+  proxy era ->
+  Gen (LedgerState era, Natural, Coin, Tx era, LedgerValidation era)
 genStateTx p = do
   (keyPairs, steps, _, ls) <- genValidLedgerState p
   (txfee', entry, lv) <- genLedgerStateTx' keyPairs ls
@@ -370,7 +388,12 @@ genLedgerStateTx' keyList sourceState = do
   pure
     ( txfee',
       tx',
-      asStateTransition' (SlotNo _slot) defPCs (LedgerValidation [] sourceState) tx' (AccountState 0 0)
+      asStateTransition'
+        (SlotNo _slot)
+        defPCs
+        (LedgerValidation [] sourceState)
+        tx'
+        (AccountState 0 0)
     )
 
 -- Generators for 'DelegationData'
@@ -453,11 +476,13 @@ asStateTransition' _slot pp (LedgerValidation valErrors ls) tx _ =
         Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
         Valid -> LedgerValidation valErrors ls'
 
-convertPredicateFailuresToValidationErrors :: [[PredicateFailure (LEDGER h)]] -> [ValidationError]
+convertPredicateFailuresToValidationErrors ::
+  [[LedgerPredicateFailure h]] ->
+  [ValidationError]
 convertPredicateFailuresToValidationErrors pfs =
   map predicateFailureToValidationError $ foldr (++) [] pfs
 
-predicateFailureToValidationError :: PredicateFailure (LEDGER h) -> ValidationError
+predicateFailureToValidationError :: LedgerPredicateFailure h -> ValidationError
 predicateFailureToValidationError (UtxowFailure (MissingVKeyWitnessesUTXOW _)) =
   MissingWitnesses
 predicateFailureToValidationError (UtxowFailure (MissingScriptWitnessesUTXOW _)) =

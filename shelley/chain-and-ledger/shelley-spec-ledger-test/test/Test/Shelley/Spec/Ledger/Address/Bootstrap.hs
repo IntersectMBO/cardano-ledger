@@ -68,8 +68,8 @@ import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
   )
 import Shelley.Spec.Ledger.STS.Utxow
-  ( PredicateFailure (..),
-    UTXOW,
+  ( UTXOW,
+    UtxowPredicateFailure (..),
   )
 import Shelley.Spec.Ledger.Slot
   ( SlotNo (..),

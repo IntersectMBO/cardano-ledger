@@ -73,16 +73,17 @@ import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 -- witnesses.
 data CERTS era
 
+data CertsPredicateFailure era
+  = CertsFailure (PredicateFailure (DELPL era))
+  deriving (Show, Eq, Generic)
+
 instance Era era => STS (CERTS era) where
   type Environment (CERTS era) = (SlotNo, Ix, PParams, AccountState)
   type State (CERTS era) = (DPState era, Ix)
   type Signal (CERTS era) = Maybe (DCert era, CertCred era)
+  type PredicateFailure (CERTS era) = CertsPredicateFailure era
 
   type BaseM (CERTS era) = ShelleyBase
-
-  data PredicateFailure (CERTS era)
-    = CertsFailure (PredicateFailure (DELPL era))
-    deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [certsTransition]

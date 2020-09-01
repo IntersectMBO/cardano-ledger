@@ -13,7 +13,8 @@
 module Shelley.Spec.Ledger.STS.Chain
   ( CHAIN,
     ChainState (..),
-    PredicateFailure (..),
+    ChainPredicateFailure (..),
+    PredicateFailure,
     initialShelleyState,
     totalAda,
     totalAdaPots,
@@ -136,6 +137,23 @@ data ChainState era = ChainState
 
 instance NFData (ChainState era)
 
+data ChainPredicateFailure era
+  = HeaderSizeTooLargeCHAIN
+      !Natural -- Header Size
+      !Natural -- Max Header Size
+  | BlockSizeTooLargeCHAIN
+      !Natural -- Block Size
+      !Natural -- Max Block Size
+  | ObsoleteNodeCHAIN
+      !Natural -- protocol version used
+      !Natural -- max protocol version
+  | BbodyFailure !(PredicateFailure (BBODY era)) -- Subtransition Failures
+  | TickFailure !(PredicateFailure (TICK era)) -- Subtransition Failures
+  | TicknFailure !(PredicateFailure TICKN) -- Subtransition Failures
+  | PrtclFailure !(PredicateFailure (PRTCL era)) -- Subtransition Failures
+  | PrtclSeqFailure !(PrtlSeqFailure era) -- Subtransition Failures
+  deriving (Show, Eq, Generic)
+
 -- | Creates a valid initial chain state
 initialShelleyState ::
   WithOrigin (LastAppliedBlock era) ->
@@ -202,27 +220,12 @@ instance
   type Environment (CHAIN era) = ()
   type BaseM (CHAIN era) = ShelleyBase
 
-  data PredicateFailure (CHAIN era)
-    = HeaderSizeTooLargeCHAIN
-        !Natural -- Header Size
-        !Natural -- Max Header Size
-    | BlockSizeTooLargeCHAIN
-        !Natural -- Block Size
-        !Natural -- Max Block Size
-    | ObsoleteNodeCHAIN
-        !Natural -- protocol version used
-        !Natural -- max protocol version
-    | BbodyFailure !(PredicateFailure (BBODY era)) -- Subtransition Failures
-    | TickFailure !(PredicateFailure (TICK era)) -- Subtransition Failures
-    | TicknFailure !(PredicateFailure TICKN) -- Subtransition Failures
-    | PrtclFailure !(PredicateFailure (PRTCL era)) -- Subtransition Failures
-    | PrtclSeqFailure !(PrtlSeqFailure era) -- Subtransition Failures
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (CHAIN era) = ChainPredicateFailure era
 
   initialRules = []
   transitionRules = [chainTransition]
 
-instance Era era => NoUnexpectedThunks (PredicateFailure (CHAIN era))
+instance Era era => NoUnexpectedThunks (ChainPredicateFailure era)
 
 chainChecks ::
   (Era era, MonadError (PredicateFailure (CHAIN era)) m) =>

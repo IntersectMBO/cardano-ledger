@@ -289,6 +289,13 @@ data UBlockState
     , upistate :: UPIState
     } deriving (Eq, Show)
 
+data UBlockPredicateFailure
+  = UPIREGFailure (PredicateFailure UPIREG)
+  | UPIVOTESFailure (PredicateFailure UPIVOTES)
+  | UPIENDFailure (PredicateFailure UPIEND)
+  | NotIncreasingBlockSlot
+  deriving (Eq, Show, Data, Typeable)
+
 instance STS UBLOCK where
   type Environment UBLOCK = UPIEnv
 
@@ -296,12 +303,7 @@ instance STS UBLOCK where
 
   type Signal UBLOCK = UBlock
 
-  data PredicateFailure UBLOCK
-    = UPIREGFailure (PredicateFailure UPIREG)
-    | UPIVOTESFailure (PredicateFailure UPIVOTES)
-    | UPIENDFailure (PredicateFailure UPIEND)
-    | NotIncreasingBlockSlot
-    deriving (Eq, Show, Data, Typeable)
+  type PredicateFailure UBLOCK = UBlockPredicateFailure
 
   initialRules
     = [ do

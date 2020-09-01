@@ -81,13 +81,12 @@ module Byron.Spec.Ledger.Delegation
   , maxRepeatedDelegations
   , maxCertsPerBlock
   -- * Predicate failures
-  , PredicateFailure
-      ( IsNotGenesisKey, EpochInThePast, EpochPastNextEpoch
-      , HasAlreadyDelegated, IsAlreadyScheduled, DoesNotVerify
-      , ADelegSFailure, ADelegFailure, SDelegSFailure, SDelegFailure
-      , S_BeforeExistingDelegation, S_NoLastDelegation
-      , S_AfterExistingDelegation, S_AlreadyADelegateOf
-      )
+  , AdelegPredicateFailure(..)
+  , AdelegsPredicateFailure(..)
+  , SdelegPredicateFailure(..)
+  , SdelegsPredicateFailure(..)
+  , MsdelegPredicateFailure(..)
+  , DelegPredicateFailure(..)
   , tamperedDcerts
   )
 where
@@ -284,22 +283,24 @@ data SDELEG deriving (Data, Typeable)
 data EpochDiff = EpochDiff { currentEpoch :: Epoch, certEpoch :: Epoch }
   deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
+-- | These `PredicateFailure`s are all "throwable". The disjunction of the
+--   rules' preconditions is not `True` - the `PredicateFailure`s represent
+--   `False` cases.
+data SdelegPredicateFailure
+  = IsNotGenesisKey
+  | EpochInThePast EpochDiff
+  | EpochPastNextEpoch EpochDiff
+  | HasAlreadyDelegated
+  | IsAlreadyScheduled
+  | DoesNotVerify
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
+
 instance STS SDELEG where
   type State SDELEG = DSState
   type Signal SDELEG = DCert
   type Environment SDELEG = DSEnv
-
-  -- | These `PredicateFailure`s are all "throwable". The disjunction of the
-  --   rules' preconditions is not `True` - the `PredicateFailure`s represent
-  --   `False` cases.
-  data PredicateFailure SDELEG
-    = IsNotGenesisKey
-    | EpochInThePast EpochDiff
-    | EpochPastNextEpoch EpochDiff
-    | HasAlreadyDelegated
-    | IsAlreadyScheduled
-    | DoesNotVerify
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure SDELEG = SdelegPredicateFailure
 
   initialRules = [ return DSState
                    { _dSStateScheduledDelegations = []
@@ -354,6 +355,17 @@ instance STS SDELEG where
 liveAfter :: BlockCount -> SlotCount
 liveAfter bc = SlotCount $ 2 * unBlockCount bc
 
+-- | None of these `PredicateFailure`s are actually "throwable". The
+--   disjuction of the rules' preconditions is `True`, which means that one of
+--   them will pass. The `PredicateFailure` just act as switches to direct
+--   control flow to the successful one.
+data AdelegPredicateFailure
+  = S_BeforeExistingDelegation
+  | S_NoLastDelegation
+  | S_AfterExistingDelegation
+  | S_AlreadyADelegateOf VKey VKeyGenesis
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 -- | Delegation rules
 data ADELEG deriving (Data, Typeable)
 
@@ -361,17 +373,8 @@ instance STS ADELEG where
   type State ADELEG = DState
   type Signal ADELEG = (Slot, (VKeyGenesis, VKey))
   type Environment ADELEG = Set VKeyGenesis
+  type PredicateFailure ADELEG = AdelegPredicateFailure
 
-  -- | None of these `PredicateFailure`s are actually "throwable". The
-  --   disjuction of the rules' preconditions is `True`, which means that one of
-  --   them will pass. The `PredicateFailure` just act as switches to direct
-  --   control flow to the successful one.
-  data PredicateFailure ADELEG
-    = S_BeforeExistingDelegation
-    | S_NoLastDelegation
-    | S_AfterExistingDelegation
-    | S_AlreadyADelegateOf VKey VKeyGenesis
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = [
     do
@@ -421,14 +424,15 @@ instance STS ADELEG where
 -- | Delegation scheduling sequencing
 data SDELEGS deriving (Data, Typeable)
 
+data SdelegsPredicateFailure
+  = SDelegFailure (PredicateFailure SDELEG)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS SDELEGS where
   type State SDELEGS = DSState
   type Signal SDELEGS = [DCert]
   type Environment SDELEGS = DSEnv
-
-  data PredicateFailure SDELEGS
-    = SDelegFailure (PredicateFailure SDELEG)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure SDELEGS = SdelegsPredicateFailure
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -451,14 +455,17 @@ instance Embed SDELEG SDELEGS where
 -- | Delegation rules sequencing
 data ADELEGS deriving (Data, Typeable)
 
+data AdelegsPredicateFailure
+  = ADelegFailure (PredicateFailure ADELEG)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS ADELEGS where
   type State ADELEGS = DState
   type Signal ADELEGS = [(Slot, (VKeyGenesis, VKey))]
   type Environment ADELEGS = Set VKeyGenesis
 
-  data PredicateFailure ADELEGS
-    = ADelegFailure (PredicateFailure ADELEG)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure ADELEGS
+    = AdelegsPredicateFailure
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -481,15 +488,17 @@ instance Embed ADELEG ADELEGS where
 -- | Delegation interface
 data DELEG deriving (Data, Typeable)
 
+data DelegPredicateFailure
+    = SDelegSFailure (PredicateFailure SDELEGS)
+    | ADelegSFailure (PredicateFailure ADELEGS)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS DELEG where
   type State DELEG = DIState
   type Signal DELEG = [DCert]
   type Environment DELEG = DIEnv
 
-  data PredicateFailure DELEG
-    = SDelegSFailure (PredicateFailure SDELEGS)
-    | ADelegSFailure (PredicateFailure ADELEGS)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure DELEG = DelegPredicateFailure
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -592,14 +601,15 @@ randomDCertGen env = do
 -- | Dummy transition system needed for generating sequences of delegation certificates.
 data MSDELEG deriving (Data, Typeable)
 
+data MsdelegPredicateFailure = SDELEGFailure (PredicateFailure SDELEG)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS MSDELEG where
 
   type Environment MSDELEG = DSEnv
   type State MSDELEG = DSState
   type Signal MSDELEG = Maybe DCert
-
-  data PredicateFailure MSDELEG = SDELEGFailure (PredicateFailure SDELEG)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure MSDELEG = MsdelegPredicateFailure
 
   initialRules = []
 

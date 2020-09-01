@@ -26,6 +26,10 @@ sEpoch (Slot s) k = if k' > 0
 
 data EPOCH deriving (Data, Typeable)
 
+data EpochPredicateFailure =
+  UPIECFailure (PredicateFailure UPIEC)
+  deriving (Eq, Show, Data, Typeable)
+
 instance STS EPOCH where
   type Environment EPOCH =
     ( Epoch
@@ -35,11 +39,8 @@ instance STS EPOCH where
                  -- different values of it.
     )
   type State EPOCH = UPIState
-
   type Signal EPOCH = Slot
-  data PredicateFailure EPOCH =
-    UPIECFailure (PredicateFailure UPIEC)
-    deriving (Eq, Show, Data, Typeable)
+  type PredicateFailure EPOCH = EpochPredicateFailure
 
   initialRules = []
 

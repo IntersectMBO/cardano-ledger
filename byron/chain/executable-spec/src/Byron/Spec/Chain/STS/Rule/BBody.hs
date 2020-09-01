@@ -27,6 +27,16 @@ import           Control.State.Transition (Embed, Environment, STS (..), Signal,
 import           Byron.Spec.Chain.STS.Block
 
 data BBODY deriving (Data, Typeable)
+-- | These `PredicateFailure`s are all throwable.
+data BbodyPredicateFailure
+  = InvalidBlockSize
+  | InvalidUtxoHash
+  | InvalidDelegationHash
+  | InvalidUpdateProposalHash
+  | BUPIFailure (PredicateFailure BUPI)
+  | DelegationFailure (PredicateFailure DELEG)
+  | UTXOWSFailure (PredicateFailure UTXOWS)
+  deriving (Eq, Show, Data, Typeable)
 
 instance STS BBODY where
   type Environment BBODY =
@@ -45,16 +55,7 @@ instance STS BBODY where
 
   type Signal BBODY = Block
 
-  -- | These `PredicateFailure`s are all throwable.
-  data PredicateFailure BBODY
-    = InvalidBlockSize
-    | InvalidUtxoHash
-    | InvalidDelegationHash
-    | InvalidUpdateProposalHash
-    | BUPIFailure (PredicateFailure BUPI)
-    | DelegationFailure (PredicateFailure DELEG)
-    | UTXOWSFailure (PredicateFailure UTXOWS)
-    deriving (Eq, Show, Data, Typeable)
+  type PredicateFailure BBODY = BbodyPredicateFailure
 
   initialRules = []
 

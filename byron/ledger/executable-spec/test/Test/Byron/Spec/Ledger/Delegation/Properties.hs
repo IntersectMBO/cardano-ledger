@@ -51,18 +51,8 @@ import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst)
                      preStatesAndSignals, traceEnv, traceLength, traceSignals)
 import           Byron.Spec.Ledger.Core (Epoch (Epoch), Sig (Sig), Slot, SlotCount (SlotCount), VKey,
                      VKeyGenesis, addSlot, mkVKeyGenesis, owner, unSlot, unSlotCount)
-import           Byron.Spec.Ledger.Delegation (DCert, DELEG, DIState (DIState),
-                     DSEnv (DSEnv, _dSEnvEpoch, _dSEnvK), DSState (DSState),
-                     DState (DState, _dStateDelegationMap, _dStateLastDelegation),
-                     PredicateFailure (IsAlreadyScheduled, IsAlreadyScheduled, SDelegFailure, SDelegSFailure),
-                     delegationMap, delegatorDelegate, depoch, emptyDelegationPayloadRatio, epoch,
-                     liveAfter, mkDCert, multipleDelegationsRatio, nextEpochDelegationsRatio,
-                     scheduledDelegations, selfDelegationsRatio, slot, tamperedDcerts,
-                     thisEpochDelegationsRatio, _dIStateDelegationMap, _dIStateKeyEpochDelegations,
-                     _dIStateLastDelegation, _dIStateScheduledDelegations,
-                     _dSStateKeyEpochDelegations, _dSStateScheduledDelegations)
+import           Byron.Spec.Ledger.Delegation
 import qualified Byron.Spec.Ledger.Delegation.Test
-
 import           Byron.Spec.Ledger.Core.Generators (epochGen, slotGen, vkGen)
 import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
 import           Byron.Spec.Ledger.GlobalParams (slotsPerEpoch)
@@ -107,17 +97,18 @@ data DBlock
 
 makeLenses ''DBlock
 
+data DBlockPredicateFailure
+  = DPF (PredicateFailure DELEG)
+  | NotIncreasingBlockSlot
+  deriving (Eq, Show, Data, Typeable)
+
 -- | This corresponds to a state-transition rule where blocks with increasing
 -- slot-numbers are produced.
 instance STS DBLOCK where
   type Environment DBLOCK = DSEnv -- The initial environment is only used to bootstrap the initial state.
   type State DBLOCK = (DSEnv, DIState)
   type Signal DBLOCK = DBlock
-
-  data PredicateFailure DBLOCK
-    = DPF (PredicateFailure DELEG)
-    | NotIncreasingBlockSlot
-    deriving (Eq, Show, Data, Typeable)
+  type PredicateFailure DBLOCK = DBlockPredicateFailure
 
   initialRules
     = [ do
@@ -259,7 +250,7 @@ instance HasTrace DBLOCK where
   envGen
     chainLength
     = DSEnv
-    <$> allowedDelegators
+    <$> allowedDelegators'
     -- We do not expect the current epoch to have an influence on the tests, so
     -- we chose a small value here.
     <*> epochGen 0 10
@@ -278,7 +269,7 @@ instance HasTrace DBLOCK where
     where
       -- We scale the number of delegators linearly up to twice the number of genesis keys we use in
       -- production. Factor 2 is chosen ad-hoc here.
-      allowedDelegators = do
+      allowedDelegators' = do
         n <- Gen.integral (Range.linear 0 13)
         pure $! Set.fromAscList $ mkVKeyGenesis <$> [0 .. n]
 

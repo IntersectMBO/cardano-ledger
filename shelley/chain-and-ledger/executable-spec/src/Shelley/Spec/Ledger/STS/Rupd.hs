@@ -47,18 +47,20 @@ data RUPD era
 data RupdEnv era
   = RupdEnv (BlocksMade era) (EpochState era)
 
+data RupdPredicateFailure era -- No predicate failures
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (RupdPredicateFailure era)
+
 instance Typeable era => STS (RUPD era) where
   type State (RUPD era) = StrictMaybe (RewardUpdate era)
   type Signal (RUPD era) = SlotNo
   type Environment (RUPD era) = RupdEnv era
   type BaseM (RUPD era) = ShelleyBase
-  data PredicateFailure (RUPD era) -- No predicate failures
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (RUPD era) = RupdPredicateFailure era
 
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
-
-instance NoUnexpectedThunks (PredicateFailure (RUPD era))
 
 rupdTransition :: Typeable era => TransitionRule (RUPD era)
 rupdTransition = do
@@ -74,5 +76,13 @@ rupdTransition = do
   if s <= slot
     then pure ru
     else case ru of
-      SNothing -> SJust <$> (liftSTS $ createRUpd slotsPerEpoch b es (Coin $ fromIntegral maxLL))
+      SNothing ->
+        SJust
+          <$> ( liftSTS $
+                  createRUpd
+                    slotsPerEpoch
+                    b
+                    es
+                    (Coin $ fromIntegral maxLL)
+              )
       SJust _ -> pure ru

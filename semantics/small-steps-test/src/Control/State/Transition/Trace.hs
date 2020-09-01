@@ -125,11 +125,12 @@ mkTrace env initState sigs = Trace env initState sigs'
 -- >>> import Control.State.Transition (initialRules, transitionRules)
 -- >>> :{
 -- data DUMMY
+-- data DummyPredicateFailure = CeciNEstPasUnePredicateFailure deriving (Eq, Show)
 -- instance STS DUMMY where
 --   type Environment DUMMY = Bool
 --   type State DUMMY = Int
 --   type Signal DUMMY = String
---   data PredicateFailure DUMMY = CeciNEstPasUnePredicateFailure deriving (Eq, Show)
+--   type PredicateFailure DUMMY = DummyPredicateFailure
 --   initialRules = []
 --   transitionRules = []
 -- :}
@@ -345,11 +346,12 @@ preStatesAndSignals NewestFirst tr
 -- >>> import Data.Functor.Identity
 -- >>> :{
 -- data ADDER
+-- data AdderPredicateFailure = NoFailuresPossible deriving (Eq, Show)
 -- instance STS ADDER where
 --   type Environment ADDER = ()
 --   type State ADDER = Int
 --   type Signal ADDER = Int
---   data PredicateFailure ADDER = NoFailuresPossible deriving (Eq, Show)
+--   type PredicateFailure ADDER = AdderPredicateFailure
 --   initialRules = [ pure 0 ]
 --   transitionRules =
 --     [ do

@@ -9,7 +9,8 @@
 module Shelley.Spec.Ledger.STS.Pool
   ( POOL,
     PoolEnv (..),
-    PredicateFailure (..),
+    PredicateFailure,
+    PoolPredicateFailure (..),
   )
 where
 
@@ -54,6 +55,22 @@ data PoolEnv
   = PoolEnv SlotNo PParams
   deriving (Show, Eq)
 
+data PoolPredicateFailure era
+  = StakePoolNotRegisteredOnKeyPOOL
+      !(KeyHash 'StakePool era) -- KeyHash which cannot be retired since it is not registered
+  | StakePoolRetirementWrongEpochPOOL
+      !Word64 -- Current Epoch
+      !Word64 -- The epoch listed in the Pool Retirement Certificate
+      !Word64 -- The first epoch that is too far out for retirement
+  | WrongCertificateTypePOOL
+      !Word8 -- The disallowed certificate (this case should never happen)
+  | StakePoolCostTooLowPOOL
+      !Coin -- The stake pool cost listed in the Pool Registration Certificate
+      !Coin -- The minimum stake pool cost listed in the protocol parameters
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (PoolPredicateFailure era)
+
 instance Typeable era => STS (POOL era) where
   type State (POOL era) = PState era
 
@@ -62,30 +79,15 @@ instance Typeable era => STS (POOL era) where
   type Environment (POOL era) = PoolEnv
 
   type BaseM (POOL era) = ShelleyBase
-
-  data PredicateFailure (POOL era)
-    = StakePoolNotRegisteredOnKeyPOOL
-        !(KeyHash 'StakePool era) -- KeyHash which cannot be retired since it is not registered
-    | StakePoolRetirementWrongEpochPOOL
-        !Word64 -- Current Epoch
-        !Word64 -- The epoch listed in the Pool Retirement Certificate
-        !Word64 -- The first epoch that is too far out for retirement
-    | WrongCertificateTypePOOL
-        !Word8 -- The disallowed certificate (this case should never happen)
-    | StakePoolCostTooLowPOOL
-        !Coin -- The stake pool cost listed in the Pool Registration Certificate
-        !Coin -- The minimum stake pool cost listed in the protocol parameters
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (POOL era) = PoolPredicateFailure era
 
   initialRules = [pure emptyPState]
 
   transitionRules = [poolDelegationTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (POOL era))
-
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PredicateFailure (POOL era))
+  ToCBOR (PoolPredicateFailure era)
   where
   toCBOR = \case
     StakePoolNotRegisteredOnKeyPOOL kh ->
@@ -99,7 +101,7 @@ instance
 
 instance
   (Era era) =>
-  FromCBOR (PredicateFailure (POOL era))
+  FromCBOR (PoolPredicateFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
     \case

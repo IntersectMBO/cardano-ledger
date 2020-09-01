@@ -50,6 +50,16 @@ import qualified Byron.Spec.Chain.STS.Rule.SigCnt as SigCntGen
 
 data CHAIN deriving (Data, Typeable)
 
+data ChainPredicateFailure
+  = EpochFailure (PredicateFailure EPOCH)
+  | HeaderSizeTooBig BlockHeader Natural (Threshold Natural)
+  | BBodyFailure (PredicateFailure BBODY)
+  | PBFTFailure (PredicateFailure PBFT)
+  | MaximumBlockSize Natural Natural
+  | LedgerDelegationFailure (PredicateFailure DELEG)
+  | LedgerUTxOFailure (PredicateFailure UTXOWS)
+  deriving (Eq, Show, Data, Typeable)
+
 instance STS CHAIN where
   type Environment CHAIN =
     ( Slot            -- Current slot
@@ -75,15 +85,7 @@ instance STS CHAIN where
 
   type Signal CHAIN = Block
 
-  data PredicateFailure CHAIN
-    = EpochFailure (PredicateFailure EPOCH)
-    | HeaderSizeTooBig BlockHeader Natural (Threshold Natural)
-    | BBodyFailure (PredicateFailure BBODY)
-    | PBFTFailure (PredicateFailure PBFT)
-    | MaximumBlockSize Natural Natural
-    | LedgerDelegationFailure (PredicateFailure DELEG)
-    | LedgerUTxOFailure (PredicateFailure UTXOWS)
-    deriving (Eq, Show, Data, Typeable)
+  type PredicateFailure CHAIN = ChainPredicateFailure
 
   initialRules =
     [ do

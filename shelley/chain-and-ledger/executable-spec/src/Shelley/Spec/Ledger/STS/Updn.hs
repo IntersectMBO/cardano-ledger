@@ -33,6 +33,11 @@ newtype UpdnEnv
 data UpdnState = UpdnState Nonce Nonce
   deriving (Show, Eq)
 
+data UpdnPredicateFailure era -- No predicate failures
+  deriving (Generic, Show, Eq)
+
+instance NoUnexpectedThunks (UpdnPredicateFailure era)
+
 instance
   (Era era) =>
   STS (UPDN era)
@@ -41,8 +46,7 @@ instance
   type Signal (UPDN era) = SlotNo
   type Environment (UPDN era) = UpdnEnv
   type BaseM (UPDN era) = ShelleyBase
-  data PredicateFailure (UPDN era) -- No predicate failures
-    deriving (Generic, Show, Eq)
+  type PredicateFailure (UPDN era) = UpdnPredicateFailure era
   initialRules =
     [ pure
         ( UpdnState
@@ -53,8 +57,6 @@ instance
     where
       initialNonce = mkNonceFromNumber 0
   transitionRules = [updTransition]
-
-instance NoUnexpectedThunks (PredicateFailure (UPDN era))
 
 updTransition :: Era era => TransitionRule (UPDN era)
 updTransition = do

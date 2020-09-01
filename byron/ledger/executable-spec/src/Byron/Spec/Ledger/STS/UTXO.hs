@@ -13,7 +13,8 @@ module Byron.Spec.Ledger.STS.UTXO
   ( UTXO
   , UTxOEnv (UTxOEnv)
   , UTxOState (UTxOState)
-  , PredicateFailure(..)
+  , UtxoPredicateFailure(..)
+  , PredicateFailure
   , utxo
   , utxo0
   , pps
@@ -50,23 +51,25 @@ data UTxOState = UTxOState
   , reserves :: Lovelace
   } deriving (Eq, Show, Generic, NoUnexpectedThunks)
 
+-- | These `PredicateFailure`s are all "throwable". The disjunction of the
+--   rules' preconditions is not `True` - the `PredicateFailure`s represent
+--   `False` cases.
+data UtxoPredicateFailure
+  = EmptyTxInputs
+  | EmptyTxOutputs
+  | FeeTooLow
+  | IncreasedTotalBalance
+  | InputsNotInUTxO
+  | NonPositiveOutputs
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
+
 instance STS UTXO where
 
   type Environment UTXO = UTxOEnv
   type State UTXO = UTxOState
   type Signal UTXO = Tx
-
-  -- | These `PredicateFailure`s are all "throwable". The disjunction of the
-  --   rules' preconditions is not `True` - the `PredicateFailure`s represent
-  --   `False` cases.
-  data PredicateFailure UTXO
-    = EmptyTxInputs
-    | EmptyTxOutputs
-    | FeeTooLow
-    | IncreasedTotalBalance
-    | InputsNotInUTxO
-    | NonPositiveOutputs
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UTXO = UtxoPredicateFailure
 
   initialRules =
     [ do

@@ -31,18 +31,19 @@ import Shelley.Spec.Ledger.LedgerState
 
 data SNAP era
 
+data SnapPredicateFailure era -- No predicate failures
+  deriving (Show, Generic, Eq)
+
+instance NoUnexpectedThunks (SnapPredicateFailure era)
+
 instance (Era era, Typeable era) => STS (SNAP era) where
   type State (SNAP era) = SnapShots era
   type Signal (SNAP era) = ()
   type Environment (SNAP era) = LedgerState era
   type BaseM (SNAP era) = ShelleyBase
-  data PredicateFailure (SNAP era) -- No predicate failures
-    deriving (Show, Generic, Eq)
-
+  type PredicateFailure (SNAP era) = SnapPredicateFailure era
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]
-
-instance NoUnexpectedThunks (PredicateFailure (SNAP era))
 
 snapTransition :: Era era => TransitionRule (SNAP era)
 snapTransition = do

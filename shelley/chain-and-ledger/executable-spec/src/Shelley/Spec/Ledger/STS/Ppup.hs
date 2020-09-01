@@ -10,7 +10,8 @@
 module Shelley.Spec.Ledger.STS.Ppup
   ( PPUP,
     PPUPEnv (..),
-    PredicateFailure (..),
+    PpupPredicateFailure (..),
+    PredicateFailure,
     VotingPeriod (..),
   )
 where
@@ -59,32 +60,34 @@ instance FromCBOR VotingPeriod where
       1 -> pure VoteForNextEpoch
       k -> invalidKey k
 
+data PpupPredicateFailure era
+  = NonGenesisUpdatePPUP
+      !(Set (KeyHash 'Genesis era)) -- KeyHashes which are voting
+      !(Set (KeyHash 'Genesis era)) -- KeyHashes which should be voting
+  | PPUpdateWrongEpoch
+      !EpochNo -- current epoch
+      !EpochNo -- intended epoch of update
+      !VotingPeriod -- voting period within the epoch
+  | PVCannotFollowPPUP
+      !ProtVer -- the first bad protocol version
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (PpupPredicateFailure era)
+
 instance Typeable era => STS (PPUP era) where
   type State (PPUP era) = PPUPState era
   type Signal (PPUP era) = Maybe (Update era)
   type Environment (PPUP era) = PPUPEnv era
   type BaseM (PPUP era) = ShelleyBase
-  data PredicateFailure (PPUP era)
-    = NonGenesisUpdatePPUP
-        !(Set (KeyHash 'Genesis era)) -- KeyHashes which are voting
-        !(Set (KeyHash 'Genesis era)) -- KeyHashes which should be voting
-    | PPUpdateWrongEpoch
-        !EpochNo -- current epoch
-        !EpochNo -- intended epoch of update
-        !VotingPeriod -- voting period within the epoch
-    | PVCannotFollowPPUP
-        !ProtVer -- the first bad protocol version
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (PPUP era) = PpupPredicateFailure era
 
   initialRules = []
 
   transitionRules = [ppupTransitionNonEmpty]
 
-instance NoUnexpectedThunks (PredicateFailure (PPUP era))
-
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PredicateFailure (PPUP era))
+  ToCBOR (PpupPredicateFailure era)
   where
   toCBOR = \case
     (NonGenesisUpdatePPUP a b) ->
@@ -98,7 +101,7 @@ instance
 
 instance
   (Era era) =>
-  FromCBOR (PredicateFailure (PPUP era))
+  FromCBOR (PpupPredicateFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (PPUP era)" $
     \case

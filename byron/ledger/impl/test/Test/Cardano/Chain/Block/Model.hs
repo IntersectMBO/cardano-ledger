@@ -82,9 +82,6 @@ import Cardano.Chain.Update.Validation.Interface (adoptedProtocolParameters)
 import Byron.Spec.Ledger.STS.UTXO (UTxOEnv(..))
 import Byron.Spec.Ledger.STS.UTXOW (coverUtxoFailure, tamperedTxList)
 import Byron.Spec.Chain.STS.Rule.BBody
-  ( PredicateFailure(InvalidBlockSize, InvalidDelegationHash,
-                 InvalidUpdateProposalHash, InvalidUtxoHash)
-  )
 import Byron.Spec.Chain.STS.Rule.Chain
   ( CHAIN
   , ShouldGenDelegation(NoGenDelegation)
@@ -106,7 +103,14 @@ import Control.State.Transition.Generator
   , sigGen
   , trace
   )
-import Control.State.Transition (State, Environment, Signal, applySTS, TRC(TRC))
+import Control.State.Transition
+  ( State
+  , Environment
+  , Signal
+  , PredicateFailure
+  , applySTS
+  , TRC(TRC)
+  )
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import Control.State.Transition.Trace
   ( Trace

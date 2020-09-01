@@ -92,10 +92,17 @@ import Shelley.Spec.Ledger.Rewards
     LogWeight (..),
     PerformanceEstimate (..),
   )
-import qualified Shelley.Spec.Ledger.STS.Chain as STS
+import qualified Shelley.Spec.Ledger.STS.Deleg as STS
+import qualified Shelley.Spec.Ledger.STS.Delegs as STS
+import qualified Shelley.Spec.Ledger.STS.Delpl as STS
+import qualified Shelley.Spec.Ledger.STS.Ledger as STS
+import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
+import qualified Shelley.Spec.Ledger.STS.Pool as STS
 import qualified Shelley.Spec.Ledger.STS.Ppup as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS
+import qualified Shelley.Spec.Ledger.STS.Utxo as STS
+import qualified Shelley.Spec.Ledger.STS.Utxow as STS
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck
@@ -326,62 +333,62 @@ instance Arbitrary STS.VotingPeriod where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Era era => Arbitrary (STS.PredicateFailure (PPUP era)) where
+instance Era era => Arbitrary (STS.PpupPredicateFailure era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
   (Era era, Mock (Crypto era)) =>
-  Arbitrary (STS.PredicateFailure (UTXO era))
+  Arbitrary (STS.UtxoPredicateFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
   (Era era, MockGen era) =>
-  Arbitrary (STS.PredicateFailure (UTXOW era))
+  Arbitrary (STS.UtxowPredicateFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
   Era era =>
-  Arbitrary (STS.PredicateFailure (POOL era))
+  Arbitrary (STS.PoolPredicateFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
   (Era era, Mock (Crypto era)) =>
-  Arbitrary (STS.PredicateFailure (DELPL era))
+  Arbitrary (STS.DelplPredicateFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
   (Era era, Mock (Crypto era)) =>
-  Arbitrary (STS.PredicateFailure (DELEG era))
+  Arbitrary (STS.DelegPredicateFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
   (Era era, Mock (Crypto era)) =>
-  Arbitrary (STS.PredicateFailure (DELEGS era))
+  Arbitrary (STS.DelegsPredicateFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
   (Era era, MockGen era) =>
-  Arbitrary (STS.PredicateFailure (LEDGER era))
+  Arbitrary (STS.LedgerPredicateFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
   (Era era, MockGen era) =>
-  Arbitrary (STS.PredicateFailure (LEDGERS era))
+  Arbitrary (STS.LedgersPredicateFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink

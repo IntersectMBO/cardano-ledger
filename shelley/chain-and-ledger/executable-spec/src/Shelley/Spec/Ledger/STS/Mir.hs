@@ -53,13 +53,17 @@ import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 
 data MIR era
 
+data MirPredicateFailure era
+  deriving (Show, Generic, Eq)
+
+instance NoUnexpectedThunks (MirPredicateFailure era)
+
 instance Typeable era => STS (MIR era) where
   type State (MIR era) = EpochState era
   type Signal (MIR era) = ()
   type Environment (MIR era) = ()
   type BaseM (MIR era) = ShelleyBase
-  data PredicateFailure (MIR era) -- No Failures
-    deriving (Show, Generic, Eq)
+  type PredicateFailure (MIR era) = MirPredicateFailure era
 
   initialRules = [initialMir]
   transitionRules = [mirTransition]
@@ -72,8 +76,6 @@ instance Typeable era => STS (MIR era) where
              in length (r st) == length (r st')
         )
     ]
-
-instance NoUnexpectedThunks (PredicateFailure (MIR era))
 
 initialMir :: InitialRule (MIR era)
 initialMir =

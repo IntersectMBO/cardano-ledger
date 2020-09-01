@@ -28,13 +28,15 @@ import           Control.State.Transition.Trace (TraceOrder (OldestFirst), trace
 
 data UTXOWS deriving (Data, Typeable)
 
+data UtxowsPredicateFailure
+  = UtxowFailure (PredicateFailure UTXOW)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS UTXOWS where
   type State UTXOWS = UTxOState
   type Signal UTXOWS = [Tx]
   type Environment UTXOWS = UTxOEnv
-  data PredicateFailure UTXOWS
-    = UtxowFailure (PredicateFailure UTXOW)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UTXOWS = UtxowsPredicateFailure
 
   initialRules =
     [ do

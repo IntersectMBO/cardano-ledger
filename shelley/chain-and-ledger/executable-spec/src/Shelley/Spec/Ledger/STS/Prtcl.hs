@@ -16,7 +16,8 @@ module Shelley.Spec.Ledger.STS.Prtcl
     State,
     PrtclEnv (..),
     PrtclState (..),
-    PredicateFailure (..),
+    PrtclPredicateFailure (..),
+    PredicateFailure,
     PrtlSeqFailure (..),
     prtlSeqChecks,
   )
@@ -110,6 +111,19 @@ data PrtclEnv era
 
 instance NoUnexpectedThunks (PrtclEnv era)
 
+data PrtclPredicateFailure era
+  = OverlayFailure (PredicateFailure (OVERLAY era)) -- Subtransition Failures
+  | UpdnFailure (PredicateFailure (UPDN era)) -- Subtransition Failures
+  deriving (Generic)
+
+deriving instance
+  (VRF.VRFAlgorithm (VRF (Crypto era))) =>
+  Show (PrtclPredicateFailure era)
+
+deriving instance
+  (VRF.VRFAlgorithm (VRF (Crypto era))) =>
+  Eq (PrtclPredicateFailure era)
+
 instance
   ( Era era,
     DSignable era (OCertSignable era),
@@ -131,19 +145,11 @@ instance
       PrtclEnv era
 
   type BaseM (PRTCL era) = ShelleyBase
-
-  data PredicateFailure (PRTCL era)
-    = OverlayFailure (PredicateFailure (OVERLAY era)) -- Subtransition Failures
-    | UpdnFailure (PredicateFailure (UPDN era)) -- Subtransition Failures
-    deriving (Generic)
+  type PredicateFailure (PRTCL era) = PrtclPredicateFailure era
 
   initialRules = []
 
   transitionRules = [prtclTransition]
-
-deriving instance (VRF.VRFAlgorithm (VRF (Crypto era))) => Show (PredicateFailure (PRTCL era))
-
-deriving instance (VRF.VRFAlgorithm (VRF (Crypto era))) => Eq (PredicateFailure (PRTCL era))
 
 prtclTransition ::
   forall era.
@@ -181,7 +187,7 @@ prtclTransition = do
       etaV'
       etaC'
 
-instance (Era era) => NoUnexpectedThunks (PredicateFailure (PRTCL era))
+instance (Era era) => NoUnexpectedThunks (PrtclPredicateFailure era)
 
 instance
   ( Era era,

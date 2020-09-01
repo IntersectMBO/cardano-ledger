@@ -50,13 +50,17 @@ data PoolreapState era = PoolreapState
   }
   deriving (Show, Eq)
 
+data PoolreapPredicateFailure era -- No predicate Falures
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (PoolreapPredicateFailure era)
+
 instance Typeable era => STS (POOLREAP era) where
   type State (POOLREAP era) = PoolreapState era
   type Signal (POOLREAP era) = EpochNo
   type Environment (POOLREAP era) = PParams
   type BaseM (POOLREAP era) = ShelleyBase
-  data PredicateFailure (POOLREAP era) -- No predicate Falures
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (POOLREAP era) = PoolreapPredicateFailure era
   initialRules =
     [ pure $
         PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState
@@ -77,8 +81,6 @@ instance Typeable era => STS (POOLREAP era) where
              in length (r st) == length (r st')
         )
     ]
-
-instance NoUnexpectedThunks (PredicateFailure (POOLREAP era))
 
 poolReapTransition :: TransitionRule (POOLREAP era)
 poolReapTransition = do

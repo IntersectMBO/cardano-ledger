@@ -9,7 +9,8 @@ module Shelley.Spec.Ledger.STS.Newpp
   ( NEWPP,
     NewppState (..),
     NewppEnv (..),
-    PredicateFailure (..),
+    NewppPredicateFailure (..),
+    PredicateFailure,
   )
 where
 
@@ -53,21 +54,22 @@ data NewppState era
 data NewppEnv era
   = NewppEnv (DState era) (PState era)
 
+data NewppPredicateFailure era
+  = UnexpectedDepositPot
+      !Coin -- The total outstanding deposits
+      !Coin -- The deposit pot
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (NewppPredicateFailure era)
+
 instance Typeable era => STS (NEWPP era) where
   type State (NEWPP era) = NewppState era
   type Signal (NEWPP era) = Maybe PParams
   type Environment (NEWPP era) = NewppEnv era
   type BaseM (NEWPP era) = ShelleyBase
-  data PredicateFailure (NEWPP era)
-    = UnexpectedDepositPot
-        !Coin -- The total outstanding deposits
-        !Coin -- The deposit pot
-    deriving (Show, Eq, Generic)
-
+  type PredicateFailure (NEWPP era) = NewppPredicateFailure era
   initialRules = [initialNewPp]
   transitionRules = [newPpTransition]
-
-instance NoUnexpectedThunks (PredicateFailure (NEWPP era))
 
 initialNewPp :: InitialRule (NEWPP era)
 initialNewPp =

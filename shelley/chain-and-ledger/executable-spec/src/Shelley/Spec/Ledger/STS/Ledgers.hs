@@ -11,7 +11,8 @@
 module Shelley.Spec.Ledger.STS.Ledgers
   ( LEDGERS,
     LedgersEnv (..),
-    PredicateFailure (..),
+    LedgersPredicateFailure (..),
+    PredicateFailure,
   )
 where
 
@@ -53,6 +54,12 @@ data LedgersEnv = LedgersEnv
     ledgersAccount :: AccountState
   }
 
+data LedgersPredicateFailure era
+  = LedgerFailure (PredicateFailure (LEDGER era)) -- Subtransition Failures
+  deriving (Show, Eq, Generic)
+
+instance (Era era) => NoUnexpectedThunks (LedgersPredicateFailure era)
+
 instance
   ( Era era,
     DSignable era (Hash era (TxBody era))
@@ -63,24 +70,20 @@ instance
   type Signal (LEDGERS era) = Seq (Tx era)
   type Environment (LEDGERS era) = LedgersEnv
   type BaseM (LEDGERS era) = ShelleyBase
-  data PredicateFailure (LEDGERS era)
-    = LedgerFailure (PredicateFailure (LEDGER era)) -- Subtransition Failures
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (LEDGERS era) = LedgersPredicateFailure era
 
   initialRules = [pure emptyLedgerState]
   transitionRules = [ledgersTransition]
 
-instance (Era era) => NoUnexpectedThunks (PredicateFailure (LEDGERS era))
-
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PredicateFailure (LEDGERS era))
+  ToCBOR (LedgersPredicateFailure era)
   where
   toCBOR (LedgerFailure e) = toCBOR e
 
 instance
   (Era era) =>
-  FromCBOR (PredicateFailure (LEDGERS era))
+  FromCBOR (LedgersPredicateFailure era)
   where
   fromCBOR = LedgerFailure <$> fromCBOR
 

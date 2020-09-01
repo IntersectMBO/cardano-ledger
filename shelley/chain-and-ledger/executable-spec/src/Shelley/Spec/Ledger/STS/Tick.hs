@@ -11,7 +11,8 @@ module Shelley.Spec.Ledger.STS.Tick
   ( TICK,
     TickEnv (..),
     State,
-    PredicateFailure (..),
+    TickPredicateFailure (..),
+    PredicateFailure,
   )
 where
 
@@ -43,6 +44,13 @@ data TICK era
 data TickEnv era
   = TickEnv (Set (KeyHash 'Genesis era))
 
+data TickPredicateFailure era
+  = NewEpochFailure (PredicateFailure (NEWEPOCH era)) -- Subtransition Failures
+  | RupdFailure (PredicateFailure (RUPD era)) -- Subtransition Failures
+  deriving (Show, Generic, Eq)
+
+instance NoUnexpectedThunks (TickPredicateFailure era)
+
 instance
   Era era =>
   STS (TICK era)
@@ -55,15 +63,10 @@ instance
       SlotNo
   type Environment (TICK era) = TickEnv era
   type BaseM (TICK era) = ShelleyBase
-  data PredicateFailure (TICK era)
-    = NewEpochFailure (PredicateFailure (NEWEPOCH era)) -- Subtransition Failures
-    | RupdFailure (PredicateFailure (RUPD era)) -- Subtransition Failures
-    deriving (Show, Generic, Eq)
+  type PredicateFailure (TICK era) = TickPredicateFailure era
 
   initialRules = []
   transitionRules = [bheadTransition]
-
-instance NoUnexpectedThunks (PredicateFailure (TICK era))
 
 adoptGenesisDelegs ::
   EpochState era ->
