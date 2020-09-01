@@ -9,7 +9,8 @@
 
 module Shelley.Spec.Ledger.STS.Epoch
   ( EPOCH,
-    PredicateFailure (..),
+    EpochPredicateFailure (..),
+    PredicateFailure,
   )
 where
 
@@ -50,21 +51,22 @@ import Shelley.Spec.Ledger.Slot (EpochNo)
 
 data EPOCH era
 
+data EpochPredicateFailure era
+  = PoolReapFailure (PredicateFailure (POOLREAP era)) -- Subtransition Failures
+  | SnapFailure (PredicateFailure (SNAP era)) -- Subtransition Failures
+  | NewPpFailure (PredicateFailure (NEWPP era)) -- Subtransition Failures
+  deriving (Show, Generic, Eq)
+
 instance (Era era, Typeable era) => STS (EPOCH era) where
   type State (EPOCH era) = EpochState era
   type Signal (EPOCH era) = EpochNo
   type Environment (EPOCH era) = ()
   type BaseM (EPOCH era) = ShelleyBase
-  data PredicateFailure (EPOCH era)
-    = PoolReapFailure (PredicateFailure (POOLREAP era)) -- Subtransition Failures
-    | SnapFailure (PredicateFailure (SNAP era)) -- Subtransition Failures
-    | NewPpFailure (PredicateFailure (NEWPP era)) -- Subtransition Failures
-    deriving (Show, Generic, Eq)
-
+  type PredicateFailure (EPOCH era) = EpochPredicateFailure era
   initialRules = [initialEpoch]
   transitionRules = [epochTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (EPOCH era))
+instance NoUnexpectedThunks (EpochPredicateFailure era)
 
 initialEpoch :: InitialRule (EPOCH era)
 initialEpoch =

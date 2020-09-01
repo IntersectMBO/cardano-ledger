@@ -24,6 +24,12 @@ type UpdatePayload =
 
 data BUPI deriving (Data, Typeable)
 
+data BupiPredicateFailure
+  = UPIREGFailure (PredicateFailure UPIREG)
+  | UPIVOTESFailure (PredicateFailure UPIVOTES)
+  | UPIENDFailure (PredicateFailure UPIEND)
+  deriving (Eq, Show, Data, Typeable)
+
 instance STS BUPI where
   type Environment BUPI = UPIEnv
 
@@ -31,11 +37,7 @@ instance STS BUPI where
 
   type Signal BUPI = UpdatePayload
 
-  data PredicateFailure BUPI
-    = UPIREGFailure (PredicateFailure UPIREG)
-    | UPIVOTESFailure (PredicateFailure UPIVOTES)
-    | UPIENDFailure (PredicateFailure UPIEND)
-    deriving (Eq, Show, Data, Typeable)
+  type PredicateFailure BUPI = BupiPredicateFailure
 
   initialRules = []
 

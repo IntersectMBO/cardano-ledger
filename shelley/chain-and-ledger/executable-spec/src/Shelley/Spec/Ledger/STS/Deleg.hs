@@ -9,7 +9,8 @@
 module Shelley.Spec.Ledger.STS.Deleg
   ( DELEG,
     DelegEnv (..),
-    PredicateFailure (..),
+    PredicateFailure,
+    DelegPredicateFailure (..),
   )
 where
 
@@ -85,49 +86,51 @@ data DelegEnv = DelegEnv
   }
   deriving (Show, Eq)
 
+data DelegPredicateFailure era
+  = StakeKeyAlreadyRegisteredDELEG
+      !(Credential 'Staking era) -- Credential which is already registered
+  | -- | Indicates that the stake key is somehow already in the rewards map.
+    --   This error is now redundant with StakeKeyAlreadyRegisteredDELEG.
+    --   We should remove it and replace its one use with StakeKeyAlreadyRegisteredDELEG.
+    StakeKeyInRewardsDELEG
+      !(Credential 'Staking era) -- Credential which is already registered
+  | StakeKeyNotRegisteredDELEG
+      !(Credential 'Staking era) -- Credential which is not registered
+  | StakeKeyNonZeroAccountBalanceDELEG
+      !(Maybe Coin) -- The remaining reward account balance, if it exists
+  | StakeDelegationImpossibleDELEG
+      !(Credential 'Staking era) -- Credential that is not registered
+  | WrongCertificateTypeDELEG -- The DCertPool constructor should not be used by this transition
+  | GenesisKeyNotInpMappingDELEG
+      !(KeyHash 'Genesis era) -- Unknown Genesis KeyHash
+  | DuplicateGenesisDelegateDELEG
+      !(KeyHash 'GenesisDelegate era) -- Keyhash which is already delegated to
+  | InsufficientForInstantaneousRewardsDELEG
+      !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
+      !Coin -- amount of rewards to be given out
+      !Coin -- size of the pot from which the lovelace is drawn
+  | MIRCertificateTooLateinEpochDELEG
+      !SlotNo -- current slot
+      !SlotNo -- MIR must be submitted before this slot
+  | DuplicateGenesisVRFDELEG
+      !(Hash era (VerKeyVRF era)) --VRF KeyHash which is already delegated to
+  deriving (Show, Eq, Generic)
+
 instance Typeable era => STS (DELEG era) where
   type State (DELEG era) = DState era
   type Signal (DELEG era) = DCert era
   type Environment (DELEG era) = DelegEnv
   type BaseM (DELEG era) = ShelleyBase
-  data PredicateFailure (DELEG era)
-    = StakeKeyAlreadyRegisteredDELEG
-        !(Credential 'Staking era) -- Credential which is already registered
-    | -- | Indicates that the stake key is somehow already in the rewards map.
-      --   This error is now redundant with StakeKeyAlreadyRegisteredDELEG.
-      --   We should remove it and replace its one use with StakeKeyAlreadyRegisteredDELEG.
-      StakeKeyInRewardsDELEG
-        !(Credential 'Staking era) -- Credential which is already registered
-    | StakeKeyNotRegisteredDELEG
-        !(Credential 'Staking era) -- Credential which is not registered
-    | StakeKeyNonZeroAccountBalanceDELEG
-        !(Maybe Coin) -- The remaining reward account balance, if it exists
-    | StakeDelegationImpossibleDELEG
-        !(Credential 'Staking era) -- Credential that is not registered
-    | WrongCertificateTypeDELEG -- The DCertPool constructor should not be used by this transition
-    | GenesisKeyNotInpMappingDELEG
-        !(KeyHash 'Genesis era) -- Unknown Genesis KeyHash
-    | DuplicateGenesisDelegateDELEG
-        !(KeyHash 'GenesisDelegate era) -- Keyhash which is already delegated to
-    | InsufficientForInstantaneousRewardsDELEG
-        !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
-        !Coin -- amount of rewards to be given out
-        !Coin -- size of the pot from which the lovelace is drawn
-    | MIRCertificateTooLateinEpochDELEG
-        !SlotNo -- current slot
-        !SlotNo -- MIR must be submitted before this slot
-    | DuplicateGenesisVRFDELEG
-        !(Hash era (VerKeyVRF era)) --VRF KeyHash which is already delegated to
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (DELEG era) = DelegPredicateFailure era
 
   initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (DELEG era))
+instance NoUnexpectedThunks (DelegPredicateFailure era)
 
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PredicateFailure (DELEG era))
+  ToCBOR (DelegPredicateFailure era)
   where
   toCBOR = \case
     StakeKeyAlreadyRegisteredDELEG cred ->
@@ -158,7 +161,7 @@ instance
 
 instance
   (Era era) =>
-  FromCBOR (PredicateFailure (DELEG era))
+  FromCBOR (DelegPredicateFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (DELEG era)" $
     \case

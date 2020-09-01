@@ -20,6 +20,14 @@ import           Byron.Spec.Chain.STS.Rule.SigCnt
 
 data PBFT deriving (Data, Typeable)
 
+data PbftPredicateFailure
+  = SlotNotAfterLastBlock Slot Slot
+  | SlotInTheFuture Slot Slot
+  | PrevHashNotMatching Hash Hash
+  | InvalidHeaderSignature VKey (Sig Hash)
+  | SigCountFailure (PredicateFailure SIGCNT)
+  deriving (Eq, Show, Data, Typeable)
+
 instance STS PBFT where
   type Environment PBFT =
     ( PParams
@@ -33,13 +41,7 @@ instance STS PBFT where
 
   type Signal PBFT = BlockHeader
 
-  data PredicateFailure PBFT
-    = SlotNotAfterLastBlock Slot Slot
-    | SlotInTheFuture Slot Slot
-    | PrevHashNotMatching Hash Hash
-    | InvalidHeaderSignature VKey (Sig Hash)
-    | SigCountFailure (PredicateFailure SIGCNT)
-    deriving (Eq, Show, Data, Typeable)
+  type PredicateFailure PBFT = PbftPredicateFailure
 
   initialRules = []
 

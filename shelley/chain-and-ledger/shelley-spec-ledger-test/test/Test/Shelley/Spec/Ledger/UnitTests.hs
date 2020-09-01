@@ -62,15 +62,15 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.STS.Delegs (PredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Delpl (PredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Delegs (DelegsPredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Ledger
   ( pattern DelegsFailure,
     pattern UtxowFailure,
   )
-import Shelley.Spec.Ledger.STS.Pool (PredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Utxo (PredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Pool (PoolPredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Utxo (UtxoPredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),

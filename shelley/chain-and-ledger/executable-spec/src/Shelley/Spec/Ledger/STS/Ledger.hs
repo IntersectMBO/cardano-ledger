@@ -15,7 +15,8 @@
 module Shelley.Spec.Ledger.STS.Ledger
   ( LEDGER,
     LedgerEnv (..),
-    PredicateFailure (..),
+    LedgerPredicateFailure (..),
+    PredicateFailure,
   )
 where
 
@@ -55,16 +56,8 @@ import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..))
 import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
-    pattern BadInputsUTxO,
-    pattern ExpiredUTxO,
-    pattern FeeTooSmallUTxO,
-    pattern InputSetEmptyUTxO,
-    pattern MaxTxSizeUTxO,
-    pattern OutputTooSmallUTxO,
-    pattern UpdateFailure,
-    pattern ValueNotConservedUTxO,
   )
-import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..), UTXOW)
+import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxBody (..))
@@ -79,6 +72,11 @@ data LedgerEnv = LedgerEnv
   }
   deriving (Show)
 
+data LedgerPredicateFailure era
+  = UtxowFailure (PredicateFailure (UTXOW era)) -- Subtransition Failures
+  | DelegsFailure (PredicateFailure (DELEGS era)) -- Subtransition Failures
+  deriving (Show, Eq, Generic)
+
 instance
   ( Era era,
     DSignable era (Hash era (TxBody era))
@@ -91,10 +89,7 @@ instance
   type Signal (LEDGER era) = Tx era
   type Environment (LEDGER era) = LedgerEnv
   type BaseM (LEDGER era) = ShelleyBase
-  data PredicateFailure (LEDGER era)
-    = UtxowFailure (PredicateFailure (UTXOW era)) -- Subtransition Failures
-    | DelegsFailure (PredicateFailure (DELEGS era)) -- Subtransition Failures
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (LEDGER era) = LedgerPredicateFailure era
 
   initialRules = []
   transitionRules = [ledgerTransition]
@@ -116,11 +111,11 @@ instance
         )
     ]
 
-instance (Era era) => NoUnexpectedThunks (PredicateFailure (LEDGER era))
+instance (Era era) => NoUnexpectedThunks (LedgerPredicateFailure era)
 
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PredicateFailure (LEDGER era))
+  ToCBOR (LedgerPredicateFailure era)
   where
   toCBOR = \case
     (UtxowFailure a) -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR a
@@ -128,7 +123,7 @@ instance
 
 instance
   (Era era) =>
-  FromCBOR (PredicateFailure (LEDGER era))
+  FromCBOR (LedgerPredicateFailure era)
   where
   fromCBOR =
     decodeRecordSum "PredicateFailure (LEDGER era)" $

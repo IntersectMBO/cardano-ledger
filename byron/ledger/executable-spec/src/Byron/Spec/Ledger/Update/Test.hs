@@ -13,9 +13,7 @@ import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Internal.Property (CoverPercentage)
 
-import           Byron.Spec.Ledger.Update (PredicateFailure (AVSigDoesNotVerify, AlreadyProposedPv, AlreadyProposedSv, CannotFollowPv, CannotFollowSv, CannotUpdatePv, DoesNotVerify, InvalidApplicationName, InvalidSystemTags, NoUpdateProposal, NotGenesisDelegate))
-import           Byron.Spec.Ledger.Update (UpId (UpId))
-
+import           Byron.Spec.Ledger.Update
 
 -- | Check that all the relevant predicate failures are covered.
 coverUpiregFailures

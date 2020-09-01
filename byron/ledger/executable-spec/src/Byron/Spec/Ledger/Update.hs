@@ -366,20 +366,22 @@ svCanFollow avs (an,av) =
 -- | Update Proposal Software Version Validation
 data UPSVV deriving (Generic, Data, Typeable)
 
+-- | These `PredicateFailure`s are all "throwable". The disjunction of the
+--   rules' preconditions is not `True` - the `PredicateFailure`s represent
+--   `False` cases.
+data UpsvvPredicateFailure
+  = AlreadyProposedSv
+  | CannotFollowSv
+  | InvalidApplicationName
+  | InvalidSystemTags
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
+
 instance STS UPSVV where
   type Environment UPSVV = Map ApName (ApVer, Core.Slot, Metadata)
   type State UPSVV = Map UpId (ApName, ApVer, Metadata)
   type Signal UPSVV = UProp
-
-  -- | These `PredicateFailure`s are all "throwable". The disjunction of the
-  --   rules' preconditions is not `True` - the `PredicateFailure`s represent
-  --   `False` cases.
-  data PredicateFailure UPSVV
-    = AlreadyProposedSv
-    | CannotFollowSv
-    | InvalidApplicationName
-    | InvalidSystemTags
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UPSVV = UpsvvPredicateFailure
 
   initialRules = []
   transitionRules =
@@ -401,6 +403,15 @@ instance STS UPSVV where
 
 data UPPVV deriving (Generic, Data, Typeable)
 
+-- | These `PredicateFailure`s are all "throwable". The disjunction of the
+--   rules' preconditions is not `True` - the `PredicateFailure`s represent
+--   `False` cases.
+data UppvvPredicateFailure
+  = CannotFollowPv
+  | CannotUpdatePv [UpdateConstraintViolation]
+  | AlreadyProposedPv
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS UPPVV where
   type Environment UPPVV =
     ( ProtVer
@@ -408,15 +419,7 @@ instance STS UPPVV where
     )
   type State UPPVV = Map UpId (ProtVer, PParams)
   type Signal UPPVV = UProp
-
-  -- | These `PredicateFailure`s are all "throwable". The disjunction of the
-  --   rules' preconditions is not `True` - the `PredicateFailure`s represent
-  --   `False` cases.
-  data PredicateFailure UPPVV
-    = CannotFollowPv
-    | CannotUpdatePv [UpdateConstraintViolation]
-    | AlreadyProposedPv
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UPPVV = UppvvPredicateFailure
 
   initialRules = []
   transitionRules =
@@ -435,6 +438,15 @@ instance STS UPPVV where
 -- | Update proposal validity
 data UPV deriving (Generic, Data, Typeable)
 
+-- | These `PredicateFailure`s are all throwable.
+data UpvPredicateFailure
+  = UPPVVFailure (PredicateFailure UPPVV)
+  | UPSVVFailure (PredicateFailure UPSVV)
+  | AVChangedInPVUpdate ApName ApVer (Maybe (ApVer, Slot, Metadata))
+  | ParamsChangedInSVUpdate
+  | PVChangedInSVUpdate
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS UPV where
   type Environment UPV =
     ( ProtVer
@@ -448,15 +460,8 @@ instance STS UPV where
     )
 
   type Signal UPV = UProp
+  type PredicateFailure UPV = UpvPredicateFailure
 
-  -- | These `PredicateFailure`s are all throwable.
-  data PredicateFailure UPV
-    = UPPVVFailure (PredicateFailure UPPVV)
-    | UPSVVFailure (PredicateFailure UPSVV)
-    | AVChangedInPVUpdate ApName ApVer (Maybe (ApVer, Slot, Metadata))
-    | ParamsChangedInSVUpdate
-    | PVChangedInSVUpdate
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
@@ -497,6 +502,12 @@ instance Embed UPSVV UPV where
   wrapFailed = UPSVVFailure
 
 data UPREG deriving (Generic, Data, Typeable)
+-- | These `PredicateFailure`s are all throwable.
+data UpregPredicateFailure
+  = UPVFailure (PredicateFailure UPV)
+  | NotGenesisDelegate
+  | DoesNotVerify
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
 instance STS UPREG where
   type Environment UPREG =
@@ -510,13 +521,7 @@ instance STS UPREG where
     , Map UpId (ApName, ApVer, Metadata)
     )
   type Signal UPREG = UProp
-
-  -- | These `PredicateFailure`s are all throwable.
-  data PredicateFailure UPREG
-    = UPVFailure (PredicateFailure UPV)
-    | NotGenesisDelegate
-    | DoesNotVerify
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UPREG = UpregPredicateFailure
 
   initialRules = []
   transitionRules =
@@ -568,6 +573,14 @@ instance HasHash (Maybe Byron.Spec.Ledger.Update.UProp, [Byron.Spec.Ledger.Updat
 
 data ADDVOTE deriving (Generic, Data, Typeable)
 
+-- | These `PredicateFailure`s are all throwable.
+data AddvotePredicateFailure
+  = AVSigDoesNotVerify
+  | NoUpdateProposal UpId
+  | VoteByNonGenesisDelegate VKey
+  | RepeatVoteByGenesisDelegate VKey
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS ADDVOTE where
   type Environment ADDVOTE =
     ( Set UpId
@@ -575,14 +588,7 @@ instance STS ADDVOTE where
     )
   type State ADDVOTE = Set (UpId, Core.VKeyGenesis)
   type Signal ADDVOTE = Vote
-
-  -- | These `PredicateFailure`s are all throwable.
-  data PredicateFailure ADDVOTE
-    = AVSigDoesNotVerify
-    | NoUpdateProposal UpId
-    | VoteByNonGenesisDelegate VKey
-    | RepeatVoteByGenesisDelegate VKey
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure ADDVOTE = AddvotePredicateFailure
 
   initialRules = []
   transitionRules =
@@ -606,6 +612,16 @@ instance STS ADDVOTE where
 
 data UPVOTE deriving (Generic, Data, Typeable)
 
+-- | The 3 non-embedded `PredicateFailure`s here are all structural. The
+-- disjuntion of the preconditions is `True` - one rule either fires or the
+-- other does.
+data UpvotePredicateFailure
+  = ADDVOTEFailure (PredicateFailure ADDVOTE)
+  | S_HigherThanThdAndNotAlreadyConfirmed
+  | S_CfmThdNotReached
+  | S_AlreadyConfirmed
+  deriving (Eq, Show, Data, Generic, Typeable, NoUnexpectedThunks)
+
 instance STS UPVOTE where
   type Environment UPVOTE =
     ( Core.Slot
@@ -618,16 +634,7 @@ instance STS UPVOTE where
     , Set (UpId, Core.VKeyGenesis)
     )
   type Signal UPVOTE = Vote
-
-  -- | The 3 non-embedded `PredicateFailure`s here are all structural. The
-  -- disjuntion of the preconditions is `True` - one rule either fires or the
-  -- other does.
-  data PredicateFailure UPVOTE
-    = ADDVOTEFailure (PredicateFailure ADDVOTE)
-    | S_HigherThanThdAndNotAlreadyConfirmed
-    | S_CfmThdNotReached
-    | S_AlreadyConfirmed
-    deriving (Eq, Show, Data, Generic, Typeable, NoUnexpectedThunks)
+  type PredicateFailure UPVOTE = UpvotePredicateFailure
 
   initialRules = []
   transitionRules =
@@ -666,12 +673,14 @@ instance Embed ADDVOTE UPVOTE where
 
 data FADS deriving (Generic, Data, Typeable)
 
+data FadsPredicateFailure
+  deriving (Eq, Show, Data, Typeable, Generic)
+
 instance STS FADS where
   type Environment FADS = ()
   type State FADS = [(Core.Slot, (ProtVer, PParams))]
   type Signal FADS = (Core.Slot, (ProtVer, PParams))
-  data PredicateFailure FADS
-    deriving (Eq, Show, Data, Typeable, Generic)
+  type PredicateFailure FADS = FadsPredicateFailure
 
   initialRules = []
   transitionRules =
@@ -697,6 +706,18 @@ findKey p m =
     [(k, v)] -> Just (k, v)
     _        -> Nothing
 
+-- | `S_TryNextRule` is a structural `PredicateFailure`, used to fail from
+-- one transition rule to the other. The other `PredicateFailure`s are all
+-- throwable.
+data UpendPredicateFailure
+  = ProtVerUnknown ProtVer
+  | S_TryNextRule
+  | CanAdopt ProtVer
+  | CannotAdopt ProtVer
+  | NotADelegate VKey
+  | UnconfirmedProposal UpId
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS UPEND where
   type Environment UPEND =
     ( Core.Slot                    -- Current slot number
@@ -714,18 +735,7 @@ instance STS UPEND where
     , Set (ProtVer, Core.VKeyGenesis)
     )
   type Signal UPEND = (ProtVer, Core.VKey)
-
-  -- | `S_TryNextRule` is a structural `PredicateFailure`, used to fail from
-  -- one transition rule to the other. The other `PredicateFailure`s are all
-  -- throwable.
-  data PredicateFailure UPEND
-    = ProtVerUnknown ProtVer
-    | S_TryNextRule
-    | CanAdopt ProtVer
-    | CannotAdopt ProtVer
-    | NotADelegate VKey
-    | UnconfirmedProposal UpId
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UPEND = UpendPredicateFailure
 
   initialRules = []
   transitionRules =
@@ -926,13 +936,15 @@ registeredProtocolUpdateProposals ((_, _), _, _, rpus, _, _, _, _, _) = rpus
 
 data UPIREG deriving (Generic, Data, Typeable)
 
+data UpiregPredicateFailure
+  = UPREGFailure (PredicateFailure UPREG)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS UPIREG where
   type Environment UPIREG = UPIEnv
   type State UPIREG = UPIState
   type Signal UPIREG = UProp
-  data PredicateFailure UPIREG
-    = UPREGFailure (PredicateFailure UPREG)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UPIREG = UpiregPredicateFailure
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1300,13 +1312,15 @@ reSign uprop
 
 data UPIVOTE deriving (Generic, Data, Typeable)
 
+data UpivotePredicateFailure
+  = UPVOTEFailure (PredicateFailure UPVOTE)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS UPIVOTE where
   type Environment UPIVOTE = UPIEnv
   type State UPIVOTE = UPIState
   type Signal UPIVOTE = Vote
-  data PredicateFailure UPIVOTE
-    = UPVOTEFailure (PredicateFailure UPVOTE)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UPIVOTE = UpivotePredicateFailure
 
   initialRules = []
   transitionRules =
@@ -1351,14 +1365,15 @@ instance Embed UPVOTE UPIVOTE where
 
 data APPLYVOTES deriving (Generic, Data, Typeable)
 
+data ApplyVotesPredicateFailure
+  = UpivoteFailure (PredicateFailure UPIVOTE)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS APPLYVOTES where
   type Environment APPLYVOTES = UPIEnv
   type State APPLYVOTES = UPIState
   type Signal APPLYVOTES = [Vote]
-
-  data PredicateFailure APPLYVOTES
-    = UpivoteFailure (PredicateFailure UPIVOTE)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure APPLYVOTES = ApplyVotesPredicateFailure
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1378,14 +1393,15 @@ instance Embed UPIVOTE APPLYVOTES where
 
 data UPIVOTES deriving (Generic, Data, Typeable)
 
+data UpivotesPredicateFailure
+  = ApplyVotesFailure (PredicateFailure APPLYVOTES)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS UPIVOTES where
   type Environment UPIVOTES = UPIEnv
   type State UPIVOTES = UPIState
   type Signal UPIVOTES = [Vote]
-
-  data PredicateFailure UPIVOTES
-    = ApplyVotesFailure (PredicateFailure APPLYVOTES)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UPIVOTES = UpivotesPredicateFailure
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1523,13 +1539,15 @@ instance HasTrace UPIVOTES where
 
 data UPIEND deriving (Generic, Data, Typeable)
 
+data UpiendPredicateFailure
+  = UPENDFailure (PredicateFailure UPEND)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS UPIEND where
   type Environment UPIEND = UPIEnv
   type State UPIEND = UPIState
   type Signal UPIEND = (ProtVer, Core.VKey)
-  data PredicateFailure UPIEND
-    = UPENDFailure (PredicateFailure UPEND)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UPIEND = UpiendPredicateFailure
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1592,6 +1610,10 @@ pickHighlyEndorsedProtocolVersion endorsementsList =
 
 data PVBUMP deriving (Generic, Data, Typeable)
 
+-- PVBUMP has no predicate failures
+data PvbumpPredicateFailure = NoPVBUMPFailure
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS PVBUMP where
   type Environment PVBUMP =
     ( Core.Slot
@@ -1605,10 +1627,7 @@ instance STS PVBUMP where
     (ProtVer, PParams)
 
   type Signal PVBUMP = ()
-
-  -- PVBUMP has no predicate failures
-  data PredicateFailure PVBUMP = NoPVBUMPFailure
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure PVBUMP = PvbumpPredicateFailure
 
   initialRules = []
   transitionRules =
@@ -1623,6 +1642,10 @@ instance STS PVBUMP where
 
 data UPIEC deriving (Generic, Data, Typeable)
 
+data UpiecPredicateFailure
+  = PVBUMPFailure (PredicateFailure PVBUMP)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 instance STS UPIEC where
   type Environment UPIEC =
     ( Core.Epoch
@@ -1633,9 +1656,7 @@ instance STS UPIEC where
     )
   type State UPIEC = UPIState
   type Signal UPIEC = ()
-  data PredicateFailure UPIEC
-    = PVBUMPFailure (PredicateFailure PVBUMP)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UPIEC = UpiecPredicateFailure
 
   initialRules = []
   transitionRules =

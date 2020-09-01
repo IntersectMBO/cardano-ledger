@@ -13,7 +13,8 @@
 
 module Shelley.Spec.Ledger.STS.Utxow
   ( UTXOW,
-    PredicateFailure (..),
+    UtxowPredicateFailure (..),
+    PredicateFailure,
   )
 where
 
@@ -90,6 +91,29 @@ import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
 data UTXOW era
 
+data UtxowPredicateFailure era
+  = InvalidWitnessesUTXOW
+      ![VKey 'Witness era]
+  | -- witnesses which failed in verifiedWits function
+    MissingVKeyWitnessesUTXOW
+      !(WitHashes era) -- witnesses which were needed and not supplied
+  | MissingScriptWitnessesUTXOW
+      !(Set (ScriptHash era)) -- missing scripts
+  | ScriptWitnessNotValidatingUTXOW
+      !(Set (ScriptHash era)) -- failed scripts
+  | UtxoFailure (PredicateFailure (UTXO era))
+  | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness era))
+  | MissingTxBodyMetaDataHash
+      !(MetaDataHash era) -- hash of the full metadata
+  | MissingTxMetaData
+      !(MetaDataHash era) -- hash of the metadata included in the transaction body
+  | ConflictingMetaDataHash
+      !(MetaDataHash era) -- hash of the metadata included in the transaction body
+      !(MetaDataHash era) -- hash of the full metadata
+  deriving (Eq, Generic, Show)
+
+instance (Era era) => NoUnexpectedThunks (UtxowPredicateFailure era)
+
 instance
   ( Era era,
     DSignable era (Hash era (TxBody era))
@@ -100,35 +124,13 @@ instance
   type Signal (UTXOW era) = Tx era
   type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
-  data PredicateFailure (UTXOW era)
-    = InvalidWitnessesUTXOW
-        ![VKey 'Witness era]
-    | -- witnesses which failed in verifiedWits function
-      MissingVKeyWitnessesUTXOW
-        !(WitHashes era) -- witnesses which were needed and not supplied
-    | MissingScriptWitnessesUTXOW
-        !(Set (ScriptHash era)) -- missing scripts
-    | ScriptWitnessNotValidatingUTXOW
-        !(Set (ScriptHash era)) -- failed scripts
-    | UtxoFailure (PredicateFailure (UTXO era))
-    | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness era))
-    | MissingTxBodyMetaDataHash
-        !(MetaDataHash era) -- hash of the full metadata
-    | MissingTxMetaData
-        !(MetaDataHash era) -- hash of the metadata included in the transaction body
-    | ConflictingMetaDataHash
-        !(MetaDataHash era) -- hash of the metadata included in the transaction body
-        !(MetaDataHash era) -- hash of the full metadata
-    deriving (Eq, Generic, Show)
-
+  type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
   transitionRules = [utxoWitnessed]
   initialRules = [initialLedgerStateUTXOW]
 
-instance (Era era) => NoUnexpectedThunks (PredicateFailure (UTXOW era))
-
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PredicateFailure (UTXOW era))
+  ToCBOR (UtxowPredicateFailure era)
   where
   toCBOR = \case
     InvalidWitnessesUTXOW wits ->
@@ -150,7 +152,7 @@ instance
 
 instance
   (Era era) =>
-  FromCBOR (PredicateFailure (UTXOW era))
+  FromCBOR (UtxowPredicateFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (UTXOW era)" $
     \case

@@ -45,18 +45,19 @@ import           Test.Goblin (GoblinData, mkEmptyGoblin)
 
 data UTXOW deriving (Data, Typeable)
 
+-- | These `PredicateFailure`s are all throwable.
+data UtxowPredicateFailure
+  = UtxoFailure (PredicateFailure UTXO)
+  | InsufficientWitnesses
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+
 
 instance STS UTXOW where
 
   type Environment UTXOW = UTxOEnv
   type State UTXOW = UTxOState
   type Signal UTXOW = Tx
-
-  -- | These `PredicateFailure`s are all throwable.
-  data PredicateFailure UTXOW
-    = UtxoFailure (PredicateFailure UTXO)
-    | InsufficientWitnesses
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  type PredicateFailure UTXOW = UtxowPredicateFailure
 
   initialRules =
     [ do

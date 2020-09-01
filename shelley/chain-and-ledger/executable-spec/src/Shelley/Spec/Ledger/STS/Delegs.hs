@@ -12,7 +12,8 @@
 module Shelley.Spec.Ledger.STS.Delegs
   ( DELEGS,
     DelegsEnv (..),
-    PredicateFailure (..),
+    DelegsPredicateFailure (..),
+    PredicateFailure,
   )
 where
 
@@ -75,6 +76,14 @@ data DelegsEnv era = DelegsEnv
   }
   deriving (Show)
 
+data DelegsPredicateFailure era
+  = DelegateeNotRegisteredDELEG
+      !(KeyHash 'StakePool era) -- target pool which is not registered
+  | WithdrawalsNotInRewardsDELEGS
+      !(Map (RewardAcnt era) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
+  | DelplFailure (PredicateFailure (DELPL era)) -- Subtransition Failures
+  deriving (Show, Eq, Generic)
+
 instance
   Era era =>
   STS (DELEGS era)
@@ -83,22 +92,16 @@ instance
   type Signal (DELEGS era) = Seq (DCert era)
   type Environment (DELEGS era) = DelegsEnv era
   type BaseM (DELEGS era) = ShelleyBase
-  data PredicateFailure (DELEGS era)
-    = DelegateeNotRegisteredDELEG
-        !(KeyHash 'StakePool era) -- target pool which is not registered
-    | WithdrawalsNotInRewardsDELEGS
-        !(Map (RewardAcnt era) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
-    | DelplFailure (PredicateFailure (DELPL era)) -- Subtransition Failures
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (DELEGS era) = DelegsPredicateFailure era
 
   initialRules = [pure emptyDelegation]
   transitionRules = [delegsTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (DELEGS era))
+instance NoUnexpectedThunks (DelegsPredicateFailure era)
 
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PredicateFailure (DELEGS era))
+  ToCBOR (DelegsPredicateFailure era)
   where
   toCBOR = \case
     DelegateeNotRegisteredDELEG kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
@@ -109,7 +112,7 @@ instance
 
 instance
   (Era era) =>
-  FromCBOR (PredicateFailure (DELEGS era))
+  FromCBOR (DelegsPredicateFailure era)
   where
   fromCBOR =
     decodeRecordSum "PredicateFailure" $

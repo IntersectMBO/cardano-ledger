@@ -9,7 +9,8 @@
 
 module Shelley.Spec.Ledger.STS.NewEpoch
   ( NEWEPOCH,
-    PredicateFailure (..),
+    NewEpochPredicateFailure (..),
+    PredicateFailure,
     calculatePoolDistr,
   )
 where
@@ -33,6 +34,15 @@ import Shelley.Spec.Ledger.TxData
 
 data NEWEPOCH era
 
+data NewEpochPredicateFailure era
+  = EpochFailure (PredicateFailure (EPOCH era)) -- Subtransition Failures
+  | CorruptRewardUpdate
+      !(RewardUpdate era) -- The reward update which violates an invariant
+  | MirFailure (PredicateFailure (MIR era)) -- Subtransition Failures
+  deriving (Show, Generic, Eq)
+
+instance NoUnexpectedThunks (NewEpochPredicateFailure era)
+
 instance
   Era era =>
   STS (NEWEPOCH era)
@@ -44,13 +54,7 @@ instance
   type Environment (NEWEPOCH era) = NewEpochEnv era
 
   type BaseM (NEWEPOCH era) = ShelleyBase
-
-  data PredicateFailure (NEWEPOCH era)
-    = EpochFailure (PredicateFailure (EPOCH era)) -- Subtransition Failures
-    | CorruptRewardUpdate
-        !(RewardUpdate era) -- The reward update which violates an invariant
-    | MirFailure (PredicateFailure (MIR era)) -- Subtransition Failures
-    deriving (Show, Generic, Eq)
+  type PredicateFailure (NEWEPOCH era) = NewEpochPredicateFailure era
 
   initialRules =
     [ pure $
@@ -65,8 +69,6 @@ instance
     ]
 
   transitionRules = [newEpochTransition]
-
-instance NoUnexpectedThunks (PredicateFailure (NEWEPOCH era))
 
 newEpochTransition ::
   forall era.

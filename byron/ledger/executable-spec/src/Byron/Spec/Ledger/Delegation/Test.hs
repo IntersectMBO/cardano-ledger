@@ -9,8 +9,7 @@ import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Internal.Property (CoverPercentage)
 
-import           Byron.Spec.Ledger.Delegation (EpochDiff(..)
-                                   , PredicateFailure (DoesNotVerify, EpochInThePast, EpochPastNextEpoch, HasAlreadyDelegated, IsAlreadyScheduled, IsNotGenesisKey))
+import           Byron.Spec.Ledger.Delegation
 
 coverDelegFailures
   :: forall m a

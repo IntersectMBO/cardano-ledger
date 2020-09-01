@@ -8,8 +8,9 @@
 
 module Shelley.Spec.Ledger.STS.Ocert
   ( OCERT,
-    PredicateFailure (..),
+    PredicateFailure,
     OCertEnv (..),
+    OcertPredicateFailure (..),
   )
 where
 
@@ -28,6 +29,31 @@ import Shelley.Spec.Ledger.OCert
 
 data OCERT era
 
+data OcertPredicateFailure era
+  = KESBeforeStartOCERT
+      !KESPeriod -- OCert Start KES Period
+      !KESPeriod -- Current KES Period
+  | KESAfterEndOCERT
+      !KESPeriod -- Current KES Period
+      !KESPeriod -- OCert Start KES Period
+      !Word64 -- Max KES Key Evolutions
+  | CounterTooSmallOCERT
+      !Word64 -- last KES counter used
+      !Word64 -- current KES counter
+  | InvalidSignatureOCERT -- TODO use whole OCert
+      !Word64 -- OCert counter
+      !KESPeriod -- OCert KES period
+  | InvalidKesSignatureOCERT
+      !Word -- current KES Period
+      !Word -- KES start period
+      !Word -- expected KES evolutions
+      !String -- error message given by Consensus Layer
+  | NoCounterForKeyHashOCERT
+      !(KeyHash 'BlockIssuer era) -- stake pool key hash
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (OcertPredicateFailure era)
+
 instance
   ( Era era,
     DSignable era (OCertSignable era),
@@ -43,33 +69,10 @@ instance
       BHeader era
   type Environment (OCERT era) = OCertEnv era
   type BaseM (OCERT era) = ShelleyBase
-  data PredicateFailure (OCERT era)
-    = KESBeforeStartOCERT
-        !KESPeriod -- OCert Start KES Period
-        !KESPeriod -- Current KES Period
-    | KESAfterEndOCERT
-        !KESPeriod -- Current KES Period
-        !KESPeriod -- OCert Start KES Period
-        !Word64 -- Max KES Key Evolutions
-    | CounterTooSmallOCERT
-        !Word64 -- last KES counter used
-        !Word64 -- current KES counter
-    | InvalidSignatureOCERT -- TODO use whole OCert
-        !Word64 -- OCert counter
-        !KESPeriod -- OCert KES period
-    | InvalidKesSignatureOCERT
-        !Word -- current KES Period
-        !Word -- KES start period
-        !Word -- expected KES evolutions
-        !String -- error message given by Consensus Layer
-    | NoCounterForKeyHashOCERT
-        !(KeyHash 'BlockIssuer era) -- stake pool key hash
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (OCERT era) = OcertPredicateFailure era
 
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]
-
-instance NoUnexpectedThunks (PredicateFailure (OCERT era))
 
 ocertTransition ::
   ( Era era,

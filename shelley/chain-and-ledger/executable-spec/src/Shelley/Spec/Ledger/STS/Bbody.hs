@@ -12,7 +12,8 @@ module Shelley.Spec.Ledger.STS.Bbody
   ( BBODY,
     BbodyState (..),
     BbodyEnv (..),
-    PredicateFailure (..),
+    BbodyPredicateFailure (..),
+    PredicateFailure,
     State,
   )
 where
@@ -69,6 +70,16 @@ data BbodyEnv era = BbodyEnv
     bbodyAccount :: AccountState
   }
 
+data BbodyPredicateFailure era
+  = WrongBlockBodySizeBBODY
+      !Int -- Actual Body Size
+      !Int -- Claimed Body Size in Header
+  | InvalidBodyHashBBODY
+      !(HashBBody era) -- Actual Hash
+      !(HashBBody era) -- Claimed Hash
+  | LedgersFailure (PredicateFailure (LEDGERS era)) -- Subtransition Failures
+  deriving (Show, Eq, Generic)
+
 instance
   ( Era era,
     DSignable era (Hash era (TxBody era))
@@ -87,20 +98,12 @@ instance
 
   type BaseM (BBODY era) = ShelleyBase
 
-  data PredicateFailure (BBODY era)
-    = WrongBlockBodySizeBBODY
-        !Int -- Actual Body Size
-        !Int -- Claimed Body Size in Header
-    | InvalidBodyHashBBODY
-        !(HashBBody era) -- Actual Hash
-        !(HashBBody era) -- Claimed Hash
-    | LedgersFailure (PredicateFailure (LEDGERS era)) -- Subtransition Failures
-    deriving (Show, Eq, Generic)
+  type PredicateFailure (BBODY era) = BbodyPredicateFailure era
 
   initialRules = []
   transitionRules = [bbodyTransition]
 
-instance (Era era) => NoUnexpectedThunks (PredicateFailure (BBODY era))
+instance (Era era) => NoUnexpectedThunks (BbodyPredicateFailure era)
 
 bbodyTransition ::
   forall era.

@@ -67,9 +67,13 @@ data CRSt hashAlgo hashToDataMap commitData = CRSt
     committedHashes :: !(Set (Hash hashAlgo Data))
   }
 
-deriving instance (Eq (hashToDataMap (Hash hashAlgo Data) commitData)) => Eq (CRSt hashAlgo hashToDataMap commitData)
+deriving instance
+  (Eq (hashToDataMap (Hash hashAlgo Data) commitData)) =>
+  Eq (CRSt hashAlgo hashToDataMap commitData)
 
-deriving instance (Show (hashToDataMap (Hash hashAlgo Data) commitData)) => Show (CRSt hashAlgo hashToDataMap commitData)
+deriving instance
+  (Show (hashToDataMap (Hash hashAlgo Data) commitData)) =>
+  Show (CRSt hashAlgo hashToDataMap commitData)
 
 class MapLike m k v where
   insert :: k -> v -> m k v -> m k v
@@ -105,6 +109,11 @@ newtype Data = Data {getData :: (Id, Int)}
 newtype Id = Id {getId :: Int}
   deriving (Eq, Show, ToCBOR, Ord, QC.Arbitrary)
 
+data CRPredicateFailure hashAlgo (hashToDataMap :: Type -> Type -> Type) commitData
+  = InvalidReveal Data
+  | AlreadyComitted (Hash hashAlgo Data)
+  deriving (Eq, Show)
+
 instance
   ( HashAlgorithm hashAlgo,
     Typeable hashToDataMap,
@@ -116,14 +125,17 @@ instance
   where
   type Environment (CR hashAlgo hashToDataMap commitData) = ()
 
-  type State (CR hashAlgo hashToDataMap commitData) = CRSt hashAlgo hashToDataMap commitData
+  type
+    State (CR hashAlgo hashToDataMap commitData) =
+      CRSt hashAlgo hashToDataMap commitData
 
-  type Signal (CR hashAlgo hashToDataMap commitData) = CRSignal hashAlgo commitData
+  type
+    Signal (CR hashAlgo hashToDataMap commitData) =
+      CRSignal hashAlgo commitData
 
-  data PredicateFailure (CR hashAlgo hashToDataMap commitData)
-    = InvalidReveal Data
-    | AlreadyComitted (Hash hashAlgo Data)
-    deriving (Eq, Show)
+  type
+    PredicateFailure (CR hashAlgo hashToDataMap commitData) =
+      CRPredicateFailure hashAlgo hashToDataMap commitData
 
   initialRules =
     [ pure
@@ -145,11 +157,18 @@ instance
                   committedHashes = Set.insert dataHash committedHashes
                 }
           Reveal someData -> do
-            hashWithSerialiser toCBOR someData `Set.member` committedHashes ?! InvalidReveal someData
+            hashWithSerialiser toCBOR someData `Set.member` committedHashes
+              ?! InvalidReveal someData
             pure
               $! CRSt
-                { hashToData = delete (hashWithSerialiser toCBOR someData) hashToData,
-                  committedHashes = Set.delete (hashWithSerialiser toCBOR someData) committedHashes
+                { hashToData =
+                    delete
+                      (hashWithSerialiser toCBOR someData)
+                      hashToData,
+                  committedHashes =
+                    Set.delete
+                      (hashWithSerialiser toCBOR someData)
+                      committedHashes
                 }
     ]
 
@@ -183,7 +202,10 @@ instance
   shrinkSignal (Commit _ someData) =
     recalculateCommit <$> QC.shrink someData
     where
-      recalculateCommit shrunkData = Commit (hashWithSerialiser toCBOR shrunkData) shrunkData
+      recalculateCommit shrunkData =
+        Commit
+          (hashWithSerialiser toCBOR shrunkData)
+          shrunkData
   shrinkSignal (Reveal someData) = Reveal <$> QC.shrink someData
 
 -- | Check that unique data is generated. This is supposed to fail, since

@@ -62,13 +62,18 @@ instance ToCBOR TicknState where
           toCBOR ηc
         ]
 
+data TicknPredicateFailure -- No predicate failures
+  deriving (Generic, Show, Eq)
+
+instance NoUnexpectedThunks TicknPredicateFailure
+
 instance STS TICKN where
   type State TICKN = TicknState
   type Signal TICKN = Bool -- Marker indicating whether we are in a new epoch
   type Environment TICKN = TicknEnv
   type BaseM TICKN = ShelleyBase
-  data PredicateFailure TICKN -- No predicate failures
-    deriving (Generic, Show, Eq)
+  type PredicateFailure TICKN = TicknPredicateFailure
+
   initialRules =
     [ pure
         ( TicknState
@@ -79,8 +84,6 @@ instance STS TICKN where
     where
       initialNonce = mkNonceFromNumber 0
   transitionRules = [tickTransition]
-
-instance NoUnexpectedThunks (PredicateFailure TICKN)
 
 tickTransition :: TransitionRule TICKN
 tickTransition = do

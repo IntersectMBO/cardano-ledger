@@ -15,7 +15,8 @@
 module Shelley.Spec.Ledger.STS.Utxo
   ( UTXO,
     UtxoEnv (..),
-    PredicateFailure (..),
+    UtxoPredicateFailure (..),
+    PredicateFailure,
   )
 where
 
@@ -103,76 +104,40 @@ data UtxoEnv era
       (GenDelegs era)
   deriving (Show)
 
-instance
-  (Era era) =>
-  STS (UTXO era)
-  where
-  type State (UTXO era) = UTxOState era
-  type Signal (UTXO era) = Tx era
-  type Environment (UTXO era) = UtxoEnv era
-  type BaseM (UTXO era) = ShelleyBase
-  data PredicateFailure (UTXO era)
-    = BadInputsUTxO
-        !(Set (TxIn era)) -- The bad transaction inputs
-    | ExpiredUTxO
-        !SlotNo -- transaction's time to live
-        !SlotNo -- current slot
-    | MaxTxSizeUTxO
-        !Integer -- the actual transaction size
-        !Integer -- the max transaction size
-    | InputSetEmptyUTxO
-    | FeeTooSmallUTxO
-        !Coin -- the minimum fee for this transaction
-        !Coin -- the fee supplied in this transaction
-    | ValueNotConservedUTxO
-        !Coin -- the Coin consumed by this transaction
-        !Coin -- the Coin produced by this transaction
-    | WrongNetwork
-        !Network -- the expected network id
-        !(Set (Addr era)) -- the set of addresses with incorrect network IDs
-    | WrongNetworkWithdrawal
-        !Network -- the expected network id
-        !(Set (RewardAcnt era)) -- the set of reward addresses with incorrect network IDs
-    | OutputTooSmallUTxO
-        ![TxOut era] -- list of supplied transaction outputs that are too small
-    | UpdateFailure (PredicateFailure (PPUP era)) -- Subtransition Failures
-    | OutputBootAddrAttrsTooBig
-        ![TxOut era] -- list of supplied bad transaction outputs
-    deriving (Eq, Show, Generic)
-  transitionRules = [utxoInductive]
-  initialRules = [initialLedgerState]
+data UtxoPredicateFailure era
+  = BadInputsUTxO
+      !(Set (TxIn era)) -- The bad transaction inputs
+  | ExpiredUTxO
+      !SlotNo -- transaction's time to live
+      !SlotNo -- current slot
+  | MaxTxSizeUTxO
+      !Integer -- the actual transaction size
+      !Integer -- the max transaction size
+  | InputSetEmptyUTxO
+  | FeeTooSmallUTxO
+      !Coin -- the minimum fee for this transaction
+      !Coin -- the fee supplied in this transaction
+  | ValueNotConservedUTxO
+      !Coin -- the Coin consumed by this transaction
+      !Coin -- the Coin produced by this transaction
+  | WrongNetwork
+      !Network -- the expected network id
+      !(Set (Addr era)) -- the set of addresses with incorrect network IDs
+  | WrongNetworkWithdrawal
+      !Network -- the expected network id
+      !(Set (RewardAcnt era)) -- the set of reward addresses with incorrect network IDs
+  | OutputTooSmallUTxO
+      ![TxOut era] -- list of supplied transaction outputs that are too small
+  | UpdateFailure (PredicateFailure (PPUP era)) -- Subtransition Failures
+  | OutputBootAddrAttrsTooBig
+      ![TxOut era] -- list of supplied bad transaction outputs
+  deriving (Eq, Show, Generic)
 
-  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
-    "AssertionViolation (" <> avSTS <> "): " <> avMsg
-      <> "\n"
-      <> show avCtx
-      <> "\n"
-      <> show avState
-
-  assertions =
-    [ PreCondition
-        "Deposit pot must not be negative (pre)"
-        (\(TRC (_, st, _)) -> _deposited st >= 0),
-      PostCondition
-        "UTxO must increase fee pot"
-        (\(TRC (_, st, _)) st' -> _fees st' >= _fees st),
-      PostCondition
-        "Deposit pot must not be negative (post)"
-        (\_ st' -> _deposited st' >= 0),
-      let utxoBalance us = _deposited us + _fees us + balance (_utxo us)
-          withdrawals txb = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txb
-       in PostCondition
-            "Should preserve ADA in the UTxO state"
-            ( \(TRC (_, us, tx)) us' ->
-                utxoBalance us + withdrawals (_body tx) == utxoBalance us'
-            )
-    ]
-
-instance NoUnexpectedThunks (PredicateFailure (UTXO era))
+instance NoUnexpectedThunks (UtxoPredicateFailure era)
 
 instance
   (Typeable era, Era era) =>
-  ToCBOR (PredicateFailure (UTXO era))
+  ToCBOR (UtxoPredicateFailure era)
   where
   toCBOR = \case
     BadInputsUTxO ins ->
@@ -214,7 +179,7 @@ instance
 
 instance
   (Era era) =>
-  FromCBOR (PredicateFailure (UTXO era))
+  FromCBOR (UtxoPredicateFailure era)
   where
   fromCBOR =
     decodeRecordSum "PredicateFailureUTXO" $
@@ -257,6 +222,45 @@ instance
           outs <- decodeList fromCBOR
           pure (2, OutputBootAddrAttrsTooBig outs)
         k -> invalidKey k
+
+instance
+  (Era era) =>
+  STS (UTXO era)
+  where
+  type State (UTXO era) = UTxOState era
+  type Signal (UTXO era) = Tx era
+  type Environment (UTXO era) = UtxoEnv era
+  type BaseM (UTXO era) = ShelleyBase
+  type PredicateFailure (UTXO era) = UtxoPredicateFailure era
+
+  transitionRules = [utxoInductive]
+  initialRules = [initialLedgerState]
+
+  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
+    "AssertionViolation (" <> avSTS <> "): " <> avMsg
+      <> "\n"
+      <> show avCtx
+      <> "\n"
+      <> show avState
+
+  assertions =
+    [ PreCondition
+        "Deposit pot must not be negative (pre)"
+        (\(TRC (_, st, _)) -> _deposited st >= 0),
+      PostCondition
+        "UTxO must increase fee pot"
+        (\(TRC (_, st, _)) st' -> _fees st' >= _fees st),
+      PostCondition
+        "Deposit pot must not be negative (post)"
+        (\_ st' -> _deposited st' >= 0),
+      let utxoBalance us = _deposited us + _fees us + balance (_utxo us)
+          withdrawals txb = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txb
+       in PostCondition
+            "Should preserve ADA in the UTxO state"
+            ( \(TRC (_, us, tx)) us' ->
+                utxoBalance us + withdrawals (_body tx) == utxoBalance us'
+            )
+    ]
 
 initialLedgerState :: InitialRule (UTXO era)
 initialLedgerState = do
