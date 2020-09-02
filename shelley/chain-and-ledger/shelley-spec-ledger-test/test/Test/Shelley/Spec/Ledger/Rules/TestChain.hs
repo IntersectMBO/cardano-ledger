@@ -21,7 +21,7 @@ import Control.State.Transition.Trace
     sourceSignalTargets,
   )
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
-import Data.Foldable (foldl')
+import Data.Foldable (fold, foldl')
 import Data.Proxy
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.API
@@ -43,6 +43,7 @@ import Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Tick (TickEnv (TickEnv))
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
+import qualified Shelley.Spec.Ledger.Val as Val
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( C,
@@ -110,8 +111,6 @@ adaPreservationChain =
     checkWithdrawlBound SourceSignalTarget {source, signal, target} =
       rewardDelta === withdrawls
       where
-        sum_ :: Foldable f => f Coin -> Coin
-        sum_ = foldl' (+) (Coin 0)
         withdrawls :: Coin
         withdrawls =
           foldl'
@@ -119,14 +118,14 @@ adaPreservationChain =
                 let wdrls =
                       unWdrl . _wdrls . _body $
                         tx
-                 in c + sum_ wdrls
+                 in c <> fold wdrls
             )
             (Coin 0)
             $ txSeqTxns' . bbody $
               signal
         rewardDelta :: Coin
         rewardDelta =
-          sum_
+          fold
             ( _rewards . _dstate
                 . _delegationState
                 . esLState
@@ -134,7 +133,7 @@ adaPreservationChain =
                 . chainNes
                 $ source
             )
-            - sum_
+            Val.~~ fold
               ( _rewards . _dstate
                   . _delegationState
                   . esLState

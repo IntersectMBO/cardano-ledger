@@ -20,6 +20,7 @@ where
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Era (Crypto, Era)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
+import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Sequence.Strict (StrictSeq (..))
@@ -173,10 +174,10 @@ makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
         }
 
 aliceInitCoin :: Coin
-aliceInitCoin = 10000
+aliceInitCoin = Coin 10000
 
 bobInitCoin :: Coin
-bobInitCoin = 1000
+bobInitCoin = Coin 1000
 
 genesis :: Era era => LedgerState era
 genesis = genesisState genDelegs0 utxo0
@@ -203,7 +204,7 @@ initialUTxOState ::
   (TxId era, Either [[PredicateFailure (UTXOW era)]] (UTxOState era))
 initialUTxOState aliceKeep msigs =
   let addresses =
-        [(Cast.aliceAddr, aliceKeep) | aliceKeep > 0]
+        [(Cast.aliceAddr, aliceKeep) | aliceKeep > mempty]
           ++ map
             ( \(msig, era) ->
                 ( Addr
@@ -265,12 +266,12 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
     txbody =
       makeTxBody
         inputs
-        [(Cast.aliceAddr, aliceInitCoin + bobInitCoin + sum (unWdrl wdrl))]
+        [(Cast.aliceAddr, aliceInitCoin <> bobInitCoin <> fold (unWdrl wdrl))]
         wdrl
     inputs =
       [ TxIn txId (fromIntegral n)
         | n <-
-            [0 .. length lockScripts - (if aliceKeep > 0 then 0 else 1)]
+            [0 .. length lockScripts - (if aliceKeep > mempty then 0 else 1)]
       ]
     -- alice? + scripts
     tx =

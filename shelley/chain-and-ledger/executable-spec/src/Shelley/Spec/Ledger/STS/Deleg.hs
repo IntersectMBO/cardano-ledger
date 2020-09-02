@@ -24,6 +24,7 @@ import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
+import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -216,7 +217,7 @@ delegationTransition = do
 
       pure $
         ds
-          { _rewards = eval (_rewards ds ∪ (singleton hk (Coin 0))),
+          { _rewards = eval (_rewards ds ∪ (singleton hk mempty)),
             _ptrs = eval (_ptrs ds ∪ (singleton ptr hk))
           }
     DCertDeleg (DeRegKey hk) -> do
@@ -224,7 +225,7 @@ delegationTransition = do
       eval (hk ∈ dom (_rewards ds)) ?! StakeKeyNotRegisteredDELEG hk
 
       let rewardCoin = Map.lookup hk (_rewards ds)
-      rewardCoin == Just 0 ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
+      rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
 
       pure $
         ds
@@ -284,7 +285,7 @@ delegationTransition = do
               ReservesMIR -> (_reserves acnt, iRReserves $ _irwd ds)
               TreasuryMIR -> (_treasury acnt, iRTreasury $ _irwd ds)
       let combinedMap = Map.union credCoinMap instantaneousRewards
-          requiredForRewards = sum combinedMap
+          requiredForRewards = fold combinedMap
       requiredForRewards <= potAmount
         ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards potAmount
 

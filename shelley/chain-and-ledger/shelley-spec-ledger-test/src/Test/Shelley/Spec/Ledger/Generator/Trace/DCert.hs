@@ -63,6 +63,7 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (getKeyCombination)
 import Shelley.Spec.Ledger.TxData (Ix)
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
+import qualified Shelley.Spec.Ledger.Val as Val
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..))
@@ -176,7 +177,7 @@ genDCerts
     pure
       ( StrictSeq.fromList certs,
         totalDeposits pparams (_pParams (_pstate dpState)) certs,
-        (_keyDeposit pparams) * (fromIntegral $ length deRegStakeCreds),
+        Val.scale (length deRegStakeCreds) (_keyDeposit pparams),
         lastState_,
         ( concat (keyCredAsWitness <$> keyCreds'),
           scriptCredMultisig <$> scriptCreds

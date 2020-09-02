@@ -41,9 +41,9 @@ rewardsDecreasesByWithdrawals tr =
         } =
         let rewards = (_rewards . _dstate) d
             rewards' = (_rewards . _dstate) d'
-            rewardsSum = foldl' (+) (Coin 0) rewards
-            rewardsSum' = foldl' (+) (Coin 0) rewards'
-            wdrlSum = foldl' (+) (Coin 0) wdrls
+            rewardsSum = foldl' (<>) (Coin 0) rewards
+            rewardsSum' = foldl' (<>) (Coin 0) rewards'
+            wdrlSum = foldl' (<>) (Coin 0) wdrls
          in rewardsSum >= rewardsSum'
               && wdrlSum >= Coin 0
-              && rewardsSum == wdrlSum + rewardsSum'
+              && rewardsSum == wdrlSum <> rewardsSum'

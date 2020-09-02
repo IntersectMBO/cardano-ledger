@@ -37,7 +37,12 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Quiet
-import Shelley.Spec.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
+import Shelley.Spec.Ledger.Coin
+  ( Coin (..),
+    coinToRational,
+    rationalToCoinViaFloor,
+    word64ToCoin,
+  )
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.DeserializeShort (deserialiseAddrStakeRef)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
@@ -45,6 +50,7 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxData (PoolParams, TxOut (TxOutCompact))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import qualified Shelley.Spec.Ledger.Val as Val
 
 -- | Blocks made
 newtype BlocksMade era = BlocksMade
@@ -82,9 +88,9 @@ aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   where
     accum (TxOutCompact addr c) ans = case deserialiseAddrStakeRef addr of
       Just (StakeRefPtr p) -> case Map.lookup p ptrs of
-        Just cred -> Map.insertWith (+) cred (fromIntegral c) ans
+        Just cred -> Map.insertWith (<>) cred (word64ToCoin c) ans
         Nothing -> ans
-      Just (StakeRefBase hk) -> Map.insertWith (+) hk (fromIntegral c) ans
+      Just (StakeRefBase hk) -> Map.insertWith (<>) hk (word64ToCoin c) ans
       _other -> ans
 
 -- | Get stake of one pool
@@ -103,8 +109,8 @@ obligation ::
   Map (KeyHash 'StakePool era) (PoolParams era) ->
   Coin
 obligation pp rewards stakePools =
-  (_keyDeposit pp) * (fromIntegral $ length rewards)
-    + (_poolDeposit pp) * (fromIntegral $ length stakePools)
+  Val.scale (length rewards) (_keyDeposit pp)
+    <> Val.scale (length stakePools) (_poolDeposit pp)
 
 -- | Calculate maximal pool reward
 maxPool :: PParams -> Coin -> Rational -> Rational -> Coin

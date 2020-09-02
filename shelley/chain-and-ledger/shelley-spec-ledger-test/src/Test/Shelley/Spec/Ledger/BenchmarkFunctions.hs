@@ -161,14 +161,14 @@ ppsBench =
       _maxTxSize = 1000000000,
       _minfeeA = 0,
       _minfeeB = 0,
-      _minUTxOValue = 10,
+      _minUTxOValue = Coin 10,
       _poolDeposit = Coin 0,
       _rho = unsafeMkUnitInterval 0.0021,
       _tau = unsafeMkUnitInterval 0.2
     }
 
 ledgerEnv :: LedgerEnv
-ledgerEnv = LedgerEnv (SlotNo 0) 0 ppsBench (AccountState 0 0)
+ledgerEnv = LedgerEnv (SlotNo 0) 0 ppsBench (AccountState (Coin 0) (Coin 0))
 
 testLEDGER ::
   (UTxOState B, DPState B) ->
@@ -185,7 +185,7 @@ txbSpendOneUTxO :: TxBody B
 txbSpendOneUTxO =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.fromList [TxOut aliceAddr (Coin 10), TxOut aliceAddr 89])
+    (StrictSeq.fromList [TxOut aliceAddr (Coin 10), TxOut aliceAddr (Coin 89)])
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)

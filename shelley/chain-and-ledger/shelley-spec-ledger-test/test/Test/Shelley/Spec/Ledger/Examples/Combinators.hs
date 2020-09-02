@@ -42,6 +42,7 @@ where
 import Cardano.Ledger.Era (Era)
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.Iterate.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
+import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -90,6 +91,7 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.TxData (MIRPot (..), PoolParams (..), RewardAcnt (..), TxBody (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
+import qualified Shelley.Spec.Ledger.Val as Val
 import Test.Shelley.Spec.Ledger.Examples.Federation (overlayScheduleFor)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
 
@@ -152,8 +154,8 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
     utxoSt = _utxoState ls
     utxoSt' =
       utxoSt
-        { _deposited = (_deposited utxoSt) + depositChange,
-          _fees = (_fees utxoSt) + newFees
+        { _deposited = (_deposited utxoSt) <> depositChange,
+          _fees = (_fees utxoSt) <> newFees
         }
     ls' = ls {_utxoState = utxoSt'}
     es' = es {esLState = ls'}
@@ -377,16 +379,16 @@ reapPool pool cs = cs {chainNes = nes'}
     (rewards, unclaimed) =
       case Map.lookup rewardAddr (_rewards ds) of
         Nothing -> (_rewards ds, _poolDeposit pp)
-        Just era -> (Map.insert rewardAddr (era + _poolDeposit pp) (_rewards ds), Coin 0)
+        Just era -> (Map.insert rewardAddr (era <> _poolDeposit pp) (_rewards ds), Coin 0)
     ds' =
       ds
         { _delegations = eval (_delegations ds ⋫ Set.singleton kh),
           _rewards = rewards
         }
     as = esAccountState es
-    as' = as {_treasury = (_treasury as) + unclaimed}
+    as' = as {_treasury = (_treasury as) <> unclaimed}
     utxoSt = _utxoState ls
-    utxoSt' = utxoSt {_deposited = (_deposited utxoSt) - (_poolDeposit pp)}
+    utxoSt' = utxoSt {_deposited = (_deposited utxoSt) Val.~~ (_poolDeposit pp)}
     dps' = dps {_pstate = ps', _dstate = ds'}
     ls' = ls {_delegationState = dps', _utxoState = utxoSt'}
     es' = es {esLState = ls', esAccountState = as'}
@@ -433,7 +435,7 @@ applyMIR ::
   ChainState era
 applyMIR pot rewards cs = cs {chainNes = nes'}
   where
-    tot = sum rewards
+    tot = fold rewards
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
@@ -441,7 +443,7 @@ applyMIR pot rewards cs = cs {chainNes = nes'}
     ds = _dstate dps
     ds' =
       ds
-        { _rewards = Map.unionWith (+) rewards (_rewards ds),
+        { _rewards = Map.unionWith (<>) rewards (_rewards ds),
           _irwd = emptyInstantaneousRewards
         }
     dps' = dps {_dstate = ds'}
@@ -449,8 +451,8 @@ applyMIR pot rewards cs = cs {chainNes = nes'}
     as = esAccountState es
     as' =
       if pot == ReservesMIR
-        then as {_reserves = (_reserves as) - tot}
-        else as {_treasury = (_treasury as) - tot}
+        then as {_reserves = (_reserves as) Val.~~ tot}
+        else as {_treasury = (_treasury as) Val.~~ tot}
     es' = es {esAccountState = as', esLState = ls'}
     nes' = nes {nesEs = es'}
 

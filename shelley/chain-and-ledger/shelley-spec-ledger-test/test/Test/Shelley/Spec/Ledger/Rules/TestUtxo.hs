@@ -9,6 +9,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestUtxo
   )
 where
 
+import Cardano.Ledger.Era (Era)
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -16,11 +17,9 @@ import Control.State.Transition.Trace
     target,
     pattern SourceSignalTarget,
   )
-import Data.List (foldl')
+import Data.Foldable (fold)
 import Shelley.Spec.Ledger.API (UTXO)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
-
-import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.LedgerState (_deposited, _fees, _utxo, pattern UTxOState)
 import Shelley.Spec.Ledger.Tx (_body, pattern Tx)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), _wdrls)
@@ -75,6 +74,6 @@ potsSumIncreaseWdrls ssts =
         } =
         let circulation = balance u
             circulation' = balance u'
-            withdrawals = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txbody
+            withdrawals = fold $ unWdrl $ _wdrls txbody
          in withdrawals >= Coin 0
-              && circulation' + d' + fees' == circulation + d + fees + withdrawals
+              && circulation' <> d' <> fees' == circulation <> d <> fees <> withdrawals

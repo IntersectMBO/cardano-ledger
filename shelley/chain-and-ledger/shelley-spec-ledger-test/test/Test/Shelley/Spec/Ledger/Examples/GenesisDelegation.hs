@@ -47,6 +47,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
+import qualified Shelley.Spec.Ledger.Val as Val
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -75,10 +76,10 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
 aliceInitCoin :: Coin
-aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
 bobInitCoin :: Coin
-bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
+bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: Era era => UTxO era
 initUTxO =
@@ -109,7 +110,7 @@ feeTx1 :: Coin
 feeTx1 = Coin 1
 
 aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin - feeTx1
+aliceCoinEx1 = aliceInitCoin Val.~~ feeTx1
 
 txbodyEx1 :: Era era => TxBody era
 txbodyEx1 =

@@ -20,10 +20,9 @@ import Control.State.Transition.Trace
     target,
     pattern SourceSignalTarget,
   )
-import Data.List (foldl')
+import Data.Foldable (fold)
 import qualified Data.Set as Set (Set, null)
 import Shelley.Spec.Ledger.API (POOLREAP)
-import Shelley.Spec.Ledger.Coin (pattern Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
   ( _deposited,
@@ -89,7 +88,7 @@ nonNegativeDeposits tr =
       ( \PoolreapState
            { prUTxOSt =
                UTxOState {_deposited = deposit}
-           } -> deposit >= 0
+           } -> deposit >= mempty
       )
       (map source tr)
 
@@ -136,5 +135,17 @@ constantSumPots tr =
                 }
           }
         ) =
-        (balance u + d + fees + treasury + reserves + foldl' (+) (Coin 0) rewards)
-          == (balance u' + d' + fees' + treasury' + reserves' + foldl' (+) (Coin 0) rewards')
+        ( balance u
+            <> d
+            <> fees
+            <> treasury
+            <> reserves
+            <> fold rewards
+        )
+          == ( balance u'
+                 <> d'
+                 <> fees'
+                 <> treasury'
+                 <> reserves'
+                 <> fold rewards'
+             )

@@ -18,6 +18,7 @@
 -- > import qualified Shelley.Spec.Ledger.Val as Val
 module Shelley.Spec.Ledger.Val
   ( Val (..),
+    (~~),
 
     -- * Re-exports
     Data.Group.invert,
@@ -32,8 +33,7 @@ module Shelley.Spec.Ledger.Val
 where
 
 import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
-import Data.Group (Abelian)
-import qualified Data.Group
+import Data.Group (Abelian, Group (invert))
 import Data.PartialOrd hiding ((==))
 import qualified Data.PartialOrd
 import Data.Typeable (Typeable)
@@ -51,8 +51,8 @@ class
   ) =>
   Val t
   where
-  -- | TODO This needs documenting. what is it?
-  scalev :: Integer -> t -> t
+  -- | Multiply the value by a scalar
+  scale :: Integral i => i -> t -> t
 
   -- | Is the argument zero?
   isZero :: t -> Bool
@@ -67,8 +67,13 @@ class
   size :: t -> Integer -- compute size of Val instance
   -- TODO add PACK/UNPACK stuff to this class
 
+-- | Group subtraction. When we move to groups-0.5 we can export this from
+-- there.
+(~~) :: Group g => g -> g -> g
+a ~~ b = a <> invert b
+
 instance Val Coin where
-  scalev n (Coin x) = Coin $ n * x
+  scale n (Coin x) = Coin $ (fromIntegral n) * x
   coin = id
   inject = id
   size _ = 1

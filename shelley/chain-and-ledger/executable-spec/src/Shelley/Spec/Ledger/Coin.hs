@@ -28,7 +28,6 @@ newtype Coin = Coin {unCoin :: Integer}
   deriving
     ( Eq,
       Ord,
-      Num,
       Enum,
       NoUnexpectedThunks,
       Generic,

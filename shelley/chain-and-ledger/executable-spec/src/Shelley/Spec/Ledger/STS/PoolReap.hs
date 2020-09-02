@@ -20,6 +20,7 @@ import Control.State.Transition
     TransitionRule,
     judgmentContext,
   )
+import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -39,6 +40,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxData (getRwdCred, _poolRAcnt)
+import qualified Shelley.Spec.Ledger.Val as Val
 
 data POOLREAP era
 
@@ -90,20 +92,20 @@ poolReapTransition = do
       pr = Map.fromList $ fmap (\kh -> (kh, _poolDeposit pp)) (Set.toList retired)
       rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ (_pParams ps))
       rewardAcnts' =
-        Map.fromListWith (+)
+        Map.fromListWith (<>)
           . Map.elems
           $ Map.intersectionWith (,) rewardAcnts pr
       (refunds, mRefunds) =
         Map.partitionWithKey
           (\k _ -> eval (k ∈ dom (_rewards ds)))
           (Map.mapKeys getRwdCred rewardAcnts')
-      refunded = sum $ Map.elems refunds
-      unclaimed = sum $ Map.elems mRefunds
+      refunded = fold $ Map.elems refunds
+      unclaimed = fold $ Map.elems mRefunds
 
   pure $
     PoolreapState
-      us {_deposited = _deposited us - (unclaimed + refunded)}
-      a {_treasury = _treasury a + unclaimed}
+      us {_deposited = _deposited us Val.~~ (unclaimed <> refunded)}
+      a {_treasury = _treasury a <> unclaimed}
       ds
         { _rewards = eval (_rewards ds ∪+ refunds),
           _delegations = eval (_delegations ds ⋫ retired)

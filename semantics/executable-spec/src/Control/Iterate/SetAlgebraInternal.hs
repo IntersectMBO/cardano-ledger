@@ -509,7 +509,7 @@ data Exp t where
    Subset ::  (Ord k, Iter f, Iter g) => Exp(f k v) -> Exp(g k u) -> Exp Bool
    UnionOverrideLeft:: (Show k, Show v,Ord k) => Exp (f k v) -> Exp (g k v) -> Exp(f k v)
         -- The (Show k, Show v) supports logging errors if there are duplicate keys.
-   UnionPlus:: (Ord k,Num n) => Exp (f k n) -> Exp (f k n) -> Exp(f k n)
+   UnionPlus:: (Ord k,Monoid n) => Exp (f k n) -> Exp (f k n) -> Exp(f k n)
    UnionOverrideRight:: Ord k => Exp (f k v) -> Exp (g k v) -> Exp(f k v)
    Singleton:: (Ord k) => k -> v -> Exp(Single k v)
    SetSingleton:: (Ord k) => k -> Exp(Single k ())
@@ -593,7 +593,7 @@ unionleft = (∪)
 (⨃) x y = UnionOverrideRight (toExp x) (toExp y)
 unionright = (⨃)
 
-(∪+),unionplus :: (Ord k,Num n, HasExp s1 (f k n), HasExp s2 (f k n)) => s1 -> s2 -> Exp (f k n)
+(∪+),unionplus :: (Ord k,Monoid n, HasExp s1 (f k n), HasExp s2 (f k n)) => s1 -> s2 -> Exp (f k n)
 (∪+) x y = UnionPlus (toExp x) (toExp y)
 unionplus = (∪+)
 
@@ -652,6 +652,7 @@ data Expr env t where
 data Lam t where
   Lam::  Pat (d,c,b,a) t -> Pat (d,c,b,a) s -> Expr (d,c,b,a) v -> Lam (t -> s -> v)
   Add :: Num n => Lam (n -> n -> n)
+  Cat :: Monoid m => Lam (m -> m -> m)
   Eql :: Eq t => Lam(t -> t -> Bool)
   Both:: Lam (Bool -> Bool -> Bool)
   Lift:: (a -> b -> c) -> Lam (a -> b -> c)  -- For use n the tests only!
@@ -685,6 +686,7 @@ showE e (Lit n) = show n
 showL :: StringEnv -> Lam t -> String
 showL e (Lam p1 p2 expr) = "\\ "++showP e p1++" "++showP e p2++" -> "++showE e expr
 showL e Add = " + "
+showL e Cat = " <> "
 showL e Eql = " == "
 showL e Both = " && "
 showL e (Lift f) = "<lifted function>"
@@ -731,8 +733,8 @@ second:: Fun (v -> s -> s)
 second = Fun (Lam P1 P2 X2) (\ _x y -> y)
 
 -- Used in compile (UnionPlus case)
-plus:: Num t => Fun (t -> t -> t)
-plus = (Fun Add (+))
+plus:: Monoid t => Fun (t -> t -> t)
+plus = (Fun Cat (<>))
 
 eql :: Eq t => Fun (t -> t -> Bool)
 eql = (Fun Eql (==))
@@ -1056,7 +1058,7 @@ compute (UnionOverrideRight (Base rep x) (Singleton k v)) = addkv (k,v) x (\ new
 compute ((UnionOverrideRight (Base MapR d0) (Base MapR d1))) = Map.union d1 d0   -- we pass @d1@ as first argument, since 'Map.union' is left biased.
 compute (e@(UnionOverrideRight a b)) = run(compile e)
 
-compute (UnionPlus (Base MapR x) (Base MapR y)) = Map.unionWith (+) x y
+compute (UnionPlus (Base MapR x) (Base MapR y)) = Map.unionWith (<>) x y
 compute (e@(UnionPlus a b)) = run(compile e)
 
 compute (Singleton k v) = Single k v

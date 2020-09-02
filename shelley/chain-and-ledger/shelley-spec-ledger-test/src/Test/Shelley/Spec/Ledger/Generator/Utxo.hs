@@ -21,6 +21,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import qualified Control.Exception as Exn
 import Control.Iterate.SetAlgebra (forwards)
 import qualified Data.Either as Either (partitionEithers)
+import Data.Foldable (fold)
 import Data.List (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -86,6 +87,7 @@ import Shelley.Spec.Ledger.UTxO
     makeWitnessesFromScriptKeys,
     makeWitnessesVKey,
   )
+import qualified Shelley.Spec.Ledger.Val as Val
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -212,7 +214,10 @@ genTxRetry
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
       -- and a Outputs builder that distributes the given balance over addresses.
       -------------------------------------------------------------------------
-      let spendingBalance = spendingBalanceUtxo + (sum (snd <$> wdrls)) - deposits + refunds
+      let spendingBalance =
+            spendingBalanceUtxo
+              <> (fold (snd <$> wdrls)) Val.~~ deposits
+              <> refunds
       outputAddrs <-
         genRecipients (length inputs) keys' scripts'
           >>= genPtrAddrs (_dstate dpState')
@@ -235,7 +240,7 @@ genTxRetry
               txBody = draftTxBody {_txfee = actualFees', _outputs = outputs'}
           pure $ Right $ Tx txBody (mkTxWits' txBody) metadata
         else do
-          let minDiffSoFar' = min minDiffSoFar (fees - spendingBalance)
+          let minDiffSoFar' = min minDiffSoFar (fees Val.~~ spendingBalance)
           if n < 1
             then
               pure $
@@ -341,13 +346,13 @@ calcOutputsFromBalance ::
   Coin ->
   (Coin, StrictSeq (TxOut era))
 calcOutputsFromBalance balance_ addrs fee =
-  ( fee + splitCoinRem,
+  ( fee <> splitCoinRem,
     (`TxOut` amountPerOutput) <$> StrictSeq.fromList addrs
   )
   where
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.
-    balanceAfterFee = balance_ - fee
+    balanceAfterFee = balance_ Val.~~ fee
     (amountPerOutput, splitCoinRem) = splitCoin balanceAfterFee (fromIntegral $ length addrs)
 
 -- | Select unspent output(s) to serve as inputs for a new transaction

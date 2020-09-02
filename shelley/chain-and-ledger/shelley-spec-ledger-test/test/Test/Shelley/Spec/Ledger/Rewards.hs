@@ -182,7 +182,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   ownerKey <- keyPair <$> arbitrary
   rewardKey <- keyPair <$> arbitrary
   members' <- getOrGen poolMembers genNonOwnerMembers
-  ownerStake <- (pledge +) <$> genCoin 0 maxOwnerLovelaceAbovePledge
+  ownerStake <- (pledge <>) <$> genCoin 0 maxOwnerLovelaceAbovePledge
   -- here we are forcing the pool to meet the pledeg, later we may want flexibility
   let members = Map.insert (KeyHashObj . hashKey . vKey $ ownerKey) ownerStake members'
       params =
@@ -239,7 +239,7 @@ rewardsBoundedByPot = property $ do
                 (_poolPubKey params, params)
             )
             pools
-      totalLovelace = undelegatedLovelace + sum stake
+      totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
       rs =
         reward
@@ -276,7 +276,7 @@ rewardsBoundedByPot = property $ do
             show slotsPerEpoch
           ]
       )
-      (sum (fst rs) < rewardPot)
+      (fold (fst rs) < rewardPot)
 
 rewardTests :: TestTree
 rewardTests =

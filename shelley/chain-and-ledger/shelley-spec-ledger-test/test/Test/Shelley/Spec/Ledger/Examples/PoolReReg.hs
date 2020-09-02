@@ -15,10 +15,11 @@ module Test.Shelley.Spec.Ledger.Examples.PoolReReg
   )
 where
 
-import Data.Word (Word64)
+import Cardano.Ledger.Era (Crypto (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
@@ -27,8 +28,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-
-import Cardano.Ledger.Era (Crypto (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness)
@@ -51,6 +50,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
+import qualified Shelley.Spec.Ledger.Val as Val
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -76,10 +76,10 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
 aliceInitCoin :: Coin
-aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: Era era => UTxO era
-initUTxO = genesisCoins [ TxOut Cast.aliceAddr aliceInitCoin ]
+initUTxO = genesisCoins [TxOut Cast.aliceAddr aliceInitCoin]
 
 initStPoolReReg :: forall era. Era era => ChainState era
 initStPoolReReg = initSt initUTxO
@@ -92,14 +92,14 @@ feeTx1 :: Coin
 feeTx1 = Coin 3
 
 aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin - _poolDeposit ppEx - feeTx1
+aliceCoinEx1 = aliceInitCoin Val.~~ _poolDeposit ppEx Val.~~ feeTx1
 
 txbodyEx1 :: Era era => TxBody era
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
     (StrictSeq.fromList [TxOut Cast.aliceAddr aliceCoinEx1])
-    ( StrictSeq.fromList ([DCertPool (RegPool Cast.alicePoolParams)]))
+    (StrictSeq.fromList ([DCertPool (RegPool Cast.alicePoolParams)]))
     (Wdrl Map.empty)
     feeTx1
     (SlotNo 10)
@@ -159,7 +159,7 @@ feeTx2 :: Coin
 feeTx2 = Coin 3
 
 aliceCoinEx2 :: Coin
-aliceCoinEx2 = aliceCoinEx1 - feeTx2
+aliceCoinEx2 = aliceCoinEx1 Val.~~ feeTx2
 
 newPoolParams :: Era era => PoolParams era
 newPoolParams = Cast.alicePoolParams {_poolCost = Coin 500}
@@ -283,7 +283,7 @@ snapEx3 =
 expectedStEx3 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
 expectedStEx3 =
   C.newEpoch blockEx3
-    . C.newSnapshot snapEx3 (feeTx1 + feeTx2)
+    . C.newSnapshot snapEx3 (feeTx1 <> feeTx2)
     . C.applyRewardUpdate emptyRewardUpdate
     . C.updatePoolParams newPoolParams
     $ expectedStEx2B

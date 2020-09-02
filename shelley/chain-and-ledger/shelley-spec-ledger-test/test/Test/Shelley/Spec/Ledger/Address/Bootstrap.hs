@@ -88,6 +88,7 @@ import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
   )
+import qualified Shelley.Spec.Ledger.Val as Val
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Prelude (genBytes)
@@ -151,8 +152,8 @@ utxoState0 :: UTxOState C
 utxoState0 =
   UTxOState
     { _utxo = utxo0,
-      _deposited = 0,
-      _fees = 0,
+      _deposited = Coin 0,
+      _fees = Coin 0,
       _ppups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
     }
 
@@ -166,8 +167,8 @@ utxoState1 :: UTxOState C
 utxoState1 =
   UTxOState
     { _utxo = UTxO $ Map.fromList [bobResult, aliceResult],
-      _deposited = 0,
-      _fees = 10,
+      _deposited = Coin 0,
+      _fees = Coin 10,
       _ppups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
     }
   where
@@ -184,7 +185,7 @@ utxoEnv =
     (GenDelegs mempty)
 
 aliceInitCoin :: Coin
-aliceInitCoin = 1000000
+aliceInitCoin = Coin 1000000
 
 aliceSigningKey :: Byron.SigningKey
 aliceSigningKey = Byron.SigningKey $ Byron.generate seed (mempty :: ByteString)
@@ -228,7 +229,7 @@ bobAddr = Addr Testnet (KeyHashObj k) StakeRefNull
     k = coerceKeyRole $ hashKey aliceVKey
 
 coinsToBob :: Coin
-coinsToBob = 1000
+coinsToBob = Coin 1000
 
 txBody :: TxBody C
 txBody =
@@ -243,8 +244,8 @@ txBody =
       _mdHash = SNothing
     }
   where
-    change = aliceInitCoin - coinsToBob - fee
-    fee = 10
+    change = aliceInitCoin Val.~~ coinsToBob Val.~~ fee
+    fee = Coin 10
 
 testBootstrapSpending :: Assertion
 testBootstrapSpending =

@@ -13,6 +13,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
+import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
 import Shelley.Spec.Ledger.Keys (asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState (WitHashes (..))
@@ -92,7 +93,13 @@ testAliceSignsAlone =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOnly p, 11000)] [aliceOnly p] (Wdrl Map.empty) 0 [asWitness Cast.alicePay]
+      applyTxWithScript
+        p
+        [(aliceOnly p, Coin 11000)]
+        [aliceOnly p]
+        (Wdrl Map.empty)
+        (Coin 0)
+        [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
 
 testAliceDoesntSign :: Assertion
@@ -104,10 +111,10 @@ testAliceDoesntSign =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceOnly p, 11000)]
+        [(aliceOnly p, Coin 11000)]
         [aliceOnly p]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay, asWitness Cast.dariaPay]
 
 testEverybodySigns :: Assertion
@@ -119,10 +126,10 @@ testEverybodySigns =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceOnly p, 11000)]
+        [(aliceOnly p, Coin 11000)]
         [aliceOnly p]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [ asWitness Cast.alicePay,
           asWitness Cast.bobPay,
           asWitness Cast.carlPay,
@@ -139,10 +146,10 @@ testWrongScript =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceOnly p, 11000)]
+        [(aliceOnly p, Coin 11000)]
         [aliceOrBob p]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
 
 testAliceOrBob :: Assertion
@@ -152,7 +159,13 @@ testAliceOrBob =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOrBob p, 11000)] [aliceOrBob p] (Wdrl Map.empty) 0 [asWitness Cast.alicePay]
+      applyTxWithScript
+        p
+        [(aliceOrBob p, Coin 11000)]
+        [aliceOrBob p]
+        (Wdrl Map.empty)
+        (Coin 0)
+        [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
 
 testAliceOrBob' :: Assertion
@@ -162,7 +175,13 @@ testAliceOrBob' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOrBob p, 11000)] [aliceOrBob p] (Wdrl Map.empty) 0 [asWitness Cast.bobPay]
+      applyTxWithScript
+        p
+        [(aliceOrBob p, Coin 11000)]
+        [aliceOrBob p]
+        (Wdrl Map.empty)
+        (Coin 0)
+        [asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBob :: Assertion
@@ -174,30 +193,52 @@ testAliceAndBob =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceAndBob p, 11000)]
+        [(aliceAndBob p, Coin 11000)]
         [aliceAndBob p]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBob' :: Assertion
 testAliceAndBob' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript (aliceAndBob p))]]
+  utxoSt'
+    @?= Left
+      [ [ ScriptWitnessNotValidatingUTXOW
+            (Set.singleton $ hashScript (aliceAndBob p))
+        ]
+      ]
   where
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBob p, 11000)] [aliceAndBob p] (Wdrl Map.empty) 0 [asWitness Cast.alicePay]
+      applyTxWithScript
+        p
+        [(aliceAndBob p, Coin 11000)]
+        [aliceAndBob p]
+        (Wdrl Map.empty)
+        (Coin 0)
+        [asWitness Cast.alicePay]
 
 testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript (aliceAndBob p))]]
+  utxoSt'
+    @?= Left
+      [ [ ScriptWitnessNotValidatingUTXOW
+            (Set.singleton $ hashScript (aliceAndBob p))
+        ]
+      ]
   where
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBob p, 11000)] [aliceAndBob p] (Wdrl Map.empty) 0 [asWitness Cast.bobPay]
+      applyTxWithScript
+        p
+        [(aliceAndBob p, Coin 11000)]
+        [aliceAndBob p]
+        (Wdrl Map.empty)
+        (Coin 0)
+        [asWitness Cast.bobPay]
 
 testAliceAndBobOrCarl :: Assertion
 testAliceAndBobOrCarl =
@@ -208,10 +249,10 @@ testAliceAndBobOrCarl =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceAndBobOrCarl p, 11000)]
+        [(aliceAndBobOrCarl p, Coin 11000)]
         [aliceAndBobOrCarl p]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
@@ -222,7 +263,13 @@ testAliceAndBobOrCarl' =
     p :: Proxy C
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceAndBobOrCarl p, 11000)] [aliceAndBobOrCarl p] (Wdrl Map.empty) 0 [asWitness Cast.carlPay]
+      applyTxWithScript
+        p
+        [(aliceAndBobOrCarl p, Coin 11000)]
+        [aliceAndBobOrCarl p]
+        (Wdrl Map.empty)
+        (Coin 0)
+        [asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlAndDaria :: Assertion
@@ -234,10 +281,10 @@ testAliceAndBobOrCarlAndDaria =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceAndBobOrCarlAndDaria p, 11000)]
+        [(aliceAndBobOrCarlAndDaria p, Coin 11000)]
         [aliceAndBobOrCarlAndDaria p]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
@@ -250,10 +297,10 @@ testAliceAndBobOrCarlAndDaria' =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceAndBobOrCarlAndDaria p, 11000)]
+        [(aliceAndBobOrCarlAndDaria p, Coin 11000)]
         [aliceAndBobOrCarlAndDaria p]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.carlPay, asWitness Cast.dariaPay]
     s = "problem: " ++ show utxoSt'
 
@@ -266,10 +313,10 @@ testAliceAndBobOrCarlOrDaria =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceAndBobOrCarlOrDaria p, 11000)]
+        [(aliceAndBobOrCarlOrDaria p, Coin 11000)]
         [aliceAndBobOrCarlOrDaria p]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
@@ -282,10 +329,10 @@ testAliceAndBobOrCarlOrDaria' =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceAndBobOrCarlOrDaria p, 11000)]
+        [(aliceAndBobOrCarlOrDaria p, Coin 11000)]
         [aliceAndBobOrCarlOrDaria p]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
 
@@ -298,10 +345,10 @@ testAliceAndBobOrCarlOrDaria'' =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceAndBobOrCarlOrDaria p, 11000)]
+        [(aliceAndBobOrCarlOrDaria p, Coin 11000)]
         [aliceAndBobOrCarlOrDaria p]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.dariaPay]
     s = "problem: " ++ show utxoSt'
 
@@ -316,34 +363,39 @@ testTwoScripts =
     utxoSt' =
       applyTxWithScript
         p
-        [ (aliceOrBob p, 10000),
-          (aliceAndBobOrCarl p, 1000)
+        [ (aliceOrBob p, Coin 10000),
+          (aliceAndBobOrCarl p, Coin 1000)
         ]
         [ aliceOrBob p,
           aliceAndBobOrCarl p
         ]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
 
 testTwoScripts' :: Assertion
 testTwoScripts' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript (aliceAndBob p))]]
+  utxoSt'
+    @?= Left
+      [ [ ScriptWitnessNotValidatingUTXOW
+            (Set.singleton $ hashScript (aliceAndBob p))
+        ]
+      ]
   where
     p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript
         p
-        [ (aliceAndBob p, 10000),
-          (aliceAndBobOrCarl p, 1000)
+        [ (aliceAndBob p, Coin 10000),
+          (aliceAndBobOrCarl p, Coin 1000)
         ]
         [ aliceAndBob p,
           aliceAndBobOrCarl p
         ]
         (Wdrl Map.empty)
-        0
+        (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay]
 
 -- script and skey locked
@@ -357,10 +409,10 @@ testScriptAndSKey =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceAndBob p, 10000)]
+        [(aliceAndBob p, Coin 10000)]
         [aliceAndBob p]
         (Wdrl Map.empty)
-        1000
+        (Coin 1000)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
@@ -378,10 +430,10 @@ testScriptAndSKey' =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceOrBob p, 10000)]
+        [(aliceOrBob p, Coin 10000)]
         [aliceOrBob p]
         (Wdrl Map.empty)
-        1000
+        (Coin 1000)
         [asWitness Cast.bobPay]
     wits = Set.singleton $ asWitness $ hashKey $ vKey Cast.alicePay
 
@@ -394,10 +446,10 @@ testScriptAndSKey'' =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceOrBob p, 10000)]
+        [(aliceOrBob p, Coin 10000)]
         [aliceOrBob p]
         (Wdrl Map.empty)
-        1000
+        (Coin 1000)
         [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
 
@@ -410,10 +462,10 @@ testScriptAndSKey''' =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceAndBobOrCarl p, 10000)]
+        [(aliceAndBobOrCarl p, Coin 10000)]
         [aliceAndBobOrCarl p]
         (Wdrl Map.empty)
-        1000
+        (Coin 1000)
         [asWitness Cast.alicePay, asWitness Cast.carlPay]
     s = "problem: " ++ show utxoSt'
 
@@ -428,26 +480,47 @@ testRwdAliceSignsAlone =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceOnly p, 11000)]
+        [(aliceOnly p, Coin 11000)]
         [aliceOnly p]
-        (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (aliceOnly p))) 1000)
-        0
+        ( Wdrl $
+            Map.singleton
+              ( RewardAcnt
+                  Testnet
+                  (ScriptHashObj $ hashScript (aliceOnly p))
+              )
+              (Coin 1000)
+        )
+        (Coin 0)
         [asWitness Cast.alicePay]
     s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone' :: Assertion
 testRwdAliceSignsAlone' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript (bobOnly p))]]
+  utxoSt'
+    @?= Left
+      [ [ ScriptWitnessNotValidatingUTXOW
+            (Set.singleton $ hashScript (bobOnly p))
+        ]
+      ]
   where
     p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceOnly p, 11000)]
+        [(aliceOnly p, Coin 11000)]
         [aliceOnly p, bobOnly p]
-        (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000)
-        0
+        ( Wdrl $
+            Map.singleton
+              ( RewardAcnt
+                  Testnet
+                  ( ScriptHashObj $
+                      hashScript (bobOnly p)
+                  )
+              )
+              (Coin 1000)
+        )
+        (Coin 0)
         [asWitness Cast.alicePay]
 
 testRwdAliceSignsAlone'' :: Assertion
@@ -459,24 +532,44 @@ testRwdAliceSignsAlone'' =
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceOnly p, 11000)]
+        [(aliceOnly p, Coin 11000)]
         [aliceOnly p, bobOnly p]
-        (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000)
-        0
+        ( Wdrl $
+            Map.singleton
+              ( RewardAcnt
+                  Testnet
+                  ( ScriptHashObj $
+                      hashScript (bobOnly p)
+                  )
+              )
+              (Coin 1000)
+        )
+        (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
     s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone''' :: Assertion
 testRwdAliceSignsAlone''' =
-  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript (bobOnly p))]]
+  utxoSt'
+    @?= Left
+      [ [ MissingScriptWitnessesUTXOW
+            ( Set.singleton $
+                hashScript (bobOnly p)
+            )
+        ]
+      ]
   where
     p :: Proxy C
     p = Proxy
     utxoSt' =
       applyTxWithScript
         p
-        [(aliceOnly p, 11000)]
+        [(aliceOnly p, Coin 11000)]
         [aliceOnly p]
-        (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p))) 1000)
-        0
+        ( Wdrl $
+            Map.singleton
+              (RewardAcnt Testnet (ScriptHashObj $ hashScript (bobOnly p)))
+              (Coin 1000)
+        )
+        (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]

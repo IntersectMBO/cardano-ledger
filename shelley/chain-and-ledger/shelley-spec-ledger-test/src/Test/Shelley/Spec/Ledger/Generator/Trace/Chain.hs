@@ -42,6 +42,7 @@ import Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     hashHeaderToNonce,
   )
+import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
@@ -55,6 +56,7 @@ import Shelley.Spec.Ledger.STS.Chain (chainNes, initialShelleyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.UTxO (balance)
+import qualified Shelley.Spec.Ledger.Val as Val
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
@@ -115,7 +117,7 @@ mkGenesisChainState constants (IRC _slotNo) = do
       (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
       epoch0
       utxo0
-      (maxLLSupply - balance utxo0)
+      (maxLLSupply Val.~~ balance utxo0)
       delegs0
       osched_
       pParams
@@ -134,7 +136,7 @@ mkGenesisChainState constants (IRC _slotNo) = do
                   (nesEs chainNes)
                     { esAccountState =
                         (esAccountState (nesEs chainNes))
-                          { _treasury = 1000000
+                          { _treasury = Coin 1000000
                           }
                     }
               }

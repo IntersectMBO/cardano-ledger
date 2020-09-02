@@ -74,6 +74,7 @@ import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, decodeSeq, encodeFoldable)
 import Shelley.Spec.Ledger.TxData (PoolParams (..), getRwdCred)
+import qualified Shelley.Spec.Ledger.Val as Val
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
   deriving (Eq, Generic, Ord, Num, NFData, NoUnexpectedThunks, ToCBOR, FromCBOR)
@@ -323,8 +324,8 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
   | f <= c = f
   | otherwise =
     c
-      + rationalToCoinViaFloor
-        (coinToRational (f - c) * (m' + (1 - m') * s / sigma))
+      <> rationalToCoinViaFloor
+        (coinToRational (f Val.~~ c) * (m' + (1 - m') * s / sigma))
   where
     (c, m, _) = poolSpec pool
     m' = unitIntervalToRational m
@@ -337,7 +338,7 @@ memberRew ::
   StakeShare ->
   Coin
 memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
-  | f' <= c = 0
+  | f' <= c = mempty
   | otherwise = rationalToCoinViaFloor $ fromIntegral (f' - c) * (1 - m') * t / sigma
   where
     (Coin c, m, _) = poolSpec pool
@@ -361,15 +362,15 @@ rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma sigmaA (Coin tot
   where
     Coin ostake =
       Set.foldl'
-        (\c o -> c + (fromMaybe (Coin 0) $ Map.lookup (KeyHashObj o) stake))
-        (Coin 0)
+        (\c o -> c <> (fromMaybe mempty $ Map.lookup (KeyHashObj o) stake))
+        mempty
         (_poolOwners pool)
     Coin pledge = _poolPledge pool
     pr = fromIntegral pledge % fromIntegral total
     (Coin maxP) =
       if pledge <= ostake
         then maxPool pp r sigma pr
-        else 0
+        else mempty
     appPerf = mkApparentPerformance (_d pp) sigmaA blocksN blocksTotal
     poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
     tot = fromIntegral total
@@ -412,14 +413,14 @@ reward
   slotsPerEpoch = (rewards', hs)
     where
       totalBlocks = sum b
-      Coin totalActive = sum . unStake $ stake
+      Coin totalActive = fold . unStake $ stake
       results = do
         (hk, pparams) <- Map.toList poolParams
         let sigma = fromIntegral pstake % fromIntegral total
             sigmaA = fromIntegral pstake % fromIntegral totalActive
             blocksProduced = Map.lookup hk b
             actgr@(Stake s) = poolStake hk delegs stake
-            Coin pstake = sum s
+            Coin pstake = fold s
             rewardMap = case blocksProduced of
               Nothing -> Nothing -- This is equivalent to calling rewarOnePool with n = 0
               Just n ->

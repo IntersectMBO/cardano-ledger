@@ -18,6 +18,7 @@ where
 import Cardano.Ledger.Era
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
+import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
@@ -31,6 +32,7 @@ import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.TxData
+import qualified Shelley.Spec.Ledger.Val as Val
 
 data NEWEPOCH era
 
@@ -88,7 +90,7 @@ newEpochTransition = do
         SNothing -> pure es
         SJust ru' -> do
           let RewardUpdate dt dr rs_ df _ = ru'
-          dt + dr + (sum rs_) + df == 0 ?! CorruptRewardUpdate ru'
+          Val.isZero (dt <> dr <> (fold rs_) <> df) ?! CorruptRewardUpdate ru'
           pure $ applyRUpd ru' es
 
       es'' <- trans @(MIR era) $ TRC ((), es', ())
@@ -108,7 +110,7 @@ newEpochTransition = do
 
 calculatePoolDistr :: SnapShot era -> PoolDistr era
 calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
-  let Coin total = Map.foldl' (+) (Coin 0) stake
+  let Coin total = Map.foldl' (<>) mempty stake
       sd =
         Map.fromListWith (+) $
           catMaybes

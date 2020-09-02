@@ -99,7 +99,7 @@ import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
-import Data.Foldable (toList)
+import Data.Foldable (fold, toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -205,6 +205,7 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
+import qualified Shelley.Spec.Ledger.Val as Val
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs era = [(KeyPair 'Payment era, KeyPair 'Staking era)]
@@ -240,7 +241,7 @@ data InstantaneousRewards era = InstantaneousRewards
   deriving (Show, Eq, Generic)
 
 totalInstantaneousReservesRewards :: InstantaneousRewards era -> Coin
-totalInstantaneousReservesRewards (InstantaneousRewards irR _) = sum irR
+totalInstantaneousReservesRewards (InstantaneousRewards irR _) = fold irR
 
 instance NoUnexpectedThunks (InstantaneousRewards era)
 
@@ -365,9 +366,9 @@ instance Era era => ToCBOR (RewardUpdate era) where
   toCBOR (RewardUpdate dt dr rw df nm) =
     encodeListLen 5
       <> toCBOR dt
-      <> toCBOR (- dr) -- TODO change Coin serialization to use integers?
+      <> toCBOR (Val.invert dr) -- TODO change Coin serialization to use integers?
       <> toCBOR rw
-      <> toCBOR (- df) -- TODO change Coin serialization to use integers?
+      <> toCBOR (Val.invert df) -- TODO change Coin serialization to use integers?
       <> toCBOR nm
 
 instance Era era => FromCBOR (RewardUpdate era) where
@@ -378,7 +379,7 @@ instance Era era => FromCBOR (RewardUpdate era) where
       rw <- fromCBOR
       df <- fromCBOR -- TODO change Coin serialization to use integers?
       nm <- fromCBOR
-      pure $ RewardUpdate dt (- dr) rw (- df) nm
+      pure $ RewardUpdate dt (Val.invert dr) rw (Val.invert df) nm
 
 emptyRewardUpdate :: RewardUpdate era
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) emptyNonMyopic
@@ -671,7 +672,7 @@ produced ::
   TxBody era ->
   Coin
 produced pp stakePools tx =
-  balance (txouts tx) + _txfee tx + totalDeposits pp stakePools (toList $ _certs tx)
+  balance (txouts tx) <> _txfee tx <> totalDeposits pp stakePools (toList $ _certs tx)
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
@@ -679,7 +680,7 @@ keyRefunds ::
   PParams ->
   TxBody era ->
   Coin
-keyRefunds pp tx = (_keyDeposit pp) * (fromIntegral $ length deregistrations)
+keyRefunds pp tx = Val.scale (length deregistrations) (_keyDeposit pp)
   where
     deregistrations = filter isDeRegKey (toList $ _certs tx)
 
@@ -691,11 +692,11 @@ consumed ::
   TxBody era ->
   Coin
 consumed pp u tx =
-  balance (eval (txins tx ◁ u)) + refunds + withdrawals
+  balance (eval (txins tx ◁ u)) <> refunds <> withdrawals
   where
     -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
     refunds = keyRefunds pp tx
-    withdrawals = sum . unWdrl $ _wdrls tx
+    withdrawals = fold . unWdrl $ _wdrls tx
 
 newtype WitHashes era = WitHashes
   {unWitHashes :: Set (KeyHash 'Witness era)}
@@ -818,7 +819,7 @@ depositPoolChange ::
   PParams ->
   TxBody era ->
   Coin
-depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
+depositPoolChange ls pp tx = (currentPool <> txDeposits) Val.~~ txRefunds
   where
     -- Note that while (currentPool + txDeposits) >= txRefunds,
     -- it could be that txDeposits < txRefunds. We keep the parenthesis above
@@ -878,13 +879,13 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
         (rs ru)
     as' =
       as
-        { _treasury = _treasury as + deltaT ru + sum (range unregRU),
-          _reserves = _reserves as + deltaR ru
+        { _treasury = _treasury as <> deltaT ru <> fold (range unregRU),
+          _reserves = _reserves as <> deltaR ru
         }
     ls' =
       ls
         { _utxoState =
-            utxoState_ {_fees = _fees utxoState_ + deltaF ru},
+            utxoState_ {_fees = _fees utxoState_ <> deltaF ru},
           _delegationState =
             delegState
               { _dstate =
@@ -935,20 +936,20 @@ createRUpd slotsPerEpoch b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total
       eta
         | intervalValue (_d pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
-      Coin rPot = _feeSS ss + deltaR1
+      Coin rPot = _feeSS ss <> deltaR1
       deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
-      circulation = total - (_reserves acnt)
+      circulation = total Val.~~ (_reserves acnt)
       (rs_, newLikelihoods) =
         reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation asc slotsPerEpoch
-      deltaR2 = _R - (Map.foldr (+) (Coin 0) rs_)
+      deltaR2 = _R Val.~~ (Map.foldr (<>) mempty rs_)
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $
     RewardUpdate
       { deltaT = (Coin deltaT1),
-        deltaR = (- deltaR1 + deltaR2),
+        deltaR = (Val.invert deltaR1 <> deltaR2),
         rs = rs_,
-        deltaF = (- (_feeSS ss)),
+        deltaF = (Val.invert (_feeSS ss)),
         nonMyopic = (updateNonMypopic nm _R newLikelihoods (_pstakeGo ss))
       }
 

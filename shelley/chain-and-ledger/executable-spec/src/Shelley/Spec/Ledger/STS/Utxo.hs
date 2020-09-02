@@ -93,6 +93,7 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     txup,
   )
+import qualified Shelley.Spec.Ledger.Val as Val
 
 data UTXO era
 
@@ -246,19 +247,19 @@ instance
   assertions =
     [ PreCondition
         "Deposit pot must not be negative (pre)"
-        (\(TRC (_, st, _)) -> _deposited st >= 0),
+        (\(TRC (_, st, _)) -> _deposited st >= mempty),
       PostCondition
         "UTxO must increase fee pot"
         (\(TRC (_, st, _)) st' -> _fees st' >= _fees st),
       PostCondition
         "Deposit pot must not be negative (post)"
-        (\_ st' -> _deposited st' >= 0),
-      let utxoBalance us = _deposited us + _fees us + balance (_utxo us)
-          withdrawals txb = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txb
+        (\_ st' -> _deposited st' >= mempty),
+      let utxoBalance us = _deposited us <> _fees us <> balance (_utxo us)
+          withdrawals txb = foldl' (<>) mempty $ unWdrl $ _wdrls txb
        in PostCondition
             "Should preserve ADA in the UTxO state"
             ( \(TRC (_, us, tx)) us' ->
-                utxoBalance us + withdrawals (_body tx) == utxoBalance us'
+                utxoBalance us <> withdrawals (_body tx) == utxoBalance us'
             )
     ]
 
@@ -322,13 +323,13 @@ utxoInductive = do
 
   let refunded = keyRefunds pp txb
   let txCerts = toList $ _certs txb
-  let depositChange = totalDeposits pp stakepools txCerts - refunded
+  let depositChange = totalDeposits pp stakepools txCerts Val.~~ refunded
 
   pure
     UTxOState
       { _utxo = eval ((txins txb ⋪ utxo) ∪ txouts txb),
-        _deposited = deposits' + depositChange,
-        _fees = fees + (_txfee txb),
+        _deposited = deposits' <> depositChange,
+        _fees = fees <> (_txfee txb),
         _ppups = ppup'
       }
 
