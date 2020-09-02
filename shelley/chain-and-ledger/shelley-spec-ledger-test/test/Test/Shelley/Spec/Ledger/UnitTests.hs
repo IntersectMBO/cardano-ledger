@@ -98,6 +98,7 @@ import Shelley.Spec.Ledger.TxData
     pattern RewardAcnt,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
+import qualified Shelley.Spec.Ledger.Val as Val
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( testBootstrapNotSpending,
@@ -146,12 +147,12 @@ pp =
   emptyPParams
     { _minfeeA = 1,
       _minfeeB = 1,
-      _keyDeposit = 100,
-      _poolDeposit = 250,
+      _keyDeposit = Coin 100,
+      _poolDeposit = Coin 250,
       _maxTxSize = 1024,
       _eMax = EpochNo 10,
-      _minUTxOValue = 100,
-      _minPoolCost = 100
+      _minUTxOValue = Coin 100,
+      _minPoolCost = Coin 100
     }
 
 testOverlayScheduleZero :: Assertion
@@ -362,7 +363,7 @@ aliceGivesBobLovelace
       signers
     } = Tx txbody mempty {addrWits = awits} SNothing
     where
-      aliceCoin = aliceInitCoin + refunds - (toBob + fee + deposits)
+      aliceCoin = aliceInitCoin <> refunds Val.~~ (toBob <> fee <> deposits)
       txbody =
         TxBody
           (Set.singleton input)
@@ -401,7 +402,7 @@ addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
     rewards = Map.insert ra c $ _rewards ds
 
 ledgerEnv :: LedgerEnv
-ledgerEnv = LedgerEnv (SlotNo 0) 0 pp (AccountState 0 0)
+ledgerEnv = LedgerEnv (SlotNo 0) 0 pp (AccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::
   [PredicateFailure (LEDGER C)] ->
@@ -563,7 +564,7 @@ testExpiredTx =
               ttl = (SlotNo 0),
               signers = ([asWitness alicePay])
             }
-      ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp (AccountState 0 0)
+      ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp (AccountState (Coin 0) (Coin 0))
    in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left [errs])
 
 testInvalidWintess :: Assertion

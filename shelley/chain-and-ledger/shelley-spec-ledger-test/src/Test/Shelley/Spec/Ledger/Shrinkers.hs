@@ -22,6 +22,7 @@ import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
 import Test.QuickCheck (shrinkIntegral, shrinkList)
+import qualified Shelley.Spec.Ledger.Val as Val
 
 shrinkBlock ::
   Block h ->
@@ -43,7 +44,7 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
 
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
-  [ TxBody is os' cs ws (tf + (outBalance - outputBalance os')) tl tu md
+  [ TxBody is os' cs ws (tf <> (outBalance Val.~~ outputBalance os')) tl tu md
     | os' <- toList $ shrinkStrictSeq shrinkTxOut os
   ]
   where
@@ -55,7 +56,7 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
     outBalance = outputBalance os
 
 outputBalance :: Era era => StrictSeq (TxOut era) -> Coin
-outputBalance = foldl' (\v (TxOut _ c) -> v + c) (Coin 0)
+outputBalance = foldl' (\v (TxOut _ c) -> v <> c) (Coin 0)
 
 shrinkTxIn :: TxIn era -> [TxIn era]
 shrinkTxIn = const []

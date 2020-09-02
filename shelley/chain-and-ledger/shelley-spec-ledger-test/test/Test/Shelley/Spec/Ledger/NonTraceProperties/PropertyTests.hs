@@ -65,7 +65,7 @@ insertOrUpdate (TxOut a c) m =
   Map.insert
     a
     ( if Map.member a m
-        then c + (m Map.! a)
+        then c <> (m Map.! a)
         else c
     )
     m
@@ -101,7 +101,7 @@ propPreserveBalanceInitTx =
         classify
           "non-trivial wealth dist"
           (isNotDustDist ((_utxo . _utxoState) ls) ((_utxo . _utxoState) ls'))
-        balance ((_utxo . _utxoState) ls) === balance ((_utxo . _utxoState) ls') + fee
+        balance ((_utxo . _utxoState) ls) === balance ((_utxo . _utxoState) ls') <> fee
 
 -- | Property (Preserve Balance Restricted to TxIns in Balance of TxOuts)
 propBalanceTxInTxOut :: Property
@@ -113,7 +113,7 @@ propBalanceTxInTxOut = property $ do
   classify
     "non-trivial wealth dist"
     (isNotDustDist ((_utxo . _utxoState) l) ((_utxo . _utxoState) l'))
-  (balance $ eval (inps <| ((_utxo . _utxoState) l))) === (balance (txouts tx) + fee)
+  (balance $ eval (inps <| ((_utxo . _utxoState) l))) === (balance (txouts tx) <> fee)
 
 -- | Property (Preserve Outputs of Transaction)
 propPreserveOutputs :: Property
@@ -214,7 +214,7 @@ propBalanceTxInTxOut' =
       let balanceTarget = balance $ txouts tx
       let valErrors = getErrors lv
       let nonTrivial = balanceSource /= Coin 0
-      let balanceOk = balanceSource == balanceTarget + fee
+      let balanceOk = balanceSource == balanceTarget <> fee
       classify "non-valid, OK" (valErrors /= [] && balanceOk && nonTrivial)
       if valErrors /= [] && balanceOk && nonTrivial
         then
@@ -257,7 +257,7 @@ propCheckRedundantWitnessSet = property $ do
   let witnessSet = _witnessSet txwits
   let witnessSet' = witnessSet {addrWits = (Set.insert witness (addrWits witnessSet))}
   let txwits' = txwits {_witnessSet = witnessSet'}
-  let l'' = asStateTransition (SlotNo $ fromIntegral steps) emptyPParams l txwits' (AccountState 0 0)
+  let l'' = asStateTransition (SlotNo $ fromIntegral steps) emptyPParams l txwits' (AccountState (Coin 0) (Coin 0))
   classify
     "unneeded signature added"
     (not $ witness `Set.member` (addrWits witnessSet))
@@ -286,7 +286,7 @@ propCheckMissingWitness = property $ do
           emptyPParams
           l
           (txwits {_witnessSet = (_witnessSet txwits) {addrWits = witnessVKeySet'}})
-          (AccountState 0 0)
+          (AccountState (Coin 0) (Coin 0))
   let isRealSubset =
         witnessVKeySet' `Set.isSubsetOf` witnessVKeySet''
           && witnessVKeySet' /= witnessVKeySet''
@@ -303,11 +303,11 @@ propPreserveBalance = property $ do
   (l, _, fee, tx, l') <- Hedgehog.forAll (genValidStateTx (Proxy @C))
   let destroyed =
         balance ((_utxo . _utxoState) l)
-          + (keyRefunds emptyPParams $ _body tx)
+          <> (keyRefunds emptyPParams $ _body tx)
   let created =
         balance ((_utxo . _utxoState) l')
-          + fee
-          + (totalDeposits emptyPParams ((_pParams . _pstate . _delegationState) l') $ toList $ (_certs . _body) tx)
+          <> fee
+          <> (totalDeposits emptyPParams ((_pParams . _pstate . _delegationState) l') $ toList $ (_certs . _body) tx)
   destroyed === created
 
 -- | 'TestTree' of property-based testing properties.

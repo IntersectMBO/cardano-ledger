@@ -738,7 +738,7 @@ applyTxBody ls pp tx =
         us
           { _utxo = eval (txins tx ⋪ (_utxo us) ∪ txouts tx),
             _deposited = depositPoolChange ls pp tx,
-            _fees = (_txfee tx) + (_fees . _utxoState $ ls)
+            _fees = (_txfee tx) <> (_fees . _utxoState $ ls)
           },
       _delegationState =
         dels

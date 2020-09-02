@@ -75,6 +75,7 @@ library
     Shelley.Spec.Ledger.Tx
     Shelley.Spec.Ledger.TxData
     Shelley.Spec.Ledger.UTxO
+    Shelley.Spec.Ledger.Val
   other-modules:     Shelley.Spec.Ledger.API.Mempool
                      Shelley.Spec.Ledger.API.Wallet
                      Shelley.Spec.Ledger.API.Types
@@ -105,9 +106,11 @@ library
     cborg,
     cborg-json,
     containers,
+    groups,
     iproute,
     mtl,
     network,
+    partial-order,
     primitive >= 0.7.1.0,
     quiet,
     scientific,

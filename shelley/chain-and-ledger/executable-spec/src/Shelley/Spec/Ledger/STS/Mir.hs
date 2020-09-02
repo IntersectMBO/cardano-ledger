@@ -24,6 +24,7 @@ import Control.State.Transition
     TransitionRule,
     judgmentContext,
   )
+import Data.Foldable (fold)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
@@ -50,6 +51,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (emptyPParams)
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
+import qualified Shelley.Spec.Ledger.Val as Val
 
 data MIR era
 
@@ -110,8 +112,8 @@ mirTransition = do
       treasury = _treasury acnt
       irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd ds) :: RewardAccounts era
       irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd ds) :: RewardAccounts era
-      totR = sum irwdR
-      totT = sum irwdT
+      totR = fold irwdR
+      totT = fold irwdT
       update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts era
 
   if totR <= reserves && totT <= treasury
@@ -119,8 +121,8 @@ mirTransition = do
       pure $
         EpochState
           acnt
-            { _reserves = reserves - totR,
-              _treasury = treasury - totT
+            { _reserves = reserves Val.~~ totR,
+              _treasury = treasury Val.~~ totT
             }
           ss
           ls

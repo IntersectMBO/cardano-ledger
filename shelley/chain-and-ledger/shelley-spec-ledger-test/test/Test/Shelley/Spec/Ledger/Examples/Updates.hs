@@ -14,6 +14,7 @@ module Test.Shelley.Spec.Ledger.Examples.Updates
   )
 where
 
+import Cardano.Ledger.Era (Crypto (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -25,8 +26,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-
-import Cardano.Ledger.Era (Crypto (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness, hashKey)
@@ -56,6 +55,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
+import qualified Shelley.Spec.Ledger.Val as Val
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -85,10 +85,10 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
 aliceInitCoin :: Coin
-aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
 bobInitCoin :: Coin
-bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
+bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: Era era => UTxO era
 initUTxO =
@@ -113,7 +113,7 @@ ppVoteA =
       _maxTxSize = SNothing,
       _maxBHSize = SNothing,
       _keyDeposit = SNothing,
-      _poolDeposit = SJust 200,
+      _poolDeposit = SJust $ Coin 200,
       _eMax = SNothing,
       _nOpt = SNothing,
       _a0 = SNothing,
@@ -137,7 +137,7 @@ feeTx1 :: Coin
 feeTx1 = Coin 1
 
 aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin - feeTx1
+aliceCoinEx1 = aliceInitCoin Val.~~ feeTx1
 
 txbodyEx1 :: Era era => TxBody era
 txbodyEx1 =
@@ -212,7 +212,7 @@ feeTx2 :: Coin
 feeTx2 = Coin 1
 
 aliceCoinEx2 :: Coin
-aliceCoinEx2 = aliceCoinEx1 - feeTx2
+aliceCoinEx2 = aliceCoinEx1 Val.~~ feeTx2
 
 txbodyEx2 :: Era era => TxBody era
 txbodyEx2 =
@@ -294,7 +294,7 @@ ppVoteB =
       _d = SNothing,
       _extraEntropy = SNothing,
       _protocolVersion = SNothing,
-      _minUTxOValue = SJust 99,
+      _minUTxOValue = SJust $ Coin 99,
       _minPoolCost = SNothing
     }
 
@@ -305,7 +305,7 @@ feeTx3 :: Coin
 feeTx3 = Coin 1
 
 aliceCoinEx3 :: Coin
-aliceCoinEx3 = aliceCoinEx2 - feeTx3
+aliceCoinEx3 = aliceCoinEx2 Val.~~ feeTx3
 
 txbodyEx3 :: Era era => TxBody era
 txbodyEx3 =
@@ -390,7 +390,7 @@ ppExUpdated = ppEx {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 1
 expectedStEx4 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
 expectedStEx4 =
   C.newEpoch blockEx4
-    . C.newSnapshot EB.emptySnapShot (feeTx1 + feeTx2 + feeTx3)
+    . C.newSnapshot EB.emptySnapShot (feeTx1 <> feeTx2 <> feeTx3)
     . C.applyRewardUpdate emptyRewardUpdate
     . C.setCurrentProposals (collectVotes ppVoteB [1])
     . C.setFutureProposals (ProposedPPUpdates Map.empty)

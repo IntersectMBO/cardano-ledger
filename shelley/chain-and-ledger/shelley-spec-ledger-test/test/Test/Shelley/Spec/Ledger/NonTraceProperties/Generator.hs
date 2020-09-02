@@ -251,7 +251,7 @@ genLedgerStateTx keyList (SlotNo _slot) sourceState = do
   let utxo' = (_utxo . _utxoState) sourceState
   slot' <- genWord64 _slot (_slot + 100)
   (txfee', tx) <- genTx keyList utxo' (SlotNo slot')
-  pure (txfee', tx, asStateTransition (SlotNo slot') defPCs sourceState tx (AccountState 0 0))
+  pure (txfee', tx, asStateTransition (SlotNo slot') defPCs sourceState tx (AccountState (Coin 0) (Coin 0)))
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
@@ -294,7 +294,7 @@ repeatCollectTx n keyPairs (SlotNo _slot) fees ls txs = do
   (txfee', tx, next) <- genLedgerStateTx keyPairs (SlotNo _slot) ls
   case next of
     Left _ -> pure (fees, txs, next)
-    Right ls' -> repeatCollectTx (n - 1) keyPairs (SlotNo $ _slot + 1) (txfee' + fees) ls' (tx : txs)
+    Right ls' -> repeatCollectTx (n - 1) keyPairs (SlotNo $ _slot + 1) (txfee' <> fees) ls' (tx : txs)
 
 -- | Mutated variant of `repeatCollectTx'`, stops at recursion depth or after
 -- exhausting the UTxO set to prevent calling 'head' on empty input list.
@@ -312,7 +312,7 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
     pure (fees, reverse txs, LedgerValidation validationErrors ls)
   | otherwise = do
     (txfee', tx, LedgerValidation errors' ls') <- genLedgerStateTx' keyPairs ls
-    repeatCollectTx' (n - 1) keyPairs (txfee' + fees) ls' (tx : txs) (validationErrors ++ errors')
+    repeatCollectTx' (n - 1) keyPairs (txfee' <> fees) ls' (tx : txs) (validationErrors ++ errors')
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
 findStakeKeyPair ::
@@ -393,7 +393,7 @@ genLedgerStateTx' keyList sourceState = do
         defPCs
         (LedgerValidation [] sourceState)
         tx'
-        (AccountState 0 0)
+        (AccountState (Coin 0) (Coin 0))
     )
 
 -- Generators for 'DelegationData'

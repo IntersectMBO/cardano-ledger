@@ -14,6 +14,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (SlotNo)
 import qualified Data.ByteString.Short as BSS
+import Data.Foldable (fold)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -84,22 +85,27 @@ getNonMyopicMemberRewards globals ss creds =
     EB.SnapShot stake delegs poolParams = stakeDistr utxo dstate pstate
     poolData =
       Map.mapWithKey
-        (\k p -> (percentile' (histLookup k), p, toShare . sum . EB.unStake $ EB.poolStake k delegs stake))
+        (\k p -> (percentile' (histLookup k), p, toShare . fold . EB.unStake $ EB.poolStake k delegs stake))
         poolParams
     histLookup k = fromMaybe mempty (Map.lookup k ls)
     topPools = getTopRankedPools rPot (Coin total) pp poolParams (fmap percentile' ls)
     mkNMMRewards ms k (ap, poolp, sigma) =
       if checkPledge poolp
         then nonMyopicMemberRew pp poolp rPot s ms nmps ap
-        else 0
+        else mempty
       where
         s = (toShare . _poolPledge) poolp
         nmps = nonMyopicStake k sigma s pp topPools
         checkPledge pool =
           let ostake =
                 Set.foldl'
-                  (\c o -> c + (fromMaybe (Coin 0) $ Map.lookup (KeyHashObj o) (EB.unStake stake)))
-                  (Coin 0)
+                  ( \c o ->
+                      c
+                        <> ( fromMaybe mempty $
+                               Map.lookup (KeyHashObj o) (EB.unStake stake)
+                           )
+                  )
+                  mempty
                   (_poolOwners pool)
            in _poolPledge poolp <= ostake
 

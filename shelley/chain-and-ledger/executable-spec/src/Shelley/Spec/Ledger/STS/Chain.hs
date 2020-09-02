@@ -43,6 +43,7 @@ import Control.State.Transition
     liftSTS,
     trans,
   )
+import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
@@ -381,13 +382,18 @@ totalAdaPots (ChainState nes _ _ _ _ _ _) =
     (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) = nesEs nes
     (UTxOState u deposits fees_ _) = _utxoState ls
     (DPState ds _) = _delegationState ls
-    rewards_ = sum (Map.elems (_rewards ds))
+    rewards_ = fold (Map.elems (_rewards ds))
     circulation = balance u
 
 -- | Calculate the total ada in the chain state
 totalAda :: ChainState era -> Coin
 totalAda cs =
-  treasuryAdaPot + reservesAdaPot + rewardsAdaPot + utxoAdaPot + depositsAdaPot + feesAdaPot
+  treasuryAdaPot
+    <> reservesAdaPot
+    <> rewardsAdaPot
+    <> utxoAdaPot
+    <> depositsAdaPot
+    <> feesAdaPot
   where
     AdaPots
       { treasuryAdaPot,

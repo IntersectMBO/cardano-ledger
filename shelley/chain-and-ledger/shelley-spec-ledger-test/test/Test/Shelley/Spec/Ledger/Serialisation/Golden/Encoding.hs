@@ -643,7 +643,7 @@ tests =
             <> S (testVRFKH p) -- delegatee vrf key hash
         ),
       -- checkEncodingCBOR "mir"
-      let rws = Map.singleton (testStakeCred p) 77
+      let rws = Map.singleton (testStakeCred p) (Coin 77)
        in checkEncodingCBOR
             "mir"
             (DCertMir (MIRCert ReservesMIR rws))
@@ -695,8 +695,8 @@ tests =
           d = truncateUnitInterval $ 1 % 9
           extraEntropy = NeutralNonce
           protocolVersion = ProtVer 0 1
-          minUTxOValue = 121
-          minPoolCost = 987
+          minUTxOValue = Coin 121
+          minPoolCost = Coin 987
        in checkEncodingCBOR
             "pparams_update_all"
             ( PParams

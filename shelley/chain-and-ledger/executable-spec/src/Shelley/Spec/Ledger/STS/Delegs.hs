@@ -155,7 +155,7 @@ delegsTransition = do
           wdrls_' =
             Map.foldrWithKey
               ( \(RewardAcnt _ cred) _coin ->
-                  Map.insert cred 0
+                  Map.insert cred mempty
               )
               Map.empty
               wdrls_

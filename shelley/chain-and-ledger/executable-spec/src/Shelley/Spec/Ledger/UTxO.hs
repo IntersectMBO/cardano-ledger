@@ -10,6 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 -- for the Relation instance
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -55,7 +56,7 @@ import Data.Typeable (Typeable)
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), word64ToCoin)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
@@ -90,6 +91,7 @@ import Shelley.Spec.Ledger.TxData
     pattern Delegate,
     pattern Delegation,
   )
+import qualified Shelley.Spec.Ledger.Val as Val
 
 instance HasExp (UTxO era) (Map (TxIn era) (TxOut era)) where
   toExp (UTxO x) = Base MapR x
@@ -218,9 +220,9 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 
 -- | Determine the total balance contained in the UTxO.
 balance :: UTxO era -> Coin
-balance (UTxO utxo) = fromIntegral $ Map.foldl' addCoins 0 utxo
+balance (UTxO utxo) = Map.foldl' addCoins mempty utxo
   where
-    addCoins !b (TxOutCompact _ a) = a + b
+    addCoins !b (TxOutCompact _ (word64ToCoin -> a)) = a <> b
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
@@ -236,12 +238,11 @@ totalDeposits ::
   [DCert era] ->
   Coin
 totalDeposits pp stpools cs =
-  (_keyDeposit pp) * numKeys + (_poolDeposit pp) * numNewPools
+  Val.scale numKeys (_keyDeposit pp) <> Val.scale numNewPools (_poolDeposit pp)
   where
-    numKeys = intToCoin . length $ filter isRegKey cs
+    numKeys = length $ filter isRegKey cs
     pools = Set.fromList . Maybe.catMaybes $ fmap getKeyHashFromRegPool cs
-    numNewPools = intToCoin . length $ pools `Set.difference` (Map.keysSet stpools)
-    intToCoin = Coin . toInteger
+    numNewPools = length $ pools `Set.difference` (Map.keysSet stpools)
 
 getKeyHashFromRegPool :: DCert era -> Maybe (KeyHash 'StakePool era)
 getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolPubKey $ p

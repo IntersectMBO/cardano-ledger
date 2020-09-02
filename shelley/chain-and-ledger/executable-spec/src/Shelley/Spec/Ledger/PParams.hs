@@ -295,8 +295,8 @@ instance FromJSON PParams where
         <*> obj .: "decentralisationParam"
         <*> obj .: "extraEntropy"
         <*> obj .: "protocolVersion"
-        <*> obj .:? "minUTxOValue" .!= 0
-        <*> obj .:? "minPoolCost" .!= 0
+        <*> obj .:? "minUTxOValue" .!= mempty
+        <*> obj .:? "minPoolCost" .!= mempty
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams
@@ -317,8 +317,8 @@ emptyPParams =
       _d = interval0,
       _extraEntropy = NeutralNonce,
       _protocolVersion = ProtVer 0 0,
-      _minUTxOValue = 0,
-      _minPoolCost = 0
+      _minUTxOValue = mempty,
+      _minPoolCost = mempty
     }
 
 -- | Update Proposal

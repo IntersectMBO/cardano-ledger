@@ -44,8 +44,7 @@ import Control.State.Transition.Trace
   )
 import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
-import Data.Foldable (toList)
-import Data.List (foldl')
+import Data.Foldable (fold, toList)
 import Data.Map (Map)
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
@@ -58,7 +57,6 @@ import Shelley.Spec.Ledger.API
     UTXO,
     UTXOW,
   )
-import Shelley.Spec.Ledger.Coin (pattern Coin)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash (..),
     KeyRole (..),
@@ -181,8 +179,8 @@ consumedEqualsProduced =
                 }
               )
         } =
-        (balance u + d + fees + foldl' (+) (Coin 0) rewards)
-          === (balance u' + d' + fees' + foldl' (+) (Coin 0) rewards')
+        (balance u <> d <> fees <> fold rewards)
+          === (balance u' <> d' <> fees' <> fold rewards')
 
 feesNonDecreasing :: Property
 feesNonDecreasing =

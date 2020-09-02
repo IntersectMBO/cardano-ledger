@@ -177,7 +177,7 @@ genPParams =
     <*> genNonce
     <*> genProtVer
     <*> genMinUTxOValue
-    <*> (pure 0) -- TODO handle a min pool cost > 0
+    <*> (pure mempty) -- TODO handle a min pool cost > 0
 
 genNatural :: Range Natural -> Gen Natural
 genNatural = Gen.integral

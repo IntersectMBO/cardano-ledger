@@ -23,6 +23,7 @@ import Control.State.Transition.Trace
     target,
     pattern SourceSignalTarget,
   )
+import Data.Foldable (fold)
 import Data.List (foldl')
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup, (\\))
@@ -86,7 +87,7 @@ rewardZeroAfterReg tr =
         "a newly registered key should have a reward of 0"
         ( eval (hk ∉ getStDelegs d)
             ==> ( eval (hk ∈ getStDelegs d')
-                    && Maybe.maybe True (== 0) (Map.lookup hk (getRewards d'))
+                    && Maybe.maybe True (== mempty) (Map.lookup hk (getRewards d'))
                 )
         )
     credNewlyRegisteredAndRewardZero _ = property ()
@@ -149,7 +150,7 @@ rewardsSumInvariant tr =
         } =
         let rew = _rewards d
             rew' = _rewards d'
-            sumRew = foldl' (+) (Coin 0)
+            sumRew = foldl' (<>) mempty
          in -- sum of rewards is not changed
             sumRew rew == sumRew rew'
               && null (Map.filter (/= Coin 0) $ rew `Map.difference` rew') -- dropped elements had a zero reward balance
@@ -185,14 +186,14 @@ instantaneousRewardsValue ssts =
       case sig of
         DCertMir (MIRCert ReservesMIR irwd) ->
           property $
-            ( (sum $ (iRReserves $ _irwd s) Map.\\ irwd)
-                + (sum $ irwd)
-                == (sum $ (iRReserves $ _irwd t))
+            ( (fold $ (iRReserves $ _irwd s) Map.\\ irwd)
+                <> (fold $ irwd)
+                == (fold $ (iRReserves $ _irwd t))
             )
         DCertMir (MIRCert TreasuryMIR irwd) ->
           property $
-            ( (sum $ (iRTreasury $ _irwd s) Map.\\ irwd)
-                + (sum $ irwd)
-                == (sum $ (iRTreasury $ _irwd t))
+            ( (fold $ (iRTreasury $ _irwd s) Map.\\ irwd)
+                <> (fold $ irwd)
+                == (fold $ (iRTreasury $ _irwd t))
             )
         _ -> property ()

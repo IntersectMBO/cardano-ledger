@@ -41,7 +41,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Bbody (BbodyPredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Chain (ChainState (..), ChainPredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Chain (ChainPredicateFailure (..), ChainState (..))
 import Shelley.Spec.Ledger.STS.Deleg (DelegPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Delegs (DelegsPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure (..))
@@ -59,6 +59,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
+import qualified Shelley.Spec.Ledger.Val as Val
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -87,10 +88,10 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
 aliceInitCoin :: Coin
-aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
 bobInitCoin :: Coin
-bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
+bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: Era era => UTxO era
 initUTxO =
@@ -106,8 +107,8 @@ initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
     as = esAccountState . nesEs . chainNes $ cs
     as' =
       as
-        { _treasury = (_treasury as) + treasury,
-          _reserves = (_reserves as) - treasury
+        { _treasury = (_treasury as) <> treasury,
+          _reserves = (_reserves as) Val.~~ treasury
         }
     es' = (nesEs $ chainNes cs) {esAccountState = as'}
 
@@ -125,7 +126,7 @@ feeTx1 :: Coin
 feeTx1 = Coin 1
 
 aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin - (feeTx1 + _keyDeposit ppEx)
+aliceCoinEx1 = aliceInitCoin Val.~~ (feeTx1 <> _keyDeposit ppEx)
 
 txbodyEx1 :: Era era => MIRPot -> TxBody era
 txbodyEx1 pot =
@@ -204,7 +205,7 @@ expectedStEx1' wits pot =
     . C.newUTxO (txbodyEx1 pot)
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) 0 1)
     . C.mir Cast.aliceSHK pot aliceMIRCoin
-    $ initStMIR 1000
+    $ initStMIR (Coin 1000)
 
 expectedStEx1 ::
   forall era.
@@ -219,7 +220,7 @@ expectedStEx1 = expectedStEx1' sufficientMIRWits
 mir1 :: (Era era, ExMock (Crypto era)) => MIRPot -> CHAINExample era
 mir1 pot =
   CHAINExample
-    (initStMIR 1000)
+    (initStMIR (Coin 1000))
     (blockEx1 pot)
     (Right $ expectedStEx1 pot)
 
@@ -229,7 +230,7 @@ mir1 pot =
 mirFailWits :: (Era era, ExMock (Crypto era)) => MIRPot -> CHAINExample era
 mirFailWits pot =
   CHAINExample
-    (initStMIR 1000)
+    (initStMIR (Coin 1000))
     (blockEx1' insufficientMIRWits pot)
     ( Left
         [ [ BbodyFailure
@@ -386,9 +387,9 @@ mirExample =
       testCase "insufficient MIR witnesses, treasury" $
         testCHAINExample (mirFailWits TreasuryMIR),
       testCase "insufficient MIR funds, reserves" $
-        testCHAINExample (mirFailFunds ReservesMIR 34000000000000000 100 0),
+        testCHAINExample (mirFailFunds ReservesMIR (Coin 34000000000000000) (Coin 100) (Coin 0)),
       testCase "insufficient MIR funds, treasury" $
-        testCHAINExample (mirFailFunds TreasuryMIR 99 100 99),
+        testCHAINExample (mirFailFunds TreasuryMIR (Coin 99) (Coin 100) (Coin 99)),
       testCase "end of epoch after MIR - reserves" $
         testCHAINExample (mir2 ReservesMIR),
       testCase "end of epoch after MIR - treasury" $

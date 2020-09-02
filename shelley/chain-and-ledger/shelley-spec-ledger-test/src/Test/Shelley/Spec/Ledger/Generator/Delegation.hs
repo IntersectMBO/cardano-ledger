@@ -15,7 +15,9 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
   )
 where
 
+import Cardano.Ledger.Era (Era)
 import Control.Iterate.SetAlgebra (dom, domain, eval, (∈), (∉))
+import Data.Foldable (fold)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
@@ -57,8 +59,6 @@ import Shelley.Spec.Ledger.API
   )
 import Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
 import Shelley.Spec.Ledger.BaseTypes (interval0)
-
-import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Keys
   ( coerceKeyRole,
     hashKey,
@@ -459,7 +459,7 @@ genInstantaneousRewards s genesisDelegatesByHash pparams accountState delegSt = 
       <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> Map.elems genDelegs_)
 
   pot <- QC.elements [ReservesMIR, TreasuryMIR]
-  let rewardAmount = sum $ Map.elems credCoinMap
+  let rewardAmount = fold $ Map.elems credCoinMap
       potAmount = case pot of
         ReservesMIR -> _reserves accountState
         TreasuryMIR -> _treasury accountState

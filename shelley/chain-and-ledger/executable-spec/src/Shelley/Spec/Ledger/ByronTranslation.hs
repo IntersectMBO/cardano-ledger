@@ -27,6 +27,7 @@ import Data.Maybe (fromMaybe)
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.Coin (word64ToCoin)
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.LedgerState
@@ -34,6 +35,7 @@ import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.UTxO
+import qualified Shelley.Spec.Ledger.Val as Val
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
 -- We don't care about the type that is hashed, which will differ going from
@@ -122,7 +124,7 @@ translateToShelleyLedgerState genesisShelley globals epochNo cvs =
 
     reserves :: Coin
     reserves =
-      fromIntegral (sgMaxLovelaceSupply genesisShelley) - balance utxoShelley
+      word64ToCoin (sgMaxLovelaceSupply genesisShelley) Val.~~ balance utxoShelley
 
     epochState :: EpochState era
     epochState =

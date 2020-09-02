@@ -41,6 +41,7 @@ import Shelley.Spec.Ledger.Slot
     SlotNo (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
+import qualified Shelley.Spec.Ledger.Val as Val
 import Test.Shelley.Spec.Ledger.Examples.Federation (genDelegs, overlayScheduleFor)
 import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash, unsafeMkUnitInterval)
 
@@ -72,7 +73,7 @@ ppEx =
       _d = unsafeMkUnitInterval 0.5,
       _tau = unsafeMkUnitInterval 0.2,
       _rho = unsafeMkUnitInterval 0.0021,
-      _minUTxOValue = 100
+      _minUTxOValue = Coin 100
     }
 
 -- | === The hash of the last Bryon Header
@@ -102,7 +103,7 @@ initSt utxo =
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
     (EpochNo 0)
     utxo
-    (maxLLSupply - (balance utxo))
+    (maxLLSupply Val.~~ (balance utxo))
     genDelegs
     (overlayScheduleFor (EpochNo 0) ppEx)
     ppEx
