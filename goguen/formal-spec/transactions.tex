@@ -15,7 +15,7 @@ except for the following changes and additions:
 
 \begin{itemize}
   \item $\RdmrsHash$ is the type of hashes of the indexed redeemer structure
-  included in the transaction (details about this structure below)
+  included in the transaction (details about this structure below).
 
   \item  $\ScriptMSig$ is the native multisignature scripts already supported.
 
@@ -30,24 +30,22 @@ except for the following changes and additions:
 
   \item The tags indicate which of the (currently, four) types of things a script
   can be validating, i.e. \\
-  $\mathsf{inputTag}$ is for validating spending a (Plutus) script UTxO entry \\
-  $\mathsf{forgeTag}$ is for validating forging tokens \\
-  $\mathsf{certTag}$  is for validating certificates with script credentials  \\
-  $\mathsf{wdrlTag}$ is for validating reward withdrawals from (Plutus) script addresses
+  $\mathsf{inputTag}$ is for validating spending a (Plutus) script UTxO entry, \\
+  $\mathsf{forgeTag}$ is for validating forging tokens, \\
+  $\mathsf{certTag}$  is for validating certificates with script credentials, and  \\
+  $\mathsf{wdrlTag}$ is for validating reward withdrawals from (Plutus) script addresses.
 
   \item $\Script$ is a sum type for all types of scripts, currently only
-  Plutus V1 and multisig
-
+  Plutus V1 and multisig.
   \item $\IsValidating$ is a tag that indicates when a transaction is
-  expected to have all the non-native scripts (currently this means only
-  Plutus scripts) inside it validate.
+  expected to have all the non-native scripts inside it validate.
   This value is added by the block creator when
   constructing a block, and is checked as part of running scripts.
   $\Yes$ for when when all scripts will validate,
   $\Nope$ is for when one of them does not.
 
   \item $\Data$ refers to the type defined in Plutus libraries, but is
-  related to a ledger type (see note "Data Representation" below)
+  related to a ledger type (see note "Data Representation" below).
 
   \item $\Value$ is the multicurrency type used to represent
   both fungible and non fungible tokens. For details, see the MA spec.
@@ -78,27 +76,28 @@ except for the following changes and additions:
   option will additionally allow users to write their own programmatic solutions
   to choosing for-fees inputs.
 
-  \item $\UTxOIn$ is the type of the keys in the UTxO finite map. In Goguen, it is
-  the same as the type as the basic UTxO keys in Shelley, but we have changed the name
-  to make the distinction between a transaction input type and UTxO keys.
-  These two types are the same in Shelley, but distinct in Goguen.
+  Only VK-spending inputs and native-script (MSig) spending inputs can
+  be used to pay fees. In Shelley, spending VK or MSig outputs is
+  validated in a single witnessing rule application, so either all
+  required signatures are valid, or a transaction is completely
+  invalid. We kept this model, but chose a different approach to
+  charging users for running Plutus scripts, see
+  Section~\ref{sec:two-phase}.
+
+  It is expected that Plutus scripts will be more expensive to run, on
+  average, than only checking signatures. We want to charge users for
+  running Plutus scripts, even if they do not validate. The outputs
+  spent to pay for running them (the ones marked as for-fees) must be
+  validated fully before validating Plutus scripts.
+
+  \item $\UTxOIn$ is the type of the keys in the UTxO finite map. This
+  is the same as the type of UTxO keys in Shelley, but we have changed
+  the name because the types of transaction inputs and UTxO keys
+  differ in Goguen.
 
   \item $\TxIn$ is a transaction input. It includes the reference to the UTxO entry it is spending
   (the UTxO output reference part) and the $\IsFee$ tag, which indicates if this input should
   be used to pay script execution fees.
-
-  Only VK-spending inputs and native-script (MSig)
-  spending inputs can be used to
-  pay fees. In Shelley, spending VK or MSig outputs is validated in a single witnessing
-    rule application, so either all required signatures are valid, or a transaction
-    is completely invalid. We kept this model, but chose a different approach to charging
-    users for running Plutus scripts, see Section~\ref{sec:two-phase}.
-
-    It is expected that Plutus scripts will be more
-    expensive to run, on average, than only checking signatures. We want to
-    charge users for running Plutus scripts, even if they do not validate. The
-    outputs spent to pay for running them (the ones marked as for-fees) must
-    be validated fully before validating Plutus scripts.
 
   \item $\TxOutND$: A transaction output with no datum hash
   (this type is for VK and multisig scripts outputs).
@@ -133,7 +132,7 @@ except for the following changes and additions:
   \item $\TxOut$ : The type of outputs carried by a transaction,
   $\TxOutND$ or the pair of $\TxOutP$ with the tag $\HasDV$.
 
-  \item $\UTxO$ entries are stored in the finite map $\UTxOIn\mapsto \UTxOOut$
+  \item $\UTxO$ entries are stored in the finite map $\UTxOIn\mapsto \UTxOOut$.
 
   \item $\RdmrPtr$: This type is a pair of a tag and an index. This type is
   used to index Plutus redeemers that are included in a transaction. More on this
@@ -305,24 +304,21 @@ the body of the transaction:
   \item We have changed $\fun{txinputs}$ to map to $\TxIn$, and added other the relevant
   accessor functions. The transaction still contains inputs ($\TxIn$), and
   outputs ($\TxOut$), which are of different types than for Shelley transactions.
-  \item the body now includes a term of type $\Value$, which represents
+  \item The body now includes a term of type $\Value$, which represents
   the tokens forged (or taken out of circulation, if the quantity is negative)
   by the transaction,
   with accessor $\fun{forge}$. Ada cannot be forged this way.
-  \item the body now includes a term of type $\ExUnits$, which is the total quantity of execution units
+  \item The body now includes a term of type $\ExUnits$, which is the total quantity of execution units
   that may be used by all Plutus scripts in the transaction.
   This execution units "budget" is pre-computed off-chain by a Plutus interpreter
-  before the transaction is submitted, with accessor $\fun{txexunits}$
-  \item the
+  before the transaction is submitted, with accessor $\fun{txexunits}$.
+  \item The
   time to live $\Slot$ was replaced by a liveness interval $\Slot \times \Slot$,
   where the first slot is accessed by $\fun{txfst}$.
-  \item the fee a transaction is paying is the sum total of the script and the
-  non-script transaction fee portions, with accessor $\fun{txfee}$ as in Shelley
-  \item the body has a hash of the the indexed redeemer structure
-  with accessor $\fun{rdmrsHash}$
-  \item the body has a hash of a subset of the current protocol parameters
+  \item The body has a hash of the the indexed redeemer structure
+    with accessor $\fun{rdmrsHash}$.
   (only the ones relevant to Plutus script validation of each Plutus
-  version of the transaction's validators), $\PPHash$, with accessor $\fun{ppHash}$
+  version of the transaction's validators), $\PPHash$, with accessor $\fun{ppHash}$.
 \end{itemize}
 
 \textbf{Additional Role of Signatures on TxBody.}
