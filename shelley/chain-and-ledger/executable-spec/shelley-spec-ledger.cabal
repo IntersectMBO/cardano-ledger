@@ -110,6 +110,7 @@ library
     iproute,
     mtl,
     network,
+    partial-order,
     primitive >= 0.7.1.0,
     quiet,
     scientific,
