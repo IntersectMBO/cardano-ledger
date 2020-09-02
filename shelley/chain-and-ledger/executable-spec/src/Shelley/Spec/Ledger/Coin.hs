@@ -15,6 +15,8 @@ where
 import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Group (Abelian, Group (..))
+import Data.Monoid (Sum (..))
 import Data.Text (pack)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -34,6 +36,7 @@ newtype Coin = Coin {unCoin :: Integer}
       NFData
     )
   deriving (Show) via Quiet Coin
+  deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
 
 word64ToCoin :: Word64 -> Coin
 word64ToCoin w = Coin $ fromIntegral w
