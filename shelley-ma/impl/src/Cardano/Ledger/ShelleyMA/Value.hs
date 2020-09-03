@@ -37,6 +37,7 @@ import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Cardano.Ledger.Crypto
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Val (Val)
@@ -142,61 +143,6 @@ instance Typeable era => Val (Value era) where
           accumIns _ ans1 = ans1 + assetIdLen + uint
 
 -- ============================================================================
--- Constants needed to compute size and size-scaling operation
--- ============================================================================
-
--- address hash length is always same as Policy ID length
-addrHashLen :: Integer
-addrHashLen = 28
-
-smallArray :: Integer
-smallArray = 1
-
-hashLen :: Integer
-hashLen = 32
-
-assetIdLen :: Integer
-assetIdLen = 32
-
-uint :: Integer
-uint = 5
-
-hashObj :: Integer
-hashObj = 2 + hashLen
-
-addrHeader :: Integer
-addrHeader = 1
-
-address :: Integer
-address = 2 + addrHeader + 2 * addrHashLen
-
--- input size
-inputSize :: Integer
-inputSize = smallArray + uint + hashObj
-
--- size of output not including the Val (compute that part with vsize later)
-outputSizeWithoutVal :: Integer
-outputSizeWithoutVal = smallArray + address
-
--- size of the UTxO entry (ie the space the scaled minUTxOValue deposit pays)
-utxoEntrySizeWithoutVal :: Integer
-utxoEntrySizeWithoutVal = inputSize + outputSizeWithoutVal
-
--- This scaling function is right for UTxO, not EUTxO
-scaledMinDeposit :: (Val v) => v -> Coin -> Coin
-scaledMinDeposit v (Coin mv)
-  -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
-  | Val.inject (Val.coin v) == v = Coin mv
-  | otherwise =
-    Coin $
-      fst $
-        quotRem
-          ( mv
-              * (utxoEntrySizeWithoutVal + uint)
-          )
-          (utxoEntrySizeWithoutVal + Val.size v) -- round down
-
--- ============================================================================
 -- Operations on Map, specialised to comparable `Monoid` values.
 -- ============================================================================
 
@@ -278,3 +224,29 @@ mapV f m = Map.foldrWithKey accum Map.empty m
       where
         new = f v
 {-# INLINEABLE mapV #-}
+
+-- CBOR
+
+-- TODO filter out 0s at deserialization
+-- TODO Probably the actual serialization will be of the formal Coin OR Value type
+-- Maybe better to make this distinction in the TxOut de/serialization
+
+instance
+  (Crypto crypto)
+  => ToCBOR (Value crypto)
+ where
+   toCBOR (Value c v) =
+           encodeListLen 2
+           <> toCBOR c
+           <> toCBOR v
+
+
+instance
+  (Crypto crypto)
+  => FromCBOR (Value crypto)
+ where
+  fromCBOR = do
+    decodeRecordNamed "Value" (const 2) $ do
+      c <- fromCBOR
+      v <- fromCBOR
+      pure $ Value c v
