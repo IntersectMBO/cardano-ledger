@@ -5,6 +5,7 @@ module Shelley.Spec.Ledger.API.Wallet
     getUTxO,
     getFilteredUTxO,
     getLeaderSchedule,
+    getTotalStake,
   )
 where
 
@@ -33,7 +34,8 @@ import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), un
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Shelley.Spec.Ledger.LedgerState
-  ( DPState (..),
+  ( AccountState (..),
+    DPState (..),
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
@@ -52,6 +54,14 @@ import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxData (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import qualified Shelley.Spec.Ledger.Val as Val
+
+-- | Calculate the current total stake.
+getTotalStake :: Globals -> ShelleyState era -> Coin
+getTotalStake globals ss =
+  let supply = Coin . fromIntegral $ maxLovelaceSupply globals
+      EpochState acnt _ _ _ _ _ = nesEs ss
+   in supply Val.~~ (_reserves acnt)
 
 -- | Calculate the Non-Myopic Pool Member Rewards for a set of credentials.
 -- For each given credential, this function returns a map from each stake
