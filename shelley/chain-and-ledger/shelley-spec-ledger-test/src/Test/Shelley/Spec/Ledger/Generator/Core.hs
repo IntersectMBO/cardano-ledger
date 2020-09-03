@@ -208,7 +208,6 @@ import Test.Shelley.Spec.Ledger.Utils
     unsafeMkUnitInterval,
   )
 
-
 -- ===========================================================================
 
 data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys

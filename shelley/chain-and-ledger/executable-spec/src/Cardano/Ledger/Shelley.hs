@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.EraDefinitions where
+module Cardano.Ledger.Shelley where
 
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era

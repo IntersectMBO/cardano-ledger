@@ -85,48 +85,11 @@ instance Val Coin where
   inject = id
   size _ = 1
 
--- ============================================
--- Constants needed to compute size and size-scaling operation
 
--- address hash length is always same as Policy ID length
-addrHashLen :: Integer
-addrHashLen = 28
-
-smallArray :: Integer
-smallArray = 1
-
-hashLen :: Integer
-hashLen = 32
-
-uint :: Integer
-uint = 5
-
-hashObj :: Integer
-hashObj = 2 + hashLen
-
-addrHeader :: Integer
-addrHeader = 1
-
-address :: Integer
-address = 2 + addrHeader + 2 * addrHashLen
-
--- input size
-inputSize :: Integer
-inputSize = smallArray + uint + hashObj
-
--- size of output not including the Val (compute that part with vsize later)
-outputSizeWithoutVal :: Integer
-outputSizeWithoutVal = smallArray + address
-
--- size of the UTxO entry (ie the space the scaled minUTxOValue deposit pays)
-utxoEntrySizeWithoutVal :: Integer
-utxoEntrySizeWithoutVal = inputSize + outputSizeWithoutVal
-
--- ===========
 {- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
 (passed to it as Coin mv) as a specification of "the cost of
 making a Shelley-sized UTxO entry", calculated here by "utxoEntrySizeWithoutVal + uint",
-using the constants defined above.
+using the constants in the "where" clause.
 
 In the case when a UTxO entry contains coins only (and the Shelley
 UTxO entry format is used - we will extend this to be correct for other
@@ -144,17 +107,45 @@ estimated total size of the UTxO entry containing v, ie by
 
 See the formal specification for details.
 
-}
--- ===========
+-}
 
--- This scaling function is right for UTxO, not EUTxO
+-- TODO : This scaling function is right for UTxO, not EUTxO
+-- constants are temporary, the UTxO entry size calculation will be moved
 scaledMinDeposit :: (Val v) => v -> Coin -> Coin
 scaledMinDeposit v (Coin mv)
   | inject (coin v) == v = Coin mv -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
   | otherwise = Coin $ fst $ quotRem (mv * (utxoEntrySizeWithoutVal + uint)) (utxoEntrySizeWithoutVal + size v) -- round down
+    where
+      -- address hash length is always same as Policy ID length
+      addrHashLen :: Integer
+      addrHashLen = 28
 
--- compare the outputs as Values (finitely supported functions)
--- ada must be greater than scaled min value deposit
--- rest of tokens must be greater than 0
--- by :
--- outputsTooSmall = [out | out@(TxOut _ vl) <- outputs, (voper Gt) (vinject $ scaleVl vl minUTxOValue) vl]
+      smallArray :: Integer
+      smallArray = 1
+
+      hashLen :: Integer
+      hashLen = 32
+
+      uint :: Integer
+      uint = 5
+
+      hashObj :: Integer
+      hashObj = 2 + hashLen
+
+      addrHeader :: Integer
+      addrHeader = 1
+
+      address :: Integer
+      address = 2 + addrHeader + 2 * addrHashLen
+
+      -- input size
+      inputSize :: Integer
+      inputSize = smallArray + uint + hashObj
+
+      -- size of output not including the Val (compute that part with vsize later)
+      outputSizeWithoutVal :: Integer
+      outputSizeWithoutVal = smallArray + address
+
+      -- size of the UTxO entry (ie the space the scaled minUTxOValue deposit pays)
+      utxoEntrySizeWithoutVal :: Integer
+      utxoEntrySizeWithoutVal = inputSize + outputSizeWithoutVal
