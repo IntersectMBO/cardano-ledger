@@ -1,0 +1,30 @@
+cabal-version:       2.2
+
+name:                cardano-ledger-shelley-ma
+version:             0.1.0.0
+synopsis:            Shelley ledger with multiasset support.
+description:
+  This package extends the Shelley ledger with support for
+  native tokens.
+bug-reports:         https://github.com/input-output-hk/cardano-ledger-specs/issues
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+copyright:           2020 Input Output (Hong Kong) Ltd.
+category:            Network
+build-type:          Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+
+library
+  exposed-modules:
+    Cardano.Ledger.ShelleyMA
+  -- other-modules:
+  -- other-extensions:
+  build-depends:
+    base >=4.9 && <4.15,
+    shelley-spec-ledger
+  hs-source-dirs: src
+  default-language:    Haskell2010
