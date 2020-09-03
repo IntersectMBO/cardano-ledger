@@ -33,16 +33,16 @@ module Shelley.Spec.Ledger.Val
   )
 where
 
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+  )
 import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
 import Data.Group (Abelian, Group (invert))
 import Data.PartialOrd hiding ((==))
 import qualified Data.PartialOrd
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Cardano.Binary
-  ( ToCBOR (..),
-    FromCBOR (..),
-  )
 
 class
   ( Abelian t,
@@ -85,7 +85,6 @@ instance Val Coin where
   inject = id
   size _ = 1
 
-
 -- ============================================
 -- Constants needed to compute size and size-scaling operation
 
@@ -126,8 +125,8 @@ utxoEntrySizeWithoutVal = inputSize + outputSizeWithoutVal
 -- This scaling function is right for UTxO, not EUTxO
 scaledMinDeposit :: (Val v) => v -> Coin -> Coin
 scaledMinDeposit v (Coin mv)
-  | inject (coin v) == v = Coin mv  -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
-  | otherwise            = Coin $ fst $ quotRem (mv * (utxoEntrySizeWithoutVal + uint)) (utxoEntrySizeWithoutVal + size v) -- round down
+  | inject (coin v) == v = Coin mv -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
+  | otherwise = Coin $ fst $ quotRem (mv * (utxoEntrySizeWithoutVal + uint)) (utxoEntrySizeWithoutVal + size v) -- round down
 
 -- compare the outputs as Values (finitely supported functions)
 -- ada must be greater than scaled min value deposit

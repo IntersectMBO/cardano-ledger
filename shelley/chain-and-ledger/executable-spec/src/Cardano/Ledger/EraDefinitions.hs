@@ -1,13 +1,12 @@
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
-
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.EraDefinitions where
 
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Shelley.Spec.Ledger.Coin
 import Cardano.Ledger.Era
+import Shelley.Spec.Ledger.Coin
 
 --------------------------------------------------------------------------------
 -- Shelley Era
