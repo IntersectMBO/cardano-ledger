@@ -54,6 +54,7 @@ import Shelley.Spec.Ledger.BlockChain
     slotToNonce,
   )
 import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
+import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.LedgerState (nesBcur)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
@@ -69,6 +70,7 @@ data Bench
 
 instance Era Bench where
   type Crypto Bench = BenchCrypto
+  type ValueType Bench = Coin
 
 data BenchCrypto
 
