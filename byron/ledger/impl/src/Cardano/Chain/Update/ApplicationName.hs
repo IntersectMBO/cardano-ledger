@@ -17,6 +17,7 @@ where
 import Cardano.Prelude
 
 import Data.Aeson (ToJSON)
+import Data.Char (isAscii)
 import Data.Data (Data)
 import qualified Data.Text as T
 import Formatting (bprint, int, stext)

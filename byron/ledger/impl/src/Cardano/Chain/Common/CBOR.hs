@@ -42,6 +42,7 @@ import Cardano.Prelude
 import Formatting (Format, sformat, shown)
 
 import Data.Digest.CRC32 (CRC32(..))
+import Data.Typeable (typeOf)
 
 import Cardano.Binary
          ( Encoding, Size, ToCBOR(..), enforceSize, serialize
