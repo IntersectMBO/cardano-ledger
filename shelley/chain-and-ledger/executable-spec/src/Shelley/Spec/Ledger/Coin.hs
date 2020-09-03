@@ -6,7 +6,6 @@
 module Shelley.Spec.Ledger.Coin
   ( Coin (..),
     word64ToCoin,
-    splitCoin,
     coinToRational,
     rationalToCoinViaFloor,
   )
@@ -63,9 +62,3 @@ instance FromCBOR Coin where
     if isValidCoinValue c
       then pure (Coin c)
       else cborError $ DecoderErrorCustom "Invalid Coin Value" (pack $ show c)
-
-splitCoin :: Coin -> Integer -> (Coin, Coin)
-splitCoin (Coin n) 0 = (Coin 0, Coin n)
-splitCoin (Coin n) m
-  | m <= 0 = error "must split coins into positive parts"
-  | otherwise = (Coin $ n `div` m, Coin $ n `rem` m)

@@ -95,6 +95,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( applyTxBody,
     genesisCoins,
   )
+import Test.Shelley.Spec.Ledger.Generator.Utxo (splitCoin)
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
 import Test.Shelley.Spec.Ledger.Orphans ()

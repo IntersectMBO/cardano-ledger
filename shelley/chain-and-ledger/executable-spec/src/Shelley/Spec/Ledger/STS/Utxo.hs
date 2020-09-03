@@ -308,7 +308,7 @@ utxoInductive = do
 
   let outputs = Set.toList (eval (rng (txouts txb)))
       minUTxOValue = _minUTxOValue pp
-      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < minUTxOValue]
+      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < (Val.scaledMinDeposit c minUTxOValue)]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.

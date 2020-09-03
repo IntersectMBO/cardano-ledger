@@ -14,6 +14,7 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
   ( GenTxException (..),
     genTx,
     tryGenTx,
+    splitCoin,
   )
 where
 
@@ -47,7 +48,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     maybeToStrictMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
+import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
@@ -107,6 +108,12 @@ import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs)
+
+splitCoin :: Coin -> Integer -> (Coin, Coin)
+splitCoin (Coin n) 0 = (Coin 0, Coin n)
+splitCoin (Coin n) m
+  | m <= 0 = error "must split coins into positive parts"
+  | otherwise = (Coin $ n `div` m, Coin $ n `rem` m)
 
 -- | Generates a transaction in the context of the LEDGER STS environment
 -- and state.

@@ -19,6 +19,7 @@
 module Shelley.Spec.Ledger.Val
   ( Val (..),
     (~~),
+    scaledMinDeposit,
 
     -- * Re-exports
     Data.Group.invert,
@@ -38,6 +39,10 @@ import Data.PartialOrd hiding ((==))
 import qualified Data.PartialOrd
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Cardano.Binary
+  ( ToCBOR (..),
+    FromCBOR (..),
+  )
 
 class
   ( Abelian t,
@@ -47,7 +52,9 @@ class
     Show t,
     Typeable t,
     NFData t,
-    NoUnexpectedThunks t
+    NoUnexpectedThunks t,
+    ToCBOR t,
+    FromCBOR t
   ) =>
   Val t
   where
@@ -77,3 +84,53 @@ instance Val Coin where
   coin = id
   inject = id
   size _ = 1
+
+
+-- ============================================
+-- Constants needed to compute size and size-scaling operation
+
+-- address hash length is always same as Policy ID length
+addrHashLen :: Integer
+addrHashLen = 28
+
+smallArray :: Integer
+smallArray = 1
+
+hashLen :: Integer
+hashLen = 32
+
+uint :: Integer
+uint = 5
+
+hashObj :: Integer
+hashObj = 2 + hashLen
+
+addrHeader :: Integer
+addrHeader = 1
+
+address :: Integer
+address = 2 + addrHeader + 2 * addrHashLen
+
+-- input size
+inputSize :: Integer
+inputSize = smallArray + uint + hashObj
+
+-- size of output not including the Val (compute that part with vsize later)
+outputSizeWithoutVal :: Integer
+outputSizeWithoutVal = smallArray + address
+
+-- size of the UTxO entry (ie the space the scaled minUTxOValue deposit pays)
+utxoEntrySizeWithoutVal :: Integer
+utxoEntrySizeWithoutVal = inputSize + outputSizeWithoutVal
+
+-- This scaling function is right for UTxO, not EUTxO
+scaledMinDeposit :: (Val v) => v -> Coin -> Coin
+scaledMinDeposit v (Coin mv)
+  | inject (coin v) == v = Coin mv  -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
+  | otherwise            = Coin $ fst $ quotRem (mv * (utxoEntrySizeWithoutVal + uint)) (utxoEntrySizeWithoutVal + size v) -- round down
+
+-- compare the outputs as Values (finitely supported functions)
+-- ada must be greater than scaled min value deposit
+-- rest of tokens must be greater than 0
+-- by :
+-- outputsTooSmall = [out | out@(TxOut _ vl) <- outputs, (voper Gt) (vinject $ scaleVl vl minUTxOValue) vl]
