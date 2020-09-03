@@ -122,6 +122,31 @@ outputSizeWithoutVal = smallArray + address
 utxoEntrySizeWithoutVal :: Integer
 utxoEntrySizeWithoutVal = inputSize + outputSizeWithoutVal
 
+-- ===========
+{- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
+(passed to it as Coin mv) as a specification of "the cost of
+making a Shelley-sized UTxO entry", calculated here by "utxoEntrySizeWithoutVal + uint",
+using the constants defined above.
+
+In the case when a UTxO entry contains coins only (and the Shelley
+UTxO entry format is used - we will extend this to be correct for other
+UTxO formats shortly), the deposit should be exactly the minUTxOValue.
+This is the "inject (coin v) == v" case.
+
+Otherwise, we calculate the per-byte deposit by multiplying the minimum deposit (which is
+for the number of Shelley UTxO-entry bytes) by the size of a Shelley UTxO entry.
+This is the "(mv * (utxoEntrySizeWithoutVal + uint))" calculation.
+
+We then calculate the total deposit required for making a UTxO entry with a Val-class
+member v by dividing "(mv * (utxoEntrySizeWithoutVal + uint))" by the
+estimated total size of the UTxO entry containing v, ie by
+"(utxoEntrySizeWithoutVal + size v)".
+
+See the formal specification for details.
+
+}
+-- ===========
+
 -- This scaling function is right for UTxO, not EUTxO
 scaledMinDeposit :: (Val v) => v -> Coin -> Coin
 scaledMinDeposit v (Coin mv)
