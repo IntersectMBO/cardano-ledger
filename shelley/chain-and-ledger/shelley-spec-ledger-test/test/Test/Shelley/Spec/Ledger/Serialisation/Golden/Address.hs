@@ -42,7 +42,6 @@ import Shelley.Spec.Ledger.Keys
     pattern KeyHash,
   )
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Tasty (TestTree)
@@ -146,7 +145,6 @@ data Shelley
 
 instance Era Shelley where
   type Crypto Shelley = ShelleyCrypto
-  type ValueType Shelley = Coin
 
 goldenTests_ShelleyCrypto :: TestTree
 goldenTests_ShelleyCrypto =

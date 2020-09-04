@@ -21,7 +21,6 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Era
 import Shelley.Spec.Ledger.BaseTypes (Seed)
 import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
-import Shelley.Spec.Ledger.Coin (Coin (..))
 
 -- | Mocking constraints used in generators
 type Mock c =

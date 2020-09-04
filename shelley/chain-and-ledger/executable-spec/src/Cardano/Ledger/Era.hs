@@ -11,7 +11,6 @@ where
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
-import qualified Shelley.Spec.Ledger.Val as ValClass
 
 class
   ( CryptoClass.Crypto (Crypto e),
