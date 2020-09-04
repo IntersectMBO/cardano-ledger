@@ -88,7 +88,7 @@ import Shelley.Spec.Ledger.UTxO
     makeWitnessesFromScriptKeys,
     makeWitnessesVKey,
   )
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes

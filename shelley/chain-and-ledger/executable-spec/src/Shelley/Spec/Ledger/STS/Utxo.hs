@@ -93,7 +93,7 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     txup,
   )
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 
 data UTXO era
 

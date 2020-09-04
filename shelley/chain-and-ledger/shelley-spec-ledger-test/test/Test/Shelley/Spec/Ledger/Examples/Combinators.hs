@@ -91,7 +91,7 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..), TxBody (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 import Test.Shelley.Spec.Ledger.Examples.Federation (overlayScheduleFor)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
 

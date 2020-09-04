@@ -56,7 +56,7 @@ import Shelley.Spec.Ledger.STS.Chain (chainNes, initialShelleyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.UTxO (balance)
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,

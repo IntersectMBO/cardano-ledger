@@ -205,7 +205,7 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs era = [(KeyPair 'Payment era, KeyPair 'Staking era)]

@@ -19,7 +19,6 @@ import Cardano.Binary
     fromCBOR,
     toCBOR,
   )
-import Cardano.Ledger.Crypto
 import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
 import Data.ByteString (ByteString)
 import Data.Group (Abelian, Group (..))
@@ -38,10 +37,11 @@ import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Cardano.Ledger.Crypto
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Val (Val)
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 
 -- ============================================================================
 -- Multi Assests
@@ -232,18 +232,19 @@ mapV f m = Map.foldrWithKey accum Map.empty m
 -- Maybe better to make this distinction in the TxOut de/serialization
 
 instance
-  (Crypto crypto) =>
-  ToCBOR (Value crypto)
-  where
-  toCBOR (Value c v) =
-    encodeListLen 2
-      <> toCBOR c
-      <> toCBOR v
+  (Crypto crypto)
+  => ToCBOR (Value crypto)
+ where
+   toCBOR (Value c v) =
+           encodeListLen 2
+           <> toCBOR c
+           <> toCBOR v
+
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (Value crypto)
-  where
+  (Crypto crypto)
+  => FromCBOR (Value crypto)
+ where
   fromCBOR = do
     decodeRecordNamed "Value" (const 2) $ do
       c <- fromCBOR

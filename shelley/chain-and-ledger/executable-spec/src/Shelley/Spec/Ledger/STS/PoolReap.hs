@@ -40,7 +40,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxBody (getRwdCred, _poolRAcnt)
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 
 data POOLREAP era
 

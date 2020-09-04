@@ -32,7 +32,7 @@ import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.TxBody
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 
 data NEWEPOCH era
 

@@ -51,7 +51,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (emptyPParams)
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 
 data MIR era
 

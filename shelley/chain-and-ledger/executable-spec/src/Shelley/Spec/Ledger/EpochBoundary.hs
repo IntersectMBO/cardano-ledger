@@ -50,7 +50,7 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxBody (PoolParams, TxOut (TxOutCompact))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 
 -- | Blocks made
 newtype BlocksMade era = BlocksMade

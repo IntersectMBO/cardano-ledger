@@ -47,7 +47,7 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast

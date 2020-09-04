@@ -88,7 +88,7 @@ import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
   )
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Prelude (genBytes)

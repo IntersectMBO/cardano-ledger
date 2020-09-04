@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.UTxO
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
 -- We don't care about the type that is hashed, which will differ going from

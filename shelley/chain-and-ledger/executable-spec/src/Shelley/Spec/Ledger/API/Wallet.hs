@@ -54,7 +54,7 @@ import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 
 -- | Calculate the current total stake.
 getTotalStake :: Globals -> ShelleyState era -> Coin
