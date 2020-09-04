@@ -26,6 +26,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
 import Control.State.Transition
@@ -93,7 +94,6 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     txup,
   )
-import qualified Cardano.Ledger.Val as Val
 
 data UTXO era
 

@@ -32,6 +32,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.Iterate.SetAlgebra (eval, (◁))
@@ -74,7 +75,6 @@ import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, decodeSeq, encodeFoldable)
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), getRwdCred)
-import qualified Cardano.Ledger.Val as Val
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
   deriving (Eq, Generic, Ord, Num, NFData, NoUnexpectedThunks, ToCBOR, FromCBOR)

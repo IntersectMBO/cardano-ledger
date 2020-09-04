@@ -16,6 +16,7 @@ module Shelley.Spec.Ledger.STS.NewEpoch
 where
 
 import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
 import Data.Foldable (fold)
@@ -32,7 +33,6 @@ import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.TxBody
-import qualified Cardano.Ledger.Val as Val
 
 data NEWEPOCH era
 

@@ -14,6 +14,7 @@ module Shelley.Spec.Ledger.STS.Mir
   )
 where
 
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (∪+), (◁))
 import Control.State.Transition
@@ -51,7 +52,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (emptyPParams)
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import qualified Cardano.Ledger.Val as Val
 
 data MIR era
 
