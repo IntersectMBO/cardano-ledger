@@ -173,7 +173,7 @@ import Shelley.Spec.Ledger.Tx
     pattern TxOut,
   )
 import qualified Shelley.Spec.Ledger.Tx as Ledger
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( TxOut,
     unWdrl,
     _txfee,

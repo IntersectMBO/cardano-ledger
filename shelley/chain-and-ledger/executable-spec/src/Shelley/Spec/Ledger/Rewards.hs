@@ -73,7 +73,7 @@ import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, decodeSeq, encodeFoldable)
-import Shelley.Spec.Ledger.TxData (PoolParams (..), getRwdCred)
+import Shelley.Spec.Ledger.TxBody (PoolParams (..), getRwdCred)
 import qualified Shelley.Spec.Ledger.Val as Val
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}

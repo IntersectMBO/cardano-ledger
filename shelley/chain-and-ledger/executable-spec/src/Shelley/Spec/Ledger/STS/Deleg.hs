@@ -68,7 +68,7 @@ import Shelley.Spec.Ledger.Slot
     (*-),
     (+*),
   )
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
     Delegation (..),

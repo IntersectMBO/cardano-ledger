@@ -42,7 +42,7 @@ import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Tick (TickEnv (TickEnv))
 import Shelley.Spec.Ledger.Tx
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
 import qualified Shelley.Spec.Ledger.Val as Val
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes

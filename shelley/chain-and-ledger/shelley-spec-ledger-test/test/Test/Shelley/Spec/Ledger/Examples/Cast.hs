@@ -62,7 +62,7 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( PoolMetaData (..),
     PoolParams (..),
     RewardAcnt (..),

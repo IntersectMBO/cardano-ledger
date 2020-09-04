@@ -76,7 +76,7 @@ import Shelley.Spec.Ledger.Tx
     WitnessSetHKD (..),
     hashScript,
   )
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( TxBody (..),
     TxIn (..),
     TxOut (..),

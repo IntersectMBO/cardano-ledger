@@ -69,7 +69,7 @@ import Shelley.Spec.Ledger.Keys
   )
 import qualified Shelley.Spec.Ledger.Keys as Keys
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( TxBody,
   )
 

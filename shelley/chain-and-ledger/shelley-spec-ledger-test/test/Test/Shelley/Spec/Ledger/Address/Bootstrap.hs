@@ -78,7 +78,7 @@ import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     WitnessSetHKD (..),
   )
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( TxBody (..),
     TxId (..),
     TxIn (..),

@@ -40,7 +40,7 @@ import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Pool (POOL, PoolEnv (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
     GenesisDelegCert (..),

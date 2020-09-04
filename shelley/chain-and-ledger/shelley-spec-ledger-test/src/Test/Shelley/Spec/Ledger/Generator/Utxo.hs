@@ -80,7 +80,7 @@ import Shelley.Spec.Ledger.Tx
     getKeyCombination,
     hashScript,
   )
-import Shelley.Spec.Ledger.TxData (Wdrl (..))
+import Shelley.Spec.Ledger.TxBody (Wdrl (..))
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,

@@ -73,7 +73,7 @@ library
     Shelley.Spec.Ledger.STS.Utxo
     Shelley.Spec.Ledger.STS.Utxow
     Shelley.Spec.Ledger.Tx
-    Shelley.Spec.Ledger.TxData
+    Shelley.Spec.Ledger.TxBody
     Shelley.Spec.Ledger.UTxO
     Shelley.Spec.Ledger.Val
   other-modules:     Shelley.Spec.Ledger.API.Mempool

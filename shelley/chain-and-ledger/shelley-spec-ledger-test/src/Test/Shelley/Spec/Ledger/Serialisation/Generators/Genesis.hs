@@ -43,7 +43,7 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
 import Test.Shelley.Spec.Ledger.Utils (mkHash)
 
 genShelleyGenesis :: Era era => Gen (ShelleyGenesis era)

@@ -33,7 +33,7 @@ import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Tick as STS
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import qualified Shelley.Spec.Ledger.TxData as Tx
+import qualified Shelley.Spec.Ledger.TxBody as Tx
 
 -- | Type alias for the state updated by TICK and BBODY rules
 type ShelleyState = LedgerState.NewEpochState

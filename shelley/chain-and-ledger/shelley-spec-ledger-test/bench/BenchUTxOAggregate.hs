@@ -28,7 +28,7 @@ import Shelley.Spec.Ledger.LedgerState
     InstantaneousRewards (..),
     PState (..),
   )
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( PoolParams (..),
     TxId (..),
     TxIn (..),

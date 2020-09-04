@@ -110,7 +110,7 @@ import Shelley.Spec.Ledger.Tx as X
     TxOut (..),
     WitnessSet,
   )
-import Shelley.Spec.Ledger.TxData as X
+import Shelley.Spec.Ledger.TxBody as X
   ( Delegation (..),
     GenesisDelegCert (..),
     MIRCert (..),

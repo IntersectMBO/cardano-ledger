@@ -16,7 +16,7 @@ import Data.List (foldl')
 import Shelley.Spec.Ledger.API (DELEGS)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
 import Shelley.Spec.Ledger.LedgerState (_dstate, _rewards)
-import qualified Shelley.Spec.Ledger.TxData as T
+import qualified Shelley.Spec.Ledger.TxBody as T
 import Test.QuickCheck (Property, conjoin)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 

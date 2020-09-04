@@ -77,7 +77,7 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams (PParams, Update, _keyDeposit, _poolDeposit)
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Tx (Tx (..))
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( PoolCert (..),
     PoolParams (..),
     TxBody (..),

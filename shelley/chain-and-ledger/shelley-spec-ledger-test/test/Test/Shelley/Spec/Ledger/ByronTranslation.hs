@@ -10,7 +10,7 @@ import Cardano.Ledger.Era
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.ByronTranslation
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.QuickCheck.Hedgehog (hedgehog)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)

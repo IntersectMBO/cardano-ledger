@@ -42,7 +42,7 @@ import Shelley.Spec.Ledger.LedgerState
   ( DState (..),
     InstantaneousRewards (..),
   )
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),
     pattern DCertDeleg,
     pattern DCertMir,
