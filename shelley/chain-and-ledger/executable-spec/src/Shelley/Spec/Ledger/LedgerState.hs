@@ -182,7 +182,7 @@ import Shelley.Spec.Ledger.Tx
     addrWits,
     extractKeyHashWitnessSet,
   )
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( Ix,
     PoolCert (..),
     PoolParams (..),

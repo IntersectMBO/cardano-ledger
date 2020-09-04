@@ -150,7 +150,7 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), hashScript)
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),
     PoolMetaData (..),
     StakePoolRelay (..),

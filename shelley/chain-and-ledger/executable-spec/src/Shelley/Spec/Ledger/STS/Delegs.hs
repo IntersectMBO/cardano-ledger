@@ -54,7 +54,7 @@ import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum, mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..))
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
     Delegation (..),

@@ -52,7 +52,7 @@ import Shelley.Spec.Ledger.PParams
     emptyPParams,
   )
 import Shelley.Spec.Ledger.Rewards (reward)
-import Shelley.Spec.Ledger.TxData (PoolParams (..), RewardAcnt (..))
+import Shelley.Spec.Ledger.TxBody (PoolParams (..), RewardAcnt (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Generator.Core (genCoin, genNatural)
 import Test.Shelley.Spec.Ledger.Utils

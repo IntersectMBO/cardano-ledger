@@ -37,7 +37,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (_eMax)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( PoolParams,
     _poolPubKey,
     pattern DCertPool,

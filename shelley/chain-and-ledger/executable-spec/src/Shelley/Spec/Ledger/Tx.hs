@@ -101,7 +101,7 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
     encodeNullMaybe,
   )
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( TxBody (..),
     TxId (..),
     TxIn (..),

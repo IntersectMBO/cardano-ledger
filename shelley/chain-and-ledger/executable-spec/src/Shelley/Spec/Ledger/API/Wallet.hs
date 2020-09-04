@@ -50,7 +50,7 @@ import Shelley.Spec.Ledger.Rewards
     percentile',
   )
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
-import Shelley.Spec.Ledger.TxData (PoolParams (..), TxOut (..))
+import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Calculate the Non-Myopic Pool Member Rewards for a set of credentials.

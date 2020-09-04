@@ -51,7 +51,7 @@ import Shelley.Spec.Ledger.Keys (KeyRole (Staking))
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.Serialization
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( StakePoolRelay,
     TxBody,
     TxIn,

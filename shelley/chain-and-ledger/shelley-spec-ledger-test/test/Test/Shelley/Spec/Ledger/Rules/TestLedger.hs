@@ -77,7 +77,7 @@ import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Pool (PoolEnv (..))
 import Shelley.Spec.Ledger.Tx (_body)
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( PoolParams (..),
     Ptr (..),
     Wdrl,

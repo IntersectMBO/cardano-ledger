@@ -71,7 +71,7 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Shelley.Spec.Ledger.Tx (Tx (..))
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( TxBody (..),
     Wdrl (..),
   )

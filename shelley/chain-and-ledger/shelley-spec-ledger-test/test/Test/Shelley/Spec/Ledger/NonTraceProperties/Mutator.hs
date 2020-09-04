@@ -71,7 +71,7 @@ import Shelley.Spec.Ledger.Tx
     _wdrls,
     _witnessSet,
   )
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( PoolParams (..),
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes ()

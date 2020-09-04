@@ -19,7 +19,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Shelley.Spec.Ledger.TxData
+module Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
     Delegation (..),

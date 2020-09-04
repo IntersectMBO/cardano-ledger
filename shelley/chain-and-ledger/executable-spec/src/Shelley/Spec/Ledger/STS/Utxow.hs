@@ -86,7 +86,7 @@ import Shelley.Spec.Ledger.Tx
     txwitsScript,
     validateScript,
   )
-import Shelley.Spec.Ledger.TxData (TxBody (..))
+import Shelley.Spec.Ledger.TxBody (TxBody (..))
 import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
 data UTXOW era

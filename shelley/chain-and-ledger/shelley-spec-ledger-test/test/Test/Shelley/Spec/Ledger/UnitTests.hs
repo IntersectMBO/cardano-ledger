@@ -80,7 +80,7 @@ import Shelley.Spec.Ledger.Tx
     WitnessSetHKD (..),
     _ttl,
   )
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( PoolMetaData (..),
     PoolParams (..),
     Wdrl (..),

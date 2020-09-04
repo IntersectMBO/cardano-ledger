@@ -51,7 +51,7 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.StabilityWindow
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO
 
 -- | Genesis Shelley staking configuration.

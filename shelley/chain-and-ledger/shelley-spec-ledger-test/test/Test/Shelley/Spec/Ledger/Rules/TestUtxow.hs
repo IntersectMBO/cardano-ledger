@@ -47,7 +47,7 @@ import Shelley.Spec.Ledger.Tx
     _body,
     _witnessSet,
   )
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( PoolParams (..),
     TxIn (..),
     witKeyHash,

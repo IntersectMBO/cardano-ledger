@@ -43,7 +43,7 @@ import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     PoolCert (..),
     PoolParams (..),

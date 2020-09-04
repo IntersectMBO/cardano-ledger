@@ -19,7 +19,7 @@ import Shelley.Spec.Ledger.Keys (asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState (WitHashes (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
-import Shelley.Spec.Ledger.TxData (RewardAcnt (..), Wdrl (..))
+import Shelley.Spec.Ledger.TxBody (RewardAcnt (..), Wdrl (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Examples (testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
