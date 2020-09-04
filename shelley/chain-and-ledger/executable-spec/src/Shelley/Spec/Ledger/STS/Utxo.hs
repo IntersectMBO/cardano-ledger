@@ -27,7 +27,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
-import Control.Iterate.SetAlgebra (dom, eval, rng, (∪), (⊆), (⋪))
+import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -306,9 +306,9 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputs = Set.toList (eval (rng (txouts txb)))
+  let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
-      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < minUTxOValue]
+      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < (Val.scaledMinDeposit c minUTxOValue)]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.

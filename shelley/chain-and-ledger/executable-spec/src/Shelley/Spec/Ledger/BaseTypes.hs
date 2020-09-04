@@ -50,9 +50,6 @@ module Shelley.Spec.Ledger.BaseTypes
     -- * STS Base
     Globals (..),
     ShelleyBase,
-
-    -- * Shelley era
-    Shelley,
   )
 where
 
@@ -68,8 +65,6 @@ import Cardano.Binary
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
-import qualified Cardano.Ledger.Crypto
-import Cardano.Ledger.Era
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
 import qualified Control.Monad.Fail
@@ -454,12 +449,3 @@ instance FromCBOR Network where
     word8ToNetwork <$> fromCBOR >>= \case
       Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
       Just n -> pure n
-
---------------------------------------------------------------------------------
--- Shelley Era
---------------------------------------------------------------------------------
-
-data Shelley c
-
-instance Cardano.Ledger.Crypto.Crypto c => Era (Shelley c) where
-  type Crypto (Shelley c) = c
