@@ -9,6 +9,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Shelley.Spec.Ledger.Genesis
   ( ShelleyGenesisStaking (..),
@@ -28,7 +30,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Crypto (HASH, KES)
 import Cardano.Ledger.Era
-import Cardano.Prelude (NoUnexpectedThunks, forceElemsToWHNF)
+import Cardano.Prelude (NoUnexpectedThunks, forceElemsToWHNF, UseIsNormalFormNamed (..))
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -78,7 +80,8 @@ data ShelleyGenesisStaking c = ShelleyGenesisStaking
     sgsStake :: !(Map (KeyHash 'Staking c) (KeyHash 'StakePool c))
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (NoUnexpectedThunks)
+
+instance NoUnexpectedThunks (ShelleyGenesisStaking era)
 
 -- | Empty genesis staking
 emptyGenesisStaking :: ShelleyGenesisStaking c
@@ -111,8 +114,9 @@ data ShelleyGenesis c = ShelleyGenesis
     sgInitialFunds :: !(Map (Addr c) Coin),
     sgStaking :: !(ShelleyGenesisStaking c)
   }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NoUnexpectedThunks)
+  deriving stock (Eq, Show)
+
+deriving via UseIsNormalFormNamed "ShelleyGenesis" (ShelleyGenesis era) instance (Era era) => NoUnexpectedThunks (ShelleyGenesis era)
 
 sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff =

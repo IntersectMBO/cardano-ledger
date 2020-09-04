@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
@@ -205,7 +204,10 @@ data PoolMetaData = PoolMetaData
   { _poolMDUrl :: !Url,
     _poolMDHash :: !ByteString
   }
-  deriving (Eq, Ord, Generic, Show, NFData)
+  deriving (Eq, Ord, Generic, Show)
+
+instance NFData PoolMetaData where
+  rnf (PoolMetaData url bs) = seq (rnf url) (rnf bs)
 
 instance ToJSON PoolMetaData where
   toJSON pmd =
@@ -330,11 +332,36 @@ data PoolParams era = PoolParams
     _poolRelays :: !(StrictSeq StakePoolRelay),
     _poolMD :: !(StrictMaybe PoolMetaData)
   }
-  deriving (Show, Generic, Eq, Ord, NFData)
+  deriving (Show, Generic, Eq, Ord)
   deriving (ToCBOR) via CBORGroup (PoolParams era)
   deriving (FromCBOR) via CBORGroup (PoolParams era)
 
 instance NoUnexpectedThunks (PoolParams era)
+
+instance NFData (PoolParams era) where
+  rnf (PoolParams a b c d e f g h i) =
+    seq
+      (rnf a)
+      ( seq
+          (rnf b)
+          ( seq
+              (rnf c)
+              ( seq
+                  (rnf d)
+                  ( seq
+                      (rnf e)
+                      ( seq
+                          (rnf f)
+                          ( seq
+                              (rnf g)
+                              (seq (rnf h) (rnf i))
+                          )
+                      )
+                  )
+              )
+          )
+      )
+
 
 newtype Wdrl era = Wdrl {unWdrl :: Map (RewardAcnt era) Coin}
   deriving (Show, Eq, Generic)
@@ -377,15 +404,18 @@ instance Era era => FromJSON (PoolParams era) where
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId era = TxId {_unTxId :: Hash era (TxBody era)}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NFData, NoUnexpectedThunks)
+  deriving newtype (NoUnexpectedThunks)
 
 deriving newtype instance Era era => ToCBOR (TxId era)
 
 deriving newtype instance Era era => FromCBOR (TxId era)
 
+instance (Era era) => NFData (TxId era) where
+  rnf (TxId hs) = rnf hs
+  
 -- | The input of a UTxO.
 data TxIn era = TxInCompact {-# UNPACK #-} !(TxId era) {-# UNPACK #-} !Word64
-  deriving (Show, Eq, Generic, Ord, NFData)
+  deriving (Generic)
 
 -- TODO: We will also want to have the TxId be compact, but the representation
 -- depends on the era.
@@ -403,6 +433,15 @@ pattern TxIn addr index <-
 
 {-# COMPLETE TxIn #-}
 
+deriving instance Ord (TxIn era)
+
+deriving instance Eq (TxIn era)
+
+deriving instance Show (TxIn era)
+
+instance (Era era) => NFData (TxIn era) where
+  rnf (TxInCompact i ind) = seq (rnf i) (rnf ind)
+
 instance NoUnexpectedThunks (TxIn era)
 
 -- | The output of a UTxO.
@@ -410,7 +449,9 @@ data TxOut era
   = TxOutCompact
       {-# UNPACK #-} !BSS.ShortByteString
       {-# UNPACK #-} !Word64
-  deriving (Show, Eq, Ord)
+
+deriving instance (Era era) => Show (TxOut era)
+deriving instance (Era era) => Eq (TxOut era)
 
 instance NFData (TxOut era) where
   rnf = (`seq` ())
@@ -471,7 +512,9 @@ data GenesisDelegCert era
   deriving (Show, Generic, Eq)
 
 data MIRPot = ReservesMIR | TreasuryMIR
-  deriving (Show, Generic, Eq, NoUnexpectedThunks)
+  deriving (Show, Generic, Eq)
+
+deriving via UseIsNormalFormNamed "MIRPot" MIRPot instance NoUnexpectedThunks MIRPot
 
 instance ToCBOR MIRPot where
   toCBOR ReservesMIR = toCBOR (0 :: Word8)
@@ -535,9 +578,8 @@ data TxBody era = TxBody'
     extraSize :: !Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
   }
   deriving (Show, Eq, Generic)
-  deriving
-    (NoUnexpectedThunks)
-    via AllowThunksIn '["bodyBytes"] (TxBody era)
+
+deriving via AllowThunksIn '["bodyBytes"] (TxBody era) instance Era era => NoUnexpectedThunks (TxBody era)
 
 instance Era era => HashAnnotated (TxBody era) era
 
