@@ -108,7 +108,6 @@ data B
 
 instance Era B where
   type Crypto B = B_Crypto
-  type ValueType B = Coin
 
 data B_Crypto
 

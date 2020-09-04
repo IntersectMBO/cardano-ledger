@@ -70,7 +70,6 @@ data Bench
 
 instance Era Bench where
   type Crypto Bench = BenchCrypto
-  type ValueType Bench = Coin
 
 data BenchCrypto
 

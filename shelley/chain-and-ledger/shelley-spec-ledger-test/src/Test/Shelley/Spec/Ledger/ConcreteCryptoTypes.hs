@@ -46,7 +46,6 @@ data C
 
 instance Era C where
   type Crypto C = C_Crypto
-  type ValueType C = Coin
 
 data C_Crypto
 

@@ -16,4 +16,3 @@ data Shelley c
 
 instance CryptoClass.Crypto c => Era (Shelley c) where
   type Crypto (Shelley c) = c
-  type ValueType (Shelley c) = Coin
