@@ -43,6 +43,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Foldable (toList)
@@ -91,7 +92,6 @@ import Shelley.Spec.Ledger.TxBody
     pattern Delegate,
     pattern Delegation,
   )
-import qualified Shelley.Spec.Ledger.Val as Val
 
 instance HasExp (UTxO era) (Map (TxIn era) (TxOut era)) where
   toExp (UTxO x) = Base MapR x

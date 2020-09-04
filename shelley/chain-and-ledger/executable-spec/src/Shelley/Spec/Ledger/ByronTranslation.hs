@@ -20,6 +20,7 @@ import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Reader (runReader)
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
@@ -35,7 +36,6 @@ import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.UTxO
-import qualified Shelley.Spec.Ledger.Val as Val
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
 -- We don't care about the type that is hashed, which will differ going from

@@ -56,7 +56,7 @@ import Shelley.Spec.Ledger.TxBody
     _txfee,
   )
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 import Test.QuickCheck (Property, conjoin, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( C,

@@ -98,7 +98,7 @@ import Shelley.Spec.Ledger.TxBody
     pattern RewardAcnt,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( testBootstrapNotSpending,

@@ -15,8 +15,8 @@
 -- with which we may quantify a transaction output.
 --
 -- This module is intended for qualified import:
--- > import qualified Shelley.Spec.Ledger.Val as Val
-module Shelley.Spec.Ledger.Val
+-- > import qualified Cardano.Ledger.Val as Val
+module Cardano.Ledger.Val
   ( Val (..),
     (~~),
     scaledMinDeposit,

@@ -12,6 +12,7 @@ where
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (SlotNo)
 import qualified Data.ByteString.Short as BSS
@@ -54,7 +55,6 @@ import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
-import qualified Shelley.Spec.Ledger.Val as Val
 
 -- | Calculate the current total stake.
 getTotalStake :: Globals -> ShelleyState era -> Coin

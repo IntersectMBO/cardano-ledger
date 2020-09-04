@@ -22,7 +22,7 @@ import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxBody
 import Test.QuickCheck (shrinkIntegral, shrinkList)
-import qualified Shelley.Spec.Ledger.Val as Val
+import qualified Cardano.Ledger.Val as Val
 
 shrinkBlock ::
   Block h ->

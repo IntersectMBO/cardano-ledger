@@ -95,6 +95,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
@@ -205,7 +206,6 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
-import qualified Shelley.Spec.Ledger.Val as Val
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs era = [(KeyPair 'Payment era, KeyPair 'Staking era)]

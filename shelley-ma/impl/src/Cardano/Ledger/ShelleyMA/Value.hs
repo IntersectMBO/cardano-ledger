@@ -20,6 +20,7 @@ import Cardano.Binary
     toCBOR,
   )
 import Cardano.Ledger.Crypto
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
 import Data.ByteString (ByteString)
 import Data.Group (Abelian, Group (..))
@@ -41,7 +42,6 @@ import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Val (Val)
-import qualified Shelley.Spec.Ledger.Val as Val
 
 -- ============================================================================
 -- Multi Assests
