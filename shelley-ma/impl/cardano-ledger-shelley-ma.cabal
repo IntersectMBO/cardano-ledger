@@ -21,10 +21,18 @@ source-repository head
 library
   exposed-modules:
     Cardano.Ledger.ShelleyMA
+    Cardano.Ledger.ShelleyMA.Value
   -- other-modules:
   -- other-extensions:
   build-depends:
     base >=4.9 && <4.15,
-    shelley-spec-ledger
+    bytestring,
+    cardano-binary,
+    cardano-prelude,
+    containers,
+    groups,
+    partial-order,
+    shelley-spec-ledger,
+    small-steps
   hs-source-dirs: src
   default-language:    Haskell2010
