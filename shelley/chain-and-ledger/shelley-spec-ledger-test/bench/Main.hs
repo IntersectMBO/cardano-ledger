@@ -44,6 +44,7 @@ import Shelley.Spec.Ledger.Bench.Gen
     genChainState,
     genTx,
   )
+import Shelley.Spec.Ledger.Bench.Rewards (createRUpd, genChainInEpoch)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..))
@@ -75,6 +76,7 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerStateWithNregisteredPools,
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
+import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
 -- ==========================================================
 
@@ -475,5 +477,12 @@ main =
             "genTx"
             [ bench "1000" $ whnfIO $ genTx 1000
             ]
+        ],
+      bgroup "rewards" $
+        [ env
+            (generate $ genChainInEpoch 5)
+            ( \cs ->
+                bench "createRUpd" $ whnf (createRUpd testGlobals) cs
+            )
         ]
     ]
