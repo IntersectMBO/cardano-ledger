@@ -81,15 +81,15 @@ initialEpoch =
 
 votedValue ::
   ProposedPPUpdates era ->
-  PParams ->
+  PParams era ->
   Int ->
-  Maybe PParams
+  Maybe (PParams era)
 votedValue (ProposedPPUpdates pup) pps quorumN =
   let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
       votes =
         Map.foldr
           (\vote tally -> Map.insert vote (incrTally vote tally) tally)
-          (Map.empty :: Map PParamsUpdate Int)
+          (Map.empty :: Map (PParamsUpdate era) Int)
           pup
       consensus = Map.filter (>= quorumN) votes
    in case length consensus of

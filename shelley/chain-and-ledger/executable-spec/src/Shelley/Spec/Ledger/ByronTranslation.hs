@@ -106,7 +106,7 @@ translateToShelleyLedgerState genesisShelley globals epochNo cvs =
       nesOsched = oSchedule
     }
   where
-    pparams :: PParams
+    pparams :: PParams era
     pparams = sgProtocolParams genesisShelley
 
     -- NOTE: we ignore the Byron delegation map because the genesis and

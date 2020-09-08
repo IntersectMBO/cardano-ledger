@@ -108,7 +108,7 @@ data ShelleyGenesis c = ShelleyGenesis
     sgSlotLength :: !NominalDiffTime,
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
-    sgProtocolParams :: !PParams,
+    sgProtocolParams :: !(PParams c),
     sgGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPair c)),
     sgInitialFunds :: !(Map (Addr c) Coin),
     sgStaking :: !(ShelleyGenesisStaking c)

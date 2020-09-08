@@ -48,9 +48,9 @@ import Shelley.Spec.Ledger.Tx (Tx, TxBody)
 
 data LEDGERS era
 
-data LedgersEnv = LedgersEnv
+data LedgersEnv era = LedgersEnv
   { ledgersSlotNo :: SlotNo,
-    ledgersPp :: PParams,
+    ledgersPp :: PParams era,
     ledgersAccount :: AccountState
   }
 
@@ -68,7 +68,7 @@ instance
   where
   type State (LEDGERS era) = LedgerState era
   type Signal (LEDGERS era) = Seq (Tx era)
-  type Environment (LEDGERS era) = LedgersEnv
+  type Environment (LEDGERS era) = LedgersEnv era
   type BaseM (LEDGERS era) = ShelleyBase
   type PredicateFailure (LEDGERS era) = LedgersPredicateFailure era
 

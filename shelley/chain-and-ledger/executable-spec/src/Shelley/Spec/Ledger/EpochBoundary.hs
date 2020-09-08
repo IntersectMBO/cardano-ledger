@@ -104,7 +104,7 @@ poolStake hk delegs (Stake stake) =
 
 -- | Calculate total possible refunds.
 obligation ::
-  PParams ->
+  PParams era ->
   Map (Credential 'Staking era) Coin ->
   Map (KeyHash 'StakePool era) (PoolParams era) ->
   Coin
@@ -113,7 +113,7 @@ obligation pp rewards stakePools =
     <> Val.scale (length stakePools) (_poolDeposit pp)
 
 -- | Calculate maximal pool reward
-maxPool :: PParams -> Coin -> Rational -> Rational -> Coin
+maxPool :: PParams era -> Coin -> Rational -> Rational -> Coin
 maxPool pc r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
   where
     a0 = _a0 pc

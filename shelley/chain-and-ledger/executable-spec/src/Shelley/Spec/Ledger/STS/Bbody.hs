@@ -66,7 +66,7 @@ data BbodyState era
 
 data BbodyEnv era = BbodyEnv
   { bbodySlots :: OverlaySchedule era,
-    bbodyPp :: PParams,
+    bbodyPp :: PParams era,
     bbodyAccount :: AccountState
   }
 

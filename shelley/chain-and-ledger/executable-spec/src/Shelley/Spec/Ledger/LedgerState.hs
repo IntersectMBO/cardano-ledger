@@ -409,8 +409,8 @@ data EpochState era = EpochState
   { esAccountState :: !AccountState,
     esSnapshots :: !(SnapShots era),
     esLState :: !(LedgerState era),
-    esPrevPp :: !PParams,
-    esPp :: !PParams,
+    esPrevPp :: !(PParams era),
+    esPp :: !(PParams era),
     esNonMyopic :: !(NonMyopic era) -- TODO document this in the formal spec, see github #1319
   }
   deriving (Show, Eq, Generic)
@@ -502,7 +502,7 @@ pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
 -- | Update the protocol parameter updates by clearing out the proposals
 -- and making the future proposals become the new proposals,
 -- provided the new proposals can follow (otherwise reset them).
-updatePpup :: UTxOState era -> PParams -> UTxOState era
+updatePpup :: UTxOState era -> PParams era -> UTxOState era
 updatePpup utxoSt pp = utxoSt {_ppups = PPUPState ps emptyPPPUpdates}
   where
     (ProposedPPUpdates newProposals) = futureProposals . _ppups $ utxoSt
@@ -657,17 +657,17 @@ txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
     rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
 
 -- | Minimum fee calculation
-minfee :: PParams -> Tx era -> Coin
+minfee :: PParams era -> Tx era -> Coin
 minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_minfeeB pp)
 
 -- | Minimum fee bound using txsizeBound
-minfeeBound :: forall era. (Era era) => PParams -> Tx era -> Coin
+minfeeBound :: forall era. (Era era) => PParams era -> Tx era -> Coin
 minfeeBound pp tx = Coin $ fromIntegral (_minfeeA pp) * txsizeBound tx + fromIntegral (_minfeeB pp)
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
   (Era era) =>
-  PParams ->
+  PParams era ->
   Map (KeyHash 'StakePool era) (PoolParams era) ->
   TxBody era ->
   Coin
@@ -677,7 +677,7 @@ produced pp stakePools tx =
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
   Era era =>
-  PParams ->
+  PParams era ->
   TxBody era ->
   Coin
 keyRefunds pp tx = Val.scale (length deregistrations) (_keyDeposit pp)
@@ -687,7 +687,7 @@ keyRefunds pp tx = Val.scale (length deregistrations) (_keyDeposit pp)
 -- | Compute the lovelace which are destroyed by the transaction
 consumed ::
   Era era =>
-  PParams ->
+  PParams era ->
   UTxO era ->
   TxBody era ->
   Coin
@@ -816,7 +816,7 @@ propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
 depositPoolChange ::
   Era era =>
   LedgerState era ->
-  PParams ->
+  PParams era ->
   TxBody era ->
   Coin
 depositPoolChange ls pp tx = (currentPool <> txDeposits) Val.~~ txRefunds

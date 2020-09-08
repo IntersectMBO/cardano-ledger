@@ -242,7 +242,7 @@ instance Era era => FromCBOR (NonMyopic era) where
 -- corresponding to f^~ in section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 desirability ::
-  PParams ->
+  PParams era ->
   Coin ->
   PoolParams era ->
   PerformanceEstimate ->
@@ -270,7 +270,7 @@ desirability pp r pool (PerformanceEstimate p) (Coin total) =
 getTopRankedPools ::
   Coin ->
   Coin ->
-  PParams ->
+  PParams era ->
   Map (KeyHash 'StakePool era) (PoolParams era) ->
   Map (KeyHash 'StakePool era) PerformanceEstimate ->
   Set (KeyHash 'StakePool era)
@@ -339,7 +339,7 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
 
 -- | Reward one pool
 rewardOnePool ::
-  PParams ->
+  PParams era ->
   Coin ->
   Natural ->
   Natural ->
@@ -382,7 +382,7 @@ rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma sigmaA (Coin tot
     rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
 
 reward ::
-  PParams ->
+  PParams era ->
   BlocksMade era ->
   Coin ->
   Set (Credential 'Staking era) ->
@@ -442,7 +442,7 @@ nonMyopicStake ::
   KeyHash 'StakePool era ->
   StakeShare ->
   StakeShare ->
-  PParams ->
+  PParams era ->
   Set (KeyHash 'StakePool era) ->
   StakeShare
 nonMyopicStake kh (StakeShare sigma) (StakeShare s) pp topPools =
@@ -452,7 +452,7 @@ nonMyopicStake kh (StakeShare sigma) (StakeShare s) pp topPools =
         else StakeShare s
 
 nonMyopicMemberRew ::
-  PParams ->
+  PParams era ->
   PoolParams era ->
   Coin ->
   StakeShare ->

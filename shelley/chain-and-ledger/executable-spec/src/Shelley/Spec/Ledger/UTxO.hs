@@ -233,7 +233,7 @@ balance (UTxO utxo) = Map.foldl' addCoins mempty utxo
 -- Note that this is not an issue for key registrations since subsequent
 -- registration certificates would be invalid.
 totalDeposits ::
-  PParams ->
+  PParams era ->
   Map (KeyHash 'StakePool era) (PoolParams era) ->
   [DCert era] ->
   Coin

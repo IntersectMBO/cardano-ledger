@@ -77,7 +77,7 @@ import Shelley.Spec.Ledger.Slot (SlotNo)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView era = LedgerView
-  { lvProtParams :: PParams,
+  { lvProtParams :: PParams era,
     lvOverlaySched :: OverlaySchedule era,
     lvPoolDistr :: PoolDistr era,
     lvGenDelegs :: GenDelegs era
@@ -268,6 +268,8 @@ deriving instance (Era era) => Show (ChainTransitionError era)
 
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::
+  forall c.
+  (Era c) =>
   Globals ->
   LedgerView c ->
   -- | Are we in a new epoch?
@@ -284,7 +286,7 @@ tickChainDepState
       err = error "Panic! tickChainDepState failed."
       newTickState =
         fromRight err . flip runReader globals
-          . applySTS @STS.Tickn.TICKN
+          . applySTS @(STS.Tickn.TICKN c)
           $ TRC
             ( STS.Tickn.TicknEnv
                 lvProtParams
