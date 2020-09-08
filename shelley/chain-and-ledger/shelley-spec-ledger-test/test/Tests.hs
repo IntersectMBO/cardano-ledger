@@ -1,7 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
-import Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests (nonTracePropertyTests)
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (chainExamples)
@@ -34,7 +33,6 @@ nightlyTests =
   testGroup
     "Ledger with Delegation nightly"
     [ propertyTests,
-      nonTracePropertyTests,
       Serialisation.tests 50
     ]
 
