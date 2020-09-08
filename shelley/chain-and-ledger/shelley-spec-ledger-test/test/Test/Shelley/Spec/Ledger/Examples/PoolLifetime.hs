@@ -654,7 +654,6 @@ nonMyopicEx8 =
   NonMyopic
     (Map.singleton (hk Cast.alicePoolKeys) alicePerfEx8)
     rewardPot8
-    snapEx3
 
 rewardUpdateEx8 :: forall era. Era era => RewardUpdate era
 rewardUpdateEx8 =
@@ -877,7 +876,6 @@ nonMyopicEx11 =
   NonMyopic
     (Map.singleton (hk Cast.alicePoolKeys) (alicePerfEx11 @era))
     (Coin 0)
-    snapEx5
 
 rewardUpdateEx11 :: forall era. Era era => RewardUpdate era
 rewardUpdateEx11 =
