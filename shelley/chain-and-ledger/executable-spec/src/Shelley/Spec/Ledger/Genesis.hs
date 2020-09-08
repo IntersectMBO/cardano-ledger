@@ -7,6 +7,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -78,7 +79,8 @@ data ShelleyGenesisStaking c = ShelleyGenesisStaking
     sgsStake :: !(Map (KeyHash 'Staking c) (KeyHash 'StakePool c))
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (NoUnexpectedThunks)
+
+instance NoUnexpectedThunks (ShelleyGenesisStaking era)
 
 -- | Empty genesis staking
 emptyGenesisStaking :: ShelleyGenesisStaking c
@@ -112,7 +114,8 @@ data ShelleyGenesis c = ShelleyGenesis
     sgStaking :: !(ShelleyGenesisStaking c)
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (NoUnexpectedThunks)
+
+deriving instance (Era era) => NoUnexpectedThunks (ShelleyGenesis era)
 
 sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff =

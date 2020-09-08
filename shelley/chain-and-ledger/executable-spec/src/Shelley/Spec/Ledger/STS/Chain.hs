@@ -136,7 +136,7 @@ data ChainState era = ChainState
   }
   deriving (Show, Eq, Generic)
 
-instance NFData (ChainState era)
+instance (Era era) => NFData (ChainState era)
 
 data ChainPredicateFailure era
   = HeaderSizeTooLargeCHAIN

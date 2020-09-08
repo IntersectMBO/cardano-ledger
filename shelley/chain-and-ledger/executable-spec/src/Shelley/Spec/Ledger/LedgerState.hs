@@ -417,7 +417,7 @@ data EpochState era = EpochState
 
 instance NoUnexpectedThunks (EpochState era)
 
-instance NFData (EpochState era)
+instance (Era era) => NFData (EpochState era)
 
 instance Era era => ToCBOR (EpochState era) where
   toCBOR (EpochState a s l r p n) =
@@ -551,7 +551,7 @@ data NewEpochState era = NewEpochState
   }
   deriving (Show, Eq, Generic)
 
-instance NFData (NewEpochState era)
+instance (Era era) => NFData (NewEpochState era)
 
 instance NoUnexpectedThunks (NewEpochState era)
 
@@ -602,7 +602,7 @@ data LedgerState era = LedgerState
 
 instance NoUnexpectedThunks (LedgerState era)
 
-instance NFData (LedgerState era)
+instance (Era era) => NFData (LedgerState era)
 
 instance Era era => ToCBOR (LedgerState era) where
   toCBOR (LedgerState u dp) =

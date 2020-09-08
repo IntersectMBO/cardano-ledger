@@ -102,7 +102,7 @@ instance Embed (UTxO era) (Map (TxIn era) (TxOut era)) where
 
 -- | The unspent transaction outputs.
 newtype UTxO era = UTxO {unUTxO :: Map (TxIn era) (TxOut era)}
-  deriving (Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+  deriving (Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
   deriving (Show) via Quiet (UTxO era)
 
 instance Relation (UTxO era) where
