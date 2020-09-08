@@ -104,7 +104,7 @@ initStUpdates = initSt initUTxO
 -- Block 1, Slot 10, Epoch 0
 --
 
-ppVoteA :: PParamsUpdate
+ppVoteA :: PParamsUpdate era
 ppVoteA =
   PParams
     { _minfeeA = SNothing,
@@ -126,7 +126,7 @@ ppVoteA =
       _minPoolCost = SNothing
     }
 
-collectVotes :: Era era => PParamsUpdate -> [Int] -> ProposedPPUpdates era
+collectVotes :: Era era => PParamsUpdate era -> [Int] -> ProposedPPUpdates era
 collectVotes vote =
   ProposedPPUpdates . Map.fromList . (fmap (\n -> (hashKey $ coreNodeVK n, vote)))
 
@@ -276,7 +276,7 @@ updates2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 -- Block 3, Slot 80, Epoch 0
 --
 
-ppVoteB :: PParamsUpdate
+ppVoteB :: PParamsUpdate era
 ppVoteB =
   PParams
     { _minfeeA = SNothing,
@@ -384,7 +384,7 @@ blockEx4 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 110) 0 (KESPeriod 0))
 
-ppExUpdated :: PParams
+ppExUpdated :: PParams era
 ppExUpdated = ppEx {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 123}
 
 expectedStEx4 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era

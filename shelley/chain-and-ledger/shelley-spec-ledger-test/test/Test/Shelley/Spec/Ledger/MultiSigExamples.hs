@@ -189,7 +189,7 @@ genesis = genesisState genDelegs0 utxo0
           TxOut Cast.bobAddr bobInitCoin
         ]
 
-initPParams :: PParams
+initPParams :: PParams era
 initPParams = emptyPParams {_maxTxSize = 1000}
 
 -- | Create an initial UTxO state where Alice has 'aliceInitCoin' and Bob

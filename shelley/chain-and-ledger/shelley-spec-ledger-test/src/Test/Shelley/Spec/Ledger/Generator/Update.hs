@@ -86,7 +86,7 @@ genIntervalInThousands :: HasCallStack => Word64 -> Word64 -> Gen UnitInterval
 genIntervalInThousands lower upper =
   unsafeMkUnitInterval <$> genRatioWord64InThousands lower upper
 
-genPParams :: HasCallStack => Constants -> Gen PParams
+genPParams :: HasCallStack => Constants -> Gen (PParams era)
 genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
   mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
     <*> genNatural 0 maxMinFeeB -- _minfeeB
@@ -193,7 +193,7 @@ genMinPoolCost = Coin <$> genInteger 10 50
 -- Increments the Major or Minor versions and possibly the Alt version.
 genNextProtocolVersion ::
   HasCallStack =>
-  PParams ->
+  PParams era ->
   Gen ProtVer
 genNextProtocolVersion pp = do
   QC.elements
@@ -208,7 +208,7 @@ genNextProtocolVersion pp = do
 genPPUpdate ::
   HasCallStack =>
   Constants ->
-  PParams ->
+  PParams era ->
   [KeyHash 'Genesis h] ->
   Gen (ProposedPPUpdates h)
 genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) pp genesisKeys = do
@@ -260,7 +260,7 @@ genUpdateForNodes ::
   SlotNo ->
   EpochNo -> -- current epoch
   [KeyPair 'Genesis era] ->
-  PParams ->
+  PParams era ->
   Gen (Maybe (Update era))
 genUpdateForNodes c s e coreKeys pp =
   Just <$> (Update <$> genPPUpdate_ <*> pure e')
@@ -276,7 +276,7 @@ genUpdate ::
   SlotNo ->
   [(GenesisKeyPair era, AllIssuerKeys era 'GenesisDelegate)] ->
   Map (KeyHash 'GenesisDelegate era) (AllIssuerKeys era 'GenesisDelegate) ->
-  PParams ->
+  PParams era ->
   (UTxOState era, DPState era) ->
   Gen (Maybe (Update era), [KeyPair 'Witness era])
 genUpdate

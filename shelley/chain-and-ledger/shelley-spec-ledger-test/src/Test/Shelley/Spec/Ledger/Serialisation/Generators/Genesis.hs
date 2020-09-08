@@ -158,7 +158,7 @@ genWords n
   | n > 0 = (:) <$> Gen.word8 Range.constantBounded <*> genWords (n -1)
   | otherwise = pure []
 
-genPParams :: Gen PParams
+genPParams :: Gen (PParams era)
 genPParams =
   PParams
     <$> genNatural (Range.linear 0 1000)

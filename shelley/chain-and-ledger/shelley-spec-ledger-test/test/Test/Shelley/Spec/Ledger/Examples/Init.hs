@@ -61,7 +61,7 @@ import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash, unsafeMkUnitInterval
 --       _minUTxOValue = 100
 --     }
 -- @
-ppEx :: PParams
+ppEx :: PParams era
 ppEx =
   emptyPParams
     { _maxBBSize = 50000,

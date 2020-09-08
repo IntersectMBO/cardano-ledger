@@ -86,7 +86,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest' @(MultiSig C) n "multisig_script",
       cddlTest @(Update C) n "update",
       cddlTest @(ProposedPPUpdates C) n "proposed_protocol_parameter_updates",
-      cddlTest @PParamsUpdate n "protocol_param_update",
+      cddlTest @(PParamsUpdate C) n "protocol_param_update",
       cddlTest' @(Tx C) n "transaction",
       cddlTest' @(LaxBlock C) n "block"
     ]

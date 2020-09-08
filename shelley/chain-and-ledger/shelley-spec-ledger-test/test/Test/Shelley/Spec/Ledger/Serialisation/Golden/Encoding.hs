@@ -676,7 +676,7 @@ tests =
               _minUTxOValue = SNothing,
               _minPoolCost = SNothing
             } ::
-            PParamsUpdate
+            PParamsUpdate C
         )
         ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5)),
       -- checkEncodingCBOR "pparams_update_all"
@@ -718,7 +718,7 @@ tests =
                   _minUTxOValue = SJust minUTxOValue,
                   _minPoolCost = SJust minPoolCost
                 } ::
-                PParamsUpdate
+                PParamsUpdate C
             )
             ( (T $ TkMapLen 17)
                 <> (T $ TkWord 0)

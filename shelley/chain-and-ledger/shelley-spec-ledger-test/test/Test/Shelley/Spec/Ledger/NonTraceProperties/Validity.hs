@@ -127,7 +127,7 @@ validNoReplay tx =
     else Valid
 
 -- | Determine if the fee is large enough
-validFee :: forall era. (Era era) => PParams -> Tx era -> Validity
+validFee :: forall era. (Era era) => PParams era -> Tx era -> Validity
 validFee pc tx =
   if needed <= given
     then Valid
@@ -141,7 +141,7 @@ validFee pc tx =
 preserveBalance ::
   (Era era) =>
   Map (KeyHash 'StakePool era) (PoolParams era) ->
-  PParams ->
+  PParams era ->
   TxBody era ->
   UTxOState era ->
   Validity
@@ -168,7 +168,7 @@ validRuleUTXO ::
   (Era era) =>
   RewardAccounts era ->
   Map (KeyHash 'StakePool era) (PoolParams era) ->
-  PParams ->
+  PParams era ->
   SlotNo ->
   Tx era ->
   UTxOState era ->
@@ -233,7 +233,7 @@ validTx ::
   Tx era ->
   GenDelegs era ->
   SlotNo ->
-  PParams ->
+  PParams era ->
   LedgerState era ->
   Validity
 validTx tx d' slot pp l =

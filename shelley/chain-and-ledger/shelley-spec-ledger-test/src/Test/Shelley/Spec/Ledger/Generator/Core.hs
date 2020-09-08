@@ -729,7 +729,7 @@ genesisCoins outs =
 applyTxBody ::
   (Era era) =>
   LedgerState era ->
-  PParams ->
+  PParams era ->
   TxBody era ->
   LedgerState era
 applyTxBody ls pp tx =
