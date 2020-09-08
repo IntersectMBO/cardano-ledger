@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.NonTraceProperties.Serialization where
+module Test.Shelley.Spec.Ledger.Serialisation.StakeRef where
 
 import qualified Data.ByteString.Short as SBS
 import Shelley.Spec.Ledger.Address (Addr (..), deserialiseAddrStakeRef, serialiseAddr)

@@ -9,6 +9,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Block
   ( genBlock,
+    tickChainState,
   )
 where
 

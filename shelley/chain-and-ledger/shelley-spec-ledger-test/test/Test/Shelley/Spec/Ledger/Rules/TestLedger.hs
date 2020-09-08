@@ -14,13 +14,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestLedger
     rewardsSumInvariant,
     rewardsDecreasesByWithdrawals,
     feesNonDecreasing,
-    potsSumIncreaseWdrls,
-    preserveBalance,
-    preserveBalanceRestricted,
-    preserveOutputsTx,
-    eliminateTxInputs,
-    newEntriesAndUniqueTxIns,
-    noDoubleSpend,
     consumedEqualsProduced,
     registeredPoolIsAdded,
     rewardZeroAfterRegPool,
@@ -57,6 +50,7 @@ import Shelley.Spec.Ledger.API
     UTXO,
     UTXOW,
   )
+import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyHash (..),
     KeyRole (..),
@@ -188,50 +182,6 @@ feesNonDecreasing =
     let ssts = map ledgerToUtxoSsts (sourceSignalTargets tr)
      in TestUtxo.feesNonDecreasing ssts
 
-potsSumIncreaseWdrls :: Property
-potsSumIncreaseWdrls =
-  forAllLedgerTrace $ \tr ->
-    let ssts = map ledgerToUtxoSsts (sourceSignalTargets tr)
-     in TestUtxo.potsSumIncreaseWdrls ssts
-
-preserveBalance :: Property
-preserveBalance =
-  forAllLedgerTrace $ \tr ->
-    let ssts = map ledgerToUtxowSsts (sourceSignalTargets tr)
-        pp = ledgerPp (_traceEnv tr)
-     in TestUtxow.preserveBalance pp ssts
-
-preserveBalanceRestricted :: Property
-preserveBalanceRestricted =
-  forAllLedgerTrace $ \tr ->
-    let ssts = map ledgerToUtxowSsts (sourceSignalTargets tr)
-        pp = ledgerPp (_traceEnv tr)
-     in TestUtxow.preserveBalanceRestricted pp ssts
-
-preserveOutputsTx :: Property
-preserveOutputsTx =
-  forAllLedgerTrace $ \tr ->
-    let ssts = map ledgerToUtxoSsts (sourceSignalTargets tr)
-     in TestUtxow.preserveOutputsTx ssts
-
-eliminateTxInputs :: Property
-eliminateTxInputs =
-  forAllLedgerTrace $ \tr ->
-    let ssts = map ledgerToUtxoSsts (sourceSignalTargets tr)
-     in TestUtxow.eliminateTxInputs ssts
-
-newEntriesAndUniqueTxIns :: Property
-newEntriesAndUniqueTxIns =
-  forAllLedgerTrace $ \tr ->
-    let ssts = map ledgerToUtxoSsts (sourceSignalTargets tr)
-     in TestUtxow.newEntriesAndUniqueTxIns ssts
-
-noDoubleSpend :: Property
-noDoubleSpend =
-  forAllLedgerTrace $ \tr ->
-    let ssts = map ledgerToUtxoSsts (sourceSignalTargets tr)
-     in TestUtxow.noDoubleSpend ssts
-
 requiredMSigSignaturesSubset :: Property
 requiredMSigSignaturesSubset =
   forAllLedgerTrace $ \tr ->
@@ -339,16 +289,19 @@ ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
 ledgerToPoolTrace :: Trace (LEDGER C) -> Trace (POOL C)
 ledgerToPoolTrace ledgerTr =
   runShelleyBase $
-    Trace.closure @(POOL C) poolEnv poolSt0 (certs txs)
+    Trace.closure @(POOL C) poolEnv poolSt0 poolCerts
   where
     txs = traceSignals NewestFirst ledgerTr
     certs = concatMap (toList . _certs . _body)
+    poolCerts = filter poolCert (certs txs)
     poolEnv =
       let (LedgerEnv s _ pp _) = _traceEnv ledgerTr
        in PoolEnv s pp
     poolSt0 =
       let (_, DPState _ poolSt0_) = _traceInitState ledgerTr
        in poolSt0_
+    poolCert (DCertPool _) = True
+    poolCert _ = False
 
 -- | Transform a LEDGER Trace to a DELEG Trace by extracting the certificates
 -- from the LEDGER transactions and then reconstructing a new DELEG trace from

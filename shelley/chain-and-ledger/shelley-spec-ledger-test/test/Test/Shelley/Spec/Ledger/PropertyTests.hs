@@ -8,7 +8,6 @@ import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
-import Test.Shelley.Spec.Ledger.NonTraceProperties.Serialization
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
     onlyValidLedgerSignalsAreGenerated,
@@ -16,6 +15,7 @@ import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   )
 import Test.Shelley.Spec.Ledger.Rules.TestChain
   ( adaPreservationChain,
+    collisionFreeComplete,
     constantSumPots,
     nonNegativeDeposits,
     removedAfterPoolreap,
@@ -24,17 +24,10 @@ import Test.Shelley.Spec.Ledger.Rules.TestLedger
   ( consumedEqualsProduced,
     credentialMappingAfterDelegation,
     credentialRemovedAfterDereg,
-    eliminateTxInputs,
     feesNonDecreasing,
-    newEntriesAndUniqueTxIns,
-    noDoubleSpend,
     pStateIsInternallyConsistent,
     poolIsMarkedForRetirement,
     poolRetireInEpoch,
-    potsSumIncreaseWdrls,
-    preserveBalance,
-    preserveBalanceRestricted,
-    preserveOutputsTx,
     prop_MIRValuesEndUpInMap,
     prop_MIRentriesEndUpInMap,
     registeredPoolIsAdded,
@@ -42,6 +35,10 @@ import Test.Shelley.Spec.Ledger.Rules.TestLedger
     rewardZeroAfterRegPool,
     rewardsDecreasesByWithdrawals,
     rewardsSumInvariant,
+  )
+import Test.Shelley.Spec.Ledger.Serialisation.StakeRef
+  ( propDeserializeAddrStakeReference,
+    propDeserializeAddrStakeReferenceShortIncrediblyLongName,
   )
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
@@ -80,14 +77,7 @@ propertyTests =
       testGroup
         "STS Rules - Utxo Properties"
         [ TQC.testProperty "the value consumed by UTXO is equal to the value produced in DELEGS" consumedEqualsProduced,
-          TQC.testProperty "transaction fees are non-decreasing" feesNonDecreasing,
-          TQC.testProperty "sum of circulation, deposits and fees increases by the sum of tx withdrawals" potsSumIncreaseWdrls,
-          TQC.testProperty "preserve the balance in a transaction" preserveBalance,
-          TQC.testProperty "preserve tx balance restricted to TxIns and TxOuts" preserveBalanceRestricted,
-          TQC.testProperty "preserve transaction outputs" preserveOutputsTx,
-          TQC.testProperty "consumed inputs are eliminated" eliminateTxInputs,
-          TQC.testProperty "new tx entries are included and all txIds are new" newEntriesAndUniqueTxIns,
-          TQC.testProperty "no double spend" noDoubleSpend
+          TQC.testProperty "transaction fees are non-decreasing" feesNonDecreasing
         ],
       testGroup
         "STS Rules - Pool Properties"
@@ -125,8 +115,11 @@ propertyTests =
       testGroup
         "STS Rules - NewEpoch Properties"
         [ TQC.testProperty
-            "total amount of Ada is preserved"
-            adaPreservationChain
+            "collection of Ada preservation properties"
+            adaPreservationChain,
+          TQC.testProperty
+            "inputs are eliminated, outputs added to utxo and TxIds are unique"
+            collisionFreeComplete
         ],
       testGroup
         "STS Rules - MIR certificates"
