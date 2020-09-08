@@ -30,7 +30,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Crypto (HASH, KES)
 import Cardano.Ledger.Era
-import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalFormNamed (..), forceElemsToWHNF)
+import Cardano.Prelude (NoUnexpectedThunks, forceElemsToWHNF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -114,9 +114,9 @@ data ShelleyGenesis c = ShelleyGenesis
     sgInitialFunds :: !(Map (Addr c) Coin),
     sgStaking :: !(ShelleyGenesisStaking c)
   }
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
 
-deriving via UseIsNormalFormNamed "ShelleyGenesis" (ShelleyGenesis era) instance (Era era) => NoUnexpectedThunks (ShelleyGenesis era)
+deriving instance (Era era) => NoUnexpectedThunks (ShelleyGenesis era)
 
 sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff =

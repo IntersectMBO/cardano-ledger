@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
@@ -206,8 +207,7 @@ data PoolMetaData = PoolMetaData
   }
   deriving (Eq, Ord, Generic, Show)
 
-instance NFData PoolMetaData where
-  rnf (PoolMetaData url bs) = seq (rnf url) (rnf bs)
+deriving instance NFData PoolMetaData
 
 instance ToJSON PoolMetaData where
   toJSON pmd =
@@ -338,29 +338,7 @@ data PoolParams era = PoolParams
 
 instance NoUnexpectedThunks (PoolParams era)
 
-instance NFData (PoolParams era) where
-  rnf (PoolParams a b c d e f g h i) =
-    seq
-      (rnf a)
-      ( seq
-          (rnf b)
-          ( seq
-              (rnf c)
-              ( seq
-                  (rnf d)
-                  ( seq
-                      (rnf e)
-                      ( seq
-                          (rnf f)
-                          ( seq
-                              (rnf g)
-                              (seq (rnf h) (rnf i))
-                          )
-                      )
-                  )
-              )
-          )
-      )
+deriving instance NFData (PoolParams era)
 
 newtype Wdrl era = Wdrl {unWdrl :: Map (RewardAcnt era) Coin}
   deriving (Show, Eq, Generic)
@@ -409,8 +387,7 @@ deriving newtype instance Era era => ToCBOR (TxId era)
 
 deriving newtype instance Era era => FromCBOR (TxId era)
 
-instance (Era era) => NFData (TxId era) where
-  rnf (TxId hs) = rnf hs
+deriving newtype instance (Era era) => NFData (TxId era)
 
 -- | The input of a UTxO.
 data TxIn era = TxInCompact {-# UNPACK #-} !(TxId era) {-# UNPACK #-} !Word64
@@ -438,8 +415,7 @@ deriving instance Eq (TxIn era)
 
 deriving instance Show (TxIn era)
 
-instance (Era era) => NFData (TxIn era) where
-  rnf (TxInCompact i ind) = seq (rnf i) (rnf ind)
+deriving instance (Era era) => NFData (TxIn era)
 
 instance NoUnexpectedThunks (TxIn era)
 
@@ -514,7 +490,7 @@ data GenesisDelegCert era
 data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq)
 
-deriving via UseIsNormalFormNamed "MIRPot" MIRPot instance NoUnexpectedThunks MIRPot
+deriving instance NoUnexpectedThunks MIRPot
 
 instance ToCBOR MIRPot where
   toCBOR ReservesMIR = toCBOR (0 :: Word8)
