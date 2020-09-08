@@ -78,17 +78,35 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 
 -- ==========================================================
 
-eqf :: String -> (Map.Map Int Int -> Map.Map Int Int -> Bool) -> Int -> Benchmark
-eqf name f n = bgroup (name ++ " " ++ show n) (map runat [n, n * 10, n * 100, n * 1000])
+eqf ::
+  String ->
+  (Map.Map Int Int -> Map.Map Int Int -> Bool) ->
+  Int ->
+  Benchmark
+eqf name f n =
+  bgroup
+    (name ++ " " ++ show n)
+    (map runat [n, n * 10, n * 100, n * 1000])
   where
-    runat m = env (return $ Map.fromList [(k, k) | k <- [1 .. m]]) (\state -> bench (show m) (whnf (f state) state))
+    runat m =
+      env
+        ( return $
+            Map.fromList
+              [ (k, k)
+                | k <- [1 .. m]
+              ]
+        )
+        (\state -> bench (show m) (whnf (f state) state))
 
 mainEq :: IO ()
 mainEq =
   defaultMain $
     [ bgroup "KeysEqual tests" $
         [ eqf "keysEqual" keysEqual (100 :: Int),
-          eqf "keys x == keys y" (\x y -> Map.keys x == Map.keys y) (100 :: Int)
+          eqf
+            "keys x == keys y"
+            (\x y -> Map.keys x == Map.keys y)
+            (100 :: Int)
         ]
     ]
 
@@ -135,7 +153,11 @@ profileCreateRegKeys = do
 profileNkeysMPools :: IO ()
 profileNkeysMPools = do
   putStrLn "Enter N keys and M Pools"
-  let unit = ledgerDelegateManyKeysOnePool 50 500 (ledgerStateWithNkeysMpools 5000 500)
+  let unit =
+        ledgerDelegateManyKeysOnePool
+          50
+          500
+          (ledgerStateWithNkeysMpools 5000 500)
   putStrLn ("Exit profiling " ++ show unit)
 
 -- ==========================================
@@ -176,12 +198,17 @@ action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 dstate' :: DState C
 pstate' :: PState C
 utxo' :: UTxO C
-(dstate', pstate', utxo') = unsafePerformIO $ QC.generate (genTestCase 1000000 (5000 :: Int))
+(dstate', pstate', utxo') =
+  unsafePerformIO $
+    QC.generate (genTestCase 1000000 (5000 :: Int))
 
 profile_Maps :: Int -> IO ()
 profile_Maps _x = do
   let snap = stakeDistr utxo' dstate' pstate'
-  putStrLn ("Size = " ++ show (Map.size (EB._delegations snap)) ++ " " ++ show (Map.size (_poolParams snap)))
+  putStrLn
+    ( "Size = " ++ show (Map.size (EB._delegations snap)) ++ " "
+        ++ show (Map.size (_poolParams snap))
+    )
 
 {- At least while running in GHCI Maps use less allocation than lists
 *Main> profile_Lists 1
@@ -225,7 +252,9 @@ validGroup =
             bgroup
               "protocol"
               [ bench "updateChainDepState" (nf updateChain arg),
-                bench "updateAndTickChainDepState" (nf updateAndTickChain arg)
+                bench
+                  "updateAndTickChainDepState"
+                  (nf updateAndTickChain arg)
               ]
         ]
 
@@ -335,25 +364,101 @@ main :: IO ()
 main =
   defaultMain $
     [ bgroup "vary input size" $
-        [ varyInput "deregister key" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerDeRegisterStakeKeys,
-          varyInput "register key" (20001, 25001) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerRegisterStakeKeys,
-          varyInput "withdrawal" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerRewardWithdrawals,
-          varyInput "register pool" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredPools ledgerRegisterStakePools,
-          varyInput "reregister pool" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredPools ledgerReRegisterStakePools,
-          varyInput "retire pool" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredPools ledgerRetireStakePools,
-          varyInput "manyKeysOnePool" (5000, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNkeysMpools ledgerDelegateManyKeysOnePool
+        [ varyInput
+            "deregister key"
+            (1, 5000)
+            [(1, 50), (1, 500), (1, 5000)]
+            ledgerStateWithNregisteredKeys
+            ledgerDeRegisterStakeKeys,
+          varyInput
+            "register key"
+            (20001, 25001)
+            [(1, 50), (1, 500), (1, 5000)]
+            ledgerStateWithNregisteredKeys
+            ledgerRegisterStakeKeys,
+          varyInput
+            "withdrawal"
+            (1, 5000)
+            [(1, 50), (1, 500), (1, 5000)]
+            ledgerStateWithNregisteredKeys
+            ledgerRewardWithdrawals,
+          varyInput
+            "register pool"
+            (1, 5000)
+            [(1, 50), (1, 500), (1, 5000)]
+            ledgerStateWithNregisteredPools
+            ledgerRegisterStakePools,
+          varyInput
+            "reregister pool"
+            (1, 5000)
+            [(1, 50), (1, 500), (1, 5000)]
+            ledgerStateWithNregisteredPools
+            ledgerReRegisterStakePools,
+          varyInput
+            "retire pool"
+            (1, 5000)
+            [(1, 50), (1, 500), (1, 5000)]
+            ledgerStateWithNregisteredPools
+            ledgerRetireStakePools,
+          varyInput
+            "manyKeysOnePool"
+            (5000, 5000)
+            [(1, 50), (1, 500), (1, 5000)]
+            ledgerStateWithNkeysMpools
+            ledgerDelegateManyKeysOnePool
         ],
       bgroup "vary initial state" $
-        [ varyState "spendOne" 1 [50, 500, 5000] (\_m n -> initUTxO (fromIntegral n)) (\_m _ -> ledgerSpendOneGivenUTxO),
-          varyState "register key" 5001 [50, 500, 5000] ledgerStateWithNregisteredKeys ledgerRegisterStakeKeys,
-          varyState "deregister key" 50 [50, 500, 5000] ledgerStateWithNregisteredKeys ledgerDeRegisterStakeKeys,
-          varyState "withdrawal" 50 [50, 500, 5000] ledgerStateWithNregisteredKeys ledgerRewardWithdrawals,
-          varyState "register pool" 5001 [50, 500, 5000] ledgerStateWithNregisteredPools ledgerRegisterStakePools,
-          varyState "reregister pool" 5001 [50, 500, 5000] ledgerStateWithNregisteredPools ledgerReRegisterStakePools,
-          varyState "retire pool" 50 [50, 500, 5000] ledgerStateWithNregisteredPools ledgerRetireStakePools,
-          varyDelegState "manyKeysOnePool" 50 [50, 500, 5000] ledgerStateWithNkeysMpools ledgerDelegateManyKeysOnePool
+        [ varyState
+            "spendOne"
+            1
+            [50, 500, 5000]
+            (\_m n -> initUTxO (fromIntegral n))
+            (\_m _ -> ledgerSpendOneGivenUTxO),
+          varyState
+            "register key"
+            5001
+            [50, 500, 5000]
+            ledgerStateWithNregisteredKeys
+            ledgerRegisterStakeKeys,
+          varyState
+            "deregister key"
+            50
+            [50, 500, 5000]
+            ledgerStateWithNregisteredKeys
+            ledgerDeRegisterStakeKeys,
+          varyState
+            "withdrawal"
+            50
+            [50, 500, 5000]
+            ledgerStateWithNregisteredKeys
+            ledgerRewardWithdrawals,
+          varyState
+            "register pool"
+            5001
+            [50, 500, 5000]
+            ledgerStateWithNregisteredPools
+            ledgerRegisterStakePools,
+          varyState
+            "reregister pool"
+            5001
+            [50, 500, 5000]
+            ledgerStateWithNregisteredPools
+            ledgerReRegisterStakePools,
+          varyState
+            "retire pool"
+            50
+            [50, 500, 5000]
+            ledgerStateWithNregisteredPools
+            ledgerRetireStakePools,
+          varyDelegState
+            "manyKeysOnePool"
+            50
+            [50, 500, 5000]
+            ledgerStateWithNkeysMpools
+            ledgerDelegateManyKeysOnePool
         ],
-      bgroup "vary utxo at epoch boundary" $ (epochAt <$> [5000, 50000, 500000]),
+      bgroup "vary utxo at epoch boundary" $
+        (epochAt <$> [5000, 50000, 500000]),
       bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
       validGroup,
       -- Benchmarks for the various generators
