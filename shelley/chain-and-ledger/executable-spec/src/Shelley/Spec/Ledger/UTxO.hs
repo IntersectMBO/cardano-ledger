@@ -8,8 +8,10 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 -- for the Relation instance
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -42,6 +44,7 @@ module Shelley.Spec.Ledger.UTxO
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
@@ -57,7 +60,7 @@ import Data.Typeable (Typeable)
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
-import Shelley.Spec.Ledger.Coin (Coin (..), word64ToCoin)
+import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
@@ -102,8 +105,21 @@ instance Embed (UTxO era) (Map (TxIn era) (TxOut era)) where
 
 -- | The unspent transaction outputs.
 newtype UTxO era = UTxO {unUTxO :: Map (TxIn era) (TxOut era)}
-  deriving (Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
-  deriving (Show) via Quiet (UTxO era)
+  deriving (NoUnexpectedThunks, Generic, NFData)
+
+deriving newtype instance
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
+  ToCBOR (UTxO era)
+
+deriving newtype instance
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
+  FromCBOR (UTxO era)
+
+deriving via
+  Quiet (UTxO era)
+  instance
+    (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+    Show (UTxO era)
 
 instance Relation (UTxO era) where
   type Domain (UTxO era) = TxIn era
@@ -147,14 +163,14 @@ txid = TxId . hashAnnotated
 
 -- | Compute the UTxO inputs of a transaction.
 txins ::
-  Era era =>
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
   TxBody era ->
   Set (TxIn era)
 txins = _inputs
 
 -- | Compute the transaction outputs of a transaction.
 txouts ::
-  Era era =>
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
   TxBody era ->
   UTxO era
 txouts tx =
@@ -219,10 +235,13 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
 -- | Determine the total balance contained in the UTxO.
-balance :: UTxO era -> Coin
-balance (UTxO utxo) = Map.foldl' addCoins mempty utxo
+balance ::
+  (Val.Val (Core.Value era), Core.Compactible (Core.Value era)) =>
+  UTxO era ->
+  Core.Value era
+balance (UTxO utxo) = Map.foldl' addTxOuts mempty utxo
   where
-    addCoins !b (TxOutCompact _ (word64ToCoin -> a)) = a <> b
+    addTxOuts !b (TxOutCompact _ (Core.fromCompact -> a)) = a <> b
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
@@ -248,7 +267,10 @@ getKeyHashFromRegPool :: DCert era -> Maybe (KeyHash 'StakePool era)
 getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolPubKey $ p
 getKeyHashFromRegPool _ = Nothing
 
-txup :: Era era => Tx era -> Maybe (Update era)
+txup ::
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
+  Tx era ->
+  Maybe (Update era)
 txup (Tx txbody _ _) = strictMaybeToMaybe (_txUpdate txbody)
 
 -- | Extract script hash from value address with script.
@@ -274,7 +296,10 @@ scriptCred (ScriptHashObj hs) = Just hs
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
 scriptsNeeded ::
-  Era era =>
+  ( Era era,
+    Core.Compactible (Core.Value era),
+    ToCBOR (Core.CompactForm (Core.Value era))
+  ) =>
   UTxO era ->
   Tx era ->
   Set (ScriptHash era)
@@ -292,7 +317,9 @@ scriptsNeeded u tx =
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript ::
-  Era era =>
+  ( Era era,
+    Core.Compactible (Core.Value era)
+  ) =>
   Set (TxIn era) ->
   UTxO era ->
   Set (TxIn era)

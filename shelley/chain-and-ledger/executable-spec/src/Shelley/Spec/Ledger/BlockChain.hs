@@ -15,6 +15,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.BlockChain
   ( HashHeader (..),
@@ -74,6 +75,7 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Prelude
   ( AllowThunksIn (..),
@@ -160,7 +162,7 @@ data TxSeq era = TxSeq'
     txSeqWitsBytes :: LByteString,
     txSeqMetadataBytes :: LByteString
   }
-  deriving (Eq, Show, Generic)
+  deriving (Generic)
   deriving
     (NoUnexpectedThunks)
     via AllowThunksIn
@@ -169,6 +171,10 @@ data TxSeq era = TxSeq'
              "txSeqMetadataBytes"
            ]
           (TxSeq era)
+
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (TxSeq era)
 
 pattern TxSeq :: Era era => StrictSeq (Tx era) -> TxSeq era
 pattern TxSeq xs <-
@@ -496,7 +502,10 @@ bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
 data Block era
   = Block' !(BHeader era) !(TxSeq era) LByteString
-  deriving (Eq, Show)
+
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (Block era)
 
 pattern Block :: Era era => BHeader era -> TxSeq era -> Block era
 pattern Block h txns <-
@@ -522,14 +531,20 @@ instance
   where
   toCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
 
-blockDecoder :: Era era => Bool -> forall s. Decoder s (Annotator (Block era))
+blockDecoder ::
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
+  Bool ->
+  forall s. Decoder s (Annotator (Block era))
 blockDecoder lax = annotatorSlice $
   decodeRecordNamed "Block" (const 4) $ do
     header <- fromCBOR
     txns <- txSeqDecoder lax
     pure $ Block' <$> header <*> txns
 
-txSeqDecoder :: Era era => Bool -> forall s. Decoder s (Annotator (TxSeq era))
+txSeqDecoder ::
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
+  Bool ->
+  forall s. Decoder s (Annotator (TxSeq era))
 txSeqDecoder lax = do
   (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
   (wits, witsAnn) <- withSlice $ decodeSeq decodeWits
@@ -564,18 +579,21 @@ txSeqDecoder lax = do
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 instance
-  Era era =>
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
   FromCBOR (Annotator (Block era))
   where
   fromCBOR = blockDecoder False
 
 newtype LaxBlock era
   = LaxBlock (Block era)
-  deriving (Show, Eq)
   deriving (ToCBOR) via (Block era)
 
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (LaxBlock era)
+
 instance
-  Era era =>
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
   FromCBOR (Annotator (LaxBlock era))
   where
   fromCBOR = fmap LaxBlock <$> blockDecoder True

@@ -1,11 +1,15 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Epoch
   ( EPOCH,
@@ -14,13 +18,14 @@ module Shelley.Spec.Ledger.STS.Epoch
   )
 where
 
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
@@ -55,20 +60,28 @@ data EpochPredicateFailure era
   = PoolReapFailure (PredicateFailure (POOLREAP era)) -- Subtransition Failures
   | SnapFailure (PredicateFailure (SNAP era)) -- Subtransition Failures
   | NewPpFailure (PredicateFailure (NEWPP era)) -- Subtransition Failures
-  deriving (Show, Generic, Eq)
+  deriving (Generic)
 
-instance (Era era, Typeable era) => STS (EPOCH era) where
-  type State (EPOCH era) = EpochState era
-  type Signal (EPOCH era) = EpochNo
-  type Environment (EPOCH era) = ()
-  type BaseM (EPOCH era) = ShelleyBase
-  type PredicateFailure (EPOCH era) = EpochPredicateFailure era
+deriving stock instance
+  (Eq (PredicateFailure (SNAP era))) =>
+  Eq (EpochPredicateFailure era)
+
+deriving stock instance
+  (Show (PredicateFailure (SNAP era))) =>
+  Show (EpochPredicateFailure era)
+
+instance Crypto c => STS (EPOCH (Shelley c)) where
+  type State (EPOCH (Shelley c)) = EpochState (Shelley c)
+  type Signal (EPOCH (Shelley c)) = EpochNo
+  type Environment (EPOCH (Shelley c)) = ()
+  type BaseM (EPOCH (Shelley c)) = ShelleyBase
+  type PredicateFailure (EPOCH (Shelley c)) = EpochPredicateFailure (Shelley c)
   initialRules = [initialEpoch]
   transitionRules = [epochTransition]
 
-instance NoUnexpectedThunks (EpochPredicateFailure era)
+instance NoUnexpectedThunks (EpochPredicateFailure (Shelley c))
 
-initialEpoch :: InitialRule (EPOCH era)
+initialEpoch :: InitialRule (EPOCH (Shelley c))
 initialEpoch =
   pure $
     EpochState
@@ -105,9 +118,11 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
         _ -> Nothing
 
 epochTransition ::
-  forall era.
-  Era era =>
-  TransitionRule (EPOCH era)
+  forall era c.
+  ( Era era,
+    era ~ Shelley c
+  ) =>
+  TransitionRule (EPOCH (Shelley c))
 epochTransition = do
   TRC
     ( _,
@@ -153,11 +168,11 @@ epochTransition = do
       pp'
       nm
 
-instance (Era era, Typeable era) => Embed (SNAP era) (EPOCH era) where
+instance Crypto c => Embed (SNAP (Shelley c)) (EPOCH (Shelley c)) where
   wrapFailed = SnapFailure
 
-instance (Era era, Typeable era) => Embed (POOLREAP era) (EPOCH era) where
+instance Crypto c => Embed (POOLREAP (Shelley c)) (EPOCH (Shelley c)) where
   wrapFailed = PoolReapFailure
 
-instance (Era era, Typeable era) => Embed (NEWPP era) (EPOCH era) where
+instance Crypto c => Embed (NEWPP (Shelley c)) (EPOCH (Shelley c)) where
   wrapFailed = NewPpFailure

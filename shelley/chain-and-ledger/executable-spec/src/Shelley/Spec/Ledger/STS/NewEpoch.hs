@@ -1,8 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,7 +17,9 @@ module Shelley.Spec.Ledger.STS.NewEpoch
   )
 where
 
-import Cardano.Ledger.Era
+import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
@@ -41,22 +45,25 @@ data NewEpochPredicateFailure era
   | CorruptRewardUpdate
       !(RewardUpdate era) -- The reward update which violates an invariant
   | MirFailure (PredicateFailure (MIR era)) -- Subtransition Failures
-  deriving (Show, Generic, Eq)
+  deriving (Generic)
 
-instance NoUnexpectedThunks (NewEpochPredicateFailure era)
+deriving stock instance
+  Show (NewEpochPredicateFailure (Shelley c))
 
-instance
-  Era era =>
-  STS (NEWEPOCH era)
-  where
-  type State (NEWEPOCH era) = NewEpochState era
+deriving stock instance
+  Eq (NewEpochPredicateFailure (Shelley c))
 
-  type Signal (NEWEPOCH era) = EpochNo
+instance NoUnexpectedThunks (NewEpochPredicateFailure (Shelley c))
 
-  type Environment (NEWEPOCH era) = NewEpochEnv era
+instance Crypto c => STS (NEWEPOCH (Shelley c)) where
+  type State (NEWEPOCH (Shelley c)) = NewEpochState (Shelley c)
 
-  type BaseM (NEWEPOCH era) = ShelleyBase
-  type PredicateFailure (NEWEPOCH era) = NewEpochPredicateFailure era
+  type Signal (NEWEPOCH (Shelley c)) = EpochNo
+
+  type Environment (NEWEPOCH (Shelley c)) = NewEpochEnv (Shelley c)
+
+  type BaseM (NEWEPOCH (Shelley c)) = ShelleyBase
+  type PredicateFailure (NEWEPOCH (Shelley c)) = NewEpochPredicateFailure (Shelley c)
 
   initialRules =
     [ pure $
@@ -73,9 +80,9 @@ instance
   transitionRules = [newEpochTransition]
 
 newEpochTransition ::
-  forall era.
-  Era era =>
-  TransitionRule (NEWEPOCH era)
+  forall era c.
+  (Era era, era ~ Shelley c) =>
+  TransitionRule (NEWEPOCH (Shelley c))
 newEpochTransition = do
   TRC
     ( NewEpochEnv _s gkeys,
@@ -122,13 +129,13 @@ calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
    in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
 
 instance
-  Era era =>
-  Embed (EPOCH era) (NEWEPOCH era)
+  Crypto c =>
+  Embed (EPOCH (Shelley c)) (NEWEPOCH (Shelley c))
   where
   wrapFailed = EpochFailure
 
 instance
-  Era era =>
-  Embed (MIR era) (NEWEPOCH era)
+  Crypto c =>
+  Embed (MIR (Shelley c)) (NEWEPOCH (Shelley c))
   where
   wrapFailed = MirFailure

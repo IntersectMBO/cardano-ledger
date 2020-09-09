@@ -11,10 +11,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- |
 -- Module      : LedgerState
@@ -94,7 +96,10 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
@@ -413,17 +418,27 @@ data EpochState era = EpochState
     esPp :: !PParams,
     esNonMyopic :: !(NonMyopic era) -- TODO document this in the formal spec, see github #1319
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (EpochState era)
 
 instance NoUnexpectedThunks (EpochState era)
 
 instance (Era era) => NFData (EpochState era)
 
-instance Era era => ToCBOR (EpochState era) where
+instance
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
+  ToCBOR (EpochState era)
+  where
   toCBOR (EpochState a s l r p n) =
     encodeListLen 6 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR r <> toCBOR p <> toCBOR n
 
-instance Era era => FromCBOR (EpochState era) where
+instance
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
+  FromCBOR (EpochState era)
+  where
   fromCBOR = do
     decodeRecordNamed "EpochState" (const 6) $ do
       a <- fromCBOR
@@ -515,15 +530,25 @@ data UTxOState era = UTxOState
     _fees :: !Coin,
     _ppups :: !(PPUPState era)
   }
-  deriving (Show, Eq, Generic, NFData)
+  deriving (Generic, NFData)
+
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (UTxOState era)
 
 instance NoUnexpectedThunks (UTxOState era)
 
-instance Era era => ToCBOR (UTxOState era) where
+instance
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
+  ToCBOR (UTxOState era)
+  where
   toCBOR (UTxOState ut dp fs us) =
     encodeListLen 4 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us
 
-instance Era era => FromCBOR (UTxOState era) where
+instance
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
+  FromCBOR (UTxOState era)
+  where
   fromCBOR = do
     decodeRecordNamed "UTxOState" (const 4) $ do
       ut <- fromCBOR
@@ -549,20 +574,30 @@ data NewEpochState era = NewEpochState
     -- | Overlay schedule for PBFT vs Praos
     nesOsched :: !(OverlaySchedule era)
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (NewEpochState era)
 
 instance (Era era) => NFData (NewEpochState era)
 
 instance NoUnexpectedThunks (NewEpochState era)
 
-instance Era era => ToCBOR (NewEpochState era) where
+instance
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
+  ToCBOR (NewEpochState era)
+  where
   toCBOR (NewEpochState e bp bc es ru pd os) =
     encodeListLen 7 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
       <> toCBOR ru
       <> toCBOR pd
       <> toCBOR os
 
-instance Era era => FromCBOR (NewEpochState era) where
+instance
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
+  FromCBOR (NewEpochState era)
+  where
   fromCBOR = do
     decodeRecordNamed "NewEpochState" (const 7) $ do
       e <- fromCBOR
@@ -598,17 +633,27 @@ data LedgerState era = LedgerState
     -- | The current delegation state
     _delegationState :: !(DPState era)
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (LedgerState era)
 
 instance NoUnexpectedThunks (LedgerState era)
 
 instance (Era era) => NFData (LedgerState era)
 
-instance Era era => ToCBOR (LedgerState era) where
+instance
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
+  ToCBOR (LedgerState era)
+  where
   toCBOR (LedgerState u dp) =
     encodeListLen 2 <> toCBOR u <> toCBOR dp
 
-instance Era era => FromCBOR (LedgerState era) where
+instance
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
+  FromCBOR (LedgerState era)
+  where
   fromCBOR = do
     decodeRecordNamed "LedgerState" (const 2) $ do
       u <- fromCBOR
@@ -639,7 +684,11 @@ txsize = fromIntegral . BSL.length . txFullBytes
 
 -- | Convenience Function to bound the txsize function.
 -- | It can be helpful for coin selection.
-txsizeBound :: forall era. (Era era) => Tx era -> Integer
+txsizeBound ::
+  forall era.
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
+  Tx era ->
+  Integer
 txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
   where
     uint = 5
@@ -661,22 +710,30 @@ minfee :: PParams -> Tx era -> Coin
 minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_minfeeB pp)
 
 -- | Minimum fee bound using txsizeBound
-minfeeBound :: forall era. (Era era) => PParams -> Tx era -> Coin
-minfeeBound pp tx = Coin $ fromIntegral (_minfeeA pp) * txsizeBound tx + fromIntegral (_minfeeB pp)
+minfeeBound ::
+  forall era.
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
+  PParams ->
+  Tx era ->
+  Coin
+minfeeBound pp tx =
+  Coin $
+    fromIntegral (_minfeeA pp)
+      * txsizeBound tx + fromIntegral (_minfeeB pp)
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
-  (Era era) =>
+  Crypto c =>
   PParams ->
-  Map (KeyHash 'StakePool era) (PoolParams era) ->
-  TxBody era ->
+  Map (KeyHash 'StakePool (Shelley c)) (PoolParams (Shelley c)) ->
+  TxBody (Shelley c) ->
   Coin
 produced pp stakePools tx =
   balance (txouts tx) <> _txfee tx <> totalDeposits pp stakePools (toList $ _certs tx)
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
-  Era era =>
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
   PParams ->
   TxBody era ->
   Coin
@@ -686,10 +743,10 @@ keyRefunds pp tx = Val.scale (length deregistrations) (_keyDeposit pp)
 
 -- | Compute the lovelace which are destroyed by the transaction
 consumed ::
-  Era era =>
+  Crypto c =>
   PParams ->
-  UTxO era ->
-  TxBody era ->
+  UTxO (Shelley c) ->
+  TxBody (Shelley c) ->
   Coin
 consumed pp u tx =
   balance (eval (txins tx ◁ u)) <> refunds <> withdrawals
@@ -727,7 +784,10 @@ witsFromWitnessSet (WitnessSet aWits _ bsWits) =
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded ::
   forall era.
-  Era era =>
+  ( Era era,
+    Core.Compactible (Core.Value era),
+    ToCBOR (Core.CompactForm (Core.Value era))
+  ) =>
   UTxO era ->
   Tx era ->
   GenDelegs era ->
@@ -814,7 +874,7 @@ propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
 
 -- | Calculate the change to the deposit pool for a given transaction.
 depositPoolChange ::
-  Era era =>
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
   LedgerState era ->
   PParams ->
   TxBody era ->
@@ -845,6 +905,9 @@ reapRewards dStateRewards withdrawals =
 
 stakeDistr ::
   forall era.
+  ( (Core.Compactible (Core.Value era)),
+    Val.Val (Core.Value era)
+  ) =>
   Era era =>
   UTxO era ->
   DState era ->

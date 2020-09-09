@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.Coin
   ( Coin (..),
@@ -12,6 +13,7 @@ module Shelley.Spec.Ledger.Coin
 where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
@@ -62,3 +64,8 @@ instance FromCBOR Coin where
     if isValidCoinValue c
       then pure (Coin c)
       else cborError $ DecoderErrorCustom "Invalid Coin Value" (pack $ show c)
+
+instance Core.Compactible Coin where
+  type CompactForm Coin = Word64
+  toCompact = fromIntegral . unCoin
+  fromCompact = word64ToCoin

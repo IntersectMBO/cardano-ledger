@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,6 +9,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -25,7 +27,10 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
@@ -49,7 +54,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address
@@ -132,12 +136,20 @@ data UtxoPredicateFailure era
   | UpdateFailure (PredicateFailure (PPUP era)) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
       ![TxOut era] -- list of supplied bad transaction outputs
-  deriving (Eq, Show, Generic)
+  deriving (Generic)
+
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (UtxoPredicateFailure era)
+
+deriving stock instance
+  (Era era, Eq (Core.CompactForm (Core.Value era))) =>
+  Eq (UtxoPredicateFailure era)
 
 instance NoUnexpectedThunks (UtxoPredicateFailure era)
 
 instance
-  (Typeable era, Era era) =>
+  (Era era, ToCBOR (Core.CompactForm (Core.Value era))) =>
   ToCBOR (UtxoPredicateFailure era)
   where
   toCBOR = \case
@@ -179,7 +191,7 @@ instance
         <> encodeFoldable outs
 
 instance
-  (Era era) =>
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
   FromCBOR (UtxoPredicateFailure era)
   where
   fromCBOR =
@@ -225,14 +237,14 @@ instance
         k -> invalidKey k
 
 instance
-  (Era era) =>
-  STS (UTXO era)
+  (Crypto c) =>
+  STS (UTXO (Shelley c))
   where
-  type State (UTXO era) = UTxOState era
-  type Signal (UTXO era) = Tx era
-  type Environment (UTXO era) = UtxoEnv era
-  type BaseM (UTXO era) = ShelleyBase
-  type PredicateFailure (UTXO era) = UtxoPredicateFailure era
+  type State (UTXO (Shelley c)) = UTxOState (Shelley c)
+  type Signal (UTXO (Shelley c)) = Tx (Shelley c)
+  type Environment (UTXO (Shelley c)) = UtxoEnv (Shelley c)
+  type BaseM (UTXO (Shelley c)) = ShelleyBase
+  type PredicateFailure (UTXO (Shelley c)) = UtxoPredicateFailure (Shelley c)
 
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -263,15 +275,15 @@ instance
             )
     ]
 
-initialLedgerState :: InitialRule (UTXO era)
+initialLedgerState :: InitialRule (UTXO (Shelley c))
 initialLedgerState = do
   IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
-  forall era.
-  Era era =>
-  TransitionRule (UTXO era)
+  forall c era.
+  (Era era, era ~ Shelley c) =>
+  TransitionRule (UTXO (Shelley c))
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo deposits' fees ppup = u
@@ -334,7 +346,7 @@ utxoInductive = do
       }
 
 instance
-  Era era =>
-  Embed (PPUP era) (UTXO era)
+  Crypto c =>
+  Embed (PPUP (Shelley c)) (UTXO (Shelley c))
   where
   wrapFailed = UpdateFailure

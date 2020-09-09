@@ -1,13 +1,17 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Delegs
   ( DELEGS,
@@ -22,7 +26,10 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans, (?!), (?!:))
@@ -74,7 +81,10 @@ data DelegsEnv era = DelegsEnv
     delegsTx :: (Tx era),
     delegsAccount :: AccountState
   }
-  deriving (Show)
+
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (DelegsEnv era)
 
 data DelegsPredicateFailure era
   = DelegateeNotRegisteredDELEG
@@ -85,27 +95,33 @@ data DelegsPredicateFailure era
   deriving (Show, Eq, Generic)
 
 instance
-  Era era =>
-  STS (DELEGS era)
+  Crypto c =>
+  STS (DELEGS (Shelley c))
   where
-  type State (DELEGS era) = DPState era
-  type Signal (DELEGS era) = Seq (DCert era)
-  type Environment (DELEGS era) = DelegsEnv era
-  type BaseM (DELEGS era) = ShelleyBase
-  type PredicateFailure (DELEGS era) = DelegsPredicateFailure era
+  type State (DELEGS (Shelley c)) = DPState (Shelley c)
+  type Signal (DELEGS (Shelley c)) = Seq (DCert (Shelley c))
+  type Environment (DELEGS (Shelley c)) = DelegsEnv (Shelley c)
+  type BaseM (DELEGS (Shelley c)) = ShelleyBase
+  type PredicateFailure (DELEGS (Shelley c)) = DelegsPredicateFailure (Shelley c)
 
   initialRules = [pure emptyDelegation]
   transitionRules = [delegsTransition]
 
-instance NoUnexpectedThunks (DelegsPredicateFailure era)
+instance NoUnexpectedThunks (DelegsPredicateFailure (Shelley c))
 
 instance
   (Typeable era, Era era) =>
   ToCBOR (DelegsPredicateFailure era)
   where
   toCBOR = \case
-    DelegateeNotRegisteredDELEG kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
-    WithdrawalsNotInRewardsDELEGS ws -> encodeListLen 2 <> toCBOR (1 :: Word8) <> mapToCBOR ws
+    DelegateeNotRegisteredDELEG kh ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR kh
+    WithdrawalsNotInRewardsDELEGS ws ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> mapToCBOR ws
     (DelplFailure a) ->
       encodeListLen 2 <> toCBOR (2 :: Word8)
         <> toCBOR a
@@ -131,7 +147,15 @@ instance
 
 delegsTransition ::
   forall era.
-  Era era =>
+  ( Era era,
+    BaseM (DELEGS era) ~ ShelleyBase,
+    Environment (DELEGS era) ~ DelegsEnv era,
+    State (DELEGS era) ~ DPState era,
+    PredicateFailure (DELEGS era) ~ DelegsPredicateFailure era,
+    Signal (DELEGS era) ~ Seq (DCert era),
+    ToCBOR (Core.CompactForm (Core.Value era)),
+    Embed (DELPL era) (DELEGS era)
+  ) =>
   TransitionRule (DELEGS era)
 delegsTransition = do
   TRC (env@(DelegsEnv slot txIx pp tx acnt), dpstate, certificates) <- judgmentContext
@@ -191,7 +215,7 @@ delegsTransition = do
             ]
 
 instance
-  Era era =>
-  Embed (DELPL era) (DELEGS era)
+  (Crypto c) =>
+  Embed (DELPL (Shelley c)) (DELEGS (Shelley c))
   where
   wrapFailed = DelplFailure

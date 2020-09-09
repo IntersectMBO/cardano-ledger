@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.Genesis
@@ -27,6 +28,7 @@ where
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH, KES)
 import Cardano.Ledger.Era
 import Cardano.Prelude (NoUnexpectedThunks, forceElemsToWHNF)
@@ -188,7 +190,10 @@ instance Era era => FromJSON (ShelleyGenesisStaking era) where
   Genesis UTxO
 -------------------------------------------------------------------------------}
 
-genesisUtxO :: Era era => ShelleyGenesis era -> UTxO era
+genesisUtxO ::
+  (Era era, Core.Value era ~ Coin) =>
+  ShelleyGenesis era ->
+  UTxO era
 genesisUtxO genesis =
   UTxO $
     Map.fromList

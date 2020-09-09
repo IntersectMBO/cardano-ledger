@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -14,6 +15,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.Tx
   ( -- transaction
@@ -66,6 +68,7 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Prelude
   ( AllowThunksIn (..),
@@ -184,13 +187,20 @@ data Tx era = Tx'
     _metadata' :: !(StrictMaybe MetaData),
     txFullBytes :: LByteString
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
   deriving
     (NoUnexpectedThunks)
     via AllowThunksIn
           '[ "txFullBytes"
            ]
           (Tx era)
+
+deriving instance
+  ( Era era,
+    Core.Compactible (Core.Value era),
+    Show (Core.Value era)
+  ) =>
+  Show (Tx era)
 
 pattern Tx ::
   Era era =>
@@ -291,7 +301,10 @@ instance
   where
   toCBOR tx = encodePreEncoded . BSL.toStrict $ txFullBytes tx
 
-instance Era era => FromCBOR (Annotator (Tx era)) where
+instance
+  (Era era, FromCBOR (Core.CompactForm (Core.Value era))) =>
+  FromCBOR (Annotator (Tx era))
+  where
   fromCBOR = annotatorSlice $
     decodeRecordNamed "Tx" (const 3) $ do
       body <- fromCBOR

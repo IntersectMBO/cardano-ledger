@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -25,7 +27,9 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( Assertion (..),
@@ -38,7 +42,6 @@ import Control.State.Transition
     trans,
   )
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
@@ -75,10 +78,15 @@ data LedgerEnv = LedgerEnv
 data LedgerPredicateFailure era
   = UtxowFailure (PredicateFailure (UTXOW era)) -- Subtransition Failures
   | DelegsFailure (PredicateFailure (DELEGS era)) -- Subtransition Failures
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving stock instance Crypto c => Show (LedgerPredicateFailure (Shelley c))
+
+deriving stock instance Crypto c => Eq (LedgerPredicateFailure (Shelley c))
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (Hash era (TxBody era))
   ) =>
   STS (LEDGER era)
@@ -111,19 +119,19 @@ instance
         )
     ]
 
-instance (Era era) => NoUnexpectedThunks (LedgerPredicateFailure era)
+instance Crypto c => NoUnexpectedThunks (LedgerPredicateFailure (Shelley c))
 
 instance
-  (Typeable era, Era era) =>
-  ToCBOR (LedgerPredicateFailure era)
+  (Crypto c) =>
+  ToCBOR (LedgerPredicateFailure (Shelley c))
   where
   toCBOR = \case
     (UtxowFailure a) -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR a
     (DelegsFailure a) -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR a
 
 instance
-  (Era era) =>
-  FromCBOR (LedgerPredicateFailure era)
+  (Crypto c) =>
+  FromCBOR (LedgerPredicateFailure (Shelley c))
   where
   fromCBOR =
     decodeRecordSum "PredicateFailure (LEDGER era)" $
@@ -138,8 +146,9 @@ instance
       )
 
 ledgerTransition ::
-  forall era.
+  forall era c.
   ( Era era,
+    era ~ Shelley c,
     DSignable era (Hash era (TxBody era))
   ) =>
   TransitionRule (LEDGER era)
@@ -169,6 +178,7 @@ ledgerTransition = do
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (Hash era (TxBody era))
   ) =>
   Embed (DELEGS era) (LEDGER era)
@@ -177,6 +187,7 @@ instance
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (Hash era (TxBody era))
   ) =>
   Embed (UTXOW era) (LEDGER era)

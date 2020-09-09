@@ -1,11 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -23,8 +25,11 @@ module Shelley.Spec.Ledger.STS.Chain
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
+import qualified Cardano.Ledger.Crypto as Crypto (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Prelude
   ( MonadError (..),
     NFData,
@@ -134,7 +139,11 @@ data ChainState era = ChainState
     chainPrevEpochNonce :: Nonce,
     chainLastAppliedBlock :: WithOrigin (LastAppliedBlock era)
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (ChainState era)
 
 instance (Era era) => NFData (ChainState era)
 
@@ -153,7 +162,11 @@ data ChainPredicateFailure era
   | TicknFailure !(PredicateFailure TICKN) -- Subtransition Failures
   | PrtclFailure !(PredicateFailure (PRTCL era)) -- Subtransition Failures
   | PrtclSeqFailure !(PrtlSeqFailure era) -- Subtransition Failures
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving stock instance Crypto.Crypto c => Show (ChainPredicateFailure (Shelley c))
+
+deriving stock instance Crypto.Crypto c => Eq (ChainPredicateFailure (Shelley c))
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
@@ -203,6 +216,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (OCertSignable era),
     DSignable era (Hash era (TxBody era)),
     KESignable era (BHBody era),
@@ -226,7 +240,9 @@ instance
   initialRules = []
   transitionRules = [chainTransition]
 
-instance Era era => NoUnexpectedThunks (ChainPredicateFailure era)
+instance
+  Crypto.Crypto c =>
+  NoUnexpectedThunks (ChainPredicateFailure (Shelley c))
 
 chainChecks ::
   (Era era, MonadError (PredicateFailure (CHAIN era)) m) =>
@@ -246,8 +262,9 @@ chainChecks maxpv pp bh = do
     (ProtVer m _) = _protocolVersion pp
 
 chainTransition ::
-  forall era.
+  forall era c.
   ( Era era,
+    era ~ Shelley c,
     DSignable era (OCertSignable era),
     DSignable era (Hash era (TxBody era)),
     KESignable era (BHBody era),
@@ -256,65 +273,78 @@ chainTransition ::
   TransitionRule (CHAIN era)
 chainTransition =
   judgmentContext
-    >>= \(TRC ((), ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _))) -> do
-      case prtlSeqChecks lab bh of
-        Right () -> pure ()
-        Left e -> failBecause $ PrtclSeqFailure e
+    >>= \( TRC
+             ( (),
+               ChainState
+                 nes
+                 cs
+                 eta0
+                 etaV
+                 etaC
+                 etaH
+                 lab,
+               block@(Block bh _)
+               )
+           ) -> do
+        case prtlSeqChecks lab bh of
+          Right () -> pure ()
+          Left e -> failBecause $ PrtclSeqFailure e
 
-      let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
+        let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
 
-      maxpv <- liftSTS $ asks maxMajorPV
-      case chainChecks maxpv pp bh of
-        Right () -> pure ()
-        Left e -> failBecause e
+        maxpv <- liftSTS $ asks maxMajorPV
+        case chainChecks maxpv pp bh of
+          Right () -> pure ()
+          Left e -> failBecause e
 
-      let s = bheaderSlotNo $ bhbody bh
-      let gkeys = getGKeys nes
+        let s = bheaderSlotNo $ bhbody bh
+        let gkeys = getGKeys nes
 
-      nes' <-
-        trans @(TICK era) $ TRC (TickEnv gkeys, nes, s)
+        nes' <-
+          trans @(TICK era) $ TRC (TickEnv gkeys, nes, s)
 
-      let NewEpochState e1 _ _ _ _ _ _ = nes
-          NewEpochState e2 _ bcur es _ _pd osched = nes'
-      let EpochState account _ ls _ pp' _ = es
-      let LedgerState _ (DPState (DState _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
+        let NewEpochState e1 _ _ _ _ _ _ = nes
+            NewEpochState e2 _ bcur es _ _pd osched = nes'
+        let EpochState account _ ls _ pp' _ = es
+        let LedgerState _ (DPState (DState _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
 
-      let ph = lastAppliedHash lab
-          etaPH = prevHashToNonce ph
+        let ph = lastAppliedHash lab
+            etaPH = prevHashToNonce ph
 
-      TicknState eta0' etaH' <-
-        trans @TICKN $
-          TRC
-            ( TicknEnv pp' etaC etaPH,
-              TicknState eta0 etaH,
-              (e1 /= e2)
-            )
+        TicknState eta0' etaH' <-
+          trans @TICKN $
+            TRC
+              ( TicknEnv pp' etaC etaPH,
+                TicknState eta0 etaH,
+                (e1 /= e2)
+              )
 
-      PrtclState cs' etaV' etaC' <-
-        trans @(PRTCL era) $
-          TRC
-            ( PrtclEnv osched _pd _genDelegs eta0',
-              PrtclState cs etaV etaC,
-              bh
-            )
+        PrtclState cs' etaV' etaC' <-
+          trans @(PRTCL era) $
+            TRC
+              ( PrtclEnv osched _pd _genDelegs eta0',
+                PrtclState cs etaV etaC,
+                bh
+              )
 
-      BbodyState ls' bcur' <-
-        trans @(BBODY era) $
-          TRC (BbodyEnv osched pp' account, BbodyState ls bcur, block)
+        BbodyState ls' bcur' <-
+          trans @(BBODY era) $
+            TRC (BbodyEnv osched pp' account, BbodyState ls bcur, block)
 
-      let nes'' = updateNES nes' bcur' ls'
-          bhb = bhbody bh
-          lab' =
-            At $
-              LastAppliedBlock
-                (bheaderBlockNo bhb)
-                (bheaderSlotNo bhb)
-                (bhHash bh)
+        let nes'' = updateNES nes' bcur' ls'
+            bhb = bhbody bh
+            lab' =
+              At $
+                LastAppliedBlock
+                  (bheaderBlockNo bhb)
+                  (bheaderSlotNo bhb)
+                  (bhHash bh)
 
-      pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
+        pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (OCertSignable era),
     DSignable era (Hash era (TxBody era)),
     KESignable era (BHBody era),
@@ -326,6 +356,7 @@ instance
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (OCertSignable era),
     DSignable era (Hash era (TxBody era)),
     KESignable era (BHBody era),
@@ -337,6 +368,7 @@ instance
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (OCertSignable era),
     DSignable era (Hash era (TxBody era)),
     KESignable era (BHBody era),
@@ -348,6 +380,7 @@ instance
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (OCertSignable era),
     DSignable era (Hash era (TxBody era)),
     KESignable era (BHBody era),
@@ -368,7 +401,7 @@ data AdaPots = AdaPots
   deriving (Show, Eq)
 
 -- | Calculate the total ada pots in the chain state
-totalAdaPots :: ChainState era -> AdaPots
+totalAdaPots :: ChainState (Shelley c) -> AdaPots
 totalAdaPots (ChainState nes _ _ _ _ _ _) =
   AdaPots
     { treasuryAdaPot = treasury_,
@@ -386,7 +419,7 @@ totalAdaPots (ChainState nes _ _ _ _ _ _) =
     circulation = balance u
 
 -- | Calculate the total ada in the chain state
-totalAda :: ChainState era -> Coin
+totalAda :: ChainState (Shelley c) -> Coin
 totalAda cs =
   treasuryAdaPot
     <> reservesAdaPot

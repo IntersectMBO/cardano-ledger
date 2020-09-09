@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -23,7 +25,9 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (eval, (∩))
 import Control.State.Transition
@@ -46,7 +50,6 @@ import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
@@ -110,26 +113,31 @@ data UtxowPredicateFailure era
   | ConflictingMetaDataHash
       !(MetaDataHash era) -- hash of the metadata included in the transaction body
       !(MetaDataHash era) -- hash of the full metadata
-  deriving (Eq, Generic, Show)
+  deriving (Generic)
 
-instance (Era era) => NoUnexpectedThunks (UtxowPredicateFailure era)
+instance Crypto c => NoUnexpectedThunks (UtxowPredicateFailure (Shelley c))
+
+deriving stock instance Crypto c => Eq (UtxowPredicateFailure (Shelley c))
+
+deriving stock instance Crypto c => Show (UtxowPredicateFailure (Shelley c))
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (Hash era (TxBody era))
   ) =>
-  STS (UTXOW era)
+  STS (UTXOW (Shelley c))
   where
-  type State (UTXOW era) = UTxOState era
-  type Signal (UTXOW era) = Tx era
-  type Environment (UTXOW era) = UtxoEnv era
-  type BaseM (UTXOW era) = ShelleyBase
-  type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
+  type State (UTXOW (Shelley c)) = UTxOState (Shelley c)
+  type Signal (UTXOW (Shelley c)) = Tx (Shelley c)
+  type Environment (UTXOW (Shelley c)) = UtxoEnv (Shelley c)
+  type BaseM (UTXOW (Shelley c)) = ShelleyBase
+  type PredicateFailure (UTXOW (Shelley c)) = UtxowPredicateFailure (Shelley c)
   transitionRules = [utxoWitnessed]
   initialRules = [initialLedgerStateUTXOW]
 
 instance
-  (Typeable era, Era era) =>
+  (Era era, ToCBOR (PredicateFailure (UTXO era))) =>
   ToCBOR (UtxowPredicateFailure era)
   where
   toCBOR = \case
@@ -151,7 +159,7 @@ instance
       encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR bodyHash <> toCBOR fullMDHash
 
 instance
-  (Era era) =>
+  (Era era, FromCBOR (PredicateFailure (UTXO era))) =>
   FromCBOR (UtxowPredicateFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (UTXOW era)" $
@@ -187,18 +195,20 @@ instance
       k -> invalidKey k
 
 initialLedgerStateUTXOW ::
-  forall era.
+  forall era c.
   ( Era era,
+    era ~ Shelley c,
     DSignable era (Hash era (TxBody era))
   ) =>
-  InitialRule (UTXOW era)
+  InitialRule (UTXOW (Shelley c))
 initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
   trans @(UTXO era) $ IRC (UtxoEnv slots pp stakepools genDelegs)
 
 utxoWitnessed ::
-  forall era.
+  forall era c.
   ( Era era,
+    era ~ Shelley c,
     DSignable era (Hash era (TxBody era))
   ) =>
   TransitionRule (UTXOW era)
@@ -260,9 +270,9 @@ utxoWitnessed =
         TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
-  ( Era era,
-    DSignable era (Hash era (TxBody era))
+  ( Crypto c,
+    DSignable (Shelley c) (Hash (Shelley c) (TxBody (Shelley c)))
   ) =>
-  Embed (UTXO era) (UTXOW era)
+  Embed (UTXO (Shelley c)) (UTXOW (Shelley c))
   where
   wrapFailed = UtxoFailure

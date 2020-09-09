@@ -1,11 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- |
 -- Module      : EpochBoundary
@@ -27,6 +30,7 @@ module Shelley.Spec.Ledger.EpochBoundary
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
@@ -42,7 +46,6 @@ import Shelley.Spec.Ledger.Coin
   ( Coin (..),
     coinToRational,
     rationalToCoinViaFloor,
-    word64ToCoin,
   )
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.DeserializeShort (deserialiseAddrStakeRef)
@@ -78,7 +81,11 @@ newtype Stake era = Stake
 
 -- | Sum up all the Coin for each staking Credential
 aggregateUtxoCoinByCredential ::
-  Era era =>
+  forall era.
+  ( Era era,
+    Val.Val (Core.Value era),
+    Core.Compactible (Core.Value era)
+  ) =>
   Map Ptr (Credential 'Staking era) ->
   UTxO era ->
   Map (Credential 'Staking era) Coin ->
@@ -86,12 +93,14 @@ aggregateUtxoCoinByCredential ::
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldr accum initial u
   where
-    accum (TxOutCompact addr c) ans = case deserialiseAddrStakeRef addr of
-      Just (StakeRefPtr p) -> case Map.lookup p ptrs of
-        Just cred -> Map.insertWith (<>) cred (word64ToCoin c) ans
-        Nothing -> ans
-      Just (StakeRefBase hk) -> Map.insertWith (<>) hk (word64ToCoin c) ans
-      _other -> ans
+    accum (TxOutCompact addr c) ans =
+      let c' = Val.coin . Core.fromCompact @(Core.Value era) $ c
+       in case deserialiseAddrStakeRef addr of
+            Just (StakeRefPtr p) -> case Map.lookup p ptrs of
+              Just cred -> Map.insertWith (<>) cred c' ans
+              Nothing -> ans
+            Just (StakeRefBase hk) -> Map.insertWith (<>) hk c' ans
+            _other -> ans
 
 -- | Get stake of one pool
 poolStake ::

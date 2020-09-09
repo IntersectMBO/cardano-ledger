@@ -20,6 +20,7 @@ import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Reader (runReader)
 import qualified Data.ByteString.Short as SBS
@@ -58,7 +59,7 @@ hashFromShortBytesE sbs = fromMaybe (error msg) $ Crypto.hashFromBytesShort sbs
       "hashFromBytesShort called with ShortByteString of the wrong length: "
         <> show sbs
 
-translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> TxOut era
+translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> TxOut (Shelley c)
 translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
   TxOutCompact
     (Byron.unsafeGetCompactAddress compactAddr)
@@ -74,8 +75,8 @@ translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
     (fromIntegral idx)
 
 translateUTxOByronToShelley ::
-  forall era.
-  (Era era, ADDRHASH (Crypto era) ~ Crypto.Blake2b_224) =>
+  forall era c.
+  (Era era, era ~ Shelley c, ADDRHASH (Crypto era) ~ Crypto.Blake2b_224) =>
   Byron.UTxO ->
   UTxO era
 translateUTxOByronToShelley (Byron.UTxO utxoByron) =
@@ -88,8 +89,8 @@ translateUTxOByronToShelley (Byron.UTxO utxoByron) =
       ]
 
 translateToShelleyLedgerState ::
-  forall era.
-  (Era era, ADDRHASH (Crypto era) ~ Crypto.Blake2b_224) =>
+  forall era c.
+  (Era era, era ~ Shelley c, ADDRHASH (Crypto era) ~ Crypto.Blake2b_224) =>
   ShelleyGenesis era ->
   Globals ->
   EpochNo ->

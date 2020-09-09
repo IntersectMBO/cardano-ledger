@@ -1,4 +1,9 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.API.Wallet
   ( getNonMyopicMemberRewards,
@@ -10,6 +15,7 @@ module Shelley.Spec.Ledger.API.Wallet
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Val as Val
@@ -68,7 +74,10 @@ getTotalStake globals ss =
 -- pool (identified by the key hash of the pool operator) to the
 -- non-myopic pool member reward for that stake pool.
 getNonMyopicMemberRewards ::
-  Era era =>
+  ( Era era,
+    Core.Compactible (Core.Value era),
+    Val.Val (Core.Value era)
+  ) =>
   Globals ->
   ShelleyState era ->
   Set (Either Coin (Credential 'Staking era)) ->
@@ -95,7 +104,14 @@ getNonMyopicMemberRewards globals ss creds =
     EB.SnapShot stake delegs poolParams = stakeDistr utxo dstate pstate
     poolData =
       Map.mapWithKey
-        (\k p -> (percentile' (histLookup k), p, toShare . fold . EB.unStake $ EB.poolStake k delegs stake))
+        ( \k p ->
+            ( percentile' (histLookup k),
+              p,
+              toShare . fold
+                . EB.unStake
+                $ EB.poolStake k delegs stake
+            )
+        )
         poolParams
     histLookup k = fromMaybe mempty (Map.lookup k ls)
     topPools = getTopRankedPools rPot (Coin total) pp poolParams (fmap percentile' ls)

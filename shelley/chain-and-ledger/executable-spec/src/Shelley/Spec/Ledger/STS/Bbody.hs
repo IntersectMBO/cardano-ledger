@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -18,7 +20,10 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( Embed (..),
@@ -62,7 +67,10 @@ data BBODY era
 
 data BbodyState era
   = BbodyState (LedgerState era) (BlocksMade era)
-  deriving (Eq, Show)
+
+deriving stock instance
+  (Era era, Core.Compactible (Core.Value era), Show (Core.Value era)) =>
+  Show (BbodyState era)
 
 data BbodyEnv era = BbodyEnv
   { bbodySlots :: OverlaySchedule era,
@@ -78,10 +86,15 @@ data BbodyPredicateFailure era
       !(HashBBody era) -- Actual Hash
       !(HashBBody era) -- Claimed Hash
   | LedgersFailure (PredicateFailure (LEDGERS era)) -- Subtransition Failures
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving stock instance Crypto c => Show (BbodyPredicateFailure (Shelley c))
+
+deriving stock instance Crypto c => Eq (BbodyPredicateFailure (Shelley c))
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (Hash era (TxBody era))
   ) =>
   STS (BBODY era)
@@ -103,11 +116,12 @@ instance
   initialRules = []
   transitionRules = [bbodyTransition]
 
-instance (Era era) => NoUnexpectedThunks (BbodyPredicateFailure era)
+instance (Crypto c) => NoUnexpectedThunks (BbodyPredicateFailure (Shelley c))
 
 bbodyTransition ::
-  forall era.
+  forall era c.
   ( Era era,
+    era ~ Shelley c,
     DSignable era (Hash era (TxBody era))
   ) =>
   TransitionRule (BBODY era)
@@ -140,6 +154,7 @@ bbodyTransition =
 
 instance
   ( Era era,
+    era ~ Shelley c,
     DSignable era (Hash era (TxBody era))
   ) =>
   Embed (LEDGERS era) (BBODY era)

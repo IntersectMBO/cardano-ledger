@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -6,6 +7,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Integration between the Shelley ledger and its corresponding (Transitional
 -- Praos) protocol.
@@ -33,6 +36,7 @@ import Cardano.Crypto.KES.Class
 import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Crypto hiding (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
 import Control.Monad.Except
@@ -185,7 +189,14 @@ currentLedgerView = view
 
 newtype FutureLedgerViewError era
   = FutureLedgerViewError [PredicateFailure (TICK era)]
-  deriving (Eq, Show)
+
+deriving stock instance
+  (Eq (PredicateFailure (TICK era))) =>
+  Eq (FutureLedgerViewError era)
+
+deriving stock instance
+  (Show (PredicateFailure (TICK era))) =>
+  Show (FutureLedgerViewError era)
 
 -- | Anachronistic ledger view
 --
@@ -193,8 +204,9 @@ newtype FutureLedgerViewError era
 --   slot corresponding to the passed-in 'ShelleyState'), return a 'LedgerView'
 --   appropriate to that slot.
 futureLedgerView ::
-  forall era m.
+  forall era m c.
   ( Era era,
+    era ~ Shelley c,
     MonadError (FutureLedgerViewError era) m
   ) =>
   Globals ->
@@ -298,8 +310,9 @@ tickChainDepState
 --
 --   This also updates the last applied block hash.
 updateChainDepState ::
-  forall era m.
+  forall era m c.
   ( Era era,
+    era ~ Shelley c,
     MonadError (ChainTransitionError era) m,
     Cardano.Crypto.DSIGN.Class.Signable
       (DSIGN (Crypto era))
