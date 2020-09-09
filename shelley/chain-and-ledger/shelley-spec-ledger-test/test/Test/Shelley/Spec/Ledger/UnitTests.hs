@@ -142,7 +142,7 @@ bobAddr =
     (KeyHashObj . hashKey $ vKey bobPay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
 
-pp :: PParams era
+pp :: PParams C
 pp =
   emptyPParams
     { _minfeeA = 1,

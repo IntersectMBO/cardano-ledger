@@ -53,7 +53,7 @@ data DELPL era
 data DelplEnv era = DelplEnv
   { delplSlotNo :: SlotNo,
     delPlPtr :: Ptr,
-    delPlPp :: (PParams era),
+    delPlPp :: PParams era,
     delPlAcnt :: AccountState
   }
 

@@ -70,8 +70,8 @@ data DELEGS era
 data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: SlotNo,
     delegsIx :: Ix,
-    delegspp :: (PParams era),
-    delegsTx :: (Tx era),
+    delegspp :: PParams era,
+    delegsTx :: Tx era,
     delegsAccount :: AccountState
   }
   deriving (Show)

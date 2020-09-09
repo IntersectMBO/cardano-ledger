@@ -268,14 +268,14 @@ deriving instance (Era era) => Show (ChainTransitionError era)
 
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::
-  forall c.
-  (Era c) =>
+  forall era.
+  (Era era) =>
   Globals ->
-  LedgerView c ->
+  LedgerView era ->
   -- | Are we in a new epoch?
   Bool ->
-  ChainDepState c ->
-  ChainDepState c
+  ChainDepState era ->
+  ChainDepState era
 tickChainDepState
   globals
   LedgerView {lvProtParams}
@@ -286,7 +286,7 @@ tickChainDepState
       err = error "Panic! tickChainDepState failed."
       newTickState =
         fromRight err . flip runReader globals
-          . applySTS @(STS.Tickn.TICKN c)
+          . applySTS @(STS.Tickn.TICKN era)
           $ TRC
             ( STS.Tickn.TicknEnv
                 lvProtParams

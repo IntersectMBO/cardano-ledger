@@ -60,7 +60,7 @@ instance NoUnexpectedThunks (PoolreapPredicateFailure era)
 instance Typeable era => STS (POOLREAP era) where
   type State (POOLREAP era) = PoolreapState era
   type Signal (POOLREAP era) = EpochNo
-  type Environment (POOLREAP era) = (PParams era)
+  type Environment (POOLREAP era) = PParams era
   type BaseM (POOLREAP era) = ShelleyBase
   type PredicateFailure (POOLREAP era) = PoolreapPredicateFailure era
   initialRules =
