@@ -6,7 +6,6 @@ module Cardano.Ledger.Shelley where
 
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era
-import Shelley.Spec.Ledger.Coin
 
 --------------------------------------------------------------------------------
 -- Shelley Era
