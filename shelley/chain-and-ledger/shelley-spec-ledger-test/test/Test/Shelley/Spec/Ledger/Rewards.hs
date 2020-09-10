@@ -199,7 +199,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
           }
   pure $ PoolInfo {params, coldKey, ownerKey, ownerStake, rewardKey, members}
 
-genRewardPPs :: Gen PParams
+genRewardPPs :: Gen (PParams era)
 genRewardPPs = do
   d <- g decentralizationRange
   t <- g tauRange

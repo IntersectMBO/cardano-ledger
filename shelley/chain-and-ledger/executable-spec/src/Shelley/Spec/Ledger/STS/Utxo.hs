@@ -100,7 +100,7 @@ data UTXO era
 data UtxoEnv era
   = UtxoEnv
       SlotNo
-      PParams
+      (PParams era)
       (Map (KeyHash 'StakePool era) (PoolParams era))
       (GenDelegs era)
   deriving (Show)

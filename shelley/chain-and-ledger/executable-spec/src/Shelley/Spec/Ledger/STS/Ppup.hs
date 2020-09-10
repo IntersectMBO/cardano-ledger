@@ -42,7 +42,7 @@ import Shelley.Spec.Ledger.Slot
 data PPUP era
 
 data PPUPEnv era
-  = PPUPEnv SlotNo PParams (GenDelegs era)
+  = PPUPEnv SlotNo (PParams era) (GenDelegs era)
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)

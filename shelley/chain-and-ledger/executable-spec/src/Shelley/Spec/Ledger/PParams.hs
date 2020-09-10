@@ -102,7 +102,7 @@ type family HKD f a where
 --         ...
 --       }
 -- @
-data PParams' f = PParams
+data PParams' f era = PParams
   { -- | The linear factor for the minimum fee calculation
     _minfeeA :: !(HKD f Natural),
     -- | The constant factor for the minimum fee calculation
@@ -140,13 +140,13 @@ data PParams' f = PParams
   }
   deriving (Generic)
 
-type PParams = PParams' Identity
+type PParams era = PParams' Identity era
 
-deriving instance Eq (PParams' Identity)
+deriving instance Eq (PParams' Identity era)
 
-deriving instance Show (PParams' Identity)
+deriving instance Show (PParams' Identity era)
 
-deriving instance NFData (PParams' Identity)
+deriving instance NFData (PParams' Identity era)
 
 data ProtVer = ProtVer !Natural !Natural
   deriving (Show, Eq, Generic, Ord, NFData)
@@ -187,9 +187,9 @@ instance FromCBORGroup ProtVer where
     y <- fromCBOR
     pure $ ProtVer x y
 
-instance NoUnexpectedThunks PParams
+instance NoUnexpectedThunks (PParams era)
 
-instance ToCBOR PParams where
+instance (Era era) => ToCBOR (PParams era) where
   toCBOR
     ( PParams
         { _minfeeA = minfeeA',
@@ -230,7 +230,7 @@ instance ToCBOR PParams where
         <> toCBOR minUTxOValue'
         <> toCBOR minPoolCost'
 
-instance FromCBOR PParams where
+instance (Era era) => FromCBOR (PParams era) where
   fromCBOR = do
     decodeRecordNamed "PParams" (const 18) $
       PParams
@@ -252,7 +252,7 @@ instance FromCBOR PParams where
         <*> fromCBOR -- _minUTxOValue    :: Natural
         <*> fromCBOR -- _minPoolCost     :: Natural
 
-instance ToJSON PParams where
+instance ToJSON (PParams era) where
   toJSON pp =
     Aeson.object
       [ "minFeeA" .= _minfeeA pp,
@@ -274,7 +274,7 @@ instance ToJSON PParams where
         "minPoolCost" .= _minPoolCost pp
       ]
 
-instance FromJSON PParams where
+instance FromJSON (PParams era) where
   parseJSON =
     Aeson.withObject "PParams" $ \obj ->
       PParams
@@ -299,7 +299,7 @@ instance FromJSON PParams where
         <*> obj .:? "minPoolCost" .!= mempty
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
-emptyPParams :: PParams
+emptyPParams :: PParams era
 emptyPParams =
   PParams
     { _minfeeA = 0,
@@ -343,19 +343,19 @@ data PPUpdateEnv era = PPUpdateEnv SlotNo (GenDelegs era)
 
 instance NoUnexpectedThunks (PPUpdateEnv era)
 
-type PParamsUpdate = PParams' StrictMaybe
+type PParamsUpdate era = PParams' StrictMaybe era
 
-deriving instance Eq (PParams' StrictMaybe)
+deriving instance Eq (PParams' StrictMaybe era)
 
-deriving instance Show (PParams' StrictMaybe)
+deriving instance Show (PParams' StrictMaybe era)
 
-deriving instance Ord (PParams' StrictMaybe)
+deriving instance Ord (PParams' StrictMaybe era)
 
-deriving instance NFData (PParams' StrictMaybe)
+deriving instance NFData (PParams' StrictMaybe era)
 
-instance NoUnexpectedThunks PParamsUpdate
+instance NoUnexpectedThunks (PParamsUpdate era)
 
-instance ToCBOR PParamsUpdate where
+instance (Era era) => ToCBOR (PParamsUpdate era) where
   toCBOR ppup =
     let l =
           mapMaybe
@@ -383,7 +383,7 @@ instance ToCBOR PParamsUpdate where
     where
       encodeMapElement ix encoder x = SJust (encodeWord ix <> encoder x)
 
-emptyPParamsUpdate :: PParamsUpdate
+emptyPParamsUpdate :: PParamsUpdate era
 emptyPParamsUpdate =
   PParams
     { _minfeeA = SNothing,
@@ -405,7 +405,7 @@ emptyPParamsUpdate =
       _minPoolCost = SNothing
     }
 
-instance FromCBOR PParamsUpdate where
+instance (Era era) => FromCBOR (PParamsUpdate era) where
   fromCBOR = do
     mapParts <-
       decodeMapContents $
@@ -436,7 +436,7 @@ instance FromCBOR PParamsUpdate where
 
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
-  = ProposedPPUpdates (Map (KeyHash 'Genesis era) PParamsUpdate)
+  = ProposedPPUpdates (Map (KeyHash 'Genesis era) (PParamsUpdate era))
   deriving (Show, Eq, Generic, NFData)
 
 instance NoUnexpectedThunks (ProposedPPUpdates era)
@@ -450,7 +450,7 @@ instance Era era => FromCBOR (ProposedPPUpdates era) where
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty
 
-updatePParams :: PParams -> PParamsUpdate -> PParams
+updatePParams :: PParams era -> PParamsUpdate era -> PParams era
 updatePParams pp ppup =
   PParams
     { _minfeeA = fromMaybe' (_minfeeA pp) (_minfeeA ppup),

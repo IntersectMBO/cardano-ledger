@@ -150,7 +150,7 @@ initUTxO n =
 -- Protocal Parameters used for the benchmarknig tests.
 -- Note that the fees and deposits are set to zero for
 -- ease of creating transactions.
-ppsBench :: PParams
+ppsBench :: PParams era
 ppsBench =
   emptyPParams
     { _maxBBSize = 50000,
@@ -167,13 +167,13 @@ ppsBench =
       _tau = unsafeMkUnitInterval 0.2
     }
 
-ledgerEnv :: LedgerEnv
+ledgerEnv :: LedgerEnv B
 ledgerEnv = LedgerEnv (SlotNo 0) 0 ppsBench (AccountState (Coin 0) (Coin 0))
 
 testLEDGER ::
   (UTxOState B, DPState B) ->
   Tx B ->
-  LedgerEnv ->
+  LedgerEnv B ->
   ()
 testLEDGER initSt tx env = do
   let st = runShelleyBase $ applySTS @(LEDGER B) (TRC (env, initSt, tx))

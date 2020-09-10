@@ -641,7 +641,7 @@ setFutureProposals ps cs = cs {chainNes = nes'}
 -- Set the protocol parameters.
 setPParams ::
   forall era.
-  PParams ->
+  PParams era ->
   ChainState era ->
   ChainState era
 setPParams pp cs = cs {chainNes = nes'}

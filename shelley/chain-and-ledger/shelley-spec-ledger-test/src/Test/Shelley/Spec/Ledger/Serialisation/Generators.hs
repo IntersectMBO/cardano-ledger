@@ -568,7 +568,7 @@ instance Arbitrary a => Arbitrary (StrictMaybe a) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-genPParams :: (Era era) => proxy era -> Gen PParams
+genPParams :: (Era era) => proxy era -> Gen (PParams era)
 genPParams p = Update.genPParams (geConstants (genEnv p))
 
 instance Era era => Arbitrary (OBftSlot era) where

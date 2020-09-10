@@ -122,7 +122,7 @@ coreNodeKeysForSlot overlay slot = case Map.lookup (SlotNo slot) overlay of
 
 -- | === Overlay Schedule
 -- Retrieve the overlay schedule for a given epoch and protocol parameters.
-overlayScheduleFor :: Era era => EpochNo -> PParams -> OverlaySchedule era
+overlayScheduleFor :: Era era => EpochNo -> PParams era -> OverlaySchedule era
 overlayScheduleFor e pp =
   runShelleyBase $
     overlaySchedule
@@ -137,7 +137,7 @@ overlayScheduleFor e pp =
 -- for the given slot.
 coreNodeKeysBySchedule ::
   (HasCallStack, Era era) =>
-  PParams ->
+  PParams era ->
   Word64 ->
   AllIssuerKeys era 'GenesisDelegate
 coreNodeKeysBySchedule = coreNodeKeysForSlot . fullOSched

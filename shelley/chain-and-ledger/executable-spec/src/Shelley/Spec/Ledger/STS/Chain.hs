@@ -150,7 +150,7 @@ data ChainPredicateFailure era
       !Natural -- max protocol version
   | BbodyFailure !(PredicateFailure (BBODY era)) -- Subtransition Failures
   | TickFailure !(PredicateFailure (TICK era)) -- Subtransition Failures
-  | TicknFailure !(PredicateFailure TICKN) -- Subtransition Failures
+  | TicknFailure !(PredicateFailure (TICKN era)) -- Subtransition Failures
   | PrtclFailure !(PredicateFailure (PRTCL era)) -- Subtransition Failures
   | PrtclSeqFailure !(PrtlSeqFailure era) -- Subtransition Failures
   deriving (Show, Eq, Generic)
@@ -163,7 +163,7 @@ initialShelleyState ::
   Coin ->
   Map (KeyHash 'Genesis era) (GenDelegPair era) ->
   OverlaySchedule era ->
-  PParams ->
+  PParams era ->
   Nonce ->
   ChainState era
 initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
@@ -231,7 +231,7 @@ instance Era era => NoUnexpectedThunks (ChainPredicateFailure era)
 chainChecks ::
   (Era era, MonadError (PredicateFailure (CHAIN era)) m) =>
   Natural ->
-  PParams ->
+  PParams era ->
   BHeader era ->
   m ()
 chainChecks maxpv pp bh = do
@@ -283,7 +283,7 @@ chainTransition =
           etaPH = prevHashToNonce ph
 
       TicknState eta0' etaH' <-
-        trans @TICKN $
+        trans @(TICKN era) $
           TRC
             ( TicknEnv pp' etaC etaPH,
               TicknState eta0 etaH,
@@ -331,7 +331,7 @@ instance
     KESignable era (BHBody era),
     VRF.Signable (VRF (Crypto era)) Seed
   ) =>
-  Embed TICKN (CHAIN era)
+  Embed (TICKN era) (CHAIN era)
   where
   wrapFailed = TicknFailure
 

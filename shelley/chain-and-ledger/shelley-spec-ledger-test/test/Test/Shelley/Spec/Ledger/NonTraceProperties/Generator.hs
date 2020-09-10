@@ -181,7 +181,7 @@ genTxOut addrs = do
   return (uncurry TxOut <$> zip addrs ys)
 
 -- TODO generate sensible protocol constants
-defPCs :: PParams
+defPCs :: PParams era
 defPCs = emptyPParams
 
 -- | Generator of a non-empty genesis ledger state, i.e., at least one valid
@@ -436,7 +436,7 @@ asStateTransition ::
   forall era.
   (Era era, ExMock (Crypto era)) =>
   SlotNo ->
-  PParams ->
+  PParams era ->
   LedgerState era ->
   Tx era ->
   AccountState ->
@@ -465,7 +465,7 @@ asStateTransition _slot pp ls tx acnt =
 asStateTransition' ::
   (Era era, ExMock (Crypto era)) =>
   SlotNo ->
-  PParams ->
+  PParams era ->
   LedgerValidation era ->
   Tx era ->
   AccountState ->

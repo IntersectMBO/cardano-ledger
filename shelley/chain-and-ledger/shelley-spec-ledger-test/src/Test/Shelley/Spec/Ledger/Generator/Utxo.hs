@@ -130,7 +130,7 @@ splitCoin (Coin n) m
 genTx ::
   (HasCallStack, Era era, Mock (Crypto era)) =>
   GenEnv era ->
-  LedgerEnv ->
+  LedgerEnv era ->
   (UTxOState era, DPState era) ->
   Gen (Tx era)
 genTx ge le st =
@@ -157,7 +157,7 @@ data InsufficientSpendingBalanceInfo = InsufficientSpendingBalanceInfo
 tryGenTx ::
   (HasCallStack, Era era, Mock (Crypto era)) =>
   GenEnv era ->
-  LedgerEnv ->
+  LedgerEnv era ->
   (UTxOState era, DPState era) ->
   Gen (Either GenTxException (Tx era))
 tryGenTx ge@(GenEnv _ (Constants {genTxRetries})) =
@@ -168,7 +168,7 @@ genTxRetry ::
   Int ->
   Coin ->
   GenEnv era ->
-  LedgerEnv ->
+  LedgerEnv era ->
   (UTxOState era, DPState era) ->
   Gen (Either GenTxException (Tx era))
 genTxRetry

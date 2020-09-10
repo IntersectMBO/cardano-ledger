@@ -63,27 +63,27 @@ import Shelley.Spec.Ledger.UTxO
 --
 -- For simplicity, pools defined in the genesis staking do not pay deposits for
 -- their registration.
-data ShelleyGenesisStaking c = ShelleyGenesisStaking
+data ShelleyGenesisStaking era = ShelleyGenesisStaking
   { -- | Pools to register
     --
     --   The key in this map is the hash of the public key of the _pool_. This
     --   need not correspond to any payment or staking key, but must correspond
     --   to the cold key held by 'TPraosIsCoreNode'.
-    sgsPools :: !(Map (KeyHash 'StakePool c) (PoolParams c)),
+    sgsPools :: !(Map (KeyHash 'StakePool era) (PoolParams era)),
     -- | Stake-holding key hash credentials and the pools to delegate that stake
     -- to. We require the raw staking key hash in order to:
     --
     -- - Avoid pointer addresses, which would be tricky when there's no slot or
     --   transaction to point to.
     -- - Avoid script credentials.
-    sgsStake :: !(Map (KeyHash 'Staking c) (KeyHash 'StakePool c))
+    sgsStake :: !(Map (KeyHash 'Staking era) (KeyHash 'StakePool era))
   }
   deriving stock (Eq, Show, Generic)
 
 instance NoUnexpectedThunks (ShelleyGenesisStaking era)
 
 -- | Empty genesis staking
-emptyGenesisStaking :: ShelleyGenesisStaking c
+emptyGenesisStaking :: ShelleyGenesisStaking era
 emptyGenesisStaking =
   ShelleyGenesisStaking
     { sgsPools = Map.empty,
@@ -96,7 +96,7 @@ emptyGenesisStaking =
 -- defined here rather than in its own module. In mainnet, Shelley will
 -- transition naturally from Byron, and thus will never have its own genesis
 -- information.
-data ShelleyGenesis c = ShelleyGenesis
+data ShelleyGenesis era = ShelleyGenesis
   { sgSystemStart :: !UTCTime,
     sgNetworkMagic :: !Word32,
     sgNetworkId :: !Network,
@@ -108,16 +108,16 @@ data ShelleyGenesis c = ShelleyGenesis
     sgSlotLength :: !NominalDiffTime,
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
-    sgProtocolParams :: !PParams,
-    sgGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPair c)),
-    sgInitialFunds :: !(Map (Addr c) Coin),
-    sgStaking :: !(ShelleyGenesisStaking c)
+    sgProtocolParams :: !(PParams era),
+    sgGenDelegs :: !(Map (KeyHash 'Genesis era) (GenDelegPair era)),
+    sgInitialFunds :: !(Map (Addr era) Coin),
+    sgStaking :: !(ShelleyGenesisStaking era)
   }
   deriving stock (Eq, Show, Generic)
 
 deriving instance (Era era) => NoUnexpectedThunks (ShelleyGenesis era)
 
-sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
+sgActiveSlotCoeff :: ShelleyGenesis era -> ActiveSlotCoeff
 sgActiveSlotCoeff =
   mkActiveSlotCoeff
     . unitIntervalFromRational
@@ -322,7 +322,7 @@ validateGenesis
 -------------------------------------------------------------------------------}
 
 mkShelleyGlobals ::
-  ShelleyGenesis c ->
+  ShelleyGenesis era ->
   EpochInfo Identity ->
   Natural ->
   Globals

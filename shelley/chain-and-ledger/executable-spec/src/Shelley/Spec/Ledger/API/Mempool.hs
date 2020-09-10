@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
 import qualified Shelley.Spec.Ledger.Tx as Tx
 
-type MempoolEnv = Ledgers.LedgersEnv
+type MempoolEnv era = Ledgers.LedgersEnv era
 
 type MempoolState = LedgerState.LedgerState
 
@@ -55,7 +55,7 @@ type MempoolState = LedgerState.LedgerState
 mkMempoolEnv ::
   ShelleyState era ->
   SlotNo ->
-  MempoolEnv
+  MempoolEnv era
 mkMempoolEnv
   LedgerState.NewEpochState
     { LedgerState.nesEs
@@ -98,7 +98,7 @@ applyTxs ::
     DSignable era (Hash era (Tx.TxBody era))
   ) =>
   Globals ->
-  MempoolEnv ->
+  MempoolEnv era ->
   Seq (Tx era) ->
   MempoolState era ->
   m (MempoolState era)

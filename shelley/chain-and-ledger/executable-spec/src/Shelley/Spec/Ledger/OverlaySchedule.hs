@@ -97,7 +97,7 @@ overlayScheduleIsEmpty (OverlaySchedule oSched) = Map.null oSched
 overlaySchedule ::
   EpochNo ->
   Set (KeyHash 'Genesis era) ->
-  PParams ->
+  PParams era ->
   ShelleyBase (OverlaySchedule era)
 overlaySchedule e gkeys pp = do
   ei <- asks epochInfo

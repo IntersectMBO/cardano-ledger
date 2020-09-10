@@ -16,6 +16,7 @@ module Shelley.Spec.Ledger.STS.Tickn
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks)
 import Control.State.Transition
 import GHC.Generics (Generic)
@@ -23,10 +24,10 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 
-data TICKN
+data TICKN era
 
-data TicknEnv = TicknEnv
-  { ticknEnvPP :: PParams,
+data TicknEnv era = TicknEnv
+  { ticknEnvPP :: PParams era,
     ticknEnvCandidateNonce :: Nonce,
     -- | Hash of the last header of the previous epoch as a nonce.
     ticknEnvHashHeaderNonce :: Nonce
@@ -62,17 +63,17 @@ instance ToCBOR TicknState where
           toCBOR ηc
         ]
 
-data TicknPredicateFailure -- No predicate failures
+data TicknPredicateFailure era -- No predicate failures
   deriving (Generic, Show, Eq)
 
-instance NoUnexpectedThunks TicknPredicateFailure
+instance (Era era) => NoUnexpectedThunks (TicknPredicateFailure era)
 
-instance STS TICKN where
-  type State TICKN = TicknState
-  type Signal TICKN = Bool -- Marker indicating whether we are in a new epoch
-  type Environment TICKN = TicknEnv
-  type BaseM TICKN = ShelleyBase
-  type PredicateFailure TICKN = TicknPredicateFailure
+instance (Era era) => STS (TICKN era) where
+  type State (TICKN era) = TicknState
+  type Signal (TICKN era) = Bool -- Marker indicating whether we are in a new epoch
+  type Environment (TICKN era) = TicknEnv era
+  type BaseM (TICKN era) = ShelleyBase
+  type PredicateFailure (TICKN era) = TicknPredicateFailure era
 
   initialRules =
     [ pure
@@ -85,7 +86,7 @@ instance STS TICKN where
       initialNonce = mkNonceFromNumber 0
   transitionRules = [tickTransition]
 
-tickTransition :: TransitionRule TICKN
+tickTransition :: TransitionRule (TICKN era)
 tickTransition = do
   TRC (TicknEnv pp ηc ηph, st@(TicknState _ ηh), newEpoch) <- judgmentContext
   pure $

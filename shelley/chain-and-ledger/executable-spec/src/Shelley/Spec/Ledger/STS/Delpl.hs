@@ -50,10 +50,10 @@ import Shelley.Spec.Ledger.TxBody
 
 data DELPL era
 
-data DelplEnv = DelplEnv
+data DelplEnv era = DelplEnv
   { delplSlotNo :: SlotNo,
     delPlPtr :: Ptr,
-    delPlPp :: PParams,
+    delPlPp :: PParams era,
     delPlAcnt :: AccountState
   }
 
@@ -68,7 +68,7 @@ instance
   where
   type State (DELPL era) = DPState era
   type Signal (DELPL era) = DCert era
-  type Environment (DELPL era) = DelplEnv
+  type Environment (DELPL era) = DelplEnv era
   type BaseM (DELPL era) = ShelleyBase
   type PredicateFailure (DELPL era) = DelplPredicateFailure era
 

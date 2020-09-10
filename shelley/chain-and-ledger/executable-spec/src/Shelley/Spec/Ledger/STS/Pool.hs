@@ -51,8 +51,8 @@ import Shelley.Spec.Ledger.TxBody
 
 data POOL (era :: Type)
 
-data PoolEnv
-  = PoolEnv SlotNo PParams
+data PoolEnv era
+  = PoolEnv SlotNo (PParams era)
   deriving (Show, Eq)
 
 data PoolPredicateFailure era
@@ -76,7 +76,7 @@ instance Typeable era => STS (POOL era) where
 
   type Signal (POOL era) = DCert era
 
-  type Environment (POOL era) = PoolEnv
+  type Environment (POOL era) = PoolEnv era
 
   type BaseM (POOL era) = ShelleyBase
   type PredicateFailure (POOL era) = PoolPredicateFailure era

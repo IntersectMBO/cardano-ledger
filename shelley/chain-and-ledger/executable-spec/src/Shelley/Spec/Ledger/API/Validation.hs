@@ -45,7 +45,7 @@ chainChecks ::
   forall era m.
   (Era era, MonadError (STS.PredicateFailure (STS.CHAIN era)) m) =>
   Globals ->
-  PParams ->
+  PParams era ->
   BHeader era ->
   m ()
 chainChecks globals pp bh = STS.chainChecks (maxMajorPV globals) pp bh

@@ -103,7 +103,7 @@ genDCert ::
   (HasCallStack, Era era) =>
   Constants ->
   KeySpace era ->
-  PParams ->
+  PParams era ->
   AccountState ->
   DPState era ->
   SlotNo ->
@@ -436,7 +436,7 @@ genInstantaneousRewards ::
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate era) (AllIssuerKeys era 'GenesisDelegate) ->
-  PParams ->
+  PParams era ->
   AccountState ->
   DState era ->
   Gen (Maybe (DCert era, CertCred era))

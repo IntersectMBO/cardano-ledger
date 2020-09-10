@@ -142,7 +142,7 @@ bobAddr =
     (KeyHashObj . hashKey $ vKey bobPay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
 
-pp :: PParams
+pp :: PParams C
 pp =
   emptyPParams
     { _minfeeA = 1,
@@ -327,7 +327,7 @@ testCheckLeaderVal =
 testLEDGER ::
   (UTxOState C, DPState C) ->
   Tx C ->
-  LedgerEnv ->
+  LedgerEnv C ->
   Either [[PredicateFailure (LEDGER C)]] (UTxOState C, DPState C) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
@@ -401,7 +401,7 @@ addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
     ds = _dstate dp
     rewards = Map.insert ra c $ _rewards ds
 
-ledgerEnv :: LedgerEnv
+ledgerEnv :: LedgerEnv C
 ledgerEnv = LedgerEnv (SlotNo 0) 0 pp (AccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::

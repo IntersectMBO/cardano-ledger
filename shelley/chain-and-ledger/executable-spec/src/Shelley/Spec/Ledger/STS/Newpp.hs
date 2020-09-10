@@ -49,7 +49,7 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 data NEWPP era
 
 data NewppState era
-  = NewppState (UTxOState era) AccountState PParams
+  = NewppState (UTxOState era) AccountState (PParams era)
 
 data NewppEnv era
   = NewppEnv (DState era) (PState era)
@@ -64,7 +64,7 @@ instance NoUnexpectedThunks (NewppPredicateFailure era)
 
 instance Typeable era => STS (NEWPP era) where
   type State (NEWPP era) = NewppState era
-  type Signal (NEWPP era) = Maybe PParams
+  type Signal (NEWPP era) = Maybe (PParams era)
   type Environment (NEWPP era) = NewppEnv era
   type BaseM (NEWPP era) = ShelleyBase
   type PredicateFailure (NEWPP era) = NewppPredicateFailure era

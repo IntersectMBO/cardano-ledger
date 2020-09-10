@@ -79,7 +79,7 @@ data CertsPredicateFailure era
   deriving (Show, Eq, Generic)
 
 instance Era era => STS (CERTS era) where
-  type Environment (CERTS era) = (SlotNo, Ix, PParams, AccountState)
+  type Environment (CERTS era) = (SlotNo, Ix, PParams era, AccountState)
   type State (CERTS era) = (DPState era, Ix)
   type Signal (CERTS era) = Maybe (DCert era, CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
@@ -139,7 +139,7 @@ genDCerts ::
   forall era.
   Era era =>
   GenEnv era ->
-  PParams ->
+  PParams era ->
   DPState era ->
   SlotNo ->
   Natural ->
