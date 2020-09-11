@@ -114,6 +114,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Examples.PoolReReg
       Test.Shelley.Spec.Ledger.Examples.Updates
       Test.Shelley.Spec.Ledger.Fees
+      Test.Shelley.Spec.Ledger.LegacyOverlay
       Test.Shelley.Spec.Ledger.MultiSigExamples
       Test.Shelley.Spec.Ledger.PropertyTests
       Test.Shelley.Spec.Ledger.Rewards

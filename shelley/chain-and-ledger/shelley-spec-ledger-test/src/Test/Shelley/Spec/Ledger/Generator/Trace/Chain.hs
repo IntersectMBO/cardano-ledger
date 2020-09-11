@@ -29,7 +29,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck
   )
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, fromList, keysSet)
+import qualified Data.Map.Strict as Map (elems, fromList)
 import Data.Proxy
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
@@ -51,7 +51,6 @@ import Shelley.Spec.Ledger.Keys
     coerceKeyRole,
   )
 import Shelley.Spec.Ledger.LedgerState (esAccountState, nesEs, _treasury)
-import Shelley.Spec.Ledger.OverlaySchedule (overlaySchedule)
 import Shelley.Spec.Ledger.STS.Chain (chainNes, initialShelleyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
@@ -67,7 +66,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
 import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
-import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash, runShelleyBase)
+import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
@@ -105,12 +104,6 @@ mkGenesisChainState constants (IRC _slotNo) = do
   utxo0 <- genUtxo0 constants
 
   pParams <- genPParams constants
-  let osched_ =
-        runShelleyBase $
-          overlaySchedule
-            epoch0
-            (Map.keysSet delegs0)
-            pParams
 
   pure . Right . withRewards $
     initialShelleyState
@@ -119,7 +112,6 @@ mkGenesisChainState constants (IRC _slotNo) = do
       utxo0
       (maxLLSupply Val.~~ balance utxo0)
       delegs0
-      osched_
       pParams
       (hashHeaderToNonce (lastByronHeaderHash p))
   where

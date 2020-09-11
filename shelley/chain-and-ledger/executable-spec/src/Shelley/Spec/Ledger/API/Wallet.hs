@@ -44,6 +44,7 @@ import Shelley.Spec.Ledger.LedgerState
     stakeDistr,
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Rewards
   ( NonMyopic (..),
     StakeShare (..),
@@ -153,20 +154,19 @@ getLeaderSchedule ::
   ChainDepState era ->
   KeyHash 'StakePool era ->
   SignKeyVRF era ->
+  PParams era ->
   Set SlotNo
-getLeaderSchedule globals ss cds poolHash key = Set.filter isLeader epochSlots
+getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlots
   where
     isLeader slotNo =
       let y = VRF.evalCertified () (mkSeed seedL slotNo epochNonce) key
-       in not (isOverlaySlot slotNo overlaySched)
+       in not (isOverlaySlot a (_d pp) slotNo)
             && checkLeaderValue (VRF.certifiedOutput y) stake f
     stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
-    overlaySched = nesOsched ss
     poolDistr = unPoolDistr $ nesPd ss
     TicknState epochNonce _ = csTickn cds
     currentEpoch = nesEL ss
     ei = epochInfo globals
     f = activeSlotCoeff globals
     epochSlots = Set.fromList [a .. b]
-      where
-        (a, b) = runIdentity $ epochInfoRange ei currentEpoch
+    (a, b) = runIdentity $ epochInfoRange ei currentEpoch

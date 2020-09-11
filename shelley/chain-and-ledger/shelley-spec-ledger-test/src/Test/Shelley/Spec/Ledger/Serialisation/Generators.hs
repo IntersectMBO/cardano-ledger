@@ -38,7 +38,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Iterate.SetAlgebra (biMapFromList)
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
@@ -85,7 +85,6 @@ import Shelley.Spec.Ledger.MetaData
   )
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams (ProtVer)
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
@@ -577,16 +576,6 @@ instance Era era => Arbitrary (OBftSlot era) where
 
 instance Arbitrary ActiveSlotCoeff where
   arbitrary = mkActiveSlotCoeff <$> arbitrary
-
-instance Era era => Arbitrary (OverlaySchedule era) where
-  arbitrary =
-    -- Pick the parameters from specific random to avoid huge overlay schedules
-    overlayScheduleHelper
-      <$> (EpochSize <$> choose (1, 100))
-      <*> (SlotNo <$> choose (0, 100000))
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
 
 instance Arbitrary Likelihood where
   arbitrary = Likelihood <$> arbitrary

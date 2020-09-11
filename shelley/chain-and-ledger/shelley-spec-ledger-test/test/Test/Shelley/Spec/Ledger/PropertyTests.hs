@@ -8,6 +8,7 @@ import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
+import Test.Shelley.Spec.Ledger.LegacyOverlay (legacyOverlayTest)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
     onlyValidLedgerSignalsAreGenerated,
@@ -55,7 +56,8 @@ minimalPropertyTests =
         "Deserialize stake address reference"
         [ TQC.testProperty "wstake reference from bytestrings" propDeserializeAddrStakeReference,
           TQC.testProperty "stake reference from short bytestring" propDeserializeAddrStakeReferenceShortIncrediblyLongName
-        ]
+        ],
+      TQC.testProperty "legacy overlay schedule" legacyOverlayTest
     ]
 
 -- | 'TestTree' of property-based testing properties.

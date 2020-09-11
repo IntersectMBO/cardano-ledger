@@ -64,7 +64,6 @@ import Shelley.Spec.Ledger.LedgerState as X
     EpochState (..),
     KeyPairs,
     LedgerState (..),
-    NewEpochEnv (..),
     NewEpochState (..),
     PState (..),
     RewardUpdate (..),
@@ -95,7 +94,7 @@ import Shelley.Spec.Ledger.STS.Ocert as X (OCertEnv (..))
 import Shelley.Spec.Ledger.STS.Pool as X (POOL, PoolEnv (..))
 import Shelley.Spec.Ledger.STS.PoolReap as X (POOLREAP)
 import Shelley.Spec.Ledger.STS.Ppup as X (PPUP, PPUPEnv (..))
-import Shelley.Spec.Ledger.STS.Tick as X (TICK, TickEnv (..))
+import Shelley.Spec.Ledger.STS.Tick as X (TICK)
 import Shelley.Spec.Ledger.STS.Utxo as X (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow as X (UTXOW)
 import Shelley.Spec.Ledger.Scripts as X

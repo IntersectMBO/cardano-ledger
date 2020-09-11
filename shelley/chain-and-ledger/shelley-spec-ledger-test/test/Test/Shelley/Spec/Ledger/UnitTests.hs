@@ -60,7 +60,6 @@ import Shelley.Spec.Ledger.LedgerState
     _dstate,
     _rewards,
   )
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.STS.Delegs (DelegsPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure (..))
@@ -155,26 +154,6 @@ pp =
       _minPoolCost = Coin 100
     }
 
-testOverlayScheduleZero :: Assertion
-testOverlayScheduleZero =
-  let os =
-        runShelleyBase $
-          overlaySchedule
-            (EpochNo 0)
-            mempty
-            (emptyPParams {_d = unsafeMkUnitInterval 0})
-   in assertBool "Overlay schedule is not empty" (overlayScheduleIsEmpty os)
-
-testNoGenesisOverlay :: Assertion
-testNoGenesisOverlay =
-  let os =
-        runShelleyBase $
-          overlaySchedule
-            (EpochNo 0)
-            mempty
-            (emptyPParams {_d = unsafeMkUnitInterval 0.5})
-   in assertBool "Overlay schedule is not empty" (overlayScheduleIsEmpty os)
-
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
   checkLeaderValue
@@ -187,11 +166,7 @@ testsPParams :: TestTree
 testsPParams =
   testGroup
     "Test the protocol parameters."
-    [ testCase "Overlay Schedule when d is zero" $
-        testOverlayScheduleZero,
-      testCase "generate overlay schedule without genesis nodes" $
-        testNoGenesisOverlay,
-      testCase "VRF checks when the activeSlotCoeff is one" $
+    [ testCase "VRF checks when the activeSlotCoeff is one" $
         testVRFCheckWithActiveSlotCoeffOne
     ]
 

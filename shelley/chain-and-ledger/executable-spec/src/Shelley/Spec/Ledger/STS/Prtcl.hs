@@ -41,6 +41,7 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Nonce,
     Seed,
     ShelleyBase,
+    UnitInterval,
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
@@ -61,7 +62,6 @@ import Shelley.Spec.Ledger.Keys
     VRFSignable,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
-import Shelley.Spec.Ledger.OverlaySchedule (OverlaySchedule)
 import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
@@ -103,7 +103,7 @@ instance Era era => NoUnexpectedThunks (PrtclState era)
 
 data PrtclEnv era
   = PrtclEnv
-      (OverlaySchedule era)
+      UnitInterval -- the decentralization paramater @d@ from the protocal parameters
       (PoolDistr era)
       (GenDelegs era)
       Nonce
@@ -161,7 +161,7 @@ prtclTransition ::
   TransitionRule (PRTCL era)
 prtclTransition = do
   TRC
-    ( PrtclEnv osched pd dms eta0,
+    ( PrtclEnv dval pd dms eta0,
       PrtclState cs etaV etaC,
       bh
       ) <-
@@ -179,7 +179,7 @@ prtclTransition = do
         )
   cs' <-
     trans @(OVERLAY era) $
-      TRC (OverlayEnv osched pd dms eta0, cs, bh)
+      TRC (OverlayEnv dval pd dms eta0, cs, bh)
 
   pure $
     PrtclState

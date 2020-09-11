@@ -28,7 +28,6 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
@@ -53,7 +52,7 @@ instance
 
   type Signal (NEWEPOCH era) = EpochNo
 
-  type Environment (NEWEPOCH era) = NewEpochEnv era
+  type Environment (NEWEPOCH era) = ()
 
   type BaseM (NEWEPOCH era) = ShelleyBase
   type PredicateFailure (NEWEPOCH era) = NewEpochPredicateFailure era
@@ -67,7 +66,6 @@ instance
           emptyEpochState
           SNothing
           (PoolDistr Map.empty)
-          emptyOverlaySchedule
     ]
 
   transitionRules = [newEpochTransition]
@@ -78,8 +76,8 @@ newEpochTransition ::
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
   TRC
-    ( NewEpochEnv _s gkeys,
-      src@(NewEpochState (EpochNo eL) _ bcur es ru _pd _osched),
+    ( _,
+      src@(NewEpochState (EpochNo eL) _ bcur es ru _pd),
       e@(EpochNo e_)
       ) <-
     judgmentContext
@@ -95,9 +93,8 @@ newEpochTransition = do
 
       es'' <- trans @(MIR era) $ TRC ((), es', ())
       es''' <- trans @(EPOCH era) $ TRC ((), es'', e)
-      let EpochState _acnt ss _ls _pr pp _ = es'''
+      let EpochState _acnt ss _ls _pr _ _ = es'''
           pd' = calculatePoolDistr (_pstakeSet ss)
-      osched' <- liftSTS $ overlaySchedule e gkeys pp
       pure $
         NewEpochState
           e
@@ -106,7 +103,6 @@ newEpochTransition = do
           es'''
           SNothing
           pd'
-          osched'
 
 calculatePoolDistr :: SnapShot era -> PoolDistr era
 calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =

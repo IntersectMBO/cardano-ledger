@@ -54,22 +54,15 @@ chainChecks globals pp bh = STS.chainChecks (maxMajorPV globals) pp bh
   Applying blocks
 -------------------------------------------------------------------------------}
 
-mkTickEnv ::
-  ShelleyState era ->
-  STS.TickEnv era
-mkTickEnv = STS.TickEnv . LedgerState.getGKeys
-
 mkBbodyEnv ::
   ShelleyState era ->
   STS.BbodyEnv era
 mkBbodyEnv
   LedgerState.NewEpochState
-    { LedgerState.nesOsched,
-      LedgerState.nesEs
+    { LedgerState.nesEs
     } =
     STS.BbodyEnv
-      { STS.bbodySlots = nesOsched,
-        STS.bbodyPp = LedgerState.esPp nesEs,
+      { STS.bbodyPp = LedgerState.esPp nesEs,
         STS.bbodyAccount = LedgerState.esAccountState nesEs
       }
 
@@ -93,7 +86,7 @@ applyTickTransition ::
 applyTickTransition globals state hdr =
   (either err id) . flip runReader globals
     . applySTS @(STS.TICK era)
-    $ TRC (mkTickEnv state, state, hdr)
+    $ TRC ((), state, hdr)
   where
     err :: Show a => a -> b
     err msg = error $ "Panic! applyHeaderTransition failed: " <> (show msg)

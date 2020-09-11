@@ -83,7 +83,6 @@ module Shelley.Spec.Ledger.LedgerState
     createRUpd,
     --
     NewEpochState (..),
-    NewEpochEnv (..),
     getGKeys,
     updateNES,
   )
@@ -154,7 +153,6 @@ import Shelley.Spec.Ledger.Keys
     VKey,
     asWitness,
   )
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
@@ -545,9 +543,7 @@ data NewEpochState era = NewEpochState
     -- | Possible reward update
     nesRu :: !(StrictMaybe (RewardUpdate era)),
     -- | Stake distribution within the stake pool
-    nesPd :: !(PoolDistr era),
-    -- | Overlay schedule for PBFT vs Praos
-    nesOsched :: !(OverlaySchedule era)
+    nesPd :: !(PoolDistr era)
   }
   deriving (Show, Eq, Generic)
 
@@ -556,40 +552,30 @@ instance (Era era) => NFData (NewEpochState era)
 instance NoUnexpectedThunks (NewEpochState era)
 
 instance Era era => ToCBOR (NewEpochState era) where
-  toCBOR (NewEpochState e bp bc es ru pd os) =
-    encodeListLen 7 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
+  toCBOR (NewEpochState e bp bc es ru pd) =
+    encodeListLen 6 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
       <> toCBOR ru
       <> toCBOR pd
-      <> toCBOR os
 
 instance Era era => FromCBOR (NewEpochState era) where
   fromCBOR = do
-    decodeRecordNamed "NewEpochState" (const 7) $ do
+    decodeRecordNamed "NewEpochState" (const 6) $ do
       e <- fromCBOR
       bp <- fromCBOR
       bc <- fromCBOR
       es <- fromCBOR
       ru <- fromCBOR
       pd <- fromCBOR
-      os <- fromCBOR
-      pure $ NewEpochState e bp bc es ru pd os
+      pure $ NewEpochState e bp bc es ru pd
 
 getGKeys ::
   NewEpochState era ->
   Set (KeyHash 'Genesis era)
 getGKeys nes = Map.keysSet genDelegs
   where
-    NewEpochState _ _ _ es _ _ _ = nes
+    NewEpochState _ _ _ es _ _ = nes
     EpochState _ _ ls _ _ _ = es
     LedgerState _ (DPState (DState _ _ _ _ (GenDelegs genDelegs) _) _) = ls
-
-data NewEpochEnv era = NewEpochEnv
-  { neeS :: SlotNo,
-    neeGkeys :: Set (KeyHash 'Genesis era)
-  }
-  deriving (Show, Eq, Generic)
-
-instance NoUnexpectedThunks (NewEpochEnv era)
 
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
@@ -965,8 +951,7 @@ updateNES
       (EpochState acnt ss _ pr pp nm)
       ru
       pd
-      osched
     )
   bcur
   ls =
-    NewEpochState eL bprev bcur (EpochState acnt ss ls pr pp nm) ru pd osched
+    NewEpochState eL bprev bcur (EpochState acnt ss ls pr pp nm) ru pd

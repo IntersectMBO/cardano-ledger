@@ -95,18 +95,14 @@ import Shelley.Spec.Ledger.LedgerState
     emptyDState,
     emptyPPUPState,
     emptyPState,
-    getGKeys,
     updateNES,
     _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams
   ( PParams,
+    PParams' (..),
     ProtVer (..),
-    _maxBBSize,
-    _maxBHSize,
-    _protocolVersion,
   )
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv (..), BbodyState (..))
@@ -117,7 +113,7 @@ import Shelley.Spec.Ledger.STS.Prtcl
     PrtlSeqFailure,
     prtlSeqChecks,
   )
-import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
+import Shelley.Spec.Ledger.STS.Tick (TICK)
 import Shelley.Spec.Ledger.STS.Tickn
 import Shelley.Spec.Ledger.Slot (EpochNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
@@ -162,11 +158,10 @@ initialShelleyState ::
   UTxO era ->
   Coin ->
   Map (KeyHash 'Genesis era) (GenDelegPair era) ->
-  OverlaySchedule era ->
   PParams era ->
   Nonce ->
   ChainState era
-initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
+initialShelleyState lab e utxo reserves genDelegs pp initNonce =
   ChainState
     ( NewEpochState
         e
@@ -190,7 +185,6 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
         )
         SNothing
         (PoolDistr Map.empty)
-        os
     )
     cs
     initNonce
@@ -261,7 +255,7 @@ chainTransition =
         Right () -> pure ()
         Left e -> failBecause $ PrtclSeqFailure e
 
-      let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
+      let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ = nes
 
       maxpv <- liftSTS $ asks maxMajorPV
       case chainChecks maxpv pp bh of
@@ -269,13 +263,12 @@ chainTransition =
         Left e -> failBecause e
 
       let s = bheaderSlotNo $ bhbody bh
-      let gkeys = getGKeys nes
 
       nes' <-
-        trans @(TICK era) $ TRC (TickEnv gkeys, nes, s)
+        trans @(TICK era) $ TRC ((), nes, s)
 
-      let NewEpochState e1 _ _ _ _ _ _ = nes
-          NewEpochState e2 _ bcur es _ _pd osched = nes'
+      let NewEpochState e1 _ _ _ _ _ = nes
+          NewEpochState e2 _ bcur es _ _pd = nes'
       let EpochState account _ ls _ pp' _ = es
       let LedgerState _ (DPState (DState _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
 
@@ -293,14 +286,14 @@ chainTransition =
       PrtclState cs' etaV' etaC' <-
         trans @(PRTCL era) $
           TRC
-            ( PrtclEnv osched _pd _genDelegs eta0',
+            ( PrtclEnv (_d pp') _pd _genDelegs eta0',
               PrtclState cs etaV etaC,
               bh
             )
 
       BbodyState ls' bcur' <-
         trans @(BBODY era) $
-          TRC (BbodyEnv osched pp' account, BbodyState ls bcur, block)
+          TRC (BbodyEnv pp' account, BbodyState ls bcur, block)
 
       let nes'' = updateNES nes' bcur' ls'
           bhb = bhbody bh
