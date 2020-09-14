@@ -28,37 +28,58 @@
   urlbordercolor={white}
 }
 
+\setlength{\parindent}{0pt}
+
 \maketitle
 
 \section{Introduction}
 
-The purpose of stake pool ranking is to provide a recommendation to users
-(wallets, people who own ADA, etc)
-for the stake pools which are expected to yield the greatest rewards.
-The ranking is based upon past performance but should be a useful predictor of future performance.
+The purpose of the stake pool ranking algorithm is to provide a systematic and unique ordering for stake pools,
+based on the expected long-term rewards that each stake pool will produce.
+The pool ranking is provided to users (wallets, people who own ADA, etc.), and can be used as a single
+metric to guide delegation decisions.  The ranking is partly based on the past performance of each pool, but
+also takes into account current levels of delegation etc.  It should thus be a useful predictor of future performance.
 
-A naive approach would be to rank pools based on the rewards that are
-currently being paid out to its delegators.
-There are at least two problems with this approach.
 
-First, the naive approach is short-sighted in the sense that it does not take into
-account what a newly formed stake pool would yield when it reaches saturation.
-This issue is explained in detail in \cite{bkks2018}. The problem as applied to
-Cardano is explained in the delegation design doc \cite[Section 5.6]{delegation_design}.
+An obvious, but na\"{i}ve, approach to the ranking problem would order pools based on the rewards that are
+currently being paid out to their delegators.  There are, however, a number of problems with this approach.
 
-The second problem is that sometimes a stake pool has the opportunity to produce blocks,
-but doesn't due to things like a bad network connection or untimely downtime. The rate at
-which a pool uses their opportunities to make blocks, which we will call hit rate, affects rewards.
-It needs to be taken into account.
+\begin{enumerate}
+  \item
+  The na\"{i}ve approach is \emph{short-sighted}, in the sense that it does not take into
+  account the rewards that a newly formed stake pool would yield when it reaches saturation (\cite{bkks2018} describes this in detail).
+  The specific relationship to the Cardano design is explained in the IOHK delegation design document \cite[Section 5.6]{delegation_design}.
+  \item
+    A stake pool will sometimes have the opportunity to produce blocks,
+    but fails to do so due to issues such as a poor network connection or untimely downtime. The rate at
+    which a pool uses their opportunities to make blocks, which we will call its \emph{hit rate}, affects rewards.
+    It needs to be taken into account.
+  \item
+    The na\"{i}ve approach only considers a single set of rewards.  Delegating on this basis would create significant
+    instability in the system, with delegators pursuing short-term rewards over the long-term health of the network.
+    In order to avoid this issue and so create more stability, it is necessary to consider a pool's historic performance, rather than considering only a single set of rewards.
+    This introduces some \emph{hysteris} into the system.
+\end{enumerate}
 
-Our aim is to address both concerns.
+Our aim with the pool ranking algorithm is to address all these concerns.
 
 \section{Hit Rate}
 
-The pool operator is the only one who knows their
-hit rate since others do not have access to their VRF calculation.
-Others can only try to divine it using the public knowledge of the
-pool's relative stake and number of blocks produced.
+As described above, the \emph{hit rate} for some time period $T$ is the ratio of expected to actual blocks
+that the pool produces during that time period.
+
+$$
+  \begin{array}{lclcp{3in}}
+  Hit~Rate_T &=& B_{Actual,T} / B_{Expected,T} \\
+  & \textit{where} & B_{Actual,T} &=& \textit{The actual number of blocks that a pool has produced in time T}\\
+  &  & B_{Expected,T} &=& \textit{The actual number of blocks that a pool was expected to produce in time T}
+  \end{array}
+$$
+
+The pool operator is the only one who knows the actual pool
+hit rate since other actors do not have access to their VRF calculation,
+and  can only attempt to divine it using public knowledge of the
+pool's relative stake and the number of blocks it has produced.
 
 \subsection{Estimation}
 
