@@ -919,7 +919,7 @@ createRUpd ::
   EpochState era ->
   Coin ->
   ShelleyBase (RewardUpdate era)
-createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) total = do
+createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply = do
   asc <- asks activeSlotCoeff
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
@@ -938,7 +938,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) to
       Coin rPot = _feeSS ss <> deltaR1
       deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
-      totalStake = circulation es total
+      totalStake = circulation es maxSupply
       (rs_, newLikelihoods) =
         reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' totalStake asc slotsPerEpoch
       deltaR2 = _R Val.~~ (Map.foldr (<>) mempty rs_)
