@@ -3,6 +3,7 @@
 \usepackage{amsmath}
 \usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
 \usepackage{xcolor}
+\usepackage{todonotes}
 
 \newcommand\pbar{\overline{p}}
 
@@ -29,6 +30,7 @@
 }
 
 \setlength{\parindent}{0pt}
+\setlength{\parskip}{12pt plus 3pt minus 2pt}
 
 \maketitle
 
@@ -63,64 +65,83 @@ currently being paid out to their delegators.  There are, however, a number of p
 
 Our aim with the pool ranking algorithm is to address all these concerns.
 
+\begin{comment}
+  Is this a new proposal, or just a description of the current status quo?
+\end{comment}
+
 \section{Hit Rate}
 
 As described above, the \emph{hit rate} for some time period $T$ is the ratio of expected to actual blocks
 that the pool produces during that time period.
 
 $$
-  \begin{array}{lclcp{3in}}
-  Hit~Rate_T &=& B_{Actual,T} / B_{Expected,T} \\
-  & \textit{where} & B_{Actual,T} &=& \textit{The actual number of blocks that a pool has produced in time T}\\
-  &  & B_{Expected,T} &=& \textit{The actual number of blocks that a pool was expected to produce in time T}
+\begin{array}{l}
+  \begin{array}{lclp{3in}}
+    Hit~Rate_T &=& B_{Actual,T} / B_{Expected,T} \\
+  ~~ \textit{where} \\
   \end{array}
+\\
+~~~~
+  \begin{array}{lcp{3in}}
+      B_{Actual,T} &=& \text{The actual number of blocks that a pool}\\
+      && \text{has produced in time T}\\
+      B_{Expected,T} &=& \text{The actual number of blocks that a pool}\\
+      && \text{was expected to produce in time T}
+  \end{array}
+\end{array}
 $$
 
-The pool operator is the only one who knows the actual pool
-hit rate since other actors do not have access to their VRF calculation,
-and  can only attempt to divine it using public knowledge of the
-pool's relative stake and the number of blocks it has produced.
+Note that the pool operator is the only one who knows the \emph{actual} pool
+\emph{hit rate}, since only they have access to their internal VRF calculation.
+Other actors can only estimate it using public knowledge of the
+pool's relative stake and the number of blocks that it has produced.
 
-\subsection{Estimation}
+\subsection{Hit Rate Estimation}
 
 Each slot, a stake pool with relative (active) stake $\sigma_a$ has probability
 \[ 1 - (1-f)^{\sigma_a} \]
 of producing a block, where $f$ is the active slot coefficient.
 We can use this to estimate the hit rate.
-
-We represent such an estimate as a probability distribution on the interval $[0,1]$.
+%
+We represent such an estimate as a probability distribution on the interval $[0,1]$.\todo{Are you assuming a Gaussian distribution?}
 
 After each epoch, we refine our estimate into a more accurate one as follows.
-
-Let's say we
-observe the output of a stake pool during an epoch. We have a previous estimate, $w$, the
-epoch has $E$ slots, the pool produces $n$ blocks, and we calculate that on a given slot
-the chance they're allowed to produce a block is $t$.
-
-We compute the likelihood function, $L$, where $L(x)$ is the probability of producing exactly $n$ blocks,
+%
+Assume that we can
+observe all the blocks that a stake pool produces during an epoch, that we have a previous estimate of the blocks that
+we expected to produce during this epoch, $w$; we know that the
+epoch has a total of $E$ slots; the pool produces $n$ blocks; and we calculate that on a given slot
+the chance that the pool is allowed to produce a block is $t$.
+%
+The \emph{likelihood function}, $L$, is then shown below, where $L(x)$ is the probability of producing exactly $n$ blocks,
+and $S(x)$ is the probability that the pool produces a block at a given slot, under the assumption that the
+\emph{hit rate}, $p$, is equal to $x$.
 
 \[ L(x) = \left( E \atop n \right) S(x)^{n} (1-S(x))^{E - n}, \]
-
-and $S(x)$ is the probability that the pool produces a block at a given slot under the assumption that the
-hit rate, $p$, is equal to $x$.
 
 \[
 \begin{array}{r@{=}l}
 S(x) & P( \text{made block} | p = x) \\
-     & t \cdot P( \text{made block} | p = x,~\text{can}) + (1-t) \cdot P( \text{made block} | p = x,~\text{can't}) \\
+     & t \cdot P( \text{made block} | p = x,~b) + (1-t) \cdot P( \text{made block} | p = x,~\not~b) \\
+%     & t \cdot P( \text{made block} | p = x,~\text{can}) + (1-t) \cdot P( \text{made block} | p = x,~\text{can't}) \\
      & tx                              + (1-t) \cdot 0 \\
      & tx \\
+\\
+b    & \text{can make a block}
 \end{array}
 \]
 
-Our refined estimate is then $q(x) = \frac{w(x)L(x)}{\int w(x)L(x)}$.
+Our refined hit rate estimate is then $q(x) = \frac{w(x)L(x)}{\int w(x)L(x)}$.
 
-By calculating a running product, $\mathcal{L}$, of likelihood functions, we can defer this computation.
-
-At the time that a user wishes to produce a ranking, they will
-supply a prior distribution. This is a default estimate applied to pools for which we don't have any historical data.
-
-To make the rankings we use the posterior distribution,
+\todo{Needs a better explanation. The equation implies that $L = \mathcal{L}$}
+In order to obtain an actual ranking, we maintain a running product, $\mathcal{L}$, of the likelihood function, $L$.
+We apply this to some initial \emph{prior distribution}
+of block production, where % , we can defer the full computation  until we need to use it.
+% When a user wishes to produce a ranking, they will
+% supply a \emph{prior distribution} of block production that can be plugged in to this function.
+the prior distribution is a default hit rate estimate that is applied to pools for which we don't have any historical data.
+%
+To construct the rankings, we then use the \emph{posterior distribution}, $q(x)$,
 
 \begin{equation}
 \label{post}
@@ -129,56 +150,52 @@ q(x) = \frac{w_(x)\mathcal{L}(x)}{\int w(x)\mathcal{L}(x)}.
 
 \subsection{Implementation}
 
-We approximate a probability density function, $g$, using a sequence of sample points,
+We approximate a \emph{probability density function}, $g$, using a sequence of sample points,
 
 \[ A(g) = \big(\ln(g(0.005)),~ \ln(g(0.015)),~ \ldots,~ \ln(g(0.995))\big). \]
 
-This lets us use multiplication rather than exponentiation for most of our calculations.
+This allows us to use multiplication rather than exponentiation for most of our calculations.
 
-Because of the normalization step in \eqref{post}, any scalar multiple of $g$
-will yield the same result in the end. So any constant shift of $A(g)$ will as well.
-To ensure that our numbers don't grow too large, we use the normal form
+Because of the normalization step in Equation \eqref{post}, any scalar multiple of $g$
+will ultimately yield the same result. It follows that any constant shift of $A(g)$ will also yield the same result.
+In order to reduce the magnitude of the numbers that we are dealing with, we therefore use the logarithmic normal form\todo{Are there any tradeoffs?  Eg computational cost of logs?}
 
 \[ A'(g) = \big(\ln(g(0.005)) - m,~ \ln(g(0.015)) - m,~ \ldots,~ \ln(g(0.995)) - m\big), \]
-where $m$ is the minimal sample point. We use $g_i$ to denote the $i$'th term of $A'(g)$.
+where $\ln$ is the \emph{natural logarithm} and $m$ is the minimal sample point. We use $g_i$ to denote the $i$'th term of $A'(g)$.
+\todo{This needs clarification.  What previous sum?  What is converted?}
+For each stake pool, we compute this approximation every epoch, add it to the previous sum, and convert it to this normal form
 
-For each stake pool, every epoch we compute this approximation, add it to our previous sum, and convert it to this normal form.
-
-To calculate the final pdf used in ranking, we approximate \eqref{post}.
-If $\mathcal{L}$ is our cumulative likelihood
-and $w$ is our prior, we use
+To calculate the final probability distribution function that we need for pool ranking, we approximate Equation \eqref{post}.
+If $\mathcal{L}$ is our cumulative likelihood\todo{Inconsistent use of $\mathcal{L}$, $S$ and $q$} and $w$ is our prior distribution, we use
 
 \[ q_i = e^{w_i + \mathcal{L}_i} / S, \]
 where
 \[ S = \sum (0.01) e^{w_i + \mathcal{L}_i}. \]
 
-In the ranking calculation, we use the $k$'th percentile of this distribution for some $k$.
-We do so by computing the minimal $i$ such that the sum of $[q_0,~\ldots,q_i]$ is at least $k$.
-Then $i/100$ is the $k$'th percentile.
+\todo{Let's not use $k$ :)}
+In the ranking calculation, we use the $j$'th percentile of this distribution for some $j$.
+We do so by computing the minimal $i$ such that the sum of $[q_0,~\ldots,q_i]$ is at least $j$.
+Then $i/100$ is the $j$'th percentile.
 
-Putting it all together, given some prior distribution,
-a percentile, and a cumulative likelihood,
+Putting it all together, given some prior distribution, $w$, a percentile, $j$, and a cumulative likelihood, $\mathcal{L}$,
 we estimate the hit rate to be $i/100$.
 
 
 \subsection{Example}
 
-Let's say Alice's pool has been active for two epochs.
-There are 432,000 slots per epoch, and the active slot coefficient is 0.05
-(the mainnet values at the time of writing).
-
-During the first epoch, the relative stake was $0.001$ and 10 blocks were produced.
-
-During the second epoch, the relative stake was $0.01$ and 200 blocks were produced.
-
+Assume that Alice's pool has been active for two epochs,
+there are 432,000 slots per epoch, and the active slot coefficient is 0.05
+(these are the mainnet values at the time of writing).
+\begin{itemize}
+\item
+  During the first epoch (epoch 1), the relative stake was $0.001$ and 10 blocks were produced.
+\item
+  During the second epoch (epoch 2), the relative stake was $0.01$ and 200 blocks were produced.
+\end{itemize}
 We calculate $\ln(L_1(x))$ for the first epoch as follows.
-
+%
 With relative stake $0.001$, the probability of being allowed to produce a block on
-each slot is
-
-\[ t_1 = 1-(1-0.05)^{0.001}, \]
-and $S_1(x)= t_1x$
-
+each slot is $t_1 = 1-(1-0.05)^{0.001},$ and $S_1(x)= t_1x$.
 Since 10 blocks were produced, the real likelihood function is
 
 \[ L_1(x) =  \left( 432,000 \atop 10 \right) (t_1x)^{10} (1-t_1x)^{431,990} \]
@@ -190,8 +207,8 @@ and we will use
             &= 10 \ln(t_1 x) + 431,990 \ln(1 - t_1 x) \\
 \end{array}
 \]
-for storing information about Alice's pool's performance this epoch.
-In particular, we store
+to record information about Alice's pool's performance this epoch.
+In particular, we record
 
 \[ A'(L_1) = [\ell_1(0.005)-m_1,~\ell_1(0.015)-m_1,~\ldots,~\ell_1(.995)-m_1] \]
 where $m_1=\min\{\ell_1(0.005),\ldots,\ell_1(0.995)\}$
@@ -209,16 +226,15 @@ where $m_2=\min\{\ell_2(0.005)+\ell_1(0.005),\ldots,\ell_2(0.995)+\ell_1(0.995)\
 
 \section{Ranking and Saturation}
 
-We now describe how to use the hit rate estimation to calculate the stake pool ranking
-described in \cite{bkks2018} and \cite[Section 5.6]{delegation_design}.
-
+\todo{Explain the assumptions.  Not saturated, for example.}
+We now describe how the hit rate estimation can be used to calculate the stake pool ranking,
+as described in \cite{bkks2018} and \cite[Section 5.6]{delegation_design}.
 First we must turn the sampling of the likelihood functions into a concrete value.
-Given a percentage, $k$, we will calculate the $k$'th percentile of the hit rates.
-Currently we're using the 10\%, but we aim for this to be user configurable.
-For a given pool, let $h_k$ denote the $k$'th percentile.
-
+Given a percentage, $z$, we will calculate the $z$'th percentile\footnote{At present we use the 10th percentile (i.e. $z=10\%$), but we ultimately aim for this to be user configurable.}.
+For a given stake pool $P$, let $h_z$ denote the $z$'th percentile.
+%
 Following \cite[Section 5.6.1]{delegation_design},
-we can compute any given stake pool's rewards at saturation with:
+we can then compute the stake pool's rewards when it reaches \emph{saturation} (it has the optimal level of stake) using:
 \[
     \tilde{f}(s, \pbar) :=
     \hat{f}(s,z_0,\pbar)=
@@ -227,18 +243,18 @@ we can compute any given stake pool's rewards at saturation with:
     \left(z_0 + \min(s,z_0)\cdot a_0\right).
 \]
 
-where $\bar{p}$ is the \textit{apparent performance} defined in
+where $\bar{p}$ is the \textit{apparent performance} of the stake pool, as defined in
 \cite[Section 5.5.2]{delegation_design}.
-We will substitute our hit rate estimation $h_k$ for the apparent performance $\bar{p}$,
-Given a pool with pledged owner stake \(s\), costs \(c\) and margin \(m\),
-the desirability function of \cite[Section 5.6.1]{delegation_design} becomes:
+We will substitute our estimate of the hit rate, $h_z$, for the apparent performance, $\bar{p}$,
+Given a pool, $P$ with pledged owner stake \(s\), costs \(c\) and margin \(m\),
+the \emph{desirability} function of \cite[Section 5.6.1]{delegation_design} becomes:
 \[
-    d(c, m, s, h_k) :=
+    d(c, m, s, h_z) :=
     \left\{
     \begin{array}{ll}
         \displaystyle 0 &
-        \text{if $\tilde{f}(s,h_k)\leq c$,} \\
-        \displaystyle\left(\tilde{f}(s,h_k) - c\right)\cdot(1-m) &
+        \text{if $\tilde{f}(s,h_z)\leq c$,} \\
+        \displaystyle\left(\tilde{f}(s,h_z) - c\right)\cdot(1-m) &
         \text{otherwise.}
     \end{array}
     \right.
@@ -247,9 +263,10 @@ From here, we proceed exactly as in
 \cite[Section 5.6.2]{delegation_design} and
 \cite[Section 5.6.4]{delegation_design}.
 
-The desirability function provides a ranking of stake pools.
-For a stake pool with pledged owner stake $s$, total stake $\sigma$ and rank
-$r$, we define its \emph{non-myopic stake} $\sigma_\mathrm{nm}$ as
+The \emph{desirability function}~\cite{...} can be used to provide an overall ranking over stake pools, ordering the
+pools in terms of their \emph{non-myopic rewards} for some stake.
+For a stake pool with pledged owner stake $s$, total stake $\sigma$, rank
+$r$ and apparent performance $\pbar$, we define its \emph{non-myopic stake} $\sigma_\mathrm{nm}$ as:
 \[
     \sigma_\mathrm{nm}(s,\sigma,r) :=
     \left\{
@@ -261,12 +278,13 @@ $r$, we define its \emph{non-myopic stake} $\sigma_\mathrm{nm}$ as
     \end{array}
     \right.
 \]
-where $k$ is the parameter defined in \cite[Section 5.2]{delegation_design}
-which represents the desired number of stake pools.
-
-The non-myopic pool member rewards of a pool with costs $c$, margin $m$,
-pledged owner stake $s$, stake $\sigma$, rank $r$, and apparent
-performance $\pbar$, for a member contributing member stake $t$, are
+where $k$ is the parameter that is defined in \cite[Section 5.2]{delegation_design},
+and which represents the desired number of stake pools in an equilibrium state.
+%
+The \emph{non-myopic pool member rewards}
+% of a pool with costs $c$, margin $m$,
+% pledged owner stake $s$, stake $\sigma$, rank $r$,
+for a member that contributes member stake $t$, are then:
 \[
     r_\mathrm{member, nm}(c, m, s, \sigma, t, r, \pbar) :=
     r_\mathrm{member}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r),
@@ -286,9 +304,18 @@ where
     \end{array}
     \right.
 \]
-
-Finally, users can use $r_\mathrm{member, nm}$ to select a pool
+Delegators can use $r_\mathrm{member, nm}$ to select a pool
 that maximizes their rewards.
+
+\section{Haskell Source Code}
+
+\begin{comment}
+  Include the Haskell source code here.
+\end{comment}
+
+\begin{comment}
+  Check for missing references.
+\end{comment}
 
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{habbrv}
