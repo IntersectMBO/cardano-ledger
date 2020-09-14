@@ -274,10 +274,10 @@ getTopRankedPools ::
   Map (KeyHash 'StakePool era) (PoolParams era) ->
   Map (KeyHash 'StakePool era) PerformanceEstimate ->
   Set (KeyHash 'StakePool era)
+getTopRankedPools rPot totalStake pp poolParams aps =
   Set.fromList $
     fmap fst $
       take (fromIntegral $ _nOpt pp) (sortBy (flip compare `on` snd) rankings)
-getTopRankedPools rPot totalStake pp poolParams aps =
   where
     pdata = Map.toList $ Map.intersectionWith (,) poolParams aps
     rankings =

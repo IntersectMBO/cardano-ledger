@@ -78,8 +78,9 @@ getNonMyopicMemberRewards globals ss creds =
       (\cred -> (cred, Map.mapWithKey (mkNMMRewards $ memShare cred) poolData))
       (Set.toList creds)
   where
-    total = fromIntegral $ maxLovelaceSupply globals
-    toShare (Coin x) = StakeShare (x % total)
+    maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
+    Coin totalStake = circulation es maxSupply
+    toShare (Coin x) = StakeShare (x % totalStake)
     memShare (Right cred) = toShare $ Map.findWithDefault (Coin 0) cred (EB.unStake stake)
     memShare (Left coin) = toShare coin
     es = nesEs ss
@@ -97,7 +98,7 @@ getNonMyopicMemberRewards globals ss creds =
         (\k p -> (percentile' (histLookup k), p, toShare . fold . EB.unStake $ EB.poolStake k delegs stake))
         poolParams
     histLookup k = fromMaybe mempty (Map.lookup k ls)
-    topPools = getTopRankedPools rPot (Coin total) pp poolParams (fmap percentile' ls)
+    topPools = getTopRankedPools rPot (Coin totalStake) pp poolParams (fmap percentile' ls)
     mkNMMRewards ms k (ap, poolp, sigma) =
       if checkPledge poolp
         then nonMyopicMemberRew pp poolp rPot s ms nmps ap
