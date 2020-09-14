@@ -6,6 +6,7 @@ module Shelley.Spec.Ledger.API.Wallet
     getFilteredUTxO,
     getLeaderSchedule,
     getTotalStake,
+    poolsByTotalStakeFraction,
   )
 where
 
@@ -30,7 +31,7 @@ import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), unPoolDistr)
+import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Shelley.Spec.Ledger.LedgerState
@@ -54,6 +55,27 @@ import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+
+-- | Get pool sizes, but in terms of total stake
+--
+-- The stake distribution uses active stake (so that the leader schedule is not
+-- affected by undelegated stake), but the wallet wants to display pool
+-- saturation for rewards purposes. For that, it needs the fraction of total
+-- stake.
+poolsByTotalStakeFraction :: Globals -> ShelleyState era -> PoolDistr era
+poolsByTotalStakeFraction globals ss =
+  PoolDistr poolsByTotalStake
+  where
+    EpochState _ ss' _ _ _ _ = nesEs ss
+    EB.SnapShot stake _ _ = EB._pstakeGo ss'
+    Coin totalStake = getTotalStake globals ss
+    Coin activeStake = fold . EB.unStake $ stake
+    stakeRatio = activeStake % totalStake
+    PoolDistr poolsByActiveStake = nesPd $ ss
+    poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
+    toTotalStakeFrac :: IndividualPoolStake era -> IndividualPoolStake era
+    toTotalStakeFrac (IndividualPoolStake s vrf) =
+      IndividualPoolStake (s * stakeRatio) vrf
 
 -- | Calculate the current total stake.
 getTotalStake :: Globals -> ShelleyState era -> Coin
