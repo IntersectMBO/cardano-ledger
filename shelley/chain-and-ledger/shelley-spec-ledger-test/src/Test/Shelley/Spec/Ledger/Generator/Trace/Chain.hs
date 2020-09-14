@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -16,6 +18,7 @@
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
 import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition (IRC (..))
@@ -29,33 +32,24 @@ import Control.State.Transition.Trace.Generator.QuickCheck
   )
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, fromList)
+import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
-  ( CHAIN,
-    ChainState,
-  )
 import Shelley.Spec.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.BlockChain
-  ( HashHeader (..),
-    LastAppliedBlock (..),
+  ( LastAppliedBlock (..),
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Keys
-  ( GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash,
-    KeyRole (BlockIssuer),
-    coerceKeyRole,
-  )
-import Shelley.Spec.Ledger.LedgerState (esAccountState, nesEs, _treasury)
-import Shelley.Spec.Ledger.STS.Chain (chainNes, initialShelleyState)
+import Shelley.Spec.Ledger.EpochBoundary (_pstakeMark)
+import Shelley.Spec.Ledger.Genesis (ShelleyGenesisStaking (..))
+import Shelley.Spec.Ledger.Keys (coerceKeyRole)
+import Shelley.Spec.Ledger.LedgerState (stakeDistr)
+import Shelley.Spec.Ledger.STS.Chain (initialShelleyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
+import Shelley.Spec.Ledger.STS.NewEpoch (calculatePoolDistr)
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.UTxO (balance)
-import qualified Cardano.Ledger.Val as Val
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
@@ -143,3 +137,81 @@ mkOCertIssueNos (GenDelegs delegs0) =
   Map.fromList (fmap f (Map.elems delegs0))
   where
     f (GenDelegPair vk _) = (coerceKeyRole vk, 0)
+
+-- Register the initial staking.
+--
+-- This allows stake pools to produce blocks from genesis.
+registerGenesisStaking ::
+  forall c.
+  Era c =>
+  ShelleyGenesisStaking c ->
+  ChainState c ->
+  ChainState c
+registerGenesisStaking
+  ShelleyGenesisStaking {sgsPools, sgsStake}
+  cs@(STS.ChainState {chainNes = oldChainNes}) =
+    cs
+      { chainNes = newChainNes
+      }
+    where
+      oldEpochState = nesEs $ oldChainNes
+      oldLedgerState = esLState oldEpochState
+      oldDPState = _delegationState oldLedgerState
+
+      -- Note that this is only applicable in the initial configuration where
+      -- there is no existing stake distribution, since it would completely
+      -- overwrite any such thing.
+      newPoolDistr = calculatePoolDistr initSnapShot
+
+      newChainNes =
+        oldChainNes
+          { nesEs = newEpochState,
+            nesPd = newPoolDistr
+          }
+      newEpochState =
+        oldEpochState
+          { esLState = newLedgerState,
+            esSnapshots =
+              (esSnapshots oldEpochState)
+                { _pstakeMark = initSnapShot
+                }
+          }
+      newLedgerState =
+        oldLedgerState
+          { _delegationState = newDPState
+          }
+      newDPState =
+        oldDPState
+          { _dstate = newDState,
+            _pstate = newPState
+          }
+      -- New delegation state. Since we're using base addresses, we only care
+      -- about updating the '_delegations' field.
+      --
+      -- See STS DELEG for details
+      newDState :: DState c
+      newDState =
+        (_dstate oldDPState)
+          { _rewards =
+              Map.map (const $ Coin 0)
+                . Map.mapKeys KeyHashObj
+                $ sgsStake,
+            _delegations = Map.mapKeys KeyHashObj sgsStake
+          }
+
+      -- We consider pools as having been registered in slot 0
+      -- See STS POOL for details
+      newPState :: PState c
+      newPState =
+        (_pstate oldDPState)
+          { _pParams = sgsPools
+          }
+
+      -- The new stake distribution is made on the basis of a snapshot taken
+      -- during the previous epoch. We create a "fake" snapshot in order to
+      -- establish an initial stake distribution.
+      initSnapShot =
+        stakeDistr @c
+          (_utxo . _utxoState . esLState $ oldEpochState)
+          newDState
+          newPState
