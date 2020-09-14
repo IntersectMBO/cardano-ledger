@@ -22,6 +22,7 @@ import BenchValidation
 -- How to compute an initial state with N StakePools
 
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (dom, forwards, keysEqual, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
@@ -57,6 +58,7 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState (..),
     stakeDistr,
   )
+import Shelley.Spec.Ledger.Rewards (likelihood)
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import System.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck.Gen as QC
@@ -483,6 +485,7 @@ main =
             (generate $ genChainInEpoch 5)
             ( \cs ->
                 bench "createRUpd" $ whnf (createRUpd testGlobals) cs
-            )
+            ),
+          bench "likelihood" $ whnf (likelihood 1234 0.1) (EpochSize 10000)
         ]
     ]
