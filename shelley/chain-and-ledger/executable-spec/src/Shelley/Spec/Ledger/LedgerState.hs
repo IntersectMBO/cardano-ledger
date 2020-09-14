@@ -86,6 +86,7 @@ module Shelley.Spec.Ledger.LedgerState
     NewEpochEnv (..),
     getGKeys,
     updateNES,
+    circulation,
   )
 where
 
@@ -918,7 +919,7 @@ createRUpd ::
   EpochState era ->
   Coin ->
   ShelleyBase (RewardUpdate era)
-createRUpd slotsPerEpoch b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
+createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) total = do
   asc <- asks activeSlotCoeff
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
@@ -937,9 +938,9 @@ createRUpd slotsPerEpoch b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total
       Coin rPot = _feeSS ss <> deltaR1
       deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
-      circulation = total Val.~~ (_reserves acnt)
+      totalStake = circulation es total
       (rs_, newLikelihoods) =
-        reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation asc slotsPerEpoch
+        reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' totalStake asc slotsPerEpoch
       deltaR2 = _R Val.~~ (Map.foldr (<>) mempty rs_)
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $
@@ -950,6 +951,13 @@ createRUpd slotsPerEpoch b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total
         deltaF = (Val.invert (_feeSS ss)),
         nonMyopic = (updateNonMypopic nm _R newLikelihoods)
       }
+
+-- | Calculate the current circulation
+--
+-- This is used in the rewards calculation, and for API endpoints for pool ranking.
+circulation :: EpochState era -> Coin -> Coin
+circulation (EpochState acnt _ _ _ _ _) supply =
+  supply Val.~~ (_reserves acnt)
 
 -- | Update new epoch state
 updateNES ::

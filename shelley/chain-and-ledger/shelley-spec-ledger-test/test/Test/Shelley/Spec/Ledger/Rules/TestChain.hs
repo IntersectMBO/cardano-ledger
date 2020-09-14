@@ -46,7 +46,7 @@ import Shelley.Spec.Ledger.BlockChain
     bheaderSlotNo,
   )
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.LedgerState
+import Shelley.Spec.Ledger.LedgerState hiding (circulation)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))

@@ -12,7 +12,6 @@ where
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (SlotNo)
 import qualified Data.ByteString.Short as BSS
@@ -35,12 +34,12 @@ import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), un
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Shelley.Spec.Ledger.LedgerState
-  ( AccountState (..),
-    DPState (..),
+  ( DPState (..),
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
     UTxOState (..),
+    circulation,
     stakeDistr,
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
@@ -60,8 +59,8 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 getTotalStake :: Globals -> ShelleyState era -> Coin
 getTotalStake globals ss =
   let supply = Coin . fromIntegral $ maxLovelaceSupply globals
-      EpochState acnt _ _ _ _ _ = nesEs ss
-   in supply Val.~~ (_reserves acnt)
+      es = nesEs ss
+   in circulation es supply
 
 -- | Calculate the Non-Myopic Pool Member Rewards for a set of credentials.
 -- For each given credential, this function returns a map from each stake
