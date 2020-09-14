@@ -33,7 +33,6 @@ import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Coerce (coerce)
 import Data.IP (toIPv4)
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
 import Data.Proxy
@@ -131,7 +130,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), OCertSignable (..), pattern OCert)
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams
   ( PParams' (..),
     PParamsUpdate,
@@ -1296,8 +1294,6 @@ tests =
             ) ::
               StrictMaybe (RewardUpdate C)
           pd = (PoolDistr Map.empty) :: PoolDistr C
-          compactOs = Map.singleton (ActiveSlot (testGKeyHash p)) (SlotNo 1 :| [])
-          os = decompactOverlaySchedule compactOs
           nes =
             NewEpochState
               e
@@ -1306,18 +1302,16 @@ tests =
               es
               ru
               pd
-              os
        in checkEncodingCBOR
             "new_epoch_state"
             nes
-            ( T (TkListLen 7)
+            ( T (TkListLen 6)
                 <> S e
                 <> S (BlocksMade bs)
                 <> S (BlocksMade bs)
                 <> S es
                 <> S ru
                 <> S pd
-                <> S compactOs
             )
     ]
   where

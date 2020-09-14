@@ -50,7 +50,6 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
-import Shelley.Spec.Ledger.STS.Tick (TickEnv (TickEnv))
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
@@ -465,7 +464,7 @@ chainSstWithTick ledgerTr =
           _
           b@(Block bh _)
         ) =
-        case runShelleyBase (applySTSTest @(TICK C) (TRC (TickEnv (getGKeys nes), nes, (bheaderSlotNo . bhbody) bh))) of
+        case runShelleyBase (applySTSTest @(TICK C) (TRC ((), nes, (bheaderSlotNo . bhbody) bh))) of
           Left pf ->
             error ("chainSstWithTick.applyTick Predicate failure " <> show pf)
           Right nes' ->

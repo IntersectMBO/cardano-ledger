@@ -42,7 +42,7 @@ import Shelley.Spec.Ledger.Slot
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 import qualified Cardano.Ledger.Val as Val
-import Test.Shelley.Spec.Ledger.Examples.Federation (genDelegs, overlayScheduleFor)
+import Test.Shelley.Spec.Ledger.Examples.Federation (genDelegs)
 import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash, unsafeMkUnitInterval)
 
 -- === Initial Protocol Parameters
@@ -105,6 +105,5 @@ initSt utxo =
     utxo
     (maxLLSupply Val.~~ (balance utxo))
     genDelegs
-    (overlayScheduleFor (EpochNo 0) ppEx)
     ppEx
     (nonce0 @era)

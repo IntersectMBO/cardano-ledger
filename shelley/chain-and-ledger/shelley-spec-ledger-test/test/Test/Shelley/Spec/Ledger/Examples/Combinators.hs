@@ -92,7 +92,6 @@ import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..), TxBody (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
 import qualified Cardano.Ledger.Val as Val
-import Test.Shelley.Spec.Ledger.Examples.Federation (overlayScheduleFor)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
 
 -- | = Evolve Nonces - Frozen
@@ -579,7 +578,6 @@ newEpoch b cs = cs'
     nes' =
       nes
         { nesEL = e,
-          nesOsched = overlayScheduleFor e pp,
           nesBprev = (nesBcur nes),
           nesBcur = BlocksMade Map.empty
         }

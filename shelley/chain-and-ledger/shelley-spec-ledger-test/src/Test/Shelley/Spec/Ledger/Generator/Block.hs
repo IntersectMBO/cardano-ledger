@@ -43,7 +43,7 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
-import Shelley.Spec.Ledger.OverlaySchedule
+import Shelley.Spec.Ledger.OverlaySchedule (lookupInOverlaySchedule)
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -89,7 +89,7 @@ genBlock
             $ selectNextSlotWithLeader ge origChainState firstConsideredSlot
 
     -- Now we need to compute the KES period and get the set of hot keys.
-    let NewEpochState _ _ _ es _ _ _ = chainNes chainSt
+    let NewEpochState _ _ _ es _ _ = chainNes chainSt
         EpochState acnt _ ls _ pp _ = es
         kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
         cs = chainOCertIssue chainSt
@@ -174,7 +174,7 @@ selectNextSlotWithLeader
         Maybe (ChainState era, AllIssuerKeys era 'BlockIssuer)
       selectLeaderForSlot slotNo =
         (chainSt,)
-          <$> case lookupInOverlaySchedule slotNo overlaySched of
+          <$> case lookupInOverlaySchedule firstEpochSlot (Map.keys cores) d f slotNo of
             Nothing ->
               coerce
                 <$> List.find
@@ -190,16 +190,17 @@ selectNextSlotWithLeader
         where
           chainSt = tickChainState slotNo origChainState
           epochNonce = chainEpochNonce chainSt
-          overlaySched = nesOsched $ chainNes chainSt
           poolDistr = unPoolDistr . nesPd . chainNes $ chainSt
           dpstate = (_delegationState . esLState . nesEs . chainNes) chainSt
           (GenDelegs cores) = (_genDelegs . _dstate) dpstate
+          firstEpochSlot = slotFromEpoch (epochFromSlotNo slotNo)
+          f = activeSlotCoeff testGlobals
+          d = (_d . esPp . nesEs . chainNes) chainSt
 
           isLeader poolHash vrfKey =
             let y = VRF.evalCertified @(VRF (Crypto era)) () (mkSeed seedL slotNo epochNonce) vrfKey
                 stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
-                f = activeSlotCoeff testGlobals
-             in case lookupInOverlaySchedule slotNo overlaySched of
+             in case lookupInOverlaySchedule firstEpochSlot (Map.keys cores) d f slotNo of
                   Nothing -> checkLeaderValue (VRF.certifiedOutput y) stake f
                   Just (ActiveSlot x) | coerceKeyRole x == poolHash -> True
                   _ -> False

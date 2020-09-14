@@ -24,10 +24,10 @@ import Cardano.Ledger.Era
 import Cardano.Prelude
   ( MonadError (..),
     NoUnexpectedThunks (..),
-    asks,
     unless,
   )
 import Control.Iterate.SetAlgebra (dom, eval, range)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
@@ -40,7 +40,9 @@ import Shelley.Spec.Ledger.BaseTypes
     Nonce,
     Seed,
     ShelleyBase,
+    UnitInterval,
     activeSlotCoeff,
+    epochInfo,
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
@@ -71,17 +73,16 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.OverlaySchedule
   ( OBftSlot (..),
-    OverlaySchedule,
     lookupInOverlaySchedule,
   )
 import Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
-import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Slot (SlotNo, epochInfoEpoch, epochInfoFirst)
 
 data OVERLAY era
 
 data OverlayEnv era
   = OverlayEnv
-      (OverlaySchedule era)
+      UnitInterval -- the decentralization paramater @d@ from the protocal parameters
       (PoolDistr era)
       (GenDelegs era)
       Nonce
@@ -245,17 +246,22 @@ overlayTransition ::
 overlayTransition =
   judgmentContext
     >>= \( TRC
-             ( OverlayEnv osched pd (GenDelegs genDelegs) eta0,
+             ( OverlayEnv dval pd (GenDelegs genDelegs) eta0,
                cs,
                bh@(BHeader bhb _)
                )
            ) -> do
         let vk = bheaderVk bhb
             vkh = hashKey vk
+            slot = bheaderSlotNo bhb
 
         asc <- liftSTS $ asks activeSlotCoeff
+        firstSlotNo <- liftSTS $ do
+          ei <- asks epochInfo
+          e <- epochInfoEpoch ei slot
+          epochInfoFirst ei e
 
-        case lookupInOverlaySchedule (bheaderSlotNo bhb) osched of
+        case lookupInOverlaySchedule firstSlotNo (Map.keys genDelegs) dval asc slot of
           Nothing ->
             praosVrfChecks eta0 pd asc bhb ?!: id
           Just NonActiveSlot ->

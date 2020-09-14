@@ -21,18 +21,15 @@ import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Val as Val
-import Control.Monad.Reader (runReader)
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (word64ToCoin)
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.LedgerState
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.UTxO
@@ -91,19 +88,17 @@ translateToShelleyLedgerState ::
   forall era.
   (Era era, ADDRHASH (Crypto era) ~ Crypto.Blake2b_224) =>
   ShelleyGenesis era ->
-  Globals ->
   EpochNo ->
   Byron.ChainValidationState ->
   ShelleyState era
-translateToShelleyLedgerState genesisShelley globals epochNo cvs =
+translateToShelleyLedgerState genesisShelley epochNo cvs =
   NewEpochState
     { nesEL = epochNo,
       nesBprev = BlocksMade Map.empty,
       nesBcur = BlocksMade Map.empty,
       nesEs = epochState,
       nesRu = SNothing,
-      nesPd = PoolDistr Map.empty,
-      nesOsched = oSchedule
+      nesPd = PoolDistr Map.empty
     }
   where
     pparams :: PParams era
@@ -159,34 +154,16 @@ translateToShelleyLedgerState genesisShelley globals epochNo cvs =
                 _pstate = emptyPState
               }
         }
-    oSchedule :: OverlaySchedule era
-    oSchedule =
-      flip runReader globals $
-        overlaySchedule
-          epochNo
-          (Map.keysSet (sgGenDelegs genesisShelley))
-          pparams
 
 -- | We construct a 'LedgerView' using the Shelley genesis config in the same
 -- way as 'translateToShelleyLedgerState'.
 mkInitialShelleyLedgerView ::
   forall era.
   ShelleyGenesis era ->
-  Globals ->
-  EpochNo ->
   LedgerView era
-mkInitialShelleyLedgerView genesisShelley globals epochNo =
+mkInitialShelleyLedgerView genesisShelley =
   LedgerView
     { lvProtParams = sgProtocolParams genesisShelley,
-      lvOverlaySched = oSchedule,
       lvPoolDistr = PoolDistr Map.empty,
       lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley
     }
-  where
-    oSchedule :: OverlaySchedule era
-    oSchedule =
-      flip runReader globals $
-        overlaySchedule
-          epochNo
-          (Map.keysSet (sgGenDelegs genesisShelley))
-          (sgProtocolParams genesisShelley)

@@ -9,7 +9,6 @@
 
 module Shelley.Spec.Ledger.STS.Tick
   ( TICK,
-    TickEnv (..),
     State,
     TickPredicateFailure (..),
     PredicateFailure,
@@ -22,17 +21,15 @@ import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
-import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.Keys (GenDelegs (..))
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
     DState (..),
     EpochState (..),
     FutureGenDeleg (..),
     LedgerState (..),
-    NewEpochEnv (..),
     NewEpochState (..),
   )
 import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH)
@@ -40,9 +37,6 @@ import Shelley.Spec.Ledger.STS.Rupd (RUPD, RupdEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo, epochInfoEpoch)
 
 data TICK era
-
-data TickEnv era
-  = TickEnv (Set (KeyHash 'Genesis era))
 
 data TickPredicateFailure era
   = NewEpochFailure (PredicateFailure (NEWEPOCH era)) -- Subtransition Failures
@@ -61,7 +55,7 @@ instance
   type
     Signal (TICK era) =
       SlotNo
-  type Environment (TICK era) = TickEnv era
+  type Environment (TICK era) = ()
   type BaseM (TICK era) = ShelleyBase
   type PredicateFailure (TICK era) = TickPredicateFailure era
 
@@ -102,16 +96,14 @@ bheadTransition ::
   (Era era) =>
   TransitionRule (TICK era)
 bheadTransition = do
-  TRC (TickEnv gkeys, nes@(NewEpochState _ bprev _ es _ _ _), slot) <-
+  TRC ((), nes@(NewEpochState _ bprev _ es _ _), slot) <-
     judgmentContext
 
   epoch <- liftSTS $ do
     ei <- asks epochInfo
     epochInfoEpoch ei slot
 
-  nes' <-
-    trans @(NEWEPOCH era) $
-      TRC (NewEpochEnv slot gkeys, nes, epoch)
+  nes' <- trans @(NEWEPOCH era) $ TRC ((), nes, epoch)
 
   ru'' <- trans @(RUPD era) $ TRC (RupdEnv bprev es, nesRu nes', slot)
 

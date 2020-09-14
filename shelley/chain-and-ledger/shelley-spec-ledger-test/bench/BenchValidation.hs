@@ -172,7 +172,7 @@ instance Show UpdateInputs where
   show (UpdateInputs _globals vl bh st) = show vl ++ "\n" ++ show bh ++ "\n" ++ show st
 
 instance NFData (LedgerView era) where
-  rnf (LedgerView _pp _ov _pool _delegs) = ()
+  rnf (LedgerView _pp _pool _delegs) = ()
 
 instance Era era => NFData (BHeader era) where
   rnf (BHeader _ _) = ()

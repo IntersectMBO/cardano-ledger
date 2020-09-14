@@ -15,7 +15,6 @@ module Test.Shelley.Spec.Ledger.Examples.Federation
     coreNodeIssuerKeys,
     coreNodeKeysBySchedule,
     genDelegs,
-    overlayScheduleFor,
   )
 where
 
@@ -37,15 +36,11 @@ import Shelley.Spec.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
+import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.OverlaySchedule
-import Shelley.Spec.Ledger.PParams
-  ( PParams,
-  )
-import Shelley.Spec.Ledger.Slot
-  ( EpochNo (..),
-    SlotNo (..),
-  )
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
   )
@@ -103,51 +98,36 @@ coreNodeIssuerKeys ::
   AllIssuerKeys era 'GenesisDelegate
 coreNodeIssuerKeys = snd . (coreNodes @era !!)
 
-coreNodeKeysForSlot ::
-  forall era.
-  (HasCallStack, Era era) =>
-  Map SlotNo (OBftSlot era) ->
-  Word64 ->
-  AllIssuerKeys era 'GenesisDelegate
-coreNodeKeysForSlot overlay slot = case Map.lookup (SlotNo slot) overlay of
-  Nothing -> error $ "coreNodesForSlot: Cannot find keys for slot " <> show slot
-  Just NonActiveSlot -> error $ "coreNodesForSlot: Non-active slot " <> show slot
-  Just (ActiveSlot gkh) ->
-    case Data.List.find (\((_, gk), _) -> hashKey gk == gkh) coreNodes of
-      Nothing ->
-        error $
-          "coreNodesForSlot: Cannot find key hash in coreNodes: "
-            <> show gkh
-      Just ((_, _), ak) -> ak
-
--- | === Overlay Schedule
--- Retrieve the overlay schedule for a given epoch and protocol parameters.
-overlayScheduleFor :: Era era => EpochNo -> PParams era -> OverlaySchedule era
-overlayScheduleFor e pp =
-  runShelleyBase $
-    overlaySchedule
-      e
-      (Map.keysSet genDelegs)
-      pp
-
 -- | === Keys by Overlay Schedule
 -- Retrieve all the keys associated with a core node
 -- for a given slot and protocol parameters.
 -- It will return an error if there is not a core node scheduled
 -- for the given slot.
 coreNodeKeysBySchedule ::
+  forall era.
   (HasCallStack, Era era) =>
   PParams era ->
   Word64 ->
   AllIssuerKeys era 'GenesisDelegate
-coreNodeKeysBySchedule = coreNodeKeysForSlot . fullOSched
+coreNodeKeysBySchedule pp slot =
+  case lookupInOverlaySchedule
+         firstSlot
+         (Map.keys genDelegs)
+         (_d pp)
+         (activeSlotCoeff testGlobals)
+         slot' of
+    Nothing -> error $ "coreNodesForSlot: Cannot find keys for slot " <> show slot
+    Just NonActiveSlot -> error $ "coreNodesForSlot: Non-active slot " <> show slot
+    Just (ActiveSlot gkh) ->
+      case Data.List.find (\((_, gk), _) -> hashKey gk == gkh) coreNodes of
+        Nothing ->
+          error $
+            "coreNodesForSlot: Cannot find key hash in coreNodes: "
+              <> show gkh
+        Just ((_, _), ak) -> ak
   where
-    fullOSched pp =
-      Map.unions $
-        [ overlayScheduleToMap $
-            overlayScheduleFor e pp
-          | e <- [0 .. 10]
-        ]
+    slot' = SlotNo slot
+    firstSlot = slotFromEpoch . epochFromSlotNo $ slot'
 
 -- | === Genesis Delegation Mapping
 -- The map from genesis/core node (verification) key hashes

@@ -20,18 +20,20 @@ where
 
 import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
     STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
+    liftSTS,
     trans,
     (?!),
   )
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
@@ -50,12 +52,10 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     LedgerState,
   )
-import Shelley.Spec.Ledger.OverlaySchedule
-  ( OverlaySchedule,
-    isOverlaySlot,
-  )
-import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
+import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Shelley.Spec.Ledger.Tx (TxBody)
 
 data BBODY era
@@ -65,8 +65,7 @@ data BbodyState era
   deriving (Eq, Show)
 
 data BbodyEnv era = BbodyEnv
-  { bbodySlots :: OverlaySchedule era,
-    bbodyPp :: PParams era,
+  { bbodyPp :: PParams era,
     bbodyAccount :: AccountState
   }
 
@@ -114,7 +113,7 @@ bbodyTransition ::
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-             ( BbodyEnv oslots pp account,
+             ( BbodyEnv pp account,
                BbodyState ls b,
                Block (BHeader bhb _) txsSeq
                )
@@ -136,7 +135,19 @@ bbodyTransition =
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
         let hkAsStakePool = coerceKeyRole . poolIDfromBHBody $ bhb
-        pure $ BbodyState ls' (incrBlocks (isOverlaySlot (bheaderSlotNo bhb) oslots) hkAsStakePool b)
+            slot = bheaderSlotNo bhb
+        firstSlotNo <- liftSTS $ do
+          ei <- asks epochInfo
+          e <- epochInfoEpoch ei slot
+          epochInfoFirst ei e
+        pure $
+          BbodyState
+            ls'
+            ( incrBlocks
+                (isOverlaySlot firstSlotNo (_d pp) slot)
+                hkAsStakePool
+                b
+            )
 
 instance
   ( Era era,

@@ -59,18 +59,14 @@ import Shelley.Spec.Ledger.Keys (GenDelegs)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
     NewEpochState (..),
-    getGKeys,
     _delegationState,
     _dstate,
     _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
-import Shelley.Spec.Ledger.OverlaySchedule
-  ( OverlaySchedule,
-  )
-import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
-import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
+import Shelley.Spec.Ledger.STS.Tick (TICK)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
@@ -78,7 +74,6 @@ import Shelley.Spec.Ledger.Slot (SlotNo)
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView era = LedgerView
   { lvProtParams :: PParams era,
-    lvOverlaySched :: OverlaySchedule era,
     lvPoolDistr :: PoolDistr era,
     lvGenDelegs :: GenDelegs era
   }
@@ -90,10 +85,9 @@ instance Era era => FromCBOR (LedgerView era) where
   fromCBOR =
     decodeRecordNamed
       "LedgerView"
-      (const 4)
+      (const 3)
       ( LedgerView
           <$> fromCBOR
-          <*> fromCBOR
           <*> fromCBOR
           <*> fromCBOR
       )
@@ -102,14 +96,12 @@ instance Era era => ToCBOR (LedgerView era) where
   toCBOR
     LedgerView
       { lvProtParams,
-        lvOverlaySched,
         lvPoolDistr,
         lvGenDelegs
       } =
       mconcat
-        [ encodeListLen 4,
+        [ encodeListLen 3,
           toCBOR lvProtParams,
-          toCBOR lvOverlaySched,
           toCBOR lvPoolDistr,
           toCBOR lvGenDelegs
         ]
@@ -124,12 +116,12 @@ mkPrtclEnv ::
   STS.Prtcl.PrtclEnv era
 mkPrtclEnv
   LedgerView
-    { lvOverlaySched,
+    { lvProtParams,
       lvPoolDistr,
       lvGenDelegs
     } =
     STS.Prtcl.PrtclEnv
-      lvOverlaySched
+      (_d lvProtParams)
       lvPoolDistr
       lvGenDelegs
 
@@ -137,13 +129,10 @@ view :: ShelleyState era -> LedgerView era
 view
   NewEpochState
     { nesPd,
-      nesOsched,
       nesEs
     } =
     LedgerView
       { lvProtParams = esPp nesEs,
-        lvOverlaySched =
-          nesOsched,
         lvPoolDistr = nesPd,
         lvGenDelegs =
           _genDelegs . _dstate
@@ -210,10 +199,7 @@ futureLedgerView globals ss slot =
     res =
       flip runReader globals
         . applySTS @(TICK era)
-        $ TRC (tickEnv, ss, slot)
-    tickEnv =
-      TickEnv
-        (getGKeys ss)
+        $ TRC ((), ss, slot)
 
 -- $chainstate
 --
