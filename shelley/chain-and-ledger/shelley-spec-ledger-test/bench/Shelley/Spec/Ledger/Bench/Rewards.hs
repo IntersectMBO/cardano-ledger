@@ -59,8 +59,6 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.Chain
   )
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
-import Debug.Trace
-
 -- | Generate a chain state at a given epoch. Since we are only concerned about
 -- rewards, this will populate the chain with empty blocks (only issued by the
 -- original genesis delegates).
