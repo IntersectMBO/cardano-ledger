@@ -6,13 +6,13 @@ module Shelley.Spec.Ledger.API.Wallet
     getFilteredUTxO,
     getLeaderSchedule,
     getTotalStake,
+    poolsByTotalStakeFraction,
   )
 where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (SlotNo)
 import qualified Data.ByteString.Short as BSS
@@ -31,16 +31,16 @@ import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), unPoolDistr)
+import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Shelley.Spec.Ledger.LedgerState
-  ( AccountState (..),
-    DPState (..),
+  ( DPState (..),
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
     UTxOState (..),
+    circulation,
     stakeDistr,
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
@@ -57,12 +57,33 @@ import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
+-- | Get pool sizes, but in terms of total stake
+--
+-- The stake distribution uses active stake (so that the leader schedule is not
+-- affected by undelegated stake), but the wallet wants to display pool
+-- saturation for rewards purposes. For that, it needs the fraction of total
+-- stake.
+poolsByTotalStakeFraction :: Globals -> ShelleyState era -> PoolDistr era
+poolsByTotalStakeFraction globals ss =
+  PoolDistr poolsByTotalStake
+  where
+    EpochState _ ss' _ _ _ _ = nesEs ss
+    EB.SnapShot stake _ _ = EB._pstakeGo ss'
+    Coin totalStake = getTotalStake globals ss
+    Coin activeStake = fold . EB.unStake $ stake
+    stakeRatio = activeStake % totalStake
+    PoolDistr poolsByActiveStake = nesPd $ ss
+    poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
+    toTotalStakeFrac :: IndividualPoolStake era -> IndividualPoolStake era
+    toTotalStakeFrac (IndividualPoolStake s vrf) =
+      IndividualPoolStake (s * stakeRatio) vrf
+
 -- | Calculate the current total stake.
 getTotalStake :: Globals -> ShelleyState era -> Coin
 getTotalStake globals ss =
   let supply = Coin . fromIntegral $ maxLovelaceSupply globals
-      EpochState acnt _ _ _ _ _ = nesEs ss
-   in supply Val.~~ (_reserves acnt)
+      es = nesEs ss
+   in circulation es supply
 
 -- | Calculate the Non-Myopic Pool Member Rewards for a set of credentials.
 -- For each given credential, this function returns a map from each stake
@@ -80,8 +101,9 @@ getNonMyopicMemberRewards globals ss creds =
       (\cred -> (cred, Map.mapWithKey (mkNMMRewards $ memShare cred) poolData))
       (Set.toList creds)
   where
-    total = fromIntegral $ maxLovelaceSupply globals
-    toShare (Coin x) = StakeShare (x % total)
+    maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
+    Coin totalStake = circulation es maxSupply
+    toShare (Coin x) = StakeShare (x % totalStake)
     memShare (Right cred) = toShare $ Map.findWithDefault (Coin 0) cred (EB.unStake stake)
     memShare (Left coin) = toShare coin
     es = nesEs ss
@@ -99,7 +121,7 @@ getNonMyopicMemberRewards globals ss creds =
         (\k p -> (percentile' (histLookup k), p, toShare . fold . EB.unStake $ EB.poolStake k delegs stake))
         poolParams
     histLookup k = fromMaybe mempty (Map.lookup k ls)
-    topPools = getTopRankedPools rPot (Coin total) pp poolParams (fmap percentile' ls)
+    topPools = getTopRankedPools rPot (Coin totalStake) pp poolParams (fmap percentile' ls)
     mkNMMRewards ms k (ap, poolp, sigma) =
       if checkPledge poolp
         then nonMyopicMemberRew pp poolp rPot s ms nmps ap

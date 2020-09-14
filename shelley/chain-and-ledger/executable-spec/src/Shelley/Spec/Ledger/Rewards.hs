@@ -248,7 +248,7 @@ desirability ::
   PerformanceEstimate ->
   Coin ->
   Double
-desirability pp r pool (PerformanceEstimate p) (Coin total) =
+desirability pp r pool (PerformanceEstimate p) (Coin totalStake) =
   if fTilde <= cost
     then 0
     else (fTilde - cost) * (1 - margin)
@@ -258,7 +258,7 @@ desirability pp r pool (PerformanceEstimate p) (Coin total) =
     fTildeDenom = fromRational $ 1 + a0
     cost = (fromRational . coinToRational . _poolCost) pool
     margin = (fromRational . unitIntervalToRational . _poolMargin) pool
-    tot = max 1 (fromIntegral total)
+    tot = max 1 (fromIntegral totalStake)
     Coin pledge = _poolPledge pool
     s = fromIntegral pledge % tot
     a0 = _a0 pp
@@ -274,7 +274,7 @@ getTopRankedPools ::
   Map (KeyHash 'StakePool era) (PoolParams era) ->
   Map (KeyHash 'StakePool era) PerformanceEstimate ->
   Set (KeyHash 'StakePool era)
-getTopRankedPools rPot total pp poolParams aps =
+getTopRankedPools rPot totalStake pp poolParams aps =
   Set.fromList $
     fmap fst $
       take (fromIntegral $ _nOpt pp) (sortBy (flip compare `on` snd) rankings)
@@ -282,7 +282,7 @@ getTopRankedPools rPot total pp poolParams aps =
     pdata = Map.toList $ Map.intersectionWith (,) poolParams aps
     rankings =
       [ ( hk,
-          desirability pp rPot pool ap total
+          desirability pp rPot pool ap totalStake
         )
         | (hk, (pool, ap)) <- pdata
       ]
@@ -350,7 +350,7 @@ rewardOnePool ::
   Coin ->
   Set (Credential 'Staking era) ->
   Map (Credential 'Staking era) Coin
-rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma sigmaA (Coin total) addrsRew =
+rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma sigmaA (Coin totalStake) addrsRew =
   rewards'
   where
     Coin ostake =
@@ -359,14 +359,14 @@ rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma sigmaA (Coin tot
         mempty
         (_poolOwners pool)
     Coin pledge = _poolPledge pool
-    pr = fromIntegral pledge % fromIntegral total
+    pr = fromIntegral pledge % fromIntegral totalStake
     (Coin maxP) =
       if pledge <= ostake
         then maxPool pp r sigma pr
         else mempty
     appPerf = mkApparentPerformance (_d pp) sigmaA blocksN blocksTotal
     poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
-    tot = fromIntegral total
+    tot = fromIntegral totalStake
     mRewards =
       Map.fromList
         [ ( hk,
@@ -401,16 +401,16 @@ reward
   poolParams
   stake
   delegs
-  (Coin total)
+  (Coin totalStake)
   asc
   slotsPerEpoch = (rewards', hs)
     where
       totalBlocks = sum b
-      Coin totalActive = fold . unStake $ stake
+      Coin activeStake = fold . unStake $ stake
       results = do
         (hk, pparams) <- Map.toList poolParams
-        let sigma = fromIntegral pstake % fromIntegral total
-            sigmaA = fromIntegral pstake % fromIntegral totalActive
+        let sigma = fromIntegral pstake % fromIntegral totalStake
+            sigmaA = fromIntegral pstake % fromIntegral activeStake
             blocksProduced = Map.lookup hk b
             actgr@(Stake s) = poolStake hk delegs stake
             Coin pstake = fold s
@@ -427,7 +427,7 @@ reward
                     actgr
                     sigma
                     sigmaA
-                    (Coin total)
+                    (Coin totalStake)
                     addrsRew
             ls =
               likelihood
