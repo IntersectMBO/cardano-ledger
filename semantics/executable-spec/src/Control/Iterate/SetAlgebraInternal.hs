@@ -1028,8 +1028,10 @@ compute (DRestrict (Dom (Singleton k _)) (Base rep x2)) = materialize rep $  do 
 compute (DRestrict (Rng (Singleton _ v)) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle v) `domEq` x2; one (x,z) }
   -- This case inspired by set expression in EpochBoundary.hs (dom (delegs ▷ Set.singleton hk) ◁ stake)
 compute (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR stake)) =
-   -- materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when (not (y==hk)); one(x,z) })
-   intersectDomPLeft (\ _k v2 -> not(v2==hk)) stake delegs
+   -- materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when (y==hk); one(x,z) })
+   intersectDomPLeft (\ _k v2 -> v2==hk) stake delegs
+compute (DRestrict (Dom (RRestrict (Base MapR delegs) (Base _ rngf))) (Base MapR stake)) =
+   intersectDomPLeft (\ _k v2 -> haskey v2 rngf) stake delegs
 compute (e@(DRestrict _ _)) = run(compile e)
 
 compute (DExclude (SetSingleton n) (Base MapR m)) = Map.withoutKeys m (Set.singleton n)
@@ -1297,6 +1299,8 @@ instance Show (BaseRep f k v) where
 
 instance Show (Exp t) where
   show (Base MapR x) = "Map("++show(Map.size x)++")?"
+  show (Base SetR (Sett x)) = "Set("++show(Set.size x)++")?"
+  show (Base ListR xs) = "List("++show(length (unList xs))++")?"
   show (Base SingleR (Single _ _)) = "Single(_ _)"
   show (Base SingleR (SetSingle _ )) = "SetSingle(_)"
   show (Base rep x) = show rep++"?"

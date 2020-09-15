@@ -14,7 +14,7 @@ where
 
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (dom, eval, (∈), (∪+), (⋪), (⋫), (▷), (◁))
+import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Control.State.Transition
   ( Assertion (..),
     STS (..),
@@ -89,7 +89,7 @@ poolReapTransition :: TransitionRule (POOLREAP era)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
-  let retired = eval (dom ((_retiring ps) ▷ Set.singleton e))
+  let retired = eval (dom ((_retiring ps) ▷ setSingleton e))
       pr = Map.fromList $ fmap (\kh -> (kh, _poolDeposit pp)) (Set.toList retired)
       rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ (_pParams ps))
       rewardAcnts' =

@@ -30,11 +30,10 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (dom, eval, (▷), (◁))
+import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
-import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Quiet
@@ -100,7 +99,7 @@ poolStake ::
   Stake era ->
   Stake era
 poolStake hk delegs (Stake stake) =
-  Stake $ eval (dom (delegs ▷ Set.singleton hk) ◁ stake)
+  Stake $ eval (dom (delegs ▷ setSingleton hk) ◁ stake)
 
 -- | Calculate total possible refunds.
 obligation ::

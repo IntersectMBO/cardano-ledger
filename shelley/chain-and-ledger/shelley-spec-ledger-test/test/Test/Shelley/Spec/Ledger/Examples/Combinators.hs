@@ -45,7 +45,6 @@ import Control.Iterate.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), 
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), (⭒))
 import Shelley.Spec.Ledger.BlockChain
@@ -381,7 +380,7 @@ reapPool pool cs = cs {chainNes = nes'}
         Just era -> (Map.insert rewardAddr (era <> _poolDeposit pp) (_rewards ds), Coin 0)
     ds' =
       ds
-        { _delegations = eval (_delegations ds ⋫ Set.singleton kh),
+        { _delegations = eval (_delegations ds ⋫ setSingleton kh),
           _rewards = rewards
         }
     as = esAccountState es

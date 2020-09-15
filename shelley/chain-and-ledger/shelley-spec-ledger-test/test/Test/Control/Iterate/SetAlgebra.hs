@@ -324,7 +324,7 @@ testEpochEx =
     "Epoch Boundary Example"
     ( assertEqual
         "Epoch Boundary Example"
-        (Map.fromList [(5, False), (12, True)])
+        (Map.fromList [(6,True)])
         (eval (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR state)))
     )
   where
@@ -380,12 +380,13 @@ iter_tests =
 
 setAlgTest :: TestTree
 setAlgTest =
-  testGroup "Set Algebra Tests" [eval_tests, keysEqTests, iter_tests, intersectDomPLeftTest, ledgerStateTest]
+  testGroup "Set Algebra Tests" [eval_tests, keysEqTests, iter_tests, intersectDomPLeftTest,
+                                 ledgerStateTest, threeWayTest]
 
 intersect2ways :: Map Int Char -> Map Int String -> Char -> Bool
 intersect2ways delegs stake hk =
-    (materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when (not (y==hk)); one(x,z) }))
-      ==  (intersectDomPLeft (\ _k v2 -> not(v2==hk)) stake delegs)
+    (materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when  (y==hk); one(x,z) }))
+      ==  (intersectDomPLeft (\ _k v2 -> v2==hk) stake delegs)
 
 intersectDomPLeftTest :: TestTree
 intersectDomPLeftTest = testProperty "intersect2ways" intersect2ways
@@ -397,3 +398,17 @@ ledgerStateProp xx yy zz =
 
 ledgerStateTest :: TestTree
 ledgerStateTest = testProperty "ledgerStateExample2ways" ledgerStateProp
+
+
+threeWay :: Map Int Char -> Map Int String -> Char -> Bool
+threeWay delegs stake hk =
+    ((run (compile (dom (delegs ▷ Set.singleton hk) ◁ stake)))
+       ==  (intersectDomPLeft (\ _k v2 -> v2==hk) stake delegs))
+    && (run (compile (dom (delegs ▷ Set.singleton hk) ◁ stake))
+         == materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when ((y==hk)); one(x,z) }))
+
+threeWayTest :: TestTree
+threeWayTest = testProperty "eval-materialize-intersectDom" threeWay
+
+-- go :: IO()
+-- go = defaultMain setAlgTest
