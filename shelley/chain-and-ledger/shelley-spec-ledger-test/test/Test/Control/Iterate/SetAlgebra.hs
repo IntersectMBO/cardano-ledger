@@ -25,6 +25,10 @@ import Control.Iterate.SetAlgebraInternal
     run,
     sameDomain,
     (⨝),
+    materialize,
+    intersectDomPLeft,
+    intersectDomP,
+    domEq,
   )
 import Data.Char (ord)
 import Data.Map.Strict (Map)
@@ -32,6 +36,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Test.Tasty
 import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck(testProperty)
+import Test.Tasty(defaultMain)
 
 -- =========================================================
 -- Some examples of Exp and tests
@@ -374,4 +380,20 @@ iter_tests =
 
 setAlgTest :: TestTree
 setAlgTest =
-  testGroup "Set Algebra Tests" [eval_tests, keysEqTests, iter_tests]
+  testGroup "Set Algebra Tests" [eval_tests, keysEqTests, iter_tests, intersectDomPLeftTest, ledgerStateTest]
+
+intersect2ways :: Map Int Char -> Map Int String -> Char -> Bool
+intersect2ways delegs stake hk =
+    (materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when (not (y==hk)); one(x,z) }))
+      ==  (intersectDomPLeft (\ _k v2 -> not(v2==hk)) stake delegs)
+
+intersectDomPLeftTest :: TestTree
+intersectDomPLeftTest = testProperty "intersect2ways" intersect2ways
+
+ledgerStateProp :: Map Int Bool -> Map Int Char -> Map Char String -> Bool
+ledgerStateProp xx yy zz =
+     (materialize MapR (do { (x,_,y) <- xx `domEq` yy; y `element` zz; one (x,y)}))
+     == (intersectDomP (\ _k v -> Map.member v zz) xx yy)
+
+ledgerStateTest :: TestTree
+ledgerStateTest = testProperty "ledgerStateExample2ways" ledgerStateProp

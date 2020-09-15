@@ -440,6 +440,21 @@ intersectDomP p t1 t2@(Bin _ k v l2 r2) =
 {-# INLINABLE intersectDomP #-}
 
 
+-- |- Similar to intersectDomP, except the Map returned has the same key as the first input map, rather than the second input map.
+intersectDomPLeft:: Ord k => (k -> v2 -> Bool) -> Map k v1 -> Map k v2 -> Map k v1
+intersectDomPLeft p Tip _ = Tip
+intersectDomPLeft p  _ Tip = Tip
+intersectDomPLeft p (t1@(Bin _ k v1 l1 r1)) t2 =
+   case mb of
+      Just v2 | p k v2 -> link k v1 l1l2 r1r2
+      _other -> link2 l1l2 r1r2
+  where
+    !(l2, mb, r2) = Map.splitLookup k t2
+    !l1l2 = intersectDomPLeft p l1 l2
+    !r1r2 = intersectDomPLeft p r1 r2
+{-# INLINABLE intersectDomPLeft #-}
+
+
 -- ============== Iter BiMap ====================
 
 instance Ord v => Iter (BiMap v) where
@@ -517,6 +532,27 @@ data Exp t where
 
 -- deriving instance NFData t => NFData(Exp t)
 
+-- =======================================================================================================
+-- When we build an Exp, we want to make sure all Sets with one element become (SetSingleton x)
+-- so we use these 'smart' constructors.
+
+
+dRestrict :: (Ord k,Iter g) => Exp (g k ()) -> Exp (f k v) -> Exp (f k v)
+dRestrict (Base SetR (Sett x)) y | Set.size x == 1 = DRestrict (SetSingleton(Set.elemAt 0 x)) y
+dRestrict x y = DRestrict x y
+
+rRestrict :: (Ord k,Iter g,Ord v) =>  Exp (f k v) -> Exp (g v ()) -> Exp (f k v)
+rRestrict y (Base SetR (Sett x)) | Set.size x == 1 = RRestrict y (SetSingleton(Set.elemAt 0 x))
+rRestrict y x = RRestrict y x
+
+dExclude :: (Ord k,Iter g) => Exp (g k ()) -> Exp (f k v) -> Exp (f k v)
+dExclude (Base SetR (Sett x)) y | Set.size x == 1 = DExclude (SetSingleton(Set.elemAt 0 x)) y
+dExclude x y = DExclude x y
+
+rExclude ::(Ord k,Iter g,Ord v) => Exp (f k v) -> Exp (g v ()) -> Exp (f k v)
+rExclude y (Base SetR (Sett x)) | Set.size x == 1 = RExclude y (SetSingleton(Set.elemAt 0 x))
+rExclude y x = RExclude y x
+
 -- =================================================================
 -- | Basic types are those that can be embedded into Exp.
 -- The HasExp class, encodes how to lift a Basic type into an Exp.
@@ -562,21 +598,21 @@ rng:: (Ord k,Ord v) => HasExp s (f k v) => s -> Exp (Sett v ())
 rng x = Rng(toExp x)
 
 (◁),(<|),drestrict ::  (Ord k,HasExp s1 (Sett k ()), HasExp s2 (f k v)) => s1 -> s2 -> Exp (f k v)
-(◁) x y = DRestrict (toExp x) (toExp y)
+(◁) x y = dRestrict (toExp x) (toExp y)
 drestrict = (◁)
 (<|) = drestrict
 
 (⋪),dexclude :: (Ord k,Iter g, HasExp s1 (g k ()), HasExp s2 (f k v)) => s1 -> s2 -> Exp (f k v)
-(⋪) x y = DExclude (toExp x) (toExp y)
+(⋪) x y = dExclude (toExp x) (toExp y)
 dexclude = (⋪)
 
 (▷),(|>),rrestrict :: (Ord k,Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) => s1 -> s2 -> Exp (f k v)
-(▷) x y = RRestrict (toExp x) (toExp y)
+(▷) x y = rRestrict (toExp x) (toExp y)
 rrestrict = (▷)
 (|>) = (▷)
 
 (⋫),rexclude :: (Ord k,Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) => s1 -> s2 -> Exp (f k v)
-(⋫) x y = RExclude (toExp x) (toExp y)
+(⋫) x y = rExclude (toExp x) (toExp y)
 rexclude = (⋫)
 (∈) :: (Show k, Ord k,Iter g,HasExp s (g k ())) => k -> s -> Exp Bool
 (∈) x y = Elem x (toExp y)
@@ -963,6 +999,7 @@ run (other,target) = materialize target (fifo other)           -- If it is a com
 -- (dom x) ⊆ (dom y)
 -- ===============================================================================================
 
+
 compute:: Exp t -> t
 compute (Base rep relation) = relation
 
@@ -979,7 +1016,6 @@ compute (Rng (SetSingleton k)) = Sett (Set.singleton ())
 compute (Rng (Base rep rel)) = Sett(range rel)
 compute (e@(Rng _ )) = run(compile e)
 
-
 compute (DRestrict (Base SetR (Sett set)) (Base MapR m)) = Map.restrictKeys m set
 compute (DRestrict (SetSingleton k) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Singleton k v) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
@@ -990,12 +1026,11 @@ compute (DRestrict (Dom (Base _ x1)) (Base rep x2)) = materialize rep $ do { (x,
 compute (DRestrict (SetSingleton k) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle k) `domEq` x2; one (x,z) }
 compute (DRestrict (Dom (Singleton k _)) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle k) `domEq` x2; one (x,z) }
 compute (DRestrict (Rng (Singleton _ v)) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle v) `domEq` x2; one (x,z) }
-  -- This case inspired by set expression in EpochBoundary.hs
-compute (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR state)) =
-   materialize MapR (do { (x,y,z) <- delegs `domEq` state; when (not (y==hk)); one(x,z) })
-  -- This case inspired by set expression ((dom rewards' ◁ delegs) ▷ dom poolParams)  in LedgerState.hs
-compute (RRestrict (DRestrict (Dom (Base MapR x)) (Base MapR y)) (Dom (Base MapR z))) = intersectDomP (\ _k v -> Map.member v z) x y
-compute (e@(DRestrict _ _ )) = run(compile e)
+  -- This case inspired by set expression in EpochBoundary.hs (dom (delegs ▷ Set.singleton hk) ◁ stake)
+compute (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR stake)) =
+   -- materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when (not (y==hk)); one(x,z) })
+   intersectDomPLeft (\ _k v2 -> not(v2==hk)) stake delegs
+compute (e@(DRestrict _ _)) = run(compile e)
 
 compute (DExclude (SetSingleton n) (Base MapR m)) = Map.withoutKeys m (Set.singleton n)
 compute (DExclude (Dom (Singleton n v)) (Base MapR m)) = Map.withoutKeys m (Set.singleton n)
@@ -1016,6 +1051,8 @@ compute (RExclude (Base rep lhs) y) =
    materialize rep $ do { (a,b) <- fifo lhs; when (not(haskey b rhs)); one (a,b)} where (rhs,_) = compile y
 compute (e@(RExclude _ _ )) = run(compile e)
 
+ -- This case inspired by set expression ((dom rewards' ◁ delegs) ▷ dom poolParams)  in LedgerState.hs
+compute (RRestrict (DRestrict (Dom (Base MapR x)) (Base MapR y)) (Dom (Base MapR z))) = intersectDomP (\ _k v -> Map.member v z) x y
 compute (RRestrict (DRestrict (Dom (Base r1 stkcreds)) (Base r2 delegs)) (Dom (Base r3 stpools))) =
    materialize r2 $ do { (x,z,y) <- stkcreds `domEq` delegs; y `element` stpools; one (x,y)}
 compute (e@(RRestrict _ _ )) = run(compile e)
@@ -1260,6 +1297,8 @@ instance Show (BaseRep f k v) where
 
 instance Show (Exp t) where
   show (Base MapR x) = "Map("++show(Map.size x)++")?"
+  show (Base SingleR (Single _ _)) = "Single(_ _)"
+  show (Base SingleR (SetSingle _ )) = "SetSingle(_)"
   show (Base rep x) = show rep++"?"
   show (Dom x) = "(dom "++show x++")"
   show (Rng x) = "(rng "++show x++")"
