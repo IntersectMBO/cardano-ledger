@@ -12,6 +12,7 @@ module Shelley.Spec.Ledger.STS.Updn
     UpdnEnv (..),
     UpdnState (..),
     PredicateFailure,
+    UpdnPredicateFailure,
   )
 where
 

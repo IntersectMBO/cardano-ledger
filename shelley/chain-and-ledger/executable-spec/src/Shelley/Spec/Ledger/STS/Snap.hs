@@ -7,6 +7,7 @@
 module Shelley.Spec.Ledger.STS.Snap
   ( SNAP,
     PredicateFailure,
+    SnapPredicateFailure,
   )
 where
 
