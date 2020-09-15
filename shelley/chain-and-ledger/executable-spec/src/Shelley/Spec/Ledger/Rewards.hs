@@ -71,7 +71,11 @@ import Shelley.Spec.Ledger.EpochBoundary
   )
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, decodeSeq, encodeFoldable)
+import Shelley.Spec.Ledger.Serialization
+  ( decodeRecordNamed,
+    decodeSeq,
+    encodeFoldable,
+  )
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), getRwdCred)
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
@@ -97,7 +101,9 @@ instance Eq Likelihood where
   (==) = (==) `on` unLikelihood . normalizeLikelihood
 
 instance Semigroup Likelihood where
-  (Likelihood x) <> (Likelihood y) = normalizeLikelihood $ Likelihood (Seq.zipWith (+) x y)
+  (Likelihood x) <> (Likelihood y) =
+    normalizeLikelihood $
+      Likelihood (Seq.zipWith (+) x y)
 
 instance Monoid Likelihood where
   mempty = Likelihood $ Seq.replicate (length samplePositions) (LogWeight 0)
@@ -121,15 +127,17 @@ leaderProbability activeSlotCoeff relativeStake decentralizationParameter =
     asc = realToFrac . unitIntervalToRational . activeSlotVal $ activeSlotCoeff
     s = realToFrac relativeStake
 
-samplePositions :: [Double]
-samplePositions = (\x -> (x + 0.5) / 100.0) <$> [0.0 .. 99.0]
+samplePositions :: Seq.Seq Double
+samplePositions = (\x -> (x + 0.5) / 100.0) <$> Seq.fromList [0.0 .. 99.0]
 
 likelihood ::
   Natural -> -- number of blocks produced this epoch
   Double -> -- chance we're allowed to produce a block in this slot
   EpochSize ->
   Likelihood
-likelihood blocks t slotsPerEpoch = Likelihood . Seq.fromList $ sample <$> samplePositions
+likelihood blocks t slotsPerEpoch =
+  Likelihood $
+    sample <$> samplePositions
   where
     -- The likelihood function L(x) is the probability of observing the data we got
     -- under the assumption that the underlying pool performance is equal to x.
@@ -160,7 +168,9 @@ likelihood blocks t slotsPerEpoch = Likelihood . Seq.fromList $ sample <$> sampl
     sample position = LogWeight (realToFrac $ l position)
 
 posteriorDistribution :: Histogram -> Likelihood -> Histogram
-posteriorDistribution (Histogram points) (Likelihood likelihoods) = normalize $ Histogram $ Seq.zipWith (+) points likelihoods
+posteriorDistribution (Histogram points) (Likelihood likelihoods) =
+  normalize $
+    Histogram $ Seq.zipWith (+) points likelihoods
 
 -- TODO decay the histogram
 
@@ -180,12 +190,12 @@ percentile p prior likelihoods =
       find (\(_x, fx) -> fx > p) cdf
   where
     (Histogram values) = posteriorDistribution prior likelihoods
-    cdf = Seq.zip (Seq.fromList samplePositions) $ Seq.scanl (+) 0 (fromLogWeight <$> values)
+    cdf = Seq.zip samplePositions $ Seq.scanl (+) 0 (fromLogWeight <$> values)
 
 percentile' :: Likelihood -> PerformanceEstimate
 percentile' = percentile 0.1 h
   where
-    h = normalize . Histogram . Seq.fromList $ logBeta 40 3 <$> samplePositions
+    h = normalize . Histogram $ logBeta 40 3 <$> samplePositions
     -- Beta(n,m)(x) = C * x^(n-1)*(1-x)^(m-1)
     -- log( Beta(n,m)(x) ) = (n-1) * log x + (m-1) * log (1-x)
     logBeta n m x = LogWeight . realToFrac $ (n -1) * log x + (m -1) * log (1 - x)
@@ -332,7 +342,9 @@ memberRew ::
   Coin
 memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
   | f' <= c = mempty
-  | otherwise = rationalToCoinViaFloor $ fromIntegral (f' - c) * (1 - m') * t / sigma
+  | otherwise =
+    rationalToCoinViaFloor $
+      fromIntegral (f' - c) * (1 - m') * t / sigma
   where
     (Coin c, m, _) = poolSpec pool
     m' = unitIntervalToRational m
@@ -350,36 +362,59 @@ rewardOnePool ::
   Coin ->
   Set (Credential 'Staking era) ->
   Map (Credential 'Staking era) Coin
-rewardOnePool pp r blocksN blocksTotal pool (Stake stake) sigma sigmaA (Coin totalStake) addrsRew =
-  rewards'
-  where
-    Coin ostake =
-      Set.foldl'
-        (\c o -> c <> (fromMaybe mempty $ Map.lookup (KeyHashObj o) stake))
-        mempty
-        (_poolOwners pool)
-    Coin pledge = _poolPledge pool
-    pr = fromIntegral pledge % fromIntegral totalStake
-    (Coin maxP) =
-      if pledge <= ostake
-        then maxPool pp r sigma pr
-        else mempty
-    appPerf = mkApparentPerformance (_d pp) sigmaA blocksN blocksTotal
-    poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
-    tot = fromIntegral totalStake
-    mRewards =
-      Map.fromList
-        [ ( hk,
-            memberRew poolR pool (StakeShare (fromIntegral c % tot)) (StakeShare sigma)
-          )
-          | (hk, Coin c) <- Map.toList stake,
-            notPoolOwner hk
-        ]
-    notPoolOwner (KeyHashObj hk) = hk `Set.notMember` _poolOwners pool
-    notPoolOwner (ScriptHashObj _) = False
-    iReward = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
-    potentialRewards = Map.insert (getRwdCred $ _poolRAcnt pool) iReward mRewards
-    rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
+rewardOnePool
+  pp
+  r
+  blocksN
+  blocksTotal
+  pool
+  (Stake stake)
+  sigma
+  sigmaA
+  (Coin totalStake)
+  addrsRew =
+    rewards'
+    where
+      Coin ostake =
+        Set.foldl'
+          (\c o -> c <> (fromMaybe mempty $ Map.lookup (KeyHashObj o) stake))
+          mempty
+          (_poolOwners pool)
+      Coin pledge = _poolPledge pool
+      pr = fromIntegral pledge % fromIntegral totalStake
+      (Coin maxP) =
+        if pledge <= ostake
+          then maxPool pp r sigma pr
+          else mempty
+      appPerf = mkApparentPerformance (_d pp) sigmaA blocksN blocksTotal
+      poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
+      tot = fromIntegral totalStake
+      mRewards =
+        Map.fromList
+          [ ( hk,
+              memberRew
+                poolR
+                pool
+                (StakeShare (fromIntegral c % tot))
+                (StakeShare sigma)
+            )
+            | (hk, Coin c) <- Map.toList stake,
+              notPoolOwner hk
+          ]
+      notPoolOwner (KeyHashObj hk) = hk `Set.notMember` _poolOwners pool
+      notPoolOwner (ScriptHashObj _) = False
+      iReward =
+        leaderRew
+          poolR
+          pool
+          (StakeShare $ fromIntegral ostake % tot)
+          (StakeShare sigma)
+      potentialRewards =
+        Map.insert
+          (getRwdCred $ _poolRAcnt pool)
+          iReward
+          mRewards
+      rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
 
 reward ::
   PParams era ->
@@ -392,7 +427,11 @@ reward ::
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
-  (Map (Credential 'Staking era) Coin, Map (KeyHash 'StakePool era) Likelihood)
+  ( Map
+      (Credential 'Staking era)
+      Coin,
+    Map (KeyHash 'StakePool era) Likelihood
+  )
 reward
   pp
   (BlocksMade b)

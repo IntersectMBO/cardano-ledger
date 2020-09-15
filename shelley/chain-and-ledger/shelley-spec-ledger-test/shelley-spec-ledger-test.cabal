@@ -211,6 +211,7 @@ benchmark mainbench
     BenchUTxOAggregate,
     BenchValidation,
     Shelley.Spec.Ledger.Bench.Gen
+    Shelley.Spec.Ledger.Bench.Rewards
     Test.Shelley.Spec.Ledger.Examples.Cast
 
   build-depends:

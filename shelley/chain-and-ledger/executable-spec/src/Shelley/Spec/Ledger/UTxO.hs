@@ -45,7 +45,12 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
+import Control.Iterate.SetAlgebra
+  ( BaseRep (MapR),
+    Embed (..),
+    Exp (Base),
+    HasExp (toExp),
+  )
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -159,7 +164,10 @@ txouts ::
   UTxO era
 txouts tx =
   UTxO $
-    Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (toList $ _outputs tx) [0 ..]]
+    Map.fromList
+      [ (TxIn transId idx, out)
+        | (out, idx) <- zip (toList $ _outputs tx) [0 ..]
+      ]
   where
     transId = txid tx
 
@@ -280,8 +288,15 @@ scriptsNeeded ::
   Set (ScriptHash era)
 scriptsNeeded u tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
-    `Set.union` Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
-    `Set.union` Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
+    `Set.union` Set.fromList
+      ( Maybe.mapMaybe (scriptCred . getRwdCred) $
+          Map.keys withdrawals
+      )
+    `Set.union` Set.fromList
+      ( Maybe.mapMaybe
+          scriptStakeCred
+          (filter requiresVKeyWitness certificates)
+      )
   where
     unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ _wdrls $ _body tx

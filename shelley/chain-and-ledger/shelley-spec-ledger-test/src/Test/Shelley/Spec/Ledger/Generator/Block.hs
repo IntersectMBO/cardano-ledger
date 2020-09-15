@@ -9,6 +9,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Block
   ( genBlock,
+    genBlockWithTxGen,
     tickChainState,
   )
 where
@@ -24,6 +25,7 @@ import Data.Foldable (toList)
 import qualified Data.List as List (find)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
+import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.BaseTypes
@@ -69,6 +71,14 @@ import Test.Shelley.Spec.Ledger.Utils
     testGlobals,
   )
 
+-- | Type alias for a transaction generator
+type TxGen era =
+  PParams era ->
+  AccountState ->
+  LedgerState era ->
+  SlotNo ->
+  Gen (Seq (Tx era))
+
 -- | Generate a valid block.
 genBlock ::
   forall era.
@@ -76,7 +86,22 @@ genBlock ::
   GenEnv era ->
   ChainState era ->
   Gen (Block era)
-genBlock
+genBlock ge = genBlockWithTxGen genTxs ge
+  where
+    genTxs pp reserves ls s = do
+      let ledgerEnv = LedgersEnv s pp reserves
+
+      sigGen @(LEDGERS era) ge ledgerEnv ls
+
+genBlockWithTxGen ::
+  forall era.
+  (Era era, Mock (Crypto era)) =>
+  TxGen era ->
+  GenEnv era ->
+  ChainState era ->
+  Gen (Block era)
+genBlockWithTxGen
+  genTxs
   ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
   origChainState = do
     -- Firstly, we must choose a slot in which to lead.
@@ -131,10 +156,6 @@ genBlock
       (block, slot, hashheader) = case chainLastAppliedBlock origChainState of
         Origin -> error "block generator does not support from Origin"
         At (LastAppliedBlock b s hh) -> (b, s, hh)
-      genTxs pp reserves ls s = do
-        let ledgerEnv = LedgersEnv s pp reserves
-
-        sigGen @(LEDGERS era) ge ledgerEnv ls
 
 selectNextSlotWithLeader ::
   forall era.
