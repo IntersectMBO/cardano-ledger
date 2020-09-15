@@ -63,12 +63,13 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- affected by undelegated stake), but the wallet wants to display pool
 -- saturation for rewards purposes. For that, it needs the fraction of total
 -- stake.
-poolsByTotalStakeFraction :: Globals -> ShelleyState era -> PoolDistr era
+--
+-- This is not based on any snapshot, but uses the current ledger state.
+poolsByTotalStakeFraction :: Era era => Globals -> ShelleyState era -> PoolDistr era
 poolsByTotalStakeFraction globals ss =
   PoolDistr poolsByTotalStake
   where
-    EpochState _ ss' _ _ _ _ = nesEs ss
-    EB.SnapShot stake _ _ = EB._pstakeGo ss'
+    EB.SnapShot stake _ _ = currentSnapshot ss
     Coin totalStake = getTotalStake globals ss
     Coin activeStake = fold . EB.unStake $ stake
     stakeRatio = activeStake % totalStake
@@ -89,6 +90,8 @@ getTotalStake globals ss =
 -- For each given credential, this function returns a map from each stake
 -- pool (identified by the key hash of the pool operator) to the
 -- non-myopic pool member reward for that stake pool.
+--
+-- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
   Era era =>
   Globals ->
@@ -112,10 +115,7 @@ getNonMyopicMemberRewards globals ss creds =
       { likelihoodsNM = ls,
         rewardPotNM = rPot
       } = esNonMyopic es
-    utxo = _utxo . _utxoState . esLState $ es
-    dstate = _dstate . _delegationState . esLState $ es
-    pstate = _pstate . _delegationState . esLState $ es
-    EB.SnapShot stake delegs poolParams = stakeDistr utxo dstate pstate
+    EB.SnapShot stake delegs poolParams = currentSnapshot ss
     poolData =
       Map.mapWithKey
         (\k p -> (percentile' (histLookup k), p, toShare . fold . EB.unStake $ EB.poolStake k delegs stake))
@@ -141,6 +141,20 @@ getNonMyopicMemberRewards globals ss creds =
                   mempty
                   (_poolOwners pool)
            in _poolPledge poolp <= ostake
+
+-- | Create a current snapshot of the ledger state.
+--
+-- When ranking pools, and reporting their saturation level, in the wallet, we
+-- do not want to use one of the regular snapshots, but rather the most recent
+-- ledger state.
+currentSnapshot :: Era era => ShelleyState era -> EB.SnapShot era
+currentSnapshot ss =
+  stakeDistr utxo dstate pstate
+  where
+    es = nesEs ss
+    utxo = _utxo . _utxoState . esLState $ es
+    dstate = _dstate . _delegationState . esLState $ es
+    pstate = _pstate . _delegationState . esLState $ es
 
 -- | Get the full UTxO.
 getUTxO ::
