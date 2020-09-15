@@ -158,6 +158,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
         \var{prev} & \HashHeader^? & \text{hash of previous block header}\\
         \var{vk} & \VKey & \text{block issuer}\\
         \var{vrfVk} & \VKey & \text{VRF verification key}\\
+        \var{blockno} & \BlockNo & \text{block number}\\
         \var{slot} & \Slot & \text{block slot}\\
         \eta & \Seed & \text{nonce}\\
         \var{prf}_{\eta} & \Proof & \text{nonce proof}\\
@@ -1241,39 +1242,51 @@ parameters. The function checks:
 \begin{figure}
   \emph{VRF helper function}
   \begin{align*}
+      & \fun{poolIDfromBHBody} \in \BHBody \to \KeyHash_{pool} \\
+      & \fun{poolIDfromBHBody} = \hashKey{} \circ \bvkcold{} \\
+  \end{align*}
+  %
+  \begin{align*}
+      & \fun{mkSeed} \in \Seed \to \Slot \to \Seed \to \Seed \\
+      & \fun{mkSeed}~\var{ucNonce}~\var{slot}~\eta_0 =
+        \var{ucNonce}~\mathsf{XOR}~(\slotToSeed{slot}\seedOp\eta_0)\\
+  \end{align*}
+  %
+  \begin{align*}
       & \fun{vrfChecks} \in \Seed \to \BHBody \to \Bool \\
       & \fun{vrfChecks}~\eta_0~\var{bhb} = \\
       & \begin{array}{cl}
         ~~~~ &
-             \verifyVrf{\Seed}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seede)}
+        \verifyVrf{\Seed}{\var{vrfK}}{(\fun{mkSeed}~\Seede~\var{slot}~\eta_0)}
                {(\bprfn{bhb},~\bnonce{bhb}}) \\
         ~~~~ \land &
-             \verifyVrf{\unitInterval}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seedl)}
+               \verifyVrf{\unitInterval}{\var{vrfK}}{(\fun{mkSeed}~\Seedl~\var{slot}~\eta_0)}
                {(\bprfl{bhb},~\bleader{bhb}}) \\
       \end{array} \\
       & ~~~~\where \\
-      & ~~~~~~~~~~\var{ss} \leteq \slotToSeed{(\bslot{bhb})} \\
-      & ~~~~~~~~~~\var{vrfVk} \leteq \fun{bvkvrf}~\var{bhb} \\
+      & ~~~~~~~~~~\var{slot} \leteq \bslot{bhb} \\
+      & ~~~~~~~~~~\var{vrfK} \leteq \fun{bvkvrf}~\var{bhb} \\
   \end{align*}
   %
   \begin{align*}
-      & \fun{praosVrfChecks} \in \Seed \to \PoolDistr \to \unitInterval \to \BHBody \to \Bool \\
+      & \fun{praosVrfChecks} \in \Seed \to \PoolDistr \to \unitIntervalNonNull \to \BHBody \to \Bool \\
       & \fun{praosVrfChecks}~\eta_0~\var{pd}~\var{f}~\var{bhb} = \\
       & \begin{array}{cl}
-        ~~~~ & \var{hk}\mapsto (\sigma,~\var{hk_{vrf}})\in\var{pd} \\
+        ~~~~ & \var{hk}\mapsto (\sigma,~\var{vrfHK})\in\var{pd} \\
+        ~~~~ \land & \var{vrfHK} = \hashKey{vrfK} \\
         ~~~~ \land & \fun{vrfChecks}~\eta_0~\var{bhb} \\
         ~~~~ \land & \fun{checkLeaderVal}~(\fun{bleader}~\var{bhb})~\sigma~\var{f} \\
       \end{array} \\
       & ~~~~\where \\
-      & ~~~~~~~~~~\var{hk} \leteq \hashKey{(\bvkcold bhb)} \\
-      & ~~~~~~~~~~\var{hk_{vrf}} \leteq \hashKey{(\fun{bvkvrf}~\var{bhb})} \\
+      & ~~~~~~~~~~\var{hk} \leteq \fun{poolIDfromBHBody}~\var{bhb} \\
+      & ~~~~~~~~~~\var{vrfK} \leteq \fun{bvkvrf}~\var{bhb} \\
   \end{align*}
   %
   \begin{align*}
       & \fun{pbftVrfChecks} \in \KeyHash_{vrf} \to \Seed \to \BHBody \to \Bool \\
-      & \fun{pbftVrfChecks}~\var{vrfh}~\eta_0~~\var{bhb} = \\
+      & \fun{pbftVrfChecks}~\var{vrfHK}~\eta_0~~\var{bhb} = \\
       & \begin{array}{cl}
-        ~~~~ & \var{vrfh} = \hashKey{(\fun{bvkvrf}~\var{bhb})} \\
+        ~~~~ & \var{vrfHK} = \hashKey{(\fun{bvkvrf}~\var{bhb})} \\
         ~~~~ \land & \fun{vrfChecks}~\eta_0~\var{bhb} \\
       \end{array} \\
   \end{align*}
