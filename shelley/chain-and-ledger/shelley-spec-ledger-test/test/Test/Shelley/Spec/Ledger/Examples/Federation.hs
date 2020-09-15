@@ -112,7 +112,7 @@ coreNodeKeysBySchedule ::
 coreNodeKeysBySchedule pp slot =
   case lookupInOverlaySchedule
          firstSlot
-         (Map.keys genDelegs)
+         (Map.keysSet genDelegs)
          (_d pp)
          (activeSlotCoeff testGlobals)
          slot' of

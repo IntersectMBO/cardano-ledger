@@ -195,7 +195,7 @@ selectNextSlotWithLeader
         Maybe (ChainState era, AllIssuerKeys era 'BlockIssuer)
       selectLeaderForSlot slotNo =
         (chainSt,)
-          <$> case lookupInOverlaySchedule firstEpochSlot (Map.keys cores) d f slotNo of
+          <$> case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of
             Nothing ->
               coerce
                 <$> List.find
@@ -221,7 +221,7 @@ selectNextSlotWithLeader
           isLeader poolHash vrfKey =
             let y = VRF.evalCertified @(VRF (Crypto era)) () (mkSeed seedL slotNo epochNonce) vrfKey
                 stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
-             in case lookupInOverlaySchedule firstEpochSlot (Map.keys cores) d f slotNo of
+             in case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of
                   Nothing -> checkLeaderValue (VRF.certifiedOutput y) stake f
                   Just (ActiveSlot x) | coerceKeyRole x == poolHash -> True
                   _ -> False

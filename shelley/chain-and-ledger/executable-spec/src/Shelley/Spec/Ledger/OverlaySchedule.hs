@@ -29,6 +29,8 @@ import Cardano.Binary
 import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NFData, NoUnexpectedThunks)
 import Cardano.Slotting.Slot
+import qualified Data.Set as Set
+import Data.Set (Set)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Keys
@@ -78,7 +80,7 @@ isOverlaySlot firstSlotNo dval slot = step s < step (s + 1)
 
 classifyOverlaySlot ::
   SlotNo -> -- first slot of the epoch
-  [KeyHash 'Genesis era] -> -- genesis Nodes
+  Set (KeyHash 'Genesis era) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   SlotNo -> -- overlay slot to classify
@@ -93,12 +95,12 @@ classifyOverlaySlot firstSlotNo gkeys dval ascValue slot =
     d = unitIntervalToRational dval
     position = ceiling (fromIntegral (slot -* firstSlotNo) * d)
     isActive = position `mod` ascInv == 0
-    getAtIndex ls i = if i < length ls then ActiveSlot (ls !! i) else NonActiveSlot
+    getAtIndex gs i = if i < length gs then ActiveSlot (Set.elemAt i gs) else NonActiveSlot
     ascInv = floor (1 / (unitIntervalToRational . activeSlotVal $ ascValue))
 
 lookupInOverlaySchedule ::
   SlotNo -> -- first slot of the epoch
-  [KeyHash 'Genesis era] -> -- genesis Nodes
+  Set (KeyHash 'Genesis era) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   SlotNo -> -- slot to lookup
