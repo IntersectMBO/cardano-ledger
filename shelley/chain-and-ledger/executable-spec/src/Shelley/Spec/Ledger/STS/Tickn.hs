@@ -11,6 +11,7 @@ module Shelley.Spec.Ledger.STS.Tickn
   ( TICKN,
     TicknEnv (..),
     TicknState (..),
+    TicknPredicateFailure,
     PredicateFailure,
   )
 where
