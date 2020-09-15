@@ -6,6 +6,8 @@
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
 \newcommand{\prevHashToNonce}[1]{\fun{prevHashToNonce}~ \var{#1}}
+\newcommand{\isOverlaySlot}[3]{\fun{isOverlaySlot}~\var{#1}~\var{#2}~\var{#3}}
+\newcommand{\classifyOverlaySlot}[5]{\fun{classifyOverlaySlot}~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}}
 
 \newcommand{\T}{\type{T}}
 \newcommand{\vrf}[3]{\fun{vrf}_{#1} ~ #2 ~ #3}
@@ -42,7 +44,6 @@
 \newcommand{\PrtclEnv}{\type{PrtclEnv}}
 \newcommand{\OverlayEnv}{\type{OverlayEnv}}
 \newcommand{\VRFState}{\type{VRFState}}
-\newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
 \newcommand{\TickNonceState}{\type{TickNonceState}}
 \newcommand{\TickNonceEnv}{\type{TickNonceEnv}}
 \newcommand{\NewEpochState}{\type{NewEpochState}}
@@ -395,29 +396,9 @@ of
 \item The old epoch state.
 \item An optional rewards update.
 \item The stake pool distribution of the epoch.
-\item The OBFT overlay schedule.
 \end{itemize}
 
-Figure~\ref{fig:ts-types:newepoch} also defines an abstract pseudorandom function
-$\fun{overlaySchedule}$ for creating the OBFT overlay schedule for each new epoch,
-as explained in section 3.8.2 of~\cite{delegation_design}.
-The function takes a set of genesis keys, a seed, and the protocol parameters
-(of which the decentralization parameter $d$ and the active slot coeffient $f$ are used).
-It must create $(d\cdot\SlotsPerEpoch)$-many OBFT slots, $(f\cdot d\cdot \SlotsPerEpoch)$
-of which are active.
-
 \begin{figure}
-  \emph{New Epoch environments}
-  \begin{equation*}
-    \NewEpochEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{s} & \Slot & \text{current slot} \\
-        \var{gkeys} & \powerset{\KeyHashGen} & \text{genesis key hashes} \\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
   \emph{New Epoch states}
   \begin{equation*}
     \NewEpochState =
@@ -429,31 +410,14 @@ of which are active.
         \var{es} & \EpochState & \text{epoch state} \\
         \var{ru} & \RewardUpdate^? & \text{reward update} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
       \end{array}
     \right)
   \end{equation*}
   %
-  \emph{Abstract pseudorandom schedule function}
-  \begin{align*}
-    & \fun{overlaySchedule} \in \Epoch \to \powerset{\KeyHashGen} \to \PParams
-        \to (\Slot\mapsto\KeyHashGen^?) \\
-  \end{align*}
-  %
-  \emph{Constraints}
-  \begin{align*}
-    \text{ given: }~\var{osched}\leteq\overlaySchedule{e}{gkeys}{pp} \\
-    \range{osched}\subseteq\var{gkeys} \\
-    |\var{osched}| = \floor{(\fun{d}~\var{pp})\cdot\SlotsPerEpoch} \\
-    |\{s\mapsto k\in\var{osched}~\mid~k\neq\Nothing\}| =
-    \floor{\ActiveSlotCoeff(\fun{d}~\var{pp})\cdot\SlotsPerEpoch} \\
-    \forall s\in\dom{osched},~\epoch{s}=e\\
-  \end{align*}
-  %
   \emph{New Epoch Transitions}
   \begin{equation*}
-    \_ \vdash \var{\_} \trans{newepoch}{\_} \var{\_} \subseteq
-    \powerset (\NewEpochEnv \times \NewEpochState \times \Epoch \times \NewEpochState)
+    \vdash \var{\_} \trans{newepoch}{\_} \var{\_} \subseteq
+    \powerset (\NewEpochState \times \Epoch \times \NewEpochState)
   \end{equation*}
   %
   \emph{Helper function}
@@ -511,7 +475,6 @@ In the first case, the new epoch state is updated as follows:
 \item The rewards update is set to \Nothing.
 \item The new pool distribution \var{pd}' is calculated from the delegation map and
   stake allocation of the previous epoch.
-\item A new OBFT overlay schedule is created.
 \end{itemize}
 
 \begin{figure}[ht]
@@ -541,17 +504,12 @@ In the first case, the new epoch state is updated as follows:
       }
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
-         (\var{acnt},~\var{ss},~\wcard,~\wcard,~\var{pp}) & \var{es'''} \\
+         (\var{acnt},~\var{ss},~\wcard,~\wcard,~\wcard) & \var{es'''} \\
          (\wcard,~\var{pstake_{set}},~\wcard,~\wcard) & \var{ss} \\
          \var{pd'} & \fun{calculatePoolDistr}~\var{pstake_{set}} \\
-         \var{osched'} & \overlaySchedule{e}{gkeys}{pp} \\
        \end{array}}
     }
     {
-      {\begin{array}{c}
-         \var{s} \\
-         \var{gkeys} \\
-       \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{e_\ell} \\
@@ -560,7 +518,6 @@ In the first case, the new epoch state is updated as follows:
             \var{es} \\
             \var{ru} \\
             \var{pd} \\
-            \var{osched} \\
       \end{array}\right)}
       \trans{newepoch}{\var{e}}
       {\left(\begin{array}{c}
@@ -570,7 +527,6 @@ In the first case, the new epoch state is updated as follows:
             \varUpdate{\var{es'''}} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
-            \varUpdate{\var{osched}'} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -585,10 +541,6 @@ In the first case, the new epoch state is updated as follows:
       e \neq e_\ell + 1
     }
     {
-      {\begin{array}{c}
-          \var{s} \\
-          \var{gkeys} \\
-      \end{array}}
       \vdash\var{nes}\trans{newepoch}{\var{e}} \var{nes}
     }
   \end{equation}
@@ -617,17 +569,12 @@ In the first case, the new epoch state is updated as follows:
       }
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
-         (\var{acnt},~\var{ss},~\wcard,~\wcard,~\var{pp}) & \var{es'''} \\
+         (\var{acnt},~\var{ss},~\wcard,~\wcard,~\wcard) & \var{es'''} \\
          (\wcard,~\var{pstake_{set}},~\wcard,~\wcard) & \var{ss} \\
          \var{pd'} & \fun{calculatePoolDistr}~\var{pstake_{set}} \\
-         \var{osched'} & \overlaySchedule{e}{gkeys}{pp} \\
        \end{array}}
     }
     {
-      {\begin{array}{c}
-         \var{s} \\
-         \var{gkeys} \\
-       \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{e_\ell} \\
@@ -636,7 +583,6 @@ In the first case, the new epoch state is updated as follows:
             \var{es} \\
             \var{ru} \\
             \var{pd} \\
-            \var{osched} \\
       \end{array}\right)}
       \trans{newepoch}{\var{e}}
       {\left(\begin{array}{c}
@@ -646,7 +592,6 @@ In the first case, the new epoch state is updated as follows:
             \varUpdate{\var{es'''}} \\
             \var{ru} \\
             \varUpdate{\var{pd}'} \\
-            \varUpdate{\var{osched}'} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -980,8 +925,8 @@ slot is removed. The helper function $\fun{adoptGenesisDelegs}$ accomplishes the
 \begin{figure}
   \emph{Chain Tick Transitions}
   \begin{equation*}
-    \_ \vdash \var{\_} \trans{tick}{\_} \var{\_} \subseteq
-    \powerset (\powerset{\KeyHashGen} \times \NewEpochState \times \Slot \times \NewEpochState)
+    \vdash \var{\_} \trans{tick}{\_} \var{\_} \subseteq
+    \powerset (\NewEpochState \times \Slot \times \NewEpochState)
   \end{equation*}
   \caption{Tick transition-system types}
   \label{fig:ts-types:tick}
@@ -1052,17 +997,13 @@ Three transitions are done:
     \inference[Tick]
     {
       {
-        {\begin{array}{c}
-           \var{slot} \\
-           \var{gkeys} \\
-         \end{array}}
         \vdash
         \var{nes}
         \trans{\hyperref[fig:rules:new-epoch]{newepoch}}{\epoch{slot}}
         \var{nes}'
       }
       \\~\\
-      (\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\wcard,~\wcard,~\wcard)\leteq\var{nes} \\
+      (\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\wcard,~\wcard)\leteq\var{nes} \\
       \\~\\
       {
         {\begin{array}{c}
@@ -1072,19 +1013,16 @@ Three transitions are done:
         \vdash \var{ru'}\trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{slot}} \var{ru''}
       }
       \\~\\
-      (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es'},~\var{ru'},~\var{pd'},\var{osched'})
+      (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es'},~\var{ru'},~\var{pd'})
       \leteq\var{nes'}
       \\
       \var{es''}\leteq\fun{adoptGenesisDelegs}~\var{es'}~\var{slot}
       \\
       \var{nes''}\leteq
-      (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es''},~\var{ru''},~\var{pd'},\var{osched'})
+      (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es''},~\var{ru''},~\var{pd'})
       \\~\\
     }
     {
-      {\begin{array}{c}
-         \var{gkeys} \\
-       \end{array}}
       \vdash\var{nes}\trans{tick}{\var{slot}}\varUpdate{\var{nes''}}
     }
   \end{equation}
@@ -1307,14 +1245,28 @@ The transition system introduced in this section, $\type{OVERLAY}$, covers this 
 This transition is responsible for validating the protocol for both the OBFT blocks
 and the Praos blocks, depending on the overlay schedule.
 
-The environments for this transition are:
+The actual overlay schedule itself it determined by two functions,
+$\fun{isOverlaySlot}$ and $\fun{classifyOverlaySlot}$,
+which are defined in Figure~\ref{fig:rules:overlay}.
+The function $\fun{isOverlaySlot}$ determines if the current slot
+is reserved for the OBFT nodes.
+In particular, it looks at the current relative slot to
+see if the next multiple of $d$ (the decentralization protocol parameter)
+raises the ceiling.
+If a slot is indeed in the overlay schedule,
+the function $\fun{classifyOverlaySlot}$ determines if the current slot
+should be a silent slot (no block is allowed) or which core node
+is responsible for the block.
+The non-silent blocks are the multiples of $1/\ActiveSlotCoeff$,
+and the responsible core node are determined by
+taking turns according the lexicographic ordering of the core node keyhashes.
+\textbf{Note} that $1/\ActiveSlotCoeff$ needs to be natural number,
+otherwise the multilples of $\lfloor 1/\ActiveSlotCoeff \rfloor$
+will yield a different proportion of active slots than the Praos blocks.
+
+The environments for the overlay schedule transition are:
 \begin{itemize}
-  \item A mapping $\var{osched}$ of slots to an optional genesis key.
-    In the terminology of \cite{delegation_design},
-    the slots in $\var{osched}$ are the ``OBFT slots''.
-    A slot in this map with a value of $\Nothing$ is a non-active slot,
-    otherwise it is an active slot and its value designates the genesis key
-    responsible for producing the block.
+  \item The decentralization parameter $d$.
   \item The epoch nonce $\eta_0$.
   \item The stake pool stake distribution $\var{pd}$.
   \item The mapping $\var{genDelegs}$ of genesis keys to their cold keys and vrf keys.
@@ -1354,7 +1306,7 @@ check the correct cold key hash and vrf key hash.
     \OverlayEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
+        \var{d} & \{0,~1/100,~2/100,~\ldots,~1\} & \text{decentralization parameter} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
@@ -1368,6 +1320,32 @@ check the correct cold key hash and vrf key hash.
     \powerset (\OverlayEnv \times (\KeyHash_{pool} \mapsto \N) \times \BHeader \times
     (\KeyHash_{pool} \mapsto \N))
   \end{equation*}
+  %
+  \emph{Overlay Schedule helper functions}
+  \begin{align*}
+      & \fun{isOverlaySlot} \in \Slot \to \unitInterval \to \Slot \to \Bool \\
+      & \isOverlaySlot{fSlot}{dval}{slot} = \lceil s\cdot dval \rceil < \lceil (s+1)\cdot dval \rceil \\
+      & ~~~~ \where s\leteq\slotminus{slot}{fslot}
+  \end{align*}
+  %
+  \begin{align*}
+      & \fun{classifyOverlaySlot} \in \Slot \to \powerset{\KeyHashGen} \to \unitInterval
+        \to \unitIntervalNonNull \to \Slot \to \Bool \\
+      & \classifyOverlaySlot{fSlot}{gkeys}{dval}{asc}{slot} = \\
+      & ~~~\begin{cases}
+        \fun{elemAt}~\left( \frac{\var{position}}{\var{ascInv}} \bmod |\var{gkeys}| \right)~\var{gkeys}
+        &
+        \text{if } \var{position} \equiv 0 \pmod{\var{ascInv}} \\
+        \Nothing
+        &
+        \text{otherwise}
+        \end{cases} \\
+      & ~~~~ \where \\
+      & ~~~~~~~ \var{ascInv}\leteq\lfloor 1/\var{asc}\rfloor \\
+      & ~~~~~~~ \var{position}\leteq \lceil (\slotminus{slot}{fSlot})\cdot dval \rceil \\
+      & ~~~~~~~ \fun{elemAt}~i~\var{set}\leteq i'\text{th lexicographic element of }\var{set}
+  \end{align*}
+  %
   \caption{Overlay transition-system types}
   \label{fig:ts-types:overlay}
 \end{figure}
@@ -1382,9 +1360,14 @@ check the correct cold key hash and vrf key hash.
       &
       \var{vkh}\leteq\hashKey{vk}
       \\
-      \bslot bhb \mapsto \var{gkh}\in\var{osched}
+      \var{slot} \leteq \bslot{bhb}
       &
+      \var{fSlot} \leteq \fun{firstSlot}~(\epoch{slot})
+      \\
       \var{gkh}\mapsto(\var{vkh},~\var{vrfh})\in\var{genDelegs}
+      \\
+      \isOverlaySlot{fSlot}{(\dom{genDelegs})}{slot}\\
+      \classifyOverlaySlot{fSlot}{(\dom{genDelegs})}{d}{\ActiveSlotCoeff}{slot} = \var{ghk}
       \\~\\
       \fun{pbftVrfChecks}~\var{vrfh}~\eta_0~\var{bhb}
       \\~\\
@@ -1399,7 +1382,7 @@ check the correct cold key hash and vrf key hash.
     }
     {
       {\begin{array}{c}
-         \var{osched} \\
+         \var{d} \\
          \eta_0 \\
          \var{pd} \\
          \var{genDelegs} \\
@@ -1417,8 +1400,12 @@ check the correct cold key hash and vrf key hash.
     \inference[Decentralized]
     {
       \var{bhb}\leteq\bheader{bh}
+      &
+      \var{slot} \leteq \bslot{bhb}
+      &
+      \var{fSlot} \leteq \fun{firstSlot}~(\epoch{slot})
       \\
-      \bslot{bhb} \notin \dom{\var{osched}}
+      \neg\isOverlaySlot{fSlot}{(\dom{genDelegs})}{slot}\\
       \\~\\
       {
         \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
@@ -1428,7 +1415,7 @@ check the correct cold key hash and vrf key hash.
     }
     {
       {\begin{array}{c}
-         \var{osched} \\
+         \var{d} \\
          \eta_0 \\
          \var{pd} \\
          \var{genDelegs} \\
@@ -1486,7 +1473,7 @@ followed by the transition to update the evolving and candidate nonces.
     \PrtclEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
+        \var{d} & \{0,~1/100,~2/100,~\ldots,~1\} & \text{decentralization parameter} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
@@ -1517,12 +1504,7 @@ followed by the transition to update the evolving and candidate nonces.
 
 The environments for this transition are:
 \begin{itemize}
-  \item A mapping $\var{osched}$ of slots to an optional genesis key.
-    In the terminology of \cite{delegation_design},
-    the slots in $\var{osched}$ are the ``OBFT slots''.
-    A slot in this map with a value of $\Nothing$ is a non-active slot,
-    otherwise it is an active slot and its value designates the genesis key
-    responsible for producing the block.
+  \item The decentralization parameter $d$.
   \item The stake pool stake distribution $\var{pd}$.
   \item The mapping $\var{dms}$ of genesis keys to their cold keys.
   \item The epoch nonce $\eta_0$.
@@ -1556,7 +1538,7 @@ The states for this transition consists of:
       }\\~\\
       {
         {\begin{array}{c}
-          \var{osched} \\
+          \var{d} \\
           \var{pd} \\
           \var{dms} \\
           \eta_0 \\
@@ -1567,7 +1549,7 @@ The states for this transition consists of:
     }
     {
       {\begin{array}{c}
-         \var{osched} \\
+         \var{d} \\
          \var{pd} \\
          \var{dms} \\
          \eta_0 \\
@@ -1599,8 +1581,8 @@ The PRTCL rule has no predicate failures, besides those of the two sub-transiton
 
 The Block Body Transition updates the block body state which comprises the ledger state and the
 map describing the produced blocks.
-The environment of the $\mathsf{BBODY}$ transition are overlay schedule slots,
-the protocol parameters, and the accounting state.
+The environment of the $\mathsf{BBODY}$ transition are
+the protocol parameters and the accounting state.
 The environments and states are defined in Figure~\ref{fig:ts-types:bbody}, along with
 a helper function $\fun{incrBlocks}$, which counts the number of non-overlay blocks
 produced by each stake pool.
@@ -1611,7 +1593,6 @@ produced by each stake pool.
     \BBodyEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{oslots} & \powerset{\Slot} & \text{overlay slots} \\
         \var{pp} & \PParams & \text{protocol parameters} \\
         \var{acnt} & \Acnt & \text{accounting state}
       \end{array}
@@ -1688,6 +1669,11 @@ current slot is not an overlay slot.
       &
       \fun{bbodyhash}~{txs} = \bhash{bhb}
       \\~\\
+      \\
+      \var{slot} \leteq \bslot{bhbh}
+      &
+      \var{fSlot} \leteq \fun{firstSlot}~(\epoch{slot})
+      \\~\\
       {
         {\begin{array}{c}
                  \bslot{bhb} \\
@@ -1702,7 +1688,6 @@ current slot is not an overlay slot.
     }
     {
       {\begin{array}{c}
-               \var{oslots} \\
                \var{pp} \\
                \var{acnt}
       \end{array}}
@@ -1714,7 +1699,7 @@ current slot is not an overlay slot.
       \trans{bbody}{\var{block}}
       {\left(\begin{array}{c}
             \varUpdate{\var{ls}'} \\
-            \varUpdate{\fun{incrBlocks}~{(\bslot{bhb}\in\var{oslots})}~{hk}~{b}} \\
+            \varUpdate{\fun{incrBlocks}~{\left(\isOverlaySlot{fSlot}{(\fun{d}~pp)}{slot}\right)}~{hk}~{b}} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -1824,7 +1809,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       &
       \begin{array}{lr@{~=~}l}
         \where
-          & (\wcard,~\wcard,~\wcard,~\wcard,~\var{es},~\wcard,~\wcard,~\wcard)
+          & (\wcard,~\wcard,~\wcard,~\wcard,~\var{es},~\wcard,~\wcard)
           & \var{nes}
           \\
           & (\wcard,~\wcard,~\var{ls},~\wcard)
@@ -1839,11 +1824,11 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       & \fun{updateNES} \in \NewEpochState \to \BlocksMade \to \LState \to \NewEpochState \\
       & \fun{updateNES}~
       (\var{e_\ell},~\var{b_{prev}},~\wcard,~(\var{acnt},~\var{ss},~\wcard,~\var{pp}),
-       ~\var{ru},~\var{pd},~\var{osched})
+       ~\var{ru},~\var{pd})
           ~\var{b_{cur}}~\var{ls} = \\
       & ~~~~
       (\var{e_\ell},~\var{b_{prev}},~\var{b_{cur}},
-       ~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}),~\var{ru},~\var{pd},~\var{osched})
+       ~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}),~\var{ru},~\var{pd})
   \end{align*}
   %
   \begin{align*}
@@ -1896,25 +1881,20 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       \var{bh} \leteq \bheader{block}
       &
       \var{bhb} \leteq \bhbody{bh}
-      \\
-      \var{gkeys} \leteq \fun{getGKeys}~\var{nes}
       &
       \var{s} \leteq \bslot{bhb}
       \\
-      (\wcard,~\wcard,~\wcard,~(\wcard,~\wcard,~\wcard,~\var{pp}),~\wcard,~\wcard,\wcard) \leteq \var{nes}
+      (\wcard,~\wcard,~\wcard,~(\wcard,~\wcard,~\wcard,~\var{pp}),~\wcard,~\wcard) \leteq \var{nes}
       \\~\\
       \fun{prtlSeqChecks}~\var{lab}~\var{bh}\\
       \fun{chainChecks}~\var{pp}~\var{bh}
       \\~\\
       {
-        {\begin{array}{c}
-           \var{gkeys} \\
-         \end{array}}
         \vdash\var{nes}\trans{\hyperref[fig:rules:tick]{tick}}{\var{s}}\var{nes'}
       } \\~\\
-      (\var{e_1},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,\wcard)
+      (\var{e_1},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard)
         \leteq\var{nes} \\
-      (\var{e_2},~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
+      (\var{e_2},~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd})
         \leteq\var{nes'} \\
         (\var{acnt},~\wcard,\var{ls},~\wcard,~\var{pp'})\leteq\var{es}\\
         ( \wcard,
@@ -1941,7 +1921,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       }\\~\\~\\
       {
         {\begin{array}{c}
-            \var{osched} \\
+            (\fun{d}~\var{pp'}) \\
             \var{pd} \\
             \var{genDelegs} \\
             \eta_0' \\
@@ -1961,7 +1941,6 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       } \\~\\~\\
       {
         {\begin{array}{c}
-                 \dom{osched} \\
                  \var{pp'} \\
                  \var{acnt}
         \end{array}}
@@ -2056,7 +2035,6 @@ candidate nonces for Shelley.
           \var{utxo} \\
           \var{reserves} \\
           \var{genDelegs} \\
-          \var{os} \\
           \var{pp} \\
           \var{initNonce} \\
         \end{array}
@@ -2127,7 +2105,6 @@ candidate nonces for Shelley.
               \\
               \Nothing \\
               \emptyset \\
-              \var{os} \\
             \end{array}
           \right) \\
           \var{cs} \\
