@@ -11,6 +11,7 @@
 module Shelley.Spec.Ledger.STS.Mir
   ( MIR,
     PredicateFailure,
+    MirPredicateFailure,
   )
 where
 
