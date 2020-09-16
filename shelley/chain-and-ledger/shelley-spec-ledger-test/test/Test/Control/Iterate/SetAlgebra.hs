@@ -25,6 +25,10 @@ import Control.Iterate.SetAlgebraInternal
     run,
     sameDomain,
     (⨝),
+    materialize,
+    intersectDomPLeft,
+    intersectDomP,
+    domEq,
   )
 import Data.Char (ord)
 import Data.Map.Strict (Map)
@@ -32,6 +36,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Test.Tasty
 import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck(testProperty)
+import Test.Tasty(defaultMain)
 
 -- =========================================================
 -- Some examples of Exp and tests
@@ -318,7 +324,7 @@ testEpochEx =
     "Epoch Boundary Example"
     ( assertEqual
         "Epoch Boundary Example"
-        (Map.fromList [(5, False), (12, True)])
+        (Map.fromList [(6,True)])
         (eval (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR state)))
     )
   where
@@ -374,4 +380,35 @@ iter_tests =
 
 setAlgTest :: TestTree
 setAlgTest =
-  testGroup "Set Algebra Tests" [eval_tests, keysEqTests, iter_tests]
+  testGroup "Set Algebra Tests" [eval_tests, keysEqTests, iter_tests, intersectDomPLeftTest,
+                                 ledgerStateTest, threeWayTest]
+
+intersect2ways :: Map Int Char -> Map Int String -> Char -> Bool
+intersect2ways delegs stake hk =
+    (materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when  (y==hk); one(x,z) }))
+      ==  (intersectDomPLeft (\ _k v2 -> v2==hk) stake delegs)
+
+intersectDomPLeftTest :: TestTree
+intersectDomPLeftTest = testProperty "intersect2ways" intersect2ways
+
+ledgerStateProp :: Map Int Bool -> Map Int Char -> Map Char String -> Bool
+ledgerStateProp xx yy zz =
+     (materialize MapR (do { (x,_,y) <- xx `domEq` yy; y `element` zz; one (x,y)}))
+     == (intersectDomP (\ _k v -> Map.member v zz) xx yy)
+
+ledgerStateTest :: TestTree
+ledgerStateTest = testProperty "ledgerStateExample2ways" ledgerStateProp
+
+
+threeWay :: Map Int Char -> Map Int String -> Char -> Bool
+threeWay delegs stake hk =
+    ((run (compile (dom (delegs ▷ Set.singleton hk) ◁ stake)))
+       ==  (intersectDomPLeft (\ _k v2 -> v2==hk) stake delegs))
+    && (run (compile (dom (delegs ▷ Set.singleton hk) ◁ stake))
+         == materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when ((y==hk)); one(x,z) }))
+
+threeWayTest :: TestTree
+threeWayTest = testProperty "eval-materialize-intersectDom" threeWay
+
+-- go :: IO()
+-- go = defaultMain setAlgTest
