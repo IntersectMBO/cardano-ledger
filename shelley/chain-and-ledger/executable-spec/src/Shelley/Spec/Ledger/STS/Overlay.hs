@@ -261,7 +261,7 @@ overlayTransition =
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
 
-        case lookupInOverlaySchedule firstSlotNo (Map.keys genDelegs) dval asc slot of
+        case lookupInOverlaySchedule firstSlotNo (Map.keysSet genDelegs) dval asc slot of
           Nothing ->
             praosVrfChecks eta0 pd asc bhb ?!: id
           Just NonActiveSlot ->

@@ -65,7 +65,7 @@ mainnetEpochSize = EpochSize 432000
 
 makeConcreteOverlay ::
   SlotNo -> -- first slot of the epoch
-  [KeyHash 'Genesis era] -> -- genesis Nodes
+  Set (KeyHash 'Genesis era) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   EpochSize -> -- slots per epoch
@@ -91,4 +91,4 @@ legacyOverlayTest = property $ do
           (Map.keysSet (genDelegs @C))
           dval
           asc
-  pure $ os === makeConcreteOverlay start (Map.keys (genDelegs @C)) dval asc mainnetEpochSize
+  pure $ os === makeConcreteOverlay start (Map.keysSet (genDelegs @C)) dval asc mainnetEpochSize
