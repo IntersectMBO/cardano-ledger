@@ -48,8 +48,8 @@ import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
     checkLeaderValue,
+    issuerIDfromBHBody,
     mkSeed,
-    poolIDfromBHBody,
     seedEta,
     seedL,
   )
@@ -212,7 +212,7 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
         (throwError $ VRFLeaderValueTooBig (VRF.certifiedOutput $ bheaderL bhb) sigma f)
       pure ()
   where
-    hk = coerceKeyRole . poolIDfromBHBody $ bhb
+    hk = coerceKeyRole . issuerIDfromBHBody $ bhb
     vrfK = bheaderVrfVk bhb
 
 pbftVrfChecks ::
@@ -232,7 +232,7 @@ pbftVrfChecks vrfHK eta0 bhb = do
   vrfChecks eta0 bhb
   pure ()
   where
-    hk = poolIDfromBHBody bhb
+    hk = issuerIDfromBHBody bhb
     vrfK = bheaderVrfVk bhb
 
 overlayTransition ::

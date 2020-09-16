@@ -1242,8 +1242,8 @@ parameters. The function checks:
 \begin{figure}
   \emph{VRF helper function}
   \begin{align*}
-      & \fun{poolIDfromBHBody} \in \BHBody \to \KeyHash_{pool} \\
-      & \fun{poolIDfromBHBody} = \hashKey{} \circ \bvkcold{} \\
+      & \fun{issuerIDfromBHBody} \in \BHBody \to \KeyHash_{pool} \\
+      & \fun{issuerIDfromBHBody} = \hashKey{} \circ \bvkcold{} \\
   \end{align*}
   %
   \begin{align*}
@@ -1278,7 +1278,7 @@ parameters. The function checks:
         ~~~~ \land & \fun{checkLeaderVal}~(\fun{bleader}~\var{bhb})~\sigma~\var{f} \\
       \end{array} \\
       & ~~~~\where \\
-      & ~~~~~~~~~~\var{hk} \leteq \fun{poolIDfromBHBody}~\var{bhb} \\
+      & ~~~~~~~~~~\var{hk} \leteq \fun{issuerIDfromBHBody}~\var{bhb} \\
       & ~~~~~~~~~~\var{vrfK} \leteq \fun{bvkvrf}~\var{bhb} \\
   \end{align*}
   %

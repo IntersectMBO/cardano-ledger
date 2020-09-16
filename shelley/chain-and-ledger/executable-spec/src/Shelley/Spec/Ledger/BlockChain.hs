@@ -23,6 +23,7 @@ module Shelley.Spec.Ledger.BlockChain
     lastAppliedHash,
     BHBody (..),
     poolIDfromBHBody,
+    issuerIDfromBHBody,
     BHeader (BHeader),
     Block (Block),
     LaxBlock (..),
@@ -489,6 +490,12 @@ instance
 -- from the body of the block header.
 poolIDfromBHBody :: Era era => BHBody era -> KeyHash 'BlockIssuer era
 poolIDfromBHBody = hashKey . bheaderVk
+{-# DEPRECATED poolIDfromBHBody "poolIDfromBHBody has been deprecated (the name is misleading), use issuerIDfromBHBody" #-}
+
+-- | Retrieve the issuer id (the hash of the cold key) from the body of the block header.
+-- This corresponds to either a genesis/core node or a stake pool.
+issuerIDfromBHBody :: Era era => BHBody era -> KeyHash 'BlockIssuer era
+issuerIDfromBHBody = hashKey . bheaderVk
 
 -- | Retrieve the new nonce from the block header body.
 bnonce :: BHBody era -> Nonce
