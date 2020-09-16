@@ -11,7 +11,7 @@ is expected to satisfy.
   whether it is fully processed or just paying fees. In particular,
   this implies that the total amount of Ada in the system is constant.
 \item If a transaction is accepted and marked as paying fees only
-  (i.e. $\fun{txvaltag}\, tx \in \Yes$), then the only change to the ledger
+  (i.e. $\fun{txvaltag}\, tx = \True$), then the only change to the ledger
   when processing the transaction is that the inputs marked for paying
   fees are moved to the fee pot.
 \item If a Shelley transaction is accepted, it is fully processed.

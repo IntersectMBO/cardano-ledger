@@ -24,7 +24,7 @@
       \\
       \var{cur}
       & \CurItem
-      & \CurrencyId \uniondistinct (\TxId \times \Ix) \uniondistinct \AddrRWD \uniondistinct \DCert
+      & \CurrencyId \uniondistinct \UTxOIn \uniondistinct \AddrRWD \uniondistinct \DCert
 %      & \text{item the script is validated for}
     \end{array}
   \end{equation*}
@@ -105,7 +105,7 @@ automatically by default, so this generates no overhead for users.
     & \fun{txinputs_{vf}} ~txb~= \\
     &~~\{ (txid,ix)~\vert~(txid,ix,\var{isfee}) \in
     \fun{txinputs} ~txb,~
-     \var{isfee}\in\Yes\}
+     \var{isfee} = \True\}
     \nextdef
     & \fun{feesOK} \in \N \to \PParams \to \GoguenTx \to \UTxO \to \Bool  \\
     & \text{check if fee-marked inputs are Ada-only and enough to cover fees} \\
@@ -269,10 +269,8 @@ This includes,
   than giving it explicitly. The specific ordering of a set or a finite map
   could be implementation-dependent. A list ordering should be unambiguous.
   \begin{note}
-    $\fun{indexof}$ should only be called on arguments of the correct type? or
-    it cannot be applied at all to a predicate of the wrong type, so
-    there is no way the predicate in the subset definition should not be satisfied
-    in case of wrong type. Does this work?
+    $\fun{indexof}$ might need an actual implementation. Also, some
+    restructuring in related functions might make it easier.
   \end{note}
   \item $\fun{indexedScripts}$ creates a finite map wherein all the scripts
   of a transaction (that it carries as a set) are indexed by their hashes,
@@ -296,7 +294,7 @@ This includes,
   \begin{align*}
     &\fun{indexof} \in \DCert \to \seqof{\DCert} \to \Ix\\
     &\fun{indexof} \in \AddrRWD \to \Wdrl \to \Ix\\
-    &\fun{indexof} \in (\TxId \times \Ix) \to \powerset{\TxIn} \to \Ix\\
+    &\fun{indexof} \in \UTxOIn \to \powerset{\TxIn} \to \Ix\\
     &\fun{indexof} \in \CurrencyId \to \Value \to \Ix\\
     & \text{get the index of an item in the an ordered representation} \\
     \nextdef
@@ -305,28 +303,24 @@ This includes,
   \emph{Helper functions}
   \begin{align*}
     &\fun{indexedScripts} \in \GoguenTx \to (\PolicyID \mapsto \Script) \\
-    & \text{make a finite map of hash-indexed scripts} \\
     &\fun{indexedScripts}~{tx} ~=~ \{ h \mapsto s ~\vert~ \fun{hashScript}~{s}~=~h,
      s\in~\fun{txscripts}~(\fun{txwits}~{tx})\}
     \nextdef
     &\fun{indexedDats} \in \GoguenTx \to (\DataHash \mapsto \Data)\\
-    & \text{make a finite map of hash-indexed datum objects} \\
     &\fun{indexedDats}~{tx} ~=~ \{ h \mapsto d ~\vert~ \fun{hashData}~{d}~=~h,
      d\in~\fun{txdats}~(\fun{txwits}~{tx})\}
     &\nextdef
-    &\fun{findRdmr} \in \GoguenTx \to \CurItem \to \powerset{\Data}\\
-    & \text{get empty set or redeemer corresponding to index} \\
-    & \fun{findRdmr}~{tx}~\var{it} ~=~ \{~ r ~\vert~ \\
-    &~~(\mathsf{certTag},~\var{it}~\in~\DCert~\wedge~ \fun{indexof}~\var{it}~(\fun{txcerts}~{txb})) \mapsto ~r \in \fun{txrdmrs}~{txw} \\
-    &~~\vee~ (\mathsf{wdrlTag},~\var{it}\mapsto c~\in~\Wdrl~\wedge~\fun{indexof}~\var{w}~(\fun{txwdrls}~{txb}))
-      \mapsto ~r \in \fun{txrdmrs}~{txw} \\
-    &~~\vee~(\mathsf{forgeTag},~\var{it}\mapsto \var{tkns}~\in~\Value~\wedge~\fun{indexof}~\var{cid}~(\fun{forge}~{txb}))  \mapsto ~r
-      \in \fun{txrdmrs}~{txw} \\
-    &~~\vee~(\mathsf{inputTag},~\var{(it,\_)}~\in~\TxIn~\wedge~\fun{indexof}~\var{(txid,ix)}~(\fun{txinputs}~{txb})) \mapsto ~r
-      \in \fun{txrdmrs}~{txw} \} \\
+    &\fun{findRdmr} \in \GoguenTx \to \CurItem \to \Data^?\\
+    & \fun{findRdmr}~{tx}~\var{it} ~=~ \fun{txrdmrs}~(\fun{txwits}~{tx})~ptr \\
       & ~~\where \\
       & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
-      & ~~~~~~~ \var{txw}~=~\fun{txwits}~{tx}
+      & ~~~~~~~ \var{ptr}~=~
+      \begin{cases}
+        (\mathsf{certTag},\fun{indexof}~\var{it}~(\fun{txcerts}~{txb}))   & \var{it}~\in~\DCert \\
+        (\mathsf{wdrlTag},\fun{indexof}~\var{it}~(\fun{txwdrls}~{txb}))   & \var{it}~\in~\AddrRWD \\
+        (\mathsf{forgeTag},\fun{indexof}~\var{it}~(\fun{forge}~{txb}))    & \var{it}~\in~\CurrencyId \\
+        (\mathsf{inputTag},\fun{indexof}~\var{it}~(\fun{txinputs}~{txb})) & \var{it}~\in~\UTxOIn
+      \end{cases}
   \end{align*}
   \caption{Combining Script Validators and their Inputs}
   \label{fig:functions:script1}
@@ -658,7 +652,7 @@ The first rule, $\mathsf{Scripts\mbox{-}Val}$, applies when
 \item there
 are no scripts left to validate in the signal list (i.e. this is the base case of
 induction when all the scripts have validated), there could be $\ExUnits$ left over
-\item the validation tag is applied correctly (it is $\Yes$)
+\item the validation tag is applied correctly (it is $\True$)
 \end{itemize}
 
 The $\mathsf{Scripts\mbox{-}Stop}$ rule applies when
@@ -666,7 +660,7 @@ The $\mathsf{Scripts\mbox{-}Stop}$ rule applies when
 \begin{itemize}
   \item The currenct script-input pair being validated does not validate
   (because the transaction ran out of $\ExUnits$ or any other reasons)
-  \item The validation tag is correct ($\Nope$ in this case)
+  \item The validation tag is correct ($\False$ in this case)
 \end{itemize}
 
 These first two rules require no state change.
@@ -723,7 +717,7 @@ arguments. For how this is done in the ledger calculations, see
   \begin{equation}
     \inference[Scripts-Val]
     {
-    \fun{txvaltag}~\var{tx} \in \Yes  &
+    \fun{txvaltag}~\var{tx} = \True  &
     \var{remExU}~\geq~0
     }
     {
@@ -754,8 +748,8 @@ arguments. For how this is done in the ledger calculations, see
     \\
     ~
     \\
-    \fun{txvaltag}~\var{tx} \in \Nope &
-    (\var{remExU'}~<~0 ~ \lor ~ \var{isVal}\in \Nope)
+    \fun{txvaltag}~\var{tx} = \False &
+    (\var{remExU'}~<~0 ~ \lor ~ \var{isVal} = \False)
     }
     {
     \begin{array}{l}
@@ -858,13 +852,13 @@ tag has been applied correctly. The function $\fun{mkPLCLst}$ is used to build
 the signal list $\var{sLst}$ for the SVAL transition.
 
 The first rule
-applies when the validation tag is $\Yes$.
+applies when the validation tag is $\True$.
 In this case, the states of the UTxO, fee
   and deposit pots, and updates are updated exactly as in the current Shelley
   ledger spec.
 
   The second rule
-  applies when the validation tag is $\Nope$.
+  applies when the validation tag is $\False$.
   In this case, the UTxO state changes as follows:
 
   \begin{itemize}
@@ -882,7 +876,7 @@ In this case, the states of the UTxO, fee
     \inference[Scripts-Yes]
     {
     \var{txb}\leteq\txbody{tx} &
-    \fun{txvaltag}~\var{tx} \in \Yes
+    \fun{txvaltag}~\var{tx} = \True
     \\
     ~
     \\
@@ -948,7 +942,7 @@ In this case, the states of the UTxO, fee
     \inference[Scripts-No]
     {
     \var{txb}\leteq\txbody{tx} &
-    \fun{txvaltag}~\var{tx} \in \Nope
+    \fun{txvaltag}~\var{tx} = \False
     \\
     ~
     \\
@@ -1186,7 +1180,7 @@ preconditions:
     \item The transaction has a datum for every Plutus script output it is spending
 
     \item The transaction has a datum for every Plutus script output that is
-    marked with the $\Yes$ tag for $\HasDV$
+    marked with the $\True$ tag for $\HasDV$
 
     \item
     The hash of the subset of protocol parameters in the transaction body is equal to
@@ -1239,7 +1233,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \\
       ~
       \\
-      \forall~ix \mapsto (a,v,d_h,\Yes) ~\in~\fun{txouts}~{txb}, \\
+      \forall~ix \mapsto (a,v,d_h,\True) ~\in~\fun{txouts}~{txb}, \\
        \var{d_h}\in \fun{dom}~ (\fun{indexedDats}~{tx})
       \\
       ~

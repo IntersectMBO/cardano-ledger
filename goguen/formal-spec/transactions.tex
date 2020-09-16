@@ -21,12 +21,9 @@ except for the following changes and additions:
 
   \item $\ScriptPlutus$ is a type for scripts made with the Plutus version
   that is the first version of Plutus supported. Subsequent versions will
-  have names like $\type{ScriptPlutusV2}$. Recall that introducing
+  have names like $\PlutusII$. Recall that introducing
   a new version of Plutus necessitates a hard fork, and requires changes
   to the formal and executable specs.
-
-  \item $\Yes$ and $\Nope$: These are single-value types used in tags. These
-  values are used instead of booleans for clarity.
 
   \item The tags indicate which of the (currently, four) types of things a script
   can be validating, i.e. \\
@@ -41,8 +38,8 @@ except for the following changes and additions:
   expected to have all the non-native scripts inside it validate.
   This value is added by the block creator when
   constructing a block, and is checked as part of running scripts.
-  $\Yes$ for when when all scripts will validate,
-  $\Nope$ is for when one of them does not.
+  $\True$ for when when all scripts will validate,
+  $\False$ is for when one of them does not.
 
   \item $\Data$ refers to the type defined in Plutus libraries, but is
   related to a ledger type (see note "Data Representation" below).
@@ -51,8 +48,8 @@ except for the following changes and additions:
   both fungible and non fungible tokens. For details, see the MA spec.
 
   \item $\IsFee$ is a tag that indicates when an input has been marked
-  to be used for paying transaction fees ($\Yes$ for when it is for fees,
-  $\Nope$ when it is not). The purpose of this tag is to give users a way to prevent
+  to be used for paying transaction fees ($\True$ for when it is for fees,
+  $\False$ when it is not). The purpose of this tag is to give users a way to prevent
   the entire value of the UTxO entries spent by the transaction
   from going into the fee pot in case of script validation failure.
   Instead, only the total amount referenced by for-fees inputs goes
@@ -143,15 +140,13 @@ except for the following changes and additions:
       \var{hdv} &\RdmrsHash & \text{hash of the indexed redeemers structure}\\
       \var{msig} & \ScriptMSig & \text{Multisig scripts} \\
       \var{plc} & \ScriptPlutus & \text{Plutus scripts of initial Plutus version} \\
-      \var{yes} & \Yes & \text{tag type for yes} \\
-      \var{no} & \Nope & \text{tag type for no} \\
       \var{dat} & \Data & \text{the $\Data$ type} \\
     \end{array}
   \end{equation*}
   %
   \emph{Tag types}
   \begin{center}
-    $\mathsf{inputTag},~\mathsf{forgeTag},~\mathsf{certTag},~\mathsf{wdrlTag}$
+    
   \end{center}
   %
   \emph{Script types}
@@ -159,7 +154,7 @@ except for the following changes and additions:
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{scr} & \Script & \ScriptPlutus \uniondistinct \ScriptMSig \\
-      \var{isv} & \IsValidating & \Yes \uniondistinct \Nope \\
+      \var{isv} & \IsValidating & \Bool \\
     \end{array}
   \end{equation*}
 %
@@ -169,7 +164,7 @@ except for the following changes and additions:
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{isf}
       & \IsFee
-      & \Yes \uniondistinct \Nope
+      & \Bool
 %      & \text {tag for inputs used to pay script fees}
       \\
       \var{txin}
@@ -189,7 +184,7 @@ except for the following changes and additions:
       \\
       \var{hdv}
       & \HasDV
-      & \Yes \uniondistinct \Nope
+      & \Bool
       %      & \text {tag for outputs that come with datums}
       \\
       \var{txotx}
@@ -197,10 +192,13 @@ except for the following changes and additions:
       & \TxOutND \uniondistinct (\TxOutP \times \HasDV)
 %      & \text{transaction outputs in a transaction}
       \\
+      \var{tag}
+      & \Tag
+      & \{\mathsf{inputTag},~\mathsf{forgeTag},~\mathsf{certTag},~\mathsf{wdrlTag}\}
+      \\
       \var{dvin}
       & \RdmrPtr
-      & (\mathsf{inputTag} \uniondistinct \mathsf{forgeTag} \uniondistinct
-      \mathsf{certTag} \uniondistinct \mathsf{wdrlTag}) \times \Ix
+      & \Tag \times \Ix
 %      & \text{reverse pointer to thing dv is for}
     \end{array}
   \end{equation*}

@@ -72,12 +72,10 @@ is actually paying.
 
 Each
 version of Plutus (identified by a $\Language$ value) is considered a different
-language. That is, the interpreter
-specific to that version is invoked when a script is run. Each language
+language. Each language
 has a (version-specific) set of arguments passed to the interpreter
-for script evaluation. When Goguen is released, this type should contain
-terms that are tags for the multisignature script language, and $\var{plcV1Tag}$,
-for the first version of Plutus being released.
+for script evaluation. At the time of this writing, the type should contain
+the value $\Plutus$, but it is expected to contain more values in the future.
 
 The ledger is expected to be capable of running Plutus scripts of
 all existing versions at all times. This means maintaining any ledger
@@ -152,9 +150,6 @@ types of scripts. Recall here that these only have non-trivial values for
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{plv} & \Language
-      & \text{Script Language}
-      \\
       \var{costm} & \CostMod & \text{coefficients for cost model} \\
     \end{array}
   \end{equation*}
@@ -162,6 +157,11 @@ types of scripts. Recall here that these only have non-trivial values for
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{plv}
+      & \Language
+      & \{\Plutus, \dotsb\}
+      & \text{Script Language}
+      \\
       \var{(pr_{init}, pr_{mem}, pr_{steps})}
       & \Prices
       & \Coin \times \Coin \times \Coin

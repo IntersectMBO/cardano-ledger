@@ -170,7 +170,7 @@ if it was already a Goguen one.
   \emph{Functions}
   \begin{align*}
       & \fun{mkIns} ~\in~ \powerset{\ShelleyTxIn} \to \powerset{\TxIn}  \\
-      & \fun{mkIns}~\var{ins} ~=~ \{~ (\var{txin}, \Yes) ~\vert~
+      & \fun{mkIns}~\var{ins} ~=~ \{~ (\var{txin}, \True) ~\vert~
       \var{txin} \in \var{ins}~\} \\
       & \text{transform Shelley inputs into Goguen inputs}
       \nextdef
@@ -191,7 +191,7 @@ if it was already a Goguen one.
       & ~~\fun{ppHash}~{txb'} ~= ~\Nothing \\
       & ~~\fun{rdmrsHash}~{txb'} ~= ~\Nothing \\~\\
       & ~~\fun{txwits}~{tx'} ~= ~(\epsilon,\emptyset,\emptyset,\epsilon) \\
-      & ~~\fun{txvaltag}~{tx'} ~= ~\Yes \\
+      & ~~\fun{txvaltag}~{tx'} ~= ~\True \\
       &~~      \where \\
       & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
       & ~~~~~~~ \var{txb'}~=~\txbody{tx'}

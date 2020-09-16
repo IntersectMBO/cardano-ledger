@@ -17,7 +17,7 @@ validation tag is verified, and script fees are collected.
     \inference[ledger-V]
     {
       \var{txb}\leteq\txbody{tx} \\
-      \fun{txvaltag}~{tx} \in \Yes \\~\\
+      \fun{txvaltag}~{tx} = \True \\~\\
       {
         \begin{array}{c}
           \var{slot} \\
@@ -76,7 +76,7 @@ validation tag is verified, and script fees are collected.
     \label{eq:ledger}
     \inference[ledger-NV]
     {
-      \fun{txvaltag}~{tx} \in \Nope \\~\\
+      \fun{txvaltag}~{tx} = \False \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
       (\var{stkCreds}, \_, \_, \_, \_, \var{genDelegs}, \_) \leteq \var{dstate} \\
       (\var{stpools}, \_, \_) \leteq \var{pstate} \\
