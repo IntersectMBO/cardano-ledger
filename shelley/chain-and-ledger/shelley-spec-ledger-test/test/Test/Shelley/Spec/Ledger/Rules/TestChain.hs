@@ -124,25 +124,23 @@ adaPreservationChain =
 
 -- ADA should be preserved for all state transitions in the generated trace
 checkPreservation :: SourceSignalTarget (CHAIN C) -> Property
-checkPreservation SourceSignalTarget {source, signal, target} =
+checkPreservation SourceSignalTarget {source, target} =
   counterexample
     ( mconcat
-        [ "source\n",
-          show source,
-          "\nsignal\n",
-          show signal,
-          "\ntarget\n",
-          show target,
-          "\nsource pots\n",
-          show sourcePots,
+        [ "\nsource pots\n",
+          show (totalAdaPots source),
           "\ntarget pots\n",
-          show targetPots
+          show (totalAdaPots target),
+          "\nsource total\n",
+          show sourceTotal,
+          "\ntarget total\n",
+          show targetTotal
         ]
     )
-    $ totalAda source === totalAda target
+    $ sourceTotal === targetTotal
   where
-    sourcePots = totalAdaPots source
-    targetPots = totalAdaPots target
+    sourceTotal = totalAda source
+    targetTotal = totalAda target
 
 -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
 -- then the total rewards should change only by withdrawals
