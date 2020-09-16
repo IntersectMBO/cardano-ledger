@@ -94,7 +94,7 @@ data DelegPredicateFailure era
     --   This error is now redundant with StakeKeyAlreadyRegisteredDELEG.
     --   We should remove it and replace its one use with StakeKeyAlreadyRegisteredDELEG.
     StakeKeyInRewardsDELEG
-      !(Credential 'Staking era) -- DEPRICATED, now redundant with StakeKeyAlreadyRegisteredDELEG
+      !(Credential 'Staking era) -- DEPRECATED, now redundant with StakeKeyAlreadyRegisteredDELEG
   | StakeKeyNotRegisteredDELEG
       !(Credential 'Staking era) -- Credential which is not registered
   | StakeKeyNonZeroAccountBalanceDELEG
