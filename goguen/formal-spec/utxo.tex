@@ -2,6 +2,54 @@
 \label{sec:utxo}
 
 
+\begin{figure*}[htb]
+  \emph{Derived types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{uin}
+      & \UTxOIn
+      & \TxId \times \Ix
+%      & \text{transaction output preference}
+      \\
+      \var{uout}
+      & \UTxOOut
+      & (\TxOutND \uniondistinct \TxOutP) \times \Slot
+%      & \text{transaction outputs}
+      \\
+      \var{utxo}
+      & \UTxO
+      & \UTxOIn \mapsto \UTxOOut
+%      & \text{unspent tx outputs}
+      \\
+      \var{cur}
+      & \CurItem
+      & \CurrencyId \uniondistinct (\TxId \times \Ix) \uniondistinct \AddrRWD \uniondistinct \DCert
+%      & \text{item the script is validated for}
+    \end{array}
+  \end{equation*}
+  \caption{Definitions used in the UTxO transition system}
+  \label{fig:defs:utxo-shelley-1}
+\end{figure*}
+
+
+\begin{itemize}
+\item $\UTxO$ entries are stored in the finite map $\UTxOIn\mapsto \UTxOOut$.
+
+    \item $\UTxOIn$ is the type of the keys in the UTxO finite map. This
+  is the same as the type of UTxO keys in Shelley, but we have changed
+  the name because the types of transaction inputs and UTxO keys
+  differ in Goguen.
+
+  \item $\CurItem$ is either the hash of a
+  forging script (currency ID), the current transaction input being
+  spent, the current reward
+  withdrawal, or the current certificate being validated.
+  This current item is a sum type of all the types of things for which we want to
+  run scripts to validate.
+
+\end{itemize}
+
 \subsection{UTxO Transitions}
 \label{sec:utxo-trans}
 
@@ -283,6 +331,75 @@ This includes,
   \caption{Combining Script Validators and their Inputs}
   \label{fig:functions:script1}
 \end{figure}
+
+\textbf{Plutus Script Validation}
+In Figure \ref{fig:defs:functions-valid}, abstract functions for script validation
+are presented.
+
+\begin{itemize}
+  \item $\fun{valContext}$ constructs the validation context value passed
+  to the script interpreter (all the necessary transaction and chain state data)
+  \item $\fun{hashScript},~ \fun{hashData}$ are abstract hashing functions.
+  \item $\fun{runMSigScript}$ (replacing $\fun{evaluateScript}$ in Shelley the ledger spec) performs
+  validation for multi-sig scripts.
+  This validation works exactly as before.
+  \item $\fun{runPLCScript}$ performs validation for Plutus scripts. It takes the following
+  arguments:
+  \begin{itemize}
+  \item A cost model. The specific cost model is selected according to the Plutus
+  version of the script, and is passed to allow the interpreter to do the
+  correct conversion of the quantity of resource primitives the script validation
+  computation used into $\ExUnits$. T
+  \item
+  a list of (at most three) terms of type $\Data$ (the datum, redeemer,
+  and the validation context).
+  \item the execution units budget (the maximum $\var{exunits}$
+  the validation is allowed to use)
+  \end{itemize}
+  The script validation function outputs the pair of the validation result
+  and the remaining execution units (after the ones used by script execution
+  have been subtracted). Note that script exeuction stops if the full execution
+  units budget has been spent before the validation is complete.
+\end{itemize}
+
+\begin{note}
+  \textbf{Know your contract arguments}
+A Plutus validator script may receive either a list of three terms of type $\Data$,
+such as for output locking scripts, or two terms (redeemer and context, with
+no datum), such as in the rest of the Plutus scripts use cases.
+Contract authors must keep this in mind when writing contracts, as there is
+only one function (per Plutus version) to interface with the Plutus interpreter,
+that runs every kind of Plutus script - with no knowledge of what $\Data$ arguments
+are passed to it via this list.
+\end{note}
+
+\begin{figure*}[htb]
+  \emph{Abstract Script Validation Functions}
+  %
+  \begin{align*}
+     &\fun{hashScript} \in  ~\Script\to \PolicyID \\
+     &\text{compute script hash} \\~\\
+     &\fun{hashData} \in  ~\Data \to \DataHash \\
+     &\text{compute hash of data} \\~\\
+     &\fun{valContext} \in  \UTxO \to \GoguenTx \to \CurItem \to \Data \\
+     &\text{build Validation Data} \\~\\
+     &\fun{runMSigScript} \in\ScriptMSig\to \GoguenTx \to \IsValidating  \\
+     &\text{validation of a multi-sig script} \\~\\
+     &\fun{runPLCScript} \in \CostMod \to\ScriptPlutus \to
+    \seqof{\Data} \to \ExUnits \to (\IsValidating \times \ExUnits) \\
+     &\text{resource-restricted validation of a Plutus script}
+  \end{align*}
+  %
+  \emph{Notation}
+  %
+  \begin{align*}
+    \llbracket \var{script_v} \rrbracket_{\var{cm},\var{exunits}}(\var{dataval},~\var{rdmr},~\var{ptx})
+    &=& \fun{runPLCScript} ~{cm}~\var{script_v}~((\var{dataval};~\var{rdmr};~\var{ptx};\epsilon),~
+    \var{exunits})
+  \end{align*}
+  \caption{Script Validation, cont.}
+  \label{fig:defs:functions-valid}
+\end{figure*}
 
 \textbf{Matching Scripts and Inputs.}
 In Figures \ref{fig:functions:script2} and \ref{fig:functions:script3},
