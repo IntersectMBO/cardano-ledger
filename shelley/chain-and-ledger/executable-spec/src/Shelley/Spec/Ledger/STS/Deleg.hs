@@ -94,7 +94,7 @@ data DelegPredicateFailure era
     --   This error is now redundant with StakeKeyAlreadyRegisteredDELEG.
     --   We should remove it and replace its one use with StakeKeyAlreadyRegisteredDELEG.
     StakeKeyInRewardsDELEG
-      !(Credential 'Staking era) -- Credential which is already registered
+      !(Credential 'Staking era) -- DEPRECATED, now redundant with StakeKeyAlreadyRegisteredDELEG
   | StakeKeyNotRegisteredDELEG
       !(Credential 'Staking era) -- Credential which is not registered
   | StakeKeyNonZeroAccountBalanceDELEG
@@ -210,10 +210,7 @@ delegationTransition = do
   TRC (DelegEnv slot ptr acnt, ds, c) <- judgmentContext
   case c of
     DCertDeleg (RegKey hk) -> do
-      -- note that pattern match is used instead of regCred, as in the spec
-      -- TODO we can remove the failure StakeKeyInRewardsDELEG and replace
-      -- the use below with StakeKeyAlreadyRegisteredDELEG
-      eval (hk ∉ dom (_rewards ds)) ?! StakeKeyInRewardsDELEG hk
+      eval (hk ∉ dom (_rewards ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
 
       pure $
         ds

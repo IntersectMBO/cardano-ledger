@@ -83,8 +83,8 @@ ocertTransition ::
 ocertTransition =
   judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
     let OCert vk_hot n c0@(KESPeriod c0_) tau = bheaderOCert bhb
-        vkey = bheaderVk bhb
-        hk = hashKey vkey
+        vkcold = bheaderVk bhb
+        hk = hashKey vkcold
         s = bheaderSlotNo bhb
     kp@(KESPeriod kp_) <- liftSTS $ kesPeriod s
 
@@ -100,7 +100,7 @@ ocertTransition =
     -- above `KESBeforeStartOCERT`
     -- predicate failure in the
     -- transition.
-    verifySignedDSIGN vkey (ocertToSignable $ bheaderOCert bhb) tau ?! InvalidSignatureOCERT n c0
+    verifySignedDSIGN vkcold (ocertToSignable $ bheaderOCert bhb) tau ?! InvalidSignatureOCERT n c0
     verifySignedKES () vk_hot t bhb sigma ?!: InvalidKesSignatureOCERT kp_ c0_ t
 
     case currentIssueNo env cs hk of
