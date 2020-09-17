@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Shelley.Spec.Ledger.ByronTranslation
+module Shelley.Spec.Ledger.API.ByronTranslation
   ( mkInitialShelleyLedgerView,
     translateToShelleyLedgerState,
 
@@ -25,7 +25,9 @@ import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.API
+import Shelley.Spec.Ledger.API.Protocol
+import Shelley.Spec.Ledger.API.Types
+import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.Coin (word64ToCoin)
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.Genesis

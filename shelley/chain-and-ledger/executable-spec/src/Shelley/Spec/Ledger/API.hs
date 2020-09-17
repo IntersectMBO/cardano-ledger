@@ -4,6 +4,7 @@ module Shelley.Spec.Ledger.API
   )
 where
 
+import Shelley.Spec.Ledger.API.ByronTranslation as X
 import Shelley.Spec.Ledger.API.Mempool as X
 import Shelley.Spec.Ledger.API.Protocol as X
 import Shelley.Spec.Ledger.API.Types as X

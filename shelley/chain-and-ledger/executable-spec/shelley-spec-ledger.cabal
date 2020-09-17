@@ -24,11 +24,11 @@ library
     Shelley.Spec.Ledger.Address
     Shelley.Spec.Ledger.Address.Bootstrap
     Shelley.Spec.Ledger.API
+    Shelley.Spec.Ledger.API.ByronTranslation
     Shelley.Spec.Ledger.API.Protocol
     Shelley.Spec.Ledger.API.Validation
     Shelley.Spec.Ledger.BaseTypes
     Shelley.Spec.Ledger.BlockChain
-    Shelley.Spec.Ledger.ByronTranslation
     Shelley.Spec.Ledger.Coin
     Shelley.Spec.Ledger.Credential
     Shelley.Spec.Ledger.Delegation.Certificates
