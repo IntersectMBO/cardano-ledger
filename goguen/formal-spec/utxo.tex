@@ -467,69 +467,29 @@ $\fun{forgedScrts}$, $\fun{allInsScrts}$).
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{allCertScrts} \in \PParams \to \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus \times \seqof{\Data} \times \CostMod)} \\
-    & \text{check that all certificate witnessing scripts in a tx validate} \\
-    & \fun{allCertScrts}~\var{pp}~{utxo}~{tx}~=~ \\
-    & ~~\{ (\var{script_v}, (r;
-    \fun{valContext}~\var{utxo}~\var{tx}~\var{cert}; \epsilon),~cm) ~\vert \\
-    & ~~r \in \fun{findRdmr}~{tx}~\var{cert}, \\
-    & ~~\var{cert} \in (\DCertDeRegKey\cap\fun{txcerts}~\txbody{tx}), \\
-    &~~\fun{regCred}~\var{cert}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx}, \\
-    &~~(\fun{language}~{script_v} \mapsto cm)\in(\fun{costmdls}~{pp}) \\
-    & ~~\var{script_v} \in \ScriptPlutus
-     \}
-    %
-    \nextdef
-    & \fun{allWDRLSScrts} \in \PParams \to \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data} \times \CostMod)} \\
-    & \text{check that all reward withdrawal locking scripts in a tx validate} \\
-    & \fun{allWDRLSScrts}~\var{pp}~{utxo}~{tx}~=~ \\
-    & ~~\{ (\var{script_v}, (r; \fun{valContext}~\var{utxo}~\var{tx}~
-      (a\mapsto c); \epsilon),~cm) ~\vert \\
-    &~~ r\in \fun{findRdmr}~{tx}~\var{a}, \\
-    & ~~a \mapsto c \in\fun{txwdrls}~(\txbody{tx}), \\
-    & ~~\var{a}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx}, \\
-    &~~(\fun{language}~{script_v} \mapsto cm)\in(\fun{costmdls}~{pp}) \\
-    & ~~ \var{script_v} \in \ScriptPlutus \}
-    \nextdef
-    %
-    & \fun{forgedScrts} \in \PParams \to \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data} \times \CostMod)} \\
-    & \text{check that all forging scripts in a tx validate} \\
-    & \fun{forgedScrts}~\var{pp}~{utxo}~{tx}~=~\\
-    & ~~\{ (\var{script_v}, (r;
-    \fun{valContext}~\var{utxo}~\var{tx}~\var{cid}; \epsilon),~cm) ~\vert \\
-    & ~~r \in \fun{findRdmr}~{tx}~\var{cid}, \\
-    & ~~\var{cid}\mapsto ~ \var{tkns} \in \fun{forge}~(\txbody{tx}), \\
-    &~~\var{cid}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx} \\
-    &~~(\fun{language}~{script_v} \mapsto cm)\in(\fun{costmdls}~{pp}) \\
-    & ~~ \var{script_v} \in \ScriptPlutus \}
-    %
-  \end{align*}
-  \caption{Scripts and their Arguments}
-  \label{fig:functions:script2}
-\end{figure}
-
-\begin{figure}[htb]
-  \begin{align*}
-    & \fun{allInsScrts} \in \PParams \to \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data} \times \CostMod)} \\
-    & \text{check that all UTxO entry locking scripts in a tx validate} \\
-    & \fun{allInsScrts}~\var{pp}~{utxo}~{tx}~=~ \{ (\var{script_v}, (\var{d};\var{r}; \\
-    & ~~ \fun{valContext}~\var{utxo}~\var{tx}~
-      (txid,ix,\var{hash_r})),~cm) ~\vert \\
-    & ~~(txid,ix, \_) \in \fun{txinputs}~(\txbody{tx}), \\
-    & ~~\var{r} \in \fun{findRdmr}~{tx}~\var{(txid,ix)}, \\
-    & ~~\var{(txid,ix)} \mapsto ((a,v),h_d, \_) \in \var{utxo}, \\
-    & ~~\var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx}, \\
-    & ~~(\fun{validatorHash}~{a})\mapsto \var{script_v}\in \fun{indexedScripts}~{tx} \\
-    &~~(\fun{language}~{script_v} \mapsto cm)\in(\fun{costmdls}~{pp}) \}
+    & \fun{getCurVals} \in \GoguenTx \to \UTxO \to \powerset{(\CurItem \times \ScriptPlutus \times \Data)} \\
+    & \fun{getCurVals}~{tx}~{utxo}~=~ \\
+    & ~~\{ (\var{cert}, \var{script}, \epsilon) ~|~ \var{cert} \in \DCertDeRegKey\cap\fun{txcerts}~(\txbody{tx}), \\
+    & ~~~~~~\fun{regCred}~\var{cert}\mapsto \var{script}\in \fun{indexedScripts}~{tx} \}~\cup \\
+    & ~~\{ (\var{a}, \var{script}, \epsilon) ~|~ a \mapsto \_ \in\fun{txwdrls}~(\txbody{tx}), \\
+    & ~~~~~~\var{a}\mapsto \var{script}\in \fun{indexedScripts}~{tx}\}~\cup \\
+    & ~~\{ (\var{pid}, \var{script}, \epsilon) ~|~ \var{pid}\mapsto ~ \_ \in \fun{forge}~(\txbody{tx}), \\
+    & ~~~~~~\var{pid}\mapsto \var{script}\in \fun{indexedScripts}~{tx}\}~\cup \\
+    & ~~\{ ((\var{txid}, \var{ix}), \var{script}, \var{d}) ~|~ (txid,ix, \_) \in \fun{txinputs}~(\txbody{tx}), \\
+    & ~~~~~~(\var{txid}, \var{ix}) \mapsto ((a,\_),h_d, \_) \in \var{utxo}, \\
+    & ~~~~~~\var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx}, \\
+    & ~~~~~~(\fun{validatorHash}~{a})\mapsto \var{script}\in \fun{indexedScripts}~{tx} \}
     \nextdef
     & \fun{mkPLCLst} \in \PParams \to \GoguenTx \to \UTxO \to \seqof{(\ScriptPlutus \times \seqof{\Data} \times \CostMod)} \\
     & \text{a list of all Plutus validators and corresponding input data} \\
     & \fun{mkPLCLst} ~\var{pp}~\var{tx}~ \var{utxo} ~=~
-    \fun{toList}~(\fun{allCertScrts}~{utxo}~{tx} \cup \fun{allWDRLSScrts}~{utxo}~{tx} \\
-    & ~~ \cup \fun{allInsScrts}~{utxo}~{tx} ~~ \cup \fun{forgedScrts}~{utxo}~{tx}) \\
+      \fun{toList} \{ (\var{script}, (r; \fun{valContext}~\var{utxo}~\var{tx}~\var{cur}; d), \var{cm}) ~|~ \\
+    & ~~(\var{cur}, \var{script}, \var{d}) \in \fun{getCurVals}~{tx}~{utxo}, \\
+    & ~~\var{cur} \mapsto \var{r} \in \fun{findRdmr}~{tx}, \\
+    & ~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp} \}
   \end{align*}
   \caption{Scripts and their Arguments}
-  \label{fig:functions:script3}
+  \label{fig:functions:script2}
 \end{figure}
 
 \subsection{Two Phase Script Validation}
