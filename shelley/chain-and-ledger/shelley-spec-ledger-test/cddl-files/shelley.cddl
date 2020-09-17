@@ -118,6 +118,8 @@ genesis_key_delegation = (5, genesishash, genesis_delegate_hash, vrf_keyhash)
 move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
 
 move_instantaneous_reward = [ 0 / 1, { * stake_credential => coin } ]
+; The first field determines where the funds are drawn from.
+; 0 denotes the reserves, 1 denotes the treasury.
 
 stake_credential =
   [  0, addr_keyhash
