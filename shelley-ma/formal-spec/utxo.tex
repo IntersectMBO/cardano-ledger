@@ -6,6 +6,15 @@
 \begin{figure}[htb]
   \emph{Helper Functions}
   \begin{align*}
+    & \fun{ininterval} \in \Slot \to (\Slot^? \times \Slot^?) \to \Bool \\
+    & \fun{ininterval}~\var{slot}~(i_s, i_f) ~=~
+    \begin{cases}
+      \True & (i_s = \Nothing)~\wedge~(i_f = \Nothing) \\
+      \var{slot}~\leq~i_f & (i_s = \Nothing)~\wedge~(i_f \neq \Nothing)\\
+      i_s~\leq~\var{slot} & (i_s \neq \Nothing)~\wedge~(i_f = \Nothing) \\
+      i_s~\leq~\var{slot}~\leq~i_f & (i_s \neq \Nothing)~\wedge~(i_f \neq \Nothing) \\
+      \False & \text{otherwise} \\
+    \end{cases} \\
     & \fun{getCoin} \in \TxOut \to \Coin \\
     & \fun{getCoin}~{(\wcard,~\var{out})} ~=~\fun{valueToCoin}~\var{out}
     \nextdef
@@ -33,6 +42,10 @@ Figure~\ref{fig:functions:utxo} defines additional calculations that are needed 
 UTxO transition system with multi-assets:
 
 \begin{itemize}
+
+  \item The function $\fun{ininterval}$ returns $\True$ whenever the given slot is
+  inside the given interval. If an endpoint of the validity interval
+  is $\Nothing$, the comparison of the slot to that endpoint is $\True$ by default.
 
   \item The function $\fun{getCoin}$ returns the Ada in a given output as a $\Coin$ value.
 
@@ -81,6 +94,9 @@ updated for multi-asset support. There are the following changes to the precondi
 of this rule as compared to the original Shelley UTXO rule:
 
 \begin{itemize}
+  \item The check that the time-to-live of a transaction is after the current
+  slot is replaced with the check that the current slot is inside the validity interval
+
   \item In the preservation of value calculation (which looks the same as in
   Shelley), the value in the $\fun{forge}$ field is taken into account.
 
@@ -103,7 +119,7 @@ $\Coin$.
   \begin{equation}\label{eq:utxo-inductive-shelley}
     \inference[UTxO-inductive]
     { \var{txb}\leteq\txbody{tx}
-      & \txttl txb \geq \var{slot}
+      & \hldiff{\fun{ininterval}~\var{slot}~(\fun{txvld}{tx})}
       \\ \txins{txb} \neq \emptyset
       & \minfee{pp}{tx} \leq \txfee{txb}
       & \txins{txb} \subseteq \dom \var{utxo}
@@ -193,4 +209,25 @@ $\Coin$.
 
 Figure~\ref{fig:functions-witnesses} contains the changed definition
 of the function $\fun{scriptsNeeded}$, to also collect the scripts
-necessary for forging. This is the only change to the UTXOW rule.
+necessary for forging.
+
+Recall here that the $\Script$ type has changed to include
+not just multi-signature script type $\ScriptMSig$, but also another native (i.e. evaluated
+by the ledger directly) script type, $\ScriptMPS$. The witnessing rule UTXOW
+does not itself change, but the function $\fun{validateScript}$, which it calls
+to evaluate the scripts prescribed by $\fun{scriptsNeeded}$, does change, including
+a change to the arguments passed to it, see~\ref{sec:mps-lang}.
+
+Note that, same as in Shelley, the validation function called by the
+UTXOW rule, which checks a given script, does not know the purpose of the script
+(forging, output-locking, etc.).
+All scripts are run in the same way, with $\fun{validateScript}$ being responsible
+for calling the evaluator appropriate for the specific type of script.
+
+\begin{note}
+  The cost model for the new script type is non-existent, the bigger scripts
+  cost more only because they increase the size of the transaction.
+
+  This could be a problem with arbitrary ORs! Checking lots of things before
+  concluding the script fails could be bad
+\end{note}
