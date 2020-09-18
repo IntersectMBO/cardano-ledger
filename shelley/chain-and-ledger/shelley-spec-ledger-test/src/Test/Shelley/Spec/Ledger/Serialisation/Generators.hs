@@ -61,7 +61,6 @@ import Shelley.Spec.Ledger.Address.Bootstrap
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     DnsName,
-    Nonce (..),
     UnitInterval,
     Url,
     mkActiveSlotCoeff,
@@ -84,8 +83,6 @@ import Shelley.Spec.Ledger.MetaData
     MetaDatum,
   )
 import qualified Shelley.Spec.Ledger.MetaData as MD
-import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.PParams (ProtVer)
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     LogWeight (..),
@@ -103,7 +100,6 @@ import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import qualified Shelley.Spec.Ledger.STS.Utxo as STS
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
-import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck
   ( Arbitrary,
     arbitrary,

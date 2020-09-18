@@ -1,3 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Shelley.Spec.Ledger.API.Types
   ( module X,
   )
@@ -11,7 +13,9 @@ import Shelley.Spec.Ledger.Address.Bootstrap as X
   ( BootstrapWitness (..),
   )
 import Shelley.Spec.Ledger.BaseTypes as X
-  ( Network (..),
+  ( Globals (..),
+    Network (..),
+    Nonce (..),
     Port (..),
     StrictMaybe (..),
   )
@@ -22,9 +26,16 @@ import Shelley.Spec.Ledger.BlockChain as X
     HashHeader (..),
     LaxBlock (..),
     PrevHash (..),
+    bHeaderSize,
+    bbHash,
+    bbody,
+    bhHash,
+    bhbody,
+    bheader,
   )
 import Shelley.Spec.Ledger.Coin as X
   ( Coin (..),
+    word64ToCoin,
   )
 import Shelley.Spec.Ledger.Credential as X
   ( Credential (..),
@@ -35,16 +46,20 @@ import Shelley.Spec.Ledger.Delegation.Certificates as X
     DelegCert (..),
     PoolCert (..),
     PoolDistr (..),
+    individualPoolStake,
   )
 import Shelley.Spec.Ledger.EpochBoundary as X
-  ( SnapShot (SnapShot),
-    SnapShots (SnapShots),
-    Stake (Stake),
+  ( SnapShot (..),
+    SnapShots (..),
+    Stake (..),
   )
+import Shelley.Spec.Ledger.Genesis as X
 import Shelley.Spec.Ledger.Keys as X
   ( CertifiedVRF,
     GenDelegPair (..),
     GenDelegs (..),
+    Hash,
+    KESignable,
     KeyHash (..),
     KeyPair (..),
     KeyRole (..),
@@ -52,9 +67,12 @@ import Shelley.Spec.Ledger.Keys as X
     SignKeyKES,
     SignKeyVRF,
     SignedDSIGN,
+    SignedKES,
     VKey (..),
     VerKeyKES,
     VerKeyVRF,
+    coerceKeyRole,
+    hashKey,
     hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.LedgerState as X
@@ -70,37 +88,68 @@ import Shelley.Spec.Ledger.LedgerState as X
     UTxOState (..),
     WitHashes (..),
   )
-import Shelley.Spec.Ledger.OCert as X (OCert (..))
+import Shelley.Spec.Ledger.OCert as X (KESPeriod (..), OCert (..))
 import Shelley.Spec.Ledger.OverlaySchedule as X
   ( OBftSlot (..),
+    classifyOverlaySlot,
+    isOverlaySlot,
+    lookupInOverlaySchedule,
   )
 import Shelley.Spec.Ledger.PParams as X
   ( PParams,
     PParams' (..),
     ProposedPPUpdates (..),
+    ProtVer (..),
     Update (..),
   )
 import Shelley.Spec.Ledger.Rewards as X
   ( NonMyopic,
   )
-import Shelley.Spec.Ledger.STS.Chain as X (CHAIN, ChainState (..))
+import Shelley.Spec.Ledger.STS.Chain as X
+  ( CHAIN,
+    ChainState (..),
+    initialShelleyState,
+  )
 import Shelley.Spec.Ledger.STS.Deleg as X (DELEG, DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Delegs as X (DELEGS, DelegsEnv (..))
 import Shelley.Spec.Ledger.STS.Delpl as X (DELPL, DelplEnv (..))
 import Shelley.Spec.Ledger.STS.Ledger as X (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers as X (LEDGERS, LedgersEnv (..))
-import Shelley.Spec.Ledger.STS.NewEpoch as X (NEWEPOCH)
+import Shelley.Spec.Ledger.STS.NewEpoch as X
+  ( NEWEPOCH,
+    calculatePoolDistr,
+  )
 import Shelley.Spec.Ledger.STS.Ocert as X (OCertEnv (..))
 import Shelley.Spec.Ledger.STS.Pool as X (POOL, PoolEnv (..))
 import Shelley.Spec.Ledger.STS.PoolReap as X (POOLREAP)
 import Shelley.Spec.Ledger.STS.Ppup as X (PPUP, PPUPEnv (..))
+import Shelley.Spec.Ledger.STS.Prtcl as X
+  ( PrtclEnv (..),
+    PrtclPredicateFailure (..),
+    PrtclState (..),
+    PrtlSeqFailure (..),
+    prtlSeqChecks,
+  )
 import Shelley.Spec.Ledger.STS.Tick as X (TICK)
-import Shelley.Spec.Ledger.STS.Utxo as X (UTXO, UtxoEnv (..))
+import Shelley.Spec.Ledger.STS.Tickn as X
+  ( TICKN,
+    TicknEnv (..),
+    TicknPredicateFailure,
+    TicknState (..),
+  )
+import Shelley.Spec.Ledger.STS.Utxo as X
+  ( UTXO,
+    UtxoEnv (..),
+  )
 import Shelley.Spec.Ledger.STS.Utxow as X (UTXOW)
 import Shelley.Spec.Ledger.Scripts as X
   ( MultiSig (..),
     Script (..),
     ScriptHash (..),
+  )
+import Shelley.Spec.Ledger.StabilityWindow as X
+  ( computeRandomnessStabilisationWindow,
+    computeStabilityWindow,
   )
 import Shelley.Spec.Ledger.Tx as X
   ( Tx (..),
@@ -122,4 +171,8 @@ import Shelley.Spec.Ledger.TxBody as X
     TxId (..),
     Wdrl (..),
     WitVKey (..),
+  )
+import Shelley.Spec.Ledger.UTxO as X
+  ( UTxO (..),
+    balance,
   )

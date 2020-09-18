@@ -36,20 +36,13 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.BlockChain
   ( LastAppliedBlock (..),
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.EpochBoundary (_pstakeMark)
-import Shelley.Spec.Ledger.Genesis (ShelleyGenesisStaking (..))
-import Shelley.Spec.Ledger.Keys (coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState (stakeDistr)
-import Shelley.Spec.Ledger.STS.Chain (initialShelleyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
-import Shelley.Spec.Ledger.STS.NewEpoch (calculatePoolDistr)
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,

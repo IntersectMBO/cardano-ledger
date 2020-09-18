@@ -28,13 +28,10 @@ import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API.Protocol
 import Shelley.Spec.Ledger.API.Types
 import Shelley.Spec.Ledger.API.Validation
-import Shelley.Spec.Ledger.Coin (word64ToCoin)
 import Shelley.Spec.Ledger.EpochBoundary
-import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.UTxO
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
 -- We don't care about the type that is hashed, which will differ going from
