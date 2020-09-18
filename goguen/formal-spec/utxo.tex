@@ -125,18 +125,8 @@ automatically by default, so this generates no overhead for users.
               \fun{getDataHash}~\var{txout}) & \text{otherwise}
             \end{cases}
     \nextdef
-    & \fun{outs} \in \Slot \to \TxBody \to \UTxO \\
-    & \text{tx outputs as UTxO} \\
-    & \fun{outs} ~ \var{slot}~\var{txb} =
-        \left\{
-          (\fun{txid} ~ \var{txb}, \var{ix}) \mapsto (\fun{getOut}~\var{txout},\var{slot}) ~
-          \middle|~
-          \var{ix} \mapsto \var{txout} \in \txouts{txb}
-        \right\} \\
-    \nextdef
     & \fun{txins} \in \TxBody \to \powerset{\TxId \times \Ix} \\
-    & \text{transaction inputs} \\
-    & \fun{txins} ~\var{txb} = \{(txid,ix) \mid ((txid,ix),\wcard)\in\fun{txinputs} ~txb\} \\
+    & \fun{txins} ~\var{txb} = \{(txid,ix) \mid ((txid,ix),\wcard)\in\fun{txinputs} ~txb\}
   \end{align*}
   \caption{Functions on Tx Inputs and Outputs}
   \label{fig:functions:insouts}
@@ -151,10 +141,6 @@ The changes due to Plutus integration are as follows:
   \item $\fun{getCoin}$ adds up all the Ada in a given output and returns it as a
   $\Coin$ value
 
-  \item $\fun{utxoAda}$ returns the set of all the outputs in a UTxO with only Ada
-  tokens (the other tokens are discarded). This is used in the stake distribution
-  calculation at the epoch boundary
-
   \item $\fun{txscrfee}$ calculates the fee a transaction must pay for script
   execution based on the amount of $\ExUnits$ it has budgeted for running the
   scripts it carries, and the prices (as indicated in the current protocol parameters)
@@ -168,24 +154,6 @@ The changes due to Plutus integration are as follows:
   \item For Goguen transactions, we have also changed the minimim fee calculation, $\fun{minfee}$,
   to include the script fees the transaction is obligated to pay to run its
   scripts.
-
-  \item
-    The $\fun{ubalance}$ function calculates the (aggregated by currency ID and
-    Token) sum total of all the value in a given UTxO.
-
-  \item The $\fun{consumed}$ calculation for the preservation of value remains the
-  same. It is still the sum of the value in the UTxO entries consumed, the
-   reward address value consumed, the
-   value consumed from the deposit pot (due
-   to the transaction collecting deposit refunds),
-   and the value forged by a transaction.
-
-   Note that forged value is part of the \textit{consumed} calculation because
-   it is value that will appear in the outputs "out of thin air". All outputs
-   in a transaction are put in the UTxO once it is processed, and therefore
-   are part of the \textit{produced} calculation. That same forged amount must be
-   added to the \textit{consumed} calculation in order to balance the preservation
-   of value equation.
 
   \item The $\fun{produced}$ calculation sums the value in the outputs the
   transaction adds to the UTxO, the fee a transaction pays
@@ -207,46 +175,32 @@ The changes due to Plutus integration are as follows:
   \begin{align*}
     & \fun{getCoin} \in \UTxOOut \to \Coin \\
     & \fun{getCoin}~{\var{out}} ~=~\sum_{\mathsf{adaID} \mapsto tkns \in \fun{getValue}~out}
-       (\sum_{q \in \range~{tkns}} \fun{co}~q) \\
-    & \text{sum total of amount of Ada in an output}
-    \nextdef
-    & \fun{utxoAda} \in \UTxO \to \powerset{(\Addr \times \Coin)} \\
-    & \fun{utxoAda}~{\var{utxo}} ~=~\{~(\fun{getAddr}~\var{out},~\fun{getCoin}~{out})
-    ~\vert~ \var{out} \in \range~\var{utxo} ~\} \\
-    & \text{returns the addresses in the UTxO paired with the amount of Ada in them} \\
+       (\sum_{q \in \range~{tkns}} \fun{co}~q)
   \end{align*}
   %
   \emph{Main Calculations}
   \begin{align*}
+    & \fun{outs} \in \Slot \to \TxBody \to \UTxO \\
+    & \fun{outs} ~ \var{slot}~\var{txb} =
+        \left\{
+          (\fun{txid} ~ \var{txb}, \var{ix}) \mapsto (\fun{getOut}~\var{txout},\var{slot}) ~
+          \middle|~
+          \var{ix} \mapsto \var{txout} \in \txouts{txb}
+        \right\}
+    \nextdef
     & \fun{txscrfee} \in \N \to \Prices \to \ExUnits \to \Coin \\
     & \fun{txscrfee}~n~ (\var{pr_{init}, pr_{mem}, pr_{steps}})~ (\var{mem, steps})
-    = \var{pr_{init}}*n + \var{pr_{mem}}*\var{mem} + \var{pr_{steps}}*\var{steps} \\
-    & \text{calculates the script fee a transaction must pay} \\
+    = \var{pr_{init}}*n + \var{pr_{mem}}*\var{mem} + \var{pr_{steps}}*\var{steps}
     \nextdef
     &\fun{minfee} \in \N \to \PParams \to \GoguenTx \to \Coin \\
-    & \text{minimum fee}\\
     &\fun{minfee}  ~n~\var{pp}~\var{tx} = \\
     &~~(\fun{a}~\var{pp}) \cdot \fun{txSize}~\var{tx} + (\fun{b}~\var{pp}) +
     \fun{txscrfee}~n~(\fun{prices}~{pp})~(\fun{txexunits}~(\fun{txbody}~{tx}))
     \nextdef
-    & \fun{ubalance} \in \UTxO \to \Value \\
-    & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{out}\in~\var{utxo}}
-    \fun{getValue}~\var{out} \\
-    & \text{UTxO balance} \\
-    \nextdef
-    & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \Wdrl \to \TxBody \to \Value \\
-    & \consumed~{pp}~{utxo}~{stkCreds}~{txb} = \\
-    & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} + \\
-    &~~  \fun{coinToValue}(\fun{wbalance}~(\fun{txwdrls}~{txb})~\\
-        &~~+~ \keyRefunds{pp}{stkCreds}{txb}) +
-        ~\fun{forge}~\var{txb} \\
-    & \text{value consumed} \\
-    \nextdef
     & \fun{produced} \in \Slot \to \PParams \to \StakePools \to \TxBody \to \Value \\
     & \fun{produced}~\var{slot}~\var{pp}~\var{stpools}~\var{txb} = \\
-    &~~\ubalance{(\outs{slot}~{txb})}  + \fun{coinToValue}(\txfee{txb} \\
-    &~~+ \deposits{pp}{stpools}~{(\txcerts{txb})})\\
-    & \text{value produced}
+    &~~\ubalance{(\outs{slot}~{txb})} + \fun{coinToValue}(\txfee{txb} \\
+    &~~+ \deposits{pp}{stpools}~{(\txcerts{txb})})
   \end{align*}
   \caption{Functions used in UTxO rules}
   \label{fig:functions:utxo}
@@ -296,8 +250,7 @@ This includes,
     &\fun{indexof} \in \AddrRWD \to \Wdrl \to \Ix\\
     &\fun{indexof} \in \UTxOIn \to \powerset{\TxIn} \to \Ix\\
     &\fun{indexof} \in \CurrencyId \to \Value \to \Ix\\
-    & \text{get the index of an item in the an ordered representation} \\
-    \nextdef
+    & \text{get the index of an item in the an ordered representation}
   \end{align*}
   %
   \emph{Helper functions}
@@ -310,8 +263,8 @@ This includes,
     &\fun{indexedDats}~{tx} ~=~ \{ h \mapsto d ~\vert~ \fun{hashData}~{d}~=~h,
      d\in~\fun{txdats}~(\fun{txwits}~{tx})\}
     &\nextdef
-    &\fun{findRdmr} \in \GoguenTx \to \CurItem \to \Data^?\\
-    & \fun{findRdmr}~{tx}~\var{it} ~=~ \fun{txrdmrs}~(\fun{txwits}~{tx})~ptr \\
+    &\fun{findRdmr} \in \GoguenTx \to (\CurItem \mapsto \Data)\\
+    & \fun{findRdmr}~{tx} ~=~ \{ \var{cur} \mapsto \fun{txrdmrs}~(\fun{txwits}~{tx})~ptr \\
       & ~~\where \\
       & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
       & ~~~~~~~ \var{ptr}~=~
@@ -387,9 +340,8 @@ are passed to it via this list.
   \emph{Notation}
   %
   \begin{align*}
-    \llbracket \var{script_v} \rrbracket_{\var{cm},\var{exunits}}(\var{dataval},~\var{rdmr},~\var{ptx})
-    &=& \fun{runPLCScript} ~{cm}~\var{script_v}~((\var{dataval};~\var{rdmr};~\var{ptx};\epsilon),~
-    \var{exunits})
+    \llbracket \var{script_v} \rrbracket_{\var{cm},\var{exunits}}~\var{d}
+    &=& \fun{runPLCScript} ~{cm}~\var{script_v}~\var{d}~\var{exunits}
   \end{align*}
   \caption{Script Validation, cont.}
   \label{fig:defs:functions-valid}
@@ -467,25 +419,23 @@ $\fun{forgedScrts}$, $\fun{allInsScrts}$).
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{getCurVals} \in \GoguenTx \to \UTxO \to \powerset{(\CurItem \times \ScriptPlutus \times \Data)} \\
+    & \fun{getCurVals} \in \GoguenTx \to \UTxO \to \powerset{(\CurItem \times \PolicyID \times \seqof{\Data})} \\
     & \fun{getCurVals}~{tx}~{utxo}~=~ \\
-    & ~~\{ (\var{cert}, \var{script}, \epsilon) ~|~ \var{cert} \in \DCertDeRegKey\cap\fun{txcerts}~(\txbody{tx}), \\
-    & ~~~~~~\fun{regCred}~\var{cert}\mapsto \var{script}\in \fun{indexedScripts}~{tx} \}~\cup \\
-    & ~~\{ (\var{a}, \var{script}, \epsilon) ~|~ a \mapsto \_ \in\fun{txwdrls}~(\txbody{tx}), \\
-    & ~~~~~~\var{a}\mapsto \var{script}\in \fun{indexedScripts}~{tx}\}~\cup \\
-    & ~~\{ (\var{pid}, \var{script}, \epsilon) ~|~ \var{pid}\mapsto ~ \_ \in \fun{forge}~(\txbody{tx}), \\
-    & ~~~~~~\var{pid}\mapsto \var{script}\in \fun{indexedScripts}~{tx}\}~\cup \\
-    & ~~\{ ((\var{txid}, \var{ix}), \var{script}, \var{d}) ~|~ (txid,ix, \_) \in \fun{txinputs}~(\txbody{tx}), \\
+    & ~~\{ (\var{cert}, \fun{regCred}~\var{cert}, \epsilon) ~|~
+      \var{cert} \in \DCertDeRegKey\cap\fun{txcerts}~(\txbody{tx}) \}~\cup \\
+    & ~~\{ (\var{a}, \var{a}, \epsilon) ~|~ a \mapsto \_ \in\fun{txwdrls}~(\txbody{tx}) \}~\cup \\
+    & ~~\{ (\var{pid}, \var{pid}, \epsilon) ~|~ \var{pid}\mapsto ~ \_ \in \fun{forge}~(\txbody{tx}) \}~\cup \\
+    & ~~\{ ((\var{txid}, \var{ix}), \fun{validatorHash}~{a}, [\var{d}]) ~|~ (txid,ix, \_) \in \fun{txinputs}~(\txbody{tx}), \\
     & ~~~~~~(\var{txid}, \var{ix}) \mapsto ((a,\_),h_d, \_) \in \var{utxo}, \\
-    & ~~~~~~\var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx}, \\
-    & ~~~~~~(\fun{validatorHash}~{a})\mapsto \var{script}\in \fun{indexedScripts}~{tx} \}
+    & ~~~~~~\var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx} \}
     \nextdef
     & \fun{mkPLCLst} \in \PParams \to \GoguenTx \to \UTxO \to \seqof{(\ScriptPlutus \times \seqof{\Data} \times \CostMod)} \\
     & \text{a list of all Plutus validators and corresponding input data} \\
     & \fun{mkPLCLst} ~\var{pp}~\var{tx}~ \var{utxo} ~=~
       \fun{toList} \{ (\var{script}, (r; \fun{valContext}~\var{utxo}~\var{tx}~\var{cur}; d), \var{cm}) ~|~ \\
-    & ~~(\var{cur}, \var{script}, \var{d}) \in \fun{getCurVals}~{tx}~{utxo}, \\
+    & ~~(\var{cur}, \var{scriptHash}, \var{d}) \in \fun{getCurVals}~{tx}~{utxo}, \\
     & ~~\var{cur} \mapsto \var{r} \in \fun{findRdmr}~{tx}, \\
+    & ~~\var{scriptHash}\mapsto \var{script}\in \fun{indexedScripts}~{tx}, \\
     & ~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp} \}
   \end{align*}
   \caption{Scripts and their Arguments}
@@ -1108,7 +1058,7 @@ validation purpose (forging, outputs, certificates, withdrawals), see Figure
         \cup & ~~\PolicyID \cap \fun{certWitsNeeded}~{txb} \\
         \cup & ~~\{ cid \mid cid \mapsto \var{tkns}~\in~\fun{forge}~{txb} \} \\
       & \where \\
-      & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
+      & ~~~~~~~ \var{txb}~=~\txbody{tx}
   \end{align*}
   \caption{Functions used in witness rule}
   \label{fig:functions-witnesses}

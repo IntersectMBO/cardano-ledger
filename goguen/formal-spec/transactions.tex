@@ -409,9 +409,7 @@ the rest of a Shelley transction in the Goguen format when we discuss witnessing
     \begin{array}{r@{~\in~}lr}
       \fun{getValue} & \TxOut \uniondistinct \UTxOOut \to \Value & \text{output value} \\
       \fun{getAddr} & \TxOut \uniondistinct \UTxOOut \to \Addr & \text{output address} \\
-      \fun{outref} & \TxIn \to (\TxId \times \Ix) & \text{output reference $(txid,ix)$} \\
-      \fun{getDataHash} & \TxOut \uniondistinct \UTxOOut \to \DataHash & \text{data hash} \\
-      \fun{getDataTag} & \TxOut \to \HasDV & \text{data} \\
+      \fun{getDataHash} & \TxOut \uniondistinct \UTxOOut \to \DataHash & \text{data hash}
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system, cont.}
