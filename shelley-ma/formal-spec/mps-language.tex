@@ -70,8 +70,7 @@ The semantics of the FPS language are specified in Figure~\ref{fig:defs:tx-mc-ev
       \True & (i_s = \Nothing)~\wedge~(i_f = \Nothing) \\
       (i_f' \neq \Nothing) \wedge (i_f'~\leq~i_f) & (i_s = \Nothing)~\wedge~(i_f \neq \Nothing) \\
       (i_s' \neq \Nothing) \wedge (i_s~\leq~i_s') & (i_s \neq \Nothing)~\wedge~(i_f = \Nothing)\\
-      (i_s~\leq~i_s') \wedge (i_f'~\leq~i_f) & (i_s \neq \Nothing)~\wedge~(i_f \neq \Nothing) \\
-      \False & \text{otherwise} \\
+      (i_s~\leq~i_s') \wedge (i_f'~\leq~i_f) & (i_s \neq \Nothing)~\wedge~(i_f \neq \Nothing)
     \end{cases} \\
     &~~~~~~~ \where \\
     &~~~~~~~~~~~ (i_s', i_f') = \fun{txvld}~{txb} \\

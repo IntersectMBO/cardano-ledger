@@ -12,9 +12,9 @@
       \True & (i_s = \Nothing)~\wedge~(i_f = \Nothing) \\
       \var{slot}~\leq~i_f & (i_s = \Nothing)~\wedge~(i_f \neq \Nothing)\\
       i_s~\leq~\var{slot} & (i_s \neq \Nothing)~\wedge~(i_f = \Nothing) \\
-      i_s~\leq~\var{slot}~\leq~i_f & (i_s \neq \Nothing)~\wedge~(i_f \neq \Nothing) \\
-      \False & \text{otherwise} \\
-    \end{cases} \\
+      i_s~\leq~\var{slot}~\leq~i_f & (i_s \neq \Nothing)~\wedge~(i_f \neq \Nothing)
+    \end{cases}
+    \nextdef
     & \fun{getCoin} \in \TxOut \to \Coin \\
     & \fun{getCoin}~{(\wcard,~\var{out})} ~=~\fun{valueToCoin}~\var{out}
     \nextdef
