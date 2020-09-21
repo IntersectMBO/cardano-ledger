@@ -14,6 +14,7 @@ Formal and executable specifications for the new features to be introduced by Sh
 The documents are built in our CI and can be readily accessed using the
 following links:
 
+- [Multi-asset formal specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.shelley-ma/latest/download-by-type/doc-pdf/shelley-ma): the formal mathematical specification of the additon of multi-assets to the Shelley era ledger rules.
 - [Shelley design specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec): the primary design document for Cardano Shelley.
 - [Shelley ledger formal specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec): the formal mathematical specification of the Shelley era ledger rules.
 - [Shelley binary format specification (CDDL)](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/shelley-spec-ledger-test/cddl-files): the binary formats for the Shelley ledger using CBOR CDDL schema notation.
