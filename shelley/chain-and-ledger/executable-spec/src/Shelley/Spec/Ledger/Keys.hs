@@ -11,6 +11,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -137,6 +138,7 @@ class HasKeyRole (a :: KeyRole -> Type -> Type) where
 --   be used as witnesses to some types of transaction. As such, we provide an
 --   explicit coercion for it.
 asWitness ::
+  forall era a r.
   (HasKeyRole a) =>
   a r era ->
   a 'Witness era

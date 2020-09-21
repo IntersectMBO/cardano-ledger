@@ -95,7 +95,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val (invert, (<+>), (<->), (<×>))
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
@@ -365,9 +365,9 @@ instance Era era => ToCBOR (RewardUpdate era) where
   toCBOR (RewardUpdate dt dr rw df nm) =
     encodeListLen 5
       <> toCBOR dt
-      <> toCBOR (Val.invert dr) -- TODO change Coin serialization to use integers?
+      <> toCBOR (invert dr) -- TODO change Coin serialization to use integers?
       <> toCBOR rw
-      <> toCBOR (Val.invert df) -- TODO change Coin serialization to use integers?
+      <> toCBOR (invert df) -- TODO change Coin serialization to use integers?
       <> toCBOR nm
 
 instance Era era => FromCBOR (RewardUpdate era) where
@@ -378,7 +378,7 @@ instance Era era => FromCBOR (RewardUpdate era) where
       rw <- fromCBOR
       df <- fromCBOR -- TODO change Coin serialization to use integers?
       nm <- fromCBOR
-      pure $ RewardUpdate dt (Val.invert dr) rw (Val.invert df) nm
+      pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
 emptyRewardUpdate :: RewardUpdate era
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) emptyNonMyopic
@@ -667,7 +667,7 @@ keyRefunds ::
   PParams era ->
   TxBody era ->
   Coin
-keyRefunds pp tx = Val.scale (length deregistrations) (_keyDeposit pp)
+keyRefunds pp tx = (length deregistrations) <×> (_keyDeposit pp)
   where
     deregistrations = filter isDeRegKey (toList $ _certs tx)
 
@@ -806,7 +806,7 @@ depositPoolChange ::
   PParams era ->
   TxBody era ->
   Coin
-depositPoolChange ls pp tx = (currentPool <> txDeposits) Val.~~ txRefunds
+depositPoolChange ls pp tx = (currentPool <+> txDeposits) <-> txRefunds
   where
     -- Note that while (currentPool + txDeposits) >= txRefunds,
     -- it could be that txDeposits < txRefunds. We keep the parenthesis above
@@ -942,14 +942,14 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           totalStake
           asc
           slotsPerEpoch
-      deltaR2 = _R Val.~~ (Map.foldr (<>) mempty rs_)
+      deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $
     RewardUpdate
       { deltaT = (Coin deltaT1),
-        deltaR = (Val.invert deltaR1 <> deltaR2),
+        deltaR = (invert deltaR1 <> deltaR2),
         rs = rs_,
-        deltaF = (Val.invert (_feeSS ss)),
+        deltaF = (invert (_feeSS ss)),
         nonMyopic = (updateNonMypopic nm _R newLikelihoods)
       }
 
@@ -958,7 +958,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
 -- This is used in the rewards calculation, and for API endpoints for pool ranking.
 circulation :: EpochState era -> Coin -> Coin
 circulation (EpochState acnt _ _ _ _ _) supply =
-  supply Val.~~ (_reserves acnt)
+  supply <-> (_reserves acnt)
 
 -- | Update new epoch state
 updateNES ::

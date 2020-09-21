@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds #-}
-{-# OPTIONS_GHC -Wno-unused-binds #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE EmptyDataDecls             #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 module Main where
 
@@ -10,21 +11,12 @@ import BenchValidation
     benchValidate,
     benchreValidate,
     genUpdateInputs,
-    sizes,
     updateAndTickChain,
     updateChain,
     validateInput,
   )
--- How to precompute env for the UTxO transactions
-
--- How to precompute env for the Stake Delegation transactions
--- How to precompute env for the StakeKey transactions
--- How to compute an initial state with N StakePools
-
-import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
-import Control.Iterate.SetAlgebra (dom, forwards, keysEqual, (▷), (◁))
+import Control.Iterate.SetAlgebra (dom, keysEqual, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
 import Criterion.Main
   ( Benchmark,
@@ -42,15 +34,12 @@ import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.Bench.Gen
   ( genBlock,
-    genChainState,
-    genTx,
+    genTriple,
   )
 import Shelley.Spec.Ledger.Bench.Rewards (createRUpd, genChainInEpoch)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..))
+import Cardano.Ledger.Crypto (Crypto (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.Keys (KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
     DState (..),
@@ -60,7 +49,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.Rewards (likelihood)
 import Shelley.Spec.Ledger.UTxO (UTxO)
-import System.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck.Gen as QC
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions
   ( initUTxO,
@@ -77,20 +65,40 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerStateWithNregisteredKeys,
     ledgerStateWithNregisteredPools,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
+import Data.Proxy (Proxy (..))
+import Cardano.Ledger.Era(Era(..))
+import Cardano.Crypto.DSIGN
+import Cardano.Crypto.Hash
+import Cardano.Crypto.KES
+import Cardano.Crypto.VRF.Praos
+import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Slotting.Slot (EpochSize(..))
+
 
 -- ==========================================================
 
-eqf ::
-  String ->
-  (Map.Map Int Int -> Map.Map Int Int -> Bool) ->
-  Int ->
-  Benchmark
-eqf name f n =
-  bgroup
-    (name ++ " " ++ show n)
-    (map runat [n, n * 10, n * 100, n * 1000])
+data BenchCrypto
+
+instance CryptoClass.Crypto BenchCrypto where
+  type DSIGN BenchCrypto = Ed25519DSIGN
+  type KES BenchCrypto = Sum6KES Ed25519DSIGN Blake2b_256
+  type VRF BenchCrypto = PraosVRF
+  type HASH BenchCrypto = Blake2b_256
+  type ADDRHASH BenchCrypto = Blake2b_224
+
+data BenchEra
+
+instance Era BenchEra where
+  type Crypto BenchEra = BenchCrypto
+
+-- ============================================================
+
+--TODO set this in one place (where?)
+type FixedValType = Coin
+
+eqf :: String -> (Map.Map Int Int -> Map.Map Int Int -> Bool) -> Int -> Benchmark
+eqf name f n = bgroup (name ++ " " ++ show n) (map runat [n, n * 10, n * 100, n * 1000])
   where
     runat m =
       env
@@ -196,42 +204,8 @@ epochAt x =
         [ bench "Using maps" (whnf action2m arg)
         ]
 
-action2m :: Era era => (DState era, PState era, UTxO era) -> SnapShot era
+action2m :: Era era => (DState era, PState era, UTxO era) -> EB.SnapShot era
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
-
-dstate' :: DState C
-pstate' :: PState C
-utxo' :: UTxO C
-(dstate', pstate', utxo') =
-  unsafePerformIO $
-    QC.generate (genTestCase 1000000 (5000 :: Int))
-
-profile_Maps :: Int -> IO ()
-profile_Maps _x = do
-  let snap = stakeDistr utxo' dstate' pstate'
-  putStrLn
-    ( "Size = " ++ show (Map.size (EB._delegations snap)) ++ " "
-        ++ show (Map.size (_poolParams snap))
-    )
-
-{- At least while running in GHCI Maps use less allocation than lists
-*Main> profile_Lists 1
-Size = 122 61
-(0.24 secs, 630,016,752 bytes)
-
-*Main> profile_Maps 1
-Size = 122 61
-(0.23 secs, 519,132,520 bytes)
-
-Compiled, Maps also seem to be a little bit faster. Maps win
-
-benchmarking aggregate stake/UTxO=1000000,  address=10000/Using lists
-time                 292.9 ms   (269.6 ms .. 316.3 ms)
-
-benchmarking aggregate stake/UTxO=1000000,  address=10000/Using maps
-time                 280.6 ms   (256.0 ms .. 297.3 ms)
-
--}
 
 -- =================================================================
 
@@ -246,13 +220,13 @@ validGroup =
   where
     runAtUTxOSize n =
       bgroup (show n) $
-        [ env (validateInput n) $ \arg ->
+        [ env (validateInput @BenchEra n) $ \arg ->
             bgroup
               "block"
               [ bench "applyBlockTransition" (nfIO $ benchValidate arg),
                 bench "reapplyBlockTransition" (nf benchreValidate arg)
               ],
-          env (genUpdateInputs n) $ \arg ->
+          env (genUpdateInputs @BenchEra n) $ \arg ->
             bgroup
               "protocol"
               [ bench "updateChainDepState" (nf updateChain arg),
@@ -264,8 +238,8 @@ validGroup =
 
 profileValid :: IO ()
 profileValid = do
-  state <- validateInput 10000
-  let ans = sum [applyBlock state n | n <- [1 .. 10000 :: Int]]
+  state <- validateInput @BenchEra 10000
+  let ans = sum [applyBlock @BenchEra state n | n <- [1 .. 10000 :: Int]]
   putStrLn (show ans)
   pure ()
 
@@ -363,9 +337,11 @@ varyDelegState tag fixed changes initstate action =
 
 -- =============================================================================
 
+
 main :: IO ()
 -- main=profileValid
-main =
+main = do
+  (genenv,chainstate,genTxfun) <- genTriple (Proxy::Proxy BenchEra) 1000
   defaultMain $
     [ bgroup "vary input size" $
         [ varyInput
@@ -468,16 +444,16 @@ main =
       -- Benchmarks for the various generators
       bgroup "gen" $
         [ env
-            (genChainState 100000)
-            ( \cs ->
+            (return chainstate)
+            ( \ cs ->
                 bgroup
                   "block"
-                  [ bench "genBlock" $ whnfIO $ genBlock cs
+                  [ bench "genBlock" $ whnfIO $ genBlock genenv cs
                   ]
             ),
           bgroup
             "genTx"
-            [ bench "1000" $ whnfIO $ genTx 1000
+            [ bench "1000" $ whnfIO $ genTxfun genenv
             ]
         ],
       bgroup "rewards" $

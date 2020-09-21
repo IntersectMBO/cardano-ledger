@@ -26,7 +26,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val (scaledMinDeposit, (<->))
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
 import Control.State.Transition
@@ -308,7 +308,7 @@ utxoInductive = do
 
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
-      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < (Val.scaledMinDeposit c minUTxOValue)]
+      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, c < (scaledMinDeposit c minUTxOValue)]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
@@ -323,7 +323,7 @@ utxoInductive = do
 
   let refunded = keyRefunds pp txb
   let txCerts = toList $ _certs txb
-  let depositChange = totalDeposits pp stakepools txCerts Val.~~ refunded
+  let depositChange = totalDeposits pp stakepools txCerts <-> refunded
 
   pure
     UTxOState

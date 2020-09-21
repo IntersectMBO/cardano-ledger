@@ -88,7 +88,7 @@ import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
   )
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val((<->))
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Prelude (genBytes)
@@ -244,7 +244,7 @@ txBody =
       _mdHash = SNothing
     }
   where
-    change = aliceInitCoin Val.~~ coinsToBob Val.~~ fee
+    change = (aliceInitCoin <-> coinsToBob) <-> fee
     fee = Coin 10
 
 testBootstrapSpending :: Assertion

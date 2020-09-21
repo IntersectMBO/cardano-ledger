@@ -15,7 +15,7 @@ module Shelley.Spec.Ledger.STS.Mir
   )
 where
 
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (∪+), (◁))
 import Control.State.Transition
@@ -122,8 +122,8 @@ mirTransition = do
       pure $
         EpochState
           acnt
-            { _reserves = reserves Val.~~ totR,
-              _treasury = treasury Val.~~ totT
+            { _reserves = reserves <-> totR,
+              _treasury = treasury <-> totT
             }
           ss
           ls

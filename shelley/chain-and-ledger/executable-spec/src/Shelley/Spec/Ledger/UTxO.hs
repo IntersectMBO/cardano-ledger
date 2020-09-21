@@ -43,7 +43,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Era
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val ((<+>), (<×>))
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra
   ( BaseRep (MapR),
@@ -230,7 +230,7 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 balance :: UTxO era -> Coin
 balance (UTxO utxo) = Map.foldl' addCoins mempty utxo
   where
-    addCoins !b (TxOutCompact _ (word64ToCoin -> a)) = a <> b
+    addCoins !b (TxOutCompact _ (word64ToCoin -> a)) = a <+> b
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
@@ -246,7 +246,7 @@ totalDeposits ::
   [DCert era] ->
   Coin
 totalDeposits pp stpools cs =
-  Val.scale numKeys (_keyDeposit pp) <> Val.scale numNewPools (_poolDeposit pp)
+  (numKeys <×> _keyDeposit pp) <+> (numNewPools <×> _poolDeposit pp)
   where
     numKeys = length $ filter isRegKey cs
     pools = Set.fromList . Maybe.catMaybes $ fmap getKeyHashFromRegPool cs
