@@ -1,11 +1,22 @@
 \begin{figure*}[t!]
   %
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{s_{fps}} & \ScriptMPS & \text{extended script language}
+      \\
+    \end{array}
+  \end{equation*}
+  %
   \emph{Derived types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{txout} & \TxOut & \Addr \times \hldiff{\Value}
+      \var{txout} & \TxOut & \Addr \times \hldiff{\Value} \\
 %      & \text{tx outputs}
+      \var{s} & \Script & \hldiff{\ScriptMSig \uniondistinct \ScriptMPS}
+%      & \text{scripts}
       \\
     \end{array}
   \end{equation*}
@@ -20,7 +31,7 @@
       & \times~ \seqof{\DCert} & \fun{txcerts}& \text{certificates}\\
        & \times ~\hldiff{\Value}  & \hldiff{\fun{forge}} &\text{value forged}\\
        & \times ~\Coin & \fun{txfee} &\text{non-script fee}\\
-       & \times ~\Slot & \fun{txttl} & \text{time to live}\\
+       & \times ~\hldiff{\Slot^? \times \Slot^?} & \fun{txvldt} & \text{validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{reward withdrawals}\\
        & \times ~\Update  & \fun{txUpdates} & \text{update proposals}\\
        & \times ~\MetaDataHash^? & \fun{txMDhash} & \text{metadata hash}
@@ -42,10 +53,34 @@
 \label{sec:transactions}
 
 This section describes the changes that are necessary to the
-transaction structure to support native multi-asset functionality in
-Cardano. The main differences are that $\TxOut$ contains a $\Value$
-rather than a $\Coin$, and the $\fun{forge}$ field as part of the
-transaction body.
+transaction structure to support native multi-asset (MA) functionality in
+Cardano.
+
+\subsection*{New Output Type}
+
+A key change needed to introduce MA functionality is changing the type of
+the transaction and UTxO outputs to contain multi-asset values to accommodate
+transacting with these types of assets natively, using the same ledger accounting
+infrastructure as is used for Ada. That is,
+$\TxOut$ now contains a $\Value$ rather than a $\Coin$.
+
+\subsection*{New Script Type}
+
+The type $\Script$ has been extended to include a new scripting language,
+$\ScriptMPS$. The two types of scripts which make up the $\Script$ type are both
+native, meaning
+that they are evaluated by the ledger directly. We specify the evaluation
+function for the additional script type in section~\ref{sec:mps-lang}.
+
+Both types of scripts can be used in the exact same way, which means, for this
+spec, as
+
+\begin{itemize}
+  \item output-locking scripts,
+  \item certificate validation,
+  \item reward withdrawals, or
+  \item as forging scripts (see below).
+\end{itemize}
 
 \subsection*{The Forge Field}
 
@@ -70,10 +105,17 @@ The forging mechanism is detailed in Section~\ref{sec:utxo}.
 
 \subsection*{Transaction Body}
 
-Besides the addition of the $\fun{forge}$ field to the transaction body,
-note that the $\TxOut$ type in the body is not the same as
-the $\TxOut$ in the system without multi-asset support. Instead of
+The following changes were made to $\TxBody$:
+
+\begin{itemize}
+  \item a change in the type of $\TxOut$ --- instead of
 $\Coin$, the transaction outputs now have type $\Value$.
+  \item the addition of the $\fun{forge}$ field to the transaction body
+  \item the time-to-live slot number (which had the accessor $\fun{txttl}$),
+  has been replaced with a validity interval with accessor $\fun{txvldt}$,
+  both endpoints of which are optional
+\end{itemize}
 
 The only change to the types related to transaction witnessing is the addition
-of monetary policy scripts to the $\Script$ type, so we do not include the whole $\Tx$ type here.
+of forging policy scripts to the underlying $\Script$ type, so we do not include the
+whole $\Tx$ type here.
