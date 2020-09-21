@@ -20,7 +20,7 @@ import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -119,7 +119,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
 
     reserves :: Coin
     reserves =
-      word64ToCoin (sgMaxLovelaceSupply genesisShelley) Val.~~ balance utxoShelley
+      word64ToCoin (sgMaxLovelaceSupply genesisShelley) <-> balance utxoShelley
 
     epochState :: EpochState era
     epochState =

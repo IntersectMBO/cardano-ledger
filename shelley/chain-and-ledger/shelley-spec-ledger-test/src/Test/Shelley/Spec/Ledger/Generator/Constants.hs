@@ -87,8 +87,11 @@ data Constants = Constants
     maxTreasury :: Integer,
     minReserves :: Integer,
     maxReserves :: Integer,
-    -- | How many times the LEDGERS Trace transaction generator must retry before failing hard with an error.
-    genTxRetries :: Int
+    -- | When generating Tx, we want the UTxO size to fluctuate around this point. If
+    --   it gets too small, we can't balance the fee, too large it gets too complicated.
+    genTxStableUtxoSize:: Int,
+    -- | If we need to grow the Utxo when generating a Tx, how much should it grow by.
+    genTxUtxoIncrement:: Int
   }
   deriving (Show)
 
@@ -134,5 +137,6 @@ defaultConstants =
       maxTreasury = 10000000,
       minReserves = 1000000,
       maxReserves = 10000000,
-      genTxRetries = 10
+      genTxStableUtxoSize = 100,
+      genTxUtxoIncrement = 3
     }

@@ -28,7 +28,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Era
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val ((<+>), (<×>))
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
 import Data.Map.Strict (Map)
@@ -108,8 +108,7 @@ obligation ::
   Map (KeyHash 'StakePool era) (PoolParams era) ->
   Coin
 obligation pp rewards stakePools =
-  Val.scale (length rewards) (_keyDeposit pp)
-    <> Val.scale (length stakePools) (_poolDeposit pp)
+  (length rewards <×> _keyDeposit pp) <+> (length stakePools <×> _poolDeposit pp)
 
 -- | Calculate maximal pool reward
 maxPool :: PParams era -> Coin -> Rational -> Rational -> Coin

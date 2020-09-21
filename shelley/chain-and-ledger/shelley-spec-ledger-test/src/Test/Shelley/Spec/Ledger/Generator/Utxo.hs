@@ -5,31 +5,31 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Utxo
-  ( GenTxException (..),
-    genTx,
-    tryGenTx,
-    splitCoin,
+  ( genTx,
+    Delta (..),
+    showBalance,
   )
 where
 
-import Cardano.Ledger.Era (Crypto, Era)
-import qualified Control.Exception as Exn
+import Cardano.Ledger.Era(Crypto, Era)
+import Cardano.Ledger.Val(Val(..),(<+>),(<->),(<×>),sumVal)
+import Cardano.Binary (serialize)
+import Cardano.Slotting.Slot(SlotNo(..))
 import Control.Iterate.SetAlgebra (forwards)
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Either as Either (partitionEithers)
-import Data.Foldable (fold)
 import Data.List (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API
   ( DCert,
@@ -61,40 +61,42 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
     DState (..),
+    PState(..),
     KeyPairs,
     UTxOState (..),
-    minfeeBound,
+    minfee,
     _dstate,
     _ptrs,
     _rewards,
+    consumed,
+    produced,
   )
 import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     TxBody (..),
-    TxIn,
+    TxIn(..),
     TxOut (..),
     WitnessSet,
     WitnessSetHKD (..),
     getKeyCombination,
     hashScript,
   )
-import Shelley.Spec.Ledger.TxBody (Wdrl (..))
+import Shelley.Spec.Ledger.TxBody(Wdrl (..))
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
     makeWitnessesFromScriptKeys,
     makeWitnessesVKey,
   )
-import qualified Cardano.Ledger.Val as Val
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
   )
-import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
+import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..),defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( GenEnv (..),
     KeySpace (..),
@@ -109,86 +111,79 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs)
 
-splitCoin :: Coin -> Integer -> (Coin, Coin)
-splitCoin (Coin n) 0 = (Coin 0, Coin n)
-splitCoin (Coin n) m
-  | m <= 0 = error "must split coins into positive parts"
-  | otherwise = (Coin $ n `div` m, Coin $ n `rem` m)
+-- ===============================================================================
+-- Generating random transactions requires splitting Values into multiple Values
+-- with the same underlying amount of Coin. This property is crucial to generating
+-- transactions which have the preservation of ADA property. (vsplit n v) breaks
+-- v into n different values, and one remainder Coin, where the sum of the Coin
+-- in the original value, and the sum of the underlying Coin in the list plus the
+-- remainder coin are equal.
+-- Given:    let (vs,coin) = split n value
+-- Then:     (coin value) == sum(map coin vs) <+> coin
 
+-- We introduce a new class Split which supplies this operation.
+-- As new kinds of values become instances of the Val class, and we want to generate
+-- transactions over these values, we will have to add additional instances here.
+
+class Val v => Split v where
+   vsplit ::  v -> Integer -> ([v], Coin)
+
+instance Split Coin where
+  vsplit (Coin n) 0 = ([], Coin n)
+  vsplit (Coin n) m -- TODO fix this?
+    | m Prelude.<= 0 = error "must split coins into positive parts"
+    | otherwise = (take (fromIntegral m) (repeat (Coin (n `div` m))), Coin (n `rem` m))
+
+-- ============================================================
+
+showBalance :: Era era => LedgerEnv era -> UTxOState era -> DPState era -> Tx era -> String
+showBalance
+   (LedgerEnv _ _ pparams _)
+   (UTxOState utxo _ _ _)
+   (DPState _ (PState stakepools _ _))
+   (Tx body _ _) = "\n\nConsumed: "++show(consumed pparams utxo body)++"  Produced: "++show(produced pparams stakepools body)
+
+--  ========================================================================
 -- | Generates a transaction in the context of the LEDGER STS environment
 -- and state.
 --
 --  A generated transaction may not have sufficient spending balance and
--- need to be discarded. In this case we retry the generator,
--- up to 'genTxRetries' times, before failing hard with an error.
---
+-- need to be discarded. In that case we try to compute a Delta, that when
+-- added (applyDelta) to the transaction, repairs it. The repair is made
+-- by adding additional inputs from which more Ada can flow into the fee.
+-- If that doesn't fix it, we add add more inputs to the Delta.
+-- Experience shows that this converges quite quickly (in traces we never saw
+-- more than 3 iterations).
+
 -- Note: the spending balance emerges from inputs, refund withdrawals,
 -- certificate deposits and fees (which in turn depend on number of
 -- inputs, outputs, witnesses, metadata etc.). It's hard to avoid this
 -- completely, but in practice it is relatively easy to calibrate
 -- the generator 'Constants' so that there is sufficient spending balance.
-genTx ::
-  (HasCallStack, Era era, Mock (Crypto era)) =>
+
+genTx :: forall era.
+  (HasCallStack, Era era,Mock (Crypto era)) =>
   GenEnv era ->
   LedgerEnv era ->
   (UTxOState era, DPState era) ->
   Gen (Tx era)
-genTx ge le st =
-  tryGenTx ge le st >>= \case
-    Left exn -> Exn.throw exn
-    Right tx -> pure tx
-
-data GenTxException
-  = -- | Every transaction that the generator attempted had fees that exceeded
-    -- the available balance.
-    GenTxExceptionInsufficientSpendingBalance !InsufficientSpendingBalanceInfo
-  deriving (Show)
-
-instance Exn.Exception GenTxException
-
--- | The data for 'GenTxExceptionInsufficientSpendingBalance'.
-data InsufficientSpendingBalanceInfo = InsufficientSpendingBalanceInfo
-  { -- | The smallest amount by which the fees exceeded the unspent balance for
-    -- any of the transactions attempted.
-    isbiDiff :: !Coin
-  }
-  deriving (Show)
-
-tryGenTx ::
-  (HasCallStack, Era era, Mock (Crypto era)) =>
-  GenEnv era ->
-  LedgerEnv era ->
-  (UTxOState era, DPState era) ->
-  Gen (Either GenTxException (Tx era))
-tryGenTx ge@(GenEnv _ (Constants {genTxRetries})) =
-  genTxRetry genTxRetries (Coin (fromIntegral (maxBound :: Word64))) ge
-
-genTxRetry ::
-  (HasCallStack, Era era, Mock (Crypto era)) =>
-  Int ->
-  Coin ->
-  GenEnv era ->
-  LedgerEnv era ->
-  (UTxOState era, DPState era) ->
-  Gen (Either GenTxException (Tx era))
-genTxRetry
-  n
-  minDiffSoFar
+genTx
   ge@( GenEnv
-         KeySpace_
-           { ksKeyPairs,
-             ksCoreNodes,
-             ksMSigScripts,
-             ksIndexedGenDelegates,
-             ksIndexedPaymentKeys,
-             ksIndexedStakingKeys,
-             ksIndexedPayScripts,
-             ksIndexedStakeScripts
-           }
+         keySpace@( KeySpace_
+                      { ksKeyPairs,
+                        ksCoreNodes,
+                        ksMSigScripts,
+                        ksIndexedGenDelegates,
+                        ksIndexedPaymentKeys,
+                        ksIndexedStakingKeys,
+                        ksIndexedPayScripts,
+                        ksIndexedStakeScripts
+                      }
+                    )
          constants
        )
-  env@(LedgerEnv slot txIx pparams reserves)
-  st@(utxoSt@(UTxOState utxo _ _ _), dpState) =
+  (LedgerEnv slot txIx pparams reserves)
+  (utxoSt@(UTxOState utxo _ _ _), dpState) =
     do
       keys' <- QC.shuffle ksKeyPairs
       scripts' <- QC.shuffle ksMSigScripts
@@ -196,7 +191,11 @@ genTxRetry
       -- Generate the building blocks of a TxBody
       -------------------------------------------------------------------------
       (inputs, spendingBalanceUtxo, (spendWits, spendScripts)) <-
-        genInputs constants ksIndexedPaymentKeys ksIndexedPayScripts utxo
+        genInputs @Coin
+          (minNumGenInputs constants, maxNumGenInputs constants)
+          ksIndexedPaymentKeys
+          ksIndexedPayScripts
+          utxo
       (wdrls, (wdrlWits, wdrlScripts)) <-
         genWithdrawals constants ksIndexedStakeScripts ksIndexedStakingKeys ((_rewards . _dstate) dpState)
       (update, updateWits) <-
@@ -210,61 +209,223 @@ genTxRetry
       -------------------------------------------------------------------------
       let wits = spendWits ++ wdrlWits ++ certWits ++ updateWits
           scripts = mkScriptWits spendScripts (certScripts ++ wdrlScripts)
-          mkTxWits' =
-            mkTxWits
-              ksIndexedPaymentKeys
-              ksIndexedStakingKeys
-              wits
-              scripts
-              . hashAnnotated
+          mkTxWits' = mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys wits scripts . hashAnnotated
       -------------------------------------------------------------------------
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
       -- and a Outputs builder that distributes the given balance over addresses.
       -------------------------------------------------------------------------
-      let spendingBalance =
-            spendingBalanceUtxo
-              <> (fold (snd <$> wdrls)) Val.~~ deposits
-              <> refunds
+      let withdrawals = (sumVal (snd <$> wdrls))
+          spendingBalance = spendingBalanceUtxo  <+> (inject $ (withdrawals <-> deposits) <+> refunds)
+          n = if (Map.size . unUTxO) utxo < (genTxStableUtxoSize defaultConstants) -- something moderate 80-120
+                 then (genTxUtxoIncrement defaultConstants)                        -- something small 2-5
+                 else 0                                                            -- no change at all
+          -- This algorithm has an instability in that if we don't balance genTxStableUtxoSize and
+          -- genTxUtxoIncrement correctly the size of the UTxO gradually shrinks so small we cannot
+          -- support generating a transaction. If we get unexplained failures one might investigate
+          -- changing these constants.
       outputAddrs <-
-        genRecipients (length inputs) keys' scripts'
+        genRecipients (length inputs + n) keys' scripts'
           >>= genPtrAddrs (_dstate dpState')
-      let mkOutputs = calcOutputsFromBalance spendingBalance outputAddrs
       -------------------------------------------------------------------------
-      -- Build a Draft Tx and use it to calculate transaction fees
+      -- Build a Draft Tx and repeatedly add to Delta until all fees are accounted for.
       -------------------------------------------------------------------------
       let draftFee = Coin 0
-          draftOutputs = snd (mkOutputs draftFee)
+          (remainderCoin,draftOutputs) = calcOutputsFromBalance @Coin spendingBalance outputAddrs draftFee
       draftTxBody <- genTxBody inputs draftOutputs certs wdrls update draftFee ttl metadataHash
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
-          fees = minfeeBound pparams draftTx
-      -------------------------------------------------------------------------
-      -- Generate final Tx now that we have the real fees. We need to recompute
-      -- the output amounts and in turn the txBody and its witness set.
-      -------------------------------------------------------------------------
-      if spendingBalance >= fees
-        then do
-          let (actualFees', outputs') = mkOutputs fees
-              txBody = draftTxBody {_txfee = actualFees', _outputs = outputs'}
-          pure $ Right $ Tx txBody (mkTxWits' txBody) metadata
-        else do
-          let minDiffSoFar' = min minDiffSoFar (fees Val.~~ spendingBalance)
-          if n < 1
-            then
-              pure $
-                Left $
-                  GenTxExceptionInsufficientSpendingBalance
-                    InsufficientSpendingBalanceInfo
-                      { isbiDiff = minDiffSoFar'
-                      }
-            else genTxRetry (n - 1) minDiffSoFar' ge env st
+      -- We add now repeatedly add inputs until the process converges.
+      converge remainderCoin wits scripts keys' scripts' utxo pparams keySpace draftTx
+
+-- |- Collect additional inputs (and witnesses and keys and scripts) to make the transaction balance.
+data Delta era = Delta
+  { dfees :: Coin,
+    extraInputs :: Set.Set (TxIn era),
+    extraWitnesses :: WitnessSet era,
+    change :: TxOut era,
+    deltaVKeys :: [KeyPair 'Witness era],
+    deltaScripts :: [(MultiSig era, MultiSig era)]
+  }
+
+-- |- We need this instance to know when delta has stopped growing. We don't actually need to compare all
+-- the fields, because if the extraInputs has not changed then the Scripts and keys will not have changed.
+
+instance Era era => Eq (Delta era) where
+  a == b =
+    dfees a == dfees b
+      && extraInputs a == extraInputs b
+      && extraWitnesses a == extraWitnesses b
+      -- deltaVKeys and deltaScripts equality are implied by extraWitnesses equality, at least in the use case below.
+      && change a == change b
+
+deltaZero :: (Era era) => Coin -> Coin -> Addr era -> Delta era
+deltaZero initialfee minAda addr = Delta
+   (initialfee <-> minAda)
+    mempty
+    mempty
+    (TxOut addr (inject minAda))
+    mempty
+    mempty
+
+-- |- Do the work of computing what additioanl inputs we need to 'fix-up' the transaction so that it will balance.
+
+genNextDelta :: forall era.
+  (Era era, Mock (Crypto era)) =>
+  UTxO era ->
+  PParams era ->
+  KeySpace era ->
+  Tx era ->
+  Delta era ->
+  Gen (Delta era)
+genNextDelta
+  utxo
+  pparams
+  ( KeySpace_
+      { ksIndexedStakingKeys,
+        ksIndexedPaymentKeys,
+        ksIndexedPayScripts
+      }
+    )
+  tx
+  delta@(Delta dfees extraInputs extraWitnesses change _ _) =
+    let baseTxFee = minfee pparams tx
+        encodedLen x = fromIntegral $ BSL.length (serialize x)
+        -- based on the current contents of delta, how much will the fee increase when we add the delta to the tx?
+        draftSize =  (sum [ 5, -- safety net in case the coin or a list prefix rolls over into a larger encoding
+                                encodedLen dfees - 1,
+                                foldr (\a b -> b + encodedLen a) 0 extraInputs,
+                                encodedLen change,
+                                encodedLen extraWitnesses
+                               ])
+        deltaFee = draftSize <×> (Coin (fromIntegral (_minfeeA pparams)))
+        totalFee = baseTxFee <+> deltaFee :: Coin
+        remainingFee = totalFee <-> dfees :: Coin
+        changeAmount = getChangeAmount change
+        minAda = _minUTxOValue pparams
+     in if remainingFee <= (Coin 0) -- we've paid for all the fees
+          then pure delta -- we're done
+          else -- the change covers what we need, so shift Coin from change to dfees.
+            if remainingFee <= (changeAmount <-> minAda)
+              then
+                pure $
+                  delta
+                    { dfees = totalFee,
+                      change =
+                        deltaChange
+                          (<-> (inject remainingFee))
+                          change
+                    }
+              else -- add a new input to cover the fee
+              do
+                let utxo' =   -- Remove possible inputs from Utxo, if they already appear in inputs.
+                      UTxO $
+                        Map.withoutKeys
+                          (unUTxO utxo)
+                          ((_inputs . _body) tx <> extraInputs)
+                (inputs, value, (vkeyPairs, msigPairs)) <- genInputs (1, 1) ksIndexedPaymentKeys ksIndexedPayScripts utxo'
+                -- It is possible that the Utxo has no possible inputs left, so fail. We try and keep this from happening
+                -- by using feedback: adding to the number of ouputs (in the call to genRecipients) in genTx above. Adding to the
+                -- outputs means in the next cycle the size of the UTxO will grow.
+                _ <- if (null inputs) then (error "Not enough money in the world") else pure ()
+                let newWits =
+                      mkTxWits
+                        ksIndexedPaymentKeys
+                        ksIndexedStakingKeys
+                        vkeyPairs
+                        (mkScriptWits msigPairs mempty)
+                        (hashAnnotated $ _body tx)
+                pure $
+                  delta
+                    { extraWitnesses = extraWitnesses <> newWits,
+                      extraInputs = extraInputs <> Set.fromList inputs,
+                      change = deltaChange (<+> value) change,   -- <+> is plus of the Val class
+                      deltaVKeys =  vkeyPairs <> deltaVKeys delta,
+                      deltaScripts = msigPairs <> deltaScripts delta
+                    }
+
+    where
+      deltaChange ::(Coin -> Coin) -> TxOut era -> TxOut era
+      deltaChange f (TxOut addr val) = TxOut addr $ f val
+      getChangeAmount (TxOut _ v) = coin v
+
+
+-- calculates fixed point of getNextDelta such that
+-- reqFees (tx + delta) = dfees delta
+-- start with zero delta
+-- genNextDelta repeatedly until genNextDelta delta = delta
+
+genNextDeltaTilFixPoint ::
+  (Era era, Mock (Crypto era)) =>
+  Coin ->
+  KeyPairs era ->
+  MultiSigPairs era ->
+  UTxO era ->
+  PParams era ->
+  KeySpace era ->
+  Tx era ->
+  Gen (Delta era)
+genNextDeltaTilFixPoint initialfee randomKeys randomScripts utxo pparams keySpace tx = do
+  addr <- genRecipients 1 randomKeys randomScripts
+  fix
+    (genNextDelta utxo pparams keySpace tx)
+    (deltaZero initialfee (safetyOffset <+> (_minUTxOValue pparams)) (head addr))
+  where
+    -- add a small offset here to ensure outputs above minUtxo value
+    safetyOffset = Coin 5
+
+applyDelta :: (Era era, Mock(Crypto era)) =>
+  [KeyPair 'Witness era] ->
+  Map (ScriptHash era) (MultiSig era) ->
+  KeySpace era ->
+  Tx era ->
+  Delta era ->
+  Tx era
+applyDelta
+  neededKeys
+  neededScripts
+  (KeySpace_ {ksIndexedPaymentKeys, ksIndexedStakingKeys})
+  tx@(Tx body@TxBody {_inputs, _outputs, _txfee} _wits _md)
+  (Delta deltafees extraIn _extraWits change extraKeys extraScripts) =
+    --fix up the witnesses here?
+    -- Adds extraInputs, extraWitnesses, and change from delta to tx
+    let outputs' = _outputs StrictSeq.|> change
+        body' =
+          body
+            { _txfee = deltafees,
+              _inputs = _inputs <> extraIn,
+              _outputs = outputs'
+            }
+        kw = neededKeys <> extraKeys
+        sw = neededScripts <> mkScriptWits extraScripts mempty
+        newWitnessSet = mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys kw sw (hashAnnotated body')
+     in tx {_body = body', _witnessSet = newWitnessSet}
+
+fix :: (Eq d, Monad m) => (d -> m d) -> d -> m d
+fix f d = do d1 <- f d; if d1 == d then pure d else fix f d1
+
+converge ::
+   (Era era, Mock (Crypto era)) =>
+  Coin ->
+  [KeyPair 'Witness era] ->
+  Map (ScriptHash era) (MultiSig era) ->
+  KeyPairs era ->
+  MultiSigPairs era ->
+  UTxO era ->
+  PParams era ->
+  KeySpace era ->
+  Tx era ->
+  Gen (Tx era)
+converge initialfee neededKeys neededScripts randomKeys randomScripts utxo pparams keySpace tx = do
+  delta <- genNextDeltaTilFixPoint initialfee randomKeys randomScripts utxo pparams keySpace tx
+  pure (applyDelta neededKeys neededScripts keySpace tx delta)
+
+-- ======================================================
 
 genTimeToLive :: SlotNo -> Gen SlotNo
 genTimeToLive currentSlot = do
   ttl <- genNatural 50 100
   pure $ currentSlot + SlotNo (fromIntegral ttl)
 
-mkScriptWits ::
-  (HasCallStack, Era era) =>
+mkScriptWits :: forall era. Era era =>
   [(MultiSig era, MultiSig era)] ->
   [(MultiSig era, MultiSig era)] ->
   Map (ScriptHash era) (MultiSig era)
@@ -273,15 +434,17 @@ mkScriptWits payScripts stakeScripts =
     (hashPayScript <$> payScripts)
       ++ (hashStakeScript <$> stakeScripts)
   where
-    hashPayScript (payScript, _) = (hashScript payScript, payScript)
-    hashStakeScript (_, sScript) = (hashScript sScript, sScript)
+    hashPayScript :: (MultiSig era, MultiSig era) -> (ScriptHash era,  MultiSig era)
+    hashPayScript (payScript, _) = ((hashScript payScript)::ScriptHash era, payScript)
+    hashStakeScript :: (MultiSig era, MultiSig era) -> (ScriptHash era,  MultiSig era)
+    hashStakeScript (_, sScript) = ((hashScript sScript)::ScriptHash era, sScript)
 
 mkTxWits ::
-  (Era era, HasCallStack, Mock (Crypto era)) =>
-  Map (KeyHash 'Payment era) (KeyPair 'Payment era) ->
-  Map (KeyHash 'Staking era) (KeyPair 'Staking era) ->
-  [KeyPair 'Witness era] ->
-  Map (ScriptHash era) (MultiSig era) ->
+  (Era era,Mock (Crypto era)) =>
+  Map (KeyHash 'Payment  era) (KeyPair 'Payment  era) ->
+  Map (KeyHash 'Staking  era) (KeyPair 'Staking  era) ->
+  [KeyPair 'Witness  era] ->
+  Map (ScriptHash  era) (MultiSig  era) ->
   Hash era (TxBody era) ->
   WitnessSet era
 mkTxWits
@@ -318,7 +481,7 @@ mkTxWits
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody ::
-  (HasCallStack, Era era) =>
+  (Era era) =>
   [TxIn era] ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert era) ->
@@ -346,21 +509,22 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL mdHash = do
 --
 -- The idea is to have an specified spending balance and fees that must be paid
 -- by the selected addresses.
-calcOutputsFromBalance ::
-  (HasCallStack, Era era) =>
-  Coin ->
+-- TODO need right splitting of v!
+calcOutputsFromBalance :: forall v era.
+  (Era era,Split v) =>
+  v ->
   [Addr era] ->
   Coin ->
   (Coin, StrictSeq (TxOut era))
 calcOutputsFromBalance balance_ addrs fee =
-  ( fee <> splitCoinRem,
-    (`TxOut` amountPerOutput) <$> StrictSeq.fromList addrs
+  ( fee <+> splitCoinRem,
+    StrictSeq.fromList $ zipWith TxOut addrs (map coin amountPerOutput)
   )
   where
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.
-    balanceAfterFee = balance_ Val.~~ fee
-    (amountPerOutput, splitCoinRem) = splitCoin balanceAfterFee (fromIntegral $ length addrs)
+    balanceAfterFee = balance_  <-> (inject fee)
+    (amountPerOutput, splitCoinRem) = vsplit balanceAfterFee (fromIntegral $ length addrs)
 
 -- | Select unspent output(s) to serve as inputs for a new transaction
 --
@@ -372,14 +536,14 @@ calcOutputsFromBalance balance_ addrs fee =
 -- given UTxO originated from (in order to produce the appropriate witnesses to
 -- spend these outputs). If this is not the case, `findPayKeyPairAddr` /
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
-genInputs ::
-  (HasCallStack, Era era) =>
-  Constants ->
+genInputs :: forall v era.
+   (Era era,Val v) =>
+  (Int, Int) ->
   Map (KeyHash 'Payment era) (KeyPair 'Payment era) ->
   Map (ScriptHash era) (MultiSig era, MultiSig era) ->
   UTxO era ->
-  Gen ([TxIn era], Coin, ([KeyPair 'Witness era], [(MultiSig era, MultiSig era)]))
-genInputs Constants {minNumGenInputs, maxNumGenInputs} keyHashMap payScriptMap (UTxO utxo) = do
+  Gen ([TxIn era], v, ([KeyPair 'Witness  era], [(MultiSig era, MultiSig era)]))
+genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   selectedUtxo <-
     take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
       <*> QC.shuffle (Map.toList utxo)
@@ -387,7 +551,7 @@ genInputs Constants {minNumGenInputs, maxNumGenInputs} keyHashMap payScriptMap (
   let (inputs, witnesses) = unzip (witnessedInput <$> selectedUtxo)
   return
     ( inputs,
-      balance (UTxO (Map.fromList selectedUtxo)),
+      inject $ balance (UTxO (Map.fromList selectedUtxo)),
       Either.partitionEithers witnesses
     )
   where
@@ -399,7 +563,7 @@ genInputs Constants {minNumGenInputs, maxNumGenInputs} keyHashMap payScriptMap (
 
 -- | Select a subset of the reward accounts to use for reward withdrawals.
 genWithdrawals ::
-  (HasCallStack, Era era) =>
+  (Era era) =>
   Constants ->
   Map (ScriptHash era) (MultiSig era, MultiSig era) ->
   Map (KeyHash 'Staking era) (KeyPair 'Staking era) ->
@@ -417,43 +581,44 @@ genWithdrawals
     }
   ksIndexedStakeScripts
   ksIndexedStakingKeys
-  wdrls =
-    QC.frequency
-      [ ( frequencyNoWithdrawals,
-          pure ([], ([], []))
-        ),
-        ( frequencyAFewWithdrawals,
-          genWrdls (take maxAFewWithdrawals . Map.toList $ wdrls)
-        ),
-        ( frequencyPotentiallyManyWithdrawals,
-          genWrdls (Map.toList wdrls)
-        )
-      ]
+  wdrls = do
+    (a, b) <-
+      QC.frequency
+        [ ( frequencyNoWithdrawals,
+            pure ([], ([], []))
+          ),
+          ( frequencyAFewWithdrawals,
+            genWrdls (take maxAFewWithdrawals . Map.toList $ wdrls)
+          ),
+          ( frequencyPotentiallyManyWithdrawals,
+            genWrdls (Map.toList wdrls)
+          )
+        ]
+    pure ( a, b)
     where
-      toRewardAcnt (rwd, coin) = (RewardAcnt Testnet rwd, coin)
+      toRewardAcnt (rwd, coinx) = (RewardAcnt Testnet rwd, coinx)
       genWrdls wdrls_ = do
         selectedWrdls <- map toRewardAcnt <$> QC.sublistOf wdrls_
         let wits = (mkWdrlWits ksIndexedStakeScripts ksIndexedStakingKeys . getRwdCred . fst) <$> selectedWrdls
         return (selectedWrdls, Either.partitionEithers wits)
 
 -- | Collect witnesses needed for reward withdrawals.
-mkWdrlWits ::
-  (HasCallStack, Era era) =>
+mkWdrlWits :: Era era =>
   Map (ScriptHash era) (MultiSig era, MultiSig era) ->
   Map (KeyHash 'Staking era) (KeyPair 'Staking era) ->
   Credential 'Staking era ->
   Either (KeyPair 'Witness era) (MultiSig era, MultiSig era)
-mkWdrlWits scriptsByStakeHash _ era@(ScriptHashObj _) =
+mkWdrlWits scriptsByStakeHash _ c@(ScriptHashObj _) =
   Right $
-    findStakeScriptFromCred (asWitness era) scriptsByStakeHash
-mkWdrlWits _ keyHashMap era@(KeyHashObj _) =
+    findStakeScriptFromCred (asWitness c) scriptsByStakeHash
+mkWdrlWits _ keyHashMap c@(KeyHashObj _) =
   Left $
     asWitness $
-      findPayKeyPairCred era keyHashMap
+      findPayKeyPairCred c keyHashMap
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients ::
-  (HasCallStack, Era era) =>
+  (Era era) =>
   Int ->
   KeyPairs era ->
   MultiSigPairs era ->
@@ -488,7 +653,7 @@ genRecipients len keys scripts = do
 
   return (zipWith (Addr Testnet) payCreds stakeCreds')
 
-genPtrAddrs :: HasCallStack => DState h -> [Addr h] -> Gen [Addr h]
+genPtrAddrs :: DState h -> [Addr h] -> Gen [Addr h]
 genPtrAddrs ds addrs = do
   let pointers = forwards (_ptrs ds)
 

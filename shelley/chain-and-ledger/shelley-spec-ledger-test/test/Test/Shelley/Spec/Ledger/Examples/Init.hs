@@ -41,7 +41,7 @@ import Shelley.Spec.Ledger.Slot
     SlotNo (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val((<->))
 import Test.Shelley.Spec.Ledger.Examples.Federation (genDelegs)
 import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash, unsafeMkUnitInterval)
 
@@ -103,7 +103,7 @@ initSt utxo =
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
     (EpochNo 0)
     utxo
-    (maxLLSupply Val.~~ (balance utxo))
+    (maxLLSupply <-> (balance utxo))
     genDelegs
     ppEx
     (nonce0 @era)

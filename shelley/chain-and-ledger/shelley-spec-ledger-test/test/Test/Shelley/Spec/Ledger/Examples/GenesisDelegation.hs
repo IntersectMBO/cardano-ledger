@@ -47,7 +47,7 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val((<->))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -110,7 +110,7 @@ feeTx1 :: Coin
 feeTx1 = Coin 1
 
 aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin Val.~~ feeTx1
+aliceCoinEx1 = aliceInitCoin <-> feeTx1
 
 txbodyEx1 :: Era era => TxBody era
 txbodyEx1 =

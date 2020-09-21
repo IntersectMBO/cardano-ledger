@@ -63,7 +63,7 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (getKeyCombination)
 import Shelley.Spec.Ledger.TxBody (Ix)
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val((<×>))
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..))
@@ -177,7 +177,7 @@ genDCerts
     pure
       ( StrictSeq.fromList certs,
         totalDeposits pparams (_pParams (_pstate dpState)) certs,
-        Val.scale (length deRegStakeCreds) (_keyDeposit pparams),
+        (length deRegStakeCreds) <×> (_keyDeposit pparams),
         lastState_,
         ( concat (keyCredAsWitness <$> keyCreds'),
           scriptCredMultisig <$> scriptCreds

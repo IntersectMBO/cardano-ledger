@@ -32,7 +32,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.Iterate.SetAlgebra (eval, (◁))
@@ -328,7 +328,7 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
   | otherwise =
     c
       <> rationalToCoinViaFloor
-        (coinToRational (f Val.~~ c) * (m' + (1 - m') * s / sigma))
+        (coinToRational (f <-> c) * (m' + (1 - m') * s / sigma))
   where
     (c, m, _) = poolSpec pool
     m' = unitIntervalToRational m

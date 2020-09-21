@@ -16,7 +16,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
   )
 where
 
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val((<->), (<+>))
 import Control.Iterate.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
 import Control.State.Transition.Extended (TRC (TRC))
 import Control.State.Transition.Trace
@@ -158,7 +158,7 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
             . chainNes
             $ source
         )
-        Val.~~ fold
+        <->  fold
           ( _rewards . _dstate
               . _delegationState
               . esLState
@@ -171,13 +171,13 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
 -- increases by Withdrawals min Fees (for all transactions in a block)
 utxoDepositsIncreaseByFeesWithdrawals :: SourceSignalTarget (CHAIN C) -> Property
 utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target} =
-  circulation target Val.~~ circulation source
-    === withdrawals signal Val.~~ txFees signal
+  circulation target <-> circulation source
+    === withdrawals signal <-> txFees signal
   where
     circulation chainSt =
       let es = (nesEs . chainNes) chainSt
           (UTxOState {_utxo = u, _deposited = d}) = (_utxoState . esLState) es
-       in balance u <> d
+       in balance u <+> d
 
 -- | Reconstruct a LEDGER trace from the transactions in a Block and ChainState
 --
@@ -205,12 +205,12 @@ ledgerTraceFromBlock chainSt block =
 -- increases by sum of withdrawals for all transactions in a block
 potsSumIncreaseWdrlsPerBlock :: SourceSignalTarget (CHAIN C) -> Property
 potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
-  potsSum target Val.~~ potsSum source === withdrawals signal
+  potsSum target <-> potsSum source === withdrawals signal
   where
     potsSum chainSt =
       let (UTxOState {_utxo = u, _deposited = d, _fees = f}) =
             _utxoState . esLState . nesEs . chainNes $ chainSt
-       in balance u <> d <> f
+       in balance u <+> d <+> f
 
 -- | If we are not at an Epoch Boundary , then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals in a transaction
@@ -227,7 +227,7 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
           signal = tx,
           target = (UTxOState {_utxo = u', _deposited = d', _fees = f'}, _)
         } =
-        (balance u' <> d' <> f') Val.~~ (balance u <> d <> f) === fold (unWdrl . _wdrls $ _body tx)
+        (balance u' <+> d' <+> f') <-> (balance u <+> d <+> f) === fold (unWdrl . _wdrls $ _body tx)
 
 -- | Preserve the balance in a transaction, i.e., the sum of the consumed value
 -- equals the sum of the created value.
@@ -252,12 +252,12 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         pools = _pParams . _pstate $ dstate
         created =
           balance u'
-            <> _txfee txb
-            <> totalDeposits pp_ pools certs
+            <+> _txfee txb
+            <+> totalDeposits pp_ pools certs
         consumed_ =
           balance u
-            <> keyRefunds pp_ txb
-            <> fold (unWdrl . _wdrls $ txb)
+            <+> keyRefunds pp_ txb
+            <+> fold (unWdrl . _wdrls $ txb)
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted :: SourceSignalTarget (CHAIN C) -> Property

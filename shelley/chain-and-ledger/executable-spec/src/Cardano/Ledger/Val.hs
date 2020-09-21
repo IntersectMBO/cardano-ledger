@@ -18,11 +18,14 @@
 -- > import qualified Cardano.Ledger.Val as Val
 module Cardano.Ledger.Val
   ( Val (..),
-    (~~),
+    (<+>),
+    (<->),
+    (<×>),
+    invert,
+    sumVal,
     scaledMinDeposit,
 
     -- * Re-exports
-    Data.Group.invert,
     (Data.PartialOrd.<=),
     (Data.PartialOrd.>=),
     (Data.PartialOrd.==),
@@ -38,7 +41,7 @@ import Cardano.Binary
     ToCBOR (..),
   )
 import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
-import Data.Group (Abelian, Group (invert))
+import Data.Group (Abelian)
 import Data.PartialOrd hiding ((==))
 import qualified Data.PartialOrd
 import Data.Typeable (Typeable)
@@ -74,10 +77,30 @@ class
   size :: t -> Integer -- compute size of Val instance
   -- TODO add PACK/UNPACK stuff to this class
 
--- | Group subtraction. When we move to groups-0.5 we can export this from
--- there.
-(~~) :: Group g => g -> g -> g
-a ~~ b = a <> invert b
+-- =============================================================
+-- Infix synonyms with types fixed at (Val t). Makes calls easier
+-- to read, and gives better error messages, when a mistake is made
+
+infixl 6 <+>
+
+infixl 6 <->
+
+infixl 7 <×>
+
+(<+>) :: Val t => t -> t -> t
+x <+> y = x <> y
+
+(<->) :: Val t => t -> t -> t
+x <-> y = x <+> (invert y)
+
+(<×>) :: Val t => Int -> t -> t
+x <×> y = scale x y
+
+invert :: Val t => t -> t
+invert x = scale (-1 :: Int) x
+
+sumVal :: (Foldable t, Val v) => t v -> v
+sumVal xs = foldl (<+>) mempty xs
 
 instance Val Coin where
   scale n (Coin x) = Coin $ (fromIntegral n) * x

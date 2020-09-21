@@ -12,7 +12,7 @@ module Shelley.Spec.Ledger.STS.PoolReap
   )
 where
 
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Control.State.Transition
@@ -93,7 +93,7 @@ poolReapTransition = do
       pr = Map.fromList $ fmap (\kh -> (kh, _poolDeposit pp)) (Set.toList retired)
       rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ (_pParams ps))
       rewardAcnts' =
-        Map.fromListWith (<>)
+        Map.fromListWith (<+>)
           . Map.elems
           $ Map.intersectionWith (,) rewardAcnts pr
       (refunds, mRefunds) =
@@ -105,8 +105,8 @@ poolReapTransition = do
 
   pure $
     PoolreapState
-      us {_deposited = _deposited us Val.~~ (unclaimed <> refunded)}
-      a {_treasury = _treasury a <> unclaimed}
+      us {_deposited = _deposited us <-> (unclaimed <+> refunded)}
+      a {_treasury = _treasury a <+> unclaimed}
       ds
         { _rewards = eval (_rewards ds ∪+ refunds),
           _delegations = eval (_delegations ds ⋫ retired)

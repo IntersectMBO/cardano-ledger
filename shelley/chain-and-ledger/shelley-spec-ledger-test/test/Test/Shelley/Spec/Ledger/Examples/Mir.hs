@@ -59,7 +59,7 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val((<->),(<+>))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -107,8 +107,8 @@ initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
     as = esAccountState . nesEs . chainNes $ cs
     as' =
       as
-        { _treasury = (_treasury as) <> treasury,
-          _reserves = (_reserves as) Val.~~ treasury
+        { _treasury = (_treasury as) <+> treasury,
+          _reserves = (_reserves as) <-> treasury
         }
     es' = (nesEs $ chainNes cs) {esAccountState = as'}
 
@@ -126,7 +126,7 @@ feeTx1 :: Coin
 feeTx1 = Coin 1
 
 aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin Val.~~ (feeTx1 <> _keyDeposit ppEx)
+aliceCoinEx1 = aliceInitCoin <-> (feeTx1 <+> _keyDeposit ppEx)
 
 txbodyEx1 :: Era era => MIRPot -> TxBody era
 txbodyEx1 pot =

@@ -77,6 +77,7 @@ library
     cryptonite,
     directory,
     generic-random,
+    hashable,
     hedgehog-quickcheck,
     hedgehog,
     iproute,

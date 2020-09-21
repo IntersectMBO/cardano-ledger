@@ -1,25 +1,30 @@
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE  FlexibleContexts #-}
 
 -- | Benchmarks for Shelley test generators.
-module Shelley.Spec.Ledger.Bench.Gen where
+module Shelley.Spec.Ledger.Bench.Gen
+  ( genTriple,
+    genBlock,
+    genChainState,
+  ) where
+
+import Cardano.Ledger.Era(Crypto, Era)
 
 import Control.State.Transition.Extended (IRC (..))
 import Data.Either (fromRight)
-import Data.Proxy (Proxy (..))
+import Data.Proxy
 import Shelley.Spec.Ledger.API
   ( Block,
-    ChainState,
+    ChainState(..),
     Tx,
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( emptyDPState,
+  ( LedgerState(..),
+    NewEpochState(..),
+    EpochState(..),
   )
 import Test.QuickCheck (generate)
-import Test.Shelley.Spec.Ledger.BenchmarkFunctions
-  ( B,
-    initUTxO,
-    ledgerEnv,
-  )
 import qualified Test.Shelley.Spec.Ledger.Generator.Block as GenBlock
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants
@@ -28,23 +33,20 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
         minGenesisUTxOouts
       ),
   )
-import Test.Shelley.Spec.Ledger.Generator.Core (geConstants)
-import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv, geConstants)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
-import qualified Test.Shelley.Spec.Ledger.Generator.Utxo as GenUTxO
+import Test.Shelley.Spec.Ledger.Serialisation.Generators()  -- Arbitrary Coin
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes(Mock)
+import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
+import Test.Shelley.Spec.Ledger.Generator.Utxo(genTx)
+import Test.Shelley.Spec.Ledger.BenchmarkFunctions(ledgerEnv)
 
--- | Benchmark generating transaction given a UTxO size.
-genTx :: Integer -> IO (Tx B)
-genTx n =
-  let st = (initUTxO n, emptyDPState)
-      ge = genEnv (Proxy @B)
-   in generate $ GenUTxO.genTx ge ledgerEnv st
+-- =============================================================================
 
 -- | Generate a genesis chain state given a UTxO size
-genChainState :: Int -> IO (ChainState B)
-genChainState n =
-  let ge = genEnv (Proxy @B)
-      cs =
+genChainState :: Era era => Int -> GenEnv era -> IO (ChainState era)
+genChainState n ge =
+  let cs =
         (geConstants ge)
           { minGenesisUTxOouts = n,
             maxGenesisUTxOouts = n,
@@ -59,7 +61,25 @@ genChainState n =
             )
 
 -- | Benchmark generating a block given a chain state.
-genBlock :: ChainState B -> IO (Block B)
-genBlock cs =
-  let ge = genEnv (Proxy @B)
-   in generate $ GenBlock.genBlock ge cs
+genBlock :: (Mock (Crypto era),Era era) => GenEnv era -> ChainState era -> IO (Block era)
+genBlock ge cs = generate $ GenBlock.genBlock ge cs
+
+
+-- The order one does this is important, since all these things must flow from the same
+-- GenEnv, so that the addresses ind signatures in the UTxO are known and consistent.
+-- 1) genEnv from a (Proxy era)
+-- 2) genChainState from a GenEnv
+-- 3) get a UTxOState from the ChainState
+-- 4) get a DPState from the ChainState
+-- 5) get a Transaction (Tx) from GenEnv and ChainState
+
+
+genTriple :: (Mock (Crypto era),Era era) => Proxy era -> Int -> IO(GenEnv era, ChainState era, GenEnv era -> IO (Tx era))
+genTriple proxy n = do
+  let ge = genEnv proxy
+  cs <- genChainState n ge
+  let nes = chainNes cs  -- NewEpochState
+  let es = nesEs nes     -- EpochState
+  let (LedgerState utxoS dpstate) = esLState es   -- LedgerState
+  let fun genenv = generate $ genTx genenv ledgerEnv (utxoS,dpstate)
+  pure (ge,cs,fun)

@@ -97,7 +97,7 @@ import Shelley.Spec.Ledger.TxBody
     pattern RewardAcnt,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val((<->), (<+>))
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( testBootstrapNotSpending,
@@ -338,7 +338,7 @@ aliceGivesBobLovelace
       signers
     } = Tx txbody mempty {addrWits = awits} SNothing
     where
-      aliceCoin = aliceInitCoin <> refunds Val.~~ (toBob <> fee <> deposits)
+      aliceCoin = aliceInitCoin <+> refunds <-> (toBob <+> fee <+> deposits)
       txbody =
         TxBody
           (Set.singleton input)

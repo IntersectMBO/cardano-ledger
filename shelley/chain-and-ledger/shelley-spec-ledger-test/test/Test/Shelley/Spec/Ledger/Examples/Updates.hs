@@ -55,7 +55,7 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val((<->), (<+>))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -137,7 +137,7 @@ feeTx1 :: Coin
 feeTx1 = Coin 1
 
 aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin Val.~~ feeTx1
+aliceCoinEx1 = aliceInitCoin <-> feeTx1
 
 txbodyEx1 :: Era era => TxBody era
 txbodyEx1 =
@@ -212,7 +212,7 @@ feeTx2 :: Coin
 feeTx2 = Coin 1
 
 aliceCoinEx2 :: Coin
-aliceCoinEx2 = aliceCoinEx1 Val.~~ feeTx2
+aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
 txbodyEx2 :: Era era => TxBody era
 txbodyEx2 =
@@ -305,7 +305,7 @@ feeTx3 :: Coin
 feeTx3 = Coin 1
 
 aliceCoinEx3 :: Coin
-aliceCoinEx3 = aliceCoinEx2 Val.~~ feeTx3
+aliceCoinEx3 = aliceCoinEx2 <-> feeTx3
 
 txbodyEx3 :: Era era => TxBody era
 txbodyEx3 =
@@ -390,7 +390,7 @@ ppExUpdated = ppEx {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 1
 expectedStEx4 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
 expectedStEx4 =
   C.newEpoch blockEx4
-    . C.newSnapshot EB.emptySnapShot (feeTx1 <> feeTx2 <> feeTx3)
+    . C.newSnapshot EB.emptySnapShot (feeTx1 <+> feeTx2 <+> feeTx3)
     . C.applyRewardUpdate emptyRewardUpdate
     . C.setCurrentProposals (collectVotes ppVoteB [1])
     . C.setFutureProposals (ProposedPPUpdates Map.empty)
