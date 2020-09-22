@@ -22,7 +22,6 @@ import Control.State.Transition.Extended (IRC, TRC (..))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Functor.Identity (runIdentity)
 import qualified Data.Sequence as Seq
-import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -46,7 +45,7 @@ import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkTx)
 import Test.Shelley.Spec.Ledger.Utils (applySTSTest, runShelleyBase)
 
-genAccountState :: HasCallStack => Constants -> Gen AccountState
+genAccountState :: Constants -> Gen AccountState
 genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
   AccountState
     <$> genCoin minTreasury maxTreasury

@@ -6,11 +6,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
+import Cardano.Ledger.Era (Era(..))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -103,7 +106,7 @@ import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( testBootstrapNotSpending,
     testBootstrapSpending,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes(C, C_Crypto)
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
@@ -115,33 +118,41 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-alicePay :: KeyPair 'Payment C
+import Cardano.Crypto.DSIGN.Class(SignKeyDSIGN,VerKeyDSIGN)
+import Cardano.Ledger.Crypto(DSIGN)
+
+-- ========================================================================================
+-- |- This constraint says we can coerce Numbers into a signable keys
+type NumKey era = (Num (SignKeyDSIGN (DSIGN (Crypto era))), Num (VerKeyDSIGN (DSIGN (Crypto era))))
+
+
+alicePay :: NumKey era => KeyPair 'Payment era
 alicePay = KeyPair 1 1
 
-aliceStake :: KeyPair 'Staking C
+aliceStake :: NumKey era => KeyPair 'Staking era
 aliceStake = KeyPair 2 2
 
-aliceAddr :: Addr C
+aliceAddr :: (NumKey era,Era era) => Addr era
 aliceAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey alicePay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay :: KeyPair 'Payment C
+bobPay ::  NumKey era => KeyPair 'Payment era
 bobPay = KeyPair 3 3
 
-bobStake :: KeyPair 'Staking C
+bobStake :: NumKey era => KeyPair 'Staking era
 bobStake = KeyPair 4 4
 
-bobAddr :: Addr C
+bobAddr ::  (NumKey era,Era era) => Addr era
 bobAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey bobPay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
 
-pp :: PParams C
+pp :: PParams era
 pp =
   emptyPParams
     { _minfeeA = 1,
@@ -670,7 +681,7 @@ testPoolCostTooSmall =
     [ DelegsFailure
         ( DelplFailure
             ( PoolFailure
-                ( StakePoolCostTooLowPOOL (_poolCost alicePoolParamsSmallCost) (_minPoolCost pp)
+                ( StakePoolCostTooLowPOOL (_poolCost alicePoolParamsSmallCost) (_minPoolCost (pp @C))
                 )
             )
         )
