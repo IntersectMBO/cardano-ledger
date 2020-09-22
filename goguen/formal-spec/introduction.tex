@@ -1,0 +1,33 @@
+\section{Introduction}
+
+The main changes described in this document are extending the UTxO
+model of the Shelley era and the introduction of scripts that are not
+evaluated by the ledger.
+
+The transition from a Shelley ledger to a Goguen ledger model includes, most
+notably, a change from a basic UTxO model to an extended UTxO model, which
+we denote EUTxO in this document.
+
+\begin{note}
+  Give a short explanation of EUTxO (incl. validators and redeemers)
+  and native vs non-native languages (incl. cost models and exunits).
+\end{note}
+
+Native scripts on the other hand, are processed entirely by the ledger rules.
+Currently, this includes only the multisignature scripts.
+Because of this, their execution cost can easily be assessed before processing them.
+In the current version of the Shelley ledger, there is no assessment of cost
+of checking multisignatures (abbreviated MSig's). Instead, any additional fees 
+incurred as a result of
+spending MSig-locked outputs are proportional to the change in transaction
+size due to including all the necessary signatures (rather than the
+cost of verifying them). Therefore, the transaction size is the only
+value needed to calculate the fees of all Shelley transactions, and MSig
+scripts do not require any cost model.
+\begin{note}
+  I don't really buy that argument. The size includes a bunch of other
+  stuff, and I don't see any reason why two transactions of the same
+  size couldn't have processing costs differing by a factor of 3 or
+  so. One could argue that it's cheap in general, and the cost grows
+  linearly in the size, so we don't really care.
+\end{note}

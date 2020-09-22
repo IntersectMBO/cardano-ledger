@@ -36,10 +36,19 @@
 \begin{itemize}
 \item $\UTxO$ entries are stored in the finite map $\UTxOIn\mapsto \UTxOOut$.
 
-    \item $\UTxOIn$ is the type of the keys in the UTxO finite map. This
+  \item $\UTxOIn$ is the type of the keys in the UTxO finite map. This
   is the same as the type of UTxO keys in Shelley, but we have changed
   the name because the types of transaction inputs and UTxO keys
   differ in Goguen.
+
+  \item $\UTxOOut$ is the type of UTxO entry that gets created when a transaction
+  output is processed. Note that, like in the case of the type of transaction inputs,
+  the type of a transaction output is distinct from the type of the
+  UTxO entry that gets created with the transaction output data.
+
+  The (extended) UTxO entries in the Goguen era include the slot numbers associated with each output
+  to indicate when the output was created.
+  This feature will be used for functionality that will be added in the future.
 
   \item $\CurItem$ is either the hash of a
   forging script (currency ID), the current transaction input being
@@ -59,7 +68,10 @@ given in Figure \ref{fig:functions:insouts}. These include
 
 \begin{itemize}
   \item the function $\fun{txinputs_{vf}}$ returns only those transaction inputs
-  that were selected to pay transaction fees (we call these "fee-marked" inputs)
+    that were selected to pay transaction fees (we call these "fee-marked" inputs)
+    \begin{note}
+      Make it more obvious that we check that the fee inputs only contain Ada, maybe mention it elsewhere
+    \end{note}
   \item the predicate function $\fun{feesOK}$ checks whether the transaction is
   paying the necessary fees, and correctly. That is, it checks that
   \begin{itemize}

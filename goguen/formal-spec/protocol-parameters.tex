@@ -1,136 +1,84 @@
 \section{Protocol Parameters}
 \label{sec:protocol-parameters}
 
-The transition from a Shelley ledger to a Goguen ledger model includes, most
-notably, a change from a basic UTxO model to an extended UTxO model, which
-we denote EUTxO in this document.
-For Plutus integration, the EUTxO model, and other Goguen features, we
-require following types
+We require following types
 in addition to those already defined in the Shelley specification
 (see Figure~\ref{fig:defs:protocol-parameters}):
 
 \begin{itemize}
-  \item $\Language$: This represents the language name/tag (including the Plutus
-  version number).
+  \item $\Language$: The language name/tag, including the version number.
   \item $\ExUnits$: A term of this type has two integer values,
   $(mem, steps)$. These represent the amount of memory used and number
   of steps performed during the execution of a script
   respectively. These values are intentionally not in terms of any
   concrete units.
-  \item $\CostMod$: A term of this type represents the vector of coefficients used to generate
-  a term of type $\ExUnits$ given a vector of some resource primitives. This type is
-  abstract in our specification, and will come from the Plutus interpreter
-  implementation. The
-  conversion to $\ExUnits$ is also done by the interpreter (thus, is opaque to the ledger rules).
+\item $\CostMod$: The cost model is used by a language interpreter to
+  calculate the $\ExUnits$ used by a script. If the efficiency of a
+  script interpreter is improved, this parameter can be adjusted to
+  lower script execution units (and thus prices) without a hard fork.
   \item $\Prices$: A term of type is made up of three integer values,
-  $\var{(pr_{init}, pr_{mem}, pr_{steps})}$. The first ($pr_{init}$) represents the initial
-  cost of running a script. The $pr_{mem}$ is a price for a unit of memory
+  $\var{(pr_{init}, pr_{mem}, pr_{steps})}$. $pr_{init}$ represents a fixed
+  cost of running a script, $pr_{mem}$ is a price for a unit of memory
   used by script execution, and $pr_{steps}$ is the price per
   reduction step. It is used to calculate the cost of using an amount of execution
   units.
 \end{itemize}
 
-We also added several protocol parameters and accessor functions necessary for
-Plutus integration.
-
-\subsection{Plutus vs. Native Script Languages}
-\label{sec:plutus-native}
-
-All the newly added protocol parameter values have to do with limiting and calculating
+Several additional protocol parameters and accessor functions are also necessary.
+All the newly added protocol parameters are related to limiting and calculating
 the script execution cost.
-These are only relevant for processing scripts that are opaque
-to the ledger, that is, scripts that are not processed by the ledger rules,
-but rather by using an interpreter. Currently, this refers specifically
-to Plutus scripts. Because the ledger knows only the validation result, and
-nothing about their execution, it relies on the interpreter to compute resources
-used during the validation process. Hence the need for these parameters,
-the use of which is discussed below.
-
-Native scripts on the other hand, are processed entirely by the ledger rules.
-Currently, this includes only the multisignature scripts.
-Because of this, their execution cost can easily be assessed before processing them.
-In the current version of the Shelley ledger, there is no assessment of cost
-of checking multisignatures (abbreviated MSig's). Instead, any additional fees 
-incurred as a result of
-spending MSig-locked outputs are proportional to the change in transaction
-size due to including all the necessary signatures (rather than the
-cost of verifying them). Therefore, the transaction size is the only
-value needed to calculate the fees of all Shelley transactions, and MSig
-scripts do not require any cost model.
-
-Scripts in any future native scripting languages will also
-have their cost analyzed by the ledger rules ahead of running them.
-The $\Prices, \ExUnits$ or $\CostMod$ types will not be used
-in processing native scripts. There will be language-specific
-costing strategies added as needed to asses the running cost.
-The running cost will be used in calculating the minimum transaction
-fee, and its payment verified by comparing the minimum fee to the fee the transaction
-is actually paying.
+They are only relevant for processing scripts that are opaque
+to the ledger, that is, scripts that are processed by external an interpreter.
 
 \subsection{Plutus Versions}
 \label{sec:versions}
 
-Each
-version of Plutus (identified by a $\Language$ value) is considered a different
-language. Each language
-has a (version-specific) set of arguments passed to the interpreter
-for script evaluation. At the time of this writing, the type should contain
-the value $\Plutus$, but it is expected to contain more values in the future.
-
-The ledger is expected to be capable of running Plutus scripts of
-all existing versions at all times. This means maintaining any ledger
-data nedeed by any version. Introducing a new version of Plutus
-into the set of supported versions is a hard fork, as the actual ledger rules
+The ledger is expected to be capable of running any script it ever
+supported at all times. This means maintaining any ledger
+data nedeed by any version. Introducing a new language or version of an existing language
+into the set of languages is a hard fork, as the actual ledger rules
 and code must be updated manually to use the new interpreter.
 
 \subsection{Plutus Script Evaluation Determinism}
 \label{sec:determinism}
 
+Data passed to the interpreter
+includes the validator, redeemer, information about the transaction carrying
+the script, and some ledger data or protocol parameters.
+The exact set of arguments may depend on the language (as identified by a $\Language$ value).
+
 A change in data passed to the interpreter for
 validating a given script can cause a change in the validation result. Such
 a change may occur between the time a transaction is submitted by the wallet
-and the time the block containing it is processed. Data passed to the interpreter
-includes the validator, redeemer, information about the transaction carrying
-the script, and some ledger data or protocol parameters.
-The exact set of arguments may be different for different versions.
-It is necessary to maintain a predictable
-(deterministic) validation outcome over this period (between transaction
-submission and script processing).
+and the time the block containing it is processed. 
 
-To guarantee a deterministic outcome,
-any data passed to the interpreter must be
+It is necessary to maintain a deterministic validation outcome over this period,
+so any data passed to the interpreter must be
 the same as it was at the time the transaction carrying this script was
 constructed.
-Because of this requirement, the carrying transation includes the hash of any such data.
-This hash is compared with
-a hash of the same subset of ledger or parameter data computed at the time the transaction is being
-processed. If these hashes do not match, the interpreter is never invoked.
+To ensure this, the carrying transation includes the hash of any such data.
+If the hash does not match the data passed to the interpreter, it is never invoked.
 This check is part of the two-phase validation model for saving time and computation
-resources during transaction processing (see Section~\ref{sec:utxo}).
+resources during transaction processing (see Section~\ref{sec:two-phase}).
 
 The function $\fun{hashLanguagePP}$ selects the protocol parameters relevant to
 the a given set of languages and computes their hash.
 See Figure~\ref{fig:defs:protocol-parameters}.
-
-The only parameter passed to the interpreter (at this time, for any version) is the cost model
-corresponding to that version. For the rule
-where this comparison is performed, see Section~\ref{sec:block-body-trans}.
+\begin{note}
+  It's probably better to separate hashing and selecting parameters.
+\end{note}
 
 \subsection{Plutus Script Evaluation Cost Model and Prices}
 \label{sec:cost-mod}
-
-A cost model is a set of the values used to convert resource
-primitives used during script validation into the
-more abstract $\ExUnits$. As this conversion is done by the Plutus interpreter,
-we leave the cost model type abstract in this specification.
-The cost models for each version are stored in the protocol
-parameters in the variable $\var{costmdls}$.
 
 Having distinct cost models for each version will allow us to discourage users from
 paying into scripts made using old versions of Plutus, which could have bugs
 in them that are fixed in newer versions. Changing the conversion coefficients
 of resource primitives into $\ExUnits$ can make paying into old versions
 more expensive.
+\begin{note}
+  This seems like a bad idea. What if funds are locked by a script that forces every output of a transaction to be locked by the same script?
+\end{note}
 
 Note here that the calculation of the actual cost, in Ada, of running
 running a script that takes $\var{exunits} \in \ExUnits$ resources to run,
@@ -142,8 +90,7 @@ used to reflect real-world prices of things like electicity or hardware.
 \textbf{Limiting Script Execution Costs.}
 The protocol parameters $\var{maxTxExUnits}$ and $\var{maxBlockExUnits}$ are
 used to limit the total per-transaction and per-script resource use of all
-types of scripts. Recall here that these only have non-trivial values for
-(non-native) Plutus scripts.
+types of scripts.
 
 \begin{figure*}[htb]
   \emph{Abstract types}
@@ -199,14 +146,9 @@ types of scripts. Recall here that these only have non-trivial values for
          \fun{hash}~(\var{lgs} \restrictdom \fun{costmdls}~{pp})
                            & \text{if~} \var{lgs} \restrictdom \fun{costmdls}~{pp} \neq \{\} \\
               \Nothing & \text{otherwise} \\
-      \end{cases} \\
-    & \text{this calculation hashes the current protocol parameters relevant to
-    the given set of versions}
+      \end{cases} 
   \end{align*}
   %
   \caption{Definitions Used in Protocol Parameters}
   \label{fig:defs:protocol-parameters}
 \end{figure*}
-
-
-\clearpage
