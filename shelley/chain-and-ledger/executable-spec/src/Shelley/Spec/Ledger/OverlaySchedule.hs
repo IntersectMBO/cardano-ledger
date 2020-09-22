@@ -29,8 +29,8 @@ import Cardano.Binary
 import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NFData, NoUnexpectedThunks)
 import Cardano.Slotting.Slot
-import qualified Data.Set as Set
 import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Keys

@@ -209,7 +209,7 @@ makeWitnessesVKey ::
   ) =>
   Hash era (TxBody era) ->
   [KeyPair kr era] ->
-  Set (WitVKey era ('Witness))
+  Set (WitVKey era ( 'Witness))
 makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
@@ -221,7 +221,7 @@ makeWitnessesFromScriptKeys ::
   Hash era (TxBody era) ->
   Map (KeyHash kr era) (KeyPair kr era) ->
   Set (KeyHash kr era) ->
-  Set (WitVKey era ('Witness))
+  Set (WitVKey era ( 'Witness))
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
