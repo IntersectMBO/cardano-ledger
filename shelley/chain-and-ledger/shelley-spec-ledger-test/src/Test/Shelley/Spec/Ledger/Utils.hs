@@ -147,7 +147,7 @@ mkGenKey seed =
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
-mkKeyPair ::
+mkKeyPair :: forall era kd.
   DSIGNAlgorithm (DSIGN (Crypto era)) =>
   (Word64, Word64, Word64, Word64, Word64) ->
   (SignKeyDSIGN (DSIGN (Crypto era)), VKey kd era)
