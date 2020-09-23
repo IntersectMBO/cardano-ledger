@@ -82,7 +82,6 @@ library
     hedgehog,
     iproute,
     multiset,
-    nonempty-containers,
     process-extras,
     QuickCheck >= 2.13.2,
     scientific,
