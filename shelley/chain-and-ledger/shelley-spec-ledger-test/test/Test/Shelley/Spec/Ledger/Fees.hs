@@ -13,7 +13,6 @@
 
 module Test.Shelley.Spec.Ledger.Fees
   ( sizeTests,
-    runLocalTest,
   )
 where
 
@@ -517,6 +516,3 @@ sizeTests = testGroup
   where
     p :: Proxy C
     p = Proxy
-
-runLocalTest :: IO ()
-runLocalTest = defaultMain sizeTests
