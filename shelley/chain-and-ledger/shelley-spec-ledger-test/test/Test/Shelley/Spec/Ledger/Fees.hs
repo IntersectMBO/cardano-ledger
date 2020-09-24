@@ -13,13 +13,12 @@
 
 module Test.Shelley.Spec.Ledger.Fees
   ( sizeTests,
-    runLocalTest,
   )
 where
 
 import Cardano.Crypto.VRF(VRFAlgorithm)
 import qualified Cardano.Ledger.Crypto as CC
-import qualified Cardano.Crypto.VRF as VV
+import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Binary (serialize)
 import Cardano.Ledger.Era (Era(..))
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -40,12 +39,10 @@ import Shelley.Spec.Ledger.API
     PoolCert (..),
     PoolParams (..),
     RewardAcnt (..),
-    -- SignKeyVRF,  -- Not sure we are importing the right SignKeyVRF
     Tx (..),
     TxBody (..),
     TxIn (..),
     TxOut (..),
-    -- VerKeyVRF,  -- or the right VerKeyVRF
     hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.BaseTypes
@@ -82,7 +79,7 @@ import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils( mkKeyPair, mkAddr,  mkVRFKeyPair, unsafeMkUnitInterval )
-import Test.Tasty (TestTree, testGroup, defaultMain)
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 sizeTest ::
@@ -117,7 +114,7 @@ alicePool = KeyPair vk sk
 alicePoolKH ::  forall era . Era era => KeyHash 'StakePool era
 alicePoolKH = (hashKey . vKey) alicePool
 
-aliceVRF:: forall v. VRFAlgorithm v => (VV.SignKeyVRF v, VV.VerKeyVRF v)
+aliceVRF:: forall v. VRFAlgorithm v => (VRF.SignKeyVRF v, VRF.VerKeyVRF v)
 aliceVRF = mkVRFKeyPair (0, 0, 0, 0, 3)
 
 alicePoolParams ::  forall era . Era era => PoolParams era
@@ -519,6 +516,3 @@ sizeTests = testGroup
   where
     p :: Proxy C
     p = Proxy
-
-runLocalTest :: IO ()
-runLocalTest = defaultMain sizeTests

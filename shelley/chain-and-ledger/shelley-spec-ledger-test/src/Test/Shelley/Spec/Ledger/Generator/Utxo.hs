@@ -563,7 +563,6 @@ genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo)
 
 -- | Select a subset of the reward accounts to use for reward withdrawals.
 genWithdrawals ::
-  (Era era) =>
   Constants ->
   Map (ScriptHash era) (MultiSig era, MultiSig era) ->
   Map (KeyHash 'Staking era) (KeyPair 'Staking era) ->
@@ -603,7 +602,7 @@ genWithdrawals
         return (selectedWrdls, Either.partitionEithers wits)
 
 -- | Collect witnesses needed for reward withdrawals.
-mkWdrlWits :: Era era =>
+mkWdrlWits ::
   Map (ScriptHash era) (MultiSig era, MultiSig era) ->
   Map (KeyHash 'Staking era) (KeyPair 'Staking era) ->
   Credential 'Staking era ->
