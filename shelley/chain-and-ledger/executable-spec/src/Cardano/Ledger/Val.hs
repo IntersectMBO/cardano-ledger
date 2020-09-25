@@ -4,7 +4,6 @@
 
 -- | This module defines a generalised notion of a "value" - that is, something
 -- with which we may quantify a transaction output.
---
 module Cardano.Ledger.Val
   ( Val (..),
     scale,
@@ -16,12 +15,10 @@ module Cardano.Ledger.Val
     mapV,
     unionWithV,
     pointWise,
-    insertWithV
+    insertWithV,
   )
 where
 
-import Data.Typeable (Typeable)
-import qualified Data.Map.Strict as Map
 import Data.Map.Internal
   ( Map (..),
     balanceL,
@@ -31,43 +28,46 @@ import Data.Map.Internal
     singleton,
     splitLookup,
   )
+import qualified Data.Map.Strict as Map
+import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 
 -- ============================================================
 
 infixl 6 <+>
+
 infixl 6 <->
+
 infixl 7 <×>
 
-class ( Eq t, Show t ) => Val t
-  where
-     -- | The Val object with a count of 0 for everything
-     zero :: t
+class (Eq t, Show t) => Val t where
+  -- | The Val object with a count of 0 for everything
+  zero :: t
 
-     -- | add two Val objects
-     (<+>) :: t -> t -> t
+  -- | add two Val objects
+  (<+>) :: t -> t -> t
 
-     -- | Subtract two Val objects
-     (<->) :: t -> t -> t
-     x <-> y = x <+> (invert y)
+  -- | Subtract two Val objects
+  (<->) :: t -> t -> t
+  x <-> y = x <+> (invert y)
 
-     -- | Scale a Val object by a constant
-     (<×>) :: Int -> t -> t
+  -- | Scale a Val object by a constant
+  (<×>) :: Int -> t -> t
 
-     -- | Invert a Val object
-     invert :: t -> t
-     invert x = (-1) <×> x
+  -- | Invert a Val object
+  invert :: t -> t
+  invert x = (-1) <×> x
 
-     -- | Is the argument zero?
-     isZero :: t -> Bool
+  -- | Is the argument zero?
+  isZero :: t -> Bool
 
-     -- | Get the ADA present in the value (since ADA is our "blessed" currency)
-     coin :: t -> Coin
+  -- | Get the ADA present in the value (since ADA is our "blessed" currency)
+  coin :: t -> Coin
 
-     -- | Create a value containing only this amount of ADA
-     inject :: Coin -> t
+  -- | Create a value containing only this amount of ADA
+  inject :: Coin -> t
 
-     size :: t -> Integer -- compute size of Val instance
+  size :: t -> Integer -- compute size of Val instance
 
 -- =============================================================
 -- Synonym for backward compatibility
@@ -77,7 +77,6 @@ scale n t = n <×> t
 
 sumVal :: (Foldable t, Val v) => t v -> v
 sumVal xs = foldl (<+>) zero xs
-
 
 {- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
 (passed to it as Coin mv) as a specification of "the cost of
@@ -138,7 +137,6 @@ scaledMinDeposit v (Coin mv)
     utxoEntrySizeWithoutVal :: Integer
     utxoEntrySizeWithoutVal = inputSize + outputSizeWithoutVal
 
-
 addrHashLen :: Integer
 addrHashLen = 28
 
@@ -146,7 +144,7 @@ uint :: Integer
 uint = 5
 
 assetIdLen :: Integer
-assetIdLen = 30   -- I have no idea what this is supposed to be
+assetIdLen = 30 -- I have no idea what this is supposed to be
 
 -- ================================================================================================
 -- There are 2 basic instances of the Val class, and most other instances are built from them
@@ -159,7 +157,7 @@ instance Val Integer where
   coin x = Coin x
   inject (Coin x) = x
   size _ = 1
-  isZero x = x==0
+  isZero x = x == 0
 
 -- ==================================================================
 -- The Coin instance inherits from Integer by newtype deriving
@@ -170,7 +168,7 @@ deriving instance Val Coin
 -- We can nest Map.Map over a Val t, and that inherits from t
 -- This means instances like (Map k1 (Map k2 (Map k3 t))) come for free if Val t
 
-instance (Typeable k,Show k,Ord k,Val t) => Val (Map.Map k t) where
+instance (Typeable k, Show k, Ord k, Val t) => Val (Map.Map k t) where
   zero = Map.empty
   x <+> y = unionWithV (<+>) x y
   s <×> x = mapV (s <×>) x
@@ -178,7 +176,6 @@ instance (Typeable k,Show k,Ord k,Val t) => Val (Map.Map k t) where
   coin _ = Coin 0
   inject (Coin _) = Map.empty
   size _ = 1
-
 
 -- | Pointwise comparison assuming the map is the Default value (zero) everywhere except where it is defined
 pointWise ::

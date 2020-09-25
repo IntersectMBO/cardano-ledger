@@ -1,17 +1,16 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GADTs #-}
-
-{-# OPTIONS_GHC -fno-warn-missing-signatures  #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unused-binds #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
-module Cardano.Ledger.Value
+module Cardano.Ledger.Value where
+
 {-
   ( PolicyID (..),
     AssetID (..),
@@ -23,14 +22,7 @@ module Cardano.Ledger.Value
     modify,
   )
   -}
-where
 
-import Prelude hiding (lookup)
-import GHC.Generics (Generic)
-import Data.ByteString (ByteString)
-import qualified Data.Map.Strict as Map
-import Data.Typeable (Typeable)
-import Data.String(fromString)
 import Cardano.Binary
   ( FromCBOR,
     ToCBOR,
@@ -41,20 +33,26 @@ import Cardano.Binary
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Val
-  ( Val(..),
-    scale,
+  ( Val (..),
     addrHashLen,
-    uint,
     assetIdLen,
+    insertWithV,
     mapV,
     pointWise,
-    insertWithV,
-    unionWithV )
+    scale,
+    uint,
+    unionWithV,
+  )
 import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
+import Data.ByteString (ByteString)
+import qualified Data.Map.Strict as Map
+import Data.String (fromString)
+import Data.Typeable (Typeable)
+import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
-
+import Prelude hiding (lookup)
 
 -- ============================================================================
 -- Multi Assests
@@ -102,13 +100,12 @@ newtype PolicyID era = PolicyID {policyID :: ScriptHash era}
 -- =========================================================================
 -- The Value type, and a few of its instances
 
-
 -- | The Value representing MultiAssets
 data Value era = Value !Integer !(Map.Map (PolicyID era) (Map.Map AssetID Integer))
   deriving (Show, Generic)
 
 instance Eq (Value era) where
-  (Value c1 m1) == (Value c2 m2) = c1==c2 && pointWise (==) m1 m2
+  (Value c1 m1) == (Value c2 m2) = c1 == c2 && pointWise (==) m1 m2
 
 instance Typeable era => Monoid (Value era) where
   mempty = Value 0 Map.empty
@@ -121,7 +118,6 @@ instance NFData (Value era)
 
 -- TODO, FIX ME with some deriving magic
 instance NoUnexpectedThunks (Value era)
-
 
 -- CBOR
 instance
@@ -146,11 +142,11 @@ instance
 -- =========================================================================
 -- The important Val instance
 
-instance (Era era,Crypto era,Typeable era) => Val (Value era) where
+instance (Era era, Crypto era, Typeable era) => Val (Value era) where
   zero = Value 0 Map.empty
-  s <×> (Value c v) = Value (s <×> c) (mapV (mapV (\ x -> (fromIntegral s) * x)) v)
+  s <×> (Value c v) = Value (s <×> c) (mapV (mapV (\x -> (fromIntegral s) * x)) v)
   (Value c1 m1) <+> (Value c2 m2) = Value (c1 <+> c2) (m1 <+> m2)
-  isZero (Value c m) = c==0 &&  Map.null m
+  isZero (Value c m) = c == 0 && Map.null m
   coin (Value c _) = Coin c
   inject (Coin c) = Value c Map.empty
   size (Value _ v) =
@@ -166,23 +162,22 @@ instance (Era era,Crypto era,Typeable era) => Val (Value era) where
 -- ========================================================================
 -- Operations on Values
 
-lookup:: PolicyID era -> AssetID -> Value era -> Integer
+lookup :: PolicyID era -> AssetID -> Value era -> Integer
 lookup pid aid (Value _ m) =
   case Map.lookup pid m of
     Nothing -> 0
     Just m2 -> Map.findWithDefault 0 aid m2
 
-
-insert:: (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
+insert :: (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
 insert combine pid aid new (Value c m1) =
-   case Map.lookup pid m1 of
-      Nothing -> Value c (insertWithV (<+>) pid (insertWithV combine aid new zero) m1)
-      Just m2 -> case Map.lookup aid m2 of
-                   Nothing -> Value c (insertWithV (<+>) pid (Map.singleton aid new) m1)
-                   Just old -> Value c (insertWithV (<+>) pid (insertWithV combine aid (combine old new) m2) m1)
+  case Map.lookup pid m1 of
+    Nothing -> Value c (insertWithV (<+>) pid (insertWithV combine aid new zero) m1)
+    Just m2 -> case Map.lookup aid m2 of
+      Nothing -> Value c (insertWithV (<+>) pid (Map.singleton aid new) m1)
+      Just old -> Value c (insertWithV (<+>) pid (insertWithV combine aid (combine old new) m2) m1)
 
 -- Might be useful to benchmark 'insert' vs 'insert2'
-insert2:: (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
+insert2 :: (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
 insert2 combine pid aid new (Value c m1) = Value c (unionWithV (unionWithV combine) m1 (Map.singleton pid (Map.singleton aid new)))
 
 modify :: (Integer -> Integer) -> Value era -> Value era
@@ -198,48 +193,66 @@ data Rep t where
   ValueR :: Rep (Value era)
 
 defMinus x y = x <-> y == x <+> (invert y)
+
 defInvert x = invert x == (-1) <×> x
 
-commute x y = x <+> y  ==  y <+> x
-assoc x y z = x <+> (y <+> z) ==  (y <+> x) <+> z
-addIdent x     = (zero <+> x ==  x <+> zero) &&  (zero <+> x == x)
-cancel x    = x <-> x  == zero
+commute x y = x <+> y == y <+> x
+
+assoc x y z = x <+> (y <+> z) == (y <+> x) <+> z
+
+addIdent x = (zero <+> x == x <+> zero) && (zero <+> x == x)
+
+cancel x = x <-> x == zero
 
 distr1 r x y = r <×> (x <+> y) == (r <×> x) <+> (r <×> y)
-distr2 r s x = (r + s) <×> x   == (r <×> x) <+> (s <×> x)
+
+distr2 r s x = (r + s) <×> x == (r <×> x) <+> (s <×> x)
+
 distr3 r s x = (r * s) <×> x == r <×> (s <×> x)
+
 multIdent x = 1 <×> x == x
 
-
 minusCancel x = (x <-> x) == zero
-plusMinusAssoc x y = ((x <+> y) <-> y  ==  x <+> (y <-> y)) && (x <+> (y <-> y)  ==  x)
-plusInvertCancel x = (x <+> (invert x) ==  (x <-> x)) && (x <-> x == zero)
-minusZero x = (x <-> zero) ==  x
-zeroMinus x = (zero <-> x) ==  invert x
-invertScale x = invert x  ==  scale (-1) x
 
+plusMinusAssoc x y = ((x <+> y) <-> y == x <+> (y <-> y)) && (x <+> (y <-> y) == x)
 
-scaleZero v = 0 <×> v ==  zero
+plusInvertCancel x = (x <+> (invert x) == (x <-> x)) && (x <-> x == zero)
+
+minusZero x = (x <-> zero) == x
+
+zeroMinus x = (zero <-> x) == invert x
+
+invertScale x = invert x == scale (-1) x
+
+scaleZero v = 0 <×> v == zero
+
 zeroScale :: forall v. Val v => Rep v -> Int -> Bool
 zeroScale _ n = n <×> (zero @v) == (zero @v)
+
 scaleInject :: forall v. Val v => Rep v -> Int -> Coin -> Bool
 scaleInject _ n c = n <×> (inject @v c) == inject @v (n <×> c)
-scaleOne x = 1 <×> x ==  x
+
+scaleOne x = 1 <×> x == x
+
 scalePlus n x y = n <×> (x <+> y) == (n <×> x) <+> (n <×> y)
-scaleScale n m v = n <×> (m <×> v) == (n*m) <×>v
-scaleCoin n v = n <×> (coin v) ==  coin (n <×> v)
+
+scaleScale n m v = n <×> (m <×> v) == (n * m) <×> v
+
+scaleCoin n v = n <×> (coin v) == coin (n <×> v)
+
 unfoldScale x = 3 <×> x == x <+> x <+> x
 
 coinZero :: forall v. Val v => Rep v -> Bool
-coinZero _ = coin (zero @v) ==  zero
+coinZero _ = coin (zero @v) == zero
 
 coinPlus x y = coin (x <+> y) == coin x <+> coin y
+
 coinScale n v = coin (n <×> v) == n <×> (coin v)
 
 coinInject :: forall v. Val v => Rep v -> Coin -> Bool
 coinInject _ x = coin @v (inject @v x) == x
 
-coinModify:: forall era. (Crypto era,Era era) => (Integer -> Integer) -> Value era -> Bool
+coinModify :: forall era. (Crypto era, Era era) => (Integer -> Integer) -> Value era -> Bool
 coinModify f v = coin (modify f v) == modifyC f (coin @(Value era) v)
 
 coinInsert comb c t n v = coin (insert comb c t n v) == coin v
