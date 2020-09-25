@@ -77,6 +77,7 @@ library
     Shelley.Spec.Ledger.TxBody
     Shelley.Spec.Ledger.UTxO
     Cardano.Ledger.Val
+    Cardano.Ledger.Value
   other-modules:     Shelley.Spec.Ledger.API.Mempool
                      Shelley.Spec.Ledger.API.Wallet
                      Shelley.Spec.Ledger.API.Types
