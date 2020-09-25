@@ -8,8 +8,10 @@ module Test.Shelley.Spec.Ledger.LegacyOverlay
 where
 
 import Cardano.Slotting.Slot
+import Cardano.Ledger.Era (Era)
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
+import Data.Proxy
 import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Data.Set (Set)
@@ -20,7 +22,6 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.OverlaySchedule (OBftSlot (..), classifyOverlaySlot, overlaySlots)
 import Shelley.Spec.Ledger.Slot
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Examples.Federation (genDelegs)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty.QuickCheck
@@ -76,8 +77,8 @@ makeConcreteOverlay start gkeys dval asc spe =
       (\s -> (s, classifyOverlaySlot start gkeys dval asc s))
       (overlaySlots start dval spe)
 
-legacyOverlayTest :: Property
-legacyOverlayTest = property $ do
+legacyOverlayTest :: forall era. Era era => Proxy era -> Property
+legacyOverlayTest _proxy = property $ do
   d <- choose (0, 100)
   e <- choose (0, 100)
   let dval = unsafeMkUnitInterval (d % 100)
@@ -88,7 +89,7 @@ legacyOverlayTest = property $ do
         legacyOverlay
           mainnetEpochSize
           start
-          (Map.keysSet (genDelegs @C))
+          (Map.keysSet (genDelegs @era))
           dval
           asc
-  pure $ os === makeConcreteOverlay start (Map.keysSet (genDelegs @C)) dval asc mainnetEpochSize
+  pure $ os === makeConcreteOverlay start (Map.keysSet (genDelegs @era)) dval asc mainnetEpochSize

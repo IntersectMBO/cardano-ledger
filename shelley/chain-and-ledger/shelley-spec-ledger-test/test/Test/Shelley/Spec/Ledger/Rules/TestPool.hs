@@ -54,7 +54,7 @@ import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
 -- helper accessor functions --
 -------------------------------
 
-getRetiring :: PState C -> Map (KeyHash 'StakePool C) EpochNo
+getRetiring :: PState era -> Map (KeyHash 'StakePool era) EpochNo
 getRetiring = _retiring
 
 ------------------------------
@@ -129,22 +129,22 @@ poolRetireInEpoch env ssts =
     registeredPoolRetired _ _ _ = True
 
 -- | Check that a `RegPool` certificate properly adds a stake pool.
-registeredPoolIsAdded ::
-  [SourceSignalTarget (POOL C)] ->
+registeredPoolIsAdded :: forall era.
+  [SourceSignalTarget (POOL era)] ->
   Property
 registeredPoolIsAdded ssts =
   conjoin $
     map addedRegPool ssts
   where
     addedRegPool ::
-      SourceSignalTarget (POOL C) ->
+      SourceSignalTarget (POOL era) ->
       Property
     addedRegPool sst =
       case signal sst of
         DCertPool (RegPool poolParams) -> check poolParams
         _ -> property ()
       where
-        check :: PoolParams C -> Property
+        check :: PoolParams era -> Property
         check poolParams = do
           let hk = _poolPubKey poolParams
               sSt = source sst
@@ -173,14 +173,14 @@ registeredPoolIsAdded ssts =
 
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
 -- retirement.
-poolIsMarkedForRetirement ::
-  [SourceSignalTarget (POOL C)] ->
+poolIsMarkedForRetirement :: forall era.
+  [SourceSignalTarget (POOL era)] ->
   Property
 poolIsMarkedForRetirement ssts =
   conjoin (map check ssts)
   where
     check ::
-      SourceSignalTarget (POOL C) ->
+      SourceSignalTarget (POOL era) ->
       Property
     check sst =
       case signal sst of
@@ -189,7 +189,7 @@ poolIsMarkedForRetirement ssts =
         DCertPool (RetirePool hk _epoch) -> wasRemoved hk
         _ -> property ()
       where
-        wasRemoved :: KeyHash 'StakePool C -> Property
+        wasRemoved :: KeyHash 'StakePool era -> Property
         wasRemoved hk =
           conjoin
             [ counterexample
@@ -202,14 +202,14 @@ poolIsMarkedForRetirement ssts =
 
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
-pStateIsInternallyConsistent ::
-  [SourceSignalTarget (POOL C)] ->
+pStateIsInternallyConsistent :: forall era.
+  [SourceSignalTarget (POOL era)] ->
   Property
 pStateIsInternallyConsistent ssts =
   conjoin $
     map isConsistent (concatMap (\sst -> [source sst, target sst]) ssts)
   where
-    isConsistent :: State (POOL C) -> Property
+    isConsistent :: State (POOL era) -> Property
     isConsistent (PState pParams_ _ retiring_) = do
       let poolKeys = M.keysSet pParams_
           pParamKeys = M.keysSet pParams_

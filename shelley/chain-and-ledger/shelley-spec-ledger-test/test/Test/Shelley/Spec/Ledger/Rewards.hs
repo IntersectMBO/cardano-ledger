@@ -20,6 +20,7 @@ import Control.Monad (replicateM)
 import Data.Foldable (fold)
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Proxy
 import Data.Ratio (Ratio, (%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -53,7 +54,6 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.Rewards (reward)
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), RewardAcnt (..))
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Generator.Core (genCoin, genNatural)
 import Test.Shelley.Spec.Ledger.Utils
   ( testGlobals,
@@ -215,10 +215,10 @@ genBlocksMade pools = BlocksMade . Map.fromList <$> mapM f pools
 
 -- Properties --
 
-rewardsBoundedByPot :: Property
-rewardsBoundedByPot = property $ do
+rewardsBoundedByPot :: forall era. Era era => Proxy era -> Property
+rewardsBoundedByPot _ = property $ do
   numPools <- choose (0, maxNumPools)
-  pools <- sequence $ genPoolInfo @C <$> replicate numPools emptySetupArgs
+  pools <- sequence $ genPoolInfo @era <$> replicate numPools emptySetupArgs
   pp <- genRewardPPs
   rewardPot <- genCoin 0 (fromIntegral $ maxLovelaceSupply testGlobals)
   undelegatedLovelace <- genCoin 0 (fromIntegral $ maxLovelaceSupply testGlobals)
@@ -278,11 +278,11 @@ rewardsBoundedByPot = property $ do
       )
       (fold (fst rs) < rewardPot)
 
-rewardTests :: TestTree
-rewardTests =
+rewardTests :: forall era. Era era => Proxy era -> TestTree
+rewardTests proxy =
   testGroup
     "Reward Tests"
     [ testProperty
         "Sum of rewards is bounded by reward pot"
-        (withMaxSuccess numberOfTests rewardsBoundedByPot)
+        (withMaxSuccess numberOfTests (rewardsBoundedByPot proxy))
     ]

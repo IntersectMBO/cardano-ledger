@@ -1,13 +1,17 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTests) where
 
+import Data.Proxy
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.LegacyOverlay (legacyOverlayTest)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
@@ -39,10 +43,13 @@ import Test.Shelley.Spec.Ledger.Rules.TestLedger
   )
 import Test.Shelley.Spec.Ledger.Serialisation.StakeRef
   ( propDeserializeAddrStakeReference,
-    propDeserializeAddrStakeReferenceShortIncrediblyLongName,
+    propDeserializeAddrStakeReferenceShort,
   )
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
+
+proxyC :: Proxy C
+proxyC = Proxy
 
 minimalPropertyTests :: TestTree
 minimalPropertyTests =
@@ -54,10 +61,10 @@ minimalPropertyTests =
       bootstrapHashTest,
       testGroup
         "Deserialize stake address reference"
-        [ TQC.testProperty "wstake reference from bytestrings" propDeserializeAddrStakeReference,
-          TQC.testProperty "stake reference from short bytestring" propDeserializeAddrStakeReferenceShortIncrediblyLongName
+        [ TQC.testProperty "wstake reference from bytestrings" (propDeserializeAddrStakeReference @C),
+          TQC.testProperty "stake reference from short bytestring" (propDeserializeAddrStakeReferenceShort @C)
         ],
-      TQC.testProperty "legacy overlay schedule" legacyOverlayTest
+      TQC.testProperty "legacy overlay schedule" (legacyOverlayTest proxyC)
     ]
 
 -- | 'TestTree' of property-based testing properties.
@@ -143,5 +150,5 @@ propertyTests =
             "Only valid CHAIN STS signals are generated"
             onlyValidChainSignalsAreGenerated
         ],
-      testGroupByronTranslation
+      testGroupByronTranslation proxyC
     ]

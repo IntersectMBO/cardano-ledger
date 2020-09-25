@@ -2,6 +2,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Shelley.Spec.Ledger.Rules.TestUtxo
   ( feesNonDecreasing,
@@ -17,15 +18,14 @@ import Control.State.Transition.Trace
 import Shelley.Spec.Ledger.API (UTXO)
 import Shelley.Spec.Ledger.LedgerState (_fees, pattern UTxOState)
 import Test.QuickCheck (Property, conjoin)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 
 --------------------------
 -- Properties for UTXOW --
 --------------------------
 
 -- | Property that checks that the fees are non-decreasing
-feesNonDecreasing ::
-  [SourceSignalTarget (UTXO C)] ->
+feesNonDecreasing :: forall era.
+  [SourceSignalTarget (UTXO era)] ->
   Property
 feesNonDecreasing ssts =
   conjoin $

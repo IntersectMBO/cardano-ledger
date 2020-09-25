@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
   ( constantSumPots,
@@ -45,7 +46,6 @@ import Shelley.Spec.Ledger.STS.PoolReap
   )
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, conjoin)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring)
 
 -----------------------------
@@ -54,8 +54,8 @@ import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring)
 
 -- | Check that after a POOLREAP certificate transition the pool is removed from
 -- the stake pool and retiring maps.
-removedAfterPoolreap ::
-  [SourceSignalTarget (POOLREAP C)] ->
+removedAfterPoolreap :: forall era.
+  [SourceSignalTarget (POOLREAP era)] ->
   Property
 removedAfterPoolreap tr =
   conjoin $
@@ -72,7 +72,7 @@ removedAfterPoolreap tr =
             stp' = _pParams p'
             retiring = getRetiring p
             retiring' = getRetiring p'
-            retire :: Set.Set (KeyHash 'StakePool C) -- This declaration needed to disambiguate 'eval'
+            retire :: Set.Set (KeyHash 'StakePool era) -- This declaration needed to disambiguate 'eval'
             retire = eval (dom (retiring ▷ setSingleton e))
          in eval (retire ⊆ dom stp)
               && Set.null (eval (retire ∩ dom stp'))
@@ -80,7 +80,7 @@ removedAfterPoolreap tr =
 
 -- | Check that deposits are always non-negative
 nonNegativeDeposits ::
-  [SourceSignalTarget (POOLREAP C)] ->
+  [SourceSignalTarget (POOLREAP era)] ->
   Property
 nonNegativeDeposits tr =
   conjoin $
@@ -95,7 +95,7 @@ nonNegativeDeposits tr =
 -- | Check that the sum of circulation, deposits, fees, treasury, rewards and
 -- reserves is constant.
 constantSumPots ::
-  [SourceSignalTarget (POOLREAP C)] ->
+  [SourceSignalTarget (POOLREAP era)] ->
   Property
 constantSumPots tr =
   conjoin $
