@@ -191,6 +191,7 @@ import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
   ( GenesisKeyPair,
     MultiSigPairs,
+    ShelleyTest,
     epochFromSlotNo,
     evolveKESUntil,
     maxKESIterations,
@@ -471,7 +472,7 @@ findPayScriptFromAddr _ _ =
   error "findPayScriptFromAddr: expects only base and pointer script addresses"
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-pickStakeKey ::  KeyPairs era -> Gen (VKey 'Staking era)
+pickStakeKey :: KeyPairs era -> Gen (VKey 'Staking era)
 pickStakeKey keys = vKey . snd <$> QC.elements keys
 
 -- | Generates a list of coins for the given 'Addr' and produced a 'TxOut' for each 'Addr'
@@ -479,7 +480,7 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- Note: we need to keep the initial utxo coin sizes large enough so that
 -- when we simulate sequences of transactions, we have enough funds available
 -- to include certificates that require deposits.
-genTxOut :: (Era era) => Constants -> [Addr era] -> Gen [TxOut era]
+genTxOut :: (ShelleyTest era) => Constants -> [Addr era] -> Gen [TxOut era]
 genTxOut Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
   ys <- genCoinList minGenesisOutputVal maxGenesisOutputVal (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
@@ -688,7 +689,7 @@ genesisAccountState =
 
 -- | The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId ::
-  (Era era) => Ledger.TxId era
+  (ShelleyTest era) => Ledger.TxId era
 genesisId =
   TxId $
     hashAnnotated
@@ -705,7 +706,7 @@ genesisId =
 
 -- | Creates the UTxO for a new ledger with the specified transaction outputs.
 genesisCoins ::
-  (Era era) =>
+  (ShelleyTest era) =>
   [TxOut era] ->
   UTxO era
 genesisCoins outs =
@@ -714,7 +715,7 @@ genesisCoins outs =
 
 -- | Apply a transaction body as a state transition function on the ledger state.
 applyTxBody ::
-  (Era era) =>
+  (ShelleyTest era) =>
   LedgerState era ->
   PParams era ->
   TxBody era ->

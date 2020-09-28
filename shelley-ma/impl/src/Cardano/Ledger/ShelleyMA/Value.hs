@@ -111,6 +111,7 @@ newtype PolicyID era = PolicyID {policyID :: ScriptHash era}
 data Value era = Value !Coin !(Map (PolicyID era) (Map AssetID Quantity))
   deriving (Eq, Show, Generic)
 
+-- TODO make these specific
 instance NFData (Value era)
 
 instance NoThunks (Value era)
@@ -144,7 +145,7 @@ instance Era era => Val (Value era) where
         where
           -- add assetIdLen and uint for each asset of that Policy ID
           accumIns _ ans1 = ans1 + assetIdLen + uint
-
+      -- TODO move these constants somewhere (they are also specified in CDDL)
       uint :: Integer
       uint = 5
 
@@ -153,7 +154,7 @@ instance Era era => Val (Value era) where
 
       -- address hash length is always same as Policy ID length
       addrHashLen :: Integer
-      addrHashLen = 2
+      addrHashLen = 28
 
 -- ============================================================================
 -- Operations on Map, specialised to comparable `Monoid` values.

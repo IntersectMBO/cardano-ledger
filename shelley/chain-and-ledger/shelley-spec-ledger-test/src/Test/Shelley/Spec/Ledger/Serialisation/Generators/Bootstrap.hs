@@ -27,7 +27,7 @@ import Test.Cardano.Prelude (genBytes)
 import Test.QuickCheck (Gen)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
-genSignature :: forall a b. DSIGN.DSIGNAlgorithm a => Gen (DSIGN.SignedDSIGN a b)
+genSignature :: forall a b. (DSIGN.DSIGNAlgorithm a) => Gen (DSIGN.SignedDSIGN a b)
 genSignature =
   DSIGN.SignedDSIGN
     . fromJust

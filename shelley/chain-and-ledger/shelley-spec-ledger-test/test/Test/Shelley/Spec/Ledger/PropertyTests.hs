@@ -121,5 +121,5 @@ propertyTests =
             "Only valid CHAIN STS signals are generated"
             onlyValidChainSignalsAreGenerated
         ],
-      testGroupByronTranslation proxyC
+      testGroupByronTranslation
     ]

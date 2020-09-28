@@ -1,12 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Tick
   ( TICK,
@@ -19,7 +22,7 @@ module Shelley.Spec.Ledger.STS.Tick
   )
 where
 
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -45,12 +48,17 @@ data TICK era
 data TickPredicateFailure era
   = NewEpochFailure (PredicateFailure (NEWEPOCH era)) -- Subtransition Failures
   | RupdFailure (PredicateFailure (RUPD era)) -- Subtransition Failures
-  deriving (Show, Generic, Eq)
+  deriving (Generic)
+
+deriving stock instance Show (TickPredicateFailure era)
+
+deriving stock instance Eq (TickPredicateFailure era)
 
 instance NoThunks (TickPredicateFailure era)
 
 instance
-  Era era =>
+  ( ShelleyBased era
+  ) =>
   STS (TICK era)
   where
   type
@@ -118,7 +126,8 @@ validatingTickTransition nes slot = do
 
 bheadTransition ::
   forall era.
-  (Era era) =>
+  ( ShelleyBased era
+  ) =>
   TransitionRule (TICK era)
 bheadTransition = do
   TRC ((), nes@(NewEpochState _ bprev _ es _ _), slot) <-
@@ -132,13 +141,13 @@ bheadTransition = do
   pure nes''
 
 instance
-  Era era =>
+  ShelleyBased era =>
   Embed (NEWEPOCH era) (TICK era)
   where
   wrapFailed = NewEpochFailure
 
 instance
-  Era era =>
+  (ShelleyBased era) =>
   Embed (RUPD era) (TICK era)
   where
   wrapFailed = RupdFailure
@@ -159,7 +168,7 @@ data TickfPredicateFailure era
 instance NoThunks (TickfPredicateFailure era)
 
 instance
-  Era era =>
+  ShelleyBased era =>
   STS (TICKF era)
   where
   type
@@ -180,7 +189,7 @@ instance
     ]
 
 instance
-  Era era =>
+  ShelleyBased era =>
   Embed (NEWEPOCH era) (TICKF era)
   where
   wrapFailed = TickfNewEpochFailure

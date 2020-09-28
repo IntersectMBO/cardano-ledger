@@ -81,7 +81,7 @@ import Shelley.Spec.Ledger.BlockChain
     seedEta,
     seedL,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,
@@ -275,10 +275,10 @@ testVRF _ = mkVRFKeyPair (0, 0, 0, 0, 5)
 testVRFKH :: Era era => proxy era -> Hash era (VerKeyVRF era)
 testVRFKH p = hashVerKeyVRF $ snd (testVRF p)
 
-testTxb :: Era era => TxBody era
+testTxb :: ShelleyTest era => TxBody era
 testTxb = TxBody Set.empty StrictSeq.empty StrictSeq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) SNothing SNothing
 
-testTxbHash :: Era era => Hash era (TxBody era)
+testTxbHash :: ShelleyTest era => Hash era (TxBody era)
 testTxbHash = hashAnnotated testTxb
 
 testKey1 :: Era era => proxy era -> KeyPair 'Payment era
@@ -314,7 +314,7 @@ testBlockIssuerKeyTokens = e
 
 testKey1SigToken ::
   forall proxy era.
-  (Era era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   proxy era ->
   Tokens ->
   Tokens
@@ -429,15 +429,6 @@ instance Semigroup ToTokens where
 instance Monoid ToTokens where
   mempty = T id
 
-testNegativeCoin :: Assertion
-testNegativeCoin =
-  let enc@(Encoding tokens) = toCBOR (Coin (-1))
-   in (tokens TkEnd @?= (TkInteger (-1)) TkEnd)
-        >> ( case (decodeFullDecoder "negative_coin" (fromCBOR @Coin) . serializeEncoding) enc of
-               Left _ -> pure ()
-               Right _ -> assertFailure "should not deserialize negative coins"
-           )
-
 tests :: TestTree
 tests =
   testGroup
@@ -458,7 +449,6 @@ tests =
         "coin"
         (Coin 30)
         (T (TkWord64 30)),
-      testCase "prop_serialize_negative-coin" testNegativeCoin,
       checkEncodingCBOR
         "rational"
         (truncateUnitInterval (1 % 2))
@@ -1288,7 +1278,7 @@ tests =
                   { deltaT = Coin 100,
                     deltaR = Coin (-200),
                     rs = Map.empty,
-                    deltaF = Coin (-10),
+                    deltaF = DeltaCoin (-10),
                     nonMyopic = nm
                   }
             ) ::

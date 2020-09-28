@@ -1,19 +1,21 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation) where
 
-import Data.Proxy
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
-import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Shelley (Shelley)
 import Shelley.Spec.Ledger.API.ByronTranslation
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.TxBody
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.QuickCheck.Hedgehog (hedgehog)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
@@ -21,21 +23,21 @@ import Test.Tasty.QuickCheck
   Top-level tests
 ------------------------------------------------------------------------------}
 
-testGroupByronTranslation :: forall era. Era era => Proxy era -> TestTree
-testGroupByronTranslation proxy =
+testGroupByronTranslation :: TestTree
+testGroupByronTranslation =
   testGroup
     "Translation from Byron to Shelley"
-    [ testProperty "translateTxOut correctness" (prop_translateTxOut_correctness proxy)
+    [ testProperty "translateTxOut correctness" prop_translateTxOut_correctness
     ]
 
 {------------------------------------------------------------------------------
   Properties
 ------------------------------------------------------------------------------}
 
-prop_translateTxOut_correctness :: forall era. Era era => Proxy era -> Byron.CompactTxOut -> Property
-prop_translateTxOut_correctness _proxy compactTxOut =
+prop_translateTxOut_correctness :: Byron.CompactTxOut -> Property
+prop_translateTxOut_correctness compactTxOut =
   translateTxOutByronToShelley
-    @era
+    @C_Crypto
     (Byron.fromCompactTxOut compactTxOut)
     === translateCompactTxOutByronToShelley compactTxOut
 
@@ -44,10 +46,10 @@ prop_translateTxOut_correctness _proxy compactTxOut =
 ------------------------------------------------------------------------------}
 
 translateTxOutByronToShelley ::
-  forall era.
-  Era era =>
+  forall crypto.
+  CryptoClass.Crypto crypto =>
   Byron.TxOut ->
-  TxOut era
+  TxOut (Shelley crypto)
 translateTxOutByronToShelley (Byron.TxOut addr amount) =
   TxOut (translateAddr addr) (translateAmount amount)
   where

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -24,6 +26,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Iterate.SetAlgebra (eval, (∩))
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
@@ -47,7 +50,6 @@ import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -115,12 +117,20 @@ data UtxowPredicateFailure era
       !(MetaDataHash era) -- hash of the full metadata
       -- Contains out of range values (strings too long)
   | InvalidMetaData
-  deriving (Eq, Generic, Show)
+  deriving (Generic)
 
-instance (Era era) => NoThunks (UtxowPredicateFailure era)
+instance ShelleyBased era => NoThunks (UtxowPredicateFailure era)
+
+deriving stock instance
+  ShelleyBased era =>
+  Eq (UtxowPredicateFailure era)
+
+deriving stock instance
+  ShelleyBased era =>
+  Show (UtxowPredicateFailure era)
 
 instance
-  ( Era era,
+  ( ShelleyBased era,
     DSignable era (Hash era (TxBody era))
   ) =>
   STS (UTXOW era)
@@ -134,7 +144,7 @@ instance
   initialRules = [initialLedgerStateUTXOW]
 
 instance
-  (Typeable era, Era era) =>
+  (Era era, ToCBOR (PredicateFailure (UTXO era))) =>
   ToCBOR (UtxowPredicateFailure era)
   where
   toCBOR = \case
@@ -158,7 +168,7 @@ instance
       encodeListLen 1 <> toCBOR (9 :: Word8)
 
 instance
-  (Era era) =>
+  (Era era, FromCBOR (PredicateFailure (UTXO era))) =>
   FromCBOR (UtxowPredicateFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (UTXOW era)" $
@@ -196,7 +206,7 @@ instance
 
 initialLedgerStateUTXOW ::
   forall era.
-  ( Era era,
+  ( ShelleyBased era,
     DSignable era (Hash era (TxBody era))
   ) =>
   InitialRule (UTXOW era)
@@ -206,7 +216,7 @@ initialLedgerStateUTXOW = do
 
 utxoWitnessed ::
   forall era.
-  ( Era era,
+  ( ShelleyBased era,
     DSignable era (Hash era (TxBody era))
   ) =>
   TransitionRule (UTXOW era)
@@ -270,7 +280,7 @@ utxoWitnessed =
         TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
-  ( Era era,
+  ( ShelleyBased era,
     DSignable era (Hash era (TxBody era))
   ) =>
   Embed (UTXO era) (UTXOW era)

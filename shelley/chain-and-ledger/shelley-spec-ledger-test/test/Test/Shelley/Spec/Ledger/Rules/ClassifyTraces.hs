@@ -1,10 +1,12 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidLedgerSignalsAreGenerated,
@@ -15,8 +17,8 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   )
 where
 
-import Cardano.Ledger.Era(Era)
 import Cardano.Binary (serialize')
+import Cardano.Ledger.Era (Era)
 import Cardano.Slotting.Slot (EpochSize (..))
 import qualified Control.State.Transition.Extended
 import Control.State.Transition.Trace
@@ -94,7 +96,9 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
 
-genesisChainState :: forall era a. Era era =>
+genesisChainState ::
+  forall era a.
+  ShelleyTest era =>
   Maybe
     ( Control.State.Transition.Extended.IRC (CHAIN era) ->
       QC.Gen
@@ -103,12 +107,14 @@ genesisChainState :: forall era a. Era era =>
             (ChainState era)
         )
     )
-genesisChainState = Just $ mkGenesisChainState  (geConstants (genEnv p))
+genesisChainState = Just $ mkGenesisChainState (geConstants (genEnv p))
   where
     p :: Proxy era
     p = Proxy
 
-genesisLedgerState :: forall era a. Era era =>
+genesisLedgerState ::
+  forall era a.
+  ShelleyTest era =>
   Maybe
     ( Control.State.Transition.Extended.IRC (LEDGER era) ->
       QC.Gen
@@ -135,7 +141,9 @@ relevantCasesAreCovered = do
     p :: Proxy C
     p = Proxy
 
-relevantCasesAreCoveredForTrace :: forall era. Era era =>
+relevantCasesAreCoveredForTrace ::
+  forall era.
+  ShelleyTest era =>
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
@@ -240,7 +248,7 @@ scriptCredentialCertsRatio certs =
           certs
 
 -- | Extract the certificates from the transactions
-certsByTx :: Era era => [Tx era] -> [[DCert era]]
+certsByTx :: ShelleyTest era => [Tx era] -> [[DCert era]]
 certsByTx txs = toList . _certs . _body <$> txs
 
 ratioInt :: Int -> Int -> Double
@@ -248,7 +256,7 @@ ratioInt x y =
   fromIntegral x / fromIntegral y
 
 -- | Transaction has script locked TxOuts
-txScriptOutputsRatio :: Era era => [StrictSeq (TxOut era)] -> Double
+txScriptOutputsRatio :: ShelleyTest era => [StrictSeq (TxOut era)] -> Double
 txScriptOutputsRatio txoutsList =
   ratioInt
     (sum (map countScriptOuts txoutsList))
@@ -263,17 +271,17 @@ txScriptOutputsRatio txoutsList =
           )
           txouts
 
-hasWithdrawal :: Era era => Tx era -> Bool
+hasWithdrawal :: ShelleyTest era => Tx era -> Bool
 hasWithdrawal = not . null . unWdrl . _wdrls . _body
 
-hasPParamUpdate :: Era era => Tx era -> Bool
+hasPParamUpdate :: ShelleyTest era => Tx era -> Bool
 hasPParamUpdate tx =
   ppUpdates . _txUpdate . _body $ tx
   where
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
-hasMetaData :: Era era => Tx era -> Bool
+hasMetaData :: ShelleyTest era => Tx era -> Bool
 hasMetaData tx =
   f . _mdHash . _body $ tx
   where

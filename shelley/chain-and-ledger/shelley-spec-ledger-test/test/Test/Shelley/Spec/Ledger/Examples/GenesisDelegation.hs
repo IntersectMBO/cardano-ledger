@@ -18,6 +18,7 @@ import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Val ((<->))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -47,7 +48,6 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
-import Cardano.Ledger.Val((<->))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -71,7 +71,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkOCert,
     zero,
   )
-import Test.Shelley.Spec.Ledger.Utils (getBlockNonce, mkKeyPair, mkVRFKeyPair)
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce, mkKeyPair, mkVRFKeyPair)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
@@ -81,14 +81,14 @@ aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Era era => UTxO era
+initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
   genesisCoins
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStGenesisDeleg :: forall era. Era era => ChainState era
+initStGenesisDeleg :: forall era. ShelleyTest era => ChainState era
 initStGenesisDeleg = initSt initUTxO
 
 --
@@ -112,7 +112,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> feeTx1
 
-txbodyEx1 :: Era era => TxBody era
+txbodyEx1 :: ShelleyTest era => TxBody era
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -134,7 +134,7 @@ txbodyEx1 =
 
 txEx1 ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   Tx era
 txEx1 =
   Tx
@@ -151,7 +151,7 @@ txEx1 =
 
 blockEx1 ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   Block era
 blockEx1 =
   mkBlockFakeVRF
@@ -175,7 +175,7 @@ newGenDeleg =
 
 expectedStEx1 ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   ChainState era
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @era))
@@ -189,7 +189,7 @@ expectedStEx1 =
 --
 -- In the first block, stage a new future genesis delegate
 genesisDelegation1 ::
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   CHAINExample era
 genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStEx1)
 
@@ -199,7 +199,7 @@ genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStE
 
 blockEx2 ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   Block era
 blockEx2 =
   mkBlockFakeVRF
@@ -217,7 +217,7 @@ blockEx2 =
 
 expectedStEx2 ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   ChainState era
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @era))
@@ -230,7 +230,7 @@ expectedStEx2 =
 --
 -- Submit an empty block to trigger adopting the genesis delegation.
 genesisDelegation2 ::
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   CHAINExample era
 genesisDelegation2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 

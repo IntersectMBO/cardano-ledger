@@ -1,8 +1,12 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Interface to the Shelley ledger for the purposes of managing a Shelley
 -- mempool.
@@ -18,13 +22,12 @@ module Shelley.Spec.Ledger.API.Mempool
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Era
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Data.Sequence (Seq)
-import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.Keys
@@ -77,23 +80,24 @@ mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
   LedgerState.esLState nesEs
 
 data ApplyTxError era = ApplyTxError [PredicateFailure (LEDGERS era)]
-  deriving (Eq, Show)
 
-instance
-  (Typeable era, Era era) =>
-  ToCBOR (ApplyTxError era)
-  where
+deriving stock instance
+  (Eq (PredicateFailure (LEDGERS era))) =>
+  Eq (ApplyTxError era)
+
+deriving stock instance
+  (Show (PredicateFailure (LEDGERS era))) =>
+  Show (ApplyTxError era)
+
+instance (ShelleyBased era) => ToCBOR (ApplyTxError era) where
   toCBOR (ApplyTxError es) = toCBOR es
 
-instance
-  (Era era) =>
-  FromCBOR (ApplyTxError era)
-  where
+instance (ShelleyBased era) => FromCBOR (ApplyTxError era) where
   fromCBOR = ApplyTxError <$> fromCBOR
 
 applyTxs ::
   forall era m.
-  ( Era era,
+  ( ShelleyBased era,
     MonadError (ApplyTxError era) m,
     DSignable era (Hash era (Tx.TxBody era))
   ) =>

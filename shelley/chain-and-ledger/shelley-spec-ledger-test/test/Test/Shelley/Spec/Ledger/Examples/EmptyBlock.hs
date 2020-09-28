@@ -40,9 +40,9 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkOCert,
     zero,
   )
-import Test.Shelley.Spec.Ledger.Utils (getBlockNonce)
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
 
-initStEx1 :: forall era. Era era => ChainState era
+initStEx1 :: forall era. ShelleyTest era => ChainState era
 initStEx1 = initSt (UTxO Map.empty)
 
 blockEx1 ::
@@ -69,7 +69,7 @@ blockEx1 =
 blockNonce :: forall era. (HasCallStack, Era era, ExMock (Crypto era)) => Nonce
 blockNonce = getBlockNonce (blockEx1 @era)
 
-expectedStEx1 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx1 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx1 =
   (evolveNonceUnfrozen (blockNonce @era))
     . (newLab blockEx1)
@@ -82,5 +82,5 @@ expectedStEx1 =
 --
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
-exEmptyBlock :: (Era era, ExMock (Crypto era)) => CHAINExample era
+exEmptyBlock :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

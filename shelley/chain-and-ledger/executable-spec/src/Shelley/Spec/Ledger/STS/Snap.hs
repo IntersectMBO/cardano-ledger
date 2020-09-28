@@ -1,8 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Snap
   ( SNAP,
@@ -11,14 +13,13 @@ module Shelley.Spec.Ledger.STS.Snap
   )
 where
 
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.State.Transition
   ( STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
   )
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
@@ -37,7 +38,7 @@ data SnapPredicateFailure era -- No predicate failures
 
 instance NoThunks (SnapPredicateFailure era)
 
-instance (Era era, Typeable era) => STS (SNAP era) where
+instance ShelleyBased era => STS (SNAP era) where
   type State (SNAP era) = SnapShots era
   type Signal (SNAP era) = ()
   type Environment (SNAP era) = LedgerState era
@@ -46,9 +47,11 @@ instance (Era era, Typeable era) => STS (SNAP era) where
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]
 
-snapTransition :: Era era => TransitionRule (SNAP era)
+snapTransition ::
+  ShelleyBased era =>
+  TransitionRule (SNAP era)
 snapTransition = do
-  TRC (lstate, s, ()) <- judgmentContext
+  TRC (lstate, s, _) <- judgmentContext
 
   let LedgerState (UTxOState utxo _ fees _) (DPState dstate pstate) = lstate
       stake = stakeDistr utxo dstate pstate

@@ -16,6 +16,7 @@ module Test.Shelley.Spec.Ledger.Examples.PoolLifetime
 where
 
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Val (invert, (<+>), (<->), (<×>))
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -30,7 +31,7 @@ import Shelley.Spec.Ledger.BaseTypes
     (⭒),
   )
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader, hashHeaderToNonce)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), toDelta)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
@@ -77,7 +78,6 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
-import Cardano.Ledger.Val((<->),(<×>),(<+>),invert)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -102,7 +102,8 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     zero,
   )
 import Test.Shelley.Spec.Ledger.Utils
-  ( epochSize,
+  ( ShelleyTest,
+    epochSize,
     getBlockNonce,
     maxLLSupply,
     testGlobals,
@@ -116,14 +117,14 @@ aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Era era => UTxO era
+initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
   genesisCoins
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStPoolLifetime :: forall era. Era era => ChainState era
+initStPoolLifetime :: forall era. ShelleyTest era => ChainState era
 initStPoolLifetime = initSt initUTxO
 
 --
@@ -133,7 +134,7 @@ initStPoolLifetime = initSt initUTxO
 aliceCoinEx1 :: Coin
 aliceCoinEx1 =
   aliceInitCoin <-> _poolDeposit ppEx
-    <-> (3 <×>  _keyDeposit ppEx)
+    <-> (3 <×> _keyDeposit ppEx)
     <-> Coin 3
 
 carlMIR :: Coin
@@ -145,7 +146,7 @@ dariaMIR = Coin 99
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-txbodyEx1 :: Era era => TxBody era
+txbodyEx1 :: ShelleyTest era => TxBody era
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -174,7 +175,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: forall era. (Era era, ExMock (Crypto era)) => Tx era
+txEx1 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx1 =
   Tx
     txbodyEx1
@@ -197,7 +198,7 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall era. (HasCallStack, Era era, ExMock (Crypto era)) => Block era
+blockEx1 :: forall era. (HasCallStack, ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -212,7 +213,7 @@ blockEx1 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
 
-expectedStEx1 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx1 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @era))
     . C.newLab blockEx1
@@ -232,7 +233,7 @@ expectedStEx1 =
 -- all register stake credentials, and Alice registers a stake pool.
 -- Additionally, a MIR certificate is issued to draw from the reserves
 -- and give Carl and Daria (who is unregistered) rewards.
-poolLifetime1 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime1 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime1 = CHAINExample initStPoolLifetime blockEx1 (Right expectedStEx1)
 
 --
@@ -250,7 +251,7 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
-txbodyEx2 :: forall era. Era era => TxBody era
+txbodyEx2 :: forall era. ShelleyTest era => TxBody era
 txbodyEx2 =
   TxBody
     { _inputs = Set.fromList [TxIn (txid txbodyEx1) 0],
@@ -271,7 +272,7 @@ txbodyEx2 =
       _mdHash = SNothing
     }
 
-txEx2 :: (Era era, ExMock (Crypto era)) => Tx era
+txEx2 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx2 =
   Tx
     txbodyEx2
@@ -283,7 +284,7 @@ txEx2 =
       }
     SNothing
 
-blockEx2 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx2 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
@@ -298,7 +299,7 @@ blockEx2 =
     0
     (mkOCert (coreNodeKeysBySchedule ppEx 90) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx2 =
   C.evolveNonceFrozen (getBlockNonce (blockEx2 @era))
     . C.newLab blockEx2
@@ -312,17 +313,17 @@ expectedStEx2 =
 -- === Block 2, Slot 90, Epoch 0
 --
 -- In the second block Alice and Bob both delegation to Alice's Pool.
-poolLifetime2 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime2 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
 -- Block 3, Slot 110, Epoch 1
 --
 
-epoch1Nonce :: forall era. (Era era, ExMock (Crypto era)) => Nonce
+epoch1Nonce :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Nonce
 epoch1Nonce = chainCandidateNonce (expectedStEx2 @era)
 
-blockEx3 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx3 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx3 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx2)
@@ -354,7 +355,7 @@ snapEx3 =
       EB._poolParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams
     }
 
-expectedStEx3 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx3 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx3 =
   C.newEpoch blockEx3
     . C.newSnapshot snapEx3 (feeTx1 <> feeTx2)
@@ -366,7 +367,7 @@ expectedStEx3 =
 --
 -- In the third block, an empty block in a new epoch, the first snapshot is created.
 -- The rewards accounts from the MIR certificate in block 1 are now increased.
-poolLifetime3 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime3 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
@@ -379,7 +380,7 @@ feeTx4 = Coin 5
 aliceCoinEx4Base :: Coin
 aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 
-txbodyEx4 :: forall era. Era era => TxBody era
+txbodyEx4 :: forall era. ShelleyTest era => TxBody era
 txbodyEx4 =
   TxBody
     { _inputs = Set.fromList [TxIn (txid txbodyEx2) 0],
@@ -394,7 +395,7 @@ txbodyEx4 =
       _mdHash = SNothing
     }
 
-txEx4 :: (Era era, ExMock (Crypto era)) => Tx era
+txEx4 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx4 =
   Tx
     txbodyEx4
@@ -406,7 +407,7 @@ txEx4 =
       }
     SNothing
 
-blockEx4 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx4 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx4 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx3)
@@ -427,11 +428,11 @@ rewardUpdateEx4 =
     { deltaT = Coin 1,
       deltaR = Coin 6,
       rs = Map.empty,
-      deltaF = Coin (-7),
+      deltaF = DeltaCoin (-7),
       nonMyopic = emptyNonMyopic {rewardPotNM = Coin 6}
     }
 
-expectedStEx4 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx4 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx4 =
   C.evolveNonceFrozen (getBlockNonce (blockEx4 @era))
     . C.newLab blockEx4
@@ -446,10 +447,10 @@ expectedStEx4 =
 -- We process a block late enough in the epoch in order to create a second reward update,
 -- preparing the way for the first non-empty pool distribution in this running example.
 -- Additionally, in order to have the stake distribution change, Carl delegates his stake.
-poolLifetime4 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime4 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
-epoch2Nonce :: forall era. (Era era, ExMock (Crypto era)) => Nonce
+epoch2Nonce :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Nonce
 epoch2Nonce =
   chainCandidateNonce (expectedStEx4 @era)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx2 @era))
@@ -458,7 +459,7 @@ epoch2Nonce =
 -- Block 5, Slot 220, Epoch 2
 --
 
-blockEx5 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx5 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx5 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx4)
@@ -473,7 +474,7 @@ blockEx5 =
     10
     (mkOCert (coreNodeKeysBySchedule ppEx 220) 1 (KESPeriod 10))
 
-snapEx5 :: forall era. Era era => EB.SnapShot era
+snapEx5 :: forall era. ShelleyTest era => EB.SnapShot era
 snapEx5 =
   EB.SnapShot
     { EB._stake =
@@ -499,7 +500,7 @@ pdEx5 =
       (hk Cast.alicePoolKeys)
       (IndividualPoolStake 1 (Cast.aliceVRFKeyHash @era))
 
-expectedStEx5 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx5 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx5 =
   C.newEpoch blockEx5
     . C.newSnapshot snapEx5 feeTx4
@@ -514,14 +515,14 @@ expectedStEx5 =
 --
 -- Create the first non-empty pool distribution
 -- by creating a block in the third epoch of this running example.
-poolLifetime5 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime5 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 
 --
 -- Block 6, Slot 295, Epoch 2
 --
 
-blockEx6 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx6 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx6 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx5)
@@ -542,11 +543,11 @@ rewardUpdateEx6 =
     { deltaT = Coin 1,
       deltaR = Coin 4,
       rs = Map.empty,
-      deltaF = invert feeTx4,
+      deltaF = invert $ toDelta feeTx4,
       nonMyopic = emptyNonMyopic {rewardPotNM = Coin 4}
     }
 
-expectedStEx6 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx6 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx6 =
   C.evolveNonceFrozen (getBlockNonce (blockEx6 @era))
     . C.newLab blockEx6
@@ -558,19 +559,19 @@ expectedStEx6 =
 -- === Block 6, Slot 295, Epoch 2
 --
 -- Create a decentralized Praos block (ie one not in the overlay schedule)
-poolLifetime6 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime6 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime6 = CHAINExample expectedStEx5 blockEx6 (Right expectedStEx6)
 
 --
 -- Block 7, Slot 310, Epoch 3
 --
 
-epoch3Nonce :: forall era. (Era era, ExMock (Crypto era)) => Nonce
+epoch3Nonce :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Nonce
 epoch3Nonce =
   chainCandidateNonce (expectedStEx6 @era)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx4 @era))
 
-blockEx7 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx7 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx7 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx6)
@@ -585,7 +586,7 @@ blockEx7 =
     15
     (mkOCert (coreNodeKeysBySchedule ppEx 310) 1 (KESPeriod 15))
 
-expectedStEx7 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx7 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx7 =
   C.newEpoch blockEx7
     . C.newSnapshot snapEx5 (Coin 0)
@@ -599,14 +600,14 @@ expectedStEx7 =
 --
 -- Create an empty block in the next epoch
 -- to prepare the way for the first non-trivial reward update
-poolLifetime7 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime7 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 
 --
 -- Block 8, Slot 390, Epoch 3
 --
 
-blockEx8 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx8 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx8 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx7)
@@ -665,11 +666,11 @@ rewardUpdateEx8 =
           [ (Cast.aliceSHK, aliceRAcnt8),
             (Cast.bobSHK, bobRAcnt8)
           ],
-      deltaF = Coin 0,
+      deltaF = DeltaCoin 0,
       nonMyopic = nonMyopicEx8
     }
 
-expectedStEx8 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx8 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx8 =
   C.evolveNonceFrozen (getBlockNonce (blockEx8 @era))
     . C.newLab blockEx8
@@ -682,19 +683,19 @@ expectedStEx8 =
 -- === Block 8, Slot 390, Epoch 3
 --
 -- Create the first non-trivial reward update.
-poolLifetime8 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime8 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
 
 --
 -- Block 9, Slot 410, Epoch 4
 --
 
-epoch4Nonce :: forall era. (Era era, ExMock (Crypto era)) => Nonce
+epoch4Nonce :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Nonce
 epoch4Nonce =
   chainCandidateNonce (expectedStEx8 @era)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx6 @era))
 
-blockEx9 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx9 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx9 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx8)
@@ -709,7 +710,7 @@ blockEx9 =
     20
     (mkOCert (coreNodeKeysBySchedule ppEx 410) 2 (KESPeriod 20))
 
-snapEx9 :: forall era. Era era => EB.SnapShot era
+snapEx9 :: forall era. ShelleyTest era => EB.SnapShot era
 snapEx9 =
   snapEx5
     { EB._stake =
@@ -721,7 +722,7 @@ snapEx9 =
             ]
     }
 
-expectedStEx9 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx9 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx9 =
   C.newEpoch blockEx9
     . C.newSnapshot snapEx9 (Coin 0)
@@ -734,7 +735,7 @@ expectedStEx9 =
 -- === Block 9, Slot 410, Epoch 4
 --
 -- Apply the first non-trivial reward update.
-poolLifetime9 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime9 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime9 = CHAINExample expectedStEx8 blockEx9 (Right expectedStEx9)
 
 --
@@ -751,7 +752,7 @@ bobAda10 =
     <+> _keyDeposit ppEx
     <-> feeTx10
 
-txbodyEx10 :: Era era => TxBody era
+txbodyEx10 :: ShelleyTest era => TxBody era
 txbodyEx10 =
   TxBody
     (Set.fromList [TxIn genesisId 1])
@@ -763,7 +764,7 @@ txbodyEx10 =
     SNothing
     SNothing
 
-txEx10 :: (Era era, ExMock (Crypto era)) => Tx era
+txEx10 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx10 =
   Tx
     txbodyEx10
@@ -773,7 +774,7 @@ txEx10 =
       }
     SNothing
 
-blockEx10 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx10 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx10 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx9)
@@ -788,7 +789,7 @@ blockEx10 =
     19
     (mkOCert (coreNodeKeysBySchedule ppEx 420) 2 (KESPeriod 19))
 
-expectedStEx10 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx10 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx10 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx10 @era))
     . C.newLab blockEx10
@@ -800,7 +801,7 @@ expectedStEx10 =
 -- === Block 10, Slot 420, Epoch 4
 --
 -- Drain Bob's reward account and de-register Bob's stake key.
-poolLifetime10 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime10 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime10 = CHAINExample expectedStEx9 blockEx10 (Right expectedStEx10)
 
 --
@@ -816,7 +817,7 @@ aliceCoinEx11Ptr = aliceCoinEx4Base <-> feeTx11
 aliceRetireEpoch :: EpochNo
 aliceRetireEpoch = EpochNo 5
 
-txbodyEx11 :: Era era => TxBody era
+txbodyEx11 :: ShelleyTest era => TxBody era
 txbodyEx11 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx4) 0])
@@ -828,7 +829,7 @@ txbodyEx11 =
     SNothing
     SNothing
 
-txEx11 :: (Era era, ExMock (Crypto era)) => Tx era
+txEx11 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx11 =
   Tx
     txbodyEx11
@@ -842,7 +843,7 @@ txEx11 =
       }
     SNothing
 
-blockEx11 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx11 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx11 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx10)
@@ -860,7 +861,7 @@ blockEx11 =
 reserves12 :: Coin
 reserves12 = reserves7 <> deltaR8
 
-alicePerfEx11 :: forall era. Era era => Likelihood
+alicePerfEx11 :: forall era. ShelleyTest era => Likelihood
 alicePerfEx11 = alicePerfEx8 <> epoch4Likelihood
   where
     epoch4Likelihood = likelihood blocks t (epochSize $ EpochNo 4)
@@ -871,23 +872,23 @@ alicePerfEx11 = alicePerfEx8 <> epoch4Likelihood
     (Coin supply) = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals
 
-nonMyopicEx11 :: forall era. Era era => NonMyopic era
+nonMyopicEx11 :: forall era. ShelleyTest era => NonMyopic era
 nonMyopicEx11 =
   NonMyopic
     (Map.singleton (hk Cast.alicePoolKeys) (alicePerfEx11 @era))
     (Coin 0)
 
-rewardUpdateEx11 :: forall era. Era era => RewardUpdate era
+rewardUpdateEx11 :: forall era. ShelleyTest era => RewardUpdate era
 rewardUpdateEx11 =
   RewardUpdate
     { deltaT = Coin 0,
       deltaR = Coin 0,
       rs = Map.empty,
-      deltaF = Coin 0,
+      deltaF = DeltaCoin 0,
       nonMyopic = nonMyopicEx11
     }
 
-expectedStEx11 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx11 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx11 =
   C.evolveNonceFrozen (getBlockNonce (blockEx11 @era))
     . C.newLab blockEx11
@@ -900,19 +901,19 @@ expectedStEx11 =
 -- === Block 11, Slot 490, Epoch 4
 --
 -- Stage the retirement of Alice's stake pool.
-poolLifetime11 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime11 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime11 = CHAINExample expectedStEx10 blockEx11 (Right expectedStEx11)
 
 --
 -- Block 12, Slot 510, Epoch 5
 --
 
-epoch5Nonce :: forall era. (Era era, ExMock (Crypto era)) => Nonce
+epoch5Nonce :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Nonce
 epoch5Nonce =
   chainCandidateNonce (expectedStEx11 @era)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx8 @era))
 
-blockEx12 :: forall era. (Era era, ExMock (Crypto era)) => Block era
+blockEx12 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx12 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx11)
@@ -927,7 +928,7 @@ blockEx12 =
     25
     (mkOCert (coreNodeKeysBySchedule ppEx 510) 3 (KESPeriod 25))
 
-snapEx12 :: forall era. Era era => EB.SnapShot era
+snapEx12 :: forall era. ShelleyTest era => EB.SnapShot era
 snapEx12 =
   snapEx9
     { EB._stake =
@@ -943,7 +944,7 @@ snapEx12 =
           ]
     }
 
-expectedStEx12 :: forall era. (Era era, ExMock (Crypto era)) => ChainState era
+expectedStEx12 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx12 =
   C.newEpoch blockEx12
     . C.newSnapshot snapEx12 (Coin 11)
@@ -957,7 +958,7 @@ expectedStEx12 =
 -- === Block 12, Slot 510, Epoch 5
 --
 -- Reap Alice's stake pool.
-poolLifetime12 :: (Era era, ExMock (Crypto era)) => CHAINExample era
+poolLifetime12 :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 poolLifetime12 = CHAINExample expectedStEx11 blockEx12 (Right expectedStEx12)
 
 --

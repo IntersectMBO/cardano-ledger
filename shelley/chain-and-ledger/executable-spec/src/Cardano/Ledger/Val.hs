@@ -36,29 +36,15 @@ module Cardano.Ledger.Val
   )
 where
 
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-  )
-import Control.DeepSeq (NFData ())
-import Data.Group (Abelian)
+import Data.Group (Abelian, invert)
 import Data.PartialOrd hiding ((==))
 import qualified Data.PartialOrd
-import Data.Typeable (Typeable)
-import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Coin (Coin (..))
 
 class
   ( Abelian t,
     Eq t,
-    PartialOrd t,
-    -- Do we really need these?
-    Show t,
-    Typeable t,
-    NFData t,
-    NoThunks t,
-    ToCBOR t,
-    FromCBOR t
+    PartialOrd t
   ) =>
   Val t
   where
@@ -96,9 +82,6 @@ x <-> y = x <+> (invert y)
 
 (<×>) :: Val t => Int -> t -> t
 x <×> y = scale x y
-
-invert :: Val t => t -> t
-invert x = scale (-1 :: Int) x
 
 sumVal :: (Foldable t, Val v) => t v -> v
 sumVal xs = foldl (<+>) mempty xs

@@ -1,7 +1,8 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE EmptyDataDecls             #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Main where
 
@@ -15,6 +16,15 @@ import BenchValidation
     updateChain,
     validateInput,
   )
+import Cardano.Crypto.DSIGN
+import Cardano.Crypto.Hash
+import Cardano.Crypto.KES
+import Cardano.Crypto.VRF.Praos
+import Cardano.Ledger.Core (Value)
+import Cardano.Ledger.Crypto (Crypto (..))
+import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Era (..))
+import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (dom, keysEqual, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
@@ -31,6 +41,7 @@ import Criterion.Main
   )
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.Bench.Gen
   ( genBlock,
@@ -38,7 +49,6 @@ import Shelley.Spec.Ledger.Bench.Gen
   )
 import Shelley.Spec.Ledger.Bench.Rewards (createRUpd, genChainInEpoch)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
@@ -65,16 +75,7 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerStateWithNregisteredKeys,
     ledgerStateWithNregisteredPools,
   )
-import Test.Shelley.Spec.Ledger.Utils (testGlobals)
-import Data.Proxy (Proxy (..))
-import Cardano.Ledger.Era(Era(..))
-import Cardano.Crypto.DSIGN
-import Cardano.Crypto.Hash
-import Cardano.Crypto.KES
-import Cardano.Crypto.VRF.Praos
-import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Slotting.Slot (EpochSize(..))
-
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
 
 -- ==========================================================
 
@@ -91,6 +92,8 @@ data BenchEra
 
 instance Era BenchEra where
   type Crypto BenchEra = BenchCrypto
+
+type instance Value BenchEra = Coin
 
 -- ============================================================
 
@@ -204,7 +207,7 @@ epochAt x =
         [ bench "Using maps" (whnf action2m arg)
         ]
 
-action2m :: Era era => (DState era, PState era, UTxO era) -> EB.SnapShot era
+action2m :: ShelleyTest era => (DState era, PState era, UTxO era) -> EB.SnapShot era
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 -- =================================================================
@@ -337,11 +340,10 @@ varyDelegState tag fixed changes initstate action =
 
 -- =============================================================================
 
-
 main :: IO ()
 -- main=profileValid
 main = do
-  (genenv,chainstate,genTxfun) <- genTriple (Proxy::Proxy BenchEra) 1000
+  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy BenchEra) 1000
   defaultMain $
     [ bgroup "vary input size" $
         [ varyInput
@@ -445,7 +447,7 @@ main = do
       bgroup "gen" $
         [ env
             (return chainstate)
-            ( \ cs ->
+            ( \cs ->
                 bgroup
                   "block"
                   [ bench "genBlock" $ whnfIO $ genBlock genenv cs
