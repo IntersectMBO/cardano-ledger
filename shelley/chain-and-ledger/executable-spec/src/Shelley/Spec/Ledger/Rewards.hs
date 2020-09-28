@@ -448,8 +448,8 @@ reward
       Coin activeStake = fold . unStake $ stake
       results = do
         (hk, pparams) <- Map.toList poolParams
-        let sigma = fromIntegral pstake % fromIntegral totalStake
-            sigmaA = fromIntegral pstake % fromIntegral activeStake
+        let sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
+            sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
             blocksProduced = Map.lookup hk b
             actgr@(Stake s) = poolStake hk delegs stake
             Coin pstake = fold s
