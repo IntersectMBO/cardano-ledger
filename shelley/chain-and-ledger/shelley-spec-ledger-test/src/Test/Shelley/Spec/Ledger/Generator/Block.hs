@@ -28,10 +28,6 @@ import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.BaseTypes
-  ( Nonce (NeutralNonce),
-    activeSlotCoeff,
-  )
 import Shelley.Spec.Ledger.BlockChain
   ( LastAppliedBlock (..),
     checkLeaderValue,
@@ -39,15 +35,7 @@ import Shelley.Spec.Ledger.BlockChain
     mkSeed,
     seedL,
   )
-import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
-import Shelley.Spec.Ledger.Keys
-  ( coerceKeyRole,
-    hashKey,
-  )
-import Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
-import Shelley.Spec.Ledger.OverlaySchedule (lookupInOverlaySchedule)
-import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
-import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
+import Shelley.Spec.Ledger.OCert (currentIssueNo, kesPeriod)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose)

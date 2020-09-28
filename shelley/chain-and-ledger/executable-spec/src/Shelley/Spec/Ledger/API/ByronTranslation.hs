@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Shelley.Spec.Ledger.ByronTranslation
+module Shelley.Spec.Ledger.API.ByronTranslation
   ( mkInitialShelleyLedgerView,
     translateToShelleyLedgerState,
 
@@ -25,14 +25,13 @@ import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.Coin (word64ToCoin)
+import Shelley.Spec.Ledger.API.Protocol
+import Shelley.Spec.Ledger.API.Types
+import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.EpochBoundary
-import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.UTxO
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
 -- We don't care about the type that is hashed, which will differ going from

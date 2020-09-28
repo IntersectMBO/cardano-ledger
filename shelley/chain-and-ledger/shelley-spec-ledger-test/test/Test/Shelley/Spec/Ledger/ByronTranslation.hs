@@ -7,8 +7,8 @@ module Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation) whe
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import Cardano.Ledger.Era
+import Shelley.Spec.Ledger.API.ByronTranslation
 import Shelley.Spec.Ledger.Address
-import Shelley.Spec.Ledger.ByronTranslation
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.TxBody
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)

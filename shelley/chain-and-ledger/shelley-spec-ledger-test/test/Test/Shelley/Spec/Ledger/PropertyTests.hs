@@ -4,10 +4,10 @@
 
 module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTests) where
 
+import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
-import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
 import Test.Shelley.Spec.Ledger.LegacyOverlay (legacyOverlayTest)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
