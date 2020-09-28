@@ -56,6 +56,8 @@ let
   jobs = {
     native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
   } // (mkRequiredJob (
+      collectTests jobs.native.libs ++
+      collectTests jobs.native.exes ++
       collectTests jobs.native.checks.tests ++
       collectTests jobs.native.benchmarks ++
       mapAttrsToList (_: spec: spec.x86_64-linux or null) jobs.native.specs
