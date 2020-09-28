@@ -5,9 +5,10 @@ module Test.Shelley.Spec.Ledger.Generator.MetaData
   )
 where
 
-import qualified Data.ByteString.Char8 as BS (pack)
+import qualified Data.ByteString.Char8 as BS (pack, length)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T (pack)
+import qualified Data.Text.Encoding as T
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes
   ( StrictMaybe (..),
@@ -63,13 +64,28 @@ genMetaDatum = do
         )
 
 genDatumInt :: Gen MetaDatum
-genDatumInt = I <$> QC.arbitrary
+genDatumInt = I <$> QC.frequency [ (8, QC.choose (minVal, maxVal))
+                                 , (1, pure minVal)
+                                 , (1, pure maxVal) ]
+  where
+    minVal, maxVal :: Integer
+    minVal = -maxVal
+    maxVal = fromIntegral (maxBound :: Word64)
 
 genDatumString :: Gen MetaDatum
-genDatumString = S . T.pack <$> QC.arbitrary
+genDatumString =
+    fmap S $
+    QC.sized $ \sz -> do
+      n <- QC.choose (0, min sz 64)
+      fmap T.pack (QC.vectorOf n QC.arbitrary) `QC.suchThat` withinRange
+  where
+    withinRange s = BS.length (T.encodeUtf8 s) <= 64
 
 genDatumBytestring :: Gen MetaDatum
-genDatumBytestring = B . BS.pack <$> QC.arbitrary
+genDatumBytestring =
+    QC.sized $ \sz -> do
+      n <- QC.choose (0, min sz 64)
+      B . BS.pack <$> QC.vectorOf n QC.arbitrary
 
 -- | Generate a 'MD.List [MetaDatum]'
 --
