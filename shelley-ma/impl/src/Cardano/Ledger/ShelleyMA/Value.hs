@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Ledger.ShelleyMA.Value
@@ -19,7 +20,8 @@ import Cardano.Binary
     fromCBOR,
     toCBOR,
   )
-import Cardano.Ledger.Crypto
+import Cardano.Ledger.Era
+import Cardano.Ledger.Val (Val)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
 import Data.ByteString (ByteString)
@@ -41,7 +43,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Scripts
-import Shelley.Spec.Ledger.Val (Val)
+import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 
 -- ============================================================================
 -- Multi Assests
@@ -128,7 +130,7 @@ instance PartialOrd (Value era) where
   (Value c m) <= (Value c1 m1) =
     c Val.<= c1 && pointWise (pointWise (Val.<=)) m m1
 
-instance Typeable era => Val (Value era) where
+instance Era era => Val (Value era) where
   scale s (Value c v) = Value (Val.scale s c) (mapV (mapV $ Val.scale s) v)
   coin (Value c _) = c
   inject c = Value c mempty
@@ -141,6 +143,16 @@ instance Typeable era => Val (Value era) where
         where
           -- add assetIdLen and uint for each asset of that Policy ID
           accumIns _ ans1 = ans1 + assetIdLen + uint
+
+      uint :: Integer
+      uint = 5
+
+      assetIdLen :: Integer
+      assetIdLen = 32
+
+      -- address hash length is always same as Policy ID length
+      addrHashLen :: Integer
+      addrHashLen = 2
 
 -- ============================================================================
 -- Operations on Map, specialised to comparable `Monoid` values.
@@ -232,8 +244,8 @@ mapV f m = Map.foldrWithKey accum Map.empty m
 -- Maybe better to make this distinction in the TxOut de/serialization
 
 instance
-  (Crypto crypto) =>
-  ToCBOR (Value crypto)
+  (Era era) =>
+  ToCBOR (Value era)
   where
   toCBOR (Value c v) =
     encodeListLen 2
@@ -241,8 +253,8 @@ instance
       <> toCBOR v
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (Value crypto)
+  (Era era) =>
+  FromCBOR (Value era)
   where
   fromCBOR = do
     decodeRecordNamed "Value" (const 2) $ do
