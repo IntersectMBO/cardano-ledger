@@ -112,7 +112,7 @@ data UtxowPredicateFailure era
   | ConflictingMetaDataHash
       !(MetaDataHash era) -- hash of the metadata included in the transaction body
       !(MetaDataHash era) -- hash of the full metadata
-    -- Contains out of range values (strings too long)
+      -- Contains out of range values (strings too long)
   | InvalidMetaData
   deriving (Eq, Generic, Show)
 

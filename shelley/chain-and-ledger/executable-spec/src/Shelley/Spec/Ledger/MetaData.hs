@@ -30,11 +30,11 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedThunks (..), Word64, cborError)
-import qualified Codec.CBOR.Encoding as CBOR
-import qualified Codec.CBOR.Decoding as CBOR
 import Codec.CBOR.Decoding (Decoder)
-import qualified Data.ByteString as BS
+import qualified Codec.CBOR.Decoding as CBOR
+import qualified Codec.CBOR.Encoding as CBOR
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Map.Strict (Map)
 import qualified Data.Text as T
@@ -44,10 +44,9 @@ import Shelley.Spec.Ledger.Keys (Hash, hashWithSerialiser)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | A generic metadatum type.
---
 data MetaDatum
--- TODO make strict:
-  = Map [(MetaDatum, MetaDatum)]
+  = -- TODO make strict:
+    Map [(MetaDatum, MetaDatum)]
   | List [MetaDatum]
   | I !Integer
   | B !BS.ByteString
@@ -100,7 +99,6 @@ hashMetaData ::
   MetaDataHash era
 hashMetaData = MetaDataHash . hashWithSerialiser toCBOR
 
-
 --------------------------------------------------------------------------------
 -- Validation of sizes
 
@@ -109,28 +107,37 @@ validMetaData (MetaData m) = all validMetaDatum m
 
 validMetaDatum :: MetaDatum -> Bool
 -- The integer size/representation checks are enforced in the decoder.
-validMetaDatum (I _)     = True
-validMetaDatum (B b)     = BS.length b <= 64
-validMetaDatum (S s)     = BS.length (T.encodeUtf8 s) <= 64
+validMetaDatum (I _) = True
+validMetaDatum (B b) = BS.length b <= 64
+validMetaDatum (S s) = BS.length (T.encodeUtf8 s) <= 64
 validMetaDatum (List xs) = all validMetaDatum xs
-validMetaDatum (Map kvs) = all (\(k,v) -> validMetaDatum k
-                                       && validMetaDatum v) kvs
-
+validMetaDatum (Map kvs) =
+  all
+    ( \(k, v) ->
+        validMetaDatum k
+          && validMetaDatum v
+    )
+    kvs
 
 --------------------------------------------------------------------------------
 -- CBOR encoding and decoding
 
 encodeMetaDatum :: MetaDatum -> CBOR.Encoding
-encodeMetaDatum (I n)     = CBOR.encodeInteger n
-encodeMetaDatum (B b)     = CBOR.encodeBytes b
-encodeMetaDatum (S s)     = CBOR.encodeString s
-encodeMetaDatum (List xs) = CBOR.encodeListLen (fromIntegral (length xs))
-                         <> mconcat [ encodeMetaDatum x
-                                    | x <- xs ]
-encodeMetaDatum (Map kvs) = CBOR.encodeMapLen (fromIntegral (length kvs))
-                         <> mconcat [ encodeMetaDatum k <> encodeMetaDatum v
-                                    | (k, v) <- kvs ]
-
+encodeMetaDatum (I n) = CBOR.encodeInteger n
+encodeMetaDatum (B b) = CBOR.encodeBytes b
+encodeMetaDatum (S s) = CBOR.encodeString s
+encodeMetaDatum (List xs) =
+  CBOR.encodeListLen (fromIntegral (length xs))
+    <> mconcat
+      [ encodeMetaDatum x
+        | x <- xs
+      ]
+encodeMetaDatum (Map kvs) =
+  CBOR.encodeMapLen (fromIntegral (length kvs))
+    <> mconcat
+      [ encodeMetaDatum k <> encodeMetaDatum v
+        | (k, v) <- kvs
+      ]
 
 -- | Decode a transaction matadatum value from its CBOR representation.
 --
@@ -147,106 +154,119 @@ encodeMetaDatum (Map kvs) = CBOR.encodeMapLen (fromIntegral (length kvs))
 -- on the chain. We accept both definte and indefinite representations.
 --
 -- The byte and string length checks are not enforced in this decoder, but
---
 decodeMetaDatum :: Decoder s MetaDatum
 decodeMetaDatum = do
-    tkty <- CBOR.peekTokenType
-    case tkty of
-      -- We support -(2^64-1) .. 2^64-1, but not big integers
-      -- not even big integer representation of values within range
-      CBOR.TypeUInt         -> I <$> CBOR.decodeInteger
-      CBOR.TypeUInt64       -> I <$> CBOR.decodeInteger
-      CBOR.TypeNInt         -> I <$> CBOR.decodeInteger
-      CBOR.TypeNInt64       -> I <$> CBOR.decodeInteger
+  tkty <- CBOR.peekTokenType
+  case tkty of
+    -- We support -(2^64-1) .. 2^64-1, but not big integers
+    -- not even big integer representation of values within range
+    CBOR.TypeUInt -> I <$> CBOR.decodeInteger
+    CBOR.TypeUInt64 -> I <$> CBOR.decodeInteger
+    CBOR.TypeNInt -> I <$> CBOR.decodeInteger
+    CBOR.TypeNInt64 -> I <$> CBOR.decodeInteger
+    -- Note that we do not enforce byte and string lengths here in the
+    -- decoder. We enforce that in the tx validation rules.
+    CBOR.TypeBytes -> do
+      !x <- CBOR.decodeBytes
+      return (B x)
+    CBOR.TypeBytesIndef -> do
+      CBOR.decodeBytesIndef
+      !x <- decodeBytesIndefLen []
+      return (B x)
+    CBOR.TypeString -> do
+      !x <- CBOR.decodeString
+      return (S x)
+    CBOR.TypeStringIndef -> do
+      CBOR.decodeStringIndef
+      !x <- decodeStringIndefLen []
+      return (S x)
 
-      -- Note that we do not enforce byte and string lengths here in the
-      -- decoder. We enforce that in the tx validation rules.
-      CBOR.TypeBytes        -> do !x <- CBOR.decodeBytes
-                                  return (B x)
-      CBOR.TypeBytesIndef   -> do CBOR.decodeBytesIndef
-                                  !x <- decodeBytesIndefLen []
-                                  return (B x)
+    -- Why does it work to do the same thing here for 32 and 64bit list len
+    -- tokens? On 32bit systems the decodeListLen will fail if the value
+    -- really is bigger than maxBound :: Int, and on 64bit systems if a value
+    -- that big is provided, then it'll fail when it runs out of input for
+    -- such a big list. Hence we can do exactly the same for the 32bit and
+    -- 64bit cases.
+    CBOR.TypeListLen -> do
+      n <- CBOR.decodeListLen
+      xs <- decodeListN n []
+      return (List xs)
+    CBOR.TypeListLen64 -> do
+      n <- CBOR.decodeListLen
+      xs <- decodeListN n []
+      return (List xs)
+    CBOR.TypeListLenIndef -> do
+      CBOR.decodeListLenIndef
+      xs <- decodeListIndefLen []
+      return (List xs)
 
-      CBOR.TypeString       -> do !x <- CBOR.decodeString
-                                  return (S x)
-      CBOR.TypeStringIndef  -> do CBOR.decodeStringIndef
-                                  !x <- decodeStringIndefLen []
-                                  return (S x)
-
-      -- Why does it work to do the same thing here for 32 and 64bit list len
-      -- tokens? On 32bit systems the decodeListLen will fail if the value
-      -- really is bigger than maxBound :: Int, and on 64bit systems if a value
-      -- that big is provided, then it'll fail when it runs out of input for
-      -- such a big list. Hence we can do exactly the same for the 32bit and
-      -- 64bit cases.
-      CBOR.TypeListLen      -> do n <- CBOR.decodeListLen
-                                  xs <- decodeListN n []
-                                  return (List xs)
-      CBOR.TypeListLen64    -> do n <- CBOR.decodeListLen
-                                  xs <- decodeListN n []
-                                  return (List xs)
-
-      CBOR.TypeListLenIndef -> do CBOR.decodeListLenIndef
-                                  xs <- decodeListIndefLen []
-                                  return (List xs)
-
-      -- Same logic applies as above for large lists.
-      CBOR.TypeMapLen       -> do n <- CBOR.decodeMapLen
-                                  xs <- decodeMapN n []
-                                  return (Map xs)
-      CBOR.TypeMapLen64     -> do n <- CBOR.decodeMapLen
-                                  xs <- decodeMapN n []
-                                  return (Map xs)
-
-      CBOR.TypeMapLenIndef  -> do CBOR.decodeMapLenIndef
-                                  xs <- decodeMapIndefLen []
-                                  return (Map xs)
-
-      _ -> decodeError ("Unsupported CBOR token type " <> T.pack (show tkty))
+    -- Same logic applies as above for large lists.
+    CBOR.TypeMapLen -> do
+      n <- CBOR.decodeMapLen
+      xs <- decodeMapN n []
+      return (Map xs)
+    CBOR.TypeMapLen64 -> do
+      n <- CBOR.decodeMapLen
+      xs <- decodeMapN n []
+      return (Map xs)
+    CBOR.TypeMapLenIndef -> do
+      CBOR.decodeMapLenIndef
+      xs <- decodeMapIndefLen []
+      return (Map xs)
+    _ -> decodeError ("Unsupported CBOR token type " <> T.pack (show tkty))
   where
     decodeError msg = cborError (DecoderErrorCustom "metadata" msg)
 
 decodeBytesIndefLen :: [BS.ByteString] -> CBOR.Decoder s ByteString
 decodeBytesIndefLen acc = do
-    stop <- CBOR.decodeBreakOr
-    if stop then return $! BS.concat (reverse acc)
-            else do !bs <- CBOR.decodeBytes
-                    decodeBytesIndefLen (bs : acc)
+  stop <- CBOR.decodeBreakOr
+  if stop
+    then return $! BS.concat (reverse acc)
+    else do
+      !bs <- CBOR.decodeBytes
+      decodeBytesIndefLen (bs : acc)
 
 decodeStringIndefLen :: [T.Text] -> Decoder s T.Text
 decodeStringIndefLen acc = do
-    stop <- CBOR.decodeBreakOr
-    if stop then return $! T.concat (reverse acc)
-            else do !str <- CBOR.decodeString
-                    decodeStringIndefLen (str : acc)
+  stop <- CBOR.decodeBreakOr
+  if stop
+    then return $! T.concat (reverse acc)
+    else do
+      !str <- CBOR.decodeString
+      decodeStringIndefLen (str : acc)
 
 decodeListN :: Int -> [MetaDatum] -> Decoder s [MetaDatum]
 decodeListN !n acc =
-    case n of
-      0 -> return $! reverse acc
-      _ -> do !t <- decodeMetaDatum
-              decodeListN (n-1) (t : acc)
+  case n of
+    0 -> return $! reverse acc
+    _ -> do
+      !t <- decodeMetaDatum
+      decodeListN (n -1) (t : acc)
 
 decodeListIndefLen :: [MetaDatum] -> Decoder s [MetaDatum]
 decodeListIndefLen acc = do
-    stop <- CBOR.decodeBreakOr
-    if stop then return $! reverse acc
-            else do !tm <- decodeMetaDatum
-                    decodeListIndefLen (tm : acc)
+  stop <- CBOR.decodeBreakOr
+  if stop
+    then return $! reverse acc
+    else do
+      !tm <- decodeMetaDatum
+      decodeListIndefLen (tm : acc)
 
 decodeMapN :: Int -> [(MetaDatum, MetaDatum)] -> Decoder s [(MetaDatum, MetaDatum)]
 decodeMapN !n acc =
-    case n of
-      0 -> return $! reverse acc
-      _ -> do !tm   <- decodeMetaDatum
-              !tm'  <- decodeMetaDatum
-              decodeMapN (n-1) ((tm, tm') : acc)
+  case n of
+    0 -> return $! reverse acc
+    _ -> do
+      !tm <- decodeMetaDatum
+      !tm' <- decodeMetaDatum
+      decodeMapN (n -1) ((tm, tm') : acc)
 
 decodeMapIndefLen :: [(MetaDatum, MetaDatum)] -> Decoder s [(MetaDatum, MetaDatum)]
 decodeMapIndefLen acc = do
-    stop <- CBOR.decodeBreakOr
-    if stop then return $! reverse acc
-            else do !tm  <- decodeMetaDatum
-                    !tm' <- decodeMetaDatum
-                    decodeMapIndefLen ((tm, tm') : acc)
-
+  stop <- CBOR.decodeBreakOr
+  if stop
+    then return $! reverse acc
+    else do
+      !tm <- decodeMetaDatum
+      !tm' <- decodeMetaDatum
+      decodeMapIndefLen ((tm, tm') : acc)
