@@ -139,6 +139,9 @@ prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBO
 prop_roundtrip_Script :: Ledger.Script Mock.C -> Property
 prop_roundtrip_Script = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
+prop_roundtrip_metadata :: Ledger.MetaData -> Property
+prop_roundtrip_metadata = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
+
 -- TODO
 
 -- roundTripIpv4 :: Property
@@ -174,5 +177,6 @@ tests =
       testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
       testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState,
       testProperty "roundtrip MultiSig" prop_roundtrip_MultiSig,
-      testProperty "roundtrip Script" prop_roundtrip_Script
+      testProperty "roundtrip Script" prop_roundtrip_Script,
+      testProperty "roundtrip MetaData" prop_roundtrip_metadata
     ]

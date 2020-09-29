@@ -88,6 +88,10 @@ import Shelley.Spec.Ledger.LedgerState as X
     UTxOState (..),
     WitHashes (..),
   )
+import Shelley.Spec.Ledger.MetaData as X
+  ( MetaData (..),
+    MetaDatum (..),
+import Shelley.Spec.Ledger.OCert as X (OCert (..))
 import Shelley.Spec.Ledger.OCert as X (KESPeriod (..), OCert (..))
 import Shelley.Spec.Ledger.OverlaySchedule as X
   ( OBftSlot (..),
