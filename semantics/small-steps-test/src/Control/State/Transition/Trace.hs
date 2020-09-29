@@ -46,7 +46,7 @@ module Control.State.Transition.Trace
   )
 where
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoThunks(..))
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
@@ -82,9 +82,9 @@ deriving instance
   (Show (State s), Show (Signal s)) => (Show (SigState s))
 
 instance
-  ( NoUnexpectedThunks (State s)
-  , NoUnexpectedThunks (Signal s)
-  ) => (NoUnexpectedThunks (SigState s))
+  ( NoThunks (State s)
+  , NoThunks (Signal s)
+  ) => (NoThunks (SigState s))
 
 -- | A successful trace of a transition system.
 --
@@ -108,10 +108,10 @@ deriving instance
   (Show (State s), Show (Signal s), Show (Environment s)) => (Show (Trace s))
 
 instance
-  ( NoUnexpectedThunks (Environment s)
-  , NoUnexpectedThunks (State s)
-  , NoUnexpectedThunks (Signal s)
-  ) => (NoUnexpectedThunks (Trace s))
+  ( NoThunks (Environment s)
+  , NoThunks (State s)
+  , NoThunks (Signal s)
+  ) => (NoThunks (Trace s))
 
 -- | Make a trace given an environment and initial state.
 mkTrace :: Environment s -> State s -> [(State s, Signal s)] -> Trace s

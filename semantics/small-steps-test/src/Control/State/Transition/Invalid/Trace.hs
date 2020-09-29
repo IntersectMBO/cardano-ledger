@@ -11,7 +11,7 @@
 --
 module Control.State.Transition.Invalid.Trace where
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoThunks(..))
 import           Control.State.Transition (Environment, PredicateFailure, Signal, State)
 import qualified Control.State.Transition.Trace as Trace
 import           GHC.Generics (Generic)
@@ -42,8 +42,8 @@ deriving instance
   ) => (Show (Trace s))
 
 instance
-  ( NoUnexpectedThunks (Environment s)
-  , NoUnexpectedThunks (State s)
-  , NoUnexpectedThunks (Signal s)
-  , NoUnexpectedThunks (PredicateFailure s)
-  ) => (NoUnexpectedThunks (Trace s))
+  ( NoThunks (Environment s)
+  , NoThunks (State s)
+  , NoThunks (Signal s)
+  , NoThunks (PredicateFailure s)
+  ) => (NoThunks (Trace s))

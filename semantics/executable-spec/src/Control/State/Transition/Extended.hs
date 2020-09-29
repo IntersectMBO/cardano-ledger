@@ -39,7 +39,6 @@ module Control.State.Transition.Extended
     judgmentContext,
     trans,
     liftSTS,
-
     -- Type Apply STS
     AssertionPolicy (..),
     ValidationPolicy (..),
@@ -54,7 +53,6 @@ module Control.State.Transition.Extended
   )
 where
 
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Exception (Exception (..), throw)
 import Control.Monad (when)
 import Control.Monad.Except (MonadError (..))
@@ -69,6 +67,7 @@ import Data.Functor ((<&>))
 import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
 import Data.Typeable (typeRep)
+import NoThunks.Class (NoThunks (..))
 
 data RuleType
   = Initial
@@ -489,7 +488,7 @@ applySTSInternal ap goRule ctx =
 --
 -- TODO move this somewhere more sensible
 newtype Threshold a = Threshold a
-  deriving (Eq, Ord, Show, Data, Typeable, NoUnexpectedThunks)
+  deriving (Eq, Ord, Show, Data, Typeable, NoThunks)
 
 {------------------------------------------------------------------------------
 -- Utils

@@ -41,13 +41,14 @@ library
                      , bytestring
                      , containers
                      , cryptonite
+                     , deepseq
                      , free
                      , mtl
+                     , nothunks
                      , transformers >= 0.5
                      , ansi-wl-pprint
                      -- IOHK deps
                      , cardano-crypto-class
-                     , cardano-prelude
                      , cardano-binary
                      , cborg
   hs-source-dirs:      src
