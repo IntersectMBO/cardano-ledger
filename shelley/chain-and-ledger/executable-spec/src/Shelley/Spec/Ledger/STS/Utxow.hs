@@ -26,6 +26,7 @@ import Cardano.Binary
 import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (eval, (∩))
+import Control.Monad (when)
 import Control.State.Transition
   ( Embed,
     IRC (..),
@@ -80,6 +81,7 @@ import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData, validMetaData)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, decodeSet, encodeFoldable)
+import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     hashScript,
@@ -244,7 +246,7 @@ utxoWitnessed =
         (SJust mdh, SJust md') -> do
           hashMetaData md' == mdh ?! ConflictingMetaDataHash mdh (hashMetaData md')
           -- check metadata value sizes
-          validMetaData md' ?! InvalidMetaData
+          when (SoftForks.validMetaData pp) $ validMetaData md' ?! InvalidMetaData
 
       -- check genesis keys signatures for instantaneous rewards certificates
       let genDelegates = Set.fromList $ fmap (asWitness . genDelegKeyHash) $ Map.elems genMapping
