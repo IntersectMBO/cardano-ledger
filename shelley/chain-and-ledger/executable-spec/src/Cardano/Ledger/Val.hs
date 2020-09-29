@@ -6,6 +6,7 @@
 -- with which we may quantify a transaction output.
 module Cardano.Ledger.Val
   ( Val (..),
+    LabeledInt(..),
     scale,
     sumVal,
     scaledMinDeposit,
@@ -14,7 +15,7 @@ module Cardano.Ledger.Val
     assetIdLen,
     mapV,
     unionWithV,
-    pointWise,
+    pointWiseM,
     insertWithV,
   )
 where
@@ -32,34 +33,84 @@ import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 
--- ============================================================
+-- ==========================================================================
+-- The LabeledInt class describes an algebraic structure. Think of it as big
+-- box with a bunch of labelled items. There are two ways to label an item.
+-- 1) By path to the item.
+-- 2) By associating a key to the item.
+-- There is an inductive way to define things in the Val class. We are interested
+-- in the case where item is an Integer. So there are three formation rules,
+-- which show up as three instances. One for Base the case Integer, one for
+-- Binary Paths, and one for Keys realized in a Data.Map.Map
+-- All Instances are built composing some form of the 3 rules.
+
+class  (Eq t, Show t) => LabeledInt t where
+  zeroLI:: t
+  plusLI:: t -> t -> t
+  minusLI:: t -> t -> t
+  minusLI x y = plusLI x (invertLI y)
+  scaleLI:: Int -> t -> t
+  invertLI:: t -> t
+  invertLI x = scaleLI (-1) x
+  isZeroLI:: t -> Bool
+  pointWiseLI :: (Integer -> Integer -> Bool) -> t -> t -> Bool
+
+-- Base Case
+instance LabeledInt Integer where
+  zeroLI = 0
+  plusLI x y = x + y
+  scaleLI n x = fromIntegral n * x
+  isZeroLI x = x == 0
+  pointWiseLI p x y = p x y
+
+-- Key Case
+instance (Typeable k, Show k, Ord k, LabeledInt t) => LabeledInt (Map.Map k t) where
+  zeroLI = Map.empty
+  plusLI x y = unionWithV plusLI x y
+  scaleLI s x = mapV (s `scaleLI` ) x
+  isZeroLI x = Map.null x
+  pointWiseLI p x y = pointWiseM (pointWiseLI p) x y
+
+-- Binary Path Case
+instance (LabeledInt x, LabeledInt y) => LabeledInt (x,y) where
+  zeroLI = (zeroLI, zeroLI)
+  plusLI (x,y) (a,b) = (plusLI x a,plusLI y b)
+  scaleLI n (x,y) = (scaleLI n x, scaleLI n y)
+  isZeroLI (x,y) = isZeroLI x && isZeroLI y
+  pointWiseLI p (x,y) (a,b) = pointWiseLI p x a  &&  pointWiseLI p y b
+
+deriving instance LabeledInt Coin
+
+-- =========================================
 
 infixl 6 <+>
-
 infixl 6 <->
-
 infixl 7 <×>
 
-class (Eq t, Show t) => Val t where
+class (Eq t, Show t, LabeledInt t) => Val t where
   -- | The Val object with a count of 0 for everything
   zero :: t
+  zero = zeroLI
 
   -- | add two Val objects
   (<+>) :: t -> t -> t
+  x <+> y = plusLI x y
 
   -- | Subtract two Val objects
   (<->) :: t -> t -> t
-  x <-> y = x <+> (invert y)
+  x <-> y = plusLI x (invertLI y)
 
   -- | Scale a Val object by a constant
   (<×>) :: Int -> t -> t
+  x <×> y = scaleLI x y
 
   -- | Invert a Val object
   invert :: t -> t
-  invert x = (-1) <×> x
+  invert x = scaleLI (-1) x
 
   -- | Is the argument zero?
   isZero :: t -> Bool
+  isZero x = isZeroLI x
 
   -- | Get the ADA present in the value (since ADA is our "blessed" currency)
   coin :: t -> Coin
@@ -67,7 +118,15 @@ class (Eq t, Show t) => Val t where
   -- | Create a value containing only this amount of ADA
   inject :: Coin -> t
 
+  modifyCoin :: (Coin -> Coin) -> t -> t
+
   size :: t -> Integer -- compute size of Val instance
+
+instance Val Coin where
+   coin x = x
+   inject x = x
+   modifyCoin f x = f x
+   size _x = 1
 
 -- =============================================================
 -- Synonym for backward compatibility
@@ -75,8 +134,8 @@ class (Eq t, Show t) => Val t where
 scale :: Val t => Int -> t -> t
 scale n t = n <×> t
 
-sumVal :: (Foldable t, Val v) => t v -> v
-sumVal xs = foldl (<+>) zero xs
+sumVal :: (Foldable t, LabeledInt v) => t v -> v
+sumVal xs = foldl plusLI zeroLI xs
 
 {- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
 (passed to it as Coin mv) as a specification of "the cost of
@@ -144,57 +203,30 @@ uint :: Integer
 uint = 5
 
 assetIdLen :: Integer
-assetIdLen = 30 -- I have no idea what this is supposed to be
-
--- ================================================================================================
--- There are 2 basic instances of the Val class, and most other instances are built from them
--- from some kind of automatic inheritance from these two types.
-
-instance Val Integer where
-  zero = 0
-  x <+> y = x + y
-  n <×> x = fromIntegral n * x
-  coin x = Coin x
-  inject (Coin x) = x
-  size _ = 1
-  isZero x = x == 0
-
--- ==================================================================
--- The Coin instance inherits from Integer by newtype deriving
-
-deriving instance Val Coin
+assetIdLen = 30 -- FIXME TODO  I have no idea what this is supposed to be
 
 -- ======================================================================\
--- We can nest Map.Map over a Val t, and that inherits from t
--- This means instances like (Map k1 (Map k2 (Map k3 t))) come for free if Val t
+-- We can nest Map.Map over a LabeledInt t, and that inherits from t
+-- This means instances like (Map k1 (Map k2 (Map k3 t))) come for free if LabeledInt  t
 
-instance (Typeable k, Show k, Ord k, Val t) => Val (Map.Map k t) where
-  zero = Map.empty
-  x <+> y = unionWithV (<+>) x y
-  s <×> x = mapV (s <×>) x
-  isZero x = Map.null x
-  coin _ = Coin 0
-  inject (Coin _) = Map.empty
-  size _ = 1
-
--- | Pointwise comparison assuming the map is the Default value (zero) everywhere except where it is defined
-pointWise ::
-  (Ord k, Val v) =>
+-- | Pointwise comparison assuming the map is the Default value (zeroLI) everywhere except where it is defined
+pointWiseM ::
+  (Ord k, LabeledInt v) =>
   (v -> v -> Bool) ->
   Map k v ->
   Map k v ->
   Bool
-pointWise _ Tip Tip = True
-pointWise p Tip (m@(Bin _ _ _ _ _)) = all (zero `p`) m
-pointWise p (m@(Bin _ _ _ _ _)) Tip = all (`p` zero) m
-pointWise p m (Bin _ k v2 ls rs) =
+pointWiseM _ Tip Tip = True
+pointWiseM p Tip (m@(Bin _ _ _ _ _)) = all (zeroLI `p`) m
+pointWiseM p (m@(Bin _ _ _ _ _)) Tip = all (`p` zeroLI) m
+pointWiseM p m (Bin _ k v2 ls rs) =
   case Map.splitLookup k m of
-    (lm, Just v1, rm) -> p v1 v2 && pointWise p ls lm && pointWise p rs rm
+    (lm, Just v1, rm) -> p v1 v2 && pointWiseM p ls lm && pointWiseM p rs rm
     _ -> False
 
 -- | insertWithV enforces the invariant that mempty is never stored in a Map
 insertWithV ::
-  (Ord k, Val a) =>
+  (Ord k, LabeledInt a) =>
   (a -> a -> a) ->
   k ->
   a ->
@@ -203,24 +235,24 @@ insertWithV ::
 insertWithV = go
   where
     go ::
-      (Ord k, Val a) =>
+      (Ord k, LabeledInt a) =>
       (a -> a -> a) ->
       k ->
       a ->
       Map k a ->
       Map k a
-    go _ !kx x Tip = if x == zero then Tip else singleton kx x
+    go _ !kx x Tip = if x == zeroLI then Tip else singleton kx x
     go f !kx x (Bin sy ky y l r) =
       case Prelude.compare kx ky of
         LT -> balanceL ky y (go f kx x l) r
         GT -> balanceR ky y l (go f kx x r)
-        EQ -> if new == zero then link2 l r else Bin sy kx new l r
+        EQ -> if new == zeroLI then link2 l r else Bin sy kx new l r
           where
             new = f x y
 {-# INLINEABLE insertWithV #-}
 
 unionWithV ::
-  (Ord k, Val a) =>
+  (Ord k, LabeledInt a) =>
   (a -> a -> a) ->
   Map k a ->
   Map k a ->
@@ -232,11 +264,11 @@ unionWithV _f Tip t2 = t2
 unionWithV f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
   (l2, mb, r2) -> case mb of
     Nothing ->
-      if x1 == zero
+      if x1 == zeroLI
         then link2 l1l2 r1r2
         else link k1 x1 l1l2 r1r2
     Just x2 ->
-      if new == zero
+      if new == zeroLI
         then link2 l1l2 r1r2
         else link k1 new l1l2 r1r2
       where
@@ -246,10 +278,10 @@ unionWithV f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
       !r1r2 = unionWithV f r1 r2
 {-# INLINEABLE unionWithV #-}
 
-mapV :: (Ord k, Val a) => (a -> a) -> Map k a -> Map k a
+mapV :: (Ord k, LabeledInt a) => (a -> a) -> Map k a -> Map k a
 mapV f m = Map.foldrWithKey accum Map.empty m
   where
-    accum k v ans = if new == zero then ans else Map.insert k new ans
+    accum k v ans = if new == zeroLI then ans else Map.insert k new ans
       where
         new = f v
 {-# INLINEABLE mapV #-}

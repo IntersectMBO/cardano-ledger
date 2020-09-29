@@ -6,6 +6,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 {-# OPTIONS_GHC -Wno-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
@@ -33,17 +36,17 @@ import Cardano.Binary
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Val
-  ( Val (..),
+  ( Val (..),LabeledInt(..),
     addrHashLen,
     assetIdLen,
     insertWithV,
     mapV,
-    pointWise,
+    pointWiseM,
     scale,
     uint,
     unionWithV,
   )
-import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
+import Cardano.Prelude (NFData (rnf), NoUnexpectedThunks (..), UseIsNormalFormNamed(..))
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import Data.String (fromString)
@@ -58,7 +61,7 @@ import Prelude hiding (lookup)
 -- Multi Assests
 --
 -- A Value is a map from 'PolicyID's to a quantity of assets with this policy.
--- This map implements a finitely supported functions ovr PolicyId. A PolicyID
+-- This map implements a finitely supported functions over PolicyId. A PolicyID
 -- is not stored in the Map, then its quantity is assumed to be 0.
 --
 -- Operations on assets are usually implemented 'pointwise'. That is, we apply
@@ -105,19 +108,18 @@ data Value era = Value !Integer !(Map.Map (PolicyID era) (Map.Map AssetID Intege
   deriving (Show, Generic)
 
 instance Eq (Value era) where
-  (Value c1 m1) == (Value c2 m2) = c1 == c2 && pointWise (==) m1 m2
+  (Value c1 m1) == (Value c2 m2) = c1 == c2 && pointWiseM (==) m1 m2
 
 instance Typeable era => Monoid (Value era) where
   mempty = Value 0 Map.empty
 
 instance Typeable era => Semigroup (Value era) where
-  (Value c1 m1) <> (Value c2 m2) = Value (c1 <+> c2) (m1 <+> m2)
+  (Value c1 m1) <> (Value c2 m2) = Value (plusLI c1 c2) (plusLI m1 m2)
 
---TODO, FIX ME with some deriving magic
-instance NFData (Value era)
+instance NFData (Value era) where
+  rnf !(Value c m) = seq (rnf c) (rnf m)
 
--- TODO, FIX ME with some deriving magic
-instance NoUnexpectedThunks (Value era)
+deriving via UseIsNormalFormNamed "Value" (Value era) instance NoUnexpectedThunks (Value era)
 
 -- CBOR
 instance
@@ -140,15 +142,19 @@ instance
       pure $ Value c v
 
 -- =========================================================================
--- The important Val instance
+-- The important LabeledInt and Val instances
+
+instance (Era era, Crypto era, Typeable era) => LabeledInt (Value era) where
+  zeroLI = Value 0 Map.empty
+  scaleLI s (Value c v) = Value (scaleLI s c) (mapV (mapV (scaleLI s)) v)
+  plusLI (Value c1 m1) (Value c2 m2) = Value (plusLI c1 c2) (plusLI m1 m2)
+  isZeroLI (Value c m) = isZeroLI c && isZeroLI m
+  pointWiseLI p (Value c m) (Value d n) = (pointWiseLI p c d) && (pointWiseLI p m n)
 
 instance (Era era, Crypto era, Typeable era) => Val (Value era) where
-  zero = Value 0 Map.empty
-  s <×> (Value c v) = Value (s <×> c) (mapV (mapV (\x -> (fromIntegral s) * x)) v)
-  (Value c1 m1) <+> (Value c2 m2) = Value (c1 <+> c2) (m1 <+> m2)
-  isZero (Value c m) = c == 0 && Map.null m
   coin (Value c _) = Coin c
   inject (Coin c) = Value c Map.empty
+  modifyCoin f (Value c m) = Value d m where (Coin d) = f (Coin c)
   size (Value _ v) =
     -- add uint for the Coin portion in this size calculation
     foldr accum uint v
@@ -171,20 +177,14 @@ lookup pid aid (Value _ m) =
 insert :: (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
 insert combine pid aid new (Value c m1) =
   case Map.lookup pid m1 of
-    Nothing -> Value c (insertWithV (<+>) pid (insertWithV combine aid new zero) m1)
+    Nothing -> Value c (insertWithV (plusLI) pid (insertWithV combine aid new zeroLI) m1)
     Just m2 -> case Map.lookup aid m2 of
-      Nothing -> Value c (insertWithV (<+>) pid (Map.singleton aid new) m1)
-      Just old -> Value c (insertWithV (<+>) pid (insertWithV combine aid (combine old new) m2) m1)
+      Nothing -> Value c (insertWithV plusLI pid (Map.singleton aid new) m1)
+      Just old -> Value c (insertWithV plusLI pid (insertWithV combine aid (combine old new) m2) m1)
 
 -- Might be useful to benchmark 'insert' vs 'insert2'
 insert2 :: (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
 insert2 combine pid aid new (Value c m1) = Value c (unionWithV (unionWithV combine) m1 (Map.singleton pid (Map.singleton aid new)))
-
-modify :: (Integer -> Integer) -> Value era -> Value era
-modify f (Value n m) = Value (f n) m
-
-modifyC :: (Integer -> Integer) -> Coin -> Coin
-modifyC f (Coin n) = Coin (f n)
 
 -- =====================================================
 
@@ -252,7 +252,7 @@ coinScale n v = coin (n <×> v) == n <×> (coin v)
 coinInject :: forall v. Val v => Rep v -> Coin -> Bool
 coinInject _ x = coin @v (inject @v x) == x
 
-coinModify :: forall era. (Crypto era, Era era) => (Integer -> Integer) -> Value era -> Bool
-coinModify f v = coin (modify f v) == modifyC f (coin @(Value era) v)
+coinModify :: forall era. (Crypto era, Era era) => (Coin -> Coin) -> Value era -> Bool
+coinModify f v = coin (modifyCoin f v) == modifyCoin f (coin @(Value era) v)
 
 coinInsert comb c t n v = coin (insert comb c t n v) == coin v
