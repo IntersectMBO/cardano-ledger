@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Shelley.Spec.Ledger.Rules.TestDeleg
   ( credentialMappingAfterDelegation,
@@ -53,21 +54,18 @@ import Shelley.Spec.Ledger.TxBody
     pattern RegKey,
   )
 import Test.QuickCheck (Property, conjoin, counterexample, property)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( C,
-  )
 
 -------------------------------
 -- helper accessor functions --
 -------------------------------
 
-getStDelegs :: DState C -> Set (Credential 'Staking C)
+getStDelegs :: DState era -> Set (Credential 'Staking era)
 getStDelegs = \x -> eval (dom (_rewards x))
 
-getRewards :: DState C -> Map (Credential 'Staking C) Coin
+getRewards :: DState era -> Map (Credential 'Staking era) Coin
 getRewards = _rewards
 
-getDelegations :: DState C -> Map (Credential 'Staking C) (KeyHash 'StakePool C)
+getDelegations :: DState era -> Map (Credential 'Staking era) (KeyHash 'StakePool era)
 getDelegations = _delegations
 
 --------------------------
@@ -76,7 +74,7 @@ getDelegations = _delegations
 
 -- | Check that a newly registered key has a reward of 0.
 rewardZeroAfterReg ::
-  [SourceSignalTarget (DELEG C)] ->
+  [SourceSignalTarget (DELEG era)] ->
   Property
 rewardZeroAfterReg tr =
   conjoin $
@@ -95,7 +93,7 @@ rewardZeroAfterReg tr =
 -- | Check that when a stake credential is deregistered, it will not be in the
 -- rewards mapping or delegation mapping of the target state.
 credentialRemovedAfterDereg ::
-  [SourceSignalTarget (DELEG C)] ->
+  [SourceSignalTarget (DELEG era)] ->
   Property
 credentialRemovedAfterDereg tr =
   conjoin $
@@ -117,7 +115,7 @@ credentialRemovedAfterDereg tr =
 -- | Check that a registered stake credential get correctly delegated when
 --  applying a delegation certificate.
 credentialMappingAfterDelegation ::
-  [SourceSignalTarget (DELEG C)] ->
+  [SourceSignalTarget (DELEG era)] ->
   Property
 credentialMappingAfterDelegation tr =
   conjoin $
@@ -137,7 +135,7 @@ credentialMappingAfterDelegation tr =
 -- | Check that the sum of rewards does not change and that each element that is
 -- either removed or added has a zero balance.
 rewardsSumInvariant ::
-  [SourceSignalTarget (DELEG C)] ->
+  [SourceSignalTarget (DELEG era)] ->
   Property
 rewardsSumInvariant tr =
   conjoin $
@@ -158,12 +156,12 @@ rewardsSumInvariant tr =
 
 -- | Check that an accepted MIR certificate adds all entries to the `irwd` mapping
 instantaneousRewardsAdded ::
-  [SourceSignalTarget (DELEG C)] ->
+  [SourceSignalTarget (DELEG era)] ->
   Property
 instantaneousRewardsAdded ssts =
   conjoin (map checkMIR ssts)
   where
-    checkMIR :: SourceSignalTarget (DELEG C) -> Property
+    checkMIR :: SourceSignalTarget (DELEG era) -> Property
     checkMIR (SourceSignalTarget _ t sig) =
       case sig of
         DCertMir (MIRCert ReservesMIR irwd) ->
@@ -175,13 +173,13 @@ instantaneousRewardsAdded ssts =
 -- | Check that an accepted MIR certificate adds the overall value in the
 -- certificate to the existing value in the `irwd` map, overwriting any entries
 -- that already existed.
-instantaneousRewardsValue ::
-  [SourceSignalTarget (DELEG C)] ->
+instantaneousRewardsValue :: forall era.
+  [SourceSignalTarget (DELEG era)] ->
   Property
 instantaneousRewardsValue ssts =
   conjoin (map checkMIR ssts)
   where
-    checkMIR :: SourceSignalTarget (DELEG C) -> Property
+    checkMIR :: SourceSignalTarget (DELEG era) -> Property
     checkMIR (SourceSignalTarget s t sig) =
       case sig of
         DCertMir (MIRCert ReservesMIR irwd) ->

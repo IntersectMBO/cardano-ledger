@@ -1,6 +1,8 @@
 {-# LANGUAGE LambdaCase #-}
 
+import Data.Proxy
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (chainExamples)
@@ -20,7 +22,7 @@ mainTests =
   testGroup
     "Ledger with Delegation"
     [ minimalPropertyTests,
-      rewardTests,
+      rewardTests (Proxy :: Proxy C),
       Serialisation.tests 5,
       chainExamples,
       --multisigExamples, - TODO re-enable after the script embargo has been lifted

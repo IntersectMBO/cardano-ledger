@@ -4,6 +4,7 @@
 
 module Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation) where
 
+import Data.Proxy
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import Cardano.Ledger.Era
@@ -13,7 +14,6 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.TxBody
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.QuickCheck.Hedgehog (hedgehog)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
@@ -21,21 +21,21 @@ import Test.Tasty.QuickCheck
   Top-level tests
 ------------------------------------------------------------------------------}
 
-testGroupByronTranslation :: TestTree
-testGroupByronTranslation =
+testGroupByronTranslation :: forall era. Era era => Proxy era -> TestTree
+testGroupByronTranslation proxy =
   testGroup
     "Translation from Byron to Shelley"
-    [ testProperty "translateTxOut correctness" prop_translateTxOut_correctness
+    [ testProperty "translateTxOut correctness" (prop_translateTxOut_correctness proxy)
     ]
 
 {------------------------------------------------------------------------------
   Properties
 ------------------------------------------------------------------------------}
 
-prop_translateTxOut_correctness :: Byron.CompactTxOut -> Property
-prop_translateTxOut_correctness compactTxOut =
+prop_translateTxOut_correctness :: forall era. Era era => Proxy era -> Byron.CompactTxOut -> Property
+prop_translateTxOut_correctness _proxy compactTxOut =
   translateTxOutByronToShelley
-    @C
+    @era
     (Byron.fromCompactTxOut compactTxOut)
     === translateCompactTxOutByronToShelley compactTxOut
 

@@ -4,6 +4,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidLedgerSignalsAreGenerated,
@@ -14,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   )
 where
 
+import Cardano.Ledger.Era(Era)
 import Cardano.Binary (serialize')
 import Cardano.Slotting.Slot (EpochSize (..))
 import qualified Control.State.Transition.Extended
@@ -92,34 +94,34 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
 
-genesisChainState ::
+genesisChainState :: forall era a. Era era =>
   Maybe
-    ( Control.State.Transition.Extended.IRC (CHAIN C) ->
+    ( Control.State.Transition.Extended.IRC (CHAIN era) ->
       QC.Gen
         ( Either
             a
-            (ChainState C)
+            (ChainState era)
         )
     )
-genesisChainState = Just $ mkGenesisChainState (geConstants (genEnv p))
+genesisChainState = Just $ mkGenesisChainState  (geConstants (genEnv p))
   where
-    p :: Proxy C
+    p :: Proxy era
     p = Proxy
 
-genesisLedgerState ::
+genesisLedgerState :: forall era a. Era era =>
   Maybe
-    ( Control.State.Transition.Extended.IRC (LEDGER C) ->
+    ( Control.State.Transition.Extended.IRC (LEDGER era) ->
       QC.Gen
         ( Either
             a
-            ( UTxOState C,
-              DPState C
+            ( UTxOState era,
+              DPState era
             )
         )
     )
 genesisLedgerState = Just $ mkGenesisLedgerState (geConstants (genEnv p))
   where
-    p :: Proxy C
+    p :: Proxy era
     p = Proxy
 
 relevantCasesAreCovered :: Property
@@ -133,8 +135,8 @@ relevantCasesAreCovered = do
     p :: Proxy C
     p = Proxy
 
-relevantCasesAreCoveredForTrace ::
-  Trace (CHAIN C) ->
+relevantCasesAreCoveredForTrace :: forall era. Era era =>
+  Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
   let blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
@@ -213,7 +215,7 @@ relevantCasesAreCoveredForTrace tr = do
 
 -- | Ratio of certificates with script credentials to the number of certificates
 -- that could have script credentials.
-scriptCredentialCertsRatio :: [DCert C] -> Double
+scriptCredentialCertsRatio :: [DCert era] -> Double
 scriptCredentialCertsRatio certs =
   ratioInt haveScriptCerts couldhaveScriptCerts
   where
@@ -238,7 +240,7 @@ scriptCredentialCertsRatio certs =
           certs
 
 -- | Extract the certificates from the transactions
-certsByTx :: [Tx C] -> [[DCert C]]
+certsByTx :: Era era => [Tx era] -> [[DCert era]]
 certsByTx txs = toList . _certs . _body <$> txs
 
 ratioInt :: Int -> Int -> Double
@@ -246,7 +248,7 @@ ratioInt x y =
   fromIntegral x / fromIntegral y
 
 -- | Transaction has script locked TxOuts
-txScriptOutputsRatio :: [StrictSeq (TxOut C)] -> Double
+txScriptOutputsRatio :: Era era => [StrictSeq (TxOut era)] -> Double
 txScriptOutputsRatio txoutsList =
   ratioInt
     (sum (map countScriptOuts txoutsList))
@@ -261,17 +263,17 @@ txScriptOutputsRatio txoutsList =
           )
           txouts
 
-hasWithdrawal :: Tx C -> Bool
+hasWithdrawal :: Era era => Tx era -> Bool
 hasWithdrawal = not . null . unWdrl . _wdrls . _body
 
-hasPParamUpdate :: Tx C -> Bool
+hasPParamUpdate :: Era era => Tx era -> Bool
 hasPParamUpdate tx =
   ppUpdates . _txUpdate . _body $ tx
   where
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
-hasMetaData :: Tx C -> Bool
+hasMetaData :: Era era => Tx era -> Bool
 hasMetaData tx =
   f . _mdHash . _body $ tx
   where
@@ -330,7 +332,7 @@ onlyValidChainSignalsAreGenerated =
     p = Proxy
 
 -- | Counts the epochs spanned by this trace
-epochsInTrace :: [Block C] -> Int
+epochsInTrace :: forall era. Era era => [Block era] -> Int
 epochsInTrace [] = 0
 epochsInTrace bs =
   fromIntegral $ toEpoch - fromEpoch + 1
