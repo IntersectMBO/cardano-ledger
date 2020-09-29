@@ -24,7 +24,7 @@
       \\
       \var{cur}
       & \CurItem
-      & \CurrencyId \uniondistinct \UTxOIn \uniondistinct \AddrRWD \uniondistinct \DCert
+      & \PolicyID \uniondistinct \UTxOIn \uniondistinct \AddrRWD \uniondistinct \DCert
 %      & \text{item the script is validated for}
     \end{array}
   \end{equation*}
@@ -212,13 +212,13 @@ This includes,
     &\fun{indexof} \in \DCert \to \seqof{\DCert} \to \Ix\\
     &\fun{indexof} \in \AddrRWD \to \Wdrl \to \Ix\\
     &\fun{indexof} \in \UTxOIn \to \powerset{\TxIn} \to \Ix\\
-    &\fun{indexof} \in \CurrencyId \to \Value \to \Ix\\
+    &\fun{indexof} \in \PolicyID \to \Value \to \Ix\\
     & \text{get the index of an item in the an ordered representation}
   \end{align*}
   %
   \emph{Helper functions}
   \begin{align*}
-    &\fun{indexedScripts} \in \GoguenTx \to (\PolicyID \mapsto \Script) \\
+    &\fun{indexedScripts} \in \GoguenTx \to (\ScriptHash \mapsto \Script) \\
     &\fun{indexedScripts}~{tx} ~=~ \{ h \mapsto s ~\vert~ \fun{hashScript}~{s}~=~h,
      s\in~\fun{txscripts}~(\fun{txwits}~{tx})\}
     \nextdef
@@ -231,7 +231,7 @@ This includes,
       \begin{cases}
         (\mathsf{certTag},\fun{indexof}~\var{it}~(\fun{txcerts}~{txb}))   & \var{it}~\in~\DCert \\
         (\mathsf{wdrlTag},\fun{indexof}~\var{it}~(\fun{txwdrls}~{txb}))   & \var{it}~\in~\AddrRWD \\
-        (\mathsf{forgeTag},\fun{indexof}~\var{it}~(\fun{forge}~{txb}))    & \var{it}~\in~\CurrencyId \\
+        (\mathsf{forgeTag},\fun{indexof}~\var{it}~(\fun{forge}~{txb}))    & \var{it}~\in~\PolicyID \\
         (\mathsf{inputTag},\fun{indexof}~\var{it}~(\fun{txinputs}~{txb})) & \var{it}~\in~\UTxOIn
       \end{cases} \\
     & ~~\where \\
@@ -286,7 +286,7 @@ are passed to it via this list.
   \emph{Abstract Script Validation Functions}
   %
   \begin{align*}
-     &\fun{hashScript} \in  ~\Script\to \PolicyID \\
+     &\fun{hashScript} \in  ~\Script\to \ScriptHash \\
      &\text{compute script hash} \\~\\
      &\fun{hashData} \in  ~\Data \to \DataHash \\
      &\text{compute hash of data} \\~\\
@@ -337,7 +337,7 @@ and the current item being validated.
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{getCurVals} \in \GoguenTx \to \UTxO \to \powerset{(\CurItem \times \PolicyID \times \seqof{\Data})} \\
+    & \fun{getCurVals} \in \GoguenTx \to \UTxO \to \powerset{(\CurItem \times \ScriptHash \times \seqof{\Data})} \\
     & \fun{getCurVals}~{tx}~{utxo}~=~ \\
     & ~~\{ (\var{cert}, \fun{regCred}~\var{cert}, \epsilon) ~|~
       \var{cert} \in \DCertDeRegKey\cap\fun{txcerts}~(\txbody{tx}) \}~\cup \\
@@ -958,8 +958,7 @@ validation purpose (forging, outputs, certificates, withdrawals), see Figure
 
 \begin{figure}[htb]
   \begin{align*}
-      & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \GoguenTx \to
-        \PolicyID\\
+      & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \GoguenTx \to \ScriptHash\\
       & \hspace{-1cm}\text{items that need script validation and corresponding script hashes} \\
       &  \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
       & ~~\{ \fun{validatorHash}~(\fun{getAddr}~{txout}) \mid i \mapsto \var{txout} \in \var{utxo},\\
