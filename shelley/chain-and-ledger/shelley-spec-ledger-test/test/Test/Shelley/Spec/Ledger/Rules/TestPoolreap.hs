@@ -1,10 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
   ( constantSumPots,
@@ -26,7 +26,8 @@ import qualified Data.Set as Set (Set, null)
 import Shelley.Spec.Ledger.API (POOLREAP)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
-  ( _deposited,
+  ( PState (..),
+    _deposited,
     _fees,
     _pParams,
     _reserves,
@@ -46,7 +47,6 @@ import Shelley.Spec.Ledger.STS.PoolReap
   )
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, conjoin)
-import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring)
 
 -----------------------------
 -- Properties for POOLREAP --
@@ -54,7 +54,8 @@ import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring)
 
 -- | Check that after a POOLREAP certificate transition the pool is removed from
 -- the stake pool and retiring maps.
-removedAfterPoolreap :: forall era.
+removedAfterPoolreap ::
+  forall era.
   [SourceSignalTarget (POOLREAP era)] ->
   Property
 removedAfterPoolreap tr =
@@ -70,8 +71,8 @@ removedAfterPoolreap tr =
         ) =
         let stp = _pParams p
             stp' = _pParams p'
-            retiring = getRetiring p
-            retiring' = getRetiring p'
+            retiring = _retiring p
+            retiring' = _retiring p'
             retire :: Set.Set (KeyHash 'StakePool era) -- This declaration needed to disambiguate 'eval'
             retire = eval (dom (retiring ▷ setSingleton e))
          in eval (retire ⊆ dom stp)

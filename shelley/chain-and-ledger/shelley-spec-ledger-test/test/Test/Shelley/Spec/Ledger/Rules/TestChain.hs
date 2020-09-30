@@ -13,16 +13,20 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
     -- TestNewEpoch
     adaPreservationChain,
     collisionFreeComplete,
+    -- Test Pool
+    poolProperties,
   )
 where
 
-import Cardano.Ledger.Val((<->), (<+>))
+import Cardano.Ledger.Val ((<+>), (<->))
 import Control.Iterate.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
 import Control.State.Transition.Extended (TRC (TRC))
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
     Trace (..),
+    TraceOrder (OldestFirst),
     sourceSignalTargets,
+    traceStates,
   )
 import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
@@ -47,8 +51,10 @@ import Shelley.Spec.Ledger.BlockChain
   )
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.LedgerState hiding (circulation)
+import Shelley.Spec.Ledger.PParams (_eMax)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
+import Shelley.Spec.Ledger.STS.Pool (POOL, PoolEnv (..))
 import Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxBody
@@ -61,6 +67,11 @@ import Test.Shelley.Spec.Ledger.Generator.Block (tickChainState)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (geConstants))
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
+import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
+  ( poolRegistration,
+    poolRetirement,
+    poolStateIsInternallyConsistent,
+  )
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
 import Test.Shelley.Spec.Ledger.Utils
   ( applySTSTest,
@@ -158,7 +169,7 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
             . chainNes
             $ source
         )
-        <->  fold
+        <-> fold
           ( _rewards . _dstate
               . _delegationState
               . esLState
@@ -178,28 +189,6 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
       let es = (nesEs . chainNes) chainSt
           (UTxOState {_utxo = u, _deposited = d}) = (_utxoState . esLState) es
        in balance u <+> d
-
--- | Reconstruct a LEDGER trace from the transactions in a Block and ChainState
---
--- NOTE: we need to tick the slot before processing transactions
--- (in the same way that the CHAIN rule TICKs the slot before processing
--- transactions with the LEDGERS rule)
-ledgerTraceFromBlock :: ChainState C -> Block C -> (ChainState C, Trace (LEDGER C))
-ledgerTraceFromBlock chainSt block =
-  ( tickedChainSt,
-    runShelleyBase $
-      Trace.closure @(LEDGER C) ledgerEnv ledgerSt0 (reverse txs) -- Oldest to Newest first
-  )
-  where
-    (Block (BHeader bhb _) txSeq) = block
-    slot = bheaderSlotNo bhb
-    tickedChainSt = tickChainState slot chainSt
-    nes = (nesEs . chainNes) tickedChainSt
-    pp_ = esPp nes
-    LedgerState utxoSt0 delegSt0 = esLState nes
-    ledgerEnv = LedgerEnv slot 0 pp_ (esAccountState nes)
-    ledgerSt0 = (utxoSt0, delegSt0)
-    txs = (toList . txSeqTxns') txSeq
 
 -- | If we are not at an Epoch Boundary , then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals for all transactions in a block
@@ -372,6 +361,115 @@ txFees block =
     (\c tx -> c <> (_txfee . _body $ tx))
     (Coin 0)
     $ (txSeqTxns' . bbody) block
+
+----------------------------------------------------------------------
+-- POOL Properties
+----------------------------------------------------------------------
+
+-- | Various properties of the POOL STS Rule, tested on longer traces
+-- (double the default length)
+poolProperties :: Property
+poolProperties =
+  forAllChainTrace traceLen $ \tr -> do
+    let ssts = sourceSignalTargets tr
+    conjoin . concat $
+      [ map poolRetirement ssts,
+        map poolRegistration ssts,
+        map poolStateIsInternallyConsistent ssts
+      ]
+
+-- | Check that a `RetirePool` certificate properly marks a stake pool for
+-- retirement.
+poolRetirement :: SourceSignalTarget (CHAIN C) -> Property
+poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
+  conjoin $
+    map (TestPool.poolRetirement currentEpoch maxEpoch) (sourceSignalTargets poolTr)
+  where
+    (chainSt', poolTr) = poolTraceFromBlock chainSt block
+    (Block (BHeader bhb _) _) = block
+    currentEpoch = (epochFromSlotNo . bheaderSlotNo) bhb
+    maxEpoch = (_eMax . esPp . nesEs . chainNes) chainSt'
+
+-- | Check that a newly registered pool key is registered and not
+-- in the retiring map.
+poolRegistration :: SourceSignalTarget (CHAIN C) -> Property
+poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
+  conjoin $
+    map TestPool.poolRegistration (sourceSignalTargets poolTr)
+  where
+    (_, poolTr) = poolTraceFromBlock chainSt block
+
+-- | Assert that PState maps are in sync with each other after each `Signal
+-- POOL` transition.
+poolStateIsInternallyConsistent :: SourceSignalTarget (CHAIN C) -> Property
+poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = block}) =
+  conjoin $
+    map TestPool.poolStateIsInternallyConsistent (traceStates OldestFirst poolTr)
+  where
+    (_, poolTr) = poolTraceFromBlock chainSt block
+
+----------------------------------------------------------------------
+-- Projections of CHAIN Trace
+----------------------------------------------------------------------
+
+-- | Reconstruct a LEDGER trace from the transactions in a Block and ChainState
+ledgerTraceFromBlock :: ChainState C -> Block C -> (ChainState C, Trace (LEDGER C))
+ledgerTraceFromBlock chainSt block =
+  ( tickedChainSt,
+    runShelleyBase $
+      Trace.closure @(LEDGER C) ledgerEnv ledgerSt0 txs
+  )
+  where
+    (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
+
+-- | Reconstruct a POOL trace from the transactions in a Block and ChainState
+poolTraceFromBlock :: ChainState C -> Block C -> (ChainState C, Trace (POOL C))
+poolTraceFromBlock chainSt block =
+  ( tickedChainSt,
+    runShelleyBase $
+      Trace.closure @(POOL C) poolEnv poolSt0 poolCerts
+  )
+  where
+    (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
+    certs = concatMap (toList . _certs . _body)
+    poolCerts = filter poolCert (certs txs)
+    poolEnv =
+      let (LedgerEnv s _ pp _) = ledgerEnv
+       in PoolEnv s pp
+    poolSt0 =
+      let (_, DPState _ poolSt0_) = ledgerSt0
+       in poolSt0_
+    poolCert (DCertPool _) = True
+    poolCert _ = False
+
+-- | Reconstruct a POOL trace from the transactions in a Block and ChainState
+--
+-- NOTE: we need to tick the slot before processing transactions
+-- (in the same way that the CHAIN rule TICKs the slot before processing
+-- transactions with the LEDGERS rule)
+ledgerTraceBase ::
+  ChainState C ->
+  Block C ->
+  ( ChainState C,
+    LedgerEnv C,
+    (UTxOState C, DPState C),
+    [Tx C]
+  )
+ledgerTraceBase chainSt block =
+  ( tickedChainSt,
+    LedgerEnv slot 0 pp_ (esAccountState nes),
+    (utxoSt0, delegSt0),
+    txs
+  )
+  where
+    (Block (BHeader bhb _) txSeq) = block
+    slot = bheaderSlotNo bhb
+    tickedChainSt = tickChainState slot chainSt
+    nes = (nesEs . chainNes) tickedChainSt
+    pp_ = esPp nes
+    LedgerState utxoSt0 delegSt0 = esLState nes
+    -- Oldest to Newest first
+    txs = (reverse . toList . txSeqTxns') txSeq
 
 ----------------------------------------------------------------------
 -- Properties for PoolReap (using the CHAIN Trace) --

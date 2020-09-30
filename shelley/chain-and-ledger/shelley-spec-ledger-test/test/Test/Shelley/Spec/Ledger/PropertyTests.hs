@@ -7,10 +7,10 @@
 module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTests) where
 
 import Data.Proxy
-import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
+import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.LegacyOverlay (legacyOverlayTest)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
@@ -23,6 +23,7 @@ import Test.Shelley.Spec.Ledger.Rules.TestChain
     collisionFreeComplete,
     constantSumPots,
     nonNegativeDeposits,
+    poolProperties,
     removedAfterPoolreap,
   )
 import Test.Shelley.Spec.Ledger.Rules.TestLedger
@@ -30,14 +31,9 @@ import Test.Shelley.Spec.Ledger.Rules.TestLedger
     credentialMappingAfterDelegation,
     credentialRemovedAfterDereg,
     feesNonDecreasing,
-    pStateIsInternallyConsistent,
-    poolIsMarkedForRetirement,
-    poolRetireInEpoch,
     prop_MIRValuesEndUpInMap,
     prop_MIRentriesEndUpInMap,
-    registeredPoolIsAdded,
     rewardZeroAfterRegKey,
-    rewardZeroAfterRegPool,
     rewardsDecreasesByWithdrawals,
     rewardsSumInvariant,
   )
@@ -91,23 +87,8 @@ propertyTests =
       testGroup
         "STS Rules - Pool Properties"
         [ TQC.testProperty
-            "newly registered stake pool is added to \
-            \appropriate state mappings"
-            registeredPoolIsAdded,
-          TQC.testProperty
-            "newly registered pool key is not in the retiring map"
-            rewardZeroAfterRegPool,
-          TQC.testProperty
-            "retired stake pool is removed from \
-            \appropriate state mappings and marked \
-            \ for retiring"
-            poolIsMarkedForRetirement,
-          TQC.testProperty
-            "pool state is internally consistent"
-            pStateIsInternallyConsistent,
-          TQC.testProperty
-            "executing a pool retirement certificate adds to 'retiring'"
-            poolRetireInEpoch
+            "properties of the POOL STS"
+            poolProperties
         ],
       testGroup
         "STS Rules - Poolreap Properties"

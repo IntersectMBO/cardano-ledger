@@ -15,11 +15,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestLedger
     rewardsDecreasesByWithdrawals,
     feesNonDecreasing,
     consumedEqualsProduced,
-    registeredPoolIsAdded,
-    rewardZeroAfterRegPool,
-    poolIsMarkedForRetirement,
-    poolRetireInEpoch,
-    pStateIsInternallyConsistent,
     prop_MIRentriesEndUpInMap,
     prop_MIRValuesEndUpInMap,
     requiredMSigSignaturesSubset,
@@ -46,11 +41,9 @@ import Shelley.Spec.Ledger.API
   ( DELEG,
     DELEGS,
     LEDGER,
-    POOL,
     UTXO,
     UTXOW,
   )
-import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyHash (..),
     KeyRole (..),
@@ -69,7 +62,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
-import Shelley.Spec.Ledger.STS.Pool (PoolEnv (..))
 import Shelley.Spec.Ledger.Tx (_body)
 import Shelley.Spec.Ledger.TxBody
   ( PoolParams (..),
@@ -88,7 +80,6 @@ import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import qualified Test.Shelley.Spec.Ledger.Rules.TestDeleg as TestDeleg
 import qualified Test.Shelley.Spec.Ledger.Rules.TestDelegs as TestDelegs
-import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
 import qualified Test.Shelley.Spec.Ledger.Rules.TestUtxo as TestUtxo
 import qualified Test.Shelley.Spec.Ledger.Rules.TestUtxow as TestUtxow
 import Test.Shelley.Spec.Ledger.Utils (runShelleyBase, testGlobals)
@@ -188,43 +179,6 @@ requiredMSigSignaturesSubset =
     let ssts = map (\(_, s) -> s) $ map ledgerToUtxowSsts (sourceSignalTargets tr)
      in TestUtxow.requiredMSigSignaturesSubset ssts
 
-----------------------------------------------------------------------
--- Properties for Pool (using the LEDGER Trace) --
-----------------------------------------------------------------------
-
--- | Check that a `RegPool` certificate properly adds a stake pool.
-registeredPoolIsAdded :: Property
-registeredPoolIsAdded =
-  forAllLedgerTrace $ \tr ->
-    let sst = sourceSignalTargets (ledgerToPoolTrace tr)
-     in TestPool.registeredPoolIsAdded sst
-
--- | Check that a newly registered pool has a reward of 0.
-rewardZeroAfterRegPool :: Property
-rewardZeroAfterRegPool =
-  forAllLedgerTrace $ \tr ->
-    let sst = sourceSignalTargets (ledgerToPoolTrace tr)
-     in TestPool.rewardZeroAfterReg sst
-
-poolRetireInEpoch :: Property
-poolRetireInEpoch =
-  forAllLedgerTrace $ \tr ->
-    let sst = sourceSignalTargets (ledgerToPoolTrace tr)
-     in TestPool.poolRetireInEpoch (_traceEnv tr) sst
-
--- | Check that a `RetirePool` certificate properly removes a stake pool.
-poolIsMarkedForRetirement :: Property
-poolIsMarkedForRetirement =
-  forAllLedgerTrace $ \tr ->
-    let sst = sourceSignalTargets (ledgerToPoolTrace tr)
-     in TestPool.poolIsMarkedForRetirement sst
-
-pStateIsInternallyConsistent :: Property
-pStateIsInternallyConsistent =
-  forAllLedgerTrace $ \tr ->
-    let sst = sourceSignalTargets (ledgerToPoolTrace tr)
-     in TestPool.pStateIsInternallyConsistent sst
-
 -- | Check that `InstantaneousRewards` certificate entries are added to the
 -- Instantaneous Rewards map.
 prop_MIRentriesEndUpInMap :: Property
@@ -282,26 +236,6 @@ ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
   ( (_pParams . _pstate) delegSt,
     SourceSignalTarget utxoSt utxoSt' tx
   )
-
--- | Transform a LEDGER Trace to a POOL Trace by extracting the certificates
--- from the LEDGER transactions and then reconstructing a new POOL trace from
--- those certificates.
-ledgerToPoolTrace :: Trace (LEDGER C) -> Trace (POOL C)
-ledgerToPoolTrace ledgerTr =
-  runShelleyBase $
-    Trace.closure @(POOL C) poolEnv poolSt0 poolCerts
-  where
-    txs = traceSignals NewestFirst ledgerTr
-    certs = concatMap (toList . _certs . _body)
-    poolCerts = filter poolCert (certs txs)
-    poolEnv =
-      let (LedgerEnv s _ pp _) = _traceEnv ledgerTr
-       in PoolEnv s pp
-    poolSt0 =
-      let (_, DPState _ poolSt0_) = _traceInitState ledgerTr
-       in poolSt0_
-    poolCert (DCertPool _) = True
-    poolCert _ = False
 
 -- | Transform a LEDGER Trace to a DELEG Trace by extracting the certificates
 -- from the LEDGER transactions and then reconstructing a new DELEG trace from
