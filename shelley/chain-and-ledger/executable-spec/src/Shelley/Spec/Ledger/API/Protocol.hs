@@ -66,7 +66,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
-import Shelley.Spec.Ledger.STS.Tick (TICK)
+import Shelley.Spec.Ledger.STS.Tick (TICKF)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
@@ -173,7 +173,7 @@ currentLedgerView = view
 --  application of the TICK rule at the target slot to the curernt ledger state.
 
 newtype FutureLedgerViewError era
-  = FutureLedgerViewError [PredicateFailure (TICK era)]
+  = FutureLedgerViewError [PredicateFailure (TICKF era)]
   deriving (Eq, Show)
 
 -- | Anachronistic ledger view
@@ -198,7 +198,7 @@ futureLedgerView globals ss slot =
   where
     res =
       flip runReader globals
-        . applySTS @(TICK era)
+        . applySTS @(TICKF era)
         $ TRC ((), ss, slot)
 
 -- $chainstate

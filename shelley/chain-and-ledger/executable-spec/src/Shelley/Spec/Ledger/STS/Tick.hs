@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,6 +13,9 @@ module Shelley.Spec.Ledger.STS.Tick
     State,
     TickPredicateFailure (..),
     PredicateFailure,
+    adoptGenesisDelegs,
+    TICKF,
+    TickfPredicateFailure (..),
   )
 where
 
@@ -91,6 +95,27 @@ adoptGenesisDelegs es slot = es'
     ls' = ls {_delegationState = dp'}
     es' = es {esLState = ls'}
 
+-- | This is a limited version of 'bheadTransition' which is suitable for the
+-- future ledger view.
+validatingTickTransition ::
+  forall tick era.
+  ( Embed (NEWEPOCH era) (tick era),
+    State (tick era) ~ NewEpochState era,
+    BaseM (tick era) ~ ShelleyBase
+  ) =>
+  NewEpochState era ->
+  SlotNo ->
+  TransitionRule (tick era)
+validatingTickTransition nes slot = do
+  epoch <- liftSTS $ do
+    ei <- asks epochInfo
+    epochInfoEpoch ei slot
+
+  nes' <- trans @(NEWEPOCH era) $ TRC ((), nes, epoch)
+  let es'' = adoptGenesisDelegs (nesEs nes') slot
+
+  pure $ nes' {nesEs = es''}
+
 bheadTransition ::
   forall era.
   (Era era) =>
@@ -99,20 +124,11 @@ bheadTransition = do
   TRC ((), nes@(NewEpochState _ bprev _ es _ _), slot) <-
     judgmentContext
 
-  epoch <- liftSTS $ do
-    ei <- asks epochInfo
-    epochInfoEpoch ei slot
-
-  nes' <- trans @(NEWEPOCH era) $ TRC ((), nes, epoch)
+  nes' <- validatingTickTransition nes slot
 
   ru'' <- trans @(RUPD era) $ TRC (RupdEnv bprev es, nesRu nes', slot)
 
-  let es'' = adoptGenesisDelegs (nesEs nes') slot
-      nes'' =
-        nes'
-          { nesRu = ru'',
-            nesEs = es''
-          }
+  let nes'' = nes' {nesRu = ru''}
   pure nes''
 
 instance
@@ -126,3 +142,45 @@ instance
   Embed (RUPD era) (TICK era)
   where
   wrapFailed = RupdFailure
+
+{------------------------------------------------------------------------------
+-- TICKF transition
+
+-- This is a variant on the TICK transition called only by the consensus layer
+to tick the ledger state to a future slot.
+------------------------------------------------------------------------------}
+
+data TICKF era
+
+data TickfPredicateFailure era
+  = TickfNewEpochFailure (PredicateFailure (NEWEPOCH era)) -- Subtransition Failures
+  deriving (Show, Generic, Eq)
+
+instance NoUnexpectedThunks (TickfPredicateFailure era)
+
+instance
+  Era era =>
+  STS (TICKF era)
+  where
+  type
+    State (TICKF era) =
+      NewEpochState era
+  type
+    Signal (TICKF era) =
+      SlotNo
+  type Environment (TICKF era) = ()
+  type BaseM (TICKF era) = ShelleyBase
+  type PredicateFailure (TICKF era) = TickfPredicateFailure era
+
+  initialRules = []
+  transitionRules =
+    [ do
+        TRC ((), nes, slot) <- judgmentContext
+        validatingTickTransition nes slot
+    ]
+
+instance
+  Era era =>
+  Embed (NEWEPOCH era) (TICKF era)
+  where
+  wrapFailed = TickfNewEpochFailure
