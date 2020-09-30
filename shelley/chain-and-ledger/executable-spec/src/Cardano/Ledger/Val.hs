@@ -6,7 +6,7 @@
 -- with which we may quantify a transaction output.
 module Cardano.Ledger.Val
   ( Val (..),
-    LabeledInt(..),
+    LabeledInt (..),
     scale,
     sumVal,
     scaledMinDeposit,
@@ -44,15 +44,15 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 -- Binary Paths, and one for Keys realized in a Data.Map.Map
 -- All Instances are built composing some form of the 3 rules.
 
-class  (Eq t, Show t) => LabeledInt t where
-  zeroLI:: t
-  plusLI:: t -> t -> t
-  minusLI:: t -> t -> t
+class (Eq t, Show t) => LabeledInt t where
+  zeroLI :: t
+  plusLI :: t -> t -> t
+  minusLI :: t -> t -> t
   minusLI x y = plusLI x (invertLI y)
-  scaleLI:: Int -> t -> t
-  invertLI:: t -> t
+  scaleLI :: Int -> t -> t
+  invertLI :: t -> t
   invertLI x = scaleLI (-1) x
-  isZeroLI:: t -> Bool
+  isZeroLI :: t -> Bool
   pointWiseLI :: (Integer -> Integer -> Bool) -> t -> t -> Bool
 
 -- Base Case
@@ -67,17 +67,17 @@ instance LabeledInt Integer where
 instance (Typeable k, Show k, Ord k, LabeledInt t) => LabeledInt (Map.Map k t) where
   zeroLI = Map.empty
   plusLI x y = unionWithV plusLI x y
-  scaleLI s x = mapV (s `scaleLI` ) x
+  scaleLI s x = mapV (s `scaleLI`) x
   isZeroLI x = Map.null x
   pointWiseLI p x y = pointWiseM (pointWiseLI p) x y
 
 -- Binary Path Case
-instance (LabeledInt x, LabeledInt y) => LabeledInt (x,y) where
+instance (LabeledInt x, LabeledInt y) => LabeledInt (x, y) where
   zeroLI = (zeroLI, zeroLI)
-  plusLI (x,y) (a,b) = (plusLI x a,plusLI y b)
-  scaleLI n (x,y) = (scaleLI n x, scaleLI n y)
-  isZeroLI (x,y) = isZeroLI x && isZeroLI y
-  pointWiseLI p (x,y) (a,b) = pointWiseLI p x a  &&  pointWiseLI p y b
+  plusLI (x, y) (a, b) = (plusLI x a, plusLI y b)
+  scaleLI n (x, y) = (scaleLI n x, scaleLI n y)
+  isZeroLI (x, y) = isZeroLI x && isZeroLI y
+  pointWiseLI p (x, y) (a, b) = pointWiseLI p x a && pointWiseLI p y b
 
 -- By newtype deriving this instance is basically free.
 
@@ -93,7 +93,9 @@ deriving instance LabeledInt Coin
 -- 2) That we need to compute the size of these things.
 
 infixl 6 <+>
+
 infixl 6 <->
+
 infixl 7 <×>
 
 class (Eq t, Show t, LabeledInt t) => Val t where
@@ -132,10 +134,10 @@ class (Eq t, Show t, LabeledInt t) => Val t where
   size :: t -> Integer -- compute size of Val instance
 
 instance Val Coin where
-   coin x = x
-   inject x = x
-   modifyCoin f x = f x
-   size _x = 1
+  coin x = x
+  inject x = x
+  modifyCoin f x = f x
+  size _x = 1
 
 -- =============================================================
 -- Synonym for backward compatibility
@@ -217,7 +219,6 @@ addrHashLen = 2
 
 -- ============================================================================
 -- Operations on Map, specialised to comparable `Monoid` values.
-
 
 -- ======================================================================\
 -- We can nest Map.Map over a LabeledInt t, and that inherits from t

@@ -1,17 +1,16 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 {-# OPTIONS_GHC -Wno-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports     #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
 module Cardano.Ledger.Value where
 
@@ -37,7 +36,8 @@ import Cardano.Binary
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Val
-  ( Val (..),LabeledInt(..),
+  ( LabeledInt (..),
+    Val (..),
     addrHashLen,
     assetIdLen,
     insertWithV,
@@ -47,14 +47,14 @@ import Cardano.Ledger.Val
     uint,
     unionWithV,
   )
-import Cardano.Prelude (NFData (rnf), NoUnexpectedThunks (..), UseIsNormalFormNamed(..))
+import Cardano.Prelude (NFData (rnf), NoUnexpectedThunks (..), UseIsNormalFormNamed (..))
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import Data.String (fromString)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Scripts(ScriptHash(..))
+import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Prelude hiding (lookup)
 
