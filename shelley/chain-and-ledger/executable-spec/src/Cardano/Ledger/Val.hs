@@ -79,9 +79,18 @@ instance (LabeledInt x, LabeledInt y) => LabeledInt (x,y) where
   isZeroLI (x,y) = isZeroLI x && isZeroLI y
   pointWiseLI p (x,y) (a,b) = pointWiseLI p x a  &&  pointWiseLI p y b
 
+-- By newtype deriving this instance is basically free.
+
 deriving instance LabeledInt Coin
 
--- =========================================
+-- ===================================================================================================
+-- THe Val class is a generalization of LabeledInt. It renames the the operations of LabeledInt
+-- to give them more concise types, and makes some of them infix operators. The new methods add
+-- functionality that relate to the use case in Cardano: to encode Ada coins and Multi-Assets.
+-- Having all the methods in 1 class adds simplicity and clarity. The added methods provide two new abilities
+-- 1) That Coin is a blessed currency, and that every instance picks one of the embedded integers as
+--    the one labeled Coin. And gives means to access and alter this unique item.
+-- 2) That we need to compute the size of these things.
 
 infixl 6 <+>
 infixl 6 <->
@@ -196,14 +205,19 @@ scaledMinDeposit v (Coin mv)
     utxoEntrySizeWithoutVal :: Integer
     utxoEntrySizeWithoutVal = inputSize + outputSizeWithoutVal
 
-addrHashLen :: Integer
-addrHashLen = 28
-
 uint :: Integer
 uint = 5
 
 assetIdLen :: Integer
-assetIdLen = 30 -- FIXME TODO  I have no idea what this is supposed to be
+assetIdLen = 32
+
+-- address hash length is always same as Policy ID length
+addrHashLen :: Integer
+addrHashLen = 2
+
+-- ============================================================================
+-- Operations on Map, specialised to comparable `Monoid` values.
+
 
 -- ======================================================================\
 -- We can nest Map.Map over a LabeledInt t, and that inherits from t

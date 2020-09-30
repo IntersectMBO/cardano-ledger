@@ -138,6 +138,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON
       Test.Shelley.Spec.Ledger.STSTests
       Test.Shelley.Spec.Ledger.UnitTests
+      Test.Shelley.Spec.Ledger.Value
       Test.TestScenario
     hs-source-dirs:      test
     ghc-options:
@@ -188,6 +189,7 @@ test-suite shelley-spec-ledger-test
       multiset,
       process-extras,
       QuickCheck,
+      quickcheck-instances,
       scientific,
       shelley-spec-ledger-test,
       shelley-spec-ledger,

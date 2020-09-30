@@ -11,6 +11,7 @@
 
 {-# OPTIONS_GHC -Wno-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports     #-}
 
 module Cardano.Ledger.Value where
 
@@ -53,7 +54,7 @@ import Data.String (fromString)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Scripts
+import Shelley.Spec.Ledger.Scripts(ScriptHash(..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Prelude hiding (lookup)
 
@@ -144,6 +145,8 @@ instance
 -- =========================================================================
 -- The important LabeledInt and Val instances
 
+-- This instance is a hand-encoding of the Binary Path instance.
+
 instance (Era era, Crypto era, Typeable era) => LabeledInt (Value era) where
   zeroLI = Value 0 Map.empty
   scaleLI s (Value c v) = Value (scaleLI s c) (mapV (mapV (scaleLI s)) v)
@@ -185,74 +188,3 @@ insert combine pid aid new (Value c m1) =
 -- Might be useful to benchmark 'insert' vs 'insert2'
 insert2 :: (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
 insert2 combine pid aid new (Value c m1) = Value c (unionWithV (unionWithV combine) m1 (Map.singleton pid (Map.singleton aid new)))
-
--- =====================================================
-
-data Rep t where
-  CoinR :: Rep Coin
-  ValueR :: Rep (Value era)
-
-defMinus x y = x <-> y == x <+> (invert y)
-
-defInvert x = invert x == (-1) <×> x
-
-commute x y = x <+> y == y <+> x
-
-assoc x y z = x <+> (y <+> z) == (y <+> x) <+> z
-
-addIdent x = (zero <+> x == x <+> zero) && (zero <+> x == x)
-
-cancel x = x <-> x == zero
-
-distr1 r x y = r <×> (x <+> y) == (r <×> x) <+> (r <×> y)
-
-distr2 r s x = (r + s) <×> x == (r <×> x) <+> (s <×> x)
-
-distr3 r s x = (r * s) <×> x == r <×> (s <×> x)
-
-multIdent x = 1 <×> x == x
-
-minusCancel x = (x <-> x) == zero
-
-plusMinusAssoc x y = ((x <+> y) <-> y == x <+> (y <-> y)) && (x <+> (y <-> y) == x)
-
-plusInvertCancel x = (x <+> (invert x) == (x <-> x)) && (x <-> x == zero)
-
-minusZero x = (x <-> zero) == x
-
-zeroMinus x = (zero <-> x) == invert x
-
-invertScale x = invert x == scale (-1) x
-
-scaleZero v = 0 <×> v == zero
-
-zeroScale :: forall v. Val v => Rep v -> Int -> Bool
-zeroScale _ n = n <×> (zero @v) == (zero @v)
-
-scaleInject :: forall v. Val v => Rep v -> Int -> Coin -> Bool
-scaleInject _ n c = n <×> (inject @v c) == inject @v (n <×> c)
-
-scaleOne x = 1 <×> x == x
-
-scalePlus n x y = n <×> (x <+> y) == (n <×> x) <+> (n <×> y)
-
-scaleScale n m v = n <×> (m <×> v) == (n * m) <×> v
-
-scaleCoin n v = n <×> (coin v) == coin (n <×> v)
-
-unfoldScale x = 3 <×> x == x <+> x <+> x
-
-coinZero :: forall v. Val v => Rep v -> Bool
-coinZero _ = coin (zero @v) == zero
-
-coinPlus x y = coin (x <+> y) == coin x <+> coin y
-
-coinScale n v = coin (n <×> v) == n <×> (coin v)
-
-coinInject :: forall v. Val v => Rep v -> Coin -> Bool
-coinInject _ x = coin @v (inject @v x) == x
-
-coinModify :: forall era. (Crypto era, Era era) => (Coin -> Coin) -> Value era -> Bool
-coinModify f v = coin (modifyCoin f v) == modifyCoin f (coin @(Value era) v)
-
-coinInsert comb c t n v = coin (insert comb c t n v) == coin v
