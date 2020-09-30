@@ -148,7 +148,7 @@ deriving instance Show (PParams' Identity era)
 
 deriving instance NFData (PParams' Identity era)
 
-data ProtVer = ProtVer !Natural !Natural
+data ProtVer = ProtVer {pvMajor :: !Natural, pvMinor :: !Natural}
   deriving (Show, Eq, Generic, Ord, NFData)
   deriving (ToCBOR) via (CBORGroup ProtVer)
   deriving (FromCBOR) via (CBORGroup ProtVer)

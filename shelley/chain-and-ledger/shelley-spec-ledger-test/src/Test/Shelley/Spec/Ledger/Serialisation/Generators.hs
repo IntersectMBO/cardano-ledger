@@ -77,11 +77,6 @@ import Shelley.Spec.Ledger.LedgerState
     PPUPState,
     emptyRewardUpdate,
   )
-import Shelley.Spec.Ledger.MetaData
-  ( MetaData,
-    MetaDataHash (..),
-    MetaDatum,
-  )
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
@@ -249,7 +244,7 @@ maxMetaDatumDepth = 2
 maxMetaDatumListLens :: Int
 maxMetaDatumListLens = 5
 
-sizedMetaDatum :: Int -> Gen MetaDatum
+sizedMetaDatum :: Int -> Gen MD.MetaDatum
 sizedMetaDatum 0 =
   oneof
     [ MD.I <$> arbitrary,
@@ -269,10 +264,10 @@ sizedMetaDatum n =
       MD.S <$> (T.pack <$> arbitrary)
     ]
 
-instance Arbitrary MetaDatum where
+instance Arbitrary MD.MetaDatum where
   arbitrary = sizedMetaDatum maxMetaDatumDepth
 
-instance Arbitrary MetaData where
+instance Arbitrary MD.MetaData where
   arbitrary = MD.MetaData <$> arbitrary
 
 maxTxWits :: Int
@@ -444,8 +439,8 @@ instance Arbitrary ProtVer where
 instance Era era => Arbitrary (ScriptHash era) where
   arbitrary = ScriptHash <$> genHash
 
-instance Era era => Arbitrary (MetaDataHash era) where
-  arbitrary = MetaDataHash <$> genHash
+instance Era era => Arbitrary (MD.MetaDataHash era) where
+  arbitrary = MD.MetaDataHash <$> genHash
 
 instance HashAlgorithm h => Arbitrary (Hash.Hash h a) where
   arbitrary = genHash

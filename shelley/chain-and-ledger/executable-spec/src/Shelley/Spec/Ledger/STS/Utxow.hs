@@ -26,6 +26,7 @@ import Cardano.Binary
 import Cardano.Ledger.Era (Era)
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (eval, (∩))
+import Control.Monad (when)
 import Control.State.Transition
   ( Embed,
     IRC (..),
@@ -76,10 +77,11 @@ import Shelley.Spec.Ledger.LedgerState
     witsFromWitnessSet,
     witsVKeyNeeded,
   )
-import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData)
+import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData, validMetaData)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, decodeSet, encodeFoldable)
+import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     hashScript,
@@ -110,6 +112,8 @@ data UtxowPredicateFailure era
   | ConflictingMetaDataHash
       !(MetaDataHash era) -- hash of the metadata included in the transaction body
       !(MetaDataHash era) -- hash of the full metadata
+      -- Contains out of range values (strings too long)
+  | InvalidMetaData
   deriving (Eq, Generic, Show)
 
 instance (Era era) => NoUnexpectedThunks (UtxowPredicateFailure era)
@@ -149,6 +153,8 @@ instance
       encodeListLen 2 <> toCBOR (7 :: Word8) <> toCBOR h
     ConflictingMetaDataHash bodyHash fullMDHash ->
       encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR bodyHash <> toCBOR fullMDHash
+    InvalidMetaData ->
+      encodeListLen 1 <> toCBOR (9 :: Word8)
 
 instance
   (Era era) =>
@@ -184,6 +190,7 @@ instance
         bodyHash <- fromCBOR
         fullMDHash <- fromCBOR
         pure (3, ConflictingMetaDataHash bodyHash fullMDHash)
+      9 -> pure (1, InvalidMetaData)
       k -> invalidKey k
 
 initialLedgerStateUTXOW ::
@@ -236,8 +243,10 @@ utxoWitnessed =
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failBecause $ MissingTxMetaData mdh
         (SNothing, SJust md') -> failBecause $ MissingTxBodyMetaDataHash (hashMetaData md')
-        (SJust mdh, SJust md') ->
+        (SJust mdh, SJust md') -> do
           hashMetaData md' == mdh ?! ConflictingMetaDataHash mdh (hashMetaData md')
+          -- check metadata value sizes
+          when (SoftForks.validMetaData pp) $ validMetaData md' ?! InvalidMetaData
 
       -- check genesis keys signatures for instantaneous rewards certificates
       let genDelegates = Set.fromList $ fmap (asWitness . genDelegKeyHash) $ Map.elems genMapping
