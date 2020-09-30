@@ -89,9 +89,9 @@ data Constants = Constants
     maxReserves :: Integer,
     -- | When generating Tx, we want the UTxO size to fluctuate around this point. If
     --   it gets too small, we can't balance the fee, too large it gets too complicated.
-    genTxStableUtxoSize:: Int,
+    genTxStableUtxoSize :: Int,
     -- | If we need to grow the Utxo when generating a Tx, how much should it grow by.
-    genTxUtxoIncrement:: Int
+    genTxUtxoIncrement :: Int
   }
   deriving (Show)
 
@@ -129,7 +129,7 @@ defaultConstants =
       frequencyPotentiallyManyWithdrawals = 5,
       minSlotTrace = 1000,
       maxSlotTrace = 5000,
-      frequencyLowMaxEpoch = 6,
+      frequencyLowMaxEpoch = 200,
       maxMinFeeA = 1000,
       maxMinFeeB = 3,
       numCoreNodes = 7,
