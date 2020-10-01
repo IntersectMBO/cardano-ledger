@@ -440,6 +440,8 @@ intersectDomP p t1 t2@(Bin _ k v l2 r2) =
 {-# INLINABLE intersectDomP #-}
 
 
+
+
 -- |- Similar to intersectDomP, except the Map returned has the same key as the first input map, rather than the second input map.
 intersectDomPLeft:: Ord k => (k -> v2 -> Bool) -> Map k v1 -> Map k v2 -> Map k v1
 intersectDomPLeft p Tip _ = Tip
@@ -454,6 +456,15 @@ intersectDomPLeft p (t1@(Bin _ k v1 l1 r1)) t2 =
     !r1r2 = intersectDomPLeft p r1 r2
 {-# INLINABLE intersectDomPLeft #-}
 
+-- |- fold over the
+intersectMapSetFold:: Ord k => (k -> v -> ans -> ans) -> Map k v -> Set k -> ans -> ans
+intersectMapSetFold accum Tip _ !ans = ans
+intersectMapSetFold accum _ set !ans | Set.null set = ans
+intersectMapSetFold accum (Bin _ k v l1 l2) set !ans =
+    intersectMapSetFold accum l2 s2 (add k v (intersectMapSetFold accum l1 s1 ans))
+  where (s1,found,s2) = Set.splitMember k set
+        add k1 v1 ans1 = if found then accum k1 v1 ans1 else ans1
+{-# INLINABLE intersectMapSetFold #-}
 
 -- ============== Iter BiMap ====================
 
@@ -966,6 +977,7 @@ compile (RExclude rel set) =
    case (compile rel,compile set) of
       ((reld,rep),(BaseD _ x,_)) -> (GuardD reld (nEgate (rngElem x)),rep)
       ((reld,rep),_) -> (GuardD reld (nEgate (rngElem (compute set))),rep)  -- This could be expensive
+
 compile (UnionOverrideLeft rel1 rel2) =  (OrD rel1d (fst(compile rel2)) first,rep)   -- first uses value from rel1 to override value from rel2
     where (rel1d,rep) = compile rel1
 compile (UnionOverrideRight rel1 rel2) =  (OrD rel1d (fst(compile rel2)) second,rep) -- second uses value from rel2 to override value from rel1
@@ -984,8 +996,10 @@ run (BaseD MapR x,MapR) = x               -- and in the right form (the BaseRep'
 run (BaseD SingleR x,SingleR) = x         -- just return the data
 run (BaseD BiMapR x,BiMapR) = x           -- only need to materialize data
 run (BaseD ListR x,ListR) = x             -- if the forms do not match.
-run (BaseD source x,target) = materialize target (fifo x)      -- use fifo, since for, at least List, the order matters.
-run (other,target) = materialize target (fifo other)           -- If it is a compund Iterator, than materialize it.
+run (BaseD source x,ListR) = materialize ListR (fifo x)       -- use fifo, since the order matters for Lists.
+run (BaseD source x,target) = materialize target (lifo x)     -- use lifo, for others
+run (other,ListR) = materialize ListR (fifo other)            -- If it is a compund Iterator, for List, than materialize it using fifo
+run (other,target) = materialize target (lifo other)          -- If it is a compund Iterator, for anything else than materialize it using lifo
 
 -- ==============================================================================================
 -- Evaluate an (Exp t) into real data of type t. Try domain and type specific algorithms first,
@@ -1008,6 +1022,23 @@ compute (Dom (Base MapR x)) = Sett (Map.keysSet x)
 compute (Dom (Singleton k v)) = Sett (Set.singleton k)
 compute (Dom (SetSingleton k)) = Sett (Set.singleton k)
 compute (Dom (Base rep rel)) = Sett(domain rel)
+  -- (dom (Map(62)? ▷ (setSingleton _ )))
+compute (Dom (RRestrict (Base MapR xs) (SetSingleton v))) = Sett(Map.foldlWithKey' accum Set.empty xs)
+   where accum ans k u = if u==v then Set.insert k ans else ans
+compute (Dom (RRestrict (Base MapR xs) (Base SetR (Sett set)))) = Sett(Map.foldlWithKey' accum Set.empty xs)
+   where accum ans k u = if Set.member u set then Set.insert k ans else ans
+compute (Dom (RExclude (Base MapR xs) (SetSingleton v))) = Sett(Map.foldlWithKey' accum Set.empty xs)
+   where accum ans k u = if not(u==v) then Set.insert k ans else ans
+compute (Dom (RExclude (Base MapR xs) (Base SetR (Sett set)))) = Sett(Map.foldlWithKey' accum Set.empty xs)
+   where accum ans k u = if not(Set.member u set) then Set.insert k ans else ans
+compute (Dom (DRestrict (SetSingleton v) (Base MapR xs))) = Sett(intersectMapSetFold accum xs (Set.singleton v) Set.empty)
+   where accum k u ans = if k==v then Set.insert k ans else ans
+compute (Dom (DRestrict (Base SetR (Sett set)) (Base MapR xs))) = Sett(intersectMapSetFold accum xs set Set.empty)
+   where accum k u ans = if Set.member k set then Set.insert k ans else ans
+compute (Dom (DExclude (SetSingleton v) (Base MapR xs))) = Sett(intersectMapSetFold accum xs (Set.singleton v) Set.empty)
+   where accum k u ans = if not(k==v) then Set.insert k ans else ans
+compute (Dom (DExclude (Base SetR (Sett set)) (Base MapR xs))) = Sett(intersectMapSetFold accum xs set Set.empty)
+   where accum k u ans = if not(Set.member k set) then Set.insert k ans else ans
 compute (e@(Dom _)) = run(compile e)
 
 compute (Rng (Base SetR rel)) = Sett (Set.singleton ())
@@ -1019,19 +1050,25 @@ compute (e@(Rng _ )) = run(compile e)
 compute (DRestrict (Base SetR (Sett set)) (Base MapR m)) = Map.restrictKeys m set
 compute (DRestrict (SetSingleton k) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Singleton k v) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
-compute (DRestrict (Base SetR (Sett s1)) (Base SetR (Sett s2))) = Sett(Set.intersection s1 s2)
 compute (DRestrict (Dom (Base MapR x)) (Base MapR y)) = Map.intersection y x
+
+   -- This case inspired by set expression in EpochBoundary.hs
+   -- (dom (delegs ▷ Set.singleton hk) ◁ stake) in EpochBoundart.hs
+   -- ((dom (Map(62)? ▷ (setSingleton _ ))) ◁ Map(63)?) which has this structure
+   -- materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when (y==hk); one(x,z) })
+compute (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR stake)) =
+   intersectDomPLeft (\ _k v2 -> v2==hk) stake delegs
+compute (DRestrict (Dom (RRestrict (Base MapR delegs) (Base _ rngf))) (Base MapR stake)) =
+   intersectDomPLeft (\ _k v2 -> haskey v2 rngf) stake delegs
+compute (DRestrict set (Base MapR ys)) = Map.restrictKeys ys set2 -- Pay the cost of materializing set to use O(n* log n) restictKeys
+   where Sett set2 = materialize SetR (lifo (compute set))
+
+compute (DRestrict (Base SetR (Sett s1)) (Base SetR (Sett s2))) = Sett(Set.intersection s1 s2)
 compute (DRestrict (Base SetR x1) (Base rep x2)) = materialize rep $ do { (x,y,z) <- x1 `domEq` x2; one (x,z) }
 compute (DRestrict (Dom (Base _ x1)) (Base rep x2)) = materialize rep $ do { (x,y,z) <- x1 `domEq` x2; one (x,z) }
 compute (DRestrict (SetSingleton k) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle k) `domEq` x2; one (x,z) }
 compute (DRestrict (Dom (Singleton k _)) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle k) `domEq` x2; one (x,z) }
 compute (DRestrict (Rng (Singleton _ v)) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle v) `domEq` x2; one (x,z) }
-  -- This case inspired by set expression in EpochBoundary.hs (dom (delegs ▷ Set.singleton hk) ◁ stake)
-compute (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR stake)) =
-   -- materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when (y==hk); one(x,z) })
-   intersectDomPLeft (\ _k v2 -> v2==hk) stake delegs
-compute (DRestrict (Dom (RRestrict (Base MapR delegs) (Base _ rngf))) (Base MapR stake)) =
-   intersectDomPLeft (\ _k v2 -> haskey v2 rngf) stake delegs
 compute (e@(DRestrict _ _)) = run(compile e)
 
 compute (DExclude (SetSingleton n) (Base MapR m)) = Map.withoutKeys m (Set.singleton n)
@@ -1047,15 +1084,19 @@ compute (e@(DExclude _ _ )) = run(compile e)
 compute (RExclude (Base BiMapR x) (SetSingleton k)) = removeval k x
 compute (RExclude (Base BiMapR x) (Dom (Singleton k v))) = removeval k x
 compute (RExclude (Base BiMapR x) (Rng (Singleton k v))) = removeval v x
+compute (RExclude (Base MapR xs) (Base SetR (Sett y))) = Map.filter (\ x -> not (Set.member x y)) xs
+compute (RExclude (Base MapR xs) (SetSingleton k)) = Map.filter (not . ( == k)) xs
 compute (RExclude (Base rep lhs) (Base SetR (Sett rhs))) | Set.null rhs = lhs
 compute (RExclude (Base rep lhs) (Base SingleR Fail)) = lhs
-compute (RExclude (Base rep lhs) y) =
-   materialize rep $ do { (a,b) <- fifo lhs; when (not(haskey b rhs)); one (a,b)} where (rhs,_) = compile y
+compute (e@(RExclude (Base rep lhs) y)) =
+   materialize rep $ do { (a,b) <- lifo lhs; when (not(haskey b rhs)); one (a,b)} where (rhs,_) = compile y
 compute (e@(RExclude _ _ )) = run(compile e)
 
- -- This case inspired by set expression ((dom rewards' ◁ delegs) ▷ dom poolParams)  in LedgerState.hs
+-- (dom (Map(16)? ▷ (setSingleton _ )))
+compute (e@(RRestrict (Base MapR xs) (SetSingleton k))) = Map.filter (\ x -> x==k) xs
+-- ((dom rewards' ◁ delegs) ▷ dom poolParams)  in LedgerState.hs
 compute (RRestrict (DRestrict (Dom (Base MapR x)) (Base MapR y)) (Dom (Base MapR z))) = intersectDomP (\ _k v -> Map.member v z) x y
-compute (RRestrict (DRestrict (Dom (Base r1 stkcreds)) (Base r2 delegs)) (Dom (Base r3 stpools))) =
+compute (e@(RRestrict (DRestrict (Dom (Base r1 stkcreds)) (Base r2 delegs)) (Dom (Base r3 stpools)))) =
    materialize r2 $ do { (x,z,y) <- stkcreds `domEq` delegs; y `element` stpools; one (x,y)}
 compute (e@(RRestrict _ _ )) = run(compile e)
 
@@ -1064,6 +1105,10 @@ compute (Elem k (Base rep rel)) = haskey k rel
 compute (Elem k (Dom (Singleton key v))) = k==key
 compute (Elem k (Rng (Singleton _ key))) = k==key
 compute (Elem k (SetSingleton key)) = k==key
+compute (Elem k (UnionOverrideLeft  (Base SetR (Sett x)) (Base SetR (Sett y)))) = (Set.member k x || Set.member k y)
+compute (Elem k (UnionOverrideRight (Base SetR (Sett x)) (Base SetR (Sett y)))) = (Set.member k x || Set.member k y)
+compute (Elem k (UnionPlus          (Base SetR (Sett x)) (Base SetR (Sett y)))) = (Set.member k x || Set.member k y)
+compute (Elem k (Intersect (Base SetR (Sett x)) (Base SetR (Sett y)))) = (Set.member k x && Set.member k y)
 compute (Elem k set) = haskey k (compute set)
 
 compute (NotElem k (Dom (Base rep x))) = not $ haskey k x
@@ -1071,7 +1116,13 @@ compute (NotElem k (Base rep rel)) = not $ haskey k rel
 compute (NotElem k (Dom (Singleton key v))) = not $ k==key
 compute (NotElem k (Rng (Singleton _ key))) = not $ k==key
 compute (NotElem k (SetSingleton key)) = not $ k==key
+compute (NotElem k (UnionOverrideLeft  (Base SetR (Sett x)) (Base SetR (Sett y)))) = not(Set.member k x || Set.member k y)
+compute (NotElem k (UnionOverrideRight (Base SetR (Sett x)) (Base SetR (Sett y)))) = not(Set.member k x || Set.member k y)
+compute (NotElem k (UnionPlus          (Base SetR (Sett x)) (Base SetR (Sett y)))) = not(Set.member k x || Set.member k y)
+compute (NotElem k (Intersect (Base SetR (Sett x)) (Base SetR (Sett y)))) = not (Set.member k x && Set.member k y)
 compute (NotElem k set) = not $ haskey k (compute set)
+
+
 
 compute (Subset (Base SetR (Sett x)) (Base SetR (Sett y))) = Set.isSubsetOf x y
 compute (Subset (Base SetR (Sett x)) (Base MapR y)) = all (`Map.member` y) x
@@ -1080,7 +1131,7 @@ compute (Subset (Base MapR x) (Base MapR y)) = Map.foldrWithKey accum True x
    where accum k a ans = Map.member k y && ans
 compute (Subset (Dom (Base MapR x)) (Dom (Base MapR y))) = Map.foldrWithKey accum True x
    where accum k a ans = Map.member k y && ans
-compute (Subset x y) = runCollect (lifo left) True (\ (k,v) ans -> haskey k right && ans)
+compute (e@(Subset x y)) = runCollect (lifo left) True (\ (k,v) ans -> haskey k right && ans)
   where left = (fst(compile x))
         right = (fst(compile y))
 
@@ -1090,14 +1141,18 @@ compute (e@(Intersect a b)) = run(compile e)
 
 compute (UnionOverrideLeft (Base rep x) (Singleton k v))  = addkv (k,v) x (\ new old -> old) -- The value on the left is preferred over the right, so 'addkv' chooses 'old'
 compute (UnionOverrideLeft (Base MapR d0) (Base MapR d1)) = Map.union d0 d1  -- 'Map.union' is left biased, just what we want.
+compute (UnionOverrideLeft (Base SetR (Sett x)) (Base SetR (Sett y))) = Sett (Set.union x y)
+compute (UnionOverrideLeft (DExclude (SetSingleton k) (Base MapR xs)) (Base MapR ys)) = Map.union (Map.delete k xs) ys
 compute (UnionOverrideLeft (DExclude (Base SetR (Sett s1)) (Base MapR m2)) (Base MapR m3)) =  Map.union (Map.withoutKeys m2 s1) m3
 compute (e@(UnionOverrideLeft a b)) = run(compile e)
 
 compute (UnionOverrideRight (Base rep x) (Singleton k v)) = addkv (k,v) x (\ new old -> new) -- The value on the right is preferred over the left, so 'addkv' chooses 'new'
-compute ((UnionOverrideRight (Base MapR d0) (Base MapR d1))) = Map.union d1 d0   -- we pass @d1@ as first argument, since 'Map.union' is left biased.
+compute (UnionOverrideRight (Base MapR d0) (Base MapR d1)) = Map.union d1 d0   -- we pass @d1@ as first argument, since 'Map.union' is left biased.
+compute (UnionOverrideRight (Base SetR (Sett x)) (Base SetR (Sett y))) = Sett (Set.union x y)
 compute (e@(UnionOverrideRight a b)) = run(compile e)
 
 compute (UnionPlus (Base MapR x) (Base MapR y)) = Map.unionWith (<>) x y
+compute (UnionPlus (Base SetR (Sett x)) (Base SetR (Sett y))) = Sett (Set.union x y)  -- Recall (Sett k):: f k (), so () <> () = ()
 compute (e@(UnionPlus a b)) = run(compile e)
 
 compute (Singleton k v) = Single k v
@@ -1108,14 +1163,15 @@ compute (KeyEqual (Base BiMapR (MkBiMap m _)) (Base BiMapR (MkBiMap n _))) = key
 compute (KeyEqual (Dom (Base MapR m)) (Dom (Base MapR n))) = keysEqual m n
 compute (KeyEqual (Dom (Base BiMapR (MkBiMap m _))) (Dom (Base BiMapR (MkBiMap n _)))) = keysEqual m n
 compute (KeyEqual (Base SetR (Sett m)) (Base SetR (Sett n))) = n==m
-compute (KeyEqual x y ) = sameDomain left right  -- This is way slower than the
-   where left = (fst(compile x))
-         right = (fst(compile y))
+compute (KeyEqual (Base MapR xs) (Base SetR (Sett ys))) = Map.keysSet xs == ys
+compute (e@(KeyEqual x y )) = sameDomain left right  -- This is way slower but more general
+   where left = fst(compile x)
+         right = fst(compile y)
 
 
 eval :: Embed s t => Exp t -> s
-eval x = -- fromBase (compute (trace ("Tracing\n   "++show x++"\n") x))
-         fromBase (compute x)
+eval x = fromBase (compute x)
+
 -- ==============================================================================================
 -- To make compound iterators, i.e. instance (Iter Query), we need "step" functions for each kind
 -- ==============================================================================================

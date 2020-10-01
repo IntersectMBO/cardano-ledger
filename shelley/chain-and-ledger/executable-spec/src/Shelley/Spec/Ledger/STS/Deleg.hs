@@ -258,9 +258,9 @@ delegationTransition = do
           futureOtherColdKeyHashes = Set.map genDelegKeyHash fod
           futureOtherVrfKeyHashes = Set.map genDelegVrfHash fod
 
-      eval (vkh ∉ (currentOtherColdKeyHashes `Set.union` futureOtherColdKeyHashes))
+      eval (vkh ∉ (currentOtherColdKeyHashes ∪ futureOtherColdKeyHashes))
         ?! DuplicateGenesisDelegateDELEG vkh
-      eval (vrf ∉ (currentOtherVrfKeyHashes `Set.union` futureOtherVrfKeyHashes))
+      eval (vrf ∉ (currentOtherVrfKeyHashes ∪ futureOtherVrfKeyHashes))
         ?! DuplicateGenesisVRFDELEG vrf
 
       pure $
