@@ -30,7 +30,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitS
 import Data.Foldable (fold, foldl', toList)
 import qualified Data.Map.Strict as Map (isSubmapOf)
 import Data.Proxy
-import qualified Data.Set as Set (intersection, map, null)
+import qualified Data.Set as Set (intersection, map, null, fromList, isSubsetOf)
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.API
   ( CHAIN,
@@ -97,7 +97,9 @@ collisionFreeComplete =
         map eliminateTxInputs ssts,
         map newEntriesAndUniqueTxIns ssts,
         -- no double spend
-        map noDoubleSpend ssts
+        map noDoubleSpend ssts,
+        -- tx signatures
+        map requiredMSigSignaturesSubset ssts
       ]
 
 -- | Various preservation properties, tested on longer traces (double the
@@ -120,7 +122,8 @@ adaPreservationChain =
         -- non-epoch-boundary preservation properties
         map checkWithdrawlBound noEpochBoundarySsts,
         map utxoDepositsIncreaseByFeesWithdrawals noEpochBoundarySsts,
-        map potsSumIncreaseWdrlsPerBlock noEpochBoundarySsts
+        map potsSumIncreaseWdrlsPerBlock noEpochBoundarySsts,
+        map feesNonDecreasing noEpochBoundarySsts
       ]
 
 -- ADA should be preserved for all state transitions in the generated trace
@@ -309,6 +312,29 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
               null (outIds `Set.intersection` oldIds)
                 && eval ((dom outs) ⊆ (dom u'))
 
+-- | Check for required signatures in case of Multi-Sig. There has to be one set
+-- of possible signatures for a multi-sig script which is a sub-set of the
+-- signatures of the tansaction.
+requiredMSigSignaturesSubset :: SourceSignalTarget (CHAIN C) -> Property
+requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = block} =
+  conjoin $
+    map signaturesSubset $
+      sourceSignalTargets ledgerTr
+  where
+    (_, ledgerTr) = ledgerTraceFromBlock chainSt block
+    signaturesSubset :: SourceSignalTarget (LEDGER C) -> Property
+    signaturesSubset SourceSignalTarget {signal = tx} =
+      let khs = keyHashSet tx
+       in property $ 
+            all (existsReqKeyComb khs) (msigWits . _witnessSet $ tx)
+
+    existsReqKeyComb keyHashes msig =
+      any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (getKeyCombinations msig)
+
+    keyHashSet tx_ =
+      Set.map witKeyHash (addrWits . _witnessSet $ tx_)
+
+
 --- | Check for absence of double spend in a block
 noDoubleSpend :: SourceSignalTarget (CHAIN C) -> Property
 noDoubleSpend SourceSignalTarget {signal} =
@@ -360,6 +386,17 @@ nonNegativeDeposits SourceSignalTarget {source = chainSt} =
   let es = (nesEs . chainNes) chainSt
       (UTxOState {_deposited = d}) = (_utxoState . esLState) es
    in (d >= mempty) === True
+
+-- | Checks that the fees are non-decreasing when not at an epoch boundary
+feesNonDecreasing :: SourceSignalTarget (CHAIN C) -> Property
+feesNonDecreasing SourceSignalTarget {source, target} =
+  property $ 
+    fees_ source <= fees_ target
+  where
+    fees_ chainSt =
+      let (UTxOState {_fees = fees}) = 
+            _utxoState . esLState . nesEs . chainNes $ chainSt
+      in fees
 
 ----------------------------------------------------------------------
 -- POOL Properties

@@ -28,12 +28,11 @@ import Test.Shelley.Spec.Ledger.Rules.TestLedger
   ( consumedEqualsProduced,
     credentialMappingAfterDelegation,
     credentialRemovedAfterDereg,
-    feesNonDecreasing,
     prop_MIRValuesEndUpInMap,
     prop_MIRentriesEndUpInMap,
     rewardZeroAfterRegKey,
     rewardsDecreasesByWithdrawals,
-    rewardsSumInvariant,
+    rewardsSumInvariant
   )
 import Test.Shelley.Spec.Ledger.Serialisation.StakeRef
   ( propDeserializeAddrStakeReference,
@@ -79,8 +78,7 @@ propertyTests =
         ],
       testGroup
         "STS Rules - Utxo Properties"
-        [ TQC.testProperty "the value consumed by UTXO is equal to the value produced in DELEGS" consumedEqualsProduced,
-          TQC.testProperty "transaction fees are non-decreasing" feesNonDecreasing
+        [ TQC.testProperty "the value consumed by UTXO is equal to the value produced in DELEGS" consumedEqualsProduced
         ],
       testGroup
         "STS Rules - Pool Properties"

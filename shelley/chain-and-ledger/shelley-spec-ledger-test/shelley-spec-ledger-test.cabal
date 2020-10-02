@@ -126,8 +126,6 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Rules.TestLedger
       Test.Shelley.Spec.Ledger.Rules.TestPool
       Test.Shelley.Spec.Ledger.Rules.TestPoolreap
-      Test.Shelley.Spec.Ledger.Rules.TestUtxo
-      Test.Shelley.Spec.Ledger.Rules.TestUtxow
       Test.Shelley.Spec.Ledger.Serialisation
       Test.Shelley.Spec.Ledger.Serialisation.CDDL
       Test.Shelley.Spec.Ledger.Serialisation.Golden.Address

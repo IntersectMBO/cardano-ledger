@@ -13,11 +13,9 @@ module Test.Shelley.Spec.Ledger.Rules.TestLedger
     credentialMappingAfterDelegation,
     rewardsSumInvariant,
     rewardsDecreasesByWithdrawals,
-    feesNonDecreasing,
     consumedEqualsProduced,
     prop_MIRentriesEndUpInMap,
-    prop_MIRValuesEndUpInMap,
-    requiredMSigSignaturesSubset,
+    prop_MIRValuesEndUpInMap
   )
 where
 
@@ -33,7 +31,6 @@ import Control.State.Transition.Trace
 import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import Data.Foldable (fold, toList)
-import Data.Map (Map)
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
@@ -41,19 +38,11 @@ import Shelley.Spec.Ledger.API
   ( DELEG,
     DELEGS,
     LEDGER,
-    UTXO,
-    UTXOW,
-  )
-import Shelley.Spec.Ledger.Keys
-  ( KeyHash (..),
-    KeyRole (..),
   )
 import Shelley.Spec.Ledger.LedgerState
   ( _deposited,
     _dstate,
     _fees,
-    _pParams,
-    _pstate,
     _rewards,
     _utxo,
     pattern DPState,
@@ -64,8 +53,7 @@ import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Tx (_body)
 import Shelley.Spec.Ledger.TxBody
-  ( PoolParams (..),
-    Ptr (..),
+  ( Ptr (..),
     Wdrl,
     _certs,
     _wdrls,
@@ -80,8 +68,6 @@ import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import qualified Test.Shelley.Spec.Ledger.Rules.TestDeleg as TestDeleg
 import qualified Test.Shelley.Spec.Ledger.Rules.TestDelegs as TestDelegs
-import qualified Test.Shelley.Spec.Ledger.Rules.TestUtxo as TestUtxo
-import qualified Test.Shelley.Spec.Ledger.Rules.TestUtxow as TestUtxow
 import Test.Shelley.Spec.Ledger.Utils (runShelleyBase, testGlobals)
 
 ------------------------------
@@ -167,18 +153,6 @@ consumedEqualsProduced =
         (balance u <> d <> fees <> fold rewards)
           === (balance u' <> d' <> fees' <> fold rewards')
 
-feesNonDecreasing :: Property
-feesNonDecreasing =
-  forAllLedgerTrace $ \tr ->
-    let ssts = map ledgerToUtxoSsts (sourceSignalTargets tr)
-     in TestUtxo.feesNonDecreasing ssts
-
-requiredMSigSignaturesSubset :: Property
-requiredMSigSignaturesSubset =
-  forAllLedgerTrace $ \tr ->
-    let ssts = map (\(_, s) -> s) $ map ledgerToUtxowSsts (sourceSignalTargets tr)
-     in TestUtxow.requiredMSigSignaturesSubset ssts
-
 -- | Check that `InstantaneousRewards` certificate entries are added to the
 -- Instantaneous Rewards map.
 prop_MIRentriesEndUpInMap :: Property
@@ -217,24 +191,6 @@ ledgerToDelegsSsts ::
 ledgerToDelegsSsts (SourceSignalTarget (_, dpSt) (_, dpSt') tx) =
   ( (_wdrls . _body) tx,
     SourceSignalTarget dpSt dpSt' ((StrictSeq.getSeq . _certs . _body) tx)
-  )
-
--- | Transform LEDGER to UTXO `SourceSignalTargets`s
-ledgerToUtxoSsts ::
-  SourceSignalTarget (LEDGER C) ->
-  SourceSignalTarget (UTXO C)
-ledgerToUtxoSsts (SourceSignalTarget (utxoSt, _) (utxoSt', _) tx) =
-  (SourceSignalTarget utxoSt utxoSt' tx)
-
--- | Transform LEDGER to UTXOW `SourceSignalTargets`s
-ledgerToUtxowSsts ::
-  SourceSignalTarget (LEDGER C) ->
-  ( Map (KeyHash 'StakePool C) (PoolParams C),
-    SourceSignalTarget (UTXOW C)
-  )
-ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
-  ( (_pParams . _pstate) delegSt,
-    SourceSignalTarget utxoSt utxoSt' tx
   )
 
 -- | Transform a LEDGER Trace to a DELEG Trace by extracting the certificates
