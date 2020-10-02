@@ -1,33 +1,63 @@
 \section{Introduction}
 
-This document describes the changes to the Shelley-MA ledger required
-for the Goguen ledger. The two major components of these changes are
-the extension the UTxO model of the Shelley era and the introduction
-of non-native scripts, i.e. scripts that are not evaluated by the ledger.
+This document describes the extensions to the multi-asset formal ledger specification~\ref{XX},
+that are needed for the Plutus Foundation.  This underpins future Plutus development as part of the Goguen.
+%
+The two major extensions are:
+\begin{inparaenum}
+\item
+the introduction
+of non-native scripts, i.e. scripts that are not evaluated by the ledger; and
+\item
+  additions to the Shelley-era UTxO model that are needed to support Plutus
+  constructs (``extended UTxO'').
+\end{inparaenum}
+This document defines these extensions as changes to the multi-asset structured transition system,
+using the same notation and conventions that were used for the multi-asset specification~\ref{XX}.
+As with the multi-asset formal specification, these rules will be implemented in the form of an executable ledger specification that will then be
+integrated with the Cardano node.
 
-Native scripts are processed entirely by the ledger rules, which means
-that their execution cost can easily be assessed before processing
-them. In the current version of the Shelley ledger, there is no
-assessment of the cost of checking multisignature scripts. Instead,
-any additional fees incurred as a result of spending MSig-locked
-outputs are proportional to the change in transaction size due to
-including all the necessary signatures (rather than the cost of
-verifying them).
+\subsection{Non-Native Scripts}
 
-Non-native scripts on the other hand can perform arbitary
-(Turing-complete) computations, which means it is impossible to assess
-their execution cost without executing them. Thus, a transaction is
-required to carry a budget of $\ExUnits$, which reflect an amount of
-resources (such as memory usage and execution steps), and this budget
-influences the transaction fees. To change the $\ExUnits$ required to
-run the same computation without a hard fork (for example because a
-more efficient interpreter was introduced), every scripting language
-converts the actual execution cost into $\ExUnits$ using a cost model,
-$\CostMod$, which is a protocol parameter.
+The Shelley formal specification introduced the concept of ``multi-signature'' scripts.
+\emph{Native scripts}, such as these, are processed entirely by the ledger rules.
+Their execution costs can easily be assessed before they are processed,
+and any fees can be calculated directly by the ledger rules, based on e.g. the
+size of the transaction.
+% and there are therefore no explicit cost rules in the ledger specification.
+% In the current version of the Shelley ledger, there is no
+% assessment of the cost of checking multisignature scripts.
+% Instead,
+% any additional fees incurred as a result of spending MSig-locked
+% outputs are proportional to the change in transaction size due to
+% including all the necessary signatures (rather than the cost of
+% verifying them).
 
-The changes to the UTxO model required are adapded from
-\cite{plutus_eutxo}. Transaction outputs get an additional piece of
-data, that gets passed to a script validating the spending of that
-output. Additionally, a transaction also needs to supply a redeemer,
-which is an additional piece of data, for everything that is validated
-by non-native scripts.
+In contrast, non-native scripts can perform arbitary
+(and, in principle, Turing-complete) computations.
+In order to bound execution costs to a pre-determined constant, we use a standard ``fuel'' approach~\ref{XX},
+%% Not completely true...  The cost of many interesting computations can be assessed, and others can be limited.
+%% I've done a lot of work here :)
+% which means it is impossible to assess
+% their execution cost without executing them.
+We require transactions that use non-native scripts
+to have a budget in terms of a number of abstract $\ExUnits$.
+These provide a quantitative bound on resource usage in terms of metrics such as memory usage or abstract execution steps.
+This abstract budget is then used as part of the concrete transaction fee calculation, using an explicit
+cost model $\CostMod$, that is provided as a protocol parameter.
+
+% To change the $\ExUnits$ required to
+% run the same computation without a hard fork (for example because a
+% more efficient interpreter was introduced), every scripting language
+% converts the actual execution cost into $\ExUnits$ using a cost model,
+% $\CostMod$, which is a protocol parameter.
+
+\subsection{Extended UTxO}
+
+The specification of the extended UTxO model follows the description in~\cite{plutus_eutxo}.
+All\todo{Some?} transaction outputs must include an additional data item that ...\todo{What is this - a hash, a token? And what does it represent?}.
+This is passed to a script that validates that the output is spent correctly. All\todo{Confirm} transactions also need to supply a \emph{redeemer}, as an additional input\todo{Is this a transaction input?}.
+The redeemer ...\todo{Explain what it does.}
+For example, ...\todo{Give a high level example.}
+% which is an additional piece of data, for everything that is validated
+% by non-native scripts.
