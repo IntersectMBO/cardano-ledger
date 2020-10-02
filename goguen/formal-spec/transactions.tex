@@ -1,83 +1,77 @@
-\section{Transactions}
+\section{Transaction Validation}
 \label{sec:transactions}
 
-In this chapter, we outline the changes necessary to transaction and
-UTxO structure to make it possible to use non-native scripts to validate
+This section outlines the changes that are needed to the transaction and
+UTxO structure to enable non-native scripts to validate
 certain actions.
 
-In Figure \ref{fig:defs:utxo-shelley-1}, we give the transaction types modified
-to support Plutus.
+Figure \ref{fig:defs:utxo-shelley-1} gives the modified transaction types.
 We make the following changes and additions:
 
 \begin{itemize}
-  \item $\Value$ is the multicurrency type used to represent
-  both fungible and non fungible tokens. For details, see the MA spec.
+  \item $\Value$ represents the type of
+  both \emph{fungible} and \emph{non-fungible} multi-asset tokens. For details, see the multi-asset formal specification~\ref{XX}.
 
-  \item $\RdmrsHash$ is the type of hashes of the indexed redeemer structure
-  included in the transaction (details about this structure below).
+  \item $\RdmrsHash$ is the type of a hash of the indexed redeemer structure,
+  included within a transaction (this structure is described in detail below).
 
-  \item $\ScriptMSig$ is the native multisignature scripts already supported.
+  \item $\ScriptMSig$ is the type of the existing native multi-signature scripts.
 
-  \item $\ScriptPlutus$ is a type for scripts made with the Plutus version
-  that is the first version of Plutus supported.
+  \item $\ScriptPlutus$ is a type for scripts that use the initial version of Plutus.
 
-  \item $\Data$ refers to the type defined in Plutus libraries, but is
-  related to a ledger type (see note "Data Representation" below).
+  \item $\Data$ is the same type as in the Plutus libraries (see the note on ``Data Representation'' below).
 
-  \item $\Script$ is a sum type for all scripts.
-  
-  \item $\IsValidating$ is a tag that indicates when a transaction is
-  expected to have all the non-native scripts inside it validate.
+  \item $\Script$ is a sum type that includes all possible scripts (both native and non-native\todo{Confirm}).
+
+  \item $\IsValidating$ is a tag that indicates that a transaction
+  expects that all its non-native scripts validate.
   This tag is added by the block creator when
-  constructing a block, and is checked as part of running scripts.
+  constructing a block, and is checked when running scripts.\todo{Not sure I got this right?}
 
   \item $\IsFee$ is a tag that indicates when an input has been marked
-  to be used for paying transaction fees.
-  The purpose of this tag is to give users a way to prevent
-  the entire value of the UTxO entries spent by the transaction
-  from going into the fee pot in case of script validation failure.
-  
-  \item $\TxIn$ is a transaction input. It includes the reference to the UTxO entry it is spending
-  and the $\IsFee$ tag, which indicates if this input should
-  be used to pay script execution fees.
+    to be used for paying transaction fees.
+    This provides a way to prevent
+  the entire value of a transaction's UTxO entries being used as fees if a script fails to validate.
 
-  \item $\TxOutND$: A transaction output with no datum hash
-  (this type is for VK and multisig scripts outputs).
+  \item $\TxIn$ is a transaction input. It includes a reference to the UTxO entry that it is spending
+  and an $\IsFee$ tag.
+% , which indicates if this input should
+%   be used to pay script execution fees.
 
-  \item $\TxOutP$: A transaction output type for Plutus
-  script outputs (which include datum hash).
+  \item $\TxOutND$ is a transaction output with no datum hash
+  (this type is for VK\todo{What is VK?} and multi-signature script outputs).
 
-  \item $\HasDV$:
-  This is a tag attached to a transaction output if it is locked by a Plutus
-  script. That is, the output contains an address, a value, and necessarily a
-  hash of a datum.
+  \item $\TxOutP$ is a transaction output that comes from a Plutus script (these include a datum hash).\todo{Confirm this.}
+
+  \item $\HasDV$
+  is a tag that is attached to a transaction output if it is \emph{locked} by a Plutus
+  script. The output contains an address, a value, and a datum hash.
   This tag indicates whether the transaction carrying the output
-  contains, in its set of datum objects, the full datum corresponding
-  to the hash of the datum in the output.
+  contains, in its set of datum objects, the full datum that corresponds
+  to the datum hash.
 
-  Note that it is up to the user
-  to decide whether the transaction should have the full datum. The purpose of
-  including it is strictly to communicate it to the user who will be spending
-  the output in the future, and will require the full datum to validate
-  the Plutus script locking the output. However, this tag must be applied
+  Note that it is up to the user   to decide whether the transaction should have the full datum. The purpose of
+  including it is strictly so that it can be communicated to the user who will be spending
+  the output in the future, and who will require the full datum in order to validate
+  the Plutus script that is locking the output. However, this tag must be applied
   correctly, otherwise the transaction will not validate.
   \begin{note}
     The purpose of this tag is to ensure that it is evident if such a
     datum has been removed. We may do something else and remove this tag.
   \end{note}
-  
-  \item $\TxOut$ : The type of outputs carried by a transaction,
-  $\TxOutND$ or the pair of $\TxOutP$ with the tag $\HasDV$.
 
-  \item $\Tag$: The tags let us differentiate types of things a script
-  can be validating, i.e. \\
-  $\mathsf{inputTag}$ is for validating spending a script UTxO entry, \\
-  $\mathsf{forgeTag}$ is for validating forging tokens, \\
-  $\mathsf{certTag}$  is for validating certificates with script credentials, and  \\
-  $\mathsf{wdrlTag}$ is for validating reward withdrawals from script addresses.
+  \item $\TxOut$ is the type of transaction outputs, either
+  $\TxOutND$ or a pair of $\TxOutP$ and $\HasDV$.
 
-  \item $\RdmrPtr$: This type is a pair of a tag and an index. This type is
-  used to index Plutus redeemers that are included in a transaction. More on this
+  \item $\Tag$ let us differentiate what a script
+  can validate, i.e. \\
+  $\mathsf{inputTag}$ to validate spending a script UTxO entry, \\
+  $\mathsf{forgeTag}$ to validate forging tokens, \\
+  $\mathsf{certTag}$  to validate certificates with script credentials, and  \\
+  $\mathsf{wdrlTag}$ to validate reward withdrawals from script addresses.
+
+  \item $\RdmrPtr$ is a pair of a tag and an index. This type is
+  used to index the Plutus redeemers that are included in a transaction. See
   below.
 
 \end{itemize}
