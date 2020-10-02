@@ -1,31 +1,36 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving  #-}
+
+-- {-# OPTIONS_GHC -Wno-orphans #-}
+-- {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
+{-# OPTIONS_GHC -fno-warn-unused-matches #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
 module Test.Control.Iterate.SetAlgebra where
 
 import Control.Iterate.Collect
 import Control.Iterate.SetAlgebra
 import Control.Iterate.SetAlgebraInternal
-  ( BiMap (..),
-    Bimap,
-    Exp (..),
+  ( Exp (..),
     List (..),
+    fromPairs,
     Query (..),
     Sett (..),
-    Single (..),
     compile,
     compute,
     domElem,
-    eval,
     fifo,
     lifo,
     lift,
     rngSnd,
     run,
+    runBoolExp,
     sameDomain,
     (⨝),
-    materialize,
     intersectDomPLeft,
     intersectDomP,
     domEq,
@@ -36,8 +41,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck(testProperty)
-import Test.Tasty(defaultMain)
+import Test.Tasty.QuickCheck
 
 -- =========================================================
 -- Some examples of Exp and tests
@@ -85,6 +89,11 @@ deleg = Map.fromList [(n, chars !! n) | n <- [1 .. 10]]
 
 stpool = Map.fromList [('A', 99), ('C', 12), ('F', 42), ('R', 33), ('Z', 99)]
 
+
+
+--  ((txins txb ⋪ utxo) ∪ txouts txb)
+test33 :: () -> Exp (Map Int Char)
+test33 () = ((Set.fromList [4,7,9] ⋪ m1) ∪ m2)
 -- =============== Build a few maps ===================
 
 chars :: String
@@ -126,12 +135,12 @@ evens :: Sett Int ()
 evens = fromList SetR (\l _r -> l) [(n, ()) | n <- [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26]]
 
 l4 :: [(Int, String)]
-l4 = [(1, "m"), (2, "a"), (5, "z"), (6, "b"), (7, "r"), (12, "w"), (34, "a"), (50, "q"), (51, "l"), (105, "Z")]
+l4 = [(1, "m"), (2, "a"), (5, "z"), (6, "b"), (7, "r"), (12, "w"), (34, "v"), (50, "q"), (51, "l"), (105, "Z")]
 
 l5 :: [(String, Int)]
 l5 = [("a", 101), ("b", 102), ("c", 103), ("f", 104), ("m", 105), ("q", 107), ("s", 106), ("w", 108), ("y", 109), ("zz", 110)]
 
--- Chain l4 l5 =  [(1,(1,"m",105)),(2,(2,"a",101)),(6,(6,"b",102)),(12,(12,"w",108)),(34,(34,"a",101)),(50,(50,"q",107))]
+-- Chain l4 l5 =  [(1,(1,"m",105)),(2,(2,"a",101)),(6,(6,"b",102)),(12,(12,"w",108)),(50,(50,"q",107))]
 -- Chain l5 l4 =  [("m",("m",105,"Z"))]
 
 -- =================== Some sample (Exp t) =============================
@@ -191,14 +200,15 @@ eval_tests =
       evalTest "m0" ((setSingleton 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')]),
       evalTest "m0" (dom (singleton 2 'z') ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')]),
       evalTest "m0" (rng (singleton 'z' 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')]),
-      -- , evalTest "m0"  ((Map.fromList [(1,'a'),(2,'n'),(3,'r')]) ∪ (singleton 2 'b')) (Map.fromList[(1::Int,'a'),(2,'n'),(3,'r')])
-      --  , evalTest "m0"  ([(1,'a'),(3,'r')] ∪ (singleton 3 'b')) (UnSafeList[(1::Int,'a'),(2,'n'),(3,'r')])
+      evalTest "m0"  ((Map.fromList [(1,'a'),(2,'n'),(3,'r')]) ∪ (singleton 2 'b')) (Map.fromList[(1::Int,'a'),(2,'n'),(3,'r')]),
+      evalTest "m0"  ([(1,'a'),(3,'r')] ∪ (singleton 3 'b')) (UnSafeList[(1::Int,'a'),(3,'r')]),
 
       evalTest "m0" (70 ∉ (dom m1)) True,
       evalTest "((dom stkcred) ◁ deleg) ▷ (dom stpool)" (((dom stkcred) ◁ deleg) ▷ (dom stpool)) (Map.fromList [(5, 'F')]),
       evalTest "Range exclude 1" (l4 ⋫ Set.empty) (UnSafeList l4),
       evalTest "Range exclude 2" (l4 ⋫ Fail) (UnSafeList l4),
-      evalTest "Range exclude 3" (l4 ⋫ (Set.fromList ["m", "Z"])) (UnSafeList [(2, "a"), (5, "z"), (6, "b"), (7, "r"), (12, "w"), (34, "a"), (50, "q"), (51, "l")]),
+      evalTest "Range exclude 3" (l4 ⋫ (Set.fromList ["m", "Z"]))
+                                 (UnSafeList [(2, "a"), (5, "z"), (6, "b"), (7, "r"), (12, "w"), (34, "v"), (50, "q"), (51, "l")]),
       evalTest "DomExclude Union" ((z2 ⋪ z1) ∪ z3) z4,
       eval_compile (((dom stkcred) ◁ deleg) ▷ (dom stpool)),
       eval_compile (l4 ⋫ (Set.fromList ["m", "Z"])),
@@ -308,7 +318,12 @@ testChain nm rep1 rep2 =
   testcase
     nm
     (ChainD (fromListD rep1 l4) (fromListD rep2 l5) (lift (\x (y, v) -> (x, y, v))))
-    [(1, (1, "m", 105)), (2, (2, "a", 101)), (6, (6, "b", 102)), (12, (12, "w", 108)), (34, (34, "a", 101)), (50, (50, "q", 107))]
+    [(1, (1, "m", 105)), (2, (2, "a", 101)), (6, (6, "b", 102)), (12, (12, "w", 108)), (50, (50, "q", 107))]
+
+-- L14 = [(1,"m"),(5,"z"),(6,"b"),(7,"r"),(12,"w"),(34,"v"),(50,"q"),(51,"l"),(105,"Z")]
+-- L15 = [("a",101),("b",102),("c",103),("f",104),("m",105),("q",107),("s",106),("w",108),("y",109),("zz",110)]
+
+
 
 testChain2 :: (Iter f, Iter g) => String -> BaseRep f String Int -> BaseRep g Int String -> TestTree
 testChain2 nm rep1 rep2 =
@@ -378,10 +393,6 @@ iter_tests =
       testEpochEx
     ]
 
-setAlgTest :: TestTree
-setAlgTest =
-  testGroup "Set Algebra Tests" [eval_tests, keysEqTests, iter_tests, intersectDomPLeftTest,
-                                 ledgerStateTest, threeWayTest]
 
 intersect2ways :: Map Int Char -> Map Int String -> Char -> Bool
 intersect2ways delegs stake hk =
@@ -409,6 +420,237 @@ threeWay delegs stake hk =
 
 threeWayTest :: TestTree
 threeWayTest = testProperty "eval-materialize-intersectDom" threeWay
+
+
+-- ================================================
+-- slow property tests
+-- ================================================
+
+newtype Key = Key Int
+  deriving (Eq,Ord)
+
+instance Show Key where
+   show (Key n) = "k"++show n
+
+-- ----------------------------
+newtype Range = Range Int
+  deriving (Eq,Ord,Num)
+
+instance Show Range where
+  show (Range n) = show n
+
+instance Semigroup Range where (Range x) <> (Range y) = Range (x + y)
+instance Monoid Range where mempty = Range 0
+
+
+-- ===========================================================
+flip_rng :: (Ord b, Num b) => List a b -> List b b
+flip_rng (UnSafeList xs) = fromPairs (+) (map (\ (a,b) -> (b,b)) xs)
+
+bimap:: (Ord k,Ord v) => Map k v -> BiMap v k v
+bimap xs = biMapFromList (\ old new -> new) (Map.toList xs)
+
+duplicate :: Ord a => Set.Set a -> Map.Map a a
+duplicate s = foldr (\ a m -> Map.insert a a m) Map.empty s
+
+btest :: Exp Bool -> Property
+btest exp = (compute exp) === (runBoolExp exp)
+
+qtest :: (Ord key,Eq(f key a),Show(f key a)) => Exp (f key a) -> Property
+qtest exp =  (compute exp) === (run (compile exp))
+
+-- ======================================================
+
+slowFastEquiv :: TestTree
+slowFastEquiv = testGroup "slowFastEquiv" (map f many)
+  where f (prop,name) = testProperty name prop
+
+
+type STest =
+   Key ->             -- k
+   Range ->           -- v
+   Map Key Range ->   -- m1
+   Map Key Range ->   -- m2
+   Set.Set Key ->     -- s1
+   Set.Set Key ->     -- s2
+   Set.Set Range ->   -- rs
+   List Key Range ->  -- ls
+   Property
+
+many :: [(STest,String)]
+many =
+  [( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (Base SetR (Sett s1))), "slow1")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (Base MapR m1)), "slow2")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (Base SetR (Sett s1))), "slow3")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (Base MapR m1)), "slow4")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (Singleton k v)), "slow5")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (SetSingleton k)), "slow6")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (Base MapR m1)), "slow7")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (RRestrict (Base MapR m1) (SetSingleton v))), "slow8")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (RRestrict (Base MapR m1) (Base SetR (Sett rs)))), "slow9")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (RExclude (Base MapR m1) (SetSingleton v))), "slow10")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (RExclude (Base MapR m1) (Base SetR (Sett rs)))), "slow11")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (DRestrict (SetSingleton k) (Base MapR m1))), "slow12")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (DRestrict (Base SetR (Sett s1)) (Base MapR m1))), "slow13")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (DExclude (SetSingleton k) (Base MapR m1))), "slow14")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Dom (DExclude (Base SetR (Sett s1)) (Base MapR m1))), "slow15")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Rng (Base SetR (Sett s1))), "slow16")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Rng (Singleton k v)), "slow17")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Rng (SetSingleton k)), "slow18")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Rng (Base MapR m1)), "slow19")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Base SetR (Sett s1)) (Base MapR m1)), "slow21")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (SetSingleton k) (Base MapR m1)), "slow22")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Singleton k ()) (Base MapR m1)), "slow23")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Dom (Base MapR m2)) (Base MapR m1)), "slow24")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Dom (RRestrict (Base MapR m1) (SetSingleton v))) (Base MapR m2)), "slow25")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Dom (RRestrict (Base MapR m1) (Base SetR (Sett rs)))) (Base MapR m2)), "slow26")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Base SetR (Sett s1)) (Base MapR m1)), "slow27")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow28")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Base SetR (Sett s1)) (Base ListR ls)), "slow29")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Dom (Base MapR m1)) (Base ListR ls)), "slow30")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (SetSingleton k) (Base ListR ls)), "slow31")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Dom (Singleton k v)) (Base ListR ls)), "slow32")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DRestrict (Rng (Singleton k v)) (Base ListR (flip_rng ls))), "slow33")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DExclude (SetSingleton k) (Base MapR m1)), "slow35")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DExclude (Dom (Singleton k v)) (Base MapR m1)), "slow36")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DExclude (Rng (Singleton v k)) (Base MapR m1)), "slow37")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DExclude (Base SetR (Sett s1)) (Base MapR m1)), "slow38")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DExclude (Dom (Base MapR m1)) (Base MapR m2)), "slow39")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DExclude (SetSingleton k) (Base BiMapR (bimap m1))), "slow40")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DExclude (Dom (Singleton k v)) (Base BiMapR (bimap m1))), "slow41")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (DExclude (Rng (Singleton v k)) (Base BiMapR (bimap m1))), "slow42")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (RExclude (Base BiMapR (bimap m1)) (SetSingleton v)), "slow44")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (RExclude (Base BiMapR (bimap m1)) (Dom (Singleton v k))), "slow45")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (RExclude (Base BiMapR (bimap m1)) (Rng (Singleton k v))), "slow46")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (RExclude (Base MapR m1) (Base SetR (Sett rs))), "slow47")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (RExclude (Base MapR m1) (SetSingleton v)), "slow48")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (RExclude (Base ListR ls) (Base SetR (Sett rs))), "slow49")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (RExclude (Base ListR ls) (Base SingleR Fail)), "slow50")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (RRestrict (Base MapR m1) (SetSingleton v)), "slow52")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (RRestrict (DRestrict (Dom (Base MapR m1)) (Base MapR m1)) (Dom (Base MapR (duplicate rs)))), "slow53")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (RRestrict (DRestrict (Dom (Base MapR m1)) (Base MapR m2)) (Dom (Base ListR (flip_rng ls)))), "slow54")
+
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (Dom (Base ListR ls))), "slow56")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (Base SetR (Sett s1))), "slow57")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (Dom (Singleton k v))), "slow58")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (Rng (Singleton v k))), "slow59")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (SetSingleton k)), "slow60")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (UnionOverrideLeft  (Base SetR (Sett s1)) (Base SetR (Sett s2)))), "slow61")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (UnionOverrideRight (Base SetR (Sett s1)) (Base SetR (Sett s2)))), "slow62")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (UnionPlus          (Base SetR (Sett s1)) (Base SetR (Sett s2)))), "slow63")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (Intersect (Base SetR (Sett s1)) (Base SetR (Sett s2)))), "slow64")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (DRestrict (Dom (Base SetR (Sett s1))) (Dom(Base MapR m1)))), "slow106")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Elem k (DExclude (Dom (Base SetR (Sett s1))) (Dom(Base MapR m1)))), "slow107")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (NotElem k (Dom (Base ListR ls))), "slow66")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (NotElem k (Base SetR (Sett s1))), "slow67")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (NotElem k (Dom (Singleton k v))), "slow68")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (NotElem k (Rng (Singleton v k))), "slow69")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (NotElem k (SetSingleton k)), "slow70")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (NotElem k (UnionOverrideLeft  (Base SetR (Sett s1)) (Base SetR (Sett s2)))), "slow71")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (NotElem k (UnionOverrideRight (Base SetR (Sett s1)) (Base SetR (Sett s2)))), "slow72")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (NotElem k (UnionPlus          (Base SetR (Sett s1)) (Base SetR (Sett s2)))), "slow73")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (NotElem k (Intersect (Base SetR (Sett s1)) (Base SetR (Sett s2)))), "slow74")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Subset (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow76")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Subset (Base SetR (Sett s1)) (Base MapR m1)), "slow77")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Subset (Base SetR (Sett s1)) (Dom (Base MapR m1))), "slow78")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Subset (Base MapR m1) (Base MapR m2)), "slow79")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (Subset (Dom (Base MapR m1)) (Dom (Base MapR m2))), "slow80")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Intersect (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow82")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Intersect (Base MapR m1) (Base MapR m2)), "slow83")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (UnionOverrideLeft (Base ListR ls) (Singleton k v)), "slow85")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (UnionOverrideLeft (Base MapR m1) (Base MapR m2)), "slow86")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (UnionOverrideLeft (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow87")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (UnionOverrideLeft (DExclude (SetSingleton k) (Base MapR m1)) (Base MapR m2)), "slow88")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (UnionOverrideLeft (DExclude (Base SetR (Sett s1)) (Base MapR m1)) (Base MapR m2)), "slow89")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (UnionOverrideRight (Base ListR ls) (Singleton k v)), "slow91")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (UnionOverrideRight (Base MapR m1) (Base MapR m2)), "slow92")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (UnionOverrideRight (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow93")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (UnionPlus (Base MapR m1) (Base MapR m2)), "slow95")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (UnionPlus (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow96")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (Singleton k v), "slow98")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (SetSingleton k), "slow99")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (KeyEqual (Base MapR m1) (Base MapR m2)), "slow100")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (KeyEqual (Base BiMapR (bimap m1)) (Base BiMapR (bimap m2))), "slow101")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (KeyEqual (Dom (Base MapR m1)) (Dom (Base MapR m2))), "slow102")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (KeyEqual (Dom (Base BiMapR (bimap m1))) (Dom (Base BiMapR (bimap m2)))), "slow103")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (KeyEqual (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow104")
+  ,( \ k v m1 m2 s1 s2 rs ls -> btest (KeyEqual (Base MapR m1) (Base SetR (Sett s1))), "slow105")
+
+  ]
+
+
+ints :: Gen Int
+ints = oneof $ map pure [1..12] :: Gen Int
+
+genKey :: Gen Key
+genKey = fmap Key ints
+
+genRange :: Gen Range
+genRange = fmap Range ints
+
+genSize :: Gen Int
+genSize = frequency [(1,return 0),(2,return 1),(5,return 2),(5, return 3),(4,return 4),(3,return 5),(2, return 6),(1, return 7)]
+
+genPair :: Gen k -> Gen v -> Gen (k,v)
+genPair k v = (,) <$> k <*> v
+
+genList :: Ord k => Gen k -> Gen v -> Gen (List k v)
+genList k v = do
+   n <- genSize
+   xs <- vectorOf n (genPair k v)
+   pure $ fromPairs (\ old new -> new) xs
+
+genMap :: Ord k => Gen k -> Gen v -> Gen (Map k v)
+genMap k v = do
+   n <- genSize
+   xs <- vectorOf n (genPair k v)
+   pure (Map.fromList xs)
+
+genSett :: Ord k => Gen k -> Gen (Sett k ())
+genSett k = do
+   n <- genSize
+   xs <- vectorOf n k
+   pure (Sett (Set.fromList xs))
+
+genBiMap :: (Ord k,Ord v) => Gen k -> Gen v -> Gen (Bimap k v)
+genBiMap k v = do
+   m <- genMap k v
+   pure(bimap m)
+
+instance Arbitrary Key where
+  arbitrary = genKey
+
+instance Arbitrary Range where
+  arbitrary = genRange
+
+instance Arbitrary (List Key Range) where
+  arbitrary = genList genKey genRange
+
+instance Arbitrary (Sett Key ()) where
+  arbitrary = genSett genKey
+
+-- ====================================================
+-- Tie all the tests together
+-- ====================================================
+
+setAlgTest :: TestTree
+setAlgTest =
+  testGroup "Set Algebra Tests" [eval_tests, keysEqTests, iter_tests, intersectDomPLeftTest,
+                                 ledgerStateTest, threeWayTest, slowFastEquiv]
 
 -- go :: IO()
 -- go = defaultMain setAlgTest
