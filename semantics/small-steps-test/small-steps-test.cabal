@@ -37,6 +37,7 @@ library
                      , microlens
                      , microlens-th
                      , mtl
+                     , nothunks
                      , transformers >= 0.5
                      , QuickCheck
                      -- IOHK deps

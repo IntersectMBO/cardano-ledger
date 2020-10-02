@@ -11,7 +11,7 @@
 --
 module Control.State.Transition.Invalid.Trace where
 
-import           Cardano.Prelude (NoThunks(..))
+import           NoThunks.Class (NoThunks(..))
 import           Control.State.Transition (Environment, PredicateFailure, Signal, State)
 import qualified Control.State.Transition.Trace as Trace
 import           GHC.Generics (Generic)
