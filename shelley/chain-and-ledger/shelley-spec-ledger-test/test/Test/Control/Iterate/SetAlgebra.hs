@@ -24,13 +24,14 @@ import Control.Iterate.SetAlgebraInternal
     lifo,
     lift,
     rngSnd,
-    run,
-    runBoolExp,
+    runSet,
+    runBool,
     sameDomain,
     (⨝),
     intersectDomPLeft,
     intersectDomP,
     domEq,
+    BiMap(..),
   )
 import Data.Char (ord)
 import Data.Map.Strict (Map)
@@ -135,9 +136,6 @@ l4 = [(1, "m"), (2, "a"), (5, "z"), (6, "b"), (7, "r"), (12, "w"), (34, "v"), (5
 l5 :: [(String, Int)]
 l5 = [("a", 101), ("b", 102), ("c", 103), ("f", 104), ("m", 105), ("q", 107), ("s", 106), ("w", 108), ("y", 109), ("zz", 110)]
 
--- Chain l4 l5 =  [(1,(1,"m",105)),(2,(2,"a",101)),(6,(6,"b",102)),(12,(12,"w",108)),(50,(50,"q",107))]
--- Chain l5 l4 =  [("m",("m",105,"Z"))]
-
 -- =================== Some sample (Exp t) =============================
 
 ex1 :: Exp Bool
@@ -178,12 +176,12 @@ evalTest nm expr ans = testCase name (assertEqual name (compute expr) ans)
   where
     name = (show expr ++ " where Map? = " ++ nm)
 
--- Test that (eval x) and run(compile x) get the same answers
+-- Test that (eval x) and runSet(compile x) get the same answers
 
 eval_compile :: (Show (f k v), Ord k, Eq (f k v)) => Exp (f k v) -> TestTree
-eval_compile expr = testCase name (assertEqual name (compute expr) (run (compile expr)))
+eval_compile expr = testCase name (assertEqual name (compute expr) (runSet expr))
   where
-    name = ("compute and run.compile of " ++ show expr ++ " are the same")
+    name = ("compute and runSet of " ++ show expr ++ " are the same")
 
 eval_tests :: TestTree
 eval_tests =
@@ -315,10 +313,6 @@ testChain nm rep1 rep2 =
     (ChainD (fromListD rep1 l4) (fromListD rep2 l5) (lift (\x (y, v) -> (x, y, v))))
     [(1, (1, "m", 105)), (2, (2, "a", 101)), (6, (6, "b", 102)), (12, (12, "w", 108)), (50, (50, "q", 107))]
 
--- L14 = [(1,"m"),(5,"z"),(6,"b"),(7,"r"),(12,"w"),(34,"v"),(50,"q"),(51,"l"),(105,"Z")]
--- L15 = [("a",101),("b",102),("c",103),("f",104),("m",105),("q",107),("s",106),("w",108),("y",109),("zz",110)]
-
-
 
 testChain2 :: (Iter f, Iter g) => String -> BaseRep f String Int -> BaseRep g Int String -> TestTree
 testChain2 nm rep1 rep2 =
@@ -408,10 +402,10 @@ ledgerStateTest = testProperty "ledgerStateExample2ways" ledgerStateProp
 
 threeWay :: Map Int Char -> Map Int String -> Char -> Bool
 threeWay delegs stake hk =
-    ((run (compile (dom (delegs ▷ Set.singleton hk) ◁ stake)))
-       ==  (intersectDomPLeft (\ _k v2 -> v2==hk) stake delegs))
-    && (run (compile (dom (delegs ▷ Set.singleton hk) ◁ stake))
-         == materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when ((y==hk)); one(x,z) }))
+    ((runSet (dom (delegs ▷ Set.singleton hk) ◁ stake)))
+       ==  (intersectDomPLeft (\ _k v2 -> v2==hk) stake delegs)
+    && (runSet (dom (delegs ▷ Set.singleton hk) ◁ stake))
+         == materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when ((y==hk)); one(x,z) })
 
 threeWayTest :: TestTree
 threeWayTest = testProperty "eval-materialize-intersectDom" threeWay
@@ -449,10 +443,10 @@ duplicate :: Ord a => Set.Set a -> Map.Map a a
 duplicate s = foldr (\ a m -> Map.insert a a m) Map.empty s
 
 btest :: Exp Bool -> Property
-btest exp = (compute exp) === (runBoolExp exp)
+btest exp = (compute exp) === (runBool exp)
 
 qtest :: (Ord key,Eq(f key a),Show(f key a)) => Exp (f key a) -> Property
-qtest exp =  (compute exp) === (run (compile exp))
+qtest exp =  (compute exp) === (runSet exp)
 
 -- ======================================================
 
@@ -638,6 +632,24 @@ instance Arbitrary (List Key Range) where
 instance Arbitrary (Sett Key ()) where
   arbitrary = genSett genKey
 
+-- ====================================
+-- BiMap tests
+-- ====================================
+
+flatten :: (Ord k) => Map.Map v (Set.Set k) -> Map.Map k v
+flatten m = Map.foldrWithKey accum Map.empty m
+  where accum val setk ans = Set.foldr accum2 ans setk
+            where accum2 key m2 = Map.insert key val m2
+
+ok ::  (Ord k, Ord v) => BiMap v k v -> Bool
+ok (MkBiMap forwards backwards) = forwards == (flatten backwards)
+
+okfromList :: [(Int,Int)] -> Bool
+okfromList xs = ok (biMapFromList (\ earlier later -> later) xs)
+
+biMapTest :: TestTree
+biMapTest = testProperty "BiMap Consistent" okfromList
+
 -- ====================================================
 -- Tie all the tests together
 -- ====================================================
@@ -645,7 +657,4 @@ instance Arbitrary (Sett Key ()) where
 setAlgTest :: TestTree
 setAlgTest =
   testGroup "Set Algebra Tests" [eval_tests, keysEqTests, iter_tests, intersectDomPLeftTest,
-                                 ledgerStateTest, threeWayTest, slowFastEquiv]
-
--- go :: IO()
--- go = defaultMain setAlgTest
+                                 ledgerStateTest, threeWayTest, slowFastEquiv, biMapTest]

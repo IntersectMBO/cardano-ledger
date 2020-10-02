@@ -32,10 +32,11 @@ where
 
 
 import Data.Map(Map)
+import Data.Set(Set)
 import Control.Iterate.SetAlgebraInternal
 
 forwards :: BiMap v k v -> Map k v
 forwards (MkBiMap l _r) = l
 
-backwards :: BiMap v k v -> Map v k
+backwards :: BiMap v k v -> Map v (Set k)
 backwards (MkBiMap _l r) = r
