@@ -65,10 +65,13 @@ We make the following changes and additions:
 
   \item $\Tag$ let us differentiate what a script
   can validate, i.e. \\
-  $\mathsf{inputTag}$ to validate spending a script UTxO entry, \\
-  $\mathsf{forgeTag}$ to validate forging tokens, \\
-  $\mathsf{certTag}$  to validate certificates with script credentials, and  \\
-  $\mathsf{wdrlTag}$ to validate reward withdrawals from script addresses.
+
+  \begin{tabular}{l@{~to validate~}l}
+  $\mathsf{inputTag}$ & spending a script UTxO entry, \\
+  $\mathsf{forgeTag}$ & forging tokens, \\
+  $\mathsf{certTag}$  & certificates with script credentials, and  \\
+  $\mathsf{wdrlTag}$ & reward withdrawals from script addresses.
+  \end{tabular}
 
   \item $\RdmrPtr$ is a pair of a tag and an index. This type is
   used to index the Plutus redeemers that are included in a transaction. See
