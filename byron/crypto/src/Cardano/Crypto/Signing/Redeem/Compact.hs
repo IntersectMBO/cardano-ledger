@@ -28,6 +28,7 @@ import Data.Binary.Get (Get, getWord64le, runGet)
 import Data.Binary.Put (Put, putWord64le, runPut)
 import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
 import Formatting (build, formatToString, sformat)
+import NoThunks.Class (NoThunks (..), InspectHeap (..))
 import Text.JSON.Canonical
   (FromObjectKey(..), JSValue(..), ToObjectKey(..), toJSString)
 
@@ -46,7 +47,7 @@ data CompactRedeemVerificationKey =
                                {-# UNPACK #-} !Word64
                                {-# UNPACK #-} !Word64
   deriving (Eq, Generic, Show)
-  deriving NoUnexpectedThunks via UseIsNormalForm CompactRedeemVerificationKey
+  deriving NoThunks via InspectHeap CompactRedeemVerificationKey
   deriving anyclass NFData
 
 getCompactRedeemVerificationKey :: Get CompactRedeemVerificationKey

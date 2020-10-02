@@ -43,6 +43,7 @@ import qualified Data.Text.Encoding as T
 import Formatting
   (Format, bprint, build, fitLeft, formatToString, later, sformat, stext, (%.))
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..), InspectHeap (..))
 import Text.JSON.Canonical
   (FromObjectKey(..), JSValue(..), ToObjectKey(..), toJSString)
 
@@ -54,7 +55,7 @@ import Cardano.Crypto.Orphans ()
 newtype RedeemVerificationKey =
   RedeemVerificationKey Ed25519.PublicKey
   deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)
-  deriving NoUnexpectedThunks via UseIsNormalForm RedeemVerificationKey
+  deriving NoThunks via InspectHeap RedeemVerificationKey
 
 -- Note that normally we would not provide any Ord instances.
 -- The crypto libraries encourage using key /hashes/ not keys for

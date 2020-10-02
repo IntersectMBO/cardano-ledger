@@ -14,6 +14,7 @@ import Cardano.Prelude
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import Formatting (bprint)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..), InspectHeap (..))
 
 import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Crypto.Signing.Redeem.VerificationKey
@@ -24,7 +25,7 @@ import Cardano.Crypto.Signing.Redeem.VerificationKey
 newtype RedeemSigningKey =
   RedeemSigningKey Ed25519.SecretKey
   deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)
-  deriving NoUnexpectedThunks via UseIsNormalForm RedeemSigningKey
+  deriving NoThunks via InspectHeap RedeemSigningKey
 
 -- Note that there is deliberately no Ord instance. The crypto libraries
 -- encourage using key /hashes/ not keys for things like sets, map etc.
