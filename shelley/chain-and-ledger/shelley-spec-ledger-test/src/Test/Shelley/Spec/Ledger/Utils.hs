@@ -48,7 +48,8 @@ import Cardano.Crypto.Hash
   )
 import Cardano.Crypto.KES (KESAlgorithm, SignKeyKES, VerKeyKES, deriveVerKeyKES, genKeyKES)
 import Cardano.Crypto.KES.Class (ContextKES)
-import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
+import Cardano.Crypto.Libsodium.MLockedBytes (mlsbFromByteString)
+import Cardano.Crypto.Seed (Seed, getSeedBytes, mkSeedFromBytes)
 import Cardano.Crypto.VRF
   ( CertifiedVRF,
     SignKeyVRF,
@@ -187,7 +188,7 @@ mkCertifiedVRF a sk =
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
 mkKESKeyPair :: KESAlgorithm v => (Word64, Word64, Word64, Word64, Word64) -> (SignKeyKES v, VerKeyKES v)
 mkKESKeyPair seed =
-  let sk = genKeyKES $ mkSeedFromWords seed
+  let sk = genKeyKES $ mlsbFromByteString $ getSeedBytes (mkSeedFromWords seed)
    in (sk, deriveVerKeyKES sk)
 
 mkAddr :: Era era => (KeyPair 'Payment era, KeyPair 'Staking era) -> Addr era
