@@ -1,24 +1,53 @@
-\section{Properties of the Goguen Ledger}
+\section{Formal Properties}
 \label{sec:properties}
 
-This section collects properties that the ledger described previously
-is expected to satisfy.
+This appendix collects the main formal properties that the new ledger rules are expected to satisfy.
 
-\begin{itemize}
-\item Any token with the $\PolicyID$ of Ada is an Ada token, i.e. it
+\begin{enumerate}[label=P{\arabic*}:\ ]
+\item
+  \emph{Consistency with Shelley.}
+  All formal properties that were defined for Shelley in \ref{XX} remain valid.\todo{Confirm this, or list any exceptions.}
+\item
+  \emph{Consistency with Multi-Asset.}
+  All formal properties that were defined for multi-asset tokens in \ref{XX} also remain valid.\todo{Confirm this, or list any exceptions.}
+\item
+  \emph{Ada Consistency.}
+  Any token with the $\PolicyID$ of Ada is an Ada token, i.e. it
   also has the $\AssetID$ of Ada.
-\item The general accounting property holds with any transaction,
+\item
+  \emph{General Accounting.}
+  The \emph{general accounting} property\todo{Reference or explain this} holds for any transaction,
   whether it is fully processed or just paying fees. In particular,
   this implies that the total amount of Ada in the system is constant.
-\item If a transaction is accepted and marked as paying fees only
+\item
+  \emph{Fee Movement.}
+  If a transaction is accepted and marked as paying fees only
   (i.e. $\fun{txvaltag}\, tx = \True$), then the only change to the ledger
   when processing the transaction is that the inputs marked for paying
   fees are moved to the fee pot.
-\item If a Shelley transaction is accepted, it is fully processed.
-\item If a transaction extends the UTxO, all its scripts validate, and
+\item
+  \emph{Transaction Validation.}
+  If a Shelley transaction is accepted, it is fully processed.\todo{What does this mean? Is this: Transaction consistency - any transaction that is successfully validated can be executed successfully by the interpreter.}
+\item
+  \emph{Extended UTxO Validation.}
+  If a transaction extends the UTxO, all its scripts validate, and
   if it has a script that does not validate, it cannot extend the
   UTxO.
-\item A valid transaction that does not forge tokens satisfies the
+\item
+  \emph{Non-Token Forging.}
+  A valid transaction that does not forge tokens satisfies the
   accounting property of the Shelley ledger where the type $\Coin$ is
   replaced by $\Value$.
-\end{itemize}
+\item
+  \todo{\emph{Script consistency.} Scripts are only processed by valid version of the interpreter.}
+\item
+  \todo{\emph{Backwards compatibility.} All scripts that could be processed by any previous version of the interpreter
+    remain valid indefinitely.}
+\item
+  \todo{\emph{Cost consistency.} - no transaction exceeds the specified resource bounds.}
+\item
+  \todo{\emph{Backwards Compatibility.} Any transaction that was accepted in a previous version of the ledger rules
+    has exactly the same cost and effect, except that the transaction output is extended.}
+\item
+  ... \todo{Anything else?}
+\end{enumerate}
