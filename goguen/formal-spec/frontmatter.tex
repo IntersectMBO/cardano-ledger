@@ -32,17 +32,14 @@ Integration}
 \maketitle
 
 \begin{abstract}
-This document presents the modifications of the Shelley ledger
-specification
-(see~\cite{shelley_spec}) which will enable it to support Plutus.
-This specification is based on the Plutus system and the extended
-UTxO specification of the mockchain on which it operates
-(outlined in~\cite{plutus_eutxo}).
-
-We present a unified way to process Plutus and scripts multisig scripts
-(see~\cite{multi_sig}). This formal specification also includes native multicurrency support,
-as defined in
-~\cite{multi_currency} and~\cite{formal_multicur}.
+This document presents modifications to the Shelley ledger
+specification~\cite{shelley_spec} that will enable it to support the requirements for Plutus Foundation, within the context of the Goguen era
+of Cardano. This specification is based on the Plutus system and the extended
+UTxO specification of the mockchain on which it operates, as outlined in~\cite{plutus_eutxo}.
+%
+We present a unified way to process both Plutus scripts and Shelley-style multi-signature scripts
+(see~\cite{multi_sig}). The document also includes native multi-asset support,
+as defined in~\cite{multi_currency} and~\cite{formal_multicur}.\todo{How is this different from SL-D1 (multi-asset spec.)?}
 \end{abstract}
 
 \section*{List of Contributors}
