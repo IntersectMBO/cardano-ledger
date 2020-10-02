@@ -1,33 +1,33 @@
 \section{Introduction}
 
-The main changes described in this document are extending the UTxO
-model of the Shelley era and the introduction of scripts that are not
-evaluated by the ledger.
+This document describes the changes to the Shelley-MA ledger required
+for the Goguen ledger. The two major components of these changes are
+the extension the UTxO model of the Shelley era and the introduction
+of non-native scripts, i.e. scripts that are not evaluated by the ledger.
 
-The transition from a Shelley ledger to a Goguen ledger model includes, most
-notably, a change from a basic UTxO model to an extended UTxO model, which
-we denote EUTxO in this document.
+Native scripts are processed entirely by the ledger rules, which means
+that their execution cost can easily be assessed before processing
+them. In the current version of the Shelley ledger, there is no
+assessment of the cost of checking multisignature scripts. Instead,
+any additional fees incurred as a result of spending MSig-locked
+outputs are proportional to the change in transaction size due to
+including all the necessary signatures (rather than the cost of
+verifying them).
 
-\begin{note}
-  Give a short explanation of EUTxO (incl. validators and redeemers)
-  and native vs non-native languages (incl. cost models and exunits).
-\end{note}
+Non-native scripts on the other hand can perform arbitary
+(Turing-complete) computations, which means it is impossible to assess
+their execution cost without executing them. Thus, a transaction is
+required to carry a budget of $\ExUnits$, which reflect an amount of
+resources (such as memory usage and execution steps), and this budget
+influences the transaction fees. To change the $\ExUnits$ required to
+run the same computation without a hard fork (for example because a
+more efficient interpreter was introduced), every scripting language
+converts the actual execution cost into $\ExUnits$ using a cost model,
+$\CostMod$, which is a protocol parameter.
 
-Native scripts on the other hand, are processed entirely by the ledger rules.
-Currently, this includes only the multisignature scripts.
-Because of this, their execution cost can easily be assessed before processing them.
-In the current version of the Shelley ledger, there is no assessment of cost
-of checking multisignatures (abbreviated MSig's). Instead, any additional fees 
-incurred as a result of
-spending MSig-locked outputs are proportional to the change in transaction
-size due to including all the necessary signatures (rather than the
-cost of verifying them). Therefore, the transaction size is the only
-value needed to calculate the fees of all Shelley transactions, and MSig
-scripts do not require any cost model.
-\begin{note}
-  I don't really buy that argument. The size includes a bunch of other
-  stuff, and I don't see any reason why two transactions of the same
-  size couldn't have processing costs differing by a factor of 3 or
-  so. One could argue that it's cheap in general, and the cost grows
-  linearly in the size, so we don't really care.
-\end{note}
+The changes to the UTxO model required are adapded from
+\cite{plutus_eutxo}. Transaction outputs get an additional piece of
+data, that gets passed to a script validating the spending of that
+output. Additionally, a transaction also needs to supply a redeemer,
+which is an additional piece of data, for everything that is validated
+by non-native scripts.
