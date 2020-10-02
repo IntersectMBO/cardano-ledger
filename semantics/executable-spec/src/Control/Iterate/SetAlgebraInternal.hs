@@ -457,6 +457,9 @@ intersectDomP p t1 t2@(Bin _ k v l2 r2) =
     !r1r2 = intersectDomP p r1 r2
 {-# INLINABLE intersectDomP #-}
 
+
+
+
 -- |- Similar to intersectDomP, except the Map returned has the same key as the first input map, rather than the second input map.
 intersectDomPLeft:: Ord k => (k -> v2 -> Bool) -> Map k v1 -> Map k v2 -> Map k v1
 intersectDomPLeft p Tip _ = Tip
@@ -993,7 +996,7 @@ compile (Rng (Singleton k v))  = (BaseD SetR (Sett(Set.singleton v)),SetR)
 compile (Rng (SetSingleton k)) = (BaseD SetR (Sett(Set.singleton ())),SetR)
 compile (Rng f) = (BaseD SetR (rngStep (fst(compile f))),SetR)  -- We really ought to memoize this. It might be computed many times.
 compile (DRestrict set rel) =  (projD (andD (fst(compile set)) reld) rngSnd,rep)
-   where (reld,rep) = compile rel
+    where (reld,rep) = compile rel
 compile (DExclude set rel) = (DiffD reld (fst(compile set)),rep)
        where (reld,rep) = compile rel
 compile (RRestrict rel set) =
@@ -1102,7 +1105,8 @@ compute (DRestrict (Base SetR (Sett set)) (Base MapR m)) = Map.restrictKeys m se
 compute (DRestrict (SetSingleton k) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Singleton k v) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Dom (Base MapR x)) (Base MapR y)) = Map.intersection y x
-   -- This case inspired by set expression in EpochBoundary.hs
+
+-- This case inspired by set expression in EpochBoundary.hs
    -- (dom (delegs ▷ Set.singleton hk) ◁ stake) in EpochBoundart.hs
    -- ((dom (Map(62)? ▷ (setSingleton _ ))) ◁ Map(63)?) which has this structure
    -- materialize MapR (do { (x,y,z) <- delegs `domEq` stake; when (y==hk); one(x,z) })

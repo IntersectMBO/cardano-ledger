@@ -3,9 +3,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving  #-}
-
--- {-# OPTIONS_GHC -Wno-orphans #-}
--- {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
@@ -88,8 +85,6 @@ stkcred = Map.fromList [(5, "a"), (6, "q"), (12, "r")]
 deleg = Map.fromList [(n, chars !! n) | n <- [1 .. 10]]
 
 stpool = Map.fromList [('A', 99), ('C', 12), ('F', 42), ('R', 33), ('Z', 99)]
-
-
 
 --  ((txins txb ⋪ utxo) ∪ txouts txb)
 test33 :: () -> Exp (Map Int Char)
