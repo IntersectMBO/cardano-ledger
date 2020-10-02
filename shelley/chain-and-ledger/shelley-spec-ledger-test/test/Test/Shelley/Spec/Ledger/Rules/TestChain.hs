@@ -7,8 +7,6 @@
 
 module Test.Shelley.Spec.Ledger.Rules.TestChain
   ( -- TestPoolReap
-    constantSumPots,
-    nonNegativeDeposits,
     removedAfterPoolreap,
     -- TestNewEpoch
     adaPreservationChain,
@@ -20,7 +18,6 @@ where
 
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.Iterate.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
-import Control.State.Transition.Extended (TRC (TRC))
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
     Trace (..),
@@ -38,8 +35,6 @@ import Data.Word (Word64)
 import Shelley.Spec.Ledger.API
   ( CHAIN,
     LEDGER,
-    POOLREAP,
-    TICK,
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (..),
@@ -55,7 +50,6 @@ import Shelley.Spec.Ledger.PParams (_eMax)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Pool (POOL, PoolEnv (..))
-import Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
@@ -74,8 +68,7 @@ import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
   )
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
 import Test.Shelley.Spec.Ledger.Utils
-  ( applySTSTest,
-    epochFromSlotNo,
+  ( epochFromSlotNo,
     runShelleyBase,
     testGlobals,
   )
@@ -122,16 +115,13 @@ adaPreservationChain =
         map preserveBalance ssts,
         map preserveBalanceRestricted ssts,
         map preserveOutputsTx ssts,
+        -- well formed deposits
+        map nonNegativeDeposits ssts,
         -- non-epoch-boundary preservation properties
         map checkWithdrawlBound noEpochBoundarySsts,
         map utxoDepositsIncreaseByFeesWithdrawals noEpochBoundarySsts,
         map potsSumIncreaseWdrlsPerBlock noEpochBoundarySsts
       ]
-  where
-    epoch s = nesEL . chainNes $ s
-    sameEpoch :: SourceSignalTarget (CHAIN C) -> Bool
-    sameEpoch (SourceSignalTarget {source, target}) =
-      epoch source == epoch target
 
 -- ADA should be preserved for all state transitions in the generated trace
 checkPreservation :: SourceSignalTarget (CHAIN C) -> Property
@@ -362,6 +352,15 @@ txFees block =
     (Coin 0)
     $ (txSeqTxns' . bbody) block
 
+-- | Check that deposits are always non-negative
+nonNegativeDeposits ::
+  SourceSignalTarget (CHAIN C) ->
+  Property
+nonNegativeDeposits SourceSignalTarget {source = chainSt} =
+  let es = (nesEs . chainNes) chainSt
+      (UTxOState {_deposited = d}) = (_utxoState . esLState) es
+   in (d >= mempty) === True
+
 ----------------------------------------------------------------------
 -- POOL Properties
 ----------------------------------------------------------------------
@@ -471,27 +470,43 @@ ledgerTraceBase chainSt block =
     -- Oldest to Newest first
     txs = (reverse . toList . txSeqTxns') txSeq
 
+-- | Transform the [(source, signal, target)] of a CHAIN Trace
+-- by manually applying the Chain TICK Rule to each source and producing
+-- [(source, signal, target')].
+--
+-- This allows for testing properties on Chain traces while excluding the effects
+-- of Transactions and Certificates. For example we can check that pools that are
+-- due for retirement at an epoch transition, are indeed retired.
+--
+-- Had we not excluded the effects of Transactions/Certificates, we might have
+-- a pool that was correctly retired, but is again registered by a certificate
+-- in the block following the transition.
+chainSstWithTick :: Trace (CHAIN C) -> [SourceSignalTarget (CHAIN C)]
+chainSstWithTick ledgerTr =
+  map applyTick (sourceSignalTargets ledgerTr)
+  where
+    applyTick sst@(SourceSignalTarget {source = chainSt, signal = block}) =
+      let (Block bh _) = block
+          slot = (bheaderSlotNo . bhbody) bh
+       in sst {target = tickChainState slot chainSt}
+
 ----------------------------------------------------------------------
 -- Properties for PoolReap (using the CHAIN Trace) --
 ----------------------------------------------------------------------
 
-constantSumPots :: Property
-constantSumPots =
-  forAllChainTrace traceLen $ \tr ->
-    let sst = map chainToPoolreapSst (sourceSignalTargets tr)
-     in TestPoolreap.constantSumPots sst
-
-nonNegativeDeposits :: Property
-nonNegativeDeposits =
-  forAllChainTrace traceLen $ \tr ->
-    let sst = map chainToPoolreapSst (sourceSignalTargets tr)
-     in TestPoolreap.nonNegativeDeposits sst
-
 removedAfterPoolreap :: Property
 removedAfterPoolreap =
   forAllChainTrace traceLen $ \tr ->
-    let ssts = map chainToPoolreapSst (chainSstWithTick tr)
-     in TestPoolreap.removedAfterPoolreap ssts
+    conjoin $
+      map removedAfterPoolreap_ $
+        filter (not . sameEpoch) (chainSstWithTick tr)
+  where
+    poolState = _pstate . _delegationState . esLState . nesEs . chainNes
+
+    removedAfterPoolreap_ :: SourceSignalTarget (CHAIN C) -> Property
+    removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (Block bh _)}) =
+      let e = (epochFromSlotNo . bheaderSlotNo . bhbody) bh
+       in TestPoolreap.removedAfterPoolreap (poolState source) (poolState target) e
 
 ---------------------------
 -- Utils --
@@ -509,62 +524,8 @@ forAllChainTrace n prop =
     p :: Proxy C
     p = Proxy
 
--- | Transform CHAIN `sourceSignalTargets`s to POOLREAP ones.
-chainToPoolreapSst ::
-  SourceSignalTarget (CHAIN C) ->
-  SourceSignalTarget (POOLREAP C)
-chainToPoolreapSst
-  ( SourceSignalTarget
-      ChainState {chainNes = nes}
-      ChainState {chainNes = nes'}
-      (Block bh _)
-    ) =
-    SourceSignalTarget
-      ( PoolreapState
-          (utxoSt nes)
-          (accountSt nes)
-          dstate
-          pstate
-      )
-      ( PoolreapState
-          (utxoSt nes')
-          (accountSt nes')
-          dstate'
-          pstate'
-      )
-      (epochFromSlotNo s)
-    where
-      s = (bheaderSlotNo . bhbody) bh
-      DPState dstate pstate = (_delegationState . esLState . nesEs) nes
-      DPState dstate' pstate' = (_delegationState . esLState . nesEs) nes'
-      utxoSt = _utxoState . esLState . nesEs
-      accountSt = esAccountState . nesEs
-
--- | Transform the [(source, signal, target)] of a CHAIN Trace
--- by manually applying the Chain TICK Rule to each source and producing
--- [(source, signal, target')].
---
--- This allows for testing properties on traces that exclude effects of the
--- "UTXO branches" of the STS Rule tree.
-chainSstWithTick :: Trace (CHAIN C) -> [SourceSignalTarget (CHAIN C)]
-chainSstWithTick ledgerTr =
-  map applyTick ssts
+sameEpoch :: SourceSignalTarget (CHAIN C) -> Bool
+sameEpoch (SourceSignalTarget {source, target}) =
+  epoch source == epoch target
   where
-    ssts = sourceSignalTargets ledgerTr
-    applyTick ::
-      SourceSignalTarget (CHAIN C) ->
-      SourceSignalTarget (CHAIN C)
-    applyTick
-      ( SourceSignalTarget
-          chainSt@ChainState {chainNes = nes}
-          _
-          b@(Block bh _)
-        ) =
-        case runShelleyBase (applySTSTest @(TICK C) (TRC ((), nes, (bheaderSlotNo . bhbody) bh))) of
-          Left pf ->
-            error ("chainSstWithTick.applyTick Predicate failure " <> show pf)
-          Right nes' ->
-            SourceSignalTarget
-              chainSt
-              (chainSt {chainNes = nes'})
-              b
+    epoch = nesEL . chainNes
