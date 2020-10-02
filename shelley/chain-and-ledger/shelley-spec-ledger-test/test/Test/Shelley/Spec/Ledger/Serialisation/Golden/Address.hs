@@ -14,7 +14,7 @@ module Test.Shelley.Spec.Ledger.Serialisation.Golden.Address
 where
 
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
-import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), hashFromBytes)
+import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), hashFromBytes, sizeHash)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
 import Cardano.Crypto.KES.Sum
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
