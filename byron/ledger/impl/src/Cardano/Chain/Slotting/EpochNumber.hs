@@ -21,6 +21,7 @@ import Data.Data (Data)
 import Data.Ix (Ix)
 import Formatting (bprint, int)
 import Formatting.Buildable (Buildable(..))
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..))
@@ -41,7 +42,7 @@ newtype EpochNumber = EpochNumber
              , Generic
              , Bounded
              , NFData
-             , NoUnexpectedThunks
+             , NoThunks
              )
 
 instance Buildable EpochNumber where

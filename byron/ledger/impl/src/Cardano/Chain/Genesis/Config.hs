@@ -25,6 +25,7 @@ where
 import Cardano.Prelude
 
 import Data.Time (UTCTime)
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary (Annotated(..), Raw)
 import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
@@ -65,7 +66,7 @@ data Config = Config
     , configUTxOConfiguration :: !UTxOConfiguration
     -- ^ Extra local data used in UTxO validation rules
     }
-  deriving (Generic, NoUnexpectedThunks)
+  deriving (Generic, NoThunks)
 
 configGenesisHeaderHash :: Config -> HeaderHash
 configGenesisHeaderHash = genesisHeaderHash . configGenesisHash

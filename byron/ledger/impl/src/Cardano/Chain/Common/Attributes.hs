@@ -37,6 +37,7 @@ import qualified Data.Map.Strict as M
 import Formatting (bprint, build, int)
 import Formatting.Buildable (Buildable)
 import qualified Formatting.Buildable as Buildable
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Decoder
@@ -58,7 +59,7 @@ newtype UnparsedFields =
   UnparsedFields (Map Word8 LBS.ByteString)
   deriving (Eq, Ord, Show, Generic)
   deriving newtype HeapWords
-  deriving anyclass (NFData, NoUnexpectedThunks)
+  deriving anyclass (NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON UnparsedFields where
@@ -80,7 +81,7 @@ data Attributes h = Attributes
   -- ^ Data, containing known keys (deserialized)
   , attrRemain :: !UnparsedFields
   -- ^ Remaining, unparsed fields
-  } deriving (Eq, Ord, Generic, NoUnexpectedThunks)
+  } deriving (Eq, Ord, Generic, NoThunks)
     deriving anyclass NFData
 
 instance Show h => Show (Attributes h) where

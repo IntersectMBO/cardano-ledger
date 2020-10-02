@@ -37,6 +37,7 @@ import Cardano.Crypto.Hashing (hashToBytes, unsafeHashFromBytes)
 import Data.Binary.Get (Get, getWord64le, runGet)
 import Data.Binary.Put (Put, putWord64le, runPut)
 import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.Compact
@@ -55,7 +56,7 @@ import Cardano.Chain.UTxO.Tx (TxId, TxIn(..), TxOut(..))
 data CompactTxIn = CompactTxInUtxo {-# UNPACK #-} !CompactTxId
                                    {-# UNPACK #-} !Word32
   deriving (Eq, Ord, Generic, Show)
-  deriving anyclass (NFData, NoUnexpectedThunks)
+  deriving anyclass (NFData, NoThunks)
 
 instance HeapWords CompactTxIn where
   heapWords _
@@ -112,7 +113,7 @@ data CompactTxId = CompactTxId {-# UNPACK #-} !Word64
                                {-# UNPACK #-} !Word64
                                {-# UNPACK #-} !Word64
   deriving (Eq, Generic, Ord, Show)
-  deriving anyclass (NFData, NoUnexpectedThunks)
+  deriving anyclass (NFData, NoThunks)
 
 instance HeapWords CompactTxId where
   heapWords _
@@ -186,7 +187,7 @@ fromCompactTxId =
 data CompactTxOut = CompactTxOut {-# UNPACK #-} !CompactAddress
                                  {-# UNPACK #-} !Lovelace
   deriving (Eq, Ord, Generic, Show)
-  deriving anyclass (NFData, NoUnexpectedThunks)
+  deriving anyclass (NFData, NoThunks)
 
 instance HeapWords CompactTxOut where
   heapWords (CompactTxOut compactAddr _)

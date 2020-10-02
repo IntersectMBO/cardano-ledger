@@ -39,6 +39,7 @@ import Data.Time (UTCTime)
 import Data.Coerce (coerce)
 import Formatting (build, bprint, int, stext)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Chain.Common
   ( Address
@@ -87,7 +88,7 @@ import Cardano.Crypto as Crypto
 
 -- | Poor node secret
 newtype PoorSecret = PoorSecret { poorSecretToKey :: SigningKey }
-  deriving (Generic, NoUnexpectedThunks)
+  deriving (Generic, NoThunks)
 
 -- | Valuable secrets which can unlock genesis data.
 data GeneratedSecrets = GeneratedSecrets
@@ -102,7 +103,7 @@ data GeneratedSecrets = GeneratedSecrets
     , gsFakeAvvmSecrets   :: ![RedeemSigningKey]
     -- ^ Fake avvm secrets.
     }
-  deriving (Generic, NoUnexpectedThunks)
+  deriving (Generic, NoThunks)
 
 gsSigningKeys :: GeneratedSecrets -> [SigningKey]
 gsSigningKeys gs = gsRichSecrets gs <> gsSigningKeysPoor gs

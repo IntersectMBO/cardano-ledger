@@ -21,6 +21,7 @@ import Data.Data (Data)
 import qualified Data.Text as T
 import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Case(..)
@@ -38,7 +39,7 @@ import Cardano.Binary
 
 newtype ApplicationName = ApplicationName
   { unApplicationName :: Text
-  } deriving (Eq, Ord, Show, Generic, B.Buildable, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Ord, Show, Generic, B.Buildable, NFData, NoThunks)
 
 instance ToCBOR ApplicationName where
   toCBOR appName = toCBOR (unApplicationName appName)

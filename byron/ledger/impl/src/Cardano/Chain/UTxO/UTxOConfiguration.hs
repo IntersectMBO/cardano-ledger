@@ -11,6 +11,7 @@ where
 import Cardano.Prelude
 
 import qualified Data.Set as Set
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Chain.Common.Address (Address)
 import Cardano.Chain.Common.Compact (CompactAddress, toCompactAddress)
@@ -21,7 +22,7 @@ data UTxOConfiguration = UTxOConfiguration
   { -- | Set of source address which are asset-locked. Transactions which
     -- use these addresses as transaction inputs will be deemed invalid.
     tcAssetLockedSrcAddrs :: !(Set CompactAddress)
-  } deriving (Eq,Show,Generic,NoUnexpectedThunks)
+  } deriving (Eq,Show,Generic,NoThunks)
 
 defaultUTxOConfiguration :: UTxOConfiguration
 defaultUTxOConfiguration =

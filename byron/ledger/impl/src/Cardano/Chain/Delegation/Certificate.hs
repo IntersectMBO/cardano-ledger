@@ -40,6 +40,7 @@ import qualified Data.Aeson as Aeson
 import Data.Coerce (coerce)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical
   (FromJSON(..), Int54, JSValue(..), ToJSON(..), fromJSField, mkObject)
 
@@ -96,7 +97,7 @@ data ACertificate a = UnsafeACertificate
   -- ^ The signature that proves the certificate was issued by @issuerVK@
   , annotation :: !a
   } deriving (Eq, Ord, Show, Generic, Functor)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance Aeson.ToJSON a => Aeson.ToJSON (ACertificate a) where

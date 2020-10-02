@@ -59,6 +59,7 @@ import Data.Data (Data)
 import Formatting (Format, bprint, build, int, sformat)
 import qualified Formatting.Buildable as B
 import GHC.TypeLits (type (<=))
+import NoThunks.Class (NoThunks (..))
 import Quiet
 import qualified Text.JSON.Canonical as Canonical
   (FromJSON(..), ReportSchemaErrors, ToJSON(..))
@@ -77,7 +78,7 @@ import Cardano.Binary
 -- | Lovelace is the least possible unit of currency
 newtype Lovelace = Lovelace
   { unLovelace :: Word64
-  } deriving (Ord, Eq, Generic, Data, NFData, NoUnexpectedThunks)
+  } deriving (Ord, Eq, Generic, Data, NFData, NoThunks)
     deriving Show via (Quiet Lovelace)
 
 instance B.Buildable Lovelace where

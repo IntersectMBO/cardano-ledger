@@ -24,6 +24,7 @@ import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Annotated(..)
@@ -63,7 +64,7 @@ data Environment = Environment
 data State = State
   { schedulingState :: !Scheduling.State
   , activationState :: !Activation.State
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance FromCBOR State where
   fromCBOR = do

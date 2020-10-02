@@ -18,6 +18,7 @@ import qualified Data.Set as Set
 import qualified Data.Map.Strict as M
 import Formatting (bprint)
 import Formatting.Buildable (Buildable(..))
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Chain.Common (KeyHash)
@@ -27,7 +28,7 @@ import Cardano.Chain.Common (KeyHash)
 --   and proposals in the Byron era
 newtype GenesisKeyHashes = GenesisKeyHashes
   { unGenesisKeyHashes :: Set KeyHash
-  } deriving (Show, Eq, Semigroup, Monoid, NoUnexpectedThunks)
+  } deriving (Show, Eq, Semigroup, Monoid, NoThunks)
 
 instance Buildable GenesisKeyHashes where
   build (GenesisKeyHashes m) =

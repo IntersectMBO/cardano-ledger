@@ -22,6 +22,7 @@ where
 import Cardano.Prelude
 
 import Data.Aeson (ToJSON)
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( DecoderError(..)
@@ -91,7 +92,7 @@ dropSscPayload = do
 
 data SscProof =
   SscProof
-  deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  deriving (Eq, Show, Generic, NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON SscProof where

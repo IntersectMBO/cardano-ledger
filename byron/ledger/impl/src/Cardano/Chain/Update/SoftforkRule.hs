@@ -18,6 +18,7 @@ import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
@@ -41,7 +42,7 @@ data SoftforkRule = SoftforkRule
   , srThdDecrement :: !LovelacePortion
   -- ^ Theshold will be decreased by this value after each epoch.
   } deriving (Show, Eq, Ord, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance B.Buildable SoftforkRule where
   build sr = bprint

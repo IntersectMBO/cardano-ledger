@@ -37,6 +37,7 @@ import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import Data.Set (union)
 import qualified Data.Set as S
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Annotated
@@ -129,7 +130,7 @@ data State = State
   , proposalRegistrationSlot          :: !(Map UpId SlotNumber)
     -- ^ Slot at which an update proposal was registered
   } deriving (Eq, Show, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance FromCBOR State where
   fromCBOR = do

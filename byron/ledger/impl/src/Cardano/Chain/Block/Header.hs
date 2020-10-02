@@ -82,6 +82,7 @@ import qualified Data.Map.Strict as Map (singleton)
 import Data.Text.Lazy.Builder (Builder)
 import Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Annotated(..)
@@ -166,7 +167,7 @@ data AHeader a = AHeader
   -- ^ An annotation that captures the full header bytes
   , headerExtraAnnotation  :: !a
   -- ^ An annotation that captures the bytes from the deprecated ExtraHeaderData
-  } deriving (Eq, Show, Generic, NFData, Functor, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, Functor, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (AHeader a) where
@@ -490,7 +491,7 @@ data ABoundaryHeader a = UnsafeABoundaryHeader
   , boundaryEpoch            :: !Word64
   , boundaryDifficulty       :: !ChainDifficulty
   , boundaryHeaderAnnotation :: !a
-  } deriving (Eq, Show, Functor, Generic, NoUnexpectedThunks)
+  } deriving (Eq, Show, Functor, Generic, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (ABoundaryHeader a) where
@@ -626,7 +627,7 @@ data ABlockSignature a = ABlockSignature
   { delegationCertificate :: !(Delegation.ACertificate a)
   , signature             :: !(Signature ToSign)
   } deriving (Show, Eq, Generic, Functor)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance B.Buildable BlockSignature where
   build (ABlockSignature cert _) = bprint

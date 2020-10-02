@@ -18,6 +18,7 @@ import Data.Aeson (ToJSON)
 import Data.Fixed (Nano)
 import Formatting (bprint, build, sformat)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Decoder
@@ -43,7 +44,7 @@ import Cardano.Chain.Common.Lovelace
 data TxSizeLinear =
   TxSizeLinear !Lovelace !Rational
   deriving (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData, NoUnexpectedThunks)
+  deriving anyclass (NFData, NoThunks)
 
 instance B.Buildable TxSizeLinear where
   build (TxSizeLinear a b) = bprint (build . " + " . build . "*s") a b

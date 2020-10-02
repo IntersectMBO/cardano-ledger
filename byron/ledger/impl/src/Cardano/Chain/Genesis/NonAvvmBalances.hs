@@ -19,6 +19,7 @@ import Cardano.Prelude
 import qualified Data.Map.Strict as M
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary (DecoderError)
@@ -35,7 +36,7 @@ import Cardano.Chain.Common
 -- | Predefined balances of non avvm entries.
 newtype GenesisNonAvvmBalances = GenesisNonAvvmBalances
   { unGenesisNonAvvmBalances :: Map Address Lovelace
-  } deriving (Show, Eq, NoUnexpectedThunks)
+  } deriving (Show, Eq, NoThunks)
 
 instance B.Buildable GenesisNonAvvmBalances where
   build (GenesisNonAvvmBalances m) =

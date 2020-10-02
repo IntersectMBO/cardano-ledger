@@ -14,6 +14,7 @@ import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, shown)
 import Formatting.Buildable (Buildable(..))
+import NoThunks.Class (NoThunks (..))
 import qualified Prelude
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
@@ -25,7 +26,7 @@ data ProtocolVersion = ProtocolVersion
   , pvMinor :: !Word16
   , pvAlt   :: !Word8
   } deriving (Eq, Generic, Ord)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance Show ProtocolVersion where
   show pv =

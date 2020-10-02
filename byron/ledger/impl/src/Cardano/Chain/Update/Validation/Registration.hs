@@ -31,6 +31,7 @@ import Cardano.Prelude hiding (State)
 
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Annotated(unAnnotated)
@@ -98,7 +99,7 @@ data ApplicationVersion = ApplicationVersion
   , avSlotNumber         :: !SlotNumber
   , avMetadata           :: !Metadata
   } deriving (Eq, Show, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance FromCBOR ApplicationVersion where
   fromCBOR = do
@@ -127,7 +128,7 @@ data ProtocolUpdateProposal = ProtocolUpdateProposal
   { pupProtocolVersion    :: !ProtocolVersion
   , pupProtocolParameters :: !ProtocolParameters
   } deriving (Eq, Show, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance FromCBOR ProtocolUpdateProposal where
   fromCBOR = do
@@ -146,7 +147,7 @@ data SoftwareUpdateProposal = SoftwareUpdateProposal
   { supSoftwareVersion  :: !SoftwareVersion
   , supSoftwareMetadata :: !Metadata
   } deriving (Eq, Show, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance FromCBOR SoftwareUpdateProposal where
   fromCBOR = do
