@@ -1,6 +1,3 @@
--- {-# OPTIONS_GHC -Wno-unused-matches #-}
-
-
 {-# LANGUAGE GADTs, MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies  #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -42,15 +39,15 @@ import Text.PrettyPrint.ANSI.Leijen(Doc,text,(<+>),align,vsep,parens)
 -- ==================================================================================================
 -- | In order to build typed Exp (which are a typed deep embedding) of Set operations, we need to know
 -- what kind of basic types of Maps and Sets can be embedded. Every Basic type has a few operations
--- for creating one from a list, for adding and removing key-value pairs, lpoking up a value given a key.
+-- for creating one from a list, for adding and removing key-value pairs, looking up a value given a key.
 -- Instances of this algebra are functional in that every key has exactly one value associated with it.
 -- ===================================================================================================
 
 class Iter f => Basic f where
   -- | in addpair the new value always prevails, to make a choice use 'addkv' which has a combining function that allows choice.
   addpair:: (Ord k) => k -> v -> f k v -> f k v
-  addpair k v f = addkv (k,v) f (\ a _b -> a)
-  -- | use (\ l r -> l) if you want the v in (k,v) to prevail, and use (\ l r -> r) if you want the v in (f k v) to prevail
+  addpair k v f = addkv (k,v) f (\ _old new -> new)
+  -- | use (\ old new -> old) if you want the v in (f k v) to prevail, and use (\ old new -> new) if you want the v in (k,v) to prevail
   addkv :: Ord k => (k,v) -> f k v -> (v -> v -> v) -> f k v
   removekey:: (Ord k) => k -> f k v -> f k v
   domain:: Ord k => f k v -> Set k
@@ -60,7 +57,7 @@ class Iter f => Basic f where
 
 -- ========== Basic List ==============
 
--- | The constructor for List is hidden, since it requires some invariants. Use fromPairs to biuld an initial List.
+-- | The constructor for List is hidden, since it requires some invariants. Use fromPairs to build an initial List.
 
 instance Basic List where
    addkv (k,v) (UnSafeList xs) comb = UnSafeList(insert xs) where
@@ -98,20 +95,17 @@ data Single k v where
 
 deriving instance (Eq k,Eq v) => Eq (Single k v)
 
-firstwins :: Bool
-firstwins = False
+-- Since we can only store one key, we have to choose who wins
+-- We use the combine function to decide. (\ old new -> old) keeps
+-- the orginal value. (\ old new -> new) overwrites the stored value.
+-- Something else like (\ old new -> old+new) overwrites with a combination
 
 instance Basic Single where
   addkv (k,v) set comb =
-     if firstwins     -- Since we can only store one key, we have to choose who wins
-        then case set of
-               (Single a b) -> if k==a then Single a (comb v b) else (Single a b)
-               (SetSingle a) -> SetSingle a
-               Fail ->  Single k v
-        else case set of
-               (Single a b) -> if k==a then Single a (comb v b) else (Single k v)
-               (SetSingle _a) -> SetSingle k
-               Fail ->  Single k v
+     case set of
+       (Single a b) -> Single a (comb b v)
+       (SetSingle a) -> SetSingle a
+       Fail ->  Single k v
 
   removekey key (Single a b) = if key==a then Fail else (Single a b)
   removekey key (SetSingle a) = if key==a then Fail else (SetSingle a)
@@ -144,7 +138,7 @@ mapflip f = (\old new -> f new old)
 -- 2) The constructor for Data.BiMap is not exported, and it implements a Bijection
 -- 3) Missing operation 'restrictkeys' and 'withoutkeys' make performant versions of operations  ◁ ⋪ ▷ ⋫ hard.
 -- 4) Missing operation 'union', make performant versions of ∪ and ⨃ hard.
--- 5) So we roll our own whic is really a (Data.Map k v) with an index map v to Set{k}
+-- 5) So we roll our own which is really a (Data.Map k v) with an index that maps v to Set{k}
 
 
 data BiMap v a b where MkBiMap:: (v ~ b) => !(Map.Map a b) -> !(Map.Map b (Set.Set a)) -> BiMap v a b

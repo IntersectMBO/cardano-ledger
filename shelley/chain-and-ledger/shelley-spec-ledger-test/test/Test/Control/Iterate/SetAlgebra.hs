@@ -3,9 +3,14 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving  #-}
-{-# OPTIONS_GHC -fno-warn-unused-binds #-}
+
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
-{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+-- This option is on for only one reason, It allows us to make a list of
+-- functions, written as (\ w x y z -> Property) where each function uses
+-- a different set of the arguments. By typeing the list as
+-- [Int -> Key -> Map Key Int -> Set key -> Property], I can specify
+-- the type of each of the parameters to the anonymous functions, without
+-- repeating them for each of the over 100 items in the list.
 
 module Test.Control.Iterate.SetAlgebra where
 
@@ -17,7 +22,6 @@ import Control.Iterate.SetAlgebraInternal
     fromPairs,
     Query (..),
     Sett (..),
-    compile,
     compute,
     domElem,
     fifo,
@@ -89,7 +93,7 @@ stpool = Map.fromList [('A', 99), ('C', 12), ('F', 42), ('R', 33), ('Z', 99)]
 
 --  ((txins txb ⋪ utxo) ∪ txouts txb)
 test33 :: () -> Exp (Map Int Char)
-test33 () = ((Set.fromList [4,7,9] ⋪ m1) ∪ m2)
+test33 () = ((Set.fromList [4,7,9] ⋪ m12) ∪ m22)
 -- =============== Build a few maps ===================
 
 chars :: String
@@ -101,11 +105,11 @@ nchars = length chars
 m0 :: Map.Map Int Char
 m0 = Map.fromList [(1, 'a'), (2, 'z'), (4, 'g')]
 
-m1 :: Map.Map Int Char
-m1 = Map.fromList [(n, chars !! n) | n <- [0 .. length chars -1]]
+m12 :: Map.Map Int Char
+m12 = Map.fromList [(n, chars !! n) | n <- [0 .. length chars -1]]
 
-m2 :: Map.Map Int Char
-m2 = Map.fromList [(57 + n, chars !! n) | n <- [0 .. length chars -1]]
+m22 :: Map.Map Int Char
+m22 = Map.fromList [(57 + n, chars !! n) | n <- [0 .. length chars -1]]
 
 mN :: Int -> Int -> Map.Map Int Char
 mN start size = Map.fromList [(n, chars !! (n `mod` nchars)) | n <- [start .. start + size]]
@@ -139,10 +143,10 @@ l5 = [("a", 101), ("b", 102), ("c", 103), ("f", 104), ("m", 105), ("q", 107), ("
 -- =================== Some sample (Exp t) =============================
 
 ex1 :: Exp Bool
-ex1 = 5 ∈ (dom m1)
+ex1 = 5 ∈ (dom m12)
 
 ex2 :: Exp Bool
-ex2 = 70 ∈ (dom m1)
+ex2 = 70 ∈ (dom m12)
 
 ex3 :: Exp (Map Int Char)
 ex3 = m0 ∪ (singleton 3 'b')
@@ -153,7 +157,7 @@ ex5 = dom (singleton 2 'z') ⋪ m0
 ex6 = rng (singleton 'z' 2) ⋪ m0
 
 ex7 :: Exp Bool
-ex7 = 70 ∉ (dom m1)
+ex7 = 70 ∉ (dom m12)
 
 z1 :: Map Int String
 z1 = Map.fromList [(3, "c"), (4, "d"), (5, "e"), (6, "f"), (10, "j"), (11, "k"), (21, "v")]
@@ -176,7 +180,7 @@ evalTest nm expr ans = testCase name (assertEqual name (compute expr) ans)
   where
     name = (show expr ++ " where Map? = " ++ nm)
 
--- Test that (eval x) and runSet(compile x) get the same answers
+-- Test that (eval x) and runSet(x) get the same answers
 
 eval_compile :: (Show (f k v), Ord k, Eq (f k v)) => Exp (f k v) -> TestTree
 eval_compile expr = testCase name (assertEqual name (compute expr) (runSet expr))
@@ -187,8 +191,8 @@ eval_tests :: TestTree
 eval_tests =
   testGroup
     "eval tests"
-    [ evalTest "m1" (5 ∈ (dom m1)) True,
-      evalTest "m1" (70 ∈ (dom m1)) False,
+    [ evalTest "m12" (5 ∈ (dom m12)) True,
+      evalTest "m12" (70 ∈ (dom m12)) False,
       evalTest "m0" (m0 ∪ (singleton 3 'b')) (Map.fromList [(1, 'a'), (2, 'z'), (3, 'b'), (4, 'g')]),
       evalTest "m0" ((setSingleton 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')]),
       evalTest "m0" (dom (singleton 2 'z') ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')]),
@@ -196,7 +200,7 @@ eval_tests =
       evalTest "m0"  ((Map.fromList [(1,'a'),(2,'n'),(3,'r')]) ∪ (singleton 2 'b')) (Map.fromList[(1::Int,'a'),(2,'n'),(3,'r')]),
       evalTest "m0"  ([(1,'a'),(3,'r')] ∪ (singleton 3 'b')) (UnSafeList[(1::Int,'a'),(3,'r')]),
 
-      evalTest "m0" (70 ∉ (dom m1)) True,
+      evalTest "m0" (70 ∉ (dom m12)) True,
       evalTest "((dom stkcred) ◁ deleg) ▷ (dom stpool)" (((dom stkcred) ◁ deleg) ▷ (dom stpool)) (Map.fromList [(5, 'F')]),
       evalTest "Range exclude 1" (l4 ⋫ Set.empty) (UnSafeList l4),
       evalTest "Range exclude 2" (l4 ⋫ Fail) (UnSafeList l4),
@@ -411,9 +415,15 @@ threeWayTest :: TestTree
 threeWayTest = testProperty "eval-materialize-intersectDom" threeWay
 
 
--- ================================================
--- slow property tests
--- ================================================
+-- ==============================================================================
+-- Slow property tests show that (compute e) and (runExp e) have the same answer.
+-- The function (runExp), which uses compile, can be much slower than compute.
+-- The reason for including (runExp) is that every query can be answered using
+-- runExp, but only Queries which have data structure specific implementations
+-- can use (compute). See the big case analysis in the function (compute).
+-- ==============================================================================
+
+-- Concrete types in the arbitrary monad to use to run slow tests.
 
 newtype Key = Key Int
   deriving (Eq,Ord)
@@ -433,26 +443,25 @@ instance Monoid Range where mempty = Range 0
 
 
 -- ===========================================================
+-- helper functions to construct related types and Properties.
+
 flip_rng :: (Ord b, Num b) => List a b -> List b b
 flip_rng (UnSafeList xs) = fromPairs (+) (map (\ (a,b) -> (b,b)) xs)
 
 bimap:: (Ord k,Ord v) => Map k v -> BiMap v k v
-bimap xs = biMapFromList (\ old new -> new) (Map.toList xs)
+bimap xs = biMapFromList (\ earlier later -> later) (Map.toList xs)
 
 duplicate :: Ord a => Set.Set a -> Map.Map a a
 duplicate s = foldr (\ a m -> Map.insert a a m) Map.empty s
 
 btest :: Exp Bool -> Property
-btest exp = (compute exp) === (runBool exp)
+btest expr = (compute expr) === (runBool expr)
 
 qtest :: (Ord key,Eq(f key a),Show(f key a)) => Exp (f key a) -> Property
-qtest exp =  (compute exp) === (runSet exp)
+qtest expr =  (compute expr) === (runSet expr)
 
 -- ======================================================
 
-slowFastEquiv :: TestTree
-slowFastEquiv = testGroup "slowFastEquiv" (map f many)
-  where f (prop,name) = testProperty name prop
 
 
 type STest =
@@ -465,6 +474,14 @@ type STest =
    Set.Set Range ->   -- rs
    List Key Range ->  -- ls
    Property
+
+slowFastEquiv :: TestTree
+slowFastEquiv = testGroup "slowFastEquiv" (map f many)
+  where f (prop,name) = testProperty name prop
+
+-- Here is where we need to turn on -fno-warn-unused-matches
+-- Note how the typing (STest) fixes the type of each lambda expression,
+-- even though some tests do not mention some of the variables.
 
 many :: [(STest,String)]
 many =
@@ -581,18 +598,20 @@ many =
 
   ]
 
-
-ints :: Gen Int
-ints = oneof $ map pure [1..12] :: Gen Int
+-- ==================================================
+-- Arbitrary instances for the slow tests.
 
 genKey :: Gen Key
-genKey = fmap Key ints
+genKey = fmap Key (choose (1,12))     -- Keep the set of Key and Range pretty small so Maps share keys
 
 genRange :: Gen Range
-genRange = fmap Range ints
+genRange = fmap Range (choose (1,20)) -- The Range type can have a slightly larger set
 
-genSize :: Gen Int
-genSize = frequency [(1,return 0),(2,return 1),(5,return 2),(5, return 3),(4,return 4),(3,return 5),(2, return 6),(1, return 7)]
+genSize :: Gen Int  -- Sizes should favor middle sized numbers
+genSize = frequency
+            [(1,return 0),(2,return 1),(5,return 2),
+             (5, return 3),(4,return 4),(3,return 5),
+             (2, return 6),(1, return 7)]
 
 genPair :: Gen k -> Gen v -> Gen (k,v)
 genPair k v = (,) <$> k <*> v
@@ -632,9 +651,11 @@ instance Arbitrary (List Key Range) where
 instance Arbitrary (Sett Key ()) where
   arbitrary = genSett genKey
 
--- ====================================
--- BiMap tests
--- ====================================
+-- ========================================
+-- BiMap tests. BiMaps have two parts that
+-- should encode the same information. Test
+-- that every randomly generated one does.
+-- =========================================
 
 flatten :: (Ord k) => Map.Map v (Set.Set k) -> Map.Map k v
 flatten m = Map.foldrWithKey accum Map.empty m
@@ -642,7 +663,7 @@ flatten m = Map.foldrWithKey accum Map.empty m
             where accum2 key m2 = Map.insert key val m2
 
 ok ::  (Ord k, Ord v) => BiMap v k v -> Bool
-ok (MkBiMap forwards backwards) = forwards == (flatten backwards)
+ok (MkBiMap forwrd backwrd) = forwrd == (flatten backwrd)
 
 okfromList :: [(Int,Int)] -> Bool
 okfromList xs = ok (biMapFromList (\ earlier later -> later) xs)
