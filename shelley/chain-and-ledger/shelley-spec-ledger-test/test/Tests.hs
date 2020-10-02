@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
+import Cardano.Crypto.Libsodium (sodiumInit)
 import Data.Proxy
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
@@ -51,4 +52,4 @@ fastTests =
 
 -- main entry point
 main :: IO ()
-main = mainWithTestScenario tests
+main = sodiumInit >> mainWithTestScenario tests
