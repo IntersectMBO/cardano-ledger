@@ -7,46 +7,19 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
-  ( constantSumPots,
-    nonNegativeDeposits,
-    removedAfterPoolreap,
+  ( removedAfterPoolreap,
   )
 where
 
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
-import Control.State.Transition.Trace
-  ( SourceSignalTarget,
-    signal,
-    source,
-    target,
-    pattern SourceSignalTarget,
-  )
-import Data.Foldable (fold)
 import qualified Data.Set as Set (Set, null)
-import Shelley.Spec.Ledger.API (POOLREAP)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
   ( PState (..),
-    _deposited,
-    _fees,
     _pParams,
-    _reserves,
-    _rewards,
-    _treasury,
-    _utxo,
-    pattern AccountState,
-    pattern DState,
-    pattern UTxOState,
   )
-import Shelley.Spec.Ledger.STS.PoolReap
-  ( prAcnt,
-    prDState,
-    prPState,
-    prUTxOSt,
-    pattern PoolreapState,
-  )
-import Shelley.Spec.Ledger.UTxO (balance)
-import Test.QuickCheck (Property, conjoin)
+import Shelley.Spec.Ledger.Slot (EpochNo (..))
+import Test.QuickCheck (Property, property)
 
 -----------------------------
 -- Properties for POOLREAP --
@@ -56,97 +29,19 @@ import Test.QuickCheck (Property, conjoin)
 -- the stake pool and retiring maps.
 removedAfterPoolreap ::
   forall era.
-  [SourceSignalTarget (POOLREAP era)] ->
+  PState era ->
+  PState era ->
+  EpochNo ->
   Property
-removedAfterPoolreap tr =
-  conjoin $
-    map poolRemoved tr
+removedAfterPoolreap p p' e =
+  property $
+    eval (retire ⊆ dom stp)
+      && Set.null (eval (retire ∩ dom stp'))
+      && Set.null (eval (retire ∩ dom retiring'))
   where
-    poolRemoved
-      ( SourceSignalTarget
-          { source = PoolreapState {prPState = p},
-            signal = e,
-            target = PoolreapState {prPState = p'}
-          }
-        ) =
-        let stp = _pParams p
-            stp' = _pParams p'
-            retiring = _retiring p
-            retiring' = _retiring p'
-            retire :: Set.Set (KeyHash 'StakePool era) -- This declaration needed to disambiguate 'eval'
-            retire = eval (dom (retiring ▷ setSingleton e))
-         in eval (retire ⊆ dom stp)
-              && Set.null (eval (retire ∩ dom stp'))
-              && Set.null (eval (retire ∩ dom retiring'))
-
--- | Check that deposits are always non-negative
-nonNegativeDeposits ::
-  [SourceSignalTarget (POOLREAP era)] ->
-  Property
-nonNegativeDeposits tr =
-  conjoin $
-    map
-      ( \PoolreapState
-           { prUTxOSt =
-               UTxOState {_deposited = deposit}
-           } -> deposit >= mempty
-      )
-      (map source tr)
-
--- | Check that the sum of circulation, deposits, fees, treasury, rewards and
--- reserves is constant.
-constantSumPots ::
-  [SourceSignalTarget (POOLREAP era)] ->
-  Property
-constantSumPots tr =
-  conjoin $
-    map potsSumEqual tr
-  where
-    potsSumEqual
-      ( SourceSignalTarget
-          { source =
-              PoolreapState
-                { prUTxOSt =
-                    UTxOState
-                      { _utxo = u,
-                        _deposited = d,
-                        _fees = fees
-                      },
-                  prAcnt =
-                    AccountState
-                      { _treasury = treasury,
-                        _reserves = reserves
-                      },
-                  prDState = DState {_rewards = rewards}
-                },
-            target =
-              PoolreapState
-                { prUTxOSt =
-                    UTxOState
-                      { _utxo = u',
-                        _deposited = d',
-                        _fees = fees'
-                      },
-                  prAcnt =
-                    AccountState
-                      { _treasury = treasury',
-                        _reserves = reserves'
-                      },
-                  prDState = DState {_rewards = rewards'}
-                }
-          }
-        ) =
-        ( balance u
-            <> d
-            <> fees
-            <> treasury
-            <> reserves
-            <> fold rewards
-        )
-          == ( balance u'
-                 <> d'
-                 <> fees'
-                 <> treasury'
-                 <> reserves'
-                 <> fold rewards'
-             )
+    stp = _pParams p
+    stp' = _pParams p'
+    retiring = _retiring p
+    retiring' = _retiring p'
+    retire :: Set.Set (KeyHash 'StakePool era) -- This declaration needed to disambiguate 'eval'
+    retire = eval (dom (retiring ▷ setSingleton e))

@@ -21,8 +21,6 @@ import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
 import Test.Shelley.Spec.Ledger.Rules.TestChain
   ( adaPreservationChain,
     collisionFreeComplete,
-    constantSumPots,
-    nonNegativeDeposits,
     poolProperties,
     removedAfterPoolreap,
   )
@@ -93,17 +91,11 @@ propertyTests =
       testGroup
         "STS Rules - Poolreap Properties"
         [ TQC.testProperty
-            "circulation+deposits+fees+treasury+rewards+reserves is constant."
-            constantSumPots,
-          TQC.testProperty
-            "deposits are always non-negative"
-            nonNegativeDeposits,
-          TQC.testProperty
             "pool is removed from stake pool and retiring maps"
             removedAfterPoolreap
         ],
       testGroup
-        "STS Rules - NewEpoch Properties"
+        "CHAIN level Properties"
         [ TQC.testProperty
             "collection of Ada preservation properties"
             adaPreservationChain,
