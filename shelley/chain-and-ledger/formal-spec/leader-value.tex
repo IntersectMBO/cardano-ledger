@@ -9,7 +9,7 @@ calculation.
   \emph{Values associated with the leader value calculations}
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
-    \var{certNat} & \{n | n \in \N, n \in [0,2^{256})\} & \text{Certified natural value from VRF} \\
+    \var{certNat} & \{n | n \in \N, n \in [0,2^{512})\} & \text{Certified natural value from VRF} \\
     \var{f} & [0,1] & \text{Active slot coefficient} \\
     \sigma & [0,1] & \text{Stake proportion}
   \end{array}
@@ -18,8 +18,8 @@ calculation.
 
 \subsection{Computing the leader value}
 
-The verifiable random function gives us a 32-byte random output. We interpret
-this as a natural number $\var{certNat}$ in the range $[0,2^{256})$.
+The verifiable random function gives us a 64-byte random output. We interpret
+this as a natural number $\var{certNat}$ in the range $[0,2^{512})$.
 
 \subsection{Node eligibility}
 
@@ -42,7 +42,7 @@ of a single lovelace.)
 As such, we define the following:
 
 \begin{align*}
-  q & = \frac{2^{256}}{2^{256} - \var{certNat}} \\
+  q & = \frac{2^{512}}{2^{512} - \var{certNat}} \\
   c & = \ln{(1 - f)}
 \end{align*}
 
