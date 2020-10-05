@@ -71,7 +71,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import Formatting (Format, bprint, build, fitLeft, later, sformat, (%.))
 import qualified Formatting.Buildable as B (Buildable(..))
-import NoThunks.Class (NoThunks (..), InspectHeap (..))
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Decoded(..)
@@ -92,8 +92,7 @@ import Cardano.Binary
 --
 --   Made abstract in order to support different algorithms
 newtype AbstractHash algo a = AbstractHash SBS.ShortByteString
-  deriving (Eq, Ord, Generic, NFData)
-  deriving NoThunks via InspectHeap SBS.ShortByteString
+  deriving (Eq, Ord, Generic, NFData, NoThunks)
 
 instance Show (AbstractHash algo a) where
   show (AbstractHash h) = BSC.unpack
