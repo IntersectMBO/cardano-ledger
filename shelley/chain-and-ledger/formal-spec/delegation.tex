@@ -66,7 +66,7 @@ The following derived types are introduced:
     \item the pool reward account.
     \item the hash of the VRF verification key.
     \item the pool relays.
-    \item optional pool medata (a url and a hash).
+    \item optional pool metadata (a url and a hash).
   \end{itemize}
   The idea of pool owners is explained in Section 4.4.4 of \cite{delegation_design}.
   The pool cost and margin indicate how much more of the rewards pool leaders
@@ -348,18 +348,13 @@ concerns are independent of the ledger rules.
   the equations in $\mathsf{DELEG}$ and $\mathsf{POOL}$ follow this same pattern
   of matching on certificate type.
 
-  There are also preconditions on registration that the hashkey associated with
+  There is also a precondition on registration that the hashkey associated with
   the certificate witness of the certificate is not already found in the current
-  list of stake credentials or the current reward accounts.
-  We expect that the stake credentials and the reward accounts contain the
-  same key hashes, making one of the checks redundant.
+  reward accounts (which is the source of truth for which stake credentials are registered).
 
     Registration causes the following state transformation:
     \begin{itemize}
-    \item The key is added to the set of registered stake credentials.
       \item A reward account is created for this key, with a starting balance of zero.
-        Note that \cref{eq:deleg-reg} uses a union override left to add
-        a zero balance reward account.
       \item The certificate pointer is mapped to the new stake credential.
     \end{itemize}
 
@@ -757,7 +752,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     change of current slot number in the environment), along with all other transitions
     that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
 
-    Reregistration causes the following state transformation:
+    Retirement causes the following state transformation:
     \begin{itemize}
       \item The pool is marked to retire on the given epoch.
         If it was previously retiring, the retirement epoch is now updated.

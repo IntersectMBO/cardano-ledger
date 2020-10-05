@@ -102,7 +102,7 @@ data DelegPredicateFailure era
   | StakeDelegationImpossibleDELEG
       !(Credential 'Staking era) -- Credential that is not registered
   | WrongCertificateTypeDELEG -- The DCertPool constructor should not be used by this transition
-  | GenesisKeyNotInpMappingDELEG
+  | GenesisKeyNotInMappingDELEG
       !(KeyHash 'Genesis era) -- Unknown Genesis KeyHash
   | DuplicateGenesisDelegateDELEG
       !(KeyHash 'GenesisDelegate era) -- Keyhash which is already delegated to
@@ -146,7 +146,7 @@ instance
       encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR cred
     WrongCertificateTypeDELEG ->
       encodeListLen 1 <> toCBOR (4 :: Word8)
-    GenesisKeyNotInpMappingDELEG gkh ->
+    GenesisKeyNotInMappingDELEG gkh ->
       encodeListLen 2 <> toCBOR (5 :: Word8) <> toCBOR gkh
     DuplicateGenesisDelegateDELEG kh ->
       encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR kh
@@ -185,7 +185,7 @@ instance
         pure (1, WrongCertificateTypeDELEG)
       5 -> do
         gkh <- fromCBOR
-        pure (2, GenesisKeyNotInpMappingDELEG gkh)
+        pure (2, GenesisKeyNotInMappingDELEG gkh)
       6 -> do
         kh <- fromCBOR
         pure (2, DuplicateGenesisDelegateDELEG kh)
@@ -244,8 +244,8 @@ delegationTransition = do
       let s' = slot +* Duration sp
           (GenDelegs genDelegs) = _genDelegs ds
 
-      -- gkh ∈ dom genDelegs ?! GenesisKeyNotInpMappingDELEG gkh
-      (case Map.lookup gkh genDelegs of Just _ -> True; Nothing -> False) ?! GenesisKeyNotInpMappingDELEG gkh
+      -- gkh ∈ dom genDelegs ?! GenesisKeyNotInMappingDELEG gkh
+      (case Map.lookup gkh genDelegs of Just _ -> True; Nothing -> False) ?! GenesisKeyNotInMappingDELEG gkh
 
       let cod =
             range $
