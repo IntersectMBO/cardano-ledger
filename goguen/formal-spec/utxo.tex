@@ -1,4 +1,4 @@
-\section{UTxO}
+\section{The Extended UTxO Model}
 \label{sec:utxo}
 
 
@@ -33,51 +33,58 @@
 \end{figure*}
 
 
-\begin{itemize}
-\item $\UTxO$ entries are stored in the finite map $\UTxOIn\mapsto \UTxOOut$.
+We make a number of changes to the Shelley UTxO model~\ref{XX} to support the Goguen Extended UTxO model
+(see Figure~\ref{fig:defs:utxo-shelley-1}).
 
-  \item $\UTxOIn$ is the same type as $\TxIn$ in Shelley, but we have changed
+\begin{itemize}
+\item
+  $\UTxO$ entries are stored in the finite map $\UTxOIn\mapsto \UTxOOut$.
+
+\item
+  $\UTxOIn$ is the same type as $\TxIn$ in Shelley, but we have changed
   the name because the types of transaction inputs and UTxO keys
   differ in Goguen.
 
-  \item $\UTxOOut$ is the type of UTxO entries.
-  Note that, like in the case of the type of transaction inputs,
-  this type differs from the type of the output of a transaction.
+\item
+  $\UTxOOut$ is the type of (extended) UTxO entries.  Again, we have changed the name
+  from that used in Shelley.
+%  Note that, like in the case of the type of transaction inputs,
+%  this type differs from the type of the output of a transaction.
+  Goguen UTxO entries include a slot number for each output
+  that indicates when the output was created.
+  This will be used for future functionality. % that will be added in the future.
 
-  The UTxO entries in the Goguen era include the slot numbers associated with each output
-  to indicate when the output was created.
-  This feature will be used for functionality that will be added in the future.
-
-  \item $\CurItem$ is the type of things that scripts can validate.
+\item
+  $\CurItem$ is the type of the items that scripts can validate.\todo{Why is this called CurItem?}
 
 \end{itemize}
 
 \subsection{UTxO Transitions}
 \label{sec:utxo-trans}
 
-We have added several functions having to to with transaction and UTxO inputs and
-outputs, which are used in defining the UTxO transition system. These are
-given in Figure \ref{fig:functions:insouts}. These include:
+We have added several functions that deal with transaction and UTxO inputs and
+outputs as shown in Figure \ref{fig:functions:insouts}. These are used in the definition of the UTxO transition system.
 
 \begin{itemize}
   \item The function $\fun{txinputs_{vf}}$ returns only those transaction inputs
-    that were selected to pay transaction fees (we call these "fee-marked" inputs).
+    that were selected to pay transaction fees (we call these ``fee-marked'' inputs).
+    These inputs may only contain Ada.
     \begin{note}
       Make it more obvious that we check that the fee inputs only contain Ada, maybe mention it elsewhere. Also, what does vf stand for?
     \end{note}
-  \item The predicate function $\fun{feesOK}$ checks whether the transaction is
-  paying the necessary fees, and correctly. That is, it checks that
-  \begin{itemize}
-    \item[(i)] the fee-marked inputs are not locked by non-native scripts,
-    \item [(ii)] all the fee-marked inputs contain strictly Ada and no other tokens,
-    \item [(iii)] the fee-marked inputs are enough to cover the fee amount stated
-    in the transaction, and
-    \item [(iv)] the fee amount the transaction states it is paying suffices to cover
-    the minimum fee the transaction is obligated to pay.
-  \end{itemize}
-  \item The function $\fun{getOut}$ selects from a transaction output the data that
-  will be stored in the UTxO, i.e. $\UTxOOut$ without the slot number.
-  \item The function $\fun{txins}$ that returns UTxO keys of transaction inputs.
+  \item The predicate $\fun{feesOK}$ checks whether the transaction is
+  paying the necessary fees, and that it does it correctly. That is, it checks that:
+  \begin{enumerate}[label=({\roman*})]
+    \item the fee-marked inputs are not locked by non-native scripts;
+    \item all the fee-marked inputs contain strictly Ada and no other kinds of token;
+    \item the fee-marked inputs are sufficient to cover the fee amount that is stated
+    in the transaction; and
+    \item the fee amount that the transaction states it is paying suffices to cover
+    the minimum fee that the transaction is obligated to pay.
+  \end{enumerate}
+  \item The function $\fun{getOut}$ selects the data from a transaction output that
+  will be stored in the UTxO, i.e. a $\UTxOOut$ without the slot number.
+  \item The function $\fun{txins}$ returns the UTxO keys of transaction inputs.
 \end{itemize}
 
 Note that when creating a transaction, the wallet is responsible for
@@ -110,7 +117,7 @@ and include the fees for their execution.
     & \fun{txins} \in \TxBody \to \powerset{\TxId \times \Ix} \\
     & \fun{txins} ~\var{txb} = \{(txid,ix) \mid ((txid,ix),\wcard)\in\fun{txinputs} ~txb\}
   \end{align*}
-  \caption{Functions on Tx Inputs and Outputs}
+  \caption{Functions on Tx Inputs and Outputs.  Note that the restriction to $\Coin$ limits fees to be Ada-only.}
   \label{fig:functions:insouts}
 \end{figure}
 
