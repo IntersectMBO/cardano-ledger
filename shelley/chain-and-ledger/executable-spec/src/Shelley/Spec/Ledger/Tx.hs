@@ -50,6 +50,8 @@ module Shelley.Spec.Ledger.Tx
     extractKeyHashWitnessSet,
     getKeyCombinations,
     getKeyCombination,
+    addrWits',
+    evalNativeMultiSigScript,
   )
 where
 

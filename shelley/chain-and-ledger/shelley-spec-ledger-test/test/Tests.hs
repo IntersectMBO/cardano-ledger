@@ -4,6 +4,7 @@ import Cardano.Crypto.Libsodium (sodiumInit)
 import Data.Proxy
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
+import Test.Shelley.Spec.Ledger.MemoBytes( memoBytesTest )
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (chainExamples)
@@ -28,7 +29,8 @@ mainTests =
       chainExamples,
       --multisigExamples, - TODO re-enable after the script embargo has been lifted
       unitTests,
-      setAlgTest
+      setAlgTest,
+      memoBytesTest
     ]
 
 nightlyTests :: TestTree
@@ -47,7 +49,8 @@ fastTests =
       chainExamples,
       --multisigExamples, - TODO re-enable after the script embargo has been lifted
       unitTests,
-      setAlgTest
+      setAlgTest,
+      memoBytesTest
     ]
 
 -- main entry point
