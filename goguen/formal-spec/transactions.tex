@@ -197,7 +197,7 @@ Shelley specification~\ref{XX}:
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}l@{\qquad\qquad}l}
 \qquad\qquad      \var{tx} & \Tx & \ShelleyTx \uniondistinct \GoguenTx &
-      \text{A Shelley or Goguen transaction}\\
+      \text{All valid transactions}\\
     \end{array}
   \end{equation*}
   %
@@ -264,46 +264,49 @@ We have also made the following changes to
 the body of the transaction:
 
 \begin{itemize}
-  \item A term of type $\ExUnits$ is included, which is the total quantity of execution units
+  \item We include a term of type $\ExUnits$. This is a limit on the total quantity of execution units
   that may be used by all non-native scripts in the transaction.
-  This execution units budget is intended to be computed
-  by executing the scripts off-chain before the transaction is submitted.
-  \item The body has a hash of the the indexed redeemer structure
+  The limit can be computed by, for example, executing the scripts off-chain prior to transaction submission.
+  \item We include a hash of the the indexed redeemer structure
     with accessor $\fun{rdmrsHash}$. The reason for including this hash is explained below.
-  \item A hash of a subset of the current protocol parameters relevant for script execution is included.
+  \item We include a hash of the subset of current protocol parameters that is relevant for script execution.
 \end{itemize}
 
-Finally, the complete Goguen transaction is made up of:
+A complete Goguen transaction comprises:
 
-\begin{itemize}
-  \item the transaction body
-  \item all info needed for transaction witnessing
-  \item $\IsValidating$ is a tag that is
-  set by the user submitting the block containing this transaction.
-  Its correctness is verified as part of the ledger rules, and the block is
-  deemed invalid if this tag is applied incorrectly.
-  It can later be used to re-apply blocks without performing script validation
-  again. This tag does not need to be signed, since incorrect use will result
-  in the whole block being invalid, which benefits no one.
+\begin{enumerate}
+  \item the transaction body.
+  \item all the information that is needed to witness transactions.
+  \item the $\IsValidating$ tag, which indicates whether the transaction needs to be validated.
+%   set by the user submitting the block containing this transaction.
+  The correctness of the tag is verified as part of the ledger rules, and the block is
+  deemed to be invalid if it is applied incorrectly.
+  If it is set to \emph{false}, then the block can be re-applied without script re-validation.
+  This tag does not need to be signed, since incorrect use will result
+  in the whole block being invalid.\todo{Revised the description. Please confirm this is what was intended.}
+ % , which benefits no one.
   \begin{note}
     Not sure if I understand that argument, but it cannot be signed,
     because it's not applied by the transaction creator.
+    The ``which benefits noone'' probably doesn't matter...
   \end{note}
-  \item transaction metadata
-\end{itemize}
+  \item any transaction metadata.
+\end{enumerate}
+
 
 \subsection{Processing Shelley Transactions in the Goguen Era}
-Everything we have discussed so far in this document is about the structure and data
-in Goguen era protocol parameters and transactions. Some type names are reinterpreted
-for different purposes in the Goguen era than they were used for in Shelley, and
-we specify the differences in these cases.
+%% No semantic content?  KH
+%% Everything we have discussed so far in this document is about the structure and data
+%% in Goguen era protocol parameters and transactions. Some type names are reinterpreted
+%% for different purposes in the Goguen era than they were used for in Shelley, and
+%% we specify the differences in these cases.
 
-To make the transition from one era to the next smoother and less restrictive,
-in the Goguen era, we will be able to process both transaction formats.
-For this reason, we refer to the Shelley
-trasaction type as $\ShelleyTx$, and $\GoguenTx$ is the new style Goguen transaction.
-A true Goguen transaction is really of either type,
-i.e. $\ShelleyTx \uniondistinct \GoguenTx$.
+To simplify the transition from the Shelley to the Goguen era, the ledger supports Shelley and Goguen transaction formats.
+Shelley transactions have the type $\ShelleyTx$, and  Goguen transactions have type $\GoguenTx$.
+These are combined to give the type of valid transactions,
+% A true Goguen transaction is really of either type,
+% i.e.
+$\Tx ~~=~~ \ShelleyTx \uniondistinct \GoguenTx$.
 
 Shelley transactions have less data than the Goguen ones, so we can interpret
 a Shelley transaction as a Goguen one and process it using Goguen ledger
