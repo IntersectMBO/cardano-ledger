@@ -27,8 +27,8 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Val (scaledMinDeposit, (<->))
-import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -52,6 +52,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address
   ( Addr (AddrBootstrap),
     bootstrapAddressAttrsSize,
@@ -134,7 +135,7 @@ data UtxoPredicateFailure era
       ![TxOut era] -- list of supplied bad transaction outputs
   deriving (Eq, Show, Generic)
 
-instance NoUnexpectedThunks (UtxoPredicateFailure era)
+instance NoThunks (UtxoPredicateFailure era)
 
 instance
   (Typeable era, Era era) =>

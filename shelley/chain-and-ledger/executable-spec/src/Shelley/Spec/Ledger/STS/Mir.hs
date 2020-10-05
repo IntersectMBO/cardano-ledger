@@ -16,7 +16,6 @@ module Shelley.Spec.Ledger.STS.Mir
 where
 
 import Cardano.Ledger.Val ((<->))
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (∪+), (◁))
 import Control.State.Transition
   ( Assertion (..),
@@ -29,6 +28,7 @@ import Control.State.Transition
 import Data.Foldable (fold)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
@@ -59,7 +59,7 @@ data MIR era
 data MirPredicateFailure era
   deriving (Show, Generic, Eq)
 
-instance NoUnexpectedThunks (MirPredicateFailure era)
+instance NoThunks (MirPredicateFailure era)
 
 instance Typeable era => STS (MIR era) where
   type State (MIR era) = EpochState era

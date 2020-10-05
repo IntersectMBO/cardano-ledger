@@ -27,7 +27,6 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import Cardano.Ledger.Crypto (KES)
 import Cardano.Ledger.Era
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
@@ -39,6 +38,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Keys
@@ -79,7 +79,7 @@ currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | otherwise = Nothing
 
 newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
-  deriving (Eq, Generic, Ord, NoUnexpectedThunks, FromCBOR, ToCBOR)
+  deriving (Eq, Generic, Ord, NoThunks, FromCBOR, ToCBOR)
   deriving (Show) via Quiet KESPeriod
 
 data OCert era = OCert
@@ -99,7 +99,7 @@ deriving instance Era era => Eq (OCert era)
 
 deriving instance Era era => Show (OCert era)
 
-instance Era era => NoUnexpectedThunks (OCert era)
+instance Era era => NoThunks (OCert era)
 
 instance
   (Era era) =>

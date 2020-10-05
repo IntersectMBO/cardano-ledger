@@ -26,7 +26,6 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -41,6 +40,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
@@ -111,7 +111,7 @@ instance
         )
     ]
 
-instance (Era era) => NoUnexpectedThunks (LedgerPredicateFailure era)
+instance (Era era) => NoThunks (LedgerPredicateFailure era)
 
 instance
   (Typeable era, Era era) =>

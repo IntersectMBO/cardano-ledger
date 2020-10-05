@@ -22,10 +22,15 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8, asum)
+import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
+import Data.Foldable (asum)
+import Data.Typeable (Typeable)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
+import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Keys
@@ -53,7 +58,7 @@ instance HasKeyRole Credential where
   coerceKeyRole (ScriptHashObj x) = ScriptHashObj x
   coerceKeyRole (KeyHashObj x) = KeyHashObj $ coerceKeyRole x
 
-instance NoUnexpectedThunks (Credential kr era)
+instance NoThunks (Credential kr era)
 
 instance
   Era era =>
@@ -90,14 +95,14 @@ data StakeReference era
   | StakeRefNull
   deriving (Show, Eq, Generic, NFData, Ord)
 
-instance NoUnexpectedThunks (StakeReference era)
+instance NoThunks (StakeReference era)
 
 type Ix = Natural
 
 -- | Pointer to a slot, transaction index and index in certificate list.
 data Ptr
   = Ptr !SlotNo !Ix !Ix
-  deriving (Show, Eq, Ord, Generic, NFData, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, Generic, NFData, NoThunks)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
 instance

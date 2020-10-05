@@ -29,7 +29,7 @@ import Cardano.Binary
     withSlice,
   )
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedThunks (..), Word64, cborError)
+import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
@@ -39,7 +39,9 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import Data.Word (Word64)
 import GHC.Generics (Generic)
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Shelley.Spec.Ledger.Keys (Hash, hashWithSerialiser)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
@@ -53,14 +55,14 @@ data MetaDatum
   | S !T.Text
   deriving stock (Show, Eq, Ord, Generic)
 
-instance NoUnexpectedThunks MetaDatum
+instance NoThunks MetaDatum
 
 data MetaData = MetaData'
   { mdMap :: Map Word64 MetaDatum,
-    mdBytes :: LByteString
+    mdBytes :: LBS.ByteString
   }
   deriving (Eq, Show, Generic)
-  deriving (NoUnexpectedThunks) via AllowThunksIn '["mdBytes"] MetaData
+  deriving (NoThunks) via AllowThunksIn '["mdBytes"] MetaData
 
 pattern MetaData :: Map Word64 MetaDatum -> MetaData
 pattern MetaData m <-
@@ -87,7 +89,7 @@ instance FromCBOR MetaDatum where
   fromCBOR = decodeMetaDatum
 
 newtype MetaDataHash era = MetaDataHash {unsafeMetaDataHash :: Hash era MetaData}
-  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, NoThunks)
 
 deriving instance Era era => ToCBOR (MetaDataHash era)
 

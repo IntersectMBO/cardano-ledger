@@ -17,12 +17,12 @@ where
 
 import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -42,7 +42,7 @@ data NewEpochPredicateFailure era
   | MirFailure (PredicateFailure (MIR era)) -- Subtransition Failures
   deriving (Show, Generic, Eq)
 
-instance NoUnexpectedThunks (NewEpochPredicateFailure era)
+instance NoThunks (NewEpochPredicateFailure era)
 
 instance
   Era era =>

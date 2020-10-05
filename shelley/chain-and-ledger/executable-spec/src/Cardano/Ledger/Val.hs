@@ -40,11 +40,12 @@ import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
   )
-import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
+import Control.DeepSeq (NFData ())
 import Data.Group (Abelian)
 import Data.PartialOrd hiding ((==))
 import qualified Data.PartialOrd
 import Data.Typeable (Typeable)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Coin (Coin (..))
 
 class
@@ -55,7 +56,7 @@ class
     Show t,
     Typeable t,
     NFData t,
-    NoUnexpectedThunks t,
+    NoThunks t,
     ToCBOR t,
     FromCBOR t
   ) =>

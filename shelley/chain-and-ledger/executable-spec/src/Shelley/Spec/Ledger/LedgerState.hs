@@ -96,7 +96,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Val (invert, (<+>), (<->), (<×>))
-import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
+import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
@@ -108,6 +108,7 @@ import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Shelley.Spec.Ledger.Address.Bootstrap
@@ -218,7 +219,7 @@ data FutureGenDeleg era = FutureGenDeleg
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoUnexpectedThunks (FutureGenDeleg era)
+instance NoThunks (FutureGenDeleg era)
 
 instance NFData (FutureGenDeleg era)
 
@@ -242,7 +243,7 @@ data InstantaneousRewards era = InstantaneousRewards
 totalInstantaneousReservesRewards :: InstantaneousRewards era -> Coin
 totalInstantaneousReservesRewards (InstantaneousRewards irR _) = fold irR
 
-instance NoUnexpectedThunks (InstantaneousRewards era)
+instance NoThunks (InstantaneousRewards era)
 
 instance NFData (InstantaneousRewards era)
 
@@ -274,7 +275,7 @@ data DState era = DState
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (DState era)
+instance NoThunks (DState era)
 
 instance NFData (DState era)
 
@@ -310,7 +311,7 @@ data PState era = PState
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PState era)
+instance NoThunks (PState era)
 
 instance NFData (PState era)
 
@@ -333,7 +334,7 @@ data DPState era = DPState
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (DPState era)
+instance NoThunks (DPState era)
 
 instance NFData (DPState era)
 
@@ -357,7 +358,7 @@ data RewardUpdate era = RewardUpdate
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (RewardUpdate era)
+instance NoThunks (RewardUpdate era)
 
 instance NFData (RewardUpdate era)
 
@@ -400,7 +401,7 @@ instance FromCBOR AccountState where
       r <- fromCBOR
       pure $ AccountState t r
 
-instance NoUnexpectedThunks AccountState
+instance NoThunks AccountState
 
 instance NFData AccountState
 
@@ -414,7 +415,7 @@ data EpochState era = EpochState
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (EpochState era)
+instance NoThunks (EpochState era)
 
 instance (Era era) => NFData (EpochState era)
 
@@ -480,7 +481,7 @@ data PPUPState era = PPUPState
   { proposals :: !(ProposedPPUpdates era),
     futureProposals :: !(ProposedPPUpdates era)
   }
-  deriving (Show, Eq, Generic, NFData, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, NFData, NoThunks)
 
 instance Era era => ToCBOR (PPUPState era) where
   toCBOR (PPUPState ppup fppup) =
@@ -516,7 +517,7 @@ data UTxOState era = UTxOState
   }
   deriving (Show, Eq, Generic, NFData)
 
-instance NoUnexpectedThunks (UTxOState era)
+instance NoThunks (UTxOState era)
 
 instance Era era => ToCBOR (UTxOState era) where
   toCBOR (UTxOState ut dp fs us) =
@@ -550,7 +551,7 @@ data NewEpochState era = NewEpochState
 
 instance (Era era) => NFData (NewEpochState era)
 
-instance NoUnexpectedThunks (NewEpochState era)
+instance NoThunks (NewEpochState era)
 
 instance Era era => ToCBOR (NewEpochState era) where
   toCBOR (NewEpochState e bp bc es ru pd) =
@@ -587,7 +588,7 @@ data LedgerState era = LedgerState
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (LedgerState era)
+instance NoThunks (LedgerState era)
 
 instance (Era era) => NFData (LedgerState era)
 
@@ -690,7 +691,7 @@ newtype WitHashes era = WitHashes
   deriving (Eq, Generic)
   deriving (Show) via Quiet (WitHashes era)
 
-instance Era era => NoUnexpectedThunks (WitHashes era)
+instance Era era => NoThunks (WitHashes era)
 
 -- | Check if a set of witness hashes is empty.
 nullWitHashes :: WitHashes era -> Bool

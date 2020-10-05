@@ -21,12 +21,9 @@ where
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era
-import Cardano.Prelude
-  ( MonadError (..),
-    NoUnexpectedThunks (..),
-    unless,
-  )
 import Control.Iterate.SetAlgebra (dom, eval, range)
+import Control.Monad (unless)
+import Control.Monad.Except (throwError)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import Data.Coerce (coerce)
@@ -35,6 +32,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     Nonce,
@@ -88,7 +86,7 @@ data OverlayEnv era
       Nonce
   deriving (Generic)
 
-instance NoUnexpectedThunks (OverlayEnv era)
+instance NoThunks (OverlayEnv era)
 
 data OverlayPredicateFailure era
   = VRFKeyUnknown
@@ -284,7 +282,7 @@ overlayTransition =
 
 instance
   (VRF.VRFAlgorithm (VRF (Crypto era))) =>
-  NoUnexpectedThunks (OverlayPredicateFailure era)
+  NoThunks (OverlayPredicateFailure era)
 
 instance
   ( Era era,

@@ -20,12 +20,12 @@ module Shelley.Spec.Ledger.STS.Tick
 where
 
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
 import Shelley.Spec.Ledger.Keys (GenDelegs (..))
 import Shelley.Spec.Ledger.LedgerState
@@ -47,7 +47,7 @@ data TickPredicateFailure era
   | RupdFailure (PredicateFailure (RUPD era)) -- Subtransition Failures
   deriving (Show, Generic, Eq)
 
-instance NoUnexpectedThunks (TickPredicateFailure era)
+instance NoThunks (TickPredicateFailure era)
 
 instance
   Era era =>
@@ -156,7 +156,7 @@ data TickfPredicateFailure era
   = TickfNewEpochFailure (PredicateFailure (NEWEPOCH era)) -- Subtransition Failures
   deriving (Show, Generic, Eq)
 
-instance NoUnexpectedThunks (TickfPredicateFailure era)
+instance NoThunks (TickfPredicateFailure era)
 
 instance
   Era era =>

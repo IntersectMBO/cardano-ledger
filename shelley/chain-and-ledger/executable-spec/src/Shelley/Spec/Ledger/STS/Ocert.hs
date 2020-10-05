@@ -15,13 +15,14 @@ module Shelley.Spec.Ledger.STS.Ocert
 where
 
 import Cardano.Ledger.Era
-import Cardano.Prelude (NoUnexpectedThunks, asks)
 import Control.Iterate.SetAlgebra (eval, singleton, (⨃))
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Keys
@@ -52,7 +53,7 @@ data OcertPredicateFailure era
       !(KeyHash 'BlockIssuer era) -- stake pool key hash
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (OcertPredicateFailure era)
+instance NoThunks (OcertPredicateFailure era)
 
 instance
   ( Era era,

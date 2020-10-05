@@ -65,7 +65,7 @@ import Cardano.Binary
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
+import Cardano.Prelude (NFData, cborError)
 import Cardano.Slotting.EpochInfo
 import qualified Control.Monad.Fail
 import Control.Monad.Trans.Reader (ReaderT)
@@ -82,6 +82,7 @@ import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Word (Word16, Word64, Word8)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum, ratioFromCBOR, ratioToCBOR)
 import Shelley.Spec.NonIntegral (ln')
@@ -101,7 +102,7 @@ fpPrecision = (10 :: FixedPoint) ^ (34 :: Integer)
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnsafeUnitInterval (Ratio Word64)
   deriving (Show, Ord, Eq, Generic)
-  deriving newtype (NoUnexpectedThunks, NFData)
+  deriving newtype (NoThunks, NFData)
 
 instance ToCBOR UnitInterval where
   toCBOR (UnsafeUnitInterval u) = ratioToCBOR u
@@ -154,7 +155,7 @@ data Nonce
     NeutralNonce
   deriving (Eq, Generic, Ord, Show, NFData)
 
-instance NoUnexpectedThunks Nonce
+instance NoThunks Nonce
 
 instance ToCBOR Nonce where
   toCBOR NeutralNonce = encodeListLen 1 <> toCBOR (0 :: Word8)
@@ -204,7 +205,7 @@ mkNonceFromNumber =
 --   created using `mkSeed` for a VRF calculation.
 newtype Seed = Seed (Hash Blake2b_256 Seed)
   deriving (Eq, Ord, Show, Generic)
-  deriving newtype (NoUnexpectedThunks, ToCBOR)
+  deriving newtype (NoThunks, ToCBOR)
 
 instance SignableRepresentation Seed where
   getSignableRepresentation (Seed x) = hashToBytes x
@@ -222,7 +223,7 @@ data StrictMaybe a
   | SJust !a
   deriving (Eq, Ord, Show, Generic)
 
-instance NoUnexpectedThunks a => NoUnexpectedThunks (StrictMaybe a)
+instance NoThunks a => NoThunks (StrictMaybe a)
 
 instance NFData a => NFData (StrictMaybe a)
 
@@ -313,7 +314,7 @@ text64FromCBOR = do
 
 newtype Url = Url {urlToText :: Text}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (ToCBOR, NFData, NoUnexpectedThunks, FromJSON, ToJSON)
+  deriving newtype (ToCBOR, NFData, NoThunks, FromJSON, ToJSON)
 
 textToUrl :: Text -> Maybe Url
 textToUrl t = Url <$> text64 t
@@ -323,7 +324,7 @@ instance FromCBOR Url where
 
 newtype DnsName = DnsName {dnsToText :: Text}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (ToCBOR, NoUnexpectedThunks, NFData, FromJSON, ToJSON)
+  deriving newtype (ToCBOR, NoThunks, NFData, FromJSON, ToJSON)
 
 textToDns :: Text -> Maybe DnsName
 textToDns t = DnsName <$> text64 t
@@ -333,7 +334,7 @@ instance FromCBOR DnsName where
 
 newtype Port = Port {portToWord16 :: Word16}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (Num, FromCBOR, ToCBOR, NFData, NoUnexpectedThunks, ToJSON, FromJSON)
+  deriving newtype (Num, FromCBOR, ToCBOR, NFData, NoThunks, ToJSON, FromJSON)
 
 --------------------------------------------------------------------------------
 -- Active Slot Coefficent, named f in
@@ -344,11 +345,11 @@ data ActiveSlotCoeff = ActiveSlotCoeff
   { unActiveSlotVal :: !UnitInterval,
     unActiveSlotLog :: !Integer -- TODO mgudemann make this FixedPoint,
     -- currently a problem because of
-    -- NoUnexpectedThunks instance for FixedPoint
+    -- NoThunks instance for FixedPoint
   }
   deriving (Eq, Ord, Show, Generic)
 
-instance NoUnexpectedThunks ActiveSlotCoeff
+instance NoThunks ActiveSlotCoeff
 
 instance FromCBOR ActiveSlotCoeff where
   fromCBOR = do
@@ -423,14 +424,14 @@ data Globals = Globals
   }
   deriving (Generic)
 
-instance NoUnexpectedThunks Globals
+instance NoThunks Globals
 
 type ShelleyBase = ReaderT Globals Identity
 
 data Network
   = Testnet
   | Mainnet
-  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, ToJSON, FromJSON, NoUnexpectedThunks)
+  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, ToJSON, FromJSON, NoThunks)
 
 networkToWord8 :: Network -> Word8
 networkToWord8 = toEnum . fromEnum

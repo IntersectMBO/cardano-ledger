@@ -20,7 +20,6 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -30,6 +29,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     ShelleyBase,
@@ -127,7 +127,7 @@ instance Typeable era => STS (DELEG era) where
   initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
 
-instance NoUnexpectedThunks (DelegPredicateFailure era)
+instance NoThunks (DelegPredicateFailure era)
 
 instance
   (Typeable era, Era era) =>

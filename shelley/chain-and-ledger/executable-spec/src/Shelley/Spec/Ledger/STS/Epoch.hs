@@ -15,13 +15,14 @@ module Shelley.Spec.Ledger.STS.Epoch
 where
 
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (eval, (⨃))
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
@@ -66,7 +67,7 @@ instance (Era era, Typeable era) => STS (EPOCH era) where
   initialRules = [initialEpoch]
   transitionRules = [epochTransition]
 
-instance NoUnexpectedThunks (EpochPredicateFailure era)
+instance NoThunks (EpochPredicateFailure era)
 
 initialEpoch :: InitialRule (EPOCH era)
 initialEpoch =

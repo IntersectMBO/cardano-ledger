@@ -12,7 +12,6 @@ module Shelley.Spec.Ledger.STS.Rupd
   )
 where
 
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( STS (..),
@@ -24,6 +23,7 @@ import Control.State.Transition
 import Data.Functor ((<&>))
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( ShelleyBase,
     StrictMaybe (..),
@@ -51,7 +51,7 @@ data RupdEnv era
 data RupdPredicateFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (RupdPredicateFailure era)
+instance NoThunks (RupdPredicateFailure era)
 
 instance Typeable era => STS (RUPD era) where
   type State (RUPD era) = StrictMaybe (RewardUpdate era)

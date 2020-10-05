@@ -36,7 +36,7 @@ import Cardano.Binary
     encodeWord,
   )
 import Cardano.Ledger.Era
-import Cardano.Prelude (NFData, NoUnexpectedThunks (..), mapMaybe)
+import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -45,9 +45,10 @@ import Data.Functor.Identity (Identity)
 import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Scientific (Scientific)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (NeutralNonce),
@@ -153,7 +154,7 @@ data ProtVer = ProtVer {pvMajor :: !Natural, pvMinor :: !Natural}
   deriving (ToCBOR) via (CBORGroup ProtVer)
   deriving (FromCBOR) via (CBORGroup ProtVer)
 
-instance NoUnexpectedThunks ProtVer
+instance NoThunks ProtVer
 
 instance ToJSON ProtVer where
   toJSON (ProtVer major minor) =
@@ -187,7 +188,7 @@ instance FromCBORGroup ProtVer where
     y <- fromCBOR
     pure $ ProtVer x y
 
-instance NoUnexpectedThunks (PParams era)
+instance NoThunks (PParams era)
 
 instance (Era era) => ToCBOR (PParams era) where
   toCBOR
@@ -326,7 +327,7 @@ data Update era
   = Update !(ProposedPPUpdates era) !EpochNo
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (Update era)
+instance NoThunks (Update era)
 
 instance Era era => ToCBOR (Update era) where
   toCBOR (Update ppUpdate e) =
@@ -341,7 +342,7 @@ instance Era era => FromCBOR (Update era) where
 data PPUpdateEnv era = PPUpdateEnv SlotNo (GenDelegs era)
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PPUpdateEnv era)
+instance NoThunks (PPUpdateEnv era)
 
 type PParamsUpdate era = PParams' StrictMaybe era
 
@@ -353,7 +354,7 @@ deriving instance Ord (PParams' StrictMaybe era)
 
 deriving instance NFData (PParams' StrictMaybe era)
 
-instance NoUnexpectedThunks (PParamsUpdate era)
+instance NoThunks (PParamsUpdate era)
 
 instance (Era era) => ToCBOR (PParamsUpdate era) where
   toCBOR ppup =
@@ -439,7 +440,7 @@ newtype ProposedPPUpdates era
   = ProposedPPUpdates (Map (KeyHash 'Genesis era) (PParamsUpdate era))
   deriving (Show, Eq, Generic, NFData)
 
-instance NoUnexpectedThunks (ProposedPPUpdates era)
+instance NoThunks (ProposedPPUpdates era)
 
 instance Era era => ToCBOR (ProposedPPUpdates era) where
   toCBOR (ProposedPPUpdates m) = mapToCBOR m

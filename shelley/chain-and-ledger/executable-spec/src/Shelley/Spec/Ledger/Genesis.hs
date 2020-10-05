@@ -29,7 +29,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Crypto (HASH, KES)
 import Cardano.Ledger.Era
-import Cardano.Prelude (NoUnexpectedThunks, forceElemsToWHNF)
+import Cardano.Prelude (forceElemsToWHNF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -46,6 +46,7 @@ import Data.Time (NominalDiffTime, UTCTime (..))
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
@@ -80,7 +81,7 @@ data ShelleyGenesisStaking era = ShelleyGenesisStaking
   }
   deriving stock (Eq, Show, Generic)
 
-instance NoUnexpectedThunks (ShelleyGenesisStaking era)
+instance NoThunks (ShelleyGenesisStaking era)
 
 -- | Empty genesis staking
 emptyGenesisStaking :: ShelleyGenesisStaking era
@@ -115,7 +116,7 @@ data ShelleyGenesis era = ShelleyGenesis
   }
   deriving stock (Eq, Show, Generic)
 
-deriving instance (Era era) => NoUnexpectedThunks (ShelleyGenesis era)
+deriving instance (Era era) => NoThunks (ShelleyGenesis era)
 
 sgActiveSlotCoeff :: ShelleyGenesis era -> ActiveSlotCoeff
 sgActiveSlotCoeff =

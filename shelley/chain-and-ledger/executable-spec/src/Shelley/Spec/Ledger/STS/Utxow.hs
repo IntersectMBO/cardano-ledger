@@ -24,9 +24,9 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.Iterate.SetAlgebra (eval, (∩))
 import Control.Monad (when)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed,
     IRC (..),
@@ -50,6 +50,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( ShelleyBase,
     StrictMaybe (..),
@@ -116,7 +117,7 @@ data UtxowPredicateFailure era
   | InvalidMetaData
   deriving (Eq, Generic, Show)
 
-instance (Era era) => NoUnexpectedThunks (UtxowPredicateFailure era)
+instance (Era era) => NoThunks (UtxowPredicateFailure era)
 
 instance
   ( Era era,

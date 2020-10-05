@@ -31,12 +31,14 @@ import Cardano.Binary
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Prelude (MonadError (..), NoUnexpectedThunks (..), unless)
 import Cardano.Slotting.Slot (WithOrigin (..))
+import Control.Monad (unless)
+import Control.Monad.Except (MonadError, throwError)
 import Control.State.Transition
 import Data.Map.Strict (Map)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce,
     Seed,
@@ -99,7 +101,7 @@ instance Era era => FromCBOR (PrtclState era) where
           <*> fromCBOR
       )
 
-instance Era era => NoUnexpectedThunks (PrtclState era)
+instance Era era => NoThunks (PrtclState era)
 
 data PrtclEnv era
   = PrtclEnv
@@ -109,7 +111,7 @@ data PrtclEnv era
       Nonce
   deriving (Generic)
 
-instance NoUnexpectedThunks (PrtclEnv era)
+instance NoThunks (PrtclEnv era)
 
 data PrtclPredicateFailure era
   = OverlayFailure (PredicateFailure (OVERLAY era)) -- Subtransition Failures
@@ -187,7 +189,7 @@ prtclTransition = do
       etaV'
       etaC'
 
-instance (Era era) => NoUnexpectedThunks (PrtclPredicateFailure era)
+instance (Era era) => NoThunks (PrtclPredicateFailure era)
 
 instance
   ( Era era,
@@ -227,7 +229,7 @@ data PrtlSeqFailure era
       -- ^ Current block's previous hash
   deriving (Show, Eq, Generic)
 
-instance Era era => NoUnexpectedThunks (PrtlSeqFailure era)
+instance Era era => NoThunks (PrtlSeqFailure era)
 
 prtlSeqChecks ::
   (MonadError (PrtlSeqFailure era) m, Era era) =>

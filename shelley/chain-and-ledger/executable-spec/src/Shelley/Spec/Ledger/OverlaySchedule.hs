@@ -27,11 +27,12 @@ import Cardano.Binary
     peekTokenType,
   )
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NFData, NoUnexpectedThunks)
 import Cardano.Slotting.Slot
+import Control.DeepSeq (NFData)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Keys
   ( KeyHash (..),
@@ -62,7 +63,7 @@ instance
         pure NonActiveSlot
       _ -> ActiveSlot <$> fromCBOR
 
-instance NoUnexpectedThunks (OBftSlot era)
+instance NoThunks (OBftSlot era)
 
 instance NFData (OBftSlot era)
 

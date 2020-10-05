@@ -13,7 +13,6 @@ module Shelley.Spec.Ledger.STS.PoolReap
 where
 
 import Cardano.Ledger.Val ((<+>), (<->))
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Control.State.Transition
   ( Assertion (..),
@@ -27,6 +26,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
@@ -56,7 +56,7 @@ data PoolreapState era = PoolreapState
 data PoolreapPredicateFailure era -- No predicate Falures
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PoolreapPredicateFailure era)
+instance NoThunks (PoolreapPredicateFailure era)
 
 instance Typeable era => STS (POOLREAP era) where
   type State (POOLREAP era) = PoolreapState era

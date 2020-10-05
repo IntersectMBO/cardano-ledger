@@ -30,12 +30,13 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Val ((<+>), (<×>))
-import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
+import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Coin
@@ -56,14 +57,14 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 newtype BlocksMade era = BlocksMade
   { unBlocksMade :: Map (KeyHash 'StakePool era) Natural
   }
-  deriving (Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+  deriving (Eq, ToCBOR, FromCBOR, NoThunks, Generic, NFData)
   deriving (Show) via Quiet (BlocksMade era)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake era = Stake
   { unStake :: (Map (Credential 'Staking era) Coin)
   }
-  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, NFData)
+  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoThunks, NFData)
 
 -- A TxOut has 4 different shapes, depending on the shape its embedded of Addr.
 -- Credentials are stored in only 2 of the 4 cases.
@@ -133,7 +134,7 @@ data SnapShot era = SnapShot
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (SnapShot era)
+instance NoThunks (SnapShot era)
 
 instance NFData (SnapShot era)
 
@@ -173,7 +174,7 @@ data SnapShots era = SnapShots
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (SnapShots era)
+instance NoThunks (SnapShots era)
 
 instance NFData (SnapShots era)
 

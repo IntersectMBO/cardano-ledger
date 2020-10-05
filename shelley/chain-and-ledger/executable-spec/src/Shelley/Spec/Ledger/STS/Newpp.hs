@@ -14,7 +14,6 @@ module Shelley.Spec.Ledger.STS.Newpp
   )
 where
 
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( InitialRule,
     STS (..),
@@ -26,6 +25,7 @@ import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
@@ -60,7 +60,7 @@ data NewppPredicateFailure era
       !Coin -- The deposit pot
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (NewppPredicateFailure era)
+instance NoThunks (NewppPredicateFailure era)
 
 instance Typeable era => STS (NEWPP era) where
   type State (NEWPP era) = NewppState era

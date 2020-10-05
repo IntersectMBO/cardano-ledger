@@ -76,15 +76,10 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Era
-import Cardano.Prelude
-  ( AllowThunksIn (..),
-    ByteString,
-    LByteString,
-    NFData,
-    NoUnexpectedThunks (..),
-  )
 import Cardano.Slotting.Slot (WithOrigin (..))
+import Control.DeepSeq (NFData)
 import Control.Monad (unless)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Char8 as BS
@@ -100,6 +95,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
@@ -149,7 +145,7 @@ import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 -- | The hash of a Block Header
 newtype HashHeader era = HashHeader {unHashHeader :: (Hash era (BHeader era))}
   deriving (Show, Eq, Generic, Ord)
-  deriving newtype (NFData, NoUnexpectedThunks)
+  deriving newtype (NFData, NoThunks)
 
 deriving instance Era era => ToCBOR (HashHeader era)
 
@@ -157,13 +153,13 @@ deriving instance Era era => FromCBOR (HashHeader era)
 
 data TxSeq era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Tx era)),
-    txSeqBodyBytes :: LByteString,
-    txSeqWitsBytes :: LByteString,
-    txSeqMetadataBytes :: LByteString
+    txSeqBodyBytes :: BSL.ByteString,
+    txSeqWitsBytes :: BSL.ByteString,
+    txSeqMetadataBytes :: BSL.ByteString
   }
   deriving (Eq, Show, Generic)
   deriving
-    (NoUnexpectedThunks)
+    (NoThunks)
     via AllowThunksIn
           '[ "txSeqBodyBytes",
              "txSeqWitsBytes",
@@ -213,7 +209,7 @@ instance
 
 -- | Hash of block body
 newtype HashBBody era = HashBBody {unHashBody :: (Hash era (TxSeq era))}
-  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, NoThunks)
 
 deriving instance Era era => ToCBOR (HashBBody era)
 
@@ -247,11 +243,11 @@ hashHeaderToNonce = Nonce . coerce
 data BHeader era = BHeader'
   { bHeaderBody' :: !(BHBody era),
     bHeaderSig' :: !(SignedKES era (BHBody era)),
-    bHeaderBytes :: !LByteString
+    bHeaderBytes :: !BSL.ByteString
   }
   deriving (Generic)
   deriving
-    (NoUnexpectedThunks)
+    (NoThunks)
     via AllowThunksIn '["bHeaderBytes"] (BHeader era)
 
 instance Era era => HashAnnotated (BHeader era) era
@@ -298,7 +294,7 @@ instance
 data PrevHash era = GenesisHash | BlockHash !(HashHeader era)
   deriving (Show, Eq, Generic, Ord)
 
-instance Era era => NoUnexpectedThunks (PrevHash era)
+instance Era era => NoThunks (PrevHash era)
 
 instance
   Era era =>
@@ -354,7 +350,7 @@ data LastAppliedBlock era = LastAppliedBlock
   }
   deriving (Show, Eq, Generic)
 
-instance Era era => NoUnexpectedThunks (LastAppliedBlock era)
+instance Era era => NoThunks (LastAppliedBlock era)
 
 instance NFData (LastAppliedBlock era)
 
@@ -411,7 +407,7 @@ instance
 
 instance
   Era era =>
-  NoUnexpectedThunks (BHBody era)
+  NoThunks (BHBody era)
 
 instance
   Era era =>
@@ -502,7 +498,7 @@ bnonce :: BHBody era -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
 data Block era
-  = Block' !(BHeader era) !(TxSeq era) LByteString
+  = Block' !(BHeader era) !(TxSeq era) BSL.ByteString
   deriving (Eq, Show)
 
 pattern Block :: Era era => BHeader era -> TxSeq era -> Block era
