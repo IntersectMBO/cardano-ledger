@@ -21,6 +21,7 @@ import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, build, formatToString)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical
   (FromJSON(..), ToJSON(..), expected, fromJSField, mkObject)
 
@@ -56,7 +57,7 @@ import Cardano.Chain.Common.TxSizeLinear (TxSizeLinear(..))
 data TxFeePolicy
     = TxFeePolicyTxSizeLinear !TxSizeLinear
     deriving (Eq, Ord, Show, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance B.Buildable TxFeePolicy where
     build (TxFeePolicyTxSizeLinear tsp) =

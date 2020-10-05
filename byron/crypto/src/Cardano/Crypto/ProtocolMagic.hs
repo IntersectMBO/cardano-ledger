@@ -23,6 +23,7 @@ import Cardano.Prelude
 
 import qualified Data.Aeson as A
 import Data.Aeson ((.:), (.=))
+import NoThunks.Class (NoThunks)
 import Text.JSON.Canonical (FromJSON(..), JSValue(..), ToJSON(..), expected)
 
 import Cardano.Binary (Annotated(..), FromCBOR, ToCBOR)
@@ -38,7 +39,7 @@ import Cardano.Binary (Annotated(..), FromCBOR, ToCBOR)
 data AProtocolMagic a = AProtocolMagic
   { getAProtocolMagicId      :: !(Annotated ProtocolMagicId a)
   , getRequiresNetworkMagic :: !RequiresNetworkMagic
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoThunks)
 
 type ProtocolMagic = AProtocolMagic ()
 
@@ -46,7 +47,7 @@ newtype ProtocolMagicId = ProtocolMagicId
   { unProtocolMagicId :: Word32
   } deriving (Show, Eq, Generic)
     deriving newtype (FromCBOR, ToCBOR)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance A.ToJSON ProtocolMagicId where
   toJSON = A.toJSON . unProtocolMagicId
@@ -89,7 +90,7 @@ instance MonadError SchemaError m => FromJSON m ProtocolMagicId where
 data RequiresNetworkMagic
   = RequiresNoMagic
   | RequiresMagic
-  deriving (Show, Eq, Generic, NFData, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, NFData, NoThunks)
 
 -- Aeson JSON instances
 -- N.B @RequiresNetworkMagic@'s ToJSON & FromJSON instances do not round-trip.

@@ -20,7 +20,6 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -36,6 +35,7 @@ import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -69,7 +69,7 @@ data PoolPredicateFailure era
       !Coin -- The minimum stake pool cost listed in the protocol parameters
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PoolPredicateFailure era)
+instance NoThunks (PoolPredicateFailure era)
 
 instance Typeable era => STS (POOL era) where
   type State (POOL era) = PState era

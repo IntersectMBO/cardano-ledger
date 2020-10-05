@@ -12,7 +12,6 @@ module Shelley.Spec.Ledger.STS.Snap
 where
 
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( STS (..),
     TRC (..),
@@ -21,6 +20,7 @@ import Control.State.Transition
   )
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
@@ -35,7 +35,7 @@ data SNAP era
 data SnapPredicateFailure era -- No predicate failures
   deriving (Show, Generic, Eq)
 
-instance NoUnexpectedThunks (SnapPredicateFailure era)
+instance NoThunks (SnapPredicateFailure era)
 
 instance (Era era, Typeable era) => STS (SNAP era) where
   type State (SNAP era) = SnapShots era

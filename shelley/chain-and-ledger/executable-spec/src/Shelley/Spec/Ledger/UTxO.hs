@@ -44,7 +44,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Era
 import Cardano.Ledger.Val ((<+>), (<×>))
-import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
+import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
   ( BaseRep (MapR),
     Embed (..),
@@ -59,6 +59,8 @@ import Data.Relation (Relation (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
@@ -107,7 +109,7 @@ instance Embed (UTxO era) (Map (TxIn era) (TxOut era)) where
 
 -- | The unspent transaction outputs.
 newtype UTxO era = UTxO {unUTxO :: Map (TxIn era) (TxOut era)}
-  deriving (Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+  deriving (Eq, ToCBOR, FromCBOR, NoThunks, Generic, NFData)
   deriving (Show) via Quiet (UTxO era)
 
 instance Relation (UTxO era) where

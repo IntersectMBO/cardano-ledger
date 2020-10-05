@@ -68,7 +68,8 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era
-import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError, panic, parseBase16)
+import Cardano.Prelude (cborError, panic, parseBase16)
+import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
@@ -85,8 +86,10 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import Data.String (fromString)
+import Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes (Network (..), networkToWord8, word8ToNetwork)
@@ -186,7 +189,7 @@ getNetwork (AddrBootstrap (BootstrapAddress byronAddr)) =
     Byron.NetworkMainOrStage -> Mainnet
     Byron.NetworkTestnet _ -> Testnet
 
-instance NoUnexpectedThunks (Addr era)
+instance NoThunks (Addr era)
 
 -- | An account based address for rewards
 data RewardAcnt era = RewardAcnt
@@ -209,7 +212,7 @@ instance Era era => FromJSON (RewardAcnt era) where
         <$> obj .: "network"
         <*> obj .: "credential"
 
-instance NoUnexpectedThunks (RewardAcnt era)
+instance NoThunks (RewardAcnt era)
 
 instance Era era => ToJSONKey (Addr era) where
   toJSONKey = Aeson.ToJSONKeyText addrToText (Aeson.text . addrToText)
@@ -465,7 +468,7 @@ newtype BootstrapAddress era = BootstrapAddress
   deriving newtype (NFData, Ord)
   deriving (Show) via Quiet (BootstrapAddress era)
 
-instance NoUnexpectedThunks (BootstrapAddress era)
+instance NoThunks (BootstrapAddress era)
 
 bootstrapKeyHash ::
   forall era.

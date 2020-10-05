@@ -91,7 +91,6 @@ module Byron.Spec.Ledger.Delegation
   )
 where
 
-import           Cardano.Prelude (NoUnexpectedThunks(..), allNoUnexpectedThunks, noUnexpectedThunksInKeysAndValues)
 import           Control.Arrow ((&&&))
 import           Data.AbstractSize
 import           Data.Bimap (Bimap, (!>))
@@ -113,6 +112,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import           Lens.Micro (Lens', lens, to, (%~), (&), (.~), (<>~), (^.), _1)
 import           Lens.Micro.TH (makeFields)
+import           NoThunks.Class (NoThunks (..), allNoThunks, noThunksInKeysAndValues)
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
@@ -148,7 +148,7 @@ data DCert = DCert
   , depoch :: Epoch
     -- | Witness for the delegation certificate
   , signature :: Sig (VKey, Epoch)
-  } deriving (Show, Eq, Ord, Generic, Hashable, Data, Typeable, NoUnexpectedThunks)
+  } deriving (Show, Eq, Ord, Generic, Hashable, Data, Typeable, NoThunks)
 
 instance HasTypeReps DCert
 
@@ -191,7 +191,7 @@ data DSEnv = DSEnv
   -- ^ Current slot
   , _dSEnvK :: BlockCount
   -- ^ Chain stability parameter
-  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  } deriving (Show, Eq, Generic, NoThunks)
 
 makeFields ''DSEnv
 
@@ -199,7 +199,7 @@ makeFields ''DSEnv
 data DSState = DSState
   { _dSStateScheduledDelegations :: [(Slot, (VKeyGenesis, VKey))]
   , _dSStateKeyEpochDelegations :: Set (Epoch, VKeyGenesis)
-  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  } deriving (Show, Eq, Generic, NoThunks)
 
 makeFields ''DSState
 
@@ -210,11 +210,11 @@ data DState = DState
   , _dStateLastDelegation :: Map VKeyGenesis Slot
   } deriving (Eq, Show, Generic)
 
-instance NoUnexpectedThunks DState where
-  whnfNoUnexpectedThunks ctxt (DState dmap lastDeleg)
-    = allNoUnexpectedThunks
-      [ noUnexpectedThunksInKeysAndValues ctxt $ Bimap.toList dmap
-      , noUnexpectedThunksInKeysAndValues ctxt $ Map.toList lastDeleg
+instance NoThunks DState where
+  wNoThunks ctxt (DState dmap lastDeleg)
+    = allNoThunks
+      [ noThunksInKeysAndValues ctxt $ Bimap.toList dmap
+      , noThunksInKeysAndValues ctxt $ Map.toList lastDeleg
       ]
 
 makeFields ''DState
@@ -234,13 +234,13 @@ data DIState = DIState
 
 makeFields ''DIState
 
-instance NoUnexpectedThunks DIState where
-  whnfNoUnexpectedThunks ctxt (DIState dmap lastDeleg sds sked)
-    = allNoUnexpectedThunks
-      [ noUnexpectedThunksInKeysAndValues ctxt $ Bimap.toList dmap
-      , noUnexpectedThunksInKeysAndValues ctxt $ Map.toList lastDeleg
-      , whnfNoUnexpectedThunks ctxt sds
-      , whnfNoUnexpectedThunks ctxt sked
+instance NoThunks DIState where
+  wNoThunks ctxt (DIState dmap lastDeleg sds sked)
+    = allNoThunks
+      [ noThunksInKeysAndValues ctxt $ Bimap.toList dmap
+      , noThunksInKeysAndValues ctxt $ Map.toList lastDeleg
+      , wNoThunks ctxt sds
+      , wNoThunks ctxt sked
       ]
 
 dmsL :: HasDelegationMap a (Bimap VKeyGenesis VKey)
@@ -281,7 +281,7 @@ dIStateDState = lens
 data SDELEG deriving (Data, Typeable)
 
 data EpochDiff = EpochDiff { currentEpoch :: Epoch, certEpoch :: Epoch }
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 -- | These `PredicateFailure`s are all "throwable". The disjunction of the
 --   rules' preconditions is not `True` - the `PredicateFailure`s represent
@@ -293,7 +293,7 @@ data SdelegPredicateFailure
   | HasAlreadyDelegated
   | IsAlreadyScheduled
   | DoesNotVerify
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 
 instance STS SDELEG where
@@ -364,7 +364,7 @@ data AdelegPredicateFailure
   | S_NoLastDelegation
   | S_AfterExistingDelegation
   | S_AlreadyADelegateOf VKey VKeyGenesis
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 -- | Delegation rules
 data ADELEG deriving (Data, Typeable)
@@ -426,7 +426,7 @@ data SDELEGS deriving (Data, Typeable)
 
 data SdelegsPredicateFailure
   = SDelegFailure (PredicateFailure SDELEG)
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS SDELEGS where
   type State SDELEGS = DSState
@@ -457,7 +457,7 @@ data ADELEGS deriving (Data, Typeable)
 
 data AdelegsPredicateFailure
   = ADelegFailure (PredicateFailure ADELEG)
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS ADELEGS where
   type State ADELEGS = DState
@@ -491,7 +491,7 @@ data DELEG deriving (Data, Typeable)
 data DelegPredicateFailure
     = SDelegSFailure (PredicateFailure SDELEGS)
     | ADelegSFailure (PredicateFailure ADELEGS)
-    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+    deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS DELEG where
   type State DELEG = DIState
@@ -602,7 +602,7 @@ randomDCertGen env = do
 data MSDELEG deriving (Data, Typeable)
 
 data MsdelegPredicateFailure = SDELEGFailure (PredicateFailure SDELEG)
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS MSDELEG where
 

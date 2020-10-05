@@ -148,6 +148,7 @@ library
                      , filepath
                      , formatting
                      , mtl
+                     , nothunks
                      , quiet
                      , resourcet
                      , streaming
@@ -327,6 +328,7 @@ test-suite epoch-validation-normal-form-test
                      , filepath
                      , formatting
                      , hedgehog
+                     , nothunks
                      , optparse-applicative
                      , resourcet
                      , silently

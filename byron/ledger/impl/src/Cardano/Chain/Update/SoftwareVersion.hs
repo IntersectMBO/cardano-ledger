@@ -21,6 +21,7 @@ import qualified Prelude
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
 import Formatting (bprint, build, formatToString, int, stext)
+import NoThunks.Class (NoThunks (..))
 import qualified Formatting.Buildable as B (Buildable(..))
 
 import Cardano.Binary
@@ -42,7 +43,7 @@ data SoftwareVersion = SoftwareVersion
   { svAppName :: !ApplicationName
   , svNumber  :: !NumSoftwareVersion
   } deriving (Eq, Generic, Ord)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance B.Buildable SoftwareVersion where
   build sv =

@@ -33,8 +33,8 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Val ((<->))
-import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Cardano.Slotting.Slot (EpochSize)
+import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (eval, (◁))
 import Data.Foldable (find, fold)
 import Data.Function (on)
@@ -48,6 +48,7 @@ import qualified Data.Sequence as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes
@@ -79,7 +80,7 @@ import Shelley.Spec.Ledger.Serialization
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), getRwdCred)
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
-  deriving (Eq, Generic, Ord, Num, NFData, NoUnexpectedThunks, ToCBOR, FromCBOR)
+  deriving (Eq, Generic, Ord, Num, NFData, NoThunks, ToCBOR, FromCBOR)
   deriving (Show) via Quiet LogWeight
 
 toLogWeight :: Double -> LogWeight
@@ -95,7 +96,7 @@ newtype Likelihood = Likelihood {unLikelihood :: Seq LogWeight}
   -- TODO: replace with small data structure
   deriving (Show, Generic, NFData)
 
-instance NoUnexpectedThunks Likelihood
+instance NoThunks Likelihood
 
 instance Eq Likelihood where
   (==) = (==) `on` unLikelihood . normalizeLikelihood
@@ -206,7 +207,7 @@ reimannSum width heights = sum $ fmap (width *) heights
 -- | This is a estimate of the proportion of allowed blocks a pool will
 -- make in the future. It is used for ranking pools in delegation.
 newtype PerformanceEstimate = PerformanceEstimate {unPerformanceEstimate :: Double}
-  deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, NoThunks)
 
 instance ToCBOR PerformanceEstimate where
   toCBOR = encodeDouble . unPerformanceEstimate
@@ -223,7 +224,7 @@ data NonMyopic era = NonMyopic
 emptyNonMyopic :: NonMyopic era
 emptyNonMyopic = NonMyopic Map.empty (Coin 0)
 
-instance NoUnexpectedThunks (NonMyopic era)
+instance NoThunks (NonMyopic era)
 
 instance NFData (NonMyopic era)
 
@@ -299,7 +300,7 @@ getTopRankedPools rPot totalStake pp poolParams aps =
 
 -- | StakeShare type
 newtype StakeShare = StakeShare {unStakeShare :: Rational}
-  deriving (Generic, Ord, Eq, NoUnexpectedThunks)
+  deriving (Generic, Ord, Eq, NoThunks)
   deriving (Show) via Quiet StakeShare
 
 -- | Calculate pool reward

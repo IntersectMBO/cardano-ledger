@@ -32,6 +32,7 @@ import qualified Data.Text.Lazy.Builder as Builder
 import Formatting
   (Format, bprint, fitLeft, formatToString, later, sformat, stext, (%.))
 import Formatting.Buildable (Buildable(..))
+import NoThunks.Class (NoThunks (..), InspectHeap (..))
 import Text.JSON.Canonical (JSValue(..), toJSString)
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
@@ -44,7 +45,7 @@ newtype VerificationKey = VerificationKey
   { unVerificationKey :: CC.XPub
   } deriving stock (Eq, Ord, Show, Generic)
     deriving newtype (NFData)
-    deriving NoUnexpectedThunks via UseIsNormalForm CC.XPub
+    deriving NoThunks via InspectHeap CC.XPub
 
 instance ToJSON VerificationKey where
   toJSON = toJSON . sformat fullVerificationKeyF

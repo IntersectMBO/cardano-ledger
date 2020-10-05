@@ -67,20 +67,16 @@ import Cardano.Binary
     withSlice,
   )
 import Cardano.Ledger.Era
-import Cardano.Prelude
-  ( AllowThunksIn (..),
-    LByteString,
-    NoUnexpectedThunks (..),
-    catMaybes,
-  )
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.BaseTypes
   ( StrictMaybe,
@@ -119,7 +115,7 @@ data WitnessSetHKD f era = WitnessSet'
   { addrWits' :: !(HKD f (Set (WitVKey era 'Witness))),
     msigWits' :: !(HKD f (Map (ScriptHash era) (MultiSig era))),
     bootWits' :: !(HKD f (Set (BootstrapWitness era))),
-    txWitsBytes :: LByteString
+    txWitsBytes :: BSL.ByteString
   }
 
 deriving instance Era era => Show (WitnessSetHKD Identity era)
@@ -134,7 +130,7 @@ deriving via
      ]
     (WitnessSetHKD Identity era)
   instance
-    Era era => (NoUnexpectedThunks (WitnessSetHKD Identity era))
+    Era era => (NoThunks (WitnessSetHKD Identity era))
 
 type WitnessSet = WitnessSetHKD Identity
 
@@ -182,11 +178,11 @@ data Tx era = Tx'
   { _body' :: !(TxBody era),
     _witnessSet' :: !(WitnessSet era),
     _metadata' :: !(StrictMaybe MetaData),
-    txFullBytes :: LByteString
+    txFullBytes :: BSL.ByteString
   }
   deriving (Show, Eq, Generic)
   deriving
-    (NoUnexpectedThunks)
+    (NoThunks)
     via AllowThunksIn
           '[ "txFullBytes"
            ]

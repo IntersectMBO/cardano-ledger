@@ -17,6 +17,7 @@ import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Case(..)
@@ -77,7 +78,7 @@ data AddrType
   = ATVerKey
   | ATRedeem
   deriving (Eq, Ord, Generic, Show)
-  deriving anyclass (NFData, NoUnexpectedThunks)
+  deriving anyclass (NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON AddrType where

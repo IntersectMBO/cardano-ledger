@@ -18,6 +18,7 @@ import Cardano.Prelude
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), serialize', decodeFull')
 import qualified Data.ByteString.Short as BSS (fromShort, toShort)
 import Data.ByteString.Short (ShortByteString)
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Chain.Common.Address (Address(..))
 
@@ -31,9 +32,8 @@ import Cardano.Chain.Common.Address (Address(..))
 --
 newtype CompactAddress = CompactAddress ShortByteString
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype HeapWords
+  deriving newtype (HeapWords, NoThunks)
   deriving anyclass NFData
-  deriving NoUnexpectedThunks via UseIsNormalForm ShortByteString
 
 instance FromCBOR CompactAddress where
   fromCBOR = CompactAddress . BSS.toShort <$> fromCBOR

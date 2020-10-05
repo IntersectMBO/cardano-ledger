@@ -13,6 +13,7 @@ import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( FromCBOR(..)
@@ -29,7 +30,7 @@ import Cardano.Crypto (Hash, hashRaw)
 newtype InstallerHash = InstallerHash
   { unInstallerHash :: Hash Raw
   } deriving (Eq, Show, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance B.Buildable InstallerHash where
   build (InstallerHash h) = bprint ("{ installer hash: " . build . " }") h

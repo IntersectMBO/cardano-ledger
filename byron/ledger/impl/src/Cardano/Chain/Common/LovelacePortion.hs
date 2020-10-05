@@ -25,6 +25,7 @@ import qualified Data.Aeson as Aeson
 
 import Formatting (sformat, build, bprint, float, int)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Quiet
 
@@ -52,7 +53,7 @@ import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 --
 newtype LovelacePortion = LovelacePortion
   { unLovelacePortion :: Word64
-  } deriving (Ord, Eq, Generic, HeapWords, NFData, NoUnexpectedThunks)
+  } deriving (Ord, Eq, Generic, HeapWords, NFData, NoThunks)
     deriving Show via (Quiet LovelacePortion)
 
 instance B.Buildable LovelacePortion where

@@ -15,6 +15,7 @@ import Cardano.Prelude
 
 import Formatting (formatToString)
 import Formatting.Buildable (Buildable)
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical
   (FromObjectKey(..), JSValue(..), ToObjectKey(..), toJSString)
 
@@ -35,7 +36,7 @@ newtype KeyHash = KeyHash
              , FromCBOR
              , ToCBOR
              , HeapWords
-             , NoUnexpectedThunks
+             , NoThunks
              )
 
 instance Monad m => ToObjectKey m KeyHash where

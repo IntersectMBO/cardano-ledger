@@ -18,9 +18,9 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks)
 import Control.State.Transition
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
@@ -40,7 +40,7 @@ data TicknState = TicknState
   }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks TicknState
+instance NoThunks TicknState
 
 instance FromCBOR TicknState where
   fromCBOR =
@@ -67,7 +67,7 @@ instance ToCBOR TicknState where
 data TicknPredicateFailure era -- No predicate failures
   deriving (Generic, Show, Eq)
 
-instance (Era era) => NoUnexpectedThunks (TicknPredicateFailure era)
+instance (Era era) => NoThunks (TicknPredicateFailure era)
 
 instance (Era era) => STS (TICKN era) where
   type State (TICKN era) = TicknState

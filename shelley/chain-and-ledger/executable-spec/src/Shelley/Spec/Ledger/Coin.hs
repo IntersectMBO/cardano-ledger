@@ -12,7 +12,7 @@ module Shelley.Spec.Ledger.Coin
 where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
-import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
+import Cardano.Prelude (NFData, cborError)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
 import Data.Monoid (Sum (..))
@@ -20,6 +20,7 @@ import Data.PartialOrd (PartialOrd)
 import Data.Text (pack)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Quiet
 
 -- | The amount of value held by a transaction output.
@@ -28,7 +29,7 @@ newtype Coin = Coin {unCoin :: Integer}
     ( Eq,
       Ord,
       Enum,
-      NoUnexpectedThunks,
+      NoThunks,
       Generic,
       ToJSON,
       FromJSON,

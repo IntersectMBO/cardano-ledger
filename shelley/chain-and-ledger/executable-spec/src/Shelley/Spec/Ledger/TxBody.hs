@@ -82,17 +82,10 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Era
 import Cardano.Prelude
-  ( AllowThunksIn (..),
-    LByteString,
-    NFData (rnf),
-    NoUnexpectedThunks (..),
-    UseIsNormalFormNamed (..),
-    Word64,
-    asum,
-    catMaybes,
-    cborError,
+  ( cborError,
     panic,
   )
+import Control.DeepSeq (NFData (rnf))
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -104,11 +97,12 @@ import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as BSS
-import Data.Foldable (fold)
+import Data.Foldable (asum, fold)
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (catMaybes)
 import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
 import Data.Relation (Relation (..))
@@ -118,8 +112,9 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text.Encoding as Text
 import Data.Typeable (Typeable)
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
+import NoThunks.Class (AllowThunksIn (..), InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Address
@@ -199,7 +194,7 @@ data Delegation era = Delegation
   }
   deriving (Eq, Generic, Show)
 
-instance NoUnexpectedThunks (Delegation era)
+instance NoThunks (Delegation era)
 
 data PoolMetaData = PoolMetaData
   { _poolMDUrl :: !Url,
@@ -223,7 +218,7 @@ instance FromJSON PoolMetaData where
         <$> obj .: "url"
         <*> explicitParseField (fmap (fst . Base16.decode . Char8.pack) . parseJSON) obj "hash"
 
-instance NoUnexpectedThunks PoolMetaData
+instance NoThunks PoolMetaData
 
 data StakePoolRelay
   = -- | One or both of IPv4 & IPv6
@@ -282,7 +277,7 @@ instance ToJSON StakePoolRelay where
             ]
       ]
 
-instance NoUnexpectedThunks StakePoolRelay
+instance NoThunks StakePoolRelay
 
 instance NFData StakePoolRelay
 
@@ -336,13 +331,13 @@ data PoolParams era = PoolParams
   deriving (ToCBOR) via CBORGroup (PoolParams era)
   deriving (FromCBOR) via CBORGroup (PoolParams era)
 
-instance NoUnexpectedThunks (PoolParams era)
+instance NoThunks (PoolParams era)
 
 deriving instance NFData (PoolParams era)
 
 newtype Wdrl era = Wdrl {unWdrl :: Map (RewardAcnt era) Coin}
   deriving (Show, Eq, Generic)
-  deriving newtype (NoUnexpectedThunks)
+  deriving newtype (NoThunks)
 
 instance Era era => ToCBOR (Wdrl era) where
   toCBOR = mapToCBOR . unWdrl
@@ -381,7 +376,7 @@ instance Era era => FromJSON (PoolParams era) where
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId era = TxId {_unTxId :: Hash era (TxBody era)}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoUnexpectedThunks)
+  deriving newtype (NoThunks)
 
 deriving newtype instance Era era => ToCBOR (TxId era)
 
@@ -417,7 +412,7 @@ deriving instance Show (TxIn era)
 
 deriving instance (Era era) => NFData (TxIn era)
 
-instance NoUnexpectedThunks (TxIn era)
+instance NoThunks (TxIn era)
 
 -- | The output of a UTxO.
 data TxOut era
@@ -432,7 +427,7 @@ deriving instance (Era era) => Eq (TxOut era)
 instance NFData (TxOut era) where
   rnf = (`seq` ())
 
-deriving via UseIsNormalFormNamed "TxOut" (TxOut era) instance NoUnexpectedThunks (TxOut era)
+deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
 pattern TxOut ::
   Era era =>
@@ -490,7 +485,7 @@ data GenesisDelegCert era
 data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq)
 
-deriving instance NoUnexpectedThunks MIRPot
+deriving instance NoThunks MIRPot
 
 instance ToCBOR MIRPot where
   toCBOR ReservesMIR = toCBOR (0 :: Word8)
@@ -530,15 +525,15 @@ data DCert era
   | DCertMir !(MIRCert era)
   deriving (Show, Generic, Eq)
 
-instance NoUnexpectedThunks (DelegCert era)
+instance NoThunks (DelegCert era)
 
-instance NoUnexpectedThunks (PoolCert era)
+instance NoThunks (PoolCert era)
 
-instance NoUnexpectedThunks (GenesisDelegCert era)
+instance NoThunks (GenesisDelegCert era)
 
-instance NoUnexpectedThunks (MIRCert era)
+instance NoThunks (MIRCert era)
 
-instance NoUnexpectedThunks (DCert era)
+instance NoThunks (DCert era)
 
 -- | A raw transaction
 data TxBody era = TxBody'
@@ -550,12 +545,12 @@ data TxBody era = TxBody'
     _ttl' :: !SlotNo,
     _txUpdate' :: !(StrictMaybe (Update era)),
     _mdHash' :: !(StrictMaybe (MetaDataHash era)),
-    bodyBytes :: LByteString,
+    bodyBytes :: BSL.ByteString,
     extraSize :: !Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
   }
   deriving (Show, Eq, Generic)
 
-deriving via AllowThunksIn '["bodyBytes"] (TxBody era) instance Era era => NoUnexpectedThunks (TxBody era)
+deriving via AllowThunksIn '["bodyBytes"] (TxBody era) instance Era era => NoThunks (TxBody era)
 
 instance Era era => HashAnnotated (TxBody era) era
 
@@ -630,10 +625,10 @@ data WitVKey era kr = WitVKey'
     -- | Hash of the witness vkey. We store this here to avoid repeated hashing
     --   when used in ordering.
     wvkKeyHash :: KeyHash 'Witness era,
-    wvkBytes :: LByteString
+    wvkBytes :: BSL.ByteString
   }
   deriving (Show, Eq, Generic)
-  deriving (NoUnexpectedThunks) via AllowThunksIn '["wvkBytes"] (WitVKey era kr)
+  deriving (NoThunks) via AllowThunksIn '["wvkBytes"] (WitVKey era kr)
 
 instance (Era era, Typeable k) => HashAnnotated (WitVKey era k) era
 
@@ -673,7 +668,7 @@ newtype StakeCreds era = StakeCreds
   }
   deriving (Eq, Generic)
   deriving (Show) via (Quiet (StakeCreds era))
-  deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR, ToJSON, FromJSON)
+  deriving newtype (FromCBOR, NFData, NoThunks, ToCBOR, ToJSON, FromJSON)
 
 -- CBOR
 
@@ -868,7 +863,7 @@ instance
       f ::
         Int ->
         Decoder s a ->
-        (LByteString -> a -> TxBody era -> TxBody era) ->
+        (BSL.ByteString -> a -> TxBody era -> TxBody era) ->
         Decoder s (Int, Annotator (TxBody era -> TxBody era))
       f key decoder updater = do
         (x, annBytes) <- withSlice decoder

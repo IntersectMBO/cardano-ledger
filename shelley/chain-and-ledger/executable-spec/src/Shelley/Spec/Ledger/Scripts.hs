@@ -42,18 +42,14 @@ import Cardano.Binary
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Prelude
-  ( AllowThunksIn (..),
-    Generic,
-    LByteString,
-    NFData,
-    NoUnexpectedThunks (..),
-  )
+import Control.DeepSeq (NFData)
 import Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List (concat, concatMap, permutations)
 import Data.Word (Word8)
+import GHC.Generics (Generic)
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
@@ -89,14 +85,14 @@ data MultiSig' era
   | -- | Require M of the given sub-terms to be satisfied.
     RequireMOf' !Int ![MultiSig era]
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (NoUnexpectedThunks)
+  deriving anyclass (NoThunks)
 
 data MultiSig era = MultiSig'
   { multiSig :: !(MultiSig' era),
-    multiSigBytes :: LByteString
+    multiSigBytes :: BSL.ByteString
   }
   deriving (Show, Eq, Ord, Generic)
-  deriving (NoUnexpectedThunks) via AllowThunksIn '["multiSigBytes"] (MultiSig era)
+  deriving (NoThunks) via AllowThunksIn '["multiSigBytes"] (MultiSig era)
 
 pattern RequireSignature :: Era era => KeyHash 'Witness era -> MultiSig era
 pattern RequireSignature akh <-
@@ -137,7 +133,7 @@ pattern RequireMOf n ms <-
 newtype ScriptHash era
   = ScriptHash (Hash.Hash (ADDRHASH (Crypto era)) (Script era))
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NFData, NoUnexpectedThunks)
+  deriving newtype (NFData, NoThunks)
 
 deriving newtype instance Era era => ToCBOR (ScriptHash era)
 
@@ -151,7 +147,7 @@ data Script era = MultiSigScript (MultiSig era)
   -- new languages go here
   deriving (Show, Eq, Ord, Generic)
 
-instance Era era => NoUnexpectedThunks (Script era)
+instance Era era => NoThunks (Script era)
 
 -- | Hashes native multi-signature script.
 hashMultiSigScript ::

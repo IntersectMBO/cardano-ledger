@@ -47,18 +47,14 @@ import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.Crypto (ADDRHASH, DSIGN)
 import Cardano.Ledger.Era
-import Cardano.Prelude
-  ( AllowThunksIn (..),
-    ByteString,
-    Generic,
-    LByteString,
-    NoUnexpectedThunks,
-    Proxy (..),
-    panic,
-  )
+import Cardano.Prelude (panic)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
+import Data.Proxy (Proxy (..))
+import GHC.Generics (Generic)
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.Keys
   ( Hash,
@@ -76,18 +72,18 @@ import Shelley.Spec.Ledger.TxBody
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Eq, Generic)
   deriving (Show) via Quiet ChainCode
-  deriving newtype (NoUnexpectedThunks, ToCBOR, FromCBOR)
+  deriving newtype (NoThunks, ToCBOR, FromCBOR)
 
 data BootstrapWitness era = BootstrapWitness'
   { bwKey' :: !(VKey 'Witness era),
     bwSig' :: !(Keys.SignedDSIGN era (Hash era (TxBody era))),
     bwChainCode' :: !ChainCode,
     bwAttributes' :: !ByteString,
-    bwBytes :: LByteString
+    bwBytes :: LBS.ByteString
   }
   deriving (Eq, Generic, Show)
   deriving
-    (NoUnexpectedThunks)
+    (NoThunks)
     via AllowThunksIn '["bwBytes"] (BootstrapWitness era)
 
 pattern BootstrapWitness ::

@@ -19,6 +19,7 @@ import Cardano.Prelude
 
 import Formatting (Format, bprint, build, bytes, shortest)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
@@ -58,7 +59,7 @@ data ProtocolParameters = ProtocolParameters
   , ppTxFeePolicy       :: !TxFeePolicy
   , ppUnlockStakeEpoch  :: !EpochNumber
   } deriving (Show, Eq, Ord, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance B.Buildable ProtocolParameters where
   build pp = bprint

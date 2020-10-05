@@ -14,6 +14,7 @@ import Cardano.Prelude hiding ((%))
 import           Data.Aeson (ToJSON)
 import           Formatting (bprint, build, (%))
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import           Cardano.Binary (DecoderError(..), FromCBOR(..), ToCBOR(..),
                      decodeListLen, decodeWord8, encodeListLen , matchSize)
@@ -28,7 +29,7 @@ import           Cardano.Crypto.ProtocolMagic (AProtocolMagic (..),
 data NetworkMagic
     = NetworkMainOrStage
     | NetworkTestnet {-# UNPACK #-} !Word32
-    deriving (Show, Eq, Ord, Generic, NFData, NoUnexpectedThunks)
+    deriving (Show, Eq, Ord, Generic, NFData, NoThunks)
 
 instance B.Buildable NetworkMagic where
     build NetworkMainOrStage = "NetworkMainOrStage"

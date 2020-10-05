@@ -16,6 +16,7 @@ import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build, shown)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Block.Body
@@ -33,7 +34,7 @@ data Proof = Proof
   , proofSsc        :: !SscProof
   , proofDelegation :: !(Hash Delegation.Payload)
   , proofUpdate     :: !Update.Proof
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance B.Buildable Proof where
   build proof = bprint

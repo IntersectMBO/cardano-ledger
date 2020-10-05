@@ -82,7 +82,7 @@ import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (ADDRHASH, DSIGN, HASH, KES, VRF)
 import Cardano.Ledger.Era
-import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
+import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Coerce (Coercible, coerce)
@@ -91,6 +91,7 @@ import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 
@@ -164,7 +165,7 @@ deriving instance
   (Era era, NFData (DSIGN.VerKeyDSIGN (DSIGN (Crypto era)))) =>
   NFData (VKey kd era)
 
-deriving instance Era era => NoUnexpectedThunks (VKey kd era)
+deriving instance Era era => NoThunks (VKey kd era)
 
 instance HasKeyRole VKey
 
@@ -197,7 +198,7 @@ instance
   ) =>
   NFData (KeyPair kd era)
 
-instance Era era => NoUnexpectedThunks (KeyPair kd era)
+instance Era era => NoThunks (KeyPair kd era)
 
 instance HasKeyRole KeyPair
 
@@ -231,7 +232,7 @@ newtype KeyHash (discriminator :: KeyRole) era
           (DSIGN.VerKeyDSIGN (DSIGN (Crypto era)))
       )
   deriving (Show, Eq, Ord)
-  deriving newtype (NFData, NoUnexpectedThunks, Generic)
+  deriving newtype (NFData, NoThunks, Generic)
 
 deriving instance
   (Era era, Typeable disc) =>
@@ -287,7 +288,7 @@ data GenDelegPair era = GenDelegPair
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoUnexpectedThunks (GenDelegPair era)
+instance NoThunks (GenDelegPair era)
 
 instance NFData (GenDelegPair era)
 
@@ -319,7 +320,7 @@ instance Era era => FromJSON (GenDelegPair era) where
 newtype GenDelegs era = GenDelegs
   { unGenDelegs :: Map (KeyHash 'Genesis era) (GenDelegPair era)
   }
-  deriving (Eq, FromCBOR, NoUnexpectedThunks, NFData, Generic)
+  deriving (Eq, FromCBOR, NoThunks, NFData, Generic)
   deriving (Show) via Quiet (GenDelegs era)
 
 deriving instance
@@ -327,7 +328,7 @@ deriving instance
   ToCBOR (GenDelegs era)
 
 newtype GKeys era = GKeys {unGKeys :: Set (VKey 'Genesis era)}
-  deriving (Eq, NoUnexpectedThunks, Generic)
+  deriving (Eq, NoThunks, Generic)
   deriving (Show) via Quiet (GKeys era)
 
 --------------------------------------------------------------------------------

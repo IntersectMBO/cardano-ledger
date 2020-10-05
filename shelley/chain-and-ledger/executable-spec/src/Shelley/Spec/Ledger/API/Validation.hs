@@ -18,12 +18,12 @@ module Shelley.Spec.Ledger.API.Validation
 where
 
 import Cardano.Ledger.Era
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (TRC (..), applySTS, reapplySTS)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Keys
@@ -70,7 +70,7 @@ newtype TickTransitionError era
   = TickTransitionError [STS.PredicateFailure (STS.TICK era)]
   deriving (Eq, Show, Generic)
 
-instance NoUnexpectedThunks (TickTransitionError era)
+instance NoThunks (TickTransitionError era)
 
 -- | Apply the header level ledger transition.
 --
@@ -95,7 +95,7 @@ newtype BlockTransitionError era
   = BlockTransitionError [STS.PredicateFailure (STS.BBODY era)]
   deriving (Eq, Generic, Show)
 
-instance (Era era) => NoUnexpectedThunks (BlockTransitionError era)
+instance (Era era) => NoThunks (BlockTransitionError era)
 
 -- | Apply the block level ledger transition.
 applyBlockTransition ::

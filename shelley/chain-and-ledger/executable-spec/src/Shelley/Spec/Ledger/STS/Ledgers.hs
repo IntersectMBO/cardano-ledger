@@ -18,7 +18,6 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad (foldM)
 import Control.State.Transition
   ( Embed (..),
@@ -32,6 +31,7 @@ import Data.Foldable (toList)
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
@@ -58,7 +58,7 @@ data LedgersPredicateFailure era
   = LedgerFailure (PredicateFailure (LEDGER era)) -- Subtransition Failures
   deriving (Show, Eq, Generic)
 
-instance (Era era) => NoUnexpectedThunks (LedgersPredicateFailure era)
+instance (Era era) => NoThunks (LedgersPredicateFailure era)
 
 instance
   ( Era era,

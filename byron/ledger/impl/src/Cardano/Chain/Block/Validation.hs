@@ -42,6 +42,7 @@ import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import Formatting.Buildable (Buildable)
+import NoThunks.Class (NoThunks (..))
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
@@ -135,7 +136,7 @@ data ChainValidationState = ChainValidationState
   , cvsUtxo            :: !UTxO
   , cvsUpdateState     :: !UPI.State
   , cvsDelegationState :: !DI.State
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance FromCBOR ChainValidationState where
   fromCBOR = do

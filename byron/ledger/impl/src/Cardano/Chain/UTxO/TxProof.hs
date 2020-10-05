@@ -15,6 +15,7 @@ import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.Merkle
@@ -36,7 +37,7 @@ data TxProof = TxProof
   { txpNumber        :: !Word32
   , txpRoot          :: !(MerkleRoot Tx)
   , txpWitnessesHash :: !(Hash [TxWitness])
-  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  } deriving (Show, Eq, Generic, NoThunks)
     deriving anyclass NFData
 
 -- Used for debugging purposes only

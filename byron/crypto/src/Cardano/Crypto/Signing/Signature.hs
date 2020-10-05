@@ -41,6 +41,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Formatting (Format, bprint, build, formatToString, later, sformat, stext)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..), InspectHeap (..))
 import Text.JSON.Canonical (JSValue(..), toJSString)
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
@@ -72,7 +73,7 @@ newtype Signature a =
   Signature CC.XSignature
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass NFData
-  deriving NoUnexpectedThunks via UseIsNormalForm CC.XSignature
+  deriving NoThunks via InspectHeap CC.XSignature
 
 instance B.Buildable (Signature a) where
   build _ = "<signature>"

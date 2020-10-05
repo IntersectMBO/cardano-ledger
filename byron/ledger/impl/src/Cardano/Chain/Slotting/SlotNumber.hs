@@ -19,6 +19,7 @@ import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, int)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..))
@@ -33,7 +34,7 @@ newtype SlotNumber = SlotNumber
   { unSlotNumber :: Word64
   } deriving (Eq, Generic, Ord, Show)
     deriving newtype Num
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 
 -- Used for debugging purposes only
@@ -41,7 +42,7 @@ instance Aeson.ToJSON SlotNumber where
 
 instance ToCBOR SlotNumber where
   toCBOR = toCBOR . unSlotNumber
-  encodedSizeExpr size = encodedSizeExpr size . fmap unSlotNumber 
+  encodedSizeExpr size = encodedSizeExpr size . fmap unSlotNumber
 
 instance FromCBOR SlotNumber where
   fromCBOR = SlotNumber <$> fromCBOR

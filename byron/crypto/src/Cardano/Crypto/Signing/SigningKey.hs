@@ -17,6 +17,7 @@ import Formatting.Buildable
 import qualified Cardano.Crypto.Wallet as CC
 import qualified GHC.Show
 import Formatting (bprint)
+import NoThunks.Class (NoThunks (..), InspectHeap (..))
 
 import Cardano.Binary (Decoder, Encoding, FromCBOR(..), ToCBOR(..))
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..), shortVerificationKeyHexF)
@@ -26,7 +27,7 @@ import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..), shortVerific
 newtype SigningKey = SigningKey
   { unSigningKey :: CC.XPrv
   } deriving newtype (NFData)
-    deriving NoUnexpectedThunks via UseIsNormalForm CC.XPrv
+    deriving NoThunks via InspectHeap CC.XPrv
 
 -- Note that there is deliberately no Eq instance. The cardano-crypto library
 -- does not define one for XPrv.

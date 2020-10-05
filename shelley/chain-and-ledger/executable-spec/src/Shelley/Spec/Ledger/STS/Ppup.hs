@@ -23,7 +23,6 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Iterate.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -32,6 +31,7 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
@@ -47,7 +47,7 @@ data PPUPEnv era
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks VotingPeriod
+instance NoThunks VotingPeriod
 
 instance ToCBOR VotingPeriod where
   toCBOR VoteForThisEpoch = toCBOR (0 :: Word8)
@@ -72,7 +72,7 @@ data PpupPredicateFailure era
       !ProtVer -- the first bad protocol version
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PpupPredicateFailure era)
+instance NoThunks (PpupPredicateFailure era)
 
 instance Typeable era => STS (PPUP era) where
   type State (PPUP era) = PPUPState era

@@ -22,11 +22,11 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
@@ -75,7 +75,7 @@ instance
   initialRules = [pure emptyDelegation]
   transitionRules = [delplTransition]
 
-instance NoUnexpectedThunks (DelplPredicateFailure era)
+instance NoThunks (DelplPredicateFailure era)
 
 instance
   (Typeable era, Era era) =>

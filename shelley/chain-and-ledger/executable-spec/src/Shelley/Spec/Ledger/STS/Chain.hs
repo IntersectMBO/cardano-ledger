@@ -25,14 +25,11 @@ where
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Prelude
-  ( MonadError (..),
-    NFData,
-    NoUnexpectedThunks,
-    asks,
-    unless,
-  )
 import Cardano.Slotting.Slot (WithOrigin (..))
+import Control.DeepSeq (NFData)
+import Control.Monad (unless)
+import Control.Monad.Except (MonadError, throwError)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
     STS (..),
@@ -48,6 +45,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
@@ -220,7 +218,7 @@ instance
   initialRules = []
   transitionRules = [chainTransition]
 
-instance Era era => NoUnexpectedThunks (ChainPredicateFailure era)
+instance Era era => NoThunks (ChainPredicateFailure era)
 
 chainChecks ::
   (Era era, MonadError (PredicateFailure (CHAIN era)) m) =>

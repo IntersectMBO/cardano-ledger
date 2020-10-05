@@ -14,6 +14,7 @@ where
 import Cardano.Prelude hiding (State)
 
 import qualified Data.Map.Strict as M
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (KeyHash)
@@ -31,7 +32,7 @@ import Cardano.Chain.Slotting (SlotNumber(..))
 data State = State
   { delegationMap   :: !Delegation.Map
   , delegationSlots :: !(Map KeyHash SlotNumber)
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance FromCBOR State where
   fromCBOR = do

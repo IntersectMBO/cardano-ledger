@@ -18,6 +18,7 @@ import qualified Data.ByteString.Char8 as Char8
 import Data.Text.Lazy.Builder (Builder)
 import Formatting (bprint, builder)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Decoder
@@ -40,7 +41,7 @@ import Cardano.Chain.Common.NetworkMagic (NetworkMagic(..))
 data AddrAttributes = AddrAttributes
     { aaVKDerivationPath  :: !(Maybe HDAddressPayload)
     , aaNetworkMagic      :: !NetworkMagic
-    } deriving (Eq, Ord, Show, Generic, NFData, NoUnexpectedThunks)
+    } deriving (Eq, Ord, Show, Generic, NFData, NoThunks)
 
 instance HeapWords AddrAttributes where
   heapWords aa = 3 + heapWords (aaVKDerivationPath aa)
@@ -144,7 +145,7 @@ newtype HDAddressPayload = HDAddressPayload
   { getHDAddressPayload :: ByteString
   } deriving (Eq, Ord, Show, Generic)
     deriving newtype (ToCBOR, HeapWords)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON HDAddressPayload where

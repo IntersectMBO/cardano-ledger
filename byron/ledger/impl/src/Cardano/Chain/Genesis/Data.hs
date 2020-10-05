@@ -24,6 +24,7 @@ import Data.List (lookup)
 import Data.Time (UTCTime)
 import Formatting (bprint, build, stext)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical
   ( FromJSON(..)
   , Int54
@@ -61,7 +62,7 @@ data GenesisData = GenesisData
     , gdK                  :: !BlockCount
     , gdProtocolMagicId    :: !ProtocolMagicId
     , gdAvvmDistr          :: !GenesisAvvmBalances
-    } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+    } deriving (Show, Eq, Generic, NoThunks)
 
 instance Monad m => ToJSON m GenesisData where
   toJSON gd = mkObject

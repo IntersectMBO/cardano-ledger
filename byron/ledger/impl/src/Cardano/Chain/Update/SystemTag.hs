@@ -28,6 +28,7 @@ import Distribution.System (Arch(..), OS(..))
 import Distribution.Text (display)
 import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Decoder
@@ -46,7 +47,7 @@ newtype SystemTag = SystemTag
   { getSystemTag :: Text
   } deriving (Eq, Ord, Show, Generic)
     deriving newtype B.Buildable
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON SystemTag where

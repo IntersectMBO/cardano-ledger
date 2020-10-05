@@ -12,6 +12,7 @@ where
 
 import Cardano.Prelude
 
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Chain.Common (Lovelace)
@@ -23,7 +24,7 @@ import Cardano.Crypto.Signing.Redeem (CompactRedeemVerificationKey)
 -- the pre-sale period. These certificates allow customers to redeem ADA.
 newtype GenesisAvvmBalances = GenesisAvvmBalances
   { unGenesisAvvmBalances :: Map CompactRedeemVerificationKey Lovelace
-  } deriving (Show, Eq, Semigroup, NoUnexpectedThunks)
+  } deriving (Show, Eq, Semigroup, NoThunks)
 
 instance Monad m => ToJSON m GenesisAvvmBalances where
     toJSON = toJSON . unGenesisAvvmBalances

@@ -56,6 +56,7 @@ import Data.Text.Internal.Builder (Builder)
 import Formatting
   (Format, bprint, build, builder, formatToString, later)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical
   ( FromJSON(..)
   , FromObjectKey(..)
@@ -117,7 +118,7 @@ data Address = Address
   -- 'AddrSpendingData', but it can't be checked statically, because
   -- spending data is hashed.
   } deriving (Eq, Ord, Generic, Show)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance Aeson.ToJSON Address where

@@ -19,7 +19,6 @@ module Shelley.Spec.Ledger.STS.Bbody
 where
 
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -33,6 +32,7 @@ import Control.State.Transition
   )
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
@@ -102,7 +102,7 @@ instance
   initialRules = []
   transitionRules = [bbodyTransition]
 
-instance (Era era) => NoUnexpectedThunks (BbodyPredicateFailure era)
+instance (Era era) => NoThunks (BbodyPredicateFailure era)
 
 bbodyTransition ::
   forall era.

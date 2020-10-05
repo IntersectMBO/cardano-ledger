@@ -45,6 +45,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
 import qualified Data.Foldable as Foldable
 import Formatting.Buildable (Buildable(..))
+import NoThunks.Class (NoThunks (..))
 import qualified Prelude
 
 import Cardano.Binary
@@ -60,7 +61,7 @@ import Cardano.Crypto (Hash, hashDecoded, hashRaw, hashToBytes)
 newtype MerkleRoot a = MerkleRoot
   { getMerkleRoot :: Hash Raw  -- ^ returns root 'Hash' of Merkle Tree
   } deriving (Show, Eq, Ord, Generic)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 instance Buildable (MerkleRoot a) where
   build (MerkleRoot h) = "MerkleRoot|" <> build h

@@ -13,6 +13,7 @@ import Cardano.Prelude
 
 import Data.Aeson (ToJSON)
 import Formatting.Buildable (Buildable)
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   (Dropper, FromCBOR(..), ToCBOR(..), dropWord64, encodeListLen, enforceSize)
@@ -22,7 +23,7 @@ import Cardano.Binary
 -- chain. In the simplest case it can be number of blocks in chain.
 newtype ChainDifficulty = ChainDifficulty
   { unChainDifficulty :: Word64
-  } deriving (Show, Eq, Ord, Enum, Generic, Buildable, NFData, NoUnexpectedThunks)
+  } deriving (Show, Eq, Ord, Enum, Generic, Buildable, NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON ChainDifficulty where

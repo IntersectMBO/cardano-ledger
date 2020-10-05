@@ -33,7 +33,6 @@ import Cardano.Crypto.KES.Class
 import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Crypto hiding (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -45,6 +44,7 @@ import Control.State.Transition.Extended
   )
 import Data.Either (fromRight)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes (Globals, Nonce, Seed)
 import Shelley.Spec.Ledger.BlockChain
@@ -79,7 +79,7 @@ data LedgerView era = LedgerView
   }
   deriving (Eq, Show, Generic)
 
-instance NoUnexpectedThunks (LedgerView era)
+instance NoThunks (LedgerView era)
 
 instance Era era => FromCBOR (LedgerView era) where
   fromCBOR =
@@ -215,7 +215,7 @@ data ChainDepState c = ChainDepState
   }
   deriving (Eq, Show, Generic)
 
-instance Era era => NoUnexpectedThunks (ChainDepState era)
+instance Era era => NoThunks (ChainDepState era)
 
 instance Era era => FromCBOR (ChainDepState era) where
   fromCBOR =
@@ -246,7 +246,7 @@ newtype ChainTransitionError era
   = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL era)]
   deriving (Generic)
 
-instance (Era era) => NoUnexpectedThunks (ChainTransitionError era)
+instance (Era era) => NoThunks (ChainTransitionError era)
 
 deriving instance (Era era) => Eq (ChainTransitionError era)
 

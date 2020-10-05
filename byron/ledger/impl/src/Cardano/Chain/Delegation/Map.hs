@@ -25,6 +25,7 @@ import Cardano.Prelude hiding (Map)
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import qualified Data.Set as Set
+import NoThunks.Class (NoThunks (..), noThunksInKeysAndValues)
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 import Cardano.Chain.Common.KeyHash (KeyHash)
@@ -43,10 +44,12 @@ instance ToCBOR Map where
 
 -- | A 'Bimap' contains two regular 'Map's, which are spine strict; we therefore
 -- have to worry about the elements only
-instance NoUnexpectedThunks Map where
-  whnfNoUnexpectedThunks ctxt = noUnexpectedThunksInKeysAndValues ctxt
-                              . Bimap.toList
-                              . unMap
+instance NoThunks Map where
+  wNoThunks ctxt =
+    noThunksInKeysAndValues ctxt
+      . Bimap.toList
+      . unMap
+
 
 --------------------------------------------------------------------------------
 -- Query

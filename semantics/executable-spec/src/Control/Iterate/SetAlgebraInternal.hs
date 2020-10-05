@@ -12,32 +12,24 @@
 
 module Control.Iterate.SetAlgebraInternal where
 
-import Codec.CBOR.Decoding(decodeListLenOf)
-import Codec.CBOR.Encoding(encodeListLen)
 import Cardano.Binary
   ( FromCBOR (..),
-    ToCBOR (..)
+    ToCBOR (..),
   )
-import Cardano.Prelude
-  ( NoUnexpectedThunks (..),
-    NFData (rnf)
-  )
-import Prelude hiding(lookup)
-
-import qualified Data.Map.Strict as Map
-import Data.Map.Strict(Map)
-import Data.Map.Internal(Map(..),link2,link)
-
-
-import qualified Data.Set as Set
-import Data.Set(Set)
-
-import Data.List(sortBy)
-import qualified Data.List as List
-
+import Codec.CBOR.Decoding (decodeListLenOf)
+import Codec.CBOR.Encoding (encodeListLen)
+import Control.DeepSeq (NFData(rnf))
 import Control.Iterate.Collect
+import Data.List (sortBy)
+import qualified Data.List as List
+import Data.Map.Internal (Map (..), link, link2)
+import qualified Data.Map.Strict as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
+import NoThunks.Class (NoThunks (..))
+import Text.PrettyPrint.ANSI.Leijen (Doc, align, parens, text, vsep, (<+>))
+import Prelude hiding (lookup)
 
-import Text.PrettyPrint.ANSI.Leijen(Doc,text,(<+>),align,vsep,parens)
 
 -- ==================================================================================================
 -- | In order to build typed Exp (which are a typed deep embedding) of Set operations, we need to know
@@ -149,9 +141,9 @@ instance (Ord a, Ord b,FromCBOR a, FromCBOR b) => FromCBOR (BiMap b a b) where
     !y <- fromCBOR
     return (MkBiMap x y)
 
-instance (NoUnexpectedThunks a,NoUnexpectedThunks b) => NoUnexpectedThunks(BiMap v a b) where
+instance (NoThunks a,NoThunks b) => NoThunks(BiMap v a b) where
   showTypeOf _ = "BiMap"
-  whnfNoUnexpectedThunks ctxt (MkBiMap l r) = whnfNoUnexpectedThunks ctxt (l,r)
+  wNoThunks ctxt (MkBiMap l r) = wNoThunks ctxt (l,r)
 
 instance NFData(BiMap v a b) where
    rnf (MkBiMap l r) = seq l (seq r ())

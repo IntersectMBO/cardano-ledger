@@ -35,6 +35,7 @@ import Data.Coerce
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( DecoderError(..)
@@ -63,7 +64,7 @@ newtype UTxO = UTxO
   { unUTxO :: Map CompactTxIn CompactTxOut
   } deriving (Eq, Show, Generic)
     deriving newtype (HeapWords, FromCBOR, ToCBOR)
-    deriving anyclass (NFData, NoUnexpectedThunks)
+    deriving anyclass (NFData, NoThunks)
 
 data UTxOError
   = UTxOMissingInput TxIn

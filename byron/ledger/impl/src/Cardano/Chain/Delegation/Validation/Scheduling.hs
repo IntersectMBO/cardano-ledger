@@ -20,6 +20,7 @@ import Cardano.Prelude hiding (State)
 import Data.Sequence ((|>))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
+import NoThunks.Class (NoThunks (..))
 
 import Cardano.Binary
   ( Annotated(..)
@@ -60,7 +61,7 @@ data Environment = Environment
 data State = State
   { scheduledDelegations :: !(Seq ScheduledDelegation)
   , keyEpochDelegations  :: !(Set (EpochNumber, KeyHash))
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance FromCBOR State where
   fromCBOR = do
@@ -79,7 +80,7 @@ data ScheduledDelegation = ScheduledDelegation
   { sdSlot      :: !SlotNumber
   , sdDelegator :: !KeyHash
   , sdDelegate  :: !KeyHash
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance FromCBOR ScheduledDelegation where
   fromCBOR = do

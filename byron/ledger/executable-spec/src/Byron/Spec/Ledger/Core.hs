@@ -34,9 +34,9 @@ import qualified Data.Set as Set
 import           Data.Typeable (typeOf)
 import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
+import           NoThunks.Class (NoThunks(..))
 import           Numeric.Natural (Natural)
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Cardano.Binary (ToCBOR)
 
 import           Data.AbstractSize
@@ -54,7 +54,7 @@ import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGobli
 newtype Hash = Hash
   { unHash :: Maybe Int
   } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Hashable, ToCBOR, NoUnexpectedThunks)
+    deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
     deriving anyclass (HasTypeReps)
 
 isValid :: Hash -> Bool
@@ -72,7 +72,7 @@ class HasHash a where
 newtype Owner = Owner
   { unOwner :: Natural
   } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Hashable, ToCBOR, NoUnexpectedThunks)
+    deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
     deriving anyclass (HasTypeReps)
 
 class HasOwner a where
@@ -81,7 +81,7 @@ class HasOwner a where
 -- |Signing Key.
 newtype SKey = SKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, ToCBOR, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner SKey where
@@ -90,7 +90,7 @@ instance HasOwner SKey where
 -- |Verification Key.
 newtype VKey = VKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, ToCBOR, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 instance HasHash VKey where
@@ -102,7 +102,7 @@ instance HasOwner VKey where
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, HasHash, ToCBOR, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, HasHash, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner VKeyGenesis where
@@ -124,7 +124,7 @@ mkVkGenesisSet ngk = Set.fromAscList $ mkVKeyGenesis <$> [0 .. (fromIntegral ngk
 data KeyPair = KeyPair
   { sKey :: SKey
   , vKey :: VKey
-  } deriving (Eq, Ord, Show, Generic, NoUnexpectedThunks)
+  } deriving (Eq, Ord, Show, Generic, NoThunks)
 
 instance HasTypeReps KeyPair
 
@@ -134,7 +134,7 @@ keyPair o = KeyPair (SKey o) (VKey o)
 
 -- |A digital signature.
 data Sig a = Sig a Owner
-  deriving (Show, Eq, Ord, Generic, Hashable, Typeable, Data, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, Generic, Hashable, Typeable, Data, NoThunks)
 
 -- | We need a custom instance here that returns only the top level type.
 --   A generic instance would have recursed into type 'a' and since we use
@@ -158,12 +158,12 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 
 newtype Epoch = Epoch { unEpoch :: Word64 }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, Num, ToCBOR, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, Num, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 newtype Slot = Slot { unSlot :: Word64 }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, ToCBOR, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 -- | A number of slots.
@@ -173,7 +173,7 @@ newtype Slot = Slot { unSlot :: Word64 }
 --  of blocks.
 newtype SlotCount = SlotCount { unSlotCount :: Word64 }
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Num, Hashable, ToCBOR, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Num, Hashable, ToCBOR, NoThunks)
 
 instance HasTypeReps SlotCount
 
@@ -219,7 +219,7 @@ minusSlotMaybe (Slot m) (SlotCount n)
 
 newtype BlockCount = BlockCount { unBlockCount :: Word64 }
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Num, Hashable, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Num, Hashable, NoThunks)
 
 instance HasTypeReps BlockCount
 
@@ -230,7 +230,7 @@ instance HasTypeReps BlockCount
 -- |The address of a transaction output, used to identify the owner.
 newtype Addr = Addr VKey
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, HasOwner, ToCBOR, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, HasOwner, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 -- | Create an address from a number.
@@ -245,7 +245,7 @@ instance HasHash Addr where
 newtype Lovelace = Lovelace
   { unLovelace :: Integer
   } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral, ToCBOR, NoUnexpectedThunks)
+    deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral, ToCBOR, NoThunks)
     deriving (Semigroup, Monoid) via (Sum Integer)
     deriving anyclass (HasTypeReps)
 

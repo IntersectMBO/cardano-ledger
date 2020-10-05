@@ -88,6 +88,7 @@ import qualified Data.ByteString as BS
 import Data.Text.Lazy.Builder (Builder, fromText)
 import Formatting (bprint, build, int, later, shown)
 import qualified Formatting.Buildable as B
+import NoThunks.Class (NoThunks (..))
 
 import qualified Codec.CBOR.Encoding as CBOR
 
@@ -528,7 +529,7 @@ boundaryBlockSlot (EpochSlots es) epoch =
 data ABlockOrBoundaryHdr a =
     ABOBBlockHdr    !(AHeader         a)
   | ABOBBoundaryHdr !(ABoundaryHeader a)
-  deriving (Eq, Show, Functor, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Functor, Generic, NoThunks)
 
 fromCBORABlockOrBoundaryHdr :: EpochSlots
                             -> Decoder s (ABlockOrBoundaryHdr ByteSpan)

@@ -20,7 +20,6 @@ module Shelley.Spec.Ledger.Slot
   )
 where
 
-import Cardano.Prelude (NoUnexpectedThunks (..))
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo as EI
@@ -30,11 +29,12 @@ import Data.Functor.Identity (Identity)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
+import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 
 newtype Duration = Duration {unDuration :: Word64}
-  deriving (Eq, Generic, Ord, NoUnexpectedThunks, Num, Integral, Real, Enum)
+  deriving (Eq, Generic, Ord, NoThunks, Num, Integral, Real, Enum)
   deriving (Show) via Quiet Duration
 
 instance Semigroup Duration where

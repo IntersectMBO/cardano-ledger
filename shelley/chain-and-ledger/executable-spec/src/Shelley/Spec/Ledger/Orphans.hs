@@ -5,13 +5,15 @@ module Shelley.Spec.Ledger.Orphans where
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
-import Cardano.Prelude (NFData (rnf), NoUnexpectedThunks (..), readEither)
+import Cardano.Prelude (readEither)
 import Cardano.Slotting.Slot (WithOrigin (..))
+import Control.DeepSeq (NFData (rnf))
 import Data.Aeson
 import Data.Foldable
 import Data.IP (IPv4, IPv6)
 import Data.Sequence.Strict (StrictSeq, fromList, getSeq)
 import qualified Data.Text as Text
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Slot (BlockNo, EpochNo)
 
 instance FromJSON IPv4 where
@@ -38,9 +40,9 @@ instance FromJSON a => FromJSON (StrictSeq a) where
 instance ToJSON a => ToJSON (StrictSeq a) where
   toJSON = toJSON . toList
 
-instance NoUnexpectedThunks IPv4
+instance NoThunks IPv4
 
-instance NoUnexpectedThunks IPv6
+instance NoThunks IPv6
 
 instance NFData IPv4
 
@@ -58,8 +60,8 @@ instance NFData a => NFData (WithOrigin a)
 
 instance NFData BlockNo
 
-instance NoUnexpectedThunks WC.XSignature where
-  whnfNoUnexpectedThunks ctxt s = whnfNoUnexpectedThunks ctxt (WC.unXSignature s)
+instance NoThunks WC.XSignature where
+  wNoThunks ctxt s = wNoThunks ctxt (WC.unXSignature s)
   showTypeOf _proxy = "XSignature"
 
 instance SignableRepresentation (Hash.Hash a b) where

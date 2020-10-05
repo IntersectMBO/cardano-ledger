@@ -38,11 +38,17 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Era (Era)
-import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
-import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
+import Control.DeepSeq (NFData)
+import Control.Iterate.SetAlgebra
+  ( BaseRep (MapR),
+    Embed (..),
+    Exp (Base),
+    HasExp (toExp),
+  )
 import Data.Map.Strict (Map)
 import Data.Relation (Relation (..))
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
@@ -58,10 +64,24 @@ import Shelley.Spec.Ledger.TxBody
     StakeCreds (..),
   )
 
-instance HasExp (PoolDistr era) (Map (KeyHash 'StakePool era) (IndividualPoolStake era)) where
+instance
+  HasExp
+    (PoolDistr era)
+    ( Map
+        (KeyHash 'StakePool era)
+        (IndividualPoolStake era)
+    )
+  where
   toExp (PoolDistr x) = Base MapR x
 
-instance Embed (PoolDistr era) (Map (KeyHash 'StakePool era) (IndividualPoolStake era)) where
+instance
+  Embed
+    (PoolDistr era)
+    ( Map
+        (KeyHash 'StakePool era)
+        (IndividualPoolStake era)
+    )
+  where
   toBase (PoolDistr x) = x
   fromBase x = (PoolDistr x)
 
@@ -113,14 +133,14 @@ newtype PoolDistr era = PoolDistr
       Map (KeyHash 'StakePool era) (IndividualPoolStake era)
   }
   deriving stock (Show, Eq)
-  deriving newtype (ToCBOR, FromCBOR, NFData, NoUnexpectedThunks, Relation)
+  deriving newtype (ToCBOR, FromCBOR, NFData, NoThunks, Relation)
 
 data IndividualPoolStake era = IndividualPoolStake
   { individualPoolStake :: !Rational,
     individualPoolStakeVrf :: !(Hash era (VerKeyVRF era))
   }
   deriving stock (Show, Eq, Generic)
-  deriving anyclass (NFData, NoUnexpectedThunks)
+  deriving anyclass (NFData, NoThunks)
 
 instance Era era => ToCBOR (IndividualPoolStake era) where
   toCBOR (IndividualPoolStake stake vrf) =
