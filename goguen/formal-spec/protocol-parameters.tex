@@ -124,7 +124,7 @@ When the transaction is processed, this hash is compared with a hash of the equi
 This check is part of the \emph{two-phase validation model} that conserves time and computation
 resources during transaction processing (see Section~\ref{sec:utxo}).
 
-The function $\fun{hashLanguagePP}$ (Figure~\ref{fig:defs:protocol-parameters}) selects the protocol parameters that are relevant to
+The $\fun{hashLanguagePP}$ function (Figure~\ref{fig:defs:protocol-parameters}) selects the protocol parameters that are relevant to
 a given set of languages and computes their hash
 %
 At this time, the only parameter that is passed to the interpreter is the version-specific cost model.
@@ -162,14 +162,14 @@ type of scripts. These will only have non-trivial values for
   \emph{Abstract types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{costm} & \CostMod & \text{coefficients for cost model} \\
+    \begin{array}{r@{~\in~}l@{\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad}r}
+      \var{costm} & \CostMod & \text{Coefficients for the cost model} \\
     \end{array}
   \end{equation*}
   %
   \emph{Derived types}
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+    \begin{array}{r@{~\in~}l@{\quad=\quad}l@{\qquad}r}
       \var{plv}
       & \Language
       & \{\Plutus, \dotsb\}
@@ -178,23 +178,23 @@ type of scripts. These will only have non-trivial values for
       \var{(pr_{init}, pr_{mem}, pr_{steps})}
       & \Prices
       & \Coin \times \Coin \times \Coin
-      & \text {coefficients for ExUnits prices}
+      & \text {Coefficients for $\ExUnits$ prices}
       \\
       \var{(mem, steps)}
       & \ExUnits
       & \N \times \N
-      & \text{abstract execution units} \\
+      & \text{Abstract execution units} \\
     \end{array}
   \end{equation*}
   %
   \emph{Protocol Parameters}
   %
   \begin{equation*}
-      \begin{array}{r@{~\in~}lr}
-        \var{costmdls} \mapsto (\Language \mapsto \CostMod) & \PParams & \text{script exec cost model}\\
-        \var{prices} \mapsto \Prices & \PParams & \text{coefficients for ExUnits prices} \\
-        \var{maxTxExUnits} \mapsto \ExUnits & \PParams & \text{max total tx script execution resources}\\
-        \var{maxBlockExUnits} \mapsto \ExUnits & \PParams & \text{max total block script execution resources}\\
+      \begin{array}{r@{~\in~}l@{\qquad}r}
+        \var{costmdls} \mapsto (\Language \mapsto \CostMod) & \PParams & \text{Script exec. cost model}\\
+        \var{prices} \mapsto \Prices & \PParams & \text{Coefficients for $\ExUnits$ prices} \\
+        \var{maxTxExUnits} \mapsto \ExUnits & \PParams & \text{Max. total tx script exec. resources}\\
+        \var{maxBlockExUnits} \mapsto \ExUnits & \PParams & \text{Max. total block script exec. resources}\\
       \end{array}
   \end{equation*}
   %
@@ -210,11 +210,11 @@ type of scripts. These will only have non-trivial values for
     & \fun{hashLanguagePP} \in \PParams \to \powerset{(\Language)} \to \PPHash^?   \\
     & \fun{hashLanguagePP}~\var{pp}~\var{lgs} = \begin{cases}
          \fun{hash}~(\var{lgs} \restrictdom \fun{costmdls}~{pp})
-                           & \text{if~} \var{lgs} \restrictdom \fun{costmdls}~{pp} \neq \{\} \\
+                           & \text{if~} (\var{lgs} \restrictdom \fun{costmdls}~{pp}) \neq \{\} \\
               \Nothing & \text{otherwise} \\
-      \end{cases} \\
-    & \text{this calculation creates a hash for the protocol parameters that are relevant to
-    a given set of versions}
+      \end{cases} \\[3ex]
+    & \text{The $\fun{hashLanguagePP}$ calculation creates a hash for the protocol parameters} \\ & \text{that are relevant to
+    a given set of versions.}
   \end{align*}
   %
   \caption{Definitions Used in Protocol Parameters}

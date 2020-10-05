@@ -3,10 +3,12 @@
 
 This section outlines the changes that are needed to the transaction and
 UTxO structure to enable non-native scripts to validate
-certain actions.
-
+certain actions: forging tokens, spending outputs, verifying certificates, and
+verifying withdrawals).\todo{Is this the complete set of actions?}
+%
 Figure \ref{fig:defs:utxo-shelley-1} gives the modified transaction types.
-We make the following changes and additions:
+We make the following changes and additions over the corresponding types in the
+Shelley specification~\ref{XX}:
 
 \begin{itemize}
   \item $\Value$ represents the type of
@@ -39,7 +41,7 @@ We make the following changes and additions:
 %   be used to pay script execution fees.
 
   \item $\TxOutND$ is a transaction output with no datum hash
-  (this type is for VK\todo{What is VK?} and multi-signature script outputs).
+  (this type is for VKey\todo{What is VK?} and multi-signature script outputs).
 
   \item $\TxOutP$ is a transaction output that comes from a Plutus script (these include a datum hash).\todo{Confirm this.}
 
@@ -50,8 +52,8 @@ We make the following changes and additions:
   contains, in its set of datum objects, the full datum that corresponds
   to the datum hash.
 
-  Note that it is up to the user   to decide whether the transaction should have the full datum. The purpose of
-  including it is strictly so that it can be communicated to the user who will be spending
+  Note that it is up to the user to decide whether the transaction should have the full datum. The purpose of
+  including it is just so that it can be communicated to the user who will be spending
   the output in the future, and who will require the full datum in order to validate
   the Plutus script that is locking the output. However, this tag must be applied
   correctly, otherwise the transaction will not validate.
@@ -84,12 +86,12 @@ We make the following changes and additions:
   \emph{Abstract types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
+    \begin{array}{r@{~\in~}l@{\quad\quad\quad\quad}r}
       \var{v} &\Value & \text{Multi-asset value}\\
-      \var{hdv} &\RdmrsHash & \text{hash of the indexed redeemers structure}\\
-      \var{msig} & \ScriptMSig & \text{Multisig scripts} \\
-      \var{plc} & \ScriptPlutus & \text{Plutus scripts of initial Plutus version} \\
-      \var{dat} & \Data & \text{the $\Data$ type} \\
+      \var{hdv} &\RdmrsHash & \text{Indexed redeemer hash}\\
+      \var{msig} & \ScriptMSig & \text{Multi-signature scripts} \\
+      \var{plc} & \ScriptPlutus & \text{Plutus scripts from the initial Plutus version} \\
+      \var{dat} & \Data & \text{The Plutus $\Data$ type} \\
     \end{array}
   \end{equation*}
   %
@@ -157,54 +159,54 @@ We make the following changes and additions:
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
       \var{wits} ~\in~ \TxWitness ~=~
-       & (\VKey \mapsto \Sig) & \fun{txwitsVKey} & \text{VK signatures}\\
-       & \times ~\powerset{\Script}  & \fun{txscripts} & \text{all scripts}\\
-       & \times~ \powerset{\Data} & \fun{txdats} & \text{all datum objects}\\
-       & \times ~(\RdmrPtr \mapsto \Data)& \fun{txrdmrs}& \text{indexed redeemers}\\
+       & (\VKey \mapsto \Sig) & \fun{txwitsVKey} & \text{VKey signatures}\\
+       & \times ~\powerset{\Script}  & \fun{txscripts} & \text{All scripts}\\
+       & \times~ \powerset{\Data} & \fun{txdats} & \text{All datum objects}\\
+       & \times ~(\RdmrPtr \mapsto \Data)& \fun{txrdmrs}& \text{Indexed redeemers}\\
     \end{array}
   \end{equation*}
   %
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
       \var{txbody} ~\in~ \TxBody ~=~
-      & \powerset{\TxIn} & \fun{txinputs}& \text{inputs}\\
-      &\times ~(\Ix \mapsto \TxOut) & \fun{txouts}& \text{outputs}\\
-      & \times~ \seqof{\DCert} & \fun{txcerts}& \text{certificates}\\
-       & \times ~\Value  & \fun{forge} &\text{value forged}\\
-       & \times ~\ExUnits  & \fun{txexunits}& \text{script exec budget}\\
-       & \times ~\Coin & \fun{txfee} &\text{non-script fee}\\
-       & \times ~(\Slot\times\Slot) & \fun{txfst},~\fun{txttl} & \text{validity interval}\\
-       & \times~ \Wdrl  & \fun{txwdrls} &\text{reward withdrawals}\\
-       & \times ~\Update  & \fun{txUpdates} & \text{update proposals}\\
-       & \times ~\PPHash^?  & \fun{ppHash} & \text{hash or PPs}\\
-       & \times ~\RdmrsHash^? & \fun{rdmrsHash} & \text{hash of indexed rdmrs}\\
-       & \times ~\MetaDataHash^? & \fun{txMDhash} & \text{metadata hash}\\
+      & \powerset{\TxIn} & \fun{txinputs}& \text{Inputs}\\
+      &\times ~(\Ix \mapsto \TxOut) & \fun{txouts}& \text{Outputs}\\
+      & \times~ \seqof{\DCert} & \fun{txcerts}& \text{Certificates}\\
+       & \times ~\Value  & \fun{forge} &\text{A forged value}\\
+       & \times ~\ExUnits  & \fun{txexunits}& \text{Script exec. budget}\\
+       & \times ~\Coin & \fun{txfee} &\text{Non-script fee}\\
+       & \times ~(\Slot\times\Slot) & \fun{txfst},~\fun{txttl} & \text{Validity interval}\\
+       & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
+       & \times ~\Update  & \fun{txUpdates} & \text{Update proposals}\\
+       & \times ~\PPHash^?  & \fun{ppHash} & \text{Hash of PPs}\\
+       & \times ~\RdmrsHash^? & \fun{rdmrsHash} & \text{Hash of indexed redeemers}\\
+       & \times ~\MetaDataHash^? & \fun{txMDhash} & \text{Metadata hash}\\
     \end{array}
   \end{equation*}
   %
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
       \var{txg} ~\in~ \GoguenTx ~=~
-      & \TxBody & \fun{txbody} & \text{body}\\
-      & \times ~\TxWitness & \fun{txwits} & \text{witnesses}\\
-      & \times ~\IsValidating & \fun{txvaltag}&\text{validation tag}\\
-      & \times ~\MetaData^? & \fun{txMD}&\text{metadata}\\
+      & \TxBody & \fun{txbody} & \text{Body}\\
+      & \times ~\TxWitness & \fun{txwits} & \text{Witnesses}\\
+      & \times ~\IsValidating & \fun{txvaltag}&\text{Validation tag}\\
+      & \times ~\MetaData^? & \fun{txMD}&\text{Metadata}\\
     \end{array}
   \end{equation*}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{tx} & \Tx & \ShelleyTx \uniondistinct \GoguenTx
-      \text{~~a Shelley or Goguen transaction}\\
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}l@{\qquad\qquad}l}
+\qquad\qquad      \var{tx} & \Tx & \ShelleyTx \uniondistinct \GoguenTx &
+      \text{A Shelley or Goguen transaction}\\
     \end{array}
   \end{equation*}
   %
   \emph{Accessor Functions}
   \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \fun{getValue} & \TxOut \uniondistinct \UTxOOut \to \Value & \text{output value} \\
-      \fun{getAddr} & \TxOut \uniondistinct \UTxOOut \to \Addr & \text{output address} \\
-      \fun{getDataHash} & \TxOut \uniondistinct \UTxOOut \to \DataHash & \text{data hash}
+    \begin{array}{r@{~\in~}l@{\qquad}l}
+      \fun{getValue} & \TxOut \uniondistinct \UTxOOut \to \Value & \text{Output value} \\
+      \fun{getAddr} & \TxOut \uniondistinct \UTxOOut \to \Addr & \text{Output address} \\
+      \fun{getDataHash} & \TxOut \uniondistinct \UTxOOut \to \DataHash & \text{Data hash}
     \end{array}
   \end{equation*}
   \caption{Definitions for transactions, cont.}
@@ -213,48 +215,49 @@ We make the following changes and additions:
 
 
 \textbf{Data Representation.}
-The type $\Data$ is a Plutus type, however, there is a similar type in the
-ledger. We do not assume these are the same $\Data$, but we do assume there
-is structural equality between them.
+The type $\Data$ is a Plutus type that represents all valid ground types in Plutus\todo{Confirm}.
 \begin{note}
+There is a similar type in the
+ledger. We do not assume these are the same $\Data$, but we do assume there
+is structural equality between them. TODO: {Fix this.  Is one a subset of the other?  Are they actually related in any way; if so, how?}
   Is this supposed to be this similar type? From what I've seen, those
   two types are not actually equal, so this needs an update.
 \end{note}
 
 \subsection{Witnessing}
-In Figure \ref{fig:defs:utxo-shelley-2}, the type $\TxWitness$ contains everything
-in a transaction that is needed for witnessing, which is
+Figure \ref{fig:defs:utxo-shelley-2} defines the witness type, $\TxWitness$.  This contains everything
+in a transaction that is needed for witnessing, namely:
 
 \begin{itemize}
-  \item VK signatures,
-  \item a set of scripts (for all
-  validation purposes - forging tokens, spending outputs, verifying certificates, and
-  verifying withdrawals),
-  \item a set of terms of type data, which contains all required datum objects, and
-  \item a map of $\Data$ values indexed by $\RdmrPtr$, which includes all
+  \item VKey\todo{What is VK} signatures;
+  \item a set of scripts that is needed to \emph{validate} the transaction, including for forging tokens, spending outputs, verifying certificates, and
+  verifying withdrawals;
+  \item a set of terms of type $\Data$, which contains all required datum objects; and
+  \item a map of $\Data$ values indexed by $\RdmrPtr$, which includes all the
   required redeemers.
 \end{itemize}
 
-There is a difference between the way scripts and datum objects are included in
-a transaction (as a set) versus how redeemers are
-(as an indexed structure). The reason for this difference is a matter of matching
-the pieces of witnessing info to the thing it is required for witnessing. There
-are two possibilities here:
+Note that there is a difference between the way scripts and datum objects are included in
+a transaction (as a set) versus how redeemers are included
+(as an indexed structure). % This is driven by their different relationships to the item:
 
-\begin{itemize}
-  \item[(1)] The item being validated (output, forge, etc.) explicitly references
-  the piece needed for witnessing, by containing its hash.
-  This is the case for all scripts and datum:
+\begin{description}
+\item
+  [Hash reference (script/datum object):]
+  The item that needs to be validated (output, forge, etc.) explicitly references the hash of
+  the witness data.
+%  This is the case for all scripts and datum:
   Script addresses, currency IDs, and certificate credentials must contain
   the hash of the validator script that will be run, and script-locked UTxO entries
-  contain the hash of a datum which has to be included.
+  must contain the hash of a datum. % which has to be included. Included in what??
 
-  \item[(2)] The item being validated has no explicit link to, hash of, or
-  reference to, the piece of data needed for validation. This is the case for redeemers.
+  \item[No hash reference (redeemers):] The item that needs to be validated has no explicit % link to, hash of, or
+  hash reference to the witness data.
+  % This is the case for redeemers.
   In this case, we use a reverse pointer approach and
   index the redeemer by a pointer to the item for which it will be used.
-  For details on how a script finds its redeemer, see Section \ref{sec:scripts-inputs}.
-\end{itemize}
+  For details on how a script finds its redeemer, see Section~\ref{sec:scripts-inputs}.
+\end{description}
 
 \subsection{Goguen transactions}
 We have also made the following changes to
@@ -368,8 +371,8 @@ as users may have different considerations when making their selection. This
 option will additionally allow users to write their own programmatic solutions
 to choosing for-fees inputs.
 
-Only VK-spending inputs and native-script spending inputs can
-be used to pay fees. In Shelley, spending VK or script outputs is
+Only VKeys that spend inputs\todo{Inputs that spend VKeys? Or VKeys that spend inputs?} or native scripts that spend inputs can
+be used to pay fees. In Shelley, spending VKey or script outputs is
 validated in a single witnessing rule application, so either all
 required signatures are valid, or a transaction is completely
 invalid. We kept this model, but chose a different approach to
