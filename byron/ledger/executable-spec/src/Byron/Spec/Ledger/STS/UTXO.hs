@@ -22,7 +22,7 @@ module Byron.Spec.Ledger.STS.UTXO
   )
 where
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           NoThunks.Class (NoThunks(..))
 import           Data.Data (Data, Typeable)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
@@ -44,12 +44,12 @@ data UTXO deriving (Data, Typeable)
 data UTxOEnv = UTxOEnv
   { utxo0 :: UTxO
   , pps   :: PParams
-  } deriving (Eq, Show, Generic, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NoThunks)
 
 data UTxOState = UTxOState
   { utxo     :: UTxO
   , reserves :: Lovelace
-  } deriving (Eq, Show, Generic, NoUnexpectedThunks)
+  } deriving (Eq, Show, Generic, NoThunks)
 
 -- | These `PredicateFailure`s are all "throwable". The disjunction of the
 --   rules' preconditions is not `True` - the `PredicateFailure`s represent
@@ -61,7 +61,7 @@ data UtxoPredicateFailure
   | IncreasedTotalBalance
   | InputsNotInUTxO
   | NonPositiveOutputs
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 
 instance STS UTXO where

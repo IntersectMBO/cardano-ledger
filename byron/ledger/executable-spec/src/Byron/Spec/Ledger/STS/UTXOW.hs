@@ -15,7 +15,7 @@
 
 module Byron.Spec.Ledger.STS.UTXOW where
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           NoThunks.Class (NoThunks(..))
 import           Data.Data (Data, Typeable)
 import qualified Data.Map as Map
 import           GHC.Generics (Generic)
@@ -49,7 +49,7 @@ data UTXOW deriving (Data, Typeable)
 data UtxowPredicateFailure
   = UtxoFailure (PredicateFailure UTXO)
   | InsufficientWitnesses
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 
 instance STS UTXOW where

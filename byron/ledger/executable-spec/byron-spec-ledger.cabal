@@ -48,11 +48,11 @@ library
                      , hedgehog >= 1.0
                      , microlens
                      , microlens-th
+                     , nothunks
                      , template-haskell
                      , Unique >= 0.4.7.6
                      -- IOHK deps
                      , cardano-binary
-                     -- For NoUnexpectedThunks
                      , cardano-prelude
                      -- Local deps
                      , small-steps

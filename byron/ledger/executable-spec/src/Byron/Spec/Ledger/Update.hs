@@ -24,7 +24,7 @@ module Byron.Spec.Ledger.Update
   )
 where
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           NoThunks.Class (NoThunks(..))
 import           Control.Arrow (second, (&&&))
 import           Control.Monad (mzero)
 import           Data.Bimap (Bimap, empty, lookupR)
@@ -79,22 +79,22 @@ import           Prelude
 
 newtype FactorA = FactorA Int
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, NoThunks)
   deriving anyclass (HasTypeReps)
 
 newtype FactorB = FactorB Int
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, NoThunks)
   deriving anyclass (HasTypeReps)
 
 newtype UpAdptThd = UpAdptThd Double
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, Num, Real, Fractional, RealFrac, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, Num, Real, Fractional, RealFrac, NoThunks)
   deriving anyclass (HasTypeReps)
 
 newtype BkSgnCntT = BkSgnCntT Double
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, Num, Fractional, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, Num, Fractional, NoThunks)
   deriving anyclass (HasTypeReps)
 
 -- | Protocol parameters.
@@ -126,7 +126,7 @@ data PParams = PParams -- TODO: this should be a module of @byron-spec-ledger@.
   -- ^ Minimum fees per transaction
   , _factorB :: !FactorB
   -- ^ Additional fees per transaction size
-  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable, NoUnexpectedThunks)
+  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable, NoThunks)
 
 makeLenses ''PParams
 
@@ -134,7 +134,7 @@ instance HasTypeReps PParams
 
 newtype UpId = UpId Int
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, NoThunks)
   deriving anyclass (HasTypeReps)
 
 -- | Protocol version
@@ -142,7 +142,7 @@ data ProtVer = ProtVer
   { _pvMaj :: Natural
   , _pvMin :: Natural
   , _pvAlt :: Natural
-  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable, NoUnexpectedThunks)
+  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable, NoThunks)
 
 makeLenses ''ProtVer
 
@@ -150,21 +150,21 @@ instance HasTypeReps ProtVer
 
 newtype ApName = ApName String
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Hashable, NoThunks)
 
 instance HasTypeReps ApName
 
 -- | Application version
 newtype ApVer = ApVer Natural
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Num, Hashable, NoUnexpectedThunks)
+  deriving newtype (Eq, Ord, Num, Hashable, NoThunks)
 
 instance HasTypeReps ApVer
 
 data SwVer = SwVer
   { _svName :: ApName
   , _svVer :: ApVer
-  } deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoUnexpectedThunks)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoThunks)
 
 makeLenses ''SwVer
 
@@ -186,7 +186,7 @@ type STag = String
 
 -- | For now we do not have any requirements on metadata.
 data Metadata = Metadata
-  deriving (Eq, Ord, Show, Generic, Hashable, Data, Typeable, NoUnexpectedThunks)
+  deriving (Eq, Ord, Show, Generic, Hashable, Data, Typeable, NoThunks)
 
 -- | Update proposal
 data UProp = UProp
@@ -200,7 +200,7 @@ data UProp = UProp
   -- ^ System tags involved in the update proposal.
   , _upMdt :: Metadata
   -- ^ Metadata required for performing software updates.
-  } deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoUnexpectedThunks)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoThunks)
 
 
 -- We need the Hashable instance before making lenses.
@@ -346,7 +346,7 @@ data UpdateConstraintViolation
   | TransactionSizeTooLarge Natural (Threshold Natural)
   | ScriptVersionTooLarge Natural (Threshold Natural)
   | ScriptVersionTooSmall Natural (Threshold Natural)
-  deriving (Eq, Ord, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Ord, Show, Data, Typeable, Generic, NoThunks)
 
 svCanFollow
   :: Map ApName (ApVer, Core.Slot, Metadata)
@@ -374,7 +374,7 @@ data UpsvvPredicateFailure
   | CannotFollowSv
   | InvalidApplicationName
   | InvalidSystemTags
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 
 instance STS UPSVV where
@@ -410,7 +410,7 @@ data UppvvPredicateFailure
   = CannotFollowPv
   | CannotUpdatePv [UpdateConstraintViolation]
   | AlreadyProposedPv
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS UPPVV where
   type Environment UPPVV =
@@ -445,7 +445,7 @@ data UpvPredicateFailure
   | AVChangedInPVUpdate ApName ApVer (Maybe (ApVer, Slot, Metadata))
   | ParamsChangedInSVUpdate
   | PVChangedInSVUpdate
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS UPV where
   type Environment UPV =
@@ -507,7 +507,7 @@ data UpregPredicateFailure
   = UPVFailure (PredicateFailure UPV)
   | NotGenesisDelegate
   | DoesNotVerify
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS UPREG where
   type Environment UPREG =
@@ -550,7 +550,7 @@ data Vote = Vote
   { _vCaster :: Core.VKey
   , _vPropId :: UpId
   , _vSig :: Core.Sig UpId
-  } deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoUnexpectedThunks)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoThunks)
 
 
 makeLenses ''Vote
@@ -579,7 +579,7 @@ data AddvotePredicateFailure
   | NoUpdateProposal UpId
   | VoteByNonGenesisDelegate VKey
   | RepeatVoteByGenesisDelegate VKey
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS ADDVOTE where
   type Environment ADDVOTE =
@@ -620,7 +620,7 @@ data UpvotePredicateFailure
   | S_HigherThanThdAndNotAlreadyConfirmed
   | S_CfmThdNotReached
   | S_AlreadyConfirmed
-  deriving (Eq, Show, Data, Generic, Typeable, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Generic, Typeable, NoThunks)
 
 instance STS UPVOTE where
   type Environment UPVOTE =
@@ -716,7 +716,7 @@ data UpendPredicateFailure
   | CannotAdopt ProtVer
   | NotADelegate VKey
   | UnconfirmedProposal UpId
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS UPEND where
   type Environment UPEND =
@@ -938,7 +938,7 @@ data UPIREG deriving (Generic, Data, Typeable)
 
 data UpiregPredicateFailure
   = UPREGFailure (PredicateFailure UPREG)
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS UPIREG where
   type Environment UPIREG = UPIEnv
@@ -1314,7 +1314,7 @@ data UPIVOTE deriving (Generic, Data, Typeable)
 
 data UpivotePredicateFailure
   = UPVOTEFailure (PredicateFailure UPVOTE)
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS UPIVOTE where
   type Environment UPIVOTE = UPIEnv
@@ -1367,7 +1367,7 @@ data APPLYVOTES deriving (Generic, Data, Typeable)
 
 data ApplyVotesPredicateFailure
   = UpivoteFailure (PredicateFailure UPIVOTE)
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS APPLYVOTES where
   type Environment APPLYVOTES = UPIEnv
@@ -1395,7 +1395,7 @@ data UPIVOTES deriving (Generic, Data, Typeable)
 
 data UpivotesPredicateFailure
   = ApplyVotesFailure (PredicateFailure APPLYVOTES)
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS UPIVOTES where
   type Environment UPIVOTES = UPIEnv
@@ -1541,7 +1541,7 @@ data UPIEND deriving (Generic, Data, Typeable)
 
 data UpiendPredicateFailure
   = UPENDFailure (PredicateFailure UPEND)
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS UPIEND where
   type Environment UPIEND = UPIEnv
@@ -1612,7 +1612,7 @@ data PVBUMP deriving (Generic, Data, Typeable)
 
 -- PVBUMP has no predicate failures
 data PvbumpPredicateFailure = NoPVBUMPFailure
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS PVBUMP where
   type Environment PVBUMP =
@@ -1644,7 +1644,7 @@ data UPIEC deriving (Generic, Data, Typeable)
 
 data UpiecPredicateFailure
   = PVBUMPFailure (PredicateFailure PVBUMP)
-  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
+  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
 
 instance STS UPIEC where
   type Environment UPIEC =
