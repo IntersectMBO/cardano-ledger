@@ -28,9 +28,10 @@ library
     base >=4.9 && <4.15,
     bytestring,
     cardano-binary,
-    cardano-prelude,
     containers,
+    deepseq,
     groups,
+    nothunks,
     partial-order,
     shelley-spec-ledger,
     small-steps

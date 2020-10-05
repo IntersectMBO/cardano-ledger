@@ -23,7 +23,7 @@ import Cardano.Binary
 import Cardano.Ledger.Era
 import Cardano.Ledger.Val (Val)
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Prelude (NFData (), NoUnexpectedThunks (..))
+import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
 import Data.Group (Abelian, Group (..))
 import Data.Map.Internal
@@ -41,6 +41,7 @@ import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
@@ -80,7 +81,7 @@ newtype Quantity = Quantity {unInt :: Integer}
       Eq,
       FromCBOR,
       NFData,
-      NoUnexpectedThunks,
+      NoThunks,
       Ord,
       PartialOrd,
       ToCBOR
@@ -98,13 +99,13 @@ newtype AssetID = AssetID {assetID :: ByteString}
       ToCBOR,
       FromCBOR,
       Ord,
-      NoUnexpectedThunks,
+      NoThunks,
       NFData
     )
 
 -- | Policy ID
 newtype PolicyID era = PolicyID {policyID :: ScriptHash era}
-  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks, NFData)
+  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData)
 
 -- | The Value representing MultiAssets
 data Value era = Value !Coin !(Map (PolicyID era) (Map AssetID Quantity))
@@ -112,7 +113,7 @@ data Value era = Value !Coin !(Map (PolicyID era) (Map AssetID Quantity))
 
 instance NFData (Value era)
 
-instance NoUnexpectedThunks (Value era)
+instance NoThunks (Value era)
 
 instance Semigroup (Value era) where
   Value c m <> Value c1 m1 =
