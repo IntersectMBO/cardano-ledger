@@ -25,7 +25,6 @@ import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)
 import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
-import Cardano.Prelude (NoUnexpectedThunks)
 import Data.Bits
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
@@ -33,6 +32,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Proxy (Proxy (..))
 import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Seed)
 
 data FakeVRF
@@ -78,14 +78,14 @@ instance VRFAlgorithm FakeVRF where
 
   newtype VerKeyVRF FakeVRF = VerKeyFakeVRF Word64
     deriving stock (Show, Generic)
-    deriving newtype (Eq, Ord, NoUnexpectedThunks)
+    deriving newtype (Eq, Ord, NoThunks)
   newtype SignKeyVRF FakeVRF = SignKeyFakeVRF Word64
     deriving stock (Show, Generic)
-    deriving newtype (Eq, Ord, NoUnexpectedThunks)
+    deriving newtype (Eq, Ord, NoThunks)
 
   data CertVRF FakeVRF = CertFakeVRF !Word64 !Word16
     deriving stock (Show, Eq, Ord, Generic)
-    deriving anyclass (NoUnexpectedThunks)
+    deriving anyclass (NoThunks)
 
   genKeyVRF seed = SignKeyFakeVRF $ runMonadRandomWithSeed seed getRandomWord64
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n

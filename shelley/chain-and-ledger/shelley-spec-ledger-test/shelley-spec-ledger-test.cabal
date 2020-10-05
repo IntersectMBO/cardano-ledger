@@ -82,6 +82,7 @@ library
     hedgehog,
     iproute,
     multiset,
+    nothunks,
     process-extras,
     QuickCheck >= 2.13.2,
     scientific,
