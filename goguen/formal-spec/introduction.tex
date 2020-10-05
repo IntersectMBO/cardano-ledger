@@ -13,7 +13,7 @@ of non-native scripts, i.e. scripts that are not evaluated by the ledger; and
   constructs (the ``extended UTxO'' model).
 \end{inparaenum}
 This document defines these extensions as changes to the multi-asset structured transition system,
-using the same notation and conventions that were used for the multi-asset specification~\ref{XX}.
+using the same notation and conventions that were used for the multi-asset specification~\cite{XX}.
 As with the multi-asset formal specification, these rules will be implemented in the form of an executable ledger specification that will then be
 integrated with the Cardano node.
 
@@ -35,7 +35,7 @@ size of the transaction.
 
 In contrast, non-native scripts can perform arbitary
 (and, in principle, Turing-complete) computations.
-In order to bound execution costs to a pre-determined constant, we use a standard ``fuel'' approach~\ref{XX},
+In order to bound execution costs to a pre-determined constant, we use a standard ``fuel'' approach~\cite{XX},
 %% Not completely true...  The cost of many interesting computations can be assessed, and others can be limited.
 %% I've done a lot of work here :)
 % which means it is impossible to assess

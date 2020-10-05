@@ -8,11 +8,11 @@ verifying withdrawals).\todo{Is this the complete set of actions?}
 %
 Figure \ref{fig:defs:utxo-shelley-1} gives the modified transaction types.
 We make the following changes and additions over the corresponding types in the
-Shelley specification~\ref{XX}:
+Shelley specification~\cite{XX}:
 
 \begin{itemize}
   \item $\Value$ represents the type of
-  both \emph{fungible} and \emph{non-fungible} multi-asset tokens. For details, see the multi-asset formal specification~\ref{XX}.
+  both \emph{fungible} and \emph{non-fungible} multi-asset tokens. For details, see the multi-asset formal specification~\cite{XX}.
 
   \item $\RdmrsHash$ is the type of a hash of the indexed redeemer structure,
   included within a transaction (this structure is described in detail below).
@@ -301,19 +301,18 @@ A complete Goguen transaction comprises:
 %% for different purposes in the Goguen era than they were used for in Shelley, and
 %% we specify the differences in these cases.
 
-To simplify the transition from the Shelley to the Goguen era, the ledger supports Shelley and Goguen transaction formats.
-Shelley transactions have the type $\ShelleyTx$, and  Goguen transactions have type $\GoguenTx$.
-These are combined to give the type of valid transactions,
+To simplify the transition from the Shelley to the Goguen era, the ledger rules support both Shelley and Goguen transaction formats simultaneously:
+$\Tx ~~=~~ \ShelleyTx \uniondistinct \GoguenTx$, where Shelley transactions have the type $\ShelleyTx$, and  Goguen transactions have type $\GoguenTx$.
+%
 % A true Goguen transaction is really of either type,
 % i.e.
-$\Tx ~~=~~ \ShelleyTx \uniondistinct \GoguenTx$.
 
-Shelley transactions have less data than the Goguen ones, so we can interpret
-a Shelley transaction as a Goguen one and process it using Goguen ledger
-rules. A crucial part of a Shelley transaction,
-however, that cannot be transformed, is the witnesses.
-We will specify how to verify signatures before transforming and processing
-the rest of a Shelley transction in the Goguen format when we discuss witnessing.
+Shelley transactions contain less data items than Goguen transactions, so we can interpret
+a Shelley transaction as a Goguen one with some missing fields, and process it using the normal Goguen ledger
+rules.  Shelley witnesses cannot, however, be transformed into Goguen witnesses.
+Section~\ref{XX} specifies how to verify signatures before transforming
+and processing
+the rest of a Shelley transction in the Goguen format
 
 \subsection{Additional Role of Signatures on TxBody}
 The transaction body must contain every bit of data
@@ -358,8 +357,7 @@ failure or change the amount of fees it pays.
 
 Note that in Goguen, it is possible for a transaction
 to either be processed in full, or do nothing but pay fees for script
-validation (in the case of script validation failure, see Section
-\ref{sec:utxo} for details).
+validation (in the case of script validation failure, see Section~\ref{sec:utxo} for details).
 In designing a way to prevent all Ada in the transaction outputs from going into
 the fee pot (in case of script validation failure), we have considered two
 possibilities:
