@@ -221,5 +221,41 @@ type of scripts. These will only have non-trivial values for
   \label{fig:defs:protocol-parameters}
 \end{figure*}
 
+\subsubsection{Protocol Parameter Hash Comparison Considerations}
+
+%% \begin{note}
+%%   This should probably be in the previous section, but we don't have
+%%   the Script type there. Maybe move it there anyways and either
+%%   reference to this section or move the script type there as well...
+%%   KH: The Script type could be kept abstract, and a forward reference used?
+%% \end{note}
+
+Not all protocol parameters are relevant to all Plutus languages.
+We have defined two helper functions that can be used to select the protocol parameters that need to be hashed for a specific script
+(see Figure \ref{fig:defs:functions-chain-helper}). The first, $\fun{language}$, is an accessor function that returns the language tag for a given script, of type
+$\Script$ (defined in Section~\ref{sec:transactions}).
+The second, $\fun{cmlangs}$, returns the \emph{set} of language tags for the given set of scripts whose languages have a corresponding cost model.
+For example, as discussed in Section \ref{sec:plutus-native}),
+for multi-signature scripts ...\todo{Complete the example.}
+% e.g. MSig (recall the discussion in \ref{sec:plutus-native}).
+%% Not really neede.
+% We will use these helper functions in the rules we present later to compare the hashes.
+
+\begin{figure*}[htb]
+  \emph{Helper Functions}
+  %
+  \begin{align*}
+    \fun{language} ~\in~& \Script \to \Language \\
+    &\text{Returns the language tag ($\Plutus$ for the first version of Plutus)}
+    \nextdef
+    \fun{cmlangs} ~\in~& \powerset{\Script} \to \powerset{(\Language)} \\
+    \fun{cmlangs}~ \var{scrts} ~=~ & \{ \fun{language}~\var{scr} ~\vert~
+      \var{scr}~\in~ \var{scrts}, \fun{language}~\var{scr} \in \{\Plutus\}  \}\\
+    &\text{Returns all languages that have cost models.}
+  \end{align*}
+  \caption{Helper functions for Languages and Cost Model}
+  \label{fig:defs:functions-chain-helper}
+\end{figure*}
+
 
 \clearpage

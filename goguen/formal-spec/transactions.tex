@@ -307,48 +307,49 @@ $\Tx ~~=~~ \ShelleyTx \uniondistinct \GoguenTx$, where Shelley transactions have
 % A true Goguen transaction is really of either type,
 % i.e.
 
-Shelley transactions contain less data items than Goguen transactions, so we can interpret
+Shelley transactions contain fewer data items than Goguen transactions, so we can interpret
 a Shelley transaction as a Goguen one with some missing fields, and process it using the normal Goguen ledger
 rules.  Shelley witnesses cannot, however, be transformed into Goguen witnesses.
-Section~\ref{XX} specifies how to verify signatures before transforming
-and processing
-the rest of a Shelley transction in the Goguen format
+Section~\ref{XX} specifies how to verify signatures before a
+Shelley transaction is transformed to a Goguen one.
 
 \subsection{Additional Role of Signatures on TxBody}
-The transaction body must contain every bit of data
-(or at least the hash of the data) that can influence the
-on-chain transfer of value resulting from this transaction being processed
+The transaction body must contain all data
+(or at least a hash of the data) that can influence
+on-chain transfer of value % resulting from this transaction being processed
 (see Figure \ref{fig:defs:utxo-shelley-2}).
 This means that, for example,
-every input being spent and every output being created are in the body.
+every input that is spent and every output that is created are present in the body of the transaction.
+Since a valid transaction can now be ``fully validated'' or ``only paying
+fees'' (explained in detail in Section~\ref{sec:utxo}), anything that
+can influence these outcomes must also be included in the body.
 
-As a valid transaction can now be "fully validated" or "only paying
-fees" (explained in detail in Section~\ref{sec:utxo}), anything that
-can influence these outcomes has to be included in the body as well.
-
-There is no need to ever sign anything related to validator scripts or datum objects,
-because a hash of every validator script that will be run during the validation
-of the transaction is always part of the body, and the hash of every datum
+There is no need to ever sign anything that is related to validator scripts or datum objects,
+since a hash of every validator script that is needed % will be run during the validation of the transaction is always part of the body,
+is included in the body of the transaction, and the hash of every datum that is needed
 is recorded in the UTxO.
-
-The body is signed by every key
-whose outputs are being spent, which additionally offers
-protection from tampering with Plutus interpreter arguments, which may cause
-script validation failure (thus putting the transaction in the "only paying fees" case).
-The hash of the indexed redeemer structure and the protocol parameters used by
-script interpreters are included in the body for this reason. In the future, other parts of the ledger
-state may need to be included in this hash as well, if they are passed as
-arguments to new interpreters. Note also that data from the UTxO
+%
+The body of the transaction, however, is signed by every key
+whose outputs are being spent.
+This provides % , which additionally offers
+protection against tampering with Plutus interpreter arguments, which may cause
+script validation failure (so placing the transaction in the category of ``only paying fees'').
+For this reason, the hash of the indexed redeemer structure and the protocol parameters that are used by
+script interpreters are included in the body of the transaction. In the future, other parts of the ledger
+state may also need to be included in this hash, if they are passed as
+arguments to new script interpreter. Note also that data from the UTxO
 is passed to the interpreter, but does not require this type of hash comparison.
-This is because if the entries the transaction being processed is trying to
-spend have already been spent, there is a phase 1 validation check that
+This is because, if the
+entries % the transaction t being processed is trying to spend
+have already been spent, the phase 1 validation check
 will fail.
 
-Anyone whose tokens are being spent as part of a given transaction
-signs the transaction body. The body also includes the for-fee tags attached to inputs.
-Because of this, the users whose tokens are being spent by the transaction have
-signed their selection of
-inputs that will be put in the fee pot in case of script validation failure.
+The owner of any tokens that are spent as part of a given transaction
+must sign the transaction body. The body also includes the for-fee tags that are attached to inputs.
+%% No obvious what the semantic content is here?
+% Because of this, the owners of tokens that are spent by the transaction have
+% signed their selection of inputs that will be put in the fee pot in case of script validation failure.
+%
 As before, a change in the body of the transaction
 will make the transaction completely invalid, rather than cause the fee-paying script validation
 failure or change the amount of fees it pays.
@@ -356,64 +357,29 @@ failure or change the amount of fees it pays.
 \subsection{Partially processing transactions}
 
 Note that in Goguen, it is possible for a transaction
-to either be processed in full, or do nothing but pay fees for script
-validation (in the case of script validation failure, see Section~\ref{sec:utxo} for details).
-In designing a way to prevent all Ada in the transaction outputs from going into
-the fee pot (in case of script validation failure), we have considered two
-possibilities:
-
-\begin{itemize}
-  \item[(-)] programmatically select the inputs which will be used to pay fees
-  \item[(-)] allow the user to decide which inputs will be used to pay fees
-\end{itemize}
-
-We have decided to give control over input selection for this purpose to the user,
-as users may have different considerations when making their selection. This
-option will additionally allow users to write their own programmatic solutions
-to choosing for-fees inputs.
+to either be fully processed in full, or else to do nothing apart from paying fees for script
+validation (see Section~\ref{sec:utxo} for details).
+We have considered two ways to prevent all the Ada in the transaction outputs from going into
+the fee pot if script validation fails:
+%
+\begin{enumerate}
+  \item programmatically select the inputs which will be used to pay fees;
+  \item allow the user to decide which inputs will be used to pay fees.
+\end{enumerate}
+%
+% Since different users may have different considerations,
+To maximise flexibility, we have chosen to use the second option. %  decided to give control over input selection % for this purpose to the user.
+This also allows users to write their own programmatic solutions to choosing for-fees inputs.
 
 Only VKeys that spend inputs\todo{Inputs that spend VKeys? Or VKeys that spend inputs?} or native scripts that spend inputs can
 be used to pay fees. In Shelley, spending VKey or script outputs is
-validated in a single witnessing rule application, so either all
-required signatures are valid, or a transaction is completely
-invalid. We kept this model, but chose a different approach to
+validated as part of a single rule application, so either all
+the required signatures will be valid, or a transaction is completely
+invalid. We have retained this model, but have chosen a different approach to
 charging users for running Plutus scripts, see
 Section~\ref{sec:two-phase}.
 
-It is expected that Plutus scripts will be more expensive to run, on
-average, than only checking signatures. We want to charge users for
-running Plutus scripts, even if they do not validate. The outputs
-spent to pay for running them (the ones marked as for-fees) must be
-validated fully before validating Plutus scripts.
-
-\subsection{Protocol Parameter Hash Comparison Considerations}
-
-\begin{note}
-  This should probably be in the previous section, but we don't have
-  the Script type there. Maybe move it there anyways and either
-  reference to this section or move the script type there as well...
-\end{note}
-
-To select the relevant protocol parameters to hash, we have defined two helper
-functions (see Figure \ref{fig:defs:functions-chain-helper}). The first
-is an accessor function that returns the language tag of a given script, $\fun{language}$.
-The second is $\fun{cmlangs}$, which, given a set of scripts, returns the set
-of language tags of scripts whose languages have a corresponding cost model,
-e.g. MSig (recall the discussion in \ref{sec:plutus-native}).
-We will use these in the rules we present later to compare the hashes.
-
-\begin{figure*}[htb]
-  \emph{Helper Functions}
-  %
-  \begin{align*}
-    \fun{language} ~\in~& \Script \to \Language \\
-    &\text{returns the language tag, $\Plutus$ for Plutus V1}
-    \nextdef
-    \fun{cmlangs} ~\in~& \powerset{\Script} \to \powerset{(\Language)} \\
-    \fun{cmlangs}~ \var{scrts} ~=~ & \{ \fun{language}~\var{scr} ~\vert~
-      \var{scr}~\in~ \var{scrts}, \fun{language}~\var{scr} \in \{\Plutus\}  \}\\
-    &\text{get all languages that have cost models}
-  \end{align*}
-  \caption{Languages and Plutus Versions}
-  \label{fig:defs:functions-chain-helper}
-\end{figure*}
+Plutus scripts will generally be more expensive to run than simply checking signatures, as in Shelley.
+We therefore want to charge users for running Plutus scripts, even if the scripts fail to validate. The outputs
+that need to be spent to pay for running the scripts (the ones marked as for-fees) must therefore be
+validated fully before validating the Plutus scripts themselves.\todo{These are different forms of validation, right?  This should be made clear.}
