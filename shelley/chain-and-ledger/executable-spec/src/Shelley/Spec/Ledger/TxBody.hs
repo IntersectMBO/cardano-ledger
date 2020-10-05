@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -17,6 +18,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Shelley.Spec.Ledger.TxBody
@@ -36,6 +38,7 @@ module Shelley.Spec.Ledger.TxBody
     StakePoolRelay (..),
     TxBody
       ( TxBody,
+        TxBody',
         _inputs,
         _outputs,
         _certs,
@@ -80,7 +83,9 @@ import Cardano.Binary
     szCases,
     withSlice,
   )
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Cardano.Prelude
   ( cborError,
     panic,
@@ -133,7 +138,7 @@ import Shelley.Spec.Ledger.BaseTypes
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), word64ToCoin)
+import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ix,
@@ -410,7 +415,7 @@ deriving instance Eq (TxIn era)
 
 deriving instance Show (TxIn era)
 
-deriving instance (Era era) => NFData (TxIn era)
+deriving instance Era era => NFData (TxIn era)
 
 instance NoThunks (TxIn era)
 
@@ -418,11 +423,17 @@ instance NoThunks (TxIn era)
 data TxOut era
   = TxOutCompact
       {-# UNPACK #-} !BSS.ShortByteString
-      {-# UNPACK #-} !Word64
+      !(Core.CompactForm (Core.Value era))
 
-deriving instance (Era era) => Show (TxOut era)
+instance
+  (ShelleyBased era) =>
+  Show (TxOut era)
+  where
+  show = show . viewCompactTxOut
 
-deriving instance (Era era) => Eq (TxOut era)
+deriving stock instance
+  ShelleyBased era =>
+  Eq (TxOut era)
 
 instance NFData (TxOut era) where
   rnf = (`seq` ())
@@ -430,25 +441,30 @@ instance NFData (TxOut era) where
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
 pattern TxOut ::
-  Era era =>
+  ShelleyBased era =>
   Addr era ->
-  Coin ->
+  Core.Value era ->
   TxOut era
-pattern TxOut addr coin <-
-  (viewCompactTxOut -> (addr, coin))
+pattern TxOut addr vl <-
+  (viewCompactTxOut -> (addr, vl))
   where
-    TxOut addr (Coin coin) =
-      TxOutCompact (BSS.toShort $ serialiseAddr addr) (fromIntegral coin)
+    TxOut addr vl =
+      -- TODO check this
+      TxOutCompact (BSS.toShort $ serialiseAddr addr) (Core.toCompact vl)
 
 {-# COMPLETE TxOut #-}
 
-viewCompactTxOut :: forall era. Era era => TxOut era -> (Addr era, Coin)
-viewCompactTxOut (TxOutCompact bs c) = (addr, coin)
+viewCompactTxOut ::
+  forall era.
+  ShelleyBased era =>
+  TxOut era ->
+  (Addr era, Core.Value era)
+viewCompactTxOut (TxOutCompact bs c) = (addr, val)
   where
     addr = case decompactAddr bs of
       Nothing -> panic "viewCompactTxOut: impossible"
       Just a -> a
-    coin = word64ToCoin c
+    val = Core.fromCompact c
 
 decompactAddr :: Era era => BSS.ShortByteString -> Maybe (Addr era)
 decompactAddr bs =
@@ -548,14 +564,16 @@ data TxBody era = TxBody'
     bodyBytes :: BSL.ByteString,
     extraSize :: !Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving instance (ShelleyBased era) => Show (TxBody era)
 
 deriving via AllowThunksIn '["bodyBytes"] (TxBody era) instance Era era => NoThunks (TxBody era)
 
 instance Era era => HashAnnotated (TxBody era) era
 
 pattern TxBody ::
-  Era era =>
+  ShelleyBased era =>
   Set (TxIn era) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert era) ->
@@ -767,7 +785,7 @@ instance
       pure $ TxInCompact a b
 
 instance
-  (Typeable era, Era era) =>
+  ShelleyBased era =>
   ToCBOR (TxOut era)
   where
   toCBOR (TxOutCompact addr coin) =
@@ -776,7 +794,7 @@ instance
       <> toCBOR coin
 
 instance
-  (Era era) =>
+  ShelleyBased era =>
   FromCBOR (TxOut era)
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
@@ -814,7 +832,7 @@ instance
   toCBOR = encodePreEncoded . BSL.toStrict . bodyBytes
 
 instance
-  (Era era) =>
+  ShelleyBased era =>
   FromCBOR (Annotator (TxBody era))
   where
   fromCBOR = annotatorSlice $ do

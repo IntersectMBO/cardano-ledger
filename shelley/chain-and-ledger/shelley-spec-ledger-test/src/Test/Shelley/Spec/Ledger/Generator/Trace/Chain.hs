@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -18,7 +19,7 @@
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Val((<->))
+import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition (IRC (..))
@@ -53,12 +54,12 @@ import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
 import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
-import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash)
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, maxLLSupply, mkHash)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
-  (Era era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   HasTrace (CHAIN era) (GenEnv era)
   where
   envGen _ = pure ()
@@ -83,7 +84,7 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era a.
-  Era era =>
+  ShelleyTest era =>
   Constants ->
   IRC (CHAIN era) ->
   Gen (Either a (ChainState era))
@@ -136,7 +137,7 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall c.
-  Era c =>
+  ShelleyTest c =>
   ShelleyGenesisStaking c ->
   ChainState c ->
   ChainState c

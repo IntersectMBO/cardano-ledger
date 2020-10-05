@@ -140,7 +140,7 @@ aliceAndBobOrCarlOrDaria p =
       RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: Era era => [(Addr era, Coin)] -> TxBody era
+initTxBody :: ShelleyTest era => [(Addr era, Coin)] -> TxBody era
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
@@ -152,7 +152,7 @@ initTxBody addrs =
     SNothing
     SNothing
 
-makeTxBody :: Era era => [TxIn era] -> [(Addr era, Coin)] -> Wdrl era -> TxBody era
+makeTxBody :: ShelleyTest era => [TxIn era] -> [(Addr era, Coin)] -> Wdrl era -> TxBody era
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
@@ -179,7 +179,7 @@ aliceInitCoin = Coin 10000
 bobInitCoin :: Coin
 bobInitCoin = Coin 1000
 
-genesis :: Era era => LedgerState era
+genesis :: ShelleyTest era => LedgerState era
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty
@@ -198,7 +198,7 @@ initPParams = emptyPParams {_maxTxSize = 1000}
 -- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState ::
   forall era.
-  (Era era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   Coin ->
   [(MultiSig era, Coin)] ->
   (TxId era, Either [[PredicateFailure (UTXOW era)]] (UTxOState era))
@@ -245,7 +245,7 @@ initialUTxOState aliceKeep msigs =
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript ::
   forall proxy era.
-  (Era era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   proxy era ->
   [(MultiSig era, Coin)] ->
   [MultiSig era] ->

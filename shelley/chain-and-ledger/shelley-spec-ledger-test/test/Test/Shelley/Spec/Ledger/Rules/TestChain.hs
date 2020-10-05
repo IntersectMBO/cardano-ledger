@@ -66,6 +66,7 @@ import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
     poolRetirement,
     poolStateIsInternallyConsistent,
   )
+import Test.Shelley.Spec.Ledger.Orphans ()
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
 import Test.Shelley.Spec.Ledger.Utils
   ( epochFromSlotNo,
@@ -325,7 +326,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
     signaturesSubset :: SourceSignalTarget (LEDGER C) -> Property
     signaturesSubset SourceSignalTarget {signal = tx} =
       let khs = keyHashSet tx
-       in property $ 
+       in property $
             all (existsReqKeyComb khs) (msigWits . _witnessSet $ tx)
 
     existsReqKeyComb keyHashes msig =
@@ -390,11 +391,11 @@ nonNegativeDeposits SourceSignalTarget {source = chainSt} =
 -- | Checks that the fees are non-decreasing when not at an epoch boundary
 feesNonDecreasing :: SourceSignalTarget (CHAIN C) -> Property
 feesNonDecreasing SourceSignalTarget {source, target} =
-  property $ 
+  property $
     fees_ source <= fees_ target
   where
     fees_ chainSt =
-      let (UTxOState {_fees = fees}) = 
+      let (UTxOState {_fees = fees}) =
             _utxoState . esLState . nesEs . chainNes $ chainSt
       in fees
 

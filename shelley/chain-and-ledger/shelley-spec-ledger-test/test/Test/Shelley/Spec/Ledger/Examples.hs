@@ -11,8 +11,9 @@ import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Shelley.Spec.Ledger.BlockChain (Block)
 import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainState, totalAda)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
-import Test.Shelley.Spec.Ledger.Utils (runShelleyBase, maxLLSupply, applySTSTest)
-import Test.Tasty.HUnit ((@?=), Assertion)
+import Test.Shelley.Spec.Ledger.Orphans ()
+import Test.Shelley.Spec.Ledger.Utils (applySTSTest, maxLLSupply, runShelleyBase)
+import Test.Tasty.HUnit (Assertion, (@?=))
 
 data CHAINExample h = CHAINExample
   { -- | State to start testing with

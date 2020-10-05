@@ -16,6 +16,7 @@ module Test.Shelley.Spec.Ledger.Examples.Mir
 where
 
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
@@ -59,7 +60,6 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
-import Cardano.Ledger.Val((<->),(<+>))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -83,7 +83,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkOCert,
     zero,
   )
-import Test.Shelley.Spec.Ledger.Utils (getBlockNonce)
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
@@ -93,14 +93,14 @@ aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Era era => UTxO era
+initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
   genesisCoins
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStMIR :: forall era. Era era => Coin -> ChainState era
+initStMIR :: forall era. ShelleyTest era => Coin -> ChainState era
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt initUTxO
@@ -128,7 +128,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> (feeTx1 <+> _keyDeposit ppEx)
 
-txbodyEx1 :: Era era => MIRPot -> TxBody era
+txbodyEx1 :: ShelleyTest era => MIRPot -> TxBody era
 txbodyEx1 pot =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -153,7 +153,7 @@ sufficientMIRWits = mirWits [0 .. 4]
 insufficientMIRWits :: (Era era) => [KeyPair 'Witness era]
 insufficientMIRWits = mirWits [0 .. 3]
 
-txEx1 :: (Era era, Mock (Crypto era)) => [KeyPair 'Witness era] -> MIRPot -> Tx era
+txEx1 :: (ShelleyTest era, Mock (Crypto era)) => [KeyPair 'Witness era] -> MIRPot -> Tx era
 txEx1 wits pot =
   Tx
     (txbodyEx1 pot)
@@ -167,7 +167,7 @@ txEx1 wits pot =
 
 blockEx1' ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   [KeyPair 'Witness era] ->
   MIRPot ->
   Block era
@@ -187,14 +187,14 @@ blockEx1' wits pot =
 
 blockEx1 ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   MIRPot ->
   Block era
 blockEx1 = blockEx1' sufficientMIRWits
 
 expectedStEx1' ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   [KeyPair 'Witness era] ->
   MIRPot ->
   ChainState era
@@ -209,7 +209,7 @@ expectedStEx1' wits pot =
 
 expectedStEx1 ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   MIRPot ->
   ChainState era
 expectedStEx1 = expectedStEx1' sufficientMIRWits
@@ -217,7 +217,7 @@ expectedStEx1 = expectedStEx1' sufficientMIRWits
 -- === Block 1, Slot 10, Epoch 0, Successful MIR Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
-mir1 :: (Era era, ExMock (Crypto era)) => MIRPot -> CHAINExample era
+mir1 :: (ShelleyTest era, ExMock (Crypto era)) => MIRPot -> CHAINExample era
 mir1 pot =
   CHAINExample
     (initStMIR (Coin 1000))
@@ -227,7 +227,7 @@ mir1 pot =
 -- === Block 1, Slot 10, Epoch 0, Insufficient MIR Wits, Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
-mirFailWits :: (Era era, ExMock (Crypto era)) => MIRPot -> CHAINExample era
+mirFailWits :: (ShelleyTest era, ExMock (Crypto era)) => MIRPot -> CHAINExample era
 mirFailWits pot =
   CHAINExample
     (initStMIR (Coin 1000))
@@ -251,7 +251,7 @@ mirFailWits pot =
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
 mirFailFunds ::
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   MIRPot ->
   Coin ->
   Coin ->
@@ -285,7 +285,7 @@ mirFailFunds pot treasury llNeeded llReceived =
 -- Block 2, Slot 50, Epoch 0
 --
 
-blockEx2 :: forall era. (Era era, ExMock (Crypto era)) => MIRPot -> Block era
+blockEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => MIRPot -> Block era
 blockEx2 pot =
   mkBlockFakeVRF
     (bhHash $ bheader (blockEx1 pot))
@@ -302,7 +302,7 @@ blockEx2 pot =
 
 expectedStEx2 ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   MIRPot ->
   ChainState era
 expectedStEx2 pot =
@@ -315,7 +315,7 @@ expectedStEx2 pot =
 --
 -- Submit an empty block to create an empty reward update.
 mir2 ::
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   MIRPot ->
   CHAINExample era
 mir2 pot =
@@ -330,14 +330,14 @@ mir2 pot =
 
 epoch1Nonce ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   MIRPot ->
   Nonce
 epoch1Nonce pot = chainCandidateNonce (expectedStEx2 @era pot)
 
 blockEx3 ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   MIRPot ->
   Block era
 blockEx3 pot =
@@ -356,7 +356,7 @@ blockEx3 pot =
 
 expectedStEx3 ::
   forall era.
-  (Era era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era)) =>
   MIRPot ->
   ChainState era
 expectedStEx3 pot =
@@ -369,7 +369,7 @@ expectedStEx3 pot =
 -- === Block 3, Slot 110, Epoch 1
 --
 -- Submit an empty block in the next epoch to apply the MIR rewards.
-mir3 :: (Era era, ExMock (Crypto era)) => MIRPot -> CHAINExample era
+mir3 :: (ShelleyTest era, ExMock (Crypto era)) => MIRPot -> CHAINExample era
 mir3 pot = CHAINExample (expectedStEx2 pot) (blockEx3 pot) (Right $ expectedStEx3 pot)
 
 --

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- |
@@ -40,6 +41,8 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
 where
 
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.Iterate.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
 import Data.Foldable (fold)
@@ -90,7 +93,6 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..), TxBody (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
-import Cardano.Ledger.Val((<->),(<+>))
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
 
 -- | = Evolve Nonces - Frozen
@@ -121,7 +123,7 @@ evolveNonceUnfrozen n cs =
 -- instead use 'newEpoch'.
 newLab ::
   forall era.
-  Era era =>
+  (Era era) =>
   Block era ->
   ChainState era ->
   ChainState era
@@ -164,7 +166,7 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
 -- Update the UTxO for given transaction body.
 newUTxO ::
   forall era.
-  Era era =>
+  ShelleyBased era =>
   TxBody era ->
   ChainState era ->
   ChainState era

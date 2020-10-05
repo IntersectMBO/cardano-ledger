@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -43,7 +44,14 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
     defaultConstants,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
-import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs, maxKESIterations, mkKESKeyPair, mkVRFKeyPair, slotsPerKESIteration)
+import Test.Shelley.Spec.Ledger.Utils
+  ( MultiSigPairs,
+    ShelleyTest,
+    maxKESIterations,
+    mkKESKeyPair,
+    mkVRFKeyPair,
+    slotsPerKESIteration,
+  )
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
@@ -106,7 +114,7 @@ coreNodeKeys c@Constants {numCoreNodes} =
   where
     toKeyPair (sk, vk) = KeyPair vk sk
 
-genUtxo0 :: Era era => Constants -> Gen (UTxO era)
+genUtxo0 :: ShelleyTest era => Constants -> Gen (UTxO era)
 genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts

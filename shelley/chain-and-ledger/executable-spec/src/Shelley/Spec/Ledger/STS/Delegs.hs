@@ -1,13 +1,17 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Delegs
   ( DELEGS,
@@ -23,6 +27,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans, (?!), (?!:))
@@ -75,7 +80,10 @@ data DelegsEnv era = DelegsEnv
     delegsTx :: Tx era,
     delegsAccount :: AccountState
   }
-  deriving (Show)
+
+deriving stock instance
+  ShelleyBased era =>
+  Show (DelegsEnv era)
 
 data DelegsPredicateFailure era
   = DelegateeNotRegisteredDELEG
@@ -86,7 +94,7 @@ data DelegsPredicateFailure era
   deriving (Show, Eq, Generic)
 
 instance
-  Era era =>
+  ShelleyBased era =>
   STS (DELEGS era)
   where
   type State (DELEGS era) = DPState era
@@ -105,8 +113,14 @@ instance
   ToCBOR (DelegsPredicateFailure era)
   where
   toCBOR = \case
-    DelegateeNotRegisteredDELEG kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
-    WithdrawalsNotInRewardsDELEGS ws -> encodeListLen 2 <> toCBOR (1 :: Word8) <> mapToCBOR ws
+    DelegateeNotRegisteredDELEG kh ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR kh
+    WithdrawalsNotInRewardsDELEGS ws ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> mapToCBOR ws
     (DelplFailure a) ->
       encodeListLen 2 <> toCBOR (2 :: Word8)
         <> toCBOR a
@@ -132,7 +146,9 @@ instance
 
 delegsTransition ::
   forall era.
-  Era era =>
+  ( ShelleyBased era,
+    Embed (DELPL era) (DELEGS era)
+  ) =>
   TransitionRule (DELEGS era)
 delegsTransition = do
   TRC (env@(DelegsEnv slot txIx pp tx acnt), dpstate, certificates) <- judgmentContext
@@ -192,7 +208,7 @@ delegsTransition = do
             ]
 
 instance
-  Era era =>
+  ShelleyBased era =>
   Embed (DELPL era) (DELEGS era)
   where
   wrapFailed = DelplFailure

@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -17,7 +19,7 @@ module Shelley.Spec.Ledger.STS.Ledgers
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Monad (foldM)
 import Control.State.Transition
   ( Embed (..),
@@ -29,7 +31,6 @@ import Control.State.Transition
   )
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
@@ -56,12 +57,16 @@ data LedgersEnv era = LedgersEnv
 
 data LedgersPredicateFailure era
   = LedgerFailure (PredicateFailure (LEDGER era)) -- Subtransition Failures
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
 
-instance (Era era) => NoThunks (LedgersPredicateFailure era)
+deriving stock instance ShelleyBased era => Show (LedgersPredicateFailure era)
+
+deriving stock instance ShelleyBased era => Eq (LedgersPredicateFailure era)
+
+instance ShelleyBased era => NoThunks (LedgersPredicateFailure era)
 
 instance
-  ( Era era,
+  ( ShelleyBased era,
     DSignable era (Hash era (TxBody era))
   ) =>
   STS (LEDGERS era)
@@ -76,20 +81,20 @@ instance
   transitionRules = [ledgersTransition]
 
 instance
-  (Typeable era, Era era) =>
+  ShelleyBased era =>
   ToCBOR (LedgersPredicateFailure era)
   where
   toCBOR (LedgerFailure e) = toCBOR e
 
 instance
-  (Era era) =>
+  ShelleyBased era =>
   FromCBOR (LedgersPredicateFailure era)
   where
   fromCBOR = LedgerFailure <$> fromCBOR
 
 ledgersTransition ::
   forall era.
-  ( Era era,
+  ( ShelleyBased era,
     DSignable era (Hash era (TxBody era))
   ) =>
   TransitionRule (LEDGERS era)
@@ -109,7 +114,7 @@ ledgersTransition = do
   pure $ LedgerState u'' dp''
 
 instance
-  ( Era era,
+  ( ShelleyBased era,
     DSignable era (Hash era (TxBody era))
   ) =>
   Embed (LEDGER era) (LEDGERS era)

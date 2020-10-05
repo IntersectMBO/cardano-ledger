@@ -1,5 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -15,7 +16,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended (IRC, TRC (..))
@@ -43,7 +44,7 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkTx)
-import Test.Shelley.Spec.Ledger.Utils (applySTSTest, runShelleyBase)
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, applySTSTest, runShelleyBase)
 
 genAccountState :: Constants -> Gen AccountState
 genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
@@ -54,7 +55,7 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
 instance
-  (Era era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   TQC.HasTrace (LEDGER era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
@@ -71,7 +72,7 @@ instance
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 instance
-  (Era era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   TQC.HasTrace (LEDGERS era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
@@ -122,7 +123,7 @@ instance
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
-  Era era =>
+  ShelleyTest era =>
   Constants ->
   IRC (LEDGER era) ->
   Gen (Either a (UTxOState era, DPState era))

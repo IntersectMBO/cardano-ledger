@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -34,6 +35,7 @@ module Test.Shelley.Spec.Ledger.Utils
     GenesisKeyPair,
     MultiSigPairs,
     getBlockNonce,
+    ShelleyTest,
   )
 where
 
@@ -61,8 +63,10 @@ import Cardano.Crypto.VRF
     genKeyVRF,
   )
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Cardano.Prelude (Coercible, asks)
 import Cardano.Slotting.EpochInfo
   ( epochInfoEpoch,
@@ -108,14 +112,14 @@ import Shelley.Spec.Ledger.Keys
     pattern KeyPair,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
--- import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
-
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
   )
+
+type ShelleyTest era = (ShelleyBased era, Core.Value era ~ Coin)
 
 -- =======================================================
 
@@ -148,7 +152,8 @@ mkGenKey seed =
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
-mkKeyPair :: forall era kd.
+mkKeyPair ::
+  forall era kd.
   DSIGNAlgorithm (DSIGN (Crypto era)) =>
   (Word64, Word64, Word64, Word64, Word64) ->
   (SignKeyDSIGN (DSIGN (Crypto era)), VKey kd era)

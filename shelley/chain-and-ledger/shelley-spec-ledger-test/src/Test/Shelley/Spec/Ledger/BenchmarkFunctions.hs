@@ -27,13 +27,12 @@ module Test.Shelley.Spec.Ledger.BenchmarkFunctions
 where
 
 -- Cypto and Era stuff
-import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
-  ( C_Crypto,
-  )
-import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
-import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Era(Crypto, Era)
 
+import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Val (Val (inject))
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import qualified Data.Map as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -93,8 +92,9 @@ import Shelley.Spec.Ledger.TxBody
     _poolVrf,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
-import Cardano.Ledger.Val(Val(inject))
-
+import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
+  ( C_Crypto,
+  )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
     genesisId,
@@ -124,6 +124,8 @@ instance Cardano.Ledger.Crypto.Crypto B_Crypto where
   type DSIGN B_Crypto = DSIGN Original.C_Crypto
   type HASH B_Crypto = Blake2b_256
   type ADDRHASH B_Crypto = Blake2b_256
+
+type instance Core.Value B = Coin
 
 -- =========================================================
 

@@ -23,8 +23,10 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Era
+import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude
   ( ByteString,
   )
@@ -88,7 +90,6 @@ import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
   )
-import Cardano.Ledger.Val((<->))
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Prelude (genBytes)
@@ -98,6 +99,7 @@ import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
   ( C_Crypto,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
+import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils (testSTS)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
@@ -276,3 +278,5 @@ instance Cardano.Ledger.Crypto.Crypto C_crypto where
   type DSIGN C_crypto = DSIGN.Ed25519DSIGN
   type HASH C_crypto = HASH Original.C_Crypto
   type ADDRHASH C_crypto = Hash.Blake2b_224
+
+type instance Core.Value C = Coin

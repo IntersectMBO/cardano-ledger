@@ -16,7 +16,7 @@ where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Iterate.SetAlgebra (dom, eval)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
@@ -52,7 +52,8 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
 import Test.Shelley.Spec.Ledger.Utils
-  ( epochFromSlotNo,
+  ( ShelleyTest,
+    epochFromSlotNo,
     maxKESIterations,
     runShelleyBase,
     slotFromEpoch,
@@ -70,7 +71,7 @@ type TxGen era =
 -- | Generate a valid block.
 genBlock ::
   forall era.
-  (Era era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   GenEnv era ->
   ChainState era ->
   Gen (Block era)
@@ -83,7 +84,7 @@ genBlock ge = genBlockWithTxGen genTxs ge
 
 genBlockWithTxGen ::
   forall era.
-  (Era era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   TxGen era ->
   GenEnv era ->
   ChainState era ->
@@ -147,7 +148,7 @@ genBlockWithTxGen
 
 selectNextSlotWithLeader ::
   forall era.
-  (Era era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   GenEnv era ->
   ChainState era ->
   -- Starting slot
@@ -217,7 +218,7 @@ selectNextSlotWithLeader
 -- | The chain state is a composite of the new epoch state and the chain dep
 -- state. We tick both.
 tickChainState ::
-  Era era =>
+  ShelleyTest era =>
   SlotNo ->
   ChainState era ->
   ChainState era

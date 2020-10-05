@@ -1,7 +1,11 @@
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Test.Shelley.Spec.Ledger.Shrinkers where
 
+import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Foldable (toList)
 import Data.List (foldl')
 import Data.Map (Map)
@@ -14,15 +18,13 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Coin
-
-import Cardano.Ledger.Era
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxBody
 import Test.QuickCheck (shrinkIntegral, shrinkList)
-import Cardano.Ledger.Val((<->),(<+>))
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
 
 shrinkBlock ::
   Block h ->
@@ -31,13 +33,16 @@ shrinkBlock _ = []
 
 shrinkTx ::
   forall era.
-  Era era =>
+  ShelleyTest era =>
   Tx era ->
   [Tx era]
 shrinkTx (Tx _b _ws _md) =
   [Tx b' _ws _md | b' <- shrinkTxBody _b]
 
-shrinkTxBody :: Era era => TxBody era -> [TxBody era]
+shrinkTxBody ::
+  ShelleyTest era =>
+  TxBody era ->
+  [TxBody era]
 shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
   -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
@@ -55,13 +60,13 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
     -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
     outBalance = outputBalance os
 
-outputBalance :: Era era => StrictSeq (TxOut era) -> Coin
+outputBalance :: ShelleyTest era => StrictSeq (TxOut era) -> Coin
 outputBalance = foldl' (\v (TxOut _ c) -> v <+> c) (Coin 0)
 
 shrinkTxIn :: TxIn era -> [TxIn era]
 shrinkTxIn = const []
 
-shrinkTxOut :: Era era => TxOut era -> [TxOut era]
+shrinkTxOut :: ShelleyTest era => TxOut era -> [TxOut era]
 shrinkTxOut (TxOut addr coin) =
   TxOut addr <$> shrinkCoin coin
 
