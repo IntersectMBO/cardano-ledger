@@ -57,9 +57,9 @@
 \label{sec:block-body-trans}
 
 
-In Figure~\ref{fig:rules:bbody}, we have added the check that the sum total of
-script fees all transactions in a block pay do not exceed the maximum total fees per
-block (stored as a protocol parameter).
+Figure~\ref{fig:rules:bbody} includes an additional check that the sum of the
+script fees that are paid by all transactions in a block does not exceed the maximum total fees per
+block (obtained from the protocol parameter).
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:bbody}
@@ -112,8 +112,8 @@ block (stored as a protocol parameter).
 \end{figure}
 
 We have also defined a function that transforms the Shelley ledger state into
-the Goguen one, see Figure~\ref{fig:functions:to-shelley}. Note that here we
-refer to Shelley-era protocol parameter type as $\ShelleyPParams$, and the Goguen
+the corresponding Goguen one, see Figure~\ref{fig:functions:to-shelley}. We
+refer to the Shelley-era protocol parameter type as $\ShelleyPParams$, and the corresponding Goguen
 type as $\PParams$. We use the notation $\var{chainstate}_{x}$ to represent
 variable $x$ in the chain state. We do not specify the variables that
 remain unchanged during the transition.
