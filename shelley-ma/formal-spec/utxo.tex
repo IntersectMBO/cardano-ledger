@@ -217,7 +217,9 @@ $\Coin$.
     \cup & ~~\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
            \restrictdom \fun{txwdrls}~\var{txb}) \} \\
       \cup & ~~(\AddrScr \cap \fun{certWitsNeeded}~{txb}) \\
-      \cup & ~~\hldiff{\supp~(\fun{forge}~(\txbody{tx}))}
+      \cup & ~~\hldiff{\supp~(\fun{forge}~\var{txb})} \\
+    & \where \\
+    & ~~~~~~~ \var{txb}~=~\txbody{tx}
   \end{align*}
   \caption{Scripts Needed}
   \label{fig:functions-witnesses}
