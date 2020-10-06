@@ -122,35 +122,35 @@ and include the fees for their execution.
 \end{figure}
 
 
-Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition system.
-The changes due to Plutus integration are as follows:
+Figure~\ref{fig:functions:utxo} defines the functions that are needed for the UTxO transition system.
+The changes that are needed for Plutus integration are:
 
 \begin{itemize}
 
-  \item $\fun{getCoin}$ adds up all the Ada in a given output and returns it as a
-  $\Coin$ value
+  \item The $\fun{getCoin}$ function sums all the Ada in a given output and returns it as a
+  $\Coin$ value.
 
-  \item The function $\fun{outs}$ throws away the $\HasDV$ tag from a
-  transaction output and adds the slot number of the block in which transaction is
-  included to the outputs.
+  \item The function $\fun{outs}$ discards the $\HasDV$ tag from a
+  transaction output and adds the slot number of the block in which the transaction is
+  included.
 
-  \item $\fun{txscrfee}$ calculates the fee a transaction must pay for script
-  execution based on the amount of $\ExUnits$ it has budgeted for running the
-  scripts it carries, and the prices (as indicated in the current protocol parameters)
-  for each of the components of $\ExUnits$.
+  \item $\fun{txscrfee}$ calculates the fee that a transaction must pay for script
+  execution based on the amount of $\ExUnits$ it has budgeted, and the prices in the current protocol parameters
+  for each component of $\ExUnits$.
 
-  \item The minimim fee calculation, $\fun{minfee}$, includes the script
-  fees the transaction is obligated to pay to run its scripts.
+  \item The minimum fee calculation, $\fun{minfee}$, includes the script
+  fees that the transaction is obligated to pay in order to run its scripts.
 
-  \item The $\fun{produced}$ calculation requires the current slot number as an argument, which is
+  \item The $\fun{produced}$ calculation requires the current slot number as an argument -- this is
   needed to construct the correct UTxO outputs.
 \end{itemize}
 
-Because the $\Tx$ type is a sum of $\ShelleyTx$ and $\GoguenTx$, and
-there was a way of computing an ID from a Shelley transaction, there
+Since the $\Tx$ type combines both $\ShelleyTx$ and $\GoguenTx$, and
+there was already a way of computing an ID from a Shelley transaction, there
 is potential for confusion how the ID of a transaction is
 computed. Here, $\TxId$ is always computed from values of type $\Tx$,
-never from $\ShelleyTx$ or $\GoguenTx$.
+\emph{and never from the underlying $\ShelleyTx$ or $\GoguenTx$}.  That is, there is a \emph{canonical} ID for each Goguen transaction,
+and this is not necessarily the same as the corresponding ID in the underlying Shelley or Goguen transaction type.
 
 \begin{figure}[htb]
   \emph{Helper Functions}
