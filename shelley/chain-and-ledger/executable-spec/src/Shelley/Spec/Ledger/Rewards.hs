@@ -177,10 +177,12 @@ posteriorDistribution (Histogram points) (Likelihood likelihoods) =
 
 -- | Normalize the histogram so that the total area is 1
 normalize :: Histogram -> Histogram
-normalize (Histogram values) = Histogram $ (\x -> x - logArea) <$> values
+normalize (Histogram values) = Histogram $ (\x -> x - logArea) <$> values'
   where
+    m = maximum values
+    values' = (\x -> x - m) <$> values
     logArea = toLogWeight area
-    area = reimannSum 0.01 (fromLogWeight <$> values)
+    area = reimannSum 0.01 (fromLogWeight <$> values')
 
 -- | Calculate the k percentile for this distribution.
 -- k is a value between 0 and 1. The 0 percentile is 0 and the 1 percentile is 1
