@@ -4,9 +4,8 @@
 In Shelley, the protocol parameter $\var{minUTxOValue}$ is used to
 disincentivize attacking nodes by putting many small outputs on the
 UTxO, permanently blocking memory. Because members of the $\Value$
-type can be arbitrary large, the multi-asset ledger must
-accomodate by scaling the minimum amount of Ada in an output by the
-size of the output.
+type can be arbitrary large, the ledger requires a $\UTxO$ entry to
+contain a minimum amount of Ada, proportional to its size.
 
 How much memory is used exactly is an implementation detail, but some facts are:
 \begin{itemize}
@@ -21,14 +20,14 @@ Because of the first two items in that list, we could use the following definiti
   \begin{align*}
     & \fun{outputSize} \in \TxOut \to \MemoryEstimate \\
     & \fun{outputSize} ~\var{out} = k_0 + k_1 * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
-            \land (\var{pid}, \var{aid}) \neq (\mathsf{adaID}, \mathsf{adaToken}) \}| \\
+            \land (\var{pid}, \var{aid}) \neq (\mathsf{adaPolicy}, \mathsf{adaName}) \}| \\
     & \phantom{\fun{outputSize} ~\var{out} = k_0} + k_2 * |\{ \var{pid} : \exists aid : v~pid~aid \neq 0 \}|
   \end{align*}
   \caption{Value Size}
   \label{fig:test}
 \end{figure*}
 
-Here, $k_0$ reflects the constant part, i.e. Ada and the address, $k_1$ reflects the
+Here, $k_0$ reflects the constant part, i.e. Ada, the key and the address, $k_1$ reflects the
 size of non-ada tokens, and $k_2$ the size of $\PolicyID$s.
 
 There are some trade-offs here. Because of the third item in the above
