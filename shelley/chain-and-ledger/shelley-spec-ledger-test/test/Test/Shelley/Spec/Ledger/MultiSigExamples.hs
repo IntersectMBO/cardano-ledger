@@ -17,8 +17,9 @@ module Test.Shelley.Spec.Ledger.MultiSigExamples
   )
 where
 
-import qualified Cardano.Crypto.Hash as Hash
+import qualified Cardano.Ledger.Val as Val
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Control.State.Transition.Extended (BaseM, Environment, PredicateFailure, STS, Signal, State, TRC (..))
@@ -146,7 +147,7 @@ aliceAndBobOrCarlOrDaria p =
       RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: ShelleyTest era => [(Addr era, Coin)] -> TxBody era
+initTxBody :: ShelleyTest era => [(Addr era, Core.Value era)] -> TxBody era
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
@@ -161,7 +162,7 @@ initTxBody addrs =
 makeTxBody ::
   ShelleyTest era =>
   [TxIn era] ->
-  [(Addr era, Coin)] ->
+  [(Addr era, Core.Value era)] ->
   Wdrl era ->
   TxBody era
 makeTxBody inp addrCs wdrl =
@@ -191,11 +192,11 @@ makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
           msigWits = msigs
         }
 
-aliceInitCoin :: Coin
-aliceInitCoin = Coin 10000
+aliceInitCoin :: ShelleyTest era => Core.Value era
+aliceInitCoin = Val.inject $ Coin 10000
 
-bobInitCoin :: Coin
-bobInitCoin = Coin 1000
+bobInitCoin :: ShelleyTest era => Core.Value era
+bobInitCoin = Val.inject $ Coin 1000
 
 genesis :: forall era. ShelleyTest era => LedgerState era
 genesis = genesisState genDelegs0 utxo0
@@ -224,12 +225,12 @@ initialUTxOState ::
     Signal (UTXOW era) ~ Tx era,
     Mock (Crypto era)
   ) =>
-  Coin ->
-  [(MultiSig era, Coin)] ->
+  Core.Value era ->
+  [(MultiSig era, Core.Value era)] ->
   (TxId era, Either [[PredicateFailure (UTXOW era)]] (UTxOState era))
 initialUTxOState aliceKeep msigs =
   let addresses =
-        [(Cast.aliceAddr, aliceKeep) | aliceKeep > mempty]
+        [(Cast.aliceAddr, aliceKeep) | Val.pointwise (>) aliceKeep mempty]
           ++ map
             ( \(msig, era) ->
                 ( Addr
@@ -279,10 +280,10 @@ applyTxWithScript ::
     Mock (Crypto era)
   ) =>
   proxy era ->
-  [(MultiSig era, Coin)] ->
+  [(MultiSig era, Core.Value era)] ->
   [MultiSig era] ->
   Wdrl era ->
-  Coin ->
+  Core.Value era ->
   [KeyPair 'Witness (Crypto era)] ->
   Either [[PredicateFailure (UTXOW era)]] (UTxOState era)
 applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
@@ -298,12 +299,12 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
     txbody =
       makeTxBody
         inputs'
-        [(Cast.aliceAddr, aliceInitCoin <> bobInitCoin <> fold (unWdrl wdrl))]
+        [(Cast.aliceAddr, aliceInitCoin <> bobInitCoin <> (Val.inject $ fold (unWdrl wdrl)))]
         wdrl
     inputs' =
       [ TxIn txId (fromIntegral n)
         | n <-
-            [0 .. length lockScripts - (if aliceKeep > mempty then 0 else 1)]
+            [0 .. length lockScripts - (if (Val.pointwise (>) aliceKeep mempty) then 0 else 1)]
       ]
     -- alice? + scripts
     tx =

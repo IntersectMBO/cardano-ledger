@@ -14,6 +14,8 @@ module Test.Shelley.Spec.Ledger.Examples.Updates
   )
 where
 
+import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Data.Map.Strict as Map
@@ -84,11 +86,11 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
-aliceInitCoin :: Coin
-aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin :: ShelleyTest era => Core.Value era
+aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
-bobInitCoin :: Coin
-bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
+bobInitCoin :: ShelleyTest era => Core.Value era
+bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
@@ -136,8 +138,8 @@ ppVotes1 = collectVotes ppVoteA [0, 3, 4]
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin <-> feeTx1
+aliceCoinEx1 :: ShelleyTest era => Core.Value era
+aliceCoinEx1 = aliceInitCoin <-> (Val.inject feeTx1)
 
 txbodyEx1 :: ShelleyTest era => TxBody era
 txbodyEx1 =
@@ -211,8 +213,8 @@ updateEx3B = Update ppVotes2 (EpochNo 0)
 feeTx2 :: Coin
 feeTx2 = Coin 1
 
-aliceCoinEx2 :: Coin
-aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
+aliceCoinEx2 :: ShelleyTest era => Core.Value era
+aliceCoinEx2 = aliceCoinEx1 <-> (Val.inject feeTx2)
 
 txbodyEx2 :: ShelleyTest era => TxBody era
 txbodyEx2 =
@@ -304,8 +306,8 @@ ppVotes3 = collectVotes ppVoteB [1]
 feeTx3 :: Coin
 feeTx3 = Coin 1
 
-aliceCoinEx3 :: Coin
-aliceCoinEx3 = aliceCoinEx2 <-> feeTx3
+aliceCoinEx3 :: ShelleyTest era => Core.Value era
+aliceCoinEx3 = aliceCoinEx2 <-> (Val.inject feeTx3)
 
 txbodyEx3 :: ShelleyTest era => TxBody era
 txbodyEx3 =

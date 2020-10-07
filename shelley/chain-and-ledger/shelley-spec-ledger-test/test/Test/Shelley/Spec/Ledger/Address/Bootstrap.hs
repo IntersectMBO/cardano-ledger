@@ -17,6 +17,7 @@ module Test.Shelley.Spec.Ledger.Address.Bootstrap
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Binary (serialize')
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
@@ -150,7 +151,7 @@ utxo0 =
   UTxO $
     Map.singleton
       (TxIn genesisId 0)
-      (TxOut aliceAddr aliceInitCoin)
+      (TxOut aliceAddr (Core.Value aliceInitCoin))
 
 utxoState0 :: UTxOState C
 utxoState0 =
@@ -177,8 +178,8 @@ utxoState1 =
     }
   where
     txid = TxId $ hashAnnotated txBody
-    bobResult = (TxIn txid 0, TxOut bobAddr coinsToBob)
-    aliceResult = (TxIn txid 1, TxOut aliceAddr (Coin 998990))
+    bobResult = (TxIn txid 0, TxOut bobAddr (Core.Value coinsToBob))
+    aliceResult = (TxIn txid 1, TxOut aliceAddr (Core.Value (Coin 998990)))
 
 utxoEnv :: UtxoEnv C
 utxoEnv =
@@ -239,7 +240,7 @@ txBody :: TxBody C
 txBody =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut bobAddr coinsToBob, TxOut aliceAddr change],
+      _outputs = StrictSeq.fromList [TxOut bobAddr (Core.Value coinsToBob), TxOut aliceAddr (Core.Value change)],
       _certs = StrictSeq.fromList mempty,
       _wdrls = Wdrl Map.empty,
       _txfee = fee,
@@ -277,3 +278,5 @@ instance Cardano.Ledger.Crypto.Crypto C_crypto where
   type DSIGN C_crypto = DSIGN.Ed25519DSIGN
   type HASH C_crypto = HASH Original.C_Crypto
   type ADDRHASH C_crypto = Hash.Blake2b_224
+
+type instance Core.VALUE C = Coin

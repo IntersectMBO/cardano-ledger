@@ -17,6 +17,8 @@ where
 
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<+>), (<->))
+import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Ledger.Core as Core
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -75,8 +77,8 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce, testGlobals)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
-aliceInitCoin :: Coin
-aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin :: ShelleyTest era => Core.Value era
+aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: ShelleyTest era => UTxO era
 initUTxO = genesisCoins [TxOut Cast.aliceAddr aliceInitCoin]
@@ -91,8 +93,8 @@ initStPoolReReg = initSt initUTxO
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin <-> _poolDeposit ppEx <-> feeTx1
+aliceCoinEx1 :: ShelleyTest era => Core.Value era
+aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ _poolDeposit ppEx <+> feeTx1)
 
 txbodyEx1 :: ShelleyTest era => TxBody era
 txbodyEx1 =
@@ -164,8 +166,8 @@ poolReReg1 = CHAINExample initStPoolReReg blockEx1 (Right expectedStEx1)
 feeTx2 :: Coin
 feeTx2 = Coin 3
 
-aliceCoinEx2 :: Coin
-aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
+aliceCoinEx2 :: ShelleyTest era => Core.Value era
+aliceCoinEx2 = aliceCoinEx1 <-> (Val.inject $ feeTx2)
 
 newPoolParams :: Era era => PoolParams era
 newPoolParams = Cast.alicePoolParams {_poolCost = Coin 500}

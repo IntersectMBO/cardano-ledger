@@ -16,6 +16,8 @@ module Test.Shelley.Spec.Ledger.Examples.Mir
 where
 
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Map.Strict (Map)
@@ -88,11 +90,11 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
-aliceInitCoin :: Coin
-aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin :: ShelleyTest era => Core.Value era
+aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
-bobInitCoin :: Coin
-bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
+bobInitCoin :: ShelleyTest era => Core.Value era
+bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
@@ -101,10 +103,10 @@ initUTxO =
       TxOut Cast.bobAddr bobInitCoin
     ]
 
-initStMIR :: forall era. ShelleyTest era => Coin -> ChainState era
+initStMIR :: (ShelleyTest era) => Coin -> ChainState era
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
-    cs = initSt @era initUTxO
+    cs = initSt initUTxO
     as = esAccountState . nesEs . chainNes $ cs
     as' =
       as
@@ -126,8 +128,8 @@ ir = Map.fromList [(Cast.aliceSHK, aliceMIRCoin)]
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin <-> (feeTx1 <+> _keyDeposit ppEx)
+aliceCoinEx1 :: ShelleyTest era => Core.Value era
+aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> _keyDeposit ppEx)
 
 txbodyEx1 :: ShelleyTest era => MIRPot -> TxBody era
 txbodyEx1 pot =

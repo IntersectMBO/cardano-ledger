@@ -20,6 +20,8 @@ import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<->))
+import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Ledger.Core as Core
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -81,11 +83,11 @@ import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
-aliceInitCoin :: Coin
-aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin :: ShelleyTest era => Core.Value era
+aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
-bobInitCoin :: Coin
-bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
+bobInitCoin :: ShelleyTest era => Core.Value era
+bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
@@ -117,8 +119,8 @@ newGenesisVrfKH = hashVerKeyVRF . snd $ mkVRFKeyPair (9, 8, 7, 6, 5)
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin <-> feeTx1
+aliceCoinEx1 :: ShelleyTest era => Core.Value era
+aliceCoinEx1 = aliceInitCoin <-> (Val.inject feeTx1)
 
 txbodyEx1 :: ShelleyTest era => TxBody era
 txbodyEx1 =

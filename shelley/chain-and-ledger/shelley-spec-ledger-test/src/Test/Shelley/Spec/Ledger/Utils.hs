@@ -36,6 +36,8 @@ module Test.Shelley.Spec.Ledger.Utils
     MultiSigPairs,
     getBlockNonce,
     ShelleyTest,
+    HedGen (..),
+    Split (..),
   )
 where
 
@@ -87,7 +89,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
 import Data.Word (Word64)
-import Hedgehog (MonadTest, (===))
+import Hedgehog (MonadTest, (===), Gen)
 import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
@@ -123,14 +125,15 @@ import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
   )
+import Test.QuickCheck ( Arbitrary )
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure, UTXOW)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoPredicateFailure, UTXO)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegPredicateFailure)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsPredicateFailure)
 
-type ShelleyTest era =
-  ( ShelleyBased era,
-    Core.Value era ~ Coin,
+type ShelleyTest era = (ShelleyBased era, Arbitrary (Core.Value era),
+    HedGen (Core.Value era), Split (Core.Value era),
+    Arbitrary (Core.VALUE era), HedGen (Core.VALUE era), Split (Core.VALUE era),
     Core.TxBody era ~ TxBody era,
     PredicateFailure (CHAIN era) ~ ChainPredicateFailure era,
     PredicateFailure (LEDGERS era) ~ LedgersPredicateFailure era,
@@ -142,6 +145,11 @@ type ShelleyTest era =
     PredicateFailure (UTXO era) ~ UtxoPredicateFailure era
   )
 
+class HedGen t where
+  genHeg :: Hedgehog.Gen t
+
+class Split v where
+  vsplit :: v -> Integer -> ([v], Coin)
 -- =======================================================
 
 type GenesisKeyPair crypto = KeyPair 'Genesis crypto

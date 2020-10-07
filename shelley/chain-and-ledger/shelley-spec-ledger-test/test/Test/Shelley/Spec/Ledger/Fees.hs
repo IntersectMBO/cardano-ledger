@@ -12,6 +12,7 @@ module Test.Shelley.Spec.Ledger.Fees
   )
 where
 
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Binary (serialize)
 import Cardano.Crypto.VRF (VRFAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
@@ -47,7 +48,7 @@ import Shelley.Spec.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin(..))
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     Hash,
@@ -165,7 +166,7 @@ txbSimpleUTxO :: forall era. ShelleyTest era => TxBody era
 txbSimpleUTxO =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.empty,
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
@@ -203,11 +204,11 @@ txbMutiUTxO =
           ],
       _outputs =
         StrictSeq.fromList
-          [ TxOut aliceAddr (Coin 10),
-            TxOut aliceAddr (Coin 20),
-            TxOut aliceAddr (Coin 30),
-            TxOut bobAddr (Coin 40),
-            TxOut bobAddr (Coin 50)
+          [ TxOut aliceAddr (Val.inject $ Coin 10),
+            TxOut aliceAddr (Val.inject $ Coin 20),
+            TxOut aliceAddr (Val.inject $ Coin 30),
+            TxOut bobAddr (Val.inject $ Coin 40),
+            TxOut bobAddr (Val.inject $ Coin 50)
           ],
       _certs = StrictSeq.empty,
       _wdrls = Wdrl Map.empty,
@@ -241,7 +242,7 @@ txbRegisterStake :: forall era. ShelleyTest era => TxBody era
 txbRegisterStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.fromList [DCertDeleg (RegKey aliceSHK)],
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
@@ -269,7 +270,7 @@ txbDelegateStake :: forall era. ShelleyTest era => TxBody era
 txbDelegateStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs =
         StrictSeq.fromList
           [ DCertDeleg
@@ -304,7 +305,7 @@ txbDeregisterStake :: forall era. ShelleyTest era => TxBody era
 txbDeregisterStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.fromList [DCertDeleg (DeRegKey aliceSHK)],
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
@@ -335,7 +336,7 @@ txbRegisterPool :: forall era. ShelleyTest era => TxBody era
 txbRegisterPool =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)],
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
@@ -363,7 +364,7 @@ txbRetirePool :: forall era. ShelleyTest era => TxBody era
 txbRetirePool =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.fromList [DCertPool (RetirePool alicePoolKH (EpochNo 5))],
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
@@ -395,7 +396,7 @@ txbWithMD :: forall era. ShelleyTest era => TxBody era
 txbWithMD =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.empty,
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
@@ -432,7 +433,7 @@ txbWithMultiSig :: forall era. ShelleyTest era => TxBody era
 txbWithMultiSig =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0], -- acting as if this is multi-sig
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.empty,
       _wdrls = Wdrl Map.empty,
       _txfee = Coin 94,
@@ -461,9 +462,9 @@ txbWithWithdrawal :: forall era. ShelleyTest era => TxBody era
 txbWithWithdrawal =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
-      _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
+      _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.empty,
-      _wdrls = Wdrl $ Map.singleton (RewardAcnt Testnet aliceSHK) (Coin 100),
+      _wdrls = Wdrl $ Map.singleton (RewardAcnt Testnet aliceSHK) (Val.inject $ Coin 100),
       _txfee = Coin 94,
       _ttl = SlotNo 10,
       _txUpdate = SNothing,

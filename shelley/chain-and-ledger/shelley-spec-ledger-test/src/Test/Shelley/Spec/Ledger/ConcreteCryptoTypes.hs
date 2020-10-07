@@ -17,10 +17,12 @@ import Cardano.Crypto.KES (MockKES)
 import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Core (VALUE)
 import Cardano.Ledger.Crypto
 import Shelley.Spec.Ledger.BaseTypes (Seed)
 import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Shelley.Spec.Ledger.Coin (Coin (..))
 
 -- | Mocking constraints used in generators
 type Mock c =
@@ -51,3 +53,5 @@ instance Cardano.Ledger.Crypto.Crypto C_Crypto where
   type DSIGN C_Crypto = MockDSIGN
   type KES C_Crypto = MockKES 10
   type VRF C_Crypto = FakeVRF
+
+type instance VALUE C = Coin
