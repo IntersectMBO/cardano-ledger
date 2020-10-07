@@ -1,37 +1,33 @@
-\section{Value Size}
+\section{Output Size}
 \label{sec:value-size}
 
 In Shelley, the protocol parameter $\var{minUTxOValue}$ is used to
 disincentivize attacking nodes by putting many small outputs on the
 UTxO, permanently blocking memory. Because members of the $\Value$
-type can be arbitrary large in principle, the multi-asset ledger must
-accomodate by scaling the minimum amount of Ada in an output by the
-size of the output, which means that we need a function to determine
-the size of a member of $\Value$.
+type can be arbitrary large, the ledger requires a $\UTxO$ entry to
+contain a minimum amount of Ada, proportional to its size.
 
 How much memory is used exactly is an implementation detail, but some facts are:
 \begin{itemize}
-  \item Every output contains Ada, so Ada can be regarded as part of the constant amount of space.
-  \item The size will scale linearly with the number of $\PolicyID$s and tokens.
+  \item Every output contains and address and Ada, which take a constant amount of space.
+  \item The size will scale linearly with the number of $\PolicyID$s and tokens in the $\Value$.
   \item The number of $\PolicyID$s is less than or equal to the number of tokens.
 \end{itemize}
 
-Because of the first two items in that list, we could use the following definition for $\fun{valueSize}$:
+Because of the first two items in that list, we could use the following definition for $\fun{outputSize}$:
 
 \begin{figure*}[h]
   \begin{align*}
-    & \fun{valueSize} \in \Value \to \N \\
-    & \fun{valueSize} ~\var{v} = k_0 + k_1 * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
-            \land (\var{pid}, \var{aid}) \neq (\mathsf{adaID}, \mathsf{adaToken}) \}| \\
-    & \phantom{\fun{valueSize} ~\var{v} = k_0} + k_2 * |\{ \var{pid} : \exists aid : v~pid~aid \neq 0 \}|
+    & \fun{outputSize} \in \TxOut \to \MemoryEstimate \\
+    & \fun{outputSize} ~\var{out} = k_0 + k_1 * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
+            \land (\var{pid}, \var{aid}) \neq (\mathsf{adaPolicy}, \mathsf{adaName}) \}| \\
+    & \phantom{\fun{outputSize} ~\var{out} = k_0} + k_2 * |\{ \var{pid} : \exists aid : v~pid~aid \neq 0 \}|
   \end{align*}
   \caption{Value Size}
   \label{fig:test}
 \end{figure*}
 
-Here, $k_0$ reflects the constant part, i.e. Ada, but also everything
-in the output that is not included in the $\Value$ (i.e. the address)
-(maybe this means the function should be renamed). $k_1$ reflects the
+Here, $k_0$ reflects the constant part, i.e. Ada, the key and the address, $k_1$ reflects the
 size of non-ada tokens, and $k_2$ the size of $\PolicyID$s.
 
 There are some trade-offs here. Because of the third item in the above

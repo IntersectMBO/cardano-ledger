@@ -9,15 +9,13 @@ the most common type of token on the ledger.
 The $\Coin$ type is used to represent an amount of Ada.
 It is the only
 type of token that can be used for all non-UTxO ledger accounting, including deposits,
-fees, rewards, treasury, and the proof of stake protocol. Under no circumstances
-are these administrative fields and calculations ever expected to operate on
-any types of tokens besides Ada, and this will continue to have the type $\Coin$.
+fees, rewards, treasury, and the proof of stake protocol.
 
 \begin{figure*}[t!]
   \emph{Abstract Types}
   %
   \begin{align*}
-    \var{aid} \in& ~\AssetID & \text{Asset IDs}
+    \var{aname} \in& ~\AssetName & \text{Asset Names}
   \end{align*}
   %
   \emph{Derived types}
@@ -28,7 +26,7 @@ any types of tokens besides Ada, and this will continue to have the type $\Coin$
       \var{quan} & \Quantity & \Z \\
       %\text{quantity of a token}\\
       \var{v}, \var{w} & \Value
-      & \PolicyID \to_0 ( \AssetID \to_0 \Quantity )
+      & \PolicyID \to_0 ( \AssetName \to_0 \Quantity )
 %      & \text{a collection of tokens}
     \end{array}
   \end{equation*}
@@ -36,22 +34,21 @@ any types of tokens besides Ada, and this will continue to have the type $\Coin$
   \emph{Abstract Functions and Values}
   %
   \begin{align*}
-    \mathsf{adaID} \in& ~\PolicyID & \text{Ada asset ID} \\
-    \mathsf{adaToken} \in& ~\AssetID & \text{Ada Token} \\
-    \fun{valueSize} \in& ~\Value \to \N & \text{Memory estimate for}~\Value
+    \mathsf{adaPolicy} \in& ~\PolicyID & \text{Ada Policy ID} \\
+    \mathsf{adaName} \in& ~\AssetName & \text{Ada Asset Name} \\
   \end{align*}
   \emph{Helper Functions}
   %
   \begin{align*}
     & \fun{coinToValue} \in \Coin\to \Value \\
-    & \fun{coinToValue}~c = \lambda~\var{pid}~\var{aid}.
+    & \fun{coinToValue}~c = \lambda~\var{pid}~\var{aname}.
       \begin{cases}
-        c & \var{pid} = \mathsf{adaID}~\text{and}~\var{aid} = \mathsf{adaToken} \\
+        c & \var{pid} = \mathsf{adaPolicy}~\text{and}~\var{aname} = \mathsf{adaName} \\
         0 & \text{otherwise}
       \end{cases}
     \nextdef
     & \fun{valueToCoin} \in \Value \to \Coin \\
-    & \fun{valueToCoin}~v = v~\mathsf{adaID}~\mathsf{adaToken}
+    & \fun{valueToCoin}~v = v~\mathsf{adaPolicy}~\mathsf{adaName}
   \end{align*}
   \caption{Type Definitions and auxiliary functions for Value}
   \label{fig:defs:value}
@@ -59,15 +56,13 @@ any types of tokens besides Ada, and this will continue to have the type $\Coin$
 
 \subsection*{Representing Multi-asset Types and Values}
 An \emph{Asset} comprises a set of different \emph{Asset Classes}, each of which has
-a unique identifier, $\AssetID$. We will informally refer to a pair $(\var{pid}, \var{aid})$ of a Policy ID and an Asset ID as a ``token''. The token for Ada is $(\mathsf{adaID}, \mathsf{adaToken})$.
+a unique identifier, $\AssetName$. We will refer to a pair of a $\PolicyID$ and an
+$\AssetName$ as an $\AssetID$. The $\AssetID$ for Ada is $(\mathsf{adaPolicy}, \mathsf{adaName})$.
 
-The set of tokens that are referred to by the underlying monetary policy represents the coinage that the asset supports.  A multi-asset value, $\Value$ is a map over zero or more assets
-to single asset values.  A single asset value is then a finite map from
-$\AssetID$s to quantities.
-
-For convenience, here and in the rest of the document, we
-will treat values of type $\Value$ also as non-partial functions where
-any omitted tokens in the domain are assumed to be zero.
+The set of tokens that are referred to by the underlying monetary
+policy represents the coinage that the asset supports. A multi-asset
+value, $\Value$ is a finitely supported function of two variables,
+$\PolicyID$ and $\AssetName$ to $\Quantity$.
 
 \begin{itemize}
   \item $\PolicyID$ identifies monetary policies. A policy ID $\var{pid}$ is associated with a script
@@ -77,24 +72,20 @@ any omitted tokens in the domain are assumed to be zero.
     respects the restrictions that are imposed by the monetary policy.
     See sections \ref{sec:transactions} and \ref{sec:utxo} for details.
 
-  \item $\AssetID$ is a type used to distinguish different tokens with the same $\PolicyID$.
-    Each $aid$ identifies a unique kind of token in $\var{pid}$.
+  \item $\AssetName$ is a type used to distinguish different tokens with the same $\PolicyID$.
+    Each $aname$ identifies a unique kind of token in $\var{pid}$.
 
-  \item $\Quantity$ is an integer type that represents an amount of a specific $\AssetID$. We associate
+  \item $\Quantity$ is an integer type that represents an amount of a specific $\AssetName$. We associate
     a term $q\in\Quantity$ with a specific token to track how much of that token is contained in a given asset value.
 
   \item $\Value$ is the multi-asset type that is used to represent
-    an amount of a collection of tokens, including Ada. If $(\var{pid}, \var{aid})$ is a token and $v \in \Value$,
-    the amount in $v$ belonging to that token is $v~\var{pid}~\var{aid}$ if defined, or zero otherwise.
-    Token amounts are fungible with each other if and only if they belong to the same token,
-    i.e. they have the same $\PolicyID$ and $\AssetID$. Terms of type $\Value$ are sometimes also referred to as
+    a collection of tokens, including Ada. If $(\var{pid}, \var{aname})$ is an $\AssetID$ and $v \in \Value$,
+    the quantity in $v$ belonging to that $\AssetID$ is $v~\var{pid}~\var{aname}$.
+    Tokens are fungible with each other if and only if they belong to the same $\AssetID$,
+    i.e. they have the same $\PolicyID$ and $\AssetName$. Terms of type $\Value$ are sometimes also referred to as
     \emph{token bundles}.
 
-  \item $\mathsf{adaID}$ and $\mathsf{adaToken}$ are the $\PolicyID$ and $\AssetID$ of Ada respectively.
-
-  \item The $\fun{valueSize}$ function provides a rough estimate of
-    the amount of memory the storage of a certain value will consume, which is used in the UTXO rule.
-    Its implementation is described in Appendix \ref{sec:value-size}.
+  \item $\mathsf{adaPolicy}$ and $\mathsf{adaName}$ are the $\PolicyID$ and $\AssetName$ of Ada respectively.
 
   \item $\fun{coinToValue}$ and $\fun{valueToCoin}$ convert between the two types,
   by taking a $\Coin$ to a $\Value$ that only contains Ada, and extracting the amount of Ada from a $\Value$ respectively.
@@ -105,5 +96,5 @@ We require some operations on $\Value$, including equality, addition and $\leq$ 
 
 Addition and binary relations are extended pointwise from $\Coin$ to $\Value$, so if $R$ is a binary relation defined on $\Coin$, like $=$ or $\leq$, and $v, w$ are values, we define
 
-\[ v~R~w :\Leftrightarrow \forall~\var{pid}~\var{aid}, (v~\var{pid}~\var{aid})~R~(w~\var{pid}~\var{aid}) \]
-\[ (v + w)~\var{pid}~\var{aid} := (v~\var{pid}~\var{aid}) + (w~\var{pid}~\var{aid}). \]
+\[ v~R~w :\Leftrightarrow \forall~\var{pid}~\var{aname}, (v~\var{pid}~\var{aname})~R~(w~\var{pid}~\var{aname}) \]
+\[ (v + w)~\var{pid}~\var{aname} := (v~\var{pid}~\var{aname}) + (w~\var{pid}~\var{aname}). \]
