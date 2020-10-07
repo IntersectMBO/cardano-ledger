@@ -35,29 +35,21 @@ size of the transaction.
 
 In contrast, non-native scripts can perform arbitary
 (and, in principle, Turing-complete) computations.
-In order to bound execution costs to a pre-determined constant, we use a standard ``fuel'' approach~\cite{XX},
-%% Not completely true...  The cost of many interesting computations can be assessed, and others can be limited.
-%% I've done a lot of work here :)
-% which means it is impossible to assess
-% their execution cost without executing them.
+In order to bound execution costs to a pre-determined constant, we use a standard ``fuel'' approach~\cite{XX}.
 We require transactions that use non-native scripts
 to have a budget in terms of a number of abstract $\ExUnits$.
 These provide a quantitative bound on resource usage in terms of metrics such as memory usage or abstract execution steps.
 This abstract budget is then used as part of the concrete transaction fee calculation, using an explicit
 cost model $\CostMod$, that is provided as a protocol parameter.
 
-% To change the $\ExUnits$ required to
-% run the same computation without a hard fork (for example because a
-% more efficient interpreter was introduced), every scripting language
-% converts the actual execution cost into $\ExUnits$ using a cost model,
-% $\CostMod$, which is a protocol parameter.
+To change the $\ExUnits$ required to
+run the same computation without a hard fork (for example because a
+more efficient interpreter was introduced), every scripting language
+converts the actual execution cost into $\ExUnits$ using a cost model,
+$\CostMod$, which is a protocol parameter.
 
 \subsection{Extended UTxO}
 
 The specification of the extended UTxO model follows the description in~\cite{plutus_eutxo}.
-All\todo{Some?} transaction outputs must include an additional data item that ...\todo{What is this - a hash, a token? And what does it represent?}.
-This is passed to a script that validates that the output is spent correctly. All\todo{Confirm} transactions also need to supply a \emph{redeemer}, as an additional input\todo{Is this a transaction input?}.
-The redeemer ...\todo{Explain what it does.}
-For example, ...\todo{Give a high level example.}
-% which is an additional piece of data, for everything that is validated
-% by non-native scripts.
+All transaction outputs locked by non-native scripts must include an additional data item (for space efficiency reason, only a hash of that datum is included in the UTxO and the transaction needs to supply the full data). This data is passed to a script that validates that the output is spent correctly, and can be used to encode state.
+All transactions also need to supply a \emph{redeemer} for everything that is validated by a script, which is an additional piece of data passed to the script. The redeemer can be regarded as user-input for the scripts. Note that the same script can be used for multiple different purposes in the same transaction, so it does not suffice to include one redeemer per script.

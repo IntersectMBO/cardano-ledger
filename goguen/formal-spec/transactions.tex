@@ -1,8 +1,8 @@
 \section{Transaction Validation}
 \label{sec:transactions}
 
-This section outlines the changes that are needed to the transaction and
-UTxO structure to enable non-native scripts to validate
+This section outlines the changes that are needed to the transaction
+structure to enable non-native scripts to validate
 certain actions: forging tokens, spending outputs, verifying certificates, and
 verifying withdrawals).\todo{Is this the complete set of actions?}
 %
@@ -11,24 +11,27 @@ We make the following changes and additions over the corresponding types in the
 Shelley specification~\cite{XX}:
 
 \begin{itemize}
-  \item $\Value$ represents the type of
-  both \emph{fungible} and \emph{non-fungible} multi-asset tokens. For details, see the multi-asset formal specification~\cite{XX}.
+  \item $\Value$ represents the type of multi-asset tokens. For details,
+  see the multi-asset formal specification~\cite{XX}.
 
   \item $\RdmrsHash$ is the type of a hash of the indexed redeemer structure,
   included within a transaction (this structure is described in detail below).
 
   \item $\ScriptMSig$ is the type of the existing native multi-signature scripts.
 
-  \item $\ScriptPlutus$ is a type for scripts that use the initial version of Plutus.
+  \item $\ScriptPlutus$ is the type of scripts of the initial version of Plutus.
 
   \item $\Data$ is the same type as in the Plutus libraries (see the note on ``Data Representation'' below).
+    \begin{note}
+      It may or may not be, but we don't particularly care. We just use this to pass data to plutus.
+    \end{note}
 
-  \item $\Script$ is a sum type that includes all possible scripts (both native and non-native\todo{Confirm}).
+  \item $\Script$ is a sum type that includes all possible scripts, both native and non-native.
 
   \item $\IsValidating$ is a tag that indicates that a transaction
   expects that all its non-native scripts validate.
   This tag is added by the block creator when
-  constructing a block, and is checked when running scripts.\todo{Not sure I got this right?}
+  constructing a block, and its correctness is verified as part of the script execution.
 
   \item $\IsFee$ is a tag that indicates when an input has been marked
     to be used for paying transaction fees.
@@ -37,18 +40,16 @@ Shelley specification~\cite{XX}:
 
   \item $\TxIn$ is a transaction input. It includes a reference to the UTxO entry that it is spending
   and an $\IsFee$ tag.
-% , which indicates if this input should
-%   be used to pay script execution fees.
 
   \item $\TxOutND$ is a transaction output with no datum hash
   (this type is for VKey\todo{What is VK?} and multi-signature script outputs).
 
-  \item $\TxOutP$ is a transaction output that comes from a Plutus script (these include a datum hash).\todo{Confirm this.}
+  \item $\TxOutP$ is the type of a transaction output that is locked by
+  a non-native script, which thus needs to include a datum hash.
 
   \item $\HasDV$
   is a tag that is attached to a transaction output if it is \emph{locked} by a Plutus
-  script. The output contains an address, a value, and a datum hash.
-  This tag indicates whether the transaction carrying the output
+  script. This tag indicates whether the transaction carrying the output
   contains, in its set of datum objects, the full datum that corresponds
   to the datum hash.
 
@@ -65,7 +66,7 @@ Shelley specification~\cite{XX}:
   \item $\TxOut$ is the type of transaction outputs, either
   $\TxOutND$ or a pair of $\TxOutP$ and $\HasDV$.
 
-  \item $\Tag$ let us differentiate what a script
+  \item $\Tag$ lets us differentiate what a script
   can validate, i.e. \\
 
   \begin{tabular}{l@{~to validate~}l}
@@ -217,6 +218,7 @@ Shelley specification~\cite{XX}:
 \textbf{Data Representation.}
 The type $\Data$ is a Plutus type that represents all valid ground types in Plutus\todo{Confirm}.
 \begin{note}
+  No, this needs to be fixed later on.
 There is a similar type in the
 ledger. We do not assume these are the same $\Data$, but we do assume there
 is structural equality between them. TODO: {Fix this.  Is one a subset of the other?  Are they actually related in any way; if so, how?}
@@ -230,8 +232,7 @@ in a transaction that is needed for witnessing, namely:
 
 \begin{itemize}
   \item VKey\todo{What is VK} signatures;
-  \item a set of scripts that is needed to \emph{validate} the transaction, including for forging tokens, spending outputs, verifying certificates, and
-  verifying withdrawals;
+  \item a set of scripts, containing all the scripts (for any purpose) that are needed to \emph{validate} the transaction,
   \item a set of terms of type $\Data$, which contains all required datum objects; and
   \item a map of $\Data$ values indexed by $\RdmrPtr$, which includes all the
   required redeemers.
@@ -244,17 +245,12 @@ a transaction (as a set) versus how redeemers are included
 \begin{description}
 \item
   [Hash reference (script/datum object):]
-  The item that needs to be validated (output, forge, etc.) explicitly references the hash of
-  the witness data.
-%  This is the case for all scripts and datum:
-  Script addresses, currency IDs, and certificate credentials must contain
-  the hash of the validator script that will be run, and script-locked UTxO entries
-  must contain the hash of a datum. % which has to be included. Included in what??
+  Scripts and datum objects are referred to explicitly via their hashes,
+  which are included in the $\UTxO$ or the transaction. Thus, they can be
+  looked up in the tranasaction without any key in the data structure.
 
-  \item[No hash reference (redeemers):] The item that needs to be validated has no explicit % link to, hash of, or
-  hash reference to the witness data.
-  % This is the case for redeemers.
-  In this case, we use a reverse pointer approach and
+  \item[No hash reference (redeemers):] In the case of redeemers,
+  we use a reverse pointer approach and
   index the redeemer by a pointer to the item for which it will be used.
   For details on how a script finds its redeemer, see Section~\ref{sec:scripts-inputs}.
 \end{description}
@@ -264,9 +260,9 @@ We have also made the following changes to
 the body of the transaction:
 
 \begin{itemize}
-  \item We include a term of type $\ExUnits$. This is a limit on the total quantity of execution units
+  \item We include a term of type $\ExUnits$. This is a budget of execution units
   that may be used by all non-native scripts in the transaction.
-  The limit can be computed by, for example, executing the scripts off-chain prior to transaction submission.
+  The budget is intended to be computed by executing the scripts off-chain prior to transaction submission.
   \item We include a hash of the the indexed redeemer structure
     with accessor $\fun{rdmrsHash}$. The reason for including this hash is explained below.
   \item We include a hash of the subset of current protocol parameters that is relevant for script execution.
@@ -275,37 +271,25 @@ the body of the transaction:
 A complete Goguen transaction comprises:
 
 \begin{enumerate}
-  \item the transaction body.
-  \item all the information that is needed to witness transactions.
-  \item the $\IsValidating$ tag, which indicates whether the transaction needs to be validated.
-%   set by the user submitting the block containing this transaction.
+  \item the transaction body,
+  \item all the information that is needed to witness transactions,
+  \item the $\IsValidating$ tag, which indicates whether all scripts with all inputs
+  that are executed during the script execution phase validate.
   The correctness of the tag is verified as part of the ledger rules, and the block is
   deemed to be invalid if it is applied incorrectly.
   If it is set to \emph{false}, then the block can be re-applied without script re-validation.
-  This tag does not need to be signed, since incorrect use will result
-  in the whole block being invalid.\todo{Revised the description. Please confirm this is what was intended.}
- % , which benefits no one.
-  \begin{note}
-    Not sure if I understand that argument, but it cannot be signed,
-    because it's not applied by the transaction creator.
-    The ``which benefits noone'' probably doesn't matter...
-  \end{note}
+  This tag cannot be signed, since it is applied by the block producer.
   \item any transaction metadata.
 \end{enumerate}
 
 
 \subsection{Processing Shelley Transactions in the Goguen Era}
-%% No semantic content?  KH
-%% Everything we have discussed so far in this document is about the structure and data
-%% in Goguen era protocol parameters and transactions. Some type names are reinterpreted
-%% for different purposes in the Goguen era than they were used for in Shelley, and
-%% we specify the differences in these cases.
 
-To simplify the transition from the Shelley to the Goguen era, the ledger rules support both Shelley and Goguen transaction formats simultaneously:
-$\Tx ~~=~~ \ShelleyTx \uniondistinct \GoguenTx$, where Shelley transactions have the type $\ShelleyTx$, and  Goguen transactions have type $\GoguenTx$.
-%
-% A true Goguen transaction is really of either type,
-% i.e.
+To simplify the transition from the Shelley to the Goguen era, the
+ledger rules support both Shelley and Goguen transaction formats
+simultaneously: $\Tx ~~=~~ \ShelleyTx \uniondistinct \GoguenTx$, where
+Shelley transactions have the type $\ShelleyTx$, and Goguen
+transactions have type $\GoguenTx$.
 
 Shelley transactions contain fewer data items than Goguen transactions, so we can interpret
 a Shelley transaction as a Goguen one with some missing fields, and process it using the normal Goguen ledger
@@ -316,7 +300,7 @@ Shelley transaction is transformed to a Goguen one.
 \subsection{Additional Role of Signatures on TxBody}
 The transaction body must contain all data
 (or at least a hash of the data) that can influence
-on-chain transfer of value % resulting from this transaction being processed
+on-chain transfer of value
 (see Figure \ref{fig:defs:utxo-shelley-2}).
 This means that, for example,
 every input that is spent and every output that is created are present in the body of the transaction.
@@ -325,13 +309,13 @@ fees'' (explained in detail in Section~\ref{sec:utxo}), anything that
 can influence these outcomes must also be included in the body.
 
 There is no need to ever sign anything that is related to validator scripts or datum objects,
-since a hash of every validator script that is needed % will be run during the validation of the transaction is always part of the body,
+since a hash of every validator script that is needed
 is included in the body of the transaction, and the hash of every datum that is needed
 is recorded in the UTxO.
 %
 The body of the transaction, however, is signed by every key
 whose outputs are being spent.
-This provides % , which additionally offers
+This provides
 protection against tampering with Plutus interpreter arguments, which may cause
 script validation failure (so placing the transaction in the category of ``only paying fees'').
 For this reason, the hash of the indexed redeemer structure and the protocol parameters that are used by
@@ -339,17 +323,13 @@ script interpreters are included in the body of the transaction. In the future, 
 state may also need to be included in this hash, if they are passed as
 arguments to new script interpreter. Note also that data from the UTxO
 is passed to the interpreter, but does not require this type of hash comparison.
-This is because, if the
-entries % the transaction t being processed is trying to spend
-have already been spent, the phase 1 validation check
-will fail.
+This is because, if the entries
+have already been spent, the phase 1 validation check will fail.
 
 The owner of any tokens that are spent as part of a given transaction
-must sign the transaction body. The body also includes the for-fee tags that are attached to inputs.
-%% No obvious what the semantic content is here?
-% Because of this, the owners of tokens that are spent by the transaction have
-% signed their selection of inputs that will be put in the fee pot in case of script validation failure.
-%
+must sign the transaction body. The body also includes the for-fee tags that are attached to inputs so,
+the owners of tokens that are spent by the transaction have
+signed their selection of inputs that will be put in the fee pot in case of script validation failure.
 As before, a change in the body of the transaction
 will make the transaction completely invalid, rather than cause the fee-paying script validation
 failure or change the amount of fees it pays.
@@ -357,8 +337,8 @@ failure or change the amount of fees it pays.
 \subsection{Partially processing transactions}
 
 Note that in Goguen, it is possible for a transaction
-to either be fully processed in full, or else to do nothing apart from paying fees for script
-validation (see Section~\ref{sec:utxo} for details).
+to either be fully processed in full, or else, in case of script validation failure,
+to do nothing apart from paying fees (see Section~\ref{sec:utxo} for details).
 We have considered two ways to prevent all the Ada in the transaction outputs from going into
 the fee pot if script validation fails:
 %
@@ -367,19 +347,13 @@ the fee pot if script validation fails:
   \item allow the user to decide which inputs will be used to pay fees.
 \end{enumerate}
 %
-% Since different users may have different considerations,
-To maximise flexibility, we have chosen to use the second option. %  decided to give control over input selection % for this purpose to the user.
+To maximise flexibility, we have chosen to use the second option.
 This also allows users to write their own programmatic solutions to choosing for-fees inputs.
 
-Only VKeys that spend inputs\todo{Inputs that spend VKeys? Or VKeys that spend inputs?} or native scripts that spend inputs can
+Only inputs that are locked by VKeys or native scripts can
 be used to pay fees. In Shelley, spending VKey or script outputs is
 validated as part of a single rule application, so either all
 the required signatures will be valid, or a transaction is completely
 invalid. We have retained this model, but have chosen a different approach to
 charging users for running Plutus scripts, see
 Section~\ref{sec:two-phase}.
-
-Plutus scripts will generally be more expensive to run than simply checking signatures, as in Shelley.
-We therefore want to charge users for running Plutus scripts, even if the scripts fail to validate. The outputs
-that need to be spent to pay for running the scripts (the ones marked as for-fees) must therefore be
-validated fully before validating the Plutus scripts themselves.\todo{These are different forms of validation, right?  This should be made clear.}

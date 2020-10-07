@@ -46,13 +46,12 @@ We make a number of changes to the Shelley UTxO model~\ref{XX} to support the Go
   differ in Goguen.
 
 \item
-  $\UTxOOut$ is the type of (extended) UTxO entries.  Again, we have changed the name
-  from that used in Shelley.
-%  Note that, like in the case of the type of transaction inputs,
-%  this type differs from the type of the output of a transaction.
+  $\UTxOOut$ is the type of UTxO entries.
+  Note that, like in the case of the type of transaction inputs,
+  this type differs from the type of the output of a transaction.
   Goguen UTxO entries include a slot number for each output
   that indicates when the output was created.
-  This will be used for future functionality. % that will be added in the future.
+  This will be used for future functionality.
 
 \item
   $\CurItem$ is the type of the items that scripts can validate.\todo{Why is this called CurItem?}
@@ -117,7 +116,7 @@ and include the fees for their execution.
     & \fun{txins} \in \TxBody \to \powerset{\TxId \times \Ix} \\
     & \fun{txins} ~\var{txb} = \{(txid,ix) \mid ((txid,ix),\wcard)\in\fun{txinputs} ~txb\}
   \end{align*}
-  \caption{Functions on Tx Inputs and Outputs.  Note that the restriction to $\Coin$ limits fees to be Ada-only.}
+  \caption{Functions on Tx Inputs and Outputs.}
   \label{fig:functions:insouts}
 \end{figure}
 
