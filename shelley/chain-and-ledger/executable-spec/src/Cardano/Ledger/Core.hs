@@ -22,9 +22,8 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 
-type family Value era :: Type
-
 -- | A value is something which quantifies a transaction output.
+type family Value era :: Type
 
 --------------------------------------------------------------------------------
 

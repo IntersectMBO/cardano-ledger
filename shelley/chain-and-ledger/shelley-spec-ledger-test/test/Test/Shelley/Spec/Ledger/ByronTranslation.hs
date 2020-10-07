@@ -8,7 +8,7 @@ module Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation) whe
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Shelley.Spec.Ledger.API.ByronTranslation
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.Coin
@@ -49,7 +49,7 @@ translateTxOutByronToShelley ::
   forall crypto.
   CryptoClass.Crypto crypto =>
   Byron.TxOut ->
-  TxOut (Shelley crypto)
+  TxOut (ShelleyEra crypto)
 translateTxOutByronToShelley (Byron.TxOut addr amount) =
   TxOut (translateAddr addr) (translateAmount amount)
   where

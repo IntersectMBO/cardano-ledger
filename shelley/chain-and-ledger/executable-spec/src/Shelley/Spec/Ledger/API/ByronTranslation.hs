@@ -19,7 +19,7 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
@@ -40,7 +40,7 @@ import Shelley.Spec.Ledger.Slot
 translateTxIdByronToShelley ::
   (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.TxId ->
-  TxId (Shelley c)
+  TxId (ShelleyEra c)
 translateTxIdByronToShelley =
   TxId . hashFromShortBytesE . Hashing.abstractHashToShort
 
@@ -55,7 +55,7 @@ hashFromShortBytesE sbs = fromMaybe (error msg) $ Crypto.hashFromBytesShort sbs
       "hashFromBytesShort called with ShortByteString of the wrong length: "
         <> show sbs
 
-translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> TxOut (Shelley c)
+translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> TxOut (ShelleyEra c)
 translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
   TxOutCompact
     (Byron.unsafeGetCompactAddress compactAddr)
@@ -64,7 +64,7 @@ translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
 translateCompactTxInByronToShelley ::
   (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.CompactTxIn ->
-  TxIn (Shelley c)
+  TxIn (ShelleyEra c)
 translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
   TxInCompact
     (translateTxIdByronToShelley (Byron.fromCompactTxId compactTxId))
@@ -74,7 +74,7 @@ translateUTxOByronToShelley ::
   forall c.
   (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.UTxO ->
-  UTxO (Shelley c)
+  UTxO (ShelleyEra c)
 translateUTxOByronToShelley (Byron.UTxO utxoByron) =
   UTxO $
     Map.fromList
@@ -87,10 +87,10 @@ translateUTxOByronToShelley (Byron.UTxO utxoByron) =
 translateToShelleyLedgerState ::
   forall c.
   (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
-  ShelleyGenesis (Shelley c) ->
+  ShelleyGenesis (ShelleyEra c) ->
   EpochNo ->
   Byron.ChainValidationState ->
-  ShelleyState (Shelley c)
+  ShelleyState (ShelleyEra c)
 translateToShelleyLedgerState genesisShelley epochNo cvs =
   NewEpochState
     { nesEL = epochNo,
@@ -101,7 +101,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
       nesPd = PoolDistr Map.empty
     }
   where
-    pparams :: PParams (Shelley c)
+    pparams :: PParams (ShelleyEra c)
     pparams = sgProtocolParams genesisShelley
 
     -- NOTE: we ignore the Byron delegation map because the genesis and
@@ -114,14 +114,14 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
     -- instigate the hard fork. We just have to make sure that the hard-coded
     -- Shelley genesis contains the same genesis and delegation verification
     -- keys, but hashed with the right algorithm.
-    genDelegs :: GenDelegs (Shelley c)
+    genDelegs :: GenDelegs (ShelleyEra c)
     genDelegs = GenDelegs $ sgGenDelegs genesisShelley
 
     reserves :: Coin
     reserves =
       word64ToCoin (sgMaxLovelaceSupply genesisShelley) <-> balance utxoShelley
 
-    epochState :: EpochState (Shelley c)
+    epochState :: EpochState (ShelleyEra c)
     epochState =
       EpochState
         { esAccountState = AccountState (Coin 0) reserves,
@@ -135,10 +135,10 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
     utxoByron :: Byron.UTxO
     utxoByron = Byron.cvsUtxo cvs
 
-    utxoShelley :: UTxO (Shelley c)
+    utxoShelley :: UTxO (ShelleyEra c)
     utxoShelley = translateUTxOByronToShelley utxoByron
 
-    ledgerState :: LedgerState (Shelley c)
+    ledgerState :: LedgerState (ShelleyEra c)
     ledgerState =
       LedgerState
         { _utxoState =
@@ -159,8 +159,8 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
 -- way as 'translateToShelleyLedgerState'.
 mkInitialShelleyLedgerView ::
   forall c.
-  ShelleyGenesis (Shelley c) ->
-  LedgerView (Shelley c)
+  ShelleyGenesis (ShelleyEra c) ->
+  LedgerView (ShelleyEra c)
 mkInitialShelleyLedgerView genesisShelley =
   LedgerView
     { lvProtParams = sgProtocolParams genesisShelley,
