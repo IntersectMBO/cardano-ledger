@@ -2,10 +2,10 @@ cabal-version:       2.2
 
 name:                cardano-ledger-shelley-ma
 version:             0.1.0.0
-synopsis:            Shelley ledger with multiasset support.
+synopsis:            Shelley ledger with multiasset and time lock support.
 description:
   This package extends the Shelley ledger with support for
-  native tokens.
+  native tokens and timelocks.
 bug-reports:         https://github.com/input-output-hk/cardano-ledger-specs/issues
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
@@ -20,9 +20,11 @@ source-repository head
 
 library
   exposed-modules:
-    Cardano.Ledger.ShelleyMA
+    Cardano.Ledger.Allegra
+    Cardano.Ledger.Mary
     Cardano.Ledger.ShelleyMA.Value
-  -- other-modules:
+  other-modules:
+    Cardano.Ledger.ShelleyMA
   -- other-extensions:
   build-depends:
     base >=4.9 && <4.15,
