@@ -17,7 +17,7 @@ data MaryOrAllegra = Mary | Allegra
 -- | The Shelley Mary/Allegra eras
 --
 -- Both eras are implemented within the same codebase, matching the formal
--- specification. They differ only in the `value` type. Due to some annoying
+-- specification. They differ only in the @value@ type. Due to some annoying
 -- issues with 'Coin' and 'Value' being of different kinds, we don't parametrise
 -- over the value but instead over a closed kind 'MaryOrAllegra'. But this
 -- should be transparent to the user.
