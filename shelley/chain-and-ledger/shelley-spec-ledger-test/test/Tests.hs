@@ -10,6 +10,7 @@ import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (chainExamples)
 import qualified Test.Shelley.Spec.Ledger.Serialisation as Serialisation
 import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
+import Test.Shelley.Spec.Ledger.ValProp(valTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
@@ -30,7 +31,8 @@ mainTests =
       --multisigExamples, - TODO re-enable after the script embargo has been lifted
       unitTests,
       setAlgTest,
-      memoBytesTest
+      memoBytesTest,
+      valTests
     ]
 
 nightlyTests :: TestTree
@@ -50,7 +52,8 @@ fastTests =
       --multisigExamples, - TODO re-enable after the script embargo has been lifted
       unitTests,
       setAlgTest,
-      memoBytesTest
+      memoBytesTest,
+      valTests
     ]
 
 -- main entry point

@@ -16,7 +16,8 @@ module Test.Shelley.Spec.Ledger.Examples.PoolLifetime
 where
 
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Val (invert, (<+>), (<->), (<×>))
+import Cardano.Ledger.Val ((<+>), (<->), (<×>))
+import Data.Group (invert)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -134,7 +135,7 @@ initStPoolLifetime = initSt initUTxO
 aliceCoinEx1 :: Coin
 aliceCoinEx1 =
   aliceInitCoin <-> _poolDeposit ppEx
-    <-> (3 <×> _keyDeposit ppEx)
+    <-> ((3 :: Integer) <×> _keyDeposit ppEx)
     <-> Coin 3
 
 carlMIR :: Coin
@@ -217,7 +218,7 @@ expectedStEx1 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainStat
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @era))
     . C.newLab blockEx1
-    . C.feesAndDeposits feeTx1 ((3 <×> _keyDeposit ppEx) <+> _poolDeposit ppEx)
+    . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> _keyDeposit ppEx) <+> _poolDeposit ppEx)
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) 0 0)
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) 0 1)

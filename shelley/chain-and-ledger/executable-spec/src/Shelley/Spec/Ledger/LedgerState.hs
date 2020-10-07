@@ -99,13 +99,14 @@ import Cardano.Binary
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley (ShelleyBased)
-import Cardano.Ledger.Val (invert, (<+>), (<->), (<×>))
+import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Foldable (fold, toList)
+import Data.Group (invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
