@@ -20,12 +20,12 @@ import Shelley.Spec.Ledger.Coin (Coin)
 -- Shelley Era
 --------------------------------------------------------------------------------
 
-data Shelley c
+data ShelleyEra c
 
-instance CryptoClass.Crypto c => Era (Shelley c) where
-  type Crypto (Shelley c) = c
+instance CryptoClass.Crypto c => Era (ShelleyEra c) where
+  type Crypto (ShelleyEra c) = c
 
-type instance Value (Shelley c) = Coin
+type instance Value (ShelleyEra c) = Coin
 
 type ShelleyBased era =
   ( Era era,
