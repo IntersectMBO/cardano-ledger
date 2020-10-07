@@ -1,4 +1,4 @@
-\section{The Extended UTxO Model}
+\section{UTxO}
 \label{sec:utxo}
 
 
@@ -103,11 +103,9 @@ and include the fees for their execution.
     &~~\wedge~ \var{balance} \in \Coin \\
     &~~      \wedge~ \var{balance} \geq \txfee{txb} ~ \\
     &~~      \wedge~ \minfee~n~{pp}~{tx} \leq \txfee{txb} \\
-%    &~~      \wedge~ \fun{ubalance}~(\fun{txinputs_{vf}}~{txb} \restrictdom \var{utxo}) \geq \txfee{txb} ~ \\
-%    &~~      \wedge~ \minfee~n~{pp}~{tx} \leq \txfee{txb} \\
     &~~      \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
-    & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{txinputs_{vf}}~{txb} \restrictdom \var{utxo}) \\
+    & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{txinputs_{vf}}~{txb} \restrictdom \var{utxo})
     \nextdef
     & \fun{getOut} \in \TxOut \to \TxOutND \uniondistinct \TxOutP \\
     & \fun{getOut} ~{txout}~= \begin{cases}
@@ -288,14 +286,10 @@ Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used
 
 \begin{note}
   \textbf{Know your contract arguments}
-  A Plutus validator script may receive either a list of three terms of type $\Data$, used for locking script outputs -- TODO{Confirm this is the only use.},
+  A Plutus validator script may receive either a list of three terms of type $\Data$, in case it validates the spending of script outputs
   or two terms (redeemer and context, with no datum), for all other uses.
-  Contract authors must keep this in mind when writing contracts, since the ledger call to the interpreter is oblivious to what
+  Script authors must keep this in mind when writing scripts, since the ledger call to the interpreter is oblivious to what
   arguments are required.
-%   there is
-%   only one function (per Plutus version) to interface with the Plutus interpreter,
-%   that runs every kind of Plutus script - with no knowledge of what $\Data$ arguments
-%   are passed to it via this list.
 \end{note}
 
 \begin{figure*}[htb]
@@ -339,7 +333,7 @@ Various items of data are involved in building the inputs for script validation:
 \item The corresponding full validator and datum object, which are looked up in the finite map
 constructed by $\fun{indexedScripts}$ and $\fun{indexedDats}$, respectively;
 
-\item the redeemer, which is contained in the transaction's indexed redeemer structure
+\item The redeemer, which is contained in the transaction's indexed redeemer structure
 and which is located using the $\fun{findRdmr}$ function; and
 
 \item the validation data, built using the UTxO, the transaction itself,
@@ -381,17 +375,13 @@ and the current item being validated.
 The costs of processing native scripts (those that involve only executing standard ledger rules) are included in the standard transaction fees.
 In order to ensure that users pay for the computational resources that are needed to validate non-native scripts, even
 if transactions are invalid, transactions are validated in two phases:
-% This applies only to non-native
-% scripts, as native script execution costs are expected to be much smaller
-% and can be assesed and limited by the ledger rules directly.
 the first phase consists of every aspect of transaction validation apart from executing the non-native scripts; and
 the second phase involves actually executing those scripts.
 %
 Our validation approach  uses four transition systems, each with different responsibilities. We
 give the details of each below, but to summarize, when a transction is processed,
-the processing is done % by rules in the transition systems
+the processing is done
 in the following order:
-% (each transition calls  the one that follows it below):
 
 
 \begin{tabular}{lp{12cm}}
@@ -473,9 +463,9 @@ to run the scripts comes from the signal.
 
 The rules for the second-phase script validation SVAL are given in
 Figure~\ref{fig:rules:utxo-scrval}. Again, no UTxO state update
-is done in this rule. Its purpose is essentially to verify that the
+is done in this rule. Its purpose is to verify that the
 validation tag ($\fun{txvaltag}$) is applied correctly by the creater of
-the block.  It does this by running all the scripts.
+the block. It does this by running all the scripts.
 
 Note that following the Shelley ledger specification approach, every function
 that we define and use in the preconditions or calculations that are used in the ledger rules is
@@ -501,7 +491,7 @@ The $\mathsf{Scripts\mbox{-}Stop}$ rule applies when:
 
 \begin{enumerate}
   \item The current script-input pair  does not validate;
-  (either because the transaction ran out of $\ExUnits$ or for any other reason); or\todo{Confirm ``or'' rather than ``and''.}
+  (either because the transaction ran out of $\ExUnits$ or for any other reason); and
   \item The validation tag is correct ($\False$ in this case).
 \end{enumerate}
 
@@ -528,8 +518,8 @@ slot leader to:
 
 \begin{enumerate}
   \item Correctly apply the $\IsValidating$ tag;
-  \item Include all transactions that fully validate
-  \textit{except possibly for 2nd step script validation failure};
+  \item Include all transactions that validate,
+  \textit{even in case of a 2nd step script validation failure};
   \item Exclude any transactions that are invalid in some way \textit{other than 2nd step script validation failure}.
 \end{enumerate}
 
@@ -836,7 +826,7 @@ Figure \ref{fig:rules:utxo-shelley} shows the $\type{UTxO-inductive}$
 transition rule for the UTXO transition type. Note that the
 signal for this transition is now specifically of type $\GoguenTx$, so it does not
 work with Shelley transactions\todo{cross-reference this -- (see explanation about transforming one type into
-the other below)}\todo{Clarify - is $\Tx$ projected into $\GoguenTx$?}. This rule has the following preconditions (plus the relevant ones
+the other below)}. This rule has the following preconditions (plus the relevant ones
 from the original Shelley specification):
 
 \begin{enumerate}
@@ -960,7 +950,7 @@ UTXOS rule.
 \subsection{Witnessing}
 \label{sec:wits}
 
-Because of two-phase transaction validation, Plutus script validation does not need to be part of transaction witnessing.
+Because of two-phase transaction validation, Plutus script validation is not part of transaction witnessing.
 However, native script validation does remain part of transaction witnessing.
 When witnessing a transaction, we therefore need to validate only the native scripts.
 We have consequently changed the definition of the function
