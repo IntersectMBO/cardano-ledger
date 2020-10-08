@@ -253,14 +253,14 @@ From here, we proceed exactly as in
 The desirability function above can be used to provide an overall ranking over stake pools,
 ordering the pools in terms of their \emph{non-myopic rewards} for some stake.
 For a stake pool with pledged owner stake $s$, total stake $\sigma$, rank
-$r$ and apparent performance $\pbar$, we define its \emph{non-myopic stake} $\sigma_\mathrm{nm}$ as:
+$r$ and member stake $t$, we define the \emph{non-myopic stake} $\sigma_\mathrm{nm}$ as:
 \[
-    \sigma_\mathrm{nm}(s,\sigma,r) :=
+    \sigma_\mathrm{nm}(s,\sigma,t,r) :=
     \left\{
     \begin{array}{ll}
-        \max(\sigma,z_0) &
+        \max(\sigma+t,z_0) &
         \text{if $r\leq k$,} \\
-        s &
+        s+t &
         \text{otherwise,}
     \end{array}
     \right.
@@ -268,15 +268,15 @@ $r$ and apparent performance $\pbar$, we define its \emph{non-myopic stake} $\si
 where $k$ is the parameter that is defined in \cite[Section 5.2]{delegation_design},
 and which represents the desired number of stake pools in an equilibrium state.
 %
-The \emph{non-myopic pool member rewards}
+The \emph{non-myopic pool member reward}
 % of a pool with costs $c$, margin $m$,
 % pledged owner stake $s$, stake $\sigma$, rank $r$,
-for a member that contributes member stake $t$, are then:
+for a member that contributes member stake $t$ to a
+stake pool with hit-rate estimate $h_z$, is then:
 \[
-    r_\mathrm{member, nm}(c, m, s, \sigma, t, r, \pbar) :=
-    r_\mathrm{member}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r),
-    \pbar\bigr),
-    c, m, t, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr),
+    r_\mathrm{member, nm}(c, m, s, \sigma, t, r, h_z) :=
+    r_\mathrm{member}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma,t,r),h_z\bigr),
+    c, m, t, \sigma_\mathrm{nm}(s,\sigma,t,r)\Bigr),
 \label{eq:non-myopic-member-rewards}
 \]
 where

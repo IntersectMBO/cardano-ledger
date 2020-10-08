@@ -57,7 +57,6 @@ import Shelley.Spec.Ledger.Rewards
     StakeShare (..),
     getTopRankedPools,
     nonMyopicMemberRew,
-    nonMyopicStake,
     percentile',
   )
 import Shelley.Spec.Ledger.STS.NewEpoch (calculatePoolDistr)
@@ -114,7 +113,7 @@ getNonMyopicMemberRewards ::
 getNonMyopicMemberRewards globals ss creds =
   Map.fromList $
     fmap
-      (\cred -> (cred, Map.mapWithKey (mkNMMRewards $ memShare cred) poolData))
+      (\cred -> (cred, Map.map (mkNMMRewards $ memShare cred) poolData))
       (Set.toList creds)
   where
     maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
@@ -142,13 +141,12 @@ getNonMyopicMemberRewards globals ss creds =
         poolParams
     histLookup k = fromMaybe mempty (Map.lookup k ls)
     topPools = getTopRankedPools rPot (Coin totalStake) pp poolParams (fmap percentile' ls)
-    mkNMMRewards ms k (ap, poolp, sigma) =
+    mkNMMRewards t (hitRateEst, poolp, sigma) =
       if checkPledge poolp
-        then nonMyopicMemberRew pp poolp rPot s ms nmps ap
+        then nonMyopicMemberRew pp rPot poolp s sigma t topPools hitRateEst
         else mempty
       where
         s = (toShare . _poolPledge) poolp
-        nmps = nonMyopicStake k sigma s pp topPools
         checkPledge pool =
           let ostake =
                 Set.foldl'

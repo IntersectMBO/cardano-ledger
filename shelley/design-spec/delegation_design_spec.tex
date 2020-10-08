@@ -189,6 +189,9 @@ First version officially published on the IOHK blog.}
   affects the implementation.}
 \change{2020-07-23}{PK}{FM (IOHK)}{Change: undistributed rewards go to the
   reserves, not to the treasury.}
+\change{2020-10-08}{J. Corduan}{FM (IOHK)}{Change: include member stake in the non-myopic
+  stake calculation. Change: replaced average apparent performance usage with
+  references to the stake pool ranking document.}
 \end{changelog}
 
 \clearpage%
@@ -2426,8 +2429,8 @@ best data available:
 \begin{itemize}
 \item The cost, margin, and pledged stake will be taken from the most
   recent stake pool registration certificate of the pool.
-\item The performance of the pool will be taken as the moving average, as
-  described in \cref{average-apparent-performance}.
+\item The performance of the pool will be estimated using historical data,
+  as described in \cite{stake-pool-ranking}.
 \item The stake of the pool, and the amount of stake that the owners
   of the pool contribute (in order to check whether their pledge is
   honoured) is taken from the current stake distribution (calculated
@@ -3123,15 +3126,16 @@ the owner(s).
 \subsubsection{Non-Myopic Pool Stake}
 \label{non-myopic-pool-stake}
 
-Consider a pool with pledged owner stake \(s\), total stake \(\sigma\) and rank
-\(r\). We define its \emph{non-myopic stake} \(\sigma_\mathrm{nm}\) as
+Consider a pool with pledged owner stake \(s\), total stake \(\sigma\) and rank \(r\).
+Consider also a potential delegator with stake \(t\).
+We define the \emph{non-myopic stake} \(\sigma_\mathrm{nm}\) as
 \[
-    \sigma_\mathrm{nm}(s,\sigma,r) :=
+    \sigma_\mathrm{nm}(s,\sigma,t,r) :=
     \left\{
     \begin{array}{ll}
-        \max(\sigma,z_0) &
+        \max(\sigma+t,z_0) &
         \text{if $r\leq k$,} \\
-        s &
+        s+t &
         \text{otherwise.}
     \end{array}
     \right.
@@ -3146,8 +3150,8 @@ performance \(\pbar\) are
 \[
     r_\mathrm{operator, nm}(c, m, s, \sigma, r, \pbar) :=
     r_\mathrm{operator}\Bigl(
-    \hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r), \pbar\bigr),
-    c, m, s, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr).
+    \hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma,0,r), \pbar\bigr),
+    c, m, s, \sigma_\mathrm{nm}(s,\sigma,0,r)\Bigr).
 \]
 
 \subsubsection{Non-Myopic Pool Member Rewards}
@@ -3158,67 +3162,24 @@ pledged owner stake \(s\), stake \(\sigma\), rank \(r\), and apparent
 performance \(\pbar\), for a member contributing member stake \(t\), are
 \begin{equation}
     r_\mathrm{member, nm}(c, m, s, \sigma, t, r, \pbar) :=
-    r_\mathrm{member}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r),
+    r_\mathrm{member}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma,t,r),
     \pbar\bigr),
-    c, m, t, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr).
+    c, m, t, \sigma_\mathrm{nm}(s,\sigma,t,r)\Bigr).
 \label{eq:non-myopic-member-rewards}
 \end{equation}
-This formula holds if the pool is amongst the top \(k\) rated pools. If it is
-not, we should expect no rational player to delegate to it, and accordingly we
-will have to replace \(\sigma_\mathrm{nm}\) by \(s + t\) in
-\cref{eq:non-myopic-member-rewards} -- the pool's stake will be entirely made up
-of the owners' stake and the stake that this member chooses to delegate.
 
-\subsubsection{Average Apparent Performance}
+\subsubsection{Replacing Apparent Performance}
 \label{average-apparent-performance}
 
 Using the apparent performance of a pool \emph{within the last epoch} is not
 suitable for determining the long-term expected rewards for delegating to a
-pool. Rather, one should use the average apparent performance over several
-epochs. This avoids preferring or discarding a pool just because it performed
+pool. Rather, one should use the estimate the performance using the historical
+data. This avoids preferring or discarding a pool just because it performed
 exceptionally well or bad in one particular epoch. If the ratio of the number of
 stake pools and the number of expected blocks per epoch is large, this becomes
 even more important, since the apparent performance in a single epoch would be
-bound to fluctuate quite a bit.
-
-In order to decrease the influence of these fluctuations, and to get a long-term
-picture, when evaluating the desirability and non-myopic rewards, one should
-insert the apparent performance averaged over several epochs as \(\pbar\), not
-the value of \(\pbar\) from just the last epoch.
-
-Averaging can be done efficiently via an exponential moving average, or by using
-a moving window and keeping track of the apparent performance during the last
-couple of epochs. Note that since we perform averaging only when predicting the
-rewards to allow stakeholders to make an informed decision, but not when
-actually dealing out the rewards, it will be fine if different wallets will
-choose different methods of calculating the averages, since it does not affect
-the consensus.
-
-\subsubsection{Apparent Performance of New Pools}
-\label{apparent-performance-of-new-pools}
-
-When a new pool is created, there will be no data to determine its apparent
-performance, which is needed to calculate its desirability and non-myopic
-rewards. In order to include a new pool in the ranked display of pools, a wallet
-will have to pick a default value for the apparent performance.
-
-In order to neither advantage nor disadvantage new pools, we recommend
-initialising the moving average by looking at the top \(k\) stake pools (i.e.,
-those that we expect to attract members), taking the moving averages of the
-apparent performance for each of them, and then calculating the median and
-using it as a starting value \(p_0\) for the new pool's apparent performance.
-
-For wallets using an exponential moving average, simply set the current moving
-average to \(p_0\). For wallets using a moving window, fill all positions in the
-window with \(p_0\).
-
-Of course, this leaves us with a bootstrapping problem: what should we use for
-the apparent performance of the very first pool? We propose that wallets should
-initialise the performance of pools that start during the first couple of epochs
-to \(\pbar=1\). This will also alleviate the problem that the apparent
-performance of pools will be fluctuating more during the early phases of the
-system, when a large fraction of blocks will still be produced by the old core
-nodes (see \cref{transition-to-decentralization}).
+bound to fluctuate quite a bit. Our method of estimating stake pool performance
+is explained in \cite{stake-pool-ranking}.
 
 \subsection{Utility}
 \label{utility}

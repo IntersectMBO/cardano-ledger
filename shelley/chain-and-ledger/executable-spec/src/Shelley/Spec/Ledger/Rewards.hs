@@ -480,37 +480,55 @@ reward
       rewards' = fold $ catMaybes $ fmap (\(_, x, _) -> x) results
       hs = Map.fromList $ fmap (\(hk, _, l) -> (hk, l)) results
 
+-- | Compute the Non-Myopic Pool Stake
+--
+--   This function implements non-myopic stake calculation in section 5.6.2
+--   of "Design Specification for Delegation and Incentives in Cardano".
+--   Note that the protocol parameters are implicit in the design document.
+--   Additionally, instead of passing a rank r to compare with k,
+--   we pass the top k desirable pools and check for membership.
 nonMyopicStake ::
-  KeyHash 'StakePool (Crypto era) ->
-  StakeShare ->
-  StakeShare ->
   PParams era ->
+  StakeShare ->
+  StakeShare ->
+  StakeShare ->
+  KeyHash 'StakePool (Crypto era) ->
   Set (KeyHash 'StakePool (Crypto era)) ->
   StakeShare
-nonMyopicStake kh (StakeShare sigma) (StakeShare s) pp topPools =
+nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
   let z0 = 1 % max 1 (fromIntegral (_nOpt pp))
    in if kh `Set.member` topPools
-        then StakeShare (max sigma z0)
-        else StakeShare s
+        then StakeShare (max (sigma + t) z0)
+        else StakeShare (s + t)
 
+-- | Compute the Non-Myopic Pool Member Reward
+--
+--   This function implements equation (3) in section 5.6.4
+--   of "Design Specification for Delegation and Incentives in Cardano".
+--   Note that the protocol parameters and the reward pot are implicit
+--   in the design document. Additionally, instead of passing a rank
+--   r to compare with k, we pass the top k desirable pools and
+--   check for membership.
 nonMyopicMemberRew ::
   PParams era ->
-  PoolParams era ->
   Coin ->
+  PoolParams era ->
   StakeShare ->
   StakeShare ->
   StakeShare ->
+  Set (KeyHash 'StakePool (Crypto era)) ->
   PerformanceEstimate ->
   Coin
 nonMyopicMemberRew
   pp
-  pool
   rPot
-  (StakeShare s)
-  (StakeShare t)
-  (StakeShare nm)
+  pool
+  s
+  sigma
+  t
+  topPools
   (PerformanceEstimate p) =
-    let nm' = max t nm -- TODO check with researchers that this is how to handle t > nm
-        f = maxPool pp rPot nm' s
+    let nm = nonMyopicStake pp s sigma t (_poolPubKey pool) topPools
+        f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
         fHat = floor (p * (fromRational . coinToRational) f)
-     in memberRew (Coin fHat) pool (StakeShare t) (StakeShare nm')
+     in memberRew (Coin fHat) pool t nm
