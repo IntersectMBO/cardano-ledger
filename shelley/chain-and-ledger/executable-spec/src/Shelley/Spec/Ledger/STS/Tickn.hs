@@ -17,18 +17,16 @@ module Shelley.Spec.Ledger.STS.Tickn
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.Era (Era)
 import Control.State.Transition
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 
-data TICKN era
+data TICKN
 
-data TicknEnv era = TicknEnv
-  { ticknEnvPP :: PParams era,
+data TicknEnv = TicknEnv
+  { ticknEnvExtraEntropy :: Nonce,
     ticknEnvCandidateNonce :: Nonce,
     -- | Hash of the last header of the previous epoch as a nonce.
     ticknEnvHashHeaderNonce :: Nonce
@@ -64,17 +62,17 @@ instance ToCBOR TicknState where
           toCBOR ηc
         ]
 
-data TicknPredicateFailure era -- No predicate failures
+data TicknPredicateFailure -- No predicate failures
   deriving (Generic, Show, Eq)
 
-instance (Era era) => NoThunks (TicknPredicateFailure era)
+instance NoThunks TicknPredicateFailure
 
-instance (Era era) => STS (TICKN era) where
-  type State (TICKN era) = TicknState
-  type Signal (TICKN era) = Bool -- Marker indicating whether we are in a new epoch
-  type Environment (TICKN era) = TicknEnv era
-  type BaseM (TICKN era) = ShelleyBase
-  type PredicateFailure (TICKN era) = TicknPredicateFailure era
+instance STS TICKN where
+  type State TICKN = TicknState
+  type Signal TICKN = Bool -- Marker indicating whether we are in a new epoch
+  type Environment TICKN = TicknEnv
+  type BaseM TICKN = ShelleyBase
+  type PredicateFailure TICKN = TicknPredicateFailure
 
   initialRules =
     [ pure
@@ -87,14 +85,14 @@ instance (Era era) => STS (TICKN era) where
       initialNonce = mkNonceFromNumber 0
   transitionRules = [tickTransition]
 
-tickTransition :: TransitionRule (TICKN era)
+tickTransition :: TransitionRule TICKN
 tickTransition = do
-  TRC (TicknEnv pp ηc ηph, st@(TicknState _ ηh), newEpoch) <- judgmentContext
+  TRC (TicknEnv extraEntropy ηc ηph, st@(TicknState _ ηh), newEpoch) <- judgmentContext
   pure $
     if newEpoch
       then
         TicknState
-          { ticknStateEpochNonce = (ηc ⭒ ηh ⭒ _extraEntropy pp),
+          { ticknStateEpochNonce = (ηc ⭒ ηh ⭒ extraEntropy),
             ticknStatePrevHashNonce = ηph
           }
       else st

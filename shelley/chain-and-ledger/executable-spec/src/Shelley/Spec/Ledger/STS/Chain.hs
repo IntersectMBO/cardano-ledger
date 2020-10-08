@@ -153,7 +153,7 @@ data ChainPredicateFailure era
       !Natural -- max protocol version
   | BbodyFailure !(PredicateFailure (BBODY era)) -- Subtransition Failures
   | TickFailure !(PredicateFailure (TICK era)) -- Subtransition Failures
-  | TicknFailure !(PredicateFailure (TICKN era)) -- Subtransition Failures
+  | TicknFailure !(PredicateFailure TICKN) -- Subtransition Failures
   | PrtclFailure !(PredicateFailure (PRTCL era)) -- Subtransition Failures
   | PrtclSeqFailure !(PrtlSeqFailure era) -- Subtransition Failures
   deriving (Generic)
@@ -321,9 +321,9 @@ chainTransition =
             etaPH = prevHashToNonce ph
 
         TicknState eta0' etaH' <-
-          trans @(TICKN era) $
+          trans @TICKN $
             TRC
-              ( TicknEnv pp' etaC etaPH,
+              ( TicknEnv (_extraEntropy pp') etaC etaPH,
                 TicknState eta0 etaH,
                 (e1 /= e2)
               )
@@ -369,7 +369,7 @@ instance
     KESignable (ShelleyEra c) (BHBody (ShelleyEra c)),
     VRF.Signable (VRF (Crypto (ShelleyEra c))) Seed
   ) =>
-  Embed (TICKN (ShelleyEra c)) (CHAIN (ShelleyEra c))
+  Embed TICKN (CHAIN (ShelleyEra c))
   where
   wrapFailed = TicknFailure
 

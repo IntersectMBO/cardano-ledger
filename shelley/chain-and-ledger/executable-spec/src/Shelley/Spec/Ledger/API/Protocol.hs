@@ -50,7 +50,12 @@ import Data.Either (fromRight)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.API.Validation
-import Shelley.Spec.Ledger.BaseTypes (Globals, Nonce, Seed)
+import Shelley.Spec.Ledger.BaseTypes
+  ( Globals,
+    Nonce,
+    Seed,
+    UnitInterval,
+  )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody,
     BHeader,
@@ -68,7 +73,7 @@ import Shelley.Spec.Ledger.LedgerState
     _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.PParams (PParams' (..))
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICKF)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
@@ -77,9 +82,10 @@ import Shelley.Spec.Ledger.Slot (SlotNo)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView era = LedgerView
-  { lvProtParams :: PParams era,
-    lvPoolDistr :: PoolDistr era,
-    lvGenDelegs :: GenDelegs era
+  { lvD            :: UnitInterval,
+    lvExtraEntropy :: Nonce,
+    lvPoolDistr    :: PoolDistr era,
+    lvGenDelegs    :: GenDelegs era
   }
   deriving (Eq, Show, Generic)
 
@@ -89,9 +95,10 @@ instance Era era => FromCBOR (LedgerView era) where
   fromCBOR =
     decodeRecordNamed
       "LedgerView"
-      (const 3)
+      (const 4)
       ( LedgerView
           <$> fromCBOR
+          <*> fromCBOR
           <*> fromCBOR
           <*> fromCBOR
       )
@@ -99,13 +106,15 @@ instance Era era => FromCBOR (LedgerView era) where
 instance Era era => ToCBOR (LedgerView era) where
   toCBOR
     LedgerView
-      { lvProtParams,
+      { lvD,
+        lvExtraEntropy,
         lvPoolDistr,
         lvGenDelegs
       } =
       mconcat
-        [ encodeListLen 3,
-          toCBOR lvProtParams,
+        [ encodeListLen 4,
+          toCBOR lvD,
+          toCBOR lvExtraEntropy,
           toCBOR lvPoolDistr,
           toCBOR lvGenDelegs
         ]
@@ -120,12 +129,12 @@ mkPrtclEnv ::
   STS.Prtcl.PrtclEnv era
 mkPrtclEnv
   LedgerView
-    { lvProtParams,
+    { lvD,
       lvPoolDistr,
       lvGenDelegs
     } =
     STS.Prtcl.PrtclEnv
-      (_d lvProtParams)
+      lvD
       lvPoolDistr
       lvGenDelegs
 
@@ -136,7 +145,8 @@ view
       nesEs
     } =
     LedgerView
-      { lvProtParams = esPp nesEs,
+      { lvD = _d . esPp $ nesEs,
+        lvExtraEntropy = _extraEntropy . esPp $ nesEs,
         lvPoolDistr = nesPd,
         lvGenDelegs =
           _genDelegs . _dstate
@@ -265,8 +275,6 @@ deriving instance (Era era) => Show (ChainTransitionError era)
 
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::
-  forall era.
-  (Era era) =>
   Globals ->
   LedgerView era ->
   -- | Are we in a new epoch?
@@ -275,7 +283,7 @@ tickChainDepState ::
   ChainDepState era
 tickChainDepState
   globals
-  LedgerView {lvProtParams}
+  LedgerView {lvExtraEntropy}
   isNewEpoch
   cs@ChainDepState {csProtocol, csTickn, csLabNonce} = cs {csTickn = newTickState}
     where
@@ -283,10 +291,10 @@ tickChainDepState
       err = error "Panic! tickChainDepState failed."
       newTickState =
         fromRight err . flip runReader globals
-          . applySTS @(STS.Tickn.TICKN era)
+          . applySTS @STS.Tickn.TICKN
           $ TRC
             ( STS.Tickn.TicknEnv
-                lvProtParams
+                lvExtraEntropy
                 candidateNonce
                 csLabNonce,
               csTickn,

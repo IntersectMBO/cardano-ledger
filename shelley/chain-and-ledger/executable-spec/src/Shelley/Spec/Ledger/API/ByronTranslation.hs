@@ -163,7 +163,8 @@ mkInitialShelleyLedgerView ::
   LedgerView (ShelleyEra c)
 mkInitialShelleyLedgerView genesisShelley =
   LedgerView
-    { lvProtParams = sgProtocolParams genesisShelley,
+    { lvD = _d . sgProtocolParams $ genesisShelley,
+      lvExtraEntropy = _extraEntropy . sgProtocolParams $ genesisShelley,
       lvPoolDistr = PoolDistr Map.empty,
       lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley
     }
