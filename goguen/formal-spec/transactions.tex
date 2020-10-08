@@ -3,8 +3,8 @@
 
 This section outlines the changes that are needed to the transaction
 structure to enable non-native scripts to validate
-certain actions: forging tokens, spending outputs, verifying certificates, and
-verifying withdrawals).\todo{Is this the complete set of actions?}
+forging tokens, spending outputs, verifying certificates, and
+verifying withdrawals.
 %
 Figure \ref{fig:defs:utxo-shelley-1} gives the modified transaction types.
 We make the following changes and additions over the corresponding types in the
@@ -42,7 +42,7 @@ Shelley specification~\cite{XX}:
   and an $\IsFee$ tag.
 
   \item $\TxOutND$ is a transaction output with no datum hash
-  (this type is for VKey\todo{What is VK?} and multi-signature script outputs).
+  (this type is for VKey and multi-signature script outputs).
 
   \item $\TxOutP$ is the type of a transaction output that is locked by
   a non-native script, which thus needs to include a datum hash.
@@ -216,7 +216,7 @@ Shelley specification~\cite{XX}:
 
 
 \textbf{Data Representation.}
-The type $\Data$ is a Plutus type that represents all valid ground types in Plutus\todo{Confirm}.
+The type $\Data$ is a Plutus type that represents all valid ground types in Plutus.
 \begin{note}
   No, this needs to be fixed later on.
 There is a similar type in the
@@ -231,7 +231,7 @@ Figure \ref{fig:defs:utxo-shelley-2} defines the witness type, $\TxWitness$.  Th
 in a transaction that is needed for witnessing, namely:
 
 \begin{itemize}
-  \item VKey\todo{What is VK} signatures;
+  \item VKey signatures;
   \item a set of scripts, containing all the scripts (for any purpose) that are needed to \emph{validate} the transaction,
   \item a set of terms of type $\Data$, which contains all required datum objects; and
   \item a map of $\Data$ values indexed by $\RdmrPtr$, which includes all the

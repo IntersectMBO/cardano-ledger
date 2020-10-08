@@ -1,6 +1,10 @@
 \section{Protocol Parameters}
 \label{sec:protocol-parameters}
 
+\begin{note}
+  The content of this section is mostly not about protocol parameters, so this should be refactored.
+\end{note}
+
 We require the following types (see Figure~\ref{fig:defs:protocol-parameters})
 in addition to those that are already defined in the Shelley specification.
 
@@ -33,9 +37,6 @@ in addition to those that are already defined in the Shelley specification.
 \end{tabular}
 \vspace{12pt}
 
-
-\todo[inline]{Confirm - does it make sense to compare/add etc ExUnits, rather than treating them as semantic values.}
-
 We have also need a number of additional protocol parameters and accessor functions: ...\todo{List these.}
 
 \subsection{Plutus Versions and Backwards Compatibility Requirements}
@@ -44,7 +45,6 @@ We have also need a number of additional protocol parameters and accessor functi
 Each version of Plutus (as identified by a $\Language$ value) is considered to be a different
 \emph{language}.  Each such language needs to be interpreted by a language-specific interpreter, called from the ledger implementation,
 and provided with the arguments that it requires (which may be version-specific).
-The $\Language$ type initially contains the value $\Plutus$\todo{decide on the precise naem of the tag}.
 It is necessary for the ledger to be cabable of executing scripts for all current language and previous languages.
 This implies that it is necessary to maintain all ledger
 data that is needed by any past or current Plutus version. Introducing a new Plutus version will also
@@ -54,7 +54,7 @@ involve a hard fork, since the ledger rules must be updated to use the new inter
 \label{sec:determinism}
 
 The data that is passed to the interpreter
-includes the validator\todo{explain}, redeemer\todo{explain}, information about the transaction carrying
+includes the validator, redeemer, information about the transaction carrying
 the script, and some ledger data or protocol parameters.
 It is necessary to maintain a predictable (deterministic) validation outcome over the period between transaction
 submission and script processing.

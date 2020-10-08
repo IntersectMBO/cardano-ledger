@@ -54,7 +54,10 @@ We make a number of changes to the Shelley UTxO model~\ref{XX} to support the Go
   This will be used for future functionality.
 
 \item
-  $\CurItem$ is the type of the items that scripts can validate.\todo{Why is this called CurItem?}
+  $\CurItem$ is the type of the items that scripts can validate.
+  \begin{note}
+    Rename to ScriptPurpose.
+  \end{note}
 
 \end{itemize}
 
@@ -272,7 +275,7 @@ Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used
 \item
   $\fun{runMSigScript}$ validates multi-signature scripts, exactly as in the Shelley ledger specification (where it is called $\fun{evaluateScript}$).
 \item
-  $\fun{runPLCScript}$ validates Plutus scripts\todo{Why runPLCScript rather than checkPLCScript?}. It takes the following
+  $\fun{runPLCScript}$ validates Plutus scripts. It takes the following
   arguments:
   \begin{itemize}
   \item A cost model, that is used to calculate the $\ExUnits$ that are needed for script execution;
@@ -283,6 +286,9 @@ Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used
   and the remaining execution units (subtracting those that are used for script execution).
   Note that script execution stops if the full budget has been spent before validation is complete.
 \end{itemize}
+\begin{note}
+  Maybe rename runPLCScript.
+\end{note}
 
 \begin{note}
   \textbf{Know your contract arguments}
@@ -824,9 +830,10 @@ In this case, the states of the UTxO, fee
 
 Figure \ref{fig:rules:utxo-shelley} shows the $\type{UTxO-inductive}$
 transition rule for the UTXO transition type. Note that the
-signal for this transition is now specifically of type $\GoguenTx$, so it does not
-work with Shelley transactions\todo{cross-reference this -- (see explanation about transforming one type into
-the other below)}. This rule has the following preconditions (plus the relevant ones
+signal for this transition is specifically of type $\GoguenTx$, so it does not
+work with Shelley transactions. Thus, the UTXOW rule needs to convert a $\Tx$ into
+a $\GoguenTx$ to invoke the UTXO rule.
+This rule has the following preconditions (plus the relevant ones
 from the original Shelley specification):
 
 \begin{enumerate}
