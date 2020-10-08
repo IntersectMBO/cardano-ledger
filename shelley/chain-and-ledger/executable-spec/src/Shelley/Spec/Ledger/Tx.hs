@@ -202,6 +202,10 @@ deriving instance
   ShelleyBased era =>
   Show (Tx era)
 
+deriving instance
+  ShelleyBased era =>
+  Eq (Tx era)
+
 pattern Tx ::
   (Shelley.TxBodyConstraints era) =>
   Core.TxBody era ->

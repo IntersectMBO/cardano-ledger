@@ -121,6 +121,10 @@ newtype UTxO era = UTxO {unUTxO :: Map (TxIn era) (TxOut era)}
 
 deriving newtype instance
   ShelleyBased era =>
+  Eq (UTxO era)
+
+deriving newtype instance
+  ShelleyBased era =>
   ToCBOR (UTxO era)
 
 deriving newtype instance
