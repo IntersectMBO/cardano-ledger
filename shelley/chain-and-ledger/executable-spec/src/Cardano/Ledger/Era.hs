@@ -8,6 +8,7 @@ module Cardano.Ledger.Era
   ( Era,
     Crypto,
     PreviousEra,
+    TranslationContext,
     TranslateEra (..),
     translateEra',
   )
