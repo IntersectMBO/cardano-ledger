@@ -21,18 +21,9 @@ import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
 import Test.Shelley.Spec.Ledger.Rules.TestChain
   ( adaPreservationChain,
     collisionFreeComplete,
+    delegProperties,
     poolProperties,
     removedAfterPoolreap,
-  )
-import Test.Shelley.Spec.Ledger.Rules.TestLedger
-  ( consumedEqualsProduced,
-    credentialMappingAfterDelegation,
-    credentialRemovedAfterDereg,
-    prop_MIRValuesEndUpInMap,
-    prop_MIRentriesEndUpInMap,
-    rewardZeroAfterRegKey,
-    rewardsDecreasesByWithdrawals,
-    rewardsSumInvariant
   )
 import Test.Shelley.Spec.Ledger.Serialisation.StakeRef
   ( propDeserializeAddrStakeReference,
@@ -70,15 +61,9 @@ propertyTests =
         [TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered],
       testGroup
         "STS Rules - Delegation Properties"
-        [ TQC.testProperty "newly registered key has a reward of 0" rewardZeroAfterRegKey,
-          TQC.testProperty "deregistered key's credential is removed" credentialRemovedAfterDereg,
-          TQC.testProperty "registered stake credential is correctly delegated" credentialMappingAfterDelegation,
-          TQC.testProperty "sum of rewards does not change" rewardsSumInvariant,
-          TQC.testProperty "rewards pot decreases by the sum of tx withdrawals" rewardsDecreasesByWithdrawals
-        ],
-      testGroup
-        "STS Rules - Utxo Properties"
-        [ TQC.testProperty "the value consumed by UTXO is equal to the value produced in DELEGS" consumedEqualsProduced
+        [ TQC.testProperty
+            "properties of the DELEG STS"
+            delegProperties
         ],
       testGroup
         "STS Rules - Pool Properties"
@@ -100,17 +85,6 @@ propertyTests =
           TQC.testProperty
             "inputs are eliminated, outputs added to utxo and TxIds are unique"
             collisionFreeComplete
-        ],
-      testGroup
-        "STS Rules - MIR certificates"
-        [ TQC.testProperty
-            "entries of MIR certificate are added to\
-            \ irwd mapping"
-            prop_MIRentriesEndUpInMap,
-          TQC.testProperty
-            "coin values of entries of a MIR certificate\
-            \ are added to the irwd mapping"
-            prop_MIRValuesEndUpInMap
         ],
       testGroup
         "Properties of Trace generators"

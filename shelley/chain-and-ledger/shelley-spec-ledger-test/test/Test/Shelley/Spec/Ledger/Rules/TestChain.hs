@@ -13,6 +13,8 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
     collisionFreeComplete,
     -- Test Pool
     poolProperties,
+    -- Test Delegation
+    delegProperties,
   )
 where
 
@@ -30,10 +32,11 @@ import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitS
 import Data.Foldable (fold, foldl', toList)
 import qualified Data.Map.Strict as Map (isSubmapOf)
 import Data.Proxy
-import qualified Data.Set as Set (intersection, map, null, fromList, isSubsetOf)
+import qualified Data.Set as Set (fromList, intersection, isSubsetOf, map, null)
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.API
   ( CHAIN,
+    DELEG,
     LEDGER,
   )
 import Shelley.Spec.Ledger.BlockChain
@@ -48,6 +51,7 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.LedgerState hiding (circulation)
 import Shelley.Spec.Ledger.PParams (_eMax)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
+import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Pool (POOL, PoolEnv (..))
 import Shelley.Spec.Ledger.Tx
@@ -61,12 +65,19 @@ import Test.Shelley.Spec.Ledger.Generator.Block (tickChainState)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (geConstants))
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
+import Test.Shelley.Spec.Ledger.Orphans ()
+import qualified Test.Shelley.Spec.Ledger.Rules.TestDeleg as TestDeleg
+  ( checkInstantaneousRewards,
+    keyDeRegistration,
+    keyDelegation,
+    keyRegistration,
+    rewardsSumInvariant,
+  )
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
   ( poolRegistration,
     poolRetirement,
     poolStateIsInternallyConsistent,
   )
-import Test.Shelley.Spec.Ledger.Orphans ()
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
 import Test.Shelley.Spec.Ledger.Utils
   ( epochFromSlotNo,
@@ -83,6 +94,9 @@ numberOfTests = 300
 
 traceLen :: Word64
 traceLen = 100
+
+longTraceLen :: Word64
+longTraceLen = 150
 
 ----------------------------------------------------------------------
 -- Properties for Chain
@@ -103,11 +117,10 @@ collisionFreeComplete =
         map requiredMSigSignaturesSubset ssts
       ]
 
--- | Various preservation properties, tested on longer traces (double the
--- default length)
+-- | Various preservation properties
 adaPreservationChain :: Property
 adaPreservationChain =
-  forAllChainTrace (traceLen * 2) $ \tr -> do
+  forAllChainTrace longTraceLen $ \tr -> do
     let ssts = sourceSignalTargets tr
         noEpochBoundarySsts = filter sameEpoch ssts
 
@@ -115,9 +128,11 @@ adaPreservationChain =
       [ -- preservation properties
         map checkPreservation ssts,
         map potsSumIncreaseWdrlsPerTx ssts,
+        map potsSumIncreaseByRewardsPerTx ssts,
         map preserveBalance ssts,
         map preserveBalanceRestricted ssts,
         map preserveOutputsTx ssts,
+        map potsRewardsDecreaseByWdrlsPerTx ssts,
         -- well formed deposits
         map nonNegativeDeposits ssts,
         -- non-epoch-boundary preservation properties
@@ -172,7 +187,7 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
               $ target
           )
 
--- | If we are not at an Epoch Boundary , then (Utxo + Deposits)
+-- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
 -- increases by Withdrawals min Fees (for all transactions in a block)
 utxoDepositsIncreaseByFeesWithdrawals :: SourceSignalTarget (CHAIN C) -> Property
 utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target} =
@@ -184,7 +199,7 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
           (UTxOState {_utxo = u, _deposited = d}) = (_utxoState . esLState) es
        in balance u <+> d
 
--- | If we are not at an Epoch Boundary , then (Utxo + Deposits + Fees)
+-- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals for all transactions in a block
 potsSumIncreaseWdrlsPerBlock :: SourceSignalTarget (CHAIN C) -> Property
 potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
@@ -195,7 +210,7 @@ potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
             _utxoState . esLState . nesEs . chainNes $ chainSt
        in balance u <+> d <+> f
 
--- | If we are not at an Epoch Boundary , then (Utxo + Deposits + Fees)
+-- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals in a transaction
 potsSumIncreaseWdrlsPerTx :: SourceSignalTarget (CHAIN C) -> Property
 potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} =
@@ -211,6 +226,57 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
           target = (UTxOState {_utxo = u', _deposited = d', _fees = f'}, _)
         } =
         (balance u' <+> d' <+> f') <-> (balance u <+> d <+> f) === fold (unWdrl . _wdrls $ _body tx)
+
+-- | (Utxo + Deposits + Fees) increases by the reward delta
+potsSumIncreaseByRewardsPerTx :: SourceSignalTarget (CHAIN C) -> Property
+potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = block} =
+  conjoin $
+    map sumIncreaseRewards $
+      sourceSignalTargets ledgerTr
+  where
+    (_, ledgerTr) = ledgerTraceFromBlock chainSt block
+    sumIncreaseRewards
+      SourceSignalTarget
+        { source =
+            ( UTxOState {_utxo = u, _deposited = d, _fees = f},
+              DPState {_dstate = DState {_rewards = rewards}}
+              ),
+          target =
+            ( UTxOState {_utxo = u', _deposited = d', _fees = f'},
+              DPState {_dstate = DState {_rewards = rewards'}}
+              )
+        } =
+        (balance u' <+> d' <+> f') <-> (balance u <+> d <+> f) === fold rewards <-> fold rewards'
+
+-- | The Rewards pot decreases by the sum of withdrawals in a transaction
+potsRewardsDecreaseByWdrlsPerTx :: SourceSignalTarget (CHAIN C) -> Property
+potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} =
+  conjoin $
+    map rewardsDecreaseByWdrls $
+      sourceSignalTargets ledgerTr
+  where
+    rewardsSum = (foldl' (<+>) (Coin 0)) . _rewards . _dstate
+    (_, ledgerTr) = ledgerTraceFromBlock chainSt block
+    rewardsDecreaseByWdrls
+      SourceSignalTarget
+        { source = (_, dpstate),
+          signal = tx,
+          target = (_, dpstate')
+        } =
+        let totalRewards = rewardsSum dpstate
+            totalRewards' = rewardsSum dpstate'
+            txWithdrawals = fold (unWdrl . _wdrls $ _body tx)
+         in conjoin
+              [ counterexample
+                  "A transaction should not increase the Rewards pot"
+                  (totalRewards >= totalRewards'),
+                counterexample
+                  "Withdrawals should be non-negative"
+                  (txWithdrawals >= Coin 0),
+                counterexample
+                  "Rewards should increase by withdrawals"
+                  (totalRewards <-> totalRewards' == txWithdrawals)
+              ]
 
 -- | Preserve the balance in a transaction, i.e., the sum of the consumed value
 -- equals the sum of the created value.
@@ -335,7 +401,6 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
     keyHashSet tx_ =
       Set.map witKeyHash (addrWits . _witnessSet $ tx_)
 
-
 --- | Check for absence of double spend in a block
 noDoubleSpend :: SourceSignalTarget (CHAIN C) -> Property
 noDoubleSpend SourceSignalTarget {signal} =
@@ -397,7 +462,7 @@ feesNonDecreasing SourceSignalTarget {source, target} =
     fees_ chainSt =
       let (UTxOState {_fees = fees}) =
             _utxoState . esLState . nesEs . chainNes $ chainSt
-      in fees
+       in fees
 
 ----------------------------------------------------------------------
 -- POOL Properties
@@ -446,6 +511,33 @@ poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = 
     (_, poolTr) = poolTraceFromBlock chainSt block
 
 ----------------------------------------------------------------------
+-- DELEG Properties
+----------------------------------------------------------------------
+
+-- | Various properties of the POOL STS Rule, tested on longer traces
+-- (double the default length)
+delegProperties :: Property
+delegProperties =
+  forAllChainTrace traceLen $ \tr -> do
+    conjoin $
+      map chainProp (sourceSignalTargets tr)
+  where
+    delegProp :: SourceSignalTarget (DELEG C) -> Property
+    delegProp delegSst =
+      conjoin $
+        [ TestDeleg.keyRegistration delegSst,
+          TestDeleg.keyDeRegistration delegSst,
+          TestDeleg.keyDelegation delegSst,
+          TestDeleg.rewardsSumInvariant delegSst,
+          TestDeleg.checkInstantaneousRewards delegSst
+        ]
+    chainProp :: SourceSignalTarget (CHAIN C) -> Property
+    chainProp (SourceSignalTarget {source = chainSt, signal = block}) =
+      let delegTr = snd $ delegTraceFromBlock chainSt block
+          delegSsts = sourceSignalTargets delegTr
+       in conjoin (map delegProp delegSsts)
+
+----------------------------------------------------------------------
 -- Projections of CHAIN Trace
 ----------------------------------------------------------------------
 
@@ -478,6 +570,29 @@ poolTraceFromBlock chainSt block =
        in poolSt0_
     poolCert (DCertPool _) = True
     poolCert _ = False
+
+-- | Reconstruct a DELEG trace from all the transaction certificates in a Block
+delegTraceFromBlock :: ChainState C -> Block C -> (ChainState C, Trace (DELEG C))
+delegTraceFromBlock chainSt block =
+  ( tickedChainSt,
+    runShelleyBase $
+      Trace.closure @(DELEG C) delegEnv delegSt0 blockCerts
+  )
+  where
+    (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
+    certs = concatMap (reverse . toList . _certs . _body)
+    blockCerts = filter delegCert (certs txs)
+    delegEnv =
+      let (LedgerEnv s txIx _ reserves) = ledgerEnv
+          dummyCertIx = 0
+          ptr = Ptr s txIx dummyCertIx
+       in DelegEnv s ptr reserves
+    delegSt0 =
+      let (_, DPState delegSt0_ _) = ledgerSt0
+       in delegSt0_
+    delegCert (DCertDeleg _) = True
+    delegCert (DCertMir _) = True
+    delegCert _ = False
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
 --
