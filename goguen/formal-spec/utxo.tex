@@ -23,7 +23,7 @@
 %      & \text{unspent tx outputs}
       \\
       \var{cur}
-      & \CurItem
+      & \ScriptPurpose
       & \PolicyID \uniondistinct \UTxOIn \uniondistinct \AddrRWD \uniondistinct \DCert
 %      & \text{item the script is validated for}
     \end{array}
@@ -54,10 +54,7 @@ We make a number of changes to the Shelley UTxO model~\ref{XX} to support the Go
   This will be used for future functionality.
 
 \item
-  $\CurItem$ is the type of the items that scripts can validate.
-  \begin{note}
-    Rename to ScriptPurpose.
-  \end{note}
+  $\ScriptPurpose$ is the type of the items that scripts can validate.
 
 \end{itemize}
 
@@ -241,7 +238,7 @@ These include:
     &\fun{indexedDats}~{tx} ~=~ \{ h \mapsto d ~\vert~ \fun{hashData}~{d}~=~h,
      d\in~\fun{txdats}~(\fun{txwits}~{tx})\}
     \nextdef
-    &\fun{toRdmrPtr} \in \GoguenTx \to \CurItem \to \RdmrPtr \\
+    &\fun{toRdmrPtr} \in \GoguenTx \to \ScriptPurpose \to \RdmrPtr \\
     &\fun{toRdmrPtr}~{tx}~{it} ~=~
       \begin{cases}
         (\mathsf{certTag},\fun{indexof}~\var{it}~(\fun{txcerts}~{txb}))   & \var{it}~\in~\DCert \\
@@ -252,9 +249,9 @@ These include:
     & ~~\where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx}
     \nextdef
-    &\fun{findRdmr} \in \GoguenTx \to (\CurItem \mapsto \Data)\\
+    &\fun{findRdmr} \in \GoguenTx \to (\ScriptPurpose \mapsto \Data)\\
     & \fun{findRdmr}~{tx} ~=~ \{ \var{it} \mapsto \var{d} ~|~
-      \var{it} \in \CurItem,~ \fun{toRdmrPtr}~{tx}~{it} \mapsto \var{d} \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \}
+      \var{it} \in \ScriptPurpose,~ \fun{toRdmrPtr}~{tx}~{it} \mapsto \var{d} \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \}
   \end{align*}
   \caption{Combining Script Validators and their Inputs}
   \label{fig:functions:script1}
@@ -306,7 +303,7 @@ Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used
      &\text{Compute script hash} \\~\\
      &\fun{hashData} \in  ~\Data \to \DataHash \\
      &\text{Compute hash of data} \\~\\
-     &\fun{valContext} \in  \UTxO \to \GoguenTx \to \CurItem \to \Data \\
+     &\fun{valContext} \in  \UTxO \to \GoguenTx \to \ScriptPurpose \to \Data \\
      &\text{Build Validation Data} \\~\\
      &\fun{runMSigScript} \in\ScriptMSig\to \GoguenTx \to \IsValidating  \\
      &\text{Validate a multi-signature script} \\~\\
@@ -349,7 +346,7 @@ and the current item being validated.
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{getCurVals} \in \GoguenTx \to \UTxO \to \powerset{(\CurItem \times \ScriptHash \times \seqof{\Data})} \\
+    & \fun{getCurVals} \in \GoguenTx \to \UTxO \to \powerset{(\ScriptPurpose \times \ScriptHash \times \seqof{\Data})} \\
     & \fun{getCurVals}~{tx}~{utxo}~=~ \\
     & ~~\{ (\var{cert}, \fun{regCred}~\var{cert}, \epsilon) ~|~
       \var{cert} \in \DCertDeRegKey\cap\fun{txcerts}~(\txbody{tx}) \}~\cup \\
