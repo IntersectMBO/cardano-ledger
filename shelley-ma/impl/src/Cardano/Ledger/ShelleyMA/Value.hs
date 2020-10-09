@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.ShelleyMA.Value
   ( PolicyID (..),
@@ -22,6 +23,7 @@ import Cardano.Binary
     fromCBOR,
     toCBOR,
   )
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Val (Val (..), scale)
 import qualified Cardano.Ledger.Val as Val
@@ -150,6 +152,16 @@ instance
       c <- fromCBOR
       v <- fromCBOR
       pure $ Value c v
+
+-- ========================================================================
+-- Compactible
+
+instance Core.Compactible (Value era) where
+  -- TODO a proper compact form
+  newtype CompactForm (Value era) = CompactValue {getCompactValue :: Value era}
+    deriving (ToCBOR, FromCBOR)
+  toCompact = CompactValue
+  fromCompact = getCompactValue
 
 -- ========================================================================
 -- Operations on Values
