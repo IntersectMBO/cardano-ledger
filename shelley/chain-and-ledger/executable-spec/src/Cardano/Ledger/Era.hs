@@ -11,6 +11,7 @@ module Cardano.Ledger.Era
     TranslationContext,
     TranslateEra (..),
     translateEra',
+    translateEraMaybe,
   )
 where
 
@@ -117,3 +118,13 @@ translateEra' ::
   f (PreviousEra era) ->
   f era
 translateEra' ctxt = either absurd id . runExcept . translateEra ctxt
+
+-- | Variant of 'translateEra' for when 'TranslationError' is '()', converting
+-- the result to a 'Maybe'.
+translateEraMaybe ::
+  (TranslateEra era f, TranslationError era f ~ ()) =>
+  TranslationContext era ->
+  f (PreviousEra era) ->
+  Maybe (f era)
+translateEraMaybe ctxt =
+  either (const Nothing) Just . runExcept . translateEra ctxt
