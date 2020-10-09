@@ -346,23 +346,20 @@ and the current item being validated.
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{getCurVals} \in \GoguenTx \to \UTxO \to \powerset{(\ScriptPurpose \times \ScriptHash \times \seqof{\Data})} \\
-    & \fun{getCurVals}~{tx}~{utxo}~=~ \\
-    & ~~\{ (\var{cert}, \fun{regCred}~\var{cert}, \epsilon) ~|~
-      \var{cert} \in \DCertDeRegKey\cap\fun{txcerts}~(\txbody{tx}) \}~\cup \\
-    & ~~\{ (\var{a}, \var{a}, \epsilon) ~|~ a \mapsto \_ \in\fun{txwdrls}~(\txbody{tx}) \}~\cup \\
-    & ~~\{ (\var{pid}, \var{pid}, \epsilon) ~|~ \var{pid}\mapsto ~ \_ \in \fun{forge}~(\txbody{tx}) \}~\cup \\
-    & ~~\{ ((\var{txid}, \var{ix}), \fun{validatorHash}~{a}, [\var{d}]) ~|~ (txid,ix, \_) \in \fun{txinputs}~(\txbody{tx}), \\
-    & ~~~~~~(\var{txid}, \var{ix}) \mapsto ((a,\_),h_d, \_) \in \var{utxo}, \\
-    & ~~~~~~\var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx} \}
+    & \fun{getData} \in \GoguenTx \to \UTxO \to \ScriptPurpose \to \seqof{\Data} \\
+    & \fun{getData}~{tx}~{utxo}~{it}~=~
+      \begin{cases}
+        [\var{d}] & \var{it} \mapsto ((a,\_),h_d, \_) \in \var{utxo}, \var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx} \\
+        \epsilon  & \text{otherwise}
+      \end{cases}
     \nextdef
     & \fun{mkPLCLst} \in \PParams \to \GoguenTx \to \UTxO \to \seqof{(\ScriptPlutus \times \seqof{\Data} \times \CostMod)} \\
-    & \fun{mkPLCLst} ~\var{pp}~\var{tx}~ \var{utxo} ~=~
-      \fun{toList} \{ (\var{script}, (r; \fun{valContext}~\var{utxo}~\var{tx}~\var{cur}; d), \var{cm}) ~|~ \\
-    & ~~(\var{cur}, \var{scriptHash}, \var{d}) \in \fun{getCurVals}~{tx}~{utxo}, \\
-    & ~~\var{cur} \mapsto \var{r} \in \fun{findRdmr}~{tx}, \\
-    & ~~\var{scriptHash}\mapsto \var{script}\in \fun{indexedScripts}~{tx}, \\
-    & ~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp} \}
+    & \fun{mkPLCLst} ~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
+    & ~~\fun{toList} \{ (\var{script}, (r; \fun{valContext}~\var{utxo}~\var{tx}~\var{cur}; \fun{getData}~{tx}~{utxo}~{cur}), \var{cm}) \mid \\
+    & ~~~~(\var{cur}, \var{scriptHash}) \in \fun{scriptsNeeded}~{tx}~{utxo}, \\
+    & ~~~~\var{cur} \mapsto \var{r} \in \fun{findRdmr}~{tx}, \\
+    & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{indexedScripts}~{tx}, \\
+    & ~~~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp} \}
   \end{align*}
   \caption{Scripts and their Arguments}
   \label{fig:functions:script2}
@@ -961,22 +958,21 @@ We have consequently changed the definition of the function
 $\fun{scriptsNeeded}$, see Figure~\ref{fig:functions-witnesses} to include both multi-signature and Plutus scripts, plus the scripts that are used for any
 validation purpose (forging, outputs, certificates, withdrawals).
 
-
 \begin{figure}[htb]
   \begin{align*}
-      & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \GoguenTx \to \ScriptHash\\
-      & \hspace{-1cm}\text{items that need script validation and corresponding script hashes} \\
-      &  \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
-      & ~~\{ \fun{validatorHash}~(\fun{getAddr}~{txout}) \mid i \mapsto \var{txout} \in \var{utxo},\\
-      & ~~~~~i\in\fun{txinsScript}~{(\fun{txinputs}~\var{txb})}~{utxo}\} \\
-      \cup & ~~\{ \var{a} \mid a \mapsto c \in \fun{txwdrls}~\var{txb}),
-         a\in \AddrRWDScr \} \\
-        \cup & ~~\PolicyID \cap \fun{certWitsNeeded}~{txb} \\
-        \cup & ~~\{ cid \mid cid \mapsto \var{tkns}~\in~\fun{forge}~{txb} \} \\
-      & \where \\
-      & ~~~~~~~ \var{txb}~=~\txbody{tx}
+    & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \GoguenTx \to \powerset (\ScriptPurpose \times \ScriptHash) \\
+    & \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
+    & ~~\{ (\var{i}, \fun{validatorHash}~a) \mid i \mapsto (a, \wcard) \in \var{utxo},\\
+    & ~~~~~i\in\fun{txinsScript}~{(\fun{txins~\var{txb}})}~{utxo}\} \\
+    \cup & ~~\{ (\var{a}, \fun{stakeCred_{r}}~\var{a}) \mid a \in \dom (\AddrRWDScr
+           \restrictdom \fun{txwdrls}~\var{txb}) \} \\
+    \cup & ~~\{ (\var{cert}, \var{c}) \mid \var{cert} \in (\DCertDeleg \cup \DCertDeRegKey)\cap\fun{txcerts}~(\txbody{tx}), \\
+    & ~~~~~~\var{c} \in \cwitness{cert} \cap \AddrScr\} \\
+      \cup & ~~\{ (\var{pid}, \var{pid}) \mid \var{pid} \in \supp~(\fun{forge}~\var{txb}) \} \\
+    & \where \\
+    & ~~~~~~~ \var{txb}~=~\txbody{tx}
   \end{align*}
-  \caption{Functions used in witness rule}
+  \caption{Scripts Needed}
   \label{fig:functions-witnesses}
 \end{figure}
 
@@ -1045,9 +1041,9 @@ by the UTXO transition (the application of which is also part of the conditions)
       \dom (\txwitsVKey{txw}) \}\\~\\
       \forall \var{validator} \in \fun{txscripts}~{txw} \cap \ScriptMSig,\\
       \fun{runMSigScript}~\var{validator}~\var{tx}\\~\\
-      \fun{scriptsNeeded}~\var{utxo}~\var{tx} ~=~ \dom (\fun{indexedScripts}~{tx}) \\
-      \forall h \in ~\fun{scriptsNeeded}~\var{utxo}~\var{tx}, ~h\mapsto s~\in~\fun{indexedScripts}~{tx},\\
-       s \in \ScriptPlutus~\Leftrightarrow ~\fun{findRdmr}~{tx}~{c}\neq \emptyset
+      \{ h \mid (\wcard, h) \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}\} ~=~ \dom (\fun{indexedScripts}~{tx}) \\
+      \forall (\var{purp}, h) \in ~\fun{scriptsNeeded}~\var{utxo}~\var{tx}, ~h\mapsto s~\in~\fun{indexedScripts}~{tx},\\
+       s \in \ScriptPlutus~\Leftrightarrow \exists r, \var{purp} \mapsto r \in \fun{findRdmr}~{tx}
       \\~\\
       \forall \var{cert}~\in~\fun{txcerts}~{txb}, \fun{regCred}~{cert}\in \PolicyID \Leftrightarrow
       \var{cert} \in~ \DCertDeRegKey \\~\\

@@ -298,6 +298,9 @@ Section~\ref{XX} specifies how to verify signatures before a
 Shelley transaction is transformed to a Goguen one.
 
 \subsection{Additional Role of Signatures on TxBody}
+\begin{note}
+  Make it more obvious that there is only one kind of transaction, but two validation outcomes.
+\end{note}
 The transaction body must contain all data
 (or at least a hash of the data) that can influence
 on-chain transfer of value
@@ -335,7 +338,9 @@ will make the transaction completely invalid, rather than cause the fee-paying s
 failure or change the amount of fees it pays.
 
 \subsection{Partially processing transactions}
-
+\begin{note}
+  See note above.
+\end{note}
 Note that in Goguen, it is possible for a transaction
 to either be fully processed in full, or else, in case of script validation failure,
 to do nothing apart from paying fees (see Section~\ref{sec:utxo} for details).
