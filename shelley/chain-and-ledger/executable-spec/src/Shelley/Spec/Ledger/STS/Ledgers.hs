@@ -98,7 +98,7 @@ instance
 
 instance
   ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+    DSignable c (Hash c (TxBody (ShelleyEra c)))
   ) =>
   STS (LEDGERS (ShelleyEra c))
   where
@@ -139,7 +139,7 @@ ledgersTransition = do
 
 instance
   ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+    DSignable c (Hash c (TxBody (ShelleyEra c)))
   ) =>
   Embed (LEDGER (ShelleyEra c)) (LEDGERS (ShelleyEra c))
   where

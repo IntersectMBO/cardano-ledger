@@ -22,7 +22,7 @@ import Cardano.Binary
     decodeWord,
     encodeListLen,
   )
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Control.Iterate.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -42,7 +42,7 @@ import Shelley.Spec.Ledger.Slot
 data PPUP era
 
 data PPUPEnv era
-  = PPUPEnv SlotNo (PParams era) (GenDelegs era)
+  = PPUPEnv SlotNo (PParams era) (GenDelegs (Crypto era))
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)
@@ -62,8 +62,8 @@ instance FromCBOR VotingPeriod where
 
 data PpupPredicateFailure era
   = NonGenesisUpdatePPUP
-      !(Set (KeyHash 'Genesis era)) -- KeyHashes which are voting
-      !(Set (KeyHash 'Genesis era)) -- KeyHashes which should be voting
+      !(Set (KeyHash 'Genesis (Crypto era))) -- KeyHashes which are voting
+      !(Set (KeyHash 'Genesis (Crypto era))) -- KeyHashes which should be voting
   | PPUpdateWrongEpoch
       !EpochNo -- current epoch
       !EpochNo -- intended epoch of update

@@ -1,20 +1,22 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ConstraintKinds #-}
 
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
+import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Crypto (VRF)
-import Cardano.Ledger.Era (Era(..))
+import Cardano.Ledger.Crypto (DSIGN, VRF)
+import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Val ((<+>), (<->))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -101,13 +103,12 @@ import Shelley.Spec.Ledger.TxBody
     pattern RewardAcnt,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
-import Cardano.Ledger.Val((<->), (<+>))
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( testBootstrapNotSpending,
     testBootstrapSpending,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes(C, C_Crypto)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
@@ -119,34 +120,34 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-import Cardano.Crypto.DSIGN.Class(SignKeyDSIGN,VerKeyDSIGN)
-import Cardano.Ledger.Crypto(DSIGN)
-
 -- ========================================================================================
--- |- This constraint says we can coerce Numbers into a signable keys
-type NumKey era = (Num (SignKeyDSIGN (DSIGN (Crypto era))), Num (VerKeyDSIGN (DSIGN (Crypto era))))
 
+-- | - This constraint says we can coerce Numbers into a signable keys
+type NumKey crypto =
+  ( Num (SignKeyDSIGN (DSIGN crypto)),
+    Num (VerKeyDSIGN (DSIGN crypto))
+  )
 
-alicePay :: NumKey era => KeyPair 'Payment era
+alicePay :: NumKey crypto => KeyPair 'Payment crypto
 alicePay = KeyPair 1 1
 
-aliceStake :: NumKey era => KeyPair 'Staking era
+aliceStake :: NumKey crypto => KeyPair 'Staking crypto
 aliceStake = KeyPair 2 2
 
-aliceAddr :: (NumKey era,Era era) => Addr era
+aliceAddr :: (NumKey (Crypto era), Era era) => Addr era
 aliceAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey alicePay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay ::  NumKey era => KeyPair 'Payment era
+bobPay :: NumKey era => KeyPair 'Payment era
 bobPay = KeyPair 3 3
 
 bobStake :: NumKey era => KeyPair 'Staking era
 bobStake = KeyPair 4 4
 
-bobAddr ::  (NumKey era,Era era) => Addr era
+bobAddr :: (NumKey (Crypto era), Era era) => Addr era
 bobAddr =
   Addr
     Testnet
@@ -334,7 +335,7 @@ data AliceToBob = AliceToBob
     refunds :: Coin,
     certs :: [DCert C],
     ttl :: SlotNo,
-    signers :: [KeyPair 'Witness C]
+    signers :: [KeyPair 'Witness C_Crypto]
   }
 
 aliceGivesBobLovelace :: AliceToBob -> Tx C
@@ -650,7 +651,7 @@ testOutputTooSmall =
           signers = [asWitness alicePay]
         }
 
-alicePoolColdKeys :: KeyPair 'StakePool C
+alicePoolColdKeys :: KeyPair 'StakePool C_Crypto
 alicePoolColdKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)

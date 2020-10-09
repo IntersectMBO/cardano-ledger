@@ -28,7 +28,8 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (Crypto)
+import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
@@ -115,8 +116,8 @@ data UtxoEnv era
   = UtxoEnv
       SlotNo
       (PParams era)
-      (Map (KeyHash 'StakePool era) (PoolParams era))
-      (GenDelegs era)
+      (Map (KeyHash 'StakePool (Crypto era)) (PoolParams era))
+      (GenDelegs (Crypto era))
   deriving (Show)
 
 data UtxoPredicateFailure era
@@ -247,7 +248,7 @@ instance
         k -> invalidKey k
 
 instance
-  (Crypto c) =>
+  (CryptoClass.Crypto c) =>
   STS (UTXO (ShelleyEra c))
   where
   type State (UTXO (ShelleyEra c)) = UTxOState (ShelleyEra c)
@@ -375,7 +376,7 @@ utxoInductive = do
       }
 
 instance
-  (Crypto c) =>
+  (CryptoClass.Crypto c) =>
   Embed (PPUP (ShelleyEra c)) (UTXO (ShelleyEra c))
   where
   wrapFailed = UpdateFailure

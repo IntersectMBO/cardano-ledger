@@ -35,6 +35,7 @@ module Test.Shelley.Spec.Ledger.Examples.Cast
   )
 where
 
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
@@ -79,19 +80,19 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 
 -- | Alice's payment key pair
-alicePay :: Era era => KeyPair 'Payment era
+alicePay :: CC.Crypto crypto => KeyPair 'Payment crypto
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
 
 -- | Alice's stake key pair
-aliceStake :: Era era => KeyPair 'Staking era
+aliceStake :: CC.Crypto crypto => KeyPair 'Staking crypto
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
 
 -- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
-alicePoolKeys :: Era era => AllIssuerKeys era 'StakePool
+alicePoolKeys :: CC.Crypto crypto => AllIssuerKeys crypto 'StakePool
 alicePoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -121,7 +122,7 @@ alicePoolParams :: forall era. Era era => PoolParams era
 alicePoolParams =
   PoolParams
     { _poolPubKey = (hashKey . vKey . cold) alicePoolKeys,
-      _poolVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @era),
+      _poolVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @(Crypto era)),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeMkUnitInterval 0.1,
@@ -137,17 +138,20 @@ alicePoolParams =
     }
 
 -- | Alice's VRF key hash
-aliceVRFKeyHash :: forall era. Era era => Hash era (VerKeyVRF era)
-aliceVRFKeyHash = hashVerKeyVRF (snd $ vrf (alicePoolKeys @era))
+aliceVRFKeyHash ::
+  forall crypto.
+  CC.Crypto crypto =>
+  Hash crypto (VerKeyVRF crypto)
+aliceVRFKeyHash = hashVerKeyVRF (snd $ vrf (alicePoolKeys @crypto))
 
 -- | Bob's payment key pair
-bobPay :: Era era => KeyPair 'Payment era
+bobPay :: CC.Crypto crypto => KeyPair 'Payment crypto
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (2, 2, 2, 2, 2)
 
 -- | Bob's stake key pair
-bobStake :: Era era => KeyPair 'Staking era
+bobStake :: CC.Crypto crypto => KeyPair 'Staking crypto
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
@@ -161,13 +165,13 @@ bobSHK :: Era era => Credential 'Staking era
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 -- Carl's payment key pair
-carlPay :: Era era => KeyPair 'Payment era
+carlPay :: CC.Crypto crypto => KeyPair 'Payment crypto
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (4, 4, 4, 4, 4)
 
 -- | Carl's stake key pair
-carlStake :: Era era => KeyPair 'Staking era
+carlStake :: CC.Crypto crypto => KeyPair 'Staking crypto
 carlStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
@@ -181,13 +185,13 @@ carlSHK :: Era era => Credential 'Staking era
 carlSHK = (KeyHashObj . hashKey . vKey) carlStake
 
 -- | Daria's payment key pair
-dariaPay :: Era era => KeyPair 'Payment era
+dariaPay :: CC.Crypto crypto => KeyPair 'Payment crypto
 dariaPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (6, 6, 6, 6, 6)
 
 -- | Daria's stake key pair
-dariaStake :: Era era => KeyPair 'Staking era
+dariaStake :: CC.Crypto crypto => KeyPair 'Staking crypto
 dariaStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)

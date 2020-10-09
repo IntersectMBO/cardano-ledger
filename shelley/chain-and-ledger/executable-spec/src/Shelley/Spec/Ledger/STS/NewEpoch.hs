@@ -19,6 +19,7 @@ module Shelley.Spec.Ledger.STS.NewEpoch
   )
 where
 
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
@@ -112,7 +113,7 @@ newEpochTransition = do
           SNothing
           pd'
 
-calculatePoolDistr :: SnapShot era -> PoolDistr era
+calculatePoolDistr :: SnapShot era -> PoolDistr (Crypto era)
 calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
   let Coin total = Map.foldl' (<>) mempty stake
       sd =

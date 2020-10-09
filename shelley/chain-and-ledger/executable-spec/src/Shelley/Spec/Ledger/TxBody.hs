@@ -196,7 +196,7 @@ instance Embed (StakeCreds era) (Map (Credential 'Staking era) SlotNo) where
 -- | The delegation of one stake key to another.
 data Delegation era = Delegation
   { _delegator :: !(StakeCredential era),
-    _delegatee :: !(KeyHash 'StakePool era)
+    _delegatee :: !(KeyHash 'StakePool (Crypto era))
   }
   deriving (Eq, Generic, Show)
 
@@ -323,13 +323,13 @@ instance FromCBOR StakePoolRelay where
 
 -- | A stake pool.
 data PoolParams era = PoolParams
-  { _poolPubKey :: !(KeyHash 'StakePool era),
-    _poolVrf :: !(Hash era (VerKeyVRF era)),
+  { _poolPubKey :: !(KeyHash 'StakePool (Crypto era)),
+    _poolVrf :: !(Hash (Crypto era) (VerKeyVRF (Crypto era))),
     _poolPledge :: !Coin,
     _poolCost :: !Coin,
     _poolMargin :: !UnitInterval,
     _poolRAcnt :: !(RewardAcnt era),
-    _poolOwners :: !(Set (KeyHash 'Staking era)),
+    _poolOwners :: !(Set (KeyHash 'Staking (Crypto era))),
     _poolRelays :: !(StrictSeq StakePoolRelay),
     _poolMD :: !(StrictMaybe PoolMetaData)
   }
@@ -380,7 +380,7 @@ instance Era era => FromJSON (PoolParams era) where
         <*> obj .: "metadata"
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId era = TxId {_unTxId :: Hash era (Core.TxBody era)}
+newtype TxId era = TxId {_unTxId :: Hash (Crypto era) (Core.TxBody era)}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks)
 
@@ -492,15 +492,15 @@ data PoolCert era
   = -- | A stake pool registration certificate.
     RegPool !(PoolParams era)
   | -- | A stake pool retirement certificate.
-    RetirePool !(KeyHash 'StakePool era) !EpochNo
+    RetirePool !(KeyHash 'StakePool (Crypto era)) !EpochNo
   deriving (Show, Generic, Eq)
 
 -- | Genesis key delegation certificate
 data GenesisDelegCert era
   = GenesisDelegCert
-      !(KeyHash 'Genesis era)
-      !(KeyHash 'GenesisDelegate era)
-      !(Hash era (VerKeyVRF era))
+      !(KeyHash 'Genesis (Crypto era))
+      !(KeyHash 'GenesisDelegate (Crypto era))
+      !(Hash (Crypto era) (VerKeyVRF (Crypto era)))
   deriving (Show, Generic, Eq)
 
 data MIRPot = ReservesMIR | TreasuryMIR
@@ -677,22 +677,30 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
 
 -- | Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey era kr = WitVKey'
-  { wvkKey' :: !(VKey kr era),
-    wvkSig' :: !(SignedDSIGN era (Hash era (Core.TxBody era))),
+  { wvkKey' :: !(VKey kr (Crypto era)),
+    wvkSig' :: !(SignedDSIGN (Crypto era) (Hash (Crypto era) (Core.TxBody era))),
     -- | Hash of the witness vkey. We store this here to avoid repeated hashing
     --   when used in ordering.
-    wvkKeyHash :: KeyHash 'Witness era,
+    wvkKeyHash :: KeyHash 'Witness (Crypto era),
     wvkBytes :: BSL.ByteString
   }
-  deriving (Show, Eq, Generic)
-  deriving (NoThunks) via AllowThunksIn '["wvkBytes"] (WitVKey era kr)
+  deriving (Generic)
+
+deriving instance (Era era) => Show (WitVKey era kr)
+
+deriving instance (Era era) => Eq (WitVKey era kr)
+
+deriving via
+  (AllowThunksIn '["wvkBytes"] (WitVKey era kr))
+  instance
+    (Era era, Typeable kr) => NoThunks (WitVKey era kr)
 
 instance (Era era, Typeable k) => HashAnnotated (WitVKey era k) era
 
 pattern WitVKey ::
   (Typeable kr, Era era) =>
-  VKey kr era ->
-  SignedDSIGN era (Hash era (Core.TxBody era)) ->
+  VKey kr (Crypto era) ->
+  SignedDSIGN (Crypto era) (Hash (Crypto era) (Core.TxBody era)) ->
   WitVKey era kr
 pattern WitVKey k s <-
   WitVKey' k s _ _
@@ -710,7 +718,7 @@ pattern WitVKey k s <-
 
 witKeyHash ::
   WitVKey era kr ->
-  KeyHash 'Witness era
+  KeyHash 'Witness (Crypto era)
 witKeyHash (WitVKey' _ _ kh _) = kh
 
 instance

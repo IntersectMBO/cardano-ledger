@@ -104,7 +104,9 @@ import Test.Shelley.Spec.Ledger.Utils
 -- casting function which changes what the hash is of, without changing the
 -- hashing algorithm.
 --
-_assertScriptHashSizeMatchesAddrHashSize :: ScriptHash era -> KeyHash r era
+_assertScriptHashSizeMatchesAddrHashSize ::
+  ScriptHash era ->
+  KeyHash r (Crypto era)
 _assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
   KeyHash (Hash.castHash h)
 
@@ -175,7 +177,7 @@ makeTxBody inp addrCs wdrl =
 makeTx ::
   (Mock (Crypto era), Shelley.TxBodyConstraints era) =>
   Core.TxBody era ->
-  [KeyPair 'Witness era] ->
+  [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash era) (MultiSig era) ->
   Maybe MetaData ->
   Tx era
@@ -279,7 +281,7 @@ applyTxWithScript ::
   [MultiSig era] ->
   Wdrl era ->
   Coin ->
-  [KeyPair 'Witness era] ->
+  [KeyPair 'Witness (Crypto era)] ->
   Either [[PredicateFailure (UTXOW era)]] (UTxOState era)
 applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where

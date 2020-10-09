@@ -144,9 +144,9 @@ type ShelleyTest era =
 
 -- =======================================================
 
-type GenesisKeyPair c = KeyPair 'Genesis c
+type GenesisKeyPair crypto = KeyPair 'Genesis crypto
 
-type MultiSigPairs c = [(MultiSig c, MultiSig c)]
+type MultiSigPairs era = [(MultiSig era, MultiSig era)]
 
 -- ================================================
 
@@ -165,19 +165,19 @@ mkSeedFromWords stuff =
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey ::
-  DSIGNAlgorithm (DSIGN (Crypto era)) =>
+  DSIGNAlgorithm (DSIGN crypto) =>
   (Word64, Word64, Word64, Word64, Word64) ->
-  (SignKeyDSIGN (DSIGN (Crypto era)), VKey kd era)
+  (SignKeyDSIGN (DSIGN crypto), VKey kd crypto)
 mkGenKey seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
 mkKeyPair ::
-  forall era kd.
-  DSIGNAlgorithm (DSIGN (Crypto era)) =>
+  forall crypto kd.
+  DSIGNAlgorithm (DSIGN crypto) =>
   (Word64, Word64, Word64, Word64, Word64) ->
-  (SignKeyDSIGN (DSIGN (Crypto era)), VKey kd era)
+  (SignKeyDSIGN (DSIGN crypto), VKey kd crypto)
 mkKeyPair seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
@@ -185,9 +185,9 @@ mkKeyPair seed =
 -- | For testing purposes, generate a deterministic key pair given a seed.
 -- mkKeyPair' :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair kr
 mkKeyPair' ::
-  DSIGNAlgorithm (DSIGN (Crypto era)) =>
+  DSIGNAlgorithm (DSIGN crypto) =>
   (Word64, Word64, Word64, Word64, Word64) ->
-  KeyPair kd era
+  KeyPair kd crypto
 mkKeyPair' seed = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair seed
@@ -217,7 +217,7 @@ mkKESKeyPair seed =
   let sk = genKeyKES $ mlsbFromByteString $ getSeedBytes (mkSeedFromWords seed)
    in (sk, deriveVerKeyKES sk)
 
-mkAddr :: Era era => (KeyPair 'Payment era, KeyPair 'Staking era) -> Addr era
+mkAddr :: Era era => (KeyPair 'Payment (Crypto era), KeyPair 'Staking (Crypto era)) -> Addr era
 mkAddr (payKey, stakeKey) =
   Addr
     Testnet

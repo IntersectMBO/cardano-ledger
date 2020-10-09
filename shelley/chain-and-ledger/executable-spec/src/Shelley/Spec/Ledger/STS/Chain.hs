@@ -126,12 +126,12 @@ data CHAIN era
 
 data ChainState era = ChainState
   { chainNes :: NewEpochState era,
-    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer era) Word64,
+    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer (Crypto era)) Word64,
     chainEpochNonce :: Nonce,
     chainEvolvingNonce :: Nonce,
     chainCandidateNonce :: Nonce,
     chainPrevEpochNonce :: Nonce,
-    chainLastAppliedBlock :: WithOrigin (LastAppliedBlock era)
+    chainLastAppliedBlock :: WithOrigin (LastAppliedBlock (Crypto era))
   }
   deriving (Generic)
 
@@ -154,8 +154,8 @@ data ChainPredicateFailure era
   | BbodyFailure !(PredicateFailure (BBODY era)) -- Subtransition Failures
   | TickFailure !(PredicateFailure (TICK era)) -- Subtransition Failures
   | TicknFailure !(PredicateFailure TICKN) -- Subtransition Failures
-  | PrtclFailure !(PredicateFailure (PRTCL era)) -- Subtransition Failures
-  | PrtclSeqFailure !(PrtlSeqFailure era) -- Subtransition Failures
+  | PrtclFailure !(PredicateFailure (PRTCL (Crypto era))) -- Subtransition Failures
+  | PrtclSeqFailure !(PrtlSeqFailure (Crypto era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
@@ -178,11 +178,11 @@ instance
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
-  WithOrigin (LastAppliedBlock era) ->
+  WithOrigin (LastAppliedBlock (Crypto era)) ->
   EpochNo ->
   UTxO era ->
   Coin ->
-  Map (KeyHash 'Genesis era) (GenDelegPair era) ->
+  Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   PParams era ->
   Nonce ->
   ChainState era
@@ -222,10 +222,10 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
 
 instance
   ( CryptoClass.Crypto c,
-    DSignable (ShelleyEra c) (OCertSignable (ShelleyEra c)),
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c))),
-    KESignable (ShelleyEra c) (BHBody (ShelleyEra c)),
-    VRF.Signable (VRF (Crypto (ShelleyEra c))) Seed
+    DSignable c (OCertSignable c),
+    DSignable c (Hash c (TxBody (ShelleyEra c))),
+    KESignable c (BHBody c),
+    VRF.Signable (VRF c) Seed
   ) =>
   STS (CHAIN (ShelleyEra c))
   where
@@ -252,7 +252,7 @@ chainChecks ::
   ) =>
   Natural ->
   PParams era ->
-  BHeader era ->
+  BHeader (Crypto era) ->
   m ()
 chainChecks maxpv pp bh = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
@@ -276,9 +276,9 @@ chainTransition ::
     Environment (BBODY era) ~ BbodyEnv era,
     State (BBODY era) ~ BbodyState era,
     Signal (BBODY era) ~ Block era,
-    Embed (TICKN era) (CHAIN era),
+    Embed TICKN (CHAIN era),
     Embed (TICK era) (CHAIN era),
-    Embed (PRTCL era) (CHAIN era)
+    Embed (PRTCL (Crypto era)) (CHAIN era)
   ) =>
   TransitionRule (CHAIN era)
 chainTransition =
@@ -329,7 +329,7 @@ chainTransition =
               )
 
         PrtclState cs' etaV' etaC' <-
-          trans @(PRTCL era) $
+          trans @(PRTCL (Crypto era)) $
             TRC
               ( PrtclEnv (_d pp') _pd _genDelegs eta0',
                 PrtclState cs etaV etaC,
@@ -353,10 +353,10 @@ chainTransition =
 
 instance
   ( CryptoClass.Crypto c,
-    DSignable (ShelleyEra c) (OCertSignable (ShelleyEra c)),
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c))),
-    KESignable (ShelleyEra c) (BHBody (ShelleyEra c)),
-    VRF.Signable (VRF (Crypto (ShelleyEra c))) Seed
+    DSignable c (OCertSignable c),
+    DSignable c (Hash c (TxBody (ShelleyEra c))),
+    KESignable c (BHBody c),
+    VRF.Signable (VRF c) Seed
   ) =>
   Embed (BBODY (ShelleyEra c)) (CHAIN (ShelleyEra c))
   where
@@ -364,10 +364,10 @@ instance
 
 instance
   ( CryptoClass.Crypto c,
-    DSignable (ShelleyEra c) (OCertSignable (ShelleyEra c)),
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c))),
-    KESignable (ShelleyEra c) (BHBody (ShelleyEra c)),
-    VRF.Signable (VRF (Crypto (ShelleyEra c))) Seed
+    DSignable c (OCertSignable c),
+    DSignable c (Hash c (TxBody (ShelleyEra c))),
+    KESignable c (BHBody c),
+    VRF.Signable (VRF c) Seed
   ) =>
   Embed TICKN (CHAIN (ShelleyEra c))
   where
@@ -375,10 +375,10 @@ instance
 
 instance
   ( CryptoClass.Crypto c,
-    DSignable (ShelleyEra c) (OCertSignable (ShelleyEra c)),
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c))),
-    KESignable (ShelleyEra c) (BHBody (ShelleyEra c)),
-    VRF.Signable (VRF (Crypto (ShelleyEra c))) Seed
+    DSignable c (OCertSignable c),
+    DSignable c (Hash c (TxBody (ShelleyEra c))),
+    KESignable c (BHBody c),
+    VRF.Signable (VRF c) Seed
   ) =>
   Embed (TICK (ShelleyEra c)) (CHAIN (ShelleyEra c))
   where
@@ -386,12 +386,12 @@ instance
 
 instance
   ( CryptoClass.Crypto c,
-    DSignable (ShelleyEra c) (OCertSignable (ShelleyEra c)),
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c))),
-    KESignable (ShelleyEra c) (BHBody (ShelleyEra c)),
-    VRF.Signable (VRF (Crypto (ShelleyEra c))) Seed
+    DSignable c (OCertSignable c),
+    DSignable c (Hash c (TxBody (ShelleyEra c))),
+    KESignable c (BHBody c),
+    VRF.Signable (VRF c) Seed
   ) =>
-  Embed (PRTCL (ShelleyEra c)) (CHAIN (ShelleyEra c))
+  Embed (PRTCL c) (CHAIN (ShelleyEra c))
   where
   wrapFailed = PrtclFailure
 

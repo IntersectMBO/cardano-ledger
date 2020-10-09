@@ -7,14 +7,14 @@ module Test.Shelley.Spec.Ledger.LegacyOverlay
   )
 where
 
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Slotting.Slot
-import Cardano.Ledger.Era (Era)
-import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Ratio ((%))
-import qualified Data.Set as Set
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Keys
   ( KeyHash (..),
@@ -89,7 +89,14 @@ legacyOverlayTest _proxy = property $ do
         legacyOverlay
           mainnetEpochSize
           start
-          (Map.keysSet (genDelegs @era))
+          (Map.keysSet (genDelegs @(Crypto era)))
           dval
           asc
-  pure $ os === makeConcreteOverlay start (Map.keysSet (genDelegs @era)) dval asc mainnetEpochSize
+  pure $
+    os
+      === makeConcreteOverlay
+        start
+        (Map.keysSet (genDelegs @(Crypto era)))
+        dval
+        asc
+        mainnetEpochSize

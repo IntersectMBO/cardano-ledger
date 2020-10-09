@@ -114,7 +114,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
     -- instigate the hard fork. We just have to make sure that the hard-coded
     -- Shelley genesis contains the same genesis and delegation verification
     -- keys, but hashed with the right algorithm.
-    genDelegs :: GenDelegs (ShelleyEra c)
+    genDelegs :: GenDelegs c
     genDelegs = GenDelegs $ sgGenDelegs genesisShelley
 
     reserves :: Coin
@@ -160,7 +160,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
 mkInitialShelleyLedgerView ::
   forall c.
   ShelleyGenesis (ShelleyEra c) ->
-  LedgerView (ShelleyEra c)
+  LedgerView c
 mkInitialShelleyLedgerView genesisShelley =
   LedgerView
     { lvD = _d . sgProtocolParams $ genesisShelley,

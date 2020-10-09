@@ -111,7 +111,7 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 mkVKeyRwdAcnt ::
   Era era =>
   Network ->
-  KeyPair 'Staking era ->
+  KeyPair 'Staking (Crypto era) ->
   RewardAcnt era
 mkVKeyRwdAcnt network keys = RewardAcnt network $ KeyHashObj (hashKey $ vKey keys)
 
@@ -125,13 +125,13 @@ mkRwdAcnt network key@(KeyHashObj _) = RewardAcnt network key
 toAddr ::
   Era era =>
   Network ->
-  (KeyPair 'Payment era, KeyPair 'Staking era) ->
+  (KeyPair 'Payment (Crypto era), KeyPair 'Staking (Crypto era)) ->
   Addr era
 toAddr n (payKey, stakeKey) = Addr n (toCred payKey) (StakeRefBase $ toCred stakeKey)
 
 toCred ::
   (Era era) =>
-  KeyPair kr era ->
+  KeyPair kr (Crypto era) ->
   Credential kr era
 toCred k = KeyHashObj . hashKey $ vKey k
 
@@ -476,7 +476,7 @@ bootstrapKeyHash ::
   --(HASH era ~ Hash.Blake2b_224) =>
   Era era =>
   BootstrapAddress era ->
-  KeyHash 'Payment era
+  KeyHash 'Payment (Crypto era)
 bootstrapKeyHash (BootstrapAddress byronAddress) =
   let root = Byron.addrRoot byronAddress
       bytes = Byron.abstractHashToBytes root

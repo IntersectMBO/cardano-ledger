@@ -19,8 +19,7 @@ module Shelley.Spec.Ledger.STS.Overlay
 where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Crypto (VRF)
-import Cardano.Ledger.Era
+import Cardano.Ledger.Crypto
 import Control.Iterate.SetAlgebra (dom, eval, range)
 import Control.Monad (unless)
 import Control.Monad.Except (throwError)
@@ -76,94 +75,94 @@ import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo, epochInfoEpoch, epochInfoFirst)
 
-data OVERLAY era
+data OVERLAY crypto
 
-data OverlayEnv era
+data OverlayEnv crypto
   = OverlayEnv
       UnitInterval -- the decentralization paramater @d@ from the protocal parameters
-      (PoolDistr era)
-      (GenDelegs era)
+      (PoolDistr crypto)
+      (GenDelegs crypto)
       Nonce
   deriving (Generic)
 
-instance NoThunks (OverlayEnv era)
+instance NoThunks (OverlayEnv crypto)
 
-data OverlayPredicateFailure era
+data OverlayPredicateFailure crypto
   = VRFKeyUnknown
-      !(KeyHash 'StakePool era) -- unknown VRF keyhash (not registered)
+      !(KeyHash 'StakePool crypto) -- unknown VRF keyhash (not registered)
   | VRFKeyWrongVRFKey
-      !(KeyHash 'StakePool era) -- KeyHash of block issuer
-      !(Hash era (VerKeyVRF era)) --VRF KeyHash registered with stake pool
-      !(Hash era (VerKeyVRF era)) --VRF KeyHash from Header
+      !(KeyHash 'StakePool crypto) -- KeyHash of block issuer
+      !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash registered with stake pool
+      !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash from Header
   | VRFKeyBadNonce
       !Nonce -- Nonce constant to distinguish VRF nonce values
       !SlotNo -- Slot used for VRF calculation
       !Nonce -- Epoch nonce used for VRF calculation
-      !(VRF.CertifiedVRF (VRF (Crypto era)) Nonce) -- VRF calculated nonce value
+      !(VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated nonce value
   | VRFKeyBadLeaderValue
       !Nonce -- Leader constant to distinguish VRF leader values
       !SlotNo -- Slot used for VRF calculation
       !Nonce -- Epoch nonce used for VRF calculation
-      !(VRF.CertifiedVRF (VRF (Crypto era)) Nonce) -- VRF calculated leader value
+      !(VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated leader value
   | VRFLeaderValueTooBig
-      !(VRF.OutputVRF (VRF (Crypto era))) -- VRF Leader value
+      !(VRF.OutputVRF (VRF crypto)) -- VRF Leader value
       !Rational -- stake pool's relative stake
       !ActiveSlotCoeff -- Praos active slot coefficient value
   | NotActiveSlotOVERLAY
       !SlotNo -- Slot which is supposed to be silent
   | WrongGenesisColdKeyOVERLAY
-      !(KeyHash 'BlockIssuer era) -- KeyHash of block issuer
-      !(KeyHash 'GenesisDelegate era) -- KeyHash genesis delegate keyhash assigned to this slot
+      !(KeyHash 'BlockIssuer crypto) -- KeyHash of block issuer
+      !(KeyHash 'GenesisDelegate crypto) -- KeyHash genesis delegate keyhash assigned to this slot
   | WrongGenesisVRFKeyOVERLAY
-      !(KeyHash 'BlockIssuer era) -- KeyHash of block issuer
-      !(Hash era (VerKeyVRF era)) --VRF KeyHash registered with genesis delegation
-      !(Hash era (VerKeyVRF era)) --VRF KeyHash from Header
+      !(KeyHash 'BlockIssuer crypto) -- KeyHash of block issuer
+      !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash registered with genesis delegation
+      !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash from Header
   | UnknownGenesisKeyOVERLAY
-      !(KeyHash 'Genesis era) -- KeyHash which does not correspond to o genesis node
-  | OcertFailure (PredicateFailure (OCERT era)) -- Subtransition Failures
+      !(KeyHash 'Genesis crypto) -- KeyHash which does not correspond to o genesis node
+  | OcertFailure (PredicateFailure (OCERT crypto)) -- Subtransition Failures
   deriving (Generic)
 
 instance
-  ( Era era,
-    DSignable era (OCertSignable era),
-    KESignable era (BHBody era),
-    VRF.Signable (VRF (Crypto era)) Seed
+  ( Crypto crypto,
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto),
+    VRF.Signable (VRF crypto) Seed
   ) =>
-  STS (OVERLAY era)
+  STS (OVERLAY crypto)
   where
   type
-    State (OVERLAY era) =
-      Map (KeyHash 'BlockIssuer era) Word64
+    State (OVERLAY crypto) =
+      Map (KeyHash 'BlockIssuer crypto) Word64
 
   type
-    Signal (OVERLAY era) =
-      BHeader era
+    Signal (OVERLAY crypto) =
+      BHeader crypto
 
-  type Environment (OVERLAY era) = OverlayEnv era
-  type BaseM (OVERLAY era) = ShelleyBase
-  type PredicateFailure (OVERLAY era) = OverlayPredicateFailure era
+  type Environment (OVERLAY crypto) = OverlayEnv crypto
+  type BaseM (OVERLAY crypto) = ShelleyBase
+  type PredicateFailure (OVERLAY crypto) = OverlayPredicateFailure crypto
 
   initialRules = []
 
   transitionRules = [overlayTransition]
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF (Crypto era))) =>
-  Show (OverlayPredicateFailure era)
+  (VRF.VRFAlgorithm (VRF crypto)) =>
+  Show (OverlayPredicateFailure crypto)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF (Crypto era))) =>
-  Eq (OverlayPredicateFailure era)
+  (VRF.VRFAlgorithm (VRF crypto)) =>
+  Eq (OverlayPredicateFailure crypto)
 
 vrfChecks ::
-  forall era.
-  ( Era era,
-    VRF.Signable (VRF (Crypto era)) Seed,
-    VRF.ContextVRF (VRF (Crypto era)) ~ ()
+  forall crypto.
+  ( Crypto crypto,
+    VRF.Signable (VRF crypto) Seed,
+    VRF.ContextVRF (VRF crypto) ~ ()
   ) =>
   Nonce ->
-  BHBody era ->
-  Either (PredicateFailure (OVERLAY era)) ()
+  BHBody crypto ->
+  Either (PredicateFailure (OVERLAY crypto)) ()
 vrfChecks eta0 bhb = do
   unless
     ( VRF.verifyCertified
@@ -186,16 +185,16 @@ vrfChecks eta0 bhb = do
     slot = bheaderSlotNo bhb
 
 praosVrfChecks ::
-  forall era.
-  ( Era era,
-    VRF.Signable (VRF (Crypto era)) Seed,
-    VRF.ContextVRF (VRF (Crypto era)) ~ ()
+  forall crypto.
+  ( Crypto crypto,
+    VRF.Signable (VRF crypto) Seed,
+    VRF.ContextVRF (VRF crypto) ~ ()
   ) =>
   Nonce ->
-  PoolDistr era ->
+  PoolDistr crypto ->
   ActiveSlotCoeff ->
-  BHBody era ->
-  Either (PredicateFailure (OVERLAY era)) ()
+  BHBody crypto ->
+  Either (PredicateFailure (OVERLAY crypto)) ()
 praosVrfChecks eta0 (PoolDistr pd) f bhb = do
   let sigma' = Map.lookup hk pd
   case sigma' of
@@ -214,15 +213,15 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
     vrfK = bheaderVrfVk bhb
 
 pbftVrfChecks ::
-  forall era.
-  ( Era era,
-    VRF.Signable (VRF (Crypto era)) Seed,
-    VRF.ContextVRF (VRF (Crypto era)) ~ ()
+  forall crypto.
+  ( Crypto crypto,
+    VRF.Signable (VRF crypto) Seed,
+    VRF.ContextVRF (VRF crypto) ~ ()
   ) =>
-  Hash era (VerKeyVRF era) ->
+  Hash crypto (VerKeyVRF crypto) ->
   Nonce ->
-  BHBody era ->
-  Either (PredicateFailure (OVERLAY era)) ()
+  BHBody crypto ->
+  Either (PredicateFailure (OVERLAY crypto)) ()
 pbftVrfChecks vrfHK eta0 bhb = do
   unless
     (vrfHK == hashVerKeyVRF vrfK)
@@ -234,13 +233,13 @@ pbftVrfChecks vrfHK eta0 bhb = do
     vrfK = bheaderVrfVk bhb
 
 overlayTransition ::
-  forall era.
-  ( Era era,
-    DSignable era (OCertSignable era),
-    KESignable era (BHBody era),
-    VRF.Signable (VRF (Crypto era)) Seed
+  forall crypto.
+  ( Crypto crypto,
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto),
+    VRF.Signable (VRF crypto) Seed
   ) =>
-  TransitionRule (OVERLAY era)
+  TransitionRule (OVERLAY crypto)
 overlayTransition =
   judgmentContext
     >>= \( TRC
@@ -252,6 +251,7 @@ overlayTransition =
         let vk = bheaderVk bhb
             vkh = hashKey vk
             slot = bheaderSlotNo bhb
+            gkeys = Map.keysSet genDelegs
 
         asc <- liftSTS $ asks activeSlotCoeff
         firstSlotNo <- liftSTS $ do
@@ -259,7 +259,7 @@ overlayTransition =
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
 
-        case lookupInOverlaySchedule firstSlotNo (Map.keysSet genDelegs) dval asc slot of
+        case (lookupInOverlaySchedule firstSlotNo gkeys dval asc slot :: Maybe (OBftSlot crypto)) of
           Nothing ->
             praosVrfChecks eta0 pd asc bhb ?!: id
           Just NonActiveSlot ->
@@ -278,18 +278,18 @@ overlayTransition =
                   ocertEnvGenDelegs = Set.map genDelegKeyHash $ (range genDelegs)
                 }
 
-        trans @(OCERT era) $ TRC (oce, cs, bh)
+        trans @(OCERT crypto) $ TRC (oce, cs, bh)
 
 instance
-  (VRF.VRFAlgorithm (VRF (Crypto era))) =>
-  NoThunks (OverlayPredicateFailure era)
+  (VRF.VRFAlgorithm (VRF crypto)) =>
+  NoThunks (OverlayPredicateFailure crypto)
 
 instance
-  ( Era era,
-    DSignable era (OCertSignable era),
-    KESignable era (BHBody era),
-    VRF.Signable (VRF (Crypto era)) Seed
+  ( Crypto crypto,
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto),
+    VRF.Signable (VRF crypto) Seed
   ) =>
-  Embed (OCERT era) (OVERLAY era)
+  Embed (OCERT crypto) (OVERLAY crypto)
   where
   wrapFailed = OcertFailure

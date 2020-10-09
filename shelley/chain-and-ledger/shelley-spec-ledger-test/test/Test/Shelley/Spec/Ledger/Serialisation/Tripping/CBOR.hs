@@ -99,10 +99,10 @@ prop_roundtrip_RewardAcnt = roundtrip toCBOR fromCBOR
 prop_roundtrip_Block :: Ledger.Block Mock.C -> Property
 prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_Header :: Ledger.BHeader Mock.C -> Property
+prop_roundtrip_Header :: Ledger.BHeader Mock.C_Crypto -> Property
 prop_roundtrip_Header = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_BlockHeaderHash :: Ledger.HashHeader Mock.C -> Property
+prop_roundtrip_BlockHeaderHash :: Ledger.HashHeader Mock.C_Crypto -> Property
 prop_roundtrip_BlockHeaderHash = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_TxBody :: Ledger.TxBody Mock.C -> Property
@@ -119,12 +119,14 @@ prop_roundtrip_TxOut = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_BootstrapWitness ::
   Ledger.BootstrapWitness Mock.C -> Property
-prop_roundtrip_BootstrapWitness = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
+prop_roundtrip_BootstrapWitness =
+  roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_LEDGER_PredicateFails :: [STS.PredicateFailure (STS.LEDGERS Mock.C)] -> Property
+prop_roundtrip_LEDGER_PredicateFails ::
+  [STS.PredicateFailure (STS.LEDGERS Mock.C)] -> Property
 prop_roundtrip_LEDGER_PredicateFails = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_PrtclState :: STS.PrtclState (Mock.C) -> Property
+prop_roundtrip_PrtclState :: STS.PrtclState (Mock.C_Crypto) -> Property
 prop_roundtrip_PrtclState = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_LedgerState :: Ledger.LedgerState Mock.C -> Property
@@ -169,10 +171,14 @@ tests =
       testProperty "roundtrip Block Header Hash" prop_roundtrip_BlockHeaderHash,
       testProperty "roundtrip TxBody" prop_roundtrip_TxBody,
       testProperty "roundtrip Tx" prop_roundtrip_Tx,
-      testProperty "roundtrip Bootstrap Witness" prop_roundtrip_BootstrapWitness,
+      testProperty
+        "roundtrip Bootstrap Witness"
+        prop_roundtrip_BootstrapWitness,
       testProperty "roundtrip TxId" prop_roundtrip_TxId,
       testProperty "roundtrip TxOut" prop_roundtrip_TxOut,
-      testProperty "roundtrip LEDGER Predicate Failures" prop_roundtrip_LEDGER_PredicateFails,
+      testProperty
+        "roundtrip LEDGER Predicate Failures"
+        prop_roundtrip_LEDGER_PredicateFails,
       testProperty "roundtrip Protocol State" prop_roundtrip_PrtclState,
       testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
       testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState,

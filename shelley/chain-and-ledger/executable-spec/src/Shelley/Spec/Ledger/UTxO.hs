@@ -207,9 +207,9 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 verifyWitVKey ::
   ( Typeable kr,
     Era era,
-    DSignable era (Hash era (Core.TxBody era))
+    DSignable (Crypto era) (Hash (Crypto era) (Core.TxBody era))
   ) =>
-  Hash era (Core.TxBody era) ->
+  Hash (Crypto era) (Core.TxBody era) ->
   WitVKey era kr ->
   Bool
 verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash sig
@@ -218,22 +218,22 @@ verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash 
 makeWitnessVKey ::
   forall era kr.
   ( Era era,
-    DSignable era (Hash era (Core.TxBody era))
+    DSignable (Crypto era) (Hash (Crypto era) (Core.TxBody era))
   ) =>
-  Hash era (Core.TxBody era) ->
-  KeyPair kr era ->
+  Hash (Crypto era) (Core.TxBody era) ->
+  KeyPair kr (Crypto era) ->
   WitVKey era 'Witness
 makeWitnessVKey txbodyHash keys =
-  WitVKey (asWitness $ vKey keys) (signedDSIGN @era (sKey keys) txbodyHash)
+  WitVKey (asWitness $ vKey keys) (signedDSIGN @(Crypto era) (sKey keys) txbodyHash)
 
 -- | Create witnesses for transaction
 makeWitnessesVKey ::
   forall era kr.
   ( Era era,
-    DSignable era (Hash era (Core.TxBody era))
+    DSignable (Crypto era) (Hash (Crypto era) (Core.TxBody era))
   ) =>
-  Hash era (Core.TxBody era) ->
-  [KeyPair kr era] ->
+  Hash (Crypto era) (Core.TxBody era) ->
+  [KeyPair kr (Crypto era)] ->
   Set (WitVKey era ( 'Witness))
 makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
 
@@ -241,11 +241,11 @@ makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
 -- scripts, return the set of required keys.
 makeWitnessesFromScriptKeys ::
   ( Era era,
-    DSignable era (Hash era (Core.TxBody era))
+    DSignable (Crypto era) (Hash (Crypto era) (Core.TxBody era))
   ) =>
-  Hash era (Core.TxBody era) ->
-  Map (KeyHash kr era) (KeyPair kr era) ->
-  Set (KeyHash kr era) ->
+  Hash (Crypto era) (Core.TxBody era) ->
+  Map (KeyHash kr (Crypto era)) (KeyPair kr (Crypto era)) ->
+  Set (KeyHash kr (Crypto era)) ->
   Set (WitVKey era ( 'Witness))
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
@@ -270,7 +270,7 @@ balance (UTxO utxo) = Map.foldl' addTxOuts mempty utxo
 -- registration certificates would be invalid.
 totalDeposits ::
   PParams era ->
-  Map (KeyHash 'StakePool era) (PoolParams era) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
   [DCert era] ->
   Coin
 totalDeposits pp stpools cs =
@@ -280,7 +280,7 @@ totalDeposits pp stpools cs =
     pools = Set.fromList . Maybe.catMaybes $ fmap getKeyHashFromRegPool cs
     numNewPools = length $ pools `Set.difference` (Map.keysSet stpools)
 
-getKeyHashFromRegPool :: DCert era -> Maybe (KeyHash 'StakePool era)
+getKeyHashFromRegPool :: DCert era -> Maybe (KeyHash 'StakePool (Crypto era))
 getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolPubKey $ p
 getKeyHashFromRegPool _ = Nothing
 

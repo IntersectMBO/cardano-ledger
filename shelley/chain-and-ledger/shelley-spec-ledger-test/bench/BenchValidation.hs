@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -25,6 +26,7 @@ module BenchValidation
   )
 where
 
+import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Prelude (NFData (rnf))
 import Cardano.Slotting.Slot (withOriginToMaybe)
@@ -166,20 +168,21 @@ benchreValidate (ValidateInput globals state block) =
 
 -- ==============================================================
 
-data UpdateInputs era
+data UpdateInputs c
   = UpdateInputs
       !Globals
-      !(LedgerView era)
-      !(BHeader era)
-      !(ChainDepState era)
+      !(LedgerView c)
+      !(BHeader c)
+      !(ChainDepState c)
 
-instance Era era => Show (UpdateInputs era) where
-  show (UpdateInputs _globals vl bh st) = show vl ++ "\n" ++ show bh ++ "\n" ++ show st
+instance CryptoClass.Crypto c => Show (UpdateInputs c) where
+  show (UpdateInputs _globals vl bh st) =
+    show vl ++ "\n" ++ show bh ++ "\n" ++ show st
 
 instance NFData (LedgerView era) where
-  rnf (LedgerView _pp _pool _delegs) = ()
+  rnf (LedgerView _D _extraEntropy _pool _delegs) = ()
 
-instance Era era => NFData (BHeader era) where
+instance CryptoClass.Crypto c => NFData (BHeader c) where
   rnf (BHeader _ _) = ()
 
 instance NFData (ChainDepState c) where
@@ -191,8 +194,9 @@ instance NFData Globals where
 instance NFData (ChainTransitionError c) where
   rnf _ = ()
 
-instance Era era => NFData (UpdateInputs era) where
-  rnf (UpdateInputs g lv bh st) = seq (rnf g) (seq (rnf lv) (seq (rnf bh) (rnf st)))
+instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
+  rnf (UpdateInputs g lv bh st) =
+    seq (rnf g) (seq (rnf lv) (seq (rnf bh) (rnf st)))
 
 genUpdateInputs ::
   forall era.
@@ -211,7 +215,7 @@ genUpdateInputs ::
     Mock (Crypto era)
   ) =>
   Int ->
-  IO (UpdateInputs era)
+  IO (UpdateInputs (Crypto era))
 genUpdateInputs utxoSize = do
   let ge = genEnv (Proxy :: Proxy era)
   chainstate <- genChainState utxoSize ge
@@ -223,18 +227,24 @@ genUpdateInputs utxoSize = do
   let nonce = case withOriginToMaybe slot of
         Just (LastAppliedBlock _blknum slotnum _hash) -> slotToNonce slotnum
         Nothing -> error "Empty Slot"
-  pure (UpdateInputs testGlobals ledgerview blockheader (ChainDepState prtclState ticknState nonce))
+  pure
+    ( UpdateInputs
+        testGlobals
+        ledgerview
+        blockheader
+        (ChainDepState prtclState ticknState nonce)
+    )
 
 updateChain ::
-  (Era era, Mock (Crypto era)) =>
-  UpdateInputs era ->
-  Either (ChainTransitionError era) (ChainDepState era)
+  (Mock c) =>
+  UpdateInputs c ->
+  Either (ChainTransitionError c) (ChainDepState c)
 updateChain (UpdateInputs gl lv bh st) = updateChainDepState gl lv bh st
 
 updateAndTickChain ::
-  (Era era, Mock (Crypto era)) =>
-  UpdateInputs era ->
-  Either (ChainTransitionError era) (ChainDepState era)
+  (Mock c) =>
+  UpdateInputs c ->
+  Either (ChainTransitionError c) (ChainDepState c)
 updateAndTickChain (UpdateInputs gl lv bh st) =
   updateChainDepState gl lv bh
     . tickChainDepState gl lv True

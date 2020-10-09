@@ -61,7 +61,7 @@ import qualified System.Directory as Sys
 import qualified System.IO as Sys
 import qualified System.IO.Error as Sys
 import System.Process.ByteString.Lazy
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Prelude
@@ -70,10 +70,10 @@ import Prelude (String)
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlTest' @(BHeader C) n "header",
+    [ cddlTest' @(BHeader C_Crypto) n "header",
       cddlTest' @(BootstrapWitness C) n "bootstrap_witness",
-      cddlTest @(BHBody C) n "header_body",
-      cddlGroupTest @(OCert C) n "operational_cert",
+      cddlTest @(BHBody C_Crypto) n "header_body",
+      cddlGroupTest @(OCert C_Crypto) n "operational_cert",
       cddlTest @(Addr C) n "address",
       cddlTest @(RewardAcnt C) n "reward_account",
       cddlTest @(Credential 'Staking C) n "stake_credential",

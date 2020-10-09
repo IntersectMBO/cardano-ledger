@@ -77,7 +77,7 @@ nativeMultiSigTag = "\00"
 data MultiSig' era
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
-    RequireSignature' !(KeyHash 'Witness era)
+    RequireSignature' !(KeyHash 'Witness (Crypto era))
   | -- | Require all the sub-terms to be satisfied.
     RequireAllOf' ![MultiSig era]
   | -- | Require any one of the sub-terms to be satisfied.
@@ -94,7 +94,7 @@ data MultiSig era = MultiSig'
   deriving (Show, Eq, Ord, Generic)
   deriving (NoThunks) via AllowThunksIn '["multiSigBytes"] (MultiSig era)
 
-pattern RequireSignature :: Era era => KeyHash 'Witness era -> MultiSig era
+pattern RequireSignature :: Era era => KeyHash 'Witness (Crypto era) -> MultiSig era
 pattern RequireSignature akh <-
   MultiSig' (RequireSignature' akh) _
   where
@@ -166,7 +166,7 @@ hashAnyScript ::
 hashAnyScript (MultiSigScript msig) = hashMultiSigScript msig
 
 -- | Get one possible combination of keys for multi signature script
-getKeyCombination :: Era era => MultiSig era -> [KeyHash 'Witness era]
+getKeyCombination :: Era era => MultiSig era -> [KeyHash 'Witness (Crypto era)]
 getKeyCombination (RequireSignature hk) = [hk]
 getKeyCombination (RequireAllOf msigs) =
   List.concatMap getKeyCombination msigs
@@ -179,7 +179,7 @@ getKeyCombination (RequireMOf m msigs) =
 
 -- | Get all valid combinations of keys for given multi signature. This is
 -- mainly useful for testing.
-getKeyCombinations :: Era era => MultiSig era -> [[KeyHash 'Witness era]]
+getKeyCombinations :: Era era => MultiSig era -> [[KeyHash 'Witness (Crypto era)]]
 getKeyCombinations (RequireSignature hk) = [[hk]]
 getKeyCombinations (RequireAllOf msigs) =
   [ List.concat $

@@ -28,7 +28,7 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
@@ -88,7 +88,7 @@ instance ToCBOR MetaDatum where
 instance FromCBOR MetaDatum where
   fromCBOR = decodeMetaDatum
 
-newtype MetaDataHash era = MetaDataHash {unsafeMetaDataHash :: Hash era MetaData}
+newtype MetaDataHash era = MetaDataHash {unsafeMetaDataHash :: Hash (Crypto era) MetaData}
   deriving (Show, Eq, Ord, NoThunks)
 
 deriving instance Era era => ToCBOR (MetaDataHash era)

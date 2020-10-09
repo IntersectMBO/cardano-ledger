@@ -14,7 +14,7 @@ module Shelley.Spec.Ledger.STS.Ocert
   )
 where
 
-import Cardano.Ledger.Era
+import Cardano.Ledger.Crypto
 import Control.Iterate.SetAlgebra (eval, singleton, (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -28,9 +28,9 @@ import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert
 
-data OCERT era
+data OCERT crypto
 
-data OcertPredicateFailure era
+data OcertPredicateFailure crypto
   = KESBeforeStartOCERT
       !KESPeriod -- OCert Start KES Period
       !KESPeriod -- Current KES Period
@@ -50,37 +50,37 @@ data OcertPredicateFailure era
       !Word -- expected KES evolutions
       !String -- error message given by Consensus Layer
   | NoCounterForKeyHashOCERT
-      !(KeyHash 'BlockIssuer era) -- stake pool key hash
+      !(KeyHash 'BlockIssuer crypto) -- stake pool key hash
   deriving (Show, Eq, Generic)
 
-instance NoThunks (OcertPredicateFailure era)
+instance NoThunks (OcertPredicateFailure crypto)
 
 instance
-  ( Era era,
-    DSignable era (OCertSignable era),
-    KESignable era (BHBody era)
+  ( Crypto crypto,
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto)
   ) =>
-  STS (OCERT era)
+  STS (OCERT crypto)
   where
   type
-    State (OCERT era) =
-      Map (KeyHash 'BlockIssuer era) Word64
+    State (OCERT crypto) =
+      Map (KeyHash 'BlockIssuer crypto) Word64
   type
-    Signal (OCERT era) =
-      BHeader era
-  type Environment (OCERT era) = OCertEnv era
-  type BaseM (OCERT era) = ShelleyBase
-  type PredicateFailure (OCERT era) = OcertPredicateFailure era
+    Signal (OCERT crypto) =
+      BHeader crypto
+  type Environment (OCERT crypto) = OCertEnv crypto
+  type BaseM (OCERT crypto) = ShelleyBase
+  type PredicateFailure (OCERT crypto) = OcertPredicateFailure crypto
 
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]
 
 ocertTransition ::
-  ( Era era,
-    DSignable era (OCertSignable era),
-    KESignable era (BHBody era)
+  ( Crypto crypto,
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto)
   ) =>
-  TransitionRule (OCERT era)
+  TransitionRule (OCERT crypto)
 ocertTransition =
   judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
     let OCert vk_hot n c0@(KESPeriod c0_) tau = bheaderOCert bhb

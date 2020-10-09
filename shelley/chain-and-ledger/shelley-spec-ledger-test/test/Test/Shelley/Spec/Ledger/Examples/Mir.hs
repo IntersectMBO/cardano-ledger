@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Examples.Mir
   )
 where
 
+import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Map.Strict (Map)
@@ -144,16 +145,20 @@ txbodyEx1 pot =
     SNothing
     SNothing
 
-mirWits :: (Era era) => [Int] -> [KeyPair 'Witness era]
+mirWits :: (CryptoClass.Crypto c) => [Int] -> [KeyPair 'Witness c]
 mirWits nodes = asWitness <$> map (\x -> cold . coreNodeIssuerKeys $ x) nodes
 
-sufficientMIRWits :: (Era era) => [KeyPair 'Witness era]
+sufficientMIRWits :: (CryptoClass.Crypto c) => [KeyPair 'Witness c]
 sufficientMIRWits = mirWits [0 .. 4]
 
-insufficientMIRWits :: (Era era) => [KeyPair 'Witness era]
+insufficientMIRWits :: (CryptoClass.Crypto c) => [KeyPair 'Witness c]
 insufficientMIRWits = mirWits [0 .. 3]
 
-txEx1 :: (ShelleyTest era, Mock (Crypto era)) => [KeyPair 'Witness era] -> MIRPot -> Tx era
+txEx1 ::
+  (ShelleyTest era, Mock (Crypto era)) =>
+  [KeyPair 'Witness (Crypto era)] ->
+  MIRPot ->
+  Tx era
 txEx1 wits pot =
   Tx
     (txbodyEx1 pot)
@@ -168,22 +173,22 @@ txEx1 wits pot =
 blockEx1' ::
   forall era.
   (ShelleyTest era, ExMock (Crypto era)) =>
-  [KeyPair 'Witness era] ->
+  [KeyPair 'Witness (Crypto era)] ->
   MIRPot ->
   Block era
 blockEx1' wits pot =
   mkBlockFakeVRF
     lastByronHeaderHash
-    (coreNodeKeysBySchedule ppEx 10)
+    (coreNodeKeysBySchedule @era ppEx 10)
     [txEx1 wits pot]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @era)
+    (nonce0 @ (Crypto era))
     (NatNonce 1)
     zero
     0
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 10) 0 (KESPeriod 0))
 
 blockEx1 ::
   forall era.
@@ -195,7 +200,7 @@ blockEx1 = blockEx1' sufficientMIRWits
 expectedStEx1' ::
   forall era.
   (ShelleyTest era, ExMock (Crypto era)) =>
-  [KeyPair 'Witness era] ->
+  [KeyPair 'Witness (Crypto era)] ->
   MIRPot ->
   ChainState era
 expectedStEx1' wits pot =
@@ -291,20 +296,24 @@ mirFailFunds pot treasury llNeeded llReceived =
 -- Block 2, Slot 50, Epoch 0
 --
 
-blockEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => MIRPot -> Block era
+blockEx2 ::
+  forall era.
+  (ShelleyTest era, ExMock (Crypto era)) =>
+  MIRPot ->
+  Block era
 blockEx2 pot =
   mkBlockFakeVRF
-    (bhHash $ bheader (blockEx1 pot))
-    (coreNodeKeysBySchedule ppEx 50)
+    (bhHash $ bheader @era (blockEx1 pot))
+    (coreNodeKeysBySchedule @era ppEx 50)
     []
     (SlotNo 50)
     (BlockNo 2)
-    (nonce0 @era)
+    (nonce0 @(Crypto era))
     (NatNonce 2)
     zero
     2
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 50) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 50) 0 (KESPeriod 0))
 
 expectedStEx2 ::
   forall era.
@@ -348,8 +357,8 @@ blockEx3 ::
   Block era
 blockEx3 pot =
   mkBlockFakeVRF
-    (bhHash $ bheader (blockEx2 pot))
-    (coreNodeKeysBySchedule ppEx 110)
+    (bhHash $ bheader @era (blockEx2 pot))
+    (coreNodeKeysBySchedule @era ppEx 110)
     []
     (SlotNo 110)
     (BlockNo 3)
@@ -358,7 +367,7 @@ blockEx3 pot =
     zero
     5
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 110) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 110) 0 (KESPeriod 0))
 
 expectedStEx3 ::
   forall era.

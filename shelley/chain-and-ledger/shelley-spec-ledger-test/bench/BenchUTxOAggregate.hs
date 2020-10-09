@@ -7,6 +7,7 @@
 module BenchUTxOAggregate where
 
 import Cardano.Ledger.Core (toCompact)
+import Cardano.Ledger.Era (Era (Crypto))
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
 import Control.Iterate.SetAlgebraInternal (compile, compute, run)
@@ -40,7 +41,7 @@ import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
   )
 import Test.QuickCheck
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Shelley.Spec.Ledger.Examples.Cast (alicePoolParams)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators (mkDummyHash)
 
@@ -55,7 +56,10 @@ genTestCase numUTxO numAddr = do
     replicate numUTxO $ do
       i <- choose (0, numAddr -1)
       let addr = Seq.index packedAddrs i
-      pure $ TxOutCompact (SBS.toShort $ serialiseAddr addr) (toCompact $ Val.inject (Coin $ fromIntegral i))
+      pure $
+        TxOutCompact
+          (SBS.toShort $ serialiseAddr addr)
+          (toCompact $ Val.inject (Coin $ fromIntegral i))
   let mktxid i = TxId $ mkDummyHash i
   let mktxin i = TxIn (mktxid i) (fromIntegral i)
   let utxo = Map.fromList $ zip (mktxin <$> [1 ..]) txOuts
@@ -63,14 +67,20 @@ genTestCase numUTxO numAddr = do
       liveptrs = [p | (TxOut (Addr _ _ (StakeRefPtr p)) _) <- txOuts]
       m = length liveptrs `div` 2
   moreptrs <- (sequence $ replicate m arbitrary) :: Gen [Ptr]
-  creds <- (sequence $ replicate (m + m) arbitrary) :: Gen [Credential 'Staking C]
+  creds <-
+    (sequence $ replicate (m + m) arbitrary) ::
+      Gen [Credential 'Staking C]
   let ptrs' :: Bimap Ptr (Credential 'Staking C)
       ptrs' = biMapFromList (\new _old -> new) (zip (liveptrs ++ moreptrs) creds)
-  rewards <- sequence (replicate (3 * (numUTxO `div` 4)) arbitrary) :: Gen [(Credential 'Staking C, Coin)]
+  rewards <-
+    sequence (replicate (3 * (numUTxO `div` 4)) arbitrary) ::
+      Gen [(Credential 'Staking C, Coin)]
   let rewards' :: Map (Credential 'Staking C) Coin
       rewards' = Map.fromList rewards
 
-  keyhash <- sequence (replicate 400 arbitrary) :: Gen [KeyHash 'StakePool C]
+  keyhash <-
+    sequence (replicate 400 arbitrary) ::
+      Gen [KeyHash 'StakePool C_Crypto]
   let delegs = Map.fromList (zip creds (cycle (take 200 keyhash)))
   let pp = alicePoolParams
   let poolParams = Map.fromList (zip keyhash (replicate 400 pp))
@@ -79,12 +89,18 @@ genTestCase numUTxO numAddr = do
 
 makeStatePair ::
   Map (Credential 'Staking era) Coin ->
-  Map (Credential 'Staking era) (KeyHash 'StakePool era) ->
+  Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era)) ->
   Bimap Ptr (Credential 'Staking era) ->
-  Map (KeyHash 'StakePool era) (PoolParams era) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
   (DState era, PState era)
 makeStatePair rewards' delegs ptrs' poolParams =
-  ( DState rewards' delegs ptrs' Map.empty (GenDelegs Map.empty) (InstantaneousRewards Map.empty Map.empty),
+  ( DState
+      rewards'
+      delegs
+      ptrs'
+      Map.empty
+      (GenDelegs Map.empty)
+      (InstantaneousRewards Map.empty Map.empty),
     PState poolParams Map.empty Map.empty
   )
 

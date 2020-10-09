@@ -33,7 +33,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
@@ -209,8 +209,8 @@ genPPUpdate ::
   HasCallStack =>
   Constants ->
   PParams era ->
-  [KeyHash 'Genesis h] ->
-  Gen (ProposedPPUpdates h)
+  [KeyHash 'Genesis (Crypto era)] ->
+  Gen (ProposedPPUpdates era)
 genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) pp genesisKeys = do
   -- TODO generate Maybe tyes so not all updates are full
   minFeeA <- genNatural 0 maxMinFeeA
@@ -259,7 +259,7 @@ genUpdateForNodes ::
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [KeyPair 'Genesis era] ->
+  [KeyPair 'Genesis (Crypto era)] ->
   PParams era ->
   Gen (Maybe (Update era))
 genUpdateForNodes c s e coreKeys pp =
@@ -274,11 +274,11 @@ genUpdate ::
   (HasCallStack, Era era) =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair era, AllIssuerKeys era 'GenesisDelegate)] ->
-  Map (KeyHash 'GenesisDelegate era) (AllIssuerKeys era 'GenesisDelegate) ->
+  [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->
+  Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
   PParams era ->
   (UTxOState era, DPState era) ->
-  Gen (Maybe (Update era), [KeyPair 'Witness era])
+  Gen (Maybe (Update era), [KeyPair 'Witness (Crypto era)])
 genUpdate
   c@(Constants {frequencyTxUpdates})
   s

@@ -21,7 +21,7 @@ module Shelley.Spec.Ledger.API.Validation
   )
 where
 
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Arrow (left, right)
 import Control.Monad.Except
@@ -52,7 +52,7 @@ chainChecks ::
   ) =>
   Globals ->
   PParams era ->
-  BHeader era ->
+  BHeader (Crypto era) ->
   m ()
 chainChecks globals pp bh = STS.chainChecks (maxMajorPV globals) pp bh
 

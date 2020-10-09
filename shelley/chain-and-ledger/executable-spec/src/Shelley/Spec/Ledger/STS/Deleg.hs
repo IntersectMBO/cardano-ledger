@@ -19,7 +19,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Control.Iterate.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -103,9 +103,9 @@ data DelegPredicateFailure era
       !(Credential 'Staking era) -- Credential that is not registered
   | WrongCertificateTypeDELEG -- The DCertPool constructor should not be used by this transition
   | GenesisKeyNotInMappingDELEG
-      !(KeyHash 'Genesis era) -- Unknown Genesis KeyHash
+      !(KeyHash 'Genesis (Crypto era)) -- Unknown Genesis KeyHash
   | DuplicateGenesisDelegateDELEG
-      !(KeyHash 'GenesisDelegate era) -- Keyhash which is already delegated to
+      !(KeyHash 'GenesisDelegate (Crypto era)) -- Keyhash which is already delegated to
   | InsufficientForInstantaneousRewardsDELEG
       !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
       !Coin -- amount of rewards to be given out
@@ -114,7 +114,7 @@ data DelegPredicateFailure era
       !SlotNo -- current slot
       !SlotNo -- MIR must be submitted before this slot
   | DuplicateGenesisVRFDELEG
-      !(Hash era (VerKeyVRF era)) --VRF KeyHash which is already delegated to
+      !(Hash (Crypto era) (VerKeyVRF (Crypto era))) --VRF KeyHash which is already delegated to
   deriving (Show, Eq, Generic)
 
 instance Typeable era => STS (DELEG era) where

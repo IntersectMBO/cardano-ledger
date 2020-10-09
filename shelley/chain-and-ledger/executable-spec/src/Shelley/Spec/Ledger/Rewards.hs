@@ -31,7 +31,7 @@ import Cardano.Binary
     encodeDouble,
     encodeListLen,
   )
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
@@ -218,7 +218,7 @@ instance FromCBOR PerformanceEstimate where
   fromCBOR = PerformanceEstimate <$> decodeDouble
 
 data NonMyopic era = NonMyopic
-  { likelihoodsNM :: !(Map (KeyHash 'StakePool era) Likelihood),
+  { likelihoodsNM :: !(Map (KeyHash 'StakePool (Crypto era)) Likelihood),
     rewardPotNM :: !Coin
   }
   deriving (Show, Eq, Generic)
@@ -284,9 +284,9 @@ getTopRankedPools ::
   Coin ->
   Coin ->
   PParams era ->
-  Map (KeyHash 'StakePool era) (PoolParams era) ->
-  Map (KeyHash 'StakePool era) PerformanceEstimate ->
-  Set (KeyHash 'StakePool era)
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
+  Map (KeyHash 'StakePool (Crypto era)) PerformanceEstimate ->
+  Set (KeyHash 'StakePool (Crypto era))
 getTopRankedPools rPot totalStake pp poolParams aps =
   Set.fromList $
     fmap fst $
@@ -424,16 +424,16 @@ reward ::
   BlocksMade era ->
   Coin ->
   Set (Credential 'Staking era) ->
-  Map (KeyHash 'StakePool era) (PoolParams era) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
   Stake era ->
-  Map (Credential 'Staking era) (KeyHash 'StakePool era) ->
+  Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era)) ->
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
   ( Map
       (Credential 'Staking era)
       Coin,
-    Map (KeyHash 'StakePool era) Likelihood
+    Map (KeyHash 'StakePool (Crypto era)) Likelihood
   )
 reward
   pp
@@ -481,11 +481,11 @@ reward
       hs = Map.fromList $ fmap (\(hk, _, l) -> (hk, l)) results
 
 nonMyopicStake ::
-  KeyHash 'StakePool era ->
+  KeyHash 'StakePool (Crypto era) ->
   StakeShare ->
   StakeShare ->
   PParams era ->
-  Set (KeyHash 'StakePool era) ->
+  Set (KeyHash 'StakePool (Crypto era)) ->
   StakeShare
 nonMyopicStake kh (StakeShare sigma) (StakeShare s) pp topPools =
   let z0 = 1 % max 1 (fromIntegral (_nOpt pp))

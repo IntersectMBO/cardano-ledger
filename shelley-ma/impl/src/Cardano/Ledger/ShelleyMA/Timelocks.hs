@@ -194,7 +194,7 @@ evalFPS ::
   forall era.
   Era era =>
   Timelock era ->
-  Set (KeyHash 'Witness era) ->
+  Set (KeyHash 'Witness (Crypto era)) ->
   Core.TxBody era ->
   Bool
 evalFPS (TimelockAnd locks) vhks txb = all (\lock -> evalFPS lock vhks txb) locks

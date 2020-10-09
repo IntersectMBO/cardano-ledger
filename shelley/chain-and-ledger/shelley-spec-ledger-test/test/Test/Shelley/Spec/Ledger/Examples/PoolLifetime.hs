@@ -17,8 +17,8 @@ where
 
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
-import Data.Group (invert)
 import Data.Foldable (fold)
+import Data.Group (invert)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -31,7 +31,12 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     (⭒),
   )
-import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader, hashHeaderToNonce)
+import Shelley.Spec.Ledger.BlockChain
+  ( Block,
+    bhHash,
+    bheader,
+    hashHeaderToNonce,
+  )
 import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), toDelta)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -111,6 +116,7 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
+import qualified Cardano.Ledger.Crypto as CryptoClass
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -203,16 +209,16 @@ blockEx1 :: forall era. (HasCallStack, ShelleyTest era, ExMock (Crypto era)) => 
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
-    (coreNodeKeysBySchedule ppEx 10)
+    (coreNodeKeysBySchedule @era ppEx 10)
     [txEx1]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @era)
+    (nonce0 @(Crypto era))
     (NatNonce 1)
     zero
     0
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 10) 0 (KESPeriod 0))
 
 expectedStEx1 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx1 =
@@ -281,33 +287,39 @@ txEx2 =
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated txbodyEx2)
-            [asWitness Cast.alicePay, asWitness Cast.aliceStake, asWitness Cast.bobStake]
+            [ asWitness Cast.alicePay,
+              asWitness Cast.aliceStake,
+              asWitness Cast.bobStake
+            ]
       }
     SNothing
 
 blockEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
-    (coreNodeKeysBySchedule ppEx 90)
+    (bhHash $ bheader @era blockEx1)
+    (coreNodeKeysBySchedule @era ppEx 90)
     [txEx2]
     (SlotNo 90)
     (BlockNo 2)
-    (nonce0 @era)
+    (nonce0 @(Crypto era))
     (NatNonce 2)
     zero
     4
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 90) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 90) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
+expectedStEx2 ::
+  forall era.
+  (ShelleyTest era, ExMock (Crypto era)) =>
+  ChainState era
 expectedStEx2 =
   C.evolveNonceFrozen (getBlockNonce (blockEx2 @era))
     . C.newLab blockEx2
     . C.feesAndDeposits feeTx2 (Coin 0)
     . C.newUTxO txbodyEx2
-    . C.delegation Cast.aliceSHK (_poolPubKey Cast.alicePoolParams)
-    . C.delegation Cast.bobSHK (_poolPubKey Cast.alicePoolParams)
+    . C.delegation Cast.aliceSHK (_poolPubKey $ Cast.alicePoolParams @era)
+    . C.delegation Cast.bobSHK (_poolPubKey $ Cast.alicePoolParams @era)
     . C.rewardUpdate emptyRewardUpdate
     $ expectedStEx1
 
@@ -327,8 +339,8 @@ epoch1Nonce = chainCandidateNonce (expectedStEx2 @era)
 blockEx3 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx2)
-    (coreNodeKeysBySchedule ppEx 110)
+    (bhHash $ bheader @era blockEx2)
+    (coreNodeKeysBySchedule @era ppEx 110)
     []
     (SlotNo 110)
     (BlockNo 3)
@@ -337,7 +349,7 @@ blockEx3 =
     zero
     5
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 110) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 110) 0 (KESPeriod 0))
 
 snapEx3 :: Era era => EB.SnapShot era
 snapEx3 =
@@ -356,7 +368,10 @@ snapEx3 =
       EB._poolParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams
     }
 
-expectedStEx3 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
+expectedStEx3 ::
+  forall era.
+  (ShelleyTest era, ExMock (Crypto era)) =>
+  ChainState era
 expectedStEx3 =
   C.newEpoch blockEx3
     . C.newSnapshot snapEx3 (feeTx1 <> feeTx2)
@@ -411,8 +426,8 @@ txEx4 =
 blockEx4 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx3)
-    (coreNodeKeysBySchedule ppEx 190)
+    (bhHash $ bheader @era blockEx3)
+    (coreNodeKeysBySchedule @era ppEx 190)
     [txEx4]
     (SlotNo 190)
     (BlockNo 4)
@@ -421,7 +436,7 @@ blockEx4 =
     zero
     9
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 190) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 190) 0 (KESPeriod 0))
 
 rewardUpdateEx4 :: forall era. RewardUpdate era
 rewardUpdateEx4 =
@@ -433,13 +448,16 @@ rewardUpdateEx4 =
       nonMyopic = emptyNonMyopic {rewardPotNM = Coin 6}
     }
 
-expectedStEx4 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
+expectedStEx4 ::
+  forall era.
+  (ShelleyTest era, ExMock (Crypto era)) =>
+  ChainState era
 expectedStEx4 =
   C.evolveNonceFrozen (getBlockNonce (blockEx4 @era))
     . C.newLab blockEx4
     . C.feesAndDeposits feeTx4 (Coin 0)
     . C.newUTxO txbodyEx4
-    . C.delegation Cast.carlSHK (_poolPubKey Cast.alicePoolParams)
+    . C.delegation Cast.carlSHK (_poolPubKey $ Cast.alicePoolParams @era)
     . C.rewardUpdate rewardUpdateEx4
     $ expectedStEx3
 
@@ -463,8 +481,8 @@ epoch2Nonce =
 blockEx5 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx5 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx4)
-    (coreNodeKeysBySchedule ppEx 220)
+    (bhHash $ bheader @era blockEx4)
+    (coreNodeKeysBySchedule @era ppEx 220)
     []
     (SlotNo 220)
     (BlockNo 5)
@@ -473,7 +491,7 @@ blockEx5 =
     zero
     11
     10
-    (mkOCert (coreNodeKeysBySchedule ppEx 220) 1 (KESPeriod 10))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 220) 1 (KESPeriod 10))
 
 snapEx5 :: forall era. ShelleyTest era => EB.SnapShot era
 snapEx5 =
@@ -494,14 +512,17 @@ snapEx5 =
       EB._poolParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams
     }
 
-pdEx5 :: forall era. Era era => PoolDistr era
+pdEx5 :: forall c. CryptoClass.Crypto c => PoolDistr c
 pdEx5 =
   PoolDistr $
     Map.singleton
-      (hk Cast.alicePoolKeys)
-      (IndividualPoolStake 1 (Cast.aliceVRFKeyHash @era))
+      (hk $ Cast.alicePoolKeys @c)
+      (IndividualPoolStake 1 (Cast.aliceVRFKeyHash @c))
 
-expectedStEx5 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
+expectedStEx5 ::
+  forall era.
+  (ShelleyTest era, ExMock (Crypto era)) =>
+  ChainState era
 expectedStEx5 =
   C.newEpoch blockEx5
     . C.newSnapshot snapEx5 feeTx4
@@ -510,7 +531,7 @@ expectedStEx5 =
     . C.setOCertCounter coreNodeHK 1
     $ expectedStEx4
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule ppEx 220
+    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @era ppEx 220
 
 -- === Block 5, Slot 220, Epoch 2
 --
@@ -526,7 +547,7 @@ poolLifetime5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 blockEx6 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx6 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx5)
+    (bhHash $ bheader @era blockEx5)
     Cast.alicePoolKeys
     []
     (SlotNo 295) -- odd slots open for decentralization
@@ -575,8 +596,8 @@ epoch3Nonce =
 blockEx7 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx7 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx6)
-    (coreNodeKeysBySchedule ppEx 310)
+    (bhHash $ bheader @era blockEx6)
+    (coreNodeKeysBySchedule @era ppEx 310)
     []
     (SlotNo 310)
     (BlockNo 7)
@@ -585,7 +606,7 @@ blockEx7 =
     zero
     15
     15
-    (mkOCert (coreNodeKeysBySchedule ppEx 310) 1 (KESPeriod 15))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 310) 1 (KESPeriod 15))
 
 expectedStEx7 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx7 =
@@ -595,7 +616,7 @@ expectedStEx7 =
     . C.setOCertCounter coreNodeHK 1
     $ expectedStEx6
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule ppEx 310
+    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @era ppEx 310
 
 -- === Block 7, Slot 310, Epoch 3
 --
@@ -611,8 +632,8 @@ poolLifetime7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 blockEx8 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx8 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx7)
-    (coreNodeKeysBySchedule ppEx 390)
+    (bhHash $ bheader @era blockEx7)
+    (coreNodeKeysBySchedule @era ppEx 390)
     []
     (SlotNo 390)
     (BlockNo 8)
@@ -621,7 +642,7 @@ blockEx8 =
     zero
     19
     19
-    (mkOCert (coreNodeKeysBySchedule ppEx 390) 2 (KESPeriod 19))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 390) 2 (KESPeriod 19))
 
 aliceRAcnt8 :: Coin
 aliceRAcnt8 = Coin 11654787878
@@ -679,7 +700,7 @@ expectedStEx8 =
     . C.rewardUpdate rewardUpdateEx8
     $ expectedStEx7
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule ppEx 390
+    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @era ppEx 390
 
 -- === Block 8, Slot 390, Epoch 3
 --
@@ -699,8 +720,8 @@ epoch4Nonce =
 blockEx9 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx9 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx8)
-    (coreNodeKeysBySchedule ppEx 410)
+    (bhHash $ bheader @era blockEx8)
+    (coreNodeKeysBySchedule @era ppEx 410)
     []
     (SlotNo 410)
     (BlockNo 9)
@@ -709,7 +730,7 @@ blockEx9 =
     zero
     20
     20
-    (mkOCert (coreNodeKeysBySchedule ppEx 410) 2 (KESPeriod 20))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 410) 2 (KESPeriod 20))
 
 snapEx9 :: forall era. ShelleyTest era => EB.SnapShot era
 snapEx9 =
@@ -731,7 +752,7 @@ expectedStEx9 =
     . C.setOCertCounter coreNodeHK 2
     $ expectedStEx8
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule ppEx 410
+    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @era ppEx 410
 
 -- === Block 9, Slot 410, Epoch 4
 --
@@ -778,8 +799,8 @@ txEx10 =
 blockEx10 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx10 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx9)
-    (coreNodeKeysBySchedule ppEx 420)
+    (bhHash $ bheader @era blockEx9)
+    (coreNodeKeysBySchedule @era ppEx 420)
     [txEx10]
     (SlotNo 420)
     (BlockNo 10)
@@ -788,7 +809,7 @@ blockEx10 =
     zero
     21
     19
-    (mkOCert (coreNodeKeysBySchedule ppEx 420) 2 (KESPeriod 19))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 420) 2 (KESPeriod 19))
 
 expectedStEx10 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx10 =
@@ -847,8 +868,8 @@ txEx11 =
 blockEx11 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx11 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx10)
-    (coreNodeKeysBySchedule ppEx 490)
+    (bhHash $ bheader @era blockEx10)
+    (coreNodeKeysBySchedule @era ppEx 490)
     [txEx11]
     (SlotNo 490)
     (BlockNo 11)
@@ -857,7 +878,7 @@ blockEx11 =
     zero
     24
     19
-    (mkOCert (coreNodeKeysBySchedule ppEx 490) 2 (KESPeriod 19))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 490) 2 (KESPeriod 19))
 
 reserves12 :: Coin
 reserves12 = reserves7 <> deltaR8
@@ -917,8 +938,8 @@ epoch5Nonce =
 blockEx12 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx12 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx11)
-    (coreNodeKeysBySchedule ppEx 510)
+    (bhHash $ bheader @era blockEx11)
+    (coreNodeKeysBySchedule @era ppEx 510)
     []
     (SlotNo 510)
     (BlockNo 12)
@@ -927,7 +948,7 @@ blockEx12 =
     zero
     25
     25
-    (mkOCert (coreNodeKeysBySchedule ppEx 510) 3 (KESPeriod 25))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 510) 3 (KESPeriod 25))
 
 snapEx12 :: forall era. ShelleyTest era => EB.SnapShot era
 snapEx12 =
@@ -954,7 +975,7 @@ expectedStEx12 =
     . C.reapPool Cast.alicePoolParams
     $ expectedStEx11
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule ppEx 510
+    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @era ppEx 510
 
 -- === Block 12, Slot 510, Epoch 5
 --

@@ -13,7 +13,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts) where
 
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
   ( BaseM,
@@ -149,7 +149,7 @@ genDCerts ::
       Coin,
       Coin,
       DPState era,
-      ([KeyPair 'Witness era], [(MultiSig era, MultiSig era)])
+      ([KeyPair 'Witness (Crypto era)], [(MultiSig era, MultiSig era)])
     )
 genDCerts
   ge@( GenEnv
@@ -211,7 +211,7 @@ scriptCredMultisig x =
 keyCredAsWitness ::
   (HasCallStack, Era era) =>
   CertCred era ->
-  [KeyPair 'Witness era]
+  [KeyPair 'Witness (Crypto era)]
 keyCredAsWitness (DelegateCred c) = asWitness <$> c
 keyCredAsWitness (CoreKeyCred c) = asWitness <$> c
 keyCredAsWitness (StakeCred c) = [asWitness c]

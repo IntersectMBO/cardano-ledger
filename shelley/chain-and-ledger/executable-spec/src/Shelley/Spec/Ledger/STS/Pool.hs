@@ -19,7 +19,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -57,7 +57,7 @@ data PoolEnv era
 
 data PoolPredicateFailure era
   = StakePoolNotRegisteredOnKeyPOOL
-      !(KeyHash 'StakePool era) -- KeyHash which cannot be retired since it is not registered
+      !(KeyHash 'StakePool (Crypto era)) -- KeyHash which cannot be retired since it is not registered
   | StakePoolRetirementWrongEpochPOOL
       !Word64 -- Current Epoch
       !Word64 -- The epoch listed in the Pool Retirement Certificate

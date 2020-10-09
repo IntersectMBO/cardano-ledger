@@ -17,7 +17,8 @@ module Test.Shelley.Spec.Ledger.Examples.Init
   )
 where
 
-import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Shelley.Spec.Ledger.BaseTypes
@@ -87,12 +88,18 @@ ppEx =
 -- When this transition actually occurs,
 -- the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork.
-lastByronHeaderHash :: forall era. Era era => HashHeader era
+lastByronHeaderHash ::
+  forall c.
+  CryptoClass.Crypto c =>
+  HashHeader c
 lastByronHeaderHash = HashHeader $ mkHash 0
 
 -- | === Initial Nonce
-nonce0 :: forall era. Era era => Nonce
-nonce0 = hashHeaderToNonce (lastByronHeaderHash @era)
+nonce0 ::
+  forall c.
+  CryptoClass.Crypto c =>
+  Nonce
+nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
 
 -- | === Initial Chain State
 --
@@ -108,4 +115,4 @@ initSt utxo =
     (maxLLSupply <-> (balance utxo))
     genDelegs
     ppEx
-    (nonce0 @era)
+    (nonce0 @(Crypto era))
