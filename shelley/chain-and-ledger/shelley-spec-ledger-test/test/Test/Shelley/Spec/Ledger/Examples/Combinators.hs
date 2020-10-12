@@ -40,6 +40,7 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -48,7 +49,10 @@ import Control.Iterate.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), 
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
 import Data.Word (Word64)
+import GHC.Records (HasField)
 import Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), (⭒))
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
@@ -91,7 +95,8 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..), TxBody (..))
+import Shelley.Spec.Ledger.Tx (TxIn, TxOut)
+import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
 
@@ -166,8 +171,11 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
 -- Update the UTxO for given transaction body.
 newUTxO ::
   forall era.
-  ShelleyBased era =>
-  TxBody era ->
+  ( ShelleyBased era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+  ) =>
+  Core.TxBody era ->
   ChainState era ->
   ChainState era
 newUTxO txb cs = cs {chainNes = nes'}

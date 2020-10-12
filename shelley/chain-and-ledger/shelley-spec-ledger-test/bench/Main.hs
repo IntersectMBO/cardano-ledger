@@ -20,10 +20,8 @@ import Cardano.Crypto.DSIGN
 import Cardano.Crypto.Hash
 import Cardano.Crypto.KES
 import Cardano.Crypto.VRF.Praos
-import Cardano.Ledger.Core (Value)
 import Cardano.Ledger.Crypto (Crypto (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Era (..))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (dom, keysEqual, (▷), (◁))
@@ -76,6 +74,7 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerStateWithNregisteredPools,
   )
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
+import Cardano.Ledger.Shelley (ShelleyEra)
 
 -- ==========================================================
 
@@ -88,12 +87,7 @@ instance CryptoClass.Crypto BenchCrypto where
   type HASH BenchCrypto = Blake2b_256
   type ADDRHASH BenchCrypto = Blake2b_224
 
-data BenchEra
-
-instance Era BenchEra where
-  type Crypto BenchEra = BenchCrypto
-
-type instance Value BenchEra = Coin
+type BenchEra = ShelleyEra BenchCrypto
 
 -- ============================================================
 

@@ -45,24 +45,27 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Utils
-  ( MultiSigPairs,
-    ShelleyTest,
+  (ShelleyTest,  MultiSigPairs,
     maxKESIterations,
     mkKESKeyPair,
     mkVRFKeyPair,
     slotsPerKESIteration,
   )
+import qualified Cardano.Ledger.Shelley as Shelley
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
-genEnv :: Era era => proxy era -> GenEnv era
+genEnv :: Shelley.TxBodyConstraints era => proxy era -> GenEnv era
 genEnv _ =
   GenEnv
     (keySpace defaultConstants)
     defaultConstants
 
 -- | Example keyspace for use in generators
-keySpace :: Era era => Constants -> KeySpace era
+keySpace ::
+  (Shelley.TxBodyConstraints era) =>
+  Constants ->
+  KeySpace era
 keySpace c =
   KeySpace
     (coreNodeKeys c)

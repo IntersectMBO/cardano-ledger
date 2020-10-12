@@ -99,6 +99,7 @@ import Cardano.Binary
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley (ShelleyBased)
+import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
@@ -107,13 +108,16 @@ import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Foldable (fold, toList)
 import Data.Group (invert)
+import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash)
@@ -201,7 +205,7 @@ import Shelley.Spec.Ledger.TxBody
     PoolParams (..),
     Ptr (..),
     RewardAcnt (..),
-    TxBody (..),
+    TxIn (..),
     TxOut (..),
     Wdrl (..),
     WitVKey (..),
@@ -678,7 +682,11 @@ txsize = fromIntegral . BSL.length . txFullBytes
 -- | It can be helpful for coin selection.
 txsizeBound ::
   forall era.
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    HasField "extraSize" (Core.TxBody era) Int64,
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era))
+  ) =>
   Tx era ->
   Integer
 txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
@@ -691,54 +699,82 @@ txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
     addrHeader = 1
     address = 2 + addrHeader + 2 * addrHashLen
     txbody = _body tx
-    numInputs = toInteger . length . _inputs $ txbody
+    numInputs = toInteger . length . getField @"inputs" $ txbody
     inputSize = smallArray + uint + hashObj
-    numOutputs = toInteger . length . _outputs $ txbody
+    numOutputs = toInteger . length . getField @"outputs" $ txbody
     outputSize = smallArray + uint + address
-    rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
+    rest = fromIntegral $ BSL.length (txFullBytes tx) - getField @"extraSize" txbody
 
 -- | Minimum fee calculation
 minfee :: PParams era -> Tx era -> Coin
-minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_minfeeB pp)
+minfee pp tx =
+  Coin $
+    fromIntegral (_minfeeA pp)
+      * txsize tx + fromIntegral (_minfeeB pp)
 
 -- | Minimum fee bound using txsizeBound
-minfeeBound :: forall era. ShelleyBased era => PParams era -> Tx era -> Coin
-minfeeBound pp tx = Coin $ fromIntegral (_minfeeA pp) * txsizeBound tx + fromIntegral (_minfeeB pp)
+minfeeBound ::
+  forall era.
+  ( ShelleyBased era,
+    HasField "extraSize" (Core.TxBody era) Int64,
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era))
+  ) =>
+  PParams era ->
+  Tx era ->
+  Coin
+minfeeBound pp tx =
+  Coin $
+    fromIntegral (_minfeeA pp)
+      * txsizeBound tx + fromIntegral (_minfeeB pp)
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "txfee" (Core.TxBody era) Coin
+  ) =>
   PParams era ->
   Map (KeyHash 'StakePool era) (PoolParams era) ->
-  TxBody era ->
+  Core.TxBody era ->
   Core.Value era
 produced pp stakePools tx =
-  balance (txouts tx) <> (Val.inject $ _txfee tx <> totalDeposits pp stakePools (toList $ _certs tx))
+  balance (txouts tx)
+    <> ( Val.inject $
+           getField @"txfee" tx
+             <> totalDeposits pp stakePools (toList $ getField @"certs" tx)
+       )
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
-  ShelleyBased era =>
+  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+  ) =>
   PParams era ->
-  TxBody era ->
+  Core.TxBody era ->
   Coin
 keyRefunds pp tx = (length deregistrations) <×> (_keyDeposit pp)
   where
-    deregistrations = filter isDeRegKey (toList $ _certs tx)
+    deregistrations = filter isDeRegKey (toList $ getField @"certs" tx)
 
 -- | Compute the lovelace which are destroyed by the transaction
 -- TODO this is only correct for Shelley!
 consumed ::
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+  ) =>
   PParams era ->
   UTxO (era) ->
-  TxBody (era) ->
+  Core.TxBody era ->
   Core.Value era
 consumed pp u tx =
   balance (eval (txins tx ◁ u)) <> (Val.inject $ refunds <> withdrawals)
   where
     -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
     refunds = keyRefunds pp tx
-    withdrawals = fold . unWdrl $ _wdrls tx
+    withdrawals = fold . unWdrl $ getField @"wdrls" tx
 
 newtype WitHashes era = WitHashes
   {unWitHashes :: Set (KeyHash 'Witness era)}
@@ -769,7 +805,12 @@ witsFromWitnessSet (WitnessSet aWits _ bsWits) =
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded ::
   forall era.
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+  ) =>
   UTxO era ->
   Tx era ->
   GenDelegs era ->
@@ -783,21 +824,26 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
       `Set.union` updateKeys
   where
     inputAuthors :: Set (KeyHash 'Witness era)
-    inputAuthors = foldr accum Set.empty (_inputs txbody)
+    inputAuthors = foldr accum Set.empty (getField @"inputs" txbody)
       where
         accum txin ans =
           case txinLookup txin utxo' of
-            Just (TxOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert (asWitness pay) ans
-            Just (TxOut (AddrBootstrap bootAddr) _) -> Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
+            Just (TxOut (Addr _ (KeyHashObj pay) _) _) ->
+              Set.insert (asWitness pay) ans
+            Just (TxOut (AddrBootstrap bootAddr) _) ->
+              Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
             _other -> ans
     wdrlAuthors :: Set (KeyHash 'Witness era)
-    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (_wdrls txbody))
+    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (getField @"wdrls" txbody))
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
     owners :: Set (KeyHash 'Witness era)
-    owners = foldr accum Set.empty (_certs txbody)
+    owners = foldr accum Set.empty (getField @"certs" txbody)
       where
-        accum (DCertPool (RegPool pool)) ans = Set.union (Set.map asWitness (_poolOwners pool)) ans
+        accum (DCertPool (RegPool pool)) ans =
+          Set.union
+            (Set.map asWitness (_poolOwners pool))
+            ans
         accum _cert ans = ans
     cwitness (DCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
     cwitness (DCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
@@ -807,7 +853,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
     -- before the call to `cwitness`, so this error should never be reached.
 
     certAuthors :: Set (KeyHash 'Witness era)
-    certAuthors = foldr accum Set.empty (_certs txbody)
+    certAuthors = foldr accum Set.empty (getField @"certs" txbody)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
@@ -817,8 +863,8 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 verifiedWits ::
-  ( Era era,
-    DSignable era (Hash era (TxBody era))
+  ( Shelley.TxBodyConstraints era,
+    DSignable era (Hash era (Core.TxBody era))
   ) =>
   Tx era ->
   Either [VKey 'Witness era] ()
@@ -856,10 +902,11 @@ propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
 
 -- | Calculate the change to the deposit pool for a given transaction.
 depositPoolChange ::
-  ShelleyBased era =>
+  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+  ) =>
   LedgerState era ->
   PParams era ->
-  TxBody era ->
+  Core.TxBody era ->
   Coin
 depositPoolChange ls pp tx = (currentPool <+> txDeposits) <-> txRefunds
   where
@@ -869,7 +916,7 @@ depositPoolChange ls pp tx = (currentPool <+> txDeposits) <-> txRefunds
 
     currentPool = (_deposited . _utxoState) ls
     txDeposits =
-      totalDeposits pp ((_pParams . _pstate . _delegationState) ls) (toList $ _certs tx)
+      totalDeposits pp ((_pParams . _pstate . _delegationState) ls) (toList $ getField @"certs" tx)
     txRefunds = keyRefunds pp tx
 
 reapRewards ::

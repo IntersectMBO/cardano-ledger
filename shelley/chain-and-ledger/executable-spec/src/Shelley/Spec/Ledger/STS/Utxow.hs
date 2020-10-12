@@ -25,8 +25,10 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Iterate.SetAlgebra (eval, (∩))
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
@@ -47,11 +49,13 @@ import Control.State.Transition
   )
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
+import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( ShelleyBase,
@@ -81,6 +85,7 @@ import Shelley.Spec.Ledger.LedgerState
     witsVKeyNeeded,
   )
 import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData, validMetaData)
+import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, decodeSet, encodeFoldable)
@@ -91,7 +96,7 @@ import Shelley.Spec.Ledger.Tx
     txwitsScript,
     validateScript,
   )
-import Shelley.Spec.Ledger.TxBody (TxBody (..))
+import Shelley.Spec.Ledger.TxBody (DCert, TxBody (..), TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
 data UTXOW era
@@ -119,27 +124,35 @@ data UtxowPredicateFailure era
   | InvalidMetaData
   deriving (Generic)
 
-instance ShelleyBased era => NoThunks (UtxowPredicateFailure era)
+instance
+  ( NoThunks (PredicateFailure (UTXO era)),
+    ShelleyBased era
+  ) =>
+  NoThunks (UtxowPredicateFailure era)
 
 deriving stock instance
-  ShelleyBased era =>
+  ( Eq (PredicateFailure (UTXO era)),
+    ShelleyBased era
+  ) =>
   Eq (UtxowPredicateFailure era)
 
 deriving stock instance
-  ShelleyBased era =>
+  ( Show (PredicateFailure (UTXO era)),
+    ShelleyBased era
+  ) =>
   Show (UtxowPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
-    DSignable era (Hash era (TxBody era))
+  ( Crypto c,
+    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
   ) =>
-  STS (UTXOW era)
+  STS (UTXOW (ShelleyEra c))
   where
-  type State (UTXOW era) = UTxOState era
-  type Signal (UTXOW era) = Tx era
-  type Environment (UTXOW era) = UtxoEnv era
-  type BaseM (UTXOW era) = ShelleyBase
-  type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
+  type State (UTXOW (ShelleyEra c)) = UTxOState (ShelleyEra c)
+  type Signal (UTXOW (ShelleyEra c)) = Tx (ShelleyEra c)
+  type Environment (UTXOW (ShelleyEra c)) = UtxoEnv (ShelleyEra c)
+  type BaseM (UTXOW (ShelleyEra c)) = ShelleyBase
+  type PredicateFailure (UTXOW (ShelleyEra c)) = UtxowPredicateFailure (ShelleyEra c)
   transitionRules = [utxoWitnessed]
   initialRules = [initialLedgerStateUTXOW]
 
@@ -206,8 +219,11 @@ instance
 
 initialLedgerStateUTXOW ::
   forall era.
-  ( ShelleyBased era,
-    DSignable era (Hash era (TxBody era))
+  ( Embed (UTXO era) (UTXOW era),
+    Environment (UTXOW era) ~ UtxoEnv era,
+    State (UTXOW era) ~ UTxOState era,
+    Environment (UTXO era) ~ UtxoEnv era,
+    State (UTXO era) ~ UTxOState era
   ) =>
   InitialRule (UTXOW era)
 initialLedgerStateUTXOW = do
@@ -217,7 +233,21 @@ initialLedgerStateUTXOW = do
 utxoWitnessed ::
   forall era.
   ( ShelleyBased era,
-    DSignable era (Hash era (TxBody era))
+    Embed (UTXO era) (UTXOW era),
+    BaseM (UTXOW era) ~ ShelleyBase,
+    Environment (UTXOW era) ~ UtxoEnv era,
+    State (UTXOW era) ~ UTxOState era,
+    Signal (UTXOW era) ~ Tx era,
+    PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
+    DSignable era (Hash era (Core.TxBody era)),
+    Environment (UTXO era) ~ UtxoEnv era,
+    State (UTXO era) ~ UTxOState era,
+    Signal (UTXO era) ~ Tx era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era)),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   TransitionRule (UTXOW era)
 utxoWitnessed =
@@ -250,7 +280,7 @@ utxoWitnessed =
       haveNeededWitnesses ?!: MissingVKeyWitnessesUTXOW
 
       -- check metadata hash
-      case (_mdHash txbody, md) of
+      case (getField @"mdHash" txbody, md) of
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failBecause $ MissingTxMetaData mdh
         (SNothing, SJust md') -> failBecause $ MissingTxBodyMetaDataHash (hashMetaData md')
@@ -267,7 +297,7 @@ utxoWitnessed =
             StrictSeq.toStrict
               . Seq.filter isInstantaneousRewards
               . StrictSeq.getSeq
-              $ _certs txbody
+              $ getField @"certs" txbody
           GenDelegs genMapping = genDelegs
 
       coreNodeQuorum <- liftSTS $ asks quorum
@@ -280,9 +310,9 @@ utxoWitnessed =
         TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
-  ( ShelleyBased era,
-    DSignable era (Hash era (TxBody era))
+  ( Crypto c,
+    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
   ) =>
-  Embed (UTXO era) (UTXOW era)
+  Embed (UTXO (ShelleyEra c)) (UTXOW (ShelleyEra c))
   where
   wrapFailed = UtxoFailure

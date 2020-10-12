@@ -26,6 +26,7 @@ import Cardano.Binary
 import Cardano.Crypto.DSIGN (encodeSignedDSIGN, encodeVerKeyDSIGN)
 import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Ledger.Era (Crypto (..))
+import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
@@ -360,7 +361,10 @@ testStakeCred p = KeyHashObj (testKeyHash2 p)
 testScript :: Era era => proxy era -> MultiSig era
 testScript p = RequireSignature $ asWitness (testKeyHash1 p)
 
-testScriptHash :: Era era => proxy era -> ScriptHash era
+testScriptHash ::
+  (Shelley.TxBodyConstraints era) =>
+  proxy era ->
+  ScriptHash era
 testScriptHash p = hashScript (testScript p)
 
 testScript2 :: Era era => proxy era -> MultiSig era
@@ -369,7 +373,13 @@ testScript2 p = RequireSignature $ asWitness (testKeyHash2 p)
 testHeaderHash :: forall proxy era. Era era => proxy era -> HashHeader era
 testHeaderHash _ = HashHeader $ coerce (hashWithSerialiser toCBOR 0 :: Hash era Int)
 
-testBHB :: forall proxy era. (Era era, ExMock (Crypto era)) => proxy era -> BHBody era
+testBHB ::
+  forall proxy era.
+  ( Shelley.TxBodyConstraints era,
+    ExMock (Crypto era)
+  ) =>
+  proxy era ->
+  BHBody era
 testBHB p =
   BHBody
     { bheaderBlockNo = BlockNo 44,
@@ -405,7 +415,14 @@ testBHB p =
       bprotver = ProtVer 0 0
     }
 
-testBHBSigTokens :: (Era era, ExMock (Crypto era)) => proxy era -> Tokens -> Tokens
+testBHBSigTokens ::
+  ( Era era,
+    Shelley.TxBodyConstraints era,
+    ExMock (Crypto era)
+  ) =>
+  proxy era ->
+  Tokens ->
+  Tokens
 testBHBSigTokens p = e
   where
     s = signedKES () 0 (testBHB p) (fst (testKESKeys p))
@@ -779,7 +796,7 @@ tests =
                 <> S e
             ),
       -- checkEncodingCBOR "minimal_txn_body"
-      let tin = TxIn genesisId 1
+      let tin = TxIn @C genesisId 1
           tout = TxOut (testAddrE p) (Coin 2)
        in checkEncodingCBORAnnotated
             "txbody"
@@ -806,7 +823,7 @@ tests =
                 <> T (TkWord64 500)
             ),
       -- checkEncodingCBOR "transaction_mixed"
-      let tin = TxIn genesisId 1
+      let tin = TxIn @C genesisId 1
           tout = TxOut (testAddrE p) (Coin 2)
           ra = RewardAcnt Testnet (KeyHashObj (testKeyHash2 p))
           ras = Map.singleton ra (Coin 123)
@@ -867,7 +884,7 @@ tests =
                 <> S up
             ),
       -- checkEncodingCBOR "full_txn_body"
-      let tin = TxIn genesisId 1
+      let tin = TxIn @C genesisId 1
           tout = TxOut (testAddrE p) (Coin 2)
           reg = DCertDeleg (RegKey (testStakeCred p))
           ra = RewardAcnt Testnet (KeyHashObj (testKeyHash2 p))
@@ -1082,7 +1099,7 @@ tests =
       -- checkEncodingCBOR "rich_block"
       let sig = signedKES () 0 (testBHB p) (fst (testKESKeys p))
           bh = BHeader (testBHB p) sig
-          tin = Set.fromList [TxIn genesisId 1]
+          tin = Set.fromList [TxIn @C genesisId 1]
           tout = StrictSeq.singleton $ TxOut (testAddrE p) (Coin 2)
           txb s = TxBody tin tout StrictSeq.empty (Wdrl Map.empty) (Coin 9) (SlotNo s) SNothing SNothing
           txb1 = txb 500

@@ -641,7 +641,7 @@ chainSstWithTick ledgerTr =
     applyTick sst@(SourceSignalTarget {source = chainSt, signal = block}) =
       let (Block bh _) = block
           slot = (bheaderSlotNo . bhbody) bh
-       in sst {target = tickChainState slot chainSt}
+       in sst {target = tickChainState @C slot chainSt}
 
 ----------------------------------------------------------------------
 -- Properties for PoolReap (using the CHAIN Trace) --

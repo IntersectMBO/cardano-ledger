@@ -16,14 +16,17 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
+import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.State.Transition.Extended (IRC, TRC (..))
+import Control.State.Transition.Extended (BaseM, Environment, IRC, STS, Signal, State, TRC (..))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Functor.Identity (runIdentity)
+import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import Shelley.Spec.Ledger.BaseTypes (Globals)
+import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState,
@@ -55,7 +58,14 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
 instance
-  (ShelleyTest era, Mock (Crypto era)) =>
+  ( ShelleyTest era,
+    STS (LEDGER era),
+    BaseM (LEDGER era) ~ ShelleyBase,
+    Mock (Crypto era),
+    Environment (LEDGER era) ~ LedgerEnv era,
+    State (LEDGER era) ~ (UTxOState era, DPState era),
+    Signal (LEDGER era) ~ Tx era
+  ) =>
   TQC.HasTrace (LEDGER era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
@@ -72,7 +82,20 @@ instance
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 instance
-  (ShelleyTest era, Mock (Crypto era)) =>
+  forall era.
+  ( ShelleyTest era,
+    STS (LEDGER era),
+    BaseM (LEDGER era) ~ ShelleyBase,
+    Environment (LEDGER era) ~ LedgerEnv era,
+    State (LEDGER era) ~ (UTxOState era, DPState era),
+    Signal (LEDGER era) ~ Tx era,
+    STS (LEDGERS era),
+    BaseM (LEDGERS era) ~ ShelleyBase,
+    Environment (LEDGERS era) ~ LedgersEnv era,
+    State (LEDGERS era) ~ LedgerState era,
+    Signal (LEDGERS era) ~ Seq (Tx era),
+    Mock (Crypto era)
+  ) =>
   TQC.HasTrace (LEDGERS era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
@@ -123,10 +146,10 @@ instance
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
-  ShelleyTest era =>
+  CryptoClass.Crypto c =>
   Constants ->
-  IRC (LEDGER era) ->
-  Gen (Either a (UTxOState era, DPState era))
+  IRC (LEDGER (ShelleyEra c)) ->
+  Gen (Either a (UTxOState (ShelleyEra c), DPState (ShelleyEra c)))
 mkGenesisLedgerState c _ = do
   utxo0 <- genUtxo0 c
   let (LedgerState utxoSt dpSt) = genesisState (genesisDelegs0 c) utxo0

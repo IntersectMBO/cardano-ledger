@@ -19,6 +19,7 @@ import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Iterate.SetAlgebra (dom, eval)
+import Control.State.Transition.Extended (BaseM, Environment, STS (Signal), State)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
@@ -59,6 +60,7 @@ import Test.Shelley.Spec.Ledger.Utils
     slotFromEpoch,
     testGlobals,
   )
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 
 -- | Type alias for a transaction generator
 type TxGen era =
@@ -71,7 +73,19 @@ type TxGen era =
 -- | Generate a valid block.
 genBlock ::
   forall era.
-  (ShelleyTest era, Mock (Crypto era)) =>
+  ( ShelleyTest era,
+    STS (LEDGER era),
+    BaseM (LEDGER era) ~ ShelleyBase,
+    Environment (LEDGER era) ~ LedgerEnv era,
+    State (LEDGER era) ~ (UTxOState era, DPState era),
+    Signal (LEDGER era) ~ Tx era,
+    STS (LEDGERS era),
+    Mock (Crypto era),
+    BaseM (LEDGERS era) ~ ShelleyBase,
+    Environment (LEDGERS era) ~ LedgersEnv era,
+    State (LEDGERS era) ~ LedgerState era,
+    Signal (LEDGERS era) ~ Seq (Tx era)
+  ) =>
   GenEnv era ->
   ChainState era ->
   Gen (Block era)

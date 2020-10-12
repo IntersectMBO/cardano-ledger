@@ -18,7 +18,9 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
 where
 
 import Cardano.Binary (serialize)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Iterate.SetAlgebra (forwards)
@@ -29,7 +31,9 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
+import GHC.Records (HasField)
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API
   ( DCert,
@@ -136,12 +140,27 @@ instance Split Coin where
 
 -- ============================================================
 
-showBalance :: ShelleyTest era => LedgerEnv era -> UTxOState era -> DPState era -> Tx era -> String
+showBalance ::
+  ( ShelleyTest era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "txfee" (Core.TxBody era) Coin,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+  ) =>
+  LedgerEnv era ->
+  UTxOState era ->
+  DPState era ->
+  Tx era ->
+  String
 showBalance
   (LedgerEnv _ _ pparams _)
   (UTxOState utxo _ _ _)
   (DPState _ (PState stakepools _ _))
-  (Tx body _ _) = "\n\nConsumed: " ++ show (consumed pparams utxo body) ++ "  Produced: " ++ show (produced pparams stakepools body)
+  (Tx body _ _) =
+    "\n\nConsumed: " ++ show (consumed pparams utxo body)
+      ++ "  Produced: "
+      ++ show (produced pparams stakepools body)
 
 --  ========================================================================
 
@@ -164,7 +183,11 @@ showBalance
 
 genTx ::
   forall era.
-  (HasCallStack, ShelleyTest era, Mock (Crypto era)) =>
+  ( HasCallStack,
+    ShelleyTest era,
+    Mock (Crypto era),
+    Core.TxBody era ~ TxBody era
+  ) =>
   GenEnv era ->
   LedgerEnv era ->
   (UTxOState era, DPState era) ->
@@ -199,9 +222,19 @@ genTx
           ksIndexedPayScripts
           utxo
       (wdrls, (wdrlWits, wdrlScripts)) <-
-        genWithdrawals constants ksIndexedStakeScripts ksIndexedStakingKeys ((_rewards . _dstate) dpState)
+        genWithdrawals
+          constants
+          ksIndexedStakeScripts
+          ksIndexedStakingKeys
+          ((_rewards . _dstate) dpState)
       (update, updateWits) <-
-        genUpdate constants slot ksCoreNodes ksIndexedGenDelegates pparams (utxoSt, dpState)
+        genUpdate
+          constants
+          slot
+          ksCoreNodes
+          ksIndexedGenDelegates
+          pparams
+          (utxoSt, dpState)
       (certs, deposits, refunds, dpState', (certWits, certScripts)) <-
         genDCerts ge pparams dpState slot txIx reserves
       (metadata, metadataHash) <- genMetaData constants
@@ -211,13 +244,17 @@ genTx
       -------------------------------------------------------------------------
       let wits = spendWits ++ wdrlWits ++ certWits ++ updateWits
           scripts = mkScriptWits spendScripts (certScripts ++ wdrlScripts)
-          mkTxWits' = mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys wits scripts . hashAnnotated
+          mkTxWits' =
+            mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys wits scripts
+              . hashAnnotated
       -------------------------------------------------------------------------
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
       -- and a Outputs builder that distributes the given balance over addresses.
       -------------------------------------------------------------------------
       let withdrawals = (sumVal (snd <$> wdrls))
-          spendingBalance = spendingBalanceUtxo <+> (inject $ (withdrawals <-> deposits) <+> refunds)
+          spendingBalance =
+            spendingBalanceUtxo
+              <+> (inject $ (withdrawals <-> deposits) <+> refunds)
           n =
             if (Map.size . unUTxO) utxo < (genTxStableUtxoSize defaultConstants) -- something moderate 80-120
               then (genTxUtxoIncrement defaultConstants) -- something small 2-5
@@ -233,8 +270,22 @@ genTx
       -- Build a Draft Tx and repeatedly add to Delta until all fees are accounted for.
       -------------------------------------------------------------------------
       let draftFee = Coin 0
-          (remainderCoin, draftOutputs) = calcOutputsFromBalance @Coin spendingBalance outputAddrs draftFee
-      draftTxBody <- genTxBody inputs draftOutputs certs wdrls update draftFee ttl metadataHash
+          (remainderCoin, draftOutputs) =
+            calcOutputsFromBalance
+              @Coin
+              spendingBalance
+              outputAddrs
+              draftFee
+      draftTxBody <-
+        genTxBody
+          inputs
+          draftOutputs
+          certs
+          wdrls
+          update
+          draftFee
+          ttl
+          metadataHash
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
       -- We add now repeatedly add inputs until the process converges.
       converge remainderCoin wits scripts keys' scripts' utxo pparams keySpace draftTx
@@ -434,7 +485,7 @@ genTimeToLive currentSlot = do
 
 mkScriptWits ::
   forall era.
-  Era era =>
+  Shelley.TxBodyConstraints era =>
   [(MultiSig era, MultiSig era)] ->
   [(MultiSig era, MultiSig era)] ->
   Map (ScriptHash era) (MultiSig era)
@@ -449,7 +500,7 @@ mkScriptWits payScripts stakeScripts =
     hashStakeScript (_, sScript) = ((hashScript sScript) :: ScriptHash era, sScript)
 
 mkTxWits ::
-  (Era era, Mock (Crypto era)) =>
+  (Era era, Mock (Crypto era), Core.TxBody era ~ TxBody era) =>
   Map (KeyHash 'Payment era) (KeyPair 'Payment era) ->
   Map (KeyHash 'Staking era) (KeyPair 'Staking era) ->
   [KeyPair 'Witness era] ->

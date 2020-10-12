@@ -27,22 +27,16 @@ import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
-  ( TRC (..),
-    applySTS,
-    reapplySTS,
-  )
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..))
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain
-import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Tick as STS
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import qualified Shelley.Spec.Ledger.TxBody as Tx
 
 -- | Type alias for the state updated by TICK and BBODY rules
 type ShelleyState = LedgerState.NewEpochState
@@ -52,7 +46,10 @@ type ShelleyState = LedgerState.NewEpochState
 -------------------------------------------------------------------------------}
 chainChecks ::
   forall era m.
-  (Era era, MonadError (STS.PredicateFailure (STS.CHAIN era)) m) =>
+  ( Era era,
+    PredicateFailure (STS.CHAIN era) ~ STS.ChainPredicateFailure era,
+    MonadError (STS.PredicateFailure (STS.CHAIN era)) m
+  ) =>
   Globals ->
   PParams era ->
   BHeader era ->
@@ -129,9 +126,12 @@ instance
 -- | Apply the block level ledger transition.
 applyBlockTransition ::
   forall era m.
-  ( ShelleyBased era,
-    MonadError (BlockTransitionError era) m,
-    DSignable era (Hash era (Tx.TxBody era))
+  ( STS (STS.BBODY era),
+    BaseM (STS.BBODY era) ~ ShelleyBase,
+    Environment (STS.BBODY era) ~ STS.BbodyEnv era,
+    State (STS.BBODY era) ~ STS.BbodyState era,
+    Signal (STS.BBODY era) ~ Block era,
+    MonadError (BlockTransitionError era) m
   ) =>
   Globals ->
   ShelleyState era ->
@@ -164,8 +164,11 @@ applyBlockTransition globals state blk =
 --   `applyBlockTransition` on the same block and that this was successful.
 reapplyBlockTransition ::
   forall era.
-  ( ShelleyBased era,
-    DSignable era (Hash era (Tx.TxBody era))
+  ( STS (STS.BBODY era),
+    BaseM (STS.BBODY era) ~ ShelleyBase,
+    Environment (STS.BBODY era) ~ STS.BbodyEnv era,
+    State (STS.BBODY era) ~ STS.BbodyState era,
+    Signal (STS.BBODY era) ~ Block era
   ) =>
   Globals ->
   ShelleyState era ->

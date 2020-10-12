@@ -29,9 +29,7 @@ where
 -- Cypto and Era stuff
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Val (Val (inject))
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import qualified Data.Map as Map
@@ -107,14 +105,12 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
+import Cardano.Ledger.Shelley (ShelleyEra)
 
 -- ===============================================
 -- A special Era to run the Benchmarks in
 
-data B
-
-instance Era B where
-  type Crypto B = B_Crypto
+type B = ShelleyEra B_Crypto
 
 data B_Crypto
 
@@ -124,8 +120,6 @@ instance Cardano.Ledger.Crypto.Crypto B_Crypto where
   type DSIGN B_Crypto = DSIGN Original.C_Crypto
   type HASH B_Crypto = Blake2b_256
   type ADDRHASH B_Crypto = Blake2b_256
-
-type instance Core.Value B = Coin
 
 -- =========================================================
 

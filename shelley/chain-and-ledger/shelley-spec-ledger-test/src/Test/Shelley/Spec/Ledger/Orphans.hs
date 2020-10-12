@@ -23,7 +23,6 @@ import Shelley.Spec.Ledger.STS.Chain
   ( ChainState (..),
   )
 import Shelley.Spec.Ledger.Tx (Tx (..))
-import Shelley.Spec.Ledger.TxBody (TxBody (..))
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
   )
@@ -45,8 +44,6 @@ deriving instance ShelleyBased era => Eq (EpochState era)
 deriving instance ShelleyBased era => Eq (LedgerState era)
 
 deriving instance ShelleyBased era => Eq (Tx era)
-
-deriving instance ShelleyBased era => Eq (TxBody era)
 
 deriving instance ShelleyBased era => Eq (Block era)
 

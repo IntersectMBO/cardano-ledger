@@ -23,9 +23,7 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Era
 import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude
   ( ByteString,
@@ -106,6 +104,7 @@ import Test.Tasty.HUnit
   ( Assertion,
   )
 import Test.Tasty.QuickCheck (testProperty, (===))
+import Cardano.Ledger.Shelley (ShelleyEra)
 
 bootstrapHashTest :: TestTree
 bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witness" $
@@ -265,10 +264,7 @@ testBootstrapNotSpending =
     txBad
     (Left [[InvalidWitnessesUTXOW [aliceVKey]]])
 
-data C
-
-instance Era C where
-  type Crypto C = C_crypto
+type C = ShelleyEra C_crypto
 
 data C_crypto
 
@@ -278,5 +274,3 @@ instance Cardano.Ledger.Crypto.Crypto C_crypto where
   type DSIGN C_crypto = DSIGN.Ed25519DSIGN
   type HASH C_crypto = HASH Original.C_Crypto
   type ADDRHASH C_crypto = Hash.Blake2b_224
-
-type instance Core.Value C = Coin

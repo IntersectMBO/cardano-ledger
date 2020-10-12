@@ -28,7 +28,8 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
@@ -51,10 +52,12 @@ import Control.State.Transition
 import Data.Foldable (foldl', toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address
   ( Addr (AddrBootstrap),
@@ -62,7 +65,13 @@ import Shelley.Spec.Ledger.Address
     getNetwork,
     getRwdNetwork,
   )
-import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
+import Shelley.Spec.Ledger.BaseTypes
+  ( Network,
+    ShelleyBase,
+    StrictMaybe,
+    invalidKey,
+    networkId,
+  )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
@@ -74,7 +83,7 @@ import Shelley.Spec.Ledger.LedgerState
     produced,
     txsize,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..))
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
@@ -85,10 +94,11 @@ import Shelley.Spec.Ledger.Serialization
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut (..))
 import Shelley.Spec.Ledger.TxBody
-  ( PoolParams,
+  ( DCert,
+    PoolParams,
     RewardAcnt,
     TxBody (..),
-    unWdrl,
+    Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
@@ -237,14 +247,14 @@ instance
         k -> invalidKey k
 
 instance
-  (ShelleyBased era) =>
-  STS (UTXO era)
+  (Crypto c) =>
+  STS (UTXO (ShelleyEra c))
   where
-  type State (UTXO era) = UTxOState era
-  type Signal (UTXO era) = Tx era
-  type Environment (UTXO era) = UtxoEnv era
-  type BaseM (UTXO era) = ShelleyBase
-  type PredicateFailure (UTXO era) = UtxoPredicateFailure era
+  type State (UTXO (ShelleyEra c)) = UTxOState (ShelleyEra c)
+  type Signal (UTXO (ShelleyEra c)) = Tx (ShelleyEra c)
+  type Environment (UTXO (ShelleyEra c)) = UtxoEnv (ShelleyEra c)
+  type BaseM (UTXO (ShelleyEra c)) = ShelleyBase
+  type PredicateFailure (UTXO (ShelleyEra c)) = UtxoPredicateFailure (ShelleyEra c)
 
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -267,7 +277,7 @@ instance
         "Deposit pot must not be negative (post)"
         (\_ st' -> _deposited st' >= mempty),
       let utxoBalance us = (Val.inject $ _deposited us <> _fees us) <> balance (_utxo us)
-          withdrawals :: TxBody era -> Core.Value era
+          withdrawals :: TxBody (ShelleyEra c) -> Core.Value (ShelleyEra c)
           withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWdrl $ _wdrls txb
        in PostCondition
             "Should preserve value in the UTxO state"
@@ -276,40 +286,55 @@ instance
             )
     ]
 
-initialLedgerState :: InitialRule (UTXO era)
+initialLedgerState :: InitialRule (UTXO (ShelleyEra c))
 initialLedgerState = do
   IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
   forall era.
-  (ShelleyBased era) =>
+  ( ShelleyBased era,
+    Embed (PPUP era) (UTXO era),
+    BaseM (UTXO era) ~ ShelleyBase,
+    Environment (UTXO era) ~ UtxoEnv era,
+    State (UTXO era) ~ UTxOState era,
+    Signal (UTXO era) ~ Tx era,
+    PredicateFailure (UTXO era) ~ UtxoPredicateFailure era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "txfee" (Core.TxBody era) Coin,
+    HasField "ttl" (Core.TxBody era) SlotNo,
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+  ) =>
   TransitionRule (UTXO era)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo deposits' fees ppup = u
   let txb = _body tx
 
-  _ttl txb >= slot ?! ExpiredUTxO (_ttl txb) slot
+  getField @"ttl" txb >= slot ?! ExpiredUTxO (getField @"ttl" txb) slot
 
   txins txb /= Set.empty ?! InputSetEmptyUTxO
 
   let minFee = minfee pp tx
-      txFee = _txfee txb
+      txFee = getField @"txfee" txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  eval (txins txb ⊆ dom utxo) ?! BadInputsUTxO (txins txb `Set.difference` eval (dom utxo))
+  eval (txins txb ⊆ dom utxo)
+    ?! BadInputsUTxO (txins txb `Set.difference` eval (dom utxo))
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
         filter
           (\a -> getNetwork a /= ni)
-          (fmap (\(TxOut a _) -> a) $ toList $ _outputs txb)
+          (fmap (\(TxOut a _) -> a) $ toList $ getField @"outputs" txb)
   null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
   let wdrlsWrongNetwork =
         filter
           (\a -> getRwdNetwork a /= ni)
-          (Map.keys . unWdrl . _wdrls $ txb)
+          (Map.keys . unWdrl . getField @"wdrls" $ txb)
   null wdrlsWrongNetwork ?! WrongNetworkWithdrawal ni (Set.fromList wdrlsWrongNetwork)
 
   let consumed_ = consumed pp utxo txb
@@ -338,19 +363,19 @@ utxoInductive = do
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
   let refunded = keyRefunds pp txb
-  let txCerts = toList $ _certs txb
+  let txCerts = toList $ getField @"certs" txb
   let depositChange = totalDeposits pp stakepools txCerts <-> refunded
 
   pure
     UTxOState
       { _utxo = eval ((txins txb ⋪ utxo) ∪ txouts txb),
         _deposited = deposits' <> depositChange,
-        _fees = fees <> (_txfee txb),
+        _fees = fees <> (getField @"txfee" txb),
         _ppups = ppup'
       }
 
 instance
-  (ShelleyBased era) =>
-  Embed (PPUP era) (UTXO era)
+  (Crypto c) =>
+  Embed (PPUP (ShelleyEra c)) (UTXO (ShelleyEra c))
   where
   wrapFailed = UpdateFailure

@@ -1,8 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -10,7 +12,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (Interval, Multi, TimelockAnd, TimelockOr),
@@ -22,26 +28,20 @@ where
 import Cardano.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    annotatorSlice,
-    encodeListLen,
-    encodePreEncoded,
-    encodeWord,
+    ToCBOR,
     serialize',
-    serializeEncoding,
   )
 import qualified Cardano.Crypto.Hash as Hash
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
-import Data.Word (Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing), invalidKey)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.MemoBytes
@@ -49,33 +49,27 @@ import Shelley.Spec.Ledger.MemoBytes
     MemoBytes (..),
     Symbolic (..),
     memoBytes,
-    shorten,
     (<#>),
     (<@>),
   )
 import Shelley.Spec.Ledger.Scripts
-  ( MultiSig
-      ( RequireAllOf,
-        RequireAnyOf,
-        RequireMOf,
-        RequireSignature,
-        multiSigBytes
-      ),
+  ( MultiSig,
     ScriptHash (..),
-    hashMultiSigScript,
   )
-import Shelley.Spec.Ledger.Serialization (decodeRecordSum, decodeStrictSeq, encodeFoldable)
+import Shelley.Spec.Ledger.Serialization
+  ( decodeRecordSum,
+    decodeStrictSeq,
+    encodeFoldable,
+  )
 import Shelley.Spec.Ledger.Tx
   ( MultiSignatureScript (..),
     Tx (..),
-    TxBody (..),
     WitnessSetHKD (..),
     addrWits',
     evalNativeMultiSigScript,
   )
 import Shelley.Spec.Ledger.TxBody
-  ( TxBody (..),
-    witKeyHash,
+  ( witKeyHash,
   )
 
 -- ================================================================
@@ -122,17 +116,26 @@ newtype Timelock era = Timelock (MemoBytes (Timelock' era))
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (ToCBOR, NoThunks)
 
-deriving via (Mem (Timelock' era)) instance (Era era) => FromCBOR (Annotator (Timelock era))
+deriving via
+  (Mem (Timelock' era))
+  instance
+    (Era era) =>
+    FromCBOR (Annotator (Timelock era))
 
 -- ==========================================================================
 -- The patterns give the appearence that the mutual recursion is not present.
 -- They rely on memoBytes, and (Symbolic Timelock') to memoize each constructor of Timelock'
 
-pattern Interval :: Era era => StrictMaybe SlotNo -> StrictMaybe SlotNo -> Timelock era
+pattern Interval ::
+  Era era =>
+  StrictMaybe SlotNo ->
+  StrictMaybe SlotNo ->
+  Timelock era
 pattern Interval left right <-
   Timelock (Memo (Interval' left right) _)
   where
-    Interval left right = Timelock (memoBytes (Con Interval' 0 <@> left <@> right))
+    Interval left right =
+      Timelock (memoBytes (Con Interval' 0 <@> left <@> right))
 
 pattern Multi :: Era era => MultiSig era -> Timelock era
 pattern Multi m <-
@@ -144,13 +147,25 @@ pattern TimelockAnd :: Era era => StrictSeq (Timelock era) -> Timelock era
 pattern TimelockAnd ms <-
   Timelock (Memo (TimelockAnd' ms) _)
   where
-    TimelockAnd ms = Timelock (memoBytes (Con TimelockAnd' 2 <#> (encodeFoldable, ms)))
+    TimelockAnd ms =
+      Timelock
+        ( memoBytes
+            ( Con TimelockAnd' 2
+                <#> (encodeFoldable, ms)
+            )
+        )
 
 pattern TimelockOr :: Era era => StrictSeq (Timelock era) -> Timelock era
 pattern TimelockOr ms <-
   Timelock (Memo (TimelockOr' ms) _)
   where
-    TimelockOr ms = Timelock (memoBytes (Con TimelockOr' 3 <#> (encodeFoldable, ms)))
+    TimelockOr ms =
+      Timelock
+        ( memoBytes
+            ( Con TimelockOr' 3
+                <#> (encodeFoldable, ms)
+            )
+        )
 
 {-# COMPLETE Interval, Multi, TimelockAnd, TimelockOr #-}
 
@@ -172,20 +187,21 @@ ininterval slot (SJust i_s, SJust i_f) = i_s <= slot && slot <= i_f
 
 type ValidityInterval = (StrictMaybe SlotNo, StrictMaybe SlotNo)
 
-txvld :: TxBody era -> ValidityInterval
+txvld :: Core.TxBody era -> ValidityInterval
 txvld _ = (SNothing, SNothing)
 
 evalFPS ::
+  forall era.
   Era era =>
   Timelock era ->
   Set (KeyHash 'Witness era) ->
-  TxBody era ->
+  Core.TxBody era ->
   Bool
 evalFPS (TimelockAnd locks) vhks txb = all (\lock -> evalFPS lock vhks txb) locks
 evalFPS (TimelockOr locks) vhks txb = any (\lock -> evalFPS lock vhks txb) locks
 evalFPS (Multi msig) vhks _tx = evalNativeMultiSigScript msig vhks
 evalFPS (Interval timeS timeF) _vhks txb =
-  let (bodyS, bodyF) = txvld txb -- THIS IS A STUB
+  let (bodyS, bodyF) = txvld @era txb -- THIS IS A STUB
    in case (timeS, timeF) of
         (SNothing, SNothing) -> True
         (SNothing, SJust i_f) | SJust i'_f <- bodyF -> i'_f <= i_f
@@ -196,7 +212,8 @@ evalFPS (Interval timeS timeF) _vhks txb =
             i_s <= i'_s && i'_f <= i_f
         _ -> False
 
-validateTimelock :: Era era => Timelock era -> Tx era -> Bool
+validateTimelock ::
+  Shelley.TxBodyConstraints era => Timelock era -> Tx era -> Bool
 validateTimelock lock tx = evalFPS lock vhks (_body tx)
   where
     -- THIS IS JUST A STUB. WHO KNOWS IF
@@ -219,6 +236,9 @@ hashTimelockScript =
     . Hash.castHash
     . Hash.hashWith (\x -> nativeTimelockTag <> serialize' x)
 
-instance Era era => MultiSignatureScript (Timelock era) era where
+instance
+  (Era era, Shelley.TxBodyConstraints era) =>
+  MultiSignatureScript (Timelock era) era
+  where
   validateScript = validateTimelock
   hashScript = hashTimelockScript

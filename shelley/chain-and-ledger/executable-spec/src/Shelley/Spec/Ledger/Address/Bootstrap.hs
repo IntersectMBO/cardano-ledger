@@ -45,6 +45,7 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (ADDRHASH, DSIGN)
 import Cardano.Ledger.Era
 import Cardano.Prelude (panic)
@@ -76,7 +77,7 @@ newtype ChainCode = ChainCode {unChainCode :: ByteString}
 
 data BootstrapWitness era = BootstrapWitness'
   { bwKey' :: !(VKey 'Witness era),
-    bwSig' :: !(Keys.SignedDSIGN era (Hash era (TxBody era))),
+    bwSig' :: !(Keys.SignedDSIGN era (Hash era (Core.TxBody era))),
     bwChainCode' :: !ChainCode,
     bwAttributes' :: !ByteString,
     bwBytes :: LBS.ByteString
@@ -89,7 +90,7 @@ data BootstrapWitness era = BootstrapWitness'
 pattern BootstrapWitness ::
   Era era =>
   (VKey 'Witness era) ->
-  (Keys.SignedDSIGN era (Hash era (TxBody era))) ->
+  (Keys.SignedDSIGN era (Hash era (Core.TxBody era))) ->
   ChainCode ->
   ByteString ->
   BootstrapWitness era
@@ -177,8 +178,8 @@ unpackByronVKey
 
 verifyBootstrapWit ::
   forall era.
-  (Era era, DSIGN.Signable (DSIGN (Crypto era)) (Hash era (TxBody era))) =>
-  Hash era (TxBody era) ->
+  (Era era, DSIGN.Signable (DSIGN (Crypto era)) (Hash era (Core.TxBody era))) =>
+  Hash era (Core.TxBody era) ->
   BootstrapWitness era ->
   Bool
 verifyBootstrapWit txbodyHash witness =

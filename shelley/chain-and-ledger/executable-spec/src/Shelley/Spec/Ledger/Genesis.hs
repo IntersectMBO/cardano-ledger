@@ -29,6 +29,7 @@ where
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH, KES)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased)
@@ -223,7 +224,7 @@ initialFundsPseudoTxIn addr =
       TxId
         . ( Crypto.castHash ::
               Crypto.Hash (HASH (Crypto era)) (Addr era) ->
-              Crypto.Hash (HASH (Crypto era)) (TxBody era)
+              Crypto.Hash (HASH (Crypto era)) (Core.TxBody era)
           )
         . Crypto.hashWith serialiseAddr
 

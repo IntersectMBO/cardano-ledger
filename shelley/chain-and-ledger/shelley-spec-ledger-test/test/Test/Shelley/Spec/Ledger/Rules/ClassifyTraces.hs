@@ -95,6 +95,9 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Crypto (Crypto)
+import Control.State.Transition.Extended (STS(Signal))
 
 genesisChainState ::
   forall era a.
@@ -113,21 +116,21 @@ genesisChainState = Just $ mkGenesisChainState (geConstants (genEnv p))
     p = Proxy
 
 genesisLedgerState ::
-  forall era a.
-  ShelleyTest era =>
+  forall c a.
+  Crypto c =>
   Maybe
-    ( Control.State.Transition.Extended.IRC (LEDGER era) ->
+    ( Control.State.Transition.Extended.IRC (LEDGER (ShelleyEra c)) ->
       QC.Gen
         ( Either
             a
-            ( UTxOState era,
-              DPState era
+            ( UTxOState (ShelleyEra c),
+              DPState (ShelleyEra c)
             )
         )
     )
 genesisLedgerState = Just $ mkGenesisLedgerState (geConstants (genEnv p))
   where
-    p :: Proxy era
+    p :: Proxy (ShelleyEra c)
     p = Proxy
 
 relevantCasesAreCovered :: Property
@@ -143,11 +146,12 @@ relevantCasesAreCovered = do
 
 relevantCasesAreCoveredForTrace ::
   forall era.
-  ShelleyTest era =>
+  (ShelleyTest era, Signal (CHAIN era) ~ Block era) =>
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
+  let blockTxs :: Block era -> [Tx era]
+      blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
       certsByTx_ = certsByTx txs

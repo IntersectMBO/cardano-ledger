@@ -14,6 +14,7 @@ module Cardano.Ledger.Core
   ( -- * Compactible
     Compactible (..),
     Compact (..),
+    TxBody,
     Value,
   )
 where
@@ -24,6 +25,9 @@ import Data.Typeable (Typeable)
 
 -- | A value is something which quantifies a transaction output.
 type family Value era :: Type
+
+-- | The body of a transaction.
+type family TxBody era :: Type
 
 --------------------------------------------------------------------------------
 
