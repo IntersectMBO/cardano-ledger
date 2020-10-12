@@ -60,6 +60,7 @@ let
       shelley-ledger = pkgs.callPackage ./shelley/chain-and-ledger/formal-spec {};
       pool-ranking = pkgs.callPackage ./shelley/pool-ranking {};
       shelley-ma = pkgs.callPackage ./shelley-ma/formal-spec {};
+      goguen-ledger = pkgs.callPackage ./goguen/formal-spec {};
       delegation-design = pkgs.callPackage ./shelley/design-spec {};
       non-integer-calculations = pkgs.callPackage ./shelley/chain-and-ledger/dependencies/non-integer/doc {};
       blocks-cddl = pkgs.callPackage ./byron/cddl-spec {};

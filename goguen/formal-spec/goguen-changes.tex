@@ -25,6 +25,8 @@
 \usepackage{booktabs}
 \usepackage{enumerate}
 
+\setlength{\parindent}{0pt}
+
 
 %%
 %% Package `semantic` can be used for writing inference rules.
@@ -34,21 +36,20 @@
 \setpremisesspace{20pt}
 
 % data for Deliverable header -- added by KH from an EU H2020 project template
-\DeliverableNumber{XX-XX}
-\DeliverableTitle{A Formal Specification of the Cardano Ledger with Plutus
-Integration}{Formal Cardano Ledger with Plutus Spec.}
+\DeliverableNumber{GL-D2}
+\DeliverableTitle{A Formal Specification of the Cardano Ledger integrating Plutus Core}{Formal Spec: Cardano Ledger with Plutus Core}
 \DeliverableResponsible{Formal Methods Team}
-%\EditorName{Jared Corduan, \IOHK}
+\EditorName{Andre Knispel, \IOHK}
 \Authors{
    Polina Vinogradova \quad \texttt{polina.vinogradova@iohk.io} \\
    Andre Knispel \quad \texttt{andre.knispel@iohk.io}
 }
-%\DueDate{15$^{\textrm{th}}$ October 2019}
-%\SubmissionDate{8th October 2019}{2019/10/08}
+\DueDate{25$^{\textrm{th}}$ September 2020}
+\SubmissionDate{}{}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
-\Version{0.2}
-\Project{Shelley Ledger}
+\Version{FS-2.0.0}
+\Project{Goguen Ledger}
 \DisseminationDR
 
 %%
@@ -163,30 +164,30 @@ Integration}{Formal Cardano Ledger with Plutus Spec.}
 \newcommand{\MetaDataHash}{\type{MetaDataHash}}
 \newcommand{\MetaData}{\type{MetaData}}
 \newcommand{\DataHash}{\type{DataHash}}
+\newcommand{\ScriptHash}{\type{ScriptHash}}
 \newcommand{\PolicyID}{\type{PolicyID}}
 \newcommand{\PPHash}{\type{PPHash}}
 \newcommand{\RdmrsHash}{\type{RdmrsHash}}
 \newcommand{\Script}{\type{Script}}
 \newcommand{\ScriptPlutus}{\type{Script}_{plc}}
+\newcommand{\Plutus}{\mathsf{Plutus}}
+\newcommand{\PlutusII}{\mathsf{PlutusV2}}
 \newcommand{\ScriptMSig}{\type{Script}_{msig}}
 \newcommand{\ScriptV}{\type{Script_{v}}}
 \newcommand{\Datum}{\type{Datum}}
 \newcommand{\Rdmr}{\type{Rdmr}}
-\newcommand{\CurItem}{\type{CurItem}}
+\newcommand{\ScriptPurpose}{\type{ScriptPurpose}}
 \newcommand{\Rdmrs}{\type{Rdmrs}}
 \newcommand{\DorR}{\type{DorR}}
 \newcommand{\ValidationData}{\type{ValidationData}}
 \newcommand{\IsValidating}{\type{IsValidating}}
 \newcommand{\HashUnsData}{\type{HashUnsData}}
-\newcommand{\Yes}{\type{Yes}}
-\newcommand{\Nope}{\type{Nope}}
+\newcommand{\True}{\mathsf{True}}
+\newcommand{\False}{\mathsf{False}}
 \newcommand{\MSig}{\type{MSig}}
+\newcommand{\Tag}{\type{Tag}}
 \newcommand{\Credential}{\type{Credential}}
-\newcommand{\CurrencyId}{\type{CurrencyId}}
 \newcommand{\AssetID}{\type{AssetID}}
-\newcommand{\Quantity}{\type{Quantity}}
-\newcommand{\QuantityPM}{\type{Quantity}^{\pm}}
-\newcommand{\ValuePM}{\type{Value}^{\pm}}
 
 %% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
@@ -324,9 +325,13 @@ Integration}{Formal Cardano Ledger with Plutus Spec.}
 \newtheorem{property}{Property}[section]
 
 \newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
+\DeclareMathOperator{\supp}{supp}
 
 %% In-para enumeration -- KH
 \usepackage{paralist}
+
+%% Enumeration args -- KH
+\usepackage{enumitem}
 
 \begin{document}
 
@@ -335,7 +340,7 @@ Integration}{Formal Cardano Ledger with Plutus Spec.}
 \tableofcontents
 \listoffigures
 
-\include{notation}
+\include{introduction}
 
 \include{protocol-parameters}
 
@@ -344,8 +349,6 @@ Integration}{Formal Cardano Ledger with Plutus Spec.}
 \include{utxo}
 
 \include{ledger}
-
-\include{epoch}
 
 \include{chain}
 
