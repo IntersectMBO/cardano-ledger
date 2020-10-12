@@ -41,6 +41,7 @@ library
     Shelley.Spec.Ledger.Hashing
     Shelley.Spec.Ledger.Keys
     Shelley.Spec.Ledger.LedgerState
+    Shelley.Spec.Ledger.MemoBytes
     Shelley.Spec.Ledger.MetaData
     Shelley.Spec.Ledger.OCert
     Shelley.Spec.Ledger.Orphans
