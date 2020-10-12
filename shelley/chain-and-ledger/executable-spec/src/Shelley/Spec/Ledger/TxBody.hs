@@ -688,7 +688,7 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
 {-# COMPLETE TxBody #-}
 
 -- | Proof/Witness that a transaction is authorized by the given key holder.
-data WitVKey era kr = WitVKey'
+data WitVKey kr era = WitVKey'
   { wvkKey' :: !(VKey kr (Crypto era)),
     wvkSig' :: !(SignedDSIGN (Crypto era) (Hash (Crypto era) (Core.TxBody era))),
     -- | Hash of the witness vkey. We store this here to avoid repeated hashing
@@ -698,22 +698,22 @@ data WitVKey era kr = WitVKey'
   }
   deriving (Generic)
 
-deriving instance (Era era) => Show (WitVKey era kr)
+deriving instance (Era era) => Show (WitVKey kr era)
 
-deriving instance (Era era) => Eq (WitVKey era kr)
+deriving instance (Era era) => Eq (WitVKey kr era)
 
 deriving via
-  (AllowThunksIn '["wvkBytes"] (WitVKey era kr))
+  (AllowThunksIn '["wvkBytes"] (WitVKey kr era))
   instance
-    (Era era, Typeable kr) => NoThunks (WitVKey era kr)
+    (Era era, Typeable kr) => NoThunks (WitVKey kr era)
 
-instance (Era era, Typeable k) => HashAnnotated (WitVKey era k) era
+instance (Era era, Typeable kr) => HashAnnotated (WitVKey kr era) era
 
 pattern WitVKey ::
   (Typeable kr, Era era) =>
   VKey kr (Crypto era) ->
   SignedDSIGN (Crypto era) (Hash (Crypto era) (Core.TxBody era)) ->
-  WitVKey era kr
+  WitVKey kr era
 pattern WitVKey k s <-
   WitVKey' k s _ _
   where
@@ -739,14 +739,14 @@ eraIndTxBodyHash = coerce . hashAnnotated
 {-# COMPLETE WitVKey #-}
 
 witKeyHash ::
-  WitVKey era kr ->
+  WitVKey kr era ->
   KeyHash 'Witness (Crypto era)
 witKeyHash (WitVKey' _ _ kh _) = kh
 
 instance
   forall era kr.
   (Typeable kr, Era era) =>
-  Ord (WitVKey era kr)
+  Ord (WitVKey kr era)
   where
   compare = comparing wvkKeyHash
 
@@ -878,13 +878,13 @@ instance
 
 instance
   (Typeable kr, Era era) =>
-  ToCBOR (WitVKey era kr)
+  ToCBOR (WitVKey kr era)
   where
   toCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
 
 instance
   (Typeable kr, Era era) =>
-  FromCBOR (Annotator (WitVKey era kr))
+  FromCBOR (Annotator (WitVKey kr era))
   where
   fromCBOR =
     annotatorSlice $

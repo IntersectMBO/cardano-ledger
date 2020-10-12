@@ -216,7 +216,7 @@ verifyWitVKey ::
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
   Hash (Crypto era) EraIndependentTxBody ->
-  WitVKey era kr ->
+  WitVKey kr era ->
   Bool
 verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash (coerce sig)
 
@@ -228,7 +228,7 @@ makeWitnessVKey ::
   ) =>
   Hash (Crypto era) EraIndependentTxBody ->
   KeyPair kr (Crypto era) ->
-  WitVKey era 'Witness
+  WitVKey 'Witness era
 makeWitnessVKey txbodyHash keys =
   WitVKey (asWitness $ vKey keys) (coerce $ signedDSIGN @(Crypto era) (sKey keys) txbodyHash)
 
@@ -240,7 +240,7 @@ makeWitnessesVKey ::
   ) =>
   Hash (Crypto era) EraIndependentTxBody ->
   [KeyPair kr (Crypto era)] ->
-  Set (WitVKey era ( 'Witness))
+  Set (WitVKey 'Witness era)
 makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
@@ -252,7 +252,7 @@ makeWitnessesFromScriptKeys ::
   Hash (Crypto era) EraIndependentTxBody ->
   Map (KeyHash kr (Crypto era)) (KeyPair kr (Crypto era)) ->
   Set (KeyHash kr (Crypto era)) ->
-  Set (WitVKey era ( 'Witness))
+  Set (WitVKey 'Witness era)
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)

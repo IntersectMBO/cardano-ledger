@@ -120,7 +120,7 @@ type family HKD f a where
   HKD f a = f a
 
 data WitnessSetHKD f era = WitnessSet'
-  { addrWits' :: !(HKD f (Set (WitVKey era 'Witness))),
+  { addrWits' :: !(HKD f (Set (WitVKey 'Witness era))),
     msigWits' :: !(HKD f (Map (ScriptHash era) (MultiSig era))),
     bootWits' :: !(HKD f (Set (BootstrapWitness era))),
     txWitsBytes :: BSL.ByteString
@@ -154,7 +154,7 @@ instance Era era => Monoid (WitnessSetHKD Identity era) where
 
 pattern WitnessSet ::
   Era era =>
-  Set (WitVKey era 'Witness) ->
+  Set (WitVKey 'Witness era) ->
   Map (ScriptHash era) (MultiSig era) ->
   Set (BootstrapWitness era) ->
   WitnessSet era
