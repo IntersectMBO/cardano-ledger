@@ -693,7 +693,7 @@ data WitVKey kr era = WitVKey'
     wvkSig' :: !(SignedDSIGN (Crypto era) (Hash (Crypto era) (Core.TxBody era))),
     -- | Hash of the witness vkey. We store this here to avoid repeated hashing
     --   when used in ordering.
-    wvkKeyHash :: KeyHash 'Witness (Crypto era),
+    wvkKeyHash :: !(KeyHash 'Witness (Crypto era)),
     wvkBytes :: BSL.ByteString
   }
   deriving (Generic)
