@@ -1,0 +1,52 @@
+cradle:
+  cabal:
+    - path: "byron/chain/executable-spec/src"
+      component: "lib:byron-spec-chain"
+
+    - path: "byron/chain/executable-spec/test"
+      component: "byron-spec-chain:test:chain-rules-test"
+
+    - path: "byron/crypto/src"
+      component: "lib:cardano-crypto-wrapper"
+
+    - path: "byron/crypto/test/"
+      component: "lib:cardano-crypto-test"
+
+    - path: "byron/ledger/executable-spec/src"
+      component: "lib:byron-spec-ledger"
+
+    - path: "byron/ledger/executable-spec/test"
+      component: "byron-spec-ledger:test:byron-spec-ledger-test"
+
+    - path: "byron/ledger/impl/src"
+      component: "lib:cardano-ledger"
+
+    - path: "byron/ledger/impl/test"
+      component: "cardano-ledger:test:cardano-ledger-test"
+
+    - path: "semantics/executable-spec/src"
+      component: "lib:small-steps"
+
+    - path: "semantics/small-steps-test/src"
+      component: "lib:small-steps-test"
+
+    - path: "semantics/small-steps-test/test"
+      component: "small-steps-test:test:examples"
+
+    - path: "shelley/chain-and-ledger/dependencies/non-integer/src"
+      component: "lib:shelley-spec-non-integral"
+
+    - path: "shelley/chain-and-ledger/dependencies/non-integer/test"
+      component: "shelley-spec-non-integral:test:shelley-spec-non-integral-test"
+
+    - path: "shelley/chain-and-ledger/executable-spec/src"
+      component: "lib:shelley-spec-ledger"
+
+    - path: "shelley/chain-and-ledger/shelley-spec-ledger-test/src"
+      component: "lib:shelley-spec-ledger-test"
+
+    - path: "shelley/chain-and-ledger/shelley-spec-ledger-test/test"
+      component: "shelley-spec-ledger-test:test:shelley-spec-ledger-test"
+
+    - path: "shelley-ma/impl/src"
+      component: "lib:cardano-ledger-shelley-ma"
