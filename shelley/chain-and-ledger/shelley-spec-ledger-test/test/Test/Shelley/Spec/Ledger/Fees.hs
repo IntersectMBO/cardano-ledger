@@ -47,7 +47,7 @@ import Shelley.Spec.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET(Coin))
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,

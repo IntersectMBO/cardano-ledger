@@ -46,7 +46,8 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Coin
-  ( Coin (..),
+  ( ASSET (Coin),
+    Coin,
     coinToRational,
     rationalToCoinViaFloor,
   )

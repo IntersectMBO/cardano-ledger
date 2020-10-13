@@ -31,7 +31,7 @@ import Shelley.Spec.Ledger.BaseTypes
     UnitInterval,
     mkNonceFromNumber,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin, ASSET(Coin))
 
 import Cardano.Ledger.Era (Era)
 import Shelley.Spec.Ledger.Keys

@@ -100,7 +100,7 @@ import Shelley.Spec.Ledger.BaseTypes
     mkUnitInterval,
   )
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, bhbody, bheader)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin, ASSET(..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyPair,

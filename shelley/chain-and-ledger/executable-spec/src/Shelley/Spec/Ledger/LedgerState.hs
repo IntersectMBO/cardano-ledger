@@ -131,7 +131,8 @@ import Shelley.Spec.Ledger.BaseTypes
     unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Coin
-  ( Coin (..),
+  ( ASSET (Coin),
+    Coin,
     DeltaCoin (..),
     addDelta,
     rationalToCoinViaFloor,

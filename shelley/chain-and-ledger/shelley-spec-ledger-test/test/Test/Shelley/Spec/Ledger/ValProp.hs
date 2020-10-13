@@ -17,7 +17,8 @@ import Data.Map.Strict(empty,singleton)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Val( Val (..), invert )
 import Cardano.Ledger.ShelleyMA.ValueInternal
-  ( Value(..),
+  ( Value,
+    ASSET(Value),
     AssetID(..),
     PolicyID(..),
     lookup,
@@ -26,7 +27,7 @@ import Cardano.Ledger.ShelleyMA.ValueInternal
     cannonicalMapUnion,
     CanonicalZero(..),
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin, ASSET(Coin))
 import Test.Shelley.Spec.Ledger.Serialisation.Generators() -- get: instance Era era => Arbitrary (ScriptHash era)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes(C)
 import Test.Tasty

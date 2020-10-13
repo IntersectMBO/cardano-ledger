@@ -60,7 +60,7 @@ import Shelley.Spec.Ledger.BlockChain
     lastAppliedHash,
     prevHashToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin, ASSET(Coin))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ptr,

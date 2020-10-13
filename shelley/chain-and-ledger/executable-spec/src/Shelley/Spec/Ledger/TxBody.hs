@@ -138,7 +138,7 @@ import Shelley.Spec.Ledger.BaseTypes
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET (Coin), Coin)
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ix,

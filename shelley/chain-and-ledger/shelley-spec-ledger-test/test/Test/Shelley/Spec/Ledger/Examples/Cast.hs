@@ -46,7 +46,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     textToUrl,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET(Coin))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ptr (..),

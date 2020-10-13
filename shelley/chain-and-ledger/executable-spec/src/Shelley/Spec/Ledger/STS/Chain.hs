@@ -72,7 +72,7 @@ import Shelley.Spec.Ledger.BlockChain
     lastAppliedHash,
     prevHashToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET (Coin), Coin)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 import Shelley.Spec.Ledger.Keys

@@ -81,7 +81,7 @@ import Shelley.Spec.Ledger.BlockChain
     seedEta,
     seedL,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Shelley.Spec.Ledger.Coin (ASSET(Coin), DeltaCoin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,

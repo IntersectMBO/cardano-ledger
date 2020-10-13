@@ -58,7 +58,7 @@ import Shelley.Spec.Ledger.BaseTypes
     invalidKey,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET (Coin), Coin)
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.Serialization

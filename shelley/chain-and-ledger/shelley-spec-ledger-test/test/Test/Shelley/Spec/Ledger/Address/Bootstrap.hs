@@ -44,7 +44,7 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin, ASSET(Coin))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     StakeReference (..),

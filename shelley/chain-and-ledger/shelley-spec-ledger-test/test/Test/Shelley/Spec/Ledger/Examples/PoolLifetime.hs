@@ -32,7 +32,7 @@ import Shelley.Spec.Ledger.BaseTypes
     (⭒),
   )
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader, hashHeaderToNonce)
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), toDelta)
+import Shelley.Spec.Ledger.Coin (Coin, ASSET(Coin), DeltaCoin (..), toDelta)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),

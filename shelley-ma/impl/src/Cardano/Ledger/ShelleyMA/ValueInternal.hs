@@ -1,14 +1,19 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Ledger.ShelleyMA.ValueInternal
   ( PolicyID (..),
     AssetID (..),
-    Value (..),
+    Value,
+    ASSET (Value),
     insert,
     lookup,
     showValue,
@@ -26,7 +31,7 @@ import Cardano.Binary
     toCBOR,
   )
 import Cardano.Ledger.Era
-import Cardano.Ledger.Val (Val (..), scale)
+import Cardano.Ledger.Val (ASSET, Asset (..), Val (..), scale)
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
@@ -45,7 +50,7 @@ import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET (Coin), Coin)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Prelude hiding (lookup)
@@ -67,8 +72,10 @@ newtype PolicyID era = PolicyID {policyID :: ScriptHash era}
   deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData)
 
 -- | The Value representing MultiAssets
-data Value era = Value !Integer !(Map (PolicyID era) (Map AssetID Integer))
+data instance ASSET 'MultiAsset era = Value !Integer !(Map (PolicyID era) (Map AssetID Integer))
   deriving (Show, Generic)
+
+type Value era = ASSET 'MultiAsset era
 
 instance Era era => Eq (Value era) where
   x == y = pointwise (==) x y

@@ -34,7 +34,8 @@ import Shelley.Spec.Ledger.BlockChain as X
     bheader,
   )
 import Shelley.Spec.Ledger.Coin as X
-  ( Coin (..),
+  ( ASSET (Coin),
+    Coin,
     word64ToCoin,
   )
 import Shelley.Spec.Ledger.Credential as X

@@ -48,7 +48,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     maybeToStrictMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin,ASSET(Coin))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys

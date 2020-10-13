@@ -63,7 +63,7 @@ import Shelley.Spec.Ledger.Address
     getRwdNetwork,
   )
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET (Coin), Coin, scaledMinDeposit)
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
@@ -324,7 +324,7 @@ utxoInductive = do
       -- minUTxOValue deposit comparison done as Coin because this rule
       -- is correct strictly in the Shelley era (in shelleyMA we would need to
       -- additionally check that all amounts are non-negative)
-      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, (Val.coin c) < (Val.scaledMinDeposit c minUTxOValue)]
+      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, (Val.coin c) < (scaledMinDeposit c minUTxOValue)]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.

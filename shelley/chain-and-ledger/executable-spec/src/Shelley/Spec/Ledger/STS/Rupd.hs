@@ -31,7 +31,7 @@ import Shelley.Spec.Ledger.BaseTypes
     maxLovelaceSupply,
     randomnessStabilisationWindow,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET (Coin))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.LedgerState (EpochState, RewardUpdate, createRUpd)
 import Shelley.Spec.Ledger.Slot

@@ -18,7 +18,7 @@ import Shelley.Spec.Ledger.Address
   ( Addr (..),
     serialiseAddr,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin,ASSET(Coin))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ptr (..),

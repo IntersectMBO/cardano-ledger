@@ -93,7 +93,7 @@ import Shelley.Spec.Ledger.BlockChain
     pattern Block,
     pattern BlockHash,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin,ASSET(Coin))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     pattern KeyHashObj,

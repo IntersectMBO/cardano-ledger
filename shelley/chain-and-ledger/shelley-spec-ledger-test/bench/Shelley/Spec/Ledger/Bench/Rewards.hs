@@ -31,7 +31,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     truncateUnitInterval,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET(Coin))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesisStaking (..))
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (Staking))

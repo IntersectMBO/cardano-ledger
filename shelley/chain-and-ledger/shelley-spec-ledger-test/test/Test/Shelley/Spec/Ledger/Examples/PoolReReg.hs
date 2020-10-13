@@ -28,7 +28,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin, ASSET(Coin))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness)

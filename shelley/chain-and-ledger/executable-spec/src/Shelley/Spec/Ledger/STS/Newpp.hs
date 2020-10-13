@@ -27,7 +27,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET (Coin), Coin)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,

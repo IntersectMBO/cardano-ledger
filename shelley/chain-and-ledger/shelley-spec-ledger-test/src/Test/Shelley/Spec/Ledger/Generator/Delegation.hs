@@ -30,7 +30,8 @@ import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
   ( AccountState (..),
-    Coin (..),
+    Coin,
+    ASSET(Coin),
     Credential (..),
     DCert (..),
     DPState (..),

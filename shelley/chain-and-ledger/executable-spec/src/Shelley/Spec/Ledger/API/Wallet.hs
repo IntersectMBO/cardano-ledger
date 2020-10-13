@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.API.Validation (ShelleyState)
 import Shelley.Spec.Ledger.Address (Addr (..), serialiseAddr)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET (Coin), Coin)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB

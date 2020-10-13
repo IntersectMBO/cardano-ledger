@@ -23,7 +23,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (Nonce, StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin, ASSET(Coin))
 import Shelley.Spec.Ledger.Credential (Credential, Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)

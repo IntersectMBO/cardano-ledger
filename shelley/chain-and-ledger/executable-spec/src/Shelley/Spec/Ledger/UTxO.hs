@@ -68,7 +68,7 @@ import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),

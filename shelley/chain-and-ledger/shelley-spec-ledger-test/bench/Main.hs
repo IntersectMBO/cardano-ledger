@@ -48,7 +48,7 @@ import Shelley.Spec.Ledger.Bench.Gen
     genTriple,
   )
 import Shelley.Spec.Ledger.Bench.Rewards (createRUpd, genChainInEpoch)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin)
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),

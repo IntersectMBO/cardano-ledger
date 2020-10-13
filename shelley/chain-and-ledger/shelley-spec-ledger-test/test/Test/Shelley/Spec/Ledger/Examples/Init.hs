@@ -28,7 +28,7 @@ import Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (ASSET(Coin))
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
