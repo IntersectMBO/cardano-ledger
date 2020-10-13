@@ -3,11 +3,15 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Ledger.ShelleyMA.ValueInternal
   ( PolicyID (..),
@@ -31,7 +35,7 @@ import Cardano.Binary
     toCBOR,
   )
 import Cardano.Ledger.Era
-import Cardano.Ledger.Val (ASSET, Asset (..), Val (..), scale)
+import Cardano.Ledger.Val (ASSET, Asset (..), Val (..), scale, Blessed(..))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
@@ -303,3 +307,50 @@ gettriples :: Value era -> (Integer, [(PolicyID era, AssetID, Integer)])
 gettriples (Value c m1) = (c, foldr accum1 [] (assocs m1))
   where
     accum1 (policy, m2) ans = foldr accum2 ans (assocs m2) where accum2 (asset, cnt) ans2 = (policy, asset, cnt) : ans2
+
+
+-- =======================================================
+
+instance Blessed ('G 'Ada) where
+  prezero = COIN 0
+  precoin (COIN c) = Coin c
+  preinject (Coin c) = COIN c
+
+instance Blessed ('G 'MultiAsset) where
+  prezero = VALUE 0 Map.empty
+  precoin (VALUE c _) = Coin c
+  preinject (Coin c) = VALUE c Map.empty
+
+data instance ASSET ('G t) era where
+  COIN:: Integer -> ASSET ('G 'Ada) era
+  VALUE:: !Integer -> !(Map (PolicyID era) (Map AssetID Integer)) -> ASSET (G 'MultiAsset) era
+
+instance Semigroup (ASSET ('G t) era) where
+  VALUE c m <> VALUE c1 m1 =
+    VALUE (c + c1) (cannonicalMapUnion (cannonicalMapUnion (+)) m m1)
+  COIN c <> COIN d = COIN(c+d)
+
+instance Blessed ('G t) => Monoid (ASSET ('G t) era) where
+  mempty = prezero
+
+instance Blessed ('G t) => Group (ASSET ('G t) era) where
+  invert (VALUE c m) = VALUE (- c) (cannonicalMap (cannonicalMap ((-1 :: Integer) *)) m)
+  invert (COIN c) = COIN (-c)
+
+instance Blessed ('G t) => Abelian (ASSET ('G t) era)
+
+deriving instance Eq (ASSET (G t) era)
+
+instance Blessed ('G t) => Val (ASSET ('G t) era) where
+  n <×> (COIN c) = COIN (fromIntegral n * c)
+  n <×> (VALUE c v) = VALUE (fromIntegral n * c) (cannonicalMap (cannonicalMap ((fromIntegral n) *)) v)
+  isZero (COIN c) = c==0
+  isZero (VALUE c m) = c==0 && Map.null m
+  coin x = precoin x
+  inject c = preinject c
+  size (COIN c) = 1
+  size (VALUE c n) = fromIntegral (Map.size n)
+  modifyCoin f (COIN c) = COIN d where (Coin d) = f (Coin c)
+  modifyCoin f (VALUE c m) = VALUE d m where (Coin d) = f(Coin c)
+  pointwise f (COIN x) (COIN y) = f x y
+  pointwise f (VALUE c m) (VALUE d n) = c==d && pointWise (pointWise f) m n

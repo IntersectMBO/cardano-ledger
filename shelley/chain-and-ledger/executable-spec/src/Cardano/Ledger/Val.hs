@@ -11,6 +11,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE RankNTypes #-}
 
 -- | This module defines a generalised notion of a "value" - that is, something
 -- with which we may quantify a transaction output. Values will have Val instances
@@ -22,7 +23,7 @@ module Cardano.Ledger.Val
     sumVal,
     Asset (..),
     ASSET,
-    Coin,
+    Blessed (..),
   )
 where
 
@@ -93,8 +94,13 @@ invert x = (-1 :: Integer) <×> x
 -- =====================================================================
 -- Several instances of Val will be type family instances of ASSET
 
-data Asset = Ada | MultiAsset
+type Coin = ASSET 'Ada ()
+
+data Asset = Ada | MultiAsset | G Asset
+
+class Blessed (t::Asset) where
+  prezero :: ASSET t era
+  precoin:: ASSET t era -> Coin
+  preinject :: Coin -> ASSET t era
 
 data family ASSET (t :: Asset) :: Type -> Type
-
-type Coin = ASSET 'Ada ()

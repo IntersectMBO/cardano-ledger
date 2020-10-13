@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Shelley.Spec.Ledger.Coin
@@ -35,7 +36,7 @@ import NoThunks.Class (NoThunks (..))
 import Quiet
 
 -- | The amount of value held by a transaction output.
-newtype instance ASSET 'Ada () = Coin {unCoin :: Integer}
+newtype instance ASSET 'Ada era = Coin {unCoin :: Integer}
   deriving
     ( Eq,
       Ord,
@@ -55,8 +56,8 @@ type Coin = ASSET 'Ada ()
 
 instance Val Coin where
   n <×> (Coin x) = Coin $ (fromIntegral n) * x
-  coin = id
-  inject = id
+  coin x = x
+  inject x = x
   size _ = 1
   modifyCoin f v = f v
   pointwise p (Coin x) (Coin y) = p x y
