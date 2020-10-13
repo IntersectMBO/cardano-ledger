@@ -13,43 +13,38 @@
 
 -- | This module defines a generalised notion of a "value" - that is, something
 -- with which we may quantify a transaction output.
---
--- This module is intended for qualified import:
--- > import qualified Cardano.Ledger.Val as Val
 module Cardano.Ledger.Val
   ( Val (..),
-    (<+>),
-    (<->),
-    (<×>),
+    scale,
     invert,
     sumVal,
     scaledMinDeposit,
-
-    -- * Re-exports
-    (Data.PartialOrd.<=),
-    (Data.PartialOrd.>=),
-    (Data.PartialOrd.==),
-    (Data.PartialOrd./=),
-    (Data.PartialOrd.>),
-    (Data.PartialOrd.<),
-    Data.PartialOrd.compare,
   )
 where
 
-import Data.Group (Abelian, invert)
-import Data.PartialOrd hiding ((==))
-import qualified Data.PartialOrd
+import Data.Group (Abelian)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 
 class
   ( Abelian t,
-    Eq t,
-    PartialOrd t
+    Eq t
   ) =>
   Val t
   where
-  -- | Multiply the value by a scalar
-  scale :: Integral i => i -> t -> t
+  -- | the value with nothing in it
+  zero :: t
+  zero = mempty
+
+  -- | add two value
+  (<+>) :: t -> t -> t
+  x <+> y = x <> y
+
+  -- | scale a value by an Integral constant
+  (<×>) :: Integral i => i -> t -> t
+
+  -- | subtract two values
+  (<->) :: t -> t -> t
+  x <-> y = x <+> ((-1 :: Integer) <×> y)
 
   -- | Is the argument zero?
   isZero :: t -> Bool
@@ -61,11 +56,17 @@ class
   -- | Create a value containing only this amount of ADA
   inject :: Coin -> t
 
+  -- | modify the blessed Coin part of t
+  modifyCoin :: (Coin -> Coin) -> t -> t
+
   size :: t -> Integer -- compute size of Val instance
-  -- TODO add PACK/UNPACK stuff to this class
+
+  -- | used to compare values pointwise. Rather than using: (v1 <= v2) use: pointwise (<=) v1 v2
+  -- | If a quantity is stored in only one of 'v1' or 'v2', we use 0 for the missing quantity.
+  pointwise :: (Integer -> Integer -> Bool) -> t -> t -> Bool
 
 -- =============================================================
--- Infix synonyms with types fixed at (Val t). Makes calls easier
+-- Synonyms with types fixed at (Val t). Makes calls easier
 -- to read, and gives better error messages, when a mistake is made
 
 infixl 6 <+>
@@ -74,23 +75,22 @@ infixl 6 <->
 
 infixl 7 <×>
 
-(<+>) :: Val t => t -> t -> t
-x <+> y = x <> y
-
-(<->) :: Val t => t -> t -> t
-x <-> y = x <+> (invert y)
-
-(<×>) :: Val t => Int -> t -> t
-x <×> y = scale x y
+scale :: (Val t, Integral i) => i -> t -> t
+scale i v = i <×> v
 
 sumVal :: (Foldable t, Val v) => t v -> v
 sumVal xs = foldl (<+>) mempty xs
 
+invert :: Val t => t -> t
+invert x = (-1 :: Integer) <×> x
+
 instance Val Coin where
-  scale n (Coin x) = Coin $ (fromIntegral n) * x
+  n <×> (Coin x) = Coin $ (fromIntegral n) * x
   coin = id
   inject = id
   size _ = 1
+  modifyCoin f v = f v
+  pointwise p (Coin x) (Coin y) = p x y
 
 {- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
 (passed to it as Coin mv) as a specification of "the cost of

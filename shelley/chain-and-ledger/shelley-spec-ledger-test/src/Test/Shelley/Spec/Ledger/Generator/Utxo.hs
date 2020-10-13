@@ -295,7 +295,7 @@ genNextDelta
         -- based on the current contents of delta, how much will the fee increase when we add the delta to the tx?
         draftSize =
           ( sum
-              [ 5, -- safety net in case the coin or a list prefix rolls over into a larger encoding
+              [ 5::Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
                 encodedLen (max dfees (Coin 0)) - 1,
                 foldr (\a b -> b + encodedLen a) 0 extraInputs,
                 encodedLen change,
