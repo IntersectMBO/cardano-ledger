@@ -28,6 +28,7 @@ import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API.Protocol
 import Shelley.Spec.Ledger.API.Types
 import Shelley.Spec.Ledger.Coin (CompactForm (CompactCoin))
+import Shelley.Spec.Ledger.CompactAddr (CompactAddr (UnsafeCompactAddr))
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.Rewards
@@ -58,7 +59,7 @@ hashFromShortBytesE sbs = fromMaybe (error msg) $ Crypto.hashFromBytesShort sbs
 translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> TxOut (ShelleyEra c)
 translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
   TxOutCompact
-    (Byron.unsafeGetCompactAddress compactAddr)
+    (UnsafeCompactAddr (Byron.unsafeGetCompactAddress compactAddr))
     (CompactCoin (Byron.unsafeGetLovelace amount))
 
 translateCompactTxInByronToShelley ::

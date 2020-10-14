@@ -33,7 +33,6 @@ module Shelley.Spec.Ledger.EpochBoundary
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.Compactible (fromCompact)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased)
@@ -48,17 +47,17 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
+import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Coin
   ( Coin (..),
     coinToRational,
     rationalToCoinViaFloor,
   )
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
-import Shelley.Spec.Ledger.DeserializeShort (deserialiseAddrStakeRef)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
-import Shelley.Spec.Ledger.TxBody (PoolParams, TxOut (TxOutCompact))
+import Shelley.Spec.Ledger.TxBody (PoolParams, TxOut (TxOut))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Blocks made
@@ -108,14 +107,13 @@ aggregateUtxoCoinByCredential ::
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldr accum initial u
   where
-    accum (TxOutCompact addr c) ans =
-      let c' = Val.coin . fromCompact @(Core.Value era) $ c
-       in case deserialiseAddrStakeRef addr of
-            Just (StakeRefPtr p) -> case Map.lookup p ptrs of
-              Just cred -> Map.insertWith (<>) cred c' ans
-              Nothing -> ans
-            Just (StakeRefBase hk) -> Map.insertWith (<>) hk c' ans
-            _other -> ans
+    accum (TxOut (Addr _ _ (StakeRefPtr p)) c) ans =
+      case Map.lookup p ptrs of
+        Just cred -> Map.insertWith (<>) cred (Val.coin c) ans
+        Nothing -> ans
+    accum (TxOut (Addr _ _ (StakeRefBase hk)) c) ans =
+      Map.insertWith (<>) hk (Val.coin c) ans
+    accum _other ans = ans
 
 -- | Get stake of one pool
 poolStake ::

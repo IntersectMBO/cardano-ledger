@@ -33,10 +33,10 @@ library
     Shelley.Spec.Ledger.BaseTypes
     Shelley.Spec.Ledger.BlockChain
     Shelley.Spec.Ledger.Coin
+    Shelley.Spec.Ledger.CompactAddr
     Shelley.Spec.Ledger.Credential
     Shelley.Spec.Ledger.Delegation.Certificates
     Shelley.Spec.Ledger.Delegation.PoolParams
-    Shelley.Spec.Ledger.DeserializeShort
     Shelley.Spec.Ledger.EpochBoundary
     Shelley.Spec.Ledger.Genesis
     Shelley.Spec.Ledger.Hashing

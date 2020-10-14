@@ -104,6 +104,7 @@ test-suite shelley-spec-ledger-test
     other-modules:
       Test.Control.Iterate.SetAlgebra
       Test.Shelley.Spec.Ledger.Address.Bootstrap
+      Test.Shelley.Spec.Ledger.Address.CompactAddr
       Test.Shelley.Spec.Ledger.ByronTranslation
       Test.Shelley.Spec.Ledger.Examples
       Test.Shelley.Spec.Ledger.Examples.Cast
@@ -132,7 +133,6 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Serialisation.Golden.Address
       Test.Shelley.Spec.Ledger.Serialisation.Golden.Encoding
       Test.Shelley.Spec.Ledger.Serialisation.Golden.Genesis
-      Test.Shelley.Spec.Ledger.Serialisation.StakeRef
       Test.Shelley.Spec.Ledger.Serialisation.Tripping.CBOR
       Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON
       Test.Shelley.Spec.Ledger.ShelleyTranslation

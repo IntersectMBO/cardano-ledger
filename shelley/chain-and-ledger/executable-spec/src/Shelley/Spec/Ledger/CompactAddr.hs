@@ -1,35 +1,37 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Shelley.Spec.Ledger.DeserializeShort
-  ( deserialiseAddrStakeRef,
-    deserializeShortAddr,
+module Shelley.Spec.Ledger.CompactAddr
+  ( compactAddr,
+    decompactAddr,
+    CompactAddr (..),
+    substring,
   )
 where
 
+import Cardano.Binary
+  ( DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeFull',
+  )
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era (Crypto (..))
-import Control.Monad (ap, join)
+import Cardano.Prelude (Text, cborError, panic)
+import Control.Monad (ap)
 import qualified Control.Monad.Fail
 import Data.Bits (testBit, (.&.))
+import Data.ByteString (ByteString)
 import Data.ByteString.Short as SBS
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
+import Data.Maybe (fromMaybe)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Word (Word8)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address
-  ( Addr (..),
-    Word7 (..),
-    byron,
-    isEnterpriseAddr,
-    notBaseAddr,
-    payCredIsScript,
-    stakeCredIsScript,
-    toWord7,
-    word7sToNat,
-  )
+import Shelley.Spec.Ledger.Address (Addr (..), BootstrapAddress (..), Word7 (..), byron, isEnterpriseAddr, notBaseAddr, payCredIsScript, serialiseAddr, stakeCredIsScript, toWord7, word7sToNat)
 import Shelley.Spec.Ledger.BaseTypes (word8ToNetwork)
 import Shelley.Spec.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
@@ -40,6 +42,49 @@ import Shelley.Spec.Ledger.Credential
 import Shelley.Spec.Ledger.Keys (KeyHash (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
+
+newtype CompactAddr era = UnsafeCompactAddr ShortByteString
+  deriving (Eq, Ord)
+
+compactAddr :: Addr era -> CompactAddr era
+compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
+
+decompactAddr :: forall era. Era era => CompactAddr era -> Addr era
+decompactAddr (UnsafeCompactAddr bytes) =
+  if testBit header byron
+    then AddrBootstrap $ run "byron address" 0 bytes getBootstrapAddress
+    else Addr addrNetId paycred stakecred
+  where
+    run :: forall a. Text -> Int -> ShortByteString -> GetShort a -> a
+    run name i sbs g = snd . unwrap name $ runGetShort g i sbs
+    -- The reason failure is impossible here is that the only way to call this code
+    -- is using a CompactAddr, which can only be constructed using compactAddr.
+    -- compactAddr serializes an Addr, so this is guaranteed to work.
+    unwrap :: forall a. Text -> Maybe a -> a
+    unwrap name = fromMaybe (panic $ "Impossible failure when decoding " <> name)
+    header = run "address header" 0 bytes getWord
+    addrNetId =
+      unwrap "address network id" $
+        word8ToNetwork $ header .&. 0x0F -- 0b00001111 is the mask for the network id
+        -- The address format is
+        -- header | pay cred | stake cred
+        -- where the header is 1 byte
+        -- the pay cred is (sizeHash (ADDRHASH (Crypto era))) bytes
+        -- and the stake cred can vary
+    paycred = run "payment credential" 1 bytes (getPayCred header)
+    stakecred = run "staking credential" 1 bytes $ do
+      skipHash ([] @(ADDRHASH (Crypto era)))
+      getStakeReference header
+
+instance Era era => ToCBOR (CompactAddr era) where
+  toCBOR (UnsafeCompactAddr bytes) = toCBOR bytes
+
+instance Era era => FromCBOR (CompactAddr era) where
+  fromCBOR = do
+    sbs <- fromCBOR
+    case deserializeShortAddr @era sbs of
+      Just _ -> pure $ UnsafeCompactAddr sbs
+      Nothing -> cborError $ DecoderErrorCustom "Addr" "invalid address"
 
 newtype GetShort a = GetShort {runGetShort :: Int -> ShortByteString -> Maybe (Int, a)}
   deriving (Functor)
@@ -57,36 +102,33 @@ instance Monad GetShort where
 instance Control.Monad.Fail.MonadFail GetShort where
   fail _ = GetShort $ \_ _ -> Nothing
 
-deserialiseAddrStakeRef :: Era era => ShortByteString -> Maybe (StakeReference era)
-deserialiseAddrStakeRef sbs = join $ snd <$> runGetShort getAddrStakeReference 0 sbs
-
-getAddrStakeReference :: forall era. Era era => GetShort (Maybe (StakeReference era))
-getAddrStakeReference = do
-  header <- getWord
-  if testBit header byron
-    then pure Nothing
-    else skipHash ([] @(ADDRHASH (Crypto era))) >> Just <$> getStakeReference header
-
 deserializeShortAddr :: Era era => ShortByteString -> Maybe (Addr era)
-deserializeShortAddr short =
-  case runGetShort getShortAddr 0 short of
-    Just (_, maybe_addr) -> maybe_addr
-    Nothing -> Nothing
+deserializeShortAddr short = snd <$> runGetShort getShortAddr 0 short
 
-getShortAddr :: forall era. Era era => GetShort (Maybe (Addr era))
+getShortAddr :: forall era. Era era => GetShort (Addr era)
 getShortAddr = do
   header <- peekWord8
   if testBit header byron
-    then pure Nothing
+    then AddrBootstrap <$> getBootstrapAddress
     else do
       _ <- getWord -- read past the header byte
       let addrNetId = header .&. 0x0F -- 0b00001111 is the mask for the network id
       case word8ToNetwork addrNetId of
-        Just n -> do c <- getPayCred header; h <- getStakeReference header; pure (Just (Addr n c h))
+        Just n -> do
+          c <- getPayCred header
+          h <- getStakeReference header
+          pure (Addr n c h)
         Nothing ->
           fail $
             concat
               ["Address with unknown network Id. (", show addrNetId, ")"]
+
+getBootstrapAddress :: GetShort (BootstrapAddress era)
+getBootstrapAddress = do
+  bs <- getRemainingAsByteString
+  case decodeFull' bs of
+    Left e -> fail $ show e
+    Right r -> pure $ BootstrapAddress r
 
 getWord :: GetShort Word8
 getWord = GetShort $ \i sbs ->
@@ -99,6 +141,13 @@ peekWord8 = GetShort peek
   where
     peek i sbs = if i < SBS.length sbs then Just (i, SBS.index sbs i) else Nothing
 
+getRemainingAsByteString :: GetShort ByteString
+getRemainingAsByteString = GetShort $ \i sbs ->
+  let l = SBS.length sbs
+   in if i < l
+        then Just $ (l, SBS.fromShort $ substring sbs i l)
+        else Nothing
+
 skipHash :: forall proxy h. Hash.HashAlgorithm h => proxy h -> GetShort ()
 skipHash p = skip . fromIntegral $ Hash.sizeHash p
 
@@ -110,6 +159,8 @@ getHash = GetShort $ \i sbs ->
         then Just (offsetStop, Hash.UnsafeHash (substring sbs i offsetStop))
         else Nothing
 
+-- start is the first index copied
+-- stop is the index after the last index copied
 substring :: ShortByteString -> Int -> Int -> ShortByteString
 substring (SBS ba) start stop =
   case BA.cloneByteArray (BA.ByteArray ba) start (stop - start) of
