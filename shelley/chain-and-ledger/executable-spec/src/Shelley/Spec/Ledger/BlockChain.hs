@@ -78,6 +78,7 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased)
+import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -160,20 +161,25 @@ data TxSeq era = TxSeq'
     txSeqMetadataBytes :: BSL.ByteString
   }
   deriving (Generic)
-  deriving
-    (NoThunks)
-    via AllowThunksIn
-          '[ "txSeqBodyBytes",
-             "txSeqWitsBytes",
-             "txSeqMetadataBytes"
-           ]
-          (TxSeq era)
+
+deriving via
+  AllowThunksIn
+    '[ "txSeqBodyBytes",
+       "txSeqWitsBytes",
+       "txSeqMetadataBytes"
+     ]
+    (TxSeq era)
+  instance
+    ShelleyBased era => NoThunks (TxSeq era)
 
 deriving stock instance
   ShelleyBased era =>
   Show (TxSeq era)
 
-pattern TxSeq :: Era era => StrictSeq (Tx era) -> TxSeq era
+pattern TxSeq ::
+  (Era era, Shelley.TxBodyConstraints era) =>
+  StrictSeq (Tx era) ->
+  TxSeq era
 pattern TxSeq xs <-
   TxSeq' xs _ _ _
   where

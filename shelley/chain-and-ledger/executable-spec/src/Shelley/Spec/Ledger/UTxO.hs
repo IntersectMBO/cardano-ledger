@@ -47,6 +47,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased)
+import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
@@ -60,14 +61,16 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import Data.Relation (Relation (..))
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe, strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -92,7 +95,6 @@ import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
   ( PoolCert (..),
     PoolParams (..),
-    TxBody (..),
     TxId (..),
     TxIn (..),
     TxOut (..),
@@ -164,28 +166,32 @@ instance Relation (UTxO era) where
 
 -- | Compute the id of a transaction.
 txid ::
-  Era era =>
-  TxBody era ->
+  forall era.
+  (Shelley.TxBodyConstraints era) =>
+  Core.TxBody era ->
   TxId era
-txid = TxId . hashAnnotated
+txid = TxId . hashAnnotated @_ @era
 
 -- | Compute the UTxO inputs of a transaction.
 txins ::
-  ShelleyBased era =>
-  TxBody era ->
+  ( HasField "inputs" (Core.TxBody era) (Set (TxIn era))
+  ) =>
+  Core.TxBody era ->
   Set (TxIn era)
-txins = _inputs
+txins = getField @"inputs"
 
 -- | Compute the transaction outputs of a transaction.
 txouts ::
-  ShelleyBased era =>
-  TxBody era ->
+  ( ShelleyBased era,
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+  ) =>
+  Core.TxBody era ->
   UTxO era
 txouts tx =
   UTxO $
     Map.fromList
       [ (TxIn transId idx, out)
-        | (out, idx) <- zip (toList $ _outputs tx) [0 ..]
+        | (out, idx) <- zip (toList $ getField @"outputs" tx) [0 ..]
       ]
   where
     transId = txid tx
@@ -201,9 +207,9 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 verifyWitVKey ::
   ( Typeable kr,
     Era era,
-    DSignable era (Hash era (TxBody era))
+    DSignable era (Hash era (Core.TxBody era))
   ) =>
-  Hash era (TxBody era) ->
+  Hash era (Core.TxBody era) ->
   WitVKey era kr ->
   Bool
 verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash sig
@@ -212,9 +218,9 @@ verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash 
 makeWitnessVKey ::
   forall era kr.
   ( Era era,
-    DSignable era (Hash era (TxBody era))
+    DSignable era (Hash era (Core.TxBody era))
   ) =>
-  Hash era (TxBody era) ->
+  Hash era (Core.TxBody era) ->
   KeyPair kr era ->
   WitVKey era 'Witness
 makeWitnessVKey txbodyHash keys =
@@ -224,9 +230,9 @@ makeWitnessVKey txbodyHash keys =
 makeWitnessesVKey ::
   forall era kr.
   ( Era era,
-    DSignable era (Hash era (TxBody era))
+    DSignable era (Hash era (Core.TxBody era))
   ) =>
-  Hash era (TxBody era) ->
+  Hash era (Core.TxBody era) ->
   [KeyPair kr era] ->
   Set (WitVKey era ( 'Witness))
 makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
@@ -235,9 +241,9 @@ makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
 -- scripts, return the set of required keys.
 makeWitnessesFromScriptKeys ::
   ( Era era,
-    DSignable era (Hash era (TxBody era))
+    DSignable era (Hash era (Core.TxBody era))
   ) =>
-  Hash era (TxBody era) ->
+  Hash era (Core.TxBody era) ->
   Map (KeyHash kr era) (KeyPair kr era) ->
   Set (KeyHash kr era) ->
   Set (WitVKey era ( 'Witness))
@@ -279,10 +285,12 @@ getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolPubKey $ p
 getKeyHashFromRegPool _ = Nothing
 
 txup ::
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+  ) =>
   Tx era ->
   Maybe (Update era)
-txup (Tx txbody _ _) = strictMaybeToMaybe (_txUpdate txbody)
+txup (Tx txbody _ _) = strictMaybeToMaybe (getField @"update" txbody)
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr era -> Maybe (ScriptHash era)
@@ -307,7 +315,11 @@ scriptCred (ScriptHashObj hs) = Just hs
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
 scriptsNeeded ::
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era))
+  ) =>
   UTxO era ->
   Tx era ->
   Set (ScriptHash era)
@@ -324,10 +336,10 @@ scriptsNeeded u tx =
       )
   where
     unTxOut (TxOut a _) = a
-    withdrawals = unWdrl $ _wdrls $ _body tx
-    UTxO u'' = (txinsScript (txins $ _body tx) u) ◁ u
+    withdrawals = unWdrl $ getField @"wdrls" $ _body tx
+    UTxO u'' = (txinsScript (getField @"inputs" $ _body tx) u) ◁ u
     -- u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u)  TODO
-    certificates = (toList . _certs . _body) tx
+    certificates = (toList . getField @"certs" . _body) tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.

@@ -26,8 +26,10 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans, (?!), (?!:))
@@ -37,6 +39,7 @@ import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes
@@ -67,7 +70,6 @@ import Shelley.Spec.Ledger.TxBody
     Ix,
     Ptr (..),
     RewardAcnt (..),
-    TxBody (..),
     Wdrl (..),
   )
 
@@ -93,20 +95,19 @@ data DelegsPredicateFailure era
   | DelplFailure (PredicateFailure (DELPL era)) -- Subtransition Failures
   deriving (Show, Eq, Generic)
 
-instance
-  ShelleyBased era =>
-  STS (DELEGS era)
-  where
-  type State (DELEGS era) = DPState era
-  type Signal (DELEGS era) = Seq (DCert era)
-  type Environment (DELEGS era) = DelegsEnv era
-  type BaseM (DELEGS era) = ShelleyBase
-  type PredicateFailure (DELEGS era) = DelegsPredicateFailure era
+instance Crypto c => STS (DELEGS (ShelleyEra c)) where
+  type State (DELEGS (ShelleyEra c)) = DPState (ShelleyEra c)
+  type Signal (DELEGS (ShelleyEra c)) = Seq (DCert (ShelleyEra c))
+  type Environment (DELEGS (ShelleyEra c)) = DelegsEnv (ShelleyEra c)
+  type BaseM (DELEGS (ShelleyEra c)) = ShelleyBase
+  type
+    PredicateFailure (DELEGS (ShelleyEra c)) =
+      DelegsPredicateFailure (ShelleyEra c)
 
   initialRules = [pure emptyDelegation]
   transitionRules = [delegsTransition]
 
-instance NoThunks (DelegsPredicateFailure era)
+instance NoThunks (DelegsPredicateFailure (ShelleyEra c))
 
 instance
   (Typeable era, Era era) =>
@@ -147,6 +148,12 @@ instance
 delegsTransition ::
   forall era.
   ( ShelleyBased era,
+    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    State (DELEGS era) ~ DPState era,
+    Environment (DELEGS era) ~ DelegsEnv era,
+    PredicateFailure (DELEGS era)
+      ~ DelegsPredicateFailure era,
+    Signal (DELEGS era) ~ Seq (DCert era),
     Embed (DELPL era) (DELEGS era)
   ) =>
   TransitionRule (DELEGS era)
@@ -157,7 +164,7 @@ delegsTransition = do
   case certificates of
     Empty -> do
       let ds = _dstate dpstate
-          wdrls_ = unWdrl $ _wdrls (_body tx)
+          wdrls_ = unWdrl $ getField @"wdrls" (_body tx)
           rewards = _rewards ds
 
       isSubmapOf wdrls_ rewards -- wdrls_ ⊆ rewards
@@ -208,7 +215,7 @@ delegsTransition = do
             ]
 
 instance
-  ShelleyBased era =>
-  Embed (DELPL era) (DELEGS era)
+  Crypto c =>
+  Embed (DELPL (ShelleyEra c)) (DELEGS (ShelleyEra c))
   where
   wrapFailed = DelplFailure

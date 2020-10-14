@@ -37,6 +37,7 @@ import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Iterate.SetAlgebra (biMapFromList)
@@ -205,7 +206,10 @@ instance (Typeable kr, Era era, Mock (Crypto era)) => Arbitrary (WitVKey era kr)
       <$> arbitrary
       <*> arbitrary
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (WitnessSet era) where
+instance
+  (Shelley.TxBodyConstraints era, Mock (Crypto era)) =>
+  Arbitrary (WitnessSet era)
+  where
   arbitrary =
     WitnessSet
       <$> arbitrary
@@ -336,7 +340,10 @@ instance
   shrink = genericShrink
 
 instance
-  (ShelleyTest era, MockGen era) =>
+  ( ShelleyTest era,
+    MockGen era,
+    Arbitrary (STS.PredicateFailure (UTXO era))
+  ) =>
   Arbitrary (STS.UtxowPredicateFailure era)
   where
   arbitrary = genericArbitraryU
@@ -371,14 +378,23 @@ instance
   shrink = genericShrink
 
 instance
-  (ShelleyTest era, MockGen era) =>
+  ( ShelleyTest era,
+    MockGen era,
+    Arbitrary
+      (STS.PredicateFailure (DELEGS era)),
+    Arbitrary
+      (STS.PredicateFailure (UTXOW era))
+  ) =>
   Arbitrary (STS.LedgerPredicateFailure era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
-  (ShelleyTest era, MockGen era) =>
+  ( ShelleyTest era,
+    MockGen era,
+    Arbitrary (STS.PredicateFailure (LEDGER era))
+  ) =>
   Arbitrary (STS.LedgersPredicateFailure era)
   where
   arbitrary = genericArbitraryU
@@ -559,7 +575,10 @@ instance Arbitrary a => Arbitrary (StrictMaybe a) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-genPParams :: (Era era) => proxy era -> Gen (PParams era)
+genPParams ::
+  (Shelley.TxBodyConstraints era) =>
+  proxy era ->
+  Gen (PParams era)
 genPParams p = Update.genPParams (geConstants (genEnv p))
 
 instance Era era => Arbitrary (OBftSlot era) where

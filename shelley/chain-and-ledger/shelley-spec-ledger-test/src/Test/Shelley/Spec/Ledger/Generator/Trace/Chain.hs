@@ -22,7 +22,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.State.Transition (IRC (..))
+import Control.State.Transition (BaseM, Environment, IRC (..), STS, Signal, State)
 import Control.State.Transition.Trace.Generator.QuickCheck
   ( BaseEnv,
     HasTrace,
@@ -35,8 +35,10 @@ import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
+import Data.Sequence (Seq)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain
   ( LastAppliedBlock (..),
     hashHeaderToNonce,
@@ -59,7 +61,24 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, maxLLSupply, mkHash)
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
-  (ShelleyTest era, Mock (Crypto era)) =>
+  ( ShelleyTest era,
+    STS (CHAIN era),
+    BaseM (CHAIN era) ~ ShelleyBase,
+    STS (LEDGERS era),
+    BaseM (LEDGERS era) ~ ShelleyBase,
+    Environment (CHAIN era) ~ (),
+    State (CHAIN era) ~ ChainState era,
+    Signal (CHAIN era) ~ Block era,
+    Environment (LEDGERS era) ~ LedgersEnv era,
+    State (LEDGERS era) ~ LedgerState era,
+    Signal (LEDGERS era) ~ Seq (Tx era),
+    STS (LEDGER era),
+    BaseM (LEDGER era) ~ ShelleyBase,
+    Environment (LEDGER era) ~ LedgerEnv era,
+    State (LEDGER era) ~ (UTxOState era, DPState era),
+    Signal (LEDGER era) ~ Tx era,
+    Mock (Crypto era)
+  ) =>
   HasTrace (CHAIN era) (GenEnv era)
   where
   envGen _ = pure ()

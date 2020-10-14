@@ -19,7 +19,8 @@ module Shelley.Spec.Ledger.STS.Ledgers
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Monad (foldM)
 import Control.State.Transition
   ( Embed (..),
@@ -37,7 +38,9 @@ import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
+    DPState,
     LedgerState (..),
+    UTxOState,
     emptyLedgerState,
     _delegationState,
     _utxoState,
@@ -59,43 +62,64 @@ data LedgersPredicateFailure era
   = LedgerFailure (PredicateFailure (LEDGER era)) -- Subtransition Failures
   deriving (Generic)
 
-deriving stock instance ShelleyBased era => Show (LedgersPredicateFailure era)
+deriving stock instance
+  ( ShelleyBased era,
+    Show (PredicateFailure (LEDGER era))
+  ) =>
+  Show (LedgersPredicateFailure era)
 
-deriving stock instance ShelleyBased era => Eq (LedgersPredicateFailure era)
-
-instance ShelleyBased era => NoThunks (LedgersPredicateFailure era)
+deriving stock instance
+  ( ShelleyBased era,
+    Eq (PredicateFailure (LEDGER era))
+  ) =>
+  Eq (LedgersPredicateFailure era)
 
 instance
   ( ShelleyBased era,
-    DSignable era (Hash era (TxBody era))
+    NoThunks (PredicateFailure (LEDGER era))
   ) =>
-  STS (LEDGERS era)
-  where
-  type State (LEDGERS era) = LedgerState era
-  type Signal (LEDGERS era) = Seq (Tx era)
-  type Environment (LEDGERS era) = LedgersEnv era
-  type BaseM (LEDGERS era) = ShelleyBase
-  type PredicateFailure (LEDGERS era) = LedgersPredicateFailure era
-
-  initialRules = [pure emptyLedgerState]
-  transitionRules = [ledgersTransition]
+  NoThunks (LedgersPredicateFailure era)
 
 instance
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    ToCBOR (PredicateFailure (LEDGER era))
+  ) =>
   ToCBOR (LedgersPredicateFailure era)
   where
   toCBOR (LedgerFailure e) = toCBOR e
 
 instance
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    FromCBOR (PredicateFailure (LEDGER era))
+  ) =>
   FromCBOR (LedgersPredicateFailure era)
   where
   fromCBOR = LedgerFailure <$> fromCBOR
 
+instance
+  ( Crypto c,
+    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+  ) =>
+  STS (LEDGERS (ShelleyEra c))
+  where
+  type State (LEDGERS (ShelleyEra c)) = LedgerState (ShelleyEra c)
+  type Signal (LEDGERS (ShelleyEra c)) = Seq (Tx (ShelleyEra c))
+  type Environment (LEDGERS (ShelleyEra c)) = LedgersEnv (ShelleyEra c)
+  type BaseM (LEDGERS (ShelleyEra c)) = ShelleyBase
+  type PredicateFailure (LEDGERS (ShelleyEra c)) = LedgersPredicateFailure (ShelleyEra c)
+
+  initialRules = [pure emptyLedgerState]
+  transitionRules = [ledgersTransition]
+
 ledgersTransition ::
   forall era.
-  ( ShelleyBased era,
-    DSignable era (Hash era (TxBody era))
+  ( Embed (LEDGER era) (LEDGERS era),
+    Environment (LEDGERS era) ~ LedgersEnv era,
+    State (LEDGERS era) ~ LedgerState era,
+    Signal (LEDGERS era) ~ Seq (Tx era),
+    Environment (LEDGER era) ~ LedgerEnv era,
+    State (LEDGER era) ~ (UTxOState era, DPState era),
+    Signal (LEDGER era) ~ Tx era
   ) =>
   TransitionRule (LEDGERS era)
 ledgersTransition = do
@@ -114,9 +138,9 @@ ledgersTransition = do
   pure $ LedgerState u'' dp''
 
 instance
-  ( ShelleyBased era,
-    DSignable era (Hash era (TxBody era))
+  ( Crypto c,
+    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
   ) =>
-  Embed (LEDGER era) (LEDGERS era)
+  Embed (LEDGER (ShelleyEra c)) (LEDGERS (ShelleyEra c))
   where
   wrapFailed = LedgerFailure

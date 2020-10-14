@@ -53,8 +53,12 @@ where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.VRF (evalCertified)
+-- import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
+
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Era (Crypto (..))
+import qualified Cardano.Ledger.Shelley as Shelley
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
@@ -65,10 +69,13 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
+import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Tuple (swap)
 import Data.Word (Word64)
+import GHC.Records (HasField, getField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (..), getRwdCred, toAddr, toCred)
 import Shelley.Spec.Ledger.BaseTypes
@@ -159,19 +166,18 @@ import Shelley.Spec.Ledger.Slot
   )
 import Shelley.Spec.Ledger.Tx
   ( Tx,
-    TxBody,
+    TxIn,
     hashScript,
-    pattern TxBody,
     pattern TxId,
     pattern TxIn,
     pattern TxOut,
   )
 import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.TxBody
-  ( TxOut,
+  ( DCert,
+    TxOut,
     unWdrl,
-    _txfee,
-    _wdrls,
+    pattern TxBody,
     pattern Wdrl,
   )
 import Shelley.Spec.Ledger.UTxO
@@ -180,8 +186,6 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     pattern UTxO,
   )
--- import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
-
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -246,7 +250,7 @@ data KeySpace era = KeySpace_
 deriving instance (Era era) => Show (KeySpace era)
 
 pattern KeySpace ::
-  (Era era) =>
+  (Shelley.TxBodyConstraints era) =>
   [(GenesisKeyPair era, AllIssuerKeys era 'GenesisDelegate)] ->
   [AllIssuerKeys era 'GenesisDelegate] ->
   [AllIssuerKeys era 'StakePool] ->
@@ -346,7 +350,7 @@ mkPayKeyHashMap keyPairs =
 
 -- | Generate a mapping from pay script hash to multisig pair.
 mkPayScriptHashMap ::
-  (Era era) =>
+  (Shelley.TxBodyConstraints era) =>
   [(MultiSig era, MultiSig era)] ->
   Map (ScriptHash era) (MultiSig era, MultiSig era)
 mkPayScriptHashMap scripts =
@@ -356,7 +360,7 @@ mkPayScriptHashMap scripts =
 
 -- | Generate a mapping from stake script hash to multisig pair.
 mkStakeScriptHashMap ::
-  (Era era) =>
+  (Shelley.TxBodyConstraints era) =>
   [(MultiSig era, MultiSig era)] ->
   Map (ScriptHash era) (MultiSig era, MultiSig era)
 mkStakeScriptHashMap scripts =
@@ -523,7 +527,7 @@ unitIntervalToNatural :: UnitInterval -> Natural
 unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
 
 mkBlock ::
-  ( Era era,
+  ( Shelley.TxBodyConstraints era,
     Mock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -574,7 +578,7 @@ mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
 
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
-  ( Era era,
+  ( Shelley.TxBodyConstraints era,
     ExMock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -715,10 +719,14 @@ genesisCoins outs =
 
 -- | Apply a transaction body as a state transition function on the ledger state.
 applyTxBody ::
-  (ShelleyTest era) =>
+  ( ShelleyTest era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+  ) =>
   LedgerState era ->
   PParams era ->
-  TxBody era ->
+  Core.TxBody era ->
   LedgerState era
 applyTxBody ls pp tx =
   ls
@@ -726,7 +734,7 @@ applyTxBody ls pp tx =
         us
           { _utxo = eval (txins tx ⋪ (_utxo us) ∪ txouts tx),
             _deposited = depositPoolChange ls pp tx,
-            _fees = (_txfee tx) <> (_fees . _utxoState $ ls)
+            _fees = (getField @"txfee" tx) <> (_fees . _utxoState $ ls)
           },
       _delegationState =
         dels
@@ -740,4 +748,4 @@ applyTxBody ls pp tx =
     newAccounts =
       reapRewards
         ((_rewards . _dstate . _delegationState) ls)
-        (Map.mapKeys getRwdCred . unWdrl $ _wdrls tx)
+        (Map.mapKeys getRwdCred . unWdrl $ getField @"wdrls" tx)

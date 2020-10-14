@@ -85,7 +85,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Cardano.Prelude
   ( cborError,
     panic,
@@ -119,6 +119,7 @@ import qualified Data.Text.Encoding as Text
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
+import GHC.Records
 import NoThunks.Class (AllowThunksIn (..), InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
@@ -379,13 +380,17 @@ instance Era era => FromJSON (PoolParams era) where
         <*> obj .: "metadata"
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId era = TxId {_unTxId :: Hash era (TxBody era)}
+newtype TxId era = TxId {_unTxId :: Hash era (Core.TxBody era)}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks)
 
-deriving newtype instance Era era => ToCBOR (TxId era)
+deriving newtype instance
+  (Era era, Typeable (Core.TxBody era)) =>
+  ToCBOR (TxId era)
 
-deriving newtype instance Era era => FromCBOR (TxId era)
+deriving newtype instance
+  (Era era, Typeable (Core.TxBody era)) =>
+  FromCBOR (TxId era)
 
 deriving newtype instance (Era era) => NFData (TxId era)
 
@@ -566,6 +571,40 @@ data TxBody era = TxBody'
   }
   deriving (Generic)
 
+-- HasField instances for TxBody
+--
+-- We would like to automatically derive these. Unfortunately, however, the
+-- automatically derived instances are not exported unless the record fields are
+-- exported, which we do not wish to do because this would break the protection
+-- (given by the 'TxBody' pattern) around the serialisation.
+instance HasField "inputs" (TxBody era) (Set (TxIn era)) where
+  getField = _inputs'
+
+instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
+  getField = _outputs'
+
+instance HasField "certs" (TxBody era) (StrictSeq (DCert era)) where
+  getField = _certs'
+
+instance HasField "wdrls" (TxBody era) (Wdrl era) where
+  getField = _wdrls'
+
+instance HasField "txfee" (TxBody era) Coin where
+  getField = _txfee'
+
+instance HasField "ttl" (TxBody era) SlotNo where
+  getField = _ttl'
+
+instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
+  getField = _txUpdate'
+
+instance HasField "mdHash" (TxBody era) (StrictMaybe (MetaDataHash era)) where
+  getField = _mdHash'
+
+type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
+
+deriving instance (ShelleyBased era) => Eq (TxBody era)
+
 deriving instance (ShelleyBased era) => Show (TxBody era)
 
 deriving via AllowThunksIn '["bodyBytes"] (TxBody era) instance Era era => NoThunks (TxBody era)
@@ -639,7 +678,7 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
 -- | Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey era kr = WitVKey'
   { wvkKey' :: !(VKey kr era),
-    wvkSig' :: !(SignedDSIGN era (Hash era (TxBody era))),
+    wvkSig' :: !(SignedDSIGN era (Hash era (Core.TxBody era))),
     -- | Hash of the witness vkey. We store this here to avoid repeated hashing
     --   when used in ordering.
     wvkKeyHash :: KeyHash 'Witness era,
@@ -653,7 +692,7 @@ instance (Era era, Typeable k) => HashAnnotated (WitVKey era k) era
 pattern WitVKey ::
   (Typeable kr, Era era) =>
   VKey kr era ->
-  SignedDSIGN era (Hash era (TxBody era)) ->
+  SignedDSIGN era (Hash era (Core.TxBody era)) ->
   WitVKey era kr
 pattern WitVKey k s <-
   WitVKey' k s _ _
@@ -766,7 +805,7 @@ instance
       k -> invalidKey k
 
 instance
-  (Typeable era, Era era) =>
+  (Typeable (Core.TxBody era), Era era) =>
   ToCBOR (TxIn era)
   where
   toCBOR (TxInCompact txId index) =
@@ -775,7 +814,7 @@ instance
       <> toCBOR index
 
 instance
-  (Era era) =>
+  (Era era, Typeable (Core.TxBody era)) =>
   FromCBOR (TxIn era)
   where
   fromCBOR = do

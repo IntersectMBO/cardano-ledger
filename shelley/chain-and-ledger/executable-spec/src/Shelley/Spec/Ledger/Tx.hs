@@ -71,8 +71,10 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased)
+import qualified Cardano.Ledger.Shelley as Shelley
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
@@ -181,26 +183,28 @@ pattern WitnessSet {addrWits, msigWits, bootWits} <-
 
 -- | A fully formed transaction.
 data Tx era = Tx'
-  { _body' :: !(TxBody era),
+  { _body' :: !(Core.TxBody era),
     _witnessSet' :: !(WitnessSet era),
     _metadata' :: !(StrictMaybe MetaData),
     txFullBytes :: BSL.ByteString
   }
   deriving (Generic)
-  deriving
-    (NoThunks)
-    via AllowThunksIn
-          '[ "txFullBytes"
-           ]
-          (Tx era)
+
+deriving via
+  AllowThunksIn
+    '[ "txFullBytes"
+     ]
+    (Tx era)
+  instance
+    ShelleyBased era => NoThunks (Tx era)
 
 deriving instance
   ShelleyBased era =>
   Show (Tx era)
 
 pattern Tx ::
-  Era era =>
-  TxBody era ->
+  (Shelley.TxBodyConstraints era) =>
+  Core.TxBody era ->
   WitnessSet era ->
   StrictMaybe MetaData ->
   Tx era
@@ -229,8 +233,8 @@ pattern Tx {_body, _witnessSet, _metadata} <-
 instance ShelleyBased era => HashAnnotated (Tx era) era
 
 segwitTx ::
-  Era era =>
-  Annotator (TxBody era) ->
+  (Shelley.TxBodyConstraints era) =>
+  Annotator (Core.TxBody era) ->
   Annotator (WitnessSet era) ->
   Maybe (Annotator MetaData) ->
   Annotator (Tx era)
@@ -256,7 +260,10 @@ segwitTx
             txFullBytes = fullBytes
           }
 
-decodeWits :: forall era s. Era era => Decoder s (Annotator (WitnessSet era))
+decodeWits ::
+  forall era s.
+  (Shelley.TxBodyConstraints era) =>
+  Decoder s (Annotator (WitnessSet era))
 decodeWits = do
   (mapParts, annBytes) <-
     withSlice $
@@ -326,7 +333,7 @@ class
 
 -- | instance of MultiSignatureScript type class
 instance
-  Era era =>
+  (Era era, Shelley.TxBodyConstraints era) =>
   MultiSignatureScript (MultiSig era) era
   where
   validateScript = validateNativeMultiSigScript
@@ -349,7 +356,7 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
-  (Era era) =>
+  (Shelley.TxBodyConstraints era) =>
   MultiSig era ->
   Tx era ->
   Bool
@@ -361,7 +368,7 @@ validateNativeMultiSigScript msig tx =
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
-  Era era =>
+  (Shelley.TxBodyConstraints era) =>
   Tx era ->
   Map (ScriptHash era) (MultiSig era)
 txwitsScript = msigWits . _witnessSet

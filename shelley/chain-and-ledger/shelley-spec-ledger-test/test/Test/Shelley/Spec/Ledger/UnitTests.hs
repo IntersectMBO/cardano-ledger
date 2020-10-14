@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -418,7 +419,7 @@ testSpendNonexistentInput =
 testWitnessNotIncluded :: Assertion
 testWitnessNotIncluded =
   let txbody =
-        TxBody
+        TxBody @C
           (Set.fromList [TxIn genesisId 0])
           ( StrictSeq.fromList
               [ TxOut aliceAddr (Coin 6404),
@@ -431,7 +432,7 @@ testWitnessNotIncluded =
           (SlotNo 100)
           SNothing
           SNothing
-      tx = Tx txbody mempty SNothing
+      tx = Tx @C txbody mempty SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey alicePay)
    in testInvalidTx
         [ UtxowFailure $
@@ -443,7 +444,7 @@ testWitnessNotIncluded =
 testSpendNotOwnedUTxO :: Assertion
 testSpendNotOwnedUTxO =
   let txbody =
-        TxBody
+        TxBody @C
           (Set.fromList [TxIn genesisId 1])
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 232))
           Empty
@@ -465,7 +466,7 @@ testSpendNotOwnedUTxO =
 testWitnessWrongUTxO :: Assertion
 testWitnessWrongUTxO =
   let txbody =
-        TxBody
+        TxBody @C
           (Set.fromList [TxIn genesisId 1])
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
           Empty
@@ -475,7 +476,7 @@ testWitnessWrongUTxO =
           SNothing
           SNothing
       tx2body =
-        TxBody
+        TxBody @C
           (Set.fromList [TxIn genesisId 1])
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
           Empty
@@ -556,7 +557,7 @@ testExpiredTx =
 testInvalidWintess :: Assertion
 testInvalidWintess =
   let txb =
-        TxBody
+        TxBody @C
           (Set.fromList [TxIn genesisId 0])
           ( StrictSeq.fromList
               [ TxOut aliceAddr (Coin 6000),
@@ -582,7 +583,7 @@ testInvalidWintess =
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
   let txb =
-        TxBody
+        TxBody @C
           (Set.fromList [TxIn genesisId 0])
           ( StrictSeq.fromList
               [ TxOut aliceAddr (Coin 6000),
@@ -607,7 +608,7 @@ testWithdrawalNoWit =
 testWithdrawalWrongAmt :: Assertion
 testWithdrawalWrongAmt =
   let txb =
-        TxBody
+        TxBody @C
           (Set.fromList [TxIn genesisId 0])
           ( StrictSeq.fromList
               [ TxOut aliceAddr (Coin 6000),

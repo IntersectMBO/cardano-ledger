@@ -29,8 +29,10 @@ import Cardano.Ledger.Era (Era (..))
 import Cardano.Prelude (NFData (rnf))
 import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.Monad.Except ()
+import Control.State.Transition.Extended
 import qualified Data.Map as Map
 import Data.Proxy
+import Data.Sequence (Seq)
 import Shelley.Spec.Ledger.API.Protocol
   ( ChainDepState (..),
     ChainTransitionError,
@@ -44,7 +46,7 @@ import Shelley.Spec.Ledger.API.Validation
     applyBlockTransition,
     reapplyBlockTransition,
   )
-import Shelley.Spec.Ledger.BaseTypes (Globals (..))
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.Bench.Gen (genBlock, genChainState)
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (..),
@@ -53,10 +55,14 @@ import Shelley.Spec.Ledger.BlockChain
     slotToNonce,
   )
 import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
-import Shelley.Spec.Ledger.LedgerState (nesBcur)
-import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
+import Shelley.Spec.Ledger.LedgerState (DPState, LedgerState, UTxOState, nesBcur)
+import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv, BbodyState)
+import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainState (..))
+import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv)
+import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
+import Shelley.Spec.Ledger.Tx (Tx)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
@@ -72,29 +78,89 @@ sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocks
 instance NFData (ValidateInput era) where
   rnf (ValidateInput a b c) = seq a (seq b (seq c ()))
 
-validateInput :: (ShelleyTest era, Mock (Crypto era)) => Int -> IO (ValidateInput era)
+validateInput ::
+  ( ShelleyTest era,
+    Mock (Crypto era),
+    STS (LEDGERS era),
+    BaseM (LEDGERS era) ~ ShelleyBase,
+    Environment (LEDGERS era) ~ LedgersEnv era,
+    State (LEDGERS era) ~ LedgerState era,
+    Signal (LEDGERS era) ~ Seq (Tx era),
+    STS (LEDGER era),
+    BaseM (LEDGER era) ~ ShelleyBase,
+    Environment (LEDGER era) ~ LedgerEnv era,
+    State (LEDGER era) ~ (UTxOState era, DPState era),
+    Signal (LEDGER era) ~ Tx era,
+    Environment (CHAIN era) ~ ()
+  ) =>
+  Int ->
+  IO (ValidateInput era)
 validateInput utxoSize = genValidateInput utxoSize
 
-genValidateInput :: (ShelleyTest era, Mock (Crypto era)) => Int -> IO (ValidateInput era)
+genValidateInput ::
+  ( ShelleyTest era,
+    Mock (Crypto era),
+    STS (LEDGERS era),
+    BaseM (LEDGERS era) ~ ShelleyBase,
+    Environment (LEDGERS era) ~ LedgersEnv era,
+    State (LEDGERS era) ~ LedgerState era,
+    Signal (LEDGERS era) ~ Seq (Tx era),
+    STS (LEDGER era),
+    BaseM (LEDGER era) ~ ShelleyBase,
+    Environment (LEDGER era) ~ LedgerEnv era,
+    State (LEDGER era) ~ (UTxOState era, DPState era),
+    Signal (LEDGER era) ~ Tx era,
+    Environment (CHAIN era) ~ ()
+  ) =>
+  Int ->
+  IO (ValidateInput era)
 genValidateInput n = do
   let ge = genEnv (Proxy :: Proxy era)
   chainstate <- genChainState n ge
   block <- genBlock ge chainstate
   pure (ValidateInput testGlobals (chainNes chainstate) block)
 
-benchValidate :: forall era. (ShelleyTest era, Mock (Crypto era)) => ValidateInput era -> IO (ShelleyState era)
+benchValidate ::
+  forall era.
+  ( STS (BBODY era),
+    BaseM (BBODY era) ~ ShelleyBase,
+    Environment (BBODY era) ~ BbodyEnv era,
+    State (BBODY era) ~ BbodyState era,
+    Signal (BBODY era) ~ Block era
+  ) =>
+  ValidateInput era ->
+  IO (ShelleyState era)
 benchValidate (ValidateInput globals state block) =
   case applyBlockTransition @era globals state block of
     Right x -> pure x
     Left x -> error (show x)
 
-applyBlock :: forall era. (ShelleyTest era, Mock (Crypto era)) => ValidateInput era -> Int -> Int
+applyBlock ::
+  forall era.
+  ( Era era,
+    STS (BBODY era),
+    BaseM (BBODY era) ~ ShelleyBase,
+    Environment (BBODY era) ~ BbodyEnv era,
+    State (BBODY era) ~ BbodyState era,
+    Signal (BBODY era) ~ Block era
+  ) =>
+  ValidateInput era ->
+  Int ->
+  Int
 applyBlock (ValidateInput globals state block) n =
   case applyBlockTransition @era globals state block of
     Right x -> seq (rnf x) (n + 1)
     Left x -> error (show x)
 
-benchreValidate :: (ShelleyTest era, Mock (Crypto era)) => ValidateInput era -> ShelleyState era
+benchreValidate ::
+  ( STS (BBODY era),
+    BaseM (BBODY era) ~ ShelleyBase,
+    Environment (BBODY era) ~ BbodyEnv era,
+    State (BBODY era) ~ BbodyState era,
+    Signal (BBODY era) ~ Block era
+  ) =>
+  ValidateInput era ->
+  ShelleyState era
 benchreValidate (ValidateInput globals state block) =
   reapplyBlockTransition globals state block
 
@@ -128,13 +194,30 @@ instance NFData (ChainTransitionError c) where
 instance Era era => NFData (UpdateInputs era) where
   rnf (UpdateInputs g lv bh st) = seq (rnf g) (seq (rnf lv) (seq (rnf bh) (rnf st)))
 
-genUpdateInputs :: forall era. (ShelleyTest era, Mock (Crypto era)) => Int -> IO (UpdateInputs era)
+genUpdateInputs ::
+  forall era.
+  ( ShelleyTest era,
+    Environment (CHAIN era) ~ (),
+    STS (LEDGERS era),
+    BaseM (LEDGERS era) ~ ShelleyBase,
+    Environment (LEDGERS era) ~ LedgersEnv era,
+    State (LEDGERS era) ~ LedgerState era,
+    Signal (LEDGERS era) ~ Seq (Tx era),
+    STS (LEDGER era),
+    BaseM (LEDGER era) ~ ShelleyBase,
+    Environment (LEDGER era) ~ LedgerEnv era,
+    State (LEDGER era) ~ (UTxOState era, DPState era),
+    Signal (LEDGER era) ~ Tx era,
+    Mock (Crypto era)
+  ) =>
+  Int ->
+  IO (UpdateInputs era)
 genUpdateInputs utxoSize = do
   let ge = genEnv (Proxy :: Proxy era)
   chainstate <- genChainState utxoSize ge
   (Block blockheader _) <- genBlock ge chainstate
   let ledgerview = currentLedgerView (chainNes chainstate)
-  let (ChainState newepochState keys eta0 etaV etaC etaH slot) = chainstate
+  let (ChainState _newepochState keys eta0 etaV etaC etaH slot) = chainstate
   let prtclState = PrtclState keys eta0 etaV
   let ticknState = TicknState etaC etaH
   let nonce = case withOriginToMaybe slot of

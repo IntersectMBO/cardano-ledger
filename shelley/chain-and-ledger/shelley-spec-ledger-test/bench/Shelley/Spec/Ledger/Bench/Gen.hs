@@ -11,22 +11,27 @@ module Shelley.Spec.Ledger.Bench.Gen
 where
 
 import Cardano.Ledger.Era (Crypto)
-import Control.State.Transition.Extended (IRC (..))
+import Control.State.Transition.Extended
 import Data.Either (fromRight)
 import Data.Proxy
+import Data.Sequence (Seq)
 import Shelley.Spec.Ledger.API
   ( Block,
     ChainState (..),
     Tx,
   )
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState
-  ( EpochState (..),
+  ( DPState (..),
+    EpochState (..),
     LedgerState (..),
     NewEpochState (..),
+    UTxOState (..),
   )
+import Shelley.Spec.Ledger.STS.Chain (CHAIN)
+import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv)
+import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
 import Test.QuickCheck (generate)
--- Arbitrary Coin
-
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions (ledgerEnv)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import qualified Test.Shelley.Spec.Ledger.Generator.Block as GenBlock
@@ -47,7 +52,13 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
 -- =============================================================================
 
 -- | Generate a genesis chain state given a UTxO size
-genChainState :: ShelleyTest era => Int -> GenEnv era -> IO (ChainState era)
+genChainState ::
+  ( ShelleyTest era,
+    Environment (CHAIN era) ~ ()
+  ) =>
+  Int ->
+  GenEnv era ->
+  IO (ChainState era)
 genChainState n ge =
   let cs =
         (geConstants ge)
@@ -64,7 +75,23 @@ genChainState n ge =
             )
 
 -- | Benchmark generating a block given a chain state.
-genBlock :: (Mock (Crypto era), ShelleyTest era) => GenEnv era -> ChainState era -> IO (Block era)
+genBlock ::
+  ( Mock (Crypto era),
+    ShelleyTest era,
+    STS (LEDGERS era),
+    BaseM (LEDGERS era) ~ ShelleyBase,
+    Environment (LEDGERS era) ~ LedgersEnv era,
+    State (LEDGERS era) ~ LedgerState era,
+    Signal (LEDGERS era) ~ Seq (Tx era),
+    STS (LEDGER era),
+    BaseM (LEDGER era) ~ ShelleyBase,
+    Environment (LEDGER era) ~ LedgerEnv era,
+    State (LEDGER era) ~ (UTxOState era, DPState era),
+    Signal (LEDGER era) ~ Tx era
+  ) =>
+  GenEnv era ->
+  ChainState era ->
+  IO (Block era)
 genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 -- The order one does this is important, since all these things must flow from the same
@@ -75,7 +102,14 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 -- 4) get a DPState from the ChainState
 -- 5) get a Transaction (Tx) from GenEnv and ChainState
 
-genTriple :: (Mock (Crypto era), ShelleyTest era) => Proxy era -> Int -> IO (GenEnv era, ChainState era, GenEnv era -> IO (Tx era))
+genTriple ::
+  ( Mock (Crypto era),
+    ShelleyTest era,
+    Environment (CHAIN era) ~ ()
+  ) =>
+  Proxy era ->
+  Int ->
+  IO (GenEnv era, ChainState era, GenEnv era -> IO (Tx era))
 genTriple proxy n = do
   let ge = genEnv proxy
   cs <- genChainState n ge

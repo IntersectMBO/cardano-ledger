@@ -26,17 +26,16 @@ import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Control.State.Transition.Extended (BaseM, Environment, PredicateFailure, STS, Signal, State, TRC (..), applySTS)
 import Data.Sequence (Seq)
 import Shelley.Spec.Ledger.API.Validation
-import Shelley.Spec.Ledger.BaseTypes (Globals)
-import Shelley.Spec.Ledger.Keys
+import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
+import Shelley.Spec.Ledger.LedgerState (LedgerState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
-import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
+import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
-import qualified Shelley.Spec.Ledger.Tx as Tx
 
 type MempoolEnv era = Ledgers.LedgersEnv era
 
@@ -89,17 +88,30 @@ deriving stock instance
   (Show (PredicateFailure (LEDGERS era))) =>
   Show (ApplyTxError era)
 
-instance (ShelleyBased era) => ToCBOR (ApplyTxError era) where
+instance
+  ( ShelleyBased era,
+    ToCBOR (PredicateFailure (LEDGERS era))
+  ) =>
+  ToCBOR (ApplyTxError era)
+  where
   toCBOR (ApplyTxError es) = toCBOR es
 
-instance (ShelleyBased era) => FromCBOR (ApplyTxError era) where
+instance
+  ( ShelleyBased era,
+    FromCBOR (PredicateFailure (LEDGERS era))
+  ) =>
+  FromCBOR (ApplyTxError era)
+  where
   fromCBOR = ApplyTxError <$> fromCBOR
 
 applyTxs ::
   forall era m.
-  ( ShelleyBased era,
-    MonadError (ApplyTxError era) m,
-    DSignable era (Hash era (Tx.TxBody era))
+  ( STS (LEDGERS era),
+    BaseM (LEDGERS era) ~ ShelleyBase,
+    Environment (LEDGERS era) ~ LedgersEnv era,
+    State (LEDGERS era) ~ LedgerState era,
+    Signal (LEDGERS era) ~ Seq (Tx era),
+    MonadError (ApplyTxError era) m
   ) =>
   Globals ->
   MempoolEnv era ->

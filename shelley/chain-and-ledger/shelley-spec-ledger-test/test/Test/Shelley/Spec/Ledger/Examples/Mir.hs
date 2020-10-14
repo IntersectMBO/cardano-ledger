@@ -103,7 +103,7 @@ initUTxO =
 initStMIR :: forall era. ShelleyTest era => Coin -> ChainState era
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
-    cs = initSt initUTxO
+    cs = initSt @era initUTxO
     as = esAccountState . nesEs . chainNes $ cs
     as' =
       as
@@ -227,13 +227,19 @@ mir1 pot =
 -- === Block 1, Slot 10, Epoch 0, Insufficient MIR Wits, Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
-mirFailWits :: (ShelleyTest era, ExMock (Crypto era)) => MIRPot -> CHAINExample era
+mirFailWits ::
+  forall era.
+  ( ShelleyTest era,
+    ExMock (Crypto era)
+  ) =>
+  MIRPot ->
+  CHAINExample era
 mirFailWits pot =
   CHAINExample
     (initStMIR (Coin 1000))
     (blockEx1' insufficientMIRWits pot)
     ( Left
-        [ [ BbodyFailure
+        [ [ BbodyFailure @era
               ( LedgersFailure
                   ( LedgerFailure
                       ( UtxowFailure $
