@@ -55,32 +55,27 @@ type family TranslationContext era :: Type
 
 -- | Translation of types between eras, e.g., from Shelley to Allegra.
 --
--- In most cases, an empty standalone deriving can be used:
+-- When @era@ is just a phantom type parameter, an empty standalone deriving can be used:
 --
--- > newtype KeyHash (discriminator :: KeyRole) era
--- >   = KeyHash
--- >       ( Hash.Hash
--- >           (ADDRHASH (Crypto era))
--- >           (DSIGN.VerKeyDSIGN (DSIGN (Crypto era)))
--- >       )
+-- > newtype Foo era = Foo Int
 -- >
--- > instance CryptoClass.Crypto c => TranslateEra (Allegra c) (KeyHash discriminator)
+-- > instance TranslateEra (Allegra c) Foo
 --
 -- Note that one could use @DerivingAnyClass@ (@deriving (TranslateEra (Allegra
 -- c))@), but this would introduce an undesired coupling between the
 -- era-parametric type and (a) particular era(s). The intention is to have a
 -- module with orphan instances per era.
 --
--- In some cases, e.g., when the keys of a @Map@ or @Set@ are parameterised by
--- the era, a manual instance will have to be written:
+-- In most cases, the @era@ parameter won't be phantom, and a manual instance
+-- will have to be written:
 --
--- > newtype GenDelegs era = GenDelegs
--- >   { unGenDelegs :: Map (KeyHash 'Genesis era) (GenDelegPair era)
--- >   }
+-- > newtype Bar era = Bar (Addr era)
 -- >
--- > instance CryptoClass.Crypto c => TranslateEra (Allegra c) GenDelegs where
--- >     translateEra _ctxt =
--- >       return . GenDelegs . Map.fromList . coerce . Map.toList . unGenDelegs
+-- > instance CryptoClass.Crypto c => TranslateEra (Allegra c) Bar where
+-- >     translateEra ctxt = Bar <$> translateEra ctxt
+-- >
+-- > -- With the following instance being in scope:
+-- > instance CryptoClass.Crypto c => TranslatEra (Allegra c) Addr
 --
 -- Note: we use 'PreviousEra' instead of @NextEra@ as an era definitely knows
 -- its predecessor, but not necessarily its successor. Moreover, one could argue
