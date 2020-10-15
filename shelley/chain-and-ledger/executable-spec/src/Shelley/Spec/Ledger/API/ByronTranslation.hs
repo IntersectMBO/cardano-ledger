@@ -32,6 +32,7 @@ import Shelley.Spec.Ledger.Coin (CompactForm (CompactCoin))
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.Rewards
+import Shelley.Spec.Ledger.STS.Chain (pparamsToChainChecksData)
 import Shelley.Spec.Ledger.Slot
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
@@ -166,5 +167,6 @@ mkInitialShelleyLedgerView genesisShelley =
     { lvD = _d . sgProtocolParams $ genesisShelley,
       lvExtraEntropy = _extraEntropy . sgProtocolParams $ genesisShelley,
       lvPoolDistr = PoolDistr Map.empty,
-      lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley
+      lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
+      lvChainChecks = pparamsToChainChecksData . sgProtocolParams $ genesisShelley
     }

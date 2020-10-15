@@ -75,6 +75,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.STS.Chain (ChainChecksData, pparamsToChainChecksData)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICKF)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
@@ -86,7 +87,8 @@ data LedgerView crypto = LedgerView
   { lvD :: UnitInterval,
     lvExtraEntropy :: Nonce,
     lvPoolDistr :: PoolDistr crypto,
-    lvGenDelegs :: GenDelegs crypto
+    lvGenDelegs :: GenDelegs crypto,
+    lvChainChecks :: ChainChecksData
   }
   deriving (Eq, Show, Generic)
 
@@ -96,9 +98,10 @@ instance CC.Crypto crypto => FromCBOR (LedgerView crypto) where
   fromCBOR =
     decodeRecordNamed
       "LedgerView"
-      (const 4)
+      (const 5)
       ( LedgerView
           <$> fromCBOR
+          <*> fromCBOR
           <*> fromCBOR
           <*> fromCBOR
           <*> fromCBOR
@@ -110,14 +113,16 @@ instance CC.Crypto crypto => ToCBOR (LedgerView crypto) where
       { lvD,
         lvExtraEntropy,
         lvPoolDistr,
-        lvGenDelegs
+        lvGenDelegs,
+        lvChainChecks
       } =
       mconcat
-        [ encodeListLen 4,
+        [ encodeListLen 5,
           toCBOR lvD,
           toCBOR lvExtraEntropy,
           toCBOR lvPoolDistr,
-          toCBOR lvGenDelegs
+          toCBOR lvGenDelegs,
+          toCBOR lvChainChecks
         ]
 
 -- | Construct a protocol environment from the ledger view, along with the
@@ -152,7 +157,8 @@ view
         lvGenDelegs =
           _genDelegs . _dstate
             . _delegationState
-            $ esLState nesEs
+            $ esLState nesEs,
+        lvChainChecks = pparamsToChainChecksData . esPp $ nesEs
       }
 
 -- | Alias of 'view' for export

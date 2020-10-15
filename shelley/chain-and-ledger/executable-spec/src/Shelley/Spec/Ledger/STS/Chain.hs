@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,6 +22,8 @@ module Shelley.Spec.Ledger.STS.Chain
     initialShelleyState,
     totalAda,
     totalAdaPots,
+    ChainChecksData (..),
+    pparamsToChainChecksData,
     chainChecks,
   )
 where
@@ -245,25 +249,40 @@ instance
   initialRules = []
   transitionRules = [chainTransition]
 
+data ChainChecksData = ChainChecksData
+  { ccMaxBHSize :: Natural,
+    ccMaxBBSize :: Natural,
+    ccProtocolVersion :: ProtVer
+  }
+  deriving (Show, Eq, Generic, NoThunks)
+
+pparamsToChainChecksData :: PParams era -> ChainChecksData
+pparamsToChainChecksData pp =
+  ChainChecksData
+    { ccMaxBHSize = _maxBHSize pp,
+      ccMaxBBSize = _maxBBSize pp,
+      ccProtocolVersion = _protocolVersion pp
+    }
+
 chainChecks ::
   ( Era era,
     PredicateFailure (CHAIN era) ~ ChainPredicateFailure era,
     MonadError (PredicateFailure (CHAIN era)) m
   ) =>
   Natural ->
-  PParams era ->
+  ChainChecksData ->
   BHeader (Crypto era) ->
   m ()
-chainChecks maxpv pp bh = do
+chainChecks maxpv ccd bh = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
-  unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp) $
+  unless (fromIntegral (bHeaderSize bh) <= ccMaxBHSize ccd) $
     throwError $
-      HeaderSizeTooLargeCHAIN (fromIntegral $ bHeaderSize bh) (_maxBHSize pp)
-  unless (hBbsize (bhbody bh) <= _maxBBSize pp) $
+      HeaderSizeTooLargeCHAIN (fromIntegral $ bHeaderSize bh) (ccMaxBHSize ccd)
+  unless (hBbsize (bhbody bh) <= ccMaxBBSize ccd) $
     throwError $
-      BlockSizeTooLargeCHAIN (hBbsize (bhbody bh)) (_maxBBSize pp)
+      BlockSizeTooLargeCHAIN (hBbsize (bhbody bh)) (ccMaxBBSize ccd)
   where
-    (ProtVer m _) = _protocolVersion pp
+    (ProtVer m _) = ccProtocolVersion ccd
 
 chainTransition ::
   forall era.
@@ -301,9 +320,10 @@ chainTransition =
           Left e -> failBecause $ PrtclSeqFailure e
 
         let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ = nes
+            chainChecksData = pparamsToChainChecksData pp
 
         maxpv <- liftSTS $ asks maxMajorPV
-        case chainChecks maxpv pp bh of
+        case chainChecks maxpv chainChecksData bh of
           Right () -> pure ()
           Left e -> failBecause e
 
