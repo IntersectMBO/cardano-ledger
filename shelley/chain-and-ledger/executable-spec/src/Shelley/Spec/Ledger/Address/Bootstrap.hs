@@ -53,6 +53,7 @@ import Cardano.Ledger.Era
 import Cardano.Prelude (panic)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
+import Data.Coerce (coerce)
 import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
@@ -69,7 +70,8 @@ import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.Keys as Keys
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxBody
-  ( TxBody,
+  ( EraIndependentTxBody,
+    TxBody,
   )
 
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
@@ -192,16 +194,16 @@ unpackByronVKey
 verifyBootstrapWit ::
   forall era.
   ( Era era,
-    DSIGN.Signable (DSIGN (Crypto era)) (Hash (Crypto era) (Core.TxBody era))
+    DSIGN.Signable (DSIGN (Crypto era)) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
-  Hash (Crypto era) (Core.TxBody era) ->
+  Hash (Crypto era) EraIndependentTxBody ->
   BootstrapWitness era ->
   Bool
 verifyBootstrapWit txbodyHash witness =
   verifySignedDSIGN
     (bwKey witness)
     txbodyHash
-    (bwSig witness)
+    (coerce . bwSig $ witness)
 
 coerceSignature :: WC.XSignature -> DSIGN.SigDSIGN DSIGN.Ed25519DSIGN
 coerceSignature sig =

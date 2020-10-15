@@ -48,7 +48,6 @@ import Shelley.Spec.Ledger.BaseTypes
     textToUrl,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     Hash,
@@ -67,7 +66,9 @@ import Shelley.Spec.Ledger.Tx
     hashScript,
   )
 import Shelley.Spec.Ledger.TxBody
-  ( PoolMetaData (..),
+  ( EraIndependentTxBody,
+    eraIndTxBodyHash,
+    PoolMetaData (..),
     StakePoolRelay (..),
     Wdrl (..),
   )
@@ -174,7 +175,7 @@ txbSimpleUTxO =
     }
 
 -- | to use makeWitnessVKey, we need to know we can sign the TxBody for that era
-type BodySignable era = DSignable (Crypto era) (Hash (Crypto era) (TxBody era))
+type BodySignable era = DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
 
 txSimpleUTxO :: forall era. (ShelleyTest era, BodySignable era) => Tx era
 txSimpleUTxO =
@@ -182,7 +183,7 @@ txSimpleUTxO =
     { _body = txbSimpleUTxO,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey @era (hashAnnotated txbSimpleUTxO) [alicePay]
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbSimpleUTxO @era) [alicePay]
           },
       _metadata = SNothing
     }
@@ -224,7 +225,7 @@ txMutiUTxO =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated txbMutiUTxO)
+                (eraIndTxBodyHash $ txbMutiUTxO @era)
                 [ alicePay,
                   bobPay
                 ]
@@ -255,7 +256,7 @@ txRegisterStake =
     { _body = txbRegisterStake,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbRegisterStake) [alicePay]
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbRegisterStake @era) [alicePay]
           },
       _metadata = SNothing
     }
@@ -289,7 +290,7 @@ txDelegateStake =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated txbDelegateStake)
+                (eraIndTxBodyHash $ txbDelegateStake @era)
                 [asWitness (alicePay), asWitness bobStake]
           },
       _metadata = SNothing
@@ -320,7 +321,7 @@ txDeregisterStake =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated txbDeregisterStake)
+                (eraIndTxBodyHash $ txbDeregisterStake @era)
                 [alicePay @(Crypto era)]
           },
       _metadata = SNothing
@@ -349,7 +350,7 @@ txRegisterPool =
     { _body = txbRegisterPool,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbRegisterPool) [alicePay]
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbRegisterPool @era) [alicePay]
           },
       _metadata = SNothing
     }
@@ -377,7 +378,7 @@ txRetirePool =
     { _body = txbRetirePool,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbRetirePool) [alicePay]
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbRetirePool @era) [alicePay]
           },
       _metadata = SNothing
     }
@@ -409,7 +410,7 @@ txWithMD =
     { _body = txbWithMD,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbWithMD) [alicePay]
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbWithMD @era) [alicePay]
           },
       _metadata = SJust md
     }
@@ -446,7 +447,7 @@ txWithMultiSig =
     { _body = txbWithMultiSig,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbWithMultiSig) [alicePay, bobPay],
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbWithMultiSig @era) [alicePay, bobPay],
             msigWits = Map.singleton (hashScript @(MultiSig era) msig) msig
           },
       _metadata = SNothing
@@ -477,7 +478,7 @@ txWithWithdrawal =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated txbWithWithdrawal)
+                (eraIndTxBodyHash $ txbWithWithdrawal @era)
                 [asWitness (alicePay), asWitness aliceStake]
           },
       _metadata = SNothing

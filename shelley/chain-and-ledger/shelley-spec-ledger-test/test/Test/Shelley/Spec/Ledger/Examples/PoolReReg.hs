@@ -30,7 +30,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness)
 import Shelley.Spec.Ledger.LedgerState (emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
@@ -49,6 +48,7 @@ import Shelley.Spec.Ledger.TxBody
     TxIn (..),
     TxOut (..),
     Wdrl (..),
+    eraIndTxBodyHash,
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
@@ -113,7 +113,7 @@ txEx1 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx1)
+            (eraIndTxBodyHash $ txbodyEx1 @era)
             ( [asWitness $ Cast.alicePay]
                 <> [asWitness $ Cast.aliceStake]
                 <> [asWitness $ cold Cast.alicePoolKeys]
@@ -186,14 +186,14 @@ txbodyEx2 =
     SNothing
     SNothing
 
-txEx2 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx2 =
   Tx
     txbodyEx2
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx2)
+            (eraIndTxBodyHash $ txbodyEx2 @era)
             ( (asWitness <$> [Cast.alicePay])
                 <> (asWitness <$> [Cast.aliceStake])
                 <> [asWitness $ cold Cast.alicePoolKeys]

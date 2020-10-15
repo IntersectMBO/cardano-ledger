@@ -96,7 +96,7 @@ import Shelley.Spec.Ledger.Tx
     txwitsScript,
     validateScript,
   )
-import Shelley.Spec.Ledger.TxBody (DCert, TxBody (..), TxIn, Wdrl)
+import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody, TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
 data UTXOW era
@@ -144,7 +144,7 @@ deriving stock instance
 
 instance
   ( CryptoClass.Crypto c,
-    DSignable c (Hash c (TxBody (ShelleyEra c)))
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   STS (UTXOW (ShelleyEra c))
   where
@@ -239,7 +239,7 @@ utxoWitnessed ::
     State (UTXOW era) ~ UTxOState era,
     Signal (UTXOW era) ~ Tx era,
     PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
-    DSignable (Crypto era) (Hash (Crypto era) (Core.TxBody era)),
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Environment (UTXO era) ~ UtxoEnv era,
     State (UTXO era) ~ UTxOState era,
     Signal (UTXO era) ~ Tx era,
@@ -311,7 +311,7 @@ utxoWitnessed =
 
 instance
   ( CryptoClass.Crypto c,
-    DSignable c (Hash c (TxBody (ShelleyEra c)))
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   Embed (UTXO (ShelleyEra c)) (UTXOW (ShelleyEra c))
   where

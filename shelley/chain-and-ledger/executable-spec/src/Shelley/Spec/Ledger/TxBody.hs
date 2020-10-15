@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -51,6 +52,8 @@ module Shelley.Spec.Ledger.TxBody
       ),
     TxId (..),
     TxIn (TxIn),
+    EraIndependentTxBody,
+    eraIndTxBodyHash,
     pattern TxInCompact,
     TxOut (TxOut, TxOutCompact),
     Url,
@@ -102,6 +105,7 @@ import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as BSS
+import Data.Coerce (coerce)
 import Data.Foldable (asum, fold)
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int64)
@@ -713,6 +717,16 @@ pattern WitVKey k s <-
                 <> encodeSignedDSIGN s
           hash = asWitness $ hashKey k
        in WitVKey' k s hash bytes
+
+data EraIndependentTxBody
+
+-- | Compute an era-independent transaction body hash
+eraIndTxBodyHash ::
+  forall era.
+  (Era era) =>
+  TxBody era ->
+  Hash (Crypto era) EraIndependentTxBody
+eraIndTxBodyHash = coerce . hashAnnotated
 
 {-# COMPLETE WitVKey #-}
 

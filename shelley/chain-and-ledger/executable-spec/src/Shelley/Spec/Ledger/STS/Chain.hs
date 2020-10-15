@@ -123,7 +123,7 @@ import Shelley.Spec.Ledger.STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICK)
 import Shelley.Spec.Ledger.STS.Tickn
 import Shelley.Spec.Ledger.Slot (EpochNo)
-import Shelley.Spec.Ledger.Tx (TxBody)
+import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
 data CHAIN era
@@ -227,7 +227,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
 instance
   ( CryptoClass.Crypto c,
     DSignable c (OCertSignable c),
-    DSignable c (Hash c (TxBody (ShelleyEra c))),
+    DSignable c (Hash c EraIndependentTxBody),
     KESignable c (BHBody c),
     VRF.Signable (VRF c) Seed
   ) =>
@@ -374,7 +374,7 @@ chainTransition =
 instance
   ( CryptoClass.Crypto c,
     DSignable c (OCertSignable c),
-    DSignable c (Hash c (TxBody (ShelleyEra c))),
+    DSignable c (Hash c EraIndependentTxBody),
     KESignable c (BHBody c),
     VRF.Signable (VRF c) Seed
   ) =>
@@ -385,7 +385,7 @@ instance
 instance
   ( CryptoClass.Crypto c,
     DSignable c (OCertSignable c),
-    DSignable c (Hash c (TxBody (ShelleyEra c))),
+    DSignable c (Hash c EraIndependentTxBody),
     KESignable c (BHBody c),
     VRF.Signable (VRF c) Seed
   ) =>
@@ -396,7 +396,7 @@ instance
 instance
   ( CryptoClass.Crypto c,
     DSignable c (OCertSignable c),
-    DSignable c (Hash c (TxBody (ShelleyEra c))),
+    DSignable c (Hash c EraIndependentTxBody),
     KESignable c (BHBody c),
     VRF.Signable (VRF c) Seed
   ) =>
@@ -407,7 +407,7 @@ instance
 instance
   ( CryptoClass.Crypto c,
     DSignable c (OCertSignable c),
-    DSignable c (Hash c (TxBody (ShelleyEra c))),
+    DSignable c (Hash c EraIndependentTxBody),
     KESignable c (BHBody c),
     VRF.Signable (VRF c) Seed
   ) =>

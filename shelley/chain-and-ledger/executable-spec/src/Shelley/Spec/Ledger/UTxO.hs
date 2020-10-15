@@ -56,6 +56,7 @@ import Control.Iterate.SetAlgebra
     Exp (Base),
     HasExp (toExp),
   )
+import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -93,7 +94,8 @@ import Shelley.Spec.Ledger.PParams (PParams, Update, _keyDeposit, _poolDeposit)
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
-  ( PoolCert (..),
+  ( EraIndependentTxBody,
+    PoolCert (..),
     PoolParams (..),
     TxId (..),
     TxIn (..),
@@ -207,32 +209,32 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 verifyWitVKey ::
   ( Typeable kr,
     Era era,
-    DSignable (Crypto era) (Hash (Crypto era) (Core.TxBody era))
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
-  Hash (Crypto era) (Core.TxBody era) ->
+  Hash (Crypto era) EraIndependentTxBody ->
   WitVKey era kr ->
   Bool
-verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash sig
+verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash (coerce sig)
 
 -- | Create a witness for transaction
 makeWitnessVKey ::
   forall era kr.
   ( Era era,
-    DSignable (Crypto era) (Hash (Crypto era) (Core.TxBody era))
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
-  Hash (Crypto era) (Core.TxBody era) ->
+  Hash (Crypto era) EraIndependentTxBody ->
   KeyPair kr (Crypto era) ->
   WitVKey era 'Witness
 makeWitnessVKey txbodyHash keys =
-  WitVKey (asWitness $ vKey keys) (signedDSIGN @(Crypto era) (sKey keys) txbodyHash)
+  WitVKey (asWitness $ vKey keys) (coerce $ signedDSIGN @(Crypto era) (sKey keys) txbodyHash)
 
 -- | Create witnesses for transaction
 makeWitnessesVKey ::
   forall era kr.
   ( Era era,
-    DSignable (Crypto era) (Hash (Crypto era) (Core.TxBody era))
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
-  Hash (Crypto era) (Core.TxBody era) ->
+  Hash (Crypto era) EraIndependentTxBody ->
   [KeyPair kr (Crypto era)] ->
   Set (WitVKey era ( 'Witness))
 makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
@@ -241,9 +243,9 @@ makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
 -- scripts, return the set of required keys.
 makeWitnessesFromScriptKeys ::
   ( Era era,
-    DSignable (Crypto era) (Hash (Crypto era) (Core.TxBody era))
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
-  Hash (Crypto era) (Core.TxBody era) ->
+  Hash (Crypto era) EraIndependentTxBody ->
   Map (KeyHash kr (Crypto era)) (KeyPair kr (Crypto era)) ->
   Set (KeyHash kr (Crypto era)) ->
   Set (WitVKey era ( 'Witness))

@@ -61,7 +61,8 @@ import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
-import Shelley.Spec.Ledger.Tx (Tx, TxBody)
+import Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data BBODY era
 
@@ -107,7 +108,7 @@ instance
 
 instance
   ( CryptoClass.Crypto c,
-    DSignable c (Hash c (TxBody (ShelleyEra c)))
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   STS (BBODY (ShelleyEra c))
   where
@@ -183,7 +184,7 @@ bbodyTransition =
 
 instance
   ( CryptoClass.Crypto c,
-    DSignable c (Hash c (TxBody (ShelleyEra c)))
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   Embed (LEDGERS (ShelleyEra c)) (BBODY (ShelleyEra c))
   where

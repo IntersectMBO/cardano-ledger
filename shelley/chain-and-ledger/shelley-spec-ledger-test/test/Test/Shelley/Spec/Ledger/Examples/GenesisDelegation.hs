@@ -26,7 +26,6 @@ import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyPair (..),
@@ -47,6 +46,7 @@ import Shelley.Spec.Ledger.TxBody
     TxIn (..),
     TxOut (..),
     Wdrl (..),
+    eraIndTxBodyHash,
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
@@ -150,7 +150,7 @@ txEx1 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx1)
+            (eraIndTxBodyHash $ (txbodyEx1 @era))
             ( [asWitness Cast.alicePay]
                 <> [ asWitness $
                        KeyPair

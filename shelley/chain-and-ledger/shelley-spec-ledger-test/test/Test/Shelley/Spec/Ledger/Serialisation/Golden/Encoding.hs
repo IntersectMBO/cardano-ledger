@@ -103,7 +103,6 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShots (..),
     Stake (..),
   )
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),
@@ -158,7 +157,8 @@ import Shelley.Spec.Ledger.Serialization
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), hashScript)
 import Shelley.Spec.Ledger.TxBody
-  ( MIRPot (..),
+  ( EraIndependentTxBody,
+    MIRPot (..),
     PoolMetaData (..),
     StakePoolRelay (..),
     TxBody (..),
@@ -167,6 +167,7 @@ import Shelley.Spec.Ledger.TxBody
     TxOut (..),
     Wdrl (..),
     WitVKey (..),
+    eraIndTxBodyHash,
     _poolCost,
     _poolMD,
     _poolMDHash,
@@ -296,8 +297,11 @@ testTxb =
     SNothing
     SNothing
 
-testTxbHash :: ShelleyTest era => Hash (Crypto era) (TxBody era)
-testTxbHash = hashAnnotated testTxb
+testTxbHash ::
+  forall era.
+  ShelleyTest era =>
+  Hash (Crypto era) EraIndependentTxBody
+testTxbHash = eraIndTxBodyHash $ testTxb @era
 
 testKey1 :: CC.Crypto crypto => KeyPair 'Payment crypto
 testKey1 = KeyPair vk sk
@@ -340,8 +344,10 @@ testKey1SigToken ::
 testKey1SigToken = e
   where
     s =
-      signedDSIGN @(Crypto era) (sKey $ testKey1 @(Crypto era)) testTxbHash ::
-        SignedDSIGN (Crypto era) (Hash (Crypto era) (TxBody era))
+      signedDSIGN @(Crypto era)
+        (sKey $ testKey1 @(Crypto era))
+        (testTxbHash @era) ::
+        SignedDSIGN (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
     Encoding e = encodeSignedDSIGN s
 
 testOpCertSigTokens ::
@@ -1000,7 +1006,7 @@ tests =
               (SlotNo 500)
               SNothing
               SNothing
-          txbh = hashAnnotated txb
+          txbh = eraIndTxBodyHash txb
           w = makeWitnessVKey txbh testKey1
        in checkEncodingCBORAnnotated
             "tx_min"
@@ -1024,7 +1030,7 @@ tests =
               (SlotNo 500)
               SNothing
               SNothing
-          txbh = hashAnnotated txb
+          txbh = eraIndTxBodyHash txb
           w = makeWitnessVKey txbh testKey1
           s = Map.singleton (hashScript $ testScript @C) (testScript @C)
           wits = mempty {addrWits = Set.singleton w, msigWits = s}
@@ -1166,11 +1172,11 @@ tests =
           txb3 = txb 502
           txb4 = txb 503
           txb5 = txb 504
-          w1 = makeWitnessVKey (hashAnnotated txb1) testKey1
-          w2 = makeWitnessVKey (hashAnnotated txb1) (testKey2 :: KeyPair 'Payment C_Crypto)
+          w1 = makeWitnessVKey (eraIndTxBodyHash txb1) testKey1
+          w2 = makeWitnessVKey (eraIndTxBodyHash txb1) (testKey2 :: KeyPair 'Payment C_Crypto)
           ws = Set.fromList [w1, w2]
-          tx1 = Tx txb1 mempty {addrWits = Set.singleton w1} SNothing
-          tx2 = Tx txb2 mempty {addrWits = ws} SNothing
+          tx1 = Tx @C txb1 mempty {addrWits = Set.singleton w1} SNothing
+          tx2 = Tx @C txb2 mempty {addrWits = ws} SNothing
           tx3 =
             Tx
               txb3

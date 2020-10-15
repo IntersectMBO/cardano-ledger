@@ -44,7 +44,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     PoolDistr (..),
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( RewardUpdate (..),
@@ -82,6 +81,7 @@ import Shelley.Spec.Ledger.TxBody
     TxIn (..),
     TxOut (..),
     Wdrl (..),
+    eraIndTxBodyHash,
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
@@ -189,7 +189,7 @@ txEx1 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx1)
+            (eraIndTxBodyHash $ txbodyEx1 @era)
             ( (asWitness <$> [Cast.alicePay, Cast.carlPay])
                 <> (asWitness <$> [Cast.aliceStake])
                 <> [asWitness $ cold Cast.alicePoolKeys]
@@ -279,14 +279,14 @@ txbodyEx2 =
       _mdHash = SNothing
     }
 
-txEx2 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx2 =
   Tx
     txbodyEx2
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx2)
+            (eraIndTxBodyHash $ txbodyEx2 @era)
             [ asWitness Cast.alicePay,
               asWitness Cast.aliceStake,
               asWitness Cast.bobStake
@@ -411,14 +411,14 @@ txbodyEx4 =
       _mdHash = SNothing
     }
 
-txEx4 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx4 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx4 =
   Tx
     txbodyEx4
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx4)
+            (eraIndTxBodyHash $ txbodyEx4 @era)
             [asWitness Cast.alicePay, asWitness Cast.carlStake]
       }
     SNothing
@@ -786,13 +786,13 @@ txbodyEx10 =
     SNothing
     SNothing
 
-txEx10 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx10 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx10 =
   Tx
     txbodyEx10
     mempty
       { addrWits =
-          makeWitnessesVKey (hashAnnotated txbodyEx10) [asWitness Cast.bobPay, asWitness Cast.bobStake]
+          makeWitnessesVKey (eraIndTxBodyHash $ txbodyEx10 @era) [asWitness Cast.bobPay, asWitness Cast.bobStake]
       }
     SNothing
 
@@ -851,14 +851,14 @@ txbodyEx11 =
     SNothing
     SNothing
 
-txEx11 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx11 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx11 =
   Tx
     txbodyEx11
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx11)
+            (eraIndTxBodyHash $ txbodyEx11 @era)
             ( [asWitness Cast.alicePay]
                 <> [asWitness $ cold Cast.alicePoolKeys]
             )

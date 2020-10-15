@@ -107,6 +107,7 @@ import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
+import Data.Coerce (coerce)
 import Data.Foldable (fold, toList)
 import Data.Group (invert)
 import Data.Int (Int64)
@@ -201,7 +202,8 @@ import Shelley.Spec.Ledger.Tx
     extractKeyHashWitnessSet,
   )
 import Shelley.Spec.Ledger.TxBody
-  ( Ix,
+  ( EraIndependentTxBody,
+    Ix,
     PoolCert (..),
     PoolParams (..),
     Ptr (..),
@@ -865,7 +867,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
 --  transaction are correct.
 verifiedWits ::
   ( Shelley.TxBodyConstraints era,
-    DSignable (Crypto era) (Hash (Crypto era) (Core.TxBody era))
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
   Tx era ->
   Either [VKey 'Witness (Crypto era)] ()
@@ -878,12 +880,12 @@ verifiedWits (Tx txbody wits _) =
     failed =
       wvkKey
         <$> filter
-          (not . verifyWitVKey (hashAnnotated txbody))
+          (not . verifyWitVKey (coerce . hashAnnotated $ txbody))
           (Set.toList $ addrWits wits)
     failedBootstrap =
       bwKey
         <$> filter
-          (not . verifyBootstrapWit (hashAnnotated txbody))
+          (not . verifyBootstrapWit (coerce . hashAnnotated $ txbody))
           (Set.toList $ bootWits wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update

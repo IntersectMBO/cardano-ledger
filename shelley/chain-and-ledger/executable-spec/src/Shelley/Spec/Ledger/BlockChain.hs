@@ -220,10 +220,10 @@ instance
   listLen _ = 3
   listLenBound _ = 3
 
-data EraIndependentBodyHash
+data EraIndependentBlockBody
 
 -- | Hash of block body
-newtype HashBBody crypto = UnsafeHashBBody {unHashBody :: (Hash crypto EraIndependentBodyHash)}
+newtype HashBBody crypto = UnsafeHashBBody {unHashBody :: (Hash crypto EraIndependentBlockBody)}
   deriving (Show, Eq, Ord, NoThunks)
 
 deriving instance CC.Crypto crypto => ToCBOR (HashBBody crypto)

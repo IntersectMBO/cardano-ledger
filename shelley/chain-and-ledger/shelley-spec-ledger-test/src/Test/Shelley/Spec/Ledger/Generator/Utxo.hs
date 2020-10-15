@@ -54,7 +54,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash,
@@ -88,7 +87,11 @@ import Shelley.Spec.Ledger.Tx
     getKeyCombination,
     hashScript,
   )
-import Shelley.Spec.Ledger.TxBody (Wdrl (..))
+import Shelley.Spec.Ledger.TxBody
+  ( EraIndependentTxBody,
+    eraIndTxBodyHash,
+    Wdrl (..),
+  )
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
@@ -246,7 +249,7 @@ genTx
           scripts = mkScriptWits spendScripts (certScripts ++ wdrlScripts)
           mkTxWits' =
             mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys wits scripts
-              . hashAnnotated
+              . eraIndTxBodyHash
       -------------------------------------------------------------------------
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
       -- and a Outputs builder that distributes the given balance over addresses.
@@ -391,7 +394,7 @@ genNextDelta
                         ksIndexedStakingKeys
                         vkeyPairs
                         (mkScriptWits msigPairs mempty)
-                        (hashAnnotated $ _body tx)
+                        (eraIndTxBodyHash $ _body tx)
                 pure $
                   delta
                     { extraWitnesses = extraWitnesses <> newWits,
@@ -454,7 +457,7 @@ applyDelta
             }
         kw = neededKeys <> extraKeys
         sw = neededScripts <> mkScriptWits extraScripts mempty
-        newWitnessSet = mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys kw sw (hashAnnotated body')
+        newWitnessSet = mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys kw sw (eraIndTxBodyHash body')
      in tx {_body = body', _witnessSet = newWitnessSet}
 
 fix :: (Eq d, Monad m) => (d -> m d) -> d -> m d
@@ -500,12 +503,12 @@ mkScriptWits payScripts stakeScripts =
     hashStakeScript (_, sScript) = ((hashScript sScript) :: ScriptHash era, sScript)
 
 mkTxWits ::
-  (Era era, Mock (Crypto era), Core.TxBody era ~ TxBody era) =>
+  (Era era, Mock (Crypto era)) =>
   Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->
   Map (KeyHash 'Staking (Crypto era)) (KeyPair 'Staking (Crypto era)) ->
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash era) (MultiSig era) ->
-  Hash (Crypto era) (TxBody era) ->
+  Hash (Crypto era) EraIndependentTxBody ->
   WitnessSet era
 mkTxWits
   indexedPaymentKeys

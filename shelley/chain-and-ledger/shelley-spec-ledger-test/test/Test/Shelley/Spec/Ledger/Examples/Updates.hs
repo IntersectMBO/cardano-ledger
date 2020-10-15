@@ -28,7 +28,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness, hashKey)
 import Shelley.Spec.Ledger.LedgerState (emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
@@ -54,6 +53,7 @@ import Shelley.Spec.Ledger.TxBody
     TxIn (..),
     TxOut (..),
     Wdrl (..),
+    eraIndTxBodyHash,
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
@@ -151,14 +151,14 @@ txbodyEx1 =
     (SJust (Update ppVotes1 (EpochNo 0)))
     SNothing
 
-txEx1 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx1 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx1 =
   Tx
     txbodyEx1
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx1)
+            (eraIndTxBodyHash $ txbodyEx1 @era)
             ( [asWitness Cast.alicePay]
                 <> [ asWitness . cold $ coreNodeIssuerKeys 0,
                      asWitness . cold $ coreNodeIssuerKeys 3,
@@ -226,14 +226,14 @@ txbodyEx2 =
     (SJust updateEx3B)
     SNothing
 
-txEx2 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx2 =
   Tx
     txbodyEx2
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx2)
+            (eraIndTxBodyHash $ txbodyEx2 @era)
             ( [asWitness Cast.alicePay]
                 <> [ asWitness . cold $ coreNodeIssuerKeys 1,
                      asWitness . cold $ coreNodeIssuerKeys 5
@@ -319,14 +319,14 @@ txbodyEx3 =
     (SJust (Update ppVotes3 (EpochNo 1)))
     SNothing
 
-txEx3 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx3 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx3 =
   Tx
     txbodyEx3
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx3)
+            (eraIndTxBodyHash $ txbodyEx3 @era)
             [asWitness Cast.alicePay, asWitness . cold $ coreNodeIssuerKeys 1]
       }
     SNothing

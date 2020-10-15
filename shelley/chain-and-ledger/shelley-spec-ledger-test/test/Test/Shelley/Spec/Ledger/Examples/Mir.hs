@@ -28,7 +28,6 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential, Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -59,6 +58,7 @@ import Shelley.Spec.Ledger.TxBody
     TxIn (..),
     TxOut (..),
     Wdrl (..),
+    eraIndTxBodyHash,
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
@@ -155,6 +155,7 @@ insufficientMIRWits :: (CryptoClass.Crypto c) => [KeyPair 'Witness c]
 insufficientMIRWits = mirWits [0 .. 3]
 
 txEx1 ::
+  forall era.
   (ShelleyTest era, Mock (Crypto era)) =>
   [KeyPair 'Witness (Crypto era)] ->
   MIRPot ->
@@ -165,7 +166,7 @@ txEx1 wits pot =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated $ txbodyEx1 pot)
+            (eraIndTxBodyHash $ txbodyEx1 @era pot)
             ([asWitness Cast.alicePay] <> wits)
       }
     SNothing

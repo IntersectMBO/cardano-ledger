@@ -22,6 +22,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Control.State.Transition.Extended (BaseM, Environment, PredicateFailure, STS, Signal, State, TRC (..))
+import Data.Coerce (coerce)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
@@ -175,6 +176,7 @@ makeTxBody inp addrCs wdrl =
     SNothing
 
 makeTx ::
+  forall era.
   (Mock (Crypto era), Shelley.TxBodyConstraints era) =>
   Core.TxBody era ->
   [KeyPair 'Witness (Crypto era)] ->
@@ -185,7 +187,7 @@ makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
       mempty
-        { addrWits = makeWitnessesVKey (hashAnnotated txBody) keyPairs,
+        { addrWits = makeWitnessesVKey (coerce . hashAnnotated $ txBody) keyPairs,
           msigWits = msigs
         }
 
