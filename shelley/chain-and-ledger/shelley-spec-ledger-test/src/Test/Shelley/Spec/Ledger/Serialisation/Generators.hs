@@ -702,12 +702,6 @@ instance
   where
   arbitrary = sizedMultiSig maxMultiSigDepth
 
-instance
-  (Era era, Mock (Crypto era)) =>
-  Arbitrary (Script era)
-  where
-  arbitrary = MultiSigScript <$> arbitrary
-
 -- |
 -- Generate a byte string of a given size.
 genByteString :: Int -> Gen BS.ByteString

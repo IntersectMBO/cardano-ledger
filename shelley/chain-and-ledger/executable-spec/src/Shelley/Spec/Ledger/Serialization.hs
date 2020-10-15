@@ -142,7 +142,7 @@ decodeRecordNamed name getRecordSize decode = do
   lenOrIndef <- decodeListLenOrIndef
   x <- decode
   case lenOrIndef of
-    Just n -> matchSize name (getRecordSize x) n
+    Just n -> matchSize (Text.pack "\nRecord " <> name) n (getRecordSize x)
     Nothing -> do
       isBreak <- decodeBreakOr
       unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
@@ -154,7 +154,7 @@ decodeRecordSum name decode = do
   tag <- decodeWord
   (size, x) <- decode tag -- we decode all the stuff we want
   case lenOrIndef of
-    Just n -> matchSize (Text.pack (name ++ " tag=" ++ show size)) size n
+    Just n -> matchSize (Text.pack ("\nSum " ++ name ++ "\nreturned=" ++ show size ++ " actually read= " ++ show n)) size n
     Nothing -> do
       isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
       unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"

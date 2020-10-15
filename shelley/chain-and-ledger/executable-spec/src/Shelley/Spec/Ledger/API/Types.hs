@@ -149,7 +149,7 @@ import Shelley.Spec.Ledger.STS.Utxo as X
 import Shelley.Spec.Ledger.STS.Utxow as X (UTXOW)
 import Shelley.Spec.Ledger.Scripts as X
   ( MultiSig (..),
-    Script (..),
+    Script,
     ScriptHash (..),
   )
 import Shelley.Spec.Ledger.StabilityWindow as X

@@ -22,6 +22,7 @@ module Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (Interval, Multi, TimelockAnd, TimelockOr),
     ininterval,
     hashTimelockScript,
+    showTimelock,
   )
 where
 
@@ -45,12 +46,11 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing), invalidKey)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.MemoBytes
-  ( Mem,
+  ( Encode (..),
+    Mem,
     MemoBytes (..),
-    Symbolic (..),
     memoBytes,
-    (<#>),
-    (<@>),
+    (!>),
   )
 import Shelley.Spec.Ledger.Scripts
   ( MultiSig,
@@ -95,7 +95,7 @@ instance
       0 -> do
         left <- fromCBOR -- this: fromCBOR :: (Decoder s (StrictMaybe SlotNo))
         right <- fromCBOR
-        pure $ (2, pure (Interval' left right)) -- Note the pure lifts from T to (Annotator T)
+        pure $ (3, pure (Interval' left right)) -- Note the pure lifts from T to (Annotator T)
         -- Possible because intervalpair has no memoized
         -- structures that remember their own bytes.
       1 -> do
@@ -134,38 +134,27 @@ pattern Interval ::
 pattern Interval left right <-
   Timelock (Memo (Interval' left right) _)
   where
-    Interval left right =
-      Timelock (memoBytes (Con Interval' 0 <@> left <@> right))
+    Interval left right = Timelock $ memoBytes $ Sum Interval' 0 !> To left !> To right
 
 pattern Multi :: Era era => MultiSig era -> Timelock era
 pattern Multi m <-
   Timelock (Memo (Multi' m) _)
   where
-    Multi m = Timelock (memoBytes (Con Multi' 1 <@> m))
+    Multi m = Timelock $ memoBytes $ Sum Multi' 1 !> To m
 
 pattern TimelockAnd :: Era era => StrictSeq (Timelock era) -> Timelock era
 pattern TimelockAnd ms <-
   Timelock (Memo (TimelockAnd' ms) _)
   where
     TimelockAnd ms =
-      Timelock
-        ( memoBytes
-            ( Con TimelockAnd' 2
-                <#> (encodeFoldable, ms)
-            )
-        )
+      Timelock $ memoBytes $ Sum TimelockAnd' 2 !> E encodeFoldable ms
 
 pattern TimelockOr :: Era era => StrictSeq (Timelock era) -> Timelock era
 pattern TimelockOr ms <-
   Timelock (Memo (TimelockOr' ms) _)
   where
     TimelockOr ms =
-      Timelock
-        ( memoBytes
-            ( Con TimelockOr' 3
-                <#> (encodeFoldable, ms)
-            )
-        )
+      Timelock $ memoBytes (Sum TimelockOr' 3 !> E encodeFoldable ms)
 
 {-# COMPLETE Interval, Multi, TimelockAnd, TimelockOr #-}
 
@@ -242,3 +231,12 @@ instance
   where
   validateScript = validateTimelock
   hashScript = hashTimelockScript
+
+showTimelock :: Era era => Timelock era -> String
+showTimelock (Interval SNothing SNothing) = "(Interval -inf .. +inf)"
+showTimelock (Interval (SJust (SlotNo x)) SNothing) = "(Interval " ++ show x ++ " .. +inf)"
+showTimelock (Interval SNothing (SJust (SlotNo x))) = "(Interval -inf .. " ++ show x ++ ")"
+showTimelock (Interval (SJust (SlotNo y)) (SJust (SlotNo x))) = "(Interval " ++ show y ++ " .. " ++ show x ++ ")"
+showTimelock (TimelockAnd xs) = "(TimelockAnd " ++ foldl accum ")" xs where accum ans x = showTimelock x ++ " " ++ ans
+showTimelock (TimelockOr xs) = "(TimelockOr " ++ foldl accum ")" xs where accum ans x = showTimelock x ++ " " ++ ans
+showTimelock (Multi x) = show x
