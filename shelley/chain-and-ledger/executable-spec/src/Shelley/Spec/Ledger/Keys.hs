@@ -80,8 +80,7 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Crypto (ADDRHASH, DSIGN, HASH, KES, VRF)
-import Cardano.Ledger.Era
+import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -125,12 +124,12 @@ class HasKeyRole (a :: KeyRole -> Type -> Type) where
   --   The presence of this function is mostly to help the user realise where they
   --   are converting key roles.
   coerceKeyRole ::
-    a r era ->
-    a r' era
+    a r crypto ->
+    a r' crypto
   default coerceKeyRole ::
-    Coercible (a r era) (a r' era) =>
-    a r era ->
-    a r' era
+    Coercible (a r crypto) (a r' crypto) =>
+    a r crypto ->
+    a r' crypto
   coerceKeyRole = coerce
 
 -- | Use a key as a witness.
@@ -139,83 +138,80 @@ class HasKeyRole (a :: KeyRole -> Type -> Type) where
 --   be used as witnesses to some types of transaction. As such, we provide an
 --   explicit coercion for it.
 asWitness ::
-  forall era a r.
   (HasKeyRole a) =>
-  a r era ->
-  a 'Witness era
+  a r crypto ->
+  a 'Witness crypto
 asWitness = coerceKeyRole
 
 --------------------------------------------------------------------------------
 -- Verification keys
 --------------------------------------------------------------------------------
 
-type DSignable e = DSIGN.Signable (DSIGN (Crypto e))
+type DSignable c = DSIGN.Signable (DSIGN c)
 
 -- | Discriminated verification key
 --
 --   We wrap the basic `VerKeyDSIGN` in order to add the key role.
-newtype VKey (kd :: KeyRole) era = VKey {unVKey :: DSIGN.VerKeyDSIGN (DSIGN (Crypto era))}
+newtype VKey (kd :: KeyRole) crypto = VKey {unVKey :: DSIGN.VerKeyDSIGN (DSIGN crypto)}
   deriving (Generic)
 
-deriving via Quiet (VKey kd era) instance Era era => Show (VKey kd era)
+deriving via Quiet (VKey kd crypto) instance Crypto crypto => Show (VKey kd crypto)
 
-deriving instance Era era => Eq (VKey kd era)
+deriving instance Crypto crypto => Eq (VKey kd crypto)
 
 deriving instance
-  (Era era, NFData (DSIGN.VerKeyDSIGN (DSIGN (Crypto era)))) =>
-  NFData (VKey kd era)
+  (Crypto crypto, NFData (DSIGN.VerKeyDSIGN (DSIGN crypto))) =>
+  NFData (VKey kd crypto)
 
-deriving instance Era era => NoThunks (VKey kd era)
+deriving instance Crypto crypto => NoThunks (VKey kd crypto)
 
 instance HasKeyRole VKey
 
 instance
-  (Era era, Typeable kd) =>
-  FromCBOR (VKey kd era)
+  (Crypto crypto, Typeable kd) =>
+  FromCBOR (VKey kd crypto)
   where
   fromCBOR = VKey <$> DSIGN.decodeVerKeyDSIGN
 
 instance
-  (Era era, Typeable kd) =>
-  ToCBOR (VKey kd era)
+  (Crypto crypto, Typeable kd) =>
+  ToCBOR (VKey kd crypto)
   where
   toCBOR (VKey vk) = DSIGN.encodeVerKeyDSIGN vk
-  encodedSizeExpr _size proxy =
-    DSIGN.encodedVerKeyDSIGNSizeExpr
-      ((\(VKey k) -> k) <$> proxy)
+  encodedSizeExpr _size proxy = DSIGN.encodedVerKeyDSIGNSizeExpr ((\(VKey k) -> k) <$> proxy)
 
 -- | Pair of signing key and verification key, with a usage role.
-data KeyPair (kd :: KeyRole) era = KeyPair
-  { vKey :: !(VKey kd era),
-    sKey :: !(DSIGN.SignKeyDSIGN (DSIGN (Crypto era)))
+data KeyPair (kd :: KeyRole) crypto = KeyPair
+  { vKey :: !(VKey kd crypto),
+    sKey :: !(DSIGN.SignKeyDSIGN (DSIGN crypto))
   }
   deriving (Generic, Show)
 
 instance
-  ( Era era,
-    NFData (DSIGN.VerKeyDSIGN (DSIGN (Crypto era))),
-    NFData (DSIGN.SignKeyDSIGN (DSIGN (Crypto era)))
+  ( Crypto crypto,
+    NFData (DSIGN.VerKeyDSIGN (DSIGN crypto)),
+    NFData (DSIGN.SignKeyDSIGN (DSIGN crypto))
   ) =>
-  NFData (KeyPair kd era)
+  NFData (KeyPair kd crypto)
 
-instance Era era => NoThunks (KeyPair kd era)
+instance Crypto crypto => NoThunks (KeyPair kd crypto)
 
 instance HasKeyRole KeyPair
 
 -- | Produce a digital signature
 signedDSIGN ::
-  (Era era, DSIGN.Signable (DSIGN (Crypto era)) a) =>
-  DSIGN.SignKeyDSIGN (DSIGN (Crypto era)) ->
+  (Crypto crypto, DSIGN.Signable (DSIGN crypto) a) =>
+  DSIGN.SignKeyDSIGN (DSIGN crypto) ->
   a ->
-  SignedDSIGN era a
+  SignedDSIGN crypto a
 signedDSIGN key a = DSIGN.signedDSIGN () a key
 
 -- | Verify a digital signature
 verifySignedDSIGN ::
-  (Era era, DSIGN.Signable (DSIGN (Crypto era)) a) =>
-  VKey kd era ->
+  (Crypto crypto, DSIGN.Signable (DSIGN crypto) a) =>
+  VKey kd crypto ->
   a ->
-  SignedDSIGN era a ->
+  SignedDSIGN crypto a ->
   Bool
 verifySignedDSIGN (VKey vk) vd sigDSIGN =
   either (const False) (const True) $ DSIGN.verifySignedDSIGN () vk vd sigDSIGN
@@ -225,56 +221,52 @@ verifySignedDSIGN (VKey vk) vd sigDSIGN =
 --------------------------------------------------------------------------------
 
 -- | Discriminated hash of public Key
-newtype KeyHash (discriminator :: KeyRole) era
-  = KeyHash
-      ( Hash.Hash
-          (ADDRHASH (Crypto era))
-          (DSIGN.VerKeyDSIGN (DSIGN (Crypto era)))
-      )
+newtype KeyHash (discriminator :: KeyRole) crypto
+  = KeyHash (Hash.Hash (ADDRHASH crypto) (DSIGN.VerKeyDSIGN (DSIGN crypto)))
   deriving (Show, Eq, Ord)
   deriving newtype (NFData, NoThunks, Generic)
 
 deriving instance
-  (Era era, Typeable disc) =>
-  ToCBOR (KeyHash disc era)
+  (Crypto crypto, Typeable disc) =>
+  ToCBOR (KeyHash disc crypto)
 
 deriving instance
-  (Era era, Typeable disc) =>
-  FromCBOR (KeyHash disc era)
+  (Crypto crypto, Typeable disc) =>
+  FromCBOR (KeyHash disc crypto)
 
-deriving newtype instance ToJSONKey (KeyHash disc era)
-
-deriving newtype instance
-  (Era era) =>
-  FromJSONKey (KeyHash disc era)
-
-deriving newtype instance ToJSON (KeyHash disc era)
+deriving newtype instance ToJSONKey (KeyHash disc crypto)
 
 deriving newtype instance
-  (Era era) =>
-  FromJSON (KeyHash disc era)
+  (Crypto crypto) =>
+  FromJSONKey (KeyHash disc crypto)
+
+deriving newtype instance ToJSON (KeyHash disc crypto)
+
+deriving newtype instance
+  (Crypto crypto) =>
+  FromJSON (KeyHash disc crypto)
 
 instance HasKeyRole KeyHash
 
 -- | Hash a given public key
 hashKey ::
-  ( Era era
+  ( Crypto crypto
   ) =>
-  VKey kd era ->
-  KeyHash kd era
+  VKey kd crypto ->
+  KeyHash kd crypto
 hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
 
 --------------------------------------------------------------------------------
 -- KES
 --------------------------------------------------------------------------------
 
-type KESignable e = KES.Signable (KES (Crypto e))
+type KESignable c = KES.Signable (KES c)
 
 --------------------------------------------------------------------------------
 -- VRF
 --------------------------------------------------------------------------------
 
-type VRFSignable e = VRF.Signable (VRF (Crypto e))
+type VRFSignable c = VRF.Signable (VRF c)
 
 --------------------------------------------------------------------------------
 -- Genesis delegation
@@ -282,78 +274,78 @@ type VRFSignable e = VRF.Signable (VRF (Crypto e))
 -- TODO should this really live in here?
 --------------------------------------------------------------------------------
 
-data GenDelegPair era = GenDelegPair
-  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate era),
-    genDelegVrfHash :: !(Hash era (VerKeyVRF era))
+data GenDelegPair crypto = GenDelegPair
+  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate crypto),
+    genDelegVrfHash :: !(Hash crypto (VerKeyVRF crypto))
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoThunks (GenDelegPair era)
+instance NoThunks (GenDelegPair crypto)
 
-instance NFData (GenDelegPair era)
+instance NFData (GenDelegPair crypto)
 
-instance Era era => ToCBOR (GenDelegPair era) where
+instance Crypto crypto => ToCBOR (GenDelegPair crypto) where
   toCBOR (GenDelegPair hk vrf) =
     encodeListLen 2 <> toCBOR hk <> toCBOR vrf
 
-instance Era era => FromCBOR (GenDelegPair era) where
+instance Crypto crypto => FromCBOR (GenDelegPair crypto) where
   fromCBOR = do
     decodeRecordNamed
       "GenDelegPair"
       (const 2)
       (GenDelegPair <$> fromCBOR <*> fromCBOR)
 
-instance Era era => ToJSON (GenDelegPair era) where
+instance Crypto crypto => ToJSON (GenDelegPair crypto) where
   toJSON (GenDelegPair d v) =
     Aeson.object
       [ "delegate" .= d,
         "vrf" .= v
       ]
 
-instance Era era => FromJSON (GenDelegPair era) where
+instance Crypto crypto => FromJSON (GenDelegPair crypto) where
   parseJSON =
     Aeson.withObject "GenDelegPair" $ \obj ->
       GenDelegPair
         <$> obj .: "delegate"
         <*> obj .: "vrf"
 
-newtype GenDelegs era = GenDelegs
-  { unGenDelegs :: Map (KeyHash 'Genesis era) (GenDelegPair era)
+newtype GenDelegs crypto = GenDelegs
+  { unGenDelegs :: Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
   }
   deriving (Eq, FromCBOR, NoThunks, NFData, Generic)
-  deriving (Show) via Quiet (GenDelegs era)
+  deriving (Show) via Quiet (GenDelegs crypto)
 
 deriving instance
-  (Era era) =>
-  ToCBOR (GenDelegs era)
+  (Crypto crypto) =>
+  ToCBOR (GenDelegs crypto)
 
-newtype GKeys era = GKeys {unGKeys :: Set (VKey 'Genesis era)}
+newtype GKeys crypto = GKeys {unGKeys :: Set (VKey 'Genesis crypto)}
   deriving (Eq, NoThunks, Generic)
-  deriving (Show) via Quiet (GKeys era)
+  deriving (Show) via Quiet (GKeys crypto)
 
 --------------------------------------------------------------------------------
 -- crypto-parametrised types
 --
--- Within `cardano-ledger-specs`, we parametrise everything on our `era` type
--- "package". However, in `cardano-era-class`, things are parametrised on the
+-- Within `cardano-ledger-specs`, we parametrise everything on our `crypto` type
+-- "package". However, in `cardano-crypto-class`, things are parametrised on the
 -- original algorithm. In order to make using types from that module easier, we
--- provide some type aliases which unwrap the era parameters.
+-- provide some type aliases which unwrap the crypto parameters.
 --------------------------------------------------------------------------------
 
-type Hash e = Hash.Hash (HASH (Crypto e))
+type Hash c = Hash.Hash (HASH c)
 
-type SignedDSIGN e = DSIGN.SignedDSIGN (DSIGN (Crypto e))
+type SignedDSIGN c = DSIGN.SignedDSIGN (DSIGN c)
 
-type SignKeyDSIGN e = DSIGN.SignKeyDSIGN (DSIGN (Crypto e))
+type SignKeyDSIGN c = DSIGN.SignKeyDSIGN (DSIGN c)
 
-type SignedKES e = KES.SignedKES (KES (Crypto e))
+type SignedKES c = KES.SignedKES (KES c)
 
-type SignKeyKES e = KES.SignKeyKES (KES (Crypto e))
+type SignKeyKES c = KES.SignKeyKES (KES c)
 
-type VerKeyKES e = KES.VerKeyKES (KES (Crypto e))
+type VerKeyKES c = KES.VerKeyKES (KES c)
 
-type CertifiedVRF e = VRF.CertifiedVRF (VRF (Crypto e))
+type CertifiedVRF c = VRF.CertifiedVRF (VRF c)
 
-type SignKeyVRF e = VRF.SignKeyVRF (VRF (Crypto e))
+type SignKeyVRF c = VRF.SignKeyVRF (VRF c)
 
-type VerKeyVRF e = VRF.VerKeyVRF (VRF (Crypto e))
+type VerKeyVRF c = VRF.VerKeyVRF (VRF c)

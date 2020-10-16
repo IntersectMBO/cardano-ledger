@@ -437,7 +437,7 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
 
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
-  = ProposedPPUpdates (Map (KeyHash 'Genesis era) (PParamsUpdate era))
+  = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (PParamsUpdate era))
   deriving (Show, Eq, Generic, NFData)
 
 instance NoThunks (ProposedPPUpdates era)

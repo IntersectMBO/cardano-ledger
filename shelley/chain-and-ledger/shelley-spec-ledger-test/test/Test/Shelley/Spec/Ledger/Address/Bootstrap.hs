@@ -24,6 +24,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron
 import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude
   ( ByteString,
@@ -104,7 +105,6 @@ import Test.Tasty.HUnit
   ( Assertion,
   )
 import Test.Tasty.QuickCheck (testProperty, (===))
-import Cardano.Ledger.Shelley (ShelleyEra)
 
 bootstrapHashTest :: TestTree
 bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witness" $
@@ -112,7 +112,8 @@ bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witn
     (byronVKey, byronAddr) <- genByronVKeyAddr
     sig <- genSignature
     let addr = BootstrapAddress byronAddr
-        (shelleyVKey, chainCode) = unpackByronVKey @C byronVKey
+        (shelleyVKey, chainCode) = unpackByronVKey @C_crypto byronVKey
+        witness :: BootstrapWitness C
         witness =
           BootstrapWitness
             { bwKey = shelleyVKey,
@@ -120,7 +121,9 @@ bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witn
               bwSig = sig,
               bwAttributes = serialize' $ Byron.addrAttributes byronAddr
             }
-    pure $ (coerceKeyRole $ bootstrapKeyHash addr) === bootstrapWitKeyHash witness
+    pure $
+      (coerceKeyRole $ bootstrapKeyHash @C addr)
+        === bootstrapWitKeyHash witness
 
 genSignature :: forall a b. DSIGN.DSIGNAlgorithm a => Gen (DSIGN.SignedDSIGN a b)
 genSignature =
@@ -194,7 +197,7 @@ aliceSigningKey = Byron.SigningKey $ Byron.generate seed (mempty :: ByteString)
     seed :: ByteString -- 32 bytes
     seed = "12345678901234567890123456789012"
 
-aliceVKey :: VKey 'Witness C
+aliceVKey :: VKey 'Witness C_crypto
 aliceVKey = fst . unpackByronVKey . Byron.toVerification $ aliceSigningKey
 
 aliceByronAddr :: Byron.Address

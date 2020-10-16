@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -73,10 +74,11 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
+  forall era.
   ShelleyBased era =>
   Globals ->
   ShelleyState era ->
-  PoolDistr era
+  PoolDistr (Crypto era)
 poolsByTotalStakeFraction globals ss =
   PoolDistr poolsByTotalStake
   where
@@ -86,7 +88,7 @@ poolsByTotalStakeFraction globals ss =
     stakeRatio = activeStake % totalStake
     PoolDistr poolsByActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
-    toTotalStakeFrac :: IndividualPoolStake era -> IndividualPoolStake era
+    toTotalStakeFrac :: IndividualPoolStake (Crypto era) -> IndividualPoolStake (Crypto era)
     toTotalStakeFrac (IndividualPoolStake s vrf) =
       IndividualPoolStake (s * stakeRatio) vrf
 
@@ -108,7 +110,7 @@ getNonMyopicMemberRewards ::
   Globals ->
   ShelleyState era ->
   Set (Either Coin (Credential 'Staking era)) ->
-  Map (Either Coin (Credential 'Staking era)) (Map (KeyHash 'StakePool era) Coin)
+  Map (Either Coin (Credential 'Staking era)) (Map (KeyHash 'StakePool (Crypto era)) Coin)
 getNonMyopicMemberRewards globals ss creds =
   Map.fromList $
     fmap
@@ -205,9 +207,9 @@ getLeaderSchedule ::
   ) =>
   Globals ->
   ShelleyState era ->
-  ChainDepState era ->
-  KeyHash 'StakePool era ->
-  SignKeyVRF era ->
+  ChainDepState (Crypto era) ->
+  KeyHash 'StakePool (Crypto era) ->
+  SignKeyVRF (Crypto era) ->
   PParams era ->
   Set SlotNo
 getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlots

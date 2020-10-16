@@ -26,8 +26,8 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Iterate.SetAlgebra (eval, (∩))
 import Control.Monad (when)
@@ -96,14 +96,14 @@ import Shelley.Spec.Ledger.Tx
     txwitsScript,
     validateScript,
   )
-import Shelley.Spec.Ledger.TxBody (DCert, TxBody (..), TxIn, Wdrl)
+import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody, TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
 data UTXOW era
 
 data UtxowPredicateFailure era
   = InvalidWitnessesUTXOW
-      ![VKey 'Witness era]
+      ![VKey 'Witness (Crypto era)]
   | -- witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
       !(WitHashes era) -- witnesses which were needed and not supplied
@@ -112,7 +112,7 @@ data UtxowPredicateFailure era
   | ScriptWitnessNotValidatingUTXOW
       !(Set (ScriptHash era)) -- failed scripts
   | UtxoFailure (PredicateFailure (UTXO era))
-  | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness era))
+  | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness (Crypto era)))
   | MissingTxBodyMetaDataHash
       !(MetaDataHash era) -- hash of the full metadata
   | MissingTxMetaData
@@ -143,8 +143,8 @@ deriving stock instance
   Show (UtxowPredicateFailure era)
 
 instance
-  ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+  ( CryptoClass.Crypto c,
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   STS (UTXOW (ShelleyEra c))
   where
@@ -239,7 +239,7 @@ utxoWitnessed ::
     State (UTXOW era) ~ UTxOState era,
     Signal (UTXOW era) ~ Tx era,
     PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
-    DSignable era (Hash era (Core.TxBody era)),
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Environment (UTXO era) ~ UtxoEnv era,
     State (UTXO era) ~ UTxOState era,
     Signal (UTXO era) ~ Tx era,
@@ -310,8 +310,8 @@ utxoWitnessed =
         TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
-  ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+  ( CryptoClass.Crypto c,
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   Embed (UTXO (ShelleyEra c)) (UTXOW (ShelleyEra c))
   where

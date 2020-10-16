@@ -13,6 +13,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
 where
 
 import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
+import Cardano.Ledger.Era (Crypto)
 import qualified Data.Set as Set (Set, null)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
@@ -44,5 +45,5 @@ removedAfterPoolreap p p' e =
     stp' = _pParams p'
     retiring = _retiring p
     retiring' = _retiring p'
-    retire :: Set.Set (KeyHash 'StakePool era) -- This declaration needed to disambiguate 'eval'
+    retire :: Set.Set (KeyHash 'StakePool (Crypto era)) -- This declaration needed to disambiguate 'eval'
     retire = eval (dom (retiring ▷ setSingleton e))

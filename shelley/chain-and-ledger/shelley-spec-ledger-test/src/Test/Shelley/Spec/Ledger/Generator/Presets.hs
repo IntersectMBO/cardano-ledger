@@ -17,6 +17,7 @@ module Test.Shelley.Spec.Ledger.Generator.Presets
   )
 where
 
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -75,11 +76,11 @@ keySpace c =
     (mSigCombinedScripts c)
 
 -- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: Era era => Constants -> KeyPairs era
+keyPairs :: CC.Crypto crypto => Constants -> KeyPairs crypto
 keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: Era era => Constants -> Int -> Int -> Gen (KeyPairs era)
+someKeyPairs :: CC.Crypto crypto => Constants -> Int -> Int -> Gen (KeyPairs crypto)
 someKeyPairs c lower upper =
   take
     <$> QC.choose (lower, upper)
@@ -105,9 +106,9 @@ someScripts c lower upper =
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
 coreNodeKeys ::
-  Era era =>
+  CC.Crypto crypto =>
   Constants ->
-  [(KeyPair 'Genesis era, AllIssuerKeys era 'GenesisDelegate)]
+  [(KeyPair 'Genesis crypto, AllIssuerKeys crypto 'GenesisDelegate)]
 coreNodeKeys c@Constants {numCoreNodes} =
   [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0),
       issuerKeys c 0 x
@@ -128,14 +129,14 @@ genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   return (genesisCoins outs)
 
 -- Pre-generate a set of keys to use for genesis delegates.
-genesisDelegates :: Era era => Constants -> [AllIssuerKeys era 'GenesisDelegate]
+genesisDelegates :: CC.Crypto crypto => Constants -> [AllIssuerKeys crypto 'GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
     | x <- [0 .. 50]
   ]
 
 -- Pre-generate a set of keys to use for stake pools.
-stakePoolKeys :: Era era => Constants -> [AllIssuerKeys era 'StakePool]
+stakePoolKeys :: CC.Crypto crypto => Constants -> [AllIssuerKeys crypto 'StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
     | x <- [0 .. 50]
@@ -143,13 +144,13 @@ stakePoolKeys c =
 
 -- | Generate all keys for any entity which will be issuing blocks.
 issuerKeys ::
-  (Era era) =>
+  (CC.Crypto crypto) =>
   Constants ->
   -- | Namespace parameter. Can be used to differentiate between different
   --   "types" of issuer.
   Word64 ->
   Word64 ->
-  AllIssuerKeys era r
+  AllIssuerKeys crypto r
 issuerKeys Constants {maxSlotTrace} ns x =
   let (skCold, vkCold) = mkKeyPair (x, 0, 0, 0, ns + 1)
    in AllIssuerKeys
@@ -174,9 +175,9 @@ issuerKeys Constants {maxSlotTrace} ns x =
         }
 
 genesisDelegs0 ::
-  Era era =>
+  CC.Crypto crypto =>
   Constants ->
-  Map (KeyHash 'Genesis era) (GenDelegPair era)
+  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
 genesisDelegs0 c =
   Map.fromList
     [ ( hashVKey gkey,

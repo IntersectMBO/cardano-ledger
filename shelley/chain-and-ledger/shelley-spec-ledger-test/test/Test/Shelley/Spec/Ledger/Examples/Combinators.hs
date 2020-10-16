@@ -41,7 +41,7 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
 where
 
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
@@ -250,7 +250,7 @@ deregStakeCred cred cs = cs {chainNes = nes'}
 delegation ::
   forall era.
   Credential 'Staking era ->
-  KeyHash 'StakePool era ->
+  KeyHash 'StakePool (Crypto era) ->
   ChainState era ->
   ChainState era
 delegation cred pool cs = cs {chainNes = nes'}
@@ -343,7 +343,7 @@ updatePoolParams pool cs = cs {chainNes = nes'}
 -- Stage a stake pool for retirement.
 stageRetirement ::
   forall era.
-  KeyHash 'StakePool era ->
+  KeyHash 'StakePool (Crypto era) ->
   EpochNo ->
   ChainState era ->
   ChainState era
@@ -522,7 +522,7 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
 -- Set the stake pool distribution to the given one.
 setPoolDistr ::
   forall era.
-  PoolDistr era ->
+  PoolDistr (Crypto era) ->
   ChainState era ->
   ChainState era
 setPoolDistr pd cs = cs {chainNes = nes'}
@@ -534,7 +534,7 @@ setPoolDistr pd cs = cs {chainNes = nes'}
 -- Set the operational certificates counter for a given stake pool.
 setOCertCounter ::
   forall era.
-  KeyHash 'BlockIssuer era ->
+  KeyHash 'BlockIssuer (Crypto era) ->
   Word64 ->
   ChainState era ->
   ChainState era
@@ -547,7 +547,7 @@ setOCertCounter kh n cs = cs {chainOCertIssue = counters}
 -- Record that the given stake pool (non-core node) produced a block.
 incrBlockCount ::
   forall era.
-  KeyHash 'StakePool era ->
+  KeyHash 'StakePool (Crypto era) ->
   ChainState era ->
   ChainState era
 incrBlockCount kh cs = cs {chainNes = nes'}
@@ -661,7 +661,7 @@ setPParams pp cs = cs {chainNes = nes'}
 -- | = Set a future genesis delegation.
 setFutureGenDeleg ::
   forall era.
-  (FutureGenDeleg era, GenDelegPair era) ->
+  (FutureGenDeleg (Crypto era), GenDelegPair (Crypto era)) ->
   ChainState era ->
   ChainState era
 setFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
@@ -680,7 +680,7 @@ setFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
 -- | = Set a future genesis delegation.
 adoptFutureGenDeleg ::
   forall era.
-  (FutureGenDeleg era, GenDelegPair era) ->
+  (FutureGenDeleg (Crypto era), GenDelegPair (Crypto era)) ->
   ChainState era ->
   ChainState era
 adoptFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}

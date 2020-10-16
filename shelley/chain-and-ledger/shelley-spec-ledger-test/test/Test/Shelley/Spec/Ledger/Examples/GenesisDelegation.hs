@@ -17,6 +17,7 @@ where
 import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Data.Map.Strict as Map
@@ -25,7 +26,6 @@ import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyPair (..),
@@ -46,6 +46,7 @@ import Shelley.Spec.Ledger.TxBody
     TxIn (..),
     TxOut (..),
     Wdrl (..),
+    eraIndTxBodyHash,
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
@@ -71,7 +72,12 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkOCert,
     zero,
   )
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce, mkKeyPair, mkVRFKeyPair)
+import Test.Shelley.Spec.Ledger.Utils
+  ( ShelleyTest,
+    getBlockNonce,
+    mkKeyPair,
+    mkVRFKeyPair,
+  )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
@@ -95,7 +101,9 @@ initStGenesisDeleg = initSt initUTxO
 -- Block 1, Slot 10, Epoch 0
 --
 
-newGenDelegate :: Era era => KeyPair 'GenesisDelegate era
+newGenDelegate ::
+  CryptoClass.Crypto crypto =>
+  KeyPair 'GenesisDelegate crypto
 newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (108, 0, 0, 0, 1)
@@ -142,9 +150,13 @@ txEx1 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx1)
+            (eraIndTxBodyHash $ (txbodyEx1 @era))
             ( [asWitness Cast.alicePay]
-                <> [asWitness $ KeyPair (coreNodeVK 0) (coreNodeSK @era 0)]
+                <> [ asWitness $
+                       KeyPair
+                         (coreNodeVK 0)
+                         (coreNodeSK @(Crypto era) 0)
+                   ]
             )
       }
     SNothing
@@ -156,18 +168,21 @@ blockEx1 ::
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
-    (coreNodeKeysBySchedule ppEx 10)
+    (coreNodeKeysBySchedule @era ppEx 10)
     [txEx1]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @era)
+    (nonce0 @(Crypto era))
     (NatNonce 1)
     zero
     0
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 10) 0 (KESPeriod 0))
 
-newGenDeleg :: forall era. Era era => (FutureGenDeleg era, GenDelegPair era)
+newGenDeleg ::
+  forall crypto.
+  CryptoClass.Crypto crypto =>
+  (FutureGenDeleg crypto, GenDelegPair crypto)
 newGenDeleg =
   ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVK 0),
     GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH
@@ -203,17 +218,17 @@ blockEx2 ::
   Block era
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
-    (coreNodeKeysBySchedule ppEx 50)
+    (bhHash $ bheader @era blockEx1)
+    (coreNodeKeysBySchedule @era ppEx 50)
     []
     (SlotNo 50)
     (BlockNo 2)
-    (nonce0 @era)
+    (nonce0 @(Crypto era))
     (NatNonce 2)
     zero
     2
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 50) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 50) 0 (KESPeriod 0))
 
 expectedStEx2 ::
   forall era.

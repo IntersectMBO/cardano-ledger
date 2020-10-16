@@ -21,7 +21,7 @@ module Shelley.Spec.Ledger.API.Validation
   )
 where
 
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Arrow (left, right)
 import Control.Monad.Except
@@ -32,7 +32,6 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
-import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Tick as STS
@@ -51,10 +50,10 @@ chainChecks ::
     MonadError (STS.PredicateFailure (STS.CHAIN era)) m
   ) =>
   Globals ->
-  PParams era ->
-  BHeader era ->
+  STS.ChainChecksData ->
+  BHeader (Crypto era) ->
   m ()
-chainChecks globals pp bh = STS.chainChecks (maxMajorPV globals) pp bh
+chainChecks globals ccd bh = STS.chainChecks (maxMajorPV globals) ccd bh
 
 {-------------------------------------------------------------------------------
   Applying blocks

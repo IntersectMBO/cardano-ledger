@@ -67,8 +67,8 @@ import Shelley.Spec.Ledger.STS.Utxo
 import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import Shelley.Spec.Ledger.Tx (Tx (..), TxBody (..))
-import Shelley.Spec.Ledger.TxBody (DCert)
+import Shelley.Spec.Ledger.Tx (Tx (..))
+import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody)
 
 data LEDGER era
 
@@ -138,7 +138,7 @@ instance
 
 instance
   ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   STS (LEDGER (ShelleyEra c))
   where
@@ -213,7 +213,7 @@ ledgerTransition = do
 
 instance
   ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   Embed (DELEGS (ShelleyEra c)) (LEDGER (ShelleyEra c))
   where
@@ -221,7 +221,7 @@ instance
 
 instance
   ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   Embed (UTXOW (ShelleyEra c)) (LEDGER (ShelleyEra c))
   where

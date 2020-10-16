@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -29,7 +30,7 @@ module Shelley.Spec.Ledger.BlockChain
     Block (Block, Block'),
     LaxBlock (..),
     TxSeq (TxSeq, txSeqTxns', TxSeq'),
-    HashBBody,
+    HashBBody (..),
     bhHash,
     bbHash,
     hashHeaderToNonce,
@@ -76,6 +77,7 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased)
 import qualified Cardano.Ledger.Shelley as Shelley
@@ -113,7 +115,6 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
   ( CertifiedVRF,
     Hash,
@@ -146,13 +147,13 @@ import Shelley.Spec.Ledger.Tx (Tx (..), decodeWits, segwitTx, txWitsBytes)
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- | The hash of a Block Header
-newtype HashHeader era = HashHeader {unHashHeader :: (Hash era (BHeader era))}
+newtype HashHeader crypto = HashHeader {unHashHeader :: (Hash crypto (BHeader crypto))}
   deriving (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 
-deriving instance Era era => ToCBOR (HashHeader era)
+deriving instance CC.Crypto crypto => ToCBOR (HashHeader crypto)
 
-deriving instance Era era => FromCBOR (HashHeader era)
+deriving instance CC.Crypto crypto => FromCBOR (HashHeader crypto)
 
 data TxSeq era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Tx era)),
@@ -219,56 +220,56 @@ instance
   listLen _ = 3
   listLenBound _ = 3
 
+data EraIndependentBlockBody
+
 -- | Hash of block body
-newtype HashBBody era = HashBBody {unHashBody :: (Hash era (TxSeq era))}
+newtype HashBBody crypto = UnsafeHashBBody {unHashBody :: (Hash crypto EraIndependentBlockBody)}
   deriving (Show, Eq, Ord, NoThunks)
 
-deriving instance Era era => ToCBOR (HashBBody era)
+deriving instance CC.Crypto crypto => ToCBOR (HashBBody crypto)
 
-deriving instance Era era => FromCBOR (HashBBody era)
+deriving instance CC.Crypto crypto => FromCBOR (HashBBody crypto)
 
 -- | Hash a given block header
 bhHash ::
-  Era era =>
-  BHeader era ->
-  HashHeader era
-bhHash = HashHeader . hashAnnotated
+  forall crypto.
+  CC.Crypto crypto =>
+  BHeader crypto ->
+  HashHeader crypto
+bhHash = HashHeader . (Hash.hashWithSerialiser @(CC.HASH crypto) toCBOR)
 
 -- | Hash a given block body
 bbHash ::
   forall era.
   Era era =>
   TxSeq era ->
-  HashBBody era
+  HashBBody (Crypto era)
 bbHash (TxSeq' _ bodies wits md) =
-  (HashBBody . coerce) $
+  (UnsafeHashBBody . coerce) $
     hashStrict (hashPart bodies <> hashPart wits <> hashPart md)
   where
-    hashStrict :: ByteString -> Hash era ByteString
+    hashStrict :: ByteString -> Hash (Crypto era) ByteString
     hashStrict = Hash.hashWith id
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
 -- | HashHeader to Nonce
-hashHeaderToNonce :: HashHeader era -> Nonce
+hashHeaderToNonce :: HashHeader crypto -> Nonce
 hashHeaderToNonce = Nonce . coerce
 
-data BHeader era = BHeader'
-  { bHeaderBody' :: !(BHBody era),
-    bHeaderSig' :: !(SignedKES era (BHBody era)),
+data BHeader crypto = BHeader'
+  { bHeaderBody' :: !(BHBody crypto),
+    bHeaderSig' :: !(SignedKES crypto (BHBody crypto)),
     bHeaderBytes :: !BSL.ByteString
   }
   deriving (Generic)
-  deriving
-    (NoThunks)
-    via AllowThunksIn '["bHeaderBytes"] (BHeader era)
 
-instance Era era => HashAnnotated (BHeader era) era
+deriving via AllowThunksIn '["bHeaderBytes"] (BHeader crypto) instance CC.Crypto crypto => NoThunks (BHeader crypto)
 
-deriving instance Era era => Eq (BHeader era)
+deriving instance CC.Crypto crypto => Eq (BHeader crypto)
 
-deriving instance Era era => Show (BHeader era)
+deriving instance CC.Crypto crypto => Show (BHeader crypto)
 
-pattern BHeader :: Era era => BHBody era -> SignedKES era (BHBody era) -> BHeader era
+pattern BHeader :: CC.Crypto crypto => BHBody crypto -> SignedKES crypto (BHBody crypto) -> BHeader crypto
 pattern BHeader bHeaderBody' bHeaderSig' <-
   BHeader' {bHeaderBody', bHeaderSig'}
   where
@@ -283,8 +284,8 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
 {-# COMPLETE BHeader #-}
 
 instance
-  Era era =>
-  ToCBOR (BHeader era)
+  CC.Crypto crypto =>
+  ToCBOR (BHeader crypto)
   where
   toCBOR (BHeader' _ _ bytes) = encodePreEncoded (BSL.toStrict bytes)
   encodedSizeExpr size proxy =
@@ -293,8 +294,8 @@ instance
       + KES.encodedSigKESSizeExpr ((KES.getSig . bHeaderSig') <$> proxy)
 
 instance
-  Era era =>
-  FromCBOR (Annotator (BHeader era))
+  CC.Crypto crypto =>
+  FromCBOR (Annotator (BHeader crypto))
   where
   fromCBOR = annotatorSlice $
     decodeRecordNamed "Header" (const 2) $ do
@@ -303,14 +304,14 @@ instance
       pure $ BHeader' <$> pure bhb <*> pure sig
 
 -- | The previous hash of a block
-data PrevHash era = GenesisHash | BlockHash !(HashHeader era)
+data PrevHash crypto = GenesisHash | BlockHash !(HashHeader crypto)
   deriving (Show, Eq, Generic, Ord)
 
-instance Era era => NoThunks (PrevHash era)
+instance CC.Crypto crypto => NoThunks (PrevHash crypto)
 
 instance
-  Era era =>
-  ToCBOR (PrevHash era)
+  CC.Crypto crypto =>
+  ToCBOR (PrevHash crypto)
   where
   toCBOR GenesisHash = encodeNull
   toCBOR (BlockHash h) = toCBOR h
@@ -333,8 +334,8 @@ instance
       ]
 
 instance
-  Era era =>
-  FromCBOR (PrevHash era)
+  CC.Crypto crypto =>
+  FromCBOR (PrevHash crypto)
   where
   fromCBOR = do
     peekTokenType >>= \case
@@ -344,7 +345,7 @@ instance
       _ -> BlockHash <$> fromCBOR
 
 prevHashToNonce ::
-  PrevHash era ->
+  PrevHash crypto ->
   Nonce
 prevHashToNonce = \case
   GenesisHash -> NeutralNonce -- This case can only happen when starting Shelley from genesis,
@@ -355,22 +356,22 @@ prevHashToNonce = \case
   -- so using the neutral nonce is appropriate.
   BlockHash ph -> hashHeaderToNonce ph
 
-data LastAppliedBlock era = LastAppliedBlock
+data LastAppliedBlock crypto = LastAppliedBlock
   { labBlockNo :: !BlockNo,
     labSlotNo :: !SlotNo,
-    labHash :: !(HashHeader era)
+    labHash :: !(HashHeader crypto)
   }
   deriving (Show, Eq, Generic)
 
-instance Era era => NoThunks (LastAppliedBlock era)
+instance CC.Crypto crypto => NoThunks (LastAppliedBlock crypto)
 
-instance NFData (LastAppliedBlock era)
+instance NFData (LastAppliedBlock crypto)
 
-instance Era era => ToCBOR (LastAppliedBlock era) where
+instance CC.Crypto crypto => ToCBOR (LastAppliedBlock crypto) where
   toCBOR (LastAppliedBlock b s h) =
     encodeListLen 3 <> toCBOR b <> toCBOR s <> toCBOR h
 
-instance Era era => FromCBOR (LastAppliedBlock era) where
+instance CC.Crypto crypto => FromCBOR (LastAppliedBlock crypto) where
   fromCBOR =
     decodeRecordNamed
       "lastAppliedBlock"
@@ -381,49 +382,53 @@ instance Era era => FromCBOR (LastAppliedBlock era) where
           <*> fromCBOR
       )
 
-lastAppliedHash :: WithOrigin (LastAppliedBlock era) -> PrevHash era
+lastAppliedHash :: WithOrigin (LastAppliedBlock crypto) -> PrevHash crypto
 lastAppliedHash Origin = GenesisHash
 lastAppliedHash (At lab) = BlockHash $ labHash lab
 
-data BHBody era = BHBody
+data BHBody crypto = BHBody
   { -- | block number
     bheaderBlockNo :: !BlockNo,
     -- | block slot
     bheaderSlotNo :: !SlotNo,
     -- | Hash of the previous block header
-    bheaderPrev :: !(PrevHash era),
+    bheaderPrev :: !(PrevHash crypto),
     -- | verification key of block issuer
-    bheaderVk :: !(VKey 'BlockIssuer era),
+    bheaderVk :: !(VKey 'BlockIssuer crypto),
     -- | VRF verification key for block issuer
-    bheaderVrfVk :: !(VerKeyVRF era),
+    bheaderVrfVk :: !(VerKeyVRF crypto),
     -- | block nonce
-    bheaderEta :: !(CertifiedVRF era Nonce),
+    bheaderEta :: !(CertifiedVRF crypto Nonce),
     -- | leader election value
-    bheaderL :: !(CertifiedVRF era Natural),
+    bheaderL :: !(CertifiedVRF crypto Natural),
     -- | Size of the block body
     bsize :: !Natural,
     -- | Hash of block body
-    bhash :: !(HashBBody era),
+    bhash :: !(HashBBody crypto),
     -- | operational certificate
-    bheaderOCert :: !(OCert era),
+    bheaderOCert :: !(OCert crypto),
     -- | protocol version
     bprotver :: !ProtVer
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving instance CC.Crypto crypto => Show (BHBody crypto)
+
+deriving instance CC.Crypto crypto => Eq (BHBody crypto)
 
 instance
-  Era era =>
-  SignableRepresentation (BHBody era)
+  CC.Crypto crypto =>
+  SignableRepresentation (BHBody crypto)
   where
   getSignableRepresentation = serialize'
 
 instance
-  Era era =>
-  NoThunks (BHBody era)
+  CC.Crypto crypto =>
+  NoThunks (BHBody crypto)
 
 instance
-  Era era =>
-  ToCBOR (BHBody era)
+  CC.Crypto crypto =>
+  ToCBOR (BHBody crypto)
   where
   toCBOR bhBody =
     encodeListLen (9 + listLen oc + listLen pv)
@@ -462,8 +467,8 @@ instance
       toWord64 = fromIntegral
 
 instance
-  Era era =>
-  FromCBOR (BHBody era)
+  CC.Crypto crypto =>
+  FromCBOR (BHBody crypto)
   where
   fromCBOR = decodeRecordNamed "BHBody" bhBodySize $ do
     bheaderBlockNo <- fromCBOR
@@ -496,27 +501,27 @@ instance
 
 -- | Retrieve the pool id (the hash of the pool operator's cold key)
 -- from the body of the block header.
-poolIDfromBHBody :: Era era => BHBody era -> KeyHash 'BlockIssuer era
+poolIDfromBHBody :: CC.Crypto crypto => BHBody crypto -> KeyHash 'BlockIssuer crypto
 poolIDfromBHBody = hashKey . bheaderVk
 {-# DEPRECATED poolIDfromBHBody "poolIDfromBHBody has been deprecated (the name is misleading), use issuerIDfromBHBody" #-}
 
 -- | Retrieve the issuer id (the hash of the cold key) from the body of the block header.
 -- This corresponds to either a genesis/core node or a stake pool.
-issuerIDfromBHBody :: Era era => BHBody era -> KeyHash 'BlockIssuer era
+issuerIDfromBHBody :: CC.Crypto crypto => BHBody crypto -> KeyHash 'BlockIssuer crypto
 issuerIDfromBHBody = hashKey . bheaderVk
 
 -- | Retrieve the new nonce from the block header body.
-bnonce :: BHBody era -> Nonce
+bnonce :: BHBody crypto -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
 data Block era
-  = Block' !(BHeader era) !(TxSeq era) BSL.ByteString
+  = Block' !(BHeader (Crypto era)) !(TxSeq era) BSL.ByteString
 
 deriving stock instance
   ShelleyBased era =>
   Show (Block era)
 
-pattern Block :: Era era => BHeader era -> TxSeq era -> Block era
+pattern Block :: Era era => BHeader (Crypto era) -> TxSeq era -> Block era
 pattern Block h txns <-
   Block' h txns _
   where
@@ -608,9 +613,9 @@ instance
   fromCBOR = fmap LaxBlock <$> blockDecoder True
 
 bHeaderSize ::
-  forall era.
-  (Era era) =>
-  BHeader era ->
+  forall crypto.
+  (CC.Crypto crypto) =>
+  BHeader crypto ->
   Int
 bHeaderSize = BS.length . serialize'
 
@@ -627,16 +632,16 @@ slotToNonce (SlotNo s) = mkNonceFromNumber s
 bheader ::
   Era era =>
   Block era ->
-  BHeader era
+  BHeader (Crypto era)
 bheader (Block bh _) = bh
 
 bbody :: Era era => Block era -> TxSeq era
 bbody (Block _ txs) = txs
 
 bhbody ::
-  Era era =>
-  BHeader era ->
-  BHBody era
+  CC.Crypto crypto =>
+  BHeader crypto ->
+  BHBody crypto
 bhbody (BHeader b _) = b
 
 -- | Construct a seed to use in the VRF computation.
@@ -720,7 +725,7 @@ hBbsize = bsize
 
 incrBlocks ::
   Bool ->
-  KeyHash 'StakePool era ->
+  KeyHash 'StakePool (Crypto era) ->
   BlocksMade era ->
   BlocksMade era
 incrBlocks isOverlay hk b'@(BlocksMade b)

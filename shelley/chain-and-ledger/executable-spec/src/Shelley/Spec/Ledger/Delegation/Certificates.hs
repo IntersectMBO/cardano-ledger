@@ -37,7 +37,8 @@ module Shelley.Spec.Ledger.Delegation.Certificates
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Crypto as CC
+import qualified Cardano.Ledger.Era as ERA
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
   ( BaseRep (MapR),
@@ -66,20 +67,20 @@ import Shelley.Spec.Ledger.TxBody
 
 instance
   HasExp
-    (PoolDistr era)
+    (PoolDistr crypto)
     ( Map
-        (KeyHash 'StakePool era)
-        (IndividualPoolStake era)
+        (KeyHash 'StakePool crypto)
+        (IndividualPoolStake crypto)
     )
   where
   toExp (PoolDistr x) = Base MapR x
 
 instance
   Embed
-    (PoolDistr era)
+    (PoolDistr crypto)
     ( Map
-        (KeyHash 'StakePool era)
-        (IndividualPoolStake era)
+        (KeyHash 'StakePool crypto)
+        (IndividualPoolStake crypto)
     )
   where
   toBase (PoolDistr x) = x
@@ -95,7 +96,7 @@ poolCWitness :: PoolCert era -> Credential 'StakePool era
 poolCWitness (RegPool pool) = KeyHashObj $ _poolPubKey pool
 poolCWitness (RetirePool k _) = KeyHashObj k
 
-genesisCWitness :: GenesisDelegCert era -> KeyHash 'Genesis era
+genesisCWitness :: GenesisDelegCert era -> KeyHash 'Genesis (ERA.Crypto era)
 genesisCWitness (GenesisDelegCert gk _ _) = gk
 
 -- | Check for `RegKey` constructor
@@ -128,21 +129,21 @@ isRetirePool :: DCert era -> Bool
 isRetirePool (DCertPool (RetirePool _ _)) = True
 isRetirePool _ = False
 
-newtype PoolDistr era = PoolDistr
+newtype PoolDistr crypto = PoolDistr
   { unPoolDistr ::
-      Map (KeyHash 'StakePool era) (IndividualPoolStake era)
+      Map (KeyHash 'StakePool crypto) (IndividualPoolStake crypto)
   }
   deriving stock (Show, Eq)
   deriving newtype (ToCBOR, FromCBOR, NFData, NoThunks, Relation)
 
-data IndividualPoolStake era = IndividualPoolStake
+data IndividualPoolStake crypto = IndividualPoolStake
   { individualPoolStake :: !Rational,
-    individualPoolStakeVrf :: !(Hash era (VerKeyVRF era))
+    individualPoolStakeVrf :: !(Hash crypto (VerKeyVRF crypto))
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance Era era => ToCBOR (IndividualPoolStake era) where
+instance CC.Crypto crypto => ToCBOR (IndividualPoolStake crypto) where
   toCBOR (IndividualPoolStake stake vrf) =
     mconcat
       [ encodeListLen 2,
@@ -150,7 +151,7 @@ instance Era era => ToCBOR (IndividualPoolStake era) where
         toCBOR vrf
       ]
 
-instance Era era => FromCBOR (IndividualPoolStake era) where
+instance CC.Crypto crypto => FromCBOR (IndividualPoolStake crypto) where
   fromCBOR =
     decodeRecordNamed "IndividualPoolStake" (const 2) $
       IndividualPoolStake

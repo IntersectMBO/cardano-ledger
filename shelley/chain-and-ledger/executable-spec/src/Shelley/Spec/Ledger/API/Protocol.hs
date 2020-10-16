@@ -35,7 +35,8 @@ import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.KES.Class
 import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Crypto hiding (Crypto)
-import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Arrow (left, right)
 import Control.Monad.Except
@@ -50,7 +51,12 @@ import Data.Either (fromRight)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.API.Validation
-import Shelley.Spec.Ledger.BaseTypes (Globals, Nonce, Seed)
+import Shelley.Spec.Ledger.BaseTypes
+  ( Globals,
+    Nonce,
+    Seed,
+    UnitInterval,
+  )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody,
     BHeader,
@@ -68,7 +74,8 @@ import Shelley.Spec.Ledger.LedgerState
     _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.STS.Chain (ChainChecksData, pparamsToChainChecksData)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICKF)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
@@ -76,76 +83,55 @@ import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
-data LedgerView era = LedgerView
-  { lvProtParams :: PParams era,
-    lvPoolDistr :: PoolDistr era,
-    lvGenDelegs :: GenDelegs era
+data LedgerView crypto = LedgerView
+  { lvD :: UnitInterval,
+    lvExtraEntropy :: Nonce,
+    lvPoolDistr :: PoolDistr crypto,
+    lvGenDelegs :: GenDelegs crypto,
+    lvChainChecks :: ChainChecksData
   }
   deriving (Eq, Show, Generic)
 
-instance NoThunks (LedgerView era)
-
-instance Era era => FromCBOR (LedgerView era) where
-  fromCBOR =
-    decodeRecordNamed
-      "LedgerView"
-      (const 3)
-      ( LedgerView
-          <$> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
-      )
-
-instance Era era => ToCBOR (LedgerView era) where
-  toCBOR
-    LedgerView
-      { lvProtParams,
-        lvPoolDistr,
-        lvGenDelegs
-      } =
-      mconcat
-        [ encodeListLen 3,
-          toCBOR lvProtParams,
-          toCBOR lvPoolDistr,
-          toCBOR lvGenDelegs
-        ]
+instance NoThunks (LedgerView crypto)
 
 -- | Construct a protocol environment from the ledger view, along with the
 -- current slot and a marker indicating whether this is the first block in a new
 -- epoch.
 mkPrtclEnv ::
-  LedgerView era ->
+  LedgerView crypto ->
   -- | Epoch nonce
   Nonce ->
-  STS.Prtcl.PrtclEnv era
+  STS.Prtcl.PrtclEnv crypto
 mkPrtclEnv
   LedgerView
-    { lvProtParams,
+    { lvD,
       lvPoolDistr,
       lvGenDelegs
     } =
     STS.Prtcl.PrtclEnv
-      (_d lvProtParams)
+      lvD
       lvPoolDistr
       lvGenDelegs
 
-view :: ShelleyState era -> LedgerView era
+view :: ShelleyState era -> LedgerView (Crypto era)
 view
   NewEpochState
     { nesPd,
       nesEs
     } =
     LedgerView
-      { lvProtParams = esPp nesEs,
+      { lvD = _d . esPp $ nesEs,
+        lvExtraEntropy = _extraEntropy . esPp $ nesEs,
         lvPoolDistr = nesPd,
         lvGenDelegs =
           _genDelegs . _dstate
             . _delegationState
-            $ esLState nesEs
+            $ esLState nesEs,
+        lvChainChecks = pparamsToChainChecksData . esPp $ nesEs
       }
 
 -- | Alias of 'view' for export
-currentLedgerView :: ShelleyState era -> LedgerView era
+currentLedgerView :: ShelleyState era -> LedgerView (Crypto era)
 currentLedgerView = view
 
 -- $timetravel
@@ -200,7 +186,7 @@ futureLedgerView ::
   Globals ->
   ShelleyState era ->
   SlotNo ->
-  m (LedgerView era)
+  m (LedgerView (Crypto era))
 futureLedgerView globals ss slot =
   liftEither
     . right view
@@ -226,9 +212,9 @@ data ChainDepState c = ChainDepState
   }
   deriving (Eq, Show, Generic)
 
-instance Era era => NoThunks (ChainDepState era)
+instance CC.Crypto crypto => NoThunks (ChainDepState crypto)
 
-instance Era era => FromCBOR (ChainDepState era) where
+instance CC.Crypto crypto => FromCBOR (ChainDepState crypto) where
   fromCBOR =
     decodeRecordNamed
       "ChainDepState"
@@ -239,7 +225,7 @@ instance Era era => FromCBOR (ChainDepState era) where
           <*> fromCBOR
       )
 
-instance Era era => ToCBOR (ChainDepState era) where
+instance CC.Crypto crypto => ToCBOR (ChainDepState crypto) where
   toCBOR
     ChainDepState
       { csProtocol,
@@ -253,29 +239,27 @@ instance Era era => ToCBOR (ChainDepState era) where
           toCBOR csLabNonce
         ]
 
-newtype ChainTransitionError era
-  = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL era)]
+newtype ChainTransitionError crypto
+  = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL crypto)]
   deriving (Generic)
 
-instance (Era era) => NoThunks (ChainTransitionError era)
+instance (CC.Crypto crypto) => NoThunks (ChainTransitionError crypto)
 
-deriving instance (Era era) => Eq (ChainTransitionError era)
+deriving instance (CC.Crypto crypto) => Eq (ChainTransitionError crypto)
 
-deriving instance (Era era) => Show (ChainTransitionError era)
+deriving instance (CC.Crypto crypto) => Show (ChainTransitionError crypto)
 
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::
-  forall era.
-  (Era era) =>
   Globals ->
-  LedgerView era ->
+  LedgerView crypto ->
   -- | Are we in a new epoch?
   Bool ->
-  ChainDepState era ->
-  ChainDepState era
+  ChainDepState crypto ->
+  ChainDepState crypto
 tickChainDepState
   globals
-  LedgerView {lvProtParams}
+  LedgerView {lvExtraEntropy}
   isNewEpoch
   cs@ChainDepState {csProtocol, csTickn, csLabNonce} = cs {csTickn = newTickState}
     where
@@ -283,10 +267,10 @@ tickChainDepState
       err = error "Panic! tickChainDepState failed."
       newTickState =
         fromRight err . flip runReader globals
-          . applySTS @(STS.Tickn.TICKN era)
+          . applySTS @STS.Tickn.TICKN
           $ TRC
             ( STS.Tickn.TicknEnv
-                lvProtParams
+                lvExtraEntropy
                 candidateNonce
                 csLabNonce,
               csTickn,
@@ -297,24 +281,24 @@ tickChainDepState
 --
 --   This also updates the last applied block hash.
 updateChainDepState ::
-  forall era m.
-  ( Era era,
-    MonadError (ChainTransitionError era) m,
+  forall crypto m.
+  ( CC.Crypto crypto,
+    MonadError (ChainTransitionError crypto) m,
     Cardano.Crypto.DSIGN.Class.Signable
-      (DSIGN (Crypto era))
-      (Shelley.Spec.Ledger.OCert.OCertSignable era),
+      (DSIGN crypto)
+      (Shelley.Spec.Ledger.OCert.OCertSignable crypto),
     Cardano.Crypto.KES.Class.Signable
-      (KES (Crypto era))
-      (Shelley.Spec.Ledger.BlockChain.BHBody era),
+      (KES crypto)
+      (Shelley.Spec.Ledger.BlockChain.BHBody crypto),
     Cardano.Crypto.VRF.Class.Signable
-      (VRF (Crypto era))
+      (VRF crypto)
       Shelley.Spec.Ledger.BaseTypes.Seed
   ) =>
   Globals ->
-  LedgerView era ->
-  BHeader era ->
-  ChainDepState era ->
-  m (ChainDepState era)
+  LedgerView crypto ->
+  BHeader crypto ->
+  ChainDepState crypto ->
+  m (ChainDepState crypto)
 updateChainDepState
   globals
   lv
@@ -333,7 +317,7 @@ updateChainDepState
     where
       res =
         flip runReader globals
-          . applySTS @(STS.Prtcl.PRTCL era)
+          . applySTS @(STS.Prtcl.PRTCL crypto)
           $ TRC
             ( mkPrtclEnv lv epochNonce,
               csProtocol,
@@ -347,23 +331,23 @@ updateChainDepState
 --   or consistent with the chain it is being applied to; the caller must ensure
 --   that this is valid through having previously applied it.
 reupdateChainDepState ::
-  forall era.
-  ( Era era,
+  forall crypto.
+  ( CC.Crypto crypto,
     Cardano.Crypto.DSIGN.Class.Signable
-      (DSIGN (Crypto era))
-      (Shelley.Spec.Ledger.OCert.OCertSignable era),
+      (DSIGN crypto)
+      (Shelley.Spec.Ledger.OCert.OCertSignable crypto),
     Cardano.Crypto.KES.Class.Signable
-      (KES (Crypto era))
-      (Shelley.Spec.Ledger.BlockChain.BHBody era),
+      (KES crypto)
+      (Shelley.Spec.Ledger.BlockChain.BHBody crypto),
     Cardano.Crypto.VRF.Class.Signable
-      (VRF (Crypto era))
+      (VRF crypto)
       Shelley.Spec.Ledger.BaseTypes.Seed
   ) =>
   Globals ->
-  LedgerView era ->
-  BHeader era ->
-  ChainDepState era ->
-  ChainDepState era
+  LedgerView crypto ->
+  BHeader crypto ->
+  ChainDepState crypto ->
+  ChainDepState crypto
 reupdateChainDepState
   globals
   lv
@@ -376,7 +360,7 @@ reupdateChainDepState
     where
       res =
         flip runReader globals
-          . reapplySTS @(STS.Prtcl.PRTCL era)
+          . reapplySTS @(STS.Prtcl.PRTCL crypto)
           $ TRC
             ( mkPrtclEnv lv epochNonce,
               csProtocol,

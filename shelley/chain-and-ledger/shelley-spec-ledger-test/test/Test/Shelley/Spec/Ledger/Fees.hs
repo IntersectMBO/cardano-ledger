@@ -48,7 +48,6 @@ import Shelley.Spec.Ledger.BaseTypes
     textToUrl,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     Hash,
@@ -67,7 +66,9 @@ import Shelley.Spec.Ledger.Tx
     hashScript,
   )
 import Shelley.Spec.Ledger.TxBody
-  ( PoolMetaData (..),
+  ( EraIndependentTxBody,
+    eraIndTxBodyHash,
+    PoolMetaData (..),
     StakePoolRelay (..),
     Wdrl (..),
   )
@@ -88,25 +89,25 @@ sizeTest ::
 sizeTest _ b16 tx s = do
   (Base16.encode (serialize tx) @?= b16) >> (txsize tx @?= s)
 
-alicePay :: forall era. Era era => KeyPair 'Payment era
-alicePay = KeyPair @'Payment @era vk sk
+alicePay :: forall crypto. CC.Crypto crypto => KeyPair 'Payment crypto
+alicePay = KeyPair @ 'Payment @crypto vk sk
   where
-    (sk, vk) = mkKeyPair @era (0, 0, 0, 0, 0)
+    (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 0)
 
-aliceStake :: forall era. Era era => KeyPair 'Staking era
+aliceStake :: forall crypto. CC.Crypto crypto => KeyPair 'Staking crypto
 aliceStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @era (0, 0, 0, 0, 1)
+    (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 1)
 
 aliceSHK :: forall era. Era era => Credential 'Staking era
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
-alicePool :: forall era. Era era => KeyPair 'StakePool era
+alicePool :: forall crypto. CC.Crypto crypto => KeyPair 'StakePool crypto
 alicePool = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @era (0, 0, 0, 0, 2)
+    (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 2)
 
-alicePoolKH :: forall era. Era era => KeyHash 'StakePool era
+alicePoolKH :: forall crypto. CC.Crypto crypto => KeyHash 'StakePool crypto
 alicePoolKH = (hashKey . vKey) alicePool
 
 aliceVRF :: forall v. VRFAlgorithm v => (VRF.SignKeyVRF v, VRF.VerKeyVRF v)
@@ -137,15 +138,15 @@ alicePoolParams =
 aliceAddr :: forall era. Era era => Addr era
 aliceAddr = mkAddr (alicePay, aliceStake)
 
-bobPay :: forall era. Era era => KeyPair 'Payment era
+bobPay :: forall crypto. CC.Crypto crypto => KeyPair 'Payment crypto
 bobPay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @era (1, 0, 0, 0, 0)
+    (sk, vk) = mkKeyPair @crypto (1, 0, 0, 0, 0)
 
-bobStake :: forall era. Era era => KeyPair 'Staking era
+bobStake :: forall crypto. CC.Crypto crypto => KeyPair 'Staking crypto
 bobStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @era (1, 0, 0, 0, 1)
+    (sk, vk) = mkKeyPair @crypto (1, 0, 0, 0, 1)
 
 bobSHK :: forall era. Era era => Credential 'Staking era
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
@@ -153,7 +154,7 @@ bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 bobAddr :: forall era. Era era => Addr era
 bobAddr = mkAddr (bobPay, bobStake)
 
-carlPay :: forall era. Era era => KeyPair 'Payment era
+carlPay :: forall crypto. CC.Crypto crypto => KeyPair 'Payment crypto
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (2, 0, 0, 0, 0)
@@ -174,7 +175,7 @@ txbSimpleUTxO =
     }
 
 -- | to use makeWitnessVKey, we need to know we can sign the TxBody for that era
-type BodySignable era = DSignable era (Hash era (TxBody era))
+type BodySignable era = DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
 
 txSimpleUTxO :: forall era. (ShelleyTest era, BodySignable era) => Tx era
 txSimpleUTxO =
@@ -182,7 +183,7 @@ txSimpleUTxO =
     { _body = txbSimpleUTxO,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey @era (hashAnnotated txbSimpleUTxO) [alicePay @era]
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbSimpleUTxO @era) [alicePay]
           },
       _metadata = SNothing
     }
@@ -224,7 +225,7 @@ txMutiUTxO =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated txbMutiUTxO)
+                (eraIndTxBodyHash $ txbMutiUTxO @era)
                 [ alicePay,
                   bobPay
                 ]
@@ -255,7 +256,7 @@ txRegisterStake =
     { _body = txbRegisterStake,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbRegisterStake) [alicePay]
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbRegisterStake @era) [alicePay]
           },
       _metadata = SNothing
     }
@@ -289,8 +290,8 @@ txDelegateStake =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated txbDelegateStake)
-                [asWitness (alicePay @era), asWitness bobStake]
+                (eraIndTxBodyHash $ txbDelegateStake @era)
+                [asWitness (alicePay), asWitness bobStake]
           },
       _metadata = SNothing
     }
@@ -318,7 +319,10 @@ txDeregisterStake =
     { _body = txbDeregisterStake,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbDeregisterStake) [alicePay @era]
+          { addrWits =
+              makeWitnessesVKey
+                (eraIndTxBodyHash $ txbDeregisterStake @era)
+                [alicePay @(Crypto era)]
           },
       _metadata = SNothing
     }
@@ -346,7 +350,7 @@ txRegisterPool =
     { _body = txbRegisterPool,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbRegisterPool) [alicePay @era]
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbRegisterPool @era) [alicePay]
           },
       _metadata = SNothing
     }
@@ -374,7 +378,7 @@ txRetirePool =
     { _body = txbRetirePool,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbRetirePool) [alicePay @era]
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbRetirePool @era) [alicePay]
           },
       _metadata = SNothing
     }
@@ -406,7 +410,7 @@ txWithMD =
     { _body = txbWithMD,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbWithMD) [alicePay @era]
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbWithMD @era) [alicePay]
           },
       _metadata = SJust md
     }
@@ -419,7 +423,7 @@ msig :: forall era. Era era => MultiSig era
 msig =
   RequireMOf
     2
-    [ (RequireSignature . asWitness . hashKey . vKey) (alicePay @era),
+    [ (RequireSignature . asWitness . hashKey . vKey) (alicePay),
       (RequireSignature . asWitness . hashKey . vKey) bobPay,
       (RequireSignature . asWitness . hashKey . vKey) carlPay
     ]
@@ -443,7 +447,7 @@ txWithMultiSig =
     { _body = txbWithMultiSig,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated txbWithMultiSig) [alicePay @era, bobPay],
+          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbWithMultiSig @era) [alicePay, bobPay],
             msigWits = Map.singleton (hashScript @(MultiSig era) msig) msig
           },
       _metadata = SNothing
@@ -474,8 +478,8 @@ txWithWithdrawal =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated txbWithWithdrawal)
-                [asWitness (alicePay @era), asWitness aliceStake]
+                (eraIndTxBodyHash $ txbWithWithdrawal @era)
+                [asWitness (alicePay), asWitness aliceStake]
           },
       _metadata = SNothing
     }

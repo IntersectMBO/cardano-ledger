@@ -11,6 +11,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Crypto (DSIGN, VRF)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Prelude (Natural, Word32, Word64, Word8)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
@@ -74,7 +75,7 @@ genStaking =
 genPools ::
   Era era =>
   Gen
-    [ ( KeyHash 'StakePool era,
+    [ ( KeyHash 'StakePool (Crypto era),
         PoolParams era
       )
     ]
@@ -83,10 +84,10 @@ genPools =
     (,) <$> genKeyHash <*> genPoolParams
 
 genStake ::
-  Era era =>
+  CC.Crypto crypto =>
   Gen
-    [ ( KeyHash 'Staking era,
-        KeyHash 'StakePool era
+    [ ( KeyHash 'Staking crypto,
+        KeyHash 'StakePool crypto
       )
     ]
 genStake =
@@ -97,7 +98,7 @@ genPoolParams :: forall era. Era era => Gen (PoolParams era)
 genPoolParams =
   PoolParams
     <$> genKeyHash
-    <*> genVRFKeyHash @era
+    <*> genVRFKeyHash @(Crypto era)
     <*> genCoin
     <*> genCoin
     <*> genUnitInterval
@@ -210,34 +211,34 @@ genUnitInterval =
     <$> Gen.realFrac_ (Range.linearFrac 0.01 1)
 
 genGenesisDelegationList ::
-  Era era =>
-  Gen [(KeyHash 'Genesis era, GenDelegPair era)]
+  CC.Crypto crypto =>
+  Gen [(KeyHash 'Genesis crypto, GenDelegPair crypto)]
 genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
 genGenesisDelegationPair ::
-  forall era.
-  Era era =>
-  Gen (KeyHash 'Genesis era, GenDelegPair era)
+  forall crypto.
+  CC.Crypto crypto =>
+  Gen (KeyHash 'Genesis crypto, GenDelegPair crypto)
 genGenesisDelegationPair =
-  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> genVRFKeyHash @era)
+  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> genVRFKeyHash @crypto)
 
 genVRFKeyHash ::
-  forall era.
-  Era era =>
-  Gen (Hash era (VerKeyVRF (VRF (Crypto era))))
-genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @era)
+  forall crypto.
+  CC.Crypto crypto =>
+  Gen (Hash crypto (VerKeyVRF (VRF crypto)))
+genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @crypto)
 
 genVRFKeyPair ::
-  forall era.
-  Era era =>
-  Gen (SignKeyVRF (VRF (Crypto era)), VerKeyVRF (VRF (Crypto era)))
+  forall crypto.
+  CC.Crypto crypto =>
+  Gen (SignKeyVRF (VRF crypto), VerKeyVRF (VRF crypto))
 genVRFKeyPair = do
   seed <- genSeed seedSize
   let sk = genKeyVRF seed
       vk = deriveVerKeyVRF sk
   pure (sk, vk)
   where
-    seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF (Crypto era))))
+    seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF crypto)))
 
 genFundsList :: Era era => Gen [(Addr era, Coin)]
 genFundsList = Gen.list (Range.linear 1 100) genGenesisFundPair
@@ -246,18 +247,18 @@ genSeed :: Int -> Gen Seed
 genSeed n = mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
 
 genKeyHash ::
-  ( Era era
+  ( CC.Crypto crypto
   ) =>
-  Gen (KeyHash disc era)
+  Gen (KeyHash disc crypto)
 genKeyHash = hashKey . snd <$> genKeyPair
 
 -- | Generate a deterministic key pair given a seed.
 genKeyPair ::
-  forall era krole.
-  DSIGNAlgorithm (DSIGN (Crypto era)) =>
+  forall crypto krole.
+  DSIGNAlgorithm (DSIGN crypto) =>
   Gen
-    ( SignKeyDSIGN (DSIGN (Crypto era)),
-      VKey krole era
+    ( SignKeyDSIGN (DSIGN crypto),
+      VKey krole crypto
     )
 genKeyPair = do
   seed <- genSeed seedSize
@@ -270,7 +271,7 @@ genKeyPair = do
       fromIntegral
         ( seedSizeDSIGN
             ( Proxy ::
-                Proxy (DSIGN (Crypto era))
+                Proxy (DSIGN crypto)
             )
         )
 

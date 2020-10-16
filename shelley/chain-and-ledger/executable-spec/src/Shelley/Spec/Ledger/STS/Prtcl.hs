@@ -29,8 +29,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Crypto (VRF)
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Crypto (Crypto, VRF)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
@@ -69,11 +68,11 @@ import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (BlockNo, SlotNo)
 
-data PRTCL era
+data PRTCL crypto
 
-data PrtclState era
+data PrtclState crypto
   = PrtclState
-      !(Map (KeyHash 'BlockIssuer era) Word64)
+      !(Map (KeyHash 'BlockIssuer crypto) Word64)
       -- ^ Operation Certificate counters
       !Nonce
       -- ^ Evolving nonce
@@ -81,7 +80,7 @@ data PrtclState era
       -- ^ Candidate nonce
   deriving (Generic, Show, Eq)
 
-instance Era era => ToCBOR (PrtclState era) where
+instance Crypto crypto => ToCBOR (PrtclState crypto) where
   toCBOR (PrtclState m n1 n2) =
     mconcat
       [ encodeListLen 3,
@@ -90,7 +89,7 @@ instance Era era => ToCBOR (PrtclState era) where
         toCBOR n2
       ]
 
-instance Era era => FromCBOR (PrtclState era) where
+instance Crypto crypto => FromCBOR (PrtclState crypto) where
   fromCBOR =
     decodeRecordNamed
       "PrtclState"
@@ -101,66 +100,66 @@ instance Era era => FromCBOR (PrtclState era) where
           <*> fromCBOR
       )
 
-instance Era era => NoThunks (PrtclState era)
+instance Crypto crypto => NoThunks (PrtclState crypto)
 
-data PrtclEnv era
+data PrtclEnv crypto
   = PrtclEnv
       UnitInterval -- the decentralization paramater @d@ from the protocal parameters
-      (PoolDistr era)
-      (GenDelegs era)
+      (PoolDistr crypto)
+      (GenDelegs crypto)
       Nonce
   deriving (Generic)
 
-instance NoThunks (PrtclEnv era)
+instance NoThunks (PrtclEnv crypto)
 
-data PrtclPredicateFailure era
-  = OverlayFailure (PredicateFailure (OVERLAY era)) -- Subtransition Failures
-  | UpdnFailure (PredicateFailure (UPDN era)) -- Subtransition Failures
+data PrtclPredicateFailure crypto
+  = OverlayFailure (PredicateFailure (OVERLAY crypto)) -- Subtransition Failures
+  | UpdnFailure (PredicateFailure (UPDN crypto)) -- Subtransition Failures
   deriving (Generic)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF (Crypto era))) =>
-  Show (PrtclPredicateFailure era)
+  (VRF.VRFAlgorithm (VRF crypto)) =>
+  Show (PrtclPredicateFailure crypto)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF (Crypto era))) =>
-  Eq (PrtclPredicateFailure era)
+  (VRF.VRFAlgorithm (VRF crypto)) =>
+  Eq (PrtclPredicateFailure crypto)
 
 instance
-  ( Era era,
-    DSignable era (OCertSignable era),
-    KESignable era (BHBody era),
-    VRFSignable era Seed
+  ( Crypto crypto,
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto),
+    VRFSignable crypto Seed
   ) =>
-  STS (PRTCL era)
+  STS (PRTCL crypto)
   where
   type
-    State (PRTCL era) =
-      PrtclState era
+    State (PRTCL crypto) =
+      PrtclState crypto
 
   type
-    Signal (PRTCL era) =
-      BHeader era
+    Signal (PRTCL crypto) =
+      BHeader crypto
 
   type
-    Environment (PRTCL era) =
-      PrtclEnv era
+    Environment (PRTCL crypto) =
+      PrtclEnv crypto
 
-  type BaseM (PRTCL era) = ShelleyBase
-  type PredicateFailure (PRTCL era) = PrtclPredicateFailure era
+  type BaseM (PRTCL crypto) = ShelleyBase
+  type PredicateFailure (PRTCL crypto) = PrtclPredicateFailure crypto
 
   initialRules = []
 
   transitionRules = [prtclTransition]
 
 prtclTransition ::
-  forall era.
-  ( Era era,
-    DSignable era (OCertSignable era),
-    KESignable era (BHBody era),
-    VRFSignable era Seed
+  forall crypto.
+  ( Crypto crypto,
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto),
+    VRFSignable crypto Seed
   ) =>
-  TransitionRule (PRTCL era)
+  TransitionRule (PRTCL crypto)
 prtclTransition = do
   TRC
     ( PrtclEnv dval pd dms eta0,
@@ -173,14 +172,14 @@ prtclTransition = do
       eta = bnonce bhb
 
   UpdnState etaV' etaC' <-
-    trans @(UPDN era) $
+    trans @(UPDN crypto) $
       TRC
         ( UpdnEnv eta,
           UpdnState etaV etaC,
           slot
         )
   cs' <-
-    trans @(OVERLAY era) $
+    trans @(OVERLAY crypto) $
       TRC (OverlayEnv dval pd dms eta0, cs, bh)
 
   pure $
@@ -189,52 +188,52 @@ prtclTransition = do
       etaV'
       etaC'
 
-instance (Era era) => NoThunks (PrtclPredicateFailure era)
+instance (Crypto crypto) => NoThunks (PrtclPredicateFailure crypto)
 
 instance
-  ( Era era,
-    DSignable era (OCertSignable era),
-    KESignable era (BHBody era),
-    VRFSignable era Seed
+  ( Crypto crypto,
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto),
+    VRFSignable crypto Seed
   ) =>
-  Embed (OVERLAY era) (PRTCL era)
+  Embed (OVERLAY crypto) (PRTCL crypto)
   where
   wrapFailed = OverlayFailure
 
 instance
-  ( Era era,
-    DSignable era (OCertSignable era),
-    KESignable era (BHBody era),
-    VRFSignable era Seed
+  ( Crypto crypto,
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto),
+    VRFSignable crypto Seed
   ) =>
-  Embed (UPDN era) (PRTCL era)
+  Embed (UPDN crypto) (PRTCL crypto)
   where
   wrapFailed = UpdnFailure
 
-data PrtlSeqFailure era
+data PrtlSeqFailure crypto
   = WrongSlotIntervalPrtclSeq
       SlotNo
       -- ^ Last slot number.
       SlotNo
       -- ^ Current slot number.
   | WrongBlockNoPrtclSeq
-      (WithOrigin (LastAppliedBlock era))
+      (WithOrigin (LastAppliedBlock crypto))
       -- ^ Last applied block.
       BlockNo
       -- ^ Current block number.
   | WrongBlockSequencePrtclSeq
-      (PrevHash era)
+      (PrevHash crypto)
       -- ^ Last applied hash
-      (PrevHash era)
+      (PrevHash crypto)
       -- ^ Current block's previous hash
   deriving (Show, Eq, Generic)
 
-instance Era era => NoThunks (PrtlSeqFailure era)
+instance Crypto crypto => NoThunks (PrtlSeqFailure crypto)
 
 prtlSeqChecks ::
-  (MonadError (PrtlSeqFailure era) m, Era era) =>
-  WithOrigin (LastAppliedBlock era) ->
-  BHeader era ->
+  (MonadError (PrtlSeqFailure crypto) m, Crypto crypto) =>
+  WithOrigin (LastAppliedBlock crypto) ->
+  BHeader crypto ->
   m ()
 prtlSeqChecks lab bh =
   case lab of

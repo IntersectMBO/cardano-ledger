@@ -56,16 +56,16 @@ blockEx1 ::
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
-    (coreNodeKeysBySchedule ppEx 10)
+    (coreNodeKeysBySchedule @era ppEx 10)
     []
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @era)
+    (nonce0 @(Crypto era))
     (NatNonce 1)
     zero
     0
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 10) 0 (KESPeriod 0))
 
 blockNonce ::
   forall era.
@@ -76,7 +76,10 @@ blockNonce ::
   Nonce
 blockNonce = getBlockNonce (blockEx1 @era)
 
-expectedStEx1 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
+expectedStEx1 ::
+  forall era.
+  (ShelleyTest era, ExMock (Crypto era)) =>
+  ChainState era
 expectedStEx1 =
   (evolveNonceUnfrozen (blockNonce @era))
     . (newLab blockEx1)

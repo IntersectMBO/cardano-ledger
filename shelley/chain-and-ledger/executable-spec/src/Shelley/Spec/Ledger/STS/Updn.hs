@@ -16,7 +16,7 @@ module Shelley.Spec.Ledger.STS.Updn
   )
 where
 
-import Cardano.Ledger.Era
+import Cardano.Ledger.Crypto
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import GHC.Generics (Generic)
@@ -24,7 +24,7 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Slot
 
-data UPDN era
+data UPDN crypto
 
 newtype UpdnEnv
   = -- | New nonce
@@ -34,20 +34,20 @@ newtype UpdnEnv
 data UpdnState = UpdnState Nonce Nonce
   deriving (Show, Eq)
 
-data UpdnPredicateFailure era -- No predicate failures
+data UpdnPredicateFailure crypto -- No predicate failures
   deriving (Generic, Show, Eq)
 
-instance NoThunks (UpdnPredicateFailure era)
+instance NoThunks (UpdnPredicateFailure crypto)
 
 instance
-  (Era era) =>
-  STS (UPDN era)
+  (Crypto crypto) =>
+  STS (UPDN crypto)
   where
-  type State (UPDN era) = UpdnState
-  type Signal (UPDN era) = SlotNo
-  type Environment (UPDN era) = UpdnEnv
-  type BaseM (UPDN era) = ShelleyBase
-  type PredicateFailure (UPDN era) = UpdnPredicateFailure era
+  type State (UPDN crypto) = UpdnState
+  type Signal (UPDN crypto) = SlotNo
+  type Environment (UPDN crypto) = UpdnEnv
+  type BaseM (UPDN crypto) = ShelleyBase
+  type PredicateFailure (UPDN crypto) = UpdnPredicateFailure crypto
   initialRules =
     [ pure
         ( UpdnState
@@ -59,7 +59,7 @@ instance
       initialNonce = mkNonceFromNumber 0
   transitionRules = [updTransition]
 
-updTransition :: Era era => TransitionRule (UPDN era)
+updTransition :: Crypto crypto => TransitionRule (UPDN crypto)
 updTransition = do
   TRC (UpdnEnv eta, UpdnState eta_v eta_c, s) <- judgmentContext
   ei <- liftSTS $ asks epochInfo

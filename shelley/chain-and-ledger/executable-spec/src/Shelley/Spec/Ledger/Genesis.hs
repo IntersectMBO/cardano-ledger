@@ -75,14 +75,14 @@ data ShelleyGenesisStaking era = ShelleyGenesisStaking
     --   The key in this map is the hash of the public key of the _pool_. This
     --   need not correspond to any payment or staking key, but must correspond
     --   to the cold key held by 'TPraosIsCoreNode'.
-    sgsPools :: !(Map (KeyHash 'StakePool era) (PoolParams era)),
+    sgsPools :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams era)),
     -- | Stake-holding key hash credentials and the pools to delegate that stake
     -- to. We require the raw staking key hash in order to:
     --
     -- - Avoid pointer addresses, which would be tricky when there's no slot or
     --   transaction to point to.
     -- - Avoid script credentials.
-    sgsStake :: !(Map (KeyHash 'Staking era) (KeyHash 'StakePool era))
+    sgsStake :: !(Map (KeyHash 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)))
   }
   deriving stock (Eq, Show, Generic)
 
@@ -115,7 +115,7 @@ data ShelleyGenesis era = ShelleyGenesis
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
     sgProtocolParams :: !(PParams era),
-    sgGenDelegs :: !(Map (KeyHash 'Genesis era) (GenDelegPair era)),
+    sgGenDelegs :: !(Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era))),
     sgInitialFunds :: !(Map (Addr era) Coin),
     sgStaking :: !(ShelleyGenesisStaking era)
   }

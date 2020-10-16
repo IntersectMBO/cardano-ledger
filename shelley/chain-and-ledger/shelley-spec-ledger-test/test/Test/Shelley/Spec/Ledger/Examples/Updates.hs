@@ -28,7 +28,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness, hashKey)
 import Shelley.Spec.Ledger.LedgerState (emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
@@ -54,6 +53,7 @@ import Shelley.Spec.Ledger.TxBody
     TxIn (..),
     TxOut (..),
     Wdrl (..),
+    eraIndTxBodyHash,
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
@@ -151,14 +151,14 @@ txbodyEx1 =
     (SJust (Update ppVotes1 (EpochNo 0)))
     SNothing
 
-txEx1 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx1 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx1 =
   Tx
     txbodyEx1
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx1)
+            (eraIndTxBodyHash $ txbodyEx1 @era)
             ( [asWitness Cast.alicePay]
                 <> [ asWitness . cold $ coreNodeIssuerKeys 0,
                      asWitness . cold $ coreNodeIssuerKeys 3,
@@ -172,16 +172,16 @@ blockEx1 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
-    (coreNodeKeysBySchedule ppEx 10)
+    (coreNodeKeysBySchedule @era ppEx 10)
     [txEx1]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @era)
+    (nonce0 @(Crypto era))
     (NatNonce 1)
     zero
     0
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 10) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 10) 0 (KESPeriod 0))
 
 expectedStEx1 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx1 =
@@ -226,14 +226,14 @@ txbodyEx2 =
     (SJust updateEx3B)
     SNothing
 
-txEx2 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx2 =
   Tx
     txbodyEx2
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx2)
+            (eraIndTxBodyHash $ txbodyEx2 @era)
             ( [asWitness Cast.alicePay]
                 <> [ asWitness . cold $ coreNodeIssuerKeys 1,
                      asWitness . cold $ coreNodeIssuerKeys 5
@@ -245,17 +245,17 @@ txEx2 =
 blockEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
-    (coreNodeKeysBySchedule ppEx 20)
+    (bhHash $ bheader @era blockEx1)
+    (coreNodeKeysBySchedule @era ppEx 20)
     [txEx2]
     (SlotNo 20)
     (BlockNo 2)
-    (nonce0 @era)
+    (nonce0 @(Crypto era))
     (NatNonce 2)
     zero
     1
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 20) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 20) 0 (KESPeriod 0))
 
 expectedStEx2 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx2 =
@@ -319,14 +319,14 @@ txbodyEx3 =
     (SJust (Update ppVotes3 (EpochNo 1)))
     SNothing
 
-txEx3 :: (ShelleyTest era, ExMock (Crypto era)) => Tx era
+txEx3 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Tx era
 txEx3 =
   Tx
     txbodyEx3
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated txbodyEx3)
+            (eraIndTxBodyHash $ txbodyEx3 @era)
             [asWitness Cast.alicePay, asWitness . cold $ coreNodeIssuerKeys 1]
       }
     SNothing
@@ -334,17 +334,17 @@ txEx3 =
 blockEx3 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx2)
-    (coreNodeKeysBySchedule ppEx 80)
+    (bhHash $ bheader @era blockEx2)
+    (coreNodeKeysBySchedule @era ppEx 80)
     [txEx3]
     (SlotNo 80)
     (BlockNo 3)
-    (nonce0 @era)
+    (nonce0 @(Crypto era))
     (NatNonce 3)
     zero
     4
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 80) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 80) 0 (KESPeriod 0))
 
 expectedStEx3 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
 expectedStEx3 =
@@ -372,8 +372,8 @@ epoch1Nonce = (chainCandidateNonce (expectedStEx3 @era)) ⭒ mkNonceFromNumber 1
 blockEx4 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => Block era
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx3)
-    (coreNodeKeysBySchedule ppEx 110)
+    (bhHash $ bheader @era blockEx3)
+    (coreNodeKeysBySchedule @era ppEx 110)
     []
     (SlotNo 110)
     (BlockNo 4)
@@ -382,7 +382,7 @@ blockEx4 =
     zero
     5
     0
-    (mkOCert (coreNodeKeysBySchedule ppEx 110) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @era ppEx 110) 0 (KESPeriod 0))
 
 ppExUpdated :: PParams era
 ppExUpdated = ppEx {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 123}

@@ -13,6 +13,7 @@ import qualified Cardano.Crypto.DSIGN as Crypto
 import Cardano.Crypto.Hash (MD5, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -109,7 +110,7 @@ rhoRange = [0, 0.05 .. 0.3]
 
 -- Helpers --
 
-keyPair :: Era era => Int -> KeyPair r era
+keyPair :: CC.Crypto crypto => Int -> KeyPair r crypto
 keyPair seed = KeyPair vk sk
   where
     vk = VKey (Crypto.deriveVerKeyDSIGN sk)
@@ -145,10 +146,10 @@ emptySetupArgs =
 
 data PoolInfo era = PoolInfo
   { params :: PoolParams era,
-    coldKey :: KeyPair 'StakePool era,
-    ownerKey :: KeyPair 'Staking era,
+    coldKey :: KeyPair 'StakePool (Crypto era),
+    ownerKey :: KeyPair 'Staking (Crypto era),
     ownerStake :: Coin,
-    rewardKey :: KeyPair 'Staking era,
+    rewardKey :: KeyPair 'Staking (Crypto era),
     members :: Map (Credential 'Staking era) Coin
   }
 

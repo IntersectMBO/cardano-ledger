@@ -12,12 +12,13 @@ module Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON
   )
 where
 
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Data.Aeson (decode, encode, fromJSON, toJSON)
 import Data.Proxy
 import Hedgehog (Property)
 import qualified Hedgehog
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto, C)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
 import Test.Tasty
 import Test.Tasty.Hedgehog
@@ -36,13 +37,13 @@ prop_roundtrip_Address_JSON _ =
     Hedgehog.tripping addr encode decode
 
 prop_roundtrip_GenesisDelegationPair_JSON ::
-  forall era.
-  Era era =>
-  Proxy era ->
+  forall crypto.
+  CC.Crypto crypto =>
+  Proxy crypto ->
   Property
 prop_roundtrip_GenesisDelegationPair_JSON _ =
   Hedgehog.property $ do
-    dp <- Hedgehog.forAll $ genGenesisDelegationPair @era
+    dp <- Hedgehog.forAll $ genGenesisDelegationPair @crypto
 
     Hedgehog.tripping dp toJSON fromJSON
     Hedgehog.tripping dp encode decode
@@ -83,5 +84,5 @@ tests =
       testProperty "fund pair round trip" $
         prop_roundtrip_FundPair_JSON @C Proxy,
       testProperty "delegation pair round trip" $
-        prop_roundtrip_GenesisDelegationPair_JSON @C Proxy
+        prop_roundtrip_GenesisDelegationPair_JSON @C_Crypto Proxy
     ]

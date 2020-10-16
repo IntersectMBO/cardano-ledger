@@ -22,6 +22,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Control.State.Transition.Extended (BaseM, Environment, PredicateFailure, STS, Signal, State, TRC (..))
+import Data.Coerce (coerce)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
@@ -104,7 +105,9 @@ import Test.Shelley.Spec.Ledger.Utils
 -- casting function which changes what the hash is of, without changing the
 -- hashing algorithm.
 --
-_assertScriptHashSizeMatchesAddrHashSize :: ScriptHash era -> KeyHash r era
+_assertScriptHashSizeMatchesAddrHashSize ::
+  ScriptHash era ->
+  KeyHash r (Crypto era)
 _assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
   KeyHash (Hash.castHash h)
 
@@ -173,9 +176,10 @@ makeTxBody inp addrCs wdrl =
     SNothing
 
 makeTx ::
+  forall era.
   (Mock (Crypto era), Shelley.TxBodyConstraints era) =>
   Core.TxBody era ->
-  [KeyPair 'Witness era] ->
+  [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash era) (MultiSig era) ->
   Maybe MetaData ->
   Tx era
@@ -183,7 +187,7 @@ makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
       mempty
-        { addrWits = makeWitnessesVKey (hashAnnotated txBody) keyPairs,
+        { addrWits = makeWitnessesVKey (coerce . hashAnnotated $ txBody) keyPairs,
           msigWits = msigs
         }
 
@@ -279,7 +283,7 @@ applyTxWithScript ::
   [MultiSig era] ->
   Wdrl era ->
   Coin ->
-  [KeyPair 'Witness era] ->
+  [KeyPair 'Witness (Crypto era)] ->
   Either [[PredicateFailure (UTXOW era)]] (UTxOState era)
 applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where

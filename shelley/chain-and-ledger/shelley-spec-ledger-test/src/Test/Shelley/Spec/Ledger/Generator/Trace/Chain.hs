@@ -94,7 +94,7 @@ instance
 -- For our purposes we can bootstrap the chain by just coercing the value.
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
-lastByronHeaderHash :: forall proxy era. Era era => proxy era -> HashHeader era
+lastByronHeaderHash :: forall proxy era. Era era => proxy era -> HashHeader (Crypto era)
 lastByronHeaderHash _ = HashHeader $ mkHash 0
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align

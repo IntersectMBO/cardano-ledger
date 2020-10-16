@@ -27,12 +27,22 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans, (?!), (?!:))
+import Control.State.Transition
+  ( Embed (..),
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+    liftSTS,
+    trans,
+    (?!),
+    (?!:),
+  )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
@@ -60,7 +70,11 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))
-import Shelley.Spec.Ledger.Serialization (decodeRecordSum, mapFromCBOR, mapToCBOR)
+import Shelley.Spec.Ledger.Serialization
+  ( decodeRecordSum,
+    mapFromCBOR,
+    mapToCBOR,
+  )
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
@@ -89,13 +103,13 @@ deriving stock instance
 
 data DelegsPredicateFailure era
   = DelegateeNotRegisteredDELEG
-      !(KeyHash 'StakePool era) -- target pool which is not registered
+      !(KeyHash 'StakePool (Crypto era)) -- target pool which is not registered
   | WithdrawalsNotInRewardsDELEGS
       !(Map (RewardAcnt era) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
   | DelplFailure (PredicateFailure (DELPL era)) -- Subtransition Failures
   deriving (Show, Eq, Generic)
 
-instance Crypto c => STS (DELEGS (ShelleyEra c)) where
+instance CryptoClass.Crypto c => STS (DELEGS (ShelleyEra c)) where
   type State (DELEGS (ShelleyEra c)) = DPState (ShelleyEra c)
   type Signal (DELEGS (ShelleyEra c)) = Seq (DCert (ShelleyEra c))
   type Environment (DELEGS (ShelleyEra c)) = DelegsEnv (ShelleyEra c)
@@ -215,7 +229,7 @@ delegsTransition = do
             ]
 
 instance
-  Crypto c =>
+  CryptoClass.Crypto c =>
   Embed (DELPL (ShelleyEra c)) (DELEGS (ShelleyEra c))
   where
   wrapFailed = DelplFailure

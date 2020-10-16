@@ -167,7 +167,7 @@ selectNextSlotWithLeader ::
   ChainState era ->
   -- Starting slot
   SlotNo ->
-  Maybe (SlotNo, ChainState era, AllIssuerKeys era 'BlockIssuer)
+  Maybe (SlotNo, ChainState era, AllIssuerKeys (Crypto era) 'BlockIssuer)
 selectNextSlotWithLeader
   (GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
   origChainState
@@ -180,7 +180,7 @@ selectNextSlotWithLeader
       selectNextSlotWithLeaderThisEpoch ::
         -- Slot number whence we begin our search
         SlotNo ->
-        Maybe (SlotNo, ChainState era, AllIssuerKeys era 'BlockIssuer)
+        Maybe (SlotNo, ChainState era, AllIssuerKeys (Crypto era) 'BlockIssuer)
       selectNextSlotWithLeaderThisEpoch fromSlot =
         findJust selectLeaderForSlot [fromSlot .. toSlot]
         where
@@ -195,7 +195,7 @@ selectNextSlotWithLeader
       -- Try to select a leader for the given slot
       selectLeaderForSlot ::
         SlotNo ->
-        Maybe (ChainState era, AllIssuerKeys era 'BlockIssuer)
+        Maybe (ChainState era, AllIssuerKeys (Crypto era) 'BlockIssuer)
       selectLeaderForSlot slotNo =
         (chainSt,)
           <$> case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of

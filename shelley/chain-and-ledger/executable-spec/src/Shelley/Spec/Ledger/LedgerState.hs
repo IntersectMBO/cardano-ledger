@@ -97,7 +97,8 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyBased)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
@@ -106,6 +107,7 @@ import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
+import Data.Coerce (coerce)
 import Data.Foldable (fold, toList)
 import Data.Group (invert)
 import Data.Int (Int64)
@@ -200,7 +202,8 @@ import Shelley.Spec.Ledger.Tx
     extractKeyHashWitnessSet,
   )
 import Shelley.Spec.Ledger.TxBody
-  ( Ix,
+  ( EraIndependentTxBody,
+    Ix,
     PoolCert (..),
     PoolParams (..),
     Ptr (..),
@@ -229,21 +232,21 @@ type KeyPairs era = [(KeyPair 'Payment era, KeyPair 'Staking era)]
 type RewardAccounts era =
   Map (Credential 'Staking era) Coin
 
-data FutureGenDeleg era = FutureGenDeleg
+data FutureGenDeleg crypto = FutureGenDeleg
   { fGenDelegSlot :: !SlotNo,
-    fGenDelegGenKeyHash :: !(KeyHash 'Genesis era)
+    fGenDelegGenKeyHash :: !(KeyHash 'Genesis crypto)
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoThunks (FutureGenDeleg era)
+instance NoThunks (FutureGenDeleg crypto)
 
-instance NFData (FutureGenDeleg era)
+instance NFData (FutureGenDeleg crypto)
 
-instance Era era => ToCBOR (FutureGenDeleg era) where
+instance CC.Crypto crypto => ToCBOR (FutureGenDeleg crypto) where
   toCBOR (FutureGenDeleg a b) =
     encodeListLen 2 <> toCBOR a <> toCBOR b
 
-instance Era era => FromCBOR (FutureGenDeleg era) where
+instance CC.Crypto crypto => FromCBOR (FutureGenDeleg crypto) where
   fromCBOR = do
     decodeRecordNamed "FutureGenDeleg" (const 2) $ do
       a <- fromCBOR
@@ -279,13 +282,13 @@ data DState era = DState
   { -- | The active reward accounts.
     _rewards :: !(RewardAccounts era),
     -- | The current delegations.
-    _delegations :: !(Map (Credential 'Staking era) (KeyHash 'StakePool era)),
+    _delegations :: !(Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era))),
     -- | The pointed to hash keys.
     _ptrs :: !(Bimap Ptr (Credential 'Staking era)),
     -- | future genesis key delegations
-    _fGenDelegs :: !(Map (FutureGenDeleg era) (GenDelegPair era)),
+    _fGenDelegs :: !(Map (FutureGenDeleg (Crypto era)) (GenDelegPair (Crypto era))),
     -- | Genesis key delegations
-    _genDelegs :: !(GenDelegs era),
+    _genDelegs :: !(GenDelegs (Crypto era)),
     -- | Instantaneous Rewards
     _irwd :: !(InstantaneousRewards era)
   }
@@ -319,11 +322,11 @@ instance Era era => FromCBOR (DState era) where
 -- | Current state of staking pools and their certificate counters.
 data PState era = PState
   { -- | The pool parameters.
-    _pParams :: !(Map (KeyHash 'StakePool era) (PoolParams era)),
+    _pParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams era)),
     -- | The future pool parameters.
-    _fPParams :: !(Map (KeyHash 'StakePool era) (PoolParams era)),
+    _fPParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams era)),
     -- | A map of retiring stake pools to the epoch when they retire.
-    _retiring :: !(Map (KeyHash 'StakePool era) EpochNo)
+    _retiring :: !(Map (KeyHash 'StakePool (Crypto era)) EpochNo)
   }
   deriving (Show, Eq, Generic)
 
@@ -581,7 +584,7 @@ data NewEpochState era = NewEpochState
     -- | Possible reward update
     nesRu :: !(StrictMaybe (RewardUpdate era)),
     -- | Stake distribution within the stake pool
-    nesPd :: !(PoolDistr era)
+    nesPd :: !(PoolDistr (Crypto era))
   }
   deriving (Generic)
 
@@ -615,7 +618,7 @@ instance
 
 getGKeys ::
   NewEpochState era ->
-  Set (KeyHash 'Genesis era)
+  Set (KeyHash 'Genesis (Crypto era))
 getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ = nes
@@ -659,7 +662,7 @@ instance
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
-  Map (KeyHash 'Genesis era) (GenDelegPair era) ->
+  Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   UTxO era ->
   LedgerState era
 genesisState genDelegs0 utxo0 =
@@ -736,7 +739,7 @@ produced ::
     HasField "txfee" (Core.TxBody era) Coin
   ) =>
   PParams era ->
-  Map (KeyHash 'StakePool era) (PoolParams era) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
   Core.TxBody era ->
   Core.Value era
 produced pp stakePools tx =
@@ -777,7 +780,7 @@ consumed pp u tx =
     withdrawals = fold . unWdrl $ getField @"wdrls" tx
 
 newtype WitHashes era = WitHashes
-  {unWitHashes :: Set (KeyHash 'Witness era)}
+  {unWitHashes :: Set (KeyHash 'Witness (Crypto era))}
   deriving (Eq, Generic)
   deriving (Show) via Quiet (WitHashes era)
 
@@ -813,7 +816,7 @@ witsVKeyNeeded ::
   ) =>
   UTxO era ->
   Tx era ->
-  GenDelegs era ->
+  GenDelegs (Crypto era) ->
   WitHashes era
 witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
   WitHashes $
@@ -823,7 +826,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
       `Set.union` wdrlAuthors
       `Set.union` updateKeys
   where
-    inputAuthors :: Set (KeyHash 'Witness era)
+    inputAuthors :: Set (KeyHash 'Witness (Crypto era))
     inputAuthors = foldr accum Set.empty (getField @"inputs" txbody)
       where
         accum txin ans =
@@ -833,11 +836,11 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
             Just (TxOut (AddrBootstrap bootAddr) _) ->
               Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
             _other -> ans
-    wdrlAuthors :: Set (KeyHash 'Witness era)
+    wdrlAuthors :: Set (KeyHash 'Witness (Crypto era))
     wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (getField @"wdrls" txbody))
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
-    owners :: Set (KeyHash 'Witness era)
+    owners :: Set (KeyHash 'Witness (Crypto era))
     owners = foldr accum Set.empty (getField @"certs" txbody)
       where
         accum (DCertPool (RegPool pool)) ans =
@@ -852,22 +855,22 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
     -- key reg requires no witness but this is already filtered outby requiresVKeyWitness
     -- before the call to `cwitness`, so this error should never be reached.
 
-    certAuthors :: Set (KeyHash 'Witness era)
+    certAuthors :: Set (KeyHash 'Witness (Crypto era))
     certAuthors = foldr accum Set.empty (getField @"certs" txbody)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
-    updateKeys :: Set (KeyHash 'Witness era)
+    updateKeys :: Set (KeyHash 'Witness (Crypto era))
     updateKeys = asWitness `Set.map` propWits (txup tx) genDelegs
 
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 verifiedWits ::
   ( Shelley.TxBodyConstraints era,
-    DSignable era (Hash era (Core.TxBody era))
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
   Tx era ->
-  Either [VKey 'Witness era] ()
+  Either [VKey 'Witness (Crypto era)] ()
 verifiedWits (Tx txbody wits _) =
   case (failed <> failedBootstrap) of
     [] -> Right ()
@@ -877,20 +880,20 @@ verifiedWits (Tx txbody wits _) =
     failed =
       wvkKey
         <$> filter
-          (not . verifyWitVKey (hashAnnotated txbody))
+          (not . verifyWitVKey (coerce . hashAnnotated $ txbody))
           (Set.toList $ addrWits wits)
     failedBootstrap =
       bwKey
         <$> filter
-          (not . verifyBootstrapWit (hashAnnotated txbody))
+          (not . verifyBootstrapWit (coerce . hashAnnotated $ txbody))
           (Set.toList $ bootWits wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits ::
   Maybe (Update era) ->
-  GenDelegs era ->
-  Set (KeyHash 'Witness era)
+  GenDelegs (Crypto era) ->
+  Set (KeyHash 'Witness (Crypto era))
 propWits Nothing _ = Set.empty
 propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys
@@ -949,7 +952,7 @@ stakeDistr u ds ps =
     PState poolParams _ _ = ps
     stakeRelation :: Map (Credential 'Staking era) Coin
     stakeRelation = aggregateUtxoCoinByCredential (forwards ptrs') u rewards'
-    activeDelegs :: Map (Credential 'Staking era) (KeyHash 'StakePool era)
+    activeDelegs :: Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era))
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
 
 -- | Apply a reward update
@@ -988,7 +991,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
 updateNonMypopic ::
   NonMyopic era ->
   Coin ->
-  Map (KeyHash 'StakePool era) Likelihood ->
+  Map (KeyHash 'StakePool (Crypto era)) Likelihood ->
   NonMyopic era
 updateNonMypopic nm rPot newLikelihoods =
   nm

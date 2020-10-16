@@ -20,7 +20,8 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
-import Cardano.Ledger.Crypto (Crypto)
+import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -60,7 +61,8 @@ import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
-import Shelley.Spec.Ledger.Tx (Tx, TxBody)
+import Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data BBODY era
 
@@ -81,8 +83,8 @@ data BbodyPredicateFailure era
       !Int -- Actual Body Size
       !Int -- Claimed Body Size in Header
   | InvalidBodyHashBBODY
-      !(HashBBody era) -- Actual Hash
-      !(HashBBody era) -- Claimed Hash
+      !(HashBBody (Crypto era)) -- Actual Hash
+      !(HashBBody (Crypto era)) -- Claimed Hash
   | LedgersFailure (PredicateFailure (LEDGERS era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -105,8 +107,8 @@ instance
   NoThunks (BbodyPredicateFailure era)
 
 instance
-  ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+  ( CryptoClass.Crypto c,
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   STS (BBODY (ShelleyEra c))
   where
@@ -181,8 +183,8 @@ bbodyTransition =
             )
 
 instance
-  ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+  ( CryptoClass.Crypto c,
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   Embed (LEDGERS (ShelleyEra c)) (BBODY (ShelleyEra c))
   where

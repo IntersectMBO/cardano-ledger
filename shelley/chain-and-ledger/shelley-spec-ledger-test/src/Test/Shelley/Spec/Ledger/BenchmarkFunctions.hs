@@ -46,7 +46,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash,
@@ -88,6 +87,7 @@ import Shelley.Spec.Ledger.TxBody
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
+    eraIndTxBodyHash,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
@@ -123,12 +123,12 @@ instance Cardano.Ledger.Crypto.Crypto B_Crypto where
 
 -- =========================================================
 
-aliceStake :: KeyPair 'Staking B
+aliceStake :: KeyPair 'Staking B_Crypto
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
 
-alicePay :: KeyPair 'Payment B
+alicePay :: KeyPair 'Payment B_Crypto
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
@@ -201,7 +201,7 @@ txSpendOneUTxO =
   Tx
     txbSpendOneUTxO
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbSpendOneUTxO) [asWitness alicePay]
+      { addrWits = makeWitnessesVKey (eraIndTxBodyHash txbSpendOneUTxO) [asWitness alicePay]
       }
     SNothing
 
@@ -218,20 +218,20 @@ ledgerSpendOneGivenUTxO state = testLEDGER (state, emptyDPState) txSpendOneUTxO 
 
 -- Create stake key pairs, corresponding to seeds
 -- (start, 0, 0, 0, 0) through (end, 0, 0, 0, 0)
-stakeKeys :: Word64 -> Word64 -> [KeyPair 'Staking B]
+stakeKeys :: Word64 -> Word64 -> [KeyPair 'Staking B_Crypto]
 stakeKeys start end = fmap (\w -> mkKeyPair' (w, 0, 0, 0, 0)) [start .. end]
 
-stakeKeyOne :: KeyPair 'Staking B
+stakeKeyOne :: KeyPair 'Staking B_Crypto
 stakeKeyOne = mkKeyPair' (1, 0, 0, 0, 0)
 
-stakeKeyToCred :: KeyPair 'Staking B -> Credential 'Staking B
+stakeKeyToCred :: KeyPair 'Staking B_Crypto -> Credential 'Staking B
 stakeKeyToCred = KeyHashObj . hashKey . vKey
 
 firstStakeKeyCred :: Credential 'Staking B
 firstStakeKeyCred = stakeKeyToCred stakeKeyOne
 
 -- Create stake key registration certificates
-stakeKeyRegistrations :: [KeyPair 'Staking B] -> StrictSeq (DCert B)
+stakeKeyRegistrations :: [KeyPair 'Staking B_Crypto] -> StrictSeq (DCert B)
 stakeKeyRegistrations keys =
   StrictSeq.fromList $
     fmap (DCertDeleg . RegKey . (KeyHashObj . hashKey . vKey)) keys
@@ -252,18 +252,18 @@ txbFromCerts ix regCerts =
 
 makeSimpleTx ::
   TxBody B ->
-  [KeyPair 'Witness B] ->
+  [KeyPair 'Witness B_Crypto] ->
   Tx B
 makeSimpleTx body keysAddr =
   Tx
     body
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated body) keysAddr
+      { addrWits = makeWitnessesVKey (eraIndTxBodyHash body) keysAddr
       }
     SNothing
 
 -- Create a transaction that registers stake credentials.
-txRegStakeKeys :: Natural -> [KeyPair 'Staking B] -> Tx B
+txRegStakeKeys :: Natural -> [KeyPair 'Staking B_Crypto] -> Tx B
 txRegStakeKeys ix keys =
   makeSimpleTx
     (txbFromCerts ix $ stakeKeyRegistrations keys)
@@ -384,22 +384,22 @@ ledgerRewardWithdrawals x y state = testLEDGER state (txWithdrawals x y) ledgerE
 
 -- Create stake pool key pairs, corresponding to seeds
 -- (start, 0, 0, 0, 0) through (end, 0, 0, 0, 0)
-poolColdKeys :: Word64 -> Word64 -> [KeyPair 'StakePool B]
+poolColdKeys :: Word64 -> Word64 -> [KeyPair 'StakePool B_Crypto]
 poolColdKeys start end = fmap (\w -> mkKeyPair' (w, 1, 0, 0, 0)) [start .. end]
 
-firstStakePool :: KeyPair 'StakePool B
+firstStakePool :: KeyPair 'StakePool B_Crypto
 firstStakePool = mkKeyPair' (1, 1, 0, 0, 0)
 
-mkPoolKeyHash :: KeyPair 'StakePool B -> KeyHash 'StakePool B
+mkPoolKeyHash :: KeyPair 'StakePool B_Crypto -> KeyHash 'StakePool B_Crypto
 mkPoolKeyHash = hashKey . vKey
 
-firstStakePoolKeyHash :: KeyHash 'StakePool B
+firstStakePoolKeyHash :: KeyHash 'StakePool B_Crypto
 firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 
-vrfKeyHash :: Hash B (VerKeyVRF B)
+vrfKeyHash :: Hash B_Crypto (VerKeyVRF B_Crypto)
 vrfKeyHash = hashVerKeyVRF . snd . mkVRFKeyPair $ (0, 0, 0, 0, 0)
 
-mkPoolParameters :: KeyPair 'StakePool B -> PoolParams B
+mkPoolParameters :: KeyPair 'StakePool B_Crypto -> PoolParams B
 mkPoolParameters keys =
   PoolParams
     { _poolPubKey = (hashKey . vKey) keys,
@@ -414,11 +414,11 @@ mkPoolParameters keys =
     }
 
 -- Create stake pool registration certs
-poolRegCerts :: [KeyPair 'StakePool B] -> StrictSeq (DCert B)
+poolRegCerts :: [KeyPair 'StakePool B_Crypto] -> StrictSeq (DCert B)
 poolRegCerts = StrictSeq.fromList . fmap (DCertPool . RegPool . mkPoolParameters)
 
 -- Create a transaction that registers stake pools.
-txRegStakePools :: Natural -> [KeyPair 'StakePool B] -> Tx B
+txRegStakePools :: Natural -> [KeyPair 'StakePool B_Crypto] -> Tx B
 txRegStakePools ix keys =
   makeSimpleTx
     (txbFromCerts ix $ poolRegCerts keys)

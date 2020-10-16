@@ -58,6 +58,7 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.Chain
     registerGenesisStaking,
   )
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
+import Cardano.Ledger.Era (Era(Crypto))
 
 -- | Generate a chain state at a given epoch. Since we are only concerned about
 -- rewards, this will populate the chain with empty blocks (only issued by the
@@ -157,7 +158,7 @@ genChainInEpoch epoch = do
       go !acc [] = acc
       go !acc xs' = let (a,b) = splitAt n xs' in go (a : acc) b
 
-    addrToKeyHash :: Addr era -> Maybe (KeyHash 'Staking era)
+    addrToKeyHash :: Addr era -> Maybe (KeyHash 'Staking (Crypto era))
     addrToKeyHash (Addr _ _ (StakeRefBase (KeyHashObj kh))) = Just kh
     addrToKeyHash _ = Nothing
 

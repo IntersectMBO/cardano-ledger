@@ -32,6 +32,7 @@ import Shelley.Spec.Ledger.Coin (CompactForm (CompactCoin))
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.Rewards
+import Shelley.Spec.Ledger.STS.Chain (pparamsToChainChecksData)
 import Shelley.Spec.Ledger.Slot
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
@@ -114,7 +115,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
     -- instigate the hard fork. We just have to make sure that the hard-coded
     -- Shelley genesis contains the same genesis and delegation verification
     -- keys, but hashed with the right algorithm.
-    genDelegs :: GenDelegs (ShelleyEra c)
+    genDelegs :: GenDelegs c
     genDelegs = GenDelegs $ sgGenDelegs genesisShelley
 
     reserves :: Coin
@@ -160,10 +161,12 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
 mkInitialShelleyLedgerView ::
   forall c.
   ShelleyGenesis (ShelleyEra c) ->
-  LedgerView (ShelleyEra c)
+  LedgerView c
 mkInitialShelleyLedgerView genesisShelley =
   LedgerView
-    { lvProtParams = sgProtocolParams genesisShelley,
+    { lvD = _d . sgProtocolParams $ genesisShelley,
+      lvExtraEntropy = _extraEntropy . sgProtocolParams $ genesisShelley,
       lvPoolDistr = PoolDistr Map.empty,
-      lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley
+      lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
+      lvChainChecks = pparamsToChainChecksData . sgProtocolParams $ genesisShelley
     }

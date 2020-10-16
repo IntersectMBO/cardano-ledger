@@ -344,7 +344,7 @@ instance
 evalNativeMultiSigScript ::
   Era era =>
   MultiSig era ->
-  Set (KeyHash 'Witness era) ->
+  Set (KeyHash 'Witness (Crypto era)) ->
   Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -376,7 +376,7 @@ txwitsScript = msigWits . _witnessSet
 extractKeyHashWitnessSet ::
   forall (r :: KeyRole) era.
   [Credential r era] ->
-  Set (KeyHash 'Witness era)
+  Set (KeyHash 'Witness (Crypto era))
 extractKeyHashWitnessSet credentials = foldr accum Set.empty credentials
   where
     accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans

@@ -35,6 +35,7 @@ import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Shelley as Shelley
@@ -114,9 +115,11 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     geKeySpace,
     ksCoreNodes,
     mkBlock,
+    mkBlockHeader,
     mkOCert,
   )
-import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
+import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
+import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
 import qualified Test.Shelley.Spec.Ledger.Generator.Update as Update
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
@@ -146,7 +149,7 @@ instance
   where
   arbitrary = do
     let KeySpace_ {ksCoreNodes} = geKeySpace (genEnv p)
-    prevHash <- arbitrary :: Gen (HashHeader era)
+    prevHash <- arbitrary :: Gen (HashHeader (Crypto era))
     allPoolKeys <- elements (map snd ksCoreNodes)
     txs <- arbitrary
     curSlotNo <- SlotNo <$> choose (0, 10)
@@ -170,21 +173,40 @@ instance
       p :: Proxy era
       p = Proxy
 
-instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (BHeader era) where
+instance Mock crypto => Arbitrary (BHeader crypto) where
   arbitrary = do
-    res <- arbitrary :: Gen (Block era)
-    return $ case res of
-      Block header _ -> header
+    prevHash <- arbitrary :: Gen (HashHeader crypto)
+    allPoolKeys <- elements (map snd (coreNodeKeys defaultConstants))
+    curSlotNo <- SlotNo <$> choose (0, 10)
+    curBlockNo <- BlockNo <$> choose (0, 100)
+    epochNonce <- arbitrary :: Gen Nonce
+    bodySize <- arbitrary
+    bodyHash <- arbitrary
+    let kesPeriod = 1
+        keyRegKesPeriod = 1
+        ocert = mkOCert allPoolKeys 1 (KESPeriod kesPeriod)
+    return $
+      mkBlockHeader
+        prevHash
+        allPoolKeys
+        curSlotNo
+        curBlockNo
+        epochNonce
+        kesPeriod
+        keyRegKesPeriod
+        ocert
+        bodySize
+        bodyHash
 
-instance DSIGNAlgorithm era => Arbitrary (SignedDSIGN era a) where
+instance DSIGNAlgorithm crypto => Arbitrary (SignedDSIGN crypto a) where
   arbitrary =
     SignedDSIGN . fromJust . rawDeserialiseSigDSIGN
-      <$> (genByteString . fromIntegral $ sizeSigDSIGN (Proxy @era))
+      <$> (genByteString . fromIntegral $ sizeSigDSIGN (Proxy @crypto))
 
-instance DSIGNAlgorithm era => Arbitrary (VerKeyDSIGN era) where
+instance DSIGNAlgorithm crypto => Arbitrary (VerKeyDSIGN crypto) where
   arbitrary =
     fromJust . rawDeserialiseVerKeyDSIGN
-      <$> (genByteString . fromIntegral $ sizeVerKeyDSIGN (Proxy @era))
+      <$> (genByteString . fromIntegral $ sizeVerKeyDSIGN (Proxy @crypto))
 
 instance
   (Era era, MockGen era) =>
@@ -197,8 +219,11 @@ instance
     attributes <- arbitrary
     pure $ BootstrapWitness key sig chainCode attributes
 
-instance Era era => Arbitrary (HashHeader era) where
+instance CC.Crypto crypto => Arbitrary (HashHeader crypto) where
   arbitrary = HashHeader <$> genHash
+
+instance CC.Crypto crypto => Arbitrary (HashBBody crypto) where
+  arbitrary = UnsafeHashBBody <$> genHash
 
 instance (Typeable kr, Era era, Mock (Crypto era)) => Arbitrary (WitVKey era kr) where
   arbitrary =
@@ -310,8 +335,8 @@ instance Arbitrary UnitInterval where
   arbitrary = fromJust . mkUnitInterval . (% 100) <$> choose (1, 99)
 
 instance
-  (Era era) =>
-  Arbitrary (KeyHash a era)
+  (CC.Crypto crypto) =>
+  Arbitrary (KeyHash a crypto)
   where
   arbitrary = KeyHash <$> genHash
 
@@ -446,7 +471,7 @@ instance Arbitrary Network where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Arbitrary (VerKeyDSIGN (DSIGN (Crypto era)))) => Arbitrary (VKey kd era) where
+instance (Arbitrary (VerKeyDSIGN (DSIGN crypto))) => Arbitrary (VKey kd crypto) where
   arbitrary = VKey <$> arbitrary
 
 instance Arbitrary ProtVer where
@@ -466,7 +491,7 @@ instance Arbitrary STS.TicknState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Era era => Arbitrary (STS.PrtclState era) where
+instance CC.Crypto crypto => Arbitrary (STS.PrtclState crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -482,15 +507,15 @@ instance (Era era, Mock (Crypto era)) => Arbitrary (InstantaneousRewards era) wh
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (FutureGenDeleg era) where
+instance (Mock crypto) => Arbitrary (FutureGenDeleg crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (GenDelegs era) where
+instance (Mock crypto) => Arbitrary (GenDelegs crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (GenDelegPair era) where
+instance (Mock crypto) => Arbitrary (GenDelegPair crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -551,7 +576,7 @@ instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (NewEpochState era) w
 instance Era era => Arbitrary (BlocksMade era) where
   arbitrary = BlocksMade <$> arbitrary
 
-instance Era era => Arbitrary (PoolDistr era) where
+instance CC.Crypto crypto => Arbitrary (PoolDistr crypto) where
   arbitrary =
     PoolDistr . Map.fromList
       <$> listOf ((,) <$> arbitrary <*> genVal)
@@ -581,7 +606,7 @@ genPParams ::
   Gen (PParams era)
 genPParams p = Update.genPParams (geConstants (genEnv p))
 
-instance Era era => Arbitrary (OBftSlot era) where
+instance CC.Crypto crypto => Arbitrary (OBftSlot crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 

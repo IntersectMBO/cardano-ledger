@@ -26,7 +26,7 @@ import Cardano.Binary
     encodeNull,
     peekTokenType,
   )
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Crypto
 import Cardano.Slotting.Slot
 import Control.DeepSeq (NFData)
 import Data.Set (Set)
@@ -40,21 +40,21 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.Slot
 
-data OBftSlot era
+data OBftSlot crypto
   = NonActiveSlot
-  | ActiveSlot !(KeyHash 'Genesis era)
+  | ActiveSlot !(KeyHash 'Genesis crypto)
   deriving (Show, Eq, Ord, Generic)
 
 instance
-  Era era =>
-  ToCBOR (OBftSlot era)
+  Crypto crypto =>
+  ToCBOR (OBftSlot crypto)
   where
   toCBOR NonActiveSlot = encodeNull
   toCBOR (ActiveSlot k) = toCBOR k
 
 instance
-  Era era =>
-  FromCBOR (OBftSlot era)
+  Crypto crypto =>
+  FromCBOR (OBftSlot crypto)
   where
   fromCBOR = do
     peekTokenType >>= \case
@@ -63,9 +63,9 @@ instance
         pure NonActiveSlot
       _ -> ActiveSlot <$> fromCBOR
 
-instance NoThunks (OBftSlot era)
+instance NoThunks (OBftSlot crypto)
 
-instance NFData (OBftSlot era)
+instance NFData (OBftSlot crypto)
 
 isOverlaySlot ::
   SlotNo -> -- starting slot
@@ -81,11 +81,11 @@ isOverlaySlot firstSlotNo dval slot = step s < step (s + 1)
 
 classifyOverlaySlot ::
   SlotNo -> -- first slot of the epoch
-  Set (KeyHash 'Genesis era) -> -- genesis Nodes
+  Set (KeyHash 'Genesis crypto) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   SlotNo -> -- overlay slot to classify
-  OBftSlot era
+  OBftSlot crypto
 classifyOverlaySlot firstSlotNo gkeys dval ascValue slot =
   if isActive
     then
@@ -101,11 +101,11 @@ classifyOverlaySlot firstSlotNo gkeys dval ascValue slot =
 
 lookupInOverlaySchedule ::
   SlotNo -> -- first slot of the epoch
-  Set (KeyHash 'Genesis era) -> -- genesis Nodes
+  Set (KeyHash 'Genesis crypto) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   SlotNo -> -- slot to lookup
-  Maybe (OBftSlot era)
+  Maybe (OBftSlot crypto)
 lookupInOverlaySchedule firstSlotNo gkeys dval ascValue slot =
   if isOverlaySlot firstSlotNo dval slot
     then Just $ classifyOverlaySlot firstSlotNo gkeys dval ascValue slot

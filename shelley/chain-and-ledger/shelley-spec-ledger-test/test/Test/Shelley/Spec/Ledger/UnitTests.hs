@@ -1,20 +1,22 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ConstraintKinds #-}
 
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
+import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Crypto (VRF)
-import Cardano.Ledger.Era (Era(..))
+import Cardano.Ledger.Crypto (DSIGN, VRF)
+import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Val ((<+>), (<->))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -44,7 +46,6 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -84,7 +85,7 @@ import Shelley.Spec.Ledger.Tx
     _ttl,
   )
 import Shelley.Spec.Ledger.TxBody
-  ( PoolMetaData (..),
+  (eraIndTxBodyHash,  PoolMetaData (..),
     PoolParams (..),
     Wdrl (..),
     _poolCost,
@@ -101,13 +102,12 @@ import Shelley.Spec.Ledger.TxBody
     pattern RewardAcnt,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
-import Cardano.Ledger.Val((<->), (<+>))
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( testBootstrapNotSpending,
     testBootstrapSpending,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes(C, C_Crypto)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
@@ -119,34 +119,34 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-import Cardano.Crypto.DSIGN.Class(SignKeyDSIGN,VerKeyDSIGN)
-import Cardano.Ledger.Crypto(DSIGN)
-
 -- ========================================================================================
--- |- This constraint says we can coerce Numbers into a signable keys
-type NumKey era = (Num (SignKeyDSIGN (DSIGN (Crypto era))), Num (VerKeyDSIGN (DSIGN (Crypto era))))
 
+-- | - This constraint says we can coerce Numbers into a signable keys
+type NumKey crypto =
+  ( Num (SignKeyDSIGN (DSIGN crypto)),
+    Num (VerKeyDSIGN (DSIGN crypto))
+  )
 
-alicePay :: NumKey era => KeyPair 'Payment era
+alicePay :: NumKey crypto => KeyPair 'Payment crypto
 alicePay = KeyPair 1 1
 
-aliceStake :: NumKey era => KeyPair 'Staking era
+aliceStake :: NumKey crypto => KeyPair 'Staking crypto
 aliceStake = KeyPair 2 2
 
-aliceAddr :: (NumKey era,Era era) => Addr era
+aliceAddr :: (NumKey (Crypto era), Era era) => Addr era
 aliceAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey alicePay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay ::  NumKey era => KeyPair 'Payment era
+bobPay :: NumKey era => KeyPair 'Payment era
 bobPay = KeyPair 3 3
 
 bobStake :: NumKey era => KeyPair 'Staking era
 bobStake = KeyPair 4 4
 
-bobAddr ::  (NumKey era,Era era) => Addr era
+bobAddr :: (NumKey (Crypto era), Era era) => Addr era
 bobAddr =
   Addr
     Testnet
@@ -334,7 +334,7 @@ data AliceToBob = AliceToBob
     refunds :: Coin,
     certs :: [DCert C],
     ttl :: SlotNo,
-    signers :: [KeyPair 'Witness C]
+    signers :: [KeyPair 'Witness C_Crypto]
   }
 
 aliceGivesBobLovelace :: AliceToBob -> Tx C
@@ -365,7 +365,7 @@ aliceGivesBobLovelace
           ttl
           SNothing
           SNothing
-      awits = makeWitnessesVKey (hashAnnotated txbody) signers
+      awits = makeWitnessesVKey (eraIndTxBodyHash txbody) signers
 
 utxoState :: UTxOState C
 utxoState =
@@ -453,8 +453,8 @@ testSpendNotOwnedUTxO =
           (SlotNo 100)
           SNothing
           SNothing
-      aliceWit = makeWitnessVKey (hashAnnotated txbody) alicePay
-      tx = Tx txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
+      aliceWit = makeWitnessVKey (eraIndTxBodyHash txbody) alicePay
+      tx = Tx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
@@ -485,8 +485,8 @@ testWitnessWrongUTxO =
           (SlotNo 101)
           SNothing
           SNothing
-      aliceWit = makeWitnessVKey (hashAnnotated tx2body) alicePay
-      tx = Tx txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
+      aliceWit = makeWitnessVKey (eraIndTxBodyHash tx2body) alicePay
+      tx = Tx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
@@ -511,7 +511,7 @@ testEmptyInputSet =
           (SlotNo 0)
           SNothing
           SNothing
-      wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb) [aliceStake]}
+      wits = mempty {addrWits = makeWitnessesVKey (eraIndTxBodyHash txb) [aliceStake]}
       tx = Tx txb wits SNothing
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
@@ -571,8 +571,8 @@ testInvalidWintess =
           SNothing
           SNothing
       txb' = txb {_ttl = SlotNo 2}
-      wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb') [alicePay]}
-      tx = Tx txb wits SNothing
+      wits = mempty {addrWits = makeWitnessesVKey (eraIndTxBodyHash txb') [alicePay]}
+      tx = Tx @C txb wits SNothing
       errs =
         [ UtxowFailure $
             InvalidWitnessesUTXOW
@@ -596,8 +596,8 @@ testWithdrawalNoWit =
           (SlotNo 0)
           SNothing
           SNothing
-      wits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashAnnotated txb) alicePay}
-      tx = Tx txb wits SNothing
+      wits = mempty {addrWits = Set.singleton $ makeWitnessVKey (eraIndTxBodyHash txb) alicePay}
+      tx = Tx @C txb wits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
         [ UtxowFailure . MissingVKeyWitnessesUTXOW $ WitHashes missing
@@ -625,12 +625,12 @@ testWithdrawalWrongAmt =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated txb)
+                (eraIndTxBodyHash txb)
                 [asWitness alicePay, asWitness bobStake]
           }
       rAcnt = mkVKeyRwdAcnt Testnet bobStake
       dpState' = addReward dpState (getRwdCred rAcnt) (Coin 10)
-      tx = Tx txb wits SNothing
+      tx = Tx @C txb wits SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
    in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
 
@@ -650,7 +650,7 @@ testOutputTooSmall =
           signers = [asWitness alicePay]
         }
 
-alicePoolColdKeys :: KeyPair 'StakePool C
+alicePoolColdKeys :: KeyPair 'StakePool C_Crypto
 alicePoolColdKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)

@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -60,10 +61,14 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Blocks made
 newtype BlocksMade era = BlocksMade
-  { unBlocksMade :: Map (KeyHash 'StakePool era) Natural
+  { unBlocksMade :: Map (KeyHash 'StakePool (Crypto era)) Natural
   }
-  deriving (Eq, ToCBOR, FromCBOR, NoThunks, Generic, NFData)
+  deriving (Eq, NoThunks, Generic, NFData)
   deriving (Show) via Quiet (BlocksMade era)
+
+deriving instance (Era era) => ToCBOR (BlocksMade era)
+
+deriving instance (Era era) => FromCBOR (BlocksMade era)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake era = Stake
@@ -104,8 +109,8 @@ aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
 
 -- | Get stake of one pool
 poolStake ::
-  KeyHash 'StakePool era ->
-  Map (Credential 'Staking era) (KeyHash 'StakePool era) ->
+  KeyHash 'StakePool (Crypto era) ->
+  Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era)) ->
   Stake era ->
   Stake era
 poolStake hk delegs (Stake stake) =
@@ -115,7 +120,7 @@ poolStake hk delegs (Stake stake) =
 obligation ::
   PParams era ->
   Map (Credential 'Staking era) Coin ->
-  Map (KeyHash 'StakePool era) (PoolParams era) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
   Coin
 obligation pp rewards stakePools =
   (length rewards <×> _keyDeposit pp) <+> (length stakePools <×> _poolDeposit pp)
@@ -137,8 +142,8 @@ maxPool pc r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
 -- | Snapshot of the stake distribution.
 data SnapShot era = SnapShot
   { _stake :: !(Stake era),
-    _delegations :: !(Map (Credential 'Staking era) (KeyHash 'StakePool era)),
-    _poolParams :: !(Map (KeyHash 'StakePool era) (PoolParams era))
+    _delegations :: !(Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era))),
+    _poolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams era))
   }
   deriving (Show, Eq, Generic)
 

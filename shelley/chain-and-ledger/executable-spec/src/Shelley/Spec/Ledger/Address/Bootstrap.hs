@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -11,6 +12,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -51,6 +53,7 @@ import Cardano.Ledger.Era
 import Cardano.Prelude (panic)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
+import Data.Coerce (coerce)
 import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
@@ -67,7 +70,8 @@ import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.Keys as Keys
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxBody
-  ( TxBody,
+  ( EraIndependentTxBody,
+    TxBody,
   )
 
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
@@ -76,21 +80,31 @@ newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving newtype (NoThunks, ToCBOR, FromCBOR)
 
 data BootstrapWitness era = BootstrapWitness'
-  { bwKey' :: !(VKey 'Witness era),
-    bwSig' :: !(Keys.SignedDSIGN era (Hash era (Core.TxBody era))),
+  { bwKey' :: !(VKey 'Witness (Crypto era)),
+    bwSig' ::
+      !( Keys.SignedDSIGN
+           (Crypto era)
+           (Hash (Crypto era) (Core.TxBody era))
+       ),
     bwChainCode' :: !ChainCode,
     bwAttributes' :: !ByteString,
     bwBytes :: LBS.ByteString
   }
-  deriving (Eq, Generic, Show)
-  deriving
-    (NoThunks)
-    via AllowThunksIn '["bwBytes"] (BootstrapWitness era)
+  deriving (Generic)
+
+deriving instance (Era era) => Show (BootstrapWitness era)
+
+deriving instance (Era era) => Eq (BootstrapWitness era)
+
+deriving via
+  (AllowThunksIn '["bwBytes"] (BootstrapWitness era))
+  instance
+    Era era => NoThunks (BootstrapWitness era)
 
 pattern BootstrapWitness ::
   Era era =>
-  (VKey 'Witness era) ->
-  (Keys.SignedDSIGN era (Hash era (Core.TxBody era))) ->
+  (VKey 'Witness (Crypto era)) ->
+  (Keys.SignedDSIGN (Crypto era) (Hash (Crypto era) (Core.TxBody era))) ->
   ChainCode ->
   ByteString ->
   BootstrapWitness era
@@ -134,7 +148,7 @@ bootstrapWitKeyHash ::
   forall era.
   Era era =>
   BootstrapWitness era ->
-  KeyHash 'Witness era
+  KeyHash 'Witness (Crypto era)
 bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
   KeyHash . hash_crypto . hash_SHA3_256 $ bytes
   where
@@ -152,8 +166,9 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
     prefix :: ByteString
     prefix = "\131\00\130\00\88\64"
     -- Here we are reserializing a key which we have previously deserialized.
-    -- This is normally naughty. However, this is a blob of bytes -- serializing it
-    -- amounts to wrapping the underlying byte array in a ByteString constructor.
+    -- This is normally naughty. However, this is a blob of bytes -- serializing
+    -- it amounts to wrapping the underlying byte array in a ByteString
+    -- constructor.
     keyBytes = DSIGN.rawSerialiseVerKeyDSIGN key
     bytes = prefix <> keyBytes <> cc <> attributes
     hash_SHA3_256 :: ByteString -> ByteString
@@ -162,10 +177,10 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
     hash_crypto = Hash.castHash . Hash.hashWith @(ADDRHASH (Crypto era)) id
 
 unpackByronVKey ::
-  forall era.
-  (DSIGN (Crypto era) ~ DSIGN.Ed25519DSIGN) =>
+  forall crypto.
+  (DSIGN crypto ~ DSIGN.Ed25519DSIGN) =>
   Byron.VerificationKey ->
-  (VKey 'Witness era, ChainCode)
+  (VKey 'Witness crypto, ChainCode)
 unpackByronVKey
   ( Byron.VerificationKey
       (WC.XPub vkeyBytes (WC.ChainCode chainCodeBytes))
@@ -178,15 +193,17 @@ unpackByronVKey
 
 verifyBootstrapWit ::
   forall era.
-  (Era era, DSIGN.Signable (DSIGN (Crypto era)) (Hash era (Core.TxBody era))) =>
-  Hash era (Core.TxBody era) ->
+  ( Era era,
+    DSIGN.Signable (DSIGN (Crypto era)) (Hash (Crypto era) EraIndependentTxBody)
+  ) =>
+  Hash (Crypto era) EraIndependentTxBody ->
   BootstrapWitness era ->
   Bool
 verifyBootstrapWit txbodyHash witness =
   verifySignedDSIGN
     (bwKey witness)
     txbodyHash
-    (bwSig witness)
+    (coerce . bwSig $ witness)
 
 coerceSignature :: WC.XSignature -> DSIGN.SigDSIGN DSIGN.Ed25519DSIGN
 coerceSignature sig =
@@ -198,7 +215,7 @@ makeBootstrapWitness ::
   ( DSIGN (Crypto era) ~ DSIGN.Ed25519DSIGN,
     Era era
   ) =>
-  Hash era (TxBody era) ->
+  Hash (Crypto era) (TxBody era) ->
   Byron.SigningKey ->
   Byron.Attributes Byron.AddrAttributes ->
   BootstrapWitness era

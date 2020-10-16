@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
@@ -21,7 +22,7 @@ module Shelley.Spec.Ledger.Credential
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -49,9 +50,14 @@ import Shelley.Spec.Ledger.Serialization
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 -- | Script hash or key hash for a payment or a staking object.
+--
+-- Note that credentials (unlike raw key hashes) do appear to vary from era to
+-- era, since they reference the hash of a script, which can change. This
+-- parameter is a phantom, however, so in actuality the instances will remain
+-- the same.
 data Credential (kr :: KeyRole) era
   = ScriptHashObj {-# UNPACK #-} !(ScriptHash era)
-  | KeyHashObj {-# UNPACK #-} !(KeyHash kr era)
+  | KeyHashObj {-# UNPACK #-} !(KeyHash kr (Crypto era))
   deriving (Show, Eq, Generic, NFData, Ord)
 
 instance HasKeyRole Credential where
@@ -151,7 +157,7 @@ instance FromCBORGroup Ptr where
 
 newtype GenesisCredential era = GenesisCredential
   { unGenesisCredential ::
-      KeyHash 'Genesis era
+      KeyHash 'Genesis (Crypto era)
   }
   deriving (Generic)
   deriving (Show) via Quiet (GenesisCredential era)

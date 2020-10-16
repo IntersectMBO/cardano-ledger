@@ -83,16 +83,20 @@ exampleShelleyGenesis =
     }
   where
     -- hash of the genesis verification key
-    genesisVerKeyHash :: L.KeyHash 'L.Genesis era
+    genesisVerKeyHash :: L.KeyHash 'L.Genesis (Crypto era)
     genesisVerKeyHash = L.KeyHash "23d51e9123d51e91"
     -- hash of the delegators verififation key
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
-    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate era
+    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate (Crypto era)
     delegVerKeyHash = L.KeyHash "839b047f839b047f"
-    delegVrfKeyHash :: Hash.Hash (HASH (Crypto era)) (L.VerKeyVRF era)
+    delegVrfKeyHash :: Hash.Hash (HASH (Crypto era)) (L.VerKeyVRF (Crypto era))
     delegVrfKeyHash = "231391e7231391e70123"
     initialFundedAddress :: L.Addr era
-    initialFundedAddress = L.Addr L.Testnet paymentCredential (L.StakeRefBase stakingCredential)
+    initialFundedAddress =
+      L.Addr
+        L.Testnet
+        paymentCredential
+        (L.StakeRefBase stakingCredential)
       where
         paymentCredential =
           L.KeyHashObj $

@@ -48,7 +48,8 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import Shelley.Spec.Ledger.Tx (Tx, TxBody)
+import Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data LEDGERS era
 
@@ -98,7 +99,7 @@ instance
 
 instance
   ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   STS (LEDGERS (ShelleyEra c))
   where
@@ -139,7 +140,7 @@ ledgersTransition = do
 
 instance
   ( Crypto c,
-    DSignable (ShelleyEra c) (Hash (ShelleyEra c) (TxBody (ShelleyEra c)))
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
   Embed (LEDGER (ShelleyEra c)) (LEDGERS (ShelleyEra c))
   where
