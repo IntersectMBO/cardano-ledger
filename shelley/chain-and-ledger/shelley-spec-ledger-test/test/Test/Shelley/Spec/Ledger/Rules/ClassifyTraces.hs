@@ -97,7 +97,6 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Crypto (Crypto)
-import Control.State.Transition.Extended (STS(Signal))
 
 genesisChainState ::
   forall era a.
@@ -146,7 +145,7 @@ relevantCasesAreCovered = do
 
 relevantCasesAreCoveredForTrace ::
   forall era.
-  (ShelleyTest era, Signal (CHAIN era) ~ Block era) =>
+  (ShelleyTest era) =>
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do

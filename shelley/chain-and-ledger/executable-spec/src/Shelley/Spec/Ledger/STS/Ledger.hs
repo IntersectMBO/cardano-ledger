@@ -29,8 +29,8 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -137,18 +137,25 @@ instance
       )
 
 instance
-  ( Crypto c,
-    DSignable c (Hash c EraIndependentTxBody)
+  ( Era era,
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    ShelleyBased era,
+    Embed (DELEGS era) (LEDGER era),
+    Embed (UTXOW era) (LEDGER era),
+    Environment (DELEGS era) ~ DelegsEnv era,
+    State (DELEGS era) ~ DPState era,
+    Signal (DELEGS era) ~ Seq (DCert era),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
   ) =>
-  STS (LEDGER (ShelleyEra c))
+  STS (LEDGER era)
   where
   type
-    State (LEDGER (ShelleyEra c)) =
-      (UTxOState (ShelleyEra c), DPState (ShelleyEra c))
-  type Signal (LEDGER (ShelleyEra c)) = Tx (ShelleyEra c)
-  type Environment (LEDGER (ShelleyEra c)) = LedgerEnv (ShelleyEra c)
-  type BaseM (LEDGER (ShelleyEra c)) = ShelleyBase
-  type PredicateFailure (LEDGER (ShelleyEra c)) = LedgerPredicateFailure (ShelleyEra c)
+    State (LEDGER era) =
+      (UTxOState era, DPState era)
+  type Signal (LEDGER era) = Tx era
+  type Environment (LEDGER era) = LedgerEnv era
+  type BaseM (LEDGER era) = ShelleyBase
+  type PredicateFailure (LEDGER era) = LedgerPredicateFailure era
 
   initialRules = []
   transitionRules = [ledgerTransition]
@@ -175,15 +182,6 @@ ledgerTransition ::
   ( ShelleyBased era,
     Embed (DELEGS era) (LEDGER era),
     Embed (UTXOW era) (LEDGER era),
-    Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era,
-    Environment (DELEGS era) ~ DelegsEnv era,
-    State (DELEGS era) ~ DPState era,
-    Signal (DELEGS era) ~ Seq (DCert era),
-    Environment (UTXOW era) ~ UtxoEnv era,
-    State (UTXOW era) ~ UTxOState era,
-    Signal (UTXOW era) ~ Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
   ) =>
   TransitionRule (LEDGER era)
@@ -212,17 +210,21 @@ ledgerTransition = do
   pure (utxoSt', dpstate')
 
 instance
-  ( Crypto c,
-    DSignable c (Hash c EraIndependentTxBody)
+  ( Era era,
+    ShelleyBased era,
+    STS (DELEGS era),
+    STS (LEDGER era)
   ) =>
-  Embed (DELEGS (ShelleyEra c)) (LEDGER (ShelleyEra c))
+  Embed (DELEGS era) (LEDGER era)
   where
   wrapFailed = DelegsFailure
 
 instance
-  ( Crypto c,
-    DSignable c (Hash c EraIndependentTxBody)
+  ( Era era,
+    ShelleyBased era,
+    STS (UTXOW era),
+    STS (LEDGER era)
   ) =>
-  Embed (UTXOW (ShelleyEra c)) (LEDGER (ShelleyEra c))
+  Embed (UTXOW era) (LEDGER era)
   where
   wrapFailed = UtxowFailure

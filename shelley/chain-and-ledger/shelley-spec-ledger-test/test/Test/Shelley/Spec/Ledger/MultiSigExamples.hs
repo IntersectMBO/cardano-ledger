@@ -21,7 +21,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Shelley as Shelley
-import Control.State.Transition.Extended (BaseM, Environment, PredicateFailure, STS, Signal, State, TRC (..))
+import Control.State.Transition.Extended (BaseM, PredicateFailure, STS, TRC (..))
 import Data.Coerce (coerce)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
@@ -219,9 +219,6 @@ initialUTxOState ::
   ( ShelleyTest era,
     STS (UTXOW era),
     BaseM (UTXOW era) ~ ShelleyBase,
-    Environment (UTXOW era) ~ UtxoEnv era,
-    State (UTXOW era) ~ UTxOState era,
-    Signal (UTXOW era) ~ Tx era,
     Mock (Crypto era)
   ) =>
   Coin ->
@@ -273,9 +270,6 @@ applyTxWithScript ::
   ( ShelleyTest era,
     STS (UTXOW era),
     BaseM (UTXOW era) ~ ShelleyBase,
-    Environment (UTXOW era) ~ UtxoEnv era,
-    State (UTXOW era) ~ UTxOState era,
-    Signal (UTXOW era) ~ Tx era,
     Mock (Crypto era)
   ) =>
   proxy era ->

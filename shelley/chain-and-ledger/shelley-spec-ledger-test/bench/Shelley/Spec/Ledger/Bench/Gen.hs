@@ -28,7 +28,6 @@ import Shelley.Spec.Ledger.LedgerState
     NewEpochState (..),
     UTxOState (..),
   )
-import Shelley.Spec.Ledger.STS.Chain (CHAIN)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
 import Test.QuickCheck (generate)
@@ -53,8 +52,7 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
 
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
-  ( ShelleyTest era,
-    Environment (CHAIN era) ~ ()
+  ( ShelleyTest era
   ) =>
   Int ->
   GenEnv era ->
@@ -84,7 +82,6 @@ genBlock ::
     State (LEDGERS era) ~ LedgerState era,
     Signal (LEDGERS era) ~ Seq (Tx era),
     STS (LEDGER era),
-    BaseM (LEDGER era) ~ ShelleyBase,
     Environment (LEDGER era) ~ LedgerEnv era,
     State (LEDGER era) ~ (UTxOState era, DPState era),
     Signal (LEDGER era) ~ Tx era
@@ -104,8 +101,7 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 genTriple ::
   ( Mock (Crypto era),
-    ShelleyTest era,
-    Environment (CHAIN era) ~ ()
+    ShelleyTest era
   ) =>
   Proxy era ->
   Int ->

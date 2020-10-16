@@ -81,7 +81,6 @@ genBlock ::
     Signal (LEDGER era) ~ Tx era,
     STS (LEDGERS era),
     Mock (Crypto era),
-    BaseM (LEDGERS era) ~ ShelleyBase,
     Environment (LEDGERS era) ~ LedgersEnv era,
     State (LEDGERS era) ~ LedgerState era,
     Signal (LEDGERS era) ~ Seq (Tx era)
