@@ -94,37 +94,6 @@ data LedgerView crypto = LedgerView
 
 instance NoThunks (LedgerView crypto)
 
-instance CC.Crypto crypto => FromCBOR (LedgerView crypto) where
-  fromCBOR =
-    decodeRecordNamed
-      "LedgerView"
-      (const 5)
-      ( LedgerView
-          <$> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
-      )
-
-instance CC.Crypto crypto => ToCBOR (LedgerView crypto) where
-  toCBOR
-    LedgerView
-      { lvD,
-        lvExtraEntropy,
-        lvPoolDistr,
-        lvGenDelegs,
-        lvChainChecks
-      } =
-      mconcat
-        [ encodeListLen 5,
-          toCBOR lvD,
-          toCBOR lvExtraEntropy,
-          toCBOR lvPoolDistr,
-          toCBOR lvGenDelegs,
-          toCBOR lvChainChecks
-        ]
-
 -- | Construct a protocol environment from the ledger view, along with the
 -- current slot and a marker indicating whether this is the first block in a new
 -- epoch.
