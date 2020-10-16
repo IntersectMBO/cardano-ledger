@@ -1832,12 +1832,12 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
   \end{align*}
   %
   \begin{align*}
-      & \fun{chainChecks} \in \PParams \to \BHeader \to \Bool \\
-      & \fun{chainChecks}~\var{pp}~\var{bh} = \\
-      & ~~~~ m \leq \MaxMajorPV \\
-      & ~~~~ \land~\bHeaderSize{bh} \leq \fun{maxHeaderSize}~\var{pp} \\
-      & ~~~~ \land~\hBbsize{(\bhbody{bh})} \leq \fun{maxBlockSize}~\var{pp} \\
-      & ~~~~ \where (m,~\wcard)\leteq\fun{pv}~\var{pp}
+      & \fun{chainChecks} \in \N \to (\N,\N, \ProtVer) \to \BHeader \to \Bool \\
+      & \fun{chainChecks}~\var{maxpv}~(\var{maxBHSize},~\var{maxBBSize},~\var{protocolVersion})~\var{bh} = \\
+      & ~~~~ m \leq \var{maxpv} \\
+      & ~~~~ \land~\bHeaderSize{bh} \leq \var{maxBHSize} \\
+      & ~~~~ \land~\hBbsize{(\bhbody{bh})} \leq \var{maxBBSize} \\
+      & ~~~~ \where (m,~\wcard)\leteq\var{protocolVersion}
   \end{align*}
   %
   \begin{align*}
@@ -1887,7 +1887,9 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       (\wcard,~\wcard,~\wcard,~(\wcard,~\wcard,~\wcard,~\var{pp}),~\wcard,~\wcard) \leteq \var{nes}
       \\~\\
       \fun{prtlSeqChecks}~\var{lab}~\var{bh}\\
-      \fun{chainChecks}~\var{pp}~\var{bh}
+      \fun{chainChecks}~
+        \MaxMajorPV~(\fun{maxHeaderSize}~\var{pp},~\fun{maxBlockSize}~\var{pp},~\fun{pv}~\var{pp})~
+        \var{bh}
       \\~\\
       {
         \vdash\var{nes}\trans{\hyperref[fig:rules:tick]{tick}}{\var{s}}\var{nes'}
