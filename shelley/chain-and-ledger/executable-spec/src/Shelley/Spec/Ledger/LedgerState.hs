@@ -430,7 +430,11 @@ data EpochState era = EpochState
     esLState :: !(LedgerState era),
     esPrevPp :: !(PParams era),
     esPp :: !(PParams era),
-    esNonMyopic :: !(NonMyopic era) -- TODO document this in the formal spec, see github #1319
+    esNonMyopic :: !(NonMyopic era)
+    -- ^ This field, esNonMyopic, does not appear in the formal spec
+    -- and is not a part of the protocol. It is only used for providing
+    -- data to the stake pool ranking calculation @getNonMyopicMemberRewards@.
+    -- See https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking
   }
   deriving (Generic)
 
