@@ -1809,10 +1809,10 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       &
       \begin{array}{lr@{~=~}l}
         \where
-          & (\wcard,~\wcard,~\wcard,~\wcard,~\var{es},~\wcard,~\wcard)
+          & (\wcard,~\wcard,~\wcard,~\var{es},~\wcard,~\wcard)
           & \var{nes}
           \\
-          & (\wcard,~\wcard,~\var{ls},~\wcard)
+          & (\wcard,~\wcard,~\var{ls},~\wcard,~\wcard)
           & \var{es}
           \\
           & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs},~\wcard),~\wcard))
@@ -1823,12 +1823,12 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
   \begin{align*}
       & \fun{updateNES} \in \NewEpochState \to \BlocksMade \to \LState \to \NewEpochState \\
       & \fun{updateNES}~
-      (\var{e_\ell},~\var{b_{prev}},~\wcard,~(\var{acnt},~\var{ss},~\wcard,~\var{pp}),
+      (\var{e_\ell},~\var{b_{prev}},~\wcard,~(\var{acnt},~\var{ss},~\wcard,~\var{prevPp},~\var{pp}),
        ~\var{ru},~\var{pd})
           ~\var{b_{cur}}~\var{ls} = \\
       & ~~~~
       (\var{e_\ell},~\var{b_{prev}},~\var{b_{cur}},
-       ~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}),~\var{ru},~\var{pd})
+       ~(\var{acnt},~\var{ss},~\var{ls},~\var{prevPp},~\var{pp}),~\var{ru},~\var{pd})
   \end{align*}
   %
   \begin{align*}
@@ -1884,7 +1884,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       &
       \var{s} \leteq \bslot{bhb}
       \\
-      (\wcard,~\wcard,~\wcard,~(\wcard,~\wcard,~\wcard,~\var{pp}),~\wcard,~\wcard) \leteq \var{nes}
+      (\wcard,~\wcard,~\wcard,~(\wcard,~\wcard,~\wcard,~\wcard,~\var{pp}),~\wcard,~\wcard) \leteq \var{nes}
       \\~\\
       \fun{prtlSeqChecks}~\var{lab}~\var{bh}\\
       \fun{chainChecks}~
@@ -1896,7 +1896,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       } \\~\\
       (\var{e_1},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard)
         \leteq\var{nes} \\
-      (\var{e_2},~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd})
+      (\var{e_2},~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\wcard,~\var{pd})
         \leteq\var{nes'} \\
         (\var{acnt},~\wcard,\var{ls},~\wcard,~\var{pp'})\leteq\var{es}\\
         ( \wcard,
