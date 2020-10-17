@@ -248,6 +248,18 @@ hashTimelockScript =
     . Hash.castHash
     . Hash.hashWith (\x -> nativeTimelockTag <> serialize' x)
 
+{-
+instance
+  ( Era era,
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    Shelley.TxBodyConstraints era
+  ) =>
+  MultiSignatureScript (Timelock era) era
+  where
+  validateScript = validateTimelock
+  hashScript = hashTimelockScript
+-}
+
 showTimelock :: Era era => Timelock era -> String
 showTimelock (Interval (ValidityInterval SNothing SNothing)) = "(Interval -inf .. +inf)"
 showTimelock (Interval (ValidityInterval (SJust (SlotNo x)) SNothing)) = "(Interval " ++ show x ++ " .. +inf)"
