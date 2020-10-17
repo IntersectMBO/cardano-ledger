@@ -16,27 +16,6 @@ module Test.Control.Iterate.SetAlgebra where
 
 import Control.Iterate.Collect
 import Control.Iterate.SetAlgebra
-import Control.Iterate.SetAlgebraInternal
-  ( Exp (..),
-    List (..),
-    fromPairs,
-    Query (..),
-    Sett (..),
-    compute,
-    domElem,
-    fifo,
-    lifo,
-    lift,
-    rngSnd,
-    runSet,
-    runBool,
-    sameDomain,
-    (⨝),
-    intersectDomPLeft,
-    intersectDomP,
-    domEq,
-    BiMap(..),
-  )
 import Data.Char (ord)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

@@ -33,8 +33,8 @@ import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
-import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),

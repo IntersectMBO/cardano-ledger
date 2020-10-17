@@ -12,26 +12,21 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE BangPatterns #-}
 
 -- | MemoBytes is an abstration for a datetype that encodes its own seriialization.
 --   The idea is to use a newtype around a MemoBytes non-memoizing version.
 --   For example:   newtype Foo = Foo(MemoBytes NonMemoizingFoo)
 --   This way all the instances for Foo (Eq,Show,Ord,ToCBOR,FromCBOR,NoThunks,Generic)
 --   can be derived for free.
-module Shelley.Spec.Ledger.MemoBytes
-  ( MemoBytes (..),
-    Encode (..),
+module Data.Coders
+  ( Encode (..),
     Decode (..),
-    Wrapped (..),
     (!>),
     (<!),
-    Mem,
+    Wrapped (..),
     encode,
     decode,
-    runE,
-    decodeClosed,
-    memoBytes,
-    shorten,
     decodeList,
     decodeSeq,
     decodeStrictSeq,
@@ -40,77 +35,126 @@ module Shelley.Spec.Ledger.MemoBytes
     encodeSeq,
     encodeStrictSeq,
     encodeSet,
-    showMemo,
-    printMemo,
+    runE,               -- for testing
+    decodeClosed,       -- for testing
+    decodeRecordNamed,
+    decodeRecordSum,
+    invalidKey,
+    wrapCBORArray,
+    encodeFoldable,
+    decodeCollectionWithLen,
+    decodeCollection,
+    encodeFoldableEncoder,
   )
 where
 
-import Cardano.Binary
-  ( Annotator (..),
-    FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
-    encodeListLen,
-    encodePreEncoded,
-    encodeWord,
-    withSlice,
-  )
+import Cardano.Prelude (cborError)
+import Control.Monad (replicateM,unless)
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
-import Codec.CBOR.Write (toLazyByteString)
-import Data.ByteString.Lazy (toStrict)
-import qualified Data.ByteString.Lazy as Lazy
-import Data.ByteString.Short (ShortByteString, fromShort, toShort)
-import Data.Sequence (Seq)
+import Cardano.Binary
+  ( FromCBOR (fromCBOR),
+    ToCBOR (toCBOR),
+    encodeListLen,
+    encodeWord,
+    encodeBreak,
+    encodeListLenIndef,
+    DecoderError( DecoderErrorCustom ),
+    decodeBreakOr,
+    decodeListLenOrIndef,
+    decodeWord,
+    matchSize,
+  )
+import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
+import qualified Data.Text as Text
 import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence (Seq)
 import Data.Set (Set)
-import Data.Typeable
-import GHC.Generics (Generic)
-import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (invalidKey)
+import Data.Text (Text)
+import Data.Foldable (foldl')
+
+
+{-
 import Shelley.Spec.Ledger.Serialization
-  ( decodeList,
-    decodeRecordNamed,
-    decodeRecordSum,
-    decodeSeq,
-    decodeSet,
-    decodeStrictSeq,
+  (
     encodeFoldable,
   )
-import Prelude hiding (span)
+-}
 
--- ========================================================================
 
-data MemoBytes t = Memo {memotype :: !t, memobytes :: {-# UNPACK #-} !ShortByteString}
-  deriving (NoThunks) via AllowThunksIn '["memobytes"] (MemoBytes t)
 
-deriving instance Generic (MemoBytes t)
+decodeRecordNamed :: Text -> (a -> Int) -> Decoder s a -> Decoder s a
+decodeRecordNamed name getRecordSize decoder = do
+  lenOrIndef <- decodeListLenOrIndef
+  x <- decoder
+  case lenOrIndef of
+    Just n -> matchSize (Text.pack "\nRecord " <> name) n (getRecordSize x)
+    Nothing -> do
+      isBreak <- decodeBreakOr
+      unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
+  pure x
 
-instance (Typeable t) => ToCBOR (MemoBytes t) where
-  toCBOR (Memo _ bytes) = encodePreEncoded (fromShort bytes)
+decodeRecordSum :: String -> (Word -> Decoder s (Int, a)) -> Decoder s a
+decodeRecordSum name decoder = do
+  lenOrIndef <- decodeListLenOrIndef
+  tag <- decodeWord
+  (size, x) <- decoder tag -- we decode all the stuff we want
+  case lenOrIndef of
+    Just n -> matchSize (Text.pack ("\nSum " ++ name ++ "\nreturned=" ++ show size ++ " actually read= " ++ show n)) size n
+    Nothing -> do
+      isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
+      unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
+  pure x
 
-instance (Typeable t, FromCBOR (Annotator t)) => FromCBOR (Annotator (MemoBytes t)) where
-  fromCBOR = do
-    (Annotator getT, Annotator getBytes) <- withSlice fromCBOR
-    pure (Annotator (\fullbytes -> Memo (getT fullbytes) (toShort (toStrict (getBytes fullbytes)))))
+invalidKey :: Word -> Decoder s a
+invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)
 
-instance Eq t => Eq (MemoBytes t) where (Memo x _) == (Memo y _) = x == y
+decodeList :: Decoder s a -> Decoder s [a]
+decodeList = decodeCollection decodeListLenOrIndef
 
-instance Show t => Show (MemoBytes t) where show (Memo y _) = show y
+decodeSeq :: Decoder s a -> Decoder s (Seq a)
+decodeSeq decoder = Seq.fromList <$> decodeList decoder
 
-instance Ord t => Ord (MemoBytes t) where compare (Memo x _) (Memo y _) = compare x y
+decodeStrictSeq :: Decoder s a -> Decoder s (StrictSeq a)
+decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
 
-shorten :: Lazy.ByteString -> ShortByteString
-shorten x = toShort (toStrict x)
+decodeSet :: Ord a => Decoder s a -> Decoder s (Set a)
+decodeSet decoder = Set.fromList <$> decodeList decoder
 
--- | Useful when deriving FromCBOR(Annotator T)
--- deriving via (Mem T) instance (Era era) => FromCBOR (Annotator T)
-type Mem t = Annotator (MemoBytes t)
+decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
+decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
 
-showMemo :: Show t => MemoBytes t -> String
-showMemo (Memo t b) = "(Memo " ++ show t ++ "  " ++ show b ++ ")"
+decodeCollectionWithLen ::
+  Decoder s (Maybe Int) ->
+  Decoder s a ->
+  Decoder s (Int, [a])
+decodeCollectionWithLen lenOrIndef el = do
+  lenOrIndef >>= \case
+    Just len -> (,) len <$> replicateM len el
+    Nothing -> loop (0, []) (not <$> decodeBreakOr) el
+  where
+    loop (n, acc) condition action =
+      condition >>= \case
+        False -> pure (n, reverse acc)
+        True -> action >>= \v -> loop (n + 1, (v : acc)) condition action
 
-printMemo :: Show t => MemoBytes t -> IO ()
-printMemo x = putStrLn (showMemo x)
+encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
+encodeFoldable = encodeFoldableEncoder toCBOR
+
+encodeFoldableEncoder :: (Foldable f) => (a -> Encoding) -> f a -> Encoding
+encodeFoldableEncoder encoder xs = wrapCBORArray len contents
+  where
+    (len, contents) = foldl' go (0, mempty) xs
+    go (!l, !enc) next = (l + 1, enc <> encoder next)
+
+wrapCBORArray :: Word -> Encoding -> Encoding
+wrapCBORArray len contents =
+  if len <= 23
+    then encodeListLen len <> contents
+    else encodeListLenIndef <> contents <> encodeBreak
+
 
 -- ===============================================================================
 -- Encode and Decode are typed data structures which specify encoders and decoders.
@@ -244,11 +288,7 @@ encode sym = encodeCountPrefix 0 sym
     encodeClosed (E enc x) = enc x
     encodeClosed (ApplyE f x) = encodeClosed f <> encodeClosed x
 
-memoBytes :: Encode w t -> MemoBytes t
-memoBytes t = Memo (runE t) (shorten (toLazyByteString (encode t)))
-
 -- =====================
-
 data Decode (w :: Wrapped) t where
   Summands :: String -> (Word -> Decode 'Open t) -> Decode 'Closed t
   SumD :: t -> Decode 'Open t

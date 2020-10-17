@@ -16,7 +16,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestDeleg
   )
 where
 
-import Control.Iterate.SetAlgebra (dom, eval, rng, (∈), (∉), (◁))
+import Control.SetAlgebra (dom, eval, rng, (∈), (∉), (◁))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,

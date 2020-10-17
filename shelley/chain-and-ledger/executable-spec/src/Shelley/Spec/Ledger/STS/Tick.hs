@@ -23,8 +23,8 @@ module Shelley.Spec.Ledger.STS.Tick
 where
 
 import Cardano.Ledger.Shelley (ShelleyBased)
-import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)

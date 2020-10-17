@@ -38,7 +38,7 @@ import Cardano.Ledger.Shelley (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
-import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
+import Control.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))

@@ -30,8 +30,8 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
-import Control.Iterate.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.State.Transition
   ( Embed (..),
     STS (..),

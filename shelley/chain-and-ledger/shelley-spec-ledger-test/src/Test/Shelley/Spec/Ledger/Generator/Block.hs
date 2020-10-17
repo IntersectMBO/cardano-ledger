@@ -18,7 +18,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Slotting.Slot (WithOrigin (..))
-import Control.Iterate.SetAlgebra (dom, eval)
+import Control.SetAlgebra (dom, eval)
 import Control.State.Transition.Extended (BaseM, Environment, STS (Signal), State)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import Data.Coerce (coerce)

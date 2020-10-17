@@ -23,8 +23,8 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Era (Crypto, Era)
-import Control.Iterate.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)

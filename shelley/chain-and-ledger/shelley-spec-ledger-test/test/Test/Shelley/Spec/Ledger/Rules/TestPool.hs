@@ -12,7 +12,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestPool
   )
 where
 
-import Control.Iterate.SetAlgebra (dom, eval, (∈), (∉))
+import Control.SetAlgebra (dom, eval, (∈), (∉))
 import Control.State.Transition (State)
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),

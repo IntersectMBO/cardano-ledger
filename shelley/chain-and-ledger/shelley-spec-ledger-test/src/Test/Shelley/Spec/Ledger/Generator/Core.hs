@@ -59,7 +59,7 @@ import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
 import qualified Cardano.Ledger.Shelley as Shelley
-import Control.Iterate.SetAlgebra (eval, (∪), (⋪))
+import Control.SetAlgebra (eval, (∪), (⋪))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Data.Coerce (coerce)

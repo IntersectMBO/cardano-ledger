@@ -41,7 +41,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import Control.Iterate.SetAlgebra (biMapFromList)
+import Control.SetAlgebra (biMapFromList)
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)

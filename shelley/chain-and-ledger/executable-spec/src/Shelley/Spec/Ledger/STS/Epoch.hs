@@ -19,8 +19,8 @@ module Shelley.Spec.Ledger.STS.Epoch
 where
 
 import Cardano.Ledger.Shelley (ShelleyBased)
-import Control.Iterate.SetAlgebra (eval, (⨃))
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

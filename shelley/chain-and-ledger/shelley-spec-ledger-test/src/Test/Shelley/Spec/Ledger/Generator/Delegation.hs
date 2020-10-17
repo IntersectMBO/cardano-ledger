@@ -19,7 +19,7 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
 where
 
 import Cardano.Ledger.Era (Crypto, Era)
-import Control.Iterate.SetAlgebra (dom, domain, eval, (∈), (∉))
+import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
 import Data.Foldable (fold)
 import qualified Data.List as List
 import Data.Map.Strict (Map)

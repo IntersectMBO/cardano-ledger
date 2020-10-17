@@ -38,6 +38,12 @@ import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString as BS
+import Data.Coders (Encode (..), (!>))
+import Data.MemoBytes
+  ( Mem,
+    MemoBytes (..),
+    memoBytes,
+  )
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -45,13 +51,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing), invalidKey)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
-import Shelley.Spec.Ledger.MemoBytes
-  ( Encode (..),
-    Mem,
-    MemoBytes (..),
-    memoBytes,
-    (!>),
-  )
 import Shelley.Spec.Ledger.Scripts
   ( MultiSig,
     ScriptHash (..),

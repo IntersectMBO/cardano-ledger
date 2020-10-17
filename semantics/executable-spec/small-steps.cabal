@@ -32,19 +32,24 @@ library
                      , Control.State.Transition.Simple
                      , Data.AbstractSize
                      , Data.Relation
-                     , Control.Iterate.Collect
+                     , Data.CannonicalMaps
+                     , Data.MemoBytes
+                     , Data.Coders
                      , Control.Iterate.SetAlgebra
-                     , Control.Iterate.SetAlgebraInternal
+                     , Control.Iterate.Collect
+                     , Control.SetAlgebra
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.11 && <5
                      , bytestring
+                     , cardano-prelude
                      , containers
                      , cryptonite
                      , deepseq
                      , free
                      , mtl
                      , nothunks
+                     , text
                      , transformers >= 0.5
                      , ansi-wl-pprint
                      -- IOHK deps

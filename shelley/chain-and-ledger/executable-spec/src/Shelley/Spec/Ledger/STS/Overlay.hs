@@ -20,10 +20,10 @@ where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto
-import Control.Iterate.SetAlgebra (dom, eval, range)
 import Control.Monad (unless)
 import Control.Monad.Except (throwError)
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (dom, eval, range)
 import Control.State.Transition
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)

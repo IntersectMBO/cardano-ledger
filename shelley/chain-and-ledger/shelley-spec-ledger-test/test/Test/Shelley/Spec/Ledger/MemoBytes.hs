@@ -23,7 +23,20 @@ import Codec.CBOR.Read(DeserialiseFailure,deserialiseFromBytes)
 import Codec.CBOR.Write (toLazyByteString)
 import qualified Data.ByteString.Lazy as Lazy
 import Data.Sequence.Strict (StrictSeq,fromList)
-import Shelley.Spec.Ledger.MemoBytes
+import Data.Coders
+  ( Encode(..),
+    Decode(..),
+    (!>),
+    (<!),
+    Wrapped(..),
+    runE,
+    encode,
+    decode,
+    encodeList,
+    decodeList,
+    encodeStrictSeq,
+    decodeStrictSeq,
+  )
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing),invalidKey)
 import Shelley.Spec.Ledger.Serialization( decodeRecordSum )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes(C)

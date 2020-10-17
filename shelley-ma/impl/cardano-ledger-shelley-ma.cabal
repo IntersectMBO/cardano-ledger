@@ -23,7 +23,6 @@ library
     Cardano.Ledger.Allegra
     Cardano.Ledger.Mary
     Cardano.Ledger.ShelleyMA.Value
-    Cardano.Ledger.ShelleyMA.ValueInternal
     Cardano.Ledger.ShelleyMA.Timelocks
   other-modules:
     Cardano.Ledger.ShelleyMA

@@ -24,8 +24,8 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
-import Control.Iterate.SetAlgebra (dom, keysEqual, (▷), (◁))
-import Control.Iterate.SetAlgebraInternal (compile, compute, run)
+import Control.SetAlgebra (dom, keysEqual, (▷), (◁))
+import Control.Iterate.SetAlgebra (compile, compute, run)
 import Criterion.Main
   ( Benchmark,
     bench,
