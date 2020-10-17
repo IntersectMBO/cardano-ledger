@@ -116,6 +116,7 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
+import Shelley.Spec.Ledger.Hashing (EraIndependentBlockBody)
 import Shelley.Spec.Ledger.Keys
   ( CertifiedVRF,
     Hash,
@@ -224,8 +225,6 @@ instance
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
   listLen _ = 3
   listLenBound _ = 3
-
-data EraIndependentBlockBody
 
 -- | Hash of block body
 newtype HashBBody crypto = UnsafeHashBBody {unHashBody :: (Hash crypto EraIndependentBlockBody)}

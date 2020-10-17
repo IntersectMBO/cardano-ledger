@@ -8,7 +8,6 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
 import Test.QuickCheck (Arbitrary (..), Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
-import Test.Shelley.Spec.Ledger.MemoBytes (memoBytesTest)
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (chainExamples)
@@ -35,7 +34,6 @@ mainTests gv =
       --multisigExamples, - TODO re-enable after the script embargo has been lifted
       unitTests,
       setAlgTest,
-      memoBytesTest,
       valTests
     ]
 
@@ -56,7 +54,6 @@ fastTests =
       --multisigExamples, - TODO re-enable after the script embargo has been lifted
       unitTests,
       setAlgTest,
-      memoBytesTest,
       valTests
     ]
 

@@ -87,8 +87,8 @@ import Shelley.Spec.Ledger.TxBody
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
-    eraIndTxBodyHash,
   )
+import Shelley.Spec.Ledger.Hashing(HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
   ( C_Crypto,
@@ -201,7 +201,7 @@ txSpendOneUTxO =
   Tx
     txbSpendOneUTxO
     mempty
-      { addrWits = makeWitnessesVKey (eraIndTxBodyHash txbSpendOneUTxO) [asWitness alicePay]
+      { addrWits = makeWitnessesVKey (hashAnnotated txbSpendOneUTxO) [asWitness alicePay]
       }
     SNothing
 
@@ -258,7 +258,7 @@ makeSimpleTx body keysAddr =
   Tx
     body
     mempty
-      { addrWits = makeWitnessesVKey (eraIndTxBodyHash body) keysAddr
+      { addrWits = makeWitnessesVKey (hashAnnotated body) keysAddr
       }
     SNothing
 

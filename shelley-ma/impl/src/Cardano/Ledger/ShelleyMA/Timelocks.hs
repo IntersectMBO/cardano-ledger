@@ -12,10 +12,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.ShelleyMA.Timelocks
@@ -24,13 +26,16 @@ module Cardano.Ledger.ShelleyMA.Timelocks
     hashTimelockScript,
     showTimelock,
     validateTimelock,
+    ValidityInterval (..),
+    encodeVI,
+    decodeVI,
   )
 where
 
 import Cardano.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
-    ToCBOR,
+    ToCBOR (toCBOR),
     serialize',
   )
 import qualified Cardano.Crypto.Hash as Hash
@@ -39,7 +44,7 @@ import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString as BS
-import Data.Coders (Encode (..), (!>))
+import Data.Coders (Decode (..), Encode (..), Wrapped (..), decode, encode, (!>), (<!))
 import Data.MemoBytes
   ( Mem,
     MemoBytes (..),
@@ -49,6 +54,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing), invalidKey)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
@@ -72,6 +78,27 @@ import Shelley.Spec.Ledger.TxBody
   )
 
 -- ================================================================
+-- An pair of optional SlotNo.
+
+data ValidityInterval = ValidityInterval
+  { validFrom :: !(StrictMaybe SlotNo),
+    validTo :: !(StrictMaybe SlotNo)
+  }
+  deriving (Ord, Eq, Generic, Show, NoThunks)
+
+encodeVI :: ValidityInterval -> Encode 'Closed ValidityInterval
+encodeVI (ValidityInterval f t) = Rec ValidityInterval !> To f !> To t
+
+instance ToCBOR ValidityInterval where
+  toCBOR vi = encode (encodeVI vi)
+
+decodeVI :: Decode 'Closed ValidityInterval
+decodeVI = RecD ValidityInterval <! From <! From
+
+instance FromCBOR ValidityInterval where
+  fromCBOR = decode decodeVI
+
+-- ================================================================
 -- Timelock' and Timelock are mutually recursive. Timelock adds a
 -- convenient place to hang the memoized serialized bytes by
 -- being a newtype over MemoBytes. We need to supply two things.
@@ -79,7 +106,7 @@ import Shelley.Spec.Ledger.TxBody
 -- 2) Serializer code (replaces ToCBOR instances) in the Patterns for Timelock
 
 data Timelock' era
-  = Interval' !(StrictMaybe SlotNo) !(StrictMaybe SlotNo)
+  = Interval' !ValidityInterval
   | Multi' !(MultiSig era)
   | TimelockAnd' !(StrictSeq (Timelock era)) -- Note the hidden recursion of Timelock', through Timelock.
   | TimelockOr' !(StrictSeq (Timelock era))
@@ -92,10 +119,9 @@ instance
   fromCBOR = decodeRecordSum "Timelock" $
     \case
       0 -> do
-        left <- fromCBOR -- this: fromCBOR :: (Decoder s (StrictMaybe SlotNo))
-        right <- fromCBOR
-        pure $ (3, pure (Interval' left right)) -- Note the pure lifts from T to (Annotator T)
-        -- Possible because intervalpair has no memoized
+        interval <- fromCBOR -- this: fromCBOR :: (Decoder s ValidityInterval)
+        pure $ (2, pure (Interval' interval)) -- Note the pure lifts from T to (Annotator T)
+        -- Possible because ValidityInterval has no memoized
         -- structures that remember their own bytes.
       1 -> do
         multi <- fromCBOR
@@ -127,13 +153,12 @@ deriving via
 
 pattern Interval ::
   Era era =>
-  StrictMaybe SlotNo ->
-  StrictMaybe SlotNo ->
+  ValidityInterval ->
   Timelock era
-pattern Interval left right <-
-  Timelock (Memo (Interval' left right) _)
+pattern Interval valid <-
+  Timelock (Memo (Interval' valid) _)
   where
-    Interval left right = Timelock $ memoBytes $ Sum Interval' 0 !> To left !> To right
+    Interval valid = Timelock $ memoBytes $ Sum Interval' 0 !> To valid
 
 pattern Multi :: Era era => MultiSig era -> Timelock era
 pattern Multi m <-
@@ -168,19 +193,14 @@ ininterval slot (SJust i_s, SJust i_f) = i_s <= slot && slot <= i_f
 
 -- =======================================================
 -- Validating timelock scripts
--- The following functions are stubs, since (TxBody era) does not currently
--- contain a validity interval. At somepoint txvld :: TxBody era -> ValidityInterval
--- will provide this operation. We will also need to correctly compute the witness
--- set for this new (TxBody era) as well.
-
-type ValidityInterval = (StrictMaybe SlotNo, StrictMaybe SlotNo)
-
-txvld :: Core.TxBody era -> ValidityInterval
-txvld _ = (SNothing, SNothing)
+-- We Assume that TxBody has field "vldt" that extracts a ValidityInterval
+-- We still need to correctly compute the witness set for Core.TxBody as well.
 
 evalFPS ::
   forall era.
-  Era era =>
+  ( Era era,
+    HasField "vldt" (Core.TxBody era) ValidityInterval
+  ) =>
   Timelock era ->
   Set (KeyHash 'Witness (Crypto era)) ->
   Core.TxBody era ->
@@ -188,8 +208,8 @@ evalFPS ::
 evalFPS (TimelockAnd locks) vhks txb = all (\lock -> evalFPS lock vhks txb) locks
 evalFPS (TimelockOr locks) vhks txb = any (\lock -> evalFPS lock vhks txb) locks
 evalFPS (Multi msig) vhks _tx = evalNativeMultiSigScript msig vhks
-evalFPS (Interval timeS timeF) _vhks txb =
-  let (bodyS, bodyF) = txvld @era txb -- THIS IS A STUB
+evalFPS (Interval (ValidityInterval timeS timeF)) _vhks txb =
+  let (ValidityInterval bodyS bodyF) = getField @"vldt" txb -- THIS IS A STUB
    in case (timeS, timeF) of
         (SNothing, SNothing) -> True
         (SNothing, SJust i_f) | SJust i'_f <- bodyF -> i'_f <= i_f
@@ -201,7 +221,10 @@ evalFPS (Interval timeS timeF) _vhks txb =
         _ -> False
 
 validateTimelock ::
-  Shelley.TxBodyConstraints era => Timelock era -> Tx era -> Bool
+  (Shelley.TxBodyConstraints era, HasField "vldt" (Core.TxBody era) ValidityInterval) =>
+  Timelock era ->
+  Tx era ->
+  Bool
 validateTimelock lock tx = evalFPS lock vhks (_body tx)
   where
     -- THIS IS JUST A STUB. WHO KNOWS IF
@@ -224,11 +247,23 @@ hashTimelockScript =
     . Hash.castHash
     . Hash.hashWith (\x -> nativeTimelockTag <> serialize' x)
 
+{-
+instance
+  ( Era era,
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    Shelley.TxBodyConstraints era
+  ) =>
+  MultiSignatureScript (Timelock era) era
+  where
+  validateScript = validateTimelock
+  hashScript = hashTimelockScript
+-}
+
 showTimelock :: Era era => Timelock era -> String
-showTimelock (Interval SNothing SNothing) = "(Interval -inf .. +inf)"
-showTimelock (Interval (SJust (SlotNo x)) SNothing) = "(Interval " ++ show x ++ " .. +inf)"
-showTimelock (Interval SNothing (SJust (SlotNo x))) = "(Interval -inf .. " ++ show x ++ ")"
-showTimelock (Interval (SJust (SlotNo y)) (SJust (SlotNo x))) = "(Interval " ++ show y ++ " .. " ++ show x ++ ")"
+showTimelock (Interval (ValidityInterval SNothing SNothing)) = "(Interval -inf .. +inf)"
+showTimelock (Interval (ValidityInterval (SJust (SlotNo x)) SNothing)) = "(Interval " ++ show x ++ " .. +inf)"
+showTimelock (Interval (ValidityInterval SNothing (SJust (SlotNo x)))) = "(Interval -inf .. " ++ show x ++ ")"
+showTimelock (Interval (ValidityInterval (SJust (SlotNo y)) (SJust (SlotNo x)))) = "(Interval " ++ show y ++ " .. " ++ show x ++ ")"
 showTimelock (TimelockAnd xs) = "(TimelockAnd " ++ foldl accum ")" xs where accum ans x = showTimelock x ++ " " ++ ans
 showTimelock (TimelockOr xs) = "(TimelockOr " ++ foldl accum ")" xs where accum ans x = showTimelock x ++ " " ++ ans
 showTimelock (Multi x) = show x

@@ -51,10 +51,9 @@ module Shelley.Spec.Ledger.TxBody
         extraSize
       ),
     TxId (..),
-    TxIn (TxIn),
+    TxIn (TxIn, ..),
     EraIndependentTxBody,
     eraIndTxBodyHash,
-    pattern TxInCompact,
     TxOut (TxOut, TxOutCompact),
     Url,
     Wdrl (..),
@@ -392,17 +391,27 @@ instance Era era => FromJSON (PoolParams era) where
         <*> obj .: "relays"
         <*> obj .: "metadata"
 
+-- ===================================================================================
+-- Because we expect other Era's to import and use TxId, TxIn, TxOut, we use the weakest
+-- constraint possible when deriving their instances. A Stronger constraint, Gathering
+-- many constraints together, like:  type Strong = (C1 x, C2 x, ..., Cn x)
+-- may make this file look systematic by having things like:
+-- derving instance (Strong x) => Foo x,  for many Foo (Eq, Show, NfData, etc) BUT this
+-- forces unnecessary requirements on any new Era which tries to embed one of these
+-- types in their own datatypes, if they then try and derive (Foo TheirDataType).
+-- ====================================================================================
+
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId era = TxId {_unTxId :: Hash (Crypto era) (Core.TxBody era)}
+newtype TxId era = TxId {_unTxId :: Hash (Crypto era) EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks)
 
 deriving newtype instance
-  (Era era, Typeable (Core.TxBody era)) =>
+  (Era era) => -- weakest constraint
   ToCBOR (TxId era)
 
 deriving newtype instance
-  (Era era, Typeable (Core.TxBody era)) =>
+  (Era era) => -- weakest constraint
   FromCBOR (TxId era)
 
 deriving newtype instance (Era era) => NFData (TxId era)
@@ -412,7 +421,7 @@ data TxIn era = TxInCompact {-# UNPACK #-} !(TxId era) {-# UNPACK #-} !Word64
   deriving (Generic)
 
 -- TODO: We will also want to have the TxId be compact, but the representation
--- depends on the era.
+-- depends on the era. NOT SURE ABOUT this. The TxId is always a Hash, Can't get more compact than that.
 
 pattern TxIn ::
   Era era =>
@@ -444,13 +453,14 @@ data TxOut era
       !(CompactForm (Core.Value era))
 
 instance
-  (ShelleyBased era) =>
+  (Show (Core.Value era), Era era, Compactible (Core.Value era)) => -- Use the weakest constraint possible here
   Show (TxOut era)
   where
   show = show . viewCompactTxOut
 
 deriving stock instance
-  ShelleyBased era =>
+  -- weakest constraint
+  (Eq (Core.Value era), Compactible (Core.Value era)) =>
   Eq (TxOut era)
 
 instance NFData (TxOut era) where
@@ -474,7 +484,7 @@ pattern TxOut addr vl <-
 
 viewCompactTxOut ::
   forall era.
-  ShelleyBased era =>
+  (Era era, Compactible (Core.Value era)) => -- Use the weakest constraint possible here
   TxOut era ->
   (Addr era, Core.Value era)
 viewCompactTxOut (TxOutCompact bs c) = (addr, val)
@@ -540,7 +550,7 @@ data MIRCert era = MIRCert
   deriving (Show, Generic, Eq)
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  (Era era, Typeable (Core.Script era), FromCBOR (Annotator (Core.Script era))) =>
   FromCBOR (MIRCert era)
   where
   fromCBOR = decodeRecordNamed "SingleHostAddr" (const 2) $ do
@@ -549,7 +559,7 @@ instance
     pure $ MIRCert pot values
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  (Era era, ToCBOR (Core.Script era)) =>
   ToCBOR (MIRCert era)
   where
   toCBOR (MIRCert pot values) =
@@ -628,7 +638,8 @@ deriving instance (ShelleyBased era) => Show (TxBody era)
 
 deriving via AllowThunksIn '["bodyBytes"] (TxBody era) instance Era era => NoThunks (TxBody era)
 
-instance Era era => HashAnnotated (TxBody era) era
+instance Era era => HashAnnotated (TxBody era) era where
+  type HashIndex (TxBody era) = EraIndependentTxBody
 
 pattern TxBody ::
   ShelleyBased era =>
@@ -714,7 +725,8 @@ deriving via
   instance
     (Era era, Typeable kr) => NoThunks (WitVKey kr era)
 
-instance (Era era, Typeable kr) => HashAnnotated (WitVKey kr era) era
+instance (Era era, Typeable kr) => HashAnnotated (WitVKey kr era) era where
+  type HashIndex (WitVKey kr era) = EraIndependentWitVKey
 
 pattern WitVKey ::
   (Typeable kr, Era era) =>
@@ -732,8 +744,6 @@ pattern WitVKey k s <-
                 <> encodeSignedDSIGN s
           hash = asWitness $ hashKey k
        in WitVKey' k s hash bytes
-
-data EraIndependentTxBody
 
 -- | Compute an era-independent transaction body hash
 eraIndTxBodyHash ::
@@ -765,17 +775,18 @@ newtype StakeCreds era = StakeCreds
   deriving newtype (NFData, NoThunks, ToJSON, FromJSON)
 
 deriving newtype instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  (Era era, Typeable (Core.Script era)) =>
   FromCBOR (StakeCreds era)
 
 deriving newtype instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  (Era era, ToCBOR (Core.Script era)) =>
   ToCBOR (StakeCreds era)
 
 -- CBOR
 
-instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
+instance-- use the weakest predicate
+
+  (Era era, ToCBOR (Core.Script era)) =>
   ToCBOR (DCert era)
   where
   toCBOR = \case
@@ -817,7 +828,7 @@ instance
         <> toCBOR mir
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  (Era era, Typeable (Core.Script era), FromCBOR (Annotator (Core.Script era))) =>
   FromCBOR (DCert era)
   where
   fromCBOR = decodeRecordSum "DCert era" $
@@ -850,7 +861,7 @@ instance
       k -> invalidKey k
 
 instance
-  (Typeable (Core.TxBody era), Era era) =>
+  (Era era) =>
   ToCBOR (TxIn era)
   where
   toCBOR (TxInCompact txId index) =
@@ -859,7 +870,7 @@ instance
       <> toCBOR index
 
 instance
-  (Era era, Typeable (Core.TxBody era)) =>
+  (Era era) =>
   FromCBOR (TxIn era)
   where
   fromCBOR = do
@@ -868,8 +879,9 @@ instance
       b <- fromCBOR
       pure $ TxInCompact a b
 
-instance
-  ShelleyBased era =>
+instance-- use the weakest constraint necessary
+
+  (Era era, ToCBOR (Core.Value era), ToCBOR (CompactForm (Core.Value era))) =>
   ToCBOR (TxOut era)
   where
   toCBOR (TxOutCompact addr coin) =
@@ -877,8 +889,9 @@ instance
       <> toCBOR addr
       <> toCBOR coin
 
-instance
-  ShelleyBased era =>
+instance-- use the weakest constraint necessary
+
+  (Era era, FromCBOR (Core.Value era), FromCBOR (CompactForm (Core.Value era))) =>
   FromCBOR (TxOut era)
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do

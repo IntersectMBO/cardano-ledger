@@ -84,8 +84,9 @@ import Shelley.Spec.Ledger.Tx
     WitnessSetHKD (..),
     _ttl,
   )
+import Shelley.Spec.Ledger.Hashing(HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.TxBody
-  (eraIndTxBodyHash,  PoolMetaData (..),
+  ( PoolMetaData (..),
     PoolParams (..),
     Wdrl (..),
     _poolCost,
@@ -365,7 +366,7 @@ aliceGivesBobLovelace
           ttl
           SNothing
           SNothing
-      awits = makeWitnessesVKey (eraIndTxBodyHash txbody) signers
+      awits = makeWitnessesVKey (hashAnnotated txbody) signers
 
 utxoState :: UTxOState C
 utxoState =
@@ -453,7 +454,7 @@ testSpendNotOwnedUTxO =
           (SlotNo 100)
           SNothing
           SNothing
-      aliceWit = makeWitnessVKey (eraIndTxBodyHash txbody) alicePay
+      aliceWit = makeWitnessVKey (hashAnnotated txbody) alicePay
       tx = Tx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
@@ -485,7 +486,7 @@ testWitnessWrongUTxO =
           (SlotNo 101)
           SNothing
           SNothing
-      aliceWit = makeWitnessVKey (eraIndTxBodyHash tx2body) alicePay
+      aliceWit = makeWitnessVKey (hashAnnotated tx2body) alicePay
       tx = Tx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
@@ -511,7 +512,7 @@ testEmptyInputSet =
           (SlotNo 0)
           SNothing
           SNothing
-      wits = mempty {addrWits = makeWitnessesVKey (eraIndTxBodyHash txb) [aliceStake]}
+      wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb) [aliceStake]}
       tx = Tx txb wits SNothing
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
@@ -571,7 +572,7 @@ testInvalidWintess =
           SNothing
           SNothing
       txb' = txb {_ttl = SlotNo 2}
-      wits = mempty {addrWits = makeWitnessesVKey (eraIndTxBodyHash txb') [alicePay]}
+      wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb') [alicePay]}
       tx = Tx @C txb wits SNothing
       errs =
         [ UtxowFailure $
@@ -596,7 +597,7 @@ testWithdrawalNoWit =
           (SlotNo 0)
           SNothing
           SNothing
-      wits = mempty {addrWits = Set.singleton $ makeWitnessVKey (eraIndTxBodyHash txb) alicePay}
+      wits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashAnnotated txb) alicePay}
       tx = Tx @C txb wits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
@@ -625,7 +626,7 @@ testWithdrawalWrongAmt =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (eraIndTxBodyHash txb)
+                (hashAnnotated txb)
                 [asWitness alicePay, asWitness bobStake]
           }
       rAcnt = mkVKeyRwdAcnt Testnet bobStake

@@ -177,7 +177,7 @@ txid ::
   (Shelley.TxBodyConstraints era) =>
   Core.TxBody era ->
   TxId era
-txid = TxId . hashAnnotated @_ @era
+txid = TxId . hashAnnotated @(Core.TxBody era) @era
 
 -- | Compute the UTxO inputs of a transaction.
 txins ::

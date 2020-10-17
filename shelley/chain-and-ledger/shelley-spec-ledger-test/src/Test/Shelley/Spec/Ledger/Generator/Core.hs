@@ -749,12 +749,12 @@ genesisAccountState =
     }
 
 -- | The transaction Id for 'UTxO' included at the beginning of a new ledger.
-genesisId ::
+genesisId :: forall era.
   (ShelleyTest era) => Ledger.TxId era
 genesisId =
   TxId $
     hashAnnotated
-      ( TxBody
+      ( (TxBody @era)
           Set.empty
           StrictSeq.Empty
           StrictSeq.Empty
