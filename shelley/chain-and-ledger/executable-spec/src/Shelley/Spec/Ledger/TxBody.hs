@@ -88,14 +88,15 @@ import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Cardano.Prelude
   ( cborError,
+    decodeEitherBase16,
     panic,
   )
 import Control.DeepSeq (NFData (rnf))
 import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Control.Monad (unless)
-import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Types (explicitParseField)
+import Data.Aeson.Types (Parser, explicitParseField)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
@@ -191,7 +192,7 @@ instance HasExp (StakeCreds era) (Map (Credential 'Staking era) SlotNo) where
 
 instance Embed (StakeCreds era) (Map (Credential 'Staking era) SlotNo) where
   toBase (StakeCreds x) = x
-  fromBase x = (StakeCreds x)
+  fromBase x = StakeCreds x
 
 -- | The delegation of one stake key to another.
 data Delegation era = Delegation
@@ -219,10 +220,17 @@ instance ToJSON PoolMetaData where
 
 instance FromJSON PoolMetaData where
   parseJSON =
-    Aeson.withObject "PoolMetaData" $ \obj ->
-      PoolMetaData
-        <$> obj .: "url"
-        <*> explicitParseField (fmap (fst . Base16.decode . Char8.pack) . parseJSON) obj "hash"
+    Aeson.withObject "PoolMetaData" $ \obj -> do
+      url <- obj .: "url"
+      hash <- explicitParseField parseJsonBase16 obj "hash"
+      return $ PoolMetaData url hash
+
+parseJsonBase16 :: Value -> Parser ByteString
+parseJsonBase16 v = do
+  s <- parseJSON v
+  case decodeEitherBase16 (Char8.pack s) of
+    Right bs -> return bs
+    Left msg -> fail msg
 
 instance NoThunks PoolMetaData
 

@@ -27,6 +27,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as LB16
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
+import Data.Either
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import GHC.Stack (HasCallStack)
@@ -47,6 +48,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
+
+import Cardano.Prelude (decodeEitherBase16)
 
 tests :: TestTree
 tests =
@@ -122,11 +125,11 @@ goldenTests_MockCrypto =
     keyHash :: Credential kh C
     keyHash =
       KeyHashObj . KeyHash . UnsafeHash $
-        SBS.toShort . fst . B16.decode $ "01020304"
+        SBS.toShort . fromRight (error "Unable to decode") . decodeEitherBase16 $ "01020304"
     scriptHash :: Credential kh C
     scriptHash =
       ScriptHashObj . ScriptHash . UnsafeHash $
-        SBS.toShort . fst . B16.decode $ "05060708"
+        SBS.toShort . fromRight (error "Unable to decode") . decodeEitherBase16 $ "05060708"
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
 
