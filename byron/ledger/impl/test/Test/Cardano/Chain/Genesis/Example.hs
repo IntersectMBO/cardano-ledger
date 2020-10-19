@@ -14,7 +14,6 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.ByteString.Base16 as B16
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
@@ -169,11 +168,10 @@ exampleUTCTime0 :: UTCTime
 exampleUTCTime0 = UTCTime (ModifiedJulianDay 10000) (secondsToDiffTime 82401)
 
 hexToBS :: ByteString -> ByteString
-hexToBS ts = case B16.decode ts of
-  (fullyDecoded, "") -> fullyDecoded
-  (partiallyDecoded, invalid) ->
-    panic
-      $  "successfully decoded: "
-      <> show partiallyDecoded
-      <> " decode failed: "
-      <> show invalid
+hexToBS ts = case decodeEitherBase16 ts of
+  Right fullyDecoded -> fullyDecoded
+  Left msg -> panic
+    $  "fail to decode: "
+    <> show ts
+    <> " with error: "
+    <> show msg
