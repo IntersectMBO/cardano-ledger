@@ -16,7 +16,7 @@ module Shelley.Spec.Ledger.STS.Mir
 where
 
 import Cardano.Ledger.Val ((<->))
-import Control.Iterate.SetAlgebra (dom, eval, (∪+), (◁))
+import Control.SetAlgebra (dom, eval, (∪+), (◁))
 import Control.State.Transition
   ( Assertion (..),
     InitialRule,

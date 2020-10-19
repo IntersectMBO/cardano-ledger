@@ -16,15 +16,17 @@ import qualified Data.Map.Strict as Map
 import Data.Map.Strict(empty,singleton)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Val( Val (..), invert )
-import Cardano.Ledger.ShelleyMA.ValueInternal
+import Cardano.Ledger.ShelleyMA.Value
   ( Value(..),
     AssetID(..),
     PolicyID(..),
     lookup,
     insert,
-    cannonicalInsert,
+  )
+import Data.CannonicalMaps
+  ( cannonicalInsert,
     cannonicalMapUnion,
-    CanonicalZero(..),
+    CannonicalZero(..),
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Test.Shelley.Spec.Ledger.Serialisation.Generators() -- get: instance Era era => Arbitrary (ScriptHash era)

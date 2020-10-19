@@ -23,7 +23,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Iterate.SetAlgebra (forwards)
+import Control.SetAlgebra (forwards)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Either as Either (partitionEithers)
 import Data.List (foldl')

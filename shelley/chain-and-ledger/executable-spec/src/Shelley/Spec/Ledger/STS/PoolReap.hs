@@ -18,7 +18,7 @@ where
 
 import Cardano.Ledger.Shelley (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<->))
-import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
+import Control.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Control.State.Transition
   ( Assertion (..),
     STS (..),

@@ -95,8 +95,8 @@ import Cardano.Prelude
     panic,
   )
 import Control.DeepSeq (NFData (rnf))
-import Control.Iterate.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Control.Monad (unless)
+import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser, explicitParseField)

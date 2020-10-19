@@ -39,18 +39,17 @@ import Cardano.Ledger.Era (Crypto (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import qualified Data.ByteString as BS
+import Data.Coders (Encode (..), (!>))
 import qualified Data.List as List (concat, concatMap, permutations)
+import Data.MemoBytes
+  ( Mem,
+    MemoBytes (..),
+    memoBytes,
+  )
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
-import Shelley.Spec.Ledger.MemoBytes
-  ( Encode (..),
-    Mem,
-    MemoBytes (..),
-    memoBytes,
-    (!>),
-  )
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 
 -- | Magic number representing the tag of the native multi-signature script

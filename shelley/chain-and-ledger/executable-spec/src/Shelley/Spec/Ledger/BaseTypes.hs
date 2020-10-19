@@ -73,6 +73,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.Coders (invalidKey)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
 import Data.Ratio (Ratio, denominator, numerator, (%))
@@ -160,9 +161,6 @@ instance NoThunks Nonce
 instance ToCBOR Nonce where
   toCBOR NeutralNonce = encodeListLen 1 <> toCBOR (0 :: Word8)
   toCBOR (Nonce n) = encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR n
-
-invalidKey :: Word -> Decoder s a
-invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)
 
 instance FromCBOR Nonce where
   fromCBOR = decodeRecordSum "Nonce" $

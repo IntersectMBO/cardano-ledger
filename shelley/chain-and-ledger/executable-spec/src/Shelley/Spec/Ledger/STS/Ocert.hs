@@ -15,8 +15,8 @@ module Shelley.Spec.Ledger.STS.Ocert
 where
 
 import Cardano.Ledger.Crypto
-import Control.Iterate.SetAlgebra (eval, singleton, (⨃))
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (eval, singleton, (⨃))
 import Control.State.Transition
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

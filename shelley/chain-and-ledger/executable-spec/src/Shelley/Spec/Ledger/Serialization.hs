@@ -56,31 +56,40 @@ import Cardano.Binary
     Size,
     ToCBOR (..),
     TokenType (TypeNull),
-    decodeBreakOr,
     decodeListLenOrIndef,
     decodeMapLenOrIndef,
     decodeNull,
     decodeTag,
-    decodeWord,
     encodeBreak,
     encodeListLen,
-    encodeListLenIndef,
     encodeMapLen,
     encodeMapLenIndef,
     encodeNull,
     encodeTag,
-    matchSize,
     peekTokenType,
     withWordSize,
   )
 import Cardano.Prelude (cborError)
-import Control.Monad (replicateM, unless)
+import Control.Monad (unless)
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.Binary.Put (putWord32le, runPut)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.Coders
+  ( decodeCollection,
+    decodeCollectionWithLen,
+    decodeList,
+    decodeRecordNamed,
+    decodeRecordSum,
+    decodeSeq,
+    decodeSet,
+    decodeStrictSeq,
+    encodeFoldable,
+    encodeFoldableEncoder,
+    wrapCBORArray,
+  )
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
 import Data.IP
@@ -96,10 +105,6 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Typeable
@@ -136,29 +141,6 @@ class Typeable a => FromCBORGroup a where
 
 instance (FromCBORGroup a, ToCBORGroup a) => FromCBOR (CBORGroup a) where
   fromCBOR = CBORGroup <$> groupRecord
-
-decodeRecordNamed :: Text -> (a -> Int) -> Decoder s a -> Decoder s a
-decodeRecordNamed name getRecordSize decode = do
-  lenOrIndef <- decodeListLenOrIndef
-  x <- decode
-  case lenOrIndef of
-    Just n -> matchSize (Text.pack "\nRecord " <> name) n (getRecordSize x)
-    Nothing -> do
-      isBreak <- decodeBreakOr
-      unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
-  pure x
-
-decodeRecordSum :: String -> (Word -> Decoder s (Int, a)) -> Decoder s a
-decodeRecordSum name decode = do
-  lenOrIndef <- decodeListLenOrIndef
-  tag <- decodeWord
-  (size, x) <- decode tag -- we decode all the stuff we want
-  case lenOrIndef of
-    Just n -> matchSize (Text.pack ("\nSum " ++ name ++ "\nreturned=" ++ show size ++ " actually read= " ++ show n)) size n
-    Nothing -> do
-      isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
-      unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
-  pure x
 
 groupRecord :: forall a s. (ToCBORGroup a, FromCBORGroup a) => Decoder s a
 groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen) fromCBORGroup
@@ -202,24 +184,6 @@ instance ToCBOR a => ToCBOR (CborSeq a) where
 instance FromCBOR a => FromCBOR (CborSeq a) where
   fromCBOR = CborSeq <$> decodeSeq fromCBOR
 
-decodeSeq :: Decoder s a -> Decoder s (Seq a)
-decodeSeq decoder = Seq.fromList <$> decodeList decoder
-
-decodeStrictSeq :: Decoder s a -> Decoder s (StrictSeq a)
-decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
-
-decodeSet :: Ord a => Decoder s a -> Decoder s (Set a)
-decodeSet decoder = Set.fromList <$> decodeList decoder
-
-encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
-encodeFoldable = encodeFoldableEncoder toCBOR
-
-encodeFoldableEncoder :: (Foldable f) => (a -> Encoding) -> f a -> Encoding
-encodeFoldableEncoder encode xs = wrapCBORArray len contents
-  where
-    (len, contents) = foldl' go (0, mempty) xs
-    go (!l, !enc) next = (l + 1, enc <> encode next)
-
 encodeFoldableMapEncoder ::
   Foldable f =>
   (Word -> a -> Maybe Encoding) ->
@@ -232,20 +196,11 @@ encodeFoldableMapEncoder encode xs = wrapCBORMap len contents
       Nothing -> (l, i + 1, enc)
       Just e -> (l + 1, i + 1, enc <> e)
 
-wrapCBORArray :: Word -> Encoding -> Encoding
-wrapCBORArray len contents =
-  if len <= 23
-    then encodeListLen len <> contents
-    else encodeListLenIndef <> contents <> encodeBreak
-
 wrapCBORMap :: Word -> Encoding -> Encoding
 wrapCBORMap len contents =
   if len <= 23
     then encodeMapLen len <> contents
     else encodeMapLenIndef <> contents <> encodeBreak
-
-decodeList :: Decoder s a -> Decoder s [a]
-decodeList = decodeCollection decodeListLenOrIndef
 
 decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
 decodeMaybe d =
@@ -260,23 +215,6 @@ decodeMaybe d =
 
 decodeMapContents :: Decoder s a -> Decoder s [a]
 decodeMapContents = decodeCollection decodeMapLenOrIndef
-
-decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
-decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
-
-decodeCollectionWithLen ::
-  Decoder s (Maybe Int) ->
-  Decoder s a ->
-  Decoder s (Int, [a])
-decodeCollectionWithLen lenOrIndef el = do
-  lenOrIndef >>= \case
-    Just len -> (,) len <$> replicateM len el
-    Nothing -> loop (0, []) (not <$> decodeBreakOr) el
-  where
-    loop (n, acc) condition action =
-      condition >>= \case
-        False -> pure (n, reverse acc)
-        True -> action >>= \v -> loop (n + 1, (v : acc)) condition action
 
 ratioToCBOR :: ToCBOR a => Ratio a -> Encoding
 ratioToCBOR r =

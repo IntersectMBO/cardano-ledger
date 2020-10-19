@@ -12,7 +12,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
   )
 where
 
-import Control.Iterate.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
+import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
 import Cardano.Ledger.Era (Crypto)
 import qualified Data.Set as Set (Set, null)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (StakePool))

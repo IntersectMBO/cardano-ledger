@@ -104,8 +104,8 @@ import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
-import Control.Iterate.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
 import Data.Foldable (fold, toList)

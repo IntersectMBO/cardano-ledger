@@ -19,7 +19,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
 where
 
 import Cardano.Ledger.Val ((<+>), (<->))
-import Control.Iterate.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
+import Control.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
     Trace (..),
