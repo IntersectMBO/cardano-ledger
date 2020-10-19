@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -11,18 +12,15 @@
 -- | Interface to the Shelley ledger for the purposes of managing a Shelley
 -- mempool.
 module Shelley.Spec.Ledger.API.Mempool
-  ( MempoolEnv,
-    MempoolState,
-    mkMempoolEnv,
-    mkMempoolState,
+  ( ApplyTx (..),
     ApplyTxError (..),
-    applyTxs,
-    overShelleyState,
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
+import Cardano.Crypto.Hash (Hash)
+import Cardano.Ledger.Crypto (Crypto, HASH)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -33,13 +31,57 @@ import Control.State.Transition.Extended
     applySTS,
   )
 import Data.Sequence (Seq)
+import Data.Typeable (Typeable)
+import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes (Globals)
+import Shelley.Spec.Ledger.Keys (DSignable)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
+
+-- TODO #1304: add reapplyTxs
+class
+  ( Eq (Tx era),
+    Show (Tx era),
+    NoThunks (Tx era),
+    FromCBOR (Annotator (Tx era)),
+    ToCBOR (Tx era),
+    Eq (ApplyTxError era),
+    Show (ApplyTxError era),
+    FromCBOR (ApplyTxError era),
+    ToCBOR (ApplyTxError era),
+    Typeable (ApplyTxError era)
+  ) =>
+  ApplyTx era
+  where
+  applyTxs ::
+    MonadError (ApplyTxError era) m =>
+    Globals ->
+    SlotNo ->
+    Seq (Tx era) ->
+    ShelleyState era ->
+    m (ShelleyState era)
+  default applyTxs ::
+    (MonadError (ApplyTxError era) m, STS (LEDGERS era)) =>
+    Globals ->
+    SlotNo ->
+    Seq (Tx era) ->
+    ShelleyState era ->
+    m (ShelleyState era)
+  applyTxs globals slot txs state =
+    overShelleyState (applyTxsTransition globals mempoolEnv txs) state
+    where
+      mempoolEnv = mkMempoolEnv state slot
+
+instance
+  ( Crypto c,
+    DSignable c (Hash (HASH c) EraIndependentTxBody)
+  ) =>
+  ApplyTx (ShelleyEra c)
 
 type MempoolEnv era = Ledgers.LedgersEnv era
 
@@ -108,7 +150,7 @@ instance
   where
   fromCBOR = ApplyTxError <$> fromCBOR
 
-applyTxs ::
+applyTxsTransition ::
   forall era m.
   ( STS (LEDGERS era),
     MonadError (ApplyTxError era) m
@@ -118,7 +160,7 @@ applyTxs ::
   Seq (Tx era) ->
   MempoolState era ->
   m (MempoolState era)
-applyTxs globals env txs state =
+applyTxsTransition globals env txs state =
   let res =
         flip runReader globals
           . applySTS @(LEDGERS era)
@@ -131,9 +173,9 @@ applyTxs globals env txs state =
 -- state.
 overShelleyState ::
   Applicative f =>
-  (MempoolState c -> f (MempoolState c)) ->
-  ShelleyState c ->
-  f (ShelleyState c)
+  (MempoolState era -> f (MempoolState era)) ->
+  ShelleyState era ->
+  f (ShelleyState era)
 overShelleyState f st = do
   res <- f $ mkMempoolState st
   pure $

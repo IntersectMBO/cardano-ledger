@@ -43,11 +43,8 @@ import Shelley.Spec.Ledger.API.Protocol
     tickChainDepState,
     updateChainDepState,
   )
-import Shelley.Spec.Ledger.API.Validation
-  ( ShelleyState,
-    applyBlockTransition,
-    reapplyBlockTransition,
-  )
+import qualified Shelley.Spec.Ledger.API as API
+import Shelley.Spec.Ledger.API (ShelleyState)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.Bench.Gen (genBlock, genChainState)
 import Shelley.Spec.Ledger.BlockChain
@@ -58,7 +55,6 @@ import Shelley.Spec.Ledger.BlockChain
   )
 import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
 import Shelley.Spec.Ledger.LedgerState (DPState, LedgerState, UTxOState, nesBcur)
-import Shelley.Spec.Ledger.STS.Bbody (BBODY)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
@@ -83,6 +79,8 @@ instance NFData (ValidateInput era) where
 validateInput ::
   ( ShelleyTest era,
     Mock (Crypto era),
+    API.GetLedgerView era,
+    API.ApplyBlock era,
     STS (LEDGERS era),
     BaseM (LEDGERS era) ~ ShelleyBase,
     Environment (LEDGERS era) ~ LedgersEnv era,
@@ -100,6 +98,8 @@ validateInput utxoSize = genValidateInput utxoSize
 genValidateInput ::
   ( ShelleyTest era,
     Mock (Crypto era),
+    API.GetLedgerView era,
+    API.ApplyBlock era,
     STS (LEDGERS era),
     BaseM (LEDGERS era) ~ ShelleyBase,
     Environment (LEDGERS era) ~ LedgersEnv era,
@@ -120,35 +120,34 @@ genValidateInput n = do
 
 benchValidate ::
   forall era.
-  ( STS (BBODY era)
-  ) =>
+  API.ApplyBlock era =>
   ValidateInput era ->
   IO (ShelleyState era)
 benchValidate (ValidateInput globals state block) =
-  case applyBlockTransition @era globals state block of
+  case API.applyBlock @era globals state block of
     Right x -> pure x
     Left x -> error (show x)
 
 applyBlock ::
   forall era.
   ( Era era,
-    STS (BBODY era)
+    API.ApplyBlock era
   ) =>
   ValidateInput era ->
   Int ->
   Int
 applyBlock (ValidateInput globals state block) n =
-  case applyBlockTransition @era globals state block of
+  case API.applyBlock @era globals state block of
     Right x -> seq (rnf x) (n + 1)
     Left x -> error (show x)
 
 benchreValidate ::
-  ( STS (BBODY era)
+  ( API.ApplyBlock era
   ) =>
   ValidateInput era ->
   ShelleyState era
 benchreValidate (ValidateInput globals state block) =
-  reapplyBlockTransition globals state block
+  API.reapplyBlock globals state block
 
 -- ==============================================================
 
@@ -185,6 +184,8 @@ instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
 genUpdateInputs ::
   forall era.
   ( ShelleyTest era,
+    API.GetLedgerView era,
+    API.ApplyBlock era,
     STS (LEDGERS era),
     BaseM (LEDGERS era) ~ ShelleyBase,
     Environment (LEDGERS era) ~ LedgersEnv era,

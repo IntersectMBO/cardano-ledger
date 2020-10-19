@@ -74,6 +74,8 @@ type TxGen era =
 genBlock ::
   forall era.
   ( ShelleyTest era,
+    GetLedgerView era,
+    ApplyBlock era,
     STS (LEDGER era),
     BaseM (LEDGER era) ~ ShelleyBase,
     Environment (LEDGER era) ~ LedgerEnv era,
@@ -97,7 +99,7 @@ genBlock ge = genBlockWithTxGen genTxs ge
 
 genBlockWithTxGen ::
   forall era.
-  (ShelleyTest era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era), GetLedgerView era, ApplyBlock era) =>
   TxGen era ->
   GenEnv era ->
   ChainState era ->
@@ -161,7 +163,7 @@ genBlockWithTxGen
 
 selectNextSlotWithLeader ::
   forall era.
-  (ShelleyTest era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era), GetLedgerView era, ApplyBlock era) =>
   GenEnv era ->
   ChainState era ->
   -- Starting slot
@@ -231,7 +233,7 @@ selectNextSlotWithLeader
 -- | The chain state is a composite of the new epoch state and the chain dep
 -- state. We tick both.
 tickChainState ::
-  ShelleyTest era =>
+  (GetLedgerView era, ApplyBlock era) =>
   SlotNo ->
   ChainState era ->
   ChainState era
@@ -259,7 +261,7 @@ tickChainState
         ChainDepState {csProtocol, csTickn} =
           tickChainDepState testGlobals lv isNewEpoch cds
         PrtclState ocertIssue evNonce candNonce = csProtocol
-        nes' = applyTickTransition testGlobals chainNes slotNo
+        nes' = applyTick testGlobals chainNes slotNo
      in ChainState
           { chainNes = nes',
             chainOCertIssue = ocertIssue,

@@ -62,6 +62,8 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, maxLLSupply, mkHash)
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
   ( ShelleyTest era,
+    GetLedgerView era,
+    ApplyBlock era,
     STS (CHAIN era),
     BaseM (CHAIN era) ~ ShelleyBase,
     STS (LEDGERS era),

@@ -16,8 +16,10 @@ import Data.Either (fromRight)
 import Data.Proxy
 import Data.Sequence (Seq)
 import Shelley.Spec.Ledger.API
-  ( Block,
+  ( ApplyBlock,
+    Block,
     ChainState (..),
+    GetLedgerView,
     Tx,
   )
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
@@ -84,7 +86,9 @@ genBlock ::
     STS (LEDGER era),
     Environment (LEDGER era) ~ LedgerEnv era,
     State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era
+    Signal (LEDGER era) ~ Tx era,
+    GetLedgerView era,
+    ApplyBlock era
   ) =>
   GenEnv era ->
   ChainState era ->
