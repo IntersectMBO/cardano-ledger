@@ -25,30 +25,23 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
-import Cardano.Ledger.Val (Val (..), scale)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
 import Data.CannonicalMaps
-  ( CannonicalZero,
-    cannonicalInsert,
-    cannonicalMap,
+  ( cannonicalMap,
     cannonicalMapUnion,
     pointWise,
   )
 import Data.Group (Abelian, Group (..))
 import Data.Map.Internal
   ( Map (..),
-    balanceL,
-    balanceR,
     link,
     link2,
-    singleton,
     splitLookup,
   )
-import Data.Map.Strict (Map, assocs)
+import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
-import Data.Monoid (Sum (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -176,7 +169,7 @@ lookup pid aid (Value _ m) =
 --   if comb = \ old new -> old, the integer in the Value is prefered over n
 --   if comb = \ old new -> new, then n is prefered over the integer in the Value
 --   if (comb old new) == 0, then that value should not be stored in the Map part of the Value.
-insert :: Era era => (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
+insert :: (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
 insert combine pid aid new (Value cn m1) =
   case splitLookup pid m1 of
     (l1, Just m2, l2) ->
@@ -191,7 +184,7 @@ insert combine pid aid new (Value cn m1) =
             else Value cn (link pid (link aid n v1 v2) l1 l2)
           where
             n = combine old new
-        (v1, Nothing, v2) -> Value cn (link pid (if new == 0 then m2 else (Map.insert aid new m2)) l1 l2)
+        (_, Nothing, _) -> Value cn (link pid (if new == 0 then m2 else (Map.insert aid new m2)) l1 l2)
     (l1, Nothing, l2) ->
       Value
         cn

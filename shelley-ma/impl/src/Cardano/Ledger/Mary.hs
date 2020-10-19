@@ -4,4 +4,4 @@ module Cardano.Ledger.Mary where
 
 import Cardano.Ledger.ShelleyMA
 
-type MaryEra = ShelleyMAEra Mary
+type MaryEra = ShelleyMAEra 'Mary
