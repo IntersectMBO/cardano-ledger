@@ -27,6 +27,7 @@ library
     Cardano.Ledger.ShelleyMA.Value
     Cardano.Ledger.ShelleyMA.Timelocks
     Cardano.Ledger.ShelleyMA.TxBody
+    Cardano.Ledger.ShelleyMA.Rules.Utxo
   other-modules:
     Cardano.Ledger.ShelleyMA
 
@@ -43,9 +44,9 @@ library
     deepseq,
     groups,
     nothunks,
-    partial-order,
     shelley-spec-ledger,
     small-steps,
+    transformers
   hs-source-dirs: src
   ghc-options:
     -Wall
