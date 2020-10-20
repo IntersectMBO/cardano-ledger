@@ -10,23 +10,6 @@ with pkgs;
 let
   ormolu = import pkgs.commonLib.sources.ormolu {};
 
-  haskell-extra =
-    # The Hackage index-state from cabal.project
-    let checkMaterialization = false;
-        index-state =
-      let
-        # Borrowed from haskell.nix
-        parseIndexState = rawCabalProject:
-            let
-              indexState = pkgs.lib.lists.concatLists (
-                pkgs.lib.lists.filter (l: l != null)
-                  (builtins.map (l: builtins.match "^index-state: *(.*)" l)
-                    (pkgs.lib.splitString "\n" rawCabalProject)));
-            in pkgs.lib.lists.head (indexState ++ [ null ]);
-      in parseIndexState (builtins.readFile ./cabal.project);
-          # Extra Haskell packages which we use but aren't part of the main project definition.
-    in pkgs.callPackage ./nix/haskell-extra.nix { inherit index-state checkMaterialization; };
-
   # This provides a development environment that can be used with nix-shell or
   # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   shell = cardanoLedgerSpecsHaskellPackages.shellFor {
@@ -38,7 +21,6 @@ let
 
     # These programs will be available inside the nix-shell.
     buildInputs = with haskellPackages; [
-      haskell-extra.haskell-language-server.components.exes.haskell-language-server
       niv
       pkg-config
       hlint
@@ -47,6 +29,7 @@ let
 
     tools = {
       cabal = "3.2.0.0";
+      haskell-language-server="0.5.1";
     };
 
     # Prevents cabal from choosing alternate plans, so that
