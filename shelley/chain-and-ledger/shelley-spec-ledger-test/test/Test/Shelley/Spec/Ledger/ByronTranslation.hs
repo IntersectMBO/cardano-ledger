@@ -13,6 +13,7 @@ import Shelley.Spec.Ledger.API.ByronTranslation
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.TxBody
+import qualified Cardano.Ledger.Core as Core
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.QuickCheck.Hedgehog (hedgehog)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
@@ -51,7 +52,7 @@ translateTxOutByronToShelley ::
   Byron.TxOut ->
   TxOut (ShelleyEra crypto)
 translateTxOutByronToShelley (Byron.TxOut addr amount) =
-  TxOut (translateAddr addr) (translateAmount amount)
+  TxOut (translateAddr addr) (Core.Value $ translateAmount amount)
   where
     translateAmount :: Byron.Lovelace -> Coin
     translateAmount = Coin . Byron.lovelaceToInteger

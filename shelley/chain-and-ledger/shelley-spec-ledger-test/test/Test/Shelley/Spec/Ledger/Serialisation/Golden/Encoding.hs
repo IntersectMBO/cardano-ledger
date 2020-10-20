@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -85,6 +86,8 @@ import Shelley.Spec.Ledger.BlockChain
     seedEta,
     seedL,
   )
+import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Ledger.Core as Core
 import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -536,10 +539,10 @@ tests =
       let a = Addr Testnet (testPayCred @C) StakeRefNull
        in checkEncodingCBOR
             "txout"
-            (TxOut a (Coin 2))
+            (TxOut a (Val.inject $ Coin 2))
             ( T (TkListLen 2)
                 <> S a
-                <> S (Coin 2)
+                <> S (Val.inject @(Core.Value C) $ Coin 2)
             ),
       case makeWitnessVKey @C (testTxbHash @C) (testKey1 @C_Crypto) of
         w@(WitVKey vk _sig) ->
@@ -841,7 +844,7 @@ tests =
             ),
       -- checkEncodingCBOR "minimal_txn_body"
       let tin = TxIn @C genesisId 1
-          tout = TxOut (testAddrE @C) (Coin 2)
+          tout = TxOut (testAddrE @C) (Val.inject $ Coin 2)
        in checkEncodingCBORAnnotated
             "txbody"
             ( TxBody -- minimal transaction body
@@ -868,7 +871,7 @@ tests =
             ),
       -- checkEncodingCBOR "transaction_mixed"
       let tin = TxIn @C genesisId 1
-          tout = TxOut (testAddrE @C) (Coin 2)
+          tout = TxOut (testAddrE @C) (Val.inject $ Coin 2)
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =
@@ -929,7 +932,7 @@ tests =
             ),
       -- checkEncodingCBOR "full_txn_body"
       let tin = TxIn @C genesisId 1
-          tout = TxOut (testAddrE @C) (Coin 2)
+          tout = TxOut (testAddrE @C) (Val.inject $ Coin 2)
           reg = DCertDeleg (RegKey (testStakeCred @C))
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
@@ -999,7 +1002,7 @@ tests =
       let txb =
             TxBody
               (Set.fromList [TxIn genesisId 1])
-              (StrictSeq.singleton $ TxOut (testAddrE @C) (Coin 2))
+              (StrictSeq.singleton $ TxOut (testAddrE @C) (Val.inject $ Coin 2))
               StrictSeq.empty
               (Wdrl Map.empty)
               (Coin 9)
@@ -1023,7 +1026,7 @@ tests =
       let txb =
             TxBody
               (Set.fromList [TxIn genesisId 1])
-              (StrictSeq.singleton $ TxOut (testAddrE @C) (Coin 2))
+              (StrictSeq.singleton $ TxOut (testAddrE @C) (Val.inject $ Coin 2))
               StrictSeq.empty
               (Wdrl Map.empty)
               (Coin 9)
@@ -1156,7 +1159,7 @@ tests =
           sig = signedKES () 0 (testBHB @C) (fst $ testKESKeys @C_Crypto)
           bh = BHeader (testBHB @C) sig
           tin = Set.fromList [TxIn @C genesisId 1]
-          tout = StrictSeq.singleton $ TxOut (testAddrE @C) (Coin 2)
+          tout = StrictSeq.singleton $ TxOut (testAddrE @C) (Val.inject $ Coin 2)
           txb s =
             TxBody
               tin
@@ -1361,7 +1364,7 @@ tests =
             ( SJust
                 RewardUpdate
                   { deltaT = Coin 100,
-                    deltaR = Coin (-200),
+                    deltaR = DeltaCoin (-200),
                     rs = Map.empty,
                     deltaF = DeltaCoin (-10),
                     nonMyopic = nm

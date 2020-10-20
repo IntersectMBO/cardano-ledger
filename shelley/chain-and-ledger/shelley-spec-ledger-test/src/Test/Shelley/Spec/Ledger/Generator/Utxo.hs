@@ -18,10 +18,10 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
 where
 
 import Cardano.Binary (serialize)
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.SetAlgebra (forwards)
 import qualified Data.ByteString.Lazy as BSL
@@ -116,32 +116,8 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
-import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs, ShelleyTest)
+import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs, ShelleyTest, Split (..))
 
--- ===============================================================================
--- Generating random transactions requires splitting Values into multiple Values
--- with the same underlying amount of Coin. This property is crucial to generating
--- transactions which have the preservation of ADA property. (vsplit n v) breaks
--- v into n different values, and one remainder Coin, where the sum of the Coin
--- in the original value, and the sum of the underlying Coin in the list plus the
--- remainder coin are equal.
--- Given:    let (vs,coin) = split n value
--- Then:     (coin value) == sum(map coin vs) <+> coin
-
--- We introduce a new class Split which supplies this operation.
--- As new kinds of values become instances of the Val class, and we want to generate
--- transactions over these values, we will have to add additional instances here.
-
-class Val v => Split v where
-  vsplit :: v -> Integer -> ([v], Coin)
-
-instance Split Coin where
-  vsplit (Coin n) 0 = ([], Coin n)
-  vsplit (Coin n) m -- TODO fix this?
-    | m Prelude.<= 0 = error "must split coins into positive parts"
-    | otherwise = (take (fromIntegral m) (repeat (Coin (n `div` m))), Coin (n `rem` m))
-
--- ============================================================
 
 showBalance ::
   ( ShelleyTest era,
@@ -219,7 +195,7 @@ genTx
       -- Generate the building blocks of a TxBody
       -------------------------------------------------------------------------
       (inputs, spendingBalanceUtxo, (spendWits, spendScripts)) <-
-        genInputs @Coin
+        genInputs
           (minNumGenInputs constants, maxNumGenInputs constants)
           ksIndexedPaymentKeys
           ksIndexedPayScripts
@@ -275,7 +251,6 @@ genTx
       let draftFee = Coin 0
           (remainderCoin, draftOutputs) =
             calcOutputsFromBalance
-              @Coin
               spendingBalance
               outputAddrs
               draftFee
@@ -404,7 +379,7 @@ genNextDelta
                       deltaScripts = msigPairs <> deltaScripts delta
                     }
     where
-      deltaChange :: (Coin -> Coin) -> TxOut era -> TxOut era
+      deltaChange :: (Core.Value era -> Core.Value era) -> TxOut era -> TxOut era
       deltaChange f (TxOut addr val) = TxOut addr $ f val
       getChangeAmount (TxOut _ v) = coin v
 
@@ -574,15 +549,15 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL mdHash = do
 -- by the selected addresses.
 -- TODO need right splitting of v!
 calcOutputsFromBalance ::
-  forall v era.
-  (ShelleyTest era, Split v) =>
-  v ->
+  forall era.
+  ShelleyTest era =>
+  Core.Value era ->
   [Addr era] ->
   Coin ->
   (Coin, StrictSeq (TxOut era))
 calcOutputsFromBalance balance_ addrs fee =
   ( fee <+> splitCoinRem,
-    StrictSeq.fromList $ zipWith TxOut addrs (map coin amountPerOutput)
+    StrictSeq.fromList $ zipWith TxOut addrs amountPerOutput
   )
   where
     -- split the available balance into equal portions (one for each address),
@@ -601,13 +576,13 @@ calcOutputsFromBalance balance_ addrs fee =
 -- spend these outputs). If this is not the case, `findPayKeyPairAddr` /
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 genInputs ::
-  forall v era.
-  (ShelleyTest era, Val v) =>
+  forall era.
+  (ShelleyTest era) =>
   (Int, Int) ->
   Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->
   Map (ScriptHash era) (MultiSig era, MultiSig era) ->
   UTxO era ->
-  Gen ([TxIn era], v, ([KeyPair 'Witness (Crypto era)], [(MultiSig era, MultiSig era)]))
+  Gen ([TxIn era], Core.Value era, ([KeyPair 'Witness (Crypto era)], [(MultiSig era, MultiSig era)]))
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   selectedUtxo <-
     take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
@@ -616,7 +591,7 @@ genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo)
   let (inputs, witnesses) = unzip (witnessedInput <$> selectedUtxo)
   return
     ( inputs,
-      inject $ balance (UTxO (Map.fromList selectedUtxo)),
+      balance (UTxO (Map.fromList selectedUtxo)),
       Either.partitionEithers witnesses
     )
   where

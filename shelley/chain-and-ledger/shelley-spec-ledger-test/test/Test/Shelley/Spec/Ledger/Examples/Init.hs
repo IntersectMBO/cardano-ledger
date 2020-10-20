@@ -20,6 +20,7 @@ where
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (..),
@@ -112,7 +113,7 @@ initSt utxo =
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
     (EpochNo 0)
     utxo
-    (maxLLSupply <-> (balance utxo))
+    (maxLLSupply <-> (Val.coin $ balance utxo))
     genDelegs
     ppEx
     (nonce0 @(Crypto era))

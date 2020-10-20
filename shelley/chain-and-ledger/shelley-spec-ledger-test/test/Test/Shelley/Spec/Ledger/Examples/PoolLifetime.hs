@@ -37,7 +37,7 @@ import Shelley.Spec.Ledger.BlockChain
     bheader,
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), toDelta)
+import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), toDelta, addDelta)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
@@ -83,6 +83,8 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
     eraIndTxBodyHash,
   )
+import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Val as Val
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
@@ -118,11 +120,11 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 
-aliceInitCoin :: Coin
-aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin :: ShelleyTest era => Core.Value era
+aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
-bobInitCoin :: Coin
-bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
+bobInitCoin :: ShelleyTest era => Core.Value era
+bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
@@ -138,20 +140,20 @@ initStPoolLifetime = initSt initUTxO
 -- Block 1, Slot 10, Epoch 0
 --
 
-aliceCoinEx1 :: Coin
+feeTx1 :: Coin
+feeTx1 = Coin 3
+
+aliceCoinEx1 :: ShelleyTest era => Core.Value era
 aliceCoinEx1 =
-  aliceInitCoin <-> _poolDeposit ppEx
-    <-> ((3 :: Integer) <×> _keyDeposit ppEx)
-    <-> Coin 3
+  aliceInitCoin <-> (Val.inject $ _poolDeposit ppEx
+    <+> ((3 :: Integer) <×> _keyDeposit ppEx)
+    <+> feeTx1)
 
 carlMIR :: Coin
 carlMIR = Coin 110
 
 dariaMIR :: Coin
 dariaMIR = Coin 99
-
-feeTx1 :: Coin
-feeTx1 = Coin 3
 
 txbodyEx1 :: ShelleyTest era => TxBody era
 txbodyEx1 =
@@ -250,11 +252,11 @@ poolLifetime1 = CHAINExample initStPoolLifetime blockEx1 (Right expectedStEx1)
 feeTx2 :: Coin
 feeTx2 = Coin 4
 
-aliceCoinEx2Base :: Coin
-aliceCoinEx2Base = Coin $ 5 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceCoinEx2Base :: ShelleyTest era => Core.Value era
+aliceCoinEx2Base = Val.inject $ Coin $ 5 * 1000 * 1000 * 1000 * 1000 * 1000
 
-aliceCoinEx2Ptr :: Coin
-aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
+aliceCoinEx2Ptr :: ShelleyTest era => Core.Value era
+aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> (Val.inject feeTx2))
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
@@ -351,14 +353,14 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @era ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: Era era => EB.SnapShot era
+snapEx3 :: forall era. ShelleyTest era => EB.SnapShot era
 snapEx3 =
   EB.SnapShot
     { EB._stake =
         EB.Stake $
           Map.fromList
-            [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr),
-              (Cast.bobSHK, bobInitCoin)
+            [ (Cast.aliceSHK, (Val.coin @(Core.Value era) $ aliceCoinEx2Base <> aliceCoinEx2Ptr)),
+              (Cast.bobSHK, Val.coin @(Core.Value era) bobInitCoin)
             ],
       EB._delegations =
         Map.fromList
@@ -393,8 +395,8 @@ poolLifetime3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 feeTx4 :: Coin
 feeTx4 = Coin 5
 
-aliceCoinEx4Base :: Coin
-aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
+aliceCoinEx4Base :: forall era. ShelleyTest era => Core.Value era
+aliceCoinEx4Base = aliceCoinEx2Base <-> (Val.inject feeTx4)
 
 txbodyEx4 :: forall era. ShelleyTest era => TxBody era
 txbodyEx4 =
@@ -442,7 +444,7 @@ rewardUpdateEx4 :: forall era. RewardUpdate era
 rewardUpdateEx4 =
   RewardUpdate
     { deltaT = Coin 1,
-      deltaR = Coin 6,
+      deltaR = DeltaCoin 6,
       rs = Map.empty,
       deltaF = DeltaCoin (-7),
       nonMyopic = emptyNonMyopic {rewardPotNM = Coin 6}
@@ -499,9 +501,9 @@ snapEx5 =
     { EB._stake =
         EB.Stake $
           Map.fromList
-            [ (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr),
+            [ (Cast.aliceSHK, Val.coin @(Core.Value era) $ aliceCoinEx4Base <> aliceCoinEx2Ptr),
               (Cast.carlSHK, carlMIR),
-              (Cast.bobSHK, bobInitCoin)
+              (Cast.bobSHK, Val.coin @(Core.Value era) $ bobInitCoin)
             ],
       EB._delegations =
         Map.fromList
@@ -563,7 +565,7 @@ rewardUpdateEx6 :: forall era. RewardUpdate era
 rewardUpdateEx6 =
   RewardUpdate
     { deltaT = Coin 1,
-      deltaR = Coin 4,
+      deltaR = DeltaCoin 4,
       rs = Map.empty,
       deltaF = invert $ toDelta feeTx4,
       nonMyopic = emptyNonMyopic {rewardPotNM = Coin 4}
@@ -653,8 +655,8 @@ bobRAcnt8 = Coin 1038545454
 deltaT8 :: Coin
 deltaT8 = Coin 317333333333
 
-deltaR8 :: Coin
-deltaR8 = Coin (-330026666665)
+deltaR8 :: DeltaCoin
+deltaR8 = DeltaCoin (-330026666665)
 
 reserves7 :: Coin
 reserves7 = Coin 33999999999999900
@@ -662,23 +664,23 @@ reserves7 = Coin 33999999999999900
 rewardPot8 :: Coin
 rewardPot8 = Coin 1269333333333
 
-alicePerfEx8 :: Likelihood
+alicePerfEx8 :: forall era. (ShelleyTest era) => Likelihood
 alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
   where
     blocks = 1
     t = leaderProbability f relativeStake (_d ppEx)
-    (Coin stake) = aliceCoinEx2Base <> aliceCoinEx2Ptr <> bobInitCoin
+    (Coin stake) = Val.coin @(Core.Value era) $ aliceCoinEx2Base <> aliceCoinEx2Ptr <> bobInitCoin
     (Coin tot) = maxLLSupply <-> reserves7
     relativeStake = fromRational (stake % tot)
     f = activeSlotCoeff testGlobals
 
-nonMyopicEx8 :: forall era. Era era => NonMyopic era
+nonMyopicEx8 :: forall era. ShelleyTest era => NonMyopic era
 nonMyopicEx8 =
   NonMyopic
-    (Map.singleton (hk Cast.alicePoolKeys) alicePerfEx8)
+    (Map.singleton (hk Cast.alicePoolKeys) (alicePerfEx8 @era))
     rewardPot8
 
-rewardUpdateEx8 :: forall era. Era era => RewardUpdate era
+rewardUpdateEx8 :: forall era. ShelleyTest era => RewardUpdate era
 rewardUpdateEx8 =
   RewardUpdate
     { deltaT = deltaT8,
@@ -738,8 +740,8 @@ snapEx9 =
     { EB._stake =
         EB.Stake $
           Map.fromList
-            [ (Cast.bobSHK, bobInitCoin <> bobRAcnt8),
-              (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr <> aliceRAcnt8),
+            [ (Cast.bobSHK, (Val.coin @(Core.Value era) bobInitCoin) <> bobRAcnt8),
+              (Cast.aliceSHK, (Val.coin @(Core.Value era) $ aliceCoinEx4Base <> aliceCoinEx2Ptr) <> aliceRAcnt8),
               (Cast.carlSHK, carlMIR)
             ]
     }
@@ -767,12 +769,12 @@ poolLifetime9 = CHAINExample expectedStEx8 blockEx9 (Right expectedStEx9)
 feeTx10 :: Coin
 feeTx10 = Coin 9
 
-bobAda10 :: Coin
+bobAda10 :: ShelleyTest era => Core.Value era
 bobAda10 =
-  bobRAcnt8
+  (Val.inject bobRAcnt8)
     <+> bobInitCoin
-    <+> _keyDeposit ppEx
-    <-> feeTx10
+    <+> (Val.inject $ _keyDeposit ppEx
+    <-> feeTx10)
 
 txbodyEx10 :: ShelleyTest era => TxBody era
 txbodyEx10 =
@@ -833,8 +835,8 @@ poolLifetime10 = CHAINExample expectedStEx9 blockEx10 (Right expectedStEx10)
 feeTx11 :: Coin
 feeTx11 = Coin 2
 
-aliceCoinEx11Ptr :: Coin
-aliceCoinEx11Ptr = aliceCoinEx4Base <-> feeTx11
+aliceCoinEx11Ptr :: ShelleyTest era => Core.Value era
+aliceCoinEx11Ptr = aliceCoinEx4Base <-> (Val.inject feeTx11)
 
 aliceRetireEpoch :: EpochNo
 aliceRetireEpoch = EpochNo 5
@@ -881,10 +883,10 @@ blockEx11 =
     (mkOCert (coreNodeKeysBySchedule @era ppEx 490) 2 (KESPeriod 19))
 
 reserves12 :: Coin
-reserves12 = reserves7 <> deltaR8
+reserves12 = addDelta reserves7 deltaR8
 
 alicePerfEx11 :: forall era. ShelleyTest era => Likelihood
-alicePerfEx11 = alicePerfEx8 <> epoch4Likelihood
+alicePerfEx11 = (alicePerfEx8 @era) <> epoch4Likelihood
   where
     epoch4Likelihood = likelihood blocks t (epochSize $ EpochNo 4)
     blocks = 0
@@ -904,7 +906,7 @@ rewardUpdateEx11 :: forall era. ShelleyTest era => RewardUpdate era
 rewardUpdateEx11 =
   RewardUpdate
     { deltaT = Coin 0,
-      deltaR = Coin 0,
+      deltaR = DeltaCoin 0,
       rs = Map.empty,
       deltaF = DeltaCoin 0,
       nonMyopic = nonMyopicEx11
@@ -956,7 +958,7 @@ snapEx12 =
     { EB._stake =
         EB.Stake $
           Map.fromList
-            [ (Cast.aliceSHK, aliceRAcnt8 <> aliceCoinEx2Ptr <> aliceCoinEx11Ptr),
+            [ (Cast.aliceSHK, aliceRAcnt8 <> (Val.coin @(Core.Value era) $ aliceCoinEx2Ptr <> aliceCoinEx11Ptr)),
               (Cast.carlSHK, carlMIR)
             ],
       EB._delegations =

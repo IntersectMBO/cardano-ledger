@@ -19,6 +19,7 @@ flag development
 library
   exposed-modules:
     Cardano.Ledger.Core
+    Cardano.Ledger.Compactible
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
     Cardano.Ledger.Shelley

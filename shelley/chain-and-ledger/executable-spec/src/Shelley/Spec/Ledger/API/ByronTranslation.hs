@@ -18,6 +18,8 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
+import Cardano.Ledger.Compactible (Compactible (..))
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<->))
@@ -60,7 +62,7 @@ translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> TxOut (ShelleyEra c
 translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
   TxOutCompact
     (Byron.unsafeGetCompactAddress compactAddr)
-    (CompactCoin (Byron.unsafeGetLovelace amount))
+    (toCompact $ Core.Value (fromCompact (CompactCoin $ Byron.unsafeGetLovelace amount)))
 
 translateCompactTxInByronToShelley ::
   (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
@@ -120,7 +122,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
 
     reserves :: Coin
     reserves =
-      word64ToCoin (sgMaxLovelaceSupply genesisShelley) <-> balance utxoShelley
+      word64ToCoin (sgMaxLovelaceSupply genesisShelley) <-> (Core.unVl $ balance utxoShelley)
 
     epochState :: EpochState (ShelleyEra c)
     epochState =

@@ -13,6 +13,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -fprint-potential-instances #-}
+
+
 
 module Test.Shelley.Spec.Ledger.Serialisation.Generators
   ( genPParams,
@@ -424,10 +427,6 @@ instance
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
-
-instance Arbitrary Coin where
-  -- Cannot be negative even though it is an 'Integer'
-  arbitrary = Coin <$> choose (0, 1000)
 
 instance Arbitrary SlotNo where
   -- Cannot be negative even though it is an 'Integer'

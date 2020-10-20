@@ -102,6 +102,8 @@ import Shelley.Spec.Ledger.TxBody
     pattern RewardAcnt,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
+import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Ledger.Core as Core
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( testBootstrapNotSpending,
@@ -323,12 +325,12 @@ testLEDGER initSt tx env predicateFailure@(Left _) = do
   let st = runShelleyBase $ applySTSTest @(LEDGER C) (TRC (env, initSt, tx))
   st @?= predicateFailure
 
-aliceInitCoin :: Coin
-aliceInitCoin = Coin 10000
+aliceInitCoin :: ShelleyTest era => Core.Value era
+aliceInitCoin = Val.inject $ Coin 10000
 
-data AliceToBob = AliceToBob
+data AliceToBob era = AliceToBob
   { input :: TxIn C,
-    toBob :: Coin,
+    toBob :: Core.Value era,
     fee :: Coin,
     deposits :: Coin,
     refunds :: Coin,
@@ -337,7 +339,7 @@ data AliceToBob = AliceToBob
     signers :: [KeyPair 'Witness C_Crypto]
   }
 
-aliceGivesBobLovelace :: AliceToBob -> Tx C
+aliceGivesBobLovelace :: AliceToBob C -> Tx C
 aliceGivesBobLovelace
   AliceToBob
     { input,
@@ -350,7 +352,7 @@ aliceGivesBobLovelace
       signers
     } = Tx txbody mempty {addrWits = awits} SNothing
     where
-      aliceCoin = aliceInitCoin <+> refunds <-> (toBob <+> fee <+> deposits)
+      aliceCoin = aliceInitCoin <+> (Val.inject refunds) <-> (toBob <+> (Val.inject $ fee <+> deposits))
       txbody =
         TxBody
           (Set.singleton input)
@@ -372,7 +374,7 @@ utxoState =
   UTxOState
     ( genesisCoins
         [ TxOut aliceAddr aliceInitCoin,
-          TxOut bobAddr (Coin 1000)
+          TxOut bobAddr (Val.inject $ Coin 1000)
         ]
     )
     (Coin 0)
@@ -401,13 +403,13 @@ testInvalidTx errs tx =
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
-    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000))),
+    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Val.inject $ Coin 0) (Val.inject $ Coin 10000))),
       UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ TxIn genesisId 42))
     ]
     $ aliceGivesBobLovelace $
       AliceToBob
         { input = (TxIn genesisId 42), -- Non Existent
-          toBob = (Coin 3000),
+          toBob = (Val.inject $ Coin 3000),
           fee = (Coin 1500),
           deposits = (Coin 0),
           refunds = (Coin 0),
@@ -422,8 +424,8 @@ testWitnessNotIncluded =
         TxBody @C
           (Set.fromList [TxIn genesisId 0])
           ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6404),
-                TxOut bobAddr (Coin 3000)
+              [ TxOut aliceAddr (Val.inject $ Coin 6404),
+                TxOut bobAddr (Val.inject $ Coin 3000)
               ]
           )
           Empty
@@ -446,7 +448,7 @@ testSpendNotOwnedUTxO =
   let txbody =
         TxBody @C
           (Set.fromList [TxIn genesisId 1])
-          (StrictSeq.singleton $ TxOut aliceAddr (Coin 232))
+          (StrictSeq.singleton $ TxOut aliceAddr (Val.inject $ Coin 232))
           Empty
           (Wdrl Map.empty)
           (Coin 768)
@@ -468,7 +470,7 @@ testWitnessWrongUTxO =
   let txbody =
         TxBody @C
           (Set.fromList [TxIn genesisId 1])
-          (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
+          (StrictSeq.singleton $ TxOut aliceAddr (Val.inject $ Coin 230))
           Empty
           (Wdrl Map.empty)
           (Coin 770)
@@ -478,7 +480,7 @@ testWitnessWrongUTxO =
       tx2body =
         TxBody @C
           (Set.fromList [TxIn genesisId 1])
-          (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
+          (StrictSeq.singleton $ TxOut aliceAddr (Val.inject $ Coin 230))
           Empty
           (Wdrl Map.empty)
           (Coin 770)
@@ -504,7 +506,7 @@ testEmptyInputSet =
       txb =
         TxBody
           Set.empty
-          (StrictSeq.singleton $ TxOut aliceAddr (Coin 1000))
+          (StrictSeq.singleton $ TxOut aliceAddr (Val.inject $ Coin 1000))
           Empty
           (Wdrl aliceWithdrawal)
           (Coin 1000)
@@ -527,7 +529,7 @@ testFeeTooSmall =
     $ aliceGivesBobLovelace
       AliceToBob
         { input = (TxIn genesisId 0),
-          toBob = (Coin 3000),
+          toBob = (Val.inject $ Coin 3000),
           fee = (Coin 1),
           deposits = (Coin 0),
           refunds = (Coin 0),
@@ -543,7 +545,7 @@ testExpiredTx =
         aliceGivesBobLovelace $
           AliceToBob
             { input = (TxIn genesisId 0),
-              toBob = (Coin 3000),
+              toBob = (Val.inject $ Coin 3000),
               fee = (Coin 600),
               deposits = (Coin 0),
               refunds = (Coin 0),
@@ -560,8 +562,8 @@ testInvalidWintess =
         TxBody @C
           (Set.fromList [TxIn genesisId 0])
           ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6000),
-                TxOut bobAddr (Coin 3000)
+              [ TxOut aliceAddr (Val.inject $ Coin 6000),
+                TxOut bobAddr (Val.inject $ Coin 3000)
               ]
           )
           Empty
@@ -586,8 +588,8 @@ testWithdrawalNoWit =
         TxBody @C
           (Set.fromList [TxIn genesisId 0])
           ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6000),
-                TxOut bobAddr (Coin 3010)
+              [ TxOut aliceAddr (Val.inject $ Coin 6000),
+                TxOut bobAddr (Val.inject $ Coin 3010)
               ]
           )
           Empty
@@ -611,8 +613,8 @@ testWithdrawalWrongAmt =
         TxBody @C
           (Set.fromList [TxIn genesisId 0])
           ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6000),
-                TxOut bobAddr (Coin 3011)
+              [ TxOut aliceAddr (Val.inject $ Coin 6000),
+                TxOut bobAddr (Val.inject $ Coin 3011)
               ]
           )
           Empty
@@ -637,11 +639,11 @@ testWithdrawalWrongAmt =
 testOutputTooSmall :: Assertion
 testOutputTooSmall =
   testInvalidTx
-    [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [TxOut bobAddr (Coin 1)])]
+    [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [TxOut bobAddr (Val.inject $ Coin 1)])]
     $ aliceGivesBobLovelace $
       AliceToBob
         { input = (TxIn genesisId 0),
-          toBob = (Coin 1), -- Too Small
+          toBob = (Val.inject $ Coin 1), -- Too Small
           fee = (Coin 997),
           deposits = (Coin 0),
           refunds = (Coin 0),
@@ -690,7 +692,7 @@ testPoolCostTooSmall =
     $ aliceGivesBobLovelace $
       AliceToBob
         { input = (TxIn genesisId 0),
-          toBob = (Coin 100),
+          toBob = (Val.inject $ Coin 100),
           fee = (Coin 997),
           deposits = (Coin 250),
           refunds = (Coin 0),
