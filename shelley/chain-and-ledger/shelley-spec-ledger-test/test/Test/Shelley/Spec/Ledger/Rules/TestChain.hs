@@ -19,7 +19,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
 where
 
 import Cardano.Ledger.Val ((<+>), (<->))
-import qualified Cardano.Ledger.Val as Val
 import Control.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
@@ -193,23 +192,23 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
 utxoDepositsIncreaseByFeesWithdrawals :: SourceSignalTarget (CHAIN C) -> Property
 utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target} =
   circulation target <-> circulation source
-    === (Val.inject $ withdrawals signal <-> txFees signal)
+    === withdrawals signal <-> txFees signal
   where
     circulation chainSt =
       let es = (nesEs . chainNes) chainSt
           (UTxOState {_utxo = u, _deposited = d}) = (_utxoState . esLState) es
-       in balance u <+> (Val.inject d)
+       in balance u <+> d
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals for all transactions in a block
 potsSumIncreaseWdrlsPerBlock :: SourceSignalTarget (CHAIN C) -> Property
 potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
-  potsSum target <-> potsSum source === (Val.inject $ withdrawals signal)
+  potsSum target <-> potsSum source === withdrawals signal
   where
     potsSum chainSt =
       let (UTxOState {_utxo = u, _deposited = d, _fees = f}) =
             _utxoState . esLState . nesEs . chainNes $ chainSt
-       in balance u <+> (Val.inject $ d <+> f)
+       in balance u <+> d <+> f
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals in a transaction
@@ -226,8 +225,8 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
           signal = tx,
           target = (UTxOState {_utxo = u', _deposited = d', _fees = f'}, _)
         } =
-        (balance u' <+> (Val.inject $ d' <+> f')) <-> (balance u <+> (Val.inject $ d <+> f)) 
-          === (Val.inject $ fold (unWdrl . _wdrls $ _body tx))
+        (balance u' <+> d' <+> f') <-> (balance u <+> d <+> f)
+          === fold (unWdrl . _wdrls $ _body @C tx)
 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
 potsSumIncreaseByRewardsPerTx :: SourceSignalTarget (CHAIN C) -> Property
@@ -248,8 +247,8 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
               DPState {_dstate = DState {_rewards = rewards'}}
               )
         } =
-        (balance u' <+> (Val.inject $ d' <+> f')) <-> (balance u <+> (Val.inject $ d <+> f)) 
-          === (Val.inject $ fold rewards <-> fold rewards')
+        (balance u' <+> d' <+> f') <-> (balance u <+> d <+> f)
+          === fold rewards <-> fold rewards'
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWdrlsPerTx :: SourceSignalTarget (CHAIN C) -> Property
@@ -304,12 +303,12 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         pools = _pParams . _pstate $ dstate
         created =
           balance u'
-            <+> (Val.inject $ _txfee txb
-            <+> totalDeposits pp_ pools certs)
+            <+> _txfee txb
+            <+> totalDeposits pp_ pools certs
         consumed_ =
           balance u
-            <+> (Val.inject $ keyRefunds pp_ txb
-            <+> fold (unWdrl . _wdrls $ txb))
+            <+> keyRefunds pp_ txb
+            <+> fold (unWdrl . _wdrls $ txb)
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted :: SourceSignalTarget (CHAIN C) -> Property
@@ -328,13 +327,13 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
         pools = _pParams . _pstate $ dstate
         inps =
           balance (eval ((_inputs txb) <| u))
-            <> (Val.inject $ keyRefunds pp_ txb
-            <> fold (unWdrl . _wdrls $ txb))
+            <> keyRefunds pp_ txb
+            <> fold (unWdrl . _wdrls $ txb)
         outs =
           let certs = toList (_certs txb)
            in balance (txouts txb)
-                <> (Val.inject $ _txfee txb
-                <> totalDeposits pp_ pools certs)
+                <> _txfee txb
+                <> totalDeposits pp_ pools certs
 
 preserveOutputsTx :: SourceSignalTarget (CHAIN C) -> Property
 preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =

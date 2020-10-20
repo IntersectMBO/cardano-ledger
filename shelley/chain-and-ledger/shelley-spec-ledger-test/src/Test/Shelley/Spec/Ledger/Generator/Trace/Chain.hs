@@ -20,7 +20,6 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Val ((<->))
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition (BaseM, Environment, IRC (..), STS, Signal, State)
@@ -118,7 +117,7 @@ mkGenesisChainState constants (IRC _slotNo) = do
       (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
       epoch0
       utxo0
-      (maxLLSupply <-> (Val.coin $ balance utxo0))
+      (maxLLSupply <-> balance utxo0)
       delegs0
       pParams
       (hashHeaderToNonce (lastByronHeaderHash p))

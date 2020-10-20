@@ -16,6 +16,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- |
 -- Module      : LedgerState
@@ -369,7 +370,7 @@ instance Era era => FromCBOR (DPState era) where
 
 data RewardUpdate era = RewardUpdate
   { deltaT :: !Coin,
-    deltaR :: !DeltaCoin,
+    deltaR :: !Coin,
     rs :: !(Map (Credential 'Staking era) Coin),
     deltaF :: !DeltaCoin,
     nonMyopic :: !(NonMyopic era)
@@ -400,7 +401,7 @@ instance Era era => FromCBOR (RewardUpdate era) where
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
 emptyRewardUpdate :: RewardUpdate era
-emptyRewardUpdate = RewardUpdate (Coin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) emptyNonMyopic
+emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (DeltaCoin 0) emptyNonMyopic
 
 data AccountState = AccountState
   { _treasury :: !Coin,
@@ -975,7 +976,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     as' =
       as
         { _treasury = _treasury as <> deltaT ru <> fold (range unregRU),
-          _reserves = addDelta (_reserves as) (deltaR ru)
+          _reserves = _reserves as <> deltaR ru
         }
     ls' =
       ls
@@ -1055,7 +1056,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
   pure $
     RewardUpdate
       { deltaT = (Coin deltaT1),
-        deltaR = ((invert $ toDelta deltaR1) <> toDelta deltaR2),
+        deltaR = (invert deltaR1 <> deltaR2),
         rs = rs_,
         deltaF = (invert (toDelta $ _feeSS ss)),
         nonMyopic = (updateNonMypopic nm _R newLikelihoods)

@@ -28,7 +28,6 @@ where
 
 -- Cypto and Era stuff
 
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Val (Val (inject))
@@ -106,6 +105,7 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
+import Cardano.Ledger.Shelley (ShelleyEra)
 
 -- ===============================================
 -- A special Era to run the Benchmarks in
