@@ -20,9 +20,8 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
-import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -34,7 +33,6 @@ import Control.State.Transition
     trans,
     (?!),
   )
-import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -61,7 +59,6 @@ import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
-import Shelley.Spec.Ledger.Tx (Tx)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data BBODY era
@@ -107,24 +104,26 @@ instance
   NoThunks (BbodyPredicateFailure era)
 
 instance
-  ( CryptoClass.Crypto c,
-    DSignable c (Hash c EraIndependentTxBody)
+  ( Era era,
+    ShelleyBased era,
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    Embed (LEDGERS era) (BBODY era)
   ) =>
-  STS (BBODY (ShelleyEra c))
+  STS (BBODY era)
   where
   type
-    State (BBODY (ShelleyEra c)) =
-      BbodyState (ShelleyEra c)
+    State (BBODY era) =
+      BbodyState era
 
   type
-    Signal (BBODY (ShelleyEra c)) =
-      Block (ShelleyEra c)
+    Signal (BBODY era) =
+      Block era
 
-  type Environment (BBODY (ShelleyEra c)) = BbodyEnv (ShelleyEra c)
+  type Environment (BBODY era) = BbodyEnv era
 
-  type BaseM (BBODY (ShelleyEra c)) = ShelleyBase
+  type BaseM (BBODY era) = ShelleyBase
 
-  type PredicateFailure (BBODY (ShelleyEra c)) = BbodyPredicateFailure (ShelleyEra c)
+  type PredicateFailure (BBODY era) = BbodyPredicateFailure era
 
   initialRules = []
   transitionRules = [bbodyTransition]
@@ -132,15 +131,8 @@ instance
 bbodyTransition ::
   forall era.
   ( ShelleyBased era,
-    BaseM (BBODY era) ~ ShelleyBase,
     Embed (LEDGERS era) (BBODY era),
-    Environment (BBODY era) ~ BbodyEnv era,
-    State (BBODY era) ~ BbodyState era,
-    Signal (BBODY era) ~ Block era,
-    PredicateFailure (BBODY era) ~ BbodyPredicateFailure era,
-    Environment (LEDGERS era) ~ LedgersEnv era,
-    State (LEDGERS era) ~ LedgerState era,
-    Signal (LEDGERS era) ~ Seq (Tx era)
+    STS (BBODY era)
   ) =>
   TransitionRule (BBODY era)
 bbodyTransition =
@@ -183,9 +175,11 @@ bbodyTransition =
             )
 
 instance
-  ( CryptoClass.Crypto c,
-    DSignable c (Hash c EraIndependentTxBody)
+  ( Era era,
+    STS (LEDGERS era),
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    ShelleyBased era
   ) =>
-  Embed (LEDGERS (ShelleyEra c)) (BBODY (ShelleyEra c))
+  Embed (LEDGERS era) (BBODY era)
   where
   wrapFailed = LedgersFailure

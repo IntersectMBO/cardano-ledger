@@ -58,8 +58,8 @@ import Shelley.Spec.Ledger.BlockChain
   )
 import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
 import Shelley.Spec.Ledger.LedgerState (DPState, LedgerState, UTxOState, nesBcur)
-import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv, BbodyState)
-import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainState (..))
+import Shelley.Spec.Ledger.STS.Bbody (BBODY)
+import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
@@ -89,11 +89,9 @@ validateInput ::
     State (LEDGERS era) ~ LedgerState era,
     Signal (LEDGERS era) ~ Seq (Tx era),
     STS (LEDGER era),
-    BaseM (LEDGER era) ~ ShelleyBase,
     Environment (LEDGER era) ~ LedgerEnv era,
     State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era,
-    Environment (CHAIN era) ~ ()
+    Signal (LEDGER era) ~ Tx era
   ) =>
   Int ->
   IO (ValidateInput era)
@@ -108,11 +106,9 @@ genValidateInput ::
     State (LEDGERS era) ~ LedgerState era,
     Signal (LEDGERS era) ~ Seq (Tx era),
     STS (LEDGER era),
-    BaseM (LEDGER era) ~ ShelleyBase,
     Environment (LEDGER era) ~ LedgerEnv era,
     State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era,
-    Environment (CHAIN era) ~ ()
+    Signal (LEDGER era) ~ Tx era
   ) =>
   Int ->
   IO (ValidateInput era)
@@ -124,11 +120,7 @@ genValidateInput n = do
 
 benchValidate ::
   forall era.
-  ( STS (BBODY era),
-    BaseM (BBODY era) ~ ShelleyBase,
-    Environment (BBODY era) ~ BbodyEnv era,
-    State (BBODY era) ~ BbodyState era,
-    Signal (BBODY era) ~ Block era
+  ( STS (BBODY era)
   ) =>
   ValidateInput era ->
   IO (ShelleyState era)
@@ -140,11 +132,7 @@ benchValidate (ValidateInput globals state block) =
 applyBlock ::
   forall era.
   ( Era era,
-    STS (BBODY era),
-    BaseM (BBODY era) ~ ShelleyBase,
-    Environment (BBODY era) ~ BbodyEnv era,
-    State (BBODY era) ~ BbodyState era,
-    Signal (BBODY era) ~ Block era
+    STS (BBODY era)
   ) =>
   ValidateInput era ->
   Int ->
@@ -155,11 +143,7 @@ applyBlock (ValidateInput globals state block) n =
     Left x -> error (show x)
 
 benchreValidate ::
-  ( STS (BBODY era),
-    BaseM (BBODY era) ~ ShelleyBase,
-    Environment (BBODY era) ~ BbodyEnv era,
-    State (BBODY era) ~ BbodyState era,
-    Signal (BBODY era) ~ Block era
+  ( STS (BBODY era)
   ) =>
   ValidateInput era ->
   ShelleyState era
@@ -201,14 +185,12 @@ instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
 genUpdateInputs ::
   forall era.
   ( ShelleyTest era,
-    Environment (CHAIN era) ~ (),
     STS (LEDGERS era),
     BaseM (LEDGERS era) ~ ShelleyBase,
     Environment (LEDGERS era) ~ LedgersEnv era,
     State (LEDGERS era) ~ LedgerState era,
     Signal (LEDGERS era) ~ Seq (Tx era),
     STS (LEDGER era),
-    BaseM (LEDGER era) ~ ShelleyBase,
     Environment (LEDGER era) ~ LedgerEnv era,
     State (LEDGER era) ~ (UTxOState era, DPState era),
     Signal (LEDGER era) ~ Tx era,

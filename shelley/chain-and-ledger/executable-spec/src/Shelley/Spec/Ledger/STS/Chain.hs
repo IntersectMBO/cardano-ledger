@@ -30,9 +30,8 @@ where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
-import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
@@ -225,26 +224,32 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
     cs = Map.fromList (fmap (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
 
 instance
-  ( CryptoClass.Crypto c,
+  ( Era era,
+    c ~ Crypto era,
+    ShelleyBased era,
+    Embed (BBODY era) (CHAIN era),
+    Embed TICKN (CHAIN era),
+    Embed (TICK era) (CHAIN era),
+    Embed (PRTCL (Crypto era)) (CHAIN era),
     DSignable c (OCertSignable c),
     DSignable c (Hash c EraIndependentTxBody),
     KESignable c (BHBody c),
     VRF.Signable (VRF c) Seed
   ) =>
-  STS (CHAIN (ShelleyEra c))
+  STS (CHAIN era)
   where
   type
-    State (CHAIN (ShelleyEra c)) =
-      ChainState (ShelleyEra c)
+    State (CHAIN era) =
+      ChainState era
 
   type
-    Signal (CHAIN (ShelleyEra c)) =
-      Block (ShelleyEra c)
+    Signal (CHAIN era) =
+      Block era
 
-  type Environment (CHAIN (ShelleyEra c)) = ()
-  type BaseM (CHAIN (ShelleyEra c)) = ShelleyBase
+  type Environment (CHAIN era) = ()
+  type BaseM (CHAIN era) = ShelleyBase
 
-  type PredicateFailure (CHAIN (ShelleyEra c)) = ChainPredicateFailure (ShelleyEra c)
+  type PredicateFailure (CHAIN era) = ChainPredicateFailure era
 
   initialRules = []
   transitionRules = [chainTransition]
@@ -266,7 +271,6 @@ pparamsToChainChecksData pp =
 
 chainChecks ::
   ( Era era,
-    PredicateFailure (CHAIN era) ~ ChainPredicateFailure era,
     MonadError (PredicateFailure (CHAIN era)) m
   ) =>
   Natural ->
@@ -287,14 +291,8 @@ chainChecks maxpv ccd bh = do
 chainTransition ::
   forall era.
   ( ShelleyBased era,
-    BaseM (CHAIN era) ~ ShelleyBase,
-    State (CHAIN era) ~ ChainState era,
-    Signal (CHAIN era) ~ Block era,
-    PredicateFailure (CHAIN era) ~ ChainPredicateFailure era,
+    STS (CHAIN era),
     Embed (BBODY era) (CHAIN era),
-    Environment (BBODY era) ~ BbodyEnv era,
-    State (BBODY era) ~ BbodyState era,
-    Signal (BBODY era) ~ Block era,
     Embed TICKN (CHAIN era),
     Embed (TICK era) (CHAIN era),
     Embed (PRTCL (Crypto era)) (CHAIN era)
@@ -372,46 +370,38 @@ chainTransition =
         pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
 
 instance
-  ( CryptoClass.Crypto c,
-    DSignable c (OCertSignable c),
-    DSignable c (Hash c EraIndependentTxBody),
-    KESignable c (BHBody c),
-    VRF.Signable (VRF c) Seed
+  ( Era era,
+    ShelleyBased era,
+    STS (BBODY era)
   ) =>
-  Embed (BBODY (ShelleyEra c)) (CHAIN (ShelleyEra c))
+  Embed (BBODY era) (CHAIN era)
   where
   wrapFailed = BbodyFailure
 
 instance
-  ( CryptoClass.Crypto c,
-    DSignable c (OCertSignable c),
-    DSignable c (Hash c EraIndependentTxBody),
-    KESignable c (BHBody c),
-    VRF.Signable (VRF c) Seed
+  ( Era era,
+    ShelleyBased era
   ) =>
-  Embed TICKN (CHAIN (ShelleyEra c))
+  Embed TICKN (CHAIN era)
   where
   wrapFailed = TicknFailure
 
 instance
-  ( CryptoClass.Crypto c,
-    DSignable c (OCertSignable c),
-    DSignable c (Hash c EraIndependentTxBody),
-    KESignable c (BHBody c),
-    VRF.Signable (VRF c) Seed
+  ( Era era,
+    ShelleyBased era,
+    STS (TICK era)
   ) =>
-  Embed (TICK (ShelleyEra c)) (CHAIN (ShelleyEra c))
+  Embed (TICK era) (CHAIN era)
   where
   wrapFailed = TickFailure
 
 instance
-  ( CryptoClass.Crypto c,
-    DSignable c (OCertSignable c),
-    DSignable c (Hash c EraIndependentTxBody),
-    KESignable c (BHBody c),
-    VRF.Signable (VRF c) Seed
+  ( Era era,
+    c ~ Crypto era,
+    ShelleyBased era,
+    STS (PRTCL c)
   ) =>
-  Embed (PRTCL c) (CHAIN (ShelleyEra c))
+  Embed (PRTCL c) (CHAIN era)
   where
   wrapFailed = PrtclFailure
 

@@ -29,7 +29,7 @@ import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.BlockChain
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
@@ -46,7 +46,6 @@ type ShelleyState = LedgerState.NewEpochState
 chainChecks ::
   forall era m.
   ( Era era,
-    PredicateFailure (STS.CHAIN era) ~ STS.ChainPredicateFailure era,
     MonadError (STS.PredicateFailure (STS.CHAIN era)) m
   ) =>
   Globals ->
@@ -126,10 +125,6 @@ instance
 applyBlockTransition ::
   forall era m.
   ( STS (STS.BBODY era),
-    BaseM (STS.BBODY era) ~ ShelleyBase,
-    Environment (STS.BBODY era) ~ STS.BbodyEnv era,
-    State (STS.BBODY era) ~ STS.BbodyState era,
-    Signal (STS.BBODY era) ~ Block era,
     MonadError (BlockTransitionError era) m
   ) =>
   Globals ->
@@ -163,11 +158,7 @@ applyBlockTransition globals state blk =
 --   `applyBlockTransition` on the same block and that this was successful.
 reapplyBlockTransition ::
   forall era.
-  ( STS (STS.BBODY era),
-    BaseM (STS.BBODY era) ~ ShelleyBase,
-    Environment (STS.BBODY era) ~ STS.BbodyEnv era,
-    State (STS.BBODY era) ~ STS.BbodyState era,
-    Signal (STS.BBODY era) ~ Block era
+  ( STS (STS.BBODY era)
   ) =>
   Globals ->
   ShelleyState era ->

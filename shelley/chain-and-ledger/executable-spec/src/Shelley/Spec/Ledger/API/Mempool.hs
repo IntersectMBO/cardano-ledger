@@ -26,13 +26,17 @@ import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (BaseM, Environment, PredicateFailure, STS, Signal, State, TRC (..), applySTS)
+import Control.State.Transition.Extended
+  ( PredicateFailure,
+    STS,
+    TRC (..),
+    applySTS,
+  )
 import Data.Sequence (Seq)
 import Shelley.Spec.Ledger.API.Validation
-import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
-import Shelley.Spec.Ledger.LedgerState (LedgerState)
+import Shelley.Spec.Ledger.BaseTypes (Globals)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
-import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
+import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
@@ -107,10 +111,6 @@ instance
 applyTxs ::
   forall era m.
   ( STS (LEDGERS era),
-    BaseM (LEDGERS era) ~ ShelleyBase,
-    Environment (LEDGERS era) ~ LedgersEnv era,
-    State (LEDGERS era) ~ LedgerState era,
-    Signal (LEDGERS era) ~ Seq (Tx era),
     MonadError (ApplyTxError era) m
   ) =>
   Globals ->
