@@ -26,7 +26,7 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.SetAlgebra (forwards)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Either as Either (partitionEithers)
-import Data.List (foldl')
+import Data.List (foldl', nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -213,8 +213,6 @@ genTx
   (LedgerEnv slot txIx pparams reserves)
   (utxoSt@(UTxOState utxo _ _ _), dpState) =
     do
-      keys' <- QC.shuffle ksKeyPairs
-      scripts' <- QC.shuffle ksMSigScripts
       -------------------------------------------------------------------------
       -- Generate the building blocks of a TxBody
       -------------------------------------------------------------------------
@@ -267,7 +265,7 @@ genTx
               -- support generating a transaction. If we get unexplained failures one might investigate
               -- changing these constants.
       outputAddrs <-
-        genRecipients (length inputs + n) keys' scripts'
+        genRecipients (length inputs + n) ksKeyPairs ksMSigScripts
           >>= genPtrAddrs (_dstate dpState')
       -------------------------------------------------------------------------
       -- Build a Draft Tx and repeatedly add to Delta until all fees are accounted for.
@@ -291,7 +289,7 @@ genTx
           metadataHash
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
       -- We add now repeatedly add inputs until the process converges.
-      converge remainderCoin wits scripts keys' scripts' utxo pparams keySpace draftTx
+      converge remainderCoin wits scripts ksKeyPairs ksMSigScripts utxo pparams keySpace draftTx
 
 -- | - Collect additional inputs (and witnesses and keys and scripts) to make the transaction balance.
 data Delta era = Delta
@@ -423,8 +421,8 @@ genNextDeltaTilFixPoint ::
   KeySpace era ->
   Tx era ->
   Gen (Delta era)
-genNextDeltaTilFixPoint initialfee randomKeys randomScripts utxo pparams keySpace tx = do
-  addr <- genRecipients 1 randomKeys randomScripts
+genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx = do
+  addr <- genRecipients 1 keys scripts
   fix
     (genNextDelta utxo pparams keySpace tx)
     (deltaZero initialfee (safetyOffset <+> (_minUTxOValue pparams)) (head addr))
@@ -475,11 +473,20 @@ converge ::
   KeySpace era ->
   Tx era ->
   Gen (Tx era)
-converge initialfee neededKeys neededScripts randomKeys randomScripts utxo pparams keySpace tx = do
-  delta <- genNextDeltaTilFixPoint initialfee randomKeys randomScripts utxo pparams keySpace tx
+converge initialfee neededKeys neededScripts keys scripts utxo pparams keySpace tx = do
+  delta <- genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx
   pure (applyDelta neededKeys neededScripts keySpace tx delta)
 
 -- ======================================================
+
+-- | Return up to /k/ random elements from /items/
+-- (instead of the less efficient /take k <$> QC.shuffle items/)
+ruffle :: Int -> [a] -> Gen [a]
+ruffle k items = do 
+  indices <- nub <$> QC.vectorOf k pickIndex
+  pure $ map (items !!) indices
+  where 
+    pickIndex = QC.choose (0, length items - 1)
 
 genTimeToLive :: SlotNo -> Gen SlotNo
 genTimeToLive currentSlot = do
@@ -609,9 +616,8 @@ genInputs ::
   UTxO era ->
   Gen ([TxIn era], v, ([KeyPair 'Witness (Crypto era)], [(MultiSig era, MultiSig era)]))
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
-  selectedUtxo <-
-    take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
-      <*> QC.shuffle (Map.toList utxo)
+  numInputs <- QC.choose (minNumGenInputs, maxNumGenInputs)
+  selectedUtxo <- ruffle numInputs (Map.toList utxo)
 
   let (inputs, witnesses) = unzip (witnessedInput <$> selectedUtxo)
   return
@@ -700,19 +706,18 @@ genRecipients len keys scripts = do
 
   -- choose m scripts and n keys as recipients
   m <- QC.choose (0, n' - 1)
-  -- keys and scripts are shuffled before
   let n = n' - m
-      recipientKeys = take n keys
-      recipientScripts = take m scripts
+  recipientKeys <- ruffle n keys
+  recipientScripts <- ruffle m scripts
 
   let payKeys = (toCred . fst) <$> recipientKeys
       stakeKeys = (toCred . snd) <$> recipientKeys
       payScripts = (scriptToCred . fst) <$> recipientScripts
-      stakeScripts = (scriptToCred . fst) <$> recipientScripts
+      stakeScripts = (scriptToCred . snd) <$> recipientScripts
 
-  -- shuffle and zip keys and scripts together as base addresses
-  payCreds <- QC.shuffle (payKeys ++ payScripts)
-  stakeCreds <- QC.shuffle (stakeKeys ++ stakeScripts)
+  -- zip keys and scripts together as base addresses
+  let payCreds = payKeys ++ payScripts
+      stakeCreds = stakeKeys ++ stakeScripts
   let stakeCreds' = fmap StakeRefBase stakeCreds
 
   return (zipWith (Addr Testnet) payCreds stakeCreds')
@@ -722,7 +727,7 @@ genPtrAddrs ds addrs = do
   let pointers = forwards (_ptrs ds)
 
   n <- QC.choose (0, min (Map.size pointers) (length addrs))
-  pointerList <- take n <$> QC.shuffle (Map.keys pointers)
+  pointerList <- ruffle n (Map.keys pointers)
 
   let addrs' = zipWith baseAddrToPtrAddr (take n addrs) pointerList
 
