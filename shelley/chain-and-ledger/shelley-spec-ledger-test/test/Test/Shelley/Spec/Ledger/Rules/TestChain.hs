@@ -226,7 +226,8 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
           signal = tx,
           target = (UTxOState {_utxo = u', _deposited = d', _fees = f'}, _)
         } =
-        (balance u' <+> (Val.inject $ d' <+> f')) <-> (balance u <+> (Val.inject $ d <+> f)) === (Val.inject $ fold (unWdrl . _wdrls $ _body tx))
+        (balance u' <+> (Val.inject $ d' <+> f')) <-> (balance u <+> (Val.inject $ d <+> f)) 
+          === (Val.inject $ fold (unWdrl . _wdrls $ _body tx))
 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
 potsSumIncreaseByRewardsPerTx :: SourceSignalTarget (CHAIN C) -> Property
@@ -247,7 +248,8 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
               DPState {_dstate = DState {_rewards = rewards'}}
               )
         } =
-        (balance u' <+> (Val.inject $ d' <+> f')) <-> (balance u <+> (Val.inject $ d <+> f)) === (Val.inject $ fold rewards <-> fold rewards')
+        (balance u' <+> (Val.inject $ d' <+> f')) <-> (balance u <+> (Val.inject $ d <+> f)) 
+          === (Val.inject $ fold rewards <-> fold rewards')
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWdrlsPerTx :: SourceSignalTarget (CHAIN C) -> Property
@@ -266,7 +268,7 @@ potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = b
         } =
         let totalRewards = rewardsSum dpstate
             totalRewards' = rewardsSum dpstate'
-            txWithdrawals = fold (unWdrl . _wdrls $ _body tx)
+            txWithdrawals = fold (unWdrl . _wdrls $ _body @C tx)
          in conjoin
               [ counterexample
                   "A transaction should not increase the Rewards pot"
@@ -561,7 +563,7 @@ poolTraceFromBlock chainSt block =
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
-    certs = concatMap (toList . _certs . _body)
+    certs = concatMap (toList . _certs . _body @C)
     poolCerts = filter poolCert (certs txs)
     poolEnv =
       let (LedgerEnv s _ pp _) = ledgerEnv
@@ -581,7 +583,7 @@ delegTraceFromBlock chainSt block =
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
-    certs = concatMap (reverse . toList . _certs . _body)
+    certs = concatMap (reverse . toList . _certs . _body @C)
     blockCerts = filter delegCert (certs txs)
     delegEnv =
       let (LedgerEnv s txIx _ reserves) = ledgerEnv
