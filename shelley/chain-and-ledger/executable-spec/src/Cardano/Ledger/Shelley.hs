@@ -1,16 +1,12 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era
@@ -30,7 +26,7 @@ data ShelleyEra c
 instance CryptoClass.Crypto c => Era (ShelleyEra c) where
   type Crypto (ShelleyEra c) = c
 
-type instance VALUE (ShelleyEra c) = Coin
+type instance Value (ShelleyEra c) = Coin
 
 type TxBodyConstraints era =
   ( NoThunks (TxBody era),
@@ -41,24 +37,19 @@ type TxBodyConstraints era =
     HashAnnotated (TxBody era) era
   )
 
--- this is a type class rather than a constraint bundle to avoid having
--- to add the `UndecidableInstances` PRAGMA in modules which make use of this constraint.
-class
+type ShelleyBased era =
   ( Era era,
     -- Value constraints
-    Val (VALUE era),
-    Compactible (VALUE era),
-    Eq (VALUE era),
-    FromCBOR (CompactForm (VALUE era)),
-    FromCBOR (VALUE era),
-    NFData (VALUE era),
-    NoThunks (VALUE era),
-    Show (VALUE era),
-    ToCBOR (CompactForm (VALUE era)),
-    ToCBOR (VALUE era),
-    Typeable (VALUE era),
+    Val (Value era),
+    Compactible (Value era),
+    Eq (Value era),
+    FromCBOR (CompactForm (Value era)),
+    FromCBOR (Value era),
+    NFData (Value era),
+    NoThunks (Value era),
+    Show (Value era),
+    ToCBOR (CompactForm (Value era)),
+    ToCBOR (Value era),
+    Typeable (Value era),
     TxBodyConstraints era
-  ) =>
-  ShelleyBased era
-
-deriving instance (CryptoClass.Crypto c, TxBodyConstraints (ShelleyEra c)) => ShelleyBased (ShelleyEra c)
+  )

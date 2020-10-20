@@ -19,6 +19,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Shelley.Spec.Ledger.TxBody
@@ -85,7 +86,6 @@ import Cardano.Binary
     szCases,
     withSlice,
   )
-import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
@@ -440,7 +440,7 @@ instance NoThunks (TxIn era)
 data TxOut era
   = TxOutCompact
       {-# UNPACK #-} !BSS.ShortByteString
-      !(CompactForm (Core.Value era))
+      !(Core.CompactForm (Core.Value era))
 
 instance
   (ShelleyBased era) =>
@@ -467,7 +467,7 @@ pattern TxOut addr vl <-
   where
     TxOut addr vl =
       -- TODO check this
-      TxOutCompact (BSS.toShort $ serialiseAddr addr) (toCompact vl)
+      TxOutCompact (BSS.toShort $ serialiseAddr addr) (Core.toCompact vl)
 
 {-# COMPLETE TxOut #-}
 
@@ -481,7 +481,7 @@ viewCompactTxOut (TxOutCompact bs c) = (addr, val)
     addr = case decompactAddr bs of
       Nothing -> panic "viewCompactTxOut: impossible"
       Just a -> a
-    val = fromCompact c
+    val = Core.fromCompact c
 
 decompactAddr :: Era era => BSS.ShortByteString -> Maybe (Addr era)
 decompactAddr bs =
@@ -614,8 +614,6 @@ instance HasField "mdHash" (TxBody era) (StrictMaybe (MetaDataHash era)) where
   getField = _mdHash'
 
 type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
-
--- deriving instance (ShelleyBased era) => TxBodyConstraints (TxBody (ShelleyEra c))
 
 deriving instance (ShelleyBased era) => Eq (TxBody era)
 

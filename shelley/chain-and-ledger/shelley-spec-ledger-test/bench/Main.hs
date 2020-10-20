@@ -20,7 +20,6 @@ import Cardano.Crypto.DSIGN
 import Cardano.Crypto.Hash
 import Cardano.Crypto.KES
 import Cardano.Crypto.VRF.Praos
-import Cardano.Ledger.Core (VALUE)
 import Cardano.Ledger.Crypto (Crypto (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -89,7 +88,6 @@ instance CryptoClass.Crypto BenchCrypto where
   type ADDRHASH BenchCrypto = Blake2b_224
 
 type BenchEra = ShelleyEra BenchCrypto
-type instance VALUE BenchEra = Coin
 
 -- ============================================================
 
