@@ -511,7 +511,7 @@ straverse_ f = foldr c (pure ())
 -- | 'sfor_' is 'straverse_' with its arguments flipped. For a version
 -- that doesn't ignore the results see 'Data.Traversable.for'.
 --
--- >>> sfor_ [1..4] print
+-- >>> sfor_ ([1..4] :: [Int]) print
 -- 1
 -- 2
 -- 3

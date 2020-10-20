@@ -1,0 +1,112 @@
+name: Haskell CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ["8.10.2"]
+        os: [ubuntu-latest]
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Select build directory
+      run: echo "CABAL_BUILDDIR=dist" >> $GITHUB_ENV
+
+    - name: Install pkgconfiglite (Windows)
+      if: matrix.os == 'windows-latest'
+      run: choco install -y pkgconfiglite
+
+    - name: Set up Ruby 2.6
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: 2.6
+
+    - name: Install cbor-diag and cddl
+      run: gem install cbor-diag cddl
+
+    - name: Install libsodium (MacOS)
+      if: matrix.os == 'macos-latest'
+      run: brew install libsodium
+
+    - name: Install libsodium (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install libsodium23 libsodium-dev
+        sudo apt-get -y remove --purge software-properties-common
+        sudo apt-get -y autoremove
+
+    - name: Install libsodium (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        curl -Ls https://download.libsodium.org/libsodium/releases/libsodium-1.0.18-mingw.tar.gz -o libsodium-1.0.18-mingw.tar.gz
+        tar zxvf libsodium-1.0.18-mingw.tar.gz
+
+        sed -i "s|/d/a/1/s/|D:/a/cardano-node/cardano-node/|g" libsodium-win64/lib/pkgconfig/libsodium.pc
+
+        export PKG_CONFIG_PATH="$(readlink -f libsodium-win64/lib/pkgconfig)"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+        export LIBSODIUM_PATH="$(readlink -f libsodium-win64/bin | sed 's|^/d|D:|g' | tr / '\\')"
+        echo "LIBSODIUM_PATH=$LIBSODIUM_PATH"
+        echo "$LIBSODIUM_PATH" >> $GITHUB_PATH
+
+    - uses: actions/setup-haskell@v1
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: '3.2.0.0'
+
+    - name: Patch GHC 8.10.2 linker
+      if: matrix.os == 'windows-latest'
+      run: |
+        sed -i \
+          's|C:/GitLabRunner/builds/2WeHDSFP/0/ghc/ghc/inplace/mingw/bin/ld.exe|C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/mingw/bin/ld.exe|g' \
+          C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/lib/settings
+
+    - name: Configure to use libsodium
+      run: |
+        cat >> cabal.project <<EOF
+        package cardano-crypto-praos
+          flags: -external-libsodium-vrf
+        EOF
+
+    - name: Cabal update
+      run: cabal update
+
+    - name: Cabal Configure
+      run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+
+    - uses: actions/cache@v2
+      if: matrix.os != 'macos-latest'
+      name: Cache cabal store
+      with:
+        path: |
+          ${{ steps.setup-haskell.outputs.cabal-store }}
+          dist
+        key: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
+        restore-keys: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
+
+    - name: Install dependencies
+      run: cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
+
+    - name: Build
+      run: cabal build all -v3 --builddir="$CABAL_BUILDDIR"
+
+    - name: Git clone
+      run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
+
+    - name: Run tests
+      run: |
+        export CARDANO_MAINNET_MIRROR="$(pwd)/cardano-mainnet-mirror/epochs"
+        cabal test all --builddir="$CABAL_BUILDDIR"
