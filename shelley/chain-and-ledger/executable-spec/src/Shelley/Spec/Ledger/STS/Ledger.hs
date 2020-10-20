@@ -210,20 +210,16 @@ ledgerTransition = do
   pure (utxoSt', dpstate')
 
 instance
-  ( Era era,
-    ShelleyBased era,
-    STS (DELEGS era),
-    STS (LEDGER era)
+  ( ShelleyBased era,
+    STS (DELEGS era)
   ) =>
   Embed (DELEGS era) (LEDGER era)
   where
   wrapFailed = DelegsFailure
 
 instance
-  ( Era era,
-    ShelleyBased era,
-    STS (UTXOW era),
-    STS (LEDGER era)
+  ( ShelleyBased era,
+    STS (UTXOW era)
   ) =>
   Embed (UTXOW era) (LEDGER era)
   where

@@ -131,7 +131,8 @@ instance
 bbodyTransition ::
   forall era.
   ( ShelleyBased era,
-    Embed (LEDGERS era) (BBODY era)
+    Embed (LEDGERS era) (BBODY era),
+    STS (BBODY era)
   ) =>
   TransitionRule (BBODY era)
 bbodyTransition =

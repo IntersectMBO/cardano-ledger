@@ -295,6 +295,7 @@ initialLedgerState = do
 utxoInductive ::
   forall era.
   ( ShelleyBased era,
+    STS (UTXO era),
     Embed (PPUP era) (UTXO era),
     BaseM (UTXO era) ~ ShelleyBase,
     Environment (UTXO era) ~ UtxoEnv era,

@@ -108,6 +108,7 @@ adoptGenesisDelegs es slot = es'
 validatingTickTransition ::
   forall tick era.
   ( Embed (NEWEPOCH era) (tick era),
+    STS (tick era),
     State (tick era) ~ NewEpochState era,
     BaseM (tick era) ~ ShelleyBase
   ) =>

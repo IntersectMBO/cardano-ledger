@@ -291,6 +291,7 @@ chainChecks maxpv ccd bh = do
 chainTransition ::
   forall era.
   ( ShelleyBased era,
+    STS (CHAIN era),
     Embed (BBODY era) (CHAIN era),
     Embed TICKN (CHAIN era),
     Embed (TICK era) (CHAIN era),
@@ -371,7 +372,6 @@ chainTransition =
 instance
   ( Era era,
     ShelleyBased era,
-    STS (CHAIN era),
     STS (BBODY era)
   ) =>
   Embed (BBODY era) (CHAIN era)
@@ -380,8 +380,7 @@ instance
 
 instance
   ( Era era,
-    ShelleyBased era,
-    STS (CHAIN era)
+    ShelleyBased era
   ) =>
   Embed TICKN (CHAIN era)
   where
@@ -390,7 +389,6 @@ instance
 instance
   ( Era era,
     ShelleyBased era,
-    STS (CHAIN era),
     STS (TICK era)
   ) =>
   Embed (TICK era) (CHAIN era)
@@ -401,7 +399,6 @@ instance
   ( Era era,
     c ~ Crypto era,
     ShelleyBased era,
-    STS (CHAIN era),
     STS (PRTCL c)
   ) =>
   Embed (PRTCL c) (CHAIN era)

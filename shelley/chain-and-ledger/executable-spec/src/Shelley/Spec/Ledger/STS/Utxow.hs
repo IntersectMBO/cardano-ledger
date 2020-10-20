@@ -318,7 +318,6 @@ utxoWitnessed =
 instance
   ( Era era,
     ShelleyBased era,
-    STS (UTXOW era),
     STS (UTXO era),
     BaseM (UTXO era) ~ ShelleyBase
   ) =>
