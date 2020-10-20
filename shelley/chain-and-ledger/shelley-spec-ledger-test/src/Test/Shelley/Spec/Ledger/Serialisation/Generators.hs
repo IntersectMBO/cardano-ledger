@@ -40,7 +40,7 @@ import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.SetAlgebra (biMapFromList)
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
@@ -51,6 +51,8 @@ import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Time as Time
+import qualified Data.Time.Calendar.OrdinalDate as Time
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
@@ -708,3 +710,31 @@ genByteString :: Int -> Gen BS.ByteString
 genByteString size = do
   ws <- vectorOf size (chooseAny @Char)
   return $ BS.pack ws
+
+genUTCTime :: Gen Time.UTCTime
+genUTCTime = do
+  year <- arbitrary
+  dayOfYear <- arbitrary
+  diff <- arbitrary
+  pure $ Time.UTCTime
+           (Time.fromOrdinalDate year dayOfYear)
+           (Time.picosecondsToDiffTime diff)
+
+instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (ShelleyGenesis era) where
+  arbitrary =
+    ShelleyGenesis
+      <$> genUTCTime -- sgSystemStart
+      <*> arbitrary  -- sgNetworkMagic
+      <*> arbitrary  -- sgNetworkId
+      <*> arbitrary  -- sgActiveSlotsCoeff
+      <*> arbitrary  -- sgSecurityParam
+      <*> (EpochSize <$> arbitrary)  -- sgEpochLength
+      <*> arbitrary  -- sgSlotsPerKESPeriod
+      <*> arbitrary  -- sgMaxKESEvolutions
+      <*> (fromInteger <$> arbitrary)  -- sgSlotLength
+      <*> arbitrary  -- sgUpdateQuorum
+      <*> arbitrary  -- sgMaxLovelaceSupply
+      <*> genPParams (Proxy @era)  -- sgProtocolParams
+      <*> arbitrary  -- sgGenDelegs
+      <*> arbitrary  -- sgInitialFunds
+      <*> (ShelleyGenesisStaking <$> arbitrary <*> arbitrary)  -- sgStaking

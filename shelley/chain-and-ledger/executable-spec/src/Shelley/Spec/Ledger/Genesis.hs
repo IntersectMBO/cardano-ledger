@@ -27,6 +27,7 @@ module Shelley.Spec.Ledger.Genesis
   )
 where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import qualified Cardano.Ledger.Core as Core
@@ -57,6 +58,13 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.Serialization
+  ( decodeRecordNamed,
+    mapFromCBOR,
+    mapToCBOR,
+    utcTimeFromCBOR,
+    utcTimeToCBOR,
+  )
 import Shelley.Spec.Ledger.StabilityWindow
 import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO
@@ -87,6 +95,17 @@ data ShelleyGenesisStaking era = ShelleyGenesisStaking
   deriving stock (Eq, Show, Generic)
 
 instance NoThunks (ShelleyGenesisStaking era)
+
+instance Era era => ToCBOR (ShelleyGenesisStaking era) where
+  toCBOR (ShelleyGenesisStaking pools stake) =
+    encodeListLen 2 <> mapToCBOR pools <> mapToCBOR stake
+
+instance Era era => FromCBOR (ShelleyGenesisStaking era) where
+  fromCBOR = do
+    decodeRecordNamed "ShelleyGenesisStaking" (const 2) $ do
+      pools <- mapFromCBOR
+      stake <- mapFromCBOR
+      pure $ ShelleyGenesisStaking pools stake
 
 -- | Empty genesis staking
 emptyGenesisStaking :: ShelleyGenesisStaking era
@@ -189,6 +208,78 @@ instance Era era => FromJSON (ShelleyGenesisStaking era) where
       ShelleyGenesisStaking
         <$> (forceElemsToWHNF <$> obj .: "pools")
         <*> (forceElemsToWHNF <$> obj .: "stake")
+
+instance Era era => ToCBOR (ShelleyGenesis era) where
+  toCBOR
+    ShelleyGenesis
+      { sgSystemStart,
+        sgNetworkMagic,
+        sgNetworkId,
+        sgActiveSlotsCoeff,
+        sgSecurityParam,
+        sgEpochLength,
+        sgSlotsPerKESPeriod,
+        sgMaxKESEvolutions,
+        sgSlotLength,
+        sgUpdateQuorum,
+        sgMaxLovelaceSupply,
+        sgProtocolParams,
+        sgGenDelegs,
+        sgInitialFunds,
+        sgStaking
+      } =
+      encodeListLen 15
+        <> utcTimeToCBOR sgSystemStart
+        <> toCBOR sgNetworkMagic
+        <> toCBOR sgNetworkId
+        <> toCBOR sgActiveSlotsCoeff
+        <> toCBOR sgSecurityParam
+        <> toCBOR (unEpochSize sgEpochLength)
+        <> toCBOR sgSlotsPerKESPeriod
+        <> toCBOR sgMaxKESEvolutions
+        <> toCBOR sgSlotLength
+        <> toCBOR sgUpdateQuorum
+        <> toCBOR sgMaxLovelaceSupply
+        <> toCBOR sgProtocolParams
+        <> mapToCBOR sgGenDelegs
+        <> mapToCBOR sgInitialFunds
+        <> toCBOR sgStaking
+
+instance Era era => FromCBOR (ShelleyGenesis era) where
+  fromCBOR = do
+    decodeRecordNamed "ShelleyGenesis" (const 15) $ do
+      sgSystemStart <- utcTimeFromCBOR
+      sgNetworkMagic <- fromCBOR
+      sgNetworkId <- fromCBOR
+      sgActiveSlotsCoeff <- fromCBOR
+      sgSecurityParam <- fromCBOR
+      sgEpochLength <- fromCBOR
+      sgSlotsPerKESPeriod <- fromCBOR
+      sgMaxKESEvolutions <- fromCBOR
+      sgSlotLength <- fromCBOR
+      sgUpdateQuorum <- fromCBOR
+      sgMaxLovelaceSupply <- fromCBOR
+      sgProtocolParams <- fromCBOR
+      sgGenDelegs <- mapFromCBOR
+      sgInitialFunds <- mapFromCBOR
+      sgStaking <- fromCBOR
+      pure $
+        ShelleyGenesis
+          sgSystemStart
+          sgNetworkMagic
+          sgNetworkId
+          sgActiveSlotsCoeff
+          sgSecurityParam
+          (EpochSize sgEpochLength)
+          sgSlotsPerKESPeriod
+          sgMaxKESEvolutions
+          sgSlotLength
+          sgUpdateQuorum
+          sgMaxLovelaceSupply
+          sgProtocolParams
+          sgGenDelegs
+          sgInitialFunds
+          sgStaking
 
 {-------------------------------------------------------------------------------
   Genesis UTxO
