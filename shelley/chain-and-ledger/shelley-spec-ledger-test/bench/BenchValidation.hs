@@ -26,6 +26,7 @@ module BenchValidation
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Prelude (NFData (rnf))
@@ -70,6 +71,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
+import Test.QuickCheck (Gen)
 
 -- ====================================================================
 
@@ -96,9 +98,10 @@ validateInput ::
     State (LEDGER era) ~ (UTxOState era, DPState era),
     Signal (LEDGER era) ~ Tx era
   ) =>
+  Gen (Core.Value era) ->
   Int ->
   IO (ValidateInput era)
-validateInput utxoSize = genValidateInput utxoSize
+validateInput gv utxoSize = genValidateInput gv utxoSize
 
 genValidateInput ::
   ( ShelleyTest era,
@@ -115,11 +118,12 @@ genValidateInput ::
     State (LEDGER era) ~ (UTxOState era, DPState era),
     Signal (LEDGER era) ~ Tx era
   ) =>
+  Gen (Core.Value era) ->
   Int ->
   IO (ValidateInput era)
-genValidateInput n = do
+genValidateInput gv n = do
   let ge = genEnv (Proxy :: Proxy era)
-  chainstate <- genChainState n ge
+  chainstate <- genChainState gv n ge
   block <- genBlock ge chainstate
   pure (ValidateInput testGlobals (chainNes chainstate) block)
 
@@ -202,11 +206,12 @@ genUpdateInputs ::
     Signal (LEDGER era) ~ Tx era,
     Mock (Crypto era)
   ) =>
+  Gen (Core.Value era) ->
   Int ->
   IO (UpdateInputs (Crypto era))
-genUpdateInputs utxoSize = do
+genUpdateInputs gv utxoSize = do
   let ge = genEnv (Proxy :: Proxy era)
-  chainstate <- genChainState utxoSize ge
+  chainstate <- genChainState gv utxoSize ge
   (Block blockheader _) <- genBlock ge chainstate
   let ledgerview = currentLedgerView (chainNes chainstate)
   let (ChainState _newepochState keys eta0 etaV etaC etaH slot) = chainstate

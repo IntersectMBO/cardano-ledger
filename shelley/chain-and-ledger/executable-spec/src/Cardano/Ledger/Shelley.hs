@@ -6,6 +6,7 @@
 
 module Cardano.Ledger.Shelley where
 
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era

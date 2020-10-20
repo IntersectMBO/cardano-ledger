@@ -10,6 +10,7 @@ module Shelley.Spec.Ledger.Bench.Gen
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Control.State.Transition.Extended
 import Data.Either (fromRight)
@@ -32,7 +33,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
-import Test.QuickCheck (generate)
+import Test.QuickCheck (generate, Gen)
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions (ledgerEnv)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import qualified Test.Shelley.Spec.Ledger.Generator.Block as GenBlock
@@ -56,10 +57,11 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
 genChainState ::
   ( ShelleyTest era
   ) =>
+  Gen (Core.Value era) ->
   Int ->
   GenEnv era ->
   IO (ChainState era)
-genChainState n ge =
+genChainState gv n ge =
   let cs =
         (geConstants ge)
           { minGenesisUTxOouts = n,
@@ -71,7 +73,7 @@ genChainState n ge =
           }
    in fromRight (error "genChainState failed")
         <$> ( generate $
-                mkGenesisChainState cs (IRC ())
+                mkGenesisChainState gv cs (IRC ())
             )
 
 -- | Benchmark generating a block given a chain state.
@@ -107,12 +109,13 @@ genTriple ::
   ( Mock (Crypto era),
     ShelleyTest era
   ) =>
+  Gen (Core.Value era) ->
   Proxy era ->
   Int ->
   IO (GenEnv era, ChainState era, GenEnv era -> IO (Tx era))
-genTriple proxy n = do
+genTriple gv proxy n = do
   let ge = genEnv proxy
-  cs <- genChainState n ge
+  cs <- genChainState gv n ge
   let nes = chainNes cs -- NewEpochState
   let es = nesEs nes -- EpochState
   let (LedgerState utxoS dpstate) = esLState es -- LedgerState

@@ -456,7 +456,7 @@ genInstantaneousRewards s genesisDelegatesByHash pparams accountState delegSt = 
   winnerCreds <-
     take <$> QC.elements [0 .. (max 0 $ Map.size credentials - 1)]
       <*> QC.shuffle (Map.keys credentials)
-  coins <- genCoinList 1 1000 (length winnerCreds) (length winnerCreds)
+  coins <- genCoinList 1 1000 (length winnerCreds)
   let credCoinMap = Map.fromList $ zip winnerCreds coins
 
   coreSigners <-

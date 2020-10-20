@@ -18,6 +18,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
 import Control.State.Transition.Trace
@@ -103,9 +104,9 @@ longTraceLen = 150
 ---------------------------------------------------------------------
 
 -- | Tx inputs are eliminated, outputs added to utxo and TxIds are unique
-collisionFreeComplete :: Property
-collisionFreeComplete =
-  forAllChainTrace traceLen $ \tr -> do
+collisionFreeComplete :: Gen (Core.Value C) -> Property
+collisionFreeComplete gv =
+  forAllChainTrace gv traceLen $ \tr -> do
     let ssts = sourceSignalTargets tr
     conjoin . concat $
       [ -- collision freeness
@@ -118,9 +119,9 @@ collisionFreeComplete =
       ]
 
 -- | Various preservation properties
-adaPreservationChain :: Property
-adaPreservationChain =
-  forAllChainTrace longTraceLen $ \tr -> do
+adaPreservationChain :: Gen (Core.Value C) -> Property
+adaPreservationChain gv =
+  forAllChainTrace gv longTraceLen $ \tr -> do
     let ssts = sourceSignalTargets tr
         noEpochBoundarySsts = filter sameEpoch ssts
 
@@ -472,9 +473,9 @@ feesNonDecreasing SourceSignalTarget {source, target} =
 
 -- | Various properties of the POOL STS Rule, tested on longer traces
 -- (double the default length)
-poolProperties :: Property
-poolProperties =
-  forAllChainTrace traceLen $ \tr -> do
+poolProperties :: Gen (Core.Value C) -> Property
+poolProperties gv =
+  forAllChainTrace gv traceLen $ \tr -> do
     let ssts = sourceSignalTargets tr
     conjoin . concat $
       [ map poolRetirement ssts,
@@ -518,9 +519,9 @@ poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = 
 
 -- | Various properties of the POOL STS Rule, tested on longer traces
 -- (double the default length)
-delegProperties :: Property
-delegProperties =
-  forAllChainTrace traceLen $ \tr -> do
+delegProperties :: Gen (Core.Value C) -> Property
+delegProperties gv =
+  forAllChainTrace gv traceLen $ \tr -> do
     conjoin $
       map chainProp (sourceSignalTargets tr)
   where
@@ -649,9 +650,9 @@ chainSstWithTick ledgerTr =
 -- Properties for PoolReap (using the CHAIN Trace) --
 ----------------------------------------------------------------------
 
-removedAfterPoolreap :: Property
-removedAfterPoolreap =
-  forAllChainTrace traceLen $ \tr ->
+removedAfterPoolreap :: Gen (Core.Value C) -> Property
+removedAfterPoolreap gv =
+  forAllChainTrace gv traceLen $ \tr ->
     conjoin $
       map removedAfterPoolreap_ $
         filter (not . sameEpoch) (chainSstWithTick tr)
@@ -669,12 +670,13 @@ removedAfterPoolreap =
 
 forAllChainTrace ::
   (Testable prop) =>
+  Gen (Core.Value C) ->
   Word64 -> -- trace length
   (Trace (CHAIN C) -> prop) ->
   Property
-forAllChainTrace n prop =
+forAllChainTrace gv n prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
-    forAllTraceFromInitState testGlobals n (Preset.genEnv p) (Just $ mkGenesisChainState (geConstants (Preset.genEnv p))) prop
+    forAllTraceFromInitState testGlobals n (Preset.genEnv p) (Just $ (mkGenesisChainState gv) (geConstants (Preset.genEnv p))) prop
   where
     p :: Proxy C
     p = Proxy

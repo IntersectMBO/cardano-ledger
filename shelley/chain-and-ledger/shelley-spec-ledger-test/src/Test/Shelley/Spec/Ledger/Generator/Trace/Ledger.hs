@@ -16,6 +16,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -146,11 +147,13 @@ instance
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
-  CryptoClass.Crypto c =>
+  forall a c.
+  (CryptoClass.Crypto c) =>
+  Gen (Core.Value (ShelleyEra c)) ->
   Constants ->
   IRC (LEDGER (ShelleyEra c)) ->
   Gen (Either a (UTxOState (ShelleyEra c), DPState (ShelleyEra c)))
-mkGenesisLedgerState c _ = do
-  utxo0 <- genUtxo0 c
+mkGenesisLedgerState gv c _ = do
+  utxo0 <- genUtxo0 @(ShelleyEra c) gv c
   let (LedgerState utxoSt dpSt) = genesisState (genesisDelegs0 c) utxo0
   pure $ Right (utxoSt, dpSt)

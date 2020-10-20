@@ -36,6 +36,7 @@ module Test.Shelley.Spec.Ledger.Utils
     MultiSigPairs,
     getBlockNonce,
     ShelleyTest,
+    Split (..),
   )
 where
 
@@ -128,9 +129,8 @@ import Shelley.Spec.Ledger.STS.Utxo (UtxoPredicateFailure, UTXO)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegPredicateFailure)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsPredicateFailure)
 
-type ShelleyTest era =
-  ( ShelleyBased era,
-    Core.Value era ~ Coin,
+type ShelleyTest era = (ShelleyBased era,
+    Split (Core.Value era),
     Core.TxBody era ~ TxBody era,
     Core.Script era ~ MultiSig era,
     PredicateFailure (CHAIN era) ~ ChainPredicateFailure era,
@@ -142,6 +142,9 @@ type ShelleyTest era =
     PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
     PredicateFailure (UTXO era) ~ UtxoPredicateFailure era
   )
+
+class Split v where
+  vsplit :: v -> Integer -> ([v], Coin)
 
 -- =======================================================
 

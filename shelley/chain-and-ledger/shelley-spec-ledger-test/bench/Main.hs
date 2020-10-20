@@ -6,6 +6,7 @@
 
 module Main where
 
+import qualified Cardano.Ledger.Core as Core
 import BenchUTxOAggregate (expr, genTestCase)
 import BenchValidation
   ( applyBlock,
@@ -58,6 +59,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.Rewards (likelihood)
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck.Gen as QC
+import Test.QuickCheck (arbitrary)
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions
   ( initUTxO,
     ledgerDeRegisterStakeKeys,
@@ -75,6 +77,12 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
   )
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
 import Cardano.Ledger.Shelley (ShelleyEra)
+
+-- generator to use for Value type (here instantiated to Coin)
+-- whenever Value is Coin, this generator is not used
+-- see note in Tests.hs for why/how this is needed
+genVl :: Gen (Core.Value BenchEra)
+genVl = arbitrary
 
 -- ==========================================================
 
@@ -217,13 +225,13 @@ validGroup =
   where
     runAtUTxOSize n =
       bgroup (show n) $
-        [ env (validateInput @BenchEra n) $ \arg ->
+        [ env (validateInput @BenchEra genVl n) $ \arg ->
             bgroup
               "block"
               [ bench "applyBlockTransition" (nfIO $ benchValidate arg),
                 bench "reapplyBlockTransition" (nf benchreValidate arg)
               ],
-          env (genUpdateInputs @BenchEra n) $ \arg ->
+          env (genUpdateInputs @BenchEra genVl n) $ \arg ->
             bgroup
               "protocol"
               [ bench "updateChainDepState" (nf updateChain arg),
@@ -235,7 +243,7 @@ validGroup =
 
 profileValid :: IO ()
 profileValid = do
-  state <- validateInput @BenchEra 10000
+  state <- validateInput @BenchEra genVl 10000
   let ans = sum [applyBlock @BenchEra state n | n <- [1 .. 10000 :: Int]]
   putStrLn (show ans)
   pure ()
@@ -337,7 +345,7 @@ varyDelegState tag fixed changes initstate action =
 main :: IO ()
 -- main=profileValid
 main = do
-  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy BenchEra) 1000
+  (genenv, chainstate, genTxfun) <- genTriple genVl (Proxy :: Proxy BenchEra) 1000
   defaultMain $
     [ bgroup "vary input size" $
         [ varyInput
@@ -454,7 +462,7 @@ main = do
         ],
       bgroup "rewards" $
         [ env
-            (generate $ genChainInEpoch 5)
+            (generate $ genChainInEpoch genVl 5)
             ( \cs ->
                 bench "createRUpd" $ whnf (createRUpd testGlobals) cs
             ),

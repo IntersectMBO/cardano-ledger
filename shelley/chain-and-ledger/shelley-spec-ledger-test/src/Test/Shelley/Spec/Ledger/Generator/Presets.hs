@@ -17,6 +17,7 @@ module Test.Shelley.Spec.Ledger.Generator.Presets
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era)
 import Data.Map.Strict (Map)
@@ -118,12 +119,13 @@ coreNodeKeys c@Constants {numCoreNodes} =
   where
     toKeyPair (sk, vk) = KeyPair vk sk
 
-genUtxo0 :: ShelleyTest era => Constants -> Gen (UTxO era)
-genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
+genUtxo0 :: (ShelleyTest era) => QC.Gen (Core.Value era) -> Constants -> Gen (UTxO era)
+genUtxo0 gv c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts
   outs <-
     genTxOut
+      gv
       c
       (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr Testnet) genesisScripts)
   return (genesisCoins outs)

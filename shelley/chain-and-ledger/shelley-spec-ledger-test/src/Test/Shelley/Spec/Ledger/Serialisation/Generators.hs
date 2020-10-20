@@ -35,6 +35,7 @@ import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
@@ -150,7 +151,11 @@ type MockGen era =
   )
 
 instance
-  (ShelleyTest era, Mock (Crypto era), Arbitrary (WitnessSet era)) =>
+  ( ShelleyTest era,
+    Mock (Crypto era),
+    Arbitrary (WitnessSet era),
+    Arbitrary (Core.Value era)
+  ) =>
   Arbitrary (Block era)
   where
   arbitrary = do
@@ -260,7 +265,10 @@ instance (Era era, Mock (Crypto era)) => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (TxBody era) where
+instance
+  (ShelleyTest era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  Arbitrary (TxBody era)
+  where
   -- Our arbitrary instance constructs things using the pattern in order to have
   -- the correct serialised bytes.
   arbitrary =
@@ -310,7 +318,11 @@ maxTxWits :: Int
 maxTxWits = 5
 
 instance
-  (ShelleyTest era, Mock (Crypto era), Arbitrary (WitnessSet era)) =>
+  ( ShelleyTest era,
+    Mock (Crypto era),
+    Arbitrary (WitnessSet era),
+    Arbitrary (Core.Value era)
+  ) =>
   Arbitrary (Tx era)
   where
   -- Our arbitrary instance constructs things using the pattern in order to have
@@ -330,7 +342,10 @@ instance Era era => Arbitrary (TxIn era) where
       <$> (TxId <$> genHash)
       <*> arbitrary
 
-instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (TxOut era) where
+instance
+  (ShelleyTest era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  Arbitrary (TxOut era)
+  where
   arbitrary = TxOut <$> arbitrary <*> arbitrary
 
 instance Arbitrary Nonce where
@@ -367,11 +382,14 @@ instance Era era => Arbitrary (STS.PpupPredicateFailure era) where
   shrink = genericShrink
 
 instance
-  (ShelleyTest era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
   Arbitrary (STS.UtxoPredicateFailure era)
   where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
+
+  -- we don't have a shrinker for Value, so we do not shrink this
+  -- predicate failure, as its constructor contains Value
+  shrink pf = [pf]
 
 instance
   ( ShelleyTest era,
@@ -504,7 +522,10 @@ instance CC.Crypto crypto => Arbitrary (STS.PrtclState crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (UTxO era) where
+instance
+  (ShelleyTest era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  Arbitrary (UTxO era)
+  where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -570,15 +591,24 @@ instance (Era era, Mock (Crypto era)) => Arbitrary (DPState era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (UTxOState era) where
+instance
+  (ShelleyTest era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  Arbitrary (UTxOState era)
+  where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (LedgerState era) where
+instance
+  (ShelleyTest era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  Arbitrary (LedgerState era)
+  where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (NewEpochState era) where
+instance
+  (ShelleyTest era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  Arbitrary (NewEpochState era)
+  where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -592,7 +622,10 @@ instance CC.Crypto crypto => Arbitrary (PoolDistr crypto) where
     where
       genVal = IndividualPoolStake <$> arbitrary <*> genHash
 
-instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (EpochState era) where
+instance
+  (ShelleyTest era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  Arbitrary (EpochState era)
+  where
   arbitrary =
     EpochState
       <$> arbitrary

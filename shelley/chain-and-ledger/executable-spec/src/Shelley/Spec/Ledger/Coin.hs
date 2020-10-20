@@ -7,7 +7,7 @@
 
 module Shelley.Spec.Ledger.Coin
   ( Coin (..),
-    Core.CompactForm (..),
+    CompactForm (..),
     DeltaCoin (..),
     word64ToCoin,
     coinToRational,
@@ -18,7 +18,7 @@ module Shelley.Spec.Ledger.Coin
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Compactible
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
@@ -42,7 +42,7 @@ newtype Coin = Coin {unCoin :: Integer}
       NFData
     )
   deriving (Show) via Quiet Coin
-  deriving (ToCBOR, FromCBOR) via Core.Compact Coin
+  deriving (ToCBOR, FromCBOR) via Compact Coin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
   deriving newtype (PartialOrd)
 
@@ -71,7 +71,7 @@ rationalToCoinViaFloor r = Coin . floor $ r
 -- if coin is less than 0 or greater than (maxBound :: Word64), then
 -- fromIntegral constructs the incorrect value. for now this is handled
 -- with an erroring bounds check here. where should this really live?
-instance Core.Compactible Coin where
+instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64
   toCompact (Coin c)
     | c < 0 = error $ "out of bounds : " ++ show c
@@ -80,8 +80,8 @@ instance Core.Compactible Coin where
     | otherwise = CompactCoin (fromIntegral c)
   fromCompact (CompactCoin c) = word64ToCoin c
 
-instance ToCBOR (Core.CompactForm Coin) where
+instance ToCBOR (CompactForm Coin) where
   toCBOR (CompactCoin c) = toCBOR c
 
-instance FromCBOR (Core.CompactForm Coin) where
+instance FromCBOR (CompactForm Coin) where
   fromCBOR = CompactCoin <$> fromCBOR

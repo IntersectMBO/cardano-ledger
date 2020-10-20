@@ -33,6 +33,7 @@ module Shelley.Spec.Ledger.EpochBoundary
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.Compactible (fromCompact)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased)
@@ -108,7 +109,7 @@ aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldr accum initial u
   where
     accum (TxOutCompact addr c) ans =
-      let c' = Val.coin . Core.fromCompact @(Core.Value era) $ c
+      let c' = Val.coin . fromCompact @(Core.Value era) $ c
        in case deserialiseAddrStakeRef addr of
             Just (StakeRefPtr p) -> case Map.lookup p ptrs of
               Just cred -> Map.insertWith (<>) cred c' ans
