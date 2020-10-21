@@ -14,6 +14,7 @@ module Cardano.Ledger.Mary.Value
     Value (..),
     insert,
     lookup,
+    policies,
     showValue,
   )
 where
@@ -45,6 +46,7 @@ import Data.Map.Internal
   )
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -170,6 +172,13 @@ instance Compactible (Value era) where
 
 -- ========================================================================
 -- Operations on Values
+
+-- | Extract the set of policies in the Value.
+--
+--   This function is equivalent to computing the support of the value in the
+--   spec.
+policies :: Value era -> Set (PolicyID era)
+policies (Value _ m) = Map.keysSet m
 
 lookup :: PolicyID era -> AssetID -> Value era -> Integer
 lookup pid aid (Value _ m) =

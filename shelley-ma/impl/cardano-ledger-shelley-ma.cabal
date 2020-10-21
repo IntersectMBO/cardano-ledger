@@ -29,6 +29,7 @@ library
     Cardano.Ledger.ShelleyMA.Timelocks
     Cardano.Ledger.ShelleyMA.TxBody
     Cardano.Ledger.ShelleyMA.Rules.Utxo
+    Cardano.Ledger.ShelleyMA.Rules.Utxow
   other-modules:
     Cardano.Ledger.ShelleyMA
 
