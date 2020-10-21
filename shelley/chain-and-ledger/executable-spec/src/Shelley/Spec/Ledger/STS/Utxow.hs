@@ -18,6 +18,8 @@ module Shelley.Spec.Ledger.STS.Utxow
   ( UTXOW,
     UtxowPredicateFailure (..),
     PredicateFailure,
+    utxoWitnessed,
+    initialLedgerStateUTXOW,
   )
 where
 
@@ -27,8 +29,9 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩))
@@ -97,8 +100,7 @@ import Shelley.Spec.Ledger.Serialization
   )
 import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
 import Shelley.Spec.Ledger.Tx
-  ( Tx (..),
-    ValidateScript,
+  (ValidateScript,  Tx (..),
     hashScript,
     txwitsScript,
     validateScript,
@@ -151,31 +153,16 @@ deriving stock instance
   Show (UtxowPredicateFailure era)
 
 instance
-  ( Era era,
-    ShelleyBased era,
-    ValidateScript era,
-    Embed (UTXO era) (UTXOW era),
-    Environment (UTXOW era) ~ UtxoEnv era,
-    State (UTXOW era) ~ UTxOState era,
-    Signal (UTXOW era) ~ Tx era,
-    PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    Environment (UTXO era) ~ UtxoEnv era,
-    State (UTXO era) ~ UTxOState era,
-    Signal (UTXO era) ~ Tx era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
-    HasField "wdrls" (Core.TxBody era) (Wdrl era),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era)),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+  ( CryptoClass.Crypto c,
+    DSignable c (Hash c EraIndependentTxBody)
   ) =>
-  STS (UTXOW era)
+  STS (UTXOW (ShelleyEra c))
   where
-  type State (UTXOW era) = UTxOState era
-  type Signal (UTXOW era) = Tx era
-  type Environment (UTXOW era) = UtxoEnv era
-  type BaseM (UTXOW era) = ShelleyBase
-  type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
+  type State (UTXOW (ShelleyEra c)) = UTxOState (ShelleyEra c)
+  type Signal (UTXOW (ShelleyEra c)) = Tx (ShelleyEra c)
+  type Environment (UTXOW (ShelleyEra c)) = UtxoEnv (ShelleyEra c)
+  type BaseM (UTXOW (ShelleyEra c)) = ShelleyBase
+  type PredicateFailure (UTXOW (ShelleyEra c)) = UtxowPredicateFailure (ShelleyEra c)
   transitionRules = [utxoWitnessed UTxO.scriptsNeeded]
   initialRules = [initialLedgerStateUTXOW]
 
@@ -252,6 +239,8 @@ instance
 initialLedgerStateUTXOW ::
   forall era.
   ( Embed (UTXO era) (UTXOW era),
+    Environment (UTXOW era) ~ UtxoEnv era,
+    State (UTXOW era) ~ UTxOState era,
     Environment (UTXO era) ~ UtxoEnv era,
     State (UTXO era) ~ UTxOState era
   ) =>
@@ -264,11 +253,17 @@ utxoWitnessed ::
   forall era.
   ( ShelleyBased era,
     ValidateScript era,
+    STS (UTXOW era),
+    BaseM (UTXOW era) ~ ShelleyBase,
     Embed (UTXO era) (UTXOW era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Environment (UTXO era) ~ UtxoEnv era,
     State (UTXO era) ~ UTxOState era,
     Signal (UTXO era) ~ Tx era,
+    Environment (UTXOW era) ~ UtxoEnv era,
+    State (UTXOW era) ~ UTxOState era,
+    Signal (UTXOW era) ~ Tx era,
+    PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
@@ -347,11 +342,7 @@ utxoWitnessed scriptsNeeded =
         TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
-  ( Era era,
-    ShelleyBased era,
-    STS (UTXO era),
-    BaseM (UTXO era) ~ ShelleyBase
-  ) =>
-  Embed (UTXO era) (UTXOW era)
+  (CryptoClass.Crypto c) =>
+  Embed (UTXO (ShelleyEra c)) (UTXOW (ShelleyEra c))
   where
   wrapFailed = UtxoFailure

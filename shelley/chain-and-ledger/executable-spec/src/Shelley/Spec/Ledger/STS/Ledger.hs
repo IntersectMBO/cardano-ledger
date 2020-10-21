@@ -142,6 +142,9 @@ instance
     ShelleyBased era,
     Embed (DELEGS era) (LEDGER era),
     Embed (UTXOW era) (LEDGER era),
+    Environment (UTXOW era) ~ UtxoEnv era,
+    State (UTXOW era) ~ UTxOState era,
+    Signal (UTXOW era) ~ Tx era,
     Environment (DELEGS era) ~ DelegsEnv era,
     State (DELEGS era) ~ DPState era,
     Signal (DELEGS era) ~ Seq (DCert era),
@@ -182,6 +185,9 @@ ledgerTransition ::
   ( ShelleyBased era,
     Embed (DELEGS era) (LEDGER era),
     Embed (UTXOW era) (LEDGER era),
+    Environment (UTXOW era) ~ UtxoEnv era,
+    State (UTXOW era) ~ UTxOState era,
+    Signal (UTXOW era) ~ Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
   ) =>
   TransitionRule (LEDGER era)
@@ -219,7 +225,8 @@ instance
 
 instance
   ( ShelleyBased era,
-    STS (UTXOW era)
+    STS (UTXOW era),
+    BaseM (UTXOW era) ~ ShelleyBase
   ) =>
   Embed (UTXOW era) (LEDGER era)
   where
