@@ -17,8 +17,9 @@ module Shelley.Spec.Ledger.API.Mempool
   )
 where
 
-import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Hash (Hash)
+import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import Cardano.Ledger.Crypto (Crypto, HASH)
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Arrow (left)
@@ -32,7 +33,6 @@ import Control.State.Transition.Extended
   )
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
-import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.Keys (DSignable)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
@@ -45,16 +45,12 @@ import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 -- TODO #1304: add reapplyTxs
 class
-  ( Eq (Tx era),
-    Show (Tx era),
-    NoThunks (Tx era),
-    FromCBOR (Annotator (Tx era)),
-    ToCBOR (Tx era),
+  ( ChainData (Tx era),
+    AnnotatedData (Tx era),
     Eq (ApplyTxError era),
     Show (ApplyTxError era),
-    FromCBOR (ApplyTxError era),
-    ToCBOR (ApplyTxError era),
-    Typeable (ApplyTxError era)
+    Typeable (ApplyTxError era),
+    SerialisableData (ApplyTxError era)
   ) =>
   ApplyTx era
   where

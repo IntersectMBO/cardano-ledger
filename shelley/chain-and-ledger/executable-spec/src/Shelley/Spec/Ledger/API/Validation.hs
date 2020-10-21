@@ -19,8 +19,8 @@ module Shelley.Spec.Ledger.API.Validation
   )
 where
 
-import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Hash (Hash)
+import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
@@ -47,27 +47,14 @@ import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 -------------------------------------------------------------------------------}
 
 class
-  ( Eq (Block era),
-    Show (Block era),
-    NoThunks (Block era),
-    FromCBOR (Annotator (Block era)),
-    ToCBOR (Block era),
-    Eq (BHeader (Crypto era)),
-    Show (BHeader (Crypto era)),
-    NoThunks (BHeader (Crypto era)),
-    FromCBOR (Annotator (BHeader (Crypto era))),
-    ToCBOR (Block era),
-    Eq (NewEpochState era),
-    Show (NewEpochState era),
-    NoThunks (NewEpochState era),
-    FromCBOR (NewEpochState era),
-    ToCBOR (NewEpochState era),
-    Eq (BlockTransitionError era),
-    Show (BlockTransitionError era),
-    NoThunks (BlockTransitionError era),
-    Eq (STS.PredicateFailure (STS.CHAIN era)),
-    Show (STS.PredicateFailure (STS.CHAIN era)),
-    NoThunks (STS.PredicateFailure (STS.CHAIN era))
+  ( ChainData (Block era),
+    AnnotatedData (Block era),
+    ChainData (BHeader (Crypto era)),
+    AnnotatedData (BHeader (Crypto era)),
+    ChainData (NewEpochState era),
+    SerialisableData (NewEpochState era),
+    ChainData (BlockTransitionError era),
+    ChainData (STS.PredicateFailure (STS.CHAIN era))
   ) =>
   ApplyBlock era
   where

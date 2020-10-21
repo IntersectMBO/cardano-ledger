@@ -30,6 +30,7 @@ module Shelley.Spec.Ledger.API.Protocol
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
@@ -77,9 +78,8 @@ import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
 class
-  ( Eq (ChainDepState (Crypto era)),
-    Show (ChainDepState (Crypto era)),
-    NoThunks (ChainDepState (Crypto era)),
+  ( ChainData (ChainDepState (Crypto era)),
+    SerialisableData (ChainDepState (Crypto era)),
     Eq (ChainTransitionError (Crypto era)),
     Show (ChainTransitionError (Crypto era)),
     Show (LedgerView (Crypto era)),
