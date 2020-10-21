@@ -24,7 +24,8 @@ library
     Cardano.Ledger.Allegra.Translation
     Cardano.Ledger.Mary
     Cardano.Ledger.Mary.Translation
-    Cardano.Ledger.ShelleyMA.Value
+    Cardano.Ledger.Mary.Value
+    Cardano.Ledger.ShelleyMA.Scripts
     Cardano.Ledger.ShelleyMA.Timelocks
     Cardano.Ledger.ShelleyMA.TxBody
     Cardano.Ledger.ShelleyMA.Rules.Utxo

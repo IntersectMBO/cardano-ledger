@@ -100,7 +100,8 @@ import Shelley.Spec.Ledger.Serialization
   )
 import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
 import Shelley.Spec.Ledger.Tx
-  (ValidateScript,  Tx (..),
+  ( Tx (..),
+    ValidateScript,
     hashScript,
     txwitsScript,
     validateScript,
