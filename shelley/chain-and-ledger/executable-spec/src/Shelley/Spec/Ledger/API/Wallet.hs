@@ -32,7 +32,6 @@ import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
-import Shelley.Spec.Ledger.API.Validation (ShelleyState)
 import Shelley.Spec.Ledger.Address (Addr (..), serialiseAddr)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
@@ -77,7 +76,7 @@ poolsByTotalStakeFraction ::
   forall era.
   ShelleyBased era =>
   Globals ->
-  ShelleyState era ->
+  NewEpochState era ->
   PoolDistr (Crypto era)
 poolsByTotalStakeFraction globals ss =
   PoolDistr poolsByTotalStake
@@ -93,7 +92,7 @@ poolsByTotalStakeFraction globals ss =
       IndividualPoolStake (s * stakeRatio) vrf
 
 -- | Calculate the current total stake.
-getTotalStake :: Globals -> ShelleyState era -> Coin
+getTotalStake :: Globals -> NewEpochState era -> Coin
 getTotalStake globals ss =
   let supply = Coin . fromIntegral $ maxLovelaceSupply globals
       es = nesEs ss
@@ -108,7 +107,7 @@ getTotalStake globals ss =
 getNonMyopicMemberRewards ::
   ShelleyBased era =>
   Globals ->
-  ShelleyState era ->
+  NewEpochState era ->
   Set (Either Coin (Credential 'Staking era)) ->
   Map (Either Coin (Credential 'Staking era)) (Map (KeyHash 'StakePool (Crypto era)) Coin)
 getNonMyopicMemberRewards globals ss creds =
@@ -167,7 +166,7 @@ getNonMyopicMemberRewards globals ss creds =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: ShelleyBased era => ShelleyState era -> EB.SnapShot era
+currentSnapshot :: ShelleyBased era => NewEpochState era -> EB.SnapShot era
 currentSnapshot ss =
   stakeDistr utxo dstate pstate
   where
@@ -178,13 +177,13 @@ currentSnapshot ss =
 
 -- | Get the full UTxO.
 getUTxO ::
-  ShelleyState era ->
+  NewEpochState era ->
   UTxO era
 getUTxO = _utxo . _utxoState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
-  ShelleyState era ->
+  NewEpochState era ->
   Set (Addr era) ->
   UTxO era
 getFilteredUTxO ss addrs =
@@ -206,7 +205,7 @@ getLeaderSchedule ::
       Seed
   ) =>
   Globals ->
-  ShelleyState era ->
+  NewEpochState era ->
   ChainDepState (Crypto era) ->
   KeyHash 'StakePool (Crypto era) ->
   SignKeyVRF (Crypto era) ->

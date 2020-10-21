@@ -27,7 +27,6 @@ import Data.Maybe (fromMaybe)
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API.Protocol
 import Shelley.Spec.Ledger.API.Types
-import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.Coin (CompactForm (CompactCoin))
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
@@ -91,7 +90,7 @@ translateToShelleyLedgerState ::
   ShelleyGenesis (ShelleyEra c) ->
   EpochNo ->
   Byron.ChainValidationState ->
-  ShelleyState (ShelleyEra c)
+  NewEpochState (ShelleyEra c)
 translateToShelleyLedgerState genesisShelley epochNo cvs =
   NewEpochState
     { nesEL = epochNo,

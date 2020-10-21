@@ -37,7 +37,7 @@ type instance PreviousEra (MaryEra c) = AllegraEra c
 -- to provide the context in the right place.
 type instance TranslationContext (MaryEra c) = ()
 
-instance Crypto c => TranslateEra (MaryEra c) ShelleyState where
+instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
   translateEra _ = error "TODO Allegra to Mary translation"
 
 instance Crypto c => TranslateEra (MaryEra c) Tx where

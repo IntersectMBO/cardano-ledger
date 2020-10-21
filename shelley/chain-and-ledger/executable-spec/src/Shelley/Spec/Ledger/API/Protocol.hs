@@ -1,3 +1,4 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,11 +17,9 @@
 -- In particular, this code supports extracting the components of the ledger
 -- state needed for protocol execution, both now and in a 2k-slot window.
 module Shelley.Spec.Ledger.API.Protocol
-  ( STS.Prtcl.PrtclEnv,
+  ( GetLedgerView (..),
     LedgerView (..),
-    currentLedgerView,
-    -- $timetravel
-    futureLedgerView,
+    FutureLedgerViewError (..),
     -- $chainstate
     ChainDepState (..),
     ChainTransitionError (..),
@@ -31,13 +30,10 @@ module Shelley.Spec.Ledger.API.Protocol
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Crypto.DSIGN.Class
-import Cardano.Crypto.KES.Class
-import Cardano.Crypto.VRF.Class
-import Cardano.Ledger.Crypto hiding (Crypto)
+import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -50,7 +46,6 @@ import Control.State.Transition.Extended
 import Data.Either (fromRight)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals,
     Nonce,
@@ -65,7 +60,7 @@ import Shelley.Spec.Ledger.BlockChain
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import Shelley.Spec.Ledger.Keys (GenDelegs)
+import Shelley.Spec.Ledger.Keys (DSignable, GenDelegs, KESignable, VRFSignable)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
     NewEpochState (..),
@@ -81,6 +76,38 @@ import Shelley.Spec.Ledger.STS.Tick (TICKF)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
+
+class
+  ( ChainData (ChainDepState (Crypto era)),
+    SerialisableData (ChainDepState (Crypto era)),
+    Eq (ChainTransitionError (Crypto era)),
+    Show (ChainTransitionError (Crypto era)),
+    Show (LedgerView (Crypto era)),
+    Show (FutureLedgerViewError era)
+  ) =>
+  GetLedgerView era
+  where
+  currentLedgerView ::
+    NewEpochState era ->
+    LedgerView (Crypto era)
+  currentLedgerView = view
+
+  -- $timetravel
+  futureLedgerView ::
+    MonadError (FutureLedgerViewError era) m =>
+    Globals ->
+    NewEpochState era ->
+    SlotNo ->
+    m (LedgerView (Crypto era))
+  default futureLedgerView ::
+    (ShelleyBased era, MonadError (FutureLedgerViewError era) m) =>
+    Globals ->
+    NewEpochState era ->
+    SlotNo ->
+    m (LedgerView (Crypto era))
+  futureLedgerView = futureView
+
+instance CC.Crypto crypto => GetLedgerView (ShelleyEra crypto)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto = LedgerView
@@ -113,7 +140,7 @@ mkPrtclEnv
       lvPoolDistr
       lvGenDelegs
 
-view :: ShelleyState era -> LedgerView (Crypto era)
+view :: NewEpochState era -> LedgerView (Crypto era)
 view
   NewEpochState
     { nesPd,
@@ -129,10 +156,6 @@ view
             $ esLState nesEs,
         lvChainChecks = pparamsToChainChecksData . esPp $ nesEs
       }
-
--- | Alias of 'view' for export
-currentLedgerView :: ShelleyState era -> LedgerView (Crypto era)
-currentLedgerView = view
 
 -- $timetravel
 --
@@ -176,18 +199,18 @@ deriving stock instance
 -- | Anachronistic ledger view
 --
 --   Given a slot within the future stability window from our current slot (the
---   slot corresponding to the passed-in 'ShelleyState'), return a 'LedgerView'
+--   slot corresponding to the passed-in 'NewEpochState'), return a 'LedgerView'
 --   appropriate to that slot.
-futureLedgerView ::
+futureView ::
   forall era m.
   ( ShelleyBased era,
     MonadError (FutureLedgerViewError era) m
   ) =>
   Globals ->
-  ShelleyState era ->
+  NewEpochState era ->
   SlotNo ->
   m (LedgerView (Crypto era))
-futureLedgerView globals ss slot =
+futureView globals ss slot =
   liftEither
     . right view
     . left (FutureLedgerViewError . join)
@@ -204,8 +227,8 @@ futureLedgerView globals ss slot =
 --
 -- The chain state is an amalgam of the protocol state and the ticked nonce.
 
-data ChainDepState c = ChainDepState
-  { csProtocol :: !(STS.Prtcl.PrtclState c),
+data ChainDepState crypto = ChainDepState
+  { csProtocol :: !(STS.Prtcl.PrtclState crypto),
     csTickn :: !STS.Tickn.TicknState,
     -- | Nonce constructed from the hash of the last applied block header.
     csLabNonce :: !Nonce
@@ -284,15 +307,9 @@ updateChainDepState ::
   forall crypto m.
   ( CC.Crypto crypto,
     MonadError (ChainTransitionError crypto) m,
-    Cardano.Crypto.DSIGN.Class.Signable
-      (DSIGN crypto)
-      (Shelley.Spec.Ledger.OCert.OCertSignable crypto),
-    Cardano.Crypto.KES.Class.Signable
-      (KES crypto)
-      (Shelley.Spec.Ledger.BlockChain.BHBody crypto),
-    Cardano.Crypto.VRF.Class.Signable
-      (VRF crypto)
-      Shelley.Spec.Ledger.BaseTypes.Seed
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto),
+    VRFSignable crypto Seed
   ) =>
   Globals ->
   LedgerView crypto ->
@@ -333,15 +350,9 @@ updateChainDepState
 reupdateChainDepState ::
   forall crypto.
   ( CC.Crypto crypto,
-    Cardano.Crypto.DSIGN.Class.Signable
-      (DSIGN crypto)
-      (Shelley.Spec.Ledger.OCert.OCertSignable crypto),
-    Cardano.Crypto.KES.Class.Signable
-      (KES crypto)
-      (Shelley.Spec.Ledger.BlockChain.BHBody crypto),
-    Cardano.Crypto.VRF.Class.Signable
-      (VRF crypto)
-      Shelley.Spec.Ledger.BaseTypes.Seed
+    DSignable crypto (OCertSignable crypto),
+    KESignable crypto (BHBody crypto),
+    VRFSignable crypto Seed
   ) =>
   Globals ->
   LedgerView crypto ->

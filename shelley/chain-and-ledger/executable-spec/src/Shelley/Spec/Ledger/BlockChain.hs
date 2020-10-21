@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
@@ -148,12 +149,12 @@ import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- | The hash of a Block Header
 newtype HashHeader crypto = HashHeader {unHashHeader :: (Hash crypto (BHeader crypto))}
-  deriving (Show, Eq, Generic, Ord)
+  deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 
-deriving instance CC.Crypto crypto => ToCBOR (HashHeader crypto)
+deriving newtype instance CC.Crypto crypto => ToCBOR (HashHeader crypto)
 
-deriving instance CC.Crypto crypto => FromCBOR (HashHeader crypto)
+deriving newtype instance CC.Crypto crypto => FromCBOR (HashHeader crypto)
 
 data TxSeq era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Tx era)),
@@ -228,11 +229,12 @@ data EraIndependentBlockBody
 
 -- | Hash of block body
 newtype HashBBody crypto = UnsafeHashBBody {unHashBody :: (Hash crypto EraIndependentBlockBody)}
-  deriving (Show, Eq, Ord, NoThunks)
+  deriving stock (Show, Eq, Ord)
+  deriving newtype (NoThunks)
 
-deriving instance CC.Crypto crypto => ToCBOR (HashBBody crypto)
+deriving newtype instance CC.Crypto crypto => ToCBOR (HashBBody crypto)
 
-deriving instance CC.Crypto crypto => FromCBOR (HashBBody crypto)
+deriving newtype instance CC.Crypto crypto => FromCBOR (HashBBody crypto)
 
 -- | Hash a given block header
 bhHash ::
@@ -520,6 +522,7 @@ bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
 data Block era
   = Block' !(BHeader (Crypto era)) !(TxSeq era) BSL.ByteString
+  deriving (Generic)
 
 deriving stock instance
   ShelleyBased era =>
@@ -528,6 +531,10 @@ deriving stock instance
 deriving stock instance
   ShelleyBased era =>
   Eq (Block era)
+
+deriving anyclass instance
+  ShelleyBased era =>
+  NoThunks (Block era)
 
 pattern Block :: Era era => BHeader (Crypto era) -> TxSeq era -> Block era
 pattern Block h txns <-

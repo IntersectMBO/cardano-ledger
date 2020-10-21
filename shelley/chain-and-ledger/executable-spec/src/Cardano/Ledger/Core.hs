@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -16,12 +17,18 @@ module Cardano.Ledger.Core
     Compact (..),
     TxBody,
     Value,
+
+    -- * Constraint synonyms
+    ChainData,
+    SerialisableData,
+    AnnotatedData,
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
+import NoThunks.Class (NoThunks)
 
 -- | A value is something which quantifies a transaction output.
 type family Value era :: Type
@@ -61,3 +68,21 @@ instance
 -- TODO: consider if this is better the other way around
 instance (Eq a, Compactible a) => Eq (CompactForm a) where
   a == b = fromCompact a == fromCompact b
+
+-------------------------------------------------------------------------------
+
+-- * Constraint synonyms
+
+-------------------------------------------------------------------------------
+
+-- | Common constraints
+--
+-- NOTE: 'Ord' is not included, as 'Ord' for a 'Block' or a 'NewEpochState'
+-- doesn't make sense.
+type ChainData t = (Eq t, Show t, NoThunks t, Typeable t)
+
+-- | Constraints for serialising from/to CBOR
+type SerialisableData t = (FromCBOR t, ToCBOR t)
+
+-- | Constraints for serialising from/to CBOR using 'Annotator'
+type AnnotatedData t = (FromCBOR (Annotator t), ToCBOR t)

@@ -1,3 +1,4 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -11,18 +12,19 @@
 -- | Interface to the block validation and chain extension logic in the Shelley
 -- API.
 module Shelley.Spec.Ledger.API.Validation
-  ( ShelleyState,
+  ( ApplyBlock (..),
     TickTransitionError (..),
     BlockTransitionError (..),
     chainChecks,
-    applyTickTransition,
-    applyBlockTransition,
-    reapplyBlockTransition,
   )
 where
 
+import Cardano.Crypto.Hash (Hash)
+import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
+import Cardano.Ledger.Crypto (HASH)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -31,18 +33,120 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.BlockChain
+import Shelley.Spec.Ledger.Keys (DSignable)
+import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Tick as STS
 import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
--- | Type alias for the state updated by TICK and BBODY rules
-type ShelleyState = LedgerState.NewEpochState
+{-------------------------------------------------------------------------------
+  Block validation API
+-------------------------------------------------------------------------------}
+
+class
+  ( ChainData (Block era),
+    AnnotatedData (Block era),
+    ChainData (BHeader (Crypto era)),
+    AnnotatedData (BHeader (Crypto era)),
+    ChainData (NewEpochState era),
+    SerialisableData (NewEpochState era),
+    ChainData (BlockTransitionError era),
+    ChainData (STS.PredicateFailure (STS.CHAIN era))
+  ) =>
+  ApplyBlock era
+  where
+  -- | Apply the header level ledger transition.
+  --
+  -- This handles checks and updates that happen on a slot tick, as well as a
+  -- few header level checks, such as size constraints.
+  applyTick ::
+    Globals ->
+    NewEpochState era ->
+    SlotNo ->
+    NewEpochState era
+  default applyTick ::
+    ShelleyBased era =>
+    Globals ->
+    NewEpochState era ->
+    SlotNo ->
+    NewEpochState era
+  applyTick globals state hdr =
+    (either err id) . flip runReader globals
+      . applySTS @(STS.TICK era)
+      $ TRC ((), state, hdr)
+    where
+      err :: Show a => a -> b
+      err msg = error $ "Panic! applyTick failed: " <> (show msg)
+
+  -- | Apply the block level ledger transition.
+  applyBlock ::
+    MonadError (BlockTransitionError era) m =>
+    Globals ->
+    NewEpochState era ->
+    Block era ->
+    m (NewEpochState era)
+  default applyBlock ::
+    ( STS (STS.BBODY era),
+      MonadError (BlockTransitionError era) m
+    ) =>
+    Globals ->
+    NewEpochState era ->
+    Block era ->
+    m (NewEpochState era)
+  applyBlock globals state blk =
+    liftEither
+      . right (updateNewEpochState state)
+      . left (BlockTransitionError . join)
+      $ res
+    where
+      res =
+        flip runReader globals . applySTS @(STS.BBODY era) $
+          TRC (mkBbodyEnv state, bbs, blk)
+      bbs =
+        STS.BbodyState
+          (LedgerState.esLState $ LedgerState.nesEs state)
+          (LedgerState.nesBcur state)
+
+  -- | Re-apply a ledger block to the same state it has been applied to before.
+  --
+  -- This function does no validation of whether the block applies successfully;
+  -- the caller implicitly guarantees that they have previously called
+  -- 'applyBlockTransition' on the same block and that this was successful.
+  reapplyBlock ::
+    Globals ->
+    NewEpochState era ->
+    Block era ->
+    NewEpochState era
+  default reapplyBlock ::
+    STS (STS.BBODY era) =>
+    Globals ->
+    NewEpochState era ->
+    Block era ->
+    NewEpochState era
+  reapplyBlock globals state blk =
+    updateNewEpochState state res
+    where
+      res =
+        flip runReader globals . reapplySTS @(STS.BBODY era) $
+          TRC (mkBbodyEnv state, bbs, blk)
+      bbs =
+        STS.BbodyState
+          (LedgerState.esLState $ LedgerState.nesEs state)
+          (LedgerState.nesBcur state)
+
+instance
+  ( CC.Crypto crypto,
+    DSignable crypto (Hash (HASH crypto) EraIndependentTxBody)
+  ) =>
+  ApplyBlock (ShelleyEra crypto)
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
 -------------------------------------------------------------------------------}
+
 chainChecks ::
   forall era m.
   ( Era era,
@@ -59,7 +163,7 @@ chainChecks globals ccd bh = STS.chainChecks (maxMajorPV globals) ccd bh
 -------------------------------------------------------------------------------}
 
 mkBbodyEnv ::
-  ShelleyState era ->
+  NewEpochState era ->
   STS.BbodyEnv era
 mkBbodyEnv
   LedgerState.NewEpochState
@@ -69,6 +173,13 @@ mkBbodyEnv
       { STS.bbodyPp = LedgerState.esPp nesEs,
         STS.bbodyAccount = LedgerState.esAccountState nesEs
       }
+
+updateNewEpochState ::
+  NewEpochState era ->
+  STS.BbodyState era ->
+  NewEpochState era
+updateNewEpochState ss (STS.BbodyState ls bcur) =
+  LedgerState.updateNES ss bcur ls
 
 newtype TickTransitionError era
   = TickTransitionError [STS.PredicateFailure (STS.TICK era)]
@@ -86,25 +197,6 @@ deriving stock instance
   (Show (STS.PredicateFailure (STS.TICK era))) =>
   Show (TickTransitionError era)
 
--- | Apply the header level ledger transition.
---
--- This handles checks and updates that happen on a slot tick, as well as a few
--- header level checks, such as size constraints.
-applyTickTransition ::
-  forall era.
-  ShelleyBased era =>
-  Globals ->
-  ShelleyState era ->
-  SlotNo ->
-  ShelleyState era
-applyTickTransition globals state hdr =
-  (either err id) . flip runReader globals
-    . applySTS @(STS.TICK era)
-    $ TRC ((), state, hdr)
-  where
-    err :: Show a => a -> b
-    err msg = error $ "Panic! applyHeaderTransition failed: " <> (show msg)
-
 newtype BlockTransitionError era
   = BlockTransitionError [STS.PredicateFailure (STS.BBODY era)]
   deriving (Generic)
@@ -120,63 +212,3 @@ deriving stock instance
 instance
   (NoThunks (STS.PredicateFailure (STS.BBODY era))) =>
   NoThunks (BlockTransitionError era)
-
--- | Apply the block level ledger transition.
-applyBlockTransition ::
-  forall era m.
-  ( STS (STS.BBODY era),
-    MonadError (BlockTransitionError era) m
-  ) =>
-  Globals ->
-  ShelleyState era ->
-  Block era ->
-  m (ShelleyState era)
-applyBlockTransition globals state blk =
-  liftEither
-    . right (updateShelleyState state)
-    . left (BlockTransitionError . join)
-    $ res
-  where
-    res =
-      flip runReader globals . applySTS @(STS.BBODY era) $
-        TRC (mkBbodyEnv state, bbs, blk)
-    updateShelleyState ::
-      ShelleyState era ->
-      STS.BbodyState era ->
-      ShelleyState era
-    updateShelleyState ss (STS.BbodyState ls bcur) =
-      LedgerState.updateNES ss bcur ls
-    bbs =
-      STS.BbodyState
-        (LedgerState.esLState $ LedgerState.nesEs state)
-        (LedgerState.nesBcur state)
-
--- | Re-apply a ledger block to the same state it has been applied to before.
---
---   This function does no validation of whether the block applies successfully;
---   the caller implicitly guarantees that they have previously called
---   `applyBlockTransition` on the same block and that this was successful.
-reapplyBlockTransition ::
-  forall era.
-  ( STS (STS.BBODY era)
-  ) =>
-  Globals ->
-  ShelleyState era ->
-  Block era ->
-  ShelleyState era
-reapplyBlockTransition globals state blk =
-  updateShelleyState state res
-  where
-    res =
-      flip runReader globals . reapplySTS @(STS.BBODY era) $
-        TRC (mkBbodyEnv state, bbs, blk)
-    updateShelleyState ::
-      ShelleyState era ->
-      STS.BbodyState era ->
-      ShelleyState era
-    updateShelleyState ss (STS.BbodyState ls bcur) =
-      LedgerState.updateNES ss bcur ls
-    bbs =
-      STS.BbodyState
-        (LedgerState.esLState $ LedgerState.nesEs state)
-        (LedgerState.nesBcur state)

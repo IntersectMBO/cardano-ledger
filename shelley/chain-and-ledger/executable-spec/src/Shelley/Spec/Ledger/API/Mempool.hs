@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -11,18 +12,16 @@
 -- | Interface to the Shelley ledger for the purposes of managing a Shelley
 -- mempool.
 module Shelley.Spec.Ledger.API.Mempool
-  ( MempoolEnv,
-    MempoolState,
-    mkMempoolEnv,
-    mkMempoolState,
+  ( ApplyTx (..),
     ApplyTxError (..),
-    applyTxs,
-    overShelleyState,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Crypto.Hash (Hash)
+import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
+import Cardano.Ledger.Crypto (Crypto, HASH)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -33,13 +32,52 @@ import Control.State.Transition.Extended
     applySTS,
   )
 import Data.Sequence (Seq)
-import Shelley.Spec.Ledger.API.Validation
+import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
+import Shelley.Spec.Ledger.Keys (DSignable)
+import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
+
+-- TODO #1304: add reapplyTxs
+class
+  ( ChainData (Tx era),
+    AnnotatedData (Tx era),
+    Eq (ApplyTxError era),
+    Show (ApplyTxError era),
+    Typeable (ApplyTxError era),
+    SerialisableData (ApplyTxError era)
+  ) =>
+  ApplyTx era
+  where
+  applyTxs ::
+    MonadError (ApplyTxError era) m =>
+    Globals ->
+    SlotNo ->
+    Seq (Tx era) ->
+    NewEpochState era ->
+    m (NewEpochState era)
+  default applyTxs ::
+    (MonadError (ApplyTxError era) m, STS (LEDGERS era)) =>
+    Globals ->
+    SlotNo ->
+    Seq (Tx era) ->
+    NewEpochState era ->
+    m (NewEpochState era)
+  applyTxs globals slot txs state =
+    overNewEpochState (applyTxsTransition globals mempoolEnv txs) state
+    where
+      mempoolEnv = mkMempoolEnv state slot
+
+instance
+  ( Crypto c,
+    DSignable c (Hash (HASH c) EraIndependentTxBody)
+  ) =>
+  ApplyTx (ShelleyEra c)
 
 type MempoolEnv era = Ledgers.LedgersEnv era
 
@@ -59,7 +97,7 @@ type MempoolState = LedgerState.LedgerState
 --   included until a certain number of slots before the end of the epoch. A
 --   protocol update proposal submitted after this is considered invalid.
 mkMempoolEnv ::
-  ShelleyState era ->
+  NewEpochState era ->
   SlotNo ->
   MempoolEnv era
 mkMempoolEnv
@@ -78,7 +116,7 @@ mkMempoolEnv
 --   The given mempool state may then be evolved using 'applyTxs', but should be
 --   regenerated when the ledger state gets updated (e.g. through application of
 --   a new block).
-mkMempoolState :: ShelleyState era -> MempoolState era
+mkMempoolState :: NewEpochState era -> MempoolState era
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
   LedgerState.esLState nesEs
 
@@ -108,7 +146,7 @@ instance
   where
   fromCBOR = ApplyTxError <$> fromCBOR
 
-applyTxs ::
+applyTxsTransition ::
   forall era m.
   ( STS (LEDGERS era),
     MonadError (ApplyTxError era) m
@@ -118,7 +156,7 @@ applyTxs ::
   Seq (Tx era) ->
   MempoolState era ->
   m (MempoolState era)
-applyTxs globals env txs state =
+applyTxsTransition globals env txs state =
   let res =
         flip runReader globals
           . applySTS @(LEDGERS era)
@@ -127,14 +165,14 @@ applyTxs globals env txs state =
         . left (ApplyTxError . join)
         $ res
 
--- | Transform a function over mempool states to one over the full Shelley
--- state.
-overShelleyState ::
+-- | Transform a function over mempool states to one over the full
+-- 'NewEpochState'.
+overNewEpochState ::
   Applicative f =>
-  (MempoolState c -> f (MempoolState c)) ->
-  ShelleyState c ->
-  f (ShelleyState c)
-overShelleyState f st = do
+  (MempoolState era -> f (MempoolState era)) ->
+  NewEpochState era ->
+  f (NewEpochState era)
+overNewEpochState f st = do
   res <- f $ mkMempoolState st
   pure $
     st
