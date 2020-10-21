@@ -45,6 +45,9 @@ module Shelley.Spec.Ledger.Serialization
     -- Raw
     listLenInt,
     runByteBuilder,
+    -- UTC Time
+    utcTimeToCBOR,
+    utcTimeFromCBOR,
   )
 where
 
@@ -107,6 +110,9 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import qualified Data.Text as Text
+import Data.Time (UTCTime (..))
+import Data.Time.Calendar.OrdinalDate (fromOrdinalDate, toOrdinalDate)
+import Data.Time.Clock (diffTimeToPicoseconds, picosecondsToDiffTime)
 import Data.Typeable
 import Network.Socket (HostAddress6)
 import Prelude
@@ -310,3 +316,23 @@ runByteBuilder !sizeHint =
       (BS.safeStrategy sizeHint (2 * sizeHint))
       mempty
 {-# NOINLINE runByteBuilder #-}
+
+utcTimeToCBOR :: UTCTime -> Encoding
+utcTimeToCBOR t =
+  encodeListLen 3
+    <> toCBOR year
+    <> toCBOR dayOfYear
+    <> (toCBOR . diffTimeToPicoseconds . utctDayTime) t
+  where
+    (year, dayOfYear) = toOrdinalDate . utctDay $ t
+
+utcTimeFromCBOR :: Decoder s UTCTime
+utcTimeFromCBOR = do
+  decodeRecordNamed "UTCTime" (const 3) $ do
+    year <- fromCBOR
+    dayOfYear <- fromCBOR
+    diff <- fromCBOR
+    pure $
+      UTCTime
+        (fromOrdinalDate year dayOfYear)
+        (picosecondsToDiffTime diff)

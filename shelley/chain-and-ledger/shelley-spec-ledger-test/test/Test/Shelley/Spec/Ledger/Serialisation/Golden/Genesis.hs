@@ -9,10 +9,12 @@ module Test.Shelley.Spec.Ledger.Serialisation.Golden.Genesis
   ( tests,
 
     -- * Individual properties
-    prop_golden_ShelleyGenesis,
+    prop_golden_json_ShelleyGenesis,
+    prop_golden_cbor_ShelleyGenesis,
   )
 where
 
+import Cardano.Binary (Encoding (..), ToCBOR (..), Tokens (..), serializeEncoding)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (Crypto (..))
@@ -39,19 +41,106 @@ import Test.Shelley.Spec.Ledger.Utils
     unsafeMkUnitInterval,
   )
 import Test.Tasty
+import Test.Tasty.HUnit (Assertion, assertFailure, testCase)
 import Test.Tasty.Hedgehog
 
-prop_golden_ShelleyGenesis :: Property
-prop_golden_ShelleyGenesis = goldenTestJSONPretty example "test/Golden/ShelleyGenesis"
+prop_golden_json_ShelleyGenesis :: Property
+prop_golden_json_ShelleyGenesis = goldenTestJSONPretty example "test/Golden/ShelleyGenesis"
   where
     example :: ShelleyGenesis C
     example = exampleShelleyGenesis
+
+prop_golden_cbor_ShelleyGenesis :: Assertion
+prop_golden_cbor_ShelleyGenesis =
+  if serializeEncoding received /= serializeEncoding expected
+    then
+      assertFailure $
+        mconcat
+          [ "\nexpected:\n",
+            show expected,
+            "\nexpected:\n",
+            show received,
+            "\n"
+          ]
+    else return ()
+  where
+    example :: ShelleyGenesis C
+    example = exampleShelleyGenesis
+
+    received = Encoding expectedTokens
+    expected = toCBOR example
+
+    expectedTokens =
+      TkListLen 15
+        . TkListLen 3 . TkInt 2009 . TkInt 44 . TkInt 83589000000000000 -- sgSystemStart
+        . TkInt 4036000900 -- sgNetworkMagic
+        . TkInt 0 -- sgNetworkId
+        . TkListLen 2 . TkInt 6259 . TkInt 1000 -- sgActiveSlotsCoeff
+        . TkInt 120842 -- sgSecurityParam
+        . TkInt 1215 -- sgEpochLength
+        . TkInt 8541 -- sgSlotsPerKESPeriod
+        . TkInt 28899 -- sgMaxKESEvolutions
+        . TkInt 8000000 -- sgSlotLength
+        . TkInt 16991 -- sgUpdateQuorum
+        . TkInt 71 -- sgMaxLovelaceSupply
+        . TkListLen 18 -- sgProtocolParams
+          . TkInt 0
+          . TkInt 0
+          . TkInt 239857
+          . TkInt 2048
+          . TkInt 217569
+          . TkInt 0
+          . TkInt 0
+          . TkInt 0
+          . TkInt 100
+          . TkTag 30 . TkListLen 2 . TkInt 0 . TkInt 1
+          . TkTag 30 . TkListLen 2 . TkInt 0 . TkInt 1
+          . TkTag 30 . TkListLen 2 . TkInt 0 . TkInt 1
+          . TkTag 30 . TkListLen 2 . TkInt 19 . TkInt 1000
+          . TkListLen 1 . TkInt 0
+          . TkInt 0
+          . TkInt 0
+          . TkInt 0
+          . TkInt 0
+        . TkMapLen 1 -- sgGenDelegs
+          . TkBytes "#\213\RS\145#\213\RS\145"
+          . TkListLen 2
+            . TkBytes "\131\155\EOT\DEL\131\155\EOT\DEL"
+            . TkBytes "#\DC3\145\231#\DC3\145\231\SOH#"
+        . TkMapLen 1 -- sgInitialFunds
+          . TkBytes "\NUL\FS\DC4\238\142\FS\DC4\238\142\227ze\234\227ze\234"
+          . TkInt 12157196
+        . TkListLen 2 -- sgStaking
+          . TkMapLen 1 -- sgsPools
+            . TkBytes "=\190\NUL\161=\190\NUL\161"
+            . TkListLen 9 -- PoolParams
+              . TkBytes "\160\132\186\143l\131\193\165"
+              . TkBytes "\237\201\a\154O7\FS\172\&1\SI"
+              . TkInt 1
+              . TkInt 5
+              . TkTag 30 . TkListLen 2 . TkInt 1 . TkInt 4
+              . TkBytes "\224\248h\161\150\n?\160C"
+              . TkListLen 1 . TkBytes "\248h\161\150\n?\160C"
+              . TkListLen 3
+                . TkListLen 4
+                  . TkInt 0
+                  . TkInt 1234
+                  . TkBytes "\NUL\NUL\NUL\NUL"
+                  . TkBytes "\184\r\SOH \NUL\NUL\n\NUL\NUL\NUL\NUL\NUL#\SOH\NUL\NUL"
+                . TkListLen 3 . TkInt 1 . TkNull . TkString "cool.domain.com"
+                . TkListLen 2 . TkInt 2 . TkString "cool.domain.com"
+              . TkListLen 2 . TkString "best.pool.com" . TkBytes "100ab{}100ab{}"
+          . TkMapLen 1 -- sgsStake
+            . TkBytes "\FS\DC4\238\142\FS\DC4\238\142"
+            . TkBytes "\FS\DC4\238\142\FS\DC4\238\142"
+    -- TODO - return a CBOR diff in the case of failure
 
 tests :: TestTree
 tests =
   testGroup
     "Shelley Genesis golden tests"
-    [ testProperty "ShelleyGenesis golden test" prop_golden_ShelleyGenesis
+    [ testProperty "ShelleyGenesis JSON golden test" prop_golden_json_ShelleyGenesis
+    , testCase "ShelleyGenesis CBOR golden test" prop_golden_cbor_ShelleyGenesis
     ]
 
 exampleShelleyGenesis ::
