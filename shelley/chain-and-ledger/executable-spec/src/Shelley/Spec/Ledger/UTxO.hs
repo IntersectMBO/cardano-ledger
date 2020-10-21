@@ -38,7 +38,10 @@ module Shelley.Spec.Ledger.UTxO
     makeWitnessesVKey,
     makeWitnessesFromScriptKeys,
     verifyWitVKey,
+    getScriptHash,
     scriptsNeeded,
+    scriptCred,
+    scriptStakeCred,
     txinsScript,
   )
 where

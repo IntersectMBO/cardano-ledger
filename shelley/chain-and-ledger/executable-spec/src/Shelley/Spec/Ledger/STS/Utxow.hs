@@ -104,7 +104,8 @@ import Shelley.Spec.Ledger.Tx
     validateScript,
   )
 import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody, TxIn, Wdrl)
-import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
+import Shelley.Spec.Ledger.UTxO (UTxO)
+import qualified Shelley.Spec.Ledger.UTxO as UTxO
 
 data UTXOW era
 
@@ -175,7 +176,7 @@ instance
   type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
   type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
-  transitionRules = [utxoWitnessed]
+  transitionRules = [utxoWitnessed UTxO.scriptsNeeded]
   initialRules = [initialLedgerStateUTXOW]
 
 instance
@@ -274,8 +275,9 @@ utxoWitnessed ::
     HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
+  (UTxO era -> Tx era -> Set (ScriptHash era)) ->
   TransitionRule (UTXOW era)
-utxoWitnessed =
+utxoWitnessed scriptsNeeded =
   judgmentContext
     >>= \(TRC (UtxoEnv slot pp stakepools genDelegs, u, tx@(Tx txbody wits md))) -> do
       let utxo = _utxo u
