@@ -33,9 +33,9 @@ import Control.State.Transition.Extended
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import NoThunks.Class (NoThunks)
-import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.Keys (DSignable)
+import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
@@ -63,17 +63,17 @@ class
     Globals ->
     SlotNo ->
     Seq (Tx era) ->
-    ShelleyState era ->
-    m (ShelleyState era)
+    NewEpochState era ->
+    m (NewEpochState era)
   default applyTxs ::
     (MonadError (ApplyTxError era) m, STS (LEDGERS era)) =>
     Globals ->
     SlotNo ->
     Seq (Tx era) ->
-    ShelleyState era ->
-    m (ShelleyState era)
+    NewEpochState era ->
+    m (NewEpochState era)
   applyTxs globals slot txs state =
-    overShelleyState (applyTxsTransition globals mempoolEnv txs) state
+    overNewEpochState (applyTxsTransition globals mempoolEnv txs) state
     where
       mempoolEnv = mkMempoolEnv state slot
 
@@ -101,7 +101,7 @@ type MempoolState = LedgerState.LedgerState
 --   included until a certain number of slots before the end of the epoch. A
 --   protocol update proposal submitted after this is considered invalid.
 mkMempoolEnv ::
-  ShelleyState era ->
+  NewEpochState era ->
   SlotNo ->
   MempoolEnv era
 mkMempoolEnv
@@ -120,7 +120,7 @@ mkMempoolEnv
 --   The given mempool state may then be evolved using 'applyTxs', but should be
 --   regenerated when the ledger state gets updated (e.g. through application of
 --   a new block).
-mkMempoolState :: ShelleyState era -> MempoolState era
+mkMempoolState :: NewEpochState era -> MempoolState era
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
   LedgerState.esLState nesEs
 
@@ -169,14 +169,14 @@ applyTxsTransition globals env txs state =
         . left (ApplyTxError . join)
         $ res
 
--- | Transform a function over mempool states to one over the full Shelley
--- state.
-overShelleyState ::
+-- | Transform a function over mempool states to one over the full
+-- 'NewEpochState'.
+overNewEpochState ::
   Applicative f =>
   (MempoolState era -> f (MempoolState era)) ->
-  ShelleyState era ->
-  f (ShelleyState era)
-overShelleyState f st = do
+  NewEpochState era ->
+  f (NewEpochState era)
+overNewEpochState f st = do
   res <- f $ mkMempoolState st
   pure $
     st

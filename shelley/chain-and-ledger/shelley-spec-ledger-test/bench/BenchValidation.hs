@@ -44,7 +44,6 @@ import Shelley.Spec.Ledger.API.Protocol
     updateChainDepState,
   )
 import qualified Shelley.Spec.Ledger.API as API
-import Shelley.Spec.Ledger.API (ShelleyState)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.Bench.Gen (genBlock, genChainState)
 import Shelley.Spec.Ledger.BlockChain
@@ -54,7 +53,13 @@ import Shelley.Spec.Ledger.BlockChain
     slotToNonce,
   )
 import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
-import Shelley.Spec.Ledger.LedgerState (DPState, LedgerState, UTxOState, nesBcur)
+import Shelley.Spec.Ledger.LedgerState
+  ( DPState,
+    LedgerState,
+    NewEpochState,
+    UTxOState,
+    nesBcur
+  )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
@@ -68,7 +73,7 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
 
 -- ====================================================================
 
-data ValidateInput era = ValidateInput Globals (ShelleyState era) (Block era)
+data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 
 sizes :: ValidateInput era -> String
 sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocksMade (nesBcur ss)))
@@ -122,7 +127,7 @@ benchValidate ::
   forall era.
   API.ApplyBlock era =>
   ValidateInput era ->
-  IO (ShelleyState era)
+  IO (NewEpochState era)
 benchValidate (ValidateInput globals state block) =
   case API.applyBlock @era globals state block of
     Right x -> pure x
@@ -145,7 +150,7 @@ benchreValidate ::
   ( API.ApplyBlock era
   ) =>
   ValidateInput era ->
-  ShelleyState era
+  NewEpochState era
 benchreValidate (ValidateInput globals state block) =
   API.reapplyBlock globals state block
 

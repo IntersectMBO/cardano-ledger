@@ -45,7 +45,6 @@ import Control.State.Transition.Extended
 import Data.Either (fromRight)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.API.Validation
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals,
     Nonce,
@@ -89,7 +88,7 @@ class
   GetLedgerView era
   where
   currentLedgerView ::
-    ShelleyState era ->
+    NewEpochState era ->
     LedgerView (Crypto era)
   currentLedgerView = view
 
@@ -97,13 +96,13 @@ class
   futureLedgerView ::
     MonadError (FutureLedgerViewError era) m =>
     Globals ->
-    ShelleyState era ->
+    NewEpochState era ->
     SlotNo ->
     m (LedgerView (Crypto era))
   default futureLedgerView ::
     (ShelleyBased era, MonadError (FutureLedgerViewError era) m) =>
     Globals ->
-    ShelleyState era ->
+    NewEpochState era ->
     SlotNo ->
     m (LedgerView (Crypto era))
   futureLedgerView = futureView
@@ -141,7 +140,7 @@ mkPrtclEnv
       lvPoolDistr
       lvGenDelegs
 
-view :: ShelleyState era -> LedgerView (Crypto era)
+view :: NewEpochState era -> LedgerView (Crypto era)
 view
   NewEpochState
     { nesPd,
@@ -200,7 +199,7 @@ deriving stock instance
 -- | Anachronistic ledger view
 --
 --   Given a slot within the future stability window from our current slot (the
---   slot corresponding to the passed-in 'ShelleyState'), return a 'LedgerView'
+--   slot corresponding to the passed-in 'NewEpochState'), return a 'LedgerView'
 --   appropriate to that slot.
 futureView ::
   forall era m.
@@ -208,7 +207,7 @@ futureView ::
     MonadError (FutureLedgerViewError era) m
   ) =>
   Globals ->
-  ShelleyState era ->
+  NewEpochState era ->
   SlotNo ->
   m (LedgerView (Crypto era))
 futureView globals ss slot =
