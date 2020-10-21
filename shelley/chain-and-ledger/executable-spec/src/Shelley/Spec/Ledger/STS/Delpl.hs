@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -21,6 +22,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
 import Control.State.Transition
 import Data.Typeable (Typeable)
@@ -78,7 +80,7 @@ instance
 instance NoThunks (DelplPredicateFailure era)
 
 instance
-  (Typeable era, Era era) =>
+  (Typeable era, Era era, Typeable (Core.Script era)) =>
   ToCBOR (DelplPredicateFailure era)
   where
   toCBOR = \case
@@ -90,7 +92,7 @@ instance
         <> toCBOR a
 
 instance
-  (Era era) =>
+  (Era era, Typeable (Core.Script era)) =>
   FromCBOR (DelplPredicateFailure era)
   where
   fromCBOR =

@@ -6,14 +6,10 @@
 
 module Cardano.Ledger.Shelley where
 
-import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era
 import Cardano.Ledger.Val (Val)
-import Control.DeepSeq (NFData)
-import Data.Typeable (Typeable)
-import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Hashing (HashAnnotated)
 
@@ -29,11 +25,8 @@ instance CryptoClass.Crypto c => Era (ShelleyEra c) where
 type instance Value (ShelleyEra c) = Coin
 
 type TxBodyConstraints era =
-  ( NoThunks (TxBody era),
-    Eq (TxBody era),
-    Show (TxBody era),
-    FromCBOR (Annotator (TxBody era)),
-    ToCBOR (TxBody era),
+  ( ChainData (TxBody era),
+    AnnotatedData (TxBody era),
     HashAnnotated (TxBody era) era
   )
 
@@ -42,14 +35,12 @@ type ShelleyBased era =
     -- Value constraints
     Val (Value era),
     Compactible (Value era),
-    Eq (Value era),
-    FromCBOR (CompactForm (Value era)),
-    FromCBOR (Value era),
-    NFData (Value era),
-    NoThunks (Value era),
-    Show (Value era),
-    ToCBOR (CompactForm (Value era)),
-    ToCBOR (Value era),
-    Typeable (Value era),
-    TxBodyConstraints era
+    ChainData (Value era),
+    SerialisableData (Value era),
+    SerialisableData (CompactForm (Value era)),
+    -- TxBody constraints
+    TxBodyConstraints era,
+    -- Script constraints
+    ChainData (Script era),
+    AnnotatedData (Script era)
   )

@@ -266,11 +266,17 @@ instance NoThunks (InstantaneousRewards era)
 
 instance NFData (InstantaneousRewards era)
 
-instance Era era => ToCBOR (InstantaneousRewards era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  ToCBOR (InstantaneousRewards era)
+  where
   toCBOR (InstantaneousRewards irR irT) =
     encodeListLen 2 <> mapToCBOR irR <> mapToCBOR irT
 
-instance Era era => FromCBOR (InstantaneousRewards era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  FromCBOR (InstantaneousRewards era)
+  where
   fromCBOR = do
     decodeRecordNamed "InstantaneousRewards" (const 2) $ do
       irR <- mapFromCBOR
@@ -298,7 +304,10 @@ instance NoThunks (DState era)
 
 instance NFData (DState era)
 
-instance Era era => ToCBOR (DState era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  ToCBOR (DState era)
+  where
   toCBOR (DState rw dlg p fgs gs ir) =
     encodeListLen 6
       <> toCBOR rw
@@ -308,7 +317,10 @@ instance Era era => ToCBOR (DState era) where
       <> toCBOR gs
       <> toCBOR ir
 
-instance Era era => FromCBOR (DState era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  FromCBOR (DState era)
+  where
   fromCBOR = do
     decodeRecordNamed "DState" (const 6) $ do
       rw <- fromCBOR
@@ -357,11 +369,17 @@ instance NoThunks (DPState era)
 
 instance NFData (DPState era)
 
-instance Era era => ToCBOR (DPState era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  ToCBOR (DPState era)
+  where
   toCBOR (DPState ds ps) =
     encodeListLen 2 <> toCBOR ds <> toCBOR ps
 
-instance Era era => FromCBOR (DPState era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  FromCBOR (DPState era)
+  where
   fromCBOR = do
     decodeRecordNamed "DPState" (const 2) $ do
       ds <- fromCBOR
@@ -381,7 +399,10 @@ instance NoThunks (RewardUpdate era)
 
 instance NFData (RewardUpdate era)
 
-instance Era era => ToCBOR (RewardUpdate era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  ToCBOR (RewardUpdate era)
+  where
   toCBOR (RewardUpdate dt dr rw df nm) =
     encodeListLen 5
       <> toCBOR dt
@@ -390,7 +411,10 @@ instance Era era => ToCBOR (RewardUpdate era) where
       <> toCBOR (invert df) -- TODO change Coin serialization to use integers?
       <> toCBOR nm
 
-instance Era era => FromCBOR (RewardUpdate era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  FromCBOR (RewardUpdate era)
+  where
   fromCBOR = do
     decodeRecordNamed "RewardUpdate" (const 5) $ do
       dt <- fromCBOR
@@ -817,7 +841,9 @@ diffWitHashes (WitHashes x) (WitHashes x') =
 
 -- | Extract the witness hashes from the Witness set.
 witsFromWitnessSet ::
-  Era era => WitnessSet era -> WitHashes era
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  WitnessSet era ->
+  WitHashes era
 witsFromWitnessSet (WitnessSet aWits _ bsWits) =
   WitHashes $
     Set.map witKeyHash aWits
@@ -887,6 +913,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
 --  transaction are correct.
 verifiedWits ::
   ( Shelley.TxBodyConstraints era,
+    Core.AnnotatedData (Core.Script era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
   Tx era ->

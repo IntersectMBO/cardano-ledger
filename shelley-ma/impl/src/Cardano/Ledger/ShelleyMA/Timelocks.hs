@@ -23,6 +23,7 @@ module Cardano.Ledger.ShelleyMA.Timelocks
     ininterval,
     hashTimelockScript,
     showTimelock,
+    validateTimelock,
   )
 where
 
@@ -61,8 +62,7 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
   )
 import Shelley.Spec.Ledger.Tx
-  ( MultiSignatureScript (..),
-    Tx (..),
+  ( Tx (..),
     WitnessSetHKD (..),
     addrWits',
     evalNativeMultiSigScript,
@@ -223,13 +223,6 @@ hashTimelockScript =
   ScriptHash
     . Hash.castHash
     . Hash.hashWith (\x -> nativeTimelockTag <> serialize' x)
-
-instance
-  (Era era, Shelley.TxBodyConstraints era) =>
-  MultiSignatureScript (Timelock era) era
-  where
-  validateScript = validateTimelock
-  hashScript = hashTimelockScript
 
 showTimelock :: Era era => Timelock era -> String
 showTimelock (Interval SNothing SNothing) = "(Interval -inf .. +inf)"

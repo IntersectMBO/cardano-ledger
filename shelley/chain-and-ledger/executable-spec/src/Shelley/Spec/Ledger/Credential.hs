@@ -22,6 +22,7 @@ module Shelley.Spec.Ledger.Credential
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
@@ -112,7 +113,7 @@ data Ptr
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
 instance
-  (Typeable kr, Era era) =>
+  (Typeable kr, Era era, Typeable (Core.Script era)) =>
   ToCBOR (Credential kr era)
   where
   toCBOR = \case
@@ -120,7 +121,7 @@ instance
     ScriptHashObj hs -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
 
 instance
-  (Typeable kr, Era era) =>
+  (Typeable kr, Era era, Typeable (Core.Script era)) =>
   FromCBOR (Credential kr era)
   where
   fromCBOR = decodeRecordSum "Credential" $

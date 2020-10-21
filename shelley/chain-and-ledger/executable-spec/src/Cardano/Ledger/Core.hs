@@ -12,11 +12,14 @@
 -- It is intended for qualified import:
 -- > import qualified Cardano.Ledger.Core as Core
 module Cardano.Ledger.Core
-  ( -- * Compactible
-    Compactible (..),
-    Compact (..),
+  ( -- * Era-changing types
     TxBody,
     Value,
+    Script,
+
+    -- * Compactible
+    Compactible (..),
+    Compact (..),
 
     -- * Constraint synonyms
     ChainData,
@@ -35,6 +38,9 @@ type family Value era :: Type
 
 -- | The body of a transaction.
 type family TxBody era :: Type
+
+-- | Scripts which may lock transaction outputs in this era
+type family Script era :: Type
 
 --------------------------------------------------------------------------------
 

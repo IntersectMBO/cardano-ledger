@@ -538,13 +538,19 @@ data MIRCert era = MIRCert
   }
   deriving (Show, Generic, Eq)
 
-instance Era era => FromCBOR (MIRCert era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  FromCBOR (MIRCert era)
+  where
   fromCBOR = decodeRecordNamed "SingleHostAddr" (const 2) $ do
     pot <- fromCBOR
     values <- mapFromCBOR
     pure $ MIRCert pot values
 
-instance Era era => ToCBOR (MIRCert era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  ToCBOR (MIRCert era)
+  where
   toCBOR (MIRCert pot values) =
     encodeListLen 2
       <> toCBOR pot
@@ -755,12 +761,20 @@ newtype StakeCreds era = StakeCreds
   }
   deriving (Eq, Generic)
   deriving (Show) via (Quiet (StakeCreds era))
-  deriving newtype (FromCBOR, NFData, NoThunks, ToCBOR, ToJSON, FromJSON)
+  deriving newtype (NFData, NoThunks, ToJSON, FromJSON)
+
+deriving newtype instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  FromCBOR (StakeCreds era)
+
+deriving newtype instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  ToCBOR (StakeCreds era)
 
 -- CBOR
 
 instance
-  (Era era) =>
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
   ToCBOR (DCert era)
   where
   toCBOR = \case
@@ -802,7 +816,7 @@ instance
         <> toCBOR mir
 
 instance
-  (Era era) =>
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
   FromCBOR (DCert era)
   where
   fromCBOR = decodeRecordSum "DCert era" $
