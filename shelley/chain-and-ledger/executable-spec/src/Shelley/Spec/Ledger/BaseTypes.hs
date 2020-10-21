@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDecls #-}
@@ -219,15 +220,11 @@ infix 1 ==>
 data StrictMaybe a
   = SNothing
   | SJust !a
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Ord, Show, Generic, Functor, Foldable, Traversable)
 
 instance NoThunks a => NoThunks (StrictMaybe a)
 
 instance NFData a => NFData (StrictMaybe a)
-
-instance Functor StrictMaybe where
-  fmap _ SNothing = SNothing
-  fmap f (SJust a) = SJust (f a)
 
 instance Applicative StrictMaybe where
   pure = SJust

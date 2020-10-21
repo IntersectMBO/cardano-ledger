@@ -225,7 +225,7 @@ instance CC.Crypto crypto => Arbitrary (HashHeader crypto) where
 instance CC.Crypto crypto => Arbitrary (HashBBody crypto) where
   arbitrary = UnsafeHashBBody <$> genHash
 
-instance (Typeable kr, Era era, Mock (Crypto era)) => Arbitrary (WitVKey era kr) where
+instance (Typeable kr, Era era, Mock (Crypto era)) => Arbitrary (WitVKey kr era) where
   arbitrary =
     WitVKey
       <$> arbitrary

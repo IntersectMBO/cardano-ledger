@@ -30,7 +30,7 @@ instance
   type Crypto (ShelleyMAEra ma c) = c
 
 type family MAValue (x :: MaryOrAllegra) era :: Type where
-  MAValue Allegra era = Coin
-  MAValue Mary era = Value era
+  MAValue 'Allegra era = Coin
+  MAValue 'Mary era = Value era
 
 type instance Core.Value (ShelleyMAEra m c) = MAValue m (ShelleyMAEra m c)

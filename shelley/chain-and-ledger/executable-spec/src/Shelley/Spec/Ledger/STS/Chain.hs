@@ -142,6 +142,10 @@ deriving stock instance
   ShelleyBased era =>
   Show (ChainState era)
 
+deriving stock instance
+  ShelleyBased era =>
+  Eq (ChainState era)
+
 instance (Era era) => NFData (ChainState era)
 
 data ChainPredicateFailure era

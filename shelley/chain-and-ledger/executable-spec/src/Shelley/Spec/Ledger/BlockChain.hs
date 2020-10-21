@@ -177,6 +177,10 @@ deriving stock instance
   ShelleyBased era =>
   Show (TxSeq era)
 
+deriving stock instance
+  ShelleyBased era =>
+  Eq (TxSeq era)
+
 pattern TxSeq ::
   (Era era, Shelley.TxBodyConstraints era) =>
   StrictSeq (Tx era) ->
@@ -520,6 +524,10 @@ data Block era
 deriving stock instance
   ShelleyBased era =>
   Show (Block era)
+
+deriving stock instance
+  ShelleyBased era =>
+  Eq (Block era)
 
 pattern Block :: Era era => BHeader (Crypto era) -> TxSeq era -> Block era
 pattern Block h txns <-

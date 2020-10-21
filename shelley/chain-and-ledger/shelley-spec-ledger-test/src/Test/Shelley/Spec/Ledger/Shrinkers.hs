@@ -88,7 +88,7 @@ shrinkSlotNo (SlotNo x) = SlotNo <$> shrinkIntegral x
 shrinkUpdate :: Update era -> [Update era]
 shrinkUpdate = const []
 
-shrinkWitVKey :: WitVKey era kr -> [WitVKey era kr]
+shrinkWitVKey :: WitVKey kr era -> [WitVKey kr era]
 shrinkWitVKey = const []
 
 shrinkScriptHash :: ScriptHash era -> [ScriptHash era]
