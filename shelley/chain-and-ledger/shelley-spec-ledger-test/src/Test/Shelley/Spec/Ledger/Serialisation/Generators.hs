@@ -77,8 +77,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState
   ( FutureGenDeleg,
-    InstantaneousRewards,
-    PPUPState,
     emptyRewardUpdate,
   )
 import qualified Shelley.Spec.Ledger.MetaData as MD

@@ -57,6 +57,9 @@ instance Monad Collect where
 -- x:: a
 -- c:: (s -> a -> a)
 
+instance Foldable Collect where
+  foldr f z (Collect g) = g z f
+
 -- ===========================================================================
 -- Operations on the collect Monad.
 

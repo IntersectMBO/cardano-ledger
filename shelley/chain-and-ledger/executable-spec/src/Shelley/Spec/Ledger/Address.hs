@@ -24,6 +24,7 @@ module Shelley.Spec.Ledger.Address
     Addr (..),
     BootstrapAddress (..),
     bootstrapAddressAttrsSize,
+    isBootstrapRedeemer,
     getNetwork,
     RewardAcnt (..),
     serialiseRewardAcnt,
@@ -390,6 +391,11 @@ bootstrapAddressAttrsSize (BootstrapAddress addr) =
     + Byron.unknownAttributesLength attrs
   where
     attrs = Byron.addrAttributes addr
+
+-- | Return True if a given address is a redeemer address from the Byron Era
+isBootstrapRedeemer :: Addr era -> Bool
+isBootstrapRedeemer (AddrBootstrap (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem))) = True
+isBootstrapRedeemer _ = False
 
 putPtr :: Ptr -> Put
 putPtr (Ptr slot txIx certIx) = do
