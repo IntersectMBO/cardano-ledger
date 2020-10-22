@@ -20,8 +20,8 @@ where
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import qualified Cardano.Ledger.Shelley as Shelley
-import Control.State.Transition.Extended (BaseM, PredicateFailure, STS, TRC (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Coerce (coerce)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
@@ -39,7 +39,6 @@ import Shelley.Spec.Ledger.Address
   )
 import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
-    ShelleyBase,
     StrictMaybe (..),
     maybeToStrictMaybe,
   )
@@ -176,19 +175,19 @@ makeTxBody inp addrCs wdrl =
     SNothing
 
 makeTx ::
-  forall era.
-  (Mock (Crypto era), Shelley.TxBodyConstraints era) =>
-  Core.TxBody era ->
-  [KeyPair 'Witness (Crypto era)] ->
-  Map (ScriptHash era) (MultiSig era) ->
+  forall c.
+  (Mock c) =>
+  Core.TxBody (ShelleyEra c) ->
+  [KeyPair 'Witness c] ->
+  Map (ScriptHash (ShelleyEra c)) (MultiSig (ShelleyEra c)) ->
   Maybe MetaData ->
-  Tx era
+  Tx (ShelleyEra c)
 makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
       mempty
         { addrWits = makeWitnessesVKey (coerce . hashAnnotated $ txBody) keyPairs,
-          msigWits = msigs
+          scriptWits = msigs
         }
 
 aliceInitCoin :: Coin
@@ -215,15 +214,15 @@ initPParams = emptyPParams {_maxTxSize = 1000}
 -- 'aliceKeep' is greater than 0, gives that amount to Alice and creates outputs
 -- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState ::
-  forall era.
-  ( ShelleyTest era,
-    STS (UTXOW era),
-    BaseM (UTXOW era) ~ ShelleyBase,
-    Mock (Crypto era)
-  ) =>
+  forall c.
+  (Mock c) =>
   Coin ->
-  [(MultiSig era, Coin)] ->
-  (TxId era, Either [[PredicateFailure (UTXOW era)]] (UTxOState era))
+  [(MultiSig (ShelleyEra c), Coin)] ->
+  ( TxId (ShelleyEra c),
+    Either
+      [[PredicateFailure (UTXOW (ShelleyEra c))]]
+      (UTxOState (ShelleyEra c))
+  )
 initialUTxOState aliceKeep msigs =
   let addresses =
         [(Cast.aliceAddr, aliceKeep) | aliceKeep > mempty]
@@ -245,7 +244,7 @@ initialUTxOState aliceKeep msigs =
               Nothing
        in ( txid $ _body tx,
             runShelleyBase $
-              applySTSTest @(UTXOW era)
+              applySTSTest @(UTXOW (ShelleyEra c))
                 ( TRC
                     ( UtxoEnv
                         (SlotNo 0)
@@ -266,20 +265,15 @@ initialUTxOState aliceKeep msigs =
 -- 'aliceKeep' in the case of it being non-zero) to spend all funds back to
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript ::
-  forall proxy era.
-  ( ShelleyTest era,
-    STS (UTXOW era),
-    BaseM (UTXOW era) ~ ShelleyBase,
-    Mock (Crypto era)
-  ) =>
-  proxy era ->
-  [(MultiSig era, Coin)] ->
-  [MultiSig era] ->
-  Wdrl era ->
+  forall c.
+  (Mock c) =>
+  [(MultiSig (ShelleyEra c), Coin)] ->
+  [MultiSig (ShelleyEra c)] ->
+  Wdrl (ShelleyEra c) ->
   Coin ->
-  [KeyPair 'Witness (Crypto era)] ->
-  Either [[PredicateFailure (UTXOW era)]] (UTxOState era)
-applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
+  [KeyPair 'Witness c] ->
+  Either [[PredicateFailure (UTXOW (ShelleyEra c))]] (UTxOState (ShelleyEra c))
+applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
     utxoSt = case initUtxo of
@@ -308,7 +302,7 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         Nothing
     utxoSt' =
       runShelleyBase $
-        applySTSTest @(UTXOW era)
+        applySTSTest @(UTXOW (ShelleyEra c))
           ( TRC
               ( UtxoEnv
                   (SlotNo 0)

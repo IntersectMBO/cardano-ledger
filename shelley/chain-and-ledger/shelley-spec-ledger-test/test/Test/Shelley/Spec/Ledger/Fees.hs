@@ -17,6 +17,7 @@ import Cardano.Crypto.VRF (VRFAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
@@ -67,13 +68,13 @@ import Shelley.Spec.Ledger.Tx
   )
 import Shelley.Spec.Ledger.TxBody
   ( EraIndependentTxBody,
-    eraIndTxBodyHash,
     PoolMetaData (..),
     StakePoolRelay (..),
     Wdrl (..),
+    eraIndTxBodyHash,
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock, C)
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, mkAddr, mkKeyPair, mkVRFKeyPair, unsafeMkUnitInterval)
 import Test.Tasty (TestTree, testGroup)
@@ -441,14 +442,17 @@ txbWithMultiSig =
       _mdHash = SNothing
     }
 
-txWithMultiSig :: forall era. (ShelleyTest era, BodySignable era) => Tx era
+txWithMultiSig :: forall c. Mock c => Tx (ShelleyEra c)
 txWithMultiSig =
   Tx
     { _body = txbWithMultiSig,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (eraIndTxBodyHash $ txbWithMultiSig @era) [alicePay, bobPay],
-            msigWits = Map.singleton (hashScript @(MultiSig era) msig) msig
+          { addrWits =
+              makeWitnessesVKey
+                (eraIndTxBodyHash $ txbWithMultiSig @(ShelleyEra c))
+                [alicePay, bobPay],
+            scriptWits = Map.singleton (hashScript @(ShelleyEra c) msig) msig
           },
       _metadata = SNothing
     }

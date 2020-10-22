@@ -132,6 +132,7 @@ type ShelleyTest era =
   ( ShelleyBased era,
     Core.Value era ~ Coin,
     Core.TxBody era ~ TxBody era,
+    Core.Script era ~ MultiSig era,
     PredicateFailure (CHAIN era) ~ ChainPredicateFailure era,
     PredicateFailure (LEDGERS era) ~ LedgersPredicateFailure era,
     PredicateFailure (LEDGER era) ~ LedgerPredicateFailure era,

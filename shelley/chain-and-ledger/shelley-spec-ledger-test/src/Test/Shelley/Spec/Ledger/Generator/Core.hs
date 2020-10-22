@@ -152,7 +152,7 @@ import Shelley.Spec.Ledger.PParams
     ProtVer (..),
   )
 import Shelley.Spec.Ledger.Scripts
-  ( MultiSig,
+  (hashMultiSigScript,  MultiSig,
     ScriptHash,
     pattern RequireAllOf,
     pattern RequireAnyOf,
@@ -169,7 +169,6 @@ import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( Tx,
     TxIn,
-    hashScript,
     pattern TxId,
     pattern TxIn,
     pattern TxOut,
@@ -358,7 +357,7 @@ mkPayScriptHashMap ::
 mkPayScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
-    f script@(pay, _stake) = (hashScript pay, script)
+    f script@(pay, _stake) = (hashMultiSigScript pay, script)
 
 -- | Generate a mapping from stake script hash to multisig pair.
 mkStakeScriptHashMap ::
@@ -368,7 +367,7 @@ mkStakeScriptHashMap ::
 mkStakeScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
-    f script@(_pay, stake) = (hashScript stake, script)
+    f script@(_pay, stake) = (hashMultiSigScript stake, script)
 
 -- | Multi-Sig Scripts based on the given key pairs
 mkMSigScripts :: (Era era) => KeyPairs (Crypto era) -> MultiSigPairs era

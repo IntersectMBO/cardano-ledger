@@ -395,7 +395,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
     signaturesSubset SourceSignalTarget {signal = tx} =
       let khs = keyHashSet tx
        in property $
-            all (existsReqKeyComb khs) (msigWits . _witnessSet $ tx)
+            all (existsReqKeyComb khs) (scriptWits . _witnessSet $ tx)
 
     existsReqKeyComb keyHashes msig =
       any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (getKeyCombinations msig)
