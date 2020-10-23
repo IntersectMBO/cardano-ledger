@@ -196,9 +196,9 @@ percentile p prior likelihoods =
     cdf = Seq.zip samplePositions $ Seq.scanl (+) 0 (fromLogWeight <$> values)
 
 percentile' :: Likelihood -> PerformanceEstimate
-percentile' = percentile 0.1 h
+percentile' = percentile 0.5 h
   where
-    h = normalize . Histogram $ logBeta 40 3 <$> samplePositions
+    h = normalize . Histogram $ logBeta 40 1 <$> samplePositions
     -- Beta(n,m)(x) = C * x^(n-1)*(1-x)^(m-1)
     -- log( Beta(n,m)(x) ) = (n-1) * log x + (m-1) * log (1-x)
     logBeta n m x = LogWeight . realToFrac $ (n -1) * log x + (m -1) * log (1 - x)
