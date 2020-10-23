@@ -48,12 +48,14 @@ import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( RewardUpdate (..),
+    decayFactor,
     emptyRewardUpdate,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.Rewards
-  ( Likelihood (..),
+  ( applyDecay,
+    Likelihood (..),
     NonMyopic (..),
     emptyNonMyopic,
     leaderProbability,
@@ -885,7 +887,7 @@ reserves12 :: Coin
 reserves12 = addDelta reserves7 deltaR8
 
 alicePerfEx11 :: forall era. ShelleyTest era => Likelihood
-alicePerfEx11 = alicePerfEx8 <> epoch4Likelihood
+alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
   where
     epoch4Likelihood = likelihood blocks t (epochSize $ EpochNo 4)
     blocks = 0

@@ -19,6 +19,7 @@ module Shelley.Spec.Ledger.Rewards
     Histogram (..),
     LogWeight (..),
     likelihood,
+    applyDecay,
     Likelihood (..),
     leaderProbability,
   )
@@ -168,12 +169,16 @@ likelihood blocks t slotsPerEpoch =
     l x = n * log x + m * log (1 - t * x)
     sample position = LogWeight (realToFrac $ l position)
 
+-- | Decay previous likelihood
+applyDecay :: Float -> Likelihood -> Likelihood
+applyDecay decay (Likelihood logWeights) = Likelihood $ mul decay <$> logWeights
+  where
+    mul x (LogWeight f) = LogWeight (x * f)
+
 posteriorDistribution :: Histogram -> Likelihood -> Histogram
 posteriorDistribution (Histogram points) (Likelihood likelihoods) =
   normalize $
     Histogram $ Seq.zipWith (+) points likelihoods
-
--- TODO decay the histogram
 
 -- | Normalize the histogram so that the total area is 1
 normalize :: Histogram -> Histogram
