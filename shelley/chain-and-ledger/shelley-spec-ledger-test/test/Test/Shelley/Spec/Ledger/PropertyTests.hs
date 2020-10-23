@@ -6,6 +6,7 @@
 
 module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTests) where
 
+import qualified Cardano.Ledger.Core as Core
 import Data.Proxy
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
@@ -35,13 +36,13 @@ import qualified Test.Tasty.QuickCheck as TQC
 proxyC :: Proxy C
 proxyC = Proxy
 
-minimalPropertyTests :: TestTree
-minimalPropertyTests =
+minimalPropertyTests :: TQC.Gen (Core.Value C) -> TestTree
+minimalPropertyTests gv =
   testGroup
     "Minimal Property Tests"
-    [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered,
-      TQC.testProperty "total amount of Ada is preserved (Chain)" adaPreservationChain,
-      TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated,
+    [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered gv),
+      TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationChain gv),
+      TQC.testProperty "Only valid CHAIN STS signals are generated" (onlyValidChainSignalsAreGenerated gv),
       bootstrapHashTest,
       testGroup
         "Deserialize stake address reference"
@@ -52,48 +53,48 @@ minimalPropertyTests =
     ]
 
 -- | 'TestTree' of property-based testing properties.
-propertyTests :: TestTree
-propertyTests =
+propertyTests :: TQC.Gen (Core.Value C) -> TestTree
+propertyTests gv =
   testGroup
     "Property-Based Testing"
     [ testGroup
         "Classify Traces"
-        [TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered],
+        [TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered gv)],
       testGroup
         "STS Rules - Delegation Properties"
         [ TQC.testProperty
             "properties of the DELEG STS"
-            delegProperties
+            (delegProperties gv)
         ],
       testGroup
         "STS Rules - Pool Properties"
         [ TQC.testProperty
             "properties of the POOL STS"
-            poolProperties
+            (poolProperties gv)
         ],
       testGroup
         "STS Rules - Poolreap Properties"
         [ TQC.testProperty
             "pool is removed from stake pool and retiring maps"
-            removedAfterPoolreap
+            (removedAfterPoolreap gv)
         ],
       testGroup
         "CHAIN level Properties"
         [ TQC.testProperty
             "collection of Ada preservation properties"
-            adaPreservationChain,
+            (adaPreservationChain gv),
           TQC.testProperty
             "inputs are eliminated, outputs added to utxo and TxIds are unique"
-            collisionFreeComplete
+            (collisionFreeComplete gv)
         ],
       testGroup
         "Properties of Trace generators"
         [ TQC.testProperty
             "Only valid LEDGER STS signals are generated"
-            onlyValidLedgerSignalsAreGenerated,
+            (onlyValidLedgerSignalsAreGenerated gv),
           TQC.testProperty
             "Only valid CHAIN STS signals are generated"
-            onlyValidChainSignalsAreGenerated
+            (onlyValidChainSignalsAreGenerated gv)
         ],
       testGroupByronTranslation
     ]

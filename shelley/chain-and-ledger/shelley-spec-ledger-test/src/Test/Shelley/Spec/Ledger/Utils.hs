@@ -36,6 +36,7 @@ module Test.Shelley.Spec.Ledger.Utils
     MultiSigPairs,
     getBlockNonce,
     ShelleyTest,
+    Split (..),
   )
 where
 
@@ -48,7 +49,13 @@ import Cardano.Crypto.Hash
     hashToBytes,
     hashWithSerialiser,
   )
-import Cardano.Crypto.KES (KESAlgorithm, SignKeyKES, VerKeyKES, deriveVerKeyKES, genKeyKES)
+import Cardano.Crypto.KES
+  ( KESAlgorithm,
+    SignKeyKES,
+    VerKeyKES,
+    deriveVerKeyKES,
+    genKeyKES,
+  )
 import Cardano.Crypto.KES.Class (ContextKES)
 import Cardano.Crypto.Libsodium.MLockedBytes (mlsbFromByteString)
 import Cardano.Crypto.Seed (Seed, getSeedBytes, mkSeedFromBytes)
@@ -114,8 +121,12 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyPredicateFailure)
 import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainPredicateFailure)
+import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegPredicateFailure)
+import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsPredicateFailure)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerPredicateFailure)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersPredicateFailure)
+import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoPredicateFailure)
+import Shelley.Spec.Ledger.STS.Utxow (UTXOW, UtxowPredicateFailure)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
@@ -123,14 +134,10 @@ import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
   )
-import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure, UTXOW)
-import Shelley.Spec.Ledger.STS.Utxo (UtxoPredicateFailure, UTXO)
-import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegPredicateFailure)
-import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsPredicateFailure)
 
 type ShelleyTest era =
   ( ShelleyBased era,
-    Core.Value era ~ Coin,
+    Split (Core.Value era),
     Core.TxBody era ~ TxBody era,
     Core.Script era ~ MultiSig era,
     PredicateFailure (CHAIN era) ~ ChainPredicateFailure era,
@@ -142,6 +149,9 @@ type ShelleyTest era =
     PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
     PredicateFailure (UTXO era) ~ UtxoPredicateFailure era
   )
+
+class Split v where
+  vsplit :: v -> Integer -> ([v], Coin)
 
 -- =======================================================
 
@@ -194,7 +204,10 @@ mkKeyPair' seed = KeyPair vk sk
     (sk, vk) = mkKeyPair seed
 
 -- | For testing purposes, generate a deterministic VRF key pair given a seed.
-mkVRFKeyPair :: VRFAlgorithm v => (Word64, Word64, Word64, Word64, Word64) -> (SignKeyVRF v, VerKeyVRF v)
+mkVRFKeyPair ::
+  VRFAlgorithm v =>
+  (Word64, Word64, Word64, Word64, Word64) ->
+  (SignKeyVRF v, VerKeyVRF v)
 mkVRFKeyPair seed =
   let sk = genKeyVRF $ mkSeedFromWords seed
    in (sk, deriveVerKeyVRF sk)
@@ -213,12 +226,18 @@ mkCertifiedVRF a sk =
   coerce $ evalCertified () a sk
 
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
-mkKESKeyPair :: KESAlgorithm v => (Word64, Word64, Word64, Word64, Word64) -> (SignKeyKES v, VerKeyKES v)
+mkKESKeyPair ::
+  KESAlgorithm v =>
+  (Word64, Word64, Word64, Word64, Word64) ->
+  (SignKeyKES v, VerKeyKES v)
 mkKESKeyPair seed =
   let sk = genKeyKES $ mlsbFromByteString $ getSeedBytes (mkSeedFromWords seed)
    in (sk, deriveVerKeyKES sk)
 
-mkAddr :: Era era => (KeyPair 'Payment (Crypto era), KeyPair 'Staking (Crypto era)) -> Addr era
+mkAddr ::
+  Era era =>
+  (KeyPair 'Payment (Crypto era), KeyPair 'Staking (Crypto era)) ->
+  Addr era
 mkAddr (payKey, stakeKey) =
   Addr
     Testnet

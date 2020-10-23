@@ -5,6 +5,8 @@
 
 module Test.Shelley.Spec.Ledger.Shrinkers where
 
+import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Foldable (toList)
 import Data.List (foldl')
@@ -12,7 +14,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq (..), (<|), empty)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as S
@@ -39,17 +41,33 @@ shrinkTx ::
 shrinkTx (Tx _b _ws _md) =
   [Tx b' _ws _md | b' <- shrinkTxBody _b]
 
+-- NOTE ====
+--
+-- This is a shrinker for the Shelley TxBody, but has code in it to deal with
+-- Values, which will only ever exist in the ShelleyMA TxBody (which is
+-- different, and will have its own shrinker).
+--
+-- This is fine for now, but a better resolution would be: when we have a
+-- shrinker for the ShelleyMA TxBody, let's use this logic to allow shrinking
+-- the values, and revert this function to its prior incarnation, fixed to Coin
+-- ======
 shrinkTxBody ::
+  forall era.
   ShelleyTest era =>
   TxBody era ->
   [TxBody era]
-shrinkTxBody (TxBody is os cs ws tf tl tu md) =
+-- do not shrink body in case of empty output list
+-- this will have to change in case any other part of TxBody will be shrunk
+shrinkTxBody (TxBody _ Empty _ _ _ _ _ _) = []
+-- need to keep all the MA tokens in the transaction, so we need at least one
+-- output to remain after the shrinking to preserve invariant
+shrinkTxBody (TxBody is os@( (:<|) (TxOut a vs) _ ) cs ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
   -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
 
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
-  [ TxBody is os' cs ws (tf <+> (outBalance <-> outputBalance os')) tl tu md
+  [ TxBody is (mvExtraTksnToOut1 os') cs ws (tf <+> (extraCoin os')) tl tu md
     | os' <- toList $ shrinkStrictSeq shrinkTxOut os
   ]
   where
@@ -59,16 +77,23 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
     -- [ TxBody is os cs ws tf tl' tu | tl' <- shrinkSlotNo tl ] ++
     -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
     outBalance = outputBalance os
-
-outputBalance :: ShelleyTest era => StrictSeq (TxOut era) -> Coin
-outputBalance = foldl' (\v (TxOut _ c) -> v <+> c) (Coin 0)
+    extraTokens sr = outBalance <-> outputBalance sr
+    extraCoin sr = Val.coin $ extraTokens sr
+    -- put all the non-ada tokens in the head of the outputs, append shrunk list
+    mvExtraTksnToOut1 Empty = empty
+    mvExtraTksnToOut1 sr = (TxOut a (vs <+> (extraTokens sr) <-> (Val.inject $ extraCoin sr))) <| sr
+outputBalance :: ShelleyTest era => StrictSeq (TxOut era) -> Core.Value era
+outputBalance = foldl' (\v (TxOut _ c) -> v <+> c) mempty
 
 shrinkTxIn :: TxIn era -> [TxIn era]
 shrinkTxIn = const []
 
 shrinkTxOut :: ShelleyTest era => TxOut era -> [TxOut era]
-shrinkTxOut (TxOut addr coin) =
-  TxOut addr <$> shrinkCoin coin
+shrinkTxOut (TxOut addr vl) =
+  TxOut addr <$> shrinkVal vl
+  where
+    -- we do not shrink value for now
+    shrinkVal vl' = [vl']
 
 shrinkCoin :: Coin -> [Coin]
 shrinkCoin (Coin x) = Coin <$> shrinkIntegral x

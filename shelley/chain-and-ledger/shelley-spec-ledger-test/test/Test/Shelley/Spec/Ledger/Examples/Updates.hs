@@ -14,6 +14,7 @@ module Test.Shelley.Spec.Ledger.Examples.Updates
   )
 where
 
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Data.Map.Strict as Map
@@ -93,8 +94,8 @@ bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
   genesisCoins
-    [ TxOut Cast.aliceAddr aliceInitCoin,
-      TxOut Cast.bobAddr bobInitCoin
+    [ TxOut Cast.aliceAddr (Val.inject aliceInitCoin),
+      TxOut Cast.bobAddr (Val.inject bobInitCoin)
     ]
 
 initStUpdates :: forall era. ShelleyTest era => ChainState era
@@ -143,7 +144,7 @@ txbodyEx1 :: ShelleyTest era => TxBody era
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx1)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr (Val.inject aliceCoinEx1))
     StrictSeq.empty
     (Wdrl Map.empty)
     feeTx1
@@ -218,7 +219,7 @@ txbodyEx2 :: ShelleyTest era => TxBody era
 txbodyEx2 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx1) 0])
-    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx2)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr (Val.inject aliceCoinEx2))
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)
@@ -311,7 +312,7 @@ txbodyEx3 :: ShelleyTest era => TxBody era
 txbodyEx3 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx2) 0])
-    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx3)
+    (StrictSeq.singleton $ TxOut Cast.aliceAddr (Val.inject aliceCoinEx3))
     StrictSeq.empty
     (Wdrl Map.empty)
     feeTx3

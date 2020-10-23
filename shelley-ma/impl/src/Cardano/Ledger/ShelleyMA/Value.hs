@@ -24,6 +24,7 @@ import Cardano.Binary
     fromCBOR,
     toCBOR,
   )
+import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Val (Val (..))
@@ -151,7 +152,7 @@ instance
 -- ========================================================================
 -- Compactible
 
-instance Core.Compactible (Value era) where
+instance Compactible (Value era) where
   -- TODO a proper compact form
   newtype CompactForm (Value era) = CompactValue {getCompactValue :: Value era}
     deriving (ToCBOR, FromCBOR)

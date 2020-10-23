@@ -10,6 +10,7 @@ module Shelley.Spec.Ledger.Bench.Rewards
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Crypto.VRF (hashVerKeyVRF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
@@ -63,11 +64,11 @@ import Cardano.Ledger.Era (Era(Crypto))
 -- | Generate a chain state at a given epoch. Since we are only concerned about
 -- rewards, this will populate the chain with empty blocks (only issued by the
 -- original genesis delegates).
-genChainInEpoch :: EpochNo -> Gen (ChainState B)
-genChainInEpoch epoch = do
+genChainInEpoch :: Gen (Core.Value B) -> EpochNo -> Gen (ChainState B)
+genChainInEpoch gv epoch = do
   genesisChainState <-
     fromRight (error "genChainState failed")
-      <$> mkGenesisChainState @B cs (IRC ())
+      <$> mkGenesisChainState @B gv cs (IRC ())
   -- Our genesis chain state contains no registered staking. Since we want to
   -- calculate a reward update, we will set some up.
   -- What do we want to do here?

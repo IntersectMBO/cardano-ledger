@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Examples.PoolReReg
   )
 where
 
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Data.Map.Strict as Map
@@ -79,7 +80,7 @@ aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: ShelleyTest era => UTxO era
-initUTxO = genesisCoins [TxOut Cast.aliceAddr aliceInitCoin]
+initUTxO = genesisCoins [TxOut Cast.aliceAddr (Val.inject aliceInitCoin)]
 
 initStPoolReReg :: forall era. ShelleyTest era => ChainState era
 initStPoolReReg = initSt initUTxO
@@ -98,7 +99,7 @@ txbodyEx1 :: ShelleyTest era => TxBody era
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.fromList [TxOut Cast.aliceAddr aliceCoinEx1])
+    (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     (StrictSeq.fromList ([DCertPool (RegPool Cast.alicePoolParams)]))
     (Wdrl Map.empty)
     feeTx1
@@ -174,7 +175,7 @@ txbodyEx2 :: ShelleyTest era => TxBody era
 txbodyEx2 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx1) 0])
-    (StrictSeq.fromList [TxOut Cast.aliceAddr aliceCoinEx2])
+    (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx2)])
     ( StrictSeq.fromList
         ( [ DCertPool (RegPool newPoolParams)
           ]

@@ -1361,7 +1361,7 @@ tests =
             ( SJust
                 RewardUpdate
                   { deltaT = Coin 100,
-                    deltaR = Coin (-200),
+                    deltaR = DeltaCoin (-200),
                     rs = Map.empty,
                     deltaF = DeltaCoin (-10),
                     nonMyopic = nm

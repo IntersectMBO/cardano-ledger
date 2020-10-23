@@ -18,6 +18,8 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
+import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (WithOrigin (..))
@@ -105,12 +107,13 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era a.
-  ShelleyTest era =>
+  (ShelleyTest era) =>
+  Gen (Core.Value era) ->
   Constants ->
   IRC (CHAIN era) ->
   Gen (Either a (ChainState era))
-mkGenesisChainState constants (IRC _slotNo) = do
-  utxo0 <- genUtxo0 constants
+mkGenesisChainState gv constants (IRC _slotNo) = do
+  utxo0 <- genUtxo0 gv constants
 
   pParams <- genPParams constants
 
@@ -119,7 +122,7 @@ mkGenesisChainState constants (IRC _slotNo) = do
       (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
       epoch0
       utxo0
-      (maxLLSupply <-> balance utxo0)
+      (maxLLSupply <-> (Val.coin $ balance utxo0))
       delegs0
       pParams
       (hashHeaderToNonce (lastByronHeaderHash p))

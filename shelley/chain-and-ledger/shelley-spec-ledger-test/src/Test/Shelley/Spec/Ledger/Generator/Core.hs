@@ -59,9 +59,11 @@ import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
 import qualified Cardano.Ledger.Shelley as Shelley
-import Control.SetAlgebra (eval, (∪), (⋪))
-import Control.Monad (replicateM)
+import Cardano.Ledger.Val ((<+>), (<->))
+import qualified Cardano.Ledger.Val as Val
+import Control.Monad (liftM2, replicateM)
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (eval, (∪), (⋪))
 import Data.Coerce (coerce)
 import Data.List (foldl')
 import qualified Data.List as List ((\\))
@@ -152,8 +154,9 @@ import Shelley.Spec.Ledger.PParams
     ProtVer (..),
   )
 import Shelley.Spec.Ledger.Scripts
-  (hashMultiSigScript,  MultiSig,
+  ( MultiSig,
     ScriptHash,
+    hashMultiSigScript,
     pattern RequireAllOf,
     pattern RequireAnyOf,
     pattern RequireMOf,
@@ -485,16 +488,40 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- Note: we need to keep the initial utxo coin sizes large enough so that
 -- when we simulate sequences of transactions, we have enough funds available
 -- to include certificates that require deposits.
-genTxOut :: (ShelleyTest era) => Constants -> [Addr era] -> Gen [TxOut era]
-genTxOut Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
-  ys <- genCoinList minGenesisOutputVal maxGenesisOutputVal (length addrs) (length addrs)
-  return (uncurry TxOut <$> zip addrs ys)
+genTxOut ::
+  forall era.
+  (ShelleyTest era) =>
+  QC.Gen (Core.Value era) ->
+  Constants ->
+  [Addr era] ->
+  Gen [TxOut era]
+genTxOut gv Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
+  let ln = length addrs
+  p <- max <$> QC.choose (0, ln) <*> QC.choose (0, ln)
+  cls <- genCoinList minGenesisOutputVal maxGenesisOutputVal p
+  vls <- genValList @era gv minGenesisOutputVal maxGenesisOutputVal (ln - p)
+  outs <- QC.shuffle ((Val.inject <$> cls) ++ vls)
+  return (uncurry TxOut <$> zip addrs outs)
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
 -- and with values between 'minCoin' and 'maxCoin'.
-genCoinList :: Integer -> Integer -> Int -> Int -> Gen [Coin]
-genCoinList minCoin maxCoin lower upper = do
-  len <- QC.choose (lower, upper)
+-- NOTE we pass here a Value generator gv that is piped in from where
+-- it can be defined in the necessary context (see Tests.hs)
+genValList ::
+  (ShelleyTest era) =>
+  QC.Gen (Core.Value era) ->
+  Integer ->
+  Integer ->
+  Int ->
+  Gen [Core.Value era]
+genValList gv minCoin maxCoin len = do
+  let addWOCoin c v = c <+> (v <-> (Val.inject $ Val.coin v))
+  replicateM len $ liftM2 addWOCoin (Val.inject <$> genCoin minCoin maxCoin) gv
+
+-- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
+-- and with values between 'minCoin' and 'maxCoin'.
+genCoinList :: Integer -> Integer -> Int -> Gen [Coin]
+genCoinList minCoin maxCoin len = do
   replicateM len $ genCoin minCoin maxCoin
 
 -- TODO this should be an exponential distribution, not constant

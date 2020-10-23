@@ -17,6 +17,7 @@ where
 
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
+import qualified Cardano.Ledger.Val as Val
 import Data.Foldable (fold)
 import Data.Group (invert)
 import qualified Data.Map.Strict as Map
@@ -37,7 +38,7 @@ import Shelley.Spec.Ledger.BlockChain
     bheader,
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), toDelta)
+import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), toDelta, addDelta)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
@@ -127,8 +128,8 @@ bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
   genesisCoins
-    [ TxOut Cast.aliceAddr aliceInitCoin,
-      TxOut Cast.bobAddr bobInitCoin
+    [ TxOut Cast.aliceAddr (Val.inject aliceInitCoin),
+      TxOut Cast.bobAddr (Val.inject bobInitCoin)
     ]
 
 initStPoolLifetime :: forall era. ShelleyTest era => ChainState era
@@ -157,7 +158,7 @@ txbodyEx1 :: ShelleyTest era => TxBody era
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.fromList [TxOut Cast.aliceAddr aliceCoinEx1])
+    (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     ( StrictSeq.fromList
         ( [ DCertDeleg (RegKey Cast.aliceSHK),
             DCertDeleg (RegKey Cast.bobSHK),
@@ -264,8 +265,8 @@ txbodyEx2 =
     { _inputs = Set.fromList [TxIn (txid txbodyEx1) 0],
       _outputs =
         StrictSeq.fromList
-          [ TxOut Cast.aliceAddr aliceCoinEx2Base,
-            TxOut Cast.alicePtrAddr aliceCoinEx2Ptr
+          [ TxOut Cast.aliceAddr (Val.inject aliceCoinEx2Base),
+            TxOut Cast.alicePtrAddr (Val.inject aliceCoinEx2Ptr)
           ],
       _certs =
         StrictSeq.fromList
@@ -400,7 +401,7 @@ txbodyEx4 :: forall era. ShelleyTest era => TxBody era
 txbodyEx4 =
   TxBody
     { _inputs = Set.fromList [TxIn (txid txbodyEx2) 0],
-      _outputs = StrictSeq.fromList [TxOut Cast.aliceAddr aliceCoinEx4Base],
+      _outputs = StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)],
       _certs =
         StrictSeq.fromList
           [DCertDeleg (Delegate $ Delegation Cast.carlSHK (hk Cast.alicePoolKeys))],
@@ -442,7 +443,7 @@ rewardUpdateEx4 :: forall era. RewardUpdate era
 rewardUpdateEx4 =
   RewardUpdate
     { deltaT = Coin 1,
-      deltaR = Coin 6,
+      deltaR = DeltaCoin 6,
       rs = Map.empty,
       deltaF = DeltaCoin (-7),
       nonMyopic = emptyNonMyopic {rewardPotNM = Coin 6}
@@ -563,7 +564,7 @@ rewardUpdateEx6 :: forall era. RewardUpdate era
 rewardUpdateEx6 =
   RewardUpdate
     { deltaT = Coin 1,
-      deltaR = Coin 4,
+      deltaR = DeltaCoin 4,
       rs = Map.empty,
       deltaF = invert $ toDelta feeTx4,
       nonMyopic = emptyNonMyopic {rewardPotNM = Coin 4}
@@ -653,8 +654,8 @@ bobRAcnt8 = Coin 1038545454
 deltaT8 :: Coin
 deltaT8 = Coin 317333333333
 
-deltaR8 :: Coin
-deltaR8 = Coin (-330026666665)
+deltaR8 :: DeltaCoin
+deltaR8 = DeltaCoin (-330026666665)
 
 reserves7 :: Coin
 reserves7 = Coin 33999999999999900
@@ -778,7 +779,7 @@ txbodyEx10 :: ShelleyTest era => TxBody era
 txbodyEx10 =
   TxBody
     (Set.fromList [TxIn genesisId 1])
-    (StrictSeq.singleton $ TxOut Cast.bobAddr bobAda10)
+    (StrictSeq.singleton $ TxOut Cast.bobAddr (Val.inject bobAda10))
     (StrictSeq.fromList [DCertDeleg (DeRegKey Cast.bobSHK)])
     (Wdrl $ Map.singleton (RewardAcnt Testnet Cast.bobSHK) bobRAcnt8)
     feeTx10
@@ -843,7 +844,7 @@ txbodyEx11 :: ShelleyTest era => TxBody era
 txbodyEx11 =
   TxBody
     (Set.fromList [TxIn (txid txbodyEx4) 0])
-    (StrictSeq.singleton $ TxOut Cast.alicePtrAddr aliceCoinEx11Ptr)
+    (StrictSeq.singleton $ TxOut Cast.alicePtrAddr (Val.inject aliceCoinEx11Ptr))
     (StrictSeq.fromList [DCertPool (RetirePool (hk Cast.alicePoolKeys) aliceRetireEpoch)])
     (Wdrl Map.empty)
     feeTx11
@@ -881,7 +882,7 @@ blockEx11 =
     (mkOCert (coreNodeKeysBySchedule @era ppEx 490) 2 (KESPeriod 19))
 
 reserves12 :: Coin
-reserves12 = reserves7 <> deltaR8
+reserves12 = addDelta reserves7 deltaR8
 
 alicePerfEx11 :: forall era. ShelleyTest era => Likelihood
 alicePerfEx11 = alicePerfEx8 <> epoch4Likelihood
@@ -904,7 +905,7 @@ rewardUpdateEx11 :: forall era. ShelleyTest era => RewardUpdate era
 rewardUpdateEx11 =
   RewardUpdate
     { deltaT = Coin 0,
-      deltaR = Coin 0,
+      deltaR = DeltaCoin 0,
       rs = Map.empty,
       deltaF = DeltaCoin 0,
       nonMyopic = nonMyopicEx11

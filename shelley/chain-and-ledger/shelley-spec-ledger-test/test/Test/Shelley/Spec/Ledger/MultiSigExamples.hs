@@ -19,6 +19,7 @@ where
 
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
@@ -145,7 +146,7 @@ aliceAndBobOrCarlOrDaria p =
       RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: ShelleyTest era => [(Addr era, Coin)] -> TxBody era
+initTxBody :: ShelleyTest era => [(Addr era, Core.Value era)] -> TxBody era
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
@@ -160,7 +161,7 @@ initTxBody addrs =
 makeTxBody ::
   ShelleyTest era =>
   [TxIn era] ->
-  [(Addr era, Coin)] ->
+  [(Addr era, Core.Value era)] ->
   Wdrl era ->
   TxBody era
 makeTxBody inp addrCs wdrl =
@@ -202,8 +203,8 @@ genesis = genesisState genDelegs0 utxo0
     genDelegs0 = Map.empty
     utxo0 =
       genesisCoins @era
-        [ TxOut Cast.aliceAddr aliceInitCoin,
-          TxOut Cast.bobAddr bobInitCoin
+        [ TxOut Cast.aliceAddr (Val.inject aliceInitCoin),
+          TxOut Cast.bobAddr (Val.inject bobInitCoin)
         ]
 
 initPParams :: PParams era
@@ -225,7 +226,7 @@ initialUTxOState ::
   )
 initialUTxOState aliceKeep msigs =
   let addresses =
-        [(Cast.aliceAddr, aliceKeep) | aliceKeep > mempty]
+        [(Cast.aliceAddr, aliceKeep) | Val.pointwise (>) aliceKeep mempty]
           ++ map
             ( \(msig, era) ->
                 ( Addr
@@ -286,12 +287,12 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
     txbody =
       makeTxBody
         inputs'
-        [(Cast.aliceAddr, aliceInitCoin <> bobInitCoin <> fold (unWdrl wdrl))]
+        [(Cast.aliceAddr, (Val.inject $ aliceInitCoin <> bobInitCoin <> fold (unWdrl wdrl)))]
         wdrl
     inputs' =
       [ TxIn txId (fromIntegral n)
         | n <-
-            [0 .. length lockScripts - (if aliceKeep > mempty then 0 else 1)]
+            [0 .. length lockScripts - (if (Val.pointwise (>) aliceKeep mempty) then 0 else 1)]
       ]
     -- alice? + scripts
     tx =
