@@ -129,7 +129,7 @@ instance
 instance NoThunks (DelegsPredicateFailure era)
 
 instance
-  (Typeable era, Era era) =>
+  (Typeable era, Era era, Typeable (Core.Script era)) =>
   ToCBOR (DelegsPredicateFailure era)
   where
   toCBOR = \case
@@ -146,7 +146,7 @@ instance
         <> toCBOR a
 
 instance
-  (Era era) =>
+  (Era era, Typeable (Core.Script era)) =>
   FromCBOR (DelegsPredicateFailure era)
   where
   fromCBOR =

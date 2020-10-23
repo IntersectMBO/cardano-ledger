@@ -29,7 +29,6 @@ module Test.Shelley.Spec.Ledger.Serialisation.Tripping.CBOR
     prop_roundtrip_PrtclState,
     prop_roundtrip_LedgerState,
     prop_roundtrip_NewEpochState,
-    prop_roundtrip_Script,
     prop_roundtrip_ShelleyGenesis,
   )
 where
@@ -140,9 +139,6 @@ prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
 prop_roundtrip_MultiSig :: Ledger.MultiSig Mock.C -> Property
 prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_Script :: Ledger.Script Mock.C -> Property
-prop_roundtrip_Script = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
-
 prop_roundtrip_metadata :: Ledger.MetaData -> Property
 prop_roundtrip_metadata = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
@@ -188,7 +184,6 @@ tests =
       testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
       testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState,
       testProperty "roundtrip MultiSig" prop_roundtrip_MultiSig,
-      testProperty "roundtrip Script" prop_roundtrip_Script,
       testProperty "roundtrip MetaData" prop_roundtrip_metadata,
       testProperty "roundtrip Shelley Genesis" prop_roundtrip_ShelleyGenesis
     ]

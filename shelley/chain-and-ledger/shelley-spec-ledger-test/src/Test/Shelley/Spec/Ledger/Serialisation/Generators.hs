@@ -35,9 +35,10 @@ import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Crypto (DSIGN)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
@@ -51,9 +52,9 @@ import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Data.Time.Calendar.OrdinalDate as Time
-import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import Generic.Random (genericArbitraryU)
@@ -111,6 +112,7 @@ import Test.QuickCheck
   )
 import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
+import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( KeySpace (KeySpace_),
     geConstants,
@@ -120,7 +122,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkBlockHeader,
     mkOCert,
   )
-import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
 import qualified Test.Shelley.Spec.Ledger.Generator.Update as Update
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
@@ -143,10 +144,13 @@ mkDummyHash = coerce . hashWithSerialiser @h toCBOR
   necessarily valid
 -------------------------------------------------------------------------------}
 
-type MockGen era = (Mock (Crypto era), Arbitrary (VerKeyDSIGN (DSIGN (Crypto era))))
+type MockGen era =
+  ( Mock (Crypto era),
+    Arbitrary (VerKeyDSIGN (DSIGN (Crypto era)))
+  )
 
 instance
-  (ShelleyTest era, Mock (Crypto era)) =>
+  (ShelleyTest era, Mock (Crypto era), Arbitrary (WitnessSet era)) =>
   Arbitrary (Block era)
   where
   arbitrary = do
@@ -234,8 +238,8 @@ instance (Typeable kr, Era era, Mock (Crypto era)) => Arbitrary (WitVKey kr era)
       <*> arbitrary
 
 instance
-  (Shelley.TxBodyConstraints era, Mock (Crypto era)) =>
-  Arbitrary (WitnessSet era)
+  (Mock c) =>
+  Arbitrary (WitnessSet (ShelleyEra c))
   where
   arbitrary =
     WitnessSet
@@ -305,7 +309,10 @@ instance Arbitrary MD.MetaData where
 maxTxWits :: Int
 maxTxWits = 5
 
-instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (Tx era) where
+instance
+  (ShelleyTest era, Mock (Crypto era), Arbitrary (WitnessSet era)) =>
+  Arbitrary (Tx era)
+  where
   -- Our arbitrary instance constructs things using the pattern in order to have
   -- the correct serialised bytes.
   arbitrary =
@@ -716,25 +723,26 @@ genUTCTime = do
   year <- arbitrary
   dayOfYear <- arbitrary
   diff <- arbitrary
-  pure $ Time.UTCTime
-           (Time.fromOrdinalDate year dayOfYear)
-           (Time.picosecondsToDiffTime diff)
+  pure $
+    Time.UTCTime
+      (Time.fromOrdinalDate year dayOfYear)
+      (Time.picosecondsToDiffTime diff)
 
 instance (ShelleyTest era, Mock (Crypto era)) => Arbitrary (ShelleyGenesis era) where
   arbitrary =
     ShelleyGenesis
       <$> genUTCTime -- sgSystemStart
-      <*> arbitrary  -- sgNetworkMagic
-      <*> arbitrary  -- sgNetworkId
-      <*> arbitrary  -- sgActiveSlotsCoeff
-      <*> arbitrary  -- sgSecurityParam
-      <*> (EpochSize <$> arbitrary)  -- sgEpochLength
-      <*> arbitrary  -- sgSlotsPerKESPeriod
-      <*> arbitrary  -- sgMaxKESEvolutions
-      <*> (fromInteger <$> arbitrary)  -- sgSlotLength
-      <*> arbitrary  -- sgUpdateQuorum
-      <*> arbitrary  -- sgMaxLovelaceSupply
-      <*> genPParams (Proxy @era)  -- sgProtocolParams
-      <*> arbitrary  -- sgGenDelegs
-      <*> arbitrary  -- sgInitialFunds
-      <*> (ShelleyGenesisStaking <$> arbitrary <*> arbitrary)  -- sgStaking
+      <*> arbitrary -- sgNetworkMagic
+      <*> arbitrary -- sgNetworkId
+      <*> arbitrary -- sgActiveSlotsCoeff
+      <*> arbitrary -- sgSecurityParam
+      <*> (EpochSize <$> arbitrary) -- sgEpochLength
+      <*> arbitrary -- sgSlotsPerKESPeriod
+      <*> arbitrary -- sgMaxKESEvolutions
+      <*> (fromInteger <$> arbitrary) -- sgSlotLength
+      <*> arbitrary -- sgUpdateQuorum
+      <*> arbitrary -- sgMaxLovelaceSupply
+      <*> genPParams (Proxy @era) -- sgProtocolParams
+      <*> arbitrary -- sgGenDelegs
+      <*> arbitrary -- sgInitialFunds
+      <*> (ShelleyGenesisStaking <$> arbitrary <*> arbitrary) -- sgStaking

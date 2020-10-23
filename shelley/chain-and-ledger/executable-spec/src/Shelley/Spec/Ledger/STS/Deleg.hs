@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -19,6 +20,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
@@ -130,7 +132,7 @@ instance Typeable era => STS (DELEG era) where
 instance NoThunks (DelegPredicateFailure era)
 
 instance
-  (Typeable era, Era era) =>
+  (Typeable era, Era era, Typeable (Core.Script era)) =>
   ToCBOR (DelegPredicateFailure era)
   where
   toCBOR = \case
@@ -161,7 +163,7 @@ instance
       encodeListLen 2 <> toCBOR (9 :: Word8) <> toCBOR vrf
 
 instance
-  (Era era) =>
+  (Era era, Typeable (Core.Script era)) =>
   FromCBOR (DelegPredicateFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (DELEG era)" $

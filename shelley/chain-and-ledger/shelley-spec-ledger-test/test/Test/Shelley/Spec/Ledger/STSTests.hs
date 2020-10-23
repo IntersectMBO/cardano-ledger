@@ -95,7 +95,6 @@ testAliceSignsAlone =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOnly p, Coin 11000)]
         [aliceOnly p]
         (Wdrl Map.empty)
@@ -111,7 +110,6 @@ testAliceDoesntSign =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOnly p, Coin 11000)]
         [aliceOnly p]
         (Wdrl Map.empty)
@@ -126,7 +124,6 @@ testEverybodySigns =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOnly p, Coin 11000)]
         [aliceOnly p]
         (Wdrl Map.empty)
@@ -146,7 +143,6 @@ testWrongScript =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOnly p, Coin 11000)]
         [aliceOrBob p]
         (Wdrl Map.empty)
@@ -161,7 +157,6 @@ testAliceOrBob =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOrBob p, Coin 11000)]
         [aliceOrBob p]
         (Wdrl Map.empty)
@@ -177,7 +172,6 @@ testAliceOrBob' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOrBob p, Coin 11000)]
         [aliceOrBob p]
         (Wdrl Map.empty)
@@ -193,7 +187,6 @@ testAliceAndBob =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBob p, Coin 11000)]
         [aliceAndBob p]
         (Wdrl Map.empty)
@@ -214,7 +207,6 @@ testAliceAndBob' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBob p, Coin 11000)]
         [aliceAndBob p]
         (Wdrl Map.empty)
@@ -234,7 +226,6 @@ testAliceAndBob'' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBob p, Coin 11000)]
         [aliceAndBob p]
         (Wdrl Map.empty)
@@ -249,7 +240,6 @@ testAliceAndBobOrCarl =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBobOrCarl p, Coin 11000)]
         [aliceAndBobOrCarl p]
         (Wdrl Map.empty)
@@ -265,7 +255,6 @@ testAliceAndBobOrCarl' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBobOrCarl p, Coin 11000)]
         [aliceAndBobOrCarl p]
         (Wdrl Map.empty)
@@ -281,7 +270,6 @@ testAliceAndBobOrCarlAndDaria =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBobOrCarlAndDaria p, Coin 11000)]
         [aliceAndBobOrCarlAndDaria p]
         (Wdrl Map.empty)
@@ -297,7 +285,6 @@ testAliceAndBobOrCarlAndDaria' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBobOrCarlAndDaria p, Coin 11000)]
         [aliceAndBobOrCarlAndDaria p]
         (Wdrl Map.empty)
@@ -313,7 +300,6 @@ testAliceAndBobOrCarlOrDaria =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBobOrCarlOrDaria p, Coin 11000)]
         [aliceAndBobOrCarlOrDaria p]
         (Wdrl Map.empty)
@@ -329,7 +315,6 @@ testAliceAndBobOrCarlOrDaria' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBobOrCarlOrDaria p, Coin 11000)]
         [aliceAndBobOrCarlOrDaria p]
         (Wdrl Map.empty)
@@ -345,7 +330,6 @@ testAliceAndBobOrCarlOrDaria'' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBobOrCarlOrDaria p, Coin 11000)]
         [aliceAndBobOrCarlOrDaria p]
         (Wdrl Map.empty)
@@ -363,7 +347,6 @@ testTwoScripts =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [ (aliceOrBob p, Coin 10000),
           (aliceAndBobOrCarl p, Coin 1000)
         ]
@@ -388,7 +371,6 @@ testTwoScripts' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [ (aliceAndBob p, Coin 10000),
           (aliceAndBobOrCarl p, Coin 1000)
         ]
@@ -409,7 +391,6 @@ testScriptAndSKey =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBob p, Coin 10000)]
         [aliceAndBob p]
         (Wdrl Map.empty)
@@ -430,7 +411,6 @@ testScriptAndSKey' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOrBob p, Coin 10000)]
         [aliceOrBob p]
         (Wdrl Map.empty)
@@ -446,7 +426,6 @@ testScriptAndSKey'' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOrBob p, Coin 10000)]
         [aliceOrBob p]
         (Wdrl Map.empty)
@@ -462,7 +441,6 @@ testScriptAndSKey''' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceAndBobOrCarl p, Coin 10000)]
         [aliceAndBobOrCarl p]
         (Wdrl Map.empty)
@@ -480,7 +458,6 @@ testRwdAliceSignsAlone =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOnly p, Coin 11000)]
         [aliceOnly p]
         ( Wdrl $
@@ -508,7 +485,6 @@ testRwdAliceSignsAlone' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOnly p, Coin 11000)]
         [aliceOnly p, bobOnly p]
         ( Wdrl $
@@ -532,7 +508,6 @@ testRwdAliceSignsAlone'' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOnly p, Coin 11000)]
         [aliceOnly p, bobOnly p]
         ( Wdrl $
@@ -564,7 +539,6 @@ testRwdAliceSignsAlone''' =
     p = Proxy
     utxoSt' =
       applyTxWithScript
-        p
         [(aliceOnly p, Coin 11000)]
         [aliceOnly p]
         ( Wdrl $

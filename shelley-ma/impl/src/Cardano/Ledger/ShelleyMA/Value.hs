@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -42,6 +43,7 @@ import Data.Map.Internal
   )
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -128,7 +130,7 @@ instance Era era => Val (Value era) where
 -- Maybe better to make this distinction in the TxOut de/serialization
 
 instance
-  (Era era) =>
+  (Era era, Typeable (Core.Script era)) =>
   ToCBOR (Value era)
   where
   toCBOR (Value c v) =
@@ -137,7 +139,7 @@ instance
       <> toCBOR v
 
 instance
-  (Era era) =>
+  (Era era, Typeable (Core.Script era)) =>
   FromCBOR (Value era)
   where
   fromCBOR = do

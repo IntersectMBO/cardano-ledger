@@ -77,6 +77,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
+import Shelley.Spec.Ledger.Scripts (hashMultiSigScript)
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     TxBody (..),
@@ -85,12 +86,11 @@ import Shelley.Spec.Ledger.Tx
     WitnessSet,
     WitnessSetHKD (..),
     getKeyCombination,
-    hashScript,
   )
 import Shelley.Spec.Ledger.TxBody
   ( EraIndependentTxBody,
-    eraIndTxBodyHash,
     Wdrl (..),
+    eraIndTxBodyHash,
   )
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
@@ -188,8 +188,7 @@ genTx ::
   forall era.
   ( HasCallStack,
     ShelleyTest era,
-    Mock (Crypto era),
-    Core.TxBody era ~ TxBody era
+    Mock (Crypto era)
   ) =>
   GenEnv era ->
   LedgerEnv era ->
@@ -347,7 +346,7 @@ genNextDelta
         -- based on the current contents of delta, how much will the fee increase when we add the delta to the tx?
         draftSize =
           ( sum
-              [ 5::Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
+              [ 5 :: Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
                 encodedLen (max dfees (Coin 0)) - 1,
                 foldr (\a b -> b + encodedLen a) 0 extraInputs,
                 encodedLen change,
@@ -455,7 +454,13 @@ applyDelta
             }
         kw = neededKeys <> extraKeys
         sw = neededScripts <> mkScriptWits extraScripts mempty
-        newWitnessSet = mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys kw sw (eraIndTxBodyHash body')
+        newWitnessSet =
+          mkTxWits
+            ksIndexedPaymentKeys
+            ksIndexedStakingKeys
+            kw
+            sw
+            (eraIndTxBodyHash body')
      in tx {_body = body', _witnessSet = newWitnessSet}
 
 fix :: (Eq d, Monad m) => (d -> m d) -> d -> m d
@@ -482,10 +487,10 @@ converge initialfee neededKeys neededScripts keys scripts utxo pparams keySpace 
 -- | Return up to /k/ random elements from /items/
 -- (instead of the less efficient /take k <$> QC.shuffle items/)
 ruffle :: Int -> [a] -> Gen [a]
-ruffle k items = do 
+ruffle k items = do
   indices <- nub <$> QC.vectorOf k pickIndex
   pure $ map (items !!) indices
-  where 
+  where
     pickIndex = QC.choose (0, length items - 1)
 
 genTimeToLive :: SlotNo -> Gen SlotNo
@@ -505,12 +510,18 @@ mkScriptWits payScripts stakeScripts =
       ++ (hashStakeScript <$> stakeScripts)
   where
     hashPayScript :: (MultiSig era, MultiSig era) -> (ScriptHash era, MultiSig era)
-    hashPayScript (payScript, _) = ((hashScript payScript) :: ScriptHash era, payScript)
+    hashPayScript (payScript, _) =
+      ((hashMultiSigScript payScript) :: ScriptHash era, payScript)
     hashStakeScript :: (MultiSig era, MultiSig era) -> (ScriptHash era, MultiSig era)
-    hashStakeScript (_, sScript) = ((hashScript sScript) :: ScriptHash era, sScript)
+    hashStakeScript (_, sScript) =
+      ((hashMultiSigScript sScript) :: ScriptHash era, sScript)
 
 mkTxWits ::
-  (Era era, Mock (Crypto era)) =>
+  ( Era era,
+    Mock (Crypto era),
+    Core.AnnotatedData (Core.Script era),
+    Core.Script era ~ MultiSig era
+  ) =>
   Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->
   Map (KeyHash 'Staking (Crypto era)) (KeyPair 'Staking (Crypto era)) ->
   [KeyPair 'Witness (Crypto era)] ->
@@ -532,7 +543,7 @@ mkTxWits
                   `Map.union` indexedStakingKeysAsWitnesses
               )
               msigSignatures,
-        msigWits = msigs,
+        scriptWits = msigs,
         bootWits = mempty
       }
     where

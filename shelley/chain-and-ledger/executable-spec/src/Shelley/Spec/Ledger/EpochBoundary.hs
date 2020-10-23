@@ -11,6 +11,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- |
 -- Module      : EpochBoundary
@@ -74,7 +75,15 @@ deriving instance (Era era) => FromCBOR (BlocksMade era)
 newtype Stake era = Stake
   { unStake :: (Map (Credential 'Staking era) Coin)
   }
-  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoThunks, NFData)
+  deriving (Show, Eq, Ord, NoThunks, NFData)
+
+deriving newtype instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  ToCBOR (Stake era)
+
+deriving newtype instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  FromCBOR (Stake era)
 
 -- A TxOut has 4 different shapes, depending on the shape its embedded of Addr.
 -- Credentials are stored in only 2 of the 4 cases.
@@ -152,7 +161,7 @@ instance NoThunks (SnapShot era)
 instance NFData (SnapShot era)
 
 instance
-  Era era =>
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
   ToCBOR (SnapShot era)
   where
   toCBOR
@@ -168,7 +177,7 @@ instance
         <> toCBOR p
 
 instance
-  Era era =>
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
   FromCBOR (SnapShot era)
   where
   fromCBOR = do
@@ -192,7 +201,7 @@ instance NoThunks (SnapShots era)
 instance NFData (SnapShots era)
 
 instance
-  Era era =>
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
   ToCBOR (SnapShots era)
   where
   toCBOR (SnapShots mark set go fs) =
@@ -203,7 +212,7 @@ instance
       <> toCBOR fs
 
 instance
-  Era era =>
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
   FromCBOR (SnapShots era)
   where
   fromCBOR = do

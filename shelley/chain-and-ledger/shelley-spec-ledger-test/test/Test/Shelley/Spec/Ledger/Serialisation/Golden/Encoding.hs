@@ -194,6 +194,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
+import Cardano.Ledger.Shelley (ShelleyEra)
 
 roundTrip ::
   (Show a, Eq a) =>
@@ -389,10 +390,9 @@ testScript :: forall era. Era era => MultiSig era
 testScript = RequireSignature $ asWitness (testKeyHash1 @(Crypto era))
 
 testScriptHash ::
-  forall era.
-  Shelley.TxBodyConstraints era =>
-  ScriptHash era
-testScriptHash = hashScript $ testScript @era
+  forall c. CC.Crypto c =>
+  ScriptHash (ShelleyEra c)
+testScriptHash = hashScript $ testScript @(ShelleyEra c)
 
 testScript2 :: forall era. Era era => MultiSig era
 testScript2 = RequireSignature $ asWitness (testKeyHash2 @(Crypto era))
@@ -570,7 +570,7 @@ tests =
             ),
       -- checkEncodingCBOR "withdrawal_script"
       --
-      let r = RewardAcnt Testnet (ScriptHashObj (testScriptHash @C))
+      let r = RewardAcnt Testnet (ScriptHashObj (testScriptHash @C_Crypto))
        in checkEncodingCBOR
             "withdrawal"
             (Map.singleton r (Coin 123))
@@ -1033,7 +1033,7 @@ tests =
           txbh = eraIndTxBodyHash txb
           w = makeWitnessVKey txbh testKey1
           s = Map.singleton (hashScript $ testScript @C) (testScript @C)
-          wits = mempty {addrWits = Set.singleton w, msigWits = s}
+          wits = mempty {addrWits = Set.singleton w, scriptWits = s}
           md = MD.MetaData $ Map.singleton 17 (MD.I 42)
        in checkEncodingCBORAnnotated
             "tx_full"
@@ -1178,10 +1178,10 @@ tests =
           tx1 = Tx @C txb1 mempty {addrWits = Set.singleton w1} SNothing
           tx2 = Tx @C txb2 mempty {addrWits = ws} SNothing
           tx3 =
-            Tx
+            Tx @C
               txb3
               mempty
-                { msigWits =
+                { scriptWits =
                     Map.singleton (hashScript (testScript @C)) (testScript @C)
                 }
               SNothing
@@ -1190,9 +1190,9 @@ tests =
               [ (hashScript (testScript @C), testScript @C),
                 (hashScript (testScript2 @C), testScript2 @C)
               ]
-          tx4 = Tx txb4 mempty {msigWits = ss} SNothing
+          tx4 = Tx txb4 mempty {scriptWits = ss} SNothing
           tx5MD = MD.MetaData $ Map.singleton 17 (MD.I 42)
-          tx5 = Tx txb5 mempty {addrWits = ws, msigWits = ss} (SJust tx5MD)
+          tx5 = Tx txb5 mempty {addrWits = ws, scriptWits = ss} (SJust tx5MD)
           txns = TxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated
             "rich_block"

@@ -144,7 +144,7 @@ import Shelley.Spec.Ledger.Serialization
     runByteBuilder,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (Tx (..), decodeWits, segwitTx, txWitsBytes)
+import Shelley.Spec.Ledger.Tx (Tx (..), ValidateScript, decodeWits, segwitTx, txWitsBytes)
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- | The hash of a Block Header
@@ -561,7 +561,7 @@ instance
   toCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
 
 blockDecoder ::
-  ShelleyBased era =>
+  (ShelleyBased era, ValidateScript era) =>
   Bool ->
   forall s. Decoder s (Annotator (Block era))
 blockDecoder lax = annotatorSlice $
@@ -571,7 +571,7 @@ blockDecoder lax = annotatorSlice $
     pure $ Block' <$> header <*> txns
 
 txSeqDecoder ::
-  ShelleyBased era =>
+  (ShelleyBased era, ValidateScript era) =>
   Bool ->
   forall s. Decoder s (Annotator (TxSeq era))
 txSeqDecoder lax = do
@@ -608,7 +608,7 @@ txSeqDecoder lax = do
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 instance
-  ShelleyBased era =>
+  (ShelleyBased era, ValidateScript era) =>
   FromCBOR (Annotator (Block era))
   where
   fromCBOR = blockDecoder False
@@ -622,7 +622,7 @@ deriving stock instance
   Show (LaxBlock era)
 
 instance
-  ShelleyBased era =>
+  (ShelleyBased era, ValidateScript era) =>
   FromCBOR (Annotator (LaxBlock era))
   where
   fromCBOR = fmap LaxBlock <$> blockDecoder True

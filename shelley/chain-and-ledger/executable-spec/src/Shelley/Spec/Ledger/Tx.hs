@@ -39,13 +39,11 @@ module Shelley.Spec.Ledger.Tx
       ( WitnessSet,
         addrWits,
         bootWits,
-        msigWits,
+        scriptWits,
         txWitsBytes
       ),
     WitVKey (..),
-    MultiSignatureScript,
-    validateScript,
-    hashScript,
+    ValidateScript (..),
     txwitsScript,
     extractKeyHashWitnessSet,
     getKeyCombinations,
@@ -72,8 +70,9 @@ import Cardano.Binary
     withSlice,
   )
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import qualified Cardano.Ledger.Shelley as Shelley
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
@@ -121,14 +120,18 @@ type family HKD f a where
 
 data WitnessSetHKD f era = WitnessSet'
   { addrWits' :: !(HKD f (Set (WitVKey 'Witness era))),
-    msigWits' :: !(HKD f (Map (ScriptHash era) (MultiSig era))),
+    scriptWits' :: !(HKD f (Map (ScriptHash era) (Core.Script era))),
     bootWits' :: !(HKD f (Set (BootstrapWitness era))),
     txWitsBytes :: BSL.ByteString
   }
 
-deriving instance Era era => Show (WitnessSetHKD Identity era)
+deriving instance
+  (Era era, Core.ChainData (Core.Script era)) =>
+  Show (WitnessSetHKD Identity era)
 
-deriving instance Era era => Eq (WitnessSetHKD Identity era)
+deriving instance
+  (Era era, Core.ChainData (Core.Script era)) =>
+  Eq (WitnessSetHKD Identity era)
 
 deriving instance Era era => Generic (WitnessSetHKD Identity era)
 
@@ -138,43 +141,50 @@ deriving via
      ]
     (WitnessSetHKD Identity era)
   instance
-    Era era => (NoThunks (WitnessSetHKD Identity era))
+    (Era era, Core.ChainData (Core.Script era)) =>
+    (NoThunks (WitnessSetHKD Identity era))
 
 type WitnessSet = WitnessSetHKD Identity
 
 instance Era era => ToCBOR (WitnessSetHKD Identity era) where
   toCBOR = encodePreEncoded . BSL.toStrict . txWitsBytes
 
-instance Era era => Semigroup (WitnessSetHKD Identity era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  Semigroup (WitnessSetHKD Identity era)
+  where
   (WitnessSet a b c) <> (WitnessSet a' b' c') =
     WitnessSet (a <> a') (b <> b') (c <> c')
 
-instance Era era => Monoid (WitnessSetHKD Identity era) where
+instance
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  Monoid (WitnessSetHKD Identity era)
+  where
   mempty = WitnessSet mempty mempty mempty
 
 pattern WitnessSet ::
-  Era era =>
+  (Era era, Core.AnnotatedData (Core.Script era)) =>
   Set (WitVKey 'Witness era) ->
-  Map (ScriptHash era) (MultiSig era) ->
+  Map (ScriptHash era) (Core.Script era) ->
   Set (BootstrapWitness era) ->
   WitnessSet era
-pattern WitnessSet {addrWits, msigWits, bootWits} <-
-  WitnessSet' addrWits msigWits bootWits _
+pattern WitnessSet {addrWits, scriptWits, bootWits} <-
+  WitnessSet' addrWits scriptWits bootWits _
   where
-    WitnessSet awits witnessMSigMap bootstrapWits =
+    WitnessSet awits scriptWitMap bootstrapWits =
       let encodeMapElement ix enc x =
             if null x then Nothing else Just (encodeWord ix <> enc x)
           l =
             catMaybes $
               [ encodeMapElement 0 encodeFoldable awits,
-                encodeMapElement 1 encodeFoldable witnessMSigMap,
+                encodeMapElement 1 encodeFoldable scriptWitMap,
                 encodeMapElement 2 encodeFoldable bootstrapWits
               ]
           n = fromIntegral $ length l
           witsBytes = serializeEncoding $ encodeMapLen n <> fold l
        in WitnessSet'
             { addrWits' = awits,
-              msigWits' = witnessMSigMap,
+              scriptWits' = scriptWitMap,
               bootWits' = bootstrapWits,
               txWitsBytes = witsBytes
             }
@@ -266,7 +276,10 @@ segwitTx
 
 decodeWits ::
   forall era s.
-  (Shelley.TxBodyConstraints era) =>
+  ( Shelley.TxBodyConstraints era,
+    Core.AnnotatedData (Core.Script era),
+    ValidateScript era
+  ) =>
   Decoder s (Annotator (WitnessSet era))
 decodeWits = do
   (mapParts, annBytes) <-
@@ -278,7 +291,7 @@ decodeWits = do
               pure (\ws -> ws {addrWits' = Set.fromList <$> sequence x})
           1 ->
             decodeList fromCBOR >>= \x ->
-              pure (\ws -> ws {msigWits' = keyBy hashScript <$> sequence x})
+              pure (\ws -> ws {scriptWits' = keyBy hashScript <$> sequence x})
           2 ->
             decodeList fromCBOR >>= \x ->
               pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
@@ -288,14 +301,14 @@ decodeWits = do
       emptyWitnessSetHKD =
         WitnessSet'
           { addrWits' = pure mempty,
-            msigWits' = pure mempty,
+            scriptWits' = pure mempty,
             bootWits' = pure mempty,
             txWitsBytes = mempty
           }
   pure $
     WitnessSet'
       <$> addrWits' witSet
-      <*> msigWits' witSet
+      <*> scriptWits' witSet
       <*> bootWits' witSet
       <*> annBytes
 
@@ -309,7 +322,7 @@ instance
   toCBOR tx = encodePreEncoded . BSL.toStrict $ txFullBytes tx
 
 instance
-  ShelleyBased era =>
+  (ShelleyBased era, ValidateScript era) =>
   FromCBOR (Annotator (Tx era))
   where
   fromCBOR = annotatorSlice $
@@ -329,17 +342,14 @@ instance
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
 class
-  (Era era, ToCBOR a) =>
-  MultiSignatureScript a era
+  (Era era, ToCBOR (Core.Script era)) =>
+  ValidateScript era
   where
-  validateScript :: a -> Tx era -> Bool
-  hashScript :: a -> ScriptHash era
+  validateScript :: Core.Script era -> Tx era -> Bool
+  hashScript :: Core.Script era -> ScriptHash era
 
 -- | instance of MultiSignatureScript type class
-instance
-  (Era era, Shelley.TxBodyConstraints era) =>
-  MultiSignatureScript (MultiSig era) era
-  where
+instance CryptoClass.Crypto c => ValidateScript (ShelleyEra c) where
   validateScript = validateNativeMultiSigScript
   hashScript = hashMultiSigScript
 
@@ -374,8 +384,8 @@ validateNativeMultiSigScript msig tx =
 txwitsScript ::
   (Shelley.TxBodyConstraints era) =>
   Tx era ->
-  Map (ScriptHash era) (MultiSig era)
-txwitsScript = msigWits . _witnessSet
+  Map (ScriptHash era) (Core.Script era)
+txwitsScript = scriptWits' . _witnessSet
 
 extractKeyHashWitnessSet ::
   forall (r :: KeyRole) era.

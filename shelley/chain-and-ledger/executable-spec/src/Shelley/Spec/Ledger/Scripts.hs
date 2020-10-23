@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -10,6 +11,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.Scripts
   ( MultiSig
@@ -18,11 +20,9 @@ module Shelley.Spec.Ledger.Scripts
         RequireSignature,
         RequireMOf
       ),
-    Script,
     ScriptHash (..),
     getKeyCombination,
     getKeyCombinations,
-    hashAnyScript,
     hashMultiSigScript,
   )
 where
@@ -34,8 +34,10 @@ import Cardano.Binary
     serialize',
   )
 import qualified Cardano.Crypto.Hash as Hash
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import qualified Data.ByteString as BS
@@ -46,6 +48,7 @@ import Data.MemoBytes
     MemoBytes (..),
     memoBytes,
   )
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
@@ -126,19 +129,23 @@ pattern RequireMOf n ms <-
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
 newtype ScriptHash era
-  = ScriptHash (Hash.Hash (ADDRHASH (Crypto era)) (Script era))
+  = ScriptHash (Hash.Hash (ADDRHASH (Crypto era)) (Core.Script era))
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoThunks)
 
-deriving newtype instance Era era => ToCBOR (ScriptHash era)
+deriving newtype instance
+  (Era era, Typeable (Core.Script era)) =>
+  ToCBOR (ScriptHash era)
 
-deriving newtype instance Era era => FromCBOR (ScriptHash era)
+deriving newtype instance
+  (Era era, Typeable (Core.Script era)) =>
+  FromCBOR (ScriptHash era)
 
-deriving newtype instance Era era => ToJSON (ScriptHash era)
+deriving newtype instance (Era era) => ToJSON (ScriptHash era)
 
 deriving newtype instance Era era => FromJSON (ScriptHash era)
 
-type Script era = MultiSig era
+type instance Core.Script (ShelleyEra c) = MultiSig (ShelleyEra c)
 
 -- | Hashes native multi-signature script.
 hashMultiSigScript ::
@@ -149,12 +156,6 @@ hashMultiSigScript =
   ScriptHash
     . Hash.castHash
     . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
-
-hashAnyScript ::
-  Era era =>
-  Script era ->
-  ScriptHash era
-hashAnyScript msig = hashMultiSigScript msig
 
 -- | Get one possible combination of keys for multi signature script
 getKeyCombination :: Era era => MultiSig era -> [KeyHash 'Witness (Crypto era)]

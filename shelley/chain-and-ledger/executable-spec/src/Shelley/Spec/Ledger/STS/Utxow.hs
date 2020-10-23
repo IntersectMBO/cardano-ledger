@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -52,6 +53,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
@@ -87,10 +89,16 @@ import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData, validMetaData)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, decodeSet, encodeFoldable)
+import Shelley.Spec.Ledger.Serialization
+  ( decodeList,
+    decodeRecordSum,
+    decodeSet,
+    encodeFoldable,
+  )
 import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
+    ValidateScript,
     hashScript,
     txwitsScript,
     validateScript,
@@ -144,6 +152,7 @@ deriving stock instance
 instance
   ( Era era,
     ShelleyBased era,
+    ValidateScript era,
     Embed (UTXO era) (UTXOW era),
     Environment (UTXOW era) ~ UtxoEnv era,
     State (UTXOW era) ~ UTxOState era,
@@ -170,7 +179,7 @@ instance
   initialRules = [initialLedgerStateUTXOW]
 
 instance
-  (Era era, ToCBOR (PredicateFailure (UTXO era))) =>
+  (Era era, Typeable (Core.Script era), ToCBOR (PredicateFailure (UTXO era))) =>
   ToCBOR (UtxowPredicateFailure era)
   where
   toCBOR = \case
@@ -178,12 +187,18 @@ instance
       encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable wits
     MissingVKeyWitnessesUTXOW (WitHashes missing) ->
       encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable missing
-    MissingScriptWitnessesUTXOW ss -> encodeListLen 2 <> toCBOR (2 :: Word8) <> encodeFoldable ss
-    ScriptWitnessNotValidatingUTXOW ss -> encodeListLen 2 <> toCBOR (3 :: Word8) <> encodeFoldable ss
+    MissingScriptWitnessesUTXOW ss ->
+      encodeListLen 2 <> toCBOR (2 :: Word8)
+        <> encodeFoldable ss
+    ScriptWitnessNotValidatingUTXOW ss ->
+      encodeListLen 2 <> toCBOR (3 :: Word8)
+        <> encodeFoldable ss
     (UtxoFailure a) ->
       encodeListLen 2 <> toCBOR (4 :: Word8)
         <> toCBOR a
-    MIRInsufficientGenesisSigsUTXOW sigs -> encodeListLen 2 <> toCBOR (5 :: Word8) <> encodeFoldable sigs
+    MIRInsufficientGenesisSigsUTXOW sigs ->
+      encodeListLen 2 <> toCBOR (5 :: Word8)
+        <> encodeFoldable sigs
     MissingTxBodyMetaDataHash h ->
       encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR h
     MissingTxMetaData h ->
@@ -194,7 +209,10 @@ instance
       encodeListLen 1 <> toCBOR (9 :: Word8)
 
 instance
-  (Era era, FromCBOR (PredicateFailure (UTXO era))) =>
+  ( Era era,
+    FromCBOR (PredicateFailure (UTXO era)),
+    Typeable (Core.Script era)
+  ) =>
   FromCBOR (UtxowPredicateFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (UTXOW era)" $
@@ -244,6 +262,7 @@ initialLedgerStateUTXOW = do
 utxoWitnessed ::
   forall era.
   ( ShelleyBased era,
+    ValidateScript era,
     Embed (UTXO era) (UTXOW era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Environment (UTXO era) ~ UtxoEnv era,
@@ -262,10 +281,13 @@ utxoWitnessed =
       let utxo = _utxo u
       let witsKeyHashes = witsFromWitnessSet wits
 
-      -- check multi-signature scripts
+      -- check scripts
       let failedScripts =
             filter
-              (\(hs, validator) -> hashScript validator /= hs || not (validateScript validator tx))
+              ( \(hs, validator) ->
+                  hashScript validator /= hs
+                    || not (validateScript validator tx)
+              )
               (Map.toList $ txwitsScript tx)
       case failedScripts of
         [] -> pure ()
@@ -273,7 +295,9 @@ utxoWitnessed =
 
       let sNeeded = scriptsNeeded utxo tx
           sReceived = Map.keysSet (txwitsScript tx)
-      sNeeded == sReceived ?! MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
+      sNeeded == sReceived
+        ?! MissingScriptWitnessesUTXOW
+          (sNeeded `Set.difference` sReceived)
 
       -- check VKey witnesses
       verifiedWits tx ?!: InvalidWitnessesUTXOW
@@ -289,14 +313,19 @@ utxoWitnessed =
       case (getField @"mdHash" txbody, md) of
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failBecause $ MissingTxMetaData mdh
-        (SNothing, SJust md') -> failBecause $ MissingTxBodyMetaDataHash (hashMetaData md')
+        (SNothing, SJust md') ->
+          failBecause $
+            MissingTxBodyMetaDataHash (hashMetaData md')
         (SJust mdh, SJust md') -> do
           hashMetaData md' == mdh ?! ConflictingMetaDataHash mdh (hashMetaData md')
           -- check metadata value sizes
           when (SoftForks.validMetaData pp) $ validMetaData md' ?! InvalidMetaData
 
       -- check genesis keys signatures for instantaneous rewards certificates
-      let genDelegates = Set.fromList $ fmap (asWitness . genDelegKeyHash) $ Map.elems genMapping
+      let genDelegates =
+            Set.fromList $
+              fmap (asWitness . genDelegKeyHash) $
+                Map.elems genMapping
           (WitHashes khAsSet) = witsKeyHashes
           genSig = eval (genDelegates ∩ khAsSet)
           mirCerts =
