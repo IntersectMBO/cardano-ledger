@@ -54,25 +54,30 @@
 In Figure~\ref{fig:functions:to-ma}, we give the functions that will be used
 to transition from a Shelley chain state into a chain state that provides multi-asset support.
 The only part of the state that is affected by the transition is the UTxO. For ease of
-reading, we use different notation here to define the UTxO update, and specify
-explicitly only the change to the UTxO, implying that every other part of the
-state is unaffected.
+reading, we keep the function $\fun{updateChainStateUTxO}$ abstract, which simply transforms the
+UTxO that is nested deeply inside the chain state with the provided function.
 
 %%
 %% Figure - Shelley to MA Transition
 %%
 \begin{figure}[htb]
+  %
+  \emph{Abstract function}
+  %
+  \begin{align*}
+      & \fun{updateChainStateUTxO} \in (\ShelleyUTxO \to \UTxO) \to \ShelleyChainState \to \ChainState \\
+      & \text{update the UTxO in a Shelley chain state}
+  \end{align*}
+  %
+  \emph{Chain state update}
+  %
   \begin{align*}
       & \fun{mkUTxO} ~\in~ \ShelleyUTxO  \to \UTxO  \\
       & \fun{mkUTxO}~\var{utxo} ~=~ \{~ \var{txin} \mapsto (a,\fun{coinToValue}~c) ~\vert~
-      \var{txin} \mapsto \var{(a,c)}\in ~\var{utxo}~\} \\
-      & \text{make UTxO with MA}
+      \var{txin} \mapsto \var{(a,c)}\in ~\var{utxo}~\}
       \nextdef
       & \fun{toMA} \in ~ \ShelleyChainState \to \ChainState \\
-      & \fun{toMA}~cs = cs' \\
-      & \where \\
-      & ~~~~ cs'_{utxo} = \fun{mkUTxO}~\var{utxo} \\
-      & \text{transform Shelley chain state to a MA-supporting state}
+      & \fun{toMA}~cs = \fun{updateChainStateUTxO}~\fun{mkUTxO}
   \end{align*}
   \caption{Shelley to Multi-Asset Chain State Transtition}
   \label{fig:functions:to-ma}
