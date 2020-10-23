@@ -21,6 +21,7 @@ module Shelley.Spec.Ledger.STS.Chain
     PredicateFailure,
     initialShelleyState,
     totalAda,
+    totalAdaES,
     totalAdaPots,
     ChainChecksData (..),
     pparamsToChainChecksData,
@@ -419,12 +420,12 @@ data AdaPots = AdaPots
   }
   deriving (Show, Eq)
 
--- | Calculate the total ada pots in the chain state
-totalAdaPots ::
+-- | Calculate the total ada pots in the epoch state
+totalAdaPotsES ::
   ShelleyBased era =>
-  ChainState era ->
+  EpochState era ->
   AdaPots
-totalAdaPots (ChainState nes _ _ _ _ _ _) =
+totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
   AdaPots
     { treasuryAdaPot = treasury_,
       reservesAdaPot = reserves_,
@@ -434,15 +435,21 @@ totalAdaPots (ChainState nes _ _ _ _ _ _) =
       feesAdaPot = fees_
     }
   where
-    (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) = nesEs nes
     (UTxOState u deposits fees_ _) = _utxoState ls
     (DPState ds _) = _delegationState ls
     rewards_ = fold (Map.elems (_rewards ds))
     circulation = Val.coin $ balance u
 
--- | Calculate the total ada in the chain state
-totalAda :: ShelleyBased era => ChainState era -> Coin
-totalAda cs =
+-- | Calculate the total ada pots in the chain state
+totalAdaPots ::
+  ShelleyBased era =>
+  ChainState era ->
+  AdaPots
+totalAdaPots = totalAdaPotsES . nesEs . chainNes
+
+-- | Calculate the total ada in the epoch state
+totalAdaES :: ShelleyBased era => EpochState era -> Coin
+totalAdaES cs =
   treasuryAdaPot
     <> reservesAdaPot
     <> rewardsAdaPot
@@ -457,4 +464,8 @@ totalAda cs =
         utxoAdaPot,
         depositsAdaPot,
         feesAdaPot
-      } = totalAdaPots cs
+      } = totalAdaPotsES cs
+
+-- | Calculate the total ada in the chain state
+totalAda :: ShelleyBased era => ChainState era -> Coin
+totalAda = totalAdaES . nesEs . chainNes

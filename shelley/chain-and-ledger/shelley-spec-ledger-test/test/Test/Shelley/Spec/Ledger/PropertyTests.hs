@@ -30,6 +30,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.StakeRef
   ( propDeserializeAddrStakeReference,
     propDeserializeAddrStakeReferenceShort,
   )
+import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
 
@@ -96,5 +97,6 @@ propertyTests gv =
             "Only valid CHAIN STS signals are generated"
             (onlyValidChainSignalsAreGenerated gv)
         ],
-      testGroupByronTranslation
+      testGroupByronTranslation,
+      testGroupShelleyTranslation
     ]

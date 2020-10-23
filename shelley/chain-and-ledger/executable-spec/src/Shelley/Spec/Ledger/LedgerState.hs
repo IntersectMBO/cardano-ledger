@@ -88,6 +88,9 @@ module Shelley.Spec.Ledger.LedgerState
     getGKeys,
     updateNES,
     circulation,
+
+    -- * Remove Bootstrap Redeem Addresses
+    returnRedeemAddrsToReserves,
   )
 where
 
@@ -122,7 +125,7 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Quiet
-import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash)
+import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash, isBootstrapRedeemer)
 import Shelley.Spec.Ledger.Address.Bootstrap
   ( BootstrapWitness (..),
     bootstrapWitKeyHash,
@@ -1130,3 +1133,18 @@ updateNES
   bcur
   ls =
     NewEpochState eL bprev bcur (EpochState acnt ss ls pr pp nm) ru pd
+
+returnRedeemAddrsToReserves ::
+  ShelleyBased era =>
+  EpochState era ->
+  EpochState era
+returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
+  where
+    ls = esLState es
+    us = _utxoState ls
+    UTxO utxo = _utxo us
+    (redeemers, nonredeemers) = Map.partition (\(TxOut a _) -> isBootstrapRedeemer a) utxo
+    acnt = esAccountState es
+    acnt' = acnt {_reserves = (_reserves acnt) <+> (Val.coin . balance $ UTxO redeemers)}
+    us' = us {_utxo = UTxO nonredeemers}
+    ls' = ls {_utxoState = us'}
