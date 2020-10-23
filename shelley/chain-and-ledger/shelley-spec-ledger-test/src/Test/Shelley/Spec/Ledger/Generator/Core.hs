@@ -59,9 +59,11 @@ import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
 import qualified Cardano.Ledger.Shelley as Shelley
-import Control.SetAlgebra (eval, (∪), (⋪))
-import Control.Monad (replicateM, liftM2)
+import Cardano.Ledger.Val ((<+>), (<->))
+import qualified Cardano.Ledger.Val as Val
+import Control.Monad (liftM2, replicateM)
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (eval, (∪), (⋪))
 import Data.Coerce (coerce)
 import Data.List (foldl')
 import qualified Data.List as List ((\\))
@@ -102,8 +104,6 @@ import Shelley.Spec.Ledger.BlockChain
     pattern Block,
     pattern BlockHash,
   )
-import qualified Cardano.Ledger.Val as Val
-import Cardano.Ledger.Val ((<+>), (<->))
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -154,8 +154,9 @@ import Shelley.Spec.Ledger.PParams
     ProtVer (..),
   )
 import Shelley.Spec.Ledger.Scripts
-  (hashMultiSigScript,  MultiSig,
+  ( MultiSig,
     ScriptHash,
+    hashMultiSigScript,
     pattern RequireAllOf,
     pattern RequireAnyOf,
     pattern RequireMOf,
@@ -487,7 +488,13 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- Note: we need to keep the initial utxo coin sizes large enough so that
 -- when we simulate sequences of transactions, we have enough funds available
 -- to include certificates that require deposits.
-genTxOut :: forall era. (ShelleyTest era) => QC.Gen (Core.Value era) -> Constants -> [Addr era] -> Gen [TxOut era]
+genTxOut ::
+  forall era.
+  (ShelleyTest era) =>
+  QC.Gen (Core.Value era) ->
+  Constants ->
+  [Addr era] ->
+  Gen [TxOut era]
 genTxOut gv Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
   let ln = length addrs
   p <- max <$> QC.choose (0, ln) <*> QC.choose (0, ln)
@@ -500,7 +507,13 @@ genTxOut gv Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
 -- and with values between 'minCoin' and 'maxCoin'.
 -- NOTE we pass here a Value generator gv that is piped in from where
 -- it can be defined in the necessary context (see Tests.hs)
-genValList :: (ShelleyTest era) => QC.Gen (Core.Value era) -> Integer -> Integer -> Int -> Gen [Core.Value era]
+genValList ::
+  (ShelleyTest era) =>
+  QC.Gen (Core.Value era) ->
+  Integer ->
+  Integer ->
+  Int ->
+  Gen [Core.Value era]
 genValList gv minCoin maxCoin len = do
   let addWOCoin c v = c <+> (v <-> (Val.inject $ Val.coin v))
   replicateM len $ liftM2 addWOCoin (Val.inject <$> genCoin minCoin maxCoin) gv

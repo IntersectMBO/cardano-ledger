@@ -41,6 +41,16 @@ shrinkTx ::
 shrinkTx (Tx _b _ws _md) =
   [Tx b' _ws _md | b' <- shrinkTxBody _b]
 
+-- NOTE ====
+--
+-- This is a shrinker for the Shelley TxBody, but has code in it to deal with
+-- Values, which will only ever exist in the ShelleyMA TxBody (which is
+-- different, and will have its own shrinker).
+--
+-- This is fine for now, but a better resolution would be: when we have a
+-- shrinker for the ShelleyMA TxBody, let's use this logic to allow shrinking
+-- the values, and revert this function to its prior incarnation, fixed to Coin
+-- ======
 shrinkTxBody ::
   forall era.
   ShelleyTest era =>
