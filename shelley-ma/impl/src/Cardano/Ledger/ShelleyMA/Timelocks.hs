@@ -22,7 +22,7 @@
 
 module Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (Interval, Multi, TimelockAnd, TimelockOr),
-    ininterval,
+    inInterval,
     hashTimelockScript,
     showTimelock,
     validateTimelock,
@@ -185,11 +185,12 @@ pattern TimelockOr ms <-
 -- =========================================================
 -- Operations on Timelock scripts
 
-ininterval :: SlotNo -> (StrictMaybe SlotNo, StrictMaybe SlotNo) -> Bool
-ininterval _slot (SNothing, SNothing) = True
-ininterval slot (SNothing, SJust i_f) = slot <= i_f
-ininterval slot (SJust i_s, SNothing) = i_s <= slot
-ininterval slot (SJust i_s, SJust i_f) = i_s <= slot && slot <= i_f
+inInterval :: SlotNo -> ValidityInterval -> Bool
+inInterval _slot (ValidityInterval SNothing SNothing) = True
+inInterval slot (ValidityInterval SNothing (SJust i_f)) = slot <= i_f
+inInterval slot (ValidityInterval (SJust i_s) SNothing) = i_s <= slot
+inInterval slot (ValidityInterval (SJust i_s) (SJust i_f)) =
+  i_s <= slot && slot <= i_f
 
 -- =======================================================
 -- Validating timelock scripts
