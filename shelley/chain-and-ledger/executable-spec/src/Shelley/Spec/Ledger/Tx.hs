@@ -92,7 +92,7 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
+import Shelley.Spec.Ledger.Hashing (EraIndependentTx, HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.Scripts
@@ -244,7 +244,8 @@ pattern Tx {_body, _witnessSet, _metadata} <-
 
 {-# COMPLETE Tx #-}
 
-instance ShelleyBased era => HashAnnotated (Tx era) era
+instance ShelleyBased era => HashAnnotated (Tx era) era where
+  type HashIndex (Tx era) = EraIndependentTx
 
 segwitTx ::
   (Shelley.TxBodyConstraints era) =>

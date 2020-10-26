@@ -30,7 +30,6 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH, KES)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased)
@@ -56,6 +55,7 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
+import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization
@@ -66,7 +66,7 @@ import Shelley.Spec.Ledger.Serialization
     utcTimeToCBOR,
   )
 import Shelley.Spec.Ledger.StabilityWindow
-import Shelley.Spec.Ledger.TxBody
+import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxId (..), TxIn (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO
 
 -- | Genesis Shelley staking configuration.
@@ -315,7 +315,7 @@ initialFundsPseudoTxIn addr =
       TxId
         . ( Crypto.castHash ::
               Crypto.Hash (HASH (Crypto era)) (Addr era) ->
-              Crypto.Hash (HASH (Crypto era)) (Core.TxBody era)
+              Crypto.Hash (HASH (Crypto era)) EraIndependentTxBody
           )
         . Crypto.hashWith serialiseAddr
 

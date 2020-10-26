@@ -13,6 +13,9 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 -- | MemoBytes is an abstration for a datetype that encodes its own seriialization.
 --   The idea is to use a newtype around a MemoBytes non-memoizing version.
@@ -27,6 +30,8 @@ module Data.Coders
     Wrapped (..),
     encode,
     decode,
+    runE,            -- Used in testing
+    decodeClosed,    -- Used in testing
     decodeList,
     decodeSeq,
     decodeStrictSeq,
@@ -35,8 +40,6 @@ module Data.Coders
     encodeSeq,
     encodeStrictSeq,
     encodeSet,
-    runE,               -- for testing
-    decodeClosed,       -- for testing
     decodeRecordNamed,
     decodeRecordSum,
     invalidKey,
@@ -45,6 +48,7 @@ module Data.Coders
     decodeCollectionWithLen,
     decodeCollection,
     encodeFoldableEncoder,
+    roundTrip,
   )
 where
 
@@ -52,6 +56,9 @@ import Cardano.Prelude (cborError)
 import Control.Monad (replicateM,unless)
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
+import Codec.CBOR.Read(DeserialiseFailure,deserialiseFromBytes)
+import Codec.CBOR.Write (toLazyByteString)
+import qualified Data.ByteString.Lazy as Lazy
 import Cardano.Binary
   ( FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
@@ -74,16 +81,7 @@ import Data.Sequence (Seq)
 import Data.Set (Set)
 import Data.Text (Text)
 import Data.Foldable (foldl')
-
-
-{-
-import Shelley.Spec.Ledger.Serialization
-  (
-    encodeFoldable,
-  )
--}
-
-
+import Prelude hiding (span)
 
 decodeRecordNamed :: Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder = do
@@ -372,3 +370,6 @@ encodeSet = encodeFoldable
 -- ===========================================
 -- For a worked out EXAMPLE see the testfile:
 -- cardano-ledger-specs/shelley/chain-and-ledger/shelley-spec-ledger-test/test/Test/Shelley/Spec/Ledger/MemoBytes.hs
+
+roundTrip :: (ToCBOR t,FromCBOR t) => t -> Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, t)
+roundTrip s = deserialiseFromBytes fromCBOR (toLazyByteString (toCBOR s))

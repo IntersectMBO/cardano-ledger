@@ -12,7 +12,7 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era
 import Cardano.Ledger.Val (Val)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Hashing (HashAnnotated)
+import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (..))
 
 --------------------------------------------------------------------------------
 -- Shelley Era
@@ -28,7 +28,8 @@ type instance Value (ShelleyEra c) = Coin
 type TxBodyConstraints era =
   ( ChainData (TxBody era),
     AnnotatedData (TxBody era),
-    HashAnnotated (TxBody era) era
+    HashAnnotated (TxBody era) era,
+    HashIndex (TxBody era) ~ EraIndependentTxBody
   )
 
 type ShelleyBased era =

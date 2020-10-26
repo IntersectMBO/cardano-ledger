@@ -87,11 +87,8 @@ import Shelley.Spec.Ledger.Tx
     WitnessSetHKD (..),
     getKeyCombination,
   )
-import Shelley.Spec.Ledger.TxBody
-  ( EraIndependentTxBody,
-    Wdrl (..),
-    eraIndTxBodyHash,
-  )
+import Shelley.Spec.Ledger.TxBody( Wdrl (..) )
+import Shelley.Spec.Ledger.Hashing(EraIndependentTxBody,HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
@@ -221,7 +218,7 @@ genTx
           scripts = mkScriptWits spendScripts (certScripts ++ wdrlScripts)
           mkTxWits' =
             mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys wits scripts
-              . eraIndTxBodyHash
+              . hashAnnotated
       -------------------------------------------------------------------------
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
       -- and a Outputs builder that distributes the given balance over addresses.
@@ -365,7 +362,7 @@ genNextDelta
                         ksIndexedStakingKeys
                         vkeyPairs
                         (mkScriptWits msigPairs mempty)
-                        (eraIndTxBodyHash $ _body tx)
+                        (hashAnnotated $ _body tx)
                 pure $
                   delta
                     { extraWitnesses = extraWitnesses <> newWits,
@@ -434,7 +431,7 @@ applyDelta
             ksIndexedStakingKeys
             kw
             sw
-            (eraIndTxBodyHash body')
+            (hashAnnotated body')
      in tx {_body = body', _witnessSet = newWitnessSet}
 
 fix :: (Eq d, Monad m) => (d -> m d) -> d -> m d

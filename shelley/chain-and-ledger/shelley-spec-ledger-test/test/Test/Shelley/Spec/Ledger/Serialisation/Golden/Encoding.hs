@@ -156,9 +156,9 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), hashScript)
+import Shelley.Spec.Ledger.Hashing(EraIndependentTxBody,HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.TxBody
-  ( EraIndependentTxBody,
-    MIRPot (..),
+  ( MIRPot (..),
     PoolMetaData (..),
     StakePoolRelay (..),
     TxBody (..),
@@ -167,7 +167,6 @@ import Shelley.Spec.Ledger.TxBody
     TxOut (..),
     Wdrl (..),
     WitVKey (..),
-    eraIndTxBodyHash,
     _poolCost,
     _poolMD,
     _poolMDHash,
@@ -302,7 +301,7 @@ testTxbHash ::
   forall era.
   ShelleyTest era =>
   Hash (Crypto era) EraIndependentTxBody
-testTxbHash = eraIndTxBodyHash $ testTxb @era
+testTxbHash = hashAnnotated $ testTxb @era
 
 testKey1 :: CC.Crypto crypto => KeyPair 'Payment crypto
 testKey1 = KeyPair vk sk
@@ -1006,7 +1005,7 @@ tests =
               (SlotNo 500)
               SNothing
               SNothing
-          txbh = eraIndTxBodyHash txb
+          txbh = hashAnnotated txb
           w = makeWitnessVKey txbh testKey1
        in checkEncodingCBORAnnotated
             "tx_min"
@@ -1030,7 +1029,7 @@ tests =
               (SlotNo 500)
               SNothing
               SNothing
-          txbh = eraIndTxBodyHash txb
+          txbh = hashAnnotated txb
           w = makeWitnessVKey txbh testKey1
           s = Map.singleton (hashScript $ testScript @C) (testScript @C)
           wits = mempty {addrWits = Set.singleton w, scriptWits = s}
@@ -1172,8 +1171,8 @@ tests =
           txb3 = txb 502
           txb4 = txb 503
           txb5 = txb 504
-          w1 = makeWitnessVKey (eraIndTxBodyHash txb1) testKey1
-          w2 = makeWitnessVKey (eraIndTxBodyHash txb1) (testKey2 :: KeyPair 'Payment C_Crypto)
+          w1 = makeWitnessVKey (hashAnnotated txb1) testKey1
+          w2 = makeWitnessVKey (hashAnnotated txb1) (testKey2 :: KeyPair 'Payment C_Crypto)
           ws = Set.fromList [w1, w2]
           tx1 = Tx @C txb1 mempty {addrWits = Set.singleton w1} SNothing
           tx2 = Tx @C txb2 mempty {addrWits = ws} SNothing

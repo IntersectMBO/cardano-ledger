@@ -47,7 +47,6 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (ADDRHASH, DSIGN)
 import Cardano.Ledger.Era
 import Cardano.Prelude (panic)
@@ -60,6 +59,7 @@ import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Quiet
+import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),
@@ -69,10 +69,6 @@ import Shelley.Spec.Ledger.Keys
   )
 import qualified Shelley.Spec.Ledger.Keys as Keys
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
-import Shelley.Spec.Ledger.TxBody
-  ( EraIndependentTxBody,
-    TxBody,
-  )
 
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Eq, Generic)
@@ -84,7 +80,7 @@ data BootstrapWitness era = BootstrapWitness'
     bwSig' ::
       !( Keys.SignedDSIGN
            (Crypto era)
-           (Hash (Crypto era) (Core.TxBody era))
+           (Hash (Crypto era) EraIndependentTxBody)
        ),
     bwChainCode' :: !ChainCode,
     bwAttributes' :: !ByteString,
@@ -104,7 +100,7 @@ deriving via
 pattern BootstrapWitness ::
   Era era =>
   (VKey 'Witness (Crypto era)) ->
-  (Keys.SignedDSIGN (Crypto era) (Hash (Crypto era) (Core.TxBody era))) ->
+  (Keys.SignedDSIGN (Crypto era) (Hash (Crypto era) EraIndependentTxBody)) ->
   ChainCode ->
   ByteString ->
   BootstrapWitness era
@@ -215,7 +211,7 @@ makeBootstrapWitness ::
   ( DSIGN (Crypto era) ~ DSIGN.Ed25519DSIGN,
     Era era
   ) =>
-  Hash (Crypto era) (TxBody era) ->
+  Hash (Crypto era) EraIndependentTxBody ->
   Byron.SigningKey ->
   Byron.Attributes Byron.AddrAttributes ->
   BootstrapWitness era

@@ -59,8 +59,8 @@ import Shelley.Spec.Ledger.TxBody
     TxIn (..),
     TxOut (..),
     Wdrl (..),
-    eraIndTxBodyHash,
   )
+import Shelley.Spec.Ledger.Hashing(HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
@@ -165,7 +165,7 @@ txEx1 wits pot =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (eraIndTxBodyHash $ txbodyEx1 @era pot)
+            (hashAnnotated $ txbodyEx1 @era pot)
             ([asWitness Cast.alicePay] <> wits)
       }
     SNothing

@@ -12,6 +12,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | MemoBytes is an abstration for a datetype that encodes its own serialization.
 --   The idea is to use a newtype around a MemoBytes non-memoizing version.
@@ -25,7 +28,7 @@ module Data.MemoBytes
     shorten,
     showMemo,
     printMemo,
-
+    roundTripMemo,
   )
 where
 import Cardano.Binary
@@ -37,18 +40,19 @@ import Cardano.Binary
   )
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import qualified Data.ByteString.Lazy as Lazy
-import Data.ByteString.Lazy (toStrict)
+import Data.ByteString.Lazy (toStrict,fromStrict)
 import Data.Typeable
 import Data.Coders(runE, Encode, encode,)
 import Codec.CBOR.Write (toLazyByteString)
 import GHC.Generics (Generic)
-import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import NoThunks.Class (NoThunks (..),AllowThunksIn(..))
 import Prelude hiding (span)
+import Codec.CBOR.Read(DeserialiseFailure,deserialiseFromBytes)
 
 -- ========================================================================
 
-data MemoBytes t = Memo {memotype :: !t, memobytes :: {-# UNPACK #-} !ShortByteString}
-  deriving (NoThunks) via AllowThunksIn '["memobytes"] (MemoBytes t)
+data MemoBytes t = Memo {memotype :: !t, memobytes :: ShortByteString}
+   deriving (NoThunks) via AllowThunksIn '["memobytes"] (MemoBytes t)
 
 deriving instance Generic (MemoBytes t)
 
@@ -82,3 +86,10 @@ printMemo x = putStrLn (showMemo x)
 
 memoBytes :: Encode w t -> MemoBytes t
 memoBytes t = Memo (runE t) (shorten (toLazyByteString (encode t)))
+
+
+roundTripMemo:: (FromCBOR t) => MemoBytes t -> Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, MemoBytes t)
+roundTripMemo (Memo _t bytes) =
+             case deserialiseFromBytes fromCBOR (fromStrict (fromShort bytes)) of
+                Left err -> Left err
+                Right(leftover, newt) -> Right(leftover,Memo newt bytes)

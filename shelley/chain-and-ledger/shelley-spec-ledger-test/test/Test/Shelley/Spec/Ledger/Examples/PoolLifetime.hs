@@ -82,8 +82,8 @@ import Shelley.Spec.Ledger.TxBody
     TxIn (..),
     TxOut (..),
     Wdrl (..),
-    eraIndTxBodyHash,
   )
+import Shelley.Spec.Ledger.Hashing(HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
@@ -190,7 +190,7 @@ txEx1 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (eraIndTxBodyHash $ txbodyEx1 @era)
+            (hashAnnotated $ txbodyEx1 @era)
             ( (asWitness <$> [Cast.alicePay, Cast.carlPay])
                 <> (asWitness <$> [Cast.aliceStake])
                 <> [asWitness $ cold Cast.alicePoolKeys]
@@ -287,7 +287,7 @@ txEx2 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (eraIndTxBodyHash $ txbodyEx2 @era)
+            (hashAnnotated $ txbodyEx2 @era)
             [ asWitness Cast.alicePay,
               asWitness Cast.aliceStake,
               asWitness Cast.bobStake
@@ -419,7 +419,7 @@ txEx4 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (eraIndTxBodyHash $ txbodyEx4 @era)
+            (hashAnnotated $ txbodyEx4 @era)
             [asWitness Cast.alicePay, asWitness Cast.carlStake]
       }
     SNothing
@@ -793,7 +793,7 @@ txEx10 =
     txbodyEx10
     mempty
       { addrWits =
-          makeWitnessesVKey (eraIndTxBodyHash $ txbodyEx10 @era) [asWitness Cast.bobPay, asWitness Cast.bobStake]
+          makeWitnessesVKey (hashAnnotated $ txbodyEx10 @era) [asWitness Cast.bobPay, asWitness Cast.bobStake]
       }
     SNothing
 
@@ -859,7 +859,7 @@ txEx11 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (eraIndTxBodyHash $ txbodyEx11 @era)
+            (hashAnnotated $ txbodyEx11 @era)
             ( [asWitness Cast.alicePay]
                 <> [asWitness $ cold Cast.alicePoolKeys]
             )

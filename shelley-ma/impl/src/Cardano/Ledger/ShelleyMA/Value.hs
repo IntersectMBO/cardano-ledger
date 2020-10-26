@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -151,6 +152,8 @@ instance
 
 -- ========================================================================
 -- Compactible
+-- This is used in the TxOut which stores the (CompactForm Value). For now that is just Value
+-- We may revisit this, and make it some kind serialized bytes.
 
 instance Compactible (Value era) where
   -- TODO a proper compact form
