@@ -179,8 +179,8 @@ deserialiseRewardAcnt bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs)
 
 -- | An address for UTxO.
 data Addr era
-  = Addr !Network !(PaymentCredential era) !(StakeReference era)
-  | AddrBootstrap !(BootstrapAddress era)
+  = Addr Network (PaymentCredential era) (StakeReference era)
+  | AddrBootstrap (BootstrapAddress era)
   deriving (Show, Eq, Generic, NFData, Ord)
 
 getNetwork :: Addr era -> Network

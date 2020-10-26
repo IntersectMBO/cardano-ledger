@@ -17,6 +17,8 @@
 module Test.Shelley.Spec.Ledger.Serialisation.Generators
   ( genPParams,
     mkDummyHash,
+    genShelleyAddress,
+    genByronAddress,
   )
 where
 
@@ -463,11 +465,13 @@ instance Arbitrary EpochNo where
   arbitrary = EpochNo <$> choose (1, 100000)
 
 instance (Era era, Mock (Crypto era)) => Arbitrary (Addr era) where
-  arbitrary =
-    oneof
-      [ Addr <$> arbitrary <*> arbitrary <*> arbitrary,
-        AddrBootstrap <$> genBootstrapAddress
-      ]
+  arbitrary = oneof [genShelleyAddress, genByronAddress]
+
+genShelleyAddress :: (Era era, Mock (Crypto era)) => Gen (Addr era)
+genShelleyAddress = Addr <$> arbitrary <*> arbitrary <*> arbitrary
+
+genByronAddress :: Gen (Addr era)
+genByronAddress = AddrBootstrap <$> genBootstrapAddress
 
 instance (Era era, Mock (Crypto era)) => Arbitrary (StakeReference era) where
   arbitrary = genericArbitraryU

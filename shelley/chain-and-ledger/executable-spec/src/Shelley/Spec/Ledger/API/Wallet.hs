@@ -22,7 +22,6 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyBased)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (SlotNo)
-import qualified Data.ByteString.Short as BSS
 import Data.Foldable (fold)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
@@ -32,10 +31,11 @@ import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
-import Shelley.Spec.Ledger.Address (Addr (..), serialiseAddr)
+import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.CompactAddr (compactAddr)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
@@ -192,7 +192,7 @@ getFilteredUTxO ss addrs =
     UTxO fullUTxO = getUTxO ss
     -- Instead of decompacting each address in the huge UTxO, compact each
     -- address in the small set of address.
-    addrSBSs = Set.map (BSS.toShort . serialiseAddr) addrs
+    addrSBSs = Set.map compactAddr addrs
 
 -- | Get the (private) leader schedule for this epoch.
 --

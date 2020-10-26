@@ -44,7 +44,6 @@ module Shelley.Spec.Ledger.UTxO
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased)
@@ -265,7 +264,7 @@ balance ::
   Core.Value era
 balance (UTxO utxo) = Map.foldl' addTxOuts mempty utxo
   where
-    addTxOuts !b (TxOutCompact _ (fromCompact -> a)) = a <+> b
+    addTxOuts !b (TxOut _ a) = a <+> b
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates

@@ -11,14 +11,13 @@ import Cardano.Ledger.Era (Era (Crypto))
 import qualified Cardano.Ledger.Val as Val
 import Control.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
 import Control.Iterate.SetAlgebra (compile, compute, run)
-import qualified Data.ByteString.Short as SBS
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Sequence as Seq
 import Shelley.Spec.Ledger.Address
   ( Addr (..),
-    serialiseAddr,
   )
+import Shelley.Spec.Ledger.CompactAddr (compactAddr)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -58,7 +57,7 @@ genTestCase numUTxO numAddr = do
       let addr = Seq.index packedAddrs i
       pure $
         TxOutCompact
-          (SBS.toShort $ serialiseAddr addr)
+          (compactAddr addr)
           (toCompact $ Val.inject (Coin $ fromIntegral i))
   let mktxid i = TxId $ mkDummyHash i
   let mktxin i = TxIn (mktxid i) (fromIntegral i)

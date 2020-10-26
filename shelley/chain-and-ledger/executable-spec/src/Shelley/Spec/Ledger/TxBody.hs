@@ -70,7 +70,6 @@ import Cardano.Binary
   ( Annotator (..),
     Case (..),
     Decoder,
-    DecoderError (..),
     FromCBOR (fromCBOR),
     Size,
     ToCBOR (..),
@@ -90,8 +89,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Cardano.Prelude
-  ( cborError,
-    decodeEitherBase16,
+  ( decodeEitherBase16,
     panic,
   )
 import Control.DeepSeq (NFData (rnf))
@@ -105,7 +103,6 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Short as BSS
 import Data.Coerce (coerce)
 import Data.Foldable (asum, fold)
 import Data.IP (IPv4, IPv6)
@@ -131,8 +128,6 @@ import Quiet
 import Shelley.Spec.Ledger.Address
   ( Addr (..),
     RewardAcnt (..),
-    deserialiseAddr,
-    serialiseAddr,
   )
 import Shelley.Spec.Ledger.BaseTypes
   ( DnsName,
@@ -145,13 +140,17 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.CompactAddr
+  ( CompactAddr,
+    compactAddr,
+    decompactAddr,
+  )
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ix,
     Ptr (..),
     StakeCredential,
   )
-import Shelley.Spec.Ledger.DeserializeShort (deserializeShortAddr)
 import Shelley.Spec.Ledger.Hashing
 import Shelley.Spec.Ledger.Keys
   ( Hash,
@@ -449,7 +448,7 @@ instance NoThunks (TxIn era)
 -- | The output of a UTxO.
 data TxOut era
   = TxOutCompact
-      {-# UNPACK #-} !BSS.ShortByteString
+      {-# UNPACK #-} !(CompactAddr era)
       !(CompactForm (Core.Value era))
 
 instance
@@ -477,8 +476,7 @@ pattern TxOut addr vl <-
   (viewCompactTxOut -> (addr, vl))
   where
     TxOut addr vl =
-      -- TODO check this
-      TxOutCompact (BSS.toShort $ serialiseAddr addr) (toCompact vl)
+      TxOutCompact (compactAddr addr) (toCompact vl)
 
 {-# COMPLETE TxOut #-}
 
@@ -489,18 +487,8 @@ viewCompactTxOut ::
   (Addr era, Core.Value era)
 viewCompactTxOut (TxOutCompact bs c) = (addr, val)
   where
-    addr = case decompactAddr bs of
-      Nothing -> panic "viewCompactTxOut: impossible"
-      Just a -> a
+    addr = decompactAddr bs
     val = fromCompact c
-
-decompactAddr :: Era era => BSS.ShortByteString -> Maybe (Addr era)
-decompactAddr bs =
-  -- Try to deserialize a Shelley style Addr directly from ShortByteString
-  case deserializeShortAddr bs of
-    Just a -> Just a
-    -- It is a Byron Address, try the more expensive route.
-    Nothing -> deserialiseAddr (BSS.fromShort bs)
 
 data DelegCert era
   = -- | A stake key registration certificate.
@@ -895,14 +883,9 @@ instance-- use the weakest constraint necessary
   FromCBOR (TxOut era)
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
-    bs <- fromCBOR
+    cAddr <- fromCBOR
     coin <- fromCBOR
-    -- Check that the address is valid by decompacting it instead of decoding
-    -- it as an address, as that would require compacting (re-encoding) it
-    -- afterwards.
-    case decompactAddr bs of
-      Just (_ :: Addr era) -> pure $ TxOutCompact bs coin
-      Nothing -> cborError $ DecoderErrorCustom "TxOut" "invalid address"
+    pure $ TxOutCompact cAddr coin
 
 instance
   (Typeable kr, Era era) =>

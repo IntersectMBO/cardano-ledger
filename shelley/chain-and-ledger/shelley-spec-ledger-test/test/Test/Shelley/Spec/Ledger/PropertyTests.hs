@@ -11,6 +11,12 @@ import Data.Proxy
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
+import Test.Shelley.Spec.Ledger.Address.CompactAddr
+  ( propCompactAddrRoundTrip,
+    propCompactSerializationAgree,
+    propDecompactAddrLazy,
+    propDecompactShelleyLazyAddr,
+  )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.LegacyOverlay (legacyOverlayTest)
@@ -25,10 +31,6 @@ import Test.Shelley.Spec.Ledger.Rules.TestChain
     delegProperties,
     poolProperties,
     removedAfterPoolreap,
-  )
-import Test.Shelley.Spec.Ledger.Serialisation.StakeRef
-  ( propDeserializeAddrStakeReference,
-    propDeserializeAddrStakeReferenceShort,
   )
 import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
 import Test.Tasty (TestTree, testGroup)
@@ -46,9 +48,11 @@ minimalPropertyTests gv =
       TQC.testProperty "Only valid CHAIN STS signals are generated" (onlyValidChainSignalsAreGenerated gv),
       bootstrapHashTest,
       testGroup
-        "Deserialize stake address reference"
-        [ TQC.testProperty "wstake reference from bytestrings" (propDeserializeAddrStakeReference @C),
-          TQC.testProperty "stake reference from short bytestring" (propDeserializeAddrStakeReferenceShort @C)
+        "Compact Address Tests"
+        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @C),
+          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @C),
+          TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @C),
+          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @C)
         ],
       TQC.testProperty "legacy overlay schedule" (legacyOverlayTest proxyC)
     ]
