@@ -54,19 +54,6 @@ import Codec.CBOR.Read(DeserialiseFailure,deserialiseFromBytes)
 data MemoBytes t = Memo {memotype :: !t, memobytes :: ShortByteString}
    deriving (NoThunks) via AllowThunksIn '["memobytes"] (MemoBytes t)
 
-{-
-deriving via AllowThunksIn '["memobytes"] (MemoBytes t)
-         instance (Typeable t, NoThunks t)  => NoThunks(MemoBytes t)
-
-data MemoBytes t = Memo { memotype :: {-# UNPACK #-} !t, memobytes:: ShortByteString }
-  deriving (NoThunks) via AllowThunksIn '["memobytes"] (MemoBytes t)
-
-
-instance NoThunks t => NoThunks(MemoBytes t) where
-  wNoThunks ctxt (Memo x _) = noThunks ("Memo":ctxt) x
-  -- We deliberately allow thunks in the bytes
--}
-
 deriving instance Generic (MemoBytes t)
 
 instance (Typeable t) => ToCBOR (MemoBytes t) where
@@ -82,11 +69,6 @@ instance Eq t => Eq (MemoBytes t) where (Memo x _) == (Memo y _) = x == y
 instance Show t => Show (MemoBytes t) where show (Memo y _) = show y
 
 instance Ord t => Ord (MemoBytes t) where compare (Memo x _) (Memo y _) = compare x y
-
-{-
-instance HasField tag t c => HasField (tag::Symbol) (MemoBytes t) c where
-   getField (Memo x _) = getField @tag x
--}
 
 shorten :: Lazy.ByteString -> ShortByteString
 shorten x = toShort (toStrict x)
