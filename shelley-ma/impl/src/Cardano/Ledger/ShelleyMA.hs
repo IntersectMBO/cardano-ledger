@@ -7,7 +7,7 @@ module Cardano.Ledger.ShelleyMA where
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto
 import Cardano.Ledger.Era
-import Cardano.Ledger.ShelleyMA.Value (Value)
+import Cardano.Ledger.Mary.Value (Value)
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.Coin (Coin)

@@ -8,7 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.ShelleyMA.Value
+module Cardano.Ledger.Mary.Value
   ( PolicyID (..),
     AssetID (..),
     Value (..),

@@ -19,10 +19,10 @@ import Cardano.Ledger.Core (Script, TxBody, Value)
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Mary.Value ()
+import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
-import qualified Cardano.Ledger.ShelleyMA.Value ()
-import qualified Cardano.Ledger.ShelleyMA.Value as ConcreteValue
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.ByteString.Short (ShortByteString)
