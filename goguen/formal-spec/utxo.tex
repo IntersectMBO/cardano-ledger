@@ -395,10 +395,7 @@ in the following order:
   and applies the state changes that are computed by the UTXOS transition.
   \\
   \textbf{(UTXOS):} & Performs the appropriate UTxO state changes, based on the
-  value of the $\IsValidating$ tag, which it checks using the SVAL transition.
-  \\
-  \textbf{(SVAL):} & Runs the scripts, verifying that the $\IsValidating$ tag
-  is applied correctly.
+  value of the $\IsValidating$ tag, which it checks using the $\fun{evalScripts}$ function.
 \end{tabular}
 
 In general, there is no way to check that the budget that has been supplied is sufficient for the transaction,
@@ -409,101 +406,12 @@ between a script running out of $\ExUnits$ during validation, or not validating.
 If a transaction contains an invalid script, the only change to the ledger
 as a result of applying this transaction is the fees.
 
-Two-phase validation requires a new transition system
-(see Figure \ref{fig:ts-types:utxos}) to sequentially run
-scripts and to track spent execution units as part of its state
-($\var{remExU}$). The signal here is a sequence of pairs of a validator
-script and the corresponding input data.
-
-Note that there is one state variable in the SVAL transition system. The reason
-for this is that in the second, script-running validation phase, we separate
-the UTxO state update from sequentially running scripts. This transition
-system is strictly for running the scripts, and a transition of this type
-will be used by another rule to perform the correct UTxO update.
-
 Running scripts sequentially
 to verify that they all validate in the allotted $\ExUnits$ budget only requires
 the amount of remaining $\ExUnits$ to be included in the state, and nothing else.
 In the environment, we need the protocol parameters and the
 transaction being validated. All other data needed
 to run the scripts comes from the signal.
-
-\begin{figure}[htb]
-  \emph{Validation environment}
-  \begin{equation*}
-    \ValEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{tx} & \GoguenTx & \text{transaction being processed} \\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Validation state}
-  \begin{equation*}
-    \ValState =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{remExU} & \ExUnits & \text{exunits remaining to spend on validation} \\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Script transitions}
-  \begin{equation*}
-    \_ \vdash
-    \var{\_} \trans{sval}{\_} \var{\_}
-    \subseteq \powerset (\ValEnv \times \ValState \times \seqof{(\ScriptPlutus\times\seqof{\Data}\times\CostMod)} \times \ValState)
-  \end{equation*}
-  %
-  \caption{UTxO script validation types}
-  \label{fig:ts-types:utxos}
-\end{figure}
-
-The rules for the second-phase script validation SVAL are given in
-Figure~\ref{fig:rules:utxo-scrval}. Again, no UTxO state update
-is done in this rule. Its purpose is to verify that the
-validation tag ($\fun{txvaltag}$) is applied correctly by the creater of
-the block. It does this by running all the scripts.
-
-Note that following the Shelley ledger specification approach, every function
-that we define and use in the preconditions or calculations that are used in the ledger rules is
-necessarily total.
-In this way, all the errors (validation failures) that we encounter always come from
-rule applications, i.e. a precondition of a rule is not met.
-We mention this here because the SVAL rule looks as if it could be
-simply a function. However, we want the incorrect application of the
-validation tag to be an error, so this must be an error that comes form
-an unmet precondition of a rule.
-
-There are three transition rules.
-The first rule, $\mathsf{Scripts\mbox{-}Val}$, applies when:
-
-\begin{enumerate}
-\item There
-are no scripts left to validate in the signal list (i.e. this is the base case of
-induction when all the scripts have validated) -- note that there could be $\ExUnits$ left over; and
-\item The validation tag is applied correctly (it is $\True$).
-\end{enumerate}
-
-The $\mathsf{Scripts\mbox{-}Stop}$ rule applies when:
-
-\begin{enumerate}
-  \item The current script-input pair  does not validate;
-  (either because the transaction ran out of $\ExUnits$ or for any other reason); and
-  \item The validation tag is correct ($\False$ in this case).
-\end{enumerate}
-
-These first two rules require no state change.
-The $\mathsf{Scripts\mbox{-}Ind}$ rule applies when:
-
-\begin{enumerate}
-  \item The current script being validated has been validated;
-  \item There is a non-negative fee which remains to pay for validating
-  the rest of the scripts in the list; and
-  \item Transition rules apply for the rest of the list (without the current script).
-\end{enumerate}
 
 The only state change in this rule is of the variable $\var{remExU}$.
 It is decreased by subtracting the cost of the execution of the
@@ -542,116 +450,16 @@ ensuring deterministic script validation outcomes: inconsistent rounding, for ex
 result in different validation outcomes running the same script on the same
 arguments.
 
-
 \begin{figure}[htb]
-  \begin{equation}
-    \inference[Scripts-Val]
-    {
-    \fun{txvaltag}~\var{tx} = \True  &
-    \var{remExU}~\geq~0
-    }
-    {
-    \begin{array}{l}
-      \var{pp}\\
-      \var{tx}\\
-    \end{array}
-      \vdash
-      \left(
-      \begin{array}{r}
-        \var{remExU}\\
-      \end{array}
-      \right)
-      \trans{sval}{\epsilon}
-      \left(
-      \begin{array}{r}
-        \var{remExU}\\
-      \end{array}
-      \right) \\
-    }
-  \end{equation}
-  \begin{equation}
-    \inference[Scripts-Stop]
-    { \\~\\
-    (\var{isVal},\var{remExU'})~:=~ \llbracket sc \rrbracket_
-    {cm,\var{remExU}} dt \\
-    (sc, dt, cm) := s
-    \\
-    ~
-    \\
-    \fun{txvaltag}~\var{tx} = \False &
-    (\var{remExU'}~<~0 ~ \lor ~ \var{isVal} = \False)
-    }
-    {
-    \begin{array}{l}
-      \var{pp}\\
-      \var{tx}\\
-    \end{array}
-      \vdash
-      \left(
-      \begin{array}{r}
-        \var{remExU}\\
-      \end{array}
-      \right)
-      \trans{sval}{\Gamma;s}
-      \left(
-      \begin{array}{r}
-        \var{remExU}\\
-      \end{array}
-      \right)
-    }
-  \end{equation}
-  \begin{equation}
-    \inference[Scripts-Ind]
-    {
-    {
-    \begin{array}{l}
-      \var{pp}\\
-      \var{tx}\\
-    \end{array}
-    }
-      \vdash
-      \left(
-      {
-      \begin{array}{r}
-        \var{remExU}\\
-      \end{array}
-      }
-      \right)
-      \trans{sval}{\Gamma}
-      \left(
-      {
-      \begin{array}{r}
-        \var{remExU'}\\
-      \end{array}
-      }
-      \right) \\
-    (\var{isVal},\var{remExU''})~:=~ \llbracket sc \rrbracket
-    _{cm,\var{remExU'}} dt \\
-    (sc, dt, cm) := s & \var{remExU''}~\geq~0
-    }
-    {
-    \begin{array}{l}
-      \var{pp}\\
-      \var{tx}\\
-    \end{array}
-      \vdash
-      \left(
-      \begin{array}{r}
-        \var{remExU}\\
-      \end{array}
-      \right)
-      \trans{sval}{\Gamma;s}
-      \left(
-      \begin{array}{r}
-        \varUpdate{remExU''}\\
-      \end{array}
-      \right)
-    }
-  \end{equation}
-  \caption{Script validation rules}
-  \label{fig:rules:utxo-scrval}
+  \begin{align*}
+    & \fun{evalScripts} \in \seqof{(\ScriptPurpose \times \Script \times \seqof{Data})} \to \ExUnits \to \Bool \\
+    & \fun{evalScripts}~\epsilon~\var{remExU}~=~\True \\
+    & \fun{evalScripts}~((\var{it}, \var{script}, \var{d});\Gamma)~\var{remExU}~=~
+      \var{isVal} \land \fun{evalScripts}~\Gamma~\var{remExU'} \\
+    & ~~\where \\
+    & ~~~~ (\var{isVal},\var{remExU'})~:=~ \llbracket sc \rrbracket_{cm,\var{remExU}} d
+  \end{align*}
 \end{figure}
-
 
 \subsection{Updating the UTxO State}
 \label{sec:utxo-state-trans}
@@ -706,24 +514,12 @@ In this case, the states of the UTxO, fee
     \inference[Scripts-Yes]
     {
     \var{txb}\leteq\txbody{tx} &
-    \fun{txvaltag}~\var{tx} = \True
+    \var{sLst} := \fun{mkPLCLst}~\var{pp}~\var{tx}~\var{utxo}
     \\
     ~
     \\
-    \var{sLst} := \fun{mkPLCLst}~\var{pp}~\var{tx}~\var{utxo}
+    \fun{txvaltag}~\var{tx} = \fun{evalScripts}~\var{sLst}~(\fun{txexunits}~{tx}) = \True
     \\~\\
-    {
-      \left(
-        \begin{array}{r}
-          \var{pp} \\
-          \var{tx} \\
-        \end{array}
-      \right)
-    }
-      \vdash
-        \var{\fun{txexunits}~{tx}}
-      \trans{sval}{sLst}\var{remExU}
-      \\~\\
     {
       \left(
         \begin{array}{r}
@@ -772,23 +568,11 @@ In this case, the states of the UTxO, fee
     \inference[Scripts-No]
     {
     \var{txb}\leteq\txbody{tx} &
-    \fun{txvaltag}~\var{tx} = \False
+    \var{sLst} := \fun{mkPLCLst}~\var{pp}~\var{tx}~\var{utxo}
     \\
     ~
     \\
-    \var{sLst} := \fun{mkPLCLst}~\var{pp}~\var{tx}~\var{utxo}
-    \\~\\
-    {
-      \left(
-        \begin{array}{r}
-          \var{pp} \\
-          \var{tx} \\
-        \end{array}
-      \right)
-    }
-      \vdash
-        \var{\fun{txexunits}~{tx}}
-      \trans{sval}{sLst}\var{remExU}
+    \fun{txvaltag}~\var{tx} = \fun{evalScripts}~\var{sLst}~(\fun{txexunits}~{tx}) = \False
     }
     {
     \begin{array}{l}
