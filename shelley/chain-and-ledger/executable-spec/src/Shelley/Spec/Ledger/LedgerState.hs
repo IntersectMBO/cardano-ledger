@@ -89,6 +89,9 @@ module Shelley.Spec.Ledger.LedgerState
     updateNES,
     circulation,
 
+    -- * Decay
+    decayFactor,
+
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
   )
@@ -186,8 +189,9 @@ import Shelley.Spec.Ledger.PParams
     emptyPParams,
   )
 import Shelley.Spec.Ledger.Rewards
-  ( Likelihood,
+  ( Likelihood (..),
     NonMyopic (..),
+    applyDecay,
     emptyNonMyopic,
     reward,
   )
@@ -1038,6 +1042,9 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
         }
     nm' = nonMyopic ru
 
+decayFactor :: Float
+decayFactor = 0.9
+
 updateNonMypopic ::
   NonMyopic era ->
   Coin ->
@@ -1050,7 +1057,11 @@ updateNonMypopic nm rPot newLikelihoods =
     }
   where
     history = likelihoodsNM nm
-    performance kh newPerf = fromMaybe mempty (Map.lookup kh history) <> newPerf
+    performance kh newPerf =
+      fromMaybe
+        mempty
+        (applyDecay decayFactor <$> Map.lookup kh history)
+        <> newPerf
     updatedLikelihoods = Map.mapWithKey performance newLikelihoods
 
 -- | Create a reward update
