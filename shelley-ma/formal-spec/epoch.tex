@@ -57,7 +57,7 @@ calculation function to add up only the Ada in the UTxO
       & \where \\
       & ~~~~ (~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard,~\wcard)
         = \var{dstate} \\
-      & ~~~~ (~\var{poolParams}~\wcard,~\wcard) = \var{pstate} \\
+      & ~~~~ (~\var{poolParams},~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
         \left(\fun{stakeCred_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
         \circ\left(\hldiff{\fun{utxoAda}}~{\var{utxo}}\right)

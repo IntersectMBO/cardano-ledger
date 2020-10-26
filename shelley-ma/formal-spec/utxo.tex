@@ -119,7 +119,7 @@ of this rule as compared to the original Shelley UTXO rule:
   \item The transaction is not forging any Ada.
 
   \item The $\Value$ of each output is constrained from below by a
-    $\Value$ that contains the product of $\var{minUTxOValue}$ and the
+    $\Value$ that contains the product of $\var{adaPerUTxOByte}$ and the
     estimated size of the output as Ada, and zero otherwise. Note that
     this implies that no quantity appearing in that output can be
     negative.
@@ -158,7 +158,7 @@ $\Coin$.
       \hldiff{\mathsf{adaPolicy}~\notin \supp{\fun{forge}~txb}} \\
       ~\\
       \hldiff{\forall txout \in \txouts{txb},} \\
-      \hldiff{txout \geq \fun{coinToValue}(\fun{outputSize}~{txout} * \fun{minUTxOValue}~pp)} \\~
+      \hldiff{txout \geq \fun{coinToValue}(\fun{outputSize}~{txout} * \fun{adaPerUTxOByte}~pp)} \\~
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a =\NetworkId
       \\
@@ -241,11 +241,3 @@ UTXOW rule, which checks a given script, does not know the purpose of the script
 (forging, output-locking, etc.).
 All scripts are run in the same way, with $\fun{validateScript}$ being responsible
 for calling the evaluator appropriate for the specific type of script.
-
-\begin{note}
-  The cost model for the new script type is non-existent, the bigger scripts
-  cost more only because they increase the size of the transaction.
-
-  This could be a problem with arbitrary ORs! Checking lots of things before
-  concluding the script fails could be bad
-\end{note}
