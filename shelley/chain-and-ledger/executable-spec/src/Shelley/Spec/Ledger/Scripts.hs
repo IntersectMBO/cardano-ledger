@@ -24,6 +24,7 @@ module Shelley.Spec.Ledger.Scripts
     getKeyCombination,
     getKeyCombinations,
     hashMultiSigScript,
+    WrappedMultiSig (..),
   )
 where
 
@@ -31,7 +32,9 @@ import Cardano.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
     ToCBOR,
+    encodeListLen,
     serialize',
+    toCBOR,
   )
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
@@ -49,6 +52,7 @@ import Data.MemoBytes
     memoBytes,
   )
 import Data.Typeable (Typeable)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
@@ -145,8 +149,6 @@ deriving newtype instance (Era era) => ToJSON (ScriptHash era)
 
 deriving newtype instance Era era => FromJSON (ScriptHash era)
 
-type instance Core.Script (ShelleyEra c) = MultiSig (ShelleyEra c)
-
 -- | Hashes native multi-signature script.
 hashMultiSigScript ::
   Era era =>
@@ -183,7 +185,6 @@ getKeyCombinations (RequireMOf m msigs) =
    in map (concat . List.concatMap getKeyCombinations) perms
 
 -- CBOR
-
 instance
   Era era =>
   FromCBOR (Annotator (MultiSig' era))
@@ -202,3 +203,34 @@ instance
         multiSigs <- sequence <$> decodeList fromCBOR
         pure $ (3, RequireMOf' m <$> multiSigs)
       k -> invalidKey k
+
+--------------------------------------------------------------------------------
+-- Compatibility encoders/decoders
+--
+-- Originally `MultiSig` was wrapped in an additional `Script` newtype and this
+-- was reflected in its CBOR encoding. For compatibility we provide these
+-- wrapped encoder and decoder. In future eras we prefer to not carry this
+-- baggage, since the `MultiSig` type will then likely be wrapped in a real
+-- `Script` type.
+--------------------------------------------------------------------------------
+
+type instance Core.Script (ShelleyEra c) = WrappedMultiSig c
+
+newtype WrappedMultiSig c = WrappedMultiSig
+  {unWrappedMultiSig :: MultiSig (ShelleyEra c)}
+  deriving newtype (Eq, Ord, Show, NoThunks)
+  deriving stock (Generic)
+
+instance Typeable c => FromCBOR (Annotator (WrappedMultiSig c)) where
+  fromCBOR = decodeRecordSum "WrappedMultiSig" $
+    \case
+      0 -> do
+        s <- fromCBOR
+        pure (2, s)
+      k -> invalidKey k
+
+instance Typeable c => ToCBOR (WrappedMultiSig c) where
+  toCBOR ms =
+    encodeListLen 2
+      <> toCBOR (0 :: Word8)
+      <> toCBOR ms

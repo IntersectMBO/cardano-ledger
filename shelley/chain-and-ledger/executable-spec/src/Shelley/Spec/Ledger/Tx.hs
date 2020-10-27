@@ -351,8 +351,8 @@ class
 
 -- | instance of MultiSignatureScript type class
 instance CryptoClass.Crypto c => ValidateScript (ShelleyEra c) where
-  validateScript = validateNativeMultiSigScript
-  hashScript = hashMultiSigScript
+  validateScript = validateNativeMultiSigScript . unWrappedMultiSig
+  hashScript = hashMultiSigScript . unWrappedMultiSig
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
