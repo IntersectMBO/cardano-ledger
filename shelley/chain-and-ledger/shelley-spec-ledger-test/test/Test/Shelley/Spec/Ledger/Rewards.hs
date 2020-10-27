@@ -188,7 +188,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   let members = Map.insert (KeyHashObj . hashKey . vKey $ ownerKey) ownerStake members'
       params =
         PoolParams
-          { _poolPubKey = hashKey . vKey $ coldKey,
+          { _poolId = hashKey . vKey $ coldKey,
             _poolVrf = Crypto.hashVerKeyVRF . snd $ vrfKey,
             _poolPledge = pledge,
             _poolCost = cost,
@@ -212,7 +212,7 @@ genRewardPPs = do
 genBlocksMade :: [PoolParams era] -> Gen (BlocksMade era)
 genBlocksMade pools = BlocksMade . Map.fromList <$> mapM f pools
   where
-    f p = (_poolPubKey p,) <$> genNatural 0 maxPoolBlocks
+    f p = (_poolId p,) <$> genNatural 0 maxPoolBlocks
 
 -- Properties --
 
@@ -231,13 +231,13 @@ rewardsBoundedByPot _ = property $ do
       delegs = fold $
         flip fmap pools $
           \PoolInfo {params, members} ->
-            Map.fromList $ (,_poolPubKey params) <$> Map.keys members
+            Map.fromList $ (,_poolId params) <$> Map.keys members
       rewardAcnts = Set.fromList $ Map.keys delegs
       poolParams =
         Map.fromList $
           fmap
             ( \PoolInfo {params} ->
-                (_poolPubKey params, params)
+                (_poolId params, params)
             )
             pools
       totalLovelace = undelegatedLovelace <> fold stake

@@ -174,7 +174,7 @@ import Shelley.Spec.Ledger.TxBody
     _poolMargin,
     _poolOwners,
     _poolPledge,
-    _poolPubKey,
+    _poolId,
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
@@ -622,7 +622,7 @@ tests =
             ( DCertPool
                 ( RegPool
                     ( PoolParams
-                        { _poolPubKey = hashKey . vKey $ testStakePoolKey,
+                        { _poolId = hashKey . vKey $ testStakePoolKey,
                           _poolVrf = testVRFKH @C_Crypto,
                           _poolPledge = poolPledge,
                           _poolCost = poolCost,
@@ -1288,7 +1288,7 @@ tests =
               ps
           params =
             PoolParams
-              { _poolPubKey = (hashKey $ vKey testStakePoolKey),
+              { _poolId = (hashKey $ vKey testStakePoolKey),
                 _poolVrf = testVRFKH @C_Crypto,
                 _poolPledge = Coin 5,
                 _poolCost = Coin 4,
@@ -1333,7 +1333,7 @@ tests =
               ps
           params =
             PoolParams
-              { _poolPubKey = (hashKey $ vKey testStakePoolKey),
+              { _poolId = (hashKey $ vKey testStakePoolKey),
                 _poolVrf = testVRFKH @C_Crypto,
                 _poolPledge = Coin 5,
                 _poolCost = Coin 4,

@@ -121,7 +121,7 @@ alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
 alicePoolParams :: forall era. Era era => PoolParams era
 alicePoolParams =
   PoolParams
-    { _poolPubKey = (hashKey . vKey . cold) alicePoolKeys,
+    { _poolId = (hashKey . vKey . cold) alicePoolKeys,
       _poolVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @(Crypto era)),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,

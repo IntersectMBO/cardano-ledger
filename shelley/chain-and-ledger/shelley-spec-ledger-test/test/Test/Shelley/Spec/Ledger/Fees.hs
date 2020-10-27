@@ -117,7 +117,7 @@ aliceVRF = mkVRFKeyPair (0, 0, 0, 0, 3)
 alicePoolParams :: forall era. Era era => PoolParams era
 alicePoolParams =
   PoolParams
-    { _poolPubKey = alicePoolKH,
+    { _poolId = alicePoolKH,
       _poolVrf = hashVerKeyVRF . snd $ aliceVRF @(CC.VRF (Crypto era)),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,

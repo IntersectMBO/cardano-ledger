@@ -321,8 +321,8 @@ expectedStEx2 =
     . C.newLab blockEx2
     . C.feesAndDeposits feeTx2 (Coin 0)
     . C.newUTxO txbodyEx2
-    . C.delegation Cast.aliceSHK (_poolPubKey $ Cast.alicePoolParams @era)
-    . C.delegation Cast.bobSHK (_poolPubKey $ Cast.alicePoolParams @era)
+    . C.delegation Cast.aliceSHK (_poolId $ Cast.alicePoolParams @era)
+    . C.delegation Cast.bobSHK (_poolId $ Cast.alicePoolParams @era)
     . C.rewardUpdate emptyRewardUpdate
     $ expectedStEx1
 
@@ -460,7 +460,7 @@ expectedStEx4 =
     . C.newLab blockEx4
     . C.feesAndDeposits feeTx4 (Coin 0)
     . C.newUTxO txbodyEx4
-    . C.delegation Cast.carlSHK (_poolPubKey $ Cast.alicePoolParams @era)
+    . C.delegation Cast.carlSHK (_poolId $ Cast.alicePoolParams @era)
     . C.rewardUpdate rewardUpdateEx4
     $ expectedStEx3
 

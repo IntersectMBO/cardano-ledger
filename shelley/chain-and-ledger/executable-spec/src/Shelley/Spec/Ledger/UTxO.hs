@@ -287,7 +287,7 @@ totalDeposits pp stpools cs =
     numNewPools = length $ pools `Set.difference` (Map.keysSet stpools)
 
 getKeyHashFromRegPool :: DCert era -> Maybe (KeyHash 'StakePool (Crypto era))
-getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolPubKey $ p
+getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolId $ p
 getKeyHashFromRegPool _ = Nothing
 
 txup ::

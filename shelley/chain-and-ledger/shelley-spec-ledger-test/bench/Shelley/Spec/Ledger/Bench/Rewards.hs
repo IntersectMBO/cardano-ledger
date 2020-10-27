@@ -134,7 +134,7 @@ genChainInEpoch gv epoch = do
                 | (AllIssuerKeys {vrf, hk}, (owner : _)) <- stakeMap,
                   let pp =
                         PoolParams
-                          { _poolPubKey = hk,
+                          { _poolId = hk,
                             _poolVrf = hashVerKeyVRF $ snd vrf,
                             _poolPledge = Coin 1,
                             _poolCost = Coin 1,

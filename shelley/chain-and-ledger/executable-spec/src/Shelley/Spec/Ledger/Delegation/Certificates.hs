@@ -93,7 +93,7 @@ delegCWitness (DeRegKey hk) = hk
 delegCWitness (Delegate delegation) = _delegator delegation
 
 poolCWitness :: PoolCert era -> Credential 'StakePool era
-poolCWitness (RegPool pool) = KeyHashObj $ _poolPubKey pool
+poolCWitness (RegPool pool) = KeyHashObj $ _poolId pool
 poolCWitness (RetirePool k _) = KeyHashObj k
 
 genesisCWitness :: GenesisDelegCert era -> KeyHash 'Genesis (ERA.Crypto era)

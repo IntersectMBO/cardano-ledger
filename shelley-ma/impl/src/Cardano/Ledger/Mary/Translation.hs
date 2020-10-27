@@ -81,7 +81,7 @@ instance Crypto c => TranslateEra (MaryEra c) PoolParams where
   translateEra ctxt poolParams =
     return $
       PoolParams
-        { _poolPubKey = _poolPubKey poolParams,
+        { _poolId = _poolId poolParams,
           _poolVrf = _poolVrf poolParams,
           _poolPledge = _poolPledge poolParams,
           _poolCost = _poolCost poolParams,
