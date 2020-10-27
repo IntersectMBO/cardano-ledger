@@ -325,7 +325,7 @@ utxoInductive = do
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
   eval (txins txb ⊆ dom utxo)
-    ?! BadInputsUTxO (txins txb `Set.difference` eval (dom utxo))
+    ?! BadInputsUTxO (Set.filter (\x -> not (Map.member x (unUTxO utxo))) (txins txb))
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
