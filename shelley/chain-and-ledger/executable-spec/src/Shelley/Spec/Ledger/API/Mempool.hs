@@ -18,9 +18,7 @@ module Shelley.Spec.Ledger.API.Mempool
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
-import Cardano.Ledger.Crypto (Crypto, HASH)
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Arrow (left)
 import Control.Monad.Except
@@ -33,15 +31,14 @@ import Control.State.Transition.Extended
   )
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
+import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
-import Shelley.Spec.Ledger.Keys (DSignable)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
-import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 -- TODO #1304: add reapplyTxs
 class
@@ -73,11 +70,7 @@ class
     where
       mempoolEnv = mkMempoolEnv state slot
 
-instance
-  ( Crypto c,
-    DSignable c (Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  ApplyTx (ShelleyEra c)
+instance PraosCrypto c => ApplyTx (ShelleyEra c)
 
 type MempoolEnv era = Ledgers.LedgersEnv era
 
