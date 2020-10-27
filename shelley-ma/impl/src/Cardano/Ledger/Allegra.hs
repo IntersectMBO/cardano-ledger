@@ -10,7 +10,7 @@ import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
 import Cardano.Ledger.ShelleyMA.Scripts ()
 import Cardano.Ledger.ShelleyMA.TxBody ()
-import Shelley.Spec.Ledger.API (ApplyBlock, ApplyTx, GetLedgerView, PraosCrypto)
+import Shelley.Spec.Ledger.API (ApplyBlock, ApplyTx, GetLedgerView, PraosCrypto, ShelleyBasedEra)
 
 type AllegraEra = ShelleyMAEra 'Allegra
 
@@ -19,3 +19,5 @@ instance PraosCrypto c => ApplyTx (AllegraEra c)
 instance PraosCrypto c => ApplyBlock (AllegraEra c)
 
 instance PraosCrypto c => GetLedgerView (AllegraEra c)
+
+instance PraosCrypto c => ShelleyBasedEra (AllegraEra c)
