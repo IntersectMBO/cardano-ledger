@@ -1,5 +1,9 @@
 # Delegation Design Document Changelog
 
+## 2020-10-08
+Include member stake in the non-myopic stake calculation.
+Replaced average apparent performance usage with references to the stake pool ranking document.
+
 ## 2020-06-12
 Rewrote the chapter on addresses. Now includes multi-sig, and is clearly separating addresses (payment and stake) and credentials.
 
