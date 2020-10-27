@@ -452,9 +452,9 @@ arguments.
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{evalScripts} \in \seqof{(\ScriptPurpose \times \Script \times \seqof{Data})} \to \ExUnits \to \Bool \\
+    & \fun{evalScripts} \in \seqof{(\Script \times \seqof{\Data} \times \CostMod)} \to \ExUnits \to \Bool \\
     & \fun{evalScripts}~\epsilon~\var{remExU}~=~\True \\
-    & \fun{evalScripts}~((\var{it}, \var{script}, \var{d});\Gamma)~\var{remExU}~=~
+    & \fun{evalScripts}~((\var{sc}, \var{d}, \var{cm});\Gamma)~\var{remExU}~=~
       \var{isVal} \land \fun{evalScripts}~\Gamma~\var{remExU'} \\
     & ~~\where \\
     & ~~~~ (\var{isVal},\var{remExU'})~:=~ \llbracket sc \rrbracket_{cm,\var{remExU}} d
