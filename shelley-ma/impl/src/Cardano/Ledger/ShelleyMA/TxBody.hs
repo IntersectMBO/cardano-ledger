@@ -29,7 +29,9 @@ where
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Compactible (CompactForm (..), Compactible (..))
 import Cardano.Ledger.Core (Script, Value)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), decodeVI, encodeVI)
 import Data.Coders
   ( Decode (..),
@@ -48,6 +50,7 @@ import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (..))
 import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Serialization (encodeFoldable)
@@ -70,8 +73,7 @@ type FamsFrom era =
     Typeable (Script era),
     FromCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
     FromCBOR (Value era),
-    FromCBOR (Annotator (Script era)), -- Arises becaause DCert memoizes its bytes
-    FromCBOR (Script era)
+    FromCBOR (Annotator (Script era)) -- Arises becaause DCert memoizes its bytes
   )
 
 type FamsTo era =
@@ -86,7 +88,7 @@ type FamsTo era =
 data TxBody' era = TxBody'
   { inputs :: !(Set (TxIn era)),
     outputs :: !(StrictSeq (TxOut era)),
-    dcerts :: !(StrictSeq (DCert era)),
+    certs :: !(StrictSeq (DCert era)),
     wdrls :: !(Wdrl era),
     txfee :: !Coin,
     vldt :: !ValidityInterval, -- imported from Timelocks
@@ -102,7 +104,9 @@ data TxBody' era = TxBody'
 
 deriving instance (Compactible (Value era), Eq (Value era)) => Eq (TxBody' era)
 
-deriving instance (Era era, Compactible (Value era), Show (Value era)) => Show (TxBody' era)
+deriving instance
+  (Era era, Compactible (Value era), Show (Value era)) =>
+  Show (TxBody' era)
 
 deriving instance Generic (TxBody' era)
 
@@ -137,13 +141,21 @@ instance
 newtype TxBody e = STxBody (MemoBytes (TxBody' e))
   deriving (Typeable)
 
+type instance
+  Core.TxBody (ShelleyMAEra (ma :: MaryOrAllegra) c) =
+    TxBody (ShelleyMAEra ma c)
+
 deriving instance (Compactible (Value era), Eq (Value era)) => Eq (TxBody era)
 
-deriving instance (Era era, Compactible (Value era), Show (Value era)) => Show (TxBody era)
+deriving instance
+  (Era era, Compactible (Value era), Show (Value era)) =>
+  Show (TxBody era)
 
 deriving instance Generic (TxBody era)
 
-deriving newtype instance (Typeable era, NoThunks (Value era)) => NoThunks (TxBody era)
+deriving newtype instance
+  (Typeable era, NoThunks (Value era)) =>
+  NoThunks (TxBody era)
 
 deriving newtype instance (Typeable era) => ToCBOR (TxBody era)
 
@@ -152,6 +164,9 @@ deriving via
   instance
     (FamsFrom era) =>
     FromCBOR (Annotator (TxBody era))
+
+instance Era era => HashAnnotated (TxBody era) era where
+  type HashIndex (TxBody era) = EraIndependentTxBody
 
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
@@ -209,8 +224,8 @@ instance HasField "inputs" (TxBody e) (Set (TxIn e)) where
 instance HasField "outputs" (TxBody e) (StrictSeq (TxOut e)) where
   getField (STxBody (Memo m _)) = getField @"outputs" m
 
-instance HasField "dcerts" (TxBody e) (StrictSeq (DCert e)) where
-  getField (STxBody (Memo m _)) = getField @"dcerts" m
+instance HasField "certs" (TxBody e) (StrictSeq (DCert e)) where
+  getField (STxBody (Memo m _)) = getField @"certs" m
 
 instance HasField "wdrls" (TxBody e) (Wdrl e) where
   getField (STxBody (Memo m _)) = getField @"wdrls" m
@@ -221,10 +236,10 @@ instance HasField "txfee" (TxBody e) Coin where
 instance HasField "vldt" (TxBody e) ValidityInterval where
   getField (STxBody (Memo m _)) = getField @"vldt" m
 
-instance HasField "txupdate" (TxBody e) (StrictMaybe (Update e)) where
+instance HasField "update" (TxBody e) (StrictMaybe (Update e)) where
   getField (STxBody (Memo m _)) = getField @"txupdate" m
 
-instance HasField "mdhash" (TxBody e) (StrictMaybe (MetaDataHash e)) where
+instance HasField "mdHash" (TxBody e) (StrictMaybe (MetaDataHash e)) where
   getField (STxBody (Memo m _)) = getField @"mdhash" m
 
 instance (Value e ~ vv) => HasField "forge" (TxBody e) vv where

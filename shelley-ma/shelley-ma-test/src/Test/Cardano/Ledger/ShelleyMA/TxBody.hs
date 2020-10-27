@@ -103,12 +103,12 @@ fieldTests =
     "getField tests"
     [ testCase "inputs" (assertEqual "inputs" (getField @"inputs" tx) empty),
       testCase "outputs" (assertEqual "outputs" (getField @"outputs" tx) eseq),
-      testCase "dcerts" (assertEqual "dcerts" (getField @"dcerts" tx) eseq),
+      testCase "dcerts" (assertEqual "dcerts" (getField @"certs" tx) eseq),
       testCase "wdrls" (assertEqual "wdrls" (getField @"wdrls" tx) (Wdrl Map.empty)),
       testCase "txfree" (assertEqual "txfree" (getField @"txfee" tx) (Coin 6)),
       testCase "vldt" (assertEqual "vldt" (getField @"vldt" tx) (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))),
-      testCase "txupdate" (assertEqual "txupdate" (getField @"txupdate" tx) SNothing),
-      testCase "mdhash" (assertEqual "mdhash" (getField @"mdhash" tx) SNothing),
+      testCase "txupdate" (assertEqual "update" (getField @"update" tx) SNothing),
+      testCase "mdhash" (assertEqual "mdhash" (getField @"mdHash" tx) SNothing),
       testCase "forge" (assertEqual "forge" (getField @"forge" tx) (inject (Coin 2)))
     ]
 
