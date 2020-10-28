@@ -287,7 +287,7 @@ newPool pool cs = cs {chainNes = nes'}
     ps = _pstate dps
     ps' =
       ps
-        { _pParams = Map.insert (_poolPubKey pool) pool (_pParams ps)
+        { _pParams = Map.insert (_poolId pool) pool (_pParams ps)
         }
     dps' = dps {_pstate = ps'}
     ls' = ls {_delegationState = dps'}
@@ -309,7 +309,7 @@ reregPool pool cs = cs {chainNes = nes'}
     ps = _pstate dps
     ps' =
       ps
-        { _fPParams = Map.insert (_poolPubKey pool) pool (_pParams ps)
+        { _fPParams = Map.insert (_poolId pool) pool (_pParams ps)
         }
     dps' = dps {_pstate = ps'}
     ls' = ls {_delegationState = dps'}
@@ -331,8 +331,8 @@ updatePoolParams pool cs = cs {chainNes = nes'}
     ps = _pstate dps
     ps' =
       ps
-        { _pParams = Map.insert (_poolPubKey pool) pool (_pParams ps),
-          _fPParams = Map.delete (_poolPubKey pool) (_pParams ps)
+        { _pParams = Map.insert (_poolId pool) pool (_pParams ps),
+          _fPParams = Map.delete (_poolId pool) (_pParams ps)
         }
     dps' = dps {_pstate = ps'}
     ls' = ls {_delegationState = dps'}
@@ -371,7 +371,7 @@ reapPool ::
   ChainState era
 reapPool pool cs = cs {chainNes = nes'}
   where
-    kh = _poolPubKey pool
+    kh = _poolId pool
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es

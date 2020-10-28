@@ -134,7 +134,7 @@ poolDelegationTransition = do
           minPoolCost = _minPoolCost pp
       poolCost >= minPoolCost ?! StakePoolCostTooLowPOOL poolCost minPoolCost
 
-      let hk = _poolPubKey poolParam
+      let hk = _poolId poolParam
       if eval (hk ∉ (dom stpools))
         then -- register new, Pool-Reg
 

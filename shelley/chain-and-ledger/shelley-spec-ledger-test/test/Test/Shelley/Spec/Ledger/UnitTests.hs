@@ -96,7 +96,7 @@ import Shelley.Spec.Ledger.TxBody
     _poolMargin,
     _poolOwners,
     _poolPledge,
-    _poolPubKey,
+    _poolId,
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
@@ -659,7 +659,7 @@ alicePoolColdKeys = KeyPair vk sk
 alicePoolParamsSmallCost :: PoolParams C
 alicePoolParamsSmallCost =
   PoolParams
-    { _poolPubKey = hashKey . vKey $ alicePoolColdKeys,
+    { _poolId = hashKey . vKey $ alicePoolColdKeys,
       _poolVrf = hashVerKeyVRF vkVrf,
       _poolPledge = Coin 1,
       _poolCost = Coin 5, -- Too Small!

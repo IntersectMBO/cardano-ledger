@@ -83,7 +83,7 @@ import Shelley.Spec.Ledger.TxBody
     _poolMargin,
     _poolOwners,
     _poolPledge,
-    _poolPubKey,
+    _poolId,
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
@@ -402,7 +402,7 @@ vrfKeyHash = hashVerKeyVRF . snd . mkVRFKeyPair $ (0, 0, 0, 0, 0)
 mkPoolParameters :: KeyPair 'StakePool B_Crypto -> PoolParams B
 mkPoolParameters keys =
   PoolParams
-    { _poolPubKey = (hashKey . vKey) keys,
+    { _poolId = (hashKey . vKey) keys,
       _poolVrf = vrfKeyHash,
       _poolPledge = Coin 0,
       _poolCost = Coin 0,

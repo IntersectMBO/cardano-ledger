@@ -209,7 +209,7 @@ exampleShelleyGenesis =
     poolParams :: L.PoolParams era
     poolParams =
       L.PoolParams
-        { L._poolPubKey = hashKey . snd $ mkKeyPair (1, 0, 0, 0, 1),
+        { L._poolId = hashKey . snd $ mkKeyPair (1, 0, 0, 0, 1),
           L._poolVrf = hashVerKeyVRF . snd $ mkVRFKeyPair (1, 0, 0, 0, 2),
           L._poolPledge = L.Coin 1,
           L._poolCost = L.Coin 5,

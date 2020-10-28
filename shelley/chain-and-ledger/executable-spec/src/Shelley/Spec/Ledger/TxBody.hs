@@ -334,7 +334,7 @@ instance FromCBOR StakePoolRelay where
 
 -- | A stake pool.
 data PoolParams era = PoolParams
-  { _poolPubKey :: !(KeyHash 'StakePool (Crypto era)),
+  { _poolId :: !(KeyHash 'StakePool (Crypto era)),
     _poolVrf :: !(Hash (Crypto era) (VerKeyVRF (Crypto era))),
     _poolPledge :: !Coin,
     _poolCost :: !Coin,
@@ -365,7 +365,7 @@ instance Era era => FromCBOR (Wdrl era) where
 instance Era era => ToJSON (PoolParams era) where
   toJSON pp =
     Aeson.object
-      [ "publicKey" .= _poolPubKey pp,
+      [ "publicKey" .= _poolId pp, -- TODO publicKey is an unfortunate name, should be poolId
         "vrf" .= _poolVrf pp,
         "pledge" .= _poolPledge pp,
         "cost" .= _poolCost pp,
@@ -380,7 +380,7 @@ instance Era era => FromJSON (PoolParams era) where
   parseJSON =
     Aeson.withObject "PoolParams" $ \obj ->
       PoolParams
-        <$> obj .: "publicKey"
+        <$> obj .: "publicKey" -- TODO publicKey is an unfortunate name, should be poolId
         <*> obj .: "vrf"
         <*> obj .: "pledge"
         <*> obj .: "cost"
@@ -1014,7 +1014,7 @@ instance
   ToCBORGroup (PoolParams era)
   where
   toCBORGroup poolParams =
-    toCBOR (_poolPubKey poolParams)
+    toCBOR (_poolId poolParams)
       <> toCBOR (_poolVrf poolParams)
       <> toCBOR (_poolPledge poolParams)
       <> toCBOR (_poolCost poolParams)
@@ -1025,7 +1025,7 @@ instance
       <> encodeNullMaybe toCBOR (strictMaybeToMaybe (_poolMD poolParams))
 
   encodedGroupSizeExpr size' proxy =
-    encodedSizeExpr size' (_poolPubKey <$> proxy)
+    encodedSizeExpr size' (_poolId <$> proxy)
       + encodedSizeExpr size' (_poolVrf <$> proxy)
       + encodedSizeExpr size' (_poolPledge <$> proxy)
       + encodedSizeExpr size' (_poolCost <$> proxy)
@@ -1054,7 +1054,7 @@ instance
   FromCBORGroup (PoolParams era)
   where
   fromCBORGroup = do
-    vk <- fromCBOR
+    hk <- fromCBOR
     vrf <- fromCBOR
     pledge <- fromCBOR
     cost <- fromCBOR
@@ -1065,7 +1065,7 @@ instance
     md <- decodeNullMaybe fromCBOR
     pure $
       PoolParams
-        { _poolPubKey = vk,
+        { _poolId = hk,
           _poolVrf = vrf,
           _poolPledge = pledge,
           _poolCost = cost,
