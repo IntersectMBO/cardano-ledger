@@ -52,6 +52,7 @@ import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
   )
+import Test.Shelley.Spec.Ledger.Generator.Utxo (GenTxFunc (..))
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
@@ -64,6 +65,7 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, maxLLSupply, mkHash)
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
   ( ShelleyTest era,
+    GenTxFunc era, 
     GetLedgerView era,
     ApplyBlock era,
     STS (CHAIN era),

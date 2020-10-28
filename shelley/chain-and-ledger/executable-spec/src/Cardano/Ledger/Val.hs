@@ -23,7 +23,7 @@ module Cardano.Ledger.Val
 where
 
 import Data.Group (Abelian)
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 
 class
   ( Abelian t,
@@ -91,6 +91,8 @@ instance Val Coin where
   size _ = 1
   modifyCoin f v = f v
   pointwise p (Coin x) (Coin y) = p x y
+
+deriving via Coin instance Val DeltaCoin
 
 {- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
 (passed to it as Coin mv) as a specification of "the cost of

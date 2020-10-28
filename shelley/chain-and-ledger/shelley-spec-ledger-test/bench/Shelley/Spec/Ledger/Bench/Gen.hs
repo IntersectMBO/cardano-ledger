@@ -57,7 +57,7 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
 genChainState ::
   ( ShelleyTest era
   ) =>
-  Gen (Core.Value era) ->
+  Gen (Core.TxBody era) ->
   Int ->
   GenEnv era ->
   IO (ChainState era)
@@ -109,7 +109,7 @@ genTriple ::
   ( Mock (Crypto era),
     ShelleyTest era
   ) =>
-  Gen (Core.Value era) ->
+  Gen (Core.TxBody era) ->
   Proxy era ->
   Int ->
   IO (GenEnv era, ChainState era, GenEnv era -> IO (Tx era))

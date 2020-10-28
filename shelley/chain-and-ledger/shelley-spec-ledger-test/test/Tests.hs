@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DataKinds #-}
 
 import Cardano.Crypto.Libsodium (sodiumInit)
 import qualified Cardano.Ledger.Core as Core
@@ -16,14 +17,21 @@ import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
 import Test.Shelley.Spec.Ledger.ValProp (valTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
+import GHC.Records (HasField)
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import Shelley.Spec.Ledger.PParams
+  ( Update (..)
+  )
 
-tests :: Gen (Core.Value C) -> TestTree
+tests :: (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) =>
+  Gen (Core.Value C) -> TestTree
 tests gv = askOption $ \case
   Nightly -> (nightlyTests gv)
   Fast -> fastTests
   _ -> (mainTests gv)
 
-mainTests :: Gen (Core.Value C) -> TestTree
+mainTests :: (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) =>
+  Gen (Core.Value C) -> TestTree
 mainTests gv =
   testGroup
     "Ledger with Delegation"
@@ -37,7 +45,8 @@ mainTests gv =
       valTests
     ]
 
-nightlyTests :: Gen (Core.Value C) -> TestTree
+nightlyTests :: (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) =>
+  Gen (Core.Value C) -> TestTree
 nightlyTests gv =
   testGroup
     "Ledger with Delegation nightly"
@@ -81,5 +90,5 @@ genVl :: Gen Coin
 genVl = arbitrary
 
 -- main entry point
-main :: IO ()
+main :: (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) => IO ()
 main = sodiumInit >> mainWithTestScenario (tests genVl)

@@ -98,7 +98,7 @@ validateInput ::
     State (LEDGER era) ~ (UTxOState era, DPState era),
     Signal (LEDGER era) ~ Tx era
   ) =>
-  Gen (Core.Value era) ->
+  Gen (Core.TxBody era) ->
   Int ->
   IO (ValidateInput era)
 validateInput gv utxoSize = genValidateInput gv utxoSize
@@ -118,7 +118,7 @@ genValidateInput ::
     State (LEDGER era) ~ (UTxOState era, DPState era),
     Signal (LEDGER era) ~ Tx era
   ) =>
-  Gen (Core.Value era) ->
+  Gen (Core.TxBody era) ->
   Int ->
   IO (ValidateInput era)
 genValidateInput gv n = do
@@ -206,7 +206,7 @@ genUpdateInputs ::
     Signal (LEDGER era) ~ Tx era,
     Mock (Crypto era)
   ) =>
-  Gen (Core.Value era) ->
+  Gen (Core.TxBody era) ->
   Int ->
   IO (UpdateInputs (Crypto era))
 genUpdateInputs gv utxoSize = do
