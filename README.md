@@ -1,4 +1,4 @@
-<h1 align="center">Formal Models for Ledger Rules</h1>
+<h1 align="center">Cardano Ledger</h1>
 
 <p align="center">
   <a href="https://buildkite.com/input-output-hk/cardano-ledger-specs">
@@ -9,7 +9,8 @@
   </a>
 </p>
 
-Formal and executable specifications for the new features to be introduced by Shelley.
+This repository contains the formal specifications, executable models,
+and implementations of the Cardano Ledger.
 
 The documents are built in our CI and can be readily accessed using the
 following links:
@@ -29,28 +30,35 @@ In addition, there is a formalization of the Ledger Specification in Isabelle/HO
 
 # Repository structure
 
-This repo contains formal (LaTeX) and executable (Haskell model) specs for both
-the Byron and Shelley eras of Cardano. The outline of the specs is as follows:
+This directory structure of this repository is as follows:
 
 - [byron](./byron)
   - [ledger](./byron/ledger)
     - [formal-spec](./byron/ledger/formal-spec)
     - [executable-spec](./byron/ledger/executable-spec)
+    - [implementation](./byron/ledger/impl)
   - [chain](./byron/chain)
     - [formal-spec](./byron/chain/formal-spec)
     - [executable-spec](./byron/chain/executable-spec)
+  - [cddl](./byron/cddl-spec)
 - [shelley](./shelley)
   - [design-spec](./shelley/design-spec)
   - [chain-and-ledger](./shelley/chain-and-ledger) (specs are combined in Shelley era)
     - [formal-spec](./shelley/chain-and-ledger/formal-spec)
-    - [executable-spec](./shelley/chain-and-ledger/executable-spec)
+    - [implementation](./shelley/chain-and-ledger/executable-spec)
+    - [tests](./shelley/chain-and-ledger/shelley-spec-ledger-test)
     - [dependencies](./shelley/chain-and-ledger/dependencies)
+  - [cddl](./shelley/chain-and-ledger/shelley-spec-ledger-test/cddl-files)
+- [Timelocks and Multi-Assets](./shelley-ma)
+    - [formal-spec](./shelley-ma/formal-spec)
+    - [implementation](./shelley-ma/impl)
+    - [tests](./shelley-ma/shelley-ma-test)
 
 ## Build tools
 
 For building LaTeX documents we use
 [`nix`](https://nixos.org/nix/download.html). Haskell files can be built either
-with `nix` or [`stack`](https://docs.haskellstack.org/en/stable/README/).
+with `nix` or [`cabal`](https://www.haskell.org/cabal/).
 
 When using `nix` it is recommended that you setup the cache, so that it can
 reuse built artifacts, reducing the compilation times dramatically:
@@ -80,7 +88,7 @@ trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
 
 ## Building the LaTeX documents and executable specifications
 
-When using `nix` the documents and executable specifications can be readily
+When using `nix` the documents and Haskell code can be readily
 built by running:
 
 ```shell
@@ -117,61 +125,94 @@ For a continuous compilation of the `LaTeX` file run:
 nix-shell --pure --run "make watch"
 ```
 
-## Testing the Haskell executable specifications
+## Testing the Haskell programs
 
-Change to the directory where the executable specifications tests are (e.g.
-`shelley/chain-and-ledger/shelley-spec-ledger-test` for the the Shelley release,
-or `byron/ledger/executable-spec` for the Byron release.
-Then the tests can be run by executing:
+The tests can be run with cabal.
+For example the Shelley tests can be run with:
 
 ```shell
-stack test
+cabal test shelley-spec-ledger-test
 ```
 
-**Note** that the tests in `shelley-spec-ledger` require two Ruby gems,
+**Note** that the tests in `shelley-spec-ledger-test` require two Ruby gems,
 [cbor-diag](https://rubygems.org/gems/cbor-diag) and
 [cddl](https://rubygems.org/gems/cddl).
 
-For the executable models test suites that use `tasty` (e.g. Byron), it is possible to select which
-tests to run by passing the `-p` flag to the test program, followed by an `awk` pattern. For
-instance for running only the `UTxO` tests, we can pass the `-p UTxO` option. `tasty` allows for
-more [complex patterns](https://github.com/feuerbach/tasty#patterns), for instance, to run only the
-update mechanism tests for the ledger that classify traces, we can pass the `-p $1 ~ /Ledger/ && $2
-~ /Update/ && $3 ~ /classified/` option. Here each `$i` refers to a level in the tests names
-hierarchy. Passing `-l` to `tasty` will list the available test names.
+It can be helpful to use the `--test-show-details=streaming` option for seeing
+the output of the tests while they run:
 
-When testing using `stack`, pay special attention to escaping the right symbols, e.g.:
-
-```sh
-stack test byron-spec-ledger:test:byron-spec-ledger-test --ta "-p \"\$1 ~ /Ledger/ \&\& \$2 ~ /Update/ \&\& \$3 ~ /classified/\""
+```shell
+cabal test shelley-spec-ledger-test --test-show-details=streaming
 ```
 
-Additionally, the Shelley tests are grouped into test scenarios,
+### Running Specific Tests
+
+The test suites use [Tasty](https://github.com/feuerbach/tasty),
+which allows for running specific tests.
+This is done by passing the `-p` flag to the test program, followed by an `awk` pattern.
+You can alternatively use the `TASTY_PATTERN` environment variable with a pattern.
+For example, the Shelley golden tests can be run with:
+
+```shell
+cabal test shelley-spec-ledger-test --test-options="-p golden"
+```
+
+or
+
+```shell
+TASTY_PATTERN=golden cabal test shelley-spec-ledger-test
+```
+
+`Tasty` allows for more
+[complex patterns](https://github.com/feuerbach/tasty#patterns).
+For instance, to run only the Byron update mechanism tests for the ledger
+that classify traces, we can pass the
+`-p $1 ~ /Ledger/ && $2 ~ /Update/ && $3 ~ /classified/` option.
+Here each `$i` refers to a level in the tests names hierarchy.
+Passing `-l` to `tasty` will list the available test names.
+
+When testing using `cabal`, pay special attention to escaping the right symbols, e.g.:
+
+```shell
+cabal test byron-spec-ledger:test:byron-spec-ledger-test --test-options "-p \"\$1 ~ /Ledger/ && \$2 ~ /Update/ && \$3 ~ /classified/\""
+```
+
+### Replaying QuickCheck Failures
+
+When a QuickCheck test fails, the seed which produced the failure is reported.
+The failure can be replayed with:
+
+```shell
+cabal test shelley-spec-ledger-test --test-options "--quickcheck-replay=42"
+```
+(where 42 is an example seed).
+
+### Test Scenarios
+
+Most of the test suites are grouped into test scenarios.
+For example, the Shelley test suite contains
 `ContinuousIntegration`, `Development`, `Nightly`, and `Fast`,
 which can be run with the `--scenario` flag. For example:
 
-```sh
-stack test shelley-spec-ledger --ta --scenario=Nightly
+```shell
+cabal test shelley-spec-ledger-test --test-options --scenario=Fast
 ```
 
-Alternatively, it is also possible to use `ghcid` if it is installed in your system.
-There is a [makefile](https://github.com/input-output-hk/cardano-ledger-specs/blob/master/shelley/chain-and-ledger/Makefile)
-for the Shelley release, which can be helpful to run in a separate shell:
+### ghcid
+
+We have support for running
+[ghcid](https://github.com/ndmitchell/ghcid)
+from inside of nix-shell.
+Enter nix-shell from the base directory of the repository,
+change directories to the cabal package that you wish to check,
+then run `ghcid`.
+
+For example:
 
 ```shell
-make ghcid
-```
-
-or with tests included:
-
-```shell
-make ghcid-test
-```
-
-You can use the `TASTY_PATTERN` environment variable to set the tasty pattern:
-
-```shell
-TASTY_PATTERN=roundtrip make ghcid-test
+nix-shell
+cd shelley/chain-and-ledger/executable-spec/
+ghcid
 ```
 
 ---
