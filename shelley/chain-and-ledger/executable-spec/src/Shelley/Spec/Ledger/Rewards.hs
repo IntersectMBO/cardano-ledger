@@ -533,7 +533,7 @@ nonMyopicMemberRew
   t
   topPools
   (PerformanceEstimate p) =
-    let nm = nonMyopicStake pp s sigma t (_poolPubKey pool) topPools
+    let nm = nonMyopicStake pp s sigma t (_poolId pool) topPools
         f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
         fHat = floor (p * (fromRational . coinToRational) f)
      in memberRew (Coin fHat) pool t nm
