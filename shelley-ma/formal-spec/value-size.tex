@@ -18,10 +18,12 @@ Because of the first two items in that list, we could use the following definiti
 
 \begin{figure*}[h]
   \begin{align*}
-    & \fun{outputSize} \in \TxOut \to \MemoryEstimate \\
-    & \fun{outputSize} ~\var{out} = k_0 + k_1 * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
+    & \fun{outputSize} \in \PParams \to \TxOut \to \MemoryEstimate \\
+    & \fun{outputSize}~{pp}~\var{out} = k_0 + k_1 * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
             \land (\var{pid}, \var{aid}) \neq (\mathsf{adaPolicy}, \mathsf{adaName}) \}| \\
-    & \phantom{\fun{outputSize} ~\var{out} = k_0} + k_2 * |\{ \var{pid} : \exists aid : v~pid~aid \neq 0 \}|
+    & \phantom{\fun{outputSize}~{pp}~\var{out} = k_0} + k_2 * |\{ \var{pid} : \exists aid : v~pid~aid \neq 0 \}| \\
+    & ~~\where \\
+    & ~~~~~~(k_0, k_1, k_2) = \fun{outputSizeConstants}~{pp}
   \end{align*}
   \caption{Value Size}
   \label{fig:test}

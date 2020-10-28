@@ -6,10 +6,9 @@
   \begin{align*}
     \fun{validateScript} & \in\Script\to
     \powerset{\KeyHash}\to\TxBody\to\Bool \\
-    \fun{validateScript} & ~s~\var{vhks}~\var{txb}
-     ~\var{txb}~\var{utxo} =
+    \fun{validateScript} & ~s~\var{vhks}~\var{txb}~=
                            \begin{cases}
-                             \fun{evalMultiSigScript}~s~vhks & \text{if}~s \in\ScriptMSig \\
+                             \fun{evalMultiSigScript}~s~vhks & \text{if}~s \in\ScriptNI \\
                              \fun{evalFPS}~s~\var{vhks} ~txb & \text{if}~s \in\ScriptMPS \\
                              \mathsf{False} & \text{otherwise}
                            \end{cases}
@@ -21,7 +20,7 @@
 We have updated the
 $\fun{validateScripts}$ function, to allow for the validation of both the
 multi-signature scripts and forging policy scripts, calling the appropriate
-evaluator for each type of script, see~\ref{fig:functions-validate}.
+evaluator for each type of script, see Figure~\ref{fig:functions-validate}.
 
 \begin{note}
   This appendix will change if we change anything about the language, it will go
