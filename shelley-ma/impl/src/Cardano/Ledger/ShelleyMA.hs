@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -7,7 +8,7 @@ module Cardano.Ledger.ShelleyMA where
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto
 import Cardano.Ledger.Era
-import Cardano.Ledger.ShelleyMA.Value (Value)
+import Cardano.Ledger.Mary.Value (Value)
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.Coin (Coin)
@@ -24,13 +25,14 @@ data MaryOrAllegra = Mary | Allegra
 data ShelleyMAEra (ma :: MaryOrAllegra) c
 
 instance
+  forall c (ma :: MaryOrAllegra).
   (Typeable ma, Cardano.Ledger.Crypto.Crypto c) =>
   Era (ShelleyMAEra ma c)
   where
   type Crypto (ShelleyMAEra ma c) = c
 
 type family MAValue (x :: MaryOrAllegra) era :: Type where
-  MAValue 'Allegra era = Coin
+  MAValue 'Allegra _ = Coin
   MAValue 'Mary era = Value era
 
 type instance Core.Value (ShelleyMAEra m c) = MAValue m (ShelleyMAEra m c)

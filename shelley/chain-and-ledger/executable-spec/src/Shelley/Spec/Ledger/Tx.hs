@@ -50,6 +50,8 @@ module Shelley.Spec.Ledger.Tx
     getKeyCombination,
     addrWits',
     evalNativeMultiSigScript,
+    hashMultiSigScript,
+    validateNativeMultiSigScript,
   )
 where
 

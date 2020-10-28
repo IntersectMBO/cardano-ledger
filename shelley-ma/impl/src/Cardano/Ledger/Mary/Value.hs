@@ -8,12 +8,13 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.ShelleyMA.Value
+module Cardano.Ledger.Mary.Value
   ( PolicyID (..),
     AssetID (..),
     Value (..),
     insert,
     lookup,
+    policies,
     showValue,
   )
 where
@@ -45,6 +46,7 @@ import Data.Map.Internal
   )
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -89,7 +91,10 @@ instance Monoid (Value era) where
   mempty = Value 0 mempty
 
 instance Group (Value era) where
-  invert (Value c m) = Value (- c) (cannonicalMap (cannonicalMap ((-1 :: Integer) *)) m)
+  invert (Value c m) =
+    Value
+      (- c)
+      (cannonicalMap (cannonicalMap ((-1 :: Integer) *)) m)
 
 instance Abelian (Value era)
 
@@ -97,7 +102,10 @@ instance Abelian (Value era)
 -- Make the Val instance of Value
 
 instance Era era => Val (Value era) where
-  s <×> (Value c v) = Value (fromIntegral s * c) (cannonicalMap (cannonicalMap ((fromIntegral s) *)) v)
+  s <×> (Value c v) =
+    Value
+      (fromIntegral s * c)
+      (cannonicalMap (cannonicalMap ((fromIntegral s) *)) v)
   isZero (Value c v) = c == 0 && Map.null v
   coin (Value c _) = Coin c
   inject (Coin c) = Value c mempty
@@ -165,6 +173,13 @@ instance Compactible (Value era) where
 -- ========================================================================
 -- Operations on Values
 
+-- | Extract the set of policies in the Value.
+--
+--   This function is equivalent to computing the support of the value in the
+--   spec.
+policies :: Value era -> Set (PolicyID era)
+policies (Value _ m) = Map.keysSet m
+
 lookup :: PolicyID era -> AssetID -> Value era -> Integer
 lookup pid aid (Value _ m) =
   case Map.lookup pid m of
@@ -175,7 +190,13 @@ lookup pid aid (Value _ m) =
 --   if comb = \ old new -> old, the integer in the Value is prefered over n
 --   if comb = \ old new -> new, then n is prefered over the integer in the Value
 --   if (comb old new) == 0, then that value should not be stored in the Map part of the Value.
-insert :: (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
+insert ::
+  (Integer -> Integer -> Integer) ->
+  PolicyID era ->
+  AssetID ->
+  Integer ->
+  Value era ->
+  Value era
 insert combine pid aid new (Value cn m1) =
   case splitLookup pid m1 of
     (l1, Just m2, l2) ->
@@ -190,7 +211,18 @@ insert combine pid aid new (Value cn m1) =
             else Value cn (link pid (link aid n v1 v2) l1 l2)
           where
             n = combine old new
-        (_, Nothing, _) -> Value cn (link pid (if new == 0 then m2 else (Map.insert aid new m2)) l1 l2)
+        (_, Nothing, _) ->
+          Value
+            cn
+            ( link
+                pid
+                ( if new == 0
+                    then m2
+                    else (Map.insert aid new m2)
+                )
+                l1
+                l2
+            )
     (l1, Nothing, l2) ->
       Value
         cn
@@ -206,9 +238,16 @@ showValue :: Value era -> String
 showValue v = show c ++ "\n" ++ unlines (map trans ts)
   where
     (c, ts) = gettriples v
-    trans (PolicyID x, hash, cnt) = show x ++ ",  " ++ show hash ++ ",  " ++ show cnt
+    trans (PolicyID x, hash, cnt) =
+      show x
+        ++ ",  "
+        ++ show hash
+        ++ ",  "
+        ++ show cnt
 
 gettriples :: Value era -> (Integer, [(PolicyID era, AssetID, Integer)])
 gettriples (Value c m1) = (c, foldr accum1 [] (assocs m1))
   where
-    accum1 (policy, m2) ans = foldr accum2 ans (assocs m2) where accum2 (asset, cnt) ans2 = (policy, asset, cnt) : ans2
+    accum1 (policy, m2) ans = foldr accum2 ans (assocs m2)
+      where
+        accum2 (asset, cnt) ans2 = (policy, asset, cnt) : ans2

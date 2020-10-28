@@ -19,10 +19,10 @@ import Cardano.Ledger.Core (Script, TxBody, Value)
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Mary.Value ()
+import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
-import qualified Cardano.Ledger.ShelleyMA.Value ()
-import qualified Cardano.Ledger.ShelleyMA.Value as ConcreteValue
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.ByteString.Short (ShortByteString)
@@ -103,12 +103,12 @@ fieldTests =
     "getField tests"
     [ testCase "inputs" (assertEqual "inputs" (getField @"inputs" tx) empty),
       testCase "outputs" (assertEqual "outputs" (getField @"outputs" tx) eseq),
-      testCase "dcerts" (assertEqual "dcerts" (getField @"dcerts" tx) eseq),
+      testCase "dcerts" (assertEqual "dcerts" (getField @"certs" tx) eseq),
       testCase "wdrls" (assertEqual "wdrls" (getField @"wdrls" tx) (Wdrl Map.empty)),
       testCase "txfree" (assertEqual "txfree" (getField @"txfee" tx) (Coin 6)),
       testCase "vldt" (assertEqual "vldt" (getField @"vldt" tx) (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))),
-      testCase "txupdate" (assertEqual "txupdate" (getField @"txupdate" tx) SNothing),
-      testCase "mdhash" (assertEqual "mdhash" (getField @"mdhash" tx) SNothing),
+      testCase "txupdate" (assertEqual "update" (getField @"update" tx) SNothing),
+      testCase "mdhash" (assertEqual "mdhash" (getField @"mdHash" tx) SNothing),
       testCase "forge" (assertEqual "forge" (getField @"forge" tx) (inject (Coin 2)))
     ]
 
