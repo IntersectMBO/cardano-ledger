@@ -10,6 +10,7 @@ PACKAGES=(
   shelley/chain-and-ledger/executable-spec
   shelley/chain-and-ledger/shelley-spec-ledger-test
   shelley-ma/impl
+  shelley-ma/shelley-ma-test
 )
 
 ghcid_for_package () {

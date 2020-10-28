@@ -13,6 +13,7 @@ packages:
   shelley/chain-and-ledger/executable-spec
   shelley/chain-and-ledger/shelley-spec-ledger-test
   shelley-ma/impl
+  shelley-ma/shelley-ma-test
 
 -- Always wrtie GHC env files, because they are needed by the doctests.
 write-ghc-environment-files: always
