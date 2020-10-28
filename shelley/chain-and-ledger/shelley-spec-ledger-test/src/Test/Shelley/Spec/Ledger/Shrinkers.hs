@@ -5,6 +5,7 @@
 
 module Test.Shelley.Spec.Ledger.Shrinkers where
 
+import Cardano.Ledger.Crypto
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -27,6 +28,8 @@ import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxBody
 import Test.QuickCheck (shrinkIntegral, shrinkList)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Test.Shelley.Spec.Ledger.Orphans ()
 
 shrinkBlock ::
   Block h ->
@@ -34,10 +37,9 @@ shrinkBlock ::
 shrinkBlock _ = []
 
 shrinkTx ::
-  forall era.
-  ShelleyTest era =>
-  Tx era ->
-  [Tx era]
+  (Crypto c) =>
+  Tx (ShelleyEra c) ->
+  [Tx (ShelleyEra c)]
 shrinkTx (Tx _b _ws _md) =
   [Tx b' _ws _md | b' <- shrinkTxBody _b]
 
@@ -52,10 +54,9 @@ shrinkTx (Tx _b _ws _md) =
 -- the values, and revert this function to its prior incarnation, fixed to Coin
 -- ======
 shrinkTxBody ::
-  forall era.
-  ShelleyTest era =>
-  TxBody era ->
-  [TxBody era]
+  (Crypto c) =>
+  TxBody (ShelleyEra c) ->
+  [TxBody (ShelleyEra c)]
 -- do not shrink body in case of empty output list
 -- this will have to change in case any other part of TxBody will be shrunk
 shrinkTxBody (TxBody _ Empty _ _ _ _ _ _) = []
@@ -82,6 +83,7 @@ shrinkTxBody (TxBody is os@( (:<|) (TxOut a vs) _ ) cs ws tf tl tu md) =
     -- put all the non-ada tokens in the head of the outputs, append shrunk list
     mvExtraTksnToOut1 Empty = empty
     mvExtraTksnToOut1 sr = (TxOut a (vs <+> (extraTokens sr) <-> (Val.inject $ extraCoin sr))) <| sr
+
 outputBalance :: ShelleyTest era => StrictSeq (TxOut era) -> Core.Value era
 outputBalance = foldl' (\v (TxOut _ c) -> v <+> c) mempty
 

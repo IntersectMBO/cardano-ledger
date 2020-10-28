@@ -3,6 +3,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DataKinds #-}
 
 module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTests) where
 
@@ -35,11 +37,17 @@ import Test.Shelley.Spec.Ledger.Rules.TestChain
 import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
+import GHC.Records (HasField)
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import Shelley.Spec.Ledger.PParams
+  ( Update (..)
+  )
 
 proxyC :: Proxy C
 proxyC = Proxy
 
-minimalPropertyTests :: TQC.Gen (Core.Value C) -> TestTree
+minimalPropertyTests :: (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) =>
+  TQC.Gen (Core.Value C) -> TestTree
 minimalPropertyTests gv =
   testGroup
     "Minimal Property Tests"
@@ -58,7 +66,9 @@ minimalPropertyTests gv =
     ]
 
 -- | 'TestTree' of property-based testing properties.
-propertyTests :: TQC.Gen (Core.Value C) -> TestTree
+propertyTests ::
+  (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) =>
+  TQC.Gen (Core.Value C) -> TestTree
 propertyTests gv =
   testGroup
     "Property-Based Testing"

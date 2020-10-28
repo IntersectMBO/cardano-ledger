@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
 
 module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidLedgerSignalsAreGenerated,
@@ -72,6 +73,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams
   ( pattern ProposedPPUpdates,
     pattern Update,
+    Update (..)
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Shelley.Spec.Ledger.Tx (Tx (..))
@@ -88,6 +90,8 @@ import Test.QuickCheck
     property,
     withMaxSuccess,
   )
+import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import GHC.Records (HasField, getField)
 import qualified Test.QuickCheck.Gen as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
@@ -100,6 +104,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Core as Core
 import Test.QuickCheck.Gen (Gen (..))
 
+-- genesis state has no MA tokens
 genesisChainState ::
   forall era a.
   ShelleyTest era =>
@@ -117,6 +122,7 @@ genesisChainState gv = Just $ mkGenesisChainState gv (geConstants (genEnv p))
     p :: Proxy era
     p = Proxy
 
+-- genesis state has no MA tokens
 genesisLedgerState ::
   forall c a.
   Crypto c =>
@@ -136,7 +142,9 @@ genesisLedgerState gv = Just $ mkGenesisLedgerState gv (geConstants (genEnv p))
     p :: Proxy (ShelleyEra c)
     p = Proxy
 
-relevantCasesAreCovered :: Gen (Core.Value C) -> Property
+relevantCasesAreCovered ::
+  (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) =>
+  Gen (Core.Value C) -> Property
 relevantCasesAreCovered gv = do
   let tl = 100
   checkCoverage $
@@ -149,7 +157,13 @@ relevantCasesAreCovered gv = do
 
 relevantCasesAreCoveredForTrace ::
   forall era.
-  (ShelleyTest era) =>
+  ( ShelleyTest era,
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "txUpdate" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era))
+  ) =>
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
@@ -198,7 +212,7 @@ relevantCasesAreCoveredForTrace tr = do
             60
           ),
           ( "at least 10% of transactions have script TxOuts",
-            0.1 < txScriptOutputsRatio (map (_outputs . _body) txs),
+            0.1 < txScriptOutputsRatio (map (getField @"outputs" . _body) txs),
             20
           ),
           ( "at least 10% of `DCertDeleg` certificates have script credentials",
@@ -255,8 +269,11 @@ scriptCredentialCertsRatio certs =
           certs
 
 -- | Extract the certificates from the transactions
-certsByTx :: ShelleyTest era => [Tx era] -> [[DCert era]]
-certsByTx txs = toList . _certs . _body <$> txs
+certsByTx ::
+  ( ShelleyTest era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+  ) => [Tx era] -> [[DCert era]]
+certsByTx txs =  (toList . (getField @"certs") .  _body) <$> txs
 
 ratioInt :: Int -> Int -> Double
 ratioInt x y =
@@ -278,19 +295,27 @@ txScriptOutputsRatio txoutsList =
           )
           txouts
 
-hasWithdrawal :: ShelleyTest era => Tx era -> Bool
-hasWithdrawal = not . null . unWdrl . _wdrls . _body
+hasWithdrawal ::
+  ( ShelleyTest era,
+    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+  ) => Tx era -> Bool
+hasWithdrawal tx = (not . null . unWdrl) $ getField @"wdrls" (_body tx)
 
-hasPParamUpdate :: ShelleyTest era => Tx era -> Bool
+hasPParamUpdate ::
+  ( ShelleyTest era,
+    HasField "txUpdate" (Core.TxBody era) (StrictMaybe (Update era))
+  ) => Tx era -> Bool
 hasPParamUpdate tx =
-  ppUpdates . _txUpdate . _body $ tx
+  ppUpdates (getField @"txUpdate" $ _body tx)
   where
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
-hasMetaData :: ShelleyTest era => Tx era -> Bool
+hasMetaData :: ( ShelleyTest era,
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era))
+  ) => Tx era -> Bool
 hasMetaData tx =
-  f . _mdHash . _body $ tx
+  f $ getField @"mdHash" (_body tx)
   where
     f SNothing = False
     f (SJust _) = True
@@ -305,7 +330,7 @@ onlyValidLedgerSignalsAreGenerated gv =
 
 -- | Check that the abstract transaction size function
 -- actually bounds the number of bytes in the serialized transaction.
-propAbstractSizeBoundsBytes :: Gen (Core.Value C) -> Property
+propAbstractSizeBoundsBytes :: Gen (Core.Value C) ->  Property
 propAbstractSizeBoundsBytes gv = property $ do
   let tl = 100
       numBytes = toInteger . BS.length . serialize'

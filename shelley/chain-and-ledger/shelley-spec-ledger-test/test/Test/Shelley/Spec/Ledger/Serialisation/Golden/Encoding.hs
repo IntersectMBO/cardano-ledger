@@ -1359,7 +1359,7 @@ tests =
           ru =
             ( SJust
                 RewardUpdate
-                  { deltaT = Coin 100,
+                  { deltaT = DeltaCoin 100,
                     deltaR = DeltaCoin (-200),
                     rs = Map.empty,
                     deltaF = DeltaCoin (-10),

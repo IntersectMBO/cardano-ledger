@@ -19,6 +19,7 @@ module Test.Shelley.Spec.Ledger.Serialisation.Generators () where
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Generic.Random (genericArbitraryU)
 import Shelley.Spec.Ledger.API (TxBody (TxBody))
+import Shelley.Spec.Ledger.Hashing (HashIndex, EraIndependentTxBody)
 import qualified Shelley.Spec.Ledger.STS.Utxo as STS
 import Test.QuickCheck
   ( Arbitrary,
@@ -50,3 +51,4 @@ instance Mock c => Arbitrary (TxBody (ShelleyEra c)) where
 instance Mock c => Arbitrary (STS.UtxoPredicateFailure (ShelleyEra c)) where
   arbitrary = genericArbitraryU
   shrink _ = []
+  
