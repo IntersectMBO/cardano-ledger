@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -24,13 +25,14 @@ data MaryOrAllegra = Mary | Allegra
 data ShelleyMAEra (ma :: MaryOrAllegra) c
 
 instance
+  forall c (ma :: MaryOrAllegra).
   (Typeable ma, Cardano.Ledger.Crypto.Crypto c) =>
   Era (ShelleyMAEra ma c)
   where
   type Crypto (ShelleyMAEra ma c) = c
 
 type family MAValue (x :: MaryOrAllegra) era :: Type where
-  MAValue 'Allegra era = Coin
+  MAValue 'Allegra _ = Coin
   MAValue 'Mary era = Value era
 
 type instance Core.Value (ShelleyMAEra m c) = MAValue m (ShelleyMAEra m c)

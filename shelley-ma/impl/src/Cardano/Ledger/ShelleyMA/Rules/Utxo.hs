@@ -255,9 +255,10 @@ utxoTransition = do
 --------------------------------------------------------------------------------
 
 instance
+  forall c (ma :: MaryOrAllegra).
   ( CryptoClass.Crypto c,
     Typeable ma,
-    ShelleyBased (ShelleyMAEra (ma :: MaryOrAllegra) c),
+    ShelleyBased (ShelleyMAEra ma c),
     Core.TxBody (ShelleyMAEra ma c) ~ TxBody (ShelleyMAEra ma c)
   ) =>
   STS (UTXO (ShelleyMAEra ma c))
@@ -277,7 +278,7 @@ instance
 
 instance
   (CryptoClass.Crypto c, Typeable ma) =>
-  Embed (PPUP (ShelleyMAEra ma c)) (UTXO (ShelleyMAEra ma c))
+  Embed (PPUP (ShelleyMAEra (ma :: MaryOrAllegra) c)) (UTXO (ShelleyMAEra ma c))
   where
   wrapFailed = UpdateFailure
 

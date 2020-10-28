@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -15,7 +16,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
 import Cardano.Ledger.Shelley (ShelleyBased)
-import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
+import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
 import Cardano.Ledger.ShelleyMA.Scripts ()
 import Cardano.Ledger.ShelleyMA.TxBody ()
@@ -112,6 +113,7 @@ scriptsNeeded u tx =
 --------------------------------------------------------------------------------
 
 instance
+  forall c (ma :: MaryOrAllegra).
   ( CryptoClass.Crypto c,
     Typeable ma,
     STS (UTXO (ShelleyMAEra ma c)),
