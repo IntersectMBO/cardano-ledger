@@ -89,7 +89,7 @@ class (Era era, Era (PreviousEra era)) => TranslateEra era f where
   -- concrete error type.
   type TranslationError era f :: Type
 
-  type TranslationError era f = Void
+  type TranslationError _ _ = Void
 
   -- | Translate a type @f@ parameterised by the era from an era to the era
   -- after it.
