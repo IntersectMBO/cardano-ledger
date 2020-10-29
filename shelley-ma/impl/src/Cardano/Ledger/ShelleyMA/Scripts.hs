@@ -7,7 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.ShelleyMA.Scripts (Script) where
+module Cardano.Ledger.ShelleyMA.Scripts (Script (..)) where
 
 import Cardano.Binary
   ( Annotator,
