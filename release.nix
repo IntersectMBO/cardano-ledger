@@ -74,6 +74,8 @@ let
     delegationDesignSpec = project.specs.delegation-design;
     nonIntegerCalculations = project.specs.non-integer-calculations;
     blocksCDDLSpec = project.specs.blocks-cddl;
+    # Ensure everything in the shell is cached
+    shell = project.shell;
   };
 
 in jobs
