@@ -30,7 +30,7 @@ In addition, there is a formalization of the Ledger Specification in Isabelle/HO
 
 # Repository structure
 
-This directory structure of this repository is as follows:
+The directory structure of this repository is as follows:
 
 - [byron](./byron)
   - [ledger](./byron/ledger)
