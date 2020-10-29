@@ -20,6 +20,7 @@ import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
 import Cardano.Ledger.ShelleyMA.Scripts ()
 import Cardano.Ledger.ShelleyMA.TxBody ()
+import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val (Val)
 import Control.State.Transition.Extended
 import Data.Foldable (Foldable (toList))
@@ -122,8 +123,11 @@ instance
     Val (Core.Value (ShelleyMAEra ma c)),
     GetPolicies (Core.Value (ShelleyMAEra ma c)) (ShelleyMAEra ma c),
     Core.ChainData (Core.Value (ShelleyMAEra ma c)),
+    Core.ChainData (Delta (Core.Value (ShelleyMAEra ma c))),
     Core.SerialisableData (Core.Value (ShelleyMAEra ma c)),
+    Core.SerialisableData (Delta (Core.Value (ShelleyMAEra ma c))),
     Core.SerialisableData (CompactForm (Core.Value (ShelleyMAEra ma c))),
+    Torsor (Core.Value (ShelleyMAEra ma c)),
     DSignable c (Hash c EraIndependentTxBody)
   ) =>
   STS (UTXOW (ShelleyMAEra ma c))

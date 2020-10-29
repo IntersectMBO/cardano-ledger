@@ -145,9 +145,9 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
   ( Coin (..),
     DeltaCoin (..),
-    addDelta,
+    addDeltaCoin,
     rationalToCoinViaFloor,
-    toDelta,
+    toDeltaCoin,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -1026,12 +1026,12 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     as' =
       as
         { _treasury = _treasury as <> deltaT ru <> fold (range unregRU),
-          _reserves = addDelta (_reserves as) (deltaR ru)
+          _reserves = addDeltaCoin (_reserves as) (deltaR ru)
         }
     ls' =
       ls
         { _utxoState =
-            utxoState_ {_fees = _fees utxoState_ `addDelta` deltaF ru},
+            utxoState_ {_fees = _fees utxoState_ `addDeltaCoin` deltaF ru},
           _delegationState =
             delegState
               { _dstate =
@@ -1113,9 +1113,9 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
   pure $
     RewardUpdate
       { deltaT = (Coin deltaT1),
-        deltaR = ((invert $ toDelta deltaR1) <> toDelta deltaR2),
+        deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
         rs = rs_,
-        deltaF = (invert (toDelta $ _feeSS ss)),
+        deltaF = (invert (toDeltaCoin $ _feeSS ss)),
         nonMyopic = (updateNonMypopic nm _R newLikelihoods)
       }
 

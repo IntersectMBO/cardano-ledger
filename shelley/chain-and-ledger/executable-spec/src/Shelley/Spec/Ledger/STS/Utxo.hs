@@ -31,6 +31,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
@@ -134,8 +135,8 @@ data UtxoPredicateFailure era
       !Coin -- the minimum fee for this transaction
       !Coin -- the fee supplied in this transaction
   | ValueNotConservedUTxO
-      !(Core.Value era) -- the Coin consumed by this transaction
-      !(Core.Value era) -- the Coin produced by this transaction
+      !(Delta (Core.Value era)) -- the Coin consumed by this transaction
+      !(Delta (Core.Value era)) -- the Coin produced by this transaction
   | WrongNetwork
       !Network -- the expected network id
       !(Set (Addr era)) -- the set of addresses with incorrect network IDs
@@ -157,7 +158,7 @@ deriving stock instance
   ShelleyBased era =>
   Eq (UtxoPredicateFailure era)
 
-instance NoThunks (Core.Value era) => NoThunks (UtxoPredicateFailure era)
+instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era)
 
 instance
   ShelleyBased era =>
@@ -341,7 +342,7 @@ utxoInductive = do
 
   let consumed_ = consumed pp utxo txb
       produced_ = produced pp stakepools txb
-  consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
+  consumed_ == produced_ ?! ValueNotConservedUTxO (toDelta consumed_) (toDelta produced_)
 
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)

@@ -23,6 +23,7 @@ library
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
     Cardano.Ledger.Shelley
+    Cardano.Ledger.Torsor
     Cardano.Ledger.Val
     Shelley.Spec.Ledger.Address
     Shelley.Spec.Ledger.Address.Bootstrap

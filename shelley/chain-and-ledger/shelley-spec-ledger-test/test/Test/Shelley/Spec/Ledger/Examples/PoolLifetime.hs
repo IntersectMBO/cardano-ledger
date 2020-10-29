@@ -38,7 +38,7 @@ import Shelley.Spec.Ledger.BlockChain
     bheader,
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), toDelta, addDelta)
+import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), toDeltaCoin, addDeltaCoin)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
@@ -568,7 +568,7 @@ rewardUpdateEx6 =
     { deltaT = Coin 1,
       deltaR = DeltaCoin 4,
       rs = Map.empty,
-      deltaF = invert $ toDelta feeTx4,
+      deltaF = invert $ toDeltaCoin feeTx4,
       nonMyopic = emptyNonMyopic {rewardPotNM = Coin 4}
     }
 
@@ -884,7 +884,7 @@ blockEx11 =
     (mkOCert (coreNodeKeysBySchedule @era ppEx 490) 2 (KESPeriod 19))
 
 reserves12 :: Coin
-reserves12 = addDelta reserves7 deltaR8
+reserves12 = addDeltaCoin reserves7 deltaR8
 
 alicePerfEx11 :: forall era. ShelleyTest era => Likelihood
 alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
