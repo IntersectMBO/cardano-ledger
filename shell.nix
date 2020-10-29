@@ -10,6 +10,14 @@ with pkgs;
 let
   ormolu = import pkgs.commonLib.sources.ormolu {};
 
+  # For building the sphinx doc
+  pyEnv = 
+    # TODO: deduplicate with default.nix
+    let
+      sphinx-markdown-tables = pkgs.python3Packages.callPackage ./nix/python/sphinx-markdown-tables.nix {};
+      sphinxemoji = pkgs.python3Packages.callPackage ./nix/python/sphinxemoji.nix {};
+    in pkgs.python3.withPackages (ps: [ ps.sphinx ps.sphinx_rtd_theme ps.recommonmark sphinx-markdown-tables sphinxemoji ]);
+
   # This provides a development environment that can be used with nix-shell or
   # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   shell = cardanoLedgerSpecsHaskellPackages.shellFor {
@@ -25,6 +33,7 @@ let
       pkg-config
       hlint
       ormolu.ormolu
+      pyEnv
     ];
 
     tools = {
