@@ -42,7 +42,7 @@ type instance PreviousEra (AllegraEra c) = ShelleyEra c
 --
 -- Note: if context is needed, please coordinate with consensus, who will have
 -- to provide the context in the right place.
-type instance TranslationContext (AllegraEra c) = ()
+type instance TranslationContext (AllegraEra _) = ()
 
 instance (ShelleyBased (AllegraEra c), Crypto c) => TranslateEra (AllegraEra c) NewEpochState where
   -- TODO remove the ShelleyBased (AllegraEra c) constraint
