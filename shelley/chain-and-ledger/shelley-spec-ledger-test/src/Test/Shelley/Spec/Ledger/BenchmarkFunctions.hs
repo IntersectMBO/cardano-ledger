@@ -39,6 +39,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr)
+import Shelley.Spec.Ledger.API (PraosCrypto)
 import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -120,6 +121,8 @@ instance Cardano.Ledger.Crypto.Crypto B_Crypto where
   type DSIGN B_Crypto = DSIGN Original.C_Crypto
   type HASH B_Crypto = Blake2b_256
   type ADDRHASH B_Crypto = Blake2b_256
+
+instance PraosCrypto B_Crypto
 
 -- =========================================================
 

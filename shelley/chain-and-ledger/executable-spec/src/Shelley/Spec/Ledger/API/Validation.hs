@@ -19,10 +19,7 @@ module Shelley.Spec.Ledger.API.Validation
   )
 where
 
-import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
-import Cardano.Ledger.Crypto (HASH)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
 import Control.Arrow (left, right)
@@ -31,16 +28,15 @@ import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.BlockChain
-import Shelley.Spec.Ledger.Keys (DSignable)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Tick as STS
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 {-------------------------------------------------------------------------------
   Block validation API
@@ -137,11 +133,7 @@ class
           (LedgerState.esLState $ LedgerState.nesEs state)
           (LedgerState.nesBcur state)
 
-instance
-  ( CC.Crypto crypto,
-    DSignable crypto (Hash (HASH crypto) EraIndependentTxBody)
-  ) =>
-  ApplyBlock (ShelleyEra crypto)
+instance PraosCrypto crypto => ApplyBlock (ShelleyEra crypto)
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks

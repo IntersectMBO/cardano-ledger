@@ -32,6 +32,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class
+import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
   ( ValidateScript (..),
@@ -61,6 +62,7 @@ instance Era era => FromCBOR (Annotator (Script era)) where
         1 -> do
           tl <- fromCBOR
           pure (2, ScriptTimelock <$> tl)
+        k -> invalidKey k
 
 type instance
   Core.Script (ShelleyMAEra (ma :: MaryOrAllegra) c) =

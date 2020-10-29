@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -10,6 +11,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Integration between the Shelley ledger and its corresponding (Transitional
 -- Praos) protocol.
@@ -17,7 +19,8 @@
 -- In particular, this code supports extracting the components of the ledger
 -- state needed for protocol execution, both now and in a 2k-slot window.
 module Shelley.Spec.Ledger.API.Protocol
-  ( GetLedgerView (..),
+  ( PraosCrypto,
+    GetLedgerView (..),
     LedgerView (..),
     FutureLedgerViewError (..),
     -- $chainstate
@@ -60,7 +63,8 @@ import Shelley.Spec.Ledger.BlockChain
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import Shelley.Spec.Ledger.Keys (DSignable, GenDelegs, KESignable, VRFSignable)
+import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody)
+import Shelley.Spec.Ledger.Keys (DSignable, GenDelegs, Hash, KESignable, VRFSignable)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
     NewEpochState (..),
@@ -76,6 +80,15 @@ import Shelley.Spec.Ledger.STS.Tick (TICKF)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
+
+class
+  ( CC.Crypto c,
+    DSignable c (OCertSignable c),
+    DSignable c (Hash c EraIndependentTxBody),
+    KESignable c (BHBody c),
+    VRFSignable c Seed
+  ) =>
+  PraosCrypto c
 
 class
   ( ChainData (ChainDepState (Crypto era)),
@@ -107,7 +120,7 @@ class
     m (LedgerView (Crypto era))
   futureLedgerView = futureView
 
-instance CC.Crypto crypto => GetLedgerView (ShelleyEra crypto)
+instance PraosCrypto crypto => GetLedgerView (ShelleyEra crypto)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto = LedgerView
@@ -305,11 +318,8 @@ tickChainDepState
 --   This also updates the last applied block hash.
 updateChainDepState ::
   forall crypto m.
-  ( CC.Crypto crypto,
-    MonadError (ChainTransitionError crypto) m,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRFSignable crypto Seed
+  ( PraosCrypto crypto,
+    MonadError (ChainTransitionError crypto) m
   ) =>
   Globals ->
   LedgerView crypto ->
@@ -349,11 +359,7 @@ updateChainDepState
 --   that this is valid through having previously applied it.
 reupdateChainDepState ::
   forall crypto.
-  ( CC.Crypto crypto,
-    DSignable crypto (OCertSignable crypto),
-    KESignable crypto (BHBody crypto),
-    VRFSignable crypto Seed
-  ) =>
+  PraosCrypto crypto =>
   Globals ->
   LedgerView crypto ->
   BHeader crypto ->

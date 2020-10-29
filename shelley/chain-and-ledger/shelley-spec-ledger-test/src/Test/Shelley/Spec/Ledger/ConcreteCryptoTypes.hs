@@ -21,10 +21,11 @@ import Cardano.Ledger.Crypto
 import Shelley.Spec.Ledger.BaseTypes (Seed)
 import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Shelley.Spec.Ledger.API (PraosCrypto)
 
 -- | Mocking constraints used in generators
 type Mock c =
-  ( Cardano.Ledger.Crypto.Crypto c,
+  ( PraosCrypto c,
     KES.Signable (KES c) ~ SignableRepresentation,
     DSIGN.Signable (DSIGN c)
       ~ SignableRepresentation,
@@ -51,3 +52,5 @@ instance Cardano.Ledger.Crypto.Crypto C_Crypto where
   type DSIGN C_Crypto = MockDSIGN
   type KES C_Crypto = MockKES 10
   type VRF C_Crypto = FakeVRF
+
+instance PraosCrypto C_Crypto

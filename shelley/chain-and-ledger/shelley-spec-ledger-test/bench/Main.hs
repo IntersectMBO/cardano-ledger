@@ -41,6 +41,7 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
+import Shelley.Spec.Ledger.API (PraosCrypto)
 import Shelley.Spec.Ledger.Bench.Gen
   ( genBlock,
     genTriple,
@@ -107,6 +108,8 @@ instance CryptoClass.Crypto BenchCrypto where
   type VRF BenchCrypto = PraosVRF
   type HASH BenchCrypto = Blake2b_256
   type ADDRHASH BenchCrypto = Blake2b_224
+
+instance PraosCrypto BenchCrypto
 
 type BenchEra = ShelleyEra BenchCrypto
 

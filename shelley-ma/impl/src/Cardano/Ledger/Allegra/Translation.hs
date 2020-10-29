@@ -12,7 +12,7 @@ module Cardano.Ledger.Allegra.Translation where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.Iterate.SetAlgebra (biMapFromList, lifo)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
@@ -44,8 +44,7 @@ type instance PreviousEra (AllegraEra c) = ShelleyEra c
 -- to provide the context in the right place.
 type instance TranslationContext (AllegraEra c) = ()
 
-instance (ShelleyBased (AllegraEra c), Crypto c) => TranslateEra (AllegraEra c) NewEpochState where
-  -- TODO remove the ShelleyBased (AllegraEra c) constraint
+instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
