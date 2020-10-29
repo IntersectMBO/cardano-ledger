@@ -74,7 +74,7 @@ import Cardano.Binary
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra, TxBodyConstraints)
 import qualified Cardano.Ledger.Shelley as Shelley
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
@@ -352,7 +352,10 @@ class
   hashScript :: Core.Script era -> ScriptHash era
 
 -- | instance of MultiSignatureScript type class
-instance CryptoClass.Crypto c => ValidateScript (ShelleyEra c) where
+instance
+  (CryptoClass.Crypto c, TxBodyConstraints (ShelleyEra c)) =>
+  ValidateScript (ShelleyEra c)
+  where
   validateScript = validateNativeMultiSigScript
   hashScript = hashMultiSigScript
 

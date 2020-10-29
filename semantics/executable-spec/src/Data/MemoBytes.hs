@@ -70,11 +70,6 @@ instance Show t => Show (MemoBytes t) where show (Memo y _) = show y
 
 instance Ord t => Ord (MemoBytes t) where compare (Memo x _) (Memo y _) = compare x y
 
-{-
-instance HasField tag t c => HasField (tag::Symbol) (MemoBytes t) c where
-   getField (Memo x _) = getField @tag x
--}
-
 shorten :: Lazy.ByteString -> ShortByteString
 shorten x = toShort (toStrict x)
 
@@ -88,10 +83,8 @@ showMemo (Memo t b) = "(Memo " ++ show t ++ "  " ++ show b ++ ")"
 printMemo :: Show t => MemoBytes t -> IO ()
 printMemo x = putStrLn (showMemo x)
 
-
 memoBytes :: Encode w t -> MemoBytes t
 memoBytes t = Memo (runE t) (shorten (toLazyByteString (encode t)))
-
 
 roundTripMemo:: (FromCBOR t) => MemoBytes t -> Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, MemoBytes t)
 roundTripMemo (Memo _t bytes) =

@@ -116,7 +116,6 @@ import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
 import Data.Foldable (fold, toList)
 import Data.Group (invert)
-import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -737,7 +736,6 @@ txsize = fromIntegral . BSL.length . txFullBytes
 txsizeBound ::
   forall era.
   ( ShelleyBased era,
-    HasField "extraSize" (Core.TxBody era) Int64,
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn era))
   ) =>
@@ -757,7 +755,7 @@ txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
     inputSize = smallArray + uint + hashObj
     numOutputs = toInteger . length . getField @"outputs" $ txbody
     outputSize = smallArray + uint + address
-    rest = fromIntegral $ BSL.length (txFullBytes tx) - getField @"extraSize" txbody
+    rest = fromIntegral $ BSL.length (txFullBytes tx)
 
 -- | Minimum fee calculation
 minfee :: PParams era -> Tx era -> Coin
@@ -770,7 +768,6 @@ minfee pp tx =
 minfeeBound ::
   forall era.
   ( ShelleyBased era,
-    HasField "extraSize" (Core.TxBody era) Int64,
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn era))
   ) =>

@@ -58,18 +58,14 @@ import Cardano.Binary
     FromCBOR (..),
     Size,
     ToCBOR (..),
-    TokenType (TypeNull),
     decodeListLenOrIndef,
     decodeMapLenOrIndef,
-    decodeNull,
     decodeTag,
     encodeBreak,
     encodeListLen,
     encodeMapLen,
     encodeMapLenIndef,
-    encodeNull,
     encodeTag,
-    peekTokenType,
     withWordSize,
   )
 import Cardano.Prelude (cborError)
@@ -84,6 +80,7 @@ import Data.Coders
   ( decodeCollection,
     decodeCollectionWithLen,
     decodeList,
+    decodeNullMaybe,
     decodeRecordNamed,
     decodeRecordSum,
     decodeSeq,
@@ -91,6 +88,7 @@ import Data.Coders
     decodeStrictSeq,
     encodeFoldable,
     encodeFoldableEncoder,
+    encodeNullMaybe,
     wrapCBORArray,
   )
 import Data.Foldable (foldl')
@@ -237,18 +235,6 @@ ratioFromCBOR = do
   case values of
     n : d : [] -> pure $ n % d
     _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numValues
-
-encodeNullMaybe :: (a -> Encoding) -> Maybe a -> Encoding
-encodeNullMaybe _ Nothing = encodeNull
-encodeNullMaybe encoder (Just x) = encoder x
-
-decodeNullMaybe :: Decoder s a -> Decoder s (Maybe a)
-decodeNullMaybe decoder = do
-  peekTokenType >>= \case
-    TypeNull -> do
-      decodeNull
-      pure Nothing
-    _ -> Just <$> decoder
 
 ipv4ToBytes :: IPv4 -> BS.ByteString
 ipv4ToBytes = BSL.toStrict . runPut . putWord32le . toHostAddress

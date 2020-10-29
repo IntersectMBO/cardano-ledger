@@ -40,7 +40,8 @@ library
                      , Control.SetAlgebra
   -- other-modules:
   -- other-extensions:
-  build-depends:       base >=4.11 && <5
+  build-depends:       array
+                     , base >=4.11 && <5
                      , bytestring
                      , cardano-prelude
                      , containers

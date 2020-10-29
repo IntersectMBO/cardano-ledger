@@ -248,7 +248,7 @@ instance
         k -> invalidKey k
 
 instance
-  (CryptoClass.Crypto c) =>
+  (CryptoClass.Crypto c, Core.TxBody (ShelleyEra c) ~ TxBody (ShelleyEra c)) =>
   STS (UTXO (ShelleyEra c))
   where
   type State (UTXO (ShelleyEra c)) = UTxOState (ShelleyEra c)

@@ -21,9 +21,11 @@ library
   exposed-modules:
     Test.Cardano.Ledger.ShelleyMA.TxBody
     Test.Cardano.Ledger.ShelleyMA.Timelocks
+    Test.Cardano.Ledger.ShelleyMA.Coders
 
   -- other-extensions:
   build-depends:
+    array,
     cardano-ledger-shelley-ma,
     base >=4.9 && <4.15,
     bytestring,
@@ -44,6 +46,7 @@ library
     tasty-hunit,
     tasty-quickcheck,
     tasty,
+    text,
   hs-source-dirs: src
   ghc-options:
     -Wall

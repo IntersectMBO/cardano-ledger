@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -39,7 +40,7 @@ module Shelley.Spec.Ledger.TxBody
     StakePoolRelay (..),
     TxBody
       ( TxBody,
-        TxBody',
+        TxBodyY,
         _inputs,
         _outputs,
         _certs,
@@ -47,9 +48,9 @@ module Shelley.Spec.Ledger.TxBody
         _txfee,
         _ttl,
         _txUpdate,
-        _mdHash,
-        extraSize
+        _mdHash
       ),
+    --  TxBodyY(TxBodyZ,..),
     TxId (..),
     TxIn (TxIn, ..),
     EraIndependentTxBody,
@@ -69,50 +70,54 @@ where
 import Cardano.Binary
   ( Annotator (..),
     Case (..),
-    Decoder,
     FromCBOR (fromCBOR),
     Size,
     ToCBOR (..),
     annotatorSlice,
     decodeWord,
     encodeListLen,
-    encodeMapLen,
     encodePreEncoded,
-    encodeWord,
     serializeEncoding,
-    serializeEncoding',
     szCases,
-    withSlice,
   )
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Val (Val)
 import Cardano.Prelude
   ( decodeEitherBase16,
     panic,
   )
 import Control.DeepSeq (NFData (rnf))
-import Control.Monad (unless)
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser, explicitParseField)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
+import Data.Coders
+  ( Decode (..),
+    Density (..),
+    Dual (..),
+    Encode (..),
+    Field (..),
+    Wrapped (..),
+    decode,
+    encode,
+    (!>),
+  )
 import Data.Coerce (coerce)
-import Data.Foldable (asum, fold)
+import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
-import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes)
+import Data.Maybe (fromJust)
+import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
-import Data.Relation (Relation (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -172,7 +177,6 @@ import Shelley.Spec.Ledger.Serialization
     CborSeq (..),
     FromCBORGroup (..),
     ToCBORGroup (..),
-    decodeMapContents,
     decodeNullMaybe,
     decodeRecordNamed,
     decodeRecordSum,
@@ -189,6 +193,8 @@ import Shelley.Spec.Ledger.Serialization
     mapToCBOR,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+
+-- ========================================================================
 
 instance HasExp (StakeCreds era) (Map (Credential 'Staking era) SlotNo) where
   toExp (StakeCreds x) = Base MapR x
@@ -573,64 +579,149 @@ instance NoThunks (MIRCert era)
 
 instance NoThunks (DCert era)
 
--- | A raw transaction
-data TxBody era = TxBody'
-  { _inputs' :: !(Set (TxIn era)),
-    _outputs' :: !(StrictSeq (TxOut era)),
-    _certs' :: !(StrictSeq (DCert era)),
-    _wdrls' :: !(Wdrl era),
-    _txfee' :: !Coin,
-    _ttl' :: !SlotNo,
-    _txUpdate' :: !(StrictMaybe (Update era)),
-    _mdHash' :: !(StrictMaybe (MetaDataHash era)),
-    bodyBytes :: BSL.ByteString,
-    extraSize :: !Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
+-- ===========================================================================
+-- Since TxBody has fees (which are Values) and Scripts (inside hashes),
+-- and both are type families, we need to ensure that these families have
+-- the minimum amount of properties, to make the correct instances for TxBody
+
+-- | Needed for Show, Eq etc instances
+type ProperVal era =
+  ( Era era,
+    Compactible (Core.Value era),
+    Show (Core.Value era),
+    Eq (Core.Value era),
+    Val (Core.Value era)
+  )
+
+-- | Needed for FromCBOR instances
+type ProperFrom era =
+  ( Era era,
+    Typeable era,
+    FromCBOR (Core.Value era),
+    Typeable (Core.Script era),
+    FromCBOR (CompactForm (Core.Value era)),
+    FromCBOR (Annotator (Core.Script era))
+  )
+
+-- | Needed for ToCBOR instances
+type ProperTo era =
+  ( Era era,
+    ToCBOR (Core.Value era),
+    ToCBOR (Core.Script era),
+    ToCBOR (CompactForm (Core.Value era))
+  )
+
+-- ==============================
+-- The underlying type for TxBody
+
+data TxBodyX era = TxBodyX
+  { _inputsX :: !(Set (TxIn era)),
+    _outputsX :: !(StrictSeq (TxOut era)),
+    _certsX :: !(StrictSeq (DCert era)),
+    _wdrlsX :: !(Wdrl era),
+    _txfeeX :: !Coin,
+    _ttlX :: !SlotNo,
+    _txUpdateX :: !(StrictMaybe (Update era)),
+    _mdHashX :: !(StrictMaybe (MetaDataHash era))
   }
-  deriving (Generic)
+  deriving (Generic, NoThunks, Typeable)
 
--- HasField instances for TxBody
---
--- We would like to automatically derive these. Unfortunately, however, the
--- automatically derived instances are not exported unless the record fields are
--- exported, which we do not wish to do because this would break the protection
--- (given by the 'TxBody' pattern) around the serialisation.
-instance HasField "inputs" (TxBody era) (Set (TxIn era)) where
-  getField = _inputs'
+deriving instance (Era era, ProperVal era) => Eq (TxBodyX era)
 
-instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
-  getField = _outputs'
+deriving instance (Era era, ProperVal era) => Show (TxBodyX era)
 
-instance HasField "certs" (TxBody era) (StrictSeq (DCert era)) where
-  getField = _certs'
+instance ProperFrom era => FromCBOR (TxBodyX era) where
+  fromCBOR = decode (SparseKeyed "TxBody" baseTxBodyX boxBody [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")])
 
-instance HasField "wdrls" (TxBody era) (Wdrl era) where
-  getField = _wdrls'
+instance ProperFrom era => FromCBOR (Annotator (TxBodyX era)) where
+  fromCBOR = pure <$> fromCBOR
 
-instance HasField "txfee" (TxBody era) Coin where
-  getField = _txfee'
+-- =================================================================
+-- Composable components for building TxBody optional sparse serialisers.
+-- The order of serializing optional fields, and their key values is
+-- demanded by backward compatibility concerns.
 
-instance HasField "ttl" (TxBody era) SlotNo where
-  getField = _ttl'
+-- | This Dual follows strategy of the the old code, for backward compatibility,
+--   of serializing StrictMaybe values. The strategy is to serialise only the
+--   value: 'x' in a (SJust x). The SNothing and the SJust part are never
+--   written to the serialised bytes but are supplied by the Omit capability.
+--   Be sure and wrap a (Omit isNothing (Key v _)) around use of this Dual.
+--   Like this: (Omit isNothing (Key v (ED omitStrictNothingDual x))).
+--   Neither the Omit or the key is needed for Decoders.
+omitStrictNothingDual :: (FromCBOR t, ToCBOR t) => Dual (StrictMaybe t)
+omitStrictNothingDual = Dual (toCBOR . fromJust . strictMaybeToMaybe) (SJust <$> fromCBOR)
 
-instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
-  getField = _txUpdate'
+isSNothing :: StrictMaybe a -> Bool
+isSNothing SNothing = True
+isSNothing _ = False
 
-instance HasField "mdHash" (TxBody era) (StrictMaybe (MetaDataHash era)) where
-  getField = _mdHash'
+-- | Choose a de-serialiser when given the key (of type Word).
+--   Wrap it in a Field which pairs it with its update function which
+--   changes only the field being deserialised.
+boxBody :: ProperFrom era => Word -> Field (TxBodyX era)
+boxBody 0 = Field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
+boxBody 1 = Field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
+boxBody 4 = Field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
+boxBody 5 = Field (\x tx -> tx {_wdrlsX = x}) From
+boxBody 2 = Field (\x tx -> tx {_txfeeX = x}) From
+boxBody 3 = Field (\x tx -> tx {_ttlX = x}) From
+boxBody 6 = Field (\x tx -> tx {_txUpdateX = x}) (DD omitStrictNothingDual)
+boxBody 7 = Field (\x tx -> tx {_mdHashX = x}) (DD omitStrictNothingDual)
+boxBody n = Field (\_ t -> t) (Invalid n)
 
-type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
+-- | Tells how to serialise each field, and what tag to label it with in the
+--   serialisation. boxBody and txSparse should be Duals, visually inspect
+--   The key order looks strange but was choosen for backward compatibility.
+txSparse :: ProperTo era => TxBodyX era -> Encode ( 'Closed 'Sparse) (TxBodyX era)
+txSparse (TxBodyX input output cert wdrl fee ttl update hash) =
+  Keyed (\i o f t c w u h -> TxBodyX i o c w f t u h)
+    !> Key 0 (E encodeFoldable input) -- We don't have to send these in TxBodyX order
+    !> Key 1 (E encodeFoldable output) -- Just hack up a fake constructor with the lambda.
+    !> Key 2 (To fee)
+    !> Key 3 (To ttl)
+    !> Omit null (Key 4 (E encodeFoldable cert))
+    !> Omit (null . unWdrl) (Key 5 (To wdrl))
+    !> Omit isSNothing (Key 6 (ED omitStrictNothingDual update))
+    !> Omit isSNothing (Key 7 (ED omitStrictNothingDual hash))
 
-deriving instance (ShelleyBased era) => Eq (TxBody era)
+-- The initial TxBody. We will overide some of these fields as we build a TxBody,
+-- adding one field at a time, using optional serialisers, inside the Pattern.
+baseTxBodyX :: TxBodyX era
+baseTxBodyX =
+  TxBodyX
+    { _inputsX = Set.empty,
+      _outputsX = StrictSeq.empty,
+      _txfeeX = Coin 0,
+      _ttlX = SlotNo 0,
+      _certsX = StrictSeq.empty,
+      _wdrlsX = Wdrl Map.empty,
+      _txUpdateX = SNothing,
+      _mdHashX = SNothing
+    }
 
-deriving instance (ShelleyBased era) => Show (TxBody era)
+instance ProperTo era => ToCBOR (TxBodyX era) where
+  toCBOR x = encode (txSparse x)
 
-deriving via AllowThunksIn '["bodyBytes"] (TxBody era) instance Era era => NoThunks (TxBody era)
+-- ====================================================
+-- Introduce TxBody as a newtype around a MemoBytes
 
-instance Era era => HashAnnotated (TxBody era) era where
-  type HashIndex (TxBody era) = EraIndependentTxBody
+newtype TxBody era = TxBodyY (MemoBytes (TxBodyX era))
+  deriving (Generic, Typeable)
+  deriving newtype (NoThunks)
 
+deriving instance ProperVal era => Show (TxBody era)
+
+deriving instance ProperVal era => Eq (TxBody era)
+
+deriving via
+  (Mem (TxBodyX era))
+  instance
+    (ProperFrom era) =>
+    FromCBOR (Annotator (TxBody era))
+
+-- | Pattern for use by external users
 pattern TxBody ::
-  ShelleyBased era =>
+  ProperTo era =>
   Set (TxIn era) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert era) ->
@@ -641,57 +732,66 @@ pattern TxBody ::
   StrictMaybe (MetaDataHash era) ->
   TxBody era
 pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
-  TxBody'
-    { _inputs' = _inputs,
-      _outputs' = _outputs,
-      _certs' = _certs,
-      _wdrls' = _wdrls,
-      _txfee' = _txfee,
-      _ttl' = _ttl,
-      _txUpdate' = _txUpdate,
-      _mdHash' = _mdHash
-    }
+  TxBodyY
+    ( Memo
+        ( TxBodyX
+            { _inputsX = _inputs,
+              _outputsX = _outputs,
+              _certsX = _certs,
+              _wdrlsX = _wdrls,
+              _txfeeX = _txfee,
+              _ttlX = _ttl,
+              _txUpdateX = _txUpdate,
+              _mdHashX = _mdHash
+            }
+          )
+        _
+      )
   where
     TxBody _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash =
-      let encodeMapElement ix enc x = Just (encodeWord ix <> enc x)
-          encodeMapElementUnless condition ix enc x =
-            if condition x
-              then Nothing
-              else encodeMapElement ix enc x
-          l =
-            catMaybes
-              [ encodeMapElement 0 encodePreEncoded inputBytes,
-                encodeMapElement 1 encodePreEncoded outputBytes,
-                encodeMapElement 2 encodePreEncoded feeBytes,
-                encodeMapElement 3 toCBOR _ttl,
-                encodeMapElementUnless null 4 encodeFoldable _certs,
-                encodeMapElementUnless (null . unWdrl) 5 toCBOR _wdrls,
-                encodeMapElement 6 toCBOR =<< strictMaybeToMaybe _txUpdate,
-                encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _mdHash
-              ]
-          inputBytes = serializeEncoding' $ encodeFoldable _inputs
-          outputBytes = serializeEncoding' $ encodeFoldable _outputs
-          feeBytes = serializeEncoding' $ toCBOR _txfee
-          es =
-            fromIntegral $
-              BS.length inputBytes
-                + BS.length outputBytes
-                + BS.length feeBytes
-          n = fromIntegral $ length l
-          bytes = serializeEncoding $ encodeMapLen n <> fold l
-       in TxBody'
-            _inputs
-            _outputs
-            _certs
-            _wdrls
-            _txfee
-            _ttl
-            _txUpdate
-            _mdHash
-            bytes
-            es
+      TxBodyY $ memoBytes (txSparse (TxBodyX _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash))
 
 {-# COMPLETE TxBody #-}
+
+instance Era era => HashAnnotated (TxBody era) era where
+  type HashIndex (TxBody era) = EraIndependentTxBody
+
+instance (Era era) => ToCBOR (TxBody era) where
+  toCBOR (TxBodyY memo) = toCBOR memo
+
+-- ==========================================================================
+-- Here is where we declare that in the (ShelleyEra c) The abstract type family
+-- Core.TxBody is set to THIS TxBody,The one we defined a few lines above.
+
+type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
+
+-- ===========================================================================
+
+instance HasField "inputs" (TxBody e) (Set (TxIn e)) where
+  getField (TxBodyY (Memo m _)) = getField @"_inputsX" m
+
+instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
+  getField (TxBodyY (Memo m _)) = getField @"_outputsX" m
+
+instance HasField "certs" (TxBody era) (StrictSeq (DCert era)) where
+  getField (TxBodyY (Memo m _)) = getField @"_certsX" m
+
+instance HasField "wdrls" (TxBody era) (Wdrl era) where
+  getField (TxBodyY (Memo m _)) = getField @"_wdrlsX" m
+
+instance HasField "txfee" (TxBody era) Coin where
+  getField (TxBodyY (Memo m _)) = getField @"_txfeeX" m
+
+instance HasField "ttl" (TxBody era) SlotNo where
+  getField (TxBodyY (Memo m _)) = getField @"_ttlX" m
+
+instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
+  getField (TxBodyY (Memo m _)) = getField @"_txUpdateX" m
+
+instance HasField "mdHash" (TxBody era) (StrictMaybe (MetaDataHash era)) where
+  getField (TxBodyY (Memo m _)) = getField @"_mdHashX" m
+
+-- ===============================================================
 
 -- | Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey kr era = WitVKey'
@@ -905,83 +1005,6 @@ instance
     where
       mkWitVKey k sig = WitVKey' k sig (asWitness $ hashKey k)
 
-instance
-  (Era era) =>
-  ToCBOR (TxBody era)
-  where
-  toCBOR = encodePreEncoded . BSL.toStrict . bodyBytes
-
-instance
-  ShelleyBased era =>
-  FromCBOR (Annotator (TxBody era))
-  where
-  fromCBOR = annotatorSlice $ do
-    mapParts <-
-      decodeMapContents $
-        decodeWord >>= \case
-          0 -> f 0 (decodeSet fromCBOR) $ \bytes x t ->
-            t
-              { _inputs' = x,
-                extraSize = extraSize t + BSL.length bytes
-              }
-          1 -> f 1 (decodeStrictSeq fromCBOR) $ \bytes x t ->
-            t
-              { _outputs' = x,
-                extraSize = extraSize t + BSL.length bytes
-              }
-          2 -> f 2 fromCBOR $ \bytes x t ->
-            t
-              { _txfee' = x,
-                extraSize = extraSize t + BSL.length bytes
-              }
-          3 -> f 3 fromCBOR $ \_ x t -> t {_ttl' = x}
-          4 -> f 4 (decodeStrictSeq fromCBOR) $ \_ x t -> t {_certs' = x}
-          5 -> f 5 fromCBOR $ \_ x t -> t {_wdrls' = x}
-          6 -> f 6 fromCBOR $ \_ x t -> t {_txUpdate' = SJust x}
-          7 -> f 7 fromCBOR $ \_ x t -> t {_mdHash' = SJust x}
-          k -> invalidKey k
-    let requiredFields :: Map Int String
-        requiredFields =
-          Map.fromList $
-            [ (0, "inputs"),
-              (1, "outputs"),
-              (2, "fee"),
-              (3, "ttl")
-            ]
-        fields = fst <$> mapParts
-        missingFields = Map.filterWithKey (\k _ -> notElem k fields) requiredFields
-    unless
-      (null missingFields)
-      (fail $ "missing required transaction component(s): " <> show missingFields)
-    pure $
-      Annotator $
-        \fullbytes bytes ->
-          (foldr ($) basebody (flip runAnnotator fullbytes . snd <$> mapParts)) {bodyBytes = bytes}
-    where
-      f ::
-        Int ->
-        Decoder s a ->
-        (BSL.ByteString -> a -> TxBody era -> TxBody era) ->
-        Decoder s (Int, Annotator (TxBody era -> TxBody era))
-      f key decoder updater = do
-        (x, annBytes) <- withSlice decoder
-        let result = Annotator $ \fullbytes txbody ->
-              updater (runAnnotator annBytes fullbytes) x txbody
-        pure (key, result)
-      basebody =
-        TxBody'
-          { _inputs' = Set.empty,
-            _outputs' = StrictSeq.empty,
-            _txfee' = Coin 0,
-            _ttl' = SlotNo 0,
-            _certs' = StrictSeq.empty,
-            _wdrls' = Wdrl Map.empty,
-            _txUpdate' = SNothing,
-            _mdHash' = SNothing,
-            bodyBytes = mempty,
-            extraSize = 0
-          }
-
 instance ToCBOR PoolMetaData where
   toCBOR (PoolMetaData u h) =
     encodeListLen 2
@@ -1075,38 +1098,3 @@ instance
           _poolRelays = relays,
           _poolMD = maybeToStrictMaybe md
         }
-
-instance Relation (StakeCreds era) where
-  type Domain (StakeCreds era) = Credential 'Staking era
-  type Range (StakeCreds era) = SlotNo
-
-  singleton k v = StakeCreds $ Map.singleton k v
-
-  dom (StakeCreds stkCreds) = dom stkCreds
-
-  range (StakeCreds stkCreds) = range stkCreds
-
-  s ◁ (StakeCreds stkCreds) = StakeCreds $ s ◁ stkCreds
-
-  s ⋪ (StakeCreds stkCreds) = StakeCreds $ s ⋪ stkCreds
-
-  (StakeCreds stkCreds) ▷ s = StakeCreds $ stkCreds ▷ s
-
-  (StakeCreds stkCreds) ⋫ s = StakeCreds $ stkCreds ⋫ s
-
-  (StakeCreds a) ∪ (StakeCreds b) = StakeCreds $ a ∪ b
-
-  (StakeCreds a) ⨃ (StakeCreds b) = StakeCreds $ a ⨃ b
-
-  size (StakeCreds stkCreds) = size stkCreds
-
-  {-# INLINE addpair #-}
-  addpair k v (StakeCreds x) = StakeCreds (Map.insertWith (\y _z -> y) k v x)
-
-  {-# INLINE haskey #-}
-  haskey k (StakeCreds x) = case Map.lookup k x of
-    Just _ -> True
-    Nothing -> False -- haskey k x
-
-  {-# INLINE removekey #-}
-  removekey k (StakeCreds m) = StakeCreds (Map.delete k m)
