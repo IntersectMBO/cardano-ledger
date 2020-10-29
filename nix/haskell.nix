@@ -33,6 +33,9 @@ let
         packages.byron-spec-ledger.configureFlags = [ "--ghc-option=-Werror" ];
         packages.delegation.configureFlags = [ "--ghc-option=-Werror" ];
         packages.shelley-spec-non-integral.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.shelley-spec-ledger.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.cardano-ledger-shelley-ma.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.cardano-ledger-shelley-ma-test.configureFlags = [ "--ghc-option=-Werror" ];
         packages.small-steps.configureFlags = [ "--ghc-option=-Werror" ];
         packages.shelley-spec-ledger-test.components.tests.shelley-spec-ledger-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         enableLibraryProfiling = profiling;
