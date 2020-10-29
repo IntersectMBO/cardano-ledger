@@ -87,7 +87,7 @@ import Cardano.Binary
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Cardano.Prelude
   ( decodeEitherBase16,
     panic,
@@ -617,8 +617,6 @@ instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
 
 instance HasField "mdHash" (TxBody era) (StrictMaybe (MetaDataHash era)) where
   getField = _mdHash'
-
-type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
 
 deriving instance (ShelleyBased era) => Eq (TxBody era)
 

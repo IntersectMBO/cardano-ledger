@@ -21,7 +21,7 @@ where
 
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -36,6 +36,7 @@ import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Tick as STS
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
 {-------------------------------------------------------------------------------

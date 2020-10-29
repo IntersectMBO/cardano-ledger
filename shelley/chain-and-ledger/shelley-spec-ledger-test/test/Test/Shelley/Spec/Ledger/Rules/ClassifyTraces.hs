@@ -95,8 +95,8 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 import qualified Cardano.Ledger.Core as Core
 import Test.QuickCheck.Gen (Gen (..))
 

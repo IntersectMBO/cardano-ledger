@@ -20,7 +20,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto
 import Shelley.Spec.Ledger.BaseTypes (Seed)
 import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 import Shelley.Spec.Ledger.API (PraosCrypto)
 
 -- | Mocking constraints used in generators

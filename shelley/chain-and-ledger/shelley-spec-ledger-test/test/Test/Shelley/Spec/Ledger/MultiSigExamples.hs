@@ -21,8 +21,8 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 import Data.Coerce (coerce)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)

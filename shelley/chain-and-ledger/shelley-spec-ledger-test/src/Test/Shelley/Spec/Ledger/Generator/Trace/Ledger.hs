@@ -19,8 +19,8 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.Monad (foldM)
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended (BaseM, Environment, IRC, STS, Signal, State, TRC (..))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC

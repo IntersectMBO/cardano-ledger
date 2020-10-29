@@ -76,7 +76,7 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerStateWithNregisteredPools,
   )
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 
 -- Generator for coin. This is required, but its ouput is completely discarded.
 -- What is going on here?

@@ -24,8 +24,8 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<->))
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 import Cardano.Prelude
   ( ByteString,
   )

@@ -19,7 +19,6 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
@@ -33,6 +32,7 @@ import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.STS.Chain (pparamsToChainChecksData)
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 import Shelley.Spec.Ledger.Slot
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.

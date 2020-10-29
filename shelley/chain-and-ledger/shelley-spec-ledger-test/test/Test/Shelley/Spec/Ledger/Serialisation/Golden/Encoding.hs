@@ -193,7 +193,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 
 roundTrip ::
   (Show a, Eq a) =>

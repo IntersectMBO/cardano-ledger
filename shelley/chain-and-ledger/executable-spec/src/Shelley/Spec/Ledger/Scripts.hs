@@ -37,7 +37,6 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import qualified Data.ByteString as BS
@@ -144,8 +143,6 @@ deriving newtype instance
 deriving newtype instance (Era era) => ToJSON (ScriptHash era)
 
 deriving newtype instance Era era => FromJSON (ScriptHash era)
-
-type instance Core.Script (ShelleyEra c) = MultiSig (ShelleyEra c)
 
 -- | Hashes native multi-signature script.
 hashMultiSigScript ::

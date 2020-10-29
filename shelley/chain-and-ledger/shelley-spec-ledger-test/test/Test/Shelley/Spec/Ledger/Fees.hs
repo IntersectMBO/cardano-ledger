@@ -18,8 +18,8 @@ import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Val as Val
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Data.ByteString.Base16.Lazy as Base16
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map (empty, singleton)

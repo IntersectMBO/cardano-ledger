@@ -106,7 +106,7 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 
 -- ===============================================
 -- A special Era to run the Benchmarks in

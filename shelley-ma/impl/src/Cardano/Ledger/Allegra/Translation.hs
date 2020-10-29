@@ -12,7 +12,6 @@ module Cardano.Ledger.Allegra.Translation where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.Iterate.SetAlgebra (biMapFromList, lifo)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
@@ -20,6 +19,7 @@ import Shelley.Spec.Ledger.API
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import qualified Shelley.Spec.Ledger.LedgerState as LS (returnRedeemAddrsToReserves, _delegations)
 import Shelley.Spec.Ledger.Rewards (NonMyopic (..))
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Allegra

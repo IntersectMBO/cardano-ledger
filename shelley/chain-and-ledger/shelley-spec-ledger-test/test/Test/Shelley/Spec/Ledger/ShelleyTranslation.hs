@@ -1,6 +1,6 @@
 module Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation) where
 
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Shelley.Spec.Ledger.ShelleyEra (ShelleyEra)
 import Shelley.Spec.Ledger.LedgerState (EpochState, returnRedeemAddrsToReserves)
 import Shelley.Spec.Ledger.STS.Chain (totalAdaES)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
