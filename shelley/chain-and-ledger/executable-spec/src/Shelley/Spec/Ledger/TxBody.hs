@@ -696,7 +696,7 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
 -- | Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey kr era = WitVKey'
   { wvkKey' :: !(VKey kr (Crypto era)),
-    wvkSig' :: !(SignedDSIGN (Crypto era) (Hash (Crypto era) (Core.TxBody era))),
+    wvkSig' :: !(SignedDSIGN (Crypto era) (Hash (Crypto era) EraIndependentTxBody)),
     -- | Hash of the witness vkey. We store this here to avoid repeated hashing
     --   when used in ordering.
     wvkKeyHash :: !(KeyHash 'Witness (Crypto era)),
@@ -719,7 +719,7 @@ instance (Era era, Typeable kr) => HashAnnotated (WitVKey kr era) era where
 pattern WitVKey ::
   (Typeable kr, Era era) =>
   VKey kr (Crypto era) ->
-  SignedDSIGN (Crypto era) (Hash (Crypto era) (Core.TxBody era)) ->
+  SignedDSIGN (Crypto era) (Hash (Crypto era) EraIndependentTxBody) ->
   WitVKey kr era
 pattern WitVKey k s <-
   WitVKey' k s _ _
