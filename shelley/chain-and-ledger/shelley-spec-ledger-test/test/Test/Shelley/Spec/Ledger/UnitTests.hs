@@ -12,6 +12,7 @@
 
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
+import Cardano.Binary (serialize')
 import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (DSIGN, VRF)
@@ -27,6 +28,7 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
   ( DCert (..),
@@ -402,7 +404,7 @@ testInvalidTx errs tx =
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
-    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000))),
+    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (DeltaCoin 0) (DeltaCoin 10000))),
       UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ TxIn genesisId 42))
     ]
     $ aliceGivesBobLovelace $
@@ -705,6 +707,25 @@ testPoolCostTooSmall =
             )
         }
 
+testProducedOverMaxWord64 :: Assertion
+testProducedOverMaxWord64 =
+  let biggestCoin = fromIntegral (maxBound :: Word64)
+      txbody =
+        TxBody @C
+          (Set.fromList [TxIn genesisId 0])
+          (StrictSeq.fromList [TxOut bobAddr (Coin biggestCoin)])
+          Empty
+          (Wdrl Map.empty)
+          (Coin 1) -- @produced@ will return biggestCoin + 1, which is > 2^64.
+          (SlotNo 100)
+          SNothing
+          SNothing
+      wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txbody) [alicePay]}
+      tx = Tx @C txbody wits SNothing
+      st = runShelleyBase $ applySTSTest @(LEDGER C) (TRC (ledgerEnv, (utxoState, dpState), tx))
+   -- We test that the serialization of the predicate failure does not return bottom
+   in serialize' st @?= serialize' st
+
 testsInvalidLedger :: TestTree
 testsInvalidLedger =
   testGroup
@@ -720,7 +741,8 @@ testsInvalidLedger =
       testCase "Invalid Ledger - No withdrawal witness" testWithdrawalNoWit,
       testCase "Invalid Ledger - Incorrect withdrawal amount" testWithdrawalWrongAmt,
       testCase "Invalid Ledger - OutputTooSmall" testOutputTooSmall,
-      testCase "Invalid Ledger - PoolCostTooSmall" testPoolCostTooSmall
+      testCase "Invalid Ledger - PoolCostTooSmall" testPoolCostTooSmall,
+      testCase "Invalid Ledger - ProducedOverMaxWord64" testProducedOverMaxWord64
     ]
 
 testBootstrap :: TestTree

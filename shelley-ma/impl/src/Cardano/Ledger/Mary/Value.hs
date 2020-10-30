@@ -29,6 +29,7 @@ import Cardano.Binary
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
+import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
@@ -169,6 +170,12 @@ instance Compactible (Value era) where
     deriving (ToCBOR, FromCBOR)
   toCompact = CompactValue
   fromCompact = getCompactValue
+
+instance (Era era) => Torsor (Value era) where
+  -- TODO a proper torsor form
+  type Delta (Value era) = (Value era)
+  addDelta = (<+>)
+  toDelta = id
 
 -- ========================================================================
 -- Operations on Values

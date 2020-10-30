@@ -10,6 +10,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era
+import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val (Val)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (..))
@@ -40,6 +41,9 @@ type ShelleyBased era =
     ChainData (Value era),
     SerialisableData (Value era),
     SerialisableData (CompactForm (Value era)),
+    ChainData (Delta (Value era)),
+    SerialisableData (Delta (Value era)),
+    Torsor (Value era),
     -- TxBody constraints
     TxBodyConstraints era,
     -- Script constraints

@@ -12,13 +12,14 @@ module Shelley.Spec.Ledger.Coin
     word64ToCoin,
     coinToRational,
     rationalToCoinViaFloor,
-    addDelta,
-    toDelta,
+    addDeltaCoin,
+    toDeltaCoin,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Compactible
+import qualified Cardano.Ledger.Torsor as Torsor
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
@@ -52,11 +53,16 @@ newtype DeltaCoin = DeltaCoin Integer
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
   deriving newtype (PartialOrd)
 
-addDelta :: Coin -> DeltaCoin -> Coin
-addDelta (Coin x) (DeltaCoin y) = Coin (x + y)
+addDeltaCoin :: Coin -> DeltaCoin -> Coin
+addDeltaCoin (Coin x) (DeltaCoin y) = Coin (x + y)
 
-toDelta :: Coin -> DeltaCoin
-toDelta (Coin x) = DeltaCoin x
+toDeltaCoin :: Coin -> DeltaCoin
+toDeltaCoin (Coin x) = DeltaCoin x
+
+instance Torsor.Torsor Coin where
+  type Delta Coin = DeltaCoin
+  addDelta = addDeltaCoin
+  toDelta = toDeltaCoin
 
 word64ToCoin :: Word64 -> Coin
 word64ToCoin w = Coin $ fromIntegral w

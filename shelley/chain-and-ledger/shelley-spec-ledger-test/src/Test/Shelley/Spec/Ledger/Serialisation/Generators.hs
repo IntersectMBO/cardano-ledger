@@ -43,6 +43,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley as Shelley
+import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.SetAlgebra (biMapFromList)
@@ -77,6 +78,7 @@ import Shelley.Spec.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
+import Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState
@@ -382,11 +384,14 @@ instance Era era => Arbitrary (STS.PpupPredicateFailure era) where
   shrink = genericShrink
 
 instance
-  (ShelleyTest era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  ( ShelleyTest era,
+    Mock (Crypto era),
+    Arbitrary (Core.Value era),
+    Arbitrary (Delta (Core.Value era))
+  ) =>
   Arbitrary (STS.UtxoPredicateFailure era)
   where
   arbitrary = genericArbitraryU
-
   -- we don't have a shrinker for Value, so we do not shrink this
   -- predicate failure, as its constructor contains Value
   shrink pf = [pf]
@@ -455,6 +460,9 @@ instance
 instance Arbitrary Coin where
   -- Cannot be negative even though it is an 'Integer'
   arbitrary = Coin <$> choose (0, 1000)
+
+instance Arbitrary DeltaCoin where
+  arbitrary = DeltaCoin <$> choose (-1000, 1000)
 
 instance Arbitrary SlotNo where
   -- Cannot be negative even though it is an 'Integer'
