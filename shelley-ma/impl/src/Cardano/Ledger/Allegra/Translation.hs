@@ -42,7 +42,7 @@ type instance PreviousEra (AllegraEra c) = ShelleyEra c
 --
 -- Note: if context is needed, please coordinate with consensus, who will have
 -- to provide the context in the right place.
-type instance TranslationContext (AllegraEra _) = ()
+type instance TranslationContext (AllegraEra c) = ()
 
 instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
   translateEra ctxt nes =
