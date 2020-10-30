@@ -23,7 +23,7 @@ data ShelleyEra c
 instance CryptoClass.Crypto c => Era (ShelleyEra c) where
   type Crypto (ShelleyEra c) = c
 
-type instance Value (ShelleyEra _) = Coin
+type instance Value (ShelleyEra c) = Coin
 
 type TxBodyConstraints era =
   ( ChainData (TxBody era),
