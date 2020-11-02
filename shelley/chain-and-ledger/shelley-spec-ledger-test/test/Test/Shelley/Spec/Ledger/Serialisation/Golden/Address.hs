@@ -13,6 +13,7 @@ module Test.Shelley.Spec.Ledger.Serialisation.Golden.Address
   )
 where
 
+import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), hashFromBytes, sizeHash)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
@@ -20,6 +21,7 @@ import Cardano.Crypto.KES.Sum
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Era
+import Cardano.Prelude (decodeEitherBase16)
 import qualified Data.Binary as B
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
@@ -48,8 +50,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
-
-import Cardano.Prelude (decodeEitherBase16)
 
 tests :: TestTree
 tests =
@@ -187,7 +187,26 @@ goldenTests_ShelleyCrypto =
         "rewardAcntK"
         putRewardAcnt
         (RewardAcnt Testnet stakeKey)
-        "e008b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4"
+        "e008b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
+      golden
+        "bootstrapAddr for network id = 1"
+        putAddr
+        ( AddrBootstrap . BootstrapAddress $
+            Byron.Address
+              { Byron.addrRoot = read "4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6a",
+                Byron.addrAttributes =
+                  Byron.Attributes
+                    { Byron.attrData =
+                        Byron.AddrAttributes
+                          { Byron.aaVKDerivationPath = Nothing,
+                            Byron.aaNetworkMagic = Byron.NetworkMainOrStage
+                          },
+                      Byron.attrRemain = Byron.UnparsedFields mempty
+                    },
+                Byron.addrType = Byron.ATVerKey
+              }
+        )
+        "82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5"
     ]
   where
     paymentKey :: Credential 'Payment Shelley
