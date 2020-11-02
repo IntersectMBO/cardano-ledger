@@ -3,8 +3,16 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{- We disable warnings for name shadowing because of
+https://gitlab.haskell.org/ghc/ghc/-/issues/14630, which means that we get
+shadowing warnings for the named field puns when used with a pattern synonym.
+-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra.Translation where
@@ -13,13 +21,23 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.ShelleyMA.Scripts
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (ValidityInterval))
+import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
 import Control.Iterate.SetAlgebra (biMapFromList, lifo)
+import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.API
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import qualified Shelley.Spec.Ledger.LedgerState as LS (returnRedeemAddrsToReserves, _delegations)
+import qualified Shelley.Spec.Ledger.LedgerState as LS
+  ( returnRedeemAddrsToReserves,
+    _delegations,
+  )
 import Shelley.Spec.Ledger.Rewards (NonMyopic (..))
+import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..))
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Allegra
@@ -56,9 +74,43 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
           nesPd = nesPd nes
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) Tx where
+instance forall c. Crypto c => TranslateEra (AllegraEra c) Tx where
   type TranslationError (AllegraEra c) Tx = ()
-  translateEra _ = error "TODO Shelley to Allegra translation"
+  translateEra ctx (Tx body witness md) =
+    pure $
+      Tx
+        { _body = translateBody body,
+          _witnessSet = translateEra' ctx witness,
+          _metadata = md
+        }
+    where
+      translateBody ::
+        ( TxBody (ShelleyEra c) ->
+          Allegra.TxBody (AllegraEra c)
+        )
+      translateBody
+        ( TxBody
+            { _inputs,
+              _outputs,
+              _certs,
+              _wdrls,
+              _txfee,
+              _ttl,
+              _txUpdate,
+              _mdHash
+            }
+          ) =
+          Allegra.TxBody
+            (Set.map (translateEra' ctx) _inputs)
+            (translateEra' ctx <$> _outputs)
+            (translateEra' ctx <$> _certs)
+            (translateEra' ctx _wdrls)
+            _txfee
+            (ttlToVI _ttl)
+            (translateEra' ctx <$> _txUpdate)
+            (coerce _mdHash)
+            mempty
+      ttlToVI sn = ValidityInterval SNothing (SJust sn)
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyGenesis where
   translateEra ctxt genesis =
@@ -139,8 +191,7 @@ instance Crypto c => TranslateEra (AllegraEra c) ShelleyGenesisStaking where
           sgsStake = sgsStake sgs
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) Addr where
-  translateEra _ = error "TODO Shelley to Allegra translation"
+instance Crypto c => TranslateEra (AllegraEra c) Addr
 
 instance Crypto c => TranslateEra (AllegraEra c) EB.BlocksMade where
   translateEra _ bm = return . EB.BlocksMade . EB.unBlocksMade $ bm
@@ -153,8 +204,7 @@ instance Crypto c => TranslateEra (AllegraEra c) NonMyopic where
           rewardPotNM = rewardPotNM nm
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) ScriptHash where
-  translateEra _ = error "TODO Shelley to Allegra translation"
+instance Crypto c => TranslateEra (AllegraEra c) ScriptHash
 
 instance Crypto c => TranslateEra (AllegraEra c) (Credential kr) where
   translateEra ctxt (ScriptHashObj h) = return (ScriptHashObj (translateEra' ctxt h))
@@ -202,14 +252,14 @@ instance Crypto c => TranslateEra (AllegraEra c) PPUPState where
           futureProposals = translateEra' ctxt $ futureProposals ps
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) TxId where
-  translateEra _ = error "TODO Shelley to Allegra translation"
+instance Crypto c => TranslateEra (AllegraEra c) TxId
 
 instance Crypto c => TranslateEra (AllegraEra c) TxIn where
   translateEra ctxt (TxIn txid ix) = return $ TxIn (translateEra' ctxt txid) ix
 
 instance Crypto c => TranslateEra (AllegraEra c) TxOut where
-  translateEra _ = error "TODO Shelley to Allegra translation"
+  translateEra () (TxOutCompact addr cfval) =
+    pure $ TxOutCompact (coerce addr) cfval
 
 instance Crypto c => TranslateEra (AllegraEra c) UTxO where
   translateEra ctxt utxo =
@@ -290,3 +340,54 @@ instance Crypto c => TranslateEra (AllegraEra c) EpochState where
           esPp = translateEra' ctxt $ esPp es,
           esNonMyopic = translateEra' ctxt $ esNonMyopic es
         }
+
+instance Crypto c => TranslateEra (AllegraEra c) WitnessSet where
+  translateEra ctxt WitnessSet {addrWits, scriptWits, bootWits} =
+    pure $
+      WitnessSet
+        { addrWits = Set.map (translateEra' @(AllegraEra c) ctxt) addrWits,
+          scriptWits =
+            Map.map (ScriptMSig . coerce)
+              . Map.mapKeysMonotonic coerce
+              $ scriptWits,
+          bootWits = Set.map (translateEra' @(AllegraEra c) ctxt) bootWits
+        }
+
+instance Crypto c => TranslateEra (AllegraEra c) BootstrapWitness where
+  translateEra _ BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes} =
+    pure
+      BootstrapWitness
+        { bwKey = bwKey,
+          bwSig = coerce bwSig,
+          bwChainCode,
+          bwAttributes
+        }
+
+instance
+  (Crypto c, Typeable kr) =>
+  TranslateEra (AllegraEra c) (WitVKey kr)
+  where
+  translateEra _ (WitVKey k s) =
+    pure $
+      WitVKey k s
+
+instance Crypto c => TranslateEra (AllegraEra c) Wdrl where
+  translateEra _ (Wdrl w) = pure . Wdrl $ Map.mapKeysMonotonic coerce w
+
+instance Crypto c => TranslateEra (AllegraEra c) DCert where
+  translateEra _ (DCertDeleg c) = pure . DCertDeleg $ coerce c
+  translateEra ctx (DCertPool c) = DCertPool <$> translateEra ctx c
+  translateEra _ (DCertGenesis c) = pure . DCertGenesis $ coerce c
+  translateEra ctx (DCertMir c) = DCertMir <$> translateEra ctx c
+
+instance Crypto c => TranslateEra (AllegraEra c) PoolCert where
+  translateEra ctx (RegPool pp) = pure . RegPool $ translateEra' ctx pp
+  translateEra _ (RetirePool kh e) = pure $ RetirePool (coerce kh) e
+
+instance Crypto c => TranslateEra (AllegraEra c) MIRCert where
+  translateEra _ (MIRCert pot rewards) =
+    pure $
+      MIRCert pot (Map.mapKeysMonotonic coerce rewards)
+
+instance Crypto c => TranslateEra (AllegraEra c) Update where
+  translateEra _ (Update pp en) = pure $ Update (coerce pp) en
