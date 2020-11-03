@@ -92,8 +92,8 @@ data TxBody' era = TxBody'
     wdrls :: !(Wdrl era),
     txfee :: !Coin,
     vldt :: !ValidityInterval, -- imported from Timelocks
-    txupdate :: !(StrictMaybe (Update era)),
-    mdhash :: !(StrictMaybe (MetaDataHash era)),
+    update :: !(StrictMaybe (Update era)),
+    mdHash :: !(StrictMaybe (MetaDataHash era)),
     forge :: !(Value era)
   }
   deriving (Typeable)
@@ -104,9 +104,7 @@ data TxBody' era = TxBody'
 
 deriving instance (Compactible (Value era), Eq (Value era)) => Eq (TxBody' era)
 
-deriving instance
-  (Era era, Compactible (Value era), Show (Value era)) =>
-  Show (TxBody' era)
+deriving instance (Era era, Compactible (Value era), Show (Value era)) => Show (TxBody' era)
 
 deriving instance Generic (TxBody' era)
 
@@ -147,15 +145,11 @@ type instance
 
 deriving instance (Compactible (Value era), Eq (Value era)) => Eq (TxBody era)
 
-deriving instance
-  (Era era, Compactible (Value era), Show (Value era)) =>
-  Show (TxBody era)
+deriving instance (Era era, Compactible (Value era), Show (Value era)) => Show (TxBody era)
 
 deriving instance Generic (TxBody era)
 
-deriving newtype instance
-  (Typeable era, NoThunks (Value era)) =>
-  NoThunks (TxBody era)
+deriving newtype instance (Typeable era, NoThunks (Value era)) => NoThunks (TxBody era)
 
 deriving newtype instance (Typeable era) => ToCBOR (TxBody era)
 
@@ -237,10 +231,10 @@ instance HasField "vldt" (TxBody e) ValidityInterval where
   getField (STxBody (Memo m _)) = getField @"vldt" m
 
 instance HasField "update" (TxBody e) (StrictMaybe (Update e)) where
-  getField (STxBody (Memo m _)) = getField @"txupdate" m
+  getField (STxBody (Memo m _)) = getField @"update" m
 
 instance HasField "mdHash" (TxBody e) (StrictMaybe (MetaDataHash e)) where
-  getField (STxBody (Memo m _)) = getField @"mdhash" m
+  getField (STxBody (Memo m _)) = getField @"mdHash" m
 
 instance (Value e ~ vv) => HasField "forge" (TxBody e) vv where
   getField (STxBody (Memo m _)) = getField @"forge" m

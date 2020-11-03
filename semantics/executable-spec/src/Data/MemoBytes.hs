@@ -83,10 +83,8 @@ showMemo (Memo t b) = "(Memo " ++ show t ++ "  " ++ show b ++ ")"
 printMemo :: Show t => MemoBytes t -> IO ()
 printMemo x = putStrLn (showMemo x)
 
-
 memoBytes :: Encode w t -> MemoBytes t
 memoBytes t = Memo (runE t) (shorten (toLazyByteString (encode t)))
-
 
 roundTripMemo:: (FromCBOR t) => MemoBytes t -> Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, MemoBytes t)
 roundTripMemo (Memo _t bytes) =

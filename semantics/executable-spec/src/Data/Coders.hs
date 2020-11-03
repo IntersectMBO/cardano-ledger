@@ -16,6 +16,13 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeOperators  #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FunctionalDependencies #-}
+
+
+-- {-# OPTIONS_GHC  -fno-warn-orphans #-}
 
 -- | MemoBytes is an abstration for a datetype that encodes its own seriialization.
 --   The idea is to use a newtype around a MemoBytes non-memoizing version.
@@ -27,19 +34,20 @@ module Data.Coders
     Decode (..),
     (!>),
     (<!),
+    (<*!),
+    Density(..),
     Wrapped (..),
+    Annotator(..),
+    Dual(..),
+    Field(..),
     encode,
     decode,
     runE,            -- Used in testing
-    decodeClosed,    -- Used in testing
+--    decodeClosed,    -- Used in testing
     decodeList,
     decodeSeq,
     decodeStrictSeq,
     decodeSet,
-    encodeList,
-    encodeSeq,
-    encodeStrictSeq,
-    encodeSet,
     decodeRecordNamed,
     decodeRecordSum,
     invalidKey,
@@ -48,7 +56,22 @@ module Data.Coders
     decodeCollectionWithLen,
     decodeCollection,
     encodeFoldableEncoder,
+    dualList, -- Dual values for export
+    dualSeq,
+    dualSet,
+    dualMaybeAsList,
+    dualMaybeAsNull,
+    dualText,
+    dualStrictSeq,
+    dualCBOR,
     roundTrip,
+    roundTrip',
+    to,
+    from,
+    Decoder,
+    Encoding,
+    encodeNullMaybe,
+    decodeNullMaybe,
   )
 where
 
@@ -62,15 +85,22 @@ import qualified Data.ByteString.Lazy as Lazy
 import Cardano.Binary
   ( FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
+    Annotator (..),
     encodeListLen,
+    encodeMapLen,
     encodeWord,
     encodeBreak,
     encodeListLenIndef,
     DecoderError( DecoderErrorCustom ),
     decodeBreakOr,
     decodeListLenOrIndef,
+    decodeMapLenOrIndef,
     decodeWord,
     matchSize,
+    TokenType(TypeNull),
+    peekTokenType,
+    decodeNull,
+    encodeNull,
   )
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as StrictSeq
@@ -78,12 +108,13 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Sequence.Strict (StrictSeq)
 import Data.Sequence (Seq)
-import Data.Set (Set)
-import Data.Text (Text)
+import Data.Set (Set,insert,member)
 import Data.Foldable (foldl')
-import Prelude hiding (span)
+import Data.Typeable
 
-decodeRecordNamed :: Text -> (a -> Int) -> Decoder s a -> Decoder s a
+-- ====================================================================
+
+decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder = do
   lenOrIndef <- decodeListLenOrIndef
   x <- decoder
@@ -106,8 +137,32 @@ decodeRecordSum name decoder = do
       unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
   pure x
 
+encodeNullMaybe :: (a -> Encoding) -> Maybe a -> Encoding
+encodeNullMaybe _ Nothing = encodeNull
+encodeNullMaybe encoder (Just x) = encoder x
+
+decodeNullMaybe :: Decoder s a -> Decoder s (Maybe a)
+decodeNullMaybe decoder = do
+  peekTokenType >>= \case
+    TypeNull -> do
+      decodeNull
+      pure Nothing
+    _ -> Just <$> decoder
+
 invalidKey :: Word -> Decoder s a
 invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)
+
+duplicateKey :: String -> Word -> Decoder s a
+duplicateKey name k = cborError $ DecoderErrorCustom "Duplicate key:" (Text.pack $ show k++" while decoding type "++name)
+
+unusedRequiredKeys :: Set Word -> [(Word,String)] -> String -> Decoder s a
+unusedRequiredKeys used required name =
+      cborError $ DecoderErrorCustom (Text.pack("value of type "++name)) (Text.pack (message (filter bad required)))
+   where bad (k,_) = not(member k used)
+         message [] = ", not decoded."
+         message [pair] = report pair ++ message []
+         message (pair:more) = report pair ++", and "++message more
+         report (k,f) = ("field "++f++" with key "++show k)
 
 decodeList :: Decoder s a -> Decoder s [a]
 decodeList = decodeCollection decodeListLenOrIndef
@@ -155,106 +210,138 @@ wrapCBORArray len contents =
 
 
 -- ===============================================================================
--- Encode and Decode are typed data structures which specify encoders and decoders.
--- The types keep one from making mistakes, and count the correct number fields
--- in an encoding and decoding. They are somewhat dual, and are designed that visual
--- inspection of a Encode and its dual Decode can help the user conclude that the
--- two are self-consistent. They are also reusable abstractions that can be defined
--- once, and then used many places.
+-- Encode and Decode are typed data structures which specify encoders and decoders
+-- for Algebraic data structures written in Haskell. They exploit types and count
+-- the correct number fields in an encoding and decoding, which are automatically computed.
+-- They are somewhat dual, and are designed so that visual inspection of a Encode and
+-- its dual Decode can help the user conclude that the two are self-consistent.
+-- They are also reusable abstractions that can be defined once, and then used many places.
 --
 -- (Encode t) is a data structure from which 3 things can be recovered
 -- Given:    x :: Encode t
 -- 1) get a value of type t
 -- 2) get an Encoding for that value, which correctly encodes the number of "fields"
---    written to the ByteString. Care must still be taken that the tags are correct.
+--    written to the ByteString. Care must still be taken that the Keys are correct.
 -- 3) get a (MemoBytes t)
 -- The advantage of using Encode with a MemoBytes, is we don't have to make a ToCBOR
 -- instance. Instead the "instance" is spread amongst the pattern constuctors by using
 -- (memoBytes encoding) in the where clause of the pattern contructor.
 -- See some examples of this see the file Timelocks.hs
 --
--- The Encode and Decode mechanism can also be used to encode Algebraic datatypes
--- in a uniform way. (Decode t) is dual to (Encode t). A decoder can be extracted
--- from it. And it will consistently decode it's dual. We now give some examples.
--- In the examples Let  Int and C have ToCBOR instances, and
--- encodeB :: B -> Encoding, and decodeB :: Decoder s B
+-- The Encode and Decode mechanism are meant to specify the encoding and decoding of
+-- Algebraic datatypes in a uniform way. (Decode t) is dual to (Encode t). In some cases
+-- a decoder can be extracted from an encoder by visual inspection. We now give some
+-- examples. In the examples Let Int and C have ToCBOR instances, and dualB :: Dual B
 {-
 -- An example with 1 constructor (a record) uses Rec and RecD
 
+data C = C Text.Text
+instance ToCBOR C where toCBOR (C t) = toCBOR t
+instance FromCBOR C where fromCBOR = C <$> fromCBOR
+
+data B = B Text.Text
+dualB = Dual (\ (B t) ->toCBOR t) (B <$> fromCBOR)
+
 data A = ACon Int B C
 
-encodeA :: A -> Encode 'Closed A
-encodeA (ACon i b c) = Rec ACon !> To i !> E encodeB b !> To c
+encodeA :: A -> Encode ('Closed 'Dense) A
+encodeA (ACon i b c) = Rec ACon !> To i !> ED dualB b !> To c
 
-decodeA :: Decode 'Closed A
-decodeA = RecD ACon <! From <! D decodeB <! From
+decodeA :: Decode ('Closed 'Dense) A
+decodeA = RecD ACon <! From <! DD dualB <! From
 
 instance ToCBOR A   where toCBOR x = encode(encodeA x)
 instance FromCBOR A where fromCBOR = decode decodeA
 
 -- An example with multiple constructors uses Sum, SumD, and Summands
 
-data M = M1 Int | M2 B Bool | M3 A
+data N = N1 Int | N2 B Bool | N3 A
 
-encodeM :: M -> Encode 'Open M
-encodeM (M1 i)    = Sum M1 0 !> To i
-encodeM (M2 b tf) = Sum M2 1 !> E encodeB b  !> To tf
-encodeM (M3 a)    = Sum M3 2 !> To a
+encodeN :: N -> Encode 'Open N
+encodeN (N1 i)    = Sum N1 0 !> To i
+encodeN (N2 b tf) = Sum N2 1 !> ED dualB b  !> To tf
+encodeN (N3 a)    = Sum N3 2 !> To a
 
-decodeM :: Decode 'Closed M
-decodeM = Summands "M" decodeMx
-  where decodeMx 0 = SumD M1 <! From
-        decodeMx 1 = SumD M2 <! D decodeB <! From
-        decodeMx 3 = SumD M3 <! From
-        decodeMx k = Invalid k
+decodeN :: Decode ('Closed 'Dense) N    -- Note each clause has an 'Open decoder,
+decodeN = Summands "N" decodeNx         -- But Summands returns a ('Closed 'Dense) decoder
+  where decodeNx 0 = SumD N1 <! From
+        decodeNx 1 = SumD N2 <! DD dualB <! From
+        decodeNx 3 = SumD N3 <! From
+        decodeNx k = Invalid k
 
-instance ToCBOR M   where toCBOR x = encode(encodeM x)
-instance FromCBOR M where fromCBOR = decode decodeM
+instance ToCBOR N   where toCBOR x = encode(encodeN x)
+instance FromCBOR N where fromCBOR = decode decodeN
 -}
--- For more examples writing CBOR instances using Encode and Decode see the test file
--- shelley-spec-ledger-test/test/Test/Shelley/Spec/Ledger/MemoBytes.hs
+-- For more examples writing CBOR instances using Encode and Decode, including
+-- ones using Sparse encoding, see the test file
+-- shelley-spec-ledger-test/test/Test/Shelley/Spec/Ledger/Coders.hs
 
 -- ========================================================
+-- Subsidary classes and datatype used in the Coders scheme
+-- =========================================================
 
 -- | Some CBOR instances wrap encoding sequences with prefixes and suffixes. I.e.
---  prefix , encode, encode, encode , ... , suffix
---  A type that MUST do this is called 'Open. Other types are called 'Closed.
---  The point is that a Closed type may have a prefix, but it can still be 'inlined'
---  by using the context it appears in, inside another Closed type. It does so by
---  sharing the prefix of its containing type, and using positional context.
---  In terms of Open and Closed, a datatype with more than one constructor is Open,
---  and one with only one constructor is Closed (we call these records). Primitive
---  types with no constructors can also be inlined, so we mark them as closed.
-data Wrapped = Open | Closed
+--  prefix , encode, encode, encode , ... , suffix.
+--  There are two kinds of wrapping coders: Nary sums, and Sparsely encoded products.
+--  Coders in these classes can only be decoded when they are wrapped by their
+--  closing forms Summand and SparseKeyed. In another dimension records can be
+--  encoded densely (all their fields serialised) or sparsely (only some of their
+--  fields). We use indexes to types to try and mark (and enforce) these distinctions.
 
+
+-- | Record density (all the fields) vs (some of the fields)
+data Density = Dense | Sparse
+
+data Wrapped where
+  Open :: Wrapped                -- Needs some type-wide wrapping
+  Closed :: Density -> Wrapped   -- Does not need type-wide wrapping,
+                                 -- But may need field-wide wrapping, when Density is 'Sparse
+
+-- | Analogous to paired ToCBOR and FromCBOR instances with out freezing out
+--   alternate ways to code. Unlike ToCBOR and FromCBOR where there is only
+--   one instance per type. There can be multiple Duals with the same type.
+data Dual t = Dual (t -> Encoding) (forall s . Decoder s t)
+
+-- | A Field pairs an update function and a decoder for one field of a Sparse record.
+data Field t where
+  Field:: (x -> t -> t) -> Decode ('Closed d) x -> Field t
+
+-- ===========================================================
+-- The coders and the decoders as GADT datatypes
 -- ===========================================================
 
 data Encode (w :: Wrapped) t where
-  Sum :: t -> Word -> Encode 'Open t
-  Rec :: t -> Encode 'Closed t
-  To :: ToCBOR a => a -> Encode 'Closed a
-  E :: (t -> Encoding) -> t -> Encode 'Closed t
-  ApplyE :: Encode w (a -> t) -> Encode 'Closed a -> Encode w t
+  Rec:: t -> Encode ('Closed 'Dense) t    -- Constructor of normal Record (1 constructor)
+  Sum:: t -> Word -> Encode 'Open t       -- One Constructor of many
+  Keyed:: t -> Encode ('Closed 'Sparse) t -- One Constructor with sparse encoding
+  To :: ToCBOR a => a -> Encode ('Closed 'Dense) a
+  E :: (t -> Encoding) -> t -> Encode ('Closed 'Dense) t
+  ED :: Dual t -> t -> Encode ('Closed 'Dense) t
+  OmitC :: t -> Encode w t
+  Omit:: (t -> Bool) -> Encode ('Closed 'Sparse) t -> Encode ('Closed 'Sparse) t
+  Key :: Word -> Encode ('Closed 'Dense) t -> Encode ('Closed 'Sparse) t
+  ApplyE :: Encode w (a -> t) -> Encode ('Closed r) a -> Encode w t
 
--- The Wrapped index of ApplyE is determined by the index
--- at the bottom of its left spine. The LEFT arg of ApplyE
--- must be a function type, and the only Encode with function
--- types are (Sum c tag) and (Rec c). So if the leftmost spine
--- is (Sum c tag) it is 'Open, and if is (Rec c) it is 'Closed.
--- The RIGHT arg of ApplyE must be 'Closed. This allows us to
--- inline anything in a RIGHT arg, supporting CBORGroup capability.
+    -- The Wrapped index of ApplyE is determined by the index
+    -- at the bottom of its left spine. The choices are 'Open (Sum c tag),
+    -- ('Closed 'Dense) (Rec c), and ('Closed 'Sparse) (Keyed c).
 
 infixl 4 !>
 
-(!>) :: Encode w (a -> t) -> Encode 'Closed a -> Encode w t
+(!>) ::  Encode w (a -> t) -> Encode ('Closed r) a -> Encode w t
 x !> y = ApplyE x y
 
 runE :: Encode w t -> t
-runE (Sum c _) = c
-runE (Rec c) = c
+runE (Sum cn _) = cn
+runE (Rec cn) = cn
 runE (ApplyE f x) = runE f (runE x)
 runE (To x) = x
 runE (E _ x) = x
+runE (ED _ x) = x
+runE (OmitC x) = x
+runE (Omit _ x) = runE x
+runE (Key _ x) = runE x
+runE (Keyed cn) = cn
 
 gsize :: Encode w t -> Word
 gsize (Sum _ _) = 0
@@ -262,55 +349,86 @@ gsize (Rec _) = 0
 gsize (To _) = 1
 gsize (E _ _) = 1
 gsize (ApplyE f x) = gsize f + gsize x
+gsize (ED _ _) = 1
+gsize (OmitC _) = 0
+gsize (Omit p x) = if p (runE x) then 0 else gsize x
+gsize (Key _ x) = gsize x
+gsize (Keyed _) = 0
 
 encode :: Encode w t -> Encoding
 encode sym = encodeCountPrefix 0 sym
   where
     encodeCountPrefix :: Word -> Encode w t -> Encoding
+                   -- n is the number of fields we must write in the prefix.
     encodeCountPrefix n (Sum _ tag) = encodeListLen (n + 1) <> encodeWord tag
+    encodeCountPrefix n (Keyed _) = encodeMapLen n
     encodeCountPrefix n (Rec _) = encodeListLen n
-    -- n is the number of fields we must write in the prefx.
     encodeCountPrefix _ (To x) = toCBOR x
     encodeCountPrefix _ (E enc x) = enc x
-    encodeCountPrefix n (ApplyE f x) =
-      encodeCountPrefix (n + gsize x) f <> encodeClosed x
-    -- The RIGHT arg may be any 'Closed Encode, and is inlined
-    -- by design. Its left spine must end in a (Rec c). We count (gsize x)
-    -- the 'fields' in x, and add them to the number things we
-    -- must add to the prefix of the enclosing type.
+    encodeCountPrefix _ (ED (Dual enc _) x) = enc x
+    encodeCountPrefix _ (OmitC _) = mempty
+    encodeCountPrefix n (Key tag x) = encodeWord tag <> encodeCountPrefix n x
+    encodeCountPrefix n (Omit p x) =
+       if p (runE x) then mempty else encodeCountPrefix n x
+    encodeCountPrefix n (ApplyE ff xx) = encodeCountPrefix (n + gsize xx) ff <> encodeClosed xx
+      where encodeClosed :: Encode ('Closed d) t -> Encoding
+            encodeClosed (Rec _) = mempty
+            encodeClosed (To x) = toCBOR x
+            encodeClosed (E enc x) = enc x
+            encodeClosed (ApplyE f x) = encodeClosed f <> encodeClosed x
+            encodeClosed (ED (Dual enc _) x) = enc x
+            encodeClosed (OmitC _) = mempty
+            encodeClosed (Omit p x) =
+              if p (runE x) then mempty else encodeClosed x
+            encodeClosed (Key tag x) = encodeWord tag <> encodeClosed x
+            encodeClosed (Keyed _) = mempty
 
-    encodeClosed :: Encode 'Closed t -> Encoding
-    -- encodeClosed (Sum _ _) -- By design this case is unreachable by type considerations.
-    encodeClosed (Rec _) = mempty
-    encodeClosed (To x) = toCBOR x
-    encodeClosed (E enc x) = enc x
-    encodeClosed (ApplyE f x) = encodeClosed f <> encodeClosed x
+-- ==================================================================
+-- Decode
+-- ===================================================================
 
--- =====================
 data Decode (w :: Wrapped) t where
-  Summands :: String -> (Word -> Decode 'Open t) -> Decode 'Closed t
+  Summands :: String -> (Word -> Decode 'Open t) -> Decode ('Closed 'Dense) t
+  SparseKeyed :: Typeable t => String -> t -> (Word -> Field t) -> [(Word,String)] -> Decode ('Closed 'Dense) t
   SumD :: t -> Decode 'Open t
-  RecD :: t -> Decode 'Closed t
-  From :: FromCBOR t => Decode 'Closed t
-  D :: (forall s. Decoder s t) -> Decode 'Closed t
-  ApplyD :: Decode w (a -> t) -> Decode 'Closed a -> Decode w t
+  RecD :: t -> Decode ('Closed 'Dense) t
+  KeyedD :: t -> Decode ('Closed 'Sparse) t
+  From :: FromCBOR t => Decode w t
+  D :: (forall s. Decoder s t) -> Decode ('Closed 'Dense) t
+  ApplyD :: Decode w1 (a -> t) -> Decode ('Closed d) a -> Decode w1 t
   Invalid :: Word -> Decode w t
   Map :: (a -> b) -> Decode w a -> Decode w b
+  DD :: Dual t -> Decode ('Closed 'Dense) t
+  Emit :: t -> Decode w t
+
+  -- The next two could be generalized to any (Applicative f) rather than Annotator
+  Ann :: Decode w t -> Decode w (Annotator t)
+  ApplyAnn :: Decode w1 (Annotator(a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
 
 infixl 4 <!
+infixl 4 <*!
 
-(<!) :: Decode w (a -> t) -> Decode 'Closed a -> Decode w t
+(<!) ::  Decode w1 (a -> t) -> Decode ('Closed w) a -> Decode w1 t
 x <! y = ApplyD x y
+
+(<*!) :: Decode w1 (Annotator(a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
+x <*! y = ApplyAnn x y
 
 hsize :: Decode w t -> Int
 hsize (Summands _ _) = 1
 hsize (SumD _) = 0
 hsize (RecD _) = 0
+hsize (KeyedD _) = 0
 hsize From = 1
 hsize (D _) = 1
+hsize (DD _) = 1
 hsize (ApplyD f x) = hsize f + hsize x
 hsize (Invalid _) = 0
 hsize (Map _ x) = hsize x
+hsize (Emit _) = 0
+hsize (SparseKeyed _ _ _ _) = 1
+hsize (Ann x) = hsize x
+hsize (ApplyAnn f x) = hsize f + hsize x
 
 decode :: Decode w t -> Decoder s t
 decode x = fmap snd (decodE x)
@@ -318,58 +436,169 @@ decode x = fmap snd (decodE x)
 decodE :: Decode w t -> Decoder s (Int, t)
 decodE x = decodeCount x 0
 
-decodeCount :: Decode w t -> Int -> Decoder s (Int, t)
+decodeCount :: forall (w::Wrapped) s t. Decode w t -> Int -> Decoder s (Int, t)
 decodeCount (Summands nm f) n = (n + 1,) <$> decodeRecordSum nm (\x -> decodE (f x))
-decodeCount (SumD c) n = pure (n + 1, c)
-decodeCount (RecD c) n = decodeRecordNamed "RecD" (const n) (pure (n, c))
-decodeCount From n = do x <- fromCBOR; pure (n, x)
-decodeCount (D dec) n = do x <- dec; pure (n, x)
-decodeCount (ApplyD c g) n = do
-  (i, f) <- decodeCount c (n + hsize g)
-  y <- decodeClosed g
-  pure (i, f y)
+decodeCount (SumD cn) n = pure (n + 1, cn)
+decodeCount (KeyedD cn) n = pure(n+1,cn)
+decodeCount (RecD cn) n = decodeRecordNamed "RecD" (const n) (pure (n, cn))
+decodeCount From n = (n,) <$> fromCBOR
+decodeCount (D dec) n = (n,) <$> dec
 decodeCount (Invalid k) _ = invalidKey k
 decodeCount (Map f x) n = do (m, y) <- decodeCount x n; pure (m, f y)
+decodeCount (DD (Dual _enc dec)) n = (n,) <$> dec
+decodeCount (Emit x) n = pure(n,x)
+decodeCount (SparseKeyed name initial pick required) n =
+   (n+1,) <$> decodeSparse  name initial pick required
+decodeCount (Ann x) n = do (m,y) <- decodeCount x n; pure(m,pure y)
+decodeCount (ApplyAnn g x) n = do
+  (i,f) <- decodeCount g (n + hsize x)
+  y <- decodeClosed x
+  pure (i,f <*> y)
+decodeCount (ApplyD cn g) n = do
+    (i, f) <- decodeCount cn (n + hsize g)
+    y <- decodeClosed g
+    pure (i, f y)
 
-decodeClosed :: Decode 'Closed t -> Decoder s t
+-- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
+
+decodeClosed :: Decode ('Closed d) t -> Decoder s t
 decodeClosed (Summands nm f) = decodeRecordSum nm (\x -> decodE (f x))
--- decodeClosed (SumD _) = undefined -- This case, by design, is unreachable by type considerations
-decodeClosed (RecD c) = pure c
+decodeClosed (KeyedD cn) = pure cn
+decodeClosed (RecD cn) = pure cn
 decodeClosed From = do x <- fromCBOR; pure x
-decodeClosed (D dec) = do x <- dec; pure x
-decodeClosed (ApplyD c g) = do
-  f <- decodeClosed c
+decodeClosed (D dec) = dec
+decodeClosed (ApplyD cn g) = do
+  f <- decodeClosed cn
   y <- decodeClosed g
   pure (f y)
 decodeClosed (Invalid k) = invalidKey k
 decodeClosed (Map f x) = f <$> decodeClosed x
+decodeClosed (DD (Dual _enc dec)) = dec
+decodeClosed (Emit n) = pure n
+decodeClosed (SparseKeyed name initial pick required) =
+   decodeSparse name initial pick required
+decodeClosed (Ann x) = fmap pure (decodeClosed x)
+decodeClosed (ApplyAnn g x) = do
+  f <- decodeClosed g
+  y <- decodeClosed x
+  pure (f <*> y)
+
+decodeSparse ::
+   Typeable a =>
+   String -> a -> (Word -> Field a) -> [(Word, String)] -> Decoder s a
+decodeSparse name initial pick required = do
+  lenOrIndef <- decodeMapLenOrIndef
+  (!v,used) <- getSparseBlock lenOrIndef initial pick (Set.empty) name
+  if all (\ (key,_name) -> member key used) required
+     then pure v
+     else unusedRequiredKeys used required (show(typeOf initial))
+
+-- | Given a function that picks a Field from a key, decodes that field
+--   and returns a (t -> t) transformer, which when applied, will
+--   update the record with the value decoded.
+
+applyField :: (Word -> Field t) -> Set Word -> String -> Decoder s (t -> t,Set Word)
+applyField f seen name = do
+  tag <- decodeWord
+  if Set.member tag seen
+     then duplicateKey name tag
+     else case f tag of
+            Field update d -> do v <- decode d; pure (update v,insert tag seen)
+
+-- | Decode a Map Block of key encoded data for type t
+--   given a function that picks the right box for a given key, and an
+--   initial value for the record (usually starts filled with default values).
+--   The Block can be either len-encoded or block-encoded.
+
+getSparseBlock :: Maybe Int -> t -> (Word -> Field t) -> Set Word -> String -> Decoder s (t,Set Word)
+getSparseBlock (Just 0) initial _pick seen _name = pure(initial,seen)
+getSparseBlock (Just n) initial pick seen name = do
+   (transform,seen2) <- applyField pick seen name
+   getSparseBlock (Just(n-1)) (transform initial) pick seen2 name
+getSparseBlock Nothing initial pick seen name =
+   decodeBreakOr >>= \case
+             True -> pure(initial,seen)
+             False -> do (transform,seen2) <- applyField pick seen name
+                         getSparseBlock Nothing (transform initial) pick seen2 name
+
+-- ======================================================
+-- (Decode ('Closed 'Dense)) and (Decode ('Closed 'Sparse)) are applicative
+-- (Decode 'Open) is not applicative since there is no
+-- (Applys 'Open 'Open) instance. And there should never be one.
 
 instance Functor (Decode w) where
   fmap f (Map g x) = Map (f . g) x
   fmap f x = Map f x
 
+instance Applicative (Decode ('Closed d)) where
+  pure x = Emit x
+  f <*> x = ApplyD f x
+
 -- ===========================================================================================
--- These functions are the dual analogs to
--- Shelley.Spec.Ledger.Serialization(decodeList, decodeSeq, decodeStrictSeq, decodeSet)
--- It is not well documented how to use encodeFoldable.
--- They are provided here as compatible pairs for use with the (E x) and (D x) constructors
--- of the Encode and Decode types. (E encodeList xs) and (D (decodeList fromCBOR)) should be duals.
+-- A Dual pairs an Encoding and a Decoder with a roundtrip property.
+-- They are used with the (E and D) constructors of Encode and Decode
+-- If you are trying to code something not in the CBOR classes
+-- or you want something not traditional, make you own Dual and use E or D
 
-encodeList :: ToCBOR a => [a] -> Encoding
-encodeList = encodeFoldable
+-- data Dual t = Dual (t -> Encoding) (forall s . Decoder s t)
 
-encodeStrictSeq :: ToCBOR a => StrictSeq a -> Encoding
-encodeStrictSeq = encodeFoldable
+dualList :: (ToCBOR a, FromCBOR a) => Dual [a]
+dualList = Dual encodeFoldable (decodeList fromCBOR)
 
-encodeSeq :: ToCBOR a => Seq a -> Encoding
-encodeSeq = encodeFoldable
+dualSeq :: (ToCBOR a, FromCBOR a) => Dual (Seq a)
+dualSeq = Dual encodeFoldable (decodeSeq fromCBOR)
 
-encodeSet :: ToCBOR a => Set a -> Encoding
-encodeSet = encodeFoldable
+dualSet :: (Ord a,ToCBOR a, FromCBOR a) => Dual (Set a)
+dualSet = Dual encodeFoldable (decodeSet fromCBOR)
 
--- ===========================================
--- For a worked out EXAMPLE see the testfile:
--- cardano-ledger-specs/shelley/chain-and-ledger/shelley-spec-ledger-test/test/Test/Shelley/Spec/Ledger/MemoBytes.hs
+-- | Good for encoding (Maybe t) if is another Maybe. Uses more space than dualMaybeAsNull
+dualMaybeAsList :: (ToCBOR a, FromCBOR a) => Dual (Maybe a)
+dualMaybeAsList = Dual toCBOR fromCBOR
 
-roundTrip :: (ToCBOR t,FromCBOR t) => t -> Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, t)
+-- | Good for encoding (Maybe T) as long as T isn't another Maybe
+dualMaybeAsNull :: (ToCBOR a, FromCBOR a) => Dual (Maybe a)
+dualMaybeAsNull = Dual (encodeNullMaybe toCBOR) (decodeNullMaybe fromCBOR)
+
+dualStrictSeq :: (ToCBOR a, FromCBOR a) => Dual (StrictSeq a)
+dualStrictSeq = Dual encodeFoldable (decodeStrictSeq fromCBOR)
+
+dualText :: Dual Text.Text
+dualText = Dual toCBOR fromCBOR
+
+dualCBOR :: (ToCBOR a, FromCBOR a) => Dual a
+dualCBOR = Dual toCBOR fromCBOR
+
+-- Use to and from, when you want to guarantee that a type has both
+-- ToCBOR and FromCBR instances.
+
+to :: (ToCBOR t, FromCBOR t) => t -> Encode ('Closed 'Dense) t
+to xs = ED dualCBOR xs
+
+from ::  (ToCBOR t, FromCBOR t) => Decode ('Closed 'Dense) t
+from = DD dualCBOR
+
+-- Writing roundTrip properties
+
+type Answer t = Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, t)
+
+roundTrip :: (ToCBOR t,FromCBOR t) => t -> Answer t
 roundTrip s = deserialiseFromBytes fromCBOR (toLazyByteString (toCBOR s))
+
+roundTrip' ::(t ->  Encoding) -> (forall s. Decoder s t) -> t -> Answer t
+roundTrip' enc dec t = deserialiseFromBytes dec  (toLazyByteString (enc t))
+
+-- ==================================================================
+-- A Guide to Visual inspection of Duality in Encode and Decode
+--
+-- 1) (Sum c)     and (SumD c)    are duals
+-- 2) (Rec c)     and (RecD c)    are duals
+-- 3) (Keyed c)   and (KeyedD c)  are duals
+-- 4) (OmitC x)   and (Emit x)    are duals
+-- 5) (Omit p ..) and (Emit x)    are duals if (p x) is True
+-- 6) (To x)      and (From)      are duals if (x::T) and (forall (y::T). isRight (roundTrip y))
+-- 7) (E enc x)   and (D dec)     are duals if (forall x . isRight (roundTrip' enc dec x))
+-- 6) (ED d x)    and (DD f)      are duals as long as d=(Dual enc dec) and (forall x . isRight (roundTrip' enc dec x))
+-- 7) f !> x      and g <! y      are duals if (f and g are duals) and (x and y are duals)
+--
+-- The duality of (Summands name decodeT) depends on the duality of the range of decodeT with the endoder of T
+-- A some property also holds for (SparseKeyed name (init::T) pick required) depending on the keys of pick and the Sparse encoder of T

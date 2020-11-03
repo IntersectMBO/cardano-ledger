@@ -26,13 +26,12 @@ import Cardano.Ledger.ShelleyMA.Timelocks
     hashTimelockScript,
     validateTimelock,
   )
-import Data.Coders (decodeRecordSum)
+import Data.Coders (decodeRecordSum, invalidKey)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class
-import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
   ( ValidateScript (..),

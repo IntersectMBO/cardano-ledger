@@ -44,7 +44,7 @@ import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString as BS
-import Data.Coders (Decode (..), Encode (..), Wrapped (..), decode, encode, (!>), (<!))
+import Data.Coders (Decode (..), Density (..), Encode (..), Wrapped (..), decode, encode, (!>), (<!), (<*!))
 import Data.MemoBytes
   ( Mem,
     MemoBytes (..),
@@ -56,15 +56,14 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing), invalidKey)
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Scripts
   ( MultiSig,
     ScriptHash (..),
   )
 import Shelley.Spec.Ledger.Serialization
-  ( decodeRecordSum,
-    decodeStrictSeq,
+  ( decodeStrictSeq,
     encodeFoldable,
   )
 import Shelley.Spec.Ledger.Tx
@@ -86,13 +85,13 @@ data ValidityInterval = ValidityInterval
   }
   deriving (Ord, Eq, Generic, Show, NoThunks)
 
-encodeVI :: ValidityInterval -> Encode 'Closed ValidityInterval
+encodeVI :: ValidityInterval -> Encode ( 'Closed 'Dense) ValidityInterval
 encodeVI (ValidityInterval f t) = Rec ValidityInterval !> To f !> To t
 
 instance ToCBOR ValidityInterval where
   toCBOR vi = encode (encodeVI vi)
 
-decodeVI :: Decode 'Closed ValidityInterval
+decodeVI :: Decode ( 'Closed 'Dense) ValidityInterval
 decodeVI = RecD ValidityInterval <! From <! From
 
 instance FromCBOR ValidityInterval where
@@ -112,6 +111,17 @@ data Timelock' era
   | TimelockOr' !(StrictSeq (Timelock era))
   deriving (Show, Eq, Ord, Generic, NoThunks)
 
+decTimelock' :: Era era => Word -> Decode 'Open (Annotator (Timelock' era))
+decTimelock' 0 = Ann (SumD Interval' <! From)
+decTimelock' 1 = Ann (SumD Multi') <*! From
+decTimelock' 2 = Ann (SumD TimelockAnd') <*! D (sequence <$> decodeStrictSeq fromCBOR)
+decTimelock' 3 = Ann (SumD TimelockOr') <*! D (sequence <$> decodeStrictSeq fromCBOR)
+decTimelock' k = Invalid k
+
+instance Era era => FromCBOR (Annotator (Timelock' era)) where
+  fromCBOR = decode (Summands "Annotator(Timelock' era)" decTimelock')
+
+{- The decTimelok' function replaces things like this:
 instance
   Era era =>
   FromCBOR (Annotator (Timelock' era))
@@ -133,6 +143,7 @@ instance
         timelks <- sequence <$> decodeStrictSeq fromCBOR
         pure (2, TimelockOr' <$> timelks)
       k -> invalidKey k
+-}
 
 -- ==============================================================================
 -- Now all the problematic Timelock instances are derived. No thinking required
@@ -164,7 +175,7 @@ pattern Multi :: Era era => MultiSig era -> Timelock era
 pattern Multi m <-
   Timelock (Memo (Multi' m) _)
   where
-    Multi m = Timelock $ memoBytes $ Sum Multi' 1 !> To m
+    Multi m = Timelock $ memoBytes $ (Sum Multi' 1) !> To m
 
 pattern TimelockAnd :: Era era => StrictSeq (Timelock era) -> Timelock era
 pattern TimelockAnd ms <-
@@ -247,6 +258,20 @@ hashTimelockScript =
   ScriptHash
     . Hash.castHash
     . Hash.hashWith (\x -> nativeTimelockTag <> serialize' x)
+
+{-
+-- At some point we will need a class, analogous to  MultiSignatureScript
+-- which relates scripts and their validators.
+instance
+  ( Era era,
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    Shelley.TxBodyConstraints era
+  ) =>
+  MultiSignatureScript (Timelock era) era
+  where
+  validateScript = validateTimelock
+  hashScript = hashTimelockScript
+-}
 
 showTimelock :: Era era => Timelock era -> String
 showTimelock (Interval (ValidityInterval SNothing SNothing)) = "(Interval -inf .. +inf)"

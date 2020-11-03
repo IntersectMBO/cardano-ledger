@@ -106,6 +106,7 @@ library
     cardano-crypto-class,
     cardano-crypto-wrapper,
     cardano-ledger,
+    cardano-crypto-praos,
     cardano-prelude,
     cardano-slotting,
     cborg,
