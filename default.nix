@@ -65,6 +65,14 @@ let
       non-integer-calculations = pkgs.callPackage ./shelley/chain-and-ledger/dependencies/non-integer/doc {};
       blocks-cddl = pkgs.callPackage ./byron/cddl-spec {};
     };
+
+    doc = {
+      site =
+        let
+          sphinx-markdown-tables = pkgs.python3Packages.callPackage ./nix/python/sphinx-markdown-tables.nix {};
+          sphinxemoji = pkgs.python3Packages.callPackage ./nix/python/sphinxemoji.nix {};
+        in pkgs.callPackage ./doc { inherit sphinx-markdown-tables sphinxemoji; pythonPackages = pkgs.python3Packages; };
+    };
   };
 
 in

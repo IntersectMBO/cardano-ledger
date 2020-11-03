@@ -74,6 +74,10 @@ let
     delegationDesignSpec = project.specs.delegation-design;
     nonIntegerCalculations = project.specs.non-integer-calculations;
     blocksCDDLSpec = project.specs.blocks-cddl;
+    # Sphinx doc site
+    docSite = project.doc.site;
+    # Ensure everything in the shell is cached
+    shell = project.shell;
   };
 
 in jobs
