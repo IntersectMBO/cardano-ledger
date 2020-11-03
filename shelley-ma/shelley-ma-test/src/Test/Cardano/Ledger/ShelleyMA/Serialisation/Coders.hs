@@ -23,12 +23,16 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
-module Test.Cardano.Ledger.ShelleyMA.Coders where
-
--- Used in testing
--- Used in testing
-
--- Duals
+module Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
+  ( codersTest,
+    roundTrip,
+    roundTrip',
+    embedTrip,
+    roundTripAnn,
+    embedTripAnn,
+    RoundTripResult,
+  )
+  where
 
 import Cardano.Binary
   ( Annotator (..),
@@ -45,6 +49,7 @@ import Cardano.Binary
     encodeMapLen,
     encodeWord,
     matchSize,
+    FullByteString (Full),
   )
 import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
@@ -82,8 +87,6 @@ import Data.Coders
     encodeFoldableEncoder,
     from,
     invalidKey,
-    roundTrip,
-    roundTrip',
     runE,
     to,
     wrapCBORArray,
@@ -106,6 +109,33 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck hiding (scale)
 
 -- =====================================================================
+
+
+type RoundTripResult t = Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, t)
+
+roundTrip :: (ToCBOR t,FromCBOR t) => t -> RoundTripResult t
+roundTrip s = deserialiseFromBytes fromCBOR (toLazyByteString (toCBOR s))
+
+roundTrip' ::(t ->  Encoding) -> (forall s. Decoder s t) -> t -> RoundTripResult t
+roundTrip' enc dec t = deserialiseFromBytes dec  (toLazyByteString (enc t))
+
+roundTripAnn :: (ToCBOR t, FromCBOR (Annotator t)) => t -> RoundTripResult t
+roundTripAnn s =
+  let bytes = (toLazyByteString (toCBOR s))
+   in case deserialiseFromBytes fromCBOR bytes of
+        Left err -> Left err
+        Right (leftover, Annotator f) -> Right (leftover, f (Full bytes))
+
+-- | Can we serialise a type, and then deserialise it as something else?
+embedTrip :: (ToCBOR t,FromCBOR s) => t -> RoundTripResult s
+embedTrip s = deserialiseFromBytes fromCBOR (toLazyByteString (toCBOR s))
+
+embedTripAnn :: forall s t. (ToCBOR t, FromCBOR (Annotator s)) => t -> RoundTripResult s
+embedTripAnn s =
+  let bytes = (toLazyByteString (toCBOR s))
+   in case deserialiseFromBytes fromCBOR bytes of
+        Left err -> Left err
+        Right (leftover, Annotator f) -> Right (leftover, f (Full bytes))
 
 -- ==========================================================================
 

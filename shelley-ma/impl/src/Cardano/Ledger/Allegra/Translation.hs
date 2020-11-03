@@ -21,8 +21,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.ShelleyMA.Scripts
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (ValidityInterval))
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (ValidityInterval), translate)
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
 import Control.Iterate.SetAlgebra (biMapFromList, lifo)
 import Data.Coerce (coerce)
@@ -347,7 +346,7 @@ instance Crypto c => TranslateEra (AllegraEra c) WitnessSet where
       WitnessSet
         { addrWits = Set.map (translateEra' @(AllegraEra c) ctxt) addrWits,
           scriptWits =
-            Map.map (ScriptMSig . coerce)
+            Map.map translate
               . Map.mapKeysMonotonic coerce
               $ scriptWits,
           bootWits = Set.map (translateEra' @(AllegraEra c) ctxt) bootWits

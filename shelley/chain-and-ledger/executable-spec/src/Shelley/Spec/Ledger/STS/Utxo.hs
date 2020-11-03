@@ -318,6 +318,8 @@ utxoInductive = do
   let txb = _body tx
 
   getField @"ttl" txb >= slot ?! ExpiredUTxO (getField @"ttl" txb) slot
+  -- the ttl field marks the top of an open interval, so it must be
+  -- strictly less than the slot, so raise an error if it is (>=).
 
   txins txb /= Set.empty ?! InputSetEmptyUTxO
 

@@ -10,15 +10,7 @@
 
 module Test.Cardano.Ledger.ShelleyMA.TxBody (txBodyTest, TestEra) where
 
-import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
-import Cardano.Crypto.DSIGN
-import Cardano.Crypto.Hash (Blake2b_224, Blake2b_256)
-import Cardano.Crypto.KES
-import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Core (Script, TxBody, Value)
-import Cardano.Ledger.Crypto (HASH)
-import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Mary.Value ()
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
@@ -37,43 +29,19 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.TxBody (Wdrl (..))
 import Test.Tasty
 import Test.Tasty.HUnit
+import Test.Cardano.Ledger.ShelleyMA.TestEra(TestEra,TestScript)
 
 -- ============================================================================================
 -- make an example
 -- ============================================================================================
 
 -- First make a fully concrete Era where the Hashing is concrete
--- without this we won't be able to Serialize or Hash TxID.
-
-data TestCrypto
-
-instance CryptoClass.Crypto TestCrypto where
-  type DSIGN TestCrypto = Ed25519DSIGN
-  type KES TestCrypto = Sum6KES Ed25519DSIGN Blake2b_256
-  type VRF TestCrypto = PraosVRF
-  type HASH TestCrypto = Blake2b_256
-  type ADDRHASH TestCrypto = Blake2b_224
-
--- Now make a new Era instance. We needtochoose type family instances for Value, Script, and TxBody
-
-data TestEra
-
-instance Era TestEra where
-  type Crypto TestEra = TestCrypto
+-- without this we won't be able to Serialize or Hash TxID. We use
+--the tools supplied by Test.Cardano.Ledger.ShelleyMA.TestEra(TestEra,TestScript)
 
 type instance Value TestEra = ConcreteValue.Value TestEra
-
 type instance Script TestEra = TestScript
-
 type instance TxBody TestEra = Mary.TxBody TestEra
-
-data TestScript = TestScript
-
-instance FromCBOR TestScript where fromCBOR = pure TestScript
-
-instance ToCBOR TestScript where toCBOR TestScript = mempty
-
-instance FromCBOR (Annotator TestScript) where fromCBOR = pure <$> fromCBOR
 
 -- ====================================================================================================
 -- Make a TxBody to test with
