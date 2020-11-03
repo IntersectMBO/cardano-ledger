@@ -531,7 +531,7 @@ In this case, the states of the UTxO, fee
     }
     \vdash \var{ups} \trans{\hyperref[fig:rules:update]{up}}{\fun{txup}~\var{tx}} \var{ups'}
     \\~\\
-    \var{refunded} \leteq \keyRefunds{pp}{stkCreds}~{txb}
+    \var{refunded} \leteq \keyRefunds{pp}{txb}
     \\
     \var{depositChange} \leteq
       (\deposits{pp}~{stpools}~{(\txcerts{txb})}) - \var{refunded}
@@ -540,7 +540,6 @@ In this case, the states of the UTxO, fee
     \begin{array}{l}
       \var{slot}\\
       \var{pp}\\
-      \var{stkCreds}\\
       \var{stpools}\\
       \var{genDelegs}\\
     \end{array}
@@ -578,7 +577,6 @@ In this case, the states of the UTxO, fee
     \begin{array}{l}
       \var{slot}\\
       \var{pp}\\
-      \var{stkCreds}\\
       \var{stpools}\\
       \var{genDelegs}\\
     \end{array}
@@ -652,7 +650,7 @@ UTXOS rule.
       \txins{txb} \neq \emptyset
       & \txins{txb} \subseteq \dom \var{utxo}
       \\
-      \consumed{pp}{utxo}{stkCreds}{rewards}~{txb} = \produced{slot}~{pp}~{stpools}~{txb}
+      \consumed{pp}{utxo}{rewards}{txb} = \produced{pp}~{stpools}~{txb}
       \\~\\
       \fun{feesOK}~(\vert~ \fun{txscripts}~{tx} \cap \ScriptPlutus ~\vert) ~pp~tx~utxo \\
       \\
@@ -672,7 +670,6 @@ UTXOS rule.
         \begin{array}{c}
           \var{slot}\\
           \var{pp}\\
-          \var{stkCreds}\\
           \var{stpools}\\
           \var{genDelegs}\\
         \end{array}
@@ -704,7 +701,6 @@ UTXOS rule.
       \begin{array}{l}
         \var{slot}\\
         \var{pp}\\
-        \var{stkCreds}\\
         \var{stpools}\\
         \var{genDelegs}\\
       \end{array}
@@ -875,7 +871,6 @@ by the UTXO transition (the application of which is also part of the conditions)
         \begin{array}{r}
           \var{slot}\\
           \var{pp}\\
-          \var{stkCreds}\\
           \var{stpools}\\
           \var{genDelegs}\\
         \end{array}
@@ -887,7 +882,6 @@ by the UTXO transition (the application of which is also part of the conditions)
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
-        \var{stkCreds}\\
         \var{stpools}\\
         \var{genDelegs}\\
       \end{array}

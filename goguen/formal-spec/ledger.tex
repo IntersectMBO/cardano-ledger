@@ -32,14 +32,13 @@ validation tag is verified, and where script fees are collected.
                      \fun{txcerts}~\var{txb}} dpstate'
       \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
-      (\var{stkCreds}, \_, \_, \_, \_, \var{genDelegs}, \_) \leteq \var{dstate} \\
+      (\_, \_, \_, \_, \_, \var{genDelegs}, \_) \leteq \var{dstate} \\
       (\var{stpools}, \_, \_) \leteq \var{pstate} \\
       \\~\\
       {
         \begin{array}{c}
         \var{slot} \\
         \var{pp} \\
-        \var{stkCreds} \\
         \var{stpools} \\
         \var{genDelegs} \\
         \end{array}
@@ -78,14 +77,13 @@ validation tag is verified, and where script fees are collected.
     {
       \fun{txvaltag}~{tx} = \False \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
-      (\var{stkCreds}, \_, \_, \_, \_, \var{genDelegs}, \_) \leteq \var{dstate} \\
+      (\_, \_, \_, \_, \_, \var{genDelegs}, \_) \leteq \var{dstate} \\
       (\var{stpools}, \_, \_) \leteq \var{pstate} \\
       \\~\\
       {
         \begin{array}{c}
         \var{slot} \\
         \var{pp} \\
-        \var{stkCreds} \\
         \var{stpools} \\
         \var{genDelegs} \\
         \end{array}
