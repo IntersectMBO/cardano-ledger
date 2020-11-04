@@ -44,8 +44,9 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Ratio ((%))
-import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -90,10 +91,10 @@ toLogWeight d = LogWeight (realToFrac $ log d)
 fromLogWeight :: LogWeight -> Double
 fromLogWeight (LogWeight l) = exp (realToFrac l)
 
-data Histogram = Histogram {unHistogram :: Seq LogWeight}
+newtype Histogram = Histogram {unHistogram :: StrictSeq LogWeight}
   deriving (Eq, Show, Generic)
 
-newtype Likelihood = Likelihood {unLikelihood :: Seq LogWeight}
+newtype Likelihood = Likelihood {unLikelihood :: StrictSeq LogWeight}
   -- TODO: replace with small data structure
   deriving (Show, Generic, NFData)
 
@@ -104,11 +105,15 @@ instance Eq Likelihood where
 
 instance Semigroup Likelihood where
   (Likelihood x) <> (Likelihood y) =
-    normalizeLikelihood $
-      Likelihood (Seq.zipWith (+) x y)
+    normalizeLikelihood $ Likelihood (strictSeqZipWith (+) x y)
 
 instance Monoid Likelihood where
-  mempty = Likelihood $ Seq.replicate (length samplePositions) (LogWeight 0)
+  mempty = Likelihood $ StrictSeq.toStrict $ Seq.replicate (length samplePositions) (LogWeight 0)
+
+-- TODO should be defined in @Data.Sequence.Strict@
+strictSeqZipWith :: (a -> b -> c) -> StrictSeq a -> StrictSeq b -> StrictSeq c
+strictSeqZipWith f x y =
+  StrictSeq.toStrict (Seq.zipWith f (StrictSeq.getSeq x) (StrictSeq.getSeq y))
 
 normalizeLikelihood :: Likelihood -> Likelihood
 normalizeLikelihood (Likelihood xs) = Likelihood $ (\x -> x - m) <$> xs
@@ -119,7 +124,7 @@ instance ToCBOR Likelihood where
   toCBOR (Likelihood logweights) = encodeFoldable logweights
 
 instance FromCBOR Likelihood where
-  fromCBOR = Likelihood <$> decodeSeq fromCBOR
+  fromCBOR = Likelihood . StrictSeq.toStrict <$> decodeSeq fromCBOR
 
 leaderProbability :: ActiveSlotCoeff -> Rational -> UnitInterval -> Double
 leaderProbability activeSlotCoeff relativeStake decentralizationParameter =
@@ -129,8 +134,8 @@ leaderProbability activeSlotCoeff relativeStake decentralizationParameter =
     asc = realToFrac . unitIntervalToRational . activeSlotVal $ activeSlotCoeff
     s = realToFrac relativeStake
 
-samplePositions :: Seq.Seq Double
-samplePositions = (\x -> (x + 0.5) / 100.0) <$> Seq.fromList [0.0 .. 99.0]
+samplePositions :: StrictSeq Double
+samplePositions = (\x -> (x + 0.5) / 100.0) <$> StrictSeq.fromList [0.0 .. 99.0]
 
 likelihood ::
   Natural -> -- number of blocks produced this epoch
@@ -178,7 +183,7 @@ applyDecay decay (Likelihood logWeights) = Likelihood $ mul decay <$> logWeights
 posteriorDistribution :: Histogram -> Likelihood -> Histogram
 posteriorDistribution (Histogram points) (Likelihood likelihoods) =
   normalize $
-    Histogram $ Seq.zipWith (+) points likelihoods
+    Histogram $ strictSeqZipWith (+) points likelihoods
 
 -- | Normalize the histogram so that the total area is 1
 normalize :: Histogram -> Histogram
@@ -198,7 +203,10 @@ percentile p prior likelihoods =
       find (\(_x, fx) -> fx > p) cdf
   where
     (Histogram values) = posteriorDistribution prior likelihoods
-    cdf = Seq.zip samplePositions $ Seq.scanl (+) 0 (fromLogWeight <$> values)
+    cdf =
+      Seq.zip
+        (StrictSeq.getSeq samplePositions)
+        (StrictSeq.getSeq (StrictSeq.scanl (+) 0 (fromLogWeight <$> values)))
 
 percentile' :: Likelihood -> PerformanceEstimate
 percentile' = percentile 0.5 h
