@@ -1,22 +1,34 @@
-{-# LANGUAGE GADTs, MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies  #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DeriveGeneric           #-}
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+
 
 module Control.Iterate.SetAlgebra where
 
 import Cardano.Binary
-  ( FromCBOR (..),
+  ( Decoder,
+    FromCBOR (..),
     ToCBOR (..),
+    decodeListLen,
+    decodeMapSkel,
+    dropMap,
   )
-import Codec.CBOR.Decoding (decodeListLenOf)
 import Codec.CBOR.Encoding (encodeListLen)
-import Control.DeepSeq (NFData(rnf))
+import Control.DeepSeq (NFData (rnf))
 import Control.Iterate.Collect
+import Control.Monad (void)
+import Data.Coders (invalidKey)
 import Data.List (sortBy)
 import qualified Data.List as List
 import Data.Map.Internal (Map (..), link, link2)
@@ -137,15 +149,35 @@ data BiMap v a b where MkBiMap:: (v ~ b) => !(Map.Map a b) -> !(Map.Map b (Set.S
                                 --  ^   the 1st and 3rd parameter must be the same:             ^   ^
 
 -- ============== begin necessary Cardano.Binary instances ===============
-instance (Ord a, Ord b,ToCBOR a, ToCBOR b) => ToCBOR (BiMap b a b) where
-  toCBOR (MkBiMap l r) = encodeListLen 2 <> toCBOR l <> toCBOR r
+instance (Ord a, Ord b, ToCBOR a, ToCBOR b) => ToCBOR (BiMap b a b) where
+  -- The `toCBOR` instance encodes only the forward map. We wrap this in a
+  -- length-one list because a _previous_ encoding wrote out both maps, and we
+  -- can easily use the list length token to distinguish between them.
+  toCBOR (MkBiMap l _) = encodeListLen 1 <> toCBOR l
 
-instance (Ord a, Ord b,FromCBOR a, FromCBOR b) => FromCBOR (BiMap b a b) where
-  fromCBOR = do
-    decodeListLenOf 2
-    !x <- fromCBOR
-    !y <- fromCBOR
-    return (MkBiMap x y)
+instance
+  forall a b.
+  (Ord a, Ord b, FromCBOR a, FromCBOR b) =>
+  FromCBOR (BiMap b a b)
+  where
+  fromCBOR =
+    decodeListLen >>= \case
+      1 -> decodeMapAsBimap
+      -- Previous encoding of 'BiMap' encoded both the forward and reverse
+      -- directions. In this case we skip the reverse encoding. Note that,
+      -- further, the reverse encoding was from 'b' to 'a', not the current 'b'
+      -- to 'Set a', and hence the dropper reflects that.
+      2 -> do
+        !x <- decodeMapAsBimap
+        dropMap (void $ fromCBOR @b) (void $ fromCBOR @a)
+        return x
+      k -> invalidKey (fromIntegral k)
+
+-- | Decode a serialised CBOR Map as a Bimap
+decodeMapAsBimap ::
+  (FromCBOR a, FromCBOR b, Ord a, Ord b) =>
+  Decoder s (BiMap b a b)
+decodeMapAsBimap = decodeMapSkel (biMapFromList const)
 
 instance (NoThunks a,NoThunks b) => NoThunks(BiMap v a b) where
   showTypeOf _ = "BiMap"
