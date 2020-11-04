@@ -212,6 +212,7 @@ benchmark mainbench
     test
   main-is:          Main.hs
   other-modules:
+    Bench.Control.Iterate.SetAlgebra.Bimap,
     BenchUTxOAggregate,
     BenchValidation,
     Shelley.Spec.Ledger.Bench.Gen

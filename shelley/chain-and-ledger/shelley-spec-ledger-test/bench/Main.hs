@@ -6,6 +6,7 @@
 
 module Main where
 
+import qualified Bench.Control.Iterate.SetAlgebra.Bimap as Bimap
 import BenchUTxOAggregate (expr, genTestCase)
 import BenchValidation
   ( applyBlock,
@@ -22,10 +23,11 @@ import Cardano.Crypto.KES
 import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Crypto (Crypto (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
-import Control.SetAlgebra (dom, keysEqual, (▷), (◁))
 import Control.Iterate.SetAlgebra (compile, compute, run)
+import Control.SetAlgebra (dom, keysEqual, (▷), (◁))
 import Criterion.Main
   ( Benchmark,
     bench,
@@ -58,8 +60,8 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.Rewards (likelihood)
 import Shelley.Spec.Ledger.UTxO (UTxO)
-import Test.QuickCheck.Gen as QC
 import Test.QuickCheck (arbitrary)
+import Test.QuickCheck.Gen as QC
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions
   ( initUTxO,
     ledgerDeRegisterStakeKeys,
@@ -76,7 +78,6 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerStateWithNregisteredPools,
   )
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
-import Cardano.Ledger.Shelley (ShelleyEra)
 
 -- Generator for coin. This is required, but its ouput is completely discarded.
 -- What is going on here?
@@ -483,5 +484,6 @@ main = do
                 bench "createRUpd" $ whnf (createRUpd testGlobals) cs
             ),
           bench "likelihood" $ whnf (likelihood 1234 0.1) (EpochSize 10000)
-        ]
+        ],
+      bgroup "bimap" $ [Bimap.fromList]
     ]

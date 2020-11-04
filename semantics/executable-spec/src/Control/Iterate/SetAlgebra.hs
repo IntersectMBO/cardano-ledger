@@ -177,7 +177,7 @@ instance
 decodeMapAsBimap ::
   (FromCBOR a, FromCBOR b, Ord a, Ord b) =>
   Decoder s (BiMap b a b)
-decodeMapAsBimap = decodeMapSkel (biMapFromList const)
+decodeMapAsBimap = decodeMapSkel biMapFromAscDistinctList
 
 instance (NoThunks a,NoThunks b) => NoThunks(BiMap v a b) where
   showTypeOf _ = "BiMap"
@@ -185,6 +185,7 @@ instance (NoThunks a,NoThunks b) => NoThunks(BiMap v a b) where
 
 instance NFData(BiMap v a b) where
    rnf (MkBiMap l r) = seq l (seq r ())
+
 -- ============== end Necessary Cardano.Binary instances ===================
 
 instance (Eq k,Eq v) => Eq (BiMap u k v) where
@@ -229,6 +230,12 @@ biMapFromList comb xs = foldr addEntry biMapEmpty xs
             Just oldv -> MkBiMap (addkv (k,v) forward comb) (insertBackwards oldv newv k backward)
                where newv = comb oldv v
 
+biMapFromAscDistinctList ::
+  (Ord k, Ord v) => [(k, v)] -> BiMap v k v
+biMapFromAscDistinctList xs = MkBiMap bmForward bmBackward
+  where
+    bmForward = Map.fromDistinctAscList xs
+    bmBackward = foldr (uncurry $ flip addBack) Map.empty xs
 
 -- This synonym makes (BiMap v k v) appear as an ordinary Binary type contructor: (Bimap k v)
 type Bimap k v = BiMap v k v
