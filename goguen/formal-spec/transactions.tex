@@ -42,14 +42,7 @@ Shelley specification~\cite{XX}:
   \item $\TxIn$ is a transaction input. It includes a reference to the UTxO entry that it is spending
   and an $\IsFee$ tag.
 
-  \item $\TxOutND$ is a transaction output with no datum hash
-  (this type is for VKey and native script outputs).
-
-  \item $\TxOutP$ is the type of a transaction output that is locked by
-  a non-native script, which thus needs to include a datum hash.
-
-  \item $\TxOut$ is the type of transaction outputs, either
-  $\TxOutND$ or $\TxOutP$.
+  \item $\TxOut$ is the type of transaction outputs, which now includes an optional hash of a datum.
 
   \item $\Tag$ lets us differentiate what a script
   can validate, i.e. \\
@@ -102,19 +95,9 @@ Shelley specification~\cite{XX}:
       & \TxId \times \Ix \times \IsFee
 %      & \text{transaction input}
       \\
-      (\var{addr}, v)
-      & \type{TxOutND}
-      & \Addr \times \Value
-%      & \text{vk address output}
-      \\
-      (\var{addr}, v, \var{hashscr_d})
-      & \type{TxOutP}
-      & \type{TxOutND} \times \DataHash
-%      & \text{script address output}
-      \\
-      \var{txotx}
+      \var{txout}
       & \TxOut
-      & \TxOutND \uniondistinct \TxOutP
+      & \Addr \times \Value \times \DataHash^?
 %      & \text{transaction outputs in a transaction}
       \\
       \var{tag}

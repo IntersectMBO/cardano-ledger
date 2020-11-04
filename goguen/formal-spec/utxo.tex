@@ -84,7 +84,7 @@ and include the fees for their execution.
     \nextdef
     & \fun{feesOK} \in \N \to \PParams \to \GoguenTx \to \UTxO \to \Bool  \\
     & \fun{feesOK} ~n~\var{pp}~tx~utxo~= \\
-    &~~\fun{range}~(\fun{txinputs_{vf}}~{txb} \restrictdom \var{utxo}) \subseteq \TxOutND ~ \\
+    &~~(\forall (\wcard, \wcard, \var{d}) \in \fun{range}~(\fun{txinputs_{vf}}~{txb} \restrictdom \var{utxo}), \var{d} = \Nothing) \\
     &~~\wedge~ \var{balance} \in \Coin \\
     &~~      \wedge~ \var{balance} \geq \txfee{txb} ~ \\
     &~~      \wedge~ \minfee~n~{pp}~{tx} \leq \txfee{txb} \\
@@ -308,7 +308,7 @@ and the current item being validated.
     & \fun{getData} \in \GoguenTx \to \UTxO \to \ScriptPurpose \to \seqof{\Data} \\
     & \fun{getData}~{tx}~{utxo}~{it}~=~
       \begin{cases}
-        [\var{d}] & \var{it} \mapsto ((a,\_),h_d, \_) \in \var{utxo}, \var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx} \\
+        [\var{d}] & \var{it} \mapsto (a, \_, h_d) \in \var{utxo}, \var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx} \\
         \epsilon  & \text{otherwise}
       \end{cases}
     \nextdef
@@ -697,7 +697,7 @@ validation purpose (forging, outputs, certificates, withdrawals).
   \begin{align*}
     & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \GoguenTx \to \powerset (\ScriptPurpose \times \ScriptHash) \\
     & \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
-    & ~~\{ (\var{i}, \fun{validatorHash}~a) \mid i \mapsto (a, \wcard) \in \var{utxo},
+    & ~~\{ (\var{i}, \fun{validatorHash}~a) \mid i \mapsto (a, \wcard, \wcard) \in \var{utxo},
       i\in\fun{txinsScript}~{(\fun{txins~\var{txb}})}~{utxo}\} \\
     \cup & ~~\{ (\var{a}, \fun{stakeCred_{r}}~\var{a}) \mid a \in \dom (\AddrRWDScr
            \restrictdom \fun{txwdrls}~\var{txb}) \} \\
