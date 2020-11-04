@@ -21,8 +21,8 @@ write-ghc-environment-files: always
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 72399b18f1bb7d91b21bc9e0e3c28715cde7d124
-  --sha256: 014jw9jkwq3z30hl5pc0in51hzxrdys4964vpppmn1nim994bykx
+  tag: acac87c7af2652b8d86d92c583b6c29234634866
+  --sha256: 1awxr663zgkn8dw13pjzzlzzz5y9y5l2fy14f87331gbrw6n2xdg
   subdir:
     binary
     binary/test
