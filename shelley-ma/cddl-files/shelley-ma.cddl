@@ -1,5 +1,3 @@
-; Shelley Types
-
 block =
   [ header
   , transaction_bodies         : [* transaction_body]
@@ -52,18 +50,20 @@ transaction_body =
   { 0 : set<transaction_input>
   , 1 : [* transaction_output]
   , 2 : coin ; fee
-  , 3 : uint ; ttl
+  , ? 3 : uint ; ttl
   , ? 4 : [* certificate]
   , ? 5 : withdrawals
   , ? 6 : update
   , ? 7 : metadata_hash
+  , ? 8 : uint ; validity interval start
+  , ? 9 : forge
   }
 
 transaction_input = [ transaction_id : $hash32
                     , index : uint
                     ]
 
-transaction_output = [address, amount : coin]
+transaction_output = [address, amount : value]
 
 ; address = bytes
 ; reward_account = bytes
@@ -193,11 +193,11 @@ protocol_param_update =
 
 transaction_witness_set =
   { ?0 => [* vkeywitness ]
-  , ?1 => [* multisig_script ]
+  , ?1 => [* native_script ]
   , ?2 => [* bootstrap_witness ]
   ; In the future, new kinds of witnesses can be added like this:
-  ; , ?3 => [* monetary_policy_script ]
-  ; , ?4 => [* plutus_script ]
+  ; , ?4 => [* foo_script ]
+  ; , ?5 => [* plutus_script ]
   }
 
 transaction_metadatum =
@@ -221,19 +221,33 @@ bootstrap_witness =
   , attributes : bytes
   ]
 
-multisig_script =
-  [ multisig_pubkey
-  // multisig_all
-  // multisig_any
-  // multisig_n_of_k
+native_script =
+  [ script_pubkey
+  // script_all
+  // script_any
+  // script_n_of_k
+  // timelock_start
+  // timelock_expiry
   ]
 
-multisig_pubkey = (0, addr_keyhash)
-multisig_all = (1, [ * multisig_script ])
-multisig_any = (2, [ * multisig_script ])
-multisig_n_of_k = (3, n: uint, [ * multisig_script ])
+script_pubkey = (0, addr_keyhash)
+script_all = (1, [ * native_script ])
+script_any = (2, [ * native_script ])
+script_n_of_k = (3, n: uint, [ * native_script ])
+timelock_start = (4, uint)
+timelock_expiry = (5, uint)
 
 coin = uint
+
+;policy id for ada is 0xADA0... padded with zeroes
+;asset name for ada is empty string
+multiasset<a> = { * policy_id => { * asset_name => a } }
+policy_id = scripthash
+asset_name = text .size (0..32)
+
+value = coin / multiasset<uint>
+forge = multiasset<int>
+
 epoch = uint
 
 addr_keyhash          = $hash28
