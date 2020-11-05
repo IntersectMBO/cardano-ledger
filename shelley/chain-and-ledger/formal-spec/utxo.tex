@@ -475,7 +475,7 @@ This consists of:
     \cup & ~~
            \{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
       \restrictdom \txwdrls{tx}\}\\
-    \cup & ~~\fun{certWitsNeeded}~{tx} \\
+    \cup & ~~(\AddrVKey \cap \fun{certWitsNeeded}~{tx}) \\
     \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\var{genDelegs} \\
     \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c}
   \end{align*}
