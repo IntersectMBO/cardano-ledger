@@ -19,14 +19,17 @@ source-repository head
 
 library
   exposed-modules:
+    Test.Cardano.Ledger.ShelleyMA.TestEra
+    Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
     Test.Cardano.Ledger.ShelleyMA.TxBody
-    Test.Cardano.Ledger.ShelleyMA.Timelocks
-    Test.Cardano.Ledger.ShelleyMA.Coders
+    Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
+    Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
 
   -- other-extensions:
   build-depends:
     array,
     cardano-ledger-shelley-ma,
+    shelley-spec-ledger-test,
     base >=4.9 && <4.15,
     bytestring,
     cardano-binary,

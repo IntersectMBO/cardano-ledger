@@ -20,6 +20,7 @@ module Shelley.Spec.Ledger.Scripts
         RequireSignature,
         RequireMOf
       ),
+    getMultiSigBytes,
     ScriptHash (..),
     getKeyCombination,
     getKeyCombinations,
@@ -41,6 +42,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import qualified Data.ByteString as BS
+import Data.ByteString.Short (ShortByteString)
 import Data.Coders (Encode (..), (!>))
 import qualified Data.List as List (concat, concatMap, permutations)
 import Data.MemoBytes
@@ -91,6 +93,9 @@ data MultiSig' era
 newtype MultiSig era = MultiSig (MemoBytes (MultiSig' era))
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (ToCBOR, NoThunks)
+
+getMultiSigBytes :: MultiSig era -> ShortByteString
+getMultiSigBytes (MultiSig (Memo _ bytes)) = bytes
 
 deriving via
   (Mem (MultiSig' era))

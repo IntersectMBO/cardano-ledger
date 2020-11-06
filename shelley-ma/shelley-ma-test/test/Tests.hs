@@ -1,8 +1,8 @@
 module Main where
 
-import Test.Cardano.Ledger.ShelleyMA.Timelocks (timelockTests)
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks (timelockTests)
 import Test.Cardano.Ledger.ShelleyMA.TxBody (txBodyTest)
-import Test.Cardano.Ledger.ShelleyMA.Coders (codersTest)
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (codersTest)
 import Test.Tasty
 import Test.Tasty.HUnit ()
 

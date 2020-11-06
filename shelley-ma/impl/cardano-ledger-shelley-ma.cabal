@@ -42,6 +42,7 @@ library
     cardano-crypto-praos,
     cardano-prelude,
     cardano-slotting,
+    cborg,
     containers,
     deepseq,
     groups,
