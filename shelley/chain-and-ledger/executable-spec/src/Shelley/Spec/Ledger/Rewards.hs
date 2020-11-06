@@ -74,6 +74,7 @@ import Shelley.Spec.Ledger.EpochBoundary
     maxPool,
     poolStake,
   )
+import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
 import Shelley.Spec.Ledger.Serialization
@@ -421,17 +422,18 @@ rewardOnePool
           ]
       notPoolOwner (KeyHashObj hk) = hk `Set.notMember` _poolOwners pool
       notPoolOwner (ScriptHashObj _) = False
-      iReward =
+      lReward =
         leaderRew
           poolR
           pool
           (StakeShare $ fromIntegral ostake % tot)
           (StakeShare sigma)
+      f =
+        if HardForks.aggregatedRewards pp
+          then Map.insertWith (<>)
+          else Map.insert
       potentialRewards =
-        Map.insert
-          (getRwdCred $ _poolRAcnt pool)
-          iReward
-          mRewards
+        f (getRwdCred $ _poolRAcnt pool) lReward mRewards
       rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
 
 reward ::
@@ -492,7 +494,11 @@ reward
                 (leaderProbability asc sigma (_d pp))
                 slotsPerEpoch
         pure (hk, rewardMap, ls)
-      rewards' = fold $ catMaybes $ fmap (\(_, x, _) -> x) results
+      f =
+        if HardForks.aggregatedRewards pp
+          then Map.unionsWith (<>)
+          else Map.unions
+      rewards' = f . catMaybes $ fmap (\(_, x, _) -> x) results
       hs = Map.fromList $ fmap (\(hk, _, l) -> (hk, l)) results
 
 -- | Compute the Non-Myopic Pool Stake

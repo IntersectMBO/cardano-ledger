@@ -36,6 +36,7 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
     setCurrentProposals,
     setFutureProposals,
     setPParams,
+    setPrevPParams,
     setFutureGenDeleg,
     adoptFutureGenDeleg,
   )
@@ -657,6 +658,21 @@ setPParams pp cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     es' = es {esPp = pp}
+    nes' = nes {nesEs = es'}
+
+-- | = Set the Previous Protocol Proposals
+--
+-- Set the previous protocol parameters.
+setPrevPParams ::
+  forall era.
+  PParams era ->
+  ChainState era ->
+  ChainState era
+setPrevPParams pp cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    es' = es {esPrevPp = pp}
     nes' = nes {nesEs = es'}
 
 -- | = Set a future genesis delegation.

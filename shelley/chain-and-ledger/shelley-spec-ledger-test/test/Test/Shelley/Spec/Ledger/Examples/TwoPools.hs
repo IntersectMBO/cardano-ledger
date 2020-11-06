@@ -64,7 +64,7 @@ import Shelley.Spec.Ledger.LedgerState
     emptyRewardUpdate,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.PParams (PParams' (..), ProtVer (..))
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
@@ -73,6 +73,7 @@ import Shelley.Spec.Ledger.Rewards
     leaderProbability,
     leaderRew,
     likelihood,
+    memberRew,
     mkApparentPerformance,
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
@@ -622,6 +623,9 @@ circulation = unCoin $ maxLLSupply <-> reserves9
 aliceStakeShareTot :: Rational
 aliceStakeShareTot = (unCoin aliceCoinEx1 + unCoin carlInitCoin) % circulation
 
+bobStakeShareTot :: Rational
+bobStakeShareTot = unCoin bobInitCoin % circulation
+
 alicePoolRewards :: forall era. Era era => Coin
 alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
@@ -630,6 +634,14 @@ alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ ma
     pr = pledge % circulation
     maxP = EB.maxPool ppEx bigR aliceStakeShareTot pr
 
+carlMemberRewardsFromAlice :: forall era. Era era => Coin
+carlMemberRewardsFromAlice =
+  memberRew
+    (alicePoolRewards @era)
+    (alicePoolParams' @era)
+    (StakeShare $ unCoin carlInitCoin % circulation)
+    (StakeShare aliceStakeShareTot)
+
 carlLeaderRewardsFromAlice :: forall era. Era era => Coin
 carlLeaderRewardsFromAlice =
   leaderRew
@@ -637,6 +649,22 @@ carlLeaderRewardsFromAlice =
     (alicePoolParams' @era)
     (StakeShare $ unCoin aliceCoinEx1 % circulation)
     (StakeShare aliceStakeShareTot)
+
+bobPoolRewards :: forall era. Era era => Coin
+bobPoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
+  where
+    appPerf = mkApparentPerformance (_d ppEx) bobPoolStake 1 3
+    pledge = fromIntegral . unCoin . _poolPledge $ bobPoolParams' @era
+    pr = pledge % circulation
+    maxP = EB.maxPool ppEx bigR bobStakeShareTot pr
+
+carlLeaderRewardsFromBob :: forall era. Era era => Coin
+carlLeaderRewardsFromBob =
+  leaderRew
+    (bobPoolRewards @era)
+    (bobPoolParams' @era)
+    (StakeShare $ unCoin bobInitCoin % circulation)
+    (StakeShare bobStakeShareTot)
 
 alicePerfEx9 :: Likelihood
 alicePerfEx9 = likelihood blocks t (epochSize $ EpochNo 3)
@@ -703,6 +731,33 @@ twoPools9 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => CHAINExample 
 twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 rsEx9)
 
 --
+-- Now test with Aggregation
+--
+
+rsEx9Agg :: forall era. Era era => Map (Credential 'Staking era) Coin
+rsEx9Agg =
+  Map.singleton
+    Cast.carlSHK
+    ( carlMemberRewardsFromAlice @era
+        <> carlLeaderRewardsFromAlice @era
+        <> carlLeaderRewardsFromBob @era
+    )
+
+expectedStEx8Agg :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
+expectedStEx8Agg = C.setPrevPParams (ppEx {_protocolVersion = ProtVer 3 0}) expectedStEx8
+
+expectedStEx9Agg :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
+expectedStEx9Agg =
+  C.setPrevPParams
+    (ppEx {_protocolVersion = ProtVer 3 0})
+    (expectedStEx9 rsEx9Agg)
+
+-- Create the first non-trivial reward update. The rewards demonstrate the
+-- results of the delegation scenario that was constructed in the first and only transaction.
+twoPools9Agg :: forall era. (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
+twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
+
+--
 -- Two Pools Test Group
 --
 
@@ -710,7 +765,9 @@ twoPoolsExample :: TestTree
 twoPoolsExample =
   testGroup
     "two pools"
-    [testCase "create a nontrivial rewards" $ testCHAINExample twoPools9]
+    [ testCase "create non-aggregated rewards" $ testCHAINExample twoPools9,
+      testCase "create aggregated rewards" $ testCHAINExample twoPools9Agg
+    ]
 
 -- This test group tests each block individually, which is really only
 -- helpful for debugging purposes.
@@ -726,5 +783,6 @@ twoPoolsExampleExtended =
       testCase "alice produces a block" $ testCHAINExample twoPools6,
       testCase "bob produces a block" $ testCHAINExample twoPools7,
       testCase "prelude to the first nontrivial rewards" $ testCHAINExample twoPools8,
-      testCase "create a nontrivial rewards" $ testCHAINExample twoPools9
+      testCase "create non-aggregated rewards" $ testCHAINExample twoPools9,
+      testCase "create aggregated rewards" $ testCHAINExample twoPools9Agg
     ]
