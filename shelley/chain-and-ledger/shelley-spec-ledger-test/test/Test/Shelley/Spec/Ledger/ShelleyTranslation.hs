@@ -4,6 +4,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Shelley.Spec.Ledger.LedgerState (EpochState, returnRedeemAddrsToReserves)
 import Shelley.Spec.Ledger.STS.Chain (totalAdaES)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
+import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck

@@ -1,10 +1,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
   ( timelockTests,
@@ -12,34 +14,38 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
   )
 where
 
-import Cardano.Binary( Annotator (..), FromCBOR(..), ToCBOR(..) )
+import Cardano.Binary (Annotator (..), FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Era (PreviousEra)
 import Cardano.Ledger.ShelleyMA.Timelocks
-  ( Timelock(..),
-    pattern Timelock,
-    translate,
+  ( Timelock (..),
     showTimelock,
+    translate,
+    pattern Timelock,
   )
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString.Lazy as Lazy
+import Data.MemoBytes (MemoBytes (Memo))
 import Data.Sequence.Strict (fromList)
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
+import Shelley.Spec.Ledger.Scripts (MultiSig, getMultiSigBytes)
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (embedTripAnn, roundTripAnn)
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (maxTimelockDepth, sizedTimelock)
 import Test.Cardano.Ledger.ShelleyMA.TxBody (TestEra)
+import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
+import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
-import Test.Tasty.QuickCheck hiding (scale)
-import Shelley.Spec.Ledger.Scripts(MultiSig,getMultiSigBytes)
-import Test.Shelley.Spec.Ledger.Serialisation.Generators()        -- imports arbitrary instance for MultiSig
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators()   -- imports arbitrary instance for Timelock
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders(roundTripAnn, embedTripAnn)
-import Data.MemoBytes(MemoBytes(Memo))
-import Cardano.Ledger.Era(PreviousEra)
+import Test.Tasty.QuickCheck (Arbitrary, arbitrary, testProperty)
+
+instance Arbitrary (Timelock TestEra) where
+  arbitrary = sizedTimelock maxTimelockDepth
 
 -- ================================================================
 
 s1 :: Timelock TestEra
-s1 = RequireAllOf (fromList [ RequireTimeStart (SJust (SlotNo 12)), RequireTimeExpire SNothing])
+s1 = RequireAllOf (fromList [RequireTimeStart (SJust (SlotNo 12)), RequireTimeExpire SNothing])
 
 s2 :: Timelock TestEra
-s2 = RequireAllOf (fromList [ RequireTimeStart (SJust (SlotNo 12)), RequireTimeExpire  (SJust (SlotNo 23))])
+s2 = RequireAllOf (fromList [RequireTimeStart (SJust (SlotNo 12)), RequireTimeExpire (SJust (SlotNo 23))])
 
 s4 :: Timelock TestEra
 s4 = RequireAllOf (fromList [s1, s2])
@@ -54,15 +60,15 @@ checkOne nm t = testProperty ("RoundTrip: " ++ nm) $
 
 checkAnn :: Timelock TestEra -> Bool
 checkAnn t =
-   case roundTripAnn t of
-     Right _ -> True
-     Left s -> error (show s)
+  case roundTripAnn t of
+    Right _ -> True
+    Left s -> error (show s)
 
 checkEmbed :: MultiSig TestEra -> Bool
 checkEmbed multi =
   case embedTripAnn @(Timelock TestEra) multi of
-    Right (left,_) | left == Lazy.empty -> True
-    Right (left,_) -> error("Bytes left over: "++show left)
+    Right (left, _) | left == Lazy.empty -> True
+    Right (left, _) -> error ("Bytes left over: " ++ show left)
     Left s -> error (show s)
 
 -- The translate tests depend upon translating from a previous era
@@ -70,13 +76,13 @@ checkEmbed multi =
 -- PreviousEra. TestEra is only used in Serialisations tests, so
 -- this should not have any wider effect.
 
-type instance PreviousEra(TestEra) = TestEra
+type instance PreviousEra (TestEra) = TestEra
 
 checkTranslate :: MultiSig TestEra -> Bool
 checkTranslate multi = bytes == bytes2
-  where bytes = getMultiSigBytes multi
-        (Timelock (Memo _ bytes2)) = translate @TestEra multi
-
+  where
+    bytes = getMultiSigBytes multi
+    (Timelock (Memo _ bytes2)) = translate @TestEra multi
 
 timelockTests :: TestTree
 timelockTests =

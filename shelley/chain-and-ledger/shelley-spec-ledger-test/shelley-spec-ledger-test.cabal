@@ -39,6 +39,7 @@ library
     Test.Shelley.Spec.Ledger.Generator.Utxo
     Test.Shelley.Spec.Ledger.Orphans
     Test.Shelley.Spec.Ledger.Serialisation.Generators
+    Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators
     Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
     Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
     Test.Shelley.Spec.Ledger.Shrinkers

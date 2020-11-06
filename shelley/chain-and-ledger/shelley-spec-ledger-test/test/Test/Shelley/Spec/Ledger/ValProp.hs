@@ -29,6 +29,7 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import System.IO.Unsafe (unsafePerformIO)
 -- get: instance Era era => Arbitrary (ScriptHash era)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
+import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (scale)
