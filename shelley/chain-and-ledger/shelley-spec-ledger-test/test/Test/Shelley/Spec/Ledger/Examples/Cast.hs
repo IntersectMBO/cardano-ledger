@@ -24,6 +24,9 @@ module Test.Shelley.Spec.Ledger.Examples.Cast
     bobStake,
     bobSHK,
     bobAddr,
+    bobPoolKeys,
+    bobPoolParams,
+    bobVRFKeyHash,
     carlPay,
     carlStake,
     carlSHK,
@@ -163,6 +166,39 @@ bobAddr = mkAddr (bobPay, bobStake)
 -- | Bob's stake credential
 bobSHK :: Era era => Credential 'Staking era
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
+
+-- | Bob's stake pool keys (cold keys, VRF keys, hot KES keys)
+bobPoolKeys :: CC.Crypto crypto => AllIssuerKeys crypto 'StakePool
+bobPoolKeys =
+  AllIssuerKeys
+    (KeyPair vkCold skCold)
+    (mkVRFKeyPair (2, 0, 0, 0, 2))
+    [(KESPeriod 0, mkKESKeyPair (2, 0, 0, 0, 3))]
+    (hashKey vkCold)
+  where
+    (skCold, vkCold) = mkKeyPair (2, 0, 0, 0, 1)
+
+-- | Bob's stake pool parameters
+bobPoolParams :: forall era. Era era => PoolParams era
+bobPoolParams =
+  PoolParams
+    { _poolId = (hashKey . vKey . cold) bobPoolKeys,
+      _poolVrf = hashVerKeyVRF . snd $ vrf (bobPoolKeys @(Crypto era)),
+      _poolPledge = Coin 2,
+      _poolCost = Coin 1,
+      _poolMargin = unsafeMkUnitInterval 0.1,
+      _poolRAcnt = RewardAcnt Testnet bobSHK,
+      _poolOwners = Set.singleton $ (hashKey . vKey) bobStake,
+      _poolRelays = StrictSeq.empty,
+      _poolMD = SNothing
+    }
+
+-- | Bob's VRF key hash
+bobVRFKeyHash ::
+  forall crypto.
+  CC.Crypto crypto =>
+  Hash crypto (VerKeyVRF crypto)
+bobVRFKeyHash = hashVerKeyVRF (snd $ vrf (bobPoolKeys @crypto))
 
 -- Carl's payment key pair
 carlPay :: CC.Crypto crypto => KeyPair 'Payment crypto

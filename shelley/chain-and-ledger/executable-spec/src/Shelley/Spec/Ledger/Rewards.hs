@@ -22,6 +22,8 @@ module Shelley.Spec.Ledger.Rewards
     applyDecay,
     Likelihood (..),
     leaderProbability,
+    leaderRew,
+    memberRew,
   )
 where
 

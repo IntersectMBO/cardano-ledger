@@ -118,6 +118,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Examples.Mir
       Test.Shelley.Spec.Ledger.Examples.PoolLifetime
       Test.Shelley.Spec.Ledger.Examples.PoolReReg
+      Test.Shelley.Spec.Ledger.Examples.TwoPools
       Test.Shelley.Spec.Ledger.Examples.Updates
       Test.Shelley.Spec.Ledger.Fees
       Test.Shelley.Spec.Ledger.LegacyOverlay

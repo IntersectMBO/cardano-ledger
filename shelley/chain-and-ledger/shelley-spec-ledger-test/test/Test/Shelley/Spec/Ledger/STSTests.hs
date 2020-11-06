@@ -29,6 +29,7 @@ import Test.Shelley.Spec.Ledger.Examples.GenesisDelegation (genesisDelegExample)
 import Test.Shelley.Spec.Ledger.Examples.Mir (mirExample)
 import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (poolLifetimeExample)
 import Test.Shelley.Spec.Ledger.Examples.PoolReReg (poolReRegExample)
+import Test.Shelley.Spec.Ledger.Examples.TwoPools (twoPoolsExample)
 import Test.Shelley.Spec.Ledger.Examples.Updates (updatesExample)
 import Test.Shelley.Spec.Ledger.MultiSigExamples
   ( aliceAndBob,
@@ -49,6 +50,7 @@ chainExamples =
     "CHAIN examples"
     [ testCase "empty block" $ testCHAINExample exEmptyBlock,
       poolLifetimeExample,
+      twoPoolsExample,
       poolReRegExample,
       updatesExample,
       genesisDelegExample,
