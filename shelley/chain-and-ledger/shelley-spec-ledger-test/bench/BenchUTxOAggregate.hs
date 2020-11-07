@@ -9,16 +9,16 @@ module BenchUTxOAggregate where
 import Cardano.Ledger.Compactible (toCompact)
 import Cardano.Ledger.Era (Era (Crypto))
 import qualified Cardano.Ledger.Val as Val
-import Control.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
 import Control.Iterate.SetAlgebra (compile, compute, run)
+import Control.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Sequence as Seq
 import Shelley.Spec.Ledger.Address
   ( Addr (..),
   )
-import Shelley.Spec.Ledger.CompactAddr (compactAddr)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.CompactAddr (compactAddr)
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ptr (..),
@@ -30,6 +30,7 @@ import Shelley.Spec.Ledger.LedgerState
     InstantaneousRewards (..),
     PState (..),
   )
+import Shelley.Spec.Ledger.Scripts ()
 import Shelley.Spec.Ledger.TxBody
   ( PoolParams (..),
     TxId (..),
@@ -42,7 +43,8 @@ import Shelley.Spec.Ledger.UTxO
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Shelley.Spec.Ledger.Examples.Cast (alicePoolParams)
-import Test.Shelley.Spec.Ledger.Serialisation.Generators (mkDummyHash)
+import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators (mkDummyHash)
+import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 
 genTestCase ::
   Int -> -- The size of the utxo

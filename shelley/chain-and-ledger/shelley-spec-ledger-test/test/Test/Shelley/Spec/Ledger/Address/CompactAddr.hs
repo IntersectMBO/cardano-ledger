@@ -13,13 +13,12 @@ import Shelley.Spec.Ledger.Address (Addr (..), serialiseAddr)
 import qualified Shelley.Spec.Ledger.CompactAddr as CA
 import Shelley.Spec.Ledger.Credential
   ( PaymentCredential,
-    StakeReference (..)
+    StakeReference (..),
   )
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
-import Test.Shelley.Spec.Ledger.Serialisation.Generators
-  ( 
-  )
+import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
+import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 
 propCompactAddrRoundTrip :: forall era. Era era => Addr era -> Bool
 propCompactAddrRoundTrip addr =
@@ -48,13 +47,15 @@ propDecompactAddrLazy = do
 -- correct length that wasn't a valid hash, which doesn't seem possible.
 propDecompactShelleyLazyAddr ::
   forall era.
-  (Era era, Mock (Crypto era)) =>
+  Era era =>
   Gen Bool
 propDecompactShelleyLazyAddr = do
-  stakeRef <- oneof
-     [ StakeRefBase <$> arbitrary
-     , StakeRefPtr <$> arbitrary
-     ] :: Gen (StakeReference era)
+  stakeRef <-
+    oneof
+      [ StakeRefBase <$> arbitrary,
+        StakeRefPtr <$> arbitrary
+      ] ::
+      Gen (StakeReference era)
   addr <- Addr <$> arbitrary <*> arbitrary <*> pure stakeRef
   let keyHash0 = unsafeGetHash addr
       keyHash1 = unsafeGetHash . CA.decompactAddr . mangle . CA.compactAddr $ addr

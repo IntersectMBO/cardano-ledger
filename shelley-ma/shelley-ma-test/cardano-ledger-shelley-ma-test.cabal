@@ -20,11 +20,10 @@ source-repository head
 library
   exposed-modules:
     Test.Cardano.Ledger.ShelleyMA.TestEra
-    Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
     Test.Cardano.Ledger.ShelleyMA.TxBody
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
-
+    Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
   -- other-extensions:
   build-depends:
     array,
@@ -33,9 +32,13 @@ library
     base >=4.9 && <4.15,
     bytestring,
     cardano-binary,
+    cardano-crypto,
     cardano-crypto-class,
     cardano-crypto-praos,
+    cardano-crypto-test,
+    cardano-crypto-wrapper,
     cardano-prelude,
+    generic-random,
     cardano-slotting,
     cborg,
     containers,
@@ -50,6 +53,7 @@ library
     tasty-quickcheck,
     tasty,
     text,
+    QuickCheck >= 2.13.2,
   hs-source-dirs: src
   ghc-options:
     -Wall
@@ -82,12 +86,18 @@ test-suite cardano-ledger-shelley-ma-test
       -- determined ad-hoc.
       "-with-rtsopts=-K4m -M250m"
     build-depends:
+      cardano-ledger-shelley-ma,
+      shelley-spec-ledger-test,
       cardano-ledger-shelley-ma-test,
       base >=4.9 && <4.15,
       bytestring,
       cardano-binary,
+      cardano-crypto,
       cardano-crypto-class,
       cardano-crypto-praos,
+      cardano-crypto-test,
+      cardano-crypto-wrapper,
+      generic-random,
       cardano-prelude,
       cardano-slotting,
       cborg,
@@ -102,3 +112,5 @@ test-suite cardano-ledger-shelley-ma-test
       tasty-hunit,
       tasty-quickcheck,
       tasty,
+      text,
+      QuickCheck,

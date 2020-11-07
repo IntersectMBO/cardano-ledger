@@ -50,6 +50,7 @@ import Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Mock
+import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (Property, counterexample, testProperty, (===))
