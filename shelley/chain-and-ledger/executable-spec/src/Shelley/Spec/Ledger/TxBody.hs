@@ -50,7 +50,7 @@ module Shelley.Spec.Ledger.TxBody
         _txUpdate,
         _mdHash
       ),
-    --  TxBodyY(TxBodyZ,..),
+    TxBodyX (..),
     TxId (..),
     TxIn (TxIn, ..),
     EraIndependentTxBody,
@@ -103,10 +103,11 @@ import Data.Coders
     Density (..),
     Dual (..),
     Encode (..),
-    Field (..),
+    Field,
     Wrapped (..),
     decode,
     encode,
+    field,
     (!>),
   )
 import Data.Coerce (coerce)
@@ -360,7 +361,7 @@ deriving instance NFData (PoolParams era)
 
 newtype Wdrl era = Wdrl {unWdrl :: Map (RewardAcnt era) Coin}
   deriving (Show, Eq, Generic)
-  deriving newtype (NoThunks)
+  deriving newtype (NoThunks, NFData)
 
 instance Era era => ToCBOR (Wdrl era) where
   toCBOR = mapToCBOR . unWdrl
@@ -624,7 +625,7 @@ data TxBodyX era = TxBodyX
     _txUpdateX :: !(StrictMaybe (Update era)),
     _mdHashX :: !(StrictMaybe (MetaDataHash era))
   }
-  deriving (Generic, NoThunks, Typeable)
+  deriving (Generic, NoThunks, Typeable, NFData)
 
 deriving instance (Era era, ProperVal era) => Eq (TxBodyX era)
 
@@ -659,15 +660,15 @@ isSNothing _ = False
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
 boxBody :: ProperFrom era => Word -> Field (TxBodyX era)
-boxBody 0 = Field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
-boxBody 1 = Field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
-boxBody 4 = Field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
-boxBody 5 = Field (\x tx -> tx {_wdrlsX = x}) From
-boxBody 2 = Field (\x tx -> tx {_txfeeX = x}) From
-boxBody 3 = Field (\x tx -> tx {_ttlX = x}) From
-boxBody 6 = Field (\x tx -> tx {_txUpdateX = x}) (DD omitStrictNothingDual)
-boxBody 7 = Field (\x tx -> tx {_mdHashX = x}) (DD omitStrictNothingDual)
-boxBody n = Field (\_ t -> t) (Invalid n)
+boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
+boxBody 1 = field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
+boxBody 4 = field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
+boxBody 5 = field (\x tx -> tx {_wdrlsX = x}) From
+boxBody 2 = field (\x tx -> tx {_txfeeX = x}) From
+boxBody 3 = field (\x tx -> tx {_ttlX = x}) From
+boxBody 6 = field (\x tx -> tx {_txUpdateX = x}) (DD omitStrictNothingDual)
+boxBody 7 = field (\x tx -> tx {_mdHashX = x}) (DD omitStrictNothingDual)
+boxBody n = field (\_ t -> t) (Invalid n)
 
 -- | Tells how to serialise each field, and what tag to label it with in the
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
@@ -707,7 +708,7 @@ instance ProperTo era => ToCBOR (TxBodyX era) where
 
 newtype TxBody era = TxBodyY (MemoBytes (TxBodyX era))
   deriving (Generic, Typeable)
-  deriving newtype (NoThunks)
+  deriving newtype (NoThunks, NFData)
 
 deriving instance ProperVal era => Show (TxBody era)
 

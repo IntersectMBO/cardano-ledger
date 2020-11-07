@@ -33,6 +33,7 @@ import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
+import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -89,7 +90,7 @@ instance FromCBOR MetaDatum where
   fromCBOR = decodeMetaDatum
 
 newtype MetaDataHash era = MetaDataHash {unsafeMetaDataHash :: Hash (Crypto era) MetaData}
-  deriving (Show, Eq, Ord, NoThunks)
+  deriving (Show, Eq, Ord, NoThunks, NFData)
 
 deriving instance Era era => ToCBOR (MetaDataHash era)
 

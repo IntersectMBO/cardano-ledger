@@ -28,6 +28,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
     roundTrip,
     roundTrip',
     embedTrip,
+    embedTrip',
     roundTripAnn,
     embedTripAnn,
     RoundTripResult,
@@ -65,7 +66,8 @@ import Data.Coders
     Decode (..),
     Dual (..),
     Encode (..),
-    Field (..),
+    Field,
+    field,
     Density(..),
     Wrapped (..),
     decode,
@@ -129,6 +131,9 @@ roundTripAnn s =
 -- | Can we serialise a type, and then deserialise it as something else?
 embedTrip :: (ToCBOR t,FromCBOR s) => t -> RoundTripResult s
 embedTrip s = deserialiseFromBytes fromCBOR (toLazyByteString (toCBOR s))
+
+embedTrip' :: (s -> Encoding) -> (forall x.Decoder x t) -> s -> RoundTripResult t
+embedTrip' enc dec s = deserialiseFromBytes dec (toLazyByteString (enc s))
 
 embedTripAnn :: forall s t. (ToCBOR t, FromCBOR (Annotator s)) => t -> RoundTripResult s
 embedTripAnn s =
@@ -368,16 +373,16 @@ baz (M n xs t) = Keyed M !> Omit (== 0) (Key 0 (To n)) !> Omit null (Key 1 (To x
 -- tags correspond to a particular field, things will fail.
 
 boxM :: Word -> Field M
-boxM 0 = Field update0 From
+boxM 0 = field update0 From
   where
     update0 n (M _ xs t) = M n xs t
-boxM 1 = Field update1 (From)
+boxM 1 = field update1 (From)
   where
     update1 xs (M n _ t) = M n xs t
-boxM 2 = Field update2 (From)
+boxM 2 = field update2 (From)
   where
     update2 t (M n xs _) = M n xs t
-boxM n = Field (\_ t -> t) (Invalid n)
+boxM n = field (\_ t -> t) (Invalid n)
 
 -- Finally there is a new constructor for Decode, called SparseKeyed, that decodes field
 -- keyed sparse objects. The user supplies an initial value and pick function, and a list

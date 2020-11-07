@@ -29,15 +29,10 @@ import Data.Sequence.Strict (fromList)
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Scripts (MultiSig, getMultiSigBytes)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (embedTripAnn, roundTripAnn)
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (maxTimelockDepth, sizedTimelock)
 import Test.Cardano.Ledger.ShelleyMA.TxBody (TestEra)
-import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
-import Test.Tasty.QuickCheck (Arbitrary, arbitrary, testProperty)
-
-instance Arbitrary (Timelock TestEra) where
-  arbitrary = sizedTimelock maxTimelockDepth
+import Test.Tasty.QuickCheck (testProperty)
 
 -- ================================================================
 

@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE  DeriveAnyClass #-}
 
 -- | MemoBytes is an abstration for a datetype that encodes its own serialization.
 --   The idea is to use a newtype around a MemoBytes non-memoizing version.
@@ -44,6 +45,7 @@ import Data.ByteString.Lazy (toStrict,fromStrict)
 import Data.Typeable
 import Data.Coders(runE, Encode, encode,)
 import Codec.CBOR.Write (toLazyByteString)
+import Control.DeepSeq (NFData (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..),AllowThunksIn(..))
 import Prelude hiding (span)
@@ -53,6 +55,8 @@ import Codec.CBOR.Read(DeserialiseFailure,deserialiseFromBytes)
 
 data MemoBytes t = Memo {memotype :: !t, memobytes :: ShortByteString}
    deriving (NoThunks) via AllowThunksIn '["memobytes"] (MemoBytes t)
+
+deriving instance NFData t => NFData (MemoBytes t)
 
 deriving instance Generic (MemoBytes t)
 

@@ -325,7 +325,7 @@ emptyPParams =
 -- | Update Proposal
 data Update era
   = Update !(ProposedPPUpdates era) !EpochNo
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, NFData)
 
 instance NoThunks (Update era)
 

@@ -47,6 +47,7 @@ import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
+import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as Lazy
 import Data.ByteString.Short (fromShort)
@@ -114,7 +115,7 @@ data ValidityInterval = ValidityInterval
   { validFrom :: !(StrictMaybe SlotNo),
     validTo :: !(StrictMaybe SlotNo)
   }
-  deriving (Ord, Eq, Generic, Show, NoThunks)
+  deriving (Ord, Eq, Generic, Show, NoThunks, NFData)
 
 encodeVI :: ValidityInterval -> Encode ( 'Closed 'Dense) ValidityInterval
 encodeVI (ValidityInterval f t) = Rec ValidityInterval !> To f !> To t
