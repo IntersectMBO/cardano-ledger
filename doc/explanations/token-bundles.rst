@@ -1,4 +1,4 @@
-Token Bundles
-=============
+Token Bundle Explainer
+======================
 
 CONTENT HERE.
