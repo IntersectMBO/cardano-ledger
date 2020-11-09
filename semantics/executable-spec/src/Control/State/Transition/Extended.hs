@@ -39,7 +39,7 @@ module Control.State.Transition.Extended
     judgmentContext,
     trans,
     liftSTS,
-    -- Type Apply STS
+    -- * Apply STS
     AssertionPolicy (..),
     ValidationPolicy (..),
     ApplySTSOpts (..),
