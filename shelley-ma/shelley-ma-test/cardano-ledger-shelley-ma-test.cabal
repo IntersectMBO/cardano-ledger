@@ -13,6 +13,12 @@ copyright:           2020 Input Output (Hong Kong) Ltd.
 category:            Network
 build-type:          Simple
 
+
+extra-source-files:
+  cddl-files/shelley-ma.cddl
+  cddl-files/mock/crypto.cddl
+  cddl-files/mock/extras.cddl
+
 source-repository head
   type:     git
   location: https://github.com/input-output-hk/cardano-ledger-specs
@@ -22,6 +28,7 @@ library
     Test.Cardano.Ledger.ShelleyMA.TestEra
     Test.Cardano.Ledger.ShelleyMA.TxBody
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
+    Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
   -- other-extensions:

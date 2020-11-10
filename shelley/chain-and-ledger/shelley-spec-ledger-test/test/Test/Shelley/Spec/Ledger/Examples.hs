@@ -14,6 +14,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils (applySTSTest, maxLLSupply, runShelleyBase)
 import Test.Tasty.HUnit (Assertion, (@?=))
+import Shelley.Spec.Ledger.Scripts ()
 
 data CHAINExample h = CHAINExample
   { -- | State to start testing with
