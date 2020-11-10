@@ -40,6 +40,7 @@ module Data.Coders
     Annotator(..),
     Dual(..),
     Field(..),
+    field,
     encode,
     decode,
     runE,            -- Used in testing
@@ -50,6 +51,8 @@ module Data.Coders
     decodeRecordNamed,
     decodeRecordSum,
     invalidKey,
+    unusedRequiredKeys,
+    duplicateKey,
     wrapCBORArray,
     encodeFoldable,
     decodeCollectionWithLen,
@@ -69,6 +72,7 @@ module Data.Coders
     Encoding,
     encodeNullMaybe,
     decodeNullMaybe,
+    decodeSparse,
   )
 where
 
@@ -298,7 +302,10 @@ data Dual t = Dual (t -> Encoding) (forall s . Decoder s t)
 
 -- | A Field pairs an update function and a decoder for one field of a Sparse record.
 data Field t where
-  Field:: (x -> t -> t) -> Decode ('Closed d) x -> Field t
+  Field:: (x -> t -> t) -> (forall s. Decoder s x) -> Field t
+
+field :: (x -> t -> t) -> Decode ('Closed d) x -> Field t
+field update dec = Field update (decode dec)
 
 -- ===========================================================
 -- The coders and the decoders as GADT datatypes
@@ -497,7 +504,7 @@ applyField f seen name = do
   if Set.member tag seen
      then duplicateKey name tag
      else case f tag of
-            Field update d -> do v <- decode d; pure (update v,insert tag seen)
+            Field update d -> do v <- d; pure (update v,insert tag seen)
 
 -- | Decode a Map Block of key encoded data for type t
 --   given a function that picks the right box for a given key, and an
