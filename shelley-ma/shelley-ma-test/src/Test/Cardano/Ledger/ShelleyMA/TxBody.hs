@@ -19,17 +19,24 @@ module Test.Cardano.Ledger.ShelleyMA.TxBody
   ) where
 
 import Cardano.Binary(ToCBOR(..))
-import Cardano.Ledger.Core (Value)
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.Mary.Value
+  ( AssetName (..),
+    PolicyID (..),
+    Value (..),
+  )
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), Timelock (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
+import Shelley.Spec.Ledger.Tx (hashScript)
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as Short
 import qualified Data.Map.Strict as Map
 import Data.MemoBytes (MemoBytes (Memo), roundTripMemo)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (empty)
+import Data.String (fromString)
 import GHC.Records
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -89,7 +96,13 @@ txM =
     (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))
     SNothing
     SNothing
-    (inject (Coin 2))
+    mint
+
+mint :: Value TestEra
+mint = Value 0 (Map.singleton policyId (Map.singleton aname 2))
+  where
+  policyId = PolicyID . hashScript . RequireAnyOf $ fromList []
+  aname = AssetName $ fromString "asset name"
 
 bytes :: Mary.TxBody era -> ShortByteString
 bytes (Mary.TxBodyConstr (Memo _ b)) = b
@@ -106,14 +119,15 @@ fieldTests =
       testCase "vldt" (assertEqual "vldt" (getField @"vldt" txM) (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))),
       testCase "update" (assertEqual "update" (getField @"update" txM) SNothing),
       testCase "mdHash" (assertEqual "mdHash" (getField @"mdHash" txM) SNothing),
-      testCase "forge" (assertEqual "forge" (getField @"forge" txM) (inject (Coin 2)))
+      testCase "forge" (assertEqual "forge" (getField @"forge" txM) mint)
     ]
 
-roundtrip :: Mary.TxBody TestEra -> Bool
+roundtrip :: Mary.TxBody TestEra -> Assertion
 roundtrip (Mary.TxBodyConstr memo) =
   case roundTripMemo memo of
-    Right ("", new) -> new == memo
-    _other -> False
+    Right ("", new) -> new @?= memo
+    Right (extra, _new) -> error ("extra bytes: " <> show extra)
+    Left s -> error (show s)
 
 -- =====================================================================
 -- Now some random property tests
@@ -132,7 +146,7 @@ embedTest = do
      Right(left,_) -> error ("left over input: "++show left)
      Left s -> error (show s)
 
-getTxSparse ::  (Val (Value era),FamsFrom era) => Decode ('Closed 'Dense) (TxBodyRaw era)
+getTxSparse ::  (Val (Core.Value era),FamsFrom era) => Decode ('Closed 'Dense) (TxBodyRaw era)
 getTxSparse = SparseKeyed "TxBodyRaw" initial bodyFields [(0,"inputs"),(1,"outputs"),(2,"txfee")]
 
 oldStyleRoundTrip:: TxBodyRaw TestEra -> RoundTripResult (TxBodyRaw TestEra)
@@ -166,8 +180,8 @@ txBodyTest =
   testGroup
     "TxBody"
     [ fieldTests
-    , testCase "length" (assertEqual "length" 16 (Short.length (bytes txM)))
-    , testCase "roundtrip txM" (assertBool "rountrip" (roundtrip txM))
+    , testCase "length" (assertEqual "length" 36 (Short.length (bytes txM)))
+    , testCase "roundtrip txM" (roundtrip txM)
     , testProperty "roundtrip sparse TxBodyRaw" checkSparse
     , testProperty "embed Shelley sparse TxBodyRaw" embedTest
     , testProperty "routrip sparse TxBody" checkSparseAnn

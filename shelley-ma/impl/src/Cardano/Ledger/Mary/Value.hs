@@ -5,6 +5,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -20,17 +22,28 @@ module Cardano.Ledger.Mary.Value
 where
 
 import Cardano.Binary
-  ( FromCBOR,
+  ( Decoder,
+    Encoding,
+    FromCBOR,
     ToCBOR,
-    encodeListLen,
+    TokenType (..),
+    decodeInt64,
+    decodeWord64,
     fromCBOR,
+    peekTokenType,
     toCBOR,
   )
+import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Torsor (Torsor (..))
-import Cardano.Ledger.Val (Val (..))
+import Cardano.Ledger.Val
+  ( DecodeMint (..),
+    DecodeNonNegative (..),
+    EncodeMint (..),
+    Val (..),
+  )
 import Control.DeepSeq (NFData (..))
 import Control.Monad (guard)
 import Data.Array (Array)
@@ -40,6 +53,14 @@ import Data.CannonicalMaps
   ( cannonicalMap,
     cannonicalMapUnion,
     pointWise,
+  )
+import Data.Coders
+  ( Decode (..),
+    Encode (..),
+    decode,
+    encode,
+    (!>),
+    (<!),
   )
 import Data.Group (Abelian, Group (..))
 import Data.Map.Internal
@@ -58,8 +79,8 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Coin (Coin (..), integerToWord64)
-import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
+import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
+import Shelley.Spec.Ledger.Serialization (decodeMap, encodeMap)
 import Prelude hiding (lookup)
 
 -- | Asset Name
@@ -147,24 +168,106 @@ instance Era era => Val (Value era) where
 -- TODO Probably the actual serialization will be of the formal Coin OR Value type
 -- Maybe better to make this distinction in the TxOut de/serialization
 
+decodeInteger :: Decoder s Integer
+decodeInteger = fromIntegral <$> decodeInt64
+
+decodeValue ::
+  ( Typeable (Core.Script era),
+    Era era
+  ) =>
+  Decoder s (Value era)
+decodeValue = do
+  tt <- peekTokenType
+  case tt of
+    TypeUInt -> inject . Coin <$> decodeInteger
+    TypeNInt -> inject . Coin <$> decodeInteger
+    TypeListLen -> decodeValuePair decodeInteger
+    TypeListLen64 -> decodeValuePair decodeInteger
+    TypeListLenIndef -> decodeValuePair decodeInteger
+    _ -> fail $ "Value: expected array or int"
+
+decodeValuePair ::
+  ( Typeable (Core.Script era),
+    Era era
+  ) =>
+  (forall t. Decoder t Integer) ->
+  Decoder s (Value era)
+decodeValuePair decodeAmount =
+  decode $
+    RecD Value
+      <! D decodeAmount
+      <! D (decodeMultiAssetMaps decodeAmount)
+
+encodeMultiAssetMaps ::
+  ( Typeable (Core.Script era),
+    Era era
+  ) =>
+  Map (PolicyID era) (Map AssetName Integer) ->
+  Encoding
+encodeMultiAssetMaps = encodeMap toCBOR (encodeMap toCBOR toCBOR)
+
+decodeMultiAssetMaps ::
+  ( Typeable (Core.Script era),
+    Era era
+  ) =>
+  Decoder s Integer ->
+  Decoder s (Map (PolicyID era) (Map AssetName Integer))
+decodeMultiAssetMaps decodeAmount =
+  prune <$> decodeMap fromCBOR (decodeMap fromCBOR decodeAmount)
+
+decodeNonNegativeInteger :: Decoder s Integer
+decodeNonNegativeInteger = fromIntegral <$> decodeWord64
+
+decodeNonNegativeValue ::
+  ( Typeable (Core.Script era),
+    Era era
+  ) =>
+  Decoder s (Value era)
+decodeNonNegativeValue = do
+  tt <- peekTokenType
+  case tt of
+    TypeUInt -> inject . Coin <$> decodeNonNegativeInteger
+    TypeListLen -> decodeValuePair decodeNonNegativeInteger
+    TypeListLen64 -> decodeValuePair decodeNonNegativeInteger
+    TypeListLenIndef -> decodeValuePair decodeNonNegativeInteger
+    _ -> fail $ "Value: expected array or int"
+
 instance
   (Era era, Typeable (Core.Script era)) =>
   ToCBOR (Value era)
   where
   toCBOR (Value c v) =
-    encodeListLen 2
-      <> toCBOR c
-      <> toCBOR v
+    if Map.null v
+      then toCBOR c
+      else
+        encode $
+          Rec Value
+            !> To c
+            !> E encodeMultiAssetMaps v
 
 instance
   (Era era, Typeable (Core.Script era)) =>
   FromCBOR (Value era)
   where
-  fromCBOR = do
-    decodeRecordNamed "Value" (const 2) $ do
-      c <- fromCBOR
-      v <- fromCBOR
-      pure $ Value c v
+  fromCBOR = decodeValue
+
+instance
+  (Era era, Typeable (Core.Script era)) =>
+  DecodeNonNegative (Value era)
+  where
+  decodeNonNegative = decodeNonNegativeValue
+
+instance
+  (Era era, Typeable (Core.Script era)) =>
+  DecodeMint (Value era)
+  where
+  decodeMint = Value 0 <$> decodeMultiAssetMaps decodeInteger
+
+instance
+  (Era era, Typeable (Core.Script era)) =>
+  EncodeMint (Value era)
+  where
+  encodeMint (Value _ multiasset) = encodeMultiAssetMaps multiasset
 
 -- ========================================================================
 -- Compactible
@@ -173,14 +276,20 @@ instance
 instance Era era => Compactible (Value era) where
   newtype CompactForm (Value era) = CompactValue (CV era)
     deriving (ToCBOR, FromCBOR)
-  toCompact = CompactValue . toCV
+  toCompact x = CompactValue <$> toCV x
   fromCompact (CompactValue x) = fromCV x
 
 instance (Typeable (Core.Script era), Era era) => ToCBOR (CV era) where
   toCBOR = toCBOR . fromCV
 
 instance (Typeable (Core.Script era), Era era) => FromCBOR (CV era) where
-  fromCBOR = toCV <$> fromCBOR
+  fromCBOR = do
+    v <- decodeNonNegativeValue
+    case toCV v of
+      Nothing ->
+        fail
+          "impossible failure: decoded nonnegative value that cannot be compacted"
+      Just x -> pure x
 
 data CV era
   = CV
@@ -193,24 +302,23 @@ data CVPart era
       {-# UNPACK #-} !AssetName
       {-# UNPACK #-} !Word64
 
-toCV :: Value era -> CV era
-toCV v =
+toCV :: Value era -> Maybe (CV era)
+toCV v = do
   let (c, triples) = gettriples v
       policyIDs = Set.fromList $ (\(x, _, _) -> x) <$> triples
       n = length triples - 1
-      arr = array (0, n) (zip [0 .. n] (toCVPart policyIDs <$> triples))
-   in CV (convert c) arr
+  cvParts <- traverse (toCVPart policyIDs) triples
+  let arr = array (0, n) (zip [0 .. n] cvParts)
+  c' <- integerToWord64 c
+  pure $ CV c' arr
   where
     deduplicate xs x = fromMaybe x $ do
       r <- Set.lookupLE x xs
       guard (x == r)
       pure r
     toCVPart policyIdSet (policyId, aname, amount) =
-      CVPart (deduplicate policyIdSet policyId) aname (convert amount)
-    convert x =
-      fromMaybe
-        (error $ "out of bounds : " ++ show x)
-        (integerToWord64 x)
+      CVPart (deduplicate policyIdSet policyId) aname
+        <$> integerToWord64 amount
 
 fromCV :: Era era => CV era -> Value era
 fromCV (CV w vs) = foldr f (inject . Coin . fromIntegral $ w) vs
@@ -286,6 +394,13 @@ insert combine pid aid new (Value cn m1) =
         )
 
 -- ========================================================
+
+-- | Remove 0 assets from a map
+prune ::
+  Map (PolicyID era) (Map AssetName Integer) ->
+  Map (PolicyID era) (Map AssetName Integer)
+prune assets =
+  Map.filter (not . null) $ Map.filter (/= 0) <$> assets
 
 -- | Display a Value as a String, one token per line
 showValue :: Value era -> String

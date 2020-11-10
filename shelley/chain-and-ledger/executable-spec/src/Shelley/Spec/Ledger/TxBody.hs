@@ -84,7 +84,7 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
-import Cardano.Ledger.Val (Val)
+import Cardano.Ledger.Val (DecodeNonNegative (..), Val)
 import Cardano.Prelude
   ( decodeEitherBase16,
     panic,
@@ -115,7 +115,7 @@ import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
@@ -483,7 +483,9 @@ pattern TxOut addr vl <-
   (viewCompactTxOut -> (addr, vl))
   where
     TxOut addr vl =
-      TxOutCompact (compactAddr addr) (toCompact vl)
+      TxOutCompact
+        (compactAddr addr)
+        (fromMaybe (error $ "illegal value in txout: " <> show vl) $ toCompact vl)
 
 {-# COMPLETE TxOut #-}
 
@@ -598,10 +600,11 @@ type ProperVal era =
 type ProperFrom era =
   ( Era era,
     Typeable era,
-    FromCBOR (Core.Value era),
+    DecodeNonNegative (Core.Value era),
+    Compactible (Core.Value era),
+    Show (Core.Value era),
     Typeable (Core.Script era),
     Typeable (Core.Metadata era),
-    FromCBOR (CompactForm (Core.Value era)),
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (Annotator (Core.Metadata era))
   )
@@ -610,9 +613,10 @@ type ProperFrom era =
 type ProperTo era =
   ( Era era,
     ToCBOR (Core.Value era),
-    ToCBOR (Core.Script era),
+    Compactible (Core.Value era),
+    ToCBOR (CompactForm (Core.Value era)),
     ToCBOR (Core.Metadata era),
-    ToCBOR (CompactForm (Core.Value era))
+    ToCBOR (Core.Script era)
   )
 
 -- ==============================
@@ -973,7 +977,7 @@ instance
 
 instance-- use the weakest constraint necessary
 
-  (Era era, ToCBOR (Core.Value era), ToCBOR (CompactForm (Core.Value era))) =>
+  (Era era, ToCBOR (CompactForm (Core.Value era)), Compactible (Core.Value era)) =>
   ToCBOR (TxOut era)
   where
   toCBOR (TxOutCompact addr coin) =
@@ -983,12 +987,12 @@ instance-- use the weakest constraint necessary
 
 instance-- use the weakest constraint necessary
 
-  (Era era, FromCBOR (Core.Value era), FromCBOR (CompactForm (Core.Value era))) =>
+  (Era era, DecodeNonNegative (CompactForm (Core.Value era)), Compactible (Core.Value era)) =>
   FromCBOR (TxOut era)
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
     cAddr <- fromCBOR
-    coin <- fromCBOR
+    coin <- decodeNonNegative
     pure $ TxOutCompact cAddr coin
 
 instance

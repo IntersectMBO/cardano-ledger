@@ -22,7 +22,7 @@ import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
 import Cardano.Ledger.ShelleyMA.Scripts ()
 import Cardano.Ledger.ShelleyMA.TxBody ()
 import Cardano.Ledger.Torsor (Torsor (..))
-import Cardano.Ledger.Val (Val)
+import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val)
 import Control.State.Transition.Extended
 import Data.Foldable (Foldable (toList))
 import qualified Data.Map.Strict as Map
@@ -120,6 +120,8 @@ instance
     Typeable ma,
     STS (UTXO (ShelleyMAEra ma c)),
     BaseM (UTXO (ShelleyMAEra ma c)) ~ ShelleyBase,
+    DecodeMint (Core.Value (ShelleyMAEra ma c)),
+    DecodeNonNegative (Core.Value (ShelleyMAEra ma c)),
     Compactible (Core.Value (ShelleyMAEra ma c)),
     Val (Core.Value (ShelleyMAEra ma c)),
     GetPolicies (Core.Value (ShelleyMAEra ma c)) (ShelleyMAEra ma c),

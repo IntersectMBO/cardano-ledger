@@ -19,9 +19,14 @@ module Cardano.Ledger.Val
     invert,
     sumVal,
     scaledMinDeposit,
+    DecodeNonNegative (..),
+    DecodeMint (..),
+    EncodeMint (..),
   )
 where
 
+import Cardano.Binary (Decoder, Encoding, decodeWord64, toCBOR)
+import Cardano.Ledger.Compactible (Compactible (..))
 import Data.Group (Abelian)
 import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 
@@ -164,3 +169,34 @@ scaledMinDeposit v (Coin mv)
     -- parameter is implicit from the minAdaValue parameter
     adaPerUTxOByte :: Integer
     adaPerUTxOByte = quot mv (utxoEntrySizeWithoutVal + uint)
+
+-- =============================================================
+
+class DecodeNonNegative v where
+  decodeNonNegative :: Decoder s v
+
+instance DecodeNonNegative Coin where
+  decodeNonNegative = Coin . fromIntegral <$> decodeWord64
+
+instance (DecodeNonNegative a, Compactible a, Show a) => DecodeNonNegative (CompactForm a) where
+  decodeNonNegative = do
+    v <- decodeNonNegative
+    maybe (fail $ "illegal value: " <> show v) pure (toCompact v)
+
+-- =============================================================
+
+class DecodeMint v where
+  decodeMint :: Decoder s v
+
+instance DecodeMint Coin where
+  decodeMint = fail "cannot have coin in mint field"
+
+-- =============================================================
+
+class EncodeMint v where
+  encodeMint :: v -> Encoding
+
+instance EncodeMint Coin where
+  --we expect nothing to be able to successfully decode this
+  --this is an alternative to throwing an error at encoding
+  encodeMint = toCBOR

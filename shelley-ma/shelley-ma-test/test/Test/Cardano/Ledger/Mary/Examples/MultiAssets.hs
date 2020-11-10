@@ -49,7 +49,7 @@ import Test.Cardano.Ledger.EraBuffet (MaryTest)
 import Test.Cardano.Ledger.Mary.Examples (testMaryNoDelegLEDGER)
 import qualified Test.Cardano.Ledger.Mary.Examples.Cast as Cast
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (Assertion, assertFailure, testCase)
 
 ------------------------------
 -- Set Up the Initial State --
@@ -528,7 +528,7 @@ testNegEx2 :: Assertion
 testNegEx2 = do
   r <- try (evaluate $ txbodyNegEx2 == txbodyNegEx2)
   case r of
-    Left (ErrorCall e) -> e @?= "out of bounds : -1"
+    Left (ErrorCall _) -> pure ()
     Right _ -> assertFailure $ "constructed negative TxOut Value"
 
 --

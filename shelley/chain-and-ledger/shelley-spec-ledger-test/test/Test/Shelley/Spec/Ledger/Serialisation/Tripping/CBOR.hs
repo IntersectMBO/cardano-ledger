@@ -40,13 +40,16 @@ import Cardano.Binary
     ToCBOR (..),
     toCBOR,
   )
+import Cardano.Ledger.Compactible (Compactible (..))
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Write (toLazyByteString)
 import qualified Data.ByteString.Lazy as Lazy
+import Data.Maybe (fromJust)
 import qualified Shelley.Spec.Ledger.API as Ledger
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
+import Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Mock
@@ -147,6 +150,13 @@ prop_roundtrip_metadata = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBO
 prop_roundtrip_ShelleyGenesis :: ShelleyGenesis Mock.C -> Property
 prop_roundtrip_ShelleyGenesis = roundtrip toCBOR fromCBOR
 
+prop_roundtrip_Coin_1 :: Coin -> Property
+prop_roundtrip_Coin_1 = roundtrip (toCBOR . fromJust . toCompact) fromCBOR
+
+prop_roundtrip_Coin_2 :: Coin -> Property
+prop_roundtrip_Coin_2 = roundtrip toCBOR (fromCompact <$> fromCBOR)
+
+
 -- TODO
 
 -- roundTripIpv4 :: Property
@@ -187,5 +197,7 @@ tests =
       testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState,
       testProperty "roundtrip MultiSig" prop_roundtrip_MultiSig,
       testProperty "roundtrip MetaData" prop_roundtrip_metadata,
-      testProperty "roundtrip Shelley Genesis" prop_roundtrip_ShelleyGenesis
+      testProperty "roundtrip Shelley Genesis" prop_roundtrip_ShelleyGenesis,
+      testProperty "roundtrip coin compactcoin cbor" prop_roundtrip_Coin_1,
+      testProperty "roundtrip coin cbor compactcoin" prop_roundtrip_Coin_2
     ]

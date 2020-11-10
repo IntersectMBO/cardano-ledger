@@ -44,9 +44,8 @@ newtype Coin = Coin {unCoin :: Integer}
       NFData
     )
   deriving (Show) via Quiet Coin
-  deriving (ToCBOR, FromCBOR) via Compact Coin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
-  deriving newtype (PartialOrd)
+  deriving newtype (PartialOrd, FromCBOR, ToCBOR)
 
 newtype DeltaCoin = DeltaCoin Integer
   deriving (Eq, Ord, Generic, Enum, NoThunks, NFData, FromCBOR, ToCBOR)
@@ -80,9 +79,7 @@ rationalToCoinViaFloor r = Coin . floor $ r
 -- with an erroring bounds check here. where should this really live?
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64
-  toCompact (Coin c) = case integerToWord64 c of
-    Nothing -> error $ "out of bounds : " ++ show c
-    Just x -> CompactCoin x
+  toCompact (Coin c) = CompactCoin <$> integerToWord64 c
   fromCompact (CompactCoin c) = word64ToCoin c
 
 -- It's odd for this to live here. Where should it go?

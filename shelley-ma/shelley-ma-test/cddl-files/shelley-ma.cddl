@@ -260,3 +260,17 @@ genesishash           = $hash28
 
 vrf_keyhash           = $hash32
 metadata_hash         = $hash32
+
+; allegra differences
+transaction_body_allegra =
+  { 0 : set<transaction_input>
+  , 1 : [* transaction_output_allegra]
+  , 2 : coin ; fee
+  , ? 3 : uint ; ttl
+  , ? 4 : [* certificate]
+  , ? 5 : withdrawals
+  , ? 6 : update
+  , ? 7 : metadata_hash
+  , ? 8 : uint ; validity interval start
+  }
+transaction_output_allegra = [address, amount : coin]
