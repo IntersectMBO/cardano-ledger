@@ -222,8 +222,8 @@ the body of the transaction:
   \item We include a term of type $\ExUnits$. This is a budget of execution units
   that may be used by all non-native scripts in the transaction.
   The budget is intended to be computed by executing the scripts off-chain prior to transaction submission.
-  \item We include a hash of the the indexed redeemer structure
-    with accessor $\fun{sdHash}$. The reason for including this hash is explained below.
+  \item We include a hash of some of the data contained in the witnesses, specifically data relating to scripts,
+    with accessor $\fun{sdHash}$. It is used to prevent tampering with that data.
   \item We include a hash of the subset of current protocol parameters that is relevant for script execution.
 \end{itemize}
 

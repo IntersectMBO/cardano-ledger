@@ -308,7 +308,7 @@ and the current item being validated.
     & \fun{getData} \in \GoguenTx \to \UTxO \to \ScriptPurpose \to \seqof{\Data} \\
     & \fun{getData}~{tx}~{utxo}~{it}~=~
       \begin{cases}
-        [\var{d}] & \var{it} \mapsto (a, \_, h_d) \in \var{utxo}, \var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx} \\
+        [\var{d}] & \var{it} \mapsto (\_, \_, h_d) \in \var{utxo}, \var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx} \\
         \epsilon  & \text{otherwise}
       \end{cases}
     \nextdef
