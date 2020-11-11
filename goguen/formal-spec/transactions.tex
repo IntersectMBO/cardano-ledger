@@ -42,7 +42,12 @@ Shelley specification~\cite{XX}:
   \item $\TxIn$ is a transaction input. It includes a reference to the UTxO entry that it is spending
   and an $\IsFee$ tag.
 
-  \item $\TxOut$ is the type of transaction outputs, which now includes an optional hash of a datum.
+  \item $\TxOut$ is the type of transaction outputs, which now includes
+  an optional hash of a datum. Note here that \emph{any} output can
+  optionally include such a hash, even though only non-native scripts
+  can use this hash. As it is in general impossible for the ledger to
+  know at the time of creation if an output belongs to a non-native
+  script or not, it simply allows any output to contain a data hash.
 
   \item $\Tag$ lets us differentiate what a script
   can validate, i.e. \\

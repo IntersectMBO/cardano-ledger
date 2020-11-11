@@ -707,6 +707,11 @@ validation purpose (forging, outputs, certificates, withdrawals).
     & \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx}
     \nextdef
+    & \hspace{-1cm}\fun{checkNativeScriptData} \in \Tx \to \UTxO \to (\ScriptPurpose \times \ScriptHash) \to \Bool \\
+    & \hspace{-1cm}\fun{checkNativeScriptData}~\var{tx}~\var{utxo}~(\var{purp},\var{h})~=~ \exists s, h\mapsto s~\in~\fun{indexedScripts}~{tx}\\
+    \land & ~ s \in \ScriptNonNative~\Rightarrow (\var{purp} \in \dom (\fun{findRdmr}~{tx}) \land \\
+    & ~~~~~~ \var{purp} \in \UTxOIn \Rightarrow \fun{getData}~tx~utxo~purp \neq \epsilon) \\
+    \nextdef
     & \hspace{-1cm}\fun{hashSD} \in \TxWitness \to \ScriptDataHash^? \\
     & \hspace{-1cm}\fun{hashSD}~\var{txw}~=~
       \begin{cases}
@@ -781,12 +786,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \dom (\txwitsVKey{txw}) \}\\~\\
       \forall \var{validator} \in \fun{txscripts}~{txw} \cap \ScriptNative,\\
       \fun{runNativeScript}~\var{validator}~\var{tx}\\~\\
-      \forall (\var{purp}, h) \in ~\fun{scriptsNeeded}~\var{utxo}~\var{tx}, \exists s, (h\mapsto s~\in~\fun{indexedScripts}~{tx} ~\land\\
-       s \in \ScriptNonNative~\Leftrightarrow \exists r, \var{purp} \mapsto r \in \fun{findRdmr}~{tx})
-      \\~\\
-      \forall~\var{txin}\in\fun{txinputs}~{txb},
-      \var{txin} \mapsto \var{(\wcard,\wcard,h_d)} \in \var{utxo},
-      \var{h_d} ~\in \fun{dom}(\fun{indexedDats}~{tx})
+      \forall h \in ~\fun{scriptsNeeded}~\var{utxo}~\var{tx}, \fun{checkNativeScriptData}~tx~utxo~h
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
       \mathcal{V}_{\var{vk}}{\serialised{tx_{o}}}_{\sigma} \\
