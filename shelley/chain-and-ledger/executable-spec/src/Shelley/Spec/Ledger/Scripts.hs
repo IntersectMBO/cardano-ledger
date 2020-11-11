@@ -77,7 +77,7 @@ nativeMultiSigTag = "\00"
 -- This makes it easy to express multi-signature addresses, and provides an
 -- extension point to express other validity conditions, e.g., as needed for
 -- locking funds used with lightning.
-data MultiSig' era
+data MultiSigRaw era
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
     RequireSignature' !(KeyHash 'Witness (Crypto era))
@@ -90,46 +90,46 @@ data MultiSig' era
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NoThunks)
 
-newtype MultiSig era = MultiSig (MemoBytes (MultiSig' era))
+newtype MultiSig era = MultiSigConstr (MemoBytes (MultiSigRaw era))
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (ToCBOR, NoThunks)
 
 getMultiSigBytes :: MultiSig era -> ShortByteString
-getMultiSigBytes (MultiSig (Memo _ bytes)) = bytes
+getMultiSigBytes (MultiSigConstr (Memo _ bytes)) = bytes
 
 deriving via
-  (Mem (MultiSig' era))
+  (Mem (MultiSigRaw era))
   instance
     (Era era) =>
     FromCBOR (Annotator (MultiSig era))
 
 pattern RequireSignature :: Era era => KeyHash 'Witness (Crypto era) -> MultiSig era
 pattern RequireSignature akh <-
-  MultiSig (Memo (RequireSignature' akh) _)
+  MultiSigConstr (Memo (RequireSignature' akh) _)
   where
     RequireSignature akh =
-      MultiSig $ memoBytes (Sum RequireSignature' 0 !> To akh)
+      MultiSigConstr $ memoBytes (Sum RequireSignature' 0 !> To akh)
 
 pattern RequireAllOf :: Era era => [MultiSig era] -> MultiSig era
 pattern RequireAllOf ms <-
-  MultiSig (Memo (RequireAllOf' ms) _)
+  MultiSigConstr (Memo (RequireAllOf' ms) _)
   where
     RequireAllOf ms =
-      MultiSig $ memoBytes (Sum RequireAllOf' 1 !> E encodeFoldable ms)
+      MultiSigConstr $ memoBytes (Sum RequireAllOf' 1 !> E encodeFoldable ms)
 
 pattern RequireAnyOf :: Era era => [MultiSig era] -> MultiSig era
 pattern RequireAnyOf ms <-
-  MultiSig (Memo (RequireAnyOf' ms) _)
+  MultiSigConstr (Memo (RequireAnyOf' ms) _)
   where
     RequireAnyOf ms =
-      MultiSig $ memoBytes (Sum RequireAnyOf' 2 !> E encodeFoldable ms)
+      MultiSigConstr $ memoBytes (Sum RequireAnyOf' 2 !> E encodeFoldable ms)
 
 pattern RequireMOf :: Era era => Int -> [MultiSig era] -> MultiSig era
 pattern RequireMOf n ms <-
-  MultiSig (Memo (RequireMOf' n ms) _)
+  MultiSigConstr (Memo (RequireMOf' n ms) _)
   where
     RequireMOf n ms =
-      MultiSig $ memoBytes (Sum RequireMOf' 3 !> To n !> E encodeFoldable ms)
+      MultiSigConstr $ memoBytes (Sum RequireMOf' 3 !> To n !> E encodeFoldable ms)
 
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
@@ -191,7 +191,7 @@ getKeyCombinations (RequireMOf m msigs) =
 
 instance
   Era era =>
-  FromCBOR (Annotator (MultiSig' era))
+  FromCBOR (Annotator (MultiSigRaw era))
   where
   fromCBOR = decodeRecordSum "MultiSig" $
     \case
