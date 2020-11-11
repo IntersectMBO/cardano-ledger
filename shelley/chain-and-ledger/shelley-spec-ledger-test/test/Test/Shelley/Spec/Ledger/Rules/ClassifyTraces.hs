@@ -78,8 +78,7 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
-  ( TxBody (..),
-    Wdrl (..),
+  ( Wdrl (..),
   )
 import Test.QuickCheck
   ( Property,
@@ -143,7 +142,6 @@ genesisLedgerState gv = Just $ mkGenesisLedgerState gv (geConstants (genEnv p))
     p = Proxy
 
 relevantCasesAreCovered ::
-  (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) =>
   Gen (Core.Value C) -> Property
 relevantCasesAreCovered gv = do
   let tl = 100
@@ -161,7 +159,7 @@ relevantCasesAreCoveredForTrace ::
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
-    HasField "txUpdate" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era))
   ) =>
   Trace (CHAIN era) ->
@@ -303,10 +301,10 @@ hasWithdrawal tx = (not . null . unWdrl) $ getField @"wdrls" (_body tx)
 
 hasPParamUpdate ::
   ( ShelleyTest era,
-    HasField "txUpdate" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) => Tx era -> Bool
 hasPParamUpdate tx =
-  ppUpdates (getField @"txUpdate" $ _body tx)
+  ppUpdates (getField @"update" $ _body tx)
   where
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0

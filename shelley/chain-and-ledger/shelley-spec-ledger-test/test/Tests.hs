@@ -17,21 +17,14 @@ import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
 import Test.Shelley.Spec.Ledger.ValProp (valTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
-import GHC.Records (HasField)
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.PParams
-  ( Update (..)
-  )
 
-tests :: (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) =>
-  Gen (Core.Value C) -> TestTree
+tests :: Gen (Core.Value C) -> TestTree
 tests gv = askOption $ \case
   Nightly -> (nightlyTests gv)
   Fast -> fastTests
   _ -> (mainTests gv)
 
-mainTests :: (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) =>
-  Gen (Core.Value C) -> TestTree
+mainTests :: Gen (Core.Value C) -> TestTree
 mainTests gv =
   testGroup
     "Ledger with Delegation"
@@ -45,8 +38,7 @@ mainTests gv =
       valTests
     ]
 
-nightlyTests :: (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) =>
-  Gen (Core.Value C) -> TestTree
+nightlyTests :: Gen (Core.Value C) -> TestTree
 nightlyTests gv =
   testGroup
     "Ledger with Delegation nightly"
@@ -90,5 +82,5 @@ genVl :: Gen Coin
 genVl = arbitrary
 
 -- main entry point
-main :: (HasField "txUpdate" (Core.TxBody C) (StrictMaybe (Update C))) => IO ()
+main :: IO ()
 main = sodiumInit >> mainWithTestScenario (tests genVl)
