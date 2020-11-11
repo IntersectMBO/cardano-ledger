@@ -92,7 +92,7 @@ txM =
     (inject (Coin 2))
 
 bytes :: Mary.TxBody era -> ShortByteString
-bytes (Mary.STxBody (Memo _ b)) = b
+bytes (Mary.TxBodyConstr (Memo _ b)) = b
 
 fieldTests :: TestTree
 fieldTests =
@@ -110,7 +110,7 @@ fieldTests =
     ]
 
 roundtrip :: Mary.TxBody TestEra -> Bool
-roundtrip (Mary.STxBody memo) =
+roundtrip (Mary.TxBodyConstr memo) =
   case roundTripMemo memo of
     Right ("", new) -> new == memo
     _other -> False

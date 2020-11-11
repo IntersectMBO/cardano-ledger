@@ -21,7 +21,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.ShelleyMA.TxBody
-  ( TxBody (TxBody, STxBody),
+  ( TxBody (TxBody, TxBodyConstr),
     TxBodyRaw (..),
     FamsFrom,
     FamsTo,
@@ -195,7 +195,7 @@ initial =
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern construtor.
 
-newtype TxBody e = STxBody (MemoBytes (TxBodyRaw e))
+newtype TxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
   deriving (Typeable)
 
 type instance
@@ -238,10 +238,10 @@ pattern TxBody ::
   (Value era) ->
   TxBody era
 pattern TxBody i o d w fee vi u m forge <-
-  STxBody (Memo (TxBodyRaw i o d w fee vi u m forge) _)
+  TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m forge) _)
   where
     TxBody i o d w fee vi u m forge =
-      STxBody $
+      TxBodyConstr $
         memoBytes $ txSparse (TxBodyRaw i o d w fee vi u m forge)
 
 {-# COMPLETE TxBody #-}
@@ -252,7 +252,7 @@ pattern TxBody i o d w fee vi u m forge <-
 
 {-
 instance HasField tag (TxBodyRaw e) c => HasField (tag::Symbol) (TxBody e) c where
-   getField (STxBody (Memo x _)) = getField @tag x
+   getField (TxBodyConstr (Memo x _)) = getField @tag x
 
 -- The method above autmatically lifts the Hasfield instances from TxBodyRaw to TxBody
 -- the problem is, if some other file imports this file, it needs to import both
@@ -264,28 +264,28 @@ instance HasField tag (TxBodyRaw e) c => HasField (tag::Symbol) (TxBody e) c whe
 -}
 
 instance HasField "inputs" (TxBody e) (Set (TxIn e)) where
-  getField (STxBody (Memo m _)) = getField @"inputs" m
+  getField (TxBodyConstr (Memo m _)) = getField @"inputs" m
 
 instance HasField "outputs" (TxBody e) (StrictSeq (TxOut e)) where
-  getField (STxBody (Memo m _)) = getField @"outputs" m
+  getField (TxBodyConstr (Memo m _)) = getField @"outputs" m
 
 instance HasField "certs" (TxBody e) (StrictSeq (DCert e)) where
-  getField (STxBody (Memo m _)) = getField @"certs" m
+  getField (TxBodyConstr (Memo m _)) = getField @"certs" m
 
 instance HasField "wdrls" (TxBody e) (Wdrl e) where
-  getField (STxBody (Memo m _)) = getField @"wdrls" m
+  getField (TxBodyConstr (Memo m _)) = getField @"wdrls" m
 
 instance HasField "txfee" (TxBody e) Coin where
-  getField (STxBody (Memo m _)) = getField @"txfee" m
+  getField (TxBodyConstr (Memo m _)) = getField @"txfee" m
 
 instance HasField "vldt" (TxBody e) ValidityInterval where
-  getField (STxBody (Memo m _)) = getField @"vldt" m
+  getField (TxBodyConstr (Memo m _)) = getField @"vldt" m
 
 instance HasField "update" (TxBody e) (StrictMaybe (Update e)) where
-  getField (STxBody (Memo m _)) = getField @"update" m
+  getField (TxBodyConstr (Memo m _)) = getField @"update" m
 
 instance HasField "mdHash" (TxBody e) (StrictMaybe (MetaDataHash e)) where
-  getField (STxBody (Memo m _)) = getField @"mdHash" m
+  getField (TxBodyConstr (Memo m _)) = getField @"mdHash" m
 
 instance (Value e ~ vv) => HasField "forge" (TxBody e) vv where
-  getField (STxBody (Memo m _)) = getField @"forge" m
+  getField (TxBodyConstr (Memo m _)) = getField @"forge" m

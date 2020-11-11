@@ -20,7 +20,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     showTimelock,
     translate,
-    pattern Timelock,
+    pattern TimelockConstr,
   )
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString.Lazy as Lazy
@@ -77,7 +77,7 @@ checkTranslate :: MultiSig TestEra -> Bool
 checkTranslate multi = bytes == bytes2
   where
     bytes = getMultiSigBytes multi
-    (Timelock (Memo _ bytes2)) = translate @TestEra multi
+    (TimelockConstr (Memo _ bytes2)) = translate @TestEra multi
 
 timelockTests :: TestTree
 timelockTests =

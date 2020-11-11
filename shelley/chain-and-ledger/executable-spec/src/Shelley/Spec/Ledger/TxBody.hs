@@ -40,7 +40,7 @@ module Shelley.Spec.Ledger.TxBody
     StakePoolRelay (..),
     TxBody
       ( TxBody,
-        TxBodyY,
+        TxBodyConstr,
         _inputs,
         _outputs,
         _certs,
@@ -50,7 +50,7 @@ module Shelley.Spec.Ledger.TxBody
         _txUpdate,
         _mdHash
       ),
-    TxBodyX (..),
+    TxBodyRaw (..),
     TxId (..),
     TxIn (TxIn, ..),
     EraIndependentTxBody,
@@ -615,7 +615,7 @@ type ProperTo era =
 -- ==============================
 -- The underlying type for TxBody
 
-data TxBodyX era = TxBodyX
+data TxBodyRaw era = TxBodyRaw
   { _inputsX :: !(Set (TxIn era)),
     _outputsX :: !(StrictSeq (TxOut era)),
     _certsX :: !(StrictSeq (DCert era)),
@@ -627,14 +627,14 @@ data TxBodyX era = TxBodyX
   }
   deriving (Generic, NoThunks, Typeable, NFData)
 
-deriving instance (Era era, ProperVal era) => Eq (TxBodyX era)
+deriving instance (Era era, ProperVal era) => Eq (TxBodyRaw era)
 
-deriving instance (Era era, ProperVal era) => Show (TxBodyX era)
+deriving instance (Era era, ProperVal era) => Show (TxBodyRaw era)
 
-instance ProperFrom era => FromCBOR (TxBodyX era) where
-  fromCBOR = decode (SparseKeyed "TxBody" baseTxBodyX boxBody [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")])
+instance ProperFrom era => FromCBOR (TxBodyRaw era) where
+  fromCBOR = decode (SparseKeyed "TxBody" baseTxBodyRaw boxBody [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")])
 
-instance ProperFrom era => FromCBOR (Annotator (TxBodyX era)) where
+instance ProperFrom era => FromCBOR (Annotator (TxBodyRaw era)) where
   fromCBOR = pure <$> fromCBOR
 
 -- =================================================================
@@ -659,7 +659,7 @@ isSNothing _ = False
 -- | Choose a de-serialiser when given the key (of type Word).
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
-boxBody :: ProperFrom era => Word -> Field (TxBodyX era)
+boxBody :: ProperFrom era => Word -> Field (TxBodyRaw era)
 boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
 boxBody 1 = field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
 boxBody 4 = field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
@@ -673,10 +673,10 @@ boxBody n = field (\_ t -> t) (Invalid n)
 -- | Tells how to serialise each field, and what tag to label it with in the
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
-txSparse :: ProperTo era => TxBodyX era -> Encode ( 'Closed 'Sparse) (TxBodyX era)
-txSparse (TxBodyX input output cert wdrl fee ttl update hash) =
-  Keyed (\i o f t c w u h -> TxBodyX i o c w f t u h)
-    !> Key 0 (E encodeFoldable input) -- We don't have to send these in TxBodyX order
+txSparse :: ProperTo era => TxBodyRaw era -> Encode ( 'Closed 'Sparse) (TxBodyRaw era)
+txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
+  Keyed (\i o f t c w u h -> TxBodyRaw i o c w f t u h)
+    !> Key 0 (E encodeFoldable input) -- We don't have to send these in TxBodyRaw order
     !> Key 1 (E encodeFoldable output) -- Just hack up a fake constructor with the lambda.
     !> Key 2 (To fee)
     !> Key 3 (To ttl)
@@ -687,9 +687,9 @@ txSparse (TxBodyX input output cert wdrl fee ttl update hash) =
 
 -- The initial TxBody. We will overide some of these fields as we build a TxBody,
 -- adding one field at a time, using optional serialisers, inside the Pattern.
-baseTxBodyX :: TxBodyX era
-baseTxBodyX =
-  TxBodyX
+baseTxBodyRaw :: TxBodyRaw era
+baseTxBodyRaw =
+  TxBodyRaw
     { _inputsX = Set.empty,
       _outputsX = StrictSeq.empty,
       _txfeeX = Coin 0,
@@ -700,13 +700,13 @@ baseTxBodyX =
       _mdHashX = SNothing
     }
 
-instance ProperTo era => ToCBOR (TxBodyX era) where
+instance ProperTo era => ToCBOR (TxBodyRaw era) where
   toCBOR x = encode (txSparse x)
 
 -- ====================================================
 -- Introduce TxBody as a newtype around a MemoBytes
 
-newtype TxBody era = TxBodyY (MemoBytes (TxBodyX era))
+newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
   deriving (Generic, Typeable)
   deriving newtype (NoThunks, NFData)
 
@@ -715,7 +715,7 @@ deriving instance ProperVal era => Show (TxBody era)
 deriving instance ProperVal era => Eq (TxBody era)
 
 deriving via
-  (Mem (TxBodyX era))
+  (Mem (TxBodyRaw era))
   instance
     (ProperFrom era) =>
     FromCBOR (Annotator (TxBody era))
@@ -733,9 +733,9 @@ pattern TxBody ::
   StrictMaybe (MetaDataHash era) ->
   TxBody era
 pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
-  TxBodyY
+  TxBodyConstr
     ( Memo
-        ( TxBodyX
+        ( TxBodyRaw
             { _inputsX = _inputs,
               _outputsX = _outputs,
               _certsX = _certs,
@@ -750,7 +750,7 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
       )
   where
     TxBody _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash =
-      TxBodyY $ memoBytes (txSparse (TxBodyX _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash))
+      TxBodyConstr $ memoBytes (txSparse (TxBodyRaw _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash))
 
 {-# COMPLETE TxBody #-}
 
@@ -758,7 +758,7 @@ instance Era era => HashAnnotated (TxBody era) era where
   type HashIndex (TxBody era) = EraIndependentTxBody
 
 instance (Era era) => ToCBOR (TxBody era) where
-  toCBOR (TxBodyY memo) = toCBOR memo
+  toCBOR (TxBodyConstr memo) = toCBOR memo
 
 -- ==========================================================================
 -- Here is where we declare that in the (ShelleyEra c) The abstract type family
@@ -769,28 +769,28 @@ type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
 -- ===========================================================================
 
 instance HasField "inputs" (TxBody e) (Set (TxIn e)) where
-  getField (TxBodyY (Memo m _)) = getField @"_inputsX" m
+  getField (TxBodyConstr (Memo m _)) = getField @"_inputsX" m
 
 instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
-  getField (TxBodyY (Memo m _)) = getField @"_outputsX" m
+  getField (TxBodyConstr (Memo m _)) = getField @"_outputsX" m
 
 instance HasField "certs" (TxBody era) (StrictSeq (DCert era)) where
-  getField (TxBodyY (Memo m _)) = getField @"_certsX" m
+  getField (TxBodyConstr (Memo m _)) = getField @"_certsX" m
 
 instance HasField "wdrls" (TxBody era) (Wdrl era) where
-  getField (TxBodyY (Memo m _)) = getField @"_wdrlsX" m
+  getField (TxBodyConstr (Memo m _)) = getField @"_wdrlsX" m
 
 instance HasField "txfee" (TxBody era) Coin where
-  getField (TxBodyY (Memo m _)) = getField @"_txfeeX" m
+  getField (TxBodyConstr (Memo m _)) = getField @"_txfeeX" m
 
 instance HasField "ttl" (TxBody era) SlotNo where
-  getField (TxBodyY (Memo m _)) = getField @"_ttlX" m
+  getField (TxBodyConstr (Memo m _)) = getField @"_ttlX" m
 
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
-  getField (TxBodyY (Memo m _)) = getField @"_txUpdateX" m
+  getField (TxBodyConstr (Memo m _)) = getField @"_txUpdateX" m
 
 instance HasField "mdHash" (TxBody era) (StrictMaybe (MetaDataHash era)) where
-  getField (TxBodyY (Memo m _)) = getField @"_mdHashX" m
+  getField (TxBodyConstr (Memo m _)) = getField @"_mdHashX" m
 
 -- ===============================================================
 

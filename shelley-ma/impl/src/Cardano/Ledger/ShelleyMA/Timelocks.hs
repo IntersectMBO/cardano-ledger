@@ -22,7 +22,7 @@
 
 module Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf, RequireTimeExpire, RequireTimeStart),
-    pattern Timelock,
+    pattern TimelockConstr,
     inInterval,
     hashTimelockScript,
     showTimelock,
@@ -174,7 +174,7 @@ instance Era era => FromCBOR (Annotator (TimelockRaw era)) where
 -- They rely on memoBytes, and TimelockRaw to memoize each constructor of Timelock
 -- =================================================================
 
-newtype Timelock era = Timelock (MemoBytes (TimelockRaw era))
+newtype Timelock era = TimelockConstr (MemoBytes (TimelockRaw era))
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (ToCBOR, NoThunks)
 
@@ -185,45 +185,45 @@ deriving via
 
 pattern RequireSignature :: Era era => KeyHash 'Witness (Crypto era) -> Timelock era
 pattern RequireSignature akh <-
-  Timelock (Memo (Signature akh) _)
+  TimelockConstr (Memo (Signature akh) _)
   where
     RequireSignature akh =
-      Timelock $ memoBytes (encRaw (Signature akh))
+      TimelockConstr $ memoBytes (encRaw (Signature akh))
 
 pattern RequireAllOf :: Era era => StrictSeq (Timelock era) -> Timelock era
 pattern RequireAllOf ms <-
-  Timelock (Memo (AllOf ms) _)
+  TimelockConstr (Memo (AllOf ms) _)
   where
     RequireAllOf ms =
-      Timelock $ memoBytes (encRaw (AllOf ms))
+      TimelockConstr $ memoBytes (encRaw (AllOf ms))
 
 pattern RequireAnyOf :: Era era => StrictSeq (Timelock era) -> Timelock era
 pattern RequireAnyOf ms <-
-  Timelock (Memo (AnyOf ms) _)
+  TimelockConstr (Memo (AnyOf ms) _)
   where
     RequireAnyOf ms =
-      Timelock $ memoBytes (encRaw (AnyOf ms))
+      TimelockConstr $ memoBytes (encRaw (AnyOf ms))
 
 pattern RequireMOf :: Era era => Int -> StrictSeq (Timelock era) -> Timelock era
 pattern RequireMOf n ms <-
-  Timelock (Memo (MOfN n ms) _)
+  TimelockConstr (Memo (MOfN n ms) _)
   where
     RequireMOf n ms =
-      Timelock $ memoBytes (encRaw (MOfN n ms))
+      TimelockConstr $ memoBytes (encRaw (MOfN n ms))
 
 pattern RequireTimeExpire :: Era era => StrictMaybe (SlotNo) -> Timelock era
 pattern RequireTimeExpire mslot <-
-  Timelock (Memo (TimeExpire mslot) _)
+  TimelockConstr (Memo (TimeExpire mslot) _)
   where
     RequireTimeExpire mslot =
-      Timelock $ memoBytes (encRaw (TimeExpire mslot))
+      TimelockConstr $ memoBytes (encRaw (TimeExpire mslot))
 
 pattern RequireTimeStart :: Era era => StrictMaybe (SlotNo) -> Timelock era
 pattern RequireTimeStart mslot <-
-  Timelock (Memo (TimeStart mslot) _)
+  TimelockConstr (Memo (TimeStart mslot) _)
   where
     RequireTimeStart mslot =
-      Timelock $ memoBytes (encRaw (TimeStart mslot))
+      TimelockConstr $ memoBytes (encRaw (TimeStart mslot))
 
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf, RequireTimeExpire, RequireTimeStart #-}
 
