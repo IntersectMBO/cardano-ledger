@@ -3,6 +3,7 @@ module Main where
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks (timelockTests)
 import Test.Cardano.Ledger.ShelleyMA.TxBody (txBodyTest)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (codersTest)
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL (cddlTests)
 import Test.Tasty
 import Test.Tasty.HUnit ()
 
@@ -12,7 +13,8 @@ tests =
     "Cardano-Legder-Tests"
     [ codersTest,
       txBodyTest,
-      timelockTests
+      timelockTests,
+      cddlTests 10
     ]
 
 -- main entry point
