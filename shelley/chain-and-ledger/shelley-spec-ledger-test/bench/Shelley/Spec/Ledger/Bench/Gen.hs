@@ -47,9 +47,9 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv, geConstants)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
-import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
+import Test.Shelley.Spec.Ledger.Generator.Utxo (GenTxFunc (..))
 
 -- =============================================================================
 
@@ -57,7 +57,7 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
 genChainState ::
   ( ShelleyTest era
   ) =>
-  Gen (Core.TxBody era) ->
+  Gen (Core.Value era) ->
   Int ->
   GenEnv era ->
   IO (ChainState era)
@@ -81,6 +81,7 @@ genBlock ::
   ( Mock (Crypto era),
     ShelleyTest era,
     STS (LEDGERS era),
+    GenTxFunc era,
     BaseM (LEDGERS era) ~ ShelleyBase,
     Environment (LEDGERS era) ~ LedgersEnv era,
     State (LEDGERS era) ~ LedgerState era,
@@ -106,10 +107,10 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 -- 5) get a Transaction (Tx) from GenEnv and ChainState
 
 genTriple ::
-  ( Mock (Crypto era),
+  ( GenTxFunc era,
     ShelleyTest era
   ) =>
-  Gen (Core.TxBody era) ->
+  Gen (Core.Value era) ->
   Proxy era ->
   Int ->
   IO (GenEnv era, ChainState era, GenEnv era -> IO (Tx era))
@@ -119,5 +120,5 @@ genTriple gv proxy n = do
   let nes = chainNes cs -- NewEpochState
   let es = nesEs nes -- EpochState
   let (LedgerState utxoS dpstate) = esLState es -- LedgerState
-  let fun genenv = generate $ genTx genenv ledgerEnv (utxoS, dpstate)
+  let fun genenv = generate $ genTxFunc genenv ledgerEnv (utxoS, dpstate)
   pure (ge, cs, fun)

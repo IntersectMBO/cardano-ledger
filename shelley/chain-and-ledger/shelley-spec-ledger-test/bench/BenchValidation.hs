@@ -72,6 +72,7 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
 import Test.QuickCheck (Gen)
+import Test.Shelley.Spec.Ledger.Generator.Utxo (GenTxFunc (..))
 
 -- ====================================================================
 
@@ -85,6 +86,7 @@ instance NFData (ValidateInput era) where
 
 validateInput ::
   ( ShelleyTest era,
+    GenTxFunc era,
     Mock (Crypto era),
     API.GetLedgerView era,
     API.ApplyBlock era,
@@ -98,13 +100,14 @@ validateInput ::
     State (LEDGER era) ~ (UTxOState era, DPState era),
     Signal (LEDGER era) ~ Tx era
   ) =>
-  Gen (Core.TxBody era) ->
+  Gen (Core.Value era) ->
   Int ->
   IO (ValidateInput era)
 validateInput gv utxoSize = genValidateInput gv utxoSize
 
 genValidateInput ::
   ( ShelleyTest era,
+    GenTxFunc era,
     Mock (Crypto era),
     API.GetLedgerView era,
     API.ApplyBlock era,
@@ -118,7 +121,7 @@ genValidateInput ::
     State (LEDGER era) ~ (UTxOState era, DPState era),
     Signal (LEDGER era) ~ Tx era
   ) =>
-  Gen (Core.TxBody era) ->
+  Gen (Core.Value era) ->
   Int ->
   IO (ValidateInput era)
 genValidateInput gv n = do
@@ -193,6 +196,7 @@ instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
 genUpdateInputs ::
   forall era.
   ( ShelleyTest era,
+    GenTxFunc era,
     API.GetLedgerView era,
     API.ApplyBlock era,
     STS (LEDGERS era),
@@ -206,7 +210,7 @@ genUpdateInputs ::
     Signal (LEDGER era) ~ Tx era,
     Mock (Crypto era)
   ) =>
-  Gen (Core.TxBody era) ->
+  Gen (Core.Value era) ->
   Int ->
   IO (UpdateInputs (Crypto era))
 genUpdateInputs gv utxoSize = do
