@@ -25,7 +25,7 @@
 --   type instance Script MyEra = TestScript
 --   type instance TxBody MyEra = Mary.TxBody MyEra
 --
-module Test.Cardano.Ledger.ShelleyMA.TestEra
+module Test.Cardano.Ledger.EraBuffet
   ( TestCrypto,   -- These are two crypto versions
     StandardCrypto,
     ShelleyEra,   -- These are the crypto parameterized Eras re-exported for convenience.

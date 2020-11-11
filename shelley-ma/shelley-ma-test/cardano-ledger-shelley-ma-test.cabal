@@ -25,7 +25,7 @@ source-repository head
 
 library
   exposed-modules:
-    Test.Cardano.Ledger.ShelleyMA.TestEra
+    Test.Cardano.Ledger.EraBuffet
     Test.Cardano.Ledger.ShelleyMA.TxBody
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
     Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
