@@ -14,12 +14,9 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
   ( genTx,
     Delta (..),
     showBalance,
-    GenTxFunc (..)
   )
 where
 
-import Shelley.Spec.Ledger.Hashing (HashIndex)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Binary (serialize)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -36,7 +33,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Records (HasField, getField)
+import GHC.Records (HasField)
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API
   ( DCert,
@@ -117,13 +114,6 @@ import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (MultiSigPairs, ShelleyTest, Split (..))
-import qualified Cardano.Ledger.Crypto as Cr
-
-class GenTxFunc era where
-  genTxFunc :: GenEnv era -> LedgerEnv era -> (UTxOState era, DPState era) -> Gen (Tx era)
-
-instance (Cr.Crypto c, Mock c) => GenTxFunc (ShelleyEra c) where
-  genTxFunc = genTx
 
 showBalance ::
   ( ShelleyTest era,
@@ -167,13 +157,15 @@ showBalance
 -- the generator 'Constants' so that there is sufficient spending balance.
 
 genTx ::
+  forall era.
   ( HasCallStack,
-    Mock c
+    ShelleyTest era,
+    Mock (Crypto era)
   ) =>
-  GenEnv (ShelleyEra c) ->
-  LedgerEnv (ShelleyEra c) ->
-  (UTxOState (ShelleyEra c), DPState (ShelleyEra c)) ->
-  Gen (Tx (ShelleyEra c))
+  GenEnv era ->
+  LedgerEnv era ->
+  (UTxOState era, DPState era) ->
+  Gen (Tx era)
 genTx
   ge@( GenEnv
          keySpace@( KeySpace_
@@ -300,14 +292,9 @@ deltaZero initialfee minAda addr =
     mempty
 
 -- | - Do the work of computing what additioanl inputs we need to 'fix-up' the transaction so that it will balance.
--- TODO this is probably doable polymorphically but we need to have generict script witness
 genNextDelta ::
   forall era.
-  (ShelleyTest era,
-  Mock (Crypto era),
-  HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
-  HashIndex (Core.TxBody era) ~ EraIndependentTxBody,
-  Core.Script era ~ MultiSig era) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   UTxO era ->
   PParams era ->
   KeySpace era ->
@@ -323,7 +310,7 @@ genNextDelta
         ksIndexedPayScripts
       }
     )
-  tx@(Tx txb _ _)
+  tx
   delta@(Delta dfees extraInputs extraWitnesses change _ _) =
     let baseTxFee = minfee pparams tx
         encodedLen x = fromIntegral $ BSL.length (serialize x)
@@ -358,13 +345,12 @@ genNextDelta
                     }
               else -- add a new input to cover the fee
               do
-                let instx = getField @"inputs" txb
                 let utxo' =
                       -- Remove possible inputs from Utxo, if they already appear in inputs.
                       UTxO $
                         Map.withoutKeys
                           (unUTxO utxo)
-                          (instx <> extraInputs)
+                          ((_inputs . _body) tx <> extraInputs)
                 (inputs, value, (vkeyPairs, msigPairs)) <- genInputs (1, 1) ksIndexedPaymentKeys ksIndexedPayScripts utxo'
                 -- It is possible that the Utxo has no possible inputs left, so fail. We try and keep this from happening
                 -- by using feedback: adding to the number of ouputs (in the call to genRecipients) in genTx above. Adding to the
@@ -396,15 +382,15 @@ genNextDelta
 -- genNextDelta repeatedly until genNextDelta delta = delta
 
 genNextDeltaTilFixPoint ::
-  (Mock c) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   Coin ->
-  KeyPairs c ->
-  MultiSigPairs (ShelleyEra c) ->
-  UTxO (ShelleyEra c) ->
-  PParams (ShelleyEra c) ->
-  KeySpace (ShelleyEra c) ->
-  Tx (ShelleyEra c) ->
-  Gen (Delta (ShelleyEra c))
+  KeyPairs (Crypto era) ->
+  MultiSigPairs era ->
+  UTxO era ->
+  PParams era ->
+  KeySpace era ->
+  Tx era ->
+  Gen (Delta era)
 genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx = do
   addr <- genRecipients 1 keys scripts
   fix
@@ -414,16 +400,14 @@ genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx = do
     -- add a small offset here to ensure outputs above minUtxo value
     safetyOffset = Coin 5
 
-
--- TODO can we set the body' fields agnotically of the exact TxBody type?
 applyDelta ::
-  (Mock c) =>
-  [KeyPair 'Witness c] ->
-  Map (ScriptHash (ShelleyEra c)) (MultiSig (ShelleyEra c)) ->
-  KeySpace (ShelleyEra c) ->
-  Tx (ShelleyEra c) ->
-  Delta (ShelleyEra c) ->
-  Tx (ShelleyEra c)
+  (ShelleyTest era, Mock (Crypto era)) =>
+  [KeyPair 'Witness (Crypto era)] ->
+  Map (ScriptHash era) (MultiSig era) ->
+  KeySpace era ->
+  Tx era ->
+  Delta era ->
+  Tx era
 applyDelta
   neededKeys
   neededScripts
@@ -454,17 +438,17 @@ fix :: (Eq d, Monad m) => (d -> m d) -> d -> m d
 fix f d = do d1 <- f d; if d1 == d then pure d else fix f d1
 
 converge ::
-  (Mock c) =>
+  (ShelleyTest era, Mock (Crypto era)) =>
   Coin ->
-  [KeyPair 'Witness c] ->
-  Map (ScriptHash (ShelleyEra c)) (MultiSig (ShelleyEra c)) ->
-  KeyPairs (Crypto (ShelleyEra c)) ->
-  MultiSigPairs (ShelleyEra c) ->
-  UTxO (ShelleyEra c) ->
-  PParams (ShelleyEra c) ->
-  KeySpace (ShelleyEra c) ->
-  Tx (ShelleyEra c) ->
-  Gen (Tx (ShelleyEra c))
+  [KeyPair 'Witness (Crypto era)] ->
+  Map (ScriptHash era) (MultiSig era) ->
+  KeyPairs (Crypto era) ->
+  MultiSigPairs era ->
+  UTxO era ->
+  PParams era ->
+  KeySpace era ->
+  Tx era ->
+  Gen (Tx era)
 converge initialfee neededKeys neededScripts keys scripts utxo pparams keySpace tx = do
   delta <- genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx
   pure (applyDelta neededKeys neededScripts keySpace tx delta)
@@ -549,16 +533,16 @@ mkTxWits
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody ::
-  (ShelleyTest (ShelleyEra c)) =>
-  [TxIn (ShelleyEra c)] ->
-  StrictSeq (TxOut (ShelleyEra c)) ->
-  StrictSeq (DCert (ShelleyEra c)) ->
-  [(RewardAcnt (ShelleyEra c), Coin)] ->
-  Maybe (Update (ShelleyEra c)) ->
+  (ShelleyTest era) =>
+  [TxIn era] ->
+  StrictSeq (TxOut era) ->
+  StrictSeq (DCert era) ->
+  [(RewardAcnt era, Coin)] ->
+  Maybe (Update era) ->
   Coin ->
   SlotNo ->
-  StrictMaybe (MetaDataHash (ShelleyEra c)) ->
-  Gen (TxBody (ShelleyEra c))
+  StrictMaybe (MetaDataHash era) ->
+  Gen (TxBody era)
 genTxBody inputs outputs certs wdrls update fee slotWithTTL mdHash = do
   return $
     TxBody

@@ -61,7 +61,6 @@ import Test.Shelley.Spec.Ledger.Utils
     testGlobals,
   )
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Test.Shelley.Spec.Ledger.Generator.Utxo (GenTxFunc (..))
 
 -- | Type alias for a transaction generator
 type TxGen era =
@@ -74,8 +73,7 @@ type TxGen era =
 -- | Generate a valid block.
 genBlock ::
   forall era.
-  ( GenTxFunc era,
-    ShelleyTest era, 
+  ( ShelleyTest era,
     GetLedgerView era,
     ApplyBlock era,
     STS (LEDGER era),
@@ -99,8 +97,6 @@ genBlock ge = genBlockWithTxGen genTxs ge
 
       sigGen @(LEDGERS era) ge ledgerEnv ls
 
--- Still polymorphic over transaction type
--- can reuse in ShelleyMA by passing TxGen for right era
 genBlockWithTxGen ::
   forall era.
   (ShelleyTest era, Mock (Crypto era), GetLedgerView era, ApplyBlock era) =>

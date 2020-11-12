@@ -3,8 +3,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DataKinds #-}
 
 module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTests) where
 
@@ -60,8 +58,7 @@ minimalPropertyTests gv =
     ]
 
 -- | 'TestTree' of property-based testing properties.
-propertyTests ::
-  TQC.Gen (Core.Value C) -> TestTree
+propertyTests :: TQC.Gen (Core.Value C) -> TestTree
 propertyTests gv =
   testGroup
     "Property-Based Testing"

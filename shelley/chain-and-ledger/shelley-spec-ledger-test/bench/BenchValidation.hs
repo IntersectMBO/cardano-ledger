@@ -72,7 +72,6 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
 import Test.QuickCheck (Gen)
-import Test.Shelley.Spec.Ledger.Generator.Utxo (GenTxFunc (..))
 
 -- ====================================================================
 
@@ -86,7 +85,6 @@ instance NFData (ValidateInput era) where
 
 validateInput ::
   ( ShelleyTest era,
-    GenTxFunc era,
     Mock (Crypto era),
     API.GetLedgerView era,
     API.ApplyBlock era,
@@ -107,7 +105,6 @@ validateInput gv utxoSize = genValidateInput gv utxoSize
 
 genValidateInput ::
   ( ShelleyTest era,
-    GenTxFunc era,
     Mock (Crypto era),
     API.GetLedgerView era,
     API.ApplyBlock era,
@@ -196,7 +193,6 @@ instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
 genUpdateInputs ::
   forall era.
   ( ShelleyTest era,
-    GenTxFunc era,
     API.GetLedgerView era,
     API.ApplyBlock era,
     STS (LEDGERS era),

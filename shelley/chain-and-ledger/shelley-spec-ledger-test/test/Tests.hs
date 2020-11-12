@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE DataKinds #-}
 
 import Cardano.Crypto.Libsodium (sodiumInit)
 import qualified Cardano.Ledger.Core as Core

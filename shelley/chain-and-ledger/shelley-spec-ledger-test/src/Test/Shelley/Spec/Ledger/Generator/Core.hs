@@ -180,7 +180,6 @@ import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.TxBody
   ( DCert,
     TxOut,
-    Wdrl,
     unWdrl,
     pattern TxBody,
     pattern Wdrl,
@@ -508,7 +507,6 @@ genTxOut gv Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
 -- and with values between 'minCoin' and 'maxCoin'.
 -- NOTE we pass here a Value generator gv that is piped in from where
 -- it can be defined in the necessary context (see Tests.hs)
--- TODO make sure this mostly generates values satisfying the min deposit condition
 genValList ::
   (ShelleyTest era) =>
   QC.Gen (Core.Value era) ->
@@ -779,8 +777,6 @@ genesisCoins outs =
 -- | Apply a transaction body as a state transition function on the ledger state.
 applyTxBody ::
   ( ShelleyTest era,
-    HasField "txfee" (Core.TxBody era) Coin,
-    HasField "wdrls" (Core.TxBody era) (Wdrl era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
