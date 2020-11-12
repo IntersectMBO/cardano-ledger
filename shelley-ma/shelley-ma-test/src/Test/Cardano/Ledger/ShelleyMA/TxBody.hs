@@ -37,7 +37,7 @@ import Shelley.Spec.Ledger.TxBody (Wdrl (..))
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Cardano.Ledger.ShelleyMA.TestEra(TestCrypto)
+import Test.Cardano.Ledger.EraBuffet(TestCrypto)
 import Cardano.Ledger.ShelleyMA.TxBody
   ( TxBodyRaw(..),
     FamsFrom,
