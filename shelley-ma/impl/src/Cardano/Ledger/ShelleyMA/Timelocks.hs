@@ -57,9 +57,7 @@ import Data.Coders
     Encode (..),
     Wrapped (..),
     decode,
-    decodeNullMaybe,
     encode,
-    encodeNullMaybe,
     (!>),
     (<!),
     (<*!),
@@ -76,7 +74,7 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing), maybeToStrictMaybe, strictMaybeToMaybe)
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Scripts (MultiSig, ScriptHash (..), getMultiSigBytes)
 import Shelley.Spec.Ledger.Serialization
@@ -136,8 +134,8 @@ data TimelockRaw era
   | AllOf !(StrictSeq (Timelock era)) -- NOTE that Timelock and
   | AnyOf !(StrictSeq (Timelock era)) -- TimelockRaw are mutually recursive.
   | MOfN !Int !(StrictSeq (Timelock era)) -- Note that the Int may be negative in which case (MOfN -2 [..]) is always True
-  | TimeStart !(StrictMaybe SlotNo) -- The start time
-  | TimeExpire !(StrictMaybe SlotNo) -- The time it expires
+  | TimeStart !SlotNo -- The start time
+  | TimeExpire !SlotNo -- The time it expires
   deriving (Eq, Show, Ord, Generic)
 
 deriving instance Typeable era => NoThunks (TimelockRaw era)
@@ -150,16 +148,16 @@ encRaw (Signature hash) = Sum Signature 0 !> To hash
 encRaw (AllOf xs) = Sum AllOf 1 !> E encodeFoldable xs
 encRaw (AnyOf xs) = Sum AnyOf 2 !> E encodeFoldable xs
 encRaw (MOfN m xs) = Sum MOfN 3 !> To m !> E encodeFoldable xs
-encRaw (TimeStart m) = Sum TimeStart 4 !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) m
-encRaw (TimeExpire m) = Sum TimeExpire 5 !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) m
+encRaw (TimeStart m) = Sum TimeStart 4 !> To m
+encRaw (TimeExpire m) = Sum TimeExpire 5 !> To m
 
 decRaw :: Era era => Word -> Decode 'Open (Annotator (TimelockRaw era))
 decRaw 0 = Ann (SumD Signature <! From)
 decRaw 1 = Ann (SumD AllOf) <*! D (sequence <$> decodeStrictSeq fromCBOR)
 decRaw 2 = Ann (SumD AnyOf) <*! D (sequence <$> decodeStrictSeq fromCBOR)
 decRaw 3 = Ann (SumD MOfN) <*! Ann From <*! D (sequence <$> decodeStrictSeq fromCBOR)
-decRaw 4 = Ann (SumD TimeStart <! D (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR))
-decRaw 5 = Ann (SumD TimeExpire <! D (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR))
+decRaw 4 = Ann (SumD TimeStart <! From)
+decRaw 5 = Ann (SumD TimeExpire <! From)
 decRaw n = Invalid n
 
 -- This instance allows us to derive instance FromCBOR(Annotator (Timelock era)).
@@ -211,14 +209,14 @@ pattern RequireMOf n ms <-
     RequireMOf n ms =
       Timelock $ memoBytes (encRaw (MOfN n ms))
 
-pattern RequireTimeExpire :: Era era => StrictMaybe (SlotNo) -> Timelock era
+pattern RequireTimeExpire :: Era era => SlotNo -> Timelock era
 pattern RequireTimeExpire mslot <-
   Timelock (Memo (TimeExpire mslot) _)
   where
     RequireTimeExpire mslot =
       Timelock $ memoBytes (encRaw (TimeExpire mslot))
 
-pattern RequireTimeStart :: Era era => StrictMaybe (SlotNo) -> Timelock era
+pattern RequireTimeStart :: Era era => SlotNo -> Timelock era
 pattern RequireTimeStart mslot <-
   Timelock (Memo (TimeStart mslot) _)
   where
@@ -232,17 +230,13 @@ pattern RequireTimeStart mslot <-
 
 -- PLEASE SOMEONE VERIFY I AM USING atOrAfter and strictlyBefore RIGHT
 
-atOrAfter :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> Bool
-atOrAfter SNothing SNothing = True
-atOrAfter SNothing (SJust _) = True
-atOrAfter (SJust _) SNothing = False
-atOrAfter (SJust i) (SJust j) = i <= j
+atOrAfter :: StrictMaybe SlotNo -> SlotNo -> Bool
+atOrAfter SNothing _ = True
+atOrAfter (SJust i) j = i <= j
 
-strictlyBefore :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> Bool
-strictlyBefore SNothing SNothing = True
-strictlyBefore SNothing (SJust _) = False
-strictlyBefore (SJust _) SNothing = True
-strictlyBefore (SJust i) (SJust j) = i < j
+strictlyBefore :: SlotNo -> StrictMaybe SlotNo -> Bool
+strictlyBefore _i SNothing = True
+strictlyBefore i (SJust j) = i < j
 
 evalTimelock ::
   Era era =>
@@ -250,10 +244,10 @@ evalTimelock ::
   ValidityInterval ->
   Timelock era ->
   Bool
-evalTimelock _vhks (ValidityInterval mstart _) (RequireTimeStart mslot) =
-  atOrAfter mstart mslot
-evalTimelock _vhks (ValidityInterval _ mexpire) (RequireTimeExpire mslot) =
-  strictlyBefore mslot mexpire
+evalTimelock _vhks (ValidityInterval mstart _) (RequireTimeStart slot) =
+  atOrAfter mstart slot
+evalTimelock _vhks (ValidityInterval _ mexpire) (RequireTimeExpire slot) =
+  strictlyBefore slot mexpire
 evalTimelock vhks _vi (RequireSignature hash) = member hash vhks
 evalTimelock vhks vi (RequireAllOf xs) =
   all (evalTimelock vhks vi) xs
@@ -318,10 +312,8 @@ hashTimelockScript =
     . Hash.hashWith (\x -> nativeTimelockTag <> serialize' x)
 
 showTimelock :: Era era => Timelock era -> String
-showTimelock (RequireTimeStart SNothing) = "(Start -inf)"
-showTimelock (RequireTimeStart (SJust (SlotNo i))) = "(Start >= " ++ show i ++ ")"
-showTimelock (RequireTimeExpire SNothing) = "(Expire +inf)"
-showTimelock (RequireTimeExpire (SJust (SlotNo i))) = "(Expire < " ++ show i ++ ")"
+showTimelock (RequireTimeStart (SlotNo i)) = "(Start >= " ++ show i ++ ")"
+showTimelock (RequireTimeExpire (SlotNo i)) = "(Expire < " ++ show i ++ ")"
 showTimelock (RequireAllOf xs) = "(AllOf " ++ foldl accum ")" xs where accum ans x = showTimelock x ++ " " ++ ans
 showTimelock (RequireAnyOf xs) = "(AnyOf " ++ foldl accum ")" xs where accum ans x = showTimelock x ++ " " ++ ans
 showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ foldl accum ")" xs where accum ans x = showTimelock x ++ " " ++ ans

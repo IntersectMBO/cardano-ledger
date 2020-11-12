@@ -26,7 +26,6 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString.Lazy as Lazy
 import Data.MemoBytes (MemoBytes (Memo))
 import Data.Sequence.Strict (fromList)
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Scripts (MultiSig, getMultiSigBytes)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (embedTripAnn, roundTripAnn)
 import Test.Cardano.Ledger.ShelleyMA.TxBody (TestEra)
@@ -37,10 +36,10 @@ import Test.Tasty.QuickCheck (testProperty)
 -- ================================================================
 
 s1 :: Timelock TestEra
-s1 = RequireAllOf (fromList [RequireTimeStart (SJust (SlotNo 12)), RequireTimeExpire SNothing])
+s1 = RequireAllOf (fromList [RequireTimeStart (SlotNo 12), RequireTimeExpire 18])
 
 s2 :: Timelock TestEra
-s2 = RequireAllOf (fromList [RequireTimeStart (SJust (SlotNo 12)), RequireTimeExpire (SJust (SlotNo 23))])
+s2 = RequireAllOf (fromList [RequireTimeStart (SlotNo 12), RequireTimeExpire (SlotNo 23)])
 
 s4 :: Timelock TestEra
 s4 = RequireAllOf (fromList [s1, s2])
