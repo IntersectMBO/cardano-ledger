@@ -47,7 +47,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), genCoin)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
-import Test.Shelley.Spec.Ledger.Shrinkers (shrinkTx)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, applySTSTest, runShelleyBase)
 
 genAccountState :: Constants -> Gen AccountState
@@ -77,11 +76,13 @@ instance
 
   sigGen = genTx
 
-  shrinkSignal = shrinkTx
+  -- TODO shrink
+  shrinkSignal _ = []
 
   type BaseEnv (LEDGER era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
+-- TODO does anything here constrain era to ShelleyEra?
 instance
   forall era.
   ( ShelleyTest era,

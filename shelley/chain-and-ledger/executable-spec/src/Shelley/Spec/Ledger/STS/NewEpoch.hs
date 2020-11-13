@@ -97,7 +97,7 @@ newEpochTransition = do
         SNothing -> pure es
         SJust ru' -> do
           let RewardUpdate dt dr rs_ df _ = ru'
-          Val.isZero (dt `addDeltaCoin` (dr <> (toDeltaCoin $ fold rs_) <> df)) ?! CorruptRewardUpdate ru'
+          Val.isZero (dt <> (dr <> (toDeltaCoin $ fold rs_) <> df)) ?! CorruptRewardUpdate ru'
           pure $ applyRUpd ru' es
 
       es'' <- trans @(MIR era) $ TRC ((), es', ())

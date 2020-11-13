@@ -118,15 +118,8 @@ import Shelley.Spec.Ledger.Keys
     vKey,
     pattern KeyPair,
   )
+import Shelley.Spec.Ledger.Hashing (HashIndex, EraIndependentTxBody)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyPredicateFailure)
-import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainPredicateFailure)
-import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegPredicateFailure)
-import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsPredicateFailure)
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerPredicateFailure)
-import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersPredicateFailure)
-import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoPredicateFailure)
-import Shelley.Spec.Ledger.STS.Utxow (UTXOW, UtxowPredicateFailure)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
@@ -137,17 +130,10 @@ import Test.Tasty.HUnit
 
 type ShelleyTest era =
   ( ShelleyBased era,
-    Split (Core.Value era),
-    Core.TxBody era ~ TxBody era,
+    TxBody era ~ Core.TxBody era,
     Core.Script era ~ MultiSig era,
-    PredicateFailure (CHAIN era) ~ ChainPredicateFailure era,
-    PredicateFailure (LEDGERS era) ~ LedgersPredicateFailure era,
-    PredicateFailure (LEDGER era) ~ LedgerPredicateFailure era,
-    PredicateFailure (BBODY era) ~ BbodyPredicateFailure era,
-    PredicateFailure (DELEGS era) ~ DelegsPredicateFailure era,
-    PredicateFailure (DELEG era) ~ DelegPredicateFailure era,
-    PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
-    PredicateFailure (UTXO era) ~ UtxoPredicateFailure era
+    Split (Core.Value era),
+    HashIndex (Core.TxBody era) ~ EraIndependentTxBody
   )
 
 class Split v where

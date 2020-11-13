@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -72,13 +73,14 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams
   ( pattern ProposedPPUpdates,
     pattern Update,
+    Update (..)
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
-  ( TxBody (..),
-    Wdrl (..),
+  ( Wdrl (..),
   )
+import GHC.Records (getField)
 import Test.QuickCheck
   ( Property,
     checkCoverage,
@@ -198,7 +200,7 @@ relevantCasesAreCoveredForTrace tr = do
             60
           ),
           ( "at least 10% of transactions have script TxOuts",
-            0.1 < txScriptOutputsRatio (map (_outputs . _body) txs),
+            0.1 < txScriptOutputsRatio (map (getField @"outputs" . _body) txs),
             20
           ),
           ( "at least 10% of `DCertDeleg` certificates have script credentials",
@@ -256,7 +258,7 @@ scriptCredentialCertsRatio certs =
 
 -- | Extract the certificates from the transactions
 certsByTx :: ShelleyTest era => [Tx era] -> [[DCert era]]
-certsByTx txs = toList . _certs . _body <$> txs
+certsByTx txs =  (toList . (getField @"certs") .  _body) <$> txs
 
 ratioInt :: Int -> Int -> Double
 ratioInt x y =
@@ -279,18 +281,18 @@ txScriptOutputsRatio txoutsList =
           txouts
 
 hasWithdrawal :: ShelleyTest era => Tx era -> Bool
-hasWithdrawal = not . null . unWdrl . _wdrls . _body
+hasWithdrawal tx = (not . null . unWdrl) $ getField @"wdrls" (_body tx)
 
 hasPParamUpdate :: ShelleyTest era => Tx era -> Bool
 hasPParamUpdate tx =
-  ppUpdates . _txUpdate . _body $ tx
+  ppUpdates (getField @"update" $ _body tx)
   where
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
 hasMetaData :: ShelleyTest era => Tx era -> Bool
 hasMetaData tx =
-  f . _mdHash . _body $ tx
+  f $ getField @"mdHash" (_body tx)
   where
     f SNothing = False
     f (SJust _) = True

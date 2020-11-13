@@ -12,11 +12,11 @@ module Test.Shelley.Spec.Ledger.Fees
   )
 where
 
+import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Binary (serialize)
 import Cardano.Crypto.VRF (VRFAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Val as Val
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -76,49 +76,49 @@ import Shelley.Spec.Ledger.Hashing(EraIndependentTxBody,HashAnnotated(hashAnnota
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock, C)
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, mkAddr, mkKeyPair, mkVRFKeyPair, unsafeMkUnitInterval)
+import Test.Shelley.Spec.Ledger.Utils (mkAddr, mkKeyPair, mkVRFKeyPair, unsafeMkUnitInterval)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 sizeTest ::
-  ShelleyTest era =>
-  proxy era ->
+  Cr.Crypto c =>
+  proxy (ShelleyEra c) ->
   BSL.ByteString ->
-  Tx era ->
+  Tx (ShelleyEra c) ->
   Integer ->
   Assertion
 sizeTest _ b16 tx s = do
   (Base16.encode (serialize tx) @?= b16) >> (txsize tx @?= s)
 
-alicePay :: forall crypto. CC.Crypto crypto => KeyPair 'Payment crypto
+alicePay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
 alicePay = KeyPair @ 'Payment @crypto vk sk
   where
     (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 0)
 
-aliceStake :: forall crypto. CC.Crypto crypto => KeyPair 'Staking crypto
+aliceStake :: forall crypto. Cr.Crypto crypto => KeyPair 'Staking crypto
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 1)
 
-aliceSHK :: forall era. Era era => Credential 'Staking era
+aliceSHK :: forall c. Era (ShelleyEra c) => Credential 'Staking (ShelleyEra c)
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
-alicePool :: forall crypto. CC.Crypto crypto => KeyPair 'StakePool crypto
+alicePool :: forall crypto. Cr.Crypto crypto => KeyPair 'StakePool crypto
 alicePool = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 2)
 
-alicePoolKH :: forall crypto. CC.Crypto crypto => KeyHash 'StakePool crypto
+alicePoolKH :: forall crypto. Cr.Crypto crypto => KeyHash 'StakePool crypto
 alicePoolKH = (hashKey . vKey) alicePool
 
 aliceVRF :: forall v. VRFAlgorithm v => (VRF.SignKeyVRF v, VRF.VerKeyVRF v)
 aliceVRF = mkVRFKeyPair (0, 0, 0, 0, 3)
 
-alicePoolParams :: forall era. Era era => PoolParams era
+alicePoolParams :: forall c. Era (ShelleyEra c) => PoolParams (ShelleyEra c)
 alicePoolParams =
   PoolParams
     { _poolId = alicePoolKH,
-      _poolVrf = hashVerKeyVRF . snd $ aliceVRF @(CC.VRF (Crypto era)),
+      _poolVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF (Crypto (ShelleyEra c))),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeMkUnitInterval 0.1,
@@ -136,33 +136,33 @@ alicePoolParams =
             }
     }
 
-aliceAddr :: forall era. Era era => Addr era
+aliceAddr :: forall c. Era (ShelleyEra c) => Addr (ShelleyEra c)
 aliceAddr = mkAddr (alicePay, aliceStake)
 
-bobPay :: forall crypto. CC.Crypto crypto => KeyPair 'Payment crypto
+bobPay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @crypto (1, 0, 0, 0, 0)
 
-bobStake :: forall crypto. CC.Crypto crypto => KeyPair 'Staking crypto
+bobStake :: forall crypto. Cr.Crypto crypto => KeyPair 'Staking crypto
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @crypto (1, 0, 0, 0, 1)
 
-bobSHK :: forall era. Era era => Credential 'Staking era
+bobSHK :: forall c. Era (ShelleyEra c) => Credential 'Staking (ShelleyEra c)
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
-bobAddr :: forall era. Era era => Addr era
+bobAddr :: forall c. Era (ShelleyEra c) => Addr (ShelleyEra c)
 bobAddr = mkAddr (bobPay, bobStake)
 
-carlPay :: forall crypto. CC.Crypto crypto => KeyPair 'Payment crypto
+carlPay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (2, 0, 0, 0, 0)
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
-txbSimpleUTxO :: forall era. ShelleyTest era => TxBody era
+txbSimpleUTxO :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbSimpleUTxO =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -175,16 +175,16 @@ txbSimpleUTxO =
       _mdHash = SNothing
     }
 
--- | to use makeWitnessVKey, we need to know we can sign the TxBody for that era
+-- | to use makeWitnessVKey, we need to know we can sign the TxBody for that (ShelleyEra c)
 type BodySignable era = DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
 
-txSimpleUTxO :: forall era. (ShelleyTest era, BodySignable era) => Tx era
+txSimpleUTxO :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txSimpleUTxO =
   Tx
     { _body = txbSimpleUTxO,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated $ txbSimpleUTxO @era) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated $ txbSimpleUTxO @c) [alicePay]
           },
       _metadata = SNothing
     }
@@ -194,7 +194,7 @@ txSimpleUTxOBytes16 = "83a40081824a9db8a41713ad20245f4e00018182510075c40f44e1c15
 
 -- | Transaction which consumes two UTxO and creates five UTxO
 -- | and has two witness
-txbMutiUTxO :: forall era. ShelleyTest era => TxBody era
+txbMutiUTxO :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbMutiUTxO =
   TxBody
     { _inputs =
@@ -218,7 +218,7 @@ txbMutiUTxO =
       _mdHash = SNothing
     }
 
-txMutiUTxO :: forall era. (ShelleyTest era, BodySignable era) => Tx era
+txMutiUTxO :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txMutiUTxO =
   Tx
     { _body = txbMutiUTxO,
@@ -226,7 +226,7 @@ txMutiUTxO =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated $ txbMutiUTxO @era)
+                (hashAnnotated $ txbMutiUTxO @c)
                 [ alicePay,
                   bobPay
                 ]
@@ -238,7 +238,7 @@ txMutiUTxOBytes16 :: BSL.ByteString
 txMutiUTxOBytes16 = "83a40082824a9db8a41713ad20245f4e00824a9db8a41713ad20245f4e01018582510075c40f44e1c155bedab80d3ec7c2190b0a82510075c40f44e1c155bedab80d3ec7c2190b1482510075c40f44e1c155bedab80d3ec7c2190b181e8251009ed1f6c32150add8a084ba8f6c83c1a518288251009ed1f6c32150add8a084ba8f6c83c1a518320218c7030aa10082824873ed39075e40d2a650f44dc9848e2c0aea73ed39075e40d2a682483e046f8a4a4eeda150f44dc9848e2c0aea3e046f8a4a4eeda1f6"
 
 -- | Transaction which registers a stake key
-txbRegisterStake :: forall era. ShelleyTest era => TxBody era
+txbRegisterStake :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbRegisterStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -251,13 +251,13 @@ txbRegisterStake =
       _mdHash = SNothing
     }
 
-txRegisterStake :: forall era. (ShelleyTest era, BodySignable era) => Tx era
+txRegisterStake :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txRegisterStake =
   Tx
     { _body = txbRegisterStake,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated $ txbRegisterStake @era) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated $ txbRegisterStake @c) [alicePay]
           },
       _metadata = SNothing
     }
@@ -266,7 +266,7 @@ txRegisterStakeBytes16 :: BSL.ByteString
 txRegisterStakeBytes16 = "83a50081824a9db8a41713ad20245f4e00018182510075c40f44e1c155bedab80d3ec7c2190b0a02185e030a04818200820048dab80d3ec7c2190ba10081824873ed39075e40d2a650e4d2720634c8e8ab73ed39075e40d2a6f6"
 
 -- | Transaction which delegates a stake key
-txbDelegateStake :: forall era. ShelleyTest era => TxBody era
+txbDelegateStake :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbDelegateStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -283,7 +283,7 @@ txbDelegateStake =
       _mdHash = SNothing
     }
 
-txDelegateStake :: forall era. (ShelleyTest era, BodySignable era) => Tx era
+txDelegateStake :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txDelegateStake =
   Tx
     { _body = txbDelegateStake,
@@ -291,7 +291,7 @@ txDelegateStake =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated $ txbDelegateStake @era)
+                (hashAnnotated $ txbDelegateStake @c)
                 [asWitness (alicePay), asWitness bobStake]
           },
       _metadata = SNothing
@@ -301,7 +301,7 @@ txDelegateStakeBytes16 :: BSL.ByteString
 txDelegateStakeBytes16 = "83a50081824a9db8a41713ad20245f4e00018182510075c40f44e1c155bedab80d3ec7c2190b0a02185e030a04818302820048a084ba8f6c83c1a548bc5edd0d46d5e843a10082824873ed39075e40d2a650a0f42ce9b916eb9d73ed39075e40d2a68248244ad6b5eb5665c750a0f42ce9b916eb9d244ad6b5eb5665c7f6"
 
 -- | Transaction which de-registers a stake key
-txbDeregisterStake :: forall era. ShelleyTest era => TxBody era
+txbDeregisterStake :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbDeregisterStake =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -314,7 +314,7 @@ txbDeregisterStake =
       _mdHash = SNothing
     }
 
-txDeregisterStake :: forall era. (ShelleyTest era, BodySignable era) => Tx era
+txDeregisterStake :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txDeregisterStake =
   Tx
     { _body = txbDeregisterStake,
@@ -322,8 +322,8 @@ txDeregisterStake =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated $ txbDeregisterStake @era)
-                [alicePay @(Crypto era)]
+                (hashAnnotated $ txbDeregisterStake @c)
+                [alicePay @(Crypto (ShelleyEra c))]
           },
       _metadata = SNothing
     }
@@ -332,7 +332,7 @@ txDeregisterStakeBytes16 :: BSL.ByteString
 txDeregisterStakeBytes16 = "83a50081824a9db8a41713ad20245f4e00018182510075c40f44e1c155bedab80d3ec7c2190b0a02185e030a04818201820048dab80d3ec7c2190ba10081824873ed39075e40d2a650be9cfdc830b8cb5173ed39075e40d2a6f6"
 
 -- | Transaction which registers a stake pool
-txbRegisterPool :: forall era. ShelleyTest era => TxBody era
+txbRegisterPool :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbRegisterPool =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -345,13 +345,13 @@ txbRegisterPool =
       _mdHash = SNothing
     }
 
-txRegisterPool :: forall era. (ShelleyTest era, BodySignable era) => Tx era
+txRegisterPool :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txRegisterPool =
   Tx
     { _body = txbRegisterPool,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated $ txbRegisterPool @era) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated $ txbRegisterPool @c) [alicePay]
           },
       _metadata = SNothing
     }
@@ -360,7 +360,7 @@ txRegisterPoolBytes16 :: BSL.ByteString
 txRegisterPoolBytes16 = "83a50081824a9db8a41713ad20245f4e00018182510075c40f44e1c155bedab80d3ec7c2190b0a02185e030a04818a0348bc5edd0d46d5e8434a3d64a89de764031618600105d81e82010a49e0dab80d3ec7c2190b8148dab80d3ec7c2190b818301f66872656c61792e696f826a616c6963652e706f6f6c427b7da10081824873ed39075e40d2a650d744f1f7d47c27e473ed39075e40d2a6f6"
 
 -- | Transaction which retires a stake pool
-txbRetirePool :: forall era. ShelleyTest era => TxBody era
+txbRetirePool :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbRetirePool =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -373,13 +373,13 @@ txbRetirePool =
       _mdHash = SNothing
     }
 
-txRetirePool :: forall era. (ShelleyTest era, BodySignable era) => Tx era
+txRetirePool :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txRetirePool =
   Tx
     { _body = txbRetirePool,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated $ txbRetirePool @era) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated $ txbRetirePool @c) [alicePay]
           },
       _metadata = SNothing
     }
@@ -392,7 +392,7 @@ txRetirePoolBytes16 = "83a50081824a9db8a41713ad20245f4e00018182510075c40f44e1c15
 md :: MD.MetaData
 md = MD.MetaData $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
 
-txbWithMD :: forall era. ShelleyTest era => TxBody era
+txbWithMD :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbWithMD =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -405,13 +405,13 @@ txbWithMD =
       _mdHash = SJust $ MD.hashMetaData md
     }
 
-txWithMD :: forall era. (ShelleyTest era, BodySignable era) => Tx era
+txWithMD :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txWithMD =
   Tx
     { _body = txbWithMD,
       _witnessSet =
         mempty
-          { addrWits = makeWitnessesVKey (hashAnnotated $ txbWithMD @era) [alicePay]
+          { addrWits = makeWitnessesVKey (hashAnnotated $ txbWithMD @c) [alicePay]
           },
       _metadata = SJust md
     }
@@ -420,7 +420,7 @@ txWithMDBytes16 :: BSL.ByteString
 txWithMDBytes16 = "83a50081824a9db8a41713ad20245f4e00018182510075c40f44e1c155bedab80d3ec7c2190b0a02185e030a074a4eece6527f366cfa5e71a10081824873ed39075e40d2a650203cdabf7e292c0673ed39075e40d2a6a10082056568656c6c6f"
 
 -- | Spending from a multi-sig address
-msig :: forall era. Era era => MultiSig era
+msig :: forall c. Era (ShelleyEra c) => MultiSig (ShelleyEra c)
 msig =
   RequireMOf
     2
@@ -429,7 +429,7 @@ msig =
       (RequireSignature . asWitness . hashKey . vKey) carlPay
     ]
 
-txbWithMultiSig :: forall era. ShelleyTest era => TxBody era
+txbWithMultiSig :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbWithMultiSig =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0], -- acting as if this is multi-sig
@@ -450,7 +450,7 @@ txWithMultiSig =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated $ txbWithMultiSig @(ShelleyEra c))
+                (hashAnnotated $ txbWithMultiSig @c)
                 [alicePay, bobPay],
             scriptWits = Map.singleton (hashScript @(ShelleyEra c) msig) msig
           },
@@ -461,7 +461,7 @@ txWithMultiSigBytes16 :: BSL.ByteString
 txWithMultiSigBytes16 = "83a40081824a9db8a41713ad20245f4e00018182510075c40f44e1c155bedab80d3ec7c2190b0a02185e030aa20082824873ed39075e40d2a650ecca0b99fca3d8d173ed39075e40d2a682483e046f8a4a4eeda150ecca0b99fca3d8d13e046f8a4a4eeda101818303028382004875c40f44e1c155be8200489ed1f6c32150add8820048b59ebd7e616fad7ef6"
 
 -- | Transaction with a Reward Withdrawal
-txbWithWithdrawal :: forall era. ShelleyTest era => TxBody era
+txbWithWithdrawal :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbWithWithdrawal =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -474,7 +474,7 @@ txbWithWithdrawal =
       _mdHash = SNothing
     }
 
-txWithWithdrawal :: forall era. (ShelleyTest era, BodySignable era) => Tx era
+txWithWithdrawal :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txWithWithdrawal =
   Tx
     { _body = txbWithWithdrawal,
@@ -482,7 +482,7 @@ txWithWithdrawal =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashAnnotated $ txbWithWithdrawal @era)
+                (hashAnnotated $ txbWithWithdrawal @c)
                 [asWitness (alicePay), asWitness aliceStake]
           },
       _metadata = SNothing

@@ -393,7 +393,7 @@ instance
       pure $ DPState ds ps
 
 data RewardUpdate era = RewardUpdate
-  { deltaT :: !Coin,
+  { deltaT :: !DeltaCoin,
     deltaR :: !DeltaCoin,
     rs :: !(Map (Credential 'Staking era) Coin),
     deltaF :: !DeltaCoin,
@@ -431,7 +431,7 @@ instance
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
 emptyRewardUpdate :: RewardUpdate era
-emptyRewardUpdate = RewardUpdate (Coin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) emptyNonMyopic
+emptyRewardUpdate = RewardUpdate (DeltaCoin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) emptyNonMyopic
 
 data AccountState = AccountState
   { _treasury :: !Coin,
@@ -1022,7 +1022,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
         (rs ru)
     as' =
       as
-        { _treasury = _treasury as <> deltaT ru <> fold (range unregRU),
+        { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold (range unregRU),
           _reserves = addDeltaCoin (_reserves as) (deltaR ru)
         }
     ls' =
@@ -1109,7 +1109,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $
     RewardUpdate
-      { deltaT = (Coin deltaT1),
+      { deltaT = (DeltaCoin deltaT1),
         deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
         rs = rs_,
         deltaF = (invert (toDeltaCoin $ _feeSS ss)),
