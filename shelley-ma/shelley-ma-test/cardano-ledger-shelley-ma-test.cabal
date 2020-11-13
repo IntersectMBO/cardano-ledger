@@ -64,6 +64,7 @@ library
   hs-source-dirs: src
   ghc-options:
     -Wall
+    -Werror
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
@@ -76,12 +77,17 @@ test-suite cardano-ledger-shelley-ma-test
     type:                exitcode-stdio-1.0
     main-is:             Tests.hs
     hs-source-dirs:      test
+    other-modules:
+      Test.Cardano.Ledger.Mary.Examples
+      Test.Cardano.Ledger.Mary.Examples.Cast
+      Test.Cardano.Ledger.Mary.Examples.MultiAssets
     default-language:    Haskell2010
     ghc-options:
       -threaded
       -rtsopts
       -with-rtsopts=-N
       -Wall
+      -Werror
       -Wcompat
       -Wincomplete-record-updates
       -Wincomplete-uni-patterns
@@ -114,6 +120,8 @@ test-suite cardano-ledger-shelley-ma-test
       nothunks,
       partial-order,
       shelley-spec-ledger,
+      shelley-spec-ledger-test,
+      small-steps-test,
       small-steps,
       tasty-hedgehog,
       tasty-hunit,
