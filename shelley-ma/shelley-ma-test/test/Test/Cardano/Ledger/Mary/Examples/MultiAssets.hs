@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Mary.Examples.MultiAssets
 where
 
 import Cardano.Ledger.Mary.Value
-  ( AssetID (..),
+  ( AssetName (..),
     PolicyID (..),
     Value (..),
   )
@@ -103,11 +103,11 @@ purplePolicy = RequireAllOf (StrictSeq.fromList [])
 purplePolicyId :: PolicyID MaryTest
 purplePolicyId = PolicyID $ hashScript purplePolicy
 
-plum :: AssetID
-plum = AssetID $ BS.pack "plum"
+plum :: AssetName
+plum = AssetName $ BS.pack "plum"
 
-amethyst :: AssetID
-amethyst = AssetID $ BS.pack "amethyst"
+amethyst :: AssetName
+amethyst = AssetName $ BS.pack "amethyst"
 
 ------------------------
 -- Mint Purple Tokens --
