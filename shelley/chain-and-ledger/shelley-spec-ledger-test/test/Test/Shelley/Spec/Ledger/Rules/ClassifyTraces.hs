@@ -18,6 +18,7 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   )
 where
 
+import qualified Test.Shelley.Spec.Ledger.Generator.GenEra as GE
 import Cardano.Binary (serialize')
 import Cardano.Ledger.Era (Era)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -104,7 +105,7 @@ import Test.QuickCheck.Gen (Gen (..))
 
 genesisChainState ::
   forall era a.
-  ShelleyTest era =>
+  (GE.EraGen era, ShelleyTest era) =>
   Gen (Core.Value era) ->
   Maybe
     ( Control.State.Transition.Extended.IRC (CHAIN era) ->

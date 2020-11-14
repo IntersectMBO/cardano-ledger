@@ -26,6 +26,7 @@ module BenchValidation
   )
 where
 
+import qualified Test.Shelley.Spec.Ledger.Generator.GenEra as GE
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
@@ -84,7 +85,8 @@ instance NFData (ValidateInput era) where
   rnf (ValidateInput a b c) = seq a (seq b (seq c ()))
 
 validateInput ::
-  ( ShelleyTest era,
+  ( GE.EraGen era,
+    ShelleyTest era,
     Mock (Crypto era),
     API.GetLedgerView era,
     API.ApplyBlock era,
@@ -105,6 +107,7 @@ validateInput gv utxoSize = genValidateInput gv utxoSize
 
 genValidateInput ::
   ( ShelleyTest era,
+    GE.EraGen era,
     Mock (Crypto era),
     API.GetLedgerView era,
     API.ApplyBlock era,
@@ -192,7 +195,8 @@ instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
 
 genUpdateInputs ::
   forall era.
-  ( ShelleyTest era,
+  ( GE.EraGen era,
+    ShelleyTest era,
     API.GetLedgerView era,
     API.ApplyBlock era,
     STS (LEDGERS era),

@@ -17,6 +17,7 @@
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
 import qualified Cardano.Ledger.Core as Core
+import qualified Test.Shelley.Spec.Ledger.Generator.GenEra as GE
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -59,6 +60,7 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- with meaningful delegation certificates.
 instance
   ( ShelleyTest era,
+    GE.EraGen era,
     STS (LEDGER era),
     BaseM (LEDGER era) ~ ShelleyBase,
     Mock (Crypto era),
@@ -86,6 +88,7 @@ instance
 instance
   forall era.
   ( ShelleyTest era,
+    GE.EraGen era,
     STS (LEDGER era),
     BaseM (LEDGER era) ~ ShelleyBase,
     Environment (LEDGER era) ~ LedgerEnv era,

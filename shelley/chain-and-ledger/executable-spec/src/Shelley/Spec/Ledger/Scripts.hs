@@ -36,6 +36,8 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
+-- import NoThunks.Class(NoThunks)
+
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -50,12 +52,14 @@ import Data.MemoBytes
     MemoBytes (..),
     memoBytes,
   )
-import Data.Typeable (Typeable)
+import Data.Typeable
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
+
+-- ================================================
 
 -- | Magic number representing the tag of the native multi-signature script
 -- language. For each script language included, a new tag is chosen and the tag

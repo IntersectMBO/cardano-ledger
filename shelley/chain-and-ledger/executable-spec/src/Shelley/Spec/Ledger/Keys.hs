@@ -138,6 +138,7 @@ class HasKeyRole (a :: KeyRole -> Type -> Type) where
 --   be used as witnesses to some types of transaction. As such, we provide an
 --   explicit coercion for it.
 asWitness ::
+  forall crypto a r.
   (HasKeyRole a) =>
   a r crypto ->
   a 'Witness crypto
@@ -250,6 +251,7 @@ instance HasKeyRole KeyHash
 
 -- | Hash a given public key
 hashKey ::
+  forall crypto kd.
   ( Crypto crypto
   ) =>
   VKey kd crypto ->

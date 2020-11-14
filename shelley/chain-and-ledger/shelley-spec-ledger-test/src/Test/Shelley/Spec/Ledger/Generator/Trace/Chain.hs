@@ -18,6 +18,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
+import qualified Test.Shelley.Spec.Ledger.Generator.GenEra as GE
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Era (Crypto, Era)
@@ -63,7 +64,8 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, maxLLSupply, mkHash)
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
-  ( ShelleyTest era,
+  ( GE.EraGen era,
+    ShelleyTest era,
     GetLedgerView era,
     ApplyBlock era,
     STS (CHAIN era),
@@ -107,7 +109,7 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era a.
-  (ShelleyTest era) =>
+  (GE.EraGen era,ShelleyTest era) =>
   Gen (Core.Value era) ->
   Constants ->
   IRC (CHAIN era) ->

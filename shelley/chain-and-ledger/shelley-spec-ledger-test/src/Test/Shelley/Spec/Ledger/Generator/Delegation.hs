@@ -18,6 +18,8 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
+import qualified Test.Shelley.Spec.Ledger.Generator.GenEra as GE
 import Cardano.Ledger.Era (Crypto, Era)
 import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
 import Data.Foldable (fold)
@@ -49,7 +51,6 @@ import Shelley.Spec.Ledger.API
     KeyRole (..),
     MIRCert (..),
     MIRPot (..),
-    MultiSig,
     Network (..),
     PParams,
     PParams' (..),
@@ -60,7 +61,7 @@ import Shelley.Spec.Ledger.API
     StrictMaybe (..),
     VKey,
   )
-import Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
+import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (interval0)
 import Shelley.Spec.Ledger.Keys
   ( coerceKeyRole,
@@ -80,18 +81,26 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genWord64,
     toCred,
     tooLateInEpoch,
+    ScriptPairs,
   )
 import Test.Shelley.Spec.Ledger.Utils
+
+-- ==============================================
+
+scriptToCred :: (GE.ScriptClass era, Era era) => Core.Script era -> Credential kr era
+scriptToCred = ScriptHashObj . GE.hashScript
+
+
 
 data CertCred era
   = CoreKeyCred [GenesisKeyPair (Crypto era)]
   | StakeCred (KeyPair 'Staking (Crypto era))
   | PoolCred (KeyPair 'StakePool (Crypto era))
-  | ScriptCred (MultiSig era, MultiSig era)
+  | ScriptCred (Core.Script era, Core.Script era)
   | DelegateCred [KeyPair 'GenesisDelegate (Crypto era)]
   | NoCred
 
-deriving instance Era era => Show (CertCred era)
+deriving instance (Era era,Show (Core.Script era)) => Show (CertCred era)
 
 -- | Occasionally generate a valid certificate
 --
@@ -104,7 +113,7 @@ deriving instance Era era => Show (CertCred era)
 -- Note: we register keys and pools more often than deregistering/retiring them,
 -- and we generate more delegations than registrations of keys/pools.
 genDCert ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, GE.ScriptClass era) =>
   Constants ->
   KeySpace era ->
   PParams era ->
@@ -159,10 +168,10 @@ genDCert
 
 -- | Generate a RegKey certificate
 genRegKeyCert ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, GE.ScriptClass era) =>
   Constants ->
   KeyPairs (Crypto era) ->
-  MultiSigPairs era ->
+  ScriptPairs era ->
   DState era ->
   Gen (Maybe (DCert era, CertCred era))
 genRegKeyCert
@@ -202,10 +211,10 @@ genRegKeyCert
 -- | Generate a DeRegKey certificate along with the staking credential, which is
 -- needed to witness the certificate.
 genDeRegKeyCert ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, GE.ScriptClass era) =>
   Constants ->
   KeyPairs (Crypto era) ->
-  MultiSigPairs era ->
+  ScriptPairs era ->
   DState era ->
   Gen (Maybe (DCert era, CertCred era))
 genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys scripts dState =
@@ -255,10 +264,10 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
 -- Returns nothing if there are no registered staking credentials or no
 -- registered pools.
 genDelegation ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, GE.ScriptClass era) =>
   Constants ->
   KeyPairs (Crypto era) ->
-  MultiSigPairs era ->
+  ScriptPairs era ->
   DPState era ->
   Gen (Maybe (DCert era, CertCred era))
 genDelegation

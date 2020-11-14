@@ -10,6 +10,7 @@ module Shelley.Spec.Ledger.Bench.Gen
   )
 where
 
+import qualified Test.Shelley.Spec.Ledger.Generator.GenEra as GE
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Control.State.Transition.Extended
@@ -55,7 +56,8 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
 
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
-  ( ShelleyTest era
+  ( GE.EraGen era,
+    ShelleyTest era
   ) =>
   Gen (Core.Value era) ->
   Int ->
@@ -80,6 +82,7 @@ genChainState gv n ge =
 genBlock ::
   ( Mock (Crypto era),
     ShelleyTest era,
+    GE.EraGen era,
     STS (LEDGERS era),
     BaseM (LEDGERS era) ~ ShelleyBase,
     Environment (LEDGERS era) ~ LedgersEnv era,
@@ -106,7 +109,8 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 -- 5) get a Transaction (Tx) from GenEnv and ChainState
 
 genTriple ::
-  ( Mock (Crypto era),
+  ( GE.EraGen era,
+    Mock (Crypto era),
     ShelleyTest era
   ) =>
   Gen (Core.Value era) ->

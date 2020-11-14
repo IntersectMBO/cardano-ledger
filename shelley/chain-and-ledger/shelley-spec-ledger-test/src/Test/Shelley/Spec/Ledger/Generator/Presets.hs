@@ -3,6 +3,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Pre-generated items to use in traces.
 --
@@ -19,7 +21,7 @@ where
 
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era)
+-- import Cardano.Ledger.Era (Era)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
@@ -47,25 +49,25 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Utils
-  (ShelleyTest,  MultiSigPairs,
+  (ShelleyTest,
     maxKESIterations,
     mkKESKeyPair,
     mkVRFKeyPair,
     slotsPerKESIteration,
   )
-import qualified Cardano.Ledger.Shelley as Shelley
+import Data.Proxy
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
-genEnv :: Shelley.TxBodyConstraints era => proxy era -> GenEnv era
+genEnv :: (EraGen era) => proxy era -> GenEnv era
 genEnv _ =
   GenEnv
     (keySpace defaultConstants)
     defaultConstants
 
 -- | Example keyspace for use in generators
-keySpace ::
-  (Shelley.TxBodyConstraints era) =>
+keySpace :: forall era.
+  (EraGen era) =>
   Constants ->
   KeySpace era
 keySpace c =
@@ -74,7 +76,7 @@ keySpace c =
     (genesisDelegates c)
     (stakePoolKeys c)
     (keyPairs c)
-    (mSigCombinedScripts c)
+    (mSigCombinedScripts (Proxy :: Proxy era) c)
 
 -- | Constant list of KeyPairs intended to be used in the generators.
 keyPairs :: CC.Crypto crypto => Constants -> KeyPairs crypto
@@ -87,20 +89,20 @@ someKeyPairs c lower upper =
     <$> QC.choose (lower, upper)
     <*> QC.shuffle (keyPairs c)
 
-mSigBaseScripts :: Era era => Constants -> MultiSigPairs era
-mSigBaseScripts c = mkMSigScripts (keyPairs c)
+mSigBaseScripts :: forall era. EraGen era => Proxy era -> Constants -> ScriptPairs era
+mSigBaseScripts _proxy c = mkMSigScripts @era (keyPairs c)
 
-mSigCombinedScripts :: Era era => Constants -> MultiSigPairs era
-mSigCombinedScripts c@(Constants {numBaseScripts}) =
-  mkMSigCombinations . take numBaseScripts $ mSigBaseScripts c
+mSigCombinedScripts :: forall era. EraGen era => Proxy era -> Constants -> ScriptPairs era
+mSigCombinedScripts proxy c@(Constants {numBaseScripts}) =
+  mkMSigCombinations @era . take numBaseScripts $ mSigBaseScripts proxy c
 
 -- | Select between _lower_ and _upper_ scripts from the possible combinations
 -- of the first `numBaseScripts` multi-sig scripts of `mSigScripts`.
-someScripts :: Era era => Constants -> Int -> Int -> Gen (MultiSigPairs era)
-someScripts c lower upper =
+someScripts :: EraGen era => Proxy era -> Constants -> Int -> Int -> Gen (ScriptPairs era)
+someScripts proxy c lower upper =
   take
     <$> QC.choose (lower, upper)
-    <*> QC.shuffle (mSigCombinedScripts c)
+    <*> QC.shuffle (mSigCombinedScripts proxy c)
 
 -- Pairs of (genesis key, node keys)
 --
@@ -119,10 +121,10 @@ coreNodeKeys c@Constants {numCoreNodes} =
   where
     toKeyPair (sk, vk) = KeyPair vk sk
 
-genUtxo0 :: (ShelleyTest era) => QC.Gen (Core.Value era) -> Constants -> Gen (UTxO era)
+genUtxo0 :: forall era. (EraGen era,ShelleyTest era) => QC.Gen (Core.Value era) -> Constants -> Gen (UTxO era)
 genUtxo0 gv c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
-  genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts
+  genesisScripts <- someScripts (Proxy :: Proxy era) c minGenesisUTxOouts maxGenesisUTxOouts
   outs <-
     genTxOut
       gv

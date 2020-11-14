@@ -19,6 +19,7 @@ where
 
 import Cardano.Binary (serialize)
 import qualified Cardano.Ledger.Core as Core
+import qualified Test.Shelley.Spec.Ledger.Generator.GenEra as GE
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
@@ -85,7 +86,6 @@ import Shelley.Spec.Ledger.Tx
     TxOut (..),
     WitnessSet,
     WitnessSetHKD (..),
-    getKeyCombination,
   )
 import Shelley.Spec.Ledger.TxBody( Wdrl (..) )
 import Shelley.Spec.Ledger.Hashing(EraIndependentTxBody,HashAnnotated(hashAnnotated))
@@ -159,6 +159,7 @@ showBalance
 genTx ::
   forall era.
   ( HasCallStack,
+    GE.EraGen era,
     ShelleyTest era,
     Mock (Crypto era)
   ) =>
@@ -294,7 +295,7 @@ deltaZero initialfee minAda addr =
 -- | - Do the work of computing what additioanl inputs we need to 'fix-up' the transaction so that it will balance.
 genNextDelta ::
   forall era.
-  (ShelleyTest era, Mock (Crypto era)) =>
+  (GE.EraGen era, ShelleyTest era, Mock (Crypto era)) =>
   UTxO era ->
   PParams era ->
   KeySpace era ->
@@ -382,7 +383,7 @@ genNextDelta
 -- genNextDelta repeatedly until genNextDelta delta = delta
 
 genNextDeltaTilFixPoint ::
-  (ShelleyTest era, Mock (Crypto era)) =>
+  (GE.EraGen era, ShelleyTest era, Mock (Crypto era)) =>
   Coin ->
   KeyPairs (Crypto era) ->
   MultiSigPairs era ->
@@ -401,7 +402,7 @@ genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx = do
     safetyOffset = Coin 5
 
 applyDelta ::
-  (ShelleyTest era, Mock (Crypto era)) =>
+  (GE.EraGen era, ShelleyTest era, Mock (Crypto era)) =>
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash era) (MultiSig era) ->
   KeySpace era ->
@@ -438,7 +439,7 @@ fix :: (Eq d, Monad m) => (d -> m d) -> d -> m d
 fix f d = do d1 <- f d; if d1 == d then pure d else fix f d1
 
 converge ::
-  (ShelleyTest era, Mock (Crypto era)) =>
+  (GE.EraGen era, ShelleyTest era, Mock (Crypto era)) =>
   Coin ->
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash era) (MultiSig era) ->
@@ -487,8 +488,8 @@ mkScriptWits payScripts stakeScripts =
     hashStakeScript (_, sScript) =
       ((hashMultiSigScript sScript) :: ScriptHash era, sScript)
 
-mkTxWits ::
-  ( Era era,
+mkTxWits :: forall era.
+  ( GE.EraGen era,
     Mock (Crypto era),
     Core.AnnotatedData (Core.Script era),
     Core.Script era ~ MultiSig era
@@ -528,7 +529,7 @@ mkTxWits
           . map (\(a, b) -> (asWitness a, asWitness b))
           . Map.toAscList
           $ indexedStakingKeys
-      keysLists = map getKeyCombination $ Map.elems msigs
+      keysLists = map (GE.scriptKeyCombination (GE.proxy @era)) (Map.elems msigs)
       msigSignatures = foldl' Set.union Set.empty $ map Set.fromList keysLists
 
 -- | Generate a transaction body with the given inputs/outputs and certificates

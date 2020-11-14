@@ -14,6 +14,7 @@ module Test.Shelley.Spec.Ledger.Generator.Block
   )
 where
 
+import qualified Test.Shelley.Spec.Ledger.Generator.GenEra as GE
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto)
@@ -73,7 +74,8 @@ type TxGen era =
 -- | Generate a valid block.
 genBlock ::
   forall era.
-  ( ShelleyTest era,
+  ( GE.EraGen era,
+    ShelleyTest era,
     GetLedgerView era,
     ApplyBlock era,
     STS (LEDGER era),

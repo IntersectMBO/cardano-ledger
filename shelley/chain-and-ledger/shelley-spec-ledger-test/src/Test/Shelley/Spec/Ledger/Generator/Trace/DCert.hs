@@ -10,9 +10,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts) where
 
+import Data.Proxy
+import qualified Cardano.Ledger.Core as Core
+import qualified Test.Shelley.Spec.Ledger.Generator.GenEra as GE
 import Cardano.Ledger.Era (Crypto, Era)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -58,9 +62,7 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
-import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (getKeyCombination)
 import Shelley.Spec.Ledger.TxBody (Ix)
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
 import Cardano.Ledger.Val((<×>))
@@ -110,7 +112,7 @@ certsTransition = do
 instance Era era => Embed (DELPL era) (CERTS era) where
   wrapFailed = CertsFailure
 
-instance Era era => QC.HasTrace (CERTS era) (GenEnv era) where
+instance (GE.ScriptClass era, Era era) => QC.HasTrace (CERTS era) (GenEnv era) where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
   sigGen
@@ -137,7 +139,7 @@ instance Era era => QC.HasTrace (CERTS era) (GenEnv era) where
 -- deposits and refunds required.
 genDCerts ::
   forall era.
-  Era era =>
+  (Era era, GE.ScriptClass era) =>
   GenEnv era ->
   PParams era ->
   DPState era ->
@@ -149,7 +151,7 @@ genDCerts ::
       Coin,
       Coin,
       DPState era,
-      ([KeyPair 'Witness (Crypto era)], [(MultiSig era, MultiSig era)])
+      ([KeyPair 'Witness (Crypto era)], [(Core.Script era, Core.Script era)])
     )
 genDCerts
   ge@( GenEnv
@@ -191,7 +193,7 @@ genDCerts
       scriptWitnesses (ScriptCred (_, stakeScript)) =
         StakeCred <$> witnessHashes''
         where
-          witnessHashes = getKeyCombination stakeScript
+          witnessHashes = GE.scriptKeyCombination (Proxy :: Proxy era) stakeScript
           witnessHashes' = fmap coerceKeyRole witnessHashes
           witnessHashes'' = fmap coerceKeyRole (catMaybes (map lookupWit witnessHashes'))
       scriptWitnesses _ = []
@@ -199,9 +201,9 @@ genDCerts
       lookupWit = flip Map.lookup ksIndexedStakingKeys
 
 scriptCredMultisig ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, Show(Core.Script era)) =>
   CertCred era ->
-  (MultiSig era, MultiSig era)
+  (Core.Script era, Core.Script era)
 scriptCredMultisig (ScriptCred c) = c
 scriptCredMultisig x =
   error $
@@ -209,7 +211,7 @@ scriptCredMultisig x =
       <> show x
 
 keyCredAsWitness ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, Show(Core.Script era)) =>
   CertCred era ->
   [KeyPair 'Witness (Crypto era)]
 keyCredAsWitness (DelegateCred c) = asWitness <$> c
