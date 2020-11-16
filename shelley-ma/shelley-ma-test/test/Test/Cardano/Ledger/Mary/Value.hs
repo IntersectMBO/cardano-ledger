@@ -6,7 +6,7 @@
 
 -- surpresses orphan warnings on Arbitray (Value era),  Arbitrary AssetName,  Arbitrary (PolicyID C)
 
-module Test.Shelley.Spec.Ledger.ValProp (valTests, ass, pol) where
+module Test.Cardano.Ledger.Mary.Value (valTests, ass, pol) where
 
 import Cardano.Ledger.Era
 import Cardano.Ledger.Mary.Value
