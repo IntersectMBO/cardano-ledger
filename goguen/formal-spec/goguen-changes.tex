@@ -77,7 +77,6 @@
 \newcommand{\Addr}{\type{Addr}}
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\UTxOIn}{\type{UTxOIn}}
-\newcommand{\UTxOOut}{\type{UTxOOut}}
 \newcommand{\Wdrl}{\type{Wdrl}}
 \newcommand{\Coin}{\type{Coin}}
 \newcommand{\PParams}{\type{PParams}}
@@ -167,12 +166,13 @@
 \newcommand{\ScriptHash}{\type{ScriptHash}}
 \newcommand{\PolicyID}{\type{PolicyID}}
 \newcommand{\PPHash}{\type{PPHash}}
-\newcommand{\RdmrsHash}{\type{RdmrsHash}}
+\newcommand{\ScriptDataHash}{\type{ScriptDataHash}}
 \newcommand{\Script}{\type{Script}}
 \newcommand{\ScriptPlutus}{\type{Script}_{plc}}
 \newcommand{\Plutus}{\mathsf{Plutus}}
 \newcommand{\PlutusII}{\mathsf{PlutusV2}}
-\newcommand{\ScriptMSig}{\type{Script}_{msig}}
+\newcommand{\ScriptNative}{\type{Script^{native}}}
+\newcommand{\ScriptNonNative}{\type{Script^{non-native}}}
 \newcommand{\ScriptV}{\type{Script_{v}}}
 \newcommand{\Datum}{\type{Datum}}
 \newcommand{\Rdmr}{\type{Rdmr}}
@@ -205,8 +205,6 @@
 \newcommand{\IsFee}{\type{IsFee}}
 \newcommand{\TxOut}{\type{TxOut}}
 \newcommand{\OutFoo}{\type{OutFoo}}
-\newcommand{\TxOutND}{\type{TxOutND}}
-\newcommand{\TxOutP}{\type{TxOutP}}
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\VKeyEv}{\type{VKey_{ev}}}
 \newcommand{\VKeyGen}{\type{VKey_G}}
@@ -255,7 +253,7 @@
 \newcommand{\decayedTx}[3]{\fun{decayedTx}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\keyRefund}[6]{\fun{keyRefund}~ {#1}~{#2}~{#3}~\var{#4}~\var{#5}~\var{#6}}
 \newcommand{\refund}[4]{\fun{refund}~ \var{#1}~ \var{#2}~ {#3}~ {#4}}
-\newcommand{\keyRefunds}[3]{\fun{keyRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
+\newcommand{\keyRefunds}[2]{\fun{keyRefunds}~ \var{#1}~ \var{#2}}
 \newcommand{\consumed}[4]{\fun{consumed}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\produced}[2]{\fun{produced}~ \var{#1}~ \var{#2}}
 \newcommand{\applyFun}[2]{\fun{#1}~\var{#2}}

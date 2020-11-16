@@ -118,15 +118,6 @@ type as $\PParams$. We use the notation $\var{chainstate}_{x}$ to represent
 variable $x$ in the chain state. We do not specify the variables that
 remain unchanged during the transition.
 
-\begin{note}
-  \textbf{What creation slots should Shelley era UTxOs have?}
-  It is not yet clear whether we will follow the approach of making the creation
-  slot of every Shelley-era UTxO entry the first slot of Goguen. It is possible
-  to look through all the blocks and add the correct one, but not clear if
-  necessary. The other option is to allow both types out outputs, some without
-  the creation slot.
-\end{note}
-
 %%
 %% Figure - Shelley to Goguen Transition
 %%
@@ -134,8 +125,6 @@ remain unchanged during the transition.
   \emph{Types and Constants}
   %
   \begin{align*}
-      & s_{last} \\
-      & \text{last slot of Shelley era} \\
       & \NewParams ~=~ (\Language \mapsto \CostMod) \times \Prices \times \ExUnits \times \ExUnits \\
       & \text{the type of new parameters to add for Goguen}
       \nextdef
@@ -145,15 +134,9 @@ remain unchanged during the transition.
   \emph{Shelley to Goguen Transition Functions}
   %
   \begin{align*}
-      & \fun{mkUTxO} ~\in~ \Slot \to \ShelleyUTxO  \to \UTxO  \\
-      & \fun{mkUTxO}~s~\var{utxo} ~=~ \{~ \var{txin} \mapsto ((a,\fun{coinToValue}~c),s) ~\vert~
-      \var{txin} \mapsto \var{(a,c)}\in ~\var{utxo}~\} \\
-      & \text{make UTxO Goguen}
-      \nextdef
-      & \fun{toGoguen} \in ~ \ShelleyChainState \to \ChainState \\
+      & \fun{toGoguen} \in \ShelleyChainState \to \ChainState \\
       & \fun{toGoguen}~\var{chainstate} =~\var{chainstate'} \\
       &~~\where \\
-      &~~~~\var{chainstate'}_{utxo}~=~\fun{mkUTxO}~s_{last}~\var{utxo} \\
       &~~~~\var{chainstate'}_{pparams}~=~\var{pp}\cup \mathsf{ivPP}\\
       & \text{transform Shelley chain state to Goguen state}
   \end{align*}

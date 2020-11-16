@@ -14,19 +14,20 @@ Shelley specification~\cite{XX}:
   \item $\Value$ represents the type of multi-asset tokens. For details,
   see the multi-asset formal specification~\cite{XX}.
 
-  \item $\RdmrsHash$ is the type of a hash of the indexed redeemer structure,
-  included within a transaction (this structure is described in detail below).
+  \item $\ScriptDataHash$ is the type of a hash of script related data
+    included within a transaction. It contains a hash of the $\fun{txscripts}, \fun{txdats}$
+    and $\fun{txrdmrs}$ fields of a transaction.
 
-  \item $\ScriptMSig$ is the type of the existing native multi-signature scripts.
+  \item $\ScriptNative$ is the type of native scripts.
 
-  \item $\ScriptPlutus$ is the type of scripts of the initial version of Plutus.
+  \item $\ScriptNonNative$ is the type of non-native scripts.
 
   \item $\Data$ is the same type as in the Plutus libraries (see the note on ``Data Representation'' below).
     \begin{note}
       It may or may not be, but we don't particularly care. We just use this to pass data to plutus.
     \end{note}
 
-  \item $\Script$ is a sum type that includes all possible scripts, both native and non-native.
+  \item $\Script$ is a sum type of all scripts, both native and non-native.
 
   \item $\IsValidating$ is a tag that indicates that a transaction
   expects that all its non-native scripts validate.
@@ -41,34 +42,15 @@ Shelley specification~\cite{XX}:
   \item $\TxIn$ is a transaction input. It includes a reference to the UTxO entry that it is spending
   and an $\IsFee$ tag.
 
-  \item $\TxOutND$ is a transaction output with no datum hash
-  (this type is for VKey and multi-signature script outputs).
-
-  \item $\TxOutP$ is the type of a transaction output that is locked by
-  a non-native script, which thus needs to include a datum hash.
-
-  \item $\HasDV$
-  is a tag that is attached to a transaction output if it is \emph{locked} by a Plutus
-  script. This tag indicates whether the transaction carrying the output
-  contains, in its set of datum objects, the full datum that corresponds
-  to the datum hash.
-
-  Note that it is up to the user to decide whether the transaction should have the full datum. The purpose of
-  including it is just so that it can be communicated to the user who will be spending
-  the output in the future, and who will require the full datum in order to validate
-  the Plutus script that is locking the output. However, this tag must be applied
-  correctly, otherwise the transaction will not validate.
-  \begin{note}
-    The purpose of this tag is to ensure that it is evident if such a
-    datum has been removed. We may do something else and remove this tag.
-  \end{note}
-
-  \item $\TxOut$ is the type of transaction outputs, either
-  $\TxOutND$ or a pair of $\TxOutP$ and $\HasDV$.
+  \item $\TxOut$ is the type of transaction outputs, which now includes
+  an optional hash of a datum. Note here that \emph{any} output can
+  optionally include such a hash, even though only non-native scripts
+  can use this hash. As it is in general impossible for the ledger to
+  know at the time of creation if an output belongs to a non-native
+  script or not, it simply allows any output to contain a data hash.
 
   \item $\Tag$ lets us differentiate what a script
   can validate, i.e. \\
-
   \begin{tabular}{l@{~to validate~}l}
   $\mathsf{inputTag}$ & spending a script UTxO entry, \\
   $\mathsf{forgeTag}$ & forging tokens, \\
@@ -89,10 +71,9 @@ Shelley specification~\cite{XX}:
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\quad\quad\quad\quad}r}
       \var{v} &\Value & \text{Multi-asset value}\\
-      \var{hdv} &\RdmrsHash & \text{Indexed redeemer hash}\\
-      \var{msig} & \ScriptMSig & \text{Multi-signature scripts} \\
-      \var{plc} & \ScriptPlutus & \text{Plutus scripts from the initial Plutus version} \\
-      \var{dat} & \Data & \text{The Plutus $\Data$ type} \\
+      \var{sdh} &\ScriptDataHash & \text{Script data hash}\\
+      \var{plc} & \ScriptPlutus & \text{Plutus core scripts} \\
+      \var{d} & \Data & \text{The Plutus $\Data$ type}
     \end{array}
   \end{equation*}
   %
@@ -100,8 +81,8 @@ Shelley specification~\cite{XX}:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{scr} & \Script & \ScriptPlutus \uniondistinct \ScriptMSig \\
-      \var{isv} & \IsValidating & \Bool \\
+      \var{sc} & \Script & \ScriptNative \uniondistinct \ScriptNonNative \\
+      \var{isv} & \IsValidating & \Bool
     \end{array}
   \end{equation*}
 %
@@ -119,34 +100,26 @@ Shelley specification~\cite{XX}:
       & \TxId \times \Ix \times \IsFee
 %      & \text{transaction input}
       \\
-      (\var{addr}, v)
-      & \type{TxOutND}
-      & \Addr \times \Value
-%      & \text{vk address output}
-      \\
-      (\var{addr}, v, \var{hashscr_d})
-      & \type{TxOutP}
-      & \type{TxOutND} \times \DataHash
-%      & \text{script address output}
-      \\
-      \var{hdv}
-      & \HasDV
-      & \Bool
-      %      & \text {tag for outputs that come with datums}
-      \\
-      \var{txotx}
+      \var{txout}
       & \TxOut
-      & \TxOutND \uniondistinct (\TxOutP \times \HasDV)
+      & \Addr \times \Value \times \DataHash^?
 %      & \text{transaction outputs in a transaction}
       \\
       \var{tag}
       & \Tag
       & \{\mathsf{inputTag},~\mathsf{forgeTag},~\mathsf{certTag},~\mathsf{wdrlTag}\}
       \\
-      \var{dvin}
+      \var{rdptr}
       & \RdmrPtr
       & \Tag \times \Ix
 %      & \text{reverse pointer to thing dv is for}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Accessor Functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad}l}
+      \fun{getValue} & \TxOut \to \Value & \text{Output value}
     \end{array}
   \end{equation*}
   \caption{Definitions for Transactions}
@@ -178,9 +151,9 @@ Shelley specification~\cite{XX}:
        & \times ~\Coin & \fun{txfee} &\text{Non-script fee}\\
        & \times ~(\Slot\times\Slot) & \fun{txfst},~\fun{txttl} & \text{Validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
-       & \times ~\Update  & \fun{txUpdates} & \text{Update proposals}\\
+       & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
        & \times ~\PPHash^?  & \fun{ppHash} & \text{Hash of PPs}\\
-       & \times ~\RdmrsHash^? & \fun{rdmrsHash} & \text{Hash of indexed redeemers}\\
+       & \times ~\ScriptDataHash^? & \fun{sdHash} & \text{Hash of script-related data}\\
        & \times ~\MetaDataHash^? & \fun{txMDhash} & \text{Metadata hash}\\
     \end{array}
   \end{equation*}
@@ -199,15 +172,6 @@ Shelley specification~\cite{XX}:
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}l@{\qquad\qquad}l}
 \qquad\qquad      \var{tx} & \Tx & \ShelleyTx \uniondistinct \GoguenTx &
       \text{All valid transactions}\\
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Accessor Functions}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad}l}
-      \fun{getValue} & \TxOut \uniondistinct \UTxOOut \to \Value & \text{Output value} \\
-      \fun{getAddr} & \TxOut \uniondistinct \UTxOOut \to \Addr & \text{Output address} \\
-      \fun{getDataHash} & \TxOut \uniondistinct \UTxOOut \to \DataHash & \text{Data hash}
     \end{array}
   \end{equation*}
   \caption{Definitions for transactions, cont.}
@@ -263,8 +227,8 @@ the body of the transaction:
   \item We include a term of type $\ExUnits$. This is a budget of execution units
   that may be used by all non-native scripts in the transaction.
   The budget is intended to be computed by executing the scripts off-chain prior to transaction submission.
-  \item We include a hash of the the indexed redeemer structure
-    with accessor $\fun{rdmrsHash}$. The reason for including this hash is explained below.
+  \item We include a hash of some of the data contained in the witnesses, specifically data relating to scripts,
+    with accessor $\fun{sdHash}$. It is used to prevent tampering with that data.
   \item We include a hash of the subset of current protocol parameters that is relevant for script execution.
 \end{itemize}
 

@@ -39,18 +39,18 @@ in addition to those that are already defined in the Shelley specification.
 
 We have also need a number of additional protocol parameters and accessor functions: ...\todo{List these.}
 
-\subsection{Plutus Versions and Backwards Compatibility Requirements}
+\subsection{Language Versions and Backwards Compatibility Requirements}
 \label{sec:versions}
 
-Each version of Plutus (as identified by a $\Language$ value) is considered to be a different
-\emph{language}.  Each such language needs to be interpreted by a language-specific interpreter, called from the ledger implementation,
+Each version of a language is considered to be a different language as identified by the $\Language$ type.
+Each such language needs to be interpreted by a language-specific interpreter, called from the ledger implementation,
 and provided with the arguments that it requires (which may be version-specific).
 It is necessary for the ledger to be cabable of executing scripts for all current language and previous languages.
 This implies that it is necessary to maintain all ledger
-data that is needed by any past or current Plutus version. Introducing a new Plutus version will also
+data that is needed by any past or current language. Introducing a new language will also
 involve a hard fork, since the ledger rules must be updated to use the new interpreter.
 
-\subsection{Determinism of Plutus Script Evaluation}
+\subsection{Determinism of Script Evaluation}
 \label{sec:determinism}
 
 The data that is passed to the interpreter
@@ -71,15 +71,13 @@ a given set of languages and computes their hash.
 %
 At this time, the only parameter that is passed to the interpreter is the cost model.
 
-\subsection{Plutus Script Evaluation Cost Model and Prices}
+\subsection{Script Evaluation Cost Model and Prices}
 \label{sec:cost-mod}
 
-A cost model is used to convert resource
-primitives into the
-more abstract $\ExUnits$. This conversion is done by the Plutus interpreter,
+A cost model is used to convert resource primitives into the
+more abstract $\ExUnits$. This conversion is done by the interpreter executing the script,
 which means we can keep the cost model abstract in this specification.
-The actual cost models are recorded in the protocol
-parameter $\var{costmdls}$.
+The actual cost models are recorded in the protocol parameter $\var{costmdls}$.
 %
 By having distinct cost models for each version and changing the conversion coefficients, we can discourage users from
 paying into scripts that have been made using old versions of Plutus, by making these more expensive to execute.
@@ -95,24 +93,23 @@ scripts and cannot be varied for individual languages. This parameter
 reflects the real-world costs of electicity, hardware etc.
 
 \textbf{Limiting Script Execution Costs.}
-The $\var{maxTxExUnits}$ and $\var{maxBlockExUnits}$  protocol parameters are
-used to limit the total per-transaction and per-script resource use for every
-type of scripts. These will only have non-trivial values for
-(non-native) Plutus scripts.
+The $\var{maxTxExUnits}$ and $\var{maxBlockExUnits}$ protocol parameters are
+used to limit the total per-transaction and per-block resource use. These only apply to non-native scripts.
+Per-block resource use needs to be limited to ensure that the time required to verify a block has an upper bound.
 
 \begin{figure*}[htb]
   \emph{Abstract types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad}r}
-      \var{costm} & \CostMod & \text{Coefficients for the cost model} \\
+      \var{cm} & \CostMod & \text{Coefficients for the cost model} \\
     \end{array}
   \end{equation*}
   %
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\quad=\quad}l@{\qquad}r}
-      \var{plv}
+      \var{lg}
       & \Language
       & \{\Plutus, \dotsb\}
       & \text{Script Language}
