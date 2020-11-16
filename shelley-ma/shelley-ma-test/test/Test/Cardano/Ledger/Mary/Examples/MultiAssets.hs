@@ -15,7 +15,7 @@ import Cardano.Ledger.Mary.Value
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
-import Cardano.Ledger.Val ((<->))
+import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure)
 import qualified Data.ByteString.Char8 as BS
@@ -131,9 +131,12 @@ policyFailure p =
       ]
     ]
 
--------------------------------------------------
--- Introduce a new Token Bundle, Purple Tokens --
--------------------------------------------------
+----------------------------------------------------
+-- Introduce a new Token Bundle, Purple Tokens
+--
+-- Variables ending with SimpleExN (for a numeral N)
+-- refer to this example.
+----------------------------------------------------
 
 -- This is the most lax policy possible, requiring no authorization at all.
 purplePolicy :: Timelock MaryTest
@@ -152,42 +155,42 @@ amethyst = AssetName $ BS.pack "amethyst"
 -- Mint Purple Tokens --
 ------------------------
 
-purpleTokensEx1 :: Value MaryTest
-purpleTokensEx1 =
+mintSimpleEx1 :: Value MaryTest
+mintSimpleEx1 =
   Value 0 $
     Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
 
-aliceCoinEx1 :: Coin
-aliceCoinEx1 = aliceInitCoin <-> feeEx
+aliceCoinSimpleEx1 :: Coin
+aliceCoinSimpleEx1 = aliceInitCoin <-> feeEx
+
+tokensSimpleEx1 :: Value MaryTest
+tokensSimpleEx1 = mintSimpleEx1 <+> (Val.inject aliceCoinSimpleEx1)
 
 -- Mint a purple token bundle, consisting of thirteen plums and two amethysts.
 -- Give the bundle to Alice.
-txbodyEx1 :: TxBody MaryTest
-txbodyEx1 =
+txbodySimpleEx1 :: TxBody MaryTest
+txbodySimpleEx1 =
   makeTxb
     [TxIn bootstrapTxId 0]
-    [ TxOut Cast.aliceAddr (Val.inject aliceCoinEx1),
-      TxOut Cast.aliceAddr purpleTokensEx1
-    ]
+    [TxOut Cast.aliceAddr tokensSimpleEx1]
     unboundedInterval
-    purpleTokensEx1
+    mintSimpleEx1
 
-txEx1 :: Tx MaryTest
-txEx1 =
+txSimpleEx1 :: Tx MaryTest
+txSimpleEx1 =
   Tx
-    txbodyEx1
+    txbodySimpleEx1
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbodyEx1) [asWitness Cast.alicePay],
+      { addrWits = makeWitnessesVKey (hashAnnotated txbodySimpleEx1) [asWitness Cast.alicePay],
         scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
       }
     SNothing
 
-expectedUTxOEx1 :: UTxO MaryTest
-expectedUTxOEx1 =
+expectedUTxOSimpleEx1 :: UTxO MaryTest
+expectedUTxOSimpleEx1 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodyEx1) 0, TxOut Cast.aliceAddr (Val.inject aliceCoinEx1)),
-        (TxIn (txid txbodyEx1) 1, TxOut Cast.aliceAddr purpleTokensEx1),
+      [ (TxIn (txid txbodySimpleEx1) 0, TxOut Cast.aliceAddr tokensSimpleEx1),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
@@ -195,51 +198,54 @@ expectedUTxOEx1 =
 -- Transfer Purple Tokens --
 ----------------------------
 
-feeTx2 :: Coin
-feeTx2 = Coin 3
+minUtxoSimpleEx2 :: Coin
+minUtxoSimpleEx2 = Coin 100
 
-aliceCoinEx2 :: Coin
-aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
+aliceCoinsSimpleEx2 :: Coin
+aliceCoinsSimpleEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> minUtxoSimpleEx2)
 
-purpleTokensAliceEx2 :: Value MaryTest
-purpleTokensAliceEx2 =
-  Value (unCoin aliceCoinEx2) $
+aliceTokensSimpleEx2 :: Value MaryTest
+aliceTokensSimpleEx2 =
+  Value (unCoin aliceCoinsSimpleEx2) $
     Map.singleton purplePolicyId (Map.fromList [(plum, 8), (amethyst, 2)])
 
-purpleTokensBobEx2 :: Value MaryTest
-purpleTokensBobEx2 =
-  Value 0 $
+bobTokensSimpleEx2 :: Value MaryTest
+bobTokensSimpleEx2 =
+  Value (unCoin minUtxoSimpleEx2) $
     Map.singleton purplePolicyId (Map.singleton plum 5)
 
 -- Alice gives five plums to Bob.
-txbodyEx2 :: TxBody MaryTest
-txbodyEx2 =
+txbodySimpleEx2 :: TxBody MaryTest
+txbodySimpleEx2 =
   makeTxb
-    [TxIn (txid txbodyEx1) 0, TxIn (txid txbodyEx1) 1]
-    [ TxOut Cast.aliceAddr purpleTokensAliceEx2,
-      TxOut Cast.bobAddr purpleTokensBobEx2
+    [TxIn (txid txbodySimpleEx1) 0]
+    [ TxOut Cast.aliceAddr aliceTokensSimpleEx2,
+      TxOut Cast.bobAddr bobTokensSimpleEx2
     ]
     unboundedInterval
     Val.zero
 
-txEx2 :: Tx MaryTest
-txEx2 =
+txSimpleEx2 :: Tx MaryTest
+txSimpleEx2 =
   Tx
-    txbodyEx2
-    mempty {addrWits = makeWitnessesVKey (hashAnnotated txbodyEx2) [asWitness Cast.alicePay]}
+    txbodySimpleEx2
+    mempty {addrWits = makeWitnessesVKey (hashAnnotated txbodySimpleEx2) [asWitness Cast.alicePay]}
     SNothing
 
-expectedUTxOEx2 :: UTxO MaryTest
-expectedUTxOEx2 =
+expectedUTxOSimpleEx2 :: UTxO MaryTest
+expectedUTxOSimpleEx2 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodyEx2) 0, TxOut Cast.aliceAddr purpleTokensAliceEx2),
-        (TxIn (txid txbodyEx2) 1, TxOut Cast.bobAddr purpleTokensBobEx2),
+      [ (TxIn (txid txbodySimpleEx2) 0, TxOut Cast.aliceAddr aliceTokensSimpleEx2),
+        (TxIn (txid txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 ------------------------------------------------------------
--- Introduce a new Token Bundle, Tokens With a Time Range --
+-- Introduce a new Token Bundle, Tokens With a Time Range
+--
+-- Variables ending with TimeExN (for a numeral N)
+-- refer to this example.
 ------------------------------------------------------------
 
 beforeStart :: SlotNo
@@ -266,37 +272,38 @@ boundedTimePolicy =
 boundedTimePolicyId :: PolicyID MaryTest
 boundedTimePolicyId = PolicyID $ hashScript boundedTimePolicy
 
-tokenEx3 :: AssetName
-tokenEx3 = AssetName $ BS.pack "tokenEx3"
+tokenTimeEx :: AssetName
+tokenTimeEx = AssetName $ BS.pack "tokenTimeEx"
 
 ------------------------------------
 -- Mint Bounded Time Range Tokens --
 ------------------------------------
 
-tokensEx3 :: Value MaryTest
-tokensEx3 =
+mintTimeEx1 :: Value MaryTest
+mintTimeEx1 =
   Value 0 $
-    Map.singleton boundedTimePolicyId (Map.singleton tokenEx3 1)
+    Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
 
-aliceCoinEx3 :: Coin
-aliceCoinEx3 = aliceInitCoin <-> feeEx
+aliceCoinsTimeEx1 :: Coin
+aliceCoinsTimeEx1 = aliceInitCoin <-> feeEx
+
+tokensTimeEx1 :: Value MaryTest
+tokensTimeEx1 = mintTimeEx1 <+> (Val.inject aliceCoinsTimeEx1)
 
 -- Mint tokens
-txbodyEx3 :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> TxBody MaryTest
-txbodyEx3 s e =
+txbodyTimeEx1 :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> TxBody MaryTest
+txbodyTimeEx1 s e =
   makeTxb
     [TxIn bootstrapTxId 0]
-    [ TxOut Cast.aliceAddr (Val.inject aliceCoinEx3),
-      TxOut Cast.aliceAddr tokensEx3
-    ]
+    [TxOut Cast.aliceAddr tokensTimeEx1]
     (ValidityInterval s e)
-    tokensEx3
+    mintTimeEx1
 
-txbodyEx3Valid :: TxBody MaryTest
-txbodyEx3Valid = txbodyEx3 (SJust startInterval) (SJust stopInterval)
+txbodyTimeEx1Valid :: TxBody MaryTest
+txbodyTimeEx1Valid = txbodyTimeEx1 (SJust startInterval) (SJust stopInterval)
 
-txEx3 :: TxBody MaryTest -> Tx MaryTest
-txEx3 body =
+txTimeEx1 :: TxBody MaryTest -> Tx MaryTest
+txTimeEx1 body =
   Tx
     body
     mempty
@@ -305,27 +312,26 @@ txEx3 body =
       }
     SNothing
 
-txEx3Valid :: Tx MaryTest
-txEx3Valid = txEx3 txbodyEx3Valid
+txTimeEx1Valid :: Tx MaryTest
+txTimeEx1Valid = txTimeEx1 txbodyTimeEx1Valid
 
-txEx3InvalidLHSfixed :: Tx MaryTest
-txEx3InvalidLHSfixed = txEx3 $ txbodyEx3 (SJust beforeStart) (SJust stopInterval)
+txTimeEx1InvalidLHSfixed :: Tx MaryTest
+txTimeEx1InvalidLHSfixed = txTimeEx1 $ txbodyTimeEx1 (SJust beforeStart) (SJust stopInterval)
 
-txEx3InvalidLHSopen :: Tx MaryTest
-txEx3InvalidLHSopen = txEx3 $ txbodyEx3 SNothing (SJust stopInterval)
+txTimeEx1InvalidLHSopen :: Tx MaryTest
+txTimeEx1InvalidLHSopen = txTimeEx1 $ txbodyTimeEx1 SNothing (SJust stopInterval)
 
-txEx3InvalidRHSfixed :: Tx MaryTest
-txEx3InvalidRHSfixed = txEx3 $ txbodyEx3 (SJust startInterval) (SJust afterStop)
+txTimeEx1InvalidRHSfixed :: Tx MaryTest
+txTimeEx1InvalidRHSfixed = txTimeEx1 $ txbodyTimeEx1 (SJust startInterval) (SJust afterStop)
 
-txEx3InvalidRHSopen :: Tx MaryTest
-txEx3InvalidRHSopen = txEx3 $ txbodyEx3 (SJust startInterval) SNothing
+txTimeEx1InvalidRHSopen :: Tx MaryTest
+txTimeEx1InvalidRHSopen = txTimeEx1 $ txbodyTimeEx1 (SJust startInterval) SNothing
 
-expectedUTxOEx3 :: UTxO MaryTest
-expectedUTxOEx3 =
+expectedUTxOTimeEx1 :: UTxO MaryTest
+expectedUTxOTimeEx1 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodyEx3Valid) 0, TxOut Cast.aliceAddr (Val.inject aliceCoinEx3)),
-        (TxIn (txid txbodyEx3Valid) 1, TxOut Cast.aliceAddr tokensEx3),
+      [ (TxIn (txid txbodyTimeEx1Valid) 0, TxOut Cast.aliceAddr tokensTimeEx1),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
@@ -333,41 +339,52 @@ expectedUTxOEx3 =
 -- Transfer Bounded Time Range Tokens --
 ----------------------------------------
 
-aliceCoinEx4 :: Coin
-aliceCoinEx4 = aliceCoinEx3 <-> feeEx
+mintTimeEx2 :: Coin
+mintTimeEx2 = Coin 100
 
-tokensEx4 :: Value MaryTest
-tokensEx4 = Value 0 $ Map.singleton boundedTimePolicyId (Map.singleton tokenEx3 1)
+bobTokensTimeEx2 :: Value MaryTest
+bobTokensTimeEx2 =
+  Value (unCoin mintTimeEx2) $
+    Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
+
+aliceCoinsTimeEx2 :: Coin
+aliceCoinsTimeEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> mintTimeEx2)
 
 -- Alice gives one token to Bob
-txbodyEx4 :: TxBody MaryTest
-txbodyEx4 =
+txbodyTimeEx2 :: TxBody MaryTest
+txbodyTimeEx2 =
   makeTxb
-    [TxIn (txid txbodyEx3Valid) 0, TxIn (txid txbodyEx3Valid) 1]
-    [ TxOut Cast.aliceAddr (Val.inject aliceCoinEx4),
-      TxOut Cast.bobAddr tokensEx4
+    [TxIn (txid txbodyTimeEx1Valid) 0]
+    [ TxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2),
+      TxOut Cast.bobAddr bobTokensTimeEx2
     ]
     unboundedInterval
     Val.zero
 
-txEx4 :: Tx MaryTest
-txEx4 =
+txTimeEx2 :: Tx MaryTest
+txTimeEx2 =
   Tx
-    txbodyEx4
-    mempty {addrWits = makeWitnessesVKey (hashAnnotated txbodyEx4) [asWitness Cast.alicePay]}
+    txbodyTimeEx2
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashAnnotated txbodyTimeEx2) [asWitness Cast.alicePay]
+      }
     SNothing
 
-expectedUTxOEx4 :: UTxO MaryTest
-expectedUTxOEx4 =
+expectedUTxOTimeEx2 :: UTxO MaryTest
+expectedUTxOTimeEx2 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodyEx4) 0, TxOut Cast.aliceAddr (Val.inject aliceCoinEx4)),
-        (TxIn (txid txbodyEx4) 1, TxOut Cast.bobAddr tokensEx4),
+      [ (TxIn (txid txbodyTimeEx2) 0, TxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2)),
+        (TxIn (txid txbodyTimeEx2) 1, TxOut Cast.bobAddr bobTokensTimeEx2),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 --------------------------------------------------------------
--- Introduce a new Token Bundle, Tokens only Alice can mint --
+-- Introduce a new Token Bundle, Tokens only Alice can mint
+--
+-- Variables ending with SingExN (for a numeral N)
+-- refer to this example.
 --------------------------------------------------------------
 
 alicePolicy :: Timelock MaryTest
@@ -376,57 +393,58 @@ alicePolicy = RequireSignature . asWitness . hashKey . vKey $ Cast.alicePay
 alicePolicyId :: PolicyID MaryTest
 alicePolicyId = PolicyID $ hashScript alicePolicy
 
-tokenEx5 :: AssetName
-tokenEx5 = AssetName $ BS.pack "alice"
+tokenSingWitEx1 :: AssetName
+tokenSingWitEx1 = AssetName $ BS.pack "tokenSingWitEx1"
 
 -----------------------
 -- Mint Alice Tokens --
 -----------------------
 
-tokensEx5 :: Value MaryTest
-tokensEx5 =
+mintSingWitEx1 :: Value MaryTest
+mintSingWitEx1 =
   Value 0 $
-    Map.singleton alicePolicyId (Map.singleton tokenEx5 17)
+    Map.singleton alicePolicyId (Map.singleton tokenSingWitEx1 17)
 
-bobCoinEx5 :: Coin
-bobCoinEx5 = bobInitCoin <-> feeEx
+bobCoinsSingWitEx1 :: Coin
+bobCoinsSingWitEx1 = bobInitCoin <-> feeEx
+
+tokensSingWitEx1 :: Value MaryTest
+tokensSingWitEx1 = mintSingWitEx1 <+> (Val.inject bobCoinsSingWitEx1)
 
 -- Bob pays the fees, but only alice can witness the minting
-txbodyEx5 :: TxBody MaryTest
-txbodyEx5 =
+txbodySingWitEx1 :: TxBody MaryTest
+txbodySingWitEx1 =
   makeTxb
     [TxIn bootstrapTxId 1]
-    [ TxOut Cast.bobAddr (Val.inject bobCoinEx5),
-      TxOut Cast.bobAddr tokensEx5
-    ]
+    [TxOut Cast.bobAddr tokensSingWitEx1]
     unboundedInterval
-    tokensEx5
+    mintSingWitEx1
 
-txEx5Valid :: Tx MaryTest
-txEx5Valid =
+txSingWitEx1Valid :: Tx MaryTest
+txSingWitEx1Valid =
   Tx
-    txbodyEx5
+    txbodySingWitEx1
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbodyEx5) [asWitness Cast.bobPay, asWitness Cast.alicePay],
+      { addrWits =
+          makeWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay, asWitness Cast.alicePay],
         scriptWits = Map.fromList [(policyID alicePolicyId, alicePolicy)]
       }
     SNothing
 
-expectedUTxOEx5 :: UTxO MaryTest
-expectedUTxOEx5 =
+expectedUTxOSingWitEx1 :: UTxO MaryTest
+expectedUTxOSingWitEx1 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodyEx5) 0, TxOut Cast.bobAddr (Val.inject bobCoinEx5)),
-        (TxIn (txid txbodyEx5) 1, TxOut Cast.bobAddr tokensEx5),
+      [ (TxIn (txid txbodySingWitEx1) 0, TxOut Cast.bobAddr tokensSingWitEx1),
         (TxIn bootstrapTxId 0, TxOut Cast.aliceAddr (Val.inject aliceInitCoin))
       ]
 
-txEx5Invalid :: Tx MaryTest
-txEx5Invalid =
+txSingWitEx1Invalid :: Tx MaryTest
+txSingWitEx1Invalid =
   Tx
-    txbodyEx5
+    txbodySingWitEx1
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbodyEx5) [asWitness Cast.bobPay],
+      { addrWits = makeWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay],
         scriptWits = Map.fromList [(policyID alicePolicyId, alicePolicy)]
       }
     SNothing
@@ -444,67 +462,67 @@ multiAssetsExample =
         [ testCase "minting" $
             testMaryNoDelegLEDGER
               initUTxO
-              txEx1
+              txSimpleEx1
               (ledgerEnv $ SlotNo 0)
-              (Right expectedUTxOEx1),
+              (Right expectedUTxOSimpleEx1),
           testCase "transfer" $
             testMaryNoDelegLEDGER
-              expectedUTxOEx1
-              txEx2
+              expectedUTxOSimpleEx1
+              txSimpleEx2
               (ledgerEnv $ SlotNo 1)
-              (Right expectedUTxOEx2)
+              (Right expectedUTxOSimpleEx2)
         ],
       testGroup
         "bounded time interval"
         [ testCase "minting, valid" $
             testMaryNoDelegLEDGER
               initUTxO
-              txEx3Valid
+              txTimeEx1Valid
               (ledgerEnv startInterval)
-              (Right expectedUTxOEx3),
+              (Right expectedUTxOTimeEx1),
           testCase "minting, invalid LHS too small" $
             testMaryNoDelegLEDGER
               initUTxO
-              txEx3InvalidLHSfixed
+              txTimeEx1InvalidLHSfixed
               (ledgerEnv startInterval)
               (policyFailure boundedTimePolicyId),
           testCase "minting, invalid LHS unspecified" $
             testMaryNoDelegLEDGER
               initUTxO
-              txEx3InvalidLHSopen
+              txTimeEx1InvalidLHSopen
               (ledgerEnv startInterval)
               (policyFailure boundedTimePolicyId),
           testCase "minting, invalid RHS too big" $
             testMaryNoDelegLEDGER
               initUTxO
-              txEx3InvalidRHSfixed
+              txTimeEx1InvalidRHSfixed
               (ledgerEnv startInterval)
               (policyFailure boundedTimePolicyId),
           testCase "minting, invalid RHS unspecified" $
             testMaryNoDelegLEDGER
               initUTxO
-              txEx3InvalidRHSopen
+              txTimeEx1InvalidRHSopen
               (ledgerEnv startInterval)
               (policyFailure boundedTimePolicyId),
           testCase "transfer, after minting period" $
             testMaryNoDelegLEDGER
-              expectedUTxOEx3
-              txEx4
+              expectedUTxOTimeEx1
+              txTimeEx2
               (ledgerEnv afterStop)
-              (Right expectedUTxOEx4)
+              (Right expectedUTxOTimeEx2)
         ],
       testGroup
         "single key"
         [ testCase "minting, valid" $
             testMaryNoDelegLEDGER
               initUTxO
-              txEx5Valid
+              txSingWitEx1Valid
               (ledgerEnv $ SlotNo 0)
-              (Right expectedUTxOEx5),
+              (Right expectedUTxOSingWitEx1),
           testCase "minting, invalid no forge signature" $
             testMaryNoDelegLEDGER
               initUTxO
-              txEx5Invalid
+              txSingWitEx1Invalid
               (ledgerEnv $ SlotNo 0)
               (policyFailure alicePolicyId)
         ]
