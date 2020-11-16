@@ -13,6 +13,7 @@ import Cardano.Ledger.Mary.Value
     PolicyID (..),
     Value (..),
   )
+import Cardano.Ledger.ShelleyMA.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -130,6 +131,9 @@ policyFailure p =
           )
       ]
     ]
+
+valueFailure :: TxOut MaryTest -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
+valueFailure out = Left [[UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [out])]]
 
 ----------------------------------------------------
 -- Introduce a new Token Bundle, Purple Tokens
@@ -449,6 +453,90 @@ txSingWitEx1Invalid =
       }
     SNothing
 
+------------------------
+-- Mint Negative Values
+--
+-- Variables ending with NegExN (for a numeral N)
+-- refer to this example. We assume that the simple
+-- tokens in the SimpleEx1 example have been minted
+-- and we use expectedUTxOSimpleEx1 as our starting
+-- state.
+------------------------
+
+-- Mint negative valued tokens
+mintNegEx1 :: Value MaryTest
+mintNegEx1 =
+  Value 0 $
+    Map.singleton purplePolicyId (Map.singleton plum (-8))
+
+aliceTokensNegEx1 :: Value MaryTest
+aliceTokensNegEx1 =
+  Value (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
+    Map.singleton purplePolicyId (Map.singleton amethyst 2)
+
+txbodyNegEx1 :: TxBody MaryTest
+txbodyNegEx1 =
+  makeTxb
+    [TxIn (txid txbodySimpleEx2) 0]
+    [TxOut Cast.aliceAddr aliceTokensNegEx1]
+    unboundedInterval
+    mintNegEx1
+
+txNegEx1 :: Tx MaryTest
+txNegEx1 =
+  Tx
+    txbodyNegEx1
+    mempty
+      { addrWits = makeWitnessesVKey (hashAnnotated txbodyNegEx1) [asWitness Cast.alicePay],
+        scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
+      }
+    SNothing
+
+initialUTxONegEx1 :: UTxO MaryTest
+initialUTxONegEx1 = expectedUTxOSimpleEx2
+
+expectedUTxONegEx1 :: UTxO MaryTest
+expectedUTxONegEx1 =
+  UTxO $
+    Map.fromList
+      [ (TxIn (txid txbodyNegEx1) 0, TxOut Cast.aliceAddr aliceTokensNegEx1),
+        (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin)),
+        (TxIn (txid txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2)
+      ]
+
+--
+-- Now attempt to produce negative outputs
+--
+
+mintNegEx2 :: Value MaryTest
+mintNegEx2 =
+  Value 0 $
+    Map.singleton purplePolicyId (Map.singleton plum (-9))
+
+aliceTokensNegEx2 :: Value MaryTest
+aliceTokensNegEx2 =
+  Value (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
+    Map.singleton purplePolicyId (Map.fromList [(plum, (-1)), (amethyst, 2)])
+
+-- Mint negative valued tokens
+txbodyNegEx2 :: TxBody MaryTest
+txbodyNegEx2 =
+  makeTxb
+    [TxIn (txid txbodySimpleEx2) 0]
+    [TxOut Cast.aliceAddr aliceTokensNegEx2]
+    unboundedInterval
+    mintNegEx2
+
+txNegEx2 :: Tx MaryTest
+txNegEx2 =
+  Tx
+    txbodyNegEx2
+    mempty
+      { addrWits = makeWitnessesVKey (hashAnnotated txbodyNegEx2) [asWitness Cast.alicePay],
+        scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
+      }
+    SNothing
+
 --
 -- Multi-Assets Test Group
 --
@@ -525,5 +613,20 @@ multiAssetsExample =
               txSingWitEx1Invalid
               (ledgerEnv $ SlotNo 0)
               (policyFailure alicePolicyId)
+        ],
+      testGroup
+        "negative minting"
+        [ testCase "remove assets" $
+            testMaryNoDelegLEDGER
+              initialUTxONegEx1
+              txNegEx1
+              (ledgerEnv $ SlotNo 3)
+              (Right expectedUTxONegEx1),
+          testCase "no negative outputs" $
+            testMaryNoDelegLEDGER
+              initialUTxONegEx1
+              txNegEx2
+              (ledgerEnv $ SlotNo 3)
+              (valueFailure $ TxOut Cast.aliceAddr aliceTokensNegEx2)
         ]
     ]
