@@ -96,7 +96,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Hashing (EraIndependentTx, HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
-import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
@@ -197,7 +196,7 @@ pattern WitnessSet {addrWits, scriptWits, bootWits} <-
 data Tx era = Tx'
   { _body' :: !(Core.TxBody era),
     _witnessSet' :: !(WitnessSet era),
-    _metadata' :: !(StrictMaybe MetaData),
+    _metadata' :: !(StrictMaybe (Core.Metadata era)),
     txFullBytes :: BSL.ByteString
   }
   deriving (Generic)
@@ -219,10 +218,12 @@ deriving instance
   Eq (Tx era)
 
 pattern Tx ::
-  (Shelley.TxBodyConstraints era) =>
+  ( Shelley.TxBodyConstraints era,
+    ToCBOR (Core.Metadata era)
+  ) =>
   Core.TxBody era ->
   WitnessSet era ->
-  StrictMaybe MetaData ->
+  StrictMaybe (Core.Metadata era) ->
   Tx era
 pattern Tx {_body, _witnessSet, _metadata} <-
   Tx' _body _witnessSet _metadata _
@@ -250,10 +251,12 @@ instance ShelleyBased era => HashAnnotated (Tx era) era where
   type HashIndex (Tx era) = EraIndependentTx
 
 segwitTx ::
-  (Shelley.TxBodyConstraints era) =>
+  ( Shelley.TxBodyConstraints era,
+    ToCBOR (Core.Metadata era)
+  ) =>
   Annotator (Core.TxBody era) ->
   Annotator (WitnessSet era) ->
-  Maybe (Annotator MetaData) ->
+  Maybe (Annotator (Core.Metadata era)) ->
   Annotator (Tx era)
 segwitTx
   bodyAnn
@@ -332,7 +335,10 @@ instance
     decodeRecordNamed "Tx" (const 3) $ do
       body <- fromCBOR
       wits <- decodeWits
-      meta <- (decodeNullMaybe fromCBOR :: Decoder s (Maybe (Annotator MetaData)))
+      meta <-
+        ( decodeNullMaybe fromCBOR ::
+            Decoder s (Maybe (Annotator (Core.Metadata era)))
+          )
       pure $
         Annotator $ \fullBytes bytes ->
           Tx'
@@ -376,7 +382,9 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
-  (Shelley.TxBodyConstraints era) =>
+  ( Shelley.TxBodyConstraints era,
+    ToCBOR (Core.Metadata era)
+  ) =>
   MultiSig era ->
   Tx era ->
   Bool
@@ -388,7 +396,7 @@ validateNativeMultiSigScript msig tx =
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
-  (Shelley.TxBodyConstraints era) =>
+  (Shelley.TxBodyConstraints era, ToCBOR (Core.Metadata era)) =>
   Tx era ->
   Map (ScriptHash era) (Core.Script era)
 txwitsScript = scriptWits' . _witnessSet

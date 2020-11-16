@@ -198,6 +198,7 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
+import Cardano.Binary (ToCBOR)
 
 class
   ( ShelleyBased era,
@@ -559,6 +560,7 @@ mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
 
 mkBlock ::
   ( Shelley.TxBodyConstraints era,
+    ToCBOR (Core.Metadata era),
     Mock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -589,6 +591,7 @@ mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
   ( Shelley.TxBodyConstraints era,
+    ToCBOR (Core.Metadata era),
     ExMock (Crypto era)
   ) =>
   -- | Hash of previous block

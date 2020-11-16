@@ -88,7 +88,7 @@ import Shelley.Spec.Ledger.LedgerState
     witsFromWitnessSet,
     witsVKeyNeeded,
   )
-import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData, validMetaData)
+import Shelley.Spec.Ledger.MetaData (MetaDataHash, ValidateMetadata (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
@@ -168,7 +168,11 @@ instance
   initialRules = [initialLedgerStateUTXOW]
 
 instance
-  (Era era, Typeable (Core.Script era), ToCBOR (PredicateFailure (UTXO era))) =>
+  ( Era era,
+    Typeable (Core.Script era),
+    Typeable (Core.Metadata era),
+    ToCBOR (PredicateFailure (UTXO era))
+  ) =>
   ToCBOR (UtxowPredicateFailure era)
   where
   toCBOR = \case
@@ -200,7 +204,8 @@ instance
 instance
   ( Era era,
     FromCBOR (PredicateFailure (UTXO era)),
-    Typeable (Core.Script era)
+    Typeable (Core.Script era),
+    Typeable (Core.Metadata era)
   ) =>
   FromCBOR (UtxowPredicateFailure era)
   where
@@ -254,6 +259,7 @@ utxoWitnessed ::
   forall era.
   ( ShelleyBased era,
     ValidateScript era,
+    ValidateMetadata era,
     STS (UTXOW era),
     BaseM (UTXOW era) ~ ShelleyBase,
     Embed (UTXO era) (UTXOW era),
@@ -313,11 +319,12 @@ utxoWitnessed scriptsNeeded =
         (SJust mdh, SNothing) -> failBecause $ MissingTxMetaData mdh
         (SNothing, SJust md') ->
           failBecause $
-            MissingTxBodyMetaDataHash (hashMetaData md')
+            MissingTxBodyMetaDataHash (hashMetadata md')
         (SJust mdh, SJust md') -> do
-          hashMetaData md' == mdh ?! ConflictingMetaDataHash mdh (hashMetaData md')
+          hashMetadata md' == mdh ?! ConflictingMetaDataHash mdh (hashMetadata md')
           -- check metadata value sizes
-          when (SoftForks.validMetaData pp) $ validMetaData md' ?! InvalidMetaData
+          when (SoftForks.validMetaData pp) $
+            validateMetadata @era md' ?! InvalidMetaData
 
       -- check genesis keys signatures for instantaneous rewards certificates
       let genDelegates =

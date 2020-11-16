@@ -1,21 +1,24 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.MetaData
   ( MetaDatum (..),
     MetaData (MetaData),
     MetaDataHash (..),
-    hashMetaData,
-    validMetaData,
+    ValidateMetadata (..),
+    validMetaDatum,
   )
 where
 
@@ -28,7 +31,10 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
+import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
@@ -40,6 +46,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
@@ -65,6 +72,8 @@ data MetaData = MetaData'
   deriving (Eq, Show, Generic)
   deriving (NoThunks) via AllowThunksIn '["mdBytes"] MetaData
 
+type instance Core.Metadata (ShelleyEra c) = MetaData
+
 pattern MetaData :: Map Word64 MetaDatum -> MetaData
 pattern MetaData m <-
   MetaData' m _
@@ -89,24 +98,21 @@ instance ToCBOR MetaDatum where
 instance FromCBOR MetaDatum where
   fromCBOR = decodeMetaDatum
 
-newtype MetaDataHash era = MetaDataHash {unsafeMetaDataHash :: Hash (Crypto era) MetaData}
+newtype MetaDataHash era = MetaDataHash
+  { unsafeMetaDataHash :: Hash (Crypto era) (Core.Metadata era)
+  }
   deriving (Show, Eq, Ord, NoThunks, NFData)
 
-deriving instance Era era => ToCBOR (MetaDataHash era)
+deriving instance
+  (Era era, Typeable (Core.Metadata era)) =>
+  ToCBOR (MetaDataHash era)
 
-deriving instance Era era => FromCBOR (MetaDataHash era)
-
-hashMetaData ::
-  Era era =>
-  MetaData ->
-  MetaDataHash era
-hashMetaData = MetaDataHash . hashWithSerialiser toCBOR
+deriving instance
+  (Era era, Typeable (Core.Metadata era)) =>
+  FromCBOR (MetaDataHash era)
 
 --------------------------------------------------------------------------------
 -- Validation of sizes
-
-validMetaData :: MetaData -> Bool
-validMetaData (MetaData m) = all validMetaDatum m
 
 validMetaDatum :: MetaDatum -> Bool
 -- The integer size/representation checks are enforced in the decoder.
@@ -121,6 +127,14 @@ validMetaDatum (Map kvs) =
           && validMetaDatum v
     )
     kvs
+
+class ValidateMetadata era where
+  hashMetadata :: Core.Metadata era -> MetaDataHash era
+  validateMetadata :: Core.Metadata era -> Bool
+
+instance CC.Crypto c => ValidateMetadata (ShelleyEra c) where
+  hashMetadata = MetaDataHash . hashWithSerialiser toCBOR
+  validateMetadata (MetaData m) = all validMetaDatum m
 
 --------------------------------------------------------------------------------
 -- CBOR encoding and decoding

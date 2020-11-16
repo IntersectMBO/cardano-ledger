@@ -600,8 +600,10 @@ type ProperFrom era =
     Typeable era,
     FromCBOR (Core.Value era),
     Typeable (Core.Script era),
+    Typeable (Core.Metadata era),
     FromCBOR (CompactForm (Core.Value era)),
-    FromCBOR (Annotator (Core.Script era))
+    FromCBOR (Annotator (Core.Script era)),
+    FromCBOR (Annotator (Core.Metadata era))
   )
 
 -- | Needed for ToCBOR instances
@@ -609,6 +611,7 @@ type ProperTo era =
   ( Era era,
     ToCBOR (Core.Value era),
     ToCBOR (Core.Script era),
+    ToCBOR (Core.Metadata era),
     ToCBOR (CompactForm (Core.Value era))
   )
 

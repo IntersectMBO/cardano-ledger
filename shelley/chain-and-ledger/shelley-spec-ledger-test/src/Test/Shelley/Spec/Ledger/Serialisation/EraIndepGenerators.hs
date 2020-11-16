@@ -709,7 +709,8 @@ instance
 genTx ::
   ( ShelleyBased era,
     Arbitrary (WitnessSet era),
-    Arbitrary (Core.TxBody era)
+    Arbitrary (Core.TxBody era),
+    Arbitrary (Core.Metadata era)
   ) =>
   Gen (Tx era)
 genTx =
@@ -724,7 +725,8 @@ genBlock ::
     EraGen era,
     Mock (Crypto era),
     Arbitrary (WitnessSet era),
-    Arbitrary (Core.TxBody era)
+    Arbitrary (Core.TxBody era),
+    Arbitrary (Core.Metadata era)
   ) =>
   Gen (Block era)
 genBlock = do
@@ -759,6 +761,7 @@ instance
     ValidateScript era,
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
+    Arbitrary (Core.Metadata era),
     Arbitrary (Core.Script era)
   ) =>
   Arbitrary (Tx era)
@@ -772,6 +775,7 @@ instance
     ValidateScript era,
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
+    Arbitrary (Core.Metadata era),
     Arbitrary (Core.Script era)
   ) =>
   Arbitrary (Block era)
