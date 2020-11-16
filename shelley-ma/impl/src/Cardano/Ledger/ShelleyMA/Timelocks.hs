@@ -228,15 +228,15 @@ pattern RequireTimeStart mslot <-
 -- =================================================================
 -- Evaluating and validating a Timelock
 
--- PLEASE SOMEONE VERIFY I AM USING atOrAfter and strictlyBefore RIGHT
+-- | less-than-equal comparison, where Nothing is negative infinity
+lteNegInfty :: SlotNo -> StrictMaybe SlotNo -> Bool
+lteNegInfty _ SNothing = False -- i > -∞
+lteNegInfty i (SJust j) = i <= j
 
-atOrAfter :: StrictMaybe SlotNo -> SlotNo -> Bool
-atOrAfter SNothing _ = True
-atOrAfter (SJust i) j = i <= j
-
-strictlyBefore :: SlotNo -> StrictMaybe SlotNo -> Bool
-strictlyBefore _i SNothing = True
-strictlyBefore i (SJust j) = i < j
+-- | less-than-equal comparison, where Nothing is positive infinity
+ltePosInfty :: StrictMaybe SlotNo -> SlotNo -> Bool
+ltePosInfty SNothing _ = False -- ∞ > j
+ltePosInfty (SJust i) j = i <= j
 
 evalTimelock ::
   Era era =>
@@ -244,10 +244,10 @@ evalTimelock ::
   ValidityInterval ->
   Timelock era ->
   Bool
-evalTimelock _vhks (ValidityInterval mstart _) (RequireTimeStart slot) =
-  atOrAfter mstart slot
-evalTimelock _vhks (ValidityInterval _ mexpire) (RequireTimeExpire slot) =
-  strictlyBefore slot mexpire
+evalTimelock _vhks (ValidityInterval txStart _) (RequireTimeStart lockStart) =
+  lockStart `lteNegInfty` txStart
+evalTimelock _vhks (ValidityInterval _ txExp) (RequireTimeExpire lockExp) =
+  txExp `ltePosInfty` lockExp
 evalTimelock vhks _vi (RequireSignature hash) = member hash vhks
 evalTimelock vhks vi (RequireAllOf xs) =
   all (evalTimelock vhks vi) xs
