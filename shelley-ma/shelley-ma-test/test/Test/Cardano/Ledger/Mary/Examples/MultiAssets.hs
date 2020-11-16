@@ -266,8 +266,8 @@ boundedTimePolicy =
 boundedTimePolicyId :: PolicyID MaryTest
 boundedTimePolicyId = PolicyID $ hashScript boundedTimePolicy
 
-tokenEx3 :: AssetID
-tokenEx3 = AssetID $ BS.pack "tokenEx3"
+tokenEx3 :: AssetName
+tokenEx3 = AssetName $ BS.pack "tokenEx3"
 
 ------------------------------------
 -- Mint Bounded Time Range Tokens --
@@ -376,8 +376,8 @@ alicePolicy = RequireSignature . asWitness . hashKey . vKey $ Cast.alicePay
 alicePolicyId :: PolicyID MaryTest
 alicePolicyId = PolicyID $ hashScript alicePolicy
 
-tokenEx5 :: AssetID
-tokenEx5 = AssetID $ BS.pack "alice"
+tokenEx5 :: AssetName
+tokenEx5 = AssetName $ BS.pack "alice"
 
 -----------------------
 -- Mint Alice Tokens --
