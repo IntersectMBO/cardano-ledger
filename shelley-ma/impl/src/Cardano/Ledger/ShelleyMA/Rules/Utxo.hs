@@ -219,10 +219,11 @@ utxoTransition = do
       outputsTooSmall =
         [ out
           | out@(TxOut _ c) <- outputs,
-            Val.pointwise
-              (<)
-              c
-              (Val.inject $ Val.scaledMinDeposit c minUTxOValue)
+            not $
+              Val.pointwise
+                (>=)
+                c
+                (Val.inject $ Val.scaledMinDeposit c minUTxOValue)
         ]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
