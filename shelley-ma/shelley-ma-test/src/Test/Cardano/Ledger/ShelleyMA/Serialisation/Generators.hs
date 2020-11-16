@@ -30,7 +30,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Allegra (AllegraEra)
 import qualified Cardano.Ledger.Core as Abstract
 import Cardano.Ledger.Mary (MaryEra)
-import qualified Cardano.Ledger.Mary.Value as Mary (AssetID (..), PolicyID (..), Value (..))
+import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.Shelley (ShelleyBased)
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA.STS
 import qualified Cardano.Ledger.ShelleyMA.Scripts as MA (Timelock (..))
@@ -126,8 +126,8 @@ instance Mock c => Arbitrary (Mary.PolicyID (MaryEra c)) where
 instance Mock c => Arbitrary (Mary.Value (MaryEra c)) where
   arbitrary = Mary.Value <$> arbitrary <*> arbitrary
 
-instance Arbitrary Mary.AssetID where
-  arbitrary = Mary.AssetID <$> arbitrary
+instance Arbitrary Mary.AssetName where
+  arbitrary = Mary.AssetName <$> arbitrary
 
 instance Mock c => Arbitrary (MA.STS.UtxoPredicateFailure (MaryEra c)) where
   arbitrary = genericArbitraryU

@@ -4,13 +4,13 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
--- surpresses orphan warnings on Arbitray (Value era),  Arbitrary AssetID,  Arbitrary (PolicyID C)
+-- surpresses orphan warnings on Arbitray (Value era),  Arbitrary AssetName,  Arbitrary (PolicyID C)
 
 module Test.Shelley.Spec.Ledger.ValProp (valTests, ass, pol) where
 
 import Cardano.Ledger.Era
 import Cardano.Ledger.Mary.Value
-  ( AssetID (..),
+  ( AssetName (..),
     PolicyID (..),
     Value (..),
     insert,
@@ -43,7 +43,7 @@ import Prelude hiding (lookup)
 
 -- Use cannonicalUnion and cannonicalInsert
 
-insert3 :: (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
+insert3 :: (Integer -> Integer -> Integer) -> PolicyID era -> AssetName -> Integer -> Value era -> Value era
 insert3 combine pid aid new (Value c m1) =
   case Map.lookup pid m1 of
     Nothing -> Value c (cannonicalInsert (cannonicalMapUnion combine) pid (cannonicalInsert combine aid new zeroC) m1)
@@ -52,12 +52,12 @@ insert3 combine pid aid new (Value c m1) =
       Just old -> Value c (cannonicalInsert (\_o n -> n) pid (cannonicalInsert (\_o n -> n) aid (combine old new) m2) m1)
 
 -- | Make a Value with no coin, and just one token.
-unit :: PolicyID era -> AssetID -> Integer -> Value era
+unit :: PolicyID era -> AssetName -> Integer -> Value era
 unit pid aid n = Value 0 (cannonicalInsert (\_old new -> new) pid (cannonicalInsert (\_old new -> new) aid n empty) empty)
 
 -- Use <+> and <->
 
-insert2 :: Era era => (Integer -> Integer -> Integer) -> PolicyID era -> AssetID -> Integer -> Value era -> Value era
+insert2 :: Era era => (Integer -> Integer -> Integer) -> PolicyID era -> AssetName -> Integer -> Value era -> Value era
 insert2 combine pid aid new m1 =
   case (lookup pid aid m1, new == 0) of -- The trick is to correctly not store a zero. Several ways to get a zero
     (0, True) -> m1 -- input is zero, and its not in the map
@@ -69,17 +69,17 @@ insert2 combine pid aid new m1 =
 
 -- 3 functions that build Values from Policy Asset triples.
 
-valueFromList :: [(PolicyID C, AssetID, Integer)] -> Integer -> Value C
+valueFromList :: [(PolicyID C, AssetName, Integer)] -> Integer -> Value C
 valueFromList list c = foldr acc (Value c empty) list
   where
     acc (policy, asset, count) m = insert (+) policy asset count m
 
-valueFromList3 :: [(PolicyID C, AssetID, Integer)] -> Integer -> Value C
+valueFromList3 :: [(PolicyID C, AssetName, Integer)] -> Integer -> Value C
 valueFromList3 list c = foldr acc (Value c empty) list
   where
     acc (policy, asset, count) m = insert3 (+) policy asset count m
 
-valueFromList2 :: [(PolicyID C, AssetID, Integer)] -> Integer -> Value C
+valueFromList2 :: [(PolicyID C, AssetName, Integer)] -> Integer -> Value C
 valueFromList2 list c = foldr acc (Value c empty) list
   where
     acc (policy, asset, count) m = insert2 (+) policy asset count m
@@ -101,14 +101,14 @@ insertTests =
 genB :: Gen ByteString
 genB = resize 4 arbitrary
 
-genID :: Gen AssetID
-genID = fmap AssetID genB
+genID :: Gen AssetName
+genID = fmap AssetName genB
 
--- we want a limited number of AssetID and (ScriptHash C)
-assetChoices :: [AssetID]
+-- we want a limited number of AssetName and (ScriptHash C)
+assetChoices :: [AssetName]
 assetChoices = unsafePerformIO (generate (vectorOf 8 genID))
 
-ass :: Int -> AssetID
+ass :: Int -> AssetName
 ass n = assetChoices !! n
 
 policyChoices :: [PolicyID C]
@@ -117,16 +117,16 @@ policyChoices = unsafePerformIO (generate (vectorOf 8 (PolicyID <$> arbitrary)))
 pol :: Int -> PolicyID C
 pol n = policyChoices !! n
 
-genAssetID :: Gen AssetID
-genAssetID = oneof (map return assetChoices)
+genAssetName :: Gen AssetName
+genAssetName = oneof (map return assetChoices)
 
 genPolicyID :: Gen (PolicyID C)
 genPolicyID = oneof (map return policyChoices)
 
-genTriple :: Gen (PolicyID C, AssetID, Integer)
-genTriple = (,,) <$> genPolicyID <*> genAssetID <*> choose (-2, 4)
+genTriple :: Gen (PolicyID C, AssetName, Integer)
+genTriple = (,,) <$> genPolicyID <*> genAssetName <*> choose (-2, 4)
 
-genMap :: Gen [(PolicyID C, AssetID, Integer)] -- Most maps have 1 or 2 Assets
+genMap :: Gen [(PolicyID C, AssetName, Integer)] -- Most maps have 1 or 2 Assets
 genMap =
   frequency
     [ (1, vectorOf 0 genTriple),
@@ -143,8 +143,8 @@ instance Arbitrary (Value C) where
   arbitrary = genValue
   shrink _ = []
 
-instance Arbitrary AssetID where
-  arbitrary = genAssetID
+instance Arbitrary AssetName where
+  arbitrary = genAssetName
 
 instance Arbitrary (PolicyID C) where
   arbitrary = genPolicyID
@@ -222,7 +222,7 @@ polyValueTests = testGroup "polyValueTests" (map f (proplist @(Value C)))
 -- Tests that hold only in the Value class.
 -- Testing that insert, lookup, and coin interact properly
 
-valuePropList :: [(Integer -> Integer -> Value C -> PolicyID C -> AssetID -> Bool, String)]
+valuePropList :: [(Integer -> Integer -> Value C -> PolicyID C -> AssetName -> Bool, String)]
 valuePropList =
   [ (\_ _ x _ _ -> coin (modifyCoin f x) == modifyCoin f (coin x), "coinModify"),
     (\_ _ _ p a -> insert (\old _new -> old) p a 0 zero == zero, "Nozeros"),
@@ -275,7 +275,7 @@ valuePropList =
 monoValueTests :: TestTree
 monoValueTests = testGroup "Value specific tests" (map (\(f, n) -> testProperty n f) valuePropList)
 
-valueGroup :: [(Integer -> Value C -> Value C -> PolicyID C -> AssetID -> Property, String)]
+valueGroup :: [(Integer -> Value C -> Value C -> PolicyID C -> AssetName -> Property, String)]
 valueGroup =
   [ (\_ x y p a -> lookup p a (x <+> y) === lookup p a x + lookup p a y, "lookup over <+>"),
     (\_ x y p a -> lookup p a (x <-> y) === lookup p a x - lookup p a y, "lookup over <->"),

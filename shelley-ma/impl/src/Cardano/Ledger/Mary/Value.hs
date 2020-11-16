@@ -10,7 +10,7 @@
 
 module Cardano.Ledger.Mary.Value
   ( PolicyID (..),
-    AssetID (..),
+    AssetName (..),
     Value (..),
     insert,
     lookup,
@@ -56,8 +56,8 @@ import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Prelude hiding (lookup)
 
--- | Asset ID
-newtype AssetID = AssetID {assetID :: ByteString}
+-- | Asset Name
+newtype AssetName = AssetName {assetName :: ByteString}
   deriving newtype
     ( Show,
       Eq,
@@ -73,7 +73,7 @@ newtype PolicyID era = PolicyID {policyID :: ScriptHash era}
   deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData)
 
 -- | The Value representing MultiAssets
-data Value era = Value !Integer !(Map (PolicyID era) (Map AssetID Integer))
+data Value era = Value !Integer !(Map (PolicyID era) (Map AssetName Integer))
   deriving (Show, Generic)
 
 instance Era era => Eq (Value era) where
@@ -120,14 +120,14 @@ instance Era era => Val (Value era) where
       -- add addrHashLen for each Policy ID
       accum u ans = foldr accumIns (ans + addrHashLen) u
         where
-          -- add assetIdLen and uint for each asset of that Policy ID
-          accumIns _ ans1 = ans1 + assetIdLen + uint
+          -- add assetNameLen and uint for each asset of that Policy ID
+          accumIns _ ans1 = ans1 + assetNameLen + uint
       -- TODO move these constants somewhere (they are also specified in CDDL)
       uint :: Integer
       uint = 5
 
-      assetIdLen :: Integer
-      assetIdLen = 32
+      assetNameLen :: Integer
+      assetNameLen = 32
 
       -- address hash length is always same as Policy ID length
       addrHashLen :: Integer
@@ -187,7 +187,7 @@ instance (Era era) => Torsor (Value era) where
 policies :: Value era -> Set (PolicyID era)
 policies (Value _ m) = Map.keysSet m
 
-lookup :: PolicyID era -> AssetID -> Value era -> Integer
+lookup :: PolicyID era -> AssetName -> Value era -> Integer
 lookup pid aid (Value _ m) =
   case Map.lookup pid m of
     Nothing -> 0
@@ -200,7 +200,7 @@ lookup pid aid (Value _ m) =
 insert ::
   (Integer -> Integer -> Integer) ->
   PolicyID era ->
-  AssetID ->
+  AssetName ->
   Integer ->
   Value era ->
   Value era
@@ -252,7 +252,7 @@ showValue v = show c ++ "\n" ++ unlines (map trans ts)
         ++ ",  "
         ++ show cnt
 
-gettriples :: Value era -> (Integer, [(PolicyID era, AssetID, Integer)])
+gettriples :: Value era -> (Integer, [(PolicyID era, AssetName, Integer)])
 gettriples (Value c m1) = (c, foldr accum1 [] (assocs m1))
   where
     accum1 (policy, m2) ans = foldr accum2 ans (assocs m2)
