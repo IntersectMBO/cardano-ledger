@@ -24,7 +24,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata, MetaDataHash)
 import Shelley.Spec.Ledger.PParams (Update (..))
 import Shelley.Spec.Ledger.TxBody (TxIn, TxOut, Wdrl)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
@@ -60,6 +60,7 @@ minimalPropertyTests ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
@@ -94,6 +95,7 @@ propertyTests ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,

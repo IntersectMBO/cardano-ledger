@@ -47,6 +47,7 @@ import Shelley.Spec.Ledger.BlockChain
     hashHeaderToNonce,
   )
 import Shelley.Spec.Ledger.LedgerState (stakeDistr)
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Test.QuickCheck (Gen)
@@ -78,6 +79,7 @@ instance
     ShelleyLedgerSTS era,
     ShelleyLedgersSTS era,
     ShelleyChainSTS era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>

@@ -102,10 +102,10 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     findPayScriptFromAddr,
     findStakeScriptFromCred,
   )
-import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, Split (..))
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata(hashMetadata))
 
 showBalance ::
   ( ShelleyTest era,
@@ -152,6 +152,7 @@ genTx ::
   forall era.
   ( HasCallStack,
     EraGen era,
+    ValidateMetadata era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
@@ -203,7 +204,7 @@ genTx
           (utxoSt, dpState)
       (certs, deposits, refunds, dpState', (certWits, certScripts)) <-
         genDCerts ge pparams dpState slot txIx reserves
-      (metadata, metadataHash) <- genMetaData constants
+      metadata <- genMetadata @era constants
       -------------------------------------------------------------------------
       -- Gather Key Witnesses and Scripts, prepare a constructor for Tx Wits
       -------------------------------------------------------------------------
@@ -249,7 +250,7 @@ genTx
           (Wdrl (Map.fromList wdrls))
           draftFee
           (maybeToStrictMaybe update)
-          metadataHash
+          (hashMetadata <$> metadata)
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
       -- We add now repeatedly add inputs until the process converges.
       converge remainderCoin wits scripts ksKeyPairs ksMSigScripts utxo pparams keySpace draftTx

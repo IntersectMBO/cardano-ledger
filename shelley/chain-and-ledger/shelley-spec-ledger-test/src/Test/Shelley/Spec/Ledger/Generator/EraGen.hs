@@ -58,11 +58,13 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genTxOut,
     genesisCoins,
   )
+import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 import Test.Shelley.Spec.Ledger.Generator.Presets (keyPairs, someKeyPairs)
 
 instance CC.Crypto c => EraGen (ShelleyEra c) where
   genEraUtxo0 = genUtxo0
   genEraTxBody = genTxBody
+  genMetadata = genMetaData
 
   eraScriptWitnesses = getKeyCombinations
 

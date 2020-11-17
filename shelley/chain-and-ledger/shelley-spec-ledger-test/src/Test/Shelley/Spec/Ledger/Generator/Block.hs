@@ -66,6 +66,7 @@ import Test.Shelley.Spec.Ledger.Utils
     slotFromEpoch,
     testGlobals,
   )
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 
 -- | Type alias for a transaction generator
 type TxGen era =
@@ -82,6 +83,7 @@ genBlock ::
     Mock (Crypto era),
     ApplyBlock era,
     GetLedgerView era,
+    ValidateMetadata era,
     ShelleyLedgerSTS era,
     ShelleyLedgersSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),

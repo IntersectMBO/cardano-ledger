@@ -402,7 +402,7 @@ txbWithMD =
       _txfee = Coin 94,
       _ttl = SlotNo 10,
       _txUpdate = SNothing,
-      _mdHash = SJust $ MD.hashMetaData md
+      _mdHash = SJust $ MD.hashMetadata md
     }
 
 txWithMD :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)

@@ -221,6 +221,8 @@ class
     StrictMaybe (MetaDataHash era) ->
     Gen (Core.TxBody era)
 
+  genMetadata :: Constants -> Gen (StrictMaybe (Core.Metadata era))
+
   eraScriptWitnesses :: Core.Script era -> [[KeyHash 'Witness (Crypto era)]]
 
   eraKeySpaceScripts :: Constants -> [(Core.Script era, Core.Script era)]
