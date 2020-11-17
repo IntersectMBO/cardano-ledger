@@ -35,7 +35,7 @@ import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, (∪), (⊆), (⋪))
+import Control.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (➖))
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -328,7 +328,7 @@ utxoInductive = do
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
   eval (txins txb ⊆ dom utxo)
-    ?! BadInputsUTxO (Set.filter (\x -> not (Map.member x (unUTxO utxo))) (txins txb))
+    ?! BadInputsUTxO (eval (txins txb ➖ dom utxo))
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =

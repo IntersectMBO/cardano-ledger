@@ -150,6 +150,9 @@ z3 = Map.fromList [(9, "3"), (10, "j"), (30, "a")]
 z4 :: Map Int String
 z4 = Map.fromList [(3, "c"), (5, "e"), (10, "j"), (21, "v"), (9, "3"), (30, "a")]
 
+ex8 :: Set.Set Int
+ex8 = (eval (z2 ➖ dom z1))
+
 -- ===================== test that compute works ======================
 
 -- Test that computing  x::(Exp t) computes to the given object with type t.
@@ -186,6 +189,7 @@ eval_tests =
       evalTest "Range exclude 3" (l4 ⋫ (Set.fromList ["m", "Z"]))
                                  (UnSafeList [(2, "a"), (5, "z"), (6, "b"), (7, "r"), (12, "w"), (34, "v"), (50, "q"), (51, "l")]),
       evalTest "DomExclude Union" ((z2 ⋪ z1) ∪ z3) z4,
+      evalTest "Set difference"  (z2 ➖ dom z1) (Sett(Set.fromList [2::Int,13])),
       eval_compile (((dom stkcred) ◁ deleg) ▷ (dom stpool)),
       eval_compile (l4 ⋫ (Set.fromList ["m", "Z"])),
       eval_compile (m0 ∪ (singleton 3 'b')),
@@ -574,6 +578,13 @@ many =
   ,( \ k v m1 m2 s1 s2 rs ls -> btest (KeyEqual (Dom (Base BiMapR (bimap m1))) (Dom (Base BiMapR (bimap m2)))), "slow103")
   ,( \ k v m1 m2 s1 s2 rs ls -> btest (KeyEqual (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow104")
   ,( \ k v m1 m2 s1 s2 rs ls -> btest (KeyEqual (Base MapR m1) (Base SetR (Sett s1))), "slow105")
+
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (SetDiff (Base SetR (Sett s1)) (Base SetR (Sett s2))), "slow108")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (SetDiff (Base SetR (Sett s1)) (Base MapR m2)), "slow109")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (SetDiff (Base SetR (Sett s1)) (Dom (Base MapR m2))), "slow110")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (SetDiff (Base MapR m1) (Dom (Base MapR m2))), "slow111")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (SetDiff (Base MapR m1) (Base MapR m2)), "slow112")
+  ,( \ k v m1 m2 s1 s2 rs ls -> qtest (SetDiff (Base MapR m1) (Base SetR (Sett s2))),"slow113")
 
   ]
 
