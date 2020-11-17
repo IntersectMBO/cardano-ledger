@@ -192,12 +192,12 @@ protocol_param_update =
   }
 
 transaction_witness_set =
-  { ?0 => [* vkeywitness ]
-  , ?1 => [* native_script ]
-  , ?2 => [* bootstrap_witness ]
+  { ? 0: [* vkeywitness ]
+  , ? 1: [* native_script ]
+  , ? 2: [* bootstrap_witness ]
   ; In the future, new kinds of witnesses can be added like this:
-  ; , ?4 => [* foo_script ]
-  ; , ?5 => [* plutus_script ]
+  ; , ? 4: [* foo_script ]
+  ; , ? 5: [* plutus_script ]
   }
 
 transaction_metadatum =
@@ -211,6 +211,10 @@ transaction_metadatum_label = uint
 
 transaction_metadata =
   { * transaction_metadatum_label => transaction_metadatum }
+  / [{ ? 0: { * transaction_metadatum_label => transaction_metadatum }
+     , ? 1: [ * native_script ]
+     ; other types of metadata...
+    }]
 
 vkeywitness = [ $vkey, $signature ]
 
@@ -239,13 +243,11 @@ timelock_expiry = (5, uint)
 
 coin = uint
 
-;policy id for ada is 0xADA0... padded with zeroes
-;asset name for ada is empty string
 multiasset<a> = { * policy_id => { * asset_name => a } }
 policy_id = scripthash
-asset_name = text .size (0..32)
+asset_name = bytes .size (0..32)
 
-value = coin / multiasset<uint>
+value = coin / [coin,multiasset<uint>]
 forge = multiasset<int>
 
 epoch = uint
