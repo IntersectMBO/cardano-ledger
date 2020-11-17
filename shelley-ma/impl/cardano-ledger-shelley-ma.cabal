@@ -35,6 +35,7 @@ library
 
   -- other-extensions:
   build-depends:
+    array,
     base >=4.9 && <4.15,
     bytestring,
     cardano-binary,

@@ -28,10 +28,8 @@ import Cardano.Ledger.ShelleyMA.Timelocks(Timelock(..), ValidityInterval(..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Allegra (AllegraEra)
-import qualified Cardano.Ledger.Core as Abstract
 import Cardano.Ledger.Mary (MaryEra)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
-import Cardano.Ledger.Shelley (ShelleyBased)
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA.STS
 import qualified Cardano.Ledger.ShelleyMA.Scripts as MA (Timelock (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
@@ -64,27 +62,6 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators() -- imports arbitray i
 mkDummyHash :: forall h a. HashAlgorithm h => Int -> Hash.Hash h a
 mkDummyHash = coerce . hashWithSerialiser @h toCBOR
 
-genTxBody ::
-  ( ShelleyBased era,
-    Arbitrary (Abstract.Value era),
-    Arbitrary (TxOut era),
-    Arbitrary (DCert era),
-    Arbitrary (Wdrl era),
-    Arbitrary (Update era)
-  ) =>
-  Gen (MA.TxBody era)
-genTxBody =
-  MA.TxBody
-    <$> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-
 maxTimelockDepth :: Int
 maxTimelockDepth = 3
 
@@ -114,7 +91,17 @@ sizedTimelock n =
 -------------------------------------------------------------------------------}
 
 instance Mock c => Arbitrary (MA.TxBody (MaryEra c)) where
-  arbitrary = genTxBody
+  arbitrary =
+    MA.TxBody
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> genMintValues
 
 instance Mock c => Arbitrary (Timelock (MaryEra c)) where
   arbitrary = sizedTimelock maxTimelockDepth
@@ -124,7 +111,11 @@ instance Mock c => Arbitrary (Mary.PolicyID (MaryEra c)) where
   arbitrary = Mary.PolicyID <$> arbitrary
 
 instance Mock c => Arbitrary (Mary.Value (MaryEra c)) where
-  arbitrary = Mary.Value <$> arbitrary <*> arbitrary
+  arbitrary = Mary.Value <$> (abs <$> arbitrary) <*> (pointwiseAbs <$> arbitrary)
+    where pointwiseAbs = fmap (fmap abs)
+
+genMintValues :: Mock c => Gen (Mary.Value (MaryEra c))
+genMintValues = Mary.Value <$> arbitrary <*> arbitrary
 
 instance Arbitrary Mary.AssetName where
   arbitrary = Mary.AssetName <$> arbitrary
@@ -137,7 +128,17 @@ instance Mock c => Arbitrary (MA.STS.UtxoPredicateFailure (MaryEra c)) where
 -------------------------------------------------------------------------------}
 
 instance Mock c => Arbitrary (MA.TxBody (AllegraEra c)) where
-  arbitrary = genTxBody
+  arbitrary =
+    MA.TxBody
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance Mock c => Arbitrary (Timelock (AllegraEra c)) where
   arbitrary = sizedTimelock maxTimelockDepth

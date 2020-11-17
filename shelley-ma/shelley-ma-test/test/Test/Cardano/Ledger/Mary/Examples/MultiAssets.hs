@@ -13,11 +13,11 @@ import Cardano.Ledger.Mary.Value
     PolicyID (..),
     Value (..),
   )
-import Cardano.Ledger.ShelleyMA.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
+import Control.Exception (ErrorCall (ErrorCall), evaluate, try)
 import Control.State.Transition.Extended (PredicateFailure)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map.Strict as Map
@@ -49,7 +49,7 @@ import Test.Cardano.Ledger.EraBuffet (MaryTest)
 import Test.Cardano.Ledger.Mary.Examples (testMaryNoDelegLEDGER)
 import qualified Test.Cardano.Ledger.Mary.Examples.Cast as Cast
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase)
+import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
 ------------------------------
 -- Set Up the Initial State --
@@ -131,9 +131,6 @@ policyFailure p =
           )
       ]
     ]
-
-valueFailure :: TxOut MaryTest -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
-valueFailure out = Left [[UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [out])]]
 
 ----------------------------------------------------
 -- Introduce a new Token Bundle, Purple Tokens
@@ -527,15 +524,12 @@ txbodyNegEx2 =
     unboundedInterval
     mintNegEx2
 
-txNegEx2 :: Tx MaryTest
-txNegEx2 =
-  Tx
-    txbodyNegEx2
-    mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated txbodyNegEx2) [asWitness Cast.alicePay],
-        scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
-      }
-    SNothing
+testNegEx2 :: Assertion
+testNegEx2 = do
+  r <- try (evaluate $ txbodyNegEx2 == txbodyNegEx2)
+  case r of
+    Left (ErrorCall e) -> e @?= "out of bounds : -1"
+    Right _ -> assertFailure $ "constructed negative TxOut Value"
 
 --
 -- Multi-Assets Test Group
@@ -622,11 +616,6 @@ multiAssetsExample =
               txNegEx1
               (ledgerEnv $ SlotNo 3)
               (Right expectedUTxONegEx1),
-          testCase "no negative outputs" $
-            testMaryNoDelegLEDGER
-              initialUTxONegEx1
-              txNegEx2
-              (ledgerEnv $ SlotNo 3)
-              (valueFailure $ TxOut Cast.aliceAddr aliceTokensNegEx2)
+          testCase "no negative outputs" testNegEx2
         ]
     ]
