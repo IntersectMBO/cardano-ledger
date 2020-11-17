@@ -57,8 +57,7 @@ import Cardano.Crypto.KES
     genKeyKES,
   )
 import Cardano.Crypto.KES.Class (ContextKES)
-import Cardano.Crypto.Libsodium.MLockedBytes (mlsbFromByteString)
-import Cardano.Crypto.Seed (Seed, getSeedBytes, mkSeedFromBytes)
+import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF
   ( CertifiedVRF,
     SignKeyVRF,
@@ -217,7 +216,7 @@ mkKESKeyPair ::
   (Word64, Word64, Word64, Word64, Word64) ->
   (SignKeyKES v, VerKeyKES v)
 mkKESKeyPair seed =
-  let sk = genKeyKES $ mlsbFromByteString $ getSeedBytes (mkSeedFromWords seed)
+  let sk = genKeyKES $ mkSeedFromWords seed
    in (sk, deriveVerKeyKES sk)
 
 mkAddr ::
