@@ -1327,7 +1327,12 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\Delta r_1 = \floor*{\min(1,\eta) \cdot (\fun{rho}~\var{prevPp}) \cdot
       \var{reserves}}
     \\
-    & ~~~~~~~\eta = \frac{blocksMade}{\var{slotsPerEpoch} \cdot \ActiveSlotCoeff} \\
+    & ~~~~~~~\eta =
+      \begin{cases}
+        1 & (\fun{d}~\var{prevPp})\geq 0.8 \\
+        \frac{blocksMade}{\floor{(\fun{d}~\var{prevPp})\cdot\var{slotsPerEpoch} \cdot \ActiveSlotCoeff}}
+          & \text{otherwise} \\
+      \end{cases} \\
     & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r_1 \\
     & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~\var{prevPp}) \cdot \var{rewardPot}} \\
     & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
