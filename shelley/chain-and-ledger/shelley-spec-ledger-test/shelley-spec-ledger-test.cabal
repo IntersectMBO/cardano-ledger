@@ -8,7 +8,7 @@ cabal-version:       >=1.8
 
 extra-source-files:
   cddl-files/shelley.cddl
-  cddl-files/mock/crypto.cddl
+  cddl-files/real/crypto.cddl
   cddl-files/mock/extras.cddl
 
 source-repository head
@@ -171,6 +171,7 @@ test-suite shelley-spec-ledger-test
       bytestring,
       cardano-binary,
       cardano-crypto-class,
+      cardano-crypto-praos,
       cardano-crypto-test,
       cardano-crypto-wrapper,
       cardano-crypto,
