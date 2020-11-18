@@ -16,7 +16,7 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts) where
 
 import Data.Proxy
 import qualified Cardano.Ledger.Core as Core
-import qualified Test.Shelley.Spec.Ledger.Generator.GenEra as GE
+import qualified Test.Shelley.Spec.Ledger.Generator.Scripts as GenScript
 import Cardano.Ledger.Era (Crypto, Era)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -112,7 +112,7 @@ certsTransition = do
 instance Era era => Embed (DELPL era) (CERTS era) where
   wrapFailed = CertsFailure
 
-instance (GE.ScriptClass era, Era era) => QC.HasTrace (CERTS era) (GenEnv era) where
+instance (GenScript.ScriptClass era) => QC.HasTrace (CERTS era) (GenEnv era) where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
   sigGen
@@ -139,7 +139,7 @@ instance (GE.ScriptClass era, Era era) => QC.HasTrace (CERTS era) (GenEnv era) w
 -- deposits and refunds required.
 genDCerts ::
   forall era.
-  (Era era, GE.ScriptClass era) =>
+  (GenScript.ScriptClass era) =>
   GenEnv era ->
   PParams era ->
   DPState era ->
@@ -193,7 +193,7 @@ genDCerts
       scriptWitnesses (ScriptCred (_, stakeScript)) =
         StakeCred <$> witnessHashes''
         where
-          witnessHashes = GE.scriptKeyCombination (Proxy :: Proxy era) stakeScript
+          witnessHashes = GenScript.scriptKeyCombination (Proxy :: Proxy era) stakeScript
           witnessHashes' = fmap coerceKeyRole witnessHashes
           witnessHashes'' = fmap coerceKeyRole (catMaybes (map lookupWit witnessHashes'))
       scriptWitnesses _ = []

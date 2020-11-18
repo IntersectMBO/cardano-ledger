@@ -13,6 +13,7 @@
 module Test.Shelley.Spec.Ledger.Generator.Presets
   ( coreNodeKeys,
     keySpace,
+    keyPairs,
     genEnv,
     genUtxo0,
     genesisDelegs0,
@@ -56,10 +57,17 @@ import Test.Shelley.Spec.Ledger.Utils
     slotsPerKESIteration,
   )
 import Data.Proxy
+import Test.Shelley.Spec.Ledger.Generator.Scripts
+  ( ScriptClass(..),
+    keyPairs,
+    combinedScripts,
+    someScripts,
+  )
+
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
-genEnv :: (EraGen era) => proxy era -> GenEnv era
+genEnv :: (ScriptClass era) => proxy era -> GenEnv era
 genEnv _ =
   GenEnv
     (keySpace defaultConstants)
@@ -67,7 +75,7 @@ genEnv _ =
 
 -- | Example keyspace for use in generators
 keySpace :: forall era.
-  (EraGen era) =>
+  (ScriptClass era) =>
   Constants ->
   KeySpace era
 keySpace c =
@@ -76,11 +84,7 @@ keySpace c =
     (genesisDelegates c)
     (stakePoolKeys c)
     (keyPairs c)
-    (mSigCombinedScripts (Proxy :: Proxy era) c)
-
--- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: CC.Crypto crypto => Constants -> KeyPairs crypto
-keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
+    (combinedScripts (Proxy :: Proxy era) c)
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
 someKeyPairs :: CC.Crypto crypto => Constants -> Int -> Int -> Gen (KeyPairs crypto)
@@ -88,21 +92,6 @@ someKeyPairs c lower upper =
   take
     <$> QC.choose (lower, upper)
     <*> QC.shuffle (keyPairs c)
-
-mSigBaseScripts :: forall era. EraGen era => Proxy era -> Constants -> ScriptPairs era
-mSigBaseScripts _proxy c = mkMSigScripts @era (keyPairs c)
-
-mSigCombinedScripts :: forall era. EraGen era => Proxy era -> Constants -> ScriptPairs era
-mSigCombinedScripts proxy c@(Constants {numBaseScripts}) =
-  mkMSigCombinations @era . take numBaseScripts $ mSigBaseScripts proxy c
-
--- | Select between _lower_ and _upper_ scripts from the possible combinations
--- of the first `numBaseScripts` multi-sig scripts of `mSigScripts`.
-someScripts :: EraGen era => Proxy era -> Constants -> Int -> Int -> Gen (ScriptPairs era)
-someScripts proxy c lower upper =
-  take
-    <$> QC.choose (lower, upper)
-    <*> QC.shuffle (mSigCombinedScripts proxy c)
 
 -- Pairs of (genesis key, node keys)
 --
@@ -121,7 +110,7 @@ coreNodeKeys c@Constants {numCoreNodes} =
   where
     toKeyPair (sk, vk) = KeyPair vk sk
 
-genUtxo0 :: forall era. (EraGen era,ShelleyTest era) => QC.Gen (Core.Value era) -> Constants -> Gen (UTxO era)
+genUtxo0 :: forall era. (ScriptClass era,ShelleyTest era) => QC.Gen (Core.Value era) -> Constants -> Gen (UTxO era)
 genUtxo0 gv c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts (Proxy :: Proxy era) c minGenesisUTxOouts maxGenesisUTxOouts

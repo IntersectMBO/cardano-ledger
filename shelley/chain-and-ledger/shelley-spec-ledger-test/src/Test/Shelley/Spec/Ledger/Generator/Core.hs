@@ -48,11 +48,8 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     mkKeyPair,
     mkKeyPairs,
     mkGenKey,
-    mkMSigScripts,
-    mkMSigCombinations,
     genesisAccountState,
     ScriptPairs,
-    EraGen,
   )
 where
 
@@ -68,8 +65,6 @@ import Control.Monad (liftM2, replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∪), (⋪))
 import Data.Coerce (coerce)
-import Data.List (foldl')
-import qualified Data.List as List ((\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -78,7 +73,6 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Tuple (swap)
 import Data.Word (Word64)
 import GHC.Records (HasField, getField)
 import Numeric.Natural (Natural)
@@ -204,13 +198,15 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
-import Test.Shelley.Spec.Ledger.Generator.GenEra
-  ( EraGen,
-    anyOf, allOf, mOf,
-    proxy,
-    ScriptClass(..),
+import Test.Shelley.Spec.Ledger.Generator.Scripts( ScriptClass(..) )
+import Test.Shelley.Spec.Ledger.Generator.Scripts
+  ( ScriptPairs,
+    mkPayScriptHashMap,
+    mkStakeScriptHashMap,
+    mkScriptsFromKeyPair,
+    mkKeyPairs,
   )
-import Data.Proxy(Proxy(..))
+
 -- ===========================================================================
 
 data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
@@ -228,7 +224,7 @@ data GenEnv era = GenEnv
   }
 
 -- ==================================
-type ScriptPairs era = [(Core.Script era, Core.Script era)]
+
 
 -- | Collection of all keys which are required to generate a trace.
 --
@@ -254,10 +250,10 @@ data KeySpace era = KeySpace_
     ksIndexedStakeScripts :: Map (ScriptHash era) (Core.Script era, Core.Script era)
   }
 
-deriving instance (Era era,Show (Core.Script era)) => Show (KeySpace era)
+deriving instance (CC.Crypto (Crypto era), Show (Core.Script era)) => Show (KeySpace era)
 
 pattern KeySpace ::
-  ( EraGen era,
+  ( ScriptClass era,
     Eq (Core.TxBody era),
     Show (Core.TxBody era),
     HashIndex (Core.TxBody era) ~ EraIndependentTxBody
@@ -317,16 +313,6 @@ genWord64 lower upper =
   fromIntegral
     <$> genNatural (fromIntegral lower) (fromIntegral upper)
 
-mkKeyPairs ::
-  (DSIGNAlgorithm (DSIGN crypto)) =>
-  Word64 ->
-  (KeyPair kr crypto, KeyPair kr' crypto)
-mkKeyPairs n =
-  (mkKeyPair_ (2 * n), mkKeyPair_ (2 * n + 1))
-  where
-    mkKeyPair_ n_ =
-      (uncurry KeyPair . swap)
-        (mkKeyPair (n_, n_, n_, n_, n_))
 
 -- | Generate a mapping from genesis delegate cold key hash to the issuer keys.
 -- Note: we index all possible genesis delegate keys, that is,
@@ -360,74 +346,6 @@ mkPayKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
     f (payK, _stakeK) = ((hashKey . vKey) payK, payK)
-
-
--- | Generate a mapping from pay script hash to multisig pair.
-mkPayScriptHashMap ::
-  (EraGen era) =>
-  [(Core.Script era, Core.Script era)] ->
-  Map (ScriptHash era) (Core.Script era, Core.Script era)
-mkPayScriptHashMap scripts =
-  Map.fromList (f <$> scripts)
-  where
-    f script@(pay, _stake) = (hashScript pay, script)
-
--- | Generate a mapping from stake script hash to multisig pair.
-mkStakeScriptHashMap ::
-  (EraGen era) =>
-  [(Core.Script era, Core.Script era)] ->
-  Map (ScriptHash era) (Core.Script era, Core.Script era)
-mkStakeScriptHashMap scripts =
-  Map.fromList (f <$> scripts)
-  where
-    f script@(_pay, stake) = (hashScript stake, script)
-
--- | Multi-Sig Scripts based on the given key pairs
-mkMSigScripts :: forall era. (EraGen era) => KeyPairs (Crypto era) -> ScriptPairs era
-mkMSigScripts = map (mkScriptsFromKeyPair @era)
-
--- | Combine a list of multisig pairs into hierarchically structured multi-sig
--- scripts, list must have at least length 3. Be careful not to call with too
--- many pairs in order not to create too many of the possible combinations.
-mkMSigCombinations :: forall era. (EraGen era) => ScriptPairs era -> ScriptPairs era
-mkMSigCombinations msigs =
-  if length msigs < 3
-    then error "length of input msigs must be at least 3"
-    else (foldl' (++) [] $
-      do
-        (k1, k2) <- msigs
-        (k3, k4) <- msigs List.\\ [(k1, k2)]
-        (k5, k6) <- msigs List.\\ [(k1, k2), (k3, k4)]
-
-        pure
-          [ (pay, stake)
-            | pay <-
-                [ anyOf (proxy @era) [k1, k3, k5],
-                  allOf (proxy @era) [k1, k3, k5],
-                  mOf (proxy @era) 1 [k1, k3, k5],
-                  mOf (proxy @era) 2 [k1, k3, k5],
-                  mOf (proxy @era) 3 [k1, k3, k5]
-                ],
-              stake <-
-                [ anyOf (proxy @era) [k2, k4, k6],
-                  allOf (proxy @era) [k2, k4, k6],
-                  mOf (proxy @era) 1 [k2, k4, k6],
-                  mOf (proxy @era) 2 [k2, k4, k6],
-                  mOf (proxy @era) 3 [k2, k4, k6]
-                ]
-          ]) :: ScriptPairs era
-
-
-mkScriptsFromKeyPair :: forall era.
-  (EraGen era) =>
-  (KeyPair 'Payment (Crypto era), KeyPair 'Staking (Crypto era)) ->
-  (Core.Script era, Core.Script era)
-mkScriptsFromKeyPair (k0, k1) =
-  (mkScriptFromKey @era $ asWitness k0, mkScriptFromKey @era $ asWitness k1)
-
-mkScriptFromKey :: forall era. (EraGen era) => KeyPair 'Witness (Crypto era) -> Core.Script era
-mkScriptFromKey = (basescript (Proxy :: Proxy era) . hashKey . vKey)
-
 
 
 -- | Find first matching key pair for a credential. Returns the matching key pair
