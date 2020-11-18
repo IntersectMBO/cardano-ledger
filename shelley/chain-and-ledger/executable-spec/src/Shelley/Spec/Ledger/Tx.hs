@@ -46,8 +46,8 @@ module Shelley.Spec.Ledger.Tx
     ValidateScript (..),
     txwitsScript,
     extractKeyHashWitnessSet,
-    getKeyCombinations,
-    getKeyCombination,
+    -- getKeyCombinations, GONE
+    -- getKeyCombination, GONE
     addrWits',
     evalNativeMultiSigScript,
     hashMultiSigScript,

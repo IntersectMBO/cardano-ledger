@@ -37,7 +37,7 @@ import Shelley.Spec.Ledger.LedgerState (KeyPairs)
 import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.Scripts
   ( MultiSig,
-    getKeyCombinations,
+    -- getKeyCombinations,
     pattern RequireAllOf,
     pattern RequireAnyOf,
     pattern RequireMOf,
@@ -64,9 +64,9 @@ instance CC.Crypto c => EraGen (ShelleyEra c) where
   genEraUtxo0 = genUtxo0
   genEraTxBody = genTxBody
 
-  eraScriptWitnesses = getKeyCombinations
+  -- eraScriptWitnesses = getKeyCombinations
 
-  eraKeySpaceScripts = mSigCombinedScripts
+  -- eraKeySpaceScripts = mSigCombinedScripts
 
   updateEraTxBody body fee ins outs =
     body

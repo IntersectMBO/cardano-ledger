@@ -22,8 +22,8 @@ module Shelley.Spec.Ledger.Scripts
       ),
     getMultiSigBytes,
     ScriptHash (..),
-    getKeyCombination,
-    getKeyCombinations,
+    -- getKeyCombination,  GONE
+    -- getKeyCombinations, GONE
     hashMultiSigScript,
   )
 where
@@ -44,7 +44,7 @@ import Data.Aeson
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
 import Data.Coders (Encode (..), (!>))
-import qualified Data.List as List (concat, concatMap, permutations)
+-- import qualified Data.List as List (concat, concatMap, permutations) GONE
 import Data.MemoBytes
   ( Mem,
     MemoBytes (..),
@@ -162,6 +162,7 @@ hashMultiSigScript =
     . Hash.castHash
     . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
+{-  GONE
 -- | Get one possible combination of keys for multi signature script
 getKeyCombination :: Era era => MultiSig era -> [KeyHash 'Witness (Crypto era)]
 getKeyCombination (RequireSignature hk) = [hk]
@@ -186,6 +187,7 @@ getKeyCombinations (RequireAnyOf msigs) = List.concatMap getKeyCombinations msig
 getKeyCombinations (RequireMOf m msigs) =
   let perms = map (take m) $ List.permutations msigs
    in map (concat . List.concatMap getKeyCombinations) perms
+-}
 
 -- CBOR
 

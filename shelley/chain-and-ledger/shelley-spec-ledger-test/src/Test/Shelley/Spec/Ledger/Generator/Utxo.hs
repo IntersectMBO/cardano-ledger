@@ -106,6 +106,10 @@ import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, Split (..))
+import Test.Shelley.Spec.Ledger.Generator.Scripts(scriptKeyCombination)
+import Data.Proxy(Proxy(..))
+
+-- ======================================================
 
 showBalance ::
   ( ShelleyTest era,
@@ -530,12 +534,13 @@ mkTxWits
           . map (\(a, b) -> (asWitness a, asWitness b))
           . Map.toAscList
           $ indexedStakingKeys
-      keysLists = map eraScriptWitness (Map.elems msigs)
-
-      eraScriptWitness s =
+      keysLists = map (scriptKeyCombination (Proxy @era)) (Map.elems msigs)
+{-
+      eraScriptWitness s =   GONE
         case (eraScriptWitnesses @era s) of
           [] -> error "mkTxWits - empty eraScriptWitnesses"
           (k : _) -> k
+-}
       msigSignatures = foldl' Set.union Set.empty $ map Set.fromList keysLists
 
 -- | Distribute the sum of `balance_` and `fee` over the addresses, return the

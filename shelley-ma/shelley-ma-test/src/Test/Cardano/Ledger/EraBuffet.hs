@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{-# OPTIONS_GHC  -fno-warn-orphans #-}
 
 -- | This module exports pieces one may use to make a new Era.
 --   The pieces come in 3 flavors:
@@ -57,7 +58,7 @@ module Test.Cardano.Ledger.EraBuffet
 
 
 import Shelley.Spec.Ledger.API (PraosCrypto)
-import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..),serializeEncoding')
 import Cardano.Crypto.Hash (Blake2b_224, Blake2b_256)
 import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Core (Script, TxBody, Value)
@@ -75,9 +76,15 @@ import qualified Shelley.Spec.Ledger.TxBody as ShelleyBody
 import qualified Shelley.Spec.Ledger.Scripts as ShelleyScript
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MABody
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MAScript
+import Shelley.Spec.Ledger.Keys(KeyHash,KeyRole(..))
 import Cardano.Ledger.Mary(MaryEra)
 import Cardano.Ledger.Allegra(AllegraEra)
 import Cardano.Ledger.Shelley(ShelleyEra)
+
+import Data.Hashable
+import Test.Shelley.Spec.Ledger.Generator.Scripts(ScriptClass(..),Quantifier(..))
+import Data.Sequence.Strict (fromList)
+import Cardano.Slotting.Slot (SlotNo (..))
 
 -- ===========================================================
 -- First construct concrete versions of Crypto where the Hashing
@@ -115,8 +122,6 @@ type MaryTest        = MaryEra TestCrypto
 type MaryStandard    = MaryEra StandardCrypto
 type AllegraTest     = AllegraEra TestCrypto
 type AllegraStandard = AllegraEra StandardCrypto
-
-
 
 -- ==================================================================
 -- These are the concrete types used to instantiate the type families
@@ -163,11 +168,61 @@ instance FromCBOR (Annotator TestTxBody) where fromCBOR = pure <$> fromCBOR
 -- how one may choose pieces from the buffet to make an Era.
 {-
 data TestEra
-
 instance Era TestEra where
   type Crypto TestEra = TestCrypto
-
 type instance Value TestEra = Coin
 type instance TxBody TestEra = MaryTxBody TestEra
 type instance Script TestEra = TestScript
 -}
+
+-- ==========================================================================================
+-- I am not sure that this stuff belongs here. But it does have one thing in common with the
+-- other stuff here. Both groups have to be able to see all the source code of every Era. and
+-- that the tests of every Era (if they are Era generic) have to be able to see this code.
+
+-- =====================================
+-- EraGen instaces for the MaryEra
+-- =====================================
+
+instance (CryptoClass.Crypto c) => ScriptClass (MaryEra c) where
+  isKey _ (MAScript.RequireSignature hk) = Just hk
+  isKey _ _ = Nothing
+  basescript _proxy = someLeaf
+  quantify _ = quantifyTL
+  unQuantify _ = unQuantifyTL
+
+-- =====================================
+-- EraGen instaces for the AllegraEra
+-- =====================================
+
+instance ( CryptoClass.Crypto c) => ScriptClass (AllegraEra c) where
+  isKey _ (MAScript.RequireSignature hk) = Just hk
+  isKey _ _ = Nothing
+  basescript _proxy = someLeaf
+  quantify _ = quantifyTL
+  unQuantify _ = unQuantifyTL
+
+-- ========================================================
+-- Reusable pieces for both Mary and Allegra
+
+quantifyTL:: Era era => MAScript.Timelock era -> Quantifier (MAScript.Timelock era)
+quantifyTL (MAScript.RequireAllOf xs) = AllOf (foldr (:) [] xs)
+quantifyTL (MAScript.RequireAnyOf xs) = AnyOf (foldr (:) [] xs)
+quantifyTL (MAScript.RequireMOf n xs) = MOf n (foldr (:) [] xs)
+quantifyTL t = Leaf t
+
+unQuantifyTL:: Era era => Quantifier (MAScript.Timelock era) -> MAScript.Timelock era
+unQuantifyTL (AllOf xs) = (MAScript.RequireAllOf (fromList xs))
+unQuantifyTL (AnyOf xs) = (MAScript.RequireAnyOf (fromList xs))
+unQuantifyTL (MOf n xs) = (MAScript.RequireMOf n (fromList xs))
+unQuantifyTL (Leaf t) = t
+
+-- | Generate some Leaf Timelock (i.e. a Signature or TimeStart or TimeExpire)
+someLeaf :: Era era => KeyHash 'Witness (Crypto era) -> MAScript.Timelock era
+someLeaf x =
+    let n = mod (hash(serializeEncoding' (toCBOR x))) 200
+    in if n <= 50
+          then MAScript.RequireTimeStart (SlotNo (fromIntegral n))
+          else if n > 150
+                  then MAScript.RequireTimeExpire (SlotNo (fromIntegral n))
+                  else MAScript.RequireSignature x

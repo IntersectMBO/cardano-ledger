@@ -69,6 +69,8 @@ import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (..), KeySpace (..))
 import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..), genDCert)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
+import Test.Shelley.Spec.Ledger.Generator.Scripts(scriptKeyCombination)
+import Data.Proxy(Proxy(..))
 
 -- | This is a non-spec STS used to generate a sequence of certificates with
 -- witnesses.
@@ -191,15 +193,17 @@ genDCerts
       scriptWitnesses (ScriptCred (_, stakeScript)) =
         StakeCred <$> witnessHashes''
         where
-          witnessHashes = eraScriptWitness stakeScript
+          -- witnessHashes = eraScriptWitness stakeScript
+          witnessHashes = scriptKeyCombination (Proxy @era) stakeScript
           witnessHashes' = fmap coerceKeyRole witnessHashes
           witnessHashes'' = fmap coerceKeyRole (catMaybes (map lookupWit witnessHashes'))
       scriptWitnesses _ = []
-
+{-
       eraScriptWitness s =
         case (eraScriptWitnesses @era s) of
           [] -> error "genDCerts - empty eraScriptWitnesses"
           (k : _) -> k
+-}
 
       lookupWit = flip Map.lookup ksIndexedStakingKeys
 
