@@ -71,6 +71,7 @@ import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern 
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.Generator.Block (tickChainState)
 import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (geConstants))
+import Test.Shelley.Spec.Ledger.Generator.Scripts(scriptKeyCombinations)
 import Test.Shelley.Spec.Ledger.Generator.EraGen ()
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
@@ -508,7 +509,8 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
             all (existsReqKeyComb khs) (scriptWits . _witnessSet $ tx)
 
     existsReqKeyComb keyHashes msig =
-      any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (eraScriptWitnesses @era msig)
+      -- any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (eraScriptWitnesses @era msig)  GONE
+      any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
 
     keyHashSet tx_ =
       Set.map witKeyHash (addrWits . _witnessSet $ tx_)

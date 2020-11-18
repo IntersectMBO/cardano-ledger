@@ -51,6 +51,7 @@ library
     containers,
     deepseq,
     groups,
+    hashable,
     nothunks,
     partial-order,
     shelley-spec-ledger,

@@ -198,12 +198,16 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
+import Test.Shelley.Spec.Ledger.Generator.Scripts(ScriptClass, mkPayScriptHashMap,mkStakeScriptHashMap)
+
+-- ===================================
 
 class
   ( ShelleyBased era,
     ValidateScript era,
     Split (Core.Value era),
-    Show (Core.Script era)
+    Show (Core.Script era),
+    ScriptClass era
   ) =>
   EraGen era
   where
@@ -220,9 +224,9 @@ class
     StrictMaybe (MetaDataHash era) ->
     Gen (Core.TxBody era)
 
-  eraScriptWitnesses :: Core.Script era -> [[KeyHash 'Witness (Crypto era)]]
+  -- eraScriptWitnesses :: Core.Script era -> [[KeyHash 'Witness (Crypto era)]] GONE
 
-  eraKeySpaceScripts :: Constants -> [(Core.Script era, Core.Script era)]
+  -- eraKeySpaceScripts :: Constants -> [(Core.Script era, Core.Script era)]   GONE
 
   updateEraTxBody ::
     Core.TxBody era ->
@@ -272,7 +276,7 @@ data KeySpace era = KeySpace_
 deriving instance (Era era, Show (Core.Script era)) => Show (KeySpace era)
 
 pattern KeySpace ::
-  EraGen era =>
+  ScriptClass era =>
   [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->
   [AllIssuerKeys (Crypto era) 'GenesisDelegate] ->
   [AllIssuerKeys (Crypto era) 'StakePool] ->
@@ -359,6 +363,7 @@ mkStakeKeyHashMap keyPairs =
   where
     f (_payK, stakeK) = ((hashKey . vKey) stakeK, stakeK)
 
+
 -- | Generate a mapping from payment key hash to keypair
 -- from a list of (payment, staking) key pairs.
 mkPayKeyHashMap ::
@@ -370,6 +375,7 @@ mkPayKeyHashMap keyPairs =
   where
     f (payK, _stakeK) = ((hashKey . vKey) payK, payK)
 
+{-
 -- | Generate a mapping from pay script hash to multisig pair.
 mkPayScriptHashMap ::
   EraGen era =>
@@ -389,6 +395,7 @@ mkStakeScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
     f script@(_pay, stake) = (hashScript stake, script)
+-}
 
 -- | Find first matching key pair for a credential. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
