@@ -16,10 +16,10 @@ module Test.Shelley.Spec.Ledger.Examples.PoolReReg
 where
 
 import qualified Cardano.Ledger.Crypto as Cr
-import Cardano.Ledger.Shelley (ShelleyEra)
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<+>), (<->))
+import qualified Cardano.Ledger.Val as Val
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -33,6 +33,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys (asWitness)
 import Shelley.Spec.Ledger.LedgerState (emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
@@ -52,7 +53,6 @@ import Shelley.Spec.Ledger.TxBody
     TxOut (..),
     Wdrl (..),
   )
-import Shelley.Spec.Ledger.Hashing(HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
@@ -69,11 +69,11 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
     genesisCoins,
-    genesisId,
     mkBlockFakeVRF,
     mkOCert,
     zero,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils (getBlockNonce, testGlobals)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -82,7 +82,7 @@ aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: Cr.Crypto c => UTxO (ShelleyEra c)
-initUTxO = genesisCoins [TxOut Cast.aliceAddr (Val.inject aliceInitCoin)]
+initUTxO = genesisCoins genesisId [TxOut Cast.aliceAddr (Val.inject aliceInitCoin)]
 
 initStPoolReReg :: Cr.Crypto c => ChainState (ShelleyEra c)
 initStPoolReReg = initSt initUTxO

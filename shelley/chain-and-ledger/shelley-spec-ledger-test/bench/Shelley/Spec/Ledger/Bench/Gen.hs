@@ -15,7 +15,6 @@ import Cardano.Ledger.Era (Crypto)
 import Control.State.Transition.Extended
 import Data.Either (fromRight)
 import Data.Proxy
-import Data.Sequence (Seq)
 import Shelley.Spec.Ledger.API
   ( ApplyBlock,
     Block,
@@ -23,17 +22,12 @@ import Shelley.Spec.Ledger.API
     GetLedgerView,
     Tx,
   )
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState
-  ( DPState (..),
-    EpochState (..),
+  ( EpochState (..),
     LedgerState (..),
     NewEpochState (..),
-    UTxOState (..),
   )
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv)
-import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
-import Test.QuickCheck (generate, Gen)
+import Test.QuickCheck (Gen, generate)
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions (ledgerEnv)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import qualified Test.Shelley.Spec.Ledger.Generator.Block as GenBlock
@@ -44,24 +38,23 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
         minGenesisUTxOouts
       ),
   )
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv, geConstants)
+import Test.Shelley.Spec.Ledger.Generator.Core (EraGen, GenEnv, geConstants)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
+import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyLedgersSTS, ShelleyTest)
 
 -- =============================================================================
 
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
-  ( ShelleyTest era
-  ) =>
+  EraGen era =>
   Gen (Core.Value era) ->
   Int ->
   GenEnv era ->
   IO (ChainState era)
-genChainState gv n ge =
+genChainState _gv n ge =
   let cs =
         (geConstants ge)
           { minGenesisUTxOouts = n,
@@ -73,22 +66,16 @@ genChainState gv n ge =
           }
    in fromRight (error "genChainState failed")
         <$> ( generate $
-                mkGenesisChainState gv cs (IRC ())
+                mkGenesisChainState cs (IRC ())
             )
 
 -- | Benchmark generating a block given a chain state.
 genBlock ::
-  ( Mock (Crypto era),
+  ( EraGen era,
+    Mock (Crypto era),
     ShelleyTest era,
-    STS (LEDGERS era),
-    BaseM (LEDGERS era) ~ ShelleyBase,
-    Environment (LEDGERS era) ~ LedgersEnv era,
-    State (LEDGERS era) ~ LedgerState era,
-    Signal (LEDGERS era) ~ Seq (Tx era),
-    STS (LEDGER era),
-    Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era,
+    ShelleyLedgerSTS era,
+    ShelleyLedgersSTS era,
     GetLedgerView era,
     ApplyBlock era
   ) =>
@@ -106,7 +93,8 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 -- 5) get a Transaction (Tx) from GenEnv and ChainState
 
 genTriple ::
-  ( Mock (Crypto era),
+  ( EraGen era,
+    Mock (Crypto era),
     ShelleyTest era
   ) =>
   Gen (Core.Value era) ->

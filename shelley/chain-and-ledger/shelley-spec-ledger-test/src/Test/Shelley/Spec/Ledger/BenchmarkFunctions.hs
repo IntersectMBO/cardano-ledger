@@ -30,6 +30,7 @@ where
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val (Val (inject))
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import qualified Data.Map as Map
@@ -38,8 +39,8 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.API (PraosCrypto)
+import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -47,6 +48,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash,
@@ -80,24 +82,23 @@ import Shelley.Spec.Ledger.TxBody
     TxOut (..),
     Wdrl (..),
     _poolCost,
+    _poolId,
     _poolMD,
     _poolMargin,
     _poolOwners,
     _poolPledge,
-    _poolId,
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
   )
-import Shelley.Spec.Ledger.Hashing(HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
   ( C_Crypto,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
-    genesisId,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
   ( mkAddr,
     mkKeyPair,
@@ -106,7 +107,6 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
-import Cardano.Ledger.Shelley (ShelleyEra)
 
 -- ===============================================
 -- A special Era to run the Benchmarks in
@@ -148,7 +148,7 @@ injcoins n = fmap (\_ -> TxOut aliceAddr (inject $ Coin 100)) [0 .. n]
 initUTxO :: Integer -> UTxOState B
 initUTxO n =
   UTxOState
-    (genesisCoins (injcoins n))
+    (genesisCoins genesisId (injcoins n))
     (Coin 0)
     (Coin 0)
     emptyPPUPState

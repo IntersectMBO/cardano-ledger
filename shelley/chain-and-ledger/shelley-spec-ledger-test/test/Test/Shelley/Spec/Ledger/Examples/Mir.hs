@@ -17,6 +17,7 @@ where
 
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Data.Map.Strict (Map)
@@ -29,6 +30,7 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential, Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -40,7 +42,6 @@ import Shelley.Spec.Ledger.LedgerState
     NewEpochState (..),
     emptyRewardUpdate,
   )
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Bbody (BbodyPredicateFailure (..))
@@ -61,7 +62,6 @@ import Shelley.Spec.Ledger.TxBody
     TxOut (..),
     Wdrl (..),
   )
-import Shelley.Spec.Ledger.Hashing(HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
@@ -81,11 +81,11 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
     genesisCoins,
-    genesisId,
     mkBlockFakeVRF,
     mkOCert,
     zero,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -93,12 +93,13 @@ import Test.Tasty.HUnit (testCase)
 initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
   genesisCoins
+    genesisId
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
-    where
-      aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
-      bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
+  where
+    aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+    bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initStMIR :: forall era. (ShelleyTest era) => Coin -> ChainState era
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
@@ -140,10 +141,9 @@ txbodyEx1 pot =
     (SlotNo 10)
     SNothing
     SNothing
-    where
-      aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
-      aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> _keyDeposit ppEx)
-
+  where
+    aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+    aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> _keyDeposit ppEx)
 
 mirWits :: (CryptoClass.Crypto c) => [Int] -> [KeyPair 'Witness c]
 mirWits nodes = asWitness <$> map (\x -> cold . coreNodeIssuerKeys $ x) nodes
@@ -184,7 +184,7 @@ blockEx1' wits pot =
     [txEx1 wits pot]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @ (Crypto (ShelleyEra c)))
+    (nonce0 @(Crypto (ShelleyEra c)))
     (NatNonce 1)
     zero
     0

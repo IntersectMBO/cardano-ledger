@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -19,9 +20,10 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
 where
 
 import Cardano.Binary (serialize')
+import qualified Cardano.Ledger.Core as Core (TxBody)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley (ShelleyBased, TxBodyConstraints)
 import Cardano.Slotting.Slot (EpochSize (..))
-import qualified Control.State.Transition.Extended
 import Control.State.Transition.Trace
   ( Trace,
     TraceOrder (OldestFirst),
@@ -37,10 +39,11 @@ import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
+import GHC.Records (HasField (..), getField)
 import Shelley.Spec.Ledger.API
   ( Addr (..),
     CHAIN,
-    ChainState,
     Credential (..),
     DCert (..),
     DelegCert (..),
@@ -66,21 +69,21 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     isTreasuryMIRCert,
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( DPState,
-    UTxOState (..),
-    txsizeBound,
+  ( txsizeBound,
   )
+import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.PParams
-  ( pattern ProposedPPUpdates,
+  ( Update (..),
+    pattern ProposedPPUpdates,
     pattern Update,
-    Update (..)
   )
+import Shelley.Spec.Ledger.PParams as PParams (Update)
 import Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
-  ( Wdrl (..),
+  ( TxIn,
+    Wdrl (..),
   )
-import GHC.Records (getField)
 import Test.QuickCheck
   ( Property,
     checkCoverage,
@@ -90,68 +93,45 @@ import Test.QuickCheck
     property,
     withMaxSuccess,
   )
-import qualified Test.QuickCheck.Gen as QC
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
+import Test.Shelley.Spec.Ledger.Generator.Core (EraGen, GenEnv (..))
+import Test.Shelley.Spec.Ledger.Generator.EraGen ()
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
-import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Crypto (Crypto)
-import qualified Cardano.Ledger.Core as Core
-import Test.QuickCheck.Gen (Gen (..))
 
-genesisChainState ::
-  forall era a.
-  ShelleyTest era =>
-  Gen (Core.Value era) ->
-  Maybe
-    ( Control.State.Transition.Extended.IRC (CHAIN era) ->
-      QC.Gen
-        ( Either
-            a
-            (ChainState era)
-        )
-    )
-genesisChainState gv = Just $ mkGenesisChainState gv (geConstants (genEnv p))
-  where
-    p :: Proxy era
-    p = Proxy
-
-genesisLedgerState ::
-  forall c a.
-  Crypto c =>
-  Gen (Core.Value (ShelleyEra c)) ->
-  Maybe
-    ( Control.State.Transition.Extended.IRC (LEDGER (ShelleyEra c)) ->
-      QC.Gen
-        ( Either
-            a
-            ( UTxOState (ShelleyEra c),
-              DPState (ShelleyEra c)
-            )
-        )
-    )
-genesisLedgerState gv = Just $ mkGenesisLedgerState gv (geConstants (genEnv p))
-  where
-    p :: Proxy (ShelleyEra c)
-    p = Proxy
-
-relevantCasesAreCovered :: Gen (Core.Value C) -> Property
-relevantCasesAreCovered gv = do
+relevantCasesAreCovered ::
+  forall era.
+  ( EraGen era,
+    ChainProperty era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era))
+  ) =>
+  Property
+relevantCasesAreCovered = do
   let tl = 100
   checkCoverage $
     forAllBlind
-      (traceFromInitState @(CHAIN C) testGlobals tl (genEnv p) (genesisChainState gv))
+      (traceFromInitState @(CHAIN era) testGlobals tl (genEnv p) genesisChainSt)
       relevantCasesAreCoveredForTrace
   where
-    p :: Proxy C
+    p :: Proxy era
     p = Proxy
+    genesisChainSt = Just $ mkGenesisChainState (geConstants (genEnv p))
 
 relevantCasesAreCoveredForTrace ::
   forall era.
-  (ShelleyTest era) =>
+  ( ChainProperty era,
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era))
+  ) =>
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
@@ -257,15 +237,24 @@ scriptCredentialCertsRatio certs =
           certs
 
 -- | Extract the certificates from the transactions
-certsByTx :: ShelleyTest era => [Tx era] -> [[DCert era]]
-certsByTx txs =  (toList . (getField @"certs") .  _body) <$> txs
+certsByTx ::
+  forall era.
+  ( TxBodyConstraints era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+  ) =>
+  [Tx era] ->
+  [[DCert era]]
+certsByTx txs = toList . (getField @"certs") . _body <$> txs
 
 ratioInt :: Int -> Int -> Double
 ratioInt x y =
   fromIntegral x / fromIntegral y
 
 -- | Transaction has script locked TxOuts
-txScriptOutputsRatio :: ShelleyTest era => [StrictSeq (TxOut era)] -> Double
+txScriptOutputsRatio ::
+  (TxBodyConstraints era, ShelleyBased era) =>
+  [StrictSeq (TxOut era)] ->
+  Double
 txScriptOutputsRatio txoutsList =
   ratioInt
     (sum (map countScriptOuts txoutsList))
@@ -280,49 +269,94 @@ txScriptOutputsRatio txoutsList =
           )
           txouts
 
-hasWithdrawal :: ShelleyTest era => Tx era -> Bool
-hasWithdrawal tx = (not . null . unWdrl) $ getField @"wdrls" (_body tx)
+hasWithdrawal ::
+  ( TxBodyConstraints era,
+    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+  ) =>
+  Tx era ->
+  Bool
+hasWithdrawal = not . null . unWdrl . (getField @"wdrls") . _body
 
-hasPParamUpdate :: ShelleyTest era => Tx era -> Bool
+hasPParamUpdate ::
+  ( ChainProperty era,
+    HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))
+  ) =>
+  Tx era ->
+  Bool
 hasPParamUpdate tx =
-  ppUpdates (getField @"update" $ _body tx)
+  ppUpdates . (getField @"update") . _body $ tx
   where
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
-hasMetaData :: ShelleyTest era => Tx era -> Bool
+hasMetaData ::
+  ( TxBodyConstraints era,
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era))
+  ) =>
+  Tx era ->
+  Bool
 hasMetaData tx =
-  f $ getField @"mdHash" (_body tx)
+  f . (getField @"mdHash") . _body $ tx
   where
     f SNothing = False
     f (SJust _) = True
 
-onlyValidLedgerSignalsAreGenerated :: Gen (Core.Value C) -> Property
-onlyValidLedgerSignalsAreGenerated gv =
+onlyValidLedgerSignalsAreGenerated ::
+  forall era.
+  ( EraGen era,
+    ChainProperty era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+  ) =>
+  Property
+onlyValidLedgerSignalsAreGenerated =
   withMaxSuccess 200 $
-    onlyValidSignalsAreGeneratedFromInitState @(LEDGER C) testGlobals 100 (genEnv p) (genesisLedgerState gv)
+    onlyValidSignalsAreGeneratedFromInitState @(LEDGER era) testGlobals 100 ge genesisLedgerSt
   where
-    p :: Proxy C
+    p :: Proxy era
     p = Proxy
+    ge = genEnv p
+    genesisLedgerSt = Just $ mkGenesisLedgerState (geConstants ge)
 
 -- | Check that the abstract transaction size function
 -- actually bounds the number of bytes in the serialized transaction.
-propAbstractSizeBoundsBytes :: Gen (Core.Value C) -> Property
-propAbstractSizeBoundsBytes gv = property $ do
+propAbstractSizeBoundsBytes ::
+  forall era.
+  ( EraGen era,
+    ChainProperty era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+  ) =>
+  Property
+propAbstractSizeBoundsBytes = property $ do
   let tl = 100
       numBytes = toInteger . BS.length . serialize'
-  forAllTraceFromInitState @(LEDGER C) testGlobals tl (genEnv p) (genesisLedgerState gv) $ \tr -> do
-    let txs :: [Tx C]
+  forAllTraceFromInitState @(LEDGER era) testGlobals tl (genEnv p) genesisLedgerSt $ \tr -> do
+    let txs :: [Tx era]
         txs = traceSignals OldestFirst tr
     all (\tx -> txsizeBound tx >= numBytes tx) txs
   where
-    p :: Proxy C
+    p :: Proxy era
     p = Proxy
+    genesisLedgerSt = Just $ mkGenesisLedgerState (geConstants (genEnv p))
 
 -- | Check that the abstract transaction size function
 -- is not off by an acceptable order of magnitude.
-propAbstractSizeNotTooBig :: Gen (Core.Value C) -> Property
-propAbstractSizeNotTooBig gv = property $ do
+propAbstractSizeNotTooBig ::
+  forall era.
+  ( EraGen era,
+    ChainProperty era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+  ) =>
+  Property
+propAbstractSizeNotTooBig = property $ do
   let tl = 100
       -- The below acceptable order of magnitude may not actually be large enough.
       -- For small transactions, estimating the size of an encoded uint as 5
@@ -332,21 +366,32 @@ propAbstractSizeNotTooBig gv = property $ do
       acceptableMagnitude = (3 :: Integer)
       numBytes = toInteger . BS.length . serialize'
       notTooBig txb = txsizeBound txb <= acceptableMagnitude * numBytes txb
-  forAllTraceFromInitState @(LEDGER C) testGlobals tl (genEnv p) (genesisLedgerState gv) $ \tr -> do
-    let txs :: [Tx C]
+  forAllTraceFromInitState @(LEDGER era) testGlobals tl (genEnv p) genesisLedgerSt $ \tr -> do
+    let txs :: [Tx era]
         txs = traceSignals OldestFirst tr
     all notTooBig txs
   where
-    p :: Proxy C
+    p :: Proxy era
     p = Proxy
+    genesisLedgerSt = Just $ mkGenesisLedgerState (geConstants (genEnv p))
 
-onlyValidChainSignalsAreGenerated :: Gen (Core.Value C) -> Property
-onlyValidChainSignalsAreGenerated gv =
+onlyValidChainSignalsAreGenerated ::
+  forall era.
+  ( EraGen era,
+    ChainProperty era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+  ) =>
+  Property
+onlyValidChainSignalsAreGenerated =
   withMaxSuccess 100 $
-    onlyValidSignalsAreGeneratedFromInitState @(CHAIN C) testGlobals 100 (genEnv p) (genesisChainState gv)
+    onlyValidSignalsAreGeneratedFromInitState @(CHAIN era) testGlobals 100 (genEnv p) genesisChainSt
   where
-    p :: Proxy C
+    p :: Proxy era
     p = Proxy
+    genesisChainSt = Just $ mkGenesisChainState (geConstants (genEnv p))
 
 -- | Counts the epochs spanned by this trace
 epochsInTrace :: forall era. Era era => [Block era] -> Int

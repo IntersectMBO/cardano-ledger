@@ -17,17 +17,17 @@
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.State.Transition.Extended (BaseM, Environment, IRC, STS, Signal, State, TRC (..))
+import Control.State.Transition.Extended (IRC, TRC (..))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Functor.Identity (runIdentity)
-import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
+import GHC.Records (HasField)
+import Shelley.Spec.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState,
@@ -39,15 +39,20 @@ import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx)
-import Shelley.Spec.Ledger.TxBody (Ix)
+import Shelley.Spec.Ledger.TxBody (Ix, TxIn, TxOut)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), genCoin)
-import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
+import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (..), genCoin)
+import Test.Shelley.Spec.Ledger.Generator.Presets (genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, applySTSTest, runShelleyBase)
+import Test.Shelley.Spec.Ledger.Utils
+  ( ShelleyLedgerSTS,
+    ShelleyLedgersSTS,
+    applySTSTest,
+    runShelleyBase,
+  )
 
 genAccountState :: Constants -> Gen AccountState
 genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
@@ -58,13 +63,11 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
 instance
-  ( ShelleyTest era,
-    STS (LEDGER era),
-    BaseM (LEDGER era) ~ ShelleyBase,
+  ( EraGen era,
     Mock (Crypto era),
-    Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era
+    ShelleyLedgerSTS era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
   TQC.HasTrace (LEDGER era) (GenEnv era)
   where
@@ -76,7 +79,6 @@ instance
 
   sigGen = genTx
 
-  -- TODO shrink
   shrinkSignal _ = []
 
   type BaseEnv (LEDGER era) = Globals
@@ -85,18 +87,12 @@ instance
 -- TODO does anything here constrain era to ShelleyEra?
 instance
   forall era.
-  ( ShelleyTest era,
-    STS (LEDGER era),
-    BaseM (LEDGER era) ~ ShelleyBase,
-    Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era,
-    STS (LEDGERS era),
-    BaseM (LEDGERS era) ~ ShelleyBase,
-    Environment (LEDGERS era) ~ LedgersEnv era,
-    State (LEDGERS era) ~ LedgerState era,
-    Signal (LEDGERS era) ~ Seq (Tx era),
-    Mock (Crypto era)
+  ( EraGen era,
+    Mock (Crypto era),
+    ShelleyLedgerSTS era,
+    ShelleyLedgersSTS era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
   TQC.HasTrace (LEDGERS era) (GenEnv era)
   where
@@ -148,13 +144,12 @@ instance
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
-  forall a c.
-  (CryptoClass.Crypto c) =>
-  Gen (Core.Value (ShelleyEra c)) ->
+  forall a era.
+  EraGen era =>
   Constants ->
-  IRC (LEDGER (ShelleyEra c)) ->
-  Gen (Either a (UTxOState (ShelleyEra c), DPState (ShelleyEra c)))
-mkGenesisLedgerState gv c _ = do
-  utxo0 <- genUtxo0 @(ShelleyEra c) gv c
+  IRC (LEDGER era) ->
+  Gen (Either a (UTxOState era, DPState era))
+mkGenesisLedgerState c _ = do
+  utxo0 <- genEraUtxo0 c
   let (LedgerState utxoSt dpSt) = genesisState (genesisDelegs0 c) utxo0
   pure $ Right (utxoSt, dpSt)

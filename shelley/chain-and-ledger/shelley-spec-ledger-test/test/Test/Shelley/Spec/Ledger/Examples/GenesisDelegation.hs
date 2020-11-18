@@ -17,9 +17,9 @@ where
 import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Crypto as Cr
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
-import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
@@ -29,6 +29,7 @@ import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyPair (..),
@@ -50,7 +51,6 @@ import Shelley.Spec.Ledger.TxBody
     TxOut (..),
     Wdrl (..),
   )
-import Shelley.Spec.Ledger.Hashing(HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
@@ -70,11 +70,11 @@ import Test.Shelley.Spec.Ledger.Examples.Init
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( NatNonce (..),
     genesisCoins,
-    genesisId,
     mkBlockFakeVRF,
     mkOCert,
     zero,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
   ( ShelleyTest,
     getBlockNonce,
@@ -87,12 +87,13 @@ import Test.Tasty.HUnit (testCase)
 initUTxO :: ShelleyTest era => UTxO era
 initUTxO =
   genesisCoins
+    genesisId
     [ TxOut Cast.aliceAddr aliceInitCoin,
       TxOut Cast.bobAddr bobInitCoin
     ]
-    where
-      aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
-      bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
+  where
+    aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+    bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initStGenesisDeleg :: forall era. ShelleyTest era => ChainState era
 initStGenesisDeleg = initSt initUTxO
@@ -136,9 +137,9 @@ txbodyEx1 =
     (SlotNo 10)
     SNothing
     SNothing
-    where
-      aliceCoinEx1 = aliceInitCoin <-> (Val.inject feeTx1)
-      aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+  where
+    aliceCoinEx1 = aliceInitCoin <-> (Val.inject feeTx1)
+    aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
 txEx1 ::
   forall c.

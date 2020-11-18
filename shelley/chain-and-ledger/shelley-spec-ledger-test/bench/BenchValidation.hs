@@ -32,10 +32,9 @@ import Cardano.Ledger.Era (Era (..))
 import Cardano.Prelude (NFData (rnf))
 import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.Monad.Except ()
-import Control.State.Transition.Extended
 import qualified Data.Map as Map
 import Data.Proxy
-import Data.Sequence (Seq)
+import qualified Shelley.Spec.Ledger.API as API
 import Shelley.Spec.Ledger.API.Protocol
   ( ChainDepState (..),
     ChainTransitionError,
@@ -44,8 +43,7 @@ import Shelley.Spec.Ledger.API.Protocol
     tickChainDepState,
     updateChainDepState,
   )
-import qualified Shelley.Spec.Ledger.API as API
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.Bench.Gen (genBlock, genChainState)
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (..),
@@ -55,25 +53,20 @@ import Shelley.Spec.Ledger.BlockChain
   )
 import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
 import Shelley.Spec.Ledger.LedgerState
-  ( DPState,
-    LedgerState,
-    NewEpochState,
-    UTxOState,
-    nesBcur
+  ( NewEpochState,
+    nesBcur,
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv)
-import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv)
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
-import Shelley.Spec.Ledger.Tx (Tx)
+import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
+import Test.Shelley.Spec.Ledger.Generator.Core (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
-import Test.QuickCheck (Gen)
+import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyLedgersSTS, ShelleyTest, testGlobals)
 
--- ====================================================================
+-- ==============================================================
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 
@@ -84,19 +77,13 @@ instance NFData (ValidateInput era) where
   rnf (ValidateInput a b c) = seq a (seq b (seq c ()))
 
 validateInput ::
-  ( ShelleyTest era,
+  ( EraGen era,
+    ShelleyTest era,
     Mock (Crypto era),
     API.GetLedgerView era,
     API.ApplyBlock era,
-    STS (LEDGERS era),
-    BaseM (LEDGERS era) ~ ShelleyBase,
-    Environment (LEDGERS era) ~ LedgersEnv era,
-    State (LEDGERS era) ~ LedgerState era,
-    Signal (LEDGERS era) ~ Seq (Tx era),
-    STS (LEDGER era),
-    Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era
+    ShelleyLedgerSTS era,
+    ShelleyLedgersSTS era
   ) =>
   Gen (Core.Value era) ->
   Int ->
@@ -104,19 +91,13 @@ validateInput ::
 validateInput gv utxoSize = genValidateInput gv utxoSize
 
 genValidateInput ::
-  ( ShelleyTest era,
+  ( EraGen era,
+    ShelleyTest era,
     Mock (Crypto era),
     API.GetLedgerView era,
     API.ApplyBlock era,
-    STS (LEDGERS era),
-    BaseM (LEDGERS era) ~ ShelleyBase,
-    Environment (LEDGERS era) ~ LedgersEnv era,
-    State (LEDGERS era) ~ LedgerState era,
-    Signal (LEDGERS era) ~ Seq (Tx era),
-    STS (LEDGER era),
-    Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era
+    ShelleyLedgerSTS era,
+    ShelleyLedgersSTS era
   ) =>
   Gen (Core.Value era) ->
   Int ->
@@ -192,19 +173,13 @@ instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
 
 genUpdateInputs ::
   forall era.
-  ( ShelleyTest era,
+  ( EraGen era,
+    ShelleyTest era,
+    Mock (Crypto era),
     API.GetLedgerView era,
     API.ApplyBlock era,
-    STS (LEDGERS era),
-    BaseM (LEDGERS era) ~ ShelleyBase,
-    Environment (LEDGERS era) ~ LedgersEnv era,
-    State (LEDGERS era) ~ LedgerState era,
-    Signal (LEDGERS era) ~ Seq (Tx era),
-    STS (LEDGER era),
-    Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era,
-    Mock (Crypto era)
+    ShelleyLedgerSTS era,
+    ShelleyLedgersSTS era
   ) =>
   Gen (Core.Value era) ->
   Int ->

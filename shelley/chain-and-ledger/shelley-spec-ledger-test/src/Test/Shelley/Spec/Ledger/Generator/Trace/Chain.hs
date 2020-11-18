@@ -19,12 +19,12 @@
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Val ((<->))
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.State.Transition (BaseM, Environment, IRC (..), STS, Signal, State)
+import Control.State.Transition (IRC (..))
 import Control.State.Transition.Trace.Generator.QuickCheck
   ( BaseEnv,
     HasTrace,
@@ -37,10 +37,11 @@ import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
-import Data.Sequence (Seq)
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
+import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain
   ( LastAppliedBlock (..),
     hashHeaderToNonce,
@@ -54,34 +55,31 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   )
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
-import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
+import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (..))
+import Test.Shelley.Spec.Ledger.Generator.Presets (genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, maxLLSupply, mkHash)
+import Test.Shelley.Spec.Ledger.Utils
+  ( ShelleyChainSTS,
+    ShelleyLedgerSTS,
+    ShelleyLedgersSTS,
+    ShelleyTest,
+    maxLLSupply,
+    mkHash,
+  )
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
-  ( ShelleyTest era,
-    GetLedgerView era,
+  ( EraGen era,
+    Mock (Crypto era),
     ApplyBlock era,
-    STS (CHAIN era),
-    BaseM (CHAIN era) ~ ShelleyBase,
-    STS (LEDGERS era),
-    BaseM (LEDGERS era) ~ ShelleyBase,
-    Environment (CHAIN era) ~ (),
-    State (CHAIN era) ~ ChainState era,
-    Signal (CHAIN era) ~ Block era,
-    Environment (LEDGERS era) ~ LedgersEnv era,
-    State (LEDGERS era) ~ LedgerState era,
-    Signal (LEDGERS era) ~ Seq (Tx era),
-    STS (LEDGER era),
-    BaseM (LEDGER era) ~ ShelleyBase,
-    Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era,
-    Mock (Crypto era)
+    GetLedgerView era,
+    ShelleyLedgerSTS era,
+    ShelleyLedgersSTS era,
+    ShelleyChainSTS era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
   HasTrace (CHAIN era) (GenEnv era)
   where
@@ -107,13 +105,12 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era a.
-  (ShelleyTest era) =>
-  Gen (Core.Value era) ->
+  EraGen era =>
   Constants ->
   IRC (CHAIN era) ->
   Gen (Either a (ChainState era))
-mkGenesisChainState gv constants (IRC _slotNo) = do
-  utxo0 <- genUtxo0 gv constants
+mkGenesisChainState constants (IRC _slotNo) = do
+  utxo0 <- genEraUtxo0 constants
 
   pParams <- genPParams constants
 

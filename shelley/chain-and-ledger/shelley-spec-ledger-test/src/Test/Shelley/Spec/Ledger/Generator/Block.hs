@@ -15,11 +15,12 @@ module Test.Shelley.Spec.Ledger.Generator.Block
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley (ShelleyBased)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.SetAlgebra (dom, eval)
-import Control.State.Transition.Extended (BaseM, Environment, STS (Signal), State)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
@@ -27,7 +28,10 @@ import qualified Data.List as List (find)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
 import qualified Data.Set as Set
+import GHC.Records (HasField)
 import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.BlockChain
   ( LastAppliedBlock (..),
@@ -45,6 +49,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
+    EraGen,
     GenEnv (..),
     KeySpace (..),
     getKESPeriodRenewalNo,
@@ -53,14 +58,14 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
 import Test.Shelley.Spec.Ledger.Utils
-  ( ShelleyTest,
+  ( ShelleyLedgerSTS,
+    ShelleyLedgersSTS,
     epochFromSlotNo,
     maxKESIterations,
     runShelleyBase,
     slotFromEpoch,
     testGlobals,
   )
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 
 -- | Type alias for a transaction generator
 type TxGen era =
@@ -73,19 +78,14 @@ type TxGen era =
 -- | Generate a valid block.
 genBlock ::
   forall era.
-  ( ShelleyTest era,
-    GetLedgerView era,
-    ApplyBlock era,
-    STS (LEDGER era),
-    BaseM (LEDGER era) ~ ShelleyBase,
-    Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era,
-    STS (LEDGERS era),
+  ( EraGen era,
     Mock (Crypto era),
-    Environment (LEDGERS era) ~ LedgersEnv era,
-    State (LEDGERS era) ~ LedgerState era,
-    Signal (LEDGERS era) ~ Seq (Tx era)
+    ApplyBlock era,
+    GetLedgerView era,
+    ShelleyLedgerSTS era,
+    ShelleyLedgersSTS era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
   GenEnv era ->
   ChainState era ->
@@ -99,7 +99,11 @@ genBlock ge = genBlockWithTxGen genTxs ge
 
 genBlockWithTxGen ::
   forall era.
-  (ShelleyTest era, Mock (Crypto era), GetLedgerView era, ApplyBlock era) =>
+  ( ShelleyBased era,
+    Mock (Crypto era),
+    GetLedgerView era,
+    ApplyBlock era
+  ) =>
   TxGen era ->
   GenEnv era ->
   ChainState era ->
@@ -163,7 +167,11 @@ genBlockWithTxGen
 
 selectNextSlotWithLeader ::
   forall era.
-  (ShelleyTest era, Mock (Crypto era), GetLedgerView era, ApplyBlock era) =>
+  ( ShelleyBased era,
+    Mock (Crypto era),
+    GetLedgerView era,
+    ApplyBlock era
+  ) =>
   GenEnv era ->
   ChainState era ->
   -- Starting slot

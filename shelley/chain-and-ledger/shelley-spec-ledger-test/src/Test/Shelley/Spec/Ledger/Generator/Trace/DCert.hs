@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -13,7 +14,9 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts) where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Val ((<×>))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
   ( BaseM,
@@ -58,15 +61,12 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
-import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (getKeyCombination)
 import Shelley.Spec.Ledger.TxBody (Ix)
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
-import Cardano.Ledger.Val((<×>))
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..))
+import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (..), KeySpace (..))
 import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..), genDCert)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
@@ -110,7 +110,7 @@ certsTransition = do
 instance Era era => Embed (DELPL era) (CERTS era) where
   wrapFailed = CertsFailure
 
-instance Era era => QC.HasTrace (CERTS era) (GenEnv era) where
+instance (Era era, EraGen era) => QC.HasTrace (CERTS era) (GenEnv era) where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
   sigGen
@@ -137,7 +137,7 @@ instance Era era => QC.HasTrace (CERTS era) (GenEnv era) where
 -- deposits and refunds required.
 genDCerts ::
   forall era.
-  Era era =>
+  EraGen era =>
   GenEnv era ->
   PParams era ->
   DPState era ->
@@ -149,7 +149,7 @@ genDCerts ::
       Coin,
       Coin,
       DPState era,
-      ([KeyPair 'Witness (Crypto era)], [(MultiSig era, MultiSig era)])
+      ([KeyPair 'Witness (Crypto era)], [(Core.Script era, Core.Script era)])
     )
 genDCerts
   ge@( GenEnv
@@ -180,7 +180,7 @@ genDCerts
         (length deRegStakeCreds) <×> (_keyDeposit pparams),
         lastState_,
         ( concat (keyCredAsWitness <$> keyCreds'),
-          scriptCredMultisig <$> scriptCreds
+          extractScriptCred <$> scriptCreds
         )
       )
     where
@@ -191,25 +191,30 @@ genDCerts
       scriptWitnesses (ScriptCred (_, stakeScript)) =
         StakeCred <$> witnessHashes''
         where
-          witnessHashes = getKeyCombination stakeScript
+          witnessHashes = eraScriptWitness stakeScript
           witnessHashes' = fmap coerceKeyRole witnessHashes
           witnessHashes'' = fmap coerceKeyRole (catMaybes (map lookupWit witnessHashes'))
       scriptWitnesses _ = []
 
+      eraScriptWitness s =
+        case (eraScriptWitnesses @era s) of
+          [] -> error "genDCerts - empty eraScriptWitnesses"
+          (k : _) -> k
+
       lookupWit = flip Map.lookup ksIndexedStakingKeys
 
-scriptCredMultisig ::
-  (HasCallStack, Era era) =>
+extractScriptCred ::
+  (HasCallStack, Era era, Show (Core.Script era)) =>
   CertCred era ->
-  (MultiSig era, MultiSig era)
-scriptCredMultisig (ScriptCred c) = c
-scriptCredMultisig x =
+  (Core.Script era, Core.Script era)
+extractScriptCred (ScriptCred c) = c
+extractScriptCred x =
   error $
-    "scriptCredMultisig: use only for Script Credentials - "
+    "extractScriptCred: use only for Script Credentials - "
       <> show x
 
 keyCredAsWitness ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, Show (Core.Script era)) =>
   CertCred era ->
   [KeyPair 'Witness (Crypto era)]
 keyCredAsWitness (DelegateCred c) = asWitness <$> c

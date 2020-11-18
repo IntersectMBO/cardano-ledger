@@ -46,7 +46,6 @@ import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyBased)
-import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.SetAlgebra (biMapFromList)
@@ -119,7 +118,8 @@ import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( KeySpace (KeySpace_),
+  ( EraGen,
+    KeySpace (KeySpace_),
     geConstants,
     geKeySpace,
     ksCoreNodes,
@@ -455,7 +455,7 @@ instance
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era) =>
   Arbitrary (NewEpochState era)
   where
   arbitrary = genericArbitraryU
@@ -472,7 +472,7 @@ instance CC.Crypto crypto => Arbitrary (PoolDistr crypto) where
       genVal = IndividualPoolStake <$> arbitrary <*> genHash
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era) =>
   Arbitrary (EpochState era)
   where
   arbitrary =
@@ -492,7 +492,7 @@ instance Arbitrary a => Arbitrary (StrictMaybe a) where
   shrink = genericShrink
 
 genPParams ::
-  (Shelley.TxBodyConstraints era) =>
+  EraGen era =>
   proxy era ->
   Gen (PParams era)
 genPParams p = Update.genPParams (geConstants (genEnv p))
@@ -611,7 +611,7 @@ genUTCTime = do
       (Time.picosecondsToDiffTime diff)
 
 instance
-  (ShelleyBased era, Mock (Crypto era)) =>
+  (ShelleyBased era, Mock (Crypto era), EraGen era) =>
   Arbitrary (ShelleyGenesis era)
   where
   arbitrary =
@@ -721,6 +721,7 @@ genTx =
 genBlock ::
   forall era.
   ( ShelleyBased era,
+    EraGen era,
     Mock (Crypto era),
     Arbitrary (WitnessSet era),
     Arbitrary (Core.TxBody era)
@@ -766,6 +767,7 @@ instance
 
 instance
   ( ShelleyBased era,
+    EraGen era,
     Mock (Crypto era),
     ValidateScript era,
     Arbitrary (Core.TxBody era),
