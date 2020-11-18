@@ -14,7 +14,7 @@ module Control.SetAlgebra
    -- with the operators in the specification, except here sets are thought of as a map with a Unit value. (Map k ())
    dom, rng, dexclude, drestrict, rexclude, rrestrict, unionleft, unionright, unionplus,
    singleton, setSingleton, intersect, subset, keyeq,
-   (◁), (⋪), (▷), (⋫), (∈), (∉), (∪), (⨃), (∪+), (∩), (⊆), (≍), (<|), (|>),
+   (◁), (⋪), (▷), (⋫), (∈), (∉), (∪), (⨃), (∪+), (∩), (⊆), (≍), (<|), (|>), (➖),
    -- The only exported concrete Constructor of Set Algebra Expressons. Needed to make 'HasExp' and 'Embed'
    -- instances of new kinds of sets (Basically,  Data.Map's wrapped in a newtype).
    -- See: Shelley.Spec.Ledger.TxBody and Shelley/Spec/Ledger/UTxO.hs and helley/Spec/Ledger/Delegation/Certificates.hs
