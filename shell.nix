@@ -11,7 +11,7 @@ let
   ormolu = import pkgs.commonLib.sources.ormolu {};
 
   # For building the sphinx doc
-  pyEnv = 
+  pyEnv =
     # TODO: deduplicate with default.nix
     let
       sphinx-markdown-tables = pkgs.python3Packages.callPackage ./nix/python/sphinx-markdown-tables.nix {};
@@ -38,7 +38,7 @@ let
 
     tools = {
       cabal = "3.2.0.0";
-      haskell-language-server="0.5.1";
+      haskell-language-server="0.6.0";
     };
 
     # Prevents cabal from choosing alternate plans, so that
