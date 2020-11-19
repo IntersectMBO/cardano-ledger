@@ -19,7 +19,7 @@
 
 We have updated the
 $\fun{validateScripts}$ function, to allow for the validation of both the
-multi-signature scripts and forging policy scripts, calling the appropriate
+multi-signature scripts and minting policy scripts, calling the appropriate
 evaluator for each type of script, see Figure~\ref{fig:functions-validate}.
 
 \begin{note}
@@ -108,9 +108,9 @@ The semantics of the FPS language are specified in Figure~\ref{fig:defs:tx-mc-ev
 %     & \text {checks the msig script}\\~\\
 %     %
 %     & \fun{evalFPS}
-%      ~\type{DoForge}~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
-%     &~~~~ =~ \var{pid} \notin \dom~(\fun{forge}~\var{txb}) \\
-%     & \text {checks that script hash of this script is not an asset ID being forged by tx}  \\~\\
+%      ~\type{DoMint}~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
+%     &~~~~ =~ \var{pid} \notin \dom~(\fun{mint}~\var{txb}) \\
+%     & \text {checks that script hash of this script is not an asset ID being minted by tx}  \\~\\
 %     %
 %     & \fun{evalFPS}
 %      ~\type{SignedByPIDToken}~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
@@ -180,12 +180,12 @@ The semantics of the FPS language are specified in Figure~\ref{fig:defs:tx-mc-ev
 %     & \fun{whitelist} \in\ScriptMSig\to\Script  \\~\\
 %     %
 %     & \type{whitelist}  ~\var{msig}~ =~ \type{RequireOr}~
-%       (\type{RequireAll}~(\type{DoForge};~\type{JustMSig}~\var{msig});~\\
+%       (\type{RequireAll}~(\type{DoMint};~\type{JustMSig}~\var{msig});~\\
 %     &~~~~~~ \type{RequireAll}~(\type{AssetToAddress}~\Nothing~\Nothing ;\\
-%     &~~~~~~ (\type{Not}~\type{DoForge});~\type{SignedByPIDToken})) \\
+%     &~~~~~~ (\type{Not}~\type{DoMint});~\type{SignedByPIDToken})) \\
 %     %
 %     & \text{msig is some MSig script containing signatures of some accreditation authority} \\
-%     & \text{i.e. this authority can do any forging or spending of this token} \\~\\
+%     & \text{i.e. this authority can do any minting or spending of this token} \\~\\
 %     %
 %     & (\fun{hashScript}~(\type{SpendsCur}~(\fun{hashScript}~(\type{whitelist}~\var{msig}))),~ \var{tkns}) \\
 %     & \text{an example of an output spending which requires to be on a whitelist made by msig authority}

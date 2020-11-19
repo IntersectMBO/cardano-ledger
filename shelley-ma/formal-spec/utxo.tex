@@ -38,7 +38,7 @@
   \begin{align*}
     & \fun{consumed} \in \PParams \to \UTxO \to \TxBody \to \hldiff{\Value} \\
     & \consumed{pp}{utxo}{txb} = \\
-    & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} ~+~ \hldiff{\fun{forge}~\var{txb}} \\
+    & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} ~+~ \hldiff{\fun{mint}~\var{txb}} \\
     &~~+~\hldiff{\fun{coinToValue}}(\fun{wbalance}~(\fun{txwdrls}~{txb})~+~ \keyRefunds{pp}{txb})
     \nextdef
     & \fun{produced} \in \PParams \to \StakePools \to \TxBody \to \hldiff{\Value} \\
@@ -70,38 +70,38 @@ UTxO transition system with multi-assets:
   \item The $\fun{consumed}$ and $\fun{produced}$ calculations are similar to their Shelley
     counterparts, with the following changes: 1) They return elements of $\Value$, which
     the administrative fields of type $\Coin$ have to be converted to, via $\fun{coinToValue}$.
-    2) $\fun{consumed}$ also contains the $\fun{forge}$ field of the transaction.
+    2) $\fun{consumed}$ also contains the $\fun{mint}$ field of the transaction.
     This is explained below.
 \end{itemize}
 
-\subsection*{Forging and the Preservation of Value}
+\subsection*{Minting and the Preservation of Value}
 What does it mean to preserve the value of non-Ada tokens, since they
 are put in and taken out of circulation by the users themselves?
 
 For the following discussion, we focus on a single arbitrary
 $\var{pid}$ that is not $\mathsf{adaPolicy}$. If a transaction $\var{tx}$
-does not forge any tokens with policy ID $\var{pid}$, the preservation
+does not mint any tokens with policy ID $\var{pid}$, the preservation
 of value reduces to an equation that the sum of inputs and the sum of
 outputs are equal, which is exactly the same condition as for Shelley,
 except that there are no administrative fields. If a transactions
-forges tokens of that policy ID, then the sum of inputs and the sum of
+mints tokens of that policy ID, then the sum of inputs and the sum of
 outputs will differ, and that difference has to be exactly the value
-of the $\fun{forge}$ field. Note that this means that the
-$\fun{forge}$ field can also contain negative quantities.
+of the $\fun{mint}$ field. Note that this means that the
+$\fun{mint}$ field can also contain negative quantities.
 
-To balance the preservation of value equation, the $\fun{forge}$ field
+To balance the preservation of value equation, the $\fun{mint}$ field
 could be included in either $\fun{consumed}$ or $\fun{produced}$, with
-the only difference being the sign of the $\fun{forge}$ field. We
+the only difference being the sign of the $\fun{mint}$ field. We
 include it on the $\fun{consumed}$ side, because this means that
-forging a positive quantity increases the amount of tokens on the
-ledger, and forging a negative quantity reduces the amount of tokens on
+minting a positive quantity increases the amount of tokens on the
+ledger, and minting a negative quantity reduces the amount of tokens on
 the ledger.
 
-Note that the UTXO rule specifically forbids the forging of Ada, and
+Note that the UTXO rule specifically forbids the minting of Ada, and
 thus in the case of Ada, the preservation of value equation is exactly
 the same as in Shelley.
 
-The forging scripts themselves are not evaluated at part of the UTXO, but instead
+The minting scripts themselves are not evaluated at part of the UTXO, but instead
 as part of witnessing, i.e. in the UTXOW rule, see Figure~\ref{fig:functions-witnesses}.
 
 \subsection*{The UTXO Transition Rule}
@@ -114,9 +114,9 @@ of this rule as compared to the original Shelley UTXO rule:
   slot is replaced with the check that the current slot is inside the validity interval
 
   \item In the preservation of value calculation (which looks the same as in
-  Shelley), the value in the $\fun{forge}$ field is taken into account.
+  Shelley), the value in the $\fun{mint}$ field is taken into account.
 
-  \item The transaction is not forging any Ada.
+  \item The transaction is not minting any Ada.
 
   \item The $\Value$ of each output is constrained from below by a
     $\Value$ that contains the product of $\var{adaPerUTxOByte}$ and the
@@ -155,7 +155,7 @@ $\Coin$.
       \\
       ~
       \\
-      \hldiff{\mathsf{adaPolicy}~\notin \supp{\fun{forge}~txb}} \\
+      \hldiff{\mathsf{adaPolicy}~\notin \supp{\fun{mint}~txb}} \\
       ~\\
       \hldiff{\forall txout \in \txouts{txb},} \\
       \hldiff{txout \geq \fun{coinToValue}(\fun{outputSize}~{txout} * \fun{adaPerUTxOByte}~pp)} \\~
@@ -217,7 +217,7 @@ $\Coin$.
     \cup & ~~\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
            \restrictdom \fun{txwdrls}~\var{txb}) \} \\
       \cup & ~~(\AddrScr \cap \fun{certWitsNeeded}~{txb}) \\
-      \cup & ~~\hldiff{\supp~(\fun{forge}~\var{txb})} \\
+      \cup & ~~\hldiff{\supp~(\fun{mint}~\var{txb})} \\
     & \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx}
   \end{align*}
@@ -227,7 +227,7 @@ $\Coin$.
 
 Figure~\ref{fig:functions-witnesses} contains the changed definition
 of the function $\fun{scriptsNeeded}$, to also collect the scripts
-necessary for forging.
+necessary for minting.
 
 Recall here that the $\Script$ type has changed to include
 not just multi-signature script type $\ScriptMSig$, but also another native (i.e. evaluated
@@ -238,6 +238,6 @@ a change to the arguments passed to it, see~\ref{sec:mps-lang}.
 
 Note that, same as in Shelley, the validation function called by the
 UTXOW rule, which checks a given script, does not know the purpose of the script
-(forging, output-locking, etc.).
+(minting, output-locking, etc.).
 All scripts are run in the same way, with $\fun{validateScript}$ being responsible
 for calling the evaluator appropriate for the specific type of script.
