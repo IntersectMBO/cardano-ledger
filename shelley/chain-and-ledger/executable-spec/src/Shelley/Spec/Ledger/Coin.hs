@@ -14,6 +14,7 @@ module Shelley.Spec.Ledger.Coin
     rationalToCoinViaFloor,
     addDeltaCoin,
     toDeltaCoin,
+    integerToWord64,
   )
 where
 
@@ -79,12 +80,17 @@ rationalToCoinViaFloor r = Coin . floor $ r
 -- with an erroring bounds check here. where should this really live?
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64
-  toCompact (Coin c)
-    | c < 0 = error $ "out of bounds : " ++ show c
-    | c > (fromIntegral (maxBound :: Word64)) =
-      error $ "out of bounds : " ++ show c
-    | otherwise = CompactCoin (fromIntegral c)
+  toCompact (Coin c) = case integerToWord64 c of
+    Nothing -> error $ "out of bounds : " ++ show c
+    Just x -> CompactCoin x
   fromCompact (CompactCoin c) = word64ToCoin c
+
+-- It's odd for this to live here. Where should it go?
+integerToWord64 :: Integer -> Maybe Word64
+integerToWord64 c
+  | c < 0 = Nothing
+  | c > (fromIntegral (maxBound :: Word64)) = Nothing
+  | otherwise = Just $ fromIntegral c
 
 instance ToCBOR (CompactForm Coin) where
   toCBOR (CompactCoin c) = toCBOR c
