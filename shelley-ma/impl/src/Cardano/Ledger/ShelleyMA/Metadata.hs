@@ -44,6 +44,7 @@ import Shelley.Spec.Ledger.MetaData
     ValidateMetadata (..),
     validMetaDatum,
   )
+import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | Raw, un-memoised metadata type
 data MetadataRaw era = MetadataRaw
@@ -121,10 +122,10 @@ instance
 encMetadataRaw ::
   (Core.AnnotatedData (Core.Script era)) =>
   MetadataRaw era ->
-  Encode ('Closed 'Dense) (MetadataRaw era)
+  Encode ( 'Closed 'Dense) (MetadataRaw era)
 encMetadataRaw (MetadataRaw blob sp) =
   Rec MetadataRaw
-    !> To blob
+    !> E mapToCBOR blob
     !> E encodeFoldable sp
 
 instance
@@ -136,13 +137,13 @@ instance
       TypeMapLen ->
         decode
           ( Ann (Emit MetadataRaw)
-              <*! Ann From
+              <*! Ann (D mapFromCBOR)
               <*! Ann (Emit StrictSeq.empty)
           )
       TypeListLen ->
         decode
           ( Ann (RecD MetadataRaw)
-              <*! Ann From
+              <*! Ann (D mapFromCBOR)
               <*! D (sequence <$> decodeStrictSeq fromCBOR)
           )
       _ -> error "Failed to decode Metadata"
