@@ -15,8 +15,9 @@ module Test.Shelley.Spec.Ledger.Examples.PoolLifetime
   )
 where
 
-import Cardano.Ledger.Shelley (ShelleyEra)
+import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Data.Foldable (fold)
@@ -39,13 +40,14 @@ import Shelley.Spec.Ledger.BlockChain
     bheader,
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), toDeltaCoin, addDeltaCoin)
+import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
     PoolDistr (..),
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys (asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( RewardUpdate (..),
@@ -55,9 +57,9 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.Rewards
-  ( applyDecay,
-    Likelihood (..),
+  ( Likelihood (..),
     NonMyopic (..),
+    applyDecay,
     emptyNonMyopic,
     leaderProbability,
     likelihood,
@@ -86,7 +88,6 @@ import Shelley.Spec.Ledger.TxBody
     TxOut (..),
     Wdrl (..),
   )
-import Shelley.Spec.Ledger.Hashing(HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
@@ -106,11 +107,11 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
     genesisCoins,
-    genesisId,
     mkBlockFakeVRF,
     mkOCert,
     zero,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
   ( epochSize,
     getBlockNonce,
@@ -119,7 +120,6 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
-import qualified Cardano.Ledger.Crypto as Cr
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -130,6 +130,7 @@ bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 initUTxO :: Cr.Crypto c => UTxO (ShelleyEra c)
 initUTxO =
   genesisCoins
+    genesisId
     [ TxOut Cast.aliceAddr (Val.inject aliceInitCoin),
       TxOut Cast.bobAddr (Val.inject bobInitCoin)
     ]

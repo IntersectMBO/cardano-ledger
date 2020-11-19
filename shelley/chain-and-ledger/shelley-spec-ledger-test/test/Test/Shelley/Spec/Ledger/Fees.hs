@@ -12,13 +12,13 @@ module Test.Shelley.Spec.Ledger.Fees
   )
 where
 
-import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Binary (serialize)
 import Cardano.Crypto.VRF (VRFAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
-import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
+import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
@@ -50,6 +50,7 @@ import Shelley.Spec.Ledger.BaseTypes
     textToUrl,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     Hash,
@@ -72,10 +73,9 @@ import Shelley.Spec.Ledger.TxBody
     StakePoolRelay (..),
     Wdrl (..),
   )
-import Shelley.Spec.Ledger.Hashing(EraIndependentTxBody,HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock, C)
-import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils (mkAddr, mkKeyPair, mkVRFKeyPair, unsafeMkUnitInterval)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
@@ -91,7 +91,7 @@ sizeTest _ b16 tx s = do
   (Base16.encode (serialize tx) @?= b16) >> (txsize tx @?= s)
 
 alicePay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
-alicePay = KeyPair @ 'Payment @crypto vk sk
+alicePay = KeyPair @'Payment @crypto vk sk
   where
     (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 0)
 

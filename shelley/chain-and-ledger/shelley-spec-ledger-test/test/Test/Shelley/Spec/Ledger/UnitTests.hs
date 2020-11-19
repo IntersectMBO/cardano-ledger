@@ -48,6 +48,7 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -86,19 +87,18 @@ import Shelley.Spec.Ledger.Tx
     WitnessSetHKD (..),
     _ttl,
   )
-import Shelley.Spec.Ledger.Hashing(HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.TxBody
   ( PoolMetaData (..),
     PoolParams (..),
     Wdrl (..),
     _poolCost,
+    _poolId,
     _poolMD,
     _poolMDHash,
     _poolMDUrl,
     _poolMargin,
     _poolOwners,
     _poolPledge,
-    _poolId,
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
@@ -114,8 +114,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
-    genesisId,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty
@@ -374,6 +374,7 @@ utxoState :: UTxOState C
 utxoState =
   UTxOState
     ( genesisCoins
+        genesisId
         [ TxOut aliceAddr aliceInitCoin,
           TxOut bobAddr (Coin 1000)
         ]
@@ -723,8 +724,8 @@ testProducedOverMaxWord64 =
       wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txbody) [alicePay]}
       tx = Tx @C txbody wits SNothing
       st = runShelleyBase $ applySTSTest @(LEDGER C) (TRC (ledgerEnv, (utxoState, dpState), tx))
-   -- We test that the serialization of the predicate failure does not return bottom
-   in serialize' st @?= serialize' st
+   in -- We test that the serialization of the predicate failure does not return bottom
+      serialize' st @?= serialize' st
 
 testsInvalidLedger :: TestTree
 testsInvalidLedger =

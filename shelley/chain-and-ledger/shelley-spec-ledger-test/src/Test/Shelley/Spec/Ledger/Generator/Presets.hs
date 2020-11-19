@@ -1,7 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Pre-generated items to use in traces.
@@ -12,19 +15,16 @@ module Test.Shelley.Spec.Ledger.Generator.Presets
   ( coreNodeKeys,
     keySpace,
     genEnv,
-    genUtxo0,
     genesisDelegs0,
+    someKeyPairs,
+    keyPairs,
   )
 where
 
-import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.Address (scriptsToAddr)
-import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash,
@@ -38,7 +38,6 @@ import Shelley.Spec.Ledger.LedgerState
   ( KeyPairs,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants
@@ -47,17 +46,18 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Utils
-  (ShelleyTest,  MultiSigPairs,
-    maxKESIterations,
+  ( maxKESIterations,
     mkKESKeyPair,
     mkVRFKeyPair,
     slotsPerKESIteration,
   )
-import qualified Cardano.Ledger.Shelley as Shelley
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
-genEnv :: Shelley.TxBodyConstraints era => proxy era -> GenEnv era
+genEnv ::
+  EraGen era =>
+  proxy era ->
+  GenEnv era
 genEnv _ =
   GenEnv
     (keySpace defaultConstants)
@@ -65,7 +65,8 @@ genEnv _ =
 
 -- | Example keyspace for use in generators
 keySpace ::
-  (Shelley.TxBodyConstraints era) =>
+  forall era.
+  EraGen era =>
   Constants ->
   KeySpace era
 keySpace c =
@@ -74,7 +75,7 @@ keySpace c =
     (genesisDelegates c)
     (stakePoolKeys c)
     (keyPairs c)
-    (mSigCombinedScripts c)
+    (eraKeySpaceScripts @era c)
 
 -- | Constant list of KeyPairs intended to be used in the generators.
 keyPairs :: CC.Crypto crypto => Constants -> KeyPairs crypto
@@ -86,21 +87,6 @@ someKeyPairs c lower upper =
   take
     <$> QC.choose (lower, upper)
     <*> QC.shuffle (keyPairs c)
-
-mSigBaseScripts :: Era era => Constants -> MultiSigPairs era
-mSigBaseScripts c = mkMSigScripts (keyPairs c)
-
-mSigCombinedScripts :: Era era => Constants -> MultiSigPairs era
-mSigCombinedScripts c@(Constants {numBaseScripts}) =
-  mkMSigCombinations . take numBaseScripts $ mSigBaseScripts c
-
--- | Select between _lower_ and _upper_ scripts from the possible combinations
--- of the first `numBaseScripts` multi-sig scripts of `mSigScripts`.
-someScripts :: Era era => Constants -> Int -> Int -> Gen (MultiSigPairs era)
-someScripts c lower upper =
-  take
-    <$> QC.choose (lower, upper)
-    <*> QC.shuffle (mSigCombinedScripts c)
 
 -- Pairs of (genesis key, node keys)
 --
@@ -118,17 +104,6 @@ coreNodeKeys c@Constants {numCoreNodes} =
   ]
   where
     toKeyPair (sk, vk) = KeyPair vk sk
-
-genUtxo0 :: (ShelleyTest era) => QC.Gen (Core.Value era) -> Constants -> Gen (UTxO era)
-genUtxo0 gv c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
-  genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
-  genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts
-  outs <-
-    genTxOut
-      gv
-      c
-      (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr Testnet) genesisScripts)
-  return (genesisCoins outs)
 
 -- Pre-generate a set of keys to use for genesis delegates.
 genesisDelegates :: CC.Crypto crypto => Constants -> [AllIssuerKeys crypto 'GenesisDelegate]

@@ -30,6 +30,7 @@ import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley as Shelley
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
@@ -103,6 +104,7 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShots (..),
     Stake (..),
   )
+import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),
@@ -156,7 +158,6 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), hashScript)
-import Shelley.Spec.Ledger.Hashing(EraIndependentTxBody,HashAnnotated(hashAnnotated))
 import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),
     PoolMetaData (..),
@@ -168,13 +169,13 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
     WitVKey (..),
     _poolCost,
+    _poolId,
     _poolMD,
     _poolMDHash,
     _poolMDUrl,
     _poolMargin,
     _poolOwners,
     _poolPledge,
-    _poolId,
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
@@ -189,11 +190,10 @@ import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
-import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
-import Cardano.Ledger.Shelley (ShelleyEra)
 
 roundTrip ::
   (Show a, Eq a) =>
@@ -389,7 +389,8 @@ testScript :: forall era. Era era => MultiSig era
 testScript = RequireSignature $ asWitness (testKeyHash1 @(Crypto era))
 
 testScriptHash ::
-  forall c. CC.Crypto c =>
+  forall c.
+  CC.Crypto c =>
   ScriptHash (ShelleyEra c)
 testScriptHash = hashScript $ testScript @(ShelleyEra c)
 

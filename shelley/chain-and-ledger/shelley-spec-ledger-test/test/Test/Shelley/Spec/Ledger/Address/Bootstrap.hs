@@ -97,7 +97,7 @@ import Test.QuickCheck.Hedgehog (hedgehog)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
   ( C_Crypto,
   )
-import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils (testSTS)
 import Test.Tasty (TestTree)

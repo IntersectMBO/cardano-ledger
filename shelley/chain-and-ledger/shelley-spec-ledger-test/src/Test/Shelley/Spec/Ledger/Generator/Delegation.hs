@@ -18,6 +18,7 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
 import Data.Foldable (fold)
@@ -49,7 +50,6 @@ import Shelley.Spec.Ledger.API
     KeyRole (..),
     MIRCert (..),
     MIRPot (..),
-    MultiSig,
     Network (..),
     PParams,
     PParams' (..),
@@ -60,7 +60,7 @@ import Shelley.Spec.Ledger.API
     StrictMaybe (..),
     VKey,
   )
-import Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
+import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (interval0)
 import Shelley.Spec.Ledger.Keys
   ( coerceKeyRole,
@@ -69,11 +69,13 @@ import Shelley.Spec.Ledger.Keys
     vKey,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import Shelley.Spec.Ledger.Tx (ValidateScript (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
+    EraGen (..),
     KeySpace (..),
     genCoinList,
     genInteger,
@@ -87,11 +89,11 @@ data CertCred era
   = CoreKeyCred [GenesisKeyPair (Crypto era)]
   | StakeCred (KeyPair 'Staking (Crypto era))
   | PoolCred (KeyPair 'StakePool (Crypto era))
-  | ScriptCred (MultiSig era, MultiSig era)
+  | ScriptCred (Core.Script era, Core.Script era)
   | DelegateCred [KeyPair 'GenesisDelegate (Crypto era)]
   | NoCred
 
-deriving instance Era era => Show (CertCred era)
+deriving instance (Era era, Show (Core.Script era)) => Show (CertCred era)
 
 -- | Occasionally generate a valid certificate
 --
@@ -104,7 +106,7 @@ deriving instance Era era => Show (CertCred era)
 -- Note: we register keys and pools more often than deregistering/retiring them,
 -- and we generate more delegations than registrations of keys/pools.
 genDCert ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, EraGen era) =>
   Constants ->
   KeySpace era ->
   PParams era ->
@@ -159,10 +161,10 @@ genDCert
 
 -- | Generate a RegKey certificate
 genRegKeyCert ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, EraGen era) =>
   Constants ->
   KeyPairs (Crypto era) ->
-  MultiSigPairs era ->
+  [(Core.Script era, Core.Script era)] ->
   DState era ->
   Gen (Maybe (DCert era, CertCred era))
 genRegKeyCert
@@ -189,23 +191,24 @@ genRegKeyCert
               (_, stakeScript) <- QC.elements availableScripts
               pure $
                 Just
-                  ( DCertDeleg (RegKey (scriptToCred stakeScript)),
+                  ( DCertDeleg (RegKey (scriptToCred' stakeScript)),
                     NoCred
                   )
         )
       ]
     where
+      scriptToCred' = ScriptHashObj . hashScript
       notRegistered k = eval (k ∉ dom (_rewards delegSt))
       availableKeys = filter (notRegistered . toCred . snd) keys
-      availableScripts = filter (notRegistered . scriptToCred . snd) scripts
+      availableScripts = filter (notRegistered . scriptToCred' . snd) scripts
 
 -- | Generate a DeRegKey certificate along with the staking credential, which is
 -- needed to witness the certificate.
 genDeRegKeyCert ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, EraGen era) =>
   Constants ->
   KeyPairs (Crypto era) ->
-  MultiSigPairs era ->
+  [(Core.Script era, Core.Script era)] ->
   DState era ->
   Gen (Maybe (DCert era, CertCred era))
 genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys scripts dState =
@@ -224,12 +227,13 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
             scriptPair@(_, stakeScript) <- QC.elements availableScripts
             pure $
               Just
-                ( DCertDeleg (DeRegKey (scriptToCred stakeScript)),
+                ( DCertDeleg (DeRegKey (scriptToCred' stakeScript)),
                   ScriptCred scriptPair
                 )
       )
     ]
   where
+    scriptToCred' = ScriptHashObj . hashScript
     registered k = eval (k ∈ dom (_rewards dState))
     availableKeys =
       filter
@@ -241,7 +245,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
     availableScripts =
       filter
         ( \(_, s) ->
-            let cred = scriptToCred s
+            let cred = scriptToCred' s
              in ((&&) <$> registered <*> zeroRewards) cred
         )
         scripts
@@ -255,10 +259,10 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
 -- Returns nothing if there are no registered staking credentials or no
 -- registered pools.
 genDelegation ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, Era era, EraGen era) =>
   Constants ->
   KeyPairs (Crypto era) ->
-  MultiSigPairs era ->
+  [(Core.Script era, Core.Script era)] ->
   DPState era ->
   Gen (Maybe (DCert era, CertCred era))
 genDelegation
@@ -286,6 +290,7 @@ genDelegation
             )
           ]
     where
+      scriptToCred' = ScriptHashObj . hashScript
       mkCert (_, delegatorKey) poolKey = Just (cert, StakeCred delegatorKey)
         where
           cert = DCertDeleg (Delegate (Delegation (toCred delegatorKey) poolKey))
@@ -293,11 +298,11 @@ genDelegation
         Just (scriptCert, ScriptCred (s, delegatorScript))
         where
           scriptCert =
-            DCertDeleg (Delegate (Delegation (scriptToCred delegatorScript) poolKey))
+            DCertDeleg (Delegate (Delegation (scriptToCred' delegatorScript) poolKey))
       registeredDelegate k = eval (k ∈ dom (_rewards (_dstate dpState)))
       availableDelegates = filter (registeredDelegate . toCred . snd) keys
       availableDelegatesScripts =
-        filter (registeredDelegate . scriptToCred . snd) scripts
+        filter (registeredDelegate . scriptToCred' . snd) scripts
       registeredPools = _pParams (_pstate dpState)
       availablePools = Set.toList $ domain registeredPools
 

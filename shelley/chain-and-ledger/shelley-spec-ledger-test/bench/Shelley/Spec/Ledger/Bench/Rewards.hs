@@ -10,8 +10,9 @@ module Shelley.Spec.Ledger.Bench.Rewards
   )
 where
 
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Crypto.VRF (hashVerKeyVRF)
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Reader (runReader, runReaderT)
@@ -59,16 +60,15 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.Chain
     registerGenesisStaking,
   )
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
-import Cardano.Ledger.Era (Era(Crypto))
 
 -- | Generate a chain state at a given epoch. Since we are only concerned about
 -- rewards, this will populate the chain with empty blocks (only issued by the
 -- original genesis delegates).
 genChainInEpoch :: Gen (Core.Value B) -> EpochNo -> Gen (ChainState B)
-genChainInEpoch gv epoch = do
+genChainInEpoch _gv epoch = do
   genesisChainState <-
     fromRight (error "genChainState failed")
-      <$> mkGenesisChainState @B gv cs (IRC ())
+      <$> mkGenesisChainState @B cs (IRC ())
   -- Our genesis chain state contains no registered staking. Since we want to
   -- calculate a reward update, we will set some up.
   -- What do we want to do here?
@@ -155,9 +155,10 @@ genChainInEpoch gv epoch = do
     stakePools = ksStakePools ks
     chunk :: Int -> [a] -> [[a]]
     chunk n _ | n <= 0 = []
-    chunk n xs = go [] xs where
-      go !acc [] = acc
-      go !acc xs' = let (a,b) = splitAt n xs' in go (a : acc) b
+    chunk n xs = go [] xs
+      where
+        go !acc [] = acc
+        go !acc xs' = let (a, b) = splitAt n xs' in go (a : acc) b
 
     addrToKeyHash :: Addr era -> Maybe (KeyHash 'Staking (Crypto era))
     addrToKeyHash (Addr _ _ (StakeRefBase (KeyHashObj kh))) = Just kh

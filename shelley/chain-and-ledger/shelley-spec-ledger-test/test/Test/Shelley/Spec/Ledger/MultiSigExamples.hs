@@ -19,9 +19,9 @@ where
 
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Coerce (coerce)
 import Data.Foldable (fold)
@@ -93,8 +93,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
-    genesisId,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
 
 -- Multi-Signature tests
@@ -203,6 +203,7 @@ genesis = genesisState genDelegs0 utxo0
     genDelegs0 = Map.empty
     utxo0 =
       genesisCoins @era
+        genesisId
         [ TxOut Cast.aliceAddr (Val.inject aliceInitCoin),
           TxOut Cast.bobAddr (Val.inject bobInitCoin)
         ]

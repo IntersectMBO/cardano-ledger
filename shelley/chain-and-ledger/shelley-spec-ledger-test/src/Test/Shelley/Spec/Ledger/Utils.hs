@@ -36,6 +36,11 @@ module Test.Shelley.Spec.Ledger.Utils
     MultiSigPairs,
     getBlockNonce,
     ShelleyTest,
+    ShelleyUtxoSTS,
+    ShelleyLedgerSTS,
+    ShelleyLedgersSTS,
+    ShelleyChainSTS,
+    ChainProperty,
     Split (..),
   )
 where
@@ -92,8 +97,21 @@ import Data.Functor ((<&>))
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
+import Data.Sequence (Seq)
 import Data.Word (Word64)
 import Hedgehog (MonadTest, (===))
+import Shelley.Spec.Ledger.API
+  ( ApplyBlock,
+    CHAIN,
+    ChainState,
+    DPState,
+    GetLedgerView,
+    LEDGER,
+    LEDGERS,
+    LedgerEnv,
+    LedgerState,
+    LedgersEnv,
+  )
 import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
@@ -108,6 +126,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, bhbody, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
+import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashIndex)
 import Shelley.Spec.Ledger.Keys
   ( KeyPair,
     KeyRole (..),
@@ -117,11 +136,14 @@ import Shelley.Spec.Ledger.Keys
     vKey,
     pattern KeyPair,
   )
-import Shelley.Spec.Ledger.Hashing (HashIndex, EraIndependentTxBody)
+import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv)
+import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
-import Shelley.Spec.Ledger.Tx (TxBody)
+import Shelley.Spec.Ledger.Tx (Tx, TxBody)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
@@ -133,6 +155,48 @@ type ShelleyTest era =
     Core.Script era ~ MultiSig era,
     Split (Core.Value era),
     HashIndex (Core.TxBody era) ~ EraIndependentTxBody
+  )
+
+type ChainProperty era =
+  ( ShelleyBased era,
+    Mock (Crypto era),
+    ShelleyUtxoSTS era,
+    ApplyBlock era,
+    GetLedgerView era
+  )
+
+type ShelleyUtxoSTS era =
+  ( STS (UTXOW era),
+    BaseM (UTXOW era) ~ ShelleyBase,
+    State (UTXO era) ~ UTxOState era,
+    State (UTXOW era) ~ UTxOState era,
+    Environment (UTXOW era) ~ UtxoEnv era,
+    Environment (UTXO era) ~ UtxoEnv era,
+    Signal (UTXOW era) ~ Tx era
+  )
+
+type ShelleyLedgerSTS era =
+  ( STS (LEDGER era),
+    BaseM (LEDGER era) ~ ShelleyBase,
+    Environment (LEDGER era) ~ LedgerEnv era,
+    State (LEDGER era) ~ (UTxOState era, DPState era),
+    Signal (LEDGER era) ~ Tx era
+  )
+
+type ShelleyLedgersSTS era =
+  ( STS (LEDGERS era),
+    BaseM (LEDGERS era) ~ ShelleyBase,
+    Environment (LEDGERS era) ~ LedgersEnv era,
+    State (LEDGERS era) ~ LedgerState era,
+    Signal (LEDGERS era) ~ Seq (Tx era)
+  )
+
+type ShelleyChainSTS era =
+  ( STS (CHAIN era),
+    BaseM (CHAIN era) ~ ShelleyBase,
+    Environment (CHAIN era) ~ (),
+    State (CHAIN era) ~ ChainState era,
+    Signal (CHAIN era) ~ Block era
   )
 
 class Split v where
