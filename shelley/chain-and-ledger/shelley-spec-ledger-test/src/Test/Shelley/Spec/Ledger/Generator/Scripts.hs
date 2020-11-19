@@ -172,7 +172,7 @@ mkPayScriptHashMap scripts =
   where
     f script@(pay, _stake) = (hashScript pay, script)
 
--- | Generate a mapping from stake script hash to multisig pair.
+-- | Generate a mapping from stake script hash to script pair.
 mkStakeScriptHashMap ::
   (ScriptClass era) =>
   [(Core.Script era, Core.Script era)] ->

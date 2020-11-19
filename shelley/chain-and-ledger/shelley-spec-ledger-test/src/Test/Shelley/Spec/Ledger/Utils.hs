@@ -33,12 +33,10 @@ module Test.Shelley.Spec.Ledger.Utils
     maxLLSupply,
     applySTSTest,
     GenesisKeyPair,
-    MultiSigPairs,
     getBlockNonce,
     ShelleyTest,
     ShelleyUtxoSTS,
     ShelleyLedgerSTS,
-    ShelleyLedgersSTS,
     ShelleyChainSTS,
     ChainProperty,
     Split (..),
@@ -180,11 +178,8 @@ type ShelleyLedgerSTS era =
     BaseM (LEDGER era) ~ ShelleyBase,
     Environment (LEDGER era) ~ LedgerEnv era,
     State (LEDGER era) ~ (UTxOState era, DPState era),
-    Signal (LEDGER era) ~ Tx era
-  )
-
-type ShelleyLedgersSTS era =
-  ( STS (LEDGERS era),
+    Signal (LEDGER era) ~ Tx era,
+    STS (LEDGERS era),
     BaseM (LEDGERS era) ~ ShelleyBase,
     Environment (LEDGERS era) ~ LedgersEnv era,
     State (LEDGERS era) ~ LedgerState era,
@@ -205,8 +200,6 @@ class Split v where
 -- =======================================================
 
 type GenesisKeyPair crypto = KeyPair 'Genesis crypto
-
-type MultiSigPairs era = [(MultiSig era, MultiSig era)]
 
 -- ================================================
 

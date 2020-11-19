@@ -49,7 +49,6 @@ import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Utils
   ( ShelleyLedgerSTS,
-    ShelleyLedgersSTS,
     applySTSTest,
     runShelleyBase,
   )
@@ -90,7 +89,6 @@ instance
   ( EraGen era,
     Mock (Crypto era),
     ShelleyLedgerSTS era,
-    ShelleyLedgersSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>

@@ -59,7 +59,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
 import Test.Shelley.Spec.Ledger.Utils
   ( ShelleyLedgerSTS,
-    ShelleyLedgersSTS,
     epochFromSlotNo,
     maxKESIterations,
     runShelleyBase,
@@ -83,7 +82,6 @@ genBlock ::
     ApplyBlock era,
     GetLedgerView era,
     ShelleyLedgerSTS era,
-    ShelleyLedgersSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
