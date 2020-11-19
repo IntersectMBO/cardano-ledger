@@ -1,4 +1,6 @@
-{ lib, latex, texlive, gitMinimal }:
+{ pkgs ? import ../../../nix/default.nix {} }:
+
+with pkgs;
 
 latex.buildLatex {
   name = "shelley-ledger-spec";
