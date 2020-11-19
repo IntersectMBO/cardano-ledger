@@ -1,4 +1,6 @@
-{ lib, latex, texlive, gitMinimal, cddl, cbor-diag }:
+{ pkgs ? import ../../nix/default.nix {} }:
+
+with pkgs;
 
 latex.buildLatex {
   name = "blocks-cddl-spec";

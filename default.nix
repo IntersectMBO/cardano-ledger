@@ -54,16 +54,16 @@ let
     #  nix-build -A specs -o spec
     #
     specs = recurseIntoAttrs {
-      byron-ledger = pkgs.callPackage ./byron/ledger/formal-spec {};
-      byron-chain = pkgs.callPackage ./byron/chain/formal-spec {};
-      small-step-semantics = pkgs.callPackage ./semantics/formal-spec {};
-      shelley-ledger = pkgs.callPackage ./shelley/chain-and-ledger/formal-spec {};
-      pool-ranking = pkgs.callPackage ./shelley/pool-ranking {};
-      shelley-ma = pkgs.callPackage ./shelley-ma/formal-spec {};
-      goguen-ledger = pkgs.callPackage ./goguen/formal-spec {};
-      delegation-design = pkgs.callPackage ./shelley/design-spec {};
-      non-integer-calculations = pkgs.callPackage ./shelley/chain-and-ledger/dependencies/non-integer/doc {};
-      blocks-cddl = pkgs.callPackage ./byron/cddl-spec {};
+      byron-ledger = pkgs.callPackage ./byron/ledger/formal-spec/default.nix {};
+      byron-chain = pkgs.callPackage ./byron/chain/formal-spec/default.nix {};
+      small-step-semantics = pkgs.callPackage ./semantics/formal-spec/default.nix {};
+      shelley-ledger = pkgs.callPackage ./shelley/chain-and-ledger/formal-spec/default.nix {};
+      pool-ranking = pkgs.callPackage ./shelley/pool-ranking/default.nix {};
+      shelley-ma = pkgs.callPackage ./shelley-ma/formal-spec/default.nix {};
+      goguen-ledger = pkgs.callPackage ./goguen/formal-spec/default.nix {};
+      delegation-design = pkgs.callPackage ./shelley/design-spec/default.nix {};
+      non-integer-calculations = pkgs.callPackage ./shelley/chain-and-ledger/dependencies/non-integer/doc/default.nix {};
+      blocks-cddl = pkgs.callPackage ./byron/cddl-spec/default.nix {};
     };
 
     doc = {
