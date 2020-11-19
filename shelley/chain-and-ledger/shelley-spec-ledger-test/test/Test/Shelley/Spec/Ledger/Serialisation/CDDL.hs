@@ -1,11 +1,13 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.Serialisation.CDDL
   ( tests,
@@ -41,7 +43,6 @@ import Shelley.Spec.Ledger.TxBody
     TxIn,
     TxOut,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Tasty (TestTree, withResource, testGroup)
 import Test.Shelley.Spec.Ledger.Serialisation.CDDLUtils
   ( cddlGroupTest,
@@ -49,34 +50,58 @@ import Test.Shelley.Spec.Ledger.Serialisation.CDDLUtils
     cddlTest',
   )
 
+import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
+import Cardano.Crypto.KES.Sum
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
+import Cardano.Crypto.VRF.Praos (PraosVRF)
+import Cardano.Ledger.Shelley (ShelleyEra)
+
+-- Crypto family as used in production Shelley
+-- TODO: we really need a central location for all the Crypto and Era families.
+-- I think we need something like Test.Cardano.Ledger.EraBuffet
+-- (currently in the shelley-ma-test package)
+-- that lives outside any era specific package.
+data ShelleyC
+
+instance Cardano.Ledger.Crypto.Crypto ShelleyC where
+  type DSIGN ShelleyC = Ed25519DSIGN
+  type KES ShelleyC = Sum6KES Ed25519DSIGN Blake2b_256
+  type VRF ShelleyC = PraosVRF
+  type HASH ShelleyC = Blake2b_256
+  type ADDRHASH ShelleyC = Blake2b_224
+
+type ShelleyE = ShelleyEra ShelleyC
+
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlTest' @(BHeader C_Crypto) n "header",
-      cddlTest' @(BootstrapWitness C) n "bootstrap_witness",
-      cddlTest @(BHBody C_Crypto) n "header_body",
-      cddlGroupTest @(OCert C_Crypto) n "operational_cert",
-      cddlTest @(Addr C) n "address",
-      cddlTest @(RewardAcnt C) n "reward_account",
-      cddlTest @(Credential 'Staking C) n "stake_credential",
-      cddlTest' @(TxBody C) n "transaction_body",
-      cddlTest @(TxOut C) n "transaction_output",
+    [ cddlTest' @(BHeader ShelleyC) n "header",
+      cddlTest' @(BootstrapWitness ShelleyE) n "bootstrap_witness",
+      cddlTest @(BHBody ShelleyC) n "header_body",
+      cddlGroupTest @(OCert ShelleyC) n "operational_cert",
+      cddlTest @(Addr ShelleyE) n "address",
+      cddlTest @(RewardAcnt ShelleyE) n "reward_account",
+      cddlTest @(Credential 'Staking ShelleyE) n "stake_credential",
+      cddlTest' @(TxBody ShelleyE) n "transaction_body",
+      cddlTest @(TxOut ShelleyE) n "transaction_output",
       cddlTest @StakePoolRelay n "relay",
-      cddlTest @(DCert C) n "certificate",
-      cddlTest @(TxIn C) n "transaction_input",
+      cddlTest @(DCert ShelleyE) n "certificate",
+      cddlTest @(TxIn ShelleyE) n "transaction_input",
       cddlTest' @MetaData n "transaction_metadata",
-      cddlTest' @(MultiSig C) n "multisig_script",
-      cddlTest @(Update C) n "update",
-      cddlTest @(ProposedPPUpdates C) n "proposed_protocol_parameter_updates",
-      cddlTest @(PParamsUpdate C) n "protocol_param_update",
-      cddlTest' @(Tx C) n "transaction",
-      cddlTest' @(LaxBlock C) n "block"
+      cddlTest' @(MultiSig ShelleyE) n "multisig_script",
+      cddlTest @(Update ShelleyE) n "update",
+      cddlTest @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",
+      cddlTest @(PParamsUpdate ShelleyE) n "protocol_param_update",
+      cddlTest' @(Tx ShelleyE) n "transaction",
+      cddlTest' @(LaxBlock ShelleyE) n "block"
     ]
       <*> pure cddl
 
 combinedCDDL :: IO BSL.ByteString
 combinedCDDL = do
   base <- BSL.readFile "cddl-files/shelley.cddl"
-  crypto <- BSL.readFile "cddl-files/mock/crypto.cddl"
+  crypto <- BSL.readFile "cddl-files/real/crypto.cddl"
   extras <- BSL.readFile "cddl-files/mock/extras.cddl"
+  --extras contains the types whose restrictions cannot be expressed in CDDL
   pure $ base <> crypto <> extras

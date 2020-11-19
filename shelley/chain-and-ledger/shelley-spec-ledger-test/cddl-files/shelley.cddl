@@ -244,3 +244,5 @@ genesishash           = $hash28
 
 vrf_keyhash           = $hash32
 metadata_hash         = $hash32
+
+$nonce /= [ 0 // 1, bytes .size 32 ]
