@@ -124,20 +124,21 @@ instance Era era => Val (Value era) where
     foldr accum uint v
     where
       -- add addrHashLen for each Policy ID
-      accum u ans = foldr accumIns (ans + addrHashLen) u
+      accum u ans = foldr accumIns (ans + policyIdLen) u
         where
           -- add assetNameLen and uint for each asset of that Policy ID
           accumIns _ ans1 = ans1 + assetNameLen + uint
       -- TODO move these constants somewhere (they are also specified in CDDL)
       uint :: Integer
-      uint = 5
+      uint = 9
 
       assetNameLen :: Integer
       assetNameLen = 32
 
+      -- TODO dig up these constraints from Era 
       -- address hash length is always same as Policy ID length
-      addrHashLen :: Integer
-      addrHashLen = 28
+      policyIdLen :: Integer
+      policyIdLen = 28
 
 -- ==============================================================
 -- CBOR
