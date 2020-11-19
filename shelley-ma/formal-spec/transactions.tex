@@ -38,6 +38,23 @@
     \end{array}
   \end{equation*}
   %
+  \begin{equation*}
+    \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
+      \var{md} ~\in~ \MetaData ~=~
+      & \powerset{\Script} & \fun{scripts}& \text{Optional scripts}\\
+      & \times ~\MetaDataBlob^? & \fun{mdBlob} & \text{Blob metadata}
+    \end{array}
+  \end{equation*}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
+      \var{tx} ~\in~ \Tx ~=~
+      & \TxBody & \fun{txinputs}& \text{Transaction body}\\
+      &\times ~\TxWitness & \fun{txouts}& \text{Witnesses}\\
+      & \times ~\MetaData^? & \fun{txMDhash} & \text{Metadata}
+    \end{array}
+  \end{equation*}
+  %
   \emph{Accessor Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
@@ -120,3 +137,14 @@ $\Coin$, the transaction outputs now have type $\Value$.
 The only change to the types related to transaction witnessing is the addition
 of minting policy scripts to the underlying $\Script$ type, so we do not include the
 whole $\Tx$ type here.
+
+\subsection*{Metadata}
+
+The metadata section of the transaction consists of two parts:
+$\fun{mdBlob}$ which is a new name for the metadata type used in
+Shelley, and $\fun{scripts}$, which is used to allow transactions to
+contain optional scripts that are not used for witnessing. The
+intended purpose of this field is to give users the ability to
+transmit a script that belongs to a script address via this
+metadata. There are no restrictions on this field however, and users
+can use it to put arbitrary scripts into metadata.

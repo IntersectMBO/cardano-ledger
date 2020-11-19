@@ -226,18 +226,8 @@ $\Coin$.
 \end{figure}
 
 Figure~\ref{fig:functions-witnesses} contains the changed definition
-of the function $\fun{scriptsNeeded}$, to also collect the scripts
+of the function $\fun{scriptsNeeded}$, which also collects the scripts
 necessary for minting.
 
-Recall here that the $\Script$ type has changed to include
-not just multi-signature script type $\ScriptMSig$, but also another native (i.e. evaluated
-by the ledger directly) script type, $\ScriptMPS$. The witnessing rule UTXOW
-does not itself change, but the function $\fun{validateScript}$, which it calls
-to evaluate the scripts prescribed by $\fun{scriptsNeeded}$, does change, including
-a change to the arguments passed to it, see~\ref{sec:mps-lang}.
-
-Note that, same as in Shelley, the validation function called by the
-UTXOW rule, which checks a given script, does not know the purpose of the script
-(minting, output-locking, etc.).
-All scripts are run in the same way, with $\fun{validateScript}$ being responsible
-for calling the evaluator appropriate for the specific type of script.
+The witnessing rule UTXOW only needs a minor change for verifying the meta data hash,
+which is replacing the condition $\var{md} = \Nothing$ with $\var{md} = (\emptyset, \Nothing)$.

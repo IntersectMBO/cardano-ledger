@@ -4,14 +4,15 @@
 
 \begin{figure}[htb]
   \begin{align*}
-    \fun{validateScript} & \in\Script\to
-    \powerset{\KeyHash}\to\TxBody\to\Bool \\
-    \fun{validateScript} & ~s~\var{vhks}~\var{txb}~=
+    \fun{validateScript} & \in\Script\to\Tx\to\Bool \\
+    \fun{validateScript} & ~s~\var{tx}~=
                            \begin{cases}
                              \fun{evalMultiSigScript}~s~vhks & \text{if}~s \in\ScriptNI \\
                              \fun{evalFPS}~s~\var{vhks} ~txb & \text{if}~s \in\ScriptMPS \\
                              \mathsf{False} & \text{otherwise}
-                           \end{cases}
+                           \end{cases} \\
+                         & ~~~~\where \var{vhks}\leteq \{\fun{hashKey}~vk \vert
+                           vk \in \dom(\fun{txwitsVKey}~\var{tx})\}
   \end{align*}
   \caption{Script Validation}
   \label{fig:functions-validate}
