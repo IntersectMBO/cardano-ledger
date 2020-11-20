@@ -8,7 +8,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId) where
+module Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId,genUtxo0) where
 
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -102,9 +102,10 @@ genUtxo0 ::
 genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts, maxGenesisOutputVal, minGenesisOutputVal} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts (Proxy @era) c minGenesisUTxOouts maxGenesisUTxOouts
+  let scriptHashList = map (hashScript . fst) genesisScripts
   outs <-
     genTxOut
-      (genValue @era minGenesisOutputVal maxGenesisOutputVal)
+      (genValue @era scriptHashList minGenesisOutputVal maxGenesisOutputVal)
       (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr' Testnet) genesisScripts)
   return (genesisCoins (genesisId @era)  outs)
   where

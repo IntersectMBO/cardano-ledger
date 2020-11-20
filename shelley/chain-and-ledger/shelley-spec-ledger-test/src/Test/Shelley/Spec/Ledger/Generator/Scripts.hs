@@ -280,8 +280,8 @@ instance CC.Crypto c => ScriptClass (ShelleyEra c) where
 -- ===========================================================
 -- How to be a Generic Value
 
-class ValueClass era where
-   genValue:: Integer -> Integer -> Gen(Core.Value era)
+class Val(Core.Value era) => ValueClass era where
+   genValue:: [ScriptHash era] -> Integer -> Integer -> Gen(Core.Value era)
 
 genCoin :: Integer -> Integer -> Gen Coin
 genCoin minCoin maxCoin = Coin <$> exponential minCoin maxCoin
@@ -295,20 +295,23 @@ exponential minc maxc = QC.frequency spread
         spread = zip scales deltas
 
 instance ValueClass (ShelleyEra c) where
-   genValue = genCoin
+   genValue _ = genCoin
 
 
 -- ===========================================================
 -- How to be a Generic TxBody
+
+-- data Field old new = Field (d -> old -> new) (Gen d)
 
 class ( HashIndex (Core.TxBody era) ~ EraIndependentTxBody,
         HashAnnotated (TxBody era) era)
        =>
        TxBodyClass era where
    emptyTxBody:: Core.TxBody era
+   liftTxBody :: Gen (Shelley.TxBody era) -> Gen(Core.TxBody era)
 
 instance CC.Crypto c => TxBodyClass (ShelleyEra c) where
-  emptyTxBody = Shelley.TxBody
+   emptyTxBody = Shelley.TxBody
           Set.empty
           StrictSeq.Empty
           StrictSeq.Empty
@@ -317,6 +320,7 @@ instance CC.Crypto c => TxBodyClass (ShelleyEra c) where
           (SlotNo 0)
           SNothing
           SNothing
+   liftTxBody x = x
 
 genesisId :: forall era. TxBodyClass era => TxId era
 genesisId = TxId (hashAnnotated @(Core.TxBody era) @era (emptyTxBody @era))
