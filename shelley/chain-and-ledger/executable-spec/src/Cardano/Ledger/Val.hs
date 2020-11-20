@@ -122,7 +122,10 @@ See the formal specification for details.
 scaledMinDeposit :: (Val v) => v -> Coin -> Coin
 scaledMinDeposit v (Coin mv)
   | inject (coin v) == v = Coin mv -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
-  | otherwise = Coin $ fst $ quotRem (mv * (utxoEntrySizeWithoutVal + uint)) (utxoEntrySizeWithoutVal + size v) -- round down
+  -- The calculation should represent this equation
+  -- minValueParameter / coinUTxOSize = actualMinValue / valueUTxOSize
+  -- actualMinValue = (minValueParameter / coinUTxOSize) * valueUTxOSize
+  | otherwise = Coin $ adaPerUTxOByte * (utxoEntrySizeWithoutVal + size v) -- round down
   where
     -- address hash length is always same as Policy ID length
     addrHashLen :: Integer
@@ -157,3 +160,7 @@ scaledMinDeposit v (Coin mv)
     -- size of the UTxO entry (ie the space the scaled minUTxOValue deposit pays)
     utxoEntrySizeWithoutVal :: Integer
     utxoEntrySizeWithoutVal = inputSize + outputSizeWithoutVal
+
+    -- parameter is implicit from the minAdaValue parameter
+    adaPerUTxOByte :: Integer
+    adaPerUTxOByte = quot mv (utxoEntrySizeWithoutVal + uint)
