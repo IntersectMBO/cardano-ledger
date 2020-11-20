@@ -135,7 +135,7 @@ instance Era era => Val (Value era) where
       assetNameLen :: Integer
       assetNameLen = 32
 
-      -- TODO dig up these constraints from Era 
+      -- TODO dig up these constraints from Era
       -- address hash length is always same as Policy ID length
       policyIdLen :: Integer
       policyIdLen = 28
