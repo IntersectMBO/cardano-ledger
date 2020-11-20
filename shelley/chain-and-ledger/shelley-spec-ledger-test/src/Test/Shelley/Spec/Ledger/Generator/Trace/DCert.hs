@@ -193,17 +193,10 @@ genDCerts
       scriptWitnesses (ScriptCred (_, stakeScript)) =
         StakeCred <$> witnessHashes''
         where
-          -- witnessHashes = eraScriptWitness stakeScript
           witnessHashes = scriptKeyCombination (Proxy @era) stakeScript
           witnessHashes' = fmap coerceKeyRole witnessHashes
           witnessHashes'' = fmap coerceKeyRole (catMaybes (map lookupWit witnessHashes'))
       scriptWitnesses _ = []
-{-
-      eraScriptWitness s =
-        case (eraScriptWitnesses @era s) of
-          [] -> error "genDCerts - empty eraScriptWitnesses"
-          (k : _) -> k
--}
 
       lookupWit = flip Map.lookup ksIndexedStakingKeys
 

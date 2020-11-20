@@ -62,7 +62,6 @@ import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
 import Test.Shelley.Spec.Ledger.Utils
   ( ShelleyChainSTS,
     ShelleyLedgerSTS,
-    ShelleyLedgersSTS,
     ShelleyTest,
     maxLLSupply,
     mkHash,
@@ -76,7 +75,6 @@ instance
     ApplyBlock era,
     GetLedgerView era,
     ShelleyLedgerSTS era,
-    ShelleyLedgersSTS era,
     ShelleyChainSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))

@@ -535,12 +535,7 @@ mkTxWits
           . Map.toAscList
           $ indexedStakingKeys
       keysLists = map (scriptKeyCombination (Proxy @era)) (Map.elems msigs)
-{-
-      eraScriptWitness s =   GONE
-        case (eraScriptWitnesses @era s) of
-          [] -> error "mkTxWits - empty eraScriptWitnesses"
-          (k : _) -> k
--}
+
       msigSignatures = foldl' Set.union Set.empty $ map Set.fromList keysLists
 
 -- | Distribute the sum of `balance_` and `fee` over the addresses, return the

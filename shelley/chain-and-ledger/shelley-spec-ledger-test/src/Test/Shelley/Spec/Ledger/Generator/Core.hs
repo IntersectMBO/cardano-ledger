@@ -198,7 +198,14 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
-import Test.Shelley.Spec.Ledger.Generator.Scripts(ScriptClass, mkPayScriptHashMap,mkStakeScriptHashMap)
+import Test.Shelley.Spec.Ledger.Generator.Scripts
+  ( ScriptClass,
+    ValueClass,
+    TxBodyClass,
+    mkPayScriptHashMap,
+    mkStakeScriptHashMap,
+    genCoin,
+  )
 
 -- ===================================
 
@@ -207,7 +214,9 @@ class
     ValidateScript era,
     Split (Core.Value era),
     Show (Core.Script era),
-    ScriptClass era
+    ScriptClass era,
+    ValueClass era,
+    TxBodyClass era
   ) =>
   EraGen era
   where
@@ -223,10 +232,6 @@ class
     StrictMaybe (Update era) ->
     StrictMaybe (MetaDataHash era) ->
     Gen (Core.TxBody era)
-
-  -- eraScriptWitnesses :: Core.Script era -> [[KeyHash 'Witness (Crypto era)]] GONE
-
-  -- eraKeySpaceScripts :: Constants -> [(Core.Script era, Core.Script era)]   GONE
 
   updateEraTxBody ::
     Core.TxBody era ->
@@ -375,28 +380,6 @@ mkPayKeyHashMap keyPairs =
   where
     f (payK, _stakeK) = ((hashKey . vKey) payK, payK)
 
-{-
--- | Generate a mapping from pay script hash to multisig pair.
-mkPayScriptHashMap ::
-  EraGen era =>
-  [(Core.Script era, Core.Script era)] ->
-  Map (ScriptHash era) (Core.Script era, Core.Script era)
-mkPayScriptHashMap scripts =
-  Map.fromList (f <$> scripts)
-  where
-    f script@(pay, _stake) = (hashScript pay, script)
-
--- | Generate a mapping from stake script hash to multisig pair.
-mkStakeScriptHashMap ::
-  EraGen era =>
-  [(Core.Script era, Core.Script era)] ->
-  Map (ScriptHash era) (Core.Script era, Core.Script era)
-mkStakeScriptHashMap scripts =
-  Map.fromList (f <$> scripts)
-  where
-    f script@(_pay, stake) = (hashScript stake, script)
--}
-
 -- | Find first matching key pair for a credential. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPairCred ::
@@ -483,10 +466,6 @@ genTxOut genEraVal addrs = do
 genCoinList :: Integer -> Integer -> Int -> Gen [Coin]
 genCoinList minCoin maxCoin len = do
   replicateM len $ genCoin minCoin maxCoin
-
--- TODO this should be an exponential distribution, not constant
-genCoin :: Integer -> Integer -> Gen Coin
-genCoin minCoin maxCoin = Coin <$> QC.choose (minCoin, maxCoin)
 
 -- | Generate values the given distribution in 90% of the cases, and values at
 -- the bounds of the range in 10% of the cases.

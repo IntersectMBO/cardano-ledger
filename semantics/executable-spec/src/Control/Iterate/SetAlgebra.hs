@@ -39,7 +39,6 @@ import NoThunks.Class (NoThunks (..))
 import Text.PrettyPrint.ANSI.Leijen (Doc, align, parens, text, vsep, (<+>))
 import Prelude hiding (lookup)
 
-
 -- ==================================================================================================
 -- | In order to build typed Exp (which are a typed deep embedding) of Set operations, we need to know
 -- what kind of basic types of Maps and Sets can be embedded. Every Basic type has a few operations
@@ -601,6 +600,7 @@ data Exp t where
    NotElem ::(Ord k,Iter g, Show k) => k -> Exp(g k ()) -> Exp Bool
    Intersect :: (Ord k, Iter f, Iter g) => Exp(f k v) -> Exp(g k u) -> Exp(Sett k ())
    Subset ::  (Ord k, Iter f, Iter g) => Exp(f k v) -> Exp(g k u) -> Exp Bool
+   SetDiff ::  (Ord k, Iter f, Iter g) => Exp(f k v) -> Exp(g k u) -> Exp(f k v)
    UnionOverrideLeft:: (Show k, Show v,Ord k) => Exp (f k v) -> Exp (g k v) -> Exp(f k v)
         -- The (Show k, Show v) supports logging errors if there are duplicate keys.
    UnionPlus:: (Ord k,Monoid n) => Exp (f k n) -> Exp (f k n) -> Exp(f k n)
@@ -725,6 +725,10 @@ intersect = (∩)
 (⊆),subset :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp Bool
 (⊆) x y = Subset (toExp x) (toExp y)
 subset = (⊆)
+
+(➖),setdiff  ::  (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp(f k v)
+(➖) x y = SetDiff (toExp x) (toExp y)
+setdiff = (➖)
 
 (≍),keyeq :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp Bool
 (≍) x y = KeyEqual (toExp x) (toExp y)
@@ -1060,6 +1064,8 @@ compile (UnionOverrideRight rel1 rel2) =  (OrD rel1d (fst(compile rel2)) second,
 compile (UnionPlus rel1 rel2) =  (OrD rel1d (fst(compile rel2)) plus,rep)
     where (rel1d,rep) = compile rel1
 compile (Intersect rel1 rel2) = (andPD (fst(compile rel1)) (fst(compile rel2)) (constant ()) ,SetR)
+compile (SetDiff rel1 rel2) = (DiffD rel1d (fst (compile rel2)), rep)
+    where (rel1d,rep) = compile rel1
 
 -- ===========================================================================
 -- run materializes compiled code, only if it is not already data
@@ -1241,6 +1247,14 @@ compute (e@(Subset _ _)) = runBoolExp e
 compute (Intersect (Base SetR (Sett x)) (Base SetR (Sett y))) = Sett (Set.intersection x y)
 compute (Intersect (Base MapR x) (Base MapR y)) = Sett (Map.keysSet(Map.intersection x y))
 compute (e@(Intersect _ _)) = runSetExp e
+
+compute (SetDiff (Base SetR (Sett x)) (Base SetR (Sett y))) = Sett (Set.difference x y)
+compute (SetDiff (Base SetR (Sett x)) (Base MapR y)) = Sett(Set.filter (\ e -> not(Map.member e y)) x)
+compute (SetDiff (Base SetR (Sett x)) (Dom (Base MapR y))) = Sett(Set.filter (\ e -> not(Map.member e y)) x)
+compute (SetDiff (Base MapR x) (Dom (Base MapR y))) = Map.difference x y
+compute (SetDiff (Base MapR x) (Base MapR y)) = (Map.difference x y)
+compute (SetDiff (Base MapR x) (Base SetR (Sett y))) = (Map.withoutKeys x y)
+compute (e@(SetDiff _ _)) = runSetExp e
 
 compute (UnionOverrideLeft (Base _rep x) (Singleton k v))  = addkv (k,v) x (\ old _new -> old) -- The value on the left is preferred over the right, so 'addkv' chooses 'old'
 compute (UnionOverrideLeft (Base MapR d0) (Base MapR d1)) = Map.union d0 d1  -- 'Map.union' is left biased, just what we want.
@@ -1469,6 +1483,7 @@ instance Show (Exp t) where
   show (Elem k x) = "("++show k++" ∈ "++show x++")"
   show (NotElem k x) = "("++show k++" ∉ "++show x++")"
   show (Intersect x y) = "("++show x ++" ∩ "++show y++")"
+  show (SetDiff x y) = "("++show x ++" ➖ "++show y++")"
   show (Subset x y) = "("++show x++" ⊆ "++show y++")"
   show (UnionOverrideLeft x y) = "("++show x++" ∪ "++show y++")"
   show (UnionPlus x y) = "("++show x++" ∪+ "++show y++")"

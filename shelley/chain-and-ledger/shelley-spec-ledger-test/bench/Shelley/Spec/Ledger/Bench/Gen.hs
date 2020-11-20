@@ -10,7 +10,6 @@ module Shelley.Spec.Ledger.Bench.Gen
   )
 where
 
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Control.State.Transition.Extended
 import Data.Either (fromRight)
@@ -27,7 +26,7 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
   )
-import Test.QuickCheck (Gen, generate)
+import Test.QuickCheck (generate)
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions (ledgerEnv)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import qualified Test.Shelley.Spec.Ledger.Generator.Block as GenBlock
@@ -43,18 +42,17 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyLedgersSTS, ShelleyTest)
+import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest)
 
 -- =============================================================================
 
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
   EraGen era =>
-  Gen (Core.Value era) ->
   Int ->
   GenEnv era ->
   IO (ChainState era)
-genChainState _gv n ge =
+genChainState n ge =
   let cs =
         (geConstants ge)
           { minGenesisUTxOouts = n,
@@ -75,7 +73,6 @@ genBlock ::
     Mock (Crypto era),
     ShelleyTest era,
     ShelleyLedgerSTS era,
-    ShelleyLedgersSTS era,
     GetLedgerView era,
     ApplyBlock era
   ) =>
@@ -97,13 +94,12 @@ genTriple ::
     Mock (Crypto era),
     ShelleyTest era
   ) =>
-  Gen (Core.Value era) ->
   Proxy era ->
   Int ->
   IO (GenEnv era, ChainState era, GenEnv era -> IO (Tx era))
-genTriple gv proxy n = do
+genTriple proxy n = do
   let ge = genEnv proxy
-  cs <- genChainState gv n ge
+  cs <- genChainState n ge
   let nes = chainNes cs -- NewEpochState
   let es = nesEs nes -- EpochState
   let (LedgerState utxoS dpstate) = esLState es -- LedgerState

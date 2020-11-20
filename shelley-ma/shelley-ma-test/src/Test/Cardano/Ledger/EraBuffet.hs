@@ -65,7 +65,6 @@ import Cardano.Ledger.Core (Script, TxBody, Value)
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
-import qualified Cardano.Ledger.Mary.Value ()
 import qualified Cardano.Ledger.Mary.Value as MaryValue
 import Cardano.Crypto.Hash (MD5Prefix)
 import Cardano.Crypto.DSIGN (MockDSIGN, Ed25519DSIGN)
@@ -82,10 +81,24 @@ import Cardano.Ledger.Allegra(AllegraEra)
 import Cardano.Ledger.Shelley(ShelleyEra)
 
 import Data.Hashable
-import Test.Shelley.Spec.Ledger.Generator.Scripts(ScriptClass(..),Quantifier(..))
+import Data.String(fromString)
+import Test.Shelley.Spec.Ledger.Generator.Constants(Constants(..),defaultConstants)
+import Test.Shelley.Spec.Ledger.Generator.Scripts
+  ( ScriptClass(..),
+    Quantifier(..),
+    ValueClass(..),
+    -- TxBodyClass(..),  -- reserved for future use
+    combinedScripts,
+    exponential,
+    genCoin,
+  )
 import Data.Sequence.Strict (fromList)
 import Cardano.Slotting.Slot (SlotNo (..))
-
+import Data.Proxy(Proxy(..))
+import Test.QuickCheck(Gen,frequency,elements,vectorOf)
+import Shelley.Spec.Ledger.Tx( ValidateScript (..) )
+import qualified Data.Map as Map
+import Cardano.Ledger.Mary.Value(AssetName(..),PolicyID(..),insert)
 -- ===========================================================
 -- First construct concrete versions of Crypto where the Hashing
 -- is concrete. Without this we won't be able to Hash things
@@ -191,6 +204,12 @@ instance (CryptoClass.Crypto c) => ScriptClass (MaryEra c) where
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
 
+type instance Script (MaryEra c) = MAScript.Timelock (MaryEra c)
+
+instance (CryptoClass.Crypto c) => ValueClass  (MaryEra c) where
+   genValue = genMaryValue assets (policyIDs (scripts (Proxy @(MaryEra c)) 5))
+
+
 -- =====================================
 -- EraGen instaces for the AllegraEra
 -- =====================================
@@ -201,6 +220,11 @@ instance ( CryptoClass.Crypto c) => ScriptClass (AllegraEra c) where
   basescript _proxy = someLeaf
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
+
+type instance Script (AllegraEra c) = MAScript.Timelock (AllegraEra c)
+
+instance (CryptoClass.Crypto c) => ValueClass  (AllegraEra c) where
+   genValue = genCoin
 
 -- ========================================================
 -- Reusable pieces for both Mary and Allegra
@@ -226,3 +250,19 @@ someLeaf x =
           else if n > 150
                   then MAScript.RequireTimeExpire (SlotNo (fromIntegral n))
                   else MAScript.RequireSignature x
+
+assets :: [AssetName]
+assets = map (AssetName . fromString) ["Red","Blue","Green","Yellow","Orange","Purple","Black","White"]
+
+scripts :: ScriptClass era => Proxy era -> Int -> [Script era]
+scripts poxy n = map fst (combinedScripts poxy (defaultConstants{numBaseScripts = n}))
+
+policyIDs :: ScriptClass era => [Script era] -> [PolicyID era]
+policyIDs scs = map (PolicyID . hashScript) scs
+
+genMaryValue :: [AssetName] -> [PolicyID era] -> Integer -> Integer ->  Gen(MaryValue era)
+genMaryValue ass policys minCoin maxCoin = do
+   coinN <- exponential minCoin maxCoin
+   size <- frequency [(6,pure 0),(4,pure 1),(2,pure 2),(1,pure 3)]
+   triples <- vectorOf size (do { p <- elements policys; n <- elements ass; i <- elements [1,2,3,4]; pure(p,n,i)})
+   pure $ foldr (\ (p,n,i) ans -> insert (+) p n i ans) (MaryValue.Value coinN Map.empty) triples

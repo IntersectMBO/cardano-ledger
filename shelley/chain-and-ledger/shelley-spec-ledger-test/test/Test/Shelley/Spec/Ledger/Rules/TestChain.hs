@@ -509,7 +509,6 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
             all (existsReqKeyComb khs) (scriptWits . _witnessSet $ tx)
 
     existsReqKeyComb keyHashes msig =
-      -- any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (eraScriptWitnesses @era msig)  GONE
       any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
 
     keyHashSet tx_ =

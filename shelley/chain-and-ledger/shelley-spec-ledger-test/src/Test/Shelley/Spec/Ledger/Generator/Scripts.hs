@@ -29,6 +29,10 @@
 module Test.Shelley.Spec.Ledger.Generator.Scripts
   ( ScriptClass(..),
     Quantifier(..),
+    ValueClass(..),
+    TxBodyClass(..),
+    genCoin,
+    exponential,
     anyOf, allOf, mOf,
     ScriptPairs,
     keyPairs,
@@ -42,6 +46,7 @@ module Test.Shelley.Spec.Ledger.Generator.Scripts
     someScripts,
     scriptKeyCombinations,
     scriptKeyCombination,
+    genesisId,
   )
   where
 
@@ -50,6 +55,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Core(Script,Value,TxBody,ChainData, SerialisableData, AnnotatedData)
 import Cardano.Ledger.Era (Era(..))
+import Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Shelley.Spec.Ledger.Keys (Hash, KeyHash, KeyRole (..),VKey(..), hashKey, asWitness, KeyPair(..), vKey)
 import Cardano.Binary(ToCBOR(..),FromCBOR(..),Annotator)
@@ -62,14 +68,15 @@ import qualified Data.Map as Map
 import qualified Data.List as List
 import Cardano.Ledger.Val(Val(..))
 import qualified Cardano.Crypto.Hash as Hash
-import Shelley.Spec.Ledger.TxBody() -- import instances only
+import Shelley.Spec.Ledger.TxBody(TxId(..))  -- also to import instances
+import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import Data.List(concatMap,permutations)
 import Shelley.Spec.Ledger.LedgerState( KeyPairs )
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
     defaultConstants,
   )
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen,generate)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Utils( mkKeyPair )
 import Data.Word(Word64)
@@ -77,6 +84,10 @@ import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import Data.Tuple (swap)
 import Shelley.Spec.Ledger.Tx( ValidateScript (..) )
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
+import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 
 
 -- ==============================================================================
@@ -172,7 +183,8 @@ mkPayScriptHashMap scripts =
   where
     f script@(pay, _stake) = (hashScript pay, script)
 
--- | Generate a mapping from stake script hash to multisig pair.
+
+-- | Generate a mapping from stake script hash to script pair.
 mkStakeScriptHashMap ::
   (ScriptClass era) =>
   [(Core.Script era, Core.Script era)] ->
@@ -264,3 +276,47 @@ instance CC.Crypto c => ScriptClass (ShelleyEra c) where
   unQuantify _  (AnyOf xs) = (RequireAnyOf xs)
   unQuantify _  (MOf n xs) = (RequireMOf n xs)
   unQuantify _  (Leaf t) = t
+
+-- ===========================================================
+-- How to be a Generic Value
+
+class ValueClass era where
+   genValue:: Integer -> Integer -> Gen(Core.Value era)
+
+genCoin :: Integer -> Integer -> Gen Coin
+genCoin minCoin maxCoin = Coin <$> exponential minCoin maxCoin
+
+exponential :: Integer -> Integer -> Gen Integer
+exponential minc maxc = QC.frequency spread
+  where width = (maxc - minc) `div` n
+        deltas = [QC.choose (minc + (i-1)*width, minc + i*width) | i <- [1 .. n]]
+        scales = [1,2,4,6,4,2,1]
+        n = fromIntegral(length scales)
+        spread = zip scales deltas
+
+instance ValueClass (ShelleyEra c) where
+   genValue = genCoin
+
+
+-- ===========================================================
+-- How to be a Generic TxBody
+
+class ( HashIndex (Core.TxBody era) ~ EraIndependentTxBody,
+        HashAnnotated (TxBody era) era)
+       =>
+       TxBodyClass era where
+   emptyTxBody:: Core.TxBody era
+
+instance CC.Crypto c => TxBodyClass (ShelleyEra c) where
+  emptyTxBody = Shelley.TxBody
+          Set.empty
+          StrictSeq.Empty
+          StrictSeq.Empty
+          (Shelley.Wdrl Map.empty)
+          (Coin 0)
+          (SlotNo 0)
+          SNothing
+          SNothing
+
+genesisId :: forall era. TxBodyClass era => TxId era
+genesisId = TxId (hashAnnotated @(Core.TxBody era) @era (emptyTxBody @era))

@@ -1,4 +1,6 @@
-{ lib, latex, texlive }:
+{ pkgs ? import ../../nix/default.nix {} }:
+
+with pkgs;
 
 latex.buildLatex {
   name = "shelley-ma-spec";

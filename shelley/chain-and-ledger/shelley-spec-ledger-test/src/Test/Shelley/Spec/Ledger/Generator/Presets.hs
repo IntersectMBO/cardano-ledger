@@ -83,14 +83,7 @@ keySpace c =
     (genesisDelegates c)
     (stakePoolKeys c)
     (keyPairs c)
-    -- (eraKeySpaceScripts @era c)   GONE
     (combinedScripts (Proxy :: Proxy era) c)
-
-{- GONE
--- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: CC.Crypto crypto => Constants -> KeyPairs crypto
-keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
--}
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
 someKeyPairs :: CC.Crypto crypto => Constants -> Int -> Int -> Gen (KeyPairs crypto)
