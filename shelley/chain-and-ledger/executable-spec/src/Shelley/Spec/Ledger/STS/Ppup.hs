@@ -38,11 +38,14 @@ import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
+import qualified Cardano.Ledger.Core as Core
 
 data PPUP era
 
 data PPUPEnv era
   = PPUPEnv SlotNo (PParams era) (GenDelegs (Crypto era))
+
+type instance Core.UPEnv era = PPUPEnv era
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)
@@ -144,7 +147,7 @@ ppupTransitionNonEmpty = do
         ei <- asks epochInfo
         EpochNo e <- epochInfoEpoch ei slot
         epochInfoFirst ei (EpochNo $ e + 1)
-      let tooLate = firstSlotNextEpoch *- (Duration (2 * sp))
+      let tooLate = firstSlotNextEpoch *- Duration (2 * sp)
 
       currentEpoch <- liftSTS $ do
         ei <- asks epochInfo

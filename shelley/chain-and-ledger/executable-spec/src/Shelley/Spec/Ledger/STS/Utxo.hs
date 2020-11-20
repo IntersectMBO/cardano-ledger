@@ -298,6 +298,7 @@ utxoInductive ::
   ( ShelleyBased era,
     STS (UTXO era),
     Embed (PPUP era) (UTXO era),
+    Core.EmbedsUpdateLogic UTXO era,
     BaseM (UTXO era) ~ ShelleyBase,
     Environment (UTXO era) ~ UtxoEnv era,
     State (UTXO era) ~ UTxOState era,
@@ -313,7 +314,7 @@ utxoInductive ::
   ) =>
   TransitionRule (UTXO era)
 utxoInductive = do
-  TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
+  TRC (env@(UtxoEnv slot pp stakepools _genDelegs), u, tx) <- judgmentContext
   let UTxOState utxo deposits' fees ppup = u
   let txb = _body tx
 
@@ -347,7 +348,8 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO (toDelta consumed_) (toDelta produced_)
 
   -- process Protocol Parameter Update Proposals
-  ppup' <- trans @(PPUP era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
+  let upenv = Core.getUpdateEnv @UTXO @era env
+  ppup' <- trans @(PPUP era) $ TRC (upenv, ppup, txup tx)
 
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
@@ -384,3 +386,6 @@ instance
   Embed (PPUP (ShelleyEra c)) (UTXO (ShelleyEra c))
   where
   wrapFailed = UpdateFailure
+
+instance Core.EmbedsUpdateLogic UTXO (ShelleyEra c) where
+  getUpdateEnv (UtxoEnv slot pp _stakepools genDelegs) = PPUPEnv slot pp genDelegs

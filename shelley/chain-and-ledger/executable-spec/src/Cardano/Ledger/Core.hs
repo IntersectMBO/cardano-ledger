@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -18,6 +20,9 @@ module Cardano.Ledger.Core
     TxBody,
     Value,
     Script,
+    -- ** Update system types
+    UPEnv,
+    EmbedsUpdateLogic (getUpdateEnv),
 
     -- * Constraint synonyms
     ChainData,
@@ -31,6 +36,9 @@ import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import NoThunks.Class (NoThunks)
 
+-- TODO: import qualified.
+import Control.State.Transition
+
 -- | A value is something which quantifies a transaction output.
 type family Value era :: Type
 
@@ -39,6 +47,13 @@ type family TxBody era :: Type
 
 -- | Scripts which may lock transaction outputs in this era
 type family Script era :: Type
+
+-- | Update system environment
+type family UPEnv era :: Type
+
+-- | STS's that can make use of update rules.
+class EmbedsUpdateLogic t era where
+  getUpdateEnv :: Environment (t era) -> UPEnv era
 
 -- | Common constraints
 --

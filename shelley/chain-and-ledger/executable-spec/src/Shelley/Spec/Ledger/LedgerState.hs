@@ -561,6 +561,7 @@ instance Era era => FromCBOR (PPUPState era) where
       fppup <- fromCBOR
       pure $ PPUPState ppup fppup
 
+-- TODO: It seems this should not be defined here.
 pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
 pvCanFollow _ SNothing = True
 pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
