@@ -69,7 +69,7 @@ import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (..), KeySpace (..))
 import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..), genDCert)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
-import Test.Shelley.Spec.Ledger.Generator.Scripts(scriptKeyCombination)
+import Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses(scriptKeyCombination)
 import Data.Proxy(Proxy(..))
 
 -- | This is a non-spec STS used to generate a sequence of certificates with

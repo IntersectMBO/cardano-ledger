@@ -26,7 +26,7 @@
 -- | We gather together all the operations on the type family Script that are
 --   necessary to generate consistent transactions to run property tests.
 --   The key component is the class ScriptClass.
-module Test.Shelley.Spec.Ledger.Generator.Scripts
+module Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses
   ( ScriptClass(..),
     Quantifier(..),
     ValueClass(..),

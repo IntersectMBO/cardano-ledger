@@ -34,7 +34,7 @@ library
     Test.Shelley.Spec.Ledger.Generator.Presets
     Test.Shelley.Spec.Ledger.Generator.Trace.Chain
     Test.Shelley.Spec.Ledger.Generator.Trace.DCert
-    Test.Shelley.Spec.Ledger.Generator.Scripts
+    Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses
     Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
     Test.Shelley.Spec.Ledger.Generator.Update
     Test.Shelley.Spec.Ledger.Generator.Utxo

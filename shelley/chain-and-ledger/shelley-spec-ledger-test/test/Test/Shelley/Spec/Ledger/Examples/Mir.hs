@@ -89,8 +89,10 @@ import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
+import Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses(TxBodyClass(..))
 
-initUTxO :: ShelleyTest era => UTxO era
+
+initUTxO :: (TxBodyClass era,ShelleyTest era) => UTxO era
 initUTxO =
   genesisCoins
     genesisId
@@ -101,7 +103,7 @@ initUTxO =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStMIR :: forall era. (ShelleyTest era) => Coin -> ChainState era
+initStMIR :: forall era. (TxBodyClass era,ShelleyTest era) => Coin -> ChainState era
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt @era initUTxO
@@ -126,7 +128,7 @@ ir = Map.fromList [(Cast.aliceSHK, aliceMIRCoin)]
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: ShelleyTest era => MIRPot -> TxBody era
+txbodyEx1 :: (TxBodyClass era,ShelleyTest era) => MIRPot -> TxBody era
 txbodyEx1 pot =
   TxBody
     (Set.fromList [TxIn genesisId 0])

@@ -52,7 +52,7 @@ import Test.Shelley.Spec.Ledger.Utils
     slotsPerKESIteration,
   )
 import Data.Proxy
-import Test.Shelley.Spec.Ledger.Generator.Scripts
+import Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses
   ( ScriptClass(..),
     keyPairs,
     combinedScripts,

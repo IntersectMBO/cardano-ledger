@@ -39,7 +39,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genesisCoins,
   )
 import Test.Shelley.Spec.Ledger.Generator.Presets(someKeyPairs)
-import Test.Shelley.Spec.Ledger.Generator.Scripts
+import Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses
   ( ScriptClass,
     ValueClass(..),
     TxBodyClass(..),
@@ -51,7 +51,7 @@ import Data.Proxy(Proxy(..))
 
 instance CC.Crypto c => EraGen (ShelleyEra c) where
   genEraUtxo0 = genUtxo0
-  genEraTxBody = genTxBody
+  genEraTxBody _scriptHashes = genTxBody
 
   updateEraTxBody body fee ins outs =
     body

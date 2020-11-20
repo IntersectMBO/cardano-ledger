@@ -83,8 +83,11 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
+import Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses(TxBodyClass(..))
 
-initUTxO :: ShelleyTest era => UTxO era
+-- ===============================================================
+
+initUTxO :: (TxBodyClass era,ShelleyTest era) => UTxO era
 initUTxO =
   genesisCoins
     genesisId
@@ -95,7 +98,7 @@ initUTxO =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStGenesisDeleg :: forall era. ShelleyTest era => ChainState era
+initStGenesisDeleg :: forall era. (TxBodyClass era,ShelleyTest era) => ChainState era
 initStGenesisDeleg = initSt initUTxO
 
 --

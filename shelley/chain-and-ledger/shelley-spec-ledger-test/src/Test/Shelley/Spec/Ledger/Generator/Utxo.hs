@@ -106,7 +106,7 @@ import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, Split (..))
-import Test.Shelley.Spec.Ledger.Generator.Scripts(scriptKeyCombination)
+import Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses(scriptKeyCombination)
 import Data.Proxy(Proxy(..))
 
 -- ======================================================
@@ -246,6 +246,7 @@ genTx
               draftFee
       draftTxBody <-
         genEraTxBody @era
+          (Map.keys scripts)
           slot
           (Set.fromList inputs)
           draftOutputs

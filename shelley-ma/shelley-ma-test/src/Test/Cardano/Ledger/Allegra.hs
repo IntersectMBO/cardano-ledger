@@ -28,7 +28,7 @@ import Test.Cardano.Ledger.Mary
   )
 import Test.Shelley.Spec.Ledger.Generator.Core(EraGen (..))
 import Test.Shelley.Spec.Ledger.Generator.EraGen(genUtxo0)
-import Test.Shelley.Spec.Ledger.Generator.Scripts
+import Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses
   ( ScriptClass(..),
     ValueClass(..),
     TxBodyClass(..),

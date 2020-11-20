@@ -39,13 +39,14 @@ import Shelley.Spec.Ledger.Coin(Coin(..))
 import Shelley.Spec.Ledger.Keys(KeyHash,KeyRole(..))
 import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.PParams(Update)
+import Shelley.Spec.Ledger.Scripts(ScriptHash)
 import Shelley.Spec.Ledger.Tx(TxOut,TxIn)
 import Shelley.Spec.Ledger.TxBody(DCert,Wdrl(..))
 import Test.Cardano.Ledger.EraBuffet(MaryEra)
 import Test.Shelley.Spec.Ledger.Generator.Core(EraGen (..))
 import Test.Shelley.Spec.Ledger.Generator.EraGen(genUtxo0)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
-import Test.Shelley.Spec.Ledger.Generator.Scripts
+import Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses
   ( ScriptClass(..),
     Quantifier(..),
     ValueClass(..),
@@ -131,6 +132,7 @@ genMATxBody :: forall era.
   ( FamsTo era,
     ValueClass era
   ) =>
+    [ScriptHash era] ->
     SlotNo ->
     Set.Set (TxIn era) ->
     StrictSeq (TxOut era) ->
@@ -140,11 +142,11 @@ genMATxBody :: forall era.
     StrictMaybe (Update era) ->
     StrictMaybe (MetaDataHash era) ->
     Gen (TxBody era)
-genMATxBody (ttl@(SlotNo n)) ins outs cert wdrl fee upd meta = do
+genMATxBody scriptHashes (ttl@(SlotNo n)) ins outs cert wdrl fee upd meta = do
    m <- choose (5,n)
    timeStart <- frequency [(1,pure SNothing),(4,pure $ SJust (SlotNo m))]
    timeExpire <- frequency [(1,pure SNothing),(4, pure $ SJust ttl)]
-   forge <- genValue @era [] 0 0 -- TODO we need a [PolicyID era]  not the []
+   forge <- genValue @era scriptHashes 0 0 -- TODO we need a [PolicyID era]  not the []
    pure (TxBody
           ins
           outs

@@ -71,7 +71,7 @@ import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern 
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.Generator.Block (tickChainState)
 import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (geConstants))
-import Test.Shelley.Spec.Ledger.Generator.Scripts(scriptKeyCombinations)
+import Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses(scriptKeyCombinations)
 import Test.Shelley.Spec.Ledger.Generator.EraGen ()
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)

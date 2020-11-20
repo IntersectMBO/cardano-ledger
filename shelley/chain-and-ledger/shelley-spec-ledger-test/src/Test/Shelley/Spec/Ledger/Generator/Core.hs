@@ -198,7 +198,7 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
-import Test.Shelley.Spec.Ledger.Generator.Scripts
+import Test.Shelley.Spec.Ledger.Generator.TypeFamilyClasses
   ( ScriptClass,
     ValueClass,
     TxBodyClass,
@@ -223,6 +223,7 @@ class
   genEraUtxo0 :: Constants -> Gen (UTxO era)
 
   genEraTxBody ::
+    [ScriptHash era] ->
     SlotNo ->
     Set (TxIn era) ->
     StrictSeq (TxOut era) ->
