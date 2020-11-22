@@ -211,10 +211,10 @@ transaction_metadatum_label = uint
 
 transaction_metadata =
   { * transaction_metadatum_label => transaction_metadatum }
-  / [{ ? 0: { * transaction_metadatum_label => transaction_metadatum }
-     , ? 1: [ * native_script ]
+  / [ 0: { * transaction_metadatum_label => transaction_metadatum }
+     , 1: [ * native_script ]
      ; other types of metadata...
-    }]
+    ]
 
 vkeywitness = [ $vkey, $signature ]
 

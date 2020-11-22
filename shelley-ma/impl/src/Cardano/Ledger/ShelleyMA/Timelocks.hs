@@ -136,7 +136,7 @@ data TimelockRaw era
   | MOfN !Int !(StrictSeq (Timelock era)) -- Note that the Int may be negative in which case (MOfN -2 [..]) is always True
   | TimeStart !SlotNo -- The start time
   | TimeExpire !SlotNo -- The time it expires
-  deriving (Eq, Show, Ord, Generic)
+  deriving (Eq, Show, Ord, Generic, NFData)
 
 deriving instance Typeable era => NoThunks (TimelockRaw era)
 
@@ -174,7 +174,7 @@ instance Era era => FromCBOR (Annotator (TimelockRaw era)) where
 
 newtype Timelock era = TimelockConstr (MemoBytes (TimelockRaw era))
   deriving (Eq, Ord, Show, Generic)
-  deriving newtype (ToCBOR, NoThunks)
+  deriving newtype (ToCBOR, NoThunks, NFData)
 
 deriving via
   (Mem (TimelockRaw era))
@@ -285,7 +285,10 @@ evalFPS ::
 evalFPS timelock vhks txb = evalTimelock vhks (getField @"vldt" txb) timelock
 
 validateTimelock ::
-  (Shelley.TxBodyConstraints era, HasField "vldt" (Core.TxBody era) ValidityInterval) =>
+  ( Shelley.TxBodyConstraints era,
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    ToCBOR (Core.Metadata era)
+  ) =>
   Timelock era ->
   Tx era ->
   Bool
@@ -314,9 +317,15 @@ hashTimelockScript =
 showTimelock :: Era era => Timelock era -> String
 showTimelock (RequireTimeStart (SlotNo i)) = "(Start >= " ++ show i ++ ")"
 showTimelock (RequireTimeExpire (SlotNo i)) = "(Expire < " ++ show i ++ ")"
-showTimelock (RequireAllOf xs) = "(AllOf " ++ foldl accum ")" xs where accum ans x = showTimelock x ++ " " ++ ans
-showTimelock (RequireAnyOf xs) = "(AnyOf " ++ foldl accum ")" xs where accum ans x = showTimelock x ++ " " ++ ans
-showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ foldl accum ")" xs where accum ans x = showTimelock x ++ " " ++ ans
+showTimelock (RequireAllOf xs) = "(AllOf " ++ foldl accum ")" xs
+  where
+    accum ans x = showTimelock x ++ " " ++ ans
+showTimelock (RequireAnyOf xs) = "(AnyOf " ++ foldl accum ")" xs
+  where
+    accum ans x = showTimelock x ++ " " ++ ans
+showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ foldl accum ")" xs
+  where
+    accum ans x = showTimelock x ++ " " ++ ans
 showTimelock (RequireSignature hash) = "(Signature " ++ show hash ++ ")"
 
 -- ===============================================================

@@ -53,6 +53,7 @@ import Test.Shelley.Spec.Ledger.Utils
     applySTSTest,
     runShelleyBase,
   )
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 
 genAccountState :: Constants -> Gen AccountState
 genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
@@ -65,6 +66,7 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 instance
   ( EraGen era,
     Mock (Crypto era),
+    ValidateMetadata era,
     ShelleyLedgerSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
@@ -89,6 +91,7 @@ instance
   forall era.
   ( EraGen era,
     Mock (Crypto era),
+    ValidateMetadata era,
     ShelleyLedgerSTS era,
     ShelleyLedgersSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),

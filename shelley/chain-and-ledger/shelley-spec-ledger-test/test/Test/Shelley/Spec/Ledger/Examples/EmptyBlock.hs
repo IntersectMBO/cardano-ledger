@@ -9,7 +9,9 @@ module Test.Shelley.Spec.Ledger.Examples.EmptyBlock
   )
 where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Era (Crypto (..))
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Shelley as Shelley
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
@@ -50,7 +52,8 @@ blockEx1 ::
   forall era.
   ( HasCallStack,
     ExMock (Crypto era),
-    Shelley.TxBodyConstraints era
+    Shelley.TxBodyConstraints era,
+    ToCBOR (Core.Metadata era)
   ) =>
   Block era
 blockEx1 =
@@ -71,7 +74,8 @@ blockNonce ::
   forall era.
   ( HasCallStack,
     ExMock (Crypto era),
-    Shelley.TxBodyConstraints era
+    Shelley.TxBodyConstraints era,
+    ToCBOR (Core.Metadata era)
   ) =>
   Nonce
 blockNonce = getBlockNonce (blockEx1 @era)

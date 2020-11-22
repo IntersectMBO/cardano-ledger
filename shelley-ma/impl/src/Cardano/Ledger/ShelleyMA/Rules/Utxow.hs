@@ -17,6 +17,7 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
 import Cardano.Ledger.Shelley (ShelleyBased)
 import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
+import Cardano.Ledger.ShelleyMA.Metadata ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
 import Cardano.Ledger.ShelleyMA.Scripts ()
 import Cardano.Ledger.ShelleyMA.TxBody ()

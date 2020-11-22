@@ -6,6 +6,7 @@
 module Cardano.Ledger.Allegra where
 
 import Cardano.Ledger.ShelleyMA
+import Cardano.Ledger.ShelleyMA.Metadata ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
 import Cardano.Ledger.ShelleyMA.Scripts ()

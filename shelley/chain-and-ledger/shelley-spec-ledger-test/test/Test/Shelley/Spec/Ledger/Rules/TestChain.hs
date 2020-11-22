@@ -89,6 +89,7 @@ import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
   )
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
 import Test.Shelley.Spec.Ledger.Utils (ChainProperty, epochFromSlotNo, runShelleyBase, testGlobals)
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 
 ------------------------------
 -- Constants for Properties --
@@ -112,6 +113,7 @@ collisionFreeComplete ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
@@ -136,6 +138,7 @@ adaPreservationChain ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
@@ -602,6 +605,7 @@ poolProperties ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
@@ -672,6 +676,7 @@ delegProperties ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
@@ -839,6 +844,7 @@ removedAfterPoolreap ::
   forall era.
   ( ChainProperty era,
     EraGen era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
@@ -867,6 +873,7 @@ forAllChainTrace ::
   ( Testable prop,
     EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl era),

@@ -19,8 +19,8 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   )
 where
 
-import Cardano.Binary (serialize')
-import qualified Cardano.Ledger.Core as Core (TxBody)
+import Cardano.Binary (ToCBOR, serialize')
+import qualified Cardano.Ledger.Core as Core (Metadata, TxBody)
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley (ShelleyBased, TxBodyConstraints)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -71,7 +71,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.LedgerState
   ( txsizeBound,
   )
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata, MetaDataHash)
 import Shelley.Spec.Ledger.PParams
   ( Update (..),
     pattern ProposedPPUpdates,
@@ -104,6 +104,7 @@ relevantCasesAreCovered ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
@@ -240,6 +241,7 @@ scriptCredentialCertsRatio certs =
 certsByTx ::
   forall era.
   ( TxBodyConstraints era,
+    ToCBOR (Core.Metadata era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
   ) =>
   [Tx era] ->
@@ -271,6 +273,7 @@ txScriptOutputsRatio txoutsList =
 
 hasWithdrawal ::
   ( TxBodyConstraints era,
+    ToCBOR (Core.Metadata era),
     HasField "wdrls" (Core.TxBody era) (Wdrl era)
   ) =>
   Tx era ->
@@ -291,6 +294,7 @@ hasPParamUpdate tx =
 
 hasMetaData ::
   ( TxBodyConstraints era,
+    ToCBOR (Core.Metadata era),
     HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era))
   ) =>
   Tx era ->
@@ -305,6 +309,7 @@ onlyValidLedgerSignalsAreGenerated ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
@@ -326,6 +331,7 @@ propAbstractSizeBoundsBytes ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
@@ -350,6 +356,7 @@ propAbstractSizeNotTooBig ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
@@ -379,6 +386,7 @@ onlyValidChainSignalsAreGenerated ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),

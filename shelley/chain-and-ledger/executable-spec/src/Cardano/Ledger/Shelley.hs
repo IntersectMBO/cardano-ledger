@@ -48,5 +48,8 @@ type ShelleyBased era =
     TxBodyConstraints era,
     -- Script constraints
     ChainData (Script era),
-    AnnotatedData (Script era)
+    AnnotatedData (Script era),
+    -- Metadata constraints
+    ChainData (Metadata era),
+    AnnotatedData (Metadata era)
   )

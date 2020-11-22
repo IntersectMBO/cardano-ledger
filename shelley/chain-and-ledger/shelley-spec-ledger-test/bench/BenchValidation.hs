@@ -65,6 +65,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyLedgersSTS, ShelleyTest, testGlobals)
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 
 -- ==============================================================
 
@@ -80,6 +81,7 @@ validateInput ::
   ( EraGen era,
     ShelleyTest era,
     Mock (Crypto era),
+    ValidateMetadata era,
     API.GetLedgerView era,
     API.ApplyBlock era,
     ShelleyLedgerSTS era,
@@ -94,6 +96,7 @@ genValidateInput ::
   ( EraGen era,
     ShelleyTest era,
     Mock (Crypto era),
+    ValidateMetadata era,
     API.GetLedgerView era,
     API.ApplyBlock era,
     ShelleyLedgerSTS era,
@@ -176,6 +179,7 @@ genUpdateInputs ::
   ( EraGen era,
     ShelleyTest era,
     Mock (Crypto era),
+    ValidateMetadata era,
     API.GetLedgerView era,
     API.ApplyBlock era,
     ShelleyLedgerSTS era,

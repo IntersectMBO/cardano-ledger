@@ -194,6 +194,7 @@ import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
+import qualified Cardano.Ledger.Core as Core
 
 roundTrip ::
   (Show a, Eq a) =>
@@ -410,6 +411,7 @@ testBHB ::
   forall era crypto.
   ( Era era,
     Shelley.TxBodyConstraints era,
+    ToCBOR (Core.Metadata era),
     ExMock crypto,
     crypto ~ Crypto era
   ) =>
@@ -453,6 +455,7 @@ testBHBSigTokens ::
   forall era.
   ( Era era,
     ExMock (Crypto era),
+    ToCBOR (Core.Metadata era),
     Shelley.TxBodyConstraints era
   ) =>
   Tokens ->
@@ -961,7 +964,7 @@ tests =
                   )
               )
               (EpochNo 0)
-          mdh = MD.hashMetaData $ MD.MetaData $ Map.singleton 13 (MD.I 17)
+          mdh = MD.hashMetadata $ MD.MetaData $ Map.singleton 13 (MD.I 17)
        in checkEncodingCBORAnnotated
             "txbody_full"
             ( TxBody -- transaction body with all components

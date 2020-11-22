@@ -87,6 +87,7 @@ type FamsFrom era =
   ( Era era,
     Typeable era,
     Typeable (Script era),
+    Typeable (Core.Metadata era),
     FromCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
     FromCBOR (Value era),
     FromCBOR (Annotator (Script era)) -- Arises becaause DCert memoizes its bytes
@@ -96,7 +97,8 @@ type FamsTo era =
   ( Era era,
     ToCBOR (Value era),
     ToCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
-    ToCBOR (Script era)
+    ToCBOR (Script era),
+    Typeable (Core.Metadata era)
   )
 
 -- =======================================================
@@ -145,14 +147,21 @@ fromSJust :: StrictMaybe a -> a
 fromSJust (SJust x) = x
 fromSJust SNothing = error "SNothing in fromSJust"
 
-encodeKeyedStrictMaybe :: ToCBOR a => Word -> StrictMaybe a -> Encode ( 'Closed 'Sparse) (StrictMaybe a)
+encodeKeyedStrictMaybe ::
+  ToCBOR a =>
+  Word ->
+  StrictMaybe a ->
+  Encode ( 'Closed 'Sparse) (StrictMaybe a)
 encodeKeyedStrictMaybe key x = Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
 
 -- Sparse encodings of TxBodyRaw, the key values are fixed by backwarad compatibility
 -- concerns as we want the Shelley era TxBody to deserialise as a Shelley-ma TxBody.
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
 
-txSparse :: (Val (Value era), FamsTo era) => TxBodyRaw era -> Encode ( 'Closed 'Sparse) (TxBodyRaw era)
+txSparse ::
+  (Val (Value era), FamsTo era) =>
+  TxBodyRaw era ->
+  Encode ( 'Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
   Keyed (\i o f topx c w u h botx forg -> TxBodyRaw i o c w f (ValidityInterval botx topx) u h forg)
     !> Key 0 (E encodeFoldable inp) -- We don't have to send these in TxBodyX order
@@ -204,7 +213,9 @@ type instance
 
 deriving instance (Compactible (Value era), Eq (Value era)) => Eq (TxBody era)
 
-deriving instance (Era era, Compactible (Value era), Show (Value era)) => Show (TxBody era)
+deriving instance
+  (Era era, Compactible (Value era), Show (Value era)) =>
+  Show (TxBody era)
 
 deriving instance Generic (TxBody era)
 

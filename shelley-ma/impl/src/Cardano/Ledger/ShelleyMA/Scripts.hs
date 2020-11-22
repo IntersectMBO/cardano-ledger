@@ -36,6 +36,7 @@ instance
   ( CryptoClass.Crypto c,
     Typeable ma,
     Shelley.TxBodyConstraints (ShelleyMAEra ma c),
+    Core.AnnotatedData (Core.Metadata (ShelleyMAEra ma c)),
     (HasField "vldt" (Core.TxBody (ShelleyMAEra ma c)) ValidityInterval)
   ) =>
   ValidateScript (ShelleyMAEra ma c)

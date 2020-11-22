@@ -44,6 +44,7 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyLedgersSTS, ShelleyTest)
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 
 -- =============================================================================
 
@@ -77,6 +78,7 @@ genBlock ::
     ShelleyLedgerSTS era,
     ShelleyLedgersSTS era,
     GetLedgerView era,
+    ValidateMetadata era,
     ApplyBlock era
   ) =>
   GenEnv era ->
@@ -95,6 +97,7 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 genTriple ::
   ( EraGen era,
     Mock (Crypto era),
+    ValidateMetadata era,
     ShelleyTest era
   ) =>
   Gen (Core.Value era) ->

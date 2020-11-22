@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -20,6 +21,8 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value
+import Cardano.Ledger.ShelleyMA.Metadata (Metadata (..), pattern Metadata)
+import Cardano.Ledger.ShelleyMA.Scripts (Timelock)
 import Cardano.Ledger.ShelleyMA.TxBody
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (biMapFromList, lifo)
@@ -77,7 +80,7 @@ instance Crypto c => TranslateEra (MaryEra c) Tx where
       Tx
         { _body = translateEra' ctx body,
           _witnessSet = translateEra' ctx witness,
-          _metadata = md
+          _metadata = translateEra' ctx <$> md
         }
 
 -- TODO when a genesis has been introduced for Mary, this instance can be
@@ -347,6 +350,13 @@ instance Crypto c => TranslateEra (MaryEra c) TxBody where
         (translateEra' ctx <$> u)
         (coerce m)
         (translateValue forge)
+
+instance Crypto c => TranslateEra (MaryEra c) Metadata where
+  translateEra ctx (Metadata blob sp) =
+    pure $
+      Metadata blob (translateEra' ctx <$> sp)
+
+instance Crypto c => TranslateEra (MaryEra c) Timelock
 
 translateValue :: Era era => Coin -> Value era
 translateValue = Val.inject

@@ -70,7 +70,6 @@ library
     cardano-crypto-test,
     cardano-crypto-wrapper,
     cardano-crypto,
-    cardano-ledger-shelley-ma,
     cardano-ledger-test,
     cardano-ledger,
     cardano-prelude-test,
@@ -140,7 +139,6 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.ShelleyTranslation
       Test.Shelley.Spec.Ledger.STSTests
       Test.Shelley.Spec.Ledger.UnitTests
-      Test.Shelley.Spec.Ledger.ValProp
       Test.TestScenario
 
     hs-source-dirs:      test
@@ -176,7 +174,6 @@ test-suite shelley-spec-ledger-test
       cardano-crypto-test,
       cardano-crypto-wrapper,
       cardano-crypto,
-      cardano-ledger-shelley-ma,
       cardano-ledger-test,
       cardano-ledger,
       cardano-prelude-test,

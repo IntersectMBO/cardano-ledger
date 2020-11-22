@@ -21,12 +21,14 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import qualified Cardano.Ledger.ShelleyMA.Metadata as Allegra
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (ValidityInterval), translate)
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
 import Control.Iterate.SetAlgebra (biMapFromList, lifo)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.API
@@ -80,9 +82,11 @@ instance forall c. Crypto c => TranslateEra (AllegraEra c) Tx where
       Tx
         { _body = translateBody body,
           _witnessSet = translateEra' ctx witness,
-          _metadata = md
+          _metadata = translateMetadata <$> md
         }
     where
+      translateMetadata :: MetaData -> Allegra.Metadata (AllegraEra c)
+      translateMetadata (MetaData md) = Allegra.Metadata md StrictSeq.empty
       translateBody ::
         ( TxBody (ShelleyEra c) ->
           Allegra.TxBody (AllegraEra c)

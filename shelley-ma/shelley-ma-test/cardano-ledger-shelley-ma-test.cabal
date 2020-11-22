@@ -81,6 +81,7 @@ test-suite cardano-ledger-shelley-ma-test
       Test.Cardano.Ledger.Mary.Examples
       Test.Cardano.Ledger.Mary.Examples.Cast
       Test.Cardano.Ledger.Mary.Examples.MultiAssets
+      Test.Cardano.Ledger.Mary.Value
     default-language:    Haskell2010
     ghc-options:
       -threaded
