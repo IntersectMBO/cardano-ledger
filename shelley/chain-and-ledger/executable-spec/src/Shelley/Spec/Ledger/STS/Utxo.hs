@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -259,7 +260,7 @@ instance
   type BaseM (UTXO (ShelleyEra c)) = ShelleyBase
   type PredicateFailure (UTXO (ShelleyEra c)) = UtxoPredicateFailure (ShelleyEra c)
 
-  transitionRules = [utxoInductive]
+  transitionRules = [utxoInductive @(ShelleyEra c) @PPUP]
   initialRules = [initialLedgerState]
 
   renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
@@ -295,11 +296,10 @@ initialLedgerState = do
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
-  forall era updateSTS updateEnv z.
+  forall era updateSTS.
   ( ShelleyBased era,
     STS (UTXO era),
-    -- Embed (PPUP era) (UTXO era),
-    Embed z (UTXO era),
+    Embed (updateSTS era) (UTXO era),
     BaseM (UTXO era) ~ ShelleyBase,
     Environment (UTXO era) ~ UtxoEnv era,
     State (UTXO era) ~ UTxOState era,
@@ -312,7 +312,7 @@ utxoInductive ::
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "ttl" (Core.TxBody era) SlotNo,
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-    HasField "updateEnv" (UtxoEnv era) updateEnv -- (Environment (updateSTS era))
+    HasField "updateEnv" (UtxoEnv era) (Environment (updateSTS era))
   ) =>
   TransitionRule (UTXO era)
 utxoInductive = do
@@ -350,8 +350,8 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO (toDelta consumed_) (toDelta produced_)
 
   -- process Protocol Parameter Update Proposals
---  let upenv = getField @"updateEnv" @(UtxoEnv era) @(Environment (updateSTS era)) env
-  ppup' <- undefined -- trans @(updateSTS era) $ TRC (upenv, ppup, txup tx)
+  let upenv = getField @"updateEnv" @(UtxoEnv era) @(Environment (updateSTS era)) env
+  ppup' <- trans @(updateSTS era) $ TRC (upenv, ppup, txup tx)
 
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
