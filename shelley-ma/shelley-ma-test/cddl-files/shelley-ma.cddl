@@ -56,7 +56,7 @@ transaction_body =
   , ? 6 : update
   , ? 7 : metadata_hash
   , ? 8 : uint ; validity interval start
-  , ? 9 : forge
+  , ? 9 : mint
   }
 
 transaction_input = [ transaction_id : $hash32
@@ -211,9 +211,9 @@ transaction_metadatum_label = uint
 
 transaction_metadata =
   { * transaction_metadatum_label => transaction_metadatum }
-  / [ 0: { * transaction_metadatum_label => transaction_metadatum }
-     , 1: [ * native_script ]
-     ; other types of metadata...
+  / [ general: { * transaction_metadatum_label => transaction_metadatum }
+    , native_scripts: [ * native_script ]
+    ; other types of metadata...
     ]
 
 vkeywitness = [ $vkey, $signature ]
@@ -248,7 +248,7 @@ policy_id = scripthash
 asset_name = bytes .size (0..32)
 
 value = coin / [coin,multiasset<uint>]
-forge = multiasset<int>
+mint = multiasset<int>
 
 epoch = uint
 
