@@ -27,8 +27,6 @@ library
   exposed-modules:
     Test.Cardano.Ledger.EraBuffet
     Test.Cardano.Ledger.ShelleyMA.TxBody
-    Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
-    Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
   -- other-extensions:
@@ -82,6 +80,8 @@ test-suite cardano-ledger-shelley-ma-test
       Test.Cardano.Ledger.Mary.Examples.Cast
       Test.Cardano.Ledger.Mary.Examples.MultiAssets
       Test.Cardano.Ledger.Mary.Value
+      Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
+      Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
     default-language:    Haskell2010
     ghc-options:
       -threaded
