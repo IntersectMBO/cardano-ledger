@@ -95,6 +95,9 @@ library
   if (!flag(development))
     ghc-options:
       -Werror
+  if (flag(development))
+    ghc-options:
+      -O0
   build-depends:
     aeson,
     base >= 4.7 && < 5,

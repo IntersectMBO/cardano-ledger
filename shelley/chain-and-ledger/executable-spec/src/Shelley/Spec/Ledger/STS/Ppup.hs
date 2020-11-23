@@ -40,12 +40,12 @@ import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
 import qualified Cardano.Ledger.Core as Core
 
+import  Cardano.Ledger.Shelley
+
 data PPUP era
 
 data PPUPEnv era
   = PPUPEnv SlotNo (PParams era) (GenDelegs (Crypto era))
-
-type instance Core.UPEnv era = PPUPEnv era
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)

@@ -581,7 +581,7 @@ data UTxOState era = UTxOState
   { _utxo :: !(UTxO era),
     _deposited :: !Coin,
     _fees :: !Coin,
-    _ppups :: !(PPUPState era)
+    _ppups :: !(PPUPState era) -- State (updateSTS era)
   }
   deriving (Generic, NFData)
 

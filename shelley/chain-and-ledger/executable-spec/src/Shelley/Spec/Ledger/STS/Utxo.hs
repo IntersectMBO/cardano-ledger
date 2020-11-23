@@ -249,7 +249,8 @@ instance
         k -> invalidKey k
 
 instance
-  (CryptoClass.Crypto c, Core.TxBody (ShelleyEra c) ~ TxBody (ShelleyEra c)) =>
+  (CryptoClass.Crypto c, Core.TxBody (ShelleyEra c) ~ TxBody (ShelleyEra c)
+  ) =>
   STS (UTXO (ShelleyEra c))
   where
   type State (UTXO (ShelleyEra c)) = UTxOState (ShelleyEra c)
@@ -294,11 +295,11 @@ initialLedgerState = do
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
-  forall era.
+  forall era updateSTS updateEnv z.
   ( ShelleyBased era,
     STS (UTXO era),
-    Embed (PPUP era) (UTXO era),
-    Core.EmbedsUpdateLogic UTXO era,
+    -- Embed (PPUP era) (UTXO era),
+    Embed z (UTXO era),
     BaseM (UTXO era) ~ ShelleyBase,
     Environment (UTXO era) ~ UtxoEnv era,
     State (UTXO era) ~ UTxOState era,
@@ -310,7 +311,8 @@ utxoInductive ::
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "ttl" (Core.TxBody era) SlotNo,
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "updateEnv" (UtxoEnv era) updateEnv -- (Environment (updateSTS era))
   ) =>
   TransitionRule (UTXO era)
 utxoInductive = do
@@ -348,8 +350,8 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO (toDelta consumed_) (toDelta produced_)
 
   -- process Protocol Parameter Update Proposals
-  let upenv = Core.getUpdateEnv @UTXO @era env
-  ppup' <- trans @(PPUP era) $ TRC (upenv, ppup, txup tx)
+--  let upenv = getField @"updateEnv" @(UtxoEnv era) @(Environment (updateSTS era)) env
+  ppup' <- undefined -- trans @(updateSTS era) $ TRC (upenv, ppup, txup tx)
 
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
@@ -387,5 +389,5 @@ instance
   where
   wrapFailed = UpdateFailure
 
-instance Core.EmbedsUpdateLogic UTXO (ShelleyEra c) where
-  getUpdateEnv (UtxoEnv slot pp _stakepools genDelegs) = PPUPEnv slot pp genDelegs
+-- instance Core.EmbedsUpdateLogic UTXO (ShelleyEra c) where
+--   getUpdateEnv (UtxoEnv slot pp _stakepools genDelegs) = PPUPEnv slot pp genDelegs

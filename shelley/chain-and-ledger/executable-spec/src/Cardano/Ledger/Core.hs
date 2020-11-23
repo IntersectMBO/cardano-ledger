@@ -20,9 +20,6 @@ module Cardano.Ledger.Core
     TxBody,
     Value,
     Script,
-    -- ** Update system types
-    UPEnv,
-    EmbedsUpdateLogic (getUpdateEnv),
 
     -- * Constraint synonyms
     ChainData,
@@ -47,13 +44,6 @@ type family TxBody era :: Type
 
 -- | Scripts which may lock transaction outputs in this era
 type family Script era :: Type
-
--- | Update system environment
-type family UPEnv era :: Type
-
--- | STS's that can make use of update rules.
-class EmbedsUpdateLogic t era where
-  getUpdateEnv :: Environment (t era) -> UPEnv era
 
 -- | Common constraints
 --
