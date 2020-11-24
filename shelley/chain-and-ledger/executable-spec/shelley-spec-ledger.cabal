@@ -1,6 +1,7 @@
 name:                shelley-spec-ledger
 version:             0.1.0.0
 description:         Shelley Ledger Executable Model
+license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
 build-type:          Simple

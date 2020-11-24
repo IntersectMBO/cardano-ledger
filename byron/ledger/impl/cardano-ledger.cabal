@@ -3,7 +3,6 @@ version:             0.1.0.0
 synopsis:            The blockchain layer of Cardano
 description:         The blockchain layer of Cardano
 license:             Apache-2.0
-license-file:        LICENSE
 author:              IOHK
 maintainer:          operations@iohk.io
 copyright:           2018 IOHK
