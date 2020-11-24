@@ -10,8 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.Utils
-  ( assertAll,
-    mkSeedFromWords,
+  ( mkSeedFromWords,
     mkCertifiedVRF,
     epochFromSlotNo,
     evolveKESUntil,
@@ -99,7 +98,6 @@ import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
 import Data.Sequence (Seq)
 import Data.Word (Word64)
-import Hedgehog (MonadTest, (===))
 import Shelley.Spec.Ledger.API
   ( ApplyBlock,
     CHAIN,
@@ -209,9 +207,6 @@ type GenesisKeyPair crypto = KeyPair 'Genesis crypto
 type MultiSigPairs era = [(MultiSig era, MultiSig era)]
 
 -- ================================================
-
-assertAll :: (MonadTest m, Show a, Eq a) => (a -> Bool) -> [a] -> m ()
-assertAll p xs = [] === filter (not . p) xs
 
 -- | Construct a seed from a bunch of Word64s
 --
