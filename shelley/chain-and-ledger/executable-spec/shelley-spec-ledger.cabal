@@ -40,6 +40,7 @@ library
     Shelley.Spec.Ledger.Delegation.PoolParams
     Shelley.Spec.Ledger.EpochBoundary
     Shelley.Spec.Ledger.Genesis
+    Shelley.Spec.Ledger.HardForks
     Shelley.Spec.Ledger.Hashing
     Shelley.Spec.Ledger.Keys
     Shelley.Spec.Ledger.LedgerState
