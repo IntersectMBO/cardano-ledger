@@ -86,7 +86,7 @@ scriptsNeeded ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
-    HasField "forge" (Core.TxBody era) (Core.Value era)
+    HasField "mint" (Core.TxBody era) (Core.Value era)
   ) =>
   UTxO era ->
   Tx era ->
@@ -102,7 +102,7 @@ scriptsNeeded u tx =
           scriptStakeCred
           (filter requiresVKeyWitness certificates)
       )
-    `Set.union` ((policyID `Set.map` (getPolicies $ getField @"forge" txb)))
+    `Set.union` ((policyID `Set.map` (getPolicies $ getField @"mint" txb)))
   where
     txb = _body tx
     unTxOut (TxOut a _) = a

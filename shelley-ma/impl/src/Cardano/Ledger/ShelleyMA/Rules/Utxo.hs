@@ -123,18 +123,18 @@ instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era
 -- | Calculate the value consumed by the transation.
 --
 --   This differs from the corresponding Shelley function @Shelley.consumed@
---   since it also considers the "forge" field which creates or destroys non-Ada
+--   since it also considers the "mint" field which creates or destroys non-Ada
 --   tokens.
 --
 --   Note that this is slightly confusing, since it also covers non-Ada assets
 --   _created_ by the transaction, depending on the sign of the quantities in
---   the forge field.
+--   the mint field.
 consumed ::
   forall era.
   ( ShelleyBased era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
-    HasField "forge" (Core.TxBody era) (Core.Value era),
+    HasField "mint" (Core.TxBody era) (Core.Value era),
     HasField "wdrls" (Core.TxBody era) (Wdrl era)
   ) =>
   PParams era ->
@@ -143,7 +143,7 @@ consumed ::
   Core.Value era
 consumed pp u tx =
   balance (eval (txins tx ◁ u))
-    <> getField @"forge" tx
+    <> getField @"mint" tx
     <> (Val.inject $ refunds <> withdrawals)
   where
     -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
@@ -163,7 +163,7 @@ utxoTransition ::
     PredicateFailure (UTXO era) ~ UtxoPredicateFailure era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
-    HasField "forge" (Core.TxBody era) (Core.Value era),
+    HasField "mint" (Core.TxBody era) (Core.Value era),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
     HasField "txfee" (Core.TxBody era) Coin,
@@ -210,9 +210,9 @@ utxoTransition = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  -- Check that the forge field does not try to forge ADA. This is equivalent to
-  -- the check `adaPolicy ∉ supp forge tx` in the spec.
-  Val.coin (getField @"forge" txb) == Val.zero ?! TriesToForgeADA
+  -- Check that the mint field does not try to mint ADA. This is equivalent to
+  -- the check `adaPolicy ∉ supp mint tx` in the spec.
+  Val.coin (getField @"mint" txb) == Val.zero ?! TriesToForgeADA
 
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp

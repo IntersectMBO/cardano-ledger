@@ -601,7 +601,7 @@ multiAssetsExample =
               txSingWitEx1Valid
               (ledgerEnv $ SlotNo 0)
               (Right expectedUTxOSingWitEx1),
-          testCase "minting, invalid no forge signature" $
+          testCase "minting, invalid no mint signature" $
             testMaryNoDelegLEDGER
               initUTxO
               txSingWitEx1Invalid
