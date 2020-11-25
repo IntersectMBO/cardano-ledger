@@ -38,9 +38,6 @@ import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
-import qualified Cardano.Ledger.Core as Core
-
-import  Cardano.Ledger.Shelley
 
 data PPUP era
 
@@ -79,7 +76,7 @@ instance NoThunks (PpupPredicateFailure era)
 
 instance Typeable era => STS (PPUP era) where
   type State (PPUP era) = PPUPState era
-  type Signal (PPUP era) = Maybe (Update era)
+  type Signal (PPUP era) = StrictMaybe (Update era)
   type Environment (PPUP era) = PPUPEnv era
   type BaseM (PPUP era) = ShelleyBase
   type PredicateFailure (PPUP era) = PpupPredicateFailure era
@@ -132,8 +129,8 @@ ppupTransitionNonEmpty = do
     judgmentContext
 
   case up of
-    Nothing -> pure $ PPUPState (ProposedPPUpdates pupS) (ProposedPPUpdates fpupS)
-    Just (Update (ProposedPPUpdates pup) te) -> do
+    SNothing -> pure $ PPUPState (ProposedPPUpdates pupS) (ProposedPPUpdates fpupS)
+    SJust (Update (ProposedPPUpdates pup) te) -> do
       eval (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom _genDelegs))
 
       let goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion

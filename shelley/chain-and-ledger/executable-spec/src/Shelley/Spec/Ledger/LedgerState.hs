@@ -44,17 +44,17 @@ module Shelley.Spec.Ledger.LedgerState
     emptyAccount,
     emptyDPState,
     emptyDState,
-    emptyEpochState,
+--    emptyEpochState,
     emptyInstantaneousRewards,
-    emptyLedgerState,
+--    emptyLedgerState,
     emptyPPUPState,
     emptyPState,
     emptyRewardUpdate,
-    emptyUTxOState,
+--    emptyUTxOState,
     pvCanFollow,
     reapRewards,
     totalInstantaneousReservesRewards,
-    updatePpup,
+--    updatePpup,
 
     -- * state transitions
     emptyDelegation,
@@ -231,6 +231,8 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
+
+import Control.State.Transition (STS(..))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs era = [(KeyPair 'Payment era, KeyPair 'Staking era)]
@@ -476,9 +478,9 @@ deriving stock instance
   ShelleyBased era =>
   Eq (EpochState era)
 
-instance NoThunks (EpochState era)
+instance ShelleyBased era => NoThunks (EpochState era)
 
-instance (Era era) => NFData (EpochState era)
+instance ShelleyBased era => NFData (EpochState era)
 
 instance
   ShelleyBased era =>
@@ -504,18 +506,15 @@ instance
 emptyPPUPState :: PPUPState era
 emptyPPUPState = PPUPState emptyPPPUpdates emptyPPPUpdates
 
-emptyUTxOState :: UTxOState era
-emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
+-- emptyEpochState :: EpochState era
+-- emptyEpochState =
+--   EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams emptyPParams emptyNonMyopic
 
-emptyEpochState :: EpochState era
-emptyEpochState =
-  EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams emptyPParams emptyNonMyopic
-
-emptyLedgerState :: LedgerState era
-emptyLedgerState =
-  LedgerState
-    emptyUTxOState
-    emptyDelegation
+-- emptyLedgerState :: LedgerState era
+-- emptyLedgerState =
+--   LedgerState
+--     emptyUTxOState
+--     emptyDelegation
 
 emptyAccount :: AccountState
 emptyAccount = AccountState (Coin 0) (Coin 0)
@@ -570,20 +569,20 @@ pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
 -- | Update the protocol parameter updates by clearing out the proposals
 -- and making the future proposals become the new proposals,
 -- provided the new proposals can follow (otherwise reset them).
-updatePpup :: UTxOState era -> PParams era -> UTxOState era
-updatePpup utxoSt pp = utxoSt {_ppups = PPUPState ps emptyPPPUpdates}
-  where
-    (ProposedPPUpdates newProposals) = futureProposals . _ppups $ utxoSt
-    goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
-    ps = if all goodPV newProposals then ProposedPPUpdates newProposals else emptyPPPUpdates
+-- updatePpup :: UTxOState era -> PParams era -> UTxOState era
+-- updatePpup utxoSt pp = utxoSt {_ppups = PPUPState ps emptyPPPUpdates}
+--   where
+--     (ProposedPPUpdates newProposals) = futureProposals . _ppups $ utxoSt
+--     goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
+--     ps = if all goodPV newProposals then ProposedPPUpdates newProposals else emptyPPPUpdates
 
 data UTxOState era = UTxOState
   { _utxo :: !(UTxO era),
     _deposited :: !Coin,
     _fees :: !Coin,
-    _ppups :: !(PPUPState era) -- State (updateSTS era)
+    _ppups :: !(State (Core.UpdateSTS era))
   }
-  deriving (Generic, NFData)
+  deriving (Generic)
 
 deriving stock instance
   ShelleyBased era =>
@@ -593,7 +592,9 @@ deriving stock instance
   ShelleyBased era =>
   Eq (UTxOState era)
 
-instance NoThunks (UTxOState era)
+deriving instance (Era era, NFData (State (Core.UpdateSTS era))) => NFData (UTxOState era)
+
+deriving instance (NoThunks (State (Core.UpdateSTS era))) =>  NoThunks (UTxOState era)
 
 instance
   ShelleyBased era =>
@@ -639,9 +640,9 @@ deriving stock instance
   ShelleyBased era =>
   Eq (NewEpochState era)
 
-instance (Era era) => NFData (NewEpochState era)
+instance ShelleyBased era => NFData (NewEpochState era)
 
-instance NoThunks (NewEpochState era)
+instance ShelleyBased era => NoThunks (NewEpochState era)
 
 instance ShelleyBased era => ToCBOR (NewEpochState era) where
   toCBOR (NewEpochState e bp bc es ru pd) =
@@ -689,9 +690,9 @@ deriving stock instance
   ShelleyBased era =>
   Eq (LedgerState era)
 
-instance NoThunks (LedgerState era)
+instance ShelleyBased era => NoThunks (LedgerState era)
 
-instance (Era era) => NFData (LedgerState era)
+instance (ShelleyBased era) => NFData (LedgerState era)
 
 instance
   ShelleyBased era =>
@@ -715,14 +716,15 @@ instance
 genesisState ::
   Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   UTxO era ->
+  State (Core.UpdateSTS era) ->
   LedgerState era
-genesisState genDelegs0 utxo0 =
+genesisState genDelegs0 utxo0 updateSt0 =
   LedgerState
     ( UTxOState
         utxo0
         (Coin 0)
         (Coin 0)
-        emptyPPUPState
+        updateSt0
     )
     (DPState dState emptyPState)
   where
@@ -1157,3 +1159,12 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     acnt' = acnt {_reserves = (_reserves acnt) <+> (Val.coin . balance $ UTxO redeemers)}
     us' = us {_utxo = UTxO nonredeemers}
     ls' = ls {_utxoState = us'}
+
+--------------------------------------------------------------------------------
+-- TODO: these definitions should be in Shelley specific modules
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+-- END TODO: these definitions should be in Shelley specific modules
+--------------------------------------------------------------------------------

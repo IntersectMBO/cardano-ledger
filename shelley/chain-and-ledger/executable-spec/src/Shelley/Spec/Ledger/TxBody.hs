@@ -83,7 +83,7 @@ import Cardano.Binary
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+-- import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val (Val)
 import Cardano.Prelude
   ( decodeEitherBase16,
@@ -475,7 +475,8 @@ instance NFData (TxOut era) where
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
 pattern TxOut ::
-  ShelleyBased era =>
+  -- ShelleyBased era =>
+  (Era era, Compactible (Core.Value era)) =>
   Addr era ->
   Core.Value era ->
   TxOut era
@@ -764,7 +765,7 @@ instance (Era era) => ToCBOR (TxBody era) where
 -- Here is where we declare that in the (ShelleyEra c) The abstract type family
 -- Core.TxBody is set to THIS TxBody,The one we defined a few lines above.
 
-type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
+-- type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
 
 -- ===========================================================================
 

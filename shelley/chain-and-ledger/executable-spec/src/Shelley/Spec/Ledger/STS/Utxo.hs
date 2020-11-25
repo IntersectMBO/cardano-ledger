@@ -31,7 +31,8 @@ import Cardano.Binary
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.ShelleyEra (ShelleyEra)
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
@@ -251,6 +252,7 @@ instance
 
 instance
   (CryptoClass.Crypto c, Core.TxBody (ShelleyEra c) ~ TxBody (ShelleyEra c)
+  , ShelleyBased (ShelleyEra c)
   ) =>
   STS (UTXO (ShelleyEra c))
   where
@@ -260,7 +262,7 @@ instance
   type BaseM (UTXO (ShelleyEra c)) = ShelleyBase
   type PredicateFailure (UTXO (ShelleyEra c)) = UtxoPredicateFailure (ShelleyEra c)
 
-  transitionRules = [utxoInductive @(ShelleyEra c) @PPUP]
+  transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
 
   renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
@@ -296,10 +298,10 @@ initialLedgerState = do
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
-  forall era updateSTS.
+  forall era .
   ( ShelleyBased era,
     STS (UTXO era),
-    Embed (updateSTS era) (UTXO era),
+    Embed (Core.UpdateSTS era) (UTXO era),
     BaseM (UTXO era) ~ ShelleyBase,
     Environment (UTXO era) ~ UtxoEnv era,
     State (UTXO era) ~ UTxOState era,
@@ -311,8 +313,8 @@ utxoInductive ::
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "ttl" (Core.TxBody era) SlotNo,
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-    HasField "updateEnv" (UtxoEnv era) (Environment (updateSTS era))
+    HasField "update" (Core.TxBody era) (Signal (Core.UpdateSTS era)),
+    HasField "updateEnv" (UtxoEnv era) (Environment (Core.UpdateSTS era))
   ) =>
   TransitionRule (UTXO era)
 utxoInductive = do
@@ -350,8 +352,8 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO (toDelta consumed_) (toDelta produced_)
 
   -- process Protocol Parameter Update Proposals
-  let upenv = getField @"updateEnv" @(UtxoEnv era) @(Environment (updateSTS era)) env
-  ppup' <- trans @(updateSTS era) $ TRC (upenv, ppup, txup tx)
+  let upenv = getField @"updateEnv" @(UtxoEnv era) @(Environment (Core.UpdateSTS era)) env
+  ppup' <- trans @(Core.UpdateSTS era) $ TRC (upenv, ppup, getField @"update" txb)
 
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
@@ -389,5 +391,5 @@ instance
   where
   wrapFailed = UpdateFailure
 
--- instance Core.EmbedsUpdateLogic UTXO (ShelleyEra c) where
---   getUpdateEnv (UtxoEnv slot pp _stakepools genDelegs) = PPUPEnv slot pp genDelegs
+instance HasField "updateEnv" (UtxoEnv (ShelleyEra c)) (PPUPEnv (ShelleyEra c)) where
+  getField (UtxoEnv slot pp _stakepools genDelegs) = PPUPEnv slot pp genDelegs

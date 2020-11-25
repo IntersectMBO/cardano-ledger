@@ -72,9 +72,8 @@ import Cardano.Binary
     withSlice,
   )
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra, TxBodyConstraints)
+import Cardano.Ledger.Era ( Era(..) )
+import Cardano.Ledger.Shelley (ShelleyBased)
 import qualified Cardano.Ledger.Shelley as Shelley
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
@@ -96,8 +95,14 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Hashing (EraIndependentTx, HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
+    ( asWitness, HasKeyRole(coerceKeyRole), KeyHash, KeyRole(Witness) )
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.Scripts
+    ( getKeyCombination,
+      getKeyCombinations,
+      hashMultiSigScript,
+      MultiSig(..),
+      ScriptHash )
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
     decodeMapContents,
@@ -350,14 +355,6 @@ class
   where
   validateScript :: Core.Script era -> Tx era -> Bool
   hashScript :: Core.Script era -> ScriptHash era
-
--- | instance of MultiSignatureScript type class
-instance
-  (CryptoClass.Crypto c, TxBodyConstraints (ShelleyEra c)) =>
-  ValidateScript (ShelleyEra c)
-  where
-  validateScript = validateNativeMultiSigScript
-  hashScript = hashMultiSigScript
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.

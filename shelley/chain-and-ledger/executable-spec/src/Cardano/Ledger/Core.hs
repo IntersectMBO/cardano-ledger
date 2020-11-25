@@ -21,6 +21,8 @@ module Cardano.Ledger.Core
     Value,
     Script,
 
+    -- * Era-changing STS's
+    UpdateSTS,
     -- * Constraint synonyms
     ChainData,
     SerialisableData,
@@ -44,6 +46,9 @@ type family TxBody era :: Type
 
 -- | Scripts which may lock transaction outputs in this era
 type family Script era :: Type
+
+-- | Update transition system for the era.
+type family UpdateSTS era :: Type
 
 -- | Common constraints
 --

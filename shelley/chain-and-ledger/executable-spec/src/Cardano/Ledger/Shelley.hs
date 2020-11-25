@@ -8,23 +8,20 @@ module Cardano.Ledger.Shelley where
 
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CryptoClass
+
 import Cardano.Ledger.Era
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val (Val)
-import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (..))
+
+-- TODO: import qualified
+import Control.State.Transition
+import Control.DeepSeq (NFData)
+import NoThunks.Class (NoThunks)
 
 --------------------------------------------------------------------------------
 -- Shelley Era
 --------------------------------------------------------------------------------
-
-data ShelleyEra c
-
-instance CryptoClass.Crypto c => Era (ShelleyEra c) where
-  type Crypto (ShelleyEra c) = c
-
-type instance Value (ShelleyEra c) = Coin
 
 type TxBodyConstraints era =
   ( ChainData (TxBody era),
@@ -44,6 +41,12 @@ type ShelleyBased era =
     ChainData (Delta (Value era)),
     SerialisableData (Delta (Value era)),
     Torsor (Value era),
+    -- STS Constraints
+    Eq (State (UpdateSTS era)),
+    Show (State (UpdateSTS era)),
+    NFData (State (UpdateSTS era)),
+    NoThunks (State (UpdateSTS era)),
+    SerialisableData (State (UpdateSTS era)),
     -- TxBody constraints
     TxBodyConstraints era,
     -- Script constraints
