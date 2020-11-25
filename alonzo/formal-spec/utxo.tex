@@ -730,7 +730,7 @@ and Goguen transactions. To do this, we transform any Shelley transactions
 into Goguen ones, filling any missing data fields with default values.
 The only time that we need the original Shelley transaction is to check the signatures
 in the hash of the original transaction body, as shown in
-Figure~\ref{fig:rules:utxow-goguen}. In addition to the Shelley UTXOW preconditions
+Figure~\ref{fig:rules:utxow-alonzo}. In addition to the Shelley UTXOW preconditions
 that still apply, we have made the following changes and additions:
 
 \begin{itemize}
@@ -775,7 +775,7 @@ by the UTXO transition (the application of which is also part of the conditions)
 
 \begin{figure}
   \begin{equation}
-    \label{eq:utxo-witness-inductive-goguen}
+    \label{eq:utxo-witness-inductive-alonzo}
     \inference[UTxO-witG]
     {
       \var{tx}~\leteq~\fun{toGoguenTx}~{tx}_o \\~\\
@@ -837,5 +837,5 @@ by the UTXO transition (the application of which is also part of the conditions)
     }
   \end{equation}
   \caption{UTxO with witnesses inference rules for GoguenTx}
-  \label{fig:rules:utxow-goguen}
+  \label{fig:rules:utxow-alonzo}
 \end{figure}
