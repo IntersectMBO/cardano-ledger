@@ -809,7 +809,6 @@ keyRefunds pp tx = (length deregistrations) <×> (_keyDeposit pp)
     deregistrations = filter isDeRegKey (toList $ getField @"certs" tx)
 
 -- | Compute the lovelace which are destroyed by the transaction
--- TODO this is only correct for Shelley!
 consumed ::
   ( ShelleyBased era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),

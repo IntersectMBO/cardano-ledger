@@ -86,7 +86,6 @@ instance
   type BaseEnv (LEDGER era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
--- TODO does anything here constrain era to ShelleyEra?
 instance
   forall era.
   ( EraGen era,

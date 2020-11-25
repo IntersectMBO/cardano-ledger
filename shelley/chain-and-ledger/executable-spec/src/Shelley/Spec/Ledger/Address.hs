@@ -138,8 +138,6 @@ toCred k = KeyHashObj . hashKey $ vKey k
 
 -- | Convert a given multi-sig script to a credential by hashing it and wrapping
 -- into the `Credential` data type.
---
--- TODO nc what is the role of this credential?
 scriptToCred :: Era era => MultiSig era -> Credential kr era
 scriptToCred = ScriptHashObj . hashMultiSigScript
 

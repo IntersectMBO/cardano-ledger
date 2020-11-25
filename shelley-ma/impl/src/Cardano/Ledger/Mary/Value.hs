@@ -275,7 +275,7 @@ instance
 
 instance Era era => Compactible (Value era) where
   newtype CompactForm (Value era) = CompactValue (CV era)
-    deriving (ToCBOR, FromCBOR)
+    deriving (Eq, Typeable, Show, ToCBOR, FromCBOR)
   toCompact x = CompactValue <$> toCV x
   fromCompact (CompactValue x) = fromCV x
 
@@ -295,12 +295,14 @@ data CV era
   = CV
       {-# UNPACK #-} !Word64
       {-# UNPACK #-} !(Array Int (CVPart era))
+  deriving (Eq, Show, Typeable)
 
 data CVPart era
   = CVPart
       !(PolicyID era)
       {-# UNPACK #-} !AssetName
       {-# UNPACK #-} !Word64
+  deriving (Eq, Show, Typeable)
 
 toCV :: Value era -> Maybe (CV era)
 toCV v = do

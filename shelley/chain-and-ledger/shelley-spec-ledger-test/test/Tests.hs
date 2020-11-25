@@ -8,7 +8,7 @@ import Test.Control.Iterate.SetAlgebra (setAlgTest)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
-import Test.Shelley.Spec.Ledger.STSTests (chainExamples)
+import Test.Shelley.Spec.Ledger.STSTests (chainExamples, multisigExamples)
 import qualified Test.Shelley.Spec.Ledger.Serialisation as Serialisation
 import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
 import Test.Tasty
@@ -28,7 +28,7 @@ mainTests =
       rewardTests (Proxy :: Proxy C),
       Serialisation.tests 5,
       chainExamples,
-      --multisigExamples, - TODO re-enable after the script embargo has been lifted
+      multisigExamples,
       unitTests,
       setAlgTest
     ]
@@ -47,7 +47,7 @@ fastTests =
     "Ledger with Delegation fast"
     [ Serialisation.tests 1,
       chainExamples,
-      --multisigExamples, - TODO re-enable after the script embargo has been lifted
+      multisigExamples,
       unitTests,
       setAlgTest
     ]
