@@ -125,6 +125,7 @@ instance
     Compactible (Core.Value (ShelleyMAEra ma c)),
     Val (Core.Value (ShelleyMAEra ma c)),
     GetPolicies (Core.Value (ShelleyMAEra ma c)) (ShelleyMAEra ma c),
+    Eq (CompactForm (Core.Value (ShelleyMAEra ma c))),
     Core.ChainData (Core.Value (ShelleyMAEra ma c)),
     Core.ChainData (Delta (Core.Value (ShelleyMAEra ma c))),
     Core.SerialisableData (Core.Value (ShelleyMAEra ma c)),

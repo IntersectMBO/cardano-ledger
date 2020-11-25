@@ -26,6 +26,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
 import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
+import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -79,6 +80,8 @@ rationalToCoinViaFloor r = Coin . floor $ r
 -- with an erroring bounds check here. where should this really live?
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64
+    deriving (Eq, Show, NoThunks, Typeable)
+
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
   fromCompact (CompactCoin c) = word64ToCoin c
 

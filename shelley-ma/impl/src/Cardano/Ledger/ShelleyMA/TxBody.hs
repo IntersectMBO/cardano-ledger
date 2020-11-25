@@ -133,16 +133,30 @@ data TxBodyRaw era = TxBodyRaw
 
 deriving instance (NFData (Value era), Era era) => NFData (TxBodyRaw era)
 
-deriving instance (Compactible (Value era), Eq (Value era)) => Eq (TxBodyRaw era)
+deriving instance
+  ( Compactible (Value era),
+    Eq (Value era),
+    Eq (CompactForm (Value era))
+  ) =>
+  Eq (TxBodyRaw era)
 
-deriving instance (Era era, Compactible (Value era), Show (Value era)) => Show (TxBodyRaw era)
+deriving instance
+  (Era era, Compactible (Value era), Show (Value era)) =>
+  Show (TxBodyRaw era)
 
 deriving instance Generic (TxBodyRaw era)
 
 deriving instance NoThunks (Value era) => NoThunks (TxBodyRaw era)
 
 instance (Val (Value era), FamsFrom era) => FromCBOR (TxBodyRaw era) where
-  fromCBOR = decode (SparseKeyed "TxBodyRaw" initial bodyFields [(0, "inputs"), (1, "outputs"), (2, "txfee")])
+  fromCBOR =
+    decode
+      ( SparseKeyed
+          "TxBodyRaw"
+          initial
+          bodyFields
+          [(0, "inputs"), (1, "outputs"), (2, "txfee")]
+      )
 
 instance
   (Val (Value era), FamsFrom era) =>
@@ -222,7 +236,9 @@ type instance
   Core.TxBody (ShelleyMAEra (ma :: MaryOrAllegra) c) =
     TxBody (ShelleyMAEra ma c)
 
-deriving instance (Compactible (Value era), Eq (Value era)) => Eq (TxBody era)
+deriving instance
+  (Compactible (Value era), Eq (Value era), Eq (CompactForm (Value era))) =>
+  Eq (TxBody era)
 
 deriving instance
   (Era era, Compactible (Value era), Show (Value era)) =>

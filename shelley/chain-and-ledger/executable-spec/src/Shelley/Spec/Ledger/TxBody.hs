@@ -466,7 +466,10 @@ instance
 
 deriving stock instance
   -- weakest constraint
-  (Eq (Core.Value era), Compactible (Core.Value era)) =>
+  ( Eq (Core.Value era),
+    Eq (CompactForm (Core.Value era)),
+    Compactible (Core.Value era)
+  ) =>
   Eq (TxOut era)
 
 instance NFData (TxOut era) where
@@ -593,6 +596,7 @@ type ProperVal era =
     Compactible (Core.Value era),
     Show (Core.Value era),
     Eq (Core.Value era),
+    Eq (CompactForm (Core.Value era)),
     Val (Core.Value era)
   )
 

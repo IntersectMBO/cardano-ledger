@@ -26,7 +26,3 @@ class Compactible a where
   data CompactForm a :: Type
   toCompact :: a -> Maybe (CompactForm a)
   fromCompact :: CompactForm a -> a
-
--- TODO: consider if this is better the other way around
-instance (Eq a, Compactible a) => Eq (CompactForm a) where
-  a == b = fromCompact a == fromCompact b

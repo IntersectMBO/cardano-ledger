@@ -40,6 +40,7 @@ type ShelleyBased era =
     Compactible (Value era),
     DecodeNonNegative (Value era),
     ChainData (Value era),
+    Eq (CompactForm (Value era)),
     SerialisableData (Value era),
     SerialisableData (CompactForm (Value era)),
     ChainData (Delta (Value era)),
