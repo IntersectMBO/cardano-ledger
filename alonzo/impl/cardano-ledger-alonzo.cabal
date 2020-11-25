@@ -1,0 +1,25 @@
+cabal-version:       2.2
+
+name:                cardano-ledger-alonzo
+version:             0.1.0.0
+synopsis:            Cardano ledger introducing Plutus Core
+description:
+  This package builds upon the Mary ledger with support for extended UTxO
+  via Plutus Core.
+bug-reports:         https://github.com/input-output-hk/cardano-ledger-specs/issues
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+copyright:           2020 Input Output (Hong Kong) Ltd.
+category:            Network
+build-type:          Simple
+
+library
+  exposed-modules:
+    Cardano.Ledger.Alonzo
+  build-depends:
+    base >=4.14 && <4.15,
+    shelley-spec-ledger
+
+  -- hs-source-dirs:
+  default-language:    Haskell2010
