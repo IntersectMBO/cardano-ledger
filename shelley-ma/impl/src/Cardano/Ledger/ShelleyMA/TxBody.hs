@@ -40,7 +40,6 @@ import Cardano.Ledger.Compactible (CompactForm (..), Compactible (..))
 import Cardano.Ledger.Core (Script, Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),
@@ -231,10 +230,6 @@ initial =
 
 newtype TxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
   deriving (Typeable)
-
-type instance
-  Core.TxBody (ShelleyMAEra (ma :: MaryOrAllegra) c) =
-    TxBody (ShelleyMAEra ma c)
 
 deriving instance
   (Compactible (Value era), Eq (Value era), Eq (CompactForm (Value era))) =>

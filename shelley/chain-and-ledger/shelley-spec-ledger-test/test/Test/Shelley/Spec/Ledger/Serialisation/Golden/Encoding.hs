@@ -31,7 +31,7 @@ import Cardano.Crypto.VRF (CertifiedVRF)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
-import qualified Cardano.Ledger.Shelley as Shelley
+import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
@@ -410,7 +410,7 @@ testHeaderHash =
 testBHB ::
   forall era crypto.
   ( Era era,
-    Shelley.TxBodyConstraints era,
+    TxBodyConstraints era,
     ToCBOR (Core.Metadata era),
     ExMock crypto,
     crypto ~ Crypto era
@@ -456,7 +456,7 @@ testBHBSigTokens ::
   ( Era era,
     ExMock (Crypto era),
     ToCBOR (Core.Metadata era),
-    Shelley.TxBodyConstraints era
+    TxBodyConstraints era
   ) =>
   Tokens ->
   Tokens

@@ -20,7 +20,7 @@ module Shelley.Spec.Ledger.STS.NewEpoch
 where
 
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
 import Data.Foldable (fold)

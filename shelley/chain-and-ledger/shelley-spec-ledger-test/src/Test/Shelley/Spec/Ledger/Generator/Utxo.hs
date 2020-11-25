@@ -20,7 +20,7 @@ where
 import Cardano.Binary (serialize)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.SetAlgebra (forwards)
 import qualified Data.ByteString.Lazy as BSL

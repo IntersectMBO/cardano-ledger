@@ -21,14 +21,9 @@ module Cardano.Ledger.ShelleyMA.Metadata
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
-import Cardano.Crypto.Hash (hashWithSerialiser)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
-import Cardano.Ledger.ShelleyMA.Scripts ()
 import Codec.CBOR.Decoding (TokenType (TypeListLen, TypeMapLen))
-import Control.DeepSeq (deepseq)
 import Data.Coders
 import Data.Map.Strict (Map)
 import Data.MemoBytes
@@ -39,10 +34,7 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class
 import Shelley.Spec.Ledger.MetaData
-  ( MetaDataHash (..),
-    MetaDatum,
-    ValidateMetadata (..),
-    validMetaDatum,
+  ( MetaDatum,
   )
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
@@ -98,21 +90,6 @@ pattern Metadata blob sp <-
           (encMetadataRaw $ MetadataRaw blob sp)
 
 {-# COMPLETE Metadata #-}
-
-type instance
-  Core.Metadata (ShelleyMAEra (ma :: MaryOrAllegra) c) =
-    Metadata (ShelleyMAEra (ma :: MaryOrAllegra) c)
-
-instance
-  ( Crypto c,
-    Typeable ma,
-    Core.AnnotatedData (Core.Script (ShelleyMAEra ma c))
-  ) =>
-  ValidateMetadata (ShelleyMAEra (ma :: MaryOrAllegra) c)
-  where
-  hashMetadata = MetaDataHash . hashWithSerialiser toCBOR
-
-  validateMetadata (Metadata blob sp) = deepseq sp $ all validMetaDatum blob
 
 --------------------------------------------------------------------------------
 -- Serialisation

@@ -32,9 +32,7 @@ import Cardano.Binary
     withSlice,
   )
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
@@ -50,7 +48,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
-import Shelley.Spec.Ledger.Keys (Hash, hashWithSerialiser)
+import Shelley.Spec.Ledger.Keys (Hash)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | A generic metadatum type.
@@ -71,8 +69,6 @@ data MetaData = MetaData'
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks) via AllowThunksIn '["mdBytes"] MetaData
-
-type instance Core.Metadata (ShelleyEra c) = MetaData
 
 pattern MetaData :: Map Word64 MetaDatum -> MetaData
 pattern MetaData m <-
@@ -131,10 +127,6 @@ validMetaDatum (Map kvs) =
 class ValidateMetadata era where
   hashMetadata :: Core.Metadata era -> MetaDataHash era
   validateMetadata :: Core.Metadata era -> Bool
-
-instance CC.Crypto c => ValidateMetadata (ShelleyEra c) where
-  hashMetadata = MetaDataHash . hashWithSerialiser toCBOR
-  validateMetadata (MetaData m) = all validMetaDatum m
 
 --------------------------------------------------------------------------------
 -- CBOR encoding and decoding

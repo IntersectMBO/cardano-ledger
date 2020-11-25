@@ -22,7 +22,7 @@ import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (Value (..))
 import Cardano.Ledger.ShelleyMA.Metadata (Metadata (..), pattern Metadata)
-import Cardano.Ledger.ShelleyMA.Scripts (Timelock)
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.ShelleyMA.TxBody
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (biMapFromList, lifo)

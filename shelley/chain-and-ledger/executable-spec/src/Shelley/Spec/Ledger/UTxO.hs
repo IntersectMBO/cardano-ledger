@@ -49,8 +49,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley (ShelleyBased)
-import qualified Cardano.Ledger.Shelley as Shelley
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
@@ -176,7 +175,7 @@ instance Relation (UTxO era) where
 -- | Compute the id of a transaction.
 txid ::
   forall era.
-  (Shelley.TxBodyConstraints era) =>
+  (TxBodyConstraints era) =>
   Core.TxBody era ->
   TxId era
 txid = TxId . hashAnnotated @(Core.TxBody era) @era

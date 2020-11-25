@@ -22,7 +22,7 @@ where
 import Cardano.Binary (ToCBOR, serialize')
 import qualified Cardano.Ledger.Core as Core (Metadata, TxBody)
 import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.Shelley (ShelleyBased, TxBodyConstraints)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.State.Transition.Trace
   ( Trace,
