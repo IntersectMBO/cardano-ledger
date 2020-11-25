@@ -16,11 +16,11 @@ shadowing warnings for the named field puns when used with a pattern synonym.
 module Cardano.Ledger.Mary.Translation where
 
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Compactible
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Value
+import Cardano.Ledger.Mary.Value (Value (..))
 import Cardano.Ledger.ShelleyMA.Metadata (Metadata (..), pattern Metadata)
 import Cardano.Ledger.ShelleyMA.Scripts (Timelock)
 import Cardano.Ledger.ShelleyMA.TxBody
@@ -29,6 +29,7 @@ import Control.Iterate.SetAlgebra (biMapFromList, lifo)
 import Data.Coerce (coerce)
 import Data.Foldable (Foldable (toList))
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.API hiding (TxBody)
@@ -362,4 +363,7 @@ translateValue :: Era era => Coin -> Value era
 translateValue = Val.inject
 
 translateCompactValue :: Era era => CompactForm Coin -> CompactForm (Value era)
-translateCompactValue = toCompact . translateValue . fromCompact
+translateCompactValue =
+  fromMaybe (error msg) . toCompact . translateValue . fromCompact
+  where
+    msg = "impossible error: compact coin is out of range"

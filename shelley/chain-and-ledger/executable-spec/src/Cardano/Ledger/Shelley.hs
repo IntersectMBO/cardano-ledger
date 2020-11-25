@@ -11,7 +11,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era
 import Cardano.Ledger.Torsor (Torsor (..))
-import Cardano.Ledger.Val (Val)
+import Cardano.Ledger.Val (DecodeNonNegative, Val)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (..))
 
@@ -38,6 +38,7 @@ type ShelleyBased era =
     -- Value constraints
     Val (Value era),
     Compactible (Value era),
+    DecodeNonNegative (Value era),
     ChainData (Value era),
     SerialisableData (Value era),
     SerialisableData (CompactForm (Value era)),

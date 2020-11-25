@@ -42,7 +42,12 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
-import Cardano.Ledger.Val (Val (..))
+import Cardano.Ledger.Val
+  ( DecodeMint (..),
+    DecodeNonNegative,
+    EncodeMint (..),
+    Val (..),
+  )
 import Control.DeepSeq (NFData (..))
 import Data.Coders
   ( Decode (..),
@@ -88,6 +93,10 @@ type FamsFrom era =
     Typeable era,
     Typeable (Script era),
     Typeable (Core.Metadata era),
+    Show (Value era),
+    Compactible (Value era),
+    DecodeNonNegative (Value era),
+    DecodeMint (Value era),
     FromCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
     FromCBOR (Value era),
     FromCBOR (Annotator (Script era)) -- Arises becaause DCert memoizes its bytes
@@ -96,6 +105,8 @@ type FamsFrom era =
 type FamsTo era =
   ( Era era,
     ToCBOR (Value era),
+    Compactible (Value era),
+    EncodeMint (Value era),
     ToCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
     ToCBOR (Script era),
     Typeable (Core.Metadata era)
@@ -173,7 +184,7 @@ txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frg
     !> encodeKeyedStrictMaybe 6 up
     !> encodeKeyedStrictMaybe 7 hash
     !> encodeKeyedStrictMaybe 8 bot
-    !> Omit isZero (Key 9 (To frge))
+    !> Omit isZero (Key 9 (E encodeMint frge))
 
 bodyFields :: FamsFrom era => Word -> Field (TxBodyRaw era)
 bodyFields 0 = field (\x tx -> tx {inputs = x}) (D (decodeSet fromCBOR))
@@ -185,7 +196,7 @@ bodyFields 5 = field (\x tx -> tx {wdrls = x}) From
 bodyFields 6 = field (\x tx -> tx {update = x}) (D (SJust <$> fromCBOR))
 bodyFields 7 = field (\x tx -> tx {mdHash = x}) (D (SJust <$> fromCBOR))
 bodyFields 8 = field (\x tx -> tx {vldt = (vldt tx) {validFrom = x}}) (D (SJust <$> fromCBOR))
-bodyFields 9 = field (\x tx -> tx {forge = x}) From
+bodyFields 9 = field (\x tx -> tx {forge = x}) (D decodeMint)
 bodyFields n = field (\_ t -> t) (Invalid n)
 
 initial :: (Val (Value era)) => TxBodyRaw era

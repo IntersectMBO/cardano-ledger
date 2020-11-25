@@ -13,6 +13,7 @@ import Control.Iterate.SetAlgebra (compile, compute, run)
 import Control.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Maybe (fromJust)
 import qualified Data.Sequence as Seq
 import Shelley.Spec.Ledger.Address
   ( Addr (..),
@@ -60,7 +61,7 @@ genTestCase numUTxO numAddr = do
       pure $
         TxOutCompact
           (compactAddr addr)
-          (toCompact $ Val.inject (Coin $ fromIntegral i))
+          (fromJust $ toCompact $ Val.inject (Coin $ fromIntegral i))
   let mktxid i = TxId $ mkDummyHash i
   let mktxin i = TxIn (mktxid i) (fromIntegral i)
   let utxo = Map.fromList $ zip (mktxin <$> [1 ..]) txOuts

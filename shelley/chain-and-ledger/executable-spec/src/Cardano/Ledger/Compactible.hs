@@ -7,13 +7,10 @@
 module Cardano.Ledger.Compactible
   ( -- * Compactible
     Compactible (..),
-    Compact (..),
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Data.Kind (Type)
-import Data.Typeable (Typeable)
 
 --------------------------------------------------------------------------------
 
@@ -27,22 +24,8 @@ import Data.Typeable (Typeable)
 
 class Compactible a where
   data CompactForm a :: Type
-  toCompact :: a -> CompactForm a
+  toCompact :: a -> Maybe (CompactForm a)
   fromCompact :: CompactForm a -> a
-
-newtype Compact a = Compact {unCompact :: a}
-
-instance
-  (Typeable a, Compactible a, ToCBOR (CompactForm a)) =>
-  ToCBOR (Compact a)
-  where
-  toCBOR = toCBOR . toCompact . unCompact
-
-instance
-  (Typeable a, Compactible a, FromCBOR (CompactForm a)) =>
-  FromCBOR (Compact a)
-  where
-  fromCBOR = Compact . fromCompact <$> fromCBOR
 
 -- TODO: consider if this is better the other way around
 instance (Eq a, Compactible a) => Eq (CompactForm a) where

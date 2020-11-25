@@ -27,6 +27,7 @@ module Shelley.Spec.Ledger.Serialization
     encodeFoldableEncoder,
     encodeFoldableMapEncoder,
     encodeNullMaybe,
+    encodeMap,
     groupRecord,
     ratioToCBOR,
     ratioFromCBOR,
@@ -149,11 +150,14 @@ instance (FromCBORGroup a, ToCBORGroup a) => FromCBOR (CBORGroup a) where
 groupRecord :: forall a s. (ToCBORGroup a, FromCBORGroup a) => Decoder s a
 groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen) fromCBORGroup
 
-mapToCBOR :: (ToCBOR a, ToCBOR b) => Map a b -> Encoding
-mapToCBOR m =
+encodeMap :: (a -> Encoding) -> (b -> Encoding) -> Map a b -> Encoding
+encodeMap encodeKey encodeValue m =
   let l = fromIntegral $ Map.size m
-      contents = Map.foldMapWithKey (\k v -> toCBOR k <> toCBOR v) m
+      contents = Map.foldMapWithKey (\k v -> encodeKey k <> encodeValue v) m
    in wrapCBORMap l contents
+
+mapToCBOR :: (ToCBOR a, ToCBOR b) => Map a b -> Encoding
+mapToCBOR = encodeMap toCBOR toCBOR
 
 mapFromCBOR :: (Ord a, FromCBOR a, FromCBOR b) => Decoder s (Map a b)
 mapFromCBOR = decodeMap fromCBOR fromCBOR

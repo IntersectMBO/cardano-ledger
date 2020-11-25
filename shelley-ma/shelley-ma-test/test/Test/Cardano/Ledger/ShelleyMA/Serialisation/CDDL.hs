@@ -25,9 +25,9 @@ cddlTests :: Int -> TestTree
 cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
     [ cddlTest @(Core.Value A) n "coin",
-      -- cddlTest @(Core.Value M) n "value",
-      -- cddlTest' @(Core.TxBody M) n "transaction_body",
-      -- cddlTest' @(Core.TxBody A) n "transaction_body",
+      cddlTest @(Core.Value M) n "value",
+      cddlTest' @(Core.TxBody M) n "transaction_body",
+      cddlTest' @(Core.TxBody A) n "transaction_body_allegra",
       cddlTest' @(Core.Script M) n "native_script",
       cddlTest' @(Core.Script A) n "native_script",
       cddlTest' @(Core.Metadata M) n "transaction_metadata",
