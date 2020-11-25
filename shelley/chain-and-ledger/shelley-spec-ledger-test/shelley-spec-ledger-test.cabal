@@ -1,6 +1,7 @@
 name:                shelley-spec-ledger-test
 version:             0.1.0.0
 description:         Test helpers from shelley-spec-ledger exposed to other packages
+license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
 build-type:          Simple
