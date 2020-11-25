@@ -426,9 +426,6 @@ deriving newtype instance (Era era) => NFData (TxId era)
 data TxIn era = TxInCompact {-# UNPACK #-} !(TxId era) {-# UNPACK #-} !Word64
   deriving (Generic)
 
--- TODO: We will also want to have the TxId be compact, but the representation
--- depends on the era. NOT SURE ABOUT this. The TxId is always a Hash, Can't get more compact than that.
-
 pattern TxIn ::
   Era era =>
   TxId era ->
