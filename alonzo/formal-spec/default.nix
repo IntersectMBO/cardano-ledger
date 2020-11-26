@@ -3,8 +3,8 @@
 with pkgs;
 
 latex.buildLatex {
-  name = "goguen-spec";
-  texFiles = [ "goguen-changes" ];
+  name = "alonzo-spec";
+  texFiles = [ "alonzo-changes" ];
   meta = with lib; {
     description = "Goguen ledger specification";
     license = licenses.asl20;
