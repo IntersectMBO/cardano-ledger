@@ -6,11 +6,8 @@
 module Cardano.Ledger.Mary where
 
 import Cardano.Ledger.ShelleyMA
-import Cardano.Ledger.ShelleyMA.Metadata ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
-import Cardano.Ledger.ShelleyMA.Scripts ()
-import Cardano.Ledger.ShelleyMA.TxBody ()
 import Shelley.Spec.Ledger.API (ApplyBlock, ApplyTx, GetLedgerView, PraosCrypto, ShelleyBasedEra)
 
 type MaryEra = ShelleyMAEra 'Mary

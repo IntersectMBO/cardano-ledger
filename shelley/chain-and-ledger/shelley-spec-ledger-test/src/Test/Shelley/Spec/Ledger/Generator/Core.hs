@@ -56,8 +56,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Shelley (ShelleyBased)
-import qualified Cardano.Ledger.Shelley as Shelley
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∪), (⋪))
@@ -561,7 +560,7 @@ mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
    in BHeader bhb sig
 
 mkBlock ::
-  ( Shelley.TxBodyConstraints era,
+  ( TxBodyConstraints era,
     ToCBOR (Core.Metadata era),
     Mock (Crypto era)
   ) =>
@@ -592,7 +591,7 @@ mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
 
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
-  ( Shelley.TxBodyConstraints era,
+  ( TxBodyConstraints era,
     ToCBOR (Core.Metadata era),
     ExMock (Crypto era)
   ) =>

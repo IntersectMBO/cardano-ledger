@@ -13,7 +13,8 @@ module Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId) where
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Data.List (foldl')
 import qualified Data.List as List ((\\))
 import qualified Data.Map.Strict as Map

@@ -10,7 +10,8 @@ module Shelley.Spec.Ledger.API
 where
 
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Shelley.Spec.Ledger.API.ByronTranslation as X
 import Shelley.Spec.Ledger.API.Mempool as X
 import Shelley.Spec.Ledger.API.Protocol as X

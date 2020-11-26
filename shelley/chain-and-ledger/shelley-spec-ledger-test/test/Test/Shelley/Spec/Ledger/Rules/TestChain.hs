@@ -22,7 +22,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
 where
 
 import qualified Cardano.Ledger.Core as Core (TxBody)
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Prelude (HasField (..))

@@ -34,7 +34,7 @@ import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import qualified Cardano.Ledger.ShelleyMA.Metadata as MA
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA.STS
-import qualified Cardano.Ledger.ShelleyMA.Scripts as MA (Timelock (..))
+import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
 import Data.Coerce (coerce)

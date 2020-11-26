@@ -16,7 +16,7 @@ module Shelley.Spec.Ledger.STS.PoolReap
   )
 where
 
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Control.State.Transition

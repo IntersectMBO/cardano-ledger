@@ -12,7 +12,7 @@ where
 import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Era (Crypto (..))
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Shelley as Shelley
+import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Nonce)
@@ -52,7 +52,7 @@ blockEx1 ::
   forall era.
   ( HasCallStack,
     ExMock (Crypto era),
-    Shelley.TxBodyConstraints era,
+    TxBodyConstraints era,
     ToCBOR (Core.Metadata era)
   ) =>
   Block era
@@ -74,7 +74,7 @@ blockNonce ::
   forall era.
   ( HasCallStack,
     ExMock (Crypto era),
-    Shelley.TxBodyConstraints era,
+    TxBodyConstraints era,
     ToCBOR (Core.Metadata era)
   ) =>
   Nonce

@@ -44,7 +44,7 @@ import Cardano.Binary
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
-import qualified Cardano.Ledger.Shelley as Shelley
+import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Control.DeepSeq (NFData (..))
@@ -285,7 +285,7 @@ evalFPS ::
 evalFPS timelock vhks txb = evalTimelock vhks (getField @"vldt" txb) timelock
 
 validateTimelock ::
-  ( Shelley.TxBodyConstraints era,
+  ( TxBodyConstraints era,
     HasField "vldt" (Core.TxBody era) ValidityInterval,
     ToCBOR (Core.Metadata era)
   ) =>

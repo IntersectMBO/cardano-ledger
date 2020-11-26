@@ -18,7 +18,7 @@ module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)

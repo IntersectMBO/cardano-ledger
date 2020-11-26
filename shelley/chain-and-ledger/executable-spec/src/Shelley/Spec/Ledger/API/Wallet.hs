@@ -20,7 +20,7 @@ where
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (SlotNo)
 import Data.Foldable (fold)

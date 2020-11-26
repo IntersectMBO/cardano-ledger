@@ -24,7 +24,7 @@
 **/*-blx.bib
 **/*.run.xml
 
-# Cabal & Stack
+## Cabal & Stack
 .stack-work*/
 .stack-work-local/
 */dist
@@ -33,20 +33,21 @@ dist-newstyle/
 cabal.project.local
 stack.yaml.lock
 .ghc.environment.*
+ghcid.txt
 
-# Editors
+## Editors
 TAGS
 tags
 *.temp
 
-# Emacs auto-generated Emacs-lisp code
+## Emacs auto-generated Emacs-lisp code
 auto/
 
-# Nix artifacts
+## Nix artifacts
 specs/**/result*
 result*
 specs/**/.ghc.environment.x86_64-linux-*
 .stack-to-nix.cache
 
-## Ignore PDFs
 *.pdf
+.envrc

@@ -83,7 +83,7 @@ import Cardano.Binary
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val (DecodeNonNegative (..), Val)
 import Cardano.Prelude
   ( decodeEitherBase16,
@@ -767,14 +767,6 @@ instance Era era => HashAnnotated (TxBody era) era where
 
 instance (Era era) => ToCBOR (TxBody era) where
   toCBOR (TxBodyConstr memo) = toCBOR memo
-
--- ==========================================================================
--- Here is where we declare that in the (ShelleyEra c) The abstract type family
--- Core.TxBody is set to THIS TxBody,The one we defined a few lines above.
-
-type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
-
--- ===========================================================================
 
 instance HasField "inputs" (TxBody e) (Set (TxIn e)) where
   getField (TxBodyConstr (Memo m _)) = getField @"_inputsX" m

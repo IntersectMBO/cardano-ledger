@@ -19,7 +19,8 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)

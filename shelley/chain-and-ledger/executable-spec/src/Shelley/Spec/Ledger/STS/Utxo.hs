@@ -30,7 +30,8 @@ import Cardano.Binary
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley (ShelleyBased, ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val

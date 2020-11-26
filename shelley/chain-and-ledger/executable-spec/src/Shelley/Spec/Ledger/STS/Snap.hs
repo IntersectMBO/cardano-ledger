@@ -13,7 +13,7 @@ module Shelley.Spec.Ledger.STS.Snap
   )
 where
 
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.State.Transition
   ( STS (..),
     TRC (..),

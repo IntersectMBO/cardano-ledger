@@ -32,7 +32,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Crypto (HASH, KES)
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (forceElemsToWHNF)
 import Cardano.Slotting.EpochInfo

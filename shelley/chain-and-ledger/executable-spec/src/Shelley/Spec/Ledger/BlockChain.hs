@@ -81,8 +81,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley (ShelleyBased)
-import qualified Cardano.Ledger.Shelley as Shelley
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -185,7 +184,7 @@ deriving stock instance
   Eq (TxSeq era)
 
 pattern TxSeq ::
-  (Era era, Shelley.TxBodyConstraints era, ToCBOR (Core.Metadata era)) =>
+  (Era era, TxBodyConstraints era, ToCBOR (Core.Metadata era)) =>
   StrictSeq (Tx era) ->
   TxSeq era
 pattern TxSeq xs <-
