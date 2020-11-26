@@ -123,7 +123,7 @@ data TxBodyRaw era = TxBodyRaw
     vldt :: !ValidityInterval, -- imported from Timelocks
     update :: !(StrictMaybe (Update era)),
     mdHash :: !(StrictMaybe (MetaDataHash era)),
-    forge :: !(Value era)
+    mint :: !(Value era)
   }
   deriving (Typeable)
 
@@ -210,7 +210,7 @@ bodyFields 5 = field (\x tx -> tx {wdrls = x}) From
 bodyFields 6 = field (\x tx -> tx {update = x}) (D (SJust <$> fromCBOR))
 bodyFields 7 = field (\x tx -> tx {mdHash = x}) (D (SJust <$> fromCBOR))
 bodyFields 8 = field (\x tx -> tx {vldt = (vldt tx) {validFrom = x}}) (D (SJust <$> fromCBOR))
-bodyFields 9 = field (\x tx -> tx {forge = x}) (D decodeMint)
+bodyFields 9 = field (\x tx -> tx {mint = x}) (D decodeMint)
 bodyFields n = field (\_ t -> t) (Invalid n)
 
 initial :: (Val (Value era)) => TxBodyRaw era
@@ -275,12 +275,12 @@ pattern TxBody ::
   (StrictMaybe (MetaDataHash era)) ->
   (Value era) ->
   TxBody era
-pattern TxBody i o d w fee vi u m forge <-
-  TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m forge) _)
+pattern TxBody i o d w fee vi u m mint <-
+  TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)
   where
-    TxBody i o d w fee vi u m forge =
+    TxBody i o d w fee vi u m mint =
       TxBodyConstr $
-        memoBytes $ txSparse (TxBodyRaw i o d w fee vi u m forge)
+        memoBytes $ txSparse (TxBodyRaw i o d w fee vi u m mint)
 
 {-# COMPLETE TxBody #-}
 
@@ -325,5 +325,5 @@ instance HasField "update" (TxBody e) (StrictMaybe (Update e)) where
 instance HasField "mdHash" (TxBody e) (StrictMaybe (MetaDataHash e)) where
   getField (TxBodyConstr (Memo m _)) = getField @"mdHash" m
 
-instance (Value e ~ vv) => HasField "forge" (TxBody e) vv where
-  getField (TxBodyConstr (Memo m _)) = getField @"forge" m
+instance (Value e ~ vv) => HasField "mint" (TxBody e) vv where
+  getField (TxBodyConstr (Memo m _)) = getField @"mint" m

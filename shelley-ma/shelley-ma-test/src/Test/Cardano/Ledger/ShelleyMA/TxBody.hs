@@ -96,10 +96,10 @@ txM =
     (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))
     SNothing
     SNothing
-    mint
+    testmint
 
-mint :: Value TestEra
-mint = Value 0 (Map.singleton policyId (Map.singleton aname 2))
+testmint :: Value TestEra
+testmint = Value 0 (Map.singleton policyId (Map.singleton aname 2))
   where
   policyId = PolicyID . hashScript . RequireAnyOf $ fromList []
   aname = AssetName $ fromString "asset name"
@@ -119,7 +119,7 @@ fieldTests =
       testCase "vldt" (assertEqual "vldt" (getField @"vldt" txM) (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))),
       testCase "update" (assertEqual "update" (getField @"update" txM) SNothing),
       testCase "mdHash" (assertEqual "mdHash" (getField @"mdHash" txM) SNothing),
-      testCase "forge" (assertEqual "forge" (getField @"forge" txM) mint)
+      testCase "mint" (assertEqual "mint" (getField @"mint" txM) testmint)
     ]
 
 roundtrip :: Mary.TxBody TestEra -> Assertion

@@ -339,7 +339,7 @@ instance Crypto c => TranslateEra (MaryEra c) Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en
 
 instance Crypto c => TranslateEra (MaryEra c) TxBody where
-  translateEra ctx (TxBody i o d w fee vi u m forge) =
+  translateEra ctx (TxBody i o d w fee vi u m mint) =
     pure $
       TxBody
         (Set.map (translateEra' ctx) i)
@@ -350,7 +350,7 @@ instance Crypto c => TranslateEra (MaryEra c) TxBody where
         vi
         (translateEra' ctx <$> u)
         (coerce m)
-        (translateValue forge)
+        (translateValue mint)
 
 instance Crypto c => TranslateEra (MaryEra c) Metadata where
   translateEra ctx (Metadata blob sp) =
