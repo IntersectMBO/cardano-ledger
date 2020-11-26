@@ -17,7 +17,7 @@ import qualified Data.Binary as B
 import Data.Binary.Get (getWord32be)
 import qualified Data.Binary.Get as B
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Streaming as SBS
+import qualified Streaming.ByteString as SBS
 import Data.String (String)
 import Streaming.Binary (decodedWith)
 import Streaming.Prelude (Of(..), Stream)
@@ -51,10 +51,10 @@ data ParseError
   deriving (Eq, Show)
 
 loadFileWithHeader
-  :: FilePath -> LBS.ByteString -> SBS.ByteString (ExceptT ParseError ResIO) ()
+  :: FilePath -> LBS.ByteString -> SBS.ByteStream (ExceptT ParseError ResIO) ()
 loadFileWithHeader file header =
   let
-    bytes :: SBS.ByteString (ExceptT ParseError ResIO) ()
+    bytes :: SBS.ByteStream (ExceptT ParseError ResIO) ()
     bytes = SBS.readFile file
 
     len :: Int64
@@ -83,7 +83,7 @@ parseEpochFileWithBoundary epochSlots file = do
     $ decodedWith (getSlotData epochSlots) (boundaryBytes <> bytes)
   liftBinaryError s
  where
-  boundaryBytes :: SBS.ByteString (ExceptT ParseError ResIO) ()
+  boundaryBytes :: SBS.ByteStream (ExceptT ParseError ResIO) ()
   boundaryBytes = do
     let boundaryFile = file -<.> "boundary"
     boundaryExists <- liftIO $ doesFileExist boundaryFile
