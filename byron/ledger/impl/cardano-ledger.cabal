@@ -152,7 +152,7 @@ library
                      , resourcet
                      , streaming
                      , streaming-binary
-                     , streaming-bytestring
+                     , streaming-bytestring <0.2
                      , text
                      , time
                      , vector
