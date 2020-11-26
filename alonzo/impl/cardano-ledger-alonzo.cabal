@@ -21,9 +21,21 @@ library
     buildable: False
   exposed-modules:
     Cardano.Ledger.Alonzo
+    Cardano.Ledger.Alonzo.Data
+    Cardano.Ledger.Alonzo.Scripts
+    Cardano.Ledger.Alonzo.TxBody
+    Cardano.Ledger.Alonzo.TxWitness
   build-depends:
     base >=4.14 && <4.15,
-    shelley-spec-ledger
-
-  -- hs-source-dirs:
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-shelley-ma,
+    cardano-prelude,
+    containers,
+    deepseq,
+    nothunks,
+    shelley-spec-ledger,
+    small-steps
+  hs-source-dirs:
+    src
   default-language:    Haskell2010
