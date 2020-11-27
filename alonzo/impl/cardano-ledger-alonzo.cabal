@@ -15,6 +15,10 @@ category:            Network
 build-type:          Simple
 
 library
+  -- We make use of features requiring ghc >= 8.10. In order to allow CI to
+  -- still build the 'all' component, simply make this non-buildable.
+  if impl(ghc < 8.10)
+    buildable: False
   exposed-modules:
     Cardano.Ledger.Alonzo
   build-depends:
