@@ -242,13 +242,13 @@ validGroup =
   where
     runAtUTxOSize n =
       bgroup (show n) $
-        [ env (validateInput @BenchEra genVl n) $ \arg ->
+        [ env (validateInput @BenchEra n) $ \arg ->
             bgroup
               "block"
               [ bench "applyBlockTransition" (nfIO $ benchValidate arg),
                 bench "reapplyBlockTransition" (nf benchreValidate arg)
               ],
-          env (genUpdateInputs @BenchEra genVl n) $ \arg ->
+          env (genUpdateInputs @BenchEra n) $ \arg ->
             bgroup
               "protocol"
               [ bench "updateChainDepState" (nf updateChain arg),
@@ -260,7 +260,7 @@ validGroup =
 
 profileValid :: IO ()
 profileValid = do
-  state <- validateInput @BenchEra genVl 10000
+  state <- validateInput @BenchEra 10000
   let ans = sum [applyBlock @BenchEra state n | n <- [1 .. 10000 :: Int]]
   putStrLn (show ans)
   pure ()
@@ -362,7 +362,7 @@ varyDelegState tag fixed changes initstate action =
 main :: IO ()
 -- main=profileValid
 main = do
-  (genenv, chainstate, genTxfun) <- genTriple genVl (Proxy :: Proxy BenchEra) 1000
+  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy BenchEra) 1000
   defaultMain $
     [ bgroup "vary input size" $
         [ varyInput
@@ -479,7 +479,7 @@ main = do
         ],
       bgroup "rewards" $
         [ env
-            (generate $ genChainInEpoch genVl 5)
+            (generate $ genChainInEpoch 5)
             ( \cs ->
                 bench "createRUpd" $ whnf (createRUpd testGlobals) cs
             ),

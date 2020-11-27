@@ -40,6 +40,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.List (partition)
 import qualified Data.Map.Strict as Map (lookup)
 import Data.Maybe (catMaybes)
+import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
@@ -66,8 +67,10 @@ import Shelley.Spec.Ledger.TxBody (Ix)
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (..), KeySpace (..))
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..))
 import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..), genDCert)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombination)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
 -- | This is a non-spec STS used to generate a sequence of certificates with
@@ -191,15 +194,10 @@ genDCerts
       scriptWitnesses (ScriptCred (_, stakeScript)) =
         StakeCred <$> witnessHashes''
         where
-          witnessHashes = eraScriptWitness stakeScript
+          witnessHashes = scriptKeyCombination (Proxy @era) stakeScript
           witnessHashes' = fmap coerceKeyRole witnessHashes
           witnessHashes'' = fmap coerceKeyRole (catMaybes (map lookupWit witnessHashes'))
       scriptWitnesses _ = []
-
-      eraScriptWitness s =
-        case (eraScriptWitnesses @era s) of
-          [] -> error "genDCerts - empty eraScriptWitnesses"
-          (k : _) -> k
 
       lookupWit = flip Map.lookup ksIndexedStakingKeys
 

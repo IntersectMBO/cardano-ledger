@@ -45,6 +45,11 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
     defaultConstants,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass
+  ( ScriptClass (..),
+    combinedScripts,
+    keyPairs,
+  )
 import Test.Shelley.Spec.Ledger.Utils
   ( maxKESIterations,
     mkKESKeyPair,
@@ -55,7 +60,7 @@ import Test.Shelley.Spec.Ledger.Utils
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
 genEnv ::
-  EraGen era =>
+  ScriptClass era =>
   proxy era ->
   GenEnv era
 genEnv _ =
@@ -66,7 +71,7 @@ genEnv _ =
 -- | Example keyspace for use in generators
 keySpace ::
   forall era.
-  EraGen era =>
+  ScriptClass era =>
   Constants ->
   KeySpace era
 keySpace c =
@@ -75,11 +80,7 @@ keySpace c =
     (genesisDelegates c)
     (stakePoolKeys c)
     (keyPairs c)
-    (eraKeySpaceScripts @era c)
-
--- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: CC.Crypto crypto => Constants -> KeyPairs crypto
-keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
+    (combinedScripts @era c)
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
 someKeyPairs :: CC.Crypto crypto => Constants -> Int -> Int -> Gen (KeyPairs crypto)

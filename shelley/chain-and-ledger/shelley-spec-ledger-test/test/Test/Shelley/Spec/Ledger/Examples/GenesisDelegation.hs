@@ -75,6 +75,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     zero,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
+import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
   ( ShelleyTest,
     getBlockNonce,
@@ -84,7 +85,7 @@ import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
-initUTxO :: ShelleyTest era => UTxO era
+initUTxO :: (ShelleyTest era) => UTxO era
 initUTxO =
   genesisCoins
     genesisId
@@ -95,7 +96,7 @@ initUTxO =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStGenesisDeleg :: forall era. ShelleyTest era => ChainState era
+initStGenesisDeleg :: forall era. (ShelleyTest era) => ChainState era
 initStGenesisDeleg = initSt initUTxO
 
 --

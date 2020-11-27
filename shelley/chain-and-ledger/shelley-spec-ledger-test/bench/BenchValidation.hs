@@ -26,7 +26,6 @@ module BenchValidation
   )
 where
 
-import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Prelude (NFData (rnf))
@@ -56,18 +55,15 @@ import Shelley.Spec.Ledger.LedgerState
   ( NewEpochState,
     nesBcur,
   )
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
-import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
-import Test.Shelley.Spec.Ledger.Generator.Core (EraGen)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyLedgersSTS, ShelleyTest, testGlobals)
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
-
--- ==============================================================
+import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest, testGlobals)
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 
@@ -84,13 +80,11 @@ validateInput ::
     ValidateMetadata era,
     API.GetLedgerView era,
     API.ApplyBlock era,
-    ShelleyLedgerSTS era,
-    ShelleyLedgersSTS era
+    ShelleyLedgerSTS era
   ) =>
-  Gen (Core.Value era) ->
   Int ->
   IO (ValidateInput era)
-validateInput gv utxoSize = genValidateInput gv utxoSize
+validateInput utxoSize = genValidateInput utxoSize
 
 genValidateInput ::
   ( EraGen era,
@@ -99,15 +93,13 @@ genValidateInput ::
     ValidateMetadata era,
     API.GetLedgerView era,
     API.ApplyBlock era,
-    ShelleyLedgerSTS era,
-    ShelleyLedgersSTS era
+    ShelleyLedgerSTS era
   ) =>
-  Gen (Core.Value era) ->
   Int ->
   IO (ValidateInput era)
-genValidateInput gv n = do
+genValidateInput n = do
   let ge = genEnv (Proxy :: Proxy era)
-  chainstate <- genChainState gv n ge
+  chainstate <- genChainState n ge
   block <- genBlock ge chainstate
   pure (ValidateInput testGlobals (chainNes chainstate) block)
 
@@ -182,15 +174,13 @@ genUpdateInputs ::
     ValidateMetadata era,
     API.GetLedgerView era,
     API.ApplyBlock era,
-    ShelleyLedgerSTS era,
-    ShelleyLedgersSTS era
+    ShelleyLedgerSTS era
   ) =>
-  Gen (Core.Value era) ->
   Int ->
   IO (UpdateInputs (Crypto era))
-genUpdateInputs gv utxoSize = do
+genUpdateInputs utxoSize = do
   let ge = genEnv (Proxy :: Proxy era)
-  chainstate <- genChainState gv utxoSize ge
+  chainstate <- genChainState utxoSize ge
   (Block blockheader _) <- genBlock ge chainstate
   let ledgerview = currentLedgerView (chainNes chainstate)
   let (ChainState _newepochState keys eta0 etaV etaC etaH slot) = chainstate

@@ -39,6 +39,8 @@ library
     Test.Shelley.Spec.Ledger.Generator.Update
     Test.Shelley.Spec.Ledger.Generator.Utxo
     Test.Shelley.Spec.Ledger.Generator.EraGen
+    Test.Shelley.Spec.Ledger.Generator.ScriptClass
+    Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen
     Test.Shelley.Spec.Ledger.Orphans
     Test.Shelley.Spec.Ledger.Serialisation.CDDLUtils
     Test.Shelley.Spec.Ledger.Serialisation.Generators

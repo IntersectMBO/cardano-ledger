@@ -99,6 +99,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
+import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
   ( mkAddr,
     mkKeyPair,

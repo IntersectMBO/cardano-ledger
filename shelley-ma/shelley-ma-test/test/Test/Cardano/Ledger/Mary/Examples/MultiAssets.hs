@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Mary.Examples.MultiAssets
   )
 where
 
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
     PolicyID (..),
@@ -45,11 +46,13 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
-import Test.Cardano.Ledger.EraBuffet (MaryTest)
+import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Mary.Examples (testMaryNoDelegLEDGER)
 import qualified Test.Cardano.Ledger.Mary.Examples.Cast as Cast
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase)
+
+type MaryTest = MaryEra TestCrypto
 
 ------------------------------
 -- Set Up the Initial State --

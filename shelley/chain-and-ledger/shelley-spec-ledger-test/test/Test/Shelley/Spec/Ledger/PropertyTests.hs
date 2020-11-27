@@ -24,7 +24,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata, MetaDataHash)
+import Shelley.Spec.Ledger.MetaData (MetaDataHash, ValidateMetadata)
 import Shelley.Spec.Ledger.PParams (Update (..))
 import Shelley.Spec.Ledger.TxBody (TxIn, TxOut, Wdrl)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
@@ -37,7 +37,7 @@ import Test.Shelley.Spec.Ledger.Address.CompactAddr
     propDecompactShelleyLazyAddr,
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
-import Test.Shelley.Spec.Ledger.Generator.Core (EraGen)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.LegacyOverlay (legacyOverlayTest)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
