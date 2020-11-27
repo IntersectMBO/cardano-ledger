@@ -230,6 +230,7 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
+import Control.State.Transition (STS(State))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
@@ -475,9 +476,9 @@ deriving stock instance
   ShelleyBased era =>
   Eq (EpochState era)
 
-instance NoThunks (EpochState era)
+instance ShelleyBased era => NoThunks (EpochState era)
 
-instance (Era era) => NFData (EpochState era)
+instance ShelleyBased era => NFData (EpochState era)
 
 instance
   ShelleyBased era =>
@@ -503,14 +504,19 @@ instance
 emptyPPUPState :: PPUPState era
 emptyPPUPState = PPUPState emptyPPPUpdates emptyPPPUpdates
 
-emptyUTxOState :: UTxOState era
-emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
+emptyUTxOState :: forall era . Core.HasUpdateLogic era => UTxOState era
+emptyUTxOState = initialUTxOState (UTxO Map.empty)
 
-emptyEpochState :: EpochState era
+initialUTxOState :: forall era . Core.HasUpdateLogic era
+  => UTxO era -> UTxOState era
+initialUTxOState utxo =
+  UTxOState utxo (Coin 0) (Coin 0) (Core.initialUpdateState @era)
+
+emptyEpochState :: Core.HasUpdateLogic era => EpochState era
 emptyEpochState =
   EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams emptyPParams emptyNonMyopic
 
-emptyLedgerState :: LedgerState era
+emptyLedgerState :: Core.HasUpdateLogic era => LedgerState era
 emptyLedgerState =
   LedgerState
     emptyUTxOState
@@ -565,23 +571,24 @@ pvCanFollow _ SNothing = True
 pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
   (m + 1, 0) == (m', n') || (m, n + 1) == (m', n')
 
--- | Update the protocol parameter updates by clearing out the proposals
--- and making the future proposals become the new proposals,
--- provided the new proposals can follow (otherwise reset them).
-updatePpup :: UTxOState era -> PParams era -> UTxOState era
-updatePpup utxoSt pp = utxoSt {_ppups = PPUPState ps emptyPPPUpdates}
-  where
-    (ProposedPPUpdates newProposals) = futureProposals . _ppups $ utxoSt
-    goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
-    ps = if all goodPV newProposals then ProposedPPUpdates newProposals else emptyPPPUpdates
+-- | Register a protocol parameter change in the UTxO state.
+--
+-- The UTxO state contains the update state. Depending on the implementation of
+-- the update logic, a protocol-parameters change might cause a change in the
+-- update state as well.
+updatePpup
+  :: forall era . Core.HasUpdateLogic era
+  => UTxOState era -> PParams era -> UTxOState era
+updatePpup utxoSt pp =
+  utxoSt {_ppups = Core.registerProtocolParametersChange @era (_ppups utxoSt) pp }
 
 data UTxOState era = UTxOState
   { _utxo :: !(UTxO era),
     _deposited :: !Coin,
     _fees :: !Coin,
-    _ppups :: !(PPUPState era)
+    _ppups :: !(State (Core.UpdateSTS era))
   }
-  deriving (Generic, NFData)
+  deriving (Generic)
 
 deriving stock instance
   ShelleyBased era =>
@@ -591,7 +598,11 @@ deriving stock instance
   ShelleyBased era =>
   Eq (UTxOState era)
 
-instance NoThunks (UTxOState era)
+deriving instance (Era era, NFData (State (Core.UpdateSTS era)))
+  => NFData (UTxOState era)
+
+deriving instance (NoThunks (State (Core.UpdateSTS era)))
+  =>  NoThunks (UTxOState era)
 
 instance
   ShelleyBased era =>
@@ -637,9 +648,9 @@ deriving stock instance
   ShelleyBased era =>
   Eq (NewEpochState era)
 
-instance (Era era) => NFData (NewEpochState era)
+instance ShelleyBased era => NFData (NewEpochState era)
 
-instance NoThunks (NewEpochState era)
+instance ShelleyBased era => NoThunks (NewEpochState era)
 
 instance ShelleyBased era => ToCBOR (NewEpochState era) where
   toCBOR (NewEpochState e bp bc es ru pd) =
@@ -687,9 +698,9 @@ deriving stock instance
   ShelleyBased era =>
   Eq (LedgerState era)
 
-instance NoThunks (LedgerState era)
+instance ShelleyBased era => NoThunks (LedgerState era)
 
-instance (Era era) => NFData (LedgerState era)
+instance ShelleyBased era => NFData (LedgerState era)
 
 instance
   ShelleyBased era =>
@@ -711,17 +722,13 @@ instance
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
+  forall era . Core.HasUpdateLogic era =>
   Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   UTxO era ->
   LedgerState era
 genesisState genDelegs0 utxo0 =
   LedgerState
-    ( UTxOState
-        utxo0
-        (Coin 0)
-        (Coin 0)
-        emptyPPUPState
-    )
+    (initialUTxOState utxo0)
     (DPState dState emptyPState)
   where
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}

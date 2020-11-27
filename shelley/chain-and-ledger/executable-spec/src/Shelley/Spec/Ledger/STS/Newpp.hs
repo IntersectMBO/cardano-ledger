@@ -46,6 +46,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.Core as Core
 
 data NEWPP era
 
@@ -63,24 +64,27 @@ data NewppPredicateFailure era
 
 instance NoThunks (NewppPredicateFailure era)
 
-instance Typeable era => STS (NEWPP era) where
+instance (Typeable era, Core.HasUpdateLogic era) => STS (NEWPP era) where
   type State (NEWPP era) = NewppState era
   type Signal (NEWPP era) = Maybe (PParams era)
   type Environment (NEWPP era) = NewppEnv era
   type BaseM (NEWPP era) = ShelleyBase
   type PredicateFailure (NEWPP era) = NewppPredicateFailure era
-  initialRules = [initialNewPp]
+  initialRules = [
+    -- initialNewPp
+                 ]
   transitionRules = [newPpTransition]
 
-initialNewPp :: InitialRule (NEWPP era)
-initialNewPp =
-  pure $
-    NewppState
-      (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState)
-      emptyAccount
-      emptyPParams
+-- initialNewPp :: InitialRule (NEWPP era)
+-- initialNewPp =
+--   pure $
+--     NewppState
+--       (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState)
+--       emptyAccount
+--       emptyPParams
 
-newPpTransition :: TransitionRule (NEWPP era)
+newPpTransition ::
+  Core.HasUpdateLogic era => TransitionRule (NEWPP era)
 newPpTransition = do
   TRC (NewppEnv dstate pstate, NewppState utxoSt acnt pp, ppNew) <- judgmentContext
 

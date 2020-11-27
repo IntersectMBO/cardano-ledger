@@ -75,21 +75,23 @@ instance ShelleyBased era => STS (EPOCH era) where
   type Environment (EPOCH era) = ()
   type BaseM (EPOCH era) = ShelleyBase
   type PredicateFailure (EPOCH era) = EpochPredicateFailure era
-  initialRules = [initialEpoch]
+  initialRules = [
+    -- initialEpoch
+    ]
   transitionRules = [epochTransition]
 
 instance NoThunks (EpochPredicateFailure era)
 
-initialEpoch :: InitialRule (EPOCH era)
-initialEpoch =
-  pure $
-    EpochState
-      emptyAccount
-      emptySnapShots
-      emptyLedgerState
-      emptyPParams
-      emptyPParams
-      emptyNonMyopic
+-- initialEpoch :: InitialRule (EPOCH era)
+-- initialEpoch =
+--   pure $
+--     EpochState
+--       emptyAccount
+--       emptySnapShots
+--       emptyLedgerState
+--       emptyPParams
+--       emptyPParams
+--       emptyNonMyopic
 
 votedValue ::
   ProposedPPUpdates era ->

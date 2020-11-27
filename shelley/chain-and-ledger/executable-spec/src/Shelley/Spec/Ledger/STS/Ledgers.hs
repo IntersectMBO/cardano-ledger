@@ -111,7 +111,9 @@ instance
   type BaseM (LEDGERS era) = ShelleyBase
   type PredicateFailure (LEDGERS era) = LedgersPredicateFailure era
 
-  initialRules = [pure emptyLedgerState]
+  initialRules = [
+    -- pure emptyLedgerState
+    ]
   transitionRules = [ledgersTransition]
 
 ledgersTransition ::

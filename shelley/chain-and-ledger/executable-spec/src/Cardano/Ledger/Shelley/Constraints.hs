@@ -15,6 +15,7 @@ import Cardano.Ledger.Core
     SerialisableData,
     TxBody,
     Value,
+    UpdateSTS
   )
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Torsor (Torsor (..))
@@ -23,6 +24,9 @@ import Shelley.Spec.Ledger.Hashing
   ( EraIndependentTxBody,
     HashAnnotated (..),
   )
+import Control.State.Transition (STS(State))
+import Control.DeepSeq (NFData)
+import NoThunks.Class (NoThunks)
 
 --------------------------------------------------------------------------------
 -- Shelley Era
@@ -50,6 +54,12 @@ type ShelleyBased era =
     ChainData (Delta (Value era)),
     SerialisableData (Delta (Value era)),
     Torsor (Value era),
+    -- STS Constraints
+    Eq (State (UpdateSTS era)),
+    Show (State (UpdateSTS era)),
+    NFData (State (UpdateSTS era)),
+    NoThunks (State (UpdateSTS era)),
+    SerialisableData (State (UpdateSTS era)),
     -- TxBody constraints
     TxBodyConstraints era,
     -- Script constraints

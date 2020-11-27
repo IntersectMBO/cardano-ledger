@@ -31,6 +31,7 @@ import Shelley.Spec.Ledger.Tx
     hashMultiSigScript,
     validateNativeMultiSigScript,
   )
+import Shelley.Spec.Ledger.STS.Ppup (PPUP)
 
 data ShelleyEra c
 
@@ -48,6 +49,8 @@ type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
 type instance Core.Script (ShelleyEra c) = MultiSig c
 
 type instance Core.AuxiliaryData (ShelleyEra c) = Metadata
+
+type instance Core.UpdateSTS (ShelleyEra c) = PPUP (ShelleyEra c)
 
 --------------------------------------------------------------------------------
 -- Ledger data instances

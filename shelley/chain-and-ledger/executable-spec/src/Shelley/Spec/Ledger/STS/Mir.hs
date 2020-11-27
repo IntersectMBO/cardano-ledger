@@ -69,7 +69,9 @@ instance Typeable era => STS (MIR era) where
   type BaseM (MIR era) = ShelleyBase
   type PredicateFailure (MIR era) = MirPredicateFailure era
 
-  initialRules = [initialMir]
+  initialRules = [
+    -- initialMir
+    ]
   transitionRules = [mirTransition]
 
   assertions =
@@ -81,16 +83,16 @@ instance Typeable era => STS (MIR era) where
         )
     ]
 
-initialMir :: InitialRule (MIR era)
-initialMir =
-  pure $
-    EpochState
-      emptyAccount
-      emptySnapShots
-      emptyLedgerState
-      emptyPParams
-      emptyPParams
-      emptyNonMyopic
+-- initialMir :: InitialRule (MIR era)
+-- initialMir =
+--   pure $
+--     EpochState
+--       emptyAccount
+--       emptySnapShots
+--       emptyLedgerState
+--       emptyPParams
+--       emptyPParams
+--       emptyNonMyopic
 
 mirTransition :: forall era. TransitionRule (MIR era)
 mirTransition = do

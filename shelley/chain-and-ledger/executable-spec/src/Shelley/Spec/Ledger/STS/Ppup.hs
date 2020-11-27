@@ -163,3 +163,16 @@ ppupTransitionNonEmpty = do
             PPUPState
               (ProposedPPUpdates pupS)
               (ProposedPPUpdates (eval (fpupS ⨃ pup)))
+
+-- | Update the protocol parameter updates by clearing out the proposals and
+-- making the future proposals become the new proposals, provided __all of__ the
+-- new proposals can follow, or otherwise reset them.
+registerProtocolParametersChange
+  :: PPUPState era -> PParams era -> PPUPState era
+registerProtocolParametersChange ppupState pp =  PPUPState ps emptyPPPUpdates
+  where
+    (ProposedPPUpdates newProposals) = futureProposals ppupState
+    goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
+    ps = if all goodPV newProposals
+         then ProposedPPUpdates newProposals
+         else emptyPPPUpdates

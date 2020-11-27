@@ -259,7 +259,75 @@ instance
   type BaseM (UTXO (ShelleyEra c)) = ShelleyBase
   type PredicateFailure (UTXO (ShelleyEra c)) = UtxoPredicateFailure (ShelleyEra c)
 
-  transitionRules = [utxoInductive]
+  transitionRules =
+    [ do
+        TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
+        let UTxOState utxo deposits' fees ppup = u
+        let txb = _body tx
+
+        getField @"ttl" txb >= slot ?! ExpiredUTxO (getField @"ttl" txb) slot
+        -- the ttl field marks the top of an open interval, so it must be
+        -- strictly less than the slot, so raise an error if it is (>=).
+
+        txins txb /= Set.empty ?! InputSetEmptyUTxO
+
+        let minFee = minfee pp tx
+            txFee = getField @"txfee" txb
+        minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
+
+        eval (txins txb ⊆ dom utxo)
+          ?! BadInputsUTxO (eval (txins txb ➖ dom utxo))
+
+        ni <- liftSTS $ asks networkId
+        let addrsWrongNetwork =
+              filter
+                (\a -> getNetwork a /= ni)
+                (fmap (\(TxOut a _) -> a) $ toList $ getField @"outputs" txb)
+        null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
+        let wdrlsWrongNetwork =
+              filter
+                (\a -> getRwdNetwork a /= ni)
+                (Map.keys . unWdrl . getField @"wdrls" $ txb)
+        null wdrlsWrongNetwork ?! WrongNetworkWithdrawal ni (Set.fromList wdrlsWrongNetwork)
+
+        let consumed_ = consumed pp utxo txb
+            produced_ = produced pp stakepools txb
+        consumed_ == produced_ ?! ValueNotConservedUTxO (toDelta consumed_) (toDelta produced_)
+
+        -- process Protocol Parameter Update Proposals
+        ppup' <- trans @(PPUP (ShelleyEra c)) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
+
+        let outputs = Map.elems $ unUTxO (txouts txb)
+            minUTxOValue = _minUTxOValue pp
+            -- minUTxOValue deposit comparison done as Coin because this rule
+            -- is correct strictly in the Shelley era (in shelleyMA we would need to
+            -- additionally check that all amounts are non-negative)
+            outputsTooSmall = [out | out@(TxOut _ c) <- outputs, (Val.coin c) < (Val.scaledMinDeposit c minUTxOValue)]
+        null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
+
+        -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
+        -- It is important to limit their overall size.
+        let outputsAttrsTooBig =
+              [out | out@(TxOut (AddrBootstrap addr) _) <- outputs, bootstrapAddressAttrsSize addr > 64]
+        null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
+
+        let maxTxSize_ = fromIntegral (_maxTxSize pp)
+            txSize_ = txsize tx
+        txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
+
+        let refunded = keyRefunds pp txb
+        let txCerts = toList $ getField @"certs" txb
+        let depositChange = totalDeposits pp stakepools txCerts <-> refunded
+
+        pure
+          UTxOState
+            { _utxo = eval ((txins txb ⋪ utxo) ∪ txouts txb),
+              _deposited = deposits' <> depositChange,
+              _fees = fees <> (getField @"txfee" txb),
+              _ppups = ppup'
+            }
+            -- utxoInductive
+    ]
   initialRules = [initialLedgerState]
 
   renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =

@@ -74,8 +74,8 @@ instance Typeable era => STS (POOLREAP era) where
   type BaseM (POOLREAP era) = ShelleyBase
   type PredicateFailure (POOLREAP era) = PoolreapPredicateFailure era
   initialRules =
-    [ pure $
-        PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState
+    [ -- pure $
+      --   PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState
     ]
   transitionRules = [poolReapTransition]
 
