@@ -11,8 +11,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Core
-  ( EraGen (..),
-    AllIssuerKeys (..),
+  ( AllIssuerKeys (..),
     applyTxBody,
     GenEnv (..),
     KeySpace (..),
@@ -24,7 +23,6 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     findStakeScriptFromCred,
     findPayScriptFromAddr,
     genBool,
-    genCoin,
     genCoinList,
     genInteger,
     genNatural,
@@ -47,9 +45,11 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     mkKeyPairs,
     mkGenKey,
     genesisAccountState,
+    genCoin,
   )
 where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.VRF (evalCertified)
 import qualified Cardano.Ledger.Core as Core
@@ -75,7 +75,6 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (..), getRwdCred, toAddr, toCred)
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (..),
-    StrictMaybe (..),
     UnitInterval,
     epochInfo,
     intervalValue,
@@ -135,7 +134,6 @@ import Shelley.Spec.Ledger.LedgerState
     _utxo,
     _utxoState,
   )
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import Shelley.Spec.Ledger.OCert
   ( KESPeriod (..),
     OCert,
@@ -145,7 +143,6 @@ import Shelley.Spec.Ledger.OCert
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     ProtVer (..),
-    Update,
   )
 import Shelley.Spec.Ledger.Scripts
   ( ScriptHash,
@@ -160,7 +157,6 @@ import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( Tx,
     TxIn,
-    ValidateScript (..),
     pattern TxIn,
     pattern TxOut,
   )
@@ -168,7 +164,6 @@ import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.TxBody
   ( DCert,
     TxOut,
-    Wdrl,
     unWdrl,
   )
 import Shelley.Spec.Ledger.UTxO
@@ -182,11 +177,16 @@ import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass
+  ( ScriptClass,
+    exponential,
+    mkPayScriptHashMap,
+    mkStakeScriptHashMap,
+  )
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
   ( GenesisKeyPair,
     ShelleyTest,
-    Split (..),
     epochFromSlotNo,
     evolveKESUntil,
     maxKESIterations,
@@ -197,41 +197,6 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
-import Cardano.Binary (ToCBOR)
-
-class
-  ( ShelleyBased era,
-    ValidateScript era,
-    Split (Core.Value era),
-    Show (Core.Script era)
-  ) =>
-  EraGen era
-  where
-  genEraUtxo0 :: Constants -> Gen (UTxO era)
-
-  genEraTxBody ::
-    SlotNo ->
-    Set (TxIn era) ->
-    StrictSeq (TxOut era) ->
-    StrictSeq (DCert era) ->
-    Wdrl era ->
-    Coin ->
-    StrictMaybe (Update era) ->
-    StrictMaybe (MetaDataHash era) ->
-    Gen (Core.TxBody era)
-
-  genMetadata :: Constants -> Gen (StrictMaybe (Core.Metadata era))
-
-  eraScriptWitnesses :: Core.Script era -> [[KeyHash 'Witness (Crypto era)]]
-
-  eraKeySpaceScripts :: Constants -> [(Core.Script era, Core.Script era)]
-
-  updateEraTxBody ::
-    Core.TxBody era ->
-    Coin ->
-    Set (TxIn era) ->
-    StrictSeq (TxOut era) ->
-    Core.TxBody era
 
 data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
   { cold :: KeyPair r v,
@@ -274,7 +239,7 @@ data KeySpace era = KeySpace_
 deriving instance (Era era, Show (Core.Script era)) => Show (KeySpace era)
 
 pattern KeySpace ::
-  EraGen era =>
+  ScriptClass era =>
   [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->
   [AllIssuerKeys (Crypto era) 'GenesisDelegate] ->
   [AllIssuerKeys (Crypto era) 'StakePool] ->
@@ -308,6 +273,9 @@ pattern KeySpace
           ksIndexedStakeScripts = mkStakeScriptHashMap ksMSigScripts,
           ksMSigScripts
         }
+
+genCoin :: Integer -> Integer -> Gen Coin
+genCoin minCoin maxCoin = Coin <$> exponential minCoin maxCoin
 
 genBool :: Gen Bool
 genBool = QC.arbitraryBoundedRandom
@@ -371,26 +339,6 @@ mkPayKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
     f (payK, _stakeK) = ((hashKey . vKey) payK, payK)
-
--- | Generate a mapping from pay script hash to multisig pair.
-mkPayScriptHashMap ::
-  EraGen era =>
-  [(Core.Script era, Core.Script era)] ->
-  Map (ScriptHash era) (Core.Script era, Core.Script era)
-mkPayScriptHashMap scripts =
-  Map.fromList (f <$> scripts)
-  where
-    f script@(pay, _stake) = (hashScript pay, script)
-
--- | Generate a mapping from stake script hash to multisig pair.
-mkStakeScriptHashMap ::
-  EraGen era =>
-  [(Core.Script era, Core.Script era)] ->
-  Map (ScriptHash era) (Core.Script era, Core.Script era)
-mkStakeScriptHashMap scripts =
-  Map.fromList (f <$> scripts)
-  where
-    f script@(_pay, stake) = (hashScript stake, script)
 
 -- | Find first matching key pair for a credential. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
@@ -478,10 +426,6 @@ genTxOut genEraVal addrs = do
 genCoinList :: Integer -> Integer -> Int -> Gen [Coin]
 genCoinList minCoin maxCoin len = do
   replicateM len $ genCoin minCoin maxCoin
-
--- TODO this should be an exponential distribution, not constant
-genCoin :: Integer -> Integer -> Gen Coin
-genCoin minCoin maxCoin = Coin <$> QC.choose (minCoin, maxCoin)
 
 -- | Generate values the given distribution in 90% of the cases, and values at
 -- the bounds of the range in 10% of the cases.

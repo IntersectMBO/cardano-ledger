@@ -21,13 +21,16 @@ module Test.Cardano.Ledger.Mary.Examples.Cast
   )
 where
 
+import Cardano.Ledger.Mary (MaryEra)
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
   )
-import Test.Cardano.Ledger.EraBuffet (MaryTest, TestCrypto)
+import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Shelley.Spec.Ledger.Utils (mkAddr, mkKeyPair)
+
+type MaryTest = MaryEra TestCrypto
 
 -- | Alice's payment key pair
 alicePay :: KeyPair 'Payment TestCrypto

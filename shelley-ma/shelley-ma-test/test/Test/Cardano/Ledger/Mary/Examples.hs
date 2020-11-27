@@ -6,8 +6,10 @@ module Test.Cardano.Ledger.Mary.Examples
   )
 where
 
-import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
 -- obtaining orphan STS (UTXOW (ShelleyMAEra ma c))
+
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import GHC.Records
@@ -20,9 +22,11 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.UTxO (UTxO)
-import Test.Cardano.Ledger.EraBuffet (MaryTest)
+import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Shelley.Spec.Ledger.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty.HUnit (Assertion, (@?=))
+
+type MaryTest = MaryEra TestCrypto
 
 ignoreAllButUTxO ::
   Either [[PredicateFailure (LEDGER MaryTest)]] (UTxOState MaryTest, DPState MaryTest) ->

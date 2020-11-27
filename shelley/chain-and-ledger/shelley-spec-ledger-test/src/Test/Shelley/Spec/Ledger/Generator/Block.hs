@@ -40,6 +40,7 @@ import Shelley.Spec.Ledger.BlockChain
     mkSeed,
     seedL,
   )
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 import Shelley.Spec.Ledger.OCert (currentIssueNo, kesPeriod)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Test.QuickCheck (Gen)
@@ -49,24 +50,22 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
-    EraGen,
     GenEnv (..),
     KeySpace (..),
     getKESPeriodRenewalNo,
     mkBlock,
     mkOCert,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
 import Test.Shelley.Spec.Ledger.Utils
   ( ShelleyLedgerSTS,
-    ShelleyLedgersSTS,
     epochFromSlotNo,
     maxKESIterations,
     runShelleyBase,
     slotFromEpoch,
     testGlobals,
   )
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 
 -- | Type alias for a transaction generator
 type TxGen era =
@@ -85,7 +84,6 @@ genBlock ::
     GetLedgerView era,
     ValidateMetadata era,
     ShelleyLedgerSTS era,
-    ShelleyLedgersSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>

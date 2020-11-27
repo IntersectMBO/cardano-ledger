@@ -6,7 +6,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-
 -- | This module exports pieces one may use to make a new Era.
 --   The pieces come in 3 flavors:
 --   1) Crypto
@@ -24,65 +23,37 @@
 --   type instance Value MyEra = ConcreteValue.Value MyEra
 --   type instance Script MyEra = TestScript
 --   type instance TxBody MyEra = Mary.TxBody MyEra
---
 module Test.Cardano.Ledger.EraBuffet
-  ( TestCrypto,   -- These are two crypto versions
+  ( TestCrypto, -- These are two crypto versions
     StandardCrypto,
-    ShelleyEra,   -- These are the crypto parameterized Eras re-exported for convenience.
-    MaryEra,      -- one needs to apply these to a crypto be be concrete
+    ShelleyEra, -- These are the crypto parameterized Eras re-exported for convenience.
+    MaryEra, -- one needs to apply these to a crypto be be concrete
     AllegraEra,
-    ShelleyTest,      -- These are concrete Era's for Shelley, Allegra, and Mary
-    ShelleyStandard,  -- fixed on one of the concrete crypto pieces
-    MaryTest,
-    MaryStandard,
-    AllegraTest,
-    AllegraStandard,
-    Value,        -- These are the type families re-exported for convenience.
+    Value, -- These are the type families re-exported for convenience.
     Script,
     TxBody,
-    TestValue,    -- These are trivial types useable for type families when they don't matter
-    TestScript,
-    TestTxBody,
-    ShelleyTxBody, -- These are the concrete types used by Eras Shelley, Mary and Allegra
-    ShelleyValue,  -- for type family instances. These need to be applied to a concrete
-    ShelleyScript, -- Era to be fully concrete.
-    AllegraValue,
-    AllegraTxBody,
-    AllegraScript,
-    MaryValue,
-    MaryTxBody,
-    MaryScript,
-    Era(..),       -- The Era class re-exported
-  ) where
+    Era (..), -- The Era class re-exported
+  )
+where
 
-
-import Shelley.Spec.Ledger.API (PraosCrypto)
-import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
-import Cardano.Crypto.Hash (Blake2b_224, Blake2b_256)
+import Cardano.Crypto.DSIGN (Ed25519DSIGN, MockDSIGN)
+import Cardano.Crypto.Hash (Blake2b_224, Blake2b_256, MD5Prefix)
+import Cardano.Crypto.KES (MockKES, Sum6KES)
 import Cardano.Crypto.VRF.Praos
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core (Script, TxBody, Value)
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
-import qualified Cardano.Ledger.Mary.Value ()
-import qualified Cardano.Ledger.Mary.Value as MaryValue
-import Cardano.Crypto.Hash (MD5Prefix)
-import Cardano.Crypto.DSIGN (MockDSIGN, Ed25519DSIGN)
-import Cardano.Crypto.KES (MockKES, Sum6KES)
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Shelley.Spec.Ledger.API (PraosCrypto)
 import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
-import Shelley.Spec.Ledger.Coin(Coin)
-import qualified Shelley.Spec.Ledger.TxBody as ShelleyBody
-import qualified Shelley.Spec.Ledger.Scripts as ShelleyScript
-import qualified Cardano.Ledger.ShelleyMA.TxBody as MABody
-import qualified Cardano.Ledger.ShelleyMA.Timelocks as MAScript
-import Cardano.Ledger.Mary(MaryEra)
-import Cardano.Ledger.Allegra(AllegraEra)
-import Cardano.Ledger.Shelley(ShelleyEra)
 
--- ===========================================================
--- First construct concrete versions of Crypto where the Hashing
--- is concrete. Without this we won't be able to Hash things
-
+{------------------------------------------------------------------------------
+ First construct concrete versions of Crypto where the Hashing
+ is concrete. Without this we won't be able to Hash things
+------------------------------------------------------------------------------}
 data TestCrypto
 
 instance CryptoClass.Crypto TestCrypto where
@@ -105,69 +76,18 @@ instance CryptoClass.Crypto StandardCrypto where
 
 instance PraosCrypto StandardCrypto
 
--- ==================================================================
--- These are the concrete Eras. Two each for Shelley, Mary, Allegra
--- In each pair a particular kind of crypto is chosen.
+{------------------------------------------------------------------------------
+ Example concrete Eras:
 
-type ShelleyTest     = ShelleyEra TestCrypto
-type ShelleyStandard = ShelleyEra StandardCrypto
-type MaryTest        = MaryEra TestCrypto
-type MaryStandard    = MaryEra StandardCrypto
-type AllegraTest     = AllegraEra TestCrypto
-type AllegraStandard = AllegraEra StandardCrypto
+  type ShelleyTest = ShelleyEra TestCrypto
 
+  type ShelleyStandard = ShelleyEra StandardCrypto
 
+  type MaryTest = MaryEra TestCrypto
 
--- ==================================================================
--- These are the concrete types used to instantiate the type families
--- Value, Script, and TxBody for Eras Shelley, Allegra, and Mary
+  type MaryStandard = MaryEra StandardCrypto
 
-type ShelleyTxBody era = ShelleyBody.TxBody era
-type ShelleyValue era = Coin
-type ShelleyScript era = ShelleyScript.MultiSig era
+  type AllegraTest = AllegraEra TestCrypto
 
-type AllegraValue era = Coin
-type AllegraTxBody era = MABody.TxBody era
-type AllegraScript era = MAScript.Timelock era
-
-type MaryValue era = MaryValue.Value era
-type MaryTxBody era = MABody.TxBody era
-type MaryScript era = MAScript.Timelock era
-
--- ===============================================================
--- Now some trivial types users may choose as type family instances
--- if they don't need something more specific, they may always choose
--- other types if they want to.
-
-type TestValue = MaryValue.Value
-
-data TestScript = TestScript
-
-data TestTxBody = TestTxBody
-
-instance FromCBOR TestScript where fromCBOR = pure TestScript
-
-instance ToCBOR TestScript where toCBOR TestScript = mempty
-
-instance FromCBOR (Annotator TestScript) where fromCBOR = pure <$> fromCBOR
-
-instance FromCBOR TestTxBody where fromCBOR = pure TestTxBody
-
-instance ToCBOR TestTxBody where toCBOR TestTxBody = mempty
-
-instance FromCBOR (Annotator TestTxBody) where fromCBOR = pure <$> fromCBOR
-
--- =====================================================================
--- An example of how one might use this to make their own Era
---This exaple is not meant to make any semantic sense, but it illustrates
--- how one may choose pieces from the buffet to make an Era.
-{-
-data TestEra
-
-instance Era TestEra where
-  type Crypto TestEra = TestCrypto
-
-type instance Value TestEra = Coin
-type instance TxBody TestEra = MaryTxBody TestEra
-type instance Script TestEra = TestScript
--}
+  type AllegraStandard = AllegraEra StandardCrypto
+------------------------------------------------------------------------------}

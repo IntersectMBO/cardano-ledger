@@ -75,7 +75,6 @@ import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
-    EraGen (..),
     KeySpace (..),
     genCoinList,
     genInteger,
@@ -83,6 +82,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     toCred,
     tooLateInEpoch,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Test.Shelley.Spec.Ledger.Utils
 
 data CertCred era

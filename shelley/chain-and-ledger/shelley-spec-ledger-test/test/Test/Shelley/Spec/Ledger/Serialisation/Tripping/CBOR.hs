@@ -48,12 +48,12 @@ import Codec.CBOR.Write (toLazyByteString)
 import qualified Data.ByteString.Lazy as Lazy
 import Data.Maybe (fromJust)
 import qualified Shelley.Spec.Ledger.API as Ledger
-import Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Mock
-import Test.Shelley.Spec.Ledger.Generator.EraGen ()
+import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
@@ -155,7 +155,6 @@ prop_roundtrip_Coin_1 = roundtrip (toCBOR . fromJust . toCompact) fromCBOR
 
 prop_roundtrip_Coin_2 :: Coin -> Property
 prop_roundtrip_Coin_2 = roundtrip toCBOR (fromCompact <$> fromCBOR)
-
 
 -- TODO
 

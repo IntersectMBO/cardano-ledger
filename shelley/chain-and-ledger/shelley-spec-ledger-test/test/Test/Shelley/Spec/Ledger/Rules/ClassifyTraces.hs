@@ -71,7 +71,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.LedgerState
   ( txsizeBound,
   )
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata, MetaDataHash)
+import Shelley.Spec.Ledger.MetaData (MetaDataHash, ValidateMetadata)
 import Shelley.Spec.Ledger.PParams
   ( Update (..),
     pattern ProposedPPUpdates,
@@ -93,9 +93,9 @@ import Test.QuickCheck
     property,
     withMaxSuccess,
   )
-import Test.Shelley.Spec.Ledger.Generator.Core (EraGen, GenEnv (..))
-import Test.Shelley.Spec.Ledger.Generator.EraGen ()
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
+import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
@@ -122,7 +122,7 @@ relevantCasesAreCovered = do
   where
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just $ mkGenesisChainState (geConstants (genEnv p))
+    genesisChainSt = Just $ mkGenesisChainState (genEnv p)
 
 relevantCasesAreCoveredForTrace ::
   forall era.
@@ -323,7 +323,7 @@ onlyValidLedgerSignalsAreGenerated =
     p :: Proxy era
     p = Proxy
     ge = genEnv p
-    genesisLedgerSt = Just $ mkGenesisLedgerState (geConstants ge)
+    genesisLedgerSt = Just $ mkGenesisLedgerState ge
 
 -- | Check that the abstract transaction size function
 -- actually bounds the number of bytes in the serialized transaction.
@@ -348,7 +348,7 @@ propAbstractSizeBoundsBytes = property $ do
   where
     p :: Proxy era
     p = Proxy
-    genesisLedgerSt = Just $ mkGenesisLedgerState (geConstants (genEnv p))
+    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p)
 
 -- | Check that the abstract transaction size function
 -- is not off by an acceptable order of magnitude.
@@ -380,7 +380,7 @@ propAbstractSizeNotTooBig = property $ do
   where
     p :: Proxy era
     p = Proxy
-    genesisLedgerSt = Just $ mkGenesisLedgerState (geConstants (genEnv p))
+    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p)
 
 onlyValidChainSignalsAreGenerated ::
   forall era.
@@ -399,7 +399,7 @@ onlyValidChainSignalsAreGenerated =
   where
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just $ mkGenesisChainState (geConstants (genEnv p))
+    genesisChainSt = Just $ mkGenesisChainState (genEnv p)
 
 -- | Counts the epochs spanned by this trace
 epochsInTrace :: forall era. Era era => [Block era] -> Int

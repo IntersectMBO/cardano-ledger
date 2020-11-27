@@ -55,15 +55,17 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
   )
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
-import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (..))
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
+import Test.Shelley.Spec.Ledger.Generator.EraGen
+  ( EraGen (..),
+    genUtxo0,
+  )
 import Test.Shelley.Spec.Ledger.Generator.Presets (genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
 import Test.Shelley.Spec.Ledger.Utils
   ( ShelleyChainSTS,
     ShelleyLedgerSTS,
-    ShelleyLedgersSTS,
     ShelleyTest,
     maxLLSupply,
     mkHash,
@@ -77,7 +79,6 @@ instance
     ApplyBlock era,
     GetLedgerView era,
     ShelleyLedgerSTS era,
-    ShelleyLedgersSTS era,
     ShelleyChainSTS era,
     ValidateMetadata era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
@@ -108,11 +109,11 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 mkGenesisChainState ::
   forall era a.
   EraGen era =>
-  Constants ->
+  GenEnv era ->
   IRC (CHAIN era) ->
   Gen (Either a (ChainState era))
-mkGenesisChainState constants (IRC _slotNo) = do
-  utxo0 <- genEraUtxo0 constants
+mkGenesisChainState ge@(GenEnv _ constants) (IRC _slotNo) = do
+  utxo0 <- genUtxo0 ge
 
   pParams <- genPParams constants
 
@@ -121,7 +122,7 @@ mkGenesisChainState constants (IRC _slotNo) = do
       (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
       epoch0
       utxo0
-      (maxLLSupply <-> (Val.coin $ balance utxo0))
+      (maxLLSupply <-> Val.coin (balance utxo0))
       delegs0
       pParams
       (hashHeaderToNonce (lastByronHeaderHash p))

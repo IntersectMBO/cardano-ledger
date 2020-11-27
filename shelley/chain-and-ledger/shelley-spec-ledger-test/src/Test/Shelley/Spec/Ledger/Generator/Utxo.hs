@@ -28,6 +28,7 @@ import qualified Data.Either as Either (partitionEithers)
 import Data.List (foldl', nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -70,6 +71,7 @@ import Shelley.Spec.Ledger.LedgerState
     _ptrs,
     _rewards,
   )
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata (hashMetadata))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Tx
@@ -94,18 +96,18 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..), defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( EraGen (..),
-    GenEnv (..),
+  ( GenEnv (..),
     KeySpace (..),
     findPayKeyPairAddr,
     findPayKeyPairCred,
     findPayScriptFromAddr,
     findStakeScriptFromCred,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombination)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, Split (..))
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata(hashMetadata))
 
 showBalance ::
   ( ShelleyTest era,
@@ -243,6 +245,7 @@ genTx
               draftFee
       draftTxBody <-
         genEraTxBody @era
+          ge
           slot
           (Set.fromList inputs)
           draftOutputs
@@ -462,8 +465,6 @@ converge initialfee neededKeys neededScripts keys scripts utxo pparams keySpace 
   delta <- genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx
   pure (applyDelta neededKeys neededScripts keySpace tx delta)
 
--- ======================================================
-
 -- | Return up to /k/ random elements from /items/
 -- (instead of the less efficient /take k <$> QC.shuffle items/)
 ruffle :: Int -> [a] -> Gen [a]
@@ -531,12 +532,7 @@ mkTxWits
           . map (\(a, b) -> (asWitness a, asWitness b))
           . Map.toAscList
           $ indexedStakingKeys
-      keysLists = map eraScriptWitness (Map.elems msigs)
-
-      eraScriptWitness s =
-        case (eraScriptWitnesses @era s) of
-          [] -> error "mkTxWits - empty eraScriptWitnesses"
-          (k : _) -> k
+      keysLists = map (scriptKeyCombination (Proxy @era)) (Map.elems msigs)
       msigSignatures = foldl' Set.union Set.empty $ map Set.fromList keysLists
 
 -- | Distribute the sum of `balance_` and `fee` over the addresses, return the

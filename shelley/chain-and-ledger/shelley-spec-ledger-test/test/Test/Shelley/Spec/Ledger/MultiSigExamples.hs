@@ -95,6 +95,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
+import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
 
 -- Multi-Signature tests
@@ -146,7 +147,7 @@ aliceAndBobOrCarlOrDaria p =
       RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: ShelleyTest era => [(Addr era, Core.Value era)] -> TxBody era
+initTxBody :: (ShelleyTest era) => [(Addr era, Core.Value era)] -> TxBody era
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
@@ -197,7 +198,7 @@ aliceInitCoin = Coin 10000
 bobInitCoin :: Coin
 bobInitCoin = Coin 1000
 
-genesis :: forall era. ShelleyTest era => LedgerState era
+genesis :: forall era. (ShelleyTest era) => LedgerState era
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty

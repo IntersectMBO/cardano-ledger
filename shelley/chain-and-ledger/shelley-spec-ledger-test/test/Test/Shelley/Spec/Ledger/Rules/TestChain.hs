@@ -60,6 +60,7 @@ import Shelley.Spec.Ledger.BlockChain
   )
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.LedgerState hiding (circulation)
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 import Shelley.Spec.Ledger.PParams (_eMax)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
@@ -70,9 +71,10 @@ import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.Generator.Block (tickChainState)
-import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (geConstants))
-import Test.Shelley.Spec.Ledger.Generator.EraGen ()
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombinations)
+import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Orphans ()
 import qualified Test.Shelley.Spec.Ledger.Rules.TestDeleg as TestDeleg
@@ -89,7 +91,6 @@ import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
   )
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
 import Test.Shelley.Spec.Ledger.Utils (ChainProperty, epochFromSlotNo, runShelleyBase, testGlobals)
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 
 ------------------------------
 -- Constants for Properties --
@@ -511,7 +512,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
             all (existsReqKeyComb khs) (scriptWits . _witnessSet $ tx)
 
     existsReqKeyComb keyHashes msig =
-      any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (eraScriptWitnesses @era msig)
+      any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
 
     keyHashSet tx_ =
       Set.map witKeyHash (addrWits . _witnessSet $ tx_)
@@ -888,7 +889,7 @@ forAllChainTrace n prop =
       testGlobals
       n
       (Preset.genEnv p)
-      (Just $ mkGenesisChainState (geConstants (Preset.genEnv p)))
+      (Just $ mkGenesisChainState (Preset.genEnv p))
       prop
   where
     p :: Proxy era
@@ -897,7 +898,7 @@ forAllChainTrace n prop =
 sameEpoch ::
   SourceSignalTarget (CHAIN era) ->
   Bool
-sameEpoch (SourceSignalTarget {source, target}) =
+sameEpoch SourceSignalTarget {source, target} =
   epoch source == epoch target
   where
     epoch = nesEL . chainNes

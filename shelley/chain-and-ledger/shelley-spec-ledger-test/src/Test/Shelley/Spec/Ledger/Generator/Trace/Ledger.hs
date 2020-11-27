@@ -35,6 +35,7 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
     genesisState,
   )
+import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -43,17 +44,19 @@ import Shelley.Spec.Ledger.TxBody (Ix, TxIn, TxOut)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core (EraGen (..), GenEnv (..), genCoin)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), genCoin)
+import Test.Shelley.Spec.Ledger.Generator.EraGen
+  ( EraGen (..),
+    genUtxo0,
+  )
 import Test.Shelley.Spec.Ledger.Generator.Presets (genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Utils
   ( ShelleyLedgerSTS,
-    ShelleyLedgersSTS,
     applySTSTest,
     runShelleyBase,
   )
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
 
 genAccountState :: Constants -> Gen AccountState
 genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
@@ -92,7 +95,6 @@ instance
     Mock (Crypto era),
     ValidateMetadata era,
     ShelleyLedgerSTS era,
-    ShelleyLedgersSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
@@ -148,10 +150,10 @@ instance
 mkGenesisLedgerState ::
   forall a era.
   EraGen era =>
-  Constants ->
+  GenEnv era ->
   IRC (LEDGER era) ->
   Gen (Either a (UTxOState era, DPState era))
-mkGenesisLedgerState c _ = do
-  utxo0 <- genEraUtxo0 c
+mkGenesisLedgerState ge@(GenEnv _ c) _ = do
+  utxo0 <- genUtxo0 ge
   let (LedgerState utxoSt dpSt) = genesisState (genesisDelegs0 c) utxo0
   pure $ Right (utxoSt, dpSt)

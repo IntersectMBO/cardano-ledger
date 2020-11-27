@@ -26,6 +26,8 @@ source-repository head
 library
   exposed-modules:
     Test.Cardano.Ledger.EraBuffet
+    Test.Cardano.Ledger.Mary
+    Test.Cardano.Ledger.Allegra
     Test.Cardano.Ledger.ShelleyMA.TxBody
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
@@ -49,6 +51,7 @@ library
     containers,
     deepseq,
     groups,
+    hashable,
     nothunks,
     partial-order,
     shelley-spec-ledger,

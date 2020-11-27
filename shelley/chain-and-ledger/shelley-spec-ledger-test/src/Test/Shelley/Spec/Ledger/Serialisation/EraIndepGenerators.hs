@@ -118,8 +118,7 @@ import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( EraGen,
-    KeySpace (KeySpace_),
+  ( KeySpace (KeySpace_),
     geConstants,
     geKeySpace,
     ksCoreNodes,
@@ -127,6 +126,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkBlockHeader,
     mkOCert,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
 import qualified Test.Shelley.Spec.Ledger.Generator.Update as Update
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
