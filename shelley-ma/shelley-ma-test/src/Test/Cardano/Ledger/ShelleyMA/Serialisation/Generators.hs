@@ -1,10 +1,10 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -34,8 +34,8 @@ import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import qualified Cardano.Ledger.ShelleyMA.Metadata as MA
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA.STS
-import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
+import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
 import Data.Coerce (coerce)
 import Data.Sequence.Strict (fromList)
@@ -98,18 +98,20 @@ instance
   Arbitrary (MA.Metadata (ShelleyMAEra ma c))
   where
   -- Why do we do this rather than:
-  -- $$$
+  --
+  -- @
   -- arbitrary = do
   --   MetaData m <- genMetaData'
   --   pure $ MA.Metadata m StrictSeq.empty
-  -- $$$
+  -- @
   --
   -- The above leads to an error about a failable
   -- pattern, despite the pattern being COMPLETE, resulting
   -- in an unsatisfied `MonadFail` constraint.
-  arbitrary = genMetaData' >>= \case
-    MetaData m ->
-      pure $ MA.Metadata m StrictSeq.empty
+  arbitrary =
+    genMetaData' >>= \case
+      MetaData m ->
+        pure $ MA.Metadata m StrictSeq.empty
 
 {-------------------------------------------------------------------------------
   MaryEra Generators
@@ -136,7 +138,8 @@ instance Mock c => Arbitrary (Mary.PolicyID (MaryEra c)) where
 
 instance Mock c => Arbitrary (Mary.Value (MaryEra c)) where
   arbitrary = Mary.Value <$> (abs <$> arbitrary) <*> (pointwiseAbs <$> arbitrary)
-    where pointwiseAbs = fmap (fmap abs)
+    where
+      pointwiseAbs = fmap (fmap abs)
 
 genMintValues :: Mock c => Gen (Mary.Value (MaryEra c))
 genMintValues = Mary.Value <$> arbitrary <*> arbitrary
@@ -162,7 +165,7 @@ instance Mock c => Arbitrary (MA.TxBody (AllegraEra c)) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> pure (Coin 0)
 
 instance Mock c => Arbitrary (Timelock (AllegraEra c)) where
   arbitrary = sizedTimelock maxTimelockDepth
