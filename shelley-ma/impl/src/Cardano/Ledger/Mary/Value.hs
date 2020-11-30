@@ -17,6 +17,7 @@ module Cardano.Ledger.Mary.Value
     insert,
     lookup,
     policies,
+    prune,
     showValue,
   )
 where

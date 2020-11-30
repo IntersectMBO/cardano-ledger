@@ -137,12 +137,12 @@ instance Mock c => Arbitrary (Mary.PolicyID (MaryEra c)) where
   arbitrary = Mary.PolicyID <$> arbitrary
 
 instance Mock c => Arbitrary (Mary.Value (MaryEra c)) where
-  arbitrary = Mary.Value <$> (abs <$> arbitrary) <*> (pointwiseAbs <$> arbitrary)
+  arbitrary = Mary.Value <$> (abs <$> arbitrary) <*> (ConcreteValue.prune . pointwiseAbs <$> arbitrary)
     where
       pointwiseAbs = fmap (fmap abs)
 
 genMintValues :: Mock c => Gen (Mary.Value (MaryEra c))
-genMintValues = Mary.Value 0 <$> arbitrary
+genMintValues = Mary.Value 0 . ConcreteValue.prune <$> arbitrary
 
 instance Arbitrary Mary.AssetName where
   arbitrary = Mary.AssetName <$> arbitrary
