@@ -23,7 +23,8 @@ module Cardano.Ledger.Core
     UpdateSTS,
     HasUpdateLogic
       ( initialUpdateState,
-        registerProtocolParametersChange
+        registerProtocolParametersChange,
+        votedValue
       ),
 
     -- * Constraint synonyms
@@ -63,14 +64,8 @@ class HasUpdateLogic era where
   registerProtocolParametersChange ::
     State (UpdateSTS era) -> PParams era -> State (UpdateSTS era)
 
--- votedValue :: State (UpdateSTS era) ... hmmm I'm not sure how to abstract
---   away the oter parameters of the concrete votedValue.
---
--- ... we might need a VOTEDVALUE transition that we make vary accross eras
--- which might mean another STS :/
---
--- An easy way to solve this is to add the PParams era -> Int -> parameter,
--- and simply discard the quorum in the Priviledge prototype.
+  votedValue ::
+    State (UpdateSTS era) -> PParams era -> Int -> Maybe (PParams era)
 
 -- | Common constraints
 --

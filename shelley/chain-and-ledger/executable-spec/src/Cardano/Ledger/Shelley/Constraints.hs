@@ -15,7 +15,8 @@ import Cardano.Ledger.Core
     SerialisableData,
     TxBody,
     Value,
-    UpdateSTS
+    UpdateSTS,
+    HasUpdateLogic
   )
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Torsor (Torsor (..))
@@ -55,6 +56,7 @@ type ShelleyBased era =
     SerialisableData (Delta (Value era)),
     Torsor (Value era),
     -- STS Constraints
+    HasUpdateLogic era,
     Eq (State (UpdateSTS era)),
     Show (State (UpdateSTS era)),
     NFData (State (UpdateSTS era)),

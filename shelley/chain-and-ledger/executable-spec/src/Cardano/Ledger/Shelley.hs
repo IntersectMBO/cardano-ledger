@@ -52,6 +52,8 @@ type instance Core.AuxiliaryData (ShelleyEra c) = Metadata
 
 type instance Core.UpdateSTS (ShelleyEra c) = PPUP (ShelleyEra c)
 
+instance Core.HasUpdateLogic (ShelleyEra c) where
+
 --------------------------------------------------------------------------------
 -- Ledger data instances
 --------------------------------------------------------------------------------

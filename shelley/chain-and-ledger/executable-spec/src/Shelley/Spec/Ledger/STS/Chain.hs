@@ -125,6 +125,7 @@ import Shelley.Spec.Ledger.STS.Tickn
 import Shelley.Spec.Ledger.Slot (EpochNo)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
+import qualified Cardano.Ledger.Core as Core
 
 data CHAIN era
 
@@ -147,7 +148,7 @@ deriving stock instance
   ShelleyBased era =>
   Eq (ChainState era)
 
-instance (Era era) => NFData (ChainState era)
+instance (Era era, ShelleyBased era) => NFData (ChainState era)
 
 data ChainPredicateFailure era
   = HeaderSizeTooLargeCHAIN
@@ -186,6 +187,8 @@ instance
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
+  forall era .
+  Core.HasUpdateLogic era =>
   WithOrigin (LastAppliedBlock (Crypto era)) ->
   EpochNo ->
   UTxO era ->
@@ -208,7 +211,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     utxo
                     (Coin 0)
                     (Coin 0)
-                    emptyPPUPState
+                    (Core.initialUpdateState @era)
                 )
                 (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
             )

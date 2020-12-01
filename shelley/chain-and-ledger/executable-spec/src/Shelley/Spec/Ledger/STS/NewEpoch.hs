@@ -37,6 +37,7 @@ import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.TxBody
+import qualified Cardano.Ledger.Core as Core
 
 data NEWEPOCH era
 
@@ -55,7 +56,7 @@ deriving stock instance
 
 instance NoThunks (NewEpochPredicateFailure era)
 
-instance ShelleyBased era => STS (NEWEPOCH era) where
+instance (Core.HasUpdateLogic era, ShelleyBased era) => STS (NEWEPOCH era) where
   type State (NEWEPOCH era) = NewEpochState era
 
   type Signal (NEWEPOCH era) = EpochNo
@@ -80,7 +81,7 @@ instance ShelleyBased era => STS (NEWEPOCH era) where
 
 newEpochTransition ::
   forall era.
-  ( ShelleyBased era
+  ( Core.HasUpdateLogic era, ShelleyBased era
   ) =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
@@ -127,7 +128,7 @@ calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
    in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
 
 instance
-  ShelleyBased era =>
+  (Core.HasUpdateLogic era, ShelleyBased era) =>
   Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = EpochFailure

@@ -52,6 +52,7 @@ import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP)
 import Shelley.Spec.Ledger.Slot (EpochNo)
+import qualified Cardano.Ledger.Core as Core
 
 data EPOCH era
 
@@ -69,7 +70,7 @@ deriving stock instance
   (Show (PredicateFailure (SNAP era))) =>
   Show (EpochPredicateFailure era)
 
-instance ShelleyBased era => STS (EPOCH era) where
+instance (Core.HasUpdateLogic era, ShelleyBased era) => STS (EPOCH era) where
   type State (EPOCH era) = EpochState era
   type Signal (EPOCH era) = EpochNo
   type Environment (EPOCH era) = ()
@@ -120,7 +121,7 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
 
 epochTransition ::
   forall era.
-  ShelleyBased era =>
+  (Core.HasUpdateLogic era, ShelleyBased era) => -- TODO: should the HasUpdateLogic constraint be part of ShelleyBased?
   TransitionRule (EPOCH era)
 epochTransition = do
   TRC
@@ -153,8 +154,8 @@ epochTransition = do
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
-  let pup = proposals . _ppups $ utxoSt'
-  let ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
+  -- let pup = proposals . _ppups $ utxoSt'
+  let ppNew = Core.votedValue (_ppups utxoSt') pp (fromIntegral coreNodeQuorum)
   NewppState utxoSt'' acnt'' pp' <-
     trans @(NEWPP era) $
       TRC (NewppEnv dstate' pstate'', NewppState utxoSt' acnt' pp, ppNew)
@@ -173,5 +174,5 @@ instance ShelleyBased era => Embed (SNAP era) (EPOCH era) where
 instance ShelleyBased era => Embed (POOLREAP era) (EPOCH era) where
   wrapFailed = PoolReapFailure
 
-instance ShelleyBased era => Embed (NEWPP era) (EPOCH era) where
+instance (Core.HasUpdateLogic era, ShelleyBased era) => Embed (NEWPP era) (EPOCH era) where
   wrapFailed = NewPpFailure
