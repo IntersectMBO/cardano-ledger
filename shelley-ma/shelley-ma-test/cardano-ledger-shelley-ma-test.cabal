@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+    Test.Cardano.Ledger.TranslationTools
     Test.Cardano.Ledger.EraBuffet
     Test.Cardano.Ledger.Mary
     Test.Cardano.Ledger.Allegra
@@ -52,6 +53,7 @@ library
     deepseq,
     groups,
     hashable,
+    mtl,
     nothunks,
     partial-order,
     shelley-spec-ledger,
@@ -83,6 +85,7 @@ test-suite cardano-ledger-shelley-ma-test
       Test.Cardano.Ledger.Mary.Examples.Cast
       Test.Cardano.Ledger.Mary.Examples.MultiAssets
       Test.Cardano.Ledger.Mary.Value
+      Test.Cardano.Ledger.Allegra.Translation
       Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
       Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
     default-language:    Haskell2010

@@ -23,7 +23,16 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
-import Codec.CBOR.Decoding (TokenType (TypeListLen, TypeMapLen))
+import Codec.CBOR.Decoding
+  ( TokenType
+      ( TypeListLen,
+        TypeListLen64,
+        TypeListLenIndef,
+        TypeMapLen,
+        TypeMapLen64,
+        TypeMapLenIndef
+      ),
+  )
 import Data.Coders
 import Data.Map.Strict (Map)
 import Data.MemoBytes
@@ -111,19 +120,26 @@ instance
   where
   fromCBOR =
     peekTokenType >>= \case
-      TypeMapLen ->
+      TypeMapLen -> decodeFromMap
+      TypeMapLen64 -> decodeFromMap
+      TypeMapLenIndef -> decodeFromMap
+      TypeListLen -> decodeFromList
+      TypeListLen64 -> decodeFromList
+      TypeListLenIndef -> decodeFromList
+      _ -> error "Failed to decode Metadata"
+    where
+      decodeFromMap =
         decode
           ( Ann (Emit MetadataRaw)
               <*! Ann (D mapFromCBOR)
               <*! Ann (Emit StrictSeq.empty)
           )
-      TypeListLen ->
+      decodeFromList =
         decode
           ( Ann (RecD MetadataRaw)
               <*! Ann (D mapFromCBOR)
               <*! D (sequence <$> decodeStrictSeq fromCBOR)
           )
-      _ -> error "Failed to decode Metadata"
 
 deriving via
   (Mem (MetadataRaw era))
