@@ -6,6 +6,8 @@ import Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks (timelockTests)
 import Test.Cardano.Ledger.ShelleyMA.TxBody (txBodyTest)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (codersTest)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL (cddlTests)
+import Test.Cardano.Ledger.Allegra.Translation
+   (allegraTranslationTests, allegraEncodeDecodeTests)
 import Test.Tasty
 import Test.Tasty.HUnit ()
 
@@ -21,6 +23,8 @@ tests =
   testGroup
     "Cardano-Legder-Tests"
     [ codersTest,
+      allegraTranslationTests,
+      allegraEncodeDecodeTests,
       txBodyTest,
       timelockTests,
       cddlTests 10,

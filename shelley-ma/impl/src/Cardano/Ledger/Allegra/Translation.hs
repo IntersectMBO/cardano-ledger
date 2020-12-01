@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,18 +18,22 @@ shadowing warnings for the named field puns when used with a pattern synonym.
 
 module Cardano.Ledger.Allegra.Translation where
 
+import Cardano.Binary
+  ( DecoderError,
+    decodeAnnotator,
+    fromCBOR,
+    serialize,
+  )
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import qualified Cardano.Ledger.ShelleyMA.Metadata as Allegra
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (ValidityInterval), translate)
-import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
+import Cardano.Ledger.ShelleyMA.Timelocks (translate)
 import Control.Iterate.SetAlgebra (biMapFromList, lifo)
+import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
-import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.API
@@ -58,7 +63,7 @@ import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..))
 type instance PreviousEra (AllegraEra c) = ShelleyEra c
 
 -- | Currently no context is needed to translate from Shelley to Allegra.
---
+
 -- Note: if context is needed, please coordinate with consensus, who will have
 -- to provide the context in the right place.
 type instance TranslationContext (AllegraEra c) = ()
@@ -76,44 +81,11 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
         }
 
 instance forall c. Crypto c => TranslateEra (AllegraEra c) Tx where
-  type TranslationError (AllegraEra c) Tx = ()
-  translateEra ctx (Tx body witness md) =
-    pure $
-      Tx
-        { _body = translateBody body,
-          _witnessSet = translateEra' ctx witness,
-          _metadata = translateMetadata <$> md
-        }
-    where
-      translateMetadata :: MetaData -> Allegra.Metadata (AllegraEra c)
-      translateMetadata (MetaData md) = Allegra.Metadata md StrictSeq.empty
-      translateBody ::
-        ( TxBody (ShelleyEra c) ->
-          Allegra.TxBody (AllegraEra c)
-        )
-      translateBody
-        ( TxBody
-            { _inputs,
-              _outputs,
-              _certs,
-              _wdrls,
-              _txfee,
-              _ttl,
-              _txUpdate,
-              _mdHash
-            }
-          ) =
-          Allegra.TxBody
-            (Set.map (translateEra' ctx) _inputs)
-            (translateEra' ctx <$> _outputs)
-            (translateEra' ctx <$> _certs)
-            (translateEra' ctx _wdrls)
-            _txfee
-            (ttlToVI _ttl)
-            (translateEra' ctx <$> _txUpdate)
-            (coerce _mdHash)
-            mempty
-      ttlToVI sn = ValidityInterval SNothing (SJust sn)
+  type TranslationError (AllegraEra c) Tx = DecoderError
+  translateEra _ctx tx =
+    case decodeAnnotator "tx" fromCBOR (serialize tx) of
+      Right newTx -> pure newTx
+      Left decoderError -> throwError decoderError
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyGenesis where
   translateEra ctxt genesis =

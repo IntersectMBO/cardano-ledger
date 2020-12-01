@@ -46,6 +46,7 @@ library
     containers,
     deepseq,
     groups,
+    mtl,
     nothunks,
     shelley-spec-ledger,
     small-steps,
