@@ -135,37 +135,38 @@ test-suite cardano-ledger-shelley-ma-test
       QuickCheck,
 
 
-benchmark marybench
+benchmark bench
   type:             exitcode-stdio-1.0
   hs-source-dirs:
     bench
   main-is:          Main.hs
   default-language:    Haskell2010
   other-modules:
-
+    Bench.Cardano.Ledger.ShelleyMA.Serialisation.Generators
   build-depends:
-   cardano-ledger-shelley-ma-test,
-      base >=4.9 && <4.15,
-      criterion,
-      bytestring,
-      cardano-ledger-shelley-ma,
-      cardano-binary,
-      cardano-crypto-class,
-      cardano-crypto-praos,
-      cardano-prelude,
-      cardano-slotting,
-      cborg,
-      containers,
-      deepseq,
-      groups,
-      nothunks,
-      partial-order,
-      shelley-spec-ledger,
-      small-steps,
-      tasty-hedgehog,
-      tasty-hunit,
-      tasty-quickcheck,
-      tasty
+    base >=4.9 && <4.15,
+    bytestring,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-crypto-praos,
+    cardano-ledger-shelley-ma-test,
+    cardano-ledger-shelley-ma,
+    cardano-prelude,
+    cardano-slotting,
+    cborg,
+    containers,
+    criterion,
+    deepseq,
+    groups,
+    nothunks,
+    partial-order,
+    shelley-spec-ledger,
+    small-steps,
+    tasty,
+    tasty-hedgehog,
+    tasty-hunit,
+    tasty-quickcheck,
+    QuickCheck
   ghc-options:
       -threaded
       -rtsopts
