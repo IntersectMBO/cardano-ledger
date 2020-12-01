@@ -165,17 +165,16 @@ genTx ::
   Gen (Tx era)
 genTx
   ge@( GenEnv
-         keySpace@( KeySpace_
-                      { ksKeyPairs,
-                        ksCoreNodes,
-                        ksMSigScripts,
-                        ksIndexedGenDelegates,
-                        ksIndexedPaymentKeys,
-                        ksIndexedStakingKeys,
-                        ksIndexedPayScripts,
-                        ksIndexedStakeScripts
-                      }
-                    )
+         keySpace@KeySpace_
+           { ksKeyPairs,
+             ksCoreNodes,
+             ksMSigScripts,
+             ksIndexedGenDelegates,
+             ksIndexedPaymentKeys,
+             ksIndexedStakingKeys,
+             ksIndexedPayScripts,
+             ksIndexedStakeScripts
+           }
          constants
        )
   (LedgerEnv slot txIx pparams reserves)
@@ -217,25 +216,28 @@ genTx
               . hashAnnotated
       -------------------------------------------------------------------------
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
-      -- and a Outputs builder that distributes the given balance over addresses.
+      -- and a Outputs builder that distributes the given balance over
+      -- addresses.
       -------------------------------------------------------------------------
-      let withdrawals = (sumVal (snd <$> wdrls))
+      let withdrawals = sumVal (snd <$> wdrls)
           spendingBalance =
             spendingBalanceUtxo
               <+> (inject $ (withdrawals <-> deposits) <+> refunds)
           n =
             if (Map.size . unUTxO) utxo < (genTxStableUtxoSize defaultConstants) -- something moderate 80-120
-              then (genTxUtxoIncrement defaultConstants) -- something small 2-5
+              then genTxUtxoIncrement defaultConstants -- something small 2-5
               else 0 -- no change at all
-              -- This algorithm has an instability in that if we don't balance genTxStableUtxoSize and
-              -- genTxUtxoIncrement correctly the size of the UTxO gradually shrinks so small we cannot
-              -- support generating a transaction. If we get unexplained failures one might investigate
-              -- changing these constants.
+              -- This algorithm has an instability in that if we don't balance
+              -- genTxStableUtxoSize and genTxUtxoIncrement correctly the size
+              -- of the UTxO gradually shrinks so small we cannot support
+              -- generating a transaction. If we get unexplained failures one
+              -- might investigate changing these constants.
       outputAddrs <-
         genRecipients (length inputs + n) ksKeyPairs ksMSigScripts
           >>= genPtrAddrs (_dstate dpState')
       -------------------------------------------------------------------------
-      -- Build a Draft Tx and repeatedly add to Delta until all fees are accounted for.
+      -- Build a Draft Tx and repeatedly add to Delta until all fees are
+      -- accounted for.
       -------------------------------------------------------------------------
       let draftFee = Coin 0
           (remainderCoin, draftOutputs) =
@@ -256,9 +258,19 @@ genTx
           (hashMetadata <$> metadata)
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
       -- We add now repeatedly add inputs until the process converges.
-      converge remainderCoin wits scripts ksKeyPairs ksMSigScripts utxo pparams keySpace draftTx
+      converge
+        remainderCoin
+        wits
+        scripts
+        ksKeyPairs
+        ksMSigScripts
+        utxo
+        pparams
+        keySpace
+        draftTx
 
--- | - Collect additional inputs (and witnesses and keys and scripts) to make the transaction balance.
+-- | - Collect additional inputs (and witnesses and keys and scripts) to make
+-- the transaction balance.
 data Delta era = Delta
   { dfees :: Coin,
     extraInputs :: Set.Set (TxIn era),
@@ -268,14 +280,16 @@ data Delta era = Delta
     deltaScripts :: [(Core.Script era, Core.Script era)]
   }
 
--- | - We need this instance to know when delta has stopped growing. We don't actually need to compare all
---  the fields, because if the extraInputs has not changed then the Scripts and keys will not have changed.
+-- | - We need this instance to know when delta has stopped growing. We don't
+--  actually need to compare all the fields, because if the extraInputs has not
+--  changed then the Scripts and keys will not have changed.
 instance ShelleyBased era => Eq (Delta era) where
   a == b =
     dfees a == dfees b
       && extraInputs a == extraInputs b
       && extraWitnesses a == extraWitnesses b
-      -- deltaVKeys and deltaScripts equality are implied by extraWitnesses equality, at least in the use case below.
+      -- deltaVKeys and deltaScripts equality are implied by extraWitnesses
+      -- equality, at least in the use case below.
       && change a == change b
 
 deltaZero :: ShelleyBased era => Coin -> Coin -> Addr era -> Delta era
@@ -288,7 +302,8 @@ deltaZero initialfee minAda addr =
     mempty
     mempty
 
--- | - Do the work of computing what additioanl inputs we need to 'fix-up' the transaction so that it will balance.
+-- | - Do the work of computing what additioanl inputs we need to 'fix-up' the
+-- transaction so that it will balance.
 genNextDelta ::
   forall era.
   ( EraGen era,
@@ -314,7 +329,8 @@ genNextDelta
   delta@(Delta dfees extraInputs extraWitnesses change _ _) =
     let baseTxFee = minfee pparams tx
         encodedLen x = fromIntegral $ BSL.length (serialize x)
-        -- based on the current contents of delta, how much will the fee increase when we add the delta to the tx?
+        -- based on the current contents of delta, how much will the fee
+        -- increase when we add the delta to the tx?
         draftSize =
           ( sum
               [ 5 :: Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
@@ -347,16 +363,23 @@ genNextDelta
               do
                 let Tx txBody _ _ = tx
                     utxo' =
-                      -- Remove possible inputs from Utxo, if they already appear in inputs.
+                      -- Remove possible inputs from Utxo, if they already
+                      -- appear in inputs.
                       UTxO $
                         Map.withoutKeys
                           (unUTxO utxo)
-                          ((getField @"inputs" txBody) <> extraInputs)
-                (inputs, value, (vkeyPairs, msigPairs)) <- genInputs (1, 1) ksIndexedPaymentKeys ksIndexedPayScripts utxo'
-                -- It is possible that the Utxo has no possible inputs left, so fail. We try and keep this from happening
-                -- by using feedback: adding to the number of ouputs (in the call to genRecipients) in genTx above. Adding to the
-                -- outputs means in the next cycle the size of the UTxO will grow.
-                _ <- if (null inputs) then (error "Not enough money in the world") else pure ()
+                          (getField @"inputs" txBody <> extraInputs)
+                (inputs, value, (vkeyPairs, msigPairs)) <-
+                  genInputs (1, 1) ksIndexedPaymentKeys ksIndexedPayScripts utxo'
+                -- It is possible that the Utxo has no possible inputs left, so
+                -- fail. We try and keep this from happening by using feedback:
+                -- adding to the number of ouputs (in the call to genRecipients)
+                -- in genTx above. Adding to the outputs means in the next cycle
+                -- the size of the UTxO will grow.
+                _ <-
+                  if null inputs
+                    then error "Not enough money in the world"
+                    else pure ()
                 let newWits =
                       mkTxWits
                         ksIndexedPaymentKeys
@@ -373,7 +396,10 @@ genNextDelta
                       deltaScripts = msigPairs <> deltaScripts delta
                     }
     where
-      deltaChange :: (Core.Value era -> Core.Value era) -> TxOut era -> TxOut era
+      deltaChange ::
+        (Core.Value era -> Core.Value era) ->
+        TxOut era ->
+        TxOut era
       deltaChange f (TxOut addr val) = TxOut addr $ f val
       getChangeAmount (TxOut _ v) = coin v
 
@@ -399,7 +425,7 @@ genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx = do
   addr <- genRecipients 1 keys scripts
   fix
     (genNextDelta utxo pparams keySpace tx)
-    (deltaZero initialfee (safetyOffset <+> (_minUTxOValue pparams)) (head addr))
+    (deltaZero initialfee (safetyOffset <+> _minUTxOValue pparams) (head addr))
   where
     -- add a small offset here to ensure outputs above minUtxo value
     safetyOffset = Coin 5
@@ -419,7 +445,7 @@ applyDelta ::
 applyDelta
   neededKeys
   neededScripts
-  (KeySpace_ {ksIndexedPaymentKeys, ksIndexedStakingKeys})
+  KeySpace_ {ksIndexedPaymentKeys, ksIndexedStakingKeys}
   tx@(Tx body _wits _md)
   (Delta deltafees extraIn _extraWits change extraKeys extraScripts) =
     --fix up the witnesses here?
@@ -461,9 +487,18 @@ converge ::
   KeySpace era ->
   Tx era ->
   Gen (Tx era)
-converge initialfee neededKeys neededScripts keys scripts utxo pparams keySpace tx = do
-  delta <- genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx
-  pure (applyDelta neededKeys neededScripts keySpace tx delta)
+converge
+  initialfee
+  neededKeys
+  neededScripts
+  keys
+  scripts
+  utxo
+  pparams
+  keySpace
+  tx = do
+    delta <- genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx
+    pure (applyDelta neededKeys neededScripts keySpace tx delta)
 
 -- | Return up to /k/ random elements from /items/
 -- (instead of the less efficient /take k <$> QC.shuffle items/)
@@ -485,12 +520,16 @@ mkScriptWits payScripts stakeScripts =
     (hashPayScript <$> payScripts)
       ++ (hashStakeScript <$> stakeScripts)
   where
-    hashPayScript :: (Core.Script era, Core.Script era) -> (ScriptHash era, Core.Script era)
+    hashPayScript ::
+      (Core.Script era, Core.Script era) ->
+      (ScriptHash era, Core.Script era)
     hashPayScript (payScript, _) =
-      ((hashScript payScript) :: ScriptHash era, payScript)
-    hashStakeScript :: (Core.Script era, Core.Script era) -> (ScriptHash era, Core.Script era)
+      (hashScript payScript :: ScriptHash era, payScript)
+    hashStakeScript ::
+      (Core.Script era, Core.Script era) ->
+      (ScriptHash era, Core.Script era)
     hashStakeScript (_, sScript) =
-      ((hashScript sScript) :: ScriptHash era, sScript)
+      (hashScript sScript :: ScriptHash era, sScript)
 
 mkTxWits ::
   forall era.
@@ -557,7 +596,8 @@ calcOutputsFromBalance balance_ addrs fee =
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.
     balanceAfterFee = balance_ <-> (inject fee)
-    (amountPerOutput, splitCoinRem) = vsplit balanceAfterFee (fromIntegral $ length addrs)
+    (amountPerOutput, splitCoinRem) =
+      vsplit balanceAfterFee (fromIntegral $ length addrs)
 
 -- | Select unspent output(s) to serve as inputs for a new transaction
 --
@@ -635,7 +675,11 @@ genWithdrawals
       toRewardAcnt (rwd, coinx) = (RewardAcnt Testnet rwd, coinx)
       genWrdls wdrls_ = do
         selectedWrdls <- map toRewardAcnt <$> QC.sublistOf wdrls_
-        let wits = (mkWdrlWits ksIndexedStakeScripts ksIndexedStakingKeys . getRwdCred . fst) <$> selectedWrdls
+        let wits =
+              mkWdrlWits ksIndexedStakeScripts ksIndexedStakingKeys
+                . getRwdCred
+                . fst
+                <$> selectedWrdls
         return (selectedWrdls, Either.partitionEithers wits)
 
 -- | Collect witnesses needed for reward withdrawals.
@@ -652,7 +696,8 @@ mkWdrlWits _ keyHashMap c@(KeyHashObj _) =
     asWitness $
       findPayKeyPairCred c keyHashMap
 
--- | Select recipient addresses that will serve as output targets for a new transaction.
+-- | Select recipient addresses that will serve as output targets for a new
+-- transaction.
 genRecipients ::
   EraGen era =>
   Int ->
@@ -699,7 +744,7 @@ genPtrAddrs ds addrs = do
 
   let addrs' = zipWith baseAddrToPtrAddr (take n addrs) pointerList
 
-  pure (addrs' ++ (drop n addrs))
+  pure (addrs' ++ drop n addrs)
   where
     baseAddrToPtrAddr a p = case a of
       Addr n pay _ -> Addr n pay (StakeRefPtr p)
