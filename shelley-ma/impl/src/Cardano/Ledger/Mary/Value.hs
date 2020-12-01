@@ -19,6 +19,7 @@ module Cardano.Ledger.Mary.Value
     policies,
     prune,
     showValue,
+    valueFromList,
   )
 where
 
@@ -404,6 +405,11 @@ prune ::
   Map (PolicyID era) (Map AssetName Integer)
 prune assets =
   Map.filter (not . null) $ Map.filter (/= 0) <$> assets
+
+-- | Rather than using prune to remove 0 assets, when can avoid adding them in the
+--   first place by using valueFromList to construct a Value.
+valueFromList :: Integer -> [(PolicyID era, AssetName, Integer)] -> Value era
+valueFromList ada triples = foldr (\(p, n, i) ans -> insert (+) p n i ans) (Value ada Map.empty) triples
 
 -- | Display a Value as a String, one token per line
 showValue :: Value era -> String
