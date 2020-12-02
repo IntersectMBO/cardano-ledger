@@ -23,6 +23,7 @@ module Shelley.Spec.Ledger.Scripts
     getMultiSigBytes,
     ScriptHash (..),
     hashMultiSigScript,
+    nativeMultiSigTag,
   )
 where
 
