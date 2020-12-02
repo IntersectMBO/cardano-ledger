@@ -158,7 +158,9 @@ $\Coin$.
       \hldiff{\mathsf{adaPolicy}~\notin \supp{\fun{mint}~txb}} \\
       ~\\
       \hldiff{\forall txout \in \txouts{txb},} \\
-      \hldiff{txout \geq \fun{coinToValue}(\fun{outputSize}~{txout} * \fun{adaPerUTxOByte}~pp)} \\~
+      \hldiff{\fun{getValue}~txout \geq \fun{coinToValue}(\fun{outputSize}~{txout} * \fun{adaPerUTxOByte}~pp)} \\~
+      \\
+      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, a \in \AddrBS \to \fun{bootstrapAttrsSize}~a \leq 64
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a =\NetworkId
       \\
