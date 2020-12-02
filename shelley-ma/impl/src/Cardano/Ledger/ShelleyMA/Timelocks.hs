@@ -48,7 +48,6 @@ import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Control.DeepSeq (NFData (..))
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as Lazy
 import Data.ByteString.Short (fromShort)
 import Data.Coders
@@ -76,7 +75,7 @@ import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
-import Shelley.Spec.Ledger.Scripts (MultiSig, ScriptHash (..), getMultiSigBytes)
+import Shelley.Spec.Ledger.Scripts (MultiSig, ScriptHash (..), getMultiSigBytes, nativeMultiSigTag)
 import Shelley.Spec.Ledger.Serialization
   ( decodeStrictSeq,
     encodeFoldable,
@@ -298,12 +297,6 @@ validateTimelock lock tx = evalFPS lock vhks (_body tx)
     witsSet = _witnessSet tx -- IT COMPUTES THE RIGHT WITNESS SET.
     vhks = Set.map witKeyHash (addrWits' witsSet)
 
--- | Magic number representing the tag of the native Timelock script
--- language. For each script language included, a new tag is chosen and the tag
--- is included in the script hash for a script.
-nativeTimelockTag :: BS.ByteString
-nativeTimelockTag = "\01"
-
 -- | Hashes native timelock script.
 hashTimelockScript ::
   Era era =>
@@ -312,7 +305,9 @@ hashTimelockScript ::
 hashTimelockScript =
   ScriptHash
     . Hash.castHash
-    . Hash.hashWith (\x -> nativeTimelockTag <> serialize' x)
+    -- since timelock scripts are a strict backwards compatible extension
+    -- of multisig scripts we can use the same tag here
+    . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
 showTimelock :: Era era => Timelock era -> String
 showTimelock (RequireTimeStart (SlotNo i)) = "(Start >= " ++ show i ++ ")"
