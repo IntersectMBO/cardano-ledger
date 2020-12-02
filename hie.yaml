@@ -58,4 +58,7 @@ cradle:
       component: "lib:cardano-ledger-shelley-ma-test"
 
     - path: "shelley-ma/shelley-ma-test/test"
+      component: "cardano-ledger-shelley-ma-test:bench:bench"
+
+    - path: "shelley-ma/shelley-ma-test/bench"
       component: "cardano-ledger-shelley-ma-test:test:cardano-ledger-shelley-ma-test"
