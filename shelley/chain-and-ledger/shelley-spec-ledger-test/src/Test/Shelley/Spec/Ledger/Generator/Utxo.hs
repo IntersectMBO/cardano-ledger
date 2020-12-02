@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -22,6 +23,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
+import Control.Monad (when)
 import Control.SetAlgebra (forwards)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Either as Either (partitionEithers)
@@ -89,7 +91,7 @@ import Shelley.Spec.Ledger.UTxO
     makeWitnessesFromScriptKeys,
     makeWitnessesVKey,
   )
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen, discard)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
@@ -220,11 +222,11 @@ genTx
       -- addresses.
       -------------------------------------------------------------------------
       let withdrawals = sumVal (snd <$> wdrls)
-          spendingBalance =
+          !spendingBalance =
             spendingBalanceUtxo
-              <+> (inject $ (withdrawals <-> deposits) <+> refunds)
+              <+> inject ((withdrawals <-> deposits) <+> refunds)
           n =
-            if (Map.size . unUTxO) utxo < (genTxStableUtxoSize defaultConstants) -- something moderate 80-120
+            if (Map.size . unUTxO) utxo < genTxStableUtxoSize defaultConstants -- something moderate 80-120
               then genTxUtxoIncrement defaultConstants -- something small 2-5
               else 0 -- no change at all
               -- This algorithm has an instability in that if we don't balance
@@ -232,6 +234,10 @@ genTx
               -- of the UTxO gradually shrinks so small we cannot support
               -- generating a transaction. If we get unexplained failures one
               -- might investigate changing these constants.
+
+      -- Occasionally we have a transaction generated with insufficient inputs
+      -- to cover the deposits. In this case we discard the test case.
+      !_ <- when (coin spendingBalance <= Coin 0) discard
       outputAddrs <-
         genRecipients (length inputs + n) ksKeyPairs ksMSigScripts
           >>= genPtrAddrs (_dstate dpState')
@@ -319,12 +325,11 @@ genNextDelta ::
 genNextDelta
   utxo
   pparams
-  ( KeySpace_
-      { ksIndexedStakingKeys,
-        ksIndexedPaymentKeys,
-        ksIndexedPayScripts
-      }
-    )
+  KeySpace_
+    { ksIndexedStakingKeys,
+      ksIndexedPaymentKeys,
+      ksIndexedPayScripts
+    }
   tx
   delta@(Delta dfees extraInputs extraWitnesses change _ _) =
     let baseTxFee = minfee pparams tx
@@ -332,20 +337,20 @@ genNextDelta
         -- based on the current contents of delta, how much will the fee
         -- increase when we add the delta to the tx?
         draftSize =
-          ( sum
-              [ 5 :: Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
-                encodedLen (max dfees (Coin 0)) - 1,
-                foldr (\a b -> b + encodedLen a) 0 extraInputs,
-                encodedLen change,
-                encodedLen extraWitnesses
-              ]
-          )
-        deltaFee = draftSize <×> (Coin (fromIntegral (_minfeeA pparams)))
+          sum
+            [ 5 :: Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
+              encodedLen (max dfees (Coin 0)) - 1,
+              foldr (\a b -> b + encodedLen a) 0 extraInputs,
+              encodedLen change,
+              encodedLen extraWitnesses
+            ]
+
+        deltaFee = draftSize <×> Coin (fromIntegral (_minfeeA pparams))
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change
         minAda = _minUTxOValue pparams
-     in if remainingFee <= (Coin 0) -- we've paid for all the fees
+     in if remainingFee <= Coin 0 -- we've paid for all the fees
           then pure delta -- we're done
           else -- the change covers what we need, so shift Coin from change to dfees.
 
@@ -356,7 +361,7 @@ genNextDelta
                     { dfees = totalFee,
                       change =
                         deltaChange
-                          (<-> (inject remainingFee))
+                          (<-> inject remainingFee)
                           change
                     }
               else -- add a new input to cover the fee
@@ -583,7 +588,10 @@ mkTxWits
 -- TODO need right splitting of v!
 calcOutputsFromBalance ::
   forall era.
-  (ShelleyBased era, Split (Core.Value era)) =>
+  ( HasCallStack,
+    ShelleyBased era,
+    Split (Core.Value era)
+  ) =>
   Core.Value era ->
   [Addr era] ->
   Coin ->
@@ -595,7 +603,7 @@ calcOutputsFromBalance balance_ addrs fee =
   where
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.
-    balanceAfterFee = balance_ <-> (inject fee)
+    balanceAfterFee = balance_ <-> inject fee
     (amountPerOutput, splitCoinRem) =
       vsplit balanceAfterFee (fromIntegral $ length addrs)
 
