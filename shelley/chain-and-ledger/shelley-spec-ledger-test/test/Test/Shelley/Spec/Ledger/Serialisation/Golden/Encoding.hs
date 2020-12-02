@@ -19,9 +19,6 @@ import Cardano.Binary
     ToCBOR (..),
     decodeAnnotator,
     decodeFullDecoder,
-    serialize,
-    serialize',
-    serializeEncoding,
     toCBOR,
   )
 import Cardano.Crypto.DSIGN (encodeSignedDSIGN, encodeVerKeyDSIGN)
@@ -35,7 +32,6 @@ import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Coerce (coerce)
 import Data.IP (toIPv4)
@@ -191,61 +187,15 @@ import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
+import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
+  ( checkEncoding,
+    checkEncodingCBOR,
+    checkEncodingCBORAnnotated,
+    ToTokens (..),
+  )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
 import qualified Cardano.Ledger.Core as Core
-
-roundTrip ::
-  (Show a, Eq a) =>
-  (a -> Encoding) ->
-  (LByteString -> Either DecoderError a) ->
-  a ->
-  Assertion
-roundTrip encode decode x =
-  case (decode . serializeEncoding . encode) x of
-    Left e -> assertFailure $ "could not decode serialization of " ++ show x ++ ", " ++ show e
-    Right y -> y @?= x
-
-checkEncoding ::
-  (Show a, Eq a) =>
-  (a -> Encoding) ->
-  (LByteString -> Either DecoderError a) ->
-  String ->
-  a ->
-  ToTokens ->
-  TestTree
-checkEncoding encode decode name x t =
-  testCase testName $
-    assertEqual
-      testName
-      (Base16.encode $ serialize t)
-      (Base16.encode . serializeEncoding . encode $ x)
-      >> roundTrip encode decode x
-  where
-    testName = "prop_serialize_" <> name
-
-checkEncodingCBOR ::
-  (FromCBOR a, ToCBOR a, Show a, Eq a) =>
-  String ->
-  a ->
-  ToTokens ->
-  TestTree
-checkEncodingCBOR name x t =
-  let d = decodeFullDecoder (fromString name) fromCBOR
-   in checkEncoding toCBOR d name x t
-
-checkEncodingCBORAnnotated ::
-  (FromCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
-  String ->
-  a ->
-  ToTokens ->
-  TestTree
-checkEncodingCBORAnnotated name x t =
-  let d = decodeAnnotator (fromString name) fromCBOR
-   in checkEncoding toCBOR d name x annTokens
-  where
-    annTokens = T $ TkEncoded $ serialize' t
 
 type MultiSigMap = Map.Map (ScriptHash C) (MultiSig C)
 
@@ -469,24 +419,6 @@ testBHBSigTokens = e
         (testBHB @era)
         (fst $ testKESKeys @(Crypto era))
     Encoding e = encodeSignedKES s
-
-data ToTokens where
-  T :: (Tokens -> Tokens) -> ToTokens
-  S :: ToCBOR a => a -> ToTokens
-  G :: ToCBORGroup a => a -> ToTokens
-  Plus :: ToTokens -> ToTokens -> ToTokens
-
-instance ToCBOR ToTokens where
-  toCBOR (T xs) = Encoding xs
-  toCBOR (S s) = toCBOR s
-  toCBOR (G g) = toCBORGroup g
-  toCBOR (Plus a b) = toCBOR a <> toCBOR b
-
-instance Semigroup ToTokens where
-  (<>) = Plus
-
-instance Monoid ToTokens where
-  mempty = T id
 
 tests :: TestTree
 tests =

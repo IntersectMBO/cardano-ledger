@@ -1,13 +1,9 @@
 module Main where
 
+import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
 import Test.Cardano.Ledger.Mary.Examples.MultiAssets (multiAssetsExample)
+import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.Cardano.Ledger.Mary.Value (valTests)
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks (timelockTests)
-import Test.Cardano.Ledger.ShelleyMA.TxBody (txBodyTest)
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (codersTest)
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL (cddlTests)
-import Test.Cardano.Ledger.Allegra.Translation
-   (allegraTranslationTests, allegraEncodeDecodeTests)
 import Test.Tasty
 import Test.Tasty.HUnit ()
 
@@ -22,12 +18,8 @@ tests :: TestTree
 tests =
   testGroup
     "Cardano-Legder-Tests"
-    [ codersTest,
+    [ Serialisation.tests,
       allegraTranslationTests,
-      allegraEncodeDecodeTests,
-      txBodyTest,
-      timelockTests,
-      cddlTests 10,
       maryChainExamples,
       valTests
     ]
