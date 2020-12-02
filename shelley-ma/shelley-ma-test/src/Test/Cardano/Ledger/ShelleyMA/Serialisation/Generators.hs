@@ -38,8 +38,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
 import Data.Coerce (coerce)
-import Data.Sequence.Strict (fromList)
-import qualified Data.Sequence.Strict as StrictSeq
+import Data.Sequence.Strict (StrictSeq,fromList)
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
 import Shelley.Spec.Ledger.API hiding (SignedDSIGN, TxBody (..))
@@ -49,6 +48,7 @@ import Test.QuickCheck
     choose,
     genericShrink,
     listOf,
+    vectorOf,
     oneof,
     resize,
     shrink,
@@ -58,6 +58,7 @@ import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData')
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty.QuickCheck (Gen)
+
 
 {-------------------------------------------------------------------------------
   ShelleyMAEra Generators
@@ -94,10 +95,10 @@ sizedTimelock n =
 
 -- TODO Generate metadata with script preimages
 instance
-  (Mock c, Typeable ma) =>
+  (Mock c, Typeable ma, Arbitrary (Timelock (ShelleyMAEra ma c))) =>
   Arbitrary (MA.Metadata (ShelleyMAEra ma c))
   where
-  -- Why do we do this rather than:
+  -- Why do we use the \case instead of a do statement? like this:
   --
   -- @
   -- arbitrary = do
@@ -111,7 +112,14 @@ instance
   arbitrary =
     genMetaData' >>= \case
       MetaData m ->
-        pure $ MA.Metadata m StrictSeq.empty
+        do ss <- genScriptSeq ; pure (MA.Metadata m ss)
+
+genScriptSeq :: (Arbitrary (Timelock (ShelleyMAEra ma c))) => Gen(StrictSeq (Timelock (ShelleyMAEra ma c)))
+genScriptSeq = do
+  n <- choose (0,3)
+  l <- vectorOf n arbitrary
+  pure (fromList l)
+
 
 {-------------------------------------------------------------------------------
   MaryEra Generators
