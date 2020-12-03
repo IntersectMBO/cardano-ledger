@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.PropertyTests
 where
 
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Era (Crypto)
 import Data.Proxy
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -61,11 +62,11 @@ minimalPropertyTests ::
   ( EraGen era,
     ChainProperty era,
     ValidateMetadata era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
@@ -79,10 +80,10 @@ minimalPropertyTests =
       bootstrapHashTest,
       testGroup
         "Compact Address Tests"
-        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @era),
-          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @era),
-          TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @era),
-          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @era)
+        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(Crypto era)),
+          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
+          TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @(Crypto era)),
+          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era))
         ],
       TQC.testProperty "legacy overlay schedule" (legacyOverlayTest p)
     ]
@@ -96,11 +97,11 @@ propertyTests ::
   ( EraGen era,
     ChainProperty era,
     ValidateMetadata era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>

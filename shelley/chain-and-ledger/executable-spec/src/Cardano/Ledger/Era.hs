@@ -69,13 +69,13 @@ type family TranslationContext era :: Type
 -- In most cases, the @era@ parameter won't be phantom, and a manual instance
 -- will have to be written:
 --
--- > newtype Bar era = Bar (Addr era)
+-- > newtype Bar era = Bar (TxBody era)
 -- >
 -- > instance CryptoClass.Crypto c => TranslateEra (Allegra c) Bar where
 -- >     translateEra ctxt = Bar <$> translateEra ctxt
 -- >
 -- > -- With the following instance being in scope:
--- > instance CryptoClass.Crypto c => TranslatEra (Allegra c) Addr
+-- > instance CryptoClass.Crypto c => TranslatEra (Allegra c) TxBody
 --
 -- Note: we use 'PreviousEra' instead of @NextEra@ as an era definitely knows
 -- its predecessor, but not necessarily its successor. Moreover, one could argue

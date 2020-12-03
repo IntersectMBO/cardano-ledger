@@ -48,7 +48,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.Crypto (ADDRHASH, DSIGN)
-import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Prelude (panic)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -75,12 +75,12 @@ newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Show) via Quiet ChainCode
   deriving newtype (NoThunks, ToCBOR, FromCBOR)
 
-data BootstrapWitness era = BootstrapWitness'
-  { bwKey' :: !(VKey 'Witness (Crypto era)),
+data BootstrapWitness crypto = BootstrapWitness'
+  { bwKey' :: !(VKey 'Witness crypto),
     bwSig' ::
       !( Keys.SignedDSIGN
-           (Crypto era)
-           (Hash (Crypto era) EraIndependentTxBody)
+           crypto
+           (Hash crypto EraIndependentTxBody)
        ),
     bwChainCode' :: !ChainCode,
     bwAttributes' :: !ByteString,
@@ -88,22 +88,22 @@ data BootstrapWitness era = BootstrapWitness'
   }
   deriving (Generic)
 
-deriving instance (Era era) => Show (BootstrapWitness era)
+deriving instance CC.Crypto crypto => Show (BootstrapWitness crypto)
 
-deriving instance (Era era) => Eq (BootstrapWitness era)
+deriving instance CC.Crypto crypto => Eq (BootstrapWitness crypto)
 
 deriving via
-  (AllowThunksIn '["bwBytes"] (BootstrapWitness era))
+  (AllowThunksIn '["bwBytes"] (BootstrapWitness crypto))
   instance
-    Era era => NoThunks (BootstrapWitness era)
+    CC.Crypto crypto => NoThunks (BootstrapWitness crypto)
 
 pattern BootstrapWitness ::
-  Era era =>
-  (VKey 'Witness (Crypto era)) ->
-  (Keys.SignedDSIGN (Crypto era) (Hash (Crypto era) EraIndependentTxBody)) ->
+  CC.Crypto crypto =>
+  VKey 'Witness crypto ->
+  Keys.SignedDSIGN crypto (Hash crypto EraIndependentTxBody) ->
   ChainCode ->
   ByteString ->
-  BootstrapWitness era
+  BootstrapWitness crypto
 pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes} <-
   BootstrapWitness' bwKey bwSig bwChainCode bwAttributes _
   where
@@ -119,17 +119,13 @@ pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes} <-
 
 {-# COMPLETE BootstrapWitness #-}
 
-instance
-  forall era.
-  (Era era) =>
-  Ord (BootstrapWitness era)
-  where
+instance CC.Crypto crypto => Ord (BootstrapWitness crypto) where
   compare = comparing bootstrapWitKeyHash
 
-instance Era era => ToCBOR (BootstrapWitness era) where
+instance CC.Crypto crypto => ToCBOR (BootstrapWitness crypto) where
   toCBOR = encodePreEncoded . LBS.toStrict . bwBytes
 
-instance Era era => FromCBOR (Annotator (BootstrapWitness era)) where
+instance CC.Crypto crypto => FromCBOR (Annotator (BootstrapWitness crypto)) where
   fromCBOR = annotatorSlice $
     decodeRecordNamed "BootstrapWitness" (const 4) $
       do
@@ -141,10 +137,10 @@ instance Era era => FromCBOR (Annotator (BootstrapWitness era)) where
 
 -- | Rebuild the addrRoot of the corresponding address.
 bootstrapWitKeyHash ::
-  forall era.
-  Era era =>
-  BootstrapWitness era ->
-  KeyHash 'Witness (Crypto era)
+  forall crypto.
+  CC.Crypto crypto =>
+  BootstrapWitness crypto ->
+  KeyHash 'Witness crypto
 bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
   KeyHash . hash_crypto . hash_SHA3_256 $ bytes
   where
@@ -169,8 +165,8 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
     bytes = prefix <> keyBytes <> cc <> attributes
     hash_SHA3_256 :: ByteString -> ByteString
     hash_SHA3_256 = Hash.digest (Proxy :: Proxy Hash.SHA3_256)
-    hash_crypto :: ByteString -> Hash.Hash (ADDRHASH (Crypto era)) a
-    hash_crypto = Hash.castHash . Hash.hashWith @(ADDRHASH (Crypto era)) id
+    hash_crypto :: ByteString -> Hash.Hash (ADDRHASH crypto) a
+    hash_crypto = Hash.castHash . Hash.hashWith @(ADDRHASH crypto) id
 
 unpackByronVKey ::
   forall crypto.
@@ -188,12 +184,12 @@ unpackByronVKey
     Just vk -> (VKey vk, ChainCode chainCodeBytes)
 
 verifyBootstrapWit ::
-  forall era.
-  ( Era era,
-    DSIGN.Signable (DSIGN (Crypto era)) (Hash (Crypto era) EraIndependentTxBody)
+  forall crypto.
+  ( CC.Crypto crypto,
+    DSIGN.Signable (DSIGN crypto) (Hash crypto EraIndependentTxBody)
   ) =>
-  Hash (Crypto era) EraIndependentTxBody ->
-  BootstrapWitness era ->
+  Hash crypto EraIndependentTxBody ->
+  BootstrapWitness crypto ->
   Bool
 verifyBootstrapWit txbodyHash witness =
   verifySignedDSIGN
@@ -207,14 +203,14 @@ coerceSignature sig =
     DSIGN.rawDeserialiseSigDSIGN (WC.unXSignature sig)
 
 makeBootstrapWitness ::
-  forall era.
-  ( DSIGN (Crypto era) ~ DSIGN.Ed25519DSIGN,
-    Era era
+  forall crypto.
+  ( DSIGN crypto ~ DSIGN.Ed25519DSIGN,
+    CC.Crypto crypto
   ) =>
-  Hash (Crypto era) EraIndependentTxBody ->
+  Hash crypto EraIndependentTxBody ->
   Byron.SigningKey ->
   Byron.Attributes Byron.AddrAttributes ->
-  BootstrapWitness era
+  BootstrapWitness crypto
 makeBootstrapWitness txBodyHash byronSigningKey addrAttributes =
   BootstrapWitness vk signature cc (serialize' addrAttributes)
   where

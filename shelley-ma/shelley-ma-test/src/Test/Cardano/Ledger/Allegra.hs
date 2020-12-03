@@ -79,10 +79,10 @@ genTxBody ::
     EraGen era
   ) =>
   SlotNo ->
-  Set.Set (TxIn era) ->
+  Set.Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert era) ->
-  Wdrl era ->
+  StrictSeq (DCert (Crypto era)) ->
+  Wdrl (Crypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (MetadataHash era) ->
@@ -106,13 +106,13 @@ genTxBody slot ins outs cert wdrl fee upd meta = do
   ShelleyMA helpers, shared by Allegra and Mary
 ------------------------------------------------------------------------------}
 
-quantifyTL :: Era era => Timelock era -> Quantifier (Timelock era)
+quantifyTL :: CryptoClass.Crypto crypto => Timelock crypto -> Quantifier (Timelock crypto)
 quantifyTL (RequireAllOf xs) = AllOf (foldr (:) [] xs)
 quantifyTL (RequireAnyOf xs) = AnyOf (foldr (:) [] xs)
 quantifyTL (RequireMOf n xs) = MOf n (foldr (:) [] xs)
 quantifyTL t = Leaf t
 
-unQuantifyTL :: Era era => Quantifier (Timelock era) -> Timelock era
+unQuantifyTL :: CryptoClass.Crypto crypto => Quantifier (Timelock crypto) -> Timelock crypto
 unQuantifyTL (AllOf xs) = RequireAllOf (fromList xs)
 unQuantifyTL (AnyOf xs) = RequireAnyOf (fromList xs)
 unQuantifyTL (MOf n xs) = RequireMOf n (fromList xs)
@@ -128,7 +128,7 @@ genValidityInterval (SlotNo currentSlot) = do
     ValidityInterval validityStart validityEnd
 
 -- | Generate some Leaf Timelock (i.e. a Signature or TimeStart or TimeExpire)
-someLeaf :: Era era => KeyHash 'Witness (Crypto era) -> Timelock era
+someLeaf :: CryptoClass.Crypto crypto => KeyHash 'Witness crypto -> Timelock crypto
 someLeaf x =
   let n = mod (hash (serializeEncoding' (toCBOR x))) 200
    in if n <= 50

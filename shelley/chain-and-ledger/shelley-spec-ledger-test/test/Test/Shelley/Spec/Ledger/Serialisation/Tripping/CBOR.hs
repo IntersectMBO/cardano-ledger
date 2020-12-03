@@ -96,10 +96,10 @@ roundtrip' enc dec a = case deserialiseFromBytes dec bs of
   Serialization Properties
 -------------------------------------------------------------------------------}
 
-prop_roundtrip_Addr :: Ledger.Addr Mock.C -> Property
+prop_roundtrip_Addr :: Ledger.Addr Mock.C_Crypto -> Property
 prop_roundtrip_Addr = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_RewardAcnt :: Ledger.RewardAcnt Mock.C -> Property
+prop_roundtrip_RewardAcnt :: Ledger.RewardAcnt Mock.C_Crypto -> Property
 prop_roundtrip_RewardAcnt = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_Block :: Ledger.Block Mock.C -> Property
@@ -117,14 +117,14 @@ prop_roundtrip_TxBody = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 prop_roundtrip_Tx :: Ledger.Tx Mock.C -> Property
 prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_TxId :: Ledger.TxId Mock.C -> Property
+prop_roundtrip_TxId :: Ledger.TxId Mock.C_Crypto -> Property
 prop_roundtrip_TxId = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_TxOut :: Ledger.TxOut Mock.C -> Property
 prop_roundtrip_TxOut = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_BootstrapWitness ::
-  Ledger.BootstrapWitness Mock.C -> Property
+  Ledger.BootstrapWitness Mock.C_Crypto -> Property
 prop_roundtrip_BootstrapWitness =
   roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
@@ -132,7 +132,7 @@ prop_roundtrip_LEDGER_PredicateFails ::
   [STS.PredicateFailure (STS.LEDGERS Mock.C)] -> Property
 prop_roundtrip_LEDGER_PredicateFails = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_PrtclState :: STS.PrtclState (Mock.C_Crypto) -> Property
+prop_roundtrip_PrtclState :: STS.PrtclState Mock.C_Crypto -> Property
 prop_roundtrip_PrtclState = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_LedgerState :: Ledger.LedgerState Mock.C -> Property
@@ -141,7 +141,7 @@ prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
 prop_roundtrip_NewEpochState :: Ledger.NewEpochState Mock.C -> Property
 prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_MultiSig :: Ledger.MultiSig Mock.C -> Property
+prop_roundtrip_MultiSig :: Ledger.MultiSig Mock.C_Crypto -> Property
 prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_metadata :: Ledger.Metadata -> Property

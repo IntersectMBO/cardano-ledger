@@ -45,7 +45,7 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
@@ -121,11 +121,11 @@ goldenTests_MockCrypto =
         "f005060708"
     ]
   where
-    keyHash :: Credential kh C
+    keyHash :: Credential kh C_Crypto
     keyHash =
       KeyHashObj . KeyHash . UnsafeHash $
         SBS.toShort . fromRight (error "Unable to decode") . B16.decode $ "01020304"
-    scriptHash :: Credential kh C
+    scriptHash :: Credential kh C_Crypto
     scriptHash =
       ScriptHashObj . ScriptHash . UnsafeHash $
         SBS.toShort . fromRight (error "Unable to decode") . B16.decode $ "05060708"
@@ -155,32 +155,32 @@ goldenTests_ShelleyCrypto =
     [ golden
         "addrEnterpriseK for network id = 0"
         putAddr
-        (Addr Testnet (paymentKey) StakeRefNull)
+        (Addr Testnet paymentKey StakeRefNull)
         "608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
       golden
         "addrBaseKK for network id = 0"
         putAddr
-        (Addr Testnet (paymentKey) (StakeRefBase (stakeKey)))
+        (Addr Testnet paymentKey (StakeRefBase stakeKey))
         "008a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
       golden
         "addrPtrK for network id = 0"
         putAddr
-        (Addr Testnet (paymentKey) (StakeRefPtr ptr))
+        (Addr Testnet paymentKey (StakeRefPtr ptr))
         "408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
       golden
         "addrEnterpriseK for network id = 1"
         putAddr
-        (Addr Mainnet (paymentKey) StakeRefNull)
+        (Addr Mainnet paymentKey StakeRefNull)
         "618a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
       golden
         "addrBaseKK for network id = 1"
         putAddr
-        (Addr Mainnet (paymentKey) (StakeRefBase (stakeKey)))
+        (Addr Mainnet paymentKey (StakeRefBase stakeKey))
         "018a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
       golden
         "addrPtrK for network id = 1"
         putAddr
-        (Addr Mainnet (paymentKey) (StakeRefPtr ptr))
+        (Addr Mainnet paymentKey (StakeRefPtr ptr))
         "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
       golden
         "rewardAcntK"
@@ -208,16 +208,16 @@ goldenTests_ShelleyCrypto =
         "82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5"
     ]
   where
-    paymentKey :: Credential 'Payment Shelley
+    paymentKey :: Credential 'Payment ShelleyCrypto
     paymentKey = keyBlake2b224 $ B16.encode "1a2a3a4a5a6a7a8a"
-    stakeKey :: Credential 'Staking Shelley
+    stakeKey :: Credential 'Staking ShelleyCrypto
     stakeKey = keyBlake2b224 $ B16.encode "1c2c3c4c5c6c7c8c"
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
     -- 32-byte verification key is expected, vk, ie., public key without chain code.
     -- The verification key undergoes Blake2b_224 hashing
     -- and should be 28-byte in the aftermath
-    keyBlake2b224 :: BS.ByteString -> Credential kh Shelley
+    keyBlake2b224 :: BS.ByteString -> Credential kh ShelleyCrypto
     keyBlake2b224 vk =
       KeyHashObj . KeyHash . fromJust . hashFromBytes $ hk
       where

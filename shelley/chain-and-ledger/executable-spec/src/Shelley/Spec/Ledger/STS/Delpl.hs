@@ -23,7 +23,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Control.State.Transition
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
@@ -68,8 +68,8 @@ instance
   Era era =>
   STS (DELPL era)
   where
-  type State (DELPL era) = DPState era
-  type Signal (DELPL era) = DCert era
+  type State (DELPL era) = DPState (Crypto era)
+  type Signal (DELPL era) = DCert (Crypto era)
   type Environment (DELPL era) = DelplEnv era
   type BaseM (DELPL era) = ShelleyBase
   type PredicateFailure (DELPL era) = DelplPredicateFailure era

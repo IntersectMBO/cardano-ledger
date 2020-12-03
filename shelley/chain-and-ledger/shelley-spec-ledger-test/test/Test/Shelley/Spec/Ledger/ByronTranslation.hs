@@ -56,7 +56,7 @@ translateTxOutByronToShelley (Byron.TxOut addr amount) =
     translateAmount :: Byron.Lovelace -> Coin
     translateAmount = Coin . Byron.lovelaceToInteger
 
-    translateAddr :: Byron.Address -> Addr era
+    translateAddr :: Byron.Address -> Addr crypto
     translateAddr = AddrBootstrap . BootstrapAddress
 
 {------------------------------------------------------------------------------

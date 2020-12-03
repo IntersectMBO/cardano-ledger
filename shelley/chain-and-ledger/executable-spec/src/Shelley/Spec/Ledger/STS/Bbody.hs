@@ -64,7 +64,7 @@ import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 data BBODY era
 
 data BbodyState era
-  = BbodyState (LedgerState era) (BlocksMade era)
+  = BbodyState (LedgerState era) (BlocksMade (Crypto era))
 
 deriving stock instance
   ShelleyBased era =>

@@ -42,7 +42,7 @@ type instance Core.Value (ShelleyEra _c) = Coin
 
 type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
 
-type instance Core.Script (ShelleyEra c) = MultiSig (ShelleyEra c)
+type instance Core.Script (ShelleyEra c) = MultiSig c
 
 type instance Core.Metadata (ShelleyEra c) = Metadata
 

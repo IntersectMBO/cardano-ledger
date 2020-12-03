@@ -15,8 +15,8 @@ module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 import Cardano.Binary (serialize')
 import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Crypto (DSIGN, VRF)
-import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
@@ -137,20 +137,20 @@ alicePay = KeyPair 1 1
 aliceStake :: NumKey crypto => KeyPair 'Staking crypto
 aliceStake = KeyPair 2 2
 
-aliceAddr :: (NumKey (Crypto era), Era era) => Addr era
+aliceAddr :: (NumKey crypto, CC.Crypto crypto) => Addr crypto
 aliceAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey alicePay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay :: NumKey era => KeyPair 'Payment era
+bobPay :: NumKey crypto => KeyPair 'Payment crypto
 bobPay = KeyPair 3 3
 
-bobStake :: NumKey era => KeyPair 'Staking era
+bobStake :: NumKey crypto => KeyPair 'Staking crypto
 bobStake = KeyPair 4 4
 
-bobAddr :: (NumKey (Crypto era), Era era) => Addr era
+bobAddr :: (NumKey crypto, CC.Crypto crypto) => Addr crypto
 bobAddr =
   Addr
     Testnet
@@ -316,10 +316,10 @@ testCheckLeaderVal =
     maxVRFVal = (2 ^ (8 * VRF.sizeOutputVRF (Proxy @v))) - 1
 
 testLEDGER ::
-  (UTxOState C, DPState C) ->
+  (UTxOState C, DPState C_Crypto) ->
   Tx C ->
   LedgerEnv C ->
-  Either [[PredicateFailure (LEDGER C)]] (UTxOState C, DPState C) ->
+  Either [[PredicateFailure (LEDGER C)]] (UTxOState C, DPState C_Crypto) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
   checkTrace @(LEDGER C) runShelleyBase env $ pure initSt .- tx .-> expectedSt
@@ -331,12 +331,12 @@ aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
 
 data AliceToBob = AliceToBob
-  { input :: TxIn C,
+  { input :: TxIn C_Crypto,
     toBob :: Coin,
     fee :: Coin,
     deposits :: Coin,
     refunds :: Coin,
-    certs :: [DCert C],
+    certs :: [DCert C_Crypto],
     ttl :: SlotNo,
     signers :: [KeyPair 'Witness C_Crypto]
   }
@@ -384,10 +384,10 @@ utxoState =
     (Coin 0)
     emptyPPUPState
 
-dpState :: DPState C
+dpState :: DPState C_Crypto
 dpState = DPState emptyDState emptyPState
 
-addReward :: DPState C -> Credential 'Staking C -> Coin -> DPState C
+addReward :: DPState C_Crypto -> Credential 'Staking C_Crypto -> Coin -> DPState C_Crypto
 addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
   where
     ds = _dstate dp
@@ -660,7 +660,7 @@ alicePoolColdKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
 
-alicePoolParamsSmallCost :: PoolParams C
+alicePoolParamsSmallCost :: PoolParams C_Crypto
 alicePoolParamsSmallCost =
   PoolParams
     { _poolId = hashKey . vKey $ alicePoolColdKeys,

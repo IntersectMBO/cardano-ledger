@@ -101,7 +101,7 @@ aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 1)
 
-aliceSHK :: forall c. Era (ShelleyEra c) => Credential 'Staking (ShelleyEra c)
+aliceSHK :: forall crypto. Cr.Crypto crypto => Credential 'Staking crypto
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
 alicePool :: forall crypto. Cr.Crypto crypto => KeyPair 'StakePool crypto
@@ -115,11 +115,11 @@ alicePoolKH = (hashKey . vKey) alicePool
 aliceVRF :: forall v. VRFAlgorithm v => (VRF.SignKeyVRF v, VRF.VerKeyVRF v)
 aliceVRF = mkVRFKeyPair (0, 0, 0, 0, 3)
 
-alicePoolParams :: forall c. Era (ShelleyEra c) => PoolParams (ShelleyEra c)
+alicePoolParams :: forall crypto. Cr.Crypto crypto => PoolParams crypto
 alicePoolParams =
   PoolParams
     { _poolId = alicePoolKH,
-      _poolVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF (Crypto (ShelleyEra c))),
+      _poolVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF crypto),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeMkUnitInterval 0.1,
@@ -137,7 +137,7 @@ alicePoolParams =
             }
     }
 
-aliceAddr :: forall c. Era (ShelleyEra c) => Addr (ShelleyEra c)
+aliceAddr :: forall crypto. Cr.Crypto crypto => Addr crypto
 aliceAddr = mkAddr (alicePay, aliceStake)
 
 bobPay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
@@ -150,10 +150,10 @@ bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @crypto (1, 0, 0, 0, 1)
 
-bobSHK :: forall c. Era (ShelleyEra c) => Credential 'Staking (ShelleyEra c)
+bobSHK :: forall crypto. Cr.Crypto crypto => Credential 'Staking crypto
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
-bobAddr :: forall c. Era (ShelleyEra c) => Addr (ShelleyEra c)
+bobAddr :: forall crypto. Cr.Crypto crypto => Addr crypto
 bobAddr = mkAddr (bobPay, bobStake)
 
 carlPay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
@@ -293,7 +293,7 @@ txDelegateStake =
           { addrWits =
               makeWitnessesVKey
                 (hashAnnotated $ txbDelegateStake @c)
-                [asWitness (alicePay), asWitness bobStake]
+                [asWitness alicePay, asWitness bobStake]
           },
       _metadata = SNothing
     }
@@ -421,11 +421,11 @@ txWithMDBytes16 :: BSL.ByteString
 txWithMDBytes16 = "83a50081824a93b885adfe0da089cdf600018182510075c40f44e1c155bedab80d3ec7c2190b0a02185e030a074a4eece6527f366cfa5e71a10081824873ed39075e40d2a65010b0506a2911469873ed39075e40d2a6a10082056568656c6c6f"
 
 -- | Spending from a multi-sig address
-msig :: forall c. Era (ShelleyEra c) => MultiSig (ShelleyEra c)
+msig :: forall crypto. Cr.Crypto crypto => MultiSig crypto
 msig =
   RequireMOf
     2
-    [ (RequireSignature . asWitness . hashKey . vKey) (alicePay),
+    [ (RequireSignature . asWitness . hashKey . vKey) alicePay,
       (RequireSignature . asWitness . hashKey . vKey) bobPay,
       (RequireSignature . asWitness . hashKey . vKey) carlPay
     ]
@@ -484,7 +484,7 @@ txWithWithdrawal =
           { addrWits =
               makeWitnessesVKey
                 (hashAnnotated $ txbWithWithdrawal @c)
-                [asWitness (alicePay), asWitness aliceStake]
+                [asWitness alicePay, asWitness aliceStake]
           },
       _metadata = SNothing
     }

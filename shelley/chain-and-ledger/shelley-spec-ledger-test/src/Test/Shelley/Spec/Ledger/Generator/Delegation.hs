@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -19,6 +20,7 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
 where
 
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
 import Data.Foldable (fold)
@@ -111,9 +113,9 @@ genDCert ::
   KeySpace era ->
   PParams era ->
   AccountState ->
-  DPState era ->
+  DPState (Crypto era) ->
   SlotNo ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (DCert (Crypto era), CertCred era))
 genDCert
   c@( Constants
         { frequencyRegKeyCert,
@@ -161,12 +163,13 @@ genDCert
 
 -- | Generate a RegKey certificate
 genRegKeyCert ::
+  forall era.
   (HasCallStack, Era era, EraGen era) =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
-  DState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  DState (Crypto era) ->
+  Gen (Maybe (DCert (Crypto era), CertCred era))
 genRegKeyCert
   Constants {frequencyKeyCredReg, frequencyScriptCredReg}
   keys
@@ -197,7 +200,7 @@ genRegKeyCert
         )
       ]
     where
-      scriptToCred' = ScriptHashObj . hashScript
+      scriptToCred' = ScriptHashObj . hashScript @era
       notRegistered k = eval (k ∉ dom (_rewards delegSt))
       availableKeys = filter (notRegistered . toCred . snd) keys
       availableScripts = filter (notRegistered . scriptToCred' . snd) scripts
@@ -205,12 +208,13 @@ genRegKeyCert
 -- | Generate a DeRegKey certificate along with the staking credential, which is
 -- needed to witness the certificate.
 genDeRegKeyCert ::
+  forall era.
   (HasCallStack, Era era, EraGen era) =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
-  DState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  DState (Crypto era) ->
+  Gen (Maybe (DCert (Crypto era), CertCred era))
 genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys scripts dState =
   QC.frequency
     [ ( frequencyKeyCredDeReg,
@@ -233,7 +237,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
       )
     ]
   where
-    scriptToCred' = ScriptHashObj . hashScript
+    scriptToCred' = ScriptHashObj . hashScript @era
     registered k = eval (k ∈ dom (_rewards dState))
     availableKeys =
       filter
@@ -259,12 +263,13 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
 -- Returns nothing if there are no registered staking credentials or no
 -- registered pools.
 genDelegation ::
+  forall era.
   (HasCallStack, Era era, EraGen era) =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
-  DPState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  DPState (Crypto era)  ->
+  Gen (Maybe (DCert (Crypto era), CertCred era))
 genDelegation
   Constants {frequencyKeyCredDelegation, frequencyScriptCredDelegation}
   keys
@@ -290,7 +295,7 @@ genDelegation
             )
           ]
     where
-      scriptToCred' = ScriptHashObj . hashScript
+      scriptToCred' = ScriptHashObj . hashScript @era
       mkCert (_, delegatorKey) poolKey = Just (cert, StakeCred delegatorKey)
         where
           cert = DCertDeleg (Delegate (Delegation (toCred delegatorKey) poolKey))
@@ -312,8 +317,8 @@ genGenesisDelegation ::
   [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
   [AllIssuerKeys (Crypto era) 'GenesisDelegate] ->
-  DPState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  DPState (Crypto era) ->
+  Gen (Maybe (DCert (Crypto era), CertCred era))
 genGenesisDelegation coreNodes delegateKeys dpState =
   if null genesisDelegators || null availableDelegatees
     then pure Nothing
@@ -347,15 +352,15 @@ genGenesisDelegation coreNodes delegateKeys dpState =
 
 -- | Generate PoolParams and the key witness.
 genStakePool ::
-  forall era.
-  (HasCallStack, Era era) =>
+  forall crypto.
+  (HasCallStack, CC.Crypto crypto) =>
   -- | Available keys for stake pool registration
-  [AllIssuerKeys (Crypto era) 'StakePool] ->
+  [AllIssuerKeys crypto 'StakePool] ->
   -- | KeyPairs containing staking keys to act as owners/reward account
-  KeyPairs (Crypto era) ->
+  KeyPairs crypto ->
   -- | Minimum pool cost Protocol Param
   Coin ->
-  Gen (PoolParams era, KeyPair 'StakePool (Crypto era))
+  Gen (PoolParams crypto, KeyPair 'StakePool crypto)
 genStakePool poolKeys skeys (Coin minPoolCost) =
   mkPoolParams
     <$> QC.elements poolKeys
@@ -369,7 +374,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
     <*> (fromInteger <$> QC.choose (0, 100) :: Gen Natural)
     <*> getAnyStakeKey skeys
   where
-    getAnyStakeKey :: KeyPairs (Crypto era) -> Gen (VKey 'Staking (Crypto era))
+    getAnyStakeKey :: KeyPairs crypto -> Gen (VKey 'Staking crypto)
     getAnyStakeKey keys = vKey . snd <$> QC.elements keys
     mkPoolParams allPoolKeys pledge cost marginPercent acntKey =
       let interval = unsafeMkUnitInterval $ fromIntegral marginPercent % 100
@@ -392,7 +397,7 @@ genRegPool ::
   [AllIssuerKeys (Crypto era) 'StakePool] ->
   KeyPairs (Crypto era) ->
   Coin ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (DCert (Crypto era), CertCred era))
 genRegPool poolKeys keyPairs minPoolCost = do
   (pps, poolKey) <- genStakePool poolKeys keyPairs minPoolCost
   pure $ Just (DCertPool (RegPool pps), PoolCred poolKey)
@@ -408,9 +413,9 @@ genRetirePool ::
   HasCallStack =>
   Constants ->
   [AllIssuerKeys (Crypto era) 'StakePool] ->
-  PState era ->
+  PState (Crypto era) ->
   SlotNo ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (DCert (Crypto era), CertCred era))
 genRetirePool Constants {frequencyLowMaxEpoch} poolKeys pState slot =
   if (null retireable)
     then pure Nothing
@@ -448,8 +453,8 @@ genInstantaneousRewards ::
   Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
   PParams era ->
   AccountState ->
-  DState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  DState (Crypto era) ->
+  Gen (Maybe (DCert (Crypto era), CertCred era))
 genInstantaneousRewards s genesisDelegatesByHash pparams accountState delegSt = do
   let (GenDelegs genDelegs_) = _genDelegs delegSt
       lookupGenDelegate' gk =

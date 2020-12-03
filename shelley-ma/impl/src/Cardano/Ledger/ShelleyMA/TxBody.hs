@@ -39,7 +39,7 @@ import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Compactible (CompactForm (..), Compactible (..))
 import Cardano.Ledger.Core (Script, Value)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),
@@ -114,10 +114,10 @@ type FamsTo era =
 -- =======================================================
 
 data TxBodyRaw era = TxBodyRaw
-  { inputs :: !(Set (TxIn era)),
+  { inputs :: !(Set (TxIn (Crypto era))),
     outputs :: !(StrictSeq (TxOut era)),
-    certs :: !(StrictSeq (DCert era)),
-    wdrls :: !(Wdrl era),
+    certs :: !(StrictSeq (DCert (Crypto era))),
+    wdrls :: !(Wdrl (Crypto era)),
     txfee :: !Coin,
     vldt :: !ValidityInterval, -- imported from Timelocks
     update :: !(StrictMaybe (Update era)),
@@ -260,15 +260,15 @@ instance Era era => HashAnnotated (TxBody era) era where
 
 pattern TxBody ::
   (Val (Value era), FamsTo era) =>
-  (Set (TxIn era)) ->
-  (StrictSeq (TxOut era)) ->
-  (StrictSeq (DCert era)) ->
-  (Wdrl era) ->
+  Set (TxIn (Crypto era)) ->
+  StrictSeq (TxOut era) ->
+  StrictSeq (DCert (Crypto era)) ->
+  Wdrl (Crypto era) ->
   Coin ->
   ValidityInterval ->
-  (StrictMaybe (Update era)) ->
-  (StrictMaybe (MetadataHash era)) ->
-  (Value era) ->
+  StrictMaybe (Update era) ->
+  StrictMaybe (MetadataHash era) ->
+  Value era ->
   TxBody era
 pattern TxBody i o d w fee vi u m mint <-
   TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)
@@ -296,29 +296,29 @@ instance HasField tag (TxBodyRaw e) c => HasField (tag::Symbol) (TxBody e) c whe
 -- So instead we tediously write by hand explicit HasField instances for TxBody
 -}
 
-instance HasField "inputs" (TxBody e) (Set (TxIn e)) where
+instance Crypto era ~ crypto => HasField "inputs" (TxBody era) (Set (TxIn crypto)) where
   getField (TxBodyConstr (Memo m _)) = getField @"inputs" m
 
-instance HasField "outputs" (TxBody e) (StrictSeq (TxOut e)) where
+instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"outputs" m
 
-instance HasField "certs" (TxBody e) (StrictSeq (DCert e)) where
+instance Crypto era ~ crypto => HasField "certs" (TxBody era) (StrictSeq (DCert crypto)) where
   getField (TxBodyConstr (Memo m _)) = getField @"certs" m
 
-instance HasField "wdrls" (TxBody e) (Wdrl e) where
+instance Crypto era ~ crypto => HasField "wdrls" (TxBody era) (Wdrl crypto) where
   getField (TxBodyConstr (Memo m _)) = getField @"wdrls" m
 
-instance HasField "txfee" (TxBody e) Coin where
+instance HasField "txfee" (TxBody era) Coin where
   getField (TxBodyConstr (Memo m _)) = getField @"txfee" m
 
-instance HasField "vldt" (TxBody e) ValidityInterval where
+instance HasField "vldt" (TxBody era) ValidityInterval where
   getField (TxBodyConstr (Memo m _)) = getField @"vldt" m
 
-instance HasField "update" (TxBody e) (StrictMaybe (Update e)) where
+instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"update" m
 
-instance HasField "mdHash" (TxBody e) (StrictMaybe (MetadataHash e)) where
+instance HasField "mdHash" (TxBody era) (StrictMaybe (MetadataHash era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"mdHash" m
 
-instance (Value e ~ vv) => HasField "mint" (TxBody e) vv where
+instance Value era ~ value => HasField "mint" (TxBody era) value where
   getField (TxBodyConstr (Memo m _)) = getField @"mint" m

@@ -18,6 +18,7 @@ module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Timelocks
@@ -82,7 +83,7 @@ import Shelley.Spec.Ledger.UTxO
 
 data UtxoPredicateFailure era
   = BadInputsUTxO
-      !(Set (TxIn era)) -- The bad transaction inputs
+      !(Set (TxIn (Crypto era))) -- The bad transaction inputs
   | OutsideValidityIntervalUTxO
       !ValidityInterval -- transaction's validity interval
       !SlotNo -- current slot
@@ -98,10 +99,10 @@ data UtxoPredicateFailure era
       !(Delta (Core.Value era)) -- the Coin produced by this transaction
   | WrongNetwork
       !Network -- the expected network id
-      !(Set (Addr era)) -- the set of addresses with incorrect network IDs
+      !(Set (Addr (Crypto era))) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       !Network -- the expected network id
-      !(Set (RewardAcnt era)) -- the set of reward addresses with incorrect network IDs
+      !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure (PredicateFailure (PPUP era)) -- Subtransition Failures
@@ -132,17 +133,17 @@ instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era
 consumed ::
   forall era.
   ( ShelleyBased era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
-    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   PParams era ->
   UTxO era ->
   Core.TxBody era ->
   Core.Value era
 consumed pp u tx =
-  balance (eval (txins tx ◁ u))
+  balance (eval (txins @era tx ◁ u))
     <> getField @"mint" tx
     <> (Val.inject $ refunds <> withdrawals)
   where
@@ -161,11 +162,11 @@ utxoTransition ::
     State (UTXO era) ~ Shelley.UTxOState era,
     Signal (UTXO era) ~ Tx era,
     PredicateFailure (UTXO era) ~ UtxoPredicateFailure era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
-    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "vldt" (Core.TxBody era) ValidityInterval,
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
@@ -179,14 +180,14 @@ utxoTransition = do
   inInterval slot (getField @"vldt" txb)
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
 
-  txins txb /= Set.empty ?! InputSetEmptyUTxO
+  txins @era txb /= Set.empty ?! InputSetEmptyUTxO
 
   let minFee = Shelley.minfee pp tx
       txFee = getField @"txfee" txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  eval (txins txb ⊆ dom utxo)
-    ?! BadInputsUTxO (txins txb `Set.difference` eval (dom utxo))
+  eval (txins @era txb ⊆ dom utxo)
+    ?! BadInputsUTxO (txins @era txb `Set.difference` eval (dom utxo))
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
@@ -246,7 +247,7 @@ utxoTransition = do
 
   pure
     Shelley.UTxOState
-      { Shelley._utxo = eval ((txins txb ⋪ utxo) ∪ txouts txb),
+      { Shelley._utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts txb),
         Shelley._deposited = deposits' <> depositChange,
         Shelley._fees = fees <> (getField @"txfee" txb),
         Shelley._ppups = ppup'

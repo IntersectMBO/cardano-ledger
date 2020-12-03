@@ -82,6 +82,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val (DecodeNonNegative (..), Val)
@@ -205,13 +206,13 @@ instance Embed (StakeCreds era) (Map (Credential 'Staking era) SlotNo) where
   fromBase x = StakeCreds x
 
 -- | The delegation of one stake key to another.
-data Delegation era = Delegation
-  { _delegator :: !(StakeCredential era),
-    _delegatee :: !(KeyHash 'StakePool (Crypto era))
+data Delegation crypto = Delegation
+  { _delegator :: !(StakeCredential crypto),
+    _delegatee :: !(KeyHash 'StakePool crypto)
   }
   deriving (Eq, Generic, Show)
 
-instance NoThunks (Delegation era)
+instance NoThunks (Delegation crypto)
 
 data PoolMetadata = PoolMetadata
   { _poolMDUrl :: !Url,
@@ -340,36 +341,36 @@ instance FromCBOR StakePoolRelay where
       k -> invalidKey k
 
 -- | A stake pool.
-data PoolParams era = PoolParams
-  { _poolId :: !(KeyHash 'StakePool (Crypto era)),
-    _poolVrf :: !(Hash (Crypto era) (VerKeyVRF (Crypto era))),
+data PoolParams crypto = PoolParams
+  { _poolId :: !(KeyHash 'StakePool crypto),
+    _poolVrf :: !(Hash crypto (VerKeyVRF crypto)),
     _poolPledge :: !Coin,
     _poolCost :: !Coin,
     _poolMargin :: !UnitInterval,
-    _poolRAcnt :: !(RewardAcnt era),
-    _poolOwners :: !(Set (KeyHash 'Staking (Crypto era))),
+    _poolRAcnt :: !(RewardAcnt crypto),
+    _poolOwners :: !(Set (KeyHash 'Staking crypto)),
     _poolRelays :: !(StrictSeq StakePoolRelay),
     _poolMD :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
-  deriving (ToCBOR) via CBORGroup (PoolParams era)
-  deriving (FromCBOR) via CBORGroup (PoolParams era)
+  deriving (ToCBOR) via CBORGroup (PoolParams crypto)
+  deriving (FromCBOR) via CBORGroup (PoolParams crypto)
 
-instance NoThunks (PoolParams era)
+instance NoThunks (PoolParams crypto)
 
-deriving instance NFData (PoolParams era)
+deriving instance NFData (PoolParams crypto)
 
-newtype Wdrl era = Wdrl {unWdrl :: Map (RewardAcnt era) Coin}
+newtype Wdrl crypto = Wdrl {unWdrl :: Map (RewardAcnt crypto) Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData)
 
-instance Era era => ToCBOR (Wdrl era) where
+instance CC.Crypto crypto => ToCBOR (Wdrl crypto) where
   toCBOR = mapToCBOR . unWdrl
 
-instance Era era => FromCBOR (Wdrl era) where
+instance CC.Crypto crypto => FromCBOR (Wdrl crypto) where
   fromCBOR = Wdrl <$> mapFromCBOR
 
-instance Era era => ToJSON (PoolParams era) where
+instance CC.Crypto crypto => ToJSON (PoolParams crypto) where
   toJSON pp =
     Aeson.object
       [ "publicKey" .= _poolId pp, -- TODO publicKey is an unfortunate name, should be poolId
@@ -383,7 +384,7 @@ instance Era era => ToJSON (PoolParams era) where
         "metadata" .= _poolMD pp
       ]
 
-instance Era era => FromJSON (PoolParams era) where
+instance CC.Crypto crypto => FromJSON (PoolParams crypto) where
   parseJSON =
     Aeson.withObject "PoolParams" $ \obj ->
       PoolParams
@@ -408,29 +409,25 @@ instance Era era => FromJSON (PoolParams era) where
 -- ====================================================================================
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId era = TxId {_unTxId :: Hash (Crypto era) EraIndependentTxBody}
+newtype TxId crypto = TxId {_unTxId :: Hash crypto EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks)
 
-deriving newtype instance
-  (Era era) => -- weakest constraint
-  ToCBOR (TxId era)
+deriving newtype instance CC.Crypto crypto => ToCBOR (TxId crypto)
 
-deriving newtype instance
-  (Era era) => -- weakest constraint
-  FromCBOR (TxId era)
+deriving newtype instance CC.Crypto crypto => FromCBOR (TxId crypto)
 
-deriving newtype instance (Era era) => NFData (TxId era)
+deriving newtype instance CC.Crypto crypto => NFData (TxId crypto)
 
 -- | The input of a UTxO.
-data TxIn era = TxInCompact {-# UNPACK #-} !(TxId era) {-# UNPACK #-} !Word64
+data TxIn crypto = TxInCompact {-# UNPACK #-} !(TxId crypto) {-# UNPACK #-} !Word64
   deriving (Generic)
 
 pattern TxIn ::
-  Era era =>
-  TxId era ->
+  CC.Crypto crypto =>
+  TxId crypto ->
   Natural -> -- TODO We might want to change this to Word64 generally
-  TxIn era
+  TxIn crypto
 pattern TxIn addr index <-
   TxInCompact addr (fromIntegral -> index)
   where
@@ -439,20 +436,20 @@ pattern TxIn addr index <-
 
 {-# COMPLETE TxIn #-}
 
-deriving instance Ord (TxIn era)
+deriving instance Ord (TxIn crypto)
 
-deriving instance Eq (TxIn era)
+deriving instance Eq (TxIn crypto)
 
-deriving instance Show (TxIn era)
+deriving instance Show (TxIn crypto)
 
-deriving instance Era era => NFData (TxIn era)
+deriving instance CC.Crypto crypto => NFData (TxIn crypto)
 
-instance NoThunks (TxIn era)
+instance NoThunks (TxIn crypto)
 
 -- | The output of a UTxO.
 data TxOut era
   = TxOutCompact
-      {-# UNPACK #-} !(CompactAddr era)
+      {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
 
 instance
@@ -476,7 +473,7 @@ deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
 pattern TxOut ::
   (HasCallStack, ShelleyBased era) =>
-  Addr era ->
+  Addr (Crypto era) ->
   Core.Value era ->
   TxOut era
 pattern TxOut addr vl <-
@@ -493,34 +490,34 @@ viewCompactTxOut ::
   forall era.
   (Era era, Compactible (Core.Value era)) => -- Use the weakest constraint possible here
   TxOut era ->
-  (Addr era, Core.Value era)
+  (Addr (Crypto era), Core.Value era)
 viewCompactTxOut (TxOutCompact bs c) = (addr, val)
   where
     addr = decompactAddr bs
     val = fromCompact c
 
-data DelegCert era
+data DelegCert crypto
   = -- | A stake key registration certificate.
-    RegKey !(StakeCredential era)
+    RegKey !(StakeCredential crypto)
   | -- | A stake key deregistration certificate.
-    DeRegKey !(StakeCredential era)
+    DeRegKey !(StakeCredential crypto)
   | -- | A stake delegation certificate.
-    Delegate !(Delegation era)
+    Delegate !(Delegation crypto)
   deriving (Show, Generic, Eq)
 
-data PoolCert era
+data PoolCert crypto
   = -- | A stake pool registration certificate.
-    RegPool !(PoolParams era)
+    RegPool !(PoolParams crypto)
   | -- | A stake pool retirement certificate.
-    RetirePool !(KeyHash 'StakePool (Crypto era)) !EpochNo
+    RetirePool !(KeyHash 'StakePool crypto) !EpochNo
   deriving (Show, Generic, Eq)
 
 -- | Genesis key delegation certificate
-data GenesisDelegCert era
+data GenesisDelegCert crypto
   = GenesisDelegCert
-      !(KeyHash 'Genesis (Crypto era))
-      !(KeyHash 'GenesisDelegate (Crypto era))
-      !(Hash (Crypto era) (VerKeyVRF (Crypto era)))
+      !(KeyHash 'Genesis crypto)
+      !(KeyHash 'GenesisDelegate crypto)
+      !(Hash crypto (VerKeyVRF crypto))
   deriving (Show, Generic, Eq)
 
 data MIRPot = ReservesMIR | TreasuryMIR
@@ -540,15 +537,15 @@ instance FromCBOR MIRPot where
       k -> invalidKey k
 
 -- | Move instantaneous rewards certificate
-data MIRCert era = MIRCert
+data MIRCert crypto = MIRCert
   { mirPot :: MIRPot,
-    mirRewards :: Map (Credential 'Staking era) Coin
+    mirRewards :: Map (Credential 'Staking crypto) Coin
   }
   deriving (Show, Generic, Eq)
 
 instance
-  (Era era, Typeable (Core.Script era), FromCBOR (Annotator (Core.Script era))) =>
-  FromCBOR (MIRCert era)
+  CC.Crypto crypto =>
+  FromCBOR (MIRCert crypto)
   where
   fromCBOR = decodeRecordNamed "SingleHostAddr" (const 2) $ do
     pot <- fromCBOR
@@ -556,8 +553,8 @@ instance
     pure $ MIRCert pot values
 
 instance
-  (Era era, ToCBOR (Core.Script era)) =>
-  ToCBOR (MIRCert era)
+  CC.Crypto crypto =>
+  ToCBOR (MIRCert crypto)
   where
   toCBOR (MIRCert pot values) =
     encodeListLen 2
@@ -565,22 +562,22 @@ instance
       <> mapToCBOR values
 
 -- | A heavyweight certificate.
-data DCert era
-  = DCertDeleg !(DelegCert era)
-  | DCertPool !(PoolCert era)
-  | DCertGenesis !(GenesisDelegCert era)
-  | DCertMir !(MIRCert era)
+data DCert crypto
+  = DCertDeleg !(DelegCert crypto)
+  | DCertPool !(PoolCert crypto)
+  | DCertGenesis !(GenesisDelegCert crypto)
+  | DCertMir !(MIRCert crypto)
   deriving (Show, Generic, Eq)
 
-instance NoThunks (DelegCert era)
+instance NoThunks (DelegCert crypto)
 
-instance NoThunks (PoolCert era)
+instance NoThunks (PoolCert crypto)
 
-instance NoThunks (GenesisDelegCert era)
+instance NoThunks (GenesisDelegCert crypto)
 
-instance NoThunks (MIRCert era)
+instance NoThunks (MIRCert crypto)
 
-instance NoThunks (DCert era)
+instance NoThunks (DCert crypto)
 
 -- ===========================================================================
 -- Since TxBody has fees (which are Values) and Scripts (inside hashes),
@@ -624,16 +621,18 @@ type ProperTo era =
 -- The underlying type for TxBody
 
 data TxBodyRaw era = TxBodyRaw
-  { _inputsX :: !(Set (TxIn era)),
+  { _inputsX :: !(Set (TxIn (Crypto era))),
     _outputsX :: !(StrictSeq (TxOut era)),
-    _certsX :: !(StrictSeq (DCert era)),
-    _wdrlsX :: !(Wdrl era),
+    _certsX :: !(StrictSeq (DCert (Crypto era))),
+    _wdrlsX :: !(Wdrl (Crypto era)),
     _txfeeX :: !Coin,
     _ttlX :: !SlotNo,
     _txUpdateX :: !(StrictMaybe (Update era)),
     _mdHashX :: !(StrictMaybe (MetadataHash era))
   }
-  deriving (Generic, NoThunks, Typeable, NFData)
+  deriving (Generic, NoThunks, Typeable)
+
+deriving instance CC.Crypto (Crypto era) => NFData (TxBodyRaw era)
 
 deriving instance (Era era, ProperVal era) => Eq (TxBodyRaw era)
 
@@ -716,7 +715,9 @@ instance ProperTo era => ToCBOR (TxBodyRaw era) where
 
 newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
   deriving (Generic, Typeable)
-  deriving newtype (NoThunks, NFData)
+  deriving newtype (NoThunks)
+
+deriving newtype instance CC.Crypto (Crypto era) => NFData (TxBody era)
 
 deriving instance ProperVal era => Show (TxBody era)
 
@@ -731,10 +732,10 @@ deriving via
 -- | Pattern for use by external users
 pattern TxBody ::
   ProperTo era =>
-  Set (TxIn era) ->
+  Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert era) ->
-  Wdrl era ->
+  StrictSeq (DCert (Crypto era)) ->
+  Wdrl (Crypto era) ->
   Coin ->
   SlotNo ->
   StrictMaybe (Update era) ->
@@ -768,16 +769,16 @@ instance Era era => HashAnnotated (TxBody era) era where
 instance (Era era) => ToCBOR (TxBody era) where
   toCBOR (TxBodyConstr memo) = toCBOR memo
 
-instance HasField "inputs" (TxBody e) (Set (TxIn e)) where
+instance Crypto era ~ crypto => HasField "inputs" (TxBody era) (Set (TxIn crypto)) where
   getField (TxBodyConstr (Memo m _)) = getField @"_inputsX" m
 
 instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"_outputsX" m
 
-instance HasField "certs" (TxBody era) (StrictSeq (DCert era)) where
+instance Crypto era ~ crypto => HasField "certs" (TxBody era) (StrictSeq (DCert crypto)) where
   getField (TxBodyConstr (Memo m _)) = getField @"_certsX" m
 
-instance HasField "wdrls" (TxBody era) (Wdrl era) where
+instance Crypto era ~ crypto => HasField "wdrls" (TxBody era) (Wdrl crypto) where
   getField (TxBodyConstr (Memo m _)) = getField @"_wdrlsX" m
 
 instance HasField "txfee" (TxBody era) Coin where
@@ -795,33 +796,30 @@ instance HasField "mdHash" (TxBody era) (StrictMaybe (MetadataHash era)) where
 -- ===============================================================
 
 -- | Proof/Witness that a transaction is authorized by the given key holder.
-data WitVKey kr era = WitVKey'
-  { wvkKey' :: !(VKey kr (Crypto era)),
-    wvkSig' :: !(SignedDSIGN (Crypto era) (Hash (Crypto era) EraIndependentTxBody)),
+data WitVKey kr crypto = WitVKey'
+  { wvkKey' :: !(VKey kr crypto),
+    wvkSig' :: !(SignedDSIGN crypto (Hash crypto EraIndependentTxBody)),
     -- | Hash of the witness vkey. We store this here to avoid repeated hashing
     --   when used in ordering.
-    wvkKeyHash :: !(KeyHash 'Witness (Crypto era)),
+    wvkKeyHash :: !(KeyHash 'Witness crypto),
     wvkBytes :: BSL.ByteString
   }
   deriving (Generic)
 
-deriving instance (Era era) => Show (WitVKey kr era)
+deriving instance CC.Crypto crypto => Show (WitVKey kr crypto)
 
-deriving instance (Era era) => Eq (WitVKey kr era)
+deriving instance CC.Crypto crypto => Eq (WitVKey kr crypto)
 
 deriving via
-  (AllowThunksIn '["wvkBytes"] (WitVKey kr era))
+  (AllowThunksIn '["wvkBytes"] (WitVKey kr crypto))
   instance
-    (Era era, Typeable kr) => NoThunks (WitVKey kr era)
-
-instance (Era era, Typeable kr) => HashAnnotated (WitVKey kr era) era where
-  type HashIndex (WitVKey kr era) = EraIndependentWitVKey
+    (CC.Crypto crypto, Typeable kr) => NoThunks (WitVKey kr crypto)
 
 pattern WitVKey ::
-  (Typeable kr, Era era) =>
-  VKey kr (Crypto era) ->
-  SignedDSIGN (Crypto era) (Hash (Crypto era) EraIndependentTxBody) ->
-  WitVKey kr era
+  (Typeable kr, CC.Crypto crypto) =>
+  VKey kr crypto ->
+  SignedDSIGN crypto (Hash crypto EraIndependentTxBody) ->
+  WitVKey kr crypto
 pattern WitVKey k s <-
   WitVKey' k s _ _
   where
@@ -837,7 +835,7 @@ pattern WitVKey k s <-
 -- | Compute an era-independent transaction body hash
 eraIndTxBodyHash ::
   forall era.
-  (Era era) =>
+  Era era =>
   TxBody era ->
   Hash (Crypto era) EraIndependentTxBody
 eraIndTxBodyHash = coerce . hashAnnotated
@@ -845,38 +843,36 @@ eraIndTxBodyHash = coerce . hashAnnotated
 {-# COMPLETE WitVKey #-}
 
 witKeyHash ::
-  WitVKey kr era ->
-  KeyHash 'Witness (Crypto era)
+  WitVKey kr crypto ->
+  KeyHash 'Witness crypto
 witKeyHash (WitVKey' _ _ kh _) = kh
 
 instance
-  forall era kr.
-  (Typeable kr, Era era) =>
-  Ord (WitVKey kr era)
+  (Typeable kr, CC.Crypto crypto) =>
+  Ord (WitVKey kr crypto)
   where
   compare = comparing wvkKeyHash
 
-newtype StakeCreds era = StakeCreds
-  { unStakeCreds :: Map (Credential 'Staking era) SlotNo
+newtype StakeCreds crypto = StakeCreds
+  { unStakeCreds :: Map (Credential 'Staking crypto) SlotNo
   }
   deriving (Eq, Generic)
-  deriving (Show) via (Quiet (StakeCreds era))
+  deriving (Show) via (Quiet (StakeCreds crypto))
   deriving newtype (NFData, NoThunks, ToJSON, FromJSON)
 
 deriving newtype instance
-  (Era era, Typeable (Core.Script era)) =>
-  FromCBOR (StakeCreds era)
+  CC.Crypto crypto =>
+  FromCBOR (StakeCreds crypto)
 
 deriving newtype instance
-  (Era era, ToCBOR (Core.Script era)) =>
-  ToCBOR (StakeCreds era)
+  CC.Crypto crypto =>
+  ToCBOR (StakeCreds crypto)
 
 -- CBOR
 
-instance-- use the weakest predicate
-
-  (Era era, ToCBOR (Core.Script era)) =>
-  ToCBOR (DCert era)
+instance
+  CC.Crypto crypto =>
+  ToCBOR (DCert crypto)
   where
   toCBOR = \case
     -- DCertDeleg
@@ -917,10 +913,10 @@ instance-- use the weakest predicate
         <> toCBOR mir
 
 instance
-  (Era era, Typeable (Core.Script era), FromCBOR (Annotator (Core.Script era))) =>
-  FromCBOR (DCert era)
+  CC.Crypto crypto =>
+  FromCBOR (DCert crypto)
   where
-  fromCBOR = decodeRecordSum "DCert era" $
+  fromCBOR = decodeRecordSum "DCert crypto" $
     \case
       0 -> do
         x <- fromCBOR
@@ -950,8 +946,8 @@ instance
       k -> invalidKey k
 
 instance
-  (Era era) =>
-  ToCBOR (TxIn era)
+  CC.Crypto crypto =>
+  ToCBOR (TxIn crypto)
   where
   toCBOR (TxInCompact txId index) =
     encodeListLen 2
@@ -959,8 +955,8 @@ instance
       <> toCBOR index
 
 instance
-  (Era era) =>
-  FromCBOR (TxIn era)
+  CC.Crypto crypto =>
+  FromCBOR (TxIn crypto)
   where
   fromCBOR = do
     decodeRecordNamed "TxIn" (const 2) $ do
@@ -989,14 +985,14 @@ instance-- use the weakest constraint necessary
     pure $ TxOutCompact cAddr coin
 
 instance
-  (Typeable kr, Era era) =>
-  ToCBOR (WitVKey kr era)
+  (Typeable kr, CC.Crypto crypto) =>
+  ToCBOR (WitVKey kr crypto)
   where
   toCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
 
 instance
-  (Typeable kr, Era era) =>
-  FromCBOR (Annotator (WitVKey kr era))
+  (Typeable kr, CC.Crypto crypto) =>
+  FromCBOR (Annotator (WitVKey kr crypto))
   where
   fromCBOR =
     annotatorSlice $
@@ -1034,8 +1030,8 @@ instance ToCBOR SizeOfPoolRelays where
   toCBOR = panic "The `SizeOfPoolRelays` type cannot be encoded!"
 
 instance
-  (Era era) =>
-  ToCBORGroup (PoolParams era)
+  CC.Crypto crypto =>
+  ToCBORGroup (PoolParams crypto)
   where
   toCBORGroup poolParams =
     toCBOR (_poolId poolParams)
@@ -1074,8 +1070,8 @@ instance
   listLenBound _ = 9
 
 instance
-  (Era era) =>
-  FromCBORGroup (PoolParams era)
+  CC.Crypto crypto =>
+  FromCBORGroup (PoolParams crypto)
   where
   fromCBORGroup = do
     hk <- fromCBOR

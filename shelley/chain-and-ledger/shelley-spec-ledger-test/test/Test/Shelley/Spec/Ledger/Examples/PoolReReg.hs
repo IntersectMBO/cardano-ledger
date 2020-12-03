@@ -171,7 +171,7 @@ feeTx2 = Coin 3
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-newPoolParams :: (Cr.Crypto c) => PoolParams (ShelleyEra c)
+newPoolParams :: Cr.Crypto c => PoolParams c
 newPoolParams = Cast.alicePoolParams {_poolCost = Coin 500}
 
 txbodyEx2 :: Cr.Crypto c => TxBody (ShelleyEra c)
@@ -286,7 +286,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: (Cr.Crypto c) => SnapShot (ShelleyEra c)
+snapEx3 :: Cr.Crypto c => SnapShot c
 snapEx3 =
   emptySnapShot {_poolParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams}
 

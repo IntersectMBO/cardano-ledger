@@ -24,14 +24,14 @@ import Test.Tasty
 import Test.Tasty.Hedgehog
 
 prop_roundtrip_Address_JSON ::
-  forall era.
-  Era era =>
-  Proxy era ->
+  forall crypto.
+  CC.Crypto crypto =>
+  Proxy crypto ->
   Property
 prop_roundtrip_Address_JSON _ =
   -- If this fails, FundPair and ShelleyGenesis can also fail.
   Hedgehog.property $ do
-    addr <- Hedgehog.forAll $ genAddress @era
+    addr <- Hedgehog.forAll $ genAddress @crypto
 
     Hedgehog.tripping addr toJSON fromJSON
     Hedgehog.tripping addr encode decode
@@ -49,14 +49,14 @@ prop_roundtrip_GenesisDelegationPair_JSON _ =
     Hedgehog.tripping dp encode decode
 
 prop_roundtrip_FundPair_JSON ::
-  forall era.
-  Era era =>
-  Proxy era ->
+  forall crypto.
+  CC.Crypto crypto =>
+  Proxy crypto ->
   Property
 prop_roundtrip_FundPair_JSON _ =
   -- If this fails, ShelleyGenesis can also fail.
   Hedgehog.property $ do
-    fp <- Hedgehog.forAll $ genGenesisFundPair @era
+    fp <- Hedgehog.forAll $ genGenesisFundPair @crypto
 
     Hedgehog.tripping fp toJSON fromJSON
     Hedgehog.tripping fp encode decode
@@ -78,11 +78,11 @@ tests =
   testGroup
     "Shelley Genesis"
     [ testProperty "Adress round trip" $
-        prop_roundtrip_Address_JSON @C Proxy,
+        prop_roundtrip_Address_JSON @C_Crypto Proxy,
       testProperty "Genesis round trip" $
         prop_roundtrip_ShelleyGenesis_JSON @C Proxy,
       testProperty "fund pair round trip" $
-        prop_roundtrip_FundPair_JSON @C Proxy,
+        prop_roundtrip_FundPair_JSON @C_Crypto Proxy,
       testProperty "delegation pair round trip" $
         prop_roundtrip_GenesisDelegationPair_JSON @C_Crypto Proxy
     ]

@@ -21,7 +21,6 @@ module Test.Cardano.Ledger.Mary.Examples.Cast
   )
 where
 
-import Cardano.Ledger.Mary (MaryEra)
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
@@ -29,8 +28,6 @@ import Shelley.Spec.Ledger.Keys
   )
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Shelley.Spec.Ledger.Utils (mkAddr, mkKeyPair)
-
-type MaryTest = MaryEra TestCrypto
 
 -- | Alice's payment key pair
 alicePay :: KeyPair 'Payment TestCrypto
@@ -45,7 +42,7 @@ aliceStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
 
 -- | Alice's base address
-aliceAddr :: Addr MaryTest
+aliceAddr :: Addr TestCrypto
 aliceAddr = mkAddr (alicePay, aliceStake)
 
 -- | Bob's payment key pair
@@ -61,7 +58,7 @@ bobStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
 
 -- | Bob's address
-bobAddr :: Addr MaryTest
+bobAddr :: Addr TestCrypto
 bobAddr = mkAddr (bobPay, bobStake)
 
 -- Carl's payment key pair
@@ -77,7 +74,7 @@ carlStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
 
 -- | Carl's address
-carlAddr :: Addr MaryTest
+carlAddr :: Addr TestCrypto
 carlAddr = mkAddr (carlPay, carlStake)
 
 -- | Daria's payment key pair
@@ -93,5 +90,5 @@ dariaStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
 
 -- | Daria's address
-dariaAddr :: Addr MaryTest
+dariaAddr :: Addr TestCrypto
 dariaAddr = mkAddr (dariaPay, dariaStake)

@@ -12,10 +12,15 @@
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodingTests) where
 
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
-import Cardano.Ledger.ShelleyMA.Metadata (Metadata, pattern Metadata)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.ShelleyMA.Metadata (pattern Metadata)
+import Cardano.Ledger.ShelleyMA.Timelocks
+  ( Timelock (..),
+    ValidityInterval (..),
+    hashTimelockScript
+  )
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
 import qualified Cardano.Ledger.Val as Val
 import Codec.CBOR.Encoding (Tokens (..))
@@ -36,7 +41,6 @@ import Shelley.Spec.Ledger.PParams
     pattern Update,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (hashScript)
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -63,14 +67,14 @@ type M = MaryEra TestCrypto
 -- == Test Values for Building Timelock Scripts ==
 -- ===============================================
 
-policy1 :: forall era. Era era => Timelock era
+policy1 :: CC.Crypto crypto => Timelock crypto
 policy1 = RequireAnyOf . StrictSeq.fromList $ []
 
-policyID1 :: PolicyID M
-policyID1 = PolicyID . hashScript $ policy1
+policyID1 :: PolicyID TestCrypto
+policyID1 = PolicyID . hashTimelockScript $ policy1
 
-policyID2 :: PolicyID M
-policyID2 = PolicyID . hashScript . RequireAllOf . StrictSeq.fromList $ []
+policyID2 :: PolicyID TestCrypto
+policyID2 = PolicyID . hashTimelockScript . RequireAllOf . StrictSeq.fromList $ []
 
 assetName1 :: BS.ByteString
 assetName1 = BS.pack "a1"
@@ -88,7 +92,7 @@ assetName3 = BS.pack "a3"
 testGKeyHash :: KeyHash 'Genesis TestCrypto
 testGKeyHash = hashKey . snd . mkGenKey $ (0, 0, 0, 0, 0)
 
-testAddrE :: forall era. Crypto era ~ TestCrypto => Addr era
+testAddrE :: Addr TestCrypto
 testAddrE =
   Addr
     Testnet
@@ -98,7 +102,7 @@ testAddrE =
 testKeyHash :: KeyHash 'Staking TestCrypto
 testKeyHash = hashKey . snd $ mkKeyPair (0, 0, 0, 0, 2)
 
-testStakeCred :: forall era. Crypto era ~ TestCrypto => Credential 'Staking era
+testStakeCred :: Credential 'Staking TestCrypto
 testStakeCred = KeyHashObj . hashKey . snd $ mkKeyPair (0, 0, 0, 0, 3)
 
 testUpdate :: forall era. (Crypto era ~ TestCrypto) => Update era
@@ -141,14 +145,13 @@ scriptGoldenTest =
       kh1 = hashKey . snd . mkGenKey $ (1, 1, 1, 1, 1) :: KeyHash 'Witness (Crypto era)
    in checkEncodingCBORAnnotated
         "timelock_script"
-        ( RequireAllOf
+        ( RequireAllOf @(Crypto era)
             ( StrictSeq.fromList
                 [ RequireMOf 1 $ StrictSeq.fromList [RequireSignature kh0, RequireSignature kh1],
                   RequireTimeStart (SlotNo 100),
                   RequireTimeExpire (SlotNo 101)
                 ]
-            ) ::
-            Timelock era
+            )
         )
         ( T
             ( TkListLen 2
@@ -177,11 +180,11 @@ scriptGoldenTest =
               )
         )
 
-metadataNoScritpsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock era) => TestTree
+metadataNoScritpsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock (Crypto era)) => TestTree
 metadataNoScritpsGoldenTest =
   checkEncodingCBORAnnotated
     "metadata_no_scripts"
-    (Metadata (Map.singleton 17 (SMD.I 42)) StrictSeq.empty :: Metadata era)
+    (Metadata @era (Map.singleton 17 (SMD.I 42)) StrictSeq.empty)
     ( T
         ( TkListLen 2 -- structured metadata and auxiliary scripts
             . TkMapLen 1 -- metadata wrapper
@@ -190,15 +193,14 @@ metadataNoScritpsGoldenTest =
             . TkListLen 0 -- empty scripts
         )
     )
-
-metadataWithScritpsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock era) => TestTree
+-- CONTINUE also Scritps
+metadataWithScritpsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock (Crypto era)) => TestTree
 metadataWithScritpsGoldenTest =
   checkEncodingCBORAnnotated
     "metadata_with_scripts"
-    ( Metadata
+    ( Metadata @era
         (Map.singleton 17 (SMD.I 42))
-        (StrictSeq.singleton policy1) ::
-        Metadata era
+        (StrictSeq.singleton policy1)
     )
     ( T
         ( TkListLen 2 -- structured metadata and auxiliary scripts
@@ -207,7 +209,7 @@ metadataWithScritpsGoldenTest =
             . TkInteger 42
             . TkListLen 1 -- one script
         )
-        <> S (policy1 @era)
+        <> S (policy1 @(Crypto era))
     )
 
 -- | Golden Tests for Allegra
@@ -217,14 +219,14 @@ goldenEncodingTestsAllegra =
     "Allegra"
     [ checkEncodingCBOR
         "value"
-        (Val.inject (Coin 1) :: Value A)
+        (Val.inject (Coin 1) :: Value TestCrypto)
         (T (TkInteger 1)),
       scriptGoldenTest @A,
       metadataNoScritpsGoldenTest @A,
       metadataWithScritpsGoldenTest @A,
       -- "minimal_txn_body"
       let tin = TxIn genesisId 1
-          tout = TxOut (testAddrE @A) (Coin 2)
+          tout = TxOut @A testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
             "minimal_txbody"
             ( TxBody
@@ -250,7 +252,7 @@ goldenEncodingTestsAllegra =
             ),
       -- "full_txn_body"
       let tin = TxIn genesisId 1
-          tout = TxOut (testAddrE @A) (Coin 2)
+          tout = TxOut @A testAddrE (Coin 2)
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
@@ -300,11 +302,11 @@ goldenEncodingTestsMary =
     "Mary"
     [ checkEncodingCBOR
         "ada_only_value"
-        (Val.inject (Coin 1) :: Value M)
+        (Val.inject (Coin 1) :: Value TestCrypto)
         (T (TkInteger 1)),
       checkEncodingCBOR
         "not_just_ada_value"
-        ( Value 2 $
+        ( Value @TestCrypto 2 $
             Map.fromList
               [ ( policyID1,
                   Map.fromList
@@ -357,7 +359,7 @@ goldenEncodingTestsMary =
       metadataWithScritpsGoldenTest @M,
       -- "minimal_txn_body"
       let tin = TxIn genesisId 1
-          tout = TxOut (testAddrE @M) (Val.inject $ Coin 2)
+          tout = TxOut @M testAddrE (Val.inject $ Coin 2)
        in checkEncodingCBORAnnotated
             "minimal_txbody"
             ( TxBody
@@ -369,7 +371,7 @@ goldenEncodingTestsMary =
                 (ValidityInterval SNothing SNothing)
                 SNothing
                 SNothing
-                (Val.inject (Coin 0) :: Value M)
+                (Val.inject (Coin 0))
             )
             ( T (TkMapLen 3)
                 <> T (TkWord 0) -- Tx Ins
@@ -383,7 +385,7 @@ goldenEncodingTestsMary =
             ),
       -- "full_txn_body"
       let tin = TxIn genesisId 1
-          tout = TxOut (testAddrE @M) (Val.inject $ Coin 2)
+          tout = TxOut @M testAddrE (Val.inject $ Coin 2)
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate

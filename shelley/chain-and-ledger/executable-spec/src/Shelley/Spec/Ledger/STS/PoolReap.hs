@@ -16,6 +16,7 @@ module Shelley.Spec.Ledger.STS.PoolReap
   )
 where
 
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
@@ -53,8 +54,8 @@ data POOLREAP era
 data PoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era,
     prAcnt :: AccountState,
-    prDState :: DState era,
-    prPState :: PState era
+    prDState :: DState (Crypto era),
+    prPState :: PState (Crypto era)
   }
 
 deriving stock instance

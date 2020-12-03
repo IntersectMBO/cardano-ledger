@@ -81,7 +81,7 @@ instance
     ShelleyLedgerSTS era,
     ShelleyChainSTS era,
     ValidateMetadata era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
   HasTrace (CHAIN era) (GenEnv era)
@@ -160,11 +160,11 @@ mkOCertIssueNos (GenDelegs delegs0) =
 --
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
-  forall c.
-  ShelleyTest c =>
-  ShelleyGenesisStaking c ->
-  ChainState c ->
-  ChainState c
+  forall era.
+  ShelleyTest era =>
+  ShelleyGenesisStaking (Crypto era) ->
+  ChainState era ->
+  ChainState era
 registerGenesisStaking
   ShelleyGenesisStaking {sgsPools, sgsStake}
   cs@(STS.ChainState {chainNes = oldChainNes}) =
@@ -207,7 +207,7 @@ registerGenesisStaking
       -- about updating the '_delegations' field.
       --
       -- See STS DELEG for details
-      newDState :: DState c
+      newDState :: DState (Crypto era)
       newDState =
         (_dstate oldDPState)
           { _rewards =
@@ -219,7 +219,7 @@ registerGenesisStaking
 
       -- We consider pools as having been registered in slot 0
       -- See STS POOL for details
-      newPState :: PState c
+      newPState :: PState (Crypto era)
       newPState =
         (_pstate oldDPState)
           { _pParams = sgsPools
@@ -229,7 +229,7 @@ registerGenesisStaking
       -- during the previous epoch. We create a "fake" snapshot in order to
       -- establish an initial stake distribution.
       initSnapShot =
-        stakeDistr @c
+        stakeDistr @era
           (_utxo . _utxoState . esLState $ oldEpochState)
           newDState
           newPState

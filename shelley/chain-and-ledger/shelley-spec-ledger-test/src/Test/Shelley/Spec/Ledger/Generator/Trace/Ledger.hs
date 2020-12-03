@@ -71,7 +71,7 @@ instance
     Mock (Crypto era),
     ValidateMetadata era,
     ShelleyLedgerSTS era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
   TQC.HasTrace (LEDGER era) (GenEnv era)
@@ -95,7 +95,7 @@ instance
     Mock (Crypto era),
     ValidateMetadata era,
     ShelleyLedgerSTS era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
   TQC.HasTrace (LEDGERS era) (GenEnv era)
@@ -119,9 +119,9 @@ instance
       pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
       where
         genAndApplyTx ::
-          (UTxOState era, DPState era, [Tx era]) ->
+          (UTxOState era, DPState (Crypto era), [Tx era]) ->
           Ix ->
-          Gen (UTxOState era, DPState era, [Tx era])
+          Gen (UTxOState era, DPState (Crypto era), [Tx era])
         genAndApplyTx (u, dp, txs) ix = do
           let ledgerEnv = LedgerEnv slotNo ix pParams reserves
           tx <- genTx ge ledgerEnv (u, dp)
@@ -152,7 +152,7 @@ mkGenesisLedgerState ::
   EraGen era =>
   GenEnv era ->
   IRC (LEDGER era) ->
-  Gen (Either a (UTxOState era, DPState era))
+  Gen (Either a (UTxOState era, DPState (Crypto era)))
 mkGenesisLedgerState ge@(GenEnv _ c) _ = do
   utxo0 <- genUtxo0 ge
   let (LedgerState utxoSt dpSt) = genesisState (genesisDelegs0 c) utxo0

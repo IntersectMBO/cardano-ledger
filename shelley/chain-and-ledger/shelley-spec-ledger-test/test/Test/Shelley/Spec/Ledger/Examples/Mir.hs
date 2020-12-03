@@ -121,7 +121,7 @@ initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
 aliceMIRCoin :: Coin
 aliceMIRCoin = Coin 100
 
-ir :: Era era => Map (Credential 'Staking era) Coin
+ir :: CryptoClass.Crypto c => Map (Credential 'Staking c) Coin
 ir = Map.fromList [(Cast.aliceSHK, aliceMIRCoin)]
 
 feeTx1 :: Coin

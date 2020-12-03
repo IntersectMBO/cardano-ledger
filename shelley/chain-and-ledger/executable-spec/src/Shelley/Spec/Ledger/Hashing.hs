@@ -11,7 +11,7 @@ module Shelley.Spec.Ledger.Hashing
     EraIndependentTx,
     EraIndependentTxBody,
     EraIndependentBlockBody,
-    EraIndependentWitVKey,
+    EraIndependentScript,
   )
 where
 
@@ -28,7 +28,7 @@ data EraIndependentTxBody
 
 data EraIndependentBlockBody
 
-data EraIndependentWitVKey
+data EraIndependentScript
 
 class Era e => HashAnnotated a e | a -> e where
   type HashIndex a :: Type

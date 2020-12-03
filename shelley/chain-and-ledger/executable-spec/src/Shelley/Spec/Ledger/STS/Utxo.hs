@@ -118,13 +118,13 @@ data UtxoEnv era
   = UtxoEnv
       SlotNo
       (PParams era)
-      (Map (KeyHash 'StakePool (Crypto era)) (PoolParams era))
+      (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)))
       (GenDelegs (Crypto era))
   deriving (Show)
 
 data UtxoPredicateFailure era
   = BadInputsUTxO
-      !(Set (TxIn era)) -- The bad transaction inputs
+      !(Set (TxIn (Crypto era))) -- The bad transaction inputs
   | ExpiredUTxO
       !SlotNo -- transaction's time to live
       !SlotNo -- current slot
@@ -140,10 +140,10 @@ data UtxoPredicateFailure era
       !(Delta (Core.Value era)) -- the Coin produced by this transaction
   | WrongNetwork
       !Network -- the expected network id
-      !(Set (Addr era)) -- the set of addresses with incorrect network IDs
+      !(Set (Addr (Crypto era))) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       !Network -- the expected network id
-      !(Set (RewardAcnt era)) -- the set of reward addresses with incorrect network IDs
+      !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure (PredicateFailure (PPUP era)) -- Subtransition Failures
@@ -304,10 +304,10 @@ utxoInductive ::
     State (UTXO era) ~ UTxOState era,
     Signal (UTXO era) ~ Tx era,
     PredicateFailure (UTXO era) ~ UtxoPredicateFailure era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
-    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "ttl" (Core.TxBody era) SlotNo,
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
@@ -322,14 +322,14 @@ utxoInductive = do
   -- the ttl field marks the top of an open interval, so it must be
   -- strictly less than the slot, so raise an error if it is (>=).
 
-  txins txb /= Set.empty ?! InputSetEmptyUTxO
+  txins @era txb /= Set.empty ?! InputSetEmptyUTxO
 
   let minFee = minfee pp tx
       txFee = getField @"txfee" txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  eval (txins txb ⊆ dom utxo)
-    ?! BadInputsUTxO (eval (txins txb ➖ dom utxo))
+  eval (txins @era txb ⊆ dom utxo)
+    ?! BadInputsUTxO (eval (txins @era txb ➖ dom utxo))
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
@@ -374,7 +374,7 @@ utxoInductive = do
 
   pure
     UTxOState
-      { _utxo = eval ((txins txb ⋪ utxo) ∪ txouts txb),
+      { _utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts txb),
         _deposited = deposits' <> depositChange,
         _fees = fees <> (getField @"txfee" txb),
         _ppups = ppup'

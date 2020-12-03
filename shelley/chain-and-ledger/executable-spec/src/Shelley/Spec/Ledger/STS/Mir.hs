@@ -15,6 +15,7 @@ module Shelley.Spec.Ledger.STS.Mir
   )
 where
 
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
 import Control.SetAlgebra (dom, eval, (∪+), (◁))
 import Control.State.Transition
@@ -111,11 +112,11 @@ mirTransition = do
       rewards = _rewards ds
       reserves = _reserves acnt
       treasury = _treasury acnt
-      irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd ds) :: RewardAccounts era
-      irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd ds) :: RewardAccounts era
+      irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd ds) :: RewardAccounts (Crypto era)
+      irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd ds) :: RewardAccounts (Crypto era)
       totR = fold irwdR
       totT = fold irwdT
-      update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts era
+      update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts (Crypto era)
 
   if totR <= reserves && totT <= treasury
     then

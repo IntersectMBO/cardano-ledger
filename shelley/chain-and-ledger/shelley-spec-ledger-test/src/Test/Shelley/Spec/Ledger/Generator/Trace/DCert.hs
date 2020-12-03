@@ -83,8 +83,8 @@ data CertsPredicateFailure era
 
 instance Era era => STS (CERTS era) where
   type Environment (CERTS era) = (SlotNo, Ix, PParams era, AccountState)
-  type State (CERTS era) = (DPState era, Ix)
-  type Signal (CERTS era) = Maybe (DCert era, CertCred era)
+  type State (CERTS era) = (DPState (Crypto era), Ix)
+  type Signal (CERTS era) = Maybe (DCert (Crypto era), CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
 
   type BaseM (CERTS era) = ShelleyBase
@@ -143,15 +143,15 @@ genDCerts ::
   EraGen era =>
   GenEnv era ->
   PParams era ->
-  DPState era ->
+  DPState (Crypto era) ->
   SlotNo ->
   Natural ->
   AccountState ->
   Gen
-    ( StrictSeq (DCert era),
+    ( StrictSeq (DCert (Crypto era)),
       Coin,
       Coin,
-      DPState era,
+      DPState (Crypto era),
       ([KeyPair 'Witness (Crypto era)], [(Core.Script era, Core.Script era)])
     )
 genDCerts

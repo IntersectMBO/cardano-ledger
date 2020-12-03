@@ -37,8 +37,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Compactible (Compactible (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),
@@ -98,40 +97,40 @@ newtype AssetName = AssetName {assetName :: ByteString}
     )
 
 -- | Policy ID
-newtype PolicyID era = PolicyID {policyID :: ScriptHash era}
+newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
   deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData)
 
 -- | The Value representing MultiAssets
-data Value era = Value !Integer !(Map (PolicyID era) (Map AssetName Integer))
+data Value crypto = Value !Integer !(Map (PolicyID crypto) (Map AssetName Integer))
   deriving (Show, Generic)
 
-instance Era era => Eq (Value era) where
+instance CC.Crypto crypto => Eq (Value crypto) where
   x == y = pointwise (==) x y
 
 -- TODO make these specific
-instance NFData (Value era)
+instance NFData (Value crypto)
 
-instance NoThunks (Value era)
+instance NoThunks (Value crypto)
 
-instance Semigroup (Value era) where
+instance Semigroup (Value crypto) where
   Value c m <> Value c1 m1 =
     Value (c + c1) (cannonicalMapUnion (cannonicalMapUnion (+)) m m1)
 
-instance Monoid (Value era) where
+instance Monoid (Value crypto) where
   mempty = Value 0 mempty
 
-instance Group (Value era) where
+instance Group (Value crypto) where
   invert (Value c m) =
     Value
       (- c)
       (cannonicalMap (cannonicalMap ((-1 :: Integer) *)) m)
 
-instance Abelian (Value era)
+instance Abelian (Value crypto)
 
 -- ===================================================
 -- Make the Val instance of Value
 
-instance Era era => Val (Value era) where
+instance CC.Crypto crypto => Val (Value crypto) where
   s <×> (Value c v) =
     Value
       (fromIntegral s * c)
@@ -171,10 +170,8 @@ instance Era era => Val (Value era) where
 -- Maybe better to make this distinction in the TxOut de/serialization
 
 decodeValue ::
-  ( Typeable (Core.Script era),
-    Era era
-  ) =>
-  Decoder s (Value era)
+  CC.Crypto crypto =>
+  Decoder s (Value crypto)
 decodeValue = do
   tt <- peekTokenType
   case tt of
@@ -188,11 +185,9 @@ decodeValue = do
     _ -> fail $ "Value: expected array or int, got " ++ show tt
 
 decodeValuePair ::
-  ( Typeable (Core.Script era),
-    Era era
-  ) =>
+  CC.Crypto crypto =>
   (forall t. Decoder t Integer) ->
-  Decoder s (Value era)
+  Decoder s (Value crypto)
 decodeValuePair decodeAmount =
   decode $
     RecD Value
@@ -200,19 +195,15 @@ decodeValuePair decodeAmount =
       <! D (decodeMultiAssetMaps decodeAmount)
 
 encodeMultiAssetMaps ::
-  ( Typeable (Core.Script era),
-    Era era
-  ) =>
-  Map (PolicyID era) (Map AssetName Integer) ->
+  CC.Crypto crypto =>
+  Map (PolicyID crypto) (Map AssetName Integer) ->
   Encoding
 encodeMultiAssetMaps = encodeMap toCBOR (encodeMap toCBOR toCBOR)
 
 decodeMultiAssetMaps ::
-  ( Typeable (Core.Script era),
-    Era era
-  ) =>
+  CC.Crypto crypto =>
   Decoder s Integer ->
-  Decoder s (Map (PolicyID era) (Map AssetName Integer))
+  Decoder s (Map (PolicyID crypto) (Map AssetName Integer))
 decodeMultiAssetMaps decodeAmount =
   prune <$> decodeMap fromCBOR (decodeMap fromCBOR decodeAmount)
 
@@ -220,10 +211,8 @@ decodeNonNegativeInteger :: Decoder s Integer
 decodeNonNegativeInteger = fromIntegral <$> decodeWord64
 
 decodeNonNegativeValue ::
-  ( Typeable (Core.Script era),
-    Era era
-  ) =>
-  Decoder s (Value era)
+  CC.Crypto crypto =>
+  Decoder s (Value crypto)
 decodeNonNegativeValue = do
   tt <- peekTokenType
   case tt of
@@ -235,8 +224,8 @@ decodeNonNegativeValue = do
     _ -> fail $ "Value: expected array or int, got " ++ show tt
 
 instance
-  (Era era, Typeable (Core.Script era)) =>
-  ToCBOR (Value era)
+  CC.Crypto crypto =>
+  ToCBOR (Value crypto)
   where
   toCBOR (Value c v) =
     if Map.null v
@@ -248,26 +237,26 @@ instance
             !> E encodeMultiAssetMaps v
 
 instance
-  (Era era, Typeable (Core.Script era)) =>
-  FromCBOR (Value era)
+  CC.Crypto crypto =>
+  FromCBOR (Value crypto)
   where
   fromCBOR = decodeValue
 
 instance
-  (Era era, Typeable (Core.Script era)) =>
-  DecodeNonNegative (Value era)
+  CC.Crypto crypto =>
+  DecodeNonNegative (Value crypto)
   where
   decodeNonNegative = decodeNonNegativeValue
 
 instance
-  (Era era, Typeable (Core.Script era)) =>
-  DecodeMint (Value era)
+  CC.Crypto crypto =>
+  DecodeMint (Value crypto)
   where
   decodeMint = Value 0 <$> decodeMultiAssetMaps decodeInteger
 
 instance
-  (Era era, Typeable (Core.Script era)) =>
-  EncodeMint (Value era)
+  CC.Crypto crypto =>
+  EncodeMint (Value crypto)
   where
   encodeMint (Value _ multiasset) = encodeMultiAssetMaps multiasset
 
@@ -275,16 +264,16 @@ instance
 -- Compactible
 -- This is used in the TxOut which stores the (CompactForm Value).
 
-instance Era era => Compactible (Value era) where
-  newtype CompactForm (Value era) = CompactValue (CV era)
+instance CC.Crypto crypto => Compactible (Value crypto) where
+  newtype CompactForm (Value crypto) = CompactValue (CV crypto)
     deriving (Eq, Typeable, Show, ToCBOR, FromCBOR)
   toCompact x = CompactValue <$> toCV x
   fromCompact (CompactValue x) = fromCV x
 
-instance (Typeable (Core.Script era), Era era) => ToCBOR (CV era) where
+instance CC.Crypto crypto => ToCBOR (CV crypto) where
   toCBOR = toCBOR . fromCV
 
-instance (Typeable (Core.Script era), Era era) => FromCBOR (CV era) where
+instance CC.Crypto crypto => FromCBOR (CV crypto) where
   fromCBOR = do
     v <- decodeNonNegativeValue
     case toCV v of
@@ -293,20 +282,20 @@ instance (Typeable (Core.Script era), Era era) => FromCBOR (CV era) where
           "impossible failure: decoded nonnegative value that cannot be compacted"
       Just x -> pure x
 
-data CV era
+data CV crypto
   = CV
       {-# UNPACK #-} !Word64
-      {-# UNPACK #-} !(Array Int (CVPart era))
+      {-# UNPACK #-} !(Array Int (CVPart crypto))
   deriving (Eq, Show, Typeable)
 
-data CVPart era
+data CVPart crypto
   = CVPart
-      !(PolicyID era)
+      !(PolicyID crypto)
       {-# UNPACK #-} !AssetName
       {-# UNPACK #-} !Word64
   deriving (Eq, Show, Typeable)
 
-toCV :: Value era -> Maybe (CV era)
+toCV :: Value crypto -> Maybe (CV crypto)
 toCV v = do
   let (c, triples) = gettriples v
       policyIDs = Set.fromList $ (\(x, _, _) -> x) <$> triples
@@ -324,15 +313,15 @@ toCV v = do
       CVPart (deduplicate policyIdSet policyId) aname
         <$> integerToWord64 amount
 
-fromCV :: Era era => CV era -> Value era
+fromCV :: CC.Crypto crypto => CV crypto -> Value crypto
 fromCV (CV w vs) = foldr f (inject . Coin . fromIntegral $ w) vs
   where
     f (CVPart policyId aname amount) acc =
       insert (+) policyId aname (fromIntegral amount) acc
 
-instance (Era era) => Torsor (Value era) where
+instance CC.Crypto crypto => Torsor (Value crypto) where
   -- TODO a proper torsor form
-  type Delta (Value era) = (Value era)
+  type Delta (Value crypto) = (Value crypto)
   addDelta = (<+>)
   toDelta = id
 
@@ -343,10 +332,10 @@ instance (Era era) => Torsor (Value era) where
 --
 --   This function is equivalent to computing the support of the value in the
 --   spec.
-policies :: Value era -> Set (PolicyID era)
+policies :: Value crypto -> Set (PolicyID crypto)
 policies (Value _ m) = Map.keysSet m
 
-lookup :: PolicyID era -> AssetName -> Value era -> Integer
+lookup :: PolicyID crypto -> AssetName -> Value crypto -> Integer
 lookup pid aid (Value _ m) =
   case Map.lookup pid m of
     Nothing -> 0
@@ -358,11 +347,11 @@ lookup pid aid (Value _ m) =
 --   if (comb old new) == 0, then that value should not be stored in the Map part of the Value.
 insert ::
   (Integer -> Integer -> Integer) ->
-  PolicyID era ->
+  PolicyID crypto ->
   AssetName ->
   Integer ->
-  Value era ->
-  Value era
+  Value crypto ->
+  Value crypto
 insert combine pid aid new (Value cn m1) =
   case splitLookup pid m1 of
     (l1, Just m2, l2) ->
@@ -401,8 +390,8 @@ insert combine pid aid new (Value cn m1) =
 
 -- | Remove 0 assets from a map
 prune ::
-  Map (PolicyID era) (Map AssetName Integer) ->
-  Map (PolicyID era) (Map AssetName Integer)
+  Map (PolicyID crypto) (Map AssetName Integer) ->
+  Map (PolicyID crypto) (Map AssetName Integer)
 prune assets =
   Map.filter (not . null) $ Map.filter (/= 0) <$> assets
 
@@ -415,7 +404,7 @@ valueFromList ada =
     (Value ada Map.empty)
 
 -- | Display a Value as a String, one token per line
-showValue :: Value era -> String
+showValue :: Value crypto -> String
 showValue v = show c ++ "\n" ++ unlines (map trans ts)
   where
     (c, ts) = gettriples v
@@ -426,7 +415,7 @@ showValue v = show c ++ "\n" ++ unlines (map trans ts)
         ++ ",  "
         ++ show cnt
 
-gettriples :: Value era -> (Integer, [(PolicyID era, AssetName, Integer)])
+gettriples :: Value crypto -> (Integer, [(PolicyID crypto, AssetName, Integer)])
 gettriples (Value c m1) = (c, triples)
   where
     triples =

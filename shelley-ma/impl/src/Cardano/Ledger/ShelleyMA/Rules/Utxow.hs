@@ -14,6 +14,7 @@ module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 import Cardano.Ledger.Compactible (Compactible (CompactForm))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
@@ -63,33 +64,33 @@ import Shelley.Spec.Ledger.UTxO
   )
 
 -- | We want to reuse the same rules for Mary and Allegra. This however relies
--- on being able to get a set of `PolicyID`s from the value. Since a `Coin` has
--- no policies, we create a small class which returns a null set of PolicyIDs
--- for Coin.
+-- on being able to get a set of 'PolicyID's from the value. Since a 'Coin' has
+-- no policies, we create a small class which returns a null set of 'PolicyID's
+-- for 'Coin'.
 --
 -- This should not escape this module.
-class GetPolicies a era where
-  getPolicies :: a -> Set (PolicyID era)
+class GetPolicies a crypto where
+  getPolicies :: a -> Set (PolicyID crypto)
 
-instance GetPolicies Coin era where
+instance GetPolicies Coin crypto where
   getPolicies = const Set.empty
 
-instance GetPolicies (Value era) era where
+instance GetPolicies (Value crypto) crypto where
   getPolicies = policies
 
 -- | Computes the set of script hashes required to unlock the transaction inputs
 -- and the withdrawals.
 scriptsNeeded ::
   ( ShelleyBased era,
-    GetPolicies (Core.Value era) era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "wdrls" (Core.TxBody era) (Wdrl era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    GetPolicies (Core.Value era) (Crypto era),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era)
   ) =>
   UTxO era ->
   Tx era ->
-  Set (ScriptHash era)
+  Set (ScriptHash (Crypto era))
 scriptsNeeded u tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
     `Set.union` Set.fromList
@@ -123,7 +124,7 @@ instance
     DecodeNonNegative (Core.Value (ShelleyMAEra ma c)),
     Compactible (Core.Value (ShelleyMAEra ma c)),
     Val (Core.Value (ShelleyMAEra ma c)),
-    GetPolicies (Core.Value (ShelleyMAEra ma c)) (ShelleyMAEra ma c),
+    GetPolicies (Core.Value (ShelleyMAEra ma c)) c,
     Eq (CompactForm (Core.Value (ShelleyMAEra ma c))),
     Core.ChainData (Core.Value (ShelleyMAEra ma c)),
     Core.ChainData (Delta (Core.Value (ShelleyMAEra ma c))),

@@ -734,14 +734,14 @@ seedEta = mkNonceFromNumber 0
 seedL :: Nonce
 seedL = mkNonceFromNumber 1
 
-hBbsize :: BHBody era -> Natural
+hBbsize :: BHBody crypto -> Natural
 hBbsize = bsize
 
 incrBlocks ::
   Bool ->
-  KeyHash 'StakePool (Crypto era) ->
-  BlocksMade era ->
-  BlocksMade era
+  KeyHash 'StakePool crypto ->
+  BlocksMade crypto ->
+  BlocksMade crypto
 incrBlocks isOverlay hk b'@(BlocksMade b)
   | isOverlay = b'
   | otherwise = BlocksMade $ case hkVal of

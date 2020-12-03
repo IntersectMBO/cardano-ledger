@@ -68,7 +68,7 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Ledger.Crypto (ADDRHASH)
-import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Prelude (cborError, panic)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
@@ -110,125 +110,125 @@ import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 mkVKeyRwdAcnt ::
-  Era era =>
+  CC.Crypto crypto =>
   Network ->
-  KeyPair 'Staking (Crypto era) ->
-  RewardAcnt era
+  KeyPair 'Staking crypto ->
+  RewardAcnt crypto
 mkVKeyRwdAcnt network keys = RewardAcnt network $ KeyHashObj (hashKey $ vKey keys)
 
 mkRwdAcnt ::
   Network ->
-  Credential 'Staking era ->
-  RewardAcnt era
+  Credential 'Staking crypto ->
+  RewardAcnt crypto
 mkRwdAcnt network script@(ScriptHashObj _) = RewardAcnt network script
 mkRwdAcnt network key@(KeyHashObj _) = RewardAcnt network key
 
 toAddr ::
-  Era era =>
+  CC.Crypto crypto =>
   Network ->
-  (KeyPair 'Payment (Crypto era), KeyPair 'Staking (Crypto era)) ->
-  Addr era
+  (KeyPair 'Payment crypto, KeyPair 'Staking crypto) ->
+  Addr crypto
 toAddr n (payKey, stakeKey) = Addr n (toCred payKey) (StakeRefBase $ toCred stakeKey)
 
 toCred ::
-  (Era era) =>
-  KeyPair kr (Crypto era) ->
-  Credential kr era
+  CC.Crypto crypto =>
+  KeyPair kr crypto ->
+  Credential kr crypto
 toCred k = KeyHashObj . hashKey $ vKey k
 
 -- | Convert a given multi-sig script to a credential by hashing it and wrapping
--- into the `Credential` data type.
-scriptToCred :: Era era => MultiSig era -> Credential kr era
+-- into the 'Credential' data type.
+scriptToCred :: CC.Crypto crypto => MultiSig crypto -> Credential kr crypto
 scriptToCred = ScriptHashObj . hashMultiSigScript
 
 -- | Create a base address from a pair of multi-sig scripts (pay and stake)
-scriptsToAddr :: Era era => Network -> (MultiSig era, MultiSig era) -> Addr era
+scriptsToAddr :: CC.Crypto crypto => Network -> (MultiSig crypto, MultiSig crypto) -> Addr crypto
 scriptsToAddr n (payScript, stakeScript) =
   Addr n (scriptToCred payScript) (StakeRefBase $ scriptToCred stakeScript)
 
 -- | Serialise an address to the external format.
-serialiseAddr :: Addr era -> ByteString
+serialiseAddr :: Addr crypto -> ByteString
 serialiseAddr = BSL.toStrict . B.runPut . putAddr
 
 -- | Deserialise an address from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseAddr :: Era era => ByteString -> Maybe (Addr era)
+deserialiseAddr :: CC.Crypto crypto => ByteString -> Maybe (Addr crypto)
 deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
   Right (_remaining, _offset, result) -> Just result
 
 -- | Deserialise a stake refence from a address. This will fail if this
 -- is a Bootstrap address (or malformed).
-deserialiseAddrStakeRef :: Era era => ByteString -> Maybe (StakeReference era)
+deserialiseAddrStakeRef :: CC.Crypto crypto => ByteString -> Maybe (StakeReference crypto)
 deserialiseAddrStakeRef bs = case B.runGetOrFail getAddrStakeReference (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
   Right (_remaining, _offset, result) -> result
 
 -- | Serialise a reward account to the external format.
-serialiseRewardAcnt :: RewardAcnt era -> ByteString
+serialiseRewardAcnt :: RewardAcnt crypto -> ByteString
 serialiseRewardAcnt = BSL.toStrict . B.runPut . putRewardAcnt
 
 -- | Deserialise an reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseRewardAcnt :: Era era => ByteString -> Maybe (RewardAcnt era)
+deserialiseRewardAcnt :: CC.Crypto crypto => ByteString -> Maybe (RewardAcnt crypto)
 deserialiseRewardAcnt bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
   Right (_remaining, _offset, result) -> Just result
 
 -- | An address for UTxO.
-data Addr era
-  = Addr Network (PaymentCredential era) (StakeReference era)
-  | AddrBootstrap (BootstrapAddress era)
+data Addr crypto
+  = Addr Network (PaymentCredential crypto) (StakeReference crypto)
+  | AddrBootstrap (BootstrapAddress crypto)
   deriving (Show, Eq, Generic, NFData, Ord)
 
-getNetwork :: Addr era -> Network
+getNetwork :: Addr crypto -> Network
 getNetwork (Addr n _ _) = n
 getNetwork (AddrBootstrap (BootstrapAddress byronAddr)) =
   case Byron.aaNetworkMagic . Byron.attrData . Byron.addrAttributes $ byronAddr of
     Byron.NetworkMainOrStage -> Mainnet
     Byron.NetworkTestnet _ -> Testnet
 
-instance NoThunks (Addr era)
+instance NoThunks (Addr crypto)
 
 -- | An account based address for rewards
-data RewardAcnt era = RewardAcnt
+data RewardAcnt crypto = RewardAcnt
   { getRwdNetwork :: !Network,
-    getRwdCred :: !(Credential 'Staking era)
+    getRwdCred :: !(Credential 'Staking crypto)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
-instance Era era => ToJSON (RewardAcnt era) where
+instance ToJSON (RewardAcnt crypto) where
   toJSON ra =
     Aeson.object
       [ "network" .= getRwdNetwork ra,
         "credential" .= getRwdCred ra
       ]
 
-instance Era era => FromJSON (RewardAcnt era) where
+instance CC.Crypto crypto => FromJSON (RewardAcnt crypto) where
   parseJSON =
     Aeson.withObject "RewardAcnt" $ \obj ->
       RewardAcnt
         <$> obj .: "network"
         <*> obj .: "credential"
 
-instance NoThunks (RewardAcnt era)
+instance NoThunks (RewardAcnt crypto)
 
-instance Era era => ToJSONKey (Addr era) where
+instance ToJSONKey (Addr crypto) where
   toJSONKey = Aeson.ToJSONKeyText addrToText (Aeson.text . addrToText)
 
-instance Era era => FromJSONKey (Addr era) where
+instance CC.Crypto crypto => FromJSONKey (Addr crypto) where
   fromJSONKey = Aeson.FromJSONKeyTextParser parseAddr
 
-instance Era era => ToJSON (Addr era) where
+instance ToJSON (Addr crypto) where
   toJSON = toJSON . addrToText
 
-instance Era era => FromJSON (Addr era) where
+instance CC.Crypto crypto => FromJSON (Addr crypto) where
   parseJSON = Aeson.withText "address" parseAddr
 
-addrToText :: Addr era -> Text
+addrToText :: Addr crypto -> Text
 addrToText = Text.decodeLatin1 . B16.encode . serialiseAddr
 
-parseAddr :: Era era => Text -> Aeson.Parser (Addr era)
+parseAddr :: CC.Crypto crypto => Text -> Aeson.Parser (Addr crypto)
 parseAddr t = do
   bytes <- either badHex return (B16.decode (Text.encodeUtf8 t))
   maybe badFormat return (deserialiseAddr bytes)
@@ -254,7 +254,7 @@ payCredIsScript = 4
 rewardCredIsScript :: Int
 rewardCredIsScript = 4
 
-putAddr :: Addr era -> Put
+putAddr :: Addr crypto -> Put
 putAddr (AddrBootstrap (BootstrapAddress byronAddr)) = B.putLazyByteString (serialize byronAddr)
 putAddr (Addr network pc sr) =
   let setPayCredBit = case pc of
@@ -280,7 +280,7 @@ putAddr (Addr network pc sr) =
           B.putWord8 header
           putCredential pc
 
-getAddr :: forall era. Era era => Get (Addr era)
+getAddr :: CC.Crypto crypto => Get (Addr crypto)
 getAddr = do
   header <- B.lookAhead B.getWord8
   if testBit header byron
@@ -297,14 +297,14 @@ getAddr = do
 
 -- | We are "expecting" an address, but we are only interested in the StakeReference.
 --   If the Addr is A Byron style address, there are no Stake References, return Nothing.
-getAddrStakeReference :: forall era. Era era => Get (Maybe (StakeReference era))
+getAddrStakeReference :: forall crypto. CC.Crypto crypto => Get (Maybe (StakeReference crypto))
 getAddrStakeReference = do
   header <- B.getWord8
   if testBit header byron
     then pure Nothing
-    else skipHash ([] @(ADDRHASH (Crypto era))) >> Just <$> getStakeReference header
+    else skipHash ([] @(ADDRHASH crypto)) >> Just <$> getStakeReference header
 
-putRewardAcnt :: RewardAcnt era -> Put
+putRewardAcnt :: RewardAcnt crypto -> Put
 putRewardAcnt (RewardAcnt network cred) = do
   let setPayCredBit = case cred of
         ScriptHashObj _ -> flip setBit payCredIsScript
@@ -315,7 +315,7 @@ putRewardAcnt (RewardAcnt network cred) = do
   B.putWord8 header
   putCredential cred
 
-getRewardAcnt :: forall era. Era era => Get (RewardAcnt era)
+getRewardAcnt :: CC.Crypto crypto => Get (RewardAcnt crypto)
 getRewardAcnt = do
   header <- B.getWord8
   let rewardAcntPrefix = 0xE0 -- 0b1110000 are always set for reward accounts
@@ -345,18 +345,18 @@ getHash = do
 putHash :: Hash.Hash h a -> Put
 putHash = B.putByteString . Hash.hashToBytes
 
-getPayCred :: Era era => Word8 -> Get (PaymentCredential era)
+getPayCred :: CC.Crypto crypto => Word8 -> Get (PaymentCredential crypto)
 getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash
 
-getScriptHash :: Era era => Get (Credential kr era)
+getScriptHash :: CC.Crypto crypto => Get (Credential kr crypto)
 getScriptHash = ScriptHashObj . ScriptHash <$> getHash
 
-getKeyHash :: (Era era) => Get (Credential kr era)
+getKeyHash :: CC.Crypto crypto => Get (Credential kr crypto)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
 
-getStakeReference :: Era era => Word8 -> Get (StakeReference era)
+getStakeReference :: CC.Crypto crypto => Word8 -> Get (StakeReference crypto)
 getStakeReference header = case testBit header notBaseAddr of
   True -> case testBit header isEnterpriseAddr of
     True -> pure StakeRefNull
@@ -365,11 +365,11 @@ getStakeReference header = case testBit header notBaseAddr of
     True -> StakeRefBase <$> getScriptHash
     False -> StakeRefBase <$> getKeyHash
 
-putCredential :: Credential kr era -> Put
+putCredential :: Credential kr crypto -> Put
 putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
 
-getByron :: Get (Addr era)
+getByron :: Get (Addr crypto)
 getByron =
   decodeFull <$> B.getRemainingLazyByteString >>= \case
     Left e -> fail (show e)
@@ -377,7 +377,7 @@ getByron =
 
 -- | The size of the extra attributes in a bootstrp (ie Byron) address. Used
 -- to help enforce that people do not post huge ones on the chain.
-bootstrapAddressAttrsSize :: BootstrapAddress era -> Int
+bootstrapAddressAttrsSize :: BootstrapAddress crypto -> Int
 bootstrapAddressAttrsSize (BootstrapAddress addr) =
   -- I'm sorry this code is formatted so weridly below.
   -- It is to apease the capricious god Ormolu. A sacrifice is demanded!
@@ -390,7 +390,7 @@ bootstrapAddressAttrsSize (BootstrapAddress addr) =
     attrs = Byron.addrAttributes addr
 
 -- | Return True if a given address is a redeemer address from the Byron Era
-isBootstrapRedeemer :: Addr era -> Bool
+isBootstrapRedeemer :: Addr crypto -> Bool
 isBootstrapRedeemer (AddrBootstrap (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem))) = True
 isBootstrapRedeemer _ = False
 
@@ -452,34 +452,34 @@ decoderFromGet name get = do
     Left (_remaining, _offset, message) ->
       cborError (DecoderErrorCustom name $ fromString message)
 
-instance Era era => ToCBOR (Addr era) where
+instance CC.Crypto crypto => ToCBOR (Addr crypto) where
   toCBOR = toCBOR . B.runPut . putAddr
 
-instance Era era => FromCBOR (Addr era) where
+instance CC.Crypto crypto => FromCBOR (Addr crypto) where
   fromCBOR = decoderFromGet "Addr" getAddr
 
-instance Era era => ToCBOR (RewardAcnt era) where
+instance CC.Crypto crypto => ToCBOR (RewardAcnt crypto) where
   toCBOR = toCBOR . B.runPut . putRewardAcnt
 
-instance Era era => FromCBOR (RewardAcnt era) where
+instance CC.Crypto crypto => FromCBOR (RewardAcnt crypto) where
   fromCBOR = decoderFromGet "RewardAcnt" getRewardAcnt
 
-newtype BootstrapAddress era = BootstrapAddress
+newtype BootstrapAddress crypto = BootstrapAddress
   { unBootstrapAddress :: Byron.Address
   }
   deriving (Eq, Generic)
   deriving newtype (NFData, Ord)
-  deriving (Show) via Quiet (BootstrapAddress era)
+  deriving (Show) via Quiet (BootstrapAddress crypto)
 
-instance NoThunks (BootstrapAddress era)
+instance NoThunks (BootstrapAddress crypto)
 
 bootstrapKeyHash ::
-  forall era.
+  forall crypto.
+  CC.Crypto crypto =>
   -- TODO: enforce this constraint
   --(HASH era ~ Hash.Blake2b_224) =>
-  Era era =>
-  BootstrapAddress era ->
-  KeyHash 'Payment (Crypto era)
+  BootstrapAddress crypto ->
+  KeyHash 'Payment crypto
 bootstrapKeyHash (BootstrapAddress byronAddress) =
   let root = Byron.addrRoot byronAddress
       bytes = Byron.abstractHashToBytes root

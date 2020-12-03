@@ -43,7 +43,7 @@ data NEWEPOCH era
 data NewEpochPredicateFailure era
   = EpochFailure (PredicateFailure (EPOCH era)) -- Subtransition Failures
   | CorruptRewardUpdate
-      !(RewardUpdate era) -- The reward update which violates an invariant
+      !(RewardUpdate (Crypto era)) -- The reward update which violates an invariant
   | MirFailure (PredicateFailure (MIR era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -113,7 +113,7 @@ newEpochTransition = do
           SNothing
           pd'
 
-calculatePoolDistr :: SnapShot era -> PoolDistr (Crypto era)
+calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
 calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
   let Coin total = Map.foldl' (<>) mempty stake
       sd =

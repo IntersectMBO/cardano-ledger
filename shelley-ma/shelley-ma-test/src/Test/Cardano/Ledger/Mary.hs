@@ -11,6 +11,7 @@
 module Test.Cardano.Ledger.Mary () where -- export the EraGen instance for MaryEra
 
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Mary.Value (Value (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody (FamsTo, StrictMaybe, TxBody (..))
@@ -74,10 +75,10 @@ genTxBody ::
   ) =>
   GenEnv era ->
   SlotNo ->
-  Set.Set (TxIn era) ->
+  Set.Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert era) ->
-  Wdrl era ->
+  StrictSeq (DCert (Crypto era)) ->
+  Wdrl (Crypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (MetadataHash era) ->

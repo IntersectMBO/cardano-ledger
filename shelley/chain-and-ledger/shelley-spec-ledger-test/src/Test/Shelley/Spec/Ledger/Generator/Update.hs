@@ -277,7 +277,7 @@ genUpdate ::
   [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->
   Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
   PParams era ->
-  (UTxOState era, DPState era) ->
+  (UTxOState era, DPState (Crypto era)) ->
   Gen (Maybe (Update era), [KeyPair 'Witness (Crypto era)])
 genUpdate
   c@(Constants {frequencyTxUpdates})

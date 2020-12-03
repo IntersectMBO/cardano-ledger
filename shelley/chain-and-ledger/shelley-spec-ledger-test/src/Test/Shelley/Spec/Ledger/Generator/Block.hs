@@ -84,7 +84,7 @@ genBlock ::
     GetLedgerView era,
     ValidateMetadata era,
     ShelleyLedgerSTS era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
   GenEnv era ->
