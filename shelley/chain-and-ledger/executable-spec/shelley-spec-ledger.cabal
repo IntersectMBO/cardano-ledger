@@ -53,6 +53,7 @@ library
     Shelley.Spec.Ledger.OverlaySchedule
     Shelley.Spec.Ledger.PParams
     Shelley.Spec.Ledger.Rewards
+    Shelley.Spec.Ledger.RewardProvenance
     Shelley.Spec.Ledger.Scripts
     Shelley.Spec.Ledger.Serialization
     Shelley.Spec.Ledger.Slot
@@ -116,6 +117,7 @@ library
     cborg,
     cborg-json,
     containers,
+    data-default-class,
     deepseq,
     groups,
     iproute,

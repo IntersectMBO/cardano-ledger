@@ -6,7 +6,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Rewards (rewardTests) where
+module Test.Shelley.Spec.Ledger.Rewards (rewardTests,C,defaultMain) where
 
 import Cardano.Binary (toCBOR)
 import qualified Cardano.Crypto.DSIGN as Crypto
@@ -60,7 +60,7 @@ import Test.Shelley.Spec.Ledger.Utils
   ( testGlobals,
     unsafeMkUnitInterval,
   )
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty (TestTree, testGroup,defaultMain)
 import Test.Tasty.QuickCheck
   ( Gen,
     Property,
@@ -71,7 +71,13 @@ import Test.Tasty.QuickCheck
     property,
     testProperty,
     withMaxSuccess,
+    generate,
   )
+import Test.Tasty.HUnit(testCaseInfo)
+import Control.Monad.Identity(Identity(..))
+import Data.Default.Class(Default(def))
+import Control.Provenance(runProvM,runWithProvM)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 
 -- Bounds and Constants --
 
@@ -242,9 +248,8 @@ rewardsBoundedByPot _ = property $ do
             pools
       totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
-      rs =
-        reward
-          @era
+      Identity rs = runProvM $
+        reward @Identity @era
           pp
           bs
           rewardPot
@@ -280,6 +285,48 @@ rewardsBoundedByPot _ = property $ do
       )
       (fold (fst rs) < rewardPot)
 
+
+rewardsProvenance :: forall era. Era era => Proxy era -> IO String
+rewardsProvenance _ = generate $ do
+  numPools <- choose (0, maxNumPools)
+  pools <- sequence $ genPoolInfo @(Crypto era) <$> replicate numPools emptySetupArgs
+  pp <- genRewardPPs
+  rewardPot <- genCoin 0 (fromIntegral $ maxLovelaceSupply testGlobals)
+  undelegatedLovelace <- genCoin 0 (fromIntegral $ maxLovelaceSupply testGlobals)
+  asc <- mkActiveSlotCoeff . unsafeMkUnitInterval <$> elements [0.1, 0.2, 0.3]
+  bs@(BlocksMade blocks) <- genBlocksMade (fmap params pools)
+  let totalBlocks = sum blocks
+  silentSlots <- genNatural 0 (3 * totalBlocks) -- the '3 * sum blocks' is pretty arbitrary
+  let stake = fold (members <$> pools)
+      delegs = fold $
+        flip fmap pools $
+          \PoolInfo {params, members} ->
+            Map.fromList $ (,_poolId params) <$> Map.keys members
+      rewardAcnts = Set.fromList $ Map.keys delegs
+      poolParams =
+        Map.fromList $
+          fmap
+            ( \PoolInfo {params} ->
+                (_poolId params, params)
+            )
+            pools
+      totalLovelace = undelegatedLovelace <> fold stake
+      slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
+      Identity (_,prov) = runWithProvM def $
+        reward @Identity @era
+          pp
+          bs
+          rewardPot
+          rewardAcnts
+          poolParams
+          (Stake stake)
+          delegs
+          totalLovelace
+          asc
+          slotsPerEpoch
+  pure (show(snd(Map.findMin prov)))
+
+
 rewardTests :: forall era. Era era => Proxy era -> TestTree
 rewardTests proxy =
   testGroup
@@ -287,4 +334,5 @@ rewardTests proxy =
     [ testProperty
         "Sum of rewards is bounded by reward pot"
         (withMaxSuccess numberOfTests (rewardsBoundedByPot proxy))
+    , testCaseInfo "Reward Provenance works" (rewardsProvenance proxy)
     ]

@@ -110,6 +110,7 @@ import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
+import Control.Provenance (ProvM, lift, modifyWithBlackBox, runOtherProv)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
@@ -186,17 +187,20 @@ import Shelley.Spec.Ledger.PParams
     emptyPPPUpdates,
     emptyPParams,
   )
+import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance (..))
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
+    PerformanceEstimate (..),
     applyDecay,
     emptyNonMyopic,
+    percentile',
     reward,
   )
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
   ( EpochNo (..),
-    EpochSize,
+    EpochSize (..),
     SlotNo (..),
   )
 import Shelley.Spec.Ledger.Tx
@@ -230,6 +234,8 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
+
+-- ===============================================================
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
@@ -1067,9 +1073,9 @@ createRUpd ::
   BlocksMade (Crypto era) ->
   EpochState era ->
   Coin ->
-  ShelleyBase (RewardUpdate (Crypto era))
+  ProvM (RewardProvenance (Crypto era)) ShelleyBase (RewardUpdate (Crypto era))
 createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply = do
-  asc <- asks activeSlotCoeff
+  asc <- lift (asks activeSlotCoeff)
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
@@ -1086,6 +1092,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           (1 - d) * unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
+      blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
       eta
         | intervalValue (_d pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
@@ -1093,8 +1100,10 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
       deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       totalStake = circulation es maxSupply
-      (rs_, newLikelihoods) =
-        reward
+  ((rs_, newLikelihoods), boxedPools) <-
+    runOtherProv
+      Map.empty
+      ( reward
           pr
           b
           _R
@@ -1105,8 +1114,30 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           totalStake
           asc
           slotsPerEpoch
-      deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
-      blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
+      )
+
+  let deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
+  modifyWithBlackBox
+    boxedPools
+    ( \provPools _ ->
+        RewardProvenance
+          (unEpochSize slotsPerEpoch)
+          b
+          maxSupply
+          deltaR1
+          deltaR2
+          _R
+          totalStake
+          blocksMade
+          d
+          expectedBlocks
+          eta
+          (Coin rPot)
+          (Coin deltaT1)
+          (fold . unStake $ stake')
+          provPools
+          (Map.map (unPerformanceEstimate . percentile') newLikelihoods)
+    )
   pure $
     RewardUpdate
       { deltaT = (DeltaCoin deltaT1),

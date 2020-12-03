@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -14,6 +16,7 @@ module Shelley.Spec.Ledger.API.Wallet
     getPoolParameters,
     getTotalStake,
     poolsByTotalStakeFraction,
+    getRewardInfo,
   )
 where
 
@@ -22,7 +25,10 @@ import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
-import Cardano.Slotting.Slot (SlotNo)
+import Cardano.Slotting.Slot (EpochSize, SlotNo)
+import Control.Monad.Trans.Reader (runReader)
+import Control.Provenance (runWithProvM)
+import Data.Default.Class (Default (..))
 import Data.Foldable (fold)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
@@ -47,12 +53,15 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
     PState (..),
+    RewardUpdate,
     UTxOState (..),
     circulation,
+    createRUpd,
     stakeDistr,
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import Shelley.Spec.Ledger.Rewards
   ( NonMyopic (..),
     StakeShare (..),
@@ -62,6 +71,7 @@ import Shelley.Spec.Ledger.Rewards
   )
 import Shelley.Spec.Ledger.STS.NewEpoch (calculatePoolDistr)
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
+import Shelley.Spec.Ledger.Slot (epochInfoSize)
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
@@ -234,3 +244,24 @@ getPoolParameters ::
 getPoolParameters nes poolId = Map.lookup poolId (f nes)
   where
     f = _pParams . _pstate . _delegationState . esLState . nesEs
+
+getRewardInfo ::
+  forall era.
+  Globals ->
+  NewEpochState era ->
+  (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
+getRewardInfo globals newepochstate =
+  runReader
+    ( runWithProvM def $
+        createRUpd slotsPerEpoch blocksmade epochstate maxsupply
+    )
+    globals
+  where
+    epochstate = nesEs newepochstate
+    maxsupply :: Coin
+    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
+    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade = nesBprev newepochstate
+    epochnumber = nesEL newepochstate
+    slotsPerEpoch :: EpochSize
+    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
