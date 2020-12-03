@@ -182,11 +182,13 @@ decodeValue = do
   tt <- peekTokenType
   case tt of
     TypeUInt -> inject . Coin <$> decodeInteger
+    TypeUInt64 -> inject . Coin <$> decodeInteger
     TypeNInt -> inject . Coin <$> decodeInteger
+    TypeNInt64 -> inject . Coin <$> decodeInteger
     TypeListLen -> decodeValuePair decodeInteger
     TypeListLen64 -> decodeValuePair decodeInteger
     TypeListLenIndef -> decodeValuePair decodeInteger
-    _ -> fail $ "Value: expected array or int"
+    _ -> fail $ "Value: expected array or int, got " ++ show tt
 
 decodeValuePair ::
   ( Typeable (Core.Script era),
@@ -229,10 +231,11 @@ decodeNonNegativeValue = do
   tt <- peekTokenType
   case tt of
     TypeUInt -> inject . Coin <$> decodeNonNegativeInteger
+    TypeUInt64 -> inject . Coin <$> decodeNonNegativeInteger
     TypeListLen -> decodeValuePair decodeNonNegativeInteger
     TypeListLen64 -> decodeValuePair decodeNonNegativeInteger
     TypeListLenIndef -> decodeValuePair decodeNonNegativeInteger
-    _ -> fail $ "Value: expected array or int"
+    _ -> fail $ "Value: expected array or int, got " ++ show tt
 
 instance
   (Era era, Typeable (Core.Script era)) =>
@@ -409,7 +412,10 @@ prune assets =
 -- | Rather than using prune to remove 0 assets, when can avoid adding them in the
 --   first place by using valueFromList to construct a Value.
 valueFromList :: Integer -> [(PolicyID era, AssetName, Integer)] -> Value era
-valueFromList ada triples = foldr (\(p, n, i) ans -> insert (+) p n i ans) (Value ada Map.empty) triples
+valueFromList ada =
+  foldr
+    (\(p, n, i) ans -> insert (+) p n i ans)
+    (Value ada Map.empty)
 
 -- | Display a Value as a String, one token per line
 showValue :: Value era -> String
