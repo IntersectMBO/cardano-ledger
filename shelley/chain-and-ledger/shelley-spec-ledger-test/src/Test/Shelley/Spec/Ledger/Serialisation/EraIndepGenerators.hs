@@ -87,7 +87,7 @@ import Shelley.Spec.Ledger.LedgerState
   ( FutureGenDeleg,
     emptyRewardUpdate,
   )
-import qualified Shelley.Spec.Ledger.MetaData as MD
+import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     LogWeight (..),
@@ -222,37 +222,37 @@ instance (Era era, Mock (Crypto era)) => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-maxMetaDatumDepth :: Int
-maxMetaDatumDepth = 2
+maxMetadatumDepth :: Int
+maxMetadatumDepth = 2
 
-maxMetaDatumListLens :: Int
-maxMetaDatumListLens = 5
+maxMetadatumListLens :: Int
+maxMetadatumListLens = 5
 
-sizedMetaDatum :: Int -> Gen MD.MetaDatum
-sizedMetaDatum 0 =
+sizedMetadatum :: Int -> Gen MD.Metadatum
+sizedMetadatum 0 =
   oneof
     [ MD.I <$> arbitrary,
       MD.B <$> arbitrary,
       MD.S <$> (T.pack <$> arbitrary)
     ]
-sizedMetaDatum n =
+sizedMetadatum n =
   oneof
     [ MD.Map
         <$> ( zip
-                <$> (resize maxMetaDatumListLens (listOf (sizedMetaDatum (n -1))))
-                <*> (listOf (sizedMetaDatum (n -1)))
+                <$> (resize maxMetadatumListLens (listOf (sizedMetadatum (n -1))))
+                <*> (listOf (sizedMetadatum (n -1)))
             ),
-      MD.List <$> resize maxMetaDatumListLens (listOf (sizedMetaDatum (n -1))),
+      MD.List <$> resize maxMetadatumListLens (listOf (sizedMetadatum (n -1))),
       MD.I <$> arbitrary,
       MD.B <$> arbitrary,
       MD.S <$> (T.pack <$> arbitrary)
     ]
 
-instance Arbitrary MD.MetaDatum where
-  arbitrary = sizedMetaDatum maxMetaDatumDepth
+instance Arbitrary MD.Metadatum where
+  arbitrary = sizedMetadatum maxMetadatumDepth
 
-instance Arbitrary MD.MetaData where
-  arbitrary = MD.MetaData <$> arbitrary
+instance Arbitrary MD.Metadata where
+  arbitrary = MD.Metadata <$> arbitrary
 
 maxTxWits :: Int
 maxTxWits = 5
@@ -358,8 +358,8 @@ instance Arbitrary ProtVer where
 instance Era era => Arbitrary (ScriptHash era) where
   arbitrary = ScriptHash <$> genHash
 
-instance Era era => Arbitrary (MD.MetaDataHash era) where
-  arbitrary = MD.MetaDataHash <$> genHash
+instance Era era => Arbitrary (MD.MetadataHash era) where
+  arbitrary = MD.MetadataHash <$> genHash
 
 instance HashAlgorithm h => Arbitrary (Hash.Hash h a) where
   arbitrary = genHash
@@ -542,8 +542,8 @@ instance (Era era, Mock (Crypto era)) => Arbitrary (PoolParams era) where
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary PoolMetaData where
-  arbitrary = (`PoolMetaData` BS.pack "bytestring") <$> arbitrary
+instance Arbitrary PoolMetadata where
+  arbitrary = (`PoolMetadata` BS.pack "bytestring") <$> arbitrary
 
 instance Arbitrary Url where
   arbitrary = return . fromJust $ textToUrl "text"

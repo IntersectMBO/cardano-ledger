@@ -47,7 +47,7 @@ data Constants = Constants
     -- | Relative frequency of Prototol/Application Updates in a transaction
     frequencyTxUpdates :: Int,
     -- | Relative frequency of Metadata in a transaction
-    frequencyTxWithMetaData :: Int,
+    frequencyTxWithMetadata :: Int,
     -- | minimal number of genesis UTxO outputs
     minGenesisUTxOouts :: Int,
     -- | maximal number of genesis UTxO outputs
@@ -114,7 +114,7 @@ defaultConstants =
       frequencyScriptCredDelegation = 1,
       frequencyKeyCredDelegation = 2,
       frequencyTxUpdates = 10,
-      frequencyTxWithMetaData = 10,
+      frequencyTxWithMetadata = 10,
       minGenesisUTxOouts = 10,
       maxGenesisUTxOouts = 100,
       maxCertsPerTx = 3,

@@ -54,8 +54,8 @@ This function must produce a unique id for each unique transaction body.
       \var{gkey} & \VKeyGen & \text{genesis public keys}\\
       \var{gkh} & \KeyHashGen & \text{genesis key hash}\\
       \var{txid} & \TxId & \text{transaction id}\\
-      \var{m} & \MetaDatum & \text{metadatum}\\
-      \var{mdh} & \MetaDataHash & \text{hash of transaction metadata}\\
+      \var{m} & \Metadatum & \text{metadatum}\\
+      \var{mdh} & \MetadataHash & \text{hash of transaction metadata}\\
     \end{array}
   \end{equation*}
   \emph{Derived types}
@@ -83,8 +83,8 @@ This function must produce a unique id for each unique transaction body.
       & \text{reward withdrawal}
       \\
       \var{md}
-      & \MetaData
-      & \N \mapsto \MetaDatum
+      & \Metadata
+      & \N \mapsto \Metadatum
       & \text{metadata}
     \end{array}
   \end{equation*}
@@ -113,14 +113,14 @@ This function must produce a unique id for each unique transaction body.
       & \begin{array}{l}
         \powerset{\TxIn} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
         \times \Coin \times \Slot \times \Wdrl
-        \\ ~~~~\times \Update^? \times \MetaDataHash^?
+        \\ ~~~~\times \Update^? \times \MetadataHash^?
         \end{array}
       \\
       \var{wit} & \TxWitness & (\VKey \mapsto \Sig) \times (\HashScr \mapsto \Script)
       \\
       \var{tx}
       & \Tx
-      & \TxBody \times \TxWitness \times \MetaData^?
+      & \TxBody \times \TxWitness \times \Metadata^?
     \end{array}
   \end{equation*}
   %
@@ -137,8 +137,8 @@ This function must produce a unique id for each unique transaction body.
       \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
       \fun{txwitsScript} & \Tx \to (\HashScr \mapsto \Script) & \text{script witnesses}\\
       \fun{txup} & \Tx \to \Update^? & \text{protocol parameter update}\\
-      \fun{txMD} & \Tx \to \MetaData^? & \text{metadata}\\
-      \fun{txMDhash} & \Tx \to \MetaDataHash^? & \text{metadata hash}\\
+      \fun{txMD} & \Tx \to \Metadata^? & \text{metadata}\\
+      \fun{txMDhash} & \Tx \to \MetadataHash^? & \text{metadata hash}\\
     \end{array}
   \end{equation*}
   %
@@ -147,7 +147,7 @@ This function must produce a unique id for each unique transaction body.
     \begin{array}{r@{~\in~}lr}
       \txid{} & \TxBody \to \TxId & \text{compute transaction id}\\
       \fun{validateScript} & \Script \to \Tx \to \Bool & \text{script interpreter}\\
-      \fun{hashMD} & \MetaData \to \MetaDataHash & \text{hash the metadata}\\
+      \fun{hashMD} & \Metadata \to \MetadataHash & \text{hash the metadata}\\
       \fun{bootstrapAttrSize} & \AddrBS \to \N & \text{bootstrap attribute size}\\
     \end{array}
   \end{equation*}

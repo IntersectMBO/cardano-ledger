@@ -15,11 +15,11 @@ import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (hashWithSerialiser)
-import Shelley.Spec.Ledger.MetaData
-  ( MetaData (MetaData),
-    MetaDataHash (MetaDataHash),
+import Shelley.Spec.Ledger.Metadata
+  ( Metadata (Metadata),
+    MetadataHash (MetadataHash),
     ValidateMetadata (hashMetadata, validateMetadata),
-    validMetaDatum,
+    validMetadatum,
   )
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
@@ -44,7 +44,7 @@ type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
 
 type instance Core.Script (ShelleyEra c) = MultiSig (ShelleyEra c)
 
-type instance Core.Metadata (ShelleyEra c) = MetaData
+type instance Core.Metadata (ShelleyEra c) = Metadata
 
 --------------------------------------------------------------------------------
 -- Ledger data instances
@@ -58,5 +58,5 @@ instance
   hashScript = hashMultiSigScript
 
 instance CryptoClass.Crypto c => ValidateMetadata (ShelleyEra c) where
-  hashMetadata = MetaDataHash . hashWithSerialiser toCBOR
-  validateMetadata (MetaData m) = all validMetaDatum m
+  hashMetadata = MetadataHash . hashWithSerialiser toCBOR
+  validateMetadata (Metadata m) = all validMetadatum m

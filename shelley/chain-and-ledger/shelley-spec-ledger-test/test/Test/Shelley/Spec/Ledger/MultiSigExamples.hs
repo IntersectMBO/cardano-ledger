@@ -62,7 +62,7 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
     genesisState,
   )
-import Shelley.Spec.Ledger.MetaData (MetaData)
+import Shelley.Spec.Ledger.Metadata (Metadata)
 import Shelley.Spec.Ledger.PParams (PParams, emptyPParams, _maxTxSize)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts
@@ -182,7 +182,7 @@ makeTx ::
   Core.TxBody (ShelleyEra c) ->
   [KeyPair 'Witness c] ->
   Map (ScriptHash (ShelleyEra c)) (MultiSig (ShelleyEra c)) ->
-  Maybe MetaData ->
+  Maybe Metadata ->
   Tx (ShelleyEra c)
 makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where

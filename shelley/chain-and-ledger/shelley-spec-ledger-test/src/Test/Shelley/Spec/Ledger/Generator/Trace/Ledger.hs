@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
     genesisState,
   )
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
+import Shelley.Spec.Ledger.Metadata (ValidateMetadata)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))

@@ -28,7 +28,7 @@ import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
-import qualified Shelley.Spec.Ledger.MetaData as SMD
+import qualified Shelley.Spec.Ledger.Metadata as SMD
 import Shelley.Spec.Ledger.PParams
   ( PParams' (..),
     Update,

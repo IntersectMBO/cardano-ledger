@@ -31,7 +31,7 @@ import qualified Cardano.Ledger.ShelleyMA.Metadata as MA
 import qualified Data.ByteString.Lazy as Lazy (null)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.String (fromString)
-import Shelley.Spec.Ledger.MetaData (MetaData (..))
+import qualified Shelley.Spec.Ledger.Metadata as Shelley (Metadata (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Test.Cardano.Ledger.EraBuffet
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
@@ -39,7 +39,7 @@ import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
     roundTripAnn,
   )
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.Generator.MetaData ()
+import Test.Shelley.Spec.Ledger.Generator.Metadata ()
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators (genHash)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)
@@ -85,7 +85,7 @@ genMeta Allegra = do
   m <- arbitrary
   s <- genScriptSeq Allegra
   pure (MA.Metadata m s)
-genMeta Shelley = MetaData <$> arbitrary
+genMeta Shelley = Shelley.Metadata <$> arbitrary
 
 -- ==========================================================
 -- Parameterized helper functions for generating Mary style Values

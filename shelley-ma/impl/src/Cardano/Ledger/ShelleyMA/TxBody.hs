@@ -71,7 +71,7 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (..))
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Serialization (encodeFoldable)
 import Shelley.Spec.Ledger.TxBody
@@ -121,7 +121,7 @@ data TxBodyRaw era = TxBodyRaw
     txfee :: !Coin,
     vldt :: !ValidityInterval, -- imported from Timelocks
     update :: !(StrictMaybe (Update era)),
-    mdHash :: !(StrictMaybe (MetaDataHash era)),
+    mdHash :: !(StrictMaybe (MetadataHash era)),
     mint :: !(Value era)
   }
   deriving (Typeable)
@@ -267,7 +267,7 @@ pattern TxBody ::
   Coin ->
   ValidityInterval ->
   (StrictMaybe (Update era)) ->
-  (StrictMaybe (MetaDataHash era)) ->
+  (StrictMaybe (MetadataHash era)) ->
   (Value era) ->
   TxBody era
 pattern TxBody i o d w fee vi u m mint <-
@@ -317,7 +317,7 @@ instance HasField "vldt" (TxBody e) ValidityInterval where
 instance HasField "update" (TxBody e) (StrictMaybe (Update e)) where
   getField (TxBodyConstr (Memo m _)) = getField @"update" m
 
-instance HasField "mdHash" (TxBody e) (StrictMaybe (MetaDataHash e)) where
+instance HasField "mdHash" (TxBody e) (StrictMaybe (MetadataHash e)) where
   getField (TxBodyConstr (Memo m _)) = getField @"mdHash" m
 
 instance (Value e ~ vv) => HasField "mint" (TxBody e) vv where

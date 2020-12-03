@@ -40,7 +40,7 @@ import Shelley.Spec.Ledger.BlockChain
     mkSeed,
     seedL,
   )
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
+import Shelley.Spec.Ledger.Metadata (ValidateMetadata)
 import Shelley.Spec.Ledger.OCert (currentIssueNo, kesPeriod)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Test.QuickCheck (Gen)

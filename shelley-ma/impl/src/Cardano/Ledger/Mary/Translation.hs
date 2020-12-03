@@ -32,7 +32,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Shelley.Spec.Ledger.API hiding (TxBody)
+import Shelley.Spec.Ledger.API hiding (Metadata, TxBody)
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import qualified Shelley.Spec.Ledger.LedgerState as LS
 import Shelley.Spec.Ledger.Rewards (NonMyopic (NonMyopic), likelihoodsNM, rewardPotNM)

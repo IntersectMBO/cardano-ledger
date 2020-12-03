@@ -26,7 +26,7 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
   )
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
+import Shelley.Spec.Ledger.Metadata (ValidateMetadata)
 import Test.QuickCheck (generate)
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions (ledgerEnv)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)

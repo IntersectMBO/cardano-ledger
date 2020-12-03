@@ -21,7 +21,7 @@ import Shelley.Spec.Ledger.API
     Update,
   )
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.Scripts (MultiSig (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
@@ -37,7 +37,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genNatural,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
-import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData)
+import Test.Shelley.Spec.Ledger.Generator.Metadata (genMetadata)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( Quantifier (..),
     ScriptClass (..),
@@ -51,7 +51,7 @@ instance CC.Crypto c => EraGen (ShelleyEra c) where
   genGenesisValue (GenEnv _keySpace Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     genCoin minGenesisOutputVal maxGenesisOutputVal
   genEraTxBody _ge = genTxBody
-  genMetadata = genMetaData
+  genEraMetadata = genMetadata
 
   updateEraTxBody body fee ins outs =
     body
@@ -86,7 +86,7 @@ genTxBody ::
   Wdrl era ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetaDataHash era) ->
+  StrictMaybe (MetadataHash era) ->
   Gen (TxBody era)
 genTxBody slot inputs outputs certs wdrls fee update mdHash = do
   ttl <- genTimeToLive slot

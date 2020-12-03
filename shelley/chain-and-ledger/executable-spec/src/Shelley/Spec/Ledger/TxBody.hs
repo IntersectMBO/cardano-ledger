@@ -32,7 +32,7 @@ module Shelley.Spec.Ledger.TxBody
     MIRCert (..),
     MIRPot (..),
     PoolCert (..),
-    PoolMetaData (..),
+    PoolMetadata (..),
     PoolParams (..),
     Ptr (..),
     RewardAcnt (..),
@@ -170,7 +170,7 @@ import Shelley.Spec.Ledger.Keys
     encodeSignedDSIGN,
     hashKey,
   )
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Serialization
@@ -213,27 +213,27 @@ data Delegation era = Delegation
 
 instance NoThunks (Delegation era)
 
-data PoolMetaData = PoolMetaData
+data PoolMetadata = PoolMetadata
   { _poolMDUrl :: !Url,
     _poolMDHash :: !ByteString
   }
   deriving (Eq, Ord, Generic, Show)
 
-deriving instance NFData PoolMetaData
+deriving instance NFData PoolMetadata
 
-instance ToJSON PoolMetaData where
+instance ToJSON PoolMetadata where
   toJSON pmd =
     Aeson.object
       [ "url" .= _poolMDUrl pmd,
         "hash" .= (Text.decodeLatin1 . B16.encode) (_poolMDHash pmd)
       ]
 
-instance FromJSON PoolMetaData where
+instance FromJSON PoolMetadata where
   parseJSON =
-    Aeson.withObject "PoolMetaData" $ \obj -> do
+    Aeson.withObject "PoolMetadata" $ \obj -> do
       url <- obj .: "url"
       hash <- explicitParseField parseJsonBase16 obj "hash"
-      return $ PoolMetaData url hash
+      return $ PoolMetadata url hash
 
 parseJsonBase16 :: Value -> Parser ByteString
 parseJsonBase16 v = do
@@ -242,7 +242,7 @@ parseJsonBase16 v = do
     Right bs -> return bs
     Left msg -> fail msg
 
-instance NoThunks PoolMetaData
+instance NoThunks PoolMetadata
 
 data StakePoolRelay
   = -- | One or both of IPv4 & IPv6
@@ -349,7 +349,7 @@ data PoolParams era = PoolParams
     _poolRAcnt :: !(RewardAcnt era),
     _poolOwners :: !(Set (KeyHash 'Staking (Crypto era))),
     _poolRelays :: !(StrictSeq StakePoolRelay),
-    _poolMD :: !(StrictMaybe PoolMetaData)
+    _poolMD :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
   deriving (ToCBOR) via CBORGroup (PoolParams era)
@@ -631,7 +631,7 @@ data TxBodyRaw era = TxBodyRaw
     _txfeeX :: !Coin,
     _ttlX :: !SlotNo,
     _txUpdateX :: !(StrictMaybe (Update era)),
-    _mdHashX :: !(StrictMaybe (MetaDataHash era))
+    _mdHashX :: !(StrictMaybe (MetadataHash era))
   }
   deriving (Generic, NoThunks, Typeable, NFData)
 
@@ -738,7 +738,7 @@ pattern TxBody ::
   Coin ->
   SlotNo ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetaDataHash era) ->
+  StrictMaybe (MetadataHash era) ->
   TxBody era
 pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
   TxBodyConstr
@@ -789,7 +789,7 @@ instance HasField "ttl" (TxBody era) SlotNo where
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"_txUpdateX" m
 
-instance HasField "mdHash" (TxBody era) (StrictMaybe (MetaDataHash era)) where
+instance HasField "mdHash" (TxBody era) (StrictMaybe (MetadataHash era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"_mdHashX" m
 
 -- ===============================================================
@@ -1006,18 +1006,18 @@ instance
     where
       mkWitVKey k sig = WitVKey' k sig (asWitness $ hashKey k)
 
-instance ToCBOR PoolMetaData where
-  toCBOR (PoolMetaData u h) =
+instance ToCBOR PoolMetadata where
+  toCBOR (PoolMetadata u h) =
     encodeListLen 2
       <> toCBOR u
       <> toCBOR h
 
-instance FromCBOR PoolMetaData where
+instance FromCBOR PoolMetadata where
   fromCBOR = do
-    decodeRecordNamed "PoolMetaData" (const 2) $ do
+    decodeRecordNamed "PoolMetadata" (const 2) $ do
       u <- fromCBOR
       h <- fromCBOR
-      pure $ PoolMetaData u h
+      pure $ PoolMetadata u h
 
 -- | The size of the '_poolOwners' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.

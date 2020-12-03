@@ -55,7 +55,7 @@ import Shelley.Spec.Ledger.LedgerState
   ( NewEpochState,
     nesBcur,
   )
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata)
+import Shelley.Spec.Ledger.Metadata (ValidateMetadata)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
