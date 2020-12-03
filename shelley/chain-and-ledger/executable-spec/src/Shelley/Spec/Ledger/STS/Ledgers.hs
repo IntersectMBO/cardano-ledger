@@ -112,7 +112,7 @@ instance
   type PredicateFailure (LEDGERS era) = LedgersPredicateFailure era
 
   initialRules = [
-    -- pure emptyLedgerState
+    pure emptyLedgerState
     ]
   transitionRules = [ledgersTransition]
 

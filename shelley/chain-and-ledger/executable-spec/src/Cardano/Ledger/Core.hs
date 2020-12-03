@@ -56,6 +56,10 @@ type family Script era :: Type
 type family AuxiliaryData era :: Type
 
 -- | Update transition system for the era.
+--
+-- TODO: this is actually the update payload processing rule, so we need to name
+-- it accordingly. We will need another rule to register slot changes in the
+-- tick rule.
 type family UpdateSTS era :: Type
 
 class HasUpdateLogic era where

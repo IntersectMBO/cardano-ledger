@@ -4,6 +4,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Newpp
   ( NEWPP,
@@ -46,6 +51,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Core as Core
 
 data NEWPP era
@@ -64,24 +70,24 @@ data NewppPredicateFailure era
 
 instance NoThunks (NewppPredicateFailure era)
 
-instance (Typeable era, Core.HasUpdateLogic era) => STS (NEWPP era) where
+instance (Typeable era, ShelleyBased era) => STS (NEWPP era) where
   type State (NEWPP era) = NewppState era
   type Signal (NEWPP era) = Maybe (PParams era)
   type Environment (NEWPP era) = NewppEnv era
   type BaseM (NEWPP era) = ShelleyBase
   type PredicateFailure (NEWPP era) = NewppPredicateFailure era
   initialRules = [
-    -- initialNewPp
+    initialNewPp
                  ]
   transitionRules = [newPpTransition]
 
--- initialNewPp :: InitialRule (NEWPP era)
--- initialNewPp =
---   pure $
---     NewppState
---       (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState)
---       emptyAccount
---       emptyPParams
+initialNewPp :: forall era . ShelleyBased era => InitialRule (NEWPP era)
+initialNewPp =
+  pure $
+    NewppState
+      (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (initialUpdateState @era))
+      emptyAccount
+      emptyPParams
 
 newPpTransition ::
   Core.HasUpdateLogic era => TransitionRule (NEWPP era)

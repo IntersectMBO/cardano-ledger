@@ -32,6 +32,8 @@ import Shelley.Spec.Ledger.Tx
     validateNativeMultiSigScript,
   )
 import Shelley.Spec.Ledger.STS.Ppup (PPUP)
+import qualified Shelley.Spec.Ledger.STS.Ppup as Ppup
+import Shelley.Spec.Ledger.LedgerState as LedgerState
 
 data ShelleyEra c
 
@@ -53,6 +55,11 @@ type instance Core.AuxiliaryData (ShelleyEra c) = Metadata
 type instance Core.UpdateSTS (ShelleyEra c) = PPUP (ShelleyEra c)
 
 instance Core.HasUpdateLogic (ShelleyEra c) where
+  initialUpdateState = LedgerState.emptyPPUPState
+
+  registerProtocolParametersChange = Ppup.registerProtocolParametersChange
+
+  votedValue = Ppup.votedValue
 
 --------------------------------------------------------------------------------
 -- Ledger data instances

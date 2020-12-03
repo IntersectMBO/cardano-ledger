@@ -100,7 +100,6 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     UTxOState (..),
     emptyDState,
-    emptyPPUPState,
     emptyPState,
     updateNES,
     _genDelegs,

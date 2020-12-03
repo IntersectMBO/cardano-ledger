@@ -7,6 +7,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Mir
   ( MIR,
@@ -54,6 +56,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (emptyPParams)
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 
 data MIR era
 
@@ -62,7 +65,7 @@ data MirPredicateFailure era
 
 instance NoThunks (MirPredicateFailure era)
 
-instance Typeable era => STS (MIR era) where
+instance (Typeable era, ShelleyBased era) => STS (MIR era) where
   type State (MIR era) = EpochState era
   type Signal (MIR era) = ()
   type Environment (MIR era) = ()
@@ -70,7 +73,7 @@ instance Typeable era => STS (MIR era) where
   type PredicateFailure (MIR era) = MirPredicateFailure era
 
   initialRules = [
-    -- initialMir
+    initialMir
     ]
   transitionRules = [mirTransition]
 
@@ -83,16 +86,16 @@ instance Typeable era => STS (MIR era) where
         )
     ]
 
--- initialMir :: InitialRule (MIR era)
--- initialMir =
---   pure $
---     EpochState
---       emptyAccount
---       emptySnapShots
---       emptyLedgerState
---       emptyPParams
---       emptyPParams
---       emptyNonMyopic
+initialMir :: ShelleyBased era => InitialRule (MIR era)
+initialMir =
+  pure $
+    EpochState
+      emptyAccount
+      emptySnapShots
+      emptyLedgerState
+      emptyPParams
+      emptyPParams
+      emptyNonMyopic
 
 mirTransition :: forall era. TransitionRule (MIR era)
 mirTransition = do

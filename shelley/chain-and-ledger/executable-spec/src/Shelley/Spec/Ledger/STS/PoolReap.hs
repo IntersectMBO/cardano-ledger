@@ -48,6 +48,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxBody (getRwdCred, _poolRAcnt)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 
 data POOLREAP era
 
@@ -67,15 +68,15 @@ data PoolreapPredicateFailure era -- No predicate Falures
 
 instance NoThunks (PoolreapPredicateFailure era)
 
-instance Typeable era => STS (POOLREAP era) where
+instance (Typeable era, ShelleyBased era) => STS (POOLREAP era) where
   type State (POOLREAP era) = PoolreapState era
   type Signal (POOLREAP era) = EpochNo
   type Environment (POOLREAP era) = PParams era
   type BaseM (POOLREAP era) = ShelleyBase
   type PredicateFailure (POOLREAP era) = PoolreapPredicateFailure era
   initialRules =
-    [ -- pure $
-      --   PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState
+    [ pure $
+        PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState
     ]
   transitionRules = [poolReapTransition]
 

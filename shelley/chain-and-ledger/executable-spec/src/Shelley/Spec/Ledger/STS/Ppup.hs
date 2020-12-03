@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Shelley.Spec.Ledger.STS.Ppup
   ( PPUP,
@@ -13,6 +14,8 @@ module Shelley.Spec.Ledger.STS.Ppup
     PpupPredicateFailure (..),
     PredicateFailure,
     VotingPeriod (..),
+    registerProtocolParametersChange,
+    votedValue
   )
 where
 
@@ -38,6 +41,8 @@ import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
 data PPUP era
 
@@ -176,3 +181,29 @@ registerProtocolParametersChange ppupState pp =  PPUPState ps emptyPPPUpdates
     ps = if all goodPV newProposals
          then ProposedPPUpdates newProposals
          else emptyPPPUpdates
+
+votedValue ::
+  PPUPState era ->
+  PParams era ->
+  Int ->
+  Maybe (PParams era)
+votedValue PPUPState {proposals} pps quorumN =
+  let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
+      ProposedPPUpdates pup = proposals
+      votes =
+        Map.foldr
+          (\vote tally -> Map.insert vote (incrTally vote tally) tally)
+          (Map.empty :: Map (PParamsUpdate era) Int)
+          pup
+      consensus = Map.filter (>= quorumN) votes
+   in case length consensus of
+        -- NOTE that `quorumN` is a global constant, and that we require
+        -- it to be strictly greater than half the number of genesis nodes.
+        -- The keys in the `pup` correspond to the genesis nodes,
+        -- and therefore either:
+        --   1) `consensus` is empty, or
+        --   2) `consensus` has exactly one element.
+        1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
+        -- NOTE that `updatePParams` corresponds to the union override right
+        -- operation in the formal spec.
+        _ -> Nothing

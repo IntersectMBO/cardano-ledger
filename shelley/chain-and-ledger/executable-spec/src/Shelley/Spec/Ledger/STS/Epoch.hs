@@ -14,26 +14,22 @@
 module Shelley.Spec.Ledger.STS.Epoch
   ( EPOCH,
     EpochPredicateFailure (..),
-    PredicateFailure,
+    PredicateFailure
   )
 where
 
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
-import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
-import Data.Map.Strict (Map)
+import Control.State.Transition (Embed (..), InitialRule
+                                , STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
-import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
-    PPUPState (..),
     PState (..),
-    emptyAccount,
-    emptyLedgerState,
     esAccountState,
     esLState,
     esNonMyopic,
@@ -43,6 +39,8 @@ import Shelley.Spec.Ledger.LedgerState
     _delegationState,
     _ppups,
     _utxoState,
+    emptyAccount,
+    emptyLedgerState,
     pattern DPState,
     pattern EpochState,
   )
@@ -52,6 +50,7 @@ import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP)
 import Shelley.Spec.Ledger.Slot (EpochNo)
+import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import qualified Cardano.Ledger.Core as Core
 
 data EPOCH era
@@ -70,54 +69,29 @@ deriving stock instance
   (Show (PredicateFailure (SNAP era))) =>
   Show (EpochPredicateFailure era)
 
-instance (Core.HasUpdateLogic era, ShelleyBased era) => STS (EPOCH era) where
+instance ShelleyBased era => STS (EPOCH era) where
   type State (EPOCH era) = EpochState era
   type Signal (EPOCH era) = EpochNo
   type Environment (EPOCH era) = ()
   type BaseM (EPOCH era) = ShelleyBase
   type PredicateFailure (EPOCH era) = EpochPredicateFailure era
   initialRules = [
-    -- initialEpoch
+    initialEpoch
     ]
   transitionRules = [epochTransition]
 
 instance NoThunks (EpochPredicateFailure era)
 
--- initialEpoch :: InitialRule (EPOCH era)
--- initialEpoch =
---   pure $
---     EpochState
---       emptyAccount
---       emptySnapShots
---       emptyLedgerState
---       emptyPParams
---       emptyPParams
---       emptyNonMyopic
-
-votedValue ::
-  ProposedPPUpdates era ->
-  PParams era ->
-  Int ->
-  Maybe (PParams era)
-votedValue (ProposedPPUpdates pup) pps quorumN =
-  let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
-      votes =
-        Map.foldr
-          (\vote tally -> Map.insert vote (incrTally vote tally) tally)
-          (Map.empty :: Map (PParamsUpdate era) Int)
-          pup
-      consensus = Map.filter (>= quorumN) votes
-   in case length consensus of
-        -- NOTE that `quorumN` is a global constant, and that we require
-        -- it to be strictly greater than half the number of genesis nodes.
-        -- The keys in the `pup` correspond to the genesis nodes,
-        -- and therefore either:
-        --   1) `consensus` is empty, or
-        --   2) `consensus` has exactly one element.
-        1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
-        -- NOTE that `updatePParams` corresponds to the union override right
-        -- operation in the formal spec.
-        _ -> Nothing
+initialEpoch :: ShelleyBased era => InitialRule (EPOCH era)
+initialEpoch =
+  pure $
+    EpochState
+      emptyAccount
+      emptySnapShots
+      emptyLedgerState
+      emptyPParams
+      emptyPParams
+      emptyNonMyopic
 
 epochTransition ::
   forall era.
@@ -174,5 +148,5 @@ instance ShelleyBased era => Embed (SNAP era) (EPOCH era) where
 instance ShelleyBased era => Embed (POOLREAP era) (EPOCH era) where
   wrapFailed = PoolReapFailure
 
-instance (Core.HasUpdateLogic era, ShelleyBased era) => Embed (NEWPP era) (EPOCH era) where
+instance ShelleyBased era => Embed (NEWPP era) (EPOCH era) where
   wrapFailed = NewPpFailure

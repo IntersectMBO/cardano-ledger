@@ -56,7 +56,7 @@ deriving stock instance
 
 instance NoThunks (NewEpochPredicateFailure era)
 
-instance (Core.HasUpdateLogic era, ShelleyBased era) => STS (NEWEPOCH era) where
+instance ShelleyBased era => STS (NEWEPOCH era) where
   type State (NEWEPOCH era) = NewEpochState era
 
   type Signal (NEWEPOCH era) = EpochNo
@@ -81,8 +81,8 @@ instance (Core.HasUpdateLogic era, ShelleyBased era) => STS (NEWEPOCH era) where
 
 newEpochTransition ::
   forall era.
-  ( Core.HasUpdateLogic era, ShelleyBased era
-  ) =>
+  ShelleyBased era
+   =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
   TRC
