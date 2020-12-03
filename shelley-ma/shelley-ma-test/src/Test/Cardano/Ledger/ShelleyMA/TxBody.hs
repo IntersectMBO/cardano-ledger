@@ -5,8 +5,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+-- Arbitrary instances
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
-{-# OPTIONS_GHC  -fno-warn-orphans #-} -- Arbitrary instances
 -- =========================
 
 module Test.Cardano.Ledger.ShelleyMA.TxBody
@@ -14,61 +15,65 @@ module Test.Cardano.Ledger.ShelleyMA.TxBody
     TestEra,
     genShelleyBody,
     genMaryBody,
-    genMaryTxBody,
-    oldStyleRoundTrip,
-  ) where
+  )
+where
 
-import Cardano.Binary(ToCBOR(..))
+import Cardano.Binary (ToCBOR (..))
+import qualified Cardano.Ledger.Core as Core
+-- Arbitrary instances
+-- Arbitrary instances
+
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
     PolicyID (..),
     Value (..),
   )
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), Timelock (..))
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.ShelleyMA.TxBody
+  ( FamsFrom,
+    TxBodyRaw (..),
+    bodyFields,
+    initial,
+    txSparse,
+  )
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (hashScript)
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as Short
+import Data.Coders
+  ( Decode (..),
+    Density (..),
+    Wrapped (..),
+    decode,
+    encode,
+  )
 import qualified Data.Map.Strict as Map
 import Data.MemoBytes (MemoBytes (Memo), roundTripMemo)
-import Data.Sequence.Strict (StrictSeq, fromList)
+import Data.Sequence.Strict (fromList)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (empty)
 import Data.String (fromString)
 import GHC.Records
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Tx (hashScript)
 import Shelley.Spec.Ledger.TxBody (Wdrl (..))
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
+import Test.Cardano.Ledger.EraBuffet (TestCrypto)
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
+  ( RoundTripResult,
+    embedTrip',
+    roundTrip',
+    roundTripAnn,
+  )
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
+import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Cardano.Ledger.EraBuffet(TestCrypto)
-import Cardano.Ledger.ShelleyMA.TxBody
-  ( TxBodyRaw(..),
-    FamsFrom,
-    txSparse,
-    bodyFields,
-    initial,
-   )
-import Data.Coders
-  ( Wrapped(..),
-    Density(..),
-    encode,
-    Decode(..),
-    decode,
-  )
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators() -- Arbitrary instances
-import Test.Shelley.Spec.Ledger.Serialisation.Generators() -- Arbitrary instances
 import Test.Tasty.QuickCheck
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
-  ( roundTrip',
-    embedTrip',
-    roundTripAnn,
-    RoundTripResult
-  )
-import Cardano.Ledger.Mary (MaryEra)
+
 -- ============================================================================================
 -- make an example
 -- ============================================================================================
@@ -82,15 +87,12 @@ type TestEra = MaryEra TestCrypto
 -- ====================================================================================================
 -- Make a TxBody to test with
 
-eseq :: StrictSeq a
-eseq = fromList []
-
 txM :: Mary.TxBody TestEra
 txM =
   Mary.TxBody
     empty
-    eseq
-    eseq
+    StrictSeq.empty
+    StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 6)
     (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))
@@ -101,8 +103,8 @@ txM =
 testmint :: Value TestEra
 testmint = Value 0 (Map.singleton policyId (Map.singleton aname 2))
   where
-  policyId = PolicyID . hashScript . RequireAnyOf $ fromList []
-  aname = AssetName $ fromString "asset name"
+    policyId = PolicyID . hashScript . RequireAnyOf $ fromList []
+    aname = AssetName $ fromString "asset name"
 
 bytes :: Mary.TxBody era -> ShortByteString
 bytes (Mary.TxBodyConstr (Memo _ b)) = b
@@ -112,11 +114,23 @@ fieldTests =
   testGroup
     "getField tests"
     [ testCase "inputs" (assertEqual "inputs" (getField @"inputs" txM) empty),
-      testCase "outputs" (assertEqual "outputs" (getField @"outputs" txM) eseq),
-      testCase "certs" (assertEqual "certs" (getField @"certs" txM) eseq),
+      testCase
+        "outputs"
+        ( assertEqual
+            "outputs"
+            (getField @"outputs" txM)
+            StrictSeq.empty
+        ),
+      testCase "certs" (assertEqual "certs" (getField @"certs" txM) StrictSeq.empty),
       testCase "wdrls" (assertEqual "wdrls" (getField @"wdrls" txM) (Wdrl Map.empty)),
       testCase "txfree" (assertEqual "txfree" (getField @"txfee" txM) (Coin 6)),
-      testCase "vldt" (assertEqual "vldt" (getField @"vldt" txM) (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))),
+      testCase
+        "vldt"
+        ( assertEqual
+            "vldt"
+            (getField @"vldt" txM)
+            (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))
+        ),
       testCase "update" (assertEqual "update" (getField @"update" txM) SNothing),
       testCase "mdHash" (assertEqual "mdHash" (getField @"mdHash" txM) SNothing),
       testCase "mint" (assertEqual "mint" (getField @"mint" txM) testmint)
@@ -134,44 +148,64 @@ roundtrip (Mary.TxBodyConstr memo) =
 
 checkSparse :: TxBodyRaw TestEra -> Bool
 checkSparse tx = case oldStyleRoundTrip tx of
-    Right("",_) -> True
-    Right(left,_) -> error ("left over input: "++show left)
-    Left s -> error (show s)
+  Right ("", _) -> True
+  Right (left, _) -> error ("left over input: " ++ show left)
+  Left s -> error (show s)
 
 embedTest :: Gen Bool
 embedTest = do
   shelleybody <- genShelleyBody
   case embedTrip' toCBOR (decode (getTxSparse @TestEra)) shelleybody of
-     Right("",_) -> pure True
-     Right(left,_) -> error ("left over input: "++show left)
-     Left s -> error (show s)
+    Right ("", _) -> pure True
+    Right (left, _) -> error ("left over input: " ++ show left)
+    Left s -> error (show s)
 
-getTxSparse ::  (Val (Core.Value era),FamsFrom era) => Decode ('Closed 'Dense) (TxBodyRaw era)
-getTxSparse = SparseKeyed "TxBodyRaw" initial bodyFields [(0,"inputs"),(1,"outputs"),(2,"txfee")]
+getTxSparse ::
+  (Val (Core.Value era), FamsFrom era) =>
+  Decode ('Closed 'Dense) (TxBodyRaw era)
+getTxSparse =
+  SparseKeyed
+    "TxBodyRaw"
+    initial
+    bodyFields
+    [(0, "inputs"), (1, "outputs"), (2, "txfee")]
 
-oldStyleRoundTrip:: TxBodyRaw TestEra -> RoundTripResult (TxBodyRaw TestEra)
-oldStyleRoundTrip x = roundTrip' (encode . txSparse) (decode getTxSparse) x
+oldStyleRoundTrip :: TxBodyRaw TestEra -> RoundTripResult (TxBodyRaw TestEra)
+oldStyleRoundTrip = roundTrip' (encode . txSparse) (decode getTxSparse)
 
 genShelleyBody :: Gen (Shelley.TxBody TestEra)
-genShelleyBody = Shelley.TxBody <$> arbitrary <*> pure eseq <*> arbitrary <*> arbitrary
-                                <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+genShelleyBody =
+  Shelley.TxBody
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
 
 genMaryBody :: Gen (TxBodyRaw TestEra)
-genMaryBody = TxBodyRaw <$> arbitrary <*> pure eseq <*> arbitrary <*> arbitrary
-                      <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+genMaryBody =
+  TxBodyRaw
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> genMintValues
 
 instance Arbitrary (TxBodyRaw TestEra) where
   arbitrary = genMaryBody
 
-genMaryTxBody :: Gen (Mary.TxBody TestEra)
-genMaryTxBody = Mary.TxBody <$> arbitrary <*> pure eseq <*> arbitrary <*> arbitrary
-                      <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-
 checkSparseAnn :: Mary.TxBody TestEra -> Bool
 checkSparseAnn tx = case roundTripAnn tx of
-    Right("",_) -> True
-    Right(left,_) -> error ("left over input: "++show left)
-    Left s -> error (show s)
+  Right ("", _) -> True
+  Right (left, _) -> error ("left over input: " ++ show left)
+  Left s -> error (show s)
 
 -- ======================================================
 
@@ -179,10 +213,10 @@ txBodyTest :: TestTree
 txBodyTest =
   testGroup
     "TxBody"
-    [ fieldTests
-    , testCase "length" (assertEqual "length" 36 (Short.length (bytes txM)))
-    , testCase "roundtrip txM" (roundtrip txM)
-    , testProperty "roundtrip sparse TxBodyRaw" checkSparse
-    , testProperty "embed Shelley sparse TxBodyRaw" embedTest
-    , testProperty "routrip sparse TxBody" checkSparseAnn
+    [ fieldTests,
+      testCase "length" (assertEqual "length" 36 (Short.length (bytes txM))),
+      testCase "roundtrip txM" (roundtrip txM),
+      testProperty "roundtrip sparse TxBodyRaw" checkSparse,
+      testProperty "embed Shelley sparse TxBodyRaw" embedTest,
+      testProperty "roundtrip sparse TxBody" checkSparseAnn
     ]

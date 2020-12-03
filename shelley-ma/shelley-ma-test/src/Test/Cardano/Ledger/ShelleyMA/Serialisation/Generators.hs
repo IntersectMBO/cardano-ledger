@@ -21,6 +21,7 @@
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
   ( sizedTimelock,
     maxTimelockDepth,
+    genMintValues,
   )
 where
 
