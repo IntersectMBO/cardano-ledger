@@ -128,6 +128,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Records
+import GHC.Stack (HasCallStack)
 import NoThunks.Class (AllowThunksIn (..), InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
@@ -475,7 +476,7 @@ instance NFData (TxOut era) where
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
 pattern TxOut ::
-  ShelleyBased era =>
+  (HasCallStack, ShelleyBased era) =>
   Addr era ->
   Core.Value era ->
   TxOut era

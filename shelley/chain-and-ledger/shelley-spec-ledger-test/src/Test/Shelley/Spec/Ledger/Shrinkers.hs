@@ -6,18 +6,19 @@
 module Test.Shelley.Spec.Ledger.Shrinkers where
 
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Ledger.Val ((<+>), (<->))
+import qualified Cardano.Ledger.Val as Val
 import Data.Foldable (toList)
 import Data.List (foldl')
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import Data.Sequence.Strict (StrictSeq (..), (<|), empty)
+import Data.Sequence.Strict (StrictSeq (..), empty, (<|))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as S
+import Debug.Trace (traceShowId)
 import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.PParams
@@ -61,7 +62,7 @@ shrinkTxBody ::
 shrinkTxBody (TxBody _ Empty _ _ _ _ _ _) = []
 -- need to keep all the MA tokens in the transaction, so we need at least one
 -- output to remain after the shrinking to preserve invariant
-shrinkTxBody (TxBody is os@( (:<|) (TxOut a vs) _ ) cs ws tf tl tu md) =
+shrinkTxBody (TxBody is os@((:<|) (TxOut a vs) _) cs ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
   -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
 
@@ -78,10 +79,12 @@ shrinkTxBody (TxBody is os@( (:<|) (TxOut a vs) _ ) cs ws tf tl tu md) =
     -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
     outBalance = outputBalance os
     extraTokens sr = outBalance <-> outputBalance sr
-    extraCoin sr = Val.coin $ extraTokens sr
+    extraCoin sr = traceShowId . Val.coin $ extraTokens sr
     -- put all the non-ada tokens in the head of the outputs, append shrunk list
     mvExtraTksnToOut1 Empty = empty
-    mvExtraTksnToOut1 sr = (TxOut a (vs <+> (extraTokens sr) <-> (Val.inject $ extraCoin sr))) <| sr
+    mvExtraTksnToOut1 sr =
+      (TxOut a (vs <+> (extraTokens sr) <-> (Val.inject $ extraCoin sr))) <| sr
+
 outputBalance :: ShelleyTest era => StrictSeq (TxOut era) -> Core.Value era
 outputBalance = foldl' (\v (TxOut _ c) -> v <+> c) mempty
 
