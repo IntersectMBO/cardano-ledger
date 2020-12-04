@@ -19,7 +19,6 @@ module Shelley.Spec.Ledger.STS.NewEpoch
   )
 where
 
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val

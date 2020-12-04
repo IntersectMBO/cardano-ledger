@@ -43,7 +43,6 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     UTxOState,
     emptyAccount,
-    emptyPPUPState,
     totalInstantaneousReservesRewards,
     updatePpup,
     _deposited,
