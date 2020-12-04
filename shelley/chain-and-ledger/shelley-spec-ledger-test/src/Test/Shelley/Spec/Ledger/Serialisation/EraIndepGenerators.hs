@@ -304,6 +304,7 @@ instance Arbitrary STS.VotingPeriod where
 instance Arbitrary Coin where
   -- Cannot be negative even though it is an 'Integer'
   arbitrary = Coin <$> choose (0, 1000)
+  shrink (Coin i) = Coin <$> shrink i
 
 instance Arbitrary DeltaCoin where
   arbitrary = DeltaCoin <$> choose (-1000, 1000)

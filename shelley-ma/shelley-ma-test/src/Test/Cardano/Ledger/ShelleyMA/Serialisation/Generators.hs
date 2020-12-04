@@ -15,11 +15,13 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
   ( sizedTimelock,
     maxTimelockDepth,
+    genMintValues,
   )
 where
 
@@ -30,7 +32,11 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Mary (MaryEra)
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
-import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
+import qualified Cardano.Ledger.Mary.Value as Mary
+  ( AssetName (..),
+    PolicyID (..),
+    Value (..),
+  )
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import qualified Cardano.Ledger.ShelleyMA.Metadata as MA
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA.STS
@@ -38,8 +44,11 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
 import Data.Coerce (coerce)
-import Data.Sequence.Strict (StrictSeq,fromList)
+import Data.Int (Int64)
+import qualified Data.Map.Strict as Map
+import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Typeable (Typeable)
+import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Shelley.Spec.Ledger.API hiding (SignedDSIGN, TxBody (..))
 import Test.QuickCheck
@@ -48,17 +57,16 @@ import Test.QuickCheck
     choose,
     genericShrink,
     listOf,
-    vectorOf,
     oneof,
     resize,
     shrink,
+    vectorOf,
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData')
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty.QuickCheck (Gen)
-
 
 {-------------------------------------------------------------------------------
   ShelleyMAEra Generators
@@ -83,8 +91,18 @@ sizedTimelock 0 = (MA.RequireSignature . KeyHash . mkDummyHash) <$> arbitrary
 sizedTimelock n =
   oneof
     [ (MA.RequireSignature . KeyHash . mkDummyHash) <$> arbitrary,
-      MA.RequireAllOf <$> (fromList <$> resize maxTimelockListLens (listOf (sizedTimelock (n -1)))),
-      MA.RequireAnyOf <$> (fromList <$> resize maxTimelockListLens (listOf (sizedTimelock (n -1)))),
+      MA.RequireAllOf
+        <$> ( fromList
+                <$> resize
+                  maxTimelockListLens
+                  (listOf (sizedTimelock (n -1)))
+            ),
+      MA.RequireAnyOf
+        <$> ( fromList
+                <$> resize
+                  maxTimelockListLens
+                  (listOf (sizedTimelock (n -1)))
+            ),
       do
         subs <- resize maxTimelockListLens (listOf (sizedTimelock (n -1)))
         let i = length subs
@@ -112,14 +130,15 @@ instance
   arbitrary =
     genMetaData' >>= \case
       MetaData m ->
-        do ss <- genScriptSeq ; pure (MA.Metadata m ss)
+        do ss <- genScriptSeq; pure (MA.Metadata m ss)
 
-genScriptSeq :: (Arbitrary (Timelock (ShelleyMAEra ma c))) => Gen(StrictSeq (Timelock (ShelleyMAEra ma c)))
+genScriptSeq ::
+  (Arbitrary (Timelock (ShelleyMAEra ma c))) =>
+  Gen (StrictSeq (Timelock (ShelleyMAEra ma c)))
 genScriptSeq = do
-  n <- choose (0,3)
+  n <- choose (0, 3)
   l <- vectorOf n arbitrary
   pure (fromList l)
-
 
 {-------------------------------------------------------------------------------
   MaryEra Generators
@@ -145,12 +164,43 @@ instance Mock c => Arbitrary (Mary.PolicyID (MaryEra c)) where
   arbitrary = Mary.PolicyID <$> arbitrary
 
 instance Mock c => Arbitrary (Mary.Value (MaryEra c)) where
-  arbitrary = Mary.Value <$> (abs <$> arbitrary) <*> (ConcreteValue.prune . pointwiseAbs <$> arbitrary)
-    where
-      pointwiseAbs = fmap (fmap abs)
+  arbitrary = valueFromListBounded @Word64 <$> arbitrary <*> arbitrary
 
-genMintValues :: Mock c => Gen (Mary.Value (MaryEra c))
-genMintValues = Mary.Value 0 . ConcreteValue.prune <$> arbitrary
+  shrink (Mary.Value ada assets) =
+    concat
+      [ -- Shrink the ADA value
+        flip Mary.Value assets <$> shrink ada,
+        -- Shrink the non-ADA assets by reducing the list length
+        Mary.Value
+          ada
+          <$> shrink assets
+      ]
+
+-- | When generating values for the mint field, we do two things:
+--
+-- - Fix the ADA value to 0
+-- - Allow both positive and negative quantities
+genMintValues :: forall c. Mock c => Gen (Mary.Value (MaryEra c))
+genMintValues = valueFromListBounded @Int64 0 <$> arbitrary
+
+-- | Variant on @valueFromList@ that makes sure that generated values stay
+-- bounded within the range of a given integral type.
+valueFromListBounded ::
+  forall i era.
+  (Bounded i, Integral i) =>
+  i ->
+  [(Mary.PolicyID era, Mary.AssetName, i)] ->
+  Mary.Value era
+valueFromListBounded (fromIntegral -> ada) =
+  foldr
+    (\(p, n, fromIntegral -> i) ans -> ConcreteValue.insert comb p n i ans)
+    (Mary.Value ada Map.empty)
+  where
+    comb :: Integer -> Integer -> Integer
+    comb a b =
+      max
+        (fromIntegral $ minBound @i)
+        (min (fromIntegral $ maxBound @i) (a + b))
 
 instance Arbitrary Mary.AssetName where
   arbitrary = Mary.AssetName <$> arbitrary
