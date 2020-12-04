@@ -75,9 +75,7 @@ instance ShelleyBased era => STS (EPOCH era) where
   type Environment (EPOCH era) = ()
   type BaseM (EPOCH era) = ShelleyBase
   type PredicateFailure (EPOCH era) = EpochPredicateFailure era
-  initialRules = [
-    initialEpoch
-    ]
+  initialRules = [initialEpoch]
   transitionRules = [epochTransition]
 
 instance NoThunks (EpochPredicateFailure era)
@@ -95,7 +93,7 @@ initialEpoch =
 
 epochTransition ::
   forall era.
-  (Core.HasUpdateLogic era, ShelleyBased era) => -- TODO: should the HasUpdateLogic constraint be part of ShelleyBased?
+  ShelleyBased era => -- TODO: should the HasUpdateLogic constraint be part of ShelleyBased?
   TransitionRule (EPOCH era)
 epochTransition = do
   TRC
@@ -128,7 +126,6 @@ epochTransition = do
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
-  -- let pup = proposals . _ppups $ utxoSt'
   let ppNew = Core.votedValue (_ppups utxoSt') pp (fromIntegral coreNodeQuorum)
   NewppState utxoSt'' acnt'' pp' <-
     trans @(NEWPP era) $

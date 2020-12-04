@@ -128,7 +128,7 @@ calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
    in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
 
 instance
-  (Core.HasUpdateLogic era, ShelleyBased era) =>
+   ShelleyBased era =>
   Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = EpochFailure

@@ -260,9 +260,7 @@ instance
   type BaseM (UTXO (ShelleyEra c)) = ShelleyBase
   type PredicateFailure (UTXO (ShelleyEra c)) = UtxoPredicateFailure (ShelleyEra c)
 
-  transitionRules =
-    [ utxoInductive
-    ]
+  transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
 
   renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =

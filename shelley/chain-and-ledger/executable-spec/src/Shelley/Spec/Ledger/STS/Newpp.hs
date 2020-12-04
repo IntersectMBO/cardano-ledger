@@ -76,9 +76,7 @@ instance (Typeable era, ShelleyBased era) => STS (NEWPP era) where
   type Environment (NEWPP era) = NewppEnv era
   type BaseM (NEWPP era) = ShelleyBase
   type PredicateFailure (NEWPP era) = NewppPredicateFailure era
-  initialRules = [
-    initialNewPp
-                 ]
+  initialRules = [initialNewPp]
   transitionRules = [newPpTransition]
 
 initialNewPp :: forall era . ShelleyBased era => InitialRule (NEWPP era)

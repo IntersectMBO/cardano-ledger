@@ -39,8 +39,8 @@ import Control.State.Transition (STS (State))
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import NoThunks.Class (NoThunks)
--- TODO: we need to make sure it is ok to postpone the abstraction of the era's
--- update parameters.
+-- NOTE: all eras use the same type of protocol parameters, since at the moment
+-- there is no need of abstracting away the protocol parameters.
 import Shelley.Spec.Ledger.PParams (PParams)
 
 -- | A value is something which quantifies a transaction output.
@@ -65,9 +65,21 @@ type family UpdateSTS era :: Type
 class HasUpdateLogic era where
   initialUpdateState :: State (UpdateSTS era)
 
+  -- | Shelley requires that the update system registers a change in the
+  -- protocol parameters. Other update systems might chose to ignore this.
   registerProtocolParametersChange ::
     State (UpdateSTS era) -> PParams era -> State (UpdateSTS era)
 
+  -- | Determine what is the voted value given the current update system state,
+  -- the current update parameters, and the number of nodes that need to agree
+  -- on the protocol parameters change.
+  --
+  -- TODO: at the moment this function is too Shelley-specific, since in general
+  -- all the update-sub-system should have access to is its environment and its
+  -- state. We should make sure we abstract away the protocol-parameters and
+  -- quorum parameters of this function. This will require modifying the Shelley
+  -- Epoch rule to call @votedValue@ with some environment instead, which we'll
+  -- have to build in an era-independent way.
   votedValue ::
     State (UpdateSTS era) -> PParams era -> Int -> Maybe (PParams era)
 

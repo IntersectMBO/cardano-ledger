@@ -182,10 +182,15 @@ registerProtocolParametersChange ppupState pp =  PPUPState ps emptyPPPUpdates
          then ProposedPPUpdates newProposals
          else emptyPPPUpdates
 
+-- | If at least @n@ nodes voted to change __the same__ protocol parameters to
+-- __the same__ values, return the given protocol parameters updated to these
+-- values. Here @n@ is the quorum needed.
 votedValue ::
   PPUPState era ->
   PParams era ->
+  -- ^ Protocol parameters to which the change will be applied.
   Int ->
+  -- ^ Quorum needed to change the protocol parameters.
   Maybe (PParams era)
 votedValue PPUPState {proposals} pps quorumN =
   let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally

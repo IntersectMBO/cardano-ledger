@@ -72,9 +72,7 @@ instance (Typeable era, ShelleyBased era) => STS (MIR era) where
   type BaseM (MIR era) = ShelleyBase
   type PredicateFailure (MIR era) = MirPredicateFailure era
 
-  initialRules = [
-    initialMir
-    ]
+  initialRules = [initialMir]
   transitionRules = [mirTransition]
 
   assertions =
