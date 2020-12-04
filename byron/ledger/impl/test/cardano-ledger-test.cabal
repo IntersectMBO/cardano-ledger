@@ -83,7 +83,7 @@ library
                        Test.Options
 
   build-depends:       base
-                     , base16-bytestring
+                     , base16-bytestring >= 1
                      , bimap
                      , bytestring
                      , cardano-binary

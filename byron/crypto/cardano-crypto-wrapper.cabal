@@ -49,6 +49,7 @@ library
 
   build-depends:       base
                      , aeson
+                     , base16-bytestring >= 1
                      , base64-bytestring
                      , base64-bytestring-type
                      , binary

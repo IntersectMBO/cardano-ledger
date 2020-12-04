@@ -56,6 +56,7 @@ import Test.Cardano.Chain.Update.Example (exampleProtocolParameters)
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example (exampleProtocolMagicId0)
 
+import qualified Data.ByteString.Base16 as B16
 
 exampleBlockCount :: BlockCount
 exampleBlockCount = BlockCount 12344
@@ -168,7 +169,7 @@ exampleUTCTime0 :: UTCTime
 exampleUTCTime0 = UTCTime (ModifiedJulianDay 10000) (secondsToDiffTime 82401)
 
 hexToBS :: ByteString -> ByteString
-hexToBS ts = case decodeEitherBase16 ts of
+hexToBS ts = case B16.decode ts of
   Right fullyDecoded -> fullyDecoded
   Left msg -> panic
     $  "fail to decode: "

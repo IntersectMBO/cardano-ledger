@@ -246,7 +246,7 @@ test-suite cardano-ledger-test
                        Test.Options
 
   build-depends:       base
-                     , base16-bytestring
+                     , base16-bytestring >= 1
                      , bimap >=0.4 && <0.5
                      , bytestring
                      , cardano-binary
