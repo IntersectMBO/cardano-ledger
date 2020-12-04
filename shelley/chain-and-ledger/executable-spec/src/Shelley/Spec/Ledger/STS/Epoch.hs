@@ -14,22 +14,34 @@
 module Shelley.Spec.Ledger.STS.Epoch
   ( EPOCH,
     EpochPredicateFailure (..),
-    PredicateFailure
+    PredicateFailure,
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
-import Control.State.Transition (Embed (..), InitialRule
-                                , STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
+import Control.State.Transition
+  ( Embed (..),
+    InitialRule,
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+    liftSTS,
+    trans,
+  )
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
     PState (..),
+    emptyAccount,
+    emptyLedgerState,
     esAccountState,
     esLState,
     esNonMyopic,
@@ -39,8 +51,6 @@ import Shelley.Spec.Ledger.LedgerState
     _delegationState,
     _ppups,
     _utxoState,
-    emptyAccount,
-    emptyLedgerState,
     pattern DPState,
     pattern EpochState,
   )
@@ -50,8 +60,6 @@ import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP)
 import Shelley.Spec.Ledger.Slot (EpochNo)
-import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
-import qualified Cardano.Ledger.Core as Core
 
 data EPOCH era
 

@@ -11,23 +11,23 @@ import Cardano.Ledger.Core
   ( AnnotatedData,
     AuxiliaryData,
     ChainData,
+    HasUpdateLogic,
     Script,
     SerialisableData,
     TxBody,
-    Value,
     UpdateSTS,
-    HasUpdateLogic
+    Value,
   )
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val (DecodeNonNegative, Val)
+import Control.DeepSeq (NFData)
+import Control.State.Transition (STS (State))
+import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Hashing
   ( EraIndependentTxBody,
     HashAnnotated (..),
   )
-import Control.State.Transition (STS(State))
-import Control.DeepSeq (NFData)
-import NoThunks.Class (NoThunks)
 
 --------------------------------------------------------------------------------
 -- Shelley Era

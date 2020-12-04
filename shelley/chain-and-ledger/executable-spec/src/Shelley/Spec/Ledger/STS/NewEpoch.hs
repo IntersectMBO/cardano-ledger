@@ -19,6 +19,7 @@ module Shelley.Spec.Ledger.STS.NewEpoch
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val
@@ -37,7 +38,6 @@ import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.TxBody
-import qualified Cardano.Ledger.Core as Core
 
 data NEWEPOCH era
 
@@ -81,8 +81,7 @@ instance ShelleyBased era => STS (NEWEPOCH era) where
 
 newEpochTransition ::
   forall era.
-  ShelleyBased era
-   =>
+  ShelleyBased era =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
   TRC
@@ -128,7 +127,7 @@ calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
    in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
 
 instance
-   ShelleyBased era =>
+  ShelleyBased era =>
   Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = EpochFailure

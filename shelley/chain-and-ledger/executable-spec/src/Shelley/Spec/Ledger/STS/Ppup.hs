@@ -4,9 +4,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE NamedFieldPuns #-}
 
 module Shelley.Spec.Ledger.STS.Ppup
   ( PPUP,
@@ -15,7 +15,7 @@ module Shelley.Spec.Ledger.STS.Ppup
     PredicateFailure,
     VotingPeriod (..),
     registerProtocolParametersChange,
-    votedValue
+    votedValue,
   )
 where
 
@@ -29,6 +29,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Typeable (Typeable)
@@ -41,8 +42,6 @@ import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 
 data PPUP era
 
@@ -172,25 +171,26 @@ ppupTransitionNonEmpty = do
 -- | Update the protocol parameter updates by clearing out the proposals and
 -- making the future proposals become the new proposals, provided __all of__ the
 -- new proposals can follow, or otherwise reset them.
-registerProtocolParametersChange
-  :: PPUPState era -> PParams era -> PPUPState era
-registerProtocolParametersChange ppupState pp =  PPUPState ps emptyPPPUpdates
+registerProtocolParametersChange ::
+  PPUPState era -> PParams era -> PPUPState era
+registerProtocolParametersChange ppupState pp = PPUPState ps emptyPPPUpdates
   where
     (ProposedPPUpdates newProposals) = futureProposals ppupState
     goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
-    ps = if all goodPV newProposals
-         then ProposedPPUpdates newProposals
-         else emptyPPPUpdates
+    ps =
+      if all goodPV newProposals
+        then ProposedPPUpdates newProposals
+        else emptyPPPUpdates
 
 -- | If at least @n@ nodes voted to change __the same__ protocol parameters to
 -- __the same__ values, return the given protocol parameters updated to these
 -- values. Here @n@ is the quorum needed.
 votedValue ::
   PPUPState era ->
+  -- | Protocol parameters to which the change will be applied.
   PParams era ->
-  -- ^ Protocol parameters to which the change will be applied.
+  -- | Quorum needed to change the protocol parameters.
   Int ->
-  -- ^ Quorum needed to change the protocol parameters.
   Maybe (PParams era)
 votedValue PPUPState {proposals} pps quorumN =
   let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally

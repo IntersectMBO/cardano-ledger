@@ -1,13 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Newpp
@@ -19,7 +19,9 @@ module Shelley.Spec.Ledger.STS.Newpp
   )
 where
 
+import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.State.Transition
   ( InitialRule,
     STS (..),
@@ -51,8 +53,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
-import Cardano.Ledger.Core as Core
 
 data NEWPP era
 
@@ -79,7 +79,7 @@ instance (Typeable era, ShelleyBased era) => STS (NEWPP era) where
   initialRules = [initialNewPp]
   transitionRules = [newPpTransition]
 
-initialNewPp :: forall era . ShelleyBased era => InitialRule (NEWPP era)
+initialNewPp :: forall era. ShelleyBased era => InitialRule (NEWPP era)
 initialNewPp =
   pure $
     NewppState

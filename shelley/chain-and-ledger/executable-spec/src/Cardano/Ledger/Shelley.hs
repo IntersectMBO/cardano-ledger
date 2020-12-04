@@ -23,7 +23,13 @@ import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (hashWithSerialiser)
-import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
+import Shelley.Spec.Ledger.LedgerState as LedgerState
+import Shelley.Spec.Ledger.MetaData
+  ( MetaData (MetaData),
+    validMetaDatum,
+  )
+import Shelley.Spec.Ledger.STS.Ppup (PPUP)
+import qualified Shelley.Spec.Ledger.STS.Ppup as Ppup
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
   ( TxBody,
@@ -31,9 +37,6 @@ import Shelley.Spec.Ledger.Tx
     hashMultiSigScript,
     validateNativeMultiSigScript,
   )
-import Shelley.Spec.Ledger.STS.Ppup (PPUP)
-import qualified Shelley.Spec.Ledger.STS.Ppup as Ppup
-import Shelley.Spec.Ledger.LedgerState as LedgerState
 
 data ShelleyEra c
 

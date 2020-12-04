@@ -30,6 +30,7 @@ module Shelley.Spec.Ledger.STS.Chain
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
@@ -124,7 +125,6 @@ import Shelley.Spec.Ledger.STS.Tickn
 import Shelley.Spec.Ledger.Slot (EpochNo)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
-import qualified Cardano.Ledger.Core as Core
 
 data CHAIN era
 
@@ -186,7 +186,7 @@ instance
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
-  forall era .
+  forall era.
   Core.HasUpdateLogic era =>
   WithOrigin (LastAppliedBlock (Crypto era)) ->
   EpochNo ->

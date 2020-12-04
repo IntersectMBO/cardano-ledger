@@ -111,6 +111,7 @@ import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
+import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
 import Data.Foldable (fold, toList)
@@ -230,7 +231,6 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
-import Control.State.Transition (STS(State))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
@@ -504,11 +504,14 @@ instance
 emptyPPUPState :: PPUPState era
 emptyPPUPState = PPUPState emptyPPPUpdates emptyPPPUpdates
 
-emptyUTxOState :: forall era . Core.HasUpdateLogic era => UTxOState era
+emptyUTxOState :: forall era. Core.HasUpdateLogic era => UTxOState era
 emptyUTxOState = initialUTxOState (UTxO Map.empty)
 
-initialUTxOState :: forall era . Core.HasUpdateLogic era
-  => UTxO era -> UTxOState era
+initialUTxOState ::
+  forall era.
+  Core.HasUpdateLogic era =>
+  UTxO era ->
+  UTxOState era
 initialUTxOState utxo =
   UTxOState utxo (Coin 0) (Coin 0) (Core.initialUpdateState @era)
 
@@ -576,11 +579,14 @@ pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
 -- The UTxO state contains the update state. Depending on the implementation of
 -- the update logic, a protocol-parameters change might cause a change in the
 -- update state as well.
-updatePpup
-  :: forall era . Core.HasUpdateLogic era
-  => UTxOState era -> PParams era -> UTxOState era
+updatePpup ::
+  forall era.
+  Core.HasUpdateLogic era =>
+  UTxOState era ->
+  PParams era ->
+  UTxOState era
 updatePpup utxoSt pp =
-  utxoSt {_ppups = Core.registerProtocolParametersChange @era (_ppups utxoSt) pp }
+  utxoSt {_ppups = Core.registerProtocolParametersChange @era (_ppups utxoSt) pp}
 
 data UTxOState era = UTxOState
   { _utxo :: !(UTxO era),
@@ -598,11 +604,13 @@ deriving stock instance
   ShelleyBased era =>
   Eq (UTxOState era)
 
-deriving instance (Era era, NFData (State (Core.UpdateSTS era)))
-  => NFData (UTxOState era)
+deriving instance
+  (Era era, NFData (State (Core.UpdateSTS era))) =>
+  NFData (UTxOState era)
 
-deriving instance (NoThunks (State (Core.UpdateSTS era)))
-  =>  NoThunks (UTxOState era)
+deriving instance
+  (NoThunks (State (Core.UpdateSTS era))) =>
+  NoThunks (UTxOState era)
 
 instance
   ShelleyBased era =>
@@ -722,7 +730,8 @@ instance
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
-  forall era . Core.HasUpdateLogic era =>
+  forall era.
+  Core.HasUpdateLogic era =>
   Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   UTxO era ->
   LedgerState era
