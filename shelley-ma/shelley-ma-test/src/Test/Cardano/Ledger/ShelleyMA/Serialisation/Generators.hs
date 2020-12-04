@@ -128,7 +128,7 @@ instance
   -- pattern, despite the pattern being COMPLETE, resulting
   -- in an unsatisfied `MonadFail` constraint.
   arbitrary =
-    genMetaData' >>= \case
+    genMetadata' >>= \case
       Metadata m -> MA.Metadata m <$> genScriptSeq
 
 genScriptSeq ::

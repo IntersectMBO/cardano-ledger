@@ -628,7 +628,7 @@ data TxBodyRaw era = TxBodyRaw
     _txfeeX :: !Coin,
     _ttlX :: !SlotNo,
     _txUpdateX :: !(StrictMaybe (Update era)),
-    _mdHashX :: !(StrictMaybe (MetadataHash era))
+    _mdHashX :: !(StrictMaybe (MetadataHash (Crypto era)))
   }
   deriving (Generic, NoThunks, Typeable)
 
@@ -739,7 +739,7 @@ pattern TxBody ::
   Coin ->
   SlotNo ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetadataHash era) ->
+  StrictMaybe (MetadataHash (Crypto era)) ->
   TxBody era
 pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
   TxBodyConstr
@@ -790,7 +790,7 @@ instance HasField "ttl" (TxBody era) SlotNo where
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"_txUpdateX" m
 
-instance HasField "mdHash" (TxBody era) (StrictMaybe (MetadataHash era)) where
+instance Crypto era ~ crypto => HasField "mdHash" (TxBody era) (StrictMaybe (MetadataHash crypto)) where
   getField (TxBodyConstr (Memo m _)) = getField @"_mdHashX" m
 
 -- ===============================================================

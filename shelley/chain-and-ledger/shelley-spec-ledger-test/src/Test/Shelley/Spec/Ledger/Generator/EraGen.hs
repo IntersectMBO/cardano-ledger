@@ -74,7 +74,7 @@ class
     Wdrl (Crypto era) ->
     Coin ->
     StrictMaybe (Update era) ->
-    StrictMaybe (MetadataHash era) ->
+    StrictMaybe (MetadataHash (Crypto era)) ->
     Gen (Core.TxBody era)
 
   -- | Generate era-specific metadata

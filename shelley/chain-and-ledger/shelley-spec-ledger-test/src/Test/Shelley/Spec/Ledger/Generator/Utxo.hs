@@ -263,7 +263,7 @@ genTx
           (Wdrl (Map.fromList wdrls))
           draftFee
           (maybeToStrictMaybe update)
-          (hashMetadata <$> metadata)
+          (hashMetadata @era <$> metadata)
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
       -- We add now repeatedly add inputs until the process converges.
       converge

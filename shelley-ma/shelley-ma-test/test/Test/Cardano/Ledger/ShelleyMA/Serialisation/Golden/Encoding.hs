@@ -256,7 +256,7 @@ goldenEncodingTestsAllegra =
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
-          mdh = SMD.hashMetadata $ Metadata Map.empty StrictSeq.empty
+          mdh = SMD.hashMetadata @A $ Metadata Map.empty StrictSeq.empty
        in checkEncodingCBORAnnotated
             "full_txn_body"
             ( TxBody
@@ -389,7 +389,7 @@ goldenEncodingTestsMary =
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
-          mdh = SMD.hashMetadata $ Metadata Map.empty StrictSeq.empty
+          mdh = SMD.hashMetadata @M $ Metadata Map.empty StrictSeq.empty
           mint = Map.singleton policyID1 $ Map.singleton (AssetName assetName1) 13
        in checkEncodingCBORAnnotated
             "full_txn_body"

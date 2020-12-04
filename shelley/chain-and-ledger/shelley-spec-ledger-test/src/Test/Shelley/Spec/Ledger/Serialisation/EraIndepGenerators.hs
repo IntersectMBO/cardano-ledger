@@ -84,7 +84,7 @@ import Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState
-  ( FutureGenDeleg
+  ( FutureGenDeleg,
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.Rewards
@@ -351,7 +351,7 @@ instance Arbitrary ProtVer where
 instance CC.Crypto crypto => Arbitrary (ScriptHash crypto) where
   arbitrary = ScriptHash <$> genHash
 
-instance Era era => Arbitrary (MD.MetadataHash era) where
+instance CC.Crypto crypto => Arbitrary (MD.MetadataHash crypto) where
   arbitrary = MD.MetadataHash <$> genHash
 
 instance HashAlgorithm h => Arbitrary (Hash.Hash h a) where

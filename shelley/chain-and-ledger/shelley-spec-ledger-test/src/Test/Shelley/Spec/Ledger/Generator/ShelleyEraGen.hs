@@ -87,7 +87,7 @@ genTxBody ::
   Wdrl (Crypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetadataHash era) ->
+  StrictMaybe (MetadataHash (Crypto era)) ->
   Gen (TxBody era)
 genTxBody slot inputs outputs certs wdrls fee update mdHash = do
   ttl <- genTimeToLive slot

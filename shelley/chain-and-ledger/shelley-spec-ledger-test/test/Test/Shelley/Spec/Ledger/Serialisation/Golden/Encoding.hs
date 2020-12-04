@@ -25,6 +25,7 @@ import Cardano.Crypto.DSIGN (encodeSignedDSIGN, encodeVerKeyDSIGN)
 import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -187,14 +188,13 @@ import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
-  ( checkEncoding,
+  ( ToTokens (..),
+    checkEncoding,
     checkEncodingCBOR,
     checkEncodingCBORAnnotated,
-    ToTokens (..),
   )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
-import qualified Cardano.Ledger.Core as Core
 
 type MultiSigMap = Map.Map (ScriptHash C_Crypto) (MultiSig C_Crypto)
 
@@ -892,7 +892,7 @@ tests =
                   )
               )
               (EpochNo 0)
-          mdh = MD.hashMetadata $ MD.Metadata $ Map.singleton 13 (MD.I 17)
+          mdh = MD.hashMetadata @C $ MD.Metadata $ Map.singleton 13 (MD.I 17)
        in checkEncodingCBORAnnotated
             "txbody_full"
             ( TxBody -- transaction body with all components

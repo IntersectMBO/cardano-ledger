@@ -393,7 +393,7 @@ txRetirePoolBytes16 = "83a50081824a93b885adfe0da089cdf600018182510075c40f44e1c15
 md :: MD.Metadata
 md = MD.Metadata $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
 
-txbWithMD :: Cr.Crypto c => TxBody (ShelleyEra c)
+txbWithMD :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbWithMD =
   TxBody
     { _inputs = Set.fromList [TxIn genesisId 0],
@@ -403,7 +403,7 @@ txbWithMD =
       _txfee = Coin 94,
       _ttl = SlotNo 10,
       _txUpdate = SNothing,
-      _mdHash = SJust $ MD.hashMetadata md
+      _mdHash = SJust $ MD.hashMetadata @(ShelleyEra c) md
     }
 
 txWithMD :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)

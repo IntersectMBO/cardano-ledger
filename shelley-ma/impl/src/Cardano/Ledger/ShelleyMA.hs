@@ -7,7 +7,7 @@
 module Cardano.Ledger.ShelleyMA where
 
 import Cardano.Binary (toCBOR)
-import Cardano.Crypto.Hash (hashWithSerialiser)
+import Cardano.Crypto.Hash (castHash, hashWithSerialiser)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
@@ -98,6 +98,6 @@ instance
   ) =>
   ValidateMetadata (ShelleyMAEra (ma :: MaryOrAllegra) c)
   where
-  hashMetadata = MetadataHash . hashWithSerialiser toCBOR
+  hashMetadata = MetadataHash . castHash . hashWithSerialiser toCBOR
 
   validateMetadata (Metadata blob sp) = deepseq sp $ all validMetadatum blob

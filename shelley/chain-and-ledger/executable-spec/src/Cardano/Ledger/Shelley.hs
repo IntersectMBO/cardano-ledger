@@ -1,5 +1,7 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -9,7 +11,9 @@
 module Cardano.Ledger.Shelley where
 
 import Cardano.Binary (toCBOR)
+import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
@@ -58,5 +62,5 @@ instance
   hashScript = hashMultiSigScript
 
 instance CryptoClass.Crypto c => ValidateMetadata (ShelleyEra c) where
-  hashMetadata = MetadataHash . hashWithSerialiser toCBOR
+  hashMetadata = MetadataHash . Hash.castHash . hashWithSerialiser @(HASH c) toCBOR
   validateMetadata (Metadata m) = all validMetadatum m

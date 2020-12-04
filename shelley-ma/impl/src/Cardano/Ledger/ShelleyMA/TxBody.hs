@@ -121,7 +121,7 @@ data TxBodyRaw era = TxBodyRaw
     txfee :: !Coin,
     vldt :: !ValidityInterval, -- imported from Timelocks
     update :: !(StrictMaybe (Update era)),
-    mdHash :: !(StrictMaybe (MetadataHash era)),
+    mdHash :: !(StrictMaybe (MetadataHash (Crypto era))),
     mint :: !(Value era)
   }
   deriving (Typeable)
@@ -267,7 +267,7 @@ pattern TxBody ::
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetadataHash era) ->
+  StrictMaybe (MetadataHash (Crypto era)) ->
   Value era ->
   TxBody era
 pattern TxBody i o d w fee vi u m mint <-
@@ -317,7 +317,7 @@ instance HasField "vldt" (TxBody era) ValidityInterval where
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"update" m
 
-instance HasField "mdHash" (TxBody era) (StrictMaybe (MetadataHash era)) where
+instance Crypto era ~ crypto => HasField "mdHash" (TxBody era) (StrictMaybe (MetadataHash crypto)) where
   getField (TxBodyConstr (Memo m _)) = getField @"mdHash" m
 
 instance Value era ~ value => HasField "mint" (TxBody era) value where

@@ -27,7 +27,7 @@ import qualified Cardano.Ledger.Val as Val
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Shelley.Spec.Ledger.API hiding (TxBody)
+import Shelley.Spec.Ledger.API hiding (Metadata, TxBody)
 import Shelley.Spec.Ledger.Tx
   ( WitnessSetHKD (WitnessSet, addrWits, bootWits, scriptWits),
   )

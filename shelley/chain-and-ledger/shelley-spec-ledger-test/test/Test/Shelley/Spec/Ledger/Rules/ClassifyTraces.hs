@@ -110,7 +110,7 @@ relevantCasesAreCovered ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era))
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash (Crypto era)))
   ) =>
   Property
 relevantCasesAreCovered = do
@@ -131,7 +131,7 @@ relevantCasesAreCoveredForTrace ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era))
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash (Crypto era)))
   ) =>
   Trace (CHAIN era) ->
   Property
@@ -295,7 +295,7 @@ hasPParamUpdate tx =
 hasMetadata ::
   ( TxBodyConstraints era,
     ToCBOR (Core.Metadata era),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era))
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash (Crypto era)))
   ) =>
   Tx era ->
   Bool

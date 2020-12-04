@@ -67,7 +67,7 @@ minimalPropertyTests ::
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era)),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   TestTree
@@ -102,7 +102,7 @@ propertyTests ::
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era)),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   TestTree

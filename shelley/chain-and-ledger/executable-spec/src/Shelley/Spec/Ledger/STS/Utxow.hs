@@ -126,12 +126,12 @@ data UtxowPredicateFailure era
   | UtxoFailure (PredicateFailure (UTXO era))
   | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness (Crypto era)))
   | MissingTxBodyMetadataHash
-      !(MetadataHash era) -- hash of the full metadata
+      !(MetadataHash (Crypto era)) -- hash of the full metadata
   | MissingTxMetadata
-      !(MetadataHash era) -- hash of the metadata included in the transaction body
+      !(MetadataHash (Crypto era)) -- hash of the metadata included in the transaction body
   | ConflictingMetadataHash
-      !(MetadataHash era) -- hash of the metadata included in the transaction body
-      !(MetadataHash era) -- hash of the full metadata
+      !(MetadataHash (Crypto era)) -- hash of the metadata included in the transaction body
+      !(MetadataHash (Crypto era)) -- hash of the full metadata
       -- Contains out of range values (strings too long)
   | InvalidMetadata
   deriving (Generic)
@@ -275,7 +275,7 @@ utxoWitnessed ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era)),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   (UTxO era -> Tx era -> Set (ScriptHash (Crypto era))) ->
@@ -320,9 +320,9 @@ utxoWitnessed scriptsNeeded =
         (SJust mdh, SNothing) -> failBecause $ MissingTxMetadata mdh
         (SNothing, SJust md') ->
           failBecause $
-            MissingTxBodyMetadataHash (hashMetadata md')
+            MissingTxBodyMetadataHash (hashMetadata @era md')
         (SJust mdh, SJust md') -> do
-          hashMetadata md' == mdh ?! ConflictingMetadataHash mdh (hashMetadata md')
+          hashMetadata @era md' == mdh ?! ConflictingMetadataHash mdh (hashMetadata @era md')
           -- check metadata value sizes
           when (SoftForks.validMetadata pp) $
             validateMetadata @era md' ?! InvalidMetadata

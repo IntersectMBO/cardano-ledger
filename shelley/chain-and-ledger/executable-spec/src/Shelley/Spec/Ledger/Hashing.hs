@@ -11,6 +11,7 @@ module Shelley.Spec.Ledger.Hashing
     EraIndependentTx,
     EraIndependentTxBody,
     EraIndependentBlockBody,
+    EraIndependentMetadata,
     EraIndependentScript,
   )
 where
@@ -27,6 +28,8 @@ data EraIndependentTx
 data EraIndependentTxBody
 
 data EraIndependentBlockBody
+
+data EraIndependentMetadata
 
 data EraIndependentScript
 

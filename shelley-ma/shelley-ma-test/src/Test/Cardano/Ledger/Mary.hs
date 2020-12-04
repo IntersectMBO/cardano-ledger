@@ -81,7 +81,7 @@ genTxBody ::
   Wdrl (Crypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetadataHash era) ->
+  StrictMaybe (MetadataHash (Crypto era)) ->
   Gen (TxBody era)
 genTxBody _ge slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
