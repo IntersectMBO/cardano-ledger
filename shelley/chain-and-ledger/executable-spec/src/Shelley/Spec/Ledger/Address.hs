@@ -69,7 +69,7 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Era
-import Cardano.Prelude (cborError, panic, parseBase16)
+import Cardano.Prelude (cborError, panic)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -82,7 +82,7 @@ import qualified Data.Binary.Put as B
 import Data.Bits (setBit, shiftL, shiftR, testBit, (.&.), (.|.))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
@@ -226,12 +226,11 @@ instance Era era => FromJSON (Addr era) where
   parseJSON = Aeson.withText "address" parseAddr
 
 addrToText :: Addr era -> Text
-addrToText =
-  Text.decodeLatin1 . Base16.encode . serialiseAddr
+addrToText = Text.decodeLatin1 . B16.encode . serialiseAddr
 
 parseAddr :: Era era => Text -> Aeson.Parser (Addr era)
 parseAddr t = do
-  bytes <- either badHex return (parseBase16 t)
+  bytes <- either badHex return (B16.decode (Text.encodeUtf8 t))
   maybe badFormat return (deserialiseAddr bytes)
   where
     badHex h = fail $ "Addresses are expected in hex encoding for now: " ++ show h

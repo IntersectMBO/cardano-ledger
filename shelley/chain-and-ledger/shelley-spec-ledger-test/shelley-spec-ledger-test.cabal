@@ -63,7 +63,7 @@ library
   build-depends:
     aeson,
     base,
-    base16-bytestring,
+    base16-bytestring >= 1,
     bimap,
     binary,
     byron-spec-ledger,
@@ -168,7 +168,7 @@ test-suite shelley-spec-ledger-test
     build-depends:
       aeson,
       base,
-      base16-bytestring,
+      base16-bytestring >= 1,
       binary,
       byron-spec-ledger,
       bytestring-conversion,

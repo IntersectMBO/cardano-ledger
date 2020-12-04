@@ -86,8 +86,7 @@ import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val (DecodeNonNegative (..), Val)
 import Cardano.Prelude
-  ( decodeEitherBase16,
-    panic,
+  ( panic,
   )
 import Control.DeepSeq (NFData (rnf))
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
@@ -95,7 +94,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser, explicitParseField)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coders
@@ -225,7 +224,7 @@ instance ToJSON PoolMetaData where
   toJSON pmd =
     Aeson.object
       [ "url" .= _poolMDUrl pmd,
-        "hash" .= (Text.decodeLatin1 . Base16.encode) (_poolMDHash pmd)
+        "hash" .= (Text.decodeLatin1 . B16.encode) (_poolMDHash pmd)
       ]
 
 instance FromJSON PoolMetaData where
@@ -238,7 +237,7 @@ instance FromJSON PoolMetaData where
 parseJsonBase16 :: Value -> Parser ByteString
 parseJsonBase16 v = do
   s <- parseJSON v
-  case decodeEitherBase16 (Char8.pack s) of
+  case B16.decode (Char8.pack s) of
     Right bs -> return bs
     Left msg -> fail msg
 
@@ -542,7 +541,7 @@ instance FromCBOR MIRPot where
 -- | Move instantaneous rewards certificate
 data MIRCert era = MIRCert
   { mirPot :: MIRPot,
-    mirRewards :: (Map (Credential 'Staking era) Coin)
+    mirRewards :: Map (Credential 'Staking era) Coin
   }
   deriving (Show, Generic, Eq)
 

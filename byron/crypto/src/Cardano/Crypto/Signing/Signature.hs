@@ -39,6 +39,8 @@ import Data.Aeson (FromJSON(..), ToJSON(..))
 import Data.ByteArray (ScrubbedBytes)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.Text.Encoding as T
 import Formatting (Format, bprint, build, formatToString, later, sformat, stext)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..), InspectHeap (..))
@@ -114,7 +116,8 @@ instance B.Buildable SignatureParseError where
 -- | Parse 'Signature' from base16 encoded string.
 parseFullSignature :: Text -> Either SignatureParseError (Signature a)
 parseFullSignature s = do
-  b <- first SignatureParseBase16Error $ parseBase16 s
+  let bs = T.encodeUtf8 s
+  b <- first (const (SignatureParseBase16Error (Base16IncorrectSuffix bs))) $ B16.decode bs
   Signature <$> first (SignatureParseXSignatureError . toS) (CC.xsignature b)
 
 toCBORXSignature :: CC.XSignature -> Encoding

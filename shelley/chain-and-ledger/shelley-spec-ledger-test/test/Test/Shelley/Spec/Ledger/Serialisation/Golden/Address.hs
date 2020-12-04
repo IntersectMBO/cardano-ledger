@@ -21,7 +21,6 @@ import Cardano.Crypto.KES.Sum
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Era
-import Cardano.Prelude (decodeEitherBase16)
 import qualified Data.Binary as B
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
@@ -125,11 +124,11 @@ goldenTests_MockCrypto =
     keyHash :: Credential kh C
     keyHash =
       KeyHashObj . KeyHash . UnsafeHash $
-        SBS.toShort . fromRight (error "Unable to decode") . decodeEitherBase16 $ "01020304"
+        SBS.toShort . fromRight (error "Unable to decode") . B16.decode $ "01020304"
     scriptHash :: Credential kh C
     scriptHash =
       ScriptHashObj . ScriptHash . UnsafeHash $
-        SBS.toShort . fromRight (error "Unable to decode") . decodeEitherBase16 $ "05060708"
+        SBS.toShort . fromRight (error "Unable to decode") . B16.decode $ "05060708"
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
 

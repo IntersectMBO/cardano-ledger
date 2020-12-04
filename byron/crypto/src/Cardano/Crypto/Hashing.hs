@@ -69,6 +69,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.Text.Encoding as T
 import Formatting (Format, bprint, build, fitLeft, later, sformat, (%.))
 import qualified Formatting.Buildable as B (Buildable(..))
 import NoThunks.Class (NoThunks (..))
@@ -101,7 +103,7 @@ instance Show (AbstractHash algo a) where
                         $ h
 
 instance HashAlgorithm algo => Read (AbstractHash algo a) where
-  readsPrec _ s = case parseBase16 $ toS s of
+  readsPrec _ s = case B16.decode (T.encodeUtf8 (toS s)) of
     Left  _  -> []
     Right bs -> case abstractHashFromBytes bs of
       Nothing -> []
@@ -173,7 +175,7 @@ instance HeapWords (AbstractHash algo a) where
 decodeAbstractHash
   :: HashAlgorithm algo => Text -> Either Text (AbstractHash algo a)
 decodeAbstractHash prettyHash = do
-  bytes <- first (sformat build) $ parseBase16 prettyHash
+  bytes <- first (sformat build) $ B16.decode (T.encodeUtf8 prettyHash)
   case abstractHashFromBytes bytes of
     Nothing -> Left
       (  "decodeAbstractHash: "
