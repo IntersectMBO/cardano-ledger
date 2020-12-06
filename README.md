@@ -15,6 +15,7 @@ and implementations of the Cardano Ledger.
 The documents are built in our CI and can be readily accessed using the
 following links:
 
+- [Plutus integration formal specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.alonzo-ledger/latest/download-by-type/doc-pdf/alonzo-changes): the formal mathematical specification of the addition of Plutus scripts to the ledger rules, following on from the multi-asset formal specification.
 - [Multi-asset formal specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.shelley-ma/latest/download-by-type/doc-pdf/shelley-ma): the formal mathematical specification of the additon of multi-assets to the Shelley era ledger rules.
 - [Shelley design specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec): the primary design document for Cardano Shelley.
 - [Shelley ledger formal specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec): the formal mathematical specification of the Shelley era ledger rules.
