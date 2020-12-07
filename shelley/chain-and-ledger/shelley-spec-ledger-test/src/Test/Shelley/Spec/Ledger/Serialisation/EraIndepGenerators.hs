@@ -458,7 +458,7 @@ instance
     | ppups' <- shrink (_ppups utxoState)]
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)
+  (ShelleyBased era, Mock (Crypto era)
   , Arbitrary (UTxOState era)) =>
   Arbitrary (LedgerState era)
   where
