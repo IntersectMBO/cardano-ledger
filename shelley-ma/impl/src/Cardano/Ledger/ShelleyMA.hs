@@ -30,13 +30,13 @@ import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import GHC.Records (HasField)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Metadata (validMetadatum)
+import Shelley.Spec.Ledger.LedgerState as LedgerState
+import Shelley.Spec.Ledger.MetaData (validMetaDatum)
+import Shelley.Spec.Ledger.STS.Ppup (PPUP)
+import qualified Shelley.Spec.Ledger.STS.Ppup as Ppup
 import Shelley.Spec.Ledger.Tx
   ( ValidateScript (..),
   )
-import Shelley.Spec.Ledger.STS.Ppup (PPUP)
-import qualified Shelley.Spec.Ledger.STS.Ppup as Ppup
-import Shelley.Spec.Ledger.LedgerState as LedgerState
 
 -- | The Shelley Mary/Allegra eras
 --
@@ -78,8 +78,9 @@ type instance
   Core.AuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c) =
     AuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c)
 
-type instance Core.UpdateSTS (ShelleyMAEra (ma :: MaryOrAllegra) c)
-  = PPUP (ShelleyMAEra (ma :: MaryOrAllegra) c)
+type instance
+  Core.UpdateSTS (ShelleyMAEra (ma :: MaryOrAllegra) c) =
+    PPUP (ShelleyMAEra (ma :: MaryOrAllegra) c)
 
 instance Core.HasUpdateLogic (ShelleyMAEra (ma :: MaryOrAllegra) c) where
   initialUpdateState = LedgerState.emptyPPUPState

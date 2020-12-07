@@ -101,7 +101,7 @@ initialEpoch =
 
 epochTransition ::
   forall era.
-  ShelleyBased era => -- TODO: should the HasUpdateLogic constraint be part of ShelleyBased?
+  ShelleyBased era =>
   TransitionRule (EPOCH era)
 epochTransition = do
   TRC

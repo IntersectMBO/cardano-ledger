@@ -55,11 +55,7 @@ type family Script era :: Type
 -- | AuxiliaryData which may be attached to a transaction
 type family AuxiliaryData era :: Type
 
--- | Update transition system for the era.
---
--- TODO: this is actually the update payload processing rule, so we need to name
--- it accordingly. We will need another rule to register slot changes in the
--- tick rule.
+-- | Transition system that processes the update payload for the era.
 type family UpdateSTS era :: Type
 
 class HasUpdateLogic era where
