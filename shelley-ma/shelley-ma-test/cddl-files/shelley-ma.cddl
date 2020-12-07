@@ -230,16 +230,20 @@ native_script =
   // script_all
   // script_any
   // script_n_of_k
-  // timelock_start
-  // timelock_expiry
+  // invalid_before
+     ; Timelock validity intervals are half-open intervals [a, b).
+     ; This field specifies the left (included) endpoint a.
+  // invalid_hereafter
+     ; Timelock validity intervals are half-open intervals [a, b).
+     ; This field specifies the right (excluded) endpoint b.
   ]
 
 script_pubkey = (0, addr_keyhash)
 script_all = (1, [ * native_script ])
 script_any = (2, [ * native_script ])
 script_n_of_k = (3, n: uint, [ * native_script ])
-timelock_start = (4, uint)
-timelock_expiry = (5, uint)
+invalid_before = (4, uint)
+invalid_hereafter = (5, uint)
 
 coin = uint
 
