@@ -34,8 +34,6 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
     newSnapshot,
     incrBlockCount,
     newEpoch,
-    setCurrentProposals,
-    setFutureProposals,
     setPParams,
     setPrevPParams,
     setFutureGenDeleg,
@@ -603,48 +601,6 @@ newEpoch b cs = cs'
           chainPrevEpochNonce = prevHashToNonce . lastAppliedHash $ lab,
           chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)
         }
-
--- | = Set Current Proposals
---
--- Set the current protocol parameter proposals.
-setCurrentProposals ::
-  forall era.
-  ProposedPPUpdates era ->
-  ChainState era ->
-  ChainState era
-setCurrentProposals ps cs = cs {chainNes = nes'}
-  where
-    nes = chainNes cs
-    es = nesEs nes
-    ls = esLState es
-    utxoSt = _utxoState ls
-    ppupSt = _ppups utxoSt
-    ppupSt' = ppupSt {proposals = ps}
-    utxoSt' = utxoSt {_ppups = ppupSt'}
-    ls' = ls {_utxoState = utxoSt'}
-    es' = es {esLState = ls'}
-    nes' = nes {nesEs = es'}
-
--- | = Set Future Proposals
---
--- Set the future protocol parameter proposals.
-setFutureProposals ::
-  forall era.
-  ProposedPPUpdates era ->
-  ChainState era ->
-  ChainState era
-setFutureProposals ps cs = cs {chainNes = nes'}
-  where
-    nes = chainNes cs
-    es = nesEs nes
-    ls = esLState es
-    utxoSt = _utxoState ls
-    ppupSt = _ppups utxoSt
-    ppupSt' = ppupSt {futureProposals = ps}
-    utxoSt' = utxoSt {_ppups = ppupSt'}
-    ls' = ls {_utxoState = utxoSt'}
-    es' = es {esLState = ls'}
-    nes' = nes {nesEs = es'}
 
 -- | = Set the Protocol Proposals
 --

@@ -33,7 +33,7 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys (asWitness, hashKey)
-import Shelley.Spec.Ledger.LedgerState (emptyRewardUpdate)
+import Shelley.Spec.Ledger.LedgerState (emptyRewardUpdate, nesEs, futureProposals, _utxoState, esLState, proposals, _ppups)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams
   ( PParams,
@@ -194,8 +194,50 @@ expectedStEx1 =
     . C.newLab blockEx1
     . C.feesAndDeposits feeTx1 (Coin 0)
     . C.newUTxO txbodyEx1
-    . C.setCurrentProposals ppVotes1
+    . setCurrentProposals ppVotes1
     $ initStUpdates
+
+-- | = Set Current Proposals
+--
+-- Set the current protocol parameter proposals.
+setCurrentProposals ::
+  forall c.
+  ProposedPPUpdates (ShelleyEra c) ->
+  ChainState (ShelleyEra c) ->
+  ChainState (ShelleyEra c)
+setCurrentProposals ps cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    ls = esLState es
+    utxoSt = _utxoState ls
+    ppupSt = _ppups utxoSt
+    ppupSt' = ppupSt {proposals = ps}
+    utxoSt' = utxoSt {_ppups = ppupSt'}
+    ls' = ls {_utxoState = utxoSt'}
+    es' = es {esLState = ls'}
+    nes' = nes {nesEs = es'}
+
+-- | = Set Future Proposals
+--
+-- Set the future protocol parameter proposals.
+setFutureProposals ::
+  forall c.
+  ProposedPPUpdates (ShelleyEra c) ->
+  ChainState (ShelleyEra c) ->
+  ChainState (ShelleyEra c)
+setFutureProposals ps cs = cs {chainNes = nes'}
+  where
+    nes = chainNes cs
+    es = nesEs nes
+    ls = esLState es
+    utxoSt = _utxoState ls
+    ppupSt = _ppups utxoSt
+    ppupSt' = ppupSt {futureProposals = ps}
+    utxoSt' = utxoSt {_ppups = ppupSt'}
+    ls' = ls {_utxoState = utxoSt'}
+    es' = es {esLState = ls'}
+    nes' = nes {nesEs = es'}
 
 -- === Block 1, Slot 10, Epoch 0
 --
@@ -268,7 +310,7 @@ expectedStEx2 =
     . C.newLab blockEx2
     . C.feesAndDeposits feeTx2 (Coin 0)
     . C.newUTxO txbodyEx2
-    . C.setCurrentProposals (collectVotes ppVoteA [0, 1, 3, 4, 5])
+    . setCurrentProposals (collectVotes ppVoteA [0, 1, 3, 4, 5])
     $ expectedStEx1
 
 -- === Block 2, Slot 20, Epoch 0
@@ -358,7 +400,7 @@ expectedStEx3 =
     . C.feesAndDeposits feeTx3 (Coin 0)
     . C.newUTxO txbodyEx3
     . C.rewardUpdate emptyRewardUpdate
-    . C.setFutureProposals (collectVotes ppVoteB [1])
+    . setFutureProposals (collectVotes ppVoteB [1])
     $ expectedStEx2
 
 -- === Block 3, Slot 80, Epoch 0
@@ -397,8 +439,8 @@ expectedStEx4 =
   C.newEpoch blockEx4
     . C.newSnapshot EB.emptySnapShot (feeTx1 <+> feeTx2 <+> feeTx3)
     . C.applyRewardUpdate emptyRewardUpdate
-    . C.setCurrentProposals (collectVotes ppVoteB [1])
-    . C.setFutureProposals (ProposedPPUpdates Map.empty)
+    . setCurrentProposals (collectVotes ppVoteB [1])
+    . setFutureProposals (ProposedPPUpdates Map.empty)
     . C.setPParams ppExUpdated
     $ expectedStEx3
 

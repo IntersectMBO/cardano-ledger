@@ -134,6 +134,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
     genSignature,
   )
 import Test.Tasty.QuickCheck (Gen, choose, elements)
+import Control.State.Transition (STS(State))
 
 genHash :: forall a h. HashAlgorithm h => Gen (Hash.Hash h a)
 genHash = mkDummyHash <$> arbitrary
@@ -436,21 +437,37 @@ instance CC.Crypto crypto => Arbitrary (DPState crypto) where
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  (ShelleyBased era, Mock (Crypto era),
+  Arbitrary (State (Core.UpdateSTS era)) ) =>
   Arbitrary (UTxOState era)
   where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
+  shrink utxoState =
+    -- We define this instance by hand because using @genericShrink@ will cause
+    -- out of scope overlapping instances.
+    [ utxoState { _utxo = utxo'}
+    | utxo' <- shrink (_utxo utxoState)]
+    ++
+    [ utxoState { _deposited = deposited'}
+    | deposited' <- shrink (_deposited utxoState)]
+    ++
+    [ utxoState { _fees = fees'}
+    | fees' <- shrink (_fees utxoState)]
+    ++
+    [ utxoState { _ppups = ppups'}
+    | ppups' <- shrink (_ppups utxoState)]
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)
+  , Arbitrary (UTxOState era)) =>
   Arbitrary (LedgerState era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era) =>
+  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era
+  , Arbitrary (State (Core.UpdateSTS era))) =>
   Arbitrary (NewEpochState era)
   where
   arbitrary = genericArbitraryU
@@ -467,7 +484,8 @@ instance CC.Crypto crypto => Arbitrary (PoolDistr crypto) where
       genVal = IndividualPoolStake <$> arbitrary <*> genHash
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era) =>
+  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era
+  , Arbitrary (State (Core.UpdateSTS era))) =>
   Arbitrary (EpochState era)
   where
   arbitrary =
