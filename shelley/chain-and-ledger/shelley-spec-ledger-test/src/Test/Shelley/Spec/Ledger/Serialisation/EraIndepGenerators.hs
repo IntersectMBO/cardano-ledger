@@ -442,20 +442,18 @@ instance
   Arbitrary (UTxOState era)
   where
   arbitrary = genericArbitraryU
-  shrink utxoState =
-    -- We define this instance by hand because using @genericShrink@ will cause
-    -- out of scope overlapping instances.
-    [ utxoState { _utxo = utxo'}
-    | utxo' <- shrink (_utxo utxoState)]
-    ++
-    [ utxoState { _deposited = deposited'}
-    | deposited' <- shrink (_deposited utxoState)]
-    ++
-    [ utxoState { _fees = fees'}
-    | fees' <- shrink (_fees utxoState)]
-    ++
-    [ utxoState { _ppups = ppups'}
-    | ppups' <- shrink (_ppups utxoState)]
+  shrink utxoState = recursivelyShrink
+    -- The 'genericShrink' function returns first the immediate subterms of a
+    -- value (in case it is a recursive data-type), and then shrinks the value
+    -- itself. Since 'UTxOState' is not a recursive data-type, there are no
+    -- subterms, and we can use `recursivelyShrink` directly. This is
+    -- particularly important when abstracting away the different fields of the
+    -- ledger state, since the generic subterms instances will overlap due to
+    -- GHC not having enough context to infer if 'a' and 'b' are the same types
+    -- (since in this case this will depend on the definition of 'era').
+    --
+    -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) a where
+    -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
 
 instance
   (ShelleyBased era, Mock (Crypto era)
