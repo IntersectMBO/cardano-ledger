@@ -437,7 +437,7 @@ instance CC.Crypto crypto => Arbitrary (DPState crypto) where
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era),
+  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era),
   Arbitrary (State (Core.UpdateSTS era)) ) =>
   Arbitrary (UTxOState era)
   where

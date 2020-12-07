@@ -162,6 +162,7 @@ utxoTransition ::
     State (UTXO era) ~ Shelley.UTxOState era,
     Signal (UTXO era) ~ Tx era,
     PredicateFailure (UTXO era) ~ UtxoPredicateFailure era,
+    State (Core.UpdateSTS era) ~ Shelley.PPUPState era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),

@@ -34,6 +34,9 @@ import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import Shelley.Spec.Ledger.Tx
   ( ValidateScript (..),
   )
+import Shelley.Spec.Ledger.STS.Ppup (PPUP)
+import qualified Shelley.Spec.Ledger.STS.Ppup as Ppup
+import Shelley.Spec.Ledger.LedgerState as LedgerState
 
 -- | The Shelley Mary/Allegra eras
 --
@@ -74,6 +77,16 @@ type instance
 type instance
   Core.AuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c) =
     AuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c)
+
+type instance Core.UpdateSTS (ShelleyMAEra (ma :: MaryOrAllegra) c)
+  = PPUP (ShelleyMAEra (ma :: MaryOrAllegra) c)
+
+instance Core.HasUpdateLogic (ShelleyMAEra (ma :: MaryOrAllegra) c) where
+  initialUpdateState = LedgerState.emptyPPUPState
+
+  registerProtocolParametersChange = Ppup.registerProtocolParametersChange
+
+  votedValue = Ppup.votedValue
 
 --------------------------------------------------------------------------------
 -- Ledger data instances
