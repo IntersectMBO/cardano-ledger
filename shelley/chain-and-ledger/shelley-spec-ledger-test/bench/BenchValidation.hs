@@ -64,6 +64,7 @@ import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest, testGlobals)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 
@@ -115,7 +116,7 @@ benchValidate (ValidateInput globals state block) =
 
 applyBlock ::
   forall era.
-  ( Era era,
+  ( ShelleyBased era,
     API.ApplyBlock era
   ) =>
   ValidateInput era ->
