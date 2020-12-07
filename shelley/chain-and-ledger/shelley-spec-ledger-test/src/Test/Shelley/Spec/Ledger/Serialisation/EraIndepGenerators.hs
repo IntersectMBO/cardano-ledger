@@ -443,7 +443,7 @@ instance
   Arbitrary (UTxOState era)
   where
   arbitrary = genericArbitraryU
-  shrink utxoState = recursivelyShrink
+  shrink = recursivelyShrink
     -- The 'genericShrink' function returns first the immediate subterms of a
     -- value (in case it is a recursive data-type), and then shrinks the value
     -- itself. Since 'UTxOState' is not a recursive data-type, there are no
