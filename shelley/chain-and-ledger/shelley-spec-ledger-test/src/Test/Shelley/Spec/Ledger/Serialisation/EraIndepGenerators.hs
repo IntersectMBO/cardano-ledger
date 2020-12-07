@@ -113,6 +113,7 @@ import Test.QuickCheck
     resize,
     shrink,
     vectorOf,
+    recursivelyShrink
   )
 import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
