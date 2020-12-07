@@ -65,3 +65,9 @@ cradle:
 
     - path: "alonzo/impl/src"
       component: "lib:cardano-ledger-alonzo"
+
+    - path: "alonzo/impl/test/lib"
+      component: "cardano-ledger-alonzo:lib:test"
+
+    - path: "alonzo/impl/test/test"
+      component: "cardano-ledger-alonzo:test:tests"
