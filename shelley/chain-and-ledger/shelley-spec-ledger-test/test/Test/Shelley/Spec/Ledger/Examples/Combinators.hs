@@ -87,14 +87,13 @@ import Shelley.Spec.Ledger.LedgerState
     InstantaneousRewards (..),
     LedgerState (..),
     NewEpochState (..),
-    PPUPState (..),
     PState (..),
     RewardUpdate (..),
     UTxOState (..),
     applyRUpd,
     emptyInstantaneousRewards,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.Tx (TxIn, TxOut)
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
