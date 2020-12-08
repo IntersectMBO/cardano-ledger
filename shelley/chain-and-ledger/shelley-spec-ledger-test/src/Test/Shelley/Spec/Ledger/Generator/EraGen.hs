@@ -29,7 +29,7 @@ import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.Address (toAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Tx
   ( TxId (TxId),
@@ -74,11 +74,11 @@ class
     Wdrl era ->
     Coin ->
     StrictMaybe (Update era) ->
-    StrictMaybe (MetaDataHash era) ->
+    StrictMaybe (MetadataHash era) ->
     Gen (Core.TxBody era)
 
   -- | Generate era-specific metadata
-  genMetadata :: Constants -> Gen (StrictMaybe (Core.Metadata era))
+  genEraMetadata :: Constants -> Gen (StrictMaybe (Core.Metadata era))
 
   -- | Update an era-specific TxBody
   updateEraTxBody ::

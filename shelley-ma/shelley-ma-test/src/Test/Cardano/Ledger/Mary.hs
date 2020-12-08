@@ -20,7 +20,7 @@ import qualified Data.Map as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Tx (TxIn, TxOut)
 import Shelley.Spec.Ledger.TxBody (DCert, Wdrl)
@@ -63,7 +63,7 @@ instance (CryptoClass.Crypto c) => EraGen (MaryEra c) where
   genGenesisValue (GenEnv _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
   genEraTxBody = genTxBody
-  genMetadata = error "TODO @uroboros - implement genMetaData for Mary"
+  genEraMetadata = error "TODO @uroboros - implement genMetadata for Mary"
   updateEraTxBody (TxBody _in _out cert wdrl _txfee vi upd meta forge) fee ins outs =
     TxBody ins outs cert wdrl fee vi upd meta forge
 
@@ -80,7 +80,7 @@ genTxBody ::
   Wdrl era ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetaDataHash era) ->
+  StrictMaybe (MetadataHash era) ->
   Gen (TxBody era)
 genTxBody _ge slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot

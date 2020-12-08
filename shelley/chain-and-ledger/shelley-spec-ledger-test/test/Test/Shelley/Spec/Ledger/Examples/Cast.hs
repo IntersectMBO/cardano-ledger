@@ -67,7 +67,7 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.TxBody
-  ( PoolMetaData (..),
+  ( PoolMetadata (..),
     PoolParams (..),
     RewardAcnt (..),
   )
@@ -134,7 +134,7 @@ alicePoolParams =
       _poolRelays = StrictSeq.empty,
       _poolMD =
         SJust $
-          PoolMetaData
+          PoolMetadata
             { _poolMDUrl = fromJust $ textToUrl "alice.pool",
               _poolMDHash = BS.pack "{}"
             }

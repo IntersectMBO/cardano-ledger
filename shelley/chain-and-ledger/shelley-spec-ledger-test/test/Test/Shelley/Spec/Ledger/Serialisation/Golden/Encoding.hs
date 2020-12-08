@@ -129,7 +129,7 @@ import Shelley.Spec.Ledger.LedgerState
     RewardUpdate (..),
     emptyLedgerState,
   )
-import qualified Shelley.Spec.Ledger.MetaData as MD
+import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.OCert
   ( KESPeriod (..),
     OCert,
@@ -156,7 +156,7 @@ import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), hashScript)
 import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),
-    PoolMetaData (..),
+    PoolMetadata (..),
     StakePoolRelay (..),
     TxBody (..),
     TxId,
@@ -568,7 +568,7 @@ tests =
                           _poolRelays = poolRelays,
                           _poolMD =
                             SJust $
-                              PoolMetaData
+                              PoolMetadata
                                 { _poolMDUrl = Maybe.fromJust $ textToUrl poolUrl,
                                   _poolMDHash = poolMDHash
                                 }
@@ -896,7 +896,7 @@ tests =
                   )
               )
               (EpochNo 0)
-          mdh = MD.hashMetadata $ MD.MetaData $ Map.singleton 13 (MD.I 17)
+          mdh = MD.hashMetadata $ MD.Metadata $ Map.singleton 13 (MD.I 17)
        in checkEncodingCBORAnnotated
             "txbody_full"
             ( TxBody -- transaction body with all components
@@ -969,7 +969,7 @@ tests =
           w = makeWitnessVKey txbh testKey1
           s = Map.singleton (hashScript $ testScript @C) (testScript @C)
           wits = mempty {addrWits = Set.singleton w, scriptWits = s}
-          md = MD.MetaData $ Map.singleton 17 (MD.I 42)
+          md = MD.Metadata $ Map.singleton 17 (MD.I 42)
        in checkEncodingCBORAnnotated
             "tx_full"
             (Tx txb wits (SJust md))
@@ -1126,7 +1126,7 @@ tests =
                 (hashScript (testScript2 @C), testScript2 @C)
               ]
           tx4 = Tx txb4 mempty {scriptWits = ss} SNothing
-          tx5MD = MD.MetaData $ Map.singleton 17 (MD.I 42)
+          tx5MD = MD.Metadata $ Map.singleton 17 (MD.I 42)
           tx5 = Tx txb5 mempty {addrWits = ws, scriptWits = ss} (SJust tx5MD)
           txns = TxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated
@@ -1234,7 +1234,7 @@ tests =
                 _poolRelays = StrictSeq.empty,
                 _poolMD =
                   SJust $
-                    PoolMetaData
+                    PoolMetadata
                       { _poolMDUrl = Maybe.fromJust $ textToUrl "web.site",
                         _poolMDHash = BS.pack "{}"
                       }
@@ -1279,7 +1279,7 @@ tests =
                 _poolRelays = StrictSeq.empty,
                 _poolMD =
                   SJust $
-                    PoolMetaData
+                    PoolMetadata
                       { _poolMDUrl = Maybe.fromJust $ textToUrl "web.site",
                         _poolMDHash = BS.pack "{}"
                       }

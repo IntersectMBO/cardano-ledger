@@ -71,7 +71,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.LedgerState
   ( txsizeBound,
   )
-import Shelley.Spec.Ledger.MetaData (MetaDataHash, ValidateMetadata)
+import Shelley.Spec.Ledger.Metadata (MetadataHash, ValidateMetadata)
 import Shelley.Spec.Ledger.PParams
   ( Update (..),
     pattern ProposedPPUpdates,
@@ -110,7 +110,7 @@ relevantCasesAreCovered ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era))
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era))
   ) =>
   Property
 relevantCasesAreCovered = do
@@ -131,7 +131,7 @@ relevantCasesAreCoveredForTrace ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era))
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era))
   ) =>
   Trace (CHAIN era) ->
   Property
@@ -197,7 +197,7 @@ relevantCasesAreCoveredForTrace tr = do
             60
           ),
           ( "at least 1 in 20 transactions have metadata",
-            length txs < 20 * length (filter hasMetaData txs),
+            length txs < 20 * length (filter hasMetadata txs),
             60
           ),
           ( "at least 5 epochs in a trace, 20% of the time",
@@ -292,14 +292,14 @@ hasPParamUpdate tx =
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
-hasMetaData ::
+hasMetadata ::
   ( TxBodyConstraints era,
     ToCBOR (Core.Metadata era),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era))
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era))
   ) =>
   Tx era ->
   Bool
-hasMetaData tx =
+hasMetadata tx =
   f . (getField @"mdHash") . _body $ tx
   where
     f SNothing = False

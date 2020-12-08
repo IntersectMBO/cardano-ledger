@@ -88,7 +88,7 @@ import Shelley.Spec.Ledger.Tx
     _ttl,
   )
 import Shelley.Spec.Ledger.TxBody
-  ( PoolMetaData (..),
+  ( PoolMetadata (..),
     PoolParams (..),
     Wdrl (..),
     _poolCost,
@@ -673,7 +673,7 @@ alicePoolParamsSmallCost =
       _poolRelays = StrictSeq.empty,
       _poolMD =
         SJust $
-          PoolMetaData
+          PoolMetadata
             { _poolMDUrl = fromJust $ textToUrl "alice.pool",
               _poolMDHash = BS.pack "{}"
             }

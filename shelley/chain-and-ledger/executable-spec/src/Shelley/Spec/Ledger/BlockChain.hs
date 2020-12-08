@@ -550,8 +550,8 @@ pattern Block h txns <-
 -- | Given a size and a mapping from indices to maybe metadata,
 --  return a sequence whose size is the size paramater and
 --  whose non-Nothing values correspond no the values in the mapping.
-constructMetaData :: Int -> Map Int a -> Seq (Maybe a)
-constructMetaData n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1])
+constructMetadata :: Int -> Map Int a -> Seq (Maybe a)
+constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1])
 
 instance
   Era era =>
@@ -581,7 +581,7 @@ txSeqDecoder lax = do
 
   (metadata, metadataAnn) <-
     withSlice $
-      constructMetaData b
+      constructMetadata b
         <$> decodeMap fromCBOR fromCBOR
   let m = length metadata
 

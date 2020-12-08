@@ -63,7 +63,7 @@ import Test.QuickCheck
     vectorOf,
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
-import Test.Shelley.Spec.Ledger.Generator.MetaData (genMetaData')
+import Test.Shelley.Spec.Ledger.Generator.Metadata (genMetadata')
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty.QuickCheck (Gen)
@@ -120,7 +120,7 @@ instance
   --
   -- @
   -- arbitrary = do
-  --   MetaData m <- genMetaData'
+  --   Metadata m <- genMetadata'
   --   pure $ MA.Metadata m StrictSeq.empty
   -- @
   --
@@ -128,8 +128,8 @@ instance
   -- pattern, despite the pattern being COMPLETE, resulting
   -- in an unsatisfied `MonadFail` constraint.
   arbitrary =
-    genMetaData' >>= \case
-      MetaData m ->
+    genMetadata' >>= \case
+      Metadata m ->
         do ss <- genScriptSeq; pure (MA.Metadata m ss)
 
 genScriptSeq ::

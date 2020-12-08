@@ -598,13 +598,13 @@ The UTXOW rule has eight predicate failures:
   there is a \emph{MIRInsufficientGenesisSigs} failure.
 \item In the case the transaction contains metadata,
   but the transaction body does not contain a metadata hash,
-  there is a \emph{MissingTxBodyMetaDataHash} failure.
+  there is a \emph{MissingTxBodyMetadataHash} failure.
 \item In the case that the transaction body contains a metadata hash,
   but there is no metadata outside the body,
-  there is a \emph{MissingTxMetaData} failure.
+  there is a \emph{MissingTxMetadata} failure.
 \item In the case that the metadata hash in the transaction body
   is not equal to the hash of the metadata outside the body,
-  there is a \emph{ConflictingMetaDataHash} failure.
+  there is a \emph{ConflictingMetadataHash} failure.
 \end{itemize}
 
 \clearpage

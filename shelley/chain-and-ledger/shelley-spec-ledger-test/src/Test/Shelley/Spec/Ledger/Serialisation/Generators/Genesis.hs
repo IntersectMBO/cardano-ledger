@@ -105,7 +105,7 @@ genPoolParams =
     <*> genRewardAcnt
     <*> (Set.fromList <$> (Gen.list (Range.linear 1 10) $ genKeyHash))
     <*> (StrictSeq.fromList <$> (Gen.list (Range.linear 1 10) $ genStakePoolRelay))
-    <*> genStrictMaybe genPoolMetaData
+    <*> genStrictMaybe genPoolMetadata
 
 genStakePoolRelay :: Gen StakePoolRelay
 genStakePoolRelay =
@@ -125,9 +125,9 @@ genDnsName = do
     Nothing -> error "wrong generator for DnsName"
     Just dns -> return dns
 
-genPoolMetaData :: Gen PoolMetaData
-genPoolMetaData =
-  PoolMetaData
+genPoolMetadata :: Gen PoolMetadata
+genPoolMetadata =
+  PoolMetadata
     <$> genUrl
     <*> Gen.bytes (Range.linear 1 30)
 

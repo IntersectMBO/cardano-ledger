@@ -42,15 +42,15 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class
-import Shelley.Spec.Ledger.MetaData
-  ( MetaDatum,
+import Shelley.Spec.Ledger.Metadata
+  ( Metadatum,
   )
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | Raw, un-memoised metadata type
 data MetadataRaw era = MetadataRaw
   { -- | Unstructured metadata "blob"
-    mdBlob :: !(Map Word64 MetaDatum),
+    mdBlob :: !(Map Word64 Metadatum),
     -- | Pre-images of script hashes found within the TxBody, but which are not
     -- required as witnesses. Examples include:
     -- - Token policy IDs appearing in transaction outputs
@@ -87,7 +87,7 @@ pattern Metadata ::
   ( Core.AnnotatedData (Core.Script era),
     Ord (Core.Script era)
   ) =>
-  Map Word64 MetaDatum ->
+  Map Word64 Metadatum ->
   StrictSeq (Core.Script era) ->
   Metadata era
 pattern Metadata blob sp <-

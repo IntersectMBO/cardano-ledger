@@ -24,7 +24,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
-import Shelley.Spec.Ledger.MetaData (MetaDataHash, ValidateMetadata)
+import Shelley.Spec.Ledger.Metadata (MetadataHash, ValidateMetadata)
 import Shelley.Spec.Ledger.PParams (Update (..))
 import Shelley.Spec.Ledger.TxBody (TxIn, TxOut, Wdrl)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
@@ -66,7 +66,7 @@ minimalPropertyTests ::
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era)),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   TestTree
@@ -101,7 +101,7 @@ propertyTests ::
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era)),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   TestTree

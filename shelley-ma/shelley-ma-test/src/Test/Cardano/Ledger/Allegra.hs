@@ -34,7 +34,7 @@ import Shelley.Spec.Ledger.API (KeyRole (Witness))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash)
-import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut, Wdrl)
 import Test.Cardano.Ledger.EraBuffet (AllegraEra)
@@ -69,7 +69,7 @@ instance CryptoClass.Crypto c => EraGen (AllegraEra c) where
   genGenesisValue (GenEnv _keySpace Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     genCoin minGenesisOutputVal maxGenesisOutputVal
   genEraTxBody _ge = genTxBody
-  genMetadata = error "TODO @uroboros - implement genMetaData for Allegra"
+  genEraMetadata = error "TODO @uroboros - implement genEraMetadata for Allegra"
   updateEraTxBody (TxBody _in _out cert wdrl _txfee vi upd meta forge) fee ins outs =
     TxBody ins outs cert wdrl fee vi upd meta forge
 
@@ -85,7 +85,7 @@ genTxBody ::
   Wdrl era ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetaDataHash era) ->
+  StrictMaybe (MetadataHash era) ->
   Gen (TxBody era)
 genTxBody slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot

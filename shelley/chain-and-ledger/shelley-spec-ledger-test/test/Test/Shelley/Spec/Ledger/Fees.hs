@@ -62,14 +62,14 @@ import Shelley.Spec.Ledger.Keys
     vKey,
   )
 import Shelley.Spec.Ledger.LedgerState (txsize)
-import qualified Shelley.Spec.Ledger.MetaData as MD
+import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( WitnessSetHKD (..),
     hashScript,
   )
 import Shelley.Spec.Ledger.TxBody
-  ( PoolMetaData (..),
+  ( PoolMetadata (..),
     StakePoolRelay (..),
     Wdrl (..),
   )
@@ -131,7 +131,7 @@ alicePoolParams =
             fromJust $ textToDns "relay.io",
       _poolMD =
         SJust $
-          PoolMetaData
+          PoolMetadata
             { _poolMDUrl = fromJust $ textToUrl "alice.pool",
               _poolMDHash = BS.pack "{}"
             }
@@ -390,8 +390,8 @@ txRetirePoolBytes16 = "83a50081824a93b885adfe0da089cdf600018182510075c40f44e1c15
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
-md :: MD.MetaData
-md = MD.MetaData $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
+md :: MD.Metadata
+md = MD.Metadata $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
 
 txbWithMD :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbWithMD =

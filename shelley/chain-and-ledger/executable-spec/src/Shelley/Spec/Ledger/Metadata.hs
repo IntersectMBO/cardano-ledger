@@ -13,12 +13,12 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Shelley.Spec.Ledger.MetaData
-  ( MetaDatum (..),
-    MetaData (MetaData),
-    MetaDataHash (..),
+module Shelley.Spec.Ledger.Metadata
+  ( Metadatum (..),
+    Metadata (Metadata),
+    MetadataHash (..),
     ValidateMetadata (..),
-    validMetaDatum,
+    validMetadatum,
   )
 where
 
@@ -52,99 +52,99 @@ import Shelley.Spec.Ledger.Keys (Hash)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | A generic metadatum type.
-data MetaDatum
+data Metadatum
   = -- TODO make strict:
-    Map [(MetaDatum, MetaDatum)]
-  | List [MetaDatum]
+    Map [(Metadatum, Metadatum)]
+  | List [Metadatum]
   | I !Integer
   | B !BS.ByteString
   | S !T.Text
   deriving stock (Show, Eq, Ord, Generic)
 
-instance NoThunks MetaDatum
+instance NoThunks Metadatum
 
-data MetaData = MetaData'
-  { mdMap :: Map Word64 MetaDatum,
+data Metadata = Metadata'
+  { mdMap :: Map Word64 Metadatum,
     mdBytes :: LBS.ByteString
   }
   deriving (Eq, Show, Generic)
-  deriving (NoThunks) via AllowThunksIn '["mdBytes"] MetaData
+  deriving (NoThunks) via AllowThunksIn '["mdBytes"] Metadata
 
-pattern MetaData :: Map Word64 MetaDatum -> MetaData
-pattern MetaData m <-
-  MetaData' m _
+pattern Metadata :: Map Word64 Metadatum -> Metadata
+pattern Metadata m <-
+  Metadata' m _
   where
-    MetaData m =
+    Metadata m =
       let bytes = serializeEncoding $ mapToCBOR m
-       in MetaData' m bytes
+       in Metadata' m bytes
 
-{-# COMPLETE MetaData #-}
+{-# COMPLETE Metadata #-}
 
-instance ToCBOR MetaData where
+instance ToCBOR Metadata where
   toCBOR = encodePreEncoded . LBS.toStrict . mdBytes
 
-instance FromCBOR (Annotator MetaData) where
+instance FromCBOR (Annotator Metadata) where
   fromCBOR = do
     (m, bytesAnn) <- withSlice mapFromCBOR
-    pure $ MetaData' m <$> bytesAnn
+    pure $ Metadata' m <$> bytesAnn
 
-instance ToCBOR MetaDatum where
-  toCBOR = encodeMetaDatum
+instance ToCBOR Metadatum where
+  toCBOR = encodeMetadatum
 
-instance FromCBOR MetaDatum where
-  fromCBOR = decodeMetaDatum
+instance FromCBOR Metadatum where
+  fromCBOR = decodeMetadatum
 
-newtype MetaDataHash era = MetaDataHash
-  { unsafeMetaDataHash :: Hash (Crypto era) (Core.Metadata era)
+newtype MetadataHash era = MetadataHash
+  { unsafeMetadataHash :: Hash (Crypto era) (Core.Metadata era)
   }
   deriving (Show, Eq, Ord, NoThunks, NFData)
 
 deriving instance
   (Era era, Typeable (Core.Metadata era)) =>
-  ToCBOR (MetaDataHash era)
+  ToCBOR (MetadataHash era)
 
 deriving instance
   (Era era, Typeable (Core.Metadata era)) =>
-  FromCBOR (MetaDataHash era)
+  FromCBOR (MetadataHash era)
 
 --------------------------------------------------------------------------------
 -- Validation of sizes
 
-validMetaDatum :: MetaDatum -> Bool
+validMetadatum :: Metadatum -> Bool
 -- The integer size/representation checks are enforced in the decoder.
-validMetaDatum (I _) = True
-validMetaDatum (B b) = BS.length b <= 64
-validMetaDatum (S s) = BS.length (T.encodeUtf8 s) <= 64
-validMetaDatum (List xs) = all validMetaDatum xs
-validMetaDatum (Map kvs) =
+validMetadatum (I _) = True
+validMetadatum (B b) = BS.length b <= 64
+validMetadatum (S s) = BS.length (T.encodeUtf8 s) <= 64
+validMetadatum (List xs) = all validMetadatum xs
+validMetadatum (Map kvs) =
   all
     ( \(k, v) ->
-        validMetaDatum k
-          && validMetaDatum v
+        validMetadatum k
+          && validMetadatum v
     )
     kvs
 
 class ValidateMetadata era where
-  hashMetadata :: Core.Metadata era -> MetaDataHash era
+  hashMetadata :: Core.Metadata era -> MetadataHash era
   validateMetadata :: Core.Metadata era -> Bool
 
 --------------------------------------------------------------------------------
 -- CBOR encoding and decoding
 
-encodeMetaDatum :: MetaDatum -> CBOR.Encoding
-encodeMetaDatum (I n) = CBOR.encodeInteger n
-encodeMetaDatum (B b) = CBOR.encodeBytes b
-encodeMetaDatum (S s) = CBOR.encodeString s
-encodeMetaDatum (List xs) =
+encodeMetadatum :: Metadatum -> CBOR.Encoding
+encodeMetadatum (I n) = CBOR.encodeInteger n
+encodeMetadatum (B b) = CBOR.encodeBytes b
+encodeMetadatum (S s) = CBOR.encodeString s
+encodeMetadatum (List xs) =
   CBOR.encodeListLen (fromIntegral (length xs))
     <> mconcat
-      [ encodeMetaDatum x
+      [ encodeMetadatum x
         | x <- xs
       ]
-encodeMetaDatum (Map kvs) =
+encodeMetadatum (Map kvs) =
   CBOR.encodeMapLen (fromIntegral (length kvs))
     <> mconcat
-      [ encodeMetaDatum k <> encodeMetaDatum v
+      [ encodeMetadatum k <> encodeMetadatum v
         | (k, v) <- kvs
       ]
 
@@ -163,8 +163,8 @@ encodeMetaDatum (Map kvs) =
 -- on the chain. We accept both definte and indefinite representations.
 --
 -- The byte and string length checks are not enforced in this decoder, but
-decodeMetaDatum :: Decoder s MetaDatum
-decodeMetaDatum = do
+decodeMetadatum :: Decoder s Metadatum
+decodeMetadatum = do
   tkty <- CBOR.peekTokenType
   case tkty of
     -- We support -(2^64-1) .. 2^64-1, but not big integers
@@ -244,38 +244,38 @@ decodeStringIndefLen acc = do
       !str <- CBOR.decodeString
       decodeStringIndefLen (str : acc)
 
-decodeListN :: Int -> [MetaDatum] -> Decoder s [MetaDatum]
+decodeListN :: Int -> [Metadatum] -> Decoder s [Metadatum]
 decodeListN !n acc =
   case n of
     0 -> return $! reverse acc
     _ -> do
-      !t <- decodeMetaDatum
+      !t <- decodeMetadatum
       decodeListN (n -1) (t : acc)
 
-decodeListIndefLen :: [MetaDatum] -> Decoder s [MetaDatum]
+decodeListIndefLen :: [Metadatum] -> Decoder s [Metadatum]
 decodeListIndefLen acc = do
   stop <- CBOR.decodeBreakOr
   if stop
     then return $! reverse acc
     else do
-      !tm <- decodeMetaDatum
+      !tm <- decodeMetadatum
       decodeListIndefLen (tm : acc)
 
-decodeMapN :: Int -> [(MetaDatum, MetaDatum)] -> Decoder s [(MetaDatum, MetaDatum)]
+decodeMapN :: Int -> [(Metadatum, Metadatum)] -> Decoder s [(Metadatum, Metadatum)]
 decodeMapN !n acc =
   case n of
     0 -> return $! reverse acc
     _ -> do
-      !tm <- decodeMetaDatum
-      !tm' <- decodeMetaDatum
+      !tm <- decodeMetadatum
+      !tm' <- decodeMetadatum
       decodeMapN (n -1) ((tm, tm') : acc)
 
-decodeMapIndefLen :: [(MetaDatum, MetaDatum)] -> Decoder s [(MetaDatum, MetaDatum)]
+decodeMapIndefLen :: [(Metadatum, Metadatum)] -> Decoder s [(Metadatum, Metadatum)]
 decodeMapIndefLen acc = do
   stop <- CBOR.decodeBreakOr
   if stop
     then return $! reverse acc
     else do
-      !tm <- decodeMetaDatum
-      !tm' <- decodeMetaDatum
+      !tm <- decodeMetadatum
+      !tm' <- decodeMetadatum
       decodeMapIndefLen ((tm, tm') : acc)

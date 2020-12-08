@@ -26,10 +26,10 @@ import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import GHC.Records (HasField)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.MetaData
-  ( MetaDataHash (..),
+import Shelley.Spec.Ledger.Metadata
+  ( MetadataHash (..),
     ValidateMetadata (..),
-    validMetaDatum,
+    validMetadatum,
   )
 import Shelley.Spec.Ledger.Tx
   ( ValidateScript (..),
@@ -98,6 +98,6 @@ instance
   ) =>
   ValidateMetadata (ShelleyMAEra (ma :: MaryOrAllegra) c)
   where
-  hashMetadata = MetaDataHash . hashWithSerialiser toCBOR
+  hashMetadata = MetadataHash . hashWithSerialiser toCBOR
 
-  validateMetadata (Metadata blob sp) = deepseq sp $ all validMetaDatum blob
+  validateMetadata (Metadata blob sp) = deepseq sp $ all validMetadatum blob

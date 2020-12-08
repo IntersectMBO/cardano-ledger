@@ -144,7 +144,7 @@ prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
 prop_roundtrip_MultiSig :: Ledger.MultiSig Mock.C -> Property
 prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_metadata :: Ledger.MetaData -> Property
+prop_roundtrip_metadata :: Ledger.Metadata -> Property
 prop_roundtrip_metadata = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_ShelleyGenesis :: ShelleyGenesis Mock.C -> Property
@@ -195,7 +195,7 @@ tests =
       testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
       testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState,
       testProperty "roundtrip MultiSig" prop_roundtrip_MultiSig,
-      testProperty "roundtrip MetaData" prop_roundtrip_metadata,
+      testProperty "roundtrip Metadata" prop_roundtrip_metadata,
       testProperty "roundtrip Shelley Genesis" prop_roundtrip_ShelleyGenesis,
       testProperty "roundtrip coin compactcoin cbor" prop_roundtrip_Coin_1,
       testProperty "roundtrip coin cbor compactcoin" prop_roundtrip_Coin_2

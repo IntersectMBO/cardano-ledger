@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.BlockChain
     LaxBlock,
   )
 import Shelley.Spec.Ledger.Keys (KeyRole (Staking))
-import Shelley.Spec.Ledger.MetaData (MetaData)
+import Shelley.Spec.Ledger.Metadata (Metadata)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.TxBody
   ( StakePoolRelay,
@@ -88,7 +88,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @StakePoolRelay n "relay",
       cddlTest @(DCert ShelleyE) n "certificate",
       cddlTest @(TxIn ShelleyE) n "transaction_input",
-      cddlTest' @MetaData n "transaction_metadata",
+      cddlTest' @Metadata n "transaction_metadata",
       cddlTest' @(MultiSig ShelleyE) n "multisig_script",
       cddlTest @(Update ShelleyE) n "update",
       cddlTest @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",

@@ -219,7 +219,7 @@ exampleShelleyGenesis =
           L._poolRelays = relays,
           L._poolMD =
             L.SJust $
-              L.PoolMetaData
+              L.PoolMetadata
                 { L._poolMDUrl = fromJust $ textToUrl "best.pool.com",
                   L._poolMDHash = BS.pack "100ab{}100ab{}"
                 }

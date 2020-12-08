@@ -1,8 +1,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Test.Shelley.Spec.Ledger.Generator.MetaData
-  ( genMetaData,
-    genMetaData'
+module Test.Shelley.Spec.Ledger.Generator.Metadata
+  ( genMetadata,
+    genMetadata'
   )
 where
 
@@ -15,51 +15,51 @@ import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
-import Shelley.Spec.Ledger.MetaData
-  ( MetaData (..),
-    MetaDatum (..),
+import Shelley.Spec.Ledger.Metadata
+  ( Metadata (..),
+    Metadatum (..),
   )
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 
--- | Max size of generated MetaDatum List and Map
+-- | Max size of generated Metadatum List and Map
 collectionDatumMaxSize :: Int
 collectionDatumMaxSize = 5
 
--- | Max size of generated MetaData map
+-- | Max size of generated Metadata map
 metadataMaxSize :: Int
 metadataMaxSize = 3
 
--- | Generate Metadata (and compute hash) with frequency 'frequencyTxWithMetaData'
-genMetaData :: Constants -> Gen (StrictMaybe MetaData)
-genMetaData (Constants {frequencyTxWithMetaData}) =
+-- | Generate Metadata (and compute hash) with frequency 'frequencyTxWithMetadata'
+genMetadata :: Constants -> Gen (StrictMaybe Metadata)
+genMetadata (Constants {frequencyTxWithMetadata}) =
   QC.frequency
-    [ (frequencyTxWithMetaData, SJust <$> genMetaData'),
-      (100 - frequencyTxWithMetaData, pure SNothing)
+    [ (frequencyTxWithMetadata, SJust <$> genMetadata'),
+      (100 - frequencyTxWithMetadata, pure SNothing)
     ]
 
 -- | Generate Metadata (and compute hash) of size up to 'metadataMaxSize'
-genMetaData' :: Gen MetaData
-genMetaData' = do
+genMetadata' :: Gen Metadata
+genMetadata' = do
   n <- QC.choose (1, metadataMaxSize)
-  MetaData . Map.fromList
-    <$> QC.vectorOf n genMetaDatum
+  Metadata . Map.fromList
+    <$> QC.vectorOf n genMetadatum
 
--- | Generate one of the MetaDatum
-genMetaDatum :: Gen (Word64, MetaDatum)
-genMetaDatum = do
+-- | Generate one of the Metadatum
+genMetadatum :: Gen (Word64, Metadatum)
+genMetadatum = do
   (,) <$> QC.arbitrary
     <*> ( QC.oneof
             [ genDatumInt,
               genDatumString,
               genDatumBytestring,
-              genMetaDatumList,
-              genMetaDatumMap
+              genMetadatumList,
+              genMetadatumMap
             ]
         )
 
-genDatumInt :: Gen MetaDatum
+genDatumInt :: Gen Metadatum
 genDatumInt =
   I
     <$> QC.frequency
@@ -72,7 +72,7 @@ genDatumInt =
     minVal = - maxVal
     maxVal = fromIntegral (maxBound :: Word64)
 
-genDatumString :: Gen MetaDatum
+genDatumString :: Gen Metadatum
 genDatumString =
   QC.sized $ \sz -> do
     n <- QC.choose (0, min sz 64)
@@ -100,27 +100,27 @@ genUtf8StringOfSize n = do
   cs <- genUtf8StringOfSize (n - cz)
   return (c : cs)
 
-genDatumBytestring :: Gen MetaDatum
+genDatumBytestring :: Gen Metadatum
 genDatumBytestring =
   QC.sized $ \sz -> do
     n <- QC.choose (0, min sz 64)
     B . BS.pack <$> QC.vectorOf n QC.arbitrary
 
--- | Generate a 'MD.List [MetaDatum]'
+-- | Generate a 'MD.List [Metadatum]'
 --
 -- Note: to limit generated metadata size, impact on transaction fees and
 -- cost of hashing, we generate only lists of "simple" Datums, not lists
 -- of list or map Datum.
-genMetaDatumList :: Gen MetaDatum
-genMetaDatumList = List <$> vectorOfMetaDatumSimple
+genMetadatumList :: Gen Metadatum
+genMetadatumList = List <$> vectorOfMetadatumSimple
 
--- | Generate a 'MD.Map ('[(MetaDatum, MetaDatum)]')
-genMetaDatumMap :: Gen MetaDatum
-genMetaDatumMap =
-  Map <$> (zip <$> vectorOfMetaDatumSimple <*> vectorOfMetaDatumSimple)
+-- | Generate a 'MD.Map ('[(Metadatum, Metadatum)]')
+genMetadatumMap :: Gen Metadatum
+genMetadatumMap =
+  Map <$> (zip <$> vectorOfMetadatumSimple <*> vectorOfMetadatumSimple)
 
-vectorOfMetaDatumSimple :: Gen [MetaDatum]
-vectorOfMetaDatumSimple = do
+vectorOfMetadatumSimple :: Gen [Metadatum]
+vectorOfMetadatumSimple = do
   n <- QC.choose (1, collectionDatumMaxSize)
   QC.vectorOf
     n

@@ -42,7 +42,7 @@ allegraEncodeDecodeTests =
     "encoded shelley types can be decoded as allegra types"
     [ testProperty
         "decoding metadata"
-        (decodeTestAnn @S.MetaData ([] :: [MA.Metadata Allegra]))
+        (decodeTestAnn @S.Metadata ([] :: [MA.Metadata Allegra]))
     ]
 
 allegraTranslationTests :: TestTree

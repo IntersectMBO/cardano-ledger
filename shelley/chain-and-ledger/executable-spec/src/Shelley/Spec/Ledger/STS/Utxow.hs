@@ -89,7 +89,7 @@ import Shelley.Spec.Ledger.LedgerState
     witsFromWitnessSet,
     witsVKeyNeeded,
   )
-import Shelley.Spec.Ledger.MetaData (MetaDataHash, ValidateMetadata (..))
+import Shelley.Spec.Ledger.Metadata (MetadataHash, ValidateMetadata (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
@@ -125,15 +125,15 @@ data UtxowPredicateFailure era
       !(Set (ScriptHash era)) -- failed scripts
   | UtxoFailure (PredicateFailure (UTXO era))
   | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness (Crypto era)))
-  | MissingTxBodyMetaDataHash
-      !(MetaDataHash era) -- hash of the full metadata
-  | MissingTxMetaData
-      !(MetaDataHash era) -- hash of the metadata included in the transaction body
-  | ConflictingMetaDataHash
-      !(MetaDataHash era) -- hash of the metadata included in the transaction body
-      !(MetaDataHash era) -- hash of the full metadata
+  | MissingTxBodyMetadataHash
+      !(MetadataHash era) -- hash of the full metadata
+  | MissingTxMetadata
+      !(MetadataHash era) -- hash of the metadata included in the transaction body
+  | ConflictingMetadataHash
+      !(MetadataHash era) -- hash of the metadata included in the transaction body
+      !(MetadataHash era) -- hash of the full metadata
       -- Contains out of range values (strings too long)
-  | InvalidMetaData
+  | InvalidMetadata
   deriving (Generic)
 
 instance
@@ -193,13 +193,13 @@ instance
     MIRInsufficientGenesisSigsUTXOW sigs ->
       encodeListLen 2 <> toCBOR (5 :: Word8)
         <> encodeFoldable sigs
-    MissingTxBodyMetaDataHash h ->
+    MissingTxBodyMetadataHash h ->
       encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR h
-    MissingTxMetaData h ->
+    MissingTxMetadata h ->
       encodeListLen 2 <> toCBOR (7 :: Word8) <> toCBOR h
-    ConflictingMetaDataHash bodyHash fullMDHash ->
+    ConflictingMetadataHash bodyHash fullMDHash ->
       encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR bodyHash <> toCBOR fullMDHash
-    InvalidMetaData ->
+    InvalidMetadata ->
       encodeListLen 1 <> toCBOR (9 :: Word8)
 
 instance
@@ -232,15 +232,15 @@ instance
         pure (2, MIRInsufficientGenesisSigsUTXOW s)
       6 -> do
         h <- fromCBOR
-        pure (2, MissingTxBodyMetaDataHash h)
+        pure (2, MissingTxBodyMetadataHash h)
       7 -> do
         h <- fromCBOR
-        pure (2, MissingTxMetaData h)
+        pure (2, MissingTxMetadata h)
       8 -> do
         bodyHash <- fromCBOR
         fullMDHash <- fromCBOR
-        pure (3, ConflictingMetaDataHash bodyHash fullMDHash)
-      9 -> pure (1, InvalidMetaData)
+        pure (3, ConflictingMetadataHash bodyHash fullMDHash)
+      9 -> pure (1, InvalidMetadata)
       k -> invalidKey k
 
 initialLedgerStateUTXOW ::
@@ -275,7 +275,7 @@ utxoWitnessed ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetaDataHash era)),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   (UTxO era -> Tx era -> Set (ScriptHash era)) ->
@@ -317,15 +317,15 @@ utxoWitnessed scriptsNeeded =
       -- check metadata hash
       case (getField @"mdHash" txbody, md) of
         (SNothing, SNothing) -> pure ()
-        (SJust mdh, SNothing) -> failBecause $ MissingTxMetaData mdh
+        (SJust mdh, SNothing) -> failBecause $ MissingTxMetadata mdh
         (SNothing, SJust md') ->
           failBecause $
-            MissingTxBodyMetaDataHash (hashMetadata md')
+            MissingTxBodyMetadataHash (hashMetadata md')
         (SJust mdh, SJust md') -> do
-          hashMetadata md' == mdh ?! ConflictingMetaDataHash mdh (hashMetadata md')
+          hashMetadata md' == mdh ?! ConflictingMetadataHash mdh (hashMetadata md')
           -- check metadata value sizes
-          when (SoftForks.validMetaData pp) $
-            validateMetadata @era md' ?! InvalidMetaData
+          when (SoftForks.validMetadata pp) $
+            validateMetadata @era md' ?! InvalidMetadata
 
       -- check genesis keys signatures for instantaneous rewards certificates
       let genDelegates =

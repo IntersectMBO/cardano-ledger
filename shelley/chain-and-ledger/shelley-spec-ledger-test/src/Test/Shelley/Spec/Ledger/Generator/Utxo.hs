@@ -73,7 +73,7 @@ import Shelley.Spec.Ledger.LedgerState
     _ptrs,
     _rewards,
   )
-import Shelley.Spec.Ledger.MetaData (ValidateMetadata (hashMetadata))
+import Shelley.Spec.Ledger.Metadata (ValidateMetadata (hashMetadata))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Tx
@@ -207,7 +207,7 @@ genTx
           (utxoSt, dpState)
       (certs, deposits, refunds, dpState', (certWits, certScripts)) <-
         genDCerts ge pparams dpState slot txIx reserves
-      metadata <- genMetadata @era constants
+      metadata <- genEraMetadata @era constants
       -------------------------------------------------------------------------
       -- Gather Key Witnesses and Scripts, prepare a constructor for Tx Wits
       -------------------------------------------------------------------------
