@@ -108,15 +108,10 @@ instance Eq Likelihood where
 
 instance Semigroup Likelihood where
   (Likelihood x) <> (Likelihood y) =
-    normalizeLikelihood $ Likelihood (strictSeqZipWith (+) x y)
+    normalizeLikelihood $ Likelihood (StrictSeq.zipWith (+) x y)
 
 instance Monoid Likelihood where
-  mempty = Likelihood $ StrictSeq.toStrict $ Seq.replicate (length samplePositions) (LogWeight 0)
-
--- TODO should be defined in @Data.Sequence.Strict@
-strictSeqZipWith :: (a -> b -> c) -> StrictSeq a -> StrictSeq b -> StrictSeq c
-strictSeqZipWith f x y =
-  StrictSeq.toStrict (Seq.zipWith f (StrictSeq.getSeq x) (StrictSeq.getSeq y))
+  mempty = Likelihood $ StrictSeq.forceToStrict $ Seq.replicate (length samplePositions) (LogWeight 0)
 
 normalizeLikelihood :: Likelihood -> Likelihood
 normalizeLikelihood (Likelihood xs) = Likelihood $ (\x -> x - m) <$> xs
@@ -127,7 +122,7 @@ instance ToCBOR Likelihood where
   toCBOR (Likelihood logweights) = encodeFoldable logweights
 
 instance FromCBOR Likelihood where
-  fromCBOR = Likelihood . StrictSeq.toStrict <$> decodeSeq fromCBOR
+  fromCBOR = Likelihood . StrictSeq.forceToStrict <$> decodeSeq fromCBOR
 
 leaderProbability :: ActiveSlotCoeff -> Rational -> UnitInterval -> Double
 leaderProbability activeSlotCoeff relativeStake decentralizationParameter =
@@ -186,7 +181,7 @@ applyDecay decay (Likelihood logWeights) = Likelihood $ mul decay <$> logWeights
 posteriorDistribution :: Histogram -> Likelihood -> Histogram
 posteriorDistribution (Histogram points) (Likelihood likelihoods) =
   normalize $
-    Histogram $ strictSeqZipWith (+) points likelihoods
+    Histogram $ StrictSeq.zipWith (+) points likelihoods
 
 -- | Normalize the histogram so that the total area is 1
 normalize :: Histogram -> Histogram
@@ -208,8 +203,8 @@ percentile p prior likelihoods =
     (Histogram values) = posteriorDistribution prior likelihoods
     cdf =
       Seq.zip
-        (StrictSeq.getSeq samplePositions)
-        (StrictSeq.getSeq (StrictSeq.scanl (+) 0 (fromLogWeight <$> values)))
+        (StrictSeq.fromStrict samplePositions)
+        (StrictSeq.fromStrict (StrictSeq.scanl (+) 0 (fromLogWeight <$> values)))
 
 percentile' :: Likelihood -> PerformanceEstimate
 percentile' = percentile 0.5 h

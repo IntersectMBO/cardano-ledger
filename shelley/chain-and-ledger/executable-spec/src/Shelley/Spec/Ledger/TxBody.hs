@@ -1045,7 +1045,7 @@ instance
       <> toCBOR (_poolMargin poolParams)
       <> toCBOR (_poolRAcnt poolParams)
       <> encodeFoldable (_poolOwners poolParams)
-      <> toCBOR (CborSeq (StrictSeq.getSeq (_poolRelays poolParams)))
+      <> toCBOR (CborSeq (StrictSeq.fromStrict (_poolRelays poolParams)))
       <> encodeNullMaybe toCBOR (strictMaybeToMaybe (_poolMD poolParams))
 
   encodedGroupSizeExpr size' proxy =

@@ -199,7 +199,7 @@ ledgerTransition = do
       TRC
         ( DelegsEnv slot txIx pp tx account,
           dpstate,
-          StrictSeq.getSeq $ getField @"certs" $ _body tx
+          StrictSeq.fromStrict $ getField @"certs" $ _body tx
         )
 
   let DPState dstate pstate = dpstate

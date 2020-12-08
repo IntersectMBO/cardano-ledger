@@ -335,9 +335,9 @@ utxoWitnessed scriptsNeeded =
           (WitHashes khAsSet) = witsKeyHashes
           genSig = eval (genDelegates ∩ khAsSet)
           mirCerts =
-            StrictSeq.toStrict
+            StrictSeq.forceToStrict
               . Seq.filter isInstantaneousRewards
-              . StrictSeq.getSeq
+              . StrictSeq.fromStrict
               $ getField @"certs" txbody
           GenDelegs genMapping = genDelegs
 

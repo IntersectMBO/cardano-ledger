@@ -603,7 +603,7 @@ txSeqDecoder lax = do
           <> show w
           <> ")"
     )
-  let txns = sequenceA $ StrictSeq.toStrict $ Seq.zipWith3 segwitTx bodies wits metadata
+  let txns = sequenceA $ StrictSeq.forceToStrict $ Seq.zipWith3 segwitTx bodies wits metadata
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 instance

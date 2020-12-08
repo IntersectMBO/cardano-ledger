@@ -41,7 +41,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.Text.Encoding as T
-import Formatting (Format, bprint, build, formatToString, later, sformat, stext)
+import Formatting (Format, bprint, formatToString, later, sformat, shown, stext)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..), InspectHeap (..))
 import Text.JSON.Canonical (JSValue(..), toJSString)
@@ -98,15 +98,15 @@ fullSignatureHexF =
   later $ \(Signature x) -> base16Builder . CC.unXSignature $ x
 
 data SignatureParseError
-  = SignatureParseBase16Error Base16ParseError
+  = SignatureParseBase16Error ByteString
   | SignatureParseXSignatureError Text
   deriving (Eq, Show)
 
 instance B.Buildable SignatureParseError where
   build = \case
-    SignatureParseBase16Error err -> bprint
-      ("Failed to parse base 16 while parsing Signature.\n Error: " . build)
-      err
+    SignatureParseBase16Error bs -> bprint
+      ("Failed to parse base 16 while parsing Signature.\n Error: " . shown)
+      bs
     SignatureParseXSignatureError err -> bprint
       ("Failed to construct XSignature while parsing Signature.\n Error: "
       . stext
@@ -117,7 +117,7 @@ instance B.Buildable SignatureParseError where
 parseFullSignature :: Text -> Either SignatureParseError (Signature a)
 parseFullSignature s = do
   let bs = T.encodeUtf8 s
-  b <- first (const (SignatureParseBase16Error (Base16IncorrectSuffix bs))) $ B16.decode bs
+  b <- first (const (SignatureParseBase16Error bs)) $ B16.decode bs
   Signature <$> first (SignatureParseXSignatureError . toS) (CC.xsignature b)
 
 toCBORXSignature :: CC.XSignature -> Encoding
