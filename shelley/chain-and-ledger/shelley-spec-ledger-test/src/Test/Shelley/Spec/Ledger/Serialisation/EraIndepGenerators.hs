@@ -549,8 +549,8 @@ instance Arbitrary Url where
   arbitrary = return . fromJust $ textToUrl "text"
 
 instance Arbitrary a => Arbitrary (StrictSeq a) where
-  arbitrary = StrictSeq.toStrict <$> arbitrary
-  shrink = map StrictSeq.toStrict . shrink . StrictSeq.getSeq
+  arbitrary = StrictSeq.forceToStrict <$> arbitrary
+  shrink = map StrictSeq.forceToStrict . shrink . StrictSeq.fromStrict
 
 instance Arbitrary StakePoolRelay where
   arbitrary = genericArbitraryU

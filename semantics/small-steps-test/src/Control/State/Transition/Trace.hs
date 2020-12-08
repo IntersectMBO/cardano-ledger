@@ -293,11 +293,11 @@ traceLength tr = tr ^. traceTrans . to length
 --
 -- >>> tr01 = mkTrace True 0 [(1, "one")] :: Trace DUMMY
 -- >>> traceInit tr01
--- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = StrictSeq {getSeq = fromList []}}
+-- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = StrictSeq {fromStrict = fromList []}}
 --
 -- >>> tr012 = mkTrace True 0 [(2, "two"), (1, "one")] :: Trace DUMMY
 -- >>> traceInit tr012
--- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = StrictSeq {getSeq = fromList [SigState 1 "one"]}}
+-- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = StrictSeq {fromStrict = fromList [SigState 1 "one"]}}
 --
 traceInit :: HasCallStack => Trace s -> Trace s
 traceInit tr@Trace { _traceTrans } =
@@ -361,10 +361,10 @@ preStatesAndSignals NewestFirst tr
 -- :}
 --
 -- >>> runIdentity $ closure @ADDER () 0 [3, 2, 1]
--- Trace {_traceEnv = (), _traceInitState = 0, _traceTrans = StrictSeq {getSeq = fromList [SigState 6 3,SigState 3 2,SigState 1 1]}}
+-- Trace {_traceEnv = (), _traceInitState = 0, _traceTrans = StrictSeq {fromStrict = fromList [SigState 6 3,SigState 3 2,SigState 1 1]}}
 --
 -- >>> runIdentity $ closure @ADDER () 10 [-3, -2, -1]
--- Trace {_traceEnv = (), _traceInitState = 10, _traceTrans = StrictSeq {getSeq = fromList [SigState 4 (-3),SigState 7 (-2),SigState 9 (-1)]}}
+-- Trace {_traceEnv = (), _traceInitState = 10, _traceTrans = StrictSeq {fromStrict = fromList [SigState 4 (-3),SigState 7 (-2),SigState 9 (-1)]}}
 --
 closure
   :: forall s m

@@ -22,8 +22,8 @@ write-ghc-environment-files: always
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 980e6ca052c8dbad91336b6230c58b78ac1032f5
-  --sha256: 0vid3qi20pfadjxqmklanbh701avjbclx549cqb38dvmz5p0g0xi
+  tag: 6a6ea9695ee898dd7d4fd7a5d2cc639d7d5764f7
+  --sha256: 1hkq5i9fjjr4picx3plq3s09isrmx6jifpqf57c7viqfdrwlhjnj
   subdir:
     binary
     binary/test
@@ -40,8 +40,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: ed3cea18898eeb1f0c9166885f14c543341e59a4
-  --sha256: 0dsrrqnc47d455x9z1alj4m9cclv4qy99gsdjjj5v5s23giagnmm
+  tag: ee4e7b547a991876e6b05ba542f4e62909f4a571
+  --sha256: 0dg6ihgrn5mgqp95c4f11l6kh9k3y75lwfqf47hdp554w7wyvaw6
   subdir:
     cardano-prelude
     cardano-prelude-test

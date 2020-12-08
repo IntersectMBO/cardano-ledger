@@ -11,7 +11,7 @@ import Control.DeepSeq (NFData (rnf))
 import Data.Aeson
 import Data.Foldable
 import Data.IP (IPv4, IPv6)
-import Data.Sequence.Strict (StrictSeq, fromList, getSeq)
+import Data.Sequence.Strict (StrictSeq, fromList, fromStrict)
 import qualified Data.Text as Text
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Slot (BlockNo, EpochNo)
@@ -52,7 +52,7 @@ instance NFData IPv6
 instance NFData EpochNo
 
 instance NFData (StrictSeq a) where
-  rnf x = case getSeq x of _any -> ()
+  rnf x = case fromStrict x of _any -> ()
 
 -- By defintion it is strict, so as long as the (hidden) constructor is evident, it is in normal form
 
