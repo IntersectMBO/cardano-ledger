@@ -104,19 +104,19 @@ data DelegsPredicateFailure era
   = DelegateeNotRegisteredDELEG
       !(KeyHash 'StakePool (Crypto era)) -- target pool which is not registered
   | WithdrawalsNotInRewardsDELEGS
-      !(Map (RewardAcnt era) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
+      !(Map (RewardAcnt (Crypto era)) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
   | DelplFailure (PredicateFailure (DELPL era)) -- Subtransition Failures
   deriving (Show, Eq, Generic)
 
 instance
   ( Era era,
     ShelleyBased era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   STS (DELEGS era)
   where
-  type State (DELEGS era) = DPState era
-  type Signal (DELEGS era) = Seq (DCert era)
+  type State (DELEGS era) = DPState (Crypto era)
+  type Signal (DELEGS era) = Seq (DCert (Crypto era))
   type Environment (DELEGS era) = DelegsEnv era
   type BaseM (DELEGS era) = ShelleyBase
   type
@@ -167,7 +167,7 @@ instance
 delegsTransition ::
   forall era.
   ( ShelleyBased era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl era),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     Embed (DELPL era) (DELEGS era)
   ) =>
   TransitionRule (DELEGS era)
@@ -189,7 +189,7 @@ delegsTransition = do
               (Map.mapKeys (mkRwdAcnt network) rewards)
           )
 
-      let wdrls_' :: RewardAccounts era
+      let wdrls_' :: RewardAccounts (Crypto era)
           wdrls_' =
             Map.foldrWithKey
               ( \(RewardAcnt _ cred) _coin ->
@@ -219,7 +219,7 @@ delegsTransition = do
   where
     -- @wdrls_@ is small and @rewards@ big, better to transform the former
     -- than the latter into the right shape so we can call 'Map.isSubmapOf'.
-    isSubmapOf :: Map (RewardAcnt era) Coin -> RewardAccounts era -> Bool
+    isSubmapOf :: Map (RewardAcnt (Crypto era)) Coin -> RewardAccounts (Crypto era) -> Bool
     isSubmapOf wdrls_ rewards = wdrls_' `Map.isSubmapOf` rewards
       where
         wdrls_' =
@@ -231,7 +231,7 @@ delegsTransition = do
 instance
   ( Era era,
     ShelleyBased era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   Embed (DELPL era) (DELEGS era)
   where

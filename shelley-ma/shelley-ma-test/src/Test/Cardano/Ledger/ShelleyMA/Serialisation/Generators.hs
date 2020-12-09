@@ -29,7 +29,7 @@ import Cardano.Binary (toCBOR)
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Era (Era (..))
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Mary (MaryEra)
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import qualified Cardano.Ledger.Mary.Value as Mary
@@ -84,9 +84,9 @@ maxTimelockListLens :: Int
 maxTimelockListLens = 5
 
 sizedTimelock ::
-  Era era =>
+  CC.Crypto crypto =>
   Int ->
-  Gen (Timelock era)
+  Gen (Timelock crypto)
 sizedTimelock 0 = (MA.RequireSignature . KeyHash . mkDummyHash) <$> arbitrary
 sizedTimelock n =
   oneof
@@ -113,7 +113,7 @@ sizedTimelock n =
 
 -- TODO Generate metadata with script preimages
 instance
-  (Mock c, Typeable ma, Arbitrary (Timelock (ShelleyMAEra ma c))) =>
+  (Mock c, Typeable ma, Arbitrary (Timelock c)) =>
   Arbitrary (MA.Metadata (ShelleyMAEra ma c))
   where
   -- Why do we use the \case instead of a do statement? like this:
@@ -121,7 +121,7 @@ instance
   -- @
   -- arbitrary = do
   --   Metadata m <- genMetadata'
-  --   pure $ MA.Metadata m StrictSeq.empty
+  --   MA.Metadata m <$> genScriptSeq
   -- @
   --
   -- The above leads to an error about a failable
@@ -129,12 +129,11 @@ instance
   -- in an unsatisfied `MonadFail` constraint.
   arbitrary =
     genMetadata' >>= \case
-      Metadata m ->
-        do ss <- genScriptSeq; pure (MA.Metadata m ss)
+      Metadata m -> MA.Metadata m <$> genScriptSeq
 
 genScriptSeq ::
-  (Arbitrary (Timelock (ShelleyMAEra ma c))) =>
-  Gen (StrictSeq (Timelock (ShelleyMAEra ma c)))
+  (Arbitrary (Timelock c)) =>
+  Gen (StrictSeq (Timelock c))
 genScriptSeq = do
   n <- choose (0, 3)
   l <- vectorOf n arbitrary
@@ -157,13 +156,10 @@ instance Mock c => Arbitrary (MA.TxBody (MaryEra c)) where
       <*> arbitrary
       <*> genMintValues
 
-instance Mock c => Arbitrary (Timelock (MaryEra c)) where
-  arbitrary = sizedTimelock maxTimelockDepth
-
-instance Mock c => Arbitrary (Mary.PolicyID (MaryEra c)) where
+instance Mock c => Arbitrary (Mary.PolicyID c) where
   arbitrary = Mary.PolicyID <$> arbitrary
 
-instance Mock c => Arbitrary (Mary.Value (MaryEra c)) where
+instance Mock c => Arbitrary (Mary.Value c) where
   arbitrary = valueFromListBounded @Word64 <$> arbitrary <*> arbitrary
 
   shrink (Mary.Value ada assets) =
@@ -180,17 +176,17 @@ instance Mock c => Arbitrary (Mary.Value (MaryEra c)) where
 --
 -- - Fix the ADA value to 0
 -- - Allow both positive and negative quantities
-genMintValues :: forall c. Mock c => Gen (Mary.Value (MaryEra c))
+genMintValues :: forall c. Mock c => Gen (Mary.Value c)
 genMintValues = valueFromListBounded @Int64 0 <$> arbitrary
 
 -- | Variant on @valueFromList@ that makes sure that generated values stay
 -- bounded within the range of a given integral type.
 valueFromListBounded ::
-  forall i era.
+  forall i crypto.
   (Bounded i, Integral i) =>
   i ->
-  [(Mary.PolicyID era, Mary.AssetName, i)] ->
-  Mary.Value era
+  [(Mary.PolicyID crypto, Mary.AssetName, i)] ->
+  Mary.Value crypto
 valueFromListBounded (fromIntegral -> ada) =
   foldr
     (\(p, n, fromIntegral -> i) ans -> ConcreteValue.insert comb p n i ans)
@@ -225,7 +221,7 @@ instance Mock c => Arbitrary (MA.TxBody (AllegraEra c)) where
       <*> arbitrary
       <*> pure (Coin 0)
 
-instance Mock c => Arbitrary (Timelock (AllegraEra c)) where
+instance Mock c => Arbitrary (Timelock c) where
   arbitrary = sizedTimelock maxTimelockDepth
 
 instance Arbitrary ValidityInterval where
@@ -234,9 +230,3 @@ instance Arbitrary ValidityInterval where
 
 instance Mock c => Arbitrary (MA.STS.UtxoPredicateFailure (AllegraEra c)) where
   arbitrary = genericArbitraryU
-
-instance Mock c => Arbitrary (ConcreteValue.PolicyID (AllegraEra c)) where
-  arbitrary = ConcreteValue.PolicyID <$> arbitrary
-
-instance Mock c => Arbitrary (ConcreteValue.Value (AllegraEra c)) where
-  arbitrary = ConcreteValue.Value <$> arbitrary <*> arbitrary

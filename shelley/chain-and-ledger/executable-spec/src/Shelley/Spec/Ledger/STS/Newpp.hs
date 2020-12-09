@@ -14,6 +14,7 @@ module Shelley.Spec.Ledger.STS.Newpp
   )
 where
 
+import Cardano.Ledger.Era (Crypto)
 import Control.State.Transition
   ( InitialRule,
     STS (..),
@@ -52,7 +53,7 @@ data NewppState era
   = NewppState (UTxOState era) AccountState (PParams era)
 
 data NewppEnv era
-  = NewppEnv (DState era) (PState era)
+  = NewppEnv (DState (Crypto era)) (PState (Crypto era))
 
 data NewppPredicateFailure era
   = UnexpectedDepositPot

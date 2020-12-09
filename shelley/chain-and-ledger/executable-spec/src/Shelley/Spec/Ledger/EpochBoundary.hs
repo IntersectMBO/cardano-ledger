@@ -33,7 +33,7 @@ module Shelley.Spec.Ledger.EpochBoundary
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<×>))
@@ -61,29 +61,27 @@ import Shelley.Spec.Ledger.TxBody (PoolParams, TxOut (TxOut))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Blocks made
-newtype BlocksMade era = BlocksMade
-  { unBlocksMade :: Map (KeyHash 'StakePool (Crypto era)) Natural
+newtype BlocksMade crypto = BlocksMade
+  { unBlocksMade :: Map (KeyHash 'StakePool crypto) Natural
   }
   deriving (Eq, NoThunks, Generic, NFData)
-  deriving (Show) via Quiet (BlocksMade era)
+  deriving (Show) via Quiet (BlocksMade crypto)
 
-deriving instance (Era era) => ToCBOR (BlocksMade era)
+deriving instance CC.Crypto crypto => ToCBOR (BlocksMade crypto)
 
-deriving instance (Era era) => FromCBOR (BlocksMade era)
+deriving instance CC.Crypto crypto => FromCBOR (BlocksMade crypto)
 
 -- | Type of stake as map from hash key to coins associated.
-newtype Stake era = Stake
-  { unStake :: (Map (Credential 'Staking era) Coin)
+newtype Stake crypto = Stake
+  { unStake :: Map (Credential 'Staking crypto) Coin
   }
   deriving (Show, Eq, Ord, NoThunks, NFData)
 
 deriving newtype instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  ToCBOR (Stake era)
+  CC.Crypto crypto => ToCBOR (Stake crypto)
 
 deriving newtype instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  FromCBOR (Stake era)
+  CC.Crypto crypto => FromCBOR (Stake crypto)
 
 -- A TxOut has 4 different shapes, depending on the shape its embedded of Addr.
 -- Credentials are stored in only 2 of the 4 cases.
@@ -100,10 +98,10 @@ deriving newtype instance
 aggregateUtxoCoinByCredential ::
   forall era.
   ShelleyBased era =>
-  Map Ptr (Credential 'Staking era) ->
+  Map Ptr (Credential 'Staking (Crypto era)) ->
   UTxO era ->
-  Map (Credential 'Staking era) Coin ->
-  Map (Credential 'Staking era) Coin
+  Map (Credential 'Staking (Crypto era)) Coin ->
+  Map (Credential 'Staking (Crypto era)) Coin
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldr accum initial u
   where
@@ -117,18 +115,18 @@ aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
 
 -- | Get stake of one pool
 poolStake ::
-  KeyHash 'StakePool (Crypto era) ->
-  Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era)) ->
-  Stake era ->
-  Stake era
+  KeyHash 'StakePool crypto ->
+  Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
+  Stake crypto ->
+  Stake crypto
 poolStake hk delegs (Stake stake) =
   Stake $ eval (dom (delegs ▷ setSingleton hk) ◁ stake)
 
 -- | Calculate total possible refunds.
 obligation ::
   PParams era ->
-  Map (Credential 'Staking era) Coin ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
+  Map (Credential 'Staking (Crypto era)) Coin ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
   Coin
 obligation pp rewards stakePools =
   (length rewards <×> _keyDeposit pp) <+> (length stakePools <×> _poolDeposit pp)
@@ -148,20 +146,20 @@ maxPool pc r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
     factor4 = (z0 - sigma') / z0
 
 -- | Snapshot of the stake distribution.
-data SnapShot era = SnapShot
-  { _stake :: !(Stake era),
-    _delegations :: !(Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era))),
-    _poolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams era))
+data SnapShot crypto = SnapShot
+  { _stake :: !(Stake crypto),
+    _delegations :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
+    _poolParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto))
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (SnapShot era)
+instance NoThunks (SnapShot crypto)
 
-instance NFData (SnapShot era)
+instance NFData (SnapShot crypto)
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  ToCBOR (SnapShot era)
+  CC.Crypto crypto =>
+  ToCBOR (SnapShot crypto)
   where
   toCBOR
     ( SnapShot
@@ -176,8 +174,8 @@ instance
         <> toCBOR p
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  FromCBOR (SnapShot era)
+  CC.Crypto crypto =>
+  FromCBOR (SnapShot crypto)
   where
   fromCBOR = do
     decodeRecordNamed "SnapShot" (const 3) $ do
@@ -187,21 +185,21 @@ instance
       pure $ SnapShot s d p
 
 -- | Snapshots of the stake distribution.
-data SnapShots era = SnapShots
-  { _pstakeMark :: !(SnapShot era),
-    _pstakeSet :: !(SnapShot era),
-    _pstakeGo :: !(SnapShot era),
+data SnapShots crypto = SnapShots
+  { _pstakeMark :: !(SnapShot crypto),
+    _pstakeSet :: !(SnapShot crypto),
+    _pstakeGo :: !(SnapShot crypto),
     _feeSS :: !Coin
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (SnapShots era)
+instance NoThunks (SnapShots crypto)
 
-instance NFData (SnapShots era)
+instance NFData (SnapShots crypto)
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  ToCBOR (SnapShots era)
+  CC.Crypto crypto =>
+  ToCBOR (SnapShots crypto)
   where
   toCBOR (SnapShots mark set go fs) =
     encodeListLen 4
@@ -211,8 +209,8 @@ instance
       <> toCBOR fs
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  FromCBOR (SnapShots era)
+  CC.Crypto crypto =>
+  FromCBOR (SnapShots crypto)
   where
   fromCBOR = do
     decodeRecordNamed "SnapShots" (const 4) $ do
@@ -222,8 +220,8 @@ instance
       f <- fromCBOR
       pure $ SnapShots mark set go f
 
-emptySnapShot :: SnapShot era
+emptySnapShot :: SnapShot crypto
 emptySnapShot = SnapShot (Stake Map.empty) Map.empty Map.empty
 
-emptySnapShots :: SnapShots era
+emptySnapShots :: SnapShots crypto
 emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)

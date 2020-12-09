@@ -39,7 +39,6 @@ module Test.Shelley.Spec.Ledger.Examples.Cast
 where
 
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -106,26 +105,26 @@ alicePoolKeys =
     (skCold, vkCold) = mkKeyPair (1, 0, 0, 0, 1)
 
 -- | Alice's base address
-aliceAddr :: Era era => Addr era
+aliceAddr :: CC.Crypto crypto => Addr crypto
 aliceAddr = mkAddr (alicePay, aliceStake)
 
-alicePHK :: Era era => Credential 'Payment era
+alicePHK :: CC.Crypto crypto => Credential 'Payment crypto
 alicePHK = (KeyHashObj . hashKey . vKey) alicePay
 
 -- | Alice's stake credential
-aliceSHK :: Era era => Credential 'Staking era
+aliceSHK :: CC.Crypto crypto => Credential 'Staking crypto
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
 -- | Alice's base address
-alicePtrAddr :: Era era => Addr era
+alicePtrAddr :: CC.Crypto crypto => Addr crypto
 alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
 
 -- | Alice's stake pool parameters
-alicePoolParams :: forall era. Era era => PoolParams era
+alicePoolParams :: forall crypto. CC.Crypto crypto => PoolParams crypto
 alicePoolParams =
   PoolParams
     { _poolId = (hashKey . vKey . cold) alicePoolKeys,
-      _poolVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @(Crypto era)),
+      _poolVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @crypto),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeMkUnitInterval 0.1,
@@ -160,11 +159,11 @@ bobStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
 
 -- | Bob's address
-bobAddr :: Era era => Addr era
+bobAddr :: CC.Crypto crypto => Addr crypto
 bobAddr = mkAddr (bobPay, bobStake)
 
 -- | Bob's stake credential
-bobSHK :: Era era => Credential 'Staking era
+bobSHK :: CC.Crypto crypto => Credential 'Staking crypto
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 -- | Bob's stake pool keys (cold keys, VRF keys, hot KES keys)
@@ -179,11 +178,11 @@ bobPoolKeys =
     (skCold, vkCold) = mkKeyPair (2, 0, 0, 0, 1)
 
 -- | Bob's stake pool parameters
-bobPoolParams :: forall era. Era era => PoolParams era
+bobPoolParams :: forall crypto. CC.Crypto crypto => PoolParams crypto
 bobPoolParams =
   PoolParams
     { _poolId = (hashKey . vKey . cold) bobPoolKeys,
-      _poolVrf = hashVerKeyVRF . snd $ vrf (bobPoolKeys @(Crypto era)),
+      _poolVrf = hashVerKeyVRF . snd $ vrf (bobPoolKeys @crypto),
       _poolPledge = Coin 2,
       _poolCost = Coin 1,
       _poolMargin = unsafeMkUnitInterval 0.1,
@@ -213,11 +212,11 @@ carlStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
 
 -- | Carl's address
-carlAddr :: Era era => Addr era
+carlAddr :: CC.Crypto crypto => Addr crypto
 carlAddr = mkAddr (carlPay, carlStake)
 
 -- | Carl's stake credential
-carlSHK :: Era era => Credential 'Staking era
+carlSHK :: CC.Crypto crypto => Credential 'Staking crypto
 carlSHK = (KeyHashObj . hashKey . vKey) carlStake
 
 -- | Daria's payment key pair
@@ -233,9 +232,9 @@ dariaStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
 
 -- | Daria's address
-dariaAddr :: Era era => Addr era
+dariaAddr :: CC.Crypto crypto => Addr crypto
 dariaAddr = mkAddr (dariaPay, dariaStake)
 
 -- | Daria's stake credential
-dariaSHK :: Era era => Credential 'Staking era
+dariaSHK :: CC.Crypto crypto => Credential 'Staking crypto
 dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake

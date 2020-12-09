@@ -159,23 +159,25 @@ mkScripts ::
 mkScripts = map (mkScriptsFromKeyPair @era)
 
 mkPayScriptHashMap ::
+  forall era.
   (ScriptClass era) =>
   [(Core.Script era, Core.Script era)] ->
-  Map.Map (ScriptHash era) (Core.Script era, Core.Script era)
+  Map.Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era)
 mkPayScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
-    f script@(pay, _stake) = (hashScript pay, script)
+    f script@(pay, _stake) = (hashScript @era pay, script)
 
 -- | Generate a mapping from stake script hash to script pair.
 mkStakeScriptHashMap ::
+  forall era.
   (ScriptClass era) =>
   [(Core.Script era, Core.Script era)] ->
-  Map.Map (ScriptHash era) (Core.Script era, Core.Script era)
+  Map.Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era)
 mkStakeScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
-    f script@(_pay, stake) = (hashScript stake, script)
+    f script@(_pay, stake) = (hashScript @era stake, script)
 
 -- | Combine a list of script pairs into hierarchically structured multi-sig
 -- scripts, list must have at least length 3. Be careful not to call with too

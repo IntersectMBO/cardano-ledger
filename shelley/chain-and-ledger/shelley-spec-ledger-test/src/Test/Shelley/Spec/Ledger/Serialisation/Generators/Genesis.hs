@@ -66,17 +66,17 @@ genShelleyGenesis =
     <*> fmap Map.fromList genFundsList
     <*> genStaking
 
-genStaking :: Era era => Gen (ShelleyGenesisStaking era)
+genStaking :: CC.Crypto crypto => Gen (ShelleyGenesisStaking crypto)
 genStaking =
   ShelleyGenesisStaking
     <$> fmap Map.fromList genPools
     <*> fmap Map.fromList genStake
 
 genPools ::
-  Era era =>
+  CC.Crypto crypto =>
   Gen
-    [ ( KeyHash 'StakePool (Crypto era),
-        PoolParams era
+    [ ( KeyHash 'StakePool crypto,
+        PoolParams crypto
       )
     ]
 genPools =
@@ -94,11 +94,11 @@ genStake =
   Gen.list (Range.linear 1 10) $
     (,) <$> genKeyHash <*> genKeyHash
 
-genPoolParams :: forall era. Era era => Gen (PoolParams era)
+genPoolParams :: forall crypto. CC.Crypto crypto => Gen (PoolParams crypto)
 genPoolParams =
   PoolParams
     <$> genKeyHash
-    <*> genVRFKeyHash @(Crypto era)
+    <*> genVRFKeyHash @crypto
     <*> genCoin
     <*> genCoin
     <*> genUnitInterval
@@ -141,10 +141,10 @@ genUrl = do
     Nothing -> error "wrong generator for Url"
     Just url -> return url
 
-genRewardAcnt :: Era era => Gen (RewardAcnt era)
+genRewardAcnt :: CC.Crypto crypto => Gen (RewardAcnt crypto)
 genRewardAcnt = RewardAcnt Testnet <$> genCredential
 
-genCredential :: Era era => Gen (Credential 'Staking era)
+genCredential :: CC.Crypto crypto => Gen (Credential 'Staking crypto)
 genCredential =
   Gen.choice
     [ ScriptHashObj . ScriptHash <$> genHash,
@@ -240,7 +240,7 @@ genVRFKeyPair = do
   where
     seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF crypto)))
 
-genFundsList :: Era era => Gen [(Addr era, Coin)]
+genFundsList :: CC.Crypto crypto => Gen [(Addr crypto, Coin)]
 genFundsList = Gen.list (Range.linear 1 100) genGenesisFundPair
 
 genSeed :: Int -> Gen Seed
@@ -275,11 +275,11 @@ genKeyPair = do
             )
         )
 
-genGenesisFundPair :: Era era => Gen (Addr era, Coin)
+genGenesisFundPair :: CC.Crypto crypto => Gen (Addr crypto, Coin)
 genGenesisFundPair =
   (,) <$> genAddress <*> genCoin
 
-genAddress :: Era era => Gen (Addr era)
+genAddress :: CC.Crypto crypto => Gen (Addr crypto)
 genAddress = do
   (secKey1, verKey1) <- genKeyPair
   (secKey2, verKey2) <- genKeyPair

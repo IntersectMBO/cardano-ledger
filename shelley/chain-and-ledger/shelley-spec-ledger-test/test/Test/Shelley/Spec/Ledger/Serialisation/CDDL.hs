@@ -14,6 +14,12 @@ module Test.Shelley.Spec.Ledger.Serialisation.CDDL
   )
 where
 
+import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
+import Cardano.Crypto.KES.Sum
+import Cardano.Crypto.VRF.Praos (PraosVRF)
+import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Data.ByteString.Lazy as BSL
 import Shelley.Spec.Ledger.API
   ( Credential,
@@ -43,19 +49,12 @@ import Shelley.Spec.Ledger.TxBody
     TxIn,
     TxOut,
   )
-import Test.Tasty (TestTree, withResource, testGroup)
 import Test.Shelley.Spec.Ledger.Serialisation.CDDLUtils
   ( cddlGroupTest,
     cddlTest,
     cddlTest',
   )
-
-import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
-import Cardano.Crypto.KES.Sum
-import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
-import Cardano.Crypto.VRF.Praos (PraosVRF)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Test.Tasty (TestTree, testGroup, withResource)
 
 -- Crypto family as used in production Shelley
 -- TODO: we really need a central location for all the Crypto and Era families.
@@ -77,19 +76,19 @@ tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
     [ cddlTest' @(BHeader ShelleyC) n "header",
-      cddlTest' @(BootstrapWitness ShelleyE) n "bootstrap_witness",
+      cddlTest' @(BootstrapWitness ShelleyC) n "bootstrap_witness",
       cddlTest @(BHBody ShelleyC) n "header_body",
       cddlGroupTest @(OCert ShelleyC) n "operational_cert",
-      cddlTest @(Addr ShelleyE) n "address",
-      cddlTest @(RewardAcnt ShelleyE) n "reward_account",
-      cddlTest @(Credential 'Staking ShelleyE) n "stake_credential",
+      cddlTest @(Addr ShelleyC) n "address",
+      cddlTest @(RewardAcnt ShelleyC) n "reward_account",
+      cddlTest @(Credential 'Staking ShelleyC) n "stake_credential",
       cddlTest' @(TxBody ShelleyE) n "transaction_body",
       cddlTest @(TxOut ShelleyE) n "transaction_output",
       cddlTest @StakePoolRelay n "relay",
-      cddlTest @(DCert ShelleyE) n "certificate",
-      cddlTest @(TxIn ShelleyE) n "transaction_input",
+      cddlTest @(DCert ShelleyC) n "certificate",
+      cddlTest @(TxIn ShelleyC) n "transaction_input",
       cddlTest' @Metadata n "transaction_metadata",
-      cddlTest' @(MultiSig ShelleyE) n "multisig_script",
+      cddlTest' @(MultiSig ShelleyC) n "multisig_script",
       cddlTest @(Update ShelleyE) n "update",
       cddlTest @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",
       cddlTest @(PParamsUpdate ShelleyE) n "protocol_param_update",

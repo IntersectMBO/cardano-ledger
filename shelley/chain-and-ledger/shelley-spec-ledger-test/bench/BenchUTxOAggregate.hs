@@ -2,15 +2,16 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module BenchUTxOAggregate where
 
 import Cardano.Ledger.Compactible (toCompact)
-import Cardano.Ledger.Era (Era (Crypto))
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (compile, compute, run)
 import Control.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
+import Control.Monad (replicateM)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
@@ -50,12 +51,11 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 genTestCase ::
   Int -> -- The size of the utxo
   Int -> -- the number of addresses
-  Gen (DState C, PState C, UTxO C)
+  Gen (DState C_Crypto, PState C_Crypto, UTxO C)
 genTestCase numUTxO numAddr = do
-  addrs <- (sequence $ replicate numAddr arbitrary) :: Gen [Addr C]
+  addrs :: [Addr C_Crypto] <- replicateM numAddr arbitrary
   let packedAddrs = Seq.fromList addrs
-  txOuts <- sequence $
-    replicate numUTxO $ do
+  txOuts <- replicateM numUTxO $ do
       i <- choose (0, numAddr -1)
       let addr = Seq.index packedAddrs i
       pure $
@@ -68,21 +68,15 @@ genTestCase numUTxO numAddr = do
       liveptrs :: [Ptr]
       liveptrs = [p | (TxOut (Addr _ _ (StakeRefPtr p)) _) <- txOuts]
       m = length liveptrs `div` 2
-  moreptrs <- (sequence $ replicate m arbitrary) :: Gen [Ptr]
-  creds <-
-    (sequence $ replicate (m + m) arbitrary) ::
-      Gen [Credential 'Staking C]
-  let ptrs' :: Bimap Ptr (Credential 'Staking C)
+  moreptrs :: [Ptr] <- replicateM m arbitrary
+  creds :: [Credential 'Staking C_Crypto] <- replicateM (m + m) arbitrary
+  let ptrs' :: Bimap Ptr (Credential 'Staking C_Crypto)
       ptrs' = biMapFromList (\new _old -> new) (zip (liveptrs ++ moreptrs) creds)
-  rewards <-
-    sequence (replicate (3 * (numUTxO `div` 4)) arbitrary) ::
-      Gen [(Credential 'Staking C, Coin)]
-  let rewards' :: Map (Credential 'Staking C) Coin
+  rewards :: [(Credential 'Staking C_Crypto, Coin)] <- replicateM (3 * (numUTxO `div` 4)) arbitrary
+  let rewards' :: Map (Credential 'Staking C_Crypto) Coin
       rewards' = Map.fromList rewards
 
-  keyhash <-
-    sequence (replicate 400 arbitrary) ::
-      Gen [KeyHash 'StakePool C_Crypto]
+  keyhash :: [KeyHash 'StakePool C_Crypto] <- replicateM 400 arbitrary
   let delegs = Map.fromList (zip creds (cycle (take 200 keyhash)))
   let pp = alicePoolParams
   let poolParams = Map.fromList (zip keyhash (replicate 400 pp))
@@ -90,11 +84,11 @@ genTestCase numUTxO numAddr = do
   pure (dstate, pstate, UTxO utxo)
 
 makeStatePair ::
-  Map (Credential 'Staking era) Coin ->
-  Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era)) ->
-  Bimap Ptr (Credential 'Staking era) ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
-  (DState era, PState era)
+  Map (Credential 'Staking crypto) Coin ->
+  Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
+  Bimap Ptr (Credential 'Staking crypto) ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
+  (DState crypto, PState crypto)
 makeStatePair rewards' delegs ptrs' poolParams =
   ( DState
       rewards'
@@ -110,7 +104,7 @@ makeStatePair rewards' delegs ptrs' poolParams =
 -- operations to benchmark different algorithms for executing ((dom d ◁ r) ▷ dom rg)
 
 big :: Int -> Gen Int
-big n = (choose (1, n))
+big n = choose (1, n)
 
 pair :: Gen a -> Gen b -> Gen (a, b)
 pair g1 g2 = do x <- g1; y <- g2; pure (x, y)

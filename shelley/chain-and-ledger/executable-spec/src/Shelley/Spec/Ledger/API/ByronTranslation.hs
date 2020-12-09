@@ -41,7 +41,7 @@ import Shelley.Spec.Ledger.Slot
 translateTxIdByronToShelley ::
   (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.TxId ->
-  TxId (ShelleyEra c)
+  TxId c
 translateTxIdByronToShelley =
   TxId . hashFromShortBytesE . Hashing.abstractHashToShort
 
@@ -65,7 +65,7 @@ translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
 translateCompactTxInByronToShelley ::
   (CC.Crypto c, CC.ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.CompactTxIn ->
-  TxIn (ShelleyEra c)
+  TxIn c
 translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
   TxInCompact
     (translateTxIdByronToShelley (Byron.fromCompactTxId compactTxId))

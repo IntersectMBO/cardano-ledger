@@ -6,7 +6,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
   ( timelockTests,
@@ -15,7 +14,6 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
 where
 
 import Cardano.Binary (Annotator (..), FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Era (PreviousEra)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     showTimelock,
@@ -27,21 +25,22 @@ import qualified Data.ByteString.Lazy as Lazy
 import Data.MemoBytes (MemoBytes (Memo))
 import Data.Sequence.Strict (fromList)
 import Shelley.Spec.Ledger.Scripts (MultiSig, getMultiSigBytes)
+import Test.Cardano.Ledger.EraBuffet(TestCrypto)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (embedTripAnn, roundTripAnn)
-import Test.Cardano.Ledger.ShelleyMA.TxBody (TestEra)
+import Test.Cardano.Ledger.ShelleyMA.TxBody ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
 
 -- ================================================================
 
-s1 :: Timelock TestEra
+s1 :: Timelock TestCrypto
 s1 = RequireAllOf (fromList [RequireTimeStart (SlotNo 12), RequireTimeExpire 18])
 
-s2 :: Timelock TestEra
+s2 :: Timelock TestCrypto
 s2 = RequireAllOf (fromList [RequireTimeStart (SlotNo 12), RequireTimeExpire (SlotNo 23)])
 
-s4 :: Timelock TestEra
+s4 :: Timelock TestCrypto
 s4 = RequireAllOf (fromList [s1, s2])
 
 -- ================================================================
@@ -52,31 +51,24 @@ checkOne nm t = testProperty ("RoundTrip: " ++ nm) $
     Right _ -> True
     Left s -> error ("Fail to roundtrip " ++ show t ++ " with error " ++ show s)
 
-checkAnn :: Timelock TestEra -> Bool
+checkAnn :: Timelock TestCrypto -> Bool
 checkAnn t =
   case roundTripAnn t of
     Right _ -> True
     Left s -> error (show s)
 
-checkEmbed :: MultiSig TestEra -> Bool
+checkEmbed :: MultiSig TestCrypto -> Bool
 checkEmbed multi =
-  case embedTripAnn @(Timelock TestEra) multi of
+  case embedTripAnn @(Timelock TestCrypto) multi of
     Right (left, _) | left == Lazy.empty -> True
     Right (left, _) -> error ("Bytes left over: " ++ show left)
     Left s -> error (show s)
 
--- The translate tests depend upon translating from a previous era
--- to the current era. We arbitrarily set the TestEra to be its own
--- PreviousEra. TestEra is only used in Serialisations tests, so
--- this should not have any wider effect.
-
-type instance PreviousEra (TestEra) = TestEra
-
-checkTranslate :: MultiSig TestEra -> Bool
+checkTranslate :: MultiSig TestCrypto -> Bool
 checkTranslate multi = bytes == bytes2
   where
     bytes = getMultiSigBytes multi
-    (TimelockConstr (Memo _ bytes2)) = translate @TestEra multi
+    (TimelockConstr (Memo _ bytes2)) = translate @TestCrypto multi
 
 timelockTests :: TestTree
 timelockTests =

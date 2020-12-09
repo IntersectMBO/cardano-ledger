@@ -34,9 +34,8 @@ import Cardano.Binary
     serialize',
   )
 import qualified Cardano.Crypto.Hash as Hash
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (ADDRHASH)
-import Cardano.Ledger.Era (Crypto (..))
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import qualified Data.ByteString as BS
@@ -47,10 +46,10 @@ import Data.MemoBytes
     MemoBytes (..),
     memoBytes,
   )
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
+import Shelley.Spec.Ledger.Hashing (EraIndependentScript)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 
@@ -74,54 +73,54 @@ nativeMultiSigTag = "\00"
 -- This makes it easy to express multi-signature addresses, and provides an
 -- extension point to express other validity conditions, e.g., as needed for
 -- locking funds used with lightning.
-data MultiSigRaw era
+data MultiSigRaw crypto
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
-    RequireSignature' !(KeyHash 'Witness (Crypto era))
+    RequireSignature' !(KeyHash 'Witness crypto)
   | -- | Require all the sub-terms to be satisfied.
-    RequireAllOf' ![MultiSig era]
+    RequireAllOf' ![MultiSig crypto]
   | -- | Require any one of the sub-terms to be satisfied.
-    RequireAnyOf' ![MultiSig era]
+    RequireAnyOf' ![MultiSig crypto]
   | -- | Require M of the given sub-terms to be satisfied.
-    RequireMOf' !Int ![MultiSig era]
+    RequireMOf' !Int ![MultiSig crypto]
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NoThunks)
 
-newtype MultiSig era = MultiSigConstr (MemoBytes (MultiSigRaw era))
+newtype MultiSig crypto = MultiSigConstr (MemoBytes (MultiSigRaw crypto))
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (ToCBOR, NoThunks)
 
-getMultiSigBytes :: MultiSig era -> ShortByteString
+getMultiSigBytes :: MultiSig crypto -> ShortByteString
 getMultiSigBytes (MultiSigConstr (Memo _ bytes)) = bytes
 
 deriving via
-  (Mem (MultiSigRaw era))
+  Mem (MultiSigRaw crypto)
   instance
-    (Era era) =>
-    FromCBOR (Annotator (MultiSig era))
+    CC.Crypto crypto =>
+    FromCBOR (Annotator (MultiSig crypto))
 
-pattern RequireSignature :: Era era => KeyHash 'Witness (Crypto era) -> MultiSig era
+pattern RequireSignature :: CC.Crypto crypto => KeyHash 'Witness crypto -> MultiSig crypto
 pattern RequireSignature akh <-
   MultiSigConstr (Memo (RequireSignature' akh) _)
   where
     RequireSignature akh =
       MultiSigConstr $ memoBytes (Sum RequireSignature' 0 !> To akh)
 
-pattern RequireAllOf :: Era era => [MultiSig era] -> MultiSig era
+pattern RequireAllOf :: CC.Crypto crypto => [MultiSig crypto] -> MultiSig crypto
 pattern RequireAllOf ms <-
   MultiSigConstr (Memo (RequireAllOf' ms) _)
   where
     RequireAllOf ms =
       MultiSigConstr $ memoBytes (Sum RequireAllOf' 1 !> E encodeFoldable ms)
 
-pattern RequireAnyOf :: Era era => [MultiSig era] -> MultiSig era
+pattern RequireAnyOf :: CC.Crypto crypto => [MultiSig crypto] -> MultiSig crypto
 pattern RequireAnyOf ms <-
   MultiSigConstr (Memo (RequireAnyOf' ms) _)
   where
     RequireAnyOf ms =
       MultiSigConstr $ memoBytes (Sum RequireAnyOf' 2 !> E encodeFoldable ms)
 
-pattern RequireMOf :: Era era => Int -> [MultiSig era] -> MultiSig era
+pattern RequireMOf :: CC.Crypto crypto => Int -> [MultiSig crypto] -> MultiSig crypto
 pattern RequireMOf n ms <-
   MultiSigConstr (Memo (RequireMOf' n ms) _)
   where
@@ -130,36 +129,36 @@ pattern RequireMOf n ms <-
 
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
-newtype ScriptHash era
-  = ScriptHash (Hash.Hash (ADDRHASH (Crypto era)) (Core.Script era))
+newtype ScriptHash crypto
+  = ScriptHash (Hash.Hash (ADDRHASH crypto) EraIndependentScript)
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoThunks)
 
 deriving newtype instance
-  (Era era, Typeable (Core.Script era)) =>
-  ToCBOR (ScriptHash era)
+  CC.Crypto crypto =>
+  ToCBOR (ScriptHash crypto)
 
 deriving newtype instance
-  (Era era, Typeable (Core.Script era)) =>
-  FromCBOR (ScriptHash era)
+  CC.Crypto crypto =>
+  FromCBOR (ScriptHash crypto)
 
-deriving newtype instance (Era era) => ToJSON (ScriptHash era)
+deriving newtype instance ToJSON (ScriptHash crypto)
 
-deriving newtype instance Era era => FromJSON (ScriptHash era)
+deriving newtype instance CC.Crypto crypto => FromJSON (ScriptHash crypto)
 
 -- | Hashes native multi-signature script.
 hashMultiSigScript ::
-  Era era =>
-  MultiSig era ->
-  ScriptHash era
+  CC.Crypto crypto =>
+  MultiSig crypto ->
+  ScriptHash crypto
 hashMultiSigScript =
   ScriptHash
     . Hash.castHash
     . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
 instance
-  Era era =>
-  FromCBOR (Annotator (MultiSigRaw era))
+  CC.Crypto crypto =>
+  FromCBOR (Annotator (MultiSigRaw crypto))
   where
   fromCBOR = decodeRecordSum "MultiSig" $
     \case

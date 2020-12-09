@@ -13,7 +13,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestPool
 where
 
 import Control.SetAlgebra (dom, eval, (∈), (∉))
-import Control.State.Transition (State)
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
   )
@@ -88,7 +87,7 @@ poolRetirement
       ]
 poolRetirement _ _ _ = property ()
 
-poolStateIsInternallyConsistent :: State (POOL era) -> Property
+poolStateIsInternallyConsistent :: PState crypto -> Property
 poolStateIsInternallyConsistent (PState pParams_ _ retiring_) = do
   let poolKeys = Map.keysSet pParams_
       pParamKeys = Map.keysSet pParams_

@@ -323,8 +323,8 @@ expectedStEx2 =
     . C.newLab blockEx2
     . C.feesAndDeposits feeTx2 (Coin 0)
     . C.newUTxO txbodyEx2
-    . C.delegation Cast.aliceSHK (_poolId $ Cast.alicePoolParams @(ShelleyEra c))
-    . C.delegation Cast.bobSHK (_poolId $ Cast.alicePoolParams @(ShelleyEra c))
+    . C.delegation Cast.aliceSHK (_poolId $ Cast.alicePoolParams @c)
+    . C.delegation Cast.bobSHK (_poolId $ Cast.alicePoolParams @c)
     . C.rewardUpdate emptyRewardUpdate
     $ expectedStEx1
 
@@ -356,7 +356,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: Era era => EB.SnapShot era
+snapEx3 :: Cr.Crypto c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
     { EB._stake =
@@ -443,7 +443,7 @@ blockEx4 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 190) 0 (KESPeriod 0))
 
-rewardUpdateEx4 :: forall c. RewardUpdate (ShelleyEra c)
+rewardUpdateEx4 :: forall c. RewardUpdate c
 rewardUpdateEx4 =
   RewardUpdate
     { deltaT = DeltaCoin 1,
@@ -462,7 +462,7 @@ expectedStEx4 =
     . C.newLab blockEx4
     . C.feesAndDeposits feeTx4 (Coin 0)
     . C.newUTxO txbodyEx4
-    . C.delegation Cast.carlSHK (_poolId $ Cast.alicePoolParams @(ShelleyEra c))
+    . C.delegation Cast.carlSHK (_poolId $ Cast.alicePoolParams @c)
     . C.rewardUpdate rewardUpdateEx4
     $ expectedStEx3
 
@@ -498,7 +498,7 @@ blockEx5 =
     10
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 220) 1 (KESPeriod 10))
 
-snapEx5 :: forall c. Cr.Crypto c => EB.SnapShot (ShelleyEra c)
+snapEx5 :: forall c. Cr.Crypto c => EB.SnapShot c
 snapEx5 =
   EB.SnapShot
     { EB._stake =
@@ -564,7 +564,7 @@ blockEx6 =
     14
     (mkOCert Cast.alicePoolKeys 0 (KESPeriod 14))
 
-rewardUpdateEx6 :: forall c. RewardUpdate (ShelleyEra c)
+rewardUpdateEx6 :: forall c. RewardUpdate c
 rewardUpdateEx6 =
   RewardUpdate
     { deltaT = DeltaCoin 1,
@@ -677,13 +677,13 @@ alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
     relativeStake = fromRational (stake % tot)
     f = activeSlotCoeff testGlobals
 
-nonMyopicEx8 :: forall era. Era era => NonMyopic era
+nonMyopicEx8 :: forall c. Cr.Crypto c => NonMyopic c
 nonMyopicEx8 =
   NonMyopic
     (Map.singleton (hk Cast.alicePoolKeys) alicePerfEx8)
     rewardPot8
 
-rewardUpdateEx8 :: forall era. Era era => RewardUpdate era
+rewardUpdateEx8 :: forall c. Cr.Crypto c => RewardUpdate c
 rewardUpdateEx8 =
   RewardUpdate
     { deltaT = deltaT8,
@@ -737,7 +737,7 @@ blockEx9 =
     20
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 410) 2 (KESPeriod 20))
 
-snapEx9 :: forall c. Cr.Crypto c => EB.SnapShot (ShelleyEra c)
+snapEx9 :: forall c. Cr.Crypto c => EB.SnapShot c
 snapEx9 =
   snapEx5
     { EB._stake =
@@ -899,13 +899,13 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
     (Coin supply) = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals
 
-nonMyopicEx11 :: forall c. Cr.Crypto c => NonMyopic (ShelleyEra c)
+nonMyopicEx11 :: forall c. Cr.Crypto c => NonMyopic c
 nonMyopicEx11 =
   NonMyopic
     (Map.singleton (hk Cast.alicePoolKeys) (alicePerfEx11 @c))
     (Coin 0)
 
-rewardUpdateEx11 :: forall c. Cr.Crypto c => RewardUpdate (ShelleyEra c)
+rewardUpdateEx11 :: forall c. Cr.Crypto c => RewardUpdate c
 rewardUpdateEx11 =
   RewardUpdate
     { deltaT = DeltaCoin 0,
@@ -955,7 +955,7 @@ blockEx12 =
     25
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 510) 3 (KESPeriod 25))
 
-snapEx12 :: forall c. Cr.Crypto c => EB.SnapShot (ShelleyEra c)
+snapEx12 :: forall c. Cr.Crypto c => EB.SnapShot c
 snapEx12 =
   snapEx9
     { EB._stake =

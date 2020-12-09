@@ -145,7 +145,7 @@ tests =
 
 exampleShelleyGenesis ::
   forall era.
-  (Era era) =>
+  Era era =>
   ShelleyGenesis era
 exampleShelleyGenesis =
   ShelleyGenesis
@@ -180,7 +180,7 @@ exampleShelleyGenesis =
     delegVerKeyHash = L.KeyHash "839b047f839b047f"
     delegVrfKeyHash :: Hash.Hash (HASH (Crypto era)) (L.VerKeyVRF (Crypto era))
     delegVrfKeyHash = "231391e7231391e70123"
-    initialFundedAddress :: L.Addr era
+    initialFundedAddress :: L.Addr (Crypto era)
     initialFundedAddress =
       L.Addr
         L.Testnet
@@ -206,7 +206,7 @@ exampleShelleyGenesis =
           L.SingleHostName L.SNothing (fromJust $ textToDns "cool.domain.com"),
           L.MultiHostName (fromJust $ textToDns "cool.domain.com")
         ]
-    poolParams :: L.PoolParams era
+    poolParams :: L.PoolParams (Crypto era)
     poolParams =
       L.PoolParams
         { L._poolId = hashKey . snd $ mkKeyPair (1, 0, 0, 0, 1),

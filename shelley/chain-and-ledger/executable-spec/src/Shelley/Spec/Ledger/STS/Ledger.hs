@@ -75,7 +75,7 @@ data LEDGER era
 data LedgerEnv era = LedgerEnv
   { ledgerSlotNo :: SlotNo,
     ledgerIx :: Ix,
-    ledgerPp :: (PParams era),
+    ledgerPp :: PParams era,
     ledgerAccount :: AccountState
   }
   deriving (Show)
@@ -146,15 +146,15 @@ instance
     State (UTXOW era) ~ UTxOState era,
     Signal (UTXOW era) ~ Tx era,
     Environment (DELEGS era) ~ DelegsEnv era,
-    State (DELEGS era) ~ DPState era,
-    Signal (DELEGS era) ~ Seq (DCert era),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+    State (DELEGS era) ~ DPState (Crypto era),
+    Signal (DELEGS era) ~ Seq (DCert (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   STS (LEDGER era)
   where
   type
     State (LEDGER era) =
-      (UTxOState era, DPState era)
+      (UTxOState era, DPState (Crypto era))
   type Signal (LEDGER era) = Tx era
   type Environment (LEDGER era) = LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
@@ -188,7 +188,7 @@ ledgerTransition ::
     Environment (UTXOW era) ~ UtxoEnv era,
     State (UTXOW era) ~ UTxOState era,
     Signal (UTXOW era) ~ Tx era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   TransitionRule (LEDGER era)
 ledgerTransition = do

@@ -13,6 +13,7 @@ module Shelley.Spec.Ledger.STS.Snap
   )
 where
 
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.State.Transition
   ( STS (..),
@@ -39,7 +40,7 @@ data SnapPredicateFailure era -- No predicate failures
 instance NoThunks (SnapPredicateFailure era)
 
 instance ShelleyBased era => STS (SNAP era) where
-  type State (SNAP era) = SnapShots era
+  type State (SNAP era) = SnapShots (Crypto era)
   type Signal (SNAP era) = ()
   type Environment (SNAP era) = LedgerState era
   type BaseM (SNAP era) = ShelleyBase

@@ -167,13 +167,13 @@ aliceCoinEx1 =
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-alicePoolParams' :: forall era. Era era => PoolParams era
+alicePoolParams' :: CryptoClass.Crypto c => PoolParams c
 alicePoolParams' = Cast.alicePoolParams {_poolRAcnt = RewardAcnt Testnet Cast.carlSHK}
 
-bobPoolParams' :: forall era. Era era => PoolParams era
+bobPoolParams' :: CryptoClass.Crypto c => PoolParams c
 bobPoolParams' = Cast.bobPoolParams {_poolRAcnt = RewardAcnt Testnet Cast.carlSHK}
 
-txbodyEx1 :: ShelleyTest era => TxBody era
+txbodyEx1 :: forall era. ShelleyTest era => TxBody era
 txbodyEx1 =
   TxBody
     (Set.fromList [TxIn genesisId 0])
@@ -236,9 +236,9 @@ expectedStEx1 =
     . C.newStakeCred Cast.carlSHK (Ptr (SlotNo 10) 0 2)
     . C.newPool alicePoolParams'
     . C.newPool bobPoolParams'
-    . C.delegation Cast.aliceSHK (_poolId $ alicePoolParams' @era)
-    . C.delegation Cast.bobSHK (_poolId $ bobPoolParams' @era)
-    . C.delegation Cast.carlSHK (_poolId $ alicePoolParams' @era)
+    . C.delegation Cast.aliceSHK (_poolId alicePoolParams')
+    . C.delegation Cast.bobSHK (_poolId bobPoolParams')
+    . C.delegation Cast.carlSHK (_poolId alicePoolParams')
     $ initStTwoPools
 
 -- === Block 1, Slot 10, Epoch 0
@@ -310,7 +310,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @era ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: Era era => EB.SnapShot era
+snapEx3 :: ExMock c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
     { EB._stake =
@@ -371,7 +371,7 @@ blockEx4 =
 deltaREx4 :: Coin
 deltaREx4 = Coin 3
 
-rewardUpdateEx4 :: forall era. RewardUpdate era
+rewardUpdateEx4 :: forall crypto. RewardUpdate crypto
 rewardUpdateEx4 =
   RewardUpdate
     { deltaT = DeltaCoin 0,
@@ -627,43 +627,43 @@ aliceStakeShareTot = (unCoin aliceCoinEx1 + unCoin carlInitCoin) % circulation
 bobStakeShareTot :: Rational
 bobStakeShareTot = unCoin bobInitCoin % circulation
 
-alicePoolRewards :: forall era. Era era => Coin
+alicePoolRewards :: forall c. ExMock c => Coin
 alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
     appPerf = mkApparentPerformance (_d ppEx) alicePoolStake 2 3
-    pledge = fromIntegral . unCoin . _poolPledge $ alicePoolParams' @era
+    pledge = fromIntegral . unCoin . _poolPledge $ alicePoolParams' @c
     pr = pledge % circulation
     maxP = EB.maxPool ppEx bigR aliceStakeShareTot pr
 
-carlMemberRewardsFromAlice :: forall era. Era era => Coin
+carlMemberRewardsFromAlice :: forall c. ExMock c => Coin
 carlMemberRewardsFromAlice =
   memberRew
-    (alicePoolRewards @era)
-    (alicePoolParams' @era)
+    (alicePoolRewards @c)
+    (alicePoolParams' @c)
     (StakeShare $ unCoin carlInitCoin % circulation)
     (StakeShare aliceStakeShareTot)
 
-carlLeaderRewardsFromAlice :: forall era. Era era => Coin
+carlLeaderRewardsFromAlice :: forall c. ExMock c => Coin
 carlLeaderRewardsFromAlice =
   leaderRew
-    (alicePoolRewards @era)
-    (alicePoolParams' @era)
+    (alicePoolRewards @c)
+    (alicePoolParams' @c)
     (StakeShare $ unCoin aliceCoinEx1 % circulation)
     (StakeShare aliceStakeShareTot)
 
-bobPoolRewards :: forall era. Era era => Coin
+bobPoolRewards :: forall c. ExMock c => Coin
 bobPoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
     appPerf = mkApparentPerformance (_d ppEx) bobPoolStake 1 3
-    pledge = fromIntegral . unCoin . _poolPledge $ bobPoolParams' @era
+    pledge = fromIntegral . unCoin . _poolPledge $ bobPoolParams' @c
     pr = pledge % circulation
     maxP = EB.maxPool ppEx bigR bobStakeShareTot pr
 
-carlLeaderRewardsFromBob :: forall era. Era era => Coin
+carlLeaderRewardsFromBob :: forall c. ExMock c => Coin
 carlLeaderRewardsFromBob =
   leaderRew
-    (bobPoolRewards @era)
-    (bobPoolParams' @era)
+    (bobPoolRewards @c)
+    (bobPoolParams' @c)
     (StakeShare $ unCoin bobInitCoin % circulation)
     (StakeShare bobStakeShareTot)
 
@@ -681,7 +681,7 @@ bobPerfEx9 = likelihood blocks t (epochSize $ EpochNo 3)
     t = leaderProbability f bobPoolStake (_d ppEx)
     f = activeSlotCoeff testGlobals
 
-nonMyopicEx9 :: forall era. Era era => NonMyopic era
+nonMyopicEx9 :: forall c. ExMock c => NonMyopic c
 nonMyopicEx9 =
   NonMyopic
     ( Map.fromList
@@ -691,14 +691,14 @@ nonMyopicEx9 =
     )
     bigR
 
-rsEx9 :: forall era. Era era => Map (Credential 'Staking era) Coin
-rsEx9 = Map.singleton Cast.carlSHK (carlLeaderRewardsFromAlice @era)
+rsEx9 :: forall c. ExMock c => Map (Credential 'Staking c) Coin
+rsEx9 = Map.singleton Cast.carlSHK (carlLeaderRewardsFromAlice @c)
 
 rewardUpdateEx9 ::
-  forall era.
-  Era era =>
-  Map (Credential 'Staking era) Coin ->
-  RewardUpdate era
+  forall c.
+  ExMock c =>
+  Map (Credential 'Staking c) Coin ->
+  RewardUpdate c
 rewardUpdateEx9 rewards =
   RewardUpdate
     { deltaT = DeltaCoin deltaTEx9,
@@ -713,7 +713,7 @@ rewardUpdateEx9 rewards =
 expectedStEx9 ::
   forall era.
   (ShelleyTest era, ExMock (Crypto era)) =>
-  Map (Credential 'Staking era) Coin ->
+  Map (Credential 'Staking (Crypto era)) Coin ->
   ChainState era
 expectedStEx9 rewards =
   C.evolveNonceFrozen (getBlockNonce (blockEx9 @era))
@@ -735,13 +735,13 @@ twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 rsEx9)
 -- Now test with Aggregation
 --
 
-rsEx9Agg :: forall era. Era era => Map (Credential 'Staking era) Coin
+rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) Coin
 rsEx9Agg =
   Map.singleton
     Cast.carlSHK
-    ( carlMemberRewardsFromAlice @era
-        <> carlLeaderRewardsFromAlice @era
-        <> carlLeaderRewardsFromBob @era
+    ( carlMemberRewardsFromAlice @c
+        <> carlLeaderRewardsFromAlice @c
+        <> carlLeaderRewardsFromBob @c
     )
 
 expectedStEx8Agg :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era

@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -14,6 +15,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -70,6 +72,7 @@ import Cardano.Binary
     withSlice,
   )
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
 import qualified Data.ByteString.Lazy as BSL
@@ -116,9 +119,9 @@ type family HKD f a where
   HKD f a = f a
 
 data WitnessSetHKD f era = WitnessSet'
-  { addrWits' :: !(HKD f (Set (WitVKey 'Witness era))),
-    scriptWits' :: !(HKD f (Map (ScriptHash era) (Core.Script era))),
-    bootWits' :: !(HKD f (Set (BootstrapWitness era))),
+  { addrWits' :: !(HKD f (Set (WitVKey 'Witness (Crypto era)))),
+    scriptWits' :: !(HKD f (Map (ScriptHash (Crypto era)) (Core.Script era))),
+    bootWits' :: !(HKD f (Set (BootstrapWitness (Crypto era)))),
     txWitsBytes :: BSL.ByteString
   }
 
@@ -161,9 +164,9 @@ instance
 
 pattern WitnessSet ::
   (Era era, Core.AnnotatedData (Core.Script era)) =>
-  Set (WitVKey 'Witness era) ->
-  Map (ScriptHash era) (Core.Script era) ->
-  Set (BootstrapWitness era) ->
+  Set (WitVKey 'Witness (Crypto era)) ->
+  Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  Set (BootstrapWitness (Crypto era)) ->
   WitnessSet era
 pattern WitnessSet {addrWits, scriptWits, bootWits} <-
   WitnessSet' addrWits scriptWits bootWits _
@@ -293,7 +296,7 @@ decodeWits = do
               pure (\ws -> ws {addrWits' = Set.fromList <$> sequence x})
           1 ->
             decodeList fromCBOR >>= \x ->
-              pure (\ws -> ws {scriptWits' = keyBy hashScript <$> sequence x})
+              pure (\ws -> ws {scriptWits' = keyBy (hashScript @era) <$> sequence x})
           2 ->
             decodeList fromCBOR >>= \x ->
               pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
@@ -340,7 +343,7 @@ instance
           Tx'
             { _body' = runAnnotator body fullBytes,
               _witnessSet' = runAnnotator wits fullBytes,
-              _metadata' = (maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta),
+              _metadata' = maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta,
               txFullBytes = bytes
             }
 
@@ -351,14 +354,14 @@ class
   ValidateScript era
   where
   validateScript :: Core.Script era -> Tx era -> Bool
-  hashScript :: Core.Script era -> ScriptHash era
+  hashScript :: Core.Script era -> ScriptHash (Crypto era)
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
 evalNativeMultiSigScript ::
-  Era era =>
-  MultiSig era ->
-  Set (KeyHash 'Witness (Crypto era)) ->
+  CC.Crypto crypto =>
+  MultiSig crypto ->
+  Set (KeyHash 'Witness crypto) ->
   Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -373,7 +376,7 @@ validateNativeMultiSigScript ::
   ( TxBodyConstraints era,
     ToCBOR (Core.Metadata era)
   ) =>
-  MultiSig era ->
+  MultiSig (Crypto era) ->
   Tx era ->
   Bool
 validateNativeMultiSigScript msig tx =
@@ -386,13 +389,13 @@ validateNativeMultiSigScript msig tx =
 txwitsScript ::
   (TxBodyConstraints era, ToCBOR (Core.Metadata era)) =>
   Tx era ->
-  Map (ScriptHash era) (Core.Script era)
+  Map (ScriptHash (Crypto era)) (Core.Script era)
 txwitsScript = scriptWits' . _witnessSet
 
 extractKeyHashWitnessSet ::
-  forall (r :: KeyRole) era.
-  [Credential r era] ->
-  Set (KeyHash 'Witness (Crypto era))
+  forall (r :: KeyRole) crypto.
+  [Credential r crypto] ->
+  Set (KeyHash 'Witness crypto)
 extractKeyHashWitnessSet credentials = foldr accum Set.empty credentials
   where
     accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans

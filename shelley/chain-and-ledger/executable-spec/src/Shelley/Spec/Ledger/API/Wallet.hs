@@ -109,8 +109,8 @@ getNonMyopicMemberRewards ::
   ShelleyBased era =>
   Globals ->
   NewEpochState era ->
-  Set (Either Coin (Credential 'Staking era)) ->
-  Map (Either Coin (Credential 'Staking era)) (Map (KeyHash 'StakePool (Crypto era)) Coin)
+  Set (Either Coin (Credential 'Staking (Crypto era))) ->
+  Map (Either Coin (Credential 'Staking (Crypto era))) (Map (KeyHash 'StakePool (Crypto era)) Coin)
 getNonMyopicMemberRewards globals ss creds =
   Map.fromList $
     fmap
@@ -166,7 +166,7 @@ getNonMyopicMemberRewards globals ss creds =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: ShelleyBased era => NewEpochState era -> EB.SnapShot era
+currentSnapshot :: ShelleyBased era => NewEpochState era -> EB.SnapShot (Crypto era)
 currentSnapshot ss =
   stakeDistr utxo dstate pstate
   where
@@ -184,7 +184,7 @@ getUTxO = _utxo . _utxoState . esLState . nesEs
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
   NewEpochState era ->
-  Set (Addr era) ->
+  Set (Addr (Crypto era)) ->
   UTxO era
 getFilteredUTxO ss addrs =
   UTxO $ Map.filter (\(TxOutCompact addrSBS _) -> addrSBS `Set.member` addrSBSs) fullUTxO
@@ -230,7 +230,7 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
 getPoolParameters ::
   NewEpochState era ->
   KeyHash 'StakePool (Crypto era) ->
-  Maybe (PoolParams era)
+  Maybe (PoolParams (Crypto era))
 getPoolParameters nes poolId = Map.lookup poolId (f nes)
   where
     f = _pParams . _pstate . _delegationState . esLState . nesEs

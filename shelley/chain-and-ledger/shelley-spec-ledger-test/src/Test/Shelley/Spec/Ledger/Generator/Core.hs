@@ -231,14 +231,15 @@ data KeySpace era = KeySpace_
     -- | Index over the cold key hashes in Genesis Delegates
     ksIndexedGenDelegates :: Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate),
     -- | Index over the pay script hashes in Script pairs
-    ksIndexedPayScripts :: Map (ScriptHash era) (Core.Script era, Core.Script era),
+    ksIndexedPayScripts :: Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era),
     -- | Index over the stake script hashes in Script pairs
-    ksIndexedStakeScripts :: Map (ScriptHash era) (Core.Script era, Core.Script era)
+    ksIndexedStakeScripts :: Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era)
   }
 
 deriving instance (Era era, Show (Core.Script era)) => Show (KeySpace era)
 
 pattern KeySpace ::
+  forall era.
   ScriptClass era =>
   [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->
   [AllIssuerKeys (Crypto era) 'GenesisDelegate] ->
@@ -269,8 +270,8 @@ pattern KeySpace
           ksIndexedPaymentKeys = mkPayKeyHashMap ksKeyPairs,
           ksIndexedStakingKeys = mkStakeKeyHashMap ksKeyPairs,
           ksIndexedGenDelegates = mkGenesisDelegatesHashMap ksCoreNodes ksGenesisDelegates,
-          ksIndexedPayScripts = mkPayScriptHashMap ksMSigScripts,
-          ksIndexedStakeScripts = mkStakeScriptHashMap ksMSigScripts,
+          ksIndexedPayScripts = mkPayScriptHashMap @era ksMSigScripts,
+          ksIndexedStakeScripts = mkStakeScriptHashMap @era ksMSigScripts,
           ksMSigScripts
         }
 
@@ -343,7 +344,8 @@ mkPayKeyHashMap keyPairs =
 -- | Find first matching key pair for a credential. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPairCred ::
-  Credential kr era ->
+  forall era kr.
+  Credential kr (Crypto era) ->
   Map (KeyHash kr (Crypto era)) (KeyPair kr (Crypto era)) ->
   KeyPair kr (Crypto era)
 findPayKeyPairCred (KeyHashObj addr) keyHashMap =
@@ -356,20 +358,22 @@ findPayKeyPairCred _ _ =
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPairAddr ::
-  Addr era ->
+  forall era.
+  Addr (Crypto era) ->
   Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->
   KeyPair 'Payment (Crypto era)
 findPayKeyPairAddr a keyHashMap =
   case a of
-    Addr _ addr (StakeRefBase _) -> findPayKeyPairCred addr keyHashMap
-    Addr _ addr (StakeRefPtr _) -> findPayKeyPairCred addr keyHashMap
+    Addr _ addr (StakeRefBase _) -> findPayKeyPairCred @era addr keyHashMap
+    Addr _ addr (StakeRefPtr _) -> findPayKeyPairCred @era addr keyHashMap
     _ ->
       error "findPayKeyPairAddr: expects only Base or Ptr addresses"
 
 -- | Find matching multisig scripts for a credential.
 findPayScriptFromCred ::
-  Credential 'Witness era ->
-  Map (ScriptHash era) (Core.Script era, Core.Script era) ->
+  forall era.
+  Credential 'Witness (Crypto era) ->
+  Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era) ->
   (Core.Script era, Core.Script era)
 findPayScriptFromCred (ScriptHashObj scriptHash) scriptsByPayHash =
   fromMaybe
@@ -380,8 +384,8 @@ findPayScriptFromCred _ _ =
 
 -- | Find first matching script for a credential.
 findStakeScriptFromCred ::
-  Credential 'Witness era ->
-  Map (ScriptHash era) (Core.Script era, Core.Script era) ->
+  Credential 'Witness (Crypto era) ->
+  Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era) ->
   (Core.Script era, Core.Script era)
 findStakeScriptFromCred (ScriptHashObj scriptHash) scriptsByStakeHash =
   fromMaybe
@@ -392,13 +396,14 @@ findStakeScriptFromCred _ _ =
 
 -- | Find first matching multisig script for an address.
 findPayScriptFromAddr ::
-  Addr era ->
-  Map (ScriptHash era) (Core.Script era, Core.Script era) ->
+  forall era.
+  Addr (Crypto era) ->
+  Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era) ->
   (Core.Script era, Core.Script era)
 findPayScriptFromAddr (Addr _ scriptHash (StakeRefBase _)) scriptsByPayHash =
-  findPayScriptFromCred (asWitness scriptHash) scriptsByPayHash
+  findPayScriptFromCred @era (asWitness scriptHash) scriptsByPayHash
 findPayScriptFromAddr (Addr _ scriptHash (StakeRefPtr _)) scriptsByPayHash =
-  findPayScriptFromCred (asWitness scriptHash) scriptsByPayHash
+  findPayScriptFromCred @era (asWitness scriptHash) scriptsByPayHash
 findPayScriptFromAddr _ _ =
   error "findPayScriptFromAddr: expects only base and pointer script addresses"
 
@@ -415,7 +420,7 @@ genTxOut ::
   forall era.
   (ShelleyBased era) =>
   Gen (Core.Value era) ->
-  [Addr era] ->
+  [Addr (Crypto era)] ->
   Gen [TxOut era]
 genTxOut genEraVal addrs = do
   values <- replicateM (length addrs) genEraVal
@@ -653,7 +658,7 @@ genesisAccountState =
 -- genesis TxId and transaction outputs.
 genesisCoins ::
   (ShelleyBased era) =>
-  Ledger.TxId era ->
+  Ledger.TxId (Crypto era) ->
   [TxOut era] ->
   UTxO era
 genesisCoins genesisTxId outs =
@@ -662,10 +667,11 @@ genesisCoins genesisTxId outs =
 
 -- | Apply a transaction body as a state transition function on the ledger state.
 applyTxBody ::
+  forall era.
   ( ShelleyTest era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   LedgerState era ->
   PParams era ->
@@ -675,7 +681,7 @@ applyTxBody ls pp tx =
   ls
     { _utxoState =
         us
-          { _utxo = eval (txins tx ⋪ (_utxo us) ∪ txouts tx),
+          { _utxo = eval (txins @era tx ⋪ (_utxo us) ∪ txouts tx),
             _deposited = depositPoolChange ls pp tx,
             _fees = (getField @"txfee" tx) <> (_fees . _utxoState $ ls)
           },

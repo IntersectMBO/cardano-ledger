@@ -114,7 +114,7 @@ bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witn
     sig <- genSignature
     let addr = BootstrapAddress byronAddr
         (shelleyVKey, chainCode) = unpackByronVKey @C_crypto byronVKey
-        witness :: BootstrapWitness C
+        witness :: BootstrapWitness C_crypto
         witness =
           BootstrapWitness
             { bwKey = shelleyVKey,
@@ -123,7 +123,7 @@ bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witn
               bwAttributes = serialize' $ Byron.addrAttributes byronAddr
             }
     pure $
-      (coerceKeyRole $ bootstrapKeyHash @C addr)
+      (coerceKeyRole $ bootstrapKeyHash @C_crypto addr)
         === bootstrapWitKeyHash witness
 
 genSignature :: forall a b. DSIGN.DSIGNAlgorithm a => Gen (DSIGN.SignedDSIGN a b)
@@ -133,7 +133,7 @@ genSignature =
     . DSIGN.rawDeserialiseSigDSIGN
     <$> hedgehog (genBytes . fromIntegral $ DSIGN.sizeSigDSIGN ([] @a))
 
-genBootstrapAddress :: Gen (BootstrapAddress era)
+genBootstrapAddress :: Gen (BootstrapAddress crypto)
 genBootstrapAddress = BootstrapAddress . snd <$> genByronVKeyAddr
 
 genByronVKeyAddr :: Gen (Byron.VerificationKey, Byron.Address)
@@ -211,24 +211,24 @@ aliceByronAddr = Byron.makeAddress asd attrs
         (Byron.NetworkTestnet 0)
     byronVerificationKey = Byron.toVerification aliceSigningKey
 
-aliceAddr :: Addr C
+aliceAddr :: Addr C_crypto
 aliceAddr = AddrBootstrap (BootstrapAddress aliceByronAddr)
 
-aliceWitness :: BootstrapWitness C
+aliceWitness :: BootstrapWitness C_crypto
 aliceWitness =
   makeBootstrapWitness
     (hashAnnotated txBody)
     aliceSigningKey
     (Byron.addrAttributes aliceByronAddr)
 
-aliceBadWitness :: BootstrapWitness C
+aliceBadWitness :: BootstrapWitness C_crypto
 aliceBadWitness =
   makeBootstrapWitness
     (hashAnnotated txBody {_ttl = SlotNo 100000000})
     aliceSigningKey
     (Byron.addrAttributes aliceByronAddr)
 
-bobAddr :: Addr C
+bobAddr :: Addr C_crypto
 bobAddr = Addr Testnet (KeyHashObj k) StakeRefNull
   where
     k = coerceKeyRole $ hashKey aliceVKey

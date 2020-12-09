@@ -7,7 +7,7 @@
 
 module Test.Shelley.Spec.Ledger.Address.CompactAddr where
 
-import Cardano.Ledger.Era (Era (..))
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import qualified Data.ByteString.Short as SBS
 import Shelley.Spec.Ledger.Address (Addr (..), serialiseAddr)
 import qualified Shelley.Spec.Ledger.CompactAddr as CA
@@ -20,22 +20,22 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 
-propCompactAddrRoundTrip :: forall era. Era era => Addr era -> Bool
+propCompactAddrRoundTrip :: CC.Crypto crypto => Addr crypto -> Bool
 propCompactAddrRoundTrip addr =
   let compact = CA.compactAddr addr
       decompact = CA.decompactAddr compact
    in addr == decompact
 
-propCompactSerializationAgree :: Addr era -> Bool
+propCompactSerializationAgree :: Addr crypto -> Bool
 propCompactSerializationAgree addr =
   let (CA.UnsafeCompactAddr sbs) = CA.compactAddr addr
    in sbs == SBS.toShort (serialiseAddr addr)
 
 -- Test that we can tell whether this address is a bootstrap address
 -- without decoding the rest of the address
-propDecompactAddrLazy :: forall era. (Era era, Mock (Crypto era)) => Gen Bool
+propDecompactAddrLazy :: forall crypto. Mock crypto => Gen Bool
 propDecompactAddrLazy = do
-  addr <- arbitrary :: Gen (Addr era)
+  addr <- arbitrary :: Gen (Addr crypto)
   let mangledAddr = CA.decompactAddr . mangle . CA.compactAddr $ addr
   case mangledAddr of
     Addr _ _ _ -> pure True
@@ -46,8 +46,8 @@ propDecompactAddrLazy = do
 -- same way would involve constructing a binary representation of a keyhash with the
 -- correct length that wasn't a valid hash, which doesn't seem possible.
 propDecompactShelleyLazyAddr ::
-  forall era.
-  Era era =>
+  forall crypto.
+  CC.Crypto crypto =>
   Gen Bool
 propDecompactShelleyLazyAddr = do
   stakeRef <-
@@ -55,17 +55,17 @@ propDecompactShelleyLazyAddr = do
       [ StakeRefBase <$> arbitrary,
         StakeRefPtr <$> arbitrary
       ] ::
-      Gen (StakeReference era)
+      Gen (StakeReference crypto)
   addr <- Addr <$> arbitrary <*> arbitrary <*> pure stakeRef
   let keyHash0 = unsafeGetHash addr
       keyHash1 = unsafeGetHash . CA.decompactAddr . mangle . CA.compactAddr $ addr
    in pure $ keyHash0 == keyHash1
 
-unsafeGetHash :: Addr era -> PaymentCredential era
+unsafeGetHash :: Addr crypto -> PaymentCredential crypto
 unsafeGetHash (Addr _ hash _) = hash
 unsafeGetHash _ = error "this can't get a keyhash for a byron address"
 
-mangle :: CA.CompactAddr era -> CA.CompactAddr era
+mangle :: CA.CompactAddr crypto -> CA.CompactAddr crypto
 mangle (CA.UnsafeCompactAddr bytes) =
   CA.UnsafeCompactAddr $
     CA.substring bytes 0 (SBS.length bytes - 1)

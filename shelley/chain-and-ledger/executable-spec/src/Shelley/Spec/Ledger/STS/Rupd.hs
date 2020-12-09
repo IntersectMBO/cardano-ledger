@@ -12,6 +12,7 @@ module Shelley.Spec.Ledger.STS.Rupd
   )
 where
 
+import Cardano.Ledger.Era (Crypto)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( STS (..),
@@ -46,7 +47,7 @@ import Shelley.Spec.Ledger.Slot
 data RUPD era
 
 data RupdEnv era
-  = RupdEnv (BlocksMade era) (EpochState era)
+  = RupdEnv (BlocksMade (Crypto era)) (EpochState era)
 
 data RupdPredicateFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
@@ -54,7 +55,7 @@ data RupdPredicateFailure era -- No predicate failures
 instance NoThunks (RupdPredicateFailure era)
 
 instance Typeable era => STS (RUPD era) where
-  type State (RUPD era) = StrictMaybe (RewardUpdate era)
+  type State (RUPD era) = StrictMaybe (RewardUpdate (Crypto era))
   type Signal (RUPD era) = SlotNo
   type Environment (RUPD era) = RupdEnv era
   type BaseM (RUPD era) = ShelleyBase

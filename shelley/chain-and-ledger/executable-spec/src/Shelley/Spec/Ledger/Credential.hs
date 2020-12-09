@@ -22,8 +22,7 @@ module Shelley.Spec.Ledger.Credential
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -56,21 +55,18 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 -- era, since they reference the hash of a script, which can change. This
 -- parameter is a phantom, however, so in actuality the instances will remain
 -- the same.
-data Credential (kr :: KeyRole) era
-  = ScriptHashObj {-# UNPACK #-} !(ScriptHash era)
-  | KeyHashObj {-# UNPACK #-} !(KeyHash kr (Crypto era))
+data Credential (kr :: KeyRole) crypto
+  = ScriptHashObj {-# UNPACK #-} !(ScriptHash crypto)
+  | KeyHashObj {-# UNPACK #-} !(KeyHash kr crypto)
   deriving (Show, Eq, Generic, NFData, Ord)
 
 instance HasKeyRole Credential where
   coerceKeyRole (ScriptHashObj x) = ScriptHashObj x
   coerceKeyRole (KeyHashObj x) = KeyHashObj $ coerceKeyRole x
 
-instance NoThunks (Credential kr era)
+instance NoThunks (Credential kr crypto)
 
-instance
-  Era era =>
-  ToJSON (Credential kr era)
-  where
+instance ToJSON (Credential kr crypto) where
   toJSON (ScriptHashObj hash) =
     Aeson.object
       [ "script hash" .= hash
@@ -80,7 +76,7 @@ instance
       [ "key hash" .= hash
       ]
 
-instance Era era => FromJSON (Credential kr era) where
+instance CC.Crypto crypto => FromJSON (Credential kr crypto) where
   parseJSON =
     Aeson.withObject "Credential" $ \obj ->
       asum [parser1 obj, parser2 obj]
@@ -88,21 +84,21 @@ instance Era era => FromJSON (Credential kr era) where
       parser1 obj = ScriptHashObj <$> obj .: "script hash"
       parser2 obj = KeyHashObj <$> obj .: "key hash"
 
-instance Era era => ToJSONKey (Credential kr era)
+instance ToJSONKey (Credential kr crypto)
 
-instance Era era => FromJSONKey (Credential kr era)
+instance CC.Crypto crypto => FromJSONKey (Credential kr crypto)
 
-type PaymentCredential era = Credential 'Payment era
+type PaymentCredential crypto = Credential 'Payment crypto
 
-type StakeCredential era = Credential 'Staking era
+type StakeCredential crypto = Credential 'Staking crypto
 
-data StakeReference era
-  = StakeRefBase !(StakeCredential era)
+data StakeReference crypto
+  = StakeRefBase !(StakeCredential crypto)
   | StakeRefPtr !Ptr
   | StakeRefNull
   deriving (Show, Eq, Generic, NFData, Ord)
 
-instance NoThunks (StakeReference era)
+instance NoThunks (StakeReference crypto)
 
 type Ix = Natural
 
@@ -113,16 +109,16 @@ data Ptr
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
 instance
-  (Typeable kr, Era era, Typeable (Core.Script era)) =>
-  ToCBOR (Credential kr era)
+  (Typeable kr, CC.Crypto crypto) =>
+  ToCBOR (Credential kr crypto)
   where
   toCBOR = \case
     KeyHashObj kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
     ScriptHashObj hs -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
 
 instance
-  (Typeable kr, Era era, Typeable (Core.Script era)) =>
-  FromCBOR (Credential kr era)
+  (Typeable kr, CC.Crypto crypto) =>
+  FromCBOR (Credential kr crypto)
   where
   fromCBOR = decodeRecordSum "Credential" $
     \case
@@ -156,22 +152,21 @@ instance ToCBORGroup Ptr where
 instance FromCBORGroup Ptr where
   fromCBORGroup = Ptr <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
-newtype GenesisCredential era = GenesisCredential
-  { unGenesisCredential ::
-      KeyHash 'Genesis (Crypto era)
+newtype GenesisCredential crypto = GenesisCredential
+  { unGenesisCredential :: KeyHash 'Genesis crypto
   }
   deriving (Generic)
-  deriving (Show) via Quiet (GenesisCredential era)
+  deriving (Show) via Quiet (GenesisCredential crypto)
 
-instance Ord (GenesisCredential era) where
+instance Ord (GenesisCredential crypto) where
   compare (GenesisCredential gh) (GenesisCredential gh') = compare gh gh'
 
-instance Eq (GenesisCredential era) where
+instance Eq (GenesisCredential crypto) where
   (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
 
 instance
-  (Typeable era, Era era) =>
-  ToCBOR (GenesisCredential era)
+  CC.Crypto crypto =>
+  ToCBOR (GenesisCredential crypto)
   where
   toCBOR (GenesisCredential kh) =
     toCBOR kh

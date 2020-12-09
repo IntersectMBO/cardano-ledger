@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 -- |
 -- Module      : Test.Cardano.Ledger.Mary.Examples.MultiAssets
 -- Description : Multi-Assets Examples
@@ -67,9 +68,10 @@ bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 unboundedInterval :: ValidityInterval
 unboundedInterval = ValidityInterval SNothing SNothing
 
-bootstrapTxId :: TxId MaryTest
+bootstrapTxId :: TxId TestCrypto
 bootstrapTxId = txid txb
   where
+    txb :: TxBody MaryTest
     txb =
       TxBody
         Set.empty
@@ -108,10 +110,10 @@ feeEx = Coin 3
 -- These examples do not use several of the transaction components,
 -- so we can simplify building them.
 makeTxb ::
-  [TxIn MaryTest] ->
+  [TxIn TestCrypto] ->
   [TxOut MaryTest] ->
   ValidityInterval ->
-  Value MaryTest ->
+  Value TestCrypto ->
   TxBody MaryTest
 makeTxb ins outs interval minted =
   TxBody
@@ -125,7 +127,7 @@ makeTxb ins outs interval minted =
     SNothing
     minted
 
-policyFailure :: PolicyID MaryTest -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
+policyFailure :: PolicyID TestCrypto -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
 policyFailure p =
   Left
     [ [ UtxowFailure
@@ -143,11 +145,11 @@ policyFailure p =
 ----------------------------------------------------
 
 -- This is the most lax policy possible, requiring no authorization at all.
-purplePolicy :: Timelock MaryTest
+purplePolicy :: Timelock TestCrypto
 purplePolicy = RequireAllOf (StrictSeq.fromList [])
 
-purplePolicyId :: PolicyID MaryTest
-purplePolicyId = PolicyID $ hashScript purplePolicy
+purplePolicyId :: PolicyID TestCrypto
+purplePolicyId = PolicyID $ hashScript @MaryTest purplePolicy
 
 plum :: AssetName
 plum = AssetName $ BS.pack "plum"
@@ -159,7 +161,7 @@ amethyst = AssetName $ BS.pack "amethyst"
 -- Mint Purple Tokens --
 ------------------------
 
-mintSimpleEx1 :: Value MaryTest
+mintSimpleEx1 :: Value TestCrypto
 mintSimpleEx1 =
   Value 0 $
     Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
@@ -167,7 +169,7 @@ mintSimpleEx1 =
 aliceCoinSimpleEx1 :: Coin
 aliceCoinSimpleEx1 = aliceInitCoin <-> feeEx
 
-tokensSimpleEx1 :: Value MaryTest
+tokensSimpleEx1 :: Value TestCrypto
 tokensSimpleEx1 = mintSimpleEx1 <+> (Val.inject aliceCoinSimpleEx1)
 
 -- Mint a purple token bundle, consisting of thirteen plums and two amethysts.
@@ -208,12 +210,12 @@ minUtxoSimpleEx2 = Coin 100
 aliceCoinsSimpleEx2 :: Coin
 aliceCoinsSimpleEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> minUtxoSimpleEx2)
 
-aliceTokensSimpleEx2 :: Value MaryTest
+aliceTokensSimpleEx2 :: Value TestCrypto
 aliceTokensSimpleEx2 =
   Value (unCoin aliceCoinsSimpleEx2) $
     Map.singleton purplePolicyId (Map.fromList [(plum, 8), (amethyst, 2)])
 
-bobTokensSimpleEx2 :: Value MaryTest
+bobTokensSimpleEx2 :: Value TestCrypto
 bobTokensSimpleEx2 =
   Value (unCoin minUtxoSimpleEx2) $
     Map.singleton purplePolicyId (Map.singleton plum 5)
@@ -264,7 +266,7 @@ stopInterval = SlotNo 19
 afterStop :: SlotNo
 afterStop = SlotNo 20
 
-boundedTimePolicy :: Timelock MaryTest
+boundedTimePolicy :: Timelock TestCrypto
 boundedTimePolicy =
   RequireAllOf
     ( StrictSeq.fromList
@@ -273,8 +275,8 @@ boundedTimePolicy =
         ]
     )
 
-boundedTimePolicyId :: PolicyID MaryTest
-boundedTimePolicyId = PolicyID $ hashScript boundedTimePolicy
+boundedTimePolicyId :: PolicyID TestCrypto
+boundedTimePolicyId = PolicyID $ hashScript @MaryTest boundedTimePolicy
 
 tokenTimeEx :: AssetName
 tokenTimeEx = AssetName $ BS.pack "tokenTimeEx"
@@ -283,7 +285,7 @@ tokenTimeEx = AssetName $ BS.pack "tokenTimeEx"
 -- Mint Bounded Time Range Tokens --
 ------------------------------------
 
-mintTimeEx1 :: Value MaryTest
+mintTimeEx1 :: Value TestCrypto
 mintTimeEx1 =
   Value 0 $
     Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
@@ -291,7 +293,7 @@ mintTimeEx1 =
 aliceCoinsTimeEx1 :: Coin
 aliceCoinsTimeEx1 = aliceInitCoin <-> feeEx
 
-tokensTimeEx1 :: Value MaryTest
+tokensTimeEx1 :: Value TestCrypto
 tokensTimeEx1 = mintTimeEx1 <+> (Val.inject aliceCoinsTimeEx1)
 
 -- Mint tokens
@@ -346,7 +348,7 @@ expectedUTxOTimeEx1 =
 mintTimeEx2 :: Coin
 mintTimeEx2 = Coin 100
 
-bobTokensTimeEx2 :: Value MaryTest
+bobTokensTimeEx2 :: Value TestCrypto
 bobTokensTimeEx2 =
   Value (unCoin mintTimeEx2) $
     Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
@@ -391,11 +393,11 @@ expectedUTxOTimeEx2 =
 -- refer to this example.
 --------------------------------------------------------------
 
-alicePolicy :: Timelock MaryTest
+alicePolicy :: Timelock TestCrypto
 alicePolicy = RequireSignature . asWitness . hashKey . vKey $ Cast.alicePay
 
-alicePolicyId :: PolicyID MaryTest
-alicePolicyId = PolicyID $ hashScript alicePolicy
+alicePolicyId :: PolicyID TestCrypto
+alicePolicyId = PolicyID $ hashScript @MaryTest alicePolicy
 
 tokenSingWitEx1 :: AssetName
 tokenSingWitEx1 = AssetName $ BS.pack "tokenSingWitEx1"
@@ -404,7 +406,7 @@ tokenSingWitEx1 = AssetName $ BS.pack "tokenSingWitEx1"
 -- Mint Alice Tokens --
 -----------------------
 
-mintSingWitEx1 :: Value MaryTest
+mintSingWitEx1 :: Value TestCrypto
 mintSingWitEx1 =
   Value 0 $
     Map.singleton alicePolicyId (Map.singleton tokenSingWitEx1 17)
@@ -412,7 +414,7 @@ mintSingWitEx1 =
 bobCoinsSingWitEx1 :: Coin
 bobCoinsSingWitEx1 = bobInitCoin <-> feeEx
 
-tokensSingWitEx1 :: Value MaryTest
+tokensSingWitEx1 :: Value TestCrypto
 tokensSingWitEx1 = mintSingWitEx1 <+> (Val.inject bobCoinsSingWitEx1)
 
 -- Bob pays the fees, but only alice can witness the minting
@@ -464,12 +466,12 @@ txSingWitEx1Invalid =
 ------------------------
 
 -- Mint negative valued tokens
-mintNegEx1 :: Value MaryTest
+mintNegEx1 :: Value TestCrypto
 mintNegEx1 =
   Value 0 $
     Map.singleton purplePolicyId (Map.singleton plum (-8))
 
-aliceTokensNegEx1 :: Value MaryTest
+aliceTokensNegEx1 :: Value TestCrypto
 aliceTokensNegEx1 =
   Value (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
     Map.singleton purplePolicyId (Map.singleton amethyst 2)
@@ -508,12 +510,12 @@ expectedUTxONegEx1 =
 -- Now attempt to produce negative outputs
 --
 
-mintNegEx2 :: Value MaryTest
+mintNegEx2 :: Value TestCrypto
 mintNegEx2 =
   Value 0 $
     Map.singleton purplePolicyId (Map.singleton plum (-9))
 
-aliceTokensNegEx2 :: Value MaryTest
+aliceTokensNegEx2 :: Value TestCrypto
 aliceTokensNegEx2 =
   Value (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
     Map.singleton purplePolicyId (Map.fromList [(plum, (-1)), (amethyst, 2)])

@@ -118,20 +118,20 @@ data UtxowPredicateFailure era
       ![VKey 'Witness (Crypto era)]
   | -- witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
-      !(WitHashes era) -- witnesses which were needed and not supplied
+      !(WitHashes (Crypto era)) -- witnesses which were needed and not supplied
   | MissingScriptWitnessesUTXOW
-      !(Set (ScriptHash era)) -- missing scripts
+      !(Set (ScriptHash (Crypto era))) -- missing scripts
   | ScriptWitnessNotValidatingUTXOW
-      !(Set (ScriptHash era)) -- failed scripts
+      !(Set (ScriptHash (Crypto era))) -- failed scripts
   | UtxoFailure (PredicateFailure (UTXO era))
   | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness (Crypto era)))
   | MissingTxBodyMetadataHash
-      !(MetadataHash era) -- hash of the full metadata
+      !(MetadataHash (Crypto era)) -- hash of the full metadata
   | MissingTxMetadata
-      !(MetadataHash era) -- hash of the metadata included in the transaction body
+      !(MetadataHash (Crypto era)) -- hash of the metadata included in the transaction body
   | ConflictingMetadataHash
-      !(MetadataHash era) -- hash of the metadata included in the transaction body
-      !(MetadataHash era) -- hash of the full metadata
+      !(MetadataHash (Crypto era)) -- hash of the metadata included in the transaction body
+      !(MetadataHash (Crypto era)) -- hash of the full metadata
       -- Contains out of range values (strings too long)
   | InvalidMetadata
   deriving (Generic)
@@ -272,13 +272,13 @@ utxoWitnessed ::
     State (UTXOW era) ~ UTxOState era,
     Signal (UTXOW era) ~ Tx era,
     PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
-    HasField "wdrls" (Core.TxBody era) (Wdrl era),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
-  (UTxO era -> Tx era -> Set (ScriptHash era)) ->
+  (UTxO era -> Tx era -> Set (ScriptHash (Crypto era))) ->
   TransitionRule (UTXOW era)
 utxoWitnessed scriptsNeeded =
   judgmentContext
@@ -290,7 +290,7 @@ utxoWitnessed scriptsNeeded =
       let failedScripts =
             filter
               ( \(hs, validator) ->
-                  hashScript validator /= hs
+                  hashScript @era validator /= hs
                     || not (validateScript validator tx)
               )
               (Map.toList $ txwitsScript tx)
@@ -320,9 +320,9 @@ utxoWitnessed scriptsNeeded =
         (SJust mdh, SNothing) -> failBecause $ MissingTxMetadata mdh
         (SNothing, SJust md') ->
           failBecause $
-            MissingTxBodyMetadataHash (hashMetadata md')
+            MissingTxBodyMetadataHash (hashMetadata @era md')
         (SJust mdh, SJust md') -> do
-          hashMetadata md' == mdh ?! ConflictingMetadataHash mdh (hashMetadata md')
+          hashMetadata @era md' == mdh ?! ConflictingMetadataHash mdh (hashMetadata @era md')
           -- check metadata value sizes
           when (SoftForks.validMetadata pp) $
             validateMetadata @era md' ?! InvalidMetadata

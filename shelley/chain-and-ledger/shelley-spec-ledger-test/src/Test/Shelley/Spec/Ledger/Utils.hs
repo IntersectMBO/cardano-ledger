@@ -73,6 +73,7 @@ import Cardano.Crypto.VRF
 import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Prelude (Coercible, asks)
@@ -148,7 +149,7 @@ import Test.Tasty.HUnit
 type ShelleyTest era =
   ( ShelleyBased era,
     TxBody era ~ Core.TxBody era,
-    Core.Script era ~ MultiSig era,
+    Core.Script era ~ MultiSig (Crypto era),
     Split (Core.Value era),
     HashIndex (Core.TxBody era) ~ EraIndependentTxBody
   )
@@ -175,7 +176,7 @@ type ShelleyLedgerSTS era =
   ( STS (LEDGER era),
     BaseM (LEDGER era) ~ ShelleyBase,
     Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState era),
+    State (LEDGER era) ~ (UTxOState era, DPState (Crypto era)),
     Signal (LEDGER era) ~ Tx era,
     STS (LEDGERS era),
     BaseM (LEDGERS era) ~ ShelleyBase,
@@ -268,9 +269,9 @@ mkKESKeyPair seed =
    in (sk, deriveVerKeyKES sk)
 
 mkAddr ::
-  Era era =>
-  (KeyPair 'Payment (Crypto era), KeyPair 'Staking (Crypto era)) ->
-  Addr era
+  CC.Crypto crypto =>
+  (KeyPair 'Payment crypto, KeyPair 'Staking crypto) ->
+  Addr crypto
 mkAddr (payKey, stakeKey) =
   Addr
     Testnet

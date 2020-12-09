@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Shelley.Spec.Ledger.Bench.Rewards
@@ -11,7 +12,6 @@ module Shelley.Spec.Ledger.Bench.Rewards
 where
 
 import Cardano.Crypto.VRF (hashVerKeyVRF)
-import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Reader (runReader, runReaderT)
@@ -41,7 +41,7 @@ import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainState, chainNes, totalAda)
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 import Test.QuickCheck (Gen)
-import Test.Shelley.Spec.Ledger.BenchmarkFunctions (B)
+import Test.Shelley.Spec.Ledger.BenchmarkFunctions (B, B_Crypto)
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlockWithTxGen)
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( maxGenesisUTxOouts,
@@ -160,7 +160,7 @@ genChainInEpoch epoch = do
         go !acc [] = acc
         go !acc xs' = let (a, b) = splitAt n xs' in go (a : acc) b
 
-    addrToKeyHash :: Addr era -> Maybe (KeyHash 'Staking (Crypto era))
+    addrToKeyHash :: Addr crypto -> Maybe (KeyHash 'Staking crypto)
     addrToKeyHash (Addr _ _ (StakeRefBase (KeyHashObj kh))) = Just kh
     addrToKeyHash _ = Nothing
 
@@ -168,7 +168,7 @@ genChainInEpoch epoch = do
 createRUpd ::
   Globals ->
   ChainState B ->
-  LS.RewardUpdate B
+  LS.RewardUpdate B_Crypto
 createRUpd globals cs =
   runIdentity $
     runReaderT

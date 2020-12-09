@@ -7,7 +7,7 @@
 module Cardano.Ledger.ShelleyMA where
 
 import Cardano.Binary (toCBOR)
-import Cardano.Crypto.Hash (hashWithSerialiser)
+import Cardano.Crypto.Hash (castHash, hashWithSerialiser)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
@@ -53,23 +53,23 @@ instance
   where
   type Crypto (ShelleyMAEra ma c) = c
 
-type family MAValue (x :: MaryOrAllegra) era :: Type where
+type family MAValue (x :: MaryOrAllegra) c :: Type where
   MAValue 'Allegra _ = Coin
-  MAValue 'Mary era = Value era
+  MAValue 'Mary c = Value c
 
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
 
-type instance Core.Value (ShelleyMAEra m c) = MAValue m (ShelleyMAEra m c)
+type instance Core.Value (ShelleyMAEra m c) = MAValue m c
 
 type instance
   Core.TxBody (ShelleyMAEra (ma :: MaryOrAllegra) c) =
     TxBody (ShelleyMAEra ma c)
 
 type instance
-  Core.Script (ShelleyMAEra (ma :: MaryOrAllegra) c) =
-    Timelock (ShelleyMAEra ma c)
+  Core.Script (ShelleyMAEra (_ma :: MaryOrAllegra) c) =
+    Timelock c
 
 type instance
   Core.Metadata (ShelleyMAEra (ma :: MaryOrAllegra) c) =
@@ -98,6 +98,6 @@ instance
   ) =>
   ValidateMetadata (ShelleyMAEra (ma :: MaryOrAllegra) c)
   where
-  hashMetadata = MetadataHash . hashWithSerialiser toCBOR
+  hashMetadata = MetadataHash . castHash . hashWithSerialiser toCBOR
 
   validateMetadata (Metadata blob sp) = deepseq sp $ all validMetadatum blob

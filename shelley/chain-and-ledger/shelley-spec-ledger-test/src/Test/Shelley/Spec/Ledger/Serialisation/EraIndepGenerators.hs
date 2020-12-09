@@ -85,7 +85,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState
   ( FutureGenDeleg,
-    emptyRewardUpdate,
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.Rewards
@@ -188,10 +187,7 @@ instance DSIGNAlgorithm crypto => Arbitrary (VerKeyDSIGN crypto) where
     fromJust . rawDeserialiseVerKeyDSIGN
       <$> (genByteString . fromIntegral $ sizeVerKeyDSIGN (Proxy @crypto))
 
-instance
-  (Era era, MockGen era) =>
-  Arbitrary (BootstrapWitness era)
-  where
+instance CC.Crypto crypto => Arbitrary (BootstrapWitness crypto) where
   arbitrary = do
     key <- arbitrary
     sig <- genSignature
@@ -205,13 +201,13 @@ instance CC.Crypto crypto => Arbitrary (HashHeader crypto) where
 instance CC.Crypto crypto => Arbitrary (HashBBody crypto) where
   arbitrary = UnsafeHashBBody <$> genHash
 
-instance (Typeable kr, Era era, Mock (Crypto era)) => Arbitrary (WitVKey kr era) where
+instance (Typeable kr, CC.Crypto crypto) => Arbitrary (WitVKey kr crypto) where
   arbitrary =
     WitVKey
       <$> arbitrary
       <*> arbitrary
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (Wdrl era) where
+instance CC.Crypto crypto => Arbitrary (Wdrl crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -257,10 +253,10 @@ instance Arbitrary MD.Metadata where
 maxTxWits :: Int
 maxTxWits = 5
 
-instance Era era => Arbitrary (TxId era) where
+instance CC.Crypto crypto => Arbitrary (TxId crypto) where
   arbitrary = TxId <$> genHash
 
-instance Era era => Arbitrary (TxIn era) where
+instance CC.Crypto crypto => Arbitrary (TxIn crypto) where
   arbitrary =
     TxIn
       <$> (TxId <$> genHash)
@@ -282,13 +278,10 @@ instance Arbitrary Nonce where
 instance Arbitrary UnitInterval where
   arbitrary = fromJust . mkUnitInterval . (% 100) <$> choose (1, 99)
 
-instance
-  (CC.Crypto crypto) =>
-  Arbitrary (KeyHash a crypto)
-  where
+instance CC.Crypto crypto => Arbitrary (KeyHash a crypto) where
   arbitrary = KeyHash <$> genHash
 
-instance Era era => Arbitrary (WitHashes era) where
+instance CC.Crypto crypto => Arbitrary (WitHashes crypto) where
   arbitrary = genericArbitraryU
 
 instance Arbitrary MIRPot where
@@ -317,20 +310,20 @@ instance Arbitrary EpochNo where
   -- Cannot be negative even though it is an 'Integer'
   arbitrary = EpochNo <$> choose (1, 100000)
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (Addr era) where
+instance CC.Crypto crypto => Arbitrary (Addr crypto) where
   arbitrary = oneof [genShelleyAddress, genByronAddress]
 
-genShelleyAddress :: (Era era, Mock (Crypto era)) => Gen (Addr era)
+genShelleyAddress :: CC.Crypto crypto => Gen (Addr crypto)
 genShelleyAddress = Addr <$> arbitrary <*> arbitrary <*> arbitrary
 
-genByronAddress :: Gen (Addr era)
+genByronAddress :: Gen (Addr crypto)
 genByronAddress = AddrBootstrap <$> genBootstrapAddress
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (StakeReference era) where
+instance CC.Crypto crypto => Arbitrary (StakeReference crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Era era => Arbitrary (Credential r era) where
+instance CC.Crypto crypto => Arbitrary (Credential r crypto) where
   arbitrary =
     oneof
       [ ScriptHashObj . ScriptHash <$> genHash,
@@ -341,7 +334,7 @@ instance Arbitrary Ptr where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (RewardAcnt era) where
+instance CC.Crypto crypto => Arbitrary (RewardAcnt crypto) where
   arbitrary = RewardAcnt <$> arbitrary <*> arbitrary
 
 instance Arbitrary Network where
@@ -355,10 +348,10 @@ instance Arbitrary ProtVer where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Era era => Arbitrary (ScriptHash era) where
+instance CC.Crypto crypto => Arbitrary (ScriptHash crypto) where
   arbitrary = ScriptHash <$> genHash
 
-instance Era era => Arbitrary (MD.MetadataHash era) where
+instance CC.Crypto crypto => Arbitrary (MD.MetadataHash crypto) where
   arbitrary = MD.MetadataHash <$> genHash
 
 instance HashAlgorithm h => Arbitrary (Hash.Hash h a) where
@@ -379,27 +372,27 @@ instance
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (PState era) where
+instance CC.Crypto crypto => Arbitrary (PState crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (InstantaneousRewards era) where
+instance CC.Crypto crypto => Arbitrary (InstantaneousRewards crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Mock crypto) => Arbitrary (FutureGenDeleg crypto) where
+instance CC.Crypto crypto => Arbitrary (FutureGenDeleg crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Mock crypto) => Arbitrary (GenDelegs crypto) where
+instance CC.Crypto crypto => Arbitrary (GenDelegs crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Mock crypto) => Arbitrary (GenDelegPair crypto) where
+instance CC.Crypto crypto => Arbitrary (GenDelegPair crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (DState era) where
+instance CC.Crypto crypto => Arbitrary (DState crypto) where
   arbitrary =
     DState
       <$> arbitrary
@@ -409,27 +402,27 @@ instance (Era era, Mock (Crypto era)) => Arbitrary (DState era) where
       <*> arbitrary
       <*> arbitrary
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (DelegCert era) where
+instance CC.Crypto crypto => Arbitrary (DelegCert crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (Delegation era) where
+instance CC.Crypto crypto => Arbitrary (Delegation crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (PoolCert era) where
+instance CC.Crypto crypto => Arbitrary (PoolCert crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (GenesisDelegCert era) where
+instance CC.Crypto crypto => Arbitrary (GenesisDelegCert crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (MIRCert era) where
+instance CC.Crypto crypto => Arbitrary (MIRCert crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (DCert era) where
+instance CC.Crypto crypto => Arbitrary (DCert crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -437,7 +430,7 @@ instance (Era era, Mock (Crypto era)) => Arbitrary (PPUPState era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (DPState era) where
+instance CC.Crypto crypto => Arbitrary (DPState crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -462,7 +455,7 @@ instance
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Era era => Arbitrary (BlocksMade era) where
+instance CC.Crypto crypto => Arbitrary (BlocksMade crypto) where
   arbitrary = BlocksMade <$> arbitrary
 
 instance CC.Crypto crypto => Arbitrary (PoolDistr crypto) where
@@ -485,8 +478,9 @@ instance
       <*> genPParams (Proxy @era)
       <*> arbitrary
 
-instance Arbitrary (RewardUpdate era) where
-  arbitrary = return emptyRewardUpdate
+instance CC.Crypto crypto => Arbitrary (RewardUpdate crypto) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
 
 instance Arbitrary a => Arbitrary (StrictMaybe a) where
   arbitrary = genericArbitraryU
@@ -511,25 +505,25 @@ instance Arbitrary Likelihood where
 instance Arbitrary LogWeight where
   arbitrary = LogWeight <$> arbitrary
 
-instance Era era => Arbitrary (NonMyopic era) where
+instance CC.Crypto crypto => Arbitrary (NonMyopic crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (SnapShot era) where
+instance CC.Crypto crypto => Arbitrary (SnapShot crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (SnapShots era) where
+instance CC.Crypto crypto => Arbitrary (SnapShots crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance Arbitrary PerformanceEstimate where
   arbitrary = PerformanceEstimate <$> arbitrary
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (Stake era) where
+instance CC.Crypto crypto => Arbitrary (Stake crypto) where
   arbitrary = Stake <$> arbitrary
 
-instance (Era era, Mock (Crypto era)) => Arbitrary (PoolParams era) where
+instance CC.Crypto crypto => Arbitrary (PoolParams crypto) where
   arbitrary =
     PoolParams
       <$> arbitrary
@@ -578,7 +572,7 @@ maxMultiSigDepth = 3
 maxMultiSigListLens :: Int
 maxMultiSigListLens = 5
 
-sizedMultiSig :: Era era => Int -> Gen (MultiSig era)
+sizedMultiSig :: CC.Crypto crypto => Int -> Gen (MultiSig crypto)
 sizedMultiSig 0 = RequireSignature <$> arbitrary
 sizedMultiSig n =
   oneof
@@ -588,10 +582,7 @@ sizedMultiSig n =
       RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n -1)))
     ]
 
-instance
-  (Era era, Mock (Crypto era)) =>
-  Arbitrary (MultiSig era)
-  where
+instance CC.Crypto crypto => Arbitrary (MultiSig crypto) where
   arbitrary = sizedMultiSig maxMultiSigDepth
 
 -- |
@@ -647,7 +638,7 @@ instance
       <*> (mscriptsToWits <$> arbitrary)
       <*> arbitrary
     where
-      mscriptsToWits = Map.fromList . map (\s -> (hashScript s, s))
+      mscriptsToWits = Map.fromList . map (\s -> (hashScript @era s, s))
 
 instance Era era => Arbitrary (STS.PpupPredicateFailure era) where
   arbitrary = genericArbitraryU
@@ -699,8 +690,7 @@ instance
 
 instance
   ( Era era,
-    Arbitrary (STS.PredicateFailure (UTXO era)),
-    Arbitrary (WitHashes era)
+    Arbitrary (STS.PredicateFailure (UTXO era))
   ) =>
   Arbitrary (STS.UtxowPredicateFailure era)
   where

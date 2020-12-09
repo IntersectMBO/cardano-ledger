@@ -8,7 +8,7 @@
 
 module Test.Cardano.Ledger.Mary.Value (valTests, ass, pol) where
 
-import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
     PolicyID (..),
@@ -27,8 +27,7 @@ import Data.Map.Strict (empty, singleton)
 import qualified Data.Map.Strict as Map
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import System.IO.Unsafe (unsafePerformIO)
--- get: instance Era era => Arbitrary (ScriptHash era)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
@@ -43,7 +42,7 @@ import Prelude hiding (lookup)
 
 -- Use cannonicalUnion and cannonicalInsert
 
-insert3 :: (Integer -> Integer -> Integer) -> PolicyID era -> AssetName -> Integer -> Value era -> Value era
+insert3 :: (Integer -> Integer -> Integer) -> PolicyID crypto -> AssetName -> Integer -> Value crypto -> Value crypto
 insert3 combine pid aid new (Value c m1) =
   case Map.lookup pid m1 of
     Nothing -> Value c (cannonicalInsert (cannonicalMapUnion combine) pid (cannonicalInsert combine aid new zeroC) m1)
@@ -52,12 +51,12 @@ insert3 combine pid aid new (Value c m1) =
       Just old -> Value c (cannonicalInsert (\_o n -> n) pid (cannonicalInsert (\_o n -> n) aid (combine old new) m2) m1)
 
 -- | Make a Value with no coin, and just one token.
-unit :: PolicyID era -> AssetName -> Integer -> Value era
+unit :: PolicyID crypto -> AssetName -> Integer -> Value crypto
 unit pid aid n = Value 0 (cannonicalInsert (\_old new -> new) pid (cannonicalInsert (\_old new -> new) aid n empty) empty)
 
 -- Use <+> and <->
 
-insert2 :: Era era => (Integer -> Integer -> Integer) -> PolicyID era -> AssetName -> Integer -> Value era -> Value era
+insert2 :: CC.Crypto crypto => (Integer -> Integer -> Integer) -> PolicyID crypto -> AssetName -> Integer -> Value crypto -> Value crypto
 insert2 combine pid aid new m1 =
   case (lookup pid aid m1, new == 0) of -- The trick is to correctly not store a zero. Several ways to get a zero
     (0, True) -> m1 -- input is zero, and its not in the map
@@ -69,17 +68,17 @@ insert2 combine pid aid new m1 =
 
 -- 3 functions that build Values from Policy Asset triples.
 
-valueFromList :: [(PolicyID C, AssetName, Integer)] -> Integer -> Value C
+valueFromList :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> Value C_Crypto
 valueFromList list c = foldr acc (Value c empty) list
   where
     acc (policy, asset, count) m = insert (+) policy asset count m
 
-valueFromList3 :: [(PolicyID C, AssetName, Integer)] -> Integer -> Value C
+valueFromList3 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> Value C_Crypto
 valueFromList3 list c = foldr acc (Value c empty) list
   where
     acc (policy, asset, count) m = insert3 (+) policy asset count m
 
-valueFromList2 :: [(PolicyID C, AssetName, Integer)] -> Integer -> Value C
+valueFromList2 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> Value C_Crypto
 valueFromList2 list c = foldr acc (Value c empty) list
   where
     acc (policy, asset, count) m = insert2 (+) policy asset count m
@@ -111,22 +110,22 @@ assetChoices = unsafePerformIO (generate (vectorOf 8 genID))
 ass :: Int -> AssetName
 ass n = assetChoices !! n
 
-policyChoices :: [PolicyID C]
+policyChoices :: [PolicyID C_Crypto]
 policyChoices = unsafePerformIO (generate (vectorOf 8 (PolicyID <$> arbitrary)))
 
-pol :: Int -> PolicyID C
+pol :: Int -> PolicyID C_Crypto
 pol n = policyChoices !! n
 
 genAssetName :: Gen AssetName
 genAssetName = oneof (map return assetChoices)
 
-genPolicyID :: Gen (PolicyID C)
+genPolicyID :: Gen (PolicyID C_Crypto)
 genPolicyID = oneof (map return policyChoices)
 
-genTriple :: Gen (PolicyID C, AssetName, Integer)
+genTriple :: Gen (PolicyID C_Crypto, AssetName, Integer)
 genTriple = (,,) <$> genPolicyID <*> genAssetName <*> choose (-2, 4)
 
-genMap :: Gen [(PolicyID C, AssetName, Integer)] -- Most maps have 1 or 2 Assets
+genMap :: Gen [(PolicyID C_Crypto, AssetName, Integer)] -- Most maps have 1 or 2 Assets
 genMap =
   frequency
     [ (1, vectorOf 0 genTriple),
@@ -136,17 +135,17 @@ genMap =
       (1, vectorOf 4 genTriple)
     ]
 
-genValue :: Gen (Value C)
+genValue :: Gen (Value C_Crypto)
 genValue = valueFromList <$> genMap <*> choose (-2, 10)
 
-instance Arbitrary (Value C) where
+instance Arbitrary (Value C_Crypto) where
   arbitrary = genValue
   shrink _ = []
 
 instance Arbitrary AssetName where
   arbitrary = genAssetName
 
-instance Arbitrary (PolicyID C) where
+instance Arbitrary (PolicyID C_Crypto) where
   arbitrary = genPolicyID
 
 -- ===========================================================================
@@ -166,7 +165,7 @@ albelianTests =
   testGroup
     "albelian test"
     [ testGroup "albelian Coin" (map (\(prop, name) -> testProperty name prop) (albelianlist @Coin)),
-      testGroup "albelian Value" (map (\(prop, name) -> testProperty name prop) (albelianlist @(Value C)))
+      testGroup "albelian Value" (map (\(prop, name) -> testProperty name prop) (albelianlist @(Value C_Crypto)))
     ]
 
 -- ===================================================================
@@ -214,7 +213,7 @@ polyCoinTests = testGroup "polyCoinTests" (map f (proplist @Coin))
     f (fun, name) = testProperty name fun
 
 polyValueTests :: TestTree
-polyValueTests = testGroup "polyValueTests" (map f (proplist @(Value C)))
+polyValueTests = testGroup "polyValueTests" (map f (proplist @(Value C_Crypto)))
   where
     f (fun, name) = testProperty name fun
 
@@ -222,7 +221,7 @@ polyValueTests = testGroup "polyValueTests" (map f (proplist @(Value C)))
 -- Tests that hold only in the Value class.
 -- Testing that insert, lookup, and coin interact properly
 
-valuePropList :: [(Integer -> Integer -> Value C -> PolicyID C -> AssetName -> Bool, String)]
+valuePropList :: [(Integer -> Integer -> Value C_Crypto -> PolicyID C_Crypto -> AssetName -> Bool, String)]
 valuePropList =
   [ (\_ _ x _ _ -> coin (modifyCoin f x) == modifyCoin f (coin x), "coinModify"),
     (\_ _ _ p a -> insert (\old _new -> old) p a 0 zero == zero, "Nozeros"),
@@ -275,7 +274,7 @@ valuePropList =
 monoValueTests :: TestTree
 monoValueTests = testGroup "Value specific tests" (map (\(f, n) -> testProperty n f) valuePropList)
 
-valueGroup :: [(Integer -> Value C -> Value C -> PolicyID C -> AssetName -> Property, String)]
+valueGroup :: [(Integer -> Value C_Crypto -> Value C_Crypto -> PolicyID C_Crypto -> AssetName -> Property, String)]
 valueGroup =
   [ (\_ x y p a -> lookup p a (x <+> y) === lookup p a x + lookup p a y, "lookup over <+>"),
     (\_ x y p a -> lookup p a (x <-> y) === lookup p a x - lookup p a y, "lookup over <->"),

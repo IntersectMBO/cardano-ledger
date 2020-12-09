@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- |
@@ -174,7 +175,7 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
 newUTxO ::
   forall era.
   ( ShelleyBased era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
   Core.TxBody era ->
@@ -187,7 +188,7 @@ newUTxO txb cs = cs {chainNes = nes'}
     ls = esLState es
     utxoSt = _utxoState ls
     utxo = _utxo utxoSt
-    utxo' = eval ((txins txb ⋪ utxo) ∪ txouts txb)
+    utxo' = eval ((txins @era txb ⋪ utxo) ∪ txouts txb)
     utxoSt' = utxoSt {_utxo = utxo'}
     ls' = ls {_utxoState = utxoSt'}
     es' = es {esLState = ls'}
@@ -198,7 +199,7 @@ newUTxO txb cs = cs {chainNes = nes'}
 -- Add a newly registered stake credential
 newStakeCred ::
   forall era.
-  Credential 'Staking era ->
+  Credential 'Staking (Crypto era) ->
   Ptr ->
   ChainState era ->
   ChainState era
@@ -224,7 +225,7 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
 -- De-register a stake credential and all associated data.
 deregStakeCred ::
   forall era.
-  Credential 'Staking era ->
+  Credential 'Staking (Crypto era) ->
   ChainState era ->
   ChainState era
 deregStakeCred cred cs = cs {chainNes = nes'}
@@ -251,7 +252,7 @@ deregStakeCred cred cs = cs {chainNes = nes'}
 -- stake pool.
 delegation ::
   forall era.
-  Credential 'Staking era ->
+  Credential 'Staking (Crypto era) ->
   KeyHash 'StakePool (Crypto era) ->
   ChainState era ->
   ChainState era
@@ -276,7 +277,7 @@ delegation cred pool cs = cs {chainNes = nes'}
 -- Add a newly registered stake pool
 newPool ::
   forall era.
-  PoolParams era ->
+  PoolParams (Crypto era) ->
   ChainState era ->
   ChainState era
 newPool pool cs = cs {chainNes = nes'}
@@ -298,7 +299,7 @@ newPool pool cs = cs {chainNes = nes'}
 -- | = Re-Register Stake Pool
 reregPool ::
   forall era.
-  PoolParams era ->
+  PoolParams (Crypto era) ->
   ChainState era ->
   ChainState era
 reregPool pool cs = cs {chainNes = nes'}
@@ -320,7 +321,7 @@ reregPool pool cs = cs {chainNes = nes'}
 -- | = Re-Register Stake Pool
 updatePoolParams ::
   forall era.
-  PoolParams era ->
+  PoolParams (Crypto era) ->
   ChainState era ->
   ChainState era
 updatePoolParams pool cs = cs {chainNes = nes'}
@@ -367,7 +368,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 -- Remove a stake pool.
 reapPool ::
   forall era.
-  PoolParams era ->
+  PoolParams (Crypto era) ->
   ChainState era ->
   ChainState era
 reapPool pool cs = cs {chainNes = nes'}
@@ -409,7 +410,7 @@ reapPool pool cs = cs {chainNes = nes'}
 -- Add a credential to the MIR mapping for the given pot (reserves or treasury)
 mir ::
   forall era.
-  Credential 'Staking era ->
+  Credential 'Staking (Crypto era) ->
   MIRPot ->
   Coin ->
   ChainState era ->
@@ -440,7 +441,7 @@ mir cred pot amnt cs = cs {chainNes = nes'}
 applyMIR ::
   forall era.
   MIRPot ->
-  Map (Credential 'Staking era) Coin ->
+  Map (Credential 'Staking (Crypto era)) Coin ->
   ChainState era ->
   ChainState era
 applyMIR pot rewards cs = cs {chainNes = nes'}
@@ -471,7 +472,7 @@ applyMIR pot rewards cs = cs {chainNes = nes'}
 -- Update the chain state with the given reward update
 rewardUpdate ::
   forall era.
-  RewardUpdate era ->
+  RewardUpdate (Crypto era) ->
   ChainState era ->
   ChainState era
 rewardUpdate ru cs = cs {chainNes = nes'}
@@ -483,7 +484,7 @@ rewardUpdate ru cs = cs {chainNes = nes'}
 -- Apply the given reward update to the chain state
 applyRewardUpdate ::
   forall era.
-  RewardUpdate era ->
+  RewardUpdate (Crypto era) ->
   ChainState era ->
   ChainState era
 applyRewardUpdate ru cs = cs {chainNes = nes'}
@@ -497,7 +498,7 @@ applyRewardUpdate ru cs = cs {chainNes = nes'}
 -- Add a new snapshot and rotate the others
 newSnapshot ::
   forall era.
-  SnapShot era ->
+  SnapShot (Crypto era) ->
   Coin ->
   ChainState era ->
   ChainState era

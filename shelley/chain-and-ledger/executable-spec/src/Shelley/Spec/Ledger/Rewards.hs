@@ -34,7 +34,8 @@ import Cardano.Binary
     encodeDouble,
     encodeListLen,
   )
-import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
@@ -228,20 +229,20 @@ instance ToCBOR PerformanceEstimate where
 instance FromCBOR PerformanceEstimate where
   fromCBOR = PerformanceEstimate <$> decodeDouble
 
-data NonMyopic era = NonMyopic
-  { likelihoodsNM :: !(Map (KeyHash 'StakePool (Crypto era)) Likelihood),
+data NonMyopic crypto = NonMyopic
+  { likelihoodsNM :: !(Map (KeyHash 'StakePool crypto) Likelihood),
     rewardPotNM :: !Coin
   }
   deriving (Show, Eq, Generic)
 
-emptyNonMyopic :: NonMyopic era
+emptyNonMyopic :: NonMyopic crypto
 emptyNonMyopic = NonMyopic Map.empty (Coin 0)
 
-instance NoThunks (NonMyopic era)
+instance NoThunks (NonMyopic crypto)
 
-instance NFData (NonMyopic era)
+instance NFData (NonMyopic crypto)
 
-instance Era era => ToCBOR (NonMyopic era) where
+instance CC.Crypto crypto => ToCBOR (NonMyopic crypto) where
   toCBOR
     NonMyopic
       { likelihoodsNM = aps,
@@ -251,7 +252,7 @@ instance Era era => ToCBOR (NonMyopic era) where
         <> toCBOR aps
         <> toCBOR rp
 
-instance Era era => FromCBOR (NonMyopic era) where
+instance CC.Crypto crypto => FromCBOR (NonMyopic crypto) where
   fromCBOR = do
     decodeRecordNamed "NonMyopic" (const 3) $ do
       aps <- fromCBOR
@@ -268,7 +269,7 @@ instance Era era => FromCBOR (NonMyopic era) where
 desirability ::
   PParams era ->
   Coin ->
-  PoolParams era ->
+  PoolParams (Crypto era) ->
   PerformanceEstimate ->
   Coin ->
   Double
@@ -295,7 +296,7 @@ getTopRankedPools ::
   Coin ->
   Coin ->
   PParams era ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
   Map (KeyHash 'StakePool (Crypto era)) PerformanceEstimate ->
   Set (KeyHash 'StakePool (Crypto era))
 getTopRankedPools rPot totalStake pp poolParams aps =
@@ -333,7 +334,7 @@ mkApparentPerformance d_ sigma blocksN blocksTotal
 -- | Calculate pool leader reward
 leaderRew ::
   Coin ->
-  PoolParams era ->
+  PoolParams crypto ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -350,7 +351,7 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
 -- | Calculate pool member reward
 memberRew ::
   Coin ->
-  PoolParams era ->
+  PoolParams crypto ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -369,13 +370,13 @@ rewardOnePool ::
   Coin ->
   Natural ->
   Natural ->
-  PoolParams era ->
-  Stake era ->
+  PoolParams (Crypto era) ->
+  Stake (Crypto era) ->
   Rational ->
   Rational ->
   Coin ->
-  Set (Credential 'Staking era) ->
-  Map (Credential 'Staking era) Coin
+  Set (Credential 'Staking (Crypto era)) ->
+  Map (Credential 'Staking (Crypto era)) Coin
 rewardOnePool
   pp
   r
@@ -433,17 +434,17 @@ rewardOnePool
 
 reward ::
   PParams era ->
-  BlocksMade era ->
+  BlocksMade (Crypto era) ->
   Coin ->
-  Set (Credential 'Staking era) ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
-  Stake era ->
-  Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era)) ->
+  Set (Credential 'Staking (Crypto era)) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
+  Stake (Crypto era) ->
+  Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)) ->
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
   ( Map
-      (Credential 'Staking era)
+      (Credential 'Staking (Crypto era))
       Coin,
     Map (KeyHash 'StakePool (Crypto era)) Likelihood
   )
@@ -528,7 +529,7 @@ nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
 nonMyopicMemberRew ::
   PParams era ->
   Coin ->
-  PoolParams era ->
+  PoolParams (Crypto era) ->
   StakeShare ->
   StakeShare ->
   StakeShare ->

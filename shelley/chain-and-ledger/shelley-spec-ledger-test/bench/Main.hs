@@ -21,8 +21,8 @@ import Cardano.Crypto.DSIGN
 import Cardano.Crypto.Hash
 import Cardano.Crypto.KES
 import Cardano.Crypto.VRF.Praos
-import Cardano.Ledger.Crypto (Crypto (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
@@ -165,7 +165,7 @@ profileUTxO = do
 -- ==========================================
 -- Registering Stake Keys
 
-touchDPState :: DPState era -> Int
+touchDPState :: DPState crypto -> Int
 touchDPState (DPState _x _y) = 1
 
 touchUTxOState :: Shelley.Spec.Ledger.LedgerState.UTxOState cryto -> Int
@@ -226,7 +226,10 @@ epochAt x =
         [ bench "Using maps" (whnf action2m arg)
         ]
 
-action2m :: ShelleyTest era => (DState era, PState era, UTxO era) -> EB.SnapShot era
+action2m ::
+  ShelleyTest era =>
+  (DState (Crypto era), PState (Crypto era), UTxO era) ->
+  EB.SnapShot (Crypto era)
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 -- =================================================================

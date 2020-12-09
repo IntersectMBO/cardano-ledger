@@ -100,10 +100,10 @@ txM =
     SNothing
     testmint
 
-testmint :: Value TestEra
+testmint :: Value TestCrypto
 testmint = Value 0 (Map.singleton policyId (Map.singleton aname 2))
   where
-    policyId = PolicyID . hashScript . RequireAnyOf $ fromList []
+    policyId = PolicyID . hashScript @TestEra . RequireAnyOf $ fromList []
     aname = AssetName $ fromString "asset name"
 
 bytes :: Mary.TxBody era -> ShortByteString

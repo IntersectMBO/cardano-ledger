@@ -91,18 +91,18 @@ data DelegEnv = DelegEnv
 
 data DelegPredicateFailure era
   = StakeKeyAlreadyRegisteredDELEG
-      !(Credential 'Staking era) -- Credential which is already registered
+      !(Credential 'Staking (Crypto era)) -- Credential which is already registered
   | -- | Indicates that the stake key is somehow already in the rewards map.
     --   This error is now redundant with StakeKeyAlreadyRegisteredDELEG.
     --   We should remove it and replace its one use with StakeKeyAlreadyRegisteredDELEG.
     StakeKeyInRewardsDELEG
-      !(Credential 'Staking era) -- DEPRECATED, now redundant with StakeKeyAlreadyRegisteredDELEG
+      !(Credential 'Staking (Crypto era)) -- DEPRECATED, now redundant with StakeKeyAlreadyRegisteredDELEG
   | StakeKeyNotRegisteredDELEG
-      !(Credential 'Staking era) -- Credential which is not registered
+      !(Credential 'Staking (Crypto era)) -- Credential which is not registered
   | StakeKeyNonZeroAccountBalanceDELEG
       !(Maybe Coin) -- The remaining reward account balance, if it exists
   | StakeDelegationImpossibleDELEG
-      !(Credential 'Staking era) -- Credential that is not registered
+      !(Credential 'Staking (Crypto era)) -- Credential that is not registered
   | WrongCertificateTypeDELEG -- The DCertPool constructor should not be used by this transition
   | GenesisKeyNotInMappingDELEG
       !(KeyHash 'Genesis (Crypto era)) -- Unknown Genesis KeyHash
@@ -120,8 +120,8 @@ data DelegPredicateFailure era
   deriving (Show, Eq, Generic)
 
 instance Typeable era => STS (DELEG era) where
-  type State (DELEG era) = DState era
-  type Signal (DELEG era) = DCert era
+  type State (DELEG era) = DState (Crypto era)
+  type Signal (DELEG era) = DCert (Crypto era)
   type Environment (DELEG era) = DelegEnv
   type BaseM (DELEG era) = ShelleyBase
   type PredicateFailure (DELEG era) = DelegPredicateFailure era

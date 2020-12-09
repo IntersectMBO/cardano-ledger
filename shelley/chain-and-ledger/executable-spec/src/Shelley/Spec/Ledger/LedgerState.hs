@@ -232,10 +232,10 @@ import Shelley.Spec.Ledger.UTxO
   )
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
-type KeyPairs era = [(KeyPair 'Payment era, KeyPair 'Staking era)]
+type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
 
-type RewardAccounts era =
-  Map (Credential 'Staking era) Coin
+type RewardAccounts crypto =
+  Map (Credential 'Staking crypto) Coin
 
 data FutureGenDeleg crypto = FutureGenDeleg
   { fGenDelegSlot :: !SlotNo,
@@ -258,29 +258,29 @@ instance CC.Crypto crypto => FromCBOR (FutureGenDeleg crypto) where
       b <- fromCBOR
       pure $ FutureGenDeleg a b
 
-data InstantaneousRewards era = InstantaneousRewards
-  { iRReserves :: !(Map (Credential 'Staking era) Coin),
-    iRTreasury :: !(Map (Credential 'Staking era) Coin)
+data InstantaneousRewards crypto = InstantaneousRewards
+  { iRReserves :: !(Map (Credential 'Staking crypto) Coin),
+    iRTreasury :: !(Map (Credential 'Staking crypto) Coin)
   }
   deriving (Show, Eq, Generic)
 
-totalInstantaneousReservesRewards :: InstantaneousRewards era -> Coin
+totalInstantaneousReservesRewards :: InstantaneousRewards crypto -> Coin
 totalInstantaneousReservesRewards (InstantaneousRewards irR _) = fold irR
 
-instance NoThunks (InstantaneousRewards era)
+instance NoThunks (InstantaneousRewards crypto)
 
-instance NFData (InstantaneousRewards era)
+instance NFData (InstantaneousRewards crypto)
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  ToCBOR (InstantaneousRewards era)
+  CC.Crypto crypto =>
+  ToCBOR (InstantaneousRewards crypto)
   where
   toCBOR (InstantaneousRewards irR irT) =
     encodeListLen 2 <> mapToCBOR irR <> mapToCBOR irT
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  FromCBOR (InstantaneousRewards era)
+  CC.Crypto crypto =>
+  FromCBOR (InstantaneousRewards crypto)
   where
   fromCBOR = do
     decodeRecordNamed "InstantaneousRewards" (const 2) $ do
@@ -289,29 +289,29 @@ instance
       pure $ InstantaneousRewards irR irT
 
 -- | State of staking pool delegations and rewards
-data DState era = DState
+data DState crypto = DState
   { -- | The active reward accounts.
-    _rewards :: !(RewardAccounts era),
+    _rewards :: !(RewardAccounts crypto),
     -- | The current delegations.
-    _delegations :: !(Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era))),
+    _delegations :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
     -- | The pointed to hash keys.
-    _ptrs :: !(Bimap Ptr (Credential 'Staking era)),
+    _ptrs :: !(Bimap Ptr (Credential 'Staking crypto)),
     -- | future genesis key delegations
-    _fGenDelegs :: !(Map (FutureGenDeleg (Crypto era)) (GenDelegPair (Crypto era))),
+    _fGenDelegs :: !(Map (FutureGenDeleg crypto) (GenDelegPair crypto)),
     -- | Genesis key delegations
-    _genDelegs :: !(GenDelegs (Crypto era)),
+    _genDelegs :: !(GenDelegs crypto),
     -- | Instantaneous Rewards
-    _irwd :: !(InstantaneousRewards era)
+    _irwd :: !(InstantaneousRewards crypto)
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (DState era)
+instance NoThunks (DState crypto)
 
-instance NFData (DState era)
+instance NFData (DState crypto)
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  ToCBOR (DState era)
+  CC.Crypto crypto =>
+  ToCBOR (DState crypto)
   where
   toCBOR (DState rw dlg p fgs gs ir) =
     encodeListLen 6
@@ -323,8 +323,8 @@ instance
       <> toCBOR ir
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  FromCBOR (DState era)
+  CC.Crypto crypto =>
+  FromCBOR (DState crypto)
   where
   fromCBOR = do
     decodeRecordNamed "DState" (const 6) $ do
@@ -337,25 +337,25 @@ instance
       pure $ DState rw dlg p fgs gs ir
 
 -- | Current state of staking pools and their certificate counters.
-data PState era = PState
+data PState crypto = PState
   { -- | The pool parameters.
-    _pParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams era)),
+    _pParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
     -- | The future pool parameters.
-    _fPParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams era)),
+    _fPParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
     -- | A map of retiring stake pools to the epoch when they retire.
-    _retiring :: !(Map (KeyHash 'StakePool (Crypto era)) EpochNo)
+    _retiring :: !(Map (KeyHash 'StakePool crypto) EpochNo)
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (PState era)
+instance NoThunks (PState crypto)
 
-instance NFData (PState era)
+instance NFData (PState crypto)
 
-instance Era era => ToCBOR (PState era) where
+instance CC.Crypto crypto => ToCBOR (PState crypto) where
   toCBOR (PState a b c) =
     encodeListLen 3 <> toCBOR a <> toCBOR b <> toCBOR c
 
-instance Era era => FromCBOR (PState era) where
+instance CC.Crypto crypto => FromCBOR (PState crypto) where
   fromCBOR = do
     decodeRecordNamed "PState" (const 3) $ do
       a <- fromCBOR
@@ -364,26 +364,26 @@ instance Era era => FromCBOR (PState era) where
       pure $ PState a b c
 
 -- | The state associated with the current stake delegation.
-data DPState era = DPState
-  { _dstate :: !(DState era),
-    _pstate :: !(PState era)
+data DPState crypto = DPState
+  { _dstate :: !(DState crypto),
+    _pstate :: !(PState crypto)
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (DPState era)
+instance NoThunks (DPState crypto)
 
-instance NFData (DPState era)
+instance NFData (DPState crypto)
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  ToCBOR (DPState era)
+  CC.Crypto crypto =>
+  ToCBOR (DPState crypto)
   where
   toCBOR (DPState ds ps) =
     encodeListLen 2 <> toCBOR ds <> toCBOR ps
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  FromCBOR (DPState era)
+  CC.Crypto crypto =>
+  FromCBOR (DPState crypto)
   where
   fromCBOR = do
     decodeRecordNamed "DPState" (const 2) $ do
@@ -391,22 +391,22 @@ instance
       ps <- fromCBOR
       pure $ DPState ds ps
 
-data RewardUpdate era = RewardUpdate
+data RewardUpdate crypto = RewardUpdate
   { deltaT :: !DeltaCoin,
     deltaR :: !DeltaCoin,
-    rs :: !(Map (Credential 'Staking era) Coin),
+    rs :: !(Map (Credential 'Staking crypto) Coin),
     deltaF :: !DeltaCoin,
-    nonMyopic :: !(NonMyopic era)
+    nonMyopic :: !(NonMyopic crypto)
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (RewardUpdate era)
+instance NoThunks (RewardUpdate crypto)
 
-instance NFData (RewardUpdate era)
+instance NFData (RewardUpdate crypto)
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  ToCBOR (RewardUpdate era)
+  CC.Crypto crypto =>
+  ToCBOR (RewardUpdate crypto)
   where
   toCBOR (RewardUpdate dt dr rw df nm) =
     encodeListLen 5
@@ -417,8 +417,8 @@ instance
       <> toCBOR nm
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  FromCBOR (RewardUpdate era)
+  CC.Crypto crypto =>
+  FromCBOR (RewardUpdate crypto)
   where
   fromCBOR = do
     decodeRecordNamed "RewardUpdate" (const 5) $ do
@@ -429,7 +429,7 @@ instance
       nm <- fromCBOR
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
-emptyRewardUpdate :: RewardUpdate era
+emptyRewardUpdate :: RewardUpdate crypto
 emptyRewardUpdate = RewardUpdate (DeltaCoin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) emptyNonMyopic
 
 data AccountState = AccountState
@@ -455,7 +455,7 @@ instance NFData AccountState
 
 data EpochState era = EpochState
   { esAccountState :: !AccountState,
-    esSnapshots :: !(SnapShots era),
+    esSnapshots :: !(SnapShots (Crypto era)),
     esLState :: !(LedgerState era),
     esPrevPp :: !(PParams era),
     esPp :: !(PParams era),
@@ -463,7 +463,7 @@ data EpochState era = EpochState
     -- and is not a part of the protocol. It is only used for providing
     -- data to the stake pool ranking calculation @getNonMyopicMemberRewards@.
     -- See https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking
-    esNonMyopic :: !(NonMyopic era)
+    esNonMyopic :: !(NonMyopic (Crypto era))
   }
   deriving (Generic)
 
@@ -519,14 +519,14 @@ emptyLedgerState =
 emptyAccount :: AccountState
 emptyAccount = AccountState (Coin 0) (Coin 0)
 
-emptyDelegation :: DPState era
+emptyDelegation :: DPState crypto
 emptyDelegation =
   DPState emptyDState emptyPState
 
-emptyInstantaneousRewards :: InstantaneousRewards era
+emptyInstantaneousRewards :: InstantaneousRewards crypto
 emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty
 
-emptyDState :: DState era
+emptyDState :: DState crypto
 emptyDState =
   DState
     Map.empty
@@ -536,11 +536,11 @@ emptyDState =
     (GenDelegs Map.empty)
     emptyInstantaneousRewards
 
-emptyPState :: PState era
+emptyPState :: PState crypto
 emptyPState =
   PState Map.empty Map.empty Map.empty
 
-emptyDPState :: DPState era
+emptyDPState :: DPState crypto
 emptyDPState = DPState emptyDState emptyPState
 
 data PPUPState era = PPUPState
@@ -617,13 +617,13 @@ data NewEpochState era = NewEpochState
   { -- | Last epoch
     nesEL :: !EpochNo,
     -- | Blocks made before current epoch
-    nesBprev :: !(BlocksMade era),
+    nesBprev :: !(BlocksMade (Crypto era)),
     -- | Blocks made in current epoch
-    nesBcur :: !(BlocksMade era),
+    nesBcur :: !(BlocksMade (Crypto era)),
     -- | Epoch state before current
     nesEs :: !(EpochState era),
     -- | Possible reward update
-    nesRu :: !(StrictMaybe (RewardUpdate era)),
+    nesRu :: !(StrictMaybe (RewardUpdate (Crypto era))),
     -- | Stake distribution within the stake pool
     nesPd :: !(PoolDistr (Crypto era))
   }
@@ -675,7 +675,7 @@ data LedgerState era = LedgerState
   { -- | The current unspent transaction outputs.
     _utxoState :: !(UTxOState era),
     -- | The current delegation state
-    _delegationState :: !(DPState era)
+    _delegationState :: !(DPState (Crypto era))
   }
   deriving (Generic)
 
@@ -736,7 +736,7 @@ txsizeBound ::
   forall era.
   ( ShelleyBased era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Tx era ->
   Integer
@@ -768,7 +768,7 @@ minfeeBound ::
   forall era.
   ( ShelleyBased era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   PParams era ->
   Tx era ->
@@ -781,12 +781,12 @@ minfeeBound pp tx =
 -- | Compute the lovelace which are created by the transaction
 produced ::
   ( ShelleyBased era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin
   ) =>
   PParams era ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams era) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
   Core.TxBody era ->
   Core.Value era
 produced pp stakePools tx =
@@ -798,7 +798,7 @@ produced pp stakePools tx =
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
-  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   PParams era ->
   Core.TxBody era ->
@@ -809,35 +809,36 @@ keyRefunds pp tx = (length deregistrations) <×> (_keyDeposit pp)
 
 -- | Compute the lovelace which are destroyed by the transaction
 consumed ::
+  forall era.
   ( ShelleyBased era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
-    HasField "wdrls" (Core.TxBody era) (Wdrl era)
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   PParams era ->
-  UTxO (era) ->
+  UTxO era ->
   Core.TxBody era ->
   Core.Value era
 consumed pp u tx =
-  balance (eval (txins tx ◁ u)) <> (Val.inject $ refunds <> withdrawals)
+  balance (eval (txins @era tx ◁ u)) <> (Val.inject $ refunds <> withdrawals)
   where
     -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
     refunds = keyRefunds pp tx
     withdrawals = fold . unWdrl $ getField @"wdrls" tx
 
-newtype WitHashes era = WitHashes
-  {unWitHashes :: Set (KeyHash 'Witness (Crypto era))}
+newtype WitHashes crypto = WitHashes
+  {unWitHashes :: Set (KeyHash 'Witness crypto)}
   deriving (Eq, Generic)
-  deriving (Show) via Quiet (WitHashes era)
+  deriving (Show) via Quiet (WitHashes crypto)
 
-instance Era era => NoThunks (WitHashes era)
+instance NoThunks (WitHashes crypto)
 
 -- | Check if a set of witness hashes is empty.
-nullWitHashes :: WitHashes era -> Bool
+nullWitHashes :: WitHashes crypto -> Bool
 nullWitHashes (WitHashes a) = Set.null a
 
 -- | Extract the difference between two sets of witness hashes.
-diffWitHashes :: WitHashes era -> WitHashes era -> WitHashes era
+diffWitHashes :: WitHashes crypto -> WitHashes crypto -> WitHashes crypto
 diffWitHashes (WitHashes x) (WitHashes x') =
   WitHashes (x `Set.difference` x')
 
@@ -845,7 +846,7 @@ diffWitHashes (WitHashes x) (WitHashes x') =
 witsFromWitnessSet ::
   (Era era, Core.AnnotatedData (Core.Script era)) =>
   WitnessSet era ->
-  WitHashes era
+  WitHashes (Crypto era)
 witsFromWitnessSet (WitnessSet aWits _ bsWits) =
   WitHashes $
     Set.map witKeyHash aWits
@@ -857,15 +858,15 @@ witsFromWitnessSet (WitnessSet aWits _ bsWits) =
 witsVKeyNeeded ::
   forall era.
   ( ShelleyBased era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl era),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   UTxO era ->
   Tx era ->
   GenDelegs (Crypto era) ->
-  WitHashes era
+  WitHashes (Crypto era)
 witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
   WitHashes $
     certAuthors
@@ -955,7 +956,7 @@ propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
 
 -- | Calculate the change to the deposit pool for a given transaction.
 depositPoolChange ::
-  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert era))
+  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   LedgerState era ->
   PParams era ->
@@ -973,9 +974,9 @@ depositPoolChange ls pp tx = (currentPool <+> txDeposits) <-> txRefunds
     txRefunds = keyRefunds pp tx
 
 reapRewards ::
-  RewardAccounts era ->
-  RewardAccounts era ->
-  RewardAccounts era
+  RewardAccounts crypto ->
+  RewardAccounts crypto ->
+  RewardAccounts crypto
 reapRewards dStateRewards withdrawals =
   Map.mapWithKey removeRewards dStateRewards
   where
@@ -989,9 +990,9 @@ stakeDistr ::
   forall era.
   ShelleyBased era =>
   UTxO era ->
-  DState era ->
-  PState era ->
-  SnapShot era
+  DState (Crypto era) ->
+  PState (Crypto era) ->
+  SnapShot (Crypto era)
 stakeDistr u ds ps =
   SnapShot
     (Stake $ eval (dom activeDelegs ◁ stakeRelation))
@@ -1000,14 +1001,14 @@ stakeDistr u ds ps =
   where
     DState rewards' delegs ptrs' _ _ _ = ds
     PState poolParams _ _ = ps
-    stakeRelation :: Map (Credential 'Staking era) Coin
+    stakeRelation :: Map (Credential 'Staking (Crypto era)) Coin
     stakeRelation = aggregateUtxoCoinByCredential (forwards ptrs') u rewards'
-    activeDelegs :: Map (Credential 'Staking era) (KeyHash 'StakePool (Crypto era))
+    activeDelegs :: Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
 
 -- | Apply a reward update
 applyRUpd ::
-  RewardUpdate era ->
+  RewardUpdate (Crypto era) ->
   EpochState era ->
   EpochState era
 applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
@@ -1042,10 +1043,10 @@ decayFactor :: Float
 decayFactor = 0.9
 
 updateNonMypopic ::
-  NonMyopic era ->
+  NonMyopic crypto ->
   Coin ->
-  Map (KeyHash 'StakePool (Crypto era)) Likelihood ->
-  NonMyopic era
+  Map (KeyHash 'StakePool crypto) Likelihood ->
+  NonMyopic crypto
 updateNonMypopic nm rPot newLikelihoods =
   nm
     { likelihoodsNM = updatedLikelihoods,
@@ -1063,10 +1064,10 @@ updateNonMypopic nm rPot newLikelihoods =
 -- | Create a reward update
 createRUpd ::
   EpochSize ->
-  BlocksMade era ->
+  BlocksMade (Crypto era) ->
   EpochState era ->
   Coin ->
-  ShelleyBase (RewardUpdate era)
+  ShelleyBase (RewardUpdate (Crypto era))
 createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply = do
   asc <- asks activeSlotCoeff
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
@@ -1125,7 +1126,7 @@ circulation (EpochState acnt _ _ _ _ _) supply =
 -- | Update new epoch state
 updateNES ::
   NewEpochState era ->
-  BlocksMade era ->
+  BlocksMade (Crypto era) ->
   LedgerState era ->
   NewEpochState era
 updateNES

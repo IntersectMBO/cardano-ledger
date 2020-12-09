@@ -32,7 +32,8 @@ import Cardano.Binary
     withSlice,
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
@@ -44,10 +45,10 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import Shelley.Spec.Ledger.Hashing (EraIndependentMetadata)
 import Shelley.Spec.Ledger.Keys (Hash)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
@@ -94,20 +95,19 @@ instance ToCBOR Metadatum where
 instance FromCBOR Metadatum where
   fromCBOR = decodeMetadatum
 
-newtype MetadataHash era = MetadataHash
-  { unsafeMetadataHash :: Hash (Crypto era) (Core.Metadata era)
+newtype MetadataHash crypto = MetadataHash
+  { unsafeMetadataHash :: Hash crypto EraIndependentMetadata
   }
   deriving (Show, Eq, Ord, NoThunks, NFData)
 
 deriving instance
-  (Era era, Typeable (Core.Metadata era)) =>
-  ToCBOR (MetadataHash era)
+  CC.Crypto crypto =>
+  ToCBOR (MetadataHash crypto)
 
 deriving instance
-  (Era era, Typeable (Core.Metadata era)) =>
-  FromCBOR (MetadataHash era)
+  CC.Crypto crypto =>
+  FromCBOR (MetadataHash crypto)
 
---------------------------------------------------------------------------------
 -- Validation of sizes
 
 validMetadatum :: Metadatum -> Bool
@@ -125,7 +125,7 @@ validMetadatum (Map kvs) =
     kvs
 
 class ValidateMetadata era where
-  hashMetadata :: Core.Metadata era -> MetadataHash era
+  hashMetadata :: Core.Metadata era -> MetadataHash (Crypto era)
   validateMetadata :: Core.Metadata era -> Bool
 
 --------------------------------------------------------------------------------

@@ -19,7 +19,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Crypto (ADDRHASH)
-import Cardano.Ledger.Era (Crypto (..))
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Prelude (Text, cborError, panic)
 import Control.Monad (ap)
 import qualified Control.Monad.Fail
@@ -43,13 +43,13 @@ import Shelley.Spec.Ledger.Keys (KeyHash (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
-newtype CompactAddr era = UnsafeCompactAddr ShortByteString
+newtype CompactAddr crypto = UnsafeCompactAddr ShortByteString
   deriving (Eq, Ord)
 
-compactAddr :: Addr era -> CompactAddr era
+compactAddr :: Addr crypto -> CompactAddr crypto
 compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
 
-decompactAddr :: forall era. Era era => CompactAddr era -> Addr era
+decompactAddr :: forall crypto. CC.Crypto crypto => CompactAddr crypto -> Addr crypto
 decompactAddr (UnsafeCompactAddr bytes) =
   if testBit header byron
     then AddrBootstrap $ run "byron address" 0 bytes getBootstrapAddress
@@ -69,20 +69,20 @@ decompactAddr (UnsafeCompactAddr bytes) =
         -- The address format is
         -- header | pay cred | stake cred
         -- where the header is 1 byte
-        -- the pay cred is (sizeHash (ADDRHASH (Crypto era))) bytes
+        -- the pay cred is (sizeHash (ADDRHASH crypto)) bytes
         -- and the stake cred can vary
     paycred = run "payment credential" 1 bytes (getPayCred header)
     stakecred = run "staking credential" 1 bytes $ do
-      skipHash ([] @(ADDRHASH (Crypto era)))
+      skipHash ([] @(ADDRHASH crypto))
       getStakeReference header
 
-instance Era era => ToCBOR (CompactAddr era) where
+instance CC.Crypto crypto => ToCBOR (CompactAddr crypto) where
   toCBOR (UnsafeCompactAddr bytes) = toCBOR bytes
 
-instance Era era => FromCBOR (CompactAddr era) where
+instance CC.Crypto crypto => FromCBOR (CompactAddr crypto) where
   fromCBOR = do
     sbs <- fromCBOR
-    case deserializeShortAddr @era sbs of
+    case deserializeShortAddr @crypto sbs of
       Just _ -> pure $ UnsafeCompactAddr sbs
       Nothing -> cborError $ DecoderErrorCustom "Addr" "invalid address"
 
@@ -102,10 +102,10 @@ instance Monad GetShort where
 instance Control.Monad.Fail.MonadFail GetShort where
   fail _ = GetShort $ \_ _ -> Nothing
 
-deserializeShortAddr :: Era era => ShortByteString -> Maybe (Addr era)
+deserializeShortAddr :: CC.Crypto crypto => ShortByteString -> Maybe (Addr crypto)
 deserializeShortAddr short = snd <$> runGetShort getShortAddr 0 short
 
-getShortAddr :: forall era. Era era => GetShort (Addr era)
+getShortAddr :: CC.Crypto crypto => GetShort (Addr crypto)
 getShortAddr = do
   header <- peekWord8
   if testBit header byron
@@ -123,7 +123,7 @@ getShortAddr = do
             concat
               ["Address with unknown network Id. (", show addrNetId, ")"]
 
-getBootstrapAddress :: GetShort (BootstrapAddress era)
+getBootstrapAddress :: GetShort (BootstrapAddress crypto)
 getBootstrapAddress = do
   bs <- getRemainingAsByteString
   case decodeFull' bs of
@@ -192,13 +192,13 @@ getPtr =
     <*> getVariableLengthNat
     <*> getVariableLengthNat
 
-getKeyHash :: Era era => GetShort (Credential kr era)
+getKeyHash :: CC.Crypto crypto => GetShort (Credential kr crypto)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
 
-getScriptHash :: Era era => GetShort (Credential kr era)
+getScriptHash :: CC.Crypto crypto => GetShort (Credential kr crypto)
 getScriptHash = ScriptHashObj . ScriptHash <$> getHash
 
-getStakeReference :: Era era => Word8 -> GetShort (StakeReference era)
+getStakeReference :: CC.Crypto crypto => Word8 -> GetShort (StakeReference crypto)
 getStakeReference header = case testBit header notBaseAddr of
   True -> case testBit header isEnterpriseAddr of
     True -> pure StakeRefNull
@@ -207,7 +207,7 @@ getStakeReference header = case testBit header notBaseAddr of
     True -> StakeRefBase <$> getScriptHash
     False -> StakeRefBase <$> getKeyHash
 
-getPayCred :: Era era => Word8 -> GetShort (PaymentCredential era)
+getPayCred :: CC.Crypto crypto => Word8 -> GetShort (PaymentCredential crypto)
 getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash

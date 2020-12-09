@@ -72,9 +72,9 @@ data PoolPredicateFailure era
 instance NoThunks (PoolPredicateFailure era)
 
 instance Typeable era => STS (POOL era) where
-  type State (POOL era) = PState era
+  type State (POOL era) = PState (Crypto era)
 
-  type Signal (POOL era) = DCert era
+  type Signal (POOL era) = DCert (Crypto era)
 
   type Environment (POOL era) = PoolEnv era
 

@@ -68,13 +68,13 @@ class
   genEraTxBody ::
     GenEnv era ->
     SlotNo ->
-    Set (TxIn era) ->
+    Set (TxIn (Crypto era)) ->
     StrictSeq (TxOut era) ->
-    StrictSeq (DCert era) ->
-    Wdrl era ->
+    StrictSeq (DCert (Crypto era)) ->
+    Wdrl (Crypto era) ->
     Coin ->
     StrictMaybe (Update era) ->
-    StrictMaybe (MetadataHash era) ->
+    StrictMaybe (MetadataHash (Crypto era)) ->
     Gen (Core.TxBody era)
 
   -- | Generate era-specific metadata
@@ -84,7 +84,7 @@ class
   updateEraTxBody ::
     Core.TxBody era ->
     Coin ->
-    Set (TxIn era) ->
+    Set (TxIn (Crypto era)) ->
     StrictSeq (TxOut era) ->
     Core.TxBody era
 
@@ -106,15 +106,17 @@ genUtxo0 ge@(GenEnv _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
       (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr' Testnet) genesisScripts)
   return (genesisCoins genesisId outs)
   where
-    scriptsToAddr' :: Network -> (Core.Script era, Core.Script era) -> Addr era
+    scriptsToAddr' :: Network -> (Core.Script era, Core.Script era) -> Addr (Crypto era)
     scriptsToAddr' n (payScript, stakeScript) =
       Addr n (scriptToCred' payScript) (StakeRefBase $ scriptToCred' stakeScript)
-    scriptToCred' = ScriptHashObj . hashScript
+
+    scriptToCred' :: Core.Script era -> Credential kr (Crypto era)
+    scriptToCred' = ScriptHashObj . hashScript @era
 
 -- | We share this dummy TxId as genesis transaction id across eras
 genesisId ::
-  Hash.HashAlgorithm (CC.HASH (Crypto era)) =>
-  TxId era
+  Hash.HashAlgorithm (CC.HASH crypto) =>
+  TxId crypto
 genesisId = TxId (mkDummyHash 0)
   where
     mkDummyHash :: forall h a. Hash.HashAlgorithm h => Int -> Hash.Hash h a
