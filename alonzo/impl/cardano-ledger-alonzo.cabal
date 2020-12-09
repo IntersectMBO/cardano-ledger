@@ -78,10 +78,11 @@ test-suite tests
     bytestring,
     cardano-binary,
     cardano-ledger-alonzo,
-    cardano-ledger-alonzo:test,
     cardano-ledger-shelley-ma-test,
     QuickCheck,
     shelley-spec-ledger-test,
     tasty-hunit,
     tasty-quickcheck,
-    tasty
+    tasty,
+    -- cardano-ledger-alonzo:test
+    test
