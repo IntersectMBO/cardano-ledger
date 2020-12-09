@@ -29,7 +29,7 @@ import Cardano.Binary
     FromCBOR,
     ToCBOR,
     TokenType (..),
-    decodeInt64,
+    decodeInteger,
     decodeWord64,
     fromCBOR,
     peekTokenType,
@@ -169,9 +169,6 @@ instance Era era => Val (Value era) where
 -- TODO filter out 0s at deserialization
 -- TODO Probably the actual serialization will be of the formal Coin OR Value type
 -- Maybe better to make this distinction in the TxOut de/serialization
-
-decodeInteger :: Decoder s Integer
-decodeInteger = fromIntegral <$> decodeInt64
 
 decodeValue ::
   ( Typeable (Core.Script era),
