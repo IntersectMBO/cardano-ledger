@@ -30,10 +30,10 @@
         "homepage": null,
         "owner": "tweag",
         "repo": "ormolu",
-        "rev": "f896262aee3170c823ad70fe11945e64cdc24b9c",
-        "sha256": "0hr94mxkvxys3n8nr5r4kmgmhx2k3y831wr3dfjs2y1nw3ldzrhr",
+        "rev": "9cad22a2fec0ab0b416a46527fb7d22c69d07ef7",
+        "sha256": "1f8nqq8h3a414ip2chmr3zbhkzbb20zbk3h7y8z6qypxlv8asqls",
         "type": "tarball",
-        "url": "https://github.com/tweag/ormolu/archive/f896262aee3170c823ad70fe11945e64cdc24b9c.tar.gz",
+        "url": "https://github.com/tweag/ormolu/archive/9cad22a2fec0ab0b416a46527fb7d22c69d07ef7.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

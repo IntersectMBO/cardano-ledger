@@ -681,7 +681,7 @@ boxBody n = field (\_ t -> t) (Invalid n)
 -- | Tells how to serialise each field, and what tag to label it with in the
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
-txSparse :: ProperTo era => TxBodyRaw era -> Encode ( 'Closed 'Sparse) (TxBodyRaw era)
+txSparse :: ProperTo era => TxBodyRaw era -> Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
   Keyed (\i o f t c w u h -> TxBodyRaw i o c w f t u h)
     !> Key 0 (E encodeFoldable input) -- We don't have to send these in TxBodyRaw order
