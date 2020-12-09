@@ -109,16 +109,16 @@ propertyAnn ::
   (EraIndex e -> Gen t) ->
   TestTree
 propertyAnn name i gen = testProperty ("roundtripAnn " ++ name) $ do
-  x <- gen i
-  case roundTripAnn x of
-    Right (left, _)
-      | not (Lazy.null left) ->
-        error ("unconsumed trailing bytes: " ++ show left)
-    Right (_, y) ->
-      if x == y
-        then pure True
-        else error ("Unequal\n   " ++ show x ++ "\n   " ++ show y)
-    Left s -> error (show (s, x))
+  forAll (gen i) $ \x -> case roundTripAnn x of
+    Right (remaining, y) | BSL.null remaining -> x === y
+    Right (remaining, _) ->
+      counterexample
+        ("Unconsumed trailing bytes:\n" <> BSL.unpack remaining)
+        False
+    Left stuff ->
+      counterexample
+        ("Failed to decode: " <> show stuff)
+        False
 
 property ::
   forall e t.
