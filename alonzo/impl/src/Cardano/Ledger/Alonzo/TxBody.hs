@@ -413,7 +413,7 @@ instance
       bodyFields 2 = field (\x tx -> tx {_txfee = x}) From
       bodyFields 3 =
         field
-          (\x tx -> tx {_vldt = (_vldt tx) {validTo = x}})
+          (\x tx -> tx {_vldt = (_vldt tx) {invalidHereafter = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 4 =
         field
@@ -424,7 +424,7 @@ instance
       bodyFields 7 = field (\x tx -> tx {_adHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 8 =
         field
-          (\x tx -> tx {_vldt = (_vldt tx) {validFrom = x}})
+          (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
       bodyFields 10 = field (\x tx -> tx {_exunits = x}) From
