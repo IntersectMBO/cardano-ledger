@@ -20,6 +20,7 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
 where
 
 import Cardano.Binary (serialize)
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData (hashAuxiliaryData))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
@@ -74,7 +75,6 @@ import Shelley.Spec.Ledger.LedgerState
     _ptrs,
     _rewards,
   )
-import Shelley.Spec.Ledger.Metadata (ValidateMetadata (hashMetadata))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Tx
@@ -157,7 +157,7 @@ genTx ::
   forall era.
   ( HasCallStack,
     EraGen era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
@@ -209,7 +209,7 @@ genTx
           (utxoSt, dpState)
       (certs, deposits, refunds, dpState', (certWits, certScripts)) <-
         genDCerts ge pparams dpState slot txIx reserves
-      metadata <- genEraMetadata @era constants
+      metadata <- genEraAuxiliaryData @era constants
       -------------------------------------------------------------------------
       -- Gather Key Witnesses and Scripts, prepare a constructor for Tx Wits
       -------------------------------------------------------------------------
@@ -263,7 +263,7 @@ genTx
           (Wdrl (Map.fromList wdrls))
           draftFee
           (maybeToStrictMaybe update)
-          (hashMetadata @era <$> metadata)
+          (hashAuxiliaryData @era <$> metadata)
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
       -- We add now repeatedly add inputs until the process converges.
       converge

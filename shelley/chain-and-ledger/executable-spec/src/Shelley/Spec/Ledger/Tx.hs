@@ -195,7 +195,7 @@ pattern WitnessSet {addrWits, scriptWits, bootWits} <-
 data Tx era = Tx'
   { _body' :: !(Core.TxBody era),
     _witnessSet' :: !(WitnessSet era),
-    _metadata' :: !(StrictMaybe (Core.Metadata era)),
+    _metadata' :: !(StrictMaybe (Core.AuxiliaryData era)),
     txFullBytes :: BSL.ByteString
   }
   deriving (Generic)
@@ -218,11 +218,11 @@ deriving instance
 
 pattern Tx ::
   ( TxBodyConstraints era,
-    ToCBOR (Core.Metadata era)
+    ToCBOR (Core.AuxiliaryData era)
   ) =>
   Core.TxBody era ->
   WitnessSet era ->
-  StrictMaybe (Core.Metadata era) ->
+  StrictMaybe (Core.AuxiliaryData era) ->
   Tx era
 pattern Tx {_body, _witnessSet, _metadata} <-
   Tx' _body _witnessSet _metadata _
@@ -251,11 +251,11 @@ instance ShelleyBased era => HashAnnotated (Tx era) era where
 
 segwitTx ::
   ( TxBodyConstraints era,
-    ToCBOR (Core.Metadata era)
+    ToCBOR (Core.AuxiliaryData era)
   ) =>
   Annotator (Core.TxBody era) ->
   Annotator (WitnessSet era) ->
-  Maybe (Annotator (Core.Metadata era)) ->
+  Maybe (Annotator (Core.AuxiliaryData era)) ->
   Annotator (Tx era)
 segwitTx
   bodyAnn
@@ -336,7 +336,7 @@ instance
       wits <- decodeWits
       meta <-
         ( decodeNullMaybe fromCBOR ::
-            Decoder s (Maybe (Annotator (Core.Metadata era)))
+            Decoder s (Maybe (Annotator (Core.AuxiliaryData era)))
           )
       pure $
         Annotator $ \fullBytes bytes ->
@@ -374,7 +374,7 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
   ( TxBodyConstraints era,
-    ToCBOR (Core.Metadata era)
+    ToCBOR (Core.AuxiliaryData era)
   ) =>
   MultiSig (Crypto era) ->
   Tx era ->
@@ -387,7 +387,7 @@ validateNativeMultiSigScript msig tx =
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
-  (TxBodyConstraints era, ToCBOR (Core.Metadata era)) =>
+  (TxBodyConstraints era, ToCBOR (Core.AuxiliaryData era)) =>
   Tx era ->
   Map (ScriptHash (Crypto era)) (Core.Script era)
 txwitsScript = scriptWits' . _witnessSet

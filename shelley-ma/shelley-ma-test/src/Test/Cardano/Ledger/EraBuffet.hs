@@ -32,7 +32,7 @@ module Test.Cardano.Ledger.EraBuffet
     Value, -- These are the type families re-exported for convenience.
     Script,
     TxBody,
-    Metadata,
+    AuxiliaryData,
     Era (..), -- The Era class re-exported
   )
 where
@@ -42,7 +42,7 @@ import Cardano.Crypto.Hash (Blake2b_224, Blake2b_256, MD5Prefix)
 import Cardano.Crypto.KES (MockKES, Sum6KES)
 import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Core (Script, TxBody, Value, Metadata)
+import Cardano.Ledger.Core (Script, TxBody, Value, AuxiliaryData)
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)

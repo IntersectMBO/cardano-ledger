@@ -28,6 +28,10 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.AuxiliaryData
+  ( AuxiliaryDataHash,
+    ValidateAuxiliaryData (..),
+  )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
@@ -89,7 +93,6 @@ import Shelley.Spec.Ledger.LedgerState
     witsFromWitnessSet,
     witsVKeyNeeded,
   )
-import Shelley.Spec.Ledger.Metadata (MetadataHash, ValidateMetadata (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
@@ -126,12 +129,12 @@ data UtxowPredicateFailure era
   | UtxoFailure (PredicateFailure (UTXO era))
   | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness (Crypto era)))
   | MissingTxBodyMetadataHash
-      !(MetadataHash (Crypto era)) -- hash of the full metadata
+      !(AuxiliaryDataHash (Crypto era)) -- hash of the full metadata
   | MissingTxMetadata
-      !(MetadataHash (Crypto era)) -- hash of the metadata included in the transaction body
+      !(AuxiliaryDataHash (Crypto era)) -- hash of the metadata included in the transaction body
   | ConflictingMetadataHash
-      !(MetadataHash (Crypto era)) -- hash of the metadata included in the transaction body
-      !(MetadataHash (Crypto era)) -- hash of the full metadata
+      !(AuxiliaryDataHash (Crypto era)) -- hash of the metadata included in the transaction body
+      !(AuxiliaryDataHash (Crypto era)) -- hash of the full metadata
       -- Contains out of range values (strings too long)
   | InvalidMetadata
   deriving (Generic)
@@ -171,7 +174,7 @@ instance
 instance
   ( Era era,
     Typeable (Core.Script era),
-    Typeable (Core.Metadata era),
+    Typeable (Core.AuxiliaryData era),
     ToCBOR (PredicateFailure (UTXO era))
   ) =>
   ToCBOR (UtxowPredicateFailure era)
@@ -206,7 +209,7 @@ instance
   ( Era era,
     FromCBOR (PredicateFailure (UTXO era)),
     Typeable (Core.Script era),
-    Typeable (Core.Metadata era)
+    Typeable (Core.AuxiliaryData era)
   ) =>
   FromCBOR (UtxowPredicateFailure era)
   where
@@ -260,7 +263,7 @@ utxoWitnessed ::
   forall era.
   ( ShelleyBased era,
     ValidateScript era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     STS (UTXOW era),
     BaseM (UTXOW era) ~ ShelleyBase,
     Embed (UTXO era) (UTXOW era),
@@ -275,7 +278,7 @@ utxoWitnessed ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash (Crypto era))),
+    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   (UTxO era -> Tx era -> Set (ScriptHash (Crypto era))) ->
@@ -315,17 +318,17 @@ utxoWitnessed scriptsNeeded =
       haveNeededWitnesses ?!: MissingVKeyWitnessesUTXOW
 
       -- check metadata hash
-      case (getField @"mdHash" txbody, md) of
+      case (getField @"adHash" txbody, md) of
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failBecause $ MissingTxMetadata mdh
         (SNothing, SJust md') ->
           failBecause $
-            MissingTxBodyMetadataHash (hashMetadata @era md')
+            MissingTxBodyMetadataHash (hashAuxiliaryData @era md')
         (SJust mdh, SJust md') -> do
-          hashMetadata @era md' == mdh ?! ConflictingMetadataHash mdh (hashMetadata @era md')
+          hashAuxiliaryData @era md' == mdh ?! ConflictingMetadataHash mdh (hashAuxiliaryData @era md')
           -- check metadata value sizes
           when (SoftForks.validMetadata pp) $
-            validateMetadata @era md' ?! InvalidMetadata
+            validateAuxiliaryData @era md' ?! InvalidMetadata
 
       -- check genesis keys signatures for instantaneous rewards certificates
       let genDelegates =

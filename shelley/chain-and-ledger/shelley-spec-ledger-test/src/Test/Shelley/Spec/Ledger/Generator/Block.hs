@@ -16,6 +16,7 @@ where
 
 import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
@@ -40,7 +41,6 @@ import Shelley.Spec.Ledger.BlockChain
     mkSeed,
     seedL,
   )
-import Shelley.Spec.Ledger.Metadata (ValidateMetadata)
 import Shelley.Spec.Ledger.OCert (currentIssueNo, kesPeriod)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Test.QuickCheck (Gen)
@@ -82,7 +82,7 @@ genBlock ::
     Mock (Crypto era),
     ApplyBlock era,
     GetLedgerView era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))

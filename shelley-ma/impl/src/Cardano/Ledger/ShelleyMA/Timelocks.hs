@@ -288,7 +288,7 @@ validateTimelock ::
   forall era.
   ( TxBodyConstraints era,
     HasField "vldt" (Core.TxBody era) ValidityInterval,
-    ToCBOR (Core.Metadata era)
+    ToCBOR (Core.AuxiliaryData era)
   ) =>
   Timelock (Crypto era) ->
   Tx era ->

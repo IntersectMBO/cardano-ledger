@@ -26,7 +26,7 @@ library
     Cardano.Ledger.Mary.Translation
     Cardano.Ledger.Mary.Value
     Cardano.Ledger.ShelleyMA
-    Cardano.Ledger.ShelleyMA.Metadata
+    Cardano.Ledger.ShelleyMA.AuxiliaryData
     Cardano.Ledger.ShelleyMA.Rules.Utxo
     Cardano.Ledger.ShelleyMA.Rules.Utxow
     Cardano.Ledger.ShelleyMA.Timelocks

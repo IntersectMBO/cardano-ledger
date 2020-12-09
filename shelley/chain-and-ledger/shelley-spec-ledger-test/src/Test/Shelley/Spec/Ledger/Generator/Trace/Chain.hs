@@ -19,6 +19,7 @@
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
@@ -47,7 +48,6 @@ import Shelley.Spec.Ledger.BlockChain
     hashHeaderToNonce,
   )
 import Shelley.Spec.Ledger.LedgerState (stakeDistr)
-import Shelley.Spec.Ledger.Metadata (ValidateMetadata)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Test.QuickCheck (Gen)
@@ -80,7 +80,7 @@ instance
     GetLedgerView era,
     ShelleyLedgerSTS era,
     ShelleyChainSTS era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>

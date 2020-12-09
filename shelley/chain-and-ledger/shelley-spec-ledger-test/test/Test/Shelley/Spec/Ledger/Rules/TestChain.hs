@@ -21,6 +21,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
   )
 where
 
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core (TxBody)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
@@ -61,7 +62,6 @@ import Shelley.Spec.Ledger.BlockChain
   )
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.LedgerState hiding (circulation)
-import Shelley.Spec.Ledger.Metadata (ValidateMetadata)
 import Shelley.Spec.Ledger.PParams (_eMax)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
@@ -115,7 +115,7 @@ collisionFreeComplete ::
   forall era.
   ( EraGen era,
     ChainProperty era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -140,7 +140,7 @@ adaPreservationChain ::
   forall era.
   ( EraGen era,
     ChainProperty era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -608,7 +608,7 @@ poolProperties ::
   forall era.
   ( EraGen era,
     ChainProperty era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -679,7 +679,7 @@ delegProperties ::
   forall era.
   ( EraGen era,
     ChainProperty era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -847,7 +847,7 @@ removedAfterPoolreap ::
   forall era.
   ( ChainProperty era,
     EraGen era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -876,7 +876,7 @@ forAllChainTrace ::
   ( Testable prop,
     EraGen era,
     ChainProperty era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),

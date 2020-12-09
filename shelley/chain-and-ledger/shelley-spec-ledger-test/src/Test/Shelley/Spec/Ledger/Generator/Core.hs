@@ -510,7 +510,7 @@ mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
 
 mkBlock ::
   ( TxBodyConstraints era,
-    ToCBOR (Core.Metadata era),
+    ToCBOR (Core.AuxiliaryData era),
     Mock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -541,7 +541,7 @@ mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
   ( TxBodyConstraints era,
-    ToCBOR (Core.Metadata era),
+    ToCBOR (Core.AuxiliaryData era),
     ExMock (Crypto era)
   ) =>
   -- | Hash of previous block

@@ -40,6 +40,7 @@ import Cardano.Crypto.DSIGN.Class
   )
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
@@ -351,8 +352,8 @@ instance Arbitrary ProtVer where
 instance CC.Crypto crypto => Arbitrary (ScriptHash crypto) where
   arbitrary = ScriptHash <$> genHash
 
-instance CC.Crypto crypto => Arbitrary (MD.MetadataHash crypto) where
-  arbitrary = MD.MetadataHash <$> genHash
+instance CC.Crypto crypto => Arbitrary (AuxiliaryDataHash crypto) where
+  arbitrary = AuxiliaryDataHash <$> genHash
 
 instance HashAlgorithm h => Arbitrary (Hash.Hash h a) where
   arbitrary = genHash
@@ -701,7 +702,7 @@ genTx ::
   ( ShelleyBased era,
     Arbitrary (WitnessSet era),
     Arbitrary (Core.TxBody era),
-    Arbitrary (Core.Metadata era)
+    Arbitrary (Core.AuxiliaryData era)
   ) =>
   Gen (Tx era)
 genTx =
@@ -717,7 +718,7 @@ genBlock ::
     Mock (Crypto era),
     Arbitrary (WitnessSet era),
     Arbitrary (Core.TxBody era),
-    Arbitrary (Core.Metadata era)
+    Arbitrary (Core.AuxiliaryData era)
   ) =>
   Gen (Block era)
 genBlock = do
@@ -752,7 +753,7 @@ instance
     ValidateScript era,
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
-    Arbitrary (Core.Metadata era),
+    Arbitrary (Core.AuxiliaryData era),
     Arbitrary (Core.Script era)
   ) =>
   Arbitrary (Tx era)
@@ -766,7 +767,7 @@ instance
     ValidateScript era,
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
-    Arbitrary (Core.Metadata era),
+    Arbitrary (Core.AuxiliaryData era),
     Arbitrary (Core.Script era)
   ) =>
   Arbitrary (Block era)

@@ -2,8 +2,8 @@ block =
   [ header
   , transaction_bodies         : [* transaction_body]
   , transaction_witness_sets   : [* transaction_witness_set]
-  , transaction_metadata_set   :
-      { * transaction_index => transaction_metadata }
+  , auxiliary_data_set   :
+      { * transaction_index => auxiliary_data }
   ]; Valid blocks must also satisfy the following two constraints:
    ; 1) the length of transaction_bodies and transaction_witness_sets
    ;    must be the same
@@ -13,7 +13,7 @@ block =
 transaction =
   [ transaction_body
   , transaction_witness_set
-  , transaction_metadata / null
+  , auxiliary_data / null
   ]
 
 transaction_index = uint
@@ -209,10 +209,10 @@ transaction_metadatum =
 
 transaction_metadatum_label = uint
 
-transaction_metadata =
+auxiliary_data =
   { * transaction_metadatum_label => transaction_metadatum }
-  / [ general: { * transaction_metadatum_label => transaction_metadatum }
-    , native_scripts: [ * native_script ]
+  / [ transaction_metadata: { * transaction_metadatum_label => transaction_metadatum }
+    , auxiliary_scripts: [ * native_script ]
     ; other types of metadata...
     ]
 

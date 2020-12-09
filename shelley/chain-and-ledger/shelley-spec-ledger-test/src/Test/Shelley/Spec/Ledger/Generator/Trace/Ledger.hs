@@ -17,6 +17,7 @@
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Era (Crypto)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
@@ -35,7 +36,6 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
     genesisState,
   )
-import Shelley.Spec.Ledger.Metadata (ValidateMetadata)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -69,7 +69,7 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 instance
   ( EraGen era,
     Mock (Crypto era),
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
@@ -93,7 +93,7 @@ instance
   forall era.
   ( EraGen era,
     Mock (Crypto era),
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))

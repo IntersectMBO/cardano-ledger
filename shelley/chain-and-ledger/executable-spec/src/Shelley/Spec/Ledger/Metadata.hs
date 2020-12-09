@@ -16,8 +16,6 @@
 module Shelley.Spec.Ledger.Metadata
   ( Metadatum (..),
     Metadata (Metadata),
-    MetadataHash (..),
-    ValidateMetadata (..),
     validMetadatum,
   )
 where
@@ -31,14 +29,10 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto)
 import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
-import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -48,8 +42,6 @@ import qualified Data.Text.Encoding as T
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentMetadata)
-import Shelley.Spec.Ledger.Keys (Hash)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | A generic metadatum type.
@@ -95,19 +87,6 @@ instance ToCBOR Metadatum where
 instance FromCBOR Metadatum where
   fromCBOR = decodeMetadatum
 
-newtype MetadataHash crypto = MetadataHash
-  { unsafeMetadataHash :: Hash crypto EraIndependentMetadata
-  }
-  deriving (Show, Eq, Ord, NoThunks, NFData)
-
-deriving instance
-  CC.Crypto crypto =>
-  ToCBOR (MetadataHash crypto)
-
-deriving instance
-  CC.Crypto crypto =>
-  FromCBOR (MetadataHash crypto)
-
 -- Validation of sizes
 
 validMetadatum :: Metadatum -> Bool
@@ -124,11 +103,7 @@ validMetadatum (Map kvs) =
     )
     kvs
 
-class ValidateMetadata era where
-  hashMetadata :: Core.Metadata era -> MetadataHash (Crypto era)
-  validateMetadata :: Core.Metadata era -> Bool
-
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 -- CBOR encoding and decoding
 
 encodeMetadatum :: Metadatum -> CBOR.Encoding

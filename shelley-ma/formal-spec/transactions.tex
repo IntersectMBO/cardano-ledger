@@ -34,15 +34,15 @@
        & \times ~\hldiff{\Slot^? \times \Slot^?} & \hldiff{\fun{txvldt}} & \text{validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{reward withdrawals}\\
        & \times ~\Update^?  & \fun{txUpdates} & \text{update proposals}\\
-       & \times ~\MetadataHash^? & \fun{txMDhash} & \text{metadata hash}
+       & \times ~\AuxiliaryDataHash^? & \fun{txADhash} & \text{auxiliary data hash}
     \end{array}
   \end{equation*}
   %
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
-      \var{md} ~\in~ \Metadata ~=~
+      \var{ad} ~\in~ \AuxiliaryData ~=~
       & \powerset{\Script} & \fun{scripts}& \text{Optional scripts}\\
-      & \times ~\MetadataBlob^? & \fun{mdBlob} & \text{Blob metadata}
+      & \times ~\Metadata^? & \fun{md} & \text{metadata}
     \end{array}
   \end{equation*}
   %
@@ -51,7 +51,7 @@
       \var{tx} ~\in~ \Tx ~=~
       & \TxBody & \fun{txinputs}& \text{Transaction body}\\
       &\times ~\TxWitness & \fun{txouts}& \text{Witnesses}\\
-      & \times ~\Metadata^? & \fun{txMDhash} & \text{Metadata}
+      & \times ~\AuxiliaryData^? & \fun{txADhash} & \text{Auxiliary data}
     \end{array}
   \end{equation*}
   %
@@ -138,13 +138,13 @@ The only change to the types related to transaction witnessing is the addition
 of minting policy scripts to the underlying $\Script$ type, so we do not include the
 whole $\Tx$ type here.
 
-\subsection*{Metadata}
+\subsection*{Auxiliary Data}
 
-The metadata section of the transaction consists of two parts:
-$\fun{mdBlob}$ which is a new name for the metadata type used in
+The auxiliary data section of the transaction consists of two parts:
+$\fun{md}$ which is the same metadata type used in
 Shelley, and $\fun{scripts}$, which is used to allow transactions to
 contain optional scripts that are not used for witnessing. The
 intended purpose of this field is to give users the ability to
 transmit a script that belongs to a script address via this
-metadata. There are no restrictions on this field however, and users
-can use it to put arbitrary scripts into metadata.
+auxiliary data. There are no restrictions on this field however, and users
+can use it to put arbitrary scripts into the auxiliary data.

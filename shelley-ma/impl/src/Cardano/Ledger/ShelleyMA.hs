@@ -8,12 +8,16 @@ module Cardano.Ledger.ShelleyMA where
 
 import Cardano.Binary (toCBOR)
 import Cardano.Crypto.Hash (castHash, hashWithSerialiser)
+import Cardano.Ledger.AuxiliaryData
+  ( AuxiliaryDataHash (..),
+    ValidateAuxiliaryData (..),
+  )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
-import Cardano.Ledger.ShelleyMA.Metadata (Metadata, pattern Metadata)
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData, pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     ValidityInterval,
@@ -26,11 +30,7 @@ import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import GHC.Records (HasField)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Metadata
-  ( MetadataHash (..),
-    ValidateMetadata (..),
-    validMetadatum,
-  )
+import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import Shelley.Spec.Ledger.Tx
   ( ValidateScript (..),
   )
@@ -72,8 +72,8 @@ type instance
     Timelock c
 
 type instance
-  Core.Metadata (ShelleyMAEra (ma :: MaryOrAllegra) c) =
-    Metadata (ShelleyMAEra (ma :: MaryOrAllegra) c)
+  Core.AuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c) =
+    AuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c)
 
 --------------------------------------------------------------------------------
 -- Ledger data instances
@@ -83,7 +83,7 @@ instance
   ( CryptoClass.Crypto c,
     Typeable ma,
     TxBodyConstraints (ShelleyMAEra ma c),
-    Core.AnnotatedData (Core.Metadata (ShelleyMAEra ma c)),
+    Core.AnnotatedData (Core.AuxiliaryData (ShelleyMAEra ma c)),
     (HasField "vldt" (Core.TxBody (ShelleyMAEra ma c)) ValidityInterval)
   ) =>
   ValidateScript (ShelleyMAEra ma c)
@@ -96,8 +96,7 @@ instance
     Typeable ma,
     Core.AnnotatedData (Core.Script (ShelleyMAEra ma c))
   ) =>
-  ValidateMetadata (ShelleyMAEra (ma :: MaryOrAllegra) c)
+  ValidateAuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c)
   where
-  hashMetadata = MetadataHash . castHash . hashWithSerialiser toCBOR
-
-  validateMetadata (Metadata blob sp) = deepseq sp $ all validMetadatum blob
+  hashAuxiliaryData = AuxiliaryDataHash . castHash . hashWithSerialiser toCBOR
+  validateAuxiliaryData (AuxiliaryData md as) = deepseq as $ all validMetadatum md

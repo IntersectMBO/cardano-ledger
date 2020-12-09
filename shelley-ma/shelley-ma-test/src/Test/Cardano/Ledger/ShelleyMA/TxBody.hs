@@ -132,7 +132,7 @@ fieldTests =
             (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))
         ),
       testCase "update" (assertEqual "update" (getField @"update" txM) SNothing),
-      testCase "mdHash" (assertEqual "mdHash" (getField @"mdHash" txM) SNothing),
+      testCase "adHash" (assertEqual "adHash" (getField @"adHash" txM) SNothing),
       testCase "mint" (assertEqual "mint" (getField @"mint" txM) testmint)
     ]
 

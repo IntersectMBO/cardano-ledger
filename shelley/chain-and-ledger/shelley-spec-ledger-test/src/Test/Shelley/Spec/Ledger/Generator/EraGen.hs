@@ -11,6 +11,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.EraGen (genUtxo0, genesisId, EraGen (..)) where
 
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Binary (ToCBOR (toCBOR))
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
@@ -29,7 +30,6 @@ import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.Address (toAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Tx
   ( TxId (TxId),
@@ -74,11 +74,11 @@ class
     Wdrl (Crypto era) ->
     Coin ->
     StrictMaybe (Update era) ->
-    StrictMaybe (MetadataHash (Crypto era)) ->
+    StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
     Gen (Core.TxBody era)
 
-  -- | Generate era-specific metadata
-  genEraMetadata :: Constants -> Gen (StrictMaybe (Core.Metadata era))
+  -- | Generate era-specific auxiliary data
+  genEraAuxiliaryData :: Constants -> Gen (StrictMaybe (Core.AuxiliaryData era))
 
   -- | Update an era-specific TxBody
   updateEraTxBody ::

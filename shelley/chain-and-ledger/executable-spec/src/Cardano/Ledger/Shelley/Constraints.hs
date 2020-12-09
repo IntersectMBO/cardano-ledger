@@ -9,8 +9,8 @@ module Cardano.Ledger.Shelley.Constraints where
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
   ( AnnotatedData,
+    AuxiliaryData,
     ChainData,
-    Metadata,
     Script,
     SerialisableData,
     TxBody,
@@ -55,7 +55,7 @@ type ShelleyBased era =
     -- Script constraints
     ChainData (Script era),
     AnnotatedData (Script era),
-    -- Metadata constraints
-    ChainData (Metadata era),
-    AnnotatedData (Metadata era)
+    -- AuxiliaryData constraints
+    ChainData (AuxiliaryData era),
+    AnnotatedData (AuxiliaryData era)
   )

@@ -917,7 +917,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
 verifiedWits ::
   ( TxBodyConstraints era,
     Core.AnnotatedData (Core.Script era),
-    ToCBOR (Core.Metadata era),
+    ToCBOR (Core.AuxiliaryData era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
   Tx era ->

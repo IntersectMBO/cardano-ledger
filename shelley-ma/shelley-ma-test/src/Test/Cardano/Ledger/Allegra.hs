@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Allegra
 where
 
 import Cardano.Binary (serializeEncoding', toCBOR)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
@@ -34,7 +35,6 @@ import Shelley.Spec.Ledger.API (KeyRole (Witness))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash)
-import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut, Wdrl)
 import Test.Cardano.Ledger.EraBuffet (AllegraEra)
@@ -69,9 +69,9 @@ instance CryptoClass.Crypto c => EraGen (AllegraEra c) where
   genGenesisValue (GenEnv _keySpace Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     genCoin minGenesisOutputVal maxGenesisOutputVal
   genEraTxBody _ge = genTxBody
-  genEraMetadata = error "TODO @uroboros - implement genEraMetadata for Allegra"
-  updateEraTxBody (TxBody _in _out cert wdrl _txfee vi upd meta forge) fee ins outs =
-    TxBody ins outs cert wdrl fee vi upd meta forge
+  genEraAuxiliaryData = error "TODO @uroboros - implement genEraAuxiliaryData for Allegra"
+  updateEraTxBody (TxBody _in _out cert wdrl _txfee vi upd ad forge) fee ins outs =
+    TxBody ins outs cert wdrl fee vi upd ad forge
 
 genTxBody ::
   forall era.
@@ -85,9 +85,9 @@ genTxBody ::
   Wdrl (Crypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetadataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Gen (TxBody era)
-genTxBody slot ins outs cert wdrl fee upd meta = do
+genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   let mint = mempty -- the mint field is always empty for an Allegra TxBody
   pure $
@@ -99,7 +99,7 @@ genTxBody slot ins outs cert wdrl fee upd meta = do
       fee
       validityInterval
       upd
-      meta
+      ad
       mint
 
 {------------------------------------------------------------------------------

@@ -30,8 +30,8 @@ cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest' @(Core.TxBody A) n "transaction_body_allegra",
       cddlTest' @(Core.Script M) n "native_script",
       cddlTest' @(Core.Script A) n "native_script",
-      cddlTest' @(Core.Metadata M) n "transaction_metadata",
-      cddlTest' @(Core.Metadata A) n "transaction_metadata"
+      cddlTest' @(Core.AuxiliaryData M) n "auxiliary_data",
+      cddlTest' @(Core.AuxiliaryData A) n "auxiliary_data"
     ]
       <*> pure cddl
 

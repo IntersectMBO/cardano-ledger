@@ -10,6 +10,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen (genCoin) where
 
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -22,7 +23,6 @@ import Shelley.Spec.Ledger.API
     Update,
   )
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.Scripts (MultiSig (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
@@ -52,7 +52,7 @@ instance CC.Crypto c => EraGen (ShelleyEra c) where
   genGenesisValue (GenEnv _keySpace Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     genCoin minGenesisOutputVal maxGenesisOutputVal
   genEraTxBody _ge = genTxBody
-  genEraMetadata = genMetadata
+  genEraAuxiliaryData = genMetadata
 
   updateEraTxBody body fee ins outs =
     body
@@ -87,9 +87,9 @@ genTxBody ::
   Wdrl (Crypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetadataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Gen (TxBody era)
-genTxBody slot inputs outputs certs wdrls fee update mdHash = do
+genTxBody slot inputs outputs certs wdrls fee update adHash = do
   ttl <- genTimeToLive slot
   return $
     TxBody
@@ -100,7 +100,7 @@ genTxBody slot inputs outputs certs wdrls fee update mdHash = do
       fee
       ttl
       update
-      mdHash
+      adHash
 
 genTimeToLive :: SlotNo -> Gen SlotNo
 genTimeToLive currentSlot = do
