@@ -782,3 +782,12 @@ instance
   Arbitrary (Block era)
   where
   arbitrary = genBlock
+
+instance
+  ( Era era,
+    Arbitrary (STS.PredicateFailure (LEDGER era))
+  ) =>
+  Arbitrary (ApplyTxError era)
+  where
+  arbitrary = ApplyTxError <$> arbitrary
+  shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
