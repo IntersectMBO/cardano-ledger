@@ -108,7 +108,7 @@ pattern Metadata blob sp <-
 encMetadataRaw ::
   (Core.AnnotatedData (Core.Script era)) =>
   MetadataRaw era ->
-  Encode ( 'Closed 'Dense) (MetadataRaw era)
+  Encode ('Closed 'Dense) (MetadataRaw era)
 encMetadataRaw (MetadataRaw blob sp) =
   Rec MetadataRaw
     !> E mapToCBOR blob

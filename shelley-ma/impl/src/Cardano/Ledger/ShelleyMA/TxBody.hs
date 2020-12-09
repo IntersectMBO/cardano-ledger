@@ -175,7 +175,7 @@ encodeKeyedStrictMaybe ::
   ToCBOR a =>
   Word ->
   StrictMaybe a ->
-  Encode ( 'Closed 'Sparse) (StrictMaybe a)
+  Encode ('Closed 'Sparse) (StrictMaybe a)
 encodeKeyedStrictMaybe key x = Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
 
 -- Sparse encodings of TxBodyRaw, the key values are fixed by backwarad compatibility
@@ -185,7 +185,7 @@ encodeKeyedStrictMaybe key x = Omit isSNothing (Key key (E (toCBOR . fromSJust) 
 txSparse ::
   (Val (Value era), FamsTo era) =>
   TxBodyRaw era ->
-  Encode ( 'Closed 'Sparse) (TxBodyRaw era)
+  Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
   Keyed (\i o f topx c w u h botx forg -> TxBodyRaw i o c w f (ValidityInterval botx topx) u h forg)
     !> Key 0 (E encodeFoldable inp) -- We don't have to send these in TxBodyX order

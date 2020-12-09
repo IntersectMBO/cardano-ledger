@@ -114,13 +114,13 @@ data ValidityInterval = ValidityInterval
   }
   deriving (Ord, Eq, Generic, Show, NoThunks, NFData)
 
-encodeVI :: ValidityInterval -> Encode ( 'Closed 'Dense) ValidityInterval
+encodeVI :: ValidityInterval -> Encode ('Closed 'Dense) ValidityInterval
 encodeVI (ValidityInterval f t) = Rec ValidityInterval !> To f !> To t
 
 instance ToCBOR ValidityInterval where
   toCBOR vi = encode (encodeVI vi)
 
-decodeVI :: Decode ( 'Closed 'Dense) ValidityInterval
+decodeVI :: Decode ('Closed 'Dense) ValidityInterval
 decodeVI = RecD ValidityInterval <! From <! From
 
 instance FromCBOR ValidityInterval where
