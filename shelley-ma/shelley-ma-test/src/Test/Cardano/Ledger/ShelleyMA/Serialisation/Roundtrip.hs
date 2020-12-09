@@ -21,26 +21,23 @@
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 
 import Cardano.Binary (Annotator (..), FromCBOR, ToCBOR)
-import qualified Cardano.Ledger.Mary.Value as Mary
-  ( AssetName (..),
-    PolicyID (..),
-    Value (..),
-    valueFromList,
-  )
+import Cardano.Ledger.Core (SerialisableData)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Cardano.Ledger.ShelleyMA.Metadata as MA
+import Control.State.Transition
 import qualified Data.ByteString.Lazy as Lazy (null)
+import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Sequence.Strict (StrictSeq, fromList)
-import Data.String (fromString)
+import Shelley.Spec.Ledger.API (ApplyTxError, UTXOW)
 import qualified Shelley.Spec.Ledger.Metadata as Shelley (Metadata (..))
-import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Test.Cardano.Ledger.EraBuffet
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
   ( roundTrip,
     roundTripAnn,
   )
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
+import Test.QuickCheck (counterexample, forAll, (===))
 import Test.Shelley.Spec.Ledger.Generator.Metadata ()
-import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators (genHash)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (Gen, arbitrary, choose, testProperty, vectorOf)
@@ -73,7 +70,7 @@ genScript Allegra = arbitrary
 
 genValue :: EraIndex e -> Gen (Value e)
 genValue Shelley = arbitrary
-genValue Mary = genMaryValue Mary
+genValue Mary = arbitrary
 genValue Allegra = arbitrary
 
 genMeta :: EraIndex e -> Gen (Metadata e)
@@ -87,34 +84,10 @@ genMeta Allegra = do
   pure (MA.Metadata m s)
 genMeta Shelley = Shelley.Metadata <$> arbitrary
 
--- ==========================================================
--- Parameterized helper functions for generating Mary style Values
-
-genAssetName :: Gen Mary.AssetName
-genAssetName = Mary.AssetName . fromString <$> arbitrary
-
-genPolicyID :: EraIndex e -> Gen (Mary.PolicyID e)
-genPolicyID index = Mary.PolicyID <$> genScriptHash index
-
-genScriptHash :: EraIndex e -> Gen (ScriptHash e)
-genScriptHash Shelley = ScriptHash <$> genHash
-genScriptHash Mary = ScriptHash <$> genHash
-genScriptHash Allegra = ScriptHash <$> genHash
-
-genMaryValue :: EraIndex era -> Gen (Mary.Value era)
-genMaryValue index = do
-  ada <- arbitrary
-  size <- choose (0, 10)
-  triples <-
-    vectorOf
-      size
-      ( do
-          p <- genPolicyID index
-          n <- genAssetName
-          i <- choose (-3, 50)
-          pure (p, n, i)
-      )
-  pure $ Mary.valueFromList ada triples
+genApplyTxError :: EraIndex e -> Gen (ApplyTxError e)
+genApplyTxError Shelley = arbitrary
+genApplyTxError Mary = arbitrary
+genApplyTxError Allegra = arbitrary
 
 -- ==========================================================
 -- Parameterized helper function for generating MA style Metadata
@@ -154,35 +127,23 @@ property ::
   EraIndex e ->
   (EraIndex e -> Gen t) ->
   TestTree
-property name i gen = testProperty ("roundtrip " ++ name) $ do
-  x <- gen i
-  case roundTrip x of
-    Right (left, _)
-      | not (Lazy.null left) ->
-        error ("unconsumed trailing bytes: " ++ show left)
-    Right (_, y) ->
-      if x == y
-        then pure True
-        else error ("Unequal\n   " ++ show x ++ "\n   " ++ show y)
-    Left s -> error (show s)
+property name i gen = testProperty ("roundtrip " ++ name) $
+  forAll (gen i) $ \x -> case roundTrip x of
+    Right (remaining, y) | BSL.null remaining -> x === y
+    Right (remaining, _) ->
+      counterexample
+        ("Unconsumed trailing bytes:\n" <> BSL.unpack remaining)
+        False
+    Left stuff ->
+      counterexample
+        ("Failed to decode: " <> show stuff)
+        False
 
 allprops ::
-  ( ToCBOR (TxBody e),
-    ToCBOR (Metadata e),
-    ToCBOR (Value e),
-    ToCBOR (Script e),
-    Eq (TxBody e),
-    Eq (Metadata e),
-    Eq (Value e),
-    Eq (Script e),
-    Show (TxBody e),
-    Show (Metadata e),
-    Show (Value e),
-    Show (Script e),
-    FromCBOR (Value e),
-    FromCBOR (Annotator (TxBody e)),
-    FromCBOR (Annotator (Metadata e)),
-    FromCBOR (Annotator (Script e))
+  ( ShelleyBased e,
+    SerialisableData (ApplyTxError e),
+    Eq (PredicateFailure (UTXOW e)),
+    Show (PredicateFailure (UTXOW e))
   ) =>
   EraIndex e ->
   TestTree
@@ -192,7 +153,8 @@ allprops index =
     [ propertyAnn "TxBody" index genTxBody,
       propertyAnn "Metadata" index genMeta,
       property "Value" index genValue,
-      propertyAnn "Script" index genScript
+      propertyAnn "Script" index genScript,
+      property "ApplyTxError" index genApplyTxError
     ]
 
 allEraRoundtripTests :: TestTree
