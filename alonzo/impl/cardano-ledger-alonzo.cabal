@@ -1,4 +1,4 @@
-cabal-version:       2.2
+cabal-version:       3.0
 
 name:                cardano-ledger-alonzo
 version:             0.1.0.0
@@ -21,9 +21,68 @@ library
     buildable: False
   exposed-modules:
     Cardano.Ledger.Alonzo
+    Cardano.Ledger.Alonzo.Data
+    Cardano.Ledger.Alonzo.Scripts
+    Cardano.Ledger.Alonzo.TxBody
+    Cardano.Ledger.Alonzo.TxWitness
   build-depends:
     base >=4.14 && <4.15,
-    shelley-spec-ledger
-
-  -- hs-source-dirs:
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-shelley-ma,
+    cardano-prelude,
+    containers,
+    deepseq,
+    nothunks,
+    shelley-spec-ledger,
+    small-steps
+  hs-source-dirs:
+    src
   default-language:    Haskell2010
+
+library test
+  if impl(ghc < 8.10)
+    buildable: False
+  visibility: public
+  exposed-modules:
+    Test.Cardano.Ledger.Alonzo.Serialisation.Generators
+  build-depends:
+    base >=4.14 && <4.15,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-alonzo,
+    cardano-ledger-shelley-ma,
+    cardano-slotting,
+    containers,
+    deepseq,
+    nothunks,
+    QuickCheck,
+    shelley-spec-ledger-test,
+    shelley-spec-ledger,
+    small-steps
+  hs-source-dirs:
+    test/lib
+  default-language:    Haskell2010
+
+test-suite tests
+  if impl(ghc < 8.10)
+    buildable: False
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  hs-source-dirs:
+    test/test
+  other-modules:
+    Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
+  build-depends:
+    base >=4.14 && <4.15,
+    bytestring,
+    cardano-binary,
+    cardano-ledger-alonzo,
+    cardano-ledger-shelley-ma-test,
+    QuickCheck,
+    shelley-spec-ledger-test,
+    tasty-hunit,
+    tasty-quickcheck,
+    tasty,
+    -- cardano-ledger-alonzo:test
+    test
