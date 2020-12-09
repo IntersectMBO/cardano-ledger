@@ -23,13 +23,9 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 import Cardano.Binary (Annotator (..), FromCBOR, ToCBOR)
 import Cardano.Ledger.Core (SerialisableData)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
-import qualified Cardano.Ledger.ShelleyMA.Metadata as MA
 import Control.State.Transition
-import qualified Data.ByteString.Lazy as Lazy (null)
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import Data.Sequence.Strict (StrictSeq, fromList)
 import Shelley.Spec.Ledger.API (ApplyTxError, UTXOW)
-import qualified Shelley.Spec.Ledger.Metadata as Shelley (Metadata (..))
 import Test.Cardano.Ledger.EraBuffet
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
   ( roundTrip,
@@ -40,7 +36,7 @@ import Test.QuickCheck (counterexample, forAll, (===))
 import Test.Shelley.Spec.Ledger.Generator.Metadata ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (Gen, arbitrary, choose, testProperty, vectorOf)
+import Test.Tasty.QuickCheck (Gen, arbitrary, testProperty)
 
 -- ======================================================================
 -- Witnesses to each Era
@@ -74,29 +70,14 @@ genValue Mary = arbitrary
 genValue Allegra = arbitrary
 
 genMeta :: EraIndex e -> Gen (Metadata e)
-genMeta Mary = do
-  m <- arbitrary
-  s <- genScriptSeq Mary
-  pure (MA.Metadata m s)
-genMeta Allegra = do
-  m <- arbitrary
-  s <- genScriptSeq Allegra
-  pure (MA.Metadata m s)
-genMeta Shelley = Shelley.Metadata <$> arbitrary
+genMeta Mary = arbitrary
+genMeta Allegra = arbitrary
+genMeta Shelley = arbitrary
 
 genApplyTxError :: EraIndex e -> Gen (ApplyTxError e)
 genApplyTxError Shelley = arbitrary
 genApplyTxError Mary = arbitrary
 genApplyTxError Allegra = arbitrary
-
--- ==========================================================
--- Parameterized helper function for generating MA style Metadata
-
-genScriptSeq :: EraIndex e -> Gen (StrictSeq (Script e))
-genScriptSeq index = do
-  n <- choose (0, 6)
-  l <- vectorOf n (genScript index)
-  pure (fromList l)
 
 -- ==========================================================
 -- EraIndex parameterized property tests
