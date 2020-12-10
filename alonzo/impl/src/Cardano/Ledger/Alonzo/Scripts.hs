@@ -1,11 +1,16 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
-    Script,
+    Script (..),
     ExUnits (..),
     CostModel,
     Language,
@@ -14,12 +19,14 @@ module Cardano.Ledger.Alonzo.Scripts
 where
 
 import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
 import Data.Coders
 import Data.Map (Map)
+import Data.Typeable
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -29,22 +36,27 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 -- as a validator.
 data Tag
   = -- | Validates spending a script-locked UTxO
-    Input
+    Spend
   | -- | Validates minting new tokens
     Mint
   | -- | Validates certificate transactions
     Cert
   | -- | Validates withdrawl from a reward account
-    Wdrl
+    Rewrd
   deriving (Eq, Generic, Ord, Show)
 
 instance NoThunks Tag
 
--- TODO Extend this to include Plutus scripts (CAD-1908)
--- data Script era
---   = NativeScript (Timelock era)
---   | NonNativeScript
-type Script era = Timelock (Crypto era)
+data Script era
+  = NativeScript (Timelock (Crypto era))
+  | PlutusScript
+  deriving (Eq, Show, Generic, Ord)
+
+instance Typeable (Crypto era) => NoThunks (Script era)
+
+instance NFData (Script era)
+
+-- type Script era = Timelock (Crypto era)
 
 -- | Arbitrary execution unit in which we measure the cost of scripts.
 data ExUnits = ExUnits
@@ -105,18 +117,18 @@ instance NFData Prices
 instance ToCBOR Tag where
   toCBOR = encode . encodeTag
     where
-      encodeTag Input = Sum Input 0
+      encodeTag Spend = Sum Spend 0
       encodeTag Mint = Sum Mint 1
       encodeTag Cert = Sum Cert 2
-      encodeTag Wdrl = Sum Wdrl 3
+      encodeTag Rewrd = Sum Rewrd 3
 
 instance FromCBOR Tag where
   fromCBOR = decode $ Summands "Tag" decodeTag
     where
-      decodeTag 0 = SumD Input
+      decodeTag 0 = SumD Spend
       decodeTag 1 = SumD Mint
       decodeTag 2 = SumD Cert
-      decodeTag 3 = SumD Wdrl
+      decodeTag 3 = SumD Rewrd
       decodeTag n = Invalid n
 
 instance ToCBOR ExUnits where
@@ -130,3 +142,21 @@ instance ToCBOR Prices where
 
 instance FromCBOR Prices where
   fromCBOR = decode $ RecD Prices <! From <! From
+
+instance forall era. (Typeable (Crypto era), Typeable era) => ToCBOR (Script era) where
+  toCBOR x = encode (encodeScript x)
+    where
+      encodeScript :: Script era -> Encode 'Open (Script era)
+      encodeScript (NativeScript i) = Sum NativeScript 0 !> To i
+      encodeScript PlutusScript = Sum PlutusScript 1
+
+instance
+  (CC.Crypto (Crypto era), Typeable (Crypto era), Typeable era) =>
+  FromCBOR (Annotator (Script era))
+  where
+  fromCBOR = decode (Summands "Alonzo Script" decodeScript)
+    where
+      decodeScript :: Word -> Decode 'Open (Annotator (Script era))
+      decodeScript 0 = Ann (SumD NativeScript) <*! From
+      decodeScript 1 = Ann (SumD PlutusScript)
+      decodeScript n = Invalid n

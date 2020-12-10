@@ -5,30 +5,51 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Alonzo.Tx
   ( IsValidating (..),
     Tx (Tx, body, wits, isValidating, auxiliaryData),
+    ScriptPurpose (..),
+    Indexable (..),
+    txrdmrs,
+    rdptr,
+    getMapFromValue,
+    indexedRdmrs,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Alonzo.TxBody (TxBody)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
+import Cardano.Ledger.Alonzo.Data (Data)
+import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Tag (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoBody, TxBody (..), TxIn)
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), TxWitness (..))
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Mary.Value (AssetName, PolicyID, Value (..))
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val)
 import Data.Coders
+import qualified Data.Map as Map
 import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
+import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
+import Shelley.Spec.Ledger.Address (RewardAcnt)
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe, maybeToStrictMaybe, strictMaybeToMaybe)
+import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
+import Shelley.Spec.Ledger.TxBody (Wdrl (..), unWdrl)
+
+-- ===================================================
 
 -- | Tag indicating whether non-native scripts in this transaction are expected
 -- to validate. This is added by the block creator when constructing the block.
@@ -182,3 +203,65 @@ deriving via
       Val (Core.Value era)
     ) =>
     FromCBOR (Annotator (Tx era))
+
+-- ===========================================
+-- Operations on scripts from specification
+-- Figure 6:Indexing script and data objects
+
+data ScriptPurpose crypto
+  = Minting !(PolicyID crypto)
+  | Spending !(TxIn crypto)
+  | Rewarding !(RewardAcnt crypto) -- Not sure if this is the right type.
+  | Certifying !(DCert crypto)
+
+class Indexable elem container where
+  indexOf :: elem -> container -> Word64
+  atIndex :: Word64 -> container -> elem
+
+instance Ord k => Indexable k (Set.Set k) where
+  indexOf n set = fromIntegral $ Set.findIndex n set
+  atIndex i set = Set.elemAt (fromIntegral i) set
+
+instance Eq k => Indexable k (StrictSeq k) where
+  indexOf n seqx = case StrictSeq.findIndexL (== n) seqx of
+    Just m -> fromIntegral m
+    Nothing -> error ("Not found in StrictSeq")
+  atIndex i seqx = case StrictSeq.lookup (fromIntegral i) seqx of
+    Just element -> element
+    Nothing -> error ("No elem at index " ++ show i)
+
+instance Ord k => Indexable k (Map.Map k v) where
+  indexOf n mp = fromIntegral $ Map.findIndex n mp
+  atIndex i mp = fst (Map.elemAt (fromIntegral i) mp) -- If one needs the value, on can use Map.Lookup
+
+rdptr ::
+  AlonzoBody era =>
+  TxBody era ->
+  ScriptPurpose (Crypto era) ->
+  RdmrPtr
+rdptr txbody (Minting pid) = RdmrPtr AlonzoScript.Mint (indexOf pid (getMapFromValue (mint txbody)))
+rdptr txbody (Spending txin) = RdmrPtr AlonzoScript.Spend (indexOf txin (inputs txbody))
+rdptr txbody (Rewarding racnt) = RdmrPtr AlonzoScript.Rewrd (indexOf racnt (unWdrl (wdrls txbody)))
+rdptr txbody (Certifying d) = RdmrPtr AlonzoScript.Cert (indexOf d (certs txbody))
+
+getMapFromValue :: Value crypto -> Map.Map (PolicyID crypto) (Map.Map AssetName Integer)
+getMapFromValue (Value _ m) = m
+
+txrdmrs ::
+  (Era era, ToCBOR (Core.Script era)) =>
+  TxWitness era ->
+  Map.Map RdmrPtr (Data era)
+txrdmrs (TxWitness {witsRdmr = m}) = m
+
+indexedRdmrs ::
+  ( Era era,
+    ToCBOR (Core.AuxiliaryData era),
+    ToCBOR (Core.Script era),
+    ToCBOR (CompactForm (Core.Value era))
+  ) =>
+  Tx era ->
+  ScriptPurpose (Crypto era) ->
+  Maybe (Data era)
+indexedRdmrs tx sp = Map.lookup policyid (txrdmrs . wits $ tx)
+  where
+    policyid = rdptr (body tx) sp

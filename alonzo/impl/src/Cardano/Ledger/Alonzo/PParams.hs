@@ -36,7 +36,7 @@ import Cardano.Binary
     encodeWord,
   )
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), Language, Prices (..))
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
