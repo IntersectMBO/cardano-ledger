@@ -36,6 +36,7 @@ module Cardano.Ledger.ShelleyMA.TxBody
 where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible (CompactForm (..), Compactible (..))
 import Cardano.Ledger.Core (Script, Value)
 import qualified Cardano.Ledger.Core as Core
@@ -71,7 +72,6 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (..))
-import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Serialization (encodeFoldable)
 import Shelley.Spec.Ledger.TxBody
@@ -91,7 +91,7 @@ type FamsFrom era =
   ( Era era,
     Typeable era,
     Typeable (Script era),
-    Typeable (Core.Metadata era),
+    Typeable (Core.AuxiliaryData era),
     Show (Value era),
     Compactible (Value era),
     DecodeNonNegative (Value era),
@@ -108,7 +108,7 @@ type FamsTo era =
     EncodeMint (Value era),
     ToCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
     ToCBOR (Script era),
-    Typeable (Core.Metadata era)
+    Typeable (Core.AuxiliaryData era)
   )
 
 -- =======================================================
@@ -121,7 +121,7 @@ data TxBodyRaw era = TxBodyRaw
     txfee :: !Coin,
     vldt :: !ValidityInterval, -- imported from Timelocks
     update :: !(StrictMaybe (Update era)),
-    mdHash :: !(StrictMaybe (MetadataHash (Crypto era))),
+    adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
     mint :: !(Value era)
   }
   deriving (Typeable)
@@ -203,12 +203,12 @@ bodyFields :: FamsFrom era => Word -> Field (TxBodyRaw era)
 bodyFields 0 = field (\x tx -> tx {inputs = x}) (D (decodeSet fromCBOR))
 bodyFields 1 = field (\x tx -> tx {outputs = x}) (D (decodeStrictSeq fromCBOR))
 bodyFields 2 = field (\x tx -> tx {txfee = x}) From
-bodyFields 3 = field (\x tx -> tx {vldt = (vldt tx) {validTo = x}}) (D (SJust <$> fromCBOR))
+bodyFields 3 = field (\x tx -> tx {vldt = (vldt tx) {invalidHereafter = x}}) (D (SJust <$> fromCBOR))
 bodyFields 4 = field (\x tx -> tx {certs = x}) (D (decodeStrictSeq fromCBOR))
 bodyFields 5 = field (\x tx -> tx {wdrls = x}) From
 bodyFields 6 = field (\x tx -> tx {update = x}) (D (SJust <$> fromCBOR))
-bodyFields 7 = field (\x tx -> tx {mdHash = x}) (D (SJust <$> fromCBOR))
-bodyFields 8 = field (\x tx -> tx {vldt = (vldt tx) {validFrom = x}}) (D (SJust <$> fromCBOR))
+bodyFields 7 = field (\x tx -> tx {adHash = x}) (D (SJust <$> fromCBOR))
+bodyFields 8 = field (\x tx -> tx {vldt = (vldt tx) {invalidBefore = x}}) (D (SJust <$> fromCBOR))
 bodyFields 9 = field (\x tx -> tx {mint = x}) (D decodeMint)
 bodyFields n = field (\_ t -> t) (Invalid n)
 
@@ -267,7 +267,7 @@ pattern TxBody ::
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetadataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Value era ->
   TxBody era
 pattern TxBody i o d w fee vi u m mint <-
@@ -317,8 +317,8 @@ instance HasField "vldt" (TxBody era) ValidityInterval where
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"update" m
 
-instance Crypto era ~ crypto => HasField "mdHash" (TxBody era) (StrictMaybe (MetadataHash crypto)) where
-  getField (TxBodyConstr (Memo m _)) = getField @"mdHash" m
+instance Crypto era ~ crypto => HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash crypto)) where
+  getField (TxBodyConstr (Memo m _)) = getField @"adHash" m
 
 instance Value era ~ value => HasField "mint" (TxBody era) value where
   getField (TxBodyConstr (Memo m _)) = getField @"mint" m

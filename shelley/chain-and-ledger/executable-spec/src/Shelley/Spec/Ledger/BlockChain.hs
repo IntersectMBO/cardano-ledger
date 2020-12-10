@@ -184,7 +184,7 @@ deriving stock instance
   Eq (TxSeq era)
 
 pattern TxSeq ::
-  (Era era, TxBodyConstraints era, ToCBOR (Core.Metadata era)) =>
+  (Era era, TxBodyConstraints era, ToCBOR (Core.AuxiliaryData era)) =>
   StrictSeq (Tx era) ->
   TxSeq era
 pattern TxSeq xs <-

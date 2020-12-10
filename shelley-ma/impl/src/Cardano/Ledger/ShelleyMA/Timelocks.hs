@@ -110,8 +110,8 @@ translate multi =
 -- | ValidityInterval is a half open interval. Closed on the bottom, Open on the top.
 --   A SNothing on the bottom is negative infinity, and a SNothing on the top is positive infinity
 data ValidityInterval = ValidityInterval
-  { validFrom :: !(StrictMaybe SlotNo),
-    validTo :: !(StrictMaybe SlotNo)
+  { invalidBefore :: !(StrictMaybe SlotNo),
+    invalidHereafter :: !(StrictMaybe SlotNo)
   }
   deriving (Ord, Eq, Generic, Show, NoThunks, NFData)
 
@@ -288,7 +288,7 @@ validateTimelock ::
   forall era.
   ( TxBodyConstraints era,
     HasField "vldt" (Core.TxBody era) ValidityInterval,
-    ToCBOR (Core.Metadata era)
+    ToCBOR (Core.AuxiliaryData era)
   ) =>
   Timelock (Crypto era) ->
   Tx era ->

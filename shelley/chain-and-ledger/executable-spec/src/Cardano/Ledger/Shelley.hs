@@ -12,6 +12,10 @@ module Cardano.Ledger.Shelley where
 
 import Cardano.Binary (toCBOR)
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.AuxiliaryData
+  ( AuxiliaryDataHash (..),
+    ValidateAuxiliaryData (..),
+  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
@@ -19,12 +23,7 @@ import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (hashWithSerialiser)
-import Shelley.Spec.Ledger.Metadata
-  ( Metadata (Metadata),
-    MetadataHash (MetadataHash),
-    ValidateMetadata (hashMetadata, validateMetadata),
-    validMetadatum,
-  )
+import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
   ( TxBody,
@@ -48,7 +47,7 @@ type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
 
 type instance Core.Script (ShelleyEra c) = MultiSig c
 
-type instance Core.Metadata (ShelleyEra c) = Metadata
+type instance Core.AuxiliaryData (ShelleyEra c) = Metadata
 
 --------------------------------------------------------------------------------
 -- Ledger data instances
@@ -61,6 +60,6 @@ instance
   validateScript = validateNativeMultiSigScript
   hashScript = hashMultiSigScript
 
-instance CryptoClass.Crypto c => ValidateMetadata (ShelleyEra c) where
-  hashMetadata = MetadataHash . Hash.castHash . hashWithSerialiser @(HASH c) toCBOR
-  validateMetadata (Metadata m) = all validMetadatum m
+instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) where
+  hashAuxiliaryData = AuxiliaryDataHash . Hash.castHash . hashWithSerialiser @(HASH c) toCBOR
+  validateAuxiliaryData (Metadata m) = all validMetadatum m

@@ -25,6 +25,7 @@ import Cardano.Crypto.DSIGN (encodeSignedDSIGN, encodeVerKeyDSIGN)
 import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
+import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
@@ -357,7 +358,7 @@ testBHB ::
   forall era crypto.
   ( Era era,
     TxBodyConstraints era,
-    ToCBOR (Core.Metadata era),
+    ToCBOR (Core.AuxiliaryData era),
     ExMock crypto,
     crypto ~ Crypto era
   ) =>
@@ -401,7 +402,7 @@ testBHBSigTokens ::
   forall era.
   ( Era era,
     ExMock (Crypto era),
-    ToCBOR (Core.Metadata era),
+    ToCBOR (Core.AuxiliaryData era),
     TxBodyConstraints era
   ) =>
   Tokens ->
@@ -892,7 +893,7 @@ tests =
                   )
               )
               (EpochNo 0)
-          mdh = MD.hashMetadata @C $ MD.Metadata $ Map.singleton 13 (MD.I 17)
+          mdh = hashAuxiliaryData @C $ MD.Metadata $ Map.singleton 13 (MD.I 17)
        in checkEncodingCBORAnnotated
             "txbody_full"
             ( TxBody -- transaction body with all components

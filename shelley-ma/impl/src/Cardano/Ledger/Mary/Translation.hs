@@ -21,7 +21,10 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (Value (..))
-import Cardano.Ledger.ShelleyMA.Metadata (Metadata (..), pattern Metadata)
+import Cardano.Ledger.ShelleyMA.AuxiliaryData
+  ( AuxiliaryData (..),
+    pattern AuxiliaryData,
+  )
 import Cardano.Ledger.ShelleyMA.TxBody
 import qualified Cardano.Ledger.Val as Val
 import Data.Coerce (coerce)
@@ -181,9 +184,9 @@ instance Crypto c => TranslateEra (MaryEra c) TxBody where
         (coerce m)
         (translateValue mint)
 
-instance Crypto c => TranslateEra (MaryEra c) Metadata where
-  translateEra _ (Metadata blob sp) =
-    pure $ Metadata blob sp
+instance Crypto c => TranslateEra (MaryEra c) AuxiliaryData where
+  translateEra _ (AuxiliaryData md as) =
+    pure $ AuxiliaryData md as
 
 translateValue :: Crypto c => Coin -> Value c
 translateValue = Val.inject

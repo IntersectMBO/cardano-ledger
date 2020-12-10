@@ -18,7 +18,7 @@ module Cardano.Ledger.Core
     TxBody,
     Value,
     Script,
-    Metadata,
+    AuxiliaryData,
 
     -- * Constraint synonyms
     ChainData,
@@ -41,8 +41,8 @@ type family TxBody era :: Type
 -- | Scripts which may lock transaction outputs in this era
 type family Script era :: Type
 
--- | Metadata which may be attached to a transaction
-type family Metadata era :: Type
+-- | AuxiliaryData which may be attached to a transaction
+type family AuxiliaryData era :: Type
 
 -- | Common constraints
 --

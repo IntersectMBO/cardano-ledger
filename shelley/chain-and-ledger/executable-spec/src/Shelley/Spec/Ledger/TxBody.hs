@@ -80,6 +80,7 @@ import Cardano.Binary
     serializeEncoding,
     szCases,
   )
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -171,7 +172,6 @@ import Shelley.Spec.Ledger.Keys
     encodeSignedDSIGN,
     hashKey,
   )
-import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Serialization
@@ -602,9 +602,9 @@ type ProperFrom era =
     Compactible (Core.Value era),
     Show (Core.Value era),
     Typeable (Core.Script era),
-    Typeable (Core.Metadata era),
+    Typeable (Core.AuxiliaryData era),
     FromCBOR (Annotator (Core.Script era)),
-    FromCBOR (Annotator (Core.Metadata era))
+    FromCBOR (Annotator (Core.AuxiliaryData era))
   )
 
 -- | Needed for ToCBOR instances
@@ -613,7 +613,7 @@ type ProperTo era =
     ToCBOR (Core.Value era),
     Compactible (Core.Value era),
     ToCBOR (CompactForm (Core.Value era)),
-    ToCBOR (Core.Metadata era),
+    ToCBOR (Core.AuxiliaryData era),
     ToCBOR (Core.Script era)
   )
 
@@ -628,7 +628,7 @@ data TxBodyRaw era = TxBodyRaw
     _txfeeX :: !Coin,
     _ttlX :: !SlotNo,
     _txUpdateX :: !(StrictMaybe (Update era)),
-    _mdHashX :: !(StrictMaybe (MetadataHash (Crypto era)))
+    _mdHashX :: !(StrictMaybe (AuxiliaryDataHash (Crypto era)))
   }
   deriving (Generic, NoThunks, Typeable)
 
@@ -739,7 +739,7 @@ pattern TxBody ::
   Coin ->
   SlotNo ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetadataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   TxBody era
 pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
   TxBodyConstr
@@ -790,7 +790,10 @@ instance HasField "ttl" (TxBody era) SlotNo where
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"_txUpdateX" m
 
-instance Crypto era ~ crypto => HasField "mdHash" (TxBody era) (StrictMaybe (MetadataHash crypto)) where
+instance
+  Crypto era ~ crypto =>
+  HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash crypto))
+  where
   getField (TxBodyConstr (Memo m _)) = getField @"_mdHashX" m
 
 -- ===============================================================

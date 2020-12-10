@@ -14,7 +14,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Era (TranslateEra (..))
-import qualified Cardano.Ledger.ShelleyMA.Metadata as MA
+import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
 import qualified Shelley.Spec.Ledger.API as S
 import Test.Cardano.Ledger.EraBuffet
   ( AllegraEra,
@@ -40,8 +40,8 @@ allegraEncodeDecodeTests =
   testGroup
     "encoded shelley types can be decoded as allegra types"
     [ testProperty
-        "decoding metadata"
-        (decodeTestAnn @S.Metadata ([] :: [MA.Metadata Allegra]))
+        "decoding auxiliary data"
+        (decodeTestAnn @S.Metadata ([] :: [MA.AuxiliaryData Allegra]))
     ]
 
 allegraTranslationTests :: TestTree

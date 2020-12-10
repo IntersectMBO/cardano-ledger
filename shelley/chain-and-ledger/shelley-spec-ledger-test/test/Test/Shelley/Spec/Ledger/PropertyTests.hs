@@ -14,6 +14,7 @@ module Test.Shelley.Spec.Ledger.PropertyTests
   )
 where
 
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Data.Proxy
@@ -25,7 +26,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
-import Shelley.Spec.Ledger.Metadata (MetadataHash, ValidateMetadata)
 import Shelley.Spec.Ledger.PParams (Update (..))
 import Shelley.Spec.Ledger.TxBody (TxIn, TxOut, Wdrl)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
@@ -61,13 +61,13 @@ minimalPropertyTests ::
   forall era.
   ( EraGen era,
     ChainProperty era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash (Crypto era))),
+    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   TestTree
@@ -96,13 +96,13 @@ propertyTests ::
   forall era.
   ( EraGen era,
     ChainProperty era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "mdHash" (Core.TxBody era) (StrictMaybe (MetadataHash (Crypto era))),
+    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   TestTree

@@ -26,6 +26,7 @@ module BenchValidation
   )
 where
 
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Prelude (NFData (rnf))
@@ -55,7 +56,6 @@ import Shelley.Spec.Ledger.LedgerState
   ( NewEpochState,
     nesBcur,
   )
-import Shelley.Spec.Ledger.Metadata (ValidateMetadata)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
@@ -77,7 +77,7 @@ validateInput ::
   ( EraGen era,
     ShelleyTest era,
     Mock (Crypto era),
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     API.GetLedgerView era,
     API.ApplyBlock era,
     ShelleyLedgerSTS era
@@ -90,7 +90,7 @@ genValidateInput ::
   ( EraGen era,
     ShelleyTest era,
     Mock (Crypto era),
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     API.GetLedgerView era,
     API.ApplyBlock era,
     ShelleyLedgerSTS era
@@ -171,7 +171,7 @@ genUpdateInputs ::
   ( EraGen era,
     ShelleyTest era,
     Mock (Crypto era),
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     API.GetLedgerView era,
     API.ApplyBlock era,
     ShelleyLedgerSTS era

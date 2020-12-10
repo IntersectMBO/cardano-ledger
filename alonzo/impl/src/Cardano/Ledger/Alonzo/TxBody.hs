@@ -26,7 +26,7 @@ module Cardano.Ledger.Alonzo.TxBody
         txfee,
         vldt,
         update,
-        mdHash,
+        adHash,
         mint,
         exunits,
         scriptHash
@@ -38,6 +38,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits)
 import Cardano.Ledger.Alonzo.TxWitness (ScriptDataHash)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -69,7 +70,6 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.Hashing
-import Shelley.Spec.Ledger.Metadata (MetadataHash)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.TxBody (TxId, Wdrl (Wdrl), unWdrl)
 
@@ -139,7 +139,7 @@ data TxBodyRaw era = TxBodyRaw
     _txfee :: !Coin,
     _vldt :: !ValidityInterval,
     _update :: !(StrictMaybe (Update era)),
-    _mdHash :: !(StrictMaybe (MetadataHash (Crypto era))),
+    _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
     _mint :: !(Core.Value era),
     _exunits :: !ExUnits,
     _scriptHash :: !(StrictMaybe (ScriptDataHash (Crypto era)))
@@ -186,7 +186,7 @@ deriving via
   instance
     ( Era era,
       Typeable (Core.Script era),
-      Typeable (Core.Metadata era),
+      Typeable (Core.AuxiliaryData era),
       Val (Core.Value era),
       Compactible (Core.Value era),
       Show (Core.Value era),
@@ -198,7 +198,7 @@ deriving via
 
 pattern TxBody ::
   ( Era era,
-    Typeable (Core.Metadata era),
+    Typeable (Core.AuxiliaryData era),
     Typeable (Core.Script era),
     ToCBOR (CompactForm (Core.Value era)),
     ToCBOR (Core.Script era),
@@ -212,7 +212,7 @@ pattern TxBody ::
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  StrictMaybe (MetadataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Core.Value era ->
   ExUnits ->
   StrictMaybe (ScriptDataHash (Crypto era)) ->
@@ -225,7 +225,7 @@ pattern TxBody
     txfee,
     vldt,
     update,
-    mdHash,
+    adHash,
     mint,
     exunits,
     scriptHash
@@ -240,7 +240,7 @@ pattern TxBody
             _txfee = txfee,
             _vldt = vldt,
             _update = update,
-            _mdHash = mdHash,
+            _adHash = adHash,
             _mint = mint,
             _exunits = exunits,
             _scriptHash = scriptHash
@@ -256,7 +256,7 @@ pattern TxBody
       txfee
       vldt
       update
-      mdHash
+      adHash
       mint
       exunits
       scriptHash =
@@ -271,7 +271,7 @@ pattern TxBody
                   txfee
                   vldt
                   update
-                  mdHash
+                  adHash
                   mint
                   exunits
                   scriptHash
@@ -323,7 +323,7 @@ encodeTxBodyRaw ::
   ( Era era,
     EncodeMint (Core.Value era),
     Val (Core.Value era),
-    Typeable (Core.Metadata era),
+    Typeable (Core.AuxiliaryData era),
     Typeable (Core.Script era),
     ToCBOR (CompactForm (Core.Value era)),
     ToCBOR (Core.Script era)
@@ -339,7 +339,7 @@ encodeTxBodyRaw
       _txfee,
       _vldt = ValidityInterval bot top,
       _update,
-      _mdHash,
+      _adHash,
       _mint,
       _exunits,
       _scriptHash
@@ -355,7 +355,7 @@ encodeTxBodyRaw
       !> Omit null (Key 4 (E encodeFoldable _certs))
       !> Omit (null . unWdrl) (Key 5 (To _wdrls))
       !> encodeKeyedStrictMaybe 6 _update
-      !> encodeKeyedStrictMaybe 7 _mdHash
+      !> encodeKeyedStrictMaybe 7 _adHash
       !> encodeKeyedStrictMaybe 8 bot
       !> Omit isZero (Key 9 (E encodeMint _mint))
       !> Omit (== mempty) (Key 10 (To _exunits))
@@ -376,7 +376,7 @@ instance
   forall era.
   ( Era era,
     Typeable (Core.Script era),
-    Typeable (Core.Metadata era),
+    Typeable (Core.AuxiliaryData era),
     Val (Core.Value era),
     Compactible (Core.Value era),
     Show (Core.Value era),
@@ -413,7 +413,7 @@ instance
       bodyFields 2 = field (\x tx -> tx {_txfee = x}) From
       bodyFields 3 =
         field
-          (\x tx -> tx {_vldt = (_vldt tx) {validTo = x}})
+          (\x tx -> tx {_vldt = (_vldt tx) {invalidHereafter = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 4 =
         field
@@ -421,10 +421,10 @@ instance
           (D (decodeStrictSeq fromCBOR))
       bodyFields 5 = field (\x tx -> tx {_wdrls = x}) From
       bodyFields 6 = field (\x tx -> tx {_update = x}) (D (SJust <$> fromCBOR))
-      bodyFields 7 = field (\x tx -> tx {_mdHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 7 = field (\x tx -> tx {_adHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 8 =
         field
-          (\x tx -> tx {_vldt = (_vldt tx) {validFrom = x}})
+          (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
       bodyFields 10 = field (\x tx -> tx {_exunits = x}) From
@@ -442,7 +442,7 @@ instance
 instance
   ( Era era,
     Typeable (Core.Script era),
-    Typeable (Core.Metadata era),
+    Typeable (Core.AuxiliaryData era),
     Val (Core.Value era),
     Compactible (Core.Value era),
     Show (Core.Value era),

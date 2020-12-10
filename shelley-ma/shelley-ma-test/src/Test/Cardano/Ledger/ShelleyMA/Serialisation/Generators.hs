@@ -38,7 +38,7 @@ import qualified Cardano.Ledger.Mary.Value as Mary
     Value (..),
   )
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
-import qualified Cardano.Ledger.ShelleyMA.Metadata as MA
+import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA.STS
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
@@ -114,14 +114,14 @@ sizedTimelock n =
 -- TODO Generate metadata with script preimages
 instance
   (Mock c, Typeable ma, Arbitrary (Timelock c)) =>
-  Arbitrary (MA.Metadata (ShelleyMAEra ma c))
+  Arbitrary (MA.AuxiliaryData (ShelleyMAEra ma c))
   where
   -- Why do we use the \case instead of a do statement? like this:
   --
   -- @
   -- arbitrary = do
   --   Metadata m <- genMetadata'
-  --   MA.Metadata m <$> genScriptSeq
+  --   MA.AuxiliaryData m <$> genScriptSeq
   -- @
   --
   -- The above leads to an error about a failable
@@ -129,7 +129,7 @@ instance
   -- in an unsatisfied `MonadFail` constraint.
   arbitrary =
     genMetadata' >>= \case
-      Metadata m -> MA.Metadata m <$> genScriptSeq
+      Metadata m -> MA.AuxiliaryData m <$> genScriptSeq
 
 genScriptSeq ::
   (Arbitrary (Timelock c)) =>

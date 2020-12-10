@@ -53,7 +53,7 @@ blockEx1 ::
   ( HasCallStack,
     ExMock (Crypto era),
     TxBodyConstraints era,
-    ToCBOR (Core.Metadata era)
+    ToCBOR (Core.AuxiliaryData era)
   ) =>
   Block era
 blockEx1 =
@@ -75,7 +75,7 @@ blockNonce ::
   ( HasCallStack,
     ExMock (Crypto era),
     TxBodyConstraints era,
-    ToCBOR (Core.Metadata era)
+    ToCBOR (Core.AuxiliaryData era)
   ) =>
   Nonce
 blockNonce = getBlockNonce (blockEx1 @era)

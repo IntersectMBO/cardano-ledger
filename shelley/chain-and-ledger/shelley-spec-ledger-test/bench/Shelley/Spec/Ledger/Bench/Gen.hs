@@ -10,6 +10,7 @@ module Shelley.Spec.Ledger.Bench.Gen
   )
 where
 
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Era (Crypto)
 import Control.State.Transition.Extended
 import Data.Either (fromRight)
@@ -26,7 +27,6 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
   )
-import Shelley.Spec.Ledger.Metadata (ValidateMetadata)
 import Test.QuickCheck (generate)
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions (ledgerEnv)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -75,7 +75,7 @@ genBlock ::
     ShelleyTest era,
     ShelleyLedgerSTS era,
     GetLedgerView era,
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     ApplyBlock era
   ) =>
   GenEnv era ->
@@ -94,7 +94,7 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 genTriple ::
   ( EraGen era,
     Mock (Crypto era),
-    ValidateMetadata era,
+    ValidateAuxiliaryData era,
     ShelleyTest era
   ) =>
   Proxy era ->

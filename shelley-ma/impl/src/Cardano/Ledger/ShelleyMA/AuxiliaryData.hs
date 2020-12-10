@@ -14,9 +14,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.ShelleyMA.Metadata
-  ( Metadata (..),
-    pattern Metadata,
+module Cardano.Ledger.ShelleyMA.AuxiliaryData
+  ( AuxiliaryData (..),
+    pattern AuxiliaryData,
   )
 where
 
@@ -48,75 +48,75 @@ import Shelley.Spec.Ledger.Metadata
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | Raw, un-memoised metadata type
-data MetadataRaw era = MetadataRaw
-  { -- | Unstructured metadata "blob"
-    mdBlob :: !(Map Word64 Metadatum),
+data AuxiliaryDataRaw era = AuxiliaryDataRaw
+  { -- | Structured transaction metadata
+    txMetadata :: !(Map Word64 Metadatum),
     -- | Pre-images of script hashes found within the TxBody, but which are not
     -- required as witnesses. Examples include:
     -- - Token policy IDs appearing in transaction outputs
     -- - Pool reward account registrations
-    mdScriptPreimages :: !(StrictSeq (Core.Script era))
+    auxiliaryScripts :: !(StrictSeq (Core.Script era))
   }
   deriving (Generic)
 
-deriving instance (Core.ChainData (Core.Script era)) => Eq (MetadataRaw era)
+deriving instance (Core.ChainData (Core.Script era)) => Eq (AuxiliaryDataRaw era)
 
-deriving instance (Core.ChainData (Core.Script era)) => Show (MetadataRaw era)
+deriving instance (Core.ChainData (Core.Script era)) => Show (AuxiliaryDataRaw era)
 
 deriving instance
   (Core.ChainData (Core.Script era)) =>
-  NoThunks (MetadataRaw era)
+  NoThunks (AuxiliaryDataRaw era)
 
-newtype Metadata era = MetadataWithBytes (MemoBytes (MetadataRaw era))
+newtype AuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes (AuxiliaryDataRaw era))
   deriving (Generic, Typeable)
   deriving newtype (ToCBOR)
 
 deriving newtype instance
   (Era era, Core.ChainData (Core.Script era)) =>
-  Eq (Metadata era)
+  Eq (AuxiliaryData era)
 
 deriving newtype instance
   (Era era, Core.ChainData (Core.Script era)) =>
-  Show (Metadata era)
+  Show (AuxiliaryData era)
 
 deriving newtype instance
   (Era era, Core.ChainData (Core.Script era)) =>
-  NoThunks (Metadata era)
+  NoThunks (AuxiliaryData era)
 
-pattern Metadata ::
+pattern AuxiliaryData ::
   ( Core.AnnotatedData (Core.Script era),
     Ord (Core.Script era)
   ) =>
   Map Word64 Metadatum ->
   StrictSeq (Core.Script era) ->
-  Metadata era
-pattern Metadata blob sp <-
-  MetadataWithBytes (Memo (MetadataRaw blob sp) _)
+  AuxiliaryData era
+pattern AuxiliaryData blob sp <-
+  AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw blob sp) _)
   where
-    Metadata blob sp =
-      MetadataWithBytes $
+    AuxiliaryData blob sp =
+      AuxiliaryDataWithBytes $
         memoBytes
-          (encMetadataRaw $ MetadataRaw blob sp)
+          (encAuxiliaryDataRaw $ AuxiliaryDataRaw blob sp)
 
-{-# COMPLETE Metadata #-}
+{-# COMPLETE AuxiliaryData #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
 
--- | Encode Metadata
-encMetadataRaw ::
+-- | Encode AuxiliaryData
+encAuxiliaryDataRaw ::
   (Core.AnnotatedData (Core.Script era)) =>
-  MetadataRaw era ->
-  Encode ('Closed 'Dense) (MetadataRaw era)
-encMetadataRaw (MetadataRaw blob sp) =
-  Rec MetadataRaw
+  AuxiliaryDataRaw era ->
+  Encode ('Closed 'Dense) (AuxiliaryDataRaw era)
+encAuxiliaryDataRaw (AuxiliaryDataRaw blob sp) =
+  Rec AuxiliaryDataRaw
     !> E mapToCBOR blob
     !> E encodeFoldable sp
 
 instance
   (Era era, Core.AnnotatedData (Core.Script era)) =>
-  FromCBOR (Annotator (MetadataRaw era))
+  FromCBOR (Annotator (AuxiliaryDataRaw era))
   where
   fromCBOR =
     peekTokenType >>= \case
@@ -126,25 +126,25 @@ instance
       TypeListLen -> decodeFromList
       TypeListLen64 -> decodeFromList
       TypeListLenIndef -> decodeFromList
-      _ -> error "Failed to decode Metadata"
+      _ -> error "Failed to decode AuxiliaryData"
     where
       decodeFromMap =
         decode
-          ( Ann (Emit MetadataRaw)
+          ( Ann (Emit AuxiliaryDataRaw)
               <*! Ann (D mapFromCBOR)
               <*! Ann (Emit StrictSeq.empty)
           )
       decodeFromList =
         decode
-          ( Ann (RecD MetadataRaw)
+          ( Ann (RecD AuxiliaryDataRaw)
               <*! Ann (D mapFromCBOR)
               <*! D (sequence <$> decodeStrictSeq fromCBOR)
           )
 
 deriving via
-  (Mem (MetadataRaw era))
+  (Mem (AuxiliaryDataRaw era))
   instance
     ( Era era,
       Core.AnnotatedData (Core.Script era)
     ) =>
-    FromCBOR (Annotator (Metadata era))
+    FromCBOR (Annotator (AuxiliaryData era))

@@ -11,11 +11,12 @@
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodingTests) where
 
+import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
-import Cardano.Ledger.ShelleyMA.Metadata (pattern Metadata)
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     ValidityInterval (..),
@@ -184,7 +185,7 @@ metadataNoScritpsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock 
 metadataNoScritpsGoldenTest =
   checkEncodingCBORAnnotated
     "metadata_no_scripts"
-    (Metadata @era (Map.singleton 17 (SMD.I 42)) StrictSeq.empty)
+    (AuxiliaryData @era (Map.singleton 17 (SMD.I 42)) StrictSeq.empty)
     ( T
         ( TkListLen 2 -- structured metadata and auxiliary scripts
             . TkMapLen 1 -- metadata wrapper
@@ -198,7 +199,7 @@ metadataWithScritpsGoldenTest :: forall era. (Era era, Core.Script era ~ Timeloc
 metadataWithScritpsGoldenTest =
   checkEncodingCBORAnnotated
     "metadata_with_scripts"
-    ( Metadata @era
+    ( AuxiliaryData @era
         (Map.singleton 17 (SMD.I 42))
         (StrictSeq.singleton policy1)
     )
@@ -256,7 +257,7 @@ goldenEncodingTestsAllegra =
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
-          mdh = SMD.hashMetadata @A $ Metadata Map.empty StrictSeq.empty
+          mdh = hashAuxiliaryData @A $ AuxiliaryData Map.empty StrictSeq.empty
        in checkEncodingCBORAnnotated
             "full_txn_body"
             ( TxBody
@@ -288,7 +289,7 @@ goldenEncodingTestsAllegra =
                 <> S ras
                 <> T (TkWord 6) -- Tx Update
                 <> S up
-                <> T (TkWord 7) -- Tx Metadata Hash
+                <> T (TkWord 7) -- Tx AuxiliaryData Hash
                 <> S mdh
                 <> T (TkWord 8) -- Tx Validity Start
                 <> S (SlotNo 500)
@@ -389,7 +390,7 @@ goldenEncodingTestsMary =
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
-          mdh = SMD.hashMetadata @M $ Metadata Map.empty StrictSeq.empty
+          mdh = hashAuxiliaryData @A $ AuxiliaryData Map.empty StrictSeq.empty
           mint = Map.singleton policyID1 $ Map.singleton (AssetName assetName1) 13
        in checkEncodingCBORAnnotated
             "full_txn_body"
@@ -422,7 +423,7 @@ goldenEncodingTestsMary =
                 <> S ras
                 <> T (TkWord 6) -- Tx Update
                 <> S up
-                <> T (TkWord 7) -- Tx Metadata Hash
+                <> T (TkWord 7) -- Tx AuxiliaryData Hash
                 <> S mdh
                 <> T (TkWord 8) -- Tx Validity Start
                 <> S (SlotNo 500)

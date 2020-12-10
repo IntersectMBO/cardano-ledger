@@ -15,6 +15,7 @@ where
 import Cardano.Binary (serialize)
 import Cardano.Crypto.VRF (VRFAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -403,7 +404,7 @@ txbWithMD =
       _txfee = Coin 94,
       _ttl = SlotNo 10,
       _txUpdate = SNothing,
-      _mdHash = SJust $ MD.hashMetadata @(ShelleyEra c) md
+      _mdHash = SJust $ hashAuxiliaryData @(ShelleyEra c) md
     }
 
 txWithMD :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
