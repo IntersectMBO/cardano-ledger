@@ -226,7 +226,6 @@ deriving via
 pattern TxBody ::
   ( Era era,
     Typeable (Core.AuxiliaryData era),
-    Typeable (Core.Script era),
     ToCBOR (CompactForm (Core.Value era)),
     ToCBOR (Core.Script era),
     EncodeMint (Core.Value era),
@@ -276,32 +275,32 @@ pattern TxBody
       )
   where
     TxBody
-      inputs
-      outputs
-      certs
-      wdrls
-      txfee
-      vldt
-      update
-      adHash
-      mint
-      exunits
-      scriptHash =
+      inputs'
+      outputs'
+      certs'
+      wdrls'
+      txfee'
+      vldt'
+      update'
+      adHash'
+      mint'
+      exunits'
+      scriptHash' =
         TxBodyConstr $
           memoBytes
             ( encodeTxBodyRaw $
                 TxBodyRaw
-                  inputs
-                  outputs
-                  certs
-                  wdrls
-                  txfee
-                  vldt
-                  update
-                  adHash
-                  mint
-                  exunits
-                  scriptHash
+                  inputs'
+                  outputs'
+                  certs'
+                  wdrls'
+                  txfee'
+                  vldt'
+                  update'
+                  adHash'
+                  mint'
+                  exunits'
+                  scriptHash'
             )
 
 {-# COMPLETE TxBody #-}
@@ -350,10 +349,7 @@ encodeTxBodyRaw ::
   ( Era era,
     EncodeMint (Core.Value era),
     Val (Core.Value era),
-    Typeable (Core.AuxiliaryData era),
-    Typeable (Core.Script era),
-    ToCBOR (CompactForm (Core.Value era)),
-    ToCBOR (Core.Script era)
+    ToCBOR (CompactForm (Core.Value era))
   ) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
@@ -413,10 +409,10 @@ instance
   ) =>
   FromCBOR (TxBodyRaw era)
   where
-  fromCBOR = decode $ SparseKeyed "TxBodyRaw" init bodyFields requiredFields
+  fromCBOR = decode $ SparseKeyed "TxBodyRaw" initial bodyFields requiredFields
     where
-      init :: TxBodyRaw era
-      init =
+      initial :: TxBodyRaw era
+      initial =
         TxBodyRaw
           mempty
           StrictSeq.empty

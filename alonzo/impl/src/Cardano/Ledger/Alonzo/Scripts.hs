@@ -3,12 +3,12 @@
 
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
-    Script (..),
+    Script,
     ExUnits (..),
   )
 where
 
-import Cardano.Binary
+import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Data.Coders

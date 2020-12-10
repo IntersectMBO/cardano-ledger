@@ -118,10 +118,12 @@ pattern TxWitness
         _
       )
   where
-    TxWitness witsVKey witsBoot witsScript witsDat witsRdmr =
+    TxWitness witsVKey' witsBoot' witsScript' witsDat' witsRdmr' =
       TxWitnessConstr
         . memoBytes
-        $ encodeWitnessRaw witsVKey witsBoot witsScript witsDat witsRdmr
+        $ encodeWitnessRaw witsVKey' witsBoot' witsScript' witsDat' witsRdmr'
+
+{-# COMPLETE TxWitness #-}
 
 -- | Right-biased semigroup - if there are (somehow) multiple entries either for
 -- a given 'ScriptHash' or a given 'Data', this will bias to the entry on the
@@ -225,6 +227,8 @@ instance
     <> (ScriptData s' d' r') =
       ScriptData (s <> s') (d `Set.union` d') (r <> r')
 
+{-# COMPLETE ScriptData #-}
+
 instance
   (Era era, ToCBOR (Core.Script era)) =>
   Monoid (ScriptData era)
@@ -295,7 +299,7 @@ encodeWitnessRaw ::
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
   Set (Data era) ->
   Map RdmrPtr (Data era) ->
-  Encode ('Closed Dense) (TxWitnessRaw era)
+  Encode ('Closed 'Dense) (TxWitnessRaw era)
 encodeWitnessRaw a b s d r =
   Rec TxWitnessRaw
     !> E encodeFoldable a
@@ -322,8 +326,6 @@ deriving via
   (Mem (TxWitnessRaw era))
   instance
     ( Era era,
-      FromCBOR
-        (Annotator (Core.Script era)),
       FromCBOR (Data era),
       FromCBOR (Annotator (Core.Script era)),
       ToCBOR (Core.Script era)

@@ -5,6 +5,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
@@ -18,14 +19,10 @@ import Cardano.Ledger.Alonzo.TxBody
     TxOut (..),
   )
 import Cardano.Ledger.Alonzo.TxWitness
-import Cardano.Ledger.Compactible (Compactible (toCompact))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
-import Cardano.Ledger.ShelleyMA.Timelocks
-import Cardano.Ledger.Val (EncodeMint)
-import Cardano.Slotting.Slot (SlotNo (..))
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
