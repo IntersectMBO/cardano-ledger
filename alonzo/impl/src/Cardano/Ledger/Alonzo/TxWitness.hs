@@ -20,7 +20,7 @@ module Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
     TxWitness (TxWitness, witsVKey, witsBoot, witsScript, witsData, witsRdmr),
     EraIndependentScriptData,
-    ScriptDataHash,
+    ScriptDataHash (..),
   )
 where
 
