@@ -1,0 +1,74 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
+
+module Test.Cardano.Ledger.Mary.Translation
+  ( maryTranslationTests,
+    maryEncodeDecodeTests,
+  )
+where
+
+import Cardano.Binary
+  ( ToCBOR (..),
+  )
+import Cardano.Ledger.Mary.Translation ()
+import Cardano.Ledger.Era (TranslateEra (..))
+import qualified Cardano.Ledger.ShelleyMA.Metadata as MA
+import qualified Shelley.Spec.Ledger.API as S
+import Test.Cardano.Ledger.EraBuffet
+  ( AllegraEra,
+    MaryEra,
+    StandardCrypto,
+  )
+import Test.Cardano.Ledger.TranslationTools
+  ( decodeTestAnn,
+    translationCompatToCBOR,
+  )
+import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
+import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
+import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
+import Test.Cardano.Ledger.Allegra ()
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.QuickCheck (testProperty)
+
+type Allegra = AllegraEra StandardCrypto
+
+type Mary = MaryEra StandardCrypto
+
+maryEncodeDecodeTests :: TestTree
+maryEncodeDecodeTests =
+  testGroup
+    "encoded allegra types can be decoded as mary types"
+    [ testProperty
+        "decoding metadata"
+        (decodeTestAnn @S.Metadata ([] :: [MA.Metadata Mary]))
+    ]
+
+maryTranslationTests :: TestTree
+maryTranslationTests =
+  testGroup
+    "Mary translation binary compatibiliby tests"
+    [ testProperty "Tx compatibility" (test @S.Tx),
+      testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates),
+      testProperty "PPUPState compatibility" (test @S.PPUPState),
+      testProperty "TxOut compatibility" (test @S.TxOut),
+      testProperty "UTxO compatibility" (test @S.UTxO),
+      testProperty "UTxOState compatibility" (test @S.UTxOState),
+      testProperty "LedgerState compatibility" (test @S.LedgerState),
+      testProperty "EpochState compatibility" (test @S.EpochState),
+      testProperty "WitnessSet compatibility" (test @S.WitnessSet),
+      testProperty "Update compatibility" (test @S.Update)
+    ]
+
+test ::
+  forall f.
+  ( ToCBOR (f Allegra),
+    ToCBOR (f Mary),
+    TranslateEra Mary f,
+    Show (TranslationError Mary f)
+  ) =>
+  f Allegra ->
+  Bool
+test x = translationCompatToCBOR ([] :: [Mary]) () x

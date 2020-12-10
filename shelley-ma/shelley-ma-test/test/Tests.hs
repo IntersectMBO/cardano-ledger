@@ -2,6 +2,7 @@ module Main where
 
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
 import Test.Cardano.Ledger.Mary.Examples.MultiAssets (multiAssetsExample)
+import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.Cardano.Ledger.Mary.Value (valTests)
 import Test.Tasty
@@ -20,6 +21,7 @@ tests =
     "Cardano-Legder-Tests"
     [ Serialisation.tests,
       allegraTranslationTests,
+      maryTranslationTests,
       maryChainExamples,
       valTests
     ]

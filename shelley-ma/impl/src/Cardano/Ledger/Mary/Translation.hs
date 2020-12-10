@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,6 +16,12 @@ shadowing warnings for the named field puns when used with a pattern synonym.
 
 module Cardano.Ledger.Mary.Translation where
 
+import Cardano.Binary
+  ( DecoderError,
+    decodeAnnotator,
+    fromCBOR,
+    serialize,
+  )
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto)
@@ -24,6 +31,7 @@ import Cardano.Ledger.Mary.Value (Value (..))
 import Cardano.Ledger.ShelleyMA.Metadata (Metadata (..), pattern Metadata)
 import Cardano.Ledger.ShelleyMA.TxBody
 import qualified Cardano.Ledger.Val as Val
+import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -68,13 +76,11 @@ instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
         }
 
 instance Crypto c => TranslateEra (MaryEra c) Tx where
-  translateEra ctx (Tx body witness md) =
-    pure $
-      Tx
-        { _body = translateEra' ctx body,
-          _witnessSet = translateEra' ctx witness,
-          _metadata = translateEra' ctx <$> md
-        }
+  type TranslationError (MaryEra c) Tx = DecoderError
+  translateEra _ctx tx =
+    case decodeAnnotator "tx" fromCBOR (serialize tx) of
+      Right newTx -> pure newTx
+      Left decoderError -> throwError decoderError
 
 -- TODO when a genesis has been introduced for Mary, this instance can be
 -- removed.
