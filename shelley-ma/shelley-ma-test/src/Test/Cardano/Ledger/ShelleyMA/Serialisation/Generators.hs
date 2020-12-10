@@ -29,7 +29,9 @@ import Cardano.Binary (toCBOR)
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Allegra (AllegraEra)
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary (MaryEra)
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import qualified Cardano.Ledger.Mary.Value as Mary
@@ -37,7 +39,6 @@ import qualified Cardano.Ledger.Mary.Value as Mary
     PolicyID (..),
     Value (..),
   )
-import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA.STS
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
@@ -47,7 +48,6 @@ import Data.Coerce (coerce)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq, fromList)
-import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Shelley.Spec.Ledger.API hiding (SignedDSIGN, TxBody (..))
@@ -113,8 +113,13 @@ sizedTimelock n =
 
 -- TODO Generate metadata with script preimages
 instance
-  (Mock c, Typeable ma, Arbitrary (Timelock c)) =>
-  Arbitrary (MA.AuxiliaryData (ShelleyMAEra ma c))
+  ( Era era,
+    c ~ Crypto era,
+    Mock c,
+    Arbitrary (Timelock c),
+    Core.Script era ~ Timelock c
+  ) =>
+  Arbitrary (MA.AuxiliaryData era)
   where
   -- Why do we use the \case instead of a do statement? like this:
   --

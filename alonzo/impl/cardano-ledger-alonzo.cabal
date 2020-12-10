@@ -23,6 +23,7 @@ library
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
     Cardano.Ledger.Alonzo.Scripts
+    Cardano.Ledger.Alonzo.Tx
     Cardano.Ledger.Alonzo.TxBody
     Cardano.Ledger.Alonzo.TxWitness
   build-depends:

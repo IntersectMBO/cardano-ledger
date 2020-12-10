@@ -75,6 +75,8 @@ deriving stock instance
   (Era era, Show (Core.Script era)) =>
   Show (TxWitnessRaw era)
 
+instance (Era era, NoThunks (Core.Script era)) => NoThunks (TxWitnessRaw era)
+
 newtype TxWitness era = TxWitnessConstr (MemoBytes (TxWitnessRaw era))
   deriving newtype (ToCBOR)
 
@@ -83,6 +85,10 @@ deriving newtype instance (Era era, Eq (Core.Script era)) => Eq (TxWitness era)
 deriving newtype instance
   (Era era, Show (Core.Script era)) =>
   Show (TxWitness era)
+
+deriving newtype instance
+  (Era era, NoThunks (Core.Script era)) =>
+  NoThunks (TxWitness era)
 
 pattern TxWitness ::
   (Era era, ToCBOR (Core.Script era)) =>
@@ -182,10 +188,15 @@ data ScriptDataRaw era = ScriptDataRaw
     _scriptDataData :: Set (Data era),
     _scriptDataRdmrs :: Map RdmrPtr (Data era)
   }
+  deriving (Generic)
 
 deriving stock instance (Eq (Core.Script era)) => Eq (ScriptDataRaw era)
 
 deriving stock instance (Show (Core.Script era)) => Show (ScriptDataRaw era)
+
+instance
+  (NoThunks (Core.Script era)) =>
+  NoThunks (ScriptDataRaw era)
 
 -- | 'ScriptData' is a projection of the parts of 'TxWitness' which may be
 -- hashed to include in the transaction body. Note that this cannot be the hash
@@ -204,6 +215,10 @@ newtype ScriptData era = ScriptDataConstr
 deriving newtype instance (Eq (Core.Script era)) => Eq (ScriptData era)
 
 deriving newtype instance (Show (Core.Script era)) => Show (ScriptData era)
+
+deriving newtype instance
+  (Era era, NoThunks (Core.Script era)) =>
+  NoThunks (ScriptData era)
 
 pattern ScriptData ::
   (Era era, ToCBOR (Core.Script era)) =>

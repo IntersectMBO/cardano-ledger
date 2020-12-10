@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash (..))
 import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( IsFee (..),
     TxBody (TxBody),
@@ -101,5 +102,15 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> genMintValues
+      <*> arbitrary
+      <*> arbitrary
+
+deriving newtype instance Arbitrary IsValidating
+
+instance Mock c => Arbitrary (Tx (AlonzoEra c)) where
+  arbitrary =
+    Tx
+      <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary

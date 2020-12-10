@@ -5,6 +5,7 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 
 import Cardano.Binary
 import Cardano.Ledger.Alonzo
+import Cardano.Ledger.Alonzo.Tx (Tx)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import qualified Data.ByteString.Lazy.Char8 as BSL
@@ -41,5 +42,7 @@ tests =
     [ testProperty "alonzo/TxWitness" $
         trippingAnn @(TxWitness (AlonzoEra C_Crypto)),
       testProperty "alonzo/TxBody" $
-        trippingAnn @(TxBody (AlonzoEra C_Crypto))
+        trippingAnn @(TxBody (AlonzoEra C_Crypto)),
+      testProperty "alonzo/Tx" $
+        trippingAnn @(Tx (AlonzoEra C_Crypto))
     ]
