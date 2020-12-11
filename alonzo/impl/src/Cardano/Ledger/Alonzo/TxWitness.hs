@@ -20,7 +20,7 @@ module Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
     TxWitness (TxWitness, witsVKey, witsBoot, witsScript, witsData, witsRdmr),
     EraIndependentScriptData,
-    ScriptDataHash,
+    ScriptDataHash (..),
   )
 where
 
@@ -75,6 +75,8 @@ deriving stock instance
   (Era era, Show (Core.Script era)) =>
   Show (TxWitnessRaw era)
 
+instance (Era era, NoThunks (Core.Script era)) => NoThunks (TxWitnessRaw era)
+
 newtype TxWitness era = TxWitnessConstr (MemoBytes (TxWitnessRaw era))
   deriving newtype (ToCBOR)
 
@@ -83,6 +85,10 @@ deriving newtype instance (Era era, Eq (Core.Script era)) => Eq (TxWitness era)
 deriving newtype instance
   (Era era, Show (Core.Script era)) =>
   Show (TxWitness era)
+
+deriving newtype instance
+  (Era era, NoThunks (Core.Script era)) =>
+  NoThunks (TxWitness era)
 
 pattern TxWitness ::
   (Era era, ToCBOR (Core.Script era)) =>
@@ -118,10 +124,12 @@ pattern TxWitness
         _
       )
   where
-    TxWitness witsVKey witsBoot witsScript witsDat witsRdmr =
+    TxWitness witsVKey' witsBoot' witsScript' witsDat' witsRdmr' =
       TxWitnessConstr
         . memoBytes
-        $ encodeWitnessRaw witsVKey witsBoot witsScript witsDat witsRdmr
+        $ encodeWitnessRaw witsVKey' witsBoot' witsScript' witsDat' witsRdmr'
+
+{-# COMPLETE TxWitness #-}
 
 -- | Right-biased semigroup - if there are (somehow) multiple entries either for
 -- a given 'ScriptHash' or a given 'Data', this will bias to the entry on the
@@ -180,10 +188,15 @@ data ScriptDataRaw era = ScriptDataRaw
     _scriptDataData :: Set (Data era),
     _scriptDataRdmrs :: Map RdmrPtr (Data era)
   }
+  deriving (Generic)
 
 deriving stock instance (Eq (Core.Script era)) => Eq (ScriptDataRaw era)
 
 deriving stock instance (Show (Core.Script era)) => Show (ScriptDataRaw era)
+
+instance
+  (NoThunks (Core.Script era)) =>
+  NoThunks (ScriptDataRaw era)
 
 -- | 'ScriptData' is a projection of the parts of 'TxWitness' which may be
 -- hashed to include in the transaction body. Note that this cannot be the hash
@@ -202,6 +215,10 @@ newtype ScriptData era = ScriptDataConstr
 deriving newtype instance (Eq (Core.Script era)) => Eq (ScriptData era)
 
 deriving newtype instance (Show (Core.Script era)) => Show (ScriptData era)
+
+deriving newtype instance
+  (Era era, NoThunks (Core.Script era)) =>
+  NoThunks (ScriptData era)
 
 pattern ScriptData ::
   (Era era, ToCBOR (Core.Script era)) =>
@@ -224,6 +241,8 @@ instance
   (ScriptData s d r)
     <> (ScriptData s' d' r') =
       ScriptData (s <> s') (d `Set.union` d') (r <> r')
+
+{-# COMPLETE ScriptData #-}
 
 instance
   (Era era, ToCBOR (Core.Script era)) =>
@@ -295,7 +314,7 @@ encodeWitnessRaw ::
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
   Set (Data era) ->
   Map RdmrPtr (Data era) ->
-  Encode ('Closed Dense) (TxWitnessRaw era)
+  Encode ('Closed 'Dense) (TxWitnessRaw era)
 encodeWitnessRaw a b s d r =
   Rec TxWitnessRaw
     !> E encodeFoldable a
@@ -322,8 +341,6 @@ deriving via
   (Mem (TxWitnessRaw era))
   instance
     ( Era era,
-      FromCBOR
-        (Annotator (Core.Script era)),
       FromCBOR (Data era),
       FromCBOR (Annotator (Core.Script era)),
       ToCBOR (Core.Script era)

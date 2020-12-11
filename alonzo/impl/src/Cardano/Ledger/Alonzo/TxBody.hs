@@ -12,11 +12,12 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Alonzo.TxBody
   ( IsFee (..),
     TxIn (..),
-    TxOut (..),
+    TxOut (TxOut, TxOutCompact),
     TxBody
       ( TxBody,
         inputs,
@@ -57,6 +58,7 @@ import Cardano.Ledger.Val
   )
 import Control.DeepSeq (NFData)
 import Data.Coders
+import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -64,10 +66,12 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
+import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
+import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.Hashing
 import Shelley.Spec.Ledger.PParams (Update)
@@ -130,6 +134,29 @@ instance
   show = error "Not yet implemented"
 
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
+
+pattern TxOut ::
+  ( Era era,
+    Compactible (Core.Value era),
+    Show (Core.Value era),
+    HasCallStack
+  ) =>
+  Addr (Crypto era) ->
+  Core.Value era ->
+  StrictMaybe (DataHash era) ->
+  TxOut era
+pattern TxOut addr vl dh <-
+  TxOutCompact (decompactAddr -> addr) (fromCompact -> vl) dh
+  where
+    TxOut addr vl dh =
+      TxOutCompact
+        (compactAddr addr)
+        ( fromMaybe (error $ "Illegal value in txout: " <> show vl) $
+            toCompact vl
+        )
+        dh
+
+{-# COMPLETE TxOut #-}
 
 data TxBodyRaw era = TxBodyRaw
   { _inputs :: !(Set (TxIn (Crypto era))),
@@ -199,7 +226,6 @@ deriving via
 pattern TxBody ::
   ( Era era,
     Typeable (Core.AuxiliaryData era),
-    Typeable (Core.Script era),
     ToCBOR (CompactForm (Core.Value era)),
     ToCBOR (Core.Script era),
     EncodeMint (Core.Value era),
@@ -249,32 +275,32 @@ pattern TxBody
       )
   where
     TxBody
-      inputs
-      outputs
-      certs
-      wdrls
-      txfee
-      vldt
-      update
-      adHash
-      mint
-      exunits
-      scriptHash =
+      inputs'
+      outputs'
+      certs'
+      wdrls'
+      txfee'
+      vldt'
+      update'
+      adHash'
+      mint'
+      exunits'
+      scriptHash' =
         TxBodyConstr $
           memoBytes
             ( encodeTxBodyRaw $
                 TxBodyRaw
-                  inputs
-                  outputs
-                  certs
-                  wdrls
-                  txfee
-                  vldt
-                  update
-                  adHash
-                  mint
-                  exunits
-                  scriptHash
+                  inputs'
+                  outputs'
+                  certs'
+                  wdrls'
+                  txfee'
+                  vldt'
+                  update'
+                  adHash'
+                  mint'
+                  exunits'
+                  scriptHash'
             )
 
 {-# COMPLETE TxBody #-}
@@ -323,10 +349,7 @@ encodeTxBodyRaw ::
   ( Era era,
     EncodeMint (Core.Value era),
     Val (Core.Value era),
-    Typeable (Core.AuxiliaryData era),
-    Typeable (Core.Script era),
-    ToCBOR (CompactForm (Core.Value era)),
-    ToCBOR (Core.Script era)
+    ToCBOR (CompactForm (Core.Value era))
   ) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
@@ -386,10 +409,10 @@ instance
   ) =>
   FromCBOR (TxBodyRaw era)
   where
-  fromCBOR = decode $ SparseKeyed "TxBodyRaw" init bodyFields requiredFields
+  fromCBOR = decode $ SparseKeyed "TxBodyRaw" initial bodyFields requiredFields
     where
-      init :: TxBodyRaw era
-      init =
+      initial :: TxBodyRaw era
+      initial =
         TxBodyRaw
           mempty
           StrictSeq.empty

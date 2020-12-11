@@ -27,7 +27,9 @@ import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 
 -- | TODO this should be isomorphic to the plutus type
 data Data era = NotReallyData
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Generic, Show)
+
+instance NoThunks (Data era)
 
 data EraIndependentData
 
