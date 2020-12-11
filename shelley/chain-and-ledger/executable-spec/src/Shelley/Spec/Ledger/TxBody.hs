@@ -463,6 +463,7 @@ data TxOut era
 instance (HeapWords (CompactForm (Core.Value era))) => HeapWords (TxOut era) where
   heapWords (TxOutCompact _ vl) = 3 + HW.heapWordsUnpacked packed57Bytestring + HW.heapWords vl
 
+-- the length of a shelley base address estimate (stake and payment are 28-long)
 packed57Bytestring :: ByteString
 packed57Bytestring = Char8.pack (replicate 57 'a')
 
