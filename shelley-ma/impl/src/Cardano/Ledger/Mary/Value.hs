@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MagicHash #-}
 
 module Cardano.Ledger.Mary.Value
   ( PolicyID (..),
@@ -35,6 +36,9 @@ import Cardano.Binary
     peekTokenType,
     toCBOR,
   )
+import qualified Data.ByteString.Char8 as Char8
+import Cardano.Prelude (HeapWords (..))
+import qualified Cardano.Prelude as HW
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -47,7 +51,9 @@ import Cardano.Ledger.Val
   )
 import Control.DeepSeq (NFData (..))
 import Control.Monad (guard)
-import Data.Array (Array)
+import Data.Array (Array (..))
+import GHC.Arr (Array (..))
+import GHC.Base (Array# (..))
 import Data.Array.IArray (array)
 import Data.ByteString (ByteString)
 import Data.CannonicalMaps
@@ -70,6 +76,7 @@ import Data.Map.Internal
     link2,
     splitLookup,
   )
+import Shelley.Spec.Ledger.TxBody ()
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -98,7 +105,9 @@ newtype AssetName = AssetName {assetName :: ByteString}
 
 -- | Policy ID
 newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
-  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData)
+  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData, HeapWords)
+
+deriving instance HeapWords (ScriptHash crypto)
 
 -- | The Value representing MultiAssets
 data Value crypto = Value !Integer !(Map (PolicyID crypto) (Map AssetName Integer))
@@ -266,7 +275,7 @@ instance
 
 instance CC.Crypto crypto => Compactible (Value crypto) where
   newtype CompactForm (Value crypto) = CompactValue (CV crypto)
-    deriving (Eq, Typeable, Show, ToCBOR, FromCBOR)
+    deriving (Eq, Typeable, Show, ToCBOR, FromCBOR, HeapWords)
   toCompact x = CompactValue <$> toCV x
   fromCompact (CompactValue x) = fromCV x
 
@@ -288,12 +297,27 @@ data CV crypto
       {-# UNPACK #-} !(Array Int (CVPart crypto))
   deriving (Eq, Show, Typeable)
 
+instance HeapWords (CV crypto) where
+  heapWords (CV w a) = 3 + HW.heapWordsUnpacked w + HW.heapWordsUnpacked a
+
+instance (HeapWords i, HeapWords e) => HeapWords (Array i e) where
+  heapWords (Array i1 i2 range arr) = 5 + HW.heapWords i1 + HW.heapWords i2 + HW.heapWordsUnpacked range + heapWordsArr arr range
+
+heapWordsArr :: (HeapWords t) => Array# t -> Int -> Int
+heapWordsArr arr rn  = undefined
+
 data CVPart crypto
   = CVPart
       !(PolicyID crypto)
       {-# UNPACK #-} !AssetName
       {-# UNPACK #-} !Word64
   deriving (Eq, Show, Typeable)
+
+instance HeapWords (CVPart crypto) where
+  heapWords (CVPart p a w) = 4 + HW.heapWords p + HW.heapWordsUnpacked maxAN + HW.heapWordsUnpacked w
+
+maxAN :: ByteString
+maxAN = Char8.pack (replicate 32 'a')
 
 toCV :: Value crypto -> Maybe (CV crypto)
 toCV v = do

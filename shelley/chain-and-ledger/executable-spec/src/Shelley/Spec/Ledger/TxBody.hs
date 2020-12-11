@@ -80,6 +80,8 @@ import Cardano.Binary
     serializeEncoding,
     szCases,
   )
+import qualified Cardano.Crypto.Hash.Class as HS
+import qualified Cardano.Prelude as HW
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
@@ -89,6 +91,7 @@ import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val (DecodeNonNegative (..), Val)
 import Cardano.Prelude
   ( panic,
+    HeapWords (..)
   )
 import Control.DeepSeq (NFData (rnf))
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
@@ -411,7 +414,9 @@ instance CC.Crypto crypto => FromJSON (PoolParams crypto) where
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto = TxId {_unTxId :: Hash crypto EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks)
+  deriving newtype (NoThunks, HeapWords)
+
+deriving newtype instance HeapWords (HS.Hash h a)
 
 deriving newtype instance CC.Crypto crypto => ToCBOR (TxId crypto)
 
@@ -422,6 +427,9 @@ deriving newtype instance CC.Crypto crypto => NFData (TxId crypto)
 -- | The input of a UTxO.
 data TxIn crypto = TxInCompact {-# UNPACK #-} !(TxId crypto) {-# UNPACK #-} !Word64
   deriving (Generic)
+
+instance HeapWords (TxIn crypto) where
+  heapWords (TxInCompact txid ix) = 3 + HW.heapWordsUnpacked txid + HW.heapWordsUnpacked ix
 
 pattern TxIn ::
   CC.Crypto crypto =>
@@ -451,6 +459,12 @@ data TxOut era
   = TxOutCompact
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
+
+instance (HeapWords (CompactForm (Core.Value era))) => HeapWords (TxOut era) where
+  heapWords (TxOutCompact _ vl) = 3 + HW.heapWordsUnpacked packed57Bytestring + HW.heapWords vl
+
+packed57Bytestring :: ByteString
+packed57Bytestring = Char8.pack (replicate 57 'a')
 
 instance
   (Show (Core.Value era), Era era, Compactible (Core.Value era)) => -- Use the weakest constraint possible here
