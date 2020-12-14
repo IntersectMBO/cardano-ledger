@@ -31,7 +31,7 @@ import Data.Typeable (Typeable)
 import GHC.Records (HasField)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.LedgerState as LedgerState
-import Shelley.Spec.Ledger.MetaData (validMetaDatum)
+import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP)
 import qualified Shelley.Spec.Ledger.STS.Ppup as Ppup
 import Shelley.Spec.Ledger.Tx

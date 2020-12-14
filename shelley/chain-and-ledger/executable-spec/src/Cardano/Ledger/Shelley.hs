@@ -24,9 +24,9 @@ import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (hashWithSerialiser)
 import Shelley.Spec.Ledger.LedgerState as LedgerState
-import Shelley.Spec.Ledger.MetaData
-  ( MetaData (MetaData),
-    validMetaDatum,
+import Shelley.Spec.Ledger.Metadata
+  ( Metadata (Metadata),
+    validMetadatum,
   )
 import Shelley.Spec.Ledger.STS.Ppup (PPUP)
 import qualified Shelley.Spec.Ledger.STS.Ppup as Ppup
