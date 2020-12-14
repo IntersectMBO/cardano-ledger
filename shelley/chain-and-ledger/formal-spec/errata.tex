@@ -1,0 +1,18 @@
+\section{Errata}
+\label{sec:errata}
+
+We list issues found within the Shelley ledger which will be corrected in future eras.
+
+\subsection{Total stake calculation}
+
+As described in \cite[3.4.3]{delegation_design}, stake is sometimes considered
+relative to all the delegated stake, and sometimes relative to the
+totally supply less the amount held by the reserves.
+The former is called active stake, the latter total stake.
+
+
+The $\fun{createRUpd}$ function from Figure~\ref{fig:rules:reward-update} uses the
+current value of the reserve pot, named $\var{reserves}$, to calculate the total stake.
+It should, however, use the value of the reserve pot as it was during the previous
+epoch, since $\fun{createRUpd}$ is creating the rewards earned during the previous epoch
+(see the overview in Section~\ref{sec:reward-overview}).
