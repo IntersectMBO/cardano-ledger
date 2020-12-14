@@ -4,6 +4,7 @@
 We list issues found within the Shelley ledger which will be corrected in future eras.
 
 \subsection{Total stake calculation}
+\label{sec:errata:total-stake}
 
 As described in \cite[3.4.3]{delegation_design}, stake is sometimes considered
 relative to all the delegated stake, and sometimes relative to the
@@ -16,3 +17,22 @@ current value of the reserve pot, named $\var{reserves}$, to calculate the total
 It should, however, use the value of the reserve pot as it was during the previous
 epoch, since $\fun{createRUpd}$ is creating the rewards earned during the previous epoch
 (see the overview in Section~\ref{sec:reward-overview}).
+
+\subsection{Stability Windows}
+\label{sec:errata:stability-windows}
+
+The constant $RandomnessStabilisationWindow$ was intended to be used only
+for freezing the candidate nonce in the $\mathsf{UPDN}$ rule
+from Figure~\ref{fig:rules:update-nonce}.
+This was chosen as a good value for both Ouroboros Praos and Ouroboros Genesis.
+The implementation mistakenly used the constant in the $\mathsf{RUPD}$ rule
+from Figure~\ref{fig:rules:reward-update}, and used $\StabilityWindow$
+in for the $\mathsf{UPDN}$ transition.
+
+The constant $\StabilityWindow$ is a good choice for the $\mathsf{UPDN}$
+transition while we remain using Ouroboros Praos, but it will be changed before
+adopting Ouroboros Genesis in the consensus layer.
+
+There is no problem with using $RandomnessStabilisationWindow$ for the
+$\mathsf{RUPD}$ transition, since anything after $\StabilityWindow$ would work,
+but there is no reason to do so.
