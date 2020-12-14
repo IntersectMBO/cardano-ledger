@@ -14,7 +14,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Era (TranslateEra (..))
-import qualified Cardano.Ledger.ShelleyMA.Metadata as MA
+import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
 import qualified Shelley.Spec.Ledger.API as S
 import Test.Cardano.Ledger.EraBuffet
   ( AllegraEra,
@@ -43,7 +43,7 @@ maryEncodeDecodeTests =
     "encoded allegra types can be decoded as mary types"
     [ testProperty
         "decoding metadata"
-        (decodeTestAnn @S.Metadata ([] :: [MA.Metadata Mary]))
+        (decodeTestAnn @S.Metadata ([] :: [MA.AuxiliaryData Mary]))
     ]
 
 maryTranslationTests :: TestTree
