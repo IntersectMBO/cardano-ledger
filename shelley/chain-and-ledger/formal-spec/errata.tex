@@ -62,3 +62,13 @@ $a01b9fe136e5703668c9c7776a76cc8541b84824635d237e270670a8ca56a392$,
 and the registered addresses were reimbursed in transaction
 \newline
 $8cab8049e3b8c4802d7d11277b21afc74056223a596c39ef00e002c2d1f507ad$.
+
+\subsection{Byron redeem addresses}
+\label{sec:errata:byron-redeem-addresses}
+
+The bootstrap addresses from Figure~\ref{fig:defs:addresses} were not intended
+to include the Byron era redeem addresses
+(those with addrtype 2, see the Byron CDDL spec).
+These addresses were, however, not spendable in the Shelley era.
+At the Allegra hard fork they were removed from the UTxO
+and the Ada contained in them was be returned to the reserves.
