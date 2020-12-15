@@ -19,13 +19,12 @@
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.State.Transition (IRC (..))
+import Control.State.Transition
 import Control.State.Transition.Trace.Generator.QuickCheck
   ( BaseEnv,
     HasTrace,
@@ -48,6 +47,7 @@ import Shelley.Spec.Ledger.BlockChain
     hashHeaderToNonce,
   )
 import Shelley.Spec.Ledger.LedgerState (stakeDistr)
+import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv, BbodyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Test.QuickCheck (Gen)
@@ -80,7 +80,18 @@ instance
     GetLedgerView era,
     ShelleyLedgerSTS era,
     ShelleyChainSTS era,
-    ValidateAuxiliaryData era,
+    Embed (Core.EraRule "BBODY" era) (CHAIN era),
+    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
+    State (Core.EraRule "BBODY" era) ~ BbodyState era,
+    Signal (Core.EraRule "BBODY" era) ~ Block era,
+    Embed (Core.EraRule "TICKN" era) (CHAIN era),
+    Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
+    State (Core.EraRule "TICKN" era) ~ TicknState,
+    Signal (Core.EraRule "TICKN" era) ~ Bool,
+    Embed (Core.EraRule "TICK" era) (CHAIN era),
+    Environment (Core.EraRule "TICK" era) ~ (),
+    State (Core.EraRule "TICK" era) ~ NewEpochState era,
+    Signal (Core.EraRule "TICK" era) ~ SlotNo,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
@@ -110,7 +121,7 @@ mkGenesisChainState ::
   forall era a.
   EraGen era =>
   GenEnv era ->
-  IRC (CHAIN era) ->
+  IRC (Core.EraRule "CHAIN" era) ->
   Gen (Either a (ChainState era))
 mkGenesisChainState ge@(GenEnv _ constants) (IRC _slotNo) = do
   utxo0 <- genUtxo0 ge

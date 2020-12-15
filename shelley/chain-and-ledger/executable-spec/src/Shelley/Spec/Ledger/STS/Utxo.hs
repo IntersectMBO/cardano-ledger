@@ -28,9 +28,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val ((<->))
@@ -78,7 +76,8 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
-  ( UTxOState (..),
+  ( PPUPState,
+    UTxOState (..),
     consumed,
     emptyPPUPState,
     keyRefunds,
@@ -87,7 +86,7 @@ import Shelley.Spec.Ledger.LedgerState
     txsize,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
-import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..))
+import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
     decodeRecordSum,
@@ -146,23 +145,33 @@ data UtxoPredicateFailure era
       !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
-  | UpdateFailure (PredicateFailure (PPUP era)) -- Subtransition Failures
+  | UpdateFailure (PredicateFailure (Core.EraRule "PPUP" era)) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
       ![TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
 deriving stock instance
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    Show (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
   Show (UtxoPredicateFailure era)
 
 deriving stock instance
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    Eq (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
   Eq (UtxoPredicateFailure era)
 
-instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era)
+instance
+  ( NoThunks (Delta (Core.Value era)),
+    NoThunks (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
+  NoThunks (UtxoPredicateFailure era)
 
 instance
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
   ToCBOR (UtxoPredicateFailure era)
   where
   toCBOR = \case
@@ -204,7 +213,9 @@ instance
         <> encodeFoldable outs
 
 instance
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    FromCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
   FromCBOR (UtxoPredicateFailure era)
   where
   fromCBOR =
@@ -250,14 +261,22 @@ instance
         k -> invalidKey k
 
 instance
-  (CryptoClass.Crypto c, Core.TxBody (ShelleyEra c) ~ TxBody (ShelleyEra c)) =>
-  STS (UTXO (ShelleyEra c))
+  ( ShelleyBased era,
+    Core.TxBody era ~ TxBody era,
+    Core.Value era ~ Coin,
+    Eq (PredicateFailure (Core.EraRule "PPUP" era)),
+    Embed (Core.EraRule "PPUP" era) (UTXO era),
+    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era)
+  ) =>
+  STS (UTXO era)
   where
-  type State (UTXO (ShelleyEra c)) = UTxOState (ShelleyEra c)
-  type Signal (UTXO (ShelleyEra c)) = Tx (ShelleyEra c)
-  type Environment (UTXO (ShelleyEra c)) = UtxoEnv (ShelleyEra c)
-  type BaseM (UTXO (ShelleyEra c)) = ShelleyBase
-  type PredicateFailure (UTXO (ShelleyEra c)) = UtxoPredicateFailure (ShelleyEra c)
+  type State (UTXO era) = UTxOState era
+  type Signal (UTXO era) = Tx era
+  type Environment (UTXO era) = UtxoEnv era
+  type BaseM (UTXO era) = ShelleyBase
+  type PredicateFailure (UTXO era) = UtxoPredicateFailure era
 
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -279,8 +298,8 @@ instance
       PostCondition
         "Deposit pot must not be negative (post)"
         (\_ st' -> _deposited st' >= mempty),
-      let utxoBalance us = (Val.inject $ _deposited us <> _fees us) <> balance (_utxo us)
-          withdrawals :: TxBody (ShelleyEra c) -> Core.Value (ShelleyEra c)
+      let utxoBalance us = Val.inject (_deposited us <> _fees us) <> balance (_utxo us)
+          withdrawals :: TxBody era -> Core.Value era
           withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWdrl $ _wdrls txb
        in PostCondition
             "Should preserve value in the UTxO state"
@@ -289,21 +308,24 @@ instance
             )
     ]
 
-initialLedgerState :: InitialRule (UTXO (ShelleyEra c))
+initialLedgerState :: InitialRule (UTXO era)
 initialLedgerState = do
   IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
-  forall era.
+  forall era utxo.
   ( ShelleyBased era,
-    STS (UTXO era),
-    Embed (PPUP era) (UTXO era),
-    BaseM (UTXO era) ~ ShelleyBase,
-    Environment (UTXO era) ~ UtxoEnv era,
-    State (UTXO era) ~ UTxOState era,
-    Signal (UTXO era) ~ Tx era,
-    PredicateFailure (UTXO era) ~ UtxoPredicateFailure era,
+    STS (utxo era),
+    Embed (Core.EraRule "PPUP" era) (utxo era),
+    BaseM (utxo era) ~ ShelleyBase,
+    Environment (utxo era) ~ UtxoEnv era,
+    State (utxo era) ~ UTxOState era,
+    Signal (utxo era) ~ Tx era,
+    PredicateFailure (utxo era) ~ UtxoPredicateFailure era,
+    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
@@ -312,7 +334,7 @@ utxoInductive ::
     HasField "ttl" (Core.TxBody era) SlotNo,
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
-  TransitionRule (UTXO era)
+  TransitionRule (utxo era)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo deposits' fees ppup = u
@@ -348,14 +370,18 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO (toDelta consumed_) (toDelta produced_)
 
   -- process Protocol Parameter Update Proposals
-  ppup' <- trans @(PPUP era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
+  ppup' <- trans @(Core.EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
       -- minUTxOValue deposit comparison done as Coin because this rule
       -- is correct strictly in the Shelley era (in shelleyMA we would need to
       -- additionally check that all amounts are non-negative)
-      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, (Val.coin c) < (Val.scaledMinDeposit c minUTxOValue)]
+      outputsTooSmall =
+        [ out
+          | out@(TxOut _ c) <- outputs,
+            Val.coin c < Val.scaledMinDeposit c minUTxOValue
+        ]
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
@@ -376,12 +402,14 @@ utxoInductive = do
     UTxOState
       { _utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts txb),
         _deposited = deposits' <> depositChange,
-        _fees = fees <> (getField @"txfee" txb),
+        _fees = fees <> getField @"txfee" txb,
         _ppups = ppup'
       }
 
 instance
-  (CryptoClass.Crypto c) =>
-  Embed (PPUP (ShelleyEra c)) (UTXO (ShelleyEra c))
+  ( ShelleyBased era,
+    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era
+  ) =>
+  Embed (PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure

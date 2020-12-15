@@ -19,6 +19,7 @@ import qualified Cardano.Ledger.Crypto as CC (HASH)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Slotting.Slot (SlotNo)
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Coerce (coerce)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -57,7 +58,9 @@ class
     ValidateScript era,
     Split (Core.Value era),
     Show (Core.Script era),
-    ScriptClass era
+    ScriptClass era,
+    QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era),
+    QC.HasTrace (Core.EraRule "CHAIN" era) (GenEnv era)
   ) =>
   EraGen era
   where

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
@@ -20,6 +21,7 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Monad.Trans.Reader (asks)
@@ -33,6 +35,7 @@ import Control.State.Transition
     trans,
     (?!),
   )
+import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -57,8 +60,9 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
-import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
+import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Shelley.Spec.Ledger.Tx (Tx)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data BBODY era
@@ -82,24 +86,24 @@ data BbodyPredicateFailure era
   | InvalidBodyHashBBODY
       !(HashBBody (Crypto era)) -- Actual Hash
       !(HashBBody (Crypto era)) -- Claimed Hash
-  | LedgersFailure (PredicateFailure (LEDGERS era)) -- Subtransition Failures
+  | LedgersFailure (PredicateFailure (Core.EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
   ( ShelleyBased era,
-    Show (PredicateFailure (LEDGERS era))
+    Show (PredicateFailure (Core.EraRule "LEDGERS" era))
   ) =>
   Show (BbodyPredicateFailure era)
 
 deriving stock instance
   ( ShelleyBased era,
-    Eq (PredicateFailure (LEDGERS era))
+    Eq (PredicateFailure (Core.EraRule "LEDGERS" era))
   ) =>
   Eq (BbodyPredicateFailure era)
 
 instance
   ( ShelleyBased era,
-    NoThunks (PredicateFailure (LEDGERS era))
+    NoThunks (PredicateFailure (Core.EraRule "LEDGERS" era))
   ) =>
   NoThunks (BbodyPredicateFailure era)
 
@@ -107,7 +111,10 @@ instance
   ( Era era,
     ShelleyBased era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    Embed (LEDGERS era) (BBODY era)
+    Embed (Core.EraRule "LEDGERS" era) (BBODY era),
+    Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
+    State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era)
   ) =>
   STS (BBODY era)
   where
@@ -131,7 +138,10 @@ instance
 bbodyTransition ::
   forall era.
   ( ShelleyBased era,
-    Embed (LEDGERS era) (BBODY era),
+    Embed (Core.EraRule "LEDGERS" era) (BBODY era),
+    Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
+    State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
     STS (BBODY era)
   ) =>
   TransitionRule (BBODY era)
@@ -153,7 +163,7 @@ bbodyTransition =
         actualBodyHash == bhash bhb ?! InvalidBodyHashBBODY actualBodyHash (bhash bhb)
 
         ls' <-
-          trans @(LEDGERS era) $
+          trans @(Core.EraRule "LEDGERS" era) $
             TRC (LedgersEnv (bheaderSlotNo bhb) pp account, ls, StrictSeq.fromStrict txs)
 
         -- Note that this may not actually be a stake pool - it could be a genesis key
@@ -176,10 +186,12 @@ bbodyTransition =
 
 instance
   ( Era era,
-    STS (LEDGERS era),
+    BaseM ledgers ~ ShelleyBase,
+    ledgers ~ Core.EraRule "LEDGERS" era,
+    STS ledgers,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     ShelleyBased era
   ) =>
-  Embed (LEDGERS era) (BBODY era)
+  Embed ledgers (BBODY era)
   where
   wrapFailed = LedgersFailure

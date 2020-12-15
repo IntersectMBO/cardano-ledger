@@ -29,12 +29,11 @@ module Shelley.Spec.Ledger.STS.Chain
   )
 where
 
-import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Crypto (VRF)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Slotting.Slot (WithOrigin (..))
+import Cardano.Slotting.Slot (SlotNo, WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
@@ -59,13 +58,11 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     Nonce (..),
-    Seed (..),
     ShelleyBase,
     StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.BlockChain
-  ( BHBody,
-    BHeader,
+  ( BHeader,
     Block (..),
     LastAppliedBlock (..),
     bHeaderSize,
@@ -81,11 +78,8 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 import Shelley.Spec.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
+  ( GenDelegPair (..),
     GenDelegs (..),
-    Hash,
-    KESignable,
     KeyHash,
     KeyRole (..),
     coerceKeyRole,
@@ -105,14 +99,13 @@ import Shelley.Spec.Ledger.LedgerState
     updateNES,
     _genDelegs,
   )
-import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
     ProtVer (..),
   )
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv (..), BbodyState (..))
+import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv (..), BbodyPredicateFailure, BbodyState (..))
 import Shelley.Spec.Ledger.STS.Prtcl
   ( PRTCL,
     PrtclEnv (..),
@@ -120,10 +113,9 @@ import Shelley.Spec.Ledger.STS.Prtcl
     PrtlSeqFailure,
     prtlSeqChecks,
   )
-import Shelley.Spec.Ledger.STS.Tick (TICK)
+import Shelley.Spec.Ledger.STS.Tick (TICK, TickPredicateFailure)
 import Shelley.Spec.Ledger.STS.Tickn
 import Shelley.Spec.Ledger.Slot (EpochNo)
-import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
 data CHAIN era
@@ -159,28 +151,34 @@ data ChainPredicateFailure era
   | ObsoleteNodeCHAIN
       !Natural -- protocol version used
       !Natural -- max protocol version
-  | BbodyFailure !(PredicateFailure (BBODY era)) -- Subtransition Failures
-  | TickFailure !(PredicateFailure (TICK era)) -- Subtransition Failures
-  | TicknFailure !(PredicateFailure TICKN) -- Subtransition Failures
+  | BbodyFailure !(PredicateFailure (Core.EraRule "BBODY" era)) -- Subtransition Failures
+  | TickFailure !(PredicateFailure (Core.EraRule "TICK" era)) -- Subtransition Failures
+  | TicknFailure !(PredicateFailure (Core.EraRule "TICKN" era)) -- Subtransition Failures
   | PrtclFailure !(PredicateFailure (PRTCL (Crypto era))) -- Subtransition Failures
   | PrtclSeqFailure !(PrtlSeqFailure (Crypto era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
   ( ShelleyBased era,
-    Show (PredicateFailure (BBODY era))
+    Show (PredicateFailure (Core.EraRule "BBODY" era)),
+    Show (PredicateFailure (Core.EraRule "TICK" era)),
+    Show (PredicateFailure (Core.EraRule "TICKN" era))
   ) =>
   Show (ChainPredicateFailure era)
 
 deriving stock instance
   ( ShelleyBased era,
-    Eq (PredicateFailure (BBODY era))
+    Eq (PredicateFailure (Core.EraRule "BBODY" era)),
+    Eq (PredicateFailure (Core.EraRule "TICK" era)),
+    Eq (PredicateFailure (Core.EraRule "TICKN" era))
   ) =>
   Eq (ChainPredicateFailure era)
 
 instance
   ( ShelleyBased era,
-    NoThunks (PredicateFailure (BBODY era))
+    NoThunks (PredicateFailure (Core.EraRule "BBODY" era)),
+    NoThunks (PredicateFailure (Core.EraRule "TICK" era)),
+    NoThunks (PredicateFailure (Core.EraRule "TICKN" era))
   ) =>
   NoThunks (ChainPredicateFailure era)
 
@@ -229,17 +227,21 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
     cs = Map.fromList (fmap (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
 
 instance
-  ( Era era,
-    c ~ Crypto era,
-    ShelleyBased era,
-    Embed (BBODY era) (CHAIN era),
-    Embed TICKN (CHAIN era),
-    Embed (TICK era) (CHAIN era),
-    Embed (PRTCL (Crypto era)) (CHAIN era),
-    DSignable c (OCertSignable c),
-    DSignable c (Hash c EraIndependentTxBody),
-    KESignable c (BHBody c),
-    VRF.Signable (VRF c) Seed
+  ( ShelleyBased era,
+    STS (CHAIN era),
+    Embed (Core.EraRule "BBODY" era) (CHAIN era),
+    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
+    State (Core.EraRule "BBODY" era) ~ BbodyState era,
+    Signal (Core.EraRule "BBODY" era) ~ Block era,
+    Embed (Core.EraRule "TICKN" era) (CHAIN era),
+    Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
+    State (Core.EraRule "TICKN" era) ~ TicknState,
+    Signal (Core.EraRule "TICKN" era) ~ Bool,
+    Embed (Core.EraRule "TICK" era) (CHAIN era),
+    Environment (Core.EraRule "TICK" era) ~ (),
+    State (Core.EraRule "TICK" era) ~ NewEpochState era,
+    Signal (Core.EraRule "TICK" era) ~ SlotNo,
+    Embed (PRTCL (Crypto era)) (CHAIN era)
   ) =>
   STS (CHAIN era)
   where
@@ -297,9 +299,18 @@ chainTransition ::
   forall era.
   ( ShelleyBased era,
     STS (CHAIN era),
-    Embed (BBODY era) (CHAIN era),
-    Embed TICKN (CHAIN era),
-    Embed (TICK era) (CHAIN era),
+    Embed (Core.EraRule "BBODY" era) (CHAIN era),
+    Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
+    State (Core.EraRule "BBODY" era) ~ BbodyState era,
+    Signal (Core.EraRule "BBODY" era) ~ Block era,
+    Embed (Core.EraRule "TICKN" era) (CHAIN era),
+    Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
+    State (Core.EraRule "TICKN" era) ~ TicknState,
+    Signal (Core.EraRule "TICKN" era) ~ Bool,
+    Embed (Core.EraRule "TICK" era) (CHAIN era),
+    Environment (Core.EraRule "TICK" era) ~ (),
+    State (Core.EraRule "TICK" era) ~ NewEpochState era,
+    Signal (Core.EraRule "TICK" era) ~ SlotNo,
     Embed (PRTCL (Crypto era)) (CHAIN era)
   ) =>
   TransitionRule (CHAIN era)
@@ -332,8 +343,7 @@ chainTransition =
 
         let s = bheaderSlotNo $ bhbody bh
 
-        nes' <-
-          trans @(TICK era) $ TRC ((), nes, s)
+        nes' <- trans @(Core.EraRule "TICK" era) $ TRC ((), nes, s)
 
         let NewEpochState e1 _ _ _ _ _ = nes
             NewEpochState e2 _ bcur es _ _pd = nes'
@@ -344,7 +354,7 @@ chainTransition =
             etaPH = prevHashToNonce ph
 
         TicknState eta0' etaH' <-
-          trans @TICKN $
+          trans @(Core.EraRule "TICKN" era) $
             TRC
               ( TicknEnv (_extraEntropy pp') etaC etaPH,
                 TicknState eta0 etaH,
@@ -360,7 +370,7 @@ chainTransition =
               )
 
         BbodyState ls' bcur' <-
-          trans @(BBODY era) $
+          trans @(Core.EraRule "BBODY" era) $
             TRC (BbodyEnv pp' account, BbodyState ls bcur, block)
 
         let nes'' = updateNES nes' bcur' ls'
@@ -377,7 +387,8 @@ chainTransition =
 instance
   ( Era era,
     ShelleyBased era,
-    STS (BBODY era)
+    STS (BBODY era),
+    PredicateFailure (Core.EraRule "BBODY" era) ~ BbodyPredicateFailure era
   ) =>
   Embed (BBODY era) (CHAIN era)
   where
@@ -385,7 +396,8 @@ instance
 
 instance
   ( Era era,
-    ShelleyBased era
+    ShelleyBased era,
+    PredicateFailure (Core.EraRule "TICKN" era) ~ TicknPredicateFailure
   ) =>
   Embed TICKN (CHAIN era)
   where
@@ -394,7 +406,8 @@ instance
 instance
   ( Era era,
     ShelleyBased era,
-    STS (TICK era)
+    STS (TICK era),
+    PredicateFailure (Core.EraRule "TICK" era) ~ TickPredicateFailure era
   ) =>
   Embed (TICK era) (CHAIN era)
   where

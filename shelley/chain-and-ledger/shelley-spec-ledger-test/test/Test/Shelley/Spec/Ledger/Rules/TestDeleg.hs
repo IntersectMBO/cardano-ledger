@@ -16,7 +16,9 @@ module Test.Shelley.Spec.Ledger.Rules.TestDeleg
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Control.SetAlgebra (dom, eval, rng, (∈), (∉), (◁))
+import Control.State.Transition.Extended
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -28,8 +30,8 @@ import Data.Foldable (fold)
 import Data.List (foldl')
 import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup, (\\))
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
-import Shelley.Spec.Ledger.API (DELEG)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
+import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.LedgerState
   ( DState (..),
     InstantaneousRewards (..),
@@ -47,7 +49,13 @@ import Shelley.Spec.Ledger.TxBody
 import Test.QuickCheck (Property, conjoin, counterexample, property)
 
 -- | Check stake key registration
-keyRegistration :: SourceSignalTarget (DELEG era) -> Property
+keyRegistration ::
+  forall era.
+  ( State (Core.EraRule "DELEG" era) ~ DState era,
+    Signal (Core.EraRule "DELEG" era) ~ DCert era
+  ) =>
+  SourceSignalTarget (Core.EraRule "DELEG" era) ->
+  Property
 keyRegistration
   SourceSignalTarget
     { signal = (DCertDeleg (RegKey hk)),
@@ -64,7 +72,13 @@ keyRegistration
 keyRegistration _ = property ()
 
 -- | Check stake key de-registration
-keyDeRegistration :: SourceSignalTarget (DELEG era) -> Property
+keyDeRegistration ::
+  forall era.
+  ( State (Core.EraRule "DELEG" era) ~ DState era,
+    Signal (Core.EraRule "DELEG" era) ~ DCert era
+  ) =>
+  SourceSignalTarget (Core.EraRule "DELEG" era) ->
+  Property
 keyDeRegistration
   SourceSignalTarget
     { signal = (DCertDeleg (DeRegKey hk)),
@@ -81,7 +95,13 @@ keyDeRegistration
 keyDeRegistration _ = property ()
 
 -- | Check stake key delegation
-keyDelegation :: SourceSignalTarget (DELEG era) -> Property
+keyDelegation ::
+  forall era.
+  ( State (Core.EraRule "DELEG" era) ~ DState era,
+    Signal (Core.EraRule "DELEG" era) ~ DCert era
+  ) =>
+  SourceSignalTarget (Core.EraRule "DELEG" era) ->
+  Property
 keyDelegation
   SourceSignalTarget
     { signal = (DCertDeleg (Delegate (Delegation from to))),
@@ -103,7 +123,12 @@ keyDelegation _ = property ()
 
 -- | Check that the sum of rewards does not change and that each element
 -- that is either removed or added has a zero balance.
-rewardsSumInvariant :: SourceSignalTarget (DELEG era) -> Property
+rewardsSumInvariant ::
+  forall era.
+  ( State (Core.EraRule "DELEG" era) ~ DState era
+  ) =>
+  SourceSignalTarget (Core.EraRule "DELEG" era) ->
+  Property
 rewardsSumInvariant
   SourceSignalTarget {source, target} =
     let sourceRewards = _rewards source
@@ -121,7 +146,13 @@ rewardsSumInvariant
               (null (Map.filter (/= Coin 0) $ targetRewards `Map.difference` sourceRewards))
           ]
 
-checkInstantaneousRewards :: SourceSignalTarget (DELEG era) -> Property
+checkInstantaneousRewards ::
+  forall era.
+  ( State (Core.EraRule "DELEG" era) ~ DState era,
+    Signal (Core.EraRule "DELEG" era) ~ DCert era
+  ) =>
+  SourceSignalTarget (Core.EraRule "DELEG" era) ->
+  Property
 checkInstantaneousRewards
   SourceSignalTarget {source, signal, target} =
     case signal of

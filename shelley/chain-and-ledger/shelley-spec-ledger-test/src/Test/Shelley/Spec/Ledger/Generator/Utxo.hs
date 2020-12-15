@@ -27,6 +27,7 @@ import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
 import Control.SetAlgebra (forwards)
+import Control.State.Transition
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Either as Either (partitionEithers)
 import Data.List (foldl', nub)
@@ -76,6 +77,7 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.STS.Delpl (DelplEnv)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
@@ -108,7 +110,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombination)
-import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
+import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS, genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, Split (..))
 
@@ -159,6 +161,10 @@ genTx ::
     EraGen era,
     ValidateAuxiliaryData era,
     Mock (Crypto era),
+    Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>

@@ -22,7 +22,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
 where
 
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
-import qualified Cardano.Ledger.Core as Core (TxBody)
+import qualified Cardano.Ledger.Core as Core (EraRule, TxBody)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -174,7 +174,7 @@ adaPreservationChain =
 -- ADA should be preserved for all state transitions in the generated trace
 checkPreservation ::
   ShelleyBased era =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 checkPreservation SourceSignalTarget {source, target} =
   counterexample
@@ -200,7 +200,7 @@ checkWithdrawlBound ::
   ( ChainProperty era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 checkWithdrawlBound SourceSignalTarget {source, signal, target} =
   rewardDelta === withdrawals signal
@@ -231,7 +231,7 @@ utxoDepositsIncreaseByFeesWithdrawals ::
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target} =
   circulation target <-> circulation source
@@ -248,7 +248,7 @@ potsSumIncreaseWdrlsPerBlock ::
   ( ChainProperty era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
   potsSum target <-> potsSum source === withdrawals signal
@@ -266,7 +266,7 @@ potsSumIncreaseWdrlsPerTx ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -274,7 +274,7 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
       sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock chainSt block
-    sumIncreaseWdrls :: SourceSignalTarget (LEDGER era) -> Property
+    sumIncreaseWdrls :: SourceSignalTarget (Core.EraRule "LEDGER" era) -> Property
     sumIncreaseWdrls
       SourceSignalTarget
         { source = (UTxOState {_utxo = u, _deposited = d, _fees = f}, _),
@@ -290,7 +290,7 @@ potsSumIncreaseByRewardsPerTx ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -320,7 +320,7 @@ potsRewardsDecreaseByWdrlsPerTx ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -358,7 +358,7 @@ preserveBalance ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -396,7 +396,7 @@ preserveBalanceRestricted ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -427,7 +427,7 @@ preserveOutputsTx ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -448,7 +448,7 @@ eliminateTxInputs ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -468,7 +468,7 @@ newEntriesAndUniqueTxIns ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -499,7 +499,7 @@ requiredMSigSignaturesSubset ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -507,7 +507,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
       sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock chainSt block
-    signaturesSubset :: SourceSignalTarget (LEDGER era) -> Property
+    signaturesSubset :: SourceSignalTarget (Core.EraRule "LEDGER" era) -> Property
     signaturesSubset SourceSignalTarget {signal = tx} =
       let khs = keyHashSet tx
        in property $
@@ -525,7 +525,7 @@ noDoubleSpend ::
   ( ChainProperty era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 noDoubleSpend SourceSignalTarget {signal} =
   [] === getDoubleInputs txs
@@ -578,7 +578,7 @@ txFees block =
 
 -- | Check that deposits are always non-negative
 nonNegativeDeposits ::
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 nonNegativeDeposits SourceSignalTarget {source = chainSt} =
   let es = (nesEs . chainNes) chainSt
@@ -587,7 +587,7 @@ nonNegativeDeposits SourceSignalTarget {source = chainSt} =
 
 -- | Checks that the fees are non-decreasing when not at an epoch boundary
 feesNonDecreasing ::
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 feesNonDecreasing SourceSignalTarget {source, target} =
   property $
@@ -630,7 +630,7 @@ poolRetirement ::
   ( ChainProperty era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -647,7 +647,7 @@ poolRegistration ::
   ( ChainProperty era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
   conjoin $
@@ -661,7 +661,7 @@ poolStateIsInternallyConsistent ::
   ( ChainProperty era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Property
 poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = block}) =
   conjoin $
@@ -691,7 +691,7 @@ delegProperties =
     conjoin $
       map chainProp (sourceSignalTargets tr)
   where
-    delegProp :: SourceSignalTarget (DELEG era) -> Property
+    delegProp :: SourceSignalTarget (Core.EraRule "DELEG" era) -> Property
     delegProp delegSst =
       conjoin $
         [ TestDeleg.keyRegistration delegSst,
@@ -700,7 +700,7 @@ delegProperties =
           TestDeleg.rewardsSumInvariant delegSst,
           TestDeleg.checkInstantaneousRewards delegSst
         ]
-    chainProp :: SourceSignalTarget (CHAIN era) -> Property
+    chainProp :: SourceSignalTarget (Core.EraRule "CHAIN" era) -> Property
     chainProp (SourceSignalTarget {source = chainSt, signal = block}) =
       let delegTr = snd $ delegTraceFromBlock chainSt block
           delegSsts = sourceSignalTargets delegTr
@@ -719,11 +719,11 @@ ledgerTraceFromBlock ::
   ) =>
   ChainState era ->
   Block era ->
-  (ChainState era, Trace (LEDGER era))
+  (ChainState era, Trace (Core.EraRule "LEDGER" era))
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt,
     runShelleyBase $
-      Trace.closure @(LEDGER era) ledgerEnv ledgerSt0 txs
+      Trace.closure @(Core.EraRule "LEDGER" era) ledgerEnv ledgerSt0 txs
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -736,11 +736,11 @@ poolTraceFromBlock ::
   ) =>
   ChainState era ->
   Block era ->
-  (ChainState era, Trace (POOL era))
+  (ChainState era, Trace (Core.EraRule "POOL" era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt,
     runShelleyBase $
-      Trace.closure @(POOL era) poolEnv poolSt0 poolCerts
+      Trace.closure @(Core.EraRule "POOL" era) poolEnv poolSt0 poolCerts
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -763,11 +763,11 @@ delegTraceFromBlock ::
   ) =>
   ChainState era ->
   Block era ->
-  (ChainState era, Trace (DELEG era))
+  (ChainState era, Trace (Core.EraRule "DELEG" era))
 delegTraceFromBlock chainSt block =
   ( tickedChainSt,
     runShelleyBase $
-      Trace.closure @(DELEG era) delegEnv delegSt0 blockCerts
+      Trace.closure @(Core.EraRule "DELEG" era) delegEnv delegSt0 blockCerts
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -829,8 +829,8 @@ ledgerTraceBase chainSt block =
 chainSstWithTick ::
   forall era.
   ChainProperty era =>
-  Trace (CHAIN era) ->
-  [SourceSignalTarget (CHAIN era)]
+  Trace (Core.EraRule "CHAIN" era) ->
+  [SourceSignalTarget (Core.EraRule "CHAIN" era)]
 chainSstWithTick ledgerTr =
   map applyTick (sourceSignalTargets ledgerTr)
   where
@@ -862,7 +862,7 @@ removedAfterPoolreap =
   where
     poolState = _pstate . _delegationState . esLState . nesEs . chainNes
 
-    removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
+    removedAfterPoolreap_ :: SourceSignalTarget (Core.EraRule "CHAIN" era) -> Property
     removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (Block bh _)}) =
       let e = (epochFromSlotNo . bheaderSlotNo . bhbody) bh
        in TestPoolreap.removedAfterPoolreap (poolState source) (poolState target) e
@@ -883,7 +883,7 @@ forAllChainTrace ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   Word64 -> -- trace length
-  (Trace (CHAIN era) -> prop) ->
+  (Trace (Core.EraRule "CHAIN" era) -> prop) ->
   Property
 forAllChainTrace n prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
@@ -898,7 +898,7 @@ forAllChainTrace n prop =
     p = Proxy
 
 sameEpoch ::
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (Core.EraRule "CHAIN" era) ->
   Bool
 sameEpoch SourceSignalTarget {source, target} =
   epoch source == epoch target

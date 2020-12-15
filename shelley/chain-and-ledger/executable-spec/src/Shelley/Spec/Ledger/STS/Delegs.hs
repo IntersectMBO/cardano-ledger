@@ -68,7 +68,7 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
   )
 import Shelley.Spec.Ledger.PParams (PParams)
-import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))
+import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..), DelplPredicateFailure)
 import Shelley.Spec.Ledger.Serialization
   ( decodeRecordSum,
     mapFromCBOR,
@@ -105,13 +105,26 @@ data DelegsPredicateFailure era
       !(KeyHash 'StakePool (Crypto era)) -- target pool which is not registered
   | WithdrawalsNotInRewardsDELEGS
       !(Map (RewardAcnt (Crypto era)) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
-  | DelplFailure (PredicateFailure (DELPL era)) -- Subtransition Failures
-  deriving (Show, Eq, Generic)
+  | DelplFailure (PredicateFailure (Core.EraRule "DELPL" era)) -- Subtransition Failures
+  deriving (Generic)
+
+deriving stock instance
+  ( Show (PredicateFailure (Core.EraRule "DELPL" era))
+  ) =>
+  Show (DelegsPredicateFailure era)
+
+deriving stock instance
+  ( Eq (PredicateFailure (Core.EraRule "DELPL" era))
+  ) =>
+  Eq (DelegsPredicateFailure era)
 
 instance
-  ( Era era,
-    ShelleyBased era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+  ( ShelleyBased era,
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Embed (Core.EraRule "DELPL" era) (DELEGS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
   STS (DELEGS era)
   where
@@ -126,10 +139,16 @@ instance
   initialRules = [pure emptyDelegation]
   transitionRules = [delegsTransition]
 
-instance NoThunks (DelegsPredicateFailure era)
+instance
+  ( NoThunks (PredicateFailure (Core.EraRule "DELPL" era))
+  ) =>
+  NoThunks (DelegsPredicateFailure era)
 
 instance
-  (Typeable era, Era era, Typeable (Core.Script era)) =>
+  ( Era era,
+    Typeable (Core.Script era),
+    ToCBOR (PredicateFailure (Core.EraRule "DELPL" era))
+  ) =>
   ToCBOR (DelegsPredicateFailure era)
   where
   toCBOR = \case
@@ -146,7 +165,10 @@ instance
         <> toCBOR a
 
 instance
-  (Era era, Typeable (Core.Script era)) =>
+  ( Era era,
+    FromCBOR (PredicateFailure (Core.EraRule "DELPL" era)),
+    Typeable (Core.Script era)
+  ) =>
   FromCBOR (DelegsPredicateFailure era)
   where
   fromCBOR =
@@ -168,7 +190,10 @@ delegsTransition ::
   forall era.
   ( ShelleyBased era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    Embed (DELPL era) (DELEGS era)
+    Embed (Core.EraRule "DELPL" era) (DELEGS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
   TransitionRule (DELEGS era)
 delegsTransition = do
@@ -214,7 +239,7 @@ delegsTransition = do
       isDelegationRegistered ?!: id
 
       let ptr = Ptr slot txIx (fromIntegral $ length gamma)
-      trans @(DELPL era) $
+      trans @(Core.EraRule "DELPL" era) $
         TRC (DelplEnv slot ptr pp acnt, dpstate', c)
   where
     -- @wdrls_@ is small and @rewards@ big, better to transform the former
@@ -230,8 +255,8 @@ delegsTransition = do
 
 instance
   ( Era era,
-    ShelleyBased era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    STS (DELPL era),
+    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era
   ) =>
   Embed (DELPL era) (DELEGS era)
   where

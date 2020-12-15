@@ -12,7 +12,9 @@ module Test.Shelley.Spec.Ledger.Rules.TestPool
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Control.SetAlgebra (dom, eval, (∈), (∉))
+import Control.State.Transition.Extended
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
   )
@@ -24,12 +26,17 @@ import Shelley.Spec.Ledger.LedgerState
     _fPParams,
     _pParams,
   )
-import Shelley.Spec.Ledger.STS.Pool (POOL)
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxBody (DCert (DCertPool), PoolParams (..))
 import Test.QuickCheck (Property, conjoin, counterexample, property, (===))
 
-poolRegistration :: SourceSignalTarget (POOL era) -> Property
+poolRegistration ::
+  forall era.
+  ( State (Core.EraRule "POOL" era) ~ PState era,
+    Signal (Core.EraRule "POOL" era) ~ DCert era
+  ) =>
+  SourceSignalTarget (Core.EraRule "POOL" era) ->
+  Property
 poolRegistration
   SourceSignalTarget
     { signal = (DCertPool (RegPool poolParams)),
@@ -66,7 +73,15 @@ poolRegistration
               ]
 poolRegistration _ = property ()
 
-poolRetirement :: EpochNo -> EpochNo -> SourceSignalTarget (POOL era) -> Property
+poolRetirement ::
+  forall era.
+  ( State (Core.EraRule "POOL" era) ~ PState era,
+    Signal (Core.EraRule "POOL" era) ~ DCert era
+  ) =>
+  EpochNo ->
+  EpochNo ->
+  SourceSignalTarget (Core.EraRule "POOL" era) ->
+  Property
 poolRetirement
   currentEpoch@(EpochNo ce)
   (EpochNo maxEpoch)

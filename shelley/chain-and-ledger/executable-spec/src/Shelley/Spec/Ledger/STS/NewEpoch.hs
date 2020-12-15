@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
@@ -19,6 +20,7 @@ module Shelley.Spec.Ledger.STS.NewEpoch
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val
@@ -41,21 +43,43 @@ import Shelley.Spec.Ledger.TxBody
 data NEWEPOCH era
 
 data NewEpochPredicateFailure era
-  = EpochFailure (PredicateFailure (EPOCH era)) -- Subtransition Failures
+  = EpochFailure (PredicateFailure (Core.EraRule "EPOCH" era)) -- Subtransition Failures
   | CorruptRewardUpdate
       !(RewardUpdate (Crypto era)) -- The reward update which violates an invariant
-  | MirFailure (PredicateFailure (MIR era)) -- Subtransition Failures
+  | MirFailure (PredicateFailure (Core.EraRule "MIR" era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
+  ( Show (PredicateFailure (Core.EraRule "EPOCH" era)),
+    Show (PredicateFailure (Core.EraRule "MIR" era))
+  ) =>
   Show (NewEpochPredicateFailure era)
 
 deriving stock instance
+  ( Eq (PredicateFailure (Core.EraRule "EPOCH" era)),
+    Eq (PredicateFailure (Core.EraRule "MIR" era))
+  ) =>
   Eq (NewEpochPredicateFailure era)
 
-instance NoThunks (NewEpochPredicateFailure era)
+instance
+  ( NoThunks (PredicateFailure (Core.EraRule "EPOCH" era)),
+    NoThunks (PredicateFailure (Core.EraRule "MIR" era))
+  ) =>
+  NoThunks (NewEpochPredicateFailure era)
 
-instance ShelleyBased era => STS (NEWEPOCH era) where
+instance
+  ( ShelleyBased era,
+    Embed (Core.EraRule "MIR" era) (NEWEPOCH era),
+    Embed (Core.EraRule "EPOCH" era) (NEWEPOCH era),
+    Environment (Core.EraRule "MIR" era) ~ (),
+    State (Core.EraRule "MIR" era) ~ EpochState era,
+    Signal (Core.EraRule "MIR" era) ~ (),
+    Environment (Core.EraRule "EPOCH" era) ~ (),
+    State (Core.EraRule "EPOCH" era) ~ EpochState era,
+    Signal (Core.EraRule "EPOCH" era) ~ EpochNo
+  ) =>
+  STS (NEWEPOCH era)
+  where
   type State (NEWEPOCH era) = NewEpochState era
 
   type Signal (NEWEPOCH era) = EpochNo
@@ -80,7 +104,14 @@ instance ShelleyBased era => STS (NEWEPOCH era) where
 
 newEpochTransition ::
   forall era.
-  ( ShelleyBased era
+  ( Embed (Core.EraRule "MIR" era) (NEWEPOCH era),
+    Embed (Core.EraRule "EPOCH" era) (NEWEPOCH era),
+    Environment (Core.EraRule "MIR" era) ~ (),
+    State (Core.EraRule "MIR" era) ~ EpochState era,
+    Signal (Core.EraRule "MIR" era) ~ (),
+    Environment (Core.EraRule "EPOCH" era) ~ (),
+    State (Core.EraRule "EPOCH" era) ~ EpochState era,
+    Signal (Core.EraRule "EPOCH" era) ~ EpochNo
   ) =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
@@ -100,8 +131,8 @@ newEpochTransition = do
           Val.isZero (dt <> (dr <> (toDeltaCoin $ fold rs_) <> df)) ?! CorruptRewardUpdate ru'
           pure $ applyRUpd ru' es
 
-      es'' <- trans @(MIR era) $ TRC ((), es', ())
-      es''' <- trans @(EPOCH era) $ TRC ((), es'', e)
+      es'' <- trans @(Core.EraRule "MIR" era) $ TRC ((), es', ())
+      es''' <- trans @(Core.EraRule "EPOCH" era) $ TRC ((), es'', e)
       let EpochState _acnt ss _ls _pr _ _ = es'''
           pd' = calculatePoolDistr (_pstakeSet ss)
       pure $
@@ -127,13 +158,18 @@ calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
    in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
 
 instance
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    STS (EPOCH era),
+    PredicateFailure (Core.EraRule "EPOCH" era) ~ EpochPredicateFailure era
+  ) =>
   Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = EpochFailure
 
 instance
-  ShelleyBased era =>
+  ( ShelleyBased era,
+    PredicateFailure (Core.EraRule "MIR" era) ~ MirPredicateFailure era
+  ) =>
   Embed (MIR era) (NEWEPOCH era)
   where
   wrapFailed = MirFailure

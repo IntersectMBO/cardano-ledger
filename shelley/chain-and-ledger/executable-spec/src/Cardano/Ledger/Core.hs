@@ -1,7 +1,9 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -24,12 +26,16 @@ module Cardano.Ledger.Core
     ChainData,
     SerialisableData,
     AnnotatedData,
+
+    -- * Era STS
+    EraRule,
   )
 where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
+import GHC.TypeLits (Symbol)
 import NoThunks.Class (NoThunks)
 
 -- | A value is something which quantifies a transaction output.
@@ -55,3 +61,6 @@ type SerialisableData t = (FromCBOR t, ToCBOR t)
 
 -- | Constraints for serialising from/to CBOR using 'Annotator'
 type AnnotatedData t = (FromCBOR (Annotator t), ToCBOR t)
+
+-- | Era STS map
+type family EraRule (k :: Symbol) era :: Type

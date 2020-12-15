@@ -100,12 +100,9 @@ import Data.Sequence (Seq)
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.API
   ( ApplyBlock,
-    CHAIN,
     ChainState,
     DPState,
     GetLedgerView,
-    LEDGER,
-    LEDGERS,
     LedgerEnv,
     LedgerState,
     LedgersEnv,
@@ -136,8 +133,7 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv)
-import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx, TxBody)
@@ -164,34 +160,34 @@ type ChainProperty era =
   )
 
 type ShelleyUtxoSTS era =
-  ( STS (UTXOW era),
-    BaseM (UTXOW era) ~ ShelleyBase,
-    State (UTXO era) ~ UTxOState era,
-    State (UTXOW era) ~ UTxOState era,
-    Environment (UTXOW era) ~ UtxoEnv era,
-    Environment (UTXO era) ~ UtxoEnv era,
-    Signal (UTXOW era) ~ Tx era
+  ( STS (Core.EraRule "UTXOW" era),
+    BaseM (Core.EraRule "UTXOW" era) ~ ShelleyBase,
+    State (Core.EraRule "UTXO" era) ~ UTxOState era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era
   )
 
 type ShelleyLedgerSTS era =
-  ( STS (LEDGER era),
-    BaseM (LEDGER era) ~ ShelleyBase,
-    Environment (LEDGER era) ~ LedgerEnv era,
-    State (LEDGER era) ~ (UTxOState era, DPState (Crypto era)),
-    Signal (LEDGER era) ~ Tx era,
-    STS (LEDGERS era),
-    BaseM (LEDGERS era) ~ ShelleyBase,
-    Environment (LEDGERS era) ~ LedgersEnv era,
-    State (LEDGERS era) ~ LedgerState era,
-    Signal (LEDGERS era) ~ Seq (Tx era)
+  ( STS (Core.EraRule "LEDGER" era),
+    BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
+    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
+    State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
+    Signal (Core.EraRule "LEDGER" era) ~ Tx era,
+    STS (Core.EraRule "LEDGERS" era),
+    BaseM (Core.EraRule "LEDGERS" era) ~ ShelleyBase,
+    Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
+    State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era)
   )
 
 type ShelleyChainSTS era =
-  ( STS (CHAIN era),
-    BaseM (CHAIN era) ~ ShelleyBase,
-    Environment (CHAIN era) ~ (),
-    State (CHAIN era) ~ ChainState era,
-    Signal (CHAIN era) ~ Block era
+  ( STS (Core.EraRule "CHAIN" era),
+    BaseM (Core.EraRule "CHAIN" era) ~ ShelleyBase,
+    Environment (Core.EraRule "CHAIN" era) ~ (),
+    State (Core.EraRule "CHAIN" era) ~ ChainState era,
+    Signal (Core.EraRule "CHAIN" era) ~ Block era
   )
 
 class Split v where

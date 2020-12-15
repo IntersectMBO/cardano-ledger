@@ -16,7 +16,6 @@ where
 
 import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
@@ -29,10 +28,7 @@ import qualified Data.List as List (find)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Records (HasField)
 import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.BlockChain
   ( LastAppliedBlock (..),
@@ -82,10 +78,7 @@ genBlock ::
     Mock (Crypto era),
     ApplyBlock era,
     GetLedgerView era,
-    ValidateAuxiliaryData era,
-    ShelleyLedgerSTS era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+    ShelleyLedgerSTS era
   ) =>
   GenEnv era ->
   ChainState era ->
@@ -95,7 +88,7 @@ genBlock ge = genBlockWithTxGen genTxs ge
     genTxs pp reserves ls s = do
       let ledgerEnv = LedgersEnv s pp reserves
 
-      sigGen @(LEDGERS era) ge ledgerEnv ls
+      sigGen @(Core.EraRule "LEDGERS" era) ge ledgerEnv ls
 
 genBlockWithTxGen ::
   forall era.
