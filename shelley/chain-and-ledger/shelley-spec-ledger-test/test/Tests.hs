@@ -3,7 +3,6 @@
 {-# LANGUAGE TypeApplications #-}
 
 import Cardano.Crypto.Libsodium (sodiumInit)
-import Data.Proxy
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
@@ -25,7 +24,7 @@ mainTests =
   testGroup
     "Ledger with Delegation"
     [ minimalPropertyTests @C,
-      rewardTests (Proxy :: Proxy C),
+      rewardTests,
       Serialisation.tests 5,
       chainExamples,
       multisigExamples,

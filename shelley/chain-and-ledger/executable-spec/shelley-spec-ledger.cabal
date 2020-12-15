@@ -34,6 +34,7 @@ library
     Shelley.Spec.Ledger.API.ByronTranslation
     Shelley.Spec.Ledger.API.Protocol
     Shelley.Spec.Ledger.API.Validation
+    Shelley.Spec.Ledger.API.Wallet
     Shelley.Spec.Ledger.BaseTypes
     Shelley.Spec.Ledger.BlockChain
     Shelley.Spec.Ledger.Coin
@@ -87,7 +88,6 @@ library
     Shelley.Spec.Ledger.TxBody
     Shelley.Spec.Ledger.UTxO
   other-modules:     Shelley.Spec.Ledger.API.Mempool
-                     Shelley.Spec.Ledger.API.Wallet
                      Shelley.Spec.Ledger.API.Types
   hs-source-dirs: src
   ghc-options:

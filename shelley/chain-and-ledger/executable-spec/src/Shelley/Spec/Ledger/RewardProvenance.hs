@@ -74,7 +74,8 @@ data RewardProvenance crypto = RewardProvenance
            (KeyHash 'StakePool crypto)
            (RewardProvenancePool crypto)
        ),
-    hitRateEstimates :: !(Map (KeyHash 'StakePool crypto) Double)
+    hitRateEstimates :: !(Map (KeyHash 'StakePool crypto) (Double, Double))
+    -- The pair of Doubles represents (LiklihoodEstimate,Desireability)
   }
   deriving (Eq, Generic)
 

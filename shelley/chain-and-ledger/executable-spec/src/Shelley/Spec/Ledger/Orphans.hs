@@ -24,11 +24,6 @@ import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..), UnitInterv
 import Shelley.Spec.Ledger.Keys (KeyHash (..))
 import Shelley.Spec.Ledger.Slot (BlockNo, EpochNo)
 
-{-
-import qualified Data.Set as Set
-import qualified Data.Map as Map
--}
-
 instance FromJSON IPv4 where
   parseJSON =
     withText "IPv4" $ \txt -> case readEither (Text.unpack txt) of
@@ -94,14 +89,6 @@ instance Default (KeyHash a b) where
 
 instance Default (SS.StrictSeq t) where
   def = SS.Empty
-
-{-
-instance Default (Map.Map k t) where
-   def = Map.empty
-
-instance Default (Set.Set t) where
-   def = Set.empty
--}
 
 instance Default (StrictMaybe t) where
   def = SNothing

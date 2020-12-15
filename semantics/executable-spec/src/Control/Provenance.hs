@@ -46,9 +46,13 @@ module Control.Provenance
     -- * Operation on PObject
     find,
     observe,
+
+    -- * For testing invariants
+    preservesNothing,
+    preservesJust,
+
   )
   where
-
 
 import Control.Monad.State.Strict(StateT(..),MonadTrans(..),MonadState(..))
 import Data.Aeson(ToJSON (..))
@@ -326,3 +330,19 @@ data StrictMaybe a
   = SNothing
   | SJust !a
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+
+
+-- =======================================================================
+-- useful for testing invariants, The type StrictMaybe is local to this
+-- module, and is not exported, so these predicates are defined here to
+-- support testing these invariants.
+
+preservesNothing :: Monad m => ProvM t m a -> m Bool
+preservesNothing (ProvM m) = do
+   (_,maybet) <- runStateT m SNothing
+   case maybet of { SNothing -> pure True; SJust _ -> pure False}
+
+preservesJust :: Monad m => t -> ProvM t m a -> m Bool
+preservesJust t (ProvM m) = do
+   (_,maybet) <- runStateT m (SJust t)
+   case maybet of { SNothing -> pure False; SJust _ -> pure True}

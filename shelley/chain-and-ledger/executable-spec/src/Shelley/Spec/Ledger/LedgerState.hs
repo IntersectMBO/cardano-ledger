@@ -94,6 +94,7 @@ module Shelley.Spec.Ledger.LedgerState
 
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
+    updateNonMypopic,
   )
 where
 
@@ -193,6 +194,7 @@ import Shelley.Spec.Ledger.Rewards
     NonMyopic (..),
     PerformanceEstimate (..),
     applyDecay,
+    desirability,
     emptyNonMyopic,
     percentile',
     reward,
@@ -1069,6 +1071,7 @@ updateNonMypopic nm rPot newLikelihoods =
 
 -- | Create a reward update
 createRUpd ::
+  forall era.
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->
@@ -1100,7 +1103,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
       deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       totalStake = circulation es maxSupply
-  ((rs_, newLikelihoods), boxedPools) <-
+  ((rs_, newLikelihoods), blackBoxPools) <-
     runOtherProv
       Map.empty
       ( reward
@@ -1115,10 +1118,21 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           asc
           slotsPerEpoch
       )
-
   let deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
+      -- add under 'key' the pair (LikeliHoodEstimate,Desireability) to the Map 'ans'
+      addPair ans key likelihood = case Map.lookup key poolParams of
+        Nothing -> Map.insert key (unPerformanceEstimate estimate, 0) ans
+        Just pp ->
+          Map.insert
+            key
+            ( unPerformanceEstimate estimate,
+              desirability pr (Coin rPot) pp estimate totalStake
+            )
+            ans
+        where
+          estimate = (percentile' likelihood)
   modifyWithBlackBox
-    boxedPools
+    blackBoxPools
     ( \provPools _ ->
         RewardProvenance
           (unEpochSize slotsPerEpoch)
@@ -1136,7 +1150,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           (Coin deltaT1)
           (fold . unStake $ stake')
           provPools
-          (Map.map (unPerformanceEstimate . percentile') newLikelihoods)
+          (Map.foldlWithKey' addPair Map.empty newLikelihoods)
     )
   pure $
     RewardUpdate
