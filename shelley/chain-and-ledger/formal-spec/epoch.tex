@@ -17,8 +17,6 @@
 \newcommand{\obligation}[3]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\reward}[8]{\fun{reward}
   ~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}~ \var{#6}~ \var{#7}~ \var{#8}}
-\newcommand{\rewardOnePool}[9]{\fun{rewardOnePool}
-  ~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}~\var{#7}~\var{#8}~\var{#9}}
 \newcommand{\isActive}[4]{\fun{isActive}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\activeStake}[5]{\fun{activeStake}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\poolRefunds}[2]{\fun{poolRefunds}~ \var{#1}~ \var{#2}}
@@ -26,7 +24,7 @@
 \newcommand{\stakeDistr}[3]{\fun{stakeDistr}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\lReward}[4]{\fun{r_{operator}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
-\newcommand{\poolReward}[5]{\fun{poolReward}~\var{#1}~{#2}~\var{#3}~\var{#4}~\var{#5}}
+\newcommand{\mkApparentPerformance}[4]{\fun{mkApparentPerformance}~\var{#1}~{#2}~\var{#3}~\var{#4}}
 \newcommand{\createRUpd}[4]{\fun{createRUpd}~\var{#1}~\var{#2}~\var{#3}~\var{#4}}
 \newcommand{\getIR}[1]{\fun{getIR}~\var{#1}}
 
@@ -1068,10 +1066,10 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
       \item $\var{a_0}$, the leader-stake influence
       \item $n_{opt}$, the optimal number of saturated stake pools
     \end{itemize}
-  \item The function $\fun{poolReward}$ gives the total rewards available to be
-    distributed to the members of the given pool. It depends on the protocol parameter $d$,
-    the relative stake $\sigma$, the number $n$ of blocks the pool added to the chain and the
-    total number $\overline{N}$ of blocks added to the chain in the last epoch.
+  \item The function $\fun{mkApparentPerformance}$ computes the apparent performance of a stake pool.
+    It depends on the protocol parameter $d$, the relative stake $\sigma$, the number $n$ of blocks
+    the pool added to the chain and the total number $\overline{N}$ of blocks added to the chain in
+    the last epoch.
 
 \end{itemize}
 
@@ -1098,18 +1096,16 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
       & ~~~~~~~p'=\min(p_r,~z_0) \\
   \end{align*}
 
-  \emph{Actual Reward Function, called $\hat{f}$ in section 5.5.2 of~\cite{delegation_design}}
+  \emph{Apparent Performance, called $\hat{p}$ in section 5.5.2 of~\cite{delegation_design}}
   %
   \begin{align*}
-      & \fun{poolReward} \in \unitInterval \to \unitInterval \to \N \to \N \to \Coin \to \Coin \\
-      & \poolReward{d}{\sigma}{n}{\overline{N}}{f} =
-      \floor*{\overline{p}\cdot\var{f}}\\
-      & ~~~\where \\
-      & ~~~~~~~\overline{p} =
+      & \fun{mkApparentPerformance} \in \unitInterval \to \unitInterval \to \N \to \N \to \Q \\
+      & \mkApparentPerformance{d}{\sigma}{n}{\overline{N}} =
         \begin{cases}
           \frac{\beta}{\sigma} & \text{if } d < 0.8 \\
           1 & \text{otherwise}
         \end{cases} \\
+      & ~~~\where \\
       & ~~~~~~~\beta = \frac{n}{\max(1, \overline{N})} \\
   \end{align*}
   \caption{Functions used in the Reward Calculation}
@@ -1205,17 +1201,15 @@ The calculation is done pool-by-pool.
   %
   \begin{align*}
     & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \N \to \KeyHash \to \PoolParam\\
-      & ~~~\to \Stake \to \Coin \to \powerset{\AddrRWD}
+      & ~~~\to \Stake \to \Q \to \Q \to \Coin \to \powerset{\AddrRWD}
            \to (\AddrRWD \mapsto \Coin) \\
-      & \rewardOnePool{pp}{R}{n}{\overline{N}}{poolHK}{pool}{stake}{tot}{addrs_{rew}} =
+      & \fun{rewardOnePool}~\var{pp}~\var{R}~\var{n}~\var{\overline{N}}~\var{poolHK}~\var{pool}~\var{stake}~{\sigma}~{\sigma_a}~\var{tot}~\var{addrs_{rew}} =
           \var{rewards}\\
       & ~~~\where \\
-      & ~~~~~~~\var{pstake} = \sum_{\_\mapsto c\in\var{stake}} c \\
       & ~~~~~~~\var{ostake} = \sum_{\substack{
         hk_\mapsto c\in\var{stake}\\
         hk\in(\fun{poolOwners}~\var{pool})\\
         }} c \\
-      & ~~~~~~~\sigma = \var{pstake} / tot \\
       & ~~~~~~~\var{pledge} = \fun{poolPledge}~pool \\
       & ~~~~~~~p_{r} = \var{pledge} / \var{tot} \\
       & ~~~~~~~maxP =
@@ -1224,12 +1218,14 @@ The calculation is done pool-by-pool.
         \var{pledge} \leq \var{ostake}\\
         0 & \text{otherwise.}
       \end{cases} \\
-      & ~~~~~~~\var{poolR} = \poolReward{(\fun{d}~pp)}{\sigma}{n}{\overline{N}}{maxP} \\
-      & ~~~~~~~\var{mRewards} = \left\{
-                                  \addrRw~hk\mapsto\mReward{poolR}{pool}{\frac{c}{tot}}{\sigma}
-                                  ~\Big\vert~
-                                  hk\mapsto c\in\var{stake},~~hk \neq\var{poolHK}
-                               \right\}\\
+      & ~~~~~~~\var{appPerf} = \mkApparentPerformance{(\fun{d}~pp)}{\sigma}{n}{\overline{N}} \\
+      & ~~~~~~~\var{poolR} = \floor{\var{appPerf}\cdot\var{maxP}} \\
+      & ~~~~~~~\var{mRewards} = \\
+      & ~~~~~~~~~~\left\{
+                    \addrRw~hk\mapsto\mReward{poolR}{pool}{\frac{c}{tot}}{\sigma}
+                    ~\Big\vert~
+                    hk\mapsto c\in\var{stake},~~hk \not\in(\fun{poolOwners}~\var{pool})
+                  \right\}\\
       & ~~~~~~~\var{lReward} = \lReward{poolR}{pool}{\frac{\var{ostake}}{tot}}{\sigma} \\
       & ~~~~~~~\var{potentialRewards} =
                  \var{mRewards} \cup
@@ -1247,7 +1243,7 @@ The calculation is done pool-by-pool.
       & \reward{pp}{blocks}{R}{addrs_{rew}}{poolParams}{stake}{delegs}{total}
           = \var{rewards}\\
       & ~~~\where \\
-      & ~~~~~~~tot = \sum_{\_\mapsto c\in \var{stake}}c \\
+      & ~~~~~~~\var{total}_a = \sum_{\_\mapsto c\in \var{stake}}c \\
       & ~~~~~~~\var{\overline{N}} = \sum_{\_\mapsto m\in blocks}m \\
       & ~~~~~~~pdata = \left\{
         hk\mapsto \left(p,~n,~\poolStake{hk}{delegs}{stake}\right)
@@ -1257,8 +1253,20 @@ The calculation is done pool-by-pool.
           hk & \var{n} & \var{blocks} \\
         \end{array}
       \right\} \\
-      & ~~~~~~~\var{results} = \left\{
-        hk \mapsto \rewardOnePool{pp}{R}{n}{\overline{N}}{hk}{p}{s}{tot}{addrs_{rew}}
+      & ~~~~~~~\var{results} = \\
+      & ~~~~~~~\left\{
+        hk \mapsto \fun{rewardOnePool}~
+                     \var{pp}~
+                     \var{R}~
+                     \var{n}~
+                     \var{\overline{N}}~
+                     \var{hk}~
+                     \var{p}~
+                     \var{s}~
+                     \frac{\sum s}{total}~
+                     \frac{\sum s}{\var{total}_a}~
+                     \var{tot}~
+                     \var{addrs_{rew}}
                  \mid
         hk\mapsto(p, n, s)\in\var{pdata} \right\} \\
       & ~~~~~~~\var{rewards} = \bigcup_{\wcard\mapsto\var{r}\in\var{results}}\var{r}
