@@ -19,7 +19,7 @@ module Shelley.Spec.Ledger.Genesis
     ValidationErr (..),
     emptyGenesisStaking,
     sgActiveSlotCoeff,
-    genesisUtxO,
+    genesisUTxO,
     initialFundsPseudoTxIn,
     validateGenesis,
     describeValidationErr,
@@ -286,11 +286,11 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
   Genesis UTxO
 -------------------------------------------------------------------------------}
 
-genesisUtxO ::
+genesisUTxO ::
   ShelleyBased era =>
   ShelleyGenesis era ->
   UTxO era
-genesisUtxO genesis =
+genesisUTxO genesis =
   UTxO $
     Map.fromList
       [ (txIn, txOut)
