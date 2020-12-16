@@ -139,6 +139,7 @@
 \newcommand{\DPoolReap}{\ensuremath{\type{poolreap}}}
 \newcommand{\UPIState}{\type{UPIState}}
 \newcommand{\UpdatePayload}{\type{UpdatePayload}}
+\newcommand{\NetworkId}{\mathsf{NetworkId}}
 
 % multi-signature
 \newcommand{\StakeCredential}{\type{Credential}_{stake}}
@@ -161,6 +162,7 @@
 \newcommand{\AddrScrPtr}{\type{Addr_{ptr}^{script}}}
 \newcommand{\AuxiliaryDataHash}{\type{AuxiliaryDataHash}}
 \newcommand{\AuxiliaryData}{\type{AuxiliaryData}}
+\newcommand{\MetaData}{\type{MetaData}}
 \newcommand{\DataHash}{\type{DataHash}}
 \newcommand{\ScriptHash}{\type{ScriptHash}}
 \newcommand{\PolicyID}{\type{PolicyID}}
@@ -322,6 +324,13 @@
 \newtheorem{property}{Property}[section]
 
 \newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
+
+\definecolor{hldiffcolor}{rgb}{0.95, 0.93, 0}
+\newcommand{\hldiff}[1]{\mathchoice
+  {\colorbox{hldiffcolor}{$\displaystyle#1$}}
+  {\colorbox{hldiffcolor}{$\textstyle#1$}}
+  {\colorbox{hldiffcolor}{$\scriptstyle#1$}}
+  {\colorbox{hldiffcolor}{$\scriptscriptstyle#1$}}}
 \DeclareMathOperator{\supp}{supp}
 
 %% In-para enumeration -- KH
