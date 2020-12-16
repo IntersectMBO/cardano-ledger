@@ -33,6 +33,7 @@ import Cardano.Binary
     encodeMapLen,
     encodeWord,
   )
+import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Era
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -56,6 +57,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.Orphans ()
+import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
 import Shelley.Spec.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
@@ -67,9 +69,6 @@ import Shelley.Spec.Ledger.Serialization
     ratioToCBOR,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
-import Shelley.Spec.Ledger.PParams (ProtVer (..), HKD)
-import Cardano.Ledger.Alonzo.Scripts
-
 
 -- TODO
 -- make type families for PParams and PParamsUpdate
@@ -78,11 +77,8 @@ import Cardano.Ledger.Alonzo.Scripts
 -- How to handle this alonzo-specific type?
 type PParamsUpdate era = PParams' StrictMaybe era
 
-
 -- | Protocol parameters.
 -- Shelley parameters + additional ones
-
-
 data PParams' f era = PParams
   { -- | The linear factor for the minimum fee calculation
     _minfeeA :: !(HKD f Natural),
@@ -116,7 +112,8 @@ data PParams' f era = PParams
     _protocolVersion :: !(HKD f ProtVer),
     -- | Minimum Stake Pool Cost
     _minPoolCost :: !(HKD f Coin),
--- new/updated for alonzo
+    -- new/updated for alonzo
+
     -- | Cost in ada per byte of UTxO storage (instead of _minUTxOValue)
     _adaPerUTxOByte :: !(HKD f Coin),
     -- | Cost models for non-native script languages
@@ -159,7 +156,7 @@ instance (Era era) => ToCBOR (PParams era) where
           _extraEntropy = extraEntropy',
           _protocolVersion = protocolVersion',
           _minPoolCost = minPoolCost',
--- new/updated for alonzo
+          -- new/updated for alonzo
           _adaPerUTxOByte = adaPerUTxOByte',
           _costmdls = costmdls',
           _prices = prices',
@@ -184,7 +181,7 @@ instance (Era era) => ToCBOR (PParams era) where
         <> toCBOR extraEntropy'
         <> toCBORGroup protocolVersion'
         <> toCBOR minPoolCost'
--- new/updated for alonzo
+        -- new/updated for alonzo
         <> toCBOR adaPerUTxOByte'
         <> toCBOR costmdls'
         <> toCBOR prices'
@@ -211,14 +208,13 @@ instance (Era era) => FromCBOR (PParams era) where
         <*> fromCBOR -- _extraEntropy    :: Nonce
         <*> fromCBORGroup -- _protocolVersion :: ProtVer
         <*> fromCBOR -- _minPoolCost     :: Natural
--- new/updated for alonzo
--- TODO what should all these really be?
+        -- new/updated for alonzo
+        -- TODO what should all these really be?
         <*> fromCBOR -- _adaPerUTxOByte  ::
         <*> fromCBOR -- _costmdls = costmdls',
         <*> fromCBOR -- _prices = prices',
         <*> fromCBOR -- _maxTxExUnits = maxTxExUnits',
         <*> fromCBOR -- _maxBlockExUnits = maxBlockExUnits'
-
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams era
@@ -240,7 +236,7 @@ emptyPParams =
       _extraEntropy = NeutralNonce,
       _protocolVersion = ProtVer 0 0,
       _minPoolCost = mempty,
--- new/updated for alonzo
+      -- new/updated for alonzo
       _adaPerUTxOByte = Coin 0,
       _costmdls = mempty,
       _prices = Prices (Coin 0) (Coin 0),
@@ -339,7 +335,7 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
           13 -> fromCBOR >>= \x -> pure (13, \up -> up {_extraEntropy = SJust x})
           14 -> fromCBOR >>= \x -> pure (14, \up -> up {_protocolVersion = SJust x})
           15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minPoolCost = SJust x})
-      -- new/updated for alonzo
+          -- new/updated for alonzo
           16 -> fromCBOR >>= \x -> pure (15, \up -> up {_adaPerUTxOByte = SJust x})
           17 -> fromCBOR >>= \x -> pure (15, \up -> up {_costmdls = SJust x})
           18 -> fromCBOR >>= \x -> pure (15, \up -> up {_prices = SJust x})
@@ -387,7 +383,7 @@ updatePParams pp ppup =
       _extraEntropy = fromMaybe' (_extraEntropy pp) (_extraEntropy ppup),
       _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
       _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup),
--- new/updated for alonzo
+      -- new/updated for alonzo
       _adaPerUTxOByte = fromMaybe' (_adaPerUTxOByte pp) (_adaPerUTxOByte ppup),
       _costmdls = fromMaybe' (_costmdls pp) (_costmdls ppup),
       _prices = fromMaybe' (_prices pp) (_prices ppup),

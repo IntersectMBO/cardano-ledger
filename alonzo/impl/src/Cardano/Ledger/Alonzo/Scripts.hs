@@ -9,20 +9,20 @@ module Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
     CostModel,
     Language,
-    Prices (..)
+    Prices (..),
   )
 where
 
-import Data.Map (Map)
-import Data.ByteString (ByteString)
 import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.ShelleyMA.Timelocks
+import Control.DeepSeq (NFData (..))
+import Data.ByteString (ByteString)
 import Data.Coders
+import Data.Map (Map)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
-import Control.DeepSeq (NFData (..))
 import Shelley.Spec.Ledger.Coin (Coin (..))
 
 -- | Marker indicating the part of a transaction for which this script is acting
@@ -54,6 +54,7 @@ data ExUnits = ExUnits
   deriving (Eq, Generic, Show, Ord)
 
 instance NoThunks ExUnits
+
 instance NFData ExUnits
 
 instance Semigroup ExUnits where
@@ -67,8 +68,11 @@ newtype Language = Language ByteString
   deriving (Eq, Generic, Show, Ord)
 
 instance NoThunks Language
+
 instance NFData Language
+
 deriving instance ToCBOR Language
+
 deriving instance FromCBOR Language
 
 -- Cost Model
@@ -76,18 +80,22 @@ newtype CostModel = CostModel (Map ByteString Integer)
   deriving (Eq, Generic, Show, Ord)
 
 instance NoThunks CostModel
+
 instance NFData CostModel
+
 deriving instance ToCBOR CostModel
+
 deriving instance FromCBOR CostModel
 
 -- | Prices per execution unit
 data Prices = Prices
-  { prMem  :: !Coin,
+  { prMem :: !Coin,
     prSteps :: !Coin
   }
   deriving (Eq, Generic, Show, Ord)
 
 instance NoThunks Prices
+
 instance NFData Prices
 
 --------------------------------------------------------------------------------
