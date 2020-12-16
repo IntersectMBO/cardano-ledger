@@ -12,18 +12,15 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | This module contains just the type of protocol parameters.
-module Shelley.Spec.Ledger.PParams
+module Cardano.Ledger.Alonzo.PParams
   ( PParams' (..),
     PParams,
     emptyPParams,
-    HKD,
     ProtVer (..),
-    PPUpdateEnv (..),
     ProposedPPUpdates (..),
     emptyPPPUpdates,
     PParamsUpdate,
     emptyPParamsUpdate,
-    Update (..),
     updatePParams,
   )
 where
@@ -36,18 +33,16 @@ import Cardano.Binary
     encodeMapLen,
     encodeWord,
   )
+import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Era
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
-import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
-import qualified Data.Aeson as Aeson
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Scientific (Scientific)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
@@ -60,11 +55,11 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.Orphans ()
+import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
 import Shelley.Spec.Ledger.Serialization
-  ( CBORGroup (..),
-    FromCBORGroup (..),
+  ( FromCBORGroup (..),
     ToCBORGroup (..),
     decodeMapContents,
     decodeRecordNamed,
@@ -73,37 +68,17 @@ import Shelley.Spec.Ledger.Serialization
     ratioFromCBOR,
     ratioToCBOR,
   )
-import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Shelley.Spec.Ledger.Slot (EpochNo (..))
 
--- | Higher Kinded Data
-type family HKD f a where
-  HKD Identity a = a
-  HKD f a = f a
+-- TODO
+-- make type families for PParams and PParamsUpdate
+-- what is the encodeListLen ??
+
+-- How to handle this alonzo-specific type?
+type PParamsUpdate era = PParams' StrictMaybe era
 
 -- | Protocol parameters.
---
--- We use the HKD type family so that the protocol parameters type and
--- the type for the updates to the protocol parameters can share records fields.
--- The protocol parameters will have type 'PParams'' 'Identity', and the updates
--- will have type 'PParams'' 'StrictMaybe', though 'Identity' will be hidden from use.
---
--- For example:
---
--- @
---   myParameters =
---     PParams
---       { _minfeeA = 0,
---         _minfeeB = 0,
---         ...
---       }
---
---   myUpdate =
---     PParamsUpdate
---       { _minfeeA = SNothing,
---         _minfeeB = SJust 42,
---         ...
---       }
--- @
+-- Shelley parameters + additional ones
 data PParams' f era = PParams
   { -- | The linear factor for the minimum fee calculation
     _minfeeA :: !(HKD f Natural),
@@ -135,10 +110,20 @@ data PParams' f era = PParams
     _extraEntropy :: !(HKD f Nonce),
     -- | Protocol version
     _protocolVersion :: !(HKD f ProtVer),
-    -- | Minimum UTxO value
-    _minUTxOValue :: !(HKD f Coin),
     -- | Minimum Stake Pool Cost
-    _minPoolCost :: !(HKD f Coin)
+    _minPoolCost :: !(HKD f Coin),
+    -- new/updated for alonzo
+
+    -- | Cost in ada per byte of UTxO storage (instead of _minUTxOValue)
+    _adaPerUTxOByte :: !(HKD f Coin),
+    -- | Cost models for non-native script languages
+    _costmdls :: !(HKD f (Map Language CostModel)),
+    -- | Prices of execution units (for non-native script languages)
+    _prices :: !(HKD f Prices),
+    -- | Max total script execution resources units allowed per tx
+    _maxTxExUnits :: !(HKD f ExUnits),
+    -- | Max total script execution resources units allowed per block
+    _maxBlockExUnits :: !(HKD f ExUnits)
   }
   deriving (Generic)
 
@@ -149,45 +134,6 @@ deriving instance Eq (PParams' Identity era)
 deriving instance Show (PParams' Identity era)
 
 deriving instance NFData (PParams' Identity era)
-
-data ProtVer = ProtVer {pvMajor :: !Natural, pvMinor :: !Natural}
-  deriving (Show, Eq, Generic, Ord, NFData)
-  deriving (ToCBOR) via (CBORGroup ProtVer)
-  deriving (FromCBOR) via (CBORGroup ProtVer)
-
-instance NoThunks ProtVer
-
-instance ToJSON ProtVer where
-  toJSON (ProtVer major minor) =
-    Aeson.object
-      [ "major" .= major,
-        "minor" .= minor
-      ]
-
-instance FromJSON ProtVer where
-  parseJSON =
-    Aeson.withObject "ProtVer" $ \obj ->
-      ProtVer
-        <$> obj .: "major"
-        <*> obj .: "minor"
-
-instance ToCBORGroup ProtVer where
-  toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
-  encodedGroupSizeExpr size proxy =
-    encodedSizeExpr size ((\(ProtVer x _) -> toWord x) <$> proxy)
-      + encodedSizeExpr size ((\(ProtVer _ y) -> toWord y) <$> proxy)
-    where
-      toWord :: Natural -> Word
-      toWord = fromIntegral
-
-  listLen _ = 2
-  listLenBound _ = 2
-
-instance FromCBORGroup ProtVer where
-  fromCBORGroup = do
-    x <- fromCBOR
-    y <- fromCBOR
-    pure $ ProtVer x y
 
 instance NoThunks (PParams era)
 
@@ -209,11 +155,16 @@ instance (Era era) => ToCBOR (PParams era) where
           _d = d',
           _extraEntropy = extraEntropy',
           _protocolVersion = protocolVersion',
-          _minUTxOValue = minUTxOValue',
-          _minPoolCost = minPoolCost'
+          _minPoolCost = minPoolCost',
+          -- new/updated for alonzo
+          _adaPerUTxOByte = adaPerUTxOByte',
+          _costmdls = costmdls',
+          _prices = prices',
+          _maxTxExUnits = maxTxExUnits',
+          _maxBlockExUnits = maxBlockExUnits'
         }
       ) =
-      encodeListLen 18
+      encodeListLen 22
         <> toCBOR minfeeA'
         <> toCBOR minfeeB'
         <> toCBOR maxBBSize'
@@ -229,12 +180,17 @@ instance (Era era) => ToCBOR (PParams era) where
         <> toCBOR d'
         <> toCBOR extraEntropy'
         <> toCBORGroup protocolVersion'
-        <> toCBOR minUTxOValue'
         <> toCBOR minPoolCost'
+        -- new/updated for alonzo
+        <> toCBOR adaPerUTxOByte'
+        <> toCBOR costmdls'
+        <> toCBOR prices'
+        <> toCBOR maxTxExUnits'
+        <> toCBOR maxBlockExUnits'
 
 instance (Era era) => FromCBOR (PParams era) where
   fromCBOR = do
-    decodeRecordNamed "PParams" (const 18) $
+    decodeRecordNamed "PParams" (const 22) $
       PParams
         <$> fromCBOR -- _minfeeA         :: Integer
         <*> fromCBOR -- _minfeeB         :: Natural
@@ -251,54 +207,14 @@ instance (Era era) => FromCBOR (PParams era) where
         <*> fromCBOR -- _d               :: UnitInterval
         <*> fromCBOR -- _extraEntropy    :: Nonce
         <*> fromCBORGroup -- _protocolVersion :: ProtVer
-        <*> fromCBOR -- _minUTxOValue    :: Natural
         <*> fromCBOR -- _minPoolCost     :: Natural
-
-instance ToJSON (PParams era) where
-  toJSON pp =
-    Aeson.object
-      [ "minFeeA" .= _minfeeA pp,
-        "minFeeB" .= _minfeeB pp,
-        "maxBlockBodySize" .= _maxBBSize pp,
-        "maxTxSize" .= _maxTxSize pp,
-        "maxBlockHeaderSize" .= _maxBHSize pp,
-        "keyDeposit" .= _keyDeposit pp,
-        "poolDeposit" .= _poolDeposit pp,
-        "eMax" .= _eMax pp,
-        "nOpt" .= _nOpt pp,
-        "a0" .= (fromRational (_a0 pp) :: Scientific),
-        "rho" .= _rho pp,
-        "tau" .= _tau pp,
-        "decentralisationParam" .= _d pp,
-        "extraEntropy" .= _extraEntropy pp,
-        "protocolVersion" .= _protocolVersion pp,
-        "minUTxOValue" .= _minUTxOValue pp,
-        "minPoolCost" .= _minPoolCost pp
-      ]
-
-instance FromJSON (PParams era) where
-  parseJSON =
-    Aeson.withObject "PParams" $ \obj ->
-      PParams
-        <$> obj .: "minFeeA"
-        <*> obj .: "minFeeB"
-        <*> obj .: "maxBlockBodySize"
-        <*> obj .: "maxTxSize"
-        <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "keyDeposit"
-        <*> obj .: "poolDeposit"
-        <*> obj .: "eMax"
-        <*> obj .: "nOpt"
-        <*> ( (toRational :: Scientific -> Rational)
-                <$> obj .: "a0"
-            )
-        <*> obj .: "rho"
-        <*> obj .: "tau"
-        <*> obj .: "decentralisationParam"
-        <*> obj .: "extraEntropy"
-        <*> obj .: "protocolVersion"
-        <*> obj .:? "minUTxOValue" .!= mempty
-        <*> obj .:? "minPoolCost" .!= mempty
+        -- new/updated for alonzo
+        -- TODO what should all these really be?
+        <*> fromCBOR -- _adaPerUTxOByte  ::
+        <*> fromCBOR -- _costmdls = costmdls',
+        <*> fromCBOR -- _prices = prices',
+        <*> fromCBOR -- _maxTxExUnits = maxTxExUnits',
+        <*> fromCBOR -- _maxBlockExUnits = maxBlockExUnits'
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams era
@@ -319,33 +235,14 @@ emptyPParams =
       _d = interval0,
       _extraEntropy = NeutralNonce,
       _protocolVersion = ProtVer 0 0,
-      _minUTxOValue = mempty,
-      _minPoolCost = mempty
+      _minPoolCost = mempty,
+      -- new/updated for alonzo
+      _adaPerUTxOByte = Coin 0,
+      _costmdls = mempty,
+      _prices = Prices (Coin 0) (Coin 0),
+      _maxTxExUnits = ExUnits 0 0,
+      _maxBlockExUnits = ExUnits 0 0
     }
-
--- | Update Proposal
-data Update era
-  = Update !(ProposedPPUpdates era) !EpochNo
-  deriving (Show, Eq, Generic, NFData)
-
-instance NoThunks (Update era)
-
-instance Era era => ToCBOR (Update era) where
-  toCBOR (Update ppUpdate e) =
-    encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
-
-instance Era era => FromCBOR (Update era) where
-  fromCBOR = decodeRecordNamed "Update" (const 2) $ do
-    x <- fromCBOR
-    y <- fromCBOR
-    pure (Update x y)
-
-data PPUpdateEnv era = PPUpdateEnv SlotNo (GenDelegs era)
-  deriving (Show, Eq, Generic)
-
-instance NoThunks (PPUpdateEnv era)
-
-type PParamsUpdate era = PParams' StrictMaybe era
 
 deriving instance Eq (PParams' StrictMaybe era)
 
@@ -377,8 +274,13 @@ instance (Era era) => ToCBOR (PParamsUpdate era) where
               encodeMapElement 12 toCBOR =<< _d ppup,
               encodeMapElement 13 toCBOR =<< _extraEntropy ppup,
               encodeMapElement 14 toCBOR =<< _protocolVersion ppup,
-              encodeMapElement 15 toCBOR =<< _minUTxOValue ppup,
-              encodeMapElement 16 toCBOR =<< _minPoolCost ppup
+              encodeMapElement 15 toCBOR =<< _minPoolCost ppup,
+              -- new/updated for alonzo
+              encodeMapElement 16 toCBOR =<< _adaPerUTxOByte ppup,
+              encodeMapElement 17 toCBOR =<< _costmdls ppup,
+              encodeMapElement 18 toCBOR =<< _prices ppup,
+              encodeMapElement 19 toCBOR =<< _maxTxExUnits ppup,
+              encodeMapElement 20 toCBOR =<< _maxBlockExUnits ppup
             ]
         n = fromIntegral $ length l
      in encodeMapLen n <> fold l
@@ -403,8 +305,13 @@ emptyPParamsUpdate =
       _d = SNothing,
       _extraEntropy = SNothing,
       _protocolVersion = SNothing,
-      _minUTxOValue = SNothing,
-      _minPoolCost = SNothing
+      _minPoolCost = SNothing,
+      -- new/updated for alonzo
+      _adaPerUTxOByte = SNothing,
+      _costmdls = SNothing,
+      _prices = SNothing,
+      _maxTxExUnits = SNothing,
+      _maxBlockExUnits = SNothing
     }
 
 instance (Era era) => FromCBOR (PParamsUpdate era) where
@@ -427,8 +334,13 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
           12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
           13 -> fromCBOR >>= \x -> pure (13, \up -> up {_extraEntropy = SJust x})
           14 -> fromCBOR >>= \x -> pure (14, \up -> up {_protocolVersion = SJust x})
-          15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minUTxOValue = SJust x})
-          16 -> fromCBOR >>= \x -> pure (16, \up -> up {_minPoolCost = SJust x})
+          15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minPoolCost = SJust x})
+          -- new/updated for alonzo
+          16 -> fromCBOR >>= \x -> pure (15, \up -> up {_adaPerUTxOByte = SJust x})
+          17 -> fromCBOR >>= \x -> pure (15, \up -> up {_costmdls = SJust x})
+          18 -> fromCBOR >>= \x -> pure (15, \up -> up {_prices = SJust x})
+          19 -> fromCBOR >>= \x -> pure (15, \up -> up {_maxTxExUnits = SJust x})
+          20 -> fromCBOR >>= \x -> pure (15, \up -> up {_maxBlockExUnits = SJust x})
           k -> invalidKey k
     let fields = fst <$> mapParts :: [Int]
     unless
@@ -470,8 +382,13 @@ updatePParams pp ppup =
       _d = fromMaybe' (_d pp) (_d ppup),
       _extraEntropy = fromMaybe' (_extraEntropy pp) (_extraEntropy ppup),
       _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
-      _minUTxOValue = fromMaybe' (_minUTxOValue pp) (_minUTxOValue ppup),
-      _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup)
+      _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup),
+      -- new/updated for alonzo
+      _adaPerUTxOByte = fromMaybe' (_adaPerUTxOByte pp) (_adaPerUTxOByte ppup),
+      _costmdls = fromMaybe' (_costmdls pp) (_costmdls ppup),
+      _prices = fromMaybe' (_prices pp) (_prices ppup),
+      _maxTxExUnits = fromMaybe' (_maxTxExUnits pp) (_maxTxExUnits ppup),
+      _maxBlockExUnits = fromMaybe' (_maxBlockExUnits pp) (_maxBlockExUnits ppup)
     }
   where
     fromMaybe' :: a -> StrictMaybe a -> a
