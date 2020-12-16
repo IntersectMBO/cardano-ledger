@@ -94,6 +94,7 @@ module Shelley.Spec.Ledger.LedgerState
 
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
+    updateNonMypopic,
   )
 where
 
@@ -110,6 +111,7 @@ import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
+import Control.Provenance (ProvM, lift, modifyWithBlackBox, runOtherProv)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
@@ -186,17 +188,21 @@ import Shelley.Spec.Ledger.PParams
     emptyPPPUpdates,
     emptyPParams,
   )
+import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance (..))
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
+    PerformanceEstimate (..),
     applyDecay,
+    desirability,
     emptyNonMyopic,
+    percentile',
     reward,
   )
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
   ( EpochNo (..),
-    EpochSize,
+    EpochSize (..),
     SlotNo (..),
   )
 import Shelley.Spec.Ledger.Tx
@@ -230,6 +236,8 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
+
+-- ===============================================================
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
@@ -1063,13 +1071,14 @@ updateNonMypopic nm rPot newLikelihoods =
 
 -- | Create a reward update
 createRUpd ::
+  forall era.
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->
   Coin ->
-  ShelleyBase (RewardUpdate (Crypto era))
+  ProvM (RewardProvenance (Crypto era)) ShelleyBase (RewardUpdate (Crypto era))
 createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply = do
-  asc <- asks activeSlotCoeff
+  asc <- lift (asks activeSlotCoeff)
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
@@ -1086,6 +1095,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           (1 - d) * unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
+      blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
       eta
         | intervalValue (_d pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
@@ -1093,8 +1103,10 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
       deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       totalStake = circulation es maxSupply
-      (rs_, newLikelihoods) =
-        reward
+  ((rs_, newLikelihoods), blackBoxPools) <-
+    runOtherProv
+      Map.empty
+      ( reward
           pr
           b
           _R
@@ -1105,8 +1117,41 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           totalStake
           asc
           slotsPerEpoch
-      deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
-      blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
+      )
+  let deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
+      -- add under 'key' the pair (LikeliHoodEstimate,Desireability) to the Map 'ans'
+      addPair ans key likelihood = case Map.lookup key poolParams of
+        Nothing -> Map.insert key (unPerformanceEstimate estimate, 0) ans
+        Just pp ->
+          Map.insert
+            key
+            ( unPerformanceEstimate estimate,
+              desirability pr (Coin rPot) pp estimate totalStake
+            )
+            ans
+        where
+          estimate = (percentile' likelihood)
+  modifyWithBlackBox
+    blackBoxPools
+    ( \provPools _ ->
+        RewardProvenance
+          (unEpochSize slotsPerEpoch)
+          b
+          maxSupply
+          deltaR1
+          deltaR2
+          _R
+          totalStake
+          blocksMade
+          d
+          expectedBlocks
+          eta
+          (Coin rPot)
+          (Coin deltaT1)
+          (fold . unStake $ stake')
+          provPools
+          (Map.foldlWithKey' addPair Map.empty newLikelihoods)
+    )
   pure $
     RewardUpdate
       { deltaT = (DeltaCoin deltaT1),

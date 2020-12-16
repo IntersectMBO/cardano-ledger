@@ -40,6 +40,7 @@ import Cardano.Ledger.Val ((<+>), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
+import Data.Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -66,6 +67,10 @@ newtype BlocksMade crypto = BlocksMade
   }
   deriving (Eq, NoThunks, Generic, NFData)
   deriving (Show) via Quiet (BlocksMade crypto)
+
+deriving instance (CC.Crypto crypto) => ToJSON (BlocksMade crypto)
+
+deriving instance (CC.Crypto crypto) => FromJSON (BlocksMade crypto)
 
 deriving instance CC.Crypto crypto => ToCBOR (BlocksMade crypto)
 

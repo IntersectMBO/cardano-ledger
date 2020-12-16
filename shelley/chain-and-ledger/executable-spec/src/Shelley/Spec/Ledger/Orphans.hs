@@ -2,6 +2,7 @@
 
 module Shelley.Spec.Ledger.Orphans where
 
+import Cardano.Crypto.Hash (Hash (..))
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
@@ -9,11 +10,18 @@ import Cardano.Prelude (readEither)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData (rnf))
 import Data.Aeson
+import qualified Data.ByteString as Long (ByteString, empty)
+import qualified Data.ByteString.Lazy as Lazy (ByteString, empty)
+import qualified Data.ByteString.Short as Short (ShortByteString, empty)
+import Data.Default.Class (Default (..))
 import Data.Foldable
 import Data.IP (IPv4, IPv6)
 import Data.Sequence.Strict (StrictSeq, fromList, fromStrict)
+import qualified Data.Sequence.Strict as SS
 import qualified Data.Text as Text
 import NoThunks.Class (NoThunks (..))
+import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..), UnitInterval, interval0)
+import Shelley.Spec.Ledger.Keys (KeyHash (..))
 import Shelley.Spec.Ledger.Slot (BlockNo, EpochNo)
 
 instance FromJSON IPv4 where
@@ -66,3 +74,36 @@ instance NoThunks WC.XSignature where
 
 instance SignableRepresentation (Hash.Hash a b) where
   getSignableRepresentation = Hash.hashToBytes
+
+-- ===============================================
+-- Blank instance needed to compute Provenance
+
+instance Default UnitInterval where
+  def = interval0
+
+instance Default Network where
+  def = Mainnet
+
+instance Default (KeyHash a b) where
+  def = KeyHash def
+
+instance Default (SS.StrictSeq t) where
+  def = SS.Empty
+
+instance Default (StrictMaybe t) where
+  def = SNothing
+
+instance Default Short.ShortByteString where
+  def = Short.empty
+
+instance Default Long.ByteString where
+  def = Long.empty
+
+instance Default Lazy.ByteString where
+  def = Lazy.empty
+
+instance Default (Hash a b) where
+  def = (UnsafeHash def)
+
+instance Default Bool where
+  def = False

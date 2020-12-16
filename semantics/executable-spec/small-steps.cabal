@@ -34,19 +34,23 @@ library
                      , Data.CannonicalMaps
                      , Data.MemoBytes
                      , Data.Coders
+                     , Control.Provenance
                      , Control.Iterate.SetAlgebra
                      , Control.Iterate.Collect
                      , Control.SetAlgebra
   -- other-modules:
   -- other-extensions:
-  build-depends:       array
+  build-depends:       aeson
+                     , array
                      , base >=4.11 && <5
                      , bytestring
                      , cardano-prelude
                      , containers
                      , cryptonite
+                     , data-default-class
                      , deepseq
                      , free
+                     , hashmap
                      , mtl
                      , nothunks
                      , text

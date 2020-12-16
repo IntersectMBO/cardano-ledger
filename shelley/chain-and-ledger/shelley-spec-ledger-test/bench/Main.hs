@@ -48,7 +48,7 @@ import Shelley.Spec.Ledger.Bench.Gen
   ( genBlock,
     genTriple,
   )
-import Shelley.Spec.Ledger.Bench.Rewards (createRUpd, genChainInEpoch)
+import Shelley.Spec.Ledger.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.LedgerState
@@ -485,6 +485,11 @@ main = do
             (generate $ genChainInEpoch 5)
             ( \cs ->
                 bench "createRUpd" $ whnf (createRUpd testGlobals) cs
+            ),
+           env
+            (generate $ genChainInEpoch 5)
+            ( \cs ->
+                bench "createRUpdWithProvenance" $ whnf (createRUpdWithProv testGlobals) cs
             ),
           bench "likelihood" $ whnf (likelihood 1234 0.1) (EpochSize 10000)
         ],
