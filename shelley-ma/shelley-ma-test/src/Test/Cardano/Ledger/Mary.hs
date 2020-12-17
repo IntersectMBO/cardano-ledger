@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Cardano.Ledger.Mary () where -- export the EraGen instance for MaryEra
@@ -33,6 +34,7 @@ import Test.Cardano.Ledger.Allegra
   )
 import Test.Cardano.Ledger.EraBuffet (MaryEra)
 import Test.QuickCheck (Gen)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
@@ -56,14 +58,14 @@ import Test.Shelley.Spec.Ledger.Utils (Split (..))
 instance (CryptoClass.Crypto c) => ScriptClass (MaryEra c) where
   isKey _ (RequireSignature hk) = Just hk
   isKey _ _ = Nothing
-  basescript _proxy = someLeaf
+  basescript _proxy = someLeaf @(MaryEra c)
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
 
-instance (CryptoClass.Crypto c) => EraGen (MaryEra c) where
+instance (CryptoClass.Crypto c, Mock c) => EraGen (MaryEra c) where
   genGenesisValue (GenEnv _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
-  genEraTxBody = genTxBody
+  genEraTxBody _ge = genTxBody
   genEraAuxiliaryData = error "TODO @uroboros - implement genAuxiliaryData for Mary"
   updateEraTxBody (TxBody _in _out cert wdrl _txfee vi upd meta forge) fee ins outs =
     TxBody ins outs cert wdrl fee vi upd meta forge
@@ -73,7 +75,6 @@ genTxBody ::
   ( FamsTo era,
     EraGen era
   ) =>
-  GenEnv era ->
   SlotNo ->
   Set.Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
@@ -83,7 +84,7 @@ genTxBody ::
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Gen (TxBody era)
-genTxBody _ge slot ins outs cert wdrl fee upd meta = do
+genTxBody slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
   let mint = error "TODO @uroboros mint some Mary era tokens"
   pure $

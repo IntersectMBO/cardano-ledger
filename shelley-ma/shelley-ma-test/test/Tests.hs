@@ -1,31 +1,62 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Main where
 
+import Test.Cardano.Ledger.Allegra ()
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
+import Test.Cardano.Ledger.EraBuffet (AllegraEra, TestCrypto)
 import Test.Cardano.Ledger.Mary.Examples.MultiAssets (multiAssetsExample)
 import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
-import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.Cardano.Ledger.Mary.Value (valTests)
+import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
+import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Tasty
 import Test.Tasty.HUnit ()
-
-maryChainExamples :: TestTree
-maryChainExamples =
-  testGroup
-    "Mary LEDGER examples"
-    [ multiAssetsExample
-    ]
+import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
 tests :: TestTree
-tests =
+tests = askOption $ \case
+  Nightly -> nightlyTests
+  Fast -> mainTests
+  _ -> mainTests
+
+mainTests :: TestTree
+mainTests =
   testGroup
-    "Cardano-Legder-Tests"
-    [ Serialisation.tests,
-      allegraTranslationTests,
-      maryTranslationTests,
-      maryChainExamples,
-      valTests
+    "ShelleyMA Ledger Tests"
+    [ allegraTests,
+      maryTests,
+      testGroup
+        "Mixed MA Ledger Tests"
+        [ Serialisation.tests
+        ]
+    ]
+
+allegraTests :: TestTree
+allegraTests =
+  testGroup
+    "Allegra Ledger Tests"
+    [ allegraTranslationTests,
+      minimalPropertyTests @(AllegraEra TestCrypto)
+    ]
+
+maryTests :: TestTree
+maryTests =
+  testGroup
+    "Mary Ledger Tests"
+    [ maryTranslationTests,
+      valTests,
+      multiAssetsExample
+    ]
+
+nightlyTests :: TestTree
+nightlyTests =
+  testGroup
+    "ShelleyMA Ledger - nightly"
+    [ propertyTests @(AllegraEra TestCrypto)
     ]
 
 -- main entry point
 main :: IO ()
-main = defaultMain tests
+main = mainWithTestScenario tests
