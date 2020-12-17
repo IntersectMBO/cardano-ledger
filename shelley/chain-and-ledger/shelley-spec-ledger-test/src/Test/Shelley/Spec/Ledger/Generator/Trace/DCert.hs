@@ -39,7 +39,7 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (runIdentity)
 import Data.List (partition)
 import qualified Data.Map.Strict as Map (lookup)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -194,9 +194,8 @@ genDCerts
       scriptWitnesses (ScriptCred (_, stakeScript)) =
         StakeCred <$> witnessHashes''
         where
-          witnessHashes = scriptKeyCombination (Proxy @era) stakeScript
-          witnessHashes' = fmap coerceKeyRole witnessHashes
-          witnessHashes'' = fmap coerceKeyRole (catMaybes (map lookupWit witnessHashes'))
+          witnessHashes = coerceKeyRole <$> scriptKeyCombination (Proxy @era) stakeScript
+          witnessHashes'' = coerceKeyRole <$> mapMaybe lookupWit witnessHashes
       scriptWitnesses _ = []
 
       lookupWit = flip Map.lookup ksIndexedStakingKeys

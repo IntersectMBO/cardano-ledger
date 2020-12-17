@@ -11,9 +11,9 @@
 
 module Test.Shelley.Spec.Ledger.Generator.EraGen (genUtxo0, genesisId, EraGen (..)) where
 
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Binary (ToCBOR (toCBOR))
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (HASH)
 import Cardano.Ledger.Era (Crypto)

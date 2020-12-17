@@ -12,24 +12,24 @@ where
 import Cardano.Binary
   ( ToCBOR (..),
   )
-import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Era (TranslateEra (..))
+import Cardano.Ledger.Mary.Translation ()
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
 import qualified Shelley.Spec.Ledger.API as S
+import Test.Cardano.Ledger.Allegra ()
 import Test.Cardano.Ledger.EraBuffet
   ( AllegraEra,
     MaryEra,
     StandardCrypto,
   )
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.Cardano.Ledger.TranslationTools
   ( decodeTestAnn,
     translationCompatToCBOR,
   )
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
-import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.Cardano.Ledger.Allegra ()
+import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
