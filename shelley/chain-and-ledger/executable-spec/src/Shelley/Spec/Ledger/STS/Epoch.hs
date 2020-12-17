@@ -51,7 +51,6 @@ import Shelley.Spec.Ledger.LedgerState
     esPrevPp,
     esSnapshots,
     _delegationState,
-    _ppups,
     _utxoState,
     pattern DPState,
     pattern EpochState,
@@ -61,6 +60,7 @@ import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppPredicateFailure, NewppState (..))
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapPredicateFailure, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapPredicateFailure)
+import Shelley.Spec.Ledger.STS.Upec (UPEC)
 import Shelley.Spec.Ledger.Slot (EpochNo)
 
 data EPOCH era
@@ -68,7 +68,7 @@ data EPOCH era
 data EpochPredicateFailure era
   = PoolReapFailure (PredicateFailure (Core.EraRule "POOLREAP" era)) -- Subtransition Failures
   | SnapFailure (PredicateFailure (Core.EraRule "SNAP" era)) -- Subtransition Failures
-  | NewPpFailure (PredicateFailure (Core.EraRule "NEWPP" era)) -- Subtransition Failures
+  | NewPpFailure (PredicateFailure (Core.EraRule "UPEC" era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
@@ -167,7 +167,7 @@ epochTransition = do
         { esAccountState = acnt,
           esSnapshots = ss,
           esLState = ls,
-          esPrevPp = _pr,
+          esPrevPp = pr,
           esPp = pp,
           esNonMyopic = nm
         },
@@ -189,21 +189,16 @@ epochTransition = do
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
     trans @(Core.EraRule "POOLREAP" era) $ TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
 
-  coreNodeQuorum <- liftSTS $ asks quorum
+  let epochState' =
+        EpochState
+          acnt'
+          ss'
+          (ls {_utxoState = utxoSt', _delegationState = DPState dstate' pstate''})
+          pr
+          pp
+          nm
 
-  let pup = proposals . _ppups $ utxoSt'
-  let ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
-  NewppState utxoSt'' acnt'' pp' <-
-    trans @(Core.EraRule "NEWPP" era) $
-      TRC (NewppEnv dstate' pstate'', NewppState utxoSt' acnt' pp, ppNew)
-  pure $
-    EpochState
-      acnt''
-      ss'
-      (ls {_utxoState = utxoSt'', _delegationState = DPState dstate' pstate''})
-      pp
-      pp'
-      nm
+  trans @(UPEC era) $ TRC ((), epochState', ())
 
 instance
   ( UsesTxOut era,
@@ -224,8 +219,8 @@ instance
 
 instance
   ( Era era,
-    PredicateFailure (Core.EraRule "NEWPP" era) ~ NewppPredicateFailure era
+    PredicateFailure (Core.EraRule "UPEC" era) ~ UpecPredicateFailure era
   ) =>
-  Embed (NEWPP era) (EPOCH era)
+  Embed (UPEC era) (EPOCH era)
   where
-  wrapFailed = NewPpFailure
+  wrapFailed = UpecFailure
