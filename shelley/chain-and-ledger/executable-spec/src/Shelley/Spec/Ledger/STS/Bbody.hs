@@ -20,8 +20,8 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
+import Cardano.Ledger.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -54,6 +54,7 @@ import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     LedgerState,
+    TransLedgerState,
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
@@ -67,7 +68,7 @@ data BbodyState era
   = BbodyState (LedgerState era) (BlocksMade (Crypto era))
 
 deriving stock instance
-  ShelleyBased era =>
+  TransLedgerState Show era =>
   Show (BbodyState era)
 
 data BbodyEnv era = BbodyEnv
@@ -86,26 +87,27 @@ data BbodyPredicateFailure era
   deriving (Generic)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Show (PredicateFailure (LEDGERS era))
   ) =>
   Show (BbodyPredicateFailure era)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Eq (PredicateFailure (LEDGERS era))
   ) =>
   Eq (BbodyPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     NoThunks (PredicateFailure (LEDGERS era))
   ) =>
   NoThunks (BbodyPredicateFailure era)
 
 instance
-  ( Era era,
-    ShelleyBased era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Embed (LEDGERS era) (BBODY era)
   ) =>
@@ -130,7 +132,9 @@ instance
 
 bbodyTransition ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     Embed (LEDGERS era) (BBODY era),
     STS (BBODY era)
   ) =>
@@ -178,7 +182,7 @@ instance
   ( Era era,
     STS (LEDGERS era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    ShelleyBased era
+    Era era
   ) =>
   Embed (LEDGERS era) (BBODY era)
   where

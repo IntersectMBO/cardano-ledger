@@ -49,14 +49,12 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   )
 where
 
-import Cardano.Binary (ToCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.VRF (evalCertified)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∪), (⋪))
@@ -197,6 +195,10 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
+
+import Cardano.Ledger.Constraints(UsesTxBody,UsesValue,UsesScript,UsesAuxiliary)
+
+-- ==================================================
 
 data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
   { cold :: KeyPair r v,
@@ -418,7 +420,7 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- to include certificates that require deposits.
 genTxOut ::
   forall era.
-  (ShelleyBased era) =>
+  (UsesValue era) =>
   Gen (Core.Value era) ->
   [Addr (Crypto era)] ->
   Gen [TxOut era]
@@ -509,8 +511,9 @@ mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
    in BHeader bhb sig
 
 mkBlock ::
-  ( TxBodyConstraints era,
-    ToCBOR (Core.AuxiliaryData era),
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     Mock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -540,8 +543,9 @@ mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
 
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
-  ( TxBodyConstraints era,
-    ToCBOR (Core.AuxiliaryData era),
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     ExMock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -657,7 +661,7 @@ genesisAccountState =
 -- | Creates the UTxO for a new ledger with the specified
 -- genesis TxId and transaction outputs.
 genesisCoins ::
-  (ShelleyBased era) =>
+  (Era era) =>
   Ledger.TxId (Crypto era) ->
   [TxOut era] ->
   UTxO era

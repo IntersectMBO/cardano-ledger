@@ -26,11 +26,9 @@ import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
-import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
@@ -196,6 +194,9 @@ import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
+import Cardano.Ledger.Constraints(UsesTxBody,UsesScript,UsesAuxiliary)
+
+-- ============================================
 
 type MultiSigMap = Map.Map (ScriptHash C_Crypto) (MultiSig C_Crypto)
 
@@ -357,8 +358,9 @@ testHeaderHash =
 testBHB ::
   forall era crypto.
   ( Era era,
-    TxBodyConstraints era,
-    ToCBOR (Core.AuxiliaryData era),
+    UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     ExMock crypto,
     crypto ~ Crypto era
   ) =>
@@ -402,8 +404,9 @@ testBHBSigTokens ::
   forall era.
   ( Era era,
     ExMock (Crypto era),
-    ToCBOR (Core.AuxiliaryData era),
-    TxBodyConstraints era
+    UsesTxBody era,
+    UsesAuxiliary era,
+    UsesScript era
   ) =>
   Tokens ->
   Tokens

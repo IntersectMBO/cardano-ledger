@@ -32,11 +32,11 @@ import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash,
     ValidateAuxiliaryData (..),
   )
+import Cardano.Ledger.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩))
@@ -114,6 +114,8 @@ import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody, TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import qualified Shelley.Spec.Ledger.UTxO as UTxO
 
+-- =================================================
+
 data UTXOW era
 
 data UtxowPredicateFailure era
@@ -141,19 +143,19 @@ data UtxowPredicateFailure era
 
 instance
   ( NoThunks (PredicateFailure (UTXO era)),
-    ShelleyBased era
+    Era era
   ) =>
   NoThunks (UtxowPredicateFailure era)
 
 deriving stock instance
   ( Eq (PredicateFailure (UTXO era)),
-    ShelleyBased era
+    Era era
   ) =>
   Eq (UtxowPredicateFailure era)
 
 deriving stock instance
   ( Show (PredicateFailure (UTXO era)),
-    ShelleyBased era
+    Era era
   ) =>
   Show (UtxowPredicateFailure era)
 
@@ -261,7 +263,10 @@ initialLedgerStateUTXOW = do
 
 utxoWitnessed ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesAuxiliary era,
+    UsesScript era,
+    UsesValue era,
     ValidateScript era,
     ValidateAuxiliaryData era,
     STS (UTXOW era),

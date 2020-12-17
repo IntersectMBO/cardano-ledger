@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -95,6 +96,9 @@ module Shelley.Spec.Ledger.LedgerState
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
     updateNonMypopic,
+
+    -- *
+    TransLedgerState,
   )
 where
 
@@ -103,10 +107,11 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Compactible
+import Cardano.Ledger.Constraints (TransValue, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
@@ -115,8 +120,10 @@ import Control.Provenance (ProvM, lift, modifyWithBlackBox, runOtherProv)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
+import Data.Constraint (Constraint)
 import Data.Foldable (fold, toList)
 import Data.Group (invert)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -124,6 +131,7 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
@@ -236,8 +244,6 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
-
--- ===============================================================
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
@@ -475,12 +481,14 @@ data EpochState era = EpochState
   }
   deriving (Generic)
 
+type TransEpoch (c :: Type -> Constraint) era = (TransLedgerState c era)
+
 deriving stock instance
-  ShelleyBased era =>
+  TransEpoch Show era =>
   Show (EpochState era)
 
 deriving stock instance
-  ShelleyBased era =>
+  TransEpoch Eq era =>
   Eq (EpochState era)
 
 instance NoThunks (EpochState era)
@@ -488,14 +496,14 @@ instance NoThunks (EpochState era)
 instance (Era era) => NFData (EpochState era)
 
 instance
-  ShelleyBased era =>
+  (UsesTxBody era, UsesValue era, Eq (Core.Script era), TransEpoch ToCBOR era) =>
   ToCBOR (EpochState era)
   where
   toCBOR (EpochState a s l r p n) =
     encodeListLen 6 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR r <> toCBOR p <> toCBOR n
 
 instance
-  ShelleyBased era =>
+  (UsesTxBody era, UsesValue era, TransEpoch FromCBOR era) =>
   FromCBOR (EpochState era)
   where
   fromCBOR = do
@@ -591,25 +599,34 @@ data UTxOState era = UTxOState
   }
   deriving (Generic, NFData)
 
+type TransUTxOState (c :: Type -> Constraint) era =
+  ( Era era,
+    c (Core.Value era),
+    c (CompactForm (Core.Value era)),
+    Compactible (Core.Value era)
+  )
+
 deriving stock instance
-  ShelleyBased era =>
+  TransUTxOState Show era =>
   Show (UTxOState era)
 
 deriving stock instance
-  ShelleyBased era =>
+  TransUTxOState Eq era =>
   Eq (UTxOState era)
 
 instance NoThunks (UTxOState era)
 
 instance
-  ShelleyBased era =>
+  TransUTxOState ToCBOR era =>
   ToCBOR (UTxOState era)
   where
   toCBOR (UTxOState ut dp fs us) =
     encodeListLen 4 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us
 
 instance
-  ShelleyBased era =>
+  ( UsesValue era,
+    TransUTxOState FromCBOR era
+  ) =>
   FromCBOR (UTxOState era)
   where
   fromCBOR = do
@@ -638,25 +655,28 @@ data NewEpochState era = NewEpochState
   deriving (Generic)
 
 deriving stock instance
-  ShelleyBased era =>
+  (TransValue Show era) =>
   Show (NewEpochState era)
 
 deriving stock instance
-  ShelleyBased era =>
+  TransValue Eq era =>
   Eq (NewEpochState era)
 
 instance (Era era) => NFData (NewEpochState era)
 
 instance NoThunks (NewEpochState era)
 
-instance ShelleyBased era => ToCBOR (NewEpochState era) where
+instance
+  (Typeable era, UsesTxBody era, UsesValue era, UsesScript era) =>
+  ToCBOR (NewEpochState era)
+  where
   toCBOR (NewEpochState e bp bc es ru pd) =
     encodeListLen 6 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
       <> toCBOR ru
       <> toCBOR pd
 
 instance
-  ShelleyBased era =>
+  (Typeable era, UsesTxBody era, UsesValue era) =>
   FromCBOR (NewEpochState era)
   where
   fromCBOR = do
@@ -687,12 +707,14 @@ data LedgerState era = LedgerState
   }
   deriving (Generic)
 
+type TransLedgerState (c :: Type -> Constraint) era = TransUTxOState c era
+
 deriving stock instance
-  ShelleyBased era =>
+  TransLedgerState Show era =>
   Show (LedgerState era)
 
 deriving stock instance
-  ShelleyBased era =>
+  TransLedgerState Eq era =>
   Eq (LedgerState era)
 
 instance NoThunks (LedgerState era)
@@ -700,14 +722,14 @@ instance NoThunks (LedgerState era)
 instance (Era era) => NFData (LedgerState era)
 
 instance
-  ShelleyBased era =>
+  (Era era, UsesValue era) =>
   ToCBOR (LedgerState era)
   where
   toCBOR (LedgerState u dp) =
     encodeListLen 2 <> toCBOR u <> toCBOR dp
 
 instance
-  ShelleyBased era =>
+  (Era era, UsesValue era) =>
   FromCBOR (LedgerState era)
   where
   fromCBOR = do
@@ -742,7 +764,9 @@ txsize = fromIntegral . BSL.length . txFullBytes
 -- | It can be helpful for coin selection.
 txsizeBound ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
@@ -774,7 +798,9 @@ minfee pp tx =
 -- | Minimum fee bound using txsizeBound
 minfeeBound ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesScript era,
+    UsesTxBody era,
+    UsesAuxiliary era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
@@ -788,7 +814,8 @@ minfeeBound pp tx =
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesValue era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin
@@ -799,10 +826,10 @@ produced ::
   Core.Value era
 produced pp stakePools tx =
   balance (txouts tx)
-    <> ( Val.inject $
-           getField @"txfee" tx
-             <> totalDeposits pp stakePools (toList $ getField @"certs" tx)
-       )
+    <+> ( Val.inject $
+            getField @"txfee" tx
+              <+> totalDeposits pp stakePools (toList $ getField @"certs" tx)
+        )
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
@@ -818,7 +845,7 @@ keyRefunds pp tx = (length deregistrations) <×> (_keyDeposit pp)
 -- | Compute the lovelace which are destroyed by the transaction
 consumed ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesValue era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
@@ -828,7 +855,7 @@ consumed ::
   Core.TxBody era ->
   Core.Value era
 consumed pp u tx =
-  balance (eval (txins @era tx ◁ u)) <> (Val.inject $ refunds <> withdrawals)
+  balance (eval (txins @era tx ◁ u)) <> (Val.inject $ refunds <+> withdrawals)
   where
     -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
     refunds = keyRefunds pp tx
@@ -865,7 +892,11 @@ witsFromWitnessSet (WitnessSet aWits _ bsWits) =
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded ::
   forall era.
-  ( ShelleyBased era,
+  ( Era era,
+    UsesAuxiliary era,
+    UsesValue era,
+    UsesTxBody era,
+    UsesScript era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -923,7 +954,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 verifiedWits ::
-  ( TxBodyConstraints era,
+  ( UsesTxBody era,
     Core.AnnotatedData (Core.Script era),
     ToCBOR (Core.AuxiliaryData era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
@@ -996,7 +1027,7 @@ reapRewards dStateRewards withdrawals =
 
 stakeDistr ::
   forall era.
-  ShelleyBased era =>
+  UsesValue era =>
   UTxO era ->
   DState (Crypto era) ->
   PState (Crypto era) ->
@@ -1188,7 +1219,7 @@ updateNES
     NewEpochState eL bprev bcur (EpochState acnt ss ls pr pp nm) ru pd
 
 returnRedeemAddrsToReserves ::
-  ShelleyBased era =>
+  (UsesValue era) =>
   EpochState era ->
   EpochState era
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}

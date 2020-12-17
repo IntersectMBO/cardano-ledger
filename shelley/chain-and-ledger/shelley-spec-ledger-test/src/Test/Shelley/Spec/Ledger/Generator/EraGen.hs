@@ -17,7 +17,6 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (HASH)
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Slotting.Slot (SlotNo)
 import Data.Coerce (coerce)
 import Data.Sequence.Strict (StrictSeq)
@@ -48,15 +47,16 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (someKeyPairs)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, someScripts)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
 
+import Cardano.Ledger.Constraints(UsesValue,UsesScript)
+
 {------------------------------------------------------------------------------
  An EraGen instance makes it possible to run the Shelley property tests
  -----------------------------------------------------------------------------}
 
 class
-  ( ShelleyBased era,
+  ( UsesScript era,
     ValidateScript era,
     Split (Core.Value era),
-    Show (Core.Script era),
     ScriptClass era
   ) =>
   EraGen era
@@ -94,7 +94,7 @@ class
 
 genUtxo0 ::
   forall era.
-  EraGen era =>
+  (EraGen era, UsesValue era) =>
   GenEnv era ->
   Gen (UTxO era)
 genUtxo0 ge@(GenEnv _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do

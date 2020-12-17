@@ -23,8 +23,7 @@ where
 
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core (TxBody)
-import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Era (Era, Crypto)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Prelude (HasField (..))
@@ -92,6 +91,9 @@ import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
   )
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
 import Test.Shelley.Spec.Ledger.Utils (ChainProperty, epochFromSlotNo, runShelleyBase, testGlobals)
+import Cardano.Ledger.Constraints(UsesValue)
+
+-- ======================================================
 
 ------------------------------
 -- Constants for Properties --
@@ -114,6 +116,7 @@ longTraceLen = 150
 collisionFreeComplete ::
   forall era.
   ( EraGen era,
+    UsesValue era,
     ChainProperty era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -139,6 +142,7 @@ collisionFreeComplete =
 adaPreservationChain ::
   forall era.
   ( EraGen era,
+    UsesValue era,
     ChainProperty era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -173,7 +177,7 @@ adaPreservationChain =
 
 -- ADA should be preserved for all state transitions in the generated trace
 checkPreservation ::
-  ShelleyBased era =>
+  (UsesValue era) =>
   SourceSignalTarget (CHAIN era) ->
   Property
 checkPreservation SourceSignalTarget {source, target} =
@@ -228,6 +232,7 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
 -- increases by Withdrawals min Fees (for all transactions in a block)
 utxoDepositsIncreaseByFeesWithdrawals ::
   ( ChainProperty era,
+    UsesValue era,
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
@@ -245,7 +250,8 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals for all transactions in a block
 potsSumIncreaseWdrlsPerBlock ::
-  ( ChainProperty era,
+  ( UsesValue era,
+    ChainProperty era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -263,6 +269,7 @@ potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
 potsSumIncreaseWdrlsPerTx ::
   forall era.
   ( ChainProperty era,
+    UsesValue era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
@@ -287,6 +294,7 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
 potsSumIncreaseByRewardsPerTx ::
   ( ChainProperty era,
+    UsesValue era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
@@ -317,6 +325,7 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWdrlsPerTx ::
   ( ChainProperty era,
+    UsesValue era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
@@ -354,6 +363,7 @@ potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = b
 -- equals the sum of the created value.
 preserveBalance ::
   ( ChainProperty era,
+    UsesValue era,
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
@@ -390,6 +400,7 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted ::
   ( ChainProperty era,
+    UsesValue era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
@@ -423,6 +434,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
 
 preserveOutputsTx ::
   ( ChainProperty era,
+    UsesValue era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
@@ -444,6 +456,7 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
 eliminateTxInputs ::
   forall era.
   ( ChainProperty era,
+    UsesValue era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
@@ -464,6 +477,7 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
 -- included in the new UTxO and that all TxIds are new.
 newEntriesAndUniqueTxIns ::
   ( ChainProperty era,
+    UsesValue era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
@@ -495,6 +509,7 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
 requiredMSigSignaturesSubset ::
   forall era.
   ( EraGen era,
+    UsesValue era,
     ChainProperty era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
@@ -607,6 +622,7 @@ feesNonDecreasing SourceSignalTarget {source, target} =
 poolProperties ::
   forall era.
   ( EraGen era,
+    UsesValue era,
     ChainProperty era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -678,6 +694,7 @@ poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = 
 delegProperties ::
   forall era.
   ( EraGen era,
+    UsesValue era,
     ChainProperty era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -714,6 +731,7 @@ delegProperties =
 ledgerTraceFromBlock ::
   forall era.
   ( ChainProperty era,
+    UsesValue era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
@@ -791,7 +809,7 @@ delegTraceFromBlock chainSt block =
 -- (in the same way that the CHAIN rule TICKs the slot before processing
 -- transactions with the LEDGERS rule)
 ledgerTraceBase ::
-  (ShelleyBased era, GetLedgerView era, ApplyBlock era) =>
+  (Era era, GetLedgerView era, ApplyBlock era) =>
   ChainState era ->
   Block era ->
   ( ChainState era,
@@ -847,6 +865,7 @@ removedAfterPoolreap ::
   forall era.
   ( ChainProperty era,
     EraGen era,
+    UsesValue era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
@@ -875,6 +894,7 @@ forAllChainTrace ::
   forall era prop.
   ( Testable prop,
     EraGen era,
+    UsesValue era,
     ChainProperty era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),

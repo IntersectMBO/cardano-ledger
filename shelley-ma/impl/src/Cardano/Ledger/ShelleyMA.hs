@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExplicitForAll #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -12,6 +13,7 @@ import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
     ValidateAuxiliaryData (..),
   )
+import Cardano.Ledger.Constraints (UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
@@ -56,6 +58,10 @@ instance
 type family MAValue (x :: MaryOrAllegra) c :: Type where
   MAValue 'Allegra _ = Coin
   MAValue 'Mary c = Value c
+
+instance CryptoClass.Crypto c => UsesValue (ShelleyMAEra 'Mary c)
+
+instance CryptoClass.Crypto c => UsesValue (ShelleyMAEra 'Allegra c)
 
 --------------------------------------------------------------------------------
 -- Core instances

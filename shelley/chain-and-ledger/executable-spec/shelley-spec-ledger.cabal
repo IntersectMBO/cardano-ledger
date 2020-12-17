@@ -26,6 +26,7 @@ library
     Cardano.Ledger.Era
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.Constraints
+    Cardano.Ledger.Constraints
     Cardano.Ledger.Torsor
     Cardano.Ledger.Val
     Shelley.Spec.Ledger.Address
@@ -114,6 +115,8 @@ library
     cardano-prelude,
     cardano-slotting,
     cborg,
+    cborg-json,
+    constraints,
     containers,
     data-default-class,
     deepseq,
