@@ -17,7 +17,6 @@ where
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
-import Data.Proxy
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (..))
@@ -39,7 +38,6 @@ import Test.Shelley.Spec.Ledger.Address.CompactAddr
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
-import Test.Shelley.Spec.Ledger.LegacyOverlay (legacyOverlayTest)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
     onlyValidLedgerSignalsAreGenerated,
@@ -84,12 +82,8 @@ minimalPropertyTests =
           TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
           TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @(Crypto era)),
           TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era))
-        ],
-      TQC.testProperty "legacy overlay schedule" (legacyOverlayTest p)
+        ]
     ]
-  where
-    p :: Proxy era
-    p = Proxy
 
 -- | 'TestTree' of property-based testing properties.
 propertyTests ::
