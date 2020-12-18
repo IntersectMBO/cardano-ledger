@@ -15,7 +15,7 @@
 -- handles the epoch transitions.
 module Shelley.Spec.Ledger.STS.Upec where
 
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -47,7 +47,7 @@ import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
 -- | Update epoch change
 data UPEC era
 
-data UPECState era = UPECState
+data UpecState era = UpecState
   { -- | Current protocol parameters.
     currentPp :: !(PParams era),
     -- | State of the protocol update transition system.
@@ -61,8 +61,15 @@ data UpecPredicateFailure era
 
 instance NoThunks (UpecPredicateFailure era)
 
-instance ShelleyBased era => STS (UPEC era) where
-  type State (UPEC era) = UPECState era
+instance
+  ( UsesAuxiliary era,
+    UsesTxBody era,
+    UsesScript era,
+    UsesValue era
+  ) =>
+  STS (UPEC era)
+  where
+  type State (UPEC era) = UpecState era
   type Signal (UPEC era) = ()
   type Environment (UPEC era) = EpochState era
   type BaseM (UPEC era) = ShelleyBase
@@ -75,7 +82,7 @@ instance ShelleyBased era => STS (UPEC era) where
               { esAccountState = acnt,
                 esLState = ls
               },
-            UPECState pp ppupSt,
+            UpecState pp ppupSt,
             _
             ) <-
           judgmentContext
@@ -90,7 +97,7 @@ instance ShelleyBased era => STS (UPEC era) where
           trans @(NEWPP era) $
             TRC (NewppEnv dstate pstate utxoSt acnt, NewppState pp ppupSt, ppNew)
         pure $
-          UPECState pp' ppupSt'
+          UpecState pp' ppupSt'
     ]
 
 -- | If at least @n@ nodes voted to change __the same__ protocol parameters to
