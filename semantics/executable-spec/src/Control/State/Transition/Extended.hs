@@ -39,6 +39,7 @@ module Control.State.Transition.Extended
     judgmentContext,
     trans,
     liftSTS,
+
     -- * Apply STS
     AssertionPolicy (..),
     ValidationPolicy (..),
@@ -175,7 +176,7 @@ class
   -- the disjunction of all rules' preconditions is equal to `True`. That is,
   -- either one rule will throw a structural `PredicateFailure` and the other
   -- will succeed, or vice-versa.
-  type PredicateFailure a = (b :: Type) | b -> a
+  type PredicateFailure a :: Type
 
   -- | Rules governing transition under this system.
   initialRules :: [InitialRule a]
@@ -368,8 +369,8 @@ applySTSIndifferently ::
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
   m (State s, [[PredicateFailure s]])
-applySTSIndifferently ctx =
-  applySTSOpts opts ctx
+applySTSIndifferently =
+  applySTSOpts opts
   where
     opts =
       ApplySTSOpts
@@ -394,17 +395,17 @@ applyRuleInternal vp goSTS jc r = flip runStateT [] $ foldF runClause r
   where
     runClause :: Clause s rtype a -> MonadState.StateT [PredicateFailure s] m a
     runClause (Lift f next) = next <$> lift f
-    runClause (GetCtx next) = next <$> pure jc
+    runClause (GetCtx next) = pure $ next jc
     runClause (Predicate cond orElse val) = case vp of
       ValidateAll -> do
         case catchError cond throwError of
           Left err -> modify (orElse err :) >> pure val
           Right x -> pure x
       ValidateNone -> pure val
-    runClause (SubTrans subCtx next) = do
+    runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
       (ss, sfails) <- lift $ goSTS subCtx
-      traverse_ (\a -> modify (a :)) $ wrapFailed <$> concat sfails
-      next <$> pure ss
+      traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> concat sfails
+      pure $ next ss
 
 applySTSInternal ::
   forall s m rtype.

@@ -420,10 +420,11 @@ checkTrace
    . (STS s, BaseM s ~ m)
   => (forall a. m a -> a)
   -> Environment s
-  -> ReaderT (State s -> Signal s -> (Either [[PredicateFailure s]] (State s))) IO (State s)
+  -> ReaderT (State s ->
+        Signal s -> (Either [[PredicateFailure s]] (State s))) IO (State s)
   -> IO ()
 checkTrace interp env act =
-  void $ runReaderT act (\st sig -> interp $ applySTSTest (TRC(env, st, sig)))
+  void $ runReaderT act (\st sig -> interp $ applySTSTest @s (TRC(env, st, sig)))
 
 -- | Extract all the values of a given type.
 --

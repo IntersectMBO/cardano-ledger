@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
@@ -28,7 +30,7 @@ coverUpiregFailures
   -- ^ Structure containing the failures
   -> m ()
 coverUpiregFailures coverPercentage someData = do
-  Generator.coverFailures
+  Generator.coverFailures @_ @UPPVV
     coverPercentage
     [ CannotFollowPv
     , CannotUpdatePv []
@@ -36,7 +38,7 @@ coverUpiregFailures coverPercentage someData = do
     ]
     someData
 
-  Generator.coverFailures
+  Generator.coverFailures @_ @UPSVV
     coverPercentage
     [ AlreadyProposedSv
     , CannotFollowSv
@@ -45,7 +47,7 @@ coverUpiregFailures coverPercentage someData = do
     ]
     someData
 
-  Generator.coverFailures
+  Generator.coverFailures @_ @UPREG
     coverPercentage
     [ NotGenesisDelegate
     , DoesNotVerify
@@ -64,7 +66,7 @@ coverUpivoteFailures
   -> a
   -> m ()
 coverUpivoteFailures coverPercentage =
-  Generator.coverFailures
+  Generator.coverFailures @_ @ADDVOTE
     coverPercentage
     [ AVSigDoesNotVerify
     , NoUpdateProposal (UpId 0) -- We need to pass a dummy update id here.
