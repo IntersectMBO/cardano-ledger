@@ -58,19 +58,12 @@ library test
     Test.Cardano.Ledger.Alonzo.Serialisation.Generators
   build-depends:
     base >=4.14 && <4.15,
-    cardano-binary,
     cardano-crypto-class,
     cardano-ledger-alonzo,
-    cardano-ledger-shelley-ma,
     cardano-ledger-shelley-ma-test,
-    cardano-slotting,
-    containers,
-    deepseq,
-    nothunks,
     QuickCheck,
     shelley-spec-ledger-test,
     shelley-spec-ledger,
-    small-steps
   hs-source-dirs:
     test/lib
   ghc-options:
