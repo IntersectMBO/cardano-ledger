@@ -8,6 +8,7 @@ import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
 import Test.Cardano.Ledger.EraBuffet (AllegraEra, TestCrypto)
 import Test.Cardano.Ledger.Mary.Examples.MultiAssets (multiAssetsExample)
 import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
+import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Mary.Value (valTests)
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
@@ -38,7 +39,8 @@ allegraTests =
   testGroup
     "Allegra Ledger Tests"
     [ allegraTranslationTests,
-      minimalPropertyTests @(AllegraEra TestCrypto)
+      minimalPropertyTests @(AllegraEra TestCrypto),
+      testScriptPostTranslation
     ]
 
 maryTests :: TestTree
