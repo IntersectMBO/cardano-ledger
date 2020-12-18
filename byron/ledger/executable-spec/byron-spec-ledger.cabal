@@ -1,3 +1,4 @@
+cabal-version:       2.2
 name:                byron-spec-ledger
 version:             0.1.0.0
 synopsis:            Executable specification of Cardano ledger
@@ -9,7 +10,6 @@ maintainer:          formal.methods@iohk.io
 -- copyright:
 category:            Testing
 build-type:          Simple
-cabal-version:       >= 2.0
 
 extra-source-files:  CHANGELOG.md
                      src/goblin_genomes/*.genome
