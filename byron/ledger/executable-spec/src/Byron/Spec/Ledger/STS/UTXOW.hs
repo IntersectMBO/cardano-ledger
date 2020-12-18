@@ -150,13 +150,13 @@ coverUtxoFailure
   -- ^ Structure containing the failures
   -> m ()
 coverUtxoFailure coverPercentage someData = do
-  coverFailures
+  coverFailures @_ @UTXOW
     coverPercentage
     [ InsufficientWitnesses
     ]
     someData
 
-  coverFailures
+  coverFailures @_ @UTXO
     coverPercentage
     [ FeeTooLow
     , InputsNotInUTxO
