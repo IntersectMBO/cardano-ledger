@@ -1,14 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Epoch change registration.
 --
@@ -16,67 +15,82 @@
 -- handles the epoch transitions.
 module Shelley.Spec.Ledger.STS.Upec where
 
-import GHC.Generics (Generic)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Control.Monad.Trans.Reader (asks)
+import Control.State.Transition
+  ( Embed (..),
+    STS (..),
+    TRC (..),
+    judgmentContext,
+    liftSTS,
+    trans,
+  )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Control.State.Transition
-  (Embed (..), STS (..), TRC (..), judgmentContext, liftSTS, trans)
-import Shelley.Spec.Ledger.LedgerState
-  ( EpochState, pattern EpochState,     esAccountState,     esLState, esPp, esNonMyopic, esSnapshots, esPrevPp,     _utxoState,     _delegationState,     PPUPState (..)    ,_ppups,     pattern DPState)
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
-import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
-import Control.Monad.Trans.Reader (asks)
-import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (..), updatePParams)
+import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Shelley.Spec.Ledger.LedgerState
+  ( EpochState,
+    PPUPState (..),
+    esAccountState,
+    esLState,
+    _delegationState,
+    _ppups,
+    _utxoState,
+    pattern DPState,
+    pattern EpochState,
+  )
+import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (..), updatePParams)
+import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
 
 -- | Update epoch change
 data UPEC era
 
-data UpecPredicateFailure era =
-  NewPpFailure (PredicateFailure (NEWPP era))
+data UPECState era = UPECState
+  { -- | Current protocol parameters.
+    currentPp :: !(PParams era),
+    -- | State of the protocol update transition system.
+    ppupState :: !(PPUPState era)
+  }
+  deriving (Show)
+
+data UpecPredicateFailure era
+  = NewPpFailure (PredicateFailure (NEWPP era))
   deriving (Eq, Show, Generic)
 
 instance NoThunks (UpecPredicateFailure era)
 
 instance ShelleyBased era => STS (UPEC era) where
-  type State (UPEC era) = EpochState era
+  type State (UPEC era) = UPECState era
   type Signal (UPEC era) = ()
-  type Environment (UPEC era) = ()
+  type Environment (UPEC era) = EpochState era
   type BaseM (UPEC era) = ShelleyBase
   type PredicateFailure (UPEC era) = UpecPredicateFailure era
   initialRules = []
-  transitionRules = [
-    do
-      TRC (_,
-           EpochState
-           { esAccountState = acnt,
-             esSnapshots = ss,
-             esLState = ls,
-             esPrevPp = _pr,
-             esPp = pp,
-             esNonMyopic = nm
-           }
-          , _
-          ) <- judgmentContext
+  transitionRules =
+    [ do
+        TRC
+          ( EpochState
+              { esAccountState = acnt,
+                esLState = ls
+              },
+            UPECState pp ppupSt,
+            _
+            ) <-
+          judgmentContext
 
-      coreNodeQuorum <- liftSTS $ asks quorum
+        coreNodeQuorum <- liftSTS $ asks quorum
 
-      let utxoSt = _utxoState ls
-          DPState dstate pstate = _delegationState ls
-          pup = proposals . _ppups $ utxoSt
-          ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
-      NewppState utxoSt' acnt' pp' <-
-        trans @(NEWPP era) $
-          TRC (NewppEnv dstate pstate, NewppState utxoSt acnt pp, ppNew)
-      pure $
-        EpochState
-        acnt'
-        ss
-        (ls {_utxoState = utxoSt'})
-        pp
-        pp'
-        nm
+        let utxoSt = _utxoState ls
+            DPState dstate pstate = _delegationState ls
+            pup = proposals . _ppups $ utxoSt
+            ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
+        NewppState pp' ppupSt' <-
+          trans @(NEWPP era) $
+            TRC (NewppEnv dstate pstate utxoSt acnt, NewppState pp ppupSt, ppNew)
+        pure $
+          UPECState pp' ppupSt'
     ]
 
 -- | If at least @n@ nodes voted to change __the same__ protocol parameters to
@@ -108,7 +122,6 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
         -- NOTE that `updatePParams` corresponds to the union override right
         -- operation in the formal spec.
         _ -> Nothing
-
 
 instance ShelleyBased era => Embed (NEWPP era) (UPEC era) where
   wrapFailed = NewPpFailure

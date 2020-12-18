@@ -51,6 +51,10 @@ import Shelley.Spec.Ledger.LedgerState
     esPrevPp,
     esSnapshots,
     _delegationState,
+    _deposited,
+    _ppups,
+    _reserves,
+    _rewards,
     _utxoState,
     pattern DPState,
     pattern EpochState,
@@ -60,7 +64,7 @@ import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppPredicateFailure, NewppState (..))
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapPredicateFailure, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapPredicateFailure)
-import Shelley.Spec.Ledger.STS.Upec (UPEC)
+import Shelley.Spec.Ledger.STS.Upec (UPEC, UPECState (..))
 import Shelley.Spec.Ledger.Slot (EpochNo)
 
 data EPOCH era
@@ -187,7 +191,8 @@ epochTransition = do
             _fPParams = Map.empty
           }
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
-    trans @(Core.EraRule "POOLREAP" era) $ TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
+    trans @(Core.EraRule "POOLREAP" era) $
+      TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
 
   let epochState' =
         EpochState
@@ -198,7 +203,31 @@ epochTransition = do
           pp
           nm
 
-  trans @(UPEC era) $ TRC ((), epochState', ())
+  UPECState pp' ppupSt' <-
+    trans @(Core.EraRule "UPEC" era) $ TRC (epochState', UPECState pp (_ppups utxoSt'), ())
+  let utxoSt'' = utxoSt' {_ppups = ppupSt'}
+
+  if pp /= pp'
+    then do
+      let Coin oblgCurr = obligation pp (_rewards dstate') (_pParams pstate'')
+          Coin oblgNew = obligation pp' (_rewards dstate') (_pParams pstate'')
+          Coin reserves = _reserves acnt'
+          utxoSt''' = utxoSt'' {_deposited = Coin oblgNew}
+          acnt'' = acnt' {_reserves = Coin $ reserves + oblgCurr - oblgNew}
+      pure $
+        epochState'
+          { esAccountState = acnt'',
+            esLState = (esLState epochState') {_utxoState = utxoSt'''},
+            esPrevPp = pp,
+            esPp = pp'
+          }
+    else
+      pure $
+        epochState'
+          { esLState = (esLState epochState') {_utxoState = utxoSt'}, -- do not update the protocol parameters.
+            esPrevPp = pp,
+            esPp = pp
+          }
 
 instance
   ( UsesTxOut era,
