@@ -18,10 +18,10 @@ import Cardano.Ledger.Mary.Value
   )
 import Cardano.Ledger.Val (Val (..), invert)
 import Data.ByteString (ByteString)
-import Data.CannonicalMaps
-  ( CannonicalZero (..),
-    cannonicalInsert,
-    cannonicalMapUnion,
+import Data.CanonicalMaps
+  ( CanonicalZero (..),
+    canonicalInsert,
+    canonicalMapUnion,
   )
 import Data.Map.Strict (empty, singleton)
 import qualified Data.Map.Strict as Map
@@ -40,19 +40,19 @@ import Prelude hiding (lookup)
 -- We compute Values 3 ways and show all are equivalent.
 -- =================================================================================
 
--- Use cannonicalUnion and cannonicalInsert
+-- Use canonicalUnion and canonicalInsert
 
 insert3 :: (Integer -> Integer -> Integer) -> PolicyID crypto -> AssetName -> Integer -> Value crypto -> Value crypto
 insert3 combine pid aid new (Value c m1) =
   case Map.lookup pid m1 of
-    Nothing -> Value c (cannonicalInsert (cannonicalMapUnion combine) pid (cannonicalInsert combine aid new zeroC) m1)
+    Nothing -> Value c (canonicalInsert (canonicalMapUnion combine) pid (canonicalInsert combine aid new zeroC) m1)
     Just m2 -> case Map.lookup aid m2 of
-      Nothing -> Value c (cannonicalInsert (cannonicalMapUnion combine) pid (singleton aid new) m1)
-      Just old -> Value c (cannonicalInsert (\_o n -> n) pid (cannonicalInsert (\_o n -> n) aid (combine old new) m2) m1)
+      Nothing -> Value c (canonicalInsert (canonicalMapUnion combine) pid (singleton aid new) m1)
+      Just old -> Value c (canonicalInsert (\_o n -> n) pid (canonicalInsert (\_o n -> n) aid (combine old new) m2) m1)
 
 -- | Make a Value with no coin, and just one token.
 unit :: PolicyID crypto -> AssetName -> Integer -> Value crypto
-unit pid aid n = Value 0 (cannonicalInsert (\_old new -> new) pid (cannonicalInsert (\_old new -> new) aid n empty) empty)
+unit pid aid n = Value 0 (canonicalInsert (\_old new -> new) pid (canonicalInsert (\_old new -> new) aid n empty) empty)
 
 -- Use <+> and <->
 

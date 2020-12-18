@@ -31,7 +31,7 @@ library
                      , Control.State.Transition.Simple
                      , Data.AbstractSize
                      , Data.Relation
-                     , Data.CannonicalMaps
+                     , Data.CanonicalMaps
                      , Data.MemoBytes
                      , Data.Coders
                      , Control.Provenance

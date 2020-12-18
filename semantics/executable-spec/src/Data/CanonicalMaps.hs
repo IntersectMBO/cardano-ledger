@@ -1,10 +1,10 @@
 {-# LANGUAGE BangPatterns  #-}
 
-module Data.CannonicalMaps
-  ( CannonicalZero(..),
-    cannonicalInsert,
-    cannonicalMapUnion,
-    cannonicalMap,
+module Data.CanonicalMaps
+  ( CanonicalZero(..),
+    canonicalInsert,
+    canonicalMapUnion,
+    canonicalMap,
     pointWise,
     Map.Map,
   )
@@ -23,37 +23,37 @@ import qualified Data.Map.Strict as Map
 
 -- =====================================================================================
 -- Operations on Map from keys to values that are specialised to `CanonicalZero` values.
--- A (Map k v) is (CannonicalZero v), if it never stores a zero at type v.
+-- A (Map k v) is (CanonicalZero v), if it never stores a zero at type v.
 -- In order to do this we need to know what 'zeroC' is, and 'joinC' has to know how to
 -- joining together two maps where one of its arguments might be 'zeroC'
 -- This class is strictly used in the implementation, and is not observable by the user.
 -- ======================================================================================
 
-class Eq t => CannonicalZero t where
+class Eq t => CanonicalZero t where
   zeroC :: t
   joinC :: t -> t -> t
 
-instance CannonicalZero Integer where
+instance CanonicalZero Integer where
   zeroC = 0
   joinC = (+)
 
-instance (Eq k, Eq v, Ord k, CannonicalZero v) => CannonicalZero (Map k v) where
+instance (Eq k, Eq v, Ord k, CanonicalZero v) => CanonicalZero (Map k v) where
   zeroC = Map.empty
-  joinC = cannonicalMapUnion joinC
+  joinC = canonicalMapUnion joinC
 
--- Note that the class CannonicalZero and the function cannonicalMapUnion are mutually recursive.
+-- Note that the class CanonicalZero and the function canonicalMapUnion are mutually recursive.
 
-cannonicalMapUnion ::
-  (Ord k, CannonicalZero a) =>
+canonicalMapUnion ::
+  (Ord k, CanonicalZero a) =>
   (a -> a -> a) -> -- (\ left right -> ??) which side do you prefer?
   Map k a ->
   Map k a ->
   Map k a
-cannonicalMapUnion _f t1 Tip = t1
-cannonicalMapUnion f t1 (Bin _ k x Tip Tip) = cannonicalInsert f k x t1
-cannonicalMapUnion f (Bin _ k x Tip Tip) t2 = cannonicalInsert f k x t2
-cannonicalMapUnion _f Tip t2 = t2
-cannonicalMapUnion f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
+canonicalMapUnion _f t1 Tip = t1
+canonicalMapUnion f t1 (Bin _ k x Tip Tip) = canonicalInsert f k x t1
+canonicalMapUnion f (Bin _ k x Tip Tip) t2 = canonicalInsert f k x t2
+canonicalMapUnion _f Tip t2 = t2
+canonicalMapUnion f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
   (l2, mb, r2) -> case mb of
     Nothing ->
       if x1 == zeroC
@@ -66,21 +66,21 @@ cannonicalMapUnion f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
       where
         new = (f x1 x2)
     where
-      !l1l2 = cannonicalMapUnion f l1 l2
-      !r1r2 = cannonicalMapUnion f r1 r2
-{-# INLINEABLE cannonicalMapUnion #-}
+      !l1l2 = canonicalMapUnion f l1 l2
+      !r1r2 = canonicalMapUnion f r1 r2
+{-# INLINEABLE canonicalMapUnion #-}
 
-cannonicalInsert ::
-  (Ord k, CannonicalZero a) =>
+canonicalInsert ::
+  (Ord k, CanonicalZero a) =>
   (a -> a -> a) ->
   k ->
   a ->
   Map k a ->
   Map k a
-cannonicalInsert = go
+canonicalInsert = go
   where
     go ::
-      (Ord k, CannonicalZero a) =>
+      (Ord k, CanonicalZero a) =>
       (a -> a -> a) ->
       k ->
       a ->
@@ -94,21 +94,21 @@ cannonicalInsert = go
         EQ -> if new == zeroC then link2 l r else Bin sy kx new l r
           where
             new = f y x -- Apply to value in the tree, then the new value
-{-# INLINEABLE cannonicalInsert #-}
+{-# INLINEABLE canonicalInsert #-}
 
-cannonicalMap :: (Ord k, CannonicalZero a) => (a -> a) -> Map k a -> Map k a
-cannonicalMap f m = Map.foldrWithKey accum Map.empty m
+canonicalMap :: (Ord k, CanonicalZero a) => (a -> a) -> Map k a -> Map k a
+canonicalMap f m = Map.foldrWithKey accum Map.empty m
   where
     accum k v ans = if new == zeroC then ans else Map.insert k new ans
       where
         new = f v
-{-# INLINEABLE cannonicalMap #-}
+{-# INLINEABLE canonicalMap #-}
 
--- Pointwise comparison assuming the map is CannonicalZero, and we assume semantically that
+-- Pointwise comparison assuming the map is CanonicalZero, and we assume semantically that
 -- the value for keys not appearing in the map is 'zeroC'
 
 pointWise ::
-  (Ord k, CannonicalZero v) =>
+  (Ord k, CanonicalZero v) =>
   (v -> v -> Bool) ->
   Map k v ->
   Map k v ->

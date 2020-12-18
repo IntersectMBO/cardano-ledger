@@ -50,9 +50,9 @@ import Control.Monad (guard)
 import Data.Array (Array)
 import Data.Array.IArray (array)
 import Data.ByteString (ByteString)
-import Data.CannonicalMaps
-  ( cannonicalMap,
-    cannonicalMapUnion,
+import Data.CanonicalMaps
+  ( canonicalMap,
+    canonicalMapUnion,
     pointWise,
   )
 import Data.Coders
@@ -114,7 +114,7 @@ instance NoThunks (Value crypto)
 
 instance Semigroup (Value crypto) where
   Value c m <> Value c1 m1 =
-    Value (c + c1) (cannonicalMapUnion (cannonicalMapUnion (+)) m m1)
+    Value (c + c1) (canonicalMapUnion (canonicalMapUnion (+)) m m1)
 
 instance Monoid (Value crypto) where
   mempty = Value 0 mempty
@@ -123,7 +123,7 @@ instance Group (Value crypto) where
   invert (Value c m) =
     Value
       (- c)
-      (cannonicalMap (cannonicalMap ((-1 :: Integer) *)) m)
+      (canonicalMap (canonicalMap ((-1 :: Integer) *)) m)
 
 instance Abelian (Value crypto)
 
@@ -134,7 +134,7 @@ instance CC.Crypto crypto => Val (Value crypto) where
   s <×> (Value c v) =
     Value
       (fromIntegral s * c)
-      (cannonicalMap (cannonicalMap ((fromIntegral s) *)) v)
+      (canonicalMap (canonicalMap ((fromIntegral s) *)) v)
   isZero (Value c v) = c == 0 && Map.null v
   coin (Value c _) = Coin c
   inject (Coin c) = Value c mempty
