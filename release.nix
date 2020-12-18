@@ -78,6 +78,8 @@ let
     docSite = project.doc.site;
     # Ensure everything in the shell is cached
     shell = project.shell;
+    # Ensure that the project's eval-time GC roots are built and cached by Hydra
+    roots = project.roots;
   };
 
 in jobs

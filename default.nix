@@ -41,6 +41,8 @@ let
       withHoogle = true;
     };
 
+    roots = cardanoLedgerSpecsHaskellPackages.roots;
+
     #
     # PDF builds of LaTeX documentation.
     #
