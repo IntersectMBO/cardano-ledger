@@ -371,7 +371,7 @@ coverInvalidBlockProofs
   -- ^ Structure containing the failures
   -> m ()
 coverInvalidBlockProofs coverPercentage =
-  coverFailures coverPercentage
+  coverFailures @_ @BBODY coverPercentage
     [ InvalidDelegationHash
     , InvalidUpdateProposalHash
     , InvalidUtxoHash

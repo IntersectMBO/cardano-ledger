@@ -390,7 +390,7 @@ rejectDupSchedDelegs = withTests 300 $ property $ do
     epo <- Epoch <$> Gen.integral (Range.linear 0 100)
     let dcert = mkDCert vkS (Sig (vkD, epo) (owner vkS)) vkD epo
     return (tr, dcert)
-  let pfs = case applySTS (TRC (tr ^. traceEnv, lastState tr, [dcert])) of
+  let pfs = case applySTS @DELEG (TRC (tr ^. traceEnv, lastState tr, [dcert])) of
         Left res -> res
         Right _ -> []
   assert $ SDelegSFailure (SDelegFailure IsAlreadyScheduled) `elem` concat pfs

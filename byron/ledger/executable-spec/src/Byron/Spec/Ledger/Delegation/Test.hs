@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
@@ -21,7 +23,7 @@ coverDelegFailures
   -> a
   -> m ()
 coverDelegFailures coverPercentage =
-  Generator.coverFailures
+  Generator.coverFailures @_ @SDELEG
     coverPercentage
     [ EpochInThePast (EpochDiff 0 0) -- The value here is ignored, only the constructor is compared
     , EpochPastNextEpoch (EpochDiff 0 0 ) -- The value here is ignored, only the constructor is compared
