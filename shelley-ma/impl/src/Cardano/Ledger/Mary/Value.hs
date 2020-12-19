@@ -25,6 +25,7 @@ where
 
 import Cardano.Binary
   ( Decoder,
+    DecoderError (..),
     Encoding,
     FromCBOR,
     ToCBOR,
@@ -45,11 +46,12 @@ import Cardano.Ledger.Val
     EncodeMint (..),
     Val (..),
   )
+import Cardano.Prelude (cborError)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (guard)
 import Data.Array (Array)
 import Data.Array.IArray (array)
-import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Data.CanonicalMaps
   ( canonicalMap,
     canonicalMapUnion,
@@ -75,6 +77,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text.Encoding (decodeUtf8)
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -85,16 +88,22 @@ import Shelley.Spec.Ledger.Serialization (decodeMap, encodeMap)
 import Prelude hiding (lookup)
 
 -- | Asset Name
-newtype AssetName = AssetName {assetName :: ByteString}
+newtype AssetName = AssetName {assetName :: BS.ByteString}
   deriving newtype
     ( Show,
       Eq,
       ToCBOR,
-      FromCBOR,
       Ord,
       NoThunks,
       NFData
     )
+
+instance FromCBOR AssetName where
+  fromCBOR = do
+    an <- fromCBOR
+    if BS.length an > 32
+      then cborError $ DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeUtf8 an)
+      else pure . AssetName $ an
 
 -- | Policy ID
 newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
