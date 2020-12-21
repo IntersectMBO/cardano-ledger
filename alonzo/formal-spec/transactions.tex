@@ -1,9 +1,9 @@
-\section{Transaction}
+\section{Transactions}
 \label{sec:transactions}
 
 This section outlines the changes that are needed to the transaction
 structure to enable non-native scripts to validate
-forging tokens, spending outputs, verifying certificates, and
+minting tokens, spending outputs, verifying certificates, and
 verifying withdrawals.
 %
 Figure \ref{fig:defs:utxo-shelley-1} gives the modified transaction types.
@@ -11,21 +11,14 @@ We make the following changes and additions over the corresponding types in the
 Shelley specification~\cite{XX}:
 
 \begin{itemize}
-  \item $\Value$ represents the type of multi-asset tokens. For details,
-  see the multi-asset formal specification~\cite{XX}.
-
-  \item $\ScriptDataHash$ is the type of a hash of script related data
-    included within a transaction. It contains a hash of the $\fun{txscripts}, \fun{txdats}$
-    and $\fun{txrdmrs}$ fields of a transaction.
+  \item $\ScriptDataHash$ is the type of a hash of script execution
+  related data. It is the hash of $\fun{txrdmrs}$ and relevant protocol parameters.
 
   \item $\ScriptNative$ is the type of native scripts.
 
   \item $\ScriptNonNative$ is the type of non-native scripts.
 
-  \item $\Data$ is the same type as in the Plutus libraries (see the note on ``Data Representation'' below).
-    \begin{note}
-      It may or may not be, but we don't particularly care. We just use this to pass data to plutus.
-    \end{note}
+  \item $\Data$ is a type for communicating data to scripts, kept abstract here.
 
   \item $\Script$ is a sum type of all scripts, both native and non-native.
 
@@ -53,7 +46,7 @@ Shelley specification~\cite{XX}:
   can validate, i.e. \\
   \begin{tabular}{l@{~to validate~}l}
   $\mathsf{inputTag}$ & spending a script UTxO entry, \\
-  $\mathsf{forgeTag}$ & forging tokens, \\
+  $\mathsf{mintTag}$ & minting tokens, \\
   $\mathsf{certTag}$  & certificates with script credentials, and  \\
   $\mathsf{wdrlTag}$ & reward withdrawals from script addresses.
   \end{tabular}
@@ -64,16 +57,14 @@ Shelley specification~\cite{XX}:
 
 \end{itemize}
 
-
 \begin{figure*}[htb]
   \emph{Abstract types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\quad\quad\quad\quad}r}
-      \var{v} &\Value & \text{Multi-asset value}\\
       \var{sdh} &\ScriptDataHash & \text{Script data hash}\\
       \var{plc} & \ScriptPlutus & \text{Plutus core scripts} \\
-      \var{d} & \Data & \text{The Plutus $\Data$ type}
+      \var{d} & \Data & \text{Generic script data}
     \end{array}
   \end{equation*}
   %
@@ -81,6 +72,7 @@ Shelley specification~\cite{XX}:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{sc} & \ScriptNonNative & \ScriptPlutus \\
       \var{sc} & \Script & \ScriptNative \uniondistinct \ScriptNonNative \\
       \var{isv} & \IsValidating & \Bool
     \end{array}
@@ -97,17 +89,17 @@ Shelley specification~\cite{XX}:
       \\
       \var{txin}
       & \TxIn
-      & \TxId \times \Ix \times \IsFee
+      & \TxId \times \Ix \times \hldiff{\IsFee}
 %      & \text{transaction input}
       \\
       \var{txout}
       & \TxOut
-      & \Addr \times \Value \times \DataHash^?
+      & \Addr \times \Value \times \hldiff{\DataHash^?}
 %      & \text{transaction outputs in a transaction}
       \\
       \var{tag}
       & \Tag
-      & \{\mathsf{inputTag},~\mathsf{forgeTag},~\mathsf{certTag},~\mathsf{wdrlTag}\}
+      & \{\mathsf{inputTag},~\mathsf{mintTag},~\mathsf{certTag},~\mathsf{wdrlTag}\}
       \\
       \var{rdptr}
       & \RdmrPtr
@@ -116,12 +108,22 @@ Shelley specification~\cite{XX}:
     \end{array}
   \end{equation*}
   %
-  \emph{Accessor Functions}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad}l}
-      \fun{getValue} & \TxOut \to \Value & \text{Output value}
-    \end{array}
-  \end{equation*}
+  \emph{Helper Functions}
+  %
+  \begin{align*}
+    \fun{language}& \in \ScriptNonNative \to \Language\\
+    \fun{hashData}& \in \Data \to \DataHash
+    \nextdef
+    \fun{hashScriptData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Data) \to \ScriptDataHash^? \\
+    \fun{hashScriptData}&~{pp}~{langs}~{rdmrs}~=~ \\
+                          &\begin{cases}
+                            \Nothing & rdmrs~=~\emptyset \land langs~=~\emptyset \\
+                            \fun{hash} (rdmrs, \{ \fun{hashLanguagePP}~pp~l \mid l \in langs \}) & \text{otherwise}
+                          \end{cases}
+    \nextdef
+    \fun{getCoin}& \in \TxOut \to \Coin \\
+    \fun{getCoin}&~\hldiff{{(\_, \var{v}, \_)}} ~=~\fun{valueToCoin}~{v}
+  \end{align*}
   \caption{Definitions for Transactions}
   \label{fig:defs:utxo-shelley-1}
 \end{figure*}
@@ -134,9 +136,9 @@ Shelley specification~\cite{XX}:
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
       \var{wits} ~\in~ \TxWitness ~=~
        & (\VKey \mapsto \Sig) & \fun{txwitsVKey} & \text{VKey signatures}\\
-       & \times ~\powerset{\Script}  & \fun{txscripts} & \text{All scripts}\\
-       & \times~ \powerset{\Data} & \fun{txdats} & \text{All datum objects}\\
-       & \times ~(\RdmrPtr \mapsto \Data)& \fun{txrdmrs}& \text{Indexed redeemers}\\
+       & \times ~(\ScriptHash \mapsto \Script)  & \fun{txscripts} & \text{All scripts}\\
+       & \times~ \hldiff{(\DataHash \mapsto \Data)} & \hldiff{\fun{txdats}} & \text{All datum objects}\\
+       & \times ~\hldiff{(\RdmrPtr \mapsto \Data)}& \hldiff{\fun{txrdmrs}}& \text{Indexed redeemers}\\
     \end{array}
   \end{equation*}
   %
@@ -146,13 +148,12 @@ Shelley specification~\cite{XX}:
       & \powerset{\TxIn} & \fun{txinputs}& \text{Inputs}\\
       &\times ~(\Ix \mapsto \TxOut) & \fun{txouts}& \text{Outputs}\\
       & \times~ \seqof{\DCert} & \fun{txcerts}& \text{Certificates}\\
-       & \times ~\Value  & \fun{forge} &\text{A forged value}\\
-       & \times ~\ExUnits  & \fun{txexunits}& \text{Script exec. budget}\\
+       & \times ~\Value  & \fun{mint} &\text{A minted value}\\
+       & \times ~\hldiff{\ExUnits}  & \hldiff{\fun{txexunits}}& \text{Script exec. budget}\\
        & \times ~\Coin & \fun{txfee} &\text{Non-script fee}\\
-       & \times ~(\Slot\times\Slot) & \fun{txfst},~\fun{txttl} & \text{Validity interval}\\
+       & \times ~\Slot^? \times \Slot^? & \fun{txvldt} & \text{Validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
        & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
-       & \times ~\PPHash^?  & \fun{ppHash} & \text{Hash of PPs}\\
        & \times ~\ScriptDataHash^? & \fun{sdHash} & \text{Hash of script-related data}\\
        & \times ~\AuxiliaryDataHash^? & \fun{txMDhash} & \text{Auxiliary data hash}\\
     \end{array}
@@ -160,35 +161,25 @@ Shelley specification~\cite{XX}:
   %
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
-      \var{txg} ~\in~ \GoguenTx ~=~
-      & \TxBody & \fun{txbody} & \text{Body}\\
-      & \times ~\TxWitness & \fun{txwits} & \text{Witnesses}\\
-      & \times ~\IsValidating & \fun{txvaltag}&\text{Validation tag}\\
-      & \times ~\AuxiliaryData^? & \fun{txMD}&\text{Auxiliary data}\\
+      \var{md} ~\in~ \MetaData ~=~
+      & \powerset{\Script} & \fun{scripts}& \text{Optional scripts}\\
+      & \hldiff{\powerset{\Data}} & \hldiff{\fun{dats}}& \text{Optional datums}\\
+      & \times ~\AuxiliaryData^? & \fun{txMD}&\text{Auxiliary data}
     \end{array}
   \end{equation*}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}l@{\qquad\qquad}l}
-\qquad\qquad      \var{tx} & \Tx & \ShelleyTx \uniondistinct \GoguenTx &
-      \text{All valid transactions}\\
+    \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
+      \var{tx} ~\in~ \Tx ~=~
+      & \TxBody & \fun{txbody} & \text{Body}\\
+      & \times ~\TxWitness & \fun{txwits} & \text{Witnesses}\\
+      & \times ~\hldiff{\IsValidating} & \hldiff{\fun{txvaltag}}&\text{Validation tag}\\
+      & \times ~\MetaData^? & \fun{txMD}&\text{Metadata}\\
     \end{array}
   \end{equation*}
   \caption{Definitions for transactions, cont.}
   \label{fig:defs:utxo-shelley-2}
 \end{figure*}
-
-
-\textbf{Data Representation.}
-The type $\Data$ is a Plutus type that represents all valid ground types in Plutus.
-\begin{note}
-  No, this needs to be fixed later on.
-There is a similar type in the
-ledger. We do not assume these are the same $\Data$, but we do assume there
-is structural equality between them. TODO: {Fix this.  Is one a subset of the other?  Are they actually related in any way; if so, how?}
-  Is this supposed to be this similar type? From what I've seen, those
-  two types are not actually equal, so this needs an update.
-\end{note}
 
 \subsection{Witnessing}
 Figure \ref{fig:defs:utxo-shelley-2} defines the witness type, $\TxWitness$.  This contains everything
@@ -227,9 +218,8 @@ the body of the transaction:
   \item We include a term of type $\ExUnits$. This is a budget of execution units
   that may be used by all non-native scripts in the transaction.
   The budget is intended to be computed by executing the scripts off-chain prior to transaction submission.
-  \item We include a hash of some of the data contained in the witnesses, specifically data relating to scripts,
-    with accessor $\fun{sdHash}$. It is used to prevent tampering with that data.
-  \item We include a hash of the subset of current protocol parameters that is relevant for script execution.
+  \item We include a hash of some data relating to scripts, specifically the redeemers and protocol parameters,
+    with accessor $\fun{sdHash}$.
 \end{itemize}
 
 A complete Goguen transaction comprises:
@@ -246,68 +236,32 @@ A complete Goguen transaction comprises:
   \item any transaction metadata.
 \end{enumerate}
 
-
-\subsection{Processing Shelley Transactions in the Goguen Era}
-
-To simplify the transition from the Shelley to the Goguen era, the
-ledger rules support both Shelley and Goguen transaction formats
-simultaneously: $\Tx ~~=~~ \ShelleyTx \uniondistinct \GoguenTx$, where
-Shelley transactions have the type $\ShelleyTx$, and Goguen
-transactions have type $\GoguenTx$.
-
-Shelley transactions contain fewer data items than Goguen transactions, so we can interpret
-a Shelley transaction as a Goguen one with some missing fields, and process it using the normal Goguen ledger
-rules.  Shelley witnesses cannot, however, be transformed into Goguen witnesses.
-Section~\ref{XX} specifies how to verify signatures before a
-Shelley transaction is transformed to a Goguen one.
-
 \subsection{Additional Role of Signatures on TxBody}
-\begin{note}
-  Make it more obvious that there is only one kind of transaction, but two validation outcomes.
-\end{note}
-The transaction body must contain all data
-(or at least a hash of the data) that can influence
-on-chain transfer of value
-(see Figure \ref{fig:defs:utxo-shelley-2}).
-This means that, for example,
-every input that is spent and every output that is created are present in the body of the transaction.
-Since a valid transaction can now be ``fully validated'' or ``only paying
-fees'' (explained in detail in Section~\ref{sec:utxo}), anything that
-can influence these outcomes must also be included in the body.
 
-There is no need to ever sign anything that is related to validator scripts or datum objects,
-since a hash of every validator script that is needed
-is included in the body of the transaction, and the hash of every datum that is needed
-is recorded in the UTxO.
+The transaction body and the UTxO must uniquely determine all data
+that can influence on-chain transfer of value.
+This is so that the signatures can ensure that this data is not tampered with.
+As before, a transaction that does not include the correct signatures is completely invalid.
+Thus, all data that influences script validation outcomes must also be determined by the body.
+
+Scripts and datum objects need not be included in the body,
+since a hash of every script that is needed
+is included in the body of the transaction or the UTxO (depending on what the script is validating),
+and the hash of every datum that is needed is recorded in the UTxO.
 %
-The body of the transaction, however, is signed by every key
-whose outputs are being spent.
-This provides
-protection against tampering with Plutus interpreter arguments, which may cause
-script validation failure (so placing the transaction in the category of ``only paying fees'').
-For this reason, the hash of the indexed redeemer structure and the protocol parameters that are used by
+The hash of the indexed redeemer structure and the protocol parameters that are used by
 script interpreters are included in the body of the transaction. In the future, other parts of the ledger
 state may also need to be included in this hash, if they are passed as
-arguments to new script interpreter. Note also that data from the UTxO
-is passed to the interpreter, but does not require this type of hash comparison.
-This is because, if the entries
-have already been spent, the phase 1 validation check will fail.
+arguments to new script interpreter.
 
 The owner of any tokens that are spent as part of a given transaction
-must sign the transaction body. The body also includes the for-fee tags that are attached to inputs so,
+must sign the transaction body. The body also includes the for-fee tags that are attached to inputs, so
 the owners of tokens that are spent by the transaction have
-signed their selection of inputs that will be put in the fee pot in case of script validation failure.
-As before, a change in the body of the transaction
-will make the transaction completely invalid, rather than cause the fee-paying script validation
-failure or change the amount of fees it pays.
+signed their selection of inputs that will be put in the fee pot in case of script validation failure and
+this have had the ability to check the outcome of those scripts before signing the body.
 
-\subsection{Partially processing transactions}
-\begin{note}
-  See note above.
-\end{note}
-Note that in Goguen, it is possible for a transaction
-to either be fully processed in full, or else, in case of script validation failure,
-to do nothing apart from paying fees (see Section~\ref{sec:utxo} for details).
+\subsection{Fees in the case of script validation failure}
+
 We have considered two ways to prevent all the Ada in the transaction outputs from going into
 the fee pot if script validation fails:
 %
@@ -320,9 +274,7 @@ To maximise flexibility, we have chosen to use the second option.
 This also allows users to write their own programmatic solutions to choosing for-fees inputs.
 
 Only inputs that are locked by VKeys or native scripts can
-be used to pay fees. In Shelley, spending VKey or script outputs is
-validated as part of a single rule application, so either all
+be used to pay fees. Spending VKey or native script outputs is
+validated as part of a single rule application as before, so either all
 the required signatures will be valid, or a transaction is completely
-invalid. We have retained this model, but have chosen a different approach to
-charging users for running Plutus scripts, see
-Section~\ref{sec:two-phase}.
+invalid.
