@@ -93,6 +93,11 @@ import Shelley.Spec.Ledger.Rewards
     LogWeight (..),
     PerformanceEstimate (..),
   )
+import Shelley.Spec.Ledger.RewardProvenance
+  ( Desirability (..),
+    RewardProvenance (..),
+    RewardProvenancePool (..),
+  )
 import qualified Shelley.Spec.Ledger.STS.Deleg as STS
 import qualified Shelley.Spec.Ledger.STS.Delegs as STS
 import qualified Shelley.Spec.Ledger.STS.Delpl as STS
@@ -782,3 +787,46 @@ instance
   where
   arbitrary = ApplyTxError <$> arbitrary
   shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
+
+instance Arbitrary Desirability
+  where arbitrary = Desirability <$> arbitrary <*> arbitrary
+
+instance
+  Mock crypto =>
+  Arbitrary (RewardProvenancePool crypto)
+  where
+  arbitrary =
+    RewardProvenancePool
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance
+  Mock crypto =>
+  Arbitrary (RewardProvenance crypto)
+  where
+  arbitrary =
+    RewardProvenance
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
