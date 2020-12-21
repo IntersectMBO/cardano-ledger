@@ -188,7 +188,7 @@ import Shelley.Spec.Ledger.PParams
     emptyPPPUpdates,
     emptyPParams,
   )
-import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance (..))
+import Shelley.Spec.Ledger.RewardProvenance (Desirability (..), RewardProvenance (..))
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
@@ -1119,14 +1119,27 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           slotsPerEpoch
       )
   let deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
-      -- add under 'key' the pair (LikeliHoodEstimate,Desireability) to the Map 'ans'
-      addPair ans key likelihood = case Map.lookup key poolParams of
-        Nothing -> Map.insert key (unPerformanceEstimate estimate, 0) ans
+      -- add under 'key' the pair (LikeliHoodEstimate,Desirability) to the Map 'ans'
+      addDesire ans key likelihood = case Map.lookup key poolParams of
+        Nothing ->
+          -- This case should be unreachable, since a likelihood is calculated
+          -- for every registered stake pool
+          Map.insert
+            key
+            ( Desirability
+                { hitRateEstimate = unPerformanceEstimate estimate,
+                  desirabilityScore = 0
+                }
+            )
+            ans
         Just pp ->
           Map.insert
             key
-            ( unPerformanceEstimate estimate,
-              desirability pr (Coin rPot) pp estimate totalStake
+            ( Desirability
+                { hitRateEstimate = unPerformanceEstimate estimate,
+                  desirabilityScore =
+                    desirability pr (Coin rPot) pp estimate totalStake
+                }
             )
             ans
         where
@@ -1150,7 +1163,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           (Coin deltaT1)
           (fold . unStake $ stake')
           provPools
-          (Map.foldlWithKey' addPair Map.empty newLikelihoods)
+          (Map.foldlWithKey' addDesire Map.empty newLikelihoods)
     )
   pure $
     RewardUpdate
