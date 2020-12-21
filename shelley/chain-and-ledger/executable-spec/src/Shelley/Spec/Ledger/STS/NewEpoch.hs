@@ -19,8 +19,8 @@ module Shelley.Spec.Ledger.STS.NewEpoch
   )
 where
 
-import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Constraints (UsesValue)
+import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
 import Data.Foldable (fold)
@@ -55,7 +55,7 @@ deriving stock instance
 
 instance NoThunks (NewEpochPredicateFailure era)
 
-instance ShelleyBased era => STS (NEWEPOCH era) where
+instance UsesValue era => STS (NEWEPOCH era) where
   type State (NEWEPOCH era) = NewEpochState era
 
   type Signal (NEWEPOCH era) = EpochNo
@@ -80,7 +80,7 @@ instance ShelleyBased era => STS (NEWEPOCH era) where
 
 newEpochTransition ::
   forall era.
-  ( ShelleyBased era
+  ( UsesValue era
   ) =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
@@ -127,13 +127,13 @@ calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
    in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
 
 instance
-  ShelleyBased era =>
+  UsesValue era =>
   Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = EpochFailure
 
 instance
-  ShelleyBased era =>
+  Era era =>
   Embed (MIR era) (NEWEPOCH era)
   where
   wrapFailed = MirFailure

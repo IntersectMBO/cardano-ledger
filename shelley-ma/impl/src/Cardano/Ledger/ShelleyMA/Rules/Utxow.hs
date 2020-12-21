@@ -12,22 +12,22 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
 import Cardano.Ledger.Compactible (Compactible (CompactForm))
+import Cardano.Ledger.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
 import Cardano.Ledger.ShelleyMA.TxBody ()
 import Cardano.Ledger.Torsor (Torsor (..))
-import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val)
+import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative)
+import Control.SetAlgebra (dom, eval, (◁))
 import Control.State.Transition.Extended
 import Data.Foldable (Foldable (toList))
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
-import Data.Relation (Relation ((◁)))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -63,6 +63,8 @@ import Shelley.Spec.Ledger.UTxO
     txinsScript,
   )
 
+-- ==========================================================
+
 -- | We want to reuse the same rules for Mary and Allegra. This however relies
 -- on being able to get a set of 'PolicyID's from the value. Since a 'Coin' has
 -- no policies, we create a small class which returns a null set of 'PolicyID's
@@ -81,7 +83,10 @@ instance GetPolicies (Value crypto) crypto where
 -- | Computes the set of script hashes required to unlock the transaction inputs
 -- and the withdrawals.
 scriptsNeeded ::
-  ( ShelleyBased era,
+  ( UsesValue era,
+    UsesScript era,
+    UsesTxBody era,
+    UsesAuxiliary era,
     GetPolicies (Core.Value era) (Crypto era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -107,7 +112,7 @@ scriptsNeeded u tx =
     txb = _body tx
     unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ getField @"wdrls" txb
-    UTxO u'' = (txinsScript (getField @"inputs" txb) u) ◁ u
+    UTxO u'' = eval (dom (txinsScript (getField @"inputs" txb) u) ◁ u)
     certificates = (toList . getField @"certs") txb
 
 --------------------------------------------------------------------------------
@@ -117,13 +122,12 @@ scriptsNeeded u tx =
 instance
   forall c (ma :: MaryOrAllegra).
   ( CryptoClass.Crypto c,
+    UsesValue (ShelleyMAEra ma c),
     Typeable ma,
     STS (UTXO (ShelleyMAEra ma c)),
     BaseM (UTXO (ShelleyMAEra ma c)) ~ ShelleyBase,
     DecodeMint (Core.Value (ShelleyMAEra ma c)),
     DecodeNonNegative (Core.Value (ShelleyMAEra ma c)),
-    Compactible (Core.Value (ShelleyMAEra ma c)),
-    Val (Core.Value (ShelleyMAEra ma c)),
     GetPolicies (Core.Value (ShelleyMAEra ma c)) c,
     Eq (CompactForm (Core.Value (ShelleyMAEra ma c))),
     Core.ChainData (Core.Value (ShelleyMAEra ma c)),

@@ -27,11 +27,11 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Constraints (TransValue, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
@@ -112,6 +112,8 @@ import Shelley.Spec.Ledger.UTxO
     txup,
   )
 
+-- =======================================
+
 data UTXO era
 
 data UtxoEnv era
@@ -152,17 +154,17 @@ data UtxoPredicateFailure era
   deriving (Generic)
 
 deriving stock instance
-  ShelleyBased era =>
+  (TransValue Show era) =>
   Show (UtxoPredicateFailure era)
 
 deriving stock instance
-  ShelleyBased era =>
+  (TransValue Eq era) =>
   Eq (UtxoPredicateFailure era)
 
 instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era)
 
 instance
-  ShelleyBased era =>
+  TransValue ToCBOR era =>
   ToCBOR (UtxoPredicateFailure era)
   where
   toCBOR = \case
@@ -204,7 +206,7 @@ instance
         <> encodeFoldable outs
 
 instance
-  ShelleyBased era =>
+  (TransValue FromCBOR era, Val.DecodeNonNegative (Core.Value era), Show (Core.Value era)) =>
   FromCBOR (UtxoPredicateFailure era)
   where
   fromCBOR =
@@ -296,7 +298,10 @@ initialLedgerState = do
 
 utxoInductive ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesValue era,
+    UsesAuxiliary era,
+    UsesScript era,
     STS (UTXO era),
     Embed (PPUP era) (UTXO era),
     BaseM (UTXO era) ~ ShelleyBase,

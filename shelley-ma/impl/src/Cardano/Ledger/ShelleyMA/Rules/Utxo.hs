@@ -16,11 +16,17 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.Constraints
+  ( TransValue,
+    UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesValue,
+  )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
-import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
+import Cardano.Ledger.ShelleyMA (MAValue, MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
 import Cardano.Ledger.Torsor (Torsor (..))
@@ -81,6 +87,8 @@ import Shelley.Spec.Ledger.UTxO
     unUTxO,
   )
 
+-- ==========================================================
+
 data UtxoPredicateFailure era
   = BadInputsUTxO
       !(Set (TxIn (Crypto era))) -- The bad transaction inputs
@@ -112,11 +120,11 @@ data UtxoPredicateFailure era
   deriving (Generic)
 
 deriving stock instance
-  ShelleyBased era =>
+  TransValue Show era =>
   Show (UtxoPredicateFailure era)
 
 deriving stock instance
-  ShelleyBased era =>
+  TransValue Eq era =>
   Eq (UtxoPredicateFailure era)
 
 instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era)
@@ -132,7 +140,7 @@ instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era
 --   the mint field.
 consumed ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesValue era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
@@ -154,7 +162,10 @@ consumed pp u tx =
 -- | The UTxO transition rule for the Shelley-MA (Mary and Allegra) eras.
 utxoTransition ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesAuxiliary era,
+    UsesValue era,
+    UsesScript era,
     STS (UTXO era),
     Embed (PPUP era) (UTXO era),
     BaseM (UTXO era) ~ ShelleyBase,
@@ -261,7 +272,9 @@ instance
   forall c (ma :: MaryOrAllegra).
   ( CryptoClass.Crypto c,
     Typeable ma,
-    ShelleyBased (ShelleyMAEra ma c),
+    UsesValue (ShelleyMAEra ma c),
+    Show (Delta (MAValue ma c)),
+    Val.DecodeMint (MAValue ma c),
     Core.TxBody (ShelleyMAEra ma c) ~ TxBody (ShelleyMAEra ma c)
   ) =>
   STS (UTXO (ShelleyMAEra ma c))
@@ -289,7 +302,7 @@ instance
 -- Serialisation
 --------------------------------------------------------------------------------
 instance
-  ShelleyBased era =>
+  TransValue ToCBOR era =>
   ToCBOR (UtxoPredicateFailure era)
   where
   toCBOR = \case
@@ -332,7 +345,7 @@ instance
     TriesToForgeADA -> encodeListLen 1 <> toCBOR (11 :: Word8)
 
 instance
-  ShelleyBased era =>
+  (UsesValue era, FromCBOR (Delta (Core.Value era))) =>
   FromCBOR (UtxoPredicateFailure era)
   where
   fromCBOR =

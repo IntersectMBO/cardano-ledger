@@ -57,6 +57,10 @@ import Test.Shelley.Spec.Ledger.Utils
     applySTSTest,
     runShelleyBase,
   )
+import Cardano.Ledger.Constraints(UsesTxBody,UsesValue,UsesAuxiliary)
+
+-- ======================================================
+
 
 genAccountState :: Constants -> Gen AccountState
 genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
@@ -68,6 +72,9 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- with meaningful delegation certificates.
 instance
   ( EraGen era,
+    UsesTxBody era,
+    UsesValue era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
@@ -92,6 +99,9 @@ instance
 instance
   forall era.
   ( EraGen era,
+    UsesTxBody era,
+    UsesValue era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
@@ -149,7 +159,9 @@ instance
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
   forall a era.
-  EraGen era =>
+  ( UsesValue era,
+    EraGen era
+  ) =>
   GenEnv era ->
   IRC (LEDGER era) ->
   Gen (Either a (UTxOState era, DPState (Crypto era)))

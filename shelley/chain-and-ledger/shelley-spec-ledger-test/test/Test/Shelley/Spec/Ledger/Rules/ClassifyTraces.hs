@@ -23,7 +23,6 @@ import Cardano.Binary (ToCBOR, serialize')
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core (AuxiliaryData, TxBody)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.State.Transition.Trace
   ( Trace,
@@ -99,11 +98,15 @@ import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
+import Cardano.Ledger.Constraints(UsesTxBody,UsesValue,UsesScript)
+
+-- =================================================================
 
 relevantCasesAreCovered ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    UsesValue era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
@@ -127,6 +130,8 @@ relevantCasesAreCovered = do
 relevantCasesAreCoveredForTrace ::
   forall era.
   ( ChainProperty era,
+    UsesValue era,
+    UsesTxBody era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -240,7 +245,8 @@ scriptCredentialCertsRatio certs =
 -- | Extract the certificates from the transactions
 certsByTx ::
   forall era.
-  ( TxBodyConstraints era,
+  ( UsesTxBody era,
+    UsesScript era,
     ToCBOR (Core.AuxiliaryData era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
@@ -254,7 +260,7 @@ ratioInt x y =
 
 -- | Transaction has script locked TxOuts
 txScriptOutputsRatio ::
-  (TxBodyConstraints era, ShelleyBased era) =>
+  (UsesTxBody era, UsesValue era) =>
   [StrictSeq (TxOut era)] ->
   Double
 txScriptOutputsRatio txoutsList =
@@ -272,7 +278,8 @@ txScriptOutputsRatio txoutsList =
           txouts
 
 hasWithdrawal ::
-  ( TxBodyConstraints era,
+  ( UsesTxBody era,
+    UsesScript era,
     ToCBOR (Core.AuxiliaryData era),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
@@ -293,7 +300,8 @@ hasPParamUpdate tx =
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
 hasMetadata ::
-  ( TxBodyConstraints era,
+  ( UsesTxBody era,
+    UsesScript era,
     ToCBOR (Core.AuxiliaryData era),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
   ) =>
@@ -308,6 +316,7 @@ hasMetadata tx =
 onlyValidLedgerSignalsAreGenerated ::
   forall era.
   ( EraGen era,
+    UsesValue era,
     ChainProperty era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -330,6 +339,7 @@ onlyValidLedgerSignalsAreGenerated =
 propAbstractSizeBoundsBytes ::
   forall era.
   ( EraGen era,
+    UsesValue era,
     ChainProperty era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -356,6 +366,7 @@ propAbstractSizeNotTooBig ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    UsesValue era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
@@ -385,6 +396,7 @@ propAbstractSizeNotTooBig = property $ do
 onlyValidChainSignalsAreGenerated ::
   forall era.
   ( EraGen era,
+    UsesValue era,
     ChainProperty era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),

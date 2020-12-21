@@ -23,7 +23,6 @@ import Cardano.Binary (serialize)
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData (hashAuxiliaryData))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
 import Control.SetAlgebra (forwards)
@@ -112,6 +111,9 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, Split (..))
 
+import Cardano.Ledger.Constraints(UsesValue,UsesScript,UsesTxBody,UsesAuxiliary,TransValue)
+-- =======================================================
+
 showBalance ::
   ( ShelleyTest era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -157,6 +159,9 @@ genTx ::
   forall era.
   ( HasCallStack,
     EraGen era,
+    UsesTxBody era,
+    UsesValue era,
+    UsesAuxiliary era,
     ValidateAuxiliaryData era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -291,7 +296,7 @@ data Delta era = Delta
 -- | - We need this instance to know when delta has stopped growing. We don't
 --  actually need to compare all the fields, because if the extraInputs has not
 --  changed then the Scripts and keys will not have changed.
-instance ShelleyBased era => Eq (Delta era) where
+instance (UsesScript era, TransValue Eq era) => Eq (Delta era) where
   a == b =
     dfees a == dfees b
       && extraInputs a == extraInputs b
@@ -300,7 +305,7 @@ instance ShelleyBased era => Eq (Delta era) where
       -- equality, at least in the use case below.
       && change a == change b
 
-deltaZero :: ShelleyBased era => Coin -> Coin -> Addr (Crypto era) -> Delta era
+deltaZero :: (UsesScript era, UsesValue era) => Coin -> Coin -> Addr (Crypto era) -> Delta era
 deltaZero initialfee minAda addr =
   Delta
     (initialfee <-> minAda)
@@ -315,6 +320,9 @@ deltaZero initialfee minAda addr =
 genNextDelta ::
   forall era.
   ( EraGen era,
+    UsesTxBody era,
+    UsesValue era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
@@ -418,6 +426,9 @@ genNextDelta
 genNextDeltaTilFixPoint ::
   forall era.
   ( EraGen era,
+    UsesTxBody era,
+    UsesValue era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
@@ -441,6 +452,8 @@ genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx = do
 applyDelta ::
   forall era.
   ( EraGen era,
+    UsesTxBody era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
@@ -482,6 +495,9 @@ fix f d = do d1 <- f d; if d1 == d then pure d else fix f d1
 
 converge ::
   ( EraGen era,
+    UsesTxBody era,
+    UsesValue era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
@@ -593,8 +609,7 @@ mkTxWits
 -- TODO need right splitting of v!
 calcOutputsFromBalance ::
   forall era.
-  ( HasCallStack,
-    ShelleyBased era,
+  ( UsesValue era,
     Split (Core.Value era)
   ) =>
   Core.Value era ->
@@ -624,7 +639,7 @@ calcOutputsFromBalance balance_ addrs fee =
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 genInputs ::
   forall era.
-  (ShelleyBased era) =>
+  (UsesValue era) =>
   (Int, Int) ->
   Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era) ->

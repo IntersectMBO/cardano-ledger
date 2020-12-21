@@ -21,9 +21,9 @@ module Shelley.Spec.Ledger.API.Wallet
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Constraints (UsesValue)
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
 import Control.Monad.Trans.Reader (runReader)
@@ -85,7 +85,7 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
   forall era.
-  ShelleyBased era =>
+  UsesValue era =>
   Globals ->
   NewEpochState era ->
   PoolDistr (Crypto era)
@@ -116,7 +116,7 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  ShelleyBased era =>
+  UsesValue era =>
   Globals ->
   NewEpochState era ->
   Set (Either Coin (Credential 'Staking (Crypto era))) ->
@@ -176,7 +176,7 @@ getNonMyopicMemberRewards globals ss creds =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: ShelleyBased era => NewEpochState era -> EB.SnapShot (Crypto era)
+currentSnapshot :: UsesValue era => NewEpochState era -> EB.SnapShot (Crypto era)
 currentSnapshot ss =
   stakeDistr utxo dstate pstate
   where

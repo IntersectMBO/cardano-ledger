@@ -124,7 +124,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, bhbody, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashIndex)
 import Shelley.Spec.Ledger.Keys
   ( KeyPair,
     KeyRole (..),
@@ -146,13 +145,16 @@ import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
   )
+import Cardano.Ledger.Constraints
 
 type ShelleyTest era =
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesValue era,
+    UsesScript era,
+    UsesAuxiliary era,
     TxBody era ~ Core.TxBody era,
     Core.Script era ~ MultiSig (Crypto era),
-    Split (Core.Value era),
-    HashIndex (Core.TxBody era) ~ EraIndependentTxBody
+    Split (Core.Value era)
   )
 
 type ChainProperty era =

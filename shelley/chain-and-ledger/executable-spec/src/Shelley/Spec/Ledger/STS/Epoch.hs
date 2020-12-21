@@ -18,7 +18,8 @@ module Shelley.Spec.Ledger.STS.Epoch
   )
 where
 
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Constraints (UsesValue)
+import Cardano.Ledger.Era
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
@@ -53,6 +54,8 @@ import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP)
 import Shelley.Spec.Ledger.Slot (EpochNo)
 
+-- ================================================
+
 data EPOCH era
 
 data EpochPredicateFailure era
@@ -69,7 +72,7 @@ deriving stock instance
   (Show (PredicateFailure (SNAP era))) =>
   Show (EpochPredicateFailure era)
 
-instance ShelleyBased era => STS (EPOCH era) where
+instance UsesValue era => STS (EPOCH era) where
   type State (EPOCH era) = EpochState era
   type Signal (EPOCH era) = EpochNo
   type Environment (EPOCH era) = ()
@@ -118,7 +121,7 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
 
 epochTransition ::
   forall era.
-  ShelleyBased era =>
+  UsesValue era =>
   TransitionRule (EPOCH era)
 epochTransition = do
   TRC
@@ -165,11 +168,11 @@ epochTransition = do
       pp'
       nm
 
-instance ShelleyBased era => Embed (SNAP era) (EPOCH era) where
+instance UsesValue era => Embed (SNAP era) (EPOCH era) where
   wrapFailed = SnapFailure
 
-instance ShelleyBased era => Embed (POOLREAP era) (EPOCH era) where
+instance Era era => Embed (POOLREAP era) (EPOCH era) where
   wrapFailed = PoolReapFailure
 
-instance ShelleyBased era => Embed (NEWPP era) (EPOCH era) where
+instance Era era => Embed (NEWPP era) (EPOCH era) where
   wrapFailed = NewPpFailure

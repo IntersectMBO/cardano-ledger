@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -14,8 +15,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
--- for the Relation instance
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- |
 -- Module      : UTxO
@@ -48,24 +47,27 @@ module Shelley.Spec.Ledger.UTxO
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Constraints (UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
-import Cardano.Ledger.Val ((<+>), (<×>))
+import Cardano.Ledger.Val (DecodeNonNegative, (<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
   ( BaseRep (MapR),
     Embed (..),
     Exp (Base),
     HasExp (toExp),
+    eval,
+    (◁),
   )
 import Data.Coerce (coerce)
+import Data.Constraint (Constraint)
 import Data.Foldable (toList)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
-import Data.Relation (Relation (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -96,11 +98,12 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.PParams (PParams, Update, _keyDeposit, _poolDeposit)
 import Shelley.Spec.Ledger.Scripts
-import Shelley.Spec.Ledger.Tx (Tx (..))
+import Shelley.Spec.Ledger.Tx (TransTx, Tx (..))
 import Shelley.Spec.Ledger.TxBody
   ( EraIndependentTxBody,
     PoolCert (..),
     PoolParams (..),
+    TransTxOut,
     TxId (..),
     TxIn (..),
     TxOut (..),
@@ -111,6 +114,8 @@ import Shelley.Spec.Ledger.TxBody
     pattern Delegate,
     pattern Delegation,
   )
+
+-- ===============================================
 
 instance Crypto era ~ crypto => HasExp (UTxO era) (Map (TxIn crypto) (TxOut era)) where
   toExp (UTxO x) = Base MapR x
@@ -123,63 +128,32 @@ instance Crypto era ~ crypto => Embed (UTxO era) (Map (TxIn crypto) (TxOut era))
 newtype UTxO era = UTxO {unUTxO :: Map (TxIn (Crypto era)) (TxOut era)}
   deriving (NoThunks, Generic)
 
+type TransUTxO (c :: Type -> Constraint) era = (Era era, TransTxOut c era)
+
 deriving instance Era era => NFData (UTxO era)
 
 deriving newtype instance
-  ShelleyBased era =>
+  TransUTxO Eq era =>
   Eq (UTxO era)
 
 deriving newtype instance
-  ShelleyBased era =>
+  (TransUTxO ToCBOR era) =>
   ToCBOR (UTxO era)
 
 deriving newtype instance
-  ShelleyBased era =>
+  (TransUTxO FromCBOR era, TransTxOut DecodeNonNegative era) =>
   FromCBOR (UTxO era)
 
 deriving via
   Quiet (UTxO era)
   instance
-    ShelleyBased era =>
+    (TransUTxO Show era) =>
     Show (UTxO era)
-
-instance Relation (UTxO era) where
-  type Domain (UTxO era) = TxIn (Crypto era)
-  type Range (UTxO era) = TxOut era
-
-  singleton k v = UTxO $ Map.singleton k v
-
-  dom (UTxO utxo) = dom utxo
-
-  range (UTxO utxo) = range utxo
-
-  s ◁ (UTxO utxo) = UTxO $ s ◁ utxo
-
-  s ⋪ (UTxO utxo) = UTxO $ s ⋪ utxo
-
-  (UTxO utxo) ▷ s = UTxO $ utxo ▷ s
-
-  (UTxO utxo) ⋫ s = UTxO $ utxo ⋫ s
-
-  (UTxO a) ∪ (UTxO b) = UTxO $ a ∪ b
-
-  (UTxO a) ⨃ (UTxO b) = UTxO $ a ⨃ b
-
-  size (UTxO utxo) = size utxo
-
-  {-# INLINE haskey #-}
-  haskey k (UTxO x) = case Map.lookup k x of Just _ -> True; Nothing -> False
-
-  {-# INLINE addpair #-}
-  addpair k v (UTxO x) = UTxO (Map.insertWith (\y _z -> y) k v x)
-
-  {-# INLINE removekey #-}
-  removekey k (UTxO m) = UTxO (Map.delete k m)
 
 -- | Compute the id of a transaction.
 txid ::
   forall era.
-  TxBodyConstraints era =>
+  UsesTxBody era =>
   Core.TxBody era ->
   TxId (Crypto era)
 txid = TxId . hashAnnotated @(Core.TxBody era) @era
@@ -194,7 +168,8 @@ txins = getField @"inputs"
 
 -- | Compute the transaction outputs of a transaction.
 txouts ::
-  ( ShelleyBased era,
+  forall era.
+  ( UsesTxBody era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>
   Core.TxBody era ->
@@ -206,7 +181,7 @@ txouts tx =
         | (out, idx) <- zip (toList $ getField @"outputs" tx) [0 ..]
       ]
   where
-    transId = txid tx
+    transId = txid @era tx
 
 -- | Lookup a txin for a given UTxO collection
 txinLookup ::
@@ -265,7 +240,7 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 
 -- | Determine the total balance contained in the UTxO.
 balance ::
-  ShelleyBased era =>
+  UsesValue era =>
   UTxO era ->
   Core.Value era
 balance (UTxO utxo) = Map.foldl' addTxOuts mempty utxo
@@ -297,7 +272,7 @@ getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolId $ p
 getKeyHashFromRegPool _ = Nothing
 
 txup ::
-  ( ShelleyBased era,
+  ( TransTx ToCBOR era,
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   Tx era ->
@@ -327,7 +302,9 @@ scriptCred (ScriptHashObj hs) = Just hs
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
 scriptsNeeded ::
-  ( ShelleyBased era,
+  forall era.
+  ( UsesValue era,
+    TransTx ToCBOR era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
@@ -349,14 +326,13 @@ scriptsNeeded u tx =
   where
     unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ getField @"wdrls" $ _body tx
-    UTxO u'' = (txinsScript (getField @"inputs" $ _body tx) u) ◁ u
-    -- u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u)  TODO
+    u'' = eval ((txinsScript (getField @"inputs" $ _body tx) u) ◁ u)
     certificates = (toList . getField @"certs" . _body) tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript ::
-  ShelleyBased era =>
+  UsesValue era =>
   Set (TxIn (Crypto era)) ->
   UTxO era ->
   Set (TxIn (Crypto era))

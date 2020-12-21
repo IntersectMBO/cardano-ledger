@@ -30,9 +30,9 @@ module Shelley.Spec.Ledger.STS.Chain
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Constraints (TransValue, UsesValue)
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
@@ -140,11 +140,11 @@ data ChainState era = ChainState
   deriving (Generic)
 
 deriving stock instance
-  ShelleyBased era =>
+  TransValue Show era =>
   Show (ChainState era)
 
 deriving stock instance
-  ShelleyBased era =>
+  TransValue Eq era =>
   Eq (ChainState era)
 
 instance (Era era) => NFData (ChainState era)
@@ -167,19 +167,19 @@ data ChainPredicateFailure era
   deriving (Generic)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Show (PredicateFailure (BBODY era))
   ) =>
   Show (ChainPredicateFailure era)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Eq (PredicateFailure (BBODY era))
   ) =>
   Eq (ChainPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     NoThunks (PredicateFailure (BBODY era))
   ) =>
   NoThunks (ChainPredicateFailure era)
@@ -231,7 +231,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
 instance
   ( Era era,
     c ~ Crypto era,
-    ShelleyBased era,
+    Era era,
     Embed (BBODY era) (CHAIN era),
     Embed TICKN (CHAIN era),
     Embed (TICK era) (CHAIN era),
@@ -295,7 +295,7 @@ chainChecks maxpv ccd bh = do
 
 chainTransition ::
   forall era.
-  ( ShelleyBased era,
+  ( Era era,
     STS (CHAIN era),
     Embed (BBODY era) (CHAIN era),
     Embed TICKN (CHAIN era),
@@ -376,7 +376,7 @@ chainTransition =
 
 instance
   ( Era era,
-    ShelleyBased era,
+    Era era,
     STS (BBODY era)
   ) =>
   Embed (BBODY era) (CHAIN era)
@@ -385,7 +385,7 @@ instance
 
 instance
   ( Era era,
-    ShelleyBased era
+    Era era
   ) =>
   Embed TICKN (CHAIN era)
   where
@@ -393,7 +393,7 @@ instance
 
 instance
   ( Era era,
-    ShelleyBased era,
+    Era era,
     STS (TICK era)
   ) =>
   Embed (TICK era) (CHAIN era)
@@ -403,7 +403,7 @@ instance
 instance
   ( Era era,
     c ~ Crypto era,
-    ShelleyBased era,
+    Era era,
     STS (PRTCL c)
   ) =>
   Embed (PRTCL c) (CHAIN era)
@@ -422,7 +422,7 @@ data AdaPots = AdaPots
 
 -- | Calculate the total ada pots in the epoch state
 totalAdaPotsES ::
-  ShelleyBased era =>
+  UsesValue era =>
   EpochState era ->
   AdaPots
 totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
@@ -442,13 +442,13 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
 
 -- | Calculate the total ada pots in the chain state
 totalAdaPots ::
-  ShelleyBased era =>
+  UsesValue era =>
   ChainState era ->
   AdaPots
 totalAdaPots = totalAdaPotsES . nesEs . chainNes
 
 -- | Calculate the total ada in the epoch state
-totalAdaES :: ShelleyBased era => EpochState era -> Coin
+totalAdaES :: UsesValue era => EpochState era -> Coin
 totalAdaES cs =
   treasuryAdaPot
     <> reservesAdaPot
@@ -467,5 +467,5 @@ totalAdaES cs =
       } = totalAdaPotsES cs
 
 -- | Calculate the total ada in the chain state
-totalAda :: ShelleyBased era => ChainState era -> Coin
+totalAda :: UsesValue era => ChainState era -> Coin
 totalAda = totalAdaES . nesEs . chainNes

@@ -38,6 +38,7 @@ where
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible (CompactForm (..), Compactible (..))
+import Cardano.Ledger.Constraints (TransValue)
 import Cardano.Ledger.Core (Script, Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -82,8 +83,8 @@ import Shelley.Spec.Ledger.TxBody
   )
 
 -- =====================================================
--- TxBody has two Era dependent type families
--- (Value era) and (Script era) (hidden in DCert) in
+-- TxBody has three Era dependent type families
+-- (Value era), (AuxiliaryData era), and (Script era) (hidden in DCert) in
 -- order to make CBOR instances of things we are going to
 -- have to assume some properties about these.
 
@@ -96,6 +97,7 @@ type FamsFrom era =
     Compactible (Value era),
     DecodeNonNegative (Value era),
     DecodeMint (Value era),
+    Val (Value era), -- Arises because we use 'zero' as the 'mint' field in 'initial'
     FromCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
     FromCBOR (Value era),
     FromCBOR (Annotator (Script era)) -- Arises becaause DCert memoizes its bytes
@@ -133,21 +135,18 @@ data TxBodyRaw era = TxBodyRaw
 deriving instance (NFData (Value era), Era era) => NFData (TxBodyRaw era)
 
 deriving instance
-  ( Compactible (Value era),
-    Eq (Value era),
-    Eq (CompactForm (Value era))
-  ) =>
+  TransValue Eq era =>
   Eq (TxBodyRaw era)
 
 deriving instance
-  (Era era, Compactible (Value era), Show (Value era)) =>
+  TransValue Show era =>
   Show (TxBodyRaw era)
 
 deriving instance Generic (TxBodyRaw era)
 
 deriving instance NoThunks (Value era) => NoThunks (TxBodyRaw era)
 
-instance (Val (Value era), FamsFrom era) => FromCBOR (TxBodyRaw era) where
+instance (FamsFrom era) => FromCBOR (TxBodyRaw era) where
   fromCBOR =
     decode
       ( SparseKeyed
@@ -158,7 +157,7 @@ instance (Val (Value era), FamsFrom era) => FromCBOR (TxBodyRaw era) where
       )
 
 instance
-  (Val (Value era), FamsFrom era) =>
+  (FamsFrom era) =>
   FromCBOR (Annotator (TxBodyRaw era))
   where
   fromCBOR = pure <$> fromCBOR
@@ -232,11 +231,11 @@ newtype TxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
   deriving (Typeable)
 
 deriving instance
-  (Compactible (Value era), Eq (Value era), Eq (CompactForm (Value era))) =>
+  TransValue Eq era =>
   Eq (TxBody era)
 
 deriving instance
-  (Era era, Compactible (Value era), Show (Value era)) =>
+  TransValue Show era =>
   Show (TxBody era)
 
 deriving instance Generic (TxBody era)
@@ -250,7 +249,7 @@ deriving newtype instance (Typeable era) => ToCBOR (TxBody era)
 deriving via
   (Mem (TxBodyRaw era))
   instance
-    (Val (Value era), FamsFrom era) =>
+    (FamsFrom era) =>
     FromCBOR (Annotator (TxBody era))
 
 instance Era era => HashAnnotated (TxBody era) era where
