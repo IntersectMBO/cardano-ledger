@@ -9,6 +9,7 @@ module Shelley.Spec.Ledger.API
   )
 where
 
+import Cardano.Ledger.Constraints (UsesValue)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
@@ -24,7 +25,8 @@ class
     ShelleyBased era,
     GetLedgerView era,
     ApplyBlock era,
-    ApplyTx era
+    ApplyTx era,
+    UsesValue era
   ) =>
   ShelleyBasedEra era
 
