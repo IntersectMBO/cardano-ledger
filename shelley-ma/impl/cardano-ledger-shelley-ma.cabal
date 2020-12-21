@@ -49,6 +49,7 @@ library
     nothunks,
     shelley-spec-ledger,
     small-steps,
+    text,
     transformers
   hs-source-dirs: src
   ghc-options:
