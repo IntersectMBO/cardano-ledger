@@ -19,7 +19,13 @@ import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesTxOut,
+    UsesValue
+  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.SetAlgebra (dom, eval)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
@@ -82,6 +88,7 @@ genBlock ::
   forall era.
   ( EraGen era,
     UsesTxBody era,
+    UsesTxOut era,
     UsesValue era,
     UsesAuxiliary era,
     Mock (Crypto era),
@@ -90,7 +97,7 @@ genBlock ::
     ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
   ) =>
   GenEnv era ->
   ChainState era ->

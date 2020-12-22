@@ -98,6 +98,7 @@ module Shelley.Spec.Ledger.LedgerState
     updateNonMypopic,
 
     -- *
+    TransUTxOState,
     TransLedgerState,
   )
 where
@@ -116,6 +117,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesAuxiliary,
     UsesScript,
     UsesTxBody,
+    UsesTxOut,
     UsesValue,
   )
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
@@ -233,8 +235,8 @@ import Shelley.Spec.Ledger.TxBody
     PoolParams (..),
     Ptr (..),
     RewardAcnt (..),
+    TransTxId,
     TxIn (..),
-    TxOut (..),
     Wdrl (..),
     WitVKey (..),
     getRwdCred,
@@ -497,19 +499,16 @@ deriving stock instance
   TransEpoch Eq era =>
   Eq (EpochState era)
 
-instance NoThunks (EpochState era)
+instance (Era era, TransEpoch NoThunks era) => NoThunks (EpochState era)
 
-instance (Era era) => NFData (EpochState era)
+instance (Era era, TransEpoch NFData era) => NFData (EpochState era)
 
-instance
-  (UsesTxBody era, UsesValue era, Eq (Core.Script era), TransEpoch ToCBOR era) =>
-  ToCBOR (EpochState era)
-  where
+instance (TransEpoch ToCBOR era) => ToCBOR (EpochState era) where
   toCBOR (EpochState a s l r p n) =
     encodeListLen 6 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR r <> toCBOR p <> toCBOR n
 
 instance
-  (UsesTxBody era, UsesValue era, TransEpoch FromCBOR era) =>
+  (TransEpoch FromCBOR era) =>
   FromCBOR (EpochState era)
   where
   fromCBOR = do
@@ -603,14 +602,17 @@ data UTxOState era = UTxOState
     _fees :: !Coin,
     _ppups :: !(PPUPState era)
   }
-  deriving (Generic, NFData)
+  deriving (Generic)
 
 type TransUTxOState (c :: Type -> Constraint) era =
   ( Era era,
-    c (Core.Value era),
-    c (CompactForm (Core.Value era)),
+    TransTxId c era,
+    TransValue c era,
+    c (Core.TxOut era),
     Compactible (Core.Value era)
   )
+
+instance TransUTxOState NFData era => NFData (UTxOState era)
 
 deriving stock instance
   TransUTxOState Show era =>
@@ -620,7 +622,7 @@ deriving stock instance
   TransUTxOState Eq era =>
   Eq (UTxOState era)
 
-instance NoThunks (UTxOState era)
+instance TransUTxOState NoThunks era => NoThunks (UTxOState era)
 
 instance
   TransUTxOState ToCBOR era =>
@@ -630,7 +632,7 @@ instance
     encodeListLen 4 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us
 
 instance
-  ( UsesValue era,
+  ( TransValue FromCBOR era,
     TransUTxOState FromCBOR era
   ) =>
   FromCBOR (UTxOState era)
@@ -661,23 +663,21 @@ data NewEpochState era = NewEpochState
   deriving (Generic)
 
 deriving stock instance
-  ( Era era,
-    TransValue Show era
-  ) =>
+  (TransUTxOState Show era) =>
   Show (NewEpochState era)
 
 deriving stock instance
-  ( Era era,
-    TransValue Eq era
-  ) =>
+  TransUTxOState Eq era =>
   Eq (NewEpochState era)
 
-instance (Era era) => NFData (NewEpochState era)
+instance (Era era, TransEpoch NFData era) => NFData (NewEpochState era)
 
-instance NoThunks (NewEpochState era)
+instance (Era era, TransEpoch NoThunks era) => NoThunks (NewEpochState era)
 
 instance
-  (Typeable era, UsesTxBody era, UsesValue era, UsesScript era) =>
+  ( Typeable era,
+    TransEpoch ToCBOR era
+  ) =>
   ToCBOR (NewEpochState era)
   where
   toCBOR (NewEpochState e bp bc es ru pd) =
@@ -686,7 +686,9 @@ instance
       <> toCBOR pd
 
 instance
-  (Typeable era, UsesTxBody era, UsesValue era) =>
+  ( Typeable era,
+    TransEpoch FromCBOR era
+  ) =>
   FromCBOR (NewEpochState era)
   where
   fromCBOR = do
@@ -727,19 +729,19 @@ deriving stock instance
   TransLedgerState Eq era =>
   Eq (LedgerState era)
 
-instance NoThunks (LedgerState era)
+instance (Era era, TransLedgerState NoThunks era) => NoThunks (LedgerState era)
 
-instance (Era era) => NFData (LedgerState era)
+instance (Era era, TransLedgerState NFData era) => NFData (LedgerState era)
 
 instance
-  (Era era, UsesValue era) =>
+  (Era era, TransLedgerState ToCBOR era) =>
   ToCBOR (LedgerState era)
   where
   toCBOR (LedgerState u dp) =
     encodeListLen 2 <> toCBOR u <> toCBOR dp
 
 instance
-  (Era era, UsesValue era) =>
+  (Era era, TransLedgerState FromCBOR era) =>
   FromCBOR (LedgerState era)
   where
   fromCBOR = do
@@ -773,11 +775,11 @@ txsize = fromIntegral . BSL.length . txFullBytes
 -- | Convenience Function to bound the txsize function.
 -- | It can be helpful for coin selection.
 txsizeBound ::
-  forall era.
+  forall era out.
   ( UsesTxBody era,
     UsesScript era,
     UsesAuxiliary era,
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq out),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Tx era ->
@@ -807,11 +809,11 @@ minfee pp tx =
 
 -- | Minimum fee bound using txsizeBound
 minfeeBound ::
-  forall era.
+  forall era out.
   ( UsesScript era,
     UsesTxBody era,
     UsesAuxiliary era,
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq out),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   PParams era ->
@@ -826,8 +828,9 @@ minfeeBound pp tx =
 produced ::
   ( UsesTxBody era,
     UsesValue era,
+    UsesTxOut era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin
   ) =>
   PParams era ->
@@ -856,6 +859,7 @@ keyRefunds pp tx = (length deregistrations) <×> (_keyDeposit pp)
 consumed ::
   forall era.
   ( UsesValue era,
+    UsesTxOut era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
@@ -865,9 +869,8 @@ consumed ::
   Core.TxBody era ->
   Core.Value era
 consumed pp u tx =
-  balance (eval (txins @era tx ◁ u)) <> (Val.inject $ refunds <+> withdrawals)
+  balance @era (eval (txins @era tx ◁ u)) <> (Val.inject $ refunds <+> withdrawals)
   where
-    -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
     refunds = keyRefunds pp tx
     withdrawals = fold . unWdrl $ getField @"wdrls" tx
 
@@ -904,8 +907,8 @@ witsVKeyNeeded ::
   forall era.
   ( Era era,
     UsesAuxiliary era,
-    UsesValue era,
     UsesTxBody era,
+    UsesTxOut era,
     UsesScript era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -929,11 +932,14 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
       where
         accum txin ans =
           case txinLookup txin utxo' of
-            Just (TxOut (Addr _ (KeyHashObj pay) _) _) ->
-              Set.insert (asWitness pay) ans
-            Just (TxOut (AddrBootstrap bootAddr) _) ->
-              Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
-            _other -> ans
+            Just out ->
+              case getField @"address" out of
+                Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
+                AddrBootstrap bootAddr ->
+                  Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
+                _ -> ans
+            Nothing -> ans
+
     wdrlAuthors :: Set (KeyHash 'Witness (Crypto era))
     wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (getField @"wdrls" txbody))
       where
@@ -1037,7 +1043,8 @@ reapRewards dStateRewards withdrawals =
 
 stakeDistr ::
   forall era.
-  ( UsesValue era
+  ( UsesValue era,
+    UsesTxOut era
   ) =>
   UTxO era ->
   DState (Crypto era) ->
@@ -1243,7 +1250,8 @@ updateNES
     NewEpochState eL bprev bcur (EpochState acnt ss ls pr pp nm) ru pd
 
 returnRedeemAddrsToReserves ::
-  (UsesValue era) =>
+  forall era.
+  (UsesValue era, UsesTxOut era) =>
   EpochState era ->
   EpochState era
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
@@ -1253,16 +1261,17 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     UTxO utxo = _utxo us
     (redeemers, nonredeemers) =
       Map.partition
-        ( \(TxOut a _) ->
-            isBootstrapRedeemer a
+        ( \out ->
+            isBootstrapRedeemer (getField @"address" out)
         )
         utxo
     acnt = esAccountState es
+    utxoR = UTxO redeemers :: UTxO era
     acnt' =
       acnt
         { _reserves =
             (_reserves acnt)
-              <+> (Val.coin . balance $ UTxO redeemers)
+              <+> (Val.coin . balance $ utxoR)
         }
-    us' = us {_utxo = UTxO nonredeemers}
+    us' = us {_utxo = UTxO nonredeemers :: UTxO era}
     ls' = ls {_utxoState = us'}

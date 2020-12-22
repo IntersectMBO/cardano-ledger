@@ -779,7 +779,7 @@ tests =
           tout = TxOut @C testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
             "txbody"
-            ( TxBody -- minimal transaction body
+            ( TxBody @C -- minimal transaction body
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
@@ -836,7 +836,7 @@ tests =
               (EpochNo 0)
        in checkEncodingCBORAnnotated
             "txbody_partial"
-            ( TxBody -- transaction body with some optional components
+            ( TxBody @C -- transaction body with some optional components
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 StrictSeq.Empty
@@ -899,7 +899,7 @@ tests =
           mdh = hashAuxiliaryData @C $ MD.Metadata $ Map.singleton 13 (MD.I 17)
        in checkEncodingCBORAnnotated
             "txbody_full"
-            ( TxBody -- transaction body with all components
+            ( TxBody @C -- transaction body with all components
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])
@@ -932,7 +932,7 @@ tests =
             ),
       -- checkEncodingCBOR "minimal_txn"
       let txb =
-            TxBody
+            TxBody @C
               (Set.fromList [TxIn genesisId 1])
               (StrictSeq.singleton $ TxOut @C testAddrE (Coin 2))
               StrictSeq.empty
@@ -956,7 +956,7 @@ tests =
             ),
       -- checkEncodingCBOR "full_txn"
       let txb =
-            TxBody
+            TxBody @C
               (Set.fromList [TxIn genesisId 1])
               (StrictSeq.singleton $ TxOut @C testAddrE (Coin 2))
               StrictSeq.empty
@@ -1093,7 +1093,7 @@ tests =
           tin = Set.fromList [TxIn @C_Crypto genesisId 1]
           tout = StrictSeq.singleton $ TxOut @C testAddrE (Coin 2)
           txb s =
-            TxBody
+            TxBody @C
               tin
               tout
               StrictSeq.empty

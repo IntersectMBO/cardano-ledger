@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -6,6 +7,7 @@
 
 module Cardano.Ledger.Shelley.Constraints where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
   ( AnnotatedData,
@@ -14,12 +16,16 @@ import Cardano.Ledger.Core
     Script,
     SerialisableData,
     TxBody,
+    TxOut,
     Value,
   )
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
 import Data.Kind (Constraint, Type)
+import Data.Proxy (Proxy)
+import GHC.Records (HasField)
+import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.Hashing
   ( EraIndependentTxBody,
     HashAnnotated (..),
@@ -52,6 +58,19 @@ class
     Torsor (Value era)
   ) =>
   UsesValue era
+
+class
+  ( Era era,
+    Show (TxOut era),
+    Eq (TxOut era),
+    ToCBOR (TxOut era),
+    FromCBOR (TxOut era),
+    HasField "address" (TxOut era) (Addr (Crypto era)),
+    HasField "value" (TxOut era) (Value era)
+  ) =>
+  UsesTxOut era
+  where
+  makeTxOut :: Proxy era -> Addr (Crypto era) -> Value era -> TxOut era
 
 type UsesScript era =
   ( Era era,

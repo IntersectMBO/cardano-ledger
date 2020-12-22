@@ -37,7 +37,7 @@ import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -116,7 +116,7 @@ class
     SlotNo ->
     m (LedgerView (Crypto era))
   default futureLedgerView ::
-    (UsesValue era, MonadError (FutureLedgerViewError era) m) =>
+    (UsesTxOut era, UsesValue era, MonadError (FutureLedgerViewError era) m) =>
     Globals ->
     NewEpochState era ->
     SlotNo ->
@@ -219,7 +219,8 @@ deriving stock instance
 --   appropriate to that slot.
 futureView ::
   forall era m.
-  ( UsesValue era,
+  ( UsesTxOut era,
+    UsesValue era,
     MonadError (FutureLedgerViewError era) m
   ) =>
   Globals ->

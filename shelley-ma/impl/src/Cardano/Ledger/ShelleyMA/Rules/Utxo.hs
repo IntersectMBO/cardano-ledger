@@ -24,6 +24,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesAuxiliary,
     UsesScript,
     UsesTxBody,
+    UsesTxOut,
     UsesValue,
   )
 import Cardano.Ledger.ShelleyMA (MAValue, MaryOrAllegra, ShelleyMAEra)
@@ -73,7 +74,6 @@ import Shelley.Spec.Ledger.Tx (Tx (..), TxIn)
 import Shelley.Spec.Ledger.TxBody
   ( DCert,
     RewardAcnt (getRwdNetwork),
-    TxOut (TxOut),
     Wdrl,
     unWdrl,
   )
@@ -112,22 +112,24 @@ data UtxoPredicateFailure era
       !Network -- the expected network id
       !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      ![TxOut era] -- list of supplied transaction outputs that are too small
+      ![Core.TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure (PredicateFailure (PPUP era)) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
-      ![TxOut era] -- list of supplied bad transaction outputs
+      ![Core.TxOut era] -- list of supplied bad transaction outputs
   | TriesToForgeADA
   deriving (Generic)
 
 deriving stock instance
-  TransValue Show era =>
+  (Shelley.TransUTxOState Show era) =>
   Show (UtxoPredicateFailure era)
 
 deriving stock instance
-  TransValue Eq era =>
+  (Shelley.TransUTxOState Eq era, TransValue Eq era) =>
   Eq (UtxoPredicateFailure era)
 
-instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era)
+instance
+  (Shelley.TransUTxOState NoThunks era) =>
+  NoThunks (UtxoPredicateFailure era)
 
 -- | Calculate the value consumed by the transation.
 --
@@ -141,6 +143,7 @@ instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era
 consumed ::
   forall era.
   ( UsesValue era,
+    UsesTxOut era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
@@ -151,7 +154,7 @@ consumed ::
   Core.TxBody era ->
   Core.Value era
 consumed pp u tx =
-  balance (eval (txins @era tx ◁ u))
+  balance @era (eval (txins @era tx ◁ u))
     <> getField @"mint" tx
     <> (Val.inject $ refunds <> withdrawals)
   where
@@ -163,6 +166,7 @@ consumed pp u tx =
 utxoTransition ::
   forall era.
   ( UsesTxBody era,
+    UsesTxOut era,
     UsesAuxiliary era,
     UsesValue era,
     UsesScript era,
@@ -176,7 +180,7 @@ utxoTransition ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "vldt" (Core.TxBody era) ValidityInterval,
@@ -204,7 +208,7 @@ utxoTransition = do
   let addrsWrongNetwork =
         filter
           (\a -> getNetwork a /= ni)
-          (fmap (\(TxOut a _) -> a) $ toList $ getField @"outputs" txb)
+          (fmap (getField @"address") $ toList $ getField @"outputs" txb)
   null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
   let wdrlsWrongNetwork =
         filter
@@ -229,23 +233,27 @@ utxoTransition = do
   let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = _minUTxOValue pp
       outputsTooSmall =
-        [ out
-          | out@(TxOut _ c) <- outputs,
-            not $
-              Val.pointwise
-                (>=)
-                c
-                (Val.inject $ Val.scaledMinDeposit c minUTxOValue)
-        ]
+        filter
+          ( \out ->
+              let v = getField @"value" out
+               in not $
+                    Val.pointwise
+                      (>=)
+                      v
+                      (Val.inject $ Val.scaledMinDeposit v minUTxOValue)
+          )
+          outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =
-        [ out
-          | out@(TxOut (AddrBootstrap addr) _) <- outputs,
-            bootstrapAddressAttrsSize addr > 64
-        ]
+        filter
+          ( \out -> case getField @"address" out of
+              AddrBootstrap addr -> bootstrapAddressAttrsSize addr > 64
+              _ -> False
+          )
+          outputs
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
@@ -272,7 +280,9 @@ instance
   forall c (ma :: MaryOrAllegra).
   ( CryptoClass.Crypto c,
     Typeable ma,
+    UsesTxOut (ShelleyMAEra ma c),
     UsesValue (ShelleyMAEra ma c),
+    TransValue ToCBOR (ShelleyMAEra ma c),
     Show (Delta (MAValue ma c)),
     Core.TxBody (ShelleyMAEra ma c) ~ TxBody (ShelleyMAEra ma c)
   ) =>
@@ -301,7 +311,7 @@ instance
 -- Serialisation
 --------------------------------------------------------------------------------
 instance
-  TransValue ToCBOR era =>
+  Shelley.TransUTxOState ToCBOR era =>
   ToCBOR (UtxoPredicateFailure era)
   where
   toCBOR = \case
@@ -344,7 +354,11 @@ instance
     TriesToForgeADA -> encodeListLen 1 <> toCBOR (11 :: Word8)
 
 instance
-  (UsesValue era, FromCBOR (Delta (Core.Value era))) =>
+  ( TransValue FromCBOR era,
+    Shelley.TransUTxOState FromCBOR era,
+    Val.DecodeNonNegative (Core.Value era),
+    Show (Core.Value era)
+  ) =>
   FromCBOR (UtxoPredicateFailure era)
   where
   fromCBOR =

@@ -31,7 +31,14 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (TransValue, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
+import Cardano.Ledger.Shelley.Constraints
+  ( TransValue,
+    UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesTxOut,
+    UsesValue,
+  )
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
@@ -78,7 +85,8 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
-  ( UTxOState (..),
+  ( TransUTxOState,
+    UTxOState (..),
     consumed,
     emptyPPUPState,
     keyRefunds,
@@ -95,7 +103,7 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut (..))
+import Shelley.Spec.Ledger.Tx (Tx (..), TxIn)
 import Shelley.Spec.Ledger.TxBody
   ( DCert,
     PoolParams,
@@ -147,24 +155,26 @@ data UtxoPredicateFailure era
       !Network -- the expected network id
       !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      ![TxOut era] -- list of supplied transaction outputs that are too small
+      ![Core.TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure (PredicateFailure (PPUP era)) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
-      ![TxOut era] -- list of supplied bad transaction outputs
+      ![Core.TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
 deriving stock instance
-  (TransValue Show era) =>
+  (TransUTxOState Show era) =>
   Show (UtxoPredicateFailure era)
 
 deriving stock instance
-  (TransValue Eq era) =>
+  (TransUTxOState Eq era, TransValue Eq era) =>
   Eq (UtxoPredicateFailure era)
 
-instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era)
+instance
+  (TransUTxOState NoThunks era) =>
+  NoThunks (UtxoPredicateFailure era)
 
 instance
-  TransValue ToCBOR era =>
+  (TransUTxOState ToCBOR era) =>
   ToCBOR (UtxoPredicateFailure era)
   where
   toCBOR = \case
@@ -207,6 +217,7 @@ instance
 
 instance
   ( TransValue FromCBOR era,
+    TransUTxOState FromCBOR era,
     Val.DecodeNonNegative (Core.Value era),
     Show (Core.Value era)
   ) =>
@@ -256,7 +267,8 @@ instance
 
 instance
   ( CryptoClass.Crypto c,
-    Core.TxBody (ShelleyEra c) ~ TxBody (ShelleyEra c)
+    Core.TxBody (ShelleyEra c) ~ TxBody (ShelleyEra c),
+    UsesTxOut (ShelleyEra c)
   ) =>
   STS (UTXO (ShelleyEra c))
   where
@@ -302,21 +314,23 @@ initialLedgerState = do
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
-  forall era.
+  forall era out.
   ( UsesTxBody era,
     UsesValue era,
     UsesAuxiliary era,
     UsesScript era,
+    UsesTxOut era,
     STS (UTXO era),
     Embed (PPUP era) (UTXO era),
     BaseM (UTXO era) ~ ShelleyBase,
     Environment (UTXO era) ~ UtxoEnv era,
     State (UTXO era) ~ UTxOState era,
     Signal (UTXO era) ~ Tx era,
+    Core.TxOut era ~ out,
     PredicateFailure (UTXO era) ~ UtxoPredicateFailure era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq out),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "ttl" (Core.TxBody era) SlotNo,
@@ -345,7 +359,7 @@ utxoInductive = do
   let addrsWrongNetwork =
         filter
           (\a -> getNetwork a /= ni)
-          (fmap (\(TxOut a _) -> a) $ toList $ getField @"outputs" txb)
+          (fmap (getField @"address") $ toList $ getField @"outputs" txb)
   null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
   let wdrlsWrongNetwork =
         filter
@@ -365,13 +379,24 @@ utxoInductive = do
       -- minUTxOValue deposit comparison done as Coin because this rule
       -- is correct strictly in the Shelley era (in shelleyMA we would need to
       -- additionally check that all amounts are non-negative)
-      outputsTooSmall = [out | out@(TxOut _ c) <- outputs, (Val.coin c) < (Val.scaledMinDeposit c minUTxOValue)]
+      outputsTooSmall =
+        filter
+          ( \x ->
+              let c = getField @"value" x
+               in (Val.coin c) < (Val.scaledMinDeposit c minUTxOValue)
+          )
+          outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =
-        [out | out@(TxOut (AddrBootstrap addr) _) <- outputs, bootstrapAddressAttrsSize addr > 64]
+        filter
+          ( \x -> case getField @"address" x of
+              AddrBootstrap addr -> bootstrapAddressAttrsSize addr > 64
+              _ -> False
+          )
+          outputs
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)

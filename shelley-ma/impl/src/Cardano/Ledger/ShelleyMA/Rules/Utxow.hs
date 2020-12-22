@@ -16,14 +16,20 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesTxOut,
+    UsesValue,
+  )
 import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
 import Cardano.Ledger.ShelleyMA.TxBody ()
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative)
-import Control.SetAlgebra (dom, eval, (◁))
+import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
 import Data.Foldable (Foldable (toList))
 import qualified Data.Map.Strict as Map
@@ -52,11 +58,10 @@ import Shelley.Spec.Ledger.TxBody
     EraIndependentTxBody,
     RewardAcnt (getRwdCred),
     TxIn,
-    TxOut (TxOut),
     Wdrl (unWdrl),
   )
 import Shelley.Spec.Ledger.UTxO
-  ( UTxO (UTxO),
+  ( UTxO,
     getScriptHash,
     scriptCred,
     scriptStakeCred,
@@ -83,8 +88,8 @@ instance GetPolicies (Value crypto) crypto where
 -- | Computes the set of script hashes required to unlock the transaction inputs
 -- and the withdrawals.
 scriptsNeeded ::
-  ( UsesValue era,
-    UsesScript era,
+  ( UsesScript era,
+    UsesTxOut era,
     UsesTxBody era,
     UsesAuxiliary era,
     GetPolicies (Core.Value era) (Crypto era),
@@ -97,7 +102,7 @@ scriptsNeeded ::
   Tx era ->
   Set (ScriptHash (Crypto era))
 scriptsNeeded u tx =
-  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
+  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . (getField @"address")) u'')
     `Set.union` Set.fromList
       ( Maybe.mapMaybe (scriptCred . getRwdCred) $
           Map.keys withdrawals
@@ -110,9 +115,8 @@ scriptsNeeded u tx =
     `Set.union` ((policyID `Set.map` (getPolicies $ getField @"mint" txb)))
   where
     txb = _body tx
-    unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ getField @"wdrls" txb
-    UTxO u'' = eval (dom (txinsScript (getField @"inputs" txb) u) ◁ u)
+    u'' = eval ((txinsScript (getField @"inputs" $ _body tx) u) ◁ u)
     certificates = (toList . getField @"certs") txb
 
 --------------------------------------------------------------------------------
@@ -122,6 +126,7 @@ scriptsNeeded u tx =
 instance
   forall c (ma :: MaryOrAllegra).
   ( CryptoClass.Crypto c,
+    UsesTxOut (ShelleyMAEra ma c),
     UsesValue (ShelleyMAEra ma c),
     Typeable ma,
     STS (UTXO (ShelleyMAEra ma c)),

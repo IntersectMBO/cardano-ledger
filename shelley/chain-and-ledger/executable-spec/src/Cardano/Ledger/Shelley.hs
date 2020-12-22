@@ -20,13 +20,14 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut (..), UsesValue)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (hashWithSerialiser)
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
   ( TxBody,
+    TxOut (..),
     ValidateScript (hashScript, validateScript),
     hashMultiSigScript,
     validateNativeMultiSigScript,
@@ -39,6 +40,9 @@ instance CryptoClass.Crypto c => Era (ShelleyEra c) where
 
 instance CryptoClass.Crypto c => UsesValue (ShelleyEra c)
 
+instance CryptoClass.Crypto c => UsesTxOut (ShelleyEra c) where
+  makeTxOut _ a v = TxOut a v
+
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
@@ -46,6 +50,8 @@ instance CryptoClass.Crypto c => UsesValue (ShelleyEra c)
 type instance Core.Value (ShelleyEra _c) = Coin
 
 type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
+
+type instance Core.TxOut (ShelleyEra c) = TxOut (ShelleyEra c)
 
 type instance Core.Script (ShelleyEra c) = MultiSig c
 

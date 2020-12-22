@@ -12,7 +12,7 @@ where
 
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.State.Transition.Extended
 import Data.Either (fromRight)
 import Data.Proxy
@@ -51,7 +51,7 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest)
 
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
-  (EraGen era, UsesValue era) =>
+  (EraGen era, UsesTxOut era, UsesValue era) =>
   Int ->
   GenEnv era ->
   IO (ChainState era)

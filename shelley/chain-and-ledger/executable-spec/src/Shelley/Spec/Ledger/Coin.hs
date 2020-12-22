@@ -80,7 +80,7 @@ rationalToCoinViaFloor r = Coin . floor $ r
 -- with an erroring bounds check here. where should this really live?
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64
-    deriving (Eq, Show, NoThunks, Typeable)
+    deriving (Eq, Show, NoThunks, NFData, Typeable)
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
   fromCompact (CompactCoin c) = word64ToCoin c

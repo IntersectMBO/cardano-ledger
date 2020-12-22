@@ -14,9 +14,11 @@ module Test.Shelley.Spec.Ledger.PropertyTests
   )
 where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.Constraints (TransValue, UsesTxOut)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (..))
@@ -26,7 +28,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update (..))
-import Shelley.Spec.Ledger.TxBody (TxIn, TxOut, Wdrl)
+import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
@@ -59,9 +61,11 @@ minimalPropertyTests ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    UsesTxOut era,
+    TransValue ToCBOR era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -89,10 +93,12 @@ minimalPropertyTests =
 propertyTests ::
   forall era.
   ( EraGen era,
+    UsesTxOut era,
+    TransValue ToCBOR era,
     ChainProperty era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),

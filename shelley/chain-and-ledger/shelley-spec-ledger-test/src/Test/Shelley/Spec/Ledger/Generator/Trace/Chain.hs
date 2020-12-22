@@ -21,7 +21,12 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody, UsesValue)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesTxBody,
+    UsesTxOut,
+    UsesValue
+  )
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
@@ -79,6 +84,7 @@ import Test.Shelley.Spec.Ledger.Utils
 instance
   ( EraGen era,
     UsesTxBody era,
+    UsesTxOut era,
     UsesValue era,
     UsesAuxiliary era,
     Mock (Crypto era),
@@ -88,7 +94,7 @@ instance
     ShelleyChainSTS era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
   ) =>
   HasTrace (CHAIN era) (GenEnv era)
   where
@@ -115,6 +121,7 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 mkGenesisChainState ::
   forall era a.
   ( EraGen era,
+    UsesTxOut era,
     UsesValue era
   ) =>
   GenEnv era ->
