@@ -55,6 +55,7 @@ module Shelley.Spec.Ledger.Tx
     validateNativeMultiSigScript,
     TransTx,
     TransWitnessSet,
+    prettyWitnessSetParts,
   )
 where
 
@@ -200,6 +201,17 @@ pattern WitnessSet {addrWits, scriptWits, bootWits} <-
             }
 
 {-# COMPLETE WitnessSet #-}
+
+-- | Exports the relevant parts from a (WintessSetHKD Identity era) for
+--     use by the pretty printer without all the horrible constraints.
+--     Uses the non-exported WitnessSet' constructor.
+prettyWitnessSetParts ::
+  WitnessSetHKD Identity era ->
+  ( Set (WitVKey 'Witness (Crypto era)),
+    Map (ScriptHash (Crypto era)) (Core.Script era),
+    Set (BootstrapWitness (Crypto era))
+  )
+prettyWitnessSetParts (WitnessSet' a b c _) = (a, b, c)
 
 -- | A fully formed transaction.
 data Tx era = Tx'

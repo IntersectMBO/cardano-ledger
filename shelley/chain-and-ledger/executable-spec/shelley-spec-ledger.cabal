@@ -24,6 +24,7 @@ library
     Cardano.Ledger.Core
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
+    Cardano.Ledger.Pretty
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.Constraints
     Cardano.Ledger.Torsor
@@ -125,6 +126,7 @@ library
     network,
     nothunks,
     partial-order,
+    prettyprinter,
     primitive >= 0.7.1.0,
     quiet,
     scientific,

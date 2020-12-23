@@ -96,6 +96,7 @@ library
     hedgehog,
     iproute,
     nothunks,
+    prettyprinter,
     process-extras,
     QuickCheck >= 2.13.2,
     shelley-spec-ledger,
@@ -130,6 +131,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Examples.Updates
       Test.Shelley.Spec.Ledger.Fees
       Test.Shelley.Spec.Ledger.MultiSigExamples
+      Test.Shelley.Spec.Ledger.Pretty
       Test.Shelley.Spec.Ledger.PropertyTests
       Test.Shelley.Spec.Ledger.Rewards
       Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
@@ -193,6 +195,7 @@ test-suite shelley-spec-ledger-test
       hedgehog,
       iproute,
       mtl,
+      prettyprinter,
       QuickCheck,
       scientific,
       shelley-spec-ledger-test,
@@ -233,6 +236,7 @@ benchmark mainbench
     data-default-class,
     deepseq,
     mtl,
+    prettyprinter,
     QuickCheck,
     shelley-spec-ledger-test,
     shelley-spec-ledger,
