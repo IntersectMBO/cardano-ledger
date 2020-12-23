@@ -68,8 +68,8 @@ instance Default (RewardProvenancePool crypto) where
   def = RewardProvenancePool 0 0 0 (Coin 0) def 0 (Coin 0) 0 (Coin 0) (Coin 0)
 
 data Desirability = Desirability
-  { desirabilityScore :: Double,
-    hitRateEstimate :: Double
+  { desirabilityScore :: !Double,
+    hitRateEstimate :: !Double
   }
   deriving (Eq, Show, Generic)
 
