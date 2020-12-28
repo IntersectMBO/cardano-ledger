@@ -22,9 +22,9 @@ module Shelley.Spec.Ledger.STS.Tick
   )
 where
 
+import Cardano.Ledger.Constraints (UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
@@ -45,6 +45,8 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH, NewEpochPredicateFailure)
 import Shelley.Spec.Ledger.STS.Rupd (RUPD, RupdEnv (..), RupdPredicateFailure)
 import Shelley.Spec.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
+
+-- ==================================================
 
 data TICK era
 
@@ -182,7 +184,7 @@ bheadTransition = do
   pure nes''
 
 instance
-  ( ShelleyBased era,
+  ( UsesValue era,
     STS (NEWEPOCH era),
     PredicateFailure (Core.EraRule "NEWEPOCH" era) ~ NewEpochPredicateFailure era
   ) =>
@@ -191,7 +193,7 @@ instance
   wrapFailed = NewEpochFailure
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     PredicateFailure (Core.EraRule "RUPD" era) ~ RupdPredicateFailure era
   ) =>
   Embed (RUPD era) (TICK era)
@@ -212,25 +214,25 @@ newtype TickfPredicateFailure era
   deriving (Generic)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Show (PredicateFailure (Core.EraRule "NEWEPOCH" era))
   ) =>
   Show (TickfPredicateFailure era)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Eq (PredicateFailure (Core.EraRule "NEWEPOCH" era))
   ) =>
   Eq (TickfPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
+  ( UsesValue era,
     NoThunks (PredicateFailure (Core.EraRule "NEWEPOCH" era))
   ) =>
   NoThunks (TickfPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     Embed (Core.EraRule "NEWEPOCH" era) (TICKF era),
     Environment (Core.EraRule "NEWEPOCH" era) ~ (),
     State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
@@ -256,7 +258,7 @@ instance
     ]
 
 instance
-  ( ShelleyBased era,
+  ( UsesValue era,
     STS (NEWEPOCH era),
     PredicateFailure (Core.EraRule "NEWEPOCH" era)
       ~ NewEpochPredicateFailure era

@@ -30,10 +30,10 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
+import Cardano.Ledger.Constraints (UsesValue)
 import Cardano.Ledger.Crypto (HASH, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (forceElemsToWHNF)
 import Cardano.Slotting.EpochInfo
@@ -287,7 +287,7 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
 -------------------------------------------------------------------------------}
 
 genesisUTxO ::
-  ShelleyBased era =>
+  (Era era, UsesValue era) =>
   ShelleyGenesis era ->
   UTxO era
 genesisUTxO genesis =

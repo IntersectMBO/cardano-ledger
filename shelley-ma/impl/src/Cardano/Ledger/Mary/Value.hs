@@ -25,6 +25,7 @@ where
 
 import Cardano.Binary
   ( Decoder,
+    DecoderError (..),
     Encoding,
     FromCBOR,
     ToCBOR,
@@ -45,14 +46,15 @@ import Cardano.Ledger.Val
     EncodeMint (..),
     Val (..),
   )
+import Cardano.Prelude (cborError)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (guard)
 import Data.Array (Array)
 import Data.Array.IArray (array)
-import Data.ByteString (ByteString)
-import Data.CannonicalMaps
-  ( cannonicalMap,
-    cannonicalMapUnion,
+import qualified Data.ByteString as BS
+import Data.CanonicalMaps
+  ( canonicalMap,
+    canonicalMapUnion,
     pointWise,
   )
 import Data.Coders
@@ -75,6 +77,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text.Encoding (decodeUtf8)
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -85,16 +88,22 @@ import Shelley.Spec.Ledger.Serialization (decodeMap, encodeMap)
 import Prelude hiding (lookup)
 
 -- | Asset Name
-newtype AssetName = AssetName {assetName :: ByteString}
+newtype AssetName = AssetName {assetName :: BS.ByteString}
   deriving newtype
     ( Show,
       Eq,
       ToCBOR,
-      FromCBOR,
       Ord,
       NoThunks,
       NFData
     )
+
+instance FromCBOR AssetName where
+  fromCBOR = do
+    an <- fromCBOR
+    if BS.length an > 32
+      then cborError $ DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeUtf8 an)
+      else pure . AssetName $ an
 
 -- | Policy ID
 newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
@@ -114,7 +123,7 @@ instance NoThunks (Value crypto)
 
 instance Semigroup (Value crypto) where
   Value c m <> Value c1 m1 =
-    Value (c + c1) (cannonicalMapUnion (cannonicalMapUnion (+)) m m1)
+    Value (c + c1) (canonicalMapUnion (canonicalMapUnion (+)) m m1)
 
 instance Monoid (Value crypto) where
   mempty = Value 0 mempty
@@ -123,7 +132,7 @@ instance Group (Value crypto) where
   invert (Value c m) =
     Value
       (- c)
-      (cannonicalMap (cannonicalMap ((-1 :: Integer) *)) m)
+      (canonicalMap (canonicalMap ((-1 :: Integer) *)) m)
 
 instance Abelian (Value crypto)
 
@@ -134,7 +143,7 @@ instance CC.Crypto crypto => Val (Value crypto) where
   s <×> (Value c v) =
     Value
       (fromIntegral s * c)
-      (cannonicalMap (cannonicalMap ((fromIntegral s) *)) v)
+      (canonicalMap (canonicalMap ((fromIntegral s) *)) v)
   isZero (Value c v) = c == 0 && Map.null v
   coin (Value c _) = Coin c
   inject (Coin c) = Value c mempty

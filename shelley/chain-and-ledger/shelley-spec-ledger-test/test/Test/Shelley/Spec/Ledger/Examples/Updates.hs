@@ -262,7 +262,7 @@ blockEx2 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 20) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c))
     . C.newLab blockEx2
@@ -351,7 +351,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 80) 0 (KESPeriod 0))
 
-expectedStEx3 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx3 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx3 =
   C.evolveNonceFrozen (getBlockNonce (blockEx3 @c))
     . C.newLab blockEx3

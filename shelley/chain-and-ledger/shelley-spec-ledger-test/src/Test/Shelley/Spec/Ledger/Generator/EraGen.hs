@@ -14,12 +14,11 @@ module Test.Shelley.Spec.Ledger.Generator.EraGen (genUtxo0, genesisId, EraGen (.
 import Cardano.Binary (ToCBOR (toCBOR))
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.Constraints (UsesScript, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (HASH)
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Slotting.Slot (SlotNo)
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Coerce (coerce)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -54,11 +53,11 @@ import Test.Shelley.Spec.Ledger.Utils (Split (..))
  -----------------------------------------------------------------------------}
 
 class
-  ( ShelleyBased era,
+  ( UsesScript era,
     ValidateScript era,
     Split (Core.Value era),
-    Show (Core.Script era),
     ScriptClass era,
+    Show (Core.Script era),
     QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era),
     QC.HasTrace (Core.EraRule "CHAIN" era) (GenEnv era)
   ) =>
@@ -97,7 +96,7 @@ class
 
 genUtxo0 ::
   forall era.
-  EraGen era =>
+  (EraGen era, UsesValue era) =>
   GenEnv era ->
   Gen (UTxO era)
 genUtxo0 ge@(GenEnv _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do

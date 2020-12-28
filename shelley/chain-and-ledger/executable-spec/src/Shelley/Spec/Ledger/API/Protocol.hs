@@ -90,6 +90,8 @@ import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
+-- =======================================================
+
 class
   ( CC.Crypto c,
     DSignable c (OCertSignable c),

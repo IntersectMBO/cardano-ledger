@@ -26,6 +26,7 @@ library
     Cardano.Ledger.Era
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.Constraints
+    Cardano.Ledger.Constraints
     Cardano.Ledger.Torsor
     Cardano.Ledger.Val
     Shelley.Spec.Ledger.Address
@@ -112,11 +113,11 @@ library
     cardano-crypto-class,
     cardano-crypto-wrapper,
     cardano-ledger,
-    cardano-crypto-praos,
     cardano-prelude,
     cardano-slotting,
     cborg,
     cborg-json,
+    constraints,
     containers,
     data-default-class,
     deepseq,
@@ -131,7 +132,6 @@ library
     scientific,
     shelley-spec-non-integral,
     small-steps,
-    stm,
     text,
     time,
     transformers

@@ -44,6 +44,7 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( Quantifier (..),
     ScriptClass (..),
   )
+import Test.Shelley.Spec.Ledger.Generator.Trace.Chain ()
 
 {------------------------------------------------------------------------------
   ShelleyEra instances for EraGen and ScriptClass

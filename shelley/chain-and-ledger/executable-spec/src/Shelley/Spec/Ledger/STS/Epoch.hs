@@ -19,9 +19,9 @@ module Shelley.Spec.Ledger.STS.Epoch
   )
 where
 
+import Cardano.Ledger.Constraints (UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
@@ -57,6 +57,8 @@ import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapPredicateFailure, Poo
 import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapPredicateFailure)
 import Shelley.Spec.Ledger.Slot (EpochNo)
 
+-- ================================================
+
 data EPOCH era
 
 data EpochPredicateFailure era
@@ -80,7 +82,7 @@ deriving stock instance
   Show (EpochPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
+  ( UsesValue era,
     Embed (Core.EraRule "SNAP" era) (EPOCH era),
     Environment (Core.EraRule "SNAP" era) ~ LedgerState era,
     State (Core.EraRule "SNAP" era) ~ SnapShots (Crypto era),
@@ -149,7 +151,7 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
 
 epochTransition ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesValue era,
     Embed (Core.EraRule "SNAP" era) (EPOCH era),
     Environment (Core.EraRule "SNAP" era) ~ LedgerState era,
     State (Core.EraRule "SNAP" era) ~ SnapShots (Crypto era),
@@ -210,7 +212,7 @@ epochTransition = do
       nm
 
 instance
-  ( ShelleyBased era,
+  ( UsesValue era,
     PredicateFailure (Core.EraRule "SNAP" era) ~ SnapPredicateFailure era
   ) =>
   Embed (SNAP era) (EPOCH era)
@@ -218,7 +220,7 @@ instance
   wrapFailed = SnapFailure
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     PredicateFailure (Core.EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era
   ) =>
   Embed (POOLREAP era) (EPOCH era)
@@ -226,7 +228,7 @@ instance
   wrapFailed = PoolReapFailure
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     PredicateFailure (Core.EraRule "NEWPP" era) ~ NewppPredicateFailure era
   ) =>
   Embed (NEWPP era) (EPOCH era)

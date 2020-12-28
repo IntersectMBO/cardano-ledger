@@ -20,10 +20,10 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
 where
 
 import Cardano.Binary (ToCBOR, serialize')
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.Constraints (UsesScript, UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core (AuxiliaryData, EraRule, TxBody)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.State.Transition.Trace
   ( Trace,
@@ -44,10 +44,12 @@ import Data.Set (Set)
 import GHC.Records (HasField (..), getField)
 import Shelley.Spec.Ledger.API
   ( Addr (..),
+    CHAIN,
     Credential (..),
     DCert (..),
     DelegCert (..),
     Delegation (..),
+    LEDGER,
     TxOut (..),
   )
 import Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo), StrictMaybe (..))
@@ -98,6 +100,8 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
 
+-- =================================================================
+
 relevantCasesAreCovered ::
   forall era.
   ( EraGen era,
@@ -115,12 +119,7 @@ relevantCasesAreCovered = do
   let tl = 100
   checkCoverage $
     forAllBlind
-      ( traceFromInitState @(Core.EraRule "CHAIN" era)
-          testGlobals
-          tl
-          (genEnv p)
-          genesisChainSt
-      )
+      (traceFromInitState @(CHAIN era) testGlobals tl (genEnv p) genesisChainSt)
       relevantCasesAreCoveredForTrace
   where
     p :: Proxy era
@@ -136,7 +135,7 @@ relevantCasesAreCoveredForTrace ::
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
   ) =>
-  Trace (Core.EraRule "CHAIN" era) ->
+  Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
   let blockTxs :: Block era -> [Tx era]
@@ -243,7 +242,8 @@ scriptCredentialCertsRatio certs =
 -- | Extract the certificates from the transactions
 certsByTx ::
   forall era.
-  ( TxBodyConstraints era,
+  ( UsesTxBody era,
+    UsesScript era,
     ToCBOR (Core.AuxiliaryData era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
@@ -257,7 +257,7 @@ ratioInt x y =
 
 -- | Transaction has script locked TxOuts
 txScriptOutputsRatio ::
-  (TxBodyConstraints era, ShelleyBased era) =>
+  (UsesTxBody era, UsesValue era) =>
   [StrictSeq (TxOut era)] ->
   Double
 txScriptOutputsRatio txoutsList =
@@ -275,7 +275,8 @@ txScriptOutputsRatio txoutsList =
           txouts
 
 hasWithdrawal ::
-  ( TxBodyConstraints era,
+  ( UsesTxBody era,
+    UsesScript era,
     ToCBOR (Core.AuxiliaryData era),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
@@ -296,7 +297,8 @@ hasPParamUpdate tx =
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
 hasMetadata ::
-  ( TxBodyConstraints era,
+  ( UsesTxBody era,
+    UsesScript era,
     ToCBOR (Core.AuxiliaryData era),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
   ) =>
@@ -321,7 +323,7 @@ onlyValidLedgerSignalsAreGenerated ::
   Property
 onlyValidLedgerSignalsAreGenerated =
   withMaxSuccess 200 $
-    onlyValidSignalsAreGeneratedFromInitState @(Core.EraRule "LEDGER" era) testGlobals 100 ge genesisLedgerSt
+    onlyValidSignalsAreGeneratedFromInitState @(LEDGER era) testGlobals 100 ge genesisLedgerSt
   where
     p :: Proxy era
     p = Proxy
@@ -344,7 +346,7 @@ propAbstractSizeBoundsBytes ::
 propAbstractSizeBoundsBytes = property $ do
   let tl = 100
       numBytes = toInteger . BS.length . serialize'
-  forAllTraceFromInitState @(Core.EraRule "LEDGER" era) testGlobals tl (genEnv p) genesisLedgerSt $ \tr -> do
+  forAllTraceFromInitState @(LEDGER era) testGlobals tl (genEnv p) genesisLedgerSt $ \tr -> do
     let txs :: [Tx era]
         txs = traceSignals OldestFirst tr
     all (\tx -> txsizeBound tx >= numBytes tx) txs
@@ -376,7 +378,7 @@ propAbstractSizeNotTooBig = property $ do
       acceptableMagnitude = (3 :: Integer)
       numBytes = toInteger . BS.length . serialize'
       notTooBig txb = txsizeBound txb <= acceptableMagnitude * numBytes txb
-  forAllTraceFromInitState @(Core.EraRule "LEDGER" era) testGlobals tl (genEnv p) genesisLedgerSt $ \tr -> do
+  forAllTraceFromInitState @(LEDGER era) testGlobals tl (genEnv p) genesisLedgerSt $ \tr -> do
     let txs :: [Tx era]
         txs = traceSignals OldestFirst tr
     all notTooBig txs
@@ -398,7 +400,7 @@ onlyValidChainSignalsAreGenerated ::
   Property
 onlyValidChainSignalsAreGenerated =
   withMaxSuccess 100 $
-    onlyValidSignalsAreGeneratedFromInitState @(Core.EraRule "CHAIN" era) testGlobals 100 (genEnv p) genesisChainSt
+    onlyValidSignalsAreGeneratedFromInitState @(CHAIN era) testGlobals 100 (genEnv p) genesisChainSt
   where
     p :: Proxy era
     p = Proxy

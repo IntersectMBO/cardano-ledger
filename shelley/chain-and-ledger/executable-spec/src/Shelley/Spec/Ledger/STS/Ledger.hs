@@ -28,9 +28,9 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -88,28 +88,28 @@ data LedgerPredicateFailure era
 deriving stock instance
   ( Show (PredicateFailure (Core.EraRule "DELEGS" era)),
     Show (PredicateFailure (Core.EraRule "UTXOW" era)),
-    ShelleyBased era
+    Era era
   ) =>
   Show (LedgerPredicateFailure era)
 
 deriving stock instance
   ( Eq (PredicateFailure (Core.EraRule "DELEGS" era)),
     Eq (PredicateFailure (Core.EraRule "UTXOW" era)),
-    ShelleyBased era
+    Era era
   ) =>
   Eq (LedgerPredicateFailure era)
 
 instance
   ( NoThunks (PredicateFailure (Core.EraRule "DELEGS" era)),
     NoThunks (PredicateFailure (Core.EraRule "UTXOW" era)),
-    ShelleyBased era
+    Era era
   ) =>
   NoThunks (LedgerPredicateFailure era)
 
 instance
   ( ToCBOR (PredicateFailure (Core.EraRule "DELEGS" era)),
     ToCBOR (PredicateFailure (Core.EraRule "UTXOW" era)),
-    ShelleyBased era
+    Era era
   ) =>
   ToCBOR (LedgerPredicateFailure era)
   where
@@ -120,7 +120,7 @@ instance
 instance
   ( FromCBOR (PredicateFailure (Core.EraRule "DELEGS" era)),
     FromCBOR (PredicateFailure (Core.EraRule "UTXOW" era)),
-    ShelleyBased era
+    Era era
   ) =>
   FromCBOR (LedgerPredicateFailure era)
   where
@@ -137,9 +137,12 @@ instance
       )
 
 instance
-  ( Era era,
+  ( UsesValue era,
+    UsesScript era,
+    UsesTxBody era,
+    UsesAuxiliary era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    ShelleyBased era,
+    Era era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
@@ -182,7 +185,9 @@ instance
 
 ledgerTransition ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesScript era,
+    UsesTxBody era,
+    UsesAuxiliary era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
@@ -219,7 +224,7 @@ ledgerTransition = do
   pure (utxoSt', dpstate')
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     STS (DELEGS era),
     PredicateFailure (Core.EraRule "DELEGS" era) ~ DelegsPredicateFailure era
   ) =>
@@ -228,7 +233,7 @@ instance
   wrapFailed = DelegsFailure
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     STS (UTXOW era),
     PredicateFailure (Core.EraRule "UTXOW" era) ~ UtxowPredicateFailure era
   ) =>

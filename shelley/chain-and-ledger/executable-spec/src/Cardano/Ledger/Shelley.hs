@@ -16,6 +16,7 @@ import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
     ValidateAuxiliaryData (..),
   )
+import Cardano.Ledger.Constraints (UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
@@ -36,6 +37,8 @@ data ShelleyEra c
 
 instance CryptoClass.Crypto c => Era (ShelleyEra c) where
   type Crypto (ShelleyEra c) = c
+
+instance CryptoClass.Crypto c => UsesValue (ShelleyEra c)
 
 --------------------------------------------------------------------------------
 -- Core instances

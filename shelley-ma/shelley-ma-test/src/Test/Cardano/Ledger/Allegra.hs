@@ -26,10 +26,10 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody
-  ( FamsTo,
-    TxBody (..),
+  ( TxBody (..),
     ValidityInterval (ValidityInterval),
   )
+import Cardano.Ledger.Val(Val(zero))
 import Cardano.Slotting.Slot (SlotNo (SlotNo))
 import Data.Hashable (hash)
 import Data.Sequence.Strict (StrictSeq (..), fromList)
@@ -51,6 +51,8 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( Quantifier (..),
     ScriptClass (..),
   )
+import Cardano.Ledger.Constraints (UsesValue,UsesAuxiliary)
+-- ==========================================================
 
 {------------------------------------------------------------------------------
  EraGen instance for AllegraEra - This instance makes it possible to run the
@@ -80,7 +82,8 @@ instance (CryptoClass.Crypto c, Mock c) => EraGen (AllegraEra c) where
 
 genTxBody ::
   forall era.
-  ( FamsTo era,
+  ( UsesValue era,
+    UsesAuxiliary era,
     EraGen era
   ) =>
   SlotNo ->
@@ -94,7 +97,7 @@ genTxBody ::
   Gen (TxBody era)
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
-  let mint = mempty -- the mint field is always empty for an Allegra TxBody
+  let mint = zero -- the mint field is always empty for an Allegra TxBody
   pure $
     TxBody
       ins

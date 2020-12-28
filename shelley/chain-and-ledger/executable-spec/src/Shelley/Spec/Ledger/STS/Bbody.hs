@@ -21,9 +21,9 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
+import Cardano.Ledger.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -57,6 +57,7 @@ import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     LedgerState,
+    TransLedgerState,
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
@@ -71,7 +72,7 @@ data BbodyState era
   = BbodyState (LedgerState era) (BlocksMade (Crypto era))
 
 deriving stock instance
-  ShelleyBased era =>
+  TransLedgerState Show era =>
   Show (BbodyState era)
 
 data BbodyEnv era = BbodyEnv
@@ -90,26 +91,27 @@ data BbodyPredicateFailure era
   deriving (Generic)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Show (PredicateFailure (Core.EraRule "LEDGERS" era))
   ) =>
   Show (BbodyPredicateFailure era)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Eq (PredicateFailure (Core.EraRule "LEDGERS" era))
   ) =>
   Eq (BbodyPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     NoThunks (PredicateFailure (Core.EraRule "LEDGERS" era))
   ) =>
   NoThunks (BbodyPredicateFailure era)
 
 instance
-  ( Era era,
-    ShelleyBased era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
@@ -137,7 +139,9 @@ instance
 
 bbodyTransition ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
@@ -190,7 +194,7 @@ instance
     ledgers ~ Core.EraRule "LEDGERS" era,
     STS ledgers,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    ShelleyBased era
+    Era era
   ) =>
   Embed ledgers (BBODY era)
   where

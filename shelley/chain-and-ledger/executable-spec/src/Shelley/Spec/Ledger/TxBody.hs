@@ -5,6 +5,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -64,6 +65,9 @@ module Shelley.Spec.Ledger.TxBody
     --
     SizeOfPoolOwners (..),
     SizeOfPoolRelays (..),
+    --
+    TransTxOut,
+    TransTxBody,
   )
 where
 
@@ -85,8 +89,7 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
-import Cardano.Ledger.Val (DecodeNonNegative (..), Val)
+import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude
   ( panic,
   )
@@ -112,8 +115,10 @@ import Data.Coders
     (!>),
   )
 import Data.Coerce (coerce)
+import Data.Constraint (Constraint)
 import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, fromMaybe)
@@ -129,7 +134,6 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Records
-import GHC.Stack (HasCallStack)
 import NoThunks.Class (AllowThunksIn (..), InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
@@ -452,19 +456,21 @@ data TxOut era
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
 
+type TransTxOut (c :: Type -> Constraint) era =
+  ( c (Core.Value era),
+    c (CompactForm (Core.Value era)),
+    Compactible (Core.Value era)
+  )
+
 instance
-  (Show (Core.Value era), Era era, Compactible (Core.Value era)) => -- Use the weakest constraint possible here
+  (TransTxOut Show era, Era era) => -- Use the weakest constraint possible here
   Show (TxOut era)
   where
   show = show . viewCompactTxOut
 
 deriving stock instance
   -- weakest constraint
-  ( Eq (Core.Value era),
-    Eq (CompactForm (Core.Value era)),
-    Compactible (Core.Value era)
-  ) =>
-  Eq (TxOut era)
+  TransTxOut Eq era => Eq (TxOut era)
 
 instance NFData (TxOut era) where
   rnf = (`seq` ())
@@ -472,7 +478,7 @@ instance NFData (TxOut era) where
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
 pattern TxOut ::
-  (HasCallStack, ShelleyBased era) =>
+  (Era era, Show (Core.Value era), Compactible (Core.Value era)) =>
   Addr (Crypto era) ->
   Core.Value era ->
   TxOut era
@@ -579,44 +585,6 @@ instance NoThunks (MIRCert crypto)
 
 instance NoThunks (DCert crypto)
 
--- ===========================================================================
--- Since TxBody has fees (which are Values) and Scripts (inside hashes),
--- and both are type families, we need to ensure that these families have
--- the minimum amount of properties, to make the correct instances for TxBody
-
--- | Needed for Show, Eq etc instances
-type ProperVal era =
-  ( Era era,
-    Compactible (Core.Value era),
-    Show (Core.Value era),
-    Eq (Core.Value era),
-    Eq (CompactForm (Core.Value era)),
-    Val (Core.Value era)
-  )
-
--- | Needed for FromCBOR instances
-type ProperFrom era =
-  ( Era era,
-    Typeable era,
-    DecodeNonNegative (Core.Value era),
-    Compactible (Core.Value era),
-    Show (Core.Value era),
-    Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era),
-    FromCBOR (Annotator (Core.Script era)),
-    FromCBOR (Annotator (Core.AuxiliaryData era))
-  )
-
--- | Needed for ToCBOR instances
-type ProperTo era =
-  ( Era era,
-    ToCBOR (Core.Value era),
-    Compactible (Core.Value era),
-    ToCBOR (CompactForm (Core.Value era)),
-    ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Script era)
-  )
-
 -- ==============================
 -- The underlying type for TxBody
 
@@ -632,16 +600,22 @@ data TxBodyRaw era = TxBodyRaw
   }
   deriving (Generic, NoThunks, Typeable)
 
+-- Since TxBody has fees (which are Values) which is a type family, we
+-- need  to ensure that (Core.Value era) has some constaints, to make the
+-- correct instances. This is the purpose of TransTxOut and TransTxBody
+
+type TransTxBody (c :: Type -> Constraint) era = (TransTxOut c era)
+
 deriving instance CC.Crypto (Crypto era) => NFData (TxBodyRaw era)
 
-deriving instance (Era era, ProperVal era) => Eq (TxBodyRaw era)
+deriving instance (Era era, TransTxBody Eq era) => Eq (TxBodyRaw era)
 
-deriving instance (Era era, ProperVal era) => Show (TxBodyRaw era)
+deriving instance (Era era, TransTxBody Show era) => Show (TxBodyRaw era)
 
-instance ProperFrom era => FromCBOR (TxBodyRaw era) where
+instance (TransTxBody DecodeNonNegative era, Era era) => FromCBOR (TxBodyRaw era) where
   fromCBOR = decode (SparseKeyed "TxBody" baseTxBodyRaw boxBody [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")])
 
-instance ProperFrom era => FromCBOR (Annotator (TxBodyRaw era)) where
+instance (TransTxBody DecodeNonNegative era, Era era) => FromCBOR (Annotator (TxBodyRaw era)) where
   fromCBOR = pure <$> fromCBOR
 
 -- =================================================================
@@ -666,7 +640,7 @@ isSNothing _ = False
 -- | Choose a de-serialiser when given the key (of type Word).
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
-boxBody :: ProperFrom era => Word -> Field (TxBodyRaw era)
+boxBody :: (Era era, TransTxBody DecodeNonNegative era) => Word -> Field (TxBodyRaw era)
 boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
 boxBody 1 = field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
 boxBody 4 = field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
@@ -680,7 +654,7 @@ boxBody n = field (\_ t -> t) (Invalid n)
 -- | Tells how to serialise each field, and what tag to label it with in the
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
-txSparse :: ProperTo era => TxBodyRaw era -> Encode ('Closed 'Sparse) (TxBodyRaw era)
+txSparse :: (TransTxBody ToCBOR era, Era era) => TxBodyRaw era -> Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
   Keyed (\i o f t c w u h -> TxBodyRaw i o c w f t u h)
     !> Key 0 (E encodeFoldable input) -- We don't have to send these in TxBodyRaw order
@@ -707,7 +681,7 @@ baseTxBodyRaw =
       _mdHashX = SNothing
     }
 
-instance ProperTo era => ToCBOR (TxBodyRaw era) where
+instance (Era era, TransTxBody ToCBOR era) => ToCBOR (TxBodyRaw era) where
   toCBOR x = encode (txSparse x)
 
 -- ====================================================
@@ -719,19 +693,19 @@ newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
 
 deriving newtype instance CC.Crypto (Crypto era) => NFData (TxBody era)
 
-deriving instance ProperVal era => Show (TxBody era)
+deriving instance (Era era, TransTxBody Show era) => Show (TxBody era)
 
-deriving instance ProperVal era => Eq (TxBody era)
+deriving instance (Era era, TransTxBody Eq era) => Eq (TxBody era)
 
 deriving via
   (Mem (TxBodyRaw era))
   instance
-    (ProperFrom era) =>
+    (Era era, TransTxBody DecodeNonNegative era) =>
     FromCBOR (Annotator (TxBody era))
 
 -- | Pattern for use by external users
 pattern TxBody ::
-  ProperTo era =>
+  (Era era, TransTxBody ToCBOR era) =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
@@ -969,7 +943,7 @@ instance
 
 instance-- use the weakest constraint necessary
 
-  (Era era, ToCBOR (CompactForm (Core.Value era)), Compactible (Core.Value era)) =>
+  (Era era, TransTxOut ToCBOR era) =>
   ToCBOR (TxOut era)
   where
   toCBOR (TxOutCompact addr coin) =
@@ -979,7 +953,7 @@ instance-- use the weakest constraint necessary
 
 instance-- use the weakest constraint necessary
 
-  (Era era, DecodeNonNegative (CompactForm (Core.Value era)), Compactible (Core.Value era)) =>
+  (Era era, TransTxOut DecodeNonNegative era) =>
   FromCBOR (TxOut era)
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do

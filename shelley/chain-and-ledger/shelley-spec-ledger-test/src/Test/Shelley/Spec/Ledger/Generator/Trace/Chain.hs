@@ -70,16 +70,23 @@ import Test.Shelley.Spec.Ledger.Utils
     maxLLSupply,
     mkHash,
   )
+import Cardano.Ledger.Constraints(UsesTxBody,UsesValue,UsesAuxiliary)
+
+-- ======================================================
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
   ( EraGen era,
+    UsesTxBody era,
+    UsesValue era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     ApplyBlock era,
     GetLedgerView era,
     ShelleyLedgerSTS era,
     ShelleyChainSTS era,
+    HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era),
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
@@ -119,7 +126,9 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era a.
-  EraGen era =>
+  ( EraGen era,
+    UsesValue era
+  ) =>
   GenEnv era ->
   IRC (Core.EraRule "CHAIN" era) ->
   Gen (Either a (ChainState era))

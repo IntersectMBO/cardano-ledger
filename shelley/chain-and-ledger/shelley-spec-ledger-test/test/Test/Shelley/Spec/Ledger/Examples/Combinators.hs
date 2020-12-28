@@ -45,7 +45,6 @@ where
 
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
@@ -102,6 +101,10 @@ import Shelley.Spec.Ledger.Tx (TxIn, TxOut)
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
+import Cardano.Ledger.Constraints(UsesTxBody,UsesValue)
+
+-- ======================================================
+
 
 -- | = Evolve Nonces - Frozen
 --
@@ -174,7 +177,8 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
 -- Update the UTxO for given transaction body.
 newUTxO ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesValue era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
   ) =>

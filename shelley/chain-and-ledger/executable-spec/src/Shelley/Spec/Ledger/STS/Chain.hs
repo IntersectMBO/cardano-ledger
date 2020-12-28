@@ -29,9 +29,9 @@ module Shelley.Spec.Ledger.STS.Chain
   )
 where
 
+import Cardano.Ledger.Constraints (TransValue, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo, WithOrigin (..))
 import Control.DeepSeq (NFData)
@@ -132,11 +132,11 @@ data ChainState era = ChainState
   deriving (Generic)
 
 deriving stock instance
-  ShelleyBased era =>
+  TransValue Show era =>
   Show (ChainState era)
 
 deriving stock instance
-  ShelleyBased era =>
+  TransValue Eq era =>
   Eq (ChainState era)
 
 instance (Era era) => NFData (ChainState era)
@@ -159,7 +159,7 @@ data ChainPredicateFailure era
   deriving (Generic)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Show (PredicateFailure (Core.EraRule "BBODY" era)),
     Show (PredicateFailure (Core.EraRule "TICK" era)),
     Show (PredicateFailure (Core.EraRule "TICKN" era))
@@ -167,7 +167,7 @@ deriving stock instance
   Show (ChainPredicateFailure era)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Eq (PredicateFailure (Core.EraRule "BBODY" era)),
     Eq (PredicateFailure (Core.EraRule "TICK" era)),
     Eq (PredicateFailure (Core.EraRule "TICKN" era))
@@ -175,7 +175,7 @@ deriving stock instance
   Eq (ChainPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     NoThunks (PredicateFailure (Core.EraRule "BBODY" era)),
     NoThunks (PredicateFailure (Core.EraRule "TICK" era)),
     NoThunks (PredicateFailure (Core.EraRule "TICKN" era))
@@ -227,8 +227,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
     cs = Map.fromList (fmap (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
 
 instance
-  ( ShelleyBased era,
-    STS (CHAIN era),
+  ( Era era,
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
@@ -297,7 +296,7 @@ chainChecks maxpv ccd bh = do
 
 chainTransition ::
   forall era.
-  ( ShelleyBased era,
+  ( Era era,
     STS (CHAIN era),
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
@@ -386,7 +385,7 @@ chainTransition =
 
 instance
   ( Era era,
-    ShelleyBased era,
+    Era era,
     STS (BBODY era),
     PredicateFailure (Core.EraRule "BBODY" era) ~ BbodyPredicateFailure era
   ) =>
@@ -396,7 +395,7 @@ instance
 
 instance
   ( Era era,
-    ShelleyBased era,
+    Era era,
     PredicateFailure (Core.EraRule "TICKN" era) ~ TicknPredicateFailure
   ) =>
   Embed TICKN (CHAIN era)
@@ -405,7 +404,7 @@ instance
 
 instance
   ( Era era,
-    ShelleyBased era,
+    Era era,
     STS (TICK era),
     PredicateFailure (Core.EraRule "TICK" era) ~ TickPredicateFailure era
   ) =>
@@ -416,7 +415,7 @@ instance
 instance
   ( Era era,
     c ~ Crypto era,
-    ShelleyBased era,
+    Era era,
     STS (PRTCL c)
   ) =>
   Embed (PRTCL c) (CHAIN era)
@@ -435,7 +434,7 @@ data AdaPots = AdaPots
 
 -- | Calculate the total ada pots in the epoch state
 totalAdaPotsES ::
-  ShelleyBased era =>
+  UsesValue era =>
   EpochState era ->
   AdaPots
 totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
@@ -455,13 +454,13 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
 
 -- | Calculate the total ada pots in the chain state
 totalAdaPots ::
-  ShelleyBased era =>
+  UsesValue era =>
   ChainState era ->
   AdaPots
 totalAdaPots = totalAdaPotsES . nesEs . chainNes
 
 -- | Calculate the total ada in the epoch state
-totalAdaES :: ShelleyBased era => EpochState era -> Coin
+totalAdaES :: UsesValue era => EpochState era -> Coin
 totalAdaES cs =
   treasuryAdaPot
     <> reservesAdaPot
@@ -480,5 +479,5 @@ totalAdaES cs =
       } = totalAdaPotsES cs
 
 -- | Calculate the total ada in the chain state
-totalAda :: ShelleyBased era => ChainState era -> Coin
+totalAda :: UsesValue era => ChainState era -> Coin
 totalAda = totalAdaES . nesEs . chainNes

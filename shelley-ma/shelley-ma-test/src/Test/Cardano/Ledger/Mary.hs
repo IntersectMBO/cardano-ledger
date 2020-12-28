@@ -16,7 +16,7 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Mary.Value (Value (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import Cardano.Ledger.ShelleyMA.TxBody (FamsTo, StrictMaybe, TxBody (..))
+import Cardano.Ledger.ShelleyMA.TxBody (StrictMaybe, TxBody (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import qualified Data.Map as Map
@@ -43,6 +43,7 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
     exponential,
   )
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
+import Cardano.Ledger.Constraints (UsesValue,UsesAuxiliary)
 
 {------------------------------------------------------------------------------
  EraGen instance for MaryEra - This instance makes it possible to run the
@@ -72,7 +73,8 @@ instance (CryptoClass.Crypto c, Mock c) => EraGen (MaryEra c) where
 
 genTxBody ::
   forall era.
-  ( FamsTo era,
+  ( UsesValue era,
+    UsesAuxiliary era,
     EraGen era
   ) =>
   SlotNo ->

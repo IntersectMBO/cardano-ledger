@@ -54,11 +54,13 @@ import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
 import Test.Shelley.Spec.Ledger.Utils (ChainProperty)
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
+import Cardano.Ledger.Constraints(UsesValue)
 
 minimalPropertyTests ::
   forall era.
   ( EraGen era,
     ChainProperty era,
+    UsesValue era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
@@ -89,6 +91,7 @@ minimalPropertyTests =
 propertyTests ::
   forall era.
   ( EraGen era,
+    UsesValue era,
     ChainProperty era,
     ValidateAuxiliaryData era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),

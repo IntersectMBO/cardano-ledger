@@ -46,7 +46,6 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.SetAlgebra (biMapFromList)
@@ -93,6 +92,11 @@ import Shelley.Spec.Ledger.Rewards
     LogWeight (..),
     PerformanceEstimate (..),
   )
+import Shelley.Spec.Ledger.RewardProvenance
+  ( Desirability (..),
+    RewardProvenance (..),
+    RewardProvenancePool (..),
+  )
 import qualified Shelley.Spec.Ledger.STS.Deleg as STS
 import qualified Shelley.Spec.Ledger.STS.Delegs as STS
 import qualified Shelley.Spec.Ledger.STS.Delpl as STS
@@ -125,6 +129,10 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
     genSignature,
   )
 import Test.Tasty.QuickCheck (Gen, choose, elements)
+
+import Cardano.Ledger.Constraints(UsesValue,UsesScript,UsesTxBody,UsesAuxiliary)
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass(ScriptClass)
+-- =======================================================
 
 genHash :: forall a h. HashAlgorithm h => Gen (Hash.Hash h a)
 genHash = mkDummyHash <$> arbitrary
@@ -255,7 +263,7 @@ instance CC.Crypto crypto => Arbitrary (TxIn crypto) where
       <*> arbitrary
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  (UsesValue era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
   Arbitrary (TxOut era)
   where
   arbitrary = TxOut <$> arbitrary <*> arbitrary
@@ -358,7 +366,7 @@ instance CC.Crypto crypto => Arbitrary (STS.PrtclState crypto) where
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  (UsesValue era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
   Arbitrary (UTxO era)
   where
   arbitrary = genericArbitraryU
@@ -427,21 +435,21 @@ instance CC.Crypto crypto => Arbitrary (DPState crypto) where
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  (UsesValue era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
   Arbitrary (UTxOState era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  (UsesValue era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
   Arbitrary (LedgerState era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era) =>
+  (UsesValue era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era) =>
   Arbitrary (NewEpochState era)
   where
   arbitrary = genericArbitraryU
@@ -458,7 +466,7 @@ instance CC.Crypto crypto => Arbitrary (PoolDistr crypto) where
       genVal = IndividualPoolStake <$> arbitrary <*> genHash
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era) =>
+  (UsesValue era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era) =>
   Arbitrary (EpochState era)
   where
   arbitrary =
@@ -595,7 +603,7 @@ genUTCTime = do
       (Time.picosecondsToDiffTime diff)
 
 instance
-  (ShelleyBased era, Mock (Crypto era), EraGen era) =>
+  (Mock (Crypto era), EraGen era) =>
   Arbitrary (ShelleyGenesis era)
   where
   arbitrary =
@@ -617,7 +625,7 @@ instance
       <*> (ShelleyGenesisStaking <$> arbitrary <*> arbitrary) -- sgStaking
 
 instance
-  ( ShelleyBased era,
+  ( UsesScript era,
     Mock (Crypto era),
     ValidateScript era,
     Arbitrary (Core.Script era)
@@ -697,7 +705,9 @@ instance
   shrink _ = []
 
 genTx ::
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     Arbitrary (WitnessSet era),
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.AuxiliaryData era)
@@ -711,8 +721,10 @@ genTx =
 
 genBlock ::
   forall era.
-  ( ShelleyBased era,
-    EraGen era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
+    ScriptClass era,
     Mock (Crypto era),
     Arbitrary (WitnessSet era),
     Arbitrary (Core.TxBody era),
@@ -746,7 +758,9 @@ genBlock = do
     p = Proxy
 
 instance
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     ValidateScript era,
     Arbitrary (Core.TxBody era),
@@ -759,7 +773,8 @@ instance
   arbitrary = genTx
 
 instance
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesAuxiliary era,
     EraGen era,
     Mock (Crypto era),
     ValidateScript era,
@@ -780,3 +795,46 @@ instance
   where
   arbitrary = ApplyTxError <$> arbitrary
   shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
+
+instance Arbitrary Desirability
+  where arbitrary = Desirability <$> arbitrary <*> arbitrary
+
+instance
+  Mock crypto =>
+  Arbitrary (RewardProvenancePool crypto)
+  where
+  arbitrary =
+    RewardProvenancePool
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance
+  Mock crypto =>
+  Arbitrary (RewardProvenance crypto)
+  where
+  arbitrary =
+    RewardProvenance
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
