@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -34,15 +35,20 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Core (ChainData, SerialisableData)
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
-  ( PredicateFailure,
+  ( BaseM,
+    Environment,
+    PredicateFailure,
+    STS,
+    Signal,
+    State,
     TRC (..),
     applySTS,
     reapplySTS,
@@ -54,6 +60,7 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Globals,
     Nonce,
     Seed,
+    ShelleyBase,
     UnitInterval,
   )
 import Shelley.Spec.Ledger.BlockChain
@@ -76,8 +83,9 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainChecksData, pparamsToChainChecksData)
+import Shelley.Spec.Ledger.STS.EraMapping ()
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
-import Shelley.Spec.Ledger.STS.Tick (TICKF)
+import Shelley.Spec.Ledger.STS.Tick (TickfPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
@@ -99,7 +107,13 @@ class
     Eq (ChainTransitionError (Crypto era)),
     Show (ChainTransitionError (Crypto era)),
     Show (LedgerView (Crypto era)),
-    Show (FutureLedgerViewError era)
+    Show (FutureLedgerViewError era),
+    STS (Core.EraRule "TICKF" era),
+    BaseM (Core.EraRule "TICKF" era) ~ ShelleyBase,
+    Environment (Core.EraRule "TICKF" era) ~ (),
+    State (Core.EraRule "TICKF" era) ~ NewEpochState era,
+    Signal (Core.EraRule "TICKF" era) ~ SlotNo,
+    PredicateFailure (Core.EraRule "TICKF" era) ~ TickfPredicateFailure era
   ) =>
   GetLedgerView era
   where
@@ -116,7 +130,7 @@ class
     SlotNo ->
     m (LedgerView (Crypto era))
   default futureLedgerView ::
-    (UsesTxOut era, UsesValue era, MonadError (FutureLedgerViewError era) m) =>
+    (MonadError (FutureLedgerViewError era) m) =>
     Globals ->
     NewEpochState era ->
     SlotNo ->
@@ -202,14 +216,14 @@ view
 --  application of the TICK rule at the target slot to the curernt ledger state.
 
 newtype FutureLedgerViewError era
-  = FutureLedgerViewError [PredicateFailure (TICKF era)]
+  = FutureLedgerViewError [PredicateFailure (Core.EraRule "TICKF" era)]
 
 deriving stock instance
-  (Eq (PredicateFailure (TICKF era))) =>
+  (Eq (PredicateFailure (Core.EraRule "TICKF" era))) =>
   Eq (FutureLedgerViewError era)
 
 deriving stock instance
-  (Show (PredicateFailure (TICKF era))) =>
+  (Show (PredicateFailure (Core.EraRule "TICKF" era))) =>
   Show (FutureLedgerViewError era)
 
 -- | Anachronistic ledger view
@@ -219,9 +233,13 @@ deriving stock instance
 --   appropriate to that slot.
 futureView ::
   forall era m.
-  ( UsesTxOut era,
-    UsesValue era,
-    MonadError (FutureLedgerViewError era) m
+  ( MonadError (FutureLedgerViewError era) m,
+    STS (Core.EraRule "TICKF" era),
+    BaseM (Core.EraRule "TICKF" era) ~ ShelleyBase,
+    Environment (Core.EraRule "TICKF" era) ~ (),
+    State (Core.EraRule "TICKF" era) ~ NewEpochState era,
+    Signal (Core.EraRule "TICKF" era) ~ SlotNo,
+    PredicateFailure (Core.EraRule "TICKF" era) ~ TickfPredicateFailure era
   ) =>
   Globals ->
   NewEpochState era ->
@@ -235,7 +253,7 @@ futureView globals ss slot =
   where
     res =
       flip runReader globals
-        . applySTS @(TICKF era)
+        . applySTS @(Core.EraRule "TICKF" era)
         $ TRC ((), ss, slot)
 
 -- $chainstate

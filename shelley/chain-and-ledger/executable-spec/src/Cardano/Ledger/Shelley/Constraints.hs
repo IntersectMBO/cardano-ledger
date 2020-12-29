@@ -61,8 +61,7 @@ class
 
 class
   ( Era era,
-    Show (TxOut era),
-    Eq (TxOut era),
+    ChainData (TxOut era),
     ToCBOR (TxOut era),
     FromCBOR (TxOut era),
     HasField "address" (TxOut era) (Addr (Crypto era)),
