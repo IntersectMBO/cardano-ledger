@@ -90,3 +90,5 @@ type ShelleyBased era =
     -- AuxiliaryData constraints
     UsesAuxiliary era
   )
+
+{-# LANGUAGE Deprecated ShelleyBased "Use appropriate 'Uses' constraits (e.g. `UsesValue`) instead." #-}
