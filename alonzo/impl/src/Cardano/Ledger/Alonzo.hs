@@ -9,6 +9,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto
 import Cardano.Ledger.Era
 import Cardano.Ledger.Mary.Value (Value)
+import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData)
 
 -- | The Alonzo era
@@ -27,3 +28,5 @@ type instance Core.Value (AlonzoEra c) = Value c
 type instance Core.Script (AlonzoEra c) = Script (AlonzoEra c)
 
 type instance Core.AuxiliaryData (AlonzoEra c) = AuxiliaryData (AlonzoEra c)
+
+instance Cardano.Ledger.Crypto.Crypto c => UsesValue (AlonzoEra c)

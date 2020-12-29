@@ -32,11 +32,11 @@ import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash,
     ValidateAuxiliaryData (..),
   )
-import Cardano.Ledger.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩))

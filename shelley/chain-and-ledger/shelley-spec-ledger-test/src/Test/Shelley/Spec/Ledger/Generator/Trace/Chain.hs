@@ -18,9 +18,10 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody, UsesValue)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
@@ -70,7 +71,6 @@ import Test.Shelley.Spec.Ledger.Utils
     maxLLSupply,
     mkHash,
   )
-import Cardano.Ledger.Constraints(UsesTxBody,UsesValue,UsesAuxiliary)
 
 -- ======================================================
 

@@ -22,8 +22,8 @@ module Shelley.Spec.Ledger.STS.Tick
   )
 where
 
-import Cardano.Ledger.Constraints (UsesValue)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition

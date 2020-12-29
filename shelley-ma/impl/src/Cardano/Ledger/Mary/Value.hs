@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -81,7 +82,7 @@ import Data.Text.Encoding (decodeUtf8)
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
 import Shelley.Spec.Ledger.Coin (Coin (..), integerToWord64)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.Serialization (decodeMap, encodeMap)
@@ -275,7 +276,7 @@ instance
 
 instance CC.Crypto crypto => Compactible (Value crypto) where
   newtype CompactForm (Value crypto) = CompactValue (CV crypto)
-    deriving (Eq, Typeable, Show, ToCBOR, FromCBOR)
+    deriving (Eq, Typeable, Show, NoThunks, ToCBOR, FromCBOR)
   toCompact x = CompactValue <$> toCV x
   fromCompact (CompactValue x) = fromCV x
 
@@ -297,12 +298,19 @@ data CV crypto
       {-# UNPACK #-} !(Array Int (CVPart crypto))
   deriving (Eq, Show, Typeable)
 
+deriving via OnlyCheckWhnfNamed "CV" (CV crypto) instance NoThunks (CV crypto)
+
 data CVPart crypto
   = CVPart
       !(PolicyID crypto)
       {-# UNPACK #-} !AssetName
       {-# UNPACK #-} !Word64
   deriving (Eq, Show, Typeable)
+
+deriving via
+  OnlyCheckWhnfNamed "CVPart" (CVPart crypto)
+  instance
+    NoThunks (CVPart crypto)
 
 toCV :: Value crypto -> Maybe (CV crypto)
 toCV v = do

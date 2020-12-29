@@ -16,9 +16,10 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody, UsesValue)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended (IRC, TRC (..))
@@ -57,10 +58,8 @@ import Test.Shelley.Spec.Ledger.Utils
     applySTSTest,
     runShelleyBase,
   )
-import Cardano.Ledger.Constraints(UsesTxBody,UsesValue,UsesAuxiliary)
 
 -- ======================================================
-
 
 genAccountState :: Constants -> Gen AccountState
 genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =

@@ -55,6 +55,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∪), (⋪))
@@ -195,8 +196,6 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
-
-import Cardano.Ledger.Constraints(UsesTxBody,UsesValue,UsesScript,UsesAuxiliary)
 
 -- ==================================================
 

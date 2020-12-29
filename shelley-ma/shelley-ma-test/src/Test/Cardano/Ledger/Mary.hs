@@ -15,6 +15,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Mary.Value (Value (..))
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody (StrictMaybe, TxBody (..))
 import qualified Cardano.Ledger.Val as Val
@@ -43,7 +44,6 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
     exponential,
   )
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
-import Cardano.Ledger.Constraints (UsesValue,UsesAuxiliary)
 
 {------------------------------------------------------------------------------
  EraGen instance for MaryEra - This instance makes it possible to run the

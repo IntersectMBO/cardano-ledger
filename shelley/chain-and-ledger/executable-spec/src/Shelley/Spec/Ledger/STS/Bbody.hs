@@ -20,8 +20,8 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
-import Cardano.Ledger.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),

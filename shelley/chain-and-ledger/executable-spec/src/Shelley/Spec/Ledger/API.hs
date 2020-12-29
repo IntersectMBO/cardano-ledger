@@ -9,10 +9,14 @@ module Shelley.Spec.Ledger.API
   )
 where
 
-import Cardano.Ledger.Constraints (UsesValue)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesValue,
+  )
 import Shelley.Spec.Ledger.API.ByronTranslation as X
 import Shelley.Spec.Ledger.API.Mempool as X
 import Shelley.Spec.Ledger.API.Protocol as X
@@ -22,11 +26,13 @@ import Shelley.Spec.Ledger.API.Wallet as X
 
 class
   ( PraosCrypto (Crypto era),
-    ShelleyBased era,
     GetLedgerView era,
     ApplyBlock era,
     ApplyTx era,
-    UsesValue era
+    UsesValue era,
+    UsesScript era,
+    UsesAuxiliary era,
+    UsesTxBody era
   ) =>
   ShelleyBasedEra era
 

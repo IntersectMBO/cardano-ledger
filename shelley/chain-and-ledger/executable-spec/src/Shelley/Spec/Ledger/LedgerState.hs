@@ -108,10 +108,16 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Constraints (TransValue, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley.Constraints
+  ( TransValue,
+    UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesValue,
+  )
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
@@ -655,11 +661,15 @@ data NewEpochState era = NewEpochState
   deriving (Generic)
 
 deriving stock instance
-  (TransValue Show era) =>
+  ( Era era,
+    TransValue Show era
+  ) =>
   Show (NewEpochState era)
 
 deriving stock instance
-  TransValue Eq era =>
+  ( Era era,
+    TransValue Eq era
+  ) =>
   Eq (NewEpochState era)
 
 instance (Era era) => NFData (NewEpochState era)
@@ -1027,7 +1037,8 @@ reapRewards dStateRewards withdrawals =
 
 stakeDistr ::
   forall era.
-  UsesValue era =>
+  ( UsesValue era
+  ) =>
   UTxO era ->
   DState (Crypto era) ->
   PState (Crypto era) ->
@@ -1240,8 +1251,18 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     ls = esLState es
     us = _utxoState ls
     UTxO utxo = _utxo us
-    (redeemers, nonredeemers) = Map.partition (\(TxOut a _) -> isBootstrapRedeemer a) utxo
+    (redeemers, nonredeemers) =
+      Map.partition
+        ( \(TxOut a _) ->
+            isBootstrapRedeemer a
+        )
+        utxo
     acnt = esAccountState es
-    acnt' = acnt {_reserves = (_reserves acnt) <+> (Val.coin . balance $ UTxO redeemers)}
+    acnt' =
+      acnt
+        { _reserves =
+            (_reserves acnt)
+              <+> (Val.coin . balance $ UTxO redeemers)
+        }
     us' = us {_utxo = UTxO nonredeemers}
     ls' = ls {_utxoState = us'}

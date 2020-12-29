@@ -27,11 +27,11 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Constraints (TransValue, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Constraints (TransValue, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
@@ -206,7 +206,10 @@ instance
         <> encodeFoldable outs
 
 instance
-  (TransValue FromCBOR era, Val.DecodeNonNegative (Core.Value era), Show (Core.Value era)) =>
+  ( TransValue FromCBOR era,
+    Val.DecodeNonNegative (Core.Value era),
+    Show (Core.Value era)
+  ) =>
   FromCBOR (UtxoPredicateFailure era)
   where
   fromCBOR =
@@ -252,7 +255,9 @@ instance
         k -> invalidKey k
 
 instance
-  (CryptoClass.Crypto c, Core.TxBody (ShelleyEra c) ~ TxBody (ShelleyEra c)) =>
+  ( CryptoClass.Crypto c,
+    Core.TxBody (ShelleyEra c) ~ TxBody (ShelleyEra c)
+  ) =>
   STS (UTXO (ShelleyEra c))
   where
   type State (UTXO (ShelleyEra c)) = UTxOState (ShelleyEra c)

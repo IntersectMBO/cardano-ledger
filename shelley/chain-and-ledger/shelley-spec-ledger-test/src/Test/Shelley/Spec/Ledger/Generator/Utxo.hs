@@ -23,6 +23,7 @@ import Cardano.Binary (serialize)
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData (hashAuxiliaryData))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.Constraints (TransValue, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
 import Control.SetAlgebra (forwards)
@@ -111,7 +112,6 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, Split (..))
 
-import Cardano.Ledger.Constraints(UsesValue,UsesScript,UsesTxBody,UsesAuxiliary,TransValue)
 -- =======================================================
 
 showBalance ::
