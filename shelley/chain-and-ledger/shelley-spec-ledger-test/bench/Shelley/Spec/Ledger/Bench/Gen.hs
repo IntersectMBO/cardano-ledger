@@ -79,6 +79,8 @@ genBlock ::
     ShelleyLedgerSTS era,
     GetLedgerView era,
     ValidateAuxiliaryData era,
+    Core.EraRule "LEDGERS" era ~ LEDGERS era,
+    QC.HasTrace (LEDGERS era) (GenEnv era),
     ApplyBlock era
   ) =>
   GenEnv era ->
@@ -98,6 +100,8 @@ genTriple ::
   ( EraGen era,
     Mock (Crypto era),
     ValidateAuxiliaryData era,
+    Core.EraRule "LEDGERS" era ~ LEDGERS era,
+    QC.HasTrace (LEDGERS era) (GenEnv era),
     ShelleyTest era
   ) =>
   Proxy era ->

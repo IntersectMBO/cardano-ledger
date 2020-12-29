@@ -52,7 +52,7 @@ class
     ChainData (NewEpochState era),
     SerialisableData (NewEpochState era),
     ChainData (BlockTransitionError era),
-    ChainData (STS.PredicateFailure (Core.EraRule "CHAIN" era)),
+    ChainData (STS.PredicateFailure (STS.CHAIN era)),
     STS (Core.EraRule "TICK" era),
     BaseM (Core.EraRule "TICK" era) ~ ShelleyBase,
     Environment (Core.EraRule "TICK" era) ~ (),

@@ -8,7 +8,6 @@ module Shelley.Spec.Ledger.STS.EraMapping () where
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Shelley.Spec.Ledger.STS.Bbody (BBODY)
-import Shelley.Spec.Ledger.STS.Chain (CHAIN)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS)
 import Shelley.Spec.Ledger.STS.Delpl (DELPL)
@@ -31,8 +30,6 @@ import Shelley.Spec.Ledger.STS.Utxo (UTXO)
 import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
 
 type instance Core.EraRule "BBODY" (ShelleyEra c) = BBODY (ShelleyEra c)
-
-type instance Core.EraRule "CHAIN" (ShelleyEra c) = CHAIN (ShelleyEra c)
 
 type instance Core.EraRule "DELEG" (ShelleyEra c) = DELEG (ShelleyEra c)
 

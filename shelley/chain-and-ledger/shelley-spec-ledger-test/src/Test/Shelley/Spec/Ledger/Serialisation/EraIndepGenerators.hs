@@ -115,16 +115,7 @@ import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS
 import Shelley.Spec.Ledger.Tx (ValidateScript, WitnessSetHKD (WitnessSet), hashScript)
-import Test.QuickCheck
-  ( Arbitrary,
-    arbitrary,
-    genericShrink,
-    listOf,
-    oneof,
-    resize,
-    shrink,
-    vectorOf,
-  )
+import Test.QuickCheck (Arbitrary, arbitrary, genericShrink, listOf, oneof, recursivelyShrink, resize, shrink, vectorOf)
 import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
@@ -688,11 +679,15 @@ instance Era era => Arbitrary (STS.PoolPredicateFailure era) where
   shrink = genericShrink
 
 instance
-  (Era era, Mock (Crypto era)) =>
+  ( Era era,
+    Mock (Crypto era),
+    Arbitrary (STS.PredicateFailure (Core.EraRule "POOL" era)),
+    Arbitrary (STS.PredicateFailure (Core.EraRule "DELEG" era))
+  ) =>
   Arbitrary (STS.DelplPredicateFailure era)
   where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
+  shrink = recursivelyShrink
 
 instance
   (Era era, Mock (Crypto era)) =>
@@ -702,15 +697,18 @@ instance
   shrink = genericShrink
 
 instance
-  (Era era, Mock (Crypto era)) =>
+  ( Era era,
+    Mock (Crypto era),
+    Arbitrary (STS.PredicateFailure (Core.EraRule "DELPL" era))
+  ) =>
   Arbitrary (STS.DelegsPredicateFailure era)
   where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
+  shrink = recursivelyShrink
 
 instance
   ( Era era,
-    Arbitrary (STS.PredicateFailure (LEDGER era))
+    Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   Arbitrary (STS.LedgersPredicateFailure era)
   where
@@ -719,8 +717,8 @@ instance
 
 instance
   ( Era era,
-    Arbitrary (STS.PredicateFailure (DELEGS era)),
-    Arbitrary (STS.PredicateFailure (UTXOW era))
+    Arbitrary (STS.PredicateFailure (Core.EraRule "DELEGS" era)),
+    Arbitrary (STS.PredicateFailure (Core.EraRule "UTXOW" era))
   ) =>
   Arbitrary (STS.LedgerPredicateFailure era)
   where
@@ -729,7 +727,7 @@ instance
 
 instance
   ( Era era,
-    Arbitrary (STS.PredicateFailure (UTXO era))
+    Arbitrary (STS.PredicateFailure (Core.EraRule "UTXO" era))
   ) =>
   Arbitrary (STS.UtxowPredicateFailure era)
   where
@@ -821,7 +819,7 @@ instance
 
 instance
   ( Era era,
-    Arbitrary (STS.PredicateFailure (LEDGER era))
+    Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGERS" era))
   ) =>
   Arbitrary (ApplyTxError era)
   where
