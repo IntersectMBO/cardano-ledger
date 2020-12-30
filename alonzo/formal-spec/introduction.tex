@@ -42,5 +42,5 @@ $\CostMod$, which is a protocol parameter.
 \subsection{Extended UTxO}
 
 The specification of the extended UTxO model follows the description in~\cite{plutus_eutxo}.
-All transaction outputs locked by non-native scripts must include the hash an additional ``data'' item, which the transaction needs to supply. This data could also have been stored directly in the UTxO, but this scheme has been chosen for space efficiency reasons. The data is passed to a script that validates that the output is spent correctly, and can be used to encode state.
+All transaction outputs locked by non-native scripts must include the hash of an additional ``data'' item, which the transaction needs to supply. This data could also have been stored directly in the UTxO, but this scheme has been chosen for space efficiency reasons. The data is passed to a script that validates that the output is spent correctly, and can be used to encode state.
 All transactions also need to supply a \emph{redeemer} for everything that is validated by a script, which is an additional piece of data passed to the script. The redeemer can be regarded as user-input for the scripts. Note that the same script can be used for multiple different purposes in the same transaction, so in general it does not suffice to include one redeemer per script.
