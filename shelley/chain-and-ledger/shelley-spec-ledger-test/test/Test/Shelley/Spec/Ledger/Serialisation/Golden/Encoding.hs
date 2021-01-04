@@ -29,6 +29,7 @@ import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
@@ -194,7 +195,6 @@ import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
-import Cardano.Ledger.Constraints(UsesTxBody,UsesScript,UsesAuxiliary)
 
 -- ============================================
 

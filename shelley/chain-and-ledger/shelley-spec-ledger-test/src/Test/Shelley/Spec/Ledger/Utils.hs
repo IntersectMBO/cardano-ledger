@@ -76,7 +76,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints
 import Cardano.Prelude (Coercible, asks)
 import Cardano.Slotting.EpochInfo
   ( epochInfoEpoch,
@@ -145,7 +145,6 @@ import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
   )
-import Cardano.Ledger.Constraints
 
 type ShelleyTest era =
   ( UsesTxBody era,

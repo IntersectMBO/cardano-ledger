@@ -18,7 +18,8 @@ import Cardano.Ledger.Core
   )
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Torsor (Torsor (..))
-import Cardano.Ledger.Val (DecodeNonNegative, Val)
+import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
+import Data.Kind (Constraint, Type)
 import Shelley.Spec.Ledger.Hashing
   ( EraIndependentTxBody,
     HashAnnotated (..),
@@ -28,34 +29,66 @@ import Shelley.Spec.Ledger.Hashing
 -- Shelley Era
 --------------------------------------------------------------------------------
 
-type TxBodyConstraints era =
-  ( ChainData (TxBody era),
+type UsesTxBody era =
+  ( Era era,
+    ChainData (TxBody era),
     AnnotatedData (TxBody era),
     HashAnnotated (TxBody era) era,
     HashIndex (TxBody era) ~ EraIndependentTxBody
   )
 
+class
+  ( Era era,
+    Val (Value era),
+    Compactible (Value era),
+    ChainData (Value era),
+    ChainData (Delta (Value era)),
+    ChainData (CompactForm (Value era)),
+    SerialisableData (Value era),
+    SerialisableData (CompactForm (Value era)),
+    DecodeNonNegative (Value era),
+    EncodeMint (Value era),
+    DecodeMint (Value era),
+    Torsor (Value era)
+  ) =>
+  UsesValue era
+
+type UsesScript era =
+  ( Era era,
+    Eq (Script era),
+    Show (Script era),
+    AnnotatedData (Script era)
+  )
+
+type UsesAuxiliary era =
+  ( Era era,
+    Eq (AuxiliaryData era),
+    Show (AuxiliaryData era),
+    AnnotatedData (AuxiliaryData era)
+  )
+
+-- | Apply 'c' to all the types transitively involved with Value when
+-- (Core.Value era) is an instance of Compactible and Torsor
+type TransValue (c :: Type -> Constraint) era =
+  ( Era era,
+    Compactible (Value era),
+    Torsor (Value era),
+    c (Value era),
+    c (CompactForm (Value era)),
+    c (Delta (Value era))
+  )
+
 -- | General constraints that will hold true for ledgers which are based on
 -- Shelley, and share similar serialisation formats"
 type ShelleyBased era =
-  ( Era era,
-    -- Value constraints
-    Val (Value era),
-    Compactible (Value era),
-    DecodeNonNegative (Value era),
-    ChainData (Value era),
-    Eq (CompactForm (Value era)),
-    SerialisableData (Value era),
-    SerialisableData (CompactForm (Value era)),
-    ChainData (Delta (Value era)),
-    SerialisableData (Delta (Value era)),
-    Torsor (Value era),
+  ( -- Value constraints
+    UsesValue era,
     -- TxBody constraints
-    TxBodyConstraints era,
+    UsesTxBody era,
     -- Script constraints
-    ChainData (Script era),
-    AnnotatedData (Script era),
+    UsesScript era,
     -- AuxiliaryData constraints
-    ChainData (AuxiliaryData era),
-    AnnotatedData (AuxiliaryData era)
+    UsesAuxiliary era
   )
+
+{-# LANGUAGE Deprecated ShelleyBased "Use appropriate 'Uses' constraits (e.g. `UsesValue`) instead." #-}

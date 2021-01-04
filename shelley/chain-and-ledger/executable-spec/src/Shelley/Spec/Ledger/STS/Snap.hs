@@ -13,8 +13,8 @@ module Shelley.Spec.Ledger.STS.Snap
   )
 where
 
-import Cardano.Ledger.Constraints (UsesValue)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Control.State.Transition
   ( STS (..),
     TRC (..),

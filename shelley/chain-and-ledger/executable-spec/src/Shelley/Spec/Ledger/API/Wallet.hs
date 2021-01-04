@@ -21,9 +21,9 @@ module Shelley.Spec.Ledger.API.Wallet
 where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Constraints (UsesValue)
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
 import Control.Monad.Trans.Reader (runReader)

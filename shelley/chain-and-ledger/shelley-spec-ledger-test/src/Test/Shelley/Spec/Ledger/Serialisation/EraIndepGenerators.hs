@@ -40,12 +40,13 @@ import Cardano.Crypto.DSIGN.Class
   )
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.SetAlgebra (biMapFromList)
@@ -87,15 +88,15 @@ import Shelley.Spec.Ledger.LedgerState
   ( FutureGenDeleg,
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
-import Shelley.Spec.Ledger.Rewards
-  ( Likelihood (..),
-    LogWeight (..),
-    PerformanceEstimate (..),
-  )
 import Shelley.Spec.Ledger.RewardProvenance
   ( Desirability (..),
     RewardProvenance (..),
     RewardProvenancePool (..),
+  )
+import Shelley.Spec.Ledger.Rewards
+  ( Likelihood (..),
+    LogWeight (..),
+    PerformanceEstimate (..),
   )
 import qualified Shelley.Spec.Ledger.STS.Deleg as STS
 import qualified Shelley.Spec.Ledger.STS.Delegs as STS
@@ -132,6 +133,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass)
 import qualified Test.Shelley.Spec.Ledger.Generator.Update as Update
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
@@ -139,8 +141,6 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   )
 import Test.Tasty.QuickCheck (Gen, choose, elements)
 
-import Cardano.Ledger.Constraints(UsesValue,UsesScript,UsesTxBody,UsesAuxiliary)
-import Test.Shelley.Spec.Ledger.Generator.ScriptClass(ScriptClass)
 -- =======================================================
 
 genHash :: forall a h. HashAlgorithm h => Gen (Hash.Hash h a)
@@ -798,8 +798,8 @@ instance
   arbitrary = ApplyTxError <$> arbitrary
   shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
 
-instance Arbitrary Desirability
-  where arbitrary = Desirability <$> arbitrary <*> arbitrary
+instance Arbitrary Desirability where
+  arbitrary = Desirability <$> arbitrary <*> arbitrary
 
 instance
   Mock crypto =>

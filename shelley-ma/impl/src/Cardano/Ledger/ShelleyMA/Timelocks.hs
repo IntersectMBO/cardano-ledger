@@ -42,10 +42,10 @@ import Cardano.Binary
     serialize',
   )
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Constraints (UsesScript, UsesTxBody)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesTxBody)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Control.DeepSeq (NFData (..))

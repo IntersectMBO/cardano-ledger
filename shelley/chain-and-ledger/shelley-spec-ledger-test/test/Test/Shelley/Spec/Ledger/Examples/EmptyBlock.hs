@@ -10,6 +10,7 @@ module Test.Shelley.Spec.Ledger.Examples.EmptyBlock
 where
 
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Nonce)
@@ -41,7 +42,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     zero,
   )
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
-import Cardano.Ledger.Constraints(UsesTxBody,UsesScript,UsesAuxiliary)
+
 -- =============================================================
 
 initStEx1 :: forall era. ShelleyTest era => ChainState era

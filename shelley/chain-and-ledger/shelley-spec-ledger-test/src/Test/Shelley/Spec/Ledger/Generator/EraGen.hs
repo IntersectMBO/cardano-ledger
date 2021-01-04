@@ -17,6 +17,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (HASH)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Cardano.Slotting.Slot (SlotNo)
 import Data.Coerce (coerce)
 import Data.Sequence.Strict (StrictSeq)
@@ -46,8 +47,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.Presets (someKeyPairs)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, someScripts)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
-
-import Cardano.Ledger.Constraints(UsesValue,UsesScript)
 
 {------------------------------------------------------------------------------
  An EraGen instance makes it possible to run the Shelley property tests

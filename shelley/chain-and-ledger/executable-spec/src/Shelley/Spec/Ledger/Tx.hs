@@ -74,10 +74,10 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
-import Cardano.Ledger.Constraints (UsesTxBody)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Constraint (Constraint)
 import Data.Foldable (fold)

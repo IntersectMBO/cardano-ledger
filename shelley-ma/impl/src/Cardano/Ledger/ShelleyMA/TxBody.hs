@@ -38,10 +38,10 @@ where
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible (CompactForm (..), Compactible (..))
-import Cardano.Ledger.Constraints (TransValue)
 import Cardano.Ledger.Core (Script, Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),

@@ -18,8 +18,8 @@ module Shelley.Spec.Ledger.STS.Epoch
   )
 where
 
-import Cardano.Ledger.Constraints (UsesValue)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
@@ -72,7 +72,7 @@ deriving stock instance
   (Show (PredicateFailure (SNAP era))) =>
   Show (EpochPredicateFailure era)
 
-instance UsesValue era => STS (EPOCH era) where
+instance (Era era, UsesValue era) => STS (EPOCH era) where
   type State (EPOCH era) = EpochState era
   type Signal (EPOCH era) = EpochNo
   type Environment (EPOCH era) = ()
@@ -121,7 +121,8 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
 
 epochTransition ::
   forall era.
-  UsesValue era =>
+  ( UsesValue era
+  ) =>
   TransitionRule (EPOCH era)
 epochTransition = do
   TRC

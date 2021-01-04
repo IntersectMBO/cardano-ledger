@@ -13,12 +13,11 @@ import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
     ValidateAuxiliaryData (..),
   )
-import Cardano.Ledger.Constraints (UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value)
-import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesValue)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData, pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
@@ -87,8 +86,7 @@ type instance
 
 instance
   ( CryptoClass.Crypto c,
-    Typeable ma,
-    TxBodyConstraints (ShelleyMAEra ma c),
+    UsesTxBody (ShelleyMAEra ma c),
     Core.AnnotatedData (Core.AuxiliaryData (ShelleyMAEra ma c)),
     (HasField "vldt" (Core.TxBody (ShelleyMAEra ma c)) ValidityInterval)
   ) =>

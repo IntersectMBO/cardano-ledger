@@ -45,6 +45,7 @@ where
 
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesValue)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
@@ -101,10 +102,8 @@ import Shelley.Spec.Ledger.Tx (TxIn, TxOut)
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
-import Cardano.Ledger.Constraints(UsesTxBody,UsesValue)
 
 -- ======================================================
-
 
 -- | = Evolve Nonces - Frozen
 --

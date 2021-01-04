@@ -16,16 +16,16 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.Constraints
+import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
     UsesScript,
     UsesTxBody,
     UsesValue,
   )
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.ShelleyMA (MAValue, MaryOrAllegra, ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
@@ -274,7 +274,6 @@ instance
     Typeable ma,
     UsesValue (ShelleyMAEra ma c),
     Show (Delta (MAValue ma c)),
-    Val.DecodeMint (MAValue ma c),
     Core.TxBody (ShelleyMAEra ma c) ~ TxBody (ShelleyMAEra ma c)
   ) =>
   STS (UTXO (ShelleyMAEra ma c))

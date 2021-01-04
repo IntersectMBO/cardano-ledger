@@ -47,10 +47,10 @@ module Shelley.Spec.Ledger.UTxO
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Constraints (UsesTxBody, UsesValue)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesValue)
 import Cardano.Ledger.Val (DecodeNonNegative, (<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
@@ -240,7 +240,8 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 
 -- | Determine the total balance contained in the UTxO.
 balance ::
-  UsesValue era =>
+  ( UsesValue era
+  ) =>
   UTxO era ->
   Core.Value era
 balance (UTxO utxo) = Map.foldl' addTxOuts mempty utxo
@@ -332,7 +333,8 @@ scriptsNeeded u tx =
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript ::
-  UsesValue era =>
+  ( UsesValue era
+  ) =>
   Set (TxIn (Crypto era)) ->
   UTxO era ->
   Set (TxIn (Crypto era))

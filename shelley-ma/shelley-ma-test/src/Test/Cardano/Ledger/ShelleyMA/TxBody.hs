@@ -28,6 +28,7 @@ import Cardano.Ledger.Mary.Value
     PolicyID (..),
     Value (..),
   )
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody
   ( TxBodyRaw (..),
@@ -70,7 +71,6 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-import Cardano.Ledger.Constraints (UsesValue,UsesScript,UsesAuxiliary)
 
 -- ============================================================================================
 -- make an example

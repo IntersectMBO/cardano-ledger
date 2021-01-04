@@ -12,6 +12,7 @@ where
 
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Control.State.Transition.Extended
 import Data.Either (fromRight)
 import Data.Proxy
@@ -45,7 +46,7 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest)
-import Cardano.Ledger.Constraints (UsesValue)
+
 -- ===============================================================
 
 -- | Generate a genesis chain state given a UTxO size

@@ -2,7 +2,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -23,7 +25,7 @@ import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased, UsesScript)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -43,9 +45,10 @@ instance Arbitrary ExUnits where
   arbitrary = ExUnits <$> arbitrary <*> arbitrary
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     Mock (Crypto era),
-    Arbitrary (Core.Script era)
+    Arbitrary (Core.Script era),
+    UsesScript era
   ) =>
   Arbitrary (TxWitness era)
   where
@@ -88,6 +91,7 @@ instance
       <*> arbitrary
 
 instance
+  forall c.
   (Mock c) =>
   Arbitrary (TxBody (AlonzoEra c))
   where
@@ -101,7 +105,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> genMintValues
+      <*> genMintValues @c
       <*> arbitrary
       <*> arbitrary
 
