@@ -21,14 +21,12 @@
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 
 import Cardano.Binary (Annotator (..), FromCBOR, ToCBOR)
-import Cardano.Ledger.Core (SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
-import Control.State.Transition
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Proxy (Proxy (Proxy))
 import Data.Typeable (typeRep)
-import Shelley.Spec.Ledger.API (ApplyTxError, UTXOW)
+import Shelley.Spec.Ledger.API (ApplyTx, ApplyTxError)
 import Test.Cardano.Ledger.EraBuffet
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
   ( roundTrip,
@@ -85,14 +83,12 @@ property x =
 allprops ::
   forall e.
   ( ShelleyBased e,
+    ApplyTx e,
     Arbitrary (Core.TxBody e),
     Arbitrary (Core.AuxiliaryData e),
     Arbitrary (Core.Value e),
     Arbitrary (Core.Script e),
-    Arbitrary (ApplyTxError e),
-    SerialisableData (ApplyTxError e),
-    Eq (PredicateFailure (UTXOW e)),
-    Show (PredicateFailure (UTXOW e))
+    Arbitrary (ApplyTxError e)
   ) =>
   TestTree
 allprops =

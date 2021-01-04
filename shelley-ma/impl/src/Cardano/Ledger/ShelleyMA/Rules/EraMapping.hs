@@ -22,8 +22,6 @@ import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
 
 type instance Core.EraRule "BBODY" (ShelleyMAEra ma c) = Shelley.BBODY (ShelleyMAEra ma c)
 
-type instance Core.EraRule "CHAIN" (ShelleyMAEra ma c) = Shelley.CHAIN (ShelleyMAEra ma c)
-
 type instance Core.EraRule "DELEG" (ShelleyMAEra ma c) = Shelley.DELEG (ShelleyMAEra ma c)
 
 type instance Core.EraRule "DELEGS" (ShelleyMAEra ma c) = Shelley.DELEGS (ShelleyMAEra ma c)
