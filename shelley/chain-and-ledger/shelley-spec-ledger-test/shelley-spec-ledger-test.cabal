@@ -237,6 +237,7 @@ benchmark mainbench
     shelley-spec-ledger-test,
     shelley-spec-ledger,
     small-steps,
+    small-steps-test,
     transformers
   ghc-options:
       -threaded
