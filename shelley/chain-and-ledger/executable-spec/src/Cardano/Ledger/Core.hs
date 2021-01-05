@@ -15,6 +15,7 @@
 -- > import qualified Cardano.Ledger.Core as Core
 module Cardano.Ledger.Core
   ( -- * Era-changing types
+    TxOut,
     TxBody,
     Value,
     Script,
@@ -31,6 +32,9 @@ import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import NoThunks.Class (NoThunks)
+
+-- | A transaction output.
+type family TxOut era :: Type
 
 -- | A value is something which quantifies a transaction output.
 type family Value era :: Type

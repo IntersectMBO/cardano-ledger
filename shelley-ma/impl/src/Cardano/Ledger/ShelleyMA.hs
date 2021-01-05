@@ -17,7 +17,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value)
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut (..), UsesValue)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData, pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
@@ -33,7 +33,8 @@ import GHC.Records (HasField)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import Shelley.Spec.Ledger.Tx
-  ( ValidateScript (..),
+  ( TxOut (..),
+    ValidateScript (..),
   )
 
 -- | The Shelley Mary/Allegra eras
@@ -62,11 +63,21 @@ instance CryptoClass.Crypto c => UsesValue (ShelleyMAEra 'Mary c)
 
 instance CryptoClass.Crypto c => UsesValue (ShelleyMAEra 'Allegra c)
 
+instance CryptoClass.Crypto c => UsesTxOut (ShelleyMAEra 'Mary c) where
+  makeTxOut _ a v = TxOut a v
+
+instance CryptoClass.Crypto c => UsesTxOut (ShelleyMAEra 'Allegra c) where
+  makeTxOut _ a v = TxOut a v
+
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
 
 type instance Core.Value (ShelleyMAEra m c) = MAValue m c
+
+type instance
+  Core.TxOut (ShelleyMAEra (ma :: MaryOrAllegra) c) =
+    TxOut (ShelleyMAEra ma c)
 
 type instance
   Core.TxBody (ShelleyMAEra (ma :: MaryOrAllegra) c) =

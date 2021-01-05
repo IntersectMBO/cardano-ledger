@@ -17,7 +17,6 @@ module Shelley.Spec.Ledger.STS.PoolReap
 where
 
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Control.State.Transition
@@ -39,6 +38,7 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DState (..),
     PState (..),
+    TransUTxOState,
     UTxOState (..),
     emptyAccount,
     emptyDState,
@@ -61,7 +61,7 @@ data PoolreapState era = PoolreapState
   }
 
 deriving stock instance
-  (TransValue Show era) =>
+  (TransUTxOState Show era) =>
   Show (PoolreapState era)
 
 data PoolreapPredicateFailure era -- No predicate Falures

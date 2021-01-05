@@ -32,7 +32,7 @@ where
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (TransValue, UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
@@ -98,6 +98,7 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
     PState (..),
+    TransUTxOState,
     UTxOState (..),
     emptyDState,
     emptyPPUPState,
@@ -140,14 +141,14 @@ data ChainState era = ChainState
   deriving (Generic)
 
 deriving stock instance
-  TransValue Show era =>
+  TransUTxOState Show era =>
   Show (ChainState era)
 
 deriving stock instance
-  TransValue Eq era =>
+  TransUTxOState Eq era =>
   Eq (ChainState era)
 
-instance (Era era) => NFData (ChainState era)
+instance (Era era, TransUTxOState NFData era) => NFData (ChainState era)
 
 data ChainPredicateFailure era
   = HeaderSizeTooLargeCHAIN
@@ -422,7 +423,7 @@ data AdaPots = AdaPots
 
 -- | Calculate the total ada pots in the epoch state
 totalAdaPotsES ::
-  UsesValue era =>
+  (UsesTxOut era, UsesValue era) =>
   EpochState era ->
   AdaPots
 totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
@@ -442,13 +443,13 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
 
 -- | Calculate the total ada pots in the chain state
 totalAdaPots ::
-  UsesValue era =>
+  (UsesValue era, UsesTxOut era) =>
   ChainState era ->
   AdaPots
 totalAdaPots = totalAdaPotsES . nesEs . chainNes
 
 -- | Calculate the total ada in the epoch state
-totalAdaES :: UsesValue era => EpochState era -> Coin
+totalAdaES :: (UsesTxOut era, UsesValue era) => EpochState era -> Coin
 totalAdaES cs =
   treasuryAdaPot
     <> reservesAdaPot
@@ -467,5 +468,5 @@ totalAdaES cs =
       } = totalAdaPotsES cs
 
 -- | Calculate the total ada in the chain state
-totalAda :: UsesValue era => ChainState era -> Coin
+totalAda :: (UsesTxOut era, UsesValue era) => ChainState era -> Coin
 totalAda = totalAdaES . nesEs . chainNes

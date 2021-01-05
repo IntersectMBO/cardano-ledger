@@ -23,7 +23,7 @@ module Shelley.Spec.Ledger.STS.Tick
 where
 
 import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.Shelley.Constraints (UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
@@ -60,7 +60,8 @@ deriving stock instance Eq (TickPredicateFailure era)
 instance NoThunks (TickPredicateFailure era)
 
 instance
-  ( UsesValue era
+  ( UsesTxOut era,
+    UsesValue era
   ) =>
   STS (TICK era)
   where
@@ -130,7 +131,8 @@ validatingTickTransition nes slot = do
 
 bheadTransition ::
   forall era.
-  ( UsesValue era
+  ( UsesTxOut era,
+    UsesValue era
   ) =>
   TransitionRule (TICK era)
 bheadTransition = do
@@ -145,7 +147,7 @@ bheadTransition = do
   pure nes''
 
 instance
-  UsesValue era =>
+  (UsesTxOut era, UsesValue era) =>
   Embed (NEWEPOCH era) (TICK era)
   where
   wrapFailed = NewEpochFailure
@@ -172,7 +174,7 @@ data TickfPredicateFailure era
 instance NoThunks (TickfPredicateFailure era)
 
 instance
-  UsesValue era =>
+  (UsesTxOut era, UsesValue era) =>
   STS (TICKF era)
   where
   type
@@ -193,7 +195,7 @@ instance
     ]
 
 instance
-  UsesValue era =>
+  (UsesTxOut era, UsesValue era) =>
   Embed (NEWEPOCH era) (TICKF era)
   where
   wrapFailed = TickfNewEpochFailure

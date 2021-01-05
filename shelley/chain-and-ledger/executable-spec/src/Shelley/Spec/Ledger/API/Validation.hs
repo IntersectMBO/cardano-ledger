@@ -22,7 +22,7 @@ where
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -65,7 +65,7 @@ class
     SlotNo ->
     NewEpochState era
   default applyTick ::
-    (UsesValue era) =>
+    (UsesTxOut era, UsesValue era) =>
     Globals ->
     NewEpochState era ->
     SlotNo ->

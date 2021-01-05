@@ -11,6 +11,7 @@
 module Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen (genCoin) where
 
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -79,7 +80,7 @@ instance CC.Crypto c => ScriptClass (ShelleyEra c) where
  -----------------------------------------------------------------------------}
 
 genTxBody ::
-  (ShelleyBased era) =>
+  (ShelleyBased era, Core.TxOut era ~ TxOut era) =>
   SlotNo ->
   Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->

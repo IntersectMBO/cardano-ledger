@@ -17,7 +17,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (HASH)
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesTxOut)
 import Cardano.Slotting.Slot (SlotNo)
 import Data.Coerce (coerce)
 import Data.Sequence.Strict (StrictSeq)
@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.Tx
   ( TxId (TxId),
     ValidateScript (..),
   )
-import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut, Wdrl)
+import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
@@ -68,7 +68,7 @@ class
     GenEnv era ->
     SlotNo ->
     Set (TxIn (Crypto era)) ->
-    StrictSeq (TxOut era) ->
+    StrictSeq (Core.TxOut era) ->
     StrictSeq (DCert (Crypto era)) ->
     Wdrl (Crypto era) ->
     Coin ->
@@ -84,7 +84,7 @@ class
     Core.TxBody era ->
     Coin ->
     Set (TxIn (Crypto era)) ->
-    StrictSeq (TxOut era) ->
+    StrictSeq (Core.TxOut era) ->
     Core.TxBody era
 
 {------------------------------------------------------------------------------
@@ -93,14 +93,14 @@ class
 
 genUtxo0 ::
   forall era.
-  (EraGen era, UsesValue era) =>
+  (EraGen era, UsesTxOut era) =>
   GenEnv era ->
   Gen (UTxO era)
 genUtxo0 ge@(GenEnv _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts @era c minGenesisUTxOouts maxGenesisUTxOouts
   outs <-
-    genTxOut
+    (genTxOut @era)
       (genGenesisValue @era ge)
       (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr' Testnet) genesisScripts)
   return (genesisCoins genesisId outs)

@@ -30,7 +30,13 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesTxOut,
+    UsesValue,
+  )
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -68,7 +74,7 @@ import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..))
-import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody)
+import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody, TransTxId)
 
 data LEDGER era
 
@@ -140,7 +146,9 @@ instance
   ( UsesValue era,
     UsesScript era,
     UsesTxBody era,
+    UsesTxOut era,
     UsesAuxiliary era,
+    TransTxId Show era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
     Embed (DELEGS era) (LEDGER era),

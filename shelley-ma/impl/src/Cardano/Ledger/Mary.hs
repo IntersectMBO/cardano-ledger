@@ -8,7 +8,13 @@ module Cardano.Ledger.Mary where
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
-import Shelley.Spec.Ledger.API (ApplyBlock, ApplyTx, GetLedgerView, PraosCrypto, ShelleyBasedEra)
+import Shelley.Spec.Ledger.API
+  ( ApplyBlock,
+    ApplyTx,
+    GetLedgerView,
+    PraosCrypto,
+    ShelleyBasedEra,
+  )
 
 type MaryEra = ShelleyMAEra 'Mary
 
