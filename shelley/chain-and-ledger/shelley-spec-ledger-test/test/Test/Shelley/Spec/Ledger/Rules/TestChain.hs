@@ -22,14 +22,14 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
 where
 
 import Cardano.Binary (ToCBOR)
-import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
-import qualified Cardano.Ledger.Core as Core (TxBody, TxOut)
+import qualified Cardano.Ledger.Core as Core (EraRule, TxBody, TxOut)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue, TransValue)
+import Cardano.Ledger.Shelley.Constraints (TransValue, UsesTxOut, UsesValue)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Prelude (HasField (..))
 import Control.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
+import Control.State.Transition
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
     Trace (..),
@@ -39,9 +39,11 @@ import Control.State.Transition.Trace
   )
 import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Foldable (fold, foldl', toList)
 import qualified Data.Map.Strict as Map (isSubmapOf)
 import Data.Proxy
+import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set (fromList, intersection, isSubsetOf, map, null)
@@ -50,8 +52,10 @@ import Shelley.Spec.Ledger.API
   ( ApplyBlock,
     CHAIN,
     DELEG,
+    DelegsEnv,
     GetLedgerView,
     LEDGER,
+    UtxoEnv,
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (..),
@@ -73,6 +77,7 @@ import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.Generator.Block (tickChainState)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombinations)
@@ -120,11 +125,18 @@ collisionFreeComplete ::
     UsesTxOut era,
     TransValue ToCBOR era,
     ChainProperty era,
-    ValidateAuxiliaryData era,
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   Property
 collisionFreeComplete =
@@ -147,7 +159,15 @@ adaPreservationChain ::
     UsesTxOut era,
     TransValue ToCBOR era,
     ChainProperty era,
-    ValidateAuxiliaryData era,
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -274,6 +294,14 @@ potsSumIncreaseWdrlsPerTx ::
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
@@ -300,8 +328,15 @@ potsSumIncreaseByRewardsPerTx ::
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -332,6 +367,14 @@ potsRewardsDecreaseByWdrlsPerTx ::
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
@@ -371,6 +414,14 @@ preserveBalance ::
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
@@ -410,6 +461,14 @@ preserveBalanceRestricted ::
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
@@ -445,9 +504,16 @@ preserveOutputsTx ::
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -468,9 +534,16 @@ eliminateTxInputs ::
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -490,9 +563,16 @@ newEntriesAndUniqueTxIns ::
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -524,8 +604,15 @@ requiredMSigSignaturesSubset ::
     UsesTxOut era,
     TransValue ToCBOR era,
     ChainProperty era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -636,13 +723,9 @@ poolProperties ::
   forall era.
   ( EraGen era,
     UsesTxOut era,
-    TransValue ToCBOR era,
     ChainProperty era,
-    ValidateAuxiliaryData era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   Property
 poolProperties =
@@ -709,13 +792,9 @@ delegProperties ::
   forall era.
   ( EraGen era,
     UsesTxOut era,
-    TransValue ToCBOR era,
+    QC.HasTrace (CHAIN era) (GenEnv era),
     ChainProperty era,
-    ValidateAuxiliaryData era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   Property
 delegProperties =
@@ -748,8 +827,15 @@ ledgerTraceFromBlock ::
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   ChainState era ->
   Block era ->
@@ -882,12 +968,7 @@ removedAfterPoolreap ::
   ( ChainProperty era,
     EraGen era,
     UsesTxOut era,
-    TransValue ToCBOR era,
-    ValidateAuxiliaryData era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
   Property
 removedAfterPoolreap =
@@ -912,13 +993,8 @@ forAllChainTrace ::
   ( Testable prop,
     EraGen era,
     UsesTxOut era,
-    TransValue ToCBOR era,
     ChainProperty era,
-    ValidateAuxiliaryData era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
   Word64 -> -- trace length
   (Trace (CHAIN era) -> prop) ->

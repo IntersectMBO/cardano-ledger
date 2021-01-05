@@ -114,7 +114,7 @@ data DelegPredicateFailure era
       !Coin -- size of the pot from which the lovelace is drawn
   | MIRCertificateTooLateinEpochDELEG
       !SlotNo -- current slot
-      !SlotNo -- MIR must be submitted before this slot
+      !SlotNo -- Core.EraRule "MIR" must be submitted before this slot
   | DuplicateGenesisVRFDELEG
       !(Hash (Crypto era) (VerKeyVRF (Crypto era))) --VRF KeyHash which is already delegated to
   deriving (Show, Eq, Generic)

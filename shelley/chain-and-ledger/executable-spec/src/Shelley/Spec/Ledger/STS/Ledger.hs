@@ -66,11 +66,11 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState (..),
   )
 import Shelley.Spec.Ledger.PParams (PParams)
-import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..))
+import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..), DelegsPredicateFailure)
 import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
   )
-import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
+import Shelley.Spec.Ledger.STS.Utxow (UTXOW, UtxowPredicateFailure)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..))
@@ -87,34 +87,34 @@ data LedgerEnv era = LedgerEnv
   deriving (Show)
 
 data LedgerPredicateFailure era
-  = UtxowFailure (PredicateFailure (UTXOW era)) -- Subtransition Failures
-  | DelegsFailure (PredicateFailure (DELEGS era)) -- Subtransition Failures
+  = UtxowFailure (PredicateFailure (Core.EraRule "UTXOW" era)) -- Subtransition Failures
+  | DelegsFailure (PredicateFailure (Core.EraRule "DELEGS" era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
-  ( Show (PredicateFailure (DELEGS era)),
-    Show (PredicateFailure (UTXOW era)),
+  ( Show (PredicateFailure (Core.EraRule "DELEGS" era)),
+    Show (PredicateFailure (Core.EraRule "UTXOW" era)),
     Era era
   ) =>
   Show (LedgerPredicateFailure era)
 
 deriving stock instance
-  ( Eq (PredicateFailure (DELEGS era)),
-    Eq (PredicateFailure (UTXOW era)),
+  ( Eq (PredicateFailure (Core.EraRule "DELEGS" era)),
+    Eq (PredicateFailure (Core.EraRule "UTXOW" era)),
     Era era
   ) =>
   Eq (LedgerPredicateFailure era)
 
 instance
-  ( NoThunks (PredicateFailure (DELEGS era)),
-    NoThunks (PredicateFailure (UTXOW era)),
+  ( NoThunks (PredicateFailure (Core.EraRule "DELEGS" era)),
+    NoThunks (PredicateFailure (Core.EraRule "UTXOW" era)),
     Era era
   ) =>
   NoThunks (LedgerPredicateFailure era)
 
 instance
-  ( ToCBOR (PredicateFailure (DELEGS era)),
-    ToCBOR (PredicateFailure (UTXOW era)),
+  ( ToCBOR (PredicateFailure (Core.EraRule "DELEGS" era)),
+    ToCBOR (PredicateFailure (Core.EraRule "UTXOW" era)),
     Era era
   ) =>
   ToCBOR (LedgerPredicateFailure era)
@@ -124,8 +124,8 @@ instance
     (DelegsFailure a) -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR a
 
 instance
-  ( FromCBOR (PredicateFailure (DELEGS era)),
-    FromCBOR (PredicateFailure (UTXOW era)),
+  ( FromCBOR (PredicateFailure (Core.EraRule "DELEGS" era)),
+    FromCBOR (PredicateFailure (Core.EraRule "UTXOW" era)),
     Era era
   ) =>
   FromCBOR (LedgerPredicateFailure era)
@@ -151,14 +151,14 @@ instance
     TransTxId Show era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
-    Embed (DELEGS era) (LEDGER era),
-    Embed (UTXOW era) (LEDGER era),
-    Environment (UTXOW era) ~ UtxoEnv era,
-    State (UTXOW era) ~ UTxOState era,
-    Signal (UTXOW era) ~ Tx era,
-    Environment (DELEGS era) ~ DelegsEnv era,
-    State (DELEGS era) ~ DPState (Crypto era),
-    Signal (DELEGS era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   STS (LEDGER era)
@@ -196,11 +196,14 @@ ledgerTransition ::
   ( UsesScript era,
     UsesTxBody era,
     UsesAuxiliary era,
-    Embed (DELEGS era) (LEDGER era),
-    Embed (UTXOW era) (LEDGER era),
-    Environment (UTXOW era) ~ UtxoEnv era,
-    State (UTXOW era) ~ UTxOState era,
-    Signal (UTXOW era) ~ Tx era,
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   TransitionRule (LEDGER era)
@@ -208,7 +211,7 @@ ledgerTransition = do
   TRC (LedgerEnv slot txIx pp account, (utxoSt, dpstate), tx) <- judgmentContext
 
   dpstate' <-
-    trans @(DELEGS era) $
+    trans @(Core.EraRule "DELEGS" era) $
       TRC
         ( DelegsEnv slot txIx pp tx account,
           dpstate,
@@ -220,7 +223,7 @@ ledgerTransition = do
       stpools = _pParams pstate
 
   utxoSt' <-
-    trans @(UTXOW era) $
+    trans @(Core.EraRule "UTXOW" era) $
       TRC
         ( UtxoEnv slot pp stpools genDelegs,
           utxoSt,
@@ -230,7 +233,8 @@ ledgerTransition = do
 
 instance
   ( Era era,
-    STS (DELEGS era)
+    STS (DELEGS era),
+    PredicateFailure (Core.EraRule "DELEGS" era) ~ DelegsPredicateFailure era
   ) =>
   Embed (DELEGS era) (LEDGER era)
   where
@@ -239,7 +243,7 @@ instance
 instance
   ( Era era,
     STS (UTXOW era),
-    BaseM (UTXOW era) ~ ShelleyBase
+    PredicateFailure (Core.EraRule "UTXOW" era) ~ UtxowPredicateFailure era
   ) =>
   Embed (UTXOW era) (LEDGER era)
   where

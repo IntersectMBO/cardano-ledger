@@ -15,19 +15,24 @@ module Test.Shelley.Spec.Ledger.PropertyTests
 where
 
 import Cardano.Binary (ToCBOR)
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (TransValue, UsesTxOut)
+import Control.State.Transition
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
+import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (..))
+import Shelley.Spec.Ledger.API (CHAIN, DPState, DelegsEnv, Tx, UTxOState, UtxoEnv)
 import Shelley.Spec.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update (..))
+import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
 import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
@@ -39,6 +44,7 @@ import Test.Shelley.Spec.Ledger.Address.CompactAddr
     propDecompactShelleyLazyAddr,
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
@@ -60,10 +66,18 @@ import qualified Test.Tasty.QuickCheck as TQC
 minimalPropertyTests ::
   forall era.
   ( EraGen era,
-    ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
-    ValidateAuxiliaryData era,
+    ChainProperty era,
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
@@ -96,7 +110,16 @@ propertyTests ::
     UsesTxOut era,
     TransValue ToCBOR era,
     ChainProperty era,
-    ValidateAuxiliaryData era,
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    QC.HasTrace (LEDGER era) (GenEnv era),
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
@@ -111,7 +134,10 @@ propertyTests =
     "Property-Based Testing"
     [ testGroup
         "Classify Traces"
-        [TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @era)],
+        [ TQC.testProperty
+            "Chain and Ledger traces cover the relevant cases"
+            (relevantCasesAreCovered @era)
+        ],
       testGroup
         "STS Rules - Delegation Properties"
         [ TQC.testProperty

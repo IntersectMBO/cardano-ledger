@@ -6,9 +6,15 @@
 module Cardano.Ledger.Allegra where
 
 import Cardano.Ledger.ShelleyMA
-import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
+import Cardano.Ledger.ShelleyMA.Rules.EraMapping ()
 import Cardano.Ledger.ShelleyMA.TxBody ()
-import Shelley.Spec.Ledger.API (ApplyBlock, ApplyTx, GetLedgerView, PraosCrypto, ShelleyBasedEra)
+import Shelley.Spec.Ledger.API
+  ( ApplyBlock,
+    ApplyTx,
+    GetLedgerView,
+    PraosCrypto,
+    ShelleyBasedEra,
+  )
 
 type AllegraEra = ShelleyMAEra 'Allegra
 

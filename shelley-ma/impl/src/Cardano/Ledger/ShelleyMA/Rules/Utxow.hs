@@ -11,24 +11,16 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
-import Cardano.Ledger.Compactible (Compactible (CompactForm))
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
+import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesScript,
-    UsesTxBody,
-    UsesTxOut,
-    UsesValue,
-  )
-import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesTxOut, UsesValue)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
-import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
+import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
 import Cardano.Ledger.ShelleyMA.TxBody ()
-import Cardano.Ledger.Torsor (Torsor (..))
-import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative)
+import Cardano.Ledger.Torsor (Torsor (Delta))
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
 import Data.Foldable (Foldable (toList))
@@ -37,22 +29,21 @@ import qualified Data.Maybe as Maybe
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Delegation.Certificates (requiresVKeyWitness)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState (UTxOState)
-import Shelley.Spec.Ledger.STS.Utxo
+import Shelley.Spec.Ledger.PParams (Update)
+import qualified Shelley.Spec.Ledger.STS.Ledger as Shelley
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.STS.Utxow
-  ( UTXOW,
-    UtxowPredicateFailure (..),
-    initialLedgerStateUTXOW,
+  ( UtxowPredicateFailure (..),
     utxoWitnessed,
   )
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx (Tx (_body))
+import Shelley.Spec.Ledger.Tx (Tx (_body), ValidateScript)
 import Shelley.Spec.Ledger.TxBody
   ( DCert,
     EraIndependentTxBody,
@@ -112,7 +103,7 @@ scriptsNeeded u tx =
           scriptStakeCred
           (filter requiresVKeyWitness certificates)
       )
-    `Set.union` ((policyID `Set.map` (getPolicies $ getField @"mint" txb)))
+    `Set.union` (policyID `Set.map` (getPolicies $ getField @"mint" txb))
   where
     txb = _body tx
     withdrawals = unWdrl $ getField @"wdrls" txb
@@ -123,43 +114,63 @@ scriptsNeeded u tx =
 -- UTXOW STS
 --------------------------------------------------------------------------------
 
-instance
-  forall c (ma :: MaryOrAllegra).
-  ( CryptoClass.Crypto c,
-    UsesTxOut (ShelleyMAEra ma c),
-    UsesValue (ShelleyMAEra ma c),
-    Typeable ma,
-    STS (UTXO (ShelleyMAEra ma c)),
-    BaseM (UTXO (ShelleyMAEra ma c)) ~ ShelleyBase,
-    DecodeMint (Core.Value (ShelleyMAEra ma c)),
-    DecodeNonNegative (Core.Value (ShelleyMAEra ma c)),
-    GetPolicies (Core.Value (ShelleyMAEra ma c)) c,
-    Eq (CompactForm (Core.Value (ShelleyMAEra ma c))),
-    Core.ChainData (Core.Value (ShelleyMAEra ma c)),
-    Core.ChainData (Delta (Core.Value (ShelleyMAEra ma c))),
-    Core.SerialisableData (Core.Value (ShelleyMAEra ma c)),
-    Core.SerialisableData (Delta (Core.Value (ShelleyMAEra ma c))),
-    Core.SerialisableData (CompactForm (Core.Value (ShelleyMAEra ma c))),
-    Torsor (Core.Value (ShelleyMAEra ma c)),
-    DSignable c (Hash c EraIndependentTxBody)
-  ) =>
-  STS (UTXOW (ShelleyMAEra ma c))
-  where
-  type State (UTXOW (ShelleyMAEra ma c)) = UTxOState (ShelleyMAEra ma c)
-  type Signal (UTXOW (ShelleyMAEra ma c)) = Tx (ShelleyMAEra ma c)
-  type Environment (UTXOW (ShelleyMAEra ma c)) = UtxoEnv (ShelleyMAEra ma c)
-  type BaseM (UTXOW (ShelleyMAEra ma c)) = ShelleyBase
-  type
-    PredicateFailure (UTXOW (ShelleyMAEra ma c)) =
-      UtxowPredicateFailure (ShelleyMAEra ma c)
-  transitionRules = [utxoWitnessed scriptsNeeded]
-  initialRules = [initialLedgerStateUTXOW]
+data UTXOW era
 
 instance
-  ( CryptoClass.Crypto c,
-    STS (UTXO (ShelleyMAEra ma c)),
-    BaseM (UTXO (ShelleyMAEra ma c)) ~ ShelleyBase
+  forall era.
+  ( UsesValue era,
+    UsesTxBody era,
+    UsesTxOut era,
+    UsesAuxiliary era,
+    UsesScript era,
+    ChainData (Delta (Core.Value era)),
+    SerialisableData (Delta (Core.Value era)),
+    ValidateScript era,
+    ValidateAuxiliaryData era,
+    GetPolicies (Core.Value era) (Crypto era),
+    Embed (Core.EraRule "UTXO" era) (UTXOW era),
+    Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXO" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXO" era) ~ Tx era,
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField
+      "adHash"
+      (Core.TxBody era)
+      ( StrictMaybe
+          (AuxiliaryDataHash (Crypto era))
+      ),
+    HasField "mint" (Core.TxBody era) (Core.Value era),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
-  Embed (UTXO (ShelleyMAEra ma c)) (UTXOW (ShelleyMAEra ma c))
+  STS (UTXOW era)
+  where
+  type State (UTXOW era) = UTxOState era
+  type Signal (UTXOW era) = Tx era
+  type Environment (UTXOW era) = UtxoEnv era
+  type BaseM (UTXOW era) = ShelleyBase
+  type
+    PredicateFailure (UTXOW era) =
+      UtxowPredicateFailure era
+  transitionRules = [utxoWitnessed scriptsNeeded]
+  initialRules = []
+
+instance
+  ( Era era,
+    STS (UTXO era),
+    PredicateFailure (Core.EraRule "UTXO" era) ~ UtxoPredicateFailure era
+  ) =>
+  Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = UtxoFailure
+
+instance
+  ( Era era,
+    STS (UTXOW era),
+    PredicateFailure (Core.EraRule "UTXOW" era) ~ UtxowPredicateFailure era
+  ) =>
+  Embed (UTXOW era) (Shelley.LEDGER era)
+  where
+  wrapFailed = Shelley.UtxowFailure

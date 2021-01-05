@@ -66,6 +66,7 @@ library
     Shelley.Spec.Ledger.STS.Delegs
     Shelley.Spec.Ledger.STS.Delpl
     Shelley.Spec.Ledger.STS.Epoch
+    Shelley.Spec.Ledger.STS.EraMapping
     Shelley.Spec.Ledger.STS.Ledger
     Shelley.Spec.Ledger.STS.Ledgers
     Shelley.Spec.Ledger.STS.Mir

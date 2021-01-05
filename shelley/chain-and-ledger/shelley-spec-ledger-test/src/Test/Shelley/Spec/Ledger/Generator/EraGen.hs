@@ -56,7 +56,8 @@ class
   ( UsesScript era,
     ValidateScript era,
     Split (Core.Value era),
-    ScriptClass era
+    ScriptClass era,
+    Show (Core.Script era)
   ) =>
   EraGen era
   where

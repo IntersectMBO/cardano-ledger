@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -19,24 +20,29 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
-  ( PredicateFailure,
+  ( BaseM,
+    Environment,
+    PredicateFailure,
     STS,
+    Signal,
+    State,
     TRC (..),
     applySTS,
   )
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
-import Shelley.Spec.Ledger.BaseTypes (Globals)
+import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
-import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
+import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv, LedgersPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
@@ -48,7 +54,13 @@ class
     Eq (ApplyTxError era),
     Show (ApplyTxError era),
     Typeable (ApplyTxError era),
-    SerialisableData (ApplyTxError era)
+    SerialisableData (ApplyTxError era),
+    STS (Core.EraRule "LEDGERS" era),
+    BaseM (Core.EraRule "LEDGERS" era) ~ ShelleyBase,
+    Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
+    State (Core.EraRule "LEDGERS" era) ~ MempoolState era,
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
+    PredicateFailure (Core.EraRule "LEDGERS" era) ~ LedgersPredicateFailure era
   ) =>
   ApplyTx era
   where
@@ -60,7 +72,7 @@ class
     NewEpochState era ->
     m (NewEpochState era)
   default applyTxs ::
-    (MonadError (ApplyTxError era) m, STS (LEDGERS era)) =>
+    (MonadError (ApplyTxError era) m) =>
     Globals ->
     SlotNo ->
     Seq (Tx era) ->
@@ -114,19 +126,19 @@ mkMempoolState :: NewEpochState era -> MempoolState era
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
   LedgerState.esLState nesEs
 
-data ApplyTxError era = ApplyTxError [PredicateFailure (LEDGERS era)]
+data ApplyTxError era = ApplyTxError [PredicateFailure (Core.EraRule "LEDGERS" era)]
 
 deriving stock instance
-  (Eq (PredicateFailure (LEDGERS era))) =>
+  (Eq (PredicateFailure (Core.EraRule "LEDGERS" era))) =>
   Eq (ApplyTxError era)
 
 deriving stock instance
-  (Show (PredicateFailure (LEDGERS era))) =>
+  (Show (PredicateFailure (Core.EraRule "LEDGERS" era))) =>
   Show (ApplyTxError era)
 
 instance
   ( ShelleyBased era,
-    ToCBOR (PredicateFailure (LEDGERS era))
+    ToCBOR (PredicateFailure (Core.EraRule "LEDGERS" era))
   ) =>
   ToCBOR (ApplyTxError era)
   where
@@ -134,7 +146,7 @@ instance
 
 instance
   ( ShelleyBased era,
-    FromCBOR (PredicateFailure (LEDGERS era))
+    FromCBOR (PredicateFailure (Core.EraRule "LEDGERS" era))
   ) =>
   FromCBOR (ApplyTxError era)
   where
@@ -142,7 +154,12 @@ instance
 
 applyTxsTransition ::
   forall era m.
-  ( STS (LEDGERS era),
+  ( STS (Core.EraRule "LEDGERS" era),
+    BaseM (Core.EraRule "LEDGERS" era) ~ ShelleyBase,
+    Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
+    State (Core.EraRule "LEDGERS" era) ~ MempoolState era,
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
+    PredicateFailure (Core.EraRule "LEDGERS" era) ~ LedgersPredicateFailure era,
     MonadError (ApplyTxError era) m
   ) =>
   Globals ->
@@ -153,7 +170,7 @@ applyTxsTransition ::
 applyTxsTransition globals env txs state =
   let res =
         flip runReader globals
-          . applySTS @(LEDGERS era)
+          . applySTS @(Core.EraRule "LEDGERS" era)
           $ TRC (env, state, txs)
    in liftEither
         . left (ApplyTxError . join)

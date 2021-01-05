@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -11,16 +12,22 @@ module Shelley.Spec.Ledger.Bench.Gen
 where
 
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.State.Transition.Extended
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Either (fromRight)
 import Data.Proxy
 import Shelley.Spec.Ledger.API
   ( ApplyBlock,
     Block,
     ChainState (..),
+    DCert,
+    DPState,
+    DelplEnv,
     GetLedgerView,
+    LEDGERS,
     Tx,
   )
 import Shelley.Spec.Ledger.LedgerState
@@ -43,6 +50,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
+import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest)
@@ -78,7 +86,8 @@ genBlock ::
     ShelleyTest era,
     ShelleyLedgerSTS era,
     GetLedgerView era,
-    ValidateAuxiliaryData era,
+    Core.EraRule "LEDGERS" era ~ LEDGERS era,
+    QC.HasTrace (LEDGERS era) (GenEnv era),
     ApplyBlock era
   ) =>
   GenEnv era ->
@@ -98,6 +107,10 @@ genTriple ::
   ( EraGen era,
     Mock (Crypto era),
     ValidateAuxiliaryData era,
+    Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
     ShelleyTest era
   ) =>
   Proxy era ->

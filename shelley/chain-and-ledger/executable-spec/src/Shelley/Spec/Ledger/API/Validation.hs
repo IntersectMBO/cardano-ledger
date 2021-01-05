@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -20,9 +21,9 @@ module Shelley.Spec.Ledger.API.Validation
 where
 
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -30,13 +31,13 @@ import Control.State.Transition.Extended
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
-import Shelley.Spec.Ledger.BaseTypes (Globals (..))
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
-import qualified Shelley.Spec.Ledger.STS.Tick as STS
+import Shelley.Spec.Ledger.STS.EraMapping ()
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
 {-------------------------------------------------------------------------------
@@ -51,7 +52,17 @@ class
     ChainData (NewEpochState era),
     SerialisableData (NewEpochState era),
     ChainData (BlockTransitionError era),
-    ChainData (STS.PredicateFailure (STS.CHAIN era))
+    ChainData (STS.PredicateFailure (STS.CHAIN era)),
+    STS (Core.EraRule "TICK" era),
+    BaseM (Core.EraRule "TICK" era) ~ ShelleyBase,
+    Environment (Core.EraRule "TICK" era) ~ (),
+    State (Core.EraRule "TICK" era) ~ NewEpochState era,
+    Signal (Core.EraRule "TICK" era) ~ SlotNo,
+    STS (Core.EraRule "BBODY" era),
+    BaseM (Core.EraRule "BBODY" era) ~ ShelleyBase,
+    Environment (Core.EraRule "BBODY" era) ~ STS.BbodyEnv era,
+    State (Core.EraRule "BBODY" era) ~ STS.BbodyState era,
+    Signal (Core.EraRule "BBODY" era) ~ Block era
   ) =>
   ApplyBlock era
   where
@@ -65,18 +76,17 @@ class
     SlotNo ->
     NewEpochState era
   default applyTick ::
-    (UsesTxOut era, UsesValue era) =>
     Globals ->
     NewEpochState era ->
     SlotNo ->
     NewEpochState era
   applyTick globals state hdr =
-    (either err id) . flip runReader globals
-      . applySTS @(STS.TICK era)
+    either err id . flip runReader globals
+      . applySTS @(Core.EraRule "TICK" era)
       $ TRC ((), state, hdr)
     where
       err :: Show a => a -> b
-      err msg = error $ "Panic! applyTick failed: " <> (show msg)
+      err msg = error $ "Panic! applyTick failed: " <> show msg
 
   -- | Apply the block level ledger transition.
   applyBlock ::
@@ -86,9 +96,7 @@ class
     Block era ->
     m (NewEpochState era)
   default applyBlock ::
-    ( STS (STS.BBODY era),
-      MonadError (BlockTransitionError era) m
-    ) =>
+    (MonadError (BlockTransitionError era) m) =>
     Globals ->
     NewEpochState era ->
     Block era ->
@@ -100,7 +108,7 @@ class
       $ res
     where
       res =
-        flip runReader globals . applySTS @(STS.BBODY era) $
+        flip runReader globals . applySTS @(Core.EraRule "BBODY" era) $
           TRC (mkBbodyEnv state, bbs, blk)
       bbs =
         STS.BbodyState
@@ -118,7 +126,6 @@ class
     Block era ->
     NewEpochState era
   default reapplyBlock ::
-    STS (STS.BBODY era) =>
     Globals ->
     NewEpochState era ->
     Block era ->
@@ -127,7 +134,7 @@ class
     updateNewEpochState state res
     where
       res =
-        flip runReader globals . reapplySTS @(STS.BBODY era) $
+        flip runReader globals . reapplySTS @(Core.EraRule "BBODY" era) $
           TRC (mkBbodyEnv state, bbs, blk)
       bbs =
         STS.BbodyState
@@ -175,33 +182,33 @@ updateNewEpochState ss (STS.BbodyState ls bcur) =
   LedgerState.updateNES ss bcur ls
 
 newtype TickTransitionError era
-  = TickTransitionError [STS.PredicateFailure (STS.TICK era)]
+  = TickTransitionError [STS.PredicateFailure (Core.EraRule "TICK" era)]
   deriving (Generic)
 
 instance
-  (NoThunks (STS.PredicateFailure (STS.TICK era))) =>
+  (NoThunks (STS.PredicateFailure (Core.EraRule "TICK" era))) =>
   NoThunks (TickTransitionError era)
 
 deriving stock instance
-  (Eq (STS.PredicateFailure (STS.TICK era))) =>
+  (Eq (STS.PredicateFailure (Core.EraRule "TICK" era))) =>
   Eq (TickTransitionError era)
 
 deriving stock instance
-  (Show (STS.PredicateFailure (STS.TICK era))) =>
+  (Show (STS.PredicateFailure (Core.EraRule "TICK" era))) =>
   Show (TickTransitionError era)
 
 newtype BlockTransitionError era
-  = BlockTransitionError [STS.PredicateFailure (STS.BBODY era)]
+  = BlockTransitionError [STS.PredicateFailure (Core.EraRule "BBODY" era)]
   deriving (Generic)
 
 deriving stock instance
-  (Eq (STS.PredicateFailure (STS.BBODY era))) =>
+  (Eq (STS.PredicateFailure (Core.EraRule "BBODY" era))) =>
   Eq (BlockTransitionError era)
 
 deriving stock instance
-  (Show (STS.PredicateFailure (STS.BBODY era))) =>
+  (Show (STS.PredicateFailure (Core.EraRule "BBODY" era))) =>
   Show (BlockTransitionError era)
 
 instance
-  (NoThunks (STS.PredicateFailure (STS.BBODY era))) =>
+  (NoThunks (STS.PredicateFailure (Core.EraRule "BBODY" era))) =>
   NoThunks (BlockTransitionError era)
