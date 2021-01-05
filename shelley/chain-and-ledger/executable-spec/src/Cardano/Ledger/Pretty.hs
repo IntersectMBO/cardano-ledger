@@ -19,22 +19,25 @@ import Cardano.Chain.Common
     UnparsedFields (..),
   )
 import qualified Cardano.Crypto.Hash as Hash
--- import Cardano.Crypto.Hashing(abstractHashToShort)
-
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import Codec.Binary.Bech32
 import Control.Monad.Identity (Identity)
 import Control.SetAlgebra (forwards)
+import qualified Data.ByteString as Long (ByteString)
+import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import Data.IP (IPv4, IPv6)
-import qualified Data.Map.Strict as Map (Map, fromList, toList)
+import qualified Data.Map.Strict as Map (Map, toList)
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, toList)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
+import Data.Word (Word16, Word32, Word64, Word8)
+import GHC.Natural (Natural)
 import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
@@ -44,20 +47,7 @@ import Shelley.Spec.Ledger.Address
     RewardAcnt (..),
   )
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
-import Shelley.Spec.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    DnsName,
-    Globals (..),
-    Network (..),
-    Nonce (..),
-    Port (..),
-    StrictMaybe (..),
-    UnitInterval,
-    Url (..),
-    activeSlotLog,
-    activeSlotVal,
-    dnsToText,
-  )
+import Shelley.Spec.Ledger.BaseTypes (ActiveSlotCoeff, DnsName, FixedPoint, Globals (..), Network (..), Nonce (..), Port (..), StrictMaybe (..), UnitInterval, Url (..), activeSlotLog, activeSlotVal, dnsToText)
 import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), decompactAddr)
 import Shelley.Spec.Ledger.Credential
@@ -156,6 +146,46 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- HELPER FUNCTIONS
 -- =====================================================================================================
 
+-- ======================
+-- Named pretty printers for some simpe types
+
+ppDouble :: Double -> Doc a
+ppDouble x = viaShow x
+
+ppInteger :: Integer -> Doc a
+ppInteger x = viaShow x
+
+ppRational :: Rational -> Doc a
+ppRational x = viaShow x
+
+ppFloat :: Float -> Doc a
+ppFloat x = viaShow x
+
+ppNatural :: Natural -> Doc a
+ppNatural x = viaShow x
+
+ppWord64 :: Word64 -> Doc a
+ppWord64 x = viaShow x
+
+ppWord32 :: Word32 -> Doc a
+ppWord32 x = viaShow x
+
+ppWord8 :: Word8 -> Doc a
+ppWord8 x = viaShow x
+
+ppWord16 :: Word16 -> Doc a
+ppWord16 x = viaShow x
+
+ppFixedPoint :: FixedPoint -> Doc a
+ppFixedPoint x = viaShow x
+
+-- ppSignedDSIGN :: SignedDSIGN a b -> Doc ann
+ppSignedDSIGN :: Show a => a -> PDoc
+ppSignedDSIGN x = reAnnotate (Width 5 :) (viaShow x)
+
+-- =========================
+-- operations for pretty printing
+
 isEmpty :: Doc ann -> Bool
 isEmpty Empty = True
 isEmpty _ = False
@@ -172,12 +202,49 @@ type PDoc = Doc Ann
 text :: Text -> Doc ann
 text x = pretty x
 
+-- ======================
+-- Byte Strings in Bech32 format
+
+long_bech32 :: Long.ByteString -> Text
+long_bech32 x =
+  case humanReadablePartFromText "*" of
+    Right human ->
+      case encode human (dataPartFromBytes x) of
+        Right ans -> ans
+        Left _ -> "bech32Error"
+    Left _ -> "bech32Error"
+
+lazy_bech32 :: Lazy.ByteString -> Text
+lazy_bech32 x =
+  case humanReadablePartFromText "*" of
+    Right human ->
+      case encode human (dataPartFromBytes (Lazy.toStrict x)) of
+        Right ans -> ans
+        Left _ -> "bech32Error"
+    Left _ -> "bech32Error"
+
+ppLong :: Long.ByteString -> PDoc
+ppLong x = text (long_bech32 x)
+
+ppLazy :: Lazy.ByteString -> PDoc
+ppLazy x = text (lazy_bech32 x)
+
+instance PrettyA Long.ByteString where prettyA = ppLong
+
+instance PrettyA Lazy.ByteString where prettyA = ppLazy
+
+-- ================================
+-- Combinators for common patterns of layout
+
+-- | x == y
 equate :: Doc a -> Doc a -> Doc a
 equate x y = group (flatAlt (hang 2 (sep [x <+> text "=", y])) (hsep [x, text "=", y]))
 
+-- | x -> y
 arrow :: (Doc a, Doc a) -> Doc a
 arrow (x, y) = group (flatAlt (hang 2 (sep [x <+> text "->", y])) (hsep [x, text "->", y]))
 
+-- | ppSexp x [w,y,z] --> (x w y z)
 ppSexp :: Text -> [PDoc] -> PDoc
 ppSexp con fields = ppSexp' (text con) fields
 
@@ -190,6 +257,7 @@ ppSexp' con fields =
   where
     docs = if isEmpty con then fields else (con : fields)
 
+-- | ppRecord name [("a",x),("b",y),("c",z)] --> name { a = x, b = y, c = z }
 ppRecord :: Text -> [(Text, PDoc)] -> PDoc
 ppRecord con fields = ppRecord' (text con) fields
 
@@ -200,6 +268,7 @@ ppRecord' con fields =
       (hang 1 (vcat [con, puncLeft lbrace (map (\(x, y) -> equate (text x) y) fields) comma rbrace]))
       (con <> (encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) (map (\(x, y) -> equate (text x) y) fields)))
 
+-- | Vertical layout with commas aligned on the left hand side
 puncLeft :: Doc ann -> [Doc ann] -> Doc ann -> Doc ann -> Doc ann
 puncLeft open [] _ close = hsep [open, close]
 puncLeft open [x] _ close = hsep [open, x, close]
@@ -402,7 +471,7 @@ instance
 -- Shelley.Spec.Ledger.Rewards
 
 ppPerformanceEstimate :: PerformanceEstimate -> PDoc
-ppPerformanceEstimate (PerformanceEstimate n) = ppSexp "PerformanceEstimate" [viaShow n]
+ppPerformanceEstimate (PerformanceEstimate n) = ppSexp "PerformanceEstimate" [ppDouble n]
 
 ppNonMyopic :: NonMyopic crypto -> PDoc
 ppNonMyopic (NonMyopic m c) =
@@ -413,13 +482,13 @@ ppNonMyopic (NonMyopic m c) =
     ]
 
 ppStakeShare :: StakeShare -> PDoc
-ppStakeShare (StakeShare n) = ppSexp "StakeShare" [viaShow n]
+ppStakeShare (StakeShare n) = ppSexp "StakeShare" [ppRational n]
 
 ppHistogram :: Histogram -> PDoc
 ppHistogram (Histogram ss) = ppSexp "Histogram" [ppStrictSeq ppLogWeight ss]
 
 ppLogWeight :: LogWeight -> PDoc
-ppLogWeight (LogWeight n) = ppSexp "LogWeight" [viaShow n]
+ppLogWeight (LogWeight n) = ppSexp "LogWeight" [ppFloat n]
 
 ppLikelihood :: Likelihood -> PDoc
 ppLikelihood (Likelihood ns) = ppSexp "Likelihood" [ppStrictSeq ppLogWeight ns]
@@ -441,7 +510,7 @@ ppStake :: Stake crypto -> PDoc
 ppStake (Stake m) = ppMap' (text "Stake") ppCredential ppCoin m
 
 ppBlocksMade :: BlocksMade crypto -> PDoc
-ppBlocksMade (BlocksMade m) = ppMap' (text "BlocksMade") ppKeyHash viaShow m
+ppBlocksMade (BlocksMade m) = ppMap' (text "BlocksMade") ppKeyHash ppNatural m
 
 ppSnapShot :: SnapShot crypto -> PDoc
 ppSnapShot (SnapShot st deleg params) =
@@ -505,12 +574,12 @@ ppMetadatum (Map m) =
               (encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) pairs)
         ]
 ppMetadatum (List ds) = ppSexp "List" [ppList ppMetadatum ds]
-ppMetadatum (I n) = ppSexp "I" [viaShow n]
-ppMetadatum (B bs) = ppSexp "B" [viaShow bs]
+ppMetadatum (I n) = ppSexp "I" [ppInteger n]
+ppMetadatum (B bs) = ppSexp "B" [ppLong bs]
 ppMetadatum (S txt) = ppSexp "S" [text txt]
 
 ppMetadata :: Metadata -> PDoc
-ppMetadata (Metadata m) = ppMap' (text "Metadata") viaShow ppMetadatum m
+ppMetadata (Metadata m) = ppMap' (text "Metadata") ppWord64 ppMetadatum m
 
 instance PrettyA Metadatum where prettyA = ppMetadatum
 
@@ -540,9 +609,9 @@ ppBootstrapWitness (BootstrapWitness key sig (ChainCode code) attr) =
   ppRecord
     "BootstrapWitness"
     [ ("key", ppVKey key),
-      ("signature", viaShow sig),
-      ("chaincode", viaShow code),
-      ("attributes", viaShow attr)
+      ("signature", ppSignedDSIGN sig),
+      ("chaincode", ppLong code),
+      ("attributes", ppLong attr)
     ]
 
 ppWitnessSetHKD :: (Era era, PrettyA (Core.Script era)) => WitnessSetHKD Identity era -> PDoc
@@ -596,7 +665,7 @@ ppPoolMetadata (PoolMetadata url hsh) =
   ppRecord
     "PoolMetadata"
     [ ("url", ppUrl url),
-      ("hash", (text "#" <> reAnnotate (Width 5 :) (viaShow hsh)))
+      ("hash", (text "#" <> reAnnotate (Width 5 :) (ppLong hsh)))
     ]
 
 ppStakePoolRelay :: StakePoolRelay -> PDoc
@@ -626,7 +695,7 @@ ppTxId :: TxId c -> PDoc
 ppTxId (TxId x) = ppSexp "TxId" [ppHash x]
 
 ppTxIn :: TxIn c -> PDoc
-ppTxIn (TxInCompact txid word) = ppSexp "TxIn" [ppTxId txid, viaShow word]
+ppTxIn (TxInCompact txid word) = ppSexp "TxIn" [ppTxId txid, ppWord64 word]
 
 ppTxOut :: (Era era, PrettyA (Core.Value era), Compactible (Core.Value era)) => TxOut era -> PDoc
 ppTxOut (TxOutCompact caddr cval) = ppSexp "TxOut" [ppCompactAddr caddr, ppCompactForm prettyA cval]
@@ -644,7 +713,8 @@ ppGenesisDelegCert :: GenesisDelegCert c -> PDoc
 ppGenesisDelegCert (GenesisDelegCert a b c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b, ppHash c]
 
 ppMIRPot :: MIRPot -> PDoc
-ppMIRPot x = viaShow x
+ppMIRPot ReservesMIR = text "Reserves"
+ppMIRPot TreasuryMIR = text "Treasury"
 
 ppMIRCert :: MIRCert c -> PDoc
 ppMIRCert (MIRCert pot rew) = ppSexp "MirCert" [ppMIRPot pot, ppMap ppCredential ppCoin rew]
@@ -678,7 +748,7 @@ ppTxBody (TxBody ins outs cs wdrls fee ttl upd mdh) =
     ]
 
 ppWitVKey :: (Typeable kr, Crypto c) => WitVKey kr c -> PDoc
-ppWitVKey (WitVKey key sig) = ppRecord "WitVKey" [("key", ppVKey key), ("signature", viaShow sig)]
+ppWitVKey (WitVKey key sig) = ppRecord "WitVKey" [("key", ppVKey key), ("signature", ppSignedDSIGN sig)]
 
 ppStakeCreds :: StakeCreds c -> PDoc
 ppStakeCreds (StakeCreds m) = ppSexp "" [ppMap' (text "StakeCreds") ppCredential ppSlotNo m]
@@ -750,22 +820,22 @@ instance Crypto c => PrettyA (CompactAddr c) where prettyA = ppCompactAddr
 -- Shelley.Spec.Ledger.PParams
 
 ppProtVer :: ProtVer -> PDoc
-ppProtVer (ProtVer maj mi) = ppRecord "Version" [("major", viaShow maj), ("minor", viaShow mi)]
+ppProtVer (ProtVer maj mi) = ppRecord "Version" [("major", ppNatural maj), ("minor", ppNatural mi)]
 
 ppPParams :: PParams' Identity era -> PDoc
 ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
   ppRecord
     "PParams"
-    [ ("minfeeA", viaShow feeA),
-      ("minfeeB", viaShow feeB),
-      ("maxBBSize", viaShow mbb),
-      ("maxTxSize", viaShow mtx),
-      ("maxBHSize", viaShow mbh),
+    [ ("minfeeA", ppNatural feeA),
+      ("minfeeB", ppNatural feeB),
+      ("maxBBSize", ppNatural mbb),
+      ("maxTxSize", ppNatural mtx),
+      ("maxBHSize", ppNatural mbh),
       ("keyDeposit", ppCoin kd),
       ("poolDeposit", ppCoin pd),
       ("eMax", ppEpochNo em),
-      ("nOpt", viaShow no),
-      ("a0", viaShow a0),
+      ("nOpt", ppNatural no),
+      ("a0", ppRational a0),
       ("rho", ppUnitInterval rho),
       ("tau", ppUnitInterval tau),
       ("d", ppUnitInterval d),
@@ -779,16 +849,16 @@ ppPParamsUpdate :: PParams' StrictMaybe era -> PDoc
 ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
   ppRecord
     "PParams"
-    [ ("minfeeA", lift viaShow feeA),
-      ("minfeeB", lift viaShow feeB),
-      ("maxBBSize", lift viaShow mbb),
-      ("maxTxSize", lift viaShow mtx),
-      ("maxBHSize", lift viaShow mbh),
+    [ ("minfeeA", lift ppNatural feeA),
+      ("minfeeB", lift ppNatural feeB),
+      ("maxBBSize", lift ppNatural mbb),
+      ("maxTxSize", lift ppNatural mtx),
+      ("maxBHSize", lift ppNatural mbh),
       ("keyDeposit", lift ppCoin kd),
       ("poolDeposit", lift ppCoin pd),
       ("eMax", lift ppEpochNo em),
-      ("nOpt", lift viaShow no),
-      ("a0", lift viaShow a0),
+      ("nOpt", lift ppNatural no),
+      ("a0", lift ppRational a0),
       ("rho", lift ppUnitInterval rho),
       ("tau", lift ppUnitInterval tau),
       ("d", lift ppUnitInterval d),
@@ -838,19 +908,19 @@ ppBootstrapAddress :: BootstrapAddress c -> PDoc
 ppBootstrapAddress (BootstrapAddress (Address root (Attributes (AddrAttributes path magic) y) typ)) =
   ppRecord
     "BootstrapAddress"
-    [ ("root", viaShow root),
+    [ ("root", viaShow root), -- Cardano.Crypto.Hashing.AbstractHash
       ("derivationpath", ppMaybe ppHDAddressPayload path),
       ("networkmagic", ppNetworkMagic magic),
       ("remain", ppUnparsedFields y),
-      ("type", viaShow typ)
+      ("type", viaShow typ) -- Cardano.Chain.Common.AddrSpendingData.AddrType
     ]
 
 ppNetworkMagic :: NetworkMagic -> PDoc
 ppNetworkMagic NetworkMainOrStage = text "MainOrStage"
-ppNetworkMagic (NetworkTestnet n) = text "Testnet" <+> viaShow n
+ppNetworkMagic (NetworkTestnet n) = text "Testnet" <+> ppWord32 n
 
 ppUnparsedFields :: UnparsedFields -> PDoc
-ppUnparsedFields (UnparsedFields m) = ppMap' mempty viaShow viaShow m
+ppUnparsedFields (UnparsedFields m) = ppMap' mempty ppWord8 ppLazy m
 
 instance PrettyA NetworkMagic where prettyA = ppNetworkMagic
 
@@ -866,7 +936,7 @@ ppAddr (Addr net cred ref) = ppSexp "Addr" [ppNetwork net, ppCredential cred, pp
 ppAddr (AddrBootstrap x) = ppSexp' mempty [ppBootstrapAddress x]
 
 ppHDAddressPayload :: HDAddressPayload -> PDoc
-ppHDAddressPayload (HDAddressPayload x) = viaShow x
+ppHDAddressPayload (HDAddressPayload x) = ppLong x
 
 ppRewardAcnt :: RewardAcnt c -> PDoc
 ppRewardAcnt (RewardAcnt net cred) = ppRecord "RewardAcnt" [("network", ppNetwork net), ("credential", ppCredential cred)]
@@ -966,7 +1036,7 @@ ppOCert (OCert vk n per sig) =
     [ ("ocertVkKot", ppVerKeyKES (Proxy @crypto) vk),
       ("ocertN", pretty n),
       ("ocertKESPeriod", ppKESPeriod per),
-      ("ocertSigma", reAnnotate (Width 5 :) (viaShow sig))
+      ("ocertSigma", ppSignedDSIGN sig)
     ]
 
 ppOCertSignable :: forall crypto. Crypto crypto => OCertSignable crypto -> PDoc
@@ -1003,7 +1073,7 @@ ppActiveSlotCoeff x =
   ppRecord
     "ActiveSlotCoeff"
     [ ("activeSlotVal", ppUnitInterval (activeSlotVal x)),
-      ("ActiveSlotLog", viaShow (activeSlotLog x))
+      ("ActiveSlotLog", ppFixedPoint (activeSlotLog x))
     ]
 
 ppGlobals :: Globals -> PDoc
@@ -1028,10 +1098,10 @@ ppNetwork Testnet = text "Testnet"
 ppNetwork Mainnet = text "Mainnet"
 
 ppUrl :: Url -> PDoc
-ppUrl x = viaShow x
+ppUrl x = text (urlToText x)
 
 ppPort :: Port -> PDoc
-ppPort (Port n) = ppSexp "Port" [viaShow n]
+ppPort (Port n) = ppSexp "Port" [ppWord16 n]
 
 ppDnsName :: DnsName -> PDoc
 ppDnsName x = ppSexp "DnsName" [text (dnsToText x)]
@@ -1063,7 +1133,7 @@ ppKeyPair (KeyPair x y) =
   ppRecord "KeyPair" [("vKey", ppVKey x), ("sKey", reAnnotate (Width 5 :) (viaShow y))]
 
 ppKeyHash :: KeyHash x c -> PDoc
-ppKeyHash (KeyHash x) = text "KeyHash" <+> ppHash x
+ppKeyHash (KeyHash x) = ppSexp "KeyHash" [ppHash x]
 
 ppGenDelegPair :: GenDelegPair c -> PDoc
 ppGenDelegPair (GenDelegPair (KeyHash x) y) =
@@ -1092,17 +1162,12 @@ instance PrettyA (GenDelegs c) where prettyA = ppGenDelegs
 
 -- ======================================================
 
-main :: Int -> IO ()
-main n = do
-  putDocW n (ppSexp "BIGname" ([(pretty True), (pretty [1 :: Int, 3, 5]), (pretty ("agh" :: String))]))
-  putStrLn ""
-
-main1 :: Int -> IO ()
-main1 n = do
-  putDocW n (ppRecord "BIGname" ([("abc", pretty True), ("ljklkjfdjlfd", pretty [1 :: Int, 3, 5]), ("last", pretty ("agh" :: String))]))
-  putStrLn ""
-
-main2 :: Int -> IO ()
-main2 n = do
-  putDocW n (ppMap viaShow viaShow (Map.fromList [(x, x) | x <- [1 .. (6 :: Int)]]))
+-- | Used to test pretty printing things with different widths
+--   for example: testwidth 120 ls ppLedgerState
+--   prints LedgerState, ls, with a max width of 120 columns
+--   one can use this to observe the how "pretty" a printer is at different widths
+atWidth :: Int -> a -> (a -> PDoc) -> IO ()
+atWidth n a pp = do
+  let doc = pp a
+  putDocW n doc
   putStrLn ""

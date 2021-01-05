@@ -77,6 +77,7 @@ library
   build-depends:
     base,
     base16-bytestring >= 1,
+    bech32,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
@@ -174,6 +175,7 @@ test-suite shelley-spec-ledger-test
       aeson,
       base,
       base16-bytestring >= 1,
+      bech32,
       binary,
       bytestring,
       cardano-binary,
