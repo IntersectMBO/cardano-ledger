@@ -31,6 +31,8 @@ module Cardano.Ledger.ShelleyMA.Timelocks
     encodeVI,
     decodeVI,
     translate,
+    ppTimelock,
+    ppValidityInterval,
   )
 where
 
@@ -45,6 +47,16 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppInteger,
+    ppKeyHash,
+    ppRecord,
+    ppSexp,
+    ppSlotNo,
+    ppStrictMaybe,
+  )
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesTxBody)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
@@ -327,3 +339,30 @@ showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ foldl accum ")" xs
 showTimelock (RequireSignature hash) = "(Signature " ++ show hash ++ ")"
 
 -- ===============================================================
+-- Pretty Printer
+
+ppTimelock :: Timelock crypto -> PDoc
+ppTimelock (TimelockConstr (Memo (Signature akh) _)) =
+  ppSexp "Signature" [ppKeyHash akh]
+ppTimelock (TimelockConstr (Memo (AllOf ms) _)) =
+  ppSexp "AllOf" (foldr (:) [] (fmap ppTimelock ms))
+ppTimelock (TimelockConstr (Memo (AnyOf ms) _)) =
+  ppSexp "AnyOf" (foldr (:) [] (fmap ppTimelock ms))
+ppTimelock (TimelockConstr (Memo (MOfN m ms) _)) =
+  ppSexp "MOfN" (ppInteger (fromIntegral m) : (foldr (:) [] (fmap ppTimelock ms)))
+ppTimelock (TimelockConstr (Memo (TimeExpire mslot) _)) =
+  ppSexp "Expires" [ppSlotNo mslot]
+ppTimelock (TimelockConstr (Memo (TimeStart mslot) _)) =
+  ppSexp "Starts" [ppSlotNo mslot]
+
+instance PrettyA (Timelock crypto) where prettyA = ppTimelock
+
+ppValidityInterval :: ValidityInterval -> PDoc
+ppValidityInterval (ValidityInterval b a) =
+  ppRecord
+    "ValidityInterval"
+    [ ("invalidBefore", ppStrictMaybe ppSlotNo b),
+      ("invalidHereafter", ppStrictMaybe ppSlotNo a)
+    ]
+
+instance PrettyA ValidityInterval where prettyA = ppValidityInterval
