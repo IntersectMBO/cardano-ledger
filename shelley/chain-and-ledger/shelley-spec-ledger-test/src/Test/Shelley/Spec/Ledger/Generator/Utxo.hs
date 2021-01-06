@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesScript,
     UsesTxBody,
     UsesTxOut (..),
-    UsesValue
+    UsesValue,
   )
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
@@ -271,7 +271,7 @@ genTx
               spendingBalance
               outputAddrs
               draftFee
-      draftTxBody <-
+      (draftTxBody, additionalScripts) <-
         genEraTxBody
           ge
           slot
@@ -283,11 +283,12 @@ genTx
           (maybeToStrictMaybe update)
           (hashAuxiliaryData @era <$> metadata)
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
+          scripts' = Map.fromList $ map (\s -> (hashScript @era s, s)) additionalScripts
       -- We add now repeatedly add inputs until the process converges.
       converge
         remainderCoin
         wits
-        scripts
+        (scripts `Map.union` scripts')
         ksKeyPairs
         ksMSigScripts
         utxo
@@ -323,7 +324,11 @@ deltaZero ::
   ( UsesScript era,
     UsesValue era,
     UsesTxOut era
-  ) => Coin -> Coin -> Addr (Crypto era) -> Delta era
+  ) =>
+  Coin ->
+  Coin ->
+  Addr (Crypto era) ->
+  Delta era
 deltaZero initialfee minAda addr =
   Delta
     (initialfee <-> minAda)
@@ -368,6 +373,7 @@ genNextDelta
         draftSize =
           sum
             [ 5 :: Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
+              12 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens
               encodedLen (max dfees (Coin 0)) - 1,
               foldr (\a b -> b + encodedLen a) 0 extraInputs,
               encodedLen change,
@@ -643,7 +649,7 @@ calcOutputsFromBalance ::
   (Coin, StrictSeq (Core.TxOut era))
 calcOutputsFromBalance balance_ addrs fee =
   ( fee <+> splitCoinRem,
-    StrictSeq.fromList $ zipWith (makeTxOut $ Proxy @era)addrs amountPerOutput
+    StrictSeq.fromList $ zipWith (makeTxOut $ Proxy @era) addrs amountPerOutput
   )
   where
     -- split the available balance into equal portions (one for each address),

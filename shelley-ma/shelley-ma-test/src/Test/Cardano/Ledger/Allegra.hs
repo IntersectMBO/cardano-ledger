@@ -95,21 +95,23 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  Gen (TxBody era)
+  Gen (TxBody era, [Timelock (Crypto era)])
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   let mint = zero -- the mint field is always empty for an Allegra TxBody
   pure $
-    TxBody
-      ins
-      outs
-      cert
-      wdrl
-      fee
-      validityInterval
-      upd
-      ad
-      mint
+    ( TxBody
+        ins
+        outs
+        cert
+        wdrl
+        fee
+        validityInterval
+        upd
+        ad
+        mint,
+      [] -- Allegra does not need any additional script witnesses
+    )
 
 {------------------------------------------------------------------------------
   ShelleyMA helpers, shared by Allegra and Mary
