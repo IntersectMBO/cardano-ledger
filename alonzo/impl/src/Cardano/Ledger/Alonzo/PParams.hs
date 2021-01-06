@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -15,6 +16,7 @@
 module Cardano.Ledger.Alonzo.PParams
   ( PParams' (..),
     PParams,
+    PPHash (..),
     emptyPParams,
     ProtVer (..),
     ProposedPPUpdates (..),
@@ -33,7 +35,10 @@ import Cardano.Binary
     encodeMapLen,
     encodeWord,
   )
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Crypto (HASH)
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -351,7 +356,9 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
   = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (PParamsUpdate era))
-  deriving (Show, Eq, Generic, NFData)
+  deriving (Show, Eq, Generic)
+
+instance NFData (ProposedPPUpdates era)
 
 instance NoThunks (ProposedPPUpdates era)
 
@@ -393,3 +400,16 @@ updatePParams pp ppup =
   where
     fromMaybe' :: a -> StrictMaybe a -> a
     fromMaybe' x = fromMaybe x . strictMaybeToMaybe
+
+data EraIndependentPP
+
+-- Hash of a subset of Protocol Parameters relevant to Plutus script evaluation
+newtype PPHash crypto
+  = PPHash
+      (Hash.Hash (HASH crypto) EraIndependentPP)
+  deriving (Show, Eq, Ord, Generic)
+  deriving newtype (NFData, NoThunks)
+
+deriving newtype instance CC.Crypto crypto => FromCBOR (PPHash crypto)
+
+deriving newtype instance CC.Crypto crypto => ToCBOR (PPHash crypto)

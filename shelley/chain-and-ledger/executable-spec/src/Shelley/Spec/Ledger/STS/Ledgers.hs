@@ -49,7 +49,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..), LedgerPredicateFailure)
-import Shelley.Spec.Ledger.STS.Utxo
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)

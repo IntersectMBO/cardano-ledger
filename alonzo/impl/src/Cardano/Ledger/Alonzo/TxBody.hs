@@ -10,6 +10,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -30,6 +31,7 @@ module Cardano.Ledger.Alonzo.TxBody
         adHash,
         mint,
         exunits,
+        ppHash,
         scriptHash
       ),
   )
@@ -37,6 +39,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (DataHash)
+import Cardano.Ledger.Alonzo.PParams (PPHash (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits)
 import Cardano.Ledger.Alonzo.TxWitness (ScriptDataHash)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
@@ -116,7 +119,7 @@ data TxOut era
   = TxOutCompact
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
-      !(StrictMaybe (DataHash era))
+      !(StrictMaybe (DataHash (Crypto era)))
   deriving (Generic)
 
 deriving stock instance
@@ -143,7 +146,7 @@ pattern TxOut ::
   ) =>
   Addr (Crypto era) ->
   Core.Value era ->
-  StrictMaybe (DataHash era) ->
+  StrictMaybe (DataHash (Crypto era)) ->
   TxOut era
 pattern TxOut addr vl dh <-
   TxOutCompact (decompactAddr -> addr) (fromCompact -> vl) dh
@@ -169,6 +172,7 @@ data TxBodyRaw era = TxBodyRaw
     _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
     _mint :: !(Core.Value era),
     _exunits :: !ExUnits,
+    _ppHash :: !(StrictMaybe (PPHash (Crypto era))),
     _scriptHash :: !(StrictMaybe (ScriptDataHash (Crypto era)))
   }
   deriving (Generic, Typeable)
@@ -241,6 +245,7 @@ pattern TxBody ::
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Core.Value era ->
   ExUnits ->
+  StrictMaybe (PPHash (Crypto era)) ->
   StrictMaybe (ScriptDataHash (Crypto era)) ->
   TxBody era
 pattern TxBody
@@ -254,6 +259,7 @@ pattern TxBody
     adHash,
     mint,
     exunits,
+    ppHash,
     scriptHash
   } <-
   TxBodyConstr
@@ -269,6 +275,7 @@ pattern TxBody
             _adHash = adHash,
             _mint = mint,
             _exunits = exunits,
+            _ppHash = ppHash,
             _scriptHash = scriptHash
           }
         _
@@ -285,6 +292,7 @@ pattern TxBody
       adHash'
       mint'
       exunits'
+      ppHash'
       scriptHash' =
         TxBodyConstr $
           memoBytes
@@ -300,6 +308,7 @@ pattern TxBody
                   adHash'
                   mint'
                   exunits'
+                  ppHash'
                   scriptHash'
             )
 
@@ -324,12 +333,18 @@ instance CC.Crypto crypto => FromCBOR (TxIn crypto) where
   fromCBOR = decode $ RecD TxInCompact <! From <! From <! From
 
 instance
-  (Era era, ToCBOR (CompactForm (Core.Value era))) =>
+  ( Era era,
+    ToCBOR (CompactForm (Core.Value era))
+  ) =>
   ToCBOR (TxOut era)
   where
   toCBOR (TxOutCompact addr cv dh) =
     encode $
-      Rec TxOutCompact !> To addr !> To cv !> To dh
+      Rec
+        (TxOutCompact @era)
+        !> To addr
+        !> To cv
+        !> To dh
 
 instance
   ( Era era,
@@ -365,6 +380,7 @@ encodeTxBodyRaw
       _adHash,
       _mint,
       _exunits,
+      _ppHash,
       _scriptHash
     } =
     Keyed
@@ -382,7 +398,8 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 8 bot
       !> Omit isZero (Key 9 (E encodeMint _mint))
       !> Omit (== mempty) (Key 10 (To _exunits))
-      !> encodeKeyedStrictMaybe 11 _scriptHash
+      !> encodeKeyedStrictMaybe 11 _ppHash
+      !> encodeKeyedStrictMaybe 12 _scriptHash
     where
       encodeKeyedStrictMaybe key x =
         Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
@@ -425,6 +442,7 @@ instance
           mempty
           mempty
           SNothing
+          SNothing
       bodyFields 0 =
         field
           (\x tx -> tx {_inputs = x})
@@ -451,7 +469,8 @@ instance
           (D (SJust <$> fromCBOR))
       bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
       bodyFields 10 = field (\x tx -> tx {_exunits = x}) From
-      bodyFields 11 =
+      bodyFields 11 = field (\x tx -> tx {_ppHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 12 =
         field
           (\x tx -> tx {_scriptHash = x})
           (D (SJust <$> fromCBOR))
