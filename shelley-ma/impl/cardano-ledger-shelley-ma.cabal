@@ -47,6 +47,7 @@ library
     groups,
     mtl,
     nothunks,
+    prettyprinter,
     shelley-spec-ledger,
     small-steps,
     text,

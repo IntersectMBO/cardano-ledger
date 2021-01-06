@@ -40,6 +40,7 @@ import Cardano.Binary
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppCoin, ppInteger, ppList, ppLong, ppScriptHash, ppSexp)
 import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),
@@ -83,6 +84,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
+import Prettyprinter (hsep)
 import Shelley.Spec.Ledger.Coin (Coin (..), integerToWord64)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.Serialization (decodeMap, encodeMap)
@@ -440,3 +442,24 @@ gettriples (Value c m1) = (c, triples)
         | (policyId, m2) <- assocs m1,
           (aname, amount) <- assocs m2
       ]
+
+-- =====================================
+-- Pretty printing functions
+
+ppValue :: Value crypto -> PDoc
+ppValue v = ppSexp "Value" [ppCoin (Coin n), ppList pptriple triples]
+  where
+    (n, triples) = gettriples v
+    pptriple (i, asset, num) = hsep [ppPolicyID i, ppAssetName asset, ppInteger num]
+
+ppPolicyID :: PolicyID crypto -> PDoc
+ppPolicyID (PolicyID sh) = ppScriptHash sh
+
+ppAssetName :: AssetName -> PDoc
+ppAssetName (AssetName bs) = ppLong bs
+
+instance PrettyA (Value crypto) where prettyA = ppValue
+
+instance PrettyA (PolicyID crypto) where prettyA x = ppSexp "PolicyID" [ppPolicyID x]
+
+instance PrettyA AssetName where prettyA x = ppSexp "AssetName" [ppAssetName x]
