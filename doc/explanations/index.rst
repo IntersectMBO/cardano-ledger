@@ -6,3 +6,7 @@ Ledger Explanations
    :titlesonly:
 
    token-bundles
+   features
+   faq
+   policies
+   glossary
