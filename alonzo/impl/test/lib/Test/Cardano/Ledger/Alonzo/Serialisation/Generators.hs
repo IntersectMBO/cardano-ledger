@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -14,7 +15,7 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash (..))
 import Cardano.Ledger.Alonzo.PParams (PPHash (..))
-import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( IsFee (..),
@@ -37,7 +38,7 @@ instance Arbitrary (Data era) where
   arbitrary = pure NotReallyData
 
 instance Arbitrary Tag where
-  arbitrary = elements [Input, Mint, Cert, Wdrl]
+  arbitrary = elements [Spend, Mint, Cert, Rewrd]
 
 instance Arbitrary RdmrPtr where
   arbitrary = RdmrPtr <$> arbitrary <*> arbitrary
@@ -117,10 +118,13 @@ instance
 
 deriving newtype instance Arbitrary IsValidating
 
-instance (Mock c) => Arbitrary (Tx (AlonzoEra c)) where
+instance Mock c => Arbitrary (Tx (AlonzoEra c)) where
   arbitrary =
     Tx
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+instance Mock c => Arbitrary (Script (AlonzoEra c)) where
+  arbitrary = frequency [(1, pure PlutusScript), (9, NativeScript <$> arbitrary)]

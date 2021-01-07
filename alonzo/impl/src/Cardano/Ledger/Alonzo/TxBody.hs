@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -34,6 +35,9 @@ module Cardano.Ledger.Alonzo.TxBody
         ppHash,
         scriptHash
       ),
+    AlonzoBody,
+    txins,
+    txinputs_fee,
   )
 where
 
@@ -47,13 +51,10 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Mary.Value (Value)
+import Cardano.Ledger.Mary.Value (Value (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val
-  ( DecodeMint,
-    DecodeNonNegative,
-    EncodeMint,
-    Val,
+  ( DecodeNonNegative,
     decodeMint,
     decodeNonNegative,
     encodeMint,
@@ -66,6 +67,7 @@ import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -79,6 +81,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.Hashing
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.TxBody (TxId, Wdrl (Wdrl), unWdrl)
+import Prelude hiding (lookup)
 
 -- | Tag indicating whether an input should be used to pay transaction fees.
 -- This is used to prevent the entirety of a script's inputs being used for fees
@@ -129,7 +132,7 @@ deriving stock instance
   Eq (TxOut era)
 
 instance
-  ( Show (Value era),
+  ( Show (Core.Value era),
     Show (CompactForm (Core.Value era))
   ) =>
   Show (TxOut era)
@@ -170,7 +173,10 @@ data TxBodyRaw era = TxBodyRaw
     _vldt :: !ValidityInterval,
     _update :: !(StrictMaybe (Update era)),
     _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    _mint :: !(Core.Value era),
+    _mint :: !(Value (Crypto era)),
+    -- The spec makes it clear that the mint field is a
+    -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
+    -- Operations on the TxBody in the AlonzoEra depend upon this.
     _exunits :: !ExUnits,
     _ppHash :: !(StrictMaybe (PPHash (Crypto era))),
     _scriptHash :: !(StrictMaybe (ScriptDataHash (Crypto era)))
@@ -179,6 +185,7 @@ data TxBodyRaw era = TxBodyRaw
 
 deriving instance
   ( Eq (Core.Value era),
+    CC.Crypto (Crypto era),
     Eq (CompactForm (Core.Value era))
   ) =>
   Eq (TxBodyRaw era)
@@ -196,7 +203,8 @@ newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
 
 deriving newtype instance
   ( Eq (Core.Value era),
-    Eq (CompactForm (Core.Value era))
+    Eq (CompactForm (Core.Value era)),
+    CC.Crypto (Crypto era)
   ) =>
   Eq (TxBody era)
 
@@ -218,23 +226,22 @@ deriving via
     ( Era era,
       Typeable (Core.Script era),
       Typeable (Core.AuxiliaryData era),
-      Val (Core.Value era),
       Compactible (Core.Value era),
       Show (Core.Value era),
       DecodeNonNegative (Core.Value era),
-      DecodeMint (Core.Value era),
       FromCBOR (Annotator (Core.Script era))
     ) =>
     FromCBOR (Annotator (TxBody era))
 
-pattern TxBody ::
+-- The Set of constraints necessary to use the TxBody pattern
+type AlonzoBody era =
   ( Era era,
-    Typeable (Core.AuxiliaryData era),
     ToCBOR (CompactForm (Core.Value era)),
-    ToCBOR (Core.Script era),
-    EncodeMint (Core.Value era),
-    Val (Core.Value era)
-  ) =>
+    ToCBOR (Core.Script era)
+  )
+
+pattern TxBody ::
+  AlonzoBody era =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
@@ -243,7 +250,7 @@ pattern TxBody ::
   ValidityInterval ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  Core.Value era ->
+  Value (Crypto era) ->
   ExUnits ->
   StrictMaybe (PPHash (Crypto era)) ->
   StrictMaybe (ScriptDataHash (Crypto era)) ->
@@ -362,8 +369,6 @@ instance
 
 encodeTxBodyRaw ::
   ( Era era,
-    EncodeMint (Core.Value era),
-    Val (Core.Value era),
     ToCBOR (CompactForm (Core.Value era))
   ) =>
   TxBodyRaw era ->
@@ -417,11 +422,9 @@ instance
   ( Era era,
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era),
-    Val (Core.Value era),
     Compactible (Core.Value era),
     Show (Core.Value era),
     DecodeNonNegative (Core.Value era),
-    DecodeMint (Core.Value era),
     FromCBOR (Annotator (Core.Script era))
   ) =>
   FromCBOR (TxBodyRaw era)
@@ -485,13 +488,25 @@ instance
   ( Era era,
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era),
-    Val (Core.Value era),
     Compactible (Core.Value era),
     Show (Core.Value era),
     DecodeNonNegative (Core.Value era),
-    DecodeMint (Core.Value era),
     FromCBOR (Annotator (Core.Script era))
   ) =>
   FromCBOR (Annotator (TxBodyRaw era))
   where
   fromCBOR = pure <$> fromCBOR
+
+-- ============================================================
+-- From the specification, Figure 5 "Functions related to fees"
+
+txins :: AlonzoBody era => TxBody era -> Set (TxId (Crypto era), Word64)
+txins (TxBody {inputs = is}) = Set.foldl' accum Set.empty is
+  where
+    accum ans (TxInCompact idx index _) = Set.insert (idx, index) ans
+
+txinputs_fee :: AlonzoBody era => TxBody era -> Set (TxId (Crypto era), Word64)
+txinputs_fee (TxBody {inputs = is}) = Set.foldl' accum Set.empty is
+  where
+    accum ans (TxInCompact idx index (IsFee True)) = Set.insert (idx, index) ans
+    accum ans _ = ans

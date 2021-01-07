@@ -9,7 +9,6 @@
 
 module Cardano.Ledger.Pretty where
 
-import Cardano.Binary (ToCBOR)
 import Cardano.Chain.Common
   ( AddrAttributes (..),
     Address (..),
@@ -31,6 +30,7 @@ import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import Data.IP (IPv4, IPv6)
 import qualified Data.Map.Strict as Map (Map, toList)
+import Data.MemoBytes (MemoBytes (..))
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, toList)
@@ -134,6 +134,7 @@ import Shelley.Spec.Ledger.TxBody
     StakeCreds (..),
     StakePoolRelay (..),
     TxBody (..),
+    TxBodyRaw (..),
     TxId (..),
     TxIn (..),
     TxOut (..),
@@ -398,10 +399,7 @@ ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
     ]
 
 ppUTxOState ::
-  ( Era era,
-    PrettyA (Core.Value era),
-    Compactible (Core.Value era)
-  ) =>
+  PrettyA (Core.TxOut era) =>
   UTxOState era ->
   PDoc
 ppUTxOState (UTxOState u dep fee ppup) =
@@ -413,7 +411,7 @@ ppUTxOState (UTxOState u dep fee ppup) =
       ("ppups", ppPPUPState ppup)
     ]
 
-ppEpochState :: (Era era, PrettyA (Core.Value era), Compactible (Core.Value era)) => EpochState era -> PDoc
+ppEpochState :: PrettyA (Core.TxOut era) => EpochState era -> PDoc
 ppEpochState (EpochState acnt snap ls prev pp non) =
   ppRecord
     "EpochState"
@@ -425,7 +423,7 @@ ppEpochState (EpochState acnt snap ls prev pp non) =
       ("nonMyopic", ppNonMyopic non)
     ]
 
-ppLedgerState :: (Era era, PrettyA (Core.Value era), Compactible (Core.Value era)) => LedgerState era -> PDoc
+ppLedgerState :: PrettyA (Core.TxOut era) => LedgerState era -> PDoc
 ppLedgerState (LedgerState u d) =
   ppRecord
     "LedgerState"
@@ -440,7 +438,9 @@ instance PrettyA (DPState crypto) where prettyA = ppDPState
 instance PrettyA (DState crypto) where prettyA = ppDState
 
 instance
-  (Era era, PrettyA (Core.Value era), Compactible (Core.Value era)) =>
+  ( Era era,
+    PrettyA (Core.TxOut era)
+  ) =>
   PrettyA (EpochState era)
   where
   prettyA = ppEpochState
@@ -450,7 +450,9 @@ instance PrettyA (FutureGenDeleg crypto) where prettyA = ppFutureGenDeleg
 instance PrettyA (InstantaneousRewards crypto) where prettyA = ppInstantaneousRewards
 
 instance
-  (Era era, PrettyA (Core.Value era), Compactible (Core.Value era)) =>
+  ( Era era,
+    PrettyA (Core.TxOut era)
+  ) =>
   PrettyA (LedgerState era)
   where
   prettyA = ppLedgerState
@@ -462,7 +464,9 @@ instance PrettyA (PState crypto) where prettyA = ppPState
 instance PrettyA (RewardUpdate crypto) where prettyA = ppRewardUpdate
 
 instance
-  (Era era, PrettyA (Core.Value era), Compactible (Core.Value era)) =>
+  ( Era era,
+    PrettyA (Core.TxOut era)
+  ) =>
   PrettyA (UTxOState era)
   where
   prettyA = ppUTxOState
@@ -543,19 +547,13 @@ instance PrettyA (SnapShots crypto) where prettyA = ppSnapShots
 -- Shelley.Spec.Ledger.UTxO
 
 ppUTxO ::
-  ( Era era,
-    PrettyA (Core.Value era),
-    Compactible (Core.Value era)
-  ) =>
+  PrettyA (Core.TxOut era) =>
   UTxO era ->
   PDoc
-ppUTxO (UTxO m) = ppMap' (text "UTxO") ppTxIn ppTxOut m
+ppUTxO (UTxO m) = ppMap' (text "UTxO") ppTxIn prettyA m
 
 instance
-  ( Era era,
-    PrettyA (Core.Value era),
-    Compactible (Core.Value era)
-  ) =>
+  PrettyA (Core.TxOut era) =>
   PrettyA (UTxO era)
   where
   prettyA = ppUTxO
@@ -726,19 +724,14 @@ ppDCert (DCertGenesis x) = ppSexp "DCertGenesis" [ppGenesisDelegCert x]
 ppDCert (DCertMir x) = ppSexp "DCertMir" [ppMIRCert x]
 
 ppTxBody ::
-  ( Era era,
-    ToCBOR (Core.Value era),
-    PrettyA (Core.Value era),
-    ToCBOR (CompactForm (Core.Value era)),
-    Compactible (Core.Value era)
-  ) =>
+  PrettyA (Core.TxOut era) =>
   TxBody era ->
   PDoc
-ppTxBody (TxBody ins outs cs wdrls fee ttl upd mdh) =
+ppTxBody (TxBodyConstr (Memo (TxBodyRaw ins outs cs wdrls fee ttl upd mdh) _)) =
   ppRecord
     "TxBody"
     [ ("inputs", ppSet ppTxIn ins),
-      ("outputs", ppStrictSeq ppTxOut outs),
+      ("outputs", ppStrictSeq prettyA outs),
       ("cert", ppStrictSeq ppDCert cs),
       ("wdrls", ppWdrl wdrls),
       ("fee", ppCoin fee),
@@ -782,12 +775,7 @@ instance PrettyA (MIRCert c) where prettyA = ppMIRCert
 instance PrettyA (DCert c) where prettyA = ppDCert
 
 instance
-  ( Era era,
-    ToCBOR (Core.Value era),
-    PrettyA (Core.Value era),
-    ToCBOR (CompactForm (Core.Value era)),
-    Compactible (Core.Value era)
-  ) =>
+  PrettyA (Core.TxOut era) =>
   PrettyA (TxBody era)
   where
   prettyA = ppTxBody
