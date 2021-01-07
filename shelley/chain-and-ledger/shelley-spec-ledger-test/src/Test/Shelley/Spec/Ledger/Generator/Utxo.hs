@@ -551,6 +551,7 @@ converge
 -- | Return up to /k/ random elements from /items/
 -- (instead of the less efficient /take k <$> QC.shuffle items/)
 ruffle :: Int -> [a] -> Gen [a]
+ruffle _ [] = pure []
 ruffle k items = do
   indices <- nub <$> QC.vectorOf k pickIndex
   pure $ map (items !!) indices
