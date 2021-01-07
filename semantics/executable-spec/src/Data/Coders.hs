@@ -45,6 +45,7 @@ module Data.Coders
     decode,
     runE,            -- Used in testing
     decodeList,
+    decodePair,
     decodeSeq,
     decodeStrictSeq,
     decodeSet,
@@ -54,6 +55,7 @@ module Data.Coders
     unusedRequiredKeys,
     duplicateKey,
     wrapCBORArray,
+    encodePair,
     encodeFoldable,
     decodeCollectionWithLen,
     decodeCollection,
@@ -146,6 +148,19 @@ decodeNullMaybe decoder = do
       decodeNull
       pure Nothing
     _ -> Just <$> decoder
+
+
+decodePair :: Decoder s a -> Decoder s b -> Decoder s (a,b)
+decodePair first second = decodeRecordNamed "pair" (const 2) $ do
+  a <- first
+  b <- second
+  pure (a,b)
+
+encodePair :: (a -> Encoding) -> (b -> Encoding) -> (a,b) -> Encoding
+encodePair encodeFirst encodeSecond (x,y) = encodeListLen 2
+  <> encodeFirst x
+  <> encodeSecond y
+
 
 invalidKey :: Word -> Decoder s a
 invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)

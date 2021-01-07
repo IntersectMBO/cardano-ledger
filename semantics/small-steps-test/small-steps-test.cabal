@@ -33,6 +33,7 @@ library
                      , microlens-th
                      , mtl
                      , nothunks
+                     , prettyprinter
                      , transformers >= 0.5
                      , QuickCheck
                      -- IOHK deps
@@ -55,6 +56,7 @@ test-suite doctests
   default-language:    Haskell2010
   build-depends:       base
                      , doctest
+                     , prettyprinter
 
   build-tool-depends: doctest-discover:doctest-discover
   ghc-options:        -Wall

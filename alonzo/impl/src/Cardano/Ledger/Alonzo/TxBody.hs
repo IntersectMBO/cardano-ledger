@@ -18,26 +18,24 @@
 
 module Cardano.Ledger.Alonzo.TxBody
   ( IsFee (..),
-    TxIn (..),
     TxOut (TxOut, TxOutCompact),
     TxBody
       ( TxBody,
-        inputs,
-        outputs,
-        certs,
-        wdrls,
+        txinputs,
+        txinputs_fee,
+        txouts,
+        txcerts,
+        txwdrls,
         txfee,
-        vldt,
-        update,
-        adHash,
+        txvldt,
+        txUpdates,
+        txADhash,
         mint,
         exunits,
         ppHash,
-        scriptHash
+        sdHash
       ),
     AlonzoBody,
-    txins,
-    txinputs_fee,
   )
 where
 
@@ -69,8 +67,8 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Data.Word (Word64)
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.Address (Addr)
@@ -80,7 +78,7 @@ import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.Hashing
 import Shelley.Spec.Ledger.PParams (Update)
-import Shelley.Spec.Ledger.TxBody (TxId, Wdrl (Wdrl), unWdrl)
+import Shelley.Spec.Ledger.TxBody (TxIn (..), Wdrl (Wdrl), unWdrl)
 import Prelude hiding (lookup)
 
 -- | Tag indicating whether an input should be used to pay transaction fees.
@@ -97,26 +95,6 @@ newtype IsFee = IsFee Bool
       ToCBOR,
       FromCBOR
     )
-
--- | Input of a UTxO. This references the transaction being spent from and the
--- index of the output being spent, as well as a tag indicating whether this
--- input should be used as a fee.
-data TxIn crypto
-  = TxInCompact
-      {-# UNPACK #-} !(TxId crypto)
-      {-# UNPACK #-} !Word64
-      !IsFee
-  deriving (Generic)
-
-deriving instance Ord (TxIn crypto)
-
-deriving instance Eq (TxIn crypto)
-
-deriving instance Show (TxIn crypto)
-
-instance CC.Crypto crypto => NFData (TxIn crypto)
-
-instance NoThunks (TxIn crypto)
 
 data TxOut era
   = TxOutCompact
@@ -166,6 +144,7 @@ pattern TxOut addr vl dh <-
 
 data TxBodyRaw era = TxBodyRaw
   { _inputs :: !(Set (TxIn (Crypto era))),
+    _inputs_fee :: !(Set (TxIn (Crypto era))),
     _outputs :: !(StrictSeq (TxOut era)),
     _certs :: !(StrictSeq (DCert (Crypto era))),
     _wdrls :: !(Wdrl (Crypto era)),
@@ -243,6 +222,7 @@ type AlonzoBody era =
 pattern TxBody ::
   AlonzoBody era =>
   Set (TxIn (Crypto era)) ->
+  Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
@@ -256,40 +236,43 @@ pattern TxBody ::
   StrictMaybe (ScriptDataHash (Crypto era)) ->
   TxBody era
 pattern TxBody
-  { inputs,
-    outputs,
-    certs,
-    wdrls,
+  { txinputs,
+    txinputs_fee,
+    txouts,
+    txcerts,
+    txwdrls,
     txfee,
-    vldt,
-    update,
-    adHash,
+    txvldt,
+    txUpdates,
+    txADhash,
     mint,
     exunits,
     ppHash,
-    scriptHash
+    sdHash
   } <-
   TxBodyConstr
     ( Memo
         TxBodyRaw
-          { _inputs = inputs,
-            _outputs = outputs,
-            _certs = certs,
-            _wdrls = wdrls,
+          { _inputs = txinputs,
+            _inputs_fee = txinputs_fee,
+            _outputs = txouts,
+            _certs = txcerts,
+            _wdrls = txwdrls,
             _txfee = txfee,
-            _vldt = vldt,
-            _update = update,
-            _adHash = adHash,
+            _vldt = txvldt,
+            _update = txUpdates,
+            _adHash = txADhash,
             _mint = mint,
             _exunits = exunits,
             _ppHash = ppHash,
-            _scriptHash = scriptHash
+            _scriptHash = sdHash
           }
         _
       )
   where
     TxBody
       inputs'
+      inputs_fee'
       outputs'
       certs'
       wdrls'
@@ -306,6 +289,7 @@ pattern TxBody
             ( encodeTxBodyRaw $
                 TxBodyRaw
                   inputs'
+                  inputs_fee'
                   outputs'
                   certs'
                   wdrls'
@@ -327,17 +311,6 @@ instance Era era => HashAnnotated (TxBody era) era where
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
-
-instance CC.Crypto crypto => ToCBOR (TxIn crypto) where
-  toCBOR (TxInCompact txId idx isFee) =
-    encode $
-      Rec TxInCompact
-        !> To txId
-        !> To idx
-        !> To isFee
-
-instance CC.Crypto crypto => FromCBOR (TxIn crypto) where
-  fromCBOR = decode $ RecD TxInCompact <! From <! From <! From
 
 instance
   ( Era era,
@@ -376,6 +349,7 @@ encodeTxBodyRaw ::
 encodeTxBodyRaw
   TxBodyRaw
     { _inputs,
+      _inputs_fee,
       _outputs,
       _certs,
       _wdrls,
@@ -389,10 +363,11 @@ encodeTxBodyRaw
       _scriptHash
     } =
     Keyed
-      ( \i o f t c w u mh b mi e s ->
-          TxBodyRaw i o c w f (ValidityInterval b t) u mh mi e s
+      ( \i ifee o f t c w u mh b mi e s ->
+          TxBodyRaw i ifee o c w f (ValidityInterval b t) u mh mi e s
       )
       !> Key 0 (E encodeFoldable _inputs)
+      !> Key 13 (E encodeFoldable _inputs_fee)
       !> Key 1 (E encodeFoldable _outputs)
       !> Key 2 (To _txfee)
       !> encodeKeyedStrictMaybe 3 top
@@ -435,6 +410,7 @@ instance
       initial =
         TxBodyRaw
           mempty
+          mempty
           StrictSeq.empty
           StrictSeq.empty
           (Wdrl mempty)
@@ -449,6 +425,10 @@ instance
       bodyFields 0 =
         field
           (\x tx -> tx {_inputs = x})
+          (D (decodeSet fromCBOR))
+      bodyFields 13 =
+        field
+          (\x tx -> tx {_inputs_fee = x})
           (D (decodeSet fromCBOR))
       bodyFields 1 =
         field
@@ -497,16 +477,32 @@ instance
   where
   fromCBOR = pure <$> fromCBOR
 
--- ============================================================
--- From the specification, Figure 5 "Functions related to fees"
+-- ====================================================
+-- HasField instances to be consistent with earlier Era's
 
-txins :: AlonzoBody era => TxBody era -> Set (TxId (Crypto era), Word64)
-txins (TxBody {inputs = is}) = Set.foldl' accum Set.empty is
-  where
-    accum ans (TxInCompact idx index _) = Set.insert (idx, index) ans
+instance (Crypto era ~ c) => HasField "inputs" (TxBody era) (Set (TxIn c)) where
+  getField (TxBodyConstr (Memo m _)) = Set.union (_inputs m) (_inputs_fee m)
 
-txinputs_fee :: AlonzoBody era => TxBody era -> Set (TxId (Crypto era), Word64)
-txinputs_fee (TxBody {inputs = is}) = Set.foldl' accum Set.empty is
-  where
-    accum ans (TxInCompact idx index (IsFee True)) = Set.insert (idx, index) ans
-    accum ans _ = ans
+instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
+  getField (TxBodyConstr (Memo m _)) = _outputs m
+
+instance Crypto era ~ crypto => HasField "certs" (TxBody era) (StrictSeq (DCert crypto)) where
+  getField (TxBodyConstr (Memo m _)) = _certs m
+
+instance Crypto era ~ crypto => HasField "wdrls" (TxBody era) (Wdrl crypto) where
+  getField (TxBodyConstr (Memo m _)) = _wdrls m
+
+instance HasField "txfee" (TxBody era) Coin where
+  getField (TxBodyConstr (Memo m _)) = _txfee m
+
+instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
+  getField (TxBodyConstr (Memo m _)) = _update m
+
+instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
+  getField (TxOutCompact a _ _) = a
+
+instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
+  getField (TxOutCompact a _ _) = decompactAddr a
+
+instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
+  getField (TxOutCompact _ v _) = fromCompact v

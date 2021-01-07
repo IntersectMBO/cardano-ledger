@@ -1,24 +1,34 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- Needed for FromCBOR(Annotator CostModel)
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
     Script (..),
     ExUnits (..),
-    CostModel,
-    Language,
+    CostModel (CostModel),
+    Language (..),
     Prices (..),
+    proxyhash,
+    hashCostModel,
   )
 where
 
 import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.ShelleyMA.Timelocks
@@ -26,11 +36,17 @@ import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
 import Data.Coders
 import Data.Map (Map)
+import Data.MemoBytes
 import Data.Typeable
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+
+type SafeHash e t = Hash.Hash (HASH (Crypto e)) t
+
+proxyhash :: forall e t. (ToCBOR t, Era e) => Proxy e -> t -> SafeHash e t
+proxyhash Proxy x = Hash.castHash (Hash.hashWithSerialiser @(HASH (Crypto e)) toCBOR x)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -75,7 +91,10 @@ instance Semigroup ExUnits where
 instance Monoid ExUnits where
   mempty = ExUnits 0 0
 
--- Script language
+-- Non-Native Script language.
+-- This is an open type. We will add values of this type
+-- for each Non-Native scripting language as they are added.
+
 newtype Language = Language ByteString
   deriving (Eq, Generic, Show, Ord)
 
@@ -87,9 +106,18 @@ deriving instance ToCBOR Language
 
 deriving instance FromCBOR Language
 
--- Cost Model
-newtype CostModel = CostModel (Map ByteString Integer)
+-- =====================================
+-- Cost Model needs to preserve its serialization bytes as
+-- it is going to be hashed. Thus we make it a newtype around a MemoBytes
+
+newtype CostModel = CostModelConstr (MemoBytes (Map ByteString Integer))
   deriving (Eq, Generic, Show, Ord)
+
+pattern CostModel :: (Map ByteString Integer) -> CostModel
+pattern CostModel m <-
+  CostModelConstr (Memo m _)
+  where
+    CostModel m = CostModelConstr (memoBytes (To m))
 
 instance NoThunks CostModel
 
@@ -97,7 +125,19 @@ instance NFData CostModel
 
 deriving instance ToCBOR CostModel
 
-deriving instance FromCBOR CostModel
+-- This is needed to derive the FromCBOR (Annotator CostModel) instance
+instance FromCBOR (Annotator (Map ByteString Integer)) where
+  fromCBOR = pure <$> fromCBOR
+
+deriving via
+  Mem (Map ByteString Integer)
+  instance
+    FromCBOR (Annotator CostModel)
+
+hashCostModel :: forall e. Era e => Proxy e -> CostModel -> SafeHash e CostModel
+hashCostModel Proxy x = Hash.castHash (Hash.hashWithSerialiser @(HASH (Crypto e)) toCBOR x)
+
+-- ==================================
 
 -- | Prices per execution unit
 data Prices = Prices
@@ -160,3 +200,7 @@ instance
       decodeScript 0 = Ann (SumD NativeScript) <*! From
       decodeScript 1 = Ann (SumD PlutusScript)
       decodeScript n = Invalid n
+
+-- =================================================
+-- Languages
+-- =================================================
