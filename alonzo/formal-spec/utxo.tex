@@ -7,16 +7,6 @@
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{uin}
-      & \UTxOIn
-      & \TxId \times \Ix
-%      & \text{transaction output preference}
-      \\
-      \var{utxo}
-      & \UTxO
-      & \hldiff{\UTxOIn} \mapsto \TxOut
-%      & \text{unspent tx outputs}
-      \\
       \var{sp}
       & \ScriptPurpose
       & \PolicyID \uniondistinct \UTxOIn \uniondistinct \AddrRWD \uniondistinct \DCert
@@ -31,10 +21,6 @@
 We make a number of changes to the UTxO model (see Figure~\ref{fig:defs:utxo-defs}).
 
 \begin{itemize}
-\item $\UTxOIn$ is the same type as $\TxIn$ in Shelley, but we have changed
-  the name because the types of transaction inputs and UTxO keys
-  differ in Goguen.
-\item $\UTxO$ entries are stored in the finite map $\UTxOIn \mapsto \TxOut$.
 \item $\ScriptPurpose$ is the type of the items that scripts can validate.
 \end{itemize}
 
@@ -42,11 +28,6 @@ We make a number of changes to the UTxO model (see Figure~\ref{fig:defs:utxo-def
   \emph{Functions}
   %
   \begin{align*}
-    & \fun{txinputs_{fee}} \in \TxBody \to \powerset{\TxId \times \Ix} \\
-    & \fun{txinputs_{fee}} ~txb~=~ \{ (txid,ix)~\vert~(txid,ix,\var{isfee}) \in
-    \fun{txinputs} ~txb,~
-      \var{isfee} = \True\}
-    \nextdef
     & \fun{isNonNativeScriptAddress} \in \Tx \to \Addr \to \Bool \\
     & \fun{isNonNativeScriptAddress}~tx~a = \\
       &\quad\begin{cases}
@@ -58,14 +39,14 @@ We make a number of changes to the UTxO model (see Figure~\ref{fig:defs:utxo-def
     & \fun{feesOK}~\var{pp}~tx~utxo~= \\
     &~~(\forall (a, \wcard, \_) \in \fun{range}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo}), \neg \fun{isNonNativeScriptAddress}~tx~a) \\
     &~~\wedge~ \var{balance} \in \Coin \\
-    &~~      \wedge~ \var{balance} \geq \txfee{txb} ~ \\
+    &~~      \wedge~ (\fun{exunits}~tx \neq (0, 0) \Rightarrow \var{balance} \geq \txfee{txb}) \\
     &~~      \wedge~ \minfee{pp}~{tx} \leq \txfee{txb} \\
     &~~      \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
     & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo})
     \nextdef
     & \fun{txins} \in \TxBody \to \powerset{\TxId \times \Ix} \\
-    & \fun{txins} ~\var{txb} = \{(txid,ix) \mid ((txid,ix),\wcard)\in\fun{txinputs} ~txb\}
+    & \fun{txins} ~\var{txb} = \fun{txinputs}~txb \cup \fun{txinputs_{fee}}~txb
     \nextdef
     & \fun{txscriptfee} \in \Prices \to \ExUnits \to \Coin \\
     & \fun{txscriptfee}~(pr_{mem}, pr_{steps})~ (\var{mem, steps})
@@ -83,9 +64,6 @@ We make a number of changes to the UTxO model (see Figure~\ref{fig:defs:utxo-def
 We have added or changed several functions that deal with fees as shown in Figure \ref{fig:functions:utxo}.
 
 \begin{itemize}
-  \item The function $\fun{txinputs_{fee}}$ returns only those transaction inputs
-    that were selected to pay transaction fees (we call these ``fee-marked'' inputs).
-    These inputs may only contain Ada.
   \item The predicate $\fun{feesOK}$ checks whether the transaction is
   paying the necessary fees, and that it does it correctly. That is, it checks that:
   \begin{enumerate}[label=({\roman*})]
@@ -251,20 +229,18 @@ and the current item being validated.
         \epsilon  & \text{otherwise}
       \end{cases}
     \nextdef
-    & \fun{collectNNScriptInputs} \in \PParams \to \Tx \to \UTxO \to \seqof{(\ScriptNonNative \times \seqof{\Data} \times \CostMod)} \\
+    & \fun{collectNNScriptInputs} \in \PParams \to \Tx \to \UTxO \to \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
     & \fun{collectNNScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
-    & ~~\fun{toList} \{ (\var{script}, (d; \fun{valContext}~\var{utxo}~\var{tx}~\var{sp}; \fun{getData}~tx~utxo~sp), \var{cm}) \mid \\
+    & ~~\fun{toList} \{ (\var{script}, (d; \fun{valContext}~\var{utxo}~\var{tx}~\var{sp}; \fun{getData}~tx~utxo~sp), \var{eu}, \var{cm}) \mid \\
     & ~~~~(\var{sp}, \var{scriptHash}) \in \fun{scriptsNeeded}~{tx}~{utxo}, \\
-    & ~~~~\var{d} := \fun{indexedRdmrs}~tx~sp, \\
+    & ~~~~(\var{d}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
     & ~~~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp} \}
     \nextdef
-    & \fun{evalScripts} \in \seqof{(\ScriptNonNative \times \seqof{\Data} \times \CostMod)} \to \ExUnits \to \Bool \\
-    & \fun{evalScripts}~\epsilon~\var{remExU}~=~\True \\
-    & \fun{evalScripts}~((\var{sc}, \var{d}, \var{cm});\Gamma)~\var{remExU}~=~
-      \var{isVal} \land \fun{evalScripts}~\Gamma~\var{remExU'} \\
-    & ~~\where \\
-    & ~~~~ (\var{isVal},\var{remExU'})~:=~ \llbracket sc \rrbracket_{cm,\var{remExU}} d
+    & \fun{evalScripts} \in \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \to \Bool \\
+    & \fun{evalScripts}~\epsilon = \True \\
+    & \fun{evalScripts}~((\var{sc}, \var{d}, \var{eu}, \var{cm});\Gamma) =
+      \llbracket sc \rrbracket_{cm,\var{eu}} d \land \fun{evalScripts}~\Gamma
     \nextdef
     &\fun{runNativeScript} \in\ScriptNative \to \Tx \to \IsValidating
   \end{align*}
@@ -379,7 +355,7 @@ In this case, the states of the UTxO, fee
     \\
     ~
     \\
-    \fun{txvaltag}~\var{tx} = \fun{evalScripts}~\var{sLst}~(\fun{txexunits}~{tx}) = \True
+    \fun{txvaltag}~\var{tx} = \fun{evalScripts}~\var{sLst} = \True
     \\~\\
     {
       \begin{array}{r}
@@ -430,7 +406,7 @@ In this case, the states of the UTxO, fee
     \\
     ~
     \\
-    \fun{txvaltag}~\var{tx} = \fun{evalScripts}~\var{sLst}~(\fun{txexunits}~{tx}) = \False
+    \fun{txvaltag}~\var{tx} = \fun{evalScripts}~\var{sLst} = \False
     }
     {
     \begin{array}{l}
@@ -696,13 +672,13 @@ by the UTXO transition (the application of which is also part of the conditions)
       \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
       \fun{d}~\var{pp} > 0
       \\~\\
-      \var{mdh}\leteq\fun{txMDhash}~\var{txb}
+      \var{adh}\leteq\fun{txADhash}~\var{txb}
       &
-      \var{md}\leteq\fun{txMD}~\var{tx}
+      \var{ad}\leteq\fun{txAD}~\var{tx}
       \\
-      (\var{mdh}=\Nothing \land \var{md}=\Nothing)
+      (\var{adh}=\Nothing \land \var{ad}=\Nothing)
       \lor
-      (\var{mdh}=\fun{hashMD}~\var{md})
+      (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
       \hldiff{\fun{sdHash}~{txb}~=~\fun{hashScriptData}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})}
       \\~\\

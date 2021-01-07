@@ -27,14 +27,6 @@ Shelley specification~\cite{XX}:
   This tag is added by the block creator when
   constructing a block, and its correctness is verified as part of the script execution.
 
-  \item $\IsFee$ is a tag that indicates when an input has been marked
-    to be used for paying transaction fees.
-    This provides a way to prevent
-  the entire value of a transaction's UTxO entries being used as fees if a script fails to validate.
-
-  \item $\TxIn$ is a transaction input. It includes a reference to the UTxO entry that it is spending
-  and an $\IsFee$ tag.
-
   \item $\TxOut$ is the type of transaction outputs, which now includes
   an optional hash of a datum. Note here that \emph{any} output can
   optionally include such a hash, even though only non-native scripts
@@ -82,16 +74,6 @@ Shelley specification~\cite{XX}:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{isf}
-      & \IsFee
-      & \Bool
-%      & \text {tag for inputs used to pay script fees}
-      \\
-      \var{txin}
-      & \TxIn
-      & \TxId \times \Ix \times \hldiff{\IsFee}
-%      & \text{transaction input}
-      \\
       \var{txout}
       & \TxOut
       & \Addr \times \Value \times \hldiff{\DataHash^?}
@@ -138,7 +120,7 @@ Shelley specification~\cite{XX}:
        & (\VKey \mapsto \Sig) & \fun{txwitsVKey} & \text{VKey signatures}\\
        & \times ~(\ScriptHash \mapsto \Script)  & \fun{txscripts} & \text{All scripts}\\
        & \times~ \hldiff{(\DataHash \mapsto \Data)} & \hldiff{\fun{txdats}} & \text{All datum objects}\\
-       & \times ~\hldiff{(\RdmrPtr \mapsto \Data)}& \hldiff{\fun{txrdmrs}}& \text{Indexed redeemers}\\
+       & \times ~\hldiff{(\RdmrPtr \mapsto \Data \times \ExUnits)}& \hldiff{\fun{txrdmrs}}& \text{Redeemers/budget}\\
     \end{array}
   \end{equation*}
   %
@@ -146,25 +128,25 @@ Shelley specification~\cite{XX}:
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
       \var{txbody} ~\in~ \TxBody ~=~
       & \powerset{\TxIn} & \fun{txinputs}& \text{Inputs}\\
+      & \hldiff{\powerset{\TxIn}} & \hldiff{\fun{txinputs_{fee}}}& \text{Fee inputs}\\
       &\times ~(\Ix \mapsto \TxOut) & \fun{txouts}& \text{Outputs}\\
       & \times~ \seqof{\DCert} & \fun{txcerts}& \text{Certificates}\\
        & \times ~\Value  & \fun{mint} &\text{A minted value}\\
-       & \times ~\hldiff{\ExUnits}  & \hldiff{\fun{txexunits}}& \text{Script exec. budget}\\
        & \times ~\Coin & \fun{txfee} &\text{Non-script fee}\\
        & \times ~\Slot^? \times \Slot^? & \fun{txvldt} & \text{Validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
        & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
-       & \times ~\ScriptDataHash^? & \fun{sdHash} & \text{Hash of script-related data}\\
-       & \times ~\AuxiliaryDataHash^? & \fun{txMDhash} & \text{Auxiliary data hash}\\
+       & \times ~\hldiff{\ScriptDataHash^?} & \hldiff{\fun{sdHash}} & \text{Hash of script-related data}\\
+       & \times ~\AuxiliaryDataHash^? & \fun{txADhash} & \text{Auxiliary data hash}\\
     \end{array}
   \end{equation*}
   %
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
-      \var{md} ~\in~ \MetaData ~=~
+      \var{ad} ~\in~ \AuxiliaryData ~=~
       & \powerset{\Script} & \fun{scripts}& \text{Optional scripts}\\
       & \hldiff{\powerset{\Data}} & \hldiff{\fun{dats}}& \text{Optional datums}\\
-      & \times ~\AuxiliaryData^? & \fun{txMD}&\text{Auxiliary data}
+      & \times ~\Metadata^? & \fun{txMD}&\text{Metadata}
     \end{array}
   \end{equation*}
   %
@@ -174,7 +156,7 @@ Shelley specification~\cite{XX}:
       & \TxBody & \fun{txbody} & \text{Body}\\
       & \times ~\TxWitness & \fun{txwits} & \text{Witnesses}\\
       & \times ~\hldiff{\IsValidating} & \hldiff{\fun{txvaltag}}&\text{Validation tag}\\
-      & \times ~\MetaData^? & \fun{txMD}&\text{Metadata}\\
+      & \times ~\AuxiliaryData^? & \fun{txAD}&\text{Auxiliary data}\\
     \end{array}
   \end{equation*}
   \caption{Definitions for transactions, cont.}
@@ -187,10 +169,9 @@ in a transaction that is needed for witnessing, namely:
 
 \begin{itemize}
   \item VKey signatures;
-  \item a set of scripts, containing all the scripts (for any purpose) that are needed to \emph{validate} the transaction,
-  \item a set of terms of type $\Data$, which contains all required datum objects; and
-  \item a map of $\Data$ values indexed by $\RdmrPtr$, which includes all the
-  required redeemers.
+  \item a map of scripts, including non-native scripts;
+  \item a map of terms of type $\Data$, containing all required datum objects; and
+  \item a map of $\Data$ values indexed by $\RdmrPtr$, containing the redeemers.
 \end{itemize}
 
 Note that there is a difference between the way scripts and datum objects are included in
