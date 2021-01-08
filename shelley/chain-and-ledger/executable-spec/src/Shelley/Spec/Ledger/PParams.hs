@@ -24,6 +24,7 @@ module Shelley.Spec.Ledger.PParams
     emptyPParamsUpdate,
     Update (..),
     updatePParams,
+    HKD,
   )
 where
 
