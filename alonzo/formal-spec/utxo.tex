@@ -251,35 +251,33 @@ and the current item being validated.
 \subsection{Two-Phase Transaction Validation for Non-Native Scripts}
 \label{sec:two-phase}
 
-In order to ensure that users pay for the computational resources that are needed to validate non-native scripts, even
-if transactions are invalid, transactions are validated in two phases:
+Transactions are validated in two phases:
 the first phase consists of every aspect of transaction validation apart from executing the non-native scripts; and
-the second phase is executing those scripts.
-%
-To handle script execution, an additional transition system is used, called UTXOS.
-It performs the appropriate UTxO state changes, based on the
+the second phase involves actually executing those scripts.
+This ensures that users pay for the computational resources that are needed to validate non-native scripts, even
+for invalid transactions. %
+In order to handle script execution, an additional transition system is used, called UTXOS.
+This performs the appropriate UTxO state changes, based on the
 value of the $\IsValidating$ tag, which it checks using the $\fun{evalScripts}$ function.
 
-In general, there is no way to check that the budget that has been supplied is sufficient for the transaction,
-except by running the scripts. To avoid over-spending the budget, we run them sequentially,
-stopping whenever one does not validate, and charging the transaction the corresponding
-fees. From the point of view of the ledger, there is no difference
-between a script running out of $\ExUnits$ during validation, or not validating.
-If a transaction contains an invalid script, the only change to the ledger
-as a result of applying this transaction is the fees.
+In general, there is no way to check \emph{a-priori} that the budget that has been supplied is sufficient for the transaction.
+This can only be done by actually running the scripts. In order to  avoid over-spending the budget, we run scripts sequentially rather than in parallel,
+stopping the validation whenever one does not validate, and charging the transaction the corresponding
+fees. From the perspective of the ledger, there is no difference
+between a script that exhausts the $\ExUnits$ budget during validation, and one that fails to validate.
+If a transaction contains an invalid script, the only change to the ledger that is made
+is to charge the fees.
 
 Running scripts sequentially
-to verify that they all validate in the allotted $\ExUnits$ budget only requires
-the amount of remaining $\ExUnits$ to be included in the state, and nothing else.
+to verify that they all validate within the total allotted $\ExUnits$ budget requires only
+the remaining $\ExUnits$ to be included in the state.
 In the environment, we need the protocol parameters and the
-transaction being validated. All other data needed
-to run the scripts comes from the signal.
+transaction that is neing validated. All the other data that is needed
+to run the scripts comes from the signal.\khcomment{signal??}
 
-The only state change in this rule is of the variable $\var{remExU}$.
-It is decreased by subtracting the cost of the execution of the
-current script from its current value.
-We use this variable to keep track of the remaining funds for
-script execution. If the transaction is overpaying ($\fun{txscriptfee}~{tx}$
+The only state change in this rule is to the $\var{remExU}$  variable, which has the script exection cost deducted.
+This variable keeps track of the remaining funds for
+script execution. If the transaction overpays the required fee ($\fun{txscriptfee}~{tx}$
 is too big), then the whole fee is still taken.
 
 It is always in the interest of the slot leader to have the new block validate,
@@ -288,24 +286,25 @@ slot leader to:
 
 \begin{enumerate}
   \item Correctly apply the $\IsValidating$ tag;
-  \item Include all transactions that validate,
-  \textit{even in case of a 2nd step script validation failure};
+  \item Include all transactions that validate within the block,
+  \textit{even when there is a 2nd step script validation failure};
   \item Exclude any transactions that are invalid in some way \textit{other than 2nd step script validation failure}.
 \end{enumerate}
 
-One of the reasons for having the validation tag added by the slot leader
+One important reason for adding the validation tag
 to a transaction is that re-applying blocks will not require repeat
-execution of scripts in the transactions inside a block. In fact, when replaying
+execution of scripts in the transactions inside a block, which would increase execution costs.
+In fact, when replaying
 blocks, all the witnessing information can be thrown away.
 
 \subsection{Updating the UTxO State}
 \label{sec:utxo-state-trans}
 
 We have defined a separate transition system, UTXOS, to represent the two distinct
-UTxO state changes, one resulting from all scripts in a transaction validating,
-the other - from at least one failing to validate. Its transition types
-are all the same as for the for the UTXO transition, see Figure
-\ref{fig:ts-types:utxo-scripts}.
+UTxO state changes: i) when all the scripts in a transaction validating; and
+ii) when at least one fails to validate. Its transition types
+are identical to the UTXO transition (Figure
+\ref{fig:ts-types:utxo-scripts}).
 
 \begin{figure}[htb]
   \emph{State transitions}
