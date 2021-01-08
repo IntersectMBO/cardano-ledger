@@ -441,23 +441,23 @@ In this case, the states of the UTxO, fee
 Figure \ref{fig:rules:utxo-shelley} shows the $\type{UTxO-inductive}$
 transition rule for the UTXO transition type.
 This rule has the following preconditions (plus the relevant ones
-from the Shelley-MA specification):
+from \cite{Shelley-MultiAsset-Spec}\khcomment{You need to list these...}):
 
 \begin{enumerate}
   \item The transaction is being processed within its validity interval;
 
   \item All inputs in a transaction correspond to UTxO entries;
 
-  \item The general accounting property holds;
+  \item The general accounting property holds\khcomment{what is that?};
 
-  \item The transaction pays fees correctly;
+  \item The transaction pays fees correctly, as defined above;
 
   \item All outputs of the transaction contain only non-negative quantities;
 
-  \item The transaction size does not exceed the maximum limit;
+  \item The transaction size does not exceed the maximum limit\khcomment{Defined where?};
 
- \item The execution units budget that a transaction gives does not exceed the maximum
-  permitted number of units;
+ \item The execution unit budget for a transaction is within the maximum
+  permitted number of units for a transaction;
 
   \item The UTXOS state transition is valid.
 \end{enumerate}
@@ -599,26 +599,27 @@ validation purpose (minting, outputs, certificates, withdrawals).
 \end{figure}
 
 In addition to the Shelley UTXOW preconditions
-that still apply, we have made the following changes and additions:
+(that all still apply\khcomment{confirm}), we have made the following changes and additions:
 
 \begin{itemize}
 
-    \item All the native scripts in the transaction validate;
+\item All the native scripts in the transaction are valid;
 
     \item The transaction contains exactly those scripts that are required for witnessing and no
-    additional ones (this includes all languages of scripts, for all purposes);
+    additional ones; % (this includes all languages of scripts, for all purposes); \khcomment{Not clear what this means?}
 
-    \item The transaction contains a redeemer for every item that needs to be  validated
+  \item The transaction contains a redeemer for every data\khcomment{confirm} item that needs to be  validated
       by a Plutus script;
 
-    \item The only certificates that are allowed to have scripts as witnesses
-    are delegation de-registration certificates;
+    \item The only certificates that are allowed to have scripts as witnesses are delegation de-registration certificates;
 
-    \item The transaction has a datum for every Plutus script output that it spends;
+    \item Every output that is spent by a Plutus script has a corresponding data item in the transaction;\khcomment{wasn't clear}
 
     \item
-    The hash of the subset of protocol parameters in the transaction body is equal to
-    the hash of the same subset of protocol parameters that are currently on the ledger;
+    The hash of the subset of protocol parameter values that have been included in the transaction body is the same as
+    the hash of the same subset of protocol parameters that are currently contained in the ledger;
+    \khcomment{There is some weird edge case here where protocol parameters change across major protocol versions - this needs to be sorted out urgently, otherwise we can never retire/depecrate/repurpose protocol parameters...  It suggests that care needs to be taken
+    when submitting transactions that will be run after a hard fork.}
 
     \item The hash of the indexed redeemer structure that is attached to the transaction is
     the same as $\fun{rdmrsHash}~{tx}$ (the hash value that is contained in the signed body of
@@ -627,7 +628,7 @@ that still apply, we have made the following changes and additions:
 \end{itemize}
 
 If these conditions are all satisfied, then the resulting UTxO state change is fully determined
-by the UTXO transition (the application of which is also part of the conditions).
+by the UTXO transition (the application of which is also part of the conditions).\khcomment{Do we assume that transaction validation and execution happen within the same era?}
 
 \begin{figure}[htb]
   \emph{State transitions}
