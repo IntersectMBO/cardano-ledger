@@ -41,6 +41,7 @@ import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
 import Data.Aeson
+import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -229,6 +230,9 @@ instance
       go <- fromCBOR
       f <- fromCBOR
       pure $ SnapShots mark set go f
+
+instance Default (SnapShots crypto) where
+  def = emptySnapShots
 
 emptySnapShot :: SnapShot crypto
 emptySnapShot = SnapShot (Stake Map.empty) Map.empty Map.empty

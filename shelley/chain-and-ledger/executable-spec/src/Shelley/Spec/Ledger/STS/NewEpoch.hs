@@ -25,6 +25,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
+import Data.Default.Class (def)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -96,7 +97,7 @@ instance
           (EpochNo 0)
           (BlocksMade Map.empty)
           (BlocksMade Map.empty)
-          emptyEpochState
+          def
           SNothing
           (PoolDistr Map.empty)
     ]

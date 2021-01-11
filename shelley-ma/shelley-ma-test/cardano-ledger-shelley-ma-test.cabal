@@ -104,6 +104,7 @@ test-suite cardano-ledger-shelley-ma-test
       "-with-rtsopts=-K4m -M250m"
     build-depends:
       cardano-ledger-shelley-ma,
+      data-default-class,
       shelley-spec-ledger-test,
       cardano-ledger-shelley-ma-test,
       base >=4.9 && <4.15,

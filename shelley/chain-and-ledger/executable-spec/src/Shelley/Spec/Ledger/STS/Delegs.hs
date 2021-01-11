@@ -62,7 +62,6 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DPState (..),
     RewardAccounts,
-    emptyDelegation,
     _dstate,
     _pParams,
     _rewards,
@@ -136,7 +135,6 @@ instance
     PredicateFailure (DELEGS era) =
       DelegsPredicateFailure era
 
-  initialRules = [pure emptyDelegation]
   transitionRules = [delegsTransition]
 
 instance

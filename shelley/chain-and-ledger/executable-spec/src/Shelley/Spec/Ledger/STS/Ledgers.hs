@@ -43,7 +43,6 @@ import Shelley.Spec.Ledger.LedgerState
     DPState,
     LedgerState (..),
     UTxOState,
-    emptyLedgerState,
     _delegationState,
     _utxoState,
   )
@@ -116,7 +115,6 @@ instance
   type BaseM (LEDGERS era) = ShelleyBase
   type PredicateFailure (LEDGERS era) = LedgersPredicateFailure era
 
-  initialRules = [pure emptyLedgerState]
   transitionRules = [ledgersTransition]
 
 ledgersTransition ::

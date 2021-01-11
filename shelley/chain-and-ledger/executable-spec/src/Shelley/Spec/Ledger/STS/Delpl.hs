@@ -39,7 +39,6 @@ import Shelley.Spec.Ledger.LedgerState
     DPState,
     DState,
     PState,
-    emptyDelegation,
     _dstate,
     _pstate,
   )
@@ -107,7 +106,6 @@ instance
   type BaseM (DELPL era) = ShelleyBase
   type PredicateFailure (DELPL era) = DelplPredicateFailure era
 
-  initialRules = [pure emptyDelegation]
   transitionRules = [delplTransition]
 
 instance

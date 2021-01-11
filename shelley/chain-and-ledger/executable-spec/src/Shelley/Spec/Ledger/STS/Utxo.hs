@@ -46,8 +46,6 @@ import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
     Embed,
-    IRC (..),
-    InitialRule,
     STS (..),
     TRC (..),
     TransitionRule,
@@ -87,7 +85,6 @@ import Shelley.Spec.Ledger.LedgerState
     TransUTxOState,
     UTxOState (..),
     consumed,
-    emptyPPUPState,
     keyRefunds,
     minfee,
     produced,
@@ -295,7 +292,6 @@ instance
   type PredicateFailure (UTXO era) = UtxoPredicateFailure era
 
   transitionRules = [utxoInductive]
-  initialRules = [initialLedgerState]
 
   renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
     "AssertionViolation (" <> avSTS <> "): " <> avMsg
@@ -323,11 +319,6 @@ instance
                 utxoBalance us <> withdrawals (_body tx) == utxoBalance us'
             )
     ]
-
-initialLedgerState :: InitialRule (UTXO era)
-initialLedgerState = do
-  IRC _ <- judgmentContext
-  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
   forall era utxo.

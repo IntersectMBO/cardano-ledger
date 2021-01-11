@@ -16,14 +16,13 @@ where
 
 import Cardano.Ledger.Era (Crypto)
 import Control.State.Transition
-  ( InitialRule,
-    STS (..),
+  ( STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
     (?!),
   )
-import qualified Data.Map.Strict as Map
+import Data.Default.Class (Default, def)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -35,17 +34,13 @@ import Shelley.Spec.Ledger.LedgerState
     DState (..),
     PState (..),
     UTxOState,
-    emptyAccount,
-    emptyPPUPState,
     totalInstantaneousReservesRewards,
     updatePpup,
     _deposited,
     _irwd,
     _reserves,
-    pattern UTxOState,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
-import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 
 data NEWPP era
 
@@ -69,16 +64,10 @@ instance Typeable era => STS (NEWPP era) where
   type Environment (NEWPP era) = NewppEnv era
   type BaseM (NEWPP era) = ShelleyBase
   type PredicateFailure (NEWPP era) = NewppPredicateFailure era
-  initialRules = [initialNewPp]
   transitionRules = [newPpTransition]
 
-initialNewPp :: InitialRule (NEWPP era)
-initialNewPp =
-  pure $
-    NewppState
-      (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState)
-      emptyAccount
-      emptyPParams
+instance Default (NewppState era) where
+  def = NewppState def def def
 
 newPpTransition :: TransitionRule (NEWPP era)
 newPpTransition = do

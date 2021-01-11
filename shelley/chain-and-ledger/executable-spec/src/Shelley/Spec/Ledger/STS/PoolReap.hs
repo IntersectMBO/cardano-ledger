@@ -26,6 +26,7 @@ import Control.State.Transition
     TransitionRule,
     judgmentContext,
   )
+import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -40,16 +41,10 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     TransUTxOState,
     UTxOState (..),
-    emptyAccount,
-    emptyDState,
-    emptyPState,
-    emptyUTxOState,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxBody (getRwdCred, _poolRAcnt)
-
--- =================================================================
 
 data POOLREAP era
 
@@ -69,16 +64,16 @@ data PoolreapPredicateFailure era -- No predicate Falures
 
 instance NoThunks (PoolreapPredicateFailure era)
 
+instance Default (PoolreapState era) where
+  def = PoolreapState def def def def
+
 instance Typeable era => STS (POOLREAP era) where
   type State (POOLREAP era) = PoolreapState era
   type Signal (POOLREAP era) = EpochNo
   type Environment (POOLREAP era) = PParams era
   type BaseM (POOLREAP era) = ShelleyBase
   type PredicateFailure (POOLREAP era) = PoolreapPredicateFailure era
-  initialRules =
-    [ pure $
-        PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState
-    ]
+
   transitionRules = [poolReapTransition]
 
   assertions =

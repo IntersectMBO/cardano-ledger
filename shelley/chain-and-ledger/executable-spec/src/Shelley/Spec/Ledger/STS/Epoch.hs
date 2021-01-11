@@ -24,20 +24,26 @@ import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
-import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
+import Control.State.Transition
+  ( Embed (..),
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+    liftSTS,
+    trans,
+  )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
-import Shelley.Spec.Ledger.EpochBoundary (SnapShots, emptySnapShots)
+import Shelley.Spec.Ledger.EpochBoundary (SnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
     LedgerState,
     PPUPState (..),
     PState (..),
-    emptyAccount,
-    emptyLedgerState,
     esAccountState,
     esLState,
     esNonMyopic,
@@ -50,14 +56,12 @@ import Shelley.Spec.Ledger.LedgerState
     pattern DPState,
     pattern EpochState,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (..), emptyPParams, updatePParams)
-import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
+import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (..), updatePParams)
+import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppPredicateFailure, NewppState (..))
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapPredicateFailure, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapPredicateFailure)
 import Shelley.Spec.Ledger.Slot (EpochNo)
-
--- ================================================
 
 data EPOCH era
 
@@ -104,7 +108,6 @@ instance
   type Environment (EPOCH era) = ()
   type BaseM (EPOCH era) = ShelleyBase
   type PredicateFailure (EPOCH era) = EpochPredicateFailure era
-  initialRules = [initialEpoch]
   transitionRules = [epochTransition]
 
 instance
@@ -113,17 +116,6 @@ instance
     NoThunks (PredicateFailure (Core.EraRule "NEWPP" era))
   ) =>
   NoThunks (EpochPredicateFailure era)
-
-initialEpoch :: InitialRule (EPOCH era)
-initialEpoch =
-  pure $
-    EpochState
-      emptyAccount
-      emptySnapShots
-      emptyLedgerState
-      emptyPParams
-      emptyPParams
-      emptyNonMyopic
 
 votedValue ::
   ProposedPPUpdates era ->

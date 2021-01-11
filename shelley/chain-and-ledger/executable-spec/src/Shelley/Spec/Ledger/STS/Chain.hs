@@ -48,6 +48,7 @@ import Control.State.Transition
     liftSTS,
     trans,
   )
+import Data.Default.Class (def)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -94,9 +95,6 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     TransUTxOState,
     UTxOState (..),
-    emptyDState,
-    emptyPPUPState,
-    emptyPState,
     updateNES,
     _genDelegs,
   )
@@ -105,7 +103,6 @@ import Shelley.Spec.Ledger.PParams
     PParams' (..),
     ProtVer (..),
   )
-import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv (..), BbodyPredicateFailure, BbodyState (..))
 import Shelley.Spec.Ledger.STS.Prtcl
   ( PRTCL,
@@ -207,13 +204,13 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     utxo
                     (Coin 0)
                     (Coin 0)
-                    emptyPPUPState
+                    def
                 )
-                (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
+                (DPState (def {_genDelegs = (GenDelegs genDelegs)}) def)
             )
             pp
             pp
-            emptyNonMyopic
+            def
         )
         SNothing
         (PoolDistr Map.empty)
