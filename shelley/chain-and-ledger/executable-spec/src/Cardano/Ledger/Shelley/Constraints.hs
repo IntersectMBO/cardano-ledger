@@ -52,6 +52,7 @@ class
     ChainData (CompactForm (Value era)),
     SerialisableData (Value era),
     SerialisableData (CompactForm (Value era)),
+    SerialisableData (Delta (Value era)),
     DecodeNonNegative (Value era),
     EncodeMint (Value era),
     DecodeMint (Value era),
