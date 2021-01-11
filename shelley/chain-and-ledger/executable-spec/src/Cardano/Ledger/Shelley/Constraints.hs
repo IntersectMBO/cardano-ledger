@@ -26,6 +26,7 @@ import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy)
 import GHC.Records (HasField)
 import Shelley.Spec.Ledger.Address (Addr)
+import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
 import Shelley.Spec.Ledger.Hashing
   ( EraIndependentTxBody,
     HashAnnotated (..),
@@ -66,6 +67,7 @@ class
     ToCBOR (TxOut era),
     FromCBOR (TxOut era),
     HasField "address" (TxOut era) (Addr (Crypto era)),
+    HasField "compactAddress" (TxOut era) (CompactAddr (Crypto era)),
     HasField "value" (TxOut era) (Value era)
   ) =>
   UsesTxOut era
