@@ -106,19 +106,21 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  Gen (TxBody era)
+  Gen (TxBody era, [MultiSig (Crypto era)])
 genTxBody slot inputs outputs certs wdrls fee update adHash = do
   ttl <- genTimeToLive slot
-  return $
-    TxBody
-      inputs
-      outputs
-      certs
-      wdrls
-      fee
-      ttl
-      update
-      adHash
+  return
+    ( TxBody
+        inputs
+        outputs
+        certs
+        wdrls
+        fee
+        ttl
+        update
+        adHash,
+      [] -- Shelley does not need any additional script witnesses
+    )
 
 genTimeToLive :: SlotNo -> Gen SlotNo
 genTimeToLive currentSlot = do

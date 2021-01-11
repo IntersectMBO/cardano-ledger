@@ -64,7 +64,9 @@ class
   -- | Generate a genesis value for the Era
   genGenesisValue :: GenEnv era -> Gen (Core.Value era)
 
-  -- | Given some pre-generated data, generate an era-specific TxBody
+  -- | Given some pre-generated data, generate an era-specific TxBody,
+  -- and a list of additional scripts for eras that sometimes require
+  -- additional script witnessing.
   genEraTxBody ::
     GenEnv era ->
     SlotNo ->
@@ -75,7 +77,7 @@ class
     Coin ->
     StrictMaybe (Update era) ->
     StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-    Gen (Core.TxBody era)
+    Gen (Core.TxBody era, [Core.Script era])
 
   -- | Generate era-specific auxiliary data
   genEraAuxiliaryData :: Constants -> Gen (StrictMaybe (Core.AuxiliaryData era))
