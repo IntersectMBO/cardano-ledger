@@ -32,7 +32,6 @@ import Cardano.Ledger.ShelleyMA.AuxiliaryData
   ( AuxiliaryData (..),
     pattern AuxiliaryData,
   )
-import Cardano.Ledger.ShelleyMA.TxBody
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
@@ -40,7 +39,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Shelley.Spec.Ledger.API hiding (Metadata, TxBody)
 import Shelley.Spec.Ledger.Tx
-  ( WitnessSetHKD (WitnessSet, addrWits, bootWits, scriptWits),
+  ( decodeWits,
   )
 
 --------------------------------------------------------------------------------
@@ -165,30 +164,14 @@ instance Crypto c => TranslateEra (MaryEra c) UTxO where
     return $ UTxO $ Map.map (translateEra' ctxt) $ unUTxO utxo
 
 instance Crypto c => TranslateEra (MaryEra c) WitnessSet where
-  translateEra _ WitnessSet {addrWits, scriptWits, bootWits} =
-    pure $
-      WitnessSet
-        { addrWits = addrWits,
-          scriptWits = Map.map coerce scriptWits,
-          bootWits = bootWits
-        }
+  type TranslationError (MaryEra c) WitnessSet = DecoderError
+  translateEra _ctx ws =
+    case decodeAnnotator "witnessSet" decodeWits (serialize ws) of
+      Right new -> pure new
+      Left decoderError -> throwError decoderError
 
 instance Crypto c => TranslateEra (MaryEra c) Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en
-
-instance Crypto c => TranslateEra (MaryEra c) TxBody where
-  translateEra ctx (TxBody i o d w fee vi u m mint) =
-    pure $
-      TxBody
-        i
-        (translateEra' ctx <$> o)
-        d
-        w
-        fee
-        vi
-        (translateEra' ctx <$> u)
-        (coerce m)
-        (translateValue mint)
 
 instance Crypto c => TranslateEra (MaryEra c) AuxiliaryData where
   translateEra _ (AuxiliaryData md as) =
