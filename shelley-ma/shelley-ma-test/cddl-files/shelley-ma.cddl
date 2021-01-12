@@ -252,7 +252,9 @@ policy_id = scripthash
 asset_name = bytes .size (0..32)
 
 value = coin / [coin,multiasset<uint>]
-mint = multiasset<int>
+mint = multiasset<int64>
+
+int64 = -9223372036854775808 .. 9223372036854775807
 
 epoch = uint
 

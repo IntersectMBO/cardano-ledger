@@ -68,6 +68,7 @@ import Data.Coders
     (<!),
   )
 import Data.Group (Abelian, Group (..))
+import Data.Int (Int64)
 import Data.Map.Internal
   ( Map (..),
     link,
@@ -264,7 +265,35 @@ instance
   CC.Crypto crypto =>
   DecodeMint (Value crypto)
   where
-  decodeMint = Value 0 <$> decodeMultiAssetMaps decodeInteger
+  decodeMint = Value 0 <$> decodeMultiAssetMaps decodeIntegerBounded64
+
+-- Note: we do not use `decodeInt64` from the cborg library here because the
+-- implementation contains "-- TODO FIXME: overflow"
+decodeIntegerBounded64 :: Decoder s Integer
+decodeIntegerBounded64 = do
+  tt <- peekTokenType
+  case tt of
+    TypeUInt -> pure ()
+    TypeUInt64 -> pure ()
+    TypeNInt -> pure ()
+    TypeNInt64 -> pure ()
+    _ -> fail "expected major type 0 or 1 when decoding mint field"
+  x <- decodeInteger
+  if x >= minval && x <= maxval
+    then pure x
+    else
+      fail $
+        concat
+          [ "overflow when decoding mint field. min value: ",
+            show minval,
+            " max value: ",
+            show maxval,
+            " got: ",
+            show x
+          ]
+  where
+    maxval = fromIntegral (maxBound :: Int64)
+    minval = fromIntegral (minBound :: Int64)
 
 instance
   CC.Crypto crypto =>
