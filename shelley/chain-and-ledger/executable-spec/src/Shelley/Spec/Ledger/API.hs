@@ -15,6 +15,7 @@ import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
     UsesScript,
     UsesTxBody,
+    UsesTxOut,
     UsesValue,
   )
 import Shelley.Spec.Ledger.API.ByronTranslation as X
@@ -32,7 +33,8 @@ class
     UsesValue era,
     UsesScript era,
     UsesAuxiliary era,
-    UsesTxBody era
+    UsesTxBody era,
+    UsesTxOut era
   ) =>
   ShelleyBasedEra era
 
