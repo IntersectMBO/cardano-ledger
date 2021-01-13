@@ -41,7 +41,12 @@ import Shelley.Spec.Ledger.LedgerState
     _irwd,
     _reserves,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates (..))
+import Shelley.Spec.Ledger.PParams
+  ( PParams,
+    PParams' (..),
+    ProposedPPUpdates (..),
+    emptyPPPUpdates,
+  )
 
 data NEWPP era
 

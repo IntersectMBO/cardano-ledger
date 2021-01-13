@@ -29,14 +29,12 @@ import Control.State.Transition
     TRC (..),
     TransitionRule,
     judgmentContext,
-    liftSTS,
     trans,
   )
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShots, obligation)
 import Shelley.Spec.Ledger.LedgerState
@@ -58,9 +56,8 @@ import Shelley.Spec.Ledger.LedgerState
     pattern DPState,
     pattern EpochState,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (..), updatePParams)
+import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Rewards ()
-import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppPredicateFailure, NewppState (..))
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapPredicateFailure, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapPredicateFailure)
 import Shelley.Spec.Ledger.STS.Upec (UPEC, UpecPredicateFailure, UpecState (..))
@@ -119,31 +116,6 @@ instance
     NoThunks (PredicateFailure (Core.EraRule "UPEC" era))
   ) =>
   NoThunks (EpochPredicateFailure era)
-
-votedValue ::
-  ProposedPPUpdates era ->
-  PParams era ->
-  Int ->
-  Maybe (PParams era)
-votedValue (ProposedPPUpdates pup) pps quorumN =
-  let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
-      votes =
-        Map.foldr
-          (\vote tally -> Map.insert vote (incrTally vote tally) tally)
-          (Map.empty :: Map (PParamsUpdate era) Int)
-          pup
-      consensus = Map.filter (>= quorumN) votes
-   in case length consensus of
-        -- NOTE that `quorumN` is a global constant, and that we require
-        -- it to be strictly greater than half the number of genesis nodes.
-        -- The keys in the `pup` correspond to the genesis nodes,
-        -- and therefore either:
-        --   1) `consensus` is empty, or
-        --   2) `consensus` has exactly one element.
-        1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
-        -- NOTE that `updatePParams` corresponds to the union override right
-        -- operation in the formal spec.
-        _ -> Nothing
 
 epochTransition ::
   forall era.
