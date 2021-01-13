@@ -175,5 +175,12 @@ propertyTests =
             (onlyValidChainSignalsAreGenerated @era)
         ],
       testGroupByronTranslation,
-      testGroupShelleyTranslation
+      testGroupShelleyTranslation,
+      testGroup
+        "Compact Address Tests"
+        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(Crypto era)),
+          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
+          TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @(Crypto era)),
+          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era))
+        ]
     ]

@@ -107,6 +107,12 @@ trivialPolicy :: CryptoClass.Crypto c => Int -> Timelock c
 trivialPolicy i | i == 0 = RequireAllOf (StrictSeq.fromList [])
 trivialPolicy i | otherwise = RequireAllOf (StrictSeq.fromList [trivialPolicy (i -1)])
 
+coloredCoinMinMint :: Integer
+coloredCoinMinMint = 1000
+
+coloredCoinMaxMint :: Integer
+coloredCoinMaxMint = 1000*1000
+
 --------------------------------------------------------
 -- Red Coins                                          --
 --                                                    --
@@ -125,7 +131,7 @@ red = AssetName $ BS.pack "redCoin"
 
 genRed :: CryptoClass.Crypto c => Gen (Value c)
 genRed = do
-  n <- genInteger 1 1000000
+  n <- genInteger coloredCoinMinMint coloredCoinMaxMint
   pure $ Value 0 (Map.singleton redCoinId (Map.singleton red n))
 
 --------------------------------------------------------
@@ -151,7 +157,7 @@ genBlue = do
   pure $ Value 0 (Map.singleton blueCoinId (Map.fromList as))
   where
     genSingleBlue = do
-      n <- genInteger 1 1000000
+      n <- genInteger coloredCoinMinMint coloredCoinMaxMint
       a <- arbitrary
       pure $ (AssetName a, n)
 
@@ -178,7 +184,7 @@ genYellow = do
   pure $ Value 0 (Map.singleton yellowCoinId (Map.fromList as))
   where
     genSingleYellow x = do
-      y <- genInteger 1 1000000
+      y <- genInteger coloredCoinMinMint coloredCoinMaxMint
       let an = AssetName . BS.pack $ "yellow" <> show x
       pure $ (an, y)
 
@@ -200,13 +206,13 @@ policyIndex =
 --------------------------------------------------------
 
 redFreq :: Int
-redFreq = 30
+redFreq = 10
 
 blueFreq :: Int
 blueFreq = 5
 
 yellowFreq :: Int
-yellowFreq = 50
+yellowFreq = 20
 
 genBundle :: Int -> Gen (Value c) -> Gen (Value c)
 genBundle freq g = QC.frequency [(freq, g), (100 - freq, pure mempty)]
