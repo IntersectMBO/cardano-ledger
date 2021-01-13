@@ -39,7 +39,7 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
+import Shelley.Spec.Ledger.LedgerState (PState (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
@@ -80,8 +80,6 @@ instance Typeable era => STS (POOL era) where
 
   type BaseM (POOL era) = ShelleyBase
   type PredicateFailure (POOL era) = PoolPredicateFailure era
-
-  initialRules = [pure emptyPState]
 
   transitionRules = [poolDelegationTransition]
 

@@ -52,7 +52,6 @@ import Shelley.Spec.Ledger.LedgerState
     DState,
     FutureGenDeleg (..),
     InstantaneousRewards (..),
-    emptyDState,
     _delegations,
     _fGenDelegs,
     _genDelegs,
@@ -126,7 +125,6 @@ instance Typeable era => STS (DELEG era) where
   type BaseM (DELEG era) = ShelleyBase
   type PredicateFailure (DELEG era) = DelegPredicateFailure era
 
-  initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
 
 instance NoThunks (DelegPredicateFailure era)

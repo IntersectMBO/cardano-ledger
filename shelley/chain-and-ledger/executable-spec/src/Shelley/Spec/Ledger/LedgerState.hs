@@ -42,23 +42,11 @@ module Shelley.Spec.Ledger.LedgerState
     RewardUpdate (..),
     UTxOState (..),
     depositPoolChange,
-    emptyAccount,
-    emptyDPState,
-    emptyDState,
-    emptyEpochState,
-    emptyInstantaneousRewards,
-    emptyLedgerState,
-    emptyPPUPState,
-    emptyPState,
     emptyRewardUpdate,
-    emptyUTxOState,
     pvCanFollow,
     reapRewards,
     totalInstantaneousReservesRewards,
     updatePpup,
-
-    -- * state transitions
-    emptyDelegation,
 
     -- * Genesis State
     genesisState,
@@ -129,6 +117,7 @@ import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈),
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
 import Data.Constraint (Constraint)
+import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
 import Data.Group (invert)
 import Data.Kind (Type)
@@ -181,7 +170,6 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShots (..),
     Stake (..),
     aggregateUtxoCoinByCredential,
-    emptySnapShots,
   )
 import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
@@ -202,7 +190,6 @@ import Shelley.Spec.Ledger.PParams
     ProtVer (..),
     Update (..),
     emptyPPPUpdates,
-    emptyPParams,
   )
 import Shelley.Spec.Ledger.RewardProvenance (Desirability (..), RewardProvenance (..))
 import Shelley.Spec.Ledger.Rewards
@@ -211,7 +198,6 @@ import Shelley.Spec.Ledger.Rewards
     PerformanceEstimate (..),
     applyDecay,
     desirability,
-    emptyNonMyopic,
     percentile',
     reward,
   )
@@ -452,7 +438,8 @@ instance
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
 emptyRewardUpdate :: RewardUpdate crypto
-emptyRewardUpdate = RewardUpdate (DeltaCoin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) emptyNonMyopic
+emptyRewardUpdate =
+  RewardUpdate (DeltaCoin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) def
 
 data AccountState = AccountState
   { _treasury :: !Coin,
@@ -520,49 +507,6 @@ instance
       p <- fromCBOR
       n <- fromCBOR
       pure $ EpochState a s l r p n
-
-emptyPPUPState :: PPUPState era
-emptyPPUPState = PPUPState emptyPPPUpdates emptyPPPUpdates
-
-emptyUTxOState :: UTxOState era
-emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
-
-emptyEpochState :: EpochState era
-emptyEpochState =
-  EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams emptyPParams emptyNonMyopic
-
-emptyLedgerState :: LedgerState era
-emptyLedgerState =
-  LedgerState
-    emptyUTxOState
-    emptyDelegation
-
-emptyAccount :: AccountState
-emptyAccount = AccountState (Coin 0) (Coin 0)
-
-emptyDelegation :: DPState crypto
-emptyDelegation =
-  DPState emptyDState emptyPState
-
-emptyInstantaneousRewards :: InstantaneousRewards crypto
-emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty
-
-emptyDState :: DState crypto
-emptyDState =
-  DState
-    Map.empty
-    Map.empty
-    biMapEmpty
-    Map.empty
-    (GenDelegs Map.empty)
-    emptyInstantaneousRewards
-
-emptyPState :: PState crypto
-emptyPState =
-  PState Map.empty Map.empty Map.empty
-
-emptyDPState :: DPState crypto
-emptyDPState = DPState emptyDState emptyPState
 
 data PPUPState era = PPUPState
   { proposals :: !(ProposedPPUpdates era),
@@ -762,11 +706,11 @@ genesisState genDelegs0 utxo0 =
         utxo0
         (Coin 0)
         (Coin 0)
-        emptyPPUPState
+        def
     )
-    (DPState dState emptyPState)
+    (DPState dState def)
   where
-    dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
+    dState = def {_genDelegs = GenDelegs genDelegs0}
 
 -- | Implementation of abstract transaction size
 txsize :: Tx era -> Integer
@@ -1275,3 +1219,42 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
         }
     us' = us {_utxo = UTxO nonredeemers :: UTxO era}
     ls' = ls {_utxoState = us'}
+
+--------------------------------------------------------------------------------
+-- Default instances
+--------------------------------------------------------------------------------
+
+instance Default (PPUPState era) where
+  def = PPUPState emptyPPPUpdates emptyPPPUpdates
+
+instance Default (UTxOState era) where
+  def = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) def
+
+instance Default (EpochState era) where
+  def = EpochState def def def def def def
+
+instance Default (LedgerState era) where
+  def = LedgerState def def
+
+instance Default (DPState crypto) where
+  def = DPState def def
+
+instance Default (InstantaneousRewards crypto) where
+  def = InstantaneousRewards Map.empty Map.empty
+
+instance Default (DState crypto) where
+  def =
+    DState
+      Map.empty
+      Map.empty
+      biMapEmpty
+      Map.empty
+      (GenDelegs Map.empty)
+      def
+
+instance Default (PState crypto) where
+  def =
+    PState Map.empty Map.empty Map.empty
+
+instance Default AccountState where
+  def = AccountState (Coin 0) (Coin 0)

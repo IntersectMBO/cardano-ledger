@@ -12,6 +12,7 @@ module Shelley.Spec.Ledger.STS.Mir
   ( MIR,
     PredicateFailure,
     MirPredicateFailure,
+    emptyInstantaneousRewards,
   )
 where
 
@@ -20,26 +21,22 @@ import Cardano.Ledger.Val ((<->))
 import Control.SetAlgebra (dom, eval, (∪+), (◁))
 import Control.State.Transition
   ( Assertion (..),
-    InitialRule,
     STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
   )
 import Data.Foldable (fold)
+import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState,
     InstantaneousRewards (..),
     RewardAccounts,
-    emptyAccount,
-    emptyInstantaneousRewards,
-    emptyLedgerState,
     esAccountState,
     esLState,
     esNonMyopic,
@@ -52,8 +49,6 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
     pattern EpochState,
   )
-import Shelley.Spec.Ledger.PParams (emptyPParams)
-import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 
 data MIR era
 
@@ -69,7 +64,6 @@ instance Typeable era => STS (MIR era) where
   type BaseM (MIR era) = ShelleyBase
   type PredicateFailure (MIR era) = MirPredicateFailure era
 
-  initialRules = [initialMir]
   transitionRules = [mirTransition]
 
   assertions =
@@ -80,17 +74,6 @@ instance Typeable era => STS (MIR era) where
              in length (r st) == length (r st')
         )
     ]
-
-initialMir :: InitialRule (MIR era)
-initialMir =
-  pure $
-    EpochState
-      emptyAccount
-      emptySnapShots
-      emptyLedgerState
-      emptyPParams
-      emptyPParams
-      emptyNonMyopic
 
 mirTransition :: forall era. TransitionRule (MIR era)
 mirTransition = do
@@ -155,3 +138,6 @@ mirTransition = do
           pr
           pp
           nm
+
+emptyInstantaneousRewards :: InstantaneousRewards crypto
+emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty

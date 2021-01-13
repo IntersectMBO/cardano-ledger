@@ -93,11 +93,11 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     RewardUpdate (..),
     UTxOState (..),
-    applyRUpd,
-    emptyInstantaneousRewards,
+    applyRUpd
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
+import Shelley.Spec.Ledger.STS.Mir (emptyInstantaneousRewards)
 import Shelley.Spec.Ledger.Tx (TxIn)
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)

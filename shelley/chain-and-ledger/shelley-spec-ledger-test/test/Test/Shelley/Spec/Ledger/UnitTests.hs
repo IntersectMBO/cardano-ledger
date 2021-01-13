@@ -62,9 +62,6 @@ import Shelley.Spec.Ledger.LedgerState
     DPState (..),
     UTxOState (..),
     WitHashes (..),
-    emptyDState,
-    emptyPPUPState,
-    emptyPState,
     _dstate,
     _rewards,
   )
@@ -122,6 +119,7 @@ import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
+import Data.Default.Class (def)
 
 -- ========================================================================================
 
@@ -382,10 +380,10 @@ utxoState =
     )
     (Coin 0)
     (Coin 0)
-    emptyPPUPState
+    def
 
 dpState :: DPState C_Crypto
-dpState = DPState emptyDState emptyPState
+dpState = DPState def def
 
 addReward :: DPState C_Crypto -> Credential 'Staking C_Crypto -> Coin -> DPState C_Crypto
 addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}

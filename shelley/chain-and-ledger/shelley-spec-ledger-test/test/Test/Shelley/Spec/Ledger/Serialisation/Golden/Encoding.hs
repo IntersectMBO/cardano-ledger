@@ -127,7 +127,6 @@ import Shelley.Spec.Ledger.LedgerState
     EpochState (..),
     NewEpochState (..),
     RewardUpdate (..),
-    emptyLedgerState,
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.OCert
@@ -144,7 +143,7 @@ import Shelley.Spec.Ledger.PParams
     pattern ProposedPPUpdates,
     pattern Update,
   )
-import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
+import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.Scripts (pattern RequireSignature)
 import Shelley.Spec.Ledger.Serialization
   ( FromCBORGroup (..),
@@ -195,6 +194,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
+import Data.Default.Class (def)
 
 -- ============================================
 
@@ -1287,10 +1287,10 @@ tests =
           ps = Map.singleton (hashKey $ vKey testStakePoolKey) params
           fs = Coin 123
           ss = SnapShots mark set go fs
-          ls = emptyLedgerState
+          ls = def
           pps = emptyPParams
           bs = Map.singleton (hashKey $ vKey testStakePoolKey) 1
-          nm = emptyNonMyopic
+          nm = def
           es = EpochState @C ac ss ls pps pps nm
           ru =
             ( SJust

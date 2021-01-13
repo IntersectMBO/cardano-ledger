@@ -16,15 +16,14 @@ import GHC.Records
 import Shelley.Spec.Ledger.API (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
-    UTxOState (..),
-    emptyDPState,
-    emptyUTxOState,
+    UTxOState (..)
   )
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Shelley.Spec.Ledger.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty.HUnit (Assertion, (@?=))
+import Data.Default.Class (def)
 
 type MaryTest = MaryEra TestCrypto
 
@@ -42,10 +41,10 @@ testMaryNoDelegLEDGER ::
   Assertion
 testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
   checkTrace @(LEDGER MaryTest) runShelleyBase env $
-    pure (emptyUTxOState {_utxo = utxo}, emptyDPState) .- tx .-> expectedSt'
+    pure (def {_utxo = utxo}, def) .- tx .-> expectedSt'
   where
     txFee = getField @"txfee" (_body tx)
-    expectedSt' = (emptyUTxOState {_utxo = expectedUTxO, _fees = txFee}, emptyDPState)
+    expectedSt' = (def {_utxo = expectedUTxO, _fees = txFee}, def)
 testMaryNoDelegLEDGER utxo tx env predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTSTest @(LEDGER MaryTest) (TRC (env, (emptyUTxOState {_utxo = utxo}, emptyDPState), tx))
+  let st = runShelleyBase $ applySTSTest @(LEDGER MaryTest) (TRC (env, (def {_utxo = utxo}, def), tx))
   (ignoreAllButUTxO st) @?= predicateFailure

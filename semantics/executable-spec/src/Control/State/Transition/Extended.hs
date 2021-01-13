@@ -2,6 +2,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -63,6 +64,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State.Strict (modify, runStateT)
 import qualified Control.Monad.Trans.State.Strict as MonadState
 import Data.Data (Data, Typeable)
+import Data.Default.Class (Default, def)
 import Data.Foldable (find, traverse_)
 import Data.Functor ((<&>))
 import Data.Kind (Type)
@@ -180,6 +182,8 @@ class
 
   -- | Rules governing transition under this system.
   initialRules :: [InitialRule a]
+  default initialRules :: Default (State a) => [InitialRule a]
+  initialRules = [pure def]
 
   transitionRules :: [TransitionRule a]
 

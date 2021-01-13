@@ -91,6 +91,7 @@ library
     cardano-slotting,
     cborg,
     containers,
+    data-default-class,
     directory,
     generic-random,
     hedgehog-quickcheck,

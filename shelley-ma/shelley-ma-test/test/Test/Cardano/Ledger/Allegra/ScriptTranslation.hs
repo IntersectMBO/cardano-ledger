@@ -18,7 +18,7 @@ import Shelley.Spec.Ledger.UTxO (txid)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 import Test.Shelley.Spec.Ledger.Utils (runShelleyBase, applySTSTest)
-import Shelley.Spec.Ledger.LedgerState (emptyUTxOState, emptyDPState)
+import Shelley.Spec.Ledger.LedgerState ()
 import Control.State.Transition.Extended (TRC (..))
 import Control.Monad.Except (runExcept)
 import Shelley.Spec.Ledger.Tx (hashScript, scriptWits)
@@ -29,6 +29,7 @@ import Test.Cardano.Ledger.EraBuffet
     ShelleyEra,
     StandardCrypto,
   )
+import Data.Default.Class (def)
 
 type Allegra = AllegraEra StandardCrypto
 
@@ -73,7 +74,7 @@ testScriptPostTranslation = testCase
           (S.TxIn bootstrapTxId 0)
           (S.TxOut addr (Val.inject (S.Coin 1)))
     env = S.LedgerEnv (SlotNo 0) 0 emptyPParams (S.AccountState (S.Coin 0) (S.Coin 0))
-    utxoStShelley = emptyUTxOState {S._utxo = utxo}
+    utxoStShelley = def {S._utxo = utxo}
     utxoStAllegra = fromRight . runExcept $ translateEra @Allegra () utxoStShelley
     txb =
       S.TxBody
@@ -90,7 +91,7 @@ testScriptPostTranslation = testCase
     txa = fromRight . runExcept $ translateEra @Allegra () txs
     result = runShelleyBase $
       applySTSTest @(S.LEDGER Allegra)
-        (TRC (env, (utxoStAllegra, emptyDPState), txa))
+        (TRC (env, (utxoStAllegra, def), txa))
     in
     case result of
       Left e -> error $ show e

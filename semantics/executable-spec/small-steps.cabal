@@ -48,6 +48,7 @@ library
                      , cborg
                      , containers
                      , cryptonite
+                     , data-default-class
                      , deepseq
                      , free
                      , mtl
