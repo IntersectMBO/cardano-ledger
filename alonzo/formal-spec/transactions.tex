@@ -1,7 +1,7 @@
 \section{Transactions}
 \label{sec:transactions}
 
-This section outlines the changes that are needed to the Shelley/Allegra/Mary transaction
+This section outlines the changes that are needed to the transaction
 structure to enable non-native scripts to validate
 the minting of tokens, spending outputs, verifying certificates, and
 verifying withdrawals.
@@ -23,14 +23,14 @@ Shelley specification~\cite{XX}:\khcomment{Now also Allegra/Mary?}
   \item $\Script$ is a sum type covering all possible scripts, both native and non-native.
 
   \item $\IsValidating$ is a tag that indicates that a transaction
-  expects that all its non-native scripts will be validated.\khcomment{confirm}
+  expects that all its non-native scripts will be validated.
   This tag is added by the block creator when
   constructing a block, and its correctness is verified as part of the script execution.
 
-  \item $\TxOut$ is the type of transaction outputs.  These are extended to include
+  \item $\TxOut$ is the type of transaction outputs. These are extended to include
   an optional hash of a data item. Note that \emph{any} output can
   optionally include such a hash, even though only non-native scripts
-  can actually use the hash value. Since it is, in general, impossible for the ledger implementation to
+  can actually use the hash value. Since it is in general impossible for the ledger implementation to
   know at the time of transaction creation whether or not an output belongs to a non-native
   script, we simply allow any output to contain a data hash.
 
@@ -96,7 +96,7 @@ Shelley specification~\cite{XX}:\khcomment{Now also Allegra/Mary?}
     \fun{language}& \in \ScriptNonNative \to \Language\\
     \fun{hashData}& \in \Data \to \DataHash
     \nextdef
-    \fun{hashScriptData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Data) \to \ScriptDataHash^? \\
+    \fun{hashScriptData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Data \times \ExUnits) \to \ScriptDataHash^? \\
     \fun{hashScriptData}&~{pp}~{langs}~{rdmrs}~=~ \\
                           &\begin{cases}
                             \Nothing & rdmrs~=~\emptyset \land langs~=~\emptyset \\
@@ -171,12 +171,12 @@ in a transaction that is needed for witnessing, namely:
   \item VKey signatures;
   \item a map of scripts, including non-native scripts;
   \item a map of terms of type $\Data$, containing all required datum objects; and
-  \item a map of $\Data$ values indexed by $\RdmrPtr$, containing the redeemers.
+  \item a map of $\Data$ and $\ExUnits$ values indexed by $\RdmrPtr$, containing the redeemers and execution units budgets.
 \end{itemize}
 
 Note that there is a difference between the way scripts and datum objects are included in
 a transaction (as a set) versus how redeemers are included
-(as an indexed structure). % This is driven by their different relationships to the item:
+(as an indexed structure).
 
 \begin{description}
 \item
@@ -196,9 +196,6 @@ We have also made the following changes to
 the body of the transaction:
 
 \begin{itemize}
-  \item We include a term of type $\ExUnits$. This is a budget in terms of the total number of execution units
-  that may be used by all the non-native scripts that occur in the transaction.
-  The budget is intended to be computed by executing the scripts off-chain prior to transaction submission.
   \item We include a hash of some script-related data, specifically the redeemers and protocol parameters,
     with accessor $\fun{sdHash}$.
 \end{itemize}
@@ -236,8 +233,7 @@ state may also need to be included in this hash, if they are passed as
 arguments to new script interpreter.
 
 The owner of any tokens that are spent as part of a given transaction
-must sign the transaction body. The body also includes the for-fee tags that are attached to inputs.
-This means that
+must sign the transaction body. This means that
 the owners of tokens that are spent by the transaction will have
 signed their selection of the inputs that will be put in the fee pot in case of script validation failure, and
 thus have had the opportunity to check the outcome of those scripts before signing the body.
@@ -255,10 +251,5 @@ the fee pot if script validation fails:
 In order to maximise flexibility, we have chosen to use the second option.
 This also allows users to provide their own programmatic solutions to choosing the inputs that are used to pay fees.
 
-Only the inputs that are locked by VKeys\khcomment{What is a VKey?} or native scripts can
-be used to pay fees. As before, spending VKey or native script outputs is
-validated as part of a single rule application2, so a transaction is only valid
-if all
-the required signatures are valid.
-% , or else a transaction will be completely
-% invalid.
+Only the inputs that are locked by VKeys or native scripts can
+be used to pay fees.
