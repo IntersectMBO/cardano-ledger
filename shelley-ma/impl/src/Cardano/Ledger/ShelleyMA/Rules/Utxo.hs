@@ -114,6 +114,8 @@ data UtxoPredicateFailure era
   | OutputBootAddrAttrsTooBig
       ![Core.TxOut era] -- list of supplied bad transaction outputs
   | TriesToForgeADA
+  | OutputTooBigUTxO
+      ![Core.TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
 deriving stock instance
@@ -250,6 +252,18 @@ utxoTransition = do
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
+  let outputsTooBig =
+        filter
+          ( \out ->
+              let v = getField @"value" out
+               in Val.size v > 4000
+              -- TODO this is arbitrary, but sufficiently below the current
+              -- max transaction size. We will make it a protocol parameter
+              -- in the Alonzo era.
+          )
+          outputs
+  null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
+
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =
@@ -369,6 +383,9 @@ instance
       encodeListLen 2 <> toCBOR (10 :: Word8)
         <> encodeFoldable outs
     TriesToForgeADA -> encodeListLen 1 <> toCBOR (11 :: Word8)
+    OutputTooBigUTxO outs ->
+      encodeListLen 2 <> toCBOR (12 :: Word8)
+        <> encodeFoldable outs
 
 instance
   ( TransValue FromCBOR era,
@@ -420,4 +437,7 @@ instance
           outs <- decodeList fromCBOR
           pure (2, OutputBootAddrAttrsTooBig outs)
         11 -> pure (1, TriesToForgeADA)
+        12 -> do
+          outs <- decodeList fromCBOR
+          pure (2, OutputTooBigUTxO outs)
         k -> invalidKey k
