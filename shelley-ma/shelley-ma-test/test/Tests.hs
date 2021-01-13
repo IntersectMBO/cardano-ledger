@@ -57,8 +57,14 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "ShelleyMA Ledger - nightly"
-    [ propertyTests @(AllegraEra TestCrypto),
-      minimalPropertyTests @(MaryEra TestCrypto)
+    [ testGroup
+        "Allegra Ledger - nightly"
+        [ propertyTests @(AllegraEra TestCrypto)
+        ],
+      testGroup
+        "Mary Ledger - nightly"
+        [ propertyTests @(MaryEra TestCrypto)
+        ]
     ]
 
 -- main entry point
