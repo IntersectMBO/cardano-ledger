@@ -147,7 +147,7 @@ genDCert
           genGenesisDelegation ksCoreNodes ksGenesisDelegates dpState
         ),
         (frequencyDeRegKeyCert, genDeRegKeyCert c ksKeyPairs ksMSigScripts dState),
-        (frequencyRetirePoolCert, genRetirePool c ksStakePools pState slot),
+        (frequencyRetirePoolCert, genRetirePool pparams ksStakePools pState slot),
         ( frequencyMIRCert,
           genInstantaneousRewards
             slot
@@ -411,12 +411,12 @@ genRegPool poolKeys keyPairs minPoolCost = do
 -- `KeyHash`, by doing a lookup in the set of `availableKeys`.
 genRetirePool ::
   HasCallStack =>
-  Constants ->
+  PParams era ->
   [AllIssuerKeys (Crypto era) 'StakePool] ->
   PState (Crypto era) ->
   SlotNo ->
   Gen (Maybe (DCert (Crypto era), CertCred era))
-genRetirePool Constants {frequencyLowMaxEpoch} poolKeys pState slot =
+genRetirePool pp poolKeys pState slot =
   if (null retireable)
     then pure Nothing
     else
@@ -439,11 +439,8 @@ genRetirePool Constants {frequencyLowMaxEpoch} poolKeys pState slot =
         (List.find (\x -> hk x == hk') poolKeys)
     EpochNo cepoch = epochFromSlotNo slot
     epochLow = cepoch + 1
-    -- we use the lower bound of MaxEpoch as the high mark so that all possible
-    -- future updates of the protocol parameter, MaxEpoch, will not decrease
-    -- the cut-off for pool-retirement and render this RetirePool
-    -- "too late in the epoch" when it is retired
-    epochHigh = cepoch + frequencyLowMaxEpoch
+    EpochNo retirementBound = _eMax pp
+    epochHigh = cepoch + retirementBound - 1
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewards ::
