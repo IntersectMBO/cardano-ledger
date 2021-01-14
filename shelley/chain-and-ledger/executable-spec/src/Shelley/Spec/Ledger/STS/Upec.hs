@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -8,7 +9,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DataKinds #-}
 
 -- | Epoch change registration.
 --
@@ -18,8 +18,14 @@
 -- todo: explain that this rule is Shelley specific.
 module Shelley.Spec.Ledger.STS.Upec where
 
-import Cardano.Ledger.Shelley.Constraints (
-  ShelleyBased, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Shelley.Constraints
+  ( ShelleyBased,
+    UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesValue,
+  )
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -36,8 +42,8 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
-    UpecState (..),
     PPUPState (..),
+    UpecState (..),
     esAccountState,
     esLState,
     _delegationState,
@@ -48,7 +54,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (..), updatePParams)
 import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
-import qualified Cardano.Ledger.Core as Core
 
 -- | Update epoch change
 data UPEC era
@@ -65,7 +70,7 @@ instance
     UsesScript era,
     UsesValue era,
     State (Core.EraRule "PPUP" era)
-    ~ PPUPState era
+      ~ PPUPState era
   ) =>
   STS (UPEC era)
   where

@@ -114,6 +114,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.Provenance (ProvM, lift, modifyWithBlackBox, runOtherProv)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
+import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
 import Data.Constraint (Constraint)
@@ -238,8 +239,6 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
-import Control.State.Transition (STS (State))
-
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]

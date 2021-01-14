@@ -1,13 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Mir
@@ -28,6 +28,7 @@ import Control.State.Transition
     TransitionRule,
     judgmentContext,
   )
+import Data.Default.Class (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
@@ -51,7 +52,6 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
     pattern EpochState,
   )
-import Data.Default.Class (Default)
 
 data MIR era
 

@@ -31,6 +31,7 @@ import Control.State.Transition
     judgmentContext,
     trans,
   )
+import Data.Default.Class (Default)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -39,9 +40,9 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShots, obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
-    UpecState (..),
     LedgerState,
     PState (..),
+    UpecState (..),
     esAccountState,
     esLState,
     esNonMyopic,
@@ -63,7 +64,6 @@ import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapPredicateFailure, Poo
 import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapPredicateFailure)
 import Shelley.Spec.Ledger.STS.Upec (UPEC, UpecPredicateFailure)
 import Shelley.Spec.Ledger.Slot (EpochNo)
-import Data.Default.Class (Default)
 
 data EPOCH era
 
@@ -203,7 +203,7 @@ instance
 
 instance
   ( Era era,
---    Default (State (Core.EraRule "PPUP" era)),
+    --    Default (State (Core.EraRule "PPUP" era)),
     Default (PoolreapState era),
     PredicateFailure (Core.EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era
   ) =>

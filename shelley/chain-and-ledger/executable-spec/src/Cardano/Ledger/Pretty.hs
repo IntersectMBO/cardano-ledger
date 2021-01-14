@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -6,7 +7,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ConstraintKinds #-}
 
 module Cardano.Ledger.Pretty where
 
@@ -27,6 +27,7 @@ import Cardano.Ledger.Era (Era)
 import Codec.Binary.Bech32
 import Control.Monad.Identity (Identity)
 import Control.SetAlgebra (forwards)
+import Control.State.Transition (STS (State))
 import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import Data.IP (IPv4, IPv6)
@@ -143,7 +144,6 @@ import Shelley.Spec.Ledger.TxBody
     WitVKey (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
-import Control.State.Transition (STS (State))
 
 -- =====================================================================================================
 -- HELPER FUNCTIONS
@@ -404,7 +404,8 @@ ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
       ("nonMyopic", ppNonMyopic nonmyop)
     ]
 
-ppUTxOState :: CanPrettyPrintLedgerState era =>
+ppUTxOState ::
+  CanPrettyPrintLedgerState era =>
   UTxOState era ->
   PDoc
 ppUTxOState (UTxOState u dep fee ppup) =
@@ -429,8 +430,9 @@ ppEpochState (EpochState acnt snap ls prev pp non) =
     ]
 
 ppLedgerState ::
-  CanPrettyPrintLedgerState era
-  => LedgerState era -> PDoc
+  CanPrettyPrintLedgerState era =>
+  LedgerState era ->
+  PDoc
 ppLedgerState (LedgerState u d) =
   ppRecord
     "LedgerState"

@@ -32,6 +32,7 @@ import Control.State.Transition
     judgmentContext,
     trans,
   )
+import Data.Default.Class (Default)
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
@@ -51,7 +52,6 @@ import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..), LedgerPredicateFa
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
-import Data.Default.Class (Default)
 
 data LEDGERS era
 
