@@ -40,6 +40,7 @@ import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.TxBody
+import Data.Default.Class (Default)
 
 data NEWEPOCH era
 
@@ -78,7 +79,8 @@ instance
     Signal (Core.EraRule "MIR" era) ~ (),
     Environment (Core.EraRule "EPOCH" era) ~ (),
     State (Core.EraRule "EPOCH" era) ~ EpochState era,
-    Signal (Core.EraRule "EPOCH" era) ~ EpochNo
+    Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
+    Default (EpochState era)
   ) =>
   STS (NEWEPOCH era)
   where
@@ -171,6 +173,7 @@ instance
 
 instance
   ( Era era,
+    Default (EpochState era),
     PredicateFailure (Core.EraRule "MIR" era) ~ MirPredicateFailure era
   ) =>
   Embed (MIR era) (NEWEPOCH era)

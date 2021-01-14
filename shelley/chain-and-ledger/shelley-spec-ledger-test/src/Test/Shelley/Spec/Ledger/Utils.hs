@@ -142,6 +142,8 @@ import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
   )
+import Data.Default.Class (Default)
+
 
 type ShelleyTest era =
   ( UsesTxBody era,
@@ -152,7 +154,8 @@ type ShelleyTest era =
     TxBody era ~ Core.TxBody era,
     TxOut era ~ Core.TxOut era,
     MultiSig (Crypto era) ~ Core.Script era,
-    Split (Core.Value era)
+    Split (Core.Value era),
+    Default (State (Core.EraRule "PPUP" era))
   )
 
 type ChainProperty era =

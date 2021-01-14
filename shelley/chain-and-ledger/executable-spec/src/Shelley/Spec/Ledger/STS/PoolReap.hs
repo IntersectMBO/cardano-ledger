@@ -59,15 +59,15 @@ deriving stock instance
   (TransUTxOState Show era) =>
   Show (PoolreapState era)
 
-data PoolreapPredicateFailure era -- No predicate Falures
+data PoolreapPredicateFailure era -- No predicate Failures
   deriving (Show, Eq, Generic)
 
 instance NoThunks (PoolreapPredicateFailure era)
 
-instance Default (PoolreapState era) where
+instance Default (UTxOState era) => Default (PoolreapState era) where
   def = PoolreapState def def def def
 
-instance Typeable era => STS (POOLREAP era) where
+instance (Typeable era, Default (PoolreapState era)) => STS (POOLREAP era) where
   type State (POOLREAP era) = PoolreapState era
   type Signal (POOLREAP era) = EpochNo
   type Environment (POOLREAP era) = PParams era

@@ -62,6 +62,7 @@ import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
 import Test.Shelley.Spec.Ledger.Utils (ChainProperty)
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
+import Data.Default.Class (Default)
 
 minimalPropertyTests ::
   forall era.
@@ -84,7 +85,9 @@ minimalPropertyTests ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    Default (State (Core.EraRule "PPUP" era)),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   TestTree
 minimalPropertyTests =
@@ -126,7 +129,9 @@ propertyTests ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    Default (State (Core.EraRule "PPUP" era)),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   TestTree
 propertyTests =

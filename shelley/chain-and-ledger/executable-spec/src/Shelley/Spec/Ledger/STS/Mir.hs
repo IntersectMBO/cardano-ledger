@@ -7,6 +7,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Mir
   ( MIR,
@@ -49,6 +51,7 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
     pattern EpochState,
   )
+import Data.Default.Class (Default)
 
 data MIR era
 
@@ -57,7 +60,7 @@ data MirPredicateFailure era
 
 instance NoThunks (MirPredicateFailure era)
 
-instance Typeable era => STS (MIR era) where
+instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
   type State (MIR era) = EpochState era
   type Signal (MIR era) = ()
   type Environment (MIR era) = ()

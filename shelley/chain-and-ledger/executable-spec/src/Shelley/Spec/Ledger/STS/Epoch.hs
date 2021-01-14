@@ -39,6 +39,7 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShots, obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
+    UpecState (..),
     LedgerState,
     PState (..),
     esAccountState,
@@ -60,8 +61,9 @@ import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapPredicateFailure, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapPredicateFailure)
-import Shelley.Spec.Ledger.STS.Upec (UPEC, UpecPredicateFailure, UpecState (..))
+import Shelley.Spec.Ledger.STS.Upec (UPEC, UpecPredicateFailure)
 import Shelley.Spec.Ledger.Slot (EpochNo)
+import Data.Default.Class (Default)
 
 data EPOCH era
 
@@ -99,7 +101,8 @@ instance
     Embed (Core.EraRule "UPEC" era) (EPOCH era),
     Environment (Core.EraRule "UPEC" era) ~ EpochState era,
     State (Core.EraRule "UPEC" era) ~ UpecState era,
-    Signal (Core.EraRule "UPEC" era) ~ ()
+    Signal (Core.EraRule "UPEC" era) ~ (),
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   STS (EPOCH era)
   where
@@ -200,6 +203,8 @@ instance
 
 instance
   ( Era era,
+--    Default (State (Core.EraRule "PPUP" era)),
+    Default (PoolreapState era),
     PredicateFailure (Core.EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era
   ) =>
   Embed (POOLREAP era) (EPOCH era)

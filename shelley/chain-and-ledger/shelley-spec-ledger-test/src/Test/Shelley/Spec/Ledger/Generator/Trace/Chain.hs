@@ -77,6 +77,7 @@ import Test.Shelley.Spec.Ledger.Utils
     maxLLSupply,
     mkHash,
   )
+import Data.Default.Class (Default)
 
 -- ======================================================
 
@@ -135,7 +136,8 @@ mkGenesisChainState ::
   forall era a.
   ( EraGen era,
     UsesTxOut era,
-    UsesValue era
+    UsesValue era,
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   GenEnv era ->
   IRC (CHAIN era) ->

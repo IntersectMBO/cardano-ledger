@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 module Cardano.Ledger.Pretty where
 
@@ -142,6 +143,7 @@ import Shelley.Spec.Ledger.TxBody
     WitVKey (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Control.State.Transition (STS (State))
 
 -- =====================================================================================================
 -- HELPER FUNCTIONS
@@ -325,6 +327,10 @@ class PrettyA t where
 -- =================================
 -- Shelley.Spec.Ledger.LedgerState
 
+-- | Constraints needed to ensure that the ledger state can be pretty printed.
+type CanPrettyPrintLedgerState era =
+  (PrettyA (Core.TxOut era), PrettyA (State (Core.EraRule "PPUP" era)))
+
 ppAccountState :: AccountState -> PDoc
 ppAccountState (AccountState tr re) =
   ppRecord
@@ -398,8 +404,7 @@ ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
       ("nonMyopic", ppNonMyopic nonmyop)
     ]
 
-ppUTxOState ::
-  PrettyA (Core.TxOut era) =>
+ppUTxOState :: CanPrettyPrintLedgerState era =>
   UTxOState era ->
   PDoc
 ppUTxOState (UTxOState u dep fee ppup) =
@@ -408,10 +413,10 @@ ppUTxOState (UTxOState u dep fee ppup) =
     [ ("utxo", ppUTxO u),
       ("deposited", ppCoin dep),
       ("fees", ppCoin fee),
-      ("ppups", ppPPUPState ppup)
+      ("ppups", prettyA ppup)
     ]
 
-ppEpochState :: PrettyA (Core.TxOut era) => EpochState era -> PDoc
+ppEpochState :: CanPrettyPrintLedgerState era => EpochState era -> PDoc
 ppEpochState (EpochState acnt snap ls prev pp non) =
   ppRecord
     "EpochState"
@@ -423,7 +428,9 @@ ppEpochState (EpochState acnt snap ls prev pp non) =
       ("nonMyopic", ppNonMyopic non)
     ]
 
-ppLedgerState :: PrettyA (Core.TxOut era) => LedgerState era -> PDoc
+ppLedgerState ::
+  CanPrettyPrintLedgerState era
+  => LedgerState era -> PDoc
 ppLedgerState (LedgerState u d) =
   ppRecord
     "LedgerState"
@@ -439,7 +446,7 @@ instance PrettyA (DState crypto) where prettyA = ppDState
 
 instance
   ( Era era,
-    PrettyA (Core.TxOut era)
+    CanPrettyPrintLedgerState era
   ) =>
   PrettyA (EpochState era)
   where
@@ -451,7 +458,7 @@ instance PrettyA (InstantaneousRewards crypto) where prettyA = ppInstantaneousRe
 
 instance
   ( Era era,
-    PrettyA (Core.TxOut era)
+    CanPrettyPrintLedgerState era
   ) =>
   PrettyA (LedgerState era)
   where
@@ -465,7 +472,7 @@ instance PrettyA (RewardUpdate crypto) where prettyA = ppRewardUpdate
 
 instance
   ( Era era,
-    PrettyA (Core.TxOut era)
+    CanPrettyPrintLedgerState era
   ) =>
   PrettyA (UTxOState era)
   where

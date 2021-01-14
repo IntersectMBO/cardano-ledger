@@ -8,14 +8,18 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DataKinds #-}
 
 -- | Epoch change registration.
 --
 -- The rules of this module determine how the update subsystem of the ledger
 -- handles the epoch transitions.
+--
+-- todo: explain that this rule is Shelley specific.
 module Shelley.Spec.Ledger.STS.Upec where
 
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
+import Cardano.Ledger.Shelley.Constraints (
+  ShelleyBased, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -32,6 +36,7 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
+    UpecState (..),
     PPUPState (..),
     esAccountState,
     esLState,
@@ -43,17 +48,10 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (..), updatePParams)
 import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
+import qualified Cardano.Ledger.Core as Core
 
 -- | Update epoch change
 data UPEC era
-
-data UpecState era = UpecState
-  { -- | Current protocol parameters.
-    currentPp :: !(PParams era),
-    -- | State of the protocol update transition system.
-    ppupState :: !(PPUPState era)
-  }
-  deriving (Show)
 
 data UpecPredicateFailure era
   = NewPpFailure (PredicateFailure (NEWPP era))
@@ -65,7 +63,9 @@ instance
   ( UsesAuxiliary era,
     UsesTxBody era,
     UsesScript era,
-    UsesValue era
+    UsesValue era,
+    State (Core.EraRule "PPUP" era)
+    ~ PPUPState era
   ) =>
   STS (UPEC era)
   where

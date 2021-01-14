@@ -31,6 +31,7 @@ module Shelley.Spec.Ledger.LedgerState
     DPState (..),
     DState (..),
     EpochState (..),
+    UpecState (..),
     FutureGenDeleg (..),
     InstantaneousRewards (..),
     Ix,
@@ -237,6 +238,8 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
+import Control.State.Transition (STS (State))
+
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
@@ -507,6 +510,17 @@ instance
       n <- fromCBOR
       pure $ EpochState a s l r p n
 
+data UpecState era = UpecState
+  { -- | Current protocol parameters.
+    currentPp :: !(PParams era),
+    -- | State of the protocol update transition system.
+    ppupState :: !(State (Core.EraRule "PPUP" era))
+  }
+
+deriving stock instance
+  Show (State (Core.EraRule "PPUP" era)) =>
+  Show (UpecState era)
+
 data PPUPState era = PPUPState
   { proposals :: !(ProposedPPUpdates era),
     futureProposals :: !(ProposedPPUpdates era)
@@ -533,15 +547,17 @@ data UTxOState era = UTxOState
   { _utxo :: !(UTxO era),
     _deposited :: !Coin,
     _fees :: !Coin,
-    _ppups :: !(PPUPState era)
+    _ppups :: !(State (Core.EraRule "PPUP" era))
   }
   deriving (Generic)
 
+-- todo: explain what c is here
 type TransUTxOState (c :: Type -> Constraint) era =
   ( Era era,
     TransTxId c era,
     TransValue c era,
     c (Core.TxOut era),
+    c (State (Core.EraRule "PPUP" era)),
     Compactible (Core.Value era)
   )
 
@@ -686,6 +702,7 @@ instance
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
+  Default (State (Core.EraRule "PPUP" era)) =>
   Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   UTxO era ->
   LedgerState era
@@ -1216,13 +1233,13 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
 instance Default (PPUPState era) where
   def = PPUPState emptyPPPUpdates emptyPPPUpdates
 
-instance Default (UTxOState era) where
+instance Default (State (Core.EraRule "PPUP" era)) => Default (UTxOState era) where
   def = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) def
 
-instance Default (EpochState era) where
+instance Default (LedgerState era) => Default (EpochState era) where
   def = EpochState def def def def def def
 
-instance Default (LedgerState era) where
+instance Default (UTxOState era) => Default (LedgerState era) where
   def = LedgerState def def
 
 instance Default (DPState crypto) where

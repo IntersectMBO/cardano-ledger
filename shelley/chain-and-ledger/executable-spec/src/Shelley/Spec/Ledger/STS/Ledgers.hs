@@ -51,6 +51,7 @@ import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..), LedgerPredicateFa
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
+import Data.Default.Class (Default)
 
 data LEDGERS era
 
@@ -105,7 +106,8 @@ instance
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
     Signal (Core.EraRule "LEDGER" era) ~ Tx era,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    Default (LedgerState era)
   ) =>
   STS (LEDGERS era)
   where
