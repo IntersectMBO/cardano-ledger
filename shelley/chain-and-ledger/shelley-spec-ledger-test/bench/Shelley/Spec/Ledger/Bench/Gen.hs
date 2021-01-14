@@ -54,12 +54,13 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest)
+import Data.Default.Class (Default)
 
 -- ===============================================================
 
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
-  (EraGen era, UsesTxOut era, UsesValue era) =>
+  (EraGen era, UsesTxOut era, UsesValue era, Default (State (Core.EraRule "PPUP" era))) =>
   Int ->
   GenEnv era ->
   IO (ChainState era)

@@ -25,7 +25,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
-import Data.Default.Class (def)
+import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -78,7 +78,8 @@ instance
     Signal (Core.EraRule "MIR" era) ~ (),
     Environment (Core.EraRule "EPOCH" era) ~ (),
     State (Core.EraRule "EPOCH" era) ~ EpochState era,
-    Signal (Core.EraRule "EPOCH" era) ~ EpochNo
+    Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
+    Default (EpochState era)
   ) =>
   STS (NEWEPOCH era)
   where
@@ -171,6 +172,7 @@ instance
 
 instance
   ( Era era,
+    Default (EpochState era),
     PredicateFailure (Core.EraRule "MIR" era) ~ MirPredicateFailure era
   ) =>
   Embed (MIR era) (NEWEPOCH era)

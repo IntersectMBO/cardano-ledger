@@ -69,6 +69,7 @@ import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest, testGlobals)
+import Control.State.Transition (STS (State))
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 
@@ -125,7 +126,8 @@ applyBlock ::
   ( TransTxId Show era,
     TransTxBody NFData era,
     TransValue NFData era,
-    API.ApplyBlock era
+    API.ApplyBlock era,
+    NFData (State (Core.EraRule "PPUP" era))
   ) =>
   ValidateInput era ->
   Int ->

@@ -97,7 +97,10 @@ import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
     poolStateIsInternallyConsistent,
   )
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
-import Test.Shelley.Spec.Ledger.Utils (ChainProperty, epochFromSlotNo, runShelleyBase, testGlobals)
+import Test.Shelley.Spec.Ledger.Utils (ChainProperty, epochFromSlotNo,
+                                       runShelleyBase, testGlobals)
+import Data.Default.Class (Default)
+
 
 -- ======================================================
 
@@ -136,7 +139,9 @@ collisionFreeComplete ::
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Default (State (Core.EraRule "PPUP" era)),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   Property
 collisionFreeComplete =
@@ -172,7 +177,9 @@ adaPreservationChain ::
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "txfee" (Core.TxBody era) Coin,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Default (State (Core.EraRule "PPUP" era)),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   Property
 adaPreservationChain =
@@ -303,7 +310,8 @@ potsSumIncreaseWdrlsPerTx ::
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -336,7 +344,8 @@ potsSumIncreaseByRewardsPerTx ::
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -376,7 +385,8 @@ potsRewardsDecreaseByWdrlsPerTx ::
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -424,7 +434,8 @@ preserveBalance ::
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -473,7 +484,8 @@ preserveBalanceRestricted ::
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -513,7 +525,8 @@ preserveOutputsTx ::
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -543,7 +556,8 @@ eliminateTxInputs ::
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -572,7 +586,8 @@ newEntriesAndUniqueTxIns ::
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -612,7 +627,8 @@ requiredMSigSignaturesSubset ::
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -725,7 +741,8 @@ poolProperties ::
     UsesTxOut era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   Property
 poolProperties =
@@ -794,7 +811,8 @@ delegProperties ::
     UsesTxOut era,
     QC.HasTrace (CHAIN era) (GenEnv era),
     ChainProperty era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   Property
 delegProperties =
@@ -835,7 +853,8 @@ ledgerTraceFromBlock ::
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   ChainState era ->
   Block era ->
@@ -968,7 +987,8 @@ removedAfterPoolreap ::
   ( ChainProperty era,
     EraGen era,
     UsesTxOut era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   Property
 removedAfterPoolreap =
@@ -994,7 +1014,8 @@ forAllChainTrace ::
     EraGen era,
     UsesTxOut era,
     ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   Word64 -> -- trace length
   (Trace (CHAIN era) -> prop) ->

@@ -48,7 +48,7 @@ import Control.State.Transition
     liftSTS,
     trans,
   )
-import Data.Default.Class (def)
+import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -182,6 +182,7 @@ instance
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
+  Default (State (Core.EraRule "PPUP" era)) =>
   WithOrigin (LastAppliedBlock (Crypto era)) ->
   EpochNo ->
   UTxO era ->

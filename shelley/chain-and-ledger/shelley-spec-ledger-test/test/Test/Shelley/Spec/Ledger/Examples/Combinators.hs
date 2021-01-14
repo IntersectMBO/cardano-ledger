@@ -102,6 +102,7 @@ import Shelley.Spec.Ledger.Tx (TxIn)
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
+import Control.State.Transition (STS (State))
 
 -- ======================================================
 
@@ -612,6 +613,7 @@ newEpoch b cs = cs'
 -- Set the current protocol parameter proposals.
 setCurrentProposals ::
   forall era.
+  State (Core.EraRule "PPUP" era) ~ PPUPState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era
@@ -633,6 +635,7 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
 -- Set the future protocol parameter proposals.
 setFutureProposals ::
   forall era.
+  State (Core.EraRule "PPUP" era) ~ PPUPState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era

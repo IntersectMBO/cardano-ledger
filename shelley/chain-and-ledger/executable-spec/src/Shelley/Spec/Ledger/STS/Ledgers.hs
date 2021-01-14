@@ -32,6 +32,7 @@ import Control.State.Transition
     judgmentContext,
     trans,
   )
+import Data.Default.Class (Default)
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
@@ -105,7 +106,8 @@ instance
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
     Signal (Core.EraRule "LEDGER" era) ~ Tx era,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    Default (LedgerState era)
   ) =>
   STS (LEDGERS era)
   where

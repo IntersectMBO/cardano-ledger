@@ -70,6 +70,7 @@ import Test.Shelley.Spec.Ledger.Utils
     applySTSTest,
     runShelleyBase,
   )
+import Data.Default.Class (Default)
 
 -- ======================================================
 
@@ -106,7 +107,8 @@ instance
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   TQC.HasTrace (LEDGER era) (GenEnv era)
   where
@@ -141,7 +143,8 @@ instance
     Embed (Core.EraRule "DELEG" era) (DELPL era),
     Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   TQC.HasTrace (LEDGERS era) (GenEnv era)
   where
@@ -196,7 +199,8 @@ mkGenesisLedgerState ::
   forall a era.
   ( UsesValue era,
     UsesTxOut era,
-    EraGen era
+    EraGen era,
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   GenEnv era ->
   IRC (LEDGER era) ->
