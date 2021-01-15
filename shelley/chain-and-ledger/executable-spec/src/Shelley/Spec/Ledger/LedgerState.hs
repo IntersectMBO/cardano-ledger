@@ -550,7 +550,9 @@ data UTxOState era = UTxOState
   }
   deriving (Generic)
 
--- todo: explain what c is here
+-- | Constraints needed to derive different typeclasses instances (e.g. 'Show'
+-- or 'Eq) for some STS states. Here @c@ is the typeclass we are deriving the
+-- instance for.
 type TransUTxOState (c :: Type -> Constraint) era =
   ( Era era,
     TransTxId c era,
