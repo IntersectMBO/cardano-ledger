@@ -8,7 +8,7 @@ These two cases are distinguished by the use of the $\IsValidating$ tag.
 Besides fee collection, no side effects should occur when processing a
 transaction that contains a script that does not validate. That is, no
 delegation or pool state updates, update proposals, or any other observable state change, should be
-applied.\khcomment{Explain how this is enforced.} The UTxO rule is still applied, however, as this is where the correctness of the
+applied. The UTxO rule is still applied, however, as this is where the correctness of the
 validation tag is verified, and where script fees are collected.
 
 \begin{figure}

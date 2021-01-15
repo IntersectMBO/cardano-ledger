@@ -426,21 +426,10 @@ In this case, the states of the UTxO, fee
 
 Figure \ref{fig:rules:utxo-shelley} shows the $\type{UTxO-inductive}$
 transition rule for the UTXO transition type.
-This rule has the following preconditions (plus the relevant ones
-from \cite{Shelley-MultiAsset-Spec}\khcomment{You need to list these...}):
+This rule has the following changes:
 
 \begin{enumerate}
-  \item The transaction is being processed within its validity interval;
-
-  \item All inputs in a transaction correspond to UTxO entries;
-
-  \item The general accounting property holds\khcomment{what is that?};
-
   \item The transaction pays fees correctly, as defined above;
-
-  \item All outputs of the transaction contain only non-negative quantities;
-
-  \item The transaction size does not exceed the maximum limit\khcomment{Defined where?};
 
  \item The execution unit budget for a transaction is within the maximum
   permitted number of units for a transaction;
@@ -476,7 +465,7 @@ UTXOS rule.
       \\
       ~
       \\
-      {
+      \hldiff{{
         \begin{array}{c}
           \var{slot}\\
           \var{pp}\\
@@ -506,7 +495,7 @@ UTXOS rule.
           \end{array}
         \right)
       }
-    }
+    }}
     {
       \begin{array}{l}
         \var{slot}\\
@@ -544,9 +533,6 @@ UTXOS rule.
 Because of two-phase transaction validation, non-native script validation is not part of transaction witnessing.
 However, native script validation does remain part of transaction witnessing.
 When witnessing a transaction, we therefore need to validate only the native scripts.
-We have consequently changed the definition of the function
-$\fun{scriptsNeeded}$, see Figure~\ref{fig:functions-witnesses} to include both multi-signature and Plutus scripts, plus the scripts that are used for any
-validation purpose (minting, outputs, certificates, withdrawals).
 
 \begin{figure}[htb]
   \begin{align*}
@@ -603,7 +589,7 @@ We have made the following changes and additions to the UTXOW preconditions:
 \end{itemize}
 
 If these conditions are all satisfied, then the resulting UTxO state change is fully determined
-by the UTXO transition (the application of which is also part of the conditions).\khcomment{Do we assume that transaction validation and execution happen within the same era?}
+by the UTXO transition (the application of which is also part of the conditions).
 
 \begin{figure}[htb]
   \emph{State transitions}
