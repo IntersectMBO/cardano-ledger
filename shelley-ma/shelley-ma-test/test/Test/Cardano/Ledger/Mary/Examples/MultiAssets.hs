@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+
 -- |
 -- Module      : Test.Cardano.Ledger.Mary.Examples.MultiAssets
 -- Description : Multi-Assets Examples
@@ -15,6 +16,7 @@ import Cardano.Ledger.Mary.Value
     PolicyID (..),
     Value (..),
   )
+import Cardano.Ledger.ShelleyMA.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -97,7 +99,7 @@ pp =
   emptyPParams
     { _minfeeA = 0,
       _minfeeB = 1,
-      _maxTxSize = 1024,
+      _maxTxSize = 16384,
       _minUTxOValue = Coin 100
     }
 
@@ -136,6 +138,9 @@ policyFailure p =
           )
       ]
     ]
+
+outTooSmallFailure :: TxOut MaryTest -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
+outTooSmallFailure out = Left [[UtxowFailure (UtxoFailure (OutputTooBigUTxO [out]))]]
 
 ----------------------------------------------------
 -- Introduce a new Token Bundle, Purple Tokens
@@ -537,6 +542,46 @@ testNegEx2 = do
     Right _ -> assertFailure $ "constructed negative TxOut Value"
 
 --
+-- Create a Value that is too big
+--
+
+smallValue :: Value TestCrypto
+smallValue =
+  Value 0 $
+    Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
+
+smallOut :: TxOut MaryTest
+smallOut = TxOut Cast.aliceAddr $ smallValue <+> (Val.inject (aliceInitCoin <-> (feeEx <+> Coin 100)))
+
+bigValue :: Value TestCrypto
+bigValue =
+  Value 0 $
+    Map.singleton
+      purplePolicyId
+      (Map.fromList $ map (\x -> ((AssetName . BS.pack . show $ x), 1)) [1 .. 97 :: Int])
+
+bigOut :: TxOut MaryTest
+bigOut = TxOut Cast.aliceAddr $ bigValue <+> (Val.inject (Coin 100))
+
+txbodyWithBigValue :: TxBody MaryTest
+txbodyWithBigValue =
+  makeTxb
+    [TxIn bootstrapTxId 0]
+    [smallOut, bigOut]
+    unboundedInterval
+    (bigValue <+> smallValue)
+
+txBigValue :: Tx MaryTest
+txBigValue =
+  Tx
+    txbodyWithBigValue
+    mempty
+      { addrWits = makeWitnessesVKey (hashAnnotated txbodyWithBigValue) [asWitness Cast.alicePay],
+        scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
+      }
+    SNothing
+
+--
 -- Multi-Assets Test Group
 --
 
@@ -622,5 +667,11 @@ multiAssetsExample =
               (ledgerEnv $ SlotNo 3)
               (Right expectedUTxONegEx1),
           testCase "no negative outputs" testNegEx2
-        ]
+        ],
+      testCase "value too big" $
+        testMaryNoDelegLEDGER
+          initUTxO
+          txBigValue
+          (ledgerEnv $ SlotNo 0)
+          (outTooSmallFailure bigOut)
     ]
