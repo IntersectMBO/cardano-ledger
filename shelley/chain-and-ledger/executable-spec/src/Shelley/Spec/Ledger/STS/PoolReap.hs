@@ -77,14 +77,16 @@ instance (Typeable era, Default (PoolreapState era)) => STS (POOLREAP era) where
   assertions =
     [ PostCondition
         "Deposit pot must equal obligation"
-        (\(TRC (pp, _, _)) st ->
-           obligation pp (_rewards $ prDState st) (_pParams $ prPState st) ==
-           _deposited (prUTxOSt st))
-    , PostCondition
+        ( \(TRC (pp, _, _)) st ->
+            obligation pp (_rewards $ prDState st) (_pParams $ prPState st)
+              == _deposited (prUTxOSt st)
+        ),
+      PostCondition
         "PoolReap may not create or remove reward accounts"
-        (\(TRC (_, st, _)) st' ->
-           let r = _rewards . prDState
-            in length (r st) == length (r st'))
+        ( \(TRC (_, st, _)) st' ->
+            let r = _rewards . prDState
+             in length (r st) == length (r st')
+        )
     ]
 
 poolReapTransition :: TransitionRule (POOLREAP era)

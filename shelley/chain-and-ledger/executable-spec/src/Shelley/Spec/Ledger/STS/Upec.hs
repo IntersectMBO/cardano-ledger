@@ -14,7 +14,6 @@
 --
 -- The rules of this module determine how the update subsystem of the ledger
 -- handles the epoch transitions.
---
 module Shelley.Spec.Ledger.STS.Upec where
 
 import qualified Cardano.Ledger.Core as Core
