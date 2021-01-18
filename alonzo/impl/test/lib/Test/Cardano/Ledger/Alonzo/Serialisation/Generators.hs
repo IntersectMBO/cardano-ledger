@@ -13,14 +13,12 @@
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (Data (..), DataHash (..))
+import Cardano.Ledger.Alonzo.Data (Data (..), DataHash (..), PlutusData (..))
 import Cardano.Ledger.Alonzo.PParams (PPHash (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( IsFee (..),
-    TxBody (TxBody),
-    TxIn (..),
     TxOut (..),
   )
 import Cardano.Ledger.Alonzo.TxWitness
@@ -35,7 +33,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 
 -- TODO correct arbitrary generator for Data
 instance Arbitrary (Data era) where
-  arbitrary = pure NotReallyData
+  arbitrary = pure (Data NotReallyData)
 
 instance Arbitrary Tag where
   arbitrary = elements [Spend, Mint, Cert, Rewrd]
@@ -56,12 +54,23 @@ instance
   Arbitrary (TxWitness era)
   where
   arbitrary =
-    TxWitness
+    FlatWitness
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+instance
+  ( Era era,
+    UsesValue era,
+    Mock (Crypto era),
+    Arbitrary (Core.Script era),
+    UsesScript era
+  ) =>
+  Arbitrary (ScriptData era)
+  where
+  arbitrary = ScriptData <$> arbitrary <*> arbitrary <*> arbitrary
 
 deriving newtype instance CC.Crypto c => Arbitrary (ScriptDataHash c)
 
@@ -70,17 +79,6 @@ deriving newtype instance CC.Crypto c => Arbitrary (DataHash c)
 deriving newtype instance CC.Crypto c => Arbitrary (PPHash c)
 
 deriving newtype instance Arbitrary IsFee
-
-instance
-  ( CC.Crypto c
-  ) =>
-  Arbitrary (TxIn c)
-  where
-  arbitrary =
-    TxInCompact
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
 
 instance
   ( Era era,
@@ -104,6 +102,7 @@ instance
   arbitrary =
     TxBody
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

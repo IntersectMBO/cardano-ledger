@@ -3,10 +3,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,11 +28,14 @@ module Cardano.Ledger.Alonzo.PParams
     PParamsUpdate,
     emptyPParamsUpdate,
     updatePParams,
+    hashLanguagePP,
   )
 where
 
 import Cardano.Binary
-  ( FromCBOR (..),
+  ( Annotator,
+    Decoder,
+    FromCBOR (..),
     ToCBOR (..),
     decodeWord,
     encodeListLen,
@@ -36,18 +43,26 @@ import Cardano.Binary
     encodeWord,
   )
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), Language, Prices (..))
+import Cardano.Ledger.Alonzo.Scripts
+  ( CostModel,
+    ExUnits (..),
+    Language,
+    Prices (..),
+    hashCostModel,
+  )
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
+import Data.Coders (Decode (..), decode, (<*!))
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Proxy
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
@@ -67,7 +82,7 @@ import Shelley.Spec.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
     decodeMapContents,
-    decodeRecordNamed,
+    decodeMapTraverse,
     mapFromCBOR,
     mapToCBOR,
     ratioFromCBOR,
@@ -75,6 +90,7 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 
+-- ================================================================
 -- TODO
 -- make type families for PParams and PParamsUpdate
 -- what is the encodeListLen ??
@@ -193,33 +209,42 @@ instance (Era era) => ToCBOR (PParams era) where
         <> toCBOR maxTxExUnits'
         <> toCBOR maxBlockExUnits'
 
-instance (Era era) => FromCBOR (PParams era) where
-  fromCBOR = do
-    decodeRecordNamed "PParams" (const 22) $
-      PParams
-        <$> fromCBOR -- _minfeeA         :: Integer
-        <*> fromCBOR -- _minfeeB         :: Natural
-        <*> fromCBOR -- _maxBBSize       :: Natural
-        <*> fromCBOR -- _maxTxSize       :: Natural
-        <*> fromCBOR -- _maxBHSize       :: Natural
-        <*> fromCBOR -- _keyDeposit      :: Coin
-        <*> fromCBOR -- _poolDeposit     :: Coin
-        <*> fromCBOR -- _eMax            :: EpochNo
-        <*> fromCBOR -- _nOpt            :: Natural
-        <*> ratioFromCBOR -- _a0         :: Rational
-        <*> fromCBOR -- _rho             :: UnitInterval
-        <*> fromCBOR -- _tau             :: UnitInterval
-        <*> fromCBOR -- _d               :: UnitInterval
-        <*> fromCBOR -- _extraEntropy    :: Nonce
-        <*> fromCBORGroup -- _protocolVersion :: ProtVer
-        <*> fromCBOR -- _minPoolCost     :: Natural
+instance
+  (Era era) =>
+  FromCBOR (Annotator (PParams era))
+  where
+  fromCBOR =
+    decode $
+      Ann (RecD PParams)
+        <*! Ann From -- _minfeeA         :: Integer
+        <*! Ann From -- _minfeeB         :: Natural
+        <*! Ann From -- _maxBBSize       :: Natural
+        <*! Ann From -- _maxTxSize       :: Natural
+        <*! Ann From -- _maxBHSize       :: Natural
+        <*! Ann From -- _keyDeposit      :: Coin
+        <*! Ann From -- _poolDeposit     :: Coin
+        <*! Ann From -- _eMax            :: EpochNo
+        <*! Ann From -- _nOpt            :: Natural
+        <*! Ann (D ratioFromCBOR) -- _a0              :: Rational
+        <*! Ann From -- _rho             :: UnitInterval
+        <*! Ann From -- _tau             :: UnitInterval
+        <*! Ann From -- _d               :: UnitInterval
+        <*! Ann From -- _extraEntropy    :: Nonce
+        <*! Ann (D fromCBORGroup) -- _protocolVersion :: ProtVer
+        <*! Ann From -- _minPoolCost     :: Natural
         -- new/updated for alonzo
-        -- TODO what should all these really be?
-        <*> fromCBOR -- _adaPerUTxOByte  ::
-        <*> fromCBOR -- _costmdls = costmdls',
-        <*> fromCBOR -- _prices = prices',
-        <*> fromCBOR -- _maxTxExUnits = maxTxExUnits',
-        <*> fromCBOR -- _maxBlockExUnits = maxBlockExUnits'
+        <*! Ann From -- _adaPerUTxOByte  ::
+        <*! D (splitMapFromCBOR fromCBOR fromCBOR) -- _costmdls = costmdls',
+        <*! Ann From -- _prices = prices',
+        <*! Ann From -- _maxTxExUnits = maxTxExUnits',
+        <*! Ann From -- _maxBlockExUnits = maxBlockExUnits'
+
+splitMapFromCBOR ::
+  Ord dom =>
+  Decoder s dom ->
+  Decoder s (Annotator rng) ->
+  Decoder s (Annotator (Map dom rng))
+splitMapFromCBOR a b = decodeMapTraverse (pure <$> a) b
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams era
@@ -342,7 +367,8 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
           15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minPoolCost = SJust x})
           -- new/updated for alonzo
           16 -> fromCBOR >>= \x -> pure (15, \up -> up {_adaPerUTxOByte = SJust x})
-          17 -> fromCBOR >>= \x -> pure (15, \up -> up {_costmdls = SJust x})
+          -- THIS STUB WILL HAVE to be adjusted since CostModel only has FromCBOR(Annotator _) instance
+          -- 17 -> fromCBOR >>= \x -> pure (15, \up -> up {_costmdls = SJust x})
           18 -> fromCBOR >>= \x -> pure (15, \up -> up {_prices = SJust x})
           19 -> fromCBOR >>= \x -> pure (15, \up -> up {_maxTxExUnits = SJust x})
           20 -> fromCBOR >>= \x -> pure (15, \up -> up {_maxBlockExUnits = SJust x})
@@ -401,15 +427,26 @@ updatePParams pp ppup =
     fromMaybe' :: a -> StrictMaybe a -> a
     fromMaybe' x = fromMaybe x . strictMaybeToMaybe
 
-data EraIndependentPP
+-- ===================================================
+-- Figure 1: "Definitions Used in Protocol Parameters"
 
 -- Hash of a subset of Protocol Parameters relevant to Plutus script evaluation
 newtype PPHash crypto
   = PPHash
-      (Hash.Hash (HASH crypto) EraIndependentPP)
+      (Hash.Hash (HASH crypto) CostModel)
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoThunks)
 
 deriving newtype instance CC.Crypto crypto => FromCBOR (PPHash crypto)
 
 deriving newtype instance CC.Crypto crypto => ToCBOR (PPHash crypto)
+
+hashLanguagePP :: forall era. Era era => PParams era -> Language -> PPHash (Crypto era)
+hashLanguagePP pp lang = PPHash (hashCostModel (Proxy @era) cm)
+  where
+    cm :: CostModel
+    cm = case Map.lookup lang (_costmdls pp) of
+      Just x -> x
+      Nothing -> error ("CostModel map does not have cost for language: " ++ show lang)
+
+-- =============================================================

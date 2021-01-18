@@ -382,6 +382,8 @@ class
   where
   validateScript :: Core.Script era -> Tx era -> Bool
   hashScript :: Core.Script era -> ScriptHash (Crypto era)
+  isNativeScript :: Core.Script era -> Bool
+  isNativeScript _ = True
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
