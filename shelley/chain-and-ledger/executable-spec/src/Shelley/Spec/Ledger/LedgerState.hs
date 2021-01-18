@@ -46,7 +46,6 @@ module Shelley.Spec.Ledger.LedgerState
     pvCanFollow,
     reapRewards,
     totalInstantaneousReservesRewards,
-    updatePpup,
 
     -- * Genesis State
     genesisState,
@@ -529,16 +528,6 @@ pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
 pvCanFollow _ SNothing = True
 pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
   (m + 1, 0) == (m', n') || (m, n + 1) == (m', n')
-
--- | Update the protocol parameter updates by clearing out the proposals
--- and making the future proposals become the new proposals,
--- provided the new proposals can follow (otherwise reset them).
-updatePpup :: UTxOState era -> PParams era -> UTxOState era
-updatePpup utxoSt pp = utxoSt {_ppups = PPUPState ps emptyPPPUpdates}
-  where
-    (ProposedPPUpdates newProposals) = futureProposals . _ppups $ utxoSt
-    goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
-    ps = if all goodPV newProposals then ProposedPPUpdates newProposals else emptyPPPUpdates
 
 data UTxOState era = UTxOState
   { _utxo :: !(UTxO era),

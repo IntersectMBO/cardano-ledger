@@ -26,6 +26,7 @@ import Shelley.Spec.Ledger.STS.Rupd (RUPD)
 import Shelley.Spec.Ledger.STS.Snap (SNAP)
 import Shelley.Spec.Ledger.STS.Tick (TICK, TICKF)
 import Shelley.Spec.Ledger.STS.Tickn (TICKN)
+import Shelley.Spec.Ledger.STS.Upec (UPEC)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO)
 import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
 
@@ -68,6 +69,8 @@ type instance Core.EraRule "TICK" (ShelleyEra c) = TICK (ShelleyEra c)
 type instance Core.EraRule "TICKF" (ShelleyEra c) = TICKF (ShelleyEra c)
 
 type instance Core.EraRule "TICKN" (ShelleyEra c) = TICKN
+
+type instance Core.EraRule "UPEC" (ShelleyEra c) = UPEC (ShelleyEra c)
 
 type instance Core.EraRule "UTXO" (ShelleyEra c) = UTXO (ShelleyEra c)
 

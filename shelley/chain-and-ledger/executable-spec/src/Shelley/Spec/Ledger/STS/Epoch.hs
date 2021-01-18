@@ -22,7 +22,6 @@ where
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
-import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
   ( Embed (..),
@@ -30,19 +29,17 @@ import Control.State.Transition
     TRC (..),
     TransitionRule,
     judgmentContext,
-    liftSTS,
     trans,
   )
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
-import Shelley.Spec.Ledger.EpochBoundary (SnapShots)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
+import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.EpochBoundary (SnapShots, obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
     LedgerState,
-    PPUPState (..),
     PState (..),
     esAccountState,
     esLState,
@@ -51,16 +48,19 @@ import Shelley.Spec.Ledger.LedgerState
     esPrevPp,
     esSnapshots,
     _delegationState,
+    _deposited,
     _ppups,
+    _reserves,
+    _rewards,
     _utxoState,
     pattern DPState,
     pattern EpochState,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (..), updatePParams)
+import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Rewards ()
-import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppPredicateFailure, NewppState (..))
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapPredicateFailure, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapPredicateFailure)
+import Shelley.Spec.Ledger.STS.Upec (UPEC, UpecPredicateFailure, UpecState (..))
 import Shelley.Spec.Ledger.Slot (EpochNo)
 
 data EPOCH era
@@ -68,20 +68,20 @@ data EPOCH era
 data EpochPredicateFailure era
   = PoolReapFailure (PredicateFailure (Core.EraRule "POOLREAP" era)) -- Subtransition Failures
   | SnapFailure (PredicateFailure (Core.EraRule "SNAP" era)) -- Subtransition Failures
-  | NewPpFailure (PredicateFailure (Core.EraRule "NEWPP" era)) -- Subtransition Failures
+  | UpecFailure (PredicateFailure (Core.EraRule "UPEC" era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
   ( Eq (PredicateFailure (Core.EraRule "POOLREAP" era)),
     Eq (PredicateFailure (Core.EraRule "SNAP" era)),
-    Eq (PredicateFailure (Core.EraRule "NEWPP" era))
+    Eq (PredicateFailure (Core.EraRule "UPEC" era))
   ) =>
   Eq (EpochPredicateFailure era)
 
 deriving stock instance
   ( Show (PredicateFailure (Core.EraRule "POOLREAP" era)),
     Show (PredicateFailure (Core.EraRule "SNAP" era)),
-    Show (PredicateFailure (Core.EraRule "NEWPP" era))
+    Show (PredicateFailure (Core.EraRule "UPEC" era))
   ) =>
   Show (EpochPredicateFailure era)
 
@@ -96,10 +96,10 @@ instance
     Environment (Core.EraRule "POOLREAP" era) ~ PParams era,
     State (Core.EraRule "POOLREAP" era) ~ PoolreapState era,
     Signal (Core.EraRule "POOLREAP" era) ~ EpochNo,
-    Embed (Core.EraRule "NEWPP" era) (EPOCH era),
-    Environment (Core.EraRule "NEWPP" era) ~ NewppEnv era,
-    State (Core.EraRule "NEWPP" era) ~ NewppState era,
-    Signal (Core.EraRule "NEWPP" era) ~ Maybe (PParams era)
+    Embed (Core.EraRule "UPEC" era) (EPOCH era),
+    Environment (Core.EraRule "UPEC" era) ~ EpochState era,
+    State (Core.EraRule "UPEC" era) ~ UpecState era,
+    Signal (Core.EraRule "UPEC" era) ~ ()
   ) =>
   STS (EPOCH era)
   where
@@ -113,40 +113,13 @@ instance
 instance
   ( NoThunks (PredicateFailure (Core.EraRule "POOLREAP" era)),
     NoThunks (PredicateFailure (Core.EraRule "SNAP" era)),
-    NoThunks (PredicateFailure (Core.EraRule "NEWPP" era))
+    NoThunks (PredicateFailure (Core.EraRule "UPEC" era))
   ) =>
   NoThunks (EpochPredicateFailure era)
 
-votedValue ::
-  ProposedPPUpdates era ->
-  PParams era ->
-  Int ->
-  Maybe (PParams era)
-votedValue (ProposedPPUpdates pup) pps quorumN =
-  let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
-      votes =
-        Map.foldr
-          (\vote tally -> Map.insert vote (incrTally vote tally) tally)
-          (Map.empty :: Map (PParamsUpdate era) Int)
-          pup
-      consensus = Map.filter (>= quorumN) votes
-   in case length consensus of
-        -- NOTE that `quorumN` is a global constant, and that we require
-        -- it to be strictly greater than half the number of genesis nodes.
-        -- The keys in the `pup` correspond to the genesis nodes,
-        -- and therefore either:
-        --   1) `consensus` is empty, or
-        --   2) `consensus` has exactly one element.
-        1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
-        -- NOTE that `updatePParams` corresponds to the union override right
-        -- operation in the formal spec.
-        _ -> Nothing
-
 epochTransition ::
   forall era.
-  ( UsesTxOut era,
-    UsesValue era,
-    Embed (Core.EraRule "SNAP" era) (EPOCH era),
+  ( Embed (Core.EraRule "SNAP" era) (EPOCH era),
     Environment (Core.EraRule "SNAP" era) ~ LedgerState era,
     State (Core.EraRule "SNAP" era) ~ SnapShots (Crypto era),
     Signal (Core.EraRule "SNAP" era) ~ (),
@@ -154,10 +127,10 @@ epochTransition ::
     Environment (Core.EraRule "POOLREAP" era) ~ PParams era,
     State (Core.EraRule "POOLREAP" era) ~ PoolreapState era,
     Signal (Core.EraRule "POOLREAP" era) ~ EpochNo,
-    Embed (Core.EraRule "NEWPP" era) (EPOCH era),
-    Environment (Core.EraRule "NEWPP" era) ~ NewppEnv era,
-    State (Core.EraRule "NEWPP" era) ~ NewppState era,
-    Signal (Core.EraRule "NEWPP" era) ~ Maybe (PParams era)
+    Embed (Core.EraRule "UPEC" era) (EPOCH era),
+    Environment (Core.EraRule "UPEC" era) ~ EpochState era,
+    State (Core.EraRule "UPEC" era) ~ UpecState era,
+    Signal (Core.EraRule "UPEC" era) ~ ()
   ) =>
   TransitionRule (EPOCH era)
 epochTransition = do
@@ -167,7 +140,7 @@ epochTransition = do
         { esAccountState = acnt,
           esSnapshots = ss,
           esLState = ls,
-          esPrevPp = _pr,
+          esPrevPp = pr,
           esPp = pp,
           esNonMyopic = nm
         },
@@ -187,23 +160,34 @@ epochTransition = do
             _fPParams = Map.empty
           }
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
-    trans @(Core.EraRule "POOLREAP" era) $ TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
+    trans @(Core.EraRule "POOLREAP" era) $
+      TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
 
-  coreNodeQuorum <- liftSTS $ asks quorum
+  let epochState' =
+        EpochState
+          acnt'
+          ss'
+          (ls {_utxoState = utxoSt', _delegationState = DPState dstate' pstate''})
+          pr
+          pp
+          nm
 
-  let pup = proposals . _ppups $ utxoSt'
-  let ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
-  NewppState utxoSt'' acnt'' pp' <-
-    trans @(Core.EraRule "NEWPP" era) $
-      TRC (NewppEnv dstate' pstate'', NewppState utxoSt' acnt' pp, ppNew)
+  UpecState pp' ppupSt' <-
+    trans @(Core.EraRule "UPEC" era) $ TRC (epochState', UpecState pp (_ppups utxoSt'), ())
+  let utxoSt'' = utxoSt' {_ppups = ppupSt'}
+
+  let Coin oblgCurr = obligation pp (_rewards dstate') (_pParams pstate'')
+      Coin oblgNew = obligation pp' (_rewards dstate') (_pParams pstate'')
+      Coin reserves = _reserves acnt'
+      utxoSt''' = utxoSt'' {_deposited = Coin oblgNew}
+      acnt'' = acnt' {_reserves = Coin $ reserves + oblgCurr - oblgNew}
   pure $
-    EpochState
-      acnt''
-      ss'
-      (ls {_utxoState = utxoSt'', _delegationState = DPState dstate' pstate''})
-      pp
-      pp'
-      nm
+    epochState'
+      { esAccountState = acnt'',
+        esLState = (esLState epochState') {_utxoState = utxoSt'''},
+        esPrevPp = pp,
+        esPp = pp'
+      }
 
 instance
   ( UsesTxOut era,
@@ -224,8 +208,9 @@ instance
 
 instance
   ( Era era,
-    PredicateFailure (Core.EraRule "NEWPP" era) ~ NewppPredicateFailure era
+    STS (UPEC era),
+    PredicateFailure (Core.EraRule "UPEC" era) ~ UpecPredicateFailure era
   ) =>
-  Embed (NEWPP era) (EPOCH era)
+  Embed (UPEC era) (EPOCH era)
   where
-  wrapFailed = NewPpFailure
+  wrapFailed = UpecFailure
