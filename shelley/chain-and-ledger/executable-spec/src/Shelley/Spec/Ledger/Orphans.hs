@@ -1,12 +1,16 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Shelley.Spec.Ledger.Orphans where
 
 import Cardano.Crypto.Hash (Hash (..))
 import qualified Cardano.Crypto.Hash as Hash
+import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
-import Cardano.Prelude (readEither)
+import Cardano.Prelude (HeapWords (..), readEither)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData (rnf))
 import Data.Aeson
@@ -107,3 +111,5 @@ instance Default (Hash a b) where
 
 instance Default Bool where
   def = False
+
+deriving newtype instance HeapWords (HS.Hash h a)

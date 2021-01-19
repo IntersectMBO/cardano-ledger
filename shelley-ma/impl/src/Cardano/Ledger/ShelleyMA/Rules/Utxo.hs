@@ -30,6 +30,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
 import Cardano.Ledger.Torsor (Torsor (..))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Prelude (heapWordsUnpacked)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (◁))
 import Control.Monad.Trans.Reader (asks)
@@ -83,6 +84,52 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     unUTxO,
   )
+
+{- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
+(passed to it as Coin mv) as a specification of "the cost of
+making a Shelley-sized UTxO entry", calculated here by "utxoEntrySizeWithoutVal + uint",
+using the constants in the "where" clause.
+In the case when a UTxO entry contains coins only (and the Shelley
+UTxO entry format is used - we will extend this to be correct for other
+UTxO formats shortly), the deposit should be exactly the minUTxOValue.
+This is the "inject (coin v) == v" case.
+Otherwise, we calculate the per-byte deposit by multiplying the minimum deposit (which is
+for the number of Shelley UTxO-entry bytes) by the size of a Shelley UTxO entry.
+This is the "(mv * (utxoEntrySizeWithoutVal + uint))" calculation.
+We then calculate the total deposit required for making a UTxO entry with a Val-class
+member v by dividing "(mv * (utxoEntrySizeWithoutVal + uint))" by the
+estimated total size of the UTxO entry containing v, ie by
+"(utxoEntrySizeWithoutVal + size v)".
+See the formal specification for details.
+-}
+
+-- This scaling function is right for UTxO, not EUTxO
+--
+scaledMinDeposit :: (Val.Val v) => v -> Coin -> Coin
+scaledMinDeposit v (Coin mv)
+  | Val.inject (Val.coin v) == v = Coin mv -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
+  -- The calculation should represent this equation
+  -- minValueParameter / coinUTxOSize = actualMinValue / valueUTxOSize
+  -- actualMinValue = (minValueParameter / coinUTxOSize) * valueUTxOSize
+  | otherwise = Coin $ max mv (adaPerUTxOWord * (utxoEntrySizeWithoutVal + Val.size v))
+  where
+    -- lengths obtained from tracing on HeapWords of inputs and outputs
+    -- obtained experimentally, and number used here
+    -- units are Word64s
+    txoutLenNoVal = 14
+    txinLen = 7
+
+    -- unpacked CompactCoin Word64 size in Word64s
+    coinSize :: Integer
+    coinSize = fromIntegral $ heapWordsUnpacked (CompactCoin 0)
+
+    utxoEntrySizeWithoutVal :: Integer
+    utxoEntrySizeWithoutVal = 6 + txoutLenNoVal + txinLen
+
+    -- how much ada does a Word64 of UTxO space cost, calculated from minAdaValue PP
+    -- round down
+    adaPerUTxOWord :: Integer
+    adaPerUTxOWord = quot mv (utxoEntrySizeWithoutVal + coinSize)
 
 -- ==========================================================
 
@@ -247,7 +294,7 @@ utxoTransition = do
                     Val.pointwise
                       (>=)
                       v
-                      (Val.inject $ Val.scaledMinDeposit v minUTxOValue)
+                      (Val.inject $ scaledMinDeposit v minUTxOValue)
           )
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall

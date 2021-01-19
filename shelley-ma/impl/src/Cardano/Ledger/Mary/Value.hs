@@ -49,7 +49,7 @@ import Cardano.Ledger.Val
     EncodeMint (..),
     Val (..),
   )
-import Cardano.Prelude (cborError)
+import Cardano.Prelude (HeapWords (..), cborError)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
@@ -159,26 +159,42 @@ instance CC.Crypto crypto => Val (Value crypto) where
   modifyCoin f (Value c m) = Value n m where (Coin n) = f (Coin c)
   pointwise p (Value c x) (Value d y) = (p c d) && (pointWise (pointWise p) x y)
 
-  size (Value _ v) =
-    -- add uint for the Coin portion in this size calculation
-    foldr accum uint v
-    where
-      -- add addrHashLen for each Policy ID
-      accum u ans = foldr accumIns (ans + policyIdLen) u
-        where
-          -- add assetNameLen and uint for each asset of that Policy ID
-          accumIns _ ans1 = ans1 + assetNameLen + uint
-      -- TODO move these constants somewhere (they are also specified in CDDL)
-      uint :: Integer
-      uint = 9
+  -- returns the size, in Word64's, of the CompactValue representation of Value
+  size vv@(Value _ v)
+    -- when Value contains only ada
+    | v == mempty = fromIntegral $ adaWords
+    -- when Value contains ada as well as other tokens
+    -- sums up :
+    -- i) adaWords : the space taken up by the ada amount
+    -- ii) numberMulAssets : the space taken by number of words used to store number of non-ada assets in a value
+    -- iii) the space taken up by the rest of the representation (quantities, PIDs, AssetNames, indeces)
+    | otherwise =
+      fromIntegral $
+        (roundupBytesToWords $ representationSize (snd $ gettriples vv))
+          + repOverhead
 
-      assetNameLen :: Integer
-      assetNameLen = 32
+instance CC.Crypto crypto => HeapWords (Value crypto) where
+  heapWords v = fromIntegral $ size v
 
-      -- TODO dig up these constraints from Era
-      -- address hash length is always same as Policy ID length
-      policyIdLen :: Integer
-      policyIdLen = 28
+-- space (in Word64s) taken up by the ada amount
+adaWords :: Int
+adaWords = 1
+
+-- 64 bit machine Word64 length
+wordLength :: Int
+wordLength = 8
+
+-- overhead in MA compact rep
+repOverhead :: Int
+repOverhead = 4 + adaWords + numberMulAssets
+
+-- number of words used to store number of MAs in a value
+numberMulAssets :: Int
+numberMulAssets = 1
+
+-- converts bytes to words (rounding up)
+roundupBytesToWords :: Int -> Int
+roundupBytesToWords b = quot (b + wordLength - 1) wordLength
 
 -- ==============================================================
 -- CBOR
