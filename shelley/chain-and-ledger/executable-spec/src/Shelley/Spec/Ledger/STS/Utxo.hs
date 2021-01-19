@@ -382,7 +382,7 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(Core.EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputs = Map.elems $ unUTxO (txouts txb)
+  let outputs = Map.elems $ unUTxO (txouts @era txb)
       minUTxOValue = _minUTxOValue pp
       -- minUTxOValue deposit comparison done as Coin because this rule
       -- is correct strictly in the Shelley era (in shelleyMA we would need to
@@ -417,7 +417,7 @@ utxoInductive = do
 
   pure
     UTxOState
-      { _utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts txb),
+      { _utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts @era txb),
         _deposited = deposits' <> depositChange,
         _fees = fees <> getField @"txfee" txb,
         _ppups = ppup'

@@ -2,34 +2,39 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Alonzo.Data
   ( PlutusData (..),
     -- Figure 2 (partial list)
     Data (Data, ..),
-    EraIndependentData,
-    DataHash (..),
+    DataHash,
     hashData,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeInt, encodeInt)
-import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Crypto (HASH)
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
-import Control.DeepSeq (NFData)
+import Cardano.Ledger.SafeHash
+  ( EraIndependentData,
+    HashAnnotated,
+    SafeHash,
+    SafeToHash,
+    hashAnnotated,
+  )
 import Data.Coders
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 
 -- =====================================================================
 -- PlutusData is a placeholder for the type that Plutus expects as data.
@@ -40,7 +45,7 @@ data PlutusData = NotReallyData
 instance NoThunks PlutusData
 
 -- | TODO appropriate serialisation for the Real Plutus Data
-instance ToCBOR (PlutusData) where
+instance ToCBOR PlutusData where
   toCBOR _ = encodeInt 0
 
 instance FromCBOR (PlutusData) where
@@ -58,14 +63,17 @@ instance FromCBOR (Annotator PlutusData) where
 -- The newtype will memoize the serialized bytes. The strategy is to replace
 -- PlutusData  with the correct type
 
-newtype Data era = DataConstr (MemoBytes (PlutusData))
+newtype Data era = DataConstr (MemoBytes PlutusData)
   deriving (Eq, Ord, Generic, ToCBOR, Show)
+  deriving newtype (SafeToHash)
 
 deriving via
   (Mem PlutusData)
   instance
     (Era era) =>
     FromCBOR (Annotator (Data era))
+
+instance (Crypto era ~ c) => HashAnnotated (Data era) EraIndependentData c
 
 instance NoThunks (Data era)
 
@@ -77,24 +85,7 @@ pattern Data p <-
 
 -- =============================================================================
 
-data EraIndependentData
-
-newtype DataHash crypto
-  = DataHash
-      (Hash.Hash (HASH crypto) EraIndependentData)
-  deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NFData, NoThunks)
-
-deriving newtype instance CC.Crypto crypto => FromCBOR (DataHash crypto)
-
-deriving newtype instance CC.Crypto crypto => ToCBOR (DataHash crypto)
-
-instance Era era => HashAnnotated (Data era) era where
-  type HashIndex (Data era) = EraIndependentData
+type DataHash crypto = SafeHash crypto EraIndependentData
 
 hashData :: Era era => Data era -> DataHash (Crypto era)
-hashData = DataHash . hashAnnotated
-
---------------------------------------------------------------------------------
--- Serialisation
---------------------------------------------------------------------------------
+hashData d = hashAnnotated d

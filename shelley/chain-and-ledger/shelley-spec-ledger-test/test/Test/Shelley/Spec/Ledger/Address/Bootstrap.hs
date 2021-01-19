@@ -48,7 +48,7 @@ import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
+import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
     KeyRole (..),
@@ -217,14 +217,14 @@ aliceAddr = AddrBootstrap (BootstrapAddress aliceByronAddr)
 aliceWitness :: BootstrapWitness C_crypto
 aliceWitness =
   makeBootstrapWitness
-    (hashAnnotated txBody)
+    (extractHash (hashAnnotated txBody))
     aliceSigningKey
     (Byron.addrAttributes aliceByronAddr)
 
 aliceBadWitness :: BootstrapWitness C_crypto
 aliceBadWitness =
   makeBootstrapWitness
-    (hashAnnotated txBody {_ttl = SlotNo 100000000})
+    (extractHash (hashAnnotated txBody {_ttl = SlotNo 100000000}))
     aliceSigningKey
     (Byron.addrAttributes aliceByronAddr)
 

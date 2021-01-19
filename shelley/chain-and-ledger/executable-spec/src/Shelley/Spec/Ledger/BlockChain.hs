@@ -82,6 +82,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
+import Cardano.Ledger.SafeHash (EraIndependentBlockBody)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
@@ -119,7 +120,6 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentBlockBody)
 import Shelley.Spec.Ledger.Keys
   ( CertifiedVRF,
     Hash,

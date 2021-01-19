@@ -47,6 +47,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.Presets (someKeyPairs)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, someScripts)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
+import Cardano.Ledger.SafeHash(unsafeMakeSafeHash)
 
 {------------------------------------------------------------------------------
  An EraGen instance makes it possible to run the Shelley property tests
@@ -119,7 +120,7 @@ genUtxo0 ge@(GenEnv _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
 genesisId ::
   Hash.HashAlgorithm (CC.HASH crypto) =>
   TxId crypto
-genesisId = TxId (mkDummyHash 0)
+genesisId = TxId (unsafeMakeSafeHash (mkDummyHash 0))
   where
     mkDummyHash :: forall h a. Hash.HashAlgorithm h => Int -> Hash.Hash h a
     mkDummyHash = coerce . Hash.hashWithSerialiser @h toCBOR

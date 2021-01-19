@@ -30,7 +30,7 @@ import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash(hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyPair (..), asWitness, hashKey)
 import Shelley.Spec.Ledger.LedgerState (AccountState (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
@@ -71,7 +71,7 @@ unboundedInterval :: ValidityInterval
 unboundedInterval = ValidityInterval SNothing SNothing
 
 bootstrapTxId :: TxId TestCrypto
-bootstrapTxId = txid txb
+bootstrapTxId = txid @(MaryEra TestCrypto) txb
   where
     txb :: TxBody MaryTest
     txb =
@@ -201,7 +201,7 @@ expectedUTxOSimpleEx1 :: UTxO MaryTest
 expectedUTxOSimpleEx1 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodySimpleEx1) 0, TxOut Cast.aliceAddr tokensSimpleEx1),
+      [ (TxIn (txid @MaryTest txbodySimpleEx1) 0, TxOut Cast.aliceAddr tokensSimpleEx1),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
@@ -229,7 +229,7 @@ bobTokensSimpleEx2 =
 txbodySimpleEx2 :: TxBody MaryTest
 txbodySimpleEx2 =
   makeTxb
-    [TxIn (txid txbodySimpleEx1) 0]
+    [TxIn (txid @MaryTest txbodySimpleEx1) 0]
     [ TxOut Cast.aliceAddr aliceTokensSimpleEx2,
       TxOut Cast.bobAddr bobTokensSimpleEx2
     ]
@@ -247,8 +247,8 @@ expectedUTxOSimpleEx2 :: UTxO MaryTest
 expectedUTxOSimpleEx2 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodySimpleEx2) 0, TxOut Cast.aliceAddr aliceTokensSimpleEx2),
-        (TxIn (txid txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2),
+      [ (TxIn (txid @MaryTest txbodySimpleEx2) 0, TxOut Cast.aliceAddr aliceTokensSimpleEx2),
+        (TxIn (txid @MaryTest txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
@@ -342,7 +342,7 @@ expectedUTxOTimeEx1 :: UTxO MaryTest
 expectedUTxOTimeEx1 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodyTimeEx1Valid) 0, TxOut Cast.aliceAddr tokensTimeEx1),
+      [ (TxIn (txid @MaryTest txbodyTimeEx1Valid) 0, TxOut Cast.aliceAddr tokensTimeEx1),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
@@ -365,7 +365,7 @@ aliceCoinsTimeEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> mintTimeEx2)
 txbodyTimeEx2 :: TxBody MaryTest
 txbodyTimeEx2 =
   makeTxb
-    [TxIn (txid txbodyTimeEx1Valid) 0]
+    [TxIn (txid @MaryTest txbodyTimeEx1Valid) 0]
     [ TxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2),
       TxOut Cast.bobAddr bobTokensTimeEx2
     ]
@@ -386,8 +386,8 @@ expectedUTxOTimeEx2 :: UTxO MaryTest
 expectedUTxOTimeEx2 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodyTimeEx2) 0, TxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2)),
-        (TxIn (txid txbodyTimeEx2) 1, TxOut Cast.bobAddr bobTokensTimeEx2),
+      [ (TxIn (txid @MaryTest txbodyTimeEx2) 0, TxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2)),
+        (TxIn (txid @MaryTest txbodyTimeEx2) 1, TxOut Cast.bobAddr bobTokensTimeEx2),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
@@ -446,7 +446,7 @@ expectedUTxOSingWitEx1 :: UTxO MaryTest
 expectedUTxOSingWitEx1 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodySingWitEx1) 0, TxOut Cast.bobAddr tokensSingWitEx1),
+      [ (TxIn (txid @MaryTest txbodySingWitEx1) 0, TxOut Cast.bobAddr tokensSingWitEx1),
         (TxIn bootstrapTxId 0, TxOut Cast.aliceAddr (Val.inject aliceInitCoin))
       ]
 
@@ -484,7 +484,7 @@ aliceTokensNegEx1 =
 txbodyNegEx1 :: TxBody MaryTest
 txbodyNegEx1 =
   makeTxb
-    [TxIn (txid txbodySimpleEx2) 0]
+    [TxIn (txid @MaryTest txbodySimpleEx2) 0]
     [TxOut Cast.aliceAddr aliceTokensNegEx1]
     unboundedInterval
     mintNegEx1
@@ -506,9 +506,9 @@ expectedUTxONegEx1 :: UTxO MaryTest
 expectedUTxONegEx1 =
   UTxO $
     Map.fromList
-      [ (TxIn (txid txbodyNegEx1) 0, TxOut Cast.aliceAddr aliceTokensNegEx1),
+      [ (TxIn (txid @MaryTest txbodyNegEx1) 0, TxOut Cast.aliceAddr aliceTokensNegEx1),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin)),
-        (TxIn (txid txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2)
+        (TxIn (txid @MaryTest txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2)
       ]
 
 --
@@ -529,7 +529,7 @@ aliceTokensNegEx2 =
 txbodyNegEx2 :: TxBody MaryTest
 txbodyNegEx2 =
   makeTxb
-    [TxIn (txid txbodySimpleEx2) 0]
+    [TxIn (txid @MaryTest txbodySimpleEx2) 0]
     [TxOut Cast.aliceAddr aliceTokensNegEx2]
     unboundedInterval
     mintNegEx2

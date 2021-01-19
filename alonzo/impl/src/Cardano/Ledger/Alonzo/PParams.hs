@@ -10,17 +10,18 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | This module contains just the type of protocol parameters.
 module Cardano.Ledger.Alonzo.PParams
   ( PParams' (..),
     PParams,
-    PPHash (..),
     emptyPParams,
     ProtVer (..),
     ProposedPPUpdates (..),
@@ -28,7 +29,8 @@ module Cardano.Ledger.Alonzo.PParams
     PParamsUpdate,
     emptyPParamsUpdate,
     updatePParams,
-    hashLanguagePP,
+    getLanguageView,
+    LangDepView (..),
   )
 where
 
@@ -37,41 +39,50 @@ import Cardano.Binary
     Decoder,
     FromCBOR (..),
     ToCBOR (..),
-    decodeWord,
-    encodeListLen,
-    encodeMapLen,
-    encodeWord,
+    encodePreEncoded,
   )
-import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
-    Language,
     Prices (..),
-    hashCostModel,
   )
-import Cardano.Ledger.Crypto (HASH)
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
+import Cardano.Ledger.SafeHash
+  ( EraIndependentPParamView,
+    HashAnnotated (..),
+    SafeToHash (..),
+  )
+import Control.Applicative (liftA2)
 import Control.DeepSeq (NFData)
-import Control.Monad (unless)
-import Data.Coders (Decode (..), decode, (<*!))
-import Data.Foldable (fold)
-import Data.Functor.Identity (Identity)
-import Data.List (nub)
+import Data.ByteString.Short (fromShort)
+import Data.Coders
+  ( Decode (..),
+    Density (..),
+    Encode (..),
+    Field (..),
+    Wrapped (..),
+    decode,
+    encode,
+    field,
+    (!>),
+    (<*!),
+  )
+import Data.Functor.Identity (Identity (..))
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Proxy
+import Data.Maybe (fromMaybe)
+import Data.MemoBytes (MemoBytes (..), memoBytes)
+import Data.Typeable
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
     interval0,
-    invalidKey,
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -81,9 +92,8 @@ import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
 import Shelley.Spec.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
-    decodeMapContents,
     decodeMapTraverse,
-    mapFromCBOR,
+    encodeMap,
     mapToCBOR,
     ratioFromCBOR,
     ratioToCBOR,
@@ -91,9 +101,7 @@ import Shelley.Spec.Ledger.Serialization
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 
 -- ================================================================
--- TODO
--- make type families for PParams and PParamsUpdate
--- what is the encodeListLen ??
+-- TODO make type families for PParams and PParamsUpdate
 
 -- How to handle this alonzo-specific type?
 type PParamsUpdate era = PParams' StrictMaybe era
@@ -185,29 +193,31 @@ instance (Era era) => ToCBOR (PParams era) where
           _maxBlockExUnits = maxBlockExUnits'
         }
       ) =
-      encodeListLen 22
-        <> toCBOR minfeeA'
-        <> toCBOR minfeeB'
-        <> toCBOR maxBBSize'
-        <> toCBOR maxTxSize'
-        <> toCBOR maxBHSize'
-        <> toCBOR keyDeposit'
-        <> toCBOR poolDeposit'
-        <> toCBOR eMax'
-        <> toCBOR nOpt'
-        <> ratioToCBOR a0'
-        <> toCBOR rho'
-        <> toCBOR tau'
-        <> toCBOR d'
-        <> toCBOR extraEntropy'
-        <> toCBORGroup protocolVersion'
-        <> toCBOR minPoolCost'
-        -- new/updated for alonzo
-        <> toCBOR adaPerUTxOByte'
-        <> toCBOR costmdls'
-        <> toCBOR prices'
-        <> toCBOR maxTxExUnits'
-        <> toCBOR maxBlockExUnits'
+      encode
+        ( Rec (PParams @Identity)
+            !> To minfeeA'
+            !> To minfeeB'
+            !> To maxBBSize'
+            !> To maxTxSize'
+            !> To maxBHSize'
+            !> To keyDeposit'
+            !> To poolDeposit'
+            !> To eMax'
+            !> To nOpt'
+            !> E ratioToCBOR a0'
+            !> To rho'
+            !> To tau'
+            !> To d'
+            !> To extraEntropy'
+            !> E toCBORGroup protocolVersion'
+            !> To minPoolCost'
+            -- new/updated for alonzo
+            !> To adaPerUTxOByte'
+            !> E (encodeMap toCBOR toCBOR) costmdls'
+            !> To prices'
+            !> To maxTxExUnits'
+            !> To maxBlockExUnits'
+        )
 
 instance
   (Era era) =>
@@ -234,7 +244,7 @@ instance
         <*! Ann From -- _minPoolCost     :: Natural
         -- new/updated for alonzo
         <*! Ann From -- _adaPerUTxOByte  ::
-        <*! D (splitMapFromCBOR fromCBOR fromCBOR) -- _costmdls = costmdls',
+        <*! D ((splitMapFromCBOR fromCBOR fromCBOR) :: (forall s. Decoder s (Annotator (Map Language CostModel))))
         <*! Ann From -- _prices = prices',
         <*! Ann From -- _maxTxExUnits = maxTxExUnits',
         <*! Ann From -- _maxBlockExUnits = maxBlockExUnits'
@@ -284,38 +294,49 @@ deriving instance NFData (PParams' StrictMaybe era)
 
 instance NoThunks (PParamsUpdate era)
 
+-- =======================================================
+-- A PParamsUpdate has StrictMaybe fields, we want to
+-- Sparse encode it, by writing only those fields where
+-- the field is (SJust x), that is the role of the local
+-- function (omitStrictMaybe key x)
+
+fromSJust :: StrictMaybe a -> a
+fromSJust (SJust x) = x
+fromSJust SNothing = error "SNothing in fromSJust"
+
+isSNothing :: StrictMaybe a -> Bool
+isSNothing SNothing = True
+isSNothing (SJust _) = False
+
+encodePParamsUpdate :: PParamsUpdate era -> Encode ('Closed 'Sparse) (PParamsUpdate era)
+encodePParamsUpdate ppup =
+  Keyed PParams
+    !> omitStrictMaybe 0 (_minfeeA ppup)
+    !> omitStrictMaybe 1 (_minfeeB ppup)
+    !> omitStrictMaybe 2 (_maxBBSize ppup)
+    !> omitStrictMaybe 3 (_maxTxSize ppup)
+    !> omitStrictMaybe 4 (_maxBHSize ppup)
+    !> omitStrictMaybe 5 (_keyDeposit ppup)
+    !> omitStrictMaybe 6 (_poolDeposit ppup)
+    !> omitStrictMaybe 7 (_eMax ppup)
+    !> omitStrictMaybe 8 (_nOpt ppup)
+    !> Omit isSNothing (Key 9 (E (ratioToCBOR . fromSJust) (_a0 ppup)))
+    !> omitStrictMaybe 10 (_rho ppup)
+    !> omitStrictMaybe 11 (_tau ppup)
+    !> omitStrictMaybe 12 (_d ppup)
+    !> omitStrictMaybe 13 (_extraEntropy ppup)
+    !> omitStrictMaybe 14 (_protocolVersion ppup)
+    !> omitStrictMaybe 15 (_minPoolCost ppup)
+    !> omitStrictMaybe 16 (_adaPerUTxOByte ppup)
+    !> omitStrictMaybe 17 (_costmdls ppup)
+    !> omitStrictMaybe 18 (_prices ppup)
+    !> omitStrictMaybe 19 (_maxTxExUnits ppup)
+    !> omitStrictMaybe 20 (_maxBlockExUnits ppup)
+  where
+    omitStrictMaybe key x = Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
+
 instance (Era era) => ToCBOR (PParamsUpdate era) where
-  toCBOR ppup =
-    let l =
-          mapMaybe
-            strictMaybeToMaybe
-            [ encodeMapElement 0 toCBOR =<< _minfeeA ppup,
-              encodeMapElement 1 toCBOR =<< _minfeeB ppup,
-              encodeMapElement 2 toCBOR =<< _maxBBSize ppup,
-              encodeMapElement 3 toCBOR =<< _maxTxSize ppup,
-              encodeMapElement 4 toCBOR =<< _maxBHSize ppup,
-              encodeMapElement 5 toCBOR =<< _keyDeposit ppup,
-              encodeMapElement 6 toCBOR =<< _poolDeposit ppup,
-              encodeMapElement 7 toCBOR =<< _eMax ppup,
-              encodeMapElement 8 toCBOR =<< _nOpt ppup,
-              encodeMapElement 9 ratioToCBOR =<< _a0 ppup,
-              encodeMapElement 10 toCBOR =<< _rho ppup,
-              encodeMapElement 11 toCBOR =<< _tau ppup,
-              encodeMapElement 12 toCBOR =<< _d ppup,
-              encodeMapElement 13 toCBOR =<< _extraEntropy ppup,
-              encodeMapElement 14 toCBOR =<< _protocolVersion ppup,
-              encodeMapElement 15 toCBOR =<< _minPoolCost ppup,
-              -- new/updated for alonzo
-              encodeMapElement 16 toCBOR =<< _adaPerUTxOByte ppup,
-              encodeMapElement 17 toCBOR =<< _costmdls ppup,
-              encodeMapElement 18 toCBOR =<< _prices ppup,
-              encodeMapElement 19 toCBOR =<< _maxTxExUnits ppup,
-              encodeMapElement 20 toCBOR =<< _maxBlockExUnits ppup
-            ]
-        n = fromIntegral $ length l
-     in encodeMapLen n <> fold l
-    where
-      encodeMapElement ix encoder x = SJust (encodeWord ix <> encoder x)
+  toCBOR ppup = encode (encodePParamsUpdate ppup)
 
 emptyPParamsUpdate :: PParamsUpdate era
 emptyPParamsUpdate =
@@ -344,40 +365,48 @@ emptyPParamsUpdate =
       _maxBlockExUnits = SNothing
     }
 
-instance (Era era) => FromCBOR (PParamsUpdate era) where
-  fromCBOR = do
-    mapParts <-
-      decodeMapContents $
-        decodeWord >>= \case
-          0 -> fromCBOR >>= \x -> pure (0, \up -> up {_minfeeA = SJust x})
-          1 -> fromCBOR >>= \x -> pure (1, \up -> up {_minfeeB = SJust x})
-          2 -> fromCBOR >>= \x -> pure (2, \up -> up {_maxBBSize = SJust x})
-          3 -> fromCBOR >>= \x -> pure (3, \up -> up {_maxTxSize = SJust x})
-          4 -> fromCBOR >>= \x -> pure (4, \up -> up {_maxBHSize = SJust x})
-          5 -> fromCBOR >>= \x -> pure (5, \up -> up {_keyDeposit = SJust x})
-          6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
-          7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
-          8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
-          9 -> ratioFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
-          10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
-          11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
-          12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
-          13 -> fromCBOR >>= \x -> pure (13, \up -> up {_extraEntropy = SJust x})
-          14 -> fromCBOR >>= \x -> pure (14, \up -> up {_protocolVersion = SJust x})
-          15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minPoolCost = SJust x})
-          -- new/updated for alonzo
-          16 -> fromCBOR >>= \x -> pure (15, \up -> up {_adaPerUTxOByte = SJust x})
-          -- THIS STUB WILL HAVE to be adjusted since CostModel only has FromCBOR(Annotator _) instance
-          -- 17 -> fromCBOR >>= \x -> pure (15, \up -> up {_costmdls = SJust x})
-          18 -> fromCBOR >>= \x -> pure (15, \up -> up {_prices = SJust x})
-          19 -> fromCBOR >>= \x -> pure (15, \up -> up {_maxTxExUnits = SJust x})
-          20 -> fromCBOR >>= \x -> pure (15, \up -> up {_maxBlockExUnits = SJust x})
-          k -> invalidKey k
-    let fields = fst <$> mapParts :: [Int]
-    unless
-      (nub fields == fields)
-      (fail $ "duplicate keys: " <> show fields)
-    pure $ foldr ($) emptyPParamsUpdate (snd <$> mapParts)
+-- ===============================================================================
+-- To deserialise the Sparse encoding (produced by encodePParamsUpdate) where
+-- 1) only the 'x' part of the (SJust x) has been serialized, and
+-- 2) some fields only have FormCBOR(Annotated instances),
+-- we need special functions for constructing Field decoders that handle both cases.
+
+-- | if we have a normal (FromCBOR field) instance we use fieldNorm
+fieldNorm :: (StrictMaybe field -> b -> b) -> Decode w field -> Field (Annotator b)
+fieldNorm update dec = Field (liftA2 update) (decode (Ann (Map SJust dec)))
+
+-- | if we only have a (FromCBOR (Annotator field)) instance we use fieldAnn
+fieldAnn :: (StrictMaybe field -> b -> b) -> Decode w (Annotator field) -> Field (Annotator b)
+fieldAnn update dec = Field (liftA2 update) (do x <- decode dec; pure (SJust <$> x))
+
+updateField :: Word -> Field (Annotator (PParamsUpdate era))
+updateField 0 = fieldNorm (\x up -> up {_minfeeA = x}) From
+updateField 1 = fieldNorm (\x up -> up {_minfeeB = x}) From
+updateField 2 = fieldNorm (\x up -> up {_maxBBSize = x}) From
+updateField 3 = fieldNorm (\x up -> up {_maxTxSize = x}) From
+updateField 4 = fieldNorm (\x up -> up {_maxBHSize = x}) From
+updateField 5 = fieldNorm (\x up -> up {_keyDeposit = x}) From
+updateField 6 = fieldNorm (\x up -> up {_poolDeposit = x}) From
+updateField 7 = fieldNorm (\x up -> up {_eMax = x}) From
+updateField 8 = fieldNorm (\x up -> up {_nOpt = x}) From
+updateField 9 = fieldNorm (\x up -> up {_a0 = x}) (D ratioFromCBOR)
+updateField 10 = fieldNorm (\x up -> up {_rho = x}) From
+updateField 11 = fieldNorm (\x up -> up {_tau = x}) From
+updateField 12 = fieldNorm (\x up -> up {_d = x}) From
+updateField 13 = fieldNorm (\x up -> up {_extraEntropy = x}) From
+updateField 14 = fieldNorm (\x up -> up {_protocolVersion = x}) From
+updateField 15 = fieldNorm (\x up -> up {_minPoolCost = x}) From
+updateField 16 = fieldNorm (\x up -> up {_adaPerUTxOByte = x}) From
+updateField 17 = fieldAnn (\x up -> up {_costmdls = x}) (D (splitMapFromCBOR fromCBOR fromCBOR))
+updateField 18 = fieldNorm (\x up -> up {_prices = x}) From
+updateField 19 = fieldNorm (\x up -> up {_maxTxExUnits = x}) From
+updateField 20 = fieldNorm (\x up -> up {_maxBlockExUnits = x}) From
+updateField k = field (\_x up -> up) (Invalid k)
+
+instance (Era era) => FromCBOR (Annotator (PParamsUpdate era)) where
+  fromCBOR = decode (SparseKeyed "PParamsUpdate" (pure emptyPParamsUpdate) updateField [])
+
+-- =================================================================
 
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
@@ -391,8 +420,8 @@ instance NoThunks (ProposedPPUpdates era)
 instance Era era => ToCBOR (ProposedPPUpdates era) where
   toCBOR (ProposedPPUpdates m) = mapToCBOR m
 
-instance Era era => FromCBOR (ProposedPPUpdates era) where
-  fromCBOR = ProposedPPUpdates <$> mapFromCBOR
+instance Era era => FromCBOR (Annotator (ProposedPPUpdates era)) where
+  fromCBOR = (ProposedPPUpdates <$>) <$> splitMapFromCBOR fromCBOR fromCBOR
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty
@@ -430,23 +459,103 @@ updatePParams pp ppup =
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"
 
--- Hash of a subset of Protocol Parameters relevant to Plutus script evaluation
-newtype PPHash crypto
-  = PPHash
-      (Hash.Hash (HASH crypto) CostModel)
-  deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NFData, NoThunks)
+-- The Language Depenedent View type (LangDepView) is a GADT, it will have a different
+-- Constructor for each Language. This way each language can have a different
+-- view of the Protocol parameters. This is an intermediate type and we introduce
+-- it only because we are interested in combining it with other things so we can hash
+-- the combination. Thus this type (and the other things we combine it with) must
+-- remember their original bytes. We make it a data type around a MemoBytes.
+-- Unfortunately we can't use a newtype, because the constructor must existentially
+-- hide the Language index. Instances on GADT's are a bit tricky so we are carefull
+-- in the comments below to explain them. Because we intend to add new languages
+-- the GADT will someday end up with more constructors. So we add some commented
+-- out code that suggests how to extend the instances when that happens.
 
-deriving newtype instance CC.Crypto crypto => FromCBOR (PPHash crypto)
+data RawView :: Type -> Language -> Type where
+  RawPlutusView :: CostModel -> RawView era 'PlutusV1
 
-deriving newtype instance CC.Crypto crypto => ToCBOR (PPHash crypto)
+-- RawOtherView :: Int -> RawView era 'OtherLANG
 
-hashLanguagePP :: forall era. Era era => PParams era -> Language -> PPHash (Crypto era)
-hashLanguagePP pp lang = PPHash (hashCostModel (Proxy @era) cm)
+deriving instance Eq (RawView era lang)
+
+deriving instance Ord (RawView era lang)
+
+deriving instance Show (RawView era lang)
+
+deriving instance Typeable (RawView era lang)
+
+deriving via InspectHeapNamed "RawView" (RawView e l) instance NoThunks (RawView e l)
+
+instance (Typeable era) => ToCBOR (LangDepView era) where
+  toCBOR (LangDepViewConstr (Memo _ bytes)) = encodePreEncoded (fromShort bytes)
+
+pattern PlutusView :: CostModel -> LangDepView era
+pattern PlutusView cm <-
+  LangDepViewConstr (Memo (RawPlutusView cm) _)
   where
-    cm :: CostModel
-    cm = case Map.lookup lang (_costmdls pp) of
-      Just x -> x
-      Nothing -> error ("CostModel map does not have cost for language: " ++ show lang)
+    PlutusView cm = LangDepViewConstr (memoBytes (Sum RawPlutusView 0 !> To cm))
 
--- =============================================================
+-- Note the tag 0 ^
+{- How to extend to another language
+pattern OtherView :: Int -> LangDepView era
+pattern OtherView n <- LangDepViewConstr (Memo (RawOtherView cm) _)
+  where OtherView n = LangDepViewConstr (memoBytes (Sum RawOtherView 1 !> To n))
+                                                  -- Note the tag 1  ^
+-}
+
+{-# COMPLETE PlutusView {- OtherView -} #-}
+
+instance (Typeable era) => FromCBOR (Annotator (LangDepView era)) where
+  fromCBOR = decode $ Summands "LangDepView" decodeTag
+    where
+      decodeTag :: Word -> Decode 'Open (Annotator (LangDepView era))
+      decodeTag 0 = Ann (SumD PlutusView) <*! From
+      -- Since CostModel has only (FromCBOR (Annotator CostModel) insatnce
+      -- decodeTag 1 = Ann (SumD OtherView) <*! (Ann From)
+      -- Since Int has FromCBOR instance
+      decodeTag n = Invalid n
+
+data LangDepView era where
+  LangDepViewConstr :: (MemoBytes (RawView era lang)) -> LangDepView era
+
+-- We can't derive SafeToHash via newtype deriving because LandDepViewConstr is a data
+-- not a newtype. But it does remember its original bytes so we can add the instance manually.
+
+instance SafeToHash (LangDepView era) where
+  originalBytes (LangDepViewConstr (Memo _ bs)) = fromShort bs
+
+instance
+  (Crypto era ~ c) =>
+  HashAnnotated (LangDepView era) EraIndependentPParamView c
+
+deriving via InspectHeapNamed "LangDepView" (LangDepView e) instance NoThunks (LangDepView e)
+
+instance Show (LangDepView era) where
+  show (PlutusView x) = show x
+
+-- show (OtherView n) = Show n
+
+instance Eq (LangDepView era) where
+  (PlutusView x) == (PlutusView y) = x == y
+
+-- (OtherView n) == (OtherView m) = n==m
+--  _ == _ = False
+
+instance Ord (LangDepView era) where
+  compare (PlutusView x) (PlutusView y) = compare x y
+
+-- compare (OtherView n) (OtherView m) = compare n m
+-- compare x y = compare (rank x) (rank y)
+--   where rank :: LangDepView era -> Int
+--         rank (PlutusView _) = 1
+--         rank (OtherView _) = 2
+
+getLanguageView ::
+  forall era.
+  PParams era ->
+  Language ->
+  LangDepView era
+getLanguageView pp PlutusV1 =
+  case Map.lookup PlutusV1 (_costmdls pp) of
+    Just x -> (PlutusView x)
+    Nothing -> error ("CostModel map does not have cost for language: " ++ show PlutusV1)

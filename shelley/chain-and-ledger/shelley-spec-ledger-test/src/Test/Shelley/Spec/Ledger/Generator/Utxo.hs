@@ -20,7 +20,7 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
 where
 
 import Cardano.Binary (serialize)
-import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData (hashAuxiliaryData))
+import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints
@@ -62,10 +62,9 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash (SafeHash, EraIndependentTxBody, hashAnnotated)
 import Shelley.Spec.Ledger.Keys
-  ( Hash,
-    KeyHash,
+  ( KeyHash,
     KeyPair,
     KeyRole (..),
     asWitness,
@@ -171,7 +170,6 @@ genTx ::
     UsesTxOut era,
     UsesValue era,
     UsesAuxiliary era,
-    ValidateAuxiliaryData era,
     Mock (Crypto era),
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
@@ -427,7 +425,7 @@ genNextDelta
                         ksIndexedStakingKeys
                         vkeyPairs
                         (mkScriptWits @era msigPairs mempty)
-                        (hashAnnotated $ _body tx)
+                        (hashAnnotated (_body tx))
                 pure $
                   delta
                     { extraWitnesses = extraWitnesses <> newWits,
@@ -596,7 +594,7 @@ mkTxWits ::
   Map (KeyHash 'Staking (Crypto era)) (KeyPair 'Staking (Crypto era)) ->
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
-  Hash (Crypto era) EraIndependentTxBody ->
+  SafeHash (Crypto era) EraIndependentTxBody ->
   WitnessSet era
 mkTxWits
   indexedPaymentKeys

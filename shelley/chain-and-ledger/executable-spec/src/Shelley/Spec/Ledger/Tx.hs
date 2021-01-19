@@ -78,6 +78,7 @@ import Cardano.Binary
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
+import Cardano.Ledger.SafeHash (EraIndependentTx, HashAnnotated, SafeToHash (..))
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Constraint (Constraint)
@@ -100,7 +101,6 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentTx, HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Serialization
@@ -222,6 +222,12 @@ data Tx era = Tx'
   }
   deriving (Generic)
 
+-- Usually we derive SafetToHash instances, but since (Tx era) preserves its serialisation
+-- bytes we can just extract them here, and make an explicit SafeToHash instance.
+
+instance SafeToHash (Tx era) where
+  originalBytes = BSL.toStrict . txFullBytes -- TODO Use MemoBytes to define Tx, so we can derive this
+
 type TransTx (c :: Type -> Constraint) era =
   (Era era, c (Core.Script era), c (Core.TxBody era), c (Core.AuxiliaryData era))
 
@@ -269,8 +275,7 @@ pattern Tx {_body, _witnessSet, _metadata} <-
 
 {-# COMPLETE Tx #-}
 
-instance Era era => HashAnnotated (Tx era) era where
-  type HashIndex (Tx era) = EraIndependentTx
+instance (Era era, c ~ Crypto era) => HashAnnotated (Tx era) EraIndependentTx c
 
 segwitTx ::
   ( Era era,

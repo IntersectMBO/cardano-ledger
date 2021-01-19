@@ -6,7 +6,8 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 import Cardano.Binary
 import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Data
-import Cardano.Ledger.Alonzo.Tx (Tx)
+import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate)
+import Cardano.Ledger.Alonzo.Tx (CostModel, Tx)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -56,5 +57,11 @@ tests =
       testProperty "alonzo/TxBody" $
         trippingAnn @(TxBody (AlonzoEra C_Crypto)),
       testProperty "alonzo/Tx" $
-        trippingAnn @(Tx (AlonzoEra C_Crypto))
+        trippingAnn @(Tx (AlonzoEra C_Crypto)),
+      testProperty "alonzo/CostModel" $
+        trippingAnn @CostModel,
+      testProperty "alonzo/PParams" $
+        trippingAnn @(PParams (AlonzoEra C_Crypto)),
+      testProperty "alonzo/PParamUpdate" $
+        trippingAnn @(PParamsUpdate (AlonzoEra C_Crypto))
     ]

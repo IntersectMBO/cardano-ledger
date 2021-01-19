@@ -47,6 +47,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Shelley.Spec.Ledger.Examples.Cast (alicePoolParams)
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators (mkDummyHash)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
+import Cardano.Ledger.SafeHash(unsafeMakeSafeHash)
 
 genTestCase ::
   Int -> -- The size of the utxo
@@ -62,7 +63,7 @@ genTestCase numUTxO numAddr = do
         TxOutCompact
           (compactAddr addr)
           (fromJust $ toCompact $ Val.inject (Coin $ fromIntegral i))
-  let mktxid i = TxId $ mkDummyHash i
+  let mktxid i = TxId (unsafeMakeSafeHash (mkDummyHash i))
   let mktxin i = TxIn (mktxid i) (fromIntegral i)
   let utxo = Map.fromList $ zip (mktxin <$> [1 ..]) txOuts
       liveptrs :: [Ptr]

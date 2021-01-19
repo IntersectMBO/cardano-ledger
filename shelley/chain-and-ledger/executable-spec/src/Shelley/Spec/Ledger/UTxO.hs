@@ -47,9 +47,11 @@ module Shelley.Spec.Ledger.UTxO
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import qualified Cardano.Crypto.Hash as CH
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Era
+import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut, UsesValue)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
@@ -85,7 +87,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     isRegKey,
     requiresVKeyWitness,
   )
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     Hash,
@@ -163,15 +164,22 @@ txid ::
   UsesTxBody era =>
   Core.TxBody era ->
   TxId (Crypto era)
-txid = TxId . hashAnnotated @(Core.TxBody era) @era
+txid = TxId . hashAnnotated
 
 -- | Compute the UTxO inputs of a transaction.
+-- txins has the same problems as txouts, see notes below.
 txins ::
   ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Core.TxBody era ->
   Set (TxIn (Crypto era))
 txins = getField @"inputs"
+
+-- Because its only input (Core.TxBody) is a type family this
+-- function tends to give errors like
+-- "Could not deduce: Core.TxOut era0 ~ Core.TxOut era"
+-- The way to fix this is to use TypeApplications like this:  txouts @era body
+-- where the type variable: era, is in scope (use ScopedTypeVariables)
 
 -- | Compute the transaction outputs of a transaction.
 txouts ::
@@ -210,26 +218,26 @@ verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash 
 
 -- | Create a witness for transaction
 makeWitnessVKey ::
-  forall crypto kr.
-  ( CC.Crypto crypto,
-    DSignable crypto (Hash crypto EraIndependentTxBody)
+  forall c kr.
+  ( CC.Crypto c,
+    DSignable c (CH.Hash (CC.HASH c) EraIndependentTxBody)
   ) =>
-  Hash crypto EraIndependentTxBody ->
-  KeyPair kr crypto ->
-  WitVKey 'Witness crypto
-makeWitnessVKey txbodyHash keys =
-  WitVKey (asWitness $ vKey keys) (coerce $ signedDSIGN @crypto (sKey keys) txbodyHash)
+  SafeHash c EraIndependentTxBody ->
+  KeyPair kr c ->
+  WitVKey 'Witness c
+makeWitnessVKey safe keys =
+  WitVKey (asWitness $ vKey keys) (coerce $ signedDSIGN @c (sKey keys) (extractHash safe))
 
 -- | Create witnesses for transaction
 makeWitnessesVKey ::
-  forall crypto kr.
-  ( CC.Crypto crypto,
-    DSignable crypto (Hash crypto EraIndependentTxBody)
+  forall c kr.
+  ( CC.Crypto c,
+    DSignable c (CH.Hash (CC.HASH c) EraIndependentTxBody)
   ) =>
-  Hash crypto EraIndependentTxBody ->
-  [KeyPair kr crypto] ->
-  Set (WitVKey 'Witness crypto)
-makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
+  SafeHash c EraIndependentTxBody ->
+  [KeyPair kr c] ->
+  Set (WitVKey 'Witness c)
+makeWitnessesVKey safe xs = Set.fromList (fmap (makeWitnessVKey safe) xs)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
 -- scripts, return the set of required keys.
@@ -237,7 +245,7 @@ makeWitnessesFromScriptKeys ::
   ( CC.Crypto crypto,
     DSignable crypto (Hash crypto EraIndependentTxBody)
   ) =>
-  Hash crypto EraIndependentTxBody ->
+  SafeHash crypto EraIndependentTxBody ->
   Map (KeyHash kr crypto) (KeyPair kr crypto) ->
   Set (KeyHash kr crypto) ->
   Set (WitVKey 'Witness crypto)

@@ -38,6 +38,7 @@ import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.SafeHash (EraIndependentTxBody)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.Arrow (left, right)
 import Control.Monad.Except
@@ -71,7 +72,6 @@ import Shelley.Spec.Ledger.BlockChain
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody)
 import Shelley.Spec.Ledger.Keys (DSignable, GenDelegs, Hash, KESignable, VRFSignable)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),

@@ -55,7 +55,7 @@ module Shelley.Spec.Ledger.TxBody
     TxId (..),
     TxIn (TxIn, ..),
     EraIndependentTxBody,
-    eraIndTxBodyHash,
+    -- eraIndTxBodyHash,
     TxOut (TxOut, TxOutCompact),
     Url,
     Wdrl (..),
@@ -91,6 +91,7 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, Crypto)
 import Cardano.Ledger.Era
+import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude
@@ -120,7 +121,6 @@ import Data.Coders
     field,
     (!>),
   )
-import Data.Coerce (coerce)
 import Data.Constraint (Constraint)
 import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
@@ -169,7 +169,6 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeCredential,
   )
-import Shelley.Spec.Ledger.Hashing
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),
@@ -419,7 +418,7 @@ instance CC.Crypto crypto => FromJSON (PoolParams crypto) where
 -- ====================================================================================
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId crypto = TxId {_unTxId :: Hash crypto EraIndependentTxBody}
+newtype TxId crypto = TxId {_unTxId :: SafeHash crypto EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, HeapWords)
 
@@ -436,8 +435,7 @@ type TransTxId (c :: Type -> Constraint) era =
   -- Transaction Ids are the hash of a transaction body, which contains
   -- a Core.TxBody and Core.TxOut, hence the need for the ToCBOR instances
   -- in order to hash them.
-  ( HashIndex (Core.TxBody era) ~ EraIndependentTxBody,
-    HashAnnotated (Core.TxBody era) era,
+  ( HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
     ToCBOR (Core.TxBody era),
     ToCBOR (Core.TxOut era),
     TransValue ToCBOR era,
@@ -668,7 +666,7 @@ deriving instance TransTxBody NoThunks era => NoThunks (TxBodyRaw era)
 
 type TransTxBody (c :: Type -> Constraint) era =
   ( c (Core.TxOut era),
-    HashIndex (Core.TxBody era) ~ EraIndependentTxBody
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
   )
 
 deriving instance CC.Crypto (Crypto era) => NFData (TxBodyRaw era)
@@ -754,6 +752,7 @@ instance (Era era, TransTxBody ToCBOR era) => ToCBOR (TxBodyRaw era) where
 
 newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
   deriving (Generic, Typeable)
+  deriving newtype (SafeToHash)
 
 deriving newtype instance
   (TransTxBody NoThunks era, Typeable era) => NoThunks (TxBody era)
@@ -804,8 +803,7 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
 
 {-# COMPLETE TxBody #-}
 
-instance Era era => HashAnnotated (TxBody era) era where
-  type HashIndex (TxBody era) = EraIndependentTxBody
+instance (Era era, c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 instance (Era era) => ToCBOR (TxBody era) where
   toCBOR (TxBodyConstr memo) = toCBOR memo
@@ -876,13 +874,15 @@ pattern WitVKey k s <-
           hash = asWitness $ hashKey k
        in WitVKey' k s hash bytes
 
+{-
 -- | Compute an era-independent transaction body hash
 eraIndTxBodyHash ::
   forall era.
   Era era =>
   TxBody era ->
-  Hash (Crypto era) EraIndependentTxBody
-eraIndTxBodyHash = coerce . hashAnnotated
+  SafeHash (Crypto era) EraIndependentTxBody
+eraIndTxBodyHash x = hashAnnotated x
+-}
 
 {-# COMPLETE WitVKey #-}
 

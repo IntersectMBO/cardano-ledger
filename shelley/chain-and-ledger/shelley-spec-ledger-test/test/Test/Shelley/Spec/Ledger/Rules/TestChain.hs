@@ -508,11 +508,11 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
             <> fold (unWdrl (getField @"wdrls" txb))
         outs =
           let certs = toList (getField @"certs" txb)
-           in Val.coin (balance (txouts txb))
+           in Val.coin (balance (txouts @era txb))
                 <> getField @"txfee" txb
                 <> totalDeposits pp_ pools certs
 
-preserveOutputsTx ::
+preserveOutputsTx :: forall era.
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
@@ -537,7 +537,7 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
   where
     (_, ledgerTr) = ledgerTraceFromBlock chainSt block
     outputPreserved SourceSignalTarget {target = (UTxOState {_utxo = (UTxO u')}, _), signal = tx} =
-      let UTxO outs = txouts (_body tx)
+      let UTxO outs = txouts @era (_body tx)
        in property $
             outs `Map.isSubmapOf` u'
 
@@ -573,7 +573,7 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
 
 -- | Collision-Freeness of new TxIds - checks that all new outputs of a Tx are
 -- included in the new UTxO and that all TxIds are new.
-newEntriesAndUniqueTxIns ::
+newEntriesAndUniqueTxIns :: forall era.
   ( ChainProperty era,
     UsesTxOut era,
     TransValue ToCBOR era,
@@ -603,7 +603,7 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
           signal = tx,
           target = (UTxOState {_utxo = (UTxO u')}, _)
         } =
-        let UTxO outs = txouts (_body tx)
+        let UTxO outs = txouts @era (_body tx)
             outIds = Set.map (\(TxIn _id _) -> _id) (domain outs)
             oldIds = Set.map (\(TxIn _id _) -> _id) (domain u)
          in property $

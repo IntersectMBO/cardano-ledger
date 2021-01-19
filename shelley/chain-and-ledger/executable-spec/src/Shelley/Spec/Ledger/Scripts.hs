@@ -36,6 +36,7 @@ import Cardano.Binary
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.SafeHash (EraIndependentScript)
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import qualified Data.ByteString as BS
@@ -49,7 +50,6 @@ import Data.MemoBytes
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
-import Shelley.Spec.Ledger.Hashing (EraIndependentScript)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 

@@ -49,6 +49,7 @@ import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.Crypto (ADDRHASH, DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.SafeHash (EraIndependentTxBody)
 import Cardano.Prelude (panic)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -59,7 +60,6 @@ import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Quiet
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),

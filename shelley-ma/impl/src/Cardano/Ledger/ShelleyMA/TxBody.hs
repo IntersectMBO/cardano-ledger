@@ -57,6 +57,7 @@ import Cardano.Ledger.Pretty
     ppUpdate,
     ppWdrl,
   )
+import Cardano.Ledger.SafeHash (EraIndependentTxBody, HashAnnotated, SafeToHash)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
@@ -88,7 +89,6 @@ import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Serialization (encodeFoldable)
 import Shelley.Spec.Ledger.TxBody
@@ -243,6 +243,7 @@ initial =
 
 newtype TxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
   deriving (Typeable)
+  deriving newtype (SafeToHash)
 
 deriving instance
   TransValue Eq era =>
@@ -266,8 +267,7 @@ deriving via
     (FamsFrom era) =>
     FromCBOR (Annotator (TxBody era))
 
-instance Era era => HashAnnotated (TxBody era) era where
-  type HashIndex (TxBody era) = EraIndependentTxBody
+instance (c ~ Crypto era, Era era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
