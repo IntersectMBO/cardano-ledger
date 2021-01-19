@@ -21,9 +21,9 @@ module Cardano.Ledger.Alonzo.TxBody
   ( TxOut (TxOut, TxOutCompact),
     TxBody
       ( TxBody,
-        txinputs,
+        inputs,
         txinputs_fee,
-        txouts,
+        outputs,
         txcerts,
         txwdrls,
         txfee,
@@ -51,6 +51,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value (..), ppValue)
+import qualified Cardano.Ledger.Mary.Value as Mary
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -253,9 +254,9 @@ pattern TxBody ::
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   TxBody era
 pattern TxBody
-  { txinputs,
+  { inputs,
     txinputs_fee,
-    txouts,
+    outputs,
     txcerts,
     txwdrls,
     txfee,
@@ -270,9 +271,9 @@ pattern TxBody
   TxBodyConstr
     ( Memo
         TxBodyRaw
-          { _inputs = txinputs,
+          { _inputs = inputs,
             _inputs_fee = txinputs_fee,
-            _outputs = txouts,
+            _outputs = outputs,
             _certs = txcerts,
             _wdrls = txwdrls,
             _txfee = txfee,
@@ -521,6 +522,15 @@ instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c
 
 instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
   getField (TxOutCompact _ v _) = fromCompact v
+
+instance (Crypto era ~ c) => HasField "mint" (TxBody era) (Mary.Value c) where
+  getField (TxBodyConstr (Memo m _)) = _mint m
+
+instance
+  (Crypto era ~ c) =>
+  HasField "txinputs_fee" (TxBody era) (Set (TxIn c))
+  where
+  getField (TxBodyConstr (Memo m _)) = _inputs_fee m
 
 -- ===================================================
 
