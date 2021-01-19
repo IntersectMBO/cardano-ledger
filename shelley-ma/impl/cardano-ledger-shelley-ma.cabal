@@ -49,6 +49,7 @@ library
     mtl,
     nothunks,
     prettyprinter,
+    primitive,
     shelley-spec-ledger,
     small-steps,
     text,
