@@ -1,12 +1,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Mir
   ( MIR,
@@ -26,6 +28,7 @@ import Control.State.Transition
     TransitionRule,
     judgmentContext,
   )
+import Data.Default.Class (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
@@ -57,7 +60,7 @@ data MirPredicateFailure era
 
 instance NoThunks (MirPredicateFailure era)
 
-instance Typeable era => STS (MIR era) where
+instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
   type State (MIR era) = EpochState era
   type Signal (MIR era) = ()
   type Environment (MIR era) = ()

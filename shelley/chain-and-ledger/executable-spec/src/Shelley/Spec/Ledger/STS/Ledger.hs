@@ -159,7 +159,8 @@ instance
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Show (UTxOState era)
   ) =>
   STS (LEDGER era)
   where

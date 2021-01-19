@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -15,7 +16,14 @@
 -- handles the epoch transitions.
 module Shelley.Spec.Ledger.STS.Upec where
 
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased, UsesAuxiliary, UsesScript, UsesTxBody, UsesValue)
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Shelley.Constraints
+  ( ShelleyBased,
+    UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesValue,
+  )
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -33,6 +41,7 @@ import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
     PPUPState (..),
+    UpecState (..),
     esAccountState,
     esLState,
     _delegationState,
@@ -47,14 +56,6 @@ import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
 -- | Update epoch change
 data UPEC era
 
-data UpecState era = UpecState
-  { -- | Current protocol parameters.
-    currentPp :: !(PParams era),
-    -- | State of the protocol update transition system.
-    ppupState :: !(PPUPState era)
-  }
-  deriving (Show)
-
 data UpecPredicateFailure era
   = NewPpFailure (PredicateFailure (NEWPP era))
   deriving (Eq, Show, Generic)
@@ -65,7 +66,9 @@ instance
   ( UsesAuxiliary era,
     UsesTxBody era,
     UsesScript era,
-    UsesValue era
+    UsesValue era,
+    State (Core.EraRule "PPUP" era)
+      ~ PPUPState era
   ) =>
   STS (UPEC era)
   where
