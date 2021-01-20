@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -9,6 +10,8 @@ module Shelley.Spec.Ledger.API
   )
 where
 
+import Cardano.Ledger.Core (ChainData, SerialisableData)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints
@@ -18,6 +21,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
+import Control.State.Transition (State)
 import Shelley.Spec.Ledger.API.ByronTranslation as X
 import Shelley.Spec.Ledger.API.Mempool as X
 import Shelley.Spec.Ledger.API.Protocol as X
@@ -34,7 +38,9 @@ class
     UsesScript era,
     UsesAuxiliary era,
     UsesTxBody era,
-    UsesTxOut era
+    UsesTxOut era,
+    ChainData (State (Core.EraRule "PPUP" era)),
+    SerialisableData (State (Core.EraRule "PPUP" era))
   ) =>
   ShelleyBasedEra era
 
