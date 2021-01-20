@@ -392,7 +392,7 @@ utxoInductive = do
         filter
           ( \x ->
               let c = getField @"value" x
-               in (Val.coin c) < (Val.scaledMinDeposit c minUTxOValue)
+               in (Val.coin c) < minUTxOValue
           )
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall

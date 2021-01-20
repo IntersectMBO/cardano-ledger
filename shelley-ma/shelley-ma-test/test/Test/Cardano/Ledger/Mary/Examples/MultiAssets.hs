@@ -139,8 +139,8 @@ policyFailure p =
       ]
     ]
 
-outTooSmallFailure :: TxOut MaryTest -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
-outTooSmallFailure out = Left [[UtxowFailure (UtxoFailure (OutputTooBigUTxO [out]))]]
+outTooBigFailure :: TxOut MaryTest -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
+outTooBigFailure out = Left [[UtxowFailure (UtxoFailure (OutputTooBigUTxO [out]))]]
 
 ----------------------------------------------------
 -- Introduce a new Token Bundle, Purple Tokens
@@ -210,7 +210,7 @@ expectedUTxOSimpleEx1 =
 ----------------------------
 
 minUtxoSimpleEx2 :: Coin
-minUtxoSimpleEx2 = Coin 100
+minUtxoSimpleEx2 = Coin 115
 
 aliceCoinsSimpleEx2 :: Coin
 aliceCoinsSimpleEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> minUtxoSimpleEx2)
@@ -351,7 +351,7 @@ expectedUTxOTimeEx1 =
 ----------------------------------------
 
 mintTimeEx2 :: Coin
-mintTimeEx2 = Coin 100
+mintTimeEx2 = Coin 120
 
 bobTokensTimeEx2 :: Value TestCrypto
 bobTokensTimeEx2 =
@@ -545,23 +545,29 @@ testNegEx2 = do
 -- Create a Value that is too big
 --
 
+minUtxoBigEx :: Coin
+minUtxoBigEx = Coin 50000
+
 smallValue :: Value TestCrypto
 smallValue =
   Value 0 $
     Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
 
 smallOut :: TxOut MaryTest
-smallOut = TxOut Cast.aliceAddr $ smallValue <+> (Val.inject (aliceInitCoin <-> (feeEx <+> Coin 100)))
+smallOut = TxOut Cast.aliceAddr $ smallValue <+> (Val.inject (aliceInitCoin <-> (feeEx <+> minUtxoBigEx)))
+
+numAssets :: Int
+numAssets = 1000
 
 bigValue :: Value TestCrypto
 bigValue =
   Value 0 $
     Map.singleton
       purplePolicyId
-      (Map.fromList $ map (\x -> ((AssetName . BS.pack . show $ x), 1)) [1 .. 97 :: Int])
+      (Map.fromList $ map (\x -> ((AssetName . BS.pack . show $ x), 1)) [1 .. numAssets])
 
 bigOut :: TxOut MaryTest
-bigOut = TxOut Cast.aliceAddr $ bigValue <+> (Val.inject (Coin 100))
+bigOut = TxOut Cast.aliceAddr $ bigValue <+> (Val.inject minUtxoBigEx)
 
 txbodyWithBigValue :: TxBody MaryTest
 txbodyWithBigValue =
@@ -673,5 +679,5 @@ multiAssetsExample =
           initUTxO
           txBigValue
           (ledgerEnv $ SlotNo 0)
-          (outTooSmallFailure bigOut)
+          (outTooBigFailure bigOut)
     ]

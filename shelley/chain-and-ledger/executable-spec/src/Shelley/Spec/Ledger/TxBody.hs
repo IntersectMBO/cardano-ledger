@@ -85,16 +85,19 @@ import Cardano.Binary
     serializeEncoding,
     szCases,
   )
+import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude
-  ( panic,
+  ( HeapWords (..),
+    panic,
   )
+import qualified Cardano.Prelude as HW
 import Control.DeepSeq (NFData (rnf))
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
@@ -104,6 +107,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Short (ShortByteString, pack)
 import Data.Coders
   ( Decode (..),
     Density (..),
@@ -417,13 +421,16 @@ instance CC.Crypto crypto => FromJSON (PoolParams crypto) where
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto = TxId {_unTxId :: Hash crypto EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks)
+  deriving newtype (NoThunks, HeapWords)
 
 deriving newtype instance CC.Crypto crypto => ToCBOR (TxId crypto)
 
 deriving newtype instance CC.Crypto crypto => FromCBOR (TxId crypto)
 
 deriving newtype instance CC.Crypto crypto => NFData (TxId crypto)
+
+instance HeapWords (TxIn crypto) where
+  heapWords (TxInCompact txid ix) = 3 + HW.heapWordsUnpacked txid + HW.heapWordsUnpacked (ix)
 
 type TransTxId (c :: Type -> Constraint) era =
   -- Transaction Ids are the hash of a transaction body, which contains
@@ -475,6 +482,23 @@ type TransTxOut (c :: Type -> Constraint) era =
     c (CompactForm (Core.Value era)),
     Compactible (Core.Value era)
   )
+
+-- assume Shelley+ type address : payment addr, staking addr (same length as payment), plus 1 word overhead
+instance
+  ( CC.Crypto (Crypto era),
+    HeapWords (CompactForm (Core.Value era))
+  ) =>
+  HeapWords (TxOut era)
+  where
+  heapWords (TxOutCompact _ vl) =
+    3
+      + (heapWords (packedADDRHASH (Proxy :: Proxy era)))
+      + heapWords vl
+
+-- a ShortByteString of the same length as the ADDRHASH
+-- used to calculate heapWords
+packedADDRHASH :: forall proxy era. (CC.Crypto (Crypto era)) => proxy era -> ShortByteString
+packedADDRHASH _ = pack (replicate (fromIntegral $ (1 + 2 * HS.sizeHash (Proxy :: Proxy (CC.ADDRHASH (Crypto era))))) (1 :: Word8))
 
 instance
   (TransTxOut Show era, Era era) => -- Use the weakest constraint possible here
