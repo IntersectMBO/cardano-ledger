@@ -21,6 +21,7 @@ module Cardano.Ledger.Alonzo.Scripts
     CostModel (CostModel),
     Prices (..),
     hashCostModel,
+    scriptfee,
   )
 where
 
@@ -33,6 +34,7 @@ import Cardano.Ledger.SafeHash
     SafeToHash,
   )
 import Cardano.Ledger.ShelleyMA.Timelocks
+import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
 import Data.Coders
@@ -139,6 +141,12 @@ data Prices = Prices
 instance NoThunks Prices
 
 instance NFData Prices
+
+-- | Compute the cost of a script based upon proces and the number of execution
+-- units.
+scriptfee :: Prices -> ExUnits -> Coin
+scriptfee (Prices pr_mem pr_steps) (ExUnits mem steps) =
+  (mem <×> pr_mem) <+> (steps <×> pr_steps)
 
 --------------------------------------------------------------------------------
 -- Serialisation

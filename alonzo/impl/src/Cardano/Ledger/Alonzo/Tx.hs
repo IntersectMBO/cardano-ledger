@@ -48,7 +48,6 @@ module Cardano.Ledger.Alonzo.Tx
     ScriptPurpose (..),
     --  Figure 5
     getValidatorHash,
-    txscriptfee,
     txbody,
     minfee,
     isNonNativeScriptAddress,
@@ -76,7 +75,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, PParams' (..), getLanguageView)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), Prices (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), scriptfee)
 import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..), Tag (..))
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoBody,
@@ -407,10 +406,6 @@ feesOK pp tx (UTxO m) =
 txins :: AlonzoBody era => TxBody era -> Set (TxIn (Crypto era))
 txins (TxBody {txinputs = is, txinputs_fee = fs}) = Set.union is fs
 
-txscriptfee :: Prices -> ExUnits -> Coin
-txscriptfee (Prices pr_mem pr_steps) (ExUnits mem steps) =
-  (mem <×> pr_mem) <+> (steps <×> pr_steps)
-
 -- | txsize computes the length of the serialised bytes
 txsize :: Tx era -> Integer
 txsize (TxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
@@ -419,7 +414,7 @@ minfee :: AlonzoBody era => PParams era -> Tx era -> Coin
 minfee pp tx =
   ((txsize tx) <×> (a pp))
     <+> (b pp)
-    <+> (txscriptfee (_prices pp) (exunits (txbody tx)))
+    <+> (scriptfee (_prices pp) (exunits (txbody tx)))
   where
     a protparam = Coin (fromIntegral (_minfeeA protparam))
     b protparam = Coin (fromIntegral (_minfeeB protparam))
