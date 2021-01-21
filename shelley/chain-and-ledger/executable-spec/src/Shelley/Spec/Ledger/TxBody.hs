@@ -479,7 +479,6 @@ data TxOut era
 
 type TransTxOut (c :: Type -> Constraint) era =
   ( c (Core.Value era),
-    c (CompactForm (Core.Value era)),
     Compactible (Core.Value era)
   )
 
@@ -1021,7 +1020,7 @@ instance-- use the weakest constraint necessary
 
 instance-- use the weakest constraint necessary
 
-  (Era era, TransTxOut DecodeNonNegative era) =>
+  (Era era, TransTxOut DecodeNonNegative era, Show (Core.Value era)) =>
   FromCBOR (TxOut era)
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do

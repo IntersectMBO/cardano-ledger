@@ -38,7 +38,7 @@ where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.Compactible (CompactForm (..), Compactible (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (Script, Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -114,7 +114,6 @@ type FamsFrom era =
     DecodeNonNegative (Value era),
     DecodeMint (Value era),
     Val (Value era), -- Arises because we use 'zero' as the 'mint' field in 'initial'
-    FromCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
     FromCBOR (Value era),
     FromCBOR (Annotator (Script era)) -- Arises becaause DCert memoizes its bytes
   )
@@ -124,7 +123,6 @@ type FamsTo era =
     ToCBOR (Value era),
     Compactible (Value era),
     EncodeMint (Value era),
-    ToCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
     ToCBOR (Script era),
     Typeable (Core.AuxiliaryData era)
   )

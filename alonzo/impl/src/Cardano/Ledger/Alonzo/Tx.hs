@@ -154,7 +154,7 @@ deriving instance
     Eq (Core.AuxiliaryData era),
     Eq (Core.Script era),
     Eq (Core.Value era),
-    Eq (CompactForm (Core.Value era))
+    Compactible (Core.Value era)
   ) =>
   Eq (TxRaw era)
 
@@ -163,8 +163,7 @@ deriving instance
     Compactible (Core.Value era),
     Show (Core.AuxiliaryData era),
     Show (Core.Script era),
-    Show (Core.Value era),
-    Show (CompactForm (Core.Value era))
+    Show (Core.Value era)
   ) =>
   Show (TxRaw era)
 
@@ -184,7 +183,7 @@ deriving newtype instance
     Eq (Core.AuxiliaryData era),
     Eq (Core.Script era),
     Eq (Core.Value era),
-    Eq (CompactForm (Core.Value era))
+    Compactible (Core.Value era)
   ) =>
   Eq (Tx era)
 
@@ -193,8 +192,7 @@ deriving newtype instance
     Compactible (Core.Value era),
     Show (Core.AuxiliaryData era),
     Show (Core.Script era),
-    Show (Core.Value era),
-    Show (CompactForm (Core.Value era))
+    Show (Core.Value era)
   ) =>
   Show (Tx era)
 
@@ -471,7 +469,7 @@ indexedRdmrs ::
   ( Era era,
     ToCBOR (Core.AuxiliaryData era),
     ToCBOR (Core.Script era),
-    ToCBOR (CompactForm (Core.Value era))
+    Compactible (Core.Value era)
   ) =>
   Tx era ->
   ScriptPurpose (Crypto era) ->
@@ -535,7 +533,7 @@ getData tx (UTxO m) sp = case sp of
 collectNNScriptInputs ::
   ( UsesTxOut era,
     ToCBOR (Core.Script era),
-    ToCBOR (CompactForm (Core.Value era)),
+    Compactible (Core.Value era),
     ToCBOR (Core.AuxiliaryData era),
     Core.Script era ~ AlonzoScript.Script era,
     HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
@@ -612,7 +610,7 @@ checkScriptData ::
   forall era.
   ( ToCBOR (Core.AuxiliaryData era),
     ValidateScript era,
-    ToCBOR (CompactForm (Core.Value era)),
+    Compactible (Core.Value era),
     UsesTxOut era,
     HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
   ) =>
