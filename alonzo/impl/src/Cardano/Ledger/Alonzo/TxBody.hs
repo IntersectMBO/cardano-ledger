@@ -17,8 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Alonzo.TxBody
-  ( IsFee (..),
-    TxOut (TxOut, TxOutCompact),
+  ( TxOut (TxOut, TxOutCompact),
     TxBody
       ( TxBody,
         txinputs,
@@ -87,21 +86,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.TxBody (TxIn (..), Wdrl (Wdrl), unWdrl)
 import Prelude hiding (lookup)
-
--- | Tag indicating whether an input should be used to pay transaction fees.
--- This is used to prevent the entirety of a script's inputs being used for fees
--- in the case that the script fails to validate.
-newtype IsFee = IsFee Bool
-  deriving
-    ( Eq,
-      NFData,
-      NoThunks,
-      Ord,
-      Show,
-      Typeable,
-      ToCBOR,
-      FromCBOR
-    )
 
 data TxOut era
   = TxOutCompact
