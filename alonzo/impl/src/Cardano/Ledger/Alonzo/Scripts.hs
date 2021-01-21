@@ -102,7 +102,7 @@ newtype CostModel = CostModelConstr (MemoBytes (Map ByteString Integer))
 
 instance HashWithCrypto CostModel CostModel
 
-pattern CostModel :: (Map ByteString Integer) -> CostModel
+pattern CostModel :: Map ByteString Integer -> CostModel
 pattern CostModel m <-
   CostModelConstr (Memo m _)
   where
@@ -126,8 +126,13 @@ deriving via
 -- CostModel is not parameterized by Crypto or Era so we use the
 -- hashWithCrypto function, rather than hashAnnotated
 
-hashCostModel :: forall e. Era e => Proxy e -> CostModel -> SafeHash (Crypto e) CostModel
-hashCostModel _proxy cm = hashWithCrypto (Proxy @(Crypto e)) cm
+hashCostModel ::
+  forall e.
+  Era e =>
+  Proxy e ->
+  CostModel ->
+  SafeHash (Crypto e) CostModel
+hashCostModel _proxy = hashWithCrypto (Proxy @(Crypto e))
 
 -- ==================================
 
