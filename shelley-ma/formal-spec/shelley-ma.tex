@@ -332,6 +332,8 @@
 
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{theorem}[definition]{Theorem}
 \newtheorem{property}{Property}[section]
 
 \newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
@@ -368,6 +370,7 @@
 \include{epoch}
 
 \include{chain}
+\include{properties}
 
 
 \addcontentsline{toc}{section}{References}
@@ -377,8 +380,6 @@
 \begin{appendix}
   \include{mps-language}
   \include{value-size}
-  \section{Outstanding Design Decisions}
-  \include{TODO}
 \end{appendix}
 
 \end{document}
