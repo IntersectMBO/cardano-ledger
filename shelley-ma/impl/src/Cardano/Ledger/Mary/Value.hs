@@ -42,7 +42,6 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppCoin, ppInteger, ppList, ppLong, ppScriptHash, ppSexp)
-import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),
     DecodeNonNegative (..),
@@ -675,12 +674,6 @@ byteArrayToSbs (BA.ByteArray bah) = SBS bah
 readShortByteString :: ShortByteString -> Int -> Int -> ShortByteString
 readShortByteString sbs start len =
   byteArrayToSbs $ BA.cloneByteArray (sbsToByteArray sbs) start len
-
-instance CC.Crypto crypto => Torsor (Value crypto) where
-  -- TODO a proper torsor form
-  type Delta (Value crypto) = (Value crypto)
-  addDelta = (<+>)
-  toDelta = id
 
 -- ========================================================================
 -- Operations on Values

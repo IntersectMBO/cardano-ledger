@@ -12,7 +12,6 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
-import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
@@ -20,7 +19,6 @@ import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody
 import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
 import Cardano.Ledger.ShelleyMA.TxBody ()
-import Cardano.Ledger.Torsor (Torsor (Delta))
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
 import Data.Foldable (Foldable (toList))
@@ -123,8 +121,6 @@ instance
     UsesTxOut era,
     UsesAuxiliary era,
     UsesScript era,
-    ChainData (Delta (Core.Value era)),
-    SerialisableData (Delta (Core.Value era)),
     ValidateScript era,
     ValidateAuxiliaryData era,
     GetPolicies (Core.Value era) (Crypto era),

@@ -404,7 +404,7 @@ testInvalidTx errs tx =
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
-    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (DeltaCoin 0) (DeltaCoin 10000))),
+    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000))),
       UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ TxIn genesisId 42))
     ]
     $ aliceGivesBobLovelace $

@@ -32,7 +32,6 @@ import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash,
     ValidateAuxiliaryData (..),
   )
-import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints
@@ -42,7 +41,6 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
-import Cardano.Ledger.Torsor (Torsor (Delta))
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩))
@@ -163,8 +161,6 @@ instance
     UsesScript era,
     UsesAuxiliary era,
     UsesTxBody era,
-    ChainData (Delta (Core.Value era)),
-    SerialisableData (Delta (Core.Value era)),
     ValidateScript era,
     ValidateAuxiliaryData era,
     Embed (Core.EraRule "UTXO" era) (UTXOW era),

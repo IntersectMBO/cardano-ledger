@@ -28,7 +28,6 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
-import Cardano.Ledger.Torsor (Torsor (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (heapWordsUnpacked)
 import Cardano.Slotting.Slot (SlotNo)
@@ -148,8 +147,8 @@ data UtxoPredicateFailure era
       !Coin -- the minimum fee for this transaction
       !Coin -- the fee supplied in this transaction
   | ValueNotConservedUTxO
-      !(Delta (Core.Value era)) -- the Coin consumed by this transaction
-      !(Delta (Core.Value era)) -- the Coin produced by this transaction
+      !(Core.Value era) -- the Coin consumed by this transaction
+      !(Core.Value era) -- the Coin produced by this transaction
   | WrongNetwork
       !Network -- the expected network id
       !(Set (Addr (Crypto era))) -- the set of addresses with incorrect network IDs
@@ -274,7 +273,7 @@ utxoTransition = do
 
   let consumed_ = consumed pp utxo txb
       produced_ = Shelley.produced pp stakepools txb
-  consumed_ == produced_ ?! ValueNotConservedUTxO (toDelta consumed_) (toDelta produced_)
+  consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Protocol Parameter Update Proposals
   ppup' <-
@@ -352,7 +351,6 @@ instance
     UsesTxOut era,
     UsesValue era,
     TransValue ToCBOR era,
-    Show (Delta (Core.Value era)),
     Core.TxBody era ~ TxBody era,
     Core.TxOut era ~ TxOut era,
     Embed (Core.EraRule "PPUP" era) (UTXO era),
