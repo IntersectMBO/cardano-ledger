@@ -159,49 +159,14 @@ Costs related to multi assets can be divided into two categories:
 
 **Min-Ada-Value**: Every output created by a transaction must include a minimum amount of ada, which is calculated based on the size of the output (that is, the number of different token types in it, and the lengths of their names).
 
-**Min-Ada-Value explanation:**
-
 Recall that outputs may contain a heterogeneous collection of tokens, including ad Ada is a limited resource in the Cardano system. Requiring some amount of ada be included in every output on the ledger (where that amount is based on the size of the output, in bytes) protects the size of the Cardano ledger from growing intractably.
-
-**Min-ada-value calculation:**
-
-The minimum ada amount required to be contained in every ada-only UTxO with no additional data (i.e. a UTxO containing only the address and ada amount) is a parameter the Cardano system: ``minUTxOValue``
-
-The size of such a UTxO has a upper bound : ``adaOnlyUTxOSize``
-
-We can calculate the upper bound on size of a UTxO u containing non-ada tokens : ``sizeBound (u)``
-
-We want to calculate the min-ada required to be contained in u : ``minAda (u)``
-
-A minUTxOValue amount of ada pays for ``adaOnlyUTxOSize`` bytes of UTxO storage on the ledger. To make the min-ada-value proportional for all UTxOs, the following proportion must be satisfied :
-
-	``minUTxOValue / adaOnlyUTxOSize = minAda (u) / sizeBound (u)``
-
-So, the min-ada calculation for any UTxO is:
-
-	``minAda (u) = sizeBound (u) * minUTxOValue / adaOnlyUTxOSize``
-
-As a consequence of this design,
-
-* It is impossible to make outputs containing only custom tokens
-* The number of each kind of token in an output does not affect the min-ada-value of the output, but the number of types of tokens contained in an output increases the min-value.
-* The reason for this is that the names and policy IDs of each of the types of tokens take up additional space in the output.
-* Sending custom tokens to an address always involves sending the min-ada-value of ada to that address alongside the custom tokens (by including the ada in the same output). If the address is not spendable by the user sending the tokens, the ada sent alongside the tokens no longer belongs to the sender.
-* Before transferring custom tokens, users may choose to use off-chain communication to negotiate who supplies the ada to cover the min-ada-value in the output made by the transferring transaction
-* To recover the ada stored alongside custom tokens in an output O, the user must either:
-  a) Spend the output O, and burn the custom tokens stored therein
-  b) Spend an output O and an output O’, and consolidate the tokens therein with the same collection of types of custom tokens stored in another output (spent within the same transaction)
-
-Eg. ``(CryptoDoggiesPolicy, poodle, 1)`` contained in O can be consolidated with
-``(CryptoDoggiesPolicy, poodle, 3)`` in O’, for a total of ``(CryptoDoggiesPolicy, poodle, 4)`` in a new output made by the consolidating transaction.
-
-* Splitting custom tokens into more outputs than they were contained in before the transaction getting processed requires using, in total, more ada to cover the min-ada-value, as ada is needed in the additional outputs.
+For a detailed explanation of the min-ada-value, see "Minimum Ada Value Requirement".
 
 
 What types of assets can I use to cover costs associated with native tokens?
 ************************************************************************************
 
-Currently, only ada can be used to make fee payments or deposits.
+Currently, only ada can be used to make fee payments or to satisfy the min-ada-value constraint.
 
 How does coin selection work for custom native tokens?
 ********************************************************************************
