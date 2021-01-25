@@ -50,9 +50,7 @@ class
     Compactible (Value era),
     ChainData (Value era),
     ChainData (Delta (Value era)),
-    ChainData (CompactForm (Value era)),
     SerialisableData (Value era),
-    SerialisableData (CompactForm (Value era)),
     SerialisableData (Delta (Value era)),
     DecodeNonNegative (Value era),
     EncodeMint (Value era),
@@ -95,7 +93,6 @@ type TransValue (c :: Type -> Constraint) era =
     Compactible (Value era),
     Torsor (Value era),
     c (Value era),
-    c (CompactForm (Value era)),
     c (Delta (Value era))
   )
 

@@ -105,13 +105,12 @@ data TxOut era
 
 deriving stock instance
   ( Eq (Core.Value era),
-    Eq (CompactForm (Core.Value era))
+    Compactible (Core.Value era)
   ) =>
   Eq (TxOut era)
 
 instance
-  ( Show (Core.Value era),
-    Show (CompactForm (Core.Value era))
+  ( Show (Core.Value era)
   ) =>
   Show (TxOut era)
   where
@@ -165,7 +164,7 @@ data TxBodyRaw era = TxBodyRaw
 deriving instance
   ( Eq (Core.Value era),
     CC.Crypto (Crypto era),
-    Eq (CompactForm (Core.Value era))
+    Compactible (Core.Value era)
   ) =>
   Eq (TxBodyRaw era)
 
@@ -174,7 +173,7 @@ instance
   NoThunks (TxBodyRaw era)
 
 deriving instance
-  (Era era, Show (Core.Value era), Show (CompactForm (Core.Value era))) =>
+  (Era era, Show (Core.Value era)) =>
   Show (TxBodyRaw era)
 
 newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
@@ -182,7 +181,7 @@ newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
 
 deriving newtype instance
   ( Eq (Core.Value era),
-    Eq (CompactForm (Core.Value era)),
+    Compactible (Core.Value era),
     CC.Crypto (Crypto era)
   ) =>
   Eq (TxBody era)
@@ -194,7 +193,6 @@ deriving instance
 deriving instance
   ( Era era,
     Compactible (Core.Value era),
-    Show (CompactForm (Core.Value era)),
     Show (Core.Value era)
   ) =>
   Show (TxBody era)
@@ -215,7 +213,7 @@ deriving via
 -- The Set of constraints necessary to use the TxBody pattern
 type AlonzoBody era =
   ( Era era,
-    ToCBOR (CompactForm (Core.Value era)),
+    Compactible (Core.Value era),
     ToCBOR (Core.Script era)
   )
 
@@ -314,7 +312,7 @@ instance Era era => HashAnnotated (TxBody era) era where
 
 instance
   ( Era era,
-    ToCBOR (CompactForm (Core.Value era))
+    Compactible (Core.Value era)
   ) =>
   ToCBOR (TxOut era)
   where
@@ -328,7 +326,8 @@ instance
 
 instance
   ( Era era,
-    DecodeNonNegative (CompactForm (Core.Value era)),
+    DecodeNonNegative (Core.Value era),
+    Show (Core.Value era),
     Compactible (Core.Value era)
   ) =>
   FromCBOR (TxOut era)
@@ -342,7 +341,7 @@ instance
 
 encodeTxBodyRaw ::
   ( Era era,
-    ToCBOR (CompactForm (Core.Value era))
+    Compactible (Core.Value era)
   ) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
