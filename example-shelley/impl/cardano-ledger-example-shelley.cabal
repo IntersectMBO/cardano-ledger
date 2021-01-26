@@ -21,6 +21,13 @@ source-repository head
 library
   exposed-modules:
     Cardano.Ledger.ExampleShelley
+    Cardano.Ledger.ExampleShelley.AuxiliaryData
+    Cardano.Ledger.ExampleShelley.Timelocks
+    Cardano.Ledger.ExampleShelley.TxBody
+    Cardano.Ledger.ExampleShelley.Value
+    Cardano.Ledger.ExampleShelley.Rules.EraMapping
+    Cardano.Ledger.ExampleShelley.Rules.Utxo
+    Cardano.Ledger.ExampleShelley.Rules.Utxow
 
   -- other-extensions:
   build-depends:
@@ -37,8 +44,11 @@ library
     groups,
     mtl,
     nothunks,
+    prettyprinter,
+    primitive,
     shelley-spec-ledger,
     small-steps,
+    text,
     transformers
   hs-source-dirs: src
   ghc-options:
