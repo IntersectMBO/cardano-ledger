@@ -19,7 +19,6 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (hashWithSerialiser)
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
@@ -53,7 +52,7 @@ type instance Core.AuxiliaryData (ExampleShelleyEra c) = Metadata
 --------------------------------------------------------------------------------
 
 instance
-  (CryptoClass.Crypto c, TxBodyConstraints (ExampleShelleyEra c)) =>
+  (CryptoClass.Crypto c) =>
   ValidateScript (ExampleShelleyEra c)
   where
   validateScript = validateNativeMultiSigScript
