@@ -20,14 +20,13 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut (..), UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..), UsesValue)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (hashWithSerialiser)
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
-  ( TxBody,
-    ValidateScript (hashScript, validateScript),
+  ( ValidateScript (hashScript, validateScript),
     hashMultiSigScript,
     validateNativeMultiSigScript,
   )
@@ -37,8 +36,10 @@ import Shelley.Spec.Ledger.API
     GetLedgerView,
     PraosCrypto,
     ShelleyBasedEra,
-    TxOut,
+    TxOut (..)
   )
+
+import Cardano.Ledger.ExampleShelley.TxBody (TxBody (..))
 
 import Cardano.Ledger.ExampleShelley.Rules.Utxo (UTXO)
 import Cardano.Ledger.ExampleShelley.Rules.Utxow (UTXOW)
