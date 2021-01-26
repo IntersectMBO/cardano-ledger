@@ -40,13 +40,19 @@ import Cardano.Crypto.DSIGN.Class
   )
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesTxOut,
+    UsesValue
+  )
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.SetAlgebra (biMapFromList)
@@ -88,6 +94,11 @@ import Shelley.Spec.Ledger.LedgerState
   ( FutureGenDeleg,
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
+import Shelley.Spec.Ledger.RewardProvenance
+  ( Desirability (..),
+    RewardProvenance (..),
+    RewardProvenancePool (..),
+  )
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     LogWeight (..),
@@ -104,16 +115,7 @@ import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS
 import Shelley.Spec.Ledger.Tx (ValidateScript, WitnessSetHKD (WitnessSet), hashScript)
-import Test.QuickCheck
-  ( Arbitrary,
-    arbitrary,
-    genericShrink,
-    listOf,
-    oneof,
-    resize,
-    shrink,
-    vectorOf,
-  )
+import Test.QuickCheck (Arbitrary, arbitrary, genericShrink, listOf, oneof, recursivelyShrink, resize, shrink, vectorOf)
 import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
@@ -128,12 +130,16 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass)
 import qualified Test.Shelley.Spec.Ledger.Generator.Update as Update
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
     genSignature,
   )
 import Test.Tasty.QuickCheck (Gen, choose, elements)
+import Control.State.Transition (STS (State))
+
+-- =======================================================
 
 genHash :: forall a h. HashAlgorithm h => Gen (Hash.Hash h a)
 genHash = mkDummyHash <$> arbitrary
@@ -264,7 +270,7 @@ instance CC.Crypto crypto => Arbitrary (TxIn crypto) where
       <*> arbitrary
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  (UsesValue era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
   Arbitrary (TxOut era)
   where
   arbitrary = TxOut <$> arbitrary <*> arbitrary
@@ -367,7 +373,11 @@ instance CC.Crypto crypto => Arbitrary (STS.PrtclState crypto) where
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  ( UsesTxOut era,
+    UsesValue era,
+    Mock (Crypto era),
+    Arbitrary (Core.TxOut era)
+  ) =>
   Arbitrary (UTxO era)
   where
   arbitrary = genericArbitraryU
@@ -436,21 +446,49 @@ instance CC.Crypto crypto => Arbitrary (DPState crypto) where
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  ( UsesTxOut era,
+    UsesValue era,
+    Mock (Crypto era),
+    Arbitrary (Core.TxOut era),
+    Arbitrary (State (Core.EraRule "PPUP" era))
+  ) =>
   Arbitrary (UTxOState era)
   where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
+  shrink = recursivelyShrink
+  -- The 'genericShrink' function returns first the immediate subterms of a
+  -- value (in case it is a recursive data-type), and then shrinks the value
+  -- itself. Since 'UTxOState' is not a recursive data-type, there are no
+  -- subterms, and we can use `recursivelyShrink` directly. This is particularly
+  -- important when abstracting away the different fields of the ledger state,
+  -- since the generic subterms instances will overlap due to GHC not having
+  -- enough context to infer if 'a' and 'b' are the same types (since in this
+  -- case this will depend on the definition of 'era').
+  --
+  -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) a where
+  -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  ( UsesTxOut era,
+    UsesValue era,
+    Mock (Crypto era),
+    Arbitrary (Core.TxOut era),
+    Arbitrary (State (Core.EraRule "PPUP" era))
+  ) =>
   Arbitrary (LedgerState era)
   where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era) =>
+  ( UsesTxOut era,
+    UsesValue era,
+    Mock (Crypto era),
+    Arbitrary (Core.TxOut era),
+    Arbitrary (Core.Value era),
+    Arbitrary (State (Core.EraRule "PPUP" era)),
+    EraGen era
+  ) =>
   Arbitrary (NewEpochState era)
   where
   arbitrary = genericArbitraryU
@@ -467,7 +505,14 @@ instance CC.Crypto crypto => Arbitrary (PoolDistr crypto) where
       genVal = IndividualPoolStake <$> arbitrary <*> genHash
 
 instance
-  (ShelleyBased era, Mock (Crypto era), Arbitrary (Core.Value era), EraGen era) =>
+  ( UsesTxOut era,
+    UsesValue era,
+    Mock (Crypto era),
+    Arbitrary (Core.TxOut era),
+    Arbitrary (Core.Value era),
+    Arbitrary (State (Core.EraRule "PPUP" era)),
+    EraGen era
+  ) =>
   Arbitrary (EpochState era)
   where
   arbitrary =
@@ -604,7 +649,7 @@ genUTCTime = do
       (Time.picosecondsToDiffTime diff)
 
 instance
-  (ShelleyBased era, Mock (Crypto era), EraGen era) =>
+  (Mock (Crypto era), EraGen era) =>
   Arbitrary (ShelleyGenesis era)
   where
   arbitrary =
@@ -626,7 +671,7 @@ instance
       <*> (ShelleyGenesisStaking <$> arbitrary <*> arbitrary) -- sgStaking
 
 instance
-  ( ShelleyBased era,
+  ( UsesScript era,
     Mock (Crypto era),
     ValidateScript era,
     Arbitrary (Core.Script era)
@@ -650,11 +695,15 @@ instance Era era => Arbitrary (STS.PoolPredicateFailure era) where
   shrink = genericShrink
 
 instance
-  (Era era, Mock (Crypto era)) =>
+  ( Era era,
+    Mock (Crypto era),
+    Arbitrary (STS.PredicateFailure (Core.EraRule "POOL" era)),
+    Arbitrary (STS.PredicateFailure (Core.EraRule "DELEG" era))
+  ) =>
   Arbitrary (STS.DelplPredicateFailure era)
   where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
+  shrink = recursivelyShrink
 
 instance
   (Era era, Mock (Crypto era)) =>
@@ -664,15 +713,18 @@ instance
   shrink = genericShrink
 
 instance
-  (Era era, Mock (Crypto era)) =>
+  ( Era era,
+    Mock (Crypto era),
+    Arbitrary (STS.PredicateFailure (Core.EraRule "DELPL" era))
+  ) =>
   Arbitrary (STS.DelegsPredicateFailure era)
   where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
+  shrink = recursivelyShrink
 
 instance
   ( Era era,
-    Arbitrary (STS.PredicateFailure (LEDGER era))
+    Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   Arbitrary (STS.LedgersPredicateFailure era)
   where
@@ -681,8 +733,8 @@ instance
 
 instance
   ( Era era,
-    Arbitrary (STS.PredicateFailure (DELEGS era)),
-    Arbitrary (STS.PredicateFailure (UTXOW era))
+    Arbitrary (STS.PredicateFailure (Core.EraRule "DELEGS" era)),
+    Arbitrary (STS.PredicateFailure (Core.EraRule "UTXOW" era))
   ) =>
   Arbitrary (STS.LedgerPredicateFailure era)
   where
@@ -691,7 +743,7 @@ instance
 
 instance
   ( Era era,
-    Arbitrary (STS.PredicateFailure (UTXO era))
+    Arbitrary (STS.PredicateFailure (Core.EraRule "UTXO" era))
   ) =>
   Arbitrary (STS.UtxowPredicateFailure era)
   where
@@ -699,7 +751,9 @@ instance
   shrink _ = []
 
 genTx ::
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     Arbitrary (WitnessSet era),
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.AuxiliaryData era)
@@ -713,8 +767,10 @@ genTx =
 
 genBlock ::
   forall era.
-  ( ShelleyBased era,
-    EraGen era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
+    ScriptClass era,
     Mock (Crypto era),
     Arbitrary (WitnessSet era),
     Arbitrary (Core.TxBody era),
@@ -748,7 +804,9 @@ genBlock = do
     p = Proxy
 
 instance
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     ValidateScript era,
     Arbitrary (Core.TxBody era),
@@ -761,7 +819,8 @@ instance
   arbitrary = genTx
 
 instance
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesAuxiliary era,
     EraGen era,
     Mock (Crypto era),
     ValidateScript era,
@@ -776,9 +835,52 @@ instance
 
 instance
   ( Era era,
-    Arbitrary (STS.PredicateFailure (LEDGER era))
+    Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGERS" era))
   ) =>
   Arbitrary (ApplyTxError era)
   where
   arbitrary = ApplyTxError <$> arbitrary
   shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
+
+instance Arbitrary Desirability where
+  arbitrary = Desirability <$> arbitrary <*> arbitrary
+
+instance
+  Mock crypto =>
+  Arbitrary (RewardProvenancePool crypto)
+  where
+  arbitrary =
+    RewardProvenancePool
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance
+  Mock crypto =>
+  Arbitrary (RewardProvenance crypto)
+  where
+  arbitrary =
+    RewardProvenance
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary

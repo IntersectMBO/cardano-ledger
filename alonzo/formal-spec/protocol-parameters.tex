@@ -30,9 +30,9 @@ in addition to those that are already defined in the Shelley specification.
 %  conversion to $\ExUnits$ is also done by the interpreter (thus, is opaque to the ledger rules).
   \\
   $\Prices$ &
-  A term of this type comprises three integer values,
-  $\var{(pr_{init}, pr_{mem}, pr_{steps})}$: $pr_{init}$ represents the initial
-  cost of running a script; $pr_{mem}$ is the price (in Ada) per unit of memory, and $pr_{steps}$ is the price (in Ada) per
+  A term of this type comprises two integer values,
+  $\var{pr_{mem}, pr_{steps})}$:
+  $pr_{mem}$ is the price (in Ada) per unit of memory, and $pr_{steps}$ is the price (in Ada) per
   reduction step. This is used to calculate the Ada cost for a specific script execution.
 \end{tabular}
 \vspace{12pt}
@@ -81,9 +81,6 @@ The actual cost models are recorded in the protocol parameter $\var{costmdls}$.
 %
 By having distinct cost models for each version and changing the conversion coefficients, we can discourage users from
 paying into scripts that have been made using old versions of Plutus, by making these more expensive to execute.
-\begin{note}
-  This seems like a bad idea. What if funds are locked by a script that forces every output of a transaction to be locked by the same script?
-\end{note}
 %
 The calculation of the actual cost, in Ada, of running
 a script that takes $\var{exunits} \in \ExUnits$ resources to run,
@@ -103,6 +100,7 @@ Per-block resource use needs to be limited to ensure that the time required to v
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad}r}
       \var{cm} & \CostMod & \text{Coefficients for the cost model} \\
+      \var{pph} & \PPHash & \text{Hash of a protocol parameter}
     \end{array}
   \end{equation*}
   %
@@ -114,9 +112,9 @@ Per-block resource use needs to be limited to ensure that the time required to v
       & \{\Plutus, \dotsb\}
       & \text{Script Language}
       \\
-      \var{(pr_{init}, pr_{mem}, pr_{steps})}
+      \var{pr_{mem}, pr_{steps})}
       & \Prices
-      & \Coin \times \Coin \times \Coin
+      & \Coin \times \Coin
       & \text {Coefficients for $\ExUnits$ prices}
       \\
       \var{(mem, steps)}
@@ -146,40 +144,10 @@ Per-block resource use needs to be limited to ensure that the time required to v
   \emph{Helper Functions}
   %
   \begin{align*}
-    & \fun{hashLanguagePP} \in \PParams \to \powerset{(\Language)} \to \PPHash^?   \\
-    & \fun{hashLanguagePP}~\var{pp}~\var{lgs} = \begin{cases}
-         \fun{hash}~(\var{lgs} \restrictdom \fun{costmdls}~{pp})
-                           & \text{if~} (\var{lgs} \restrictdom \fun{costmdls}~{pp}) \neq \{\} \\
-              \Nothing & \text{otherwise} \\
-      \end{cases} \\[3ex]
-    & \text{The $\fun{hashLanguagePP}$ calculation creates a hash for the protocol parameters} \\ & \text{that are relevant to
-    a given set of versions.}
+    & \fun{hashLanguagePP} \in \PParams \to \Language \to \PPHash \\
+    & \fun{hashLanguagePP}~\var{pp}~\Plutus = \fun{hash}~(\{\Plutus\} \restrictdom \fun{costmdls}~{pp})
   \end{align*}
   %
   \caption{Definitions Used in Protocol Parameters}
   \label{fig:defs:protocol-parameters}
-\end{figure*}
-
-\subsubsection{Protocol Parameter Hash Comparison Considerations}
-
-Not all protocol parameters are relevant to all Plutus languages.
-We have defined two helper functions that can be used to select the protocol parameters that need to be hashed for a specific script
-(see Figure \ref{fig:defs:functions-chain-helper}). The first, $\fun{language}$, is an accessor function that returns the language tag for a given script, of type
-$\Script$ (defined in Section~\ref{sec:transactions}).
-The second, $\fun{cmlangs}$, returns the \emph{set} of language tags for the given set of scripts whose languages have a corresponding cost model.
-
-\begin{figure*}[htb]
-  \emph{Helper Functions}
-  %
-  \begin{align*}
-    \fun{language} ~\in~& \Script \to \Language \\
-    &\text{Returns the language tag ($\Plutus$ for the first version of Plutus)}
-    \nextdef
-    \fun{cmlangs} ~\in~& \powerset{\Script} \to \powerset{(\Language)} \\
-    \fun{cmlangs}~ \var{scrts} ~=~ & \{ \fun{language}~\var{scr} ~\vert~
-      \var{scr}~\in~ \var{scrts}, \fun{language}~\var{scr} \in \{\Plutus\}  \}\\
-    &\text{Returns all languages that have cost models.}
-  \end{align*}
-  \caption{Helper functions for Languages and Cost Model}
-  \label{fig:defs:functions-chain-helper}
 \end{figure*}

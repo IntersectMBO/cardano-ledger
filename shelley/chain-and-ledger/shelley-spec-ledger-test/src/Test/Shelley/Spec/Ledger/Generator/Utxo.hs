@@ -23,10 +23,18 @@ import Cardano.Binary (serialize)
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData (hashAuxiliaryData))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints
+  ( TransValue,
+    UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesTxOut (..),
+    UsesValue,
+  )
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
 import Control.SetAlgebra (forwards)
+import Control.State.Transition
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Either as Either (partitionEithers)
 import Data.List (foldl', nub)
@@ -76,11 +84,11 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.STS.Delpl (DelplEnv)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     TxIn (..),
-    TxOut (..),
     ValidateScript (..),
     WitnessSet,
     WitnessSetHKD (..),
@@ -108,14 +116,16 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombination)
-import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
+import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS, genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, Split (..))
+
+-- =======================================================
 
 showBalance ::
   ( ShelleyTest era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
@@ -157,10 +167,18 @@ genTx ::
   forall era.
   ( HasCallStack,
     EraGen era,
+    UsesTxBody era,
+    UsesTxOut era,
+    UsesValue era,
+    UsesAuxiliary era,
     ValidateAuxiliaryData era,
     Mock (Crypto era),
+    Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
   ) =>
   GenEnv era ->
   LedgerEnv era ->
@@ -249,11 +267,11 @@ genTx
       -------------------------------------------------------------------------
       let draftFee = Coin 0
           (remainderCoin, draftOutputs) =
-            calcOutputsFromBalance
+            calcOutputsFromBalance @era
               spendingBalance
               outputAddrs
               draftFee
-      draftTxBody <-
+      (draftTxBody, additionalScripts) <-
         genEraTxBody
           ge
           slot
@@ -265,11 +283,12 @@ genTx
           (maybeToStrictMaybe update)
           (hashAuxiliaryData @era <$> metadata)
       let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
+          scripts' = Map.fromList $ map (\s -> (hashScript @era s, s)) additionalScripts
       -- We add now repeatedly add inputs until the process converges.
       converge
         remainderCoin
         wits
-        scripts
+        (scripts `Map.union` scripts')
         ksKeyPairs
         ksMSigScripts
         utxo
@@ -283,7 +302,7 @@ data Delta era = Delta
   { dfees :: Coin,
     extraInputs :: Set.Set (TxIn (Crypto era)),
     extraWitnesses :: WitnessSet era,
-    change :: TxOut era,
+    change :: Core.TxOut era,
     deltaVKeys :: [KeyPair 'Witness (Crypto era)],
     deltaScripts :: [(Core.Script era, Core.Script era)]
   }
@@ -291,7 +310,7 @@ data Delta era = Delta
 -- | - We need this instance to know when delta has stopped growing. We don't
 --  actually need to compare all the fields, because if the extraInputs has not
 --  changed then the Scripts and keys will not have changed.
-instance ShelleyBased era => Eq (Delta era) where
+instance (UsesTxOut era, UsesScript era, TransValue Eq era) => Eq (Delta era) where
   a == b =
     dfees a == dfees b
       && extraInputs a == extraInputs b
@@ -300,13 +319,22 @@ instance ShelleyBased era => Eq (Delta era) where
       -- equality, at least in the use case below.
       && change a == change b
 
-deltaZero :: ShelleyBased era => Coin -> Coin -> Addr (Crypto era) -> Delta era
+deltaZero ::
+  forall era.
+  ( UsesScript era,
+    UsesValue era,
+    UsesTxOut era
+  ) =>
+  Coin ->
+  Coin ->
+  Addr (Crypto era) ->
+  Delta era
 deltaZero initialfee minAda addr =
   Delta
     (initialfee <-> minAda)
     mempty
     mempty
-    (TxOut addr (inject minAda))
+    (makeTxOut (Proxy @era) addr (inject minAda))
     mempty
     mempty
 
@@ -315,6 +343,10 @@ deltaZero initialfee minAda addr =
 genNextDelta ::
   forall era.
   ( EraGen era,
+    UsesTxBody era,
+    UsesValue era,
+    UsesTxOut era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
@@ -341,6 +373,7 @@ genNextDelta
         draftSize =
           sum
             [ 5 :: Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
+              12 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens
               encodedLen (max dfees (Coin 0)) - 1,
               foldr (\a b -> b + encodedLen a) 0 extraInputs,
               encodedLen change,
@@ -369,6 +402,7 @@ genNextDelta
               else -- add a new input to cover the fee
               do
                 let Tx txBody _ _ = tx
+                    utxo' :: UTxO era
                     utxo' =
                       -- Remove possible inputs from Utxo, if they already
                       -- appear in inputs.
@@ -405,10 +439,11 @@ genNextDelta
     where
       deltaChange ::
         (Core.Value era -> Core.Value era) ->
-        TxOut era ->
-        TxOut era
-      deltaChange f (TxOut addr val) = TxOut addr $ f val
-      getChangeAmount (TxOut _ v) = coin v
+        Core.TxOut era ->
+        Core.TxOut era
+      deltaChange f out =
+        makeTxOut (Proxy @era) (getField @"address" out) (f $ getField @"value" out)
+      getChangeAmount out = coin $ getField @"value" out
 
 -- calculates fixed point of getNextDelta such that
 -- reqFees (tx + delta) = dfees delta
@@ -418,6 +453,10 @@ genNextDelta
 genNextDeltaTilFixPoint ::
   forall era.
   ( EraGen era,
+    UsesTxBody era,
+    UsesTxOut era,
+    UsesValue era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
@@ -441,9 +480,11 @@ genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx = do
 applyDelta ::
   forall era.
   ( EraGen era,
+    UsesTxBody era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
   ) =>
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
@@ -461,7 +502,7 @@ applyDelta
     -- Adds extraInputs, extraWitnesses, and change from delta to tx
     let outputs' = (getField @"outputs" body) StrictSeq.|> change
         body' =
-          updateEraTxBody
+          (updateEraTxBody @era)
             body
             deltafees
             (getField @"inputs" body <> extraIn)
@@ -482,9 +523,13 @@ fix f d = do d1 <- f d; if d1 == d then pure d else fix f d1
 
 converge ::
   ( EraGen era,
+    UsesTxBody era,
+    UsesTxOut era,
+    UsesValue era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
   ) =>
   Coin ->
   [KeyPair 'Witness (Crypto era)] ->
@@ -512,6 +557,7 @@ converge
 -- | Return up to /k/ random elements from /items/
 -- (instead of the less efficient /take k <$> QC.shuffle items/)
 ruffle :: Int -> [a] -> Gen [a]
+ruffle _ [] = pure []
 ruffle k items = do
   indices <- nub <$> QC.vectorOf k pickIndex
   pure $ map (items !!) indices
@@ -593,17 +639,17 @@ mkTxWits
 -- TODO need right splitting of v!
 calcOutputsFromBalance ::
   forall era.
-  ( HasCallStack,
-    ShelleyBased era,
+  ( UsesValue era,
+    UsesTxOut era,
     Split (Core.Value era)
   ) =>
   Core.Value era ->
   [Addr (Crypto era)] ->
   Coin ->
-  (Coin, StrictSeq (TxOut era))
+  (Coin, StrictSeq (Core.TxOut era))
 calcOutputsFromBalance balance_ addrs fee =
   ( fee <+> splitCoinRem,
-    StrictSeq.fromList $ zipWith TxOut addrs amountPerOutput
+    StrictSeq.fromList $ zipWith (makeTxOut $ Proxy @era) addrs amountPerOutput
   )
   where
     -- split the available balance into equal portions (one for each address),
@@ -624,7 +670,7 @@ calcOutputsFromBalance balance_ addrs fee =
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 genInputs ::
   forall era.
-  (ShelleyBased era) =>
+  (UsesTxOut era, UsesValue era) =>
   (Int, Int) ->
   Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era) ->
@@ -641,15 +687,17 @@ genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo)
   let (inputs, witnesses) = unzip (witnessedInput <$> selectedUtxo)
   return
     ( inputs,
-      balance (UTxO (Map.fromList selectedUtxo)),
+      balance (UTxO (Map.fromList selectedUtxo) :: UTxO era),
       Either.partitionEithers witnesses
     )
   where
-    witnessedInput (input, TxOut addr@(Addr _ (KeyHashObj _) _) _) =
-      (input, Left . asWitness $ findPayKeyPairAddr @era addr keyHashMap)
-    witnessedInput (input, TxOut addr@(Addr _ (ScriptHashObj _) _) _) =
-      (input, Right $ findPayScriptFromAddr @era addr payScriptMap)
-    witnessedInput _ = error "unsupported address"
+    witnessedInput (input, output) =
+      case getField @"address" output of
+        addr@(Addr _ (KeyHashObj _) _) ->
+          (input, Left . asWitness $ findPayKeyPairAddr @era addr keyHashMap)
+        addr@(Addr _ (ScriptHashObj _) _) ->
+          (input, Right $ findPayScriptFromAddr @era addr payScriptMap)
+        _ -> error "unsupported address"
 
 -- | Select a subset of the reward accounts to use for reward withdrawals.
 genWithdrawals ::

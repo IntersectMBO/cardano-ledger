@@ -40,7 +40,7 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState (..),
     NewEpochState (..),
-    emptyRewardUpdate,
+    emptyRewardUpdate
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
@@ -102,7 +102,7 @@ initUTxO =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStMIR :: forall era. (ShelleyTest era) => Coin -> ChainState era
+initStMIR :: forall era. ShelleyTest era => Coin -> ChainState era
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt @era initUTxO

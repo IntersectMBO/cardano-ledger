@@ -24,6 +24,7 @@ library
     Cardano.Ledger.Core
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
+    Cardano.Ledger.Pretty
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.Constraints
     Cardano.Ledger.Torsor
@@ -66,6 +67,7 @@ library
     Shelley.Spec.Ledger.STS.Delegs
     Shelley.Spec.Ledger.STS.Delpl
     Shelley.Spec.Ledger.STS.Epoch
+    Shelley.Spec.Ledger.STS.EraMapping
     Shelley.Spec.Ledger.STS.Ledger
     Shelley.Spec.Ledger.STS.Ledgers
     Shelley.Spec.Ledger.STS.Mir
@@ -82,6 +84,7 @@ library
     Shelley.Spec.Ledger.STS.Tick
     Shelley.Spec.Ledger.STS.Tickn
     Shelley.Spec.Ledger.STS.Updn
+    Shelley.Spec.Ledger.STS.Upec
     Shelley.Spec.Ledger.STS.Utxo
     Shelley.Spec.Ledger.STS.Utxow
     Shelley.Spec.Ledger.Tx
@@ -104,6 +107,7 @@ library
     aeson,
     base >= 4.7 && < 5,
     base16-bytestring >= 1,
+    bech32,
     binary,
     bytestring,
     cardano-binary,
@@ -114,6 +118,8 @@ library
     cardano-prelude,
     cardano-slotting,
     cborg,
+    cborg-json,
+    constraints,
     containers,
     data-default-class,
     deepseq,
@@ -123,6 +129,7 @@ library
     network,
     nothunks,
     partial-order,
+    prettyprinter,
     primitive >= 0.7.1.0,
     quiet,
     scientific,

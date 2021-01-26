@@ -79,6 +79,7 @@ import Test.Shelley.Spec.Ledger.Utils (getBlockNonce, testGlobals)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
+
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
@@ -145,7 +146,7 @@ blockEx1 =
 
 expectedStEx1 ::
   forall c.
-  (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) =>
+  (ExMock (Crypto (ShelleyEra c))) =>
   ChainState (ShelleyEra c)
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
@@ -227,7 +228,7 @@ blockEx2 slot =
 blockEx2A :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
 blockEx2A = blockEx2 20
 
-expectedStEx2 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx2 =
   C.feesAndDeposits feeTx2 (Coin 0)
     . C.newUTxO txbodyEx2

@@ -199,7 +199,7 @@ aliceInitCoin = Coin 10000
 bobInitCoin :: Coin
 bobInitCoin = Coin 1000
 
-genesis :: forall era. (ShelleyTest era) => LedgerState era
+genesis :: forall era. ShelleyTest era => LedgerState era
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty

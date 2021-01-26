@@ -44,8 +44,6 @@ import Shelley.Spec.Ledger.Slot
     (+*),
   )
 
--- ============================================
-
 data RUPD era
 
 data RupdEnv era

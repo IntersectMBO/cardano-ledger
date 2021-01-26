@@ -17,7 +17,6 @@ module Shelley.Spec.Ledger.STS.PoolReap
 where
 
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Control.State.Transition
@@ -27,6 +26,7 @@ import Control.State.Transition
     TransitionRule,
     judgmentContext,
   )
+import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -39,11 +39,8 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DState (..),
     PState (..),
+    TransUTxOState,
     UTxOState (..),
-    emptyAccount,
-    emptyDState,
-    emptyPState,
-    emptyUTxOState,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
@@ -59,26 +56,24 @@ data PoolreapState era = PoolreapState
   }
 
 deriving stock instance
-  ShelleyBased era =>
+  (TransUTxOState Show era) =>
   Show (PoolreapState era)
 
-data PoolreapPredicateFailure era -- No predicate Falures
+data PoolreapPredicateFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
 
 instance NoThunks (PoolreapPredicateFailure era)
 
-instance Typeable era => STS (POOLREAP era) where
+instance Default (UTxOState era) => Default (PoolreapState era) where
+  def = PoolreapState def def def def
+
+instance (Typeable era, Default (PoolreapState era)) => STS (POOLREAP era) where
   type State (POOLREAP era) = PoolreapState era
   type Signal (POOLREAP era) = EpochNo
   type Environment (POOLREAP era) = PParams era
   type BaseM (POOLREAP era) = ShelleyBase
   type PredicateFailure (POOLREAP era) = PoolreapPredicateFailure era
-  initialRules =
-    [ pure $
-        PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState
-    ]
   transitionRules = [poolReapTransition]
-
   assertions =
     [ PostCondition
         "Deposit pot must equal obligation"

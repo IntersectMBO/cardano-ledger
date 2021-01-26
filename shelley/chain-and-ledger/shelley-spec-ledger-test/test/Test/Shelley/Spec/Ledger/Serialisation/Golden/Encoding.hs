@@ -26,11 +26,10 @@ import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
-import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
@@ -128,7 +127,6 @@ import Shelley.Spec.Ledger.LedgerState
     EpochState (..),
     NewEpochState (..),
     RewardUpdate (..),
-    emptyLedgerState,
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.OCert
@@ -145,7 +143,7 @@ import Shelley.Spec.Ledger.PParams
     pattern ProposedPPUpdates,
     pattern Update,
   )
-import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
+import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.Scripts (pattern RequireSignature)
 import Shelley.Spec.Ledger.Serialization
   ( FromCBORGroup (..),
@@ -196,6 +194,9 @@ import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
+import Data.Default.Class (def)
+
+-- ============================================
 
 type MultiSigMap = Map.Map (ScriptHash C_Crypto) (MultiSig C_Crypto)
 
@@ -357,8 +358,9 @@ testHeaderHash =
 testBHB ::
   forall era crypto.
   ( Era era,
-    TxBodyConstraints era,
-    ToCBOR (Core.AuxiliaryData era),
+    UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     ExMock crypto,
     crypto ~ Crypto era
   ) =>
@@ -402,8 +404,9 @@ testBHBSigTokens ::
   forall era.
   ( Era era,
     ExMock (Crypto era),
-    ToCBOR (Core.AuxiliaryData era),
-    TxBodyConstraints era
+    UsesTxBody era,
+    UsesAuxiliary era,
+    UsesScript era
   ) =>
   Tokens ->
   Tokens
@@ -776,7 +779,7 @@ tests =
           tout = TxOut @C testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
             "txbody"
-            ( TxBody -- minimal transaction body
+            ( TxBody @C -- minimal transaction body
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
@@ -833,7 +836,7 @@ tests =
               (EpochNo 0)
        in checkEncodingCBORAnnotated
             "txbody_partial"
-            ( TxBody -- transaction body with some optional components
+            ( TxBody @C -- transaction body with some optional components
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 StrictSeq.Empty
@@ -896,7 +899,7 @@ tests =
           mdh = hashAuxiliaryData @C $ MD.Metadata $ Map.singleton 13 (MD.I 17)
        in checkEncodingCBORAnnotated
             "txbody_full"
-            ( TxBody -- transaction body with all components
+            ( TxBody @C -- transaction body with all components
                 (Set.fromList [tin])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])
@@ -929,7 +932,7 @@ tests =
             ),
       -- checkEncodingCBOR "minimal_txn"
       let txb =
-            TxBody
+            TxBody @C
               (Set.fromList [TxIn genesisId 1])
               (StrictSeq.singleton $ TxOut @C testAddrE (Coin 2))
               StrictSeq.empty
@@ -953,7 +956,7 @@ tests =
             ),
       -- checkEncodingCBOR "full_txn"
       let txb =
-            TxBody
+            TxBody @C
               (Set.fromList [TxIn genesisId 1])
               (StrictSeq.singleton $ TxOut @C testAddrE (Coin 2))
               StrictSeq.empty
@@ -1090,7 +1093,7 @@ tests =
           tin = Set.fromList [TxIn @C_Crypto genesisId 1]
           tout = StrictSeq.singleton $ TxOut @C testAddrE (Coin 2)
           txb s =
-            TxBody
+            TxBody @C
               tin
               tout
               StrictSeq.empty
@@ -1284,10 +1287,10 @@ tests =
           ps = Map.singleton (hashKey $ vKey testStakePoolKey) params
           fs = Coin 123
           ss = SnapShots mark set go fs
-          ls = emptyLedgerState
+          ls = def
           pps = emptyPParams
           bs = Map.singleton (hashKey $ vKey testStakePoolKey) 1
-          nm = emptyNonMyopic
+          nm = def
           es = EpochState @C ac ss ls pps pps nm
           ru =
             ( SJust

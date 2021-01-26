@@ -9,9 +9,23 @@
 
 module Shelley.Spec.Ledger.RewardProvenance where
 
+import Cardano.Binary
+  ( FromCBOR (fromCBOR),
+    ToCBOR (toCBOR),
+    decodeDouble,
+    encodeDouble,
+  )
 import qualified Cardano.Ledger.Crypto as CC
 import Control.DeepSeq (NFData)
-import Data.Aeson
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Coders
+  ( Decode (..),
+    Encode (..),
+    decode,
+    encode,
+    (!>),
+    (<!),
+  )
 import Data.Default.Class (Default (..))
 import Data.Map.Strict (Map)
 import Data.Word (Word64)
@@ -38,7 +52,6 @@ data RewardProvenancePool crypto = RewardProvenancePool
     maxPP :: !Coin,
     appPerfP :: !Rational,
     poolRP :: !Coin,
-    --mRewardsP :: !(Map (Credential 'Staking crypto) Coin),
     lRewardP :: !Coin
   }
   deriving (Eq, Generic)
@@ -53,6 +66,16 @@ deriving instance (CC.Crypto crypto) => ToJSON (RewardProvenancePool crypto)
 
 instance Default (RewardProvenancePool crypto) where
   def = RewardProvenancePool 0 0 0 (Coin 0) def 0 (Coin 0) 0 (Coin 0) (Coin 0)
+
+data Desirability = Desirability
+  { desirabilityScore :: !Double,
+    hitRateEstimate :: !Double
+  }
+  deriving (Eq, Show, Generic)
+
+instance NoThunks Desirability
+
+instance NFData Desirability
 
 data RewardProvenance crypto = RewardProvenance
   { spe :: !Word64,
@@ -74,10 +97,13 @@ data RewardProvenance crypto = RewardProvenance
            (KeyHash 'StakePool crypto)
            (RewardProvenancePool crypto)
        ),
-    hitRateEstimates :: !(Map (KeyHash 'StakePool crypto) (Double, Double))
-    -- The pair of Doubles represents (LiklihoodEstimate,Desireability)
+    desirabilities :: !(Map (KeyHash 'StakePool crypto) Desirability)
   }
   deriving (Eq, Generic)
+
+deriving instance FromJSON Desirability
+
+deriving instance ToJSON Desirability
 
 deriving instance (CC.Crypto crypto) => FromJSON (RewardProvenance crypto)
 
@@ -136,7 +162,6 @@ instance Show (RewardProvenancePool crypto) where
           "maxP = " ++ show (maxPP t),
           "appPerf = " ++ show (appPerfP t),
           "poolR = " ++ show (poolRP t),
-          -- "mRewards = "++ show (mRewardsP t)
           "lReward = " ++ show (lRewardP t)
         ]
 
@@ -176,5 +201,99 @@ instance Show (RewardProvenance crypto) where
           "deltaT1 = " ++ show (deltaT1 t),
           "activeStake = " ++ show (activeStake t),
           "pools = " ++ show (pools t),
-          "hitRateEstimates = " ++ show (hitRateEstimates t)
+          "desirabilities = " ++ show (desirabilities t)
         ]
+
+-- =======================================================
+-- CBOR instances
+
+instance ToCBOR Desirability where
+  toCBOR (Desirability p1 p2) =
+    encode $ Rec Desirability !> E encodeDouble p1 !> E encodeDouble p2
+
+instance FromCBOR Desirability where
+  fromCBOR = decode $ RecD Desirability <! D decodeDouble <! D decodeDouble
+
+instance
+  (CC.Crypto crypto) =>
+  ToCBOR (RewardProvenancePool crypto)
+  where
+  toCBOR (RewardProvenancePool p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
+    encode $
+      Rec RewardProvenancePool
+        !> To p1
+        !> To p2
+        !> To p3
+        !> To p4
+        !> To p5
+        !> To p6
+        !> To p7
+        !> To p8
+        !> To p9
+        !> To p10
+
+instance
+  (CC.Crypto crypto) =>
+  FromCBOR (RewardProvenancePool crypto)
+  where
+  fromCBOR =
+    decode $
+      RecD RewardProvenancePool
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+
+instance
+  (CC.Crypto crypto) =>
+  ToCBOR (RewardProvenance crypto)
+  where
+  toCBOR (RewardProvenance p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16) =
+    encode $
+      Rec RewardProvenance
+        !> To p1
+        !> To p2
+        !> To p3
+        !> To p4
+        !> To p5
+        !> To p6
+        !> To p7
+        !> To p8
+        !> To p9
+        !> To p10
+        !> To p11
+        !> To p12
+        !> To p13
+        !> To p14
+        !> To p15
+        !> To p16
+
+instance
+  (CC.Crypto crypto) =>
+  FromCBOR (RewardProvenance crypto)
+  where
+  fromCBOR =
+    decode $
+      RecD RewardProvenance
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From

@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -81,7 +82,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -91,14 +92,16 @@ import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
+import Data.Constraint (Constraint)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Typeable
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
@@ -145,8 +148,10 @@ import Shelley.Spec.Ledger.Serialization
     runByteBuilder,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (Tx (..), ValidateScript, decodeWits, segwitTx, txWitsBytes)
+import Shelley.Spec.Ledger.Tx (TransTx, Tx (..), ValidateScript, decodeWits, segwitTx, txWitsBytes)
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
+
+-- =======================================================
 
 -- | The hash of a Block Header
 newtype HashHeader crypto = HashHeader {unHashHeader :: (Hash crypto (BHeader crypto))}
@@ -165,6 +170,12 @@ data TxSeq era = TxSeq'
   }
   deriving (Generic)
 
+type TransTxSeq (c :: Type -> Constraint) era =
+  ( c (Core.Script era),
+    c (Core.TxBody era),
+    c (Core.AuxiliaryData era)
+  )
+
 deriving via
   AllowThunksIn
     '[ "txSeqBodyBytes",
@@ -173,18 +184,18 @@ deriving via
      ]
     (TxSeq era)
   instance
-    ShelleyBased era => NoThunks (TxSeq era)
+    TransTx NoThunks era => NoThunks (TxSeq era)
 
 deriving stock instance
-  ShelleyBased era =>
+  (Era era, TransTxSeq Show era) =>
   Show (TxSeq era)
 
 deriving stock instance
-  ShelleyBased era =>
+  (Era era, TransTxSeq Eq era) =>
   Eq (TxSeq era)
 
 pattern TxSeq ::
-  (Era era, TxBodyConstraints era, ToCBOR (Core.AuxiliaryData era)) =>
+  (UsesTxBody era, UsesAuxiliary era, UsesScript era) =>
   StrictSeq (Tx era) ->
   TxSeq era
 pattern TxSeq xs <-
@@ -523,16 +534,18 @@ data Block era
   = Block' !(BHeader (Crypto era)) !(TxSeq era) BSL.ByteString
   deriving (Generic)
 
+type TransBlock c era = TransTxSeq c era
+
 deriving stock instance
-  ShelleyBased era =>
+  (Era era, TransBlock Show era) =>
   Show (Block era)
 
 deriving stock instance
-  ShelleyBased era =>
+  (Era era, TransBlock Eq era) =>
   Eq (Block era)
 
 deriving anyclass instance
-  ShelleyBased era =>
+  (Era era, TransBlock NoThunks era) =>
   NoThunks (Block era)
 
 pattern Block :: Era era => BHeader (Crypto era) -> TxSeq era -> Block era
@@ -554,13 +567,23 @@ constructMetadata :: Int -> Map Int a -> Seq (Maybe a)
 constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1])
 
 instance
-  Era era =>
+  (Era era, TransBlock ToCBOR era) =>
   ToCBOR (Block era)
   where
   toCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
 
+type BlockAnn era =
+  ( FromCBOR (Annotator (Core.Script era)),
+    FromCBOR (Annotator (Core.TxBody era)),
+    FromCBOR (Annotator (Core.AuxiliaryData era))
+  )
+
 blockDecoder ::
-  (ShelleyBased era, ValidateScript era) =>
+  ( ToCBOR (Core.TxBody era),
+    ToCBOR (Core.AuxiliaryData era),
+    BlockAnn era,
+    ValidateScript era
+  ) =>
   Bool ->
   forall s. Decoder s (Annotator (Block era))
 blockDecoder lax = annotatorSlice $
@@ -570,7 +593,11 @@ blockDecoder lax = annotatorSlice $
     pure $ Block' <$> header <*> txns
 
 txSeqDecoder ::
-  (ShelleyBased era, ValidateScript era) =>
+  ( ToCBOR (Core.TxBody era),
+    ToCBOR (Core.AuxiliaryData era),
+    BlockAnn era,
+    ValidateScript era
+  ) =>
   Bool ->
   forall s. Decoder s (Annotator (TxSeq era))
 txSeqDecoder lax = do
@@ -607,21 +634,31 @@ txSeqDecoder lax = do
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 instance
-  (ShelleyBased era, ValidateScript era) =>
+  ( BlockAnn era,
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.AuxiliaryData era),
+    ValidateScript era
+  ) =>
   FromCBOR (Annotator (Block era))
   where
   fromCBOR = blockDecoder False
 
-newtype LaxBlock era
-  = LaxBlock (Block era)
-  deriving (ToCBOR) via (Block era)
+newtype LaxBlock era = LaxBlock (Block era)
+
+instance (Era era, TransBlock ToCBOR era, Typeable era) => ToCBOR (LaxBlock era) where
+  toCBOR (LaxBlock x) = toCBOR x
 
 deriving stock instance
-  ShelleyBased era =>
+  (Era era, TransBlock Show era) =>
   Show (LaxBlock era)
 
 instance
-  (ShelleyBased era, ValidateScript era) =>
+  ( Era era,
+    BlockAnn era,
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.AuxiliaryData era),
+    ValidateScript era
+  ) =>
   FromCBOR (Annotator (LaxBlock era))
   where
   fromCBOR = fmap LaxBlock <$> blockDecoder True

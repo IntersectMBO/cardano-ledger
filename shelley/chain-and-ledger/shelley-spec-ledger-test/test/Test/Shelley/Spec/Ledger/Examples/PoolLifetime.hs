@@ -52,7 +52,7 @@ import Shelley.Spec.Ledger.Keys (asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( RewardUpdate (..),
     decayFactor,
-    emptyRewardUpdate,
+    emptyRewardUpdate
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
@@ -60,7 +60,6 @@ import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
     applyDecay,
-    emptyNonMyopic,
     leaderProbability,
     likelihood,
   )
@@ -121,6 +120,7 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
+import Data.Default.Class (def)
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -450,7 +450,7 @@ rewardUpdateEx4 =
       deltaR = DeltaCoin 6,
       rs = Map.empty,
       deltaF = DeltaCoin (-7),
-      nonMyopic = emptyNonMyopic {rewardPotNM = Coin 6}
+      nonMyopic = def {rewardPotNM = Coin 6}
     }
 
 expectedStEx4 ::
@@ -571,7 +571,7 @@ rewardUpdateEx6 =
       deltaR = DeltaCoin 4,
       rs = Map.empty,
       deltaF = invert $ toDeltaCoin feeTx4,
-      nonMyopic = emptyNonMyopic {rewardPotNM = Coin 4}
+      nonMyopic = def {rewardPotNM = Coin 4}
     }
 
 expectedStEx6 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)

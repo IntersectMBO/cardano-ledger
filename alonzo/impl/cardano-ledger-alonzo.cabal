@@ -38,7 +38,8 @@ library
     deepseq,
     nothunks,
     shelley-spec-ledger,
-    small-steps
+    small-steps,
+    text
   hs-source-dirs:
     src
   ghc-options:
@@ -86,6 +87,7 @@ test-suite tests
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
   build-depends:
     base >=4.14 && <4.15,
+    base16-bytestring,
     bytestring,
     cardano-binary,
     cardano-ledger-alonzo,

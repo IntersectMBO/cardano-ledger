@@ -16,23 +16,24 @@ where
 
 import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.SetAlgebra (dom, eval)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.List as List (find)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Records (HasField)
 import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.BlockChain
   ( LastAppliedBlock (..),
@@ -67,6 +68,8 @@ import Test.Shelley.Spec.Ledger.Utils
     testGlobals,
   )
 
+-- ======================================================
+
 -- | Type alias for a transaction generator
 type TxGen era =
   PParams era ->
@@ -79,13 +82,13 @@ type TxGen era =
 genBlock ::
   forall era.
   ( EraGen era,
-    Mock (Crypto era),
+    UsesTxBody era,
+    UsesAuxiliary era,
     ApplyBlock era,
+    Mock (Crypto era),
     GetLedgerView era,
-    ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+    QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
   ) =>
   GenEnv era ->
   ChainState era ->
@@ -95,11 +98,13 @@ genBlock ge = genBlockWithTxGen genTxs ge
     genTxs pp reserves ls s = do
       let ledgerEnv = LedgersEnv s pp reserves
 
-      sigGen @(LEDGERS era) ge ledgerEnv ls
+      sigGen @(Core.EraRule "LEDGERS" era) ge ledgerEnv ls
 
 genBlockWithTxGen ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     GetLedgerView era,
     ApplyBlock era
@@ -167,8 +172,7 @@ genBlockWithTxGen
 
 selectNextSlotWithLeader ::
   forall era.
-  ( ShelleyBased era,
-    Mock (Crypto era),
+  ( Mock (Crypto era),
     GetLedgerView era,
     ApplyBlock era
   ) =>

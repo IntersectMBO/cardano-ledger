@@ -8,6 +8,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -23,6 +24,16 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppMap',
+    ppMetadatum,
+    ppRecord,
+    ppStrictSeq,
+    ppWord64,
+    text,
+  )
 import Codec.CBOR.Decoding
   ( TokenType
       ( TypeListLen,
@@ -46,6 +57,8 @@ import Shelley.Spec.Ledger.Metadata
   ( Metadatum,
   )
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
+
+-- =======================================
 
 -- | Raw, un-memoised metadata type
 data AuxiliaryDataRaw era = AuxiliaryDataRaw
@@ -148,3 +161,17 @@ deriving via
       Core.AnnotatedData (Core.Script era)
     ) =>
     FromCBOR (Annotator (AuxiliaryData era))
+
+-- =================================
+-- Pretty printers
+
+ppAuxiliaryData :: PrettyA (Core.Script era) => AuxiliaryData era -> PDoc
+ppAuxiliaryData (AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw m sp) _)) =
+  ppRecord
+    "AuxiliaryData"
+    [ ("metadata", ppMap' (text "Metadata") ppWord64 ppMetadatum m),
+      ("auxiliaryscripts", ppStrictSeq prettyA sp)
+    ]
+
+instance PrettyA (Core.Script era) => PrettyA (AuxiliaryData era) where
+  prettyA = ppAuxiliaryData

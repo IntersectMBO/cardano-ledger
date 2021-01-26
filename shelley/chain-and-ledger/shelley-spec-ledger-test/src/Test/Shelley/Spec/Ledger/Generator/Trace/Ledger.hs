@@ -16,14 +16,23 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.Constraints
+  ( TransValue,
+    UsesAuxiliary,
+    UsesTxBody,
+    UsesTxOut,
+    UsesValue,
+  )
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.State.Transition.Extended (IRC, TRC (..))
+import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Functor.Identity (runIdentity)
+import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -36,11 +45,14 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
     genesisState,
   )
+import Shelley.Spec.Ledger.STS.Delegs (DelegsEnv)
+import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv, DelplPredicateFailure)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx)
-import Shelley.Spec.Ledger.TxBody (Ix, TxIn, TxOut)
+import Shelley.Spec.Ledger.TxBody (DCert, Ix, TxIn)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
@@ -50,6 +62,7 @@ import Test.Shelley.Spec.Ledger.Generator.EraGen
     genUtxo0,
   )
 import Test.Shelley.Spec.Ledger.Generator.Presets (genesisDelegs0)
+import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Utils
@@ -57,6 +70,9 @@ import Test.Shelley.Spec.Ledger.Utils
     applySTSTest,
     runShelleyBase,
   )
+import Data.Default.Class (Default)
+
+-- ======================================================
 
 genAccountState :: Constants -> Gen AccountState
 genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
@@ -68,11 +84,31 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- with meaningful delegation certificates.
 instance
   ( EraGen era,
+    UsesTxBody era,
+    UsesTxOut era,
+    UsesValue era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
+    TransValue ToCBOR era,
+    Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era,
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   TQC.HasTrace (LEDGER era) (GenEnv era)
   where
@@ -92,11 +128,23 @@ instance
 instance
   forall era.
   ( EraGen era,
+    UsesTxBody era,
+    UsesTxOut era,
+    UsesValue era,
+    UsesAuxiliary era,
     Mock (Crypto era),
     ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
+    Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era,
+    Embed (Core.EraRule "DELEG" era) (DELPL era),
+    Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   TQC.HasTrace (LEDGERS era) (GenEnv era)
   where
@@ -128,7 +176,7 @@ instance
 
           let res =
                 runShelleyBase $
-                  applySTSTest @(LEDGER era)
+                  applySTSTest @(Core.EraRule "LEDGER" era)
                     (TRC (ledgerEnv, (u, dp), tx))
           pure $ case res of
             Left pf ->
@@ -149,7 +197,11 @@ instance
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
   forall a era.
-  EraGen era =>
+  ( UsesValue era,
+    UsesTxOut era,
+    EraGen era,
+    Default (State (Core.EraRule "PPUP" era))
+  ) =>
   GenEnv era ->
   IRC (LEDGER era) ->
   Gen (Either a (UTxOState era, DPState (Crypto era)))

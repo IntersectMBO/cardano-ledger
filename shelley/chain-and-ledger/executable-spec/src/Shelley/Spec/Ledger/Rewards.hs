@@ -12,7 +12,6 @@ module Shelley.Spec.Ledger.Rewards
   ( desirability,
     PerformanceEstimate (..),
     NonMyopic (..),
-    emptyNonMyopic,
     getTopRankedPools,
     StakeShare (..),
     mkApparentPerformance,
@@ -45,6 +44,7 @@ import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (eval, (◁))
 import Control.Provenance (ProvM, modifyM)
+import Data.Default.Class (Default, def)
 import Data.Foldable (find, fold)
 import Data.Function (on)
 import Data.List (sortBy)
@@ -90,8 +90,6 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
   )
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), getRwdCred)
-
--- ==================================================================
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
   deriving (Eq, Generic, Ord, Num, NFData, NoThunks, ToCBOR, FromCBOR)
@@ -243,8 +241,8 @@ data NonMyopic crypto = NonMyopic
   }
   deriving (Show, Eq, Generic)
 
-emptyNonMyopic :: NonMyopic crypto
-emptyNonMyopic = NonMyopic Map.empty (Coin 0)
+instance Default (NonMyopic crypto) where
+  def = NonMyopic Map.empty (Coin 0)
 
 instance NoThunks (NonMyopic crypto)
 
@@ -271,7 +269,7 @@ instance CC.Crypto crypto => FromCBOR (NonMyopic crypto) where
             rewardPotNM = rp
           }
 
--- | Desirability calculation for non-myopic utily,
+-- | Desirability calculation for non-myopic utility,
 -- corresponding to f^~ in section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 desirability ::

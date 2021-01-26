@@ -17,7 +17,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (HASH)
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesTxOut)
 import Cardano.Slotting.Slot (SlotNo)
 import Data.Coerce (coerce)
 import Data.Sequence.Strict (StrictSeq)
@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.Tx
   ( TxId (TxId),
     ValidateScript (..),
   )
-import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut, Wdrl)
+import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
@@ -53,29 +53,31 @@ import Test.Shelley.Spec.Ledger.Utils (Split (..))
  -----------------------------------------------------------------------------}
 
 class
-  ( ShelleyBased era,
+  ( UsesScript era,
     ValidateScript era,
     Split (Core.Value era),
-    Show (Core.Script era),
-    ScriptClass era
+    ScriptClass era,
+    Show (Core.Script era)
   ) =>
   EraGen era
   where
   -- | Generate a genesis value for the Era
   genGenesisValue :: GenEnv era -> Gen (Core.Value era)
 
-  -- | Given some pre-generated data, generate an era-specific TxBody
+  -- | Given some pre-generated data, generate an era-specific TxBody,
+  -- and a list of additional scripts for eras that sometimes require
+  -- additional script witnessing.
   genEraTxBody ::
     GenEnv era ->
     SlotNo ->
     Set (TxIn (Crypto era)) ->
-    StrictSeq (TxOut era) ->
+    StrictSeq (Core.TxOut era) ->
     StrictSeq (DCert (Crypto era)) ->
     Wdrl (Crypto era) ->
     Coin ->
     StrictMaybe (Update era) ->
     StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-    Gen (Core.TxBody era)
+    Gen (Core.TxBody era, [Core.Script era])
 
   -- | Generate era-specific auxiliary data
   genEraAuxiliaryData :: Constants -> Gen (StrictMaybe (Core.AuxiliaryData era))
@@ -85,7 +87,7 @@ class
     Core.TxBody era ->
     Coin ->
     Set (TxIn (Crypto era)) ->
-    StrictSeq (TxOut era) ->
+    StrictSeq (Core.TxOut era) ->
     Core.TxBody era
 
 {------------------------------------------------------------------------------
@@ -94,14 +96,14 @@ class
 
 genUtxo0 ::
   forall era.
-  EraGen era =>
+  (EraGen era, UsesTxOut era) =>
   GenEnv era ->
   Gen (UTxO era)
 genUtxo0 ge@(GenEnv _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts @era c minGenesisUTxOouts maxGenesisUTxOouts
   outs <-
-    genTxOut
+    (genTxOut @era)
       (genGenesisValue @era ge)
       (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr' Testnet) genesisScripts)
   return (genesisCoins genesisId outs)

@@ -96,7 +96,7 @@ initUTxO =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStGenesisDeleg :: forall era. (ShelleyTest era) => ChainState era
+initStGenesisDeleg :: forall era. ShelleyTest era => ChainState era
 initStGenesisDeleg = initSt initUTxO
 
 --

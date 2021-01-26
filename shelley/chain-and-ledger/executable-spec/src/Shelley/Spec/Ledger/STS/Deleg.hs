@@ -52,7 +52,6 @@ import Shelley.Spec.Ledger.LedgerState
     DState,
     FutureGenDeleg (..),
     InstantaneousRewards (..),
-    emptyDState,
     _delegations,
     _fGenDelegs,
     _genDelegs,
@@ -114,7 +113,7 @@ data DelegPredicateFailure era
       !Coin -- size of the pot from which the lovelace is drawn
   | MIRCertificateTooLateinEpochDELEG
       !SlotNo -- current slot
-      !SlotNo -- MIR must be submitted before this slot
+      !SlotNo -- Core.EraRule "MIR" must be submitted before this slot
   | DuplicateGenesisVRFDELEG
       !(Hash (Crypto era) (VerKeyVRF (Crypto era))) --VRF KeyHash which is already delegated to
   deriving (Show, Eq, Generic)
@@ -126,7 +125,6 @@ instance Typeable era => STS (DELEG era) where
   type BaseM (DELEG era) = ShelleyBase
   type PredicateFailure (DELEG era) = DelegPredicateFailure era
 
-  initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
 
 instance NoThunks (DelegPredicateFailure era)

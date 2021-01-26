@@ -4,11 +4,12 @@
 module Main where
 
 import Test.Cardano.Ledger.Allegra ()
+import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
-import Test.Cardano.Ledger.EraBuffet (AllegraEra, TestCrypto)
+import Test.Cardano.Ledger.EraBuffet (AllegraEra, MaryEra, TestCrypto)
+import Test.Cardano.Ledger.Mary ()
 import Test.Cardano.Ledger.Mary.Examples.MultiAssets (multiAssetsExample)
 import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
-import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Mary.Value (valTests)
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
@@ -56,7 +57,14 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "ShelleyMA Ledger - nightly"
-    [ propertyTests @(AllegraEra TestCrypto)
+    [ testGroup
+        "Allegra Ledger - nightly"
+        [ propertyTests @(AllegraEra TestCrypto)
+        ],
+      testGroup
+        "Mary Ledger - nightly"
+        [ propertyTests @(MaryEra TestCrypto)
+        ]
     ]
 
 -- main entry point

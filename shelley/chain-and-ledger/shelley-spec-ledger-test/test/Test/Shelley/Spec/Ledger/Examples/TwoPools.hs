@@ -60,8 +60,8 @@ import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
-  ( RewardUpdate (..),
-    emptyRewardUpdate,
+  ( RewardUpdate (..)
+  , emptyRewardUpdate
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..), ProtVer (..))
@@ -69,7 +69,6 @@ import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
     StakeShare (..),
-    emptyNonMyopic,
     leaderProbability,
     leaderRew,
     likelihood,
@@ -131,6 +130,7 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
+import Data.Default.Class (def)
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -378,7 +378,7 @@ rewardUpdateEx4 =
       deltaR = toDeltaCoin deltaREx4, -- No rewards paid out, fees go to reserves
       rs = Map.empty,
       deltaF = invert $ toDeltaCoin feeTx1,
-      nonMyopic = emptyNonMyopic {rewardPotNM = feeTx1}
+      nonMyopic = def {rewardPotNM = feeTx1}
     }
 
 expectedStEx4 ::

@@ -28,7 +28,6 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.ShelleyMA.Timelocks (translate)
 import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
@@ -36,7 +35,7 @@ import Shelley.Spec.Ledger.API
 import qualified Shelley.Spec.Ledger.LedgerState as LS
   ( returnRedeemAddrsToReserves,
   )
-import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..))
+import Shelley.Spec.Ledger.Tx (decodeWits)
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Allegra
@@ -179,13 +178,11 @@ instance Crypto c => TranslateEra (AllegraEra c) EpochState where
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) WitnessSet where
-  translateEra _ctxt WitnessSet {addrWits, scriptWits, bootWits} =
-    pure $
-      WitnessSet
-        { addrWits = addrWits,
-          scriptWits = Map.map translate scriptWits,
-          bootWits = bootWits
-        }
+  type TranslationError (AllegraEra c) WitnessSet = DecoderError
+  translateEra _ctx ws =
+    case decodeAnnotator "witnessSet" decodeWits (serialize ws) of
+      Right new -> pure new
+      Left decoderError -> throwError decoderError
 
 instance Crypto c => TranslateEra (AllegraEra c) Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en
