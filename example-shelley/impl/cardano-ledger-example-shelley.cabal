@@ -1,6 +1,6 @@
 cabal-version:       2.2
 
-name:                example-shelley
+name:                cardano-ledger-example-shelley
 version:             0.1.0.0
 synopsis:            Example era within Shelley context
 description:
