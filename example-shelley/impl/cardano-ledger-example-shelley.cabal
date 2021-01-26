@@ -25,7 +25,6 @@ library
     Cardano.Ledger.ExampleShelley.Timelocks
     Cardano.Ledger.ExampleShelley.TxBody
     Cardano.Ledger.ExampleShelley.Value
-    Cardano.Ledger.ExampleShelley.Rules.EraMapping
     Cardano.Ledger.ExampleShelley.Rules.Utxo
     Cardano.Ledger.ExampleShelley.Rules.Utxow
 
