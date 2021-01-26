@@ -20,7 +20,6 @@ import Cardano.Ledger.Core
     Value,
   )
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Torsor (Torsor (..))
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
 import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy)
@@ -49,13 +48,10 @@ class
     Val (Value era),
     Compactible (Value era),
     ChainData (Value era),
-    ChainData (Delta (Value era)),
     SerialisableData (Value era),
-    SerialisableData (Delta (Value era)),
     DecodeNonNegative (Value era),
     EncodeMint (Value era),
-    DecodeMint (Value era),
-    Torsor (Value era)
+    DecodeMint (Value era)
   ) =>
   UsesValue era
 
@@ -87,13 +83,11 @@ type UsesAuxiliary era =
   )
 
 -- | Apply 'c' to all the types transitively involved with Value when
--- (Core.Value era) is an instance of Compactible and Torsor
+-- (Core.Value era) is an instance of Compactible
 type TransValue (c :: Type -> Constraint) era =
   ( Era era,
     Compactible (Value era),
-    Torsor (Value era),
-    c (Value era),
-    c (Delta (Value era))
+    c (Value era)
   )
 
 -- | General constraints that will hold true for ledgers which are based on
