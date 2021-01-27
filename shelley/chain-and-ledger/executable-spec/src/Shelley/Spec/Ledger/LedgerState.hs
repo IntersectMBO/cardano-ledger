@@ -83,7 +83,7 @@ module Shelley.Spec.Ledger.LedgerState
 
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
-    updateNonMypopic,
+    updateNonMyopic,
 
     -- *
     TransUTxOState,
@@ -1050,12 +1050,12 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
 decayFactor :: Float
 decayFactor = 0.9
 
-updateNonMypopic ::
+updateNonMyopic ::
   NonMyopic crypto ->
   Coin ->
   Map (KeyHash 'StakePool crypto) Likelihood ->
   NonMyopic crypto
-updateNonMypopic nm rPot newLikelihoods =
+updateNonMyopic nm rPot newLikelihoods =
   nm
     { likelihoodsNM = updatedLikelihoods,
       rewardPotNM = rPot
@@ -1171,7 +1171,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
         deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
         rs = rs_,
         deltaF = (invert (toDeltaCoin $ _feeSS ss)),
-        nonMyopic = (updateNonMypopic nm _R newLikelihoods)
+        nonMyopic = (updateNonMyopic nm _R newLikelihoods)
       }
 
 -- | Calculate the current circulation

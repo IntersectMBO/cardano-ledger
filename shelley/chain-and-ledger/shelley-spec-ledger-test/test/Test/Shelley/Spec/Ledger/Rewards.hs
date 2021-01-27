@@ -115,7 +115,7 @@ import Shelley.Spec.Ledger.LedgerState
     AccountState(..),
     LedgerState(..),
     circulation,
-    updateNonMypopic,
+    updateNonMyopic,
   )
 import Shelley.Spec.Ledger.API.Wallet(getRewardInfo)
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
