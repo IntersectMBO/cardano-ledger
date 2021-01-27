@@ -2,7 +2,7 @@
 \label{sec:transactions}
 
 This section outlines the changes that are needed to the transaction
-structure to enable non-native scripts to validate
+structure to enable native scripts to validate
 the minting of tokens, spending outputs, verifying certificates, and
 verifying withdrawals.
 %
@@ -10,7 +10,7 @@ Figure \ref{fig:defs:utxo-shelley-1} gives the modified transaction types.
 We make the following changes and additions:
 
 \begin{itemize}
-  \item $\ScriptDataHash$ is the type of a hash of script execution
+  \item $\WitnessPPDataHash$ is the type of a hash of script execution
   related data. It is the hash of $\fun{txrdmrs}$ and relevant protocol parameters.
 
   \item $\ScriptNative$ is the type of native scripts.
@@ -27,11 +27,11 @@ We make the following changes and additions:
   constructing a block, and its correctness is verified as part of the script execution.
 
   \item $\TxOut$ is the type of transaction outputs. These are extended to include
-  an optional hash of a data item. Note that \emph{any} output can
+  an optional hash of a datum. Note that \emph{any} output can
   optionally include such a hash, even though only non-native scripts
   can actually use the hash value. Since it is in general impossible for the ledger implementation to
   know at the time of transaction creation whether or not an output belongs to a non-native
-  script, we simply allow any output to contain a data hash.
+  script, we simply allow any output to contain a hash of a datum.
 
   \item $\Tag$ lets us differentiate what a script
   can validate, i.e. \\
@@ -53,7 +53,7 @@ We make the following changes and additions:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\quad\quad\quad\quad}r}
-      \var{sdh} &\ScriptDataHash & \text{Script data hash}\\
+      \var{sdh} &\WitnessPPDataHash & \text{Script data hash}\\
       \var{plc} & \ScriptPlutus & \text{Plutus core scripts} \\
       \var{d} & \Data & \text{Generic script data}
     \end{array}
@@ -95,8 +95,8 @@ We make the following changes and additions:
     \fun{language}& \in \ScriptNonNative \to \Language\\
     \fun{hashData}& \in \Data \to \DataHash
     \nextdef
-    \fun{hashScriptData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Data \times \ExUnits) \to \ScriptDataHash^? \\
-    \fun{hashScriptData}&~{pp}~{langs}~{rdmrs}~=~ \\
+    \fun{hashWitnessPPData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Data \times \ExUnits) \to \WitnessPPDataHash^? \\
+    \fun{hashWitnessPPData}&~{pp}~{langs}~{rdmrs}~=~ \\
                           &\begin{cases}
                             \Nothing & rdmrs~=~\emptyset \land langs~=~\emptyset \\
                             \fun{hash} (rdmrs, \{ \fun{hashLanguagePP}~pp~l \mid l \in langs \}) & \text{otherwise}
@@ -135,7 +135,7 @@ We make the following changes and additions:
        & \times ~\Slot^? \times \Slot^? & \fun{txvldt} & \text{Validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
        & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
-       & \times ~\hldiff{\ScriptDataHash^?} & \hldiff{\fun{sdHash}} & \text{Hash of script-related data}\\
+       & \times ~\hldiff{\WitnessPPDataHash^?} & \hldiff{\fun{wppHash}} & \text{Hash of script-related data}\\
        & \times ~\AuxiliaryDataHash^? & \fun{txADhash} & \text{Auxiliary data hash}\\
     \end{array}
   \end{equation*}
@@ -168,8 +168,8 @@ in a transaction that is needed for witnessing, namely:
 
 \begin{itemize}
   \item VKey signatures;
-  \item a map of scripts, including non-native scripts;
-  \item a map of terms of type $\Data$, containing all required datum objects; and
+  \item a map of scripts indexed by their hashes, including non-native scripts;
+  \item a map of terms of type $\Data$ indexed by their hashes, containing all required datum objects; and
   \item a map of $\Data$ and $\ExUnits$ values indexed by $\RdmrPtr$, containing the redeemers and execution units budgets.
 \end{itemize}
 

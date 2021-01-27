@@ -53,7 +53,7 @@ Introducing a new language will require a major protocol version update, since t
 \label{sec:determinism}
 
 The data that is passed to the interpreter
-includes the validator script, the redeemer, information about the transaction that
+includes the validator script, the redeemer, possibly a datum from the UTxO, information about the transaction that
 embeds the script, any relevant ledger data, and any relevant protocol parameters.
 It is necessary for the validation outcome of any scripts to remain the same during the entire
 period between transaction
@@ -65,8 +65,8 @@ The transaction therefore includes a hash of any data that is not determined by 
 When the transaction is processed, as part of the UTXOW rule, this hash is compared with a hash of the data that is passed to the interpreter. This
 ensures that scripts are only executed if they have been provided with the intended data.
 
-The $\fun{hashLanguagePP}$ function (Figure~\ref{fig:defs:protocol-parameters}) selects the protocol parameters that are relevant to
-a given set of languages and computes their hash.
+The $\fun{getLanguageView}$ function (Figure~\ref{fig:defs:protocol-parameters}) selects the protocol parameters that are relevant to
+a given set of languages.
 %
 At the time of writing, the only parameter that needs to be passed to the interpreter is the cost model.
 
@@ -95,7 +95,7 @@ The parameters are used to ensure that the time and memory that are required to 
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad}r}
       \var{cm} & \CostMod & \text{Coefficients for the cost model} \\
-      \var{pph} & \PPHash & \text{Hash of a protocol parameter}
+      \var{ldv} & \LangDepView & \text{Language-dependent view of the protocol parameters}
     \end{array}
   \end{equation*}
   %
@@ -139,8 +139,8 @@ The parameters are used to ensure that the time and memory that are required to 
   \emph{Helper Functions}
   %
   \begin{align*}
-    & \fun{hashLanguagePP} \in \PParams \to \Language \to \PPHash \\
-    & \fun{hashLanguagePP}~\var{pp}~\Plutus = \fun{hash}~(\{\Plutus\} \restrictdom \fun{costmdls}~{pp})
+    & \fun{getLanguageView} \in \PParams \to \Language \to \LangDepView \\
+    & \fun{getLanguageView}~\var{pp}~\Plutus = \{\Plutus\} \restrictdom \fun{costmdls}~{pp}
   \end{align*}
   %
   \caption{Definitions Used in Protocol Parameters}

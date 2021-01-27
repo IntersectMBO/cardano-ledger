@@ -34,13 +34,16 @@ We make a number of changes to the UTxO model (see Figure~\ref{fig:defs:utxo-def
         s \in \ScriptNonNative & a \in \AddrScr \land \fun{validatorHash}~a \mapsto s \in \fun{txscripts} (\fun{txwits}~tx) \\
         \False & \text{otherwise}
       \end{cases}
+                 \nextdef
+    & \fun{exunits} \in \Tx \to \ExUnits \\
+    & \fun{exunits}~\var{tx} = \sum_{\wcard \mapsto (\wcard, eu) \in \fun{txrdmrs}~(\fun{txwits}~tx)} eu
     \nextdef
     & \fun{feesOK} \in \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo~= \\
-    &~~(\forall (a, \wcard, \_) \in \fun{range}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo}), \neg \fun{isNonNativeScriptAddress}~tx~a) \\
-    &~~\wedge~ \var{balance} \in \Coin \\
-    &~~      \wedge~ (\fun{exunits}~tx \neq (0, 0) \Rightarrow \var{balance} \geq \txfee{txb}) \\
-    &~~      \wedge~ \minfee{pp}~{tx} \leq \txfee{txb} \\
+    &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{exunits}~tx \neq (0, 0) \Rightarrow \\
+    &~~~~~~(\forall (a, \wcard, \_) \in \fun{range}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo}), \neg \fun{isNonNativeScriptAddress}~tx~a) \\
+    &~~~~~~\wedge~ \var{balance} \in \Coin \\
+    &~~~~~~      \wedge~ \var{balance} \geq \txfee{txb}) \\
     &~~      \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
     & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo})
@@ -67,13 +70,12 @@ We have added or changed several functions that deal with fees as shown in Figur
   \item The predicate $\fun{feesOK}$ checks whether the transaction is
   paying the necessary fees, and that it does it correctly. That is, it checks that:
   \begin{enumerate}[label=({\roman*})]
-    \item the fee-marked inputs do not have attached data, which implies that they
-      cannot be validated by non-native scripts;
-    \item all the fee-marked inputs contain strictly Ada and no other kinds of token;
-    \item the fee-marked inputs are sufficient to cover the fee amount that is stated
-    in the transaction; and
     \item the fee amount that the transaction states it is paying suffices to cover
-    the minimum fee that the transaction is obligated to pay.
+    the minimum fee that the transaction is obligated to pay; and if the transaction uses non-native scripts, that
+    \item the fee-marked inputs do not belong to non-native script addresses;
+    \item all the fee-marked inputs contain strictly Ada and no other kinds of token; and
+    \item the fee-marked inputs are sufficient to cover the fee amount that is stated
+    in the transaction.
   \end{enumerate}
   \item The function $\fun{txins}$ returns the UTxO keys of transaction inputs.
 \end{itemize}
@@ -86,8 +88,6 @@ Figure~\ref{fig:defs:utxo-defs} defines the functions that are needed for the UT
 The changes are:
 
 \begin{itemize}
-  \item The $\fun{getCoin}$ function is adjusted for the new $\TxOut$ type.
-
   \item $\fun{txscriptfee}$ calculates the fee that a transaction must pay for script
   execution based on the amount of $\ExUnits$ it has budgeted, and the prices in the current protocol parameters
   for each component of $\ExUnits$.
@@ -564,10 +564,12 @@ We have made the following changes and additions to the UTXOW preconditions:
 
 \begin{itemize}
 
-\item All the native scripts in the transaction are validate;
+\item All the native scripts in the transaction validate;
 
   \item For every item that needs to be validated by a non-native script, the transaction contains
-    a redeemer and in case it validates spending an ouput also a datum;
+    a redeemer;
+
+    \item The datums included in the witnesses are exactly those that are required for validating;
 
     \item The transaction contains exactly those scripts that are required for witnessing and no
     additional ones;
@@ -634,7 +636,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \lor
       (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
-      \hldiff{\fun{sdHash}~{txb}~=~\fun{hashScriptData}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})}
+      \hldiff{\fun{sdHash}~{txb}~=~\fun{hashWitnessPPData}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})}
       \\~\\
       {
         \begin{array}{r}
