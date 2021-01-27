@@ -22,11 +22,13 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
+import Data.Default.Class (def)
 import Data.Group (invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes
@@ -60,20 +62,28 @@ import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
-  ( RewardUpdate (..)
-  , emptyRewardUpdate
+  ( RewardUpdate (..),
+    emptyRewardUpdate,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.PParams (PParams' (..), ProtVer (..))
+import Shelley.Spec.Ledger.PParams
+  ( PParams,
+    PParams' (..),
+    ProtVer (..),
+  )
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
+    Reward (..),
+    RewardType (..),
     StakeShare (..),
+    aggregateRewards,
     leaderProbability,
     leaderRew,
     likelihood,
     memberRew,
     mkApparentPerformance,
+    sumRewards,
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.Slot
@@ -98,7 +108,7 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import qualified Test.Shelley.Spec.Ledger.Examples.Combinators as C
@@ -129,8 +139,7 @@ import Test.Shelley.Spec.Ledger.Utils
     testGlobals,
   )
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase)
-import Data.Default.Class (def)
+import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -691,15 +700,13 @@ nonMyopicEx9 =
     )
     bigR
 
-rsEx9 :: forall c. ExMock c => Map (Credential 'Staking c) Coin
-rsEx9 = Map.singleton Cast.carlSHK (carlLeaderRewardsFromAlice @c)
-
 rewardUpdateEx9 ::
-  forall c.
-  ExMock c =>
-  Map (Credential 'Staking c) Coin ->
-  RewardUpdate c
-rewardUpdateEx9 rewards =
+  forall era.
+  ExMock (Crypto era) =>
+  PParams era ->
+  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
+  RewardUpdate (Crypto era)
+rewardUpdateEx9 pp rewards =
   RewardUpdate
     { deltaT = DeltaCoin deltaTEx9,
       deltaR = (invert $ toDeltaCoin deltaR1Ex9) <> toDeltaCoin deltaR2Ex9,
@@ -708,18 +715,19 @@ rewardUpdateEx9 rewards =
       nonMyopic = nonMyopicEx9
     }
   where
-    deltaR2Ex9 = bigR <-> (Map.foldr (<+>) mempty rewards)
+    deltaR2Ex9 = bigR <-> (sumRewards pp rewards)
 
 expectedStEx9 ::
   forall era.
   (ShelleyTest era, ExMock (Crypto era)) =>
-  Map (Credential 'Staking (Crypto era)) Coin ->
+  PParams era ->
+  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
   ChainState era
-expectedStEx9 rewards =
+expectedStEx9 pp rewards =
   C.evolveNonceFrozen (getBlockNonce (blockEx9 @era))
     . C.newLab blockEx9
     . C.setOCertCounter coreNodeHK 2
-    . C.rewardUpdate (rewardUpdateEx9 rewards)
+    . C.rewardUpdate (rewardUpdateEx9 pp rewards)
     $ expectedStEx8
   where
     coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @era ppEx 390
@@ -729,34 +737,51 @@ expectedStEx9 rewards =
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.
 twoPools9 :: forall era. (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
-twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 rsEx9)
+twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 ppEx rsEx9Agg)
 
 --
 -- Now test with Aggregation
 --
 
-rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) Coin
+rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Reward c))
 rsEx9Agg =
   Map.singleton
     Cast.carlSHK
-    ( carlMemberRewardsFromAlice @c
-        <> carlLeaderRewardsFromAlice @c
-        <> carlLeaderRewardsFromBob @c
+    ( Set.fromList $
+        [ Reward MemberReward (hk Cast.alicePoolKeys) (carlMemberRewardsFromAlice @c),
+          Reward LeaderReward (hk Cast.alicePoolKeys) (carlLeaderRewardsFromAlice @c),
+          Reward LeaderReward (hk Cast.bobPoolKeys) (carlLeaderRewardsFromBob @c)
+        ]
     )
 
+ppProtVer3 :: PParams era
+ppProtVer3 = ppEx {_protocolVersion = ProtVer 3 0}
+
 expectedStEx8Agg :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
-expectedStEx8Agg = C.setPrevPParams (ppEx {_protocolVersion = ProtVer 3 0}) expectedStEx8
+expectedStEx8Agg = C.setPrevPParams ppProtVer3 expectedStEx8
 
 expectedStEx9Agg :: forall era. (ShelleyTest era, ExMock (Crypto era)) => ChainState era
-expectedStEx9Agg =
-  C.setPrevPParams
-    (ppEx {_protocolVersion = ProtVer 3 0})
-    (expectedStEx9 rsEx9Agg)
+expectedStEx9Agg = C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3 rsEx9Agg)
 
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.
 twoPools9Agg :: forall era. (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
 twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
+
+testAggregateRewardsLegacy :: Assertion
+testAggregateRewardsLegacy =
+  (aggregateRewards @C) ppEx rsEx9Agg
+    @?= Map.singleton Cast.carlSHK (carlLeaderRewardsFromBob @(Crypto C))
+
+testAggregateRewardsNew :: Assertion
+testAggregateRewardsNew =
+  (aggregateRewards @C) ppProtVer3 rsEx9Agg
+    @?= Map.singleton
+      Cast.carlSHK
+      ( carlLeaderRewardsFromAlice @(Crypto C)
+          <> carlLeaderRewardsFromBob @(Crypto C)
+          <> carlMemberRewardsFromAlice @(Crypto C)
+      )
 
 --
 -- Two Pools Test Group
@@ -767,7 +792,9 @@ twoPoolsExample =
   testGroup
     "two pools"
     [ testCase "create non-aggregated rewards" $ testCHAINExample twoPools9,
-      testCase "create aggregated rewards" $ testCHAINExample twoPools9Agg
+      testCase "create aggregated rewards" $ testCHAINExample twoPools9Agg,
+      testCase "create legacy aggregatedRewards" $ testAggregateRewardsLegacy,
+      testCase "create new aggregatedRewards" $ testAggregateRewardsNew
     ]
 
 -- This test group tests each block individually, which is really only

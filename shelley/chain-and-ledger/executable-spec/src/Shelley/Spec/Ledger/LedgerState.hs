@@ -197,10 +197,13 @@ import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
     PerformanceEstimate (..),
+    Reward (..),
+    aggregateRewards,
     applyDecay,
     desirability,
     percentile',
     reward,
+    sumRewards,
   )
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
@@ -403,7 +406,7 @@ instance
 data RewardUpdate crypto = RewardUpdate
   { deltaT :: !DeltaCoin,
     deltaR :: !DeltaCoin,
-    rs :: !(Map (Credential 'Staking crypto) Coin),
+    rs :: !(Map (Credential 'Staking crypto) (Set (Reward crypto))),
     deltaF :: !DeltaCoin,
     nonMyopic :: !(NonMyopic crypto)
   }
@@ -1027,7 +1030,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     (regRU, unregRU) =
       Map.partitionWithKey
         (\k _ -> eval (k ∈ dom (_rewards dState)))
-        (rs ru)
+        (aggregateRewards pp $ rs ru)
     as' =
       as
         { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold (range unregRU),
@@ -1118,7 +1121,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           asc
           slotsPerEpoch
       )
-  let deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
+  let deltaR2 = _R <-> (sumRewards pr rs_)
       -- add under 'key' the pair (LikeliHoodEstimate,Desirability) to the Map 'ans'
       addDesire ans key likelihood = case Map.lookup key poolParams of
         Nothing ->

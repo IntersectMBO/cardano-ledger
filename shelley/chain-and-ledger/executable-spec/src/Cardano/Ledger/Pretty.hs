@@ -108,6 +108,8 @@ import Shelley.Spec.Ledger.Rewards
     LogWeight (..),
     NonMyopic (..),
     PerformanceEstimate (..),
+    Reward (..),
+    RewardType (..),
     StakeShare (..),
   )
 import Shelley.Spec.Ledger.Scripts (MultiSig (..), ScriptHash (..))
@@ -393,13 +395,26 @@ ppPState (PState par fpar ret) =
 ppRewardAccounts :: Map.Map (Credential 'Staking crypto) Coin -> PDoc
 ppRewardAccounts m = ppMap' (text "RewardAccounts") ppCredential ppCoin m
 
+ppRewardType :: RewardType -> PDoc
+ppRewardType MemberReward = text "MemberReward"
+ppRewardType LeaderReward = text "LeaderReward"
+
+ppReward :: Reward crypto -> PDoc
+ppReward (Reward rt pool amt) =
+  ppRecord
+    "Reward"
+    [ ("rewardType", ppRewardType rt),
+      ("poolId", ppKeyHash pool),
+      ("rewardAmount", ppCoin amt)
+    ]
+
 ppRewardUpdate :: RewardUpdate crypto -> PDoc
 ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
   ppRecord
     "RewardUpdate"
     [ ("deltaT", ppDeltaCoin dt),
       ("deltaR", ppDeltaCoin dr),
-      ("rs", ppMap' mempty ppCredential ppCoin rss),
+      ("rs", ppMap' mempty ppCredential (ppSet ppReward) rss),
       ("deltaF", ppDeltaCoin df),
       ("nonMyopic", ppNonMyopic nonmyop)
     ]
