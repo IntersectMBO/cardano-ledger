@@ -8,6 +8,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -23,7 +24,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -34,6 +35,7 @@ import Cardano.Ledger.Pretty
     ppWord64,
     text,
   )
+import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, HashAnnotated, SafeToHash)
 import Codec.CBOR.Decoding
   ( TokenType
       ( TypeListLen,
@@ -82,7 +84,9 @@ deriving instance
 
 newtype AuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes (AuxiliaryDataRaw era))
   deriving (Generic, Typeable)
-  deriving newtype (ToCBOR)
+  deriving newtype (ToCBOR, SafeToHash)
+
+instance (c ~ Crypto era) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c
 
 deriving newtype instance
   (Era era, Core.ChainData (Core.Script era)) =>

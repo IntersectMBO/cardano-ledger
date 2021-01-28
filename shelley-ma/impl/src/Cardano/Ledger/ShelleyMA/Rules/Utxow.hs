@@ -11,7 +11,7 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
@@ -122,7 +122,6 @@ instance
     UsesAuxiliary era,
     UsesScript era,
     ValidateScript era,
-    ValidateAuxiliaryData era,
     GetPolicies (Core.Value era) (Crypto era),
     Embed (Core.EraRule "UTXO" era) (UTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,

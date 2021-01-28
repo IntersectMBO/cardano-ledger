@@ -11,7 +11,6 @@ module Shelley.Spec.Ledger.Bench.Gen
   )
 where
 
-import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
@@ -107,7 +106,6 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 genTriple ::
   ( EraGen era,
     Mock (Crypto era),
-    ValidateAuxiliaryData era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),

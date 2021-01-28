@@ -17,7 +17,6 @@
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
 import Cardano.Binary (ToCBOR)
-import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints
@@ -89,7 +88,6 @@ instance
     UsesValue era,
     UsesAuxiliary era,
     Mock (Crypto era),
-    ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
     TransValue ToCBOR era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
@@ -133,7 +131,6 @@ instance
     UsesValue era,
     UsesAuxiliary era,
     Mock (Crypto era),
-    ValidateAuxiliaryData era,
     ShelleyLedgerSTS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,

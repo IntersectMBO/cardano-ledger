@@ -9,6 +9,7 @@ import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTes
 import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (chainExamples, multisigExamples)
 import Test.Shelley.Spec.Ledger.Pretty(prettyTest)
+import Test.Shelley.Spec.Ledger.SafeHash (safeHashTest)
 import qualified Test.Shelley.Spec.Ledger.Serialisation as Serialisation
 import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
 import Test.Tasty
@@ -31,7 +32,8 @@ mainTests =
       multisigExamples,
       unitTests,
       setAlgTest,
-      prettyTest
+      prettyTest,
+      safeHashTest
     ]
 
 nightlyTests :: TestTree
@@ -51,7 +53,8 @@ fastTests =
       multisigExamples,
       unitTests,
       setAlgTest,
-      prettyTest
+      prettyTest,
+      safeHashTest
     ]
 
 -- main entry point

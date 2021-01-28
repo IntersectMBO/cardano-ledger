@@ -8,6 +8,7 @@
 module Cardano.Ledger.Shelley.Constraints where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
   ( AnnotatedData,
@@ -20,16 +21,16 @@ import Cardano.Ledger.Core
     Value,
   )
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.SafeHash
+  ( EraIndependentTxBody,
+    HashAnnotated,
+  )
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
 import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy)
 import GHC.Records (HasField)
 import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
-import Shelley.Spec.Ledger.Hashing
-  ( EraIndependentTxBody,
-    HashAnnotated (..),
-  )
 
 --------------------------------------------------------------------------------
 -- Shelley Era
@@ -39,8 +40,7 @@ type UsesTxBody era =
   ( Era era,
     ChainData (TxBody era),
     AnnotatedData (TxBody era),
-    HashAnnotated (TxBody era) era,
-    HashIndex (TxBody era) ~ EraIndependentTxBody
+    HashAnnotated (TxBody era) EraIndependentTxBody (Crypto era)
   )
 
 class
@@ -79,6 +79,7 @@ type UsesAuxiliary era =
   ( Era era,
     Eq (AuxiliaryData era),
     Show (AuxiliaryData era),
+    ValidateAuxiliaryData era,
     AnnotatedData (AuxiliaryData era)
   )
 

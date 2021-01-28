@@ -33,6 +33,7 @@ import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Crypto (HASH, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
+import Cardano.Ledger.SafeHash (EraIndependentTxBody, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..), UsesValue)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (forceElemsToWHNF)
@@ -56,7 +57,6 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization
@@ -315,6 +315,7 @@ initialFundsPseudoTxIn addr =
   where
     pseudoTxId =
       TxId
+        . unsafeMakeSafeHash
         . ( Crypto.castHash ::
               Crypto.Hash (HASH crypto) (Addr crypto) ->
               Crypto.Hash (HASH crypto) EraIndependentTxBody

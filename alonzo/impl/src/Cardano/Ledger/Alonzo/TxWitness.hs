@@ -25,21 +25,24 @@ module Cardano.Ledger.Alonzo.TxWitness
     witsRdmr,
     ScriptData (ScriptData),
     EraIndependentScriptData,
-    ScriptDataHash (..),
+    ScriptDataHash,
     hashSD,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Data (Data, DataHash)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (HASH)
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.SafeHash
+  ( EraIndependentScriptData,
+    HashAnnotated,
+    SafeHash,
+    SafeToHash,
+    hashAnnotated,
+  )
 import Control.Applicative (liftA2)
-import Control.DeepSeq (NFData)
 import Data.Coders
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -52,7 +55,6 @@ import GHC.Generics
 import GHC.Records
 import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization
@@ -132,7 +134,9 @@ newtype ScriptData era = ScriptDataConstr
   { unScriptDataConstr ::
       MemoBytes (ScriptDataRaw era)
   }
-  deriving newtype (ToCBOR)
+  deriving newtype (ToCBOR, SafeToHash)
+
+instance (Crypto era ~ c) => HashAnnotated (ScriptData era) EraIndependentScriptData c
 
 -- =====================================================
 -- TxWitness instances
@@ -343,17 +347,10 @@ instance
   where
   mempty = ScriptData mempty mempty mempty
 
-data EraIndependentScriptData
+type ScriptDataHash crypto = SafeHash crypto EraIndependentScriptData
 
-newtype ScriptDataHash crypto
-  = ScriptDataHash
-      (Hash.Hash (HASH crypto) EraIndependentScriptData)
-  deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NFData, NoThunks)
-
-deriving newtype instance CC.Crypto crypto => ToCBOR (ScriptDataHash crypto)
-
-deriving newtype instance CC.Crypto crypto => FromCBOR (ScriptDataHash crypto)
+hashScriptData :: forall era. Era era => ScriptData era -> ScriptDataHash (Crypto era)
+hashScriptData x = hashAnnotated x
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -464,9 +461,6 @@ deriving via
 -- bytstring, so we can make a HashAnnotated instance for (ScriptData era)
 -- to compute the hash, since (hashAnnotated x) is (hash (toCBOR x))
 
-instance (Era era, Typeable era) => HashAnnotated (ScriptData era) era where
-  type HashIndex (ScriptData era) = EraIndependentScriptData
-
 hashSD ::
   (Era era, ToCBOR (Core.Script era)) =>
   TxWitness era ->
@@ -474,4 +468,4 @@ hashSD ::
 hashSD (w@(TxWitnessConstr (Memo (TxWitnessRaw _ _ scriptdata) _))) =
   if (Map.null (witsScript w) && Map.null (witsData w) && Map.null (witsRdmr w))
     then Nothing
-    else Just (ScriptDataHash (hashAnnotated scriptdata))
+    else Just (hashScriptData scriptdata)

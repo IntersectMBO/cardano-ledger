@@ -51,7 +51,7 @@ import Shelley.Spec.Ledger.BaseTypes
     textToUrl,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash (EraIndependentTxBody, hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     Hash,
@@ -177,7 +177,7 @@ txbSimpleUTxO =
       _mdHash = SNothing
     }
 
--- | to use makeWitnessVKey, we need to know we can sign the TxBody for that (ShelleyEra c)
+-- | to use makeWitnessesVKey, we need to know we can sign the TxBody for that (ShelleyEra c)
 type BodySignable era = DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
 
 txSimpleUTxO :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)

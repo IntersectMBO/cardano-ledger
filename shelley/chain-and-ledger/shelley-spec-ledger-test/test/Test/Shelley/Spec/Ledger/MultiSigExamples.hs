@@ -24,7 +24,6 @@ import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
-import Data.Coerce (coerce)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
@@ -50,7 +49,7 @@ import Shelley.Spec.Ledger.Credential
     pattern ScriptHashObj,
     pattern StakeRefBase,
   )
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
     KeyHash (..),
@@ -189,7 +188,7 @@ makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
       mempty
-        { addrWits = makeWitnessesVKey (coerce . hashAnnotated $ txBody) keyPairs,
+        { addrWits = makeWitnessesVKey (hashAnnotated $ txBody) keyPairs,
           scriptWits = msigs
         }
 
@@ -246,7 +245,7 @@ initialUTxOState aliceKeep msigs =
               (asWitness <$> [Cast.alicePay, Cast.bobPay])
               Map.empty
               Nothing
-       in ( txid $ _body tx,
+       in ( txid @(ShelleyEra c) $ _body tx,
             runShelleyBase $
               applySTSTest @(UTXOW (ShelleyEra c))
                 ( TRC

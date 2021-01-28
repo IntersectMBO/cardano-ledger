@@ -192,7 +192,7 @@ newUTxO txb cs = cs {chainNes = nes'}
     ls = esLState es
     utxoSt = _utxoState ls
     utxo = _utxo utxoSt
-    utxo' = eval ((txins @era txb ⋪ utxo) ∪ txouts txb)
+    utxo' = eval ((txins @era txb ⋪ utxo) ∪ txouts @era txb)
     utxoSt' = utxoSt {_utxo = utxo'}
     ls' = ls {_utxoState = utxoSt'}
     es' = es {esLState = ls'}

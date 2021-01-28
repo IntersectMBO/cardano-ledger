@@ -100,6 +100,7 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -116,7 +117,6 @@ import Control.Provenance (ProvM, lift, modifyWithBlackBox, runOtherProv)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
-import Data.Coerce (coerce)
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
@@ -172,7 +172,6 @@ import Shelley.Spec.Ledger.EpochBoundary
     Stake (..),
     aggregateUtxoCoinByCredential,
   )
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -777,6 +776,7 @@ minfeeBound pp tx =
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
+  forall era.
   ( UsesTxBody era,
     UsesValue era,
     UsesTxOut era,
@@ -789,7 +789,7 @@ produced ::
   Core.TxBody era ->
   Core.Value era
 produced pp stakePools tx =
-  balance (txouts tx)
+  balance (txouts @era tx)
     <+> ( Val.inject $
             getField @"txfee" tx
               <+> totalDeposits pp stakePools (toList $ getField @"certs" tx)
@@ -921,6 +921,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 verifiedWits ::
+  forall era.
   ( UsesTxBody era,
     Core.AnnotatedData (Core.Script era),
     ToCBOR (Core.AuxiliaryData era),
@@ -937,12 +938,12 @@ verifiedWits (Tx txbody wits _) =
     failed =
       wvkKey
         <$> filter
-          (not . verifyWitVKey (coerce . hashAnnotated $ txbody))
+          (not . verifyWitVKey (extractHash (hashAnnotated @(Crypto era) txbody)))
           (Set.toList $ addrWits wits)
     failedBootstrap =
       bwKey
         <$> filter
-          (not . verifyBootstrapWit (coerce . hashAnnotated $ txbody))
+          (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
           (Set.toList $ bootWits wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update

@@ -24,6 +24,7 @@ import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Codec.Binary.Bech32
 import Control.Monad.Identity (Identity)
 import Control.SetAlgebra (forwards)
@@ -648,10 +649,15 @@ instance (Era era, PrettyA (Core.Script era)) => PrettyA (WitnessSetHKD Identity
 -- ============================
 --  Cardano.Ledger.AuxiliaryData
 
+ppSafeHash :: SafeHash crypto index -> PDoc
+ppSafeHash x = ppHash (extractHash x)
+
 ppAuxiliaryDataHash :: AuxiliaryDataHash c -> PDoc
-ppAuxiliaryDataHash (AuxiliaryDataHash h) = ppSexp "AuxiliaryDataHash" [ppHash h]
+ppAuxiliaryDataHash (AuxiliaryDataHash h) = ppSexp "AuxiliaryDataHash" [ppSafeHash h]
 
 instance PrettyA (AuxiliaryDataHash c) where prettyA = ppAuxiliaryDataHash
+
+instance PrettyA (SafeHash c i) where prettyA = ppSafeHash
 
 -- ============================
 --  Cardano.Ledger.Compactible
@@ -699,7 +705,7 @@ ppWdrl :: Wdrl c -> PDoc
 ppWdrl (Wdrl m) = ppSexp "" [ppMap' (text "Wdr") ppRewardAcnt ppCoin m]
 
 ppTxId :: TxId c -> PDoc
-ppTxId (TxId x) = ppSexp "TxId" [ppHash x]
+ppTxId (TxId x) = ppSexp "TxId" [ppSafeHash x]
 
 ppTxIn :: TxIn c -> PDoc
 ppTxIn (TxInCompact txid word) = ppSexp "TxIn" [ppTxId txid, ppWord64 word]

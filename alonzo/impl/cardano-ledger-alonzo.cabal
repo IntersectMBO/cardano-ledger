@@ -22,6 +22,7 @@ library
   exposed-modules:
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
+     Cardano.Ledger.Alonzo.Language
     Cardano.Ledger.Alonzo.PParams
     Cardano.Ledger.Alonzo.Scripts
     Cardano.Ledger.Alonzo.Tx

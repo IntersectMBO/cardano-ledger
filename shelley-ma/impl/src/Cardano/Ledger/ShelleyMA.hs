@@ -7,8 +7,6 @@
 
 module Cardano.Ledger.ShelleyMA where
 
-import Cardano.Binary (toCBOR)
-import Cardano.Crypto.Hash (castHash, hashWithSerialiser)
 import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
     ValidateAuxiliaryData (..),
@@ -17,6 +15,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value)
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut (..), UsesValue)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData, pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks
@@ -108,10 +107,9 @@ instance
 
 instance
   ( CryptoClass.Crypto c,
-    Typeable ma,
     Core.AnnotatedData (Core.Script (ShelleyMAEra ma c))
   ) =>
   ValidateAuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c)
   where
-  hashAuxiliaryData = AuxiliaryDataHash . castHash . hashWithSerialiser toCBOR
   validateAuxiliaryData (AuxiliaryData md as) = deepseq as $ all validMetadatum md
+  hashAuxiliaryData aux = AuxiliaryDataHash (hashAnnotated aux)
