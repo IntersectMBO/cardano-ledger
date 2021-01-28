@@ -39,10 +39,10 @@ import Shelley.Spec.Ledger.API
     TxOut (..)
   )
 
-import Cardano.Ledger.ExampleShelley.TxBody (TxBody (..))
+import Shelley.Spec.Ledger.TxBody (TxBody (..))
 
-import Cardano.Ledger.ExampleShelley.Rules.Utxo (UTXO)
-import Cardano.Ledger.ExampleShelley.Rules.Utxow (UTXOW)
+import Shelley.Spec.Ledger.STS.Utxo (UTXO)
+import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.STS.Bbody as Shelley
 import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
