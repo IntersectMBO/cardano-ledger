@@ -43,17 +43,26 @@ import Shelley.Spec.Ledger.TxBody (TxBody (..))
 
 import Shelley.Spec.Ledger.STS.Utxo (UTXO)
 import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
-import qualified Shelley.Spec.Ledger.API as Shelley
-import qualified Shelley.Spec.Ledger.STS.Bbody as Shelley
-import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
-import qualified Shelley.Spec.Ledger.STS.Mir as Shelley
-import qualified Shelley.Spec.Ledger.STS.Newpp as Shelley
-import qualified Shelley.Spec.Ledger.STS.Ocert as Shelley
-import qualified Shelley.Spec.Ledger.STS.Overlay as Shelley
-import qualified Shelley.Spec.Ledger.STS.Rupd as Shelley
-import qualified Shelley.Spec.Ledger.STS.Snap as Shelley
-import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
-import qualified Shelley.Spec.Ledger.STS.Upec as Shelley
+import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
+import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
+import Shelley.Spec.Ledger.STS.Ppup (PPUP)
+import Shelley.Spec.Ledger.STS.Bbody (BBODY)
+import Shelley.Spec.Ledger.STS.Deleg (DELEG)
+import Shelley.Spec.Ledger.STS.Delegs (DELEGS)
+import Shelley.Spec.Ledger.STS.Delpl (DELPL)
+import Shelley.Spec.Ledger.STS.Epoch (EPOCH)
+import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH)
+import Shelley.Spec.Ledger.STS.Mir (MIR)
+import Shelley.Spec.Ledger.STS.Newpp (NEWPP)
+import Shelley.Spec.Ledger.STS.Ocert (OCERT)
+import Shelley.Spec.Ledger.STS.Overlay (OVERLAY)
+import Shelley.Spec.Ledger.STS.Pool (POOL)
+import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP)
+import Shelley.Spec.Ledger.STS.Rupd (RUPD)
+import Shelley.Spec.Ledger.STS.Snap (SNAP)
+import Shelley.Spec.Ledger.STS.Tick (TICK, TICKF)
+import Shelley.Spec.Ledger.STS.Tickn (TICKN)
+import Shelley.Spec.Ledger.STS.Upec (UPEC)
 
 data ExampleShelleyEra c
 
@@ -100,29 +109,26 @@ instance PraosCrypto c => GetLedgerView (ExampleShelleyEra c)
 instance PraosCrypto c => ShelleyBasedEra (ExampleShelleyEra c)
 
 -- These rules are all inherited from Shelley
-
-type instance Core.EraRule "BBODY" (ExampleShelleyEra c) = Shelley.BBODY (ExampleShelleyEra c)
-type instance Core.EraRule "DELEG" (ExampleShelleyEra c) = Shelley.DELEG (ExampleShelleyEra c)
-type instance Core.EraRule "DELEGS" (ExampleShelleyEra c) = Shelley.DELEGS (ExampleShelleyEra c)
-type instance Core.EraRule "DELPL" (ExampleShelleyEra c) = Shelley.DELPL (ExampleShelleyEra c)
-type instance Core.EraRule "EPOCH" (ExampleShelleyEra c) = Shelley.EPOCH (ExampleShelleyEra c)
-type instance Core.EraRule "LEDGER" (ExampleShelleyEra c) = Shelley.LEDGER (ExampleShelleyEra c)
-type instance Core.EraRule "LEDGERS" (ExampleShelleyEra c) = Shelley.LEDGERS (ExampleShelleyEra c)
-type instance Core.EraRule "MIR" (ExampleShelleyEra c) = Shelley.MIR (ExampleShelleyEra c)
-type instance Core.EraRule "NEWEPOCH" (ExampleShelleyEra c) = Shelley.NEWEPOCH (ExampleShelleyEra c)
-type instance Core.EraRule "NEWPP" (ExampleShelleyEra c) = Shelley.NEWPP (ExampleShelleyEra c)
-type instance Core.EraRule "OCERT" (ExampleShelleyEra c) = Shelley.OCERT (ExampleShelleyEra c)
-type instance Core.EraRule "OVERLAY" (ExampleShelleyEra c) = Shelley.OVERLAY (ExampleShelleyEra c)
-type instance Core.EraRule "POOL" (ExampleShelleyEra c) = Shelley.POOL (ExampleShelleyEra c)
-type instance Core.EraRule "POOLREAP" (ExampleShelleyEra c) = Shelley.POOLREAP (ExampleShelleyEra c)
-type instance Core.EraRule "PPUP" (ExampleShelleyEra c) = Shelley.PPUP (ExampleShelleyEra c)
-type instance Core.EraRule "RUPD" (ExampleShelleyEra c) = Shelley.RUPD (ExampleShelleyEra c)
-type instance Core.EraRule "SNAP" (ExampleShelleyEra c) = Shelley.SNAP (ExampleShelleyEra c)
-type instance Core.EraRule "TICK" (ExampleShelleyEra c) = Shelley.TICK (ExampleShelleyEra c)
-type instance Core.EraRule "TICKF" (ExampleShelleyEra c) = Shelley.TICKF (ExampleShelleyEra c)
-type instance Core.EraRule "TICKN" (ExampleShelleyEra _c) = Shelley.TICKN
-type instance Core.EraRule "UPEC" (ExampleShelleyEra c) = Shelley.UPEC (ExampleShelleyEra c)
-
--- These rules are defined anew in the ExampleShelley era, copied from ShelleyMA
+type instance Core.EraRule "BBODY" (ExampleShelleyEra c) = BBODY (ExampleShelleyEra c)
+type instance Core.EraRule "DELEG" (ExampleShelleyEra c) = DELEG (ExampleShelleyEra c)
+type instance Core.EraRule "DELEGS" (ExampleShelleyEra c) = DELEGS (ExampleShelleyEra c)
+type instance Core.EraRule "DELPL" (ExampleShelleyEra c) = DELPL (ExampleShelleyEra c)
+type instance Core.EraRule "EPOCH" (ExampleShelleyEra c) = EPOCH (ExampleShelleyEra c)
+type instance Core.EraRule "LEDGER" (ExampleShelleyEra c) = LEDGER (ExampleShelleyEra c)
+type instance Core.EraRule "LEDGERS" (ExampleShelleyEra c) = LEDGERS (ExampleShelleyEra c)
+type instance Core.EraRule "MIR" (ExampleShelleyEra c) = MIR (ExampleShelleyEra c)
+type instance Core.EraRule "NEWEPOCH" (ExampleShelleyEra c) = NEWEPOCH (ExampleShelleyEra c)
+type instance Core.EraRule "NEWPP" (ExampleShelleyEra c) = NEWPP (ExampleShelleyEra c)
+type instance Core.EraRule "OCERT" (ExampleShelleyEra c) = OCERT (ExampleShelleyEra c)
+type instance Core.EraRule "OVERLAY" (ExampleShelleyEra c) = OVERLAY (ExampleShelleyEra c)
+type instance Core.EraRule "POOL" (ExampleShelleyEra c) = POOL (ExampleShelleyEra c)
+type instance Core.EraRule "POOLREAP" (ExampleShelleyEra c) = POOLREAP (ExampleShelleyEra c)
+type instance Core.EraRule "PPUP" (ExampleShelleyEra c) = PPUP (ExampleShelleyEra c)
+type instance Core.EraRule "RUPD" (ExampleShelleyEra c) = RUPD (ExampleShelleyEra c)
+type instance Core.EraRule "SNAP" (ExampleShelleyEra c) = SNAP (ExampleShelleyEra c)
+type instance Core.EraRule "TICK" (ExampleShelleyEra c) = TICK (ExampleShelleyEra c)
+type instance Core.EraRule "TICKF" (ExampleShelleyEra c) = TICKF (ExampleShelleyEra c)
+type instance Core.EraRule "TICKN" (ExampleShelleyEra _c) = TICKN
+type instance Core.EraRule "UPEC" (ExampleShelleyEra c) = UPEC (ExampleShelleyEra c)
 type instance Core.EraRule "UTXO" (ExampleShelleyEra c) = UTXO (ExampleShelleyEra c)
 type instance Core.EraRule "UTXOW" (ExampleShelleyEra c) = UTXOW (ExampleShelleyEra c)
