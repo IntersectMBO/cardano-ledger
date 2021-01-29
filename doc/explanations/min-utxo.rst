@@ -27,7 +27,7 @@ The min-ada calculation for any UTxO approximates the above formula. This uses t
 
   ``utxoEntrySizeWithoutVal = 27``
 
-  ``adaOnlyUTxOSize = utxoEntrySizeWithoutVal + coinSize = 29``
+  ``adaOnlyUTxOSize = utxoEntrySizeWithoutVal + coinSize = 27``
 
 The functions used in the formula below are :
 
