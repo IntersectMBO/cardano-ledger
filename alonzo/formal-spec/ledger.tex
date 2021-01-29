@@ -2,12 +2,12 @@
 \label{sec:ledger-trans}
 
 Figure~\ref{fig:rules:ledger} separates the case where all the scripts
-validate in a transaction from the case where there is one that does not.
-These cases are distinguished by the use of the $\IsValidating$ tag.
+in a transaction successfully validate from the case where there is one or more that does not.
+These two cases are distinguished by the use of the $\IsValidating$ tag.
 %
 Besides fee collection, no side effects should occur when processing a
-transaction containing a script that does not validate. That is, no
-delegation or pool state updates, update proposals etc, should be
+transaction that contains a script that does not validate. That is, no
+delegation or pool state updates, update proposals, or any other observable state change, should be
 applied. The UTxO rule is still applied, however, as this is where the correctness of the
 validation tag is verified, and where script fees are collected.
 

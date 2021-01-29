@@ -24,6 +24,7 @@
 \usepackage{tikz}
 \usepackage{booktabs}
 \usepackage{enumerate}
+\usepackage{comments} \newcommand{\khcomment}[1]{\comment{KH}{#1}}
 
 \setlength{\parindent}{0pt}
 
@@ -41,14 +42,15 @@
 \DeliverableResponsible{Formal Methods Team}
 \EditorName{Andre Knispel, \IOHK}
 \Authors{
-   Polina Vinogradova \quad \texttt{polina.vinogradova@iohk.io} \\
-   Andre Knispel \quad \texttt{andre.knispel@iohk.io}
+   Andre Knispel \quad \texttt{andre.knispel@iohk.io}\\
+   Polina Vinogradova \quad \texttt{polina.vinogradova@iohk.io}
+   % I think Andre is the main author of this document?  KH
 }
-\DueDate{25$^{\textrm{th}}$ September 2020}
+\DueDate{28$^{\textrm{th}}$ February 2021}
 \SubmissionDate{}{}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
-\Version{FS-2.0.0}
+\Version{FS-2.2.0}
 \Project{Goguen Ledger}
 \DisseminationDR
 
@@ -162,12 +164,12 @@
 \newcommand{\AddrScrPtr}{\type{Addr_{ptr}^{script}}}
 \newcommand{\AuxiliaryDataHash}{\type{AuxiliaryDataHash}}
 \newcommand{\AuxiliaryData}{\type{AuxiliaryData}}
-\newcommand{\MetaData}{\type{MetaData}}
+\newcommand{\Metadata}{\type{Metadata}}
 \newcommand{\DataHash}{\type{DataHash}}
 \newcommand{\ScriptHash}{\type{ScriptHash}}
 \newcommand{\PolicyID}{\type{PolicyID}}
-\newcommand{\PPHash}{\type{PPHash}}
-\newcommand{\ScriptDataHash}{\type{ScriptDataHash}}
+\newcommand{\LangDepView}{\type{LangDepView}}
+\newcommand{\WitnessPPDataHash}{\type{WitnessPPDataHash}}
 \newcommand{\Script}{\type{Script}}
 \newcommand{\ScriptPlutus}{\type{Script}_{plc}}
 \newcommand{\Plutus}{\mathsf{Plutus}}
