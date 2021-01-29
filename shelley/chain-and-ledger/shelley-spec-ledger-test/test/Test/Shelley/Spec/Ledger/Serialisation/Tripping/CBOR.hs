@@ -50,6 +50,7 @@ import Data.Maybe (fromJust)
 import qualified Shelley.Spec.Ledger.API as Ledger
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
+import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Mock
@@ -156,6 +157,9 @@ prop_roundtrip_Coin_1 = roundtrip (toCBOR . fromJust . toCompact) fromCBOR
 prop_roundtrip_Coin_2 :: Coin -> Property
 prop_roundtrip_Coin_2 = roundtrip toCBOR (fromCompact <$> fromCBOR)
 
+prop_roundtrip_RewardProvenance :: RewardProvenance Mock.C_Crypto -> Property
+prop_roundtrip_RewardProvenance = roundtrip toCBOR fromCBOR
+
 -- TODO
 
 -- roundTripIpv4 :: Property
@@ -198,5 +202,6 @@ tests =
       testProperty "roundtrip Metadata" prop_roundtrip_metadata,
       testProperty "roundtrip Shelley Genesis" prop_roundtrip_ShelleyGenesis,
       testProperty "roundtrip coin compactcoin cbor" prop_roundtrip_Coin_1,
-      testProperty "roundtrip coin cbor compactcoin" prop_roundtrip_Coin_2
+      testProperty "roundtrip coin cbor compactcoin" prop_roundtrip_Coin_2,
+      testProperty "roundtrip reward provenance" prop_roundtrip_RewardProvenance
     ]

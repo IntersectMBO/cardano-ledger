@@ -15,20 +15,26 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
-import Cardano.Ledger.ShelleyMA (MaryOrAllegra, ShelleyMAEra)
+import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley.Constraints
+  ( TransValue,
+    UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesTxOut,
+    UsesValue,
+  )
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
-import Cardano.Ledger.Torsor (Torsor (..))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Prelude (heapWordsUnpacked)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (◁))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
+import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coders
   ( decodeList,
     decodeRecordSum,
@@ -41,7 +47,6 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
@@ -58,16 +63,15 @@ import Shelley.Spec.Ledger.BaseTypes
     networkId,
   )
 import Shelley.Spec.Ledger.Coin
+import Shelley.Spec.Ledger.LedgerState (PPUPState)
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
-import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..))
-import Shelley.Spec.Ledger.STS.Utxo (UTXO)
+import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley
-import Shelley.Spec.Ledger.Tx (Tx (..), TxIn)
+import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut)
 import Shelley.Spec.Ledger.TxBody
   ( DCert,
     RewardAcnt (getRwdNetwork),
-    TxOut (TxOut),
     Wdrl,
     unWdrl,
   )
@@ -80,6 +84,54 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     unUTxO,
   )
+
+{- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
+(passed to it as Coin mv) as a specification of "the cost of
+making a Shelley-sized UTxO entry", calculated here by "utxoEntrySizeWithoutVal + uint",
+using the constants in the "where" clause.
+In the case when a UTxO entry contains coins only (and the Shelley
+UTxO entry format is used - we will extend this to be correct for other
+UTxO formats shortly), the deposit should be exactly the minUTxOValue.
+This is the "inject (coin v) == v" case.
+Otherwise, we calculate the per-byte deposit by multiplying the minimum deposit (which is
+for the number of Shelley UTxO-entry bytes) by the size of a Shelley UTxO entry.
+This is the "(mv * (utxoEntrySizeWithoutVal + uint))" calculation.
+We then calculate the total deposit required for making a UTxO entry with a Val-class
+member v by dividing "(mv * (utxoEntrySizeWithoutVal + uint))" by the
+estimated total size of the UTxO entry containing v, ie by
+"(utxoEntrySizeWithoutVal + size v)".
+See the formal specification for details.
+-}
+
+-- This scaling function is right for UTxO, not EUTxO
+--
+scaledMinDeposit :: (Val.Val v) => v -> Coin -> Coin
+scaledMinDeposit v (Coin mv)
+  | Val.inject (Val.coin v) == v = Coin mv -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
+  -- The calculation should represent this equation
+  -- minValueParameter / coinUTxOSize = actualMinValue / valueUTxOSize
+  -- actualMinValue = (minValueParameter / coinUTxOSize) * valueUTxOSize
+  | otherwise = Coin $ max mv (adaPerUTxOWord * (utxoEntrySizeWithoutVal + Val.size v))
+  where
+    -- lengths obtained from tracing on HeapWords of inputs and outputs
+    -- obtained experimentally, and number used here
+    -- units are Word64s
+    txoutLenNoVal = 14
+    txinLen = 7
+
+    -- unpacked CompactCoin Word64 size in Word64s
+    coinSize :: Integer
+    coinSize = fromIntegral $ heapWordsUnpacked (CompactCoin 0)
+
+    utxoEntrySizeWithoutVal :: Integer
+    utxoEntrySizeWithoutVal = 6 + txoutLenNoVal + txinLen
+
+    -- how much ada does a Word64 of UTxO space cost, calculated from minAdaValue PP
+    -- round down
+    adaPerUTxOWord :: Integer
+    adaPerUTxOWord = quot mv (utxoEntrySizeWithoutVal + coinSize)
+
+-- ==========================================================
 
 data UtxoPredicateFailure era
   = BadInputsUTxO
@@ -95,8 +147,8 @@ data UtxoPredicateFailure era
       !Coin -- the minimum fee for this transaction
       !Coin -- the fee supplied in this transaction
   | ValueNotConservedUTxO
-      !(Delta (Core.Value era)) -- the Coin consumed by this transaction
-      !(Delta (Core.Value era)) -- the Coin produced by this transaction
+      !(Core.Value era) -- the Coin consumed by this transaction
+      !(Core.Value era) -- the Coin produced by this transaction
   | WrongNetwork
       !Network -- the expected network id
       !(Set (Addr (Crypto era))) -- the set of addresses with incorrect network IDs
@@ -104,22 +156,34 @@ data UtxoPredicateFailure era
       !Network -- the expected network id
       !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      ![TxOut era] -- list of supplied transaction outputs that are too small
-  | UpdateFailure (PredicateFailure (PPUP era)) -- Subtransition Failures
+      ![Core.TxOut era] -- list of supplied transaction outputs that are too small
+  | UpdateFailure (PredicateFailure (Core.EraRule "PPUP" era)) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
-      ![TxOut era] -- list of supplied bad transaction outputs
+      ![Core.TxOut era] -- list of supplied bad transaction outputs
   | TriesToForgeADA
+  | OutputTooBigUTxO
+      ![Core.TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
 deriving stock instance
-  ShelleyBased era =>
+  ( Shelley.TransUTxOState Show era,
+    TransValue Show era,
+    Show (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
   Show (UtxoPredicateFailure era)
 
 deriving stock instance
-  ShelleyBased era =>
+  ( Shelley.TransUTxOState Eq era,
+    TransValue Eq era,
+    Eq (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
   Eq (UtxoPredicateFailure era)
 
-instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era)
+instance
+  ( Shelley.TransUTxOState NoThunks era,
+    NoThunks (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
+  NoThunks (UtxoPredicateFailure era)
 
 -- | Calculate the value consumed by the transation.
 --
@@ -132,7 +196,8 @@ instance NoThunks (Delta (Core.Value era)) => NoThunks (UtxoPredicateFailure era
 --   the mint field.
 consumed ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesValue era,
+    UsesTxOut era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
@@ -143,7 +208,7 @@ consumed ::
   Core.TxBody era ->
   Core.Value era
 consumed pp u tx =
-  balance (eval (txins @era tx ◁ u))
+  balance @era (eval (txins @era tx ◁ u))
     <> getField @"mint" tx
     <> (Val.inject $ refunds <> withdrawals)
   where
@@ -154,18 +219,20 @@ consumed pp u tx =
 -- | The UTxO transition rule for the Shelley-MA (Mary and Allegra) eras.
 utxoTransition ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesTxOut era,
+    UsesAuxiliary era,
+    UsesValue era,
+    UsesScript era,
     STS (UTXO era),
-    Embed (PPUP era) (UTXO era),
-    BaseM (UTXO era) ~ ShelleyBase,
-    Environment (UTXO era) ~ Shelley.UtxoEnv era,
-    State (UTXO era) ~ Shelley.UTxOState era,
-    Signal (UTXO era) ~ Tx era,
-    PredicateFailure (UTXO era) ~ UtxoPredicateFailure era,
+    Embed (Core.EraRule "PPUP" era) (UTXO era),
+    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "vldt" (Core.TxBody era) ValidityInterval,
@@ -193,7 +260,7 @@ utxoTransition = do
   let addrsWrongNetwork =
         filter
           (\a -> getNetwork a /= ni)
-          (fmap (\(TxOut a _) -> a) $ toList $ getField @"outputs" txb)
+          (fmap (getField @"address") $ toList $ getField @"outputs" txb)
   null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
   let wdrlsWrongNetwork =
         filter
@@ -206,35 +273,53 @@ utxoTransition = do
 
   let consumed_ = consumed pp utxo txb
       produced_ = Shelley.produced pp stakepools txb
-  consumed_ == produced_ ?! ValueNotConservedUTxO (toDelta consumed_) (toDelta produced_)
+  consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Protocol Parameter Update Proposals
-  ppup' <- trans @(PPUP era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
+  ppup' <-
+    trans @(Core.EraRule "PPUP" era) $
+      TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
   -- Check that the mint field does not try to mint ADA. This is equivalent to
   -- the check `adaPolicy ∉ supp mint tx` in the spec.
   Val.coin (getField @"mint" txb) == Val.zero ?! TriesToForgeADA
 
-  let outputs = Map.elems $ unUTxO (txouts txb)
+  let outputs = Map.elems $ unUTxO (txouts @era txb)
       minUTxOValue = _minUTxOValue pp
       outputsTooSmall =
-        [ out
-          | out@(TxOut _ c) <- outputs,
-            not $
-              Val.pointwise
-                (>=)
-                c
-                (Val.inject $ Val.scaledMinDeposit c minUTxOValue)
-        ]
+        filter
+          ( \out ->
+              let v = getField @"value" out
+               in not $
+                    Val.pointwise
+                      (>=)
+                      v
+                      (Val.inject $ scaledMinDeposit v minUTxOValue)
+          )
+          outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
+
+  let outputsTooBig =
+        filter
+          ( \out ->
+              let v = getField @"value" out
+               in (BSL.length . serialize) v > 4000
+              -- TODO this is arbitrary, but sufficiently below the current
+              -- max transaction size. We will make it a protocol parameter
+              -- in the Alonzo era.
+          )
+          outputs
+  null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =
-        [ out
-          | out@(TxOut (AddrBootstrap addr) _) <- outputs,
-            bootstrapAddressAttrsSize addr > 64
-        ]
+        filter
+          ( \out -> case getField @"address" out of
+              AddrBootstrap addr -> bootstrapAddressAttrsSize addr > 64
+              _ -> False
+          )
+          outputs
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
@@ -247,41 +332,52 @@ utxoTransition = do
 
   pure
     Shelley.UTxOState
-      { Shelley._utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts txb),
+      { Shelley._utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts @era txb),
         Shelley._deposited = deposits' <> depositChange,
-        Shelley._fees = fees <> (getField @"txfee" txb),
+        Shelley._fees = fees <> getField @"txfee" txb,
         Shelley._ppups = ppup'
       }
 
 --------------------------------------------------------------------------------
 -- UTXO STS
 --------------------------------------------------------------------------------
+data UTXO era
 
 instance
-  forall c (ma :: MaryOrAllegra).
-  ( CryptoClass.Crypto c,
-    Typeable ma,
-    ShelleyBased (ShelleyMAEra ma c),
-    Core.TxBody (ShelleyMAEra ma c) ~ TxBody (ShelleyMAEra ma c)
+  forall era.
+  ( Era era,
+    UsesAuxiliary era,
+    UsesScript era,
+    UsesTxOut era,
+    UsesValue era,
+    TransValue ToCBOR era,
+    Core.TxBody era ~ TxBody era,
+    Core.TxOut era ~ TxOut era,
+    Embed (Core.EraRule "PPUP" era) (UTXO era),
+    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era)
   ) =>
-  STS (UTXO (ShelleyMAEra ma c))
+  STS (UTXO era)
   where
-  type State (UTXO (ShelleyMAEra ma c)) = Shelley.UTxOState (ShelleyMAEra ma c)
-  type Signal (UTXO (ShelleyMAEra ma c)) = Tx (ShelleyMAEra ma c)
+  type State (UTXO era) = Shelley.UTxOState era
+  type Signal (UTXO era) = Tx era
   type
-    Environment (UTXO (ShelleyMAEra ma c)) =
-      Shelley.UtxoEnv (ShelleyMAEra ma c)
-  type BaseM (UTXO (ShelleyMAEra ma c)) = ShelleyBase
+    Environment (UTXO era) =
+      Shelley.UtxoEnv era
+  type BaseM (UTXO era) = ShelleyBase
   type
-    PredicateFailure (UTXO (ShelleyMAEra ma c)) =
-      UtxoPredicateFailure (ShelleyMAEra ma c)
+    PredicateFailure (UTXO era) =
+      UtxoPredicateFailure era
 
   initialRules = []
   transitionRules = [utxoTransition]
 
 instance
-  (CryptoClass.Crypto c, Typeable ma) =>
-  Embed (PPUP (ShelleyMAEra (ma :: MaryOrAllegra) c)) (UTXO (ShelleyMAEra ma c))
+  ( Era era,
+    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era
+  ) =>
+  Embed (PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure
 
@@ -289,7 +385,10 @@ instance
 -- Serialisation
 --------------------------------------------------------------------------------
 instance
-  ShelleyBased era =>
+  ( TransValue ToCBOR era,
+    Shelley.TransUTxOState ToCBOR era,
+    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
   ToCBOR (UtxoPredicateFailure era)
   where
   toCBOR = \case
@@ -330,9 +429,17 @@ instance
       encodeListLen 2 <> toCBOR (10 :: Word8)
         <> encodeFoldable outs
     TriesToForgeADA -> encodeListLen 1 <> toCBOR (11 :: Word8)
+    OutputTooBigUTxO outs ->
+      encodeListLen 2 <> toCBOR (12 :: Word8)
+        <> encodeFoldable outs
 
 instance
-  ShelleyBased era =>
+  ( TransValue FromCBOR era,
+    Shelley.TransUTxOState FromCBOR era,
+    Val.DecodeNonNegative (Core.Value era),
+    Show (Core.Value era),
+    FromCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
   FromCBOR (UtxoPredicateFailure era)
   where
   fromCBOR =
@@ -376,4 +483,7 @@ instance
           outs <- decodeList fromCBOR
           pure (2, OutputBootAddrAttrsTooBig outs)
         11 -> pure (1, TriesToForgeADA)
+        12 -> do
+          outs <- decodeList fromCBOR
+          pure (2, OutputTooBigUTxO outs)
         k -> invalidKey k

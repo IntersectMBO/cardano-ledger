@@ -10,23 +10,22 @@
 -- exposed in @module Shelley.Spec.Ledger.API@.
 module Cardano.Ledger.Shelley where
 
-import Cardano.Binary (toCBOR)
-import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
     ValidateAuxiliaryData (..),
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
+import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, makeHashWithExplicitProxys)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut (..), UsesValue)
+import Data.Proxy
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Keys (hashWithSerialiser)
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
   ( TxBody,
+    TxOut (..),
     ValidateScript (hashScript, validateScript),
     hashMultiSigScript,
     validateNativeMultiSigScript,
@@ -37,6 +36,11 @@ data ShelleyEra c
 instance CryptoClass.Crypto c => Era (ShelleyEra c) where
   type Crypto (ShelleyEra c) = c
 
+instance CryptoClass.Crypto c => UsesValue (ShelleyEra c)
+
+instance CryptoClass.Crypto c => UsesTxOut (ShelleyEra c) where
+  makeTxOut _ a v = TxOut a v
+
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
@@ -44,6 +48,8 @@ instance CryptoClass.Crypto c => Era (ShelleyEra c) where
 type instance Core.Value (ShelleyEra _c) = Coin
 
 type instance Core.TxBody (ShelleyEra c) = TxBody (ShelleyEra c)
+
+type instance Core.TxOut (ShelleyEra c) = TxOut (ShelleyEra c)
 
 type instance Core.Script (ShelleyEra c) = MultiSig c
 
@@ -54,12 +60,14 @@ type instance Core.AuxiliaryData (ShelleyEra c) = Metadata
 --------------------------------------------------------------------------------
 
 instance
-  (CryptoClass.Crypto c, TxBodyConstraints (ShelleyEra c)) =>
+  (CryptoClass.Crypto c, UsesTxBody (ShelleyEra c)) =>
   ValidateScript (ShelleyEra c)
   where
   validateScript = validateNativeMultiSigScript
   hashScript = hashMultiSigScript
 
 instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) where
-  hashAuxiliaryData = AuxiliaryDataHash . Hash.castHash . hashWithSerialiser @(HASH c) toCBOR
   validateAuxiliaryData (Metadata m) = all validMetadatum m
+  hashAuxiliaryData metadata = AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @c) index metadata)
+    where
+      index = Proxy @EraIndependentAuxiliaryData

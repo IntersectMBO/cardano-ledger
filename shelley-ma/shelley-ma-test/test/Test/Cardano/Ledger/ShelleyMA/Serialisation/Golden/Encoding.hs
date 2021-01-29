@@ -51,6 +51,7 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Test.Cardano.Ledger.EraBuffet (AllegraEra, MaryEra, TestCrypto)
+import Test.Cardano.Ledger.TranslationTools (expectDecodeFailure)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   ( ToTokens (..),
@@ -59,6 +60,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   )
 import Test.Shelley.Spec.Ledger.Utils (mkGenKey, mkKeyPair)
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (Assertion, testCase)
 
 type A = AllegraEra TestCrypto
 
@@ -432,11 +434,15 @@ goldenEncodingTestsMary =
             )
     ]
 
+assetName32Bytes :: Assertion
+assetName32Bytes = expectDecodeFailure . AssetName . BS.pack $ "123456789-123456789-123456789-123"
+
 -- | Golden Tests for Allegra and Mary
 goldenEncodingTests :: TestTree
 goldenEncodingTests =
   testGroup
     "Golden Encoding Tests"
     [ goldenEncodingTestsAllegra,
-      goldenEncodingTestsMary
+      goldenEncodingTestsMary,
+      testCase "33 bytes asset name too big" assetName32Bytes
     ]

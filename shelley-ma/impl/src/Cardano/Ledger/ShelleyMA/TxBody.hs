@@ -32,16 +32,34 @@ module Cardano.Ledger.ShelleyMA.TxBody
     fromSJust,
     ValidityInterval (..),
     initial,
+    ppTxBody,
   )
 where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.Compactible (CompactForm (..), Compactible (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (Script, Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppAuxiliaryDataHash,
+    ppCoin,
+    ppDCert,
+    ppRecord,
+    ppSet,
+    ppStrictMaybe,
+    ppStrictSeq,
+    ppTxIn,
+    ppTxOut,
+    ppUpdate,
+    ppWdrl,
+  )
+import Cardano.Ledger.SafeHash (EraIndependentTxBody, HashAnnotated, SafeToHash)
+import Cardano.Ledger.Shelley.Constraints (TransValue)
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
   ( DecodeMint (..),
     DecodeNonNegative,
@@ -71,7 +89,6 @@ import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Serialization (encodeFoldable)
 import Shelley.Spec.Ledger.TxBody
@@ -82,8 +99,8 @@ import Shelley.Spec.Ledger.TxBody
   )
 
 -- =====================================================
--- TxBody has two Era dependent type families
--- (Value era) and (Script era) (hidden in DCert) in
+-- TxBody has three Era dependent type families
+-- (Value era), (AuxiliaryData era), and (Script era) (hidden in DCert) in
 -- order to make CBOR instances of things we are going to
 -- have to assume some properties about these.
 
@@ -96,7 +113,7 @@ type FamsFrom era =
     Compactible (Value era),
     DecodeNonNegative (Value era),
     DecodeMint (Value era),
-    FromCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
+    Val (Value era), -- Arises because we use 'zero' as the 'mint' field in 'initial'
     FromCBOR (Value era),
     FromCBOR (Annotator (Script era)) -- Arises becaause DCert memoizes its bytes
   )
@@ -106,7 +123,6 @@ type FamsTo era =
     ToCBOR (Value era),
     Compactible (Value era),
     EncodeMint (Value era),
-    ToCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
     ToCBOR (Script era),
     Typeable (Core.AuxiliaryData era)
   )
@@ -133,21 +149,18 @@ data TxBodyRaw era = TxBodyRaw
 deriving instance (NFData (Value era), Era era) => NFData (TxBodyRaw era)
 
 deriving instance
-  ( Compactible (Value era),
-    Eq (Value era),
-    Eq (CompactForm (Value era))
-  ) =>
+  TransValue Eq era =>
   Eq (TxBodyRaw era)
 
 deriving instance
-  (Era era, Compactible (Value era), Show (Value era)) =>
+  TransValue Show era =>
   Show (TxBodyRaw era)
 
 deriving instance Generic (TxBodyRaw era)
 
 deriving instance NoThunks (Value era) => NoThunks (TxBodyRaw era)
 
-instance (Val (Value era), FamsFrom era) => FromCBOR (TxBodyRaw era) where
+instance (FamsFrom era) => FromCBOR (TxBodyRaw era) where
   fromCBOR =
     decode
       ( SparseKeyed
@@ -158,7 +171,7 @@ instance (Val (Value era), FamsFrom era) => FromCBOR (TxBodyRaw era) where
       )
 
 instance
-  (Val (Value era), FamsFrom era) =>
+  (FamsFrom era) =>
   FromCBOR (Annotator (TxBodyRaw era))
   where
   fromCBOR = pure <$> fromCBOR
@@ -230,13 +243,14 @@ initial =
 
 newtype TxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
   deriving (Typeable)
+  deriving newtype (SafeToHash)
 
 deriving instance
-  (Compactible (Value era), Eq (Value era), Eq (CompactForm (Value era))) =>
+  TransValue Eq era =>
   Eq (TxBody era)
 
 deriving instance
-  (Era era, Compactible (Value era), Show (Value era)) =>
+  TransValue Show era =>
   Show (TxBody era)
 
 deriving instance Generic (TxBody era)
@@ -250,11 +264,10 @@ deriving newtype instance (Typeable era) => ToCBOR (TxBody era)
 deriving via
   (Mem (TxBodyRaw era))
   instance
-    (Val (Value era), FamsFrom era) =>
+    (FamsFrom era) =>
     FromCBOR (Annotator (TxBody era))
 
-instance Era era => HashAnnotated (TxBody era) era where
-  type HashIndex (TxBody era) = EraIndependentTxBody
+instance (c ~ Crypto era, Era era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
@@ -322,3 +335,32 @@ instance Crypto era ~ crypto => HasField "adHash" (TxBody era) (StrictMaybe (Aux
 
 instance Value era ~ value => HasField "mint" (TxBody era) value where
   getField (TxBodyConstr (Memo m _)) = getField @"mint" m
+
+-- ============================================
+
+ppTxBody ::
+  ( Era era,
+    PrettyA (Value era),
+    Compactible (Value era)
+  ) =>
+  TxBody era ->
+  PDoc
+ppTxBody (TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)) =
+  ppRecord
+    "TxBody(Mary or Allegra)"
+    [ ("inputs", ppSet ppTxIn i),
+      ("outputs", ppStrictSeq ppTxOut o),
+      ("certificates", ppStrictSeq ppDCert d),
+      ("withdrawals", ppWdrl w),
+      ("txfee", ppCoin fee),
+      ("vldt", ppValidityInterval vi),
+      ("update", ppStrictMaybe ppUpdate u),
+      ("auxDataHash", ppStrictMaybe ppAuxiliaryDataHash m),
+      ("mint", prettyA mint)
+    ]
+
+instance
+  (Era era, PrettyA (Value era), Compactible (Value era)) =>
+  PrettyA (TxBody era)
+  where
+  prettyA = ppTxBody

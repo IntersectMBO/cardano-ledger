@@ -3,16 +3,15 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
 
 module Test.Shelley.Spec.Ledger.Examples.EmptyBlock
   ( exEmptyBlock,
   )
 where
 
-import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Era (Crypto (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Shelley.Constraints (TxBodyConstraints)
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Nonce)
@@ -45,6 +44,8 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
 
+-- =============================================================
+
 initStEx1 :: forall era. ShelleyTest era => ChainState era
 initStEx1 = initSt (UTxO Map.empty)
 
@@ -52,8 +53,9 @@ blockEx1 ::
   forall era.
   ( HasCallStack,
     ExMock (Crypto era),
-    TxBodyConstraints era,
-    ToCBOR (Core.AuxiliaryData era)
+    UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era
   ) =>
   Block era
 blockEx1 =
@@ -74,8 +76,9 @@ blockNonce ::
   forall era.
   ( HasCallStack,
     ExMock (Crypto era),
-    TxBodyConstraints era,
-    ToCBOR (Core.AuxiliaryData era)
+    UsesTxBody era,
+    UsesScript era,
+    UsesAuxiliary era
   ) =>
   Nonce
 blockNonce = getBlockNonce (blockEx1 @era)

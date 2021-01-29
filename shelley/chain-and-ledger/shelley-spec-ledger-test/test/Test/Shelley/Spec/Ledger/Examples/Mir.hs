@@ -30,7 +30,7 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential, Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -40,7 +40,7 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState (..),
     NewEpochState (..),
-    emptyRewardUpdate,
+    emptyRewardUpdate
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
@@ -102,7 +102,7 @@ initUTxO =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStMIR :: forall era. (ShelleyTest era) => Coin -> ChainState era
+initStMIR :: forall era. ShelleyTest era => Coin -> ChainState era
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt @era initUTxO
@@ -155,10 +155,8 @@ sufficientMIRWits = mirWits [0 .. 4]
 insufficientMIRWits :: (CryptoClass.Crypto c) => [KeyPair 'Witness c]
 insufficientMIRWits = mirWits [0 .. 3]
 
-txEx1 ::
-  forall c.
-  (Mock (Crypto (ShelleyEra c))) =>
-  [KeyPair 'Witness (Crypto (ShelleyEra c))] ->
+txEx1 :: forall c. (Mock c) =>
+  [KeyPair 'Witness c] ->
   MIRPot ->
   Tx (ShelleyEra c)
 txEx1 wits pot =

@@ -41,10 +41,13 @@ module Data.Coders
     Dual(..),
     Field(..),
     field,
+    fieldA,
+    fieldAA,
     encode,
     decode,
     runE,            -- Used in testing
     decodeList,
+    decodePair,
     decodeSeq,
     decodeStrictSeq,
     decodeSet,
@@ -54,6 +57,7 @@ module Data.Coders
     unusedRequiredKeys,
     duplicateKey,
     wrapCBORArray,
+    encodePair,
     encodeFoldable,
     decodeCollectionWithLen,
     decodeCollection,
@@ -78,6 +82,7 @@ where
 
 import Cardano.Prelude (cborError)
 import Control.Monad (replicateM,unless)
+import Control.Applicative(liftA2)
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
 import Cardano.Binary
@@ -146,6 +151,19 @@ decodeNullMaybe decoder = do
       decodeNull
       pure Nothing
     _ -> Just <$> decoder
+
+
+decodePair :: Decoder s a -> Decoder s b -> Decoder s (a,b)
+decodePair first second = decodeRecordNamed "pair" (const 2) $ do
+  a <- first
+  b <- second
+  pure (a,b)
+
+encodePair :: (a -> Encoding) -> (b -> Encoding) -> (a,b) -> Encoding
+encodePair encodeFirst encodeSecond (x,y) = encodeListLen 2
+  <> encodeFirst x
+  <> encodeSecond y
+
 
 invalidKey :: Word -> Decoder s a
 invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)
@@ -306,6 +324,16 @@ data Field t where
 
 field :: (x -> t -> t) -> Decode ('Closed d) x -> Field t
 field update dec = Field update (decode dec)
+
+-- In order to sparse decode something with a (FromCBOR (Annotator t)) instance
+-- we can use these 'field' like functions.
+
+fieldA  :: Applicative ann => (x -> t -> t) -> Decode ('Closed d) x -> Field (ann t)
+fieldA update dec  = Field (liftA2 update) (pure <$> decode dec)
+
+fieldAA :: Applicative ann => (x -> t -> t) -> Decode ('Closed d) (ann x) -> Field (ann t)
+fieldAA update dec  = Field (liftA2 update) (decode dec)
+
 
 -- ===========================================================
 -- The coders and the decoders as GADT datatypes

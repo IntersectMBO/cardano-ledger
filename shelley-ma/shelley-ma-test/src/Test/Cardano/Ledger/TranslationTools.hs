@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.TranslationTools
   , translationCompatToCBOR
   , decodeTest
   , decodeTestAnn
+  , expectDecodeFailure
   ) where
 
 
@@ -77,3 +78,9 @@ decodeTestAnn :: forall a b proxy. (ToCBOR a, FromCBOR (Annotator b))
 decodeTestAnn _ x = case decodeAnnotator mempty fromCBOR (serialize x) :: Either DecoderError b of
   Left e -> assertFailure $ show e
   Right _ -> return ()
+
+-- Tests that a decoder error happens
+expectDecodeFailure :: forall a. (ToCBOR a, FromCBOR a) => a -> Assertion
+expectDecodeFailure x = case decodeFull (serialize x) :: Either DecoderError a of
+  Left _ -> pure ()
+  Right _ -> assertFailure "should not deserialize"

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -7,12 +8,17 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts) where
+module Test.Shelley.Spec.Ledger.Generator.Trace.DCert
+  ( CERTS,
+    genDCerts,
+  )
+where
 
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -39,7 +45,7 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (runIdentity)
 import Data.List (partition)
 import qualified Data.Map.Strict as Map (lookup)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -62,6 +68,7 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.TxBody (Ix)
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
@@ -77,11 +84,29 @@ import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 -- witnesses.
 data CERTS era
 
-data CertsPredicateFailure era
-  = CertsFailure (PredicateFailure (DELPL era))
-  deriving (Show, Eq, Generic)
+newtype CertsPredicateFailure era
+  = CertsFailure (PredicateFailure (Core.EraRule "DELPL" era))
+  deriving (Generic)
 
-instance Era era => STS (CERTS era) where
+deriving stock instance
+  ( Eq (PredicateFailure (Core.EraRule "DELPL" era))
+  ) =>
+  Eq (CertsPredicateFailure era)
+
+deriving stock instance
+  ( Show (PredicateFailure (Core.EraRule "DELPL" era))
+  ) =>
+  Show (CertsPredicateFailure era)
+
+instance
+  ( Era era,
+    Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+  ) =>
+  STS (CERTS era)
+  where
   type Environment (CERTS era) = (SlotNo, Ix, PParams era, AccountState)
   type State (CERTS era) = (DPState (Crypto era), Ix)
   type Signal (CERTS era) = Maybe (DCert (Crypto era), CertCred era)
@@ -92,7 +117,14 @@ instance Era era => STS (CERTS era) where
   initialRules = []
   transitionRules = [certsTransition]
 
-certsTransition :: forall era. Era era => TransitionRule (CERTS era)
+certsTransition ::
+  forall era.
+  ( Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+  ) =>
+  TransitionRule (CERTS era)
 certsTransition = do
   TRC
     ( (slot, txIx, pp, acnt),
@@ -104,16 +136,33 @@ certsTransition = do
   case c of
     Just (cert, _wits) -> do
       let ptr = Ptr slot txIx nextCertIx
-      dpState' <- trans @(DELPL era) $ TRC (DelplEnv slot ptr pp acnt, dpState, cert)
+      dpState' <-
+        trans @(Core.EraRule "DELPL" era) $
+          TRC (DelplEnv slot ptr pp acnt, dpState, cert)
 
       pure (dpState', nextCertIx + 1)
     Nothing ->
       pure (dpState, nextCertIx)
 
-instance Era era => Embed (DELPL era) (CERTS era) where
+instance
+  ( Era era,
+    STS (DELPL era),
+    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era
+  ) =>
+  Embed (DELPL era) (CERTS era)
+  where
   wrapFailed = CertsFailure
 
-instance (Era era, EraGen era) => QC.HasTrace (CERTS era) (GenEnv era) where
+instance
+  ( Era era,
+    EraGen era,
+    Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+  ) =>
+  QC.HasTrace (CERTS era) (GenEnv era)
+  where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
   sigGen
@@ -140,7 +189,12 @@ instance (Era era, EraGen era) => QC.HasTrace (CERTS era) (GenEnv era) where
 -- deposits and refunds required.
 genDCerts ::
   forall era.
-  EraGen era =>
+  ( Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    EraGen era
+  ) =>
   GenEnv era ->
   PParams era ->
   DPState (Crypto era) ->
@@ -194,9 +248,8 @@ genDCerts
       scriptWitnesses (ScriptCred (_, stakeScript)) =
         StakeCred <$> witnessHashes''
         where
-          witnessHashes = scriptKeyCombination (Proxy @era) stakeScript
-          witnessHashes' = fmap coerceKeyRole witnessHashes
-          witnessHashes'' = fmap coerceKeyRole (catMaybes (map lookupWit witnessHashes'))
+          witnessHashes = coerceKeyRole <$> scriptKeyCombination (Proxy @era) stakeScript
+          witnessHashes'' = coerceKeyRole <$> mapMaybe lookupWit witnessHashes
       scriptWitnesses _ = []
 
       lookupWit = flip Map.lookup ksIndexedStakingKeys

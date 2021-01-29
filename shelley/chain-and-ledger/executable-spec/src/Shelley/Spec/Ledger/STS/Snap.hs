@@ -14,7 +14,7 @@ module Shelley.Spec.Ledger.STS.Snap
 where
 
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.State.Transition
   ( STS (..),
     TRC (..),
@@ -39,7 +39,7 @@ data SnapPredicateFailure era -- No predicate failures
 
 instance NoThunks (SnapPredicateFailure era)
 
-instance ShelleyBased era => STS (SNAP era) where
+instance (UsesTxOut era, UsesValue era) => STS (SNAP era) where
   type State (SNAP era) = SnapShots (Crypto era)
   type Signal (SNAP era) = ()
   type Environment (SNAP era) = LedgerState era
@@ -49,7 +49,7 @@ instance ShelleyBased era => STS (SNAP era) where
   transitionRules = [snapTransition]
 
 snapTransition ::
-  ShelleyBased era =>
+  (UsesTxOut era, UsesValue era) =>
   TransitionRule (SNAP era)
 snapTransition = do
   TRC (lstate, s, _) <- judgmentContext

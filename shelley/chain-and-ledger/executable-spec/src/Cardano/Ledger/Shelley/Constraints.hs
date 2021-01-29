@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -6,6 +7,8 @@
 
 module Cardano.Ledger.Shelley.Constraints where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
   ( AnnotatedData,
@@ -14,48 +17,91 @@ import Cardano.Ledger.Core
     Script,
     SerialisableData,
     TxBody,
+    TxOut,
     Value,
   )
-import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.Torsor (Torsor (..))
-import Cardano.Ledger.Val (DecodeNonNegative, Val)
-import Shelley.Spec.Ledger.Hashing
+import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.SafeHash
   ( EraIndependentTxBody,
-    HashAnnotated (..),
+    HashAnnotated,
   )
+import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
+import Data.Kind (Constraint, Type)
+import Data.Proxy (Proxy)
+import GHC.Records (HasField)
+import Shelley.Spec.Ledger.Address (Addr)
+import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
 
 --------------------------------------------------------------------------------
 -- Shelley Era
 --------------------------------------------------------------------------------
 
-type TxBodyConstraints era =
-  ( ChainData (TxBody era),
+type UsesTxBody era =
+  ( Era era,
+    ChainData (TxBody era),
     AnnotatedData (TxBody era),
-    HashAnnotated (TxBody era) era,
-    HashIndex (TxBody era) ~ EraIndependentTxBody
+    HashAnnotated (TxBody era) EraIndependentTxBody (Crypto era)
+  )
+
+class
+  ( Era era,
+    Val (Value era),
+    Compactible (Value era),
+    ChainData (Value era),
+    SerialisableData (Value era),
+    DecodeNonNegative (Value era),
+    EncodeMint (Value era),
+    DecodeMint (Value era)
+  ) =>
+  UsesValue era
+
+class
+  ( Era era,
+    ChainData (TxOut era),
+    ToCBOR (TxOut era),
+    FromCBOR (TxOut era),
+    HasField "address" (TxOut era) (Addr (Crypto era)),
+    HasField "compactAddress" (TxOut era) (CompactAddr (Crypto era)),
+    HasField "value" (TxOut era) (Value era)
+  ) =>
+  UsesTxOut era
+  where
+  makeTxOut :: Proxy era -> Addr (Crypto era) -> Value era -> TxOut era
+
+type UsesScript era =
+  ( Era era,
+    Eq (Script era),
+    Show (Script era),
+    AnnotatedData (Script era)
+  )
+
+type UsesAuxiliary era =
+  ( Era era,
+    Eq (AuxiliaryData era),
+    Show (AuxiliaryData era),
+    ValidateAuxiliaryData era,
+    AnnotatedData (AuxiliaryData era)
+  )
+
+-- | Apply 'c' to all the types transitively involved with Value when
+-- (Core.Value era) is an instance of Compactible
+type TransValue (c :: Type -> Constraint) era =
+  ( Era era,
+    Compactible (Value era),
+    c (Value era)
   )
 
 -- | General constraints that will hold true for ledgers which are based on
 -- Shelley, and share similar serialisation formats"
 type ShelleyBased era =
-  ( Era era,
-    -- Value constraints
-    Val (Value era),
-    Compactible (Value era),
-    DecodeNonNegative (Value era),
-    ChainData (Value era),
-    Eq (CompactForm (Value era)),
-    SerialisableData (Value era),
-    SerialisableData (CompactForm (Value era)),
-    ChainData (Delta (Value era)),
-    SerialisableData (Delta (Value era)),
-    Torsor (Value era),
+  ( -- Value constraints
+    UsesValue era,
     -- TxBody constraints
-    TxBodyConstraints era,
+    UsesTxBody era,
     -- Script constraints
-    ChainData (Script era),
-    AnnotatedData (Script era),
+    UsesScript era,
     -- AuxiliaryData constraints
-    ChainData (AuxiliaryData era),
-    AnnotatedData (AuxiliaryData era)
+    UsesAuxiliary era
   )
+
+{-# LANGUAGE Deprecated ShelleyBased "Use appropriate 'Uses' constraits (e.g. `UsesValue`) instead." #-}

@@ -25,7 +25,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
   )
 where
 
-import Cardano.Binary (toCBOR)
+import Cardano.Binary (ToCBOR(toCBOR),FromCBOR,Annotator)
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Allegra (AllegraEra)
@@ -44,6 +44,7 @@ import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA.STS
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
+import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
@@ -112,12 +113,14 @@ sizedTimelock n =
     ]
 
 -- TODO Generate metadata with script preimages
-instance
+instance forall era c.
   ( Era era,
     c ~ Crypto era,
     Mock c,
-    Arbitrary (Timelock c),
-    Core.Script era ~ Timelock c
+    FromCBOR (Annotator (Core.Script era)),
+    ToCBOR (Core.Script era),
+    Ord(Core.Script era),
+    Arbitrary (Core.Script era)
   ) =>
   Arbitrary (MA.AuxiliaryData era)
   where
@@ -134,11 +137,10 @@ instance
   -- in an unsatisfied `MonadFail` constraint.
   arbitrary =
     genMetadata' >>= \case
-      Metadata m -> MA.AuxiliaryData m <$> genScriptSeq
+      Metadata m -> MA.AuxiliaryData m <$> (genScriptSeq @era)
 
 genScriptSeq ::
-  (Arbitrary (Timelock c)) =>
-  Gen (StrictSeq (Timelock c))
+  forall era. Arbitrary (Core.Script era) => Gen(StrictSeq (Core.Script era))
 genScriptSeq = do
   n <- choose (0, 3)
   l <- vectorOf n arbitrary
@@ -204,7 +206,7 @@ valueFromListBounded (fromIntegral -> ada) =
         (min (fromIntegral $ maxBound @i) (a + b))
 
 instance Arbitrary Mary.AssetName where
-  arbitrary = Mary.AssetName <$> arbitrary
+  arbitrary = Mary.AssetName . BS.pack . take 32 . BS.unpack <$> arbitrary
 
 instance Mock c => Arbitrary (MA.STS.UtxoPredicateFailure (MaryEra c)) where
   arbitrary = genericArbitraryU

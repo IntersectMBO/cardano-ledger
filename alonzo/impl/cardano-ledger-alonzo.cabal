@@ -22,12 +22,15 @@ library
   exposed-modules:
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
+     Cardano.Ledger.Alonzo.Language
+    Cardano.Ledger.Alonzo.PParams
     Cardano.Ledger.Alonzo.Scripts
     Cardano.Ledger.Alonzo.Tx
     Cardano.Ledger.Alonzo.TxBody
     Cardano.Ledger.Alonzo.TxWitness
   build-depends:
     base >=4.14 && <4.15,
+    bytestring,
     cardano-binary,
     cardano-crypto-class,
     cardano-ledger-shelley-ma,
@@ -36,7 +39,8 @@ library
     deepseq,
     nothunks,
     shelley-spec-ledger,
-    small-steps
+    small-steps,
+    text
   hs-source-dirs:
     src
   ghc-options:
@@ -56,19 +60,12 @@ library test
     Test.Cardano.Ledger.Alonzo.Serialisation.Generators
   build-depends:
     base >=4.14 && <4.15,
-    cardano-binary,
     cardano-crypto-class,
     cardano-ledger-alonzo,
-    cardano-ledger-shelley-ma,
     cardano-ledger-shelley-ma-test,
-    cardano-slotting,
-    containers,
-    deepseq,
-    nothunks,
     QuickCheck,
     shelley-spec-ledger-test,
     shelley-spec-ledger,
-    small-steps
   hs-source-dirs:
     test/lib
   ghc-options:
@@ -91,6 +88,7 @@ test-suite tests
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
   build-depends:
     base >=4.14 && <4.15,
+    base16-bytestring,
     bytestring,
     cardano-binary,
     cardano-ledger-alonzo,

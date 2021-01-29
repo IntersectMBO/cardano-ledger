@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -52,6 +53,9 @@ module Shelley.Spec.Ledger.Tx
     evalNativeMultiSigScript,
     hashMultiSigScript,
     validateNativeMultiSigScript,
+    TransTx,
+    TransWitnessSet,
+    prettyWitnessSetParts,
   )
 where
 
@@ -74,15 +78,19 @@ import Cardano.Binary
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased, TxBodyConstraints)
+import Cardano.Ledger.SafeHash (EraIndependentTx, HashAnnotated, SafeToHash (..))
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Constraint (Constraint)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
@@ -93,7 +101,6 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentTx, HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Serialization
@@ -113,6 +120,8 @@ import Shelley.Spec.Ledger.TxBody
     witKeyHash,
   )
 
+-- ========================================================
+
 -- | Higher Kinded Data
 type family HKD f a where
   HKD Identity a = a
@@ -125,12 +134,14 @@ data WitnessSetHKD f era = WitnessSet'
     txWitsBytes :: BSL.ByteString
   }
 
+type TransWitnessSet (c :: Type -> Constraint) era = c (Core.Script era)
+
 deriving instance
-  (Era era, Core.ChainData (Core.Script era)) =>
+  (Era era, TransWitnessSet Show era) =>
   Show (WitnessSetHKD Identity era)
 
 deriving instance
-  (Era era, Core.ChainData (Core.Script era)) =>
+  (Era era, TransWitnessSet Eq era) =>
   Eq (WitnessSetHKD Identity era)
 
 deriving instance Era era => Generic (WitnessSetHKD Identity era)
@@ -141,7 +152,7 @@ deriving via
      ]
     (WitnessSetHKD Identity era)
   instance
-    (Era era, Core.ChainData (Core.Script era)) =>
+    (Era era, TransWitnessSet NoThunks era) =>
     (NoThunks (WitnessSetHKD Identity era))
 
 type WitnessSet = WitnessSetHKD Identity
@@ -191,6 +202,17 @@ pattern WitnessSet {addrWits, scriptWits, bootWits} <-
 
 {-# COMPLETE WitnessSet #-}
 
+-- | Exports the relevant parts from a (WintessSetHKD Identity era) for
+--     use by the pretty printer without all the horrible constraints.
+--     Uses the non-exported WitnessSet' constructor.
+prettyWitnessSetParts ::
+  WitnessSetHKD Identity era ->
+  ( Set (WitVKey 'Witness (Crypto era)),
+    Map (ScriptHash (Crypto era)) (Core.Script era),
+    Set (BootstrapWitness (Crypto era))
+  )
+prettyWitnessSetParts (WitnessSet' a b c _) = (a, b, c)
+
 -- | A fully formed transaction.
 data Tx era = Tx'
   { _body' :: !(Core.TxBody era),
@@ -200,26 +222,33 @@ data Tx era = Tx'
   }
   deriving (Generic)
 
+-- Usually we derive SafetToHash instances, but since (Tx era) preserves its serialisation
+-- bytes we can just extract them here, and make an explicit SafeToHash instance.
+
+instance SafeToHash (Tx era) where
+  originalBytes = BSL.toStrict . txFullBytes -- TODO Use MemoBytes to define Tx, so we can derive this
+
+type TransTx (c :: Type -> Constraint) era =
+  (Era era, c (Core.Script era), c (Core.TxBody era), c (Core.AuxiliaryData era))
+
 deriving via
   AllowThunksIn
     '[ "txFullBytes"
      ]
     (Tx era)
   instance
-    ShelleyBased era => NoThunks (Tx era)
+    (TransTx NoThunks era) => NoThunks (Tx era)
 
 deriving instance
-  ShelleyBased era =>
+  TransTx Show era =>
   Show (Tx era)
 
 deriving instance
-  ShelleyBased era =>
+  TransTx Eq era =>
   Eq (Tx era)
 
 pattern Tx ::
-  ( TxBodyConstraints era,
-    ToCBOR (Core.AuxiliaryData era)
-  ) =>
+  TransTx ToCBOR era =>
   Core.TxBody era ->
   WitnessSet era ->
   StrictMaybe (Core.AuxiliaryData era) ->
@@ -246,11 +275,11 @@ pattern Tx {_body, _witnessSet, _metadata} <-
 
 {-# COMPLETE Tx #-}
 
-instance ShelleyBased era => HashAnnotated (Tx era) era where
-  type HashIndex (Tx era) = EraIndependentTx
+instance (Era era, c ~ Crypto era) => HashAnnotated (Tx era) EraIndependentTx c
 
 segwitTx ::
-  ( TxBodyConstraints era,
+  ( Era era,
+    ToCBOR (Core.TxBody era),
     ToCBOR (Core.AuxiliaryData era)
   ) =>
   Annotator (Core.TxBody era) ->
@@ -281,8 +310,7 @@ segwitTx
 
 decodeWits ::
   forall era s.
-  ( TxBodyConstraints era,
-    Core.AnnotatedData (Core.Script era),
+  ( Core.AnnotatedData (Core.Script era),
     ValidateScript era
   ) =>
   Decoder s (Annotator (WitnessSet era))
@@ -321,13 +349,17 @@ keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 
 instance
-  ShelleyBased era =>
+  Typeable era =>
   ToCBOR (Tx era)
   where
   toCBOR tx = encodePreEncoded . BSL.toStrict $ txFullBytes tx
 
 instance
-  (ShelleyBased era, ValidateScript era) =>
+  ( UsesTxBody era,
+    ValidateScript era,
+    FromCBOR (Annotator (Core.Script era)),
+    FromCBOR (Annotator (Core.AuxiliaryData era))
+  ) =>
   FromCBOR (Annotator (Tx era))
   where
   fromCBOR = annotatorSlice $
@@ -355,6 +387,8 @@ class
   where
   validateScript :: Core.Script era -> Tx era -> Bool
   hashScript :: Core.Script era -> ScriptHash (Crypto era)
+  isNativeScript :: Core.Script era -> Bool
+  isNativeScript _ = True
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
@@ -373,9 +407,7 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
-  ( TxBodyConstraints era,
-    ToCBOR (Core.AuxiliaryData era)
-  ) =>
+  TransTx ToCBOR era =>
   MultiSig (Crypto era) ->
   Tx era ->
   Bool
@@ -387,7 +419,7 @@ validateNativeMultiSigScript msig tx =
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
-  (TxBodyConstraints era, ToCBOR (Core.AuxiliaryData era)) =>
+  TransTx ToCBOR era =>
   Tx era ->
   Map (ScriptHash (Crypto era)) (Core.Script era)
 txwitsScript = scriptWits' . _witnessSet

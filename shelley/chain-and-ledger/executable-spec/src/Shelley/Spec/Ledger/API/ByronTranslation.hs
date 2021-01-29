@@ -19,9 +19,11 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
+import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import GHC.Stack (HasCallStack)
@@ -30,8 +32,6 @@ import Shelley.Spec.Ledger.API.Types
 import Shelley.Spec.Ledger.Coin (CompactForm (CompactCoin))
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (UnsafeCompactAddr))
 import Shelley.Spec.Ledger.EpochBoundary
-import Shelley.Spec.Ledger.LedgerState
-import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.STS.Chain (pparamsToChainChecksData)
 import Shelley.Spec.Ledger.Slot
 
@@ -43,7 +43,7 @@ translateTxIdByronToShelley ::
   Byron.TxId ->
   TxId c
 translateTxIdByronToShelley =
-  TxId . hashFromShortBytesE . Hashing.abstractHashToShort
+  TxId . unsafeMakeSafeHash . hashFromShortBytesE . Hashing.abstractHashToShort
 
 hashFromShortBytesE ::
   forall h a.
@@ -130,7 +130,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
           esLState = ledgerState,
           esPrevPp = pparams,
           esPp = pparams,
-          esNonMyopic = emptyNonMyopic
+          esNonMyopic = def
         }
 
     utxoByron :: Byron.UTxO
@@ -147,12 +147,12 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
               { _utxo = utxoShelley,
                 _deposited = Coin 0,
                 _fees = Coin 0,
-                _ppups = emptyPPUPState
+                _ppups = def
               },
           _delegationState =
             DPState
-              { _dstate = emptyDState {_genDelegs = genDelegs},
-                _pstate = emptyPState
+              { _dstate = def {_genDelegs = genDelegs},
+                _pstate = def
               }
         }
 

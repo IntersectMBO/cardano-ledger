@@ -14,20 +14,26 @@ module Test.Shelley.Spec.Ledger.PropertyTests
   )
 where
 
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
+import Cardano.Binary (ToCBOR)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
-import Data.Proxy
+import Cardano.Ledger.Shelley.Constraints (TransValue, UsesTxOut)
+import Control.State.Transition
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
+import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (..))
+import Shelley.Spec.Ledger.API (CHAIN, DPState, DelegsEnv, Tx, UTxOState, UtxoEnv)
 import Shelley.Spec.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update (..))
-import Shelley.Spec.Ledger.TxBody (TxIn, TxOut, Wdrl)
+import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
+import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
@@ -38,8 +44,8 @@ import Test.Shelley.Spec.Ledger.Address.CompactAddr
     propDecompactShelleyLazyAddr,
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
-import Test.Shelley.Spec.Ledger.LegacyOverlay (legacyOverlayTest)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
     onlyValidLedgerSignalsAreGenerated,
@@ -56,19 +62,32 @@ import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
 import Test.Shelley.Spec.Ledger.Utils (ChainProperty)
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
+import Data.Default.Class (Default)
 
 minimalPropertyTests ::
   forall era.
   ( EraGen era,
+    UsesTxOut era,
+    TransValue ToCBOR era,
     ChainProperty era,
-    ValidateAuxiliaryData era,
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    Default (State (Core.EraRule "PPUP" era)),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   TestTree
 minimalPropertyTests =
@@ -84,26 +103,35 @@ minimalPropertyTests =
           TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
           TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @(Crypto era)),
           TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era))
-        ],
-      TQC.testProperty "legacy overlay schedule" (legacyOverlayTest p)
+        ]
     ]
-  where
-    p :: Proxy era
-    p = Proxy
 
 -- | 'TestTree' of property-based testing properties.
 propertyTests ::
   forall era.
   ( EraGen era,
+    UsesTxOut era,
+    TransValue ToCBOR era,
     ChainProperty era,
-    ValidateAuxiliaryData era,
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    QC.HasTrace (LEDGER era) (GenEnv era),
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era)),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    Default (State (Core.EraRule "PPUP" era)),
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   TestTree
 propertyTests =
@@ -111,7 +139,10 @@ propertyTests =
     "Property-Based Testing"
     [ testGroup
         "Classify Traces"
-        [TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @era)],
+        [ TQC.testProperty
+            "Chain and Ledger traces cover the relevant cases"
+            (relevantCasesAreCovered @era)
+        ],
       testGroup
         "STS Rules - Delegation Properties"
         [ TQC.testProperty
@@ -149,5 +180,12 @@ propertyTests =
             (onlyValidChainSignalsAreGenerated @era)
         ],
       testGroupByronTranslation,
-      testGroupShelleyTranslation
+      testGroupShelleyTranslation,
+      testGroup
+        "Compact Address Tests"
+        [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(Crypto era)),
+          TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
+          TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @(Crypto era)),
+          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era))
+        ]
     ]

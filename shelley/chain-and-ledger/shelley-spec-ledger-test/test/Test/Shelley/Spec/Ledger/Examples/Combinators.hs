@@ -45,7 +45,7 @@ where
 
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
@@ -93,15 +93,18 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     RewardUpdate (..),
     UTxOState (..),
-    applyRUpd,
-    emptyInstantaneousRewards,
+    applyRUpd
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.Tx (TxIn, TxOut)
+import Shelley.Spec.Ledger.STS.Mir (emptyInstantaneousRewards)
+import Shelley.Spec.Ledger.Tx (TxIn)
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
+import Control.State.Transition (STS (State))
+
+-- ======================================================
 
 -- | = Evolve Nonces - Frozen
 --
@@ -174,9 +177,10 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
 -- Update the UTxO for given transaction body.
 newUTxO ::
   forall era.
-  ( ShelleyBased era,
+  ( UsesTxBody era,
+    UsesTxOut era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (TxOut era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
   ) =>
   Core.TxBody era ->
   ChainState era ->
@@ -188,7 +192,7 @@ newUTxO txb cs = cs {chainNes = nes'}
     ls = esLState es
     utxoSt = _utxoState ls
     utxo = _utxo utxoSt
-    utxo' = eval ((txins @era txb ⋪ utxo) ∪ txouts txb)
+    utxo' = eval ((txins @era txb ⋪ utxo) ∪ txouts @era txb)
     utxoSt' = utxoSt {_utxo = utxo'}
     ls' = ls {_utxoState = utxoSt'}
     es' = es {esLState = ls'}
@@ -609,6 +613,7 @@ newEpoch b cs = cs'
 -- Set the current protocol parameter proposals.
 setCurrentProposals ::
   forall era.
+  State (Core.EraRule "PPUP" era) ~ PPUPState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era
@@ -630,6 +635,7 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
 -- Set the future protocol parameter proposals.
 setFutureProposals ::
   forall era.
+  State (Core.EraRule "PPUP" era) ~ PPUPState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era

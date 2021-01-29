@@ -19,7 +19,6 @@ module Test.Cardano.Ledger.ShelleyMA.TxBody
 where
 
 import Cardano.Binary (ToCBOR (..))
-import qualified Cardano.Ledger.Core as Core
 -- Arbitrary instances
 -- Arbitrary instances
 
@@ -29,16 +28,15 @@ import Cardano.Ledger.Mary.Value
     PolicyID (..),
     Value (..),
   )
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody
-  ( FamsFrom,
-    TxBodyRaw (..),
+  ( TxBodyRaw (..),
     bodyFields,
     initial,
     txSparse,
   )
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
-import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as Short
@@ -161,7 +159,7 @@ embedTest = do
     Left s -> error (show s)
 
 getTxSparse ::
-  (Val (Core.Value era), FamsFrom era) =>
+  (UsesValue era, UsesScript era, UsesAuxiliary era) =>
   Decode ('Closed 'Dense) (TxBodyRaw era)
 getTxSparse =
   SparseKeyed

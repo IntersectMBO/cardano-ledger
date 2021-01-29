@@ -259,8 +259,6 @@ test-suite cardano-ledger-test
                      , cardano-prelude-test
                      , cborg
                      , containers
-                     , contra-tracer
-                     , cryptonite
                      , byron-spec-chain
                      , byron-spec-ledger
                      , directory
@@ -269,8 +267,6 @@ test-suite cardano-ledger-test
                      , generic-monoid
                      , hedgehog
                      , microlens
-                     , mtl
-                     , optparse-applicative
                      , resourcet
                      , small-steps
                      , small-steps-test
@@ -317,18 +313,12 @@ test-suite epoch-validation-normal-form-test
                      , bytestring
                      , cardano-binary
                      , cardano-ledger
-                     , cardano-crypto-test
                      , cardano-crypto-wrapper
                      , cardano-prelude
                      , cardano-prelude-test
-                     , containers
-                     , contra-tracer
                      , directory
                      , filepath
-                     , formatting
                      , hedgehog
-                     , nothunks
-                     , optparse-applicative
                      , resourcet
                      , silently
                      , streaming

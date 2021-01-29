@@ -10,7 +10,12 @@
 
 module Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen (genCoin) where
 
+import qualified Cardano.Crypto.DSIGN as DSIGN
+import qualified Cardano.Crypto.KES as KES
+import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (DSIGN, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -20,9 +25,11 @@ import Data.Set (Set)
 import Shelley.Spec.Ledger.API
   ( Coin (..),
     DCert,
+    PraosCrypto,
     Update,
   )
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import Shelley.Spec.Ledger.STS.EraMapping ()
 import Shelley.Spec.Ledger.Scripts (MultiSig (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
@@ -43,14 +50,25 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( Quantifier (..),
     ScriptClass (..),
   )
+import Test.Shelley.Spec.Ledger.Generator.Trace.Chain ()
 
 {------------------------------------------------------------------------------
   ShelleyEra instances for EraGen and ScriptClass
  -----------------------------------------------------------------------------}
 
-instance CC.Crypto c => EraGen (ShelleyEra c) where
-  genGenesisValue (GenEnv _keySpace Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
-    genCoin minGenesisOutputVal maxGenesisOutputVal
+instance
+  ( PraosCrypto c,
+    DSIGN.Signable (DSIGN c) ~ SignableRepresentation,
+    KES.Signable (KES c) ~ SignableRepresentation
+  ) =>
+  EraGen (ShelleyEra c)
+  where
+  genGenesisValue
+    ( GenEnv
+        _keySpace
+        Constants {minGenesisOutputVal, maxGenesisOutputVal}
+      ) =
+      genCoin minGenesisOutputVal maxGenesisOutputVal
   genEraTxBody _ge = genTxBody
   genEraAuxiliaryData = genMetadata
 
@@ -79,7 +97,7 @@ instance CC.Crypto c => ScriptClass (ShelleyEra c) where
  -----------------------------------------------------------------------------}
 
 genTxBody ::
-  (ShelleyBased era) =>
+  (ShelleyBased era, Core.TxOut era ~ TxOut era) =>
   SlotNo ->
   Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
@@ -88,19 +106,21 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  Gen (TxBody era)
+  Gen (TxBody era, [MultiSig (Crypto era)])
 genTxBody slot inputs outputs certs wdrls fee update adHash = do
   ttl <- genTimeToLive slot
-  return $
-    TxBody
-      inputs
-      outputs
-      certs
-      wdrls
-      fee
-      ttl
-      update
-      adHash
+  return
+    ( TxBody
+        inputs
+        outputs
+        certs
+        wdrls
+        fee
+        ttl
+        update
+        adHash,
+      [] -- Shelley does not need any additional script witnesses
+    )
 
 genTimeToLive :: SlotNo -> Gen SlotNo
 genTimeToLive currentSlot = do

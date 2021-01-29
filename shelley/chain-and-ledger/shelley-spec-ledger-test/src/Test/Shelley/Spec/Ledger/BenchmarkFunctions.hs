@@ -49,7 +49,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash,
@@ -65,8 +65,6 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState,
     UTxOState (..),
-    emptyDPState,
-    emptyPPUPState,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
@@ -109,6 +107,7 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
+import Data.Default.Class (def)
 
 -- ===============================================
 -- A special Era to run the Benchmarks in
@@ -153,7 +152,7 @@ initUTxO n =
     (genesisCoins genesisId (injcoins n))
     (Coin 0)
     (Coin 0)
-    emptyPPUPState
+    def
 
 -- Protocal Parameters used for the benchmarknig tests.
 -- Note that the fees and deposits are set to zero for
@@ -211,10 +210,10 @@ txSpendOneUTxO =
     SNothing
 
 ledgerSpendOneUTxO :: Integer -> ()
-ledgerSpendOneUTxO n = testLEDGER (initUTxO n, emptyDPState) txSpendOneUTxO ledgerEnv
+ledgerSpendOneUTxO n = testLEDGER (initUTxO n, def) txSpendOneUTxO ledgerEnv
 
 ledgerSpendOneGivenUTxO :: UTxOState B -> ()
-ledgerSpendOneGivenUTxO state = testLEDGER (state, emptyDPState) txSpendOneUTxO ledgerEnv
+ledgerSpendOneGivenUTxO state = testLEDGER (state, def) txSpendOneUTxO ledgerEnv
 
 -- ===========================================================================
 --
@@ -275,7 +274,7 @@ txRegStakeKeys ix keys =
     [asWitness alicePay]
 
 initLedgerState :: Integer -> (UTxOState B, DPState B_Crypto)
-initLedgerState n = (initUTxO n, emptyDPState)
+initLedgerState n = (initUTxO n, def)
 
 makeLEDGERState ::
   (UTxOState B, DPState B_Crypto) ->

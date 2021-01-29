@@ -3,12 +3,13 @@
 {-# LANGUAGE TypeApplications #-}
 
 import Cardano.Crypto.Libsodium (sodiumInit)
-import Data.Proxy
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (chainExamples, multisigExamples)
+import Test.Shelley.Spec.Ledger.Pretty(prettyTest)
+import Test.Shelley.Spec.Ledger.SafeHash (safeHashTest)
 import qualified Test.Shelley.Spec.Ledger.Serialisation as Serialisation
 import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
 import Test.Tasty
@@ -25,12 +26,14 @@ mainTests =
   testGroup
     "Ledger with Delegation"
     [ minimalPropertyTests @C,
-      rewardTests (Proxy :: Proxy C),
+      rewardTests,
       Serialisation.tests 5,
       chainExamples,
       multisigExamples,
       unitTests,
-      setAlgTest
+      setAlgTest,
+      prettyTest,
+      safeHashTest
     ]
 
 nightlyTests :: TestTree
@@ -49,7 +52,9 @@ fastTests =
       chainExamples,
       multisigExamples,
       unitTests,
-      setAlgTest
+      setAlgTest,
+      prettyTest,
+      safeHashTest
     ]
 
 -- main entry point

@@ -31,7 +31,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness, hashKey)
 import Shelley.Spec.Ledger.LedgerState (emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
@@ -219,10 +219,10 @@ feeTx2 = Coin 1
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-txbodyEx2 :: Cr.Crypto c => TxBody (ShelleyEra c)
+txbodyEx2 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx2 =
   TxBody
-    (Set.fromList [TxIn (txid txbodyEx1) 0])
+    (Set.fromList [TxIn (txid @(ShelleyEra c) txbodyEx1) 0])
     (StrictSeq.singleton $ TxOut Cast.aliceAddr (Val.inject aliceCoinEx2))
     StrictSeq.empty
     (Wdrl Map.empty)
@@ -262,7 +262,7 @@ blockEx2 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 20) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c))
     . C.newLab blockEx2
@@ -312,10 +312,10 @@ feeTx3 = Coin 1
 aliceCoinEx3 :: Coin
 aliceCoinEx3 = aliceCoinEx2 <-> feeTx3
 
-txbodyEx3 :: Cr.Crypto c => TxBody (ShelleyEra c)
+txbodyEx3 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx3 =
   TxBody
-    (Set.fromList [TxIn (txid txbodyEx2) 0])
+    (Set.fromList [TxIn (txid @(ShelleyEra c) txbodyEx2) 0])
     (StrictSeq.singleton $ TxOut Cast.aliceAddr (Val.inject aliceCoinEx3))
     StrictSeq.empty
     (Wdrl Map.empty)
@@ -351,7 +351,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 80) 0 (KESPeriod 0))
 
-expectedStEx3 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx3 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx3 =
   C.evolveNonceFrozen (getBlockNonce (blockEx3 @c))
     . C.newLab blockEx3

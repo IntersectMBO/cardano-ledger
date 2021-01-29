@@ -35,15 +35,18 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
+import Data.Aeson
+import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import GHC.Generics (Generic)
+import GHC.Records (getField)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
@@ -57,7 +60,7 @@ import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
-import Shelley.Spec.Ledger.TxBody (PoolParams, TxOut (TxOut))
+import Shelley.Spec.Ledger.TxBody (PoolParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Blocks made
@@ -66,6 +69,10 @@ newtype BlocksMade crypto = BlocksMade
   }
   deriving (Eq, NoThunks, Generic, NFData)
   deriving (Show) via Quiet (BlocksMade crypto)
+
+deriving instance (CC.Crypto crypto) => ToJSON (BlocksMade crypto)
+
+deriving instance (CC.Crypto crypto) => FromJSON (BlocksMade crypto)
 
 deriving instance CC.Crypto crypto => ToCBOR (BlocksMade crypto)
 
@@ -97,7 +104,9 @@ deriving newtype instance
 -- | Sum up all the Coin for each staking Credential
 aggregateUtxoCoinByCredential ::
   forall era.
-  ShelleyBased era =>
+  ( UsesValue era,
+    UsesTxOut era
+  ) =>
   Map Ptr (Credential 'Staking (Crypto era)) ->
   UTxO era ->
   Map (Credential 'Staking (Crypto era)) Coin ->
@@ -105,13 +114,15 @@ aggregateUtxoCoinByCredential ::
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldr accum initial u
   where
-    accum (TxOut (Addr _ _ (StakeRefPtr p)) c) ans =
-      case Map.lookup p ptrs of
-        Just cred -> Map.insertWith (<>) cred (Val.coin c) ans
-        Nothing -> ans
-    accum (TxOut (Addr _ _ (StakeRefBase hk)) c) ans =
-      Map.insertWith (<>) hk (Val.coin c) ans
-    accum _other ans = ans
+    accum out ans =
+      case (getField @"address" out, getField @"value" out) of
+        (Addr _ _ (StakeRefPtr p), c) ->
+          case Map.lookup p ptrs of
+            Just cred -> Map.insertWith (<>) cred (Val.coin c) ans
+            Nothing -> ans
+        (Addr _ _ (StakeRefBase hk), c) ->
+          Map.insertWith (<>) hk (Val.coin c) ans
+        _other -> ans
 
 -- | Get stake of one pool
 poolStake ::
@@ -219,6 +230,9 @@ instance
       go <- fromCBOR
       f <- fromCBOR
       pure $ SnapShots mark set go f
+
+instance Default (SnapShots crypto) where
+  def = emptySnapShots
 
 emptySnapShot :: SnapShot crypto
 emptySnapShot = SnapShot (Stake Map.empty) Map.empty Map.empty

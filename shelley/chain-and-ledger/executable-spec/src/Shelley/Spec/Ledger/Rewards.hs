@@ -1,14 +1,17 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Shelley.Spec.Ledger.Rewards
   ( desirability,
     PerformanceEstimate (..),
     NonMyopic (..),
-    emptyNonMyopic,
     getTopRankedPools,
     StakeShare (..),
     mkApparentPerformance,
@@ -40,12 +43,14 @@ import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (eval, (◁))
+import Control.Provenance (ProvM, modifyM)
+import Data.Default.Class (Default, def)
 import Data.Foldable (find, fold)
 import Data.Function (on)
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -78,6 +83,7 @@ import Shelley.Spec.Ledger.EpochBoundary
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
+import Shelley.Spec.Ledger.RewardProvenance (RewardProvenancePool (..))
 import Shelley.Spec.Ledger.Serialization
   ( decodeRecordNamed,
     decodeSeq,
@@ -235,8 +241,8 @@ data NonMyopic crypto = NonMyopic
   }
   deriving (Show, Eq, Generic)
 
-emptyNonMyopic :: NonMyopic crypto
-emptyNonMyopic = NonMyopic Map.empty (Coin 0)
+instance Default (NonMyopic crypto) where
+  def = NonMyopic Map.empty (Coin 0)
 
 instance NoThunks (NonMyopic crypto)
 
@@ -263,7 +269,7 @@ instance CC.Crypto crypto => FromCBOR (NonMyopic crypto) where
             rewardPotNM = rp
           }
 
--- | Desirability calculation for non-myopic utily,
+-- | Desirability calculation for non-myopic utility,
 -- corresponding to f^~ in section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 desirability ::
@@ -366,6 +372,8 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
 
 -- | Reward one pool
 rewardOnePool ::
+  forall era m.
+  Monad m =>
   PParams era ->
   Coin ->
   Natural ->
@@ -376,7 +384,10 @@ rewardOnePool ::
   Rational ->
   Coin ->
   Set (Credential 'Staking (Crypto era)) ->
-  Map (Credential 'Staking (Crypto era)) Coin
+  ProvM
+    (Map (KeyHash 'StakePool (Crypto era)) (RewardProvenancePool (Crypto era)))
+    m
+    (Map (Credential 'Staking (Crypto era)) Coin)
 rewardOnePool
   pp
   r
@@ -387,8 +398,7 @@ rewardOnePool
   sigma
   sigmaA
   (Coin totalStake)
-  addrsRew =
-    rewards'
+  addrsRew = modifyM (Map.insert key provPool) >> pure rewards'
     where
       Coin ostake =
         Set.foldl'
@@ -431,8 +441,25 @@ rewardOnePool
       potentialRewards =
         f (getRwdCred $ _poolRAcnt pool) lReward mRewards
       rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
+      key = _poolId pool
+      provPool =
+        RewardProvenancePool
+          { poolBlocksP = blocksN,
+            sigmaP = sigma,
+            sigmaAP = sigmaA,
+            ownerStakeP = Coin ostake,
+            poolParamsP = pool,
+            pledgeRatioP = pr,
+            maxPP = Coin maxP,
+            appPerfP = appPerf,
+            poolRP = poolR,
+            --mRewardsP = mRewards,
+            lRewardP = lReward
+          }
 
 reward ::
+  forall m era.
+  Monad m =>
   PParams era ->
   BlocksMade (Crypto era) ->
   Coin ->
@@ -443,11 +470,12 @@ reward ::
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
-  ( Map
-      (Credential 'Staking (Crypto era))
-      Coin,
-    Map (KeyHash 'StakePool (Crypto era)) Likelihood
-  )
+  ProvM
+    (Map (KeyHash 'StakePool (Crypto era)) (RewardProvenancePool (Crypto era)))
+    m
+    ( Map (Credential 'Staking (Crypto era)) Coin,
+      Map (KeyHash 'StakePool (Crypto era)) Likelihood
+    )
 reward
   pp
   (BlocksMade b)
@@ -458,44 +486,42 @@ reward
   delegs
   (Coin totalStake)
   asc
-  slotsPerEpoch = (rewards', hs)
-    where
-      totalBlocks = sum b
-      Coin activeStake = fold . unStake $ stake
-      results = do
-        (hk, pparams) <- Map.toList poolParams
-        let sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
-            sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
-            blocksProduced = Map.lookup hk b
-            actgr@(Stake s) = poolStake hk delegs stake
-            Coin pstake = fold s
-            rewardMap = case blocksProduced of
-              Nothing -> Nothing -- This is equivalent to calling rewarOnePool with n = 0
-              Just n ->
-                Just $
-                  rewardOnePool
-                    pp
-                    r
-                    n
-                    totalBlocks
-                    pparams
-                    actgr
-                    sigma
-                    sigmaA
-                    (Coin totalStake)
-                    addrsRew
-            ls =
-              likelihood
-                (fromMaybe 0 blocksProduced)
-                (leaderProbability asc sigma (_d pp))
-                slotsPerEpoch
-        pure (hk, rewardMap, ls)
-      f =
-        if HardForks.aggregatedRewards pp
-          then Map.unionsWith (<>)
-          else Map.unions
-      rewards' = f . catMaybes $ fmap (\(_, x, _) -> x) results
-      hs = Map.fromList $ fmap (\(hk, _, l) -> (hk, l)) results
+  slotsPerEpoch = do
+    let totalBlocks = sum b
+        Coin activeStake = fold . unStake $ stake
+        aggregate =
+          if HardForks.aggregatedRewards pp
+            then Map.unionWith (<>)
+            else Map.union
+        -- We fold 'action' over the pairs in the poolParams Map to compute a pair of maps.
+        -- we must use a right associative fold. See comments on foldListM below.
+        action (hk, pparams) (m1, m2) = do
+          let blocksProduced = Map.lookup hk b
+              actgr@(Stake s) = poolStake hk delegs stake
+              Coin pstake = fold s
+              sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
+              sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
+              ls =
+                likelihood
+                  (fromMaybe 0 blocksProduced)
+                  (leaderProbability asc sigma (_d pp))
+                  slotsPerEpoch
+          case blocksProduced of
+            Nothing -> pure (m1, Map.insert hk ls m2)
+            Just n -> do
+              m <- rewardOnePool pp r n totalBlocks pparams actgr sigma sigmaA (Coin totalStake) addrsRew
+              pure (aggregate m m1, Map.insert hk ls m2)
+    foldListM action (Map.empty, Map.empty) (Map.toList poolParams)
+
+-- | Fold a monadic function 'accum' over a list. It is strict in its accumulating parameter.
+--   since the order matters in 'aggregate' (used in reward above) we need to use the same
+--   order as previous revisions. That's why we call foldListM before applying accum.
+foldListM :: Monad m => (k -> ans -> m ans) -> ans -> [k] -> m ans
+foldListM _accum ans [] = pure ans
+-- Order matters so we don't use this clause (as it associates to the left)
+-- foldListM accum ans (k:more) = do { !ans1 <- accum k ans; foldListM accum ans1 more }
+-- instead we use this one that associates to the right.
+foldListM accum ans (k : more) = do ans1 <- foldListM accum ans more; accum k ans1
 
 -- | Compute the Non-Myopic Pool Stake
 --

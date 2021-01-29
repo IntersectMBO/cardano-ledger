@@ -10,6 +10,7 @@ module Cardano.Ledger.Compactible
   )
 where
 
+import Cardano.Binary (ToCBOR)
 import Data.Kind (Type)
 
 --------------------------------------------------------------------------------
@@ -21,8 +22,13 @@ import Data.Kind (Type)
 -- representation that allows for more efficient memory usage. In this case,
 -- one should make instances of the 'Compactible' class for them.
 --------------------------------------------------------------------------------
-
-class Compactible a where
+class
+  ( Show (CompactForm a),
+    Eq (CompactForm a),
+    ToCBOR (CompactForm a)
+  ) =>
+  Compactible a
+  where
   data CompactForm a :: Type
   toCompact :: a -> Maybe (CompactForm a)
   fromCompact :: CompactForm a -> a

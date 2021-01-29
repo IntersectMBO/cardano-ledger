@@ -24,9 +24,10 @@ library
     Cardano.Ledger.Core
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
+    Cardano.Ledger.Pretty
+    Cardano.Ledger.SafeHash
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.Constraints
-    Cardano.Ledger.Torsor
     Cardano.Ledger.Val
     Shelley.Spec.Ledger.Address
     Shelley.Spec.Ledger.Address.Bootstrap
@@ -34,6 +35,7 @@ library
     Shelley.Spec.Ledger.API.ByronTranslation
     Shelley.Spec.Ledger.API.Protocol
     Shelley.Spec.Ledger.API.Validation
+    Shelley.Spec.Ledger.API.Wallet
     Shelley.Spec.Ledger.BaseTypes
     Shelley.Spec.Ledger.BlockChain
     Shelley.Spec.Ledger.Coin
@@ -44,7 +46,6 @@ library
     Shelley.Spec.Ledger.EpochBoundary
     Shelley.Spec.Ledger.Genesis
     Shelley.Spec.Ledger.HardForks
-    Shelley.Spec.Ledger.Hashing
     Shelley.Spec.Ledger.Keys
     Shelley.Spec.Ledger.LedgerState
     Shelley.Spec.Ledger.Metadata
@@ -53,6 +54,7 @@ library
     Shelley.Spec.Ledger.OverlaySchedule
     Shelley.Spec.Ledger.PParams
     Shelley.Spec.Ledger.Rewards
+    Shelley.Spec.Ledger.RewardProvenance
     Shelley.Spec.Ledger.Scripts
     Shelley.Spec.Ledger.Serialization
     Shelley.Spec.Ledger.Slot
@@ -64,6 +66,7 @@ library
     Shelley.Spec.Ledger.STS.Delegs
     Shelley.Spec.Ledger.STS.Delpl
     Shelley.Spec.Ledger.STS.Epoch
+    Shelley.Spec.Ledger.STS.EraMapping
     Shelley.Spec.Ledger.STS.Ledger
     Shelley.Spec.Ledger.STS.Ledgers
     Shelley.Spec.Ledger.STS.Mir
@@ -80,13 +83,13 @@ library
     Shelley.Spec.Ledger.STS.Tick
     Shelley.Spec.Ledger.STS.Tickn
     Shelley.Spec.Ledger.STS.Updn
+    Shelley.Spec.Ledger.STS.Upec
     Shelley.Spec.Ledger.STS.Utxo
     Shelley.Spec.Ledger.STS.Utxow
     Shelley.Spec.Ledger.Tx
     Shelley.Spec.Ledger.TxBody
     Shelley.Spec.Ledger.UTxO
   other-modules:     Shelley.Spec.Ledger.API.Mempool
-                     Shelley.Spec.Ledger.API.Wallet
                      Shelley.Spec.Ledger.API.Types
   hs-source-dirs: src
   ghc-options:
@@ -103,6 +106,7 @@ library
     aeson,
     base >= 4.7 && < 5,
     base16-bytestring >= 1,
+    bech32,
     binary,
     bytestring,
     cardano-binary,
@@ -110,12 +114,13 @@ library
     cardano-crypto-class,
     cardano-crypto-wrapper,
     cardano-ledger,
-    cardano-crypto-praos,
     cardano-prelude,
     cardano-slotting,
     cborg,
     cborg-json,
+    constraints,
     containers,
+    data-default-class,
     deepseq,
     groups,
     iproute,
@@ -123,12 +128,12 @@ library
     network,
     nothunks,
     partial-order,
+    prettyprinter,
     primitive >= 0.7.1.0,
     quiet,
     scientific,
     shelley-spec-non-integral,
     small-steps,
-    stm,
     text,
     time,
     transformers

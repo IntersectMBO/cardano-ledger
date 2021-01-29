@@ -104,9 +104,11 @@ getFirst :: ([a] -> Bool) -> [[a]] -> [a]
 getFirst _p [] = []
 getFirst p (xs : xss) = if p xs then xs else getFirst p xss
 
--- | Return some valid list of KeyHashes that appear in a Script
---   Try not to return the empty list if there is at least on
---   Leaf that requires a key hash.
+-- | Produce a valid list of key hashes that appear in a Script.
+-- Note: in the case of AnyOf, we just take the first script in the expression.
+-- This only works if we generate AnyOf scripts such that all script options
+-- are valid scripts (that is, valid in the context of a transaction, at generation time
+-- and execution/spend time).
 scriptKeyCombination ::
   forall era.
   ScriptClass era =>

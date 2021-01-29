@@ -22,14 +22,16 @@ module Shelley.Spec.Ledger.STS.Tick
   )
 where
 
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe, epochInfo)
 import Shelley.Spec.Ledger.Keys (GenDelegs (..))
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
@@ -38,26 +40,51 @@ import Shelley.Spec.Ledger.LedgerState
     FutureGenDeleg (..),
     LedgerState (..),
     NewEpochState (..),
+    RewardUpdate,
   )
-import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH)
-import Shelley.Spec.Ledger.STS.Rupd (RUPD, RupdEnv (..))
-import Shelley.Spec.Ledger.Slot (SlotNo, epochInfoEpoch)
+import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH, NewEpochPredicateFailure)
+import Shelley.Spec.Ledger.STS.Rupd (RUPD, RupdEnv (..), RupdPredicateFailure)
+import Shelley.Spec.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
+
+-- ==================================================
 
 data TICK era
 
 data TickPredicateFailure era
-  = NewEpochFailure (PredicateFailure (NEWEPOCH era)) -- Subtransition Failures
-  | RupdFailure (PredicateFailure (RUPD era)) -- Subtransition Failures
+  = NewEpochFailure (PredicateFailure (Core.EraRule "NEWEPOCH" era)) -- Subtransition Failures
+  | RupdFailure (PredicateFailure (Core.EraRule "RUPD" era)) -- Subtransition Failures
   deriving (Generic)
 
-deriving stock instance Show (TickPredicateFailure era)
+deriving stock instance
+  ( Show (PredicateFailure (Core.EraRule "NEWEPOCH" era)),
+    Show (PredicateFailure (Core.EraRule "RUPD" era))
+  ) =>
+  Show (TickPredicateFailure era)
 
-deriving stock instance Eq (TickPredicateFailure era)
-
-instance NoThunks (TickPredicateFailure era)
+deriving stock instance
+  ( Eq (PredicateFailure (Core.EraRule "NEWEPOCH" era)),
+    Eq (PredicateFailure (Core.EraRule "RUPD" era))
+  ) =>
+  Eq (TickPredicateFailure era)
 
 instance
-  ( ShelleyBased era
+  ( NoThunks (PredicateFailure (Core.EraRule "NEWEPOCH" era)),
+    NoThunks (PredicateFailure (Core.EraRule "RUPD" era))
+  ) =>
+  NoThunks (TickPredicateFailure era)
+
+instance
+  ( Era era,
+    Embed (Core.EraRule "NEWEPOCH" era) (TICK era),
+    Embed (Core.EraRule "RUPD" era) (TICK era),
+    State (TICK era) ~ NewEpochState era,
+    BaseM (TICK era) ~ ShelleyBase,
+    Environment (Core.EraRule "RUPD" era) ~ RupdEnv era,
+    State (Core.EraRule "RUPD" era) ~ StrictMaybe (RewardUpdate (Crypto era)),
+    Signal (Core.EraRule "RUPD" era) ~ SlotNo,
+    Environment (Core.EraRule "NEWEPOCH" era) ~ (),
+    State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
+    Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo
   ) =>
   STS (TICK era)
   where
@@ -107,10 +134,13 @@ adoptGenesisDelegs es slot = es'
 -- future ledger view.
 validatingTickTransition ::
   forall tick era.
-  ( Embed (NEWEPOCH era) (tick era),
+  ( Embed (Core.EraRule "NEWEPOCH" era) (tick era),
     STS (tick era),
     State (tick era) ~ NewEpochState era,
-    BaseM (tick era) ~ ShelleyBase
+    BaseM (tick era) ~ ShelleyBase,
+    Environment (Core.EraRule "NEWEPOCH" era) ~ (),
+    State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
+    Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -120,35 +150,53 @@ validatingTickTransition nes slot = do
     ei <- asks epochInfo
     epochInfoEpoch ei slot
 
-  nes' <- trans @(NEWEPOCH era) $ TRC ((), nes, epoch)
+  nes' <- trans @(Core.EraRule "NEWEPOCH" era) $ TRC ((), nes, epoch)
   let es'' = adoptGenesisDelegs (nesEs nes') slot
 
   pure $ nes' {nesEs = es''}
 
 bheadTransition ::
   forall era.
-  ( ShelleyBased era
+  ( Embed (Core.EraRule "NEWEPOCH" era) (TICK era),
+    Embed (Core.EraRule "RUPD" era) (TICK era),
+    STS (TICK era),
+    State (TICK era) ~ NewEpochState era,
+    BaseM (TICK era) ~ ShelleyBase,
+    Environment (Core.EraRule "RUPD" era) ~ RupdEnv era,
+    State (Core.EraRule "RUPD" era) ~ StrictMaybe (RewardUpdate (Crypto era)),
+    Signal (Core.EraRule "RUPD" era) ~ SlotNo,
+    Environment (Core.EraRule "NEWEPOCH" era) ~ (),
+    State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
+    Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo
   ) =>
   TransitionRule (TICK era)
 bheadTransition = do
   TRC ((), nes@(NewEpochState _ bprev _ es _ _), slot) <-
     judgmentContext
 
-  nes' <- validatingTickTransition nes slot
+  nes' <- validatingTickTransition @TICK nes slot
 
-  ru'' <- trans @(RUPD era) $ TRC (RupdEnv bprev es, nesRu nes', slot)
+  ru'' <-
+    trans @(Core.EraRule "RUPD" era) $
+      TRC (RupdEnv bprev es, nesRu nes', slot)
 
   let nes'' = nes' {nesRu = ru''}
   pure nes''
 
 instance
-  ShelleyBased era =>
+  ( UsesTxOut era,
+    UsesValue era,
+    STS (NEWEPOCH era),
+    PredicateFailure (Core.EraRule "NEWEPOCH" era) ~ NewEpochPredicateFailure era
+  ) =>
   Embed (NEWEPOCH era) (TICK era)
   where
   wrapFailed = NewEpochFailure
 
 instance
-  (ShelleyBased era) =>
+  ( Era era,
+    PredicateFailure (Core.EraRule "RUPD" era) ~ RupdPredicateFailure era
+  ) =>
   Embed (RUPD era) (TICK era)
   where
   wrapFailed = RupdFailure
@@ -162,14 +210,36 @@ to tick the ledger state to a future slot.
 
 data TICKF era
 
-data TickfPredicateFailure era
-  = TickfNewEpochFailure (PredicateFailure (NEWEPOCH era)) -- Subtransition Failures
-  deriving (Show, Generic, Eq)
+newtype TickfPredicateFailure era
+  = TickfNewEpochFailure (PredicateFailure (Core.EraRule "NEWEPOCH" era)) -- Subtransition Failures
+  deriving (Generic)
 
-instance NoThunks (TickfPredicateFailure era)
+deriving stock instance
+  ( Era era,
+    Show (PredicateFailure (Core.EraRule "NEWEPOCH" era))
+  ) =>
+  Show (TickfPredicateFailure era)
+
+deriving stock instance
+  ( Era era,
+    Eq (PredicateFailure (Core.EraRule "NEWEPOCH" era))
+  ) =>
+  Eq (TickfPredicateFailure era)
 
 instance
-  ShelleyBased era =>
+  ( UsesTxOut era,
+    UsesValue era,
+    NoThunks (PredicateFailure (Core.EraRule "NEWEPOCH" era))
+  ) =>
+  NoThunks (TickfPredicateFailure era)
+
+instance
+  ( Era era,
+    Embed (Core.EraRule "NEWEPOCH" era) (TICKF era),
+    Environment (Core.EraRule "NEWEPOCH" era) ~ (),
+    State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
+    Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo
+  ) =>
   STS (TICKF era)
   where
   type
@@ -190,7 +260,12 @@ instance
     ]
 
 instance
-  ShelleyBased era =>
+  ( UsesTxOut era,
+    UsesValue era,
+    STS (NEWEPOCH era),
+    PredicateFailure (Core.EraRule "NEWEPOCH" era)
+      ~ NewEpochPredicateFailure era
+  ) =>
   Embed (NEWEPOCH era) (TICKF era)
   where
   wrapFailed = TickfNewEpochFailure

@@ -18,10 +18,10 @@ import Cardano.Ledger.Mary.Value
   )
 import Cardano.Ledger.Val (Val (..), invert)
 import Data.ByteString (ByteString)
-import Data.CannonicalMaps
-  ( CannonicalZero (..),
-    cannonicalInsert,
-    cannonicalMapUnion,
+import Data.CanonicalMaps
+  ( CanonicalZero (..),
+    canonicalInsert,
+    canonicalMapUnion,
   )
 import Data.Map.Strict (empty, singleton)
 import qualified Data.Map.Strict as Map
@@ -32,7 +32,10 @@ import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (scale)
+import qualified Test.QuickCheck as QC
+import Control.Monad (replicateM)
 import Prelude hiding (lookup)
+import Cardano.Ledger.Compactible (toCompact, fromCompact)
 
 -- =================================================================================
 -- Alternate implementations of insert to be benchmarked.
@@ -40,19 +43,19 @@ import Prelude hiding (lookup)
 -- We compute Values 3 ways and show all are equivalent.
 -- =================================================================================
 
--- Use cannonicalUnion and cannonicalInsert
+-- Use canonicalUnion and canonicalInsert
 
 insert3 :: (Integer -> Integer -> Integer) -> PolicyID crypto -> AssetName -> Integer -> Value crypto -> Value crypto
 insert3 combine pid aid new (Value c m1) =
   case Map.lookup pid m1 of
-    Nothing -> Value c (cannonicalInsert (cannonicalMapUnion combine) pid (cannonicalInsert combine aid new zeroC) m1)
+    Nothing -> Value c (canonicalInsert (canonicalMapUnion combine) pid (canonicalInsert combine aid new zeroC) m1)
     Just m2 -> case Map.lookup aid m2 of
-      Nothing -> Value c (cannonicalInsert (cannonicalMapUnion combine) pid (singleton aid new) m1)
-      Just old -> Value c (cannonicalInsert (\_o n -> n) pid (cannonicalInsert (\_o n -> n) aid (combine old new) m2) m1)
+      Nothing -> Value c (canonicalInsert (canonicalMapUnion combine) pid (singleton aid new) m1)
+      Just old -> Value c (canonicalInsert (\_o n -> n) pid (canonicalInsert (\_o n -> n) aid (combine old new) m2) m1)
 
 -- | Make a Value with no coin, and just one token.
 unit :: PolicyID crypto -> AssetName -> Integer -> Value crypto
-unit pid aid n = Value 0 (cannonicalInsert (\_old new -> new) pid (cannonicalInsert (\_old new -> new) aid n empty) empty)
+unit pid aid n = Value 0 (canonicalInsert (\_old new -> new) pid (canonicalInsert (\_old new -> new) aid n empty) empty)
 
 -- Use <+> and <->
 
@@ -122,24 +125,19 @@ genAssetName = oneof (map return assetChoices)
 genPolicyID :: Gen (PolicyID C_Crypto)
 genPolicyID = oneof (map return policyChoices)
 
-genTriple :: Gen (PolicyID C_Crypto, AssetName, Integer)
-genTriple = (,,) <$> genPolicyID <*> genAssetName <*> choose (-2, 4)
+genTriple :: Gen Integer -> Gen (PolicyID C_Crypto, AssetName, Integer)
+genTriple genAmount = (,,) <$> genPolicyID <*> genAssetName <*> genAmount
 
-genMap :: Gen [(PolicyID C_Crypto, AssetName, Integer)] -- Most maps have 1 or 2 Assets
-genMap =
-  frequency
-    [ (1, vectorOf 0 genTriple),
-      (4, vectorOf 1 genTriple),
-      (5, vectorOf 2 genTriple),
-      (2, vectorOf 3 genTriple),
-      (1, vectorOf 4 genTriple)
-    ]
+genMap :: Gen Integer -> Gen [(PolicyID C_Crypto, AssetName, Integer)] -- Most maps have 1 or 2 Assets
+genMap genAmount = do
+  len <- frequency [(1,pure 0),(4,pure 1),(5,pure 2),(2,pure 3),(1,pure 4)]
+  vectorOf len (genTriple genAmount)
 
-genValue :: Gen (Value C_Crypto)
-genValue = valueFromList <$> genMap <*> choose (-2, 10)
+genValue :: Gen Integer ->  Gen (Value C_Crypto)
+genValue genAmount = valueFromList <$> genMap genAmount <*> genAmount
 
 instance Arbitrary (Value C_Crypto) where
-  arbitrary = genValue
+  arbitrary = genValue (choose (-2,10))
   shrink _ = []
 
 instance Arbitrary AssetName where
@@ -286,6 +284,27 @@ valueGroup =
 valueGroupTests :: TestTree
 valueGroupTests = testGroup "value is a group" (map (\(f, n) -> testProperty n f) valueGroup)
 
+compactRoundTrip ::  Property
+compactRoundTrip = forAll gen $ \v ->
+  counterexample (show $ toCompact v)
+  (Just v === fmap fromCompact (toCompact v))
+  where
+  gen = do
+   pids <- replicateM 3 (pure <$> genPolicyID)
+   ans <- replicateM 3 (pure <$> genAssetName)
+   -- this ensures we get some collisions among asset names and among pids
+   numTriples <- QC.choose (3,30)
+   triples <- replicateM numTriples $ do
+     pid <- QC.oneof pids
+     an <- QC.oneof ans
+     q <- QC.choose (0,100)
+     pure ((pid, an, q))
+   q <- QC.choose (0,100)
+   pure (valueFromList triples q)
+
+compactTest :: TestTree
+compactTest = testProperty "fromCompact . toCompact == id" compactRoundTrip
+
 -- ===========================================
 -- All the value tests
 
@@ -298,5 +317,6 @@ valTests =
       polyCoinTests,
       polyValueTests,
       monoValueTests,
-      valueGroupTests
+      valueGroupTests,
+      compactTest
     ]

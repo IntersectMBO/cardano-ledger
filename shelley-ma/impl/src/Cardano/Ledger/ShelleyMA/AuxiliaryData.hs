@@ -8,6 +8,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -22,7 +24,18 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppMap',
+    ppMetadatum,
+    ppRecord,
+    ppStrictSeq,
+    ppWord64,
+    text,
+  )
+import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, HashAnnotated, SafeToHash)
 import Codec.CBOR.Decoding
   ( TokenType
       ( TypeListLen,
@@ -47,6 +60,8 @@ import Shelley.Spec.Ledger.Metadata
   )
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
+-- =======================================
+
 -- | Raw, un-memoised metadata type
 data AuxiliaryDataRaw era = AuxiliaryDataRaw
   { -- | Structured transaction metadata
@@ -69,7 +84,9 @@ deriving instance
 
 newtype AuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes (AuxiliaryDataRaw era))
   deriving (Generic, Typeable)
-  deriving newtype (ToCBOR)
+  deriving newtype (ToCBOR, SafeToHash)
+
+instance (c ~ Crypto era) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c
 
 deriving newtype instance
   (Era era, Core.ChainData (Core.Script era)) =>
@@ -148,3 +165,17 @@ deriving via
       Core.AnnotatedData (Core.Script era)
     ) =>
     FromCBOR (Annotator (AuxiliaryData era))
+
+-- =================================
+-- Pretty printers
+
+ppAuxiliaryData :: PrettyA (Core.Script era) => AuxiliaryData era -> PDoc
+ppAuxiliaryData (AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw m sp) _)) =
+  ppRecord
+    "AuxiliaryData"
+    [ ("metadata", ppMap' (text "Metadata") ppWord64 ppMetadatum m),
+      ("auxiliaryscripts", ppStrictSeq prettyA sp)
+    ]
+
+instance PrettyA (Core.Script era) => PrettyA (AuxiliaryData era) where
+  prettyA = ppAuxiliaryData

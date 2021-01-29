@@ -16,6 +16,7 @@ module Shelley.Spec.Ledger.PParams
   ( PParams' (..),
     PParams,
     emptyPParams,
+    HKD,
     ProtVer (..),
     PPUpdateEnv (..),
     ProposedPPUpdates (..),
@@ -40,6 +41,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
@@ -298,6 +300,9 @@ instance FromJSON (PParams era) where
         <*> obj .: "protocolVersion"
         <*> obj .:? "minUTxOValue" .!= mempty
         <*> obj .:? "minPoolCost" .!= mempty
+
+instance Default (PParams era) where
+  def = emptyPParams
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams era

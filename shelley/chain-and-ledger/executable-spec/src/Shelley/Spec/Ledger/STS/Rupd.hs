@@ -12,8 +12,9 @@ module Shelley.Spec.Ledger.STS.Rupd
   )
 where
 
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (Crypto, Era)
 import Control.Monad.Trans.Reader (asks)
+import Control.Provenance (runProvM)
 import Control.State.Transition
   ( STS (..),
     TRC (..),
@@ -22,7 +23,6 @@ import Control.State.Transition
     liftSTS,
   )
 import Data.Functor ((<&>))
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
@@ -54,7 +54,7 @@ data RupdPredicateFailure era -- No predicate failures
 
 instance NoThunks (RupdPredicateFailure era)
 
-instance Typeable era => STS (RUPD era) where
+instance (Era era) => STS (RUPD era) where
   type State (RUPD era) = StrictMaybe (RewardUpdate (Crypto era))
   type Signal (RUPD era) = SlotNo
   type Environment (RUPD era) = RupdEnv era
@@ -64,7 +64,7 @@ instance Typeable era => STS (RUPD era) where
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
 
-rupdTransition :: Typeable era => TransitionRule (RUPD era)
+rupdTransition :: Era era => TransitionRule (RUPD era)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (slotsPerEpoch, slot, maxLL) <- liftSTS $ do
@@ -81,10 +81,11 @@ rupdTransition = do
       SNothing ->
         SJust
           <$> ( liftSTS $
-                  createRUpd
-                    slotsPerEpoch
-                    b
-                    es
-                    (Coin $ fromIntegral maxLL)
+                  runProvM $
+                    createRUpd
+                      slotsPerEpoch
+                      b
+                      es
+                      (Coin (fromIntegral maxLL))
               )
       SJust _ -> pure ru

@@ -16,14 +16,13 @@ where
 
 import Cardano.Ledger.Era (Crypto)
 import Control.State.Transition
-  ( InitialRule,
-    STS (..),
+  ( STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
     (?!),
   )
-import qualified Data.Map.Strict as Map
+import Data.Default.Class (Default, def)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -33,27 +32,29 @@ import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DState (..),
+    PPUPState (..),
     PState (..),
     UTxOState,
-    emptyAccount,
-    emptyPPUPState,
+    pvCanFollow,
     totalInstantaneousReservesRewards,
-    updatePpup,
     _deposited,
     _irwd,
     _reserves,
-    pattern UTxOState,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
-import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Shelley.Spec.Ledger.PParams
+  ( PParams,
+    PParams' (..),
+    ProposedPPUpdates (..),
+    emptyPPPUpdates,
+  )
 
 data NEWPP era
 
 data NewppState era
-  = NewppState (UTxOState era) AccountState (PParams era)
+  = NewppState (PParams era) (PPUPState era)
 
 data NewppEnv era
-  = NewppEnv (DState (Crypto era)) (PState (Crypto era))
+  = NewppEnv (DState (Crypto era)) (PState (Crypto era)) (UTxOState era) AccountState
 
 data NewppPredicateFailure era
   = UnexpectedDepositPot
@@ -69,20 +70,19 @@ instance Typeable era => STS (NEWPP era) where
   type Environment (NEWPP era) = NewppEnv era
   type BaseM (NEWPP era) = ShelleyBase
   type PredicateFailure (NEWPP era) = NewppPredicateFailure era
-  initialRules = [initialNewPp]
   transitionRules = [newPpTransition]
 
-initialNewPp :: InitialRule (NEWPP era)
-initialNewPp =
-  pure $
-    NewppState
-      (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState)
-      emptyAccount
-      emptyPParams
+instance Default (NewppState era) where
+  def = NewppState def def
 
 newPpTransition :: TransitionRule (NEWPP era)
 newPpTransition = do
-  TRC (NewppEnv dstate pstate, NewppState utxoSt acnt pp, ppNew) <- judgmentContext
+  TRC
+    ( NewppEnv dstate pstate utxoSt acnt,
+      NewppState pp ppupSt,
+      ppNew
+      ) <-
+    judgmentContext
 
   case ppNew of
     Just ppNew' -> do
@@ -95,12 +95,20 @@ newPpTransition = do
       (Coin oblgCurr) == (_deposited utxoSt) ?! UnexpectedDepositPot (Coin oblgCurr) (_deposited utxoSt)
 
       if reserves + diff >= requiredInstantaneousRewards
-        -- Note that instantaneous rewards from the treasury are irrelevant here,
-        -- since changes in the protocol parameters do not change how much is needed from the treasury
+        -- Note that instantaneous rewards from the treasury are irrelevant
+        -- here, since changes in the protocol parameters do not change how much
+        -- is needed from the treasury
         && (_maxTxSize ppNew' + _maxBHSize ppNew') < _maxBBSize ppNew'
-        then
-          let utxoSt' = utxoSt {_deposited = Coin oblgNew}
-           in let acnt' = acnt {_reserves = Coin $ reserves + diff}
-               in pure $ NewppState (updatePpup utxoSt' ppNew') acnt' ppNew'
-        else pure $ NewppState (updatePpup utxoSt pp) acnt pp
-    Nothing -> pure $ NewppState (updatePpup utxoSt pp) acnt pp
+        then pure $ NewppState ppNew' (updatePpup ppupSt ppNew')
+        else pure $ NewppState pp (updatePpup ppupSt pp)
+    Nothing -> pure $ NewppState pp (updatePpup ppupSt pp)
+
+-- | Update the protocol parameter updates by clearing out the proposals
+-- and making the future proposals become the new proposals,
+-- provided the new proposals can follow (otherwise reset them).
+updatePpup :: PPUPState era -> PParams era -> PPUPState era
+updatePpup ppupSt pp = PPUPState ps emptyPPPUpdates
+  where
+    (ProposedPPUpdates newProposals) = futureProposals ppupSt
+    goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
+    ps = if all goodPV newProposals then ProposedPPUpdates newProposals else emptyPPPUpdates

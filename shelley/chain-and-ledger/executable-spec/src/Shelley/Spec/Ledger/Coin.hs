@@ -20,7 +20,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Compactible
-import qualified Cardano.Ledger.Torsor as Torsor
+import Cardano.Prelude (HeapWords)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
@@ -46,10 +46,10 @@ newtype Coin = Coin {unCoin :: Integer}
     )
   deriving (Show) via Quiet Coin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
-  deriving newtype (PartialOrd, FromCBOR, ToCBOR)
+  deriving newtype (PartialOrd, FromCBOR, ToCBOR, HeapWords)
 
 newtype DeltaCoin = DeltaCoin Integer
-  deriving (Eq, Ord, Generic, Enum, NoThunks, NFData, FromCBOR, ToCBOR)
+  deriving (Eq, Ord, Generic, Enum, NoThunks, NFData, FromCBOR, ToCBOR, HeapWords)
   deriving (Show) via Quiet DeltaCoin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
   deriving newtype (PartialOrd)
@@ -60,11 +60,6 @@ addDeltaCoin (Coin x) (DeltaCoin y) = Coin (x + y)
 toDeltaCoin :: Coin -> DeltaCoin
 toDeltaCoin (Coin x) = DeltaCoin x
 
-instance Torsor.Torsor Coin where
-  type Delta Coin = DeltaCoin
-  addDelta = addDeltaCoin
-  toDelta = toDeltaCoin
-
 word64ToCoin :: Word64 -> Coin
 word64ToCoin w = Coin $ fromIntegral w
 
@@ -74,13 +69,9 @@ coinToRational (Coin c) = fromIntegral c
 rationalToCoinViaFloor :: Rational -> Coin
 rationalToCoinViaFloor r = Coin . floor $ r
 
--- FIXME:
--- if coin is less than 0 or greater than (maxBound :: Word64), then
--- fromIntegral constructs the incorrect value. for now this is handled
--- with an erroring bounds check here. where should this really live?
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64
-    deriving (Eq, Show, NoThunks, Typeable)
+    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords)
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
   fromCompact (CompactCoin c) = word64ToCoin c

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -26,12 +27,14 @@ module BenchValidation
   )
 where
 
-import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Prelude (NFData (rnf))
 import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.Monad.Except ()
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map as Map
 import Data.Proxy
 import qualified Shelley.Spec.Ledger.API as API
@@ -59,11 +62,14 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
+import Shelley.Spec.Ledger.TxBody (TransTxBody, TransTxId)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest, testGlobals)
+import Control.State.Transition (STS (State))
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 
@@ -77,9 +83,10 @@ validateInput ::
   ( EraGen era,
     ShelleyTest era,
     Mock (Crypto era),
-    ValidateAuxiliaryData era,
-    API.GetLedgerView era,
+    Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
+    QC.HasTrace (API.LEDGERS era) (GenEnv era),
     API.ApplyBlock era,
+    API.GetLedgerView era,
     ShelleyLedgerSTS era
   ) =>
   Int ->
@@ -90,9 +97,10 @@ genValidateInput ::
   ( EraGen era,
     ShelleyTest era,
     Mock (Crypto era),
-    ValidateAuxiliaryData era,
-    API.GetLedgerView era,
+    Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
+    QC.HasTrace (API.LEDGERS era) (GenEnv era),
     API.ApplyBlock era,
+    API.GetLedgerView era,
     ShelleyLedgerSTS era
   ) =>
   Int ->
@@ -115,8 +123,11 @@ benchValidate (ValidateInput globals state block) =
 
 applyBlock ::
   forall era.
-  ( Era era,
-    API.ApplyBlock era
+  ( TransTxId Show era,
+    TransTxBody NFData era,
+    TransValue NFData era,
+    API.ApplyBlock era,
+    NFData (State (Core.EraRule "PPUP" era))
   ) =>
   ValidateInput era ->
   Int ->
@@ -169,12 +180,13 @@ instance CryptoClass.Crypto c => NFData (UpdateInputs c) where
 genUpdateInputs ::
   forall era.
   ( EraGen era,
-    ShelleyTest era,
     Mock (Crypto era),
-    ValidateAuxiliaryData era,
+    ShelleyTest era,
+    ShelleyLedgerSTS era,
     API.GetLedgerView era,
-    API.ApplyBlock era,
-    ShelleyLedgerSTS era
+    Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
+    QC.HasTrace (API.LEDGERS era) (GenEnv era),
+    API.ApplyBlock era
   ) =>
   Int ->
   IO (UpdateInputs (Crypto era))

@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -14,15 +16,20 @@ module Shelley.Spec.Ledger.API.Wallet
     getPoolParameters,
     getTotalStake,
     poolsByTotalStakeFraction,
+    getRewardInfo,
   )
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
-import Cardano.Slotting.Slot (SlotNo)
+import Cardano.Slotting.Slot (EpochSize, SlotNo)
+import Control.Monad.Trans.Reader (runReader)
+import Control.Provenance (runWithProvM)
+import Data.Default.Class (Default (..))
 import Data.Foldable (fold)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
@@ -31,12 +38,13 @@ import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import GHC.Records (HasField, getField)
 import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.CompactAddr (compactAddr)
+import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
@@ -47,12 +55,15 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
     PState (..),
+    RewardUpdate,
     UTxOState (..),
     circulation,
+    createRUpd,
     stakeDistr,
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import Shelley.Spec.Ledger.Rewards
   ( NonMyopic (..),
     StakeShare (..),
@@ -62,7 +73,8 @@ import Shelley.Spec.Ledger.Rewards
   )
 import Shelley.Spec.Ledger.STS.NewEpoch (calculatePoolDistr)
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
-import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxOut (..))
+import Shelley.Spec.Ledger.Slot (epochInfoSize)
+import Shelley.Spec.Ledger.TxBody (PoolParams (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Get pool sizes, but in terms of total stake
@@ -75,7 +87,7 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
   forall era.
-  ShelleyBased era =>
+  (UsesTxOut era, UsesValue era) =>
   Globals ->
   NewEpochState era ->
   PoolDistr (Crypto era)
@@ -106,7 +118,7 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  ShelleyBased era =>
+  (UsesTxOut era, UsesValue era) =>
   Globals ->
   NewEpochState era ->
   Set (Either Coin (Credential 'Staking (Crypto era))) ->
@@ -166,7 +178,8 @@ getNonMyopicMemberRewards globals ss creds =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: ShelleyBased era => NewEpochState era -> EB.SnapShot (Crypto era)
+currentSnapshot ::
+  (UsesTxOut era, UsesValue era) => NewEpochState era -> EB.SnapShot (Crypto era)
 currentSnapshot ss =
   stakeDistr utxo dstate pstate
   where
@@ -183,11 +196,15 @@ getUTxO = _utxo . _utxoState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
+  HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era)) =>
   NewEpochState era ->
   Set (Addr (Crypto era)) ->
   UTxO era
 getFilteredUTxO ss addrs =
-  UTxO $ Map.filter (\(TxOutCompact addrSBS _) -> addrSBS `Set.member` addrSBSs) fullUTxO
+  UTxO $
+    Map.filter
+      (\out -> (getField @"compactAddress" out) `Set.member` addrSBSs)
+      fullUTxO
   where
     UTxO fullUTxO = getUTxO ss
     -- Instead of decompacting each address in the huge UTxO, compact each
@@ -234,3 +251,24 @@ getPoolParameters ::
 getPoolParameters nes poolId = Map.lookup poolId (f nes)
   where
     f = _pParams . _pstate . _delegationState . esLState . nesEs
+
+getRewardInfo ::
+  forall era.
+  Globals ->
+  NewEpochState era ->
+  (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
+getRewardInfo globals newepochstate =
+  runReader
+    ( runWithProvM def $
+        createRUpd slotsPerEpoch blocksmade epochstate maxsupply
+    )
+    globals
+  where
+    epochstate = nesEs newepochstate
+    maxsupply :: Coin
+    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
+    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade = nesBprev newepochstate
+    epochnumber = nesEL newepochstate
+    slotsPerEpoch :: EpochSize
+    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
