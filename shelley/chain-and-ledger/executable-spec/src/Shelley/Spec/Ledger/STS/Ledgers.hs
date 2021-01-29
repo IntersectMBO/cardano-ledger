@@ -47,8 +47,11 @@ import Shelley.Spec.Ledger.LedgerState
     _delegationState,
     _utxoState,
   )
-import Shelley.Spec.Ledger.PParams (PParams)
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..), LedgerPredicateFailure)
+import Shelley.Spec.Ledger.STS.Ledger
+  ( LEDGER,
+    LedgerEnv (..),
+    LedgerPredicateFailure,
+  )
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
@@ -57,7 +60,7 @@ data LEDGERS era
 
 data LedgersEnv era = LedgersEnv
   { ledgersSlotNo :: SlotNo,
-    ledgersPp :: PParams era,
+    ledgersPp :: Core.PParams era,
     ledgersAccount :: AccountState
   }
 

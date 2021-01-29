@@ -1,9 +1,17 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Shelley.Spec.Ledger.HardForks
   ( aggregatedRewards,
   )
 where
 
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer (..))
+import GHC.Records
+import Shelley.Spec.Ledger.PParams (ProtVer (..))
 
-aggregatedRewards :: PParams era -> Bool
-aggregatedRewards pp = pvMajor (_protocolVersion pp) > 2
+aggregatedRewards ::
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Bool
+aggregatedRewards pp = pvMajor (getField @"_protocolVersion" pp) > 2

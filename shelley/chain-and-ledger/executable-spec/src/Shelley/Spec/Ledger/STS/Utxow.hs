@@ -98,7 +98,7 @@ import Shelley.Spec.Ledger.LedgerState
     witsFromWitnessSet,
     witsVKeyNeeded,
   )
-import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.PParams (ProtVer, Update)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..), UtxoPredicateFailure)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization
@@ -173,7 +173,8 @@ instance
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   STS (UTXOW era)
   where
@@ -294,7 +295,8 @@ utxoWitnessed ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   (UTxO era -> Tx era -> Set (ScriptHash (Crypto era))) ->
   TransitionRule (utxow era)

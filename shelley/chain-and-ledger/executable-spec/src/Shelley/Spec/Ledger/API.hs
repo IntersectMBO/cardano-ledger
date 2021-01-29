@@ -16,6 +16,7 @@ import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
+    UsesPParams,
     UsesScript,
     UsesTxBody,
     UsesTxOut,
@@ -39,6 +40,7 @@ class
     UsesAuxiliary era,
     UsesTxBody era,
     UsesTxOut era,
+    UsesPParams era,
     ChainData (State (Core.EraRule "PPUP" era)),
     SerialisableData (State (Core.EraRule "PPUP" era))
   ) =>

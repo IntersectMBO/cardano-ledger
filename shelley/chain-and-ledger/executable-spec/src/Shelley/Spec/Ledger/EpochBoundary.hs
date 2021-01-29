@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -46,7 +47,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import GHC.Generics (Generic)
-import GHC.Records (getField)
+import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
@@ -58,7 +59,6 @@ import Shelley.Spec.Ledger.Coin
   )
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxBody (PoolParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
@@ -135,19 +135,28 @@ poolStake hk delegs (Stake stake) =
 
 -- | Calculate total possible refunds.
 obligation ::
-  PParams era ->
-  Map (Credential 'Staking (Crypto era)) Coin ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
+  forall crypto pp.
+  (HasField "_keyDeposit" pp Coin, HasField "_poolDeposit" pp Coin) =>
+  pp ->
+  Map (Credential 'Staking crypto) Coin ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   Coin
 obligation pp rewards stakePools =
-  (length rewards <×> _keyDeposit pp) <+> (length stakePools <×> _poolDeposit pp)
+  (length rewards <×> getField @"_keyDeposit" pp)
+    <+> (length stakePools <×> getField @"_poolDeposit" pp)
 
 -- | Calculate maximal pool reward
-maxPool :: PParams era -> Coin -> Rational -> Rational -> Coin
+maxPool ::
+  (HasField "_a0" pp Rational, HasField "_nOpt" pp Natural) =>
+  pp ->
+  Coin ->
+  Rational ->
+  Rational ->
+  Coin
 maxPool pc r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
   where
-    a0 = _a0 pc
-    nOpt = _nOpt pc
+    a0 = getField @"_a0" pc
+    nOpt = getField @"_nOpt" pc
     z0 = 1 % fromIntegral nOpt
     sigma' = min sigma z0
     p' = min pR z0

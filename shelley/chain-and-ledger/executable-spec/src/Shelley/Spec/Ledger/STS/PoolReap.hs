@@ -1,10 +1,13 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -16,6 +19,7 @@ module Shelley.Spec.Ledger.STS.PoolReap
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
@@ -32,8 +36,10 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
+import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -42,7 +48,6 @@ import Shelley.Spec.Ledger.LedgerState
     TransUTxOState,
     UTxOState (..),
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxBody (getRwdCred, _poolRAcnt)
 
@@ -67,10 +72,18 @@ instance NoThunks (PoolreapPredicateFailure era)
 instance Default (UTxOState era) => Default (PoolreapState era) where
   def = PoolreapState def def def def
 
-instance (Typeable era, Default (PoolreapState era)) => STS (POOLREAP era) where
+instance
+  forall era.
+  ( Typeable era,
+    Default (PoolreapState era),
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "_keyDeposit" (Core.PParams era) Coin
+  ) =>
+  STS (POOLREAP era)
+  where
   type State (POOLREAP era) = PoolreapState era
   type Signal (POOLREAP era) = EpochNo
-  type Environment (POOLREAP era) = PParams era
+  type Environment (POOLREAP era) = Core.PParams era
   type BaseM (POOLREAP era) = ShelleyBase
   type PredicateFailure (POOLREAP era) = PoolreapPredicateFailure era
   transitionRules = [poolReapTransition]
@@ -89,12 +102,14 @@ instance (Typeable era, Default (PoolreapState era)) => STS (POOLREAP era) where
         )
     ]
 
-poolReapTransition :: TransitionRule (POOLREAP era)
+poolReapTransition ::
+  HasField "_poolDeposit" (Core.PParams era) Coin =>
+  TransitionRule (POOLREAP era)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
   let retired = eval (dom ((_retiring ps) ▷ setSingleton e))
-      pr = Map.fromList $ fmap (\kh -> (kh, _poolDeposit pp)) (Set.toList retired)
+      pr = Map.fromList $ fmap (\kh -> (kh, getField @"_poolDeposit" pp)) (Set.toList retired)
       rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ (_pParams ps))
       rewardAcnts' =
         Map.fromListWith (<+>)

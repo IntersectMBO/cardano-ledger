@@ -32,6 +32,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
+    UsesPParams,
     UsesScript,
     UsesTxBody,
     UsesTxOut,
@@ -64,6 +65,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
+import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address
   ( Addr (AddrBootstrap),
     bootstrapAddressAttrsSize,
@@ -120,10 +122,11 @@ data UTXO era
 data UtxoEnv era
   = UtxoEnv
       SlotNo
-      (PParams era)
+      (Core.PParams era)
       (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)))
       (GenDelegs (Crypto era))
-  deriving (Show)
+
+deriving instance Show (Core.PParams era) => Show (UtxoEnv era)
 
 data UtxoPredicateFailure era
   = BadInputsUTxO
@@ -274,7 +277,9 @@ instance
     UsesValue era,
     UsesScript era,
     UsesAuxiliary era,
+    UsesPParams era,
     Core.TxBody era ~ TxBody era,
+    Core.PParams era ~ PParams era,
     Core.Value era ~ Coin,
     Eq (PredicateFailure (Core.EraRule "PPUP" era)),
     Embed (Core.EraRule "PPUP" era) (UTXO era),
@@ -342,7 +347,13 @@ utxoInductive ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "ttl" (Core.TxBody era) SlotNo,
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "_minfeeA" (Core.PParams era) Natural,
+    HasField "_minfeeB" (Core.PParams era) Natural,
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "_minUTxOValue" (Core.PParams era) Coin,
+    HasField "_maxTxSize" (Core.PParams era) Natural
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
@@ -376,14 +387,14 @@ utxoInductive = do
   null wdrlsWrongNetwork ?! WrongNetworkWithdrawal ni (Set.fromList wdrlsWrongNetwork)
 
   let consumed_ = consumed pp utxo txb
-      produced_ = produced pp stakepools txb
+      produced_ = produced @era pp stakepools txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(Core.EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
   let outputs = Map.elems $ unUTxO (txouts @era txb)
-      minUTxOValue = _minUTxOValue pp
+      minUTxOValue = getField @"_minUTxOValue" pp
       -- minUTxOValue deposit comparison done as Coin because this rule
       -- is correct strictly in the Shelley era (in shelleyMA we would need to
       -- additionally check that all amounts are non-negative)
@@ -391,7 +402,7 @@ utxoInductive = do
         filter
           ( \x ->
               let c = getField @"value" x
-               in (Val.coin c) < minUTxOValue
+               in Val.coin c < minUTxOValue
           )
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
@@ -407,7 +418,7 @@ utxoInductive = do
           outputs
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
-  let maxTxSize_ = fromIntegral (_maxTxSize pp)
+  let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
       txSize_ = txsize tx
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
@@ -425,6 +436,7 @@ utxoInductive = do
 
 instance
   ( Era era,
+    STS (PPUP era),
     PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era
   ) =>
   Embed (PPUP era) (UTXO era)

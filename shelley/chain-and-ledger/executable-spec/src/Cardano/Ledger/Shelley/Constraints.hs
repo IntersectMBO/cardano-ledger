@@ -14,6 +14,7 @@ import Cardano.Ledger.Core
   ( AnnotatedData,
     AuxiliaryData,
     ChainData,
+    PParams,
     Script,
     SerialisableData,
     TxBody,
@@ -26,6 +27,7 @@ import Cardano.Ledger.SafeHash
     HashAnnotated,
   )
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
+import Control.DeepSeq (NFData)
 import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy)
 import GHC.Records (HasField)
@@ -82,6 +84,26 @@ type UsesAuxiliary era =
     ValidateAuxiliaryData era,
     AnnotatedData (AuxiliaryData era)
   )
+
+class
+  ( Era era,
+    Eq (PParams era),
+    Show (PParams era),
+    SerialisableData (PParams era),
+    ChainData (PParamsDelta era),
+    NFData (PParamsDelta era),
+    Ord (PParamsDelta era),
+    SerialisableData (PParamsDelta era)
+  ) =>
+  UsesPParams era
+  where
+  type PParamsDelta era :: Type
+
+  mergePPUpdates ::
+    proxy era ->
+    PParams era ->
+    PParamsDelta era ->
+    PParams era
 
 -- | Apply 'c' to all the types transitively involved with Value when
 -- (Core.Value era) is an instance of Compactible

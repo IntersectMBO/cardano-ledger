@@ -1,11 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Ppup
   ( PPUP,
@@ -22,7 +25,9 @@ import Cardano.Binary
     decodeWord,
     encodeListLen,
   )
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
@@ -31,6 +36,7 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Keys
@@ -42,7 +48,7 @@ import Shelley.Spec.Ledger.Slot
 data PPUP era
 
 data PPUPEnv era
-  = PPUPEnv SlotNo (PParams era) (GenDelegs (Crypto era))
+  = PPUPEnv SlotNo (Core.PParams era) (GenDelegs (Crypto era))
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)
@@ -74,7 +80,13 @@ data PpupPredicateFailure era
 
 instance NoThunks (PpupPredicateFailure era)
 
-instance Typeable era => STS (PPUP era) where
+instance
+  ( Typeable era,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer)
+  ) =>
+  STS (PPUP era)
+  where
   type State (PPUP era) = PPUPState era
   type Signal (PPUP era) = Maybe (Update era)
   type Environment (PPUP era) = PPUPEnv era
@@ -119,7 +131,12 @@ instance
         pure (2, PVCannotFollowPPUP p)
       k -> invalidKey k
 
-ppupTransitionNonEmpty :: Typeable era => TransitionRule (PPUP era)
+ppupTransitionNonEmpty ::
+  ( Typeable era,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer)
+  ) =>
+  TransitionRule (PPUP era)
 ppupTransitionNonEmpty = do
   TRC
     ( PPUPEnv slot pp (GenDelegs _genDelegs),
@@ -133,9 +150,11 @@ ppupTransitionNonEmpty = do
     Just (Update (ProposedPPUpdates pup) te) -> do
       eval (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom _genDelegs))
 
-      let goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
+      let goodPV =
+            pvCanFollow (getField @"_protocolVersion" pp)
+              . getField @"_protocolVersion"
       let badPVs = Map.filter (not . goodPV) pup
-      case Map.toList (Map.map _protocolVersion badPVs) of
+      case Map.toList (Map.map (getField @"_protocolVersion") badPVs) of
         ((_, SJust pv) : _) -> failBecause $ PVCannotFollowPPUP pv
         _ -> pure ()
 
