@@ -20,7 +20,7 @@ source-repository head
 
 library
   exposed-modules:
-    Cardano.Ledger.ExampleShelley
+    Cardano.Ledger.Example
 
   -- other-extensions:
   build-depends:

@@ -8,7 +8,7 @@
 
 -- | This is a stub example of a Shelley era, designed for testing,
 -- prototyping, and demo purposes.
-module Cardano.Ledger.ExampleShelley where
+module Cardano.Ledger.Example where
 
 import Cardano.Binary (toCBOR)
 import qualified Cardano.Crypto.Hash as Hash
@@ -64,29 +64,29 @@ import Shelley.Spec.Ledger.STS.Tick (TICK, TICKF)
 import Shelley.Spec.Ledger.STS.Tickn (TICKN)
 import Shelley.Spec.Ledger.STS.Upec (UPEC)
 
-data ExampleShelleyEra c
+data ExampleEra c
 
-instance CryptoClass.Crypto c => Era (ExampleShelleyEra c) where
-  type Crypto (ExampleShelleyEra c) = c
+instance CryptoClass.Crypto c => Era (ExampleEra c) where
+  type Crypto (ExampleEra c) = c
 
-instance CryptoClass.Crypto c => UsesValue (ExampleShelleyEra c)
+instance CryptoClass.Crypto c => UsesValue (ExampleEra c)
 
-instance CryptoClass.Crypto c => UsesTxOut (ExampleShelleyEra c) where
+instance CryptoClass.Crypto c => UsesTxOut (ExampleEra c) where
   makeTxOut _ a v = TxOut a v
 
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
 
-type instance Core.Value (ExampleShelleyEra _c) = Coin
+type instance Core.Value (ExampleEra _c) = Coin
 
-type instance Core.TxBody (ExampleShelleyEra c) = TxBody (ExampleShelleyEra c)
+type instance Core.TxBody (ExampleEra c) = TxBody (ExampleEra c)
 
-type instance Core.TxOut (ExampleShelleyEra c) = TxOut (ExampleShelleyEra c)
+type instance Core.TxOut (ExampleEra c) = TxOut (ExampleEra c)
 
-type instance Core.Script (ExampleShelleyEra c) = MultiSig c
+type instance Core.Script (ExampleEra c) = MultiSig c
 
-type instance Core.AuxiliaryData (ExampleShelleyEra c) = Metadata
+type instance Core.AuxiliaryData (ExampleEra c) = Metadata
 
 --------------------------------------------------------------------------------
 -- Ledger data instances
@@ -94,41 +94,41 @@ type instance Core.AuxiliaryData (ExampleShelleyEra c) = Metadata
 
 instance
   (CryptoClass.Crypto c) =>
-  ValidateScript (ExampleShelleyEra c)
+  ValidateScript (ExampleEra c)
   where
   validateScript = validateNativeMultiSigScript
   hashScript = hashMultiSigScript
 
-instance CryptoClass.Crypto c => ValidateAuxiliaryData (ExampleShelleyEra c) where
+instance CryptoClass.Crypto c => ValidateAuxiliaryData (ExampleEra c) where
   hashAuxiliaryData = AuxiliaryDataHash . Hash.castHash . hashWithSerialiser @(HASH c) toCBOR
   validateAuxiliaryData (Metadata m) = all validMetadatum m
 
-instance PraosCrypto c => ApplyTx (ExampleShelleyEra c)
-instance PraosCrypto c => ApplyBlock (ExampleShelleyEra c)
-instance PraosCrypto c => GetLedgerView (ExampleShelleyEra c)
-instance PraosCrypto c => ShelleyBasedEra (ExampleShelleyEra c)
+instance PraosCrypto c => ApplyTx (ExampleEra c)
+instance PraosCrypto c => ApplyBlock (ExampleEra c)
+instance PraosCrypto c => GetLedgerView (ExampleEra c)
+instance PraosCrypto c => ShelleyBasedEra (ExampleEra c)
 
 -- These rules are all inherited from Shelley
-type instance Core.EraRule "BBODY" (ExampleShelleyEra c) = BBODY (ExampleShelleyEra c)
-type instance Core.EraRule "DELEG" (ExampleShelleyEra c) = DELEG (ExampleShelleyEra c)
-type instance Core.EraRule "DELEGS" (ExampleShelleyEra c) = DELEGS (ExampleShelleyEra c)
-type instance Core.EraRule "DELPL" (ExampleShelleyEra c) = DELPL (ExampleShelleyEra c)
-type instance Core.EraRule "EPOCH" (ExampleShelleyEra c) = EPOCH (ExampleShelleyEra c)
-type instance Core.EraRule "LEDGER" (ExampleShelleyEra c) = LEDGER (ExampleShelleyEra c)
-type instance Core.EraRule "LEDGERS" (ExampleShelleyEra c) = LEDGERS (ExampleShelleyEra c)
-type instance Core.EraRule "MIR" (ExampleShelleyEra c) = MIR (ExampleShelleyEra c)
-type instance Core.EraRule "NEWEPOCH" (ExampleShelleyEra c) = NEWEPOCH (ExampleShelleyEra c)
-type instance Core.EraRule "NEWPP" (ExampleShelleyEra c) = NEWPP (ExampleShelleyEra c)
-type instance Core.EraRule "OCERT" (ExampleShelleyEra c) = OCERT (ExampleShelleyEra c)
-type instance Core.EraRule "OVERLAY" (ExampleShelleyEra c) = OVERLAY (ExampleShelleyEra c)
-type instance Core.EraRule "POOL" (ExampleShelleyEra c) = POOL (ExampleShelleyEra c)
-type instance Core.EraRule "POOLREAP" (ExampleShelleyEra c) = POOLREAP (ExampleShelleyEra c)
-type instance Core.EraRule "PPUP" (ExampleShelleyEra c) = PPUP (ExampleShelleyEra c)
-type instance Core.EraRule "RUPD" (ExampleShelleyEra c) = RUPD (ExampleShelleyEra c)
-type instance Core.EraRule "SNAP" (ExampleShelleyEra c) = SNAP (ExampleShelleyEra c)
-type instance Core.EraRule "TICK" (ExampleShelleyEra c) = TICK (ExampleShelleyEra c)
-type instance Core.EraRule "TICKF" (ExampleShelleyEra c) = TICKF (ExampleShelleyEra c)
-type instance Core.EraRule "TICKN" (ExampleShelleyEra _c) = TICKN
-type instance Core.EraRule "UPEC" (ExampleShelleyEra c) = UPEC (ExampleShelleyEra c)
-type instance Core.EraRule "UTXO" (ExampleShelleyEra c) = UTXO (ExampleShelleyEra c)
-type instance Core.EraRule "UTXOW" (ExampleShelleyEra c) = UTXOW (ExampleShelleyEra c)
+type instance Core.EraRule "BBODY" (ExampleEra c) = BBODY (ExampleEra c)
+type instance Core.EraRule "DELEG" (ExampleEra c) = DELEG (ExampleEra c)
+type instance Core.EraRule "DELEGS" (ExampleEra c) = DELEGS (ExampleEra c)
+type instance Core.EraRule "DELPL" (ExampleEra c) = DELPL (ExampleEra c)
+type instance Core.EraRule "EPOCH" (ExampleEra c) = EPOCH (ExampleEra c)
+type instance Core.EraRule "LEDGER" (ExampleEra c) = LEDGER (ExampleEra c)
+type instance Core.EraRule "LEDGERS" (ExampleEra c) = LEDGERS (ExampleEra c)
+type instance Core.EraRule "MIR" (ExampleEra c) = MIR (ExampleEra c)
+type instance Core.EraRule "NEWEPOCH" (ExampleEra c) = NEWEPOCH (ExampleEra c)
+type instance Core.EraRule "NEWPP" (ExampleEra c) = NEWPP (ExampleEra c)
+type instance Core.EraRule "OCERT" (ExampleEra c) = OCERT (ExampleEra c)
+type instance Core.EraRule "OVERLAY" (ExampleEra c) = OVERLAY (ExampleEra c)
+type instance Core.EraRule "POOL" (ExampleEra c) = POOL (ExampleEra c)
+type instance Core.EraRule "POOLREAP" (ExampleEra c) = POOLREAP (ExampleEra c)
+type instance Core.EraRule "PPUP" (ExampleEra c) = PPUP (ExampleEra c)
+type instance Core.EraRule "RUPD" (ExampleEra c) = RUPD (ExampleEra c)
+type instance Core.EraRule "SNAP" (ExampleEra c) = SNAP (ExampleEra c)
+type instance Core.EraRule "TICK" (ExampleEra c) = TICK (ExampleEra c)
+type instance Core.EraRule "TICKF" (ExampleEra c) = TICKF (ExampleEra c)
+type instance Core.EraRule "TICKN" (ExampleEra _c) = TICKN
+type instance Core.EraRule "UPEC" (ExampleEra c) = UPEC (ExampleEra c)
+type instance Core.EraRule "UTXO" (ExampleEra c) = UTXO (ExampleEra c)
+type instance Core.EraRule "UTXOW" (ExampleEra c) = UTXOW (ExampleEra c)
