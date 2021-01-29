@@ -71,7 +71,7 @@ data Metadata = Metadata'
   { mdMap :: Map Word64 Metadatum,
     mdBytes :: LBS.ByteString
   }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Ord, Generic)
   deriving (NoThunks) via AllowThunksIn '["mdBytes"] Metadata
 
 -- Usually we derive SafetToHash instances, but since Metadata preserves its serialisation

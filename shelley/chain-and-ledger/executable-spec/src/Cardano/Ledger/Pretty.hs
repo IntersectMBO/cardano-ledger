@@ -155,6 +155,9 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- ======================
 -- Named pretty printers for some simpe types
 
+ppString :: String -> Doc a
+ppString x = pretty x
+
 ppDouble :: Double -> Doc a
 ppDouble x = viaShow x
 
@@ -184,6 +187,9 @@ ppWord16 x = viaShow x
 
 ppFixedPoint :: FixedPoint -> Doc a
 ppFixedPoint x = viaShow x
+
+ppPair :: (t1 -> PDoc) -> (t2 -> PDoc) -> (t1, t2) -> PDoc
+ppPair pp1 pp2 (x, y) = ppSexp' mempty [pp1 x, pp2 y]
 
 -- ppSignedDSIGN :: SignedDSIGN a b -> Doc ann
 ppSignedDSIGN :: Show a => a -> PDoc

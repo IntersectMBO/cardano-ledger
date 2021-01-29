@@ -13,7 +13,7 @@
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (Data (..), PlutusData (..))
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), Data (..), PlutusData (..))
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices (..), Script (..), Tag (..))
@@ -37,6 +37,15 @@ instance Arbitrary (Data era) where
 instance Arbitrary PlutusData where
   arbitrary = pure NotReallyData
 
+instance
+  ( UsesScript era,
+    Ord (Core.Script era),
+    Arbitrary (Core.Script era)
+  ) =>
+  Arbitrary (AuxiliaryData era)
+  where
+  arbitrary = AuxiliaryData <$> arbitrary <*> arbitrary <*> arbitrary
+
 instance Arbitrary Tag where
   arbitrary = elements [Spend, Mint, Cert, Rewrd]
 
@@ -56,23 +65,12 @@ instance
   Arbitrary (TxWitness era)
   where
   arbitrary =
-    FlatWitness
+    TxWitness
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-
-instance
-  ( Era era,
-    UsesValue era,
-    Mock (Crypto era),
-    Arbitrary (Core.Script era),
-    UsesScript era
-  ) =>
-  Arbitrary (ScriptData era)
-  where
-  arbitrary = ScriptData <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance HasAlgorithm c => Arbitrary (SafeHash c i) where
   arbitrary = unsafeMakeSafeHash <$> arbitrary

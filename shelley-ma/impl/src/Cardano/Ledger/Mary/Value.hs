@@ -22,6 +22,7 @@ module Cardano.Ledger.Mary.Value
     representationSize,
     showValue,
     valueFromList,
+    ppValue,
   )
 where
 

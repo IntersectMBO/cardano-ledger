@@ -67,7 +67,9 @@ module Cardano.Ledger.Alonzo.Tx
     -- Figure 12
     scriptsNeeded,
     checkScriptData,
-    hashSD,
+    -- Pretty
+    ppIsValidating,
+    ppTx,
   )
 where
 
@@ -83,19 +85,27 @@ import Cardano.Ledger.Alonzo.TxBody
     TxBody (..),
     TxOut (..),
     WitnessPPDataHash,
+    ppTxBody,
   )
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
     TxWitness (..),
-    hashSD,
-    witsData,
-    witsRdmr,
-    witsScript,
+    ppTxWitness,
+    txdats,
+    txrdmrs,
+    txscripts,
   )
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (AssetName, PolicyID (..), Value (..))
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppRecord,
+    ppStrictMaybe,
+    ppString,
+  )
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeToHash,
@@ -116,7 +126,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
   ( elemAt,
     findIndex,
-    fromList,
     map,
     null,
     union,
@@ -322,9 +331,6 @@ instance Era era => FromCBOR (Annotator (WitnessPPDataRaw era)) where
           <*! D (decodeAnnSet fromCBOR)
       )
 
-decodeAnnSet :: Ord t => Decoder s (Annotator t) -> Decoder s (Annotator (Set t))
-decodeAnnSet dec = do xs <- decodeList dec; pure (Set.fromList <$> (sequence xs))
-
 newtype WitnessPPData era = WitnessPPDataConstr (MemoBytes (WitnessPPDataRaw era))
   deriving (Show, Eq)
   deriving newtype (ToCBOR, SafeToHash)
@@ -475,12 +481,6 @@ rdptr txb (Certifying d) = RdmrPtr AlonzoScript.Cert (indexOf d (txcerts txb))
 getMapFromValue :: Value crypto -> Map.Map (PolicyID crypto) (Map.Map AssetName Integer)
 getMapFromValue (Value _ m) = m
 
-txrdmrs ::
-  (Era era, ToCBOR (Core.Script era)) =>
-  TxWitness era ->
-  Map.Map RdmrPtr (Data era, ExUnits)
-txrdmrs txw = witsRdmr txw
-
 indexedRdmrs ::
   ( Era era,
     ToCBOR (Core.AuxiliaryData era),
@@ -542,7 +542,7 @@ getData tx (UTxO m) sp = case sp of
         case getField @"datahash" txout of
           Nothing -> []
           Just hash ->
-            case Map.lookup hash (witsData (wits tx)) of
+            case Map.lookup hash (txdats (wits tx)) of
               Nothing -> []
               Just d -> [d]
 
@@ -651,11 +651,44 @@ checkScriptData tx utxo (sp, _h) = any ok scripts
                && (not (isSpending sp) || not (null (getData tx utxo sp)))
            )
 
-txscripts ::
-  (Era era, ToCBOR (Core.Script era)) =>
-  TxWitness era ->
-  Map.Map (ScriptHash (Crypto era)) (Core.Script era)
-txscripts x = witsScript x
-
 txwits :: (Era era, ToCBOR (Core.AuxiliaryData era)) => Tx era -> TxWitness era
 txwits x = wits x
+
+-- =======================================================
+
+ppIsValidating :: IsValidating -> PDoc
+ppIsValidating (IsValidating True) = ppString "True"
+ppIsValidating (IsValidating False) = ppString "False"
+
+instance PrettyA IsValidating where prettyA = ppIsValidating
+
+ppTx ::
+  ( Era era,
+    PrettyA (Core.Script era),
+    PrettyA (Core.AuxiliaryData era),
+    Compactible (Core.Value era),
+    Show (Core.Value era),
+    PrettyA (Core.Value era)
+  ) =>
+  Tx era ->
+  PDoc
+ppTx (TxConstr (Memo (TxRaw b w iv aux) _)) =
+  ppRecord
+    "Tx"
+    [ ("body", ppTxBody b),
+      ("wits", ppTxWitness w),
+      ("isValidating", ppIsValidating iv),
+      ("auxiliaryData", ppStrictMaybe prettyA aux)
+    ]
+
+instance
+  ( Era era,
+    PrettyA (Core.Script era),
+    PrettyA (Core.AuxiliaryData era),
+    Compactible (Core.Value era),
+    Show (Core.Value era),
+    PrettyA (Core.Value era)
+  ) =>
+  PrettyA (Tx era)
+  where
+  prettyA = ppTx

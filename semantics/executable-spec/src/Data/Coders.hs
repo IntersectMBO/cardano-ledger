@@ -51,6 +51,7 @@ module Data.Coders
     decodeSeq,
     decodeStrictSeq,
     decodeSet,
+    decodeAnnSet,
     decodeRecordNamed,
     decodeRecordSum,
     invalidKey,
@@ -191,6 +192,9 @@ decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
 
 decodeSet :: Ord a => Decoder s a -> Decoder s (Set a)
 decodeSet decoder = Set.fromList <$> decodeList decoder
+
+decodeAnnSet :: Ord t => Decoder s (Annotator t) -> Decoder s (Annotator (Set t))
+decodeAnnSet dec = do xs <- decodeList dec; pure (Set.fromList <$> (sequence xs))
 
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el

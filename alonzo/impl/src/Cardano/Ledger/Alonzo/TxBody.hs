@@ -8,6 +8,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -37,19 +38,35 @@ module Cardano.Ledger.Alonzo.TxBody
     AlonzoBody,
     EraIndependentWitnessPPData,
     WitnessPPDataHash,
+    ppTxBody,
+    ppTxOut,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Alonzo.Data (DataHash)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits)
-import Cardano.Ledger.Alonzo.TxWitness (ScriptDataHash)
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash, DataHash)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits, ppExUnits)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Mary.Value (Value (..))
+import Cardano.Ledger.Mary.Value (Value (..), ppValue)
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppAddr,
+    ppCoin,
+    ppDCert,
+    ppRecord,
+    ppSafeHash,
+    ppSet,
+    ppSexp,
+    ppStrictMaybe,
+    ppStrictSeq,
+    ppTxIn,
+    ppUpdate,
+    ppWdrl,
+  )
 import Cardano.Ledger.SafeHash
   ( EraIndependentTxBody,
     EraIndependentWitnessPPData,
@@ -57,7 +74,7 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash,
   )
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
     decodeMint,
@@ -65,7 +82,6 @@ import Cardano.Ledger.Val
     encodeMint,
     isZero,
   )
-import Control.DeepSeq (NFData)
 import Data.Coders
 import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -150,7 +166,7 @@ data TxBodyRaw era = TxBodyRaw
     -- Operations on the TxBody in the AlonzoEra depend upon this.
     _exunits :: !ExUnits,
     _sdHash :: !(StrictMaybe (WitnessPPDataHash (Crypto era))),
-    _scriptHash :: !(StrictMaybe (ScriptDataHash (Crypto era)))
+    _scriptHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era)))
   }
   deriving (Generic, Typeable)
 
@@ -225,7 +241,7 @@ pattern TxBody ::
   Value (Crypto era) ->
   ExUnits ->
   StrictMaybe (WitnessPPDataHash (Crypto era)) ->
-  StrictMaybe (ScriptDataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   TxBody era
 pattern TxBody
   { txinputs,
@@ -499,3 +515,52 @@ instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c
 
 instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
   getField (TxOutCompact _ v _) = fromCompact v
+
+-- ===================================================
+
+ppTxOut ::
+  ( Era era,
+    Compactible (Core.Value era),
+    Show (Core.Value era),
+    PrettyA (Core.Value era)
+  ) =>
+  TxOut era ->
+  PDoc
+ppTxOut (TxOut addr val dhash) =
+  ppSexp "TxOut" [ppAddr addr, prettyA val, ppStrictMaybe ppSafeHash dhash]
+
+ppTxBody ::
+  ( Era era,
+    Compactible (Core.Value era),
+    Show (Core.Value era),
+    PrettyA (Core.Value era)
+  ) =>
+  TxBody era ->
+  PDoc
+ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u adh mnt exu sdh sch) _)) =
+  ppRecord
+    "TxBody(Mary or Allegra)"
+    [ ("inputs", ppSet ppTxIn i),
+      ("inputs_fee", ppSet ppTxIn ifee),
+      ("outputs", ppStrictSeq ppTxOut o),
+      ("certificates", ppStrictSeq ppDCert c),
+      ("withdrawals", ppWdrl w),
+      ("txfee", ppCoin fee),
+      ("vldt", ppValidityInterval vi),
+      ("update", ppStrictMaybe ppUpdate u),
+      ("adHash", ppStrictMaybe ppSafeHash adh),
+      ("mint", ppValue mnt),
+      ("exunits", ppExUnits exu),
+      ("sdHash", ppStrictMaybe ppSafeHash sdh),
+      ("scriptHash", ppStrictMaybe ppSafeHash sch)
+    ]
+
+instance
+  ( Era era,
+    PrettyA (Core.Value era),
+    Compactible (Core.Value era),
+    Show (Core.Value era)
+  ) =>
+  PrettyA (TxBody era)
+  where
+  prettyA = ppTxBody

@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -22,12 +23,29 @@ module Cardano.Ledger.Alonzo.Scripts
     Prices (..),
     hashCostModel,
     scriptfee,
+    ppTag,
+    ppScript,
+    ppExUnits,
+    ppCostModel,
+    ppPrices,
   )
 where
 
 import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppCoin,
+    ppInteger,
+    ppLong,
+    ppMap,
+    ppRecord,
+    ppSexp,
+    ppString,
+    ppWord64,
+  )
 import Cardano.Ledger.SafeHash
   ( HashWithCrypto (..),
     SafeHash,
@@ -147,7 +165,7 @@ instance NoThunks Prices
 
 instance NFData Prices
 
--- | Compute the cost of a script based upon proces and the number of execution
+-- | Compute the cost of a script based upon prices and the number of execution
 -- units.
 scriptfee :: Prices -> ExUnits -> Coin
 scriptfee (Prices pr_mem pr_steps) (ExUnits mem steps) =
@@ -203,3 +221,35 @@ instance
       decodeScript 0 = Ann (SumD NativeScript) <*! From
       decodeScript 1 = Ann (SumD PlutusScript)
       decodeScript n = Invalid n
+
+-- ============================================================
+-- Pretty printing versions
+
+ppTag :: Tag -> PDoc
+ppTag x = ppString (show x)
+
+instance PrettyA Tag where prettyA = ppTag
+
+ppScript :: Script era -> PDoc
+ppScript PlutusScript = ppString "PlutusScript"
+ppScript (NativeScript x) = ppTimelock x
+
+instance PrettyA (Script era) where prettyA = ppScript
+
+ppExUnits :: ExUnits -> PDoc
+ppExUnits (ExUnits mem step) =
+  ppRecord "ExUnits" [("memory", ppWord64 mem), ("steps", ppWord64 step)]
+
+instance PrettyA ExUnits where prettyA = ppExUnits
+
+ppCostModel :: CostModel -> PDoc
+ppCostModel (CostModelConstr (Memo m _)) =
+  ppSexp "CostModel" [ppMap ppLong ppInteger m]
+
+instance PrettyA CostModel where prettyA = ppCostModel
+
+ppPrices :: Prices -> PDoc
+ppPrices (Prices mem step) =
+  ppRecord "Prices" [("prMem", ppCoin mem), ("prSteps", ppCoin step)]
+
+instance PrettyA Prices where prettyA = ppPrices
