@@ -19,8 +19,7 @@ import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices (..), Script (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
-  ( IsFee (..),
-    TxOut (..),
+  ( TxOut (..),
   )
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Core as Core
@@ -77,8 +76,6 @@ instance
 
 instance HasAlgorithm c => Arbitrary (SafeHash c i) where
   arbitrary = unsafeMakeSafeHash <$> arbitrary
-
-deriving newtype instance Arbitrary IsFee
 
 instance
   ( Era era,
