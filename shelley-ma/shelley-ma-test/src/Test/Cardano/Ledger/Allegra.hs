@@ -43,7 +43,7 @@ import Shelley.Spec.Ledger.API (KeyRole (Witness))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash)
-import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.PParams (PParams, Update)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut, Wdrl)
 import Test.Cardano.Ledger.EraBuffet (AllegraEra)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
@@ -92,6 +92,7 @@ genTxBody ::
     UsesPParams era,
     EraGen era
   ) =>
+  PParams era ->
   SlotNo ->
   Set.Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
@@ -101,7 +102,7 @@ genTxBody ::
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Gen (TxBody era, [Timelock (Crypto era)])
-genTxBody slot ins outs cert wdrl fee upd ad = do
+genTxBody _pparams slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   let mint = zero -- the mint field is always empty for an Allegra TxBody
   pure $
