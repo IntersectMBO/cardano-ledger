@@ -10,15 +10,19 @@ alonzo/formal-spec/ @polinavino @WhatisRT
 
 # CDDL
 shelley/chain-and-ledger/shelley-spec-ledger-test/cddl-files/ @redxaxder
-shelley-ma/shelley-ma-test/cddl-files/ @redxaxder
+shelley-ma/shelley-ma-test/cddl-files/                        @redxaxder
 
 # Set Algebra
-semantics/executable-spec/src/Control/Iterate/ @TimSheard
+semantics/executable-spec/src/Control/Iterate/      @TimSheard
 semantics/executable-spec/src/Control/Provenance.hs @TimSheard
 semantics/executable-spec/src/Control/SetAlgebra.hs @TimSheard
 
 # Coders library for CBOR encoding and decoding
 semantics/executable-spec/src/Data/Coders.hs @TimSheard
 
-# Nix
-nix/ @nc6
+# Devops
+.buildkite @devops
+.github    @devops
+nix        @devops
+*.nix      @devops
+bors.toml  @devops
