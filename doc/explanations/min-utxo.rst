@@ -23,11 +23,11 @@ A minUTxOValue amount of ada pays for ``adaOnlyUTxOSize`` bytes of UTxO storage 
 
 The min-ada calculation for any UTxO approximates the above formula. This uses the constants,
 
-  ``coinSize = 2``
+  ``coinSize = 0`` (note: this is an implementation error, and will be changed to the correct value, 2, in the next fork. This will decrease the minimum ada value by a small percentage)
 
   ``utxoEntrySizeWithoutVal = 27``
 
-  ``adaOnlyUTxOSize = utxoEntrySizeWithoutVal + coinSize = 29``
+  ``adaOnlyUTxOSize = utxoEntrySizeWithoutVal + coinSize = 27``
 
 The functions used in the formula below are :
 
