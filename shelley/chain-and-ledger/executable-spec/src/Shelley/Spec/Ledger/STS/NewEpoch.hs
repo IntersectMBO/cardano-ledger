@@ -26,7 +26,6 @@ import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
 import Data.Default.Class (Default, def)
-import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
@@ -36,6 +35,7 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
+import Shelley.Spec.Ledger.Rewards (sumRewards)
 import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
@@ -131,7 +131,8 @@ newEpochTransition = do
         SNothing -> pure es
         SJust ru' -> do
           let RewardUpdate dt dr rs_ df _ = ru'
-          Val.isZero (dt <> (dr <> (toDeltaCoin $ fold rs_) <> df)) ?! CorruptRewardUpdate ru'
+              totRs = sumRewards (esPp es) rs_
+          Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
           pure $ applyRUpd ru' es
 
       es'' <- trans @(Core.EraRule "MIR" era) $ TRC ((), es', ())

@@ -25,6 +25,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
+import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash (..),
@@ -37,7 +38,6 @@ import Shelley.Spec.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
-import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))

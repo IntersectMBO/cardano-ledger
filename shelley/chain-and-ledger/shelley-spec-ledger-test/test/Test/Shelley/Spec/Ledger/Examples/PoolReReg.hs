@@ -79,7 +79,6 @@ import Test.Shelley.Spec.Ledger.Utils (getBlockNonce, testGlobals)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
-
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 

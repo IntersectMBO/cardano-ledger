@@ -64,10 +64,12 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
+    ProtVer (..),
     emptyPParams,
   )
 import Shelley.Spec.Ledger.Rewards
-  ( reward,
+  ( aggregateRewards,
+    reward,
     Likelihood,
     mkApparentPerformance,
     memberRew,
@@ -75,6 +77,8 @@ import Shelley.Spec.Ledger.Rewards
     likelihood,
     leaderRew,
     leaderProbability,
+    NonMyopic,
+    sumRewards,
   )
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), RewardAcnt (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (genCoin, genNatural)
@@ -115,7 +119,7 @@ import Shelley.Spec.Ledger.LedgerState
     AccountState(..),
     LedgerState(..),
     circulation,
-    updateNonMypopic,
+    updateNonMyopic,
   )
 import Shelley.Spec.Ledger.API.Wallet(getRewardInfo)
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
@@ -330,7 +334,7 @@ rewardsBoundedByPot _ = property $ do
             show slotsPerEpoch
           ]
       )
-      (fold (fst rs) < rewardPot)
+      (sumRewards pp (fst rs) < rewardPot)
 
 -- =================================================
 -- tests when running rewards with provenance
@@ -571,12 +575,21 @@ rewardOld
       rewards' = f . catMaybes $ fmap (\(_, x, _) -> x) results
       hs = Map.fromList $ fmap (\(hk, _, l) -> (hk, l)) results
 
+data RewardUpdateOld crypto = RewardUpdateOld
+  { deltaTOld :: !DeltaCoin,
+    deltaROld :: !DeltaCoin,
+    rsOld :: !(Map (Credential 'Staking crypto) Coin),
+    deltaFOld :: !DeltaCoin,
+    nonMyopicOld :: !(NonMyopic crypto)
+  }
+  deriving (Show, Eq)
+
 createRUpdOld ::
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->
   Coin ->
-  ShelleyBase (RewardUpdate (Crypto era))
+  ShelleyBase (RewardUpdateOld (Crypto era))
 createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply = do
   asc <- asks activeSlotCoeff
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
@@ -617,12 +630,12 @@ createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm)
       deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $
-    RewardUpdate
-      { deltaT = (DeltaCoin deltaT1),
-        deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
-        rs = rs_,
-        deltaF = (invert (toDeltaCoin $ _feeSS ss)),
-        nonMyopic = (updateNonMypopic nm _R newLikelihoods)
+    RewardUpdateOld
+      { deltaTOld = (DeltaCoin deltaT1),
+        deltaROld = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
+        rsOld = rs_,
+        deltaFOld = (invert (toDeltaCoin $ _feeSS ss)),
+        nonMyopicOld = (updateNonMyopic nm _R newLikelihoods)
       }
 
 
@@ -638,8 +651,9 @@ oldEqualsNew  newepochstate  = old == new
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
-    new = runReader (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply) globals
-    old = runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
+    unAggregated = runReader (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply) globals
+    old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
+    new = aggregateRewards @era (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
 
 oldEqualsNewOn:: forall era. NewEpochState era -> Bool
 oldEqualsNewOn  newepochstate  = old == new
@@ -653,8 +667,9 @@ oldEqualsNewOn  newepochstate  = old == new
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
-    (new,_) = runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply) globals
-    old = runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
+    (unAggregated,_) = runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply) globals
+    old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
+    new = aggregateRewards @era (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
 
 
 -- ==================================================================
@@ -670,7 +685,7 @@ rewardTests =
     , testProperty "provenance does not affect result" (sameWithOrWithoutProvenance @C testGlobals)
     , testProperty "ProvM preserves Nothing" (nothingInNothingOut @C)
     , testProperty "ProvM preserves Just" (justInJustOut @C)
-    , testProperty "oldstyle matches provenance off style" (oldEqualsNew @C)
-    , testProperty "oldstyle matches provenance on style" (oldEqualsNewOn @C)
+    , testProperty "oldstyle (aggregate immediately) matches newstyle (late aggregation) with provenance off style" (oldEqualsNew @C)
+    , testProperty "oldstyle (aggregate immediately) matches newstyle (late aggregation) with provenance on style" (oldEqualsNewOn @C)
     , testCaseInfo "Reward Provenance works" (rewardsProvenance (Proxy @C))
     ]

@@ -83,7 +83,7 @@ module Shelley.Spec.Ledger.LedgerState
 
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
-    updateNonMypopic,
+    updateNonMyopic,
 
     -- *
     TransUTxOState,
@@ -196,10 +196,13 @@ import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
     PerformanceEstimate (..),
+    Reward (..),
+    aggregateRewards,
     applyDecay,
     desirability,
     percentile',
     reward,
+    sumRewards,
   )
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
@@ -402,7 +405,7 @@ instance
 data RewardUpdate crypto = RewardUpdate
   { deltaT :: !DeltaCoin,
     deltaR :: !DeltaCoin,
-    rs :: !(Map (Credential 'Staking crypto) Coin),
+    rs :: !(Map (Credential 'Staking crypto) (Set (Reward crypto))),
     deltaF :: !DeltaCoin,
     nonMyopic :: !(NonMyopic crypto)
   }
@@ -1028,7 +1031,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     (regRU, unregRU) =
       Map.partitionWithKey
         (\k _ -> eval (k ∈ dom (_rewards dState)))
-        (rs ru)
+        (aggregateRewards pp $ rs ru)
     as' =
       as
         { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold (range unregRU),
@@ -1051,12 +1054,12 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
 decayFactor :: Float
 decayFactor = 0.9
 
-updateNonMypopic ::
+updateNonMyopic ::
   NonMyopic crypto ->
   Coin ->
   Map (KeyHash 'StakePool crypto) Likelihood ->
   NonMyopic crypto
-updateNonMypopic nm rPot newLikelihoods =
+updateNonMyopic nm rPot newLikelihoods =
   nm
     { likelihoodsNM = updatedLikelihoods,
       rewardPotNM = rPot
@@ -1119,7 +1122,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           asc
           slotsPerEpoch
       )
-  let deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
+  let deltaR2 = _R <-> (sumRewards pr rs_)
       -- add under 'key' the pair (LikeliHoodEstimate,Desirability) to the Map 'ans'
       addDesire ans key likelihood = case Map.lookup key poolParams of
         Nothing ->
@@ -1172,7 +1175,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
         deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
         rs = rs_,
         deltaF = (invert (toDeltaCoin $ _feeSS ss)),
-        nonMyopic = (updateNonMypopic nm _R newLikelihoods)
+        nonMyopic = (updateNonMyopic nm _R newLikelihoods)
       }
 
 -- | Calculate the current circulation

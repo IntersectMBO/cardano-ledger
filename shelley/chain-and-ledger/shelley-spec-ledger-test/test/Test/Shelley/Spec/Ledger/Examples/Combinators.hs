@@ -49,6 +49,7 @@ import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
+import Control.State.Transition (STS (State))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -93,7 +94,7 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     RewardUpdate (..),
     UTxOState (..),
-    applyRUpd
+    applyRUpd,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
@@ -102,7 +103,6 @@ import Shelley.Spec.Ledger.Tx (TxIn)
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
-import Control.State.Transition (STS (State))
 
 -- ======================================================
 

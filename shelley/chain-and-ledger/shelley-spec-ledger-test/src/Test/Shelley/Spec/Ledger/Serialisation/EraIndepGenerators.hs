@@ -103,6 +103,8 @@ import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     LogWeight (..),
     PerformanceEstimate (..),
+    Reward (..),
+    RewardType (..),
   )
 import qualified Shelley.Spec.Ledger.STS.Deleg as STS
 import qualified Shelley.Spec.Ledger.STS.Delegs as STS
@@ -528,6 +530,14 @@ instance
       <*> genPParams (Proxy @era)
       <*> genPParams (Proxy @era)
       <*> arbitrary
+
+instance Arbitrary RewardType where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance CC.Crypto crypto => Arbitrary (Reward crypto) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
 
 instance CC.Crypto crypto => Arbitrary (RewardUpdate crypto) where
   arbitrary = genericArbitraryU
