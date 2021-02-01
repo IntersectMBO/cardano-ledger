@@ -153,7 +153,11 @@ blueCoinId :: forall c. CryptoClass.Crypto c => PolicyID c
 blueCoinId = PolicyID $ hashScript @(MaryEra c) blueCoins
 
 maxBlueMint :: Int
-maxBlueMint = 10
+maxBlueMint = 5
+
+-- TODO these blue coins are actually problematic since our
+-- current coin selection algorithm does not prevent creating
+-- a multi-asset that is too large.
 
 genBlue :: CryptoClass.Crypto c => Gen (Value c)
 genBlue = do
@@ -214,7 +218,7 @@ redFreq :: Int
 redFreq = 10
 
 blueFreq :: Int
-blueFreq = 5
+blueFreq = 1
 
 yellowFreq :: Int
 yellowFreq = 20
