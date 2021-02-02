@@ -21,6 +21,7 @@ source-repository head
 library
   exposed-modules:
     Cardano.Ledger.Example
+    Cardano.Ledger.Example.Translation
 
   -- other-extensions:
   build-depends:
