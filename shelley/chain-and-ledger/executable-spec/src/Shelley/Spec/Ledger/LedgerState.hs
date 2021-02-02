@@ -1031,7 +1031,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     (regRU, unregRU) =
       Map.partitionWithKey
         (\k _ -> eval (k ∈ dom (_rewards dState)))
-        (aggregateRewards pp $ rs ru)
+        (aggregateRewards pr $ rs ru)
     as' =
       as
         { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold (range unregRU),
