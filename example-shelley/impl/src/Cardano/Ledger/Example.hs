@@ -109,7 +109,8 @@ instance PraosCrypto c => GetLedgerView (ExampleEra c)
 instance PraosCrypto c => ShelleyBasedEra (ExampleEra c)
 
 -- These rules are all inherited from Shelley
-type instance Core.EraRule "BBODY" (ExampleEra c) = BBODY (ExampleEra c)
+-- The types on the right are all instances of class STS, ultimately defined in Control.State.Transition.Extended
+type instance Core.EraRule "BBODY" (ExampleEra c) = BBODY (ExampleEra c) -- Block body
 type instance Core.EraRule "DELEG" (ExampleEra c) = DELEG (ExampleEra c)
 type instance Core.EraRule "DELEGS" (ExampleEra c) = DELEGS (ExampleEra c)
 type instance Core.EraRule "DELPL" (ExampleEra c) = DELPL (ExampleEra c)
