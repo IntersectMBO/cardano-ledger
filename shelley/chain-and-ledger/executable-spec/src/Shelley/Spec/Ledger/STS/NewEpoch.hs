@@ -131,7 +131,7 @@ newEpochTransition = do
         SNothing -> pure es
         SJust ru' -> do
           let RewardUpdate dt dr rs_ df _ = ru'
-              totRs = sumRewards (esPp es) rs_
+              totRs = sumRewards (esPrevPp es) rs_
           Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
           pure $ applyRUpd ru' es
 
