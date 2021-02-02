@@ -103,7 +103,8 @@ instance
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    Core.PParams era ~ PParams era
   ) =>
   STS (CERTS era)
   where
@@ -122,7 +123,8 @@ certsTransition ::
   ( Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    Core.PParams era ~ PParams era
   ) =>
   TransitionRule (CERTS era)
 certsTransition = do
@@ -159,7 +161,8 @@ instance
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    Core.PParams era ~ PParams era
   ) =>
   QC.HasTrace (CERTS era) (GenEnv era)
   where
@@ -193,6 +196,7 @@ genDCerts ::
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    Core.PParams era ~ PParams era,
     EraGen era
   ) =>
   GenEnv era ->

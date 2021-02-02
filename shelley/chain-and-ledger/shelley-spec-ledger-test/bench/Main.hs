@@ -58,6 +58,7 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState (..),
     stakeDistr,
   )
+import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.Rewards (likelihood)
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck (arbitrary)
@@ -486,7 +487,7 @@ main = do
             ( \cs ->
                 bench "createRUpd" $ whnf (createRUpd testGlobals) cs
             ),
-           env
+          env
             (generate $ genChainInEpoch 5)
             ( \cs ->
                 bench "createRUpdWithProvenance" $ whnf (createRUpdWithProv testGlobals) cs

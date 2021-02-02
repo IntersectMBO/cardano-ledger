@@ -13,11 +13,13 @@ where
 
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.State.Transition.Extended
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Either (fromRight)
 import Data.Proxy
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
+import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.API
   ( ApplyBlock,
     Block,
@@ -34,6 +36,7 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
   )
+import Shelley.Spec.Ledger.Tx (TxIn)
 import Test.QuickCheck (generate)
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions (ledgerEnv)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -53,13 +56,14 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest)
-import Data.Default.Class (Default)
 
 -- ===============================================================
 
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
-  (EraGen era, UsesTxOut era, UsesValue era, Default (State (Core.EraRule "PPUP" era))) =>
+  ( ShelleyTest era,
+    EraGen era
+  ) =>
   Int ->
   GenEnv era ->
   IO (ChainState era)
@@ -81,8 +85,7 @@ genChainState n ge =
 
 -- | Benchmark generating a block given a chain state.
 genBlock ::
-  ( EraGen era,
-    Mock (Crypto era),
+  ( Mock (Crypto era),
     ShelleyTest era,
     ShelleyLedgerSTS era,
     GetLedgerView era,
@@ -110,7 +113,9 @@ genTriple ::
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
-    ShelleyTest era
+    ShelleyTest era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
   ) =>
   Proxy era ->
   Int ->

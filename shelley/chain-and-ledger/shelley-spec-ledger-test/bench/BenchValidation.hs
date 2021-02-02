@@ -34,6 +34,7 @@ import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Prelude (NFData (rnf))
 import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.Monad.Except ()
+import Control.State.Transition (STS (State))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map as Map
 import Data.Proxy
@@ -69,7 +70,6 @@ import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest, testGlobals)
-import Control.State.Transition (STS (State))
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 
@@ -127,6 +127,7 @@ applyBlock ::
     TransTxBody NFData era,
     TransValue NFData era,
     API.ApplyBlock era,
+    NFData (Core.PParams era),
     NFData (State (Core.EraRule "PPUP" era))
   ) =>
   ValidateInput era ->

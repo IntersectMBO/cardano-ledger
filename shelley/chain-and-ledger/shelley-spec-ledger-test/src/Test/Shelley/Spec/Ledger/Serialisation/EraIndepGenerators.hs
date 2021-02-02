@@ -16,8 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators
-  ( genPParams,
-    mkDummyHash,
+  ( mkDummyHash,
     genHash,
     genShelleyAddress,
     genByronAddress,
@@ -46,16 +45,18 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
     UsesScript,
     UsesTxBody,
     UsesTxOut,
-    UsesValue
+    UsesValue,
   )
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.SetAlgebra (biMapFromList)
+import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)
@@ -123,7 +124,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( KeySpace (KeySpace_),
-    geConstants,
     geKeySpace,
     ksCoreNodes,
     mkBlock,
@@ -133,14 +133,11 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass)
-import qualified Test.Shelley.Spec.Ledger.Generator.Update as Update
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
     genSignature,
   )
 import Test.Tasty.QuickCheck (Gen, choose, elements)
-import Control.State.Transition (STS (State))
-import Cardano.Ledger.SafeHash(SafeHash, HasAlgorithm, unsafeMakeSafeHash)
 
 -- =======================================================
 
@@ -152,7 +149,6 @@ mkDummyHash = coerce . hashWithSerialiser @h toCBOR
 
 genSafeHash :: HasAlgorithm c => Gen (SafeHash c i)
 genSafeHash = unsafeMakeSafeHash <$> arbitrary
-
 
 {-------------------------------------------------------------------------------
   Generators
@@ -463,17 +459,18 @@ instance
   where
   arbitrary = genericArbitraryU
   shrink = recursivelyShrink
-  -- The 'genericShrink' function returns first the immediate subterms of a
-  -- value (in case it is a recursive data-type), and then shrinks the value
-  -- itself. Since 'UTxOState' is not a recursive data-type, there are no
-  -- subterms, and we can use `recursivelyShrink` directly. This is particularly
-  -- important when abstracting away the different fields of the ledger state,
-  -- since the generic subterms instances will overlap due to GHC not having
-  -- enough context to infer if 'a' and 'b' are the same types (since in this
-  -- case this will depend on the definition of 'era').
-  --
-  -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) a where
-  -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
+
+-- The 'genericShrink' function returns first the immediate subterms of a
+-- value (in case it is a recursive data-type), and then shrinks the value
+-- itself. Since 'UTxOState' is not a recursive data-type, there are no
+-- subterms, and we can use `recursivelyShrink` directly. This is particularly
+-- important when abstracting away the different fields of the ledger state,
+-- since the generic subterms instances will overlap due to GHC not having
+-- enough context to infer if 'a' and 'b' are the same types (since in this
+-- case this will depend on the definition of 'era').
+--
+-- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) a where
+-- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
 
 instance
   ( UsesTxOut era,
@@ -493,6 +490,7 @@ instance
     Mock (Crypto era),
     Arbitrary (Core.TxOut era),
     Arbitrary (Core.Value era),
+    Arbitrary (Core.PParams era),
     Arbitrary (State (Core.EraRule "PPUP" era)),
     EraGen era
   ) =>
@@ -517,6 +515,7 @@ instance
     Mock (Crypto era),
     Arbitrary (Core.TxOut era),
     Arbitrary (Core.Value era),
+    Arbitrary (Core.PParams era),
     Arbitrary (State (Core.EraRule "PPUP" era)),
     EraGen era
   ) =>
@@ -527,8 +526,8 @@ instance
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> genPParams (Proxy @era)
-      <*> genPParams (Proxy @era)
+      <*> arbitrary
+      <*> arbitrary
       <*> arbitrary
 
 instance Arbitrary RewardType where
@@ -546,12 +545,6 @@ instance CC.Crypto crypto => Arbitrary (RewardUpdate crypto) where
 instance Arbitrary a => Arbitrary (StrictMaybe a) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
-
-genPParams ::
-  EraGen era =>
-  proxy era ->
-  Gen (PParams era)
-genPParams p = Update.genPParams (geConstants (genEnv p))
 
 instance CC.Crypto crypto => Arbitrary (OBftSlot crypto) where
   arbitrary = genericArbitraryU
@@ -664,7 +657,7 @@ genUTCTime = do
       (Time.picosecondsToDiffTime diff)
 
 instance
-  (Mock (Crypto era), EraGen era) =>
+  (Mock (Crypto era), EraGen era, Arbitrary (PParams era)) =>
   Arbitrary (ShelleyGenesis era)
   where
   arbitrary =
@@ -680,7 +673,7 @@ instance
       <*> (fromInteger <$> arbitrary) -- sgSlotLength
       <*> arbitrary -- sgUpdateQuorum
       <*> arbitrary -- sgMaxLovelaceSupply
-      <*> genPParams (Proxy @era) -- sgProtocolParams
+      <*> arbitrary -- sgProtocolParams
       <*> arbitrary -- sgGenDelegs
       <*> arbitrary -- sgInitialFunds
       <*> (ShelleyGenesisStaking <$> arbitrary <*> arbitrary) -- sgStaking

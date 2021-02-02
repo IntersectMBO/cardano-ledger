@@ -20,6 +20,7 @@ where
 
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Data.Default.Class (def)
@@ -59,7 +60,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     PoolDistr (..),
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( RewardUpdate (..),
@@ -108,7 +108,7 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, ExMock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto, ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import qualified Test.Shelley.Spec.Ledger.Examples.Combinators as C
@@ -770,12 +770,12 @@ twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
 
 testAggregateRewardsLegacy :: Assertion
 testAggregateRewardsLegacy =
-  (aggregateRewards @C) ppEx rsEx9Agg
+  (aggregateRewards @C_Crypto) ppEx rsEx9Agg
     @?= Map.singleton Cast.carlSHK (carlLeaderRewardsFromBob @(Crypto C))
 
 testAggregateRewardsNew :: Assertion
 testAggregateRewardsNew =
-  (aggregateRewards @C) ppProtVer3 rsEx9Agg
+  (aggregateRewards @C_Crypto) ppProtVer3 rsEx9Agg
     @?= Map.singleton
       Cast.carlSHK
       ( carlLeaderRewardsFromAlice @(Crypto C)

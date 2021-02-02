@@ -96,7 +96,7 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState (..),
     applyRUpd,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates, ProtVer)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Mir (emptyInstantaneousRewards)
 import Shelley.Spec.Ledger.Tx (TxIn)
@@ -372,6 +372,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 -- Remove a stake pool.
 reapPool ::
   forall era.
+  (Core.PParams era ~ PParams era) =>
   PoolParams (Crypto era) ->
   ChainState era ->
   ChainState era
@@ -488,6 +489,7 @@ rewardUpdate ru cs = cs {chainNes = nes'}
 -- Apply the given reward update to the chain state
 applyRewardUpdate ::
   forall era.
+  HasField "_protocolVersion" (Core.PParams era) ProtVer =>
   RewardUpdate (Crypto era) ->
   ChainState era ->
   ChainState era
@@ -573,6 +575,7 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
   forall era.
+  (Core.PParams era ~ PParams era) =>
   Era era =>
   Block era ->
   ChainState era ->
@@ -657,6 +660,7 @@ setFutureProposals ps cs = cs {chainNes = nes'}
 -- Set the protocol parameters.
 setPParams ::
   forall era.
+  (Core.PParams era ~ PParams era) =>
   PParams era ->
   ChainState era ->
   ChainState era
@@ -672,6 +676,7 @@ setPParams pp cs = cs {chainNes = nes'}
 -- Set the previous protocol parameters.
 setPrevPParams ::
   forall era.
+  (Core.PParams era ~ PParams era) =>
   PParams era ->
   ChainState era ->
   ChainState era
