@@ -295,10 +295,9 @@ deriving instance NFData (PParams' StrictMaybe era)
 instance NoThunks (PParamsUpdate era)
 
 -- =======================================================
--- A PParamsUpdate has StrictMaybe fields, we want to
--- Sparse encode it, by writing only those fields where
--- the field is (SJust x), that is the role of the local
--- function (omitStrictMaybe key x)
+-- A PParamsUpdate has StrictMaybe fields, we want to Sparse encode it, by
+-- writing only those fields where the field is (SJust x), that is the role of
+-- the local function (omitStrictMaybe key x)
 
 fromSJust :: StrictMaybe a -> a
 fromSJust (SJust x) = x
@@ -459,17 +458,18 @@ updatePParams pp ppup =
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"
 
--- The Language Depenedent View type (LangDepView) is a GADT, it will have a different
--- Constructor for each Language. This way each language can have a different
--- view of the Protocol parameters. This is an intermediate type and we introduce
--- it only because we are interested in combining it with other things so we can hash
--- the combination. Thus this type (and the other things we combine it with) must
--- remember their original bytes. We make it a data type around a MemoBytes.
--- Unfortunately we can't use a newtype, because the constructor must existentially
--- hide the Language index. Instances on GADT's are a bit tricky so we are carefull
--- in the comments below to explain them. Because we intend to add new languages
--- the GADT will someday end up with more constructors. So we add some commented
--- out code that suggests how to extend the instances when that happens.
+-- The Language Depenedent View type (LangDepView) is a GADT, it will have a
+-- different Constructor for each Language. This way each language can have a
+-- different view of the Protocol parameters. This is an intermediate type and
+-- we introduce it only because we are interested in combining it with other
+-- things so we can hash the combination. Thus this type (and the other things
+-- we combine it with) must remember their original bytes. We make it a data
+-- type around a MemoBytes. Unfortunately we can't use a newtype, because the
+-- constructor must existentially hide the Language index. Instances on GADT's
+-- are a bit tricky so we are carefull in the comments below to explain them.
+-- Because we intend to add new languages the GADT will someday end up with more
+-- constructors. So we add some commented out code that suggests how to extend
+-- the instances when that happens.
 
 data RawView :: Type -> Language -> Type where
   RawPlutusView :: CostModel -> RawView era 'PlutusV1
@@ -518,8 +518,9 @@ instance (Typeable era) => FromCBOR (Annotator (LangDepView era)) where
 data LangDepView era where
   LangDepViewConstr :: (MemoBytes (RawView era lang)) -> LangDepView era
 
--- We can't derive SafeToHash via newtype deriving because LandDepViewConstr is a data
--- not a newtype. But it does remember its original bytes so we can add the instance manually.
+-- We can't derive SafeToHash via newtype deriving because LandDepViewConstr is
+-- a data not a newtype. But it does remember its original bytes so we can add
+-- the instance manually.
 
 instance SafeToHash (LangDepView era) where
   originalBytes (LangDepViewConstr (Memo _ bs)) = fromShort bs
