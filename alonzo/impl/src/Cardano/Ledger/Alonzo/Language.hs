@@ -8,6 +8,7 @@
 module Cardano.Ledger.Alonzo.Language where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord64)
+import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppString)
 import Control.DeepSeq (NFData (..))
 import Data.Coders
 import qualified Data.Set as Set
@@ -39,3 +40,10 @@ instance FromCBOR Language where
 
 nonNativeLanguages :: Set.Set Language
 nonNativeLanguages = Set.insert PlutusV1 Set.empty
+
+-- ==================================
+
+ppLanguage :: Language -> PDoc
+ppLanguage PlutusV1 = ppString "PlutusV1"
+
+instance PrettyA Language where prettyA = ppLanguage
