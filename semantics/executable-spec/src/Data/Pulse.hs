@@ -4,13 +4,13 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Pulse where
+module Data.Pulse where
 
 import qualified Data.List as List
 import Data.Kind
 import Data.Map(Map)
 import qualified Data.Map.Strict as Map
-import Data.Map.Internal (Map (..), link, link2)
+import Data.Map.Internal (Map (..))
 import Control.Monad.Identity(Identity(..))
 
 -- ====================================================
@@ -44,7 +44,7 @@ data PulseListM m ans where
 instance Show ans => Show (PulseListM m ans) where
   show(PulseList ass n _ t a) = "(Pulse "++assoc ass++show n++status t++show a++")"
     where status [] = " Done "
-          status (x : _) = " More "
+          status (_ : _) = " More "
           assoc LeftA = "left "
           assoc RightA = "right "
 
@@ -177,6 +177,7 @@ jsum = pulseList LeftA 10 (+) [1..33] 0
 (Pulse left 10 Done 561)
 -}
 
+ksum :: PulseList Integer
 ksum = pulseList RightA 1 (+) [1..5] 0
 {-
 *Pulse> ksum
@@ -193,6 +194,7 @@ ksum = pulseList RightA 1 (+) [1..5] 0
 (Pulse right 1 Done 15)
 -}
 
+hsum :: PulseList Integer
 hsum = pulseList LeftA 1 (+) [1..5] 0
 {-
 *Pulse> hsum
@@ -230,7 +232,7 @@ Pulse> msum
 
 
 iosum :: PulseListM IO ()
-iosum = PulseList LeftA 2 (\ () k -> putStrLn (show k)) [1..5] ()
+iosum = PulseList LeftA 2 (\ () k -> putStrLn (show k)) [(1::Int)..5] ()
 {-
 *Pulse> iosum
 (Pulse left 2 More ())
