@@ -33,7 +33,7 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Delegation.Certificates (requiresVKeyWitness)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState (UTxOState)
-import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.PParams (ProtVer, Update)
 import qualified Shelley.Spec.Ledger.STS.Ledger as Shelley
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.STS.Utxow
@@ -138,7 +138,8 @@ instance
           (AuxiliaryDataHash (Crypto era))
       ),
     HasField "mint" (Core.TxBody era) (Core.Value era),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   STS (UTXOW era)
   where

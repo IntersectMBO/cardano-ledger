@@ -3,6 +3,7 @@
 
 module Main where
 
+import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Test.Cardano.Ledger.Allegra ()
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)

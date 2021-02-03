@@ -58,7 +58,7 @@ import Cardano.Ledger.Pretty
     ppWdrl,
   )
 import Cardano.Ledger.SafeHash (EraIndependentTxBody, HashAnnotated, SafeToHash)
-import Cardano.Ledger.Shelley.Constraints (TransValue)
+import Cardano.Ledger.Shelley.Constraints (PParamsDelta, TransValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
   ( DecodeMint (..),
@@ -114,6 +114,8 @@ type FamsFrom era =
     DecodeNonNegative (Value era),
     DecodeMint (Value era),
     Val (Value era), -- Arises because we use 'zero' as the 'mint' field in 'initial'
+    FromCBOR (Core.PParams era),
+    FromCBOR (PParamsDelta era),
     FromCBOR (Value era),
     FromCBOR (Annotator (Script era)) -- Arises becaause DCert memoizes its bytes
   )
@@ -124,6 +126,8 @@ type FamsTo era =
     Compactible (Value era),
     EncodeMint (Value era),
     ToCBOR (Script era),
+    ToCBOR (Core.PParams era),
+    ToCBOR (PParamsDelta era),
     Typeable (Core.AuxiliaryData era)
   )
 
@@ -146,19 +150,23 @@ data TxBodyRaw era = TxBodyRaw
 -- The surprising (Compactible (Value era))) constraint comes from the fact that TxOut
 -- stores a (Value era) in a compactible form.
 
-deriving instance (NFData (Value era), Era era) => NFData (TxBodyRaw era)
+deriving instance
+  (NFData (Value era), Era era, NFData (PParamsDelta era)) =>
+  NFData (TxBodyRaw era)
 
 deriving instance
-  TransValue Eq era =>
+  (TransValue Eq era, Eq (PParamsDelta era)) =>
   Eq (TxBodyRaw era)
 
 deriving instance
-  TransValue Show era =>
+  (TransValue Show era, Show (PParamsDelta era)) =>
   Show (TxBodyRaw era)
 
 deriving instance Generic (TxBodyRaw era)
 
-deriving instance NoThunks (Value era) => NoThunks (TxBodyRaw era)
+deriving instance
+  (NoThunks (Value era), NoThunks (PParamsDelta era)) =>
+  NoThunks (TxBodyRaw era)
 
 instance (FamsFrom era) => FromCBOR (TxBodyRaw era) where
   fromCBOR =
@@ -246,18 +254,25 @@ newtype TxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
   deriving newtype (SafeToHash)
 
 deriving instance
-  TransValue Eq era =>
+  (TransValue Eq era, Eq (PParamsDelta era)) =>
   Eq (TxBody era)
 
 deriving instance
-  TransValue Show era =>
+  (TransValue Show era, Show (PParamsDelta era)) =>
   Show (TxBody era)
 
 deriving instance Generic (TxBody era)
 
-deriving newtype instance (Typeable era, NoThunks (Value era)) => NoThunks (TxBody era)
+deriving newtype instance
+  (Typeable era, NoThunks (Value era), NoThunks (PParamsDelta era)) =>
+  NoThunks (TxBody era)
 
-deriving newtype instance (NFData (Value era), Era era) => NFData (TxBody era)
+deriving newtype instance
+  ( NFData (Value era),
+    NFData (PParamsDelta era),
+    Era era
+  ) =>
+  NFData (TxBody era)
 
 deriving newtype instance (Typeable era) => ToCBOR (TxBody era)
 
@@ -341,6 +356,7 @@ instance Value era ~ value => HasField "mint" (TxBody era) value where
 ppTxBody ::
   ( Era era,
     PrettyA (Value era),
+    PrettyA (PParamsDelta era),
     Compactible (Value era)
   ) =>
   TxBody era ->
@@ -360,7 +376,11 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)) =
     ]
 
 instance
-  (Era era, PrettyA (Value era), Compactible (Value era)) =>
+  ( Era era,
+    PrettyA (Value era),
+    PrettyA (PParamsDelta era),
+    Compactible (Value era)
+  ) =>
   PrettyA (TxBody era)
   where
   prettyA = ppTxBody

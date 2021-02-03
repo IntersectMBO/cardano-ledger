@@ -16,6 +16,7 @@ import Shelley.Spec.Ledger.API
     PraosCrypto,
     ShelleyBasedEra,
   )
+import Shelley.Spec.Ledger.PParams (PParams' (..))
 
 type MaryEra = ShelleyMAEra 'Mary
 

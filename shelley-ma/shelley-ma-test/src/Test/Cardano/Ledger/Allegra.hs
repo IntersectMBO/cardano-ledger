@@ -24,7 +24,11 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesValue)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesPParams,
+    UsesValue,
+  )
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody
   ( TxBody (..),
@@ -85,6 +89,7 @@ genTxBody ::
   forall era.
   ( UsesValue era,
     UsesAuxiliary era,
+    UsesPParams era,
     EraGen era
   ) =>
   SlotNo ->

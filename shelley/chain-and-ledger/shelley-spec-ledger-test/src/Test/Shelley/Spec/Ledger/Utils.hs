@@ -137,9 +137,8 @@ import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
-import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
-import Shelley.Spec.Ledger.Tx (Tx, TxBody, TxOut)
+import Shelley.Spec.Ledger.Tx (Tx, TxOut)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Tasty.HUnit
   ( Assertion,
@@ -153,11 +152,9 @@ type ShelleyTest era =
     UsesScript era,
     UsesAuxiliary era,
     UsesPParams era,
-    TxBody era ~ Core.TxBody era,
     TxOut era ~ Core.TxOut era,
     PParams era ~ Core.PParams era,
     PParamsDelta era ~ PParamsUpdate era,
-    MultiSig (Crypto era) ~ Core.Script era,
     Split (Core.Value era),
     Default (State (Core.EraRule "PPUP" era))
   )

@@ -28,7 +28,12 @@ import Cardano.Ledger.Mary.Value
     PolicyID (..),
     Value (..),
   )
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesValue)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesPParams,
+    UsesScript,
+    UsesValue,
+  )
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody
   ( TxBodyRaw (..),
@@ -159,7 +164,7 @@ embedTest = do
     Left s -> error (show s)
 
 getTxSparse ::
-  (UsesValue era, UsesScript era, UsesAuxiliary era) =>
+  (UsesValue era, UsesPParams era, UsesScript era, UsesAuxiliary era) =>
   Decode ('Closed 'Dense) (TxBodyRaw era)
 getTxSparse =
   SparseKeyed
