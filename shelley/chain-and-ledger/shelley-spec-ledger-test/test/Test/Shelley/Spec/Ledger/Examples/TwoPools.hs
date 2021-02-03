@@ -25,6 +25,7 @@ import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
+import Control.Provenance (runProvM)
 import Data.Default.Class (def)
 import Data.Group (invert)
 import Data.Map.Strict (Map)
@@ -65,6 +66,8 @@ import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( RewardUpdate (..),
+    PulsingRewUpdate (..),
+    completeStep,
     emptyRewardUpdate,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
@@ -123,6 +126,7 @@ import Test.Shelley.Spec.Ledger.Examples.Init
     nonce0,
     ppEx,
   )
+import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (makePulser)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
@@ -138,6 +142,7 @@ import Test.Shelley.Spec.Ledger.Utils
     epochSize,
     getBlockNonce,
     maxLLSupply,
+    runShelleyBase,
     testGlobals,
   )
 import Test.Tasty (TestTree, testGroup)
@@ -764,17 +769,30 @@ rewardUpdateEx9 pp rewards =
   where
     deltaR2Ex9 = bigR <-> (sumRewards pp rewards)
 
+pulserEx9 ::
+  forall era.
+  (ExMock (Crypto era), TwoPoolsConstraints era) =>
+  PParams era ->
+  PulsingRewUpdate (Crypto era)
+pulserEx9 pp = makePulser
+                 (EB.BlocksMade $
+                   Map.fromList
+                     [(hk Cast.alicePoolKeys, 2), (hk Cast.bobPoolKeys, 1)]
+                 )
+                 expectedStEx8'
+  where
+    expectedStEx8' = C.setPrevPParams pp (expectedStEx8 @era)
+
 expectedStEx9 ::
   forall era.
   (TwoPoolsConstraints era) =>
   PParams era ->
-  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
   ChainState era
-expectedStEx9 pp rewards =
+expectedStEx9 pp =
   C.evolveNonceFrozen (getBlockNonce (blockEx9 @era))
     . C.newLab blockEx9
     . C.setOCertCounter coreNodeHK 2
-    . C.rewardUpdate (rewardUpdateEx9 pp rewards)
+    . C.pulserUpdate (pulserEx9 @era pp)
     $ expectedStEx8
   where
     coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @era ppEx 390
@@ -784,7 +802,7 @@ expectedStEx9 pp rewards =
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.
 twoPools9 :: forall era. (TwoPoolsConstraints era) => CHAINExample era
-twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 ppEx rsEx9Agg)
+twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 ppEx)
 
 --
 -- Now test with Aggregation
@@ -808,7 +826,7 @@ expectedStEx8Agg :: forall era. (TwoPoolsConstraints era) => ChainState era
 expectedStEx8Agg = C.setPrevPParams ppProtVer3 expectedStEx8
 
 expectedStEx9Agg :: forall era. (TwoPoolsConstraints era) => ChainState era
-expectedStEx9Agg = C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3 rsEx9Agg)
+expectedStEx9Agg = C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3)
 
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.
@@ -838,8 +856,16 @@ twoPoolsExample :: TestTree
 twoPoolsExample =
   testGroup
     "two pools"
-    [ testCase "create non-aggregated rewards" $ testCHAINExample twoPools9,
-      testCase "create aggregated rewards" $ testCHAINExample twoPools9Agg,
+    [ testCase "create non-aggregated pulser" $ testCHAINExample twoPools9,
+      testCase "non-aggregated pulser is correct" $
+        ((Complete (rewardUpdateEx9 @C ppEx rsEx9Agg))
+          @?=
+          (runShelleyBase . runProvM . completeStep $ pulserEx9 @C ppEx)),
+      testCase "aggregated pulser is correct" $
+        ((Complete (rewardUpdateEx9 @C ppProtVer3 rsEx9Agg))
+          @?=
+          (runShelleyBase . runProvM . completeStep $ pulserEx9 @C ppProtVer3)),
+      testCase "create aggregated pulser" $ testCHAINExample twoPools9Agg,
       testCase "create legacy aggregatedRewards" $ testAggregateRewardsLegacy,
       testCase "create new aggregatedRewards" $ testAggregateRewardsNew
     ]

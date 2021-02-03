@@ -63,6 +63,11 @@ module Data.Coders
     decodeCollectionWithLen,
     decodeCollection,
     encodeFoldableEncoder,
+    encodeMap,
+    wrapCBORMap,
+    decodeMap,
+    decodeMapContents,
+    decodeMapTraverse,
     dualList, -- Dual values for export
     dualSeq,
     dualSet,
@@ -78,17 +83,17 @@ module Data.Coders
     encodeNullMaybe,
     decodeNullMaybe,
     decodeSparse,
-    toMap,
-    fromMap,
-    toSet,
-    fromSet,
-    toList,
-    fromList,
-    fromPairAA,
-    fromPairXA,
-    fromPairAX,
-    fromListA,
-    fromSetA,
+
+    mapEncode,
+    mapDecode,
+    mapDecodeA,
+    setEncode,
+    setDecode,
+    setDecodeA,
+    listEncode,
+    listDecode,
+    listDecodeA,
+    pairDecodeA,
   )
 where
 
@@ -106,6 +111,7 @@ import Cardano.Binary
     encodeWord,
     encodeBreak,
     encodeListLenIndef,
+    encodeMapLenIndef,
     DecoderError( DecoderErrorCustom ),
     decodeBreakOr,
     decodeListLenOrIndef,
@@ -127,6 +133,7 @@ import Data.Sequence (Seq)
 import Data.Set (Set,insert,member)
 import Data.Foldable (foldl')
 import Data.Typeable
+import Data.Functor.Compose (Compose (..))
 
 -- ====================================================================
 
@@ -240,6 +247,44 @@ wrapCBORArray len contents =
     then encodeListLen len <> contents
     else encodeListLenIndef <> contents <> encodeBreak
 
+-- ===============================================================
+-- We want to make a uniform way of encoding and decoding Map.Map
+-- Unfortuantely the ToCBOR and FromCBOR instances date to Byron
+-- Era, which are not always cannonical. We want to make these
+-- cannonical improvements easy to use.
+
+encodeMap :: (a -> Encoding) -> (b -> Encoding) -> Map.Map a b -> Encoding
+encodeMap encodeKey encodeValue m =
+  let l = fromIntegral $ Map.size m
+      contents = Map.foldMapWithKey (\k v -> encodeKey k <> encodeValue v) m
+   in wrapCBORMap l contents
+
+wrapCBORMap :: Word -> Encoding -> Encoding
+wrapCBORMap len contents =
+  if len <= 23
+    then encodeMapLen len <> contents
+    else encodeMapLenIndef <> contents <> encodeBreak
+
+decodeMap :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
+decodeMap decodeKey decodeValue =
+  Map.fromList
+    <$> decodeMapContents decodeInlinedPair
+  where
+    decodeInlinedPair = (,) <$> decodeKey <*> decodeValue
+
+decodeMapContents :: Decoder s a -> Decoder s [a]
+decodeMapContents = decodeCollection decodeMapLenOrIndef
+
+decodeMapTraverse ::
+  (Ord a, Applicative t) =>
+  Decoder s (t a) ->
+  Decoder s (t b) ->
+  Decoder s (t (Map.Map a b))
+decodeMapTraverse decodeKey decodeValue =
+  fmap Map.fromList . sequenceA
+    <$> decodeMapContents decodeInlinedPair
+  where
+    decodeInlinedPair = getCompose $ (,) <$> Compose decodeKey <*> Compose decodeValue
 
 -- ===============================================================================
 -- Encode and Decode are typed data structures which specify encoders and decoders
@@ -622,48 +667,78 @@ to xs = ED dualCBOR xs
 from ::  (ToCBOR t, FromCBOR t) => Decode ('Closed 'Dense) t
 from = DD dualCBOR
 
+-- ==================================================================
+-- Combinators for building ({En|De}code ('Closed 'Dense) x) objects.
+-- The use of "encodeFoldable" is not self-documenting at all (and
+-- not even correct for Maps, even though Map is an instance of Foldable)
+-- So instead of writing:  (E encodeFoldable x), we want people to write:
+-- 1) (mapEncode x)   if x is a Map
+-- 2) (setEncode x)   if x is a Set
+-- 3) (listEncode x)  if x is a List
+--
+-- To decode one of these foldable instances, should use one of the aptly named Duals
+--
+-- 1) mapDecode   if x is a Map
+-- 2) setDecode   if x is a Set
+-- 3) listDecode  if x is a List
+--
+-- If one needs an Annotated decoder, one can use (explained further below)
+--
+-- 1) mapDecodeA   if x is a Map
+-- 2) setDecodeA   if x is a Set
+-- 3) listDecodeA  if x is a List
+-- 4) pairDecodeA  if x is a Pair like (Int,Bool)
 
--- Names for derived Encode and Decode combinators for Lists, Sets and Maps
+-- | (mapEncode x)  is self-documenting, correct way to encode Map. use mapDecode as its dual
+mapEncode :: (ToCBOR k,ToCBOR v) => Map.Map k v -> Encode ('Closed 'Dense) (Map.Map k v)
+mapEncode x = E (encodeMap toCBOR toCBOR) x
 
-toMap :: (ToCBOR v) => Map.Map k v -> Encode ('Closed 'Dense) (Map.Map k v)
-toMap x = E encodeFoldable x
+-- | (mapDecode) is the Dual for (mapEncode x)
+mapDecode:: (Ord k,FromCBOR k,FromCBOR v) => Decode ('Closed 'Dense) (Map.Map k v)
+mapDecode = D (decodeMap fromCBOR fromCBOR)
 
-fromMap:: (Ord k,FromCBOR k,FromCBOR v) => Decode ('Closed 'Dense) (Map.Map k v)
-fromMap = From
+-- | (setEncode x) is self-documenting (E encodeFoldable x), use setDecode as its dual
+setEncode :: (ToCBOR v) => Set.Set v -> Encode ('Closed 'Dense) (Set.Set v)
+setEncode x = E encodeFoldable x
 
-toSet :: (ToCBOR v) => Set.Set v -> Encode ('Closed 'Dense) (Set.Set v)
-toSet x = E encodeFoldable x
+-- | (setDecode) is the Dual for (setEncode x)
+setDecode :: (Ord v,FromCBOR v) => Decode ('Closed 'Dense) (Set.Set v)
+setDecode = D (decodeSet fromCBOR)
 
-fromSet :: (Ord v,FromCBOR v) => Decode ('Closed 'Dense) (Set.Set v)
-fromSet = D (decodeSet fromCBOR)
+-- | (listEncode x) is self-documenting (E encodeFoldable x), use listDecode as its dual
+listEncode :: (ToCBOR v) => [v] -> Encode ('Closed 'Dense) [v]
+listEncode x = E encodeFoldable x
 
-toList :: (ToCBOR v) => [v] -> Encode ('Closed 'Dense) [v]
-toList x = E encodeFoldable x
-
-fromList :: (FromCBOR v) => Decode ('Closed 'Dense) [v]
-fromList = D (decodeList fromCBOR)
+-- | (listDecode) is the Dual for (listEncode x)
+listDecode:: (FromCBOR v) => Decode ('Closed 'Dense) [v]
+listDecode =  D (decodeList fromCBOR)
 
 -- =============================================================================
--- Combinators for building (Decode ('Closed 'Dense) (Annotator x)) objects.
--- Unlike the combinators above for Non-Annotator types above, these combinators take
--- explicit (Decode  ('Closed 'Dense) i) objects as parameters rather than relying
--- on implicit FromCBOR instances.
+-- Combinators for building (Decode ('Closed 'Dense) (Annotator x)) objects. Unlike
+-- the combinators above (setDecode, mapDecode, ListDecode) for Non-Annotator types,
+-- these combinators take explicit (Decode  ('Closed 'Dense) i) objects as parameters
+-- rather than relying on FromCBOR instances as implicit parameters. To get the
+-- annotator version, just add 'A' to the end of the non-annotator version decode function.
+-- E.g.  setDecodeA, listDecodeA, mapDecodeA. Suppose I want to decode x:: Map [A] (B,C)
+-- and I only have Annotator instances of A and C, then the following decodes x.
+-- mapDecodeA (listDecodeA From) (pairDecodeA (Ann From) From).
+--                                             ^^^^^^^^
+-- One can always lift x::(Decode w T) by using Ann. so (Ann x)::(Decode w (Annotator T)).
 
+pairDecodeA:: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator y) -> Decode ('Closed 'Dense) (Annotator (x,y))
+pairDecodeA x y = D (do { (xA,yA) <- decodePair (decode x) (decode y); pure(do { x' <- xA; y' <- yA; pure(x',y')}) })
 
-fromPairAA :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator y) -> Decode ('Closed 'Dense) (Annotator (x,y))
-fromPairAA x y = D (do { (xA,yA) <- decodePair (decode x) (decode y); pure(do { x' <- xA; y' <- yA; pure(x',y')}) })
+listDecodeA :: Decode ('Closed 'Dense) (Annotator x) ->  Decode ('Closed 'Dense) (Annotator [x])
+listDecodeA dx = D (do { listXA <- decodeList (decode dx); pure (sequence listXA) })
 
-fromPairXA :: Decode ('Closed 'Dense) x -> Decode ('Closed 'Dense) (Annotator y) -> Decode ('Closed 'Dense) (Annotator (x,y))
-fromPairXA x y = D (do { (x',yA) <- decodePair (decode x) (decode y); pure(do { y' <- yA; pure(x',y')}) })
+setDecodeA :: Ord x => Decode ('Closed 'Dense) (Annotator x) ->  Decode ('Closed 'Dense) (Annotator (Set x))
+setDecodeA dx = D (decodeAnnSet (decode dx))
 
-fromPairAX :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) y -> Decode ('Closed 'Dense) (Annotator (x,y))
-fromPairAX x y = D (do { (xA,y') <- decodePair (decode x) (decode y); pure(do { x' <- xA; pure(x',y')}) })
-
-fromListA :: Decode ('Closed 'Dense) (Annotator x) ->  Decode ('Closed 'Dense) (Annotator [x])
-fromListA dx = D (do { listXA <- decodeList (decode dx); pure (sequence listXA) })
-
-fromSetA :: Ord x => Decode ('Closed 'Dense) (Annotator x) ->  Decode ('Closed 'Dense) (Annotator (Set x))
-fromSetA dx = D (decodeAnnSet (decode dx))
+mapDecodeA :: Ord k =>
+   Decode ('Closed 'Dense) (Annotator k) ->
+   Decode ('Closed 'Dense) (Annotator v) ->
+   Decode ('Closed 'Dense) (Annotator (Map.Map k v))
+mapDecodeA k v = D (decodeMapTraverse (decode k) (decode v))
 
 -- ==================================================================
 -- A Guide to Visual inspection of Duality in Encode and Decode

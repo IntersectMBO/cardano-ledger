@@ -60,12 +60,8 @@ import Cardano.Binary
     Size,
     ToCBOR (..),
     decodeListLenOrIndef,
-    decodeMapLenOrIndef,
     decodeTag,
-    encodeBreak,
     encodeListLen,
-    encodeMapLen,
-    encodeMapLenIndef,
     encodeTag,
     withWordSize,
   )
@@ -78,9 +74,11 @@ import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coders
-  ( decodeCollection,
-    decodeCollectionWithLen,
+  ( decodeCollectionWithLen,
     decodeList,
+    decodeMap,
+    decodeMapContents,
+    decodeMapTraverse,
     decodeNullMaybe,
     decodeRecordNamed,
     decodeRecordSum,
@@ -89,11 +87,12 @@ import Data.Coders
     decodeStrictSeq,
     encodeFoldable,
     encodeFoldableEncoder,
+    encodeMap,
     encodeNullMaybe,
     wrapCBORArray,
+    wrapCBORMap,
   )
 import Data.Foldable (foldl')
-import Data.Functor.Compose (Compose (..))
 import Data.IP
   ( IPv4,
     IPv6,
@@ -103,7 +102,6 @@ import Data.IP
     toHostAddress6,
   )
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -150,35 +148,11 @@ instance (FromCBORGroup a, ToCBORGroup a) => FromCBOR (CBORGroup a) where
 groupRecord :: forall a s. (ToCBORGroup a, FromCBORGroup a) => Decoder s a
 groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen) fromCBORGroup
 
-encodeMap :: (a -> Encoding) -> (b -> Encoding) -> Map a b -> Encoding
-encodeMap encodeKey encodeValue m =
-  let l = fromIntegral $ Map.size m
-      contents = Map.foldMapWithKey (\k v -> encodeKey k <> encodeValue v) m
-   in wrapCBORMap l contents
-
 mapToCBOR :: (ToCBOR a, ToCBOR b) => Map a b -> Encoding
 mapToCBOR = encodeMap toCBOR toCBOR
 
 mapFromCBOR :: (Ord a, FromCBOR a, FromCBOR b) => Decoder s (Map a b)
 mapFromCBOR = decodeMap fromCBOR fromCBOR
-
-decodeMap :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map a b)
-decodeMap decodeKey decodeValue =
-  Map.fromList
-    <$> decodeMapContents decodePair
-  where
-    decodePair = (,) <$> decodeKey <*> decodeValue
-
-decodeMapTraverse ::
-  (Ord a, Applicative t) =>
-  Decoder s (t a) ->
-  Decoder s (t b) ->
-  Decoder s (t (Map a b))
-decodeMapTraverse decodeKey decodeValue =
-  fmap Map.fromList . sequenceA
-    <$> decodeMapContents decodePair
-  where
-    decodePair = getCompose $ (,) <$> Compose decodeKey <*> Compose decodeValue
 
 newtype CborSeq a = CborSeq {unwrapCborSeq :: Seq a}
   deriving (Foldable)
@@ -204,12 +178,6 @@ encodeFoldableMapEncoder encode xs = wrapCBORMap len contents
       Nothing -> (l, i + 1, enc)
       Just e -> (l + 1, i + 1, enc <> e)
 
-wrapCBORMap :: Word -> Encoding -> Encoding
-wrapCBORMap len contents =
-  if len <= 23
-    then encodeMapLen len <> contents
-    else encodeMapLenIndef <> contents <> encodeBreak
-
 decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
 decodeMaybe d =
   decodeList d >>= \case
@@ -220,9 +188,6 @@ decodeMaybe d =
         DecoderErrorCustom
           "Maybe"
           "Expected an array of length 0 or 1"
-
-decodeMapContents :: Decoder s a -> Decoder s [a]
-decodeMapContents = decodeCollection decodeMapLenOrIndef
 
 ratioToCBOR :: ToCBOR a => Ratio a -> Encoding
 ratioToCBOR r =

@@ -346,6 +346,8 @@ data ActiveSlotCoeff = ActiveSlotCoeff
 
 instance NoThunks ActiveSlotCoeff
 
+instance NFData ActiveSlotCoeff
+
 instance FromCBOR ActiveSlotCoeff where
   fromCBOR = do
     v <- fromCBOR
@@ -417,7 +419,7 @@ data Globals = Globals
     -- | The network ID
     networkId :: !Network
   }
-  deriving (Generic)
+  deriving (Show, Generic)
 
 instance NoThunks Globals
 

@@ -141,7 +141,6 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (ScriptHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Serialization (decodeMapTraverse)
 import Shelley.Spec.Ledger.Tx (ValidateScript (isNativeScript))
 import Shelley.Spec.Ledger.TxBody (DelegCert (..), Delegation (..), TxIn (..), Wdrl (..), unWdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
@@ -335,8 +334,8 @@ instance Era era => FromCBOR (Annotator (WitnessPPDataRaw era)) where
   fromCBOR =
     decode
       ( Ann (RecD WitnessPPDataRaw)
-          <*! D (decodeMapTraverse (pure <$> fromCBOR) fromCBOR)
-          <*! D (decodeAnnSet fromCBOR)
+          <*! mapDecodeA (Ann From) From
+          <*! setDecodeA From
       )
 
 newtype WitnessPPData era = WitnessPPDataConstr (MemoBytes (WitnessPPDataRaw era))
@@ -359,7 +358,7 @@ pattern WitnessPPData mp s <-
     WitnessPPData mp s =
       WitnessPPDataConstr
         . memoBytes
-        $ (Rec WitnessPPDataRaw !> To mp !> To s)
+        $ (Rec WitnessPPDataRaw !> mapEncode mp !> setEncode s)
 
 instance (c ~ Crypto era) => HashAnnotated (WitnessPPData era) EraIndependentWitnessPPData c
 

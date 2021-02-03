@@ -56,6 +56,7 @@ library
     Shelley.Spec.Ledger.PParams
     Shelley.Spec.Ledger.Rewards
     Shelley.Spec.Ledger.RewardProvenance
+    Shelley.Spec.Ledger.RewardUpdate
     Shelley.Spec.Ledger.Scripts
     Shelley.Spec.Ledger.Serialization
     Shelley.Spec.Ledger.Slot

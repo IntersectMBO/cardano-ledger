@@ -75,9 +75,9 @@ instance FromCBOR (Annotator Plutus.Data) where
   fromCBOR = decode (Summands "PlutusData" decPlutus)
     where
       decPlutus :: Word -> Decode 'Open (Annotator Plutus.Data)
-      decPlutus 0 = Ann (SumD Plutus.Constr) <*! (Ann From) <*! fromListA From
-      decPlutus 1 = Ann (SumD Plutus.Map) <*! fromListA (fromPairAA From From)
-      decPlutus 2 = Ann (SumD Plutus.List) <*! fromListA From
+      decPlutus 0 = Ann (SumD Plutus.Constr) <*! (Ann From) <*! listDecodeA From
+      decPlutus 1 = Ann (SumD Plutus.Map) <*! listDecodeA (pairDecodeA From From)
+      decPlutus 2 = Ann (SumD Plutus.List) <*! listDecodeA From
       decPlutus 3 = Ann (SumD Plutus.I <! From)
       decPlutus 4 = Ann (SumD Plutus.B <! From)
       decPlutus n = Invalid n
@@ -85,9 +85,9 @@ instance FromCBOR (Annotator Plutus.Data) where
 instance ToCBOR Plutus.Data where
   toCBOR x = encode (encPlutus x)
     where
-      encPlutus (Plutus.Constr tag args) = Sum Plutus.Constr 0 !> To tag !> toList args
-      encPlutus (Plutus.Map pairs) = Sum Plutus.Map 1 !> toList pairs
-      encPlutus (Plutus.List xs) = Sum Plutus.List 2 !> toList xs
+      encPlutus (Plutus.Constr tag args) = Sum Plutus.Constr 0 !> To tag !> listEncode args
+      encPlutus (Plutus.Map pairs) = Sum Plutus.Map 1 !> listEncode pairs
+      encPlutus (Plutus.List xs) = Sum Plutus.List 2 !> listEncode xs
       encPlutus (Plutus.I i) = Sum Plutus.I 3 !> To i
       encPlutus (Plutus.B bytes) = Sum Plutus.B 4 !> To bytes
 
@@ -158,9 +158,9 @@ encodeRaw ::
   Encode ('Closed 'Dense) (AuxiliaryDataRaw era)
 encodeRaw s d m =
   ( Rec AuxiliaryDataRaw
-      !> E encodeFoldable s
-      !> E encodeFoldable d
-      !> E encodeFoldable m
+      !> setEncode s
+      !> setEncode d
+      !> setEncode m
   )
 
 instance
@@ -173,9 +173,9 @@ instance
   fromCBOR =
     decode
       ( Ann (RecD AuxiliaryDataRaw)
-          <*! D (decodeAnnSet fromCBOR)
-          <*! D (decodeAnnSet fromCBOR)
-          <*! D (decodeAnnSet fromCBOR)
+          <*! setDecodeA From
+          <*! setDecodeA From
+          <*! setDecodeA From
       )
 
 -- ================================================================================

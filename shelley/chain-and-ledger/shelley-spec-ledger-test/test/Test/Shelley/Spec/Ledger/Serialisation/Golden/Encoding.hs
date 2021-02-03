@@ -127,6 +127,7 @@ import Shelley.Spec.Ledger.LedgerState
     EpochState (..),
     NewEpochState (..),
     RewardUpdate (..),
+    PulsingRewUpdate(Complete),
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.OCert
@@ -1294,7 +1295,7 @@ tests =
           nm = def
           es = EpochState @C ac ss ls pps pps nm
           ru =
-            ( SJust
+            ( Complete $
                 RewardUpdate
                   { deltaT = DeltaCoin 100,
                     deltaR = DeltaCoin (-200),
@@ -1302,8 +1303,7 @@ tests =
                     deltaF = DeltaCoin (-10),
                     nonMyopic = nm
                   }
-            ) ::
-              StrictMaybe (RewardUpdate C_Crypto)
+            )
           pd = PoolDistr @C_Crypto Map.empty
           nes =
             NewEpochState
@@ -1311,7 +1311,7 @@ tests =
               (BlocksMade bs)
               (BlocksMade bs)
               es
-              ru
+              (SJust ru)
               pd
        in checkEncodingCBOR
             "new_epoch_state"
@@ -1321,7 +1321,7 @@ tests =
                 <> S (BlocksMade @C_Crypto bs)
                 <> S (BlocksMade @C_Crypto bs)
                 <> S es
-                <> S ru
+                <> S (SJust ru)
                 <> S pd
             )
     ]

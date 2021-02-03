@@ -45,7 +45,6 @@ import Cardano.Ledger.Pretty
     ppWitVKey,
     ppWord64,
   )
-import Control.Applicative (liftA2)
 import Data.Coders
 import Data.Map.Strict (Map)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -59,11 +58,6 @@ import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Serialization
-  ( decodeMapTraverse,
-    mapFromCBOR,
-    mapToCBOR,
-  )
 import Shelley.Spec.Ledger.TxBody (WitVKey)
 
 -- ==========================================
@@ -214,28 +208,18 @@ encodeWitnessRaw ::
   Encode ('Closed 'Dense) (TxWitnessRaw era)
 encodeWitnessRaw a b c d e =
   Rec TxWitnessRaw
-    !> E encodeFoldable a
-    !> E encodeFoldable b
-    !> E mapToCBOR c
-    !> E mapToCBOR d
-    !> E mapToCBOR e
+    !> setEncode a
+    !> setEncode b
+    !> mapEncode c
+    !> mapEncode d
+    !> mapEncode e
 
 -- TxWitness includes a field with type: (Map RdmrPtr (Data era, ExUnits))
 -- We only have a (ToCBOR (Annotator (Data era))) instance, so we need a special
 -- way to decode a Map where one half of its range has only a (FromCBOR (Annotator _))
 -- instance. We have to be careful since the map is encodedwith 'mapToCBOR' and the
--- decoder needs to be consistent with that encoding.
-
-splitMapFromCBOR ::
-  Ord dom =>
-  Decoder s dom ->
-  Decoder s (Annotator rngLeft) ->
-  Decoder s rngRight ->
-  Decoder s (Annotator (Map dom (rngLeft, rngRight)))
-splitMapFromCBOR a b c = decodeMapTraverse (pure <$> a) (liftPair <$> decodePair b c)
-  where
-    liftPair :: (Annotator a, b) -> Annotator (a, b)
-    liftPair (x, y) = liftA2 (,) x (pure y)
+-- decoder needs to be consistent with that encoding. So we use
+-- fromMapXA From (fromPairAX From From)  to decode that field
 
 instance
   ( Era era,
@@ -249,11 +233,11 @@ instance
   fromCBOR =
     decode $
       Ann (RecD TxWitnessRaw)
-        <*! D (fmap Set.fromList . sequence <$> decodeList fromCBOR)
-        <*! D (fmap Set.fromList . sequence <$> decodeList fromCBOR)
-        <*! D (sequence <$> mapFromCBOR)
-        <*! D (sequence <$> mapFromCBOR)
-        <*! D (splitMapFromCBOR fromCBOR fromCBOR fromCBOR)
+        <*! setDecodeA From
+        <*! setDecodeA From
+        <*! mapDecodeA (Ann From) From
+        <*! mapDecodeA (Ann From) From
+        <*! mapDecodeA (Ann From) (pairDecodeA From (Ann From))
 
 deriving via
   (Mem (TxWitnessRaw era))

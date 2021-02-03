@@ -30,6 +30,7 @@ module Shelley.Spec.Ledger.EpochBoundary
     poolStake,
     obligation,
     maxPool,
+    maxPool',
   )
 where
 
@@ -146,17 +147,15 @@ obligation pp rewards stakePools =
     <+> (length stakePools <×> getField @"_poolDeposit" pp)
 
 -- | Calculate maximal pool reward
-maxPool ::
-  (HasField "_a0" pp Rational, HasField "_nOpt" pp Natural) =>
-  pp ->
+maxPool' ::
+  Rational ->
+  Natural ->
   Coin ->
   Rational ->
   Rational ->
   Coin
-maxPool pc r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
+maxPool' a0 nOpt r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
   where
-    a0 = getField @"_a0" pc
-    nOpt = getField @"_nOpt" pc
     z0 = 1 % fromIntegral nOpt
     sigma' = min sigma z0
     p' = min pR z0
@@ -164,6 +163,19 @@ maxPool pc r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
     factor2 = sigma' + p' * a0 * factor3
     factor3 = (sigma' - p' * factor4) / z0
     factor4 = (z0 - sigma') / z0
+
+-- | Version of maxPool' that extracts a0 and nOpt from a PParam with the right HasField instances
+maxPool ::
+  (HasField "_a0" pp Rational, HasField "_nOpt" pp Natural) =>
+  pp ->
+  Coin ->
+  Rational ->
+  Rational ->
+  Coin
+maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
+  where
+    a0 = getField @"_a0" pc
+    nOpt = getField @"_nOpt" pc
 
 -- | Snapshot of the stake distribution.
 data SnapShot crypto = SnapShot

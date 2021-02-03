@@ -24,6 +24,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import qualified Cardano.Ledger.Val as Val
+import Control.Provenance (runProvM)
 import Control.State.Transition
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
@@ -82,7 +83,9 @@ instance
     State (Core.EraRule "EPOCH" era) ~ EpochState era,
     Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
     Default (EpochState era),
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    Default (State (Core.EraRule "PPUP" era)),
+    Default (Core.PParams era)
   ) =>
   STS (NEWEPOCH era)
   where
@@ -118,7 +121,11 @@ newEpochTransition ::
     Environment (Core.EraRule "EPOCH" era) ~ (),
     State (Core.EraRule "EPOCH" era) ~ EpochState era,
     Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    UsesTxOut era,
+    UsesValue era,
+    Default (State (Core.EraRule "PPUP" era)),
+    Default (Core.PParams era)
   ) =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
@@ -133,7 +140,12 @@ newEpochTransition = do
     else do
       es' <- case ru of
         SNothing -> pure es
-        SJust ru' -> do
+        SJust (p@(Pulsing _ _)) -> do
+          ru'@(RewardUpdate dt dr rs_ df _) <- liftSTS $ runProvM $ completeRupd p
+          let totRs = sumRewards (esPrevPp es) rs_
+          Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
+          pure $ applyRUpd ru' es
+        SJust (Complete ru') -> do
           let RewardUpdate dt dr rs_ df _ = ru'
               totRs = sumRewards (esPrevPp es) rs_
           Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'

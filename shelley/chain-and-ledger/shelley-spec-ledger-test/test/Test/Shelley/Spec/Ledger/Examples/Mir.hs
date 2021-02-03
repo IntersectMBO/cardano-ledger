@@ -40,6 +40,7 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState (..),
     NewEpochState (..),
+    PulsingRewUpdate,
     emptyRewardUpdate,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
@@ -77,6 +78,7 @@ import Test.Shelley.Spec.Ledger.Examples.Init
     nonce0,
     ppEx,
   )
+import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (makePulser')
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
@@ -314,6 +316,13 @@ blockEx2 pot =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 50) 0 (KESPeriod 0))
 
+pulserEx2 ::
+  forall c.
+  (ExMock (Crypto (ShelleyEra c))) =>
+  MIRPot ->
+  PulsingRewUpdate c
+pulserEx2 pot = makePulser' (expectedStEx1 pot)
+
 expectedStEx2 ::
   forall c.
   (ExMock (Crypto (ShelleyEra c))) =>
@@ -322,7 +331,7 @@ expectedStEx2 ::
 expectedStEx2 pot =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c pot))
     . C.newLab (blockEx2 pot)
-    . C.rewardUpdate emptyRewardUpdate
+    . C.pulserUpdate (pulserEx2 pot)
     $ (expectedStEx1 pot)
 
 -- === Block 2, Slot 50, Epoch 0
