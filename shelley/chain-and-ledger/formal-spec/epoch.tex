@@ -1450,7 +1450,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\eta =
       \begin{cases}
         1 & (\fun{d}~\var{prevPp})\geq 0.8 \\
-        \frac{blocksMade}{\floor{(\fun{d}~\var{prevPp})\cdot\var{slotsPerEpoch} \cdot \ActiveSlotCoeff}}
+        \frac{blocksMade}{\floor{(1-\fun{d}~\var{prevPp})\cdot\var{slotsPerEpoch} \cdot \ActiveSlotCoeff}}
           & \text{otherwise} \\
       \end{cases} \\
     & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r_1 \\
