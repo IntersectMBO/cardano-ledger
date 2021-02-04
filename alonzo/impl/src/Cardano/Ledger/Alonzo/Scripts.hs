@@ -64,6 +64,8 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 
+import Plutus.V1.Ledger.Scripts ()
+
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
 data Tag
