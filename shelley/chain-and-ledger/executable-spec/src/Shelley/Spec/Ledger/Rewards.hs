@@ -2,19 +2,18 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.Rewards
   ( desirability,
@@ -52,19 +51,21 @@ import Cardano.Binary
     encodeWord,
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era,Crypto)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Val ((<->))
-import Cardano.Slotting.Slot (EpochSize(..))
+import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Provenance (ProvM, modifyM)
-import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!), toMap, fromMap, toSet, fromSet)
+import Data.Coders (Decode (..), Encode (..), decode, encode, fromMap, fromSet, toMap, toSet, (!>), (<!))
 import Data.Default.Class (Default, def)
 import Data.Foldable (find, fold)
 import Data.Function (on)
+import Data.Kind (Type)
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Pulse (LL (..), MAccum (..), completeM)
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -105,9 +106,6 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
   )
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), getRwdCred)
-import Data.Pulse(LL(..),MAccum(..),completeM)
-import Data.Kind(Type)
-
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
   deriving (Eq, Generic, Ord, Num, NFData, NoThunks, ToCBOR, FromCBOR)
@@ -558,7 +556,7 @@ rewardOnePool
 
 reward ::
   forall m era.
-  (Era era,Monad m) =>
+  (Era era, Monad m) =>
   PParams era ->
   BlocksMade (Crypto era) ->
   Coin ->
@@ -585,58 +583,76 @@ reward
   delegs
   (Coin totalStake)
   asc
-  slotsPerEpoch = completeM pulser where
-        totalBlocks = sum b
-        Coin activeStake = fold . unStake $ stake
-        free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r pp slotsPerEpoch)
-        pulser :: LL (RewardCalc m era (Crypto era)) (ProvM (RewardProvenance (Crypto era)) m) (RewardAns (Crypto era))
-        pulser = LL RewardCalc 2 free  (Map.toList poolParams) (Map.empty, Map.empty)
-        -- The function actionFree (below), is uniquely identified by the value RewardCalc :: RewardCalc
-        -- in the (MAccum (RewardCalc m era c) ...) instance below.
-        -- The pulser folds actionFree over the poolParams. In this function we 'complete' the fold in 1 go.
+  slotsPerEpoch = completeM pulser
+    where
+      totalBlocks = sum b
+      Coin activeStake = fold . unStake $ stake
+      free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r pp slotsPerEpoch)
+      pulser :: LL (RewardCalc m era (Crypto era)) (ProvM (RewardProvenance (Crypto era)) m) (RewardAns (Crypto era))
+      pulser = LL RewardCalc 2 free (Map.toList poolParams) (Map.empty, Map.empty)
+
+-- The function actionFree (below), is uniquely identified by the value RewardCalc :: RewardCalc
+-- in the (MAccum (RewardCalc m era c) ...) instance below.
+-- The pulser folds actionFree over the poolParams. In this function we 'complete' the fold in 1 go.
 
 -- ========================================================
 -- FreeVars is the set of variables needed to compute
 -- actionFree, so that it can be made into a serializable
 -- Pulsable function.
 
-data FreeVars era =
-     FreeVars{ b:: Map (KeyHash 'StakePool (Crypto era)) Natural,
-               delegs:: Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)),
-               stake:: Stake (Crypto era),
-               addrsRew :: Set (Credential 'Staking (Crypto era)),
-               totalStake :: Integer,
-               activeStake :: Integer,
-               asc :: ActiveSlotCoeff,
-               totalBlocks :: Natural,                                       --
-               r :: Coin,
-               pp ::  PParams era,
-               slotsPerEpoch :: EpochSize }
+data FreeVars era = FreeVars
+  { b :: Map (KeyHash 'StakePool (Crypto era)) Natural,
+    delegs :: Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)),
+    stake :: Stake (Crypto era),
+    addrsRew :: Set (Credential 'Staking (Crypto era)),
+    totalStake :: Integer,
+    activeStake :: Integer,
+    asc :: ActiveSlotCoeff,
+    totalBlocks :: Natural, --
+    r :: Coin,
+    pp :: PParams era,
+    slotsPerEpoch :: EpochSize
+  }
 
 -- FreeVars is serializable
 
-instance (Era era) => ToCBOR(FreeVars era) where
-  toCBOR (FreeVars{b,delegs,stake,addrsRew,totalStake,activeStake,asc,totalBlocks,r,pp,slotsPerEpoch}) =
-     encode(Rec FreeVars !> toMap b !> toMap delegs !> To stake !> toSet addrsRew
-                !> To totalStake !> To activeStake !> To asc !> To totalBlocks
-                !> To r !> To pp !> To slotsPerEpoch)
+instance (Era era) => ToCBOR (FreeVars era) where
+  toCBOR (FreeVars {b, delegs, stake, addrsRew, totalStake, activeStake, asc, totalBlocks, r, pp, slotsPerEpoch}) =
+    encode
+      ( Rec FreeVars !> toMap b !> toMap delegs !> To stake !> toSet addrsRew
+          !> To totalStake
+          !> To activeStake
+          !> To asc
+          !> To totalBlocks
+          !> To r
+          !> To pp
+          !> To slotsPerEpoch
+      )
 
-instance Era era => FromCBOR(FreeVars era) where
+instance Era era => FromCBOR (FreeVars era) where
   fromCBOR =
-     decode(RecD FreeVars <! fromMap {- b -} <! fromMap {- delegs -} <! From {- stake -} <! fromSet {- addrsRew -}
-                <! From {- totalStake -} <! From {- activeStake -} <! From {- asc -} <! From {- totalBlocks -}
-                <! From {- r -} <! From {- pp -} <! From {- slotsPerEpoch -} )
+    decode
+      ( RecD FreeVars <! fromMap {- b -} <! fromMap {- delegs -} <! From {- stake -} <! fromSet {- addrsRew -}
+          <! From {- totalStake -}
+          <! From {- activeStake -}
+          <! From {- asc -}
+          <! From {- totalBlocks -}
+          <! From {- r -}
+          <! From {- pp -}
+          <! From {- slotsPerEpoch -}
+      )
 
 -- ==============================================================================
 -- Type synonyms for the complicated types that make up the reward calculation
 
 -- | The result of reward calculation is a pair of aggregate Maps.
 type RewardAns c =
-   ( Map (Credential 'Staking c) (Set (Reward c))
-   , Map (KeyHash 'StakePool c) Likelihood )
+  ( Map (Credential 'Staking c) (Set (Reward c)),
+    Map (KeyHash 'StakePool c) Likelihood
+  )
 
 -- | We pulse on the list of these pairs
-type PulseItem c =  (KeyHash 'StakePool c, PoolParams c)
+type PulseItem c = (KeyHash 'StakePool c, PoolParams c)
 
 -- | The provenance we collect
 type RewardProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
@@ -644,49 +660,54 @@ type RewardProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
 -- ==================================================
 -- The function that we call on each pulseM
 
-actionFree :: forall m era.
-     (Monad m) =>
-     FreeVars era
-     -> RewardAns (Crypto era)
-     -> PulseItem (Crypto era)
-     -> ProvM
-          (RewardProvenance (Crypto era))
-          m
-          (RewardAns (Crypto era))
+actionFree ::
+  forall m era.
+  (Monad m) =>
+  FreeVars era ->
+  RewardAns (Crypto era) ->
+  PulseItem (Crypto era) ->
+  ProvM
+    (RewardProvenance (Crypto era))
+    m
+    (RewardAns (Crypto era))
 actionFree
-   (FreeVars{b,delegs,stake,addrsRew,totalStake,activeStake,asc,totalBlocks,r,pp,slotsPerEpoch})
-   (m1, m2)
-   (hk, pparams) = do
-          let blocksProduced = Map.lookup hk b
-              actgr@(Stake s) = poolStake hk delegs stake
-              Coin pstake = fold s
-              sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
-              sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
-              ls =
-                likelihood
-                  (fromMaybe 0 blocksProduced)
-                  (leaderProbability asc sigma (_d pp))
-                  slotsPerEpoch
-          case blocksProduced of
-            Nothing -> pure (m1, Map.insert hk ls m2)
-            Just n -> do
-              m <- rewardOnePool pp r n totalBlocks pparams actgr sigma sigmaA (Coin totalStake) addrsRew
-              pure (Map.unionWith Set.union m m1, Map.insert hk ls m2)
+  (FreeVars {b, delegs, stake, addrsRew, totalStake, activeStake, asc, totalBlocks, r, pp, slotsPerEpoch})
+  (m1, m2)
+  (hk, pparams) = do
+    let blocksProduced = Map.lookup hk b
+        actgr@(Stake s) = poolStake hk delegs stake
+        Coin pstake = fold s
+        sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
+        sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
+        ls =
+          likelihood
+            (fromMaybe 0 blocksProduced)
+            (leaderProbability asc sigma (_d pp))
+            slotsPerEpoch
+    case blocksProduced of
+      Nothing -> pure (m1, Map.insert hk ls m2)
+      Just n -> do
+        m <- rewardOnePool pp r n totalBlocks pparams actgr sigma sigmaA (Coin totalStake) addrsRew
+        pure (Map.unionWith Set.union m m1, Map.insert hk ls m2)
 
 -- ====================================================
 -- The Unit type uniquely associated with the actionFree function
 
-data RewardCalc (m:: Type -> Type) era c = RewardCalc
+data RewardCalc (m :: Type -> Type) era c = RewardCalc
 
-instance (Monad m, c ~ Crypto era) =>
-    MAccum (RewardCalc m era c)
-           (ProvM (RewardProvenance c) m)
-           (FreeVars era)
-           (KeyHash 'StakePool c, PoolParams c)
-           (RewardAns c)
-   where maccum RewardCalc = actionFree
+instance
+  (Monad m, c ~ Crypto era) =>
+  MAccum
+    (RewardCalc m era c)
+    (ProvM (RewardProvenance c) m)
+    (FreeVars era)
+    (KeyHash 'StakePool c, PoolParams c)
+    (RewardAns c)
+  where
+  maccum RewardCalc = actionFree
 
 -- ==========================================================
+
 -- | Compute the Non-Myopic Pool Stake
 --
 --   This function implements non-myopic stake calculation in section 5.6.2

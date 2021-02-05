@@ -5,13 +5,14 @@
 
 module Shelley.Spec.Ledger.Orphans where
 
+import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Crypto.Hash (Hash (..))
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Prelude (HeapWords (..), readEither)
-import Cardano.Slotting.Slot (WithOrigin (..), EpochSize(..))
+import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
 import Control.DeepSeq (NFData (rnf))
 import Data.Aeson
 import qualified Data.ByteString as Long (ByteString, empty)
@@ -27,7 +28,6 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..), UnitInterval, interval0)
 import Shelley.Spec.Ledger.Keys (KeyHash (..))
 import Shelley.Spec.Ledger.Slot (BlockNo, EpochNo)
-import Cardano.Binary(ToCBOR,FromCBOR)
 
 instance FromJSON IPv4 where
   parseJSON =
@@ -116,4 +116,5 @@ instance Default Bool where
 deriving newtype instance HeapWords (HS.Hash h a)
 
 deriving newtype instance ToCBOR EpochSize
+
 deriving newtype instance FromCBOR EpochSize

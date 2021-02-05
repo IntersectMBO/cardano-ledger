@@ -1075,7 +1075,8 @@ updateNonMyopic nm rPot newLikelihoods =
 
 -- | Create a reward update
 createRUpd ::
-  forall era. Era era =>
+  forall era.
+  Era era =>
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->
