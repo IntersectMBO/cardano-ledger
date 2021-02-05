@@ -106,6 +106,7 @@ complete p = runIdentity (completeM p)
 instance Pulsable PulseListM where
    done (PulseList _ _ _ zs _) = isNil zs
    current (PulseList _ _ _ _ ans) = ans
+   pulseM (ll@(PulseList _ _ _ balance _)) | isNil balance = pure ll
    pulseM (PulseList ass n accum balance ans) = do
        let (steps, balance') = List.splitAt n balance
        ans' <- (foldM' ass) accum ans steps
@@ -114,6 +115,7 @@ instance Pulsable PulseListM where
 instance Pulsable PulseMapM where
    done (PulseMap _ _ m _) = Map.null m
    current (PulseMap _ _ _ ans) = ans
+   pulseM (ll@(PulseMap _ _ balance _)) | Map.null balance = pure ll
    pulseM (PulseMap n accum balance ans) = do
       let (steps, balance') = Map.splitAt n balance
       ans' <-  foldlWithKeyM' accum ans steps
@@ -315,11 +317,12 @@ instance (Typeable m, ToCBOR name, ToCBOR ans) => ToCBOR (LL name m ans) where
 instance Pulsable (LL name) where
    done (LL _name _n _free zs _ans) = isNil zs
    current (LL _ _ _ _ ans) = ans
+   pulseM (ll@(LL _ _ _ [] _)) = pure ll
    pulseM (LL name n free balance ans) = do
        let (steps, balance') = List.splitAt n balance
        ans' <- foldlM' (maccum name free) ans steps
        pure (LL name n free balance' ans')
-
+   completeM (LL name _ free balance ans) = foldlM' (maccum name free) ans balance
 
 -- =================================================
 -- To make a serializable type that has a (Pulsable (LL name)) instance,

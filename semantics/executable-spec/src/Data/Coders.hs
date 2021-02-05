@@ -78,6 +78,10 @@ module Data.Coders
     encodeNullMaybe,
     decodeNullMaybe,
     decodeSparse,
+    toMap,
+    fromMap,
+    toSet,
+    fromSet,
   )
 where
 
@@ -109,6 +113,7 @@ import Cardano.Binary
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Sequence.Strict (StrictSeq)
 import Data.Sequence (Seq)
@@ -609,6 +614,21 @@ to xs = ED dualCBOR xs
 
 from ::  (ToCBOR t, FromCBOR t) => Decode ('Closed 'Dense) t
 from = DD dualCBOR
+
+
+-- Names for derived Encode and Decode combinators for Sets and Maps
+
+toMap :: (ToCBOR v) => Map.Map k v -> Encode ('Closed 'Dense) (Map.Map k v)
+toMap x = E encodeFoldable x
+
+fromMap:: (Ord k,FromCBOR k,FromCBOR v) => Decode ('Closed 'Dense) (Map.Map k v)
+fromMap = From
+
+toSet :: (ToCBOR v) => Set.Set v -> Encode ('Closed 'Dense) (Set.Set v)
+toSet x = E encodeFoldable x
+
+fromSet :: (Ord v,FromCBOR v) => Decode ('Closed 'Dense) (Set.Set v)
+fromSet = D (decodeSet fromCBOR)
 
 -- ==================================================================
 -- A Guide to Visual inspection of Duality in Encode and Decode

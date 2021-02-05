@@ -381,7 +381,7 @@ rewardsProvenance _ = generate $ do
 
 -- Analog to getRewardInfo, but does not produce Provenance
 justRewardInfo ::
-  forall era.
+  forall era. Era era =>
   Globals ->
   NewEpochState era ->
   RewardUpdate (Crypto era)
@@ -400,14 +400,14 @@ justRewardInfo globals newepochstate  =
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
 
 sameWithOrWithoutProvenance ::
- forall era.
+ forall era. Era era =>
   Globals ->
   NewEpochState era -> Bool
 sameWithOrWithoutProvenance globals newepochstate = with == without
   where (with,_) = getRewardInfo globals newepochstate
         without = justRewardInfo globals newepochstate
 
-nothingInNothingOut :: forall era. NewEpochState era -> Bool
+nothingInNothingOut :: forall era. Era era => NewEpochState era -> Bool
 nothingInNothingOut newepochstate  =
   runReader
     (preservesNothing $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply)
@@ -423,7 +423,7 @@ nothingInNothingOut newepochstate  =
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
 
-justInJustOut :: forall era. NewEpochState era -> Bool
+justInJustOut :: forall era. Era era => NewEpochState era -> Bool
 justInJustOut newepochstate  =
   runReader
     (preservesJust def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply)
@@ -639,7 +639,7 @@ createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm)
       }
 
 
-oldEqualsNew:: forall era. NewEpochState era -> Bool
+oldEqualsNew:: forall era. Era era => NewEpochState era -> Bool
 oldEqualsNew  newepochstate  = old == new
   where
     globals = testGlobals
@@ -655,7 +655,7 @@ oldEqualsNew  newepochstate  = old == new
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new = aggregateRewards @era (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
 
-oldEqualsNewOn:: forall era. NewEpochState era -> Bool
+oldEqualsNewOn:: forall era. Era era => NewEpochState era -> Bool
 oldEqualsNewOn  newepochstate  = old == new
   where
     globals = testGlobals

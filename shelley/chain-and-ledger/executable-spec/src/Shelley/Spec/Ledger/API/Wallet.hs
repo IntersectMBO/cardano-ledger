@@ -254,6 +254,7 @@ getPoolParameters nes poolId = Map.lookup poolId (f nes)
 
 getRewardInfo ::
   forall era.
+  Era era =>
   Globals ->
   NewEpochState era ->
   (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
