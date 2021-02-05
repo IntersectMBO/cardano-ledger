@@ -8,6 +8,12 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DataKinds #-}
 
 module Shelley.Spec.Ledger.Rewards
   ( desirability,
@@ -32,6 +38,7 @@ module Shelley.Spec.Ledger.Rewards
     memberRew,
     aggregateRewards,
     sumRewards,
+    rewardLL,
   )
 where
 
@@ -45,7 +52,7 @@ import Cardano.Binary
     encodeWord,
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (Era,Crypto)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
@@ -98,6 +105,9 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
   )
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), getRwdCred)
+import Data.Pulse(LL(..),MAccum(..))
+import Data.Kind(Type)
+import Data.Typeable
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
   deriving (Eq, Generic, Ord, Num, NFData, NoThunks, ToCBOR, FromCBOR)
@@ -661,3 +671,84 @@ nonMyopicMemberRew
         f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
         fHat = floor (p * (fromRational . coinToRational) f)
      in memberRew (Coin fHat) pool t nm
+
+
+-- ==========================================
+
+
+data FreeVars era =
+     FreeVars{ b:: Map (KeyHash 'StakePool (Crypto era)) Natural,
+               delegs:: Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)),
+               stake:: Stake (Crypto era),
+               addrsRew :: Set (Credential 'Staking (Crypto era)),
+               totalStake :: Integer,
+               activeStake :: Integer,
+               asc :: ActiveSlotCoeff,
+               totalBlocks :: Natural,                                       --
+               r :: Coin,
+               pp ::  PParams era,
+               slotsPerEpoch :: EpochSize }
+
+
+actionFree
+  :: (Monad m) =>
+     FreeVars era
+     -> ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))
+        , Map (KeyHash 'StakePool (Crypto era)) Likelihood)
+     -> (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era))
+     -> ProvM
+          (Map
+             (KeyHash 'StakePool (Crypto era))
+             (RewardProvenancePool (Crypto era)))
+          m
+          ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))
+          , Map (KeyHash 'StakePool (Crypto era)) Likelihood)
+actionFree (FreeVars{b,delegs,stake,addrsRew,totalStake,activeStake,asc,totalBlocks,r,pp,slotsPerEpoch})
+       (m1, m2) (hk, pparams) = do
+          let blocksProduced = Map.lookup hk b
+              actgr@(Stake s) = poolStake hk delegs stake
+              Coin pstake = fold s
+              sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
+              sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
+              ls =
+                likelihood
+                  (fromMaybe 0 blocksProduced)
+                  (leaderProbability asc sigma (_d pp))
+                  slotsPerEpoch
+          case blocksProduced of
+            Nothing -> pure (m1, Map.insert hk ls m2)
+            Just n -> do
+              m <- rewardOnePool pp r n totalBlocks pparams actgr sigma sigmaA (Coin totalStake) addrsRew
+              pure (Map.unionWith Set.union m m1, Map.insert hk ls m2)
+
+data RewardCalc (m:: Type -> Type) era c = RewardCalc
+
+instance (Monad m, c ~ Crypto era) =>
+    MAccum (RewardCalc m era c)
+           (ProvM (Map (KeyHash 'StakePool c) (RewardProvenancePool c)) m)
+           (FreeVars era)
+           (KeyHash 'StakePool c, PoolParams c)
+           ( Map (Credential 'Staking c) (Set (Reward c)),
+             Map (KeyHash 'StakePool c) Likelihood )
+   where maccum RewardCalc = actionFree
+
+-- Make an example LL
+
+instance Typeable era => ToCBOR (FreeVars era) where
+   toCBOR _x = undefined
+
+freevars :: FreeVars era
+freevars = undefined
+
+rewardLL :: (Monad m, Era era) =>
+     LL
+       (RewardCalc m era (Crypto era))
+       (ProvM
+          (Map
+             (KeyHash 'StakePool (Crypto era))
+             (RewardProvenancePool (Crypto era)))
+          m)
+       (Map
+          (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
+        Map (KeyHash 'StakePool (Crypto era)) Likelihood)
+rewardLL = LL RewardCalc 10 freevars [] (Map.empty, Map.empty)
