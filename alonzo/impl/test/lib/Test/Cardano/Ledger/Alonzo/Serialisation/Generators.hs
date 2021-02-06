@@ -13,7 +13,7 @@
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), Data (..), PlutusData (..))
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), Data (..))
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices (..), Script (..), Tag (..))
@@ -26,6 +26,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
+import qualified Language.PlutusTx as Plutus
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -34,8 +35,22 @@ import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 instance Arbitrary (Data era) where
   arbitrary = Data <$> arbitrary
 
-instance Arbitrary PlutusData where
-  arbitrary = pure NotReallyData
+genPair :: Gen a -> Gen b -> Gen (a, b)
+genPair x y = do a <- x; b <- y; pure (a, b)
+
+instance Arbitrary Plutus.Data where
+  arbitrary = resize 5 (sized gendata)
+    where
+      gendata n
+        | n > 0 =
+          oneof
+            [ (Plutus.I <$> arbitrary),
+              (Plutus.B <$> arbitrary),
+              (Plutus.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2)))),
+              (Plutus.Constr <$> arbitrary <*> listOf (gendata (n `div` 2))),
+              (Plutus.List <$> listOf (gendata (n `div` 2)))
+            ]
+      gendata _ = oneof [Plutus.I <$> arbitrary, Plutus.B <$> arbitrary]
 
 instance
   ( UsesScript era,

@@ -62,9 +62,8 @@ import Data.Typeable
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
-import Shelley.Spec.Ledger.Coin (Coin (..))
-
 import Plutus.V1.Ledger.Scripts ()
+import Shelley.Spec.Ledger.Coin (Coin (..))
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
