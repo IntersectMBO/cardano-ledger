@@ -19,7 +19,7 @@ import qualified Data.Map.Strict as Map
 import Data.Map.Internal (Map (..))
 import Control.Monad.Identity(Identity(..))
 import Data.Coders
-import Cardano.Binary(ToCBOR(..),FromCBOR(..))
+import Cardano.Binary(ToCBOR(..),FromCBOR(..),serialize', decodeFull')
 import Data.Typeable
 
 
@@ -342,3 +342,14 @@ instance FromCBOR (LL XXX Identity Int) where
 
 foo :: LL XXX Identity Int
 foo = LL XXX 3 [True] [1,2,3,5,6,7,8] 0
+
+
+-- =================================
+
+serial :: LL XXX Identity Int -> IO(LL XXX Identity Int)
+serial x = do
+  let bytes = serialize' x
+  putStrLn("Bytes = " ++ show bytes)
+  case decodeFull' bytes of
+    Right x -> putStrLn (show x) >> pure x
+    Left e -> error(show e)
