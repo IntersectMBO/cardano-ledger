@@ -25,6 +25,7 @@ module Shelley.Spec.Ledger.Rewards
     RewardType (..),
     Reward (..),
     reward,
+    rewardPulser,
     nonMyopicStake,
     nonMyopicMemberRew,
     percentile',
@@ -38,6 +39,8 @@ module Shelley.Spec.Ledger.Rewards
     memberRew,
     aggregateRewards,
     sumRewards,
+    RewardCalc(..),
+    FreeVars(..),
   )
 where
 
@@ -554,6 +557,23 @@ rewardOnePool
             lRewardP = lReward
           }
 
+-- ==============================================================================
+-- Type synonyms for the complicated types that make up the reward calculation
+
+-- | The result of reward calculation is a pair of aggregate Maps.
+type RewardAns c =
+  ( Map (Credential 'Staking c) (Set (Reward c)),
+    Map (KeyHash 'StakePool c) Likelihood
+  )
+
+-- | We pulse on the list of these pairs
+type PulseItem c = (KeyHash 'StakePool c, PoolParams c)
+
+-- | The provenance we collect
+type KeyHashPoolProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
+
+-- ===============================================================================
+
 reward ::
   forall m era.
   (Era era, Monad m) =>
@@ -568,7 +588,7 @@ reward ::
   ActiveSlotCoeff ->
   EpochSize ->
   ProvM
-    (Map (KeyHash 'StakePool (Crypto era)) (RewardProvenancePool (Crypto era)))
+    (KeyHashPoolProvenance (Crypto era))
     m
     ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
       Map (KeyHash 'StakePool (Crypto era)) Likelihood
@@ -588,7 +608,41 @@ reward
       totalBlocks = sum b
       Coin activeStake = fold . unStake $ stake
       free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r pp slotsPerEpoch)
-      pulser :: LL (RewardCalc m era (Crypto era)) (ProvM (RewardProvenance (Crypto era)) m) (RewardAns (Crypto era))
+      pulser :: LL (RewardCalc m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
+      pulser = LL RewardCalc 2 free (Map.toList poolParams) (Map.empty, Map.empty)
+
+
+
+rewardPulser ::
+  forall m era.
+  (Era era, Monad m) =>
+  PParams era ->
+  BlocksMade (Crypto era) ->
+  Coin ->
+  Set (Credential 'Staking (Crypto era)) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
+  Stake (Crypto era) ->
+  Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)) ->
+  Coin ->
+  ActiveSlotCoeff ->
+  EpochSize ->
+  LL (RewardCalc m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
+rewardPulser
+  pp
+  (BlocksMade b)
+  r
+  addrsRew
+  poolParams
+  stake
+  delegs
+  (Coin totalStake)
+  asc
+  slotsPerEpoch = pulser
+    where
+      totalBlocks = sum b
+      Coin activeStake = fold . unStake $ stake
+      free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r pp slotsPerEpoch)
+      pulser :: LL (RewardCalc m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
       pulser = LL RewardCalc 2 free (Map.toList poolParams) (Map.empty, Map.empty)
 
 -- The function actionFree (below), is uniquely identified by the value RewardCalc :: RewardCalc
@@ -642,20 +696,6 @@ instance Era era => FromCBOR (FreeVars era) where
           <! From {- slotsPerEpoch -}
       )
 
--- ==============================================================================
--- Type synonyms for the complicated types that make up the reward calculation
-
--- | The result of reward calculation is a pair of aggregate Maps.
-type RewardAns c =
-  ( Map (Credential 'Staking c) (Set (Reward c)),
-    Map (KeyHash 'StakePool c) Likelihood
-  )
-
--- | We pulse on the list of these pairs
-type PulseItem c = (KeyHash 'StakePool c, PoolParams c)
-
--- | The provenance we collect
-type RewardProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
 
 -- ==================================================
 -- The function that we call on each pulseM
@@ -667,7 +707,7 @@ actionFree ::
   RewardAns (Crypto era) ->
   PulseItem (Crypto era) ->
   ProvM
-    (RewardProvenance (Crypto era))
+    (KeyHashPoolProvenance (Crypto era))
     m
     (RewardAns (Crypto era))
 actionFree
@@ -699,7 +739,7 @@ instance
   (Monad m, c ~ Crypto era) =>
   MAccum
     (RewardCalc m era c)
-    (ProvM (RewardProvenance c) m)
+    (ProvM (KeyHashPoolProvenance c) m)
     (FreeVars era)
     (KeyHash 'StakePool c, PoolParams c)
     (RewardAns c)

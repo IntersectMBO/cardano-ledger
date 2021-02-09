@@ -41,9 +41,9 @@ class Pulsable (pulse :: (Type -> Type) -> Type -> Type) where
    current :: pulse m ans -> ans
    pulseM :: Monad m => pulse m ans -> m(pulse m ans)
    completeM :: Monad m => pulse m ans -> m ans
-   completeM p =
-      do p' <- pulseM p
-         if done p' then pure(current p') else completeM p'
+   completeM p = if done p
+                    then pure (current p)
+                    else  do p' <- pulseM p; completeM p'
 
 -- =================================
 -- Pulse structure for List in an arbitray monad
@@ -351,5 +351,5 @@ serial x = do
   let bytes = serialize' x
   putStrLn("Bytes = " ++ show bytes)
   case decodeFull' bytes of
-    Right x -> putStrLn (show x) >> pure x
+    Right x' -> putStrLn (show x') >> pure x'
     Left e -> error(show e)

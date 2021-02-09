@@ -387,7 +387,7 @@ justRewardInfo ::
   RewardUpdate (Crypto era)
 justRewardInfo globals newepochstate  =
   runReader
-    (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply)
+    (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc)
     globals
   where
     epochstate = nesEs newepochstate
@@ -398,6 +398,7 @@ justRewardInfo globals newepochstate  =
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    asc = activeSlotCoeff globals
 
 sameWithOrWithoutProvenance ::
  forall era. Era era =>
@@ -410,7 +411,7 @@ sameWithOrWithoutProvenance globals newepochstate = with == without
 nothingInNothingOut :: forall era. Era era => NewEpochState era -> Bool
 nothingInNothingOut newepochstate  =
   runReader
-    (preservesNothing $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply)
+    (preservesNothing $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc)
     globals
   where
     globals = testGlobals
@@ -422,11 +423,12 @@ nothingInNothingOut newepochstate  =
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    asc = activeSlotCoeff globals
 
 justInJustOut :: forall era. Era era => NewEpochState era -> Bool
 justInJustOut newepochstate  =
   runReader
-    (preservesJust def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply)
+    (preservesJust def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc)
     globals
   where
     globals = testGlobals
@@ -438,6 +440,7 @@ justInJustOut newepochstate  =
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    asc = activeSlotCoeff globals
 
 -- ====================================================================================
 -- To demonstrate that the code we wrote that enables provenance collection does not
@@ -651,9 +654,10 @@ oldEqualsNew  newepochstate  = old == new
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
-    unAggregated = runReader (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply) globals
+    unAggregated = runReader (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new = aggregateRewards @era (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    asc = activeSlotCoeff globals
 
 oldEqualsNewOn:: forall era. Era era => NewEpochState era -> Bool
 oldEqualsNewOn  newepochstate  = old == new
@@ -667,9 +671,10 @@ oldEqualsNewOn  newepochstate  = old == new
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
-    (unAggregated,_) = runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply) globals
+    (unAggregated,_) = runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new = aggregateRewards @era (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    asc = activeSlotCoeff globals
 
 
 -- ==================================================================

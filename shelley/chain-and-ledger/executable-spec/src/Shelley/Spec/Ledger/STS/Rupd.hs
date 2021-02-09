@@ -31,6 +31,7 @@ import Shelley.Spec.Ledger.BaseTypes
     epochInfo,
     maxLovelaceSupply,
     randomnessStabilisationWindow,
+    activeSlotCoeff,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
@@ -67,14 +68,15 @@ instance (Era era) => STS (RUPD era) where
 rupdTransition :: Era era => TransitionRule (RUPD era)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
-  (slotsPerEpoch, slot, maxLL) <- liftSTS $ do
+  (slotsPerEpoch, slot, maxLL, asc) <- liftSTS $ do
     ei <- asks epochInfo
     sr <- asks randomnessStabilisationWindow
     e <- epochInfoEpoch ei s
     slotsPerEpoch <- epochInfoSize ei e
     slot <- epochInfoFirst ei e <&> (+* (Duration sr))
     maxLL <- asks maxLovelaceSupply
-    return (slotsPerEpoch, slot, maxLL)
+    asc <- asks activeSlotCoeff
+    return (slotsPerEpoch, slot, maxLL, asc)
   if s <= slot
     then pure ru
     else case ru of
@@ -87,5 +89,6 @@ rupdTransition = do
                       b
                       es
                       (Coin (fromIntegral maxLL))
+                      asc
               )
       SJust _ -> pure ru
