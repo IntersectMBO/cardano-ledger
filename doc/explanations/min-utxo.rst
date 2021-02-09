@@ -4,7 +4,39 @@ Min-Ada-Value Requirement
 Min-Ada-Value Explanation
 ##########################
 
-Recall that outputs may contain a heterogeneous collection of tokens, including ad Ada is a limited resource in the Cardano system. Requiring some amount of ada be included in every output on the ledger (where that amount is based on the size of the output, in bytes) protects the size of the Cardano ledger from growing intractably.
+Recall that UTxOs on the ledger may contain a heterogeneous collection of tokens, including ada.
+Ada is a limited resource in the Cardano system. Requiring some amount of ada to be included
+in every UTxO (where that amount is based on the size of the UTxO, in bytes),
+limits the maximum total size taken up by UTxO entries on the ledger at a given time.
+
+The maximum possible UTxO size (the sum of the sizes of all UTxO entries) is implicitly adjusted by raising and
+lowering the min-ada-value parameter. In this way, the constraint protects the Cardano ledger
+from growing past a certain size. A ledger without a size bound is vulnerable to
+being populated by so much data that users will unable to process it (or run a node) with
+machines meeting the recommended specifications for running a node.
+
+The Ada-only Case
+###########################
+
+Because of the min-ada-value constraint, a guaranteed
+bound on the number of entries in an ada-only UTxO is
+
+``max No. UTxOs <= (total ada in circulation) / (minimum ada value)``
+
+This formula bounds the number of UTxO entries, but says nothing about adjusting
+for the size of each entry, because all UTxO entries that contain only ada
+are (close enough to) the same size. The size of the UTxO set is bounded by
+
+``max UTxO size <= (max No. UTxOs) * (max UTxO entry size) + overhead``
+
+In the multi-asset Cardano ledger, UTxO entries will have different sizes. In particular,
+any entries containing a non-ada asset contain records of the Policy IDs, asset names,
+and quantities of each of the non-ada assets. To maintain the ``max UTxO size``
+bound on the UTxO stored on the ledger with variable entry sizes,
+we must adjust the ``minimum ada value`` for each UTxO entry (based on its size).
+
+Below, we present a calculation and a more detailed justification for this adjustment.
+
 
 Min-ada-value Calculation
 ###########################
@@ -85,3 +117,24 @@ Eg. ``(CryptoDoggiesPolicy, poodle, 1)`` contained in O can be consolidated with
 ``(CryptoDoggiesPolicy, poodle, 3)`` in O’, for a total of ``(CryptoDoggiesPolicy, poodle, 4)`` in a new output made by the consolidating transaction.
 
 * Splitting custom tokens into more outputs than they were contained in before the transaction getting processed requires using, in total, more ada to cover the min-ada-value, as ada is needed in the additional outputs.
+
+**Example min-ada-values and calculations**
+
++----------------------------------------+---------------------+
+| Ada-only ``minUTxOValue`` (in lovelace)|  1,000,000	(1 ada)	 |
+| ```utxoEntrySizeWithoutVal``					 |	 				27				 |
+| ``coinSize``													 |				 	 0				 |
+| ``txoutLenNoVal``											 |					14				 |
+| ``txinLen``											       |					 7				 |
+| ``adaPerUTxOWord`` (in lovelace)	   	 |	    37,037         |
++----------------------------------------+---------------------+
+
++---------------------+----------------+-----------------+------------------+------------------+------------------+
+|	              	    | One policyID,  | One policyID,	 | One PolicyID,		|	One PolicyID,		 | 60 PolicyIDs,    |
+|		    							| no asset names | one 1-character | one 32-character | 110 32-character | each with one    |
+| 										| 							 | asset name	 	 	 | asset name			  | names						 | 32-character name|
++---------------------+----------------+-----------------+------------------+------------------+------------------+
+| size of value				|	6							 |	12						 | 16								| 629							 | 310	            |
+| ``minUTxO``					|	1,222,221			 |	1,444,443			 | 1,592,591				|	24,296,272			 | 12,481,469       |
+| ``minUTxO`` (in ada)|	1.222221			 | 	1.444443			 | 1.592591					| 24.296272				 | 12.481469	      |
++---------------------+----------------+-----------------+------------------+------------------+------------------+
