@@ -113,7 +113,7 @@ library
     cardano-crypto,
     cardano-crypto-class,
     cardano-crypto-wrapper,
-    cardano-ledger,
+    cardano-ledger-byron,
     cardano-prelude,
     cardano-slotting,
     cborg,

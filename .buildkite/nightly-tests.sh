@@ -13,7 +13,7 @@ nix-shell ../../../shell.nix --run \
   "../../../shelley-spec-ledger-test/bin/shelley-spec-ledger-test --scenario=Nightly"
 popd
 
-nix build -f `dirname $0`/.. haskellPackages.cardano-ledger.components.tests.cardano-ledger-test -o cardano-ledger-test
+nix build -f `dirname $0`/.. haskellPackages.cardano-ledger-byron.components.tests.cardano-ledger-byron-test -o cardano-ledger-byron-test
 pushd byron/ledger/impl
-../../../cardano-ledger-test/bin/cardano-ledger-test --scenario=QualityAssurance
+../../../cardano-ledger-byron/test/bin/cardano-ledger-byron-test --scenario=QualityAssurance
 popd

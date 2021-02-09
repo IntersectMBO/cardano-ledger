@@ -19,10 +19,10 @@ cradle:
       component: "byron-spec-ledger:test:byron-spec-ledger-test"
 
     - path: "byron/ledger/impl/src"
-      component: "lib:cardano-ledger"
+      component: "lib:cardano-ledger-byron"
 
     - path: "byron/ledger/impl/test"
-      component: "cardano-ledger:test:cardano-ledger-test"
+      component: "cardano-ledger-byron:test:cardano-ledger-byron-test"
 
     - path: "semantics/executable-spec/src"
       component: "lib:small-steps"
