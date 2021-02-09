@@ -30,7 +30,7 @@ import Shelley.Spec.Ledger.Address
     mkRwdAcnt,
   )
 import Shelley.Spec.Ledger.BaseTypes
-  ( Globals (epochInfo),
+  ( Globals (epochInfo,activeSlotCoeff),
     Network (Testnet),
     StrictMaybe (..),
     truncateUnitInterval,
@@ -177,7 +177,7 @@ createRUpd ::
 createRUpd globals cs =
   runIdentity $
     runReaderT
-      (runProvM (LS.createRUpd epochSize bm es total))
+      (runProvM (LS.createRUpd epochSize bm es total asc))
       globals
   where
     nes = chainNes cs
@@ -187,6 +187,7 @@ createRUpd globals cs =
     epochSize =
       runIdentity $
         epochInfoSize (epochInfo globals) (LS.nesEL nes)
+    asc = activeSlotCoeff globals
 
 
 -- | Benchmark creating a reward update.
@@ -197,7 +198,7 @@ createRUpdWithProv ::
 createRUpdWithProv globals cs =
   runIdentity $
     runReaderT
-      (runWithProvM def (LS.createRUpd epochSize bm es total))
+      (runWithProvM def (LS.createRUpd epochSize bm es total asc))
       globals
   where
     nes = chainNes cs
@@ -207,3 +208,4 @@ createRUpdWithProv globals cs =
     epochSize =
       runIdentity $
         epochInfoSize (epochInfo globals) (LS.nesEL nes)
+    asc = activeSlotCoeff globals
