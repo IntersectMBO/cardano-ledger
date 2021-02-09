@@ -109,8 +109,7 @@ instance
   NoThunks (BbodyPredicateFailure era)
 
 instance
-  ( STS (BBODY era),
-    UsesTxBody era,
+  ( UsesTxBody era,
     UsesScript era,
     UsesAuxiliary era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
