@@ -31,6 +31,7 @@ module Control.Provenance
     runProv,
     runWithProv,
     runOtherProv,
+    liftProv,
     dump,
 
     -- * Operations in Prov instantiation
@@ -180,6 +181,15 @@ runOtherProv initial other = do
       then ProvM(lift $ do (a,s) <- runWithProvM initial other ; pure(a, Box s))
       else ProvM(lift $ do a <- runProvM other; pure(a,NoBox))
 {-# INLINE runOtherProv #-}
+
+
+-- | lift a provenenace computation from one provenance type (s1) to another (s2)
+liftProv :: Monad m => ProvM s1 m a -> s1 -> (a -> s1 -> s2 -> s2) -> ProvM s2 m a
+liftProv computation inits1 combine =
+  do (a,blackbox) <- runOtherProv inits1 computation
+     modifyWithBlackBox blackbox (combine a)
+     pure a
+{-# INLINE liftProv #-}
 
 
 -- =======================================================================

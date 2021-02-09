@@ -41,6 +41,8 @@ module Shelley.Spec.Ledger.Rewards
     sumRewards,
     RewardCalc (..),
     FreeVars (..),
+    KeyHashPoolProvenance,
+    RewardAns,
   )
 where
 
