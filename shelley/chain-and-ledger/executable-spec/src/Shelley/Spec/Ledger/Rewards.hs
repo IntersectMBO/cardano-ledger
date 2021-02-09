@@ -39,8 +39,8 @@ module Shelley.Spec.Ledger.Rewards
     memberRew,
     aggregateRewards,
     sumRewards,
-    RewardCalc(..),
-    FreeVars(..),
+    RewardCalc (..),
+    FreeVars (..),
   )
 where
 
@@ -611,8 +611,6 @@ reward
       pulser :: LL (RewardCalc m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
       pulser = LL RewardCalc 2 free (Map.toList poolParams) (Map.empty, Map.empty)
 
-
-
 rewardPulser ::
   forall m era.
   (Era era, Monad m) =>
@@ -695,7 +693,6 @@ instance Era era => FromCBOR (FreeVars era) where
           <! From {- pp -}
           <! From {- slotsPerEpoch -}
       )
-
 
 -- ==================================================
 -- The function that we call on each pulseM

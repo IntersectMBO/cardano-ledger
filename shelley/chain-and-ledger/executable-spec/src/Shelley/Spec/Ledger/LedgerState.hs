@@ -115,7 +115,7 @@ import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 -- import Control.Monad.Trans.Reader (asks)
-import Control.Provenance (ProvM, modifyWithBlackBox, BlackBox, runOtherProv)
+import Control.Provenance (BlackBox, ProvM, modifyWithBlackBox, runOtherProv)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
@@ -127,6 +127,9 @@ import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+-- reward,
+
+import Data.Pulse (LL (..), completeM)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -143,12 +146,12 @@ import Shelley.Spec.Ledger.Address.Bootstrap
     verifyBootstrapWit,
   )
 import Shelley.Spec.Ledger.BaseTypes
-  ( ShelleyBase,
+  ( ActiveSlotCoeff,
+    ShelleyBase,
     StrictMaybe (..),
     activeSlotVal,
     intervalValue,
     unitIntervalToRational,
-    ActiveSlotCoeff,
   )
 import Shelley.Spec.Ledger.Coin
   ( Coin (..),
@@ -196,18 +199,17 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.RewardProvenance (Desirability (..), RewardProvenance (..))
 import qualified Shelley.Spec.Ledger.RewardProvenance as RProv
 import Shelley.Spec.Ledger.Rewards
-  ( Likelihood (..),
+  ( FreeVars (..),
+    Likelihood (..),
     NonMyopic (..),
     PerformanceEstimate (..),
     Reward (..),
+    RewardCalc (..),
     aggregateRewards,
     applyDecay,
     desirability,
     percentile',
-    -- reward,
     sumRewards,
-    RewardCalc(..),
-    FreeVars(..),
   )
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
@@ -246,7 +248,6 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     verifyWitVKey,
   )
-import Data.Pulse (LL (..), completeM)
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
@@ -1117,29 +1118,55 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ _) max
       -- This initializes the non-aggregates in the provenance data
       -- structure. It should be computed lazily, as we might not need it
       -- unless we actually compute provenance.
-      prov = RewardProvenance (unEpochSize slotsPerEpoch) b maxSupply
-               deltaR1 (Coin 0) _R totalStake blocksMade d expectedBlocks
-               eta (Coin rPot) (Coin deltaT1) (fold . unStake $ stake')
-               Map.empty Map.empty
-{-
-      -- A function to compute the 'desirablity' aggregate. Called only if we are computing
-      -- provenance. Add, under 'key', the pair (LikeliHoodEstimate,Desirability) to the Map 'ans'
-      addDesire ans key likelihood =
-        let estimate = (percentile' likelihood)
-        in  Map.insert
-            key
-            ( Desirability
-                { hitRateEstimate = unPerformanceEstimate estimate,
-                  desirabilityScore = case Map.lookup key poolParams of
-                    Just pp -> desirability pr (Coin rPot) pp estimate totalStake
-                    Nothing -> 0 })
-            ans
--}
-      free = FreeVars (unBlocksMade b) delegs' stake' (Map.keysSet $ _rewards ds) (unCoin totalStake)
-                      (unCoin (fold . unStake $ stake')) asc (sum (unBlocksMade b)) _R pr slotsPerEpoch
+      prov =
+        RewardProvenance
+          (unEpochSize slotsPerEpoch)
+          b
+          maxSupply
+          deltaR1
+          (Coin 0)
+          _R
+          totalStake
+          blocksMade
+          d
+          expectedBlocks
+          eta
+          (Coin rPot)
+          (Coin deltaT1)
+          (fold . unStake $ stake')
+          Map.empty
+          Map.empty
+      {-
+            -- A function to compute the 'desirablity' aggregate. Called only if we are computing
+            -- provenance. Add, under 'key', the pair (LikeliHoodEstimate,Desirability) to the Map 'ans'
+            addDesire ans key likelihood =
+              let estimate = (percentile' likelihood)
+              in  Map.insert
+                  key
+                  ( Desirability
+                      { hitRateEstimate = unPerformanceEstimate estimate,
+                        desirabilityScore = case Map.lookup key poolParams of
+                          Just pp -> desirability pr (Coin rPot) pp estimate totalStake
+                          Nothing -> 0 })
+                  ans
+      -}
+      free =
+        FreeVars
+          (unBlocksMade b)
+          delegs'
+          stake'
+          (Map.keysSet $ _rewards ds)
+          (unCoin totalStake)
+          (unCoin (fold . unStake $ stake'))
+          asc
+          (sum (unBlocksMade b))
+          _R
+          pr
+          slotsPerEpoch
       pulser = LL RewardCalc 2 free (Map.toList poolParams) (Map.empty, Map.empty)
   ((rs_, newLikelihoods), blackBoxPools) <- runOtherProv Map.empty (completeM pulser)
   postPulse prov es ((rs_, newLikelihoods), blackBoxPools)
+
 {-
   let deltaR2 = _R <-> (sumRewards pr rs_)
   modifyWithBlackBox  -- Update the aggregates (deltaR2, pools, desirablities) of the provenance
@@ -1159,63 +1186,75 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ _) max
 
 -}
 
-postPulse :: Monad m =>
-                   RewardProvenance (Crypto era)
-                   -> EpochState era
-                   -> ((Map
-                          (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
-                        Map (KeyHash 'StakePool (Crypto era)) Likelihood),
-                       Control.Provenance.BlackBox
-                         (Map
-                            (KeyHash 'StakePool (Crypto era))
-                            (RProv.RewardProvenancePool (Crypto era))))
-                   -> ProvM
-                        (RewardProvenance (Crypto era)) m (RewardUpdate (Crypto era))
-postPulse (prov@(RewardProvenance{deltaR1 = deltaR1, RProv.r = _r, deltaT1 = (Coin deltaT1)}))
-          (es@(EpochState{esSnapshots = ss, esPp = pr, esNonMyopic = nm}))
-          ((rs_, newLikelihoods), blackBoxPools) = do
-  let deltaR2 = _r <-> (sumRewards pr rs_)
-  modifyWithBlackBox  -- Update the aggregates (deltaR2, pools, desirablities) of the provenance
-    blackBoxPools
-    ( \provPools _ ->
-           prov { deltaR2 = _r <-> (sumRewards pr rs_),
-                  pools = provPools,
-                  desirabilities = (Map.foldlWithKey' (addDesire2 prov es) Map.empty newLikelihoods)})
-  pure $
-    RewardUpdate
-      { deltaT = (DeltaCoin deltaT1),
-        deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
-        rs = rs_,
-        deltaF = (invert (toDeltaCoin $ _feeSS ss)),
-        nonMyopic = (updateNonMyopic nm _r newLikelihoods)
-      }
-
+postPulse ::
+  Monad m =>
+  RewardProvenance (Crypto era) ->
+  EpochState era ->
+  ( ( Map
+        (Credential 'Staking (Crypto era))
+        (Set (Reward (Crypto era))),
+      Map (KeyHash 'StakePool (Crypto era)) Likelihood
+    ),
+    Control.Provenance.BlackBox
+      ( Map
+          (KeyHash 'StakePool (Crypto era))
+          (RProv.RewardProvenancePool (Crypto era))
+      )
+  ) ->
+  ProvM
+    (RewardProvenance (Crypto era))
+    m
+    (RewardUpdate (Crypto era))
+postPulse
+  (prov@(RewardProvenance {deltaR1 = deltaR1, RProv.r = _r, deltaT1 = (Coin deltaT1)}))
+  (es@(EpochState {esSnapshots = ss, esPp = pr, esNonMyopic = nm}))
+  ((rs_, newLikelihoods), blackBoxPools) = do
+    let deltaR2 = _r <-> (sumRewards pr rs_)
+    modifyWithBlackBox -- Update the aggregates (deltaR2, pools, desirablities) of the provenance
+      blackBoxPools
+      ( \provPools _ ->
+          prov
+            { deltaR2 = _r <-> (sumRewards pr rs_),
+              pools = provPools,
+              desirabilities = (Map.foldlWithKey' (addDesire2 prov es) Map.empty newLikelihoods)
+            }
+      )
+    pure $
+      RewardUpdate
+        { deltaT = (DeltaCoin deltaT1),
+          deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
+          rs = rs_,
+          deltaF = (invert (toDeltaCoin $ _feeSS ss)),
+          nonMyopic = (updateNonMyopic nm _r newLikelihoods)
+        }
 
 -- A function to compute the 'desirablity' aggregate. Called only if we are computing
 -- provenance. Add, under 'key', the pair (LikeliHoodEstimate,Desirability) to the Map 'ans'
-addDesire2 :: RewardProvenance crypto
-                    -> EpochState era
-                    -> Map (KeyHash 'StakePool (Crypto era)) Desirability
-                    -> KeyHash 'StakePool (Crypto era)
-                    -> Likelihood
-                    -> Map (KeyHash 'StakePool (Crypto era)) Desirability
-addDesire2 (RewardProvenance{RProv.totalStake = totalStake, rPot = rPot})
-           (EpochState{esSnapshots = ss, esPp = pr})
-           ans key likelihood =
-        let SnapShot _ _ poolParams = _pstakeGo ss
-            estimate = (percentile' likelihood)
-        in  Map.insert
-            key
-            ( Desirability
-                { hitRateEstimate = unPerformanceEstimate estimate,
-                  desirabilityScore = case Map.lookup key poolParams of
-                    Just pp -> desirability pr rPot pp estimate totalStake
-                    Nothing -> 0 })
-            ans
-
-
-
-
+addDesire2 ::
+  RewardProvenance crypto ->
+  EpochState era ->
+  Map (KeyHash 'StakePool (Crypto era)) Desirability ->
+  KeyHash 'StakePool (Crypto era) ->
+  Likelihood ->
+  Map (KeyHash 'StakePool (Crypto era)) Desirability
+addDesire2
+  (RewardProvenance {RProv.totalStake = totalStake, rPot = rPot})
+  (EpochState {esSnapshots = ss, esPp = pr})
+  ans
+  key
+  likelihood =
+    let SnapShot _ _ poolParams = _pstakeGo ss
+        estimate = (percentile' likelihood)
+     in Map.insert
+          key
+          ( Desirability
+              { hitRateEstimate = unPerformanceEstimate estimate,
+                desirabilityScore = case Map.lookup key poolParams of
+                  Just pp -> desirability pr rPot pp estimate totalStake
+                  Nothing -> 0
+              }
+          )
+          ans
 
 -- | Calculate the current circulation
 --

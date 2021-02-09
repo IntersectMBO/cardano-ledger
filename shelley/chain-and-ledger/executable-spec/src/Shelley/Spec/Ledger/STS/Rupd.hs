@@ -28,10 +28,10 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( ShelleyBase,
     StrictMaybe (..),
+    activeSlotCoeff,
     epochInfo,
     maxLovelaceSupply,
     randomnessStabilisationWindow,
-    activeSlotCoeff,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
