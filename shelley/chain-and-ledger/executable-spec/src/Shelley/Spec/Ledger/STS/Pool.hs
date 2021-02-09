@@ -1,10 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Pool
   ( POOL,
@@ -19,6 +23,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
@@ -35,12 +40,12 @@ import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
+import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (PState (..))
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Shelley.Spec.Ledger.TxBody
@@ -52,8 +57,11 @@ import Shelley.Spec.Ledger.TxBody
 data POOL (era :: Type)
 
 data PoolEnv era
-  = PoolEnv SlotNo (PParams era)
-  deriving (Show, Eq)
+  = PoolEnv SlotNo (Core.PParams era)
+
+deriving instance (Show (Core.PParams era)) => Show (PoolEnv era)
+
+deriving instance (Eq (Core.PParams era)) => Eq (PoolEnv era)
 
 data PoolPredicateFailure era
   = StakePoolNotRegisteredOnKeyPOOL
@@ -71,7 +79,13 @@ data PoolPredicateFailure era
 
 instance NoThunks (PoolPredicateFailure era)
 
-instance Typeable era => STS (POOL era) where
+instance
+  ( Typeable era,
+    HasField "_minPoolCost" (Core.PParams era) Coin,
+    HasField "_eMax" (Core.PParams era) EpochNo
+  ) =>
+  STS (POOL era)
+  where
   type State (POOL era) = PState (Crypto era)
 
   type Signal (POOL era) = DCert (Crypto era)
@@ -120,7 +134,12 @@ instance
         pure (3, StakePoolCostTooLowPOOL pc mc)
       k -> invalidKey k
 
-poolDelegationTransition :: Typeable era => TransitionRule (POOL era)
+poolDelegationTransition ::
+  ( Typeable era,
+    HasField "_minPoolCost" (Core.PParams era) Coin,
+    HasField "_eMax" (Core.PParams era) EpochNo
+  ) =>
+  TransitionRule (POOL era)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let stpools = _pParams ps
@@ -129,21 +148,21 @@ poolDelegationTransition = do
       -- note that pattern match is used instead of cwitness, as in the spec
 
       let poolCost = _poolCost poolParam
-          minPoolCost = _minPoolCost pp
+          minPoolCost = getField @"_minPoolCost" pp
       poolCost >= minPoolCost ?! StakePoolCostTooLowPOOL poolCost minPoolCost
 
       let hk = _poolId poolParam
-      if eval (hk ∉ (dom stpools))
+      if eval (hk ∉ dom stpools)
         then -- register new, Pool-Reg
 
           pure $
             ps
-              { _pParams = eval (_pParams ps ∪ (singleton hk poolParam))
+              { _pParams = eval (_pParams ps ∪ singleton hk poolParam)
               }
         else do
           pure $
             ps
-              { _fPParams = eval (_fPParams ps ⨃ (singleton hk poolParam)),
+              { _fPParams = eval (_fPParams ps ⨃ singleton hk poolParam),
                 _retiring = eval (setSingleton hk ⋪ _retiring ps)
               }
     DCertPool (RetirePool hk (EpochNo e)) -> do
@@ -152,10 +171,10 @@ poolDelegationTransition = do
       EpochNo cepoch <- liftSTS $ do
         ei <- asks epochInfo
         epochInfoEpoch ei slot
-      let EpochNo maxEpoch = _eMax pp
+      let EpochNo maxEpoch = getField @"_eMax" pp
       cepoch < e && e <= cepoch + maxEpoch
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
-      pure $ ps {_retiring = eval (_retiring ps ⨃ (singleton hk (EpochNo e)))}
+      pure $ ps {_retiring = eval (_retiring ps ⨃ singleton hk (EpochNo e))}
     DCertDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 0
       pure ps

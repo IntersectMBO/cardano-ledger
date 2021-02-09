@@ -92,7 +92,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.SafeHash
-import Cardano.Ledger.Shelley.Constraints (TransValue)
+import Cardano.Ledger.Shelley.Constraints (PParamsDelta, TransValue)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude
   ( HeapWords (..),
@@ -666,19 +666,35 @@ deriving instance TransTxBody NoThunks era => NoThunks (TxBodyRaw era)
 
 type TransTxBody (c :: Type -> Constraint) era =
   ( c (Core.TxOut era),
+    c (PParamsDelta era),
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
   )
 
-deriving instance CC.Crypto (Crypto era) => NFData (TxBodyRaw era)
+deriving instance
+  (CC.Crypto (Crypto era), NFData (PParamsDelta era)) =>
+  NFData (TxBodyRaw era)
 
 deriving instance (Era era, TransTxBody Eq era) => Eq (TxBodyRaw era)
 
 deriving instance (Era era, TransTxBody Show era) => Show (TxBodyRaw era)
 
-instance (TransTxBody FromCBOR era, Era era) => FromCBOR (TxBodyRaw era) where
-  fromCBOR = decode (SparseKeyed "TxBody" baseTxBodyRaw boxBody [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")])
+instance
+  (TransTxBody FromCBOR era, ToCBOR (PParamsDelta era), Era era) =>
+  FromCBOR (TxBodyRaw era)
+  where
+  fromCBOR =
+    decode
+      ( SparseKeyed
+          "TxBody"
+          baseTxBodyRaw
+          boxBody
+          [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")]
+      )
 
-instance (TransTxBody FromCBOR era, Era era) => FromCBOR (Annotator (TxBodyRaw era)) where
+instance
+  (TransTxBody FromCBOR era, ToCBOR (PParamsDelta era), Era era) =>
+  FromCBOR (Annotator (TxBodyRaw era))
+  where
   fromCBOR = pure <$> fromCBOR
 
 -- =================================================================
@@ -703,7 +719,10 @@ isSNothing _ = False
 -- | Choose a de-serialiser when given the key (of type Word).
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
-boxBody :: (Era era, TransTxBody FromCBOR era) => Word -> Field (TxBodyRaw era)
+boxBody ::
+  (Era era, ToCBOR (PParamsDelta era), TransTxBody FromCBOR era) =>
+  Word ->
+  Field (TxBodyRaw era)
 boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
 boxBody 1 = field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
 boxBody 4 = field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
@@ -717,7 +736,10 @@ boxBody n = field (\_ t -> t) (Invalid n)
 -- | Tells how to serialise each field, and what tag to label it with in the
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
-txSparse :: (TransTxBody ToCBOR era, Era era) => TxBodyRaw era -> Encode ('Closed 'Sparse) (TxBodyRaw era)
+txSparse ::
+  (TransTxBody ToCBOR era, FromCBOR (PParamsDelta era), Era era) =>
+  TxBodyRaw era ->
+  Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
   Keyed (\i o f t c w u h -> TxBodyRaw i o c w f t u h)
     !> Key 0 (E encodeFoldable input) -- We don't have to send these in TxBodyRaw order
@@ -744,7 +766,7 @@ baseTxBodyRaw =
       _mdHashX = SNothing
     }
 
-instance (Era era, TransTxBody ToCBOR era) => ToCBOR (TxBodyRaw era) where
+instance (Era era, FromCBOR (PParamsDelta era), TransTxBody ToCBOR era) => ToCBOR (TxBodyRaw era) where
   toCBOR x = encode (txSparse x)
 
 -- ====================================================
@@ -757,7 +779,9 @@ newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
 deriving newtype instance
   (TransTxBody NoThunks era, Typeable era) => NoThunks (TxBody era)
 
-deriving newtype instance CC.Crypto (Crypto era) => NFData (TxBody era)
+deriving newtype instance
+  (CC.Crypto (Crypto era), NFData (PParamsDelta era)) =>
+  NFData (TxBody era)
 
 deriving instance (Era era, TransTxBody Show era) => Show (TxBody era)
 
@@ -766,12 +790,12 @@ deriving instance (Era era, TransTxBody Eq era) => Eq (TxBody era)
 deriving via
   (Mem (TxBodyRaw era))
   instance
-    (Era era, TransTxBody FromCBOR era) =>
+    (Era era, ToCBOR (PParamsDelta era), TransTxBody FromCBOR era) =>
     FromCBOR (Annotator (TxBody era))
 
 -- | Pattern for use by external users
 pattern TxBody ::
-  (Era era, TransTxBody ToCBOR era) =>
+  (Era era, FromCBOR (PParamsDelta era), TransTxBody ToCBOR era) =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (Core.TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->

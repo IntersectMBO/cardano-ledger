@@ -195,6 +195,7 @@ instance
 
 instance
   ( Era era,
+    STS (RUPD era),
     PredicateFailure (Core.EraRule "RUPD" era) ~ RupdPredicateFailure era
   ) =>
   Embed (RUPD era) (TICK era)

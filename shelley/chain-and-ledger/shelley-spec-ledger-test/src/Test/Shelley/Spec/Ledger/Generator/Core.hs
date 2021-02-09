@@ -49,14 +49,18 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   )
 where
 
-import Data.Proxy (Proxy (..))
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.VRF (evalCertified)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesScript,
+    UsesTxBody,
+    UsesTxOut (..),
+  )
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∪), (⋪))
@@ -64,6 +68,7 @@ import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -162,6 +167,7 @@ import Shelley.Spec.Ledger.Tx
 import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.TxBody
   ( DCert,
+    Wdrl,
     unWdrl,
   )
 import Shelley.Spec.Ledger.UTxO
@@ -174,12 +180,6 @@ import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesScript,
-    UsesTxBody,
-    UsesTxOut (..)
-  )
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( ScriptClass,
@@ -430,7 +430,7 @@ genTxOut ::
   Gen [Core.TxOut era]
 genTxOut genEraVal addrs = do
   values <- replicateM (length addrs) genEraVal
-  return (uncurry (makeTxOut (Proxy @ era)) <$> zip addrs values)
+  return (uncurry (makeTxOut (Proxy @era)) <$> zip addrs values)
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
 -- and with values between 'minCoin' and 'maxCoin'.
@@ -679,7 +679,12 @@ applyTxBody ::
   ( ShelleyTest era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "txfee" (Core.TxBody era) Coin,
+    HasField
+      "wdrls"
+      (Core.TxBody era)
+      (Wdrl (Crypto era))
   ) =>
   LedgerState era ->
   PParams era ->

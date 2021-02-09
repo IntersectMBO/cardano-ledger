@@ -39,14 +39,18 @@ import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField, getField)
+import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed)
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed, UnitInterval)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr)
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
+import Shelley.Spec.Ledger.Delegation.Certificates
+  ( IndividualPoolStake (..),
+    PoolDistr (..),
+  )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Shelley.Spec.Ledger.LedgerState
@@ -62,7 +66,7 @@ import Shelley.Spec.Ledger.LedgerState
     stakeDistr,
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer)
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import Shelley.Spec.Ledger.Rewards
   ( NonMyopic (..),
@@ -100,7 +104,9 @@ poolsByTotalStakeFraction globals ss =
     stakeRatio = activeStake % totalStake
     PoolDistr poolsByActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
-    toTotalStakeFrac :: IndividualPoolStake (Crypto era) -> IndividualPoolStake (Crypto era)
+    toTotalStakeFrac ::
+      IndividualPoolStake (Crypto era) ->
+      IndividualPoolStake (Crypto era)
     toTotalStakeFrac (IndividualPoolStake s vrf) =
       IndividualPoolStake (s * stakeRatio) vrf
 
@@ -118,11 +124,17 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  (UsesTxOut era, UsesValue era) =>
+  ( UsesTxOut era,
+    UsesValue era,
+    HasField "_a0" (Core.PParams era) Rational,
+    HasField "_nOpt" (Core.PParams era) Natural
+  ) =>
   Globals ->
   NewEpochState era ->
   Set (Either Coin (Credential 'Staking (Crypto era))) ->
-  Map (Either Coin (Credential 'Staking (Crypto era))) (Map (KeyHash 'StakePool (Crypto era)) Coin)
+  Map
+    (Either Coin (Credential 'Staking (Crypto era)))
+    (Map (KeyHash 'StakePool (Crypto era)) Coin)
 getNonMyopicMemberRewards globals ss creds =
   Map.fromList $
     fmap
@@ -132,7 +144,9 @@ getNonMyopicMemberRewards globals ss creds =
     maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
     Coin totalStake = circulation es maxSupply
     toShare (Coin x) = StakeShare (x % totalStake)
-    memShare (Right cred) = toShare $ Map.findWithDefault (Coin 0) cred (EB.unStake stake)
+    memShare (Right cred) =
+      toShare $
+        Map.findWithDefault (Coin 0) cred (EB.unStake stake)
     memShare (Left coin) = toShare coin
     es = nesEs ss
     pp = esPp es
@@ -153,7 +167,13 @@ getNonMyopicMemberRewards globals ss creds =
         )
         poolParams
     histLookup k = fromMaybe mempty (Map.lookup k ls)
-    topPools = getTopRankedPools rPot (Coin totalStake) pp poolParams (fmap percentile' ls)
+    topPools =
+      getTopRankedPools
+        rPot
+        (Coin totalStake)
+        pp
+        poolParams
+        (fmap percentile' ls)
     mkNMMRewards t (hitRateEst, poolp, sigma) =
       if checkPledge poolp
         then nonMyopicMemberRew pp rPot poolp s sigma t topPools hitRateEst
@@ -165,9 +185,10 @@ getNonMyopicMemberRewards globals ss creds =
                 Set.foldl'
                   ( \c o ->
                       c
-                        <> ( fromMaybe mempty $
-                               Map.lookup (KeyHashObj o) (EB.unStake stake)
-                           )
+                        <> fromMaybe
+                          mempty
+                          ( Map.lookup (KeyHashObj o) (EB.unStake stake)
+                          )
                   )
                   mempty
                   (_poolOwners pool)
@@ -203,7 +224,7 @@ getFilteredUTxO ::
 getFilteredUTxO ss addrs =
   UTxO $
     Map.filter
-      (\out -> (getField @"compactAddress" out) `Set.member` addrSBSs)
+      (\out -> getField @"compactAddress" out `Set.member` addrSBSs)
       fullUTxO
   where
     UTxO fullUTxO = getUTxO ss
@@ -254,6 +275,13 @@ getPoolParameters nes poolId = Map.lookup poolId (f nes)
 
 getRewardInfo ::
   forall era.
+  ( HasField "_a0" (Core.PParams era) Rational,
+    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_rho" (Core.PParams era) UnitInterval,
+    HasField "_tau" (Core.PParams era) UnitInterval
+  ) =>
   Globals ->
   NewEpochState era ->
   (RewardUpdate (Crypto era), RewardProvenance (Crypto era))

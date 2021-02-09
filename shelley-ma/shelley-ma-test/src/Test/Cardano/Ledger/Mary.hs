@@ -21,7 +21,11 @@ import Cardano.Ledger.Mary.Value
     Value (..),
     policies,
   )
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesValue)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesPParams,
+    UsesValue,
+  )
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody (StrictMaybe, TxBody (..))
 import qualified Cardano.Ledger.Val as Val
@@ -111,7 +115,7 @@ coloredCoinMinMint :: Integer
 coloredCoinMinMint = 1000
 
 coloredCoinMaxMint :: Integer
-coloredCoinMaxMint = 1000*1000
+coloredCoinMaxMint = 1000 * 1000
 
 --------------------------------------------------------
 -- Red Coins                                          --
@@ -245,6 +249,7 @@ genTxBody ::
   forall era.
   ( UsesValue era,
     Core.Value era ~ Value (Crypto era),
+    UsesPParams era,
     UsesAuxiliary era,
     EraGen era
   ) =>

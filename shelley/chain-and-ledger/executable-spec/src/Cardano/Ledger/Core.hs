@@ -22,6 +22,7 @@ module Cardano.Ledger.Core
     Value,
     Script,
     AuxiliaryData,
+    PParams,
 
     -- * Constraint synonyms
     ChainData,
@@ -53,6 +54,9 @@ type family Script era :: Type
 
 -- | AuxiliaryData which may be attached to a transaction
 type family AuxiliaryData era :: Type
+
+-- | Protocol parameters
+type family PParams era :: Type
 
 -- | Common constraints
 --

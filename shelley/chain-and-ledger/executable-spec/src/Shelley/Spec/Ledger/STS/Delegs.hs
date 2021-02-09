@@ -28,7 +28,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased, UsesAuxiliary, UsesPParams, UsesScript, UsesTxBody)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.State.Transition
@@ -66,7 +66,6 @@ import Shelley.Spec.Ledger.LedgerState
     _pParams,
     _rewards,
   )
-import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..), DelplPredicateFailure)
 import Shelley.Spec.Ledger.Serialization
   ( decodeRecordSum,
@@ -90,13 +89,17 @@ data DELEGS era
 data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: SlotNo,
     delegsIx :: Ix,
-    delegspp :: PParams era,
+    delegspp :: Core.PParams era,
     delegsTx :: Tx era,
     delegsAccount :: AccountState
   }
 
 deriving stock instance
-  ShelleyBased era =>
+  ( UsesPParams era,
+    UsesScript era,
+    UsesTxBody era,
+    UsesAuxiliary era
+  ) =>
   Show (DelegsEnv era)
 
 data DelegsPredicateFailure era

@@ -21,6 +21,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
@@ -49,7 +50,6 @@ import Shelley.Spec.Ledger.Credential
     pattern ScriptHashObj,
     pattern StakeRefBase,
   )
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
     KeyHash (..),
@@ -63,7 +63,7 @@ import Shelley.Spec.Ledger.LedgerState
     genesisState,
   )
 import Shelley.Spec.Ledger.Metadata (Metadata)
-import Shelley.Spec.Ledger.PParams (PParams, emptyPParams, _maxTxSize)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams, _maxTxSize)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts
   ( MultiSig,

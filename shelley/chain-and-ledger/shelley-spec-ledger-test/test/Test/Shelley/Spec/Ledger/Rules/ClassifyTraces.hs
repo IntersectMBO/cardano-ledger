@@ -21,6 +21,7 @@ where
 
 import Cardano.Binary (ToCBOR, serialize')
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesScript,
@@ -28,6 +29,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
   )
 import Cardano.Slotting.Slot (EpochSize (..))
+import Control.State.Transition (STS (State))
 import Control.State.Transition.Trace
   ( Trace,
     TraceOrder (OldestFirst),
@@ -40,6 +42,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck
   )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.ByteString as BS
+import Data.Default.Class (Default)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -103,24 +106,20 @@ import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
-import qualified Cardano.Ledger.Core as Core
-import Control.State.Transition (STS (State))
-import Data.Default.Class (Default)
 
 -- =================================================================
 
 relevantCasesAreCovered ::
   forall era.
   ( EraGen era,
+    ShelleyTest era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
-    UsesTxOut era,
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
-    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    Default (State (Core.EraRule "PPUP" era))
+    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
   ) =>
   Property
 relevantCasesAreCovered = do
@@ -323,6 +322,7 @@ onlyValidLedgerSignalsAreGenerated ::
   ( EraGen era,
     UsesTxOut era,
     ChainProperty era,
+    Show (Core.PParams era),
     QC.HasTrace (LEDGER era) (GenEnv era),
     Default (State (Core.EraRule "PPUP" era))
   ) =>
@@ -346,6 +346,7 @@ onlyValidLedgerSignalsAreGenerated =
 propAbstractSizeBoundsBytes ::
   forall era.
   ( EraGen era,
+    Show (Core.PParams era),
     UsesTxOut era,
     ChainProperty era,
     QC.HasTrace (LEDGER era) (GenEnv era),
@@ -376,6 +377,7 @@ propAbstractSizeBoundsBytes = property $ do
 propAbstractSizeNotTooBig ::
   forall era.
   ( EraGen era,
+    Show (Core.PParams era),
     ChainProperty era,
     UsesTxOut era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -411,10 +413,9 @@ propAbstractSizeNotTooBig = property $ do
 onlyValidChainSignalsAreGenerated ::
   forall era.
   ( EraGen era,
-    UsesTxOut era,
+    ShelleyTest era,
     ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era),
-    Default (State (Core.EraRule "PPUP" era))
+    QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
   Property
 onlyValidChainSignalsAreGenerated =

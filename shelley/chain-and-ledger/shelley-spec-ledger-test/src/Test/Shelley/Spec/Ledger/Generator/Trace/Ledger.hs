@@ -30,6 +30,7 @@ import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
+import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -44,6 +45,7 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
     genesisState,
   )
+import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Delegs (DelegsEnv)
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv, DelplPredicateFailure)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
@@ -66,10 +68,10 @@ import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Utils
   ( ShelleyLedgerSTS,
+    ShelleyTest,
     applySTSTest,
     runShelleyBase,
   )
-import Data.Default.Class (Default)
 
 -- ======================================================
 
@@ -83,6 +85,7 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- with meaningful delegation certificates.
 instance
   ( EraGen era,
+    ShelleyTest era,
     UsesTxBody era,
     UsesTxOut era,
     UsesValue era,
@@ -126,6 +129,7 @@ instance
 instance
   forall era.
   ( EraGen era,
+    ShelleyTest era,
     UsesTxBody era,
     UsesTxOut era,
     UsesValue era,
@@ -140,8 +144,7 @@ instance
     Embed (Core.EraRule "DELEG" era) (DELPL era),
     Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    Default (State (Core.EraRule "PPUP" era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
   ) =>
   TQC.HasTrace (LEDGERS era) (GenEnv era)
   where

@@ -21,6 +21,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
+    UsesPParams,
     UsesScript,
     UsesTxBody,
     UsesTxOut,
@@ -51,6 +52,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
+import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address
   ( Addr (AddrBootstrap),
     bootstrapAddressAttrsSize,
@@ -201,9 +203,10 @@ consumed ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "_keyDeposit" (Core.PParams era) Coin
   ) =>
-  PParams era ->
+  Core.PParams era ->
   UTxO era ->
   Core.TxBody era ->
   Core.Value era
@@ -236,7 +239,13 @@ utxoTransition ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "vldt" (Core.TxBody era) ValidityInterval,
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "_minfeeA" (Core.PParams era) Natural,
+    HasField "_minfeeB" (Core.PParams era) Natural,
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "_minUTxOValue" (Core.PParams era) Coin,
+    HasField "_maxTxSize" (Core.PParams era) Natural
   ) =>
   TransitionRule (UTXO era)
 utxoTransition = do
@@ -272,7 +281,7 @@ utxoTransition = do
       (Set.fromList wdrlsWrongNetwork)
 
   let consumed_ = consumed pp utxo txb
-      produced_ = Shelley.produced pp stakepools txb
+      produced_ = Shelley.produced @era pp stakepools txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Protocol Parameter Update Proposals
@@ -285,7 +294,7 @@ utxoTransition = do
   Val.coin (getField @"mint" txb) == Val.zero ?! TriesToForgeADA
 
   let outputs = Map.elems $ unUTxO (txouts @era txb)
-      minUTxOValue = _minUTxOValue pp
+      minUTxOValue = getField @"_minUTxOValue" pp
       outputsTooSmall =
         filter
           ( \out ->
@@ -322,7 +331,7 @@ utxoTransition = do
           outputs
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
-  let maxTxSize_ = fromIntegral (_maxTxSize pp)
+  let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
       txSize_ = Shelley.txsize tx
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
@@ -350,7 +359,9 @@ instance
     UsesScript era,
     UsesTxOut era,
     UsesValue era,
+    UsesPParams era,
     TransValue ToCBOR era,
+    Core.PParams era ~ PParams era,
     Core.TxBody era ~ TxBody era,
     Core.TxOut era ~ TxOut era,
     Embed (Core.EraRule "PPUP" era) (UTXO era),
@@ -375,6 +386,7 @@ instance
 
 instance
   ( Era era,
+    STS (PPUP era),
     PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era
   ) =>
   Embed (PPUP era) (UTXO era)

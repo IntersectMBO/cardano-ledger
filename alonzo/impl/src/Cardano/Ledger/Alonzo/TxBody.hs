@@ -74,6 +74,7 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash,
   )
+import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
@@ -173,16 +174,17 @@ data TxBodyRaw era = TxBodyRaw
 deriving instance
   ( Eq (Core.Value era),
     CC.Crypto (Crypto era),
-    Compactible (Core.Value era)
+    Compactible (Core.Value era),
+    Eq (PParamsDelta era)
   ) =>
   Eq (TxBodyRaw era)
 
 instance
-  (Typeable era, NoThunks (Core.Value era)) =>
+  (Typeable era, NoThunks (Core.Value era), NoThunks (PParamsDelta era)) =>
   NoThunks (TxBodyRaw era)
 
 deriving instance
-  (Era era, Show (Core.Value era)) =>
+  (Era era, Show (Core.Value era), Show (PParamsDelta era)) =>
   Show (TxBodyRaw era)
 
 newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
@@ -192,18 +194,23 @@ newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
 deriving newtype instance
   ( Eq (Core.Value era),
     Compactible (Core.Value era),
-    CC.Crypto (Crypto era)
+    CC.Crypto (Crypto era),
+    Eq (PParamsDelta era)
   ) =>
   Eq (TxBody era)
 
 deriving instance
-  (Typeable era, NoThunks (Core.Value era)) =>
+  ( Typeable era,
+    NoThunks (Core.Value era),
+    NoThunks (PParamsDelta era)
+  ) =>
   NoThunks (TxBody era)
 
 deriving instance
   ( Era era,
     Compactible (Core.Value era),
-    Show (Core.Value era)
+    Show (Core.Value era),
+    Show (PParamsDelta era)
   ) =>
   Show (TxBody era)
 
@@ -216,7 +223,8 @@ deriving via
       Compactible (Core.Value era),
       Show (Core.Value era),
       DecodeNonNegative (Core.Value era),
-      FromCBOR (Annotator (Core.Script era))
+      FromCBOR (Annotator (Core.Script era)),
+      Core.SerialisableData (PParamsDelta era)
     ) =>
     FromCBOR (Annotator (TxBody era))
 
@@ -224,7 +232,8 @@ deriving via
 type AlonzoBody era =
   ( Era era,
     Compactible (Core.Value era),
-    ToCBOR (Core.Script era)
+    ToCBOR (Core.Script era),
+    Core.SerialisableData (PParamsDelta era)
   )
 
 pattern TxBody ::
@@ -337,7 +346,8 @@ instance
   ( Era era,
     DecodeNonNegative (Core.Value era),
     Show (Core.Value era),
-    Compactible (Core.Value era)
+    Compactible (Core.Value era),
+    ToCBOR (PParamsDelta era)
   ) =>
   FromCBOR (TxOut era)
   where
@@ -350,7 +360,8 @@ instance
 
 encodeTxBodyRaw ::
   ( Era era,
-    Compactible (Core.Value era)
+    Compactible (Core.Value era),
+    ToCBOR (PParamsDelta era)
   ) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
@@ -408,7 +419,9 @@ instance
     Compactible (Core.Value era),
     Show (Core.Value era),
     DecodeNonNegative (Core.Value era),
-    FromCBOR (Annotator (Core.Script era))
+    FromCBOR (Annotator (Core.Script era)),
+    FromCBOR (PParamsDelta era),
+    ToCBOR (PParamsDelta era)
   ) =>
   FromCBOR (TxBodyRaw era)
   where
@@ -480,7 +493,9 @@ instance
     Compactible (Core.Value era),
     Show (Core.Value era),
     DecodeNonNegative (Core.Value era),
-    FromCBOR (Annotator (Core.Script era))
+    FromCBOR (Annotator (Core.Script era)),
+    FromCBOR (PParamsDelta era),
+    ToCBOR (PParamsDelta era)
   ) =>
   FromCBOR (Annotator (TxBodyRaw era))
   where
@@ -533,7 +548,8 @@ ppTxBody ::
   ( Era era,
     Compactible (Core.Value era),
     Show (Core.Value era),
-    PrettyA (Core.Value era)
+    PrettyA (Core.Value era),
+    PrettyA (PParamsDelta era)
   ) =>
   TxBody era ->
   PDoc
@@ -558,6 +574,7 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u adh mnt exu sdh sc
 instance
   ( Era era,
     PrettyA (Core.Value era),
+    PrettyA (PParamsDelta era),
     Compactible (Core.Value era),
     Show (Core.Value era)
   ) =>

@@ -97,7 +97,7 @@ import Shelley.Spec.Ledger.Keys
     signedDSIGN,
     verifySignedDSIGN,
   )
-import Shelley.Spec.Ledger.PParams (PParams, Update, _keyDeposit, _poolDeposit)
+import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Tx (TransTx, Tx (..))
 import Shelley.Spec.Ledger.TxBody
@@ -273,16 +273,20 @@ balance (UTxO utxo) = Map.foldl' addTxOuts mempty utxo
 -- Note that this is not an issue for key registrations since subsequent
 -- registration certificates would be invalid.
 totalDeposits ::
-  PParams era ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
-  [DCert (Crypto era)] ->
+  ( HasField "_poolDeposit" pp Coin,
+    HasField "_keyDeposit" pp Coin
+  ) =>
+  pp ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
+  [DCert crypto] ->
   Coin
 totalDeposits pp stpools cs =
-  (numKeys <×> _keyDeposit pp) <+> (numNewPools <×> _poolDeposit pp)
+  (numKeys <×> getField @"_keyDeposit" pp)
+    <+> (numNewPools <×> getField @"_poolDeposit" pp)
   where
     numKeys = length $ filter isRegKey cs
-    pools = Set.fromList . Maybe.catMaybes $ fmap getKeyHashFromRegPool cs
-    numNewPools = length $ pools `Set.difference` (Map.keysSet stpools)
+    pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool cs
+    numNewPools = length $ pools `Set.difference` Map.keysSet stpools
 
 getKeyHashFromRegPool :: DCert crypto -> Maybe (KeyHash 'StakePool crypto)
 getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolId $ p

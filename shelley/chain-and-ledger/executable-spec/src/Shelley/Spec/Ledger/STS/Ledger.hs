@@ -32,6 +32,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
+    UsesPParams,
     UsesScript,
     UsesTxBody,
     UsesTxOut,
@@ -55,6 +56,7 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
+import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
@@ -65,7 +67,6 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     UTxOState (..),
   )
-import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..), DelegsPredicateFailure)
 import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
@@ -81,10 +82,11 @@ data LEDGER era
 data LedgerEnv era = LedgerEnv
   { ledgerSlotNo :: SlotNo,
     ledgerIx :: Ix,
-    ledgerPp :: PParams era,
+    ledgerPp :: Core.PParams era,
     ledgerAccount :: AccountState
   }
-  deriving (Show)
+
+deriving instance Show (Core.PParams era) => Show (LedgerEnv era)
 
 data LedgerPredicateFailure era
   = UtxowFailure (PredicateFailure (Core.EraRule "UTXOW" era)) -- Subtransition Failures
@@ -148,6 +150,7 @@ instance
     UsesTxBody era,
     UsesTxOut era,
     UsesAuxiliary era,
+    UsesPParams era,
     TransTxId Show era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
@@ -160,6 +163,8 @@ instance
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
     Show (UTxOState era)
   ) =>
   STS (LEDGER era)

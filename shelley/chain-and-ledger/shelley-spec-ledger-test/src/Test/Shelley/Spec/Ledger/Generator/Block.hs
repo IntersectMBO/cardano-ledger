@@ -18,11 +18,6 @@ import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesScript,
-    UsesTxBody,
-  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.SetAlgebra (dom, eval)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
@@ -57,10 +52,10 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkBlock,
     mkOCert,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
 import Test.Shelley.Spec.Ledger.Utils
   ( ShelleyLedgerSTS,
+    ShelleyTest,
     epochFromSlotNo,
     maxKESIterations,
     runShelleyBase,
@@ -81,9 +76,7 @@ type TxGen era =
 -- | Generate a valid block.
 genBlock ::
   forall era.
-  ( EraGen era,
-    UsesTxBody era,
-    UsesAuxiliary era,
+  ( ShelleyTest era,
     ApplyBlock era,
     Mock (Crypto era),
     GetLedgerView era,
@@ -102,9 +95,7 @@ genBlock ge = genBlockWithTxGen genTxs ge
 
 genBlockWithTxGen ::
   forall era.
-  ( UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era,
+  ( ShelleyTest era,
     Mock (Crypto era),
     GetLedgerView era,
     ApplyBlock era
@@ -173,6 +164,7 @@ genBlockWithTxGen
 selectNextSlotWithLeader ::
   forall era.
   ( Mock (Crypto era),
+    ShelleyTest era,
     GetLedgerView era,
     ApplyBlock era
   ) =>

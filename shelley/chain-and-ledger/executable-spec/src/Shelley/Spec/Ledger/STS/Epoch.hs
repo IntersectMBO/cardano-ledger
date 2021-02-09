@@ -34,6 +34,7 @@ import Control.State.Transition
 import Data.Default.Class (Default)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
+import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -58,7 +59,6 @@ import Shelley.Spec.Ledger.LedgerState
     pattern DPState,
     pattern EpochState,
   )
-import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapPredicateFailure, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapPredicateFailure)
@@ -95,14 +95,17 @@ instance
     State (Core.EraRule "SNAP" era) ~ SnapShots (Crypto era),
     Signal (Core.EraRule "SNAP" era) ~ (),
     Embed (Core.EraRule "POOLREAP" era) (EPOCH era),
-    Environment (Core.EraRule "POOLREAP" era) ~ PParams era,
+    Environment (Core.EraRule "POOLREAP" era) ~ Core.PParams era,
     State (Core.EraRule "POOLREAP" era) ~ PoolreapState era,
     Signal (Core.EraRule "POOLREAP" era) ~ EpochNo,
     Embed (Core.EraRule "UPEC" era) (EPOCH era),
     Environment (Core.EraRule "UPEC" era) ~ EpochState era,
     State (Core.EraRule "UPEC" era) ~ UpecState era,
     Signal (Core.EraRule "UPEC" era) ~ (),
-    Default (State (Core.EraRule "PPUP" era))
+    Default (State (Core.EraRule "PPUP" era)),
+    Default (Core.PParams era),
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin
   ) =>
   STS (EPOCH era)
   where
@@ -127,13 +130,15 @@ epochTransition ::
     State (Core.EraRule "SNAP" era) ~ SnapShots (Crypto era),
     Signal (Core.EraRule "SNAP" era) ~ (),
     Embed (Core.EraRule "POOLREAP" era) (EPOCH era),
-    Environment (Core.EraRule "POOLREAP" era) ~ PParams era,
+    Environment (Core.EraRule "POOLREAP" era) ~ Core.PParams era,
     State (Core.EraRule "POOLREAP" era) ~ PoolreapState era,
     Signal (Core.EraRule "POOLREAP" era) ~ EpochNo,
     Embed (Core.EraRule "UPEC" era) (EPOCH era),
     Environment (Core.EraRule "UPEC" era) ~ EpochState era,
     State (Core.EraRule "UPEC" era) ~ UpecState era,
-    Signal (Core.EraRule "UPEC" era) ~ ()
+    Signal (Core.EraRule "UPEC" era) ~ (),
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin
   ) =>
   TransitionRule (EPOCH era)
 epochTransition = do
@@ -176,7 +181,8 @@ epochTransition = do
           nm
 
   UpecState pp' ppupSt' <-
-    trans @(Core.EraRule "UPEC" era) $ TRC (epochState', UpecState pp (_ppups utxoSt'), ())
+    trans @(Core.EraRule "UPEC" era) $
+      TRC (epochState', UpecState pp (_ppups utxoSt'), ())
   let utxoSt'' = utxoSt' {_ppups = ppupSt'}
 
   let Coin oblgCurr = obligation pp (_rewards dstate') (_pParams pstate'')
@@ -203,7 +209,7 @@ instance
 
 instance
   ( Era era,
-    Default (PoolreapState era),
+    STS (POOLREAP era),
     PredicateFailure (Core.EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era
   ) =>
   Embed (POOLREAP era) (EPOCH era)

@@ -23,6 +23,7 @@ import Cardano.Binary (serialize)
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.SafeHash (EraIndependentTxBody, SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -62,7 +63,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.SafeHash (SafeHash, EraIndependentTxBody, hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,
     KeyPair,
@@ -122,6 +122,7 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, Split (..))
 -- =======================================================
 
 showBalance ::
+  forall era.
   ( ShelleyTest era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
@@ -141,7 +142,7 @@ showBalance
   (Tx body _ _) =
     "\n\nConsumed: " ++ show (consumed pparams utxo body)
       ++ "  Produced: "
-      ++ show (produced pparams stakepools body)
+      ++ show (produced @era pparams stakepools body)
 
 --  ========================================================================
 
@@ -165,11 +166,8 @@ showBalance
 genTx ::
   forall era.
   ( HasCallStack,
+    ShelleyTest era,
     EraGen era,
-    UsesTxBody era,
-    UsesTxOut era,
-    UsesValue era,
-    UsesAuxiliary era,
     Mock (Crypto era),
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,

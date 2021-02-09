@@ -6,15 +6,17 @@ module Test.Shelley.Spec.Ledger.Examples
   )
 where
 
+import Cardano.Ledger.Shelley ()
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Shelley.Spec.Ledger.BlockChain (Block)
+import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainState, totalAda)
+import Shelley.Spec.Ledger.Scripts ()
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils (applySTSTest, maxLLSupply, runShelleyBase)
 import Test.Tasty.HUnit (Assertion, (@?=))
-import Shelley.Spec.Ledger.Scripts ()
 
 data CHAINExample h = CHAINExample
   { -- | State to start testing with

@@ -18,10 +18,16 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, makeHashWithExplicitProxys)
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut (..), UsesValue)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesPParams (..),
+    UsesTxBody,
+    UsesTxOut (..),
+    UsesValue,
+  )
 import Data.Proxy
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
+import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, updatePParams)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
   ( TxBody,
@@ -41,6 +47,10 @@ instance CryptoClass.Crypto c => UsesValue (ShelleyEra c)
 instance CryptoClass.Crypto c => UsesTxOut (ShelleyEra c) where
   makeTxOut _ a v = TxOut a v
 
+instance CryptoClass.Crypto c => UsesPParams (ShelleyEra c) where
+  type PParamsDelta (ShelleyEra c) = PParamsUpdate (ShelleyEra c)
+  mergePPUpdates _ = updatePParams
+
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
@@ -54,6 +64,8 @@ type instance Core.TxOut (ShelleyEra c) = TxOut (ShelleyEra c)
 type instance Core.Script (ShelleyEra c) = MultiSig c
 
 type instance Core.AuxiliaryData (ShelleyEra c) = Metadata
+
+type instance Core.PParams (ShelleyEra c) = PParams (ShelleyEra c)
 
 --------------------------------------------------------------------------------
 -- Ledger data instances

@@ -16,11 +16,12 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
+import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     ValidityInterval (..),
-    hashTimelockScript
+    hashTimelockScript,
   )
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
 import qualified Cardano.Ledger.Val as Val
@@ -37,6 +38,7 @@ import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import qualified Shelley.Spec.Ledger.Metadata as SMD
 import Shelley.Spec.Ledger.PParams
   ( PParams' (..),
+    PParamsUpdate,
     Update,
     pattern ProposedPPUpdates,
     pattern Update,
@@ -108,7 +110,12 @@ testKeyHash = hashKey . snd $ mkKeyPair (0, 0, 0, 0, 2)
 testStakeCred :: Credential 'Staking TestCrypto
 testStakeCred = KeyHashObj . hashKey . snd $ mkKeyPair (0, 0, 0, 0, 3)
 
-testUpdate :: forall era. (Crypto era ~ TestCrypto) => Update era
+testUpdate ::
+  forall era.
+  ( Crypto era ~ TestCrypto,
+    PParamsDelta era ~ PParamsUpdate era
+  ) =>
+  Update era
 testUpdate =
   Update
     ( ProposedPPUpdates
@@ -196,6 +203,7 @@ metadataNoScritpsGoldenTest =
             . TkListLen 0 -- empty scripts
         )
     )
+
 -- CONTINUE also Scritps
 metadataWithScritpsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock (Crypto era)) => TestTree
 metadataWithScritpsGoldenTest =

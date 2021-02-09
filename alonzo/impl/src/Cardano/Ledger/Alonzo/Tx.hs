@@ -167,6 +167,7 @@ deriving instance
     Eq (Core.AuxiliaryData era),
     Eq (Core.Script era),
     Eq (Core.Value era),
+    Eq (PParamsDelta era),
     Compactible (Core.Value era)
   ) =>
   Eq (TxRaw era)
@@ -176,7 +177,8 @@ deriving instance
     Compactible (Core.Value era),
     Show (Core.AuxiliaryData era),
     Show (Core.Script era),
-    Show (Core.Value era)
+    Show (Core.Value era),
+    Show (PParamsDelta era)
   ) =>
   Show (TxRaw era)
 
@@ -184,7 +186,8 @@ instance
   ( Era era,
     NoThunks (Core.AuxiliaryData era),
     NoThunks (Core.Script era),
-    NoThunks (Core.Value era)
+    NoThunks (Core.Value era),
+    NoThunks (PParamsDelta era)
   ) =>
   NoThunks (TxRaw era)
 
@@ -196,6 +199,7 @@ deriving newtype instance
     Eq (Core.AuxiliaryData era),
     Eq (Core.Script era),
     Eq (Core.Value era),
+    Eq (PParamsDelta era),
     Compactible (Core.Value era)
   ) =>
   Eq (Tx era)
@@ -205,7 +209,8 @@ deriving newtype instance
     Compactible (Core.Value era),
     Show (Core.AuxiliaryData era),
     Show (Core.Script era),
-    Show (Core.Value era)
+    Show (Core.Value era),
+    Show (PParamsDelta era)
   ) =>
   Show (Tx era)
 
@@ -213,7 +218,8 @@ deriving newtype instance
   ( Era era,
     NoThunks (Core.AuxiliaryData era),
     NoThunks (Core.Script era),
-    NoThunks (Core.Value era)
+    NoThunks (Core.Value era),
+    NoThunks (PParamsDelta era)
   ) =>
   NoThunks (Tx era)
 
@@ -261,6 +267,7 @@ instance
   ( Era era,
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (Annotator (Core.AuxiliaryData era)),
+    Core.SerialisableData (PParamsDelta era),
     ToCBOR (Core.Script era),
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era),
@@ -289,6 +296,7 @@ deriving via
     ( Era era,
       FromCBOR (Annotator (Core.Script era)),
       FromCBOR (Annotator (Core.AuxiliaryData era)),
+      Core.SerialisableData (PParamsDelta era),
       ToCBOR (Core.Script era),
       Typeable (Core.Script era),
       Typeable (Core.AuxiliaryData era),
@@ -485,6 +493,7 @@ indexedRdmrs ::
   ( Era era,
     ToCBOR (Core.AuxiliaryData era),
     ToCBOR (Core.Script era),
+    Core.SerialisableData (PParamsDelta era),
     Compactible (Core.Value era)
   ) =>
   Tx era ->
@@ -551,21 +560,23 @@ collectNNScriptInputs ::
     ToCBOR (Core.Script era),
     Compactible (Core.Value era),
     ToCBOR (Core.AuxiliaryData era),
+    Core.SerialisableData (PParamsDelta era),
     Core.Script era ~ AlonzoScript.Script era,
-    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
+    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
   ) =>
-  PParams era ->
+  Core.PParams era ->
   Tx era ->
   UTxO era ->
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
-collectNNScriptInputs _pp tx utxo =
-  [ (script, (d : (valContext utxo tx sp ++ getData tx utxo sp)), eu, cost)
+collectNNScriptInputs pp tx utxo =
+  [ (script, d : (valContext utxo tx sp ++ getData tx utxo sp), eu, cost)
     | (sp, scripthash) <- scriptsNeeded utxo tx, -- TODO, IN specification ORDER IS WRONG
       (d, eu) <- maybeToList (indexedRdmrs tx sp),
       script <- maybeToList (Map.lookup scripthash (txscripts (txwits tx))),
-      cost <- case (language script) of
+      cost <- case language script of
         Nothing -> []
-        Just lang -> maybeToList (Map.lookup lang (_costmdls _pp))
+        Just lang -> maybeToList (Map.lookup lang (getField @"_costmdls" pp))
   ]
 
 language :: AlonzoScript.Script era -> Maybe Language
@@ -612,7 +623,7 @@ scriptsNeeded (UTxO utxomap) tx = spend ++ reward ++ cert ++ minted
 
     !cert = foldl addOnlyCwitness [] (txcerts txb)
 
-    !minted = map (\(pid@(PolicyID hash)) -> (Minting pid, hash)) (Map.keys m3)
+    !minted = map (\pid@(PolicyID hash) -> (Minting pid, hash)) (Map.keys m3)
       where
         m3 = getMapFromValue (mint txb)
 
@@ -631,6 +642,7 @@ addOnlyCwitness !ans _ = ans
 checkScriptData ::
   forall era.
   ( ToCBOR (Core.AuxiliaryData era),
+    Core.SerialisableData (PParamsDelta era),
     ValidateScript era,
     Compactible (Core.Value era),
     UsesTxOut era,
@@ -668,7 +680,8 @@ ppTx ::
     PrettyA (Core.AuxiliaryData era),
     Compactible (Core.Value era),
     Show (Core.Value era),
-    PrettyA (Core.Value era)
+    PrettyA (Core.Value era),
+    PrettyA (PParamsDelta era)
   ) =>
   Tx era ->
   PDoc
@@ -687,7 +700,8 @@ instance
     PrettyA (Core.AuxiliaryData era),
     Compactible (Core.Value era),
     Show (Core.Value era),
-    PrettyA (Core.Value era)
+    PrettyA (Core.Value era),
+    PrettyA (PParamsDelta era)
   ) =>
   PrettyA (Tx era)
   where

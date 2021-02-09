@@ -1,9 +1,17 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Shelley.Spec.Ledger.SoftForks
   ( validMetadata,
   )
 where
 
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer (..))
+import GHC.Records
+import Shelley.Spec.Ledger.PParams (ProtVer (..))
 
-validMetadata :: PParams era -> Bool
-validMetadata pp = _protocolVersion pp > ProtVer 2 0
+validMetadata ::
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Bool
+validMetadata pp = getField @"_protocolVersion" pp > ProtVer 2 0
