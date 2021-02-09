@@ -61,4 +61,7 @@ source-repository-package
 
 constraints:
   ListLike >= 4.7.4
-    -- ListLike-4.7.4 fixes instance IsList Bytestring
+    -- ListLike-4.7.4 fixes instances
+    --   IsList Bytestring
+    --   IsString (UTF8 ByteString)
+    -- for bytestring >= 0.10.12
