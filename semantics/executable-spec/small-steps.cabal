@@ -35,6 +35,7 @@ library
                      , Data.MemoBytes
                      , Data.Coders
                      , Data.Pulse
+                     , Data.Closure
                      , Control.Provenance
                      , Control.Iterate.SetAlgebra
                      , Control.Iterate.Collect

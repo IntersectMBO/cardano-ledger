@@ -3,12 +3,12 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE StandaloneDeriving #-}
-
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Data.Pulse where
 
@@ -19,8 +19,9 @@ import qualified Data.Map.Strict as Map
 import Data.Map.Internal (Map (..))
 import Control.Monad.Identity(Identity(..))
 import Data.Coders
-import Cardano.Binary(ToCBOR(..),FromCBOR(..),serialize', decodeFull')
+import Cardano.Binary(ToCBOR(..),FromCBOR(..))
 import Data.Typeable
+import Data.Closure(Closure(..),apply,rootName)
 
 
 -- ====================================================
@@ -157,199 +158,51 @@ foldlWithKeyM' f z = go z
          !ans2 <- (f ans1 kx x)
          go ans2 r
 
--- ======================================================
--- Two examples
-
-isum :: PulseListM Identity Integer
-isum = pulseList RightA 10 (+) [1..33] 0
-
-{-  Note how we start adding the last 10 elements
-*Pulse> isum
-(Pulse right 10 More 0)
-*Pulse> pulse it
-(Pulse right 10 More 285)
-*Pulse> pulse it
-(Pulse right 10 More 470)
-*Pulse> pulse it
-(Pulse right 10 More 555)
-*Pulse> pulse it
-(Pulse right 10 Done 561)
--}
-
-
-jsum :: PulseListM Identity Integer
-jsum = pulseList LeftA 10 (+) [1..33] 0
-
-{- Here we are adding the first 10 elements
-*Pulse> jsum
-(Pulse left 10 More 0)
-*Pulse> pulse it
-(Pulse left 10 More 55)
-*Pulse> pulse it
-(Pulse left 10 More 210)
-*Pulse> pulse it
-(Pulse left 10 More 465)
-*Pulse> pulse it
-(Pulse left 10 Done 561)
--}
-
-ksum :: PulseList Integer
-ksum = pulseList RightA 1 (+) [1..5] 0
-{-
-*Pulse> ksum
-(Pulse right 1 More 0)
-*Pulse> pulse it
-(Pulse right 1 More 5)
-*Pulse> pulse it
-(Pulse right 1 More 9)
-*Pulse> pulse it
-(Pulse right 1 More 12)
-*Pulse> pulse it
-(Pulse right 1 More 14)
-*Pulse> pulse it
-(Pulse right 1 Done 15)
--}
-
-hsum :: PulseList Integer
-hsum = pulseList LeftA 1 (+) [1..5] 0
-{-
-*Pulse> hsum
-(Pulse left 1 More 0)
-*Pulse> pulse it
-(Pulse left 1 More 1)
-*Pulse> pulse it
-(Pulse left 1 More 3)
-*Pulse> pulse it
-(Pulse left 1 More 6)
-*Pulse> pulse it
-(Pulse left 1 More 10)
-*Pulse> pulse it
-(Pulse left 1 Done 15)
--}
-
-msum :: PulseMapM Identity (Map Char Integer)
-msum = pulseMap 2
-          (\ a k n -> Map.insertWith (+) k n a)
-          (Map.fromList [(c,1) | c <- "abcdefg"])
-          (Map.fromList [('z',1),('d',1),('g',1)])
-
-{-
-Pulse> msum
-(Pulse 2 More fromList [('d',1),('g',1),('z',1)])
-*Pulse> pulse it
-(Pulse 2 More fromList [('a',1),('b',1),('d',1),('g',1),('z',1)])
-*Pulse> pulse it
-(Pulse 2 More fromList [('a',1),('b',1),('c',1),('d',2),('g',1),('z',1)])
-*Pulse> pulse it
-(Pulse 2 More fromList [('a',1),('b',1),('c',1),('d',2),('e',1),('f',1),('g',1),('z',1)])
-*Pulse> pulse it
-(Pulse 2 Done fromList [('a',1),('b',1),('c',1),('d',2),('e',1),('f',1),('g',2),('z',1)])
--}
-
-
-iosum :: PulseListM IO ()
-iosum = PulseList LeftA 2 (\ () k -> putStrLn (show k)) [(1::Int)..5] ()
-{-
-*Pulse> iosum
-(Pulse left 2 More ())
-*Pulse> pulseM it
-1
-2
-(Pulse left 2 More ())
-*Pulse> pulseM it
-3
-4
-(Pulse left 2 More ())
-*Pulse> pulseM it
-5
-(Pulse left 2 Done ())
--}
-
-{-
-Need to serialize
-
--}
 
 -- =========================================================
--- Every instance of MAccum, refers to exactly one function
 
-class MAccum unique (m :: Type -> Type) free item ans | unique -> m free item ans where
-  maccum :: unique -> free -> ans -> item -> m ans
+-- | Serializable List based Pulser (SLP)
+data SLP name (env::[Type]) i (m :: Type -> Type) ans where
+  SLP:: !Int -> !(Closure name env (ans -> i -> m ans)) -> ![i] -> !ans -> SLP name env i m ans
 
--- Here is an example instance
+instance (Show ans, Show i) => Show (SLP name env i m ans) where
+  show (SLP n cl cs ans) = "(SLP "++show n++" "++rootName cl++status cs++show ans++")"
 
--- Make a Unique Unit type. (I.e. an enumeration with one constructor)
-data XXX = XXX
-  deriving Show
+-- we need a pair of Eq instances
 
-instance ToCBOR XXX where toCBOR XXX = encode(Rec XXX)
-instance FromCBOR XXX where fromCBOR = decode(RecD XXX)
+instance (Eq ans, Eq i, Eq (Closure name '[] (ans -> i -> m ans))) => Eq (SLP name '[] i m ans) where
+  (SLP n1 c1 b1 a1) == (SLP n2 c2 b2 a2) = (n1==n2) && (c1==c2) && (b1==b2) && (a1==a2)
 
--- | The unique 'maccum' function of the (MAccum XXX _ _ _ _) instance
+instance (Eq ans, Eq i, Eq z, Eq (Closure name (z ': e) (ans -> i -> m ans))) => Eq (SLP name (z ': e) i m ans) where
+  (SLP n1 c1 b1 a1) == (SLP n2 c2 b2 a2) = (n1==n2) && (c1==c2) && (b1==b2) && (a1==a2)
 
-fooAccum :: [a] -> Int -> Int -> Identity Int
-fooAccum bs ans v = Identity (v+ans + length bs)
-
-instance MAccum XXX Identity [Bool] Int Int where
-  maccum XXX = fooAccum
-
--- =========================================================
--- LL is a first order data type (no embedded functions)
--- that can be given a (Pulsable (LL name)) instance, We
---  can also make ToCBOR and FromCBOR instances for it.
-
-data LL name (m :: Type -> Type) ans where
-  LL:: (MAccum name m free v ans, ToCBOR v, ToCBOR free) =>
-       name -> !Int -> !free -> ![v] -> !ans -> LL name m ans
-
-instance (Show ans, Show name) => Show (LL name m ans) where
-  show (LL name n _ vs ans) = "(LL "++show name++" "++show n++status vs++" "++show ans++")"
-
-
--- There is a single ToCBOR instance for (LL name m ans)
--- But because of the uniqueness of the name, which implies
--- the hidden types (free and v for LL), We must supply
--- a unique FromCBOR instance for each name. See the XXX example below.
-
-instance (Typeable m, ToCBOR name, ToCBOR ans) => ToCBOR (LL name m ans) where
-  toCBOR (LL name n free vs ans) = encode(Rec (LL name) !> To n !> To free !> To vs !> To ans)
-
-instance Pulsable (LL name) where
-   done (LL _name _n _free zs _ans) = isNil zs
-   current (LL _ _ _ _ ans) = ans
-   pulseM (ll@(LL _ _ _ [] _)) = pure ll
-   pulseM (LL name n free balance ans) = do
+instance Pulsable (SLP name env i) where
+   done (SLP _n _cl zs _ans) = isNil zs
+   current (SLP _ _ _ ans) = ans
+   pulseM (ll@(SLP _ _ [] _)) = pure ll
+   pulseM (SLP n cl balance ans) = do
        let (steps, balance') = List.splitAt n balance
-       ans' <- foldlM' (maccum name free) ans steps
-       pure (LL name n free balance' ans')
-   completeM (LL name _ free balance ans) = foldlM' (maccum name free) ans balance
+       ans' <- foldlM' (apply cl) ans steps
+       pure (SLP n cl balance' ans')
+   completeM (SLP _ cl balance ans) = foldlM' (apply cl) ans balance
 
--- =================================================
--- To make a serializable type that has a (Pulsable (LL name)) instance,
--- first, define a Unit type (an enumeration with 1 constructor).
--- This will have a unique MAccum instance, which
--- will refer to a unique function with no free variables.
--- If we follow the pattern below, then the Pulsable instance
--- will refer to that (MAccum) instance, but will store only
--- first order data.
+instance
+   ( ToCBOR ans,
+     ToCBOR i,
+     ToCBOR (Closure name env (ans -> i -> m ans)),
+     Typeable m,
+     Typeable name,
+     Typeable env
+   ) => ToCBOR (SLP name env i m ans) where
+   toCBOR (SLP n cl balance ans) = encode (Rec SLP !> To n !> To cl !> To balance !> To ans)
 
--- We must supply a unique FromCBOR instance for each 'name'. The 'name'
--- fixes the monad 'm' and 'ans' type, as well as the 'maccum' function
--- for XXX at the value level.
-
-instance FromCBOR (LL XXX Identity Int) where
-  fromCBOR = decode (RecD (LL XXX) <! From <! From <! From <! From)
-
-foo :: LL XXX Identity Int
-foo = LL XXX 3 [True] [1,2,3,5,6,7,8] 0
-
-
--- =================================
-
-serial :: LL XXX Identity Int -> IO(LL XXX Identity Int)
-serial x = do
-  let bytes = serialize' x
-  putStrLn("Bytes = " ++ show bytes)
-  case decodeFull' bytes of
-    Right x' -> putStrLn (show x') >> pure x'
-    Left e -> error(show e)
+instance
+   ( FromCBOR ans,
+     FromCBOR i,
+     FromCBOR (Closure name env (ans -> i -> m ans)),
+     Typeable m,
+     Typeable name,
+     Typeable env
+   )
+   => FromCBOR (SLP name env i m ans) where
+   fromCBOR = decode(RecD SLP <! From <! From <! From <! From)
