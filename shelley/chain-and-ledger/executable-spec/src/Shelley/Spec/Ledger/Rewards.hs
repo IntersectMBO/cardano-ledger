@@ -1,8 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -15,6 +18,8 @@ module Shelley.Spec.Ledger.Rewards
     getTopRankedPools,
     StakeShare (..),
     mkApparentPerformance,
+    RewardType (..),
+    Reward (..),
     reward,
     nonMyopicStake,
     nonMyopicMemberRew,
@@ -27,6 +32,8 @@ module Shelley.Spec.Ledger.Rewards
     leaderProbability,
     leaderRew,
     memberRew,
+    aggregateRewards,
+    sumRewards,
   )
 where
 
@@ -34,16 +41,17 @@ import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
     decodeDouble,
+    decodeWord,
     encodeDouble,
     encodeListLen,
+    encodeWord,
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
-import Control.Iterate.SetAlgebra (eval, (◁))
 import Control.Provenance (ProvM, modifyM)
+import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Data.Default.Class (Default, def)
 import Data.Foldable (find, fold)
 import Data.Function (on)
@@ -58,6 +66,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
@@ -65,6 +74,7 @@ import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     UnitInterval,
     activeSlotVal,
+    invalidKey,
     unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Coin
@@ -82,7 +92,7 @@ import Shelley.Spec.Ledger.EpochBoundary
   )
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
-import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
+import Shelley.Spec.Ledger.PParams (ProtVer)
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenancePool (..))
 import Shelley.Spec.Ledger.Serialization
   ( decodeRecordNamed,
@@ -273,9 +283,12 @@ instance CC.Crypto crypto => FromCBOR (NonMyopic crypto) where
 -- corresponding to f^~ in section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 desirability ::
-  PParams era ->
+  ( HasField "_nOpt" pp Natural,
+    HasField "_a0" pp Rational
+  ) =>
+  pp ->
   Coin ->
-  PoolParams (Crypto era) ->
+  PoolParams c ->
   PerformanceEstimate ->
   Coin ->
   Double
@@ -292,23 +305,24 @@ desirability pp r pool (PerformanceEstimate p) (Coin totalStake) =
     tot = max 1 (fromIntegral totalStake)
     Coin pledge = _poolPledge pool
     s = fromIntegral pledge % tot
-    a0 = _a0 pp
-    z0 = 1 % max 1 (fromIntegral (_nOpt pp))
+    a0 = getField @"_a0" pp
+    z0 = 1 % max 1 (fromIntegral (getField @"_nOpt" pp))
 
 -- | Computes the top ranked stake pools
 -- corresponding to section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 getTopRankedPools ::
+  (HasField "_a0" pp Rational, HasField "_nOpt" pp Natural) =>
   Coin ->
   Coin ->
-  PParams era ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
-  Map (KeyHash 'StakePool (Crypto era)) PerformanceEstimate ->
-  Set (KeyHash 'StakePool (Crypto era))
+  pp ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
+  Map (KeyHash 'StakePool crypto) PerformanceEstimate ->
+  Set (KeyHash 'StakePool crypto)
 getTopRankedPools rPot totalStake pp poolParams aps =
   Set.fromList $
-    fmap fst $
-      take (fromIntegral $ _nOpt pp) (sortBy (flip compare `on` snd) rankings)
+    fst
+      <$> take (fromIntegral $ getField @"_nOpt" pp) (sortBy (flip compare `on` snd) rankings)
   where
     pdata = Map.toList $ Map.intersectionWith (,) poolParams aps
     rankings =
@@ -370,24 +384,97 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
     (Coin c, m, _) = poolSpec pool
     m' = unitIntervalToRational m
 
+data RewardType = MemberReward | LeaderReward
+  deriving (Eq, Show, Ord, Generic)
+
+instance NoThunks RewardType
+
+instance NFData RewardType
+
+instance ToCBOR RewardType where
+  toCBOR MemberReward = encodeWord 0
+  toCBOR LeaderReward = encodeWord 1
+
+instance FromCBOR RewardType where
+  fromCBOR =
+    decodeWord >>= \case
+      0 -> pure MemberReward
+      1 -> pure LeaderReward
+      n -> invalidKey n
+
+data Reward crypto = Reward
+  { rewardType :: RewardType,
+    rewardPool :: KeyHash 'StakePool crypto,
+    rewardAmount :: Coin
+  }
+  deriving (Eq, Show, Generic)
+
+-- | Note that this Ord instance is chosen to align precisely
+--  with the Allegra reward aggregation, as given by the
+--  function 'aggregateRewards' so that 'Set.findMax' returns
+--  the expected value.
+instance Ord (Reward crypto) where
+  compare (Reward MemberReward _ _) (Reward LeaderReward _ _) = LT
+  compare (Reward LeaderReward _ _) (Reward MemberReward _ _) = GT
+  compare (Reward _ pool1 _) (Reward _ pool2 _) = compare pool1 pool2
+
+instance NoThunks (Reward crypto)
+
+instance NFData (Reward crypto)
+
+instance CC.Crypto crypto => ToCBOR (Reward crypto) where
+  toCBOR (Reward rt pool c) =
+    encode $ Rec Reward !> To rt !> To pool !> To c
+
+instance CC.Crypto crypto => FromCBOR (Reward crypto) where
+  fromCBOR =
+    decode $ RecD Reward <! From <! From <! From
+
+sumRewards ::
+  forall crypto pp.
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
+  Coin
+sumRewards pp rs = fold $ aggregateRewards pp rs
+
+aggregateRewards ::
+  forall crypto pp.
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
+  Map (Credential 'Staking crypto) Coin
+aggregateRewards pp rewards =
+  if HardForks.aggregatedRewards pp
+    then Map.map (Set.foldr addRewardToCoin mempty) rewards
+    else Map.map lastByOrd rewards
+  where
+    addRewardToCoin r = (<>) (rewardAmount r)
+    -- s should never be null, but we are being cautious
+    lastByOrd s = if Set.null s then mempty else (rewardAmount . Set.findMax) s
+
 -- | Reward one pool
 rewardOnePool ::
-  forall era m.
-  Monad m =>
-  PParams era ->
+  forall c m pp.
+  ( Monad m,
+    HasField "_d" pp UnitInterval,
+    HasField "_a0" pp Rational,
+    HasField "_nOpt" pp Natural
+  ) =>
+  pp ->
   Coin ->
   Natural ->
   Natural ->
-  PoolParams (Crypto era) ->
-  Stake (Crypto era) ->
+  PoolParams c ->
+  Stake c ->
   Rational ->
   Rational ->
   Coin ->
-  Set (Credential 'Staking (Crypto era)) ->
+  Set (Credential 'Staking c) ->
   ProvM
-    (Map (KeyHash 'StakePool (Crypto era)) (RewardProvenancePool (Crypto era)))
+    (Map (KeyHash 'StakePool c) (RewardProvenancePool c))
     m
-    (Map (Credential 'Staking (Crypto era)) Coin)
+    (Map (Credential 'Staking c) (Set (Reward c)))
 rewardOnePool
   pp
   r
@@ -411,20 +498,26 @@ rewardOnePool
         if pledge <= ostake
           then maxPool pp r sigma pr
           else mempty
-      appPerf = mkApparentPerformance (_d pp) sigmaA blocksN blocksTotal
+      appPerf = mkApparentPerformance (getField @"_d" pp) sigmaA blocksN blocksTotal
       poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
       tot = fromIntegral totalStake
       mRewards =
         Map.fromList
           [ ( hk,
-              memberRew
-                poolR
-                pool
-                (StakeShare (fromIntegral c % tot))
-                (StakeShare sigma)
+              Set.singleton $
+                Reward
+                  MemberReward
+                  (_poolId pool)
+                  ( memberRew
+                      poolR
+                      pool
+                      (StakeShare (fromIntegral c % tot))
+                      (StakeShare sigma)
+                  )
             )
             | (hk, Coin c) <- Map.toList stake,
-              notPoolOwner hk
+              notPoolOwner hk,
+              hk `Set.member` addrsRew
           ]
       notPoolOwner (KeyHashObj hk) = hk `Set.notMember` _poolOwners pool
       notPoolOwner (ScriptHashObj _) = False
@@ -434,13 +527,22 @@ rewardOnePool
           pool
           (StakeShare $ fromIntegral ostake % tot)
           (StakeShare sigma)
-      f =
-        if HardForks.aggregatedRewards pp
-          then Map.insertWith (<>)
-          else Map.insert
+      poolRA = getRwdCred $ _poolRAcnt pool
       potentialRewards =
-        f (getRwdCred $ _poolRAcnt pool) lReward mRewards
-      rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
+        if poolRA `Set.member` addrsRew
+          then
+            Map.insertWith
+              Set.union
+              poolRA
+              (Set.singleton (Reward LeaderReward (_poolId pool) lReward))
+              mRewards
+          else mRewards
+      removeDegenerate rwds =
+        let withoutZeros = Set.filter (\rwd -> rewardAmount rwd /= Coin 0) rwds
+         in if Set.null withoutZeros
+              then Nothing
+              else Just withoutZeros
+      rewards' = Map.mapMaybe removeDegenerate potentialRewards
       key = _poolId pool
       provPool =
         RewardProvenancePool
@@ -453,28 +555,31 @@ rewardOnePool
             maxPP = Coin maxP,
             appPerfP = appPerf,
             poolRP = poolR,
-            --mRewardsP = mRewards,
             lRewardP = lReward
           }
 
 reward ::
-  forall m era.
-  Monad m =>
-  PParams era ->
-  BlocksMade (Crypto era) ->
+  forall m c pp.
+  ( Monad m,
+    HasField "_d" pp UnitInterval,
+    HasField "_a0" pp Rational,
+    HasField "_nOpt" pp Natural
+  ) =>
+  pp ->
+  BlocksMade c ->
   Coin ->
-  Set (Credential 'Staking (Crypto era)) ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
-  Stake (Crypto era) ->
-  Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)) ->
+  Set (Credential 'Staking c) ->
+  Map (KeyHash 'StakePool c) (PoolParams c) ->
+  Stake c ->
+  Map (Credential 'Staking c) (KeyHash 'StakePool c) ->
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
   ProvM
-    (Map (KeyHash 'StakePool (Crypto era)) (RewardProvenancePool (Crypto era)))
+    (Map (KeyHash 'StakePool c) (RewardProvenancePool c))
     m
-    ( Map (Credential 'Staking (Crypto era)) Coin,
-      Map (KeyHash 'StakePool (Crypto era)) Likelihood
+    ( Map (Credential 'Staking c) (Set (Reward c)),
+      Map (KeyHash 'StakePool c) Likelihood
     )
 reward
   pp
@@ -489,28 +594,42 @@ reward
   slotsPerEpoch = do
     let totalBlocks = sum b
         Coin activeStake = fold . unStake $ stake
-        aggregate =
-          if HardForks.aggregatedRewards pp
-            then Map.unionWith (<>)
-            else Map.union
+        combine = Map.unionWith Set.union
         -- We fold 'action' over the pairs in the poolParams Map to compute a pair of maps.
         -- we must use a right associative fold. See comments on foldListM below.
         action (hk, pparams) (m1, m2) = do
           let blocksProduced = Map.lookup hk b
               actgr@(Stake s) = poolStake hk delegs stake
               Coin pstake = fold s
-              sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
-              sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
+              sigma =
+                if totalStake == 0
+                  then 0
+                  else fromIntegral pstake % fromIntegral totalStake
+              sigmaA =
+                if activeStake == 0
+                  then 0
+                  else fromIntegral pstake % fromIntegral activeStake
               ls =
                 likelihood
                   (fromMaybe 0 blocksProduced)
-                  (leaderProbability asc sigma (_d pp))
+                  (leaderProbability asc sigma (getField @"_d" pp))
                   slotsPerEpoch
           case blocksProduced of
             Nothing -> pure (m1, Map.insert hk ls m2)
             Just n -> do
-              m <- rewardOnePool pp r n totalBlocks pparams actgr sigma sigmaA (Coin totalStake) addrsRew
-              pure (aggregate m m1, Map.insert hk ls m2)
+              m <-
+                rewardOnePool
+                  pp
+                  r
+                  n
+                  totalBlocks
+                  pparams
+                  actgr
+                  sigma
+                  sigmaA
+                  (Coin totalStake)
+                  addrsRew
+              pure (combine m m1, Map.insert hk ls m2)
     foldListM action (Map.empty, Map.empty) (Map.toList poolParams)
 
 -- | Fold a monadic function 'accum' over a list. It is strict in its accumulating parameter.
@@ -531,15 +650,16 @@ foldListM accum ans (k : more) = do ans1 <- foldListM accum ans more; accum k an
 --   Additionally, instead of passing a rank r to compare with k,
 --   we pass the top k desirable pools and check for membership.
 nonMyopicStake ::
-  PParams era ->
+  HasField "_nOpt" pp Natural =>
+  pp ->
   StakeShare ->
   StakeShare ->
   StakeShare ->
-  KeyHash 'StakePool (Crypto era) ->
-  Set (KeyHash 'StakePool (Crypto era)) ->
+  KeyHash 'StakePool c ->
+  Set (KeyHash 'StakePool c) ->
   StakeShare
 nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
-  let z0 = 1 % max 1 (fromIntegral (_nOpt pp))
+  let z0 = 1 % max 1 (fromIntegral (getField @"_nOpt" pp))
    in if kh `Set.member` topPools
         then StakeShare (max (sigma + t) z0)
         else StakeShare (s + t)
@@ -553,13 +673,16 @@ nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
 --   r to compare with k, we pass the top k desirable pools and
 --   check for membership.
 nonMyopicMemberRew ::
-  PParams era ->
+  ( HasField "_a0" pp Rational,
+    HasField "_nOpt" pp Natural
+  ) =>
+  pp ->
   Coin ->
-  PoolParams (Crypto era) ->
+  PoolParams c ->
   StakeShare ->
   StakeShare ->
   StakeShare ->
-  Set (KeyHash 'StakePool (Crypto era)) ->
+  Set (KeyHash 'StakePool c) ->
   PerformanceEstimate ->
   Coin
 nonMyopicMemberRew

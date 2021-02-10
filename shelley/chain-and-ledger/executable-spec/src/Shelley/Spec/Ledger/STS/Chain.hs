@@ -54,6 +54,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -61,6 +62,7 @@ import Shelley.Spec.Ledger.BaseTypes
     Nonce (..),
     ShelleyBase,
     StrictMaybe (..),
+    UnitInterval,
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader,
@@ -100,7 +102,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams
   ( PParams,
-    PParams' (..),
     ProtVer (..),
   )
 import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv (..), BbodyPredicateFailure, BbodyState (..))
@@ -182,7 +183,9 @@ instance
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
-  Default (State (Core.EraRule "PPUP" era)) =>
+  ( Default (State (Core.EraRule "PPUP" era)),
+    Core.PParams era ~ PParams era
+  ) =>
   WithOrigin (LastAppliedBlock (Crypto era)) ->
   EpochNo ->
   UTxO era ->
@@ -207,7 +210,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     (Coin 0)
                     def
                 )
-                (DPState (def {_genDelegs = (GenDelegs genDelegs)}) def)
+                (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
             )
             pp
             pp
@@ -223,7 +226,12 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
     NeutralNonce
     lab
   where
-    cs = Map.fromList (fmap (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
+    cs =
+      Map.fromList
+        ( fmap
+            (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0))
+            (Map.elems genDelegs)
+        )
 
 instance
   ( Era era,
@@ -239,7 +247,12 @@ instance
     Environment (Core.EraRule "TICK" era) ~ (),
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    Embed (PRTCL (Crypto era)) (CHAIN era)
+    Embed (PRTCL (Crypto era)) (CHAIN era),
+    HasField "_maxBHSize" (Core.PParams era) Natural,
+    HasField "_maxBBSize" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_extraEntropy" (Core.PParams era) Nonce,
+    HasField "_d" (Core.PParams era) UnitInterval
   ) =>
   STS (CHAIN era)
   where
@@ -266,12 +279,18 @@ data ChainChecksData = ChainChecksData
   }
   deriving (Show, Eq, Generic, NoThunks)
 
-pparamsToChainChecksData :: PParams era -> ChainChecksData
+pparamsToChainChecksData ::
+  ( HasField "_maxBHSize" pp Natural,
+    HasField "_maxBBSize" pp Natural,
+    HasField "_protocolVersion" pp ProtVer
+  ) =>
+  pp ->
+  ChainChecksData
 pparamsToChainChecksData pp =
   ChainChecksData
-    { ccMaxBHSize = _maxBHSize pp,
-      ccMaxBBSize = _maxBBSize pp,
-      ccProtocolVersion = _protocolVersion pp
+    { ccMaxBHSize = getField @"_maxBHSize" pp,
+      ccMaxBBSize = getField @"_maxBBSize" pp,
+      ccProtocolVersion = getField @"_protocolVersion" pp
     }
 
 chainChecks ::
@@ -309,7 +328,12 @@ chainTransition ::
     Environment (Core.EraRule "TICK" era) ~ (),
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    Embed (PRTCL (Crypto era)) (CHAIN era)
+    Embed (PRTCL (Crypto era)) (CHAIN era),
+    HasField "_maxBHSize" (Core.PParams era) Natural,
+    HasField "_maxBBSize" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_extraEntropy" (Core.PParams era) Nonce,
+    HasField "_d" (Core.PParams era) UnitInterval
   ) =>
   TransitionRule (CHAIN era)
 chainTransition =
@@ -354,7 +378,7 @@ chainTransition =
         TicknState eta0' etaH' <-
           trans @(Core.EraRule "TICKN" era) $
             TRC
-              ( TicknEnv (_extraEntropy pp') etaC etaPH,
+              ( TicknEnv (getField @"_extraEntropy" pp') etaC etaPH,
                 TicknState eta0 etaH,
                 (e1 /= e2)
               )
@@ -362,7 +386,7 @@ chainTransition =
         PrtclState cs' etaV' etaC' <-
           trans @(PRTCL (Crypto era)) $
             TRC
-              ( PrtclEnv (_d pp') _pd _genDelegs eta0',
+              ( PrtclEnv (getField @"_d" pp') _pd _genDelegs eta0',
                 PrtclState cs etaV etaC,
                 bh
               )

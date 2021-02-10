@@ -16,9 +16,9 @@ import Cardano.Crypto.VRF (hashVerKeyVRF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Reader (runReader, runReaderT)
-import Data.Default.Class(Default(def))
-import Control.Provenance(runProvM,runWithProvM)
+import Control.Provenance (runProvM, runWithProvM)
 import Control.State.Transition.Extended (IRC (..), TRC (..), applySTS)
+import Data.Default.Class (Default (def))
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
@@ -40,7 +40,8 @@ import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesisStaking (..))
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (Staking))
 import qualified Shelley.Spec.Ledger.LedgerState as LS
-import Shelley.Spec.Ledger.RewardProvenance(RewardProvenance)
+import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainState, chainNes, totalAda)
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
@@ -64,7 +65,6 @@ import Test.Shelley.Spec.Ledger.Generator.Trace.Chain
     registerGenesisStaking,
   )
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
-
 
 -- | Generate a chain state at a given epoch. Since we are only concerned about
 -- rewards, this will populate the chain with empty blocks (only issued by the
@@ -188,12 +188,11 @@ createRUpd globals cs =
       runIdentity $
         epochInfoSize (epochInfo globals) (LS.nesEL nes)
 
-
 -- | Benchmark creating a reward update.
 createRUpdWithProv ::
   Globals ->
   ChainState B ->
-  (LS.RewardUpdate B_Crypto,RewardProvenance B_Crypto)
+  (LS.RewardUpdate B_Crypto, RewardProvenance B_Crypto)
 createRUpdWithProv globals cs =
   runIdentity $
     runReaderT

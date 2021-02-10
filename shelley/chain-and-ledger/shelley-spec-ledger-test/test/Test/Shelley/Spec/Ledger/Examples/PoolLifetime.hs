@@ -20,6 +20,7 @@ import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
+import Data.Default.Class (def)
 import Data.Foldable (fold)
 import Data.Group (invert)
 import qualified Data.Map.Strict as Map
@@ -47,18 +48,20 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     PoolDistr (..),
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( RewardUpdate (..),
     decayFactor,
-    emptyRewardUpdate
+    emptyRewardUpdate,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
+    Reward (..),
+    RewardType (..),
     applyDecay,
     leaderProbability,
     likelihood,
@@ -120,7 +123,6 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
-import Data.Default.Class (def)
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -194,7 +196,7 @@ txEx1 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated $ txbodyEx1 @c)
+            (hashAnnotated (txbodyEx1 @c))
             ( (asWitness <$> [Cast.alicePay, Cast.carlPay])
                 <> (asWitness <$> [Cast.aliceStake])
                 <> [asWitness $ cold Cast.alicePoolKeys]
@@ -266,7 +268,7 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 txbodyEx2 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx2 =
   TxBody
-    { _inputs = Set.fromList [TxIn (txid txbodyEx1) 0],
+    { _inputs = Set.fromList [TxIn (txid @(ShelleyEra c) (txbodyEx1 @c)) 0],
       _outputs =
         StrictSeq.fromList
           [ TxOut Cast.aliceAddr (Val.inject aliceCoinEx2Base),
@@ -291,7 +293,7 @@ txEx2 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated $ txbodyEx2 @c)
+            (hashAnnotated (txbodyEx2 @c))
             [ asWitness Cast.alicePay,
               asWitness Cast.aliceStake,
               asWitness Cast.bobStake
@@ -404,7 +406,7 @@ aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 txbodyEx4 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx4 =
   TxBody
-    { _inputs = Set.fromList [TxIn (txid txbodyEx2) 0],
+    { _inputs = Set.fromList [TxIn (txid @(ShelleyEra c) txbodyEx2) 0],
       _outputs = StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)],
       _certs =
         StrictSeq.fromList
@@ -423,7 +425,7 @@ txEx4 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated $ txbodyEx4 @c)
+            (hashAnnotated (txbodyEx4 @c))
             [asWitness Cast.alicePay, asWitness Cast.carlStake]
       }
     SNothing
@@ -690,8 +692,12 @@ rewardUpdateEx8 =
       deltaR = deltaR8,
       rs =
         Map.fromList
-          [ (Cast.aliceSHK, aliceRAcnt8),
-            (Cast.bobSHK, bobRAcnt8)
+          [ ( Cast.aliceSHK,
+              Set.singleton $ Reward LeaderReward (hk Cast.alicePoolKeys) aliceRAcnt8
+            ),
+            ( Cast.bobSHK,
+              Set.singleton $ Reward MemberReward (hk Cast.alicePoolKeys) bobRAcnt8
+            )
           ],
       deltaF = DeltaCoin 0,
       nonMyopic = nonMyopicEx8
@@ -797,7 +803,7 @@ txEx10 =
     txbodyEx10
     mempty
       { addrWits =
-          makeWitnessesVKey (hashAnnotated $ txbodyEx10 @c) [asWitness Cast.bobPay, asWitness Cast.bobStake]
+          makeWitnessesVKey (hashAnnotated (txbodyEx10 @c)) [asWitness Cast.bobPay, asWitness Cast.bobStake]
       }
     SNothing
 
@@ -844,10 +850,10 @@ aliceCoinEx11Ptr = aliceCoinEx4Base <-> feeTx11
 aliceRetireEpoch :: EpochNo
 aliceRetireEpoch = EpochNo 5
 
-txbodyEx11 :: Cr.Crypto c => TxBody (ShelleyEra c)
+txbodyEx11 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx11 =
   TxBody
-    (Set.fromList [TxIn (txid txbodyEx4) 0])
+    (Set.fromList [TxIn (txid @(ShelleyEra c) txbodyEx4) 0])
     (StrictSeq.singleton $ TxOut Cast.alicePtrAddr (Val.inject aliceCoinEx11Ptr))
     (StrictSeq.fromList [DCertPool (RetirePool (hk Cast.alicePoolKeys) aliceRetireEpoch)])
     (Wdrl Map.empty)
@@ -863,7 +869,7 @@ txEx11 =
     mempty
       { addrWits =
           makeWitnessesVKey
-            (hashAnnotated $ txbodyEx11 @c)
+            (hashAnnotated (txbodyEx11 @c))
             ( [asWitness Cast.alicePay]
                 <> [asWitness $ cold Cast.alicePoolKeys]
             )

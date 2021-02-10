@@ -14,12 +14,10 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Shelley.Spec.Ledger.API
@@ -29,6 +27,7 @@ import Shelley.Spec.Ledger.API
     Update,
   )
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.EraMapping ()
 import Shelley.Spec.Ledger.Scripts (MultiSig (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -51,6 +50,7 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
     ScriptClass (..),
   )
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain ()
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
 
 {------------------------------------------------------------------------------
   ShelleyEra instances for EraGen and ScriptClass
@@ -97,7 +97,8 @@ instance CC.Crypto c => ScriptClass (ShelleyEra c) where
  -----------------------------------------------------------------------------}
 
 genTxBody ::
-  (ShelleyBased era, Core.TxOut era ~ TxOut era) =>
+  (ShelleyTest era) =>
+  PParams era ->
   SlotNo ->
   Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
@@ -107,7 +108,7 @@ genTxBody ::
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Gen (TxBody era, [MultiSig (Crypto era)])
-genTxBody slot inputs outputs certs wdrls fee update adHash = do
+genTxBody _pparams slot inputs outputs certs wdrls fee update adHash = do
   ttl <- genTimeToLive slot
   return
     ( TxBody

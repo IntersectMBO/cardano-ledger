@@ -33,7 +33,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness)
 import Shelley.Spec.Ledger.LedgerState (emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
@@ -78,7 +78,6 @@ import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils (getBlockNonce, testGlobals)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
-
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -175,10 +174,10 @@ aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 newPoolParams :: Cr.Crypto c => PoolParams c
 newPoolParams = Cast.alicePoolParams {_poolCost = Coin 500}
 
-txbodyEx2 :: Cr.Crypto c => TxBody (ShelleyEra c)
+txbodyEx2 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx2 =
   TxBody
-    (Set.fromList [TxIn (txid txbodyEx1) 0])
+    (Set.fromList [TxIn (txid @(ShelleyEra c) txbodyEx1) 0])
     (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx2)])
     ( StrictSeq.fromList
         ( [ DCertPool (RegPool newPoolParams)

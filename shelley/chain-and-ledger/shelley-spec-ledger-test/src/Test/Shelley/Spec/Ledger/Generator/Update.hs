@@ -4,6 +4,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
@@ -14,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Generator.Update
   )
 where
 
+import Cardano.Ledger.Era (Crypto)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -32,8 +34,6 @@ import Shelley.Spec.Ledger.BaseTypes
     mkNonceFromNumber,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-
-import Cardano.Ledger.Era (Crypto, Era)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
@@ -70,8 +70,9 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Utils
   ( GenesisKeyPair,
+    ShelleyTest,
     epochFromSlotNo,
-    unsafeMkUnitInterval
+    unsafeMkUnitInterval,
   )
 
 genRationalInThousands :: HasCallStack => Integer -> Integer -> Gen Rational
@@ -207,6 +208,7 @@ genNextProtocolVersion pp = do
 -- Return an empty update if it is too late in the epoch for updates.
 genPPUpdate ::
   HasCallStack =>
+  ShelleyTest era =>
   Constants ->
   PParams era ->
   [KeyHash 'Genesis (Crypto era)] ->
@@ -255,7 +257,7 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) pp genesisKeys = do
 
 -- | Generate an @Update (where all the given nodes participate)
 genUpdateForNodes ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, ShelleyTest era) =>
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
@@ -271,7 +273,7 @@ genUpdateForNodes c s e coreKeys pp =
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::
-  (HasCallStack, Era era) =>
+  (HasCallStack, ShelleyTest era) =>
   Constants ->
   SlotNo ->
   [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->

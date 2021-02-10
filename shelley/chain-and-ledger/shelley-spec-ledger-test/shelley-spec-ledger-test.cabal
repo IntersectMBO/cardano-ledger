@@ -84,6 +84,7 @@ library
     cardano-crypto-test,
     cardano-crypto-wrapper,
     cardano-crypto,
+    cardano-crypto-praos,
     cardano-ledger-test,
     cardano-ledger,
     cardano-prelude-test,
@@ -141,6 +142,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Rules.TestDeleg
       Test.Shelley.Spec.Ledger.Rules.TestPool
       Test.Shelley.Spec.Ledger.Rules.TestPoolreap
+      Test.Shelley.Spec.Ledger.SafeHash
       Test.Shelley.Spec.Ledger.Serialisation
       Test.Shelley.Spec.Ledger.Serialisation.CDDL
       Test.Shelley.Spec.Ledger.Serialisation.Golden.Address

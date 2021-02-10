@@ -29,7 +29,7 @@ import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash (EraIndependentTxBody, hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     KeyPair (..),
@@ -42,7 +42,7 @@ import Shelley.Spec.Ledger.LedgerState (FutureGenDeleg (..), emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..))
+import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), WitnessSet)
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     GenesisDelegCert (..),
@@ -51,7 +51,7 @@ import Shelley.Spec.Ledger.TxBody
     TxOut (..),
     Wdrl (..),
   )
-import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
+import Shelley.Spec.Ledger.UTxO (UTxO (..),  makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
@@ -84,6 +84,8 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
+import Cardano.Crypto.DSIGN.Class(Signable)
+
 
 initUTxO :: (ShelleyTest era) => UTxO era
 initUTxO =
@@ -142,26 +144,26 @@ txbodyEx1 =
     aliceCoinEx1 = aliceInitCoin <-> (Val.inject feeTx1)
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
+-- fooo :: Bool
+-- fooo = addrWits == True
+
 txEx1 ::
   forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  ( CryptoClass.Crypto c,
+    -- HashAlgorithm (CryptoClass.HASH c),
+    Signable (CryptoClass.DSIGN c)
+             (Hash.Hash (CryptoClass.HASH c) EraIndependentTxBody)
+  ) =>
   Tx (ShelleyEra c)
-txEx1 =
-  Tx
-    txbodyEx1
-    mempty
-      { addrWits =
-          makeWitnessesVKey
-            (hashAnnotated @(TxBody (ShelleyEra c)) $ txbodyEx1)
-            ( [asWitness Cast.alicePay]
-                <> [ asWitness $
-                       KeyPair
-                         (coreNodeVK 0)
-                         (coreNodeSK @c 0)
-                   ]
-            )
-      }
-    SNothing
+txEx1 = Tx txbodyEx1 wits SNothing
+  where wits :: WitnessSet (ShelleyEra c)
+        wits = mempty
+                { addrWits = makeWitnessesVKey @c
+                               (hashAnnotated (txbodyEx1 @c))
+                               ( [asWitness Cast.alicePay]
+                                 <> [ asWitness $ KeyPair @'Genesis @c
+                                                   (coreNodeVK 0)
+                                                   (coreNodeSK @c 0) ] ) }
 
 blockEx1 ::
   forall c.

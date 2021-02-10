@@ -30,10 +30,13 @@ where
 -- Cypto and Era stuff
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val (Val (inject))
 import Control.State.Transition.Extended (TRC (..), applySTS)
+import Data.Default.Class (def)
 import qualified Data.Map as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -49,7 +52,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash,
@@ -107,7 +109,6 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
-import Data.Default.Class (def)
 
 -- ===============================================
 -- A special Era to run the Benchmarks in
@@ -174,7 +175,7 @@ ppsBench =
       _tau = unsafeMkUnitInterval 0.2
     }
 
-ledgerEnv :: LedgerEnv era
+ledgerEnv :: (Core.PParams era ~ PParams era) => LedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) 0 ppsBench (AccountState (Coin 0) (Coin 0))
 
 testLEDGER ::

@@ -22,6 +22,7 @@ library
   exposed-modules:
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
+     Cardano.Ledger.Alonzo.Language
     Cardano.Ledger.Alonzo.PParams
     Cardano.Ledger.Alonzo.Scripts
     Cardano.Ledger.Alonzo.Tx
@@ -89,10 +90,13 @@ test-suite tests
     base >=4.14 && <4.15,
     base16-bytestring,
     bytestring,
+    containers,
     cardano-binary,
     cardano-ledger-alonzo,
     cardano-ledger-shelley-ma-test,
     QuickCheck,
+    small-steps,
+    shelley-spec-ledger,
     shelley-spec-ledger-test,
     tasty-hunit,
     tasty-quickcheck,

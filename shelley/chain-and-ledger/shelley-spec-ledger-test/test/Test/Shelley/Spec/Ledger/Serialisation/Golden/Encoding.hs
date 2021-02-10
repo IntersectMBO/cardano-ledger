@@ -100,7 +100,7 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShots (..),
     Stake (..),
   )
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash (SafeHash, EraIndependentTxBody, extractHash, hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),
@@ -152,7 +152,7 @@ import Shelley.Spec.Ledger.Serialization
     ipv4ToBytes,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), hashScript)
+import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), WitnessSet, hashScript)
 import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),
     PoolMetadata (..),
@@ -252,7 +252,7 @@ testTxb =
 testTxbHash ::
   forall era.
   ShelleyTest era =>
-  Hash (Crypto era) EraIndependentTxBody
+  SafeHash (Crypto era) EraIndependentTxBody
 testTxbHash = hashAnnotated $ testTxb @era
 
 testKey1 :: CC.Crypto crypto => KeyPair 'Payment crypto
@@ -298,7 +298,7 @@ testKey1SigToken = e
     s =
       signedDSIGN @(Crypto era)
         (sKey $ testKey1 @(Crypto era))
-        (testTxbHash @era) ::
+        (extractHash (testTxbHash @era)) ::
         SignedDSIGN (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
     Encoding e = encodeSignedDSIGN s
 
@@ -941,11 +941,11 @@ tests =
               (SlotNo 500)
               SNothing
               SNothing
-          txbh = hashAnnotated txb
-          w = makeWitnessVKey txbh testKey1
+          txbh = (hashAnnotated txb)
+          w = makeWitnessVKey @C_Crypto txbh testKey1
        in checkEncodingCBORAnnotated
             "tx_min"
-            (Tx txb mempty {addrWits = Set.singleton w} SNothing)
+            (Tx txb (mempty {addrWits = Set.singleton w} :: Shelley.Spec.Ledger.Tx.WitnessSet C) SNothing)
             ( T (TkListLen 3)
                 <> S txb
                 <> T (TkMapLen 1)
@@ -965,9 +965,10 @@ tests =
               (SlotNo 500)
               SNothing
               SNothing
-          txbh = hashAnnotated txb
-          w = makeWitnessVKey txbh testKey1
+          txbh = (hashAnnotated txb)
+          w = makeWitnessVKey @C_Crypto txbh testKey1
           s = Map.singleton (hashScript @C testScript) (testScript @C_Crypto)
+          wits :: Shelley.Spec.Ledger.Tx.WitnessSet C
           wits = mempty {addrWits = Set.singleton w, scriptWits = s}
           md = MD.Metadata $ Map.singleton 17 (MD.I 42)
        in checkEncodingCBORAnnotated

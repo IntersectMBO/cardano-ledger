@@ -11,8 +11,7 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData)
-import Cardano.Ledger.Core (ChainData, SerialisableData)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
@@ -20,7 +19,6 @@ import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody
 import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
 import Cardano.Ledger.ShelleyMA.TxBody ()
-import Cardano.Ledger.Torsor (Torsor (Delta))
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
 import Data.Foldable (Foldable (toList))
@@ -35,7 +33,7 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Delegation.Certificates (requiresVKeyWitness)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState (UTxOState)
-import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.PParams (ProtVer, Update)
 import qualified Shelley.Spec.Ledger.STS.Ledger as Shelley
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.STS.Utxow
@@ -123,10 +121,7 @@ instance
     UsesTxOut era,
     UsesAuxiliary era,
     UsesScript era,
-    ChainData (Delta (Core.Value era)),
-    SerialisableData (Delta (Core.Value era)),
     ValidateScript era,
-    ValidateAuxiliaryData era,
     GetPolicies (Core.Value era) (Crypto era),
     Embed (Core.EraRule "UTXO" era) (UTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
@@ -143,7 +138,8 @@ instance
           (AuxiliaryDataHash (Crypto era))
       ),
     HasField "mint" (Core.TxBody era) (Core.Value era),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   STS (UTXOW era)
   where

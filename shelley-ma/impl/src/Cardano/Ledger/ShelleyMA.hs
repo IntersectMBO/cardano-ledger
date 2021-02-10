@@ -7,8 +7,6 @@
 
 module Cardano.Ledger.ShelleyMA where
 
-import Cardano.Binary (toCBOR)
-import Cardano.Crypto.Hash (castHash, hashWithSerialiser)
 import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
     ValidateAuxiliaryData (..),
@@ -17,8 +15,17 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value)
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut (..), UsesValue)
-import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData, pattern AuxiliaryData)
+import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesPParams (..),
+    UsesTxBody,
+    UsesTxOut (..),
+    UsesValue,
+  )
+import Cardano.Ledger.ShelleyMA.AuxiliaryData
+  ( AuxiliaryData,
+    pattern AuxiliaryData,
+  )
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     ValidityInterval,
@@ -32,6 +39,7 @@ import Data.Typeable (Typeable)
 import GHC.Records (HasField)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
+import qualified Shelley.Spec.Ledger.PParams as Shelley
 import Shelley.Spec.Ledger.Tx
   ( TxOut (..),
     ValidateScript (..),
@@ -69,6 +77,16 @@ instance CryptoClass.Crypto c => UsesTxOut (ShelleyMAEra 'Mary c) where
 instance CryptoClass.Crypto c => UsesTxOut (ShelleyMAEra 'Allegra c) where
   makeTxOut _ a v = TxOut a v
 
+instance
+  (CryptoClass.Crypto c, Typeable ma) =>
+  UsesPParams (ShelleyMAEra ma c)
+  where
+  type
+    PParamsDelta (ShelleyMAEra ma c) =
+      Shelley.PParamsUpdate (ShelleyMAEra ma c)
+
+  mergePPUpdates _ = Shelley.updatePParams
+
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
@@ -91,6 +109,10 @@ type instance
   Core.AuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c) =
     AuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c)
 
+type instance
+  Core.PParams (ShelleyMAEra (ma :: MaryOrAllegra) c) =
+    Shelley.PParams (ShelleyMAEra (ma :: MaryOrAllegra) c)
+
 --------------------------------------------------------------------------------
 -- Ledger data instances
 --------------------------------------------------------------------------------
@@ -108,10 +130,9 @@ instance
 
 instance
   ( CryptoClass.Crypto c,
-    Typeable ma,
     Core.AnnotatedData (Core.Script (ShelleyMAEra ma c))
   ) =>
   ValidateAuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c)
   where
-  hashAuxiliaryData = AuxiliaryDataHash . castHash . hashWithSerialiser toCBOR
   validateAuxiliaryData (AuxiliaryData md as) = deepseq as $ all validMetadatum md
+  hashAuxiliaryData aux = AuxiliaryDataHash (hashAnnotated aux)

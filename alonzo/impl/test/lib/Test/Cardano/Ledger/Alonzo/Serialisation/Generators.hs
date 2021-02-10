@@ -13,27 +13,38 @@
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (Data (..), DataHash (..), PlutusData (..))
-import Cardano.Ledger.Alonzo.PParams (PPHash (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag (..))
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), Data (..), PlutusData (..))
+import Cardano.Ledger.Alonzo.Language
+import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices (..), Script (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
-  ( IsFee (..),
-    TxOut (..),
+  ( TxOut (..),
   )
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 
--- TODO correct arbitrary generator for Data
 instance Arbitrary (Data era) where
-  arbitrary = pure (Data NotReallyData)
+  arbitrary = Data <$> arbitrary
+
+instance Arbitrary PlutusData where
+  arbitrary = pure NotReallyData
+
+instance
+  ( UsesScript era,
+    Ord (Core.Script era),
+    Arbitrary (Core.Script era)
+  ) =>
+  Arbitrary (AuxiliaryData era)
+  where
+  arbitrary = AuxiliaryData <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary Tag where
   arbitrary = elements [Spend, Mint, Cert, Rewrd]
@@ -54,31 +65,15 @@ instance
   Arbitrary (TxWitness era)
   where
   arbitrary =
-    FlatWitness
+    TxWitness
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
 
-instance
-  ( Era era,
-    UsesValue era,
-    Mock (Crypto era),
-    Arbitrary (Core.Script era),
-    UsesScript era
-  ) =>
-  Arbitrary (ScriptData era)
-  where
-  arbitrary = ScriptData <$> arbitrary <*> arbitrary <*> arbitrary
-
-deriving newtype instance CC.Crypto c => Arbitrary (ScriptDataHash c)
-
-deriving newtype instance CC.Crypto c => Arbitrary (DataHash c)
-
-deriving newtype instance CC.Crypto c => Arbitrary (PPHash c)
-
-deriving newtype instance Arbitrary IsFee
+instance HasAlgorithm c => Arbitrary (SafeHash c i) where
+  arbitrary = unsafeMakeSafeHash <$> arbitrary
 
 instance
   ( Era era,
@@ -127,3 +122,65 @@ instance Mock c => Arbitrary (Tx (AlonzoEra c)) where
 
 instance Mock c => Arbitrary (Script (AlonzoEra c)) where
   arbitrary = frequency [(1, pure PlutusScript), (9, NativeScript <$> arbitrary)]
+
+-- ==========================
+--
+
+instance Arbitrary Language where
+  arbitrary = elements [PlutusV1]
+
+instance Arbitrary Prices where
+  arbitrary = Prices <$> arbitrary <*> arbitrary
+
+instance Arbitrary CostModel where
+  arbitrary = CostModel <$> arbitrary
+
+instance Arbitrary (PParams era) where
+  arbitrary =
+    PParams
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance Arbitrary (PParamsUpdate era) where
+  arbitrary =
+    PParams
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary

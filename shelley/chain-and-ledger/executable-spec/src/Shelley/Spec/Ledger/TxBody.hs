@@ -55,7 +55,7 @@ module Shelley.Spec.Ledger.TxBody
     TxId (..),
     TxIn (TxIn, ..),
     EraIndependentTxBody,
-    eraIndTxBodyHash,
+    -- eraIndTxBodyHash,
     TxOut (TxOut, TxOutCompact),
     Url,
     Wdrl (..),
@@ -85,16 +85,20 @@ import Cardano.Binary
     serializeEncoding,
     szCases,
   )
+import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, Crypto)
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley.Constraints (TransValue)
+import Cardano.Ledger.SafeHash
+import Cardano.Ledger.Shelley.Constraints (PParamsDelta, TransValue)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude
-  ( panic,
+  ( HeapWords (..),
+    panic,
   )
+import qualified Cardano.Prelude as HW
 import Control.DeepSeq (NFData (rnf))
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
@@ -104,6 +108,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Short (ShortByteString, pack)
 import Data.Coders
   ( Decode (..),
     Density (..),
@@ -116,7 +121,6 @@ import Data.Coders
     field,
     (!>),
   )
-import Data.Coerce (coerce)
 import Data.Constraint (Constraint)
 import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
@@ -165,7 +169,6 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeCredential,
   )
-import Shelley.Spec.Ledger.Hashing
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),
@@ -415,9 +418,9 @@ instance CC.Crypto crypto => FromJSON (PoolParams crypto) where
 -- ====================================================================================
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId crypto = TxId {_unTxId :: Hash crypto EraIndependentTxBody}
+newtype TxId crypto = TxId {_unTxId :: SafeHash crypto EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks)
+  deriving newtype (NoThunks, HeapWords)
 
 deriving newtype instance CC.Crypto crypto => ToCBOR (TxId crypto)
 
@@ -425,12 +428,14 @@ deriving newtype instance CC.Crypto crypto => FromCBOR (TxId crypto)
 
 deriving newtype instance CC.Crypto crypto => NFData (TxId crypto)
 
+instance HeapWords (TxIn crypto) where
+  heapWords (TxInCompact txid ix) = 3 + HW.heapWordsUnpacked txid + HW.heapWordsUnpacked (ix)
+
 type TransTxId (c :: Type -> Constraint) era =
   -- Transaction Ids are the hash of a transaction body, which contains
   -- a Core.TxBody and Core.TxOut, hence the need for the ToCBOR instances
   -- in order to hash them.
-  ( HashIndex (Core.TxBody era) ~ EraIndependentTxBody,
-    HashAnnotated (Core.TxBody era) era,
+  ( HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
     ToCBOR (Core.TxBody era),
     ToCBOR (Core.TxOut era),
     TransValue ToCBOR era,
@@ -472,9 +477,25 @@ data TxOut era
 
 type TransTxOut (c :: Type -> Constraint) era =
   ( c (Core.Value era),
-    c (CompactForm (Core.Value era)),
     Compactible (Core.Value era)
   )
+
+-- assume Shelley+ type address : payment addr, staking addr (same length as payment), plus 1 word overhead
+instance
+  ( CC.Crypto (Crypto era),
+    HeapWords (CompactForm (Core.Value era))
+  ) =>
+  HeapWords (TxOut era)
+  where
+  heapWords (TxOutCompact _ vl) =
+    3
+      + (heapWords (packedADDRHASH (Proxy :: Proxy era)))
+      + heapWords vl
+
+-- a ShortByteString of the same length as the ADDRHASH
+-- used to calculate heapWords
+packedADDRHASH :: forall proxy era. (CC.Crypto (Crypto era)) => proxy era -> ShortByteString
+packedADDRHASH _ = pack (replicate (fromIntegral $ (1 + 2 * HS.sizeHash (Proxy :: Proxy (CC.ADDRHASH (Crypto era))))) (1 :: Word8))
 
 instance
   (TransTxOut Show era, Era era) => -- Use the weakest constraint possible here
@@ -645,19 +666,35 @@ deriving instance TransTxBody NoThunks era => NoThunks (TxBodyRaw era)
 
 type TransTxBody (c :: Type -> Constraint) era =
   ( c (Core.TxOut era),
-    HashIndex (Core.TxBody era) ~ EraIndependentTxBody
+    c (PParamsDelta era),
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
   )
 
-deriving instance CC.Crypto (Crypto era) => NFData (TxBodyRaw era)
+deriving instance
+  (CC.Crypto (Crypto era), NFData (PParamsDelta era)) =>
+  NFData (TxBodyRaw era)
 
 deriving instance (Era era, TransTxBody Eq era) => Eq (TxBodyRaw era)
 
 deriving instance (Era era, TransTxBody Show era) => Show (TxBodyRaw era)
 
-instance (TransTxBody FromCBOR era, Era era) => FromCBOR (TxBodyRaw era) where
-  fromCBOR = decode (SparseKeyed "TxBody" baseTxBodyRaw boxBody [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")])
+instance
+  (TransTxBody FromCBOR era, ToCBOR (PParamsDelta era), Era era) =>
+  FromCBOR (TxBodyRaw era)
+  where
+  fromCBOR =
+    decode
+      ( SparseKeyed
+          "TxBody"
+          baseTxBodyRaw
+          boxBody
+          [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")]
+      )
 
-instance (TransTxBody FromCBOR era, Era era) => FromCBOR (Annotator (TxBodyRaw era)) where
+instance
+  (TransTxBody FromCBOR era, ToCBOR (PParamsDelta era), Era era) =>
+  FromCBOR (Annotator (TxBodyRaw era))
+  where
   fromCBOR = pure <$> fromCBOR
 
 -- =================================================================
@@ -682,7 +719,10 @@ isSNothing _ = False
 -- | Choose a de-serialiser when given the key (of type Word).
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
-boxBody :: (Era era, TransTxBody FromCBOR era) => Word -> Field (TxBodyRaw era)
+boxBody ::
+  (Era era, ToCBOR (PParamsDelta era), TransTxBody FromCBOR era) =>
+  Word ->
+  Field (TxBodyRaw era)
 boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
 boxBody 1 = field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
 boxBody 4 = field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
@@ -696,7 +736,10 @@ boxBody n = field (\_ t -> t) (Invalid n)
 -- | Tells how to serialise each field, and what tag to label it with in the
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
-txSparse :: (TransTxBody ToCBOR era, Era era) => TxBodyRaw era -> Encode ('Closed 'Sparse) (TxBodyRaw era)
+txSparse ::
+  (TransTxBody ToCBOR era, FromCBOR (PParamsDelta era), Era era) =>
+  TxBodyRaw era ->
+  Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
   Keyed (\i o f t c w u h -> TxBodyRaw i o c w f t u h)
     !> Key 0 (E encodeFoldable input) -- We don't have to send these in TxBodyRaw order
@@ -723,7 +766,7 @@ baseTxBodyRaw =
       _mdHashX = SNothing
     }
 
-instance (Era era, TransTxBody ToCBOR era) => ToCBOR (TxBodyRaw era) where
+instance (Era era, FromCBOR (PParamsDelta era), TransTxBody ToCBOR era) => ToCBOR (TxBodyRaw era) where
   toCBOR x = encode (txSparse x)
 
 -- ====================================================
@@ -731,11 +774,14 @@ instance (Era era, TransTxBody ToCBOR era) => ToCBOR (TxBodyRaw era) where
 
 newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
   deriving (Generic, Typeable)
+  deriving newtype (SafeToHash)
 
 deriving newtype instance
   (TransTxBody NoThunks era, Typeable era) => NoThunks (TxBody era)
 
-deriving newtype instance CC.Crypto (Crypto era) => NFData (TxBody era)
+deriving newtype instance
+  (CC.Crypto (Crypto era), NFData (PParamsDelta era)) =>
+  NFData (TxBody era)
 
 deriving instance (Era era, TransTxBody Show era) => Show (TxBody era)
 
@@ -744,12 +790,12 @@ deriving instance (Era era, TransTxBody Eq era) => Eq (TxBody era)
 deriving via
   (Mem (TxBodyRaw era))
   instance
-    (Era era, TransTxBody FromCBOR era) =>
+    (Era era, ToCBOR (PParamsDelta era), TransTxBody FromCBOR era) =>
     FromCBOR (Annotator (TxBody era))
 
 -- | Pattern for use by external users
 pattern TxBody ::
-  (Era era, TransTxBody ToCBOR era) =>
+  (Era era, FromCBOR (PParamsDelta era), TransTxBody ToCBOR era) =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (Core.TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
@@ -781,8 +827,7 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
 
 {-# COMPLETE TxBody #-}
 
-instance Era era => HashAnnotated (TxBody era) era where
-  type HashIndex (TxBody era) = EraIndependentTxBody
+instance (Era era, c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 instance (Era era) => ToCBOR (TxBody era) where
   toCBOR (TxBodyConstr memo) = toCBOR memo
@@ -853,13 +898,15 @@ pattern WitVKey k s <-
           hash = asWitness $ hashKey k
        in WitVKey' k s hash bytes
 
+{-
 -- | Compute an era-independent transaction body hash
 eraIndTxBodyHash ::
   forall era.
   Era era =>
   TxBody era ->
-  Hash (Crypto era) EraIndependentTxBody
-eraIndTxBodyHash = coerce . hashAnnotated
+  SafeHash (Crypto era) EraIndependentTxBody
+eraIndTxBodyHash x = hashAnnotated x
+-}
 
 {-# COMPLETE WitVKey #-}
 
@@ -997,7 +1044,7 @@ instance-- use the weakest constraint necessary
 
 instance-- use the weakest constraint necessary
 
-  (Era era, TransTxOut DecodeNonNegative era) =>
+  (Era era, TransTxOut DecodeNonNegative era, Show (Core.Value era)) =>
   FromCBOR (TxOut era)
   where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do

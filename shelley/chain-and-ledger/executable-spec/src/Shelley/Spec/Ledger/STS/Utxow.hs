@@ -31,8 +31,8 @@ import Cardano.Binary
 import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash,
     ValidateAuxiliaryData (..),
+    hashAuxiliaryData,
   )
-import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints
@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
-import Cardano.Ledger.Torsor (Torsor (Delta))
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩))
@@ -99,7 +98,7 @@ import Shelley.Spec.Ledger.LedgerState
     witsFromWitnessSet,
     witsVKeyNeeded,
   )
-import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.PParams (ProtVer, Update)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..), UtxoPredicateFailure)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization
@@ -163,10 +162,7 @@ instance
     UsesScript era,
     UsesAuxiliary era,
     UsesTxBody era,
-    ChainData (Delta (Core.Value era)),
-    SerialisableData (Delta (Core.Value era)),
     ValidateScript era,
-    ValidateAuxiliaryData era,
     Embed (Core.EraRule "UTXO" era) (UTXOW era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
@@ -177,7 +173,8 @@ instance
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   STS (UTXOW era)
   where
@@ -283,7 +280,6 @@ utxoWitnessed ::
     UsesTxBody era,
     UsesTxOut era,
     ValidateScript era,
-    ValidateAuxiliaryData era,
     STS (utxow era),
     BaseM (utxow era) ~ ShelleyBase,
     Embed (Core.EraRule "UTXO" era) (utxow era),
@@ -299,7 +295,8 @@ utxoWitnessed ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   (UTxO era -> Tx era -> Set (ScriptHash (Crypto era))) ->
   TransitionRule (utxow era)

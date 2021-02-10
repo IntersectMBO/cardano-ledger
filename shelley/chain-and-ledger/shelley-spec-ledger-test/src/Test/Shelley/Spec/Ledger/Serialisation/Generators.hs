@@ -19,6 +19,7 @@ module Test.Shelley.Spec.Ledger.Serialisation.Generators () where
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Generic.Random (genericArbitraryU)
 import Shelley.Spec.Ledger.API (TxBody (TxBody))
+import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Utxo as STS
 import Test.QuickCheck
   ( Arbitrary,
@@ -50,3 +51,10 @@ instance Mock c => Arbitrary (TxBody (ShelleyEra c)) where
 instance Mock c => Arbitrary (STS.UtxoPredicateFailure (ShelleyEra c)) where
   arbitrary = genericArbitraryU
   shrink _ = []
+
+-- | Note that this instance is a little off - it is an era-independent
+-- generator for something which is only valid in certain eras. Its sole use is
+-- for `ShelleyGenesis`, a somewhat confusing type which is in fact used as the
+-- genesis for multiple eras.
+instance Arbitrary (PParams era) where
+  arbitrary = genericArbitraryU

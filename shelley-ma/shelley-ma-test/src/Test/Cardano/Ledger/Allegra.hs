@@ -24,7 +24,11 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesValue)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesPParams,
+    UsesValue,
+  )
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody
   ( TxBody (..),
@@ -39,7 +43,7 @@ import Shelley.Spec.Ledger.API (KeyRole (Witness))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash)
-import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.PParams (PParams, Update)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut, Wdrl)
 import Test.Cardano.Ledger.EraBuffet (AllegraEra)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
@@ -85,8 +89,10 @@ genTxBody ::
   forall era.
   ( UsesValue era,
     UsesAuxiliary era,
+    UsesPParams era,
     EraGen era
   ) =>
+  PParams era ->
   SlotNo ->
   Set.Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
@@ -96,7 +102,7 @@ genTxBody ::
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Gen (TxBody era, [Timelock (Crypto era)])
-genTxBody slot ins outs cert wdrl fee upd ad = do
+genTxBody _pparams slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   let mint = zero -- the mint field is always empty for an Allegra TxBody
   pure $

@@ -20,6 +20,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.Constraints
   ( ShelleyBased,
     UsesAuxiliary,
+    UsesPParams (PParamsDelta, mergePPUpdates),
     UsesScript,
     UsesTxBody,
     UsesValue,
@@ -33,11 +34,16 @@ import Control.State.Transition
     liftSTS,
     trans,
   )
+import Data.Default.Class (Default)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
+import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, StrictMaybe)
+import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
     PPUPState (..),
@@ -50,7 +56,7 @@ import Shelley.Spec.Ledger.LedgerState
     pattern DPState,
     pattern EpochState,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (..), updatePParams)
+import Shelley.Spec.Ledger.PParams (ProposedPPUpdates (..), ProtVer)
 import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
 
 -- | Update epoch change
@@ -67,8 +73,16 @@ instance
     UsesTxBody era,
     UsesScript era,
     UsesValue era,
-    State (Core.EraRule "PPUP" era)
-      ~ PPUPState era
+    UsesPParams era,
+    Default (Core.PParams era),
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_maxBBSize" (Core.PParams era) Natural,
+    HasField "_maxTxSize" (Core.PParams era) Natural,
+    HasField "_maxBHSize" (Core.PParams era) Natural,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer)
   ) =>
   STS (UPEC era)
   where
@@ -107,18 +121,20 @@ instance
 -- __the same__ values, return the given protocol parameters updated to these
 -- values. Here @n@ is the quorum needed.
 votedValue ::
+  forall era.
+  UsesPParams era =>
   ProposedPPUpdates era ->
   -- | Protocol parameters to which the change will be applied.
-  PParams era ->
+  Core.PParams era ->
   -- | Quorum needed to change the protocol parameters.
   Int ->
-  Maybe (PParams era)
+  Maybe (Core.PParams era)
 votedValue (ProposedPPUpdates pup) pps quorumN =
   let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
       votes =
         Map.foldr
           (\vote tally -> Map.insert vote (incrTally vote tally) tally)
-          (Map.empty :: Map (PParamsUpdate era) Int)
+          (Map.empty :: Map (PParamsDelta era) Int)
           pup
       consensus = Map.filter (>= quorumN) votes
    in case length consensus of
@@ -128,10 +144,15 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
         -- and therefore either:
         --   1) `consensus` is empty, or
         --   2) `consensus` has exactly one element.
-        1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
+        1 ->
+          (Just . mergePPUpdates (Proxy @era) pps . fst . head . Map.toList)
+            consensus
         -- NOTE that `updatePParams` corresponds to the union override right
         -- operation in the formal spec.
         _ -> Nothing
 
-instance ShelleyBased era => Embed (NEWPP era) (UPEC era) where
+instance
+  (ShelleyBased era, STS (NEWPP era)) =>
+  Embed (NEWPP era) (UPEC era)
+  where
   wrapFailed = NewPpFailure

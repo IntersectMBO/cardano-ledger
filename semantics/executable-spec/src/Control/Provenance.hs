@@ -10,13 +10,13 @@
 {-# LANGUAGE DeriveTraversable #-}
 
 
-{- The ProvM is a monad state transformer, desgined for computing provenance
+{- The ProvM is a Monad State Transformer, designed for computing provenance
 (or metadata) about an underlying computation. By running a computation with type
 (ProvM meta m a) one gets the underlying computation of type (m a). Switches
 control whether the metadata is computed or not.
 -}
 module Control.Provenance
-  ( ProvM(..),  -- * Basic Provenance monad transformer
+  ( ProvM(..),  -- * Basic Provenance Monad Transformer
     PObject,    -- * Dynamically typed Provenance objects
     Provenance, -- * Type constraint on data stored in PObject
     Prov,       -- * ProvM instantiated (Map Text PObject)
@@ -42,7 +42,7 @@ module Control.Provenance
     pushOtherProv,
     runWithProvM,
     runProvM,
-
+    
     -- * Operation on PObject
     find,
     observe,
@@ -89,7 +89,7 @@ invariant3 (ProvM m) = do
   (ans2,SJust p) <- runStateT m (SJust s)
   pure(ans1 == ans2)
 
-All operations that read the provennance (i.e the state) return
+All operations that read the provenance (i.e the state) return
 a (BlackBox t). BlackBoxes can only be used to modify provenance.
 -}
 newtype ProvM t m a = ProvM (StateT (StrictMaybe t) m a)
@@ -215,7 +215,7 @@ push key t = ProvM(modifyMState (insert key (pobject t)))
 {-# INLINE push #-}
 
 {- | Modify the value stored at the given key. If the key isn't found
-or the POject at that key has the wrong type, do nothing.
+or the PObject at that key has the wrong type, do nothing.
 -}
 update :: forall t m. (Provenance t,Monad m) => Text -> (t -> t) -> Prov m ()
 update key delta = ProvM action2 where
@@ -306,7 +306,7 @@ pobject !n = PObject (typeOf n) n
 type Store = Map Text PObject
 
 {- | Find a value for a given key from a Store (Map Text PObject). If
-  the Store does does not have that key, or the PObject at that key
+  the Store does not have that key, or the PObject at that key
   does not have the right type, returns SNothing. If the type context
   of the call does not fix the type, one can use a type
   application like:  find @Bool key map

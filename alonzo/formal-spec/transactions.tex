@@ -2,57 +2,48 @@
 \label{sec:transactions}
 
 This section outlines the changes that are needed to the transaction
-structure to enable non-native scripts to validate
-minting tokens, spending outputs, verifying certificates, and
+structure to enable native scripts to validate
+the minting of tokens, spending outputs, verifying certificates, and
 verifying withdrawals.
 %
 Figure \ref{fig:defs:utxo-shelley-1} gives the modified transaction types.
-We make the following changes and additions over the corresponding types in the
-Shelley specification~\cite{XX}:
+We make the following changes and additions:
 
 \begin{itemize}
-  \item $\ScriptDataHash$ is the type of a hash of script execution
+  \item $\WitnessPPDataHash$ is the type of a hash of script execution
   related data. It is the hash of $\fun{txrdmrs}$ and relevant protocol parameters.
 
   \item $\ScriptNative$ is the type of native scripts.
 
   \item $\ScriptNonNative$ is the type of non-native scripts.
 
-  \item $\Data$ is a type for communicating data to scripts, kept abstract here.
+  \item $\Data$ is a type for communicating data to script.  It is kept abstract here.
 
-  \item $\Script$ is a sum type of all scripts, both native and non-native.
+  \item $\Script$ is a sum type covering all possible scripts, both native and non-native.
 
   \item $\IsValidating$ is a tag that indicates that a transaction
-  expects that all its non-native scripts validate.
+  expects that all its non-native scripts will be validated.
   This tag is added by the block creator when
   constructing a block, and its correctness is verified as part of the script execution.
 
-  \item $\IsFee$ is a tag that indicates when an input has been marked
-    to be used for paying transaction fees.
-    This provides a way to prevent
-  the entire value of a transaction's UTxO entries being used as fees if a script fails to validate.
-
-  \item $\TxIn$ is a transaction input. It includes a reference to the UTxO entry that it is spending
-  and an $\IsFee$ tag.
-
-  \item $\TxOut$ is the type of transaction outputs, which now includes
-  an optional hash of a datum. Note here that \emph{any} output can
+  \item $\TxOut$ is the type of transaction outputs. These are extended to include
+  an optional hash of a datum. Note that \emph{any} output can
   optionally include such a hash, even though only non-native scripts
-  can use this hash. As it is in general impossible for the ledger to
-  know at the time of creation if an output belongs to a non-native
-  script or not, it simply allows any output to contain a data hash.
+  can actually use the hash value. Since it is in general impossible for the ledger implementation to
+  know at the time of transaction creation whether or not an output belongs to a non-native
+  script, we simply allow any output to contain a hash of a datum.
 
   \item $\Tag$ lets us differentiate what a script
   can validate, i.e. \\
   \begin{tabular}{l@{~to validate~}l}
-  $\mathsf{inputTag}$ & spending a script UTxO entry, \\
-  $\mathsf{mintTag}$ & minting tokens, \\
-  $\mathsf{certTag}$  & certificates with script credentials, and  \\
+  $\mathsf{inputTag}$ & spending a script UTxO entry; \\
+  $\mathsf{mintTag}$ & minting tokens; \\
+  $\mathsf{certTag}$  & certificates with script credentials; and  \\
   $\mathsf{wdrlTag}$ & reward withdrawals from script addresses.
   \end{tabular}
 
   \item $\RdmrPtr$ is a pair of a tag and an index. This type is
-  used to index the Plutus redeemers that are included in a transaction. See
+  used to index the Plutus redeemers that are included in a transaction, as discussed
   below.
 
 \end{itemize}
@@ -62,7 +53,7 @@ Shelley specification~\cite{XX}:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\quad\quad\quad\quad}r}
-      \var{sdh} &\ScriptDataHash & \text{Script data hash}\\
+      \var{sdh} &\WitnessPPDataHash & \text{Script data hash}\\
       \var{plc} & \ScriptPlutus & \text{Plutus core scripts} \\
       \var{d} & \Data & \text{Generic script data}
     \end{array}
@@ -82,16 +73,6 @@ Shelley specification~\cite{XX}:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{isf}
-      & \IsFee
-      & \Bool
-%      & \text {tag for inputs used to pay script fees}
-      \\
-      \var{txin}
-      & \TxIn
-      & \TxId \times \Ix \times \hldiff{\IsFee}
-%      & \text{transaction input}
-      \\
       \var{txout}
       & \TxOut
       & \Addr \times \Value \times \hldiff{\DataHash^?}
@@ -114,8 +95,8 @@ Shelley specification~\cite{XX}:
     \fun{language}& \in \ScriptNonNative \to \Language\\
     \fun{hashData}& \in \Data \to \DataHash
     \nextdef
-    \fun{hashScriptData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Data) \to \ScriptDataHash^? \\
-    \fun{hashScriptData}&~{pp}~{langs}~{rdmrs}~=~ \\
+    \fun{hashWitnessPPData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Data \times \ExUnits) \to \WitnessPPDataHash^? \\
+    \fun{hashWitnessPPData}&~{pp}~{langs}~{rdmrs}~=~ \\
                           &\begin{cases}
                             \Nothing & rdmrs~=~\emptyset \land langs~=~\emptyset \\
                             \fun{hash} (rdmrs, \{ \fun{hashLanguagePP}~pp~l \mid l \in langs \}) & \text{otherwise}
@@ -138,7 +119,7 @@ Shelley specification~\cite{XX}:
        & (\VKey \mapsto \Sig) & \fun{txwitsVKey} & \text{VKey signatures}\\
        & \times ~(\ScriptHash \mapsto \Script)  & \fun{txscripts} & \text{All scripts}\\
        & \times~ \hldiff{(\DataHash \mapsto \Data)} & \hldiff{\fun{txdats}} & \text{All datum objects}\\
-       & \times ~\hldiff{(\RdmrPtr \mapsto \Data)}& \hldiff{\fun{txrdmrs}}& \text{Indexed redeemers}\\
+       & \times ~\hldiff{(\RdmrPtr \mapsto \Data \times \ExUnits)}& \hldiff{\fun{txrdmrs}}& \text{Redeemers/budget}\\
     \end{array}
   \end{equation*}
   %
@@ -146,25 +127,25 @@ Shelley specification~\cite{XX}:
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
       \var{txbody} ~\in~ \TxBody ~=~
       & \powerset{\TxIn} & \fun{txinputs}& \text{Inputs}\\
+      & \times \hldiff{\powerset{\TxIn}} & \hldiff{\fun{txinputs_{fee}}}& \text{Fee inputs}\\
       &\times ~(\Ix \mapsto \TxOut) & \fun{txouts}& \text{Outputs}\\
       & \times~ \seqof{\DCert} & \fun{txcerts}& \text{Certificates}\\
        & \times ~\Value  & \fun{mint} &\text{A minted value}\\
-       & \times ~\hldiff{\ExUnits}  & \hldiff{\fun{txexunits}}& \text{Script exec. budget}\\
        & \times ~\Coin & \fun{txfee} &\text{Non-script fee}\\
        & \times ~\Slot^? \times \Slot^? & \fun{txvldt} & \text{Validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
        & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
-       & \times ~\ScriptDataHash^? & \fun{sdHash} & \text{Hash of script-related data}\\
-       & \times ~\AuxiliaryDataHash^? & \fun{txMDhash} & \text{Auxiliary data hash}\\
+       & \times ~\hldiff{\WitnessPPDataHash^?} & \hldiff{\fun{wppHash}} & \text{Hash of script-related data}\\
+       & \times ~\AuxiliaryDataHash^? & \fun{txADhash} & \text{Auxiliary data hash}\\
     \end{array}
   \end{equation*}
   %
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
-      \var{md} ~\in~ \MetaData ~=~
+      \var{ad} ~\in~ \AuxiliaryData ~=~
       & \powerset{\Script} & \fun{scripts}& \text{Optional scripts}\\
-      & \hldiff{\powerset{\Data}} & \hldiff{\fun{dats}}& \text{Optional datums}\\
-      & \times ~\AuxiliaryData^? & \fun{txMD}&\text{Auxiliary data}
+      & \times \hldiff{\powerset{\Data}} & \hldiff{\fun{dats}}& \text{Optional datums}\\
+      & \times ~\Metadata^? & \fun{txMD}&\text{Metadata}
     \end{array}
   \end{equation*}
   %
@@ -174,7 +155,7 @@ Shelley specification~\cite{XX}:
       & \TxBody & \fun{txbody} & \text{Body}\\
       & \times ~\TxWitness & \fun{txwits} & \text{Witnesses}\\
       & \times ~\hldiff{\IsValidating} & \hldiff{\fun{txvaltag}}&\text{Validation tag}\\
-      & \times ~\MetaData^? & \fun{txMD}&\text{Metadata}\\
+      & \times ~\AuxiliaryData^? & \fun{txAD}&\text{Auxiliary data}\\
     \end{array}
   \end{equation*}
   \caption{Definitions for transactions, cont.}
@@ -187,15 +168,14 @@ in a transaction that is needed for witnessing, namely:
 
 \begin{itemize}
   \item VKey signatures;
-  \item a set of scripts, containing all the scripts (for any purpose) that are needed to \emph{validate} the transaction,
-  \item a set of terms of type $\Data$, which contains all required datum objects; and
-  \item a map of $\Data$ values indexed by $\RdmrPtr$, which includes all the
-  required redeemers.
+  \item a map of scripts indexed by their hashes, including non-native scripts;
+  \item a map of terms of type $\Data$ indexed by their hashes, containing all required datum objects; and
+  \item a map of $\Data$ and $\ExUnits$ values indexed by $\RdmrPtr$, containing the redeemers and execution units budgets.
 \end{itemize}
 
 Note that there is a difference between the way scripts and datum objects are included in
 a transaction (as a set) versus how redeemers are included
-(as an indexed structure). % This is driven by their different relationships to the item:
+(as an indexed structure).
 
 \begin{description}
 \item
@@ -204,7 +184,7 @@ a transaction (as a set) versus how redeemers are included
   which are included in the $\UTxO$ or the transaction. Thus, they can be
   looked up in the tranasaction without any key in the data structure.
 
-  \item[No hash reference (redeemers):] In the case of redeemers,
+  \item[No hash reference (redeemers):] For redeemers,
   we use a reverse pointer approach and
   index the redeemer by a pointer to the item for which it will be used.
   For details on how a script finds its redeemer, see Section~\ref{sec:scripts-inputs}.
@@ -215,10 +195,7 @@ We have also made the following changes to
 the body of the transaction:
 
 \begin{itemize}
-  \item We include a term of type $\ExUnits$. This is a budget of execution units
-  that may be used by all non-native scripts in the transaction.
-  The budget is intended to be computed by executing the scripts off-chain prior to transaction submission.
-  \item We include a hash of some data relating to scripts, specifically the redeemers and protocol parameters,
+  \item We include a hash of some script-related data, specifically the redeemers and protocol parameters,
     with accessor $\fun{sdHash}$.
 \end{itemize}
 
@@ -238,7 +215,7 @@ A complete Goguen transaction comprises:
 
 \subsection{Additional Role of Signatures on TxBody}
 
-The transaction body and the UTxO must uniquely determine all data
+The transaction body and the UTxO must uniquely determine all the data
 that can influence on-chain transfer of value.
 This is so that the signatures can ensure that this data is not tampered with.
 As before, a transaction that does not include the correct signatures is completely invalid.
@@ -255,26 +232,23 @@ state may also need to be included in this hash, if they are passed as
 arguments to new script interpreter.
 
 The owner of any tokens that are spent as part of a given transaction
-must sign the transaction body. The body also includes the for-fee tags that are attached to inputs, so
-the owners of tokens that are spent by the transaction have
-signed their selection of inputs that will be put in the fee pot in case of script validation failure and
-this have had the ability to check the outcome of those scripts before signing the body.
+must sign the transaction body. This means that
+the owners of tokens that are spent by the transaction will have
+signed their selection of the inputs that will be put in the fee pot in case of script validation failure, and
+thus have had the opportunity to check the outcome of those scripts before signing the body.
 
-\subsection{Fees in the case of script validation failure}
+\subsection{Fee charges in the event of script validation failure}
 
-We have considered two ways to prevent all the Ada in the transaction outputs from going into
+We have considered two ways to prevent all the Ada that exists in the transaction outputs from being transferred to
 the fee pot if script validation fails:
 %
 \begin{enumerate}
-  \item programmatically select the inputs which will be used to pay fees;
+  \item programmatically select the inputs that will be used to pay fees;
   \item allow the user to decide which inputs will be used to pay fees.
 \end{enumerate}
 %
-To maximise flexibility, we have chosen to use the second option.
-This also allows users to write their own programmatic solutions to choosing for-fees inputs.
+In order to maximise flexibility, we have chosen to use the second option.
+This also allows users to provide their own programmatic solutions to choosing the inputs that are used to pay fees.
 
-Only inputs that are locked by VKeys or native scripts can
-be used to pay fees. Spending VKey or native script outputs is
-validated as part of a single rule application as before, so either all
-the required signatures will be valid, or a transaction is completely
-invalid.
+Only the inputs that are locked by VKeys or native scripts can
+be used to pay fees.

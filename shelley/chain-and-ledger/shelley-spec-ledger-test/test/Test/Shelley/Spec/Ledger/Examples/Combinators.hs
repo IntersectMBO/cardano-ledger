@@ -49,6 +49,7 @@ import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
+import Control.State.Transition (STS (State))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -93,16 +94,15 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     RewardUpdate (..),
     UTxOState (..),
-    applyRUpd
+    applyRUpd,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProposedPPUpdates, ProtVer)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Mir (emptyInstantaneousRewards)
 import Shelley.Spec.Ledger.Tx (TxIn)
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
-import Control.State.Transition (STS (State))
 
 -- ======================================================
 
@@ -192,7 +192,7 @@ newUTxO txb cs = cs {chainNes = nes'}
     ls = esLState es
     utxoSt = _utxoState ls
     utxo = _utxo utxoSt
-    utxo' = eval ((txins @era txb ⋪ utxo) ∪ txouts txb)
+    utxo' = eval ((txins @era txb ⋪ utxo) ∪ txouts @era txb)
     utxoSt' = utxoSt {_utxo = utxo'}
     ls' = ls {_utxoState = utxoSt'}
     es' = es {esLState = ls'}
@@ -372,6 +372,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 -- Remove a stake pool.
 reapPool ::
   forall era.
+  (Core.PParams era ~ PParams era) =>
   PoolParams (Crypto era) ->
   ChainState era ->
   ChainState era
@@ -488,6 +489,7 @@ rewardUpdate ru cs = cs {chainNes = nes'}
 -- Apply the given reward update to the chain state
 applyRewardUpdate ::
   forall era.
+  HasField "_protocolVersion" (Core.PParams era) ProtVer =>
   RewardUpdate (Crypto era) ->
   ChainState era ->
   ChainState era
@@ -573,6 +575,7 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
   forall era.
+  (Core.PParams era ~ PParams era) =>
   Era era =>
   Block era ->
   ChainState era ->
@@ -657,6 +660,7 @@ setFutureProposals ps cs = cs {chainNes = nes'}
 -- Set the protocol parameters.
 setPParams ::
   forall era.
+  (Core.PParams era ~ PParams era) =>
   PParams era ->
   ChainState era ->
   ChainState era
@@ -672,6 +676,7 @@ setPParams pp cs = cs {chainNes = nes'}
 -- Set the previous protocol parameters.
 setPrevPParams ::
   forall era.
+  (Core.PParams era ~ PParams era) =>
   PParams era ->
   ChainState era ->
   ChainState era

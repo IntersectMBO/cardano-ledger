@@ -77,7 +77,6 @@ import Test.Shelley.Spec.Ledger.Utils
     maxLLSupply,
     mkHash,
   )
-import Data.Default.Class (Default)
 
 -- ======================================================
 
@@ -85,6 +84,7 @@ import Data.Default.Class (Default)
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
   ( EraGen era,
+    ShelleyTest era,
     UsesTxBody era,
     UsesTxOut era,
     UsesValue era,
@@ -134,10 +134,8 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era a.
-  ( EraGen era,
-    UsesTxOut era,
-    UsesValue era,
-    Default (State (Core.EraRule "PPUP" era))
+  ( ShelleyTest era,
+    EraGen era
   ) =>
   GenEnv era ->
   IRC (CHAIN era) ->

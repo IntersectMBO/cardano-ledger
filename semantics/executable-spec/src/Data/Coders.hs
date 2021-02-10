@@ -41,6 +41,8 @@ module Data.Coders
     Dual(..),
     Field(..),
     field,
+    fieldA,
+    fieldAA,
     encode,
     decode,
     runE,            -- Used in testing
@@ -49,6 +51,7 @@ module Data.Coders
     decodeSeq,
     decodeStrictSeq,
     decodeSet,
+    decodeAnnSet,
     decodeRecordNamed,
     decodeRecordSum,
     invalidKey,
@@ -80,6 +83,7 @@ where
 
 import Cardano.Prelude (cborError)
 import Control.Monad (replicateM,unless)
+import Control.Applicative(liftA2)
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
 import Cardano.Binary
@@ -188,6 +192,9 @@ decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
 
 decodeSet :: Ord a => Decoder s a -> Decoder s (Set a)
 decodeSet decoder = Set.fromList <$> decodeList decoder
+
+decodeAnnSet :: Ord t => Decoder s (Annotator t) -> Decoder s (Annotator (Set t))
+decodeAnnSet dec = do xs <- decodeList dec; pure (Set.fromList <$> (sequence xs))
 
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
@@ -321,6 +328,16 @@ data Field t where
 
 field :: (x -> t -> t) -> Decode ('Closed d) x -> Field t
 field update dec = Field update (decode dec)
+
+-- In order to sparse decode something with a (FromCBOR (Annotator t)) instance
+-- we can use these 'field' like functions.
+
+fieldA  :: Applicative ann => (x -> t -> t) -> Decode ('Closed d) x -> Field (ann t)
+fieldA update dec  = Field (liftA2 update) (pure <$> decode dec)
+
+fieldAA :: Applicative ann => (x -> t -> t) -> Decode ('Closed d) (ann x) -> Field (ann t)
+fieldAA update dec  = Field (liftA2 update) (decode dec)
+
 
 -- ===========================================================
 -- The coders and the decoders as GADT datatypes

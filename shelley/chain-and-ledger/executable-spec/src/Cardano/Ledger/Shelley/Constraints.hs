@@ -8,11 +8,13 @@
 module Cardano.Ledger.Shelley.Constraints where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
   ( AnnotatedData,
     AuxiliaryData,
     ChainData,
+    PParams,
     Script,
     SerialisableData,
     TxBody,
@@ -20,17 +22,17 @@ import Cardano.Ledger.Core
     Value,
   )
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Torsor (Torsor (..))
+import Cardano.Ledger.SafeHash
+  ( EraIndependentTxBody,
+    HashAnnotated,
+  )
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
+import Control.DeepSeq (NFData)
 import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy)
 import GHC.Records (HasField)
 import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
-import Shelley.Spec.Ledger.Hashing
-  ( EraIndependentTxBody,
-    HashAnnotated (..),
-  )
 
 --------------------------------------------------------------------------------
 -- Shelley Era
@@ -40,8 +42,7 @@ type UsesTxBody era =
   ( Era era,
     ChainData (TxBody era),
     AnnotatedData (TxBody era),
-    HashAnnotated (TxBody era) era,
-    HashIndex (TxBody era) ~ EraIndependentTxBody
+    HashAnnotated (TxBody era) EraIndependentTxBody (Crypto era)
   )
 
 class
@@ -49,15 +50,10 @@ class
     Val (Value era),
     Compactible (Value era),
     ChainData (Value era),
-    ChainData (Delta (Value era)),
-    ChainData (CompactForm (Value era)),
     SerialisableData (Value era),
-    SerialisableData (CompactForm (Value era)),
-    SerialisableData (Delta (Value era)),
     DecodeNonNegative (Value era),
     EncodeMint (Value era),
-    DecodeMint (Value era),
-    Torsor (Value era)
+    DecodeMint (Value era)
   ) =>
   UsesValue era
 
@@ -85,18 +81,36 @@ type UsesAuxiliary era =
   ( Era era,
     Eq (AuxiliaryData era),
     Show (AuxiliaryData era),
+    ValidateAuxiliaryData era,
     AnnotatedData (AuxiliaryData era)
   )
 
+class
+  ( Era era,
+    Eq (PParams era),
+    Show (PParams era),
+    SerialisableData (PParams era),
+    ChainData (PParamsDelta era),
+    NFData (PParamsDelta era),
+    Ord (PParamsDelta era),
+    SerialisableData (PParamsDelta era)
+  ) =>
+  UsesPParams era
+  where
+  type PParamsDelta era :: Type
+
+  mergePPUpdates ::
+    proxy era ->
+    PParams era ->
+    PParamsDelta era ->
+    PParams era
+
 -- | Apply 'c' to all the types transitively involved with Value when
--- (Core.Value era) is an instance of Compactible and Torsor
+-- (Core.Value era) is an instance of Compactible
 type TransValue (c :: Type -> Constraint) era =
   ( Era era,
     Compactible (Value era),
-    Torsor (Value era),
-    c (Value era),
-    c (CompactForm (Value era)),
-    c (Delta (Value era))
+    c (Value era)
   )
 
 -- | General constraints that will hold true for ledgers which are based on

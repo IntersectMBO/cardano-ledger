@@ -15,12 +15,13 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
+    UsesPParams,
     UsesScript,
     UsesTxBody,
     UsesTxOut,
@@ -28,12 +29,13 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
-import Cardano.Ledger.Torsor (Torsor (..))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Prelude (heapWordsUnpacked)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (◁))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
+import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coders
   ( decodeList,
     decodeRecordSum,
@@ -50,6 +52,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
+import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address
   ( Addr (AddrBootstrap),
     bootstrapAddressAttrsSize,
@@ -84,6 +87,52 @@ import Shelley.Spec.Ledger.UTxO
     unUTxO,
   )
 
+{- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
+(passed to it as Coin mv) as a specification of "the cost of
+making a Shelley-sized UTxO entry", calculated here by "utxoEntrySizeWithoutVal + uint",
+using the constants in the "where" clause.
+In the case when a UTxO entry contains coins only (and the Shelley
+UTxO entry format is used - we will extend this to be correct for other
+UTxO formats shortly), the deposit should be exactly the minUTxOValue.
+This is the "inject (coin v) == v" case.
+Otherwise, we calculate the per-byte deposit by multiplying the minimum deposit (which is
+for the number of Shelley UTxO-entry bytes) by the size of a Shelley UTxO entry.
+This is the "(mv * (utxoEntrySizeWithoutVal + uint))" calculation.
+We then calculate the total deposit required for making a UTxO entry with a Val-class
+member v by dividing "(mv * (utxoEntrySizeWithoutVal + uint))" by the
+estimated total size of the UTxO entry containing v, ie by
+"(utxoEntrySizeWithoutVal + size v)".
+See the formal specification for details.
+-}
+
+-- This scaling function is right for UTxO, not EUTxO
+--
+scaledMinDeposit :: (Val.Val v) => v -> Coin -> Coin
+scaledMinDeposit v (Coin mv)
+  | Val.inject (Val.coin v) == v = Coin mv -- without non-Coin assets, scaled deposit should be exactly minUTxOValue
+  -- The calculation should represent this equation
+  -- minValueParameter / coinUTxOSize = actualMinValue / valueUTxOSize
+  -- actualMinValue = (minValueParameter / coinUTxOSize) * valueUTxOSize
+  | otherwise = Coin $ max mv (adaPerUTxOWord * (utxoEntrySizeWithoutVal + Val.size v))
+  where
+    -- lengths obtained from tracing on HeapWords of inputs and outputs
+    -- obtained experimentally, and number used here
+    -- units are Word64s
+    txoutLenNoVal = 14
+    txinLen = 7
+
+    -- unpacked CompactCoin Word64 size in Word64s
+    coinSize :: Integer
+    coinSize = fromIntegral $ heapWordsUnpacked (CompactCoin 0)
+
+    utxoEntrySizeWithoutVal :: Integer
+    utxoEntrySizeWithoutVal = 6 + txoutLenNoVal + txinLen
+
+    -- how much ada does a Word64 of UTxO space cost, calculated from minAdaValue PP
+    -- round down
+    adaPerUTxOWord :: Integer
+    adaPerUTxOWord = quot mv (utxoEntrySizeWithoutVal + coinSize)
+
 -- ==========================================================
 
 data UtxoPredicateFailure era
@@ -100,8 +149,8 @@ data UtxoPredicateFailure era
       !Coin -- the minimum fee for this transaction
       !Coin -- the fee supplied in this transaction
   | ValueNotConservedUTxO
-      !(Delta (Core.Value era)) -- the Coin consumed by this transaction
-      !(Delta (Core.Value era)) -- the Coin produced by this transaction
+      !(Core.Value era) -- the Coin consumed by this transaction
+      !(Core.Value era) -- the Coin produced by this transaction
   | WrongNetwork
       !Network -- the expected network id
       !(Set (Addr (Crypto era))) -- the set of addresses with incorrect network IDs
@@ -154,9 +203,10 @@ consumed ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "_keyDeposit" (Core.PParams era) Coin
   ) =>
-  PParams era ->
+  Core.PParams era ->
   UTxO era ->
   Core.TxBody era ->
   Core.Value era
@@ -189,7 +239,13 @@ utxoTransition ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "vldt" (Core.TxBody era) ValidityInterval,
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "_minfeeA" (Core.PParams era) Natural,
+    HasField "_minfeeB" (Core.PParams era) Natural,
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "_minUTxOValue" (Core.PParams era) Coin,
+    HasField "_maxTxSize" (Core.PParams era) Natural
   ) =>
   TransitionRule (UTXO era)
 utxoTransition = do
@@ -225,8 +281,8 @@ utxoTransition = do
       (Set.fromList wdrlsWrongNetwork)
 
   let consumed_ = consumed pp utxo txb
-      produced_ = Shelley.produced pp stakepools txb
-  consumed_ == produced_ ?! ValueNotConservedUTxO (toDelta consumed_) (toDelta produced_)
+      produced_ = Shelley.produced @era pp stakepools txb
+  consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Protocol Parameter Update Proposals
   ppup' <-
@@ -237,8 +293,8 @@ utxoTransition = do
   -- the check `adaPolicy ∉ supp mint tx` in the spec.
   Val.coin (getField @"mint" txb) == Val.zero ?! TriesToForgeADA
 
-  let outputs = Map.elems $ unUTxO (txouts txb)
-      minUTxOValue = _minUTxOValue pp
+  let outputs = Map.elems $ unUTxO (txouts @era txb)
+      minUTxOValue = getField @"_minUTxOValue" pp
       outputsTooSmall =
         filter
           ( \out ->
@@ -247,7 +303,7 @@ utxoTransition = do
                     Val.pointwise
                       (>=)
                       v
-                      (Val.inject $ Val.scaledMinDeposit v minUTxOValue)
+                      (Val.inject $ scaledMinDeposit v minUTxOValue)
           )
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
@@ -256,7 +312,7 @@ utxoTransition = do
         filter
           ( \out ->
               let v = getField @"value" out
-               in Val.size v > 4000
+               in (BSL.length . serialize) v > 4000
               -- TODO this is arbitrary, but sufficiently below the current
               -- max transaction size. We will make it a protocol parameter
               -- in the Alonzo era.
@@ -275,7 +331,7 @@ utxoTransition = do
           outputs
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
-  let maxTxSize_ = fromIntegral (_maxTxSize pp)
+  let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
       txSize_ = Shelley.txsize tx
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
@@ -285,7 +341,7 @@ utxoTransition = do
 
   pure
     Shelley.UTxOState
-      { Shelley._utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts txb),
+      { Shelley._utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts @era txb),
         Shelley._deposited = deposits' <> depositChange,
         Shelley._fees = fees <> getField @"txfee" txb,
         Shelley._ppups = ppup'
@@ -303,8 +359,9 @@ instance
     UsesScript era,
     UsesTxOut era,
     UsesValue era,
+    UsesPParams era,
     TransValue ToCBOR era,
-    Show (Delta (Core.Value era)),
+    Core.PParams era ~ PParams era,
     Core.TxBody era ~ TxBody era,
     Core.TxOut era ~ TxOut era,
     Embed (Core.EraRule "PPUP" era) (UTXO era),
@@ -329,6 +386,7 @@ instance
 
 instance
   ( Era era,
+    STS (PPUP era),
     PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era
   ) =>
   Embed (PPUP era) (UTXO era)

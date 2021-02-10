@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
@@ -27,21 +28,19 @@ module Cardano.Ledger.Alonzo.Tx
   ( Indexable (..),
     -- Figure 1
     CostModel,
-    PPHash,
-    hashLanguagePP,
+    getLanguageView,
     -- Figure 2
-    ScriptData,
-    ScriptDataHash,
     Data,
     DataHash,
     IsValidating (..),
     hashData,
     language,
-    plutusLanguage,
-    timelockLanguage,
     nonNativeLanguages,
-    hashScriptData,
+    hashWitnessPPData,
     getCoin,
+    EraIndependentWitnessPPData,
+    WitnessPPData,
+    WitnessPPDataHash,
     -- Figure 3
     Tx (Tx, body, wits, isValidating, auxiliaryData),
     TxBody (..),
@@ -49,7 +48,6 @@ module Cardano.Ledger.Alonzo.Tx
     ScriptPurpose (..),
     --  Figure 5
     getValidatorHash,
-    txscriptfee,
     txbody,
     minfee,
     isNonNativeScriptAddress,
@@ -69,34 +67,50 @@ module Cardano.Ledger.Alonzo.Tx
     -- Figure 12
     scriptsNeeded,
     checkScriptData,
-    hashSD,
+    -- Pretty
+    ppIsValidating,
+    ppTx,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
-import Cardano.Ledger.Alonzo.PParams (PPHash, PParams, PParams' (..), hashLanguagePP)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), Language (..), Prices (..))
+import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
+import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, PParams' (..), getLanguageView)
+import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), scriptfee)
 import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..), Tag (..))
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoBody,
+    EraIndependentWitnessPPData,
     TxBody (..),
     TxOut (..),
+    WitnessPPDataHash,
+    ppTxBody,
   )
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
-    ScriptData (..),
-    ScriptDataHash (..),
     TxWitness (..),
-    hashSD,
-    witsData,
-    witsRdmr,
-    witsScript,
+    ppTxWitness,
+    txdats,
+    txrdmrs,
+    txscripts,
   )
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (AssetName, PolicyID (..), Value (..))
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppRecord,
+    ppStrictMaybe,
+    ppString,
+  )
+import Cardano.Ledger.SafeHash
+  ( HashAnnotated,
+    SafeToHash,
+    hashAnnotated,
+  )
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val (coin, (<+>), (<×>)))
 import Control.SetAlgebra (eval, (◁))
@@ -111,14 +125,11 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
   ( elemAt,
-    empty,
     findIndex,
-    insert,
     map,
     null,
     union,
   )
-import Data.Text.Encoding (encodeUtf8)
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -130,6 +141,7 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (ScriptHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
+import Shelley.Spec.Ledger.Serialization (decodeMapTraverse)
 import Shelley.Spec.Ledger.Tx (ValidateScript (isNativeScript))
 import Shelley.Spec.Ledger.TxBody (DelegCert (..), Delegation (..), TxIn (..), Wdrl (..), unWdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
@@ -139,7 +151,8 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 -- | Tag indicating whether non-native scripts in this transaction are expected
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValidating = IsValidating Bool
-  deriving (Eq, NoThunks, Show)
+  deriving (Eq, Show, Generic)
+  deriving newtype (NoThunks)
 
 data TxRaw era = TxRaw
   { _body :: !(TxBody era),
@@ -154,7 +167,8 @@ deriving instance
     Eq (Core.AuxiliaryData era),
     Eq (Core.Script era),
     Eq (Core.Value era),
-    Eq (CompactForm (Core.Value era))
+    Eq (PParamsDelta era),
+    Compactible (Core.Value era)
   ) =>
   Eq (TxRaw era)
 
@@ -164,7 +178,7 @@ deriving instance
     Show (Core.AuxiliaryData era),
     Show (Core.Script era),
     Show (Core.Value era),
-    Show (CompactForm (Core.Value era))
+    Show (PParamsDelta era)
   ) =>
   Show (TxRaw era)
 
@@ -172,19 +186,21 @@ instance
   ( Era era,
     NoThunks (Core.AuxiliaryData era),
     NoThunks (Core.Script era),
-    NoThunks (Core.Value era)
+    NoThunks (Core.Value era),
+    NoThunks (PParamsDelta era)
   ) =>
   NoThunks (TxRaw era)
 
 newtype Tx era = TxConstr (MemoBytes (TxRaw era))
-  deriving (ToCBOR)
+  deriving newtype (ToCBOR)
 
 deriving newtype instance
   ( Era era,
     Eq (Core.AuxiliaryData era),
     Eq (Core.Script era),
     Eq (Core.Value era),
-    Eq (CompactForm (Core.Value era))
+    Eq (PParamsDelta era),
+    Compactible (Core.Value era)
   ) =>
   Eq (Tx era)
 
@@ -194,7 +210,7 @@ deriving newtype instance
     Show (Core.AuxiliaryData era),
     Show (Core.Script era),
     Show (Core.Value era),
-    Show (CompactForm (Core.Value era))
+    Show (PParamsDelta era)
   ) =>
   Show (Tx era)
 
@@ -202,7 +218,8 @@ deriving newtype instance
   ( Era era,
     NoThunks (Core.AuxiliaryData era),
     NoThunks (Core.Script era),
-    NoThunks (Core.Value era)
+    NoThunks (Core.Value era),
+    NoThunks (PParamsDelta era)
   ) =>
   NoThunks (Tx era)
 
@@ -250,6 +267,7 @@ instance
   ( Era era,
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (Annotator (Core.AuxiliaryData era)),
+    Core.SerialisableData (PParamsDelta era),
     ToCBOR (Core.Script era),
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era),
@@ -278,6 +296,7 @@ deriving via
     ( Era era,
       FromCBOR (Annotator (Core.Script era)),
       FromCBOR (Annotator (Core.AuxiliaryData era)),
+      Core.SerialisableData (PParamsDelta era),
       ToCBOR (Core.Script era),
       Typeable (Core.Script era),
       Typeable (Core.AuxiliaryData era),
@@ -292,58 +311,71 @@ deriving via
 -- =========================================================
 -- Figure 2: Definitions for Transactions
 
--- For now, the only Non-Native Scriting language is Plutus
--- We might add new languages in the futures.
-
-nonNativeLanguages :: Set Language
-nonNativeLanguages = Set.insert plutusLanguage Set.empty
-
-plutusLanguage :: Language
-plutusLanguage = Language (encodeUtf8 "Plutus")
-
-timelockLanguage :: Language
-timelockLanguage = Language (encodeUtf8 "Timelock")
-
-language :: AlonzoScript.Script era -> Language
-language (AlonzoScript.NativeScript _) = timelockLanguage
-language (AlonzoScript.PlutusScript) = plutusLanguage
-
 getCoin :: UsesValue era => TxOut era -> Coin
 getCoin (TxOut _ v _) = coin v
 
-{-
--- TODO fix this.  A ScriptDataHash is a hash of a Virtual triple.
--- See the selector function sdHash in TxWitness
--- In figure 14 we use this selector in the precondition
--- sdHash txb ==  hashScriptData pp ( languages txw ) ( txrdmrs txw )
--- We have two functions that produce a ScriptDataHash
--- 1) hashSD :: TxWitness -> Maybe(ScriptDataHash)  (Figure 12)
--- 2) hashScriptData :: PParams era -> Set Language ->
---       Map.Map RdmrPtr (Data era) -> Maybe (ScriptDataHash era) (Figure 2)
--- These two functions are not computing the same thing at all.
+-- ========================================================================
+-- A WitnessPPDataHash is the hash of two things. The first part comes from
+-- the witnesses and the second comes from the Protocol Parameters (PParams).
+-- In order to hash 2 things we make a newtype WitnessPPData which will be
+-- a MemoBytes of these two things (WitnessPPDataRaw), so that we can hash it.
 
-hashSD ::
-  (Era era, ToCBOR (Core.Script era)) =>
-  TxWitness era ->
-  Maybe (ScriptDataHash (Crypto era))
-hashSD (w@(TxWitnessConstr (Memo (TxWitnessRaw _ _ scriptdata) _))) =
-  if (Map.null (witsScript w) && Map.null (witsData w) && Map.null (witsRdmr w))
-    then Nothing
-    else Just (ScriptDataHash (hashAnnotated scriptdata))
--}
+data WitnessPPDataRaw era
+  = WitnessPPDataRaw
+      !(Map.Map RdmrPtr (Data era)) -- From the witnesses
+      !(Set (LangDepView era)) -- From the Porotocl parameters
+  deriving (Show, Eq, Generic, Typeable)
 
-hashScriptData ::
+deriving instance NoThunks (WitnessPPDataRaw era)
+
+instance Era era => ToCBOR (WitnessPPDataRaw era) where
+  toCBOR (WitnessPPDataRaw m s) = encode (Rec WitnessPPDataRaw !> To m !> To s)
+
+instance Era era => FromCBOR (Annotator (WitnessPPDataRaw era)) where
+  fromCBOR =
+    decode
+      ( Ann (RecD WitnessPPDataRaw)
+          <*! D (decodeMapTraverse (pure <$> fromCBOR) fromCBOR)
+          <*! D (decodeAnnSet fromCBOR)
+      )
+
+newtype WitnessPPData era = WitnessPPDataConstr (MemoBytes (WitnessPPDataRaw era))
+  deriving (Show, Eq)
+  deriving newtype (ToCBOR, SafeToHash)
+
+deriving via
+  (Mem (WitnessPPDataRaw era))
+  instance
+    Era era => FromCBOR (Annotator (WitnessPPData era))
+
+pattern WitnessPPData ::
+  Era era =>
+  Map.Map RdmrPtr (Data era) ->
+  Set (LangDepView era) ->
+  WitnessPPData era
+pattern WitnessPPData mp s <-
+  WitnessPPDataConstr (Memo (WitnessPPDataRaw mp s) _)
+  where
+    WitnessPPData mp s =
+      WitnessPPDataConstr
+        . memoBytes
+        $ (Rec WitnessPPDataRaw !> To mp !> To s)
+
+instance (c ~ Crypto era) => HashAnnotated (WitnessPPData era) EraIndependentWitnessPPData c
+
+hashWitnessPPData ::
+  forall era.
   Era era =>
   PParams era ->
   Set Language ->
   Map.Map RdmrPtr (Data era) ->
-  Maybe (ScriptDataHash era)
-hashScriptData pp langs rdmrs =
+  Maybe (WitnessPPDataHash (Crypto era))
+hashWitnessPPData pp langs rdmrs =
   if Map.null rdmrs && Set.null langs
     then Nothing
     else
-      let _newset = Set.map (hashLanguagePP pp) langs
-       in undefined -- hash(rdmrs,_newset)
+      let newset = Set.map (getLanguageView pp) langs
+       in Just (hashAnnotated (WitnessPPData rdmrs newset))
 
 -- ===============================================================
 -- From the specification, Figure 5 "Functions related to fees"
@@ -388,10 +420,6 @@ feesOK pp tx (UTxO m) =
 txins :: AlonzoBody era => TxBody era -> Set (TxIn (Crypto era))
 txins (TxBody {txinputs = is, txinputs_fee = fs}) = Set.union is fs
 
-txscriptfee :: Prices -> ExUnits -> Coin
-txscriptfee (Prices pr_mem pr_steps) (ExUnits mem steps) =
-  (mem <×> pr_mem) <+> (steps <×> pr_steps)
-
 -- | txsize computes the length of the serialised bytes
 txsize :: Tx era -> Integer
 txsize (TxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
@@ -400,7 +428,7 @@ minfee :: AlonzoBody era => PParams era -> Tx era -> Coin
 minfee pp tx =
   ((txsize tx) <×> (a pp))
     <+> (b pp)
-    <+> (txscriptfee (_prices pp) (exunits (txbody tx)))
+    <+> (scriptfee (_prices pp) (exunits (txbody tx)))
   where
     a protparam = Coin (fromIntegral (_minfeeA protparam))
     b protparam = Coin (fromIntegral (_minfeeB protparam))
@@ -461,17 +489,12 @@ rdptr txb (Certifying d) = RdmrPtr AlonzoScript.Cert (indexOf d (txcerts txb))
 getMapFromValue :: Value crypto -> Map.Map (PolicyID crypto) (Map.Map AssetName Integer)
 getMapFromValue (Value _ m) = m
 
-txrdmrs ::
-  (Era era, ToCBOR (Core.Script era)) =>
-  TxWitness era ->
-  Map.Map RdmrPtr (Data era, ExUnits)
-txrdmrs txw = witsRdmr txw
-
 indexedRdmrs ::
   ( Era era,
     ToCBOR (Core.AuxiliaryData era),
     ToCBOR (Core.Script era),
-    ToCBOR (CompactForm (Core.Value era))
+    Core.SerialisableData (PParamsDelta era),
+    Compactible (Core.Value era)
   ) =>
   Tx era ->
   ScriptPurpose (Crypto era) ->
@@ -528,29 +551,37 @@ getData tx (UTxO m) sp = case sp of
         case getField @"datahash" txout of
           Nothing -> []
           Just hash ->
-            case Map.lookup hash (witsData (wits tx)) of
+            case Map.lookup hash (txdats (wits tx)) of
               Nothing -> []
               Just d -> [d]
 
 collectNNScriptInputs ::
   ( UsesTxOut era,
     ToCBOR (Core.Script era),
-    ToCBOR (CompactForm (Core.Value era)),
+    Compactible (Core.Value era),
     ToCBOR (Core.AuxiliaryData era),
+    Core.SerialisableData (PParamsDelta era),
     Core.Script era ~ AlonzoScript.Script era,
-    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
+    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
   ) =>
-  PParams era ->
+  Core.PParams era ->
   Tx era ->
   UTxO era ->
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
-collectNNScriptInputs _pp tx utxo =
-  [ (script, (d : (valContext utxo tx sp ++ getData tx utxo sp)), eu, cost)
+collectNNScriptInputs pp tx utxo =
+  [ (script, d : (valContext utxo tx sp ++ getData tx utxo sp), eu, cost)
     | (sp, scripthash) <- scriptsNeeded utxo tx, -- TODO, IN specification ORDER IS WRONG
       (d, eu) <- maybeToList (indexedRdmrs tx sp),
       script <- maybeToList (Map.lookup scripthash (txscripts (txwits tx))),
-      cost <- maybeToList (Map.lookup (language script) (_costmdls _pp))
+      cost <- case language script of
+        Nothing -> []
+        Just lang -> maybeToList (Map.lookup lang (getField @"_costmdls" pp))
   ]
+
+language :: AlonzoScript.Script era -> Maybe Language
+language (AlonzoScript.NativeScript _) = Nothing
+language (AlonzoScript.PlutusScript) = Just PlutusV1
 
 evalScripts :: (AlonzoScript.Script era, [Data era], ExUnits, CostModel) -> Bool
 evalScripts (AlonzoScript.NativeScript _timelock, _, _, _) = True
@@ -592,7 +623,7 @@ scriptsNeeded (UTxO utxomap) tx = spend ++ reward ++ cert ++ minted
 
     !cert = foldl addOnlyCwitness [] (txcerts txb)
 
-    !minted = map (\(pid@(PolicyID hash)) -> (Minting pid, hash)) (Map.keys m3)
+    !minted = map (\pid@(PolicyID hash) -> (Minting pid, hash)) (Map.keys m3)
       where
         m3 = getMapFromValue (mint txb)
 
@@ -611,8 +642,9 @@ addOnlyCwitness !ans _ = ans
 checkScriptData ::
   forall era.
   ( ToCBOR (Core.AuxiliaryData era),
+    Core.SerialisableData (PParamsDelta era),
     ValidateScript era,
-    ToCBOR (CompactForm (Core.Value era)),
+    Compactible (Core.Value era),
     UsesTxOut era,
     HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
   ) =>
@@ -631,17 +663,46 @@ checkScriptData tx utxo (sp, _h) = any ok scripts
                && (not (isSpending sp) || not (null (getData tx utxo sp)))
            )
 
--- The function hashSD, specified in Figure 12
--- hashSD :: TxWitness era -> Maybe (ScriptDataHash (Crypto era))
--- is defined in Cardano.Ledger.Alonzo.TxWitness
-
--- languages:: TxWitness era -> Set Language  -- TODO
-
-txscripts ::
-  (Era era, ToCBOR (Core.Script era)) =>
-  TxWitness era ->
-  Map.Map (ScriptHash (Crypto era)) (Core.Script era)
-txscripts x = witsScript x
-
 txwits :: (Era era, ToCBOR (Core.AuxiliaryData era)) => Tx era -> TxWitness era
 txwits x = wits x
+
+-- =======================================================
+
+ppIsValidating :: IsValidating -> PDoc
+ppIsValidating (IsValidating True) = ppString "True"
+ppIsValidating (IsValidating False) = ppString "False"
+
+instance PrettyA IsValidating where prettyA = ppIsValidating
+
+ppTx ::
+  ( Era era,
+    PrettyA (Core.Script era),
+    PrettyA (Core.AuxiliaryData era),
+    Compactible (Core.Value era),
+    Show (Core.Value era),
+    PrettyA (Core.Value era),
+    PrettyA (PParamsDelta era)
+  ) =>
+  Tx era ->
+  PDoc
+ppTx (TxConstr (Memo (TxRaw b w iv aux) _)) =
+  ppRecord
+    "Tx"
+    [ ("body", ppTxBody b),
+      ("wits", ppTxWitness w),
+      ("isValidating", ppIsValidating iv),
+      ("auxiliaryData", ppStrictMaybe prettyA aux)
+    ]
+
+instance
+  ( Era era,
+    PrettyA (Core.Script era),
+    PrettyA (Core.AuxiliaryData era),
+    Compactible (Core.Value era),
+    Show (Core.Value era),
+    PrettyA (Core.Value era),
+    PrettyA (PParamsDelta era)
+  ) =>
+  PrettyA (Tx era)
+  where
+  prettyA = ppTx

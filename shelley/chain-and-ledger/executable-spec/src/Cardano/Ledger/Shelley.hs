@@ -10,20 +10,24 @@
 -- exposed in @module Shelley.Spec.Ledger.API@.
 module Cardano.Ledger.Shelley where
 
-import Cardano.Binary (toCBOR)
-import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
     ValidateAuxiliaryData (..),
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut (..), UsesValue)
+import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, makeHashWithExplicitProxys)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesPParams (..),
+    UsesTxBody,
+    UsesTxOut (..),
+    UsesValue,
+  )
+import Data.Proxy
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Keys (hashWithSerialiser)
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
+import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, updatePParams)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
   ( TxBody,
@@ -43,6 +47,10 @@ instance CryptoClass.Crypto c => UsesValue (ShelleyEra c)
 instance CryptoClass.Crypto c => UsesTxOut (ShelleyEra c) where
   makeTxOut _ a v = TxOut a v
 
+instance CryptoClass.Crypto c => UsesPParams (ShelleyEra c) where
+  type PParamsDelta (ShelleyEra c) = PParamsUpdate (ShelleyEra c)
+  mergePPUpdates _ = updatePParams
+
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
@@ -57,6 +65,8 @@ type instance Core.Script (ShelleyEra c) = MultiSig c
 
 type instance Core.AuxiliaryData (ShelleyEra c) = Metadata
 
+type instance Core.PParams (ShelleyEra c) = PParams (ShelleyEra c)
+
 --------------------------------------------------------------------------------
 -- Ledger data instances
 --------------------------------------------------------------------------------
@@ -69,5 +79,7 @@ instance
   hashScript = hashMultiSigScript
 
 instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) where
-  hashAuxiliaryData = AuxiliaryDataHash . Hash.castHash . hashWithSerialiser @(HASH c) toCBOR
   validateAuxiliaryData (Metadata m) = all validMetadatum m
+  hashAuxiliaryData metadata = AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @c) index metadata)
+    where
+      index = Proxy @EraIndependentAuxiliaryData

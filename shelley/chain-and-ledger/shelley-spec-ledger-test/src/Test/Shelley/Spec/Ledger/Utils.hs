@@ -92,6 +92,7 @@ import Control.State.Transition.Trace
     (.->),
   )
 import Data.Coerce (coerce)
+import Data.Default.Class (Default)
 import Data.Functor ((<&>))
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
@@ -107,6 +108,7 @@ import Shelley.Spec.Ledger.API
     LedgerEnv,
     LedgerState,
     LedgersEnv,
+    PParams,
   )
 import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
@@ -133,17 +135,15 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
-import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
-import Shelley.Spec.Ledger.Tx (Tx, TxBody, TxOut)
+import Shelley.Spec.Ledger.Tx (Tx, TxOut)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
   )
-import Data.Default.Class (Default)
-
 
 type ShelleyTest era =
   ( UsesTxBody era,
@@ -151,9 +151,10 @@ type ShelleyTest era =
     UsesTxOut era,
     UsesScript era,
     UsesAuxiliary era,
-    TxBody era ~ Core.TxBody era,
+    UsesPParams era,
     TxOut era ~ Core.TxOut era,
-    MultiSig (Crypto era) ~ Core.Script era,
+    PParams era ~ Core.PParams era,
+    PParamsDelta era ~ PParamsUpdate era,
     Split (Core.Value era),
     Default (State (Core.EraRule "PPUP" era))
   )

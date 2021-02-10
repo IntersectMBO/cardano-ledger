@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
@@ -56,7 +57,6 @@ module Shelley.Spec.Ledger.LedgerState
     nullWitHashes,
     diffWitHashes,
     minfee,
-    minfeeBound,
     txsize,
     txsizeBound,
     produced,
@@ -83,7 +83,7 @@ module Shelley.Spec.Ledger.LedgerState
 
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
-    updateNonMypopic,
+    updateNonMyopic,
 
     -- *
     TransUTxOState,
@@ -100,9 +100,11 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
+    UsesPParams (PParamsDelta),
     UsesScript,
     UsesTxBody,
     UsesTxOut,
@@ -116,7 +118,6 @@ import Control.Provenance (ProvM, lift, modifyWithBlackBox, runOtherProv)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
-import Data.Coerce (coerce)
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
@@ -133,6 +134,7 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
+import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash, isBootstrapRedeemer)
 import Shelley.Spec.Ledger.Address.Bootstrap
@@ -144,6 +146,7 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     ShelleyBase,
     StrictMaybe (..),
+    UnitInterval,
     activeSlotVal,
     intervalValue,
     unitIntervalToRational,
@@ -172,7 +175,6 @@ import Shelley.Spec.Ledger.EpochBoundary
     Stake (..),
     aggregateUtxoCoinByCredential,
   )
-import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -197,10 +199,13 @@ import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
     PerformanceEstimate (..),
+    Reward (..),
+    aggregateRewards,
     applyDecay,
     desirability,
     percentile',
     reward,
+    sumRewards,
   )
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
@@ -403,7 +408,7 @@ instance
 data RewardUpdate crypto = RewardUpdate
   { deltaT :: !DeltaCoin,
     deltaR :: !DeltaCoin,
-    rs :: !(Map (Credential 'Staking crypto) Coin),
+    rs :: !(Map (Credential 'Staking crypto) (Set (Reward crypto))),
     deltaF :: !DeltaCoin,
     nonMyopic :: !(NonMyopic crypto)
   }
@@ -467,8 +472,8 @@ data EpochState era = EpochState
   { esAccountState :: !AccountState,
     esSnapshots :: !(SnapShots (Crypto era)),
     esLState :: !(LedgerState era),
-    esPrevPp :: !(PParams era),
-    esPp :: !(PParams era),
+    esPrevPp :: !(Core.PParams era),
+    esPp :: !(Core.PParams era),
     -- | This field, esNonMyopic, does not appear in the formal spec
     -- and is not a part of the protocol. It is only used for providing
     -- data to the stake pool ranking calculation @getNonMyopicMemberRewards@.
@@ -477,7 +482,10 @@ data EpochState era = EpochState
   }
   deriving (Generic)
 
-type TransEpoch (c :: Type -> Constraint) era = (TransLedgerState c era)
+type TransEpoch (c :: Type -> Constraint) era =
+  ( TransLedgerState c era,
+    c (Core.PParams era)
+  )
 
 deriving stock instance
   TransEpoch Show era =>
@@ -511,26 +519,36 @@ instance
 
 data UpecState era = UpecState
   { -- | Current protocol parameters.
-    currentPp :: !(PParams era),
+    currentPp :: !(Core.PParams era),
     -- | State of the protocol update transition system.
     ppupState :: !(State (Core.EraRule "PPUP" era))
   }
 
 deriving stock instance
-  Show (State (Core.EraRule "PPUP" era)) =>
+  ( Show (State (Core.EraRule "PPUP" era)),
+    Show (Core.PParams era)
+  ) =>
   Show (UpecState era)
 
 data PPUPState era = PPUPState
   { proposals :: !(ProposedPPUpdates era),
     futureProposals :: !(ProposedPPUpdates era)
   }
-  deriving (Show, Eq, Generic, NFData, NoThunks)
+  deriving (Generic)
 
-instance Era era => ToCBOR (PPUPState era) where
+deriving instance Show (PParamsDelta era) => Show (PPUPState era)
+
+deriving instance Eq (PParamsDelta era) => Eq (PPUPState era)
+
+deriving instance NFData (PParamsDelta era) => NFData (PPUPState era)
+
+instance NoThunks (PParamsDelta era) => NoThunks (PPUPState era)
+
+instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (PPUPState era) where
   toCBOR (PPUPState ppup fppup) =
     encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
 
-instance Era era => FromCBOR (PPUPState era) where
+instance (Era era, FromCBOR (PParamsDelta era)) => FromCBOR (PPUPState era) where
   fromCBOR = do
     decodeRecordNamed "PPUPState" (const 2) $ do
       ppup <- fromCBOR
@@ -558,6 +576,7 @@ type TransUTxOState (c :: Type -> Constraint) era =
     TransTxId c era,
     TransValue c era,
     c (Core.TxOut era),
+    c (Core.PParams era),
     c (State (Core.EraRule "PPUP" era)),
     Compactible (Core.Value era)
   )
@@ -613,11 +632,11 @@ data NewEpochState era = NewEpochState
   deriving (Generic)
 
 deriving stock instance
-  (TransUTxOState Show era) =>
+  (TransEpoch Show era) =>
   Show (NewEpochState era)
 
 deriving stock instance
-  TransUTxOState Eq era =>
+  TransEpoch Eq era =>
   Eq (NewEpochState era)
 
 instance (Era era, TransEpoch NFData era) => NFData (NewEpochState era)
@@ -752,70 +771,64 @@ txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
     rest = fromIntegral $ BSL.length (txFullBytes tx)
 
 -- | Minimum fee calculation
-minfee :: PParams era -> Tx era -> Coin
-minfee pp tx =
-  Coin $
-    fromIntegral (_minfeeA pp)
-      * txsize tx + fromIntegral (_minfeeB pp)
-
--- | Minimum fee bound using txsizeBound
-minfeeBound ::
-  forall era out.
-  ( UsesScript era,
-    UsesTxBody era,
-    UsesAuxiliary era,
-    HasField "outputs" (Core.TxBody era) (StrictSeq out),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+minfee ::
+  ( HasField "_minfeeA" pp Natural,
+    HasField "_minfeeB" pp Natural
   ) =>
-  PParams era ->
+  pp ->
   Tx era ->
   Coin
-minfeeBound pp tx =
+minfee pp tx =
   Coin $
-    fromIntegral (_minfeeA pp)
-      * txsizeBound tx + fromIntegral (_minfeeB pp)
+    fromIntegral (getField @"_minfeeA" pp)
+      * txsize tx + fromIntegral (getField @"_minfeeB" pp)
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
+  forall era pp.
   ( UsesTxBody era,
     UsesValue era,
     UsesTxOut era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "txfee" (Core.TxBody era) Coin
+    HasField "txfee" (Core.TxBody era) Coin,
+    HasField "_keyDeposit" pp Coin,
+    HasField "_poolDeposit" pp Coin
   ) =>
-  PParams era ->
+  pp ->
   Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
   Core.TxBody era ->
   Core.Value era
 produced pp stakePools tx =
-  balance (txouts tx)
-    <+> ( Val.inject $
-            getField @"txfee" tx
-              <+> totalDeposits pp stakePools (toList $ getField @"certs" tx)
-        )
+  balance (txouts @era tx)
+    <+> Val.inject
+      ( getField @"txfee" tx
+          <+> totalDeposits pp stakePools (toList $ getField @"certs" tx)
+      )
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
-  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+  ( HasField "certs" txb (StrictSeq (DCert crypto)),
+    HasField "_keyDeposit" pp Coin
   ) =>
-  PParams era ->
-  Core.TxBody era ->
+  pp ->
+  txb ->
   Coin
-keyRefunds pp tx = (length deregistrations) <×> (_keyDeposit pp)
+keyRefunds pp tx = length deregistrations <×> getField @"_keyDeposit" pp
   where
     deregistrations = filter isDeRegKey (toList $ getField @"certs" tx)
 
 -- | Compute the lovelace which are destroyed by the transaction
 consumed ::
-  forall era.
+  forall era pp.
   ( UsesValue era,
     UsesTxOut era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "_keyDeposit" pp Coin
   ) =>
-  PParams era ->
+  pp ->
   UTxO era ->
   Core.TxBody era ->
   Core.Value era
@@ -921,6 +934,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 verifiedWits ::
+  forall era.
   ( UsesTxBody era,
     Core.AnnotatedData (Core.Script era),
     ToCBOR (Core.AuxiliaryData era),
@@ -937,12 +951,12 @@ verifiedWits (Tx txbody wits _) =
     failed =
       wvkKey
         <$> filter
-          (not . verifyWitVKey (coerce . hashAnnotated $ txbody))
+          (not . verifyWitVKey (extractHash (hashAnnotated @(Crypto era) txbody)))
           (Set.toList $ addrWits wits)
     failedBootstrap =
       bwKey
         <$> filter
-          (not . verifyBootstrapWit (coerce . hashAnnotated $ txbody))
+          (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
           (Set.toList $ bootWits wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update
@@ -1016,6 +1030,8 @@ stakeDistr u ds ps =
 
 -- | Apply a reward update
 applyRUpd ::
+  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
   RewardUpdate (Crypto era) ->
   EpochState era ->
   EpochState era
@@ -1027,7 +1043,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     (regRU, unregRU) =
       Map.partitionWithKey
         (\k _ -> eval (k ∈ dom (_rewards dState)))
-        (rs ru)
+        (aggregateRewards pr $ rs ru)
     as' =
       as
         { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold (range unregRU),
@@ -1050,12 +1066,12 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
 decayFactor :: Float
 decayFactor = 0.9
 
-updateNonMypopic ::
+updateNonMyopic ::
   NonMyopic crypto ->
   Coin ->
   Map (KeyHash 'StakePool crypto) Likelihood ->
   NonMyopic crypto
-updateNonMypopic nm rPot newLikelihoods =
+updateNonMyopic nm rPot newLikelihoods =
   nm
     { likelihoodsNM = updatedLikelihoods,
       rewardPotNM = rPot
@@ -1072,6 +1088,13 @@ updateNonMypopic nm rPot newLikelihoods =
 -- | Create a reward update
 createRUpd ::
   forall era.
+  ( HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_tau" (Core.PParams era) UnitInterval,
+    HasField "_a0" (Core.PParams era) Rational,
+    HasField "_rho" (Core.PParams era) UnitInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->
@@ -1084,12 +1107,11 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
       ds = _dstate $ _delegationState ls
       -- reserves and rewards change
       deltaR1 =
-        ( rationalToCoinViaFloor $
-            min 1 eta
-              * unitIntervalToRational (_rho pr)
-              * fromIntegral reserves
-        )
-      d = unitIntervalToRational (_d pr)
+        rationalToCoinViaFloor $
+          min 1 eta
+            * unitIntervalToRational (getField @"_rho" pr)
+            * fromIntegral reserves
+      d = unitIntervalToRational (getField @"_d" pr)
       expectedBlocks =
         floor $
           (1 - d) * unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
@@ -1097,10 +1119,10 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
       -- it would be nice to not have to compute expectedBlocks every epoch
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
       eta
-        | intervalValue (_d pr) >= 0.8 = 1
+        | intervalValue (getField @"_d" pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
       Coin rPot = _feeSS ss <> deltaR1
-      deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
+      deltaT1 = floor $ intervalValue (getField @"_tau" pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       totalStake = circulation es maxSupply
   ((rs_, newLikelihoods), blackBoxPools) <-
@@ -1118,7 +1140,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
           asc
           slotsPerEpoch
       )
-  let deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
+  let deltaR2 = _R <-> (sumRewards pr rs_)
       -- add under 'key' the pair (LikeliHoodEstimate,Desirability) to the Map 'ans'
       addDesire ans key likelihood = case Map.lookup key poolParams of
         Nothing ->
@@ -1143,7 +1165,7 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
             )
             ans
         where
-          estimate = (percentile' likelihood)
+          estimate = percentile' likelihood
   modifyWithBlackBox
     blackBoxPools
     ( \provPools _ ->
@@ -1167,11 +1189,11 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
     )
   pure $
     RewardUpdate
-      { deltaT = (DeltaCoin deltaT1),
+      { deltaT = DeltaCoin deltaT1,
         deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
         rs = rs_,
-        deltaF = (invert (toDeltaCoin $ _feeSS ss)),
-        nonMyopic = (updateNonMypopic nm _R newLikelihoods)
+        deltaF = invert (toDeltaCoin $ _feeSS ss),
+        nonMyopic = (updateNonMyopic nm _R newLikelihoods)
       }
 
 -- | Calculate the current circulation
@@ -1234,10 +1256,16 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
 instance Default (PPUPState era) where
   def = PPUPState emptyPPPUpdates emptyPPPUpdates
 
-instance Default (State (Core.EraRule "PPUP" era)) => Default (UTxOState era) where
+instance
+  Default (State (Core.EraRule "PPUP" era)) =>
+  Default (UTxOState era)
+  where
   def = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) def
 
-instance Default (LedgerState era) => Default (EpochState era) where
+instance
+  (Default (LedgerState era), Default (Core.PParams era)) =>
+  Default (EpochState era)
+  where
   def = EpochState def def def def def def
 
 instance Default (UTxOState era) => Default (LedgerState era) where

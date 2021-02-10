@@ -1,11 +1,28 @@
 # code owners are automatically assigned to review PRs
 
-# The goal is to not have more than 2 people responsible to avoid having too
-# many reviewers which often leads to nobody feeling responsible to actually
-# perform the review.
+# Shelley Design Spec
+shelley/design_spec/ @kantp @brunjlar @dcoutts
 
-shelley/design_spec/ @JaredCorduan @kantp
-shelley/chain-and-ledger/ @JaredCorduan @uroboros
-nix/ @nc6
-scripts/ @nc6
-byron/ @nc6
+# Formal Specs
+shelley/chain-and-ledger/formal-spec/ @jcorduan @polinavino
+shelley-ma/formal-spec/ @polinavino @WhatisRT
+alonzo/formal-spec/ @polinavino @WhatisRT
+
+# CDDL
+shelley/chain-and-ledger/shelley-spec-ledger-test/cddl-files/ @redxaxder
+shelley-ma/shelley-ma-test/cddl-files/                        @redxaxder
+
+# Set Algebra
+semantics/executable-spec/src/Control/Iterate/      @TimSheard
+semantics/executable-spec/src/Control/Provenance.hs @TimSheard
+semantics/executable-spec/src/Control/SetAlgebra.hs @TimSheard
+
+# Coders library for CBOR encoding and decoding
+semantics/executable-spec/src/Data/Coders.hs @TimSheard
+
+# Devops
+.buildkite @devops
+.github    @devops
+nix        @devops
+*.nix      @devops
+bors.toml  @devops

@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,19 +20,39 @@ module Cardano.Ledger.Alonzo.Scripts
     Script (..),
     ExUnits (..),
     CostModel (CostModel),
-    Language (..),
     Prices (..),
-    proxyhash,
     hashCostModel,
+    scriptfee,
+    ppTag,
+    ppScript,
+    ppExUnits,
+    ppCostModel,
+    ppPrices,
   )
 where
 
 import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
-import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppCoin,
+    ppInteger,
+    ppLong,
+    ppMap,
+    ppRecord,
+    ppSexp,
+    ppString,
+    ppWord64,
+  )
+import Cardano.Ledger.SafeHash
+  ( HashWithCrypto (..),
+    SafeHash,
+    SafeToHash,
+  )
 import Cardano.Ledger.ShelleyMA.Timelocks
+import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
 import Data.Coders
@@ -42,11 +63,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-
-type SafeHash e t = Hash.Hash (HASH (Crypto e)) t
-
-proxyhash :: forall e t. (ToCBOR t, Era e) => Proxy e -> t -> SafeHash e t
-proxyhash Proxy x = Hash.castHash (Hash.hashWithSerialiser @(HASH (Crypto e)) toCBOR x)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -91,29 +107,20 @@ instance Semigroup ExUnits where
 instance Monoid ExUnits where
   mempty = ExUnits 0 0
 
--- Non-Native Script language.
--- This is an open type. We will add values of this type
--- for each Non-Native scripting language as they are added.
-
-newtype Language = Language ByteString
-  deriving (Eq, Generic, Show, Ord)
-
-instance NoThunks Language
-
-instance NFData Language
-
-deriving instance ToCBOR Language
-
-deriving instance FromCBOR Language
-
 -- =====================================
 -- Cost Model needs to preserve its serialization bytes as
 -- it is going to be hashed. Thus we make it a newtype around a MemoBytes
 
 newtype CostModel = CostModelConstr (MemoBytes (Map ByteString Integer))
   deriving (Eq, Generic, Show, Ord)
+  deriving newtype (SafeToHash)
 
-pattern CostModel :: (Map ByteString Integer) -> CostModel
+-- CostModel does not determine 'crypto' so make a HashWithCrypto
+-- rather than a HashAnotated instance.
+
+instance HashWithCrypto CostModel CostModel
+
+pattern CostModel :: Map ByteString Integer -> CostModel
 pattern CostModel m <-
   CostModelConstr (Memo m _)
   where
@@ -134,8 +141,16 @@ deriving via
   instance
     FromCBOR (Annotator CostModel)
 
-hashCostModel :: forall e. Era e => Proxy e -> CostModel -> SafeHash e CostModel
-hashCostModel Proxy x = Hash.castHash (Hash.hashWithSerialiser @(HASH (Crypto e)) toCBOR x)
+-- CostModel is not parameterized by Crypto or Era so we use the
+-- hashWithCrypto function, rather than hashAnnotated
+
+hashCostModel ::
+  forall e.
+  Era e =>
+  Proxy e ->
+  CostModel ->
+  SafeHash (Crypto e) CostModel
+hashCostModel _proxy = hashWithCrypto (Proxy @(Crypto e))
 
 -- ==================================
 
@@ -149,6 +164,12 @@ data Prices = Prices
 instance NoThunks Prices
 
 instance NFData Prices
+
+-- | Compute the cost of a script based upon prices and the number of execution
+-- units.
+scriptfee :: Prices -> ExUnits -> Coin
+scriptfee (Prices pr_mem pr_steps) (ExUnits mem steps) =
+  (mem <×> pr_mem) <+> (steps <×> pr_steps)
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -201,6 +222,34 @@ instance
       decodeScript 1 = Ann (SumD PlutusScript)
       decodeScript n = Invalid n
 
--- =================================================
--- Languages
--- =================================================
+-- ============================================================
+-- Pretty printing versions
+
+ppTag :: Tag -> PDoc
+ppTag x = ppString (show x)
+
+instance PrettyA Tag where prettyA = ppTag
+
+ppScript :: Script era -> PDoc
+ppScript PlutusScript = ppString "PlutusScript"
+ppScript (NativeScript x) = ppTimelock x
+
+instance PrettyA (Script era) where prettyA = ppScript
+
+ppExUnits :: ExUnits -> PDoc
+ppExUnits (ExUnits mem step) =
+  ppRecord "ExUnits" [("memory", ppWord64 mem), ("steps", ppWord64 step)]
+
+instance PrettyA ExUnits where prettyA = ppExUnits
+
+ppCostModel :: CostModel -> PDoc
+ppCostModel (CostModelConstr (Memo m _)) =
+  ppSexp "CostModel" [ppMap ppLong ppInteger m]
+
+instance PrettyA CostModel where prettyA = ppCostModel
+
+ppPrices :: Prices -> PDoc
+ppPrices (Prices mem step) =
+  ppRecord "Prices" [("prMem", ppCoin mem), ("prSteps", ppCoin step)]
+
+instance PrettyA Prices where prettyA = ppPrices

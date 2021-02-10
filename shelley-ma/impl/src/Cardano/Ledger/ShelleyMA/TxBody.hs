@@ -38,7 +38,7 @@ where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.Compactible (CompactForm (..), Compactible (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (Script, Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -57,7 +57,8 @@ import Cardano.Ledger.Pretty
     ppUpdate,
     ppWdrl,
   )
-import Cardano.Ledger.Shelley.Constraints (TransValue)
+import Cardano.Ledger.SafeHash (EraIndependentTxBody, HashAnnotated, SafeToHash)
+import Cardano.Ledger.Shelley.Constraints (PParamsDelta, TransValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
   ( DecodeMint (..),
@@ -88,7 +89,6 @@ import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody, HashAnnotated (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Serialization (encodeFoldable)
 import Shelley.Spec.Ledger.TxBody
@@ -114,7 +114,8 @@ type FamsFrom era =
     DecodeNonNegative (Value era),
     DecodeMint (Value era),
     Val (Value era), -- Arises because we use 'zero' as the 'mint' field in 'initial'
-    FromCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
+    FromCBOR (Core.PParams era),
+    FromCBOR (PParamsDelta era),
     FromCBOR (Value era),
     FromCBOR (Annotator (Script era)) -- Arises becaause DCert memoizes its bytes
   )
@@ -124,8 +125,9 @@ type FamsTo era =
     ToCBOR (Value era),
     Compactible (Value era),
     EncodeMint (Value era),
-    ToCBOR (CompactForm (Value era)), -- Arises because TxOut uses Compact form
     ToCBOR (Script era),
+    ToCBOR (Core.PParams era),
+    ToCBOR (PParamsDelta era),
     Typeable (Core.AuxiliaryData era)
   )
 
@@ -148,19 +150,23 @@ data TxBodyRaw era = TxBodyRaw
 -- The surprising (Compactible (Value era))) constraint comes from the fact that TxOut
 -- stores a (Value era) in a compactible form.
 
-deriving instance (NFData (Value era), Era era) => NFData (TxBodyRaw era)
+deriving instance
+  (NFData (Value era), Era era, NFData (PParamsDelta era)) =>
+  NFData (TxBodyRaw era)
 
 deriving instance
-  TransValue Eq era =>
+  (TransValue Eq era, Eq (PParamsDelta era)) =>
   Eq (TxBodyRaw era)
 
 deriving instance
-  TransValue Show era =>
+  (TransValue Show era, Show (PParamsDelta era)) =>
   Show (TxBodyRaw era)
 
 deriving instance Generic (TxBodyRaw era)
 
-deriving instance NoThunks (Value era) => NoThunks (TxBodyRaw era)
+deriving instance
+  (NoThunks (Value era), NoThunks (PParamsDelta era)) =>
+  NoThunks (TxBodyRaw era)
 
 instance (FamsFrom era) => FromCBOR (TxBodyRaw era) where
   fromCBOR =
@@ -245,20 +251,28 @@ initial =
 
 newtype TxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
   deriving (Typeable)
+  deriving newtype (SafeToHash)
 
 deriving instance
-  TransValue Eq era =>
+  (TransValue Eq era, Eq (PParamsDelta era)) =>
   Eq (TxBody era)
 
 deriving instance
-  TransValue Show era =>
+  (TransValue Show era, Show (PParamsDelta era)) =>
   Show (TxBody era)
 
 deriving instance Generic (TxBody era)
 
-deriving newtype instance (Typeable era, NoThunks (Value era)) => NoThunks (TxBody era)
+deriving newtype instance
+  (Typeable era, NoThunks (Value era), NoThunks (PParamsDelta era)) =>
+  NoThunks (TxBody era)
 
-deriving newtype instance (NFData (Value era), Era era) => NFData (TxBody era)
+deriving newtype instance
+  ( NFData (Value era),
+    NFData (PParamsDelta era),
+    Era era
+  ) =>
+  NFData (TxBody era)
 
 deriving newtype instance (Typeable era) => ToCBOR (TxBody era)
 
@@ -268,8 +282,7 @@ deriving via
     (FamsFrom era) =>
     FromCBOR (Annotator (TxBody era))
 
-instance Era era => HashAnnotated (TxBody era) era where
-  type HashIndex (TxBody era) = EraIndependentTxBody
+instance (c ~ Crypto era, Era era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
@@ -343,6 +356,7 @@ instance Value era ~ value => HasField "mint" (TxBody era) value where
 ppTxBody ::
   ( Era era,
     PrettyA (Value era),
+    PrettyA (PParamsDelta era),
     Compactible (Value era)
   ) =>
   TxBody era ->
@@ -362,7 +376,11 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)) =
     ]
 
 instance
-  (Era era, PrettyA (Value era), Compactible (Value era)) =>
+  ( Era era,
+    PrettyA (Value era),
+    PrettyA (PParamsDelta era),
+    Compactible (Value era)
+  ) =>
   PrettyA (TxBody era)
   where
   prettyA = ppTxBody

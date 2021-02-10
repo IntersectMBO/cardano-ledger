@@ -26,16 +26,18 @@ import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
 import Data.Default.Class (Default, def)
-import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
+import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
+import Shelley.Spec.Ledger.PParams (ProtVer)
+import Shelley.Spec.Ledger.Rewards (sumRewards)
 import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
 import Shelley.Spec.Ledger.Slot
@@ -79,7 +81,8 @@ instance
     Environment (Core.EraRule "EPOCH" era) ~ (),
     State (Core.EraRule "EPOCH" era) ~ EpochState era,
     Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
-    Default (EpochState era)
+    Default (EpochState era),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   STS (NEWEPOCH era)
   where
@@ -114,7 +117,8 @@ newEpochTransition ::
     Signal (Core.EraRule "MIR" era) ~ (),
     Environment (Core.EraRule "EPOCH" era) ~ (),
     State (Core.EraRule "EPOCH" era) ~ EpochState era,
-    Signal (Core.EraRule "EPOCH" era) ~ EpochNo
+    Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
@@ -131,7 +135,8 @@ newEpochTransition = do
         SNothing -> pure es
         SJust ru' -> do
           let RewardUpdate dt dr rs_ df _ = ru'
-          Val.isZero (dt <> (dr <> (toDeltaCoin $ fold rs_) <> df)) ?! CorruptRewardUpdate ru'
+              totRs = sumRewards (esPrevPp es) rs_
+          Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
           pure $ applyRUpd ru' es
 
       es'' <- trans @(Core.EraRule "MIR" era) $ TRC ((), es', ())

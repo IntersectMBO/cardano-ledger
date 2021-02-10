@@ -23,13 +23,15 @@ import Cardano.Binary (FromCBOR, ToCBOR)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.SafeHash
+  ( EraIndependentAuxiliaryData,
+    SafeHash,
+  )
 import Control.DeepSeq (NFData (..))
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Hashing (EraIndependentMetadata)
-import Shelley.Spec.Ledger.Keys (Hash)
 
 newtype AuxiliaryDataHash crypto = AuxiliaryDataHash
-  { unsafeAuxiliaryDataHash :: Hash crypto EraIndependentMetadata
+  { unsafeAuxiliaryDataHash :: SafeHash crypto EraIndependentAuxiliaryData
   }
   deriving (Show, Eq, Ord, NoThunks, NFData)
 

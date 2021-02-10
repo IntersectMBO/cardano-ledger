@@ -1,46 +1,52 @@
 \section{Introduction}
 
-This document describes the extensions to the multi-asset formal ledger specification~\ref{XX}
-required for the support of non-native scripts, in particular Plutus Core. This underpins future Plutus development: future developments should require minimal or no changes to these ledger rules.
+\TODO{Please run a spell checker over the final document}
+\TODO{Please fix up all missing references}
+\TODO{Take care to distinguish validation succeeding, and validation returning true.  I think you ALWAYS mean validation is true (a script is valid) NOT validation is successful (it has completed, but may have returned false)}
+
+This document describes the extensions to the multi-asset formal ledger specification~\ref{XX} \TODO{Fix this reference} that are
+required for the support of non-native scripts, in particular Plutus Core. This underpins future Plutus development: there should be minimal changes to these ledger rules to support future non-native languages.
 %
-The two major extensions are:
+The two major extensions that are described here are:
 \begin{inparaenum}
 \item
 the introduction
-of non-native scripts, i.e. scripts that are not evaluated by the ledger; and
+of \emph{non-native} scripts, i.e. scripts that are not evaluated internally by the ledger; and
 \item
   additions to the Shelley-era UTxO (unspent transaction output) model that are needed to support Plutus
   constructs (the ``extended UTxO'' model).
 \end{inparaenum}
 This document defines these extensions as changes to the multi-asset structured transition system,
-using the same notation and conventions that were used for the multi-asset specification~\cite{XX}.
+using the same notation and conventions that were used for the multi-asset specification~\cite{XX}.\TODO{Add this reference!!}
 As with the multi-asset formal specification, these rules will be implemented in the form of an executable ledger specification that will then be
 integrated with the Cardano node.
 
 \subsection{Non-Native Scripts}
 
 The Shelley formal specification introduced the concept of ``multi-signature'' scripts.
-\emph{Native scripts}, such as these, are processed entirely by the ledger rules.
-Their execution costs can easily be assessed before they are processed,
-and any fees can be calculated directly by the ledger rules, based on e.g. the
-size of the transaction.
+\emph{Native scripts}, such as these, are captured entirely by the ledger rules.
+Execution costs can therefore be easily assessed \emph{before} they are processed by the implementation,
+and any fees can be calculated directly within the ledger rule implementation,
+based on e.g. the size of the transaction that includes the script.
 
-In contrast, non-native scripts can perform arbitary
+In contrast, \emph{non-native} scripts can perform arbitrary
 (and, in principle, Turing-complete) computations.
-In order to bound execution costs to a pre-determined constant, we use a standard ``fuel'' approach~\cite{XX}.
+In order to bound execution costs to a pre-determined constant, we use a standard ``fuel'' approach~\cite{XX}.\TODO{And this one, please!}
 We require transactions that use non-native scripts
 to have a budget in terms of a number of abstract $\ExUnits$.
-These provide a quantitative bound on resource usage in terms of metrics such as memory usage or abstract execution steps.
-This abstract budget is then used as part of the concrete transaction fee calculation.
+This budget gives a quantitative bound on resource usage in terms of a number of specific metrics, including memory usage or abstract execution steps.
+The budget is then used as part of the transaction fee calculation.
 
-To change the $\ExUnits$ required to
-run the same computation without a hard fork (for example because a
-more efficient interpreter was introduced), every scripting language
-converts the actual execution cost into $\ExUnits$ using a cost model,
-$\CostMod$, which is a protocol parameter.
+Every scripting language
+converts the calculated execution cost into a number of $\ExUnits$s using a cost model,
+$\CostMod$, which depends on the language and is provided as a protocol parameter.
+This allows execution costs (and so transaction fees) to be varied without requiring a major protocol version change (``hard fork'').
+This may be used, for example, if a more efficient interpreter is produced.
 
 \subsection{Extended UTxO}
 
-The specification of the extended UTxO model follows the description in~\cite{plutus_eutxo}.
-All transaction outputs locked by non-native scripts must include the hash of an additional ``data'' item, which the transaction needs to supply. This data could also have been stored directly in the UTxO, but this scheme has been chosen for space efficiency reasons. The data is passed to a script that validates that the output is spent correctly, and can be used to encode state.
-All transactions also need to supply a \emph{redeemer} for everything that is validated by a script, which is an additional piece of data passed to the script. The redeemer can be regarded as user-input for the scripts. Note that the same script can be used for multiple different purposes in the same transaction, so in general it does not suffice to include one redeemer per script.
+The specification of the extended UTxO model follows the description that was given in~\cite{plutus_eutxo}.
+All transaction outputs that are locked by non-native scripts must include the hash of an additional ``datum''. The actual datum needs to be supplied in the body of the transaction, and can be used to encode state, for example.
+While this datum could instead have been stored directly in the UTxO, our choice of storing it in the transaction body improves space efficiency in the implementation by reducing the UTxO storage requirements. The datum is passed to a script that validates that the output is spent correctly.
+All transactions also need to supply a \emph{redeemer} for all items that are validated by a script. This is an additional piece of data that is passed to the script, and that could be considered as a form of user-input to the script. Note that the same script could be used for multiple different purposes in the same transaction, so in general it might be necessary to include more than one redeemer per script.
+There will, however, always be at least one redeemer per script.

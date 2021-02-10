@@ -36,7 +36,7 @@ shrinkBlock _ = []
 
 shrinkTx ::
   forall era.
-  ShelleyTest era =>
+  (ShelleyTest era, Core.TxBody era ~ TxBody era) =>
   Tx era ->
   [Tx era]
 shrinkTx (Tx _b _ws _md) =

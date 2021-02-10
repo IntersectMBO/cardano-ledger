@@ -38,8 +38,9 @@ import Control.State.Transition
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
+import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
@@ -60,7 +61,6 @@ import Shelley.Spec.Ledger.LedgerState
     TransLedgerState,
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Shelley.Spec.Ledger.Tx (Tx)
@@ -76,7 +76,7 @@ deriving stock instance
   Show (BbodyState era)
 
 data BbodyEnv era = BbodyEnv
-  { bbodyPp :: PParams era,
+  { bbodyPp :: Core.PParams era,
     bbodyAccount :: AccountState
   }
 
@@ -116,7 +116,8 @@ instance
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era)
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
+    HasField "_d" (Core.PParams era) UnitInterval
   ) =>
   STS (BBODY era)
   where
@@ -139,14 +140,15 @@ instance
 
 bbodyTransition ::
   forall era.
-  ( UsesTxBody era,
+  ( STS (BBODY era),
+    UsesTxBody era,
     UsesScript era,
     UsesAuxiliary era,
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
-    STS (BBODY era)
+    HasField "_d" (Core.PParams era) UnitInterval
   ) =>
   TransitionRule (BBODY era)
 bbodyTransition =
@@ -183,7 +185,7 @@ bbodyTransition =
           BbodyState
             ls'
             ( incrBlocks
-                (isOverlaySlot firstSlotNo (_d pp) slot)
+                (isOverlaySlot firstSlotNo (getField @"_d" pp) slot)
                 hkAsStakePool
                 b
             )

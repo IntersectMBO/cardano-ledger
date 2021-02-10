@@ -8,14 +8,17 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.Metadata
   ( Metadatum (..),
     Metadata (Metadata),
+    hashMetadata,
     validMetadatum,
   )
 where
@@ -29,6 +32,13 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
+import Cardano.Ledger.SafeHash
+  ( EraIndependentMetadata,
+    HasAlgorithm,
+    HashWithCrypto (..),
+    SafeHash,
+    SafeToHash (..),
+  )
 import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
@@ -37,6 +47,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Map.Strict (Map)
+import Data.Proxy
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Word (Word64)
@@ -60,8 +71,22 @@ data Metadata = Metadata'
   { mdMap :: Map Word64 Metadatum,
     mdBytes :: LBS.ByteString
   }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Ord, Generic)
   deriving (NoThunks) via AllowThunksIn '["mdBytes"] Metadata
+
+-- Usually we derive SafetToHash instances, but since Metadata preserves its serialisation
+-- bytes we can just extract them here, and make an explicit SafeToHash instance.
+
+instance SafeToHash Metadata where
+  originalBytes = LBS.toStrict . mdBytes
+
+-- We can't use hashAnnotated since Metadata doesn't determine the crypto
+-- so we use the class HashWithCrypto that makes just the index implicit
+-- but the crypto explicit.
+instance HashWithCrypto Metadata EraIndependentMetadata
+
+hashMetadata :: HasAlgorithm c => Proxy c -> Metadata -> SafeHash c EraIndependentMetadata
+hashMetadata p m = hashWithCrypto p m
 
 pattern Metadata :: Map Word64 Metadatum -> Metadata
 pattern Metadata m <-

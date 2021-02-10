@@ -38,6 +38,7 @@ import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.SafeHash (EraIndependentTxBody)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.Arrow (left, right)
 import Control.Monad.Except
@@ -55,7 +56,9 @@ import Control.State.Transition.Extended
   )
 import Data.Either (fromRight)
 import GHC.Generics (Generic)
+import GHC.Records
 import NoThunks.Class (NoThunks (..))
+import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals,
     Nonce,
@@ -71,7 +74,6 @@ import Shelley.Spec.Ledger.BlockChain
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import Shelley.Spec.Ledger.Hashing (EraIndependentTxBody)
 import Shelley.Spec.Ledger.Keys (DSignable, GenDelegs, Hash, KESignable, VRFSignable)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
@@ -81,7 +83,7 @@ import Shelley.Spec.Ledger.LedgerState
     _genDelegs,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
-import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.PParams (PParams' (..), ProtVer)
 import Shelley.Spec.Ledger.STS.Chain (ChainChecksData, pparamsToChainChecksData)
 import Shelley.Spec.Ledger.STS.EraMapping ()
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
@@ -113,7 +115,12 @@ class
     Environment (Core.EraRule "TICKF" era) ~ (),
     State (Core.EraRule "TICKF" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICKF" era) ~ SlotNo,
-    PredicateFailure (Core.EraRule "TICKF" era) ~ TickfPredicateFailure era
+    PredicateFailure (Core.EraRule "TICKF" era) ~ TickfPredicateFailure era,
+    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_extraEntropy" (Core.PParams era) Nonce,
+    HasField "_maxBBSize" (Core.PParams era) Natural,
+    HasField "_maxBHSize" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   GetLedgerView era
   where
@@ -170,15 +177,23 @@ mkPrtclEnv
       lvPoolDistr
       lvGenDelegs
 
-view :: NewEpochState era -> LedgerView (Crypto era)
+view ::
+  ( HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_extraEntropy" (Core.PParams era) Nonce,
+    HasField "_maxBBSize" (Core.PParams era) Natural,
+    HasField "_maxBHSize" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
+  NewEpochState era ->
+  LedgerView (Crypto era)
 view
   NewEpochState
     { nesPd,
       nesEs
     } =
     LedgerView
-      { lvD = _d . esPp $ nesEs,
-        lvExtraEntropy = _extraEntropy . esPp $ nesEs,
+      { lvD = getField @"_d" . esPp $ nesEs,
+        lvExtraEntropy = getField @"_extraEntropy" . esPp $ nesEs,
         lvPoolDistr = nesPd,
         lvGenDelegs =
           _genDelegs . _dstate
@@ -239,7 +254,12 @@ futureView ::
     Environment (Core.EraRule "TICKF" era) ~ (),
     State (Core.EraRule "TICKF" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICKF" era) ~ SlotNo,
-    PredicateFailure (Core.EraRule "TICKF" era) ~ TickfPredicateFailure era
+    PredicateFailure (Core.EraRule "TICKF" era) ~ TickfPredicateFailure era,
+    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_extraEntropy" (Core.PParams era) Nonce,
+    HasField "_maxBBSize" (Core.PParams era) Natural,
+    HasField "_maxBHSize" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   Globals ->
   NewEpochState era ->

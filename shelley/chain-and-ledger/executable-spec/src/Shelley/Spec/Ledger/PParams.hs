@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -10,6 +11,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | This module contains just the type of protocol parameters.
 module Shelley.Spec.Ledger.PParams
@@ -37,6 +39,7 @@ import Cardano.Binary
     encodeWord,
   )
 import Cardano.Ledger.Era
+import Cardano.Ledger.Shelley.Constraints (UsesPParams (PParamsDelta))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -330,15 +333,21 @@ emptyPParams =
 -- | Update Proposal
 data Update era
   = Update !(ProposedPPUpdates era) !EpochNo
-  deriving (Show, Eq, Generic, NFData)
+  deriving (Generic)
 
-instance NoThunks (Update era)
+deriving instance Eq (PParamsDelta era) => Eq (Update era)
 
-instance Era era => ToCBOR (Update era) where
+deriving instance NFData (PParamsDelta era) => NFData (Update era)
+
+deriving instance Show (PParamsDelta era) => Show (Update era)
+
+instance NoThunks (PParamsDelta era) => NoThunks (Update era)
+
+instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (Update era) where
   toCBOR (Update ppUpdate e) =
     encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
 
-instance Era era => FromCBOR (Update era) where
+instance (Era era, FromCBOR (PParamsDelta era)) => FromCBOR (Update era) where
   fromCBOR = decodeRecordNamed "Update" (const 2) $ do
     x <- fromCBOR
     y <- fromCBOR
@@ -442,15 +451,27 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
 
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
-  = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (PParamsUpdate era))
-  deriving (Show, Eq, Generic, NFData)
+  = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (PParamsDelta era))
+  deriving (Generic)
 
-instance NoThunks (ProposedPPUpdates era)
+deriving instance Eq (PParamsDelta era) => Eq (ProposedPPUpdates era)
 
-instance Era era => ToCBOR (ProposedPPUpdates era) where
+deriving instance NFData (PParamsDelta era) => NFData (ProposedPPUpdates era)
+
+deriving instance Show (PParamsDelta era) => Show (ProposedPPUpdates era)
+
+instance NoThunks (PParamsDelta era) => NoThunks (ProposedPPUpdates era)
+
+instance
+  (Era era, ToCBOR (PParamsDelta era)) =>
+  ToCBOR (ProposedPPUpdates era)
+  where
   toCBOR (ProposedPPUpdates m) = mapToCBOR m
 
-instance Era era => FromCBOR (ProposedPPUpdates era) where
+instance
+  (Era era, FromCBOR (PParamsDelta era)) =>
+  FromCBOR (ProposedPPUpdates era)
+  where
   fromCBOR = ProposedPPUpdates <$> mapFromCBOR
 
 emptyPPPUpdates :: ProposedPPUpdates era

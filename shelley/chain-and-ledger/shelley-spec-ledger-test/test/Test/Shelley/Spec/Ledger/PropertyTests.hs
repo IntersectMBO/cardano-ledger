@@ -18,7 +18,7 @@ import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (TransValue, UsesTxOut)
+import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Sequence (Seq)
@@ -59,15 +59,14 @@ import Test.Shelley.Spec.Ledger.Rules.TestChain
     removedAfterPoolreap,
   )
 import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
-import Test.Shelley.Spec.Ledger.Utils (ChainProperty)
+import Test.Shelley.Spec.Ledger.Utils (ChainProperty, ShelleyTest)
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
-import Data.Default.Class (Default)
 
 minimalPropertyTests ::
   forall era.
   ( EraGen era,
-    UsesTxOut era,
+    ShelleyTest era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
@@ -86,7 +85,6 @@ minimalPropertyTests ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-    Default (State (Core.EraRule "PPUP" era)),
     Show (State (Core.EraRule "PPUP" era))
   ) =>
   TestTree
@@ -110,7 +108,7 @@ minimalPropertyTests =
 propertyTests ::
   forall era.
   ( EraGen era,
-    UsesTxOut era,
+    ShelleyTest era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
@@ -130,7 +128,6 @@ propertyTests ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-    Default (State (Core.EraRule "PPUP" era)),
     Show (State (Core.EraRule "PPUP" era))
   ) =>
   TestTree

@@ -48,7 +48,7 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
-import Shelley.Spec.Ledger.Hashing (HashAnnotated (hashAnnotated))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -82,6 +82,7 @@ import Shelley.Spec.Ledger.Tx
     TxIn (..),
     TxOut (..),
     WitnessSetHKD (..),
+    WitnessSet,
     _ttl,
   )
 import Shelley.Spec.Ledger.TxBody
@@ -404,7 +405,7 @@ testInvalidTx errs tx =
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
-    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (DeltaCoin 0) (DeltaCoin 10000))),
+    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000))),
       UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ TxIn genesisId 42))
     ]
     $ aliceGivesBobLovelace $
@@ -574,6 +575,7 @@ testInvalidWintess =
           SNothing
           SNothing
       txb' = txb {_ttl = SlotNo 2}
+      wits :: Shelley.Spec.Ledger.Tx.WitnessSet C
       wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb') [alicePay]}
       tx = Tx @C txb wits SNothing
       errs =
@@ -599,6 +601,7 @@ testWithdrawalNoWit =
           (SlotNo 0)
           SNothing
           SNothing
+      wits :: Shelley.Spec.Ledger.Tx.WitnessSet C
       wits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashAnnotated txb) alicePay}
       tx = Tx @C txb wits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
@@ -627,7 +630,7 @@ testWithdrawalWrongAmt =
       wits =
         mempty
           { addrWits =
-              makeWitnessesVKey
+              makeWitnessesVKey @C_Crypto
                 (hashAnnotated txb)
                 [asWitness alicePay, asWitness bobStake]
           }
@@ -720,7 +723,7 @@ testProducedOverMaxWord64 =
           (SlotNo 100)
           SNothing
           SNothing
-      wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txbody) [alicePay]}
+      wits = mempty {addrWits = makeWitnessesVKey @C_Crypto (hashAnnotated txbody) [alicePay]}
       tx = Tx @C txbody wits SNothing
       st = runShelleyBase $ applySTSTest @(LEDGER C) (TRC (ledgerEnv, (utxoState, dpState), tx))
    in -- We test that the serialization of the predicate failure does not return bottom

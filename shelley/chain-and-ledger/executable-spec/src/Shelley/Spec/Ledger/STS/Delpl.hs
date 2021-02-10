@@ -42,7 +42,6 @@ import Shelley.Spec.Ledger.LedgerState
     _dstate,
     _pstate,
   )
-import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegEnv (..), DelegPredicateFailure)
 import Shelley.Spec.Ledger.STS.Pool (POOL, PoolEnv (..), PoolPredicateFailure)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
@@ -60,7 +59,7 @@ data DELPL era
 data DelplEnv era = DelplEnv
   { delplSlotNo :: SlotNo,
     delPlPtr :: Ptr,
-    delPlPp :: PParams era,
+    delPlPp :: Core.PParams era,
     delPlAcnt :: AccountState
   }
 
@@ -190,6 +189,7 @@ delplTransition = do
 
 instance
   ( Era era,
+    STS (POOL era),
     PredicateFailure (Core.EraRule "POOL" era) ~ PoolPredicateFailure era
   ) =>
   Embed (POOL era) (DELPL era)

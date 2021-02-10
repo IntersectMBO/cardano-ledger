@@ -19,6 +19,7 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
@@ -42,7 +43,7 @@ translateTxIdByronToShelley ::
   Byron.TxId ->
   TxId c
 translateTxIdByronToShelley =
-  TxId . hashFromShortBytesE . Hashing.abstractHashToShort
+  TxId . unsafeMakeSafeHash . hashFromShortBytesE . Hashing.abstractHashToShort
 
 hashFromShortBytesE ::
   forall h a.

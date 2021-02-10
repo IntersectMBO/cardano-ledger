@@ -30,7 +30,7 @@ import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.Address (toAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.PParams (PParams, Update)
 import Shelley.Spec.Ledger.Tx
   ( TxId (TxId),
     ValidateScript (..),
@@ -47,6 +47,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.Presets (someKeyPairs)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, someScripts)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
+import Cardano.Ledger.SafeHash(unsafeMakeSafeHash)
 
 {------------------------------------------------------------------------------
  An EraGen instance makes it possible to run the Shelley property tests
@@ -69,6 +70,7 @@ class
   -- additional script witnessing.
   genEraTxBody ::
     GenEnv era ->
+    PParams era ->
     SlotNo ->
     Set (TxIn (Crypto era)) ->
     StrictSeq (Core.TxOut era) ->
@@ -119,7 +121,7 @@ genUtxo0 ge@(GenEnv _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
 genesisId ::
   Hash.HashAlgorithm (CC.HASH crypto) =>
   TxId crypto
-genesisId = TxId (mkDummyHash 0)
+genesisId = TxId (unsafeMakeSafeHash (mkDummyHash 0))
   where
     mkDummyHash :: forall h a. Hash.HashAlgorithm h => Int -> Hash.Hash h a
     mkDummyHash = coerce . Hash.hashWithSerialiser @h toCBOR

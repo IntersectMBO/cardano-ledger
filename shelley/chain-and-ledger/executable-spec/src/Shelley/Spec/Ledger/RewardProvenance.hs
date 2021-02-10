@@ -16,6 +16,7 @@ import Cardano.Binary
     encodeDouble,
   )
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Coders
@@ -141,6 +142,9 @@ instance Default (Credential r e) where
 
 instance Default (RewardAcnt crypto) where
   def = RewardAcnt def def
+
+instance Default (SafeHash c i) where
+  def = unsafeMakeSafeHash def
 
 -- =======================================================
 -- Show instances
