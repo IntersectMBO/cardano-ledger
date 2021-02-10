@@ -121,6 +121,7 @@ import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
 -- reward,
 
+import Data.Closure (Closure (..))
 import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
@@ -130,7 +131,7 @@ import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Pulse (LL (..), Pulsable (..), completeM)
+import Data.Pulse (Pulsable (..), SLP (..), completeM)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -205,8 +206,8 @@ import Shelley.Spec.Ledger.Rewards
     NonMyopic (..),
     PerformanceEstimate (..),
     Reward (..),
-    RewardAns,
-    RewardCalc (..),
+    RewardPulser,
+    RewardStakePool (..),
     aggregateRewards,
     applyDecay,
     desirability,
@@ -1099,16 +1100,9 @@ updateNonMyopic nm rPot newLikelihoods =
     updatedLikelihoods = Map.mapWithKey performance newLikelihoods
 
 -- ====================================================================
--- Some type synonyms, and generic lifting functions to lift one provenance
--- computation into another, and one to lift a Pulser from one provenance
--- type to another.  Then a specialisation of on the Provenance types we
--- use here.
-
-type RewardPulser m era =
-  LL
-    (RewardCalc m era (Crypto era))
-    (ProvM (KeyHashPoolProvenance (Crypto era)) m)
-    (RewardAns (Crypto era))
+-- Some generic lifting functions to lift one provenance computation
+-- into another, and one to lift a Pulser from one provenance type to
+-- another.  Then a specialisation on the Provenance types we use here.
 
 -- | Lift a Pulser in the ProvM monad, from one type of provenance (s1) to another (s2)
 pulseProvM ::
@@ -1136,7 +1130,7 @@ incrementProvenance provpools (prov@(RewardProvenance {pools = old})) = prov {po
 
 rupdParameters ::
   forall era m.
-  (Monad m, Era era) =>
+  (Monad m) =>
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->
@@ -1205,8 +1199,8 @@ rupdParameters slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm
           _R
           pr
           slotsPerEpoch
-      pulser :: RewardPulser m era
-      pulser = LL RewardCalc 2 free (Map.toList poolParams) (Map.empty, Map.empty)
+      -- pulser :: RewardPulser m era
+      pulser = SLP 2 (Close RewardStakePool :$ free) (Map.toList poolParams) (Map.empty, Map.empty)
    in (initprov, rewsnap, pulser)
 
 -- | Phase 3 of reward update has several parts
@@ -1217,36 +1211,52 @@ completeRupd ::
   Monad m =>
   RewardProvenance (Crypto era) ->
   RewardSnapShot era ->
-  LL
-    name
-    (ProvM (KeyHashPoolProvenance (Crypto era)) m)
-    (RewardAns (Crypto era)) ->
+  RewardPulser m era ->
   ProvM (RewardProvenance (Crypto era)) m (RewardUpdate (Crypto era))
 completeRupd
-  (prov@(RewardProvenance {deltaR1 = deltaR1, RProv.r = _r, deltaT1 = (Coin deltaT1)}))
+  (prov@(RewardProvenance {deltaR1 = deltaR1, RProv.r = oldr, deltaT1 = (Coin deltaT1)}))
   (rewsnap@(RewardSnapShot {rewSnapshots = ss, rewPp = pr, rewNonMyopic = nm}))
-  (pulser@(LL _ _ _ _ _)) = do
+  (pulser@(SLP _ _ _ _)) = do
     let combine (rs, likely) provPools (rewprov@RewardProvenance {pools = old}) =
           rewprov
-            { deltaR2 = _r <-> (sumRewards pr rs),
+            { deltaR2 = oldr <-> (sumRewards pr rs),
               pools = Map.union provPools old,
-              desirabilities = (Map.foldlWithKey' (addDesire prov rewsnap) Map.empty likely)
+              desirabilities = (Map.foldlWithKey' addDesireability Map.empty likely)
             }
+        -- A function to compute the 'desirablity' aggregate. Called only if we are computing
+        -- provenance. Adds nested pair ('key',(LikeliHoodEstimate,Desirability)) to the Map 'ans'
+        addDesireability ans key likelihood =
+          let totalstake = (RProv.totalStake prov)
+              rpot = (RProv.rPot prov)
+              snaps = (rewSnapshots rewsnap)
+              protparam = (rewPp rewsnap)
+              SnapShot _ _ poolParams = _pstakeGo snaps
+              estimate = (percentile' likelihood)
+           in Map.insert
+                key
+                ( Desirability
+                    { hitRateEstimate = unPerformanceEstimate estimate,
+                      desirabilityScore = case Map.lookup key poolParams of
+                        Just ppx -> desirability protparam rpot ppx estimate totalstake
+                        Nothing -> 0
+                    }
+                )
+                ans
     (rs_, newLikelihoods) <- liftProv (completeM pulser) Map.empty combine
-    let deltaR2 = _r <-> (sumRewards pr rs_)
+    let deltaR2 = oldr <-> (sumRewards pr rs_)
     pure $
       RewardUpdate
         { deltaT = (DeltaCoin deltaT1),
           deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
           rs = rs_,
           deltaF = (invert (toDeltaCoin $ _feeSS ss)),
-          nonMyopic = (updateNonMyopic nm _r newLikelihoods)
+          nonMyopic = (updateNonMyopic nm oldr newLikelihoods)
         }
 
 -- | To create a reward update, run all 3 phases
 createRUpd ::
   forall era m.
-  (Monad m, Era era) =>
+  (Monad m) =>
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->
@@ -1263,34 +1273,6 @@ createRUpd slotsPerEpoch blocksmade epstate maxSupply asc = do
 
   -- Phase3 Complete the computation
   completeRupd prov rewsnap pulser2
-
--- A function to compute the 'desirablity' aggregate. Called only if we are computing
--- provenance. Adds nested pair ('key',(LikeliHoodEstimate,Desirability)) to the Map 'ans'
-addDesire ::
-  RewardProvenance crypto ->
-  RewardSnapShot era ->
-  Map (KeyHash 'StakePool (Crypto era)) Desirability ->
-  KeyHash 'StakePool (Crypto era) ->
-  Likelihood ->
-  Map (KeyHash 'StakePool (Crypto era)) Desirability
-addDesire
-  (RewardProvenance {RProv.totalStake = totalStake, rPot = rPot})
-  (RewardSnapShot {rewSnapshots = ss, rewPp = pr})
-  ans
-  key
-  likelihood =
-    let SnapShot _ _ poolParams = _pstakeGo ss
-        estimate = (percentile' likelihood)
-     in Map.insert
-          key
-          ( Desirability
-              { hitRateEstimate = unPerformanceEstimate estimate,
-                desirabilityScore = case Map.lookup key poolParams of
-                  Just pp -> desirability pr rPot pp estimate totalStake
-                  Nothing -> 0
-              }
-          )
-          ans
 
 -- | Calculate the current circulation
 --

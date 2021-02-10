@@ -14,6 +14,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Shelley.Spec.Ledger.Rewards
   ( desirability,
@@ -39,10 +40,12 @@ module Shelley.Spec.Ledger.Rewards
     memberRew,
     aggregateRewards,
     sumRewards,
-    RewardCalc (..),
+    RewardStakePool (..),
     FreeVars (..),
     KeyHashPoolProvenance,
     RewardAns,
+    PulseItem,
+    RewardPulser,
   )
 where
 
@@ -61,6 +64,7 @@ import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Provenance (ProvM, modifyM)
+import Data.Closure (Closure (..), Named (..))
 import Data.Coders (Decode (..), Encode (..), decode, encode, fromMap, fromSet, toMap, toSet, (!>), (<!))
 import Data.Default.Class (Default, def)
 import Data.Foldable (find, fold)
@@ -70,13 +74,14 @@ import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Pulse (LL (..), MAccum (..), completeM)
+import Data.Pulse (SLP (..), completeM)
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
@@ -574,11 +579,21 @@ type PulseItem c = (KeyHash 'StakePool c, PoolParams c)
 -- | The provenance we collect
 type KeyHashPoolProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
 
+-- | The type of a Pulser which uses 'rewardStakePool' as its underlying function
+--     which is partially applied to an argument of type (FreeVars era)
+type RewardPulser m era =
+  SLP
+    (RewardStakePool m era (Crypto era))
+    ('[FreeVars era])
+    (PulseItem (Crypto era))
+    (ProvM (KeyHashPoolProvenance (Crypto era)) m)
+    (RewardAns (Crypto era))
+
 -- ===============================================================================
 
 reward ::
   forall m era.
-  (Era era, Monad m) =>
+  (Monad m) =>
   PParams era ->
   BlocksMade (Crypto era) ->
   Coin ->
@@ -610,12 +625,12 @@ reward
       totalBlocks = sum b
       Coin activeStake = fold . unStake $ stake
       free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r pp slotsPerEpoch)
-      pulser :: LL (RewardCalc m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
-      pulser = LL RewardCalc 2 free (Map.toList poolParams) (Map.empty, Map.empty)
+      -- pulser :: SLP (RewardStakePool m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
+      pulser = SLP 2 (Close RewardStakePool :$ free) (Map.toList poolParams) (Map.empty, Map.empty)
 
 rewardPulser ::
   forall m era.
-  (Era era, Monad m) =>
+  (Monad m) =>
   PParams era ->
   BlocksMade (Crypto era) ->
   Coin ->
@@ -626,7 +641,7 @@ rewardPulser ::
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
-  LL (RewardCalc m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
+  SLP (RewardStakePool m era (Crypto era)) (FreeVars era ': '[]) (PulseItem (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
 rewardPulser
   pp
   (BlocksMade b)
@@ -642,11 +657,12 @@ rewardPulser
       totalBlocks = sum b
       Coin activeStake = fold . unStake $ stake
       free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r pp slotsPerEpoch)
-      pulser :: LL (RewardCalc m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
-      pulser = LL RewardCalc 2 free (Map.toList poolParams) (Map.empty, Map.empty)
+      closure = (Close RewardStakePool :$ free)
+      -- pulser :: SLP (RewardStakePool m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
+      pulser = SLP 2 closure (Map.toList poolParams) (Map.empty, Map.empty)
 
--- The function actionFree (below), is uniquely identified by the value RewardCalc :: RewardCalc
--- in the (MAccum (RewardCalc m era c) ...) instance below.
+-- The function actionFree (below), is uniquely identified by the value RewardStakePool :: RewardStakePool
+-- in the (MAccum (RewardStakePool m era c) ...) instance below.
 -- The pulser folds actionFree over the poolParams. In this function we 'complete' the fold in 1 go.
 
 -- ========================================================
@@ -699,7 +715,7 @@ instance Era era => FromCBOR (FreeVars era) where
 -- ==================================================
 -- The function that we call on each pulseM
 
-actionFree ::
+rewardStakePool ::
   forall m era.
   (Monad m) =>
   FreeVars era ->
@@ -709,7 +725,7 @@ actionFree ::
     (KeyHashPoolProvenance (Crypto era))
     m
     (RewardAns (Crypto era))
-actionFree
+rewardStakePool
   (FreeVars {b, delegs, stake, addrsRew, totalStake, activeStake, asc, totalBlocks, r, pp, slotsPerEpoch})
   (m1, m2)
   (hk, pparams) = do
@@ -730,20 +746,44 @@ actionFree
         pure (Map.unionWith Set.union m m1, Map.insert hk ls m2)
 
 -- ====================================================
--- The Unit type uniquely associated with the actionFree function
+-- The Unit type uniquely associated with the rewardStakePool function
 
-data RewardCalc (m :: Type -> Type) era c = RewardCalc
+data RewardStakePool (m :: Type -> Type) era c = RewardStakePool deriving (Eq, Show)
+
+instance (Typeable era, Typeable m, Typeable c) => ToCBOR (RewardStakePool m era c) where
+  toCBOR RewardStakePool = mempty
+
+instance (Typeable era, Typeable m, Typeable c) => FromCBOR (RewardStakePool m era c) where
+  fromCBOR = pure RewardStakePool
 
 instance
   (Monad m, c ~ Crypto era) =>
+  Named
+    (RewardStakePool m era c)
+    ( FreeVars era ->
+      RewardAns c ->
+      PulseItem c ->
+      ProvM
+        (KeyHashPoolProvenance c)
+        m
+        (RewardAns c)
+    )
+  where
+  value RewardStakePool = rewardStakePool
+  name RewardStakePool = "rewardStakePool"
+
+{-
+instance
+  (Monad m, c ~ Crypto era) =>
   MAccum
-    (RewardCalc m era c)
+    (RewardStakePool m era c)
     (ProvM (KeyHashPoolProvenance c) m)
     (FreeVars era)
     (KeyHash 'StakePool c, PoolParams c)
     (RewardAns c)
   where
-  maccum RewardCalc = actionFree
+  maccum RewardStakePool = rewardStakePool
+-}
 
 -- ==========================================================
 
