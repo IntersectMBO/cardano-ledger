@@ -30,7 +30,7 @@ import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.Address (toAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.PParams (PParams, Update)
 import Shelley.Spec.Ledger.Tx
   ( TxId (TxId),
     ValidateScript (..),
@@ -70,6 +70,7 @@ class
   -- additional script witnessing.
   genEraTxBody ::
     GenEnv era ->
+    PParams era ->
     SlotNo ->
     Set (TxIn (Crypto era)) ->
     StrictSeq (Core.TxOut era) ->

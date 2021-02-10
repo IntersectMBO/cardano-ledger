@@ -150,19 +150,19 @@ goldenScaledMinDeposit =
           @?= Coin 1629628,
       testCase "three policies, ninety-six (small) names" $
         scaledMinDeposit
-          ( Value 7592585 $
+          ( Value 7407400 $
               Map.fromList
                 [ ( pid1,
-                    (Map.fromList $ map ((,1) . smallName . chr) [32 .. 64])
+                    (Map.fromList $ map ((,1) . smallName . chr) [32 .. 63])
                   ),
                   ( pid2,
-                    (Map.fromList $ map ((,1) . smallName . chr) [64 .. 96])
+                    (Map.fromList $ map ((,1) . smallName . chr) [64 .. 95])
                   ),
                   ( pid3,
-                    (Map.fromList $ map ((,1) . smallName . chr) [96 .. 128])
+                    (Map.fromList $ map ((,1) . smallName . chr) [96 .. 127])
                   )
                 ]
           )
           minUTxO
-          @?= Coin 7592585
+          @?= Coin 7407400
     ]
