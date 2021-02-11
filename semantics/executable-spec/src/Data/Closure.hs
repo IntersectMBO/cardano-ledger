@@ -8,6 +8,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE DerivingVia #-}
 
 -- | Supports the creation of objects with type (Closure name env (a -> b)) which are serializable functions.
 module Data.Closure
@@ -22,6 +24,8 @@ import Data.Kind(Type)
 import Cardano.Binary(ToCBOR(..),FromCBOR(..),serialize', decodeFull')
 import Data.Coders
 import Data.Typeable(Typeable)
+import NoThunks.Class(NoThunks,InspectHeapNamed(..))
+import Control.DeepSeq (NFData,rnf)
 
 -- ================================================
 
@@ -41,6 +45,8 @@ data Closure name (env::[Type]) t where
   Close:: Named name (a -> b) => !name -> Closure name '[] (a -> b)
   (:$):: !(Closure name env (a -> b)) -> !a -> Closure name (a ': env) b
 
+deriving via InspectHeapNamed "Closure" (Closure name env t) instance NoThunks (Closure name env t)
+
 -- | Lift a Closure to a real function
 apply :: Closure name env (a -> b) -> a -> b
 apply (Close nm) a = value nm a
@@ -55,6 +61,15 @@ rootName ( cl :$ _ ) = rootName cl
 -- Class instances for Closure come in pairs,
 -- one for the empty environment,       P(Closure n '[] t),
 -- and one for a non-empty environment, P(Closure n (a ': e) (a->b))
+
+-- ============
+-- NFData pair
+
+instance NFData name => NFData (Closure name '[]  x) where
+  rnf (Close x) = rnf x
+
+instance (NFData a, NFData (Closure name env (a -> x))) => NFData (Closure name (a ': env) x) where
+  rnf (cl :$ x) = seq (rnf cl) (rnf x)
 
 -- ==========
 -- Eq pair

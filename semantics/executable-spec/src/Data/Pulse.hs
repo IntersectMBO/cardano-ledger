@@ -9,6 +9,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Data.Pulse where
 
@@ -22,6 +24,8 @@ import Data.Coders
 import Cardano.Binary(ToCBOR(..),FromCBOR(..))
 import Data.Typeable
 import Data.Closure(Closure(..),apply,rootName)
+import NoThunks.Class(NoThunks,InspectHeapNamed(..))
+import Control.DeepSeq (NFData,rnf)
 
 
 -- ====================================================
@@ -162,8 +166,16 @@ foldlWithKeyM' f z = go z
 -- =========================================================
 
 -- | Serializable List based Pulser (SLP)
-data SLP name (env::[Type]) i (m :: Type -> Type) ans where
+data SLP name env i (m :: Type -> Type) ans where
   SLP:: !Int -> !(Closure name env (ans -> i -> m ans)) -> ![i] -> !ans -> SLP name env i m ans
+
+deriving via InspectHeapNamed "SLP" (SLP n e i m t) instance NoThunks (SLP n e i m t)
+
+instance (NFData ans, NFData i, NFData (Closure name '[] (ans -> i -> m ans))) => NFData (SLP name '[] i m ans) where
+  rnf (SLP n1 c1 b1 a1) = seq (rnf n1) (seq (rnf c1) (seq (rnf b1) (rnf a1)))
+
+instance (NFData ans, NFData i, NFData (Closure name (z ': e) (ans -> i -> m ans))) => NFData (SLP name (z ': e) i m ans) where
+  rnf (SLP n1 c1 b1 a1) =  seq (rnf n1) (seq (rnf c1) (seq (rnf b1) (rnf a1)))
 
 instance (Show ans, Show i) => Show (SLP name env i m ans) where
   show (SLP n cl cs ans) = "(SLP "++show n++" "++rootName cl++status cs++show ans++")"

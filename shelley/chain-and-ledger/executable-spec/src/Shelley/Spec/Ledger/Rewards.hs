@@ -83,7 +83,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes
@@ -565,7 +565,7 @@ rewardOnePool
           }
 
 -- ==============================================================================
--- Type synonyms for the complicated types that make up the reward calculation
+-- Type synonyms for the complicated types that make up the reward calculation with Pulsing
 
 -- | The result of reward calculation is a pair of aggregate Maps.
 type RewardAns c =
@@ -610,9 +610,10 @@ reward ::
     ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
       Map (KeyHash 'StakePool (Crypto era)) Likelihood
     )
-reward
-  pp
-  (BlocksMade b)
+reward pp bm r addrsRew poolParams stake delegs tot asc slotsPerEpoch =
+  completeM (rewardPulser pp bm r addrsRew poolParams stake delegs tot asc slotsPerEpoch)
+
+{-
   r
   addrsRew
   poolParams
@@ -620,13 +621,14 @@ reward
   delegs
   (Coin totalStake)
   asc
-  slotsPerEpoch = completeM pulser
+  slotsPerEpoch
     where
       totalBlocks = sum b
       Coin activeStake = fold . unStake $ stake
       free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r pp slotsPerEpoch)
-      -- pulser :: SLP (RewardStakePool m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
+      pulser :: RewardPulser m era
       pulser = SLP 2 (Close RewardStakePool :$ free) (Map.toList poolParams) (Map.empty, Map.empty)
+-}
 
 rewardPulser ::
   forall m era.
@@ -641,7 +643,7 @@ rewardPulser ::
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
-  SLP (RewardStakePool m era (Crypto era)) (FreeVars era ': '[]) (PulseItem (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
+  RewardPulser m era
 rewardPulser
   pp
   (BlocksMade b)
@@ -658,16 +660,12 @@ rewardPulser
       Coin activeStake = fold . unStake $ stake
       free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r pp slotsPerEpoch)
       closure = (Close RewardStakePool :$ free)
-      -- pulser :: SLP (RewardStakePool m era (Crypto era)) (ProvM (KeyHashPoolProvenance (Crypto era)) m) (RewardAns (Crypto era))
+      pulser :: RewardPulser m era
       pulser = SLP 2 closure (Map.toList poolParams) (Map.empty, Map.empty)
-
--- The function actionFree (below), is uniquely identified by the value RewardStakePool :: RewardStakePool
--- in the (MAccum (RewardStakePool m era c) ...) instance below.
--- The pulser folds actionFree over the poolParams. In this function we 'complete' the fold in 1 go.
 
 -- ========================================================
 -- FreeVars is the set of variables needed to compute
--- actionFree, so that it can be made into a serializable
+-- rewardStakePool, so that it can be made into a serializable
 -- Pulsable function.
 
 data FreeVars era = FreeVars
@@ -683,8 +681,11 @@ data FreeVars era = FreeVars
     pp :: PParams era,
     slotsPerEpoch :: EpochSize
   }
+  deriving (Show, Eq, Generic)
 
--- FreeVars is serializable
+deriving via InspectHeapNamed "FreeVars" (FreeVars era) instance NoThunks (FreeVars era)
+
+instance NFData (FreeVars era)
 
 instance (Era era) => ToCBOR (FreeVars era) where
   toCBOR (FreeVars {b, delegs, stake, addrsRew, totalStake, activeStake, asc, totalBlocks, r, pp, slotsPerEpoch}) =
@@ -713,8 +714,12 @@ instance Era era => FromCBOR (FreeVars era) where
       )
 
 -- ==================================================
--- The function that we call on each pulseM
+-- The function rewardStakePool (below), is uniquely identified by the
+-- value    RewardStakePool :: (RewardStakePool m era c)
+-- in the (Names (RewardStakePool m era c) ...) instance below.
+-- The pulser folds rewardStakePool over the poolParams.
 
+-- The function that we call on each pulseM
 rewardStakePool ::
   forall m era.
   (Monad m) =>
@@ -746,9 +751,13 @@ rewardStakePool
         pure (Map.unionWith Set.union m m1, Map.insert hk ls m2)
 
 -- ====================================================
--- The Unit type uniquely associated with the rewardStakePool function
 
-data RewardStakePool (m :: Type -> Type) era c = RewardStakePool deriving (Eq, Show)
+-- | The Unit type uniquely associated with the rewardStakePool function
+data RewardStakePool (m :: Type -> Type) era c = RewardStakePool deriving (Eq, Show, Generic)
+
+instance NoThunks (RewardStakePool m era c)
+
+instance NFData (RewardStakePool m era c)
 
 instance (Typeable era, Typeable m, Typeable c) => ToCBOR (RewardStakePool m era c) where
   toCBOR RewardStakePool = mempty
@@ -756,6 +765,7 @@ instance (Typeable era, Typeable m, Typeable c) => ToCBOR (RewardStakePool m era
 instance (Typeable era, Typeable m, Typeable c) => FromCBOR (RewardStakePool m era c) where
   fromCBOR = pure RewardStakePool
 
+-- | The Named instance that associates (RewardStakePool m era c) with the function rewardStakePool
 instance
   (Monad m, c ~ Crypto era) =>
   Named
@@ -771,19 +781,6 @@ instance
   where
   value RewardStakePool = rewardStakePool
   name RewardStakePool = "rewardStakePool"
-
-{-
-instance
-  (Monad m, c ~ Crypto era) =>
-  MAccum
-    (RewardStakePool m era c)
-    (ProvM (KeyHashPoolProvenance c) m)
-    (FreeVars era)
-    (KeyHash 'StakePool c, PoolParams c)
-    (RewardAns c)
-  where
-  maccum RewardStakePool = rewardStakePool
--}
 
 -- ==========================================================
 

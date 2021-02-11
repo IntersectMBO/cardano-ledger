@@ -117,4 +117,6 @@ deriving newtype instance HeapWords (HS.Hash h a)
 
 deriving newtype instance ToCBOR EpochSize
 
+deriving newtype instance NFData EpochSize
+
 deriving newtype instance FromCBOR EpochSize
