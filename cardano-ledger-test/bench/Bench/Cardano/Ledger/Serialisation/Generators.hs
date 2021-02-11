@@ -1,5 +1,5 @@
 -- | Benchmarks for the serialisation generators
-module Bench.Cardano.Ledger.ShelleyMA.Serialisation.Generators
+module Bench.Cardano.Ledger.Serialisation.Generators
   ( benchTxGeneration,
   )
 where
