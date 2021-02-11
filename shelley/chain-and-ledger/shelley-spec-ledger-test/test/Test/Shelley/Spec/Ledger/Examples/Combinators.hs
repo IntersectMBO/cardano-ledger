@@ -57,7 +57,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Word (Word64)
 import GHC.Records (HasField)
-import Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), (⭒))
+import Shelley.Spec.Ledger.BaseTypes (Nonce (..), (⭒))
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     Block (..),
@@ -89,6 +89,7 @@ import Shelley.Spec.Ledger.LedgerState
     FutureGenDeleg (..),
     InstantaneousRewards (..),
     LedgerState (..),
+    PulsingRewUpdate(..),
     NewEpochState (..),
     PPUPState (..),
     PState (..),
@@ -481,7 +482,7 @@ rewardUpdate ::
   ChainState era
 rewardUpdate ru cs = cs {chainNes = nes'}
   where
-    nes' = (chainNes cs) {nesRu = SJust ru}
+    nes' = (chainNes cs) {nesRu = Complete ru}
 
 -- | = Apply a Reward Update
 --
@@ -495,7 +496,7 @@ applyRewardUpdate ru cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
     es' = applyRUpd ru (nesEs nes)
-    nes' = (chainNes cs) {nesEs = es', nesRu = SNothing}
+    nes' = (chainNes cs) {nesEs = es', nesRu = Waiting}
 
 -- | = New Snapshot
 --

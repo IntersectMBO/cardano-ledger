@@ -32,6 +32,7 @@ import Shelley.Spec.Ledger.API.Types
 import Shelley.Spec.Ledger.Coin (CompactForm (CompactCoin))
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (UnsafeCompactAddr))
 import Shelley.Spec.Ledger.EpochBoundary
+import Shelley.Spec.Ledger.LedgerState (PulsingRewUpdate (Waiting))
 import Shelley.Spec.Ledger.STS.Chain (pparamsToChainChecksData)
 import Shelley.Spec.Ledger.Slot
 
@@ -98,7 +99,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
       nesBprev = BlocksMade Map.empty,
       nesBcur = BlocksMade Map.empty,
       nesEs = epochState,
-      nesRu = SNothing,
+      nesRu = Waiting,
       nesPd = PoolDistr Map.empty
     }
   where

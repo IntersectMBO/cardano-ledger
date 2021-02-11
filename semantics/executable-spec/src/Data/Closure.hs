@@ -59,8 +59,11 @@ rootName ( cl :$ _ ) = rootName cl
 
 -- =====================================================================================
 -- Class instances for Closure come in pairs,
--- one for the empty environment,       P(Closure n '[] t),
--- and one for a non-empty environment, P(Closure n (a ': e) (a->b))
+-- one for the empty environment:       P(Closure n '[] t),
+-- and one for a non-empty environment: P(Closure n (a ': e) t).
+-- The instance for the non-empty case always has the inductive structure:
+-- (P a, P (Closure name env (a -> x))) => P (Closure name (a ': env) x) .
+-- Note how the 'env' gets smaller in the inductive case:  env < (a ': env) .
 
 -- ============
 -- NFData pair

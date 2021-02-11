@@ -11,6 +11,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -32,6 +33,7 @@ module Shelley.Spec.Ledger.LedgerState
     DState (..),
     EpochState (..),
     UpecState (..),
+    PulsingRewUpdate (..),
     FutureGenDeleg (..),
     InstantaneousRewards (..),
     Ix,
@@ -74,7 +76,9 @@ module Shelley.Spec.Ledger.LedgerState
     applyRUpd,
     createRUpd,
     completeRupd,
-    rupdParameters,
+    startStep,
+    pulseStep,
+    completeStep,
     pulseOther,
     --
     NewEpochState (..),
@@ -150,12 +154,12 @@ import Shelley.Spec.Ledger.Address.Bootstrap
   )
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    ShelleyBase,
+    -- Globals,
     StrictMaybe (..),
     activeSlotVal,
     intervalValue,
     unitIntervalToRational,
-    -- ShelleyBase,
-    -- Globals,
   )
 import Shelley.Spec.Ledger.Coin
   ( Coin (..),
@@ -620,9 +624,8 @@ data NewEpochState era = NewEpochState
     -- | Epoch state before current
     nesEs :: !(EpochState era),
     -- | Possible reward update
-    nesRu :: !(StrictMaybe (RewardUpdate (Crypto era))),
-    -- nesRu :: !(StrictMaybe (PulseState ShelleyBase era)),
-
+    -- nesRu :: !(StrictMaybe (RewardUpdate (Crypto era))),
+    nesRu :: !(PulsingRewUpdate ShelleyBase era),
     -- | Stake distribution within the stake pool
     nesPd :: !(PoolDistr (Crypto era))
   }
@@ -1034,7 +1037,7 @@ stakeDistr u ds ps =
 
 -- | Apply a reward update
 applyRUpd ::
-  -- PulseState ShelleyBase era ->
+  -- PulsingRewUpdate ShelleyBase era ->
   RewardUpdate (Crypto era) ->
   EpochState era ->
   EpochState era
@@ -1125,16 +1128,26 @@ instance Era era => FromCBOR (RewardSnapShot era) where
   fromCBOR = decode (RecD RewardSnapShot <! From <! From <! From <! From <! From <! From <! From <! From)
 
 -- | State used in the STS rules
-data PulseState m era = PulseState !(RewardSnapShot era) !(RewardPulser m era)
+data PulsingRewUpdate m era
+  = Waiting
+  | Pulsing !(RewardSnapShot era) !(RewardPulser m era)
+  | Complete !(RewardUpdate (Crypto era))
   deriving (Eq, Show, Generic, NoThunks)
 
-instance NFData (PulseState m era)
+instance NFData (PulsingRewUpdate m era)
 
-instance (Typeable m, Era era) => ToCBOR (PulseState m era) where
-  toCBOR (PulseState s p) = encode (Rec PulseState !> To s !> To p)
+instance (Typeable m, Era era) => ToCBOR (PulsingRewUpdate m era) where
+  toCBOR Waiting = encode (Sum Waiting 0)
+  toCBOR (Pulsing s p) = encode (Sum Pulsing 1 !> To s !> To p)
+  toCBOR (Complete r) = encode (Sum (Complete @m @era) 2 !> To r)
 
-instance (Monad m, Typeable m, Era era) => FromCBOR (PulseState m era) where
-  fromCBOR = decode (RecD PulseState <! From <! From)
+instance (Monad m, Typeable m, Era era) => FromCBOR (PulsingRewUpdate m era) where
+  fromCBOR = decode (Summands "PulsingRewUpdate" decPS)
+    where
+      decPS 0 = (SumD Waiting)
+      decPS 1 = (SumD Pulsing <! From <! From)
+      decPS 2 = (SumD Complete <! From)
+      decPS n = Invalid n
 
 -- ====================================================================
 -- Some generic lifting functions to lift one provenance computation
@@ -1165,7 +1178,7 @@ incrementProvenance provpools (prov@(RewardProvenance {pools = old})) = prov {po
 -- One of these pure results is a Pulser, i.e. a computation that when pulseM'ed
 -- computes a portion of what is required, so that the whole compuation can be spread out in time.
 
-rupdParameters ::
+startStep ::
   forall era m.
   (Monad m) =>
   EpochSize ->
@@ -1173,8 +1186,8 @@ rupdParameters ::
   EpochState era ->
   Coin ->
   ActiveSlotCoeff ->
-  (PulseState m era)
-rupdParameters slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc =
+  (PulsingRewUpdate m era)
+startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc =
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
@@ -1225,7 +1238,32 @@ rupdParameters slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm
           slotsPerEpoch
       pulser :: RewardPulser m era
       pulser = SLP 2 (Close RewardStakePool :$ free) (Map.toList poolParams) (Map.empty, Map.empty)
-   in (PulseState rewsnap pulser)
+   in (Pulsing rewsnap pulser)
+
+-- Phase 2
+
+pulseStep ::
+  Monad m =>
+  PulsingRewUpdate m era ->
+  ProvM (RewardProvenance (Crypto era)) m (PulsingRewUpdate m era)
+pulseStep Waiting = pure Waiting
+pulseStep (Complete r) = pure (Complete r)
+pulseStep (p@(Pulsing _ pulser)) | done pulser = completeStep p
+pulseStep (Pulsing rewsnap pulser) = do
+  p2 <- (pulseOther pulser)
+  pure (Pulsing rewsnap p2)
+
+-- Phase 3
+
+completeStep ::
+  Monad m =>
+  PulsingRewUpdate m era ->
+  ProvM (RewardProvenance (Crypto era)) m (PulsingRewUpdate m era)
+completeStep Waiting = error ("Can't complete a Waiting step")
+completeStep (Complete r) = pure (Complete r)
+completeStep (Pulsing rewsnap pulser) = do
+  p2 <- completeRupd (Pulsing rewsnap pulser)
+  pure (Complete p2)
 
 -- | Phase 3 of reward update has several parts
 --   a) completeM the pulser (in case there are still computions to run)
@@ -1233,10 +1271,12 @@ rupdParameters slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm
 --   c) Construct the final RewardUpdate
 completeRupd ::
   Monad m =>
-  PulseState m era ->
+  PulsingRewUpdate m era ->
   ProvM (RewardProvenance (Crypto era)) m (RewardUpdate (Crypto era))
+completeRupd Waiting = error "Tried to complete a Waiting PulsingRewUpdate, this should be unreachable."
+completeRupd (Complete x) = pure x
 completeRupd
-  ( PulseState
+  ( Pulsing
       ( RewardSnapShot
           { rewDeltaR1 = deltaR1,
             rewR = oldr,
@@ -1293,15 +1333,15 @@ createRUpd ::
   ActiveSlotCoeff ->
   ProvM (RewardProvenance (Crypto era)) m (RewardUpdate (Crypto era))
 createRUpd slotsPerEpoch blocksmade epstate maxSupply asc = do
-  -- Phase 1, compute parameters
-  let (PulseState rewsnap pulser) = rupdParameters slotsPerEpoch blocksmade epstate maxSupply asc
+  step1 <- pure $ startStep slotsPerEpoch blocksmade epstate maxSupply asc
+  step2 <- pulseStep step1
+  step3 <- completeStep step2
+  case step3 of
+    Complete rewupdate -> pure rewupdate
+    Waiting -> error "Wait never returned by completeStep"
+    Pulsing _ _ -> error "Pulsing never returned by completeStep"
 
-  -- Phase 2, pulse 0 or more times
-  pulser1 <- pulseOther pulser
-  pulser2 <- pulseOther pulser1
-
-  -- Phase3 Complete the computation
-  completeRupd (PulseState rewsnap pulser2)
+-- completeStep $ startStep slotsPerEpoch b es maxsupply asc
 
 -- =====================================================================
 

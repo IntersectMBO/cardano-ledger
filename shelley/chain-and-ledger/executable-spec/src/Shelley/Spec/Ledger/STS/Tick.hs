@@ -23,7 +23,7 @@ module Shelley.Spec.Ledger.STS.Tick
 where
 
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
@@ -31,17 +31,9 @@ import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe, epochInfo)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
 import Shelley.Spec.Ledger.Keys (GenDelegs (..))
-import Shelley.Spec.Ledger.LedgerState
-  ( DPState (..),
-    DState (..),
-    EpochState (..),
-    FutureGenDeleg (..),
-    LedgerState (..),
-    NewEpochState (..),
-    RewardUpdate,
-  )
+import Shelley.Spec.Ledger.LedgerState (DPState (..), DState (..), EpochState (..), FutureGenDeleg (..), LedgerState (..), NewEpochState (..), PulsingRewUpdate)
 import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH, NewEpochPredicateFailure)
 import Shelley.Spec.Ledger.STS.Rupd (RUPD, RupdEnv (..), RupdPredicateFailure)
 import Shelley.Spec.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
@@ -80,7 +72,7 @@ instance
     State (TICK era) ~ NewEpochState era,
     BaseM (TICK era) ~ ShelleyBase,
     Environment (Core.EraRule "RUPD" era) ~ RupdEnv era,
-    State (Core.EraRule "RUPD" era) ~ StrictMaybe (RewardUpdate (Crypto era)),
+    State (Core.EraRule "RUPD" era) ~ PulsingRewUpdate ShelleyBase era,
     Signal (Core.EraRule "RUPD" era) ~ SlotNo,
     Environment (Core.EraRule "NEWEPOCH" era) ~ (),
     State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
@@ -163,7 +155,7 @@ bheadTransition ::
     State (TICK era) ~ NewEpochState era,
     BaseM (TICK era) ~ ShelleyBase,
     Environment (Core.EraRule "RUPD" era) ~ RupdEnv era,
-    State (Core.EraRule "RUPD" era) ~ StrictMaybe (RewardUpdate (Crypto era)),
+    State (Core.EraRule "RUPD" era) ~ PulsingRewUpdate ShelleyBase era,
     Signal (Core.EraRule "RUPD" era) ~ SlotNo,
     Environment (Core.EraRule "NEWEPOCH" era) ~ (),
     State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,

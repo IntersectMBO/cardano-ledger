@@ -92,6 +92,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState
   ( FutureGenDeleg,
+    PulsingRewUpdate(..),
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.RewardProvenance
@@ -138,7 +139,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
     genSignature,
   )
-import Test.Tasty.QuickCheck (Gen, choose, elements)
+import Test.Tasty.QuickCheck (Gen, choose, elements, frequency)
 import Control.State.Transition (STS (State))
 import Cardano.Ledger.SafeHash(SafeHash, HasAlgorithm, unsafeMakeSafeHash)
 
@@ -899,3 +900,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+instance (Monad m,Era era) => Arbitrary (PulsingRewUpdate m era) where
+   arbitrary = frequency [(1,Complete <$> arbitrary),(1,pure Waiting)]
+      -- We don't generate any (Pulsing _ _), because they follow from Waiting

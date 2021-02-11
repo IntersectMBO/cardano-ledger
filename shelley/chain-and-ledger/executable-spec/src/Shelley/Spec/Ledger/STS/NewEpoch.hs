@@ -99,7 +99,7 @@ instance
           (BlocksMade Map.empty)
           (BlocksMade Map.empty)
           def
-          SNothing
+          Waiting
           (PoolDistr Map.empty)
     ]
 
@@ -128,8 +128,9 @@ newEpochTransition = do
     then pure src
     else do
       es' <- case ru of
-        SNothing -> pure es
-        SJust ru' -> do
+        Waiting -> pure es
+        Pulsing _ _ -> error "Pulsing state in newEpochTransition" -- TODO What can we do about this?
+        Complete ru' -> do
           let RewardUpdate dt dr rs_ df _ = ru'
               totRs = sumRewards (esPrevPp es) rs_
           Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
@@ -145,7 +146,7 @@ newEpochTransition = do
           bcur
           (BlocksMade Map.empty)
           es'''
-          SNothing
+          Waiting
           pd'
 
 calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
