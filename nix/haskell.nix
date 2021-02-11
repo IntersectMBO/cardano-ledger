@@ -45,10 +45,10 @@ let
         packages.small-steps-test.components.tests.doctests.buildable = lib.mkForce false;
         packages.byron-spec-ledger.components.tests.doctests.buildable = lib.mkForce false;
 
-        packages.cardano-ledger = {
+        packages.cardano-ledger-byron = {
           configureFlags = [ "--ghc-option=-Werror" ];
           components = {
-            tests.cardano-ledger-test = {
+            tests.cardano-ledger-byron-test = {
               preCheck = ''
                 export CARDANO_MAINNET_MIRROR="${cardano-mainnet-mirror}/epochs"
                 cp ${../byron/ledger/impl/mainnet-genesis.json} ./mainnet-genesis.json
