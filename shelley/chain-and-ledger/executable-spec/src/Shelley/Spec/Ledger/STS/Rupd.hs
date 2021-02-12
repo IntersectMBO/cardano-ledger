@@ -16,6 +16,7 @@ module Shelley.Spec.Ledger.STS.Rupd
     completeStep,
     lift,
     Identity (..),
+    createRUpd,
   )
 where
 

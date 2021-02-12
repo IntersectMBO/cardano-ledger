@@ -24,6 +24,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import qualified Cardano.Ledger.Val as Val
+import Control.Provenance (runProvM)
 import Control.State.Transition
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
@@ -79,7 +80,8 @@ instance
     Environment (Core.EraRule "EPOCH" era) ~ (),
     State (Core.EraRule "EPOCH" era) ~ EpochState era,
     Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
-    Default (EpochState era)
+    Default (EpochState era),
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   STS (NEWEPOCH era)
   where
@@ -114,7 +116,10 @@ newEpochTransition ::
     Signal (Core.EraRule "MIR" era) ~ (),
     Environment (Core.EraRule "EPOCH" era) ~ (),
     State (Core.EraRule "EPOCH" era) ~ EpochState era,
-    Signal (Core.EraRule "EPOCH" era) ~ EpochNo
+    Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
+    UsesTxOut era,
+    UsesValue era,
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
@@ -128,8 +133,12 @@ newEpochTransition = do
     then pure src
     else do
       es' <- case ru of
-        Waiting -> pure es
-        Pulsing _ _ -> error "Pulsing state in newEpochTransition" -- TODO What can we do about this?
+        Waiting -> error ("\n\n *********************************************\nSTOP\n****************************\n") --pure es
+        p@(Pulsing _ _) -> do
+          ru'@(RewardUpdate dt dr rs_ df _) <- liftSTS $ runProvM $ completeRupd p
+          let totRs = sumRewards (esPrevPp es) rs_
+          Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
+          pure $ applyRUpd ru' es
         Complete ru' -> do
           let RewardUpdate dt dr rs_ df _ = ru'
               totRs = sumRewards (esPrevPp es) rs_

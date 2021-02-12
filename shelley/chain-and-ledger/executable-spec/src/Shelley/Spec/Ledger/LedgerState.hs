@@ -1072,6 +1072,17 @@ applyRUpd -- pulsestate
           }
       nm' = nonMyopic ru
 
+{-
+applyPulse ::
+  Monad m =>
+  PulsingRewUpdate m era ->
+  EpochState era ->
+  ProvM (RewardProvenance (Crypto era)) m (EpochState era)
+applyPulse pulsestate epochstate = do
+     ru <- completeRupd pulsestate
+     pure(applyRUpd ru epochstate)
+-}
+
 decayFactor :: Float
 decayFactor = 0.9
 
@@ -1246,7 +1257,7 @@ pulseStep ::
   Monad m =>
   PulsingRewUpdate m era ->
   ProvM (RewardProvenance (Crypto era)) m (PulsingRewUpdate m era)
-pulseStep Waiting = pure Waiting
+pulseStep Waiting = error ("\n\n ****************** Waiting i startStep ***********************\n\n")
 pulseStep (Complete r) = pure (Complete r)
 pulseStep (p@(Pulsing _ pulser)) | done pulser = completeStep p
 pulseStep (Pulsing rewsnap pulser) = do
@@ -1259,7 +1270,7 @@ completeStep ::
   Monad m =>
   PulsingRewUpdate m era ->
   ProvM (RewardProvenance (Crypto era)) m (PulsingRewUpdate m era)
-completeStep Waiting = error ("Can't complete a Waiting step")
+completeStep Waiting = error ("\n\n ********************** Can't complete a Waiting step ************************\n")
 completeStep (Complete r) = pure (Complete r)
 completeStep (Pulsing rewsnap pulser) = do
   p2 <- completeRupd (Pulsing rewsnap pulser)
@@ -1273,7 +1284,7 @@ completeRupd ::
   Monad m =>
   PulsingRewUpdate m era ->
   ProvM (RewardProvenance (Crypto era)) m (RewardUpdate (Crypto era))
-completeRupd Waiting = error "Tried to complete a Waiting PulsingRewUpdate, this should be unreachable."
+completeRupd Waiting = error ("\n\n ********************** Waiting in completeRupd ***********************\n\n.")
 completeRupd (Complete x) = pure x
 completeRupd
   ( Pulsing

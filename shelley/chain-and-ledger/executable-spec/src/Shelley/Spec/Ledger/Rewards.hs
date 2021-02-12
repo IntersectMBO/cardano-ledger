@@ -613,23 +613,6 @@ reward ::
 reward pp bm r addrsRew poolParams stake delegs tot asc slotsPerEpoch =
   completeM (rewardPulser pp bm r addrsRew poolParams stake delegs tot asc slotsPerEpoch)
 
-{-
-  r
-  addrsRew
-  poolParams
-  stake
-  delegs
-  (Coin totalStake)
-  asc
-  slotsPerEpoch
-    where
-      totalBlocks = sum b
-      Coin activeStake = fold . unStake $ stake
-      free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r pp slotsPerEpoch)
-      pulser :: RewardPulser m era
-      pulser = SLP 2 (Close RewardStakePool :$ free) (Map.toList poolParams) (Map.empty, Map.empty)
--}
-
 rewardPulser ::
   forall m era.
   (Monad m) =>
@@ -721,15 +704,17 @@ instance Era era => FromCBOR (FreeVars era) where
 
 -- The function that we call on each pulseM
 rewardStakePool ::
-  forall m era.
-  (Monad m) =>
+  forall era.
   FreeVars era ->
   RewardAns (Crypto era) ->
   PulseItem (Crypto era) ->
-  ProvM
-    (KeyHashPoolProvenance (Crypto era))
-    m
-    (RewardAns (Crypto era))
+  ( forall m.
+    Monad m =>
+    ProvM
+      (KeyHashPoolProvenance (Crypto era))
+      m
+      (RewardAns (Crypto era))
+  )
 rewardStakePool
   (FreeVars {b, delegs, stake, addrsRew, totalStake, activeStake, asc, totalBlocks, r, pp, slotsPerEpoch})
   (m1, m2)
