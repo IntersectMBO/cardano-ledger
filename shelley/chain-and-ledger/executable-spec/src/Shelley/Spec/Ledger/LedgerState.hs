@@ -1339,10 +1339,8 @@ createRUpd ::
 createRUpd slotsPerEpoch blocksmade epstate maxSupply asc = do
   step1 <- pure $ startStep slotsPerEpoch blocksmade epstate maxSupply asc
   step2 <- pulseStep step1
-  step3 <- completeStep step2
-  case step3 of
-    Complete rewupdate -> pure rewupdate
-    Pulsing _ _ -> error "\n\n ********* Pulsing never returned by completeStep ***************\n\n"
+  step3 <- completeRupd step2
+  pure step3
 
 -- completeStep $ startStep slotsPerEpoch b es maxsupply asc
 

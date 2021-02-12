@@ -36,6 +36,9 @@ import qualified Shelley.Spec.Ledger.LedgerState as LS
   ( returnRedeemAddrsToReserves,
   )
 import Shelley.Spec.Ledger.Tx (decodeWits)
+import Shelley.Spec.Ledger.LedgerState(PulsingRewUpdate(..))
+import Data.Pulse(SLP(..))
+import Data.Closure(rootName)
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Allegra
@@ -61,14 +64,18 @@ type instance PreviousEra (AllegraEra c) = ShelleyEra c
 type instance TranslationContext (AllegraEra c) = ()
 
 instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
-  translateEra ctxt nes =
+  type TranslationError (AllegraEra c) NewEpochState = PulseError
+  translateEra ctxt nes = do
+    nesRu' <- case nesRu nes of
+                SNothing -> pure SNothing
+                SJust pulsrew -> SJust <$> translateEra ctxt pulsrew
     return $
       NewEpochState
         { nesEL = nesEL nes,
           nesBprev = nesBprev nes,
           nesBcur = nesBcur nes,
           nesEs = translateEra' ctxt $ LS.returnRedeemAddrsToReserves . nesEs $ nes,
-          nesRu = nesRu nes,
+          nesRu = nesRu',
           nesPd = nesPd nes
         }
 
@@ -186,3 +193,11 @@ instance Crypto c => TranslateEra (AllegraEra c) WitnessSet where
 
 instance Crypto c => TranslateEra (AllegraEra c) Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en
+
+data PulseError = PulseError String
+
+instance Crypto c => TranslateEra (AllegraEra c) (PulsingRewUpdate m) where
+  type TranslationError (AllegraEra c) (PulsingRewUpdate m) = PulseError
+  translateEra _ (Pulsing _ (SLP _ cl _ _)) =
+      throwError(PulseError ("The pulsing reward update did not run to completions: "++rootName cl))
+  translateEra _ (Complete ru) = pure(Complete ru)

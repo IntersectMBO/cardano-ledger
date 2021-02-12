@@ -142,7 +142,7 @@ rupdTransition = do
   case (s <= slot, s == lastblock) of
     -- Waiting for the stabiliy point, do nothing, keep waiting
     (True, _) -> pure SNothing
-    (False, _) | ((2 * 2 == 2 + (2 :: Int))) -> liftSTS $ runProvM $ (SJust . Complete) <$> createRUpd slotsPerEpoch b es maxsupply asc
+    -- (False, _) | ((2 * 2 == 2 + (2 :: Int))) -> liftSTS $ runProvM $ (SJust . Complete) <$> createRUpd slotsPerEpoch b es maxsupply asc
     -- We are in the last block, finish everything up
     (False, True) ->
       case ru of

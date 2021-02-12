@@ -41,6 +41,10 @@ import Shelley.Spec.Ledger.API hiding (Metadata, TxBody)
 import Shelley.Spec.Ledger.Tx
   ( decodeWits,
   )
+import Shelley.Spec.Ledger.LedgerState(PulsingRewUpdate(..))
+import Data.Pulse(SLP(..))
+import Data.Closure(rootName)
+import Cardano.Ledger.Allegra.Translation(PulseError(..))
 
 --------------------------------------------------------------------------------
 -- Translation from Allegra to Mary
@@ -66,14 +70,18 @@ type instance PreviousEra (MaryEra c) = AllegraEra c
 type instance TranslationContext (MaryEra c) = ()
 
 instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
-  translateEra ctxt nes =
+  type TranslationError (MaryEra c) NewEpochState = PulseError
+  translateEra ctxt nes = do
+    nesRu' <- case nesRu nes of
+                SNothing -> pure SNothing
+                SJust pulsrew -> SJust <$> translateEra ctxt pulsrew
     return $
-      NewEpochState
+       NewEpochState
         { nesEL = nesEL nes,
           nesBprev = nesBprev nes,
           nesBcur = nesBcur nes,
           nesEs = translateEra' ctxt $ nesEs nes,
-          nesRu = nesRu nes,
+          nesRu = nesRu',
           nesPd = nesPd nes
         }
 
@@ -185,3 +193,9 @@ translateCompactValue =
   fromMaybe (error msg) . toCompact . translateValue . fromCompact
   where
     msg = "impossible error: compact coin is out of range"
+
+instance Crypto c => TranslateEra (MaryEra c) (PulsingRewUpdate m) where
+  type TranslationError (MaryEra c) (PulsingRewUpdate m) = PulseError
+  translateEra _ (Pulsing _ (SLP _ cl _ _)) =
+      throwError(PulseError ("The pulsing reward update did not run to completions: "++rootName cl))
+  translateEra _ (Complete ru) = pure(Complete ru)
