@@ -115,7 +115,7 @@ import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.Provenance (ProvM, lift, modifyWithBlackBox, runOtherProv)
-import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
+import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Constraint (Constraint)
@@ -1046,7 +1046,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
         (aggregateRewards pr $ rs ru)
     as' =
       as
-        { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold (range unregRU),
+        { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold unregRU,
           _reserves = addDeltaCoin (_reserves as) (deltaR ru)
         }
     ls' =
