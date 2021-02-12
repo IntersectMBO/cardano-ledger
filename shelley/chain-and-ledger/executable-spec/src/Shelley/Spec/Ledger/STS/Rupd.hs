@@ -40,6 +40,7 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( ShelleyBase,
+    StrictMaybe (..),
     activeSlotCoeff,
     epochInfo,
     maxLovelaceSupply,
@@ -115,13 +116,13 @@ rupdTransition = do
 -}
 
 instance (Era era) => STS (RUPD era) where
-  type State (RUPD era) = PulsingRewUpdate ShelleyBase era
+  type State (RUPD era) = StrictMaybe (PulsingRewUpdate ShelleyBase era)
   type Signal (RUPD era) = SlotNo
   type Environment (RUPD era) = RupdEnv era
   type BaseM (RUPD era) = ShelleyBase
   type PredicateFailure (RUPD era) = RupdPredicateFailure era
 
-  initialRules = [pure Waiting]
+  initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
 
 rupdTransition :: Era era => TransitionRule (RUPD era)
@@ -140,17 +141,17 @@ rupdTransition = do
   let maxsupply = Coin (fromIntegral maxLL)
   case (s <= slot, s == lastblock) of
     -- Waiting for the stabiliy point, do nothing, keep waiting
-    (True, _) -> pure Waiting
-    (False, _) | ((2 * 2 == 2 + (2 :: Int))) -> liftSTS $ runProvM $ Complete <$> createRUpd slotsPerEpoch b es maxsupply asc
+    (True, _) -> pure SNothing
+    (False, _) | ((2 * 2 == 2 + (2 :: Int))) -> liftSTS $ runProvM $ (SJust . Complete) <$> createRUpd slotsPerEpoch b es maxsupply asc
     -- We are in the last block, finish everything up
     (False, True) ->
       case ru of
-        Waiting -> liftSTS $ runProvM $ completeStep $ startStep slotsPerEpoch b es maxsupply asc
-        p@(Pulsing _ _) -> liftSTS $ runProvM $ completeStep p
-        p@(Complete _) -> pure p
+        SNothing -> liftSTS $ runProvM $ SJust <$> completeStep (startStep slotsPerEpoch b es maxsupply asc)
+        (SJust (p@(Pulsing _ _))) -> SJust <$> (liftSTS $ runProvM $ completeStep p)
+        (SJust (p@(Complete _))) -> pure (SJust p)
     -- More blocks to come, get things started or take a step
     (False, False) ->
       case ru of
-        Waiting -> liftSTS $ runProvM $ pure $ startStep slotsPerEpoch b es maxsupply asc
-        p@(Pulsing _ _) -> liftSTS $ runProvM $ pulseStep p
-        p@(Complete _) -> pure p
+        SNothing -> liftSTS $ runProvM $ pure $ SJust $ startStep slotsPerEpoch b es maxsupply asc
+        (SJust (p@(Pulsing _ _))) -> liftSTS $ runProvM $ (SJust <$> pulseStep p)
+        (SJust (p@(Complete _))) -> pure (SJust p)

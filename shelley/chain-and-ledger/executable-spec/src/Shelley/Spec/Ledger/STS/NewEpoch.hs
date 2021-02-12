@@ -101,7 +101,7 @@ instance
           (BlocksMade Map.empty)
           (BlocksMade Map.empty)
           def
-          Waiting
+          SNothing
           (PoolDistr Map.empty)
     ]
 
@@ -133,13 +133,13 @@ newEpochTransition = do
     then pure src
     else do
       es' <- case ru of
-        Waiting -> error ("\n\n *********************************************\nSTOP\n****************************\n") --pure es
-        p@(Pulsing _ _) -> do
+        SNothing -> pure es
+        SJust (p@(Pulsing _ _)) -> do
           ru'@(RewardUpdate dt dr rs_ df _) <- liftSTS $ runProvM $ completeRupd p
           let totRs = sumRewards (esPrevPp es) rs_
           Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
           pure $ applyRUpd ru' es
-        Complete ru' -> do
+        SJust (Complete ru') -> do
           let RewardUpdate dt dr rs_ df _ = ru'
               totRs = sumRewards (esPrevPp es) rs_
           Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
@@ -155,7 +155,7 @@ newEpochTransition = do
           bcur
           (BlocksMade Map.empty)
           es'''
-          Waiting
+          SNothing
           pd'
 
 calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto

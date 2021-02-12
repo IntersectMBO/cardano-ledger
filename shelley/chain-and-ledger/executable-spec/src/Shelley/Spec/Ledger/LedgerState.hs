@@ -625,7 +625,7 @@ data NewEpochState era = NewEpochState
     nesEs :: !(EpochState era),
     -- | Possible reward update
     -- nesRu :: !(StrictMaybe (RewardUpdate (Crypto era))),
-    nesRu :: !(PulsingRewUpdate ShelleyBase era),
+    nesRu :: !(StrictMaybe (PulsingRewUpdate ShelleyBase era)),
     -- | Stake distribution within the stake pool
     nesPd :: !(PoolDistr (Crypto era))
   }
@@ -1037,7 +1037,6 @@ stakeDistr u ds ps =
 
 -- | Apply a reward update
 applyRUpd ::
-  -- PulsingRewUpdate ShelleyBase era ->
   RewardUpdate (Crypto era) ->
   EpochState era ->
   EpochState era
@@ -1140,24 +1139,21 @@ instance Era era => FromCBOR (RewardSnapShot era) where
 
 -- | State used in the STS rules
 data PulsingRewUpdate m era
-  = Waiting
-  | Pulsing !(RewardSnapShot era) !(RewardPulser m era)
+  = Pulsing !(RewardSnapShot era) !(RewardPulser m era)
   | Complete !(RewardUpdate (Crypto era))
   deriving (Eq, Show, Generic, NoThunks)
 
 instance NFData (PulsingRewUpdate m era)
 
 instance (Typeable m, Era era) => ToCBOR (PulsingRewUpdate m era) where
-  toCBOR Waiting = encode (Sum Waiting 0)
-  toCBOR (Pulsing s p) = encode (Sum Pulsing 1 !> To s !> To p)
-  toCBOR (Complete r) = encode (Sum (Complete @m @era) 2 !> To r)
+  toCBOR (Pulsing s p) = encode (Sum Pulsing 0 !> To s !> To p)
+  toCBOR (Complete r) = encode (Sum (Complete @m @era) 1 !> To r)
 
 instance (Monad m, Typeable m, Era era) => FromCBOR (PulsingRewUpdate m era) where
   fromCBOR = decode (Summands "PulsingRewUpdate" decPS)
     where
-      decPS 0 = (SumD Waiting)
-      decPS 1 = (SumD Pulsing <! From <! From)
-      decPS 2 = (SumD Complete <! From)
+      decPS 0 = (SumD Pulsing <! From <! From)
+      decPS 1 = (SumD Complete <! From)
       decPS n = Invalid n
 
 -- ====================================================================
@@ -1257,7 +1253,6 @@ pulseStep ::
   Monad m =>
   PulsingRewUpdate m era ->
   ProvM (RewardProvenance (Crypto era)) m (PulsingRewUpdate m era)
-pulseStep Waiting = error ("\n\n ****************** Waiting i startStep ***********************\n\n")
 pulseStep (Complete r) = pure (Complete r)
 pulseStep (p@(Pulsing _ pulser)) | done pulser = completeStep p
 pulseStep (Pulsing rewsnap pulser) = do
@@ -1270,7 +1265,6 @@ completeStep ::
   Monad m =>
   PulsingRewUpdate m era ->
   ProvM (RewardProvenance (Crypto era)) m (PulsingRewUpdate m era)
-completeStep Waiting = error ("\n\n ********************** Can't complete a Waiting step ************************\n")
 completeStep (Complete r) = pure (Complete r)
 completeStep (Pulsing rewsnap pulser) = do
   p2 <- completeRupd (Pulsing rewsnap pulser)
@@ -1284,7 +1278,6 @@ completeRupd ::
   Monad m =>
   PulsingRewUpdate m era ->
   ProvM (RewardProvenance (Crypto era)) m (RewardUpdate (Crypto era))
-completeRupd Waiting = error ("\n\n ********************** Waiting in completeRupd ***********************\n\n.")
 completeRupd (Complete x) = pure x
 completeRupd
   ( Pulsing
@@ -1349,8 +1342,7 @@ createRUpd slotsPerEpoch blocksmade epstate maxSupply asc = do
   step3 <- completeStep step2
   case step3 of
     Complete rewupdate -> pure rewupdate
-    Waiting -> error "Wait never returned by completeStep"
-    Pulsing _ _ -> error "Pulsing never returned by completeStep"
+    Pulsing _ _ -> error "\n\n ********* Pulsing never returned by completeStep ***************\n\n"
 
 -- completeStep $ startStep slotsPerEpoch b es maxsupply asc
 

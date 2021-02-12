@@ -1311,7 +1311,7 @@ tests =
               (BlocksMade bs)
               (BlocksMade bs)
               es
-              ru
+              (SJust ru)
               pd
        in checkEncodingCBOR
             "new_epoch_state"
@@ -1321,7 +1321,7 @@ tests =
                 <> S (BlocksMade @C_Crypto bs)
                 <> S (BlocksMade @C_Crypto bs)
                 <> S es
-                <> S ru
+                <> S (SJust ru)
                 <> S pd
             )
     ]

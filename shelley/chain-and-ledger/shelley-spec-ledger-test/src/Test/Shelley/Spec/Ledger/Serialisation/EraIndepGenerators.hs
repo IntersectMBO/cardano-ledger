@@ -139,7 +139,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
     genSignature,
   )
-import Test.Tasty.QuickCheck (Gen, choose, elements, frequency)
+import Test.Tasty.QuickCheck (Gen, choose, elements)
 import Control.State.Transition (STS (State))
 import Cardano.Ledger.SafeHash(SafeHash, HasAlgorithm, unsafeMakeSafeHash)
 
@@ -902,5 +902,5 @@ instance
       <*> arbitrary
 
 instance (Monad m,Era era) => Arbitrary (PulsingRewUpdate m era) where
-   arbitrary = frequency [(1,Complete <$> arbitrary),(1,pure Waiting)]
-      -- We don't generate any (Pulsing _ _), because they follow from Waiting
+   arbitrary = Complete <$> arbitrary
+      -- We don't generate any (Pulsing _ _), because they follow from SNothing

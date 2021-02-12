@@ -31,7 +31,7 @@ import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfo)
 import Shelley.Spec.Ledger.Keys (GenDelegs (..))
 import Shelley.Spec.Ledger.LedgerState (DPState (..), DState (..), EpochState (..), FutureGenDeleg (..), LedgerState (..), NewEpochState (..), PulsingRewUpdate)
 import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH, NewEpochPredicateFailure)
@@ -72,7 +72,7 @@ instance
     State (TICK era) ~ NewEpochState era,
     BaseM (TICK era) ~ ShelleyBase,
     Environment (Core.EraRule "RUPD" era) ~ RupdEnv era,
-    State (Core.EraRule "RUPD" era) ~ PulsingRewUpdate ShelleyBase era,
+    State (Core.EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate ShelleyBase era),
     Signal (Core.EraRule "RUPD" era) ~ SlotNo,
     Environment (Core.EraRule "NEWEPOCH" era) ~ (),
     State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
@@ -155,7 +155,7 @@ bheadTransition ::
     State (TICK era) ~ NewEpochState era,
     BaseM (TICK era) ~ ShelleyBase,
     Environment (Core.EraRule "RUPD" era) ~ RupdEnv era,
-    State (Core.EraRule "RUPD" era) ~ PulsingRewUpdate ShelleyBase era,
+    State (Core.EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate ShelleyBase era),
     Signal (Core.EraRule "RUPD" era) ~ SlotNo,
     Environment (Core.EraRule "NEWEPOCH" era) ~ (),
     State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,

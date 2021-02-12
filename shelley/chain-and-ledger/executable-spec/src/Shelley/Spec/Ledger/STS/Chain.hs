@@ -60,6 +60,7 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     Nonce (..),
     ShelleyBase,
+    StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader,
@@ -92,7 +93,6 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
     PState (..),
-    PulsingRewUpdate (..),
     TransUTxOState,
     UTxOState (..),
     updateNES,
@@ -213,7 +213,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
             pp
             def
         )
-        Waiting
+        SNothing
         (PoolDistr Map.empty)
     )
     cs
