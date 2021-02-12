@@ -29,16 +29,16 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.Monad.Except (throwError)
+import Data.Closure (rootName)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
+import Data.Pulse (SLP (..))
 import Shelley.Spec.Ledger.API
+import Shelley.Spec.Ledger.LedgerState (PulsingRewUpdate (..))
 import qualified Shelley.Spec.Ledger.LedgerState as LS
   ( returnRedeemAddrsToReserves,
   )
 import Shelley.Spec.Ledger.Tx (decodeWits)
-import Shelley.Spec.Ledger.LedgerState(PulsingRewUpdate(..))
-import Data.Pulse(SLP(..))
-import Data.Closure(rootName)
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Allegra
@@ -67,8 +67,8 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
   type TranslationError (AllegraEra c) NewEpochState = PulseError
   translateEra ctxt nes = do
     nesRu' <- case nesRu nes of
-                SNothing -> pure SNothing
-                SJust pulsrew -> SJust <$> translateEra ctxt pulsrew
+      SNothing -> pure SNothing
+      SJust pulsrew -> SJust <$> translateEra ctxt pulsrew
     return $
       NewEpochState
         { nesEL = nesEL nes,
@@ -199,5 +199,5 @@ data PulseError = PulseError String
 instance Crypto c => TranslateEra (AllegraEra c) (PulsingRewUpdate m) where
   type TranslationError (AllegraEra c) (PulsingRewUpdate m) = PulseError
   translateEra _ (Pulsing _ (SLP _ cl _ _)) =
-      throwError(PulseError ("The pulsing reward update did not run to completions: "++rootName cl))
-  translateEra _ (Complete ru) = pure(Complete ru)
+    throwError (PulseError ("The pulsing reward update did not run to completions: " ++ rootName cl))
+  translateEra _ (Complete ru) = pure (Complete ru)
