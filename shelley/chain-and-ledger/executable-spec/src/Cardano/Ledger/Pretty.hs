@@ -26,6 +26,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Constraints (UsesPParams (PParamsDelta))
+import Cardano.Slotting.Slot (WithOrigin (..))
 import Codec.Binary.Bech32
 import Control.Monad.Identity (Identity)
 import Control.SetAlgebra (forwards)
@@ -52,6 +53,7 @@ import Shelley.Spec.Ledger.Address
   )
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Shelley.Spec.Ledger.BaseTypes (ActiveSlotCoeff, DnsName, FixedPoint, Globals (..), Network (..), Nonce (..), Port (..), StrictMaybe (..), UnitInterval, Url (..), activeSlotLog, activeSlotVal, dnsToText)
+import Shelley.Spec.Ledger.BlockChain (HashHeader (..), LastAppliedBlock (..))
 import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), decompactAddr)
 import Shelley.Spec.Ledger.Credential
@@ -60,6 +62,7 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
+import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
     SnapShot (..),
@@ -85,6 +88,7 @@ import Shelley.Spec.Ledger.LedgerState
     InstantaneousRewards (..),
     Ix,
     LedgerState (..),
+    NewEpochState (..),
     PPUPState (..),
     PState (..),
     RewardUpdate (..),
@@ -114,6 +118,7 @@ import Shelley.Spec.Ledger.Rewards
     RewardType (..),
     StakeShare (..),
   )
+import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.Scripts (MultiSig (..), ScriptHash (..))
 import Shelley.Spec.Ledger.Slot
   ( BlockNo (..),
@@ -195,6 +200,12 @@ ppPair pp1 pp2 (x, y) = ppSexp' mempty [pp1 x, pp2 y]
 -- ppSignedDSIGN :: SignedDSIGN a b -> Doc ann
 ppSignedDSIGN :: Show a => a -> PDoc
 ppSignedDSIGN x = reAnnotate (Width 5 :) (viaShow x)
+
+ppBool :: Bool -> Doc a
+ppBool x = viaShow x
+
+ppInt :: Int -> Doc a
+ppInt x = viaShow x
 
 -- =========================
 -- operations for pretty printing
@@ -334,6 +345,65 @@ class PrettyA t where
 -- END HELPER FUNCTIONS
 -- ================================= ====================================================================
 
+-- ================================
+-- Shelley.Spec.Ledger.STS.Chain(ChainState(..))
+-- import Shelley.Spec.Ledger.BlockChain(LastAppliedBlock(..),HashHeader(..))
+
+ppChainState :: CanPrettyPrintLedgerState era => ChainState era -> PDoc
+ppChainState (ChainState nes ocert epochnonce evolvenonce prevnonce candnonce lastab) =
+  ppRecord
+    "ChainState"
+    [ ("newepoch", ppNewEpochState nes),
+      ("ocerts", ppMap ppKeyHash ppWord64 ocert),
+      ("epochNonce", ppNonce epochnonce),
+      ("evolvingNonce", ppNonce evolvenonce),
+      ("candidateNonce", ppNonce prevnonce),
+      ("prevepochNonce", ppNonce candnonce),
+      ("lastApplidBlock", ppWithOrigin ppLastAppliedBlock lastab)
+    ]
+
+ppLastAppliedBlock :: LastAppliedBlock c -> PDoc
+ppLastAppliedBlock (LastAppliedBlock blkNo slotNo hh) =
+  ppRecord
+    "LastAppliedBlock"
+    [ ("blockNo", ppBlockNo blkNo),
+      ("slotNo", ppSlotNo slotNo),
+      ("hash", ppHashHeader hh)
+    ]
+
+ppHashHeader :: HashHeader c -> PDoc
+ppHashHeader (HashHeader x) = ppHash x
+
+ppWithOrigin :: (t -> PDoc) -> (WithOrigin t) -> PDoc
+ppWithOrigin _ Origin = ppString "Origin"
+ppWithOrigin pp (At t) = ppSexp "At" [pp t]
+
+instance CanPrettyPrintLedgerState era => PrettyA (ChainState era) where prettyA = ppChainState
+
+instance PrettyA (LastAppliedBlock c) where prettyA = ppLastAppliedBlock
+
+instance PrettyA (HashHeader c) where prettyA = ppHashHeader
+
+instance PrettyA t => PrettyA (WithOrigin t) where prettyA = ppWithOrigin prettyA
+
+-- =================================
+-- Shelley.Spec.Ledger.LedgerState.Delegation.Certificates
+
+ppPoolDistr :: PoolDistr c -> PDoc
+ppPoolDistr (PoolDistr mp) = ppSexp "PoolDistr" [ppMap ppKeyHash ppIndividualPoolStake mp]
+
+ppIndividualPoolStake :: IndividualPoolStake c -> PDoc
+ppIndividualPoolStake (IndividualPoolStake r h) =
+  ppRecord
+    "IndividualPoolStake"
+    [ ("stake", ppRational r),
+      ("stakeVrf", ppHash h)
+    ]
+
+instance PrettyA (PoolDistr c) where prettyA = ppPoolDistr
+
+instance PrettyA (IndividualPoolStake c) where prettyA = ppIndividualPoolStake
+
 -- =================================
 -- Shelley.Spec.Ledger.LedgerState
 
@@ -455,6 +525,18 @@ ppEpochState (EpochState acnt snap ls prev pp non) =
       ("nonMyopic", ppNonMyopic non)
     ]
 
+ppNewEpochState :: CanPrettyPrintLedgerState era => NewEpochState era -> PDoc
+ppNewEpochState (NewEpochState enum prevB curB es rewup pool) =
+  ppRecord
+    "NewEpochState"
+    [ ("epochnum", ppEpochNo enum),
+      ("prevBlock", ppBlocksMade prevB),
+      ("currBlock", ppBlocksMade curB),
+      ("epochState", ppEpochState es),
+      ("rewUpdate", ppStrictMaybe ppRewardUpdate rewup),
+      ("poolDist", ppPoolDistr pool)
+    ]
+
 ppLedgerState ::
   CanPrettyPrintLedgerState era =>
   LedgerState era ->
@@ -479,6 +561,14 @@ instance
   PrettyA (EpochState era)
   where
   prettyA = ppEpochState
+
+instance
+  ( Era era,
+    CanPrettyPrintLedgerState era
+  ) =>
+  PrettyA (NewEpochState era)
+  where
+  prettyA x = ppNewEpochState x
 
 instance PrettyA (FutureGenDeleg crypto) where prettyA = ppFutureGenDeleg
 
@@ -1211,3 +1301,41 @@ atWidth n a pp = do
   let doc = pp a
   putDocW n doc
   putStrLn ""
+
+-- =========================================================
+
+-- | Wrap a type: t (that has a PrettyA instance) with a newtype
+--   cnstructor, so that the prettyA instance is used to Show (Nice t).
+--   Can also be used as a DerivingVia helper.
+newtype Nice t = Nice {unNice :: t}
+
+instance PrettyA t => Show (Nice t) where
+  show (Nice x) = show (prettyA x)
+  showList xs more = show (ppList (prettyA . unNice) xs) ++ more
+
+instance Eq t => Eq (Nice t) where
+  (Nice x) == (Nice y) = x == y
+
+instance PrettyA String where prettyA = ppString
+
+instance PrettyA Double where prettyA = ppDouble
+
+instance PrettyA Integer where prettyA = ppInteger
+
+instance PrettyA Float where prettyA = ppFloat
+
+instance PrettyA Natural where prettyA = ppNatural
+
+instance PrettyA Word64 where prettyA = ppWord64
+
+instance PrettyA Word32 where prettyA = ppWord32
+
+instance PrettyA Word16 where prettyA = ppWord16
+
+instance PrettyA Word8 where prettyA = ppWord8
+
+instance PrettyA FixedPoint where prettyA = ppFixedPoint
+
+instance PrettyA Bool where prettyA = ppBool
+
+instance PrettyA Int where prettyA = ppInt
