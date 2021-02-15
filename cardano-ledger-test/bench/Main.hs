@@ -4,6 +4,7 @@
 -- | This benchmark file is a placholder for benchmarks
 module Main where
 
+import qualified Bench.Cardano.Ledger.ApplyTx as ApplyTx
 import qualified Bench.Cardano.Ledger.Serialisation.Generators as SerGen
 import Criterion.Main
   ( -- bench, bgroup, nf,
@@ -11,4 +12,4 @@ import Criterion.Main
   )
 
 main :: IO ()
-main = defaultMain [SerGen.benchTxGeneration]
+main = defaultMain [SerGen.benchTxGeneration, ApplyTx.applyTxBenchmarks]

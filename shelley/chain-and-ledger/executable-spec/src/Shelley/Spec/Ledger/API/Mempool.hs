@@ -15,6 +15,11 @@
 module Shelley.Spec.Ledger.API.Mempool
   ( ApplyTx (..),
     ApplyTxError (..),
+
+    -- * Exports for testing
+    MempoolEnv,
+    MempoolState,
+    applyTxsTransition,
   )
 where
 
