@@ -1,0 +1,90 @@
+\section{Proposal Submission}
+
+Proposals are submitted by a member of a submitter group.  They are counter-signed by a quorum of submitter keys.\khcomment{Difficult question: who controls registration/de-registration of submitter keys.}\khcomment{How do we ensure that there are always enough submitters in existence.}\khcomment{The quorum may be a protocol parameter.}
+No fee is charged for proposal submission.\khcomment{This may need to be discussed.}
+A submitter may submit any number of proposals in a single epoch.
+
+\subsection{Format}
+
+Each proposal has a header and a body and must be signed\khcomment{Submitting may implicitly sign the proposal?}.
+
+\paragraph{Header.} The header must include:
+
+\begin{verbatim}
+"header": {
+  "proposal" : ProposalHash,
+  "voteby" : Slot,
+  "votethreshold" : Threshold,
+  "endorseby" : Optional Slot,
+  "endorsethreshold" : Optional Threshold,
+  "enact" : Epoch,
+  "submitter" : KeyHash
+}
+\end{verbatim}
+
+The proposal field allows the proposal to be tied to a corresponding off-chain proposal.  The ``voteby'' and ``endorseby'' fields specify deadlines.
+Votes and endorsements must be received prior to the specified slot if they are to be counted.  The endorsement deadline is optional.
+\khcomment{Arguably, to avoid performance issues, tallying should either happen at epoch boundaries or in a separate thread.}
+In order to avoid zombie proposals that could disrupt operations, deadlines must be set within a reasonable time period after submission (e.g. within 3 epochs).
+Voting and endorsement slots and thresholds are completely independent, so a voting deadline may be set before/after/at the same time as an endorsement deadline.
+Deadlines may not be set in the past.
+
+
+The ``votethreshold'' and ``endorsethreshold'' field allow specific thresholds to be set for voting and endorsement, respectively.  This allows differentiation of different proposal types on a per-proposal basis
+(e.g. a protocol version upgrade may require a higher threshold than a simple parameter change).
+\khcomment{Arguably, this is dangerous and standard or minimum thresholds should be set as protocol parameters.}
+
+The ``enact'' field specifies when the proposal is to be enacted.
+
+The submitter must belong to the correct group.  \khcomment{Different groups for each kind of proposal?}
+
+The body of the proposal is specific to the proposal type.
+
+
+\paragraph{Parameter Update.}  The format is identical to that used for Shelley/Allegra/Mary.  Multiple parameters may be changed in a single proposal.
+Parameters are checked for validity on enactment, rather than on submission.
+
+
+\begin{verbatim}
+"body": {
+  "parameter n" : "new value 1",
+  ...
+  "parameter n" : "new value n"
+}
+\end{verbatim}
+
+\paragraph{Protocol Version Upgrade.}  The format is also identical to that used for Shelley/Allegra/Mary.
+
+
+\begin{verbatim}
+"body": {
+  "Major" : Integer,
+  "Minor" : Integer,
+  "Genesis" : Hash
+}
+\end{verbatim}
+
+Node software only needs to comply with the new protocol rules.  It does not need to be a specific version, for example, and we do not check a software hash.
+
+\khcomment{I assume that the new set of parameters is encoded in the genesis hash?}
+
+\khcomment{We might also need to include some hash here that can be verified by the system?}
+
+\paragraph{Central Funds Transfer.}  The format is also identical to that used for Shelley/Allegra/Mary.
+
+
+\begin{verbatim}
+"body": {
+  "from" : Treasury/Reserves,
+  "to" : Optional Treasury/Reserves,
+  "toAddress" : Optional Address,
+  "amount" : Nat
+ ...
+}
+\end{verbatim}
+
+Funds may be transferred from either the treasury or the reserves pot, and sent to either an address, or to the treasury/reserves pot.
+Transfers from treasury to treasury or from reserves to reserves are not permitted.  All transfers must be of a positive amount (including zero).
+Multiple transfers may be made in a single epoch.  This allows for proper accounting, where eg a
+
+Errors in tramay be corrected by a reverse transfer, except for transfers to addresses.

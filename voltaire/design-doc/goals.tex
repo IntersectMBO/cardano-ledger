@@ -1,0 +1,110 @@
+\section{Detailed Design Goals}
+
+The primary goals of this design are:
+
+\begin{itemize}
+\item
+  \textbf{Decentralised Governance:}
+  Support a decentralised governance mechanism for Cardano.
+\item
+  \textbf{Genesis Key Retirement:}
+  Remove the dependence of the Cardano blockchain on a small set of genesis keys/delegates.
+\item
+  \textbf{Security:}
+  Maintain the security of the Cardano network.
+\item
+  \textbf{Progress:}
+  Ensure that the blockchain protocol can evolve in the necessary way.
+\item
+  \textbf{Smooth Transition:}
+  Evolve smoothly from the current federated governance
+\end{itemize}
+
+Where these goals conflict, it is, of course, absolutely essential to maintain the security of the network.  Maintaining progress/enabling
+evolution is also important, since otherwise governance decisions will be ineffectual/not enacted.
+
+\subsection{Overall Governance Goals}
+
+The primary reason for decentralisation is to ensure long-term compliance with emergent and evolving international financial regulations.
+Secondary reasons include improved community engagement, alignment of decision-making authority with increased responsibility for maintaining the blockchain,
+ensuring the long term stability of the Cardano blockchain.
+
+Achieving these goals requires that:
+
+\begin{itemize}
+\item
+  The governance process is transparent -- the progress of decisions can be monitored and any deviations are properly explained to stakeholders.
+\item
+  All opinions are considered.
+\item
+  Control of the blockchain rests with those who have the greatest direct stake in the operation of the blockchain as holders of ada or as maintainers of the blockchain.
+\item
+  Control of the blockchain is not unduly concentrated -- small, unrepresentative groups of powerful individuals should not be able to take over the operation
+  of the blockchain.
+\item
+  The blockchain is robust to change -- it should be possible to recover from an incorrect decision, and changes do not expose the blockchain to attack.
+\item
+  The mechanisms that are implemented properly incentivise stakeholders to take decisions that are in the long-term interest of the blockchain.
+\item
+  There are checks and balances that ensure that technical knowledge and advice is properly considered as part of the decision making and implementation process.
+  This is especially important where there are security concerns.
+\item
+  The transition path is clearly identified and explained, with clear steps and gates.
+\end{itemize}
+
+
+It is not necessary (or even sensible) for every aspect of the process to be fully decentralised, only that the ultimate control is decentralised.
+
+\subsection{On-Chain Requirements}
+
+There are many legitimate ways to meet the off-chain governance requirements.  Since this document focuses primarily on the on-chain technical design requirements, these will not be covered here.
+
+\paragraph{Mandatory Requirements}.  The on-chain mechanism must:
+
+\begin{itemize}
+\item
+  allow changes to be made to any updatable protocol parameter, in any legal way;
+\item
+  allow major/minor protocol versions to be upgraded;
+\item
+  allow the fulfilment of all kinds of central funds transfers;
+\item
+  not require the use of genesis keys or delegates in any part of the protocol;
+\item
+  allow separate per-proposal deadlines to be set for voting and endorsement;
+\item
+  ensure that deadlines are reasonable;
+\item
+  allow an epoch to be chosen for enactment of a proposal;
+% \item
+%   be able to faithfully enact the governance decisions that have been taken off-chain.
+\item
+  be secure;
+\item
+  be efficient;
+\item
+  meet the Cardano blockchain stability window requirements;
+\item
+  allow delegation of voting rights from ada holders to a dedicated voter group;
+\item
+  assign voting and endorsement rights in proportion to the amount of ada that is held;
+\item
+  check that sufficient stake pools have upgraded, where the proposal is to change upgrade the protocol version;
+\item
+  prevent denial-of-service attacks by allowing large/unlimited numbers of proposals to be submitted;
+\item
+  automatically enact proposals at the stated epoch boundary, provided that the necessary voting and endorsement thresholds have been met.
+\end{itemize}
+
+\paragraph{Optional Requirements}.  In addition the on-chain mechanism should:
+
+\begin{itemize}
+\item
+  allow multiple proposals to be in-flight and enacted in a single epoch;
+\item
+  resolve conflicts automatically (e.g. using temporal ordering, or some other consistent and predictable mechanism);
+\item
+  (perhaps, allow different thresholds to be set for different kinds of proposal);
+\item
+  as far as possible, be consistent with the existing manual update mechanism.
+\end{itemize}
