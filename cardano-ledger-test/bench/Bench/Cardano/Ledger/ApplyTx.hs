@@ -74,11 +74,11 @@ data ApplyTxRes era = ApplyTxRes
 instance NFData (ApplyTxRes era) where
   rnf (ApplyTxRes g me s t) = seq g (seq me (seq s (seq t ())))
 
-resource_0_ledgerstate :: FilePath
-resource_0_ledgerstate = "bench/resources/0_ledgerstate.cbor"
+resource_n_ledgerstate :: Int -> FilePath
+resource_n_ledgerstate n = "bench/resources/" <> show n <> "_ledgerstate.cbor"
 
-resource_0_tx :: FilePath
-resource_0_tx = "bench/resources/0_tx.cbor"
+resource_n_tx :: Int -> FilePath
+resource_n_tx n = "bench/resources/" <> show n <> "_tx.cbor"
 
 -- | Apply the transaction as if it's a transaction from a given era.
 applyTxEra ::
@@ -89,16 +89,18 @@ applyTxEra ::
     FromCBOR (MempoolState era)
   ) =>
   Proxy era ->
+  FilePath ->
+  FilePath ->
   Benchmark
-applyTxEra p = env loadRes go
+applyTxEra p lsFile txFile = env loadRes go
   where
     loadRes :: IO (ApplyTxRes era)
     loadRes = do
-      state <- unsafeDeserialize <$> BSL.readFile resource_0_ledgerstate
+      state <- unsafeDeserialize <$> BSL.readFile lsFile
       tx <-
         either (\err -> error $ "Failed to decode tx: " <> show err) id
           . decodeAnnotator "tx" fromCBOR
-          <$> BSL.readFile resource_0_tx
+          <$> BSL.readFile txFile
       pure $! ApplyTxRes testGlobals applyTxMempoolEnv state tx
     go :: ApplyTxRes era -> Benchmark
     go ~ApplyTxRes {atrGlobals, atrMempoolEnv, atrState, atrTx} =
@@ -111,6 +113,24 @@ applyTxEra p = env loadRes go
                 (Seq.singleton atrTx)
           )
           atrState
+
+applyTxGroup :: Benchmark
+applyTxGroup =
+  bgroup
+    "Apply Shelley Tx"
+    [ withRes 0,
+      withRes 1
+    ]
+  where
+    withRes n =
+      let ls = resource_n_ledgerstate n
+          tx = resource_n_tx n
+       in bgroup
+            (show n)
+            [ applyTxEra (Proxy @ShelleyBench) ls tx,
+              applyTxEra (Proxy @AllegraBench) ls tx,
+              applyTxEra (Proxy @MaryBench) ls tx
+            ]
 
 -- | Benchmark deserialising a shelley transaction as if it comes from the given
 -- era.
@@ -126,18 +146,13 @@ deserialiseTxEra p =
     whnfIO $
       either (\err -> error $ "Failed to decode tx: " <> show err) (id @(Tx era))
         . decodeAnnotator "tx" fromCBOR
-        <$> BSL.readFile resource_0_tx
+        <$> BSL.readFile (resource_n_tx 0)
 
 applyTxBenchmarks :: Benchmark
 applyTxBenchmarks =
   bgroup
     "applyTxBenchmarks"
-    [ bgroup
-        "Apply Shelley Tx"
-        [ applyTxEra (Proxy @ShelleyBench),
-          applyTxEra (Proxy @AllegraBench),
-          applyTxEra (Proxy @MaryBench)
-        ],
+    [ applyTxGroup,
       bgroup
         "Deserialise Shelley Tx"
         [ deserialiseTxEra (Proxy @ShelleyBench),
