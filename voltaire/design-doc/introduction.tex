@@ -1,1 +1,39 @@
 \section{Introduction}
+
+The goal of the work is to eliminate the use of the genesis keys (or delegates) within the formal ledger rules.  This will enable
+governance of the blockchain protocol.   There are three places where genesis keys are currently used.
+
+
+\begin{itemize}
+\item
+  \textbf{Parameter Updates:}
+  Any updatable protocol parameter may be changed.  Multiple parameters may be changed as part of a single update proposal.
+\item
+  \textbf{Protocol Version Changes:}
+  A change may be made to a major or minor protocol version (a ``hard fork'').  The change must be accompanied by upgrades to
+  the software that is being used by block producing nodes (``stake pools''), and acknowledged by sufficient pools upgrading to the new software version.
+\item
+  \textbf{Transfers from/to Reserves/Treasury:}
+  A funds transfer may be made directly from eiher the reserves or treasury pots to a nomrmal address, between the reserves and treasury pots (in either direction), or from a normal address to the treasury pot.  This is referred to in the existing Cardano documentation as an ``MIR'' transfer (Move Instantaneous Rewards).
+\end{itemize}
+
+The governance process involves both off-chain and on-chain components.
+
+\begin{enumerate}
+\item
+  \textbf{Off-Chain:}
+  An issue is discussed off-chain.  A vote is taken on a specific proposal using the Catalyst system.  The proposal must be sufficiently unambiguous that its intention is clear, and must include dates by which the proposal is to be submitted and enacted on chain.
+\item
+  \textbf{On-Chain:}
+  A formal proposal is constructed that captures the intention of the off-chain proposal.  It is submitted, verified, and then enacted on-chain.  The proposal will include a date by which it must be enacted.
+\end{enumerate}
+
+\subsection{Off-Chain}
+
+\subsection{On-Chain}
+
+
+The outline workflows are as shown below:
+
+\begin{figure}
+\end{figure}
