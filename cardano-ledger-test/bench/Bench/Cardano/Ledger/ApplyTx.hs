@@ -51,14 +51,14 @@ type MaryBench = MaryEra C_Crypto
 -- This benchmark starts with a fixed Shelley transaction. We decode it in the
 -- correct transaction format for subsequent eras, and benchmark applying it to
 -- a given ledger state (also translated for each era.)
------------------------------------f---------------------------------------------
+--------------------------------------------------------------------------------
 
 -- | Static mempool environment. We apply Txs in some future slot. The account
 -- state shouldn't matter much.
 applyTxMempoolEnv :: Default (Core.PParams era) => MempoolEnv era
 applyTxMempoolEnv =
   LedgersEnv
-    { ledgersSlotNo = SlotNo 100,
+    { ledgersSlotNo = SlotNo 71,
       ledgersPp = def,
       ledgersAccount = AccountState (Coin 45000000000) (Coin 45000000000)
     }
@@ -80,6 +80,7 @@ resource_0_ledgerstate = "bench/resources/0_ledgerstate.cbor"
 resource_0_tx :: FilePath
 resource_0_tx = "bench/resources/0_tx.cbor"
 
+-- | Apply the transaction as if it's a transaction from a given era.
 applyTxEra ::
   forall era.
   ( Era era,
@@ -98,26 +99,49 @@ applyTxEra p = env loadRes go
         either (\err -> error $ "Failed to decode tx: " <> show err) id
           . decodeAnnotator "tx" fromCBOR
           <$> BSL.readFile resource_0_tx
-      pure $ ApplyTxRes testGlobals applyTxMempoolEnv state tx
+      pure $! ApplyTxRes testGlobals applyTxMempoolEnv state tx
     go :: ApplyTxRes era -> Benchmark
     go ~ApplyTxRes {atrGlobals, atrMempoolEnv, atrState, atrTx} =
       bench (show $ typeRep p) $
         whnf
-          ( applyTxsTransition @era @(Either _)
-              atrGlobals
-              atrMempoolEnv
-              (Seq.singleton atrTx)
+          ( either (error . show) id
+              . applyTxsTransition @era @(Either _)
+                atrGlobals
+                atrMempoolEnv
+                (Seq.singleton atrTx)
           )
           atrState
+
+-- | Benchmark deserialising a shelley transaction as if it comes from the given
+-- era.
+deserialiseTxEra ::
+  forall era.
+  ( Era era,
+    ApplyTx era
+  ) =>
+  Proxy era ->
+  Benchmark
+deserialiseTxEra p =
+  bench (show $ typeRep p) $
+    whnfIO $
+      either (\err -> error $ "Failed to decode tx: " <> show err) (id @(Tx era))
+        . decodeAnnotator "tx" fromCBOR
+        <$> BSL.readFile resource_0_tx
 
 applyTxBenchmarks :: Benchmark
 applyTxBenchmarks =
   bgroup
     "applyTxBenchmarks"
     [ bgroup
-        "Shelley Tx"
+        "Apply Shelley Tx"
         [ applyTxEra (Proxy @ShelleyBench),
           applyTxEra (Proxy @AllegraBench),
           applyTxEra (Proxy @MaryBench)
+        ],
+      bgroup
+        "Deserialise Shelley Tx"
+        [ deserialiseTxEra (Proxy @ShelleyBench),
+          deserialiseTxEra (Proxy @AllegraBench),
+          deserialiseTxEra (Proxy @MaryBench)
         ]
     ]
