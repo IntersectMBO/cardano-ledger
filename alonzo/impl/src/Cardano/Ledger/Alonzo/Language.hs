@@ -21,7 +21,7 @@ import NoThunks.Class (NoThunks)
 -- to this type as additional Non-Native scripting language as are added.
 -- We use an enumerated type for two reasons.
 -- 1) We can write total functions by case analysis over the constructors
--- 2) We will use DataKinds to make some datatypes  indexed by Language
+-- 2) We will use DataKinds to make some datatypes indexed by Language
 -- For now, the only Non-Native Scriting language is Plutus
 -- We might add new languages in the futures.
 
