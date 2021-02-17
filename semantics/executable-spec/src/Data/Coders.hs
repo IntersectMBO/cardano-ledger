@@ -78,6 +78,17 @@ module Data.Coders
     encodeNullMaybe,
     decodeNullMaybe,
     decodeSparse,
+    toMap,
+    fromMap,
+    toSet,
+    fromSet,
+    toList,
+    fromList,
+    fromPairAA,
+    fromPairXA,
+    fromPairAX,
+    fromListA,
+    fromSetA,
   )
 where
 
@@ -109,6 +120,7 @@ import Cardano.Binary
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Sequence.Strict (StrictSeq)
 import Data.Sequence (Seq)
@@ -609,6 +621,49 @@ to xs = ED dualCBOR xs
 
 from ::  (ToCBOR t, FromCBOR t) => Decode ('Closed 'Dense) t
 from = DD dualCBOR
+
+
+-- Names for derived Encode and Decode combinators for Lists, Sets and Maps
+
+toMap :: (ToCBOR v) => Map.Map k v -> Encode ('Closed 'Dense) (Map.Map k v)
+toMap x = E encodeFoldable x
+
+fromMap:: (Ord k,FromCBOR k,FromCBOR v) => Decode ('Closed 'Dense) (Map.Map k v)
+fromMap = From
+
+toSet :: (ToCBOR v) => Set.Set v -> Encode ('Closed 'Dense) (Set.Set v)
+toSet x = E encodeFoldable x
+
+fromSet :: (Ord v,FromCBOR v) => Decode ('Closed 'Dense) (Set.Set v)
+fromSet = D (decodeSet fromCBOR)
+
+toList :: (ToCBOR v) => [v] -> Encode ('Closed 'Dense) [v]
+toList x = E encodeFoldable x
+
+fromList :: (FromCBOR v) => Decode ('Closed 'Dense) [v]
+fromList = D (decodeList fromCBOR)
+
+-- =============================================================================
+-- Combinators for building (Decode ('Closed 'Dense) (Annotator x)) objects.
+-- Unlike the combinators above for Non-Annotator types above, these combinators take
+-- explicit (Decode  ('Closed 'Dense) i) objects as parameters rather than relying
+-- on implicit FromCBOR instances.
+
+
+fromPairAA :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator y) -> Decode ('Closed 'Dense) (Annotator (x,y))
+fromPairAA x y = D (do { (xA,yA) <- decodePair (decode x) (decode y); pure(do { x' <- xA; y' <- yA; pure(x',y')}) })
+
+fromPairXA :: Decode ('Closed 'Dense) x -> Decode ('Closed 'Dense) (Annotator y) -> Decode ('Closed 'Dense) (Annotator (x,y))
+fromPairXA x y = D (do { (x',yA) <- decodePair (decode x) (decode y); pure(do { y' <- yA; pure(x',y')}) })
+
+fromPairAX :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) y -> Decode ('Closed 'Dense) (Annotator (x,y))
+fromPairAX x y = D (do { (xA,y') <- decodePair (decode x) (decode y); pure(do { x' <- xA; pure(x',y')}) })
+
+fromListA :: Decode ('Closed 'Dense) (Annotator x) ->  Decode ('Closed 'Dense) (Annotator [x])
+fromListA dx = D (do { listXA <- decodeList (decode dx); pure (sequence listXA) })
+
+fromSetA :: Ord x => Decode ('Closed 'Dense) (Annotator x) ->  Decode ('Closed 'Dense) (Annotator (Set x))
+fromSetA dx = D (decodeAnnSet (decode dx))
 
 -- ==================================================================
 -- A Guide to Visual inspection of Duality in Encode and Decode

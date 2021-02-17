@@ -15,11 +15,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- This is needed to make Plutus.Data instances
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Alonzo.Data
-  ( PlutusData (..),
-    -- $
-    Data (Data, ..),
+  ( Data (Data, ..),
     DataHash,
     hashData,
     -- $
@@ -32,16 +32,19 @@ module Cardano.Ledger.Alonzo.Data
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeInt, encodeInt)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
+    ppInteger,
+    ppList,
+    ppLong,
     ppMetadata,
+    ppPair,
     ppSet,
     ppSexp,
-    ppString,
   )
 import Cardano.Ledger.SafeHash
   ( EraIndependentAuxiliaryData,
@@ -56,42 +59,50 @@ import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+-- import Plutus.V1.Ledger.Scripts
+import qualified Language.PlutusTx as Plutus
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.Metadata (Metadata)
 
+-- import qualified Shelley.Spec.Ledger.Metadata as Ledger
+
 -- =====================================================================
--- PlutusData is a placeholder for the type that Plutus expects as data.
+-- Plutus.Data is the type that Plutus expects as data.
+-- It is imported from the Plutus package, but it needs a few additional
+-- instances to also work in the ledger.
 
-data PlutusData = NotReallyData
-  deriving (Eq, Show, Ord, Generic)
+instance FromCBOR (Annotator Plutus.Data) where
+  fromCBOR = decode (Summands "PlutusData" decPlutus)
+    where
+      decPlutus :: Word -> Decode 'Open (Annotator Plutus.Data)
+      decPlutus 0 = Ann (SumD Plutus.Constr) <*! (Ann From) <*! fromListA From
+      decPlutus 1 = Ann (SumD Plutus.Map) <*! fromListA (fromPairAA From From)
+      decPlutus 2 = Ann (SumD Plutus.List) <*! fromListA From
+      decPlutus 3 = Ann (SumD Plutus.I <! From)
+      decPlutus 4 = Ann (SumD Plutus.B <! From)
+      decPlutus n = Invalid n
 
-instance NoThunks PlutusData
+instance ToCBOR Plutus.Data where
+  toCBOR x = encode (encPlutus x)
+    where
+      encPlutus (Plutus.Constr tag args) = Sum Plutus.Constr 0 !> To tag !> toList args
+      encPlutus (Plutus.Map pairs) = Sum Plutus.Map 1 !> toList pairs
+      encPlutus (Plutus.List xs) = Sum Plutus.List 2 !> toList xs
+      encPlutus (Plutus.I i) = Sum Plutus.I 3 !> To i
+      encPlutus (Plutus.B bytes) = Sum Plutus.B 4 !> To bytes
 
--- | TODO appropriate serialisation for the Real Plutus Data
-instance ToCBOR PlutusData where
-  toCBOR _ = encodeInt 0
-
-instance FromCBOR (PlutusData) where
-  fromCBOR = do
-    i <- decodeInt
-    case i of
-      0 -> pure NotReallyData
-      _ -> fail "oh no"
-
-instance FromCBOR (Annotator PlutusData) where
-  fromCBOR = pure <$> fromCBOR
+deriving instance NoThunks Plutus.Data
 
 -- ============================================================================
 -- the newtype Data is a wrapper around the type that Plutus expects as data.
--- The newtype will memoize the serialized bytes. The strategy is to replace
--- PlutusData  with the correct type
+-- The newtype will memoize the serialized bytes.
 
-newtype Data era = DataConstr (MemoBytes PlutusData)
+newtype Data era = DataConstr (MemoBytes Plutus.Data)
   deriving (Eq, Ord, Generic, Show)
   deriving newtype (SafeToHash, ToCBOR)
 
 deriving via
-  (Mem PlutusData)
+  (Mem Plutus.Data)
   instance
     (Era era) =>
     FromCBOR (Annotator (Data era))
@@ -100,7 +111,7 @@ instance (Crypto era ~ c) => HashAnnotated (Data era) EraIndependentData c
 
 instance NoThunks (Data era)
 
-pattern Data :: PlutusData -> Data era
+pattern Data :: Plutus.Data -> Data era
 pattern Data p <-
   DataConstr (Memo p _)
   where
@@ -211,10 +222,14 @@ pattern AuxiliaryData {scripts, dats, txMD} <-
 
 -- =======================================================
 
-ppPlutusData :: PlutusData -> PDoc
-ppPlutusData NotReallyData = ppString "PlutusData"
+ppPlutusData :: Plutus.Data -> PDoc
+ppPlutusData (Plutus.Constr tag args) = ppSexp "Constr" [ppInteger tag, ppList ppPlutusData args]
+ppPlutusData (Plutus.Map pairs) = ppSexp "Map" [ppList (ppPair ppPlutusData ppPlutusData) pairs]
+ppPlutusData (Plutus.List xs) = ppSexp "List" [ppList ppPlutusData xs]
+ppPlutusData (Plutus.I i) = ppSexp "I" [ppInteger i]
+ppPlutusData (Plutus.B bytes) = ppSexp "B" [ppLong bytes]
 
-instance PrettyA PlutusData where prettyA = ppPlutusData
+instance PrettyA Plutus.Data where prettyA = ppPlutusData
 
 ppData :: Data era -> PDoc
 ppData (DataConstr (Memo x _)) = ppSexp "Data" [ppPlutusData x]
