@@ -80,8 +80,8 @@ castSafeHash :: forall i j c. SafeHash c i -> SafeHash c j
 castSafeHash (SafeHash h) = SafeHash (Hash.castHash h)
 
 -- Don't use this except in Testing to make Arbitrary instances, etc.
-unsafeMakeSafeHash :: (Hash.Hash (CC.HASH crypto) index) -> SafeHash crypto index
-unsafeMakeSafeHash x = SafeHash x
+unsafeMakeSafeHash :: Hash.Hash (CC.HASH crypto) index -> SafeHash crypto index
+unsafeMakeSafeHash = SafeHash
 
 -- =====================================================================
 

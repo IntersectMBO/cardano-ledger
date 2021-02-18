@@ -33,6 +33,7 @@ library
     Shelley.Spec.Ledger.Address.Bootstrap
     Shelley.Spec.Ledger.API
     Shelley.Spec.Ledger.API.ByronTranslation
+    Shelley.Spec.Ledger.API.Genesis
     Shelley.Spec.Ledger.API.Protocol
     Shelley.Spec.Ledger.API.Validation
     Shelley.Spec.Ledger.API.Wallet
