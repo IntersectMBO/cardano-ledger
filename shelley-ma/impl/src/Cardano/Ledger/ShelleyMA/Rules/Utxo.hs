@@ -34,6 +34,7 @@ import Cardano.Prelude (heapWordsUnpacked)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (◁))
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra ((➖))
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coders
@@ -159,7 +160,7 @@ data UtxoPredicateFailure era
       !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![Core.TxOut era] -- list of supplied transaction outputs that are too small
-  | UpdateFailure (PredicateFailure (Core.EraRule "PPUP" era)) -- Subtransition Failures
+  | UpdateFailure !(PredicateFailure (Core.EraRule "PPUP" era)) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
       ![Core.TxOut era] -- list of supplied bad transaction outputs
   | TriesToForgeADA
@@ -263,7 +264,7 @@ utxoTransition = do
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
   eval (txins @era txb ⊆ dom utxo)
-    ?! BadInputsUTxO (txins @era txb `Set.difference` eval (dom utxo))
+    ?! BadInputsUTxO (eval (txins @era txb ➖ dom utxo))
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
