@@ -30,6 +30,7 @@ module Shelley.Spec.Ledger.API.Protocol
     tickChainDepState,
     updateChainDepState,
     reupdateChainDepState,
+    initialChainDepState,
   )
 where
 
@@ -55,13 +56,15 @@ import Control.State.Transition.Extended
     reapplySTS,
   )
 import Data.Either (fromRight)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals,
-    Nonce,
+    Nonce (NeutralNonce),
     Seed,
     ShelleyBase,
     UnitInterval,
@@ -74,7 +77,17 @@ import Shelley.Spec.Ledger.BlockChain
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import Shelley.Spec.Ledger.Keys (DSignable, GenDelegs, Hash, KESignable, VRFSignable)
+import Shelley.Spec.Ledger.Keys
+  ( DSignable,
+    GenDelegPair (..),
+    GenDelegs,
+    Hash,
+    KESignable,
+    KeyHash,
+    KeyRole (Genesis),
+    VRFSignable,
+    coerceKeyRole,
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
     NewEpochState (..),
@@ -289,6 +302,34 @@ data ChainDepState crypto = ChainDepState
     csLabNonce :: !Nonce
   }
   deriving (Eq, Show, Generic)
+
+-- | Construct an initial chain state given an initial nonce and a set of
+-- genesis delegates.
+initialChainDepState ::
+  Nonce ->
+  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
+  ChainDepState crypto
+initialChainDepState initNonce genDelegs =
+  ChainDepState
+    { csProtocol =
+        STS.Prtcl.PrtclState
+          ocertIssueNos
+          initNonce
+          initNonce,
+      csTickn =
+        STS.Tickn.TicknState
+          initNonce
+          NeutralNonce,
+      csLabNonce =
+        NeutralNonce
+    }
+  where
+    ocertIssueNos =
+      Map.fromList
+        ( fmap
+            (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0))
+            (Map.elems genDelegs)
+        )
 
 instance CC.Crypto crypto => NoThunks (ChainDepState crypto)
 
