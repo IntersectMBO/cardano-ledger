@@ -1,0 +1,107 @@
+\section{Groups Involved}
+
+\begin{tabular}{||l|l|l||}
+  \hline \hline
+  \textbf{Group} & \textbf{How Involved} & \textbf{On-/Off-Chain?}\\
+  \hline
+  General Ada Holders  & Make new informal proposals. & Both \\
+                       & Discuss and vote on proposals off-chain. & \\
+  			               & Delegate on-chain voting rights. & \\
+  \hline
+  Executive Team  & Prioritise proposals. & Off-chain \\
+                       & Manage off-chain votes. & \\
+                       & Manage proposal discussion. & \\
+  			               & Ensure that proposals are implemented. & \\
+  			               & Ensure that proposals are submitted on-chain. & \\
+  \hline
+  Security Experts			       & Advise on Security Aspects of proposals. & Off-chain \\
+                               & Track security issues and suggest fixes. & \\
+  \hline
+  Other Expert Groups			       & Provide feedback on proposals. & Off-chain \\
+  \hline
+  CIP Editors			   & Ensure that proposals are documented & Off-chain \\
+                     & in the required way. &  \\
+  \hline
+  Proposal Implementors			   & Produce formal proposals/software. & Off-chain\\
+  \hline
+  Submitters				   & Submit formal proposals on-chain. & On-chain \\
+  \hline
+  Delegates				   & Vote on acceptance of on-chain proposals. & On-chain \\
+  \hline
+  Endorsers			   & Endorse readiness for protocol version upgrade. & On-chain\\
+  \hline
+  Electors			       & Nominate submitters. & Either \\
+  \hline \hline
+\end{tabular}
+
+\subsection{General Ada Holdera (Off-Chain and On-Chain)}
+
+General Ada holders may make informal proposals and discuss them using an off-chain mechanism.  They vote on the acceptance of these proposals
+either on-chain or off-chain, in proportion to the ada that they hold.  They may delegate their stake for voting purposes to on-chain representatives,
+who will vote on their behalf for or against submitted proposals.  This vote delegation may be changed at any time.
+
+\subsection{Executive Team (Off-Chain)}
+
+The Executive Team is responsible for managing proposals, prioritising them for discussion and voting, monitoring the voting process and the
+voting outcome, ensuring that the proposal is properly implemented and submitted on-chain, and reporting back on proposal enactment.
+It is also responsible for ensuring that the correct process is followed for the type of proposal.  It may be possible to automate part or all of this process.
+
+\subsection{Security Experts (Off-Chain)}
+
+Security Experts evaluate proposals, provide advice on possible attack vectors, and suggest improvements to mitigate security risks.
+Their input may not be necessary on some simple parameter changes, but is always necessary for protocol version changes.
+They may also evaluate security threats and may, in extremis, produce proposals that bypass some of the usual governance processes
+(eg where open discussion could lead to a major risk of loss to the blockchain).
+
+\subsection{Other Expert Groups (Off-Chain)}
+
+Other Expert Groups may be called on to provide advice or reports to inform general ada holders or other groups that are involved in the
+governance process.  This could include performance issues, technical blockchain expertise, economic advice, advice on implementation etc.
+
+\subsection{CIP Editors (Off-Chain)}
+
+CIP Editors ensure that proposals are documented in the correct form, and recorded in the CIP repository.
+This provides a persistent record of the rationale for each proposal, and allows traceability between informal off-chain
+proposals and the formal on-chain proposal.  This process may include providing hashes or other information to support traceability.
+
+\subsection{Proposal Implementors (Off-Chain)}
+
+Proposal Implementors transform accepted proposals that have been voted on by ada holders into formal proposals that can be submitted on chain.
+They are responsible for providing necessary documentation, and complying with the required processes, including producing an acceptable CIP
+and meeting any verification/traceability requirements.  For simple parameter updates, implementation may be in the form of a single JSON
+file that fully describes the proposal.
+
+\subsection{Submitters (On-Chain)}
+
+Submitters are permitted to submit proposals on-chain.  Each proposal must be signed by a quorum of submitters, who verify the submitted
+proposal, checking that it is in the correct format, conforms to the original proposal, and meets other process requirements.
+Submitters are appointed by endorsers.  Depending on the governance design, the submitter group might be restricted to a few members,
+be an elected or appointed group, be limited by ada holding, be limited to endorsers, delegates or another group.
+
+\subsection{Delegates (On-Chain)}
+
+Delegates vote on whether an on-chain proposal should proceed.  The weight of
+their vote is in proportion to the stake that has been delegated to them by
+normal ada holders, including themselves.  They are expected to be responsible
+experts, to represent those who have chosen to delegate vote to them, and will
+be respected community members.  Although in many cases delegates may also be
+stake pool operators, the separation of vote delegation from delegation for
+block production separates politics from economics.  Ada holders may choose to
+delegate ada to good block producers in an apolitical way, and to support
+delegates that represent their opinions without considering their abilities as
+block producers.  Delegates must ensure that the proposals meet the required
+security and other concerns.
+
+\subsection{Endorsers (On-Chain)}
+
+The role of an endorser is to confirm that they are ready to upgrade to a new
+version of the Cardano protocol.  All stake pools are endorsers.  In line with
+the principle of proof-of-stake, the weight of their endorsement is proportional
+to the stake that they control.  In order to ensure that the blockchain will
+make progress, and that the main chain will not split, a sufficient stake
+threshold of endorsement is required for a proposal to be enacted.
+
+\subsection{Electors (Off-chain or On-Chain)}
+
+Electors determine who belongs to the submitter group.  The composition of this group is to be determined.  It might be formed by direct election off-chain, by
+nomination from an agreed group, by submission of an on-chain proposal.  In some systems, it may even be unnecessary.
