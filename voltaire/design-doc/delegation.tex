@@ -9,4 +9,41 @@ Delegates must register on-chain.
 
 \subsection{Voting Indirection}
 
-A vote delegation key.
+The current ledger design separates spending and block production delegation, associating two keys with a single address.
+
+%\begin{figure}[h!]
+\begin{center}
+  \begin{tabular}{||l|l||}
+\hline\hline
+  payment key & spending and withdrawal rights \\\hline
+  stake key & block production delegation rights \\\hline
+  \hline\hline
+  \end{tabular}
+\end{center}
+%  \caption{Address and key rights in Cardano: Status Quo}
+%\end{figure}
+
+The new design adds an additional key for vote delegatation.
+
+% \begin{figure}[h!]
+\begin{center}
+  \begin{tabular}{||l|l||}
+\hline\hline
+  payment key & spending and withdrawal rights \\\hline
+  stake key & block production delegation rights \\\hline
+  vote key & vote delegation rights (new) \\
+\hline\hline
+\end{tabular}
+\end{center}
+%  \caption{Address and key rights in Cardano: New Design}
+%\end{figure}
+
+It is necessary to register both block and vote delegation intentions on-chain.  This may be done in a single transaction or independently.
+The design allows independent vote and block production delegation, and also allows those rights to be passed to a third party (by providing them
+with the corresponding private keys). \khcomment{Make sure this is clear and consistent with the current stake key approach.} \khcomment{Confirm that a single transaction can be used.}
+The private key can be passed to another party to allow for transfers of delegation rights, but there is no way to independently revoke any key, or to remove
+delegation capability without revoking the corresponding key.  \khcomment{Confirm this.}
+
+\begin{figure*}[h]
+  \caption{Examples of Indirection}
+\end{figure*}
