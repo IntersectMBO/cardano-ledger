@@ -1,11 +1,18 @@
+\newpage
 \section{Vote Delegation (On-Chain)}
+\label{sect:delegation}
 
-All ada holders will have on-chain voting rights.  These rights are in direct proportion to the exact ada that they hold.
-They may delegate their voting rights to any registered delegate, who is expected to act faithfully.
+All ada holders will have on-chain voting rights.  These rights are in direct proportion to the exact number of lovelace that they hold.
+They may delegate their voting rights to any registered delegate, who is expected to act faithfully on their behalf.
 
-\subsection{Delegate Registration}
+\subsection{Delegate Address Registration/De-Registration}
 
-Delegates must register on-chain.
+Delegates must register on-chain.\khcomment{Do we need a certificate?  I think they only need an address, right?}  Once registered, ada holders may delegate their
+vote to any registered delegate by submitting a vote delegation transaction that includes the registered delegate address.\khcomment{How do voters know about the available delegates?}
+Ada holders may change this delegation at any point.  When votes are tallied, the most recent delegation is considered (in effect, a snapshot is taken for the tally).
+A deposit is taken when a delegate registers.  Delegates may choose to de-register at any time by submitting a de-registration transaction.  The de-registration takes effect
+at the specified point.  A protocol paramter governs the least and greatest notice that must be given for de-registration.  When a delegate de-registers, their deposit is returned,
+the address becomes void, and any vote delegation to that address no longer has any effect.
 
 \subsection{Voting Indirection}
 

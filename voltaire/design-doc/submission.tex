@@ -1,4 +1,6 @@
+\newpage
 \section{Proposal Submission}
+\label{sect:submission}
 
 Proposals are submitted by a member of a submitter group.  They are counter-signed by a quorum of submitter keys.\khcomment{Difficult question: who controls registration/de-registration of submitter keys.}\khcomment{How do we ensure that there are always enough submitters in existence.}\khcomment{The quorum may be a protocol parameter.}
 No fee is charged for proposal submission.\khcomment{This may need to be discussed.}
@@ -85,6 +87,22 @@ Node software only needs to comply with the new protocol rules.  It does not nee
 
 Funds may be transferred from either the treasury or the reserves pot, and sent to either an address, or to the treasury/reserves pot.
 Transfers from treasury to treasury or from reserves to reserves are not permitted.  All transfers must be of a positive amount (including zero).
-Multiple transfers may be made in a single epoch.  This allows for proper accounting, where eg a
+Multiple transfers may be made in a single epoch.  This allows for proper accounting, where eg different kinds of transfer must
+be authorised by different groups of individual.
 
-Errors in tramay be corrected by a reverse transfer, except for transfers to addresses.
+Errors in transfers between reserves and treasury, or vice-versa, may be corrected by constructing a reverse transfer that cancels the original error.
+This cannot happen for transfers to addresses, of course.  Any errors must be corrected by the owner of the address.  This implies that
+
+\subsection{Proposal Signing}
+
+All update and proposals must be signed when they are submitted.  A proposal must be counter-signed by a quorum of signatures using a signing
+policy that conforms to the existing \emph{multi-sig} transaction mechanism.  This enables the use of standard transaction witnessing.
+% where the quorum is a protocol parameter
+The signing policy is then provided as an updatable protocol parameter.  This gives a great deal of flexibility to define and change submission policies.
+To reduce the possibility of abuse, the policy must comply with a minimum quorum size should be hard-wired into the protocol.
+
+
+\khcomment{The obvious approach is to use transaction witnessing and a multi-sig approach, as described here.  That implies a change to the submission process, and also that
+  the submitter group is sufficiently small to allow this (I think we calculated n+m=500, where n is the actual number and m is the required number?}
+\khcomment{Using multi-sig potentially allows policies to be defined as described above.  This simplifies the system by removing the need for a separate Elector group,
+  but is perhaps open to abuse of power?}

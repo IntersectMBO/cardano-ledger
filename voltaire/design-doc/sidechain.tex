@@ -1,0 +1,40 @@
+\section{Tracking Proposals through a Side-Chain}
+
+It has been suggested that a specific proposal could be submitted on-chain, with voting on the proposal tracked through a side-chain, such as Catalyst.
+While it is probably not sensible to include this in the initial design, since it would add complexity and delay implementation, a system such as this
+may be worth considering in future.
+
+\subsection*{Main Advantages.}
+
+\begin{tabular}{||l|p{4.5in}||}
+  \hline\hline
+  Reuse
+  & Side-chain mechanisms are already being developed for other purposes (Hydra), so it might be possible to reuse existing design/implementation work.
+  \\ \hline
+  Automated Submission
+  & A proposal could be submitted automatically on-chain, once a vote was accepted.
+  \\ \hline
+  Automated Tracking
+  & The evolution of a proposal could be tracked automatically.
+  \\ \hline
+  \hline
+\end{tabular}
+
+\subsection*{Main Disadvantages.}
+
+\begin{tabular}{||l|p{4.5in}||}
+  \hline\hline
+  Additional Work/Risk &
+  Tracking the vote on a proposal correctly could require significant work to be completed on side-chain integration, so delaying the project as a whole.
+  \\\hline
+  Fit with Catalyst &
+  The intention is to use Catalyst for voting, so the mechanism must integrate with the Catalyst chain.
+  \\\hline
+  Implementation Timing & A proposal will typically only be crystallised into a form that can be submitted on-chain (implemented) \emph{after} it has been approved by an off-chain vote.
+  This can involve a significant amount of work and perhaps financial support.
+  It is important that any system that tracks the prpgress a proposal through a side-chain does not require it to be crystallised before it has been approved for implementation.
+  \\ \hline
+  \hline
+\end{tabular}
+
+Changes to side-chain proposal tracking could affect the on-chain submission process, but should have no impact on the remainder of the on-chain process.
