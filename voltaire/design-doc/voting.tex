@@ -1,4 +1,5 @@
-\section{Voting on Proposals (On-Chain)}
+\newpage
+\section{Voting on Proposals (On-Chain, Delegates)}
 \label{sect:voting}
 
 Once a properly signed proposal has been submitted on-chain, delegates may vote on whether or not to accept it.  A threshold is set for each vote.
@@ -8,10 +9,6 @@ Once a properly signed proposal has been submitted on-chain, delegates may vote 
 Each registered delegate may vote either in favour or against a proposal by submitting the corresponding transaction.  They may change their vote up to the point
 where the vote is tallied.  Any changes after that point in time are not considered.  If a delegate chooses not to vote on a proposal, that is considered to be
 a vote against the proposal.
-
-% \subsection{Deadlines}
-
-% A deadlines is set in the pro
 
 \subsection{Tallying Votes}
 
@@ -23,4 +20,4 @@ prior to that point in time counts towards the voting outcome.
 Following the tally, a proposal may be either accepted or rejected, based on whether it has achieved the required voting threshold.  Any proposal that achieves at least
 the specified percentage of votes is accepted, and passed forward for future enactment.
 The threshold for accepting a specific vote is specified in the proposal\khcomment{there may also be minima that are set in the protocol parameters.}.
-All thresholds
+% All thresholds

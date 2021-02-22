@@ -32,9 +32,10 @@
 
 \begin{abstract}
   This document outlines the design of the mechanisms that are needed to support
-  automated parameter updates and central funds transfers.  This enables a key part of the Cardano governance structure by
+  automated parameter updates and central funds transfers (collectively PUP).  The PUP mechanism enables a key part of the Cardano governance structure by
   eliminating the use of genesis keys or delegates to control the operation of the blockchain.  The overall governance process includes both
-  off-chain and on-chain components.  This design document is concerned primarily with the on-chain component.
+  off-chain and on-chain components.  This design document is concerned primarily with the on-chain component, but references the corresponding off-chain
+  process, and describes how they interact to ensure decentralised governance.
 \end{abstract}
 
 \section*{List of Contributors}
@@ -45,4 +46,5 @@
 \change{2021-02-17}{Kevin Hammond}{FM (IOHK)}{Description of goals and submission process.}
 \change{2021-02-19}{Kevin Hammond}{FM (IOHK)}{Groups involved.  Vote delegation.}
 \change{2021-02-19}{Kevin Hammond}{FM (IOHK)}{Added various outline sections.  Voting, sidechains, short Priviledge comparison.}
+\change{2021-02-22}{Kevin Hammond}{FM (IOHK)}{Added workflows, plus textual improvements.}
 \end{changelog}
