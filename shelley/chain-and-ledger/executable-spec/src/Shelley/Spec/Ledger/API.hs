@@ -24,6 +24,7 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Control.State.Transition (State)
 import Shelley.Spec.Ledger.API.ByronTranslation as X
+import Shelley.Spec.Ledger.API.Genesis as X
 import Shelley.Spec.Ledger.API.Mempool as X
 import Shelley.Spec.Ledger.API.Protocol as X
 import Shelley.Spec.Ledger.API.Types as X
@@ -35,6 +36,7 @@ class
     GetLedgerView era,
     ApplyBlock era,
     ApplyTx era,
+    CanStartFromGenesis era,
     UsesValue era,
     UsesScript era,
     UsesAuxiliary era,
