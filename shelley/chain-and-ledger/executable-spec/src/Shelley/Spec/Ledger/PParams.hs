@@ -44,7 +44,13 @@ import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Coders (Annotator, Decode (Ann, Emit, From, RecD), decode, mapDecodeA, (<*!))
+import Data.Coders
+  ( Annotator,
+    Decode (Ann, Emit, From, RecD),
+    decode,
+    mapDecodeA,
+    (<*!),
+  )
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
