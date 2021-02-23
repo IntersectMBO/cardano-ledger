@@ -51,9 +51,9 @@ import qualified Cardano.Crypto.Hash as CH
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Era
-import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut, UsesValue)
-import Cardano.Ledger.Val ((<+>), (<×>))
+import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, extractHash, hashAnnotated)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut)
+import Cardano.Ledger.Val (Val (..), (<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
   ( BaseRep (MapR),
@@ -161,7 +161,12 @@ deriving via
 -- | Compute the id of a transaction.
 txid ::
   forall era.
-  UsesTxBody era =>
+  ( Era era, -- The Crypto functions are determined
+    HashAnnotated -- Core.TxBody hashes with the right tag: EraIndependentTxBody
+      (Core.TxBody era)
+      EraIndependentTxBody
+      (Crypto era)
+  ) =>
   Core.TxBody era ->
   TxId (Crypto era)
 txid = TxId . hashAnnotated
@@ -184,7 +189,8 @@ txins = getField @"inputs"
 -- | Compute the transaction outputs of a transaction.
 txouts ::
   forall era.
-  ( UsesTxBody era,
+  ( Era era,
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
   ) =>
   Core.TxBody era ->
@@ -255,8 +261,8 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 
 -- | Determine the total balance contained in the UTxO.
 balance ::
-  ( UsesValue era,
-    UsesTxOut era
+  ( Val (Core.Value era),
+    HasField "value" (Core.TxOut era) (Core.Value era)
   ) =>
   UTxO era ->
   Core.Value era

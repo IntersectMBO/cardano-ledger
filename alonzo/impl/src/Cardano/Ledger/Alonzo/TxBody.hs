@@ -19,22 +19,21 @@
 
 module Cardano.Ledger.Alonzo.TxBody
   ( TxOut (TxOut, TxOutCompact),
-    TxBody
-      ( TxBody,
-        txinputs,
-        txinputs_fee,
-        txouts,
-        txcerts,
-        txwdrls,
-        txfee,
-        txvldt,
-        txUpdates,
-        txADhash,
-        mint,
-        exunits,
-        sdHash,
-        scriptHash
-      ),
+    TxBody (TxBody),
+    txinputs,
+    txinputs_fee,
+    txouts,
+    txcerts,
+    txwdrls,
+    txfee,
+    txvldt,
+    txUpdates,
+    txADhash,
+    txmint,
+    txExunits,
+    txsdHash,
+    txscriptHash,
+    TransTxBody,
     AlonzoBody,
     EraIndependentWitnessPPData,
     WitnessPPDataHash,
@@ -74,7 +73,7 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash,
   )
-import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
+import Cardano.Ledger.Shelley.Constraints (PParamsDelta, TransValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
@@ -179,6 +178,8 @@ deriving instance
   ) =>
   Eq (TxBodyRaw era)
 
+type TransTxBody p era = (TransValue p era, p (PParamsDelta era))
+
 instance
   (Typeable era, NoThunks (Core.Value era), NoThunks (PParamsDelta era)) =>
   NoThunks (TxBodyRaw era)
@@ -253,20 +254,19 @@ pattern TxBody ::
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   TxBody era
 pattern TxBody
-  { txinputs,
-    txinputs_fee,
-    txouts,
-    txcerts,
-    txwdrls,
-    txfee,
-    txvldt,
-    txUpdates,
-    txADhash,
-    mint,
-    exunits,
-    sdHash,
-    scriptHash
-  } <-
+  txinputs
+  txinputs_fee
+  txouts
+  txcerts
+  txwdrls
+  txfee
+  txvldt
+  txUpdates
+  txADhash
+  mint
+  exunits
+  sdHash
+  scriptHash <-
   TxBodyConstr
     ( Memo
         TxBodyRaw
@@ -323,6 +323,50 @@ pattern TxBody
 {-# COMPLETE TxBody #-}
 
 instance (c ~ Crypto era, Era era) => HashAnnotated (TxBody era) EraIndependentTxBody c
+
+-- We define these accessor functions manually, because if we define them using
+-- the record syntax in the TxBody pattern, they inherit the (AlonzoBody era)
+-- constraint as a precondition. This is unnecessary, as one can see below
+-- they need not be constrained at all. This should be fixed in the GHC compiler.
+
+txinputs :: TxBody era -> Set (TxIn (Crypto era))
+txinputs_fee :: TxBody era -> Set (TxIn (Crypto era))
+txouts :: TxBody era -> StrictSeq (TxOut era)
+txcerts :: TxBody era -> StrictSeq (DCert (Crypto era))
+txfee :: TxBody era -> Coin
+txwdrls :: TxBody era -> Wdrl (Crypto era)
+txvldt :: TxBody era -> ValidityInterval
+txUpdates :: TxBody era -> StrictMaybe (Update era)
+txADhash :: TxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
+txmint :: TxBody era -> Value (Crypto era)
+txExunits :: TxBody era -> ExUnits
+txsdHash :: TxBody era -> StrictMaybe (WitnessPPDataHash (Crypto era))
+txscriptHash :: TxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
+txinputs (TxBodyConstr (Memo raw _)) = _inputs raw
+
+txinputs_fee (TxBodyConstr (Memo raw _)) = _inputs_fee raw
+
+txouts (TxBodyConstr (Memo raw _)) = _outputs raw
+
+txcerts (TxBodyConstr (Memo raw _)) = _certs raw
+
+txwdrls (TxBodyConstr (Memo raw _)) = _wdrls raw
+
+txfee (TxBodyConstr (Memo raw _)) = _txfee raw
+
+txvldt (TxBodyConstr (Memo raw _)) = _vldt raw
+
+txUpdates (TxBodyConstr (Memo raw _)) = _update raw
+
+txADhash (TxBodyConstr (Memo raw _)) = _adHash raw
+
+txmint (TxBodyConstr (Memo raw _)) = _mint raw
+
+txExunits (TxBodyConstr (Memo raw _)) = _exunits raw
+
+txsdHash (TxBodyConstr (Memo raw _)) = _sdHash raw
+
+txscriptHash (TxBodyConstr (Memo raw _)) = _scriptHash raw
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -519,8 +563,14 @@ instance Crypto era ~ crypto => HasField "wdrls" (TxBody era) (Wdrl crypto) wher
 instance HasField "txfee" (TxBody era) Coin where
   getField (TxBodyConstr (Memo m _)) = _txfee m
 
+instance Crypto era ~ crypto => HasField "mint" (TxBody era) (Value crypto) where
+  getField (TxBodyConstr (Memo m _)) = _mint m
+
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = _update m
+
+instance HasField "vldt" (TxBody era) (ValidityInterval) where
+  getField (TxBodyConstr (Memo m _)) = _vldt m
 
 instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
   getField (TxOutCompact a _ _) = a

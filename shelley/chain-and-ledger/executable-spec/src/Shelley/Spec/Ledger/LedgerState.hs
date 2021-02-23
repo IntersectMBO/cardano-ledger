@@ -110,7 +110,7 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
+import Cardano.Ledger.SafeHash (HashAnnotated, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -763,9 +763,10 @@ minfee pp tx =
 -- | Compute the lovelace which are created by the transaction
 produced ::
   forall era pp.
-  ( UsesTxBody era,
-    UsesValue era,
-    UsesTxOut era,
+  ( Era era,
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era), -- due to txouts
+    Val.Val (Core.Value era), -- due to <+>
+    HasField "value" (Core.TxOut era) (Core.Value era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
