@@ -4,12 +4,19 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.Rewards
   ( desirability,
@@ -20,7 +27,6 @@ module Shelley.Spec.Ledger.Rewards
     mkApparentPerformance,
     RewardType (..),
     Reward (..),
-    reward,
     nonMyopicStake,
     nonMyopicMemberRew,
     percentile',
@@ -34,6 +40,7 @@ module Shelley.Spec.Ledger.Rewards
     memberRew,
     aggregateRewards,
     sumRewards,
+    rewardOnePool,
   )
 where
 
@@ -48,7 +55,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Val ((<->))
-import Cardano.Slotting.Slot (EpochSize)
+import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Provenance (ProvM, modifyM)
 import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -85,10 +92,9 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
 import Shelley.Spec.Ledger.EpochBoundary
-  ( BlocksMade (..),
-    Stake (..),
+  ( Stake (..),
     maxPool,
-    poolStake,
+    maxPool',
   )
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
@@ -283,16 +289,13 @@ instance CC.Crypto crypto => FromCBOR (NonMyopic crypto) where
 -- corresponding to f^~ in section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 desirability ::
-  ( HasField "_nOpt" pp Natural,
-    HasField "_a0" pp Rational
-  ) =>
-  pp ->
+  (Rational, Natural) ->
   Coin ->
   PoolParams c ->
   PerformanceEstimate ->
   Coin ->
   Double
-desirability pp r pool (PerformanceEstimate p) (Coin totalStake) =
+desirability (a0, nOpt) r pool (PerformanceEstimate p) (Coin totalStake) =
   if fTilde <= cost
     then 0
     else (fTilde - cost) * (1 - margin)
@@ -305,8 +308,7 @@ desirability pp r pool (PerformanceEstimate p) (Coin totalStake) =
     tot = max 1 (fromIntegral totalStake)
     Coin pledge = _poolPledge pool
     s = fromIntegral pledge % tot
-    a0 = getField @"_a0" pp
-    z0 = 1 % max 1 (fromIntegral (getField @"_nOpt" pp))
+    z0 = 1 % max 1 (fromIntegral nOpt)
 
 -- | Computes the top ranked stake pools
 -- corresponding to section 5.6.1 of
@@ -327,7 +329,7 @@ getTopRankedPools rPot totalStake pp poolParams aps =
     pdata = Map.toList $ Map.intersectionWith (,) poolParams aps
     rankings =
       [ ( hk,
-          desirability pp rPot pool ap totalStake
+          desirability (getField @"_a0" pp, getField @"_nOpt" pp) rPot pool ap totalStake
         )
         | (hk, (pool, ap)) <- pdata
       ]
@@ -436,7 +438,7 @@ sumRewards ::
   pp ->
   Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
   Coin
-sumRewards pp rs = fold $ aggregateRewards pp rs
+sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 
 aggregateRewards ::
   forall crypto pp.
@@ -453,15 +455,16 @@ aggregateRewards pp rewards =
     -- s should never be null, but we are being cautious
     lastByOrd s = if Set.null s then mempty else (rewardAmount . Set.findMax) s
 
--- | Reward one pool
+-- | Reward one pool. The first argument (the triple (pp_d, pp_a0, pp_nOpt))
+--     is a subset of the fields of PParams
+--     { _d :: !(HKD f UnitInterval) --  Decentralization parameter
+--     , _a0 :: !(HKD f Rational),   -- Pool influence
+--     , _nOpt :: !(HKD f Natural)   -- Desired number of pools
+--     }
 rewardOnePool ::
-  forall c m pp.
-  ( Monad m,
-    HasField "_d" pp UnitInterval,
-    HasField "_a0" pp Rational,
-    HasField "_nOpt" pp Natural
-  ) =>
-  pp ->
+  forall c m.
+  Monad m =>
+  (UnitInterval, Rational, Natural) ->
   Coin ->
   Natural ->
   Natural ->
@@ -476,7 +479,7 @@ rewardOnePool ::
     m
     (Map (Credential 'Staking c) (Set (Reward c)))
 rewardOnePool
-  pp
+  (pp_d, pp_a0, pp_nOpt) -- (Decentralization parameter, Pool influence, Desired number of pools)
   r
   blocksN
   blocksTotal
@@ -496,9 +499,9 @@ rewardOnePool
       pr = fromIntegral pledge % fromIntegral totalStake
       (Coin maxP) =
         if pledge <= ostake
-          then maxPool pp r sigma pr
+          then maxPool' pp_a0 pp_nOpt r sigma pr
           else mempty
-      appPerf = mkApparentPerformance (getField @"_d" pp) sigmaA blocksN blocksTotal
+      appPerf = mkApparentPerformance pp_d sigmaA blocksN blocksTotal
       poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
       tot = fromIntegral totalStake
       mRewards =
@@ -557,90 +560,6 @@ rewardOnePool
             poolRP = poolR,
             lRewardP = lReward
           }
-
-reward ::
-  forall m c pp.
-  ( Monad m,
-    HasField "_d" pp UnitInterval,
-    HasField "_a0" pp Rational,
-    HasField "_nOpt" pp Natural
-  ) =>
-  pp ->
-  BlocksMade c ->
-  Coin ->
-  Set (Credential 'Staking c) ->
-  Map (KeyHash 'StakePool c) (PoolParams c) ->
-  Stake c ->
-  Map (Credential 'Staking c) (KeyHash 'StakePool c) ->
-  Coin ->
-  ActiveSlotCoeff ->
-  EpochSize ->
-  ProvM
-    (Map (KeyHash 'StakePool c) (RewardProvenancePool c))
-    m
-    ( Map (Credential 'Staking c) (Set (Reward c)),
-      Map (KeyHash 'StakePool c) Likelihood
-    )
-reward
-  pp
-  (BlocksMade b)
-  r
-  addrsRew
-  poolParams
-  stake
-  delegs
-  (Coin totalStake)
-  asc
-  slotsPerEpoch = do
-    let totalBlocks = sum b
-        Coin activeStake = fold . unStake $ stake
-        combine = Map.unionWith Set.union
-        -- We fold 'action' over the pairs in the poolParams Map to compute a pair of maps.
-        -- we must use a right associative fold. See comments on foldListM below.
-        action (hk, pparams) (m1, m2) = do
-          let blocksProduced = Map.lookup hk b
-              actgr@(Stake s) = poolStake hk delegs stake
-              Coin pstake = fold s
-              sigma =
-                if totalStake == 0
-                  then 0
-                  else fromIntegral pstake % fromIntegral totalStake
-              sigmaA =
-                if activeStake == 0
-                  then 0
-                  else fromIntegral pstake % fromIntegral activeStake
-              ls =
-                likelihood
-                  (fromMaybe 0 blocksProduced)
-                  (leaderProbability asc sigma (getField @"_d" pp))
-                  slotsPerEpoch
-          case blocksProduced of
-            Nothing -> pure (m1, Map.insert hk ls m2)
-            Just n -> do
-              m <-
-                rewardOnePool
-                  pp
-                  r
-                  n
-                  totalBlocks
-                  pparams
-                  actgr
-                  sigma
-                  sigmaA
-                  (Coin totalStake)
-                  addrsRew
-              pure (combine m m1, Map.insert hk ls m2)
-    foldListM action (Map.empty, Map.empty) (Map.toList poolParams)
-
--- | Fold a monadic function 'accum' over a list. It is strict in its accumulating parameter.
---   since the order matters in 'aggregate' (used in reward above) we need to use the same
---   order as previous revisions. That's why we call foldListM before applying accum.
-foldListM :: Monad m => (k -> ans -> m ans) -> ans -> [k] -> m ans
-foldListM _accum ans [] = pure ans
--- Order matters so we don't use this clause (as it associates to the left)
--- foldListM accum ans (k:more) = do { !ans1 <- accum k ans; foldListM accum ans1 more }
--- instead we use this one that associates to the right.
-foldListM accum ans (k : more) = do ans1 <- foldListM accum ans more; accum k ans1
 
 -- | Compute the Non-Myopic Pool Stake
 --

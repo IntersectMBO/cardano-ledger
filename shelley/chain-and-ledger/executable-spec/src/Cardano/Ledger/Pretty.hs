@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -91,7 +92,6 @@ import Shelley.Spec.Ledger.LedgerState
     NewEpochState (..),
     PPUPState (..),
     PState (..),
-    RewardUpdate (..),
     UTxOState (..),
   )
 import Shelley.Spec.Ledger.Metadata (Metadata (..), Metadatum (..))
@@ -107,6 +107,16 @@ import Shelley.Spec.Ledger.PParams
     ProposedPPUpdates (..),
     ProtVer (..),
     Update (..),
+  )
+import Shelley.Spec.Ledger.RewardUpdate
+  ( FreeVars (..),
+    PulseItem,
+    Pulser,
+    PulsingRewUpdate (..),
+    RewardAns,
+    RewardPulser (..),
+    RewardSnapShot (..),
+    RewardUpdate (..),
   )
 import Shelley.Spec.Ledger.Rewards
   ( Histogram (..),
@@ -393,16 +403,95 @@ ppPoolDistr :: PoolDistr c -> PDoc
 ppPoolDistr (PoolDistr mp) = ppSexp "PoolDistr" [ppMap ppKeyHash ppIndividualPoolStake mp]
 
 ppIndividualPoolStake :: IndividualPoolStake c -> PDoc
-ppIndividualPoolStake (IndividualPoolStake r h) =
+ppIndividualPoolStake (IndividualPoolStake r1 h) =
   ppRecord
     "IndividualPoolStake"
-    [ ("stake", ppRational r),
+    [ ("stake", ppRational r1),
       ("stakeVrf", ppHash h)
     ]
 
 instance PrettyA (PoolDistr c) where prettyA = ppPoolDistr
 
 instance PrettyA (IndividualPoolStake c) where prettyA = ppIndividualPoolStake
+
+-- ================================
+-- Shelley.Spec.Ledger.RewardUpdate
+
+ppRewardUpdate :: RewardUpdate crypto -> PDoc
+ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
+  ppRecord
+    "RewardUpdate"
+    [ ("deltaT", ppDeltaCoin dt),
+      ("deltaR", ppDeltaCoin dr),
+      ("rs", ppMap' mempty ppCredential (ppSet ppReward) rss),
+      ("deltaF", ppDeltaCoin df),
+      ("nonMyopic", ppNonMyopic nonmyop)
+    ]
+
+ppRewardSnapShot :: RewardSnapShot crypto -> PDoc
+ppRewardSnapShot (RewardSnapShot snaps a0 nopt ver non deltaR1 rR deltaT1 total pot) =
+  ppRecord
+    "RewardSnapShot"
+    [ ("snapshots", ppSnapShots snaps),
+      ("a0", ppRational a0),
+      ("nOpt", ppNatural nopt),
+      ("version", ppProtVer ver),
+      ("nonmyopic", ppNonMyopic non),
+      ("deltaR1", ppCoin deltaR1),
+      ("R", ppCoin rR),
+      ("deltaT1", ppCoin deltaT1),
+      ("totalStake", ppCoin total),
+      ("rewardPot", ppCoin pot)
+    ]
+
+ppFreeVars :: FreeVars crypto -> PDoc
+ppFreeVars (FreeVars b1 del stake1 addrs total active asc1 blocks r1 slots d a0 nOpt) =
+  ppRecord
+    "FreeVars"
+    [ ("b", ppMap ppKeyHash ppNatural b1),
+      ("delegs", ppMap ppCredential ppKeyHash del),
+      ("stake", ppStake stake1),
+      ("addrsRew", ppSet ppCredential addrs),
+      ("totalStake", ppInteger total),
+      ("activeStake", ppInteger active),
+      ("asc", ppActiveSlotCoeff asc1),
+      ("totalBlocks", ppNatural blocks),
+      ("r", ppCoin r1),
+      ("slotserEpoch", ppEpochSize slots),
+      ("d", ppUnitInterval d),
+      ("a0", ppRational a0),
+      ("nOpt", ppNatural nOpt)
+    ]
+
+ppPulseItem :: PulseItem crypto -> PDoc
+ppPulseItem (keyhash, poolparams) = ppPair ppKeyHash ppPoolParams (keyhash, poolparams)
+
+ppAns :: RewardAns crypto -> PDoc
+ppAns mappair =
+  ppPair
+    (ppMap ppCredential (ppSet ppReward))
+    (ppMap ppKeyHash ppLikelihood)
+    mappair
+
+ppRewardPulser :: Pulser crypto -> PDoc
+ppRewardPulser (RSLP n free items ans) =
+  ppSexp "RewardPulser" [ppInt n, ppFreeVars free, ppList ppPulseItem items, ppAns ans]
+
+ppPulsingRewUpdate :: PulsingRewUpdate crypto -> PDoc
+ppPulsingRewUpdate (Pulsing snap pulser) =
+  ppSexp "Pulsing" [ppRewardSnapShot snap, ppRewardPulser pulser]
+ppPulsingRewUpdate (Complete rewup) =
+  ppSexp "Complete" [ppRewardUpdate rewup]
+
+instance PrettyA (RewardSnapShot crypto) where prettyA = ppRewardSnapShot
+
+instance PrettyA (FreeVars crypto) where prettyA = ppFreeVars
+
+instance PrettyA (Pulser crypto) where prettyA = ppRewardPulser
+
+instance PrettyA (PulsingRewUpdate crypto) where prettyA = ppPulsingRewUpdate
+
+instance PrettyA (RewardUpdate crypto) where prettyA = ppRewardUpdate
 
 -- =================================
 -- Shelley.Spec.Ledger.LedgerState
@@ -426,10 +515,10 @@ ppDPState :: DPState crypto -> PDoc
 ppDPState (DPState d p) = ppRecord "DPState" [("dstate", ppDState d), ("pstate", ppPState p)]
 
 ppDState :: DState crypto -> PDoc
-ppDState (DState r ds ptrs future gen irwd) =
+ppDState (DState r1 ds ptrs future gen irwd) =
   ppRecord
     "DState"
-    [ ("rewards", ppRewardAccounts r),
+    [ ("rewards", ppRewardAccounts r1),
       ("delegations", ppMap' mempty ppCredential ppKeyHash ds),
       ("ptrs", ppMap ppPtr ppCredential (forwards ptrs)),
       ("futuregendelegs", ppMap ppFutureGenDeleg ppGenDelegPair future),
@@ -489,17 +578,6 @@ ppReward (Reward rt pool amt) =
       ("rewardAmount", ppCoin amt)
     ]
 
-ppRewardUpdate :: RewardUpdate crypto -> PDoc
-ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
-  ppRecord
-    "RewardUpdate"
-    [ ("deltaT", ppDeltaCoin dt),
-      ("deltaR", ppDeltaCoin dr),
-      ("rs", ppMap' mempty ppCredential (ppSet ppReward) rss),
-      ("deltaF", ppDeltaCoin df),
-      ("nonMyopic", ppNonMyopic nonmyop)
-    ]
-
 ppUTxOState ::
   CanPrettyPrintLedgerState era =>
   UTxOState era ->
@@ -533,7 +611,7 @@ ppNewEpochState (NewEpochState enum prevB curB es rewup pool) =
       ("prevBlock", ppBlocksMade prevB),
       ("currBlock", ppBlocksMade curB),
       ("epochState", ppEpochState es),
-      ("rewUpdate", ppStrictMaybe ppRewardUpdate rewup),
+      ("rewUpdate", ppStrictMaybe ppPulsingRewUpdate rewup),
       ("poolDist", ppPoolDistr pool)
     ]
 
@@ -589,8 +667,6 @@ instance
   prettyA = ppPPUPState
 
 instance PrettyA (PState crypto) where prettyA = ppPState
-
-instance PrettyA (RewardUpdate crypto) where prettyA = ppRewardUpdate
 
 instance
   ( Era era,
@@ -842,7 +918,7 @@ ppPoolCert (RegPool x) = ppSexp "RegPool" [ppPoolParams x]
 ppPoolCert (RetirePool x y) = ppSexp "RetirePool" [ppKeyHash x, ppEpochNo y]
 
 ppGenesisDelegCert :: GenesisDelegCert c -> PDoc
-ppGenesisDelegCert (GenesisDelegCert a b c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b, ppHash c]
+ppGenesisDelegCert (GenesisDelegCert a b1 c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b1, ppHash c]
 
 ppMIRPot :: MIRPot -> PDoc
 ppMIRPot ReservesMIR = text "Reserves"

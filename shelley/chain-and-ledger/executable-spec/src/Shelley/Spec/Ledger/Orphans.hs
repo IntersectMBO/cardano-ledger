@@ -5,13 +5,14 @@
 
 module Shelley.Spec.Ledger.Orphans where
 
+import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Crypto.Hash (Hash (..))
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Prelude (HeapWords (..), readEither)
-import Cardano.Slotting.Slot (WithOrigin (..))
+import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
 import Control.DeepSeq (NFData (rnf))
 import Data.Aeson
 import qualified Data.ByteString as Long (ByteString, empty)
@@ -113,3 +114,9 @@ instance Default Bool where
   def = False
 
 deriving newtype instance HeapWords (HS.Hash h a)
+
+deriving newtype instance ToCBOR EpochSize
+
+deriving newtype instance NFData EpochSize
+
+deriving newtype instance FromCBOR EpochSize

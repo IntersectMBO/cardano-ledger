@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness)
-import Shelley.Spec.Ledger.LedgerState (emptyRewardUpdate)
+import Shelley.Spec.Ledger.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
@@ -65,6 +65,7 @@ import Test.Shelley.Spec.Ledger.Examples.Init
     nonce0,
     ppEx,
   )
+import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (makePulser')
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
@@ -247,11 +248,14 @@ expectedStEx2A =
 poolReReg2A :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
 poolReReg2A = CHAINExample expectedStEx1 blockEx2A (Right expectedStEx2A)
 
+pulserEx2 :: forall c. (ExMock c) => PulsingRewUpdate c
+pulserEx2 = makePulser' expectedStEx2
+
 expectedStEx2B :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx2B =
   C.evolveNonceFrozen (getBlockNonce (blockEx2B @c))
     . C.newLab blockEx2B
-    . C.rewardUpdate emptyRewardUpdate
+    . C.pulserUpdate pulserEx2
     $ expectedStEx2
 
 blockEx2B :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)

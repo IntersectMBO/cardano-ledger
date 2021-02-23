@@ -11,9 +11,12 @@
 -- Example demonstrating the creation of a new stake pool,
 -- block production under Praos, rewards, and pool retirement.
 module Test.Shelley.Spec.Ledger.Examples.PoolLifetime
-  ( poolLifetimeExample,
+  ( makePulser,
+    makePulser',
+    poolLifetimeExample,
   )
 where
+
 
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Crypto (..))
@@ -51,9 +54,12 @@ import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
-  ( RewardUpdate (..),
+  ( NewEpochState (..),
+    PulsingRewUpdate,
+    RewardUpdate (..),
     decayFactor,
     emptyRewardUpdate,
+    startStep
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
@@ -227,7 +233,7 @@ blockEx1 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10) 0 (KESPeriod 0))
 
-expectedStEx1 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx1 :: forall c. (ExMock c) => ChainState (ShelleyEra c)
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
@@ -316,6 +322,31 @@ blockEx2 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 90) 0 (KESPeriod 0))
 
+makePulser ::
+  forall era.
+  (C.UsesPP era) =>
+  EB.BlocksMade (Crypto era) ->
+  ChainState era ->
+  PulsingRewUpdate (Crypto era)
+makePulser bs cs =
+  startStep
+    (epochSize $ EpochNo 0)
+    bs
+    (nesEs . chainNes $ cs)
+    maxLLSupply
+    (activeSlotCoeff testGlobals)
+    (securityParameter testGlobals)
+
+makePulser' ::
+  forall era.
+  (C.UsesPP era) =>
+  ChainState era ->
+  PulsingRewUpdate (Crypto era)
+makePulser' = makePulser (EB.BlocksMade mempty)
+
+pulserEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => PulsingRewUpdate c
+pulserEx2 = makePulser (EB.BlocksMade mempty) expectedStEx1
+
 expectedStEx2 ::
   forall c.
   (ExMock (Crypto (ShelleyEra c))) =>
@@ -327,7 +358,7 @@ expectedStEx2 =
     . C.newUTxO txbodyEx2
     . C.delegation Cast.aliceSHK (_poolId $ Cast.alicePoolParams @c)
     . C.delegation Cast.bobSHK (_poolId $ Cast.alicePoolParams @c)
-    . C.rewardUpdate emptyRewardUpdate
+    . C.pulserUpdate pulserEx2
     $ expectedStEx1
 
 -- === Block 2, Slot 90, Epoch 0
@@ -445,6 +476,9 @@ blockEx4 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 190) 0 (KESPeriod 0))
 
+pulserEx4 :: forall c. (ExMock c) => PulsingRewUpdate c
+pulserEx4 = makePulser (EB.BlocksMade mempty) expectedStEx3
+
 rewardUpdateEx4 :: forall c. RewardUpdate c
 rewardUpdateEx4 =
   RewardUpdate
@@ -465,7 +499,7 @@ expectedStEx4 =
     . C.feesAndDeposits feeTx4 (Coin 0)
     . C.newUTxO txbodyEx4
     . C.delegation Cast.carlSHK (_poolId $ Cast.alicePoolParams @c)
-    . C.rewardUpdate rewardUpdateEx4
+    . C.pulserUpdate pulserEx4
     $ expectedStEx3
 
 -- === Block 4, Slot 190, Epoch 1
@@ -576,13 +610,16 @@ rewardUpdateEx6 =
       nonMyopic = def {rewardPotNM = Coin 4}
     }
 
+pulserEx6 :: forall c. (ExMock c) => PulsingRewUpdate c
+pulserEx6 = makePulser (EB.BlocksMade mempty) expectedStEx5
+
 expectedStEx6 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx6 =
   C.evolveNonceFrozen (getBlockNonce (blockEx6 @c))
     . C.newLab blockEx6
     . C.setOCertCounter (coerceKeyRole $ hk Cast.alicePoolKeys) 0
     . C.incrBlockCount (hk Cast.alicePoolKeys)
-    . C.rewardUpdate rewardUpdateEx6
+    . C.pulserUpdate pulserEx6
     $ expectedStEx5
 
 -- === Block 6, Slot 295, Epoch 2
@@ -685,6 +722,9 @@ nonMyopicEx8 =
     (Map.singleton (hk Cast.alicePoolKeys) alicePerfEx8)
     rewardPot8
 
+pulserEx8 :: forall c. (ExMock c) => PulsingRewUpdate c
+pulserEx8 = makePulser (EB.BlocksMade $ Map.singleton (hk Cast.alicePoolKeys) 1) expectedStEx7
+
 rewardUpdateEx8 :: forall c. Cr.Crypto c => RewardUpdate c
 rewardUpdateEx8 =
   RewardUpdate
@@ -708,7 +748,7 @@ expectedStEx8 =
   C.evolveNonceFrozen (getBlockNonce (blockEx8 @c))
     . C.newLab blockEx8
     . C.setOCertCounter coreNodeHK 2
-    . C.rewardUpdate rewardUpdateEx8
+    . C.pulserUpdate pulserEx8
     $ expectedStEx7
   where
     coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 390
@@ -911,6 +951,9 @@ nonMyopicEx11 =
     (Map.singleton (hk Cast.alicePoolKeys) (alicePerfEx11 @c))
     (Coin 0)
 
+pulserEx11 :: forall c. (ExMock c) => PulsingRewUpdate c
+pulserEx11 = makePulser (EB.BlocksMade mempty) expectedStEx10
+
 rewardUpdateEx11 :: forall c. Cr.Crypto c => RewardUpdate c
 rewardUpdateEx11 =
   RewardUpdate
@@ -927,7 +970,7 @@ expectedStEx11 =
     . C.newLab blockEx11
     . C.feesAndDeposits feeTx11 (Coin 0)
     . C.newUTxO txbodyEx11
-    . C.rewardUpdate rewardUpdateEx11
+    . C.pulserUpdate pulserEx11
     . C.stageRetirement (hk Cast.alicePoolKeys) aliceRetireEpoch
     $ expectedStEx10
 
@@ -1003,7 +1046,7 @@ poolLifetimeExample =
   testGroup
     "pool lifetime"
     [ testCase "initial registrations" $ testCHAINExample poolLifetime1,
-      testCase "delegate stake and create reward update" $ testCHAINExample poolLifetime2,
+      testCase "elegate stake and create reward update" $ testCHAINExample poolLifetime2,
       testCase "new epoch changes" $ testCHAINExample poolLifetime3,
       testCase "second reward update" $ testCHAINExample poolLifetime4,
       testCase "nonempty pool distr" $ testCHAINExample poolLifetime5,

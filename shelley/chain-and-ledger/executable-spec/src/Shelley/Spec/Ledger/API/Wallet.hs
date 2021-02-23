@@ -288,7 +288,7 @@ getRewardInfo ::
 getRewardInfo globals newepochstate =
   runReader
     ( runWithProvM def $
-        createRUpd slotsPerEpoch blocksmade epochstate maxsupply
+        createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam
     )
     globals
   where
@@ -300,3 +300,5 @@ getRewardInfo globals newepochstate =
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    asc = activeSlotCoeff globals
+    secparam = securityParameter globals

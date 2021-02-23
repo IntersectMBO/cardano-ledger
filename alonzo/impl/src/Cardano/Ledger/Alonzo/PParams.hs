@@ -36,7 +36,6 @@ where
 
 import Cardano.Binary
   ( Annotator,
-    Decoder,
     FromCBOR (..),
     ToCBOR (..),
     encodePreEncoded,
@@ -65,6 +64,8 @@ import Data.Coders
     decode,
     encode,
     field,
+    mapDecodeA,
+    mapEncode,
     (!>),
     (<*!),
   )
@@ -92,8 +93,6 @@ import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
 import Shelley.Spec.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
-    decodeMapTraverse,
-    encodeMap,
     mapToCBOR,
     ratioFromCBOR,
     ratioToCBOR,
@@ -213,7 +212,7 @@ instance (Era era) => ToCBOR (PParams era) where
             !> To minPoolCost'
             -- new/updated for alonzo
             !> To adaPerUTxOByte'
-            !> E (encodeMap toCBOR toCBOR) costmdls'
+            !> mapEncode costmdls'
             !> To prices'
             !> To maxTxExUnits'
             !> To maxBlockExUnits'
@@ -243,18 +242,11 @@ instance
         <*! Ann (D fromCBORGroup) -- _protocolVersion :: ProtVer
         <*! Ann From -- _minPoolCost     :: Natural
         -- new/updated for alonzo
-        <*! Ann From -- _adaPerUTxOByte  ::
-        <*! D ((splitMapFromCBOR fromCBOR fromCBOR) :: (forall s. Decoder s (Annotator (Map Language CostModel))))
+        <*! Ann From -- _adaPerUTxOByte  :: Coin
+        <*! mapDecodeA (Ann From) From -- _costmdls :: (Map Language CostModel)
         <*! Ann From -- _prices = prices',
         <*! Ann From -- _maxTxExUnits = maxTxExUnits',
         <*! Ann From -- _maxBlockExUnits = maxBlockExUnits'
-
-splitMapFromCBOR ::
-  Ord dom =>
-  Decoder s dom ->
-  Decoder s (Annotator rng) ->
-  Decoder s (Annotator (Map dom rng))
-splitMapFromCBOR a b = decodeMapTraverse (pure <$> a) b
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams era
@@ -396,7 +388,7 @@ updateField 13 = fieldNorm (\x up -> up {_extraEntropy = x}) From
 updateField 14 = fieldNorm (\x up -> up {_protocolVersion = x}) From
 updateField 15 = fieldNorm (\x up -> up {_minPoolCost = x}) From
 updateField 16 = fieldNorm (\x up -> up {_adaPerUTxOByte = x}) From
-updateField 17 = fieldAnn (\x up -> up {_costmdls = x}) (D (splitMapFromCBOR fromCBOR fromCBOR))
+updateField 17 = fieldAnn (\x up -> up {_costmdls = x}) (mapDecodeA (Ann From) From)
 updateField 18 = fieldNorm (\x up -> up {_prices = x}) From
 updateField 19 = fieldNorm (\x up -> up {_maxTxExUnits = x}) From
 updateField 20 = fieldNorm (\x up -> up {_maxBlockExUnits = x}) From
@@ -420,7 +412,7 @@ instance Era era => ToCBOR (ProposedPPUpdates era) where
   toCBOR (ProposedPPUpdates m) = mapToCBOR m
 
 instance Era era => FromCBOR (Annotator (ProposedPPUpdates era)) where
-  fromCBOR = (ProposedPPUpdates <$>) <$> splitMapFromCBOR fromCBOR fromCBOR
+  fromCBOR = (ProposedPPUpdates <$>) <$> (decode (mapDecodeA (Ann From) From)) -- splitMapFromCBOR fromCBOR fromCBOR
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty

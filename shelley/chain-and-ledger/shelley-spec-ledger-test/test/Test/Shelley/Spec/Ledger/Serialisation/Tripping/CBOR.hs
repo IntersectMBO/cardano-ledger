@@ -30,6 +30,12 @@ module Test.Shelley.Spec.Ledger.Serialisation.Tripping.CBOR
     prop_roundtrip_LedgerState,
     prop_roundtrip_NewEpochState,
     prop_roundtrip_ShelleyGenesis,
+    -- * pusing properties
+    prop_roundtrip_RewardUpdate,
+    prop_roundtrip_RewardSnapShot,
+    prop_roundtrip_FreeVars,
+    prop_roundtrip_RewardPulser,
+    prop_roundtrip_PulsingRewUpdate,
   )
 where
 
@@ -53,12 +59,21 @@ import Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
+import Shelley.Spec.Ledger.RewardUpdate
+  ( RewardUpdate(..),
+    RewardSnapShot(..),
+    FreeVars(..),
+    -- RewardPulser(..),
+    Pulser,
+    PulsingRewUpdate(..),
+  )
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Mock
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (Property, counterexample, testProperty, (===))
+
 
 roundtrip ::
   (Eq a, Show a) =>
@@ -160,6 +175,30 @@ prop_roundtrip_Coin_2 = roundtrip toCBOR (fromCompact <$> fromCBOR)
 prop_roundtrip_RewardProvenance :: RewardProvenance Mock.C_Crypto -> Property
 prop_roundtrip_RewardProvenance = roundtrip toCBOR fromCBOR
 
+prop_roundtrip_RewardUpdate :: RewardUpdate Mock.C_Crypto -> Property
+prop_roundtrip_RewardUpdate = roundtrip toCBOR fromCBOR
+
+prop_roundtrip_RewardSnapShot :: RewardSnapShot Mock.C_Crypto -> Property
+prop_roundtrip_RewardSnapShot = roundtrip toCBOR fromCBOR
+
+prop_roundtrip_FreeVars :: FreeVars Mock.C_Crypto -> Property
+prop_roundtrip_FreeVars x = roundtrip toCBOR fromCBOR x
+
+prop_roundtrip_RewardPulser :: Pulser Mock.C_Crypto -> Property
+prop_roundtrip_RewardPulser = roundtrip toCBOR fromCBOR
+
+prop_roundtrip_PulsingRewUpdate :: PulsingRewUpdate Mock.C_Crypto -> Property
+prop_roundtrip_PulsingRewUpdate = roundtrip toCBOR fromCBOR
+
+pulsingTest :: TestTree
+pulsingTest = testGroup "Serialisable Pulser tests"
+  [ testProperty "roundtrip RewardUpdate" prop_roundtrip_RewardUpdate
+  , testProperty "roundtrip RewardSnapShot" prop_roundtrip_RewardSnapShot
+  , testProperty "roundtrip RewardFreeVars" prop_roundtrip_FreeVars
+  , testProperty "roundtrip RewardPulser" prop_roundtrip_RewardPulser
+  , testProperty "roundtrip PulsingRewUpdate" prop_roundtrip_PulsingRewUpdate
+  ]
+
 -- TODO
 
 -- roundTripIpv4 :: Property
@@ -203,5 +242,6 @@ tests =
       testProperty "roundtrip Shelley Genesis" prop_roundtrip_ShelleyGenesis,
       testProperty "roundtrip coin compactcoin cbor" prop_roundtrip_Coin_1,
       testProperty "roundtrip coin cbor compactcoin" prop_roundtrip_Coin_2,
-      testProperty "roundtrip reward provenance" prop_roundtrip_RewardProvenance
+      testProperty "roundtrip reward provenance" prop_roundtrip_RewardProvenance,
+      pulsingTest
     ]

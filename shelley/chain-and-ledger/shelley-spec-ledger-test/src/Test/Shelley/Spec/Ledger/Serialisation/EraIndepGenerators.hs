@@ -107,6 +107,13 @@ import Shelley.Spec.Ledger.Rewards
     Reward (..),
     RewardType (..),
   )
+import Shelley.Spec.Ledger.RewardUpdate
+  ( RewardSnapShot(..),
+    FreeVars(..),
+    RewardPulser(..),
+    Pulser,
+    PulsingRewUpdate(..),
+  )
 import qualified Shelley.Spec.Ledger.STS.Deleg as STS
 import qualified Shelley.Spec.Ledger.STS.Delegs as STS
 import qualified Shelley.Spec.Ledger.STS.Delpl as STS
@@ -892,3 +899,42 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+
+instance (Mock crypto) => Arbitrary (PulsingRewUpdate crypto) where
+   arbitrary = oneof [ Complete <$> arbitrary
+                     , Pulsing <$> arbitrary <*> arbitrary
+                     ]
+instance
+  Mock crypto =>
+  Arbitrary (RewardSnapShot crypto)
+  where
+  arbitrary = RewardSnapShot
+                 <$> arbitrary <*> arbitrary <*> arbitrary
+                 <*> arbitrary <*> arbitrary <*> arbitrary
+                 <*> arbitrary <*> arbitrary <*> arbitrary  <*>  arbitrary
+
+instance
+  Mock crypto =>
+  Arbitrary (FreeVars crypto)
+  where
+  arbitrary = FreeVars
+          <$> arbitrary {- b -}
+          <*> arbitrary {- delegs -}
+          <*> arbitrary {- stake -}
+          <*> arbitrary {- addrsRew -}
+          <*> arbitrary {- totalStake -}
+          <*> arbitrary {- activeStake -}
+          <*> arbitrary {- asc -}
+          <*> arbitrary {- totalBlocks -}
+          <*> arbitrary {- r -}
+          <*> (EpochSize <$> arbitrary) {- slotsPerEpoch -}
+          <*> arbitrary {- pp_d -}
+          <*> arbitrary {- pp_a0 -}
+          <*> arbitrary {- pp_nOpt -}
+
+instance
+  Mock crypto =>
+  Arbitrary (Pulser crypto)
+  where
+  arbitrary =  RSLP  <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary

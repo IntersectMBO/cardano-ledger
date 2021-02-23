@@ -3,6 +3,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ConstraintKinds #-}
+
 
 -- |
 -- Module      : Test.Shelley.Spec.Ledger.Examples.Combinators
@@ -28,6 +30,7 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
     mir,
     applyMIR,
     rewardUpdate,
+    pulserUpdate,
     applyRewardUpdate,
     setPoolDistr,
     setOCertCounter,
@@ -40,10 +43,10 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
     setPrevPParams,
     setFutureGenDeleg,
     adoptFutureGenDeleg,
+    UsesPP,
   )
 where
 
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -56,8 +59,7 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Word (Word64)
-import GHC.Records (HasField)
-import Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), (⭒))
+import Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, StrictMaybe(..), (⭒))
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     Block (..),
@@ -93,6 +95,7 @@ import Shelley.Spec.Ledger.LedgerState
     PPUPState (..),
     PState (..),
     RewardUpdate (..),
+    PulsingRewUpdate(..),
     UTxOState (..),
     applyRUpd,
   )
@@ -103,6 +106,20 @@ import Shelley.Spec.Ledger.Tx (TxIn)
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
+import Numeric.Natural (Natural)
+import qualified Cardano.Ledger.Core as Core
+import GHC.Records (HasField (..))
+
+-- ==================================================
+
+type UsesPP era =
+  ( HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_tau" (Core.PParams era) UnitInterval,
+    HasField "_a0" (Core.PParams era) Rational,
+    HasField "_rho" (Core.PParams era) UnitInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  )
 
 -- ======================================================
 
@@ -482,7 +499,19 @@ rewardUpdate ::
   ChainState era
 rewardUpdate ru cs = cs {chainNes = nes'}
   where
-    nes' = (chainNes cs) {nesRu = SJust ru}
+    nes' = (chainNes cs) {nesRu = SJust(Complete ru)}
+
+-- | = Pulser
+--
+-- Update the chain state with the given reward update pulser
+pulserUpdate ::
+  forall era.
+  PulsingRewUpdate (Crypto era) ->
+  ChainState era ->
+  ChainState era
+pulserUpdate p cs = cs {chainNes = nes'}
+  where
+    nes' = (chainNes cs) {nesRu = SJust p}
 
 -- | = Apply a Reward Update
 --

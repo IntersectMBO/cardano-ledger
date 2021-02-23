@@ -6,18 +6,21 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- |
@@ -33,6 +36,7 @@ module Shelley.Spec.Ledger.LedgerState
     DState (..),
     EpochState (..),
     UpecState (..),
+    PulsingRewUpdate (..),
     FutureGenDeleg (..),
     InstantaneousRewards (..),
     Ix,
@@ -42,6 +46,7 @@ module Shelley.Spec.Ledger.LedgerState
     PState (..),
     RewardAccounts,
     RewardUpdate (..),
+    RewardSnapShot (..),
     UTxOState (..),
     depositPoolChange,
     emptyRewardUpdate,
@@ -72,6 +77,11 @@ module Shelley.Spec.Ledger.LedgerState
     stakeDistr,
     applyRUpd,
     createRUpd,
+    completeRupd,
+    startStep,
+    pulseStep,
+    completeStep,
+    pulseOther,
     --
     NewEpochState (..),
     getGKeys,
@@ -113,9 +123,8 @@ import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (asks)
-import Control.Provenance (ProvM, lift, modifyWithBlackBox, runOtherProv)
-import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))
+import Control.Provenance (ProvM, liftProv)
+import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Constraint (Constraint)
@@ -126,11 +135,13 @@ import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Pulse (Pulsable (..), completeM)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
@@ -143,7 +154,7 @@ import Shelley.Spec.Ledger.Address.Bootstrap
     verifyBootstrapWit,
   )
 import Shelley.Spec.Ledger.BaseTypes
-  ( Globals (..),
+  ( ActiveSlotCoeff,
     ShelleyBase,
     StrictMaybe (..),
     UnitInterval,
@@ -195,16 +206,24 @@ import Shelley.Spec.Ledger.PParams
     emptyPPPUpdates,
   )
 import Shelley.Spec.Ledger.RewardProvenance (Desirability (..), RewardProvenance (..))
+import Shelley.Spec.Ledger.RewardUpdate
+  ( FreeVars (..),
+    Pulser,
+    PulsingRewUpdate (..),
+    RewardPulser (..),
+    RewardSnapShot (..),
+    RewardUpdate (..),
+    emptyRewardUpdate,
+    pulseOther,
+  )
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
     PerformanceEstimate (..),
-    Reward (..),
     aggregateRewards,
     applyDecay,
     desirability,
     percentile',
-    reward,
     sumRewards,
   )
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, mapFromCBOR, mapToCBOR)
@@ -405,48 +424,6 @@ instance
       ps <- fromCBOR
       pure $ DPState ds ps
 
-data RewardUpdate crypto = RewardUpdate
-  { deltaT :: !DeltaCoin,
-    deltaR :: !DeltaCoin,
-    rs :: !(Map (Credential 'Staking crypto) (Set (Reward crypto))),
-    deltaF :: !DeltaCoin,
-    nonMyopic :: !(NonMyopic crypto)
-  }
-  deriving (Show, Eq, Generic)
-
-instance NoThunks (RewardUpdate crypto)
-
-instance NFData (RewardUpdate crypto)
-
-instance
-  CC.Crypto crypto =>
-  ToCBOR (RewardUpdate crypto)
-  where
-  toCBOR (RewardUpdate dt dr rw df nm) =
-    encodeListLen 5
-      <> toCBOR dt
-      <> toCBOR (invert dr) -- TODO change Coin serialization to use integers?
-      <> toCBOR rw
-      <> toCBOR (invert df) -- TODO change Coin serialization to use integers?
-      <> toCBOR nm
-
-instance
-  CC.Crypto crypto =>
-  FromCBOR (RewardUpdate crypto)
-  where
-  fromCBOR = do
-    decodeRecordNamed "RewardUpdate" (const 5) $ do
-      dt <- fromCBOR
-      dr <- fromCBOR -- TODO change Coin serialization to use integers?
-      rw <- fromCBOR
-      df <- fromCBOR -- TODO change Coin serialization to use integers?
-      nm <- fromCBOR
-      pure $ RewardUpdate dt (invert dr) rw (invert df) nm
-
-emptyRewardUpdate :: RewardUpdate crypto
-emptyRewardUpdate =
-  RewardUpdate (DeltaCoin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) def
-
 data AccountState = AccountState
   { _treasury :: !Coin,
     _reserves :: !Coin
@@ -625,7 +602,7 @@ data NewEpochState era = NewEpochState
     -- | Epoch state before current
     nesEs :: !(EpochState era),
     -- | Possible reward update
-    nesRu :: !(StrictMaybe (RewardUpdate (Crypto era))),
+    nesRu :: !(StrictMaybe (PulsingRewUpdate (Crypto era))),
     -- | Stake distribution within the stake pool
     nesPd :: !(PoolDistr (Crypto era))
   }
@@ -1035,33 +1012,35 @@ applyRUpd ::
   RewardUpdate (Crypto era) ->
   EpochState era ->
   EpochState era
-applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
-  where
-    utxoState_ = _utxoState ls
-    delegState = _delegationState ls
-    dState = _dstate delegState
-    (regRU, unregRU) =
-      Map.partitionWithKey
-        (\k _ -> eval (k ∈ dom (_rewards dState)))
-        (aggregateRewards pr $ rs ru)
-    as' =
-      as
-        { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold unregRU,
-          _reserves = addDeltaCoin (_reserves as) (deltaR ru)
-        }
-    ls' =
-      ls
-        { _utxoState =
-            utxoState_ {_fees = _fees utxoState_ `addDeltaCoin` deltaF ru},
-          _delegationState =
-            delegState
-              { _dstate =
-                  dState
-                    { _rewards = eval (_rewards dState ∪+ regRU)
-                    }
-              }
-        }
-    nm' = nonMyopic ru
+applyRUpd
+  ru
+  (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
+    where
+      utxoState_ = _utxoState ls
+      delegState = _delegationState ls
+      dState = _dstate delegState
+      (regRU, unregRU) =
+        Map.partitionWithKey
+          (\k _ -> eval (k ∈ dom (_rewards dState)))
+          (aggregateRewards pr $ rs ru)
+      as' =
+        as
+          { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold (range unregRU),
+            _reserves = addDeltaCoin (_reserves as) (deltaR ru)
+          }
+      ls' =
+        ls
+          { _utxoState =
+              utxoState_ {_fees = _fees utxoState_ `addDeltaCoin` deltaF ru},
+            _delegationState =
+              delegState
+                { _dstate =
+                    dState
+                      { _rewards = eval (_rewards dState ∪+ regRU)
+                      }
+                }
+          }
+      nm' = nonMyopic ru
 
 decayFactor :: Float
 decayFactor = 0.9
@@ -1085,24 +1064,43 @@ updateNonMyopic nm rPot newLikelihoods =
         <> newPerf
     updatedLikelihoods = Map.mapWithKey performance newLikelihoods
 
--- | Create a reward update
-createRUpd ::
-  forall era.
+-- =============================
+-- To prevent a huge pause, at the stability point, we spread out the
+-- Calculation of rewards over many blocks. We do this in 3 phases. Phase 1
+-- of a reward upate is a pure computation, computing some parameters which
+-- become fixed at the time when we reach the stability point. One of these
+-- parameters is a Pulser, i.e. a computation that when pulseM'ed computes
+-- a portion of what is required, so that the whole compuation can be spread out in time.
+
+-- | The EpochState has a field which is (Core.PParams era). We need these
+--     fields, a subset of the fields in PParams, in: startStep and createRUpd.
+type UsesPP era =
   ( HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_tau" (Core.PParams era) UnitInterval,
     HasField "_a0" (Core.PParams era) Rational,
     HasField "_rho" (Core.PParams era) UnitInterval,
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer
-  ) =>
+  )
+
+-- | Assemble the components for, and then create, a Pulser.
+startStep ::
+  forall era.
+  UsesPP era =>
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->
   Coin ->
-  ProvM (RewardProvenance (Crypto era)) ShelleyBase (RewardUpdate (Crypto era))
-createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply = do
-  asc <- lift (asks activeSlotCoeff)
+  ActiveSlotCoeff ->
+  Word64 ->
+  (PulsingRewUpdate (Crypto era))
+startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
+      f, numPools, k :: Rational
+      numPools = fromIntegral (Map.size poolParams)
+      k = fromIntegral secparam
+      f = unitIntervalToRational (activeSlotVal asc)
+      pulseSize = max 1 (ceiling ((numPools * f) / (6 * k)))
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
       -- reserves and rewards change
@@ -1125,76 +1123,137 @@ createRUpd slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) ma
       deltaT1 = floor $ intervalValue (getField @"_tau" pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       totalStake = circulation es maxSupply
-  ((rs_, newLikelihoods), blackBoxPools) <-
-    runOtherProv
-      Map.empty
-      ( reward
-          pr
-          b
-          _R
-          (Map.keysSet $ _rewards ds)
-          poolParams
-          stake'
+      rewsnap =
+        RewardSnapShot
+          { rewSnapshots = ss,
+            rewa0 = getField @"_a0" pr,
+            rewnOpt = getField @"_nOpt" pr,
+            rewprotocolVersion = getField @"_protocolVersion" pr,
+            rewNonMyopic = nm,
+            rewDeltaR1 = deltaR1,
+            rewR = _R,
+            rewDeltaT1 = (Coin deltaT1),
+            rewTotalStake = totalStake,
+            rewRPot = (Coin rPot)
+          }
+      free =
+        FreeVars
+          (unBlocksMade b)
           delegs'
-          totalStake
+          stake'
+          (Map.keysSet $ _rewards ds)
+          (unCoin totalStake)
+          (unCoin (fold . unStake $ stake'))
           asc
-          slotsPerEpoch
-      )
-  let deltaR2 = _R <-> (sumRewards pr rs_)
-      -- add under 'key' the pair (LikeliHoodEstimate,Desirability) to the Map 'ans'
-      addDesire ans key likelihood = case Map.lookup key poolParams of
-        Nothing ->
-          -- This case should be unreachable, since a likelihood is calculated
-          -- for every registered stake pool
-          Map.insert
-            key
-            ( Desirability
-                { hitRateEstimate = unPerformanceEstimate estimate,
-                  desirabilityScore = 0
-                }
-            )
-            ans
-        Just pp ->
-          Map.insert
-            key
-            ( Desirability
-                { hitRateEstimate = unPerformanceEstimate estimate,
-                  desirabilityScore =
-                    desirability pr (Coin rPot) pp estimate totalStake
-                }
-            )
-            ans
-        where
-          estimate = percentile' likelihood
-  modifyWithBlackBox
-    blackBoxPools
-    ( \provPools _ ->
-        RewardProvenance
-          (unEpochSize slotsPerEpoch)
-          b
-          maxSupply
-          deltaR1
-          deltaR2
+          (sum (unBlocksMade b))
           _R
-          totalStake
-          blocksMade
-          d
-          expectedBlocks
-          eta
-          (Coin rPot)
-          (Coin deltaT1)
-          (fold . unStake $ stake')
-          provPools
-          (Map.foldlWithKey' addDesire Map.empty newLikelihoods)
-    )
-  pure $
-    RewardUpdate
-      { deltaT = DeltaCoin deltaT1,
-        deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
-        rs = rs_,
-        deltaF = invert (toDeltaCoin $ _feeSS ss),
-        nonMyopic = (updateNonMyopic nm _R newLikelihoods)
-      }
+          slotsPerEpoch
+          (getField @"_d" pr)
+          (getField @"_a0" pr)
+          (getField @"_nOpt" pr)
+      pulser :: Pulser (Crypto era)
+      pulser = RSLP pulseSize free (Map.toList poolParams) (Map.empty, Map.empty)
+   in (Pulsing rewsnap pulser)
+
+-- Phase 2
+
+-- | Run the pulser for a bit. If is has nothing left to do, complete it.
+pulseStep ::
+  PulsingRewUpdate crypto ->
+  ProvM (RewardProvenance crypto) ShelleyBase (PulsingRewUpdate crypto)
+pulseStep (Complete r) = pure (Complete r)
+pulseStep (p@(Pulsing _ pulser)) | done pulser = completeStep p
+pulseStep (Pulsing rewsnap pulser) = do
+  -- The pulser computes one kind of provenance, pulseOther incorporates it
+  -- into the current flavor of provenance: RewardProvenance.
+  p2 <- (pulseOther pulser)
+  pure (Pulsing rewsnap p2)
+
+-- Phase 3
+
+completeStep ::
+  PulsingRewUpdate crypto ->
+  ProvM (RewardProvenance crypto) ShelleyBase (PulsingRewUpdate crypto)
+completeStep (Complete r) = pure (Complete r)
+completeStep (Pulsing rewsnap pulser) = do
+  p2 <- completeRupd (Pulsing rewsnap pulser)
+  pure (Complete p2)
+
+-- | Phase 3 of reward update has several parts
+--   a) completeM the pulser (in case there are still computions to run)
+--   b) Combine the pulser provenance with the RewardProvenance
+--   c) Construct the final RewardUpdate
+completeRupd ::
+  PulsingRewUpdate crypto ->
+  ProvM (RewardProvenance crypto) ShelleyBase (RewardUpdate crypto)
+completeRupd (Complete x) = pure x
+completeRupd
+  ( Pulsing
+      ( rewsnap@RewardSnapShot
+          { rewDeltaR1 = deltaR1,
+            rewR = oldr,
+            rewDeltaT1 = (Coin deltaT1),
+            rewNonMyopic = nm,
+            rewTotalStake = totalstake,
+            rewRPot = rpot,
+            rewSnapshots = snaps,
+            rewa0 = a0,
+            rewnOpt = nOpt
+          }
+        )
+      pulser
+    ) = do
+    let combine (rs, likely) provPools (rewprov@RewardProvenance {pools = old}) =
+          rewprov
+            { deltaR2 = oldr <-> (sumRewards rewsnap rs),
+              pools = Map.union provPools old,
+              desirabilities = (Map.foldlWithKey' addDesireability Map.empty likely)
+            }
+        -- A function to compute the 'desirablity' aggregate. Called only if we are computing
+        -- provenance. Adds nested pair ('key',(LikeliHoodEstimate,Desirability)) to the Map 'ans'
+        addDesireability ans key likelihood =
+          let SnapShot _ _ poolParams = _pstakeGo snaps
+              estimate = (percentile' likelihood)
+           in Map.insert
+                key
+                ( Desirability
+                    { hitRateEstimate = unPerformanceEstimate estimate,
+                      desirabilityScore = case Map.lookup key poolParams of
+                        Just ppx -> desirability (a0, nOpt) rpot ppx estimate totalstake
+                        Nothing -> 0
+                    }
+                )
+                ans
+    (rs_, newLikelihoods) <- liftProv (completeM pulser) Map.empty combine
+    let deltaR2 = oldr <-> (sumRewards rewsnap rs_)
+    pure $
+      RewardUpdate
+        { deltaT = (DeltaCoin deltaT1),
+          deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
+          rs = rs_,
+          deltaF = (invert (toDeltaCoin $ _feeSS snaps)),
+          nonMyopic = (updateNonMyopic nm oldr newLikelihoods)
+        }
+
+-- | To create a reward update, run all 3 phases
+createRUpd ::
+  forall era.
+  (UsesPP era) =>
+  EpochSize ->
+  BlocksMade (Crypto era) ->
+  EpochState era ->
+  Coin ->
+  ActiveSlotCoeff ->
+  Word64 ->
+  ProvM (RewardProvenance (Crypto era)) ShelleyBase (RewardUpdate (Crypto era))
+createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
+  let step1 = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam
+  step2 <- pulseStep step1
+  case step2 of
+    (Complete r) -> pure r
+    (Pulsing rewsnap pulser) -> completeRupd (Pulsing rewsnap pulser)
+
+-- =====================================================================
 
 -- | Calculate the current circulation
 --

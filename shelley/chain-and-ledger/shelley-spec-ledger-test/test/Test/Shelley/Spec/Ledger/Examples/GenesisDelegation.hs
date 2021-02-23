@@ -38,8 +38,9 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
-import Shelley.Spec.Ledger.LedgerState (FutureGenDeleg (..), emptyRewardUpdate)
+import Shelley.Spec.Ledger.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), WitnessSet)
@@ -67,6 +68,7 @@ import Test.Shelley.Spec.Ledger.Examples.Init
     nonce0,
     ppEx,
   )
+import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (makePulser')
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( NatNonce (..),
     genesisCoins,
@@ -194,7 +196,7 @@ newGenDeleg =
 
 expectedStEx1 ::
   forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  (ExMock c) =>
   ChainState (ShelleyEra c)
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce @(ShelleyEra c) (blockEx1))
@@ -208,7 +210,7 @@ expectedStEx1 =
 --
 -- In the first block, stage a new future genesis delegate
 genesisDelegation1 ::
-  (ExMock (Crypto (ShelleyEra c))) =>
+  (ExMock c) =>
   CHAINExample (ShelleyEra c)
 genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStEx1)
 
@@ -234,22 +236,25 @@ blockEx2 =
     0
     (mkOCert @c (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 50) 0 (KESPeriod 0))
 
+pulserEx2 :: forall c. (ExMock c, C.UsesPP (ShelleyEra c)) => PulsingRewUpdate c
+pulserEx2 = makePulser' expectedStEx1
+
 expectedStEx2 ::
   forall c.
-  (ExMock (Crypto (ShelleyEra c))) =>
+  (ExMock c, C.UsesPP (ShelleyEra c)) =>
   ChainState (ShelleyEra c)
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce @(ShelleyEra c) blockEx2)
     . C.newLab blockEx2
     . C.adoptFutureGenDeleg newGenDeleg
-    . C.rewardUpdate emptyRewardUpdate
+    . C.pulserUpdate pulserEx2
     $ expectedStEx1
 
 -- === Block 2, Slot 50, Epoch 0
 --
 -- Submit an empty block to trigger adopting the genesis delegation.
 genesisDelegation2 ::
-  (ExMock (Crypto (ShelleyEra c))) =>
+  (ExMock c, C.UsesPP (ShelleyEra c)) =>
   CHAINExample (ShelleyEra c)
 genesisDelegation2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 

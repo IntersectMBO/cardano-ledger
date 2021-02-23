@@ -78,12 +78,16 @@ instance NoThunks Desirability
 
 instance NFData Desirability
 
+-- | RewardProvenenace captures some of the intermediate calculations when computimg
+--     the statking reward distribution, most of these fields are simple scalar
+--     values, computed from the current State, and are fixed before we start to compute
+--     the distribution. 3 of them are aggregates computed when we compute the distribution.
 data RewardProvenance crypto = RewardProvenance
   { spe :: !Word64,
     blocks :: !(BlocksMade crypto),
     maxLL :: !Coin,
     deltaR1 :: !Coin,
-    deltaR2 :: !Coin,
+    deltaR2 :: !Coin, -- Aggregate
     r :: !Coin,
     totalStake :: !Coin,
     blocksCount :: !Integer,
@@ -93,12 +97,13 @@ data RewardProvenance crypto = RewardProvenance
     rPot :: !Coin,
     deltaT1 :: !Coin,
     activeStake :: !Coin,
-    pools ::
+    pools :: -- Aggregate
       !( Map
            (KeyHash 'StakePool crypto)
            (RewardProvenancePool crypto)
        ),
-    desirabilities :: !(Map (KeyHash 'StakePool crypto) Desirability)
+    desirabilities :: -- Aggregate
+      !(Map (KeyHash 'StakePool crypto) Desirability)
   }
   deriving (Eq, Generic)
 

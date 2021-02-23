@@ -27,9 +27,8 @@ import Cardano.Ledger.Val (invert, (<+>), (<->))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Iterate.SetAlgebra (eval, (◁))
 import Control.Monad (replicateM)
-import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Reader (asks, runReader)
-import Control.Provenance (preservesJust, preservesNothing, runProvM, runWithProvM)
+import Control.Provenance (preservesJust, preservesNothing, ProvM, runProvM, runWithProvM)
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
 import Data.Map (Map)
@@ -103,7 +102,6 @@ import Shelley.Spec.Ledger.Rewards
     likelihood,
     memberRew,
     mkApparentPerformance,
-    reward,
     sumRewards,
   )
 import Shelley.Spec.Ledger.Slot (epochInfoSize)
@@ -116,6 +114,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils
   ( testGlobals,
     unsafeMkUnitInterval,
+    runShelleyBase,
   )
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCaseInfo)
@@ -131,7 +130,15 @@ import Test.Tasty.QuickCheck
     testProperty,
     withMaxSuccess,
   )
-
+import Data.Set(Set)
+import Shelley.Spec.Ledger.RewardUpdate
+  ( KeyHashPoolProvenance,
+    RewardAns,
+    Pulser,
+    RewardPulser(RSLP),
+    FreeVars(..),
+  )
+import Data.Pulse(Pulsable(..))
 -- ========================================================================
 -- Bounds and Constants --
 
@@ -302,10 +309,10 @@ rewardsBoundedByPot _ = property $ do
             pools
       totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
-      Identity rs =
+      rs = runShelleyBase $
         runProvM $
           reward
-            pp
+            (_d pp, _a0 pp, _nOpt pp)
             bs
             rewardPot
             rewardAcnts
@@ -369,10 +376,10 @@ rewardsProvenance _ = generate $ do
             pools
       totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
-      Identity (_, prov) =
+      (_, prov) = runShelleyBase $
         runWithProvM def $
-          reward @Identity @(Crypto era)
-            pp
+          reward
+            (_d pp, _a0 pp, _nOpt pp)
             bs
             rewardPot
             rewardAcnts
@@ -393,7 +400,7 @@ justRewardInfo ::
   RewardUpdate (Crypto era)
 justRewardInfo globals newepochstate =
   runReader
-    (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply)
+    (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
     globals
   where
     epochstate = nesEs newepochstate
@@ -404,6 +411,8 @@ justRewardInfo globals newepochstate =
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    asc = activeSlotCoeff globals
+    k = securityParameter testGlobals
 
 sameWithOrWithoutProvenance ::
   forall era.
@@ -416,6 +425,7 @@ sameWithOrWithoutProvenance globals newepochstate = with == without
     (with, _) = getRewardInfo globals newepochstate
     without = justRewardInfo globals newepochstate
 
+
 nothingInNothingOut ::
   forall era.
   (Core.PParams era ~ PParams era) =>
@@ -423,7 +433,7 @@ nothingInNothingOut ::
   Bool
 nothingInNothingOut newepochstate =
   runReader
-    (preservesNothing $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply)
+    (preservesNothing $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
     globals
   where
     globals = testGlobals
@@ -435,6 +445,8 @@ nothingInNothingOut newepochstate =
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    asc = activeSlotCoeff globals
+    k = securityParameter testGlobals
 
 justInJustOut ::
   forall era.
@@ -443,7 +455,7 @@ justInJustOut ::
   Bool
 justInJustOut newepochstate =
   runReader
-    (preservesJust def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply)
+    (preservesJust def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
     globals
   where
     globals = testGlobals
@@ -455,6 +467,8 @@ justInJustOut newepochstate =
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    asc = activeSlotCoeff globals
+    k = securityParameter testGlobals
 
 -- ====================================================================================
 -- To demonstrate that the code we wrote that enables provenance collection does not
@@ -609,107 +623,140 @@ createRUpdOld ::
   EpochState era ->
   Coin ->
   ShelleyBase (RewardUpdateOld (Crypto era))
-createRUpdOld
-  slotsPerEpoch
-  b@(BlocksMade b')
-  es@(EpochState acnt ss ls pr _ nm)
-  maxSupply = do
-    asc <- asks activeSlotCoeff
-    let SnapShot stake' delegs' poolParams = _pstakeGo ss
-        Coin reserves = _reserves acnt
-        ds = _dstate $ _delegationState ls
-        -- reserves and rewards change
-        deltaR1 =
-          ( rationalToCoinViaFloor $
-              min 1 eta
-                * unitIntervalToRational (_rho pr)
-                * fromIntegral reserves
-          )
-        d = unitIntervalToRational (_d pr)
-        expectedBlocks =
-          floor $
-            (1 - d) * unitIntervalToRational (activeSlotVal asc)
-              * fromIntegral slotsPerEpoch
-        -- TODO asc is a global constant, and slotsPerEpoch should not change
-        -- often at all, it would be nice to not have to compute expectedBlocks
-        -- every epoch
-        eta
-          | intervalValue (_d pr) >= 0.8 = 1
-          | otherwise = blocksMade % expectedBlocks
-        Coin rPot = _feeSS ss <> deltaR1
-        deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
-        _R = Coin $ rPot - deltaT1
-        totalStake = circulation es maxSupply
-        (rs_, newLikelihoods) =
-          rewardOld @era
-            pr
-            b
-            _R
-            (Map.keysSet $ _rewards ds)
-            poolParams
-            stake'
-            delegs'
-            totalStake
-            asc
-            slotsPerEpoch
-        deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
-        blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
-    pure $
-      RewardUpdateOld
-        { deltaTOld = (DeltaCoin deltaT1),
-          deltaROld = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
-          rsOld = rs_,
-          deltaFOld = (invert (toDeltaCoin $ _feeSS ss)),
-          nonMyopicOld = (updateNonMyopic nm _R newLikelihoods)
-        }
-
-oldEqualsNew ::
-  forall era.
-  (Core.PParams era ~ PParams era) =>
-  NewEpochState era ->
-  Bool
-oldEqualsNew newepochstate = old == new
-  where
-    globals = testGlobals
-    epochstate = nesEs newepochstate
-    maxsupply :: Coin
-    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: EB.BlocksMade (Crypto era)
-    blocksmade = nesBprev newepochstate
-    epochnumber = nesEL newepochstate
-    slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
-    unAggregated =
-      runReader
-        (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply)
-        globals
-    old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
-    new = aggregateRewards (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
-
-oldEqualsNewOn ::
-  forall era.
-  (Core.PParams era ~ PParams era) =>
-  NewEpochState era ->
-  Bool
-oldEqualsNewOn newepochstate = old == new
-  where
-    globals = testGlobals
-    epochstate = nesEs newepochstate
-    maxsupply :: Coin
-    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: EB.BlocksMade (Crypto era)
-    blocksmade = nesBprev newepochstate
-    epochnumber = nesEL newepochstate
-    slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
-    (unAggregated, _) =
-      runReader
-        ( runWithProvM def $
-            createRUpd slotsPerEpoch blocksmade epochstate maxsupply
+createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply = do
+  asc <- asks activeSlotCoeff
+  let SnapShot stake' delegs' poolParams = _pstakeGo ss
+      Coin reserves = _reserves acnt
+      ds = _dstate $ _delegationState ls
+      -- reserves and rewards change
+      deltaR1 =
+        ( rationalToCoinViaFloor $
+            min 1 eta
+              * unitIntervalToRational (_rho pr)
+              * fromIntegral reserves
         )
-        globals
+      d = unitIntervalToRational (_d pr)
+      expectedBlocks =
+        floor $
+          (1 - d) * unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
+      -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
+      -- it would be nice to not have to compute expectedBlocks every epoch
+      eta
+        | intervalValue (_d pr) >= 0.8 = 1
+        | otherwise = blocksMade % expectedBlocks
+      Coin rPot = _feeSS ss <> deltaR1
+      deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
+      _R = Coin $ rPot - deltaT1
+      totalStake = circulation es maxSupply
+      (rs_, newLikelihoods) =
+        rewardOld
+          pr
+          b
+          _R
+          (Map.keysSet $ _rewards ds)
+          poolParams
+          stake'
+          delegs'
+          totalStake
+          asc
+          slotsPerEpoch
+      deltaR2 = _R <-> (Map.foldr (<+>) mempty rs_)
+      blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
+  pure $
+    RewardUpdateOld
+      { deltaTOld = (DeltaCoin deltaT1),
+        deltaROld = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
+        rsOld = rs_,
+        deltaFOld = (invert (toDeltaCoin $ _feeSS ss)),
+        nonMyopicOld = (updateNonMyopic nm _R newLikelihoods)
+      }
+
+
+oldEqualsNew:: forall era. (Core.PParams era ~ PParams era) => NewEpochState era -> Bool
+oldEqualsNew  newepochstate  = old == new
+  where
+    globals = testGlobals
+    epochstate = nesEs newepochstate
+    maxsupply :: Coin
+    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
+    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade = nesBprev newepochstate
+    epochnumber = nesEL newepochstate
+    slotsPerEpoch :: EpochSize
+    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    unAggregated = runReader (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
-    new = aggregateRewards (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    new = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    asc = activeSlotCoeff globals
+    k = securityParameter testGlobals
+
+oldEqualsNewOn:: forall era. (Core.PParams era ~ PParams era) => NewEpochState era -> Bool
+oldEqualsNewOn  newepochstate  = old == new
+  where
+    globals = testGlobals
+    epochstate = nesEs newepochstate
+    maxsupply :: Coin
+    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
+    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade = nesBprev newepochstate
+    epochnumber = nesEL newepochstate
+    slotsPerEpoch :: EpochSize
+    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    (unAggregated,_) = runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
+    old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
+    new = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    asc = activeSlotCoeff globals
+    k = securityParameter testGlobals
+
+-- ================================================================
+
+reward ::
+  forall crypto.
+  (UnitInterval, Rational, Natural) ->
+  BlocksMade crypto ->
+  Coin ->
+  Set (Credential 'Staking crypto) ->
+  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
+  Stake crypto ->
+  Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
+  Coin ->
+  ActiveSlotCoeff ->
+  EpochSize ->
+  ProvM (KeyHashPoolProvenance crypto) ShelleyBase (RewardAns crypto)
+reward pp bm r addrsRew poolParams stake delegs tot asc slotsPerEpoch =
+  completeM (rewardPulser pp bm r addrsRew poolParams stake delegs tot asc slotsPerEpoch)
+
+rewardPulser ::
+  forall c.
+  (UnitInterval, Rational, Natural) ->
+  BlocksMade c ->
+  Coin ->
+  Set (Credential 'Staking c) ->
+  Map (KeyHash 'StakePool c) (PoolParams c) ->
+  Stake c ->
+  Map (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  Coin ->
+  ActiveSlotCoeff ->
+  EpochSize ->
+  Pulser c
+rewardPulser
+  (pp_d, pp_a0, pp_nOpt)
+  (BlocksMade b)
+  r
+  addrsRew
+  poolParams
+  stake
+  delegs
+  (Coin totalStake)
+  asc
+  slotsPerEpoch = pulser
+    where
+      totalBlocks = sum b
+      Coin activeStake = fold . unStake $ stake
+      free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r slotsPerEpoch pp_d pp_a0 pp_nOpt)
+      pulser :: Pulser c
+      pulser = RSLP 2 free (Map.toList poolParams) (Map.empty, Map.empty)
+
 
 -- ==================================================================
 

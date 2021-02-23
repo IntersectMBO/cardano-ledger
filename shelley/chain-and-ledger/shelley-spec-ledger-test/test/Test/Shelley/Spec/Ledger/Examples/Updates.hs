@@ -33,7 +33,7 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness, hashKey)
-import Shelley.Spec.Ledger.LedgerState (emptyRewardUpdate)
+import Shelley.Spec.Ledger.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams
   ( PParams,
@@ -74,6 +74,7 @@ import Test.Shelley.Spec.Ledger.Examples.Init
     nonce0,
     ppEx,
   )
+import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (makePulser')
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
@@ -351,13 +352,16 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 80) 0 (KESPeriod 0))
 
+pulserEx3 :: forall c. (ExMock c) => PulsingRewUpdate c
+pulserEx3 = makePulser' expectedStEx2
+
 expectedStEx3 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx3 =
   C.evolveNonceFrozen (getBlockNonce (blockEx3 @c))
     . C.newLab blockEx3
     . C.feesAndDeposits feeTx3 (Coin 0)
     . C.newUTxO txbodyEx3
-    . C.rewardUpdate emptyRewardUpdate
+    . C.pulserUpdate pulserEx3
     . C.setFutureProposals (collectVotes ppVoteB [1])
     $ expectedStEx2
 
