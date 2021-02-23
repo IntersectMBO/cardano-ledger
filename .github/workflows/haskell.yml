@@ -61,11 +61,18 @@ jobs:
         echo "LIBSODIUM_PATH=$LIBSODIUM_PATH"
         echo "$LIBSODIUM_PATH" >> $GITHUB_PATH
 
-    - uses: actions/setup-haskell@v1
+    - name: Select optimal cabal version
+      run: |
+        case "$OS" in
+          Windows_NT)   echo "CABAL_VERSION=3.4.0.0-rc5"  >> $GITHUB_ENV;;
+          *)            echo "CABAL_VERSION=3.4.0.0"      >> $GITHUB_ENV;;
+        esac
+
+    - uses: haskell/actions/setup@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: '3.2.0.0'
+        cabal-version: ${{ env.CABAL_VERSION }}
 
     - name: Patch GHC 8.10.2 linker
       if: matrix.os == 'windows-latest'
