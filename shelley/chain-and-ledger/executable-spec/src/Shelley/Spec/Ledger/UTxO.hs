@@ -43,6 +43,9 @@ module Shelley.Spec.Ledger.UTxO
     scriptCred,
     scriptStakeCred,
     txinsScript,
+
+    -- * Utilities
+    TransUTxO,
   )
 where
 

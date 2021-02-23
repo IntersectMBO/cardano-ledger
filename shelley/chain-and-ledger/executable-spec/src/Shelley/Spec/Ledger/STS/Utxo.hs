@@ -109,7 +109,8 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO
-  ( UTxO (..),
+  ( TransUTxO,
+    UTxO (..),
     balance,
     totalDeposits,
     txins,
@@ -223,7 +224,7 @@ instance
 
 instance
   ( TransValue FromCBOR era,
-    TransUTxOState FromCBOR era,
+    TransUTxO FromCBOR era,
     Val.DecodeNonNegative (Core.Value era),
     Show (Core.Value era),
     FromCBOR (PredicateFailure (Core.EraRule "PPUP" era))

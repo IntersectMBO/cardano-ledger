@@ -30,6 +30,7 @@ module Test.Shelley.Spec.Ledger.Serialisation.Tripping.CBOR
     prop_roundtrip_LedgerState,
     prop_roundtrip_NewEpochState,
     prop_roundtrip_ShelleyGenesis,
+
     -- * pusing properties
     prop_roundtrip_RewardUpdate,
     prop_roundtrip_RewardSnapShot,
@@ -57,23 +58,22 @@ import qualified Shelley.Spec.Ledger.API as Ledger
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
-import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
-import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import Shelley.Spec.Ledger.RewardUpdate
-  ( RewardUpdate(..),
-    RewardSnapShot(..),
-    FreeVars(..),
+  ( FreeVars (..),
     -- RewardPulser(..),
     Pulser,
-    PulsingRewUpdate(..),
+    PulsingRewUpdate (..),
+    RewardSnapShot (..),
+    RewardUpdate (..),
   )
+import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
+import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Mock
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (Property, counterexample, testProperty, (===))
-
 
 roundtrip ::
   (Eq a, Show a) =>
@@ -152,10 +152,10 @@ prop_roundtrip_PrtclState :: STS.PrtclState Mock.C_Crypto -> Property
 prop_roundtrip_PrtclState = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_LedgerState :: Ledger.LedgerState Mock.C -> Property
-prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
+prop_roundtrip_LedgerState = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_NewEpochState :: Ledger.NewEpochState Mock.C -> Property
-prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
+prop_roundtrip_NewEpochState = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_MultiSig :: Ledger.MultiSig Mock.C_Crypto -> Property
 prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
@@ -191,13 +191,15 @@ prop_roundtrip_PulsingRewUpdate :: PulsingRewUpdate Mock.C_Crypto -> Property
 prop_roundtrip_PulsingRewUpdate = roundtrip toCBOR fromCBOR
 
 pulsingTest :: TestTree
-pulsingTest = testGroup "Serialisable Pulser tests"
-  [ testProperty "roundtrip RewardUpdate" prop_roundtrip_RewardUpdate
-  , testProperty "roundtrip RewardSnapShot" prop_roundtrip_RewardSnapShot
-  , testProperty "roundtrip RewardFreeVars" prop_roundtrip_FreeVars
-  , testProperty "roundtrip RewardPulser" prop_roundtrip_RewardPulser
-  , testProperty "roundtrip PulsingRewUpdate" prop_roundtrip_PulsingRewUpdate
-  ]
+pulsingTest =
+  testGroup
+    "Serialisable Pulser tests"
+    [ testProperty "roundtrip RewardUpdate" prop_roundtrip_RewardUpdate,
+      testProperty "roundtrip RewardSnapShot" prop_roundtrip_RewardSnapShot,
+      testProperty "roundtrip RewardFreeVars" prop_roundtrip_FreeVars,
+      testProperty "roundtrip RewardPulser" prop_roundtrip_RewardPulser,
+      testProperty "roundtrip PulsingRewUpdate" prop_roundtrip_PulsingRewUpdate
+    ]
 
 -- TODO
 

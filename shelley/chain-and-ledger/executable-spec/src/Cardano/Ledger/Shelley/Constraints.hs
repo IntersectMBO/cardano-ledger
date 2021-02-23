@@ -89,11 +89,11 @@ class
   ( Era era,
     Eq (PParams era),
     Show (PParams era),
-    SerialisableData (PParams era),
+    AnnotatedData (PParams era),
     ChainData (PParamsDelta era),
     NFData (PParamsDelta era),
     Ord (PParamsDelta era),
-    SerialisableData (PParamsDelta era)
+    AnnotatedData (PParamsDelta era)
   ) =>
   UsesPParams era
   where

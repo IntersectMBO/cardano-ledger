@@ -167,31 +167,30 @@ instance NoThunks (PParams era)
 
 instance (Era era) => ToCBOR (PParams era) where
   toCBOR
-    ( PParams
-        { _minfeeA = minfeeA',
-          _minfeeB = minfeeB',
-          _maxBBSize = maxBBSize',
-          _maxTxSize = maxTxSize',
-          _maxBHSize = maxBHSize',
-          _keyDeposit = keyDeposit',
-          _poolDeposit = poolDeposit',
-          _eMax = eMax',
-          _nOpt = nOpt',
-          _a0 = a0',
-          _rho = rho',
-          _tau = tau',
-          _d = d',
-          _extraEntropy = extraEntropy',
-          _protocolVersion = protocolVersion',
-          _minPoolCost = minPoolCost',
-          -- new/updated for alonzo
-          _adaPerUTxOByte = adaPerUTxOByte',
-          _costmdls = costmdls',
-          _prices = prices',
-          _maxTxExUnits = maxTxExUnits',
-          _maxBlockExUnits = maxBlockExUnits'
-        }
-      ) =
+    PParams
+      { _minfeeA = minfeeA',
+        _minfeeB = minfeeB',
+        _maxBBSize = maxBBSize',
+        _maxTxSize = maxTxSize',
+        _maxBHSize = maxBHSize',
+        _keyDeposit = keyDeposit',
+        _poolDeposit = poolDeposit',
+        _eMax = eMax',
+        _nOpt = nOpt',
+        _a0 = a0',
+        _rho = rho',
+        _tau = tau',
+        _d = d',
+        _extraEntropy = extraEntropy',
+        _protocolVersion = protocolVersion',
+        _minPoolCost = minPoolCost',
+        -- new/updated for alonzo
+        _adaPerUTxOByte = adaPerUTxOByte',
+        _costmdls = costmdls',
+        _prices = prices',
+        _maxTxExUnits = maxTxExUnits',
+        _maxBlockExUnits = maxBlockExUnits'
+      } =
       encode
         ( Rec (PParams @Identity)
             !> To minfeeA'
@@ -299,7 +298,9 @@ isSNothing :: StrictMaybe a -> Bool
 isSNothing SNothing = True
 isSNothing (SJust _) = False
 
-encodePParamsUpdate :: PParamsUpdate era -> Encode ('Closed 'Sparse) (PParamsUpdate era)
+encodePParamsUpdate ::
+  PParamsUpdate era ->
+  Encode ('Closed 'Sparse) (PParamsUpdate era)
 encodePParamsUpdate ppup =
   Keyed PParams
     !> omitStrictMaybe 0 (_minfeeA ppup)
@@ -367,7 +368,10 @@ fieldNorm :: (StrictMaybe field -> b -> b) -> Decode w field -> Field (Annotator
 fieldNorm update dec = Field (liftA2 update) (decode (Ann (Map SJust dec)))
 
 -- | if we only have a (FromCBOR (Annotator field)) instance we use fieldAnn
-fieldAnn :: (StrictMaybe field -> b -> b) -> Decode w (Annotator field) -> Field (Annotator b)
+fieldAnn ::
+  (StrictMaybe field -> b -> b) ->
+  Decode w (Annotator field) ->
+  Field (Annotator b)
 fieldAnn update dec = Field (liftA2 update) (do x <- decode dec; pure (SJust <$> x))
 
 updateField :: Word -> Field (Annotator (PParamsUpdate era))
@@ -395,7 +399,9 @@ updateField 20 = fieldNorm (\x up -> up {_maxBlockExUnits = x}) From
 updateField k = field (\_x up -> up) (Invalid k)
 
 instance (Era era) => FromCBOR (Annotator (PParamsUpdate era)) where
-  fromCBOR = decode (SparseKeyed "PParamsUpdate" (pure emptyPParamsUpdate) updateField [])
+  fromCBOR =
+    decode
+      (SparseKeyed "PParamsUpdate" (pure emptyPParamsUpdate) updateField [])
 
 -- =================================================================
 
@@ -521,7 +527,10 @@ instance
   (Crypto era ~ c) =>
   HashAnnotated (LangDepView era) EraIndependentPParamView c
 
-deriving via InspectHeapNamed "LangDepView" (LangDepView e) instance NoThunks (LangDepView e)
+deriving via
+  InspectHeapNamed "LangDepView" (LangDepView e)
+  instance
+    NoThunks (LangDepView e)
 
 instance Show (LangDepView era) where
   show (PlutusView x) = show x

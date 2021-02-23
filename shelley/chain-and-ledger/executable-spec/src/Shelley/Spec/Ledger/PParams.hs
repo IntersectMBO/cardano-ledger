@@ -44,6 +44,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import Data.Coders (Annotator, Decode (Ann, Emit, From, RecD), decode, mapDecodeA, (<*!))
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
@@ -72,7 +73,6 @@ import Shelley.Spec.Ledger.Serialization
     ToCBORGroup (..),
     decodeMapContents,
     decodeRecordNamed,
-    mapFromCBOR,
     mapToCBOR,
     ratioFromCBOR,
     ratioToCBOR,
@@ -258,6 +258,12 @@ instance (Era era) => FromCBOR (PParams era) where
         <*> fromCBOR -- _minUTxOValue    :: Natural
         <*> fromCBOR -- _minPoolCost     :: Natural
 
+-- | Annotated decoder instance for PParams. This is not needed in the Shelley
+-- era, since PParams can be decoded without their annotation. But future eras
+-- will require the annotation.
+instance Era era => FromCBOR (Annotator (PParams era)) where
+  fromCBOR = pure <$> fromCBOR
+
 instance ToJSON (PParams era) where
   toJSON pp =
     Aeson.object
@@ -347,11 +353,11 @@ instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (Update era) where
   toCBOR (Update ppUpdate e) =
     encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
 
-instance (Era era, FromCBOR (PParamsDelta era)) => FromCBOR (Update era) where
-  fromCBOR = decodeRecordNamed "Update" (const 2) $ do
-    x <- fromCBOR
-    y <- fromCBOR
-    pure (Update x y)
+instance
+  (Era era, FromCBOR (Annotator (PParamsDelta era))) =>
+  FromCBOR (Annotator (Update era))
+  where
+  fromCBOR = decode $ Ann (RecD Update) <*! From <*! Ann From
 
 data PPUpdateEnv era = PPUpdateEnv SlotNo (GenDelegs era)
   deriving (Show, Eq, Generic)
@@ -449,6 +455,9 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
       (fail $ "duplicate keys: " <> show fields)
     pure $ foldr ($) emptyPParamsUpdate (snd <$> mapParts)
 
+instance Era era => FromCBOR (Annotator (PParamsUpdate era)) where
+  fromCBOR = pure <$> fromCBOR
+
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
   = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (PParamsDelta era))
@@ -469,10 +478,13 @@ instance
   toCBOR (ProposedPPUpdates m) = mapToCBOR m
 
 instance
-  (Era era, FromCBOR (PParamsDelta era)) =>
-  FromCBOR (ProposedPPUpdates era)
+  (Era era, FromCBOR (Annotator (PParamsDelta era))) =>
+  FromCBOR (Annotator (ProposedPPUpdates era))
   where
-  fromCBOR = ProposedPPUpdates <$> mapFromCBOR
+  fromCBOR =
+    decode $
+      Ann (Emit ProposedPPUpdates)
+        <*! mapDecodeA (Ann From) From
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty

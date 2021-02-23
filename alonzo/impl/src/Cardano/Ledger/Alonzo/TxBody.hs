@@ -224,7 +224,7 @@ deriving via
       Show (Core.Value era),
       DecodeNonNegative (Core.Value era),
       FromCBOR (Annotator (Core.Script era)),
-      Core.SerialisableData (PParamsDelta era)
+      Core.AnnotatedData (PParamsDelta era)
     ) =>
     FromCBOR (Annotator (TxBody era))
 
@@ -233,7 +233,7 @@ type AlonzoBody era =
   ( Era era,
     Compactible (Core.Value era),
     ToCBOR (Core.Script era),
-    Core.SerialisableData (PParamsDelta era)
+    Core.AnnotatedData (PParamsDelta era)
   )
 
 pattern TxBody ::
@@ -420,12 +420,18 @@ instance
     Show (Core.Value era),
     DecodeNonNegative (Core.Value era),
     FromCBOR (Annotator (Core.Script era)),
-    FromCBOR (PParamsDelta era),
+    FromCBOR (Annotator (PParamsDelta era)),
     ToCBOR (PParamsDelta era)
   ) =>
-  FromCBOR (TxBodyRaw era)
+  FromCBOR (Annotator (TxBodyRaw era))
   where
-  fromCBOR = decode $ SparseKeyed "TxBodyRaw" initial bodyFields requiredFields
+  fromCBOR =
+    decode $
+      SparseKeyed
+        "TxBodyRaw"
+        (pure initial)
+        bodyFields
+        requiredFields
     where
       initial :: TxBodyRaw era
       initial =
@@ -443,63 +449,48 @@ instance
           mempty
           SNothing
           SNothing
-      bodyFields :: (Word -> Field (TxBodyRaw era))
+      bodyFields :: (Word -> Field (Annotator (TxBodyRaw era)))
       bodyFields 0 =
-        field
+        fieldA
           (\x tx -> tx {_inputs = x})
           (D (decodeSet fromCBOR))
       bodyFields 13 =
-        field
+        fieldA
           (\x tx -> tx {_inputs_fee = x})
           (D (decodeSet fromCBOR))
       bodyFields 1 =
-        field
+        fieldA
           (\x tx -> tx {_outputs = x})
           (D (decodeStrictSeq fromCBOR))
-      bodyFields 2 = field (\x tx -> tx {_txfee = x}) From
+      bodyFields 2 = fieldA (\x tx -> tx {_txfee = x}) From
       bodyFields 3 =
-        field
+        fieldA
           (\x tx -> tx {_vldt = (_vldt tx) {invalidHereafter = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 4 =
-        field
+        fieldA
           (\x tx -> tx {_certs = x})
           (D (decodeStrictSeq fromCBOR))
-      bodyFields 5 = field (\x tx -> tx {_wdrls = x}) From
-      bodyFields 6 = field (\x tx -> tx {_update = x}) (D (SJust <$> fromCBOR))
-      bodyFields 7 = field (\x tx -> tx {_adHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 5 = fieldA (\x tx -> tx {_wdrls = x}) From
+      bodyFields 6 = fieldAA (\x tx -> tx {_update = x}) (D (fmap SJust <$> fromCBOR))
+      bodyFields 7 = fieldA (\x tx -> tx {_adHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 8 =
-        field
+        fieldA
           (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
           (D (SJust <$> fromCBOR))
-      bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
-      bodyFields 10 = field (\x tx -> tx {_exunits = x}) From
-      bodyFields 11 = field (\x tx -> tx {_sdHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 9 = fieldA (\x tx -> tx {_mint = x}) (D decodeMint)
+      bodyFields 10 = fieldA (\x tx -> tx {_exunits = x}) From
+      bodyFields 11 = fieldA (\x tx -> tx {_sdHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 12 =
-        field
+        fieldA
           (\x tx -> tx {_scriptHash = x})
           (D (SJust <$> fromCBOR))
-      bodyFields n = field (\_ t -> t) (Invalid n)
+      bodyFields n = fieldA (\_ t -> t) (Invalid n)
       requiredFields =
         [ (0, "inputs"),
           (1, "outputs"),
           (2, "fee")
         ]
-
-instance
-  ( Era era,
-    Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era),
-    Compactible (Core.Value era),
-    Show (Core.Value era),
-    DecodeNonNegative (Core.Value era),
-    FromCBOR (Annotator (Core.Script era)),
-    FromCBOR (PParamsDelta era),
-    ToCBOR (PParamsDelta era)
-  ) =>
-  FromCBOR (Annotator (TxBodyRaw era))
-  where
-  fromCBOR = pure <$> fromCBOR
 
 -- ====================================================
 -- HasField instances to be consistent with earlier Era's
