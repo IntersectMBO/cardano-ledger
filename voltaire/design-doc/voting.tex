@@ -3,7 +3,7 @@
 \label{sect:voting}
 
 Once a properly signed proposal has been submitted on-chain, delegates may vote on whether or not to accept it.  A threshold is set for each vote.
-As described in Section~\ref{sect:submissiomn}, the thresholds for each proposal are included in the formal proposal at submission time.
+As described in Section~\ref{sect:submission}, the thresholds for each proposal are included in the formal proposal at submission time.
 
 \subsection{Voting}
 
@@ -22,16 +22,31 @@ a vote against the proposal.  Votes are submitted in the form of an on-chain tra
   \hline
 \end{tabular}
 
+This ensures that there is a public and traceable record of each delegate's actual vote.
+
+
 \subsection{Stake Snapshots}
 
-Stake snapshots are taken at the start of each epoch.  These snapshots are currently used for block production purposes.  The stake snapshot that is taken at the start
-of an epoch will be used for all delegated votes that are tallied at the end of the epoch.  The stake snapshot that is used for block production
+Stake snapshots are taken at the start of each epoch.  These snapshots are currently used only for block production purposes, but they will be reused here for governance purposes.
+The stake snapshot that is taken at the start of an epoch will be used for all delegated votes that are tallied at the end of the epoch.
+The stake snapshot that is used for block production is also used for endorsement votes.
+
+\begin{includegraphics}
+  \includegraphics[trim=0 90 0 80,clip,width=\textwidth]{Stake-Snapshots}
+  \caption{Stake Snapshots}
+  \label{fig:stake-snapshots}
+\end{includegraphics}
+
+\khcomment{It seems sensible to separate the vote and block production snapshots like this, but it does give a slightly odd effect, in that vote and block production stake
+  will not always be the same in a given epoch.  They could be aligned, but then there will be a lag in the vote.}
 
 
 \subsection{Tallying Votes}
 
-Votes are tailied according to a snapshot of delegated vote that is taken at the specific point given in the proposal submission. All stake that has been delegated to the delegate address
-prior to that point in time counts towards the voting outcome.
+Votes are tailied according to a snapshot of delegated vote that is taken at the specific point given in the proposal submission.  The stake snapshot from the start of the epoch is used to determine
+the weight of each delegated vote for all votes that are tallied at the end of the epoch.  The total vote that is controlled by each delegate is the sum of all active delegations at the point that
+the vote is tallied.  A calculation is made for the total amount of stake that is: i) explicitly in favour and; ii) explicitly against the proposal.  This is compared against the required voting thresholds and
+if sufficient votes have been achieved, then the proposal will be accepted as decscibed below.\khcomment{Does the tally need to be recorded on chain?}
 
 \subsection{Voting Outcomes and Thresholds}
 
@@ -44,20 +59,23 @@ All thresholds are specified as a percentage of total ada.  There are a number o
 \item
   The total ada that is in existence (i.e. 45 billion ada).
 \item
-  The total ada that is in circulation (i.e. not accounted in either the treasury or reserves pots).
+  The total ada that is in circulation (i.e. not accounted in either the treasury or reserves pots).\khcomment{Preferred.}
 \item
-  The total ada that has been delegated for block production purposees in the current epoch.
+  The total ada that has been delegated for block production purposes in the current epoch.\khcomment{Preferred.}
 \item
   The total ada that has been delegated for voting purposes in the current epoch.
 \item
   The total ada that has been used to cast a vote on a specific proposal.
 \end{enumerate}
 
-A decision needs to be taken on the total that is used.  The second or third options are preferred.  Using the total ada in existence (option 1) means that very high thresholds cannot be achieved,
-and that ada that has not been circulated will always have a negative effect on voting.
-The second option avoids this issue, but means that ``inactive'' ada will count negatively.
-The third option ensures that all active participants are considered (i.e. the entire voting population), but could in theory give results greater than 100\% (because of lag in the block production
-snapshot, or if voting is more popular than block production).   While the fourth option may seem attractive, it may result in highly unrepresentative results if insufficient stake holders delegate
+A decision needs to be taken on how to determine the total that is used in a threshold calculation.
+Using the total ada in existence (option 1) means that very high voting thresholds cannot be achieved until all ada
+is in circulation, and that ada that has not been circulated will always have a negative effect on voting.
+This seems undesirable.
+The second option avoids this issue, but means that ``inactive'' ada will count as a vote against a proposal, which may prevent the chain from making reasonable progress.
+The third option ensures that all ``active'' participants in the blockchain are considered (i.e. the entire voting constituency), but could in theory give results greater than 100\% (because of lag in the
+block production snapshot compared with the voting snapshot, or if vote delegation is more popular than block production delegation).
+While the fourth option may seem attractive, it may result in highly unrepresentative results if insufficient stake holders delegate
 their votes, so creating a security vulnerability and potential instability.
 Likewise, the fifth option would allow proposals to pass with very little positive mandate (e.g. where only 10\% of the delegate group chose to vote on a specific issue, a majority vote could be
 achieved with just over 5\% of the delegated stake).  The Priviledge project has developed further metrics that could be used to set the thresholds based on e.g. the proposal type and the
