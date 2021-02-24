@@ -22,6 +22,12 @@ a vote against the proposal.  Votes are submitted in the form of an on-chain tra
   \hline
 \end{tabular}
 
+\subsection{Stake Snapshots}
+
+Stake snapshots are taken at the start of each epoch.  These snapshots are currently used for block production purposes.  The stake snapshot that is taken at the start
+of an epoch will be used for all delegated votes that are tallied at the end of the epoch.  The stake snapshot that is used for block production
+
+
 \subsection{Tallying Votes}
 
 Votes are tailied according to a snapshot of delegated vote that is taken at the specific point given in the proposal submission. All stake that has been delegated to the delegate address
@@ -32,4 +38,27 @@ prior to that point in time counts towards the voting outcome.
 Following the tally, a proposal may be either accepted or rejected, based on whether it has achieved the required voting threshold.  Any proposal that achieves at least
 the specified percentage of votes is accepted, and passed forward for future enactment.
 The threshold for accepting a specific vote is specified in the proposal\khcomment{there may also be minima that are set in the protocol parameters.}.
-% All thresholds
+All thresholds are specified as a percentage of total ada.  There are a number of ways that this total can be specified.  In declining order, these include:
+
+\begin{enumerate}
+\item
+  The total ada that is in existence (i.e. 45 billion ada).
+\item
+  The total ada that is in circulation (i.e. not accounted in either the treasury or reserves pots).
+\item
+  The total ada that has been delegated for block production purposees in the current epoch.
+\item
+  The total ada that has been delegated for voting purposes in the current epoch.
+\item
+  The total ada that has been used to cast a vote on a specific proposal.
+\end{enumerate}
+
+A decision needs to be taken on the total that is used.  The second or third options are preferred.  Using the total ada in existence (option 1) means that very high thresholds cannot be achieved,
+and that ada that has not been circulated will always have a negative effect on voting.
+The second option avoids this issue, but means that ``inactive'' ada will count negatively.
+The third option ensures that all active participants are considered (i.e. the entire voting population), but could in theory give results greater than 100\% (because of lag in the block production
+snapshot, or if voting is more popular than block production).   While the fourth option may seem attractive, it may result in highly unrepresentative results if insufficient stake holders delegate
+their votes, so creating a security vulnerability and potential instability.
+Likewise, the fifth option would allow proposals to pass with very little positive mandate (e.g. where only 10\% of the delegate group chose to vote on a specific issue, a majority vote could be
+achieved with just over 5\% of the delegated stake).  The Priviledge project has developed further metrics that could be used to set the thresholds based on e.g. the proposal type and the
+impact on the system.

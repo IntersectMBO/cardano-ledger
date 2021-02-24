@@ -51,10 +51,11 @@ Vote delegation transactions must include:
   \\\hline
   Delegate public key hash & Unique identifier & 32 bytes
   \\\hline
-  Retirement Date & A future epoch & 28 bytes
-  \\\hline
   \hline
 \end{tabular}
+
+Vote delegation comes into effect immediately the transaction has appeared on-chain.  There is no stability window.  Delegations may be made up to the point where votes are tallied.
+
 \subsection{Voting Indirection}
 
 The current ledger design separates spending and block production delegation, associating two keys with a single address.
