@@ -60,13 +60,11 @@ benchmark bench
     QuickCheck,
     shelley-spec-ledger,
     shelley-spec-ledger-test
-  ghc-options:
-      -threaded
-      -rtsopts
-      -with-rtsopts=-N
-      -Wall
-      -Wcompat
-      -Wincomplete-record-updates
-      -Wincomplete-uni-patterns
-      -Wredundant-constraints
-      -O2
+  ghc-options:        -rtsopts -threaded
+                      -with-rtsopts=-N
+                      -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -O2

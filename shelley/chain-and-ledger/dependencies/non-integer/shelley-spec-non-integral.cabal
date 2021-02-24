@@ -40,16 +40,14 @@ test-suite shelley-spec-non-integral-test
   main-is:             Tests.hs
   other-modules:       Tests.Shelley.Spec.NonIntegral
   hs-source-dirs:      test
-  ghc-options:
-    -O2
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
+  ghc-options:        -O2
+                      -with-rtsopts=-N
+                      -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -rtsopts -threaded
   if (!flag(development))
     ghc-options:
       -Werror

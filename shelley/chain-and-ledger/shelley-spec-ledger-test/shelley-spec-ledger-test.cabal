@@ -156,21 +156,20 @@ test-suite shelley-spec-ledger-test
       Test.TestScenario
 
     hs-source-dirs:      test
-    ghc-options:
-      -threaded
-      -rtsopts
-      -with-rtsopts=-N
-      -Wall
-      -Wcompat
-      -Wincomplete-record-updates
-      -Wincomplete-uni-patterns
-      -Wredundant-constraints
-      -- We set a bound here so that we're alerted of potential space
-      -- leaks in our generators (or test) code.
-      --
-      -- The 4 megabytes stack bound and 200 megabytes heap bound were
-      -- determined ad-hoc.
-      "-with-rtsopts=-K4m -M250m"
+    ghc-options:      -with-rtsopts=-N
+                      -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -- We set a bound here so that we're alerted of potential space
+                      -- leaks in our generators (or test) code.
+                      --
+                      -- The 4 megabytes stack bound and 200 megabytes heap bound were
+                      -- determined ad-hoc.
+                      "-with-rtsopts=-K4m -M250m"
+                      -rtsopts -threaded
+
     if (!flag(development))
       ghc-options:
         -Werror
@@ -248,16 +247,14 @@ benchmark mainbench
     small-steps,
     small-steps-test,
     transformers
-  ghc-options:
-      -threaded
-      -rtsopts
-      -with-rtsopts=-N
-      -Wall
-      -Wcompat
-      -Wincomplete-record-updates
-      -Wincomplete-uni-patterns
-      -Wredundant-constraints
-      -O
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -O
+                      -rtsopts -threaded
+                      -with-rtsopts=-N
   if (!flag(development))
     ghc-options:
       -Werror

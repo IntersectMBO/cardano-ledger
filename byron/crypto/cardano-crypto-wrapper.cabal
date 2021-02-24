@@ -133,5 +133,4 @@ test-suite test
   if (!flag(development))
     ghc-options:         -Werror
 
-  ghc-options:         -threaded
-                       -rtsopts
+  ghc-options:        -rtsopts -threaded

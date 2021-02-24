@@ -64,7 +64,7 @@ test-suite doctests
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
-                      -threaded
+                      -rtsopts -threaded
 
   if (!flag(development))
     ghc-options:      -Werror
@@ -100,7 +100,7 @@ test-suite examples
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
-                      -threaded
+                      -rtsopts -threaded
 
   if (!flag(development))
     ghc-options:      -Werror
