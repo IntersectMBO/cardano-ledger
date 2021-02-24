@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         ghc: ["8.6.5", "8.10.4"]
-        os: [ubuntu-20.04]
+        os: [ubuntu-latest, macos-latest]
 
     steps:
     - uses: actions/checkout@v1
@@ -39,7 +39,7 @@ jobs:
       run: brew install libsodium
 
     - name: Install libsodium (Linux)
-      if: matrix.os == 'ubuntu-20.04'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get -y install libsodium23 libsodium-dev
@@ -101,8 +101,8 @@ jobs:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
           dist
-        key: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
-        restore-keys: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
+        key: cache-${{ runner.os }}-${{ matrix.ghc }}-v2-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
+        restore-keys: cache-${{ runner.os }}-${{ matrix.ghc }}-v2-${{ hashFiles('cabal-cache.cabal') }}-
 
     - name: Install dependencies
       run: cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
