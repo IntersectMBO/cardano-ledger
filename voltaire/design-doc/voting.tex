@@ -3,12 +3,24 @@
 \label{sect:voting}
 
 Once a properly signed proposal has been submitted on-chain, delegates may vote on whether or not to accept it.  A threshold is set for each vote.
+As described in Section~\ref{sect:submissiomn}, the thresholds for each proposal are included in the formal proposal at submission time.
 
 \subsection{Voting}
 
-Each registered delegate may vote either in favour or against a proposal by submitting the corresponding transaction.  They may change their vote up to the point
+Each \emph{registered} delegate (see Section~\ref{sect:registration} may vote either in favour or against a proposal by submitting the corresponding transaction.  They may change their vote up to the point
 where the vote is tallied.  Any changes after that point in time are not considered.  If a delegate chooses not to vote on a proposal, that is considered to be
-a vote against the proposal.
+a vote against the proposal.  Votes are submitted in the form of an on-chain transaction, and may incur fees.  The transaction needs to include:
+
+\begin{tabular}{||l|p{3in}|l||}
+  \hline\hline
+  proposal id & The unique identifier for the proposal, derived from the submission & 32 bytes
+  \\\hline
+  vote intention & Yes or no & 1 byte
+  \\\hline
+  Delegate public key hash & Unique identifier & 32 bytes
+  \\\hline
+  \hline
+\end{tabular}
 
 \subsection{Tallying Votes}
 

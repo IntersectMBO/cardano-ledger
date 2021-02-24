@@ -106,3 +106,27 @@ To reduce the possibility of abuse, the policy must comply with a minimum quorum
   the submitter group is sufficiently small to allow this (I think we calculated n+m=500, where n is the actual number and m is the required number?}
 \khcomment{Using multi-sig potentially allows policies to be defined as described above.  This simplifies the system by removing the need for a separate Elector group,
   but is perhaps open to abuse of power?}
+
+\subsection{Proposal Identifiers}
+\label{sect:proposalid}
+
+Each proposal has a unique identifier that is used for voting, endorsement and enactment.  It may also be used to refer to the proposal in the off-chain process (eg to provide its
+status, encourage voting etc).  At a minimum, uniqueness must be enforced between submission and enactment, but it will be simplest to have full uniqueness, since the blockchain will need to record
+details of each proposal indefinitely.
+
+There are three obvious ways to construct an identifier.
+
+\begin{description}
+\item
+  [Option 1.]
+  An explicit identifier that is assigned manually, and is included in the proposal submission.  This could be tied, if desired, directly to the off-chain proposal/discussion.
+  Care needs to be taken to ensure uniqueness of any manually assigned proposal identifier.
+\item
+  [Option 2.]
+  The identifier is constructed by hashing the submitted proposal.  This allows proposals to be identified before submission as well as during voting and enactment.  This property may be
+  useful to connect off-chain and on-chain mechanisms for example.  \emph{Collision resistance} is required.
+\item
+  [Option 3.]
+  The transaction identifier is used to identify the proposal.  This has the advantage that it is already available on-chain, and is guaranteed to be unique.  However, it cannot be
+  referred to prior to on-chain proposal submission.
+\end{description}

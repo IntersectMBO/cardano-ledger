@@ -6,6 +6,7 @@ All ada holders will have on-chain voting rights.  These rights are in direct pr
 They may delegate their voting rights to any registered delegate, who is expected to act faithfully on their behalf.
 
 \subsection{Delegate Address Registration/De-Registration}
+\label{sect:registration}
 
 Delegates must register on-chain.\khcomment{Do we need a certificate?  I think they only need an address, right?}  Once registered, ada holders may delegate their
 vote to any registered delegate by submitting a vote delegation transaction that includes the registered delegate address.\khcomment{How do voters know about the available delegates?}
@@ -14,6 +15,46 @@ A deposit is taken when a delegate registers.  Delegates may choose to de-regist
 at the specified point.  A protocol paramter governs the least and greatest notice that must be given for de-registration.  When a delegate de-registers, their deposit is returned,
 the address becomes void, and any vote delegation to that address no longer has any effect.
 
+The registration certificate must include:
+
+\begin{tabular}{||l|p{3in}|l||}
+  \hline\hline
+  Delegate public key hash & Unique identifier & 32 bytes
+  \\\hline
+  \hline
+\end{tabular}
+
+The transaction must be signed by the delegate's private key.  The registration comes into effect as soon as the transaction is accepted on-chain.
+
+De-registration certificates must include:
+
+\begin{tabular}{||l|p{3in}|l||}
+  \hline\hline
+  Delegate public key hash & Unique identifier & 32 bytes
+  \\\hline
+  Retirement Date & A future epoch & 28 bytes
+  \\\hline
+  \hline
+\end{tabular}
+
+De-registration takes effect from the retirement date (at a specific epoch boundary that may be no sooner than the end of the current epoch, and no more than \emph{maxDelegateRetire} epochs in the future.\khcomment{This needs to be defined, and the size confirmed above.}  Retirement on an epoch boundary ensures that stakeholders do not mistakenly delegate their vote to delegates that will retire before the end of the current epoch.
+
+\subsection{Vote Delegation}
+
+Ada stakeholders delegate their vote by issuing an on-chain transaction.  As with stake, vote delegation may be transferred, but never retracted.\khcomment{There is an argument that you should  be able to delegate to no-one, but it seems sensible to maintain consistency with the stake delegation mechanism.}
+
+Vote delegation transactions must include:
+
+\begin{tabular}{||l|p{3in}|l||}
+  \hline\hline
+  Public vote key & A unique identifier for the stake that is to be delegated  & 32 bytes
+  \\\hline
+  Delegate public key hash & Unique identifier & 32 bytes
+  \\\hline
+  Retirement Date & A future epoch & 28 bytes
+  \\\hline
+  \hline
+\end{tabular}
 \subsection{Voting Indirection}
 
 The current ledger design separates spending and block production delegation, associating two keys with a single address.
