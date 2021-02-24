@@ -1,1 +1,48 @@
-\section{Endorsement of Proposals (Endorsers)}
+\newpage
+\section{Endorsement of Proposals (Endorsers, Needed only for Protocol Version Changes)}
+\label{sect:endorsement}
+
+Proposals that change either or both the major or minor protocol version number (``hard forks'') need confirmation from the block producing nodes that they are able
+to deal with the new protocol.  We term this ``endorsement''.   In previous Cardano eras, endorsement has been handled manually, as a judgement call that
+is made by the blockchain operators, who are in control of the genesis keys and the core block producing nodes.  As we move away from federated control and eliminate these
+mechanisms, it is necessary to automate this process.  Major protocol versions will never decrease.  Minor protocol versions will always either increase or be set to zero
+(with a corresponding increase in the major protocol version number).
+
+\subsection{Automating Endorsement}
+
+Every block producing node (``stake pool'') that wishes either to continue minting
+blocks or to support the distributed verification of the Cardano blockchain must upgrade its
+software to a node version that is compatible with the new protocol.  So that it
+can follow the blockchain from its inception (that is, from the genesis block),
+the new node software must also be prepared to handle any previous version of
+the protocol, that is from version 1.0 (Byron) through all intermediate versions to the current protocol version.
+
+There are two obvious ways that could enable an \emph{endorser} to endorse a protocol version upgrade.  A decision needs
+to be made on which of these to use.
+
+\begin{description}
+\item
+  [Manual endorsement.]  The endorser submits a transaction on-chain that confirms the maximum protocol version that they are
+  able to accept (or submits an endorsement transaction for a specific proposal id).
+\item
+  [Automatic endorsement.]  The new software submits a transaction on-chain that confirms the maximum protocol version that it is
+  able to accept.
+\end{description}
+
+In both cases, the transaction will need to be signed by the stake pool operational key.  Automatic endorsement has the advantage that it will always record the
+current status of the pools (including any downgrades).  It may be necessary to restrict the period of endorsement to the time between proposal submission and vote tallying.
+\khcomment{Are there situations where might make sense to upgrade pre-emptively before a proposal is submitted?}
+However, it is not obvious that a specific proposal (identified by the proposal id) could be endorsed automatically.  Manual endorsement allows endorsers to have better control over the timing of their
+endorsement (for example, when testing a new node version) and to endorse specific proposals (so avoiding issues if two proposals mistakenly refer to the same protocol version),
+but will mean that some endorsements are missed, and perhaps that some upgrade proposals are not enacted even though nodes are actually able to handle the new protocol.
+
+\subsection{Tallying the Endorsements}
+
+Endorsements are tallied following the deadline that is given in the proposal.  If there are sufficient endorsements for the proposal, then it will be carried forward
+for enactment.  While the endorsement deadline is technically independent of the voting deadline (so it could, in theory, be earlier than the voting deadline for the proposal),
+in practice it will usually be later than the voting deadline. That is, first the vote is taken, then pools will indicate their readiness to proceed with the protocol version
+upgrade.
+
+The required endorsement threshold is separate from the voting threshold.  It may be set per-proposal.  If the endorsement threshold is met, then the proposal is passed
+for enactment.  Unlike the voting threshold, the total that is used to determine the required stake is fixed to be the amount of stake that has been delegated for block production purposes.
+\khcomment{I think it makes sense to use the same snapshot that is used for normal block production rather than the most recent delegation snapshot, but this should be discussed.}
