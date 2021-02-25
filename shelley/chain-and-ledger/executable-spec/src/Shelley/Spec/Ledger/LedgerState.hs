@@ -47,7 +47,7 @@ module Shelley.Spec.Ledger.LedgerState
     emptyRewardUpdate,
     pvCanFollow,
     reapRewards,
-    totalInstantaneousReservesRewards,
+    availableAfterMIR,
 
     -- * Genesis State
     genesisState,
@@ -223,6 +223,7 @@ import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxBody
   ( EraIndependentTxBody,
     Ix,
+    MIRPot (..),
     PoolCert (..),
     PoolParams (..),
     Ptr (..),
@@ -272,14 +273,30 @@ instance CC.Crypto crypto => FromCBOR (FutureGenDeleg crypto) where
       b <- fromCBOR
       pure $ FutureGenDeleg a b
 
+-- | InstantaneousRewards captures the pending changes to the ledger
+-- state caused by MIR certificates. It consists of two mappings,
+-- the rewards which will be paid out from the reserves and the rewards
+-- which will be paid out from the treasury. It also consists of
+-- two coin values which represent the transfer of coins from
+-- one pot the the other pot.
+-- NOTE that the following property should always hold:
+--   deltaReserves + deltaTreasury = 0
 data InstantaneousRewards crypto = InstantaneousRewards
   { iRReserves :: !(Map (Credential 'Staking crypto) Coin),
-    iRTreasury :: !(Map (Credential 'Staking crypto) Coin)
+    iRTreasury :: !(Map (Credential 'Staking crypto) Coin),
+    deltaReserves :: DeltaCoin,
+    deltaTreasury :: DeltaCoin
   }
   deriving (Show, Eq, Generic)
 
-totalInstantaneousReservesRewards :: InstantaneousRewards crypto -> Coin
-totalInstantaneousReservesRewards (InstantaneousRewards irR _) = fold irR
+-- | This function returns the coin balance of a given pot, either the
+-- reserves or the treasury, after the instantaneous rewards and pot
+-- transfers are accounted for.
+availableAfterMIR :: MIRPot -> AccountState -> InstantaneousRewards crypto -> Coin
+availableAfterMIR ReservesMIR as ir =
+  _reserves as `addDeltaCoin` (deltaReserves ir) <-> (fold $ iRReserves ir)
+availableAfterMIR TreasuryMIR as ir =
+  _treasury as `addDeltaCoin` (deltaTreasury ir) <-> (fold $ iRTreasury ir)
 
 instance NoThunks (InstantaneousRewards crypto)
 
@@ -289,18 +306,20 @@ instance
   CC.Crypto crypto =>
   ToCBOR (InstantaneousRewards crypto)
   where
-  toCBOR (InstantaneousRewards irR irT) =
-    encodeListLen 2 <> mapToCBOR irR <> mapToCBOR irT
+  toCBOR (InstantaneousRewards irR irT dR dT) =
+    encodeListLen 4 <> mapToCBOR irR <> mapToCBOR irT <> toCBOR dR <> toCBOR dT
 
 instance
   CC.Crypto crypto =>
   FromCBOR (InstantaneousRewards crypto)
   where
   fromCBOR = do
-    decodeRecordNamed "InstantaneousRewards" (const 2) $ do
+    decodeRecordNamed "InstantaneousRewards" (const 4) $ do
       irR <- mapFromCBOR
       irT <- mapFromCBOR
-      pure $ InstantaneousRewards irR irT
+      dR <- fromCBOR
+      dT <- fromCBOR
+      pure $ InstantaneousRewards irR irT dR dT
 
 -- | State of staking pool delegations and rewards
 data DState crypto = DState
@@ -1275,7 +1294,7 @@ instance Default (DPState crypto) where
   def = DPState def def
 
 instance Default (InstantaneousRewards crypto) where
-  def = InstantaneousRewards Map.empty Map.empty
+  def = InstantaneousRewards Map.empty Map.empty mempty mempty
 
 instance Default (DState crypto) where
   def =

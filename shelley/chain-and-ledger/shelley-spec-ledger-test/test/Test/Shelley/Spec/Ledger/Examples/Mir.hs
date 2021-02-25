@@ -20,14 +20,13 @@ import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (Nonce, StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
-import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Credential (Credential, Ptr (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), toDeltaCoin)
+import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -57,6 +56,7 @@ import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     MIRPot (..),
+    MIRTarget (..),
     TxBody (..),
     TxIn (..),
     TxOut (..),
@@ -121,8 +121,8 @@ initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
 aliceMIRCoin :: Coin
 aliceMIRCoin = Coin 100
 
-ir :: CryptoClass.Crypto c => Map (Credential 'Staking c) Coin
-ir = Map.fromList [(Cast.aliceSHK, aliceMIRCoin)]
+ir :: CryptoClass.Crypto c => MIRTarget c
+ir = StakeAddressesMIR $ Map.fromList [(Cast.aliceSHK, toDeltaCoin aliceMIRCoin)]
 
 feeTx1 :: Coin
 feeTx1 = Coin 1

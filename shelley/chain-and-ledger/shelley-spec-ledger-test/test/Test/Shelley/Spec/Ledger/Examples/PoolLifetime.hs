@@ -82,6 +82,7 @@ import Shelley.Spec.Ledger.TxBody
     Delegation (..),
     MIRCert (..),
     MIRPot (..),
+    MIRTarget (..),
     PoolCert (..),
     PoolParams (..),
     RewardAcnt (..),
@@ -174,9 +175,9 @@ txbodyEx1 =
             ++ [ DCertMir
                    ( MIRCert
                        ReservesMIR
-                       ( Map.fromList
-                           [ (Cast.carlSHK, carlMIR),
-                             (Cast.dariaSHK, dariaMIR)
+                       ( StakeAddressesMIR $ Map.fromList
+                           [ (Cast.carlSHK, toDeltaCoin carlMIR),
+                             (Cast.dariaSHK, toDeltaCoin dariaMIR)
                            ]
                        )
                    )

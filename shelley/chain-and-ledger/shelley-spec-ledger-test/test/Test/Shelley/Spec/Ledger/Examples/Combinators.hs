@@ -429,11 +429,13 @@ mir cred pot amnt cs = cs {chainNes = nes'}
     ds = _dstate dps
     InstantaneousRewards
       { iRReserves = ir,
-        iRTreasury = it
+        iRTreasury = it,
+        deltaReserves = dr,
+        deltaTreasury = dt
       } = _irwd ds
     irwd' = case pot of
-      ReservesMIR -> InstantaneousRewards (Map.insert cred amnt ir) it
-      TreasuryMIR -> InstantaneousRewards ir (Map.insert cred amnt it)
+      ReservesMIR -> InstantaneousRewards (Map.insert cred amnt ir) it dr dt
+      TreasuryMIR -> InstantaneousRewards ir (Map.insert cred amnt it) dr dt
     ds' = ds {_irwd = irwd'}
     dps' = dps {_dstate = ds'}
     ls' = ls {_delegationState = dps'}

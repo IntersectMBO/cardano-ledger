@@ -297,6 +297,13 @@ instance CC.Crypto crypto => Arbitrary (WitHashes crypto) where
 instance Arbitrary MIRPot where
   arbitrary = genericArbitraryU
 
+instance CC.Crypto crypto => Arbitrary (MIRTarget crypto) where
+  arbitrary =
+    oneof
+      [ StakeAddressesMIR <$> arbitrary,
+        SendToOppositePotMIR <$> arbitrary
+      ]
+
 instance Arbitrary Natural where
   arbitrary = fromInteger <$> choose (0, 1000)
 

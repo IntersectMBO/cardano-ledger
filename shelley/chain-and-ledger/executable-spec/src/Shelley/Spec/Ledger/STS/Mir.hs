@@ -35,6 +35,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
+import Shelley.Spec.Ledger.Coin (addDeltaCoin)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState,
@@ -102,15 +103,17 @@ mirTransition = do
       irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd ds) :: RewardAccounts (Crypto era)
       totR = fold irwdR
       totT = fold irwdT
+      availableReserves = reserves `addDeltaCoin` (deltaReserves . _irwd $ ds)
+      availableTreasury = treasury `addDeltaCoin` (deltaTreasury . _irwd $ ds)
       update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts (Crypto era)
 
-  if totR <= reserves && totT <= treasury
+  if totR <= availableReserves && totT <= availableTreasury
     then
       pure $
         EpochState
           acnt
-            { _reserves = reserves <-> totR,
-              _treasury = treasury <-> totT
+            { _reserves = availableReserves <-> totR,
+              _treasury = availableTreasury <-> totT
             }
           ss
           ls
@@ -143,4 +146,4 @@ mirTransition = do
           nm
 
 emptyInstantaneousRewards :: InstantaneousRewards crypto
-emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty
+emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty mempty mempty
