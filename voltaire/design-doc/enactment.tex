@@ -1,0 +1,31 @@
+\newpage
+\section{Proposal Enactment}
+\label{sect:enactment}
+
+When the stated deadline for a proposal is reached, then it is considered for enactment.  Proposals are never considered for enactment
+before the deadline.  A proposal that has been accepted by passing a voting threshold (and also, for a protocol version upgrade, the
+endorsement threshold) is automatically enacted.  Enactment involves each protocol parameter being updated to the new value that is specified
+in the proposal.  Changes take effect at the start of the following epoch.  A protocol version upgrade can also update other parameters as part of
+the proposal, and may even change the set of parameters that can be updated.
+
+\subsection{Protocol version changes (``Hard Forks'')}
+
+Protocol version upgrades never decrement the protocol version.  They must increment either the major or minor version.  If the major version is
+incremented, then the minor version may be set to any required value (usually this will be zero).  Software upgrades must accept all legitimate prior protocol versions.
+When a protocol version proposal is enacted, then all nodes will synchronise to the new protocol version using the ``hard fork combinator''~\cite{hardfork-combinator}.
+Block production and verification will continue at the start of the next epoch using the rules that are in force for the new protocol version.
+
+\subsection{Prioritisation of Enactment}
+
+If multiple update proposals are to enacted within a single epoch, then they are enacted strictly in the order that they were submitted.
+This creates a deterministic order that does not need to consider when proposals achieve a majority vote, for example.
+It allows proposals to be completely or partially overridden without needing an explicit cancellation option.
+This approach assumes, of course, that the submitter group acts honestly and in the best interest of the protocol.
+The approach does not allow contingent/conditionals proposals.  If needed, this can be handled by, for example, submitting two separate proposals that are enacted
+in different epochs, where the second proposal is submitted only if the first proposal succeeds.
+
+\subsection{Central Funds Transfers (``MIRs'')}
+
+Several proposals for funds transfers may be enacted in a single epoch.  These proposals are enacted the in the order that they were submitted, with all ledger and
+accounting rules in force.  In particular, it is not possible for the treasury, reserves or any private address to even temporarily have a negative balance.  This may affect
+the ordering of transfers in some edge cases.

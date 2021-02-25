@@ -46,3 +46,4 @@ upgrade.
 The required endorsement threshold is separate from the voting threshold.  It may be set per-proposal.  If the endorsement threshold is met, then the proposal is passed
 for enactment.  Unlike the voting threshold, the total that is used to determine the required stake is fixed to be the amount of stake that has been delegated for block production purposes.
 \khcomment{I think it makes sense to use the same snapshot that is used for normal block production rather than the most recent delegation snapshot, but this should be discussed.}
+To avoid chain forks, the minimum threshold for endorsement should be no less than 50\% of the block producing stake.
