@@ -15,5 +15,5 @@ popd
 
 nix build -f `dirname $0`/.. haskellPackages.cardano-ledger-byron.components.tests.cardano-ledger-byron-test -o cardano-ledger-byron-test
 pushd byron/ledger/impl
-../../../cardano-ledger-byron/test/bin/cardano-ledger-byron-test --scenario=QualityAssurance
+../../../cardano-ledger-byron-test/bin/cardano-ledger-byron-test --scenario=QualityAssurance
 popd
