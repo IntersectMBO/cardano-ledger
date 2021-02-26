@@ -84,8 +84,8 @@ instance (CryptoClass.Crypto c, Mock c) => EraGen (MaryEra c) where
     Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
   genEraTxBody _ge = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
-  updateEraTxBody (TxBody _in _out cert wdrl _txfee vi upd meta mint) fee ins outs =
-    TxBody ins outs cert wdrl fee vi upd meta mint
+  updateEraTxBody (TxBody _in _out cert wdrl _txfee vi upd meta _mint) fee ins outs =
+    TxBody ins outs cert wdrl fee vi upd meta _mint
 
 genAuxiliaryData ::
   Mock crypto =>
@@ -276,11 +276,11 @@ genTxBody ::
   Gen (TxBody era, [Timelock (Crypto era)])
 genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
-  mint <- genMint
-  let (mint', outs') = case addTokens pparams mint outs of
+  minted <- genMint
+  let (mint', outs') = case addTokens pparams minted outs of
                          Nothing -> (mempty, outs)
-                         Just os -> (mint, os)
-      ps = map (\p -> (Map.!) policyIndex p) (Set.toList $ policies mint)
+                         Just os -> (minted, os)
+      ps = map (\p -> (Map.!) policyIndex p) (Set.toList $ policies minted)
   pure $
     ( TxBody
         ins

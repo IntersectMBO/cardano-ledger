@@ -36,7 +36,6 @@ import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import Data.IP (IPv4, IPv6)
 import qualified Data.Map.Strict as Map (Map, toList)
-import Data.MemoBytes (MemoBytes (..))
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, toList)
@@ -155,7 +154,6 @@ import Shelley.Spec.Ledger.TxBody
     StakeCreds (..),
     StakePoolRelay (..),
     TxBody (..),
-    TxBodyRaw (..),
     TxId (..),
     TxIn (..),
     TxOut (..),
@@ -799,10 +797,10 @@ ppTx ::
   ) =>
   Tx era ->
   PDoc
-ppTx (Tx' body witset meta _) =
+ppTx (Tx' bod witset meta) =
   ppRecord
     "Tx"
-    [ ("body", prettyA body),
+    [ ("body", prettyA bod),
       ("witnessSet", ppWitnessSetHKD witset),
       ("metadata", ppStrictMaybe prettyA meta)
     ]
@@ -938,7 +936,7 @@ ppTxBody ::
   PrettyA (PParamsDelta era) =>
   TxBody era ->
   PDoc
-ppTxBody (TxBodyConstr (Memo (TxBodyRaw ins outs cs wdrls fee ttl upd mdh) _)) =
+ppTxBody (TxBody' ins outs cs wdrls fee ttl upd mdh) =
   ppRecord
     "TxBody"
     [ ("inputs", ppSet ppTxIn ins),

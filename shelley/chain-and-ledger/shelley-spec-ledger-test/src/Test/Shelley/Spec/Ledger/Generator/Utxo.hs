@@ -139,10 +139,10 @@ showBalance
   (LedgerEnv _ _ pparams _)
   (UTxOState utxo _ _ _)
   (DPState _ (PState stakepools _ _))
-  (Tx body _ _) =
-    "\n\nConsumed: " ++ show (consumed pparams utxo body)
+  (Tx' bod _ _) =
+    "\n\nConsumed: " ++ show (consumed pparams utxo bod)
       ++ "  Produced: "
-      ++ show (produced @era pparams stakepools body)
+      ++ show (produced @era pparams stakepools bod)
 
 --  ========================================================================
 
@@ -223,7 +223,7 @@ genTx
           (utxoSt, dpState)
       (certs, deposits, refunds, dpState', (certWits, certScripts)) <-
         genDCerts ge pparams dpState slot txIx reserves
-      metadata <- genEraAuxiliaryData @era constants
+      metad <- genEraAuxiliaryData @era constants
       -------------------------------------------------------------------------
       -- Gather Key Witnesses and Scripts, prepare a constructor for Tx Wits
       -------------------------------------------------------------------------
@@ -278,8 +278,8 @@ genTx
           (Wdrl (Map.fromList wdrls))
           draftFee
           (maybeToStrictMaybe update)
-          (hashAuxiliaryData @era <$> metadata)
-      let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
+          (hashAuxiliaryData @era <$> metad)
+      let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metad
           scripts' = Map.fromList $ map (\s -> (hashScript @era s, s)) additionalScripts
       -- We add now repeatedly add inputs until the process converges.
       converge
@@ -493,16 +493,16 @@ applyDelta
   neededKeys
   neededScripts
   KeySpace_ {ksIndexedPaymentKeys, ksIndexedStakingKeys}
-  tx@(Tx body _wits _md)
+  tx@(Tx bod _wits _md)
   (Delta deltafees extraIn _extraWits change extraKeys extraScripts) =
     --fix up the witnesses here?
     -- Adds extraInputs, extraWitnesses, and change from delta to tx
-    let outputs' = (getField @"outputs" body) StrictSeq.|> change
+    let outputs' = (getField @"outputs" bod) StrictSeq.|> change
         body' =
           (updateEraTxBody @era)
-            body
+            bod
             deltafees
-            (getField @"inputs" body <> extraIn)
+            (getField @"inputs" bod <> extraIn)
             outputs'
         kw = neededKeys <> extraKeys
         sw = neededScripts <> mkScriptWits @era extraScripts mempty

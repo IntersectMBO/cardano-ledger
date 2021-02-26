@@ -325,7 +325,6 @@ scriptCred (ScriptHashObj hs) = Just hs
 scriptsNeeded ::
   forall era.
   ( UsesTxOut era,
-    TransTx ToCBOR era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
@@ -345,9 +344,9 @@ scriptsNeeded u tx =
           (filter requiresVKeyWitness certificates)
       )
   where
-    withdrawals = unWdrl $ getField @"wdrls" $ _body tx
-    u'' = eval ((txinsScript (getField @"inputs" $ _body tx) u) ◁ u)
-    certificates = (toList . getField @"certs" . _body) tx
+    withdrawals = unWdrl $ getField @"wdrls" $ body tx
+    u'' = eval ((txinsScript (getField @"inputs" $ body tx) u) ◁ u)
+    certificates = (toList . getField @"certs" . body) tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.

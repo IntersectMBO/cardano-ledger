@@ -467,12 +467,12 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         (UTxOState {_utxo = u}, dstate) = ledgerSt
         (UTxOState {_utxo = u'}, _) = ledgerSt'
         txb = _body tx
-        certs = toList (getField @"certs" txb)
+        certs' = toList (getField @"certs" txb)
         pools = _pParams . _pstate $ dstate
         created =
           Val.coin (balance u')
             <+> getField @"txfee" txb
-            <+> totalDeposits pp_ pools certs
+            <+> totalDeposits pp_ pools certs'
         consumed_ =
           Val.coin (balance u)
             <+> keyRefunds pp_ txb
@@ -522,10 +522,10 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
             <> keyRefunds pp_ txb
             <> fold (unWdrl (getField @"wdrls" txb))
         outs =
-          let certs = toList (getField @"certs" txb)
+          let certs' = toList (getField @"certs" txb)
            in Val.coin (balance (txouts @era txb))
                 <> getField @"txfee" txb
-                <> totalDeposits pp_ pools certs
+                <> totalDeposits pp_ pools certs'
 
 preserveOutputsTx ::
   forall era.
@@ -718,8 +718,8 @@ withdrawals ::
 withdrawals block =
   foldl'
     ( \c tx ->
-        let wdrls = unWdrl $ getField @"wdrls" (_body tx)
-         in c <> fold wdrls
+        let wdrls' = unWdrl $ getField @"wdrls" (_body tx)
+         in c <> fold wdrls'
     )
     (Coin 0)
     $ (txSeqTxns' . bbody) block
@@ -921,8 +921,8 @@ poolTraceFromBlock chainSt block =
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
-    certs = concatMap (toList . (getField @"certs") . _body)
-    poolCerts = filter poolCert (certs txs)
+    certs' = concatMap (toList . (getField @"certs") . _body)
+    poolCerts = filter poolCert (certs' txs)
     poolEnv =
       let (LedgerEnv s _ pp _) = ledgerEnv
        in PoolEnv s pp
@@ -948,8 +948,8 @@ delegTraceFromBlock chainSt block =
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
-    certs = concatMap (reverse . toList . (getField @"certs") . _body)
-    blockCerts = filter delegCert (certs txs)
+    certs' = concatMap (reverse . toList . (getField @"certs") . _body)
+    blockCerts = filter delegCert (certs' txs)
     delegEnv =
       let (LedgerEnv s txIx _ reserves) = ledgerEnv
           dummyCertIx = 0

@@ -239,6 +239,7 @@ pattern Tx' {body, wits, isValidating, auxiliaryData} <-
           }
         _
       )
+
 {-# COMPLETE Tx' #-}
 
 pattern Tx ::
@@ -261,7 +262,9 @@ pattern Tx body wits isValidating auxiliaryData <-
       )
   where
     Tx b w v a = TxConstr $ memoBytes (encodeTxRaw $ TxRaw b w v a)
+
 {-# COMPLETE Tx #-}
+
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
@@ -539,7 +542,8 @@ runPLCScript _cost _script _data _exunits = (IsValidating True, ExUnits 0 0) -- 
 -- ===============================================================
 
 getData ::
-  forall era. HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))) =>
+  forall era.
+  HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))) =>
   Tx era ->
   UTxO era ->
   ScriptPurpose (Crypto era) ->
@@ -595,7 +599,8 @@ evalScripts (AlonzoScript.PlutusScript, ds, units, cost) = b
 
 -- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
 scriptsNeeded ::
-  forall era. UsesTxOut era =>
+  forall era.
+  UsesTxOut era =>
   UTxO era ->
   Tx era ->
   [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]

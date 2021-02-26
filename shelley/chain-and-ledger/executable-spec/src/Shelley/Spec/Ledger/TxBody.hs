@@ -42,6 +42,7 @@ module Shelley.Spec.Ledger.TxBody
     TxBody
       ( TxBody,
         TxBodyConstr,
+        TxBody',
         _inputs,
         _outputs,
         _certs,
@@ -51,6 +52,14 @@ module Shelley.Spec.Ledger.TxBody
         _txUpdate,
         _mdHash
       ),
+    inputs,
+    outputs,
+    certs,
+    wdrls,
+    txfee,
+    ttl,
+    txUpdate,
+    mdHash,
     TxBodyRaw (..),
     TxId (..),
     TxIn (TxIn, ..),
@@ -740,16 +749,16 @@ txSparse ::
   (TransTxBody ToCBOR era, FromCBOR (PParamsDelta era), Era era) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
-txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
+txSparse (TxBodyRaw input' output' cert' wdrl' fee' ttl' update' hash') =
   Keyed (\i o f t c w u h -> TxBodyRaw i o c w f t u h)
-    !> Key 0 (E encodeFoldable input) -- We don't have to send these in TxBodyRaw order
-    !> Key 1 (E encodeFoldable output) -- Just hack up a fake constructor with the lambda.
-    !> Key 2 (To fee)
-    !> Key 3 (To ttl)
-    !> Omit null (Key 4 (E encodeFoldable cert))
-    !> Omit (null . unWdrl) (Key 5 (To wdrl))
-    !> Omit isSNothing (Key 6 (ED omitStrictNothingDual update))
-    !> Omit isSNothing (Key 7 (ED omitStrictNothingDual hash))
+    !> Key 0 (E encodeFoldable input') -- We don't have to send these in TxBodyRaw order
+    !> Key 1 (E encodeFoldable output') -- Just hack up a fake constructor with the lambda.
+    !> Key 2 (To fee')
+    !> Key 3 (To ttl')
+    !> Omit null (Key 4 (E encodeFoldable cert'))
+    !> Omit (null . unWdrl) (Key 5 (To wdrl'))
+    !> Omit isSNothing (Key 6 (ED omitStrictNothingDual update'))
+    !> Omit isSNothing (Key 7 (ED omitStrictNothingDual hash'))
 
 -- The initial TxBody. We will overide some of these fields as we build a TxBody,
 -- adding one field at a time, using optional serialisers, inside the Pattern.
@@ -794,6 +803,35 @@ deriving via
     FromCBOR (Annotator (TxBody era))
 
 -- | Pattern for use by external users
+pattern TxBody' ::
+  Set (TxIn (Crypto era)) ->
+  StrictSeq (Core.TxOut era) ->
+  StrictSeq (DCert (Crypto era)) ->
+  Wdrl (Crypto era) ->
+  Coin ->
+  SlotNo ->
+  StrictMaybe (Update era) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  TxBody era
+pattern TxBody' {inputs, outputs, certs, wdrls, txfee, ttl, txUpdate, mdHash} <-
+  TxBodyConstr
+    ( Memo
+        ( TxBodyRaw
+            { _inputsX = inputs,
+              _outputsX = outputs,
+              _certsX = certs,
+              _wdrlsX = wdrls,
+              _txfeeX = txfee,
+              _ttlX = ttl,
+              _txUpdateX = txUpdate,
+              _mdHashX = mdHash
+            }
+          )
+        _
+      )
+
+{-# COMPLETE TxBody' #-}
+
 pattern TxBody ::
   (Era era, FromCBOR (PParamsDelta era), TransTxBody ToCBOR era) =>
   Set (TxIn (Crypto era)) ->

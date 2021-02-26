@@ -104,7 +104,7 @@ genTxBody ::
   Gen (TxBody era, [Timelock (Crypto era)])
 genTxBody _pparams slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
-  let mint = zero -- the mint field is always empty for an Allegra TxBody
+  let minted = zero -- the mint field is always empty for an Allegra TxBody
   pure $
     ( TxBody
         ins
@@ -115,7 +115,7 @@ genTxBody _pparams slot ins outs cert wdrl fee upd ad = do
         validityInterval
         upd
         ad
-        mint,
+        minted,
       [] -- Allegra does not need any additional script witnesses
     )
 

@@ -401,7 +401,7 @@ goldenEncodingTestsMary =
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
           mdh = hashAuxiliaryData @A $ AuxiliaryData Map.empty StrictSeq.empty
-          mint = Map.singleton policyID1 $ Map.singleton (AssetName assetName1) 13
+          minted = Map.singleton policyID1 $ Map.singleton (AssetName assetName1) 13
        in checkEncodingCBORAnnotated
             "full_txn_body"
             ( TxBody
@@ -413,7 +413,7 @@ goldenEncodingTestsMary =
                 (ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600))
                 (SJust up)
                 (SJust mdh)
-                (Value 0 mint)
+                (Value 0 minted)
             )
             ( T (TkMapLen 10)
                 <> T (TkWord 0) -- Tx Ins
@@ -438,7 +438,7 @@ goldenEncodingTestsMary =
                 <> T (TkWord 8) -- Tx Validity Start
                 <> S (SlotNo 500)
                 <> T (TkWord 9) -- Tx Mint
-                <> S mint
+                <> S minted
             )
     ]
 

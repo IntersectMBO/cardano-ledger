@@ -28,6 +28,9 @@ module Shelley.Spec.Ledger.Tx
         _body,
         _witnessSet,
         _metadata,
+        body,
+        witnessSet,
+        metadata,
         txFullBytes
       ),
     TxBody (..),
@@ -214,7 +217,7 @@ prettyWitnessSetParts ::
 prettyWitnessSetParts (WitnessSet' a b c _) = (a, b, c)
 
 -- | A fully formed transaction.
-data Tx era = Tx'
+data Tx era = TxRaw
   { _body' :: !(Core.TxBody era),
     _witnessSet' :: !(WitnessSet era),
     _metadata' :: !(StrictMaybe (Core.AuxiliaryData era)),
@@ -247,6 +250,16 @@ deriving instance
   TransTx Eq era =>
   Eq (Tx era)
 
+pattern Tx' ::
+  Core.TxBody era ->
+  WitnessSet era ->
+  StrictMaybe (Core.AuxiliaryData era) ->
+  Tx era
+pattern Tx' {body, witnessSet, metadata} <-
+  TxRaw body witnessSet metadata _
+
+{-# COMPLETE Tx' #-}
+
 pattern Tx ::
   TransTx ToCBOR era =>
   Core.TxBody era ->
@@ -254,22 +267,22 @@ pattern Tx ::
   StrictMaybe (Core.AuxiliaryData era) ->
   Tx era
 pattern Tx {_body, _witnessSet, _metadata} <-
-  Tx' _body _witnessSet _metadata _
+  TxRaw _body _witnessSet _metadata _
   where
-    Tx body witnessSet metadata =
-      let bodyBytes = serialize body
+    Tx _body _witnessSet _metadata =
+      let bodyBytes = serialize _body
           wrappedMetadataBytes =
             serializeEncoding $
-              encodeNullMaybe toCBOR (strictMaybeToMaybe metadata)
+              encodeNullMaybe toCBOR (strictMaybeToMaybe _metadata)
           fullBytes =
             (serializeEncoding $ encodeListLen 3)
               <> bodyBytes
-              <> serialize witnessSet
+              <> serialize _witnessSet
               <> wrappedMetadataBytes
-       in Tx'
-            { _body' = body,
-              _witnessSet' = witnessSet,
-              _metadata' = metadata,
+       in TxRaw
+            { _body' = _body,
+              _witnessSet' = _witnessSet,
+              _metadata' = _metadata,
               txFullBytes = fullBytes
             }
 
@@ -290,21 +303,21 @@ segwitTx
   bodyAnn
   witsAnn
   metaAnn = Annotator $ \bytes ->
-    let body = runAnnotator bodyAnn bytes
-        witnessSet = runAnnotator witsAnn bytes
-        metadata = flip runAnnotator bytes <$> metaAnn
-        wrappedMetadataBytes = case metadata of
+    let bodyA = runAnnotator bodyAnn bytes
+        witSet = runAnnotator witsAnn bytes
+        metadat = flip runAnnotator bytes <$> metaAnn
+        wrappedMetadataBytes = case metadat of
           Nothing -> serializeEncoding encodeNull
           Just b -> serialize b
         fullBytes =
           (serializeEncoding $ encodeListLen 3)
-            <> serialize body
-            <> serialize witnessSet
+            <> serialize bodyA
+            <> serialize witSet
             <> wrappedMetadataBytes
-     in Tx'
-          { _body' = body,
-            _witnessSet' = witnessSet,
-            _metadata' = maybeToStrictMaybe metadata,
+     in TxRaw
+          { _body' = bodyA,
+            _witnessSet' = witSet,
+            _metadata' = maybeToStrictMaybe metadat,
             txFullBytes = fullBytes
           }
 
@@ -364,7 +377,7 @@ instance
   where
   fromCBOR = annotatorSlice $
     decodeRecordNamed "Tx" (const 3) $ do
-      body <- fromCBOR
+      bod <- fromCBOR
       wits <- decodeWits
       meta <-
         ( decodeNullMaybe fromCBOR ::
@@ -372,8 +385,8 @@ instance
           )
       pure $
         Annotator $ \fullBytes bytes ->
-          Tx'
-            { _body' = runAnnotator body fullBytes,
+          TxRaw
+            { _body' = runAnnotator bod fullBytes,
               _witnessSet' = runAnnotator wits fullBytes,
               _metadata' = maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta,
               txFullBytes = bytes
@@ -419,10 +432,9 @@ validateNativeMultiSigScript msig tx =
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
-  TransTx ToCBOR era =>
   Tx era ->
   Map (ScriptHash (Crypto era)) (Core.Script era)
-txwitsScript = scriptWits' . _witnessSet
+txwitsScript = scriptWits' . witnessSet
 
 extractKeyHashWitnessSet ::
   forall (r :: KeyRole) crypto.

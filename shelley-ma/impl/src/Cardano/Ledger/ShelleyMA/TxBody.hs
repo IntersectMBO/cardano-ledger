@@ -21,7 +21,20 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.ShelleyMA.TxBody
-  ( TxBody (TxBody, TxBodyConstr),
+  ( TxBody
+      ( TxBody,
+        TxBody',
+        TxBodyConstr,
+        inputs,
+        outputs,
+        certs,
+        wdrls,
+        txfee,
+        vldt,
+        update,
+        adHash,
+        mint
+      ),
     TxBodyRaw (..),
     FamsFrom,
     FamsTo,
@@ -79,10 +92,11 @@ import Data.Coders
     field,
     (!>),
   )
-import qualified Data.Map as Map
+import Data.Map as Map (empty)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq, fromList)
-import Data.Set (Set, empty)
+import Data.Set (Set)
+import Data.Set as Set (empty)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records
@@ -134,15 +148,15 @@ type FamsTo era =
 -- =======================================================
 
 data TxBodyRaw era = TxBodyRaw
-  { inputs :: !(Set (TxIn (Crypto era))),
-    outputs :: !(StrictSeq (TxOut era)),
-    certs :: !(StrictSeq (DCert (Crypto era))),
-    wdrls :: !(Wdrl (Crypto era)),
-    txfee :: !Coin,
-    vldt :: !ValidityInterval, -- imported from Timelocks
-    update :: !(StrictMaybe (Update era)),
-    adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    mint :: !(Value era)
+  { inputsR :: !(Set (TxIn (Crypto era))),
+    outputsR :: !(StrictSeq (TxOut era)),
+    certsR :: !(StrictSeq (DCert (Crypto era))),
+    wdrlsR :: !(Wdrl (Crypto era)),
+    txfeeR :: !Coin,
+    vldtR :: !ValidityInterval, -- imported from Timelocks
+    updateR :: !(StrictMaybe (Update era)),
+    adHashR :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
+    mintR :: !(Value era)
   }
   deriving (Typeable)
 
@@ -221,22 +235,22 @@ txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frg
     !> Omit isZero (Key 9 (E encodeMint frge))
 
 bodyFields :: FamsFrom era => Word -> Field (TxBodyRaw era)
-bodyFields 0 = field (\x tx -> tx {inputs = x}) (D (decodeSet fromCBOR))
-bodyFields 1 = field (\x tx -> tx {outputs = x}) (D (decodeStrictSeq fromCBOR))
-bodyFields 2 = field (\x tx -> tx {txfee = x}) From
-bodyFields 3 = field (\x tx -> tx {vldt = (vldt tx) {invalidHereafter = x}}) (D (SJust <$> fromCBOR))
-bodyFields 4 = field (\x tx -> tx {certs = x}) (D (decodeStrictSeq fromCBOR))
-bodyFields 5 = field (\x tx -> tx {wdrls = x}) From
-bodyFields 6 = field (\x tx -> tx {update = x}) (D (SJust <$> fromCBOR))
-bodyFields 7 = field (\x tx -> tx {adHash = x}) (D (SJust <$> fromCBOR))
-bodyFields 8 = field (\x tx -> tx {vldt = (vldt tx) {invalidBefore = x}}) (D (SJust <$> fromCBOR))
-bodyFields 9 = field (\x tx -> tx {mint = x}) (D decodeMint)
+bodyFields 0 = field (\x tx -> tx {inputsR = x}) (D (decodeSet fromCBOR))
+bodyFields 1 = field (\x tx -> tx {outputsR = x}) (D (decodeStrictSeq fromCBOR))
+bodyFields 2 = field (\x tx -> tx {txfeeR = x}) From
+bodyFields 3 = field (\x tx -> tx {vldtR = (vldtR tx) {invalidHereafter = x}}) (D (SJust <$> fromCBOR))
+bodyFields 4 = field (\x tx -> tx {certsR = x}) (D (decodeStrictSeq fromCBOR))
+bodyFields 5 = field (\x tx -> tx {wdrlsR = x}) From
+bodyFields 6 = field (\x tx -> tx {updateR = x}) (D (SJust <$> fromCBOR))
+bodyFields 7 = field (\x tx -> tx {adHashR = x}) (D (SJust <$> fromCBOR))
+bodyFields 8 = field (\x tx -> tx {vldtR = (vldtR tx) {invalidBefore = x}}) (D (SJust <$> fromCBOR))
+bodyFields 9 = field (\x tx -> tx {mintR = x}) (D decodeMint)
 bodyFields n = field (\_ t -> t) (Invalid n)
 
 initial :: (Val (Value era)) => TxBodyRaw era
 initial =
   TxBodyRaw
-    empty
+    Set.empty
     (fromList [])
     (fromList [])
     (Wdrl Map.empty)
@@ -284,6 +298,22 @@ deriving via
 
 instance (c ~ Crypto era, Era era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
+pattern TxBody' ::
+  Set (TxIn (Crypto era)) ->
+  StrictSeq (TxOut era) ->
+  StrictSeq (DCert (Crypto era)) ->
+  Wdrl (Crypto era) ->
+  Coin ->
+  ValidityInterval ->
+  StrictMaybe (Update era) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  Value era ->
+  TxBody era
+pattern TxBody' {inputs, outputs, certs, wdrls, txfee, vldt, update, adHash, mint} <-
+  TxBodyConstr (Memo (TxBodyRaw inputs outputs certs wdrls txfee vldt update adHash mint) _)
+
+{-# COMPLETE TxBody' #-}
+
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
 pattern TxBody ::
@@ -298,12 +328,12 @@ pattern TxBody ::
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Value era ->
   TxBody era
-pattern TxBody i o d w fee vi u m mint <-
-  TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)
+pattern TxBody i o d w fee vi u m minted <-
+  TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m minted) _)
   where
-    TxBody i o d w fee vi u m mint =
+    TxBody i o d w fee vi u m minted =
       TxBodyConstr $
-        memoBytes $ txSparse (TxBodyRaw i o d w fee vi u m mint)
+        memoBytes $ txSparse (TxBodyRaw i o d w fee vi u m minted)
 
 {-# COMPLETE TxBody #-}
 
@@ -325,31 +355,31 @@ instance HasField tag (TxBodyRaw e) c => HasField (tag::Symbol) (TxBody e) c whe
 -}
 
 instance Crypto era ~ crypto => HasField "inputs" (TxBody era) (Set (TxIn crypto)) where
-  getField (TxBodyConstr (Memo m _)) = getField @"inputs" m
+  getField (TxBodyConstr (Memo m _)) = getField @"inputsR" m
 
 instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
-  getField (TxBodyConstr (Memo m _)) = getField @"outputs" m
+  getField (TxBodyConstr (Memo m _)) = getField @"outputsR" m
 
 instance Crypto era ~ crypto => HasField "certs" (TxBody era) (StrictSeq (DCert crypto)) where
-  getField (TxBodyConstr (Memo m _)) = getField @"certs" m
+  getField (TxBodyConstr (Memo m _)) = getField @"certsR" m
 
 instance Crypto era ~ crypto => HasField "wdrls" (TxBody era) (Wdrl crypto) where
-  getField (TxBodyConstr (Memo m _)) = getField @"wdrls" m
+  getField (TxBodyConstr (Memo m _)) = getField @"wdrlsR" m
 
 instance HasField "txfee" (TxBody era) Coin where
-  getField (TxBodyConstr (Memo m _)) = getField @"txfee" m
+  getField (TxBodyConstr (Memo m _)) = getField @"txfeeR" m
 
 instance HasField "vldt" (TxBody era) ValidityInterval where
-  getField (TxBodyConstr (Memo m _)) = getField @"vldt" m
+  getField (TxBodyConstr (Memo m _)) = getField @"vldtR" m
 
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
-  getField (TxBodyConstr (Memo m _)) = getField @"update" m
+  getField (TxBodyConstr (Memo m _)) = getField @"updateR" m
 
 instance Crypto era ~ crypto => HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash crypto)) where
-  getField (TxBodyConstr (Memo m _)) = getField @"adHash" m
+  getField (TxBodyConstr (Memo m _)) = getField @"adHashR" m
 
 instance Value era ~ value => HasField "mint" (TxBody era) value where
-  getField (TxBodyConstr (Memo m _)) = getField @"mint" m
+  getField (TxBodyConstr (Memo m _)) = getField @"mintR" m
 
 -- ============================================
 
@@ -361,7 +391,7 @@ ppTxBody ::
   ) =>
   TxBody era ->
   PDoc
-ppTxBody (TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)) =
+ppTxBody (TxBody' i o d w fee vi u m minted) =
   ppRecord
     "TxBody(Mary or Allegra)"
     [ ("inputs", ppSet ppTxIn i),
@@ -372,7 +402,7 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)) =
       ("vldt", ppValidityInterval vi),
       ("update", ppStrictMaybe ppUpdate u),
       ("auxDataHash", ppStrictMaybe ppAuxiliaryDataHash m),
-      ("mint", prettyA mint)
+      ("mint", prettyA minted)
     ]
 
 instance

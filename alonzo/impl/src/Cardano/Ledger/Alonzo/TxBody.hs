@@ -279,6 +279,7 @@ pattern TxBody'
           }
         _
       )
+
 {-# COMPLETE TxBody' #-}
 
 -- The Set of constraints necessary to use the TxBody pattern
@@ -306,20 +307,19 @@ pattern TxBody ::
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   TxBody era
 pattern TxBody
-    txinputs
-    txinputs_fee
-    txouts
-    txcerts
-    txwdrls
-    txfee
-    txvldt
-    txUpdates
-    txADhash
-    mint
-    exunits
-    sdHash
-    scriptHash
-  <-
+  txinputs
+  txinputs_fee
+  txouts
+  txcerts
+  txwdrls
+  txfee
+  txvldt
+  txUpdates
+  txADhash
+  mint
+  exunits
+  sdHash
+  scriptHash <-
   TxBodyConstr
     ( Memo
         TxBodyRaw

@@ -199,10 +199,7 @@ instance
 
 ledgerTransition ::
   forall era.
-  ( UsesScript era,
-    UsesTxBody era,
-    UsesAuxiliary era,
-    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+  ( Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
@@ -221,7 +218,7 @@ ledgerTransition = do
       TRC
         ( DelegsEnv slot txIx pp tx account,
           dpstate,
-          StrictSeq.fromStrict $ getField @"certs" $ _body tx
+          StrictSeq.fromStrict $ getField @"certs" $ body tx
         )
 
   let DPState dstate pstate = dpstate

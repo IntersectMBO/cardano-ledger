@@ -203,7 +203,6 @@ deriving via
     ) =>
     FromCBOR (Annotator (AuxiliaryData era))
 
-
 -- | Matches AuxiliaryData, and supplies 'selector' functions without annoying constraints.
 pattern AuxiliaryData' ::
   Set (Core.Script era) ->

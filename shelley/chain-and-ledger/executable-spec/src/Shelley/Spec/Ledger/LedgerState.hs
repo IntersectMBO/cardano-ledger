@@ -723,10 +723,7 @@ txsize = fromIntegral . BSL.length . txFullBytes
 -- | It can be helpful for coin selection.
 txsizeBound ::
   forall era out.
-  ( UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era,
-    HasField "outputs" (Core.TxBody era) (StrictSeq out),
+  ( HasField "outputs" (Core.TxBody era) (StrictSeq out),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Tx era ->
@@ -740,7 +737,7 @@ txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
     addrHashLen = 28
     addrHeader = 1
     address = 2 + addrHeader + 2 * addrHashLen
-    txbody = _body tx
+    txbody = body tx
     numInputs = toInteger . length . getField @"inputs" $ txbody
     inputSize = smallArray + uint + hashObj
     numOutputs = toInteger . length . getField @"outputs" $ txbody

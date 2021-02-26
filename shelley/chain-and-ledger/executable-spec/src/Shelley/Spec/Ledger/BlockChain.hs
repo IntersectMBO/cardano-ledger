@@ -206,8 +206,8 @@ pattern TxSeq xs <-
             serializeEncoding $
               encodeFoldableEncoder (encodePreEncoded . BSL.toStrict) x
           metaChunk index m =
-            ( \metadata ->
-                toCBOR index <> toCBOR metadata
+            ( \meta ->
+                toCBOR index <> toCBOR meta
             )
               <$> strictMaybeToMaybe m
        in TxSeq'
@@ -289,13 +289,13 @@ pattern BHeader :: CC.Crypto crypto => BHBody crypto -> SignedKES crypto (BHBody
 pattern BHeader bHeaderBody' bHeaderSig' <-
   BHeader' {bHeaderBody', bHeaderSig'}
   where
-    BHeader body sig =
+    BHeader bod sig =
       let mkBytes bhBody kESig =
             serializeEncoding $
               encodeListLen 2
                 <> toCBOR bhBody
                 <> encodeSignedKES kESig
-       in BHeader' body sig (mkBytes body sig)
+       in BHeader' bod sig (mkBytes bod sig)
 
 {-# COMPLETE BHeader #-}
 
@@ -513,7 +513,7 @@ instance
           bprotver
         }
     where
-      bhBodySize body = 9 + listLenInt (bheaderOCert body) + listLenInt (bprotver body)
+      bhBodySize body' = 9 + listLenInt (bheaderOCert body') + listLenInt (bprotver body')
 
 -- | Retrieve the pool id (the hash of the pool operator's cold key)
 -- from the body of the block header.
@@ -606,11 +606,11 @@ txSeqDecoder lax = do
   let b = length bodies
       w = length wits
 
-  (metadata, metadataAnn) <-
+  (meta, metadataAnn) <-
     withSlice $
       constructMetadata b
         <$> decodeMap fromCBOR fromCBOR
-  let m = length metadata
+  let m = length meta
 
   unless
     (lax || b == w)
@@ -630,7 +630,7 @@ txSeqDecoder lax = do
           <> show w
           <> ")"
     )
-  let txns = sequenceA $ StrictSeq.forceToStrict $ Seq.zipWith3 segwitTx bodies wits metadata
+  let txns = sequenceA $ StrictSeq.forceToStrict $ Seq.zipWith3 segwitTx bodies wits meta
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 instance

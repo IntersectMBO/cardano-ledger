@@ -314,11 +314,11 @@ txbodyTimeEx1Valid :: TxBody MaryTest
 txbodyTimeEx1Valid = txbodyTimeEx1 (SJust startInterval) (SJust stopInterval)
 
 txTimeEx1 :: TxBody MaryTest -> Tx MaryTest
-txTimeEx1 body =
+txTimeEx1 body' =
   Tx
-    body
+    body'
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated body) [asWitness Cast.alicePay],
+      { addrWits = makeWitnessesVKey (hashAnnotated body') [asWitness Cast.alicePay],
         scriptWits = Map.fromList [(policyID boundedTimePolicyId, boundedTimePolicy)]
       }
     SNothing
