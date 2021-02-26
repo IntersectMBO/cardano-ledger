@@ -23,7 +23,7 @@ module Cardano.Ledger.Alonzo.Data
     DataHash,
     hashData,
     -- $
-    AuxiliaryData (AuxiliaryData, scripts, dats, txMD),
+    AuxiliaryData (AuxiliaryData, AuxiliaryData', scripts, dats, txMD),
     AuxiliaryDataHash,
     -- $
     ppPlutusData,
@@ -203,13 +203,25 @@ deriving via
     ) =>
     FromCBOR (Annotator (AuxiliaryData era))
 
+
+-- | Matches AuxiliaryData, and supplies 'selector' functions without annoying constraints.
+pattern AuxiliaryData' ::
+  Set (Core.Script era) ->
+  Set (Data era) ->
+  Set (Metadata) ->
+  AuxiliaryData era
+pattern AuxiliaryData' {scripts, dats, txMD} <-
+  AuxiliaryDataConstr (Memo (AuxiliaryDataRaw scripts dats txMD) _)
+
+{-# COMPLETE AuxiliaryData' #-}
+
 pattern AuxiliaryData ::
   (Era era, ToCBOR (Core.Script era), Ord (Core.Script era)) =>
   Set (Core.Script era) ->
   Set (Data era) ->
   Set (Metadata) ->
   AuxiliaryData era
-pattern AuxiliaryData {scripts, dats, txMD} <-
+pattern AuxiliaryData scripts dats txMD <-
   AuxiliaryDataConstr (Memo (AuxiliaryDataRaw scripts dats txMD) _)
   where
     AuxiliaryData s d m =

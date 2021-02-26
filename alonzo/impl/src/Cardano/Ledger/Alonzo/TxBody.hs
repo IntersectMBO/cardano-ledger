@@ -21,6 +21,7 @@ module Cardano.Ledger.Alonzo.TxBody
   ( TxOut (TxOut, TxOutCompact),
     TxBody
       ( TxBody,
+        TxBody',
         txinputs,
         txinputs_fee,
         txouts,
@@ -228,6 +229,58 @@ deriving via
     ) =>
     FromCBOR (Annotator (TxBody era))
 
+-- | Matches TxBody, and supplies 'selector' functions without (AlonzoBody era) constraints.
+pattern TxBody' ::
+  Set (TxIn (Crypto era)) ->
+  Set (TxIn (Crypto era)) ->
+  StrictSeq (TxOut era) ->
+  StrictSeq (DCert (Crypto era)) ->
+  Wdrl (Crypto era) ->
+  Coin ->
+  ValidityInterval ->
+  StrictMaybe (Update era) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  Value (Crypto era) ->
+  ExUnits ->
+  StrictMaybe (WitnessPPDataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  TxBody era
+pattern TxBody'
+  { txinputs,
+    txinputs_fee,
+    txouts,
+    txcerts,
+    txwdrls,
+    txfee,
+    txvldt,
+    txUpdates,
+    txADhash,
+    mint,
+    exunits,
+    sdHash,
+    scriptHash
+  } <-
+  TxBodyConstr
+    ( Memo
+        TxBodyRaw
+          { _inputs = txinputs,
+            _inputs_fee = txinputs_fee,
+            _outputs = txouts,
+            _certs = txcerts,
+            _wdrls = txwdrls,
+            _txfee = txfee,
+            _vldt = txvldt,
+            _update = txUpdates,
+            _adHash = txADhash,
+            _mint = mint,
+            _exunits = exunits,
+            _sdHash = sdHash,
+            _scriptHash = scriptHash
+          }
+        _
+      )
+{-# COMPLETE TxBody' #-}
+
 -- The Set of constraints necessary to use the TxBody pattern
 type AlonzoBody era =
   ( Era era,
@@ -253,20 +306,20 @@ pattern TxBody ::
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   TxBody era
 pattern TxBody
-  { txinputs,
-    txinputs_fee,
-    txouts,
-    txcerts,
-    txwdrls,
-    txfee,
-    txvldt,
-    txUpdates,
-    txADhash,
-    mint,
-    exunits,
-    sdHash,
+    txinputs
+    txinputs_fee
+    txouts
+    txcerts
+    txwdrls
+    txfee
+    txvldt
+    txUpdates
+    txADhash
+    mint
+    exunits
+    sdHash
     scriptHash
-  } <-
+  <-
   TxBodyConstr
     ( Memo
         TxBodyRaw
