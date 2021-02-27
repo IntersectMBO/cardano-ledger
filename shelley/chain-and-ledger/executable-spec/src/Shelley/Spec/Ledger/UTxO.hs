@@ -322,6 +322,8 @@ scriptCred (KeyHashObj _) = Nothing
 scriptCred (ScriptHashObj hs) = Just hs
 
 -- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+-- | Computes the set of script hashes required to unlock the transcation inputs
+-- and the withdrawals.
 scriptsNeeded ::
   forall era tx body wit txout.
   ( CoreUtxow era tx body wit txout
@@ -348,55 +350,9 @@ scriptsNeeded u tx =
     u'' = eval ((txinsScript (inputsBody @era txb) u) ◁ u)
     certificates = (toList . certsBody) txb
 
-{- TO DELETE ME
--- | Computes the set of script hashes required to unlock the transcation inputs
--- and the withdrawals.
-scriptsNeeded ::
-  forall era.
-  ( UsesTxOut era,
-    TransTx ToCBOR era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
-  ) =>
-  UTxO era ->
-  Tx era ->
-  Set (ScriptHash (Crypto era))
-scriptsNeeded u tx =
-  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . (getField @"address")) u'')
-    `Set.union` Set.fromList
-      ( Maybe.mapMaybe (scriptCred . getRwdCred) $
-          Map.keys withdrawals
-      )
-    `Set.union` Set.fromList
-      ( Maybe.mapMaybe
-          scriptStakeCred
-          (filter requiresVKeyWitness certificates)
-      )
-  where
-    withdrawals = unWdrl $ getField @"wdrls" $ _body tx
-    u'' = eval ((txinsScript (getField @"inputs" $ _body tx) u) ◁ u)
-    certificates = (toList . getField @"certs" . _body) tx
-
+-- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
-txinsScript ::
-  ( UsesTxOut era
-  ) =>
-  Set (TxIn (Crypto era)) ->
-  UTxO era ->
-  Set (TxIn (Crypto era))
-txinsScript txInps (UTxO u) = foldr add Set.empty txInps
-  where
-    -- to get subset, start with empty, and only insert those inputs in txInps that are locked in u
-    add input ans = case Map.lookup input u of
-      Just out -> case getField @"address" out of
-        Addr _ (ScriptHashObj _) _ -> Set.insert input ans
-        _ -> ans
-      Nothing -> ans
--}
-
--- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
 txinsScript ::
   forall era tx body wit txout.
   (CoreUtxow era tx body wit txout) =>
