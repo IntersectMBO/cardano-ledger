@@ -23,6 +23,7 @@ module Cardano.Ledger.Core
     Script,
     AuxiliaryData,
     PParams,
+    Tx,
 
     -- * Constraint synonyms
     ChainData,
@@ -57,6 +58,9 @@ type family AuxiliaryData era :: Type
 
 -- | Protocol parameters
 type family PParams era :: Type
+
+-- | Transaction
+type family Tx era :: Type
 
 -- | Common constraints
 --

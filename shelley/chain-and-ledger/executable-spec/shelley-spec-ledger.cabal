@@ -22,6 +22,7 @@ library
     Cardano.Ledger.AuxiliaryData
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
+    Cardano.Ledger.CoreUtxow
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
     Cardano.Ledger.Pretty

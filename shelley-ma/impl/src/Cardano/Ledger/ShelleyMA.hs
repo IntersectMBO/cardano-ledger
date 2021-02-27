@@ -41,7 +41,8 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import Shelley.Spec.Ledger.Tx
-  ( TxOut (..),
+  ( Tx,
+    TxOut (..),
     ValidateScript (..),
   )
 
@@ -112,6 +113,10 @@ type instance
 type instance
   Core.PParams (ShelleyMAEra (ma :: MaryOrAllegra) c) =
     Shelley.PParams (ShelleyMAEra (ma :: MaryOrAllegra) c)
+
+type instance
+  Core.Tx (ShelleyMAEra (ma :: MaryOrAllegra) c) =
+    Shelley.Tx (ShelleyMAEra (ma :: MaryOrAllegra) c)
 
 --------------------------------------------------------------------------------
 -- Ledger data instances

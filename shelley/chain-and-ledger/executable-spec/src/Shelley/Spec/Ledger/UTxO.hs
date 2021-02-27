@@ -49,6 +49,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash as CH
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.CoreUtxow (CoreUtxow (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Era
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
@@ -320,6 +321,34 @@ scriptCred ::
 scriptCred (KeyHashObj _) = Nothing
 scriptCred (ScriptHashObj hs) = Just hs
 
+-- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+scriptsNeeded ::
+  forall era tx body wit txout.
+  ( CoreUtxow era tx body wit txout
+  ) =>
+  UTxO era ->
+  tx era ->
+  Set (ScriptHash (Crypto era))
+scriptsNeeded u tx =
+  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . (addressOut)) u'')
+    `Set.union` Set.fromList
+      ( Maybe.mapMaybe (scriptCred . getRwdCred) $
+          Map.keys withdrawals
+      )
+    `Set.union` Set.fromList
+      ( Maybe.mapMaybe
+          scriptStakeCred
+          (filter requiresVKeyWitness certificates)
+      )
+    `Set.union` (mintBody @era txb) -- (policyID `Set.map` (policies $ mintBody @era txb))
+  where
+    txb = bodyTx @era tx
+    withdrawals = unWdrl $ wdrlsBody @era txb
+    u'' :: Map.Map (TxIn (Crypto era)) (txout era)
+    u'' = eval ((txinsScript (inputsBody @era txb) u) ◁ u)
+    certificates = (toList . certsBody) txb
+
+{- TO DELETE ME
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
 scriptsNeeded ::
@@ -362,6 +391,23 @@ txinsScript txInps (UTxO u) = foldr add Set.empty txInps
     -- to get subset, start with empty, and only insert those inputs in txInps that are locked in u
     add input ans = case Map.lookup input u of
       Just out -> case getField @"address" out of
+        Addr _ (ScriptHashObj _) _ -> Set.insert input ans
+        _ -> ans
+      Nothing -> ans
+-}
+
+-- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+txinsScript ::
+  forall era tx body wit txout.
+  (CoreUtxow era tx body wit txout) =>
+  Set (TxIn (Crypto era)) ->
+  UTxO era ->
+  Set (TxIn (Crypto era))
+txinsScript txInps (UTxO u) = foldr add Set.empty txInps
+  where
+    -- to get subset, start with empty, and only insert those inputs in txInps that are locked in u
+    add input ans = case Map.lookup input u of
+      Just out -> case addressOut out of
         Addr _ (ScriptHashObj _) _ -> Set.insert input ans
         _ -> ans
       Nothing -> ans

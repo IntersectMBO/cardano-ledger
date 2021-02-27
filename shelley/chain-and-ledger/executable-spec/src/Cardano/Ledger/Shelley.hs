@@ -1,8 +1,12 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Definition of the shelley era, along with instances ot the @Core@ types
@@ -15,6 +19,7 @@ import Cardano.Ledger.AuxiliaryData
     ValidateAuxiliaryData (..),
   )
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.CoreUtxow (CoreUtxow (..), ValidateScript (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, makeHashWithExplicitProxys)
@@ -25,14 +30,19 @@ import Cardano.Ledger.Shelley.Constraints
     UsesValue,
   )
 import Data.Proxy
-import Shelley.Spec.Ledger.Coin (Coin)
+import Data.Set as Set (empty)
+import GHC.Records (HasField (..))
+import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.CompactAddr (decompactAddr)
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
 import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, updatePParams)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
-  ( TxBody,
+  ( Tx (Tx'),
+    TxBody,
     TxOut (..),
-    ValidateScript (hashScript, validateScript),
+    WitnessSet,
+    WitnessSetHKD (..),
     hashMultiSigScript,
     validateNativeMultiSigScript,
   )
@@ -67,6 +77,8 @@ type instance Core.AuxiliaryData (ShelleyEra c) = Metadata
 
 type instance Core.PParams (ShelleyEra c) = PParams (ShelleyEra c)
 
+type instance Core.Tx (ShelleyEra c) = Tx (ShelleyEra c)
+
 --------------------------------------------------------------------------------
 -- Ledger data instances
 --------------------------------------------------------------------------------
@@ -83,3 +95,21 @@ instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) where
   hashAuxiliaryData metadata = AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @c) index metadata)
     where
       index = Proxy @EraIndependentAuxiliaryData
+
+instance
+  CryptoClass.Crypto c =>
+  CoreUtxow (ShelleyEra c) Tx TxBody WitnessSet TxOut
+  where
+  bodyTx (Tx' body _wit _meta _) = body
+  witTx (Tx' _body wit _meta _) = wit
+  metaTx (Tx' _body _wit meta _) = meta
+  addrWit x = addrWits' x
+  bootWit x = bootWits' x
+  scriptWit x = scriptWits' x
+  updateBody x = getField @"update" x
+  wdrlsBody x = getField @"wdrls" x
+  certsBody x = getField @"certs" x
+  inputsBody x = getField @"inputs" x
+  mintBody _ = Set.empty
+  adHashBody x = getField @"adHash" x
+  addressOut (TxOutCompact ca _) = decompactAddr ca

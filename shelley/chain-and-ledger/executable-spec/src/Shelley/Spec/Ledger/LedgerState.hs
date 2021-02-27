@@ -108,6 +108,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.CoreUtxow (CoreUtxow (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
@@ -234,9 +235,6 @@ import Shelley.Spec.Ledger.Slot
   )
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
-    WitnessSet,
-    WitnessSetHKD (..),
-    addrWits,
     extractKeyHashWitnessSet,
   )
 import Shelley.Spec.Ledger.TxBody
@@ -260,7 +258,6 @@ import Shelley.Spec.Ledger.UTxO
     txinLookup,
     txins,
     txouts,
-    txup,
     verifyWitVKey,
   )
 
@@ -831,6 +828,18 @@ diffWitHashes :: WitHashes crypto -> WitHashes crypto -> WitHashes crypto
 diffWitHashes (WitHashes x) (WitHashes x') =
   WitHashes (x `Set.difference` x')
 
+-- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+witsFromWitnessSet ::
+  forall era tx body wits txout.
+  (CoreUtxow era tx body wits txout) =>
+  wits era ->
+  WitHashes (Crypto era)
+witsFromWitnessSet wits =
+  WitHashes $
+    Set.map witKeyHash (addrWit wits)
+      `Set.union` Set.map bootstrapWitKeyHash (bootWit wits)
+
+{- TODO DELETE ME
 -- | Extract the witness hashes from the Witness set.
 witsFromWitnessSet ::
   (Era era, Core.AnnotatedData (Core.Script era)) =>
@@ -840,7 +849,66 @@ witsFromWitnessSet (WitnessSet aWits _ bsWits) =
   WitHashes $
     Set.map witKeyHash aWits
       `Set.union` Set.map bootstrapWitKeyHash bsWits
+-}
 
+-- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+witsVKeyNeeded ::
+  forall era tx body wits txout.
+  CoreUtxow era tx body wits txout =>
+  UTxO era ->
+  tx era ->
+  GenDelegs (Crypto era) ->
+  WitHashes (Crypto era)
+witsVKeyNeeded utxo' tx genDelegs =
+  WitHashes $
+    certAuthors
+      `Set.union` inputAuthors
+      `Set.union` owners
+      `Set.union` wdrlAuthors
+      `Set.union` updateKeys
+  where
+    txbody = bodyTx tx
+    inputAuthors :: Set (KeyHash 'Witness (Crypto era))
+    inputAuthors = foldr accum Set.empty (inputsBody txbody)
+      where
+        accum txin ans =
+          case txinLookup txin utxo' of
+            Just out ->
+              case addressOut out of
+                Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
+                AddrBootstrap bootAddr ->
+                  Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
+                _ -> ans
+            Nothing -> ans
+
+    wdrlAuthors :: Set (KeyHash 'Witness (Crypto era))
+    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (wdrlsBody txbody))
+      where
+        accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
+    owners :: Set (KeyHash 'Witness (Crypto era))
+    owners = foldr accum Set.empty (certsBody txbody)
+      where
+        accum (DCertPool (RegPool pool)) ans =
+          Set.union
+            (Set.map asWitness (_poolOwners pool))
+            ans
+        accum _cert ans = ans
+    cwitness (DCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
+    cwitness (DCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
+    cwitness (DCertGenesis gc) = Set.singleton (asWitness $ genesisCWitness gc)
+    cwitness c = error $ show c ++ " does not have a witness"
+    -- key reg requires no witness but this is already filtered outby requiresVKeyWitness
+    -- before the call to `cwitness`, so this error should never be reached.
+
+    certAuthors :: Set (KeyHash 'Witness (Crypto era))
+    certAuthors = foldr accum Set.empty (certsBody txbody)
+      where
+        accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
+        accum _cert ans = ans
+    updateKeys :: Set (KeyHash 'Witness (Crypto era))
+    updateKeys = asWitness `Set.map` propWits @era (updateBody txbody) genDelegs
+
+{- TODO DELETE ME
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
@@ -906,8 +974,41 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
     updateKeys :: Set (KeyHash 'Witness (Crypto era))
-    updateKeys = asWitness `Set.map` propWits (txup tx) genDelegs
+    updateKeys = asWitness `Set.map` propWits (maybeToStrictMaybe(txup tx)) genDelegs
+-}
 
+-- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+
+-- | Given a ledger state, determine if the UTxO witnesses in a given
+--  transaction are correct.
+verifiedWits ::
+  forall era tx body wits txout.
+  ( Era era,
+    CoreUtxow era tx body wits txout,
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
+  ) =>
+  tx era ->
+  Either [VKey 'Witness (Crypto era)] ()
+verifiedWits tx =
+  case (failed <> failedBootstrap) of
+    [] -> Right ()
+    nonEmpty -> Left nonEmpty
+  where
+    txbody = bodyTx tx
+    wits = witTx tx
+    wvkKey (WitVKey k _) = k
+    failed =
+      wvkKey
+        <$> filter
+          (not . verifyWitVKey (extractHash (hashAnnotated @(Crypto era) txbody)))
+          (Set.toList $ addrWit wits)
+    failedBootstrap =
+      bwKey
+        <$> filter
+          (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
+          (Set.toList $ bootWit wits)
+
+{- TODO DELETE ME
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 verifiedWits ::
@@ -935,15 +1036,16 @@ verifiedWits (Tx txbody wits _) =
         <$> filter
           (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
           (Set.toList $ bootWits wits)
+-}
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits ::
-  Maybe (Update era) ->
+  StrictMaybe (Update era) ->
   GenDelegs (Crypto era) ->
   Set (KeyHash 'Witness (Crypto era))
-propWits Nothing _ = Set.empty
-propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
+propWits SNothing _ = Set.empty
+propWits (SJust (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys
   where
     updateKeys' = eval (Map.keysSet pup ◁ genDelegs)

@@ -47,15 +47,17 @@ module Shelley.Spec.Ledger.Tx
       ),
     WitVKey (..),
     ValidateScript (..),
-    txwitsScript,
     extractKeyHashWitnessSet,
     addrWits',
+    bootWits',
+    scriptWits',
     evalNativeMultiSigScript,
     hashMultiSigScript,
     validateNativeMultiSigScript,
     TransTx,
     TransWitnessSet,
     prettyWitnessSetParts,
+    CoreUtxow (..),
   )
 where
 
@@ -76,6 +78,7 @@ import Cardano.Binary
     withSlice,
   )
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.CoreUtxow (CoreUtxow (..), ValidateScript (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.SafeHash (EraIndependentTx, HashAnnotated, SafeToHash (..))
@@ -310,7 +313,7 @@ segwitTx
 
 decodeWits ::
   forall era s.
-  ( Core.AnnotatedData (Core.Script era),
+  ( FromCBOR (Annotator (Core.Script era)),
     ValidateScript era
   ) =>
   Decoder s (Annotator (WitnessSet era))
@@ -379,17 +382,6 @@ instance
               txFullBytes = bytes
             }
 
--- | Typeclass for multis-signature script data types. Allows for script
--- validation and hashing.
-class
-  (Era era, ToCBOR (Core.Script era)) =>
-  ValidateScript era
-  where
-  validateScript :: Core.Script era -> Tx era -> Bool
-  hashScript :: Core.Script era -> ScriptHash (Crypto era)
-  isNativeScript :: Core.Script era -> Bool
-  isNativeScript _ = True
-
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
 evalNativeMultiSigScript ::
@@ -416,13 +408,6 @@ validateNativeMultiSigScript msig tx =
   where
     witsSet = _witnessSet tx
     vhks = Set.map witKeyHash (addrWits' witsSet)
-
--- | Multi-signature script witness accessor function for Transactions
-txwitsScript ::
-  TransTx ToCBOR era =>
-  Tx era ->
-  Map (ScriptHash (Crypto era)) (Core.Script era)
-txwitsScript = scriptWits' . _witnessSet
 
 extractKeyHashWitnessSet ::
   forall (r :: KeyRole) crypto.
