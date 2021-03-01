@@ -25,7 +25,7 @@ Each proposal has a header and a body.  % and must be signed\khcomment{Submittin
 }
 \end{verbatim}
 
-The \texttt{proposal} field allows the proposal to be tied to a corresponding off-chain proposal (see Appendix~\ref{sect:relating-off-and-on-chain} and Section~\ref{sect:proposalid}).  The \textt{voteby} and \texttt{endorseby} fields specify deadlines.
+The \texttt{proposal} field allows the proposal to be tied to a corresponding off-chain proposal (see Appendix~\ref{sect:relating-off-and-on-chain} and Section~\ref{sect:proposalid}).  The \texttt{voteby} and \texttt{endorseby} fields specify deadlines.
 Votes and endorsements must be received prior to the specified slot if they are to be counted.  The endorsement deadline is optional.
 \khcomment{Arguably, to avoid performance issues, tallying should either happen at epoch boundaries or in a separate thread.}
 In order to avoid zombie proposals that could disrupt operations, deadlines must be set within a reasonable time period after submission (e.g. within 3 epochs).
