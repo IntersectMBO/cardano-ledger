@@ -4,18 +4,21 @@
 
 All ada holders will have on-chain voting rights.  These rights are in direct proportion to the exact number of lovelace that they hold.
 They may delegate their voting rights to any registered delegate, who is expected to act faithfully on their behalf.
+Only registered delegates may actually vote, but any ada holder may choose to register if they choose to do so, and may then
+allocate their vote as they wish.
+\khcomment{There is potentially a transaction cost to voting.  This needs to be considered carefully.}
 
 \subsection{Delegate Address Registration/De-Registration}
 \label{sect:registration}
 
 Delegates must register on-chain.\khcomment{Do we need a certificate?  I think they only need an address, right?}  Once registered, ada holders may delegate their
 vote to any registered delegate by submitting a vote delegation transaction that includes the registered delegate address.\khcomment{How do voters know about the available delegates?}
-Ada holders may change this delegation at any point.  When votes are tallied, the most recent delegation is considered (in effect, a snapshot is taken for the tally).
+Ada holders may change this delegation at any point in time.  When votes are tallied, the most recent delegation choice is considered.
 A deposit is taken when a delegate registers.  Delegates may choose to de-register at any time by submitting a de-registration transaction.  The de-registration takes effect
 at the specified point.  A protocol paramter governs the least and greatest notice that must be given for de-registration.  When a delegate de-registers, their deposit is returned,
 the address becomes void, and any vote delegation to that address no longer has any effect.
 
-The registration certificate must include:
+\paragraph{Registration Certificate.} The delegate registration certificate must include:
 
 \begin{tabular}{||l|p{3in}|l||}
   \hline\hline
@@ -26,7 +29,7 @@ The registration certificate must include:
 
 The transaction must be signed by the delegate's private key.  The registration comes into effect as soon as the transaction is accepted on-chain.
 
-De-registration certificates must include:
+\paragraph{De-Registration Certificate.} Delegate de-registration certificates must include:
 
 \begin{tabular}{||l|p{3in}|l||}
   \hline\hline
@@ -41,7 +44,7 @@ De-registration takes effect from the retirement date (at a specific epoch bound
 
 \subsection{Vote Delegation}
 
-Ada stakeholders delegate their vote by issuing an on-chain transaction.  As with stake, vote delegation may be transferred, but never retracted.\khcomment{There is an argument that you should  be able to delegate to no-one, but it seems sensible to maintain consistency with the stake delegation mechanism.}
+Ada stakeholders delegate their vote by issuing an on-chain transaction.  As with normal stake delegation, vote delegation may be transferred from one delegate tp another, but can never be retracted.\khcomment{There is an argument that you should  be able to delegate to no-one, but it seems sensible to maintain consistency with the stake delegation mechanism.}
 
 Vote delegation transactions must include:
 
@@ -54,11 +57,13 @@ Vote delegation transactions must include:
   \hline
 \end{tabular}
 
-Vote delegation comes into effect immediately the transaction has appeared on-chain.  There is no stability window.  Delegations may be made up to the point where votes are tallied.
+Vote delegation comes into effect immediately that the transaction has appeared on-chain.  % There is no stability window.
+Vote delegations may be made at any time up to the point where votes are tallied.
 
 \subsection{Voting Indirection}
 
-The current ledger design separates spending and block production delegation, associating two keys with a single address.
+The Shelley ledger design separates the addresses that are used spending and block production delegation, associating two keys with a single address.
+\khcomment{Keys or addresses.}
 
 %\begin{figure}[h!]
 \begin{center}
@@ -72,7 +77,7 @@ The current ledger design separates spending and block production delegation, as
 %  \caption{Address and key rights in Cardano: Status Quo}
 %\end{figure}
 
-The new design adds an additional key for vote delegatation.
+This design adds an additional key for vote delegatation.
 
 % \begin{figure}[h!]
 \begin{center}
@@ -87,9 +92,9 @@ The new design adds an additional key for vote delegatation.
 %  \caption{Address and key rights in Cardano: New Design}
 %\end{figure}
 
-It is necessary to register both block and vote delegation intentions on-chain.  This may be done in a single transaction or independently.
-The design allows independent vote and block production delegation, and also allows those rights to be passed to a third party (by providing them
-with the corresponding private keys). \khcomment{Make sure this is clear and consistent with the current stake key approach.} \khcomment{Confirm that a single transaction can be used.}
+It is necessary to register both block and vote delegation intentions on-chain.  This may be done either in a single transaction or in two separate transactions,
+as preferred.  The design allows independent delegation of vote and block production rights,
+and also allows those rights to be passed to a third party (by issuing them the corresponding private keys). \khcomment{Make sure this is clear and consistent with the current stake key approach.} \khcomment{Confirm that a single transaction can be used.}
 The private key can be passed to another party to allow for transfers of delegation rights, but there is no way to independently revoke any key, or to remove
 delegation capability without revoking the corresponding key.  \khcomment{Confirm this.}
 
