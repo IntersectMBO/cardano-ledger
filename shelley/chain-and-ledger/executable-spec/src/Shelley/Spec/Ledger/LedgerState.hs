@@ -829,6 +829,7 @@ diffWitHashes (WitHashes x) (WitHashes x') =
   WitHashes (x `Set.difference` x')
 
 -- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+
 -- | Extract the witness hashes from the Witness set.
 witsFromWitnessSet ::
   forall era tx body wits txout.
@@ -840,8 +841,8 @@ witsFromWitnessSet wits =
     Set.map witKeyHash (addrWit wits)
       `Set.union` Set.map bootstrapWitKeyHash (bootWit wits)
 
-
 -- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
@@ -901,9 +902,8 @@ witsVKeyNeeded utxo' tx genDelegs =
     updateKeys :: Set (KeyHash 'Witness (Crypto era))
     updateKeys = asWitness `Set.map` propWits @era (updateBody txbody) genDelegs
 
-
-
 -- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 verifiedWits ::
@@ -932,7 +932,6 @@ verifiedWits tx =
         <$> filter
           (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
           (Set.toList $ bootWit wits)
-
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.

@@ -322,6 +322,7 @@ scriptCred (KeyHashObj _) = Nothing
 scriptCred (ScriptHashObj hs) = Just hs
 
 -- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
 scriptsNeeded ::
@@ -351,6 +352,7 @@ scriptsNeeded u tx =
     certificates = (toList . certsBody) txb
 
 -- This function has only one use in Shelley.Spec.Ledger.STS.Utxow
+
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript ::
