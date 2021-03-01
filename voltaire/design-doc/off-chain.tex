@@ -1,0 +1,109 @@
+\section{Off-Chain Process}
+\label{sect:off-chain}
+
+This appendix outlines possible off-chain processes, and how they would interact with the on-chain process that is the focus of this design document.
+
+\subsection{Proposal Implementation}
+
+On-chain proposals must follow the precise format that is given in Section~\ref{sect:submission}.
+
+\paragraph{Proposal Editors.}  May be involved to confirm that the proposal is documented according to the required procedures, and that the change is properly recorded.
+
+\paragraph{Technical Experts.}  May be involved to formulate the proposal and ensure that it is processed according to the procedures.
+
+\paragraph{Software Developers.} Will be involved to implement new node and other software that is required by a new protocol version.
+
+\paragraph{Security Experts.} Will be involved to advise on the effects of parameter changes, and to advise on the security implications of new software.
+
+It is important that all deadlines are specified precisely in any on-chain proposal, and that sensible deadlines are chosen, based on the type of proposal and any
+voting decision that has been made.  It is also essential that all requirements are followed in terms of submission times, stability windows signing etc, so that a proposal is not
+rejected unnecessarily.
+
+
+\subsection{Relating on-chain and off-chain proposals}
+\label{sect:relating-off-and-on-chain}
+
+It may be necessary to relate off-chain discussion and decisions to the corresponding on-chain proposal and enactment.  The unique proposal
+identifier allows a proposal to be tracked on-chain, but does not link it directly to off-chain discussion.
+
+\begin{description}
+\item [Manual.]
+  A member of the community (eg the proposal submitter), creates the link.  The proposal is tracked automatically through an on-chain explorer, and the result is
+  displayed in a form where it can be tracked by the original voting group or other interested parties.
+\item [Automatic.]
+  An identifier is constructed following a successful off-chain vote.  This could be a hash or some other form.  The identifier is used by the proposal implementors and editors, and is embedded
+  in the proposal implementation.  The identifier is linked to the on-chain identifier, and the progress of the proposal is then tracked automatically on-chain, as described above.
+\end{description}
+
+In both cases, it may be possible or even necessary for multiple on-chain proposals to refer to the same off-chain identifier.  This could happen where, for example:
+
+\begin{itemize}
+\item
+  An incorrect proposal is submitted on-chain.
+\item
+  A proposal fails to be enacted for some reason, and a new version is therefore submitted on-chain.
+\item
+  An off-chain proposal gives rise to multiple on-chain proposals.  For example, multiple independent funds transfers might be submitted as the result of a single
+  decision; independent proposals might be submitted for each of two parameter changes; a protocol version might be upgraded and some specific parameter settings made independently;
+  parameters might be changed over repeated epochs (e.g. to gradually increase/decrease some parameter); parameters might be changed in one epoch, in preparation for a protocol version
+  change in a subsequent epoch.
+\end{itemize}
+
+Tracking proposals in this way helps preserve continuity, and provides explanations for enacting specific on-chain proposals.  This will be especially helpful where many proposals
+are simultaneously under consideratation.
+
+
+\subsection{Security Threats.}
+
+In most cases, security threats should not be made public until a fix has been prepared, and ideally until it has been enacted on-chain.  This mitigates the risk of
+security vulnerabilities affecting the continuity of the blockchain. However, it creates a conflict with the
+principle of full decentralisation and transparency of government.  An acceptable process needs to be developed that will meet the required security and openness goals.
+\emph{In particular, it may be necessary to prioritise security over transparency, and to accept lower levels of decentralisation.  It may also be necessary to consider
+  the legal implications of specific actions or governance structures.}
+While vulnerabilities in the node or other software may be fixed out-of-band, without needing any governance mechanism,
+security vulnerabilities in the protocol will, of course, usually require a protocol version change (``hard fork'').
+
+\TODO{Survey the literature on blockchain security and open governance, and consider solutions that have been proposed.  Priviledge does not directly consider security, as far as I am aware?  It allows
+  proposal prioritisation and deadlines, which provide one way to help deal with security problems.}
+
+\TODO{Take input from the IOG security group.}
+
+Possible approaches include:
+
+\begin{itemize}
+\item
+  Allow security issues to completely bypass the off-chain discussion, ideation and voting phases.  Appoint a committee of experts to assess security threats.
+  Ensure that security threats are classified, and prioritise the implementation of solutions to those threats.  Where the protocol needs to be changed, ensure that this
+  proposal has sufficient priority.  Proposals should still comply with implementation requirements, but there may be a moratorium on documentation until the proposal has
+  been enacted.
+\item
+  Allow security issues to bypass discussion and ideation, but then follow the usual voting, implementation, checking etc process.  This may be appropriate for low threats,
+  or ones that cannot be easily enacted without rapid detection and response, but raises significant risks where a major or easily exploited vulnerability has been found.
+\end{itemize}
+
+
+\subsection{Legal Issues}
+
+Legal input needs to be taken on the governance structure.  In particular, care needs to be taken over group liability.  Indemnity insurance may be necessary or advisable when
+undertaking some roles.
+
+\TODO{Obtain legal input before setting up the procedures.}
+
+
+\subsection{Scope of Governance Issues}
+
+The PUP mechanism is confined to:
+
+\begin{enumerate}
+\item
+  changes in updatable protocol parameters;
+\item
+  protocol version upgrades (``hard forks'');
+\item
+  central funds transfers (``MIRs'').
+\end{enumerate}
+
+Decisions that are taken on parameter and protocol version updates will generally be highly technical.  Discussion may be confined to expert groups, implementation made by
+technical experts, and delegates will usually be drawn from those with significant technical expertise.  Decisions must be made in a timely manner, with on-chain enactment.
+It may be necessary to establish a separate governance track, different voting thresholds, and specific procedures for such decisions, including some way to prioritise and
+filter business.

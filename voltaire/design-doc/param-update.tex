@@ -37,7 +37,7 @@
 \setpremisesspace{20pt}
 
 % data for Deliverable header -- added by KH from an EU H2020 project template
-\DeliverableNumber{VL-D1}
+\DeliverableNumber{PUP-D1}
 \DeliverableTitle{The Design of the Cardano Ledger with Automated Parameter Updates and Central Fund Transfers}{Design Document: Automated Updates/Fund Transfers}
 \DeliverableResponsible{Formal Methods Team}
 \EditorName{Andre Knispel, \IOHK}
@@ -87,7 +87,12 @@
 \bibliographystyle{plainnat}
 \bibliography{references}
 
-% \begin{appendix}
-% \end{appendix}
+\clearpage
+\appendix
+
+\input{off-chain}
+\clearpage
+
+\input{transition}
 
 \end{document}

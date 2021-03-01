@@ -5,10 +5,11 @@
 Proposals are submitted by a member of a submitter group.  They are counter-signed by a quorum of submitter keys.\khcomment{Difficult question: who controls registration/de-registration of submitter keys.}\khcomment{How do we ensure that there are always enough submitters in existence.}\khcomment{The quorum may be a protocol parameter.}
 No fee is charged for proposal submission.\khcomment{This may need to be discussed.}
 A submitter may submit any number of proposals in a single epoch.
+\khcomment{This assumes that submitters will not spam the blockchain.}
 
 \subsection{Format}
 
-Each proposal has a header and a body and must be signed\khcomment{Submitting may implicitly sign the proposal?}.
+Each proposal has a header and a body.  % and must be signed\khcomment{Submitting may implicitly sign the proposal?}.
 
 \paragraph{Header.} The header must include:
 
@@ -24,27 +25,26 @@ Each proposal has a header and a body and must be signed\khcomment{Submitting ma
 }
 \end{verbatim}
 
-The proposal field allows the proposal to be tied to a corresponding off-chain proposal.  The ``voteby'' and ``endorseby'' fields specify deadlines.
+The \texttt{proposal} field allows the proposal to be tied to a corresponding off-chain proposal (see Appendix~\ref{sect:relating-off-and-on-chain} and Section~\ref{sect:proposalid}).  The \textt{voteby} and \texttt{endorseby} fields specify deadlines.
 Votes and endorsements must be received prior to the specified slot if they are to be counted.  The endorsement deadline is optional.
 \khcomment{Arguably, to avoid performance issues, tallying should either happen at epoch boundaries or in a separate thread.}
 In order to avoid zombie proposals that could disrupt operations, deadlines must be set within a reasonable time period after submission (e.g. within 3 epochs).
 Voting and endorsement slots and thresholds are completely independent, so a voting deadline may be set before/after/at the same time as an endorsement deadline.
-Deadlines may not be set in the past.
-
-
-The ``votethreshold'' and ``endorsethreshold'' field allow specific thresholds to be set for voting and endorsement, respectively.  This allows differentiation of different proposal types on a per-proposal basis
-(e.g. a protocol version upgrade may require a higher threshold than a simple parameter change).
+Deadlines can never be set in the past.
+%
+The \texttt{votethreshold} and \texttt{endorsethreshold} fields allow specific thresholds to be set for voting and endorsement, respectively.  This allows the type of proposal to be differentiated on a per-proposal basis
+(e.g. a protocol version upgrade may require a higher vote threshold than a simple parameter change).
 \khcomment{Arguably, this is dangerous and standard or minimum thresholds should be set as protocol parameters.}
-
-The ``enact'' field specifies when the proposal is to be enacted.
-
-The submitter must belong to the correct group.  \khcomment{Different groups for each kind of proposal?}
+%
+The \texttt{enact} field specifies when the proposal is to be enacted if it is approved and endorsed.  This will always be in the future.
+%
+The proposal submitter must belong to the correct submitter group.  \khcomment{Different groups for each kind of proposal?}
 
 The body of the proposal is specific to the proposal type.
 
 \newpage
-\paragraph{Parameter Update.}  The format is identical to that used for Shelley/Allegra/Mary.  Multiple parameters may be changed in a single proposal.
-Parameters are checked for validity on enactment, rather than on submission.
+\paragraph{Parameter Update Body.}  The proposal format is identical to that used for Shelley/Allegra/Mary/Alonzo. \TODO{Check the format.}  Multiple parameters may be changed in a single proposal if required.
+Parameters are checked for validity on enactment, rather than on submission, so it is possible to submit a proposal that will change parameters following a future protocol version upgrade, for example.
 
 
 \begin{verbatim}
@@ -55,7 +55,7 @@ Parameters are checked for validity on enactment, rather than on submission.
 }
 \end{verbatim}
 
-\paragraph{Protocol Version Upgrade.}  The format is also identical to that used for Shelley/Allegra/Mary.
+\paragraph{Protocol Version Upgrade Body.}  The format is also identical to that used for Shelley/Allegra/Mary/Alonzo.
 
 
 \begin{verbatim}
@@ -72,8 +72,10 @@ Node software only needs to comply with the new protocol rules.  It does not nee
 
 \khcomment{We might also need to include some hash here that can be verified by the system?}
 
-\paragraph{Central Funds Transfer.}  The format is also identical to that used for Shelley/Allegra/Mary.
-
+\paragraph{Central Funds Transfer Body.}  The format is also identical to that used for Shelley/Allegra/Mary/Alonzo.
+A single proposal may cover multiple funds transfers.  These are enacted in the order they are encountered.
+\khcomment{There is a tradeoff here: submit many proposals that may clog up the system, or submit a few.  Even if there are fewer proposals, transaction size limits mean
+that a set of transfers (for Catalyst funds, for instance), may  need to broken down into a large number of submission.}
 
 \begin{verbatim}
 "body": {
@@ -81,7 +83,6 @@ Node software only needs to comply with the new protocol rules.  It does not nee
   "to" : Optional Treasury/Reserves,
   "toAddress" : Optional Address,
   "amount" : Nat
- ...
 }
 \end{verbatim}
 
@@ -91,7 +92,8 @@ Multiple transfers may be made in a single epoch.  This allows for proper accoun
 be authorised by different groups of individual.
 
 Errors in transfers between reserves and treasury, or vice-versa, may be corrected by constructing a reverse transfer that cancels the original error.
-This cannot happen for transfers to addresses, of course.  Any errors must be corrected by the owner of the address.  This implies that
+This cannot happen for transfers to addresses, of course.  Any errors must be corrected by the owner of the address, who must either explicitly transfer
+the funds to reserves or treasury, or else transfer the funds to a holding account. \khcomment{There is no way to transfer back at the moment!}
 
 \subsection{Proposal Signing}
 
@@ -120,11 +122,11 @@ There are three obvious ways to construct an identifier.
 \item
   [Option 1.]
   An explicit identifier that is assigned manually, and is included in the proposal submission.  This could be tied, if desired, directly to the off-chain proposal/discussion.
-  Care needs to be taken to ensure uniqueness of any manually assigned proposal identifier.
+  Care needs to be taken to ensure uniqueness of any manually assigned proposal identifier.  This is shown above as the \texttt{proposal} field.
 \item
   [Option 2.]
   The identifier is constructed by hashing the submitted proposal.  This allows proposals to be identified before submission as well as during voting and enactment.  This property may be
-  useful to connect off-chain and on-chain mechanisms for example.  \emph{Collision resistance} is required.
+  useful to connect off-chain and on-chain mechanisms for example.  \emph{Collision resistance} is required for the hash. \khcomment{Confirm this.}
 \item
   [Option 3.]
   The transaction identifier is used to identify the proposal.  This has the advantage that it is already available on-chain, and is guaranteed to be unique.  However, it cannot be

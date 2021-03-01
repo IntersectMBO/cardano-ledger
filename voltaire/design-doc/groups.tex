@@ -1,4 +1,6 @@
-\section{Groups Involved}
+\section{Main Groups Involved}
+
+We can identify a number of distinct groups that may be involved in proposal submission, discussion and enactment.
 
 \begin{tabular}{||l|l|l||}
   \hline \hline
@@ -19,7 +21,7 @@
   \hline
   Other Expert Groups			       & Provide feedback on proposals. & Off-chain \\
   \hline
-  CIP Editors			   & Ensure that proposals are documented & Off-chain \\
+  Proposal Editors			   & Ensure that proposals are documented & Off-chain \\
                      & in the required way. &  \\
   \hline
   Proposal Implementors			   & Produce formal proposals/software. & Off-chain\\
@@ -58,25 +60,27 @@ They may also evaluate security threats and may, in extremis, produce proposals 
 Other Expert Groups may be called on to provide advice or reports to inform general ada holders or other groups that are involved in the
 governance process.  This could include performance issues, technical blockchain expertise, economic advice, advice on implementation etc.
 
-\subsection{CIP Editors (Off-Chain)}
+\subsection{Proposal Editors (Off-Chain)}
 
-CIP Editors ensure that proposals are documented in the correct form, and recorded in the CIP repository.
+Proposal Editors\footnote{Currently CIP Editors, where CIP stands for Cardano Improvement Proposal.} ensure that proposals are documented correctly, and that they are recorded in the
+permanent repository.
 This provides a persistent record of the rationale for each proposal, and allows traceability between informal off-chain
 proposals and the formal on-chain proposal.  This process may include providing hashes or other information to support traceability.
 
 \subsection{Proposal Implementors (Off-Chain)}
 
 Proposal Implementors transform accepted proposals that have been voted on by ada holders into formal proposals that can be submitted on chain.
-They are responsible for providing necessary documentation, and complying with the required processes, including producing an acceptable CIP
-and meeting any verification/traceability requirements.  For simple parameter updates, implementation may be in the form of a single JSON
-file that fully describes the proposal.
+They are responsible for providing necessary documentation, and for compliance with the required processes.  This may include producing an acceptable formal proposal
+\footnote{CIP}
+and meeting any necessary verification/traceability requirements.  For simple parameter updates or funds transfers, implementation may be in the form of a single JSON
+file that fully describes the proposal. Protocol version upgrades will also require the corresponding software implementation.
 
 \subsection{Submitters (On-Chain)}
 
 Submitters are permitted to submit proposals on-chain.  Each proposal must be signed by a quorum of submitters, who verify the submitted
 proposal, checking that it is in the correct format, conforms to the original proposal, and meets other process requirements.
 Submitters are appointed by endorsers.  Depending on the governance design, the submitter group might be restricted to a few members,
-be an elected or appointed group, be limited by ada holding, be limited to endorsers, delegates or another group.
+be an elected or appointed group, be limited by ada holding, or be limited to endorsers, delegates or another group.
 
 \subsection{Delegates (On-Chain)}
 
@@ -88,8 +92,8 @@ be respected community members.  Although in many cases delegates may also be
 stake pool operators, the separation of vote delegation from delegation for
 block production separates politics from economics.  Ada holders may choose to
 delegate ada to good block producers in an apolitical way, and to support
-delegates that represent their opinions without considering their abilities as
-block producers.  Delegates must ensure that the proposals meet the required
+delegates that represent their political opinions without considering their abilities as
+block producers.  Delegates must track any discussions and ensure that the proposals meet the required
 security and other concerns.
 
 \subsection{Endorsers (On-Chain, May not be needed)}

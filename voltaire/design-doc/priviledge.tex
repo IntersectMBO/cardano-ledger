@@ -13,13 +13,15 @@ Its design is described in~\ref{Priviledge}, and has been used to inform the des
   Proposals are tracked throughout & Proposals are tracked once they are on-chain \\\hline
   Does not identify actor groups & Clearly identifies actor groups \\\hline
   Supports vote abstention & Treats abstention as rejection \\\hline
+  Allows votes to be removed prior to tally & Allows votes and delegations to be changed prior to tally (equivalent effect) \\\hline
   Allows multiple voting rounds & Allows only one on-chain voting round \\\hline
   Allows  vote stake snapshots to be taken at arbitrary points & Takes vote snapshots at fixed points \\\hline
   Explicit prioritisation & Submission time-based prioritisation \\\hline
+  Proposals can be cancelled & Proposals cannot be cancelled once they are approved and endorsed \\\hline
   Includes software upgrades & Does not consider software upgrades, except where these are protocol version changes \\\hline
   Does not handle central funds transfers & Handles central funds transfers \\\hline
   Does not support vote delegation & Supports vote delegation \\\hline
-  Requires version numbering & No version numbering \\\hline
+  Requires version numbering in each proposal & No version numbering \\\hline
   Single proposal enactment at an epoch boundary\khcomment{From memory.  Check this.}  & Multiple proposal enactment at each epoch boundary \\\hline
   %   Does not include specific protocol parameters & Includes protocol parameter updates \\\hline
   %% Not sure what I meant by that?  KH
