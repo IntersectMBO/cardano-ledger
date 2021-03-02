@@ -20,7 +20,20 @@
 
 module Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
-    TxWitness (TxWitness, txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs),
+    TxWitness
+      ( TxWitness,
+        txwitsVKey,
+        txwitsBoot,
+        txscripts,
+        txdats,
+        txrdmrs,
+        TxWitness',
+        txwitsVKey',
+        txwitsBoot',
+        txscripts',
+        txdats',
+        txrdmrs'
+      ),
     ppRdmrPtr,
     ppTxWitness,
   )
@@ -132,6 +145,21 @@ deriving newtype instance
 
 -- =====================================================
 -- Pattern for TxWitness
+
+-- | Defines primed selectors without  ToCBOR (Core.Script era) constraints
+--  needed for construction, but not for accessing fields.
+pattern TxWitness' ::
+  Set (WitVKey 'Witness (Crypto era)) ->
+  Set (BootstrapWitness (Crypto era)) ->
+  Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  Map (DataHash (Crypto era)) (Data era) ->
+  Map RdmrPtr (Data era, ExUnits) ->
+  TxWitness era
+pattern TxWitness' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} <-
+  TxWitnessConstr
+    (Memo (TxWitnessRaw txwitsVKey' txwitsBoot' txscripts' txdats' txrdmrs') _)
+
+{-# COMPLETE TxWitness' #-}
 
 pattern TxWitness ::
   (Era era, ToCBOR (Core.Script era)) =>

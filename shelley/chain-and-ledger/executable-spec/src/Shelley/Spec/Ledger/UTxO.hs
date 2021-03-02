@@ -55,8 +55,8 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Era
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut, UsesValue)
-import Cardano.Ledger.Val ((<+>), (<×>))
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
+import Cardano.Ledger.Val (Val (zero, (<+>), (<×>)))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
   ( BaseRep (MapR),
@@ -256,14 +256,14 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
--- | Determine the total balance contained in the UTxO.
+-- | Determine the total balance contained in the UTxO. Use minimal constraints
 balance ::
-  ( UsesValue era,
-    UsesTxOut era
+  ( Val (Core.Value era),
+    HasField "value" (Core.TxOut era) (Core.Value era)
   ) =>
   UTxO era ->
   Core.Value era
-balance (UTxO utxo) = Map.foldl' addTxOuts mempty utxo
+balance (UTxO utxo) = Map.foldl' addTxOuts zero utxo
   where
     addTxOuts !b out = (getField @"value" out) <+> b
 

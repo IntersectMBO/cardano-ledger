@@ -23,7 +23,16 @@ module Cardano.Ledger.Alonzo.Data
     DataHash,
     hashData,
     -- $
-    AuxiliaryData (AuxiliaryData, scripts, dats, txMD),
+    AuxiliaryData
+      ( AuxiliaryData,
+        scripts,
+        dats,
+        txMD,
+        AuxiliaryData',
+        scripts',
+        dats',
+        txMD'
+      ),
     AuxiliaryDataHash,
     -- $
     ppPlutusData,
@@ -128,9 +137,9 @@ hashData d = hashAnnotated d
 -- Version without serialized bytes
 
 data AuxiliaryDataRaw era = AuxiliaryDataRaw
-  { scripts' :: Set (Core.Script era),
-    dats' :: Set (Data era),
-    txMD' :: Set (Metadata)
+  { scriptsR :: Set (Core.Script era),
+    datsR :: Set (Data era),
+    txMDR :: Set (Metadata)
   }
   deriving (Generic)
 
@@ -202,6 +211,16 @@ deriving via
       FromCBOR (Annotator (Core.Script era))
     ) =>
     FromCBOR (Annotator (AuxiliaryData era))
+
+pattern AuxiliaryData' ::
+  Set (Core.Script era) ->
+  Set (Data era) ->
+  Set (Metadata) ->
+  AuxiliaryData era
+pattern AuxiliaryData' {scripts', dats', txMD'} <-
+  AuxiliaryDataConstr (Memo (AuxiliaryDataRaw scripts' dats' txMD') _)
+
+{-# COMPLETE AuxiliaryData' #-}
 
 pattern AuxiliaryData ::
   (Era era, ToCBOR (Core.Script era), Ord (Core.Script era)) =>

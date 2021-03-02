@@ -33,7 +33,21 @@ module Cardano.Ledger.Alonzo.TxBody
         mint,
         exunits,
         sdHash,
-        scriptHash
+        scriptHash,
+        TxBody',
+        txinputs',
+        txinputs_fee',
+        txouts',
+        txcerts',
+        txwdrls',
+        txfee',
+        txvldt',
+        txUpdates',
+        txADhash',
+        mint',
+        exunits',
+        sdHash',
+        scriptHash'
       ),
     AlonzoBody,
     EraIndependentWitnessPPData,
@@ -228,6 +242,60 @@ deriving via
     ) =>
     FromCBOR (Annotator (TxBody era))
 
+-- | Defines primed selectors for TxBody, without (AlonzoBody era) constraints
+--  needed for constrauction, but not for accessing fields.
+pattern TxBody' ::
+  Set (TxIn (Crypto era)) ->
+  Set (TxIn (Crypto era)) ->
+  StrictSeq (TxOut era) ->
+  StrictSeq (DCert (Crypto era)) ->
+  Wdrl (Crypto era) ->
+  Coin ->
+  ValidityInterval ->
+  StrictMaybe (Update era) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  Value (Crypto era) ->
+  ExUnits ->
+  StrictMaybe (WitnessPPDataHash (Crypto era)) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  TxBody era
+pattern TxBody'
+  { txinputs',
+    txinputs_fee',
+    txouts',
+    txcerts',
+    txwdrls',
+    txfee',
+    txvldt',
+    txUpdates',
+    txADhash',
+    mint',
+    exunits',
+    sdHash',
+    scriptHash'
+  } <-
+  TxBodyConstr
+    ( Memo
+        TxBodyRaw
+          { _inputs = txinputs',
+            _inputs_fee = txinputs_fee',
+            _outputs = txouts',
+            _certs = txcerts',
+            _wdrls = txwdrls',
+            _txfee = txfee',
+            _vldt = txvldt',
+            _update = txUpdates',
+            _adHash = txADhash',
+            _mint = mint',
+            _exunits = exunits',
+            _sdHash = sdHash',
+            _scriptHash = scriptHash'
+          }
+        _
+      )
+
+{-# COMPLETE TxBody' #-}
+
 -- The Set of constraints necessary to use the TxBody pattern
 type AlonzoBody era =
   ( Era era,
@@ -288,36 +356,36 @@ pattern TxBody
       )
   where
     TxBody
-      inputs'
-      inputs_fee'
-      outputs'
-      certs'
-      wdrls'
-      txfee'
-      vldt'
-      update'
-      adHash'
-      mint'
-      exunits'
-      sdHash'
-      scriptHash' =
+      inputsX
+      inputs_feeX
+      outputsX
+      certsX
+      wdrlsX
+      txfeeX
+      vldtX
+      updateX
+      adHashX
+      mintX
+      exunitsX
+      sdHashX
+      scriptHashX =
         TxBodyConstr $
           memoBytes
             ( encodeTxBodyRaw $
                 TxBodyRaw
-                  inputs'
-                  inputs_fee'
-                  outputs'
-                  certs'
-                  wdrls'
-                  txfee'
-                  vldt'
-                  update'
-                  adHash'
-                  mint'
-                  exunits'
-                  sdHash'
-                  scriptHash'
+                  inputsX
+                  inputs_feeX
+                  outputsX
+                  certsX
+                  wdrlsX
+                  txfeeX
+                  vldtX
+                  updateX
+                  adHashX
+                  mintX
+                  exunitsX
+                  sdHashX
+                  scriptHashX
             )
 
 {-# COMPLETE TxBody #-}
