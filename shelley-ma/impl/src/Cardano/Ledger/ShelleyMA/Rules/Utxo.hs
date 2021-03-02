@@ -87,6 +87,7 @@ import Shelley.Spec.Ledger.UTxO
     txup,
     unUTxO,
   )
+import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
 {- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
 (passed to it as Coin mv) as a specification of "the cost of
@@ -448,7 +449,7 @@ instance
 
 instance
   ( TransValue FromCBOR era,
-    Shelley.TransUTxOState FromCBOR era,
+    Shelley.TransUTxO FromCBOR era,
     Val.DecodeNonNegative (Core.Value era),
     Show (Core.Value era),
     FromCBOR (PredicateFailure (Core.EraRule "PPUP" era))

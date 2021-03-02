@@ -28,6 +28,7 @@ import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.SafeHash (EraIndependentTxBody, SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Cardano.Prelude (LByteString)
@@ -35,6 +36,7 @@ import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Coerce (coerce)
+import Data.Default.Class (def)
 import Data.IP (toIPv4)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
@@ -100,7 +102,6 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShots (..),
     Stake (..),
   )
-import Cardano.Ledger.SafeHash (SafeHash, EraIndependentTxBody, extractHash, hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),
@@ -126,8 +127,8 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState (..),
     NewEpochState (..),
+    PulsingRewUpdate (Complete),
     RewardUpdate (..),
-    PulsingRewUpdate(Complete),
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.OCert
@@ -153,7 +154,7 @@ import Shelley.Spec.Ledger.Serialization
     ipv4ToBytes,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), WitnessSet, hashScript)
+import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet, WitnessSetHKD (..), hashScript)
 import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),
     PoolMetadata (..),
@@ -195,7 +196,6 @@ import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
-import Data.Default.Class (def)
 
 -- ============================================
 
@@ -768,7 +768,7 @@ tests =
                   )
               )
           e = EpochNo 0
-       in checkEncodingCBOR
+       in checkEncodingCBORAnnotated
             "full_update"
             (Update ppup e)
             ( (T $ TkListLen 2)
@@ -1313,7 +1313,7 @@ tests =
               es
               (SJust ru)
               pd
-       in checkEncodingCBOR
+       in checkEncodingCBORAnnotated
             "new_epoch_state"
             nes
             ( T (TkListLen 6)

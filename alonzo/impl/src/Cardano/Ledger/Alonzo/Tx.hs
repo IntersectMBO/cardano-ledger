@@ -266,7 +266,7 @@ instance
   ( Era era,
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (Annotator (Core.AuxiliaryData era)),
-    Core.SerialisableData (PParamsDelta era),
+    Core.AnnotatedData (PParamsDelta era),
     ToCBOR (Core.Script era),
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era),
@@ -295,7 +295,7 @@ deriving via
     ( Era era,
       FromCBOR (Annotator (Core.Script era)),
       FromCBOR (Annotator (Core.AuxiliaryData era)),
-      Core.SerialisableData (PParamsDelta era),
+      Core.AnnotatedData (PParamsDelta era),
       ToCBOR (Core.Script era),
       Typeable (Core.Script era),
       Typeable (Core.AuxiliaryData era),
@@ -492,7 +492,7 @@ indexedRdmrs ::
   ( Era era,
     ToCBOR (Core.AuxiliaryData era),
     ToCBOR (Core.Script era),
-    Core.SerialisableData (PParamsDelta era),
+    Core.AnnotatedData (PParamsDelta era),
     Compactible (Core.Value era)
   ) =>
   Tx era ->
@@ -559,7 +559,7 @@ collectNNScriptInputs ::
     ToCBOR (Core.Script era),
     Compactible (Core.Value era),
     ToCBOR (Core.AuxiliaryData era),
-    Core.SerialisableData (PParamsDelta era),
+    Core.AnnotatedData (PParamsDelta era),
     Core.Script era ~ AlonzoScript.Script era,
     HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
@@ -641,7 +641,7 @@ addOnlyCwitness !ans _ = ans
 checkScriptData ::
   forall era.
   ( ToCBOR (Core.AuxiliaryData era),
-    Core.SerialisableData (PParamsDelta era),
+    Core.AnnotatedData (PParamsDelta era),
     ValidateScript era,
     Compactible (Core.Value era),
     UsesTxOut era,

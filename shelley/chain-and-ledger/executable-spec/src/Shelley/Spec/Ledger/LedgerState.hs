@@ -110,7 +110,7 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
+import Cardano.Ledger.SafeHash (HashAnnotated, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -127,6 +127,13 @@ import Control.Provenance (ProvM, liftProv)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
+import Data.Coders
+  ( Annotator,
+    Decode (Ann, From, RecD),
+    decode,
+    decodeRecordNamed,
+    (<*!),
+  )
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
@@ -226,7 +233,7 @@ import Shelley.Spec.Ledger.Rewards
     percentile',
     sumRewards,
   )
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed, mapFromCBOR, mapToCBOR)
+import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
   ( EpochNo (..),
     EpochSize (..),
@@ -254,7 +261,8 @@ import Shelley.Spec.Ledger.TxBody
     witKeyHash,
   )
 import Shelley.Spec.Ledger.UTxO
-  ( UTxO (..),
+  ( TransUTxO,
+    UTxO (..),
     balance,
     totalDeposits,
     txinLookup,
@@ -481,18 +489,24 @@ instance (TransEpoch ToCBOR era) => ToCBOR (EpochState era) where
     encodeListLen 6 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR r <> toCBOR p <> toCBOR n
 
 instance
-  (TransEpoch FromCBOR era) =>
-  FromCBOR (EpochState era)
+  ( FromCBOR (Annotator (Core.PParams era)),
+    TransValue FromCBOR era,
+    TransUTxO FromCBOR era,
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
+    FromCBOR (Annotator (State (Core.EraRule "PPUP" era))),
+    Era era
+  ) =>
+  FromCBOR (Annotator (EpochState era))
   where
-  fromCBOR = do
-    decodeRecordNamed "EpochState" (const 6) $ do
-      a <- fromCBOR
-      s <- fromCBOR
-      l <- fromCBOR
-      r <- fromCBOR
-      p <- fromCBOR
-      n <- fromCBOR
-      pure $ EpochState a s l r p n
+  fromCBOR =
+    decode $
+      Ann (RecD EpochState)
+        <*! Ann From
+        <*! Ann From
+        <*! From
+        <*! From
+        <*! From
+        <*! Ann From
 
 data UpecState era = UpecState
   { -- | Current protocol parameters.
@@ -525,12 +539,15 @@ instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (PPUPState era) where
   toCBOR (PPUPState ppup fppup) =
     encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
 
-instance (Era era, FromCBOR (PParamsDelta era)) => FromCBOR (PPUPState era) where
-  fromCBOR = do
-    decodeRecordNamed "PPUPState" (const 2) $ do
-      ppup <- fromCBOR
-      fppup <- fromCBOR
-      pure $ PPUPState ppup fppup
+instance
+  (Era era, FromCBOR (Annotator (PParamsDelta era))) =>
+  FromCBOR (Annotator (PPUPState era))
+  where
+  fromCBOR =
+    decode $
+      Ann (RecD PPUPState)
+        <*! From
+        <*! From
 
 pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
 pvCanFollow _ SNothing = True
@@ -579,17 +596,19 @@ instance
 
 instance
   ( TransValue FromCBOR era,
-    TransUTxOState FromCBOR era
+    TransUTxO FromCBOR era,
+    FromCBOR (Annotator (State (Core.EraRule "PPUP" era))),
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
   ) =>
-  FromCBOR (UTxOState era)
+  FromCBOR (Annotator (UTxOState era))
   where
-  fromCBOR = do
-    decodeRecordNamed "UTxOState" (const 4) $ do
-      ut <- fromCBOR
-      dp <- fromCBOR
-      fs <- fromCBOR
-      us <- fromCBOR
-      pure $ UTxOState ut dp fs us
+  fromCBOR =
+    decode $
+      Ann (RecD UTxOState)
+        <*! Ann From
+        <*! Ann From
+        <*! Ann From
+        <*! From
 
 -- | New Epoch state and environment
 data NewEpochState era = NewEpochState
@@ -632,20 +651,22 @@ instance
       <> toCBOR pd
 
 instance
-  ( Typeable era,
-    TransEpoch FromCBOR era
+  ( Era era,
+    TransUTxO FromCBOR era,
+    FromCBOR (Annotator (Core.PParams era)),
+    FromCBOR (Annotator (State (Core.EraRule "PPUP" era)))
   ) =>
-  FromCBOR (NewEpochState era)
+  FromCBOR (Annotator (NewEpochState era))
   where
   fromCBOR = do
-    decodeRecordNamed "NewEpochState" (const 6) $ do
-      e <- fromCBOR
-      bp <- fromCBOR
-      bc <- fromCBOR
-      es <- fromCBOR
-      ru <- fromCBOR
-      pd <- fromCBOR
-      pure $ NewEpochState e bp bc es ru pd
+    decode $
+      Ann (RecD NewEpochState)
+        <*! Ann From
+        <*! Ann From
+        <*! Ann From
+        <*! From
+        <*! Ann From
+        <*! Ann From
 
 getGKeys ::
   NewEpochState era ->
@@ -687,14 +708,18 @@ instance
     encodeListLen 2 <> toCBOR u <> toCBOR dp
 
 instance
-  (Era era, TransLedgerState FromCBOR era) =>
-  FromCBOR (LedgerState era)
+  ( Era era,
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
+    TransUTxO FromCBOR era,
+    FromCBOR (Annotator (State (Core.EraRule "PPUP" era)))
+  ) =>
+  FromCBOR (Annotator (LedgerState era))
   where
-  fromCBOR = do
-    decodeRecordNamed "LedgerState" (const 2) $ do
-      u <- fromCBOR
-      dp <- fromCBOR
-      pure $ LedgerState u dp
+  fromCBOR =
+    decode $
+      Ann (RecD LedgerState)
+        <*! From
+        <*! Ann From
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.

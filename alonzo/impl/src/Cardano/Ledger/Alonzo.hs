@@ -5,7 +5,6 @@
 
 module Cardano.Ledger.Alonzo where
 
-import Cardano.Binary (FromCBOR (..))
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate, updatePParams)
 import Cardano.Ledger.Alonzo.Scripts (Script)
@@ -17,7 +16,6 @@ import Cardano.Ledger.Era
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints (UsesPParams (..), UsesValue)
-import Data.Typeable (Typeable)
 
 -- | The Alonzo era
 data AlonzoEra c
@@ -39,12 +37,6 @@ type instance Core.AuxiliaryData (AlonzoEra c) = AuxiliaryData (AlonzoEra c)
 type instance Core.PParams (AlonzoEra c) = PParams (AlonzoEra c)
 
 instance CC.Crypto c => UsesValue (AlonzoEra c)
-
-instance Typeable c => FromCBOR (PParams (AlonzoEra c)) where
-  fromCBOR = error "Need to work out how to deal with annotated/unannotated decoders"
-
-instance Typeable c => FromCBOR (PParamsUpdate (AlonzoEra c)) where
-  fromCBOR = error "Need to work out how to deal with annotated/unannotated decoders"
 
 instance
   (CC.Crypto c) =>
