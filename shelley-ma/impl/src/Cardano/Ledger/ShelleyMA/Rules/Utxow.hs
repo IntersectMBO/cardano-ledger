@@ -12,25 +12,34 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
 -- import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+
 -- import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
 -- import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesTxOut, UsesValue)
-import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
-import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
-import Cardano.Ledger.ShelleyMA.TxBody ()
+
 -- import Control.SetAlgebra (eval, (◁))
-import Control.State.Transition.Extended
+
 -- import Data.Foldable (Foldable (toList))
 -- import qualified Data.Map.Strict as Map
 -- import qualified Data.Maybe as Maybe
 -- import Data.Sequence.Strict (StrictSeq)
 -- import Data.Set (Set)
 -- import qualified Data.Set as Set
-import GHC.Records (HasField (..))
-import Shelley.Spec.Ledger.BaseTypes
+
 -- import Shelley.Spec.Ledger.Coin (Coin)
 -- import Shelley.Spec.Ledger.Delegation.Certificates (requiresVKeyWitness)
+
+-- import Shelley.Spec.Ledger.Scripts (ScriptHash)
+
+import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.CoreUtxow (CoreUtxow (..))
+import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
+import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
+import Cardano.Ledger.ShelleyMA.TxBody ()
+import Control.State.Transition.Extended
+import GHC.Records (HasField (..))
+import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState (UTxOState)
 import Shelley.Spec.Ledger.PParams (ProtVer)
@@ -40,14 +49,11 @@ import Shelley.Spec.Ledger.STS.Utxow
   ( UtxowPredicateFailure (..),
     utxoWitnessed,
   )
--- import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx (Tx(..), ValidateScript)
+import Shelley.Spec.Ledger.Tx (Tx (..), ValidateScript)
 import Shelley.Spec.Ledger.TxBody
   ( EraIndependentTxBody,
   )
 
-import Cardano.Ledger.CoreUtxow(CoreUtxow(..))
-import Cardano.Ledger.AuxiliaryData(ValidateAuxiliaryData)
 -- ==========================================================
 
 {-

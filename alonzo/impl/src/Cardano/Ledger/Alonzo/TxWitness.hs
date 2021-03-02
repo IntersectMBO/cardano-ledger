@@ -21,10 +21,19 @@
 module Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
     TxWitness
-       ( TxWitness,
-         TxWitness',
-         txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs,
-         txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'),
+      ( TxWitness,
+        TxWitness',
+        txwitsVKey,
+        txwitsBoot,
+        txscripts,
+        txdats,
+        txrdmrs,
+        txwitsVKey',
+        txwitsBoot',
+        txscripts',
+        txdats',
+        txrdmrs'
+      ),
     ppRdmrPtr,
     ppTxWitness,
   )

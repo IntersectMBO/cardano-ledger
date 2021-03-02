@@ -42,8 +42,18 @@ module Cardano.Ledger.Alonzo.Tx
     WitnessPPData,
     WitnessPPDataHash,
     -- Figure 3
-    Tx (Tx, body, wits, isValidating, auxiliaryData,
-        Tx', body', wits', isValidating', auxiliaryData'),
+    Tx
+      ( Tx,
+        body,
+        wits,
+        isValidating,
+        auxiliaryData,
+        Tx',
+        body',
+        wits',
+        isValidating',
+        auxiliaryData'
+      ),
     TxBody (..),
     -- Figure 4
     ScriptPurpose (..),
@@ -264,6 +274,7 @@ pattern Tx {body, wits, isValidating, auxiliaryData} <-
     Tx b w v a = TxConstr $ memoBytes (encodeTxRaw $ TxRaw b w v a)
 
 {-# COMPLETE Tx #-}
+
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------

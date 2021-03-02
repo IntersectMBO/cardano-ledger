@@ -242,11 +242,6 @@ deriving via
     ) =>
     FromCBOR (Annotator (TxBody era))
 
-
-
-
-
-
 pattern TxBody' ::
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->

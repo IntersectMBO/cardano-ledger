@@ -1,11 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Cardano.Ledger.ShelleyMA where
 
@@ -14,9 +14,10 @@ import Cardano.Ledger.AuxiliaryData
     ValidateAuxiliaryData (..),
   )
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.CoreUtxow (CoreUtxow (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Mary.Value (Value,policies,PolicyID(..))
+import Cardano.Ledger.Mary.Value (PolicyID (..), Value, policies)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
@@ -36,24 +37,21 @@ import Cardano.Ledger.ShelleyMA.Timelocks
   )
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
 import Control.DeepSeq (deepseq)
-import qualified Data.Set as Set
 import Data.Kind (Type)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import GHC.Records (HasField(..))
+import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.CompactAddr( decompactAddr )
+import Shelley.Spec.Ledger.CompactAddr (decompactAddr)
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import Shelley.Spec.Ledger.Tx
-  ( Tx(..),
+  ( Tx (..),
     TxOut (..),
     ValidateScript (..),
     WitnessSet,
-    WitnessSetHKD(..),
+    WitnessSetHKD (..),
   )
-
-import Cardano.Ledger.CoreUtxow(CoreUtxow(..))
-
 
 -- | The Shelley Mary/Allegra eras
 --
@@ -151,18 +149,17 @@ instance
   validateAuxiliaryData (AuxiliaryData md as) = deepseq as $ all validMetadatum md
   hashAuxiliaryData aux = AuxiliaryDataHash (hashAnnotated aux)
 
-
 instance CryptoClass.Crypto c => CoreUtxow (ShelleyMAEra 'Mary c) Tx TxBody WitnessSet TxOut where
-   bodyTx (Tx' body _wit _meta _) = body
-   witTx (Tx' _body wit _meta _) = wit
-   metaTx (Tx' _body _wit meta _) = meta
-   addrWit x = addrWits' x
-   bootWit x = bootWits' x
-   scriptWit x = scriptWits' x
-   updateBody x = getField @"update" x
-   wdrlsBody x = getField @"wdrls" x
-   certsBody x = getField @"certs" x
-   inputsBody x = getField @"inputs" x
-   mintBody x = Set.map policyID (policies (getField @"mint" x))
-   adHashBody x = getField @"adHash" x
-   addressOut (TxOutCompact ca _) = decompactAddr ca
+  bodyTx (Tx' body _wit _meta _) = body
+  witTx (Tx' _body wit _meta _) = wit
+  metaTx (Tx' _body _wit meta _) = meta
+  addrWit x = addrWits' x
+  bootWit x = bootWits' x
+  scriptWit x = scriptWits' x
+  updateBody x = getField @"update" x
+  wdrlsBody x = getField @"wdrls" x
+  certsBody x = getField @"certs" x
+  inputsBody x = getField @"inputs" x
+  mintBody x = Set.map policyID (policies (getField @"mint" x))
+  adHashBody x = getField @"adHash" x
+  addressOut (TxOutCompact ca _) = decompactAddr ca
