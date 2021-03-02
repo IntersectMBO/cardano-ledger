@@ -1,0 +1,75 @@
+\pagebreak
+\section{User Experience}
+\label{sect:ux}
+
+This appendix outlines how the voting experience could appear to
+
+\subsection{General Ada Holder Experience}
+
+\paragraph{General Process.} An ada holder registers their account in the voting centre.  As a result, they obtain both Catalyst voting rights and on-chan vote delegation rights.
+The voting centre displays a list of registered delegates, and allows them to delegate their vote to any delegate that they choose.  Transaction
+fees are paid for registration and for vote delegation.  The ada holder may choose to participate in the off-chain discussion and voting process for any
+parameter update or funds transfer. They will receive ada rewards for their participation.
+Voting rights are proportional to the ada that is held, both in Catalyst and on-chain.  However, there may be lag in the Catalyst system.\khcomment{It would be possible to export the vote snapshot at each epoch,
+  so that the Catalyst system could be kept up to date.  At present, I think the stake transfer is manual -- this would need to be automated, and there might need to be some changes to the Jormungandr system
+  so that it could easily record the changes.}
+
+\paragraph{Catalyst Process.}
+
+This needs to be defined, but in essence:
+
+\begin{itemize}
+\item
+  Ada holders register for Catalyst voting through the voting centre;
+\item
+  Voters are informed of active proposals in areas that interest them;
+  \khcomment{There is a tension here between participation and overload -- ada holders may find parameter updates to be too technical, for example}
+\item
+  Ada holders vote on whether the proposal should be accepted, rejected or revised -- there may be multiple voting rounds
+  before a decision is finalised;
+  \khcomment{This may reflect a change in the current Catalyst process?}
+\item
+  Once a proposal is accepted, it proceeds to formal implementation and on-chain enactment.
+\end{itemize}
+
+\paragraph{On-Chain Vote Delegation.}
+
+Ada holders may delegate their on-chain vote whenever they choose.  Vote delegation may be changed at any point in time throgh the voting centre, in
+exactly the same way as stake pool delegation.  Ada holders are warned if their chosen delegate announces their retirement, and may then redelegate their vote if they
+wish.  If they do not redelegate their vote, it will not count towards any future decision.\khcomment{Note the different possible voting thresholds.}
+When an ada holder withdraws their ada holding, they will lose their voting rights with effect from the next stake snapshot (i.e. at the start of the next
+epoch).  Similarly, when they acquire ada, they will acquire new voting rights with effect from the next stake snapshot.
+
+\paragraph{Tracking Proposals.}
+
+An explorer or other mechanism needs to be set up so that the status and progress of proposals can be tracked.  A single off-chain proposal may give rise
+to multiple on-chain proposals that need to be linked.
+
+\subsection{Delegate Experience}
+
+Ada holders may choose to become vote delegates.  They may do this on their own behalf, or as public delegates.  Public delegates
+
+
+\subsection{Additional Tools}
+
+A number of new tools or mechananisms are needed:
+
+\begin{enumerate}
+\item
+  A way to prepare business for discussion and voting via Catalyst;
+\item
+  A way to track proposals -- this implies either a significant extension to the voting centre, or some new ``explorer'' capability;
+\item
+  Changes to the voting centre to support on-chain vote registration, delegation etc.
+\item
+  A way for delegates to register and to record their on-chain votes -- perhaps via the voting centre, or perhaps via CLI commands;
+\item
+  A way for delegates to make themselves known to potential delegators.
+\item
+  A way for ada holders to become aware of delegates.
+\end{enumerate}
+
+All of these mechanisms will need to be designed and implemented.  They mainly involve the Adrestia and Daedalus teams.
+
+Proposal submission and endorsement will be done by technical experts, so can be handled via CLI commands.  It may be reasonable for delegates
+to also use the CLI, but they may have less technical expertise than stake pool operators, for example.
