@@ -56,6 +56,6 @@ class
   wdrlsBody :: body era -> Wdrl (Crypto era)
   certsBody :: body era -> StrictSeq (DCert (Crypto era))
   inputsBody :: body era -> Set (TxIn (Crypto era))
-  mintBody :: body era -> Set (ScriptHash crypto)
+  mintBody :: body era -> Set (ScriptHash (Crypto era))
   adHashBody :: body era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
   addressOut :: txout era -> Addr (Crypto era)

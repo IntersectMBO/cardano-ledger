@@ -42,7 +42,8 @@ module Cardano.Ledger.Alonzo.Tx
     WitnessPPData,
     WitnessPPDataHash,
     -- Figure 3
-    Tx (Tx, body, wits, isValidating, auxiliaryData),
+    Tx (Tx, body, wits, isValidating, auxiliaryData,
+        Tx', body', wits', isValidating', auxiliaryData'),
     TxBody (..),
     -- Figure 4
     ScriptPurpose (..),
@@ -91,7 +92,6 @@ import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
     TxWitness (..),
     ppTxWitness,
-    txdats,
     txrdmrs,
     txscripts,
   )
@@ -222,6 +222,26 @@ deriving newtype instance
   ) =>
   NoThunks (Tx era)
 
+pattern Tx' ::
+  TxBody era ->
+  TxWitness era ->
+  IsValidating ->
+  StrictMaybe (Core.AuxiliaryData era) ->
+  Tx era
+pattern Tx' {body', wits', isValidating', auxiliaryData'} <-
+  TxConstr
+    ( Memo
+        TxRaw
+          { _body = body',
+            _wits = wits',
+            _isValidating = isValidating',
+            _auxiliaryData = auxiliaryData'
+          }
+        _
+      )
+
+{-# COMPLETE Tx' #-}
+
 pattern Tx ::
   (Era era, ToCBOR (Core.AuxiliaryData era)) =>
   TxBody era ->
@@ -243,6 +263,7 @@ pattern Tx {body, wits, isValidating, auxiliaryData} <-
   where
     Tx b w v a = TxConstr $ memoBytes (encodeTxRaw $ TxRaw b w v a)
 
+{-# COMPLETE Tx #-}
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
@@ -390,7 +411,7 @@ isNonNativeScriptAddress (TxConstr (Memo (TxRaw {_wits = w}) _)) addr =
   case getValidatorHash addr of
     Nothing -> False
     Just hash ->
-      case Map.lookup hash (txscripts w) of
+      case Map.lookup hash (txscripts' w) of
         Nothing -> False
         Just scr -> not (isNativeScript @era scr)
 
@@ -476,31 +497,24 @@ instance Ord k => Indexable k (Map.Map k v) where
   atIndex i mp = fst (Map.elemAt (fromIntegral i) mp) -- If one needs the value, on can use Map.Lookup
 
 rdptr ::
-  AlonzoBody era =>
   TxBody era ->
   ScriptPurpose (Crypto era) ->
   RdmrPtr
-rdptr txb (Minting pid) = RdmrPtr AlonzoScript.Mint (indexOf pid (getMapFromValue (mint txb)))
-rdptr txb (Spending txin) = RdmrPtr AlonzoScript.Spend (indexOf txin (txinputs txb))
-rdptr txb (Rewarding racnt) = RdmrPtr AlonzoScript.Rewrd (indexOf racnt (unWdrl (txwdrls txb)))
-rdptr txb (Certifying d) = RdmrPtr AlonzoScript.Cert (indexOf d (txcerts txb))
+rdptr txb (Minting pid) = RdmrPtr AlonzoScript.Mint (indexOf pid (getMapFromValue (mint' txb)))
+rdptr txb (Spending txin) = RdmrPtr AlonzoScript.Spend (indexOf txin (txinputs' txb))
+rdptr txb (Rewarding racnt) = RdmrPtr AlonzoScript.Rewrd (indexOf racnt (unWdrl (txwdrls' txb)))
+rdptr txb (Certifying d) = RdmrPtr AlonzoScript.Cert (indexOf d (txcerts' txb))
 
 getMapFromValue :: Value crypto -> Map.Map (PolicyID crypto) (Map.Map AssetName Integer)
 getMapFromValue (Value _ m) = m
 
 indexedRdmrs ::
-  ( Era era,
-    ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Script era),
-    Core.SerialisableData (PParamsDelta era),
-    Compactible (Core.Value era)
-  ) =>
   Tx era ->
   ScriptPurpose (Crypto era) ->
   Maybe (Data era, ExUnits)
-indexedRdmrs tx sp = Map.lookup policyid (txrdmrs . txwits $ tx)
+indexedRdmrs tx sp = Map.lookup policyid (txrdmrs' . txwits $ tx)
   where
-    policyid = rdptr (body tx) sp
+    policyid = rdptr (body' tx) sp
 
 -- ===============================================================
 -- From the specification, Figure 7 "Script Validation, cont."
@@ -529,10 +543,7 @@ runPLCScript _cost _script _data _exunits = (IsValidating True, ExUnits 0 0) -- 
 
 getData ::
   forall era.
-  ( ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Script era),
-    UsesTxOut era,
-    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
+  ( HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
   ) =>
   Tx era ->
   UTxO era ->
@@ -550,7 +561,7 @@ getData tx (UTxO m) sp = case sp of
         case getField @"datahash" txout of
           Nothing -> []
           Just hash ->
-            case Map.lookup hash (txdats (wits tx)) of
+            case Map.lookup hash (txdats' (wits' tx)) of
               Nothing -> []
               Just d -> [d]
 
@@ -558,7 +569,6 @@ collectNNScriptInputs ::
   ( UsesTxOut era,
     ToCBOR (Core.Script era),
     Compactible (Core.Value era),
-    ToCBOR (Core.AuxiliaryData era),
     Core.SerialisableData (PParamsDelta era),
     Core.Script era ~ AlonzoScript.Script era,
     HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
@@ -640,11 +650,7 @@ addOnlyCwitness !ans _ = ans
 
 checkScriptData ::
   forall era.
-  ( ToCBOR (Core.AuxiliaryData era),
-    Core.SerialisableData (PParamsDelta era),
-    ValidateScript era,
-    Compactible (Core.Value era),
-    UsesTxOut era,
+  ( ValidateScript era,
     HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
   ) =>
   Tx era ->
@@ -653,7 +659,7 @@ checkScriptData ::
   Bool
 checkScriptData tx utxo (sp, _h) = any ok scripts
   where
-    scripts = txscripts (txwits tx)
+    scripts = txscripts' (txwits tx)
     isSpending (Spending _) = True
     isSpending _ = False
     ok s =
@@ -662,8 +668,8 @@ checkScriptData tx utxo (sp, _h) = any ok scripts
                && (not (isSpending sp) || not (null (getData tx utxo sp)))
            )
 
-txwits :: (Era era, ToCBOR (Core.AuxiliaryData era)) => Tx era -> TxWitness era
-txwits x = wits x
+txwits :: Tx era -> TxWitness era
+txwits x = wits' x
 
 -- =======================================================
 
