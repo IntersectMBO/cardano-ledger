@@ -31,7 +31,7 @@ where
 
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo, WithOrigin (..))
 import Control.DeepSeq (NFData)
@@ -457,7 +457,7 @@ data AdaPots = AdaPots
 
 -- | Calculate the total ada pots in the epoch state
 totalAdaPotsES ::
-  (UsesTxOut era, UsesValue era) =>
+  UsesValue era =>
   EpochState era ->
   AdaPots
 totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
@@ -477,13 +477,13 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
 
 -- | Calculate the total ada pots in the chain state
 totalAdaPots ::
-  (UsesValue era, UsesTxOut era) =>
+  UsesValue era =>
   ChainState era ->
   AdaPots
 totalAdaPots = totalAdaPotsES . nesEs . chainNes
 
 -- | Calculate the total ada in the epoch state
-totalAdaES :: (UsesTxOut era, UsesValue era) => EpochState era -> Coin
+totalAdaES :: UsesValue era => EpochState era -> Coin
 totalAdaES cs =
   treasuryAdaPot
     <> reservesAdaPot
@@ -502,5 +502,5 @@ totalAdaES cs =
       } = totalAdaPotsES cs
 
 -- | Calculate the total ada in the chain state
-totalAda :: (UsesTxOut era, UsesValue era) => ChainState era -> Coin
+totalAda :: UsesValue era => ChainState era -> Coin
 totalAda = totalAdaES . nesEs . chainNes

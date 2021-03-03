@@ -30,7 +30,8 @@ import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
 import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, updatePParams)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
-  ( TxBody,
+  ( Tx,
+    TxBody,
     TxOut (..),
     ValidateScript (hashScript, validateScript),
     hashMultiSigScript,
@@ -63,9 +64,11 @@ type instance Core.TxOut (ShelleyEra c) = TxOut (ShelleyEra c)
 
 type instance Core.Script (ShelleyEra c) = MultiSig c
 
-type instance Core.AuxiliaryData (ShelleyEra c) = Metadata
+type instance Core.AuxiliaryData (ShelleyEra c) = Metadata (ShelleyEra c)
 
 type instance Core.PParams (ShelleyEra c) = PParams (ShelleyEra c)
+
+type instance Core.Tx (ShelleyEra c) = Tx (ShelleyEra c)
 
 --------------------------------------------------------------------------------
 -- Ledger data instances

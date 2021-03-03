@@ -28,6 +28,10 @@ module Shelley.Spec.Ledger.Tx
         _body,
         _witnessSet,
         _metadata,
+        TxPrime,
+        body',
+        witnessSet',
+        metadata',
         txFullBytes
       ),
     TxBody (..),
@@ -79,7 +83,6 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.SafeHash (EraIndependentTx, HashAnnotated, SafeToHash (..))
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Constraint (Constraint)
 import Data.Foldable (fold)
@@ -92,6 +95,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.BaseTypes
@@ -215,9 +219,9 @@ prettyWitnessSetParts (WitnessSet' a b c _) = (a, b, c)
 
 -- | A fully formed transaction.
 data Tx era = Tx'
-  { _body' :: !(Core.TxBody era),
-    _witnessSet' :: !(WitnessSet era),
-    _metadata' :: !(StrictMaybe (Core.AuxiliaryData era)),
+  { _bodyS :: !(Core.TxBody era),
+    _witnessSetS :: !(WitnessSet era),
+    _metadataS :: !(StrictMaybe (Core.AuxiliaryData era)),
     txFullBytes :: BSL.ByteString
   }
   deriving (Generic)
@@ -247,6 +251,16 @@ deriving instance
   TransTx Eq era =>
   Eq (Tx era)
 
+pattern TxPrime ::
+  Core.TxBody era ->
+  WitnessSet era ->
+  StrictMaybe (Core.AuxiliaryData era) ->
+  Tx era
+pattern TxPrime {body', witnessSet', metadata'} <-
+  Tx' body' witnessSet' metadata' _
+
+{-# COMPLETE TxPrime #-}
+
 pattern Tx ::
   TransTx ToCBOR era =>
   Core.TxBody era ->
@@ -267,15 +281,29 @@ pattern Tx {_body, _witnessSet, _metadata} <-
               <> serialize witnessSet
               <> wrappedMetadataBytes
        in Tx'
-            { _body' = body,
-              _witnessSet' = witnessSet,
-              _metadata' = metadata,
+            { _bodyS = body,
+              _witnessSetS = witnessSet,
+              _metadataS = metadata,
               txFullBytes = fullBytes
             }
 
 {-# COMPLETE Tx #-}
 
+-- =====================================
+-- WellFormed instances
+
 instance (Era era, c ~ Crypto era) => HashAnnotated (Tx era) EraIndependentTx c
+
+instance body ~ (Core.TxBody era) => HasField "body" (Tx era) body where
+  getField (Tx' body _ _ _) = body
+
+instance HasField "witnessSet" (Tx era) (WitnessSet era) where
+  getField (Tx' _ wits _ _) = wits
+
+instance aux ~ (Core.AuxiliaryData era) => HasField "auxiliaryData" (Tx era) (StrictMaybe aux) where
+  getField (Tx' _ _ auxdata _) = auxdata
+
+-- =====================================
 
 segwitTx ::
   ( Era era,
@@ -302,9 +330,9 @@ segwitTx
             <> serialize witnessSet
             <> wrappedMetadataBytes
      in Tx'
-          { _body' = body,
-            _witnessSet' = witnessSet,
-            _metadata' = maybeToStrictMaybe metadata,
+          { _bodyS = body,
+            _witnessSetS = witnessSet,
+            _metadataS = maybeToStrictMaybe metadata,
             txFullBytes = fullBytes
           }
 
@@ -355,7 +383,7 @@ instance
   toCBOR tx = encodePreEncoded . BSL.toStrict $ txFullBytes tx
 
 instance
-  ( UsesTxBody era,
+  ( FromCBOR (Annotator (Core.TxBody era)),
     ValidateScript era,
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (Annotator (Core.AuxiliaryData era))
@@ -373,9 +401,9 @@ instance
       pure $
         Annotator $ \fullBytes bytes ->
           Tx'
-            { _body' = runAnnotator body fullBytes,
-              _witnessSet' = runAnnotator wits fullBytes,
-              _metadata' = maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta,
+            { _bodyS = runAnnotator body fullBytes,
+              _witnessSetS = runAnnotator wits fullBytes,
+              _metadataS = maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta,
               txFullBytes = bytes
             }
 

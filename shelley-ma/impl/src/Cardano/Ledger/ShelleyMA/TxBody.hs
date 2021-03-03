@@ -38,7 +38,6 @@ where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (Script, Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -111,10 +110,8 @@ type FamsFrom era =
     Typeable (Script era),
     Typeable (Core.AuxiliaryData era),
     Show (Value era),
-    Compactible (Value era),
     DecodeNonNegative (Value era),
     DecodeMint (Value era),
-    Val (Value era), -- Arises because we use 'zero' as the 'mint' field in 'initial'
     FromCBOR (Annotator (Core.PParams era)),
     FromCBOR (Annotator (PParamsDelta era)),
     FromCBOR (Value era),
@@ -124,7 +121,6 @@ type FamsFrom era =
 type FamsTo era =
   ( Era era,
     ToCBOR (Value era),
-    Compactible (Value era),
     EncodeMint (Value era),
     ToCBOR (Script era),
     ToCBOR (Core.PParams era),
@@ -199,7 +195,7 @@ encodeKeyedStrictMaybe key x = Omit isSNothing (Key key (E (toCBOR . fromSJust) 
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
 
 txSparse ::
-  (Val (Value era), FamsTo era) =>
+  (FamsTo era) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
@@ -319,6 +315,9 @@ instance HasField tag (TxBodyRaw e) c => HasField (tag::Symbol) (TxBody e) c whe
 -- So instead we tediously write by hand explicit HasField instances for TxBody
 -}
 
+-- ========================================
+-- WellFormed era (and a few other) instances
+
 instance Crypto era ~ crypto => HasField "inputs" (TxBody era) (Set (TxIn crypto)) where
   getField (TxBodyConstr (Memo m _)) = getField @"inputs" m
 
@@ -351,8 +350,7 @@ instance Value era ~ value => HasField "mint" (TxBody era) value where
 ppTxBody ::
   ( Era era,
     PrettyA (Value era),
-    PrettyA (PParamsDelta era),
-    Compactible (Value era)
+    PrettyA (PParamsDelta era)
   ) =>
   TxBody era ->
   PDoc
@@ -373,8 +371,7 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)) =
 instance
   ( Era era,
     PrettyA (Value era),
-    PrettyA (PParamsDelta era),
-    Compactible (Value era)
+    PrettyA (PParamsDelta era)
   ) =>
   PrettyA (TxBody era)
   where

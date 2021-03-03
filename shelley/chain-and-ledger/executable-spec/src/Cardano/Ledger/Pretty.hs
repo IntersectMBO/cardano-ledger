@@ -781,12 +781,12 @@ ppMetadatum (I n) = ppSexp "I" [ppInteger n]
 ppMetadatum (B bs) = ppSexp "B" [ppLong bs]
 ppMetadatum (S txt) = ppSexp "S" [text txt]
 
-ppMetadata :: Metadata -> PDoc
+ppMetadata :: Metadata era -> PDoc
 ppMetadata (Metadata m) = ppMap' (text "Metadata") ppWord64 ppMetadatum m
 
 instance PrettyA Metadatum where prettyA = ppMetadatum
 
-instance PrettyA Metadata where prettyA = ppMetadata
+instance PrettyA (Metadata era) where prettyA = ppMetadata
 
 -- ============================
 -- Shelley.Spec.Ledger.Tx
@@ -905,7 +905,7 @@ ppTxId (TxId x) = ppSexp "TxId" [ppSafeHash x]
 ppTxIn :: TxIn c -> PDoc
 ppTxIn (TxInCompact txid word) = ppSexp "TxIn" [ppTxId txid, ppWord64 word]
 
-ppTxOut :: (Era era, PrettyA (Core.Value era), Compactible (Core.Value era)) => TxOut era -> PDoc
+ppTxOut :: (Era era, PrettyA (Core.Value era)) => TxOut era -> PDoc
 ppTxOut (TxOutCompact caddr cval) = ppSexp "TxOut" [ppCompactAddr caddr, ppCompactForm prettyA cval]
 
 ppDelegCert :: DelegCert c -> PDoc
@@ -971,7 +971,7 @@ instance PrettyA (TxId c) where prettyA = ppTxId
 
 instance PrettyA (TxIn c) where prettyA = ppTxIn
 
-instance (Era era, PrettyA (Core.Value era), Compactible (Core.Value era)) => PrettyA (TxOut era) where prettyA = ppTxOut
+instance (Era era, PrettyA (Core.Value era)) => PrettyA (TxOut era) where prettyA = ppTxOut
 
 instance PrettyA (DelegCert c) where prettyA = ppDelegCert
 

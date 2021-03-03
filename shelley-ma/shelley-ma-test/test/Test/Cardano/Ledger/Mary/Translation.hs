@@ -43,7 +43,7 @@ maryEncodeDecodeTests =
     "encoded allegra types can be decoded as mary types"
     [ testProperty
         "decoding metadata"
-        (decodeTestAnn @S.Metadata ([] :: [MA.AuxiliaryData Mary]))
+        (decodeTestAnn @(S.Metadata Mary) ([] :: [MA.AuxiliaryData Mary]))
     ]
 
 maryTranslationTests :: TestTree

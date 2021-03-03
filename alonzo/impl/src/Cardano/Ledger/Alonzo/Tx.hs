@@ -254,26 +254,27 @@ pattern Tx {body, wits, isValidating, auxiliaryData} <-
   where
     Tx b w v a = TxConstr $ memoBytes (encodeTxRaw $ TxRaw b w v a)
 
+-- ===================================
+-- WellFormed instances
+
+instance aux ~ (Core.AuxiliaryData era) => HasField "auxiliaryData" (Tx era) (StrictMaybe aux) where
+  getField (TxConstr (Memo (TxRaw _body _wits _ aux) _)) = aux
+
+instance (body ~ Core.TxBody era) => HasField "body" (Tx era) body where
+  getField (TxConstr (Memo (TxRaw bod _wits _ _aux) _)) = bod
+
 --------------------------------------------------------------------------------
 -- HasField instances for the Tx
 --------------------------------------------------------------------------------
 
 -- Note that we do not use the pattern synonym in these instances, since we
 -- don't want to drag in the CBOR constraints.
-instance (txb ~ Core.TxBody era) => HasField "body" (Tx era) txb where
-  getField (TxConstr (Memo txr _)) = _body txr
 
 instance HasField "wits" (Tx era) (TxWitness era) where
   getField (TxConstr (Memo txr _)) = _wits txr
 
 instance HasField "isValidating" (Tx era) IsValidating where
   getField (TxConstr (Memo txr _)) = _isValidating txr
-
-instance
-  (ad ~ Core.AuxiliaryData era) =>
-  HasField "auxiliaryData" (Tx era) (StrictMaybe ad)
-  where
-  getField (TxConstr (Memo txr _)) = _auxiliaryData txr
 
 -- =========================================================
 -- Figure 2: Definitions for Transactions
@@ -364,13 +365,8 @@ isNonNativeScriptAddress (TxConstr (Memo (TxRaw {_wits = w}) _)) addr =
 
 feesOK ::
   forall era.
-  ( UsesValue era,
-    UsesTxOut era,
-    ValidateScript era,
-    HasField "txfee" (Core.TxBody era) Coin,
-    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wits" (Tx era) (TxWitness era),
-    HasField "txrdmrs" (TxWitness era) (Map.Map RdmrPtr (Data era, ExUnits))
+  ( ValidateScript era,
+    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   PParams era ->
   Tx era ->
@@ -400,9 +396,6 @@ txsize :: Tx era -> Integer
 txsize (TxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
 
 minfee ::
-  ( HasField "wits" (Tx era) (TxWitness era),
-    HasField "txrdmrs" (TxWitness era) (Map.Map RdmrPtr (Data era, ExUnits))
-  ) =>
   PParams era ->
   Tx era ->
   Coin

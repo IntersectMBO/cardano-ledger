@@ -56,7 +56,7 @@ tests =
       testProperty "alonzo/Data" $
         trippingAnn @(Data (AlonzoEra C_Crypto)),
       testProperty "alonzo/Metadata" $
-        trippingAnn @(Metadata),
+        trippingAnn @(Metadata (AlonzoEra C_Crypto)),
       testProperty "alonzo/TxWitness" $
         trippingAnn @(TxWitness (AlonzoEra C_Crypto)),
       testProperty "alonzo/TxBody" $

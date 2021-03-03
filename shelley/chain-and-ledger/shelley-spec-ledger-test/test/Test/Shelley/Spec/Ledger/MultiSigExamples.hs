@@ -182,7 +182,7 @@ makeTx ::
   Core.TxBody (ShelleyEra c) ->
   [KeyPair 'Witness c] ->
   Map (ScriptHash c) (MultiSig c) ->
-  Maybe Metadata ->
+  Maybe (Metadata (ShelleyEra c)) ->
   Tx (ShelleyEra c)
 makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where

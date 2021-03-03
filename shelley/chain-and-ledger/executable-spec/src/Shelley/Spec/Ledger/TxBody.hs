@@ -184,6 +184,7 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization
   ( CBORGroup (..),
     CborSeq (..),
@@ -530,7 +531,7 @@ pattern TxOut addr vl <-
 
 viewCompactTxOut ::
   forall era.
-  (Era era, Compactible (Core.Value era)) => -- Use the weakest constraint possible here
+  (Era era) => -- Use the weakest constraint possible here
   TxOut era ->
   (Addr (Crypto era), Core.Value era)
 viewCompactTxOut (TxOutCompact bs c) = (addr, val)
@@ -547,23 +548,14 @@ instance
   where
   getField (TxOutCompact a _) = a
 
-instance
-  ( Crypto era ~ c,
-    Era era,
-    TransValue Show era
-  ) =>
-  HasField "address" (TxOut era) (Addr c)
-  where
-  getField (TxOut a _) = a
+-- ---------------------------
+-- WellFormed instances
 
-instance
-  ( Era era,
-    Core.Value era ~ val,
-    TransValue Show era
-  ) =>
-  HasField "value" (TxOut era) val
-  where
-  getField (TxOut _ v) = v
+instance (Compactible v, v ~ (Core.Value era)) => HasField "value" (TxOut era) v where
+  getField (TxOutCompact _ v) = fromCompact v
+
+instance (CC.Crypto c, c ~ Crypto era) => HasField "address" (TxOut era) (Addr c) where
+  getField (TxOutCompact a _) = decompactAddr a
 
 data DelegCert crypto
   = -- | A stake key registration certificate.
@@ -850,6 +842,9 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
 
 {-# COMPLETE TxBody #-}
 
+-- =========================================
+-- WellFormed era   instances
+
 instance (Era era, c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 instance (Era era) => ToCBOR (TxBody era) where
@@ -881,6 +876,9 @@ instance
   HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash crypto))
   where
   getField (TxBodyConstr (Memo m _)) = getField @"_mdHashX" m
+
+instance c ~ Crypto era => HasField "minted" (TxBody era) (Set (ScriptHash c)) where
+  getField _ = Set.empty
 
 -- ===============================================================
 

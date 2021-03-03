@@ -64,8 +64,6 @@ import qualified Language.PlutusTx as Plutus
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.Metadata (Metadata)
 
--- import qualified Shelley.Spec.Ledger.Metadata as Ledger
-
 -- =====================================================================
 -- Plutus.Data is the type that Plutus expects as data.
 -- It is imported from the Plutus package, but it needs a few additional
@@ -130,7 +128,7 @@ hashData d = hashAnnotated d
 data AuxiliaryDataRaw era = AuxiliaryDataRaw
   { scripts' :: Set (Core.Script era),
     dats' :: Set (Data era),
-    txMD' :: Set (Metadata)
+    txMD' :: Set (Metadata era)
   }
   deriving (Generic)
 
@@ -154,7 +152,7 @@ encodeRaw ::
   (ToCBOR (Core.Script era), Typeable era) =>
   Set (Core.Script era) ->
   Set (Data era) ->
-  Set Metadata ->
+  Set (Metadata era) ->
   Encode ('Closed 'Dense) (AuxiliaryDataRaw era)
 encodeRaw s d m =
   ( Rec AuxiliaryDataRaw
@@ -207,7 +205,7 @@ pattern AuxiliaryData ::
   (Era era, ToCBOR (Core.Script era), Ord (Core.Script era)) =>
   Set (Core.Script era) ->
   Set (Data era) ->
-  Set (Metadata) ->
+  Set (Metadata era) ->
   AuxiliaryData era
 pattern AuxiliaryData {scripts, dats, txMD} <-
   AuxiliaryDataConstr (Memo (AuxiliaryDataRaw scripts dats txMD) _)

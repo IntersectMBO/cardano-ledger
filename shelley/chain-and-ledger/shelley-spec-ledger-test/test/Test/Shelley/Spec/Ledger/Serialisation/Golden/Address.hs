@@ -10,6 +10,7 @@
 
 module Test.Shelley.Spec.Ledger.Serialisation.Golden.Address
   ( tests,
+    Shelley,
   )
 where
 
@@ -20,7 +21,6 @@ import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
 import Cardano.Crypto.KES.Sum
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Era
 import qualified Data.Binary as B
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
@@ -49,6 +49,22 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
+
+import Cardano.Ledger.Shelley(ShelleyEra)
+
+-- Crypto family as used in production Shelley
+-- This should match that defined at https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
+
+data ShelleyCrypto
+
+instance Cardano.Ledger.Crypto.Crypto ShelleyCrypto where
+  type DSIGN ShelleyCrypto = Ed25519DSIGN
+  type KES ShelleyCrypto = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF ShelleyCrypto = SimpleVRF
+  type HASH ShelleyCrypto = Blake2b_256
+  type ADDRHASH ShelleyCrypto = Blake2b_224
+
+type Shelley = ShelleyEra ShelleyCrypto
 
 tests :: TestTree
 tests =
@@ -132,21 +148,7 @@ goldenTests_MockCrypto =
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
 
--- Crypto family as used in production Shelley
--- This should match that defined at https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
-data ShelleyCrypto
 
-instance Cardano.Ledger.Crypto.Crypto ShelleyCrypto where
-  type DSIGN ShelleyCrypto = Ed25519DSIGN
-  type KES ShelleyCrypto = Sum7KES Ed25519DSIGN Blake2b_256
-  type VRF ShelleyCrypto = SimpleVRF
-  type HASH ShelleyCrypto = Blake2b_256
-  type ADDRHASH ShelleyCrypto = Blake2b_224
-
-data Shelley
-
-instance Era Shelley where
-  type Crypto Shelley = ShelleyCrypto
 
 goldenTests_ShelleyCrypto :: TestTree
 goldenTests_ShelleyCrypto =

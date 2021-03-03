@@ -78,7 +78,6 @@ instance GetPolicies (Value crypto) crypto where
 -- and the withdrawals.
 scriptsNeeded ::
   ( UsesScript era,
-    UsesTxOut era,
     UsesTxBody era,
     UsesAuxiliary era,
     GetPolicies (Core.Value era) (Crypto era),

@@ -264,7 +264,7 @@ sizedMetadatum n =
 instance Arbitrary MD.Metadatum where
   arbitrary = sizedMetadatum maxMetadatumDepth
 
-instance Arbitrary MD.Metadata where
+instance Arbitrary (MD.Metadata era) where
   arbitrary = MD.Metadata <$> arbitrary
 
 maxTxWits :: Int

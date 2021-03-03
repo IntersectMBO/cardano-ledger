@@ -125,9 +125,7 @@ showBalance ::
   forall era.
   ( ShelleyTest era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "txfee" (Core.TxBody era) Coin,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   LedgerEnv era ->
@@ -173,8 +171,7 @@ genTx ::
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   GenEnv era ->
   LedgerEnv era ->
@@ -319,7 +316,6 @@ instance (UsesTxOut era, UsesScript era, TransValue Eq era) => Eq (Delta era) wh
 deltaZero ::
   forall era.
   ( UsesScript era,
-    UsesValue era,
     UsesTxOut era
   ) =>
   Coin ->
@@ -341,7 +337,6 @@ genNextDelta ::
   forall era.
   ( EraGen era,
     UsesTxBody era,
-    UsesValue era,
     UsesTxOut era,
     UsesAuxiliary era,
     Mock (Crypto era),
@@ -452,7 +447,6 @@ genNextDeltaTilFixPoint ::
   ( EraGen era,
     UsesTxBody era,
     UsesTxOut era,
-    UsesValue era,
     UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
@@ -480,8 +474,7 @@ applyDelta ::
     UsesTxBody era,
     UsesAuxiliary era,
     Mock (Crypto era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
@@ -498,7 +491,7 @@ applyDelta
     --fix up the witnesses here?
     -- Adds extraInputs, extraWitnesses, and change from delta to tx
     let outputs' = (getField @"outputs" body) StrictSeq.|> change
-        body' =
+        body2 =
           (updateEraTxBody @era)
             body
             deltafees
@@ -512,8 +505,8 @@ applyDelta
             ksIndexedStakingKeys
             kw
             sw
-            (hashAnnotated body')
-     in tx {_body = body', _witnessSet = newWitnessSet}
+            (hashAnnotated body2)
+     in tx {_body = body2, _witnessSet = newWitnessSet}
 
 fix :: (Eq d, Monad m) => (d -> m d) -> d -> m d
 fix f d = do d1 <- f d; if d1 == d then pure d else fix f d1
@@ -522,11 +515,9 @@ converge ::
   ( EraGen era,
     UsesTxBody era,
     UsesTxOut era,
-    UsesValue era,
     UsesAuxiliary era,
     Mock (Crypto era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Coin ->
   [KeyPair 'Witness (Crypto era)] ->
@@ -667,7 +658,7 @@ calcOutputsFromBalance balance_ addrs fee =
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 genInputs ::
   forall era.
-  (UsesTxOut era, UsesValue era) =>
+  (UsesTxOut era) =>
   (Int, Int) ->
   Map (KeyHash 'Payment (Crypto era)) (KeyPair 'Payment (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Core.Script era, Core.Script era) ->

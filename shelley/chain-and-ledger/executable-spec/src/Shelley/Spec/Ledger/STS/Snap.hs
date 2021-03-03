@@ -49,7 +49,7 @@ instance (UsesTxOut era, UsesValue era) => STS (SNAP era) where
   transitionRules = [snapTransition]
 
 snapTransition ::
-  (UsesTxOut era, UsesValue era) =>
+  UsesValue era =>
   TransitionRule (SNAP era)
 snapTransition = do
   TRC (lstate, s, _) <- judgmentContext

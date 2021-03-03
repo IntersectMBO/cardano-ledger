@@ -113,12 +113,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.SafeHash (HashAnnotated, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
-    UsesAuxiliary,
     UsesPParams (PParamsDelta),
-    UsesScript,
-    UsesTxBody,
-    UsesTxOut,
-    UsesValue,
   )
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
@@ -748,10 +743,7 @@ txsize = fromIntegral . BSL.length . txFullBytes
 -- | It can be helpful for coin selection.
 txsizeBound ::
   forall era out.
-  ( UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era,
-    HasField "outputs" (Core.TxBody era) (StrictSeq out),
+  ( HasField "outputs" (Core.TxBody era) (StrictSeq out),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Tx era ->
@@ -765,7 +757,7 @@ txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
     addrHashLen = 28
     addrHeader = 1
     address = 2 + addrHeader + 2 * addrHashLen
-    txbody = _body tx
+    txbody = body' tx
     numInputs = toInteger . length . getField @"inputs" $ txbody
     inputSize = smallArray + uint + hashObj
     numOutputs = toInteger . length . getField @"outputs" $ txbody
@@ -788,12 +780,8 @@ minfee pp tx =
 -- | Compute the lovelace which are created by the transaction
 produced ::
   forall era pp.
-  ( UsesTxBody era,
-    UsesValue era,
-    UsesTxOut era,
+  ( Era era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "txfee" (Core.TxBody era) Coin,
     HasField "_keyDeposit" pp Coin,
     HasField "_poolDeposit" pp Coin
   ) =>
@@ -823,8 +811,7 @@ keyRefunds pp tx = length deregistrations <×> getField @"_keyDeposit" pp
 -- | Compute the lovelace which are destroyed by the transaction
 consumed ::
   forall era pp.
-  ( UsesValue era,
-    UsesTxOut era,
+  ( Era era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -872,10 +859,6 @@ witsFromWitnessSet (WitnessSet aWits _ bsWits) =
 witsVKeyNeeded ::
   forall era.
   ( Era era,
-    UsesAuxiliary era,
-    UsesTxBody era,
-    UsesTxOut era,
-    UsesScript era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -885,7 +868,7 @@ witsVKeyNeeded ::
   Tx era ->
   GenDelegs (Crypto era) ->
   WitHashes (Crypto era)
-witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
+witsVKeyNeeded utxo' tx genDelegs =
   WitHashes $
     certAuthors
       `Set.union` inputAuthors
@@ -893,6 +876,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
       `Set.union` wdrlAuthors
       `Set.union` updateKeys
   where
+    txbody = body' tx
     inputAuthors :: Set (KeyHash 'Witness (Crypto era))
     inputAuthors = foldr accum Set.empty (getField @"inputs" txbody)
       where
@@ -935,20 +919,21 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
 
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
-verifiedWits ::
+verifiedWits :: -- TODO further generalize by generalizing bootwits, addrwits
   forall era.
-  ( UsesTxBody era,
+  ( Era era,
     Core.AnnotatedData (Core.Script era),
-    ToCBOR (Core.AuxiliaryData era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
   Tx era ->
   Either [VKey 'Witness (Crypto era)] ()
-verifiedWits (Tx txbody wits _) =
+verifiedWits tx =
   case (failed <> failedBootstrap) of
     [] -> Right ()
     nonEmpty -> Left nonEmpty
   where
+    txbody = body' tx
+    wits = witnessSet' tx
     wvkKey (WitVKey k _) = k
     failed =
       wvkKey
@@ -1010,9 +995,7 @@ reapRewards dStateRewards withdrawals =
 
 stakeDistr ::
   forall era.
-  ( UsesValue era,
-    UsesTxOut era
-  ) =>
+  Era era =>
   UTxO era ->
   DState (Crypto era) ->
   PState (Crypto era) ->
@@ -1308,7 +1291,7 @@ updateNES
 
 returnRedeemAddrsToReserves ::
   forall era.
-  (UsesValue era, UsesTxOut era) =>
+  Era era =>
   EpochState era ->
   EpochState era
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}

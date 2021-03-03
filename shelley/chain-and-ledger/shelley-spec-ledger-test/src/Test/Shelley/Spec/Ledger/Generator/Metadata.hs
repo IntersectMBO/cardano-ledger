@@ -32,7 +32,7 @@ metadataMaxSize :: Int
 metadataMaxSize = 3
 
 -- | Generate Metadata (and compute hash) with frequency 'frequencyTxWithMetadata'
-genMetadata :: Constants -> Gen (StrictMaybe Metadata)
+genMetadata :: Constants -> Gen (StrictMaybe (Metadata era))
 genMetadata (Constants {frequencyTxWithMetadata}) =
   QC.frequency
     [ (frequencyTxWithMetadata, SJust <$> genMetadata'),
@@ -40,7 +40,7 @@ genMetadata (Constants {frequencyTxWithMetadata}) =
     ]
 
 -- | Generate Metadata (and compute hash) of size up to 'metadataMaxSize'
-genMetadata' :: Gen Metadata
+genMetadata' :: Gen (Metadata era)
 genMetadata' = do
   n <- QC.choose (1, metadataMaxSize)
   Metadata . Map.fromList

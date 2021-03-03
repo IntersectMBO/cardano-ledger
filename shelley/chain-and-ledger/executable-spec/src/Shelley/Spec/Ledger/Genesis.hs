@@ -34,7 +34,7 @@ import Cardano.Ledger.Crypto (HASH, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.SafeHash (EraIndependentTxBody, unsafeMakeSafeHash)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..), UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (forceElemsToWHNF)
 import Cardano.Slotting.EpochInfo
@@ -288,7 +288,7 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
 
 genesisUTxO ::
   forall era.
-  (Era era, UsesValue era, UsesTxOut era) =>
+  (Era era, UsesTxOut era) =>
   ShelleyGenesis era ->
   UTxO era
 genesisUTxO genesis =
