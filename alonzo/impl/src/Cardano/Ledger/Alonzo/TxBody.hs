@@ -544,7 +544,7 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u mnt sdh axh) _)) =
       ("update", ppStrictMaybe ppUpdate u),
       ("mint", ppValue mnt),
       ("sdHash", ppStrictMaybe ppSafeHash sdh),
-      ("auxdHash", ppStrictMaybe ppSafeHash sch)
+      ("auxdHash", ppStrictMaybe ppSafeHash axh)
     ]
 
 instance
