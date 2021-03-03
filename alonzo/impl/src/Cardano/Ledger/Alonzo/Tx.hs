@@ -398,9 +398,8 @@ txins txb = Set.union (getField @"inputs" txb) (getField @"txinputs_fee" txb)
 txsize :: Tx era -> Integer
 txsize (TxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
 
-minfee :: 
-  ( ToCBOR (Core.AuxiliaryData era)
-  ) =>
+minfee ::
+  (Era era, ToCBOR (Core.AuxiliaryData era)) =>
   PParams era ->
   Tx era ->
   Coin
