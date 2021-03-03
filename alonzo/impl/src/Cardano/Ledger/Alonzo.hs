@@ -8,7 +8,7 @@ module Cardano.Ledger.Alonzo where
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate, updatePParams)
 import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.TxBody (TxBody)
+import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -27,6 +27,8 @@ instance
   type Crypto (AlonzoEra c) = c
 
 type instance Core.TxBody (AlonzoEra c) = TxBody (AlonzoEra c)
+
+type instance Core.TxOut (AlonzoEra c) = TxOut (AlonzoEra c)
 
 type instance Core.Value (AlonzoEra c) = Value c
 

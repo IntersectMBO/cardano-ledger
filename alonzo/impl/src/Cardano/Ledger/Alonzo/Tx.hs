@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
@@ -52,6 +53,8 @@ module Cardano.Ledger.Alonzo.Tx
     minfee,
     isNonNativeScriptAddress,
     feesOK,
+    txins,
+    Shelley.txouts,
     -- Figure 6
     txrdmrs,
     rdptr,
@@ -80,12 +83,10 @@ import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, PParams' (..), 
 import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), scriptfee)
 import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..), Tag (..))
 import Cardano.Ledger.Alonzo.TxBody
-  ( AlonzoBody,
-    EraIndependentWitnessPPData,
+  ( EraIndependentWitnessPPData,
     TxBody (..),
     TxOut (..),
     WitnessPPDataHash,
-    ppTxBody,
   )
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
@@ -144,6 +145,7 @@ import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Tx (ValidateScript (isNativeScript))
 import Shelley.Spec.Ledger.TxBody (DelegCert (..), Delegation (..), TxIn (..), Wdrl (..), unWdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
+import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
 -- ===================================================
 
@@ -154,7 +156,7 @@ newtype IsValidating = IsValidating Bool
   deriving newtype (NoThunks)
 
 data TxRaw era = TxRaw
-  { _body :: !(TxBody era),
+  { _body :: !(Core.TxBody era),
     _wits :: !(TxWitness era),
     _isValidating :: !IsValidating,
     _auxiliaryData :: !(StrictMaybe (Core.AuxiliaryData era))
@@ -165,6 +167,7 @@ deriving instance
   ( Era era,
     Eq (Core.AuxiliaryData era),
     Eq (Core.Script era),
+    Eq (Core.TxBody era),
     Eq (Core.Value era),
     Eq (PParamsDelta era),
     Compactible (Core.Value era)
@@ -176,6 +179,7 @@ deriving instance
     Compactible (Core.Value era),
     Show (Core.AuxiliaryData era),
     Show (Core.Script era),
+    Show (Core.TxBody era),
     Show (Core.Value era),
     Show (PParamsDelta era)
   ) =>
@@ -185,6 +189,7 @@ instance
   ( Era era,
     NoThunks (Core.AuxiliaryData era),
     NoThunks (Core.Script era),
+    NoThunks (Core.TxBody era),
     NoThunks (Core.Value era),
     NoThunks (PParamsDelta era)
   ) =>
@@ -197,6 +202,7 @@ deriving newtype instance
   ( Era era,
     Eq (Core.AuxiliaryData era),
     Eq (Core.Script era),
+    Eq (Core.TxBody era),
     Eq (Core.Value era),
     Eq (PParamsDelta era),
     Compactible (Core.Value era)
@@ -208,6 +214,7 @@ deriving newtype instance
     Compactible (Core.Value era),
     Show (Core.AuxiliaryData era),
     Show (Core.Script era),
+    Show (Core.TxBody era),
     Show (Core.Value era),
     Show (PParamsDelta era)
   ) =>
@@ -217,14 +224,18 @@ deriving newtype instance
   ( Era era,
     NoThunks (Core.AuxiliaryData era),
     NoThunks (Core.Script era),
+    NoThunks (Core.TxBody era),
     NoThunks (Core.Value era),
     NoThunks (PParamsDelta era)
   ) =>
   NoThunks (Tx era)
 
 pattern Tx ::
-  (Era era, ToCBOR (Core.AuxiliaryData era)) =>
-  TxBody era ->
+  ( Era era,
+    ToCBOR (Core.AuxiliaryData era),
+    ToCBOR (Core.TxBody era)
+  ) =>
+  Core.TxBody era ->
   TxWitness era ->
   IsValidating ->
   StrictMaybe (Core.AuxiliaryData era) ->
@@ -244,68 +255,25 @@ pattern Tx {body, wits, isValidating, auxiliaryData} <-
     Tx b w v a = TxConstr $ memoBytes (encodeTxRaw $ TxRaw b w v a)
 
 --------------------------------------------------------------------------------
--- Serialisation
+-- HasField instances for the Tx
 --------------------------------------------------------------------------------
 
-deriving newtype instance FromCBOR IsValidating
+-- Note that we do not use the pattern synonym in these instances, since we
+-- don't want to drag in the CBOR constraints.
+instance (txb ~ Core.TxBody era) => HasField "body" (Tx era) txb where
+  getField (TxConstr (Memo txr _)) = _body txr
 
-deriving newtype instance ToCBOR IsValidating
+instance HasField "wits" (Tx era) (TxWitness era) where
+  getField (TxConstr (Memo txr _)) = _wits txr
 
-encodeTxRaw ::
-  (Era era, ToCBOR (Core.AuxiliaryData era)) =>
-  TxRaw era ->
-  Encode ('Closed 'Dense) (TxRaw era)
-encodeTxRaw TxRaw {_body, _wits, _isValidating, _auxiliaryData} =
-  Rec TxRaw
-    !> To _body
-    !> To _wits
-    !> To _isValidating
-    !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) _auxiliaryData
+instance HasField "isValidating" (Tx era) IsValidating where
+  getField (TxConstr (Memo txr _)) = _isValidating txr
 
 instance
-  ( Era era,
-    FromCBOR (Annotator (Core.Script era)),
-    FromCBOR (Annotator (Core.AuxiliaryData era)),
-    Core.AnnotatedData (PParamsDelta era),
-    ToCBOR (Core.Script era),
-    Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era),
-    Compactible (Core.Value era),
-    DecodeNonNegative (Core.Value era),
-    DecodeMint (Core.Value era),
-    Show (Core.Value era),
-    Val (Core.Value era)
-  ) =>
-  FromCBOR (Annotator (TxRaw era))
+  (ad ~ Core.AuxiliaryData era) =>
+  HasField "auxiliaryData" (Tx era) (StrictMaybe ad)
   where
-  fromCBOR =
-    decode $
-      Ann (RecD TxRaw)
-        <*! From
-        <*! From
-        <*! Ann From
-        <*! D
-          ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe fromCBOR
-          )
-
-deriving via
-  Mem (TxRaw era)
-  instance
-    ( Era era,
-      FromCBOR (Annotator (Core.Script era)),
-      FromCBOR (Annotator (Core.AuxiliaryData era)),
-      Core.AnnotatedData (PParamsDelta era),
-      ToCBOR (Core.Script era),
-      Typeable (Core.Script era),
-      Typeable (Core.AuxiliaryData era),
-      Compactible (Core.Value era),
-      DecodeNonNegative (Core.Value era),
-      DecodeMint (Core.Value era),
-      Show (Core.Value era),
-      Val (Core.Value era)
-    ) =>
-    FromCBOR (Annotator (Tx era))
+  getField (TxConstr (Memo txr _)) = _auxiliaryData txr
 
 -- =========================================================
 -- Figure 2: Definitions for Transactions
@@ -397,37 +365,49 @@ isNonNativeScriptAddress (TxConstr (Memo (TxRaw {_wits = w}) _)) addr =
 feesOK ::
   forall era.
   ( UsesValue era,
-    AlonzoBody era,
     UsesTxOut era,
-    ValidateScript era
+    ValidateScript era,
+    HasField "txfee" (Core.TxBody era) Coin,
+    HasField "exunits" (Core.TxBody era) ExUnits,
+    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   PParams era ->
   Tx era ->
   UTxO era ->
   Bool
 feesOK pp tx (UTxO m) =
-  (bal >= txfee txb)
-    && (all (\txout -> not (isNonNativeScriptAddress tx (getField @"address" txout))) utxoFees)
-    && (minfee pp tx <= txfee txb)
+  (bal >= getField @"txfee" txb)
+    && all (not . isNonNativeScriptAddress tx . getField @"address") utxoFees
+    && (minfee pp tx <= getField @"txfee" txb)
   where
     txb = txbody tx
-    fees = txinputs_fee txb
+    fees = getField @"txinputs_fee" txb
     utxoFees = eval (fees ◁ m) -- compute the domain restriction to those inputs where fees are paid
     bal = coin (balance @era (UTxO utxoFees))
 
 -- | The keys of all the inputs of the TxBody (both the inputs for fees, and the normal inputs).
-txins :: AlonzoBody era => TxBody era -> Set (TxIn (Crypto era))
-txins (TxBody {txinputs = is, txinputs_fee = fs}) = Set.union is fs
+txins ::
+  ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
+  Core.TxBody era ->
+  Set (TxIn (Crypto era))
+txins txb = Set.union (getField @"inputs" txb) (getField @"txinputs_fee" txb)
 
 -- | txsize computes the length of the serialised bytes
 txsize :: Tx era -> Integer
 txsize (TxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
 
-minfee :: AlonzoBody era => PParams era -> Tx era -> Coin
+minfee ::
+  ( HasField "exunits" (Core.TxBody era) ExUnits
+  ) =>
+  PParams era ->
+  Tx era ->
+  Coin
 minfee pp tx =
-  ((txsize tx) <×> (a pp))
-    <+> (b pp)
-    <+> (scriptfee (_prices pp) (exunits (txbody tx)))
+  (txsize tx <×> a pp)
+    <+> b pp
+    <+> scriptfee (_prices pp) (getField @"exunits" (txbody tx))
   where
     a protparam = Coin (fromIntegral (_minfeeA protparam))
     b protparam = Coin (fromIntegral (_minfeeB protparam))
@@ -440,8 +420,8 @@ getValidatorHash :: Addr crypto -> Maybe (ScriptHash crypto)
 getValidatorHash (Addr _network (ScriptHashObj hash) _ref) = Just hash
 getValidatorHash _ = Nothing
 
-txbody :: Tx era -> TxBody era
-txbody (TxConstr (Memo (TxRaw {_body = b}) _)) = b
+txbody :: Tx era -> Core.TxBody era
+txbody (TxConstr (Memo TxRaw {_body = b} _)) = b
 
 -- ===============================================================
 -- Operations on scripts from specification
@@ -466,7 +446,7 @@ instance Ord k => Indexable k (Set k) where
 instance Eq k => Indexable k (StrictSeq k) where
   indexOf n seqx = case StrictSeq.findIndexL (== n) seqx of
     Just m -> fromIntegral m
-    Nothing -> error ("Not found in StrictSeq")
+    Nothing -> error "Not found in StrictSeq"
   atIndex i seqx = case StrictSeq.lookup (fromIntegral i) seqx of
     Just element -> element
     Nothing -> error ("No elem at index " ++ show i)
@@ -476,31 +456,38 @@ instance Ord k => Indexable k (Map.Map k v) where
   atIndex i mp = fst (Map.elemAt (fromIntegral i) mp) -- If one needs the value, on can use Map.Lookup
 
 rdptr ::
-  AlonzoBody era =>
-  TxBody era ->
+  forall era.
+  ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "mint" (Core.TxBody era) (Value (Crypto era))
+  ) =>
+  Core.TxBody era ->
   ScriptPurpose (Crypto era) ->
   RdmrPtr
-rdptr txb (Minting pid) = RdmrPtr AlonzoScript.Mint (indexOf pid (getMapFromValue (mint txb)))
-rdptr txb (Spending txin) = RdmrPtr AlonzoScript.Spend (indexOf txin (txinputs txb))
-rdptr txb (Rewarding racnt) = RdmrPtr AlonzoScript.Rewrd (indexOf racnt (unWdrl (txwdrls txb)))
-rdptr txb (Certifying d) = RdmrPtr AlonzoScript.Cert (indexOf d (txcerts txb))
+rdptr txb (Minting pid) = RdmrPtr AlonzoScript.Mint (indexOf pid (getMapFromValue (getField @"mint" txb)))
+rdptr txb (Spending txin) = RdmrPtr AlonzoScript.Spend (indexOf txin (getField @"inputs" txb))
+rdptr txb (Rewarding racnt) = RdmrPtr AlonzoScript.Rewrd (indexOf racnt (unWdrl (getField @"wdrls" txb)))
+rdptr txb (Certifying d) = RdmrPtr AlonzoScript.Cert (indexOf d (getField @"certs" txb))
 
 getMapFromValue :: Value crypto -> Map.Map (PolicyID crypto) (Map.Map AssetName Integer)
 getMapFromValue (Value _ m) = m
 
 indexedRdmrs ::
+  forall era.
   ( Era era,
-    ToCBOR (Core.AuxiliaryData era),
     ToCBOR (Core.Script era),
-    Core.AnnotatedData (PParamsDelta era),
-    Compactible (Core.Value era)
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "mint" (Core.TxBody era) (Value (Crypto era))
   ) =>
   Tx era ->
   ScriptPurpose (Crypto era) ->
   Maybe (Data era, ExUnits)
-indexedRdmrs tx sp = Map.lookup policyid (txrdmrs . txwits $ tx)
+indexedRdmrs tx sp = Map.lookup policyid (txrdmrs . getField @"wits" $ tx)
   where
-    policyid = rdptr (body tx) sp
+    policyid = rdptr @era (getField @"body" tx) sp
 
 -- ===============================================================
 -- From the specification, Figure 7 "Script Validation, cont."
@@ -529,8 +516,7 @@ runPLCScript _cost _script _data _exunits = (IsValidating True, ExUnits 0 0) -- 
 
 getData ::
   forall era.
-  ( ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Script era),
+  ( ToCBOR (Core.Script era),
     UsesTxOut era,
     HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
   ) =>
@@ -550,19 +536,20 @@ getData tx (UTxO m) sp = case sp of
         case getField @"datahash" txout of
           Nothing -> []
           Just hash ->
-            case Map.lookup hash (txdats (wits tx)) of
+            case Map.lookup hash (txdats (getField @"wits" tx)) of
               Nothing -> []
               Just d -> [d]
 
 collectNNScriptInputs ::
   ( UsesTxOut era,
     ToCBOR (Core.Script era),
-    Compactible (Core.Value era),
-    ToCBOR (Core.AuxiliaryData era),
-    Core.AnnotatedData (PParamsDelta era),
     Core.Script era ~ AlonzoScript.Script era,
     HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "mint" (Core.TxBody era) (Value (Crypto era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Core.PParams era ->
   Tx era ->
@@ -572,7 +559,7 @@ collectNNScriptInputs pp tx utxo =
   [ (script, d : (valContext utxo tx sp ++ getData tx utxo sp), eu, cost)
     | (sp, scripthash) <- scriptsNeeded utxo tx, -- TODO, IN specification ORDER IS WRONG
       (d, eu) <- maybeToList (indexedRdmrs tx sp),
-      script <- maybeToList (Map.lookup scripthash (txscripts (txwits tx))),
+      script <- maybeToList (Map.lookup scripthash (txscripts (getField @"wits" tx))),
       cost <- case language script of
         Nothing -> []
         Just lang -> maybeToList (Map.lookup lang (getField @"_costmdls" pp))
@@ -580,11 +567,16 @@ collectNNScriptInputs pp tx utxo =
 
 language :: AlonzoScript.Script era -> Maybe Language
 language (AlonzoScript.NativeScript _) = Nothing
-language (AlonzoScript.PlutusScript) = Just PlutusV1
+language AlonzoScript.PlutusScript = Just PlutusV1
 
-evalScripts :: (AlonzoScript.Script era, [Data era], ExUnits, CostModel) -> Bool
-evalScripts (AlonzoScript.NativeScript _timelock, _, _, _) = True
-evalScripts (AlonzoScript.PlutusScript, ds, units, cost) = b
+evalScripts ::
+  [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)] ->
+  Bool
+evalScripts [] = True
+evalScripts ((AlonzoScript.NativeScript _timelock, _, _, _) : rest) =
+  evalScripts rest
+evalScripts ((AlonzoScript.PlutusScript, ds, units, cost) : rest) =
+  b && evalScripts rest
   where
     (IsValidating b, _exunits) = runPLCScript cost AlonzoScript.PlutusScript ds units
 
@@ -595,7 +587,10 @@ evalScripts (AlonzoScript.PlutusScript, ds, units, cost) = b
 scriptsNeeded ::
   forall era.
   ( UsesTxOut era,
-    AlonzoBody era
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "mint" (Core.TxBody era) (Value (Crypto era))
   ) =>
   UTxO era ->
   Tx era ->
@@ -603,7 +598,7 @@ scriptsNeeded ::
 scriptsNeeded (UTxO utxomap) tx = spend ++ reward ++ cert ++ minted
   where
     txb = txbody tx
-    !spend = foldl' accum [] (txins txb)
+    !spend = foldl' accum [] (getField @"inputs" txb)
       where
         accum !ans !i =
           case Map.lookup i utxomap of
@@ -615,16 +610,16 @@ scriptsNeeded (UTxO utxomap) tx = spend ++ reward ++ cert ++ minted
 
     !reward = foldl' accum [] (Map.keys m2)
       where
-        (Wdrl m2) = txwdrls txb
+        (Wdrl m2) = getField @"wdrls" txb
         accum !ans !accnt = case getRwdCred accnt of -- TODO  IS THIS RIGHT?
           (ScriptHashObj hash) -> (Rewarding accnt, hash) : ans
           _ -> ans
 
-    !cert = foldl addOnlyCwitness [] (txcerts txb)
+    !cert = foldl addOnlyCwitness [] (getField @"certs" txb)
 
     !minted = map (\pid@(PolicyID hash) -> (Minting pid, hash)) (Map.keys m3)
       where
-        m3 = getMapFromValue (mint txb)
+        m3 = getMapFromValue (getField @"mint" txb)
 
 -- We only find certificate witnesses in Delegating and Deregistration DCerts
 -- that have ScriptHashObj credentials.
@@ -632,20 +627,21 @@ addOnlyCwitness ::
   [(ScriptPurpose crypto, ScriptHash crypto)] ->
   DCert crypto ->
   [(ScriptPurpose crypto, ScriptHash crypto)]
-addOnlyCwitness !ans !(DCertDeleg (c@(DeRegKey (ScriptHashObj hk)))) =
+addOnlyCwitness !ans (DCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
   (Certifying $ DCertDeleg c, hk) : ans
-addOnlyCwitness !ans !(DCertDeleg (c@(Delegate (Delegation (ScriptHashObj hk) _dpool)))) =
+addOnlyCwitness !ans (DCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =
   (Certifying $ DCertDeleg c, hk) : ans
 addOnlyCwitness !ans _ = ans
 
 checkScriptData ::
   forall era.
-  ( ToCBOR (Core.AuxiliaryData era),
-    Core.AnnotatedData (PParamsDelta era),
-    ValidateScript era,
-    Compactible (Core.Value era),
+  ( ValidateScript era,
     UsesTxOut era,
-    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
+    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "mint" (Core.TxBody era) (Value (Crypto era))
   ) =>
   Tx era ->
   UTxO era ->
@@ -653,17 +649,14 @@ checkScriptData ::
   Bool
 checkScriptData tx utxo (sp, _h) = any ok scripts
   where
-    scripts = txscripts (txwits tx)
+    scripts = txscripts (getField @"wits" tx)
     isSpending (Spending _) = True
     isSpending _ = False
     ok s =
-      (isNativeScript @era s)
+      isNativeScript @era s
         || ( isJust (indexedRdmrs tx sp)
                && (not (isSpending sp) || not (null (getData tx utxo sp)))
            )
-
-txwits :: (Era era, ToCBOR (Core.AuxiliaryData era)) => Tx era -> TxWitness era
-txwits x = wits x
 
 -- =======================================================
 
@@ -676,18 +669,15 @@ instance PrettyA IsValidating where prettyA = ppIsValidating
 ppTx ::
   ( Era era,
     PrettyA (Core.Script era),
-    PrettyA (Core.AuxiliaryData era),
-    Compactible (Core.Value era),
-    Show (Core.Value era),
-    PrettyA (Core.Value era),
-    PrettyA (PParamsDelta era)
+    PrettyA (Core.TxBody era),
+    PrettyA (Core.AuxiliaryData era)
   ) =>
   Tx era ->
   PDoc
 ppTx (TxConstr (Memo (TxRaw b w iv aux) _)) =
   ppRecord
     "Tx"
-    [ ("body", ppTxBody b),
+    [ ("body", prettyA b),
       ("wits", ppTxWitness w),
       ("isValidating", ppIsValidating iv),
       ("auxiliaryData", ppStrictMaybe prettyA aux)
@@ -696,12 +686,78 @@ ppTx (TxConstr (Memo (TxRaw b w iv aux) _)) =
 instance
   ( Era era,
     PrettyA (Core.Script era),
-    PrettyA (Core.AuxiliaryData era),
-    Compactible (Core.Value era),
-    Show (Core.Value era),
-    PrettyA (Core.Value era),
-    PrettyA (PParamsDelta era)
+    PrettyA (Core.TxBody era),
+    PrettyA (Core.AuxiliaryData era)
   ) =>
   PrettyA (Tx era)
   where
   prettyA = ppTx
+
+--------------------------------------------------------------------------------
+-- Serialisation
+--------------------------------------------------------------------------------
+
+deriving newtype instance FromCBOR IsValidating
+
+deriving newtype instance ToCBOR IsValidating
+
+encodeTxRaw ::
+  ( Era era,
+    ToCBOR (Core.AuxiliaryData era),
+    ToCBOR (Core.TxBody era)
+  ) =>
+  TxRaw era ->
+  Encode ('Closed 'Dense) (TxRaw era)
+encodeTxRaw TxRaw {_body, _wits, _isValidating, _auxiliaryData} =
+  Rec TxRaw
+    !> To _body
+    !> To _wits
+    !> To _isValidating
+    !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) _auxiliaryData
+
+instance
+  ( Era era,
+    FromCBOR (Annotator (Core.Script era)),
+    FromCBOR (Annotator (Core.TxBody era)),
+    FromCBOR (Annotator (Core.AuxiliaryData era)),
+    Core.AnnotatedData (PParamsDelta era),
+    ToCBOR (Core.Script era),
+    Typeable (Core.Script era),
+    Typeable (Core.AuxiliaryData era),
+    Compactible (Core.Value era),
+    DecodeNonNegative (Core.Value era),
+    DecodeMint (Core.Value era),
+    Show (Core.Value era),
+    Val (Core.Value era)
+  ) =>
+  FromCBOR (Annotator (TxRaw era))
+  where
+  fromCBOR =
+    decode $
+      Ann (RecD TxRaw)
+        <*! From
+        <*! From
+        <*! Ann From
+        <*! D
+          ( sequence . maybeToStrictMaybe
+              <$> decodeNullMaybe fromCBOR
+          )
+
+deriving via
+  Mem (TxRaw era)
+  instance
+    ( Era era,
+      FromCBOR (Annotator (Core.Script era)),
+      FromCBOR (Annotator (Core.TxBody era)),
+      FromCBOR (Annotator (Core.AuxiliaryData era)),
+      Core.AnnotatedData (PParamsDelta era),
+      ToCBOR (Core.Script era),
+      Typeable (Core.Script era),
+      Typeable (Core.AuxiliaryData era),
+      Compactible (Core.Value era),
+      DecodeNonNegative (Core.Value era),
+      DecodeMint (Core.Value era),
+      Show (Core.Value era),
+      Val (Core.Value era)
+    ) =>
+    FromCBOR (Annotator (Tx era))
