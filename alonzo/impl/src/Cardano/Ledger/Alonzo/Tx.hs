@@ -368,7 +368,7 @@ feesOK ::
     UsesTxOut era,
     ValidateScript era,
     HasField "txfee" (Core.TxBody era) Coin,
-    ToCBOR (Core.AuxiliaryData era)
+    ToCBOR (Core.AuxiliaryData era),
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   PParams era ->
