@@ -117,6 +117,10 @@ On-chain requirements may be split into mandatory and optional requirements.
 \item
   prevent denial-of-service attacks by limiting the proposal submission rate;
 \item
+  avoid increasing memory requirements significantly;
+\item
+  avoid service interruptions by ensuring that computation for vote tallying etc does not impact normal block production;
+\item
   automatically enact proposals at the stated epoch boundary, provided that the necessary voting and endorsement thresholds have both been met.
 \end{itemize}
 
@@ -132,3 +136,92 @@ On-chain requirements may be split into mandatory and optional requirements.
 \item
   as far as possible, be consistent with the existing manual update and MIR mechanisms.
 \end{itemize}
+
+\pagebreak
+\subsection{Security Requirements}
+
+The primary security risks are: subversion of votes by a small group; subversion of on-chain proposal submission; denial-of-service.
+
+\paragraph{Vote Subversion.}
+An attacker may obtain control of the blockchain by pooling votes as a delegate (or as part of a voting bloc), and then proceed to enact proposals that act against the interest of the blockchain, or to block
+proposals that are in the general interest.   This attack is mitigated by:
+  \begin{inparaenum}
+  \item
+    requiring endorsement of protocol changes by stake pool operators, so that multiple distinct stakeholder groups are required to enact a proposal;
+  \item
+    setting high thresholds for vote acceptance, and basing these thresholds on active participation;
+  \item
+    ensuring that all ada holders can easily participate in vote delegation, including setting low costs for participation;
+  \item
+    never permanently transferring voting rights to delegates, and allowing vote delegation to be easily changed;
+  \item
+    separating submitter and delegate groups;
+  \item
+    providing tracking mechanisms to tie on-chain proposals to properly debated off-chain discussion and voting.
+  \end{inparaenum}
+
+\paragraph{Subversion of On-Chain Submissions.}
+Only properly submitted and signed proposals will be enacted.  An attacker could gain control of the blockchain by controlling the submission process through
+subverting members of the submitter group.
+%
+This attack is mitigated by:
+  \begin{inparaenum}
+  \item
+    Setting a sufficient quorum for counter-signing proposal submission;
+  \item
+    Making the submitter group sufficiently large that it becomes difficult to control;
+  \item
+    Separating submitter and delegate groups, so that proposals are not enacted without scrutiny;
+  \item
+    Linking off-chain and on-chain proposals, so that it is clear when a proposal has not followed proper process;
+  \item
+    Designing a process that allows submitters to be replaced where they are not acting in the best interest of the community.
+  \end{inparaenum}
+
+
+\paragraph{Denial of Service.}
+By flooding the system with bad proposals (including ones that have a long voting or enactment deadlines), it becomes difficult to identify the
+proposals that need to be progressed.  Large numbers of in-flight proposals will also impact timing and memory performance, and perhaps prevent transaction submission.
+%
+This attack is mitigated by:
+  \begin{inparaenum}
+  \item
+    Restricting the size of the submitter group;
+  \item
+    Requiring a quorum of counter-signatures for each proposal;
+  \item
+    Tying on-chain proposals to off-chain discussion;
+  \item
+    Restricting deadlines, so that they cannot be too far in the future.
+  \end{inparaenum}
+It would also be possible to charge fees for proposal submission (perhaps on a refundable basis if the proposal was accepted).
+
+\pagebreak
+\subsection{Performance Requirements}
+
+The solution must:
+
+\begin{itemize}
+\item
+  avoid significant increases in memory requirements;
+\item
+  avoid significant impact on normal block production times;
+\item
+  avoid significant increases in transaction volumes.
+\end{itemize}
+
+A particular concern is over increased costs at the epoch boundary.
+%
+Suitable performance mitigations include:
+
+\begin{enumerate}
+\item
+  Limiting the number of simultaneously active proposals through a small submitter group
+  -- this will, in turn, reduce the number of votes that need to be tallied (time and memory),  the number of proposals that need to be recorded (memory), and the number of proposals that need to be enacted at an epoch boundary (time);
+\item
+  Using a delegate system to reduce the number of vote transactions (network);
+\item
+  Tallying votes in the background, so that normal block production and verification is not affected (time);
+\item
+  Requiring vote and endorsement outcomes to be calculated ahead of the epoch boundary (time and memory).
+\end{enumerate}
