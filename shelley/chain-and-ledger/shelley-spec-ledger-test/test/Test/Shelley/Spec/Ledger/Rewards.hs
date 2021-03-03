@@ -686,7 +686,8 @@ oldEqualsNew  newepochstate  = old == new
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
     unAggregated = runReader (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
-    new = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    new_with_zeros = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    new = Map.filter (/= Coin 0) new_with_zeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
 
@@ -704,7 +705,8 @@ oldEqualsNewOn  newepochstate  = old == new
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
     (unAggregated,_) = runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
-    new = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    new_with_zeros = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    new = Map.filter (/= Coin 0) new_with_zeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
 
