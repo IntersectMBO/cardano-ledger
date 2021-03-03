@@ -35,7 +35,9 @@ jobs:
         ruby-version: 2.6
 
     - name: Install cbor-diag and cddl
-      run: gem install cbor-diag cddl
+      run: |
+        gem install cddl -v 0.8.15
+        gem install cbor-diag
 
     - name: Install libsodium (MacOS)
       if: matrix.os == 'macos-latest'
