@@ -31,7 +31,7 @@ module Cardano.Ledger.Alonzo.TxBody
         txUpdates,
         mint,
         sdHash,
-        auxdHash
+        adHash
       ),
     AlonzoBody,
     EraIndependentWitnessPPData,
@@ -163,7 +163,7 @@ data TxBodyRaw era = TxBodyRaw
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
     -- Operations on the TxBody in the AlonzoEra depend upon this.
     _sdHash :: !(StrictMaybe (WitnessPPDataHash (Crypto era))),
-    _auxdHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era)))
+    _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era)))
   }
   deriving (Generic, Typeable)
 
@@ -257,7 +257,7 @@ pattern TxBody
     txUpdates,
     mint,
     sdHash,
-    auxdHash
+    adHash
   } <-
   TxBodyConstr
     ( Memo
@@ -272,7 +272,7 @@ pattern TxBody
             _update = txUpdates,
             _mint = mint,
             _sdHash = sdHash,
-            _auxdHash = auxdHash
+            _adHash = adHash
           }
         _
       )
@@ -288,7 +288,7 @@ pattern TxBody
       update'
       mint'
       sdHash'
-      auxdHash' =
+      adHash' =
         TxBodyConstr $
           memoBytes
             ( encodeTxBodyRaw $
@@ -303,7 +303,7 @@ pattern TxBody
                   update'
                   mint'
                   sdHash'
-                  auxdHash'
+                  adHash'
             )
 
 {-# COMPLETE TxBody #-}
@@ -363,7 +363,7 @@ encodeTxBodyRaw
       _update,
       _mint,
       _sdHash,
-      _auxdHash
+      _adHash
     } =
     Keyed
       ( \i ifee o f t c w u b mi sh ah ->
@@ -380,7 +380,7 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 8 bot
       !> Omit isZero (Key 9 (E encodeMint _mint))
       !> encodeKeyedStrictMaybe 11 _sdHash
-      !> encodeKeyedStrictMaybe 12 _auxdHash
+      !> encodeKeyedStrictMaybe 12 _adHash
     where
       encodeKeyedStrictMaybe key x =
         Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
@@ -461,7 +461,7 @@ instance
       bodyFields 11 = fieldA (\x tx -> tx {_sdHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 12 =
         fieldA
-          (\x tx -> tx {_auxdHash = x})
+          (\x tx -> tx {_adHash = x})
           (D (SJust <$> fromCBOR))
       bodyFields n = fieldA (\_ t -> t) (Invalid n)
       requiredFields =
@@ -544,7 +544,7 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u mnt sdh axh) _)) =
       ("update", ppStrictMaybe ppUpdate u),
       ("mint", ppValue mnt),
       ("sdHash", ppStrictMaybe ppSafeHash sdh),
-      ("auxdHash", ppStrictMaybe ppSafeHash axh)
+      ("adHash", ppStrictMaybe ppSafeHash axh)
     ]
 
 instance
