@@ -123,7 +123,6 @@ instance
       <*> genMintValues @c
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
 deriving newtype instance Arbitrary IsValidating
 

@@ -31,7 +31,6 @@ module Cardano.Ledger.Alonzo.TxBody
         txUpdates,
         txADhash,
         mint,
-        exunits,
         sdHash,
         scriptHash
       ),
@@ -45,7 +44,6 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash, DataHash)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits, ppExUnits)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -166,7 +164,6 @@ data TxBodyRaw era = TxBodyRaw
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
     -- Operations on the TxBody in the AlonzoEra depend upon this.
-    _exunits :: !ExUnits,
     _sdHash :: !(StrictMaybe (WitnessPPDataHash (Crypto era))),
     _scriptHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era)))
   }
@@ -249,7 +246,6 @@ pattern TxBody ::
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Value (Crypto era) ->
-  ExUnits ->
   StrictMaybe (WitnessPPDataHash (Crypto era)) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   TxBody era
@@ -264,7 +260,6 @@ pattern TxBody
     txUpdates,
     txADhash,
     mint,
-    exunits,
     sdHash,
     scriptHash
   } <-
@@ -281,7 +276,6 @@ pattern TxBody
             _update = txUpdates,
             _adHash = txADhash,
             _mint = mint,
-            _exunits = exunits,
             _sdHash = sdHash,
             _scriptHash = scriptHash
           }
@@ -299,7 +293,6 @@ pattern TxBody
       update'
       adHash'
       mint'
-      exunits'
       sdHash'
       scriptHash' =
         TxBodyConstr $
@@ -316,7 +309,6 @@ pattern TxBody
                   update'
                   adHash'
                   mint'
-                  exunits'
                   sdHash'
                   scriptHash'
             )
@@ -378,7 +370,6 @@ encodeTxBodyRaw
       _update,
       _adHash,
       _mint,
-      _exunits,
       _sdHash,
       _scriptHash
     } =
@@ -397,7 +388,6 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 7 _adHash
       !> encodeKeyedStrictMaybe 8 bot
       !> Omit isZero (Key 9 (E encodeMint _mint))
-      !> Omit (== mempty) (Key 10 (To _exunits))
       !> encodeKeyedStrictMaybe 11 _sdHash
       !> encodeKeyedStrictMaybe 12 _scriptHash
     where
@@ -447,7 +437,6 @@ instance
           SNothing
           SNothing
           mempty
-          mempty
           SNothing
           SNothing
       bodyFields :: (Word -> Field (Annotator (TxBodyRaw era)))
@@ -480,7 +469,6 @@ instance
           (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 9 = fieldA (\x tx -> tx {_mint = x}) (D decodeMint)
-      bodyFields 10 = fieldA (\x tx -> tx {_exunits = x}) From
       bodyFields 11 = fieldA (\x tx -> tx {_sdHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 12 =
         fieldA
@@ -554,7 +542,7 @@ ppTxBody ::
   ) =>
   TxBody era ->
   PDoc
-ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u adh mnt exu sdh sch) _)) =
+ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u adh mnt sdh sch) _)) =
   ppRecord
     "TxBody(Mary or Allegra)"
     [ ("inputs", ppSet ppTxIn i),
@@ -567,7 +555,6 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u adh mnt exu sdh sc
       ("update", ppStrictMaybe ppUpdate u),
       ("adHash", ppStrictMaybe ppSafeHash adh),
       ("mint", ppValue mnt),
-      ("exunits", ppExUnits exu),
       ("sdHash", ppStrictMaybe ppSafeHash sdh),
       ("scriptHash", ppStrictMaybe ppSafeHash sch)
     ]
