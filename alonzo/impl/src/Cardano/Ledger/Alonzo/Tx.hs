@@ -368,8 +368,9 @@ feesOK ::
     UsesTxOut era,
     ValidateScript era,
     HasField "txfee" (Core.TxBody era) Coin,
-    HasField "exunits" (Core.TxBody era) ExUnits,
-    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wits" (Tx era) (TxWitness era),
+    HasField "txrdmrs" (TxWitness era) (Map.Map RdmrPtr (Data era, ExUnits))
   ) =>
   PParams era ->
   Tx era ->
@@ -399,7 +400,8 @@ txsize :: Tx era -> Integer
 txsize (TxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
 
 minfee ::
-  ( HasField "exunits" (Core.TxBody era) ExUnits
+  ( HasField "wits" (Tx era) (TxWitness era),
+    HasField "txrdmrs" (TxWitness era) (Map.Map RdmrPtr (Data era, ExUnits))
   ) =>
   PParams era ->
   Tx era ->
@@ -407,10 +409,12 @@ minfee ::
 minfee pp tx =
   (txsize tx <×> a pp)
     <+> b pp
-    <+> scriptfee (_prices pp) (getField @"exunits" (txbody tx))
+    <+> (scriptfee (_prices pp) totExunits)
   where
     a protparam = Coin (fromIntegral (_minfeeA protparam))
     b protparam = Coin (fromIntegral (_minfeeB protparam))
+    totExunits = foldl (<>) mempty (snd $ unzip (Map.elems trd))
+    trd = getField @"txrdmrs" (getField @"wits" tx)
 
 -- The specification uses "validatorHash" to extract ScriptHash from
 -- an Addr. But not every Addr has a ScriptHash. In particular KeyHashObj
