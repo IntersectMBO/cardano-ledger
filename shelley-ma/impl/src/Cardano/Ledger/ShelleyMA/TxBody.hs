@@ -339,11 +339,20 @@ instance HasField "vldt" (TxBody era) ValidityInterval where
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = getField @"update" m
 
-instance Crypto era ~ crypto => HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash crypto)) where
+instance
+  Crypto era ~ crypto =>
+  HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash crypto))
+  where
   getField (TxBodyConstr (Memo m _)) = getField @"adHash" m
 
 instance Value era ~ value => HasField "mint" (TxBody era) value where
   getField (TxBodyConstr (Memo m _)) = getField @"mint" m
+
+instance
+  Crypto era ~ crypto =>
+  HasField "txinputs_fee" (TxBody era) (Set (TxIn crypto))
+  where
+  getField (TxBodyConstr (Memo m _)) = getField @"inputs" m
 
 -- ============================================
 

@@ -880,6 +880,12 @@ instance
 instance c ~ Crypto era => HasField "minted" (TxBody era) (Set (ScriptHash c)) where
   getField _ = Set.empty
 
+instance
+  c ~ Crypto era =>
+  HasField "txinputs_fee" (TxBody era) (Set (TxIn c))
+  where
+  getField (TxBodyConstr (Memo m _)) = getField @"_inputsX" m
+
 -- ===============================================================
 
 -- | Proof/Witness that a transaction is authorized by the given key holder.

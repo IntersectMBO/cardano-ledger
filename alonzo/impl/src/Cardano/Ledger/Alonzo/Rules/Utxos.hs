@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -28,12 +29,12 @@ import Data.Set (Set)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.LedgerState
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (Update)
-import Shelley.Spec.Ledger.STS.Ppup (PPUPEnv (..))
+import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn (..), Wdrl)
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits)
@@ -52,10 +53,10 @@ instance
     UsesTxOut era,
     UsesValue era,
     UsesPParams era,
+    Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
-    Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Core.Script era ~ Script era,
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.TxBody era ~ Alonzo.TxBody era,
@@ -66,6 +67,7 @@ instance
   ) =>
   STS (UTXOS era)
   where
+  type BaseM (UTXOS era) = ShelleyBase
   type Environment (UTXOS era) = UtxoEnv era
   type State (UTXOS era) = UTxOState era
   type Signal (UTXOS era) = Tx era
@@ -194,3 +196,12 @@ instance
     NoThunks (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   NoThunks (UtxosPredicateFailure era)
+
+instance
+  ( Era era,
+    STS (PPUP era),
+    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era
+  ) =>
+  Embed (PPUP era) (UTXOS era)
+  where
+  wrapFailed = UpdateFailure

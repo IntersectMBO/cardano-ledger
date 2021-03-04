@@ -143,21 +143,21 @@ deriving instance TransUTxO NoThunks era => NoThunks (UTxO era)
 deriving instance (Era era, NFData (Core.TxOut era)) => NFData (UTxO era)
 
 deriving newtype instance
-  TransUTxO Eq era =>
+  Eq (Core.TxOut era) =>
   Eq (UTxO era)
 
 deriving newtype instance
-  (TransUTxO ToCBOR era, Era era) =>
+  (Era era, ToCBOR (Core.TxOut era)) =>
   ToCBOR (UTxO era)
 
 deriving newtype instance
-  (TransUTxO FromCBOR era, Era era) =>
+  (FromCBOR (Core.TxOut era), Era era) =>
   FromCBOR (UTxO era)
 
 deriving via
   Quiet (UTxO era)
   instance
-    (TransUTxO Show era) =>
+    Show (Core.TxOut era) =>
     Show (UTxO era)
 
 -- | Compute the id of a transaction.

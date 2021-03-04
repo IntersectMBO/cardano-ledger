@@ -44,6 +44,10 @@ module Cardano.Ledger.Alonzo.Tx
     WitnessPPDataHash,
     -- Figure 3
     Tx (Tx, body, wits, isValidating, auxiliaryData),
+    body',
+    wits',
+    isValidating',
+    auxiliaryData',
     TxBody (..),
     -- Figure 4
     ScriptPurpose (..),
@@ -52,7 +56,8 @@ module Cardano.Ledger.Alonzo.Tx
     txbody,
     minfee,
     isNonNativeScriptAddress,
-    feesOK,
+    -- txsize,
+    -- totExunits,
     txins,
     Shelley.txouts,
     -- Figure 6
@@ -79,8 +84,8 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
-import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, PParams' (..), getLanguageView)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), scriptfee)
+import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, getLanguageView)
+import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), Prices, scriptfee)
 import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..), Tag (..))
 import Cardano.Ledger.Alonzo.TxBody
   ( EraIndependentWitnessPPData,
@@ -114,7 +119,6 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val (coin, (<+>), (<×>)))
-import Control.SetAlgebra (eval, (◁))
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Coders
 import Data.List (foldl')
@@ -136,15 +140,18 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
+import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (..), RewardAcnt, getRwdCred)
+import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe, maybeToStrictMaybe, strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (ScriptHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
+import Shelley.Spec.Ledger.Keys (KeyRole (Witness))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Tx (ValidateScript (isNativeScript))
-import Shelley.Spec.Ledger.TxBody (DelegCert (..), Delegation (..), TxIn (..), Wdrl (..), unWdrl)
-import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
+import Shelley.Spec.Ledger.TxBody (DelegCert (..), Delegation (..), TxIn (..), Wdrl (..), WitVKey, unWdrl)
+import Shelley.Spec.Ledger.UTxO (UTxO (..))
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
 -- ===================================================
@@ -254,27 +261,49 @@ pattern Tx {body, wits, isValidating, auxiliaryData} <-
   where
     Tx b w v a = TxConstr $ memoBytes (encodeTxRaw $ TxRaw b w v a)
 
+-- We define these accessor functions manually, because if we define them using
+-- the record syntax in the Tx pattern, they inherit the constraints
+-- (Era era, ToCBOR (Core.AuxiliaryData era),ToCBOR (Core.TxBody era))
+-- constraint as a precondition. This is unnecessary, as one can see below.
+
+body' :: Tx era -> Core.TxBody era
+body' (TxConstr (Memo (TxRaw b _ _ _) _)) = b
+
+wits' :: Tx era -> TxWitness era
+wits' (TxConstr (Memo (TxRaw _ x _ _) _)) = x
+
+isValidating' :: Tx era -> IsValidating
+isValidating' (TxConstr (Memo (TxRaw _ _ x _) _)) = x
+
+auxiliaryData' :: Tx era -> StrictMaybe (Core.AuxiliaryData era)
+auxiliaryData' (TxConstr (Memo (TxRaw _ _ _ x) _)) = x
+
 -- ===================================
 -- WellFormed instances
 
 instance aux ~ (Core.AuxiliaryData era) => HasField "auxiliaryData" (Tx era) (StrictMaybe aux) where
-  getField (TxConstr (Memo (TxRaw _body _wits _ aux) _)) = aux
+  getField txr = auxiliaryData' txr
 
 instance (body ~ Core.TxBody era) => HasField "body" (Tx era) body where
-  getField (TxConstr (Memo (TxRaw bod _wits _ _aux) _)) = bod
-
---------------------------------------------------------------------------------
--- HasField instances for the Tx
---------------------------------------------------------------------------------
-
--- Note that we do not use the pattern synonym in these instances, since we
--- don't want to drag in the CBOR constraints.
+  getField txr = body' txr
 
 instance HasField "wits" (Tx era) (TxWitness era) where
-  getField (TxConstr (Memo txr _)) = _wits txr
+  getField txr = wits' txr
 
 instance HasField "isValidating" (Tx era) IsValidating where
-  getField (TxConstr (Memo txr _)) = _isValidating txr
+  getField txr = isValidating' txr
+
+instance c ~ (Crypto era) => HasField "addrWits" (Tx era) (Set (WitVKey 'Witness c)) where
+  getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txwitsVKey' x
+
+instance
+  (c ~ (Crypto era), script ~ Core.Script era) =>
+  HasField "scriptWits" (Tx era) (Map.Map (ScriptHash c) script)
+  where
+  getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txscripts' x
+
+instance c ~ (Crypto era) => HasField "bootWits" (Tx era) (Set (BootstrapWitness c)) where
+  getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txwitsBoot' x
 
 -- =========================================================
 -- Figure 2: Definitions for Transactions
@@ -351,36 +380,17 @@ hashWitnessPPData pp langs rdmrs =
 
 isNonNativeScriptAddress ::
   forall era.
-  ValidateScript era =>
-  Tx era ->
+  (Era era, ValidateScript era) =>
+  Core.Tx era ->
   Addr (Crypto era) ->
   Bool
-isNonNativeScriptAddress (TxConstr (Memo (TxRaw {_wits = w}) _)) addr =
+isNonNativeScriptAddress tx addr =
   case getValidatorHash addr of
     Nothing -> False
     Just hash ->
-      case Map.lookup hash (txscripts w) of
+      case Map.lookup hash (getField @"scriptWits" tx) of
         Nothing -> False
         Just scr -> not (isNativeScript @era scr)
-
-feesOK ::
-  forall era.
-  ( ValidateScript era,
-    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
-  ) =>
-  PParams era ->
-  Tx era ->
-  UTxO era ->
-  Bool
-feesOK pp tx (UTxO m) =
-  (bal >= getField @"txfee" txb)
-    && all (not . isNonNativeScriptAddress tx . getField @"address") utxoFees
-    && (minfee pp tx <= getField @"txfee" txb)
-  where
-    txb = txbody tx
-    fees = getField @"txinputs_fee" txb
-    utxoFees = eval (fees ◁ m) -- compute the domain restriction to those inputs where fees are paid
-    bal = coin (balance @era (UTxO utxoFees))
 
 -- | The keys of all the inputs of the TxBody (both the inputs for fees, and the normal inputs).
 txins ::
@@ -392,22 +402,37 @@ txins ::
 txins txb = Set.union (getField @"inputs" txb) (getField @"txinputs_fee" txb)
 
 -- | txsize computes the length of the serialised bytes
-txsize :: Tx era -> Integer
-txsize (TxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
+instance HasField "txsize" (Tx era) Integer where
+  getField (TxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
 
 minfee ::
-  PParams era ->
-  Tx era ->
+  ( HasField "_minfeeA" (Core.PParams era) Natural,
+    HasField "_minfeeB" (Core.PParams era) Natural,
+    HasField "_prices" (Core.PParams era) Prices,
+    HasField "totExunits" (Core.Tx era) ExUnits,
+    HasField "txsize" (Core.Tx era) Integer
+  ) =>
+  Core.PParams era ->
+  Core.Tx era ->
   Coin
 minfee pp tx =
-  (txsize tx <×> a pp)
+  (getField @"txsize" tx <×> a pp)
     <+> b pp
-    <+> (scriptfee (_prices pp) totExunits)
+    <+> (scriptfee (getField @"_prices" pp) allExunits)
   where
-    a protparam = Coin (fromIntegral (_minfeeA protparam))
-    b protparam = Coin (fromIntegral (_minfeeB protparam))
-    totExunits = foldl (<>) mempty (snd $ unzip (Map.elems trd))
-    trd = getField @"txrdmrs" (getField @"wits" tx)
+    a protparam = Coin (fromIntegral (getField @"_minfeeA" protparam))
+    b protparam = Coin (fromIntegral (getField @"_minfeeB" protparam))
+    allExunits = getField @"totExunits" tx
+
+-- The only thing that keeps minfee from working on Core.Tx is that
+-- not all eras can extract a ExUninits from a Core.Tx. For the Alonzo
+-- era, we use this function, specialized to the Alonzo Tx defined in this file.
+-- If we had instances (HasField "exUnits" (Core.Tx era) ExUnits) we'd be golden
+
+instance HasField "totExunits" (Tx era) ExUnits where
+  getField tx = foldl (<>) mempty (snd $ unzip (Map.elems trd))
+    where
+      trd = getField @"txrdmrs" (getField @"wits" tx)
 
 -- The specification uses "validatorHash" to extract ScriptHash from
 -- an Addr. But not every Addr has a ScriptHash. In particular KeyHashObj
