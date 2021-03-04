@@ -401,9 +401,11 @@ txsize :: Tx era -> Integer
 txsize (TxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
 
 minfee ::
-  (Era era, ToCBOR (Core.AuxiliaryData era),
-  HasField "wits" (Tx era) (TxWitness era),
-  HasField "txrdmrs" (TxWitness era) (Map.Map RdmrPtr (Data era, ExUnits))) =>
+  ( Era era,
+    ToCBOR (Core.AuxiliaryData era),
+    HasField "wits" (Tx era) (TxWitness era),
+    HasField "txrdmrs" (TxWitness era) (Map.Map RdmrPtr (Data era, ExUnits))
+  ) =>
   PParams era ->
   Tx era ->
   Coin
