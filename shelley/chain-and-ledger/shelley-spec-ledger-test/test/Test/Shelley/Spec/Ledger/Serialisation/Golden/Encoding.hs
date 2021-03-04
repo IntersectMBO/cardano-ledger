@@ -971,7 +971,7 @@ tests =
           s = Map.singleton (hashScript @C testScript) (testScript @C_Crypto)
           wits :: Shelley.Spec.Ledger.Tx.WitnessSet C
           wits = mempty {addrWits = Set.singleton w, scriptWits = s}
-          md = MD.Metadata $ Map.singleton 17 (MD.I 42)
+          md = (MD.Metadata @C) $ Map.singleton 17 (MD.I 42)
        in checkEncodingCBORAnnotated
             "tx_full"
             (Tx txb wits (SJust md))
@@ -1128,7 +1128,7 @@ tests =
                 (hashScript @C testScript2, testScript2)
               ]
           tx4 = Tx txb4 mempty {scriptWits = ss} SNothing
-          tx5MD = MD.Metadata $ Map.singleton 17 (MD.I 42)
+          tx5MD = MD.Metadata @C $ Map.singleton 17 (MD.I 42)
           tx5 = Tx txb5 mempty {addrWits = ws, scriptWits = ss} (SJust tx5MD)
           txns = TxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated

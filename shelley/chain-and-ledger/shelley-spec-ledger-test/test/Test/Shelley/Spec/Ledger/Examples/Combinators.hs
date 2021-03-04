@@ -56,7 +56,6 @@ import Control.State.Transition (STS (State))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, StrictMaybe(..), (⭒))
@@ -196,8 +195,7 @@ newUTxO ::
   forall era.
   ( UsesTxBody era,
     UsesTxOut era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Core.TxBody era ->
   ChainState era ->

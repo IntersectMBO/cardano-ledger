@@ -55,8 +55,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Era
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut, UsesValue)
-import Cardano.Ledger.Val ((<+>), (<×>))
+import Cardano.Ledger.Val (zero, (<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
   ( BaseRep (MapR),
@@ -102,7 +101,7 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Scripts
-import Shelley.Spec.Ledger.Tx (TransTx, Tx (..))
+import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
   ( EraIndependentTxBody,
     PoolCert (..),
@@ -164,7 +163,7 @@ deriving via
 -- | Compute the id of a transaction.
 txid ::
   forall era.
-  UsesTxBody era =>
+  Era era =>
   Core.TxBody era ->
   TxId (Crypto era)
 txid = TxId . hashAnnotated
@@ -187,9 +186,7 @@ txins = getField @"inputs"
 -- | Compute the transaction outputs of a transaction.
 txouts ::
   forall era.
-  ( UsesTxBody era,
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
-  ) =>
+  Era era =>
   Core.TxBody era ->
   UTxO era
 txouts tx =
@@ -258,12 +255,10 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 
 -- | Determine the total balance contained in the UTxO.
 balance ::
-  ( UsesValue era,
-    UsesTxOut era
-  ) =>
+  Era era =>
   UTxO era ->
   Core.Value era
-balance (UTxO utxo) = Map.foldl' addTxOuts mempty utxo
+balance (UTxO utxo) = Map.foldl' addTxOuts zero utxo
   where
     addTxOuts !b out = (getField @"value" out) <+> b
 
@@ -296,12 +291,10 @@ getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolId $ p
 getKeyHashFromRegPool _ = Nothing
 
 txup ::
-  ( TransTx ToCBOR era,
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
-  ) =>
+  HasField "update" (Core.TxBody era) (StrictMaybe (Update era)) =>
   Tx era ->
   Maybe (Update era)
-txup (Tx txbody _ _) = strictMaybeToMaybe (getField @"update" txbody)
+txup (TxPrime txbody _ _) = strictMaybeToMaybe (getField @"update" txbody)
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)
@@ -327,8 +320,7 @@ scriptCred (ScriptHashObj hs) = Just hs
 -- and the withdrawals.
 scriptsNeeded ::
   forall era.
-  ( UsesTxOut era,
-    TransTx ToCBOR era,
+  ( Era era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
@@ -348,15 +340,14 @@ scriptsNeeded u tx =
           (filter requiresVKeyWitness certificates)
       )
   where
-    withdrawals = unWdrl $ getField @"wdrls" $ _body tx
-    u'' = eval ((txinsScript (getField @"inputs" $ _body tx) u) ◁ u)
-    certificates = (toList . getField @"certs" . _body) tx
+    withdrawals = unWdrl $ getField @"wdrls" $ body' tx
+    u'' = eval ((txinsScript (getField @"inputs" $ body' tx) u) ◁ u)
+    certificates = (toList . getField @"certs" . body') tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript ::
-  ( UsesTxOut era
-  ) =>
+  Era era =>
   Set (TxIn (Crypto era)) ->
   UTxO era ->
   Set (TxIn (Crypto era))

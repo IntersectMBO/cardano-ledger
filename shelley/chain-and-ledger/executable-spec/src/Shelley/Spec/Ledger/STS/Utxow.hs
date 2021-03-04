@@ -278,7 +278,6 @@ utxoWitnessed ::
     UsesScript era,
     UsesAuxiliary era,
     UsesTxBody era,
-    UsesTxOut era,
     ValidateScript era,
     STS (utxow era),
     BaseM (utxow era) ~ ShelleyBase,

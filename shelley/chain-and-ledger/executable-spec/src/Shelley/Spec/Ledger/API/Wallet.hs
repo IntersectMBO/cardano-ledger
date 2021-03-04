@@ -24,7 +24,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
+import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
 import Control.Monad.Trans.Reader (runReader)
@@ -91,7 +91,7 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
   forall era.
-  (UsesTxOut era, UsesValue era) =>
+  UsesValue era =>
   Globals ->
   NewEpochState era ->
   PoolDistr (Crypto era)
@@ -124,8 +124,7 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  ( UsesTxOut era,
-    UsesValue era,
+  ( UsesValue era,
     HasField "_a0" (Core.PParams era) Rational,
     HasField "_nOpt" (Core.PParams era) Natural
   ) =>
@@ -200,7 +199,7 @@ getNonMyopicMemberRewards globals ss creds =
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
 currentSnapshot ::
-  (UsesTxOut era, UsesValue era) => NewEpochState era -> EB.SnapShot (Crypto era)
+  UsesValue era => NewEpochState era -> EB.SnapShot (Crypto era)
 currentSnapshot ss =
   stakeDistr utxo dstate pstate
   where

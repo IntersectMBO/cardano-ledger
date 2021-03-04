@@ -678,9 +678,7 @@ applyTxBody ::
   forall era.
   ( ShelleyTest era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "txfee" (Core.TxBody era) Coin,
     HasField
       "wdrls"
       (Core.TxBody era)

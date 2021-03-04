@@ -47,7 +47,7 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Mary.Value (Value (..), ppValue)
+import Cardano.Ledger.Mary.Value (Value (..), policies, policyID, ppValue)
 import qualified Cardano.Ledger.Mary.Value as Mary
 import Cardano.Ledger.Pretty
   ( PDoc,
@@ -99,6 +99,7 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.TxBody (TxIn (..), Wdrl (Wdrl), unWdrl)
 import Prelude hiding (lookup)
 
@@ -346,7 +347,6 @@ instance
 
 encodeTxBodyRaw ::
   ( Era era,
-    Compactible (Core.Value era),
     ToCBOR (PParamsDelta era)
   ) =>
   TxBodyRaw era ->
@@ -503,17 +503,16 @@ instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era)
 instance (Crypto era ~ c) => HasField "mint" (TxBody era) (Mary.Value c) where
   getField (TxBodyConstr (Memo m _)) = _mint m
 
-instance
-  (Crypto era ~ c) =>
-  HasField "txinputs_fee" (TxBody era) (Set (TxIn c))
-  where
+instance (Crypto era ~ c) => HasField "txinputs_fee" (TxBody era) (Set (TxIn c)) where
   getField (TxBodyConstr (Memo m _)) = _inputs_fee m
+
+instance c ~ (Crypto era) => HasField "minted" (TxBody era) (Set (ScriptHash c)) where
+  getField (TxBodyConstr (Memo m _)) = Set.map policyID (policies (_mint m))
 
 -- ===================================================
 
 ppTxOut ::
   ( Era era,
-    Compactible (Core.Value era),
     Show (Core.Value era),
     PrettyA (Core.Value era)
   ) =>
@@ -524,7 +523,6 @@ ppTxOut (TxOut addr val dhash) =
 
 ppTxBody ::
   ( Era era,
-    Compactible (Core.Value era),
     Show (Core.Value era),
     PrettyA (Core.Value era),
     PrettyA (PParamsDelta era)
@@ -551,7 +549,6 @@ instance
   ( Era era,
     PrettyA (Core.Value era),
     PrettyA (PParamsDelta era),
-    Compactible (Core.Value era),
     Show (Core.Value era)
   ) =>
   PrettyA (TxBody era)

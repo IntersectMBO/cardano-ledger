@@ -76,19 +76,15 @@ instance
 
 utxosTransition ::
   forall era.
-  ( UsesTxBody era,
-    UsesTxOut era,
+  ( UsesTxOut era,
     UsesScript era,
-    UsesValue era,
     Core.Script era ~ Script era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Core.TxOut era ~ Alonzo.TxOut era,
-    HasField "txfee" (Core.TxBody era) Coin,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Alonzo.TxOut era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
@@ -111,15 +107,12 @@ utxosTransition =
 scriptsValidateTransition ::
   forall era.
   ( UsesTxOut era,
-    UsesTxBody era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Core.TxOut era ~ Alonzo.TxOut era,
-    HasField "txfee" (Core.TxBody era) Coin,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Alonzo.TxOut era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -160,7 +153,6 @@ scriptsValidateTransition = do
 scriptsNotValidateTransition ::
   forall era.
   ( UsesTxOut era,
-    UsesValue era,
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   TransitionRule (UTXOS era)

@@ -1,3 +1,5 @@
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -12,15 +14,33 @@ module Cardano.Ledger.Era
     TranslateEra (..),
     translateEra',
     translateEraMaybe,
+    WellFormed,
   )
 where
 
+-- imports for the WellFormed constraint
+
+import Cardano.Ledger.Compactible (Compactible)
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.SafeHash
+  ( EraIndependentAuxiliaryData,
+    EraIndependentTxBody,
+    HashAnnotated (..),
+  )
+import Cardano.Ledger.Val (Val)
 import Control.Monad.Except (Except, runExcept)
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
+import GHC.Records (HasField (..))
+import Shelley.Spec.Ledger.Address (Addr)
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
+import Shelley.Spec.Ledger.Coin (Coin)
+import Shelley.Spec.Ledger.Scripts (ScriptHash)
 
 --------------------------------------------------------------------------------
 -- Era
@@ -28,7 +48,8 @@ import Data.Void (Void, absurd)
 
 class
   ( CryptoClass.Crypto (Crypto e),
-    Typeable e
+    Typeable e,
+    WellFormed e
   ) =>
   Era e
   where
@@ -123,3 +144,38 @@ translateEraMaybe ::
   Maybe (f era)
 translateEraMaybe ctxt =
   either (const Nothing) Just . runExcept . translateEra ctxt
+
+-- ==========================================================
+-- WellFormed-ness
+-- ==========================================================
+
+-- | All Well Formed Eras have this minimal structure.
+type WellFormed era =
+  ( HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
+    HasField "txfee" (Core.TxBody era) Coin,
+    HasField "minted" (Core.TxBody era) (Set (ScriptHash (Crypto era))),
+    HasField "body" (Core.Tx era) (Core.TxBody era),
+    HasField "auxiliaryData" (Core.Tx era) (StrictMaybe (Core.AuxiliaryData era)),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
+    HasField "value" (Core.TxOut era) (Core.Value era),
+    HashAnnotated (Core.AuxiliaryData era) EraIndependentAuxiliaryData (Crypto era),
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
+    Val (Core.Value era),
+    Compactible (Core.Value era) -- TxOut stores a CompactForm(Core.Value)
+  )
+
+{-  TODO, there are a few other constraints which are WellFormed and we should add
+them when time permits. Some are not added because the types they mentions reside
+in files that cause cirluar import dependencies.
+   -- import Shelley.Spec.Ledger.TxBody(DCert,Wdrl,)
+   -- import Shelley.Spec.Ledger.Tx(TxIn)
+These would have to be moved into a module such as Cardano.Ledger.TxBase(TxIn,DCert,Wdrl)
+   -- HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+   -- HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+   -- HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+others where the concrete type (Update and WitnessSet) will have to be made into a type family
+   -- import Shelley.Spec.Ledger.PParams (Update)
+   -- import Shelley.Spec.Ledger.Tx(WitnessSet)
+   -- HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+   -- HasField "witnessSet" (Core.Tx era) (WitnessSet era),
+-}

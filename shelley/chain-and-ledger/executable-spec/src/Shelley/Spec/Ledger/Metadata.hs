@@ -14,6 +14,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.Metadata
   ( Metadatum (..),
@@ -32,12 +33,13 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.SafeHash
-  ( EraIndependentMetadata,
-    HasAlgorithm,
-    HashWithCrypto (..),
+  ( EraIndependentAuxiliaryData,
+    HashAnnotated,
     SafeHash,
     SafeToHash (..),
+    hashAnnotated,
   )
 import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
@@ -47,9 +49,9 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Map.Strict (Map)
-import Data.Proxy
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
@@ -67,28 +69,25 @@ data Metadatum
 
 instance NoThunks Metadatum
 
-data Metadata = Metadata'
+data Metadata era = Metadata'
   { mdMap :: Map Word64 Metadatum,
     mdBytes :: LBS.ByteString
   }
   deriving (Eq, Show, Ord, Generic)
-  deriving (NoThunks) via AllowThunksIn '["mdBytes"] Metadata
+  deriving (NoThunks) via AllowThunksIn '["mdBytes"] (Metadata era)
 
 -- Usually we derive SafetToHash instances, but since Metadata preserves its serialisation
 -- bytes we can just extract them here, and make an explicit SafeToHash instance.
 
-instance SafeToHash Metadata where
+instance SafeToHash (Metadata era) where
   originalBytes = LBS.toStrict . mdBytes
 
--- We can't use hashAnnotated since Metadata doesn't determine the crypto
--- so we use the class HashWithCrypto that makes just the index implicit
--- but the crypto explicit.
-instance HashWithCrypto Metadata EraIndependentMetadata
+instance c ~ (Crypto era) => HashAnnotated (Metadata era) EraIndependentAuxiliaryData c
 
-hashMetadata :: HasAlgorithm c => Proxy c -> Metadata -> SafeHash c EraIndependentMetadata
-hashMetadata p m = hashWithCrypto p m
+hashMetadata :: Era era => Metadata era -> SafeHash (Crypto era) EraIndependentAuxiliaryData
+hashMetadata m = hashAnnotated m
 
-pattern Metadata :: Map Word64 Metadatum -> Metadata
+pattern Metadata :: Map Word64 Metadatum -> Metadata era
 pattern Metadata m <-
   Metadata' m _
   where
@@ -98,10 +97,10 @@ pattern Metadata m <-
 
 {-# COMPLETE Metadata #-}
 
-instance ToCBOR Metadata where
+instance Typeable era => ToCBOR (Metadata era) where
   toCBOR = encodePreEncoded . LBS.toStrict . mdBytes
 
-instance FromCBOR (Annotator Metadata) where
+instance Typeable era => FromCBOR (Annotator (Metadata era)) where
   fromCBOR = do
     (m, bytesAnn) <- withSlice mapFromCBOR
     pure $ Metadata' m <$> bytesAnn

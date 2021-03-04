@@ -391,7 +391,7 @@ txRetirePoolBytes16 = "83a50081824a93b885adfe0da089cdf600018182510075c40f44e1c15
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
-md :: MD.Metadata
+md :: MD.Metadata era
 md = MD.Metadata $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
 
 txbWithMD :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)

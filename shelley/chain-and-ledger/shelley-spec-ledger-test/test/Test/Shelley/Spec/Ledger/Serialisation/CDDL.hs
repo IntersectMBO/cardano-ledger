@@ -87,7 +87,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @StakePoolRelay n "relay",
       cddlTest @(DCert ShelleyC) n "certificate",
       cddlTest @(TxIn ShelleyC) n "transaction_input",
-      cddlTest' @Metadata n "transaction_metadata",
+      cddlTest' @(Metadata ShelleyE) n "transaction_metadata",
       cddlTest' @(MultiSig ShelleyC) n "multisig_script",
       cddlTest' @(Update ShelleyE) n "update",
       cddlTest' @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",
