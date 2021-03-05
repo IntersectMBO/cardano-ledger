@@ -1,39 +1,51 @@
 {
-    "haskell.nix": {
-        "branch": "master",
-        "description": "Alternative Haskell Infrastructure for Nixpkgs",
-        "homepage": "https://input-output-hk.github.io/haskell.nix",
-        "owner": "input-output-hk",
-        "repo": "haskell.nix",
-        "rev": "9aba1e299f6e7d6ccf1be41f64316567f845b9b7",
-        "sha256": "038xzhqxjx4xafwpa7w68cilq0iiz1wvx158yi87r70v1fk3dcr2",
-        "type": "tarball",
-        "url": "https://github.com/input-output-hk/haskell.nix/archive/9aba1e299f6e7d6ccf1be41f64316567f845b9b7.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "iohk-nix": {
-        "branch": "master",
-        "description": "nix scripts shared across projects",
-        "homepage": null,
-        "owner": "input-output-hk",
-        "repo": "iohk-nix",
-        "rev": "f2dee151a917aac96121246ed76fb17e3f9026b0",
-        "sha256": "1d8ygzczk4zbzz04j1yrwzbfld59bc6a6ar7bmlfx1j5m6fhjb8k",
-        "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/f2dee151a917aac96121246ed76fb17e3f9026b0.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "ormolu": {
-        "branch": "master",
-        "builtin": false,
-        "description": "A formatter for Haskell source code",
-        "homepage": null,
-        "owner": "tweag",
-        "repo": "ormolu",
-        "rev": "9cad22a2fec0ab0b416a46527fb7d22c69d07ef7",
-        "sha256": "1f8nqq8h3a414ip2chmr3zbhkzbb20zbk3h7y8z6qypxlv8asqls",
-        "type": "tarball",
-        "url": "https://github.com/tweag/ormolu/archive/9cad22a2fec0ab0b416a46527fb7d22c69d07ef7.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    }
+  "hackage.nix": {
+    "branch": "master",
+    "description": "Automatically generated Nix expressions for Hackage",
+    "homepage": "",
+    "owner": "input-output-hk",
+    "repo": "hackage.nix",
+    "rev": "b3c99d7f13df89a9a918c835ecb7114098912962",
+    "sha256": "1i5vg92s6g9zh0i35dm4a6hax7mdsqxbw8w2x63j0y6w57msv70g",
+    "type": "tarball",
+    "url": "https://github.com/input-output-hk/hackage.nix/archive/9f61382fad98e24fe8678db2ffb0c51a863a6023.tar.gz",
+    "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+  },
+  "haskell.nix": {
+    "branch": "master",
+    "description": "Alternative Haskell Infrastructure for Nixpkgs",
+    "homepage": "https://input-output-hk.github.io/haskell.nix",
+    "owner": "input-output-hk",
+    "repo": "haskell.nix",
+    "rev": "abe9243c255232a1ae1c93a03a0d3c79ed420ca0",
+    "sha256": "1vvwsr0klshzbvp88a45gpmx0lmm61cw8a046pmbbcsxyy08wf4m",
+    "type": "tarball",
+    "url": "https://github.com/input-output-hk/haskell.nix/archive/abe9243c255232a1ae1c93a03a0d3c79ed420ca0.tar.gz",
+    "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+  },
+  "iohk-nix": {
+    "branch": "master",
+    "description": "nix scripts shared across projects",
+    "homepage": null,
+    "owner": "input-output-hk",
+    "repo": "iohk-nix",
+    "rev": "f2dee151a917aac96121246ed76fb17e3f9026b0",
+    "sha256": "1d8ygzczk4zbzz04j1yrwzbfld59bc6a6ar7bmlfx1j5m6fhjb8k",
+    "type": "tarball",
+    "url": "https://github.com/input-output-hk/iohk-nix/archive/f2dee151a917aac96121246ed76fb17e3f9026b0.tar.gz",
+    "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+  },
+  "ormolu": {
+    "branch": "master",
+    "builtin": false,
+    "description": "A formatter for Haskell source code",
+    "homepage": null,
+    "owner": "tweag",
+    "repo": "ormolu",
+    "rev": "9cad22a2fec0ab0b416a46527fb7d22c69d07ef7",
+    "sha256": "1f8nqq8h3a414ip2chmr3zbhkzbb20zbk3h7y8z6qypxlv8asqls",
+    "type": "tarball",
+    "url": "https://github.com/tweag/ormolu/archive/9cad22a2fec0ab0b416a46527fb7d22c69d07ef7.tar.gz",
+    "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+  }
 }
