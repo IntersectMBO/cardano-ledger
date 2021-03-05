@@ -10,7 +10,6 @@
 
 module Cardano.Ledger.Alonzo.Rules.Utxos where
 
-import Cardano.Ledger.Alonzo ()
 import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx

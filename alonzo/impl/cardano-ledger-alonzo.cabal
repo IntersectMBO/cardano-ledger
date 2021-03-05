@@ -22,7 +22,7 @@ library
   exposed-modules:
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
-     Cardano.Ledger.Alonzo.Language
+    Cardano.Ledger.Alonzo.Language
     Cardano.Ledger.Alonzo.PParams
     Cardano.Ledger.Alonzo.Rules.Utxos
     Cardano.Ledger.Alonzo.Scripts
@@ -37,6 +37,7 @@ library
     cardano-ledger-shelley-ma,
     cardano-prelude,
     containers,
+    data-default,
     deepseq,
     nothunks,
     plutus-ledger-api,

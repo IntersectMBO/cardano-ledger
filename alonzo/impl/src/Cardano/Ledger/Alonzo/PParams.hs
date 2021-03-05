@@ -69,6 +69,7 @@ import Data.Coders
     (!>),
     (<*!),
   )
+import Data.Default (Default (..))
 import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
@@ -274,6 +275,9 @@ emptyPParams =
       _maxTxExUnits = ExUnits 0 0,
       _maxBlockExUnits = ExUnits 0 0
     }
+
+instance Default (PParams era) where
+  def = emptyPParams
 
 deriving instance Eq (PParams' StrictMaybe era)
 
