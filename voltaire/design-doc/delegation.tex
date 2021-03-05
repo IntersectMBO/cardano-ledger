@@ -61,7 +61,7 @@ Vote delegation transactions must include:
 Vote delegation comes into effect immediately that the transaction has appeared on-chain.  % There is no stability window.
 Vote delegations may be made at any time up to the point where votes are tallied.
 
-\subsection{Voting Indirection}
+\subsection{Vote Addresses}
 
 The Shelley ledger design separates the addresses that are used spending and block production delegation, associating two keys with a single address.
 \khcomment{Keys or addresses.}
@@ -100,5 +100,36 @@ The private key can be passed to another party to allow for transfers of delegat
 delegation capability without revoking the corresponding key.  \khcomment{Confirm this.}
 
 \begin{figure*}[h]
+  \includegraphics[trim=0 150 0 80,clip,width=\textwidth]{Indirection}
   \caption{Examples of Indirection}
+  \label{fig:indirection}
 \end{figure*}
+
+\subsubsection*{Voting Indirection}
+
+Figure~\ref{fig:indirection} shows how payment addresses are related to stake and vote addresses.
+
+\begin{figure*}[h]
+  \includegraphics[trim=0 150 0 80,clip,width=\textwidth]{Address-Structure}
+  \caption{Payment Stake and Vote Address Structure}
+  \label{fig:address-structure}
+\end{figure*}
+
+\subsubsection*{Address Structure}
+
+The structure of addresses is shown in Figure~\ref{fig:address-structure} (adapted from the Shelley delegation design document~\cite{..}).
+Payment addresses may be either Byron Addresses, Shelley Addresses or Voltaire Addresses.
+Voltaire addresses extend Shelley addresses by including a vote address reference in addition to the existing payment credential and stake address
+reference fields.  Payment credentials may be either payment verification key hashes or script hashes.  Stake address references may be either
+by value (in which case the stake credential is directly embedded in the address), by pointer to the registration transaction, or null (an efficient
+form used where payment addresses do not need stake delegation rights).
+Stake addresses refer to a stake credential that must either be a stake verification key hash or a script hash.
+\khcomment{The Shelley address design looks over-complicated -- stake references could probably be collapsed to just pointers.}
+Voltaire extends the Shelley address format by including vote address references.  These must be either by pointer to the registration transaction, or null (an efficient
+form used where payment addresses do not need vote delegation rights).
+\khcomment{I think the null form might not be used?  In which case we could avoid problems by eliminating it.  However, the vote address would then need either to be optional
+or it would be necessary to always register the vote credentials with the payment address.}
+Vote addresses refer to a vote credential that is must be a vote verification key hash.
+\khcomment{The different levels seem a bit confusing.  An address is presumably a reference to the structure.  But embedded stake credentials won't have an address.  Credentials similarly
+seem to always collapse down to the underlying structure (so may be naming artefects that do not really need to exist).}
+\khcomment{Should script hashes be allowed as voting credentials?  I would imagine so.}
