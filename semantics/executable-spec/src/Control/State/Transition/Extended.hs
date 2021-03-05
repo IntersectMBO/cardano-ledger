@@ -33,6 +33,7 @@ module Control.State.Transition.Extended
     Assertion (..),
     AssertionViolation (..),
     STS (..),
+    STUB,
     Embed (..),
     (?!),
     (?!:),
@@ -498,6 +499,30 @@ newtype Threshold a = Threshold a
 {------------------------------------------------------------------------------
 -- Utils
 ------------------------------------------------------------------------------}
+
+
+-- | A stub rule with no transitions to use as a placeholder
+data STUB (e :: Type) (st :: Type) (si :: Type) (f :: Type) (m :: Type -> Type)
+
+instance
+  ( Eq f
+  , Monad m
+  , Show f
+  , Typeable e
+  , Typeable f
+  , Typeable si
+  , Typeable st
+  , Typeable m
+  ) => STS (STUB e st si f m) where
+  type Environment (STUB e st si f m) = e
+  type State (STUB e st si f m) = st
+  type Signal (STUB e st si f m) = si
+  type PredicateFailure (STUB e st si f m) = f
+  type BaseM (STUB e st si f m) = m
+
+  transitionRules = []
+  initialRules = []
+
 
 -- | Map each element of a structure to an action, evaluate these actions from
 -- left to right, and ignore the results. For a version that doesn't ignore the
