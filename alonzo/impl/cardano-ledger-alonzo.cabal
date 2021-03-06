@@ -20,9 +20,10 @@ library
   if impl(ghc < 8.10)
     buildable: False
   exposed-modules:
+    Cardano.Ledger.DescribeEras
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
-     Cardano.Ledger.Alonzo.Language
+    Cardano.Ledger.Alonzo.Language
     Cardano.Ledger.Alonzo.PParams
     Cardano.Ledger.Alonzo.Rules.Utxos
     Cardano.Ledger.Alonzo.Scripts
@@ -34,6 +35,7 @@ library
     bytestring,
     cardano-binary,
     cardano-crypto-class,
+    cardano-crypto-praos,
     cardano-ledger-shelley-ma,
     cardano-prelude,
     containers,
@@ -42,6 +44,7 @@ library
     plutus-ledger-api,
     plutus-tx,
     shelley-spec-ledger,
+    shelley-spec-ledger-test,
     small-steps,
     text
   hs-source-dirs:
@@ -64,6 +67,7 @@ library test
   build-depends:
     base >=4.14 && <4.15,
     cardano-crypto-class,
+    cardano-crypto-praos,
     cardano-ledger-alonzo,
     cardano-ledger-shelley-ma-test,
     plutus-ledger-api,

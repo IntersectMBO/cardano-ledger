@@ -9,7 +9,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.ShelleyMA where
+module Cardano.Ledger.ShelleyMA
+  ( ShelleyMAEra,
+    MaryOrAllegra (..),
+    TxOut,
+    TxBody,
+    AuxiliaryData,
+    PParams,
+    Tx,
+  )
+where
 
 import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
@@ -47,7 +56,7 @@ import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
-import qualified Shelley.Spec.Ledger.PParams as Shelley
+import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, updatePParams)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Tx
   ( Tx,
@@ -113,9 +122,9 @@ instance
   where
   type
     PParamsDelta (ShelleyMAEra ma c) =
-      Shelley.PParamsUpdate (ShelleyMAEra ma c)
+      PParamsUpdate (ShelleyMAEra ma c)
 
-  mergePPUpdates _ = Shelley.updatePParams
+  mergePPUpdates _ = updatePParams
 
 --------------------------------------------------------------------------------
 -- Core instances
@@ -141,7 +150,7 @@ type instance
 
 type instance
   Core.PParams (ShelleyMAEra (ma :: MaryOrAllegra) c) =
-    Shelley.PParams (ShelleyMAEra (ma :: MaryOrAllegra) c)
+    PParams (ShelleyMAEra (ma :: MaryOrAllegra) c)
 
 type instance
   Core.Tx (ShelleyMAEra (ma :: MaryOrAllegra) c) =

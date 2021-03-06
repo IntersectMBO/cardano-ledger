@@ -3,16 +3,39 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra where
+module Cardano.Ledger.Allegra
+  ( AllegraEra,
+    Era,
+    proxy,
+    TxOut,
+    Value,
+    TxBody,
+    Script,
+    AuxiliaryData,
+    PParams,
+    Tx,
+  )
+where
 
 import Cardano.Ledger.Crypto (Crypto)
+import qualified Cardano.Ledger.Era as E (Era (Crypto))
 import Cardano.Ledger.ShelleyMA
+  ( AuxiliaryData,
+    MaryOrAllegra (..),
+    PParams,
+    ShelleyMAEra,
+    Tx,
+    TxBody,
+    TxOut,
+  )
 import Cardano.Ledger.ShelleyMA.Rules.EraMapping ()
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.ShelleyMA.TxBody ()
 import Cardano.Ledger.Val (Val ((<->)))
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
-import Shelley.Spec.Ledger.API
+import Data.Proxy (Proxy (..))
+import Shelley.Spec.Ledger.API hiding (TxBody)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 
 type AllegraEra = ShelleyMAEra 'Allegra
@@ -61,3 +84,14 @@ instance
       pp = sgProtocolParams sg
 
 instance PraosCrypto c => ShelleyBasedEra (AllegraEra c)
+
+-- Self-Describing type synomyms
+
+proxy :: Proxy (ShelleyMAEra 'Allegra c)
+proxy = Proxy
+
+type Era c = ShelleyMAEra 'Allegra c
+
+type Script era = Timelock (E.Crypto era)
+
+type Value era = Coin
