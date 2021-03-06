@@ -35,7 +35,7 @@ import Cardano.Ledger.Val (Val ((<->)))
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
-import Shelley.Spec.Ledger.API hiding (TxBody)
+import Shelley.Spec.Ledger.API hiding (PParams, Tx, TxBody, TxOut)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 
 type AllegraEra = ShelleyMAEra 'Allegra

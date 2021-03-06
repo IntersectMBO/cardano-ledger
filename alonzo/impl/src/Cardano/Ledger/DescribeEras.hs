@@ -17,10 +17,6 @@ module Cardano.Ledger.DescribeEras
     DescribesAlonzo,
     StandardCrypto,
     TestCrypto,
-    t1,
-    t2,
-    t3,
-    t4,
   )
 where
 
@@ -28,13 +24,8 @@ import Cardano.Crypto.DSIGN (Ed25519DSIGN, MockDSIGN)
 import Cardano.Crypto.Hash (Blake2b_224, Blake2b_256, MD5Prefix)
 import Cardano.Crypto.KES (MockKES, Sum6KES)
 import Cardano.Crypto.VRF.Praos
--- (ShelleyEra,Era,proxy,Value,TxBody,TxOut,Script,AuxiliaryData,Tx,PParams)
-
--- (MaryEra,Era,proxy,Value,TxBody,TxOut,Script,AuxiliaryData,Tx,PParams)
 import qualified Cardano.Ledger.Allegra as Allegra
--- (AllegraEra,Era,proxy,Value,TxBody,TxOut,Script,AuxiliaryData,Tx,PParams)
 import qualified Cardano.Ledger.Alonzo as Alonzo
--- (AlonzoEra,Era,proxy,Value,TxBody,TxOut,Script,AuxiliaryData,Tx,PParams)
 import Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (WellFormed)
@@ -87,6 +78,7 @@ type DescribesAlonzo era =
     Core.Tx era ~ Alonzo.Tx era
   )
 
+-- | If an instance for this class compiles, then era meets whatever superclass its given.
 class Checks era where
   checks :: Witness era -> Bool
 
@@ -101,12 +93,6 @@ instance DescribesMary (Mary.Era c) => Checks (Mary.Era c) where
 
 instance DescribesAlonzo (Alonzo.Era c) => Checks (Alonzo.Era c) where
   checks (Alonzo _) = True
-
-t1, t2, t3, t4 :: Bool
-t1 = checks (Shelley Standard)
-t2 = checks (Allegra Standard)
-t3 = checks (Mary Standard)
-t4 = checks (Alonzo Standard)
 
 {------------------------------------------------------------------------------
  First construct concrete versions of Crypto where the Hashing
@@ -134,12 +120,26 @@ instance CryptoClass.Crypto StandardCrypto where
 
 instance PraosCrypto StandardCrypto
 
+-- ===========================================
+
+-- | Evidence that a valid (predefined) crypto exists
 data Evidence c where
   Standard :: Evidence StandardCrypto
   Test :: Evidence TestCrypto
 
+instance Show (Evidence c) where
+  show Standard = "Standard"
+  show Test = "Test"
+
+-- | Witness of a valid (predefined) era
 data Witness era where
   Shelley :: Evidence c -> Witness (Shelley.ShelleyEra c)
   Mary :: Evidence c -> Witness (Mary.Era c)
   Allegra :: Evidence c -> Witness (Allegra.Era c)
   Alonzo :: Evidence c -> Witness (Alonzo.AlonzoEra c)
+
+instance Show (Witness e) where
+  show (Shelley c) = "Shelley " ++ show c
+  show (Allegra c) = "Allegra " ++ show c
+  show (Mary c) = "Mary " ++ show c
+  show (Alonzo c) = "Alonzo " ++ show c
