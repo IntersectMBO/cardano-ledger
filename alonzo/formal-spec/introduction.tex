@@ -1,10 +1,8 @@
 \section{Introduction}
 
 \TODO{Please run a spell checker over the final document}
-\TODO{Please fix up all missing references}
-\TODO{Take care to distinguish validation succeeding, and validation returning true.  I think you ALWAYS mean validation is true (a script is valid) NOT validation is successful (it has completed, but may have returned false)}
 
-This document describes the extensions to the multi-asset formal ledger specification~\ref{XX} \TODO{Fix this reference} that are
+This document describes the extensions to the multi-asset formal ledger specification~\cite{shelley_ma_spec} that are
 required for the support of non-native scripts, in particular Plutus Core. This underpins future Plutus development: there should be minimal changes to these ledger rules to support future non-native languages.
 %
 The two major extensions that are described here are:
@@ -17,7 +15,7 @@ of \emph{non-native} scripts, i.e. scripts that are not evaluated internally by 
   constructs (the ``extended UTxO'' model).
 \end{inparaenum}
 This document defines these extensions as changes to the multi-asset structured transition system,
-using the same notation and conventions that were used for the multi-asset specification~\cite{XX}.\TODO{Add this reference!!}
+using the same notation and conventions that were used for the multi-asset specification~\cite{shelley_ma_spec}.
 As with the multi-asset formal specification, these rules will be implemented in the form of an executable ledger specification that will then be
 integrated with the Cardano node.
 
@@ -31,7 +29,7 @@ based on e.g. the size of the transaction that includes the script.
 
 In contrast, \emph{non-native} scripts can perform arbitrary
 (and, in principle, Turing-complete) computations.
-In order to bound execution costs to a pre-determined constant, we use a standard ``fuel'' approach~\cite{XX}.\TODO{And this one, please!}
+In order to bound execution costs to a pre-determined constant, we use a standard ``fuel'' approach.
 We require transactions that use non-native scripts
 to have a budget in terms of a number of abstract $\ExUnits$.
 This budget gives a quantitative bound on resource usage in terms of a number of specific metrics, including memory usage or abstract execution steps.

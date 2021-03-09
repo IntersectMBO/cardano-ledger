@@ -1,29 +1,6 @@
 \section{UTxO}
 \label{sec:utxo}
 
-
-\begin{figure*}[htb]
-  \emph{Derived types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{sp}
-      & \ScriptPurpose
-      & \PolicyID \uniondistinct \UTxOIn \uniondistinct \AddrRWD \uniondistinct \DCert
-%      & \text{item the script is validated for}
-    \end{array}
-  \end{equation*}
-  \caption{Definitions used in the UTxO transition system}
-  \label{fig:defs:utxo-defs}
-\end{figure*}
-
-
-We make a number of changes to the UTxO model (see Figure~\ref{fig:defs:utxo-defs}).
-
-\begin{itemize}
-\item $\ScriptPurpose$ is the type of the items that scripts can validate.
-\end{itemize}
-
 \begin{figure*}[htb]
   \emph{Functions}
   %
@@ -67,6 +44,10 @@ We make a number of changes to the UTxO model (see Figure~\ref{fig:defs:utxo-def
 We have added or changed several functions that deal with fees as shown in Figure \ref{fig:functions:utxo}.
 
 \begin{itemize}
+  \item $\fun{isNonNativeScriptAddress}$ is a predicate that checks
+  whether an address is used as a script address with a non-native
+  script.
+  \item $\fun{exunits}$ calculates the total $\ExUnits$ in a transaction.
   \item The predicate $\fun{feesOK}$ checks whether the transaction is
   paying the necessary fees, and that it does it correctly. That is, it checks that:
   \begin{enumerate}[label=({\roman*})]
@@ -78,23 +59,16 @@ We have added or changed several functions that deal with fees as shown in Figur
     in the transaction.
   \end{enumerate}
   \item The function $\fun{txins}$ returns the UTxO keys of transaction inputs.
+  \item $\fun{txscriptfee}$ calculates the fee that a transaction must pay for script
+  execution based on the amount of $\ExUnits$ it has budgeted, and the prices in the current protocol parameters
+  for each component of $\ExUnits$.
+  \item The minimum fee calculation, $\fun{minfee}$, includes the script
+  fees that the transaction is obligated to pay in order to run its scripts.
 \end{itemize}
 
 Note that when creating a transaction, the wallet is responsible for
 determining the fees. Thus, it also has to execute the non-native scripts
 and include the fees for their execution.
-
-Figure~\ref{fig:defs:utxo-defs} defines the functions that are needed for the UTxO transition system.
-The changes are:
-
-\begin{itemize}
-  \item $\fun{txscriptfee}$ calculates the fee that a transaction must pay for script
-  execution based on the amount of $\ExUnits$ it has budgeted, and the prices in the current protocol parameters
-  for each component of $\ExUnits$.
-
-  \item The minimum fee calculation, $\fun{minfee}$, includes the script
-  fees that the transaction is obligated to pay in order to run its scripts.
-\end{itemize}
 
 \subsection{Combining Scripts with Their Inputs}
 \label{sec:scripts-inputs}
@@ -105,18 +79,29 @@ These include:
 
 \begin{itemize}
 \item
+  $\ScriptPurpose$ captures the exact purpose a script is used
+  for, for example spending a specific output or minting with a
+  specific policy.
+\item
   $\fun{indexof}$ is a helper function that finds the index of a given certificate, value, input, or
   withdrawal in a list, finite map, or set of such objects.
   It assumes there is some ordering on each of these structures.
-  \begin{note}
-    $\fun{indexof}$ might need an actual implementation.
-  \end{note}
 \item
   $\fun{indexedRdmrs}$ indexes the redeemers by the purpose they are used for.
 \end{itemize}
 
 
 \begin{figure}[htb]
+  \emph{Derived types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{sp}
+      & \ScriptPurpose
+      & \PolicyID \uniondistinct \UTxOIn \uniondistinct \AddrRWD \uniondistinct \DCert
+%      & \text{item the script is validated for}
+    \end{array}
+  \end{equation*}
   %
   \emph{Abstract functions}
   \begin{align*}
@@ -162,11 +147,11 @@ Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used
   arguments:
   \begin{itemize}
   \item A cost model, that is used to calculate the $\ExUnits$ that are needed for script execution;
-  \item A list of terms of type $\Data$ that will be passed to the script; %is given access to.
-  \item The execution unit budget.
+  \item A script to execute;
+  \item A list of terms of type $\Data$ that will be passed to the script; and
+  \item the execution unit budget.
   \end{itemize}
-  It outputs a pair of the validation result (as a Boolean)
-  and the remaining execution units (subtracting those that are used for script execution).
+  It outputs the validation result (as a Boolean).
   Note that script execution stops if the full budget has been spent before validation is complete.
 \end{itemize}
 
@@ -185,7 +170,7 @@ Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used
      &\fun{valContext} \in \UTxO \to \Tx \to \ScriptPurpose \to \Data \\
      &\text{Build Validation Data} \\~\\
      &\fun{runPLCScript} \in \CostMod \to\ScriptPlutus \to
-    \seqof{\Data} \to \ExUnits \to (\IsValidating \times \ExUnits) \\
+    \seqof{\Data} \to \ExUnits \to \IsValidating \\
      &\text{Validate a Plutus script, taking resource limits into account}
   \end{align*}
   %
@@ -199,8 +184,12 @@ Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used
   \label{fig:defs:functions-valid}
 \end{figure*}
 
-Note that no ``checks'' are performed within the functions that match the
-scripts with their inputs. Missing validators, missing inputs, incorrect hashes, the wrong type of script etc,
+Figure \ref{fig:functions:script2} contains the functions used to
+match scripts with their corresponding inputs and pass them to the
+evaluator.
+
+Note that no ``checks'' are performed within these functions.
+Missing validators, missing inputs, incorrect hashes, the wrong type of script etc,
 are caught during the application of the UTXOW rule (before these functions are ever applied).
 %
 Various items of data are involved in building the inputs for script validation:
@@ -257,7 +246,7 @@ the second phase involves actually executing those scripts.
 This ensures that users pay for the computational resources that are needed to validate non-native scripts, even
 if script validation fails. %
 In order to handle script execution, an additional transition system is used, called UTXOS.
-This performs the appropriate UTxO state changes, based on the
+It performs the appropriate UTxO state changes, based on the
 value of the $\IsValidating$ tag, which it checks using the $\fun{evalScripts}$ function.
 
 In general, there is no way to check \emph{a-priori} that the budget that has been supplied is sufficient for the transaction.
@@ -283,7 +272,7 @@ execution of scripts in the transactions inside a block, which would increase ex
 In fact, when replaying
 blocks, all the witnessing information can be thrown away.
 
-\subsection{Updating the UTxO State}
+\subsection{The UTXOS transition system}
 \label{sec:utxo-state-trans}
 
 We have defined a separate transition system, UTXOS, to represent the two distinct
@@ -296,11 +285,11 @@ are identical to the UTXO transition (Figure
   \emph{State transitions}
   \begin{equation*}
     \_ \vdash
-    \var{\_} \trans{utxo, utxos}{\_} \var{\_}
+    \var{\_} \trans{utxos}{\_} \var{\_}
     \subseteq \powerset (\UTxOEnv \times \UTxOState \times \Tx \times \UTxOState)
   \end{equation*}
   %
-  \caption{UTxO and UTxO script state update types}
+  \caption{UTxO script state update types}
   \label{fig:ts-types:utxo-scripts}
 \end{figure}
 
@@ -604,7 +593,9 @@ by the UTXO transition (the application of which is also part of the conditions)
       \var{txw}\leteq\fun{txwits}~{tx} \\
       (utxo, \wcard, \wcard, \wcard) \leteq \var{utxoSt} \\
       \var{witsKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
-      \dom (\txwitsVKey{txw}) \}\\~\\
+      \dom (\txwitsVKey{txw}) \}\\
+      \hldiff{\var{extraKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
+      \fun{extraKeys}~txb \}}\\~\\
       \hldiff{\forall \var{s} \in \range (\fun{txscripts}~{txw}) \cap \ScriptNative,
       \fun{runNativeScript}~\var{s}~\var{tx}}\\~\\
       \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}, \fun{checkRedeemers}~tx~utxo~sph} \\
@@ -614,7 +605,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
       \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\
-      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq \var{witsKeyHashes}
+      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \cup \hldiff{extraKeyHashes} \subseteq \var{witsKeyHashes}
       \\~\\
       genSig \leteq
       \left\{
