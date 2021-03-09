@@ -157,6 +157,7 @@ import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet, WitnessSetHKD (..), hashScript)
 import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),
+    MIRTarget (..),
     PoolMetadata (..),
     StakePoolRelay (..),
     TxBody (..),
@@ -628,7 +629,7 @@ tests =
             <> S (testVRFKH @C_Crypto) -- delegatee vrf key hash
         ),
       -- checkEncodingCBOR "mir"
-      let rws = Map.singleton (testStakeCred @C_Crypto) (Coin 77)
+      let rws = StakeAddressesMIR $ Map.singleton (testStakeCred @C_Crypto) (DeltaCoin 77)
        in checkEncodingCBOR
             "mir"
             (DCertMir (MIRCert ReservesMIR rws))

@@ -26,6 +26,7 @@ import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Examples.EmptyBlock (exEmptyBlock)
 import Test.Shelley.Spec.Ledger.Examples.GenesisDelegation (genesisDelegExample)
 import Test.Shelley.Spec.Ledger.Examples.Mir (mirExample)
+import Test.Shelley.Spec.Ledger.Examples.MirTransfer (testMIRTransfer)
 import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (poolLifetimeExample)
 import Test.Shelley.Spec.Ledger.Examples.PoolReReg (poolReRegExample)
 import Test.Shelley.Spec.Ledger.Examples.TwoPools (twoPoolsExample)
@@ -53,7 +54,8 @@ chainExamples =
       poolReRegExample,
       updatesExample,
       genesisDelegExample,
-      mirExample
+      mirExample,
+      testMIRTransfer
     ]
 
 multisigExamples :: TestTree

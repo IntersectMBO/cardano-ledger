@@ -22,6 +22,7 @@ where
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
 import Data.Foldable (fold)
 import qualified Data.List as List
@@ -52,6 +53,7 @@ import Shelley.Spec.Ledger.API
     KeyRole (..),
     MIRCert (..),
     MIRPot (..),
+    MIRTarget (..),
     Network (..),
     PParams,
     PParams' (..),
@@ -64,12 +66,15 @@ import Shelley.Spec.Ledger.API
   )
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (interval0)
+import Shelley.Spec.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
+import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.Keys
   ( coerceKeyRole,
     hashKey,
     hashVerKeyVRF,
     vKey,
   )
+import Shelley.Spec.Ledger.LedgerState (availableAfterMIR)
 import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Shelley.Spec.Ledger.Tx (ValidateScript (..))
 import Test.QuickCheck (Gen)
@@ -78,7 +83,6 @@ import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     KeySpace (..),
-    genCoinList,
     genInteger,
     genWord64,
     toCred,
@@ -443,7 +447,7 @@ genRetirePool pp poolKeys pState slot =
     epochHigh = cepoch + retirementBound - 1
 
 -- | Generate an InstantaneousRewards Transfer certificate
-genInstantaneousRewards ::
+genInstantaneousRewardsAccounts ::
   (HasCallStack, Era era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
@@ -452,30 +456,28 @@ genInstantaneousRewards ::
   AccountState ->
   DState (Crypto era) ->
   Gen (Maybe (DCert (Crypto era), CertCred era))
-genInstantaneousRewards s genesisDelegatesByHash pparams accountState delegSt = do
+genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState delegSt = do
   let (GenDelegs genDelegs_) = _genDelegs delegSt
       lookupGenDelegate' gk =
         fromMaybe
-          (error "genInstantaneousRewards: lookupGenDelegate failed")
+          (error "genInstantaneousRewardsAccounts: lookupGenDelegate failed")
           (Map.lookup gk genesisDelegatesByHash)
       credentials = _rewards delegSt
 
   winnerCreds <-
     take <$> QC.elements [0 .. (max 0 $ Map.size credentials - 1)]
       <*> QC.shuffle (Map.keys credentials)
-  coins <- genCoinList 1 1000 (length winnerCreds)
-  let credCoinMap = Map.fromList $ zip winnerCreds coins
+  coins <- replicateM (length winnerCreds) $ genInteger 1 1000
+  let credCoinMap = Map.fromList $ zip winnerCreds (fmap DeltaCoin coins)
 
   coreSigners <-
     take <$> QC.elements [5 .. (max 0 $ length genDelegs_ - 1)]
       <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> Map.elems genDelegs_)
 
   pot <- QC.elements [ReservesMIR, TreasuryMIR]
+  let available = availableAfterMIR pot accountState (_irwd delegSt)
   let rewardAmount = fold $ Map.elems credCoinMap
-      potAmount = case pot of
-        ReservesMIR -> _reserves accountState
-        TreasuryMIR -> _treasury accountState
-      insufficientFunds = rewardAmount > potAmount
+      insufficientFunds = toDeltaCoin available < rewardAmount
   pure $
     if -- Discard this generator (by returning Nothing) if:
     -- we are in full decentralisation mode (d=0) when IR certs are not allowed
@@ -489,6 +491,77 @@ genInstantaneousRewards s genesisDelegatesByHash pparams accountState delegSt = 
       then Nothing
       else
         Just
-          ( DCertMir (MIRCert pot credCoinMap),
+          ( DCertMir (MIRCert pot (StakeAddressesMIR credCoinMap)),
             DelegateCred (cold <$> coreSigners)
           )
+
+-- | Generate an InstantaneousRewards Transfer
+genInstantaneousRewardsTransfer ::
+  (HasCallStack, Era era) =>
+  SlotNo ->
+  -- | Index over the cold key hashes of all possible Genesis Delegates
+  Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
+  PParams era ->
+  AccountState ->
+  DState (Crypto era) ->
+  Gen (Maybe (DCert (Crypto era), CertCred era))
+genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState delegSt = do
+  let (GenDelegs genDelegs_) = _genDelegs delegSt
+      lookupGenDelegate' gk =
+        fromMaybe
+          (error "genInstantaneousRewardsTransfer: lookupGenDelegate failed")
+          (Map.lookup gk genesisDelegatesByHash)
+
+  coreSigners <-
+    take <$> QC.elements [5 .. (max 0 $ length genDelegs_ - 1)]
+      <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> Map.elems genDelegs_)
+
+  pot <- QC.elements [ReservesMIR, TreasuryMIR]
+  let Coin available = availableAfterMIR pot accountState (_irwd delegSt)
+  amount <- if available > 0 then QC.choose (0, available) else pure 0
+  pure $
+    if -- Discard this generator (by returning Nothing) if:
+    -- we are in full decentralisation mode (d=0) when IR certs are not allowed
+    _d pparams == interval0
+      -- or it's too late in the epoch for IR certs
+      || tooLateInEpoch s
+      then Nothing
+      else
+        Just
+          ( DCertMir (MIRCert pot (SendToOppositePotMIR $ Coin amount)),
+            DelegateCred (cold <$> coreSigners)
+          )
+
+genInstantaneousRewards ::
+  (HasCallStack, Era era) =>
+  SlotNo ->
+  -- | Index over the cold key hashes of all possible Genesis Delegates
+  Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
+  PParams era ->
+  AccountState ->
+  DState (Crypto era) ->
+  Gen (Maybe (DCert (Crypto era), CertCred era))
+genInstantaneousRewards slot genesisDelegatesByHash pparams accountState delegSt =
+  if HardForks.allowMIRTransfer pparams
+    then
+      QC.oneof
+        [ genInstantaneousRewardsAccounts
+            slot
+            genesisDelegatesByHash
+            pparams
+            accountState
+            delegSt,
+          genInstantaneousRewardsTransfer
+            slot
+            genesisDelegatesByHash
+            pparams
+            accountState
+            delegSt
+        ]
+    else
+      genInstantaneousRewardsAccounts
+        slot
+        genesisDelegatesByHash
+        pparams
+        accountState
+        delegSt

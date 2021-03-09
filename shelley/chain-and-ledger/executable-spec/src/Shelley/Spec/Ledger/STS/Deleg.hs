@@ -5,7 +5,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Deleg
   ( DELEG,
@@ -26,19 +28,22 @@ import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Control.State.Transition
 import Data.Foldable (fold)
+import Data.Group (Group (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     ShelleyBase,
     invalidKey,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Shelley.Spec.Ledger.Credential (Credential)
+import Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
@@ -52,6 +57,7 @@ import Shelley.Spec.Ledger.LedgerState
     DState,
     FutureGenDeleg (..),
     InstantaneousRewards (..),
+    availableAfterMIR,
     _delegations,
     _fGenDelegs,
     _genDelegs,
@@ -59,6 +65,7 @@ import Shelley.Spec.Ledger.LedgerState
     _ptrs,
     _rewards,
   )
+import Shelley.Spec.Ledger.PParams (ProtVer)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
   ( Duration (..),
@@ -76,17 +83,22 @@ import Shelley.Spec.Ledger.TxBody
     GenesisDelegCert (..),
     MIRCert (..),
     MIRPot (..),
+    MIRTarget (..),
     Ptr,
   )
 
 data DELEG era
 
-data DelegEnv = DelegEnv
+data DelegEnv era = DelegEnv
   { slotNo :: SlotNo,
     ptr_ :: Ptr,
-    acnt_ :: AccountState
+    acnt_ :: AccountState,
+    ppDE :: Core.PParams era -- The protocol parameters are only used for the HardFork mechanism
   }
-  deriving (Show, Eq)
+
+deriving instance (Show (Core.PParams era)) => Show (DelegEnv era)
+
+deriving instance (Eq (Core.PParams era)) => Eq (DelegEnv era)
 
 data DelegPredicateFailure era
   = StakeKeyAlreadyRegisteredDELEG
@@ -116,12 +128,24 @@ data DelegPredicateFailure era
       !SlotNo -- Core.EraRule "MIR" must be submitted before this slot
   | DuplicateGenesisVRFDELEG
       !(Hash (Crypto era) (VerKeyVRF (Crypto era))) --VRF KeyHash which is already delegated to
+  | MIRTransferNotCurrentlyAllowed
+  | MIRNegativesNotCurrentlyAllowed
+  | InsufficientForTransferDELEG
+      !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
+      !Coin -- amount attempted to transfer
+      !Coin -- amount available
+  | MIRProducesNegativeUpdate
   deriving (Show, Eq, Generic)
 
-instance Typeable era => STS (DELEG era) where
+instance
+  ( Typeable era,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
+  STS (DELEG era)
+  where
   type State (DELEG era) = DState (Crypto era)
   type Signal (DELEG era) = DCert (Crypto era)
-  type Environment (DELEG era) = DelegEnv
+  type Environment (DELEG era) = DelegEnv era
   type BaseM (DELEG era) = ShelleyBase
   type PredicateFailure (DELEG era) = DelegPredicateFailure era
 
@@ -136,8 +160,6 @@ instance
   toCBOR = \case
     StakeKeyAlreadyRegisteredDELEG cred ->
       encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR cred
-    StakeKeyInRewardsDELEG cred ->
-      encodeListLen 2 <> toCBOR (10 :: Word8) <> toCBOR cred
     StakeKeyNotRegisteredDELEG cred ->
       encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR cred
     StakeKeyNonZeroAccountBalanceDELEG rewardBalance ->
@@ -159,6 +181,19 @@ instance
       encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR sNow <> toCBOR sTooLate
     DuplicateGenesisVRFDELEG vrf ->
       encodeListLen 2 <> toCBOR (9 :: Word8) <> toCBOR vrf
+    StakeKeyInRewardsDELEG cred ->
+      encodeListLen 2 <> toCBOR (10 :: Word8) <> toCBOR cred
+    MIRTransferNotCurrentlyAllowed ->
+      encodeListLen 1 <> toCBOR (11 :: Word8)
+    MIRNegativesNotCurrentlyAllowed ->
+      encodeListLen 1 <> toCBOR (12 :: Word8)
+    InsufficientForTransferDELEG pot needed available ->
+      encodeListLen 4 <> toCBOR (13 :: Word8)
+        <> toCBOR pot
+        <> toCBOR needed
+        <> toCBOR available
+    MIRProducesNegativeUpdate ->
+      encodeListLen 1 <> toCBOR (14 :: Word8)
 
 instance
   (Era era, Typeable (Core.Script era)) =>
@@ -169,9 +204,6 @@ instance
       0 -> do
         kh <- fromCBOR
         pure (2, StakeKeyAlreadyRegisteredDELEG kh)
-      10 -> do
-        kh <- fromCBOR
-        pure (2, StakeKeyInRewardsDELEG kh)
       1 -> do
         kh <- fromCBOR
         pure (2, StakeKeyNotRegisteredDELEG kh)
@@ -201,13 +233,29 @@ instance
       9 -> do
         vrf <- fromCBOR
         pure (2, DuplicateGenesisVRFDELEG vrf)
+      10 -> do
+        kh <- fromCBOR
+        pure (2, StakeKeyInRewardsDELEG kh)
+      11 -> do
+        pure (1, MIRTransferNotCurrentlyAllowed)
+      12 -> do
+        pure (1, MIRNegativesNotCurrentlyAllowed)
+      13 -> do
+        pot <- fromCBOR
+        needed <- fromCBOR
+        available <- fromCBOR
+        pure (4, InsufficientForTransferDELEG pot needed available)
+      14 -> do
+        pure (1, MIRProducesNegativeUpdate)
       k -> invalidKey k
 
 delegationTransition ::
-  Typeable era =>
+  ( Typeable era,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
   TransitionRule (DELEG era)
 delegationTransition = do
-  TRC (DelegEnv slot ptr acnt, ds, c) <- judgmentContext
+  TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
   case c of
     DCertDeleg (RegKey hk) -> do
       eval (hk ∉ dom (_rewards ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
@@ -267,28 +315,101 @@ delegationTransition = do
         ds
           { _fGenDelegs = eval ((_fGenDelegs ds) ⨃ (singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
           }
-    DCertMir (MIRCert targetPot credCoinMap) -> do
-      sp <- liftSTS $ asks stabilityWindow
-      firstSlot <- liftSTS $ do
-        ei <- asks epochInfo
-        EpochNo currEpoch <- epochInfoEpoch ei slot
-        epochInfoFirst ei $ EpochNo (currEpoch + 1)
-      let tooLate = firstSlot *- Duration sp
-      slot < tooLate
-        ?! MIRCertificateTooLateinEpochDELEG slot tooLate
+    DCertMir (MIRCert targetPot (StakeAddressesMIR credCoinMap)) -> do
+      if HardForks.allowMIRTransfer pp
+        then do
+          sp <- liftSTS $ asks stabilityWindow
+          firstSlot <- liftSTS $ do
+            ei <- asks epochInfo
+            EpochNo currEpoch <- epochInfoEpoch ei slot
+            epochInfoFirst ei $ EpochNo (currEpoch + 1)
+          let tooLate = firstSlot *- Duration sp
+          slot < tooLate
+            ?! MIRCertificateTooLateinEpochDELEG slot tooLate
 
-      let (potAmount, instantaneousRewards) =
-            case targetPot of
-              ReservesMIR -> (_reserves acnt, iRReserves $ _irwd ds)
-              TreasuryMIR -> (_treasury acnt, iRTreasury $ _irwd ds)
-      let combinedMap = Map.union credCoinMap instantaneousRewards
-          requiredForRewards = fold combinedMap
-      requiredForRewards <= potAmount
-        ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards potAmount
+          let (potAmount, delta, instantaneousRewards) =
+                case targetPot of
+                  ReservesMIR -> (_reserves acnt, deltaReserves . _irwd $ ds, iRReserves $ _irwd ds)
+                  TreasuryMIR -> (_treasury acnt, deltaTreasury . _irwd $ ds, iRTreasury $ _irwd ds)
+              credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
+              combinedMap = Map.unionWith (<>) credCoinMap' instantaneousRewards
+              requiredForRewards = fold combinedMap
+              available = potAmount `addDeltaCoin` delta
 
-      case targetPot of
-        ReservesMIR -> pure $ ds {_irwd = (_irwd ds) {iRReserves = combinedMap}}
-        TreasuryMIR -> pure $ ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
+          all (>= mempty) combinedMap ?! MIRProducesNegativeUpdate
+
+          requiredForRewards <= available
+            ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
+
+          case targetPot of
+            ReservesMIR -> pure $ ds {_irwd = (_irwd ds) {iRReserves = combinedMap}}
+            TreasuryMIR -> pure $ ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
+        else do
+          sp <- liftSTS $ asks stabilityWindow
+          firstSlot <- liftSTS $ do
+            ei <- asks epochInfo
+            EpochNo currEpoch <- epochInfoEpoch ei slot
+            epochInfoFirst ei $ EpochNo (currEpoch + 1)
+          let tooLate = firstSlot *- Duration sp
+          slot < tooLate
+            ?! MIRCertificateTooLateinEpochDELEG slot tooLate
+
+          all (>= mempty) credCoinMap ?! MIRNegativesNotCurrentlyAllowed
+
+          let (potAmount, instantaneousRewards) =
+                case targetPot of
+                  ReservesMIR -> (_reserves acnt, iRReserves $ _irwd ds)
+                  TreasuryMIR -> (_treasury acnt, iRTreasury $ _irwd ds)
+          let credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
+              combinedMap = Map.union credCoinMap' instantaneousRewards
+              requiredForRewards = fold combinedMap
+          requiredForRewards <= potAmount
+            ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards potAmount
+
+          case targetPot of
+            ReservesMIR -> pure $ ds {_irwd = (_irwd ds) {iRReserves = combinedMap}}
+            TreasuryMIR -> pure $ ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
+    DCertMir (MIRCert targetPot (SendToOppositePotMIR coin)) ->
+      if HardForks.allowMIRTransfer pp
+        then do
+          sp <- liftSTS $ asks stabilityWindow
+          firstSlot <- liftSTS $ do
+            ei <- asks epochInfo
+            EpochNo currEpoch <- epochInfoEpoch ei slot
+            epochInfoFirst ei $ EpochNo (currEpoch + 1)
+          let tooLate = firstSlot *- Duration sp
+          slot < tooLate
+            ?! MIRCertificateTooLateinEpochDELEG slot tooLate
+
+          let available = availableAfterMIR targetPot acnt (_irwd ds)
+          coin <= available
+            ?! InsufficientForTransferDELEG targetPot coin available
+
+          let ir = _irwd ds
+              dr = deltaReserves ir
+              dt = deltaTreasury ir
+          case targetPot of
+            ReservesMIR ->
+              pure $
+                ds
+                  { _irwd =
+                      ir
+                        { deltaReserves = dr <> (invert $ toDeltaCoin coin),
+                          deltaTreasury = dt <> (toDeltaCoin coin)
+                        }
+                  }
+            TreasuryMIR ->
+              pure $
+                ds
+                  { _irwd =
+                      ir
+                        { deltaReserves = dr <> (toDeltaCoin coin),
+                          deltaTreasury = dt <> (invert $ toDeltaCoin coin)
+                        }
+                  }
+        else do
+          failBecause MIRTransferNotCurrentlyAllowed
+          pure ds
     DCertPool _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure ds

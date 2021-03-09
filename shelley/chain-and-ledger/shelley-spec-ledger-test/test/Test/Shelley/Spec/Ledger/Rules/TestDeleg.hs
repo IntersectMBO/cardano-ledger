@@ -29,13 +29,14 @@ import Data.List (foldl')
 import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup, (\\))
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
 import Shelley.Spec.Ledger.API (DELEG)
-import Shelley.Spec.Ledger.Coin (pattern Coin)
+import Shelley.Spec.Ledger.Coin (pattern Coin, addDeltaCoin)
 import Shelley.Spec.Ledger.LedgerState
   ( DState (..),
     InstantaneousRewards (..),
   )
 import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),
+    MIRTarget (..),
     pattern DCertDeleg,
     pattern DCertMir,
     pattern DeRegKey,
@@ -125,7 +126,7 @@ checkInstantaneousRewards :: SourceSignalTarget (DELEG era) -> Property
 checkInstantaneousRewards
   SourceSignalTarget {source, signal, target} =
     case signal of
-      DCertMir (MIRCert ReservesMIR irwd) ->
+      DCertMir (MIRCert ReservesMIR (StakeAddressesMIR irwd)) ->
         conjoin
           [ counterexample
               "a ReservesMIR certificate should add all entries to the `irwd` mapping"
@@ -133,11 +134,11 @@ checkInstantaneousRewards
             counterexample
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
               ( (fold $ (iRReserves $ _irwd source) Map.\\ irwd)
-                  <> (fold $ irwd)
+                  `addDeltaCoin` (fold irwd)
                   == (fold $ (iRReserves $ _irwd target))
               )
           ]
-      DCertMir (MIRCert TreasuryMIR irwd) ->
+      DCertMir (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
         conjoin
           [ counterexample
               "a TreasuryMIR certificate should add all entries to the `irwd` mapping"
@@ -145,7 +146,7 @@ checkInstantaneousRewards
             counterexample
               "a TreasuryMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
               ( (fold $ (iRTreasury $ _irwd source) Map.\\ irwd)
-                  <> (fold $ irwd)
+                  `addDeltaCoin` (fold irwd)
                   == (fold $ (iRTreasury $ _irwd target))
               )
           ]

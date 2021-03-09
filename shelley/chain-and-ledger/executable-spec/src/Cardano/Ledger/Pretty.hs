@@ -149,6 +149,7 @@ import Shelley.Spec.Ledger.TxBody
     GenesisDelegCert (..),
     MIRCert (..),
     MIRPot (..),
+    MIRTarget (..),
     PoolCert (..),
     PoolMetadata (..),
     PoolParams (..),
@@ -535,11 +536,13 @@ ppFutureGenDeleg (FutureGenDeleg sl kh) =
     ]
 
 ppInstantaneousRewards :: InstantaneousRewards crypto -> PDoc
-ppInstantaneousRewards (InstantaneousRewards res treas) =
+ppInstantaneousRewards (InstantaneousRewards res treas dR dT) =
   ppRecord
     "InstantaneousRewards"
     [ ("reserves", ppMap' mempty ppCredential ppCoin res),
-      ("treasury", ppMap' mempty ppCredential ppCoin treas)
+      ("treasury", ppMap' mempty ppCredential ppCoin treas),
+      ("deltaReserves", ppDeltaCoin dR),
+      ("deltaTreasury", ppDeltaCoin dT)
     ]
 
 ppIx :: Ix -> PDoc
@@ -924,8 +927,12 @@ ppMIRPot :: MIRPot -> PDoc
 ppMIRPot ReservesMIR = text "Reserves"
 ppMIRPot TreasuryMIR = text "Treasury"
 
+ppMIRTarget :: MIRTarget c -> PDoc
+ppMIRTarget (StakeAddressesMIR rews) = ppMap ppCredential ppDeltaCoin rews
+ppMIRTarget (SendToOppositePotMIR c) = ppCoin c
+
 ppMIRCert :: MIRCert c -> PDoc
-ppMIRCert (MIRCert pot rew) = ppSexp "MirCert" [ppMIRPot pot, ppMap ppCredential ppCoin rew]
+ppMIRCert (MIRCert pot vs) = ppSexp "MirCert" [ppMIRPot pot, ppMIRTarget vs]
 
 ppDCert :: DCert c -> PDoc
 ppDCert (DCertDeleg x) = ppSexp "DCertDeleg" [ppDelegCert x]

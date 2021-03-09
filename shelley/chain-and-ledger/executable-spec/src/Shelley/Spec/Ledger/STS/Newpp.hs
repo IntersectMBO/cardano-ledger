@@ -43,17 +43,17 @@ import Shelley.Spec.Ledger.LedgerState
     PPUPState (..),
     PState (..),
     UTxOState,
+    availableAfterMIR,
     pvCanFollow,
-    totalInstantaneousReservesRewards,
     _deposited,
     _irwd,
-    _reserves,
   )
 import Shelley.Spec.Ledger.PParams
   ( ProposedPPUpdates (..),
     ProtVer,
     emptyPPPUpdates,
   )
+import Shelley.Spec.Ledger.TxBody (MIRPot (..))
 
 data NEWPP era
 
@@ -122,14 +122,12 @@ newPpTransition = do
       let Coin oblgCurr = obligation pp (_rewards dstate) (_pParams pstate)
           Coin oblgNew = obligation ppNew' (_rewards dstate) (_pParams pstate)
           diff = oblgCurr - oblgNew
-          Coin reserves = _reserves acnt
-          Coin requiredInstantaneousRewards =
-            totalInstantaneousReservesRewards (_irwd dstate)
+          Coin availableReserves = availableAfterMIR ReservesMIR acnt (_irwd dstate)
 
       Coin oblgCurr == _deposited utxoSt
         ?! UnexpectedDepositPot (Coin oblgCurr) (_deposited utxoSt)
 
-      if reserves + diff >= requiredInstantaneousRewards
+      if availableReserves + diff >= 0
         -- Note that instantaneous rewards from the treasury are irrelevant
         -- here, since changes in the protocol parameters do not change how much
         -- is needed from the treasury

@@ -169,6 +169,7 @@ import Shelley.Spec.Ledger.TxBody as X
     GenesisDelegCert (..),
     MIRCert (..),
     MIRPot (..),
+    MIRTarget (..),
     PoolMetadata (..),
     PoolParams (..),
     Ptr (..),

@@ -94,6 +94,7 @@ library
     containers,
     data-default-class,
     directory,
+    groups,
     generic-random,
     hedgehog-quickcheck,
     hedgehog,
@@ -128,6 +129,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Examples.Init
       Test.Shelley.Spec.Ledger.Examples.GenesisDelegation
       Test.Shelley.Spec.Ledger.Examples.Mir
+      Test.Shelley.Spec.Ledger.Examples.MirTransfer
       Test.Shelley.Spec.Ledger.Examples.PoolLifetime
       Test.Shelley.Spec.Ledger.Examples.PoolReReg
       Test.Shelley.Spec.Ledger.Examples.TwoPools

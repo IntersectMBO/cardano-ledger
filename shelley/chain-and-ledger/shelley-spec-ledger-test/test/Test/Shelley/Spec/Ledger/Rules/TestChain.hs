@@ -940,10 +940,10 @@ delegTraceFromBlock chainSt block =
     certs = concatMap (reverse . toList . (getField @"certs") . _body)
     blockCerts = filter delegCert (certs txs)
     delegEnv =
-      let (LedgerEnv s txIx _ reserves) = ledgerEnv
+      let (LedgerEnv s txIx pp reserves) = ledgerEnv
           dummyCertIx = 0
           ptr = Ptr s txIx dummyCertIx
-       in DelegEnv s ptr reserves
+       in DelegEnv s ptr reserves pp
     delegSt0 =
       let (_, DPState delegSt0_ _) = ledgerSt0
        in delegSt0_

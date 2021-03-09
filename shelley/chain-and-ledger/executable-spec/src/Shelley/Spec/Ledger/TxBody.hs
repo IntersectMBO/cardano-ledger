@@ -32,6 +32,7 @@ module Shelley.Spec.Ledger.TxBody
     Ix,
     MIRCert (..),
     MIRPot (..),
+    MIRTarget (..),
     PoolCert (..),
     PoolMetadata (..),
     PoolParams (..),
@@ -78,10 +79,12 @@ import Cardano.Binary
     FromCBOR (fromCBOR),
     Size,
     ToCBOR (..),
+    TokenType (TypeMapLen, TypeMapLen64, TypeMapLenIndef),
     annotatorSlice,
     decodeWord,
     encodeListLen,
     encodePreEncoded,
+    peekTokenType,
     serializeEncoding,
     szCases,
   )
@@ -158,7 +161,7 @@ import Shelley.Spec.Ledger.BaseTypes
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin)
 import Shelley.Spec.Ledger.CompactAddr
   ( CompactAddr,
     compactAddr,
@@ -597,10 +600,38 @@ instance FromCBOR MIRPot where
       1 -> pure TreasuryMIR
       k -> invalidKey k
 
+-- | MIRTarget specifies if funds from either the reserves
+-- or the treasury are to be handed out to a collection of
+-- reward accounts or instead transfered to the oppososite pot.
+data MIRTarget crypto
+  = StakeAddressesMIR (Map (Credential 'Staking crypto) DeltaCoin)
+  | SendToOppositePotMIR Coin
+  deriving (Show, Generic, Eq)
+
+deriving instance NoThunks (MIRTarget crypto)
+
+instance
+  CC.Crypto crypto =>
+  FromCBOR (MIRTarget crypto)
+  where
+  fromCBOR = do
+    peekTokenType >>= \case
+      TypeMapLen -> StakeAddressesMIR <$> mapFromCBOR
+      TypeMapLen64 -> StakeAddressesMIR <$> mapFromCBOR
+      TypeMapLenIndef -> StakeAddressesMIR <$> mapFromCBOR
+      _ -> SendToOppositePotMIR <$> fromCBOR
+
+instance
+  CC.Crypto crypto =>
+  ToCBOR (MIRTarget crypto)
+  where
+  toCBOR (StakeAddressesMIR m) = mapToCBOR m
+  toCBOR (SendToOppositePotMIR c) = toCBOR c
+
 -- | Move instantaneous rewards certificate
 data MIRCert crypto = MIRCert
   { mirPot :: MIRPot,
-    mirRewards :: Map (Credential 'Staking crypto) Coin
+    mirRewards :: MIRTarget crypto
   }
   deriving (Show, Generic, Eq)
 
@@ -608,19 +639,19 @@ instance
   CC.Crypto crypto =>
   FromCBOR (MIRCert crypto)
   where
-  fromCBOR = decodeRecordNamed "SingleHostAddr" (const 2) $ do
+  fromCBOR = decodeRecordNamed "MIRCert" (const 2) $ do
     pot <- fromCBOR
-    values <- mapFromCBOR
+    values <- fromCBOR
     pure $ MIRCert pot values
 
 instance
   CC.Crypto crypto =>
   ToCBOR (MIRCert crypto)
   where
-  toCBOR (MIRCert pot values) =
+  toCBOR (MIRCert pot targets) =
     encodeListLen 2
       <> toCBOR pot
-      <> mapToCBOR values
+      <> toCBOR targets
 
 -- | A heavyweight certificate.
 data DCert crypto

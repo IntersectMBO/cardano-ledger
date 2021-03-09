@@ -32,6 +32,7 @@ import Control.State.Transition
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.LedgerState
@@ -42,6 +43,7 @@ import Shelley.Spec.Ledger.LedgerState
     _dstate,
     _pstate,
   )
+import Shelley.Spec.Ledger.PParams (ProtVer)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegEnv (..), DelegPredicateFailure)
 import Shelley.Spec.Ledger.STS.Pool (POOL, PoolEnv (..), PoolPredicateFailure)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
@@ -89,7 +91,7 @@ instance
 instance
   ( Era era,
     Embed (Core.EraRule "DELEG" era) (DELPL era),
-    Environment (Core.EraRule "DELEG" era) ~ DelegEnv,
+    Environment (Core.EraRule "DELEG" era) ~ (DelegEnv era),
     State (Core.EraRule "DELEG" era) ~ DState (Crypto era),
     Signal (Core.EraRule "DELEG" era) ~ DCert (Crypto era),
     Embed (Core.EraRule "POOL" era) (DELPL era),
@@ -147,7 +149,7 @@ instance
 delplTransition ::
   forall era.
   ( Embed (Core.EraRule "DELEG" era) (DELPL era),
-    Environment (Core.EraRule "DELEG" era) ~ DelegEnv,
+    Environment (Core.EraRule "DELEG" era) ~ (DelegEnv era),
     State (Core.EraRule "DELEG" era) ~ DState (Crypto era),
     Signal (Core.EraRule "DELEG" era) ~ DCert (Crypto era),
     Embed (Core.EraRule "POOL" era) (DELPL era),
@@ -169,22 +171,22 @@ delplTransition = do
       pure $ d {_pstate = ps}
     DCertGenesis (GenesisDelegCert {}) -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
+        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertDeleg (RegKey _) -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
+        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertDeleg (DeRegKey _) -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
+        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertDeleg (Delegate _) -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
+        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertMir _ -> do
-      ds <- trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
+      ds <- trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
       pure $ d {_dstate = ds}
 
 instance
@@ -198,6 +200,7 @@ instance
 
 instance
   ( Era era,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     PredicateFailure (Core.EraRule "DELEG" era) ~ DelegPredicateFailure era
   ) =>
   Embed (DELEG era) (DELPL era)
