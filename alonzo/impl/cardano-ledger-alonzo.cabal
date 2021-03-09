@@ -24,6 +24,7 @@ library
     Cardano.Ledger.Alonzo.Data
     Cardano.Ledger.Alonzo.Language
     Cardano.Ledger.Alonzo.PParams
+    Cardano.Ledger.Alonzo.Rules.Utxo
     Cardano.Ledger.Alonzo.Rules.Utxos
     Cardano.Ledger.Alonzo.Scripts
     Cardano.Ledger.Alonzo.Tx
@@ -36,6 +37,7 @@ library
     cardano-crypto-class,
     cardano-ledger-shelley-ma,
     cardano-prelude,
+    cardano-slotting,
     containers,
     data-default,
     deepseq,
@@ -44,7 +46,8 @@ library
     plutus-tx,
     shelley-spec-ledger,
     small-steps,
-    text
+    text,
+    transformers
   hs-source-dirs:
     src
   ghc-options:

@@ -200,7 +200,7 @@ instance
 --   the mint field.
 consumed ::
   forall era.
-  ( UsesValue era,
+  ( Era era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
