@@ -1,12 +1,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary
   ( MaryEra,
-    Era,
-    proxy,
+    Self,
     TxOut,
     Value,
     TxBody,
@@ -36,7 +36,6 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.Val (Val ((<->)), coin, inject)
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import Shelley.Spec.Ledger.API hiding (PParams, Tx, TxBody, TxOut)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 
@@ -90,10 +89,7 @@ instance PraosCrypto c => ShelleyBasedEra (MaryEra c)
 
 type MaryEra c = ShelleyMAEra 'Mary c
 
-proxy :: Proxy (ShelleyMAEra 'Mary c)
-proxy = Proxy
-
-type Era c = ShelleyMAEra 'Mary c
+type Self c = ShelleyMAEra 'Mary c
 
 type Script era = Timelock (E.Crypto era)
 

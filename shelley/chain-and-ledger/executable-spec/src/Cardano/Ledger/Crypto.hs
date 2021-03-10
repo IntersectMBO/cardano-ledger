@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -8,6 +10,8 @@ import Cardano.Crypto.DSIGN
 import Cardano.Crypto.Hash
 import Cardano.Crypto.KES
 import Cardano.Crypto.VRF
+import Cardano.Crypto.VRF.Fake (FakeVRF)
+import Cardano.Crypto.VRF.Praos
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 
@@ -29,3 +33,26 @@ class
   type DSIGN c :: Type
   type KES c :: Type
   type VRF c :: Type
+
+-- | A Crypto useful for Testing
+data TestCrypto
+
+instance Crypto TestCrypto where
+  type HASH TestCrypto = MD5Prefix 10
+  type ADDRHASH TestCrypto = MD5Prefix 8
+  type DSIGN TestCrypto = MockDSIGN
+  type KES TestCrypto = MockKES 10
+  type VRF TestCrypto = FakeVRF
+
+-- | The same crypto used on the net
+data StandardCrypto
+
+-- This should match that defined at
+-- https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
+
+instance Crypto StandardCrypto where
+  type DSIGN StandardCrypto = Ed25519DSIGN
+  type KES StandardCrypto = Sum6KES Ed25519DSIGN Blake2b_256
+  type VRF StandardCrypto = PraosVRF
+  type HASH StandardCrypto = Blake2b_256
+  type ADDRHASH StandardCrypto = Blake2b_224

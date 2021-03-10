@@ -35,7 +35,6 @@ library
     bytestring,
     cardano-binary,
     cardano-crypto-class,
-    cardano-crypto-praos,
     cardano-ledger-shelley-ma,
     cardano-prelude,
     containers,
@@ -44,7 +43,6 @@ library
     plutus-ledger-api,
     plutus-tx,
     shelley-spec-ledger,
-    shelley-spec-ledger-test,
     small-steps,
     text
   hs-source-dirs:
@@ -95,7 +93,6 @@ test-suite tests
     test/test
   other-modules:
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
-    Test.Cardano.Ledger.Alonzo.DescribeEra
   build-depends:
     base >=4.14 && <4.15,
     base16-bytestring,

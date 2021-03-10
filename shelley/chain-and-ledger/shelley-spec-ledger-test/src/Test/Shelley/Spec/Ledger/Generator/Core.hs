@@ -176,7 +176,7 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     pattern UTxO,
   )
-import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
+import Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)

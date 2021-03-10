@@ -18,7 +18,7 @@ import Cardano.Crypto.KES (MockKES, Sum6KES)
 import Cardano.Crypto.VRF.Praos
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Shelley.Spec.Ledger.API (PraosCrypto)
-import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
+import Cardano.Crypto.VRF.Fake (FakeVRF)
 
 -- ByteString imports
 import Data.ByteString.Short (ShortByteString,toShort)

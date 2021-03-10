@@ -12,7 +12,7 @@
 
 -- | Fake implementation of VRF, where the random value isn't random but given
 -- by the creator.
-module Test.Cardano.Crypto.VRF.Fake
+module Cardano.Crypto.VRF.Fake
   ( FakeVRF,
     VerKeyVRF (..),
     SignKeyVRF (..),

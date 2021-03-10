@@ -5,8 +5,7 @@
 
 module Cardano.Ledger.Alonzo
   ( AlonzoEra,
-    Era,
-    proxy,
+    Self,
     TxOut,
     Value,
     TxBody,
@@ -29,7 +28,6 @@ import qualified Cardano.Ledger.Era as EraModule
 import qualified Cardano.Ledger.Mary.Value as V (Value)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints (UsesPParams (..), UsesValue)
-import Data.Proxy (Proxy (..))
 
 -- | The Alonzo era
 data AlonzoEra c
@@ -72,9 +70,6 @@ instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
   validateAuxiliaryData = error ("NO validateAuxiliaryData yet.") -- TODO Fill this in
 
-proxy :: Proxy (AlonzoEra c)
-proxy = Proxy
-
-type Era c = AlonzoEra c
+type Self c = AlonzoEra c
 
 type Value era = V.Value (EraModule.Crypto era)

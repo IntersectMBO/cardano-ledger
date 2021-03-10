@@ -24,6 +24,7 @@ library
   hs-source-dirs:      src
   exposed-modules:
     Test.Cardano.Ledger.TestableEra
+    Test.Cardano.Ledger.DescribeEra
   ghc-options:
     -Wall
     -Wcompat
@@ -35,7 +36,9 @@ library
     base >=4.14 && <4.15,
     shelley-spec-ledger,
     cardano-ledger-shelley-ma,
-    cardano-ledger-alonzo
+    cardano-ledger-alonzo,
+    tasty,
+    tasty-hunit
   default-language:    Haskell2010
 
 benchmark bench

@@ -10,8 +10,7 @@
 -- exposed in @module Shelley.Spec.Ledger.API@.
 module Cardano.Ledger.Shelley
   ( ShelleyEra,
-    Era,
-    proxy,
+    Self,
     TxOut,
     Value,
     TxBody,
@@ -102,14 +101,11 @@ instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) where
 
 type Value era = Coin
 
-proxy :: Proxy (ShelleyEra c)
-proxy = Proxy
-
 type Script era = MultiSig (E.Crypto era)
 
 type AuxiliaryData era = Metadata era
 
-type Era c = ShelleyEra c
+type Self c = ShelleyEra c
 
 type Tx era = STx.Tx era
 

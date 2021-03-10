@@ -1,4 +1,6 @@
-module Test.Cardano.Ledger.Alonzo.DescribeEra (describeTest) where
+-- | Tests that the descriptions, in Test.Cardano.Ledger.DescribeEras,
+--   actually are accurate descriptions of the system.
+module Test.Cardano.Ledger.DescribeEra (describeTest) where
 
 import Cardano.Ledger.DescribeEras (Checks (..), Evidence (..), Witness (..))
 import Test.Tasty

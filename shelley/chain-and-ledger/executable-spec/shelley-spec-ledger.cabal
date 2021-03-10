@@ -19,6 +19,7 @@ flag development
 
 library
   exposed-modules:
+    Cardano.Crypto.VRF.Fake
     Cardano.Ledger.AuxiliaryData
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
@@ -114,6 +115,7 @@ library
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class,
+    cardano-crypto-praos,
     cardano-crypto-wrapper,
     cardano-ledger-byron,
     cardano-prelude,

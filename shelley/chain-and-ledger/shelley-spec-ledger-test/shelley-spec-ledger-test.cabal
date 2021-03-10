@@ -26,7 +26,6 @@ library
       src
       test
   exposed-modules:
-    Test.Cardano.Crypto.VRF.Fake
     Test.Shelley.Spec.Ledger.BenchmarkFunctions
     Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     Test.Shelley.Spec.Ledger.Generator.Block
