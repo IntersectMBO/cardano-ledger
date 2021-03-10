@@ -1,3 +1,5 @@
+cabal-version: 2.2
+
 name:                shelley-spec-non-integral
 version:             0.1.0.0
 license:             Apache-2.0
@@ -5,7 +7,6 @@ author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
 description:         Implementation decision for non-integer calculations
 build-type:          Simple
-cabal-version:       >=1.8
 
 extra-source-files:
   README.md
@@ -21,21 +22,32 @@ flag development
     default: False
     manual: True
 
+common base                         { build-depends: base                             >= 4.7        && < 5        }
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+
+  if (!flag(development))
+    ghc-options:      -Werror
+
+  if impl(ghc >= 8.10)
+    ghc-options:      -Wunused-packages
+
 library
+  import:             base, project-config
+
   exposed-modules:       Shelley.Spec.NonIntegral
   hs-source-dirs: src
-  build-depends: base >= 4.7 && < 5
-
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-  if (!flag(development))
-    ghc-options:       -Werror
 
 test-suite shelley-spec-non-integral-test
+  import:             base, project-config
+
   type:                exitcode-stdio-1.0
   main-is:             Tests.hs
   other-modules:       Tests.Shelley.Spec.NonIntegral
@@ -45,15 +57,8 @@ test-suite shelley-spec-non-integral-test
     -threaded
     -rtsopts
     -with-rtsopts=-N
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
+
   if (!flag(development))
-    ghc-options:
-      -Werror
     build-depends:
-      base,
       shelley-spec-non-integral,
       QuickCheck

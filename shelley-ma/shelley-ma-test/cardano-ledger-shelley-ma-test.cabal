@@ -1,4 +1,5 @@
-cabal-version:       2.2
+cabal-version: 2.2
+
 name:                cardano-ledger-shelley-ma-test
 version:             0.1.0.0
 synopsis:            Shelley ledger with multiasset and time lock support.
@@ -13,7 +14,6 @@ copyright:           2020 Input Output (Hong Kong) Ltd.
 category:            Network
 build-type:          Simple
 
-
 extra-source-files:
   cddl-files/shelley-ma.cddl
   cddl-files/mock/crypto.cddl
@@ -23,7 +23,25 @@ source-repository head
   type:     git
   location: https://github.com/input-output-hk/cardano-ledger-specs
 
+common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Werror
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wpartial-fields
+                      -Wredundant-constraints
+
+  if impl(ghc >= 8.10)
+    ghc-options:      -Wunused-packages
+
 library
+  import:             base, project-config
+
   exposed-modules:
     Test.Cardano.Ledger.TranslationTools
     Test.Cardano.Ledger.EraBuffet
@@ -58,22 +76,14 @@ library
     text,
     QuickCheck >= 2.13.2,
   hs-source-dirs: src
-  ghc-options:
-    -Wall
-    -Werror
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-  default-language:    Haskell2010
-
 
 test-suite cardano-ledger-shelley-ma-test
-    type:                exitcode-stdio-1.0
-    main-is:             Tests.hs
-    hs-source-dirs:      test
-    other-modules:
+  import:             base, project-config
+
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  hs-source-dirs:      test
+  other-modules:
       Test.Cardano.Ledger.Mary.Examples
       Test.Cardano.Ledger.Mary.Examples.Cast
       Test.Cardano.Ledger.Mary.Examples.MultiAssets
@@ -86,24 +96,16 @@ test-suite cardano-ledger-shelley-ma-test
       Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
       Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding
       Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
-    default-language:    Haskell2010
-    ghc-options:
-      -threaded
-      -rtsopts
-      -with-rtsopts=-N
-      -Wall
-      -Werror
-      -Wcompat
-      -Wincomplete-record-updates
-      -Wincomplete-uni-patterns
-      -Wredundant-constraints
-      -- We set a bound here so that we're alerted of potential space
-      -- leaks in our generators (or test) code.
-      --
-      -- The 4 megabytes stack bound and 200 megabytes heap bound were
-      -- determined ad-hoc.
-      "-with-rtsopts=-K4m -M250m"
-    build-depends:
+  -- We set a bound here so that we're alerted of potential space
+  -- leaks in our generators (or test) code.
+  --
+  -- The 4 megabytes stack bound and 200 megabytes heap bound were
+  -- determined ad-hoc.
+  ghc-options:        -threaded
+                      -rtsopts
+                      -with-rtsopts=-N
+                      "-with-rtsopts=-K4m -M250m"
+  build-depends:
       cardano-ledger-shelley-ma,
       data-default-class,
       shelley-spec-ledger-test,

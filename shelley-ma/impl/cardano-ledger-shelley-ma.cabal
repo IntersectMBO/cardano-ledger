@@ -1,4 +1,4 @@
-cabal-version:       2.2
+cabal-version: 2.2
 
 name:                cardano-ledger-shelley-ma
 version:             0.1.0.0
@@ -18,7 +18,24 @@ source-repository head
   type:     git
   location: https://github.com/input-output-hk/cardano-ledger-specs
 
+common base                         { build-depends: base                             >= 4.9        && < 4.15     }
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wpartial-fields
+
+  if impl(ghc >= 8.10)
+    ghc-options:      -Wunused-packages
+
 library
+  import:             base, project-config
+
   exposed-modules:
     Cardano.Ledger.Allegra
     Cardano.Ledger.Allegra.Translation
@@ -35,8 +52,6 @@ library
 
   -- other-extensions:
   build-depends:
-    array,
-    base >=4.9 && <4.15,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
@@ -56,11 +71,3 @@ library
     text,
     transformers
   hs-source-dirs: src
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-  default-language:    Haskell2010

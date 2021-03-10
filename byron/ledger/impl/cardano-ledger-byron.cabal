@@ -1,3 +1,5 @@
+cabal-version: 2.2
+
 name:                cardano-ledger-byron
 version:             0.1.0.0
 synopsis:            The blockchain layer of Cardano during the Byron era
@@ -9,7 +11,6 @@ copyright:           2018 IOHK
 category:            Currency
 build-type:          Simple
 extra-source-files:  README.md
-cabal-version:       >=1.10
 
 flag development
     description: Disable `-Werror`
@@ -21,7 +22,33 @@ flag test-normal-form
     default: False
     manual: True
 
+common base                         { build-depends: base                             >= 4.11       && < 4.15     }
+
+common project-config
+  default-language:   Haskell2010
+  default-extensions: NoImplicitPrelude
+
+  ghc-options:        -Weverything
+                      -Weverything
+                      -Wno-all-missed-specialisations
+                      -Wno-missing-import-lists
+                      -Wno-safe
+                      -Wno-unsafe
+
+  if impl(ghc >= 8.8)
+    ghc-options:      -Wno-missing-deriving-strategies
+
+  if impl(ghc >= 8.10)
+    ghc-options:      -Wno-missing-safe-haskell-mode
+                      -Wno-prepositive-qualified-module
+                      -Wunused-packages
+
+  if (!flag(development))
+    ghc-options:      -Werror
+
 library
+  import:             base, project-config
+
   hs-source-dirs:      src
   exposed-modules:
                        Cardano.Chain.Block
@@ -125,8 +152,7 @@ library
                        Cardano.Chain.Update.SystemTag
                        Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
 
-  build-depends:       base >=4.11 && <5
-                     , aeson
+  build-depends:       aeson
                      , base58-bytestring
                      , bimap >=0.4 && <0.5
                      , binary
@@ -157,23 +183,9 @@ library
                      , time
                      , vector
 
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-
-  ghc-options:         -Weverything
-                       -Wno-all-missed-specialisations
-                       -Wno-missing-import-lists
-                       -Wno-safe
-                       -Wno-unsafe
-  if impl(ghc >=8.8)
-    ghc-options:       -Wno-missing-deriving-strategies
-  if impl(ghc >=8.10)
-    ghc-options:       -Wno-missing-safe-haskell-mode
-                       -Wno-prepositive-qualified-module
-  if (!flag(development))
-    ghc-options:         -Werror
-
 test-suite cardano-ledger-byron-test
+  import:             base, project-config
+
   hs-source-dirs:      test
   main-is:             test.hs
   type:                exitcode-stdio-1.0
@@ -245,8 +257,7 @@ test-suite cardano-ledger-byron-test
 
                        Test.Options
 
-  build-depends:       base
-                     , base16-bytestring >= 1
+  build-depends:       base16-bytestring >= 1
                      , bimap >=0.4 && <0.5
                      , bytestring
                      , cardano-binary
@@ -277,25 +288,11 @@ test-suite cardano-ledger-byron-test
                      , time
                      , vector
 
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-
-  ghc-options:         -Weverything
-                       -Wno-all-missed-specialisations
-                       -Wno-missing-import-lists
-                       -Wno-safe
-                       -Wno-unsafe
-                       "-with-rtsopts=-K5M -M500M"
-  if impl(ghc >=8.8)
-    ghc-options:       -Wno-missing-deriving-strategies
-  if impl(ghc >=8.10)
-    ghc-options:       -Wno-missing-safe-haskell-mode
-                       -Wno-prepositive-qualified-module
-                       -Wno-unused-packages
-  if (!flag(development))
-    ghc-options:         -Werror
+  ghc-options:         "-with-rtsopts=-K450K -M500M"
 
 test-suite epoch-validation-normal-form-test
+  import:             base, project-config
+
   if (!flag(test-normal-form))
    buildable: False
 
@@ -309,8 +306,7 @@ test-suite epoch-validation-normal-form-test
                        Test.Cardano.Mirror
                        Test.Options
 
-  build-depends:       base
-                     , bytestring
+  build-depends:       bytestring
                      , cardano-binary
                      , cardano-ledger
                      , cardano-crypto-wrapper
@@ -325,15 +321,4 @@ test-suite epoch-validation-normal-form-test
                      , tasty
                      , tasty-hedgehog
 
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-
-  ghc-options:         -Weverything
-                       -Wno-all-missed-specialisations
-                       -Wno-missing-import-lists
-                       -Wno-safe
-                       -Wno-unsafe
-                       "-with-rtsopts=-K450K -M500M"
-
-  if (!flag(development))
-    ghc-options:         -Werror
+  ghc-options:         "-with-rtsopts=-K450K -M500M"

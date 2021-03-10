@@ -1,3 +1,5 @@
+cabal-version: 2.2
+
 name:                small-steps-test
 version:             0.1.0.0
 synopsis:            Small step semantics testing library
@@ -10,67 +12,69 @@ maintainer:          formal.methods@iohk.io
 category:            Control
 build-type:          Simple
 extra-source-files:
-cabal-version:       >=1.10
 
 flag development
     description: Disable '-Werror'
     default: False
     manual: True
 
+common base                         { build-depends: base                             >= 4.11       && < 4.15     }
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+
+  if (!flag(development))
+    ghc-options:      -Werror
+
+  if impl(ghc >= 8.10)
+    ghc-options:      -Wunused-packages
+
+common doctest
+  if impl(ghc < 8.10)
+    build-depends:    doctest
+
 library
+  import:             base, project-config
+
   exposed-modules:     Control.State.Transition.Invalid.Trace
                      , Control.State.Transition.Generator
                      , Control.State.Transition.Trace
                      , Control.State.Transition.Trace.Generator.QuickCheck
                      , Hedgehog.Extra.Manual
-  -- other-modules:
-  -- other-extensions:
-  build-depends:       base >=4.11 && <5
-                     , goblins
+  build-depends:       goblins
                      , hedgehog >= 1.0
                      , tasty-hunit
                      , microlens
                      , microlens-th
                      , mtl
                      , nothunks
-                     , prettyprinter
                      , transformers >= 0.5
                      , QuickCheck
                      -- IOHK deps
                      , cardano-prelude
                      , small-steps
   hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wredundant-constraints
-  if (!flag(development))
-    ghc-options:      -Werror
 
 test-suite doctests
-  hs-source-dirs:      test
-  main-is:             DoctestDiscover.hs
-  type:                exitcode-stdio-1.0
-  default-language:    Haskell2010
-  build-depends:       base
-                     , doctest
-                     , prettyprinter
+  import:             base, project-config
+                    , doctest
 
+  hs-source-dirs:     test
+  main-is:            DoctestDiscover.hs
+  type:               exitcode-stdio-1.0
+  default-language:   Haskell2010
   build-tool-depends: doctest-discover:doctest-discover
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wredundant-constraints
-                      -threaded
-
-  if (!flag(development))
-    ghc-options:      -Werror
-
+  ghc-options:        -threaded
 
 test-suite examples
+  import:             base, project-config
+
   hs-source-dirs:      test
   main-is:             examples/Main.hs
   other-modules:       Control.State.Transition.Examples.Sum
@@ -78,8 +82,7 @@ test-suite examples
                      , Control.State.Transition.Examples.CommitReveal
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
-  build-depends:       base
-                     , containers
+  build-depends:       containers
                      , hedgehog >= 1.0
                      , mtl
                      , tasty
@@ -95,12 +98,4 @@ test-suite examples
                      -- Local deps
                      , small-steps
                      , small-steps-test
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wredundant-constraints
-                      -threaded
-
-  if (!flag(development))
-    ghc-options:      -Werror
+  ghc-options:        -threaded
