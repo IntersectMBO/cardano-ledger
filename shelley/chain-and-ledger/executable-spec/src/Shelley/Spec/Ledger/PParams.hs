@@ -27,11 +27,13 @@ module Shelley.Spec.Ledger.PParams
     emptyPParamsUpdate,
     Update (..),
     updatePParams,
+    unsafeForHashingPPDeltaDecoder,
   )
 where
 
 import Cardano.Binary
-  ( FromCBOR (..),
+  ( Decoder,
+    FromCBOR (..),
     ToCBOR (..),
     decodeWord,
     encodeListLen,
@@ -79,6 +81,7 @@ import Shelley.Spec.Ledger.Serialization
     ToCBORGroup (..),
     decodeMapContents,
     decodeRecordNamed,
+    mapFromCBOR,
     mapToCBOR,
     ratioFromCBOR,
     ratioToCBOR,
@@ -491,6 +494,17 @@ instance
     decode $
       Ann (Emit ProposedPPUpdates)
         <*! mapDecodeA (Ann From) From
+
+-- | This decoder for ProposedPPUpdates should never be used to construct
+-- a value which will later be serialized and then hashed.
+-- The problem is that CBOR encodings are not unique, and the hash
+-- algorithm should be given the original bytestring. The
+-- Annotator (ProposedPPUpdates era) instance above does preserve the original
+-- bystring and should be used in such cases.
+unsafeForHashingPPDeltaDecoder ::
+  (Era era, FromCBOR (PParamsDelta era)) =>
+  Decoder s (ProposedPPUpdates era)
+unsafeForHashingPPDeltaDecoder = ProposedPPUpdates <$> mapFromCBOR
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty
