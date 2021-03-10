@@ -38,10 +38,12 @@ except that the proposal must also be \emph{endorsed} by sufficient block-produc
 The same process applies to both major and minor protocol version upgrades.
 The deadline for endorsement must be given in the original proposal submission.
 In order to ensure the stability of the chain, endorsement must happen sufficiently before the update takes
-effect.  This has been fixed at $XX$ slots prior to the epoch where the proposed is enacted.
+effect.  This has been fixed at $XX$ slots prior to the epoch where the proposed is enacted.\khcomment{Determine this!}
 If a proposal does not pass the endorsement threshold then it will be rejected at this point, otherwise it will be
-passed on for automatic enactment.  It is anticipated that endorsement will be through manual confirmation by each stake pool operator, though it would be possible
-to automate this by monitoring software versions.\khcomment{Jared has defined an automated process.}
+passed on for automatic enactment.  It is anticipated that endorsement will be automatic, based on the percentage of stake that
+is controlled by upgraded stake pools.
+% through manual confirmation by each stake pool operator, though it would be possible
+% to automate this by monitoring software versions.\khcomment{Jared has defined an automated process.}
 While the endorsement deadline will usually be after the voting deadline, this is not technically necessary, and the deadlines could
 in principle be contemporaneous, or even reversed.
 
