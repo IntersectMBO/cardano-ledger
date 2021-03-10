@@ -8,29 +8,30 @@ Its design is described in~\ref{Priviledge}, and has been used to inform the des
   \hline\hline
   \textbf{Priviledge} & \textbf{PUP}
   \\\hline
-  Completely on-chain & Uses off-chain as well as on-chain \\\hline
+  Completely on-chain & Uses off-chain processes as well as on-chain ones \\\hline
   Does not restrict proposal submission & Restricts on-chain submission to a specific group \\\hline
-  Proposals are tracked throughout & Proposals are tracked once they are on-chain \\\hline
-  Does not identify actor groups & Clearly identifies actor groups \\\hline
-  Supports vote abstention & Treats abstention as rejection \\\hline
+  Proposals are tracked throughout & Proposals are tracked once they are on-chain, mechanisms are provided to tie on-chain to off-chain proposals \\\hline
+  Proposals are completely independent & A single off-chain proposal may initiate multiple on-chain proposals for enactment \\\hline
+  Security-related proposals follow the standard process\khcomment{Confirm this.}  & Security-related proposals may bypass some off-chain processes \\\hline
+  A single vote may only be used for one proposal\khcomment{Confirm this.} & A single vote may be used for any active proposals \\\hline
+  Does not identify different actor groups & Clearly identifies different actor groups \\\hline
+  Supports explicit vote abstention & Treats abstention as rejection \\\hline
   Allows votes to be removed prior to tally & Allows votes and delegations to be changed prior to tally (equivalent effect) \\\hline
   Allows multiple voting rounds & Allows only one on-chain voting round \\\hline
   Allows  vote stake snapshots to be taken at arbitrary points & Takes vote snapshots at fixed points \\\hline
-  Explicit prioritisation & Submission time-based prioritisation \\\hline
+  Explicit proposal prioritisation & Submission-based prioritisation \\\hline
   Proposals can be cancelled & Proposals cannot be cancelled once they are approved and endorsed \\\hline
-  Includes software upgrades & Does not consider software upgrades, except where these are protocol version changes \\\hline
+  Includes software upgrades (not just protocol upgrades) & Does not consider software upgrades, except where these are protocol version changes \\\hline
   Does not handle central funds transfers & Handles central funds transfers \\\hline
   Does not support vote delegation & Supports vote delegation \\\hline
-  Requires version numbering in each proposal & No version numbering \\\hline
+  Does not consider blockchain stability windows & Explicitly considers blockchain stability windows \\\hline
+  Requires version numbering in each proposal & No version numbering required  \\\hline
   Single proposal enactment at an epoch boundary\khcomment{From memory.  Check this.}  & Multiple proposal enactment at each epoch boundary \\\hline
-  %   Does not include specific protocol parameters & Includes protocol parameter updates \\\hline
-  %% Not sure what I meant by that?  KH
   \hline
 \end{tabular}
 
-Most of these changes reflect differences in requirements, or a desire to make
+Most of these differences reflect either differences in requirements, or a desire to make
 the new mechanism generally consistent with the existing update mechanism.
-Others are simplifications that are aimed at improving peformance (e.g. vote
-stake snapshots) or reducing development and testing time (e.g. version numbering, time-based prioritisation).
-
-\khcomment{First draft.  Each of these points could be expanded on, if required.}
+Others are simplifications that are aimed at improving peformance or security (e.g. vote
+stake snapshots, restricting submission) or reducing development and testing time (e.g. version numbering, time-based prioritisation).
+Most of the Priviledge mechanisms could be added at a later date, if required, but some adaptation would generally be required.
