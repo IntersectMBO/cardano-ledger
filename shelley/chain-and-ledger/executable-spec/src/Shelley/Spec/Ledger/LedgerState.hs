@@ -123,10 +123,11 @@ import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈),
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coders
-  ( Annotator,
+  ( Annotator (..),
     Decode (Ann, From, RecD),
     decode,
     decodeRecordNamed,
+    (<!),
     (<*!),
   )
 import Data.Constraint (Constraint)
@@ -522,6 +523,26 @@ instance
         <*! From
         <*! Ann From
 
+instance
+  ( FromCBOR (Core.PParams era),
+    TransValue FromCBOR era,
+    TransUTxO FromCBOR era,
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
+    FromCBOR (State (Core.EraRule "PPUP" era)),
+    Era era
+  ) =>
+  FromCBOR (EpochState era)
+  where
+  fromCBOR =
+    decode $
+      RecD EpochState
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+
 data UpecState era = UpecState
   { -- | Current protocol parameters.
     currentPp :: !(Core.PParams era),
@@ -562,6 +583,16 @@ instance
       Ann (RecD PPUPState)
         <*! From
         <*! From
+
+instance
+  (Era era, FromCBOR (PParamsDelta era)) =>
+  FromCBOR (PPUPState era)
+  where
+  fromCBOR =
+    decode $
+      RecD PPUPState
+        <! From
+        <! From
 
 pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
 pvCanFollow _ SNothing = True
@@ -624,6 +655,22 @@ instance
         <*! Ann From
         <*! From
 
+instance
+  ( TransValue FromCBOR era,
+    TransUTxO FromCBOR era,
+    FromCBOR (State (Core.EraRule "PPUP" era)),
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
+  ) =>
+  FromCBOR (UTxOState era)
+  where
+  fromCBOR =
+    decode $
+      RecD UTxOState
+        <! From
+        <! From
+        <! From
+        <! From
+
 -- | New Epoch state and environment
 data NewEpochState era = NewEpochState
   { -- | Last epoch
@@ -663,6 +710,24 @@ instance
     encodeListLen 6 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
       <> toCBOR ru
       <> toCBOR pd
+
+instance
+  ( Era era,
+    TransUTxO FromCBOR era,
+    FromCBOR (Core.PParams era),
+    FromCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
+  FromCBOR (NewEpochState era)
+  where
+  fromCBOR = do
+    decode $
+      RecD NewEpochState
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
 
 instance
   ( Era era,
@@ -734,6 +799,20 @@ instance
       Ann (RecD LedgerState)
         <*! From
         <*! Ann From
+
+instance
+  ( Era era,
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
+    TransUTxO FromCBOR era,
+    FromCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
+  FromCBOR (LedgerState era)
+  where
+  fromCBOR =
+    decode $
+      RecD LedgerState
+        <! From
+        <! From
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
