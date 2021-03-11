@@ -21,7 +21,8 @@ flag sts_assert
     default: False
     manual: True
 
-common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+common base
+  build-depends:      base >= 4.12 && < 4.15
 
 common project-config
   default-language:   Haskell2010

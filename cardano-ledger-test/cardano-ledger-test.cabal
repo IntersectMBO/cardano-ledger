@@ -17,7 +17,8 @@ extra-source-files:
   bench/resources/0_ledgerstate.cbor
   bench/resources/0_tx.cbor
 
-common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+common base
+  build-depends:      base >= 4.12 && < 4.15
 
 common project-config
   default-language:   Haskell2010
