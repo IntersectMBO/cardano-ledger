@@ -7,34 +7,139 @@ UTxO, permanently blocking memory. Because members of the $\Value$
 type can be arbitrary large, the ledger requires a $\UTxO$ entry to
 contain a minimum amount of Ada, proportional to its size.
 
-How much memory is used exactly is an implementation detail, but some facts are:
+There is also another $\Value$ size consideration with respect to spendability
+of an output. The restriction on the total serialized size of the transaction (set
+by the parameter $\var{maxTxSize}$) serves as an implicit upper bound on the
+size of a $\Value$ contained in an output of a transaction. Without tighter
+limits on the output $\Value$ size, one of the following situations could arise,
+causing the output to be come unspendable (these are just a two examples) :
+
 \begin{itemize}
-  \item Every output contains and address and Ada, which take a constant amount of space.
-  \item The size will scale linearly with the number of $\PolicyID$s and tokens in the $\Value$.
-  \item The number of $\PolicyID$s is less than or equal to the number of tokens.
+  \item The script locking the very large $\Value$-containing UTxO is too large
+  to fit inside the transaction alongside the $\Value$ itself while still respecting
+  the max transaction size
+  \item The large $\Value$ cannot be split into several outputs, because the
+  outputs are impossible to fit inside a single transaction
 \end{itemize}
 
-Because of the first two items in that list, we could use the following definition for $\fun{outputSize}$:
+Figure \ref{fig:size-helper} contains abstract and helper functions
+used in calculating the in-memory and serialized representation
+sizes of $\Value$ terms.
 
 \begin{figure*}[h]
+  \emph{Abstract Functions}
+  %
   \begin{align*}
-    & \fun{outputSize} \in \PParams \to \TxOut \to \MemoryEstimate \\
-    & \fun{outputSize}~{pp}~\var{out} = k_0 + k_1 * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
-            \land (\var{pid}, \var{aid}) \neq (\mathsf{adaPolicy}, \mathsf{adaName}) \}| \\
-    & \phantom{\fun{outputSize}~{pp}~\var{out} = k_0} + k_2 * |\{ \var{pid} : \exists aid : v~pid~aid \neq 0 \}| \\
-    & ~~\where \\
-    & ~~~~~~(k_0, k_1, k_2) = \fun{outputSizeConstants}~{pp}
+    & \fun{serSize} \in \Value \to \MemoryEstimate \\
+    & \text{Gives the size of the serialized representation of a $\Value$}
+    \nextdef
+    & \fun{anameLen} \in \AssetName \to \MemoryEstimate \\
+    & \text{Returns the length (in bytes) of an asset name}
+  \end{align*}
+  %
+  \emph{Helper Functions}
+  \begin{align*}
+    & \fun{numAssets} \in \Value \to \N \\
+    & \fun{numAssets}~{vl}~=~\|~\{~(pid, an)~\vert~pid~(\mapsto~(an~\mapsto~\wcard))~\in~vl~\}~\| \\
+    & \text{Returns the number of distinct asset IDs in a $\Value$}
+    & \nextdef
+    & \fun{sumALs} \in \Value \to \N \\
+    & \fun{sumALs}~{vl}~=~ \sum_{\{~an~\vert~\wcard~(\mapsto~(an~\mapsto~\wcard))~\in~vl~\}} \fun{anameLen}~an \\
+    & \text{Returns the sum of the lengths (in bytes) of distinct asset names in a $\Value$}
+    & \nextdef
+    & \fun{numPids} \in \Value \to \N \\
+    & \fun{numPids}~{vl} ~=~ \|~\supp~{vl}~\| \\
+    & \text{The number of policy IDs in a $\Value$}
   \end{align*}
   \caption{Value Size}
-  \label{fig:test}
+  \label{fig:size-helper}
 \end{figure*}
 
-Here, $k_0$ reflects the constant part, i.e. Ada, the key and the address, $k_1$ reflects the
-size of non-ada tokens, and $k_2$ the size of $\PolicyID$s.
+The function $\fun{serSize}$, unlike the functions $\fun{size}$ and $\fun{utxoEntrySize}$
+    (explained below), is left abstract. It returns the actual number of bytes a $\Value$
+    occupies in the serialized transaction (and hence is implementation-dependent).
 
-There are some trade-offs here. Because of the third item in the above
-list, $k_2$ could be set to zero without changing the asymptotic
-behaviour, somewhat simplifying this function. This is important,
-because this function influences how much users have to send each
-other for transactions to be valid, so having a function that a user
-can easily evaluate by themselves is important.
+    One reason for this design decision is that the $\fun{serSize}$ function is used constrain
+    the serialized representation of the transaction (in particular, the size
+    of $\Value$ terms in outputs), whereas the min-ada requirement is about
+    the in-memory representation size. Moreover, a transparently-calculated size estimate
+    is not necessary for limiting the size of values in outputs, since this size-bound
+    check does not place any additional accounting/monetary constranits on transaction construction,
+    unlike the min-ada requirement.
+
+Figure \ref{fig:min-val-calc} gives the types of constants used in the estimation
+of the size of a UTxO entry, and the associated min-ada-value.
+
+\begin{figure*}[h]
+  \emph{Constants}
+  \begin{equation*}
+    \begin{array}{lcl}
+      (k_0, k_1, k_2, k_3, k_4) & \in & \N \times \N \times \N \times \N \times \N \\
+      \mathsf{UtxoEntrySizeWithoutVal} & \in & \MemoryEstimate \\
+      \mathsf{AdaOnlyUTxOSize} & \in & \MemoryEstimate \\
+      \mathsf{MaxValSize} & \in & \MemoryEstimate \\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Size and Min-Ada Functions}
+  \begin{align*}
+    & \fun{size} \in \Value \to \MemoryEstimate \\
+    & \fun{size}~\var{vl} ~=~
+    \begin{cases}
+      k_0 & \fun{coinToValue}~(\fun{getCoin}~vl)~=~vl \\
+      k_1 + \fun{quot}~ (((\fun{numAssets}~vl) * k_2) + (\fun{sumALs}~vl) + ((\fun{numPids}~vl) * k_3) + (k_4 - 1))~k_4 & \text{otherwise} \\
+    \end{cases} \\
+    & \text{Calculate the size of a $\Value$}
+    \nextdef
+    & \fun{adaPerUTxOWord}~\in \PParams \to \Coin \\
+    & \fun{adaPerUTxOWord}~pp = \fun{quot}~ (\fun{minUTxOValue}~pp,~ \mathsf{adaOnlyUTxOSize}) \\
+    & \text{Calculate the cost of storing a memory unit of data as a UTxO entry}
+    \nextdef
+    & \fun{utxoEntrySize} \in \TxOut \to \MemoryEstimate \\
+    & \fun{utxoEntrySize}~\var{out} = \mathsf{utxoEntrySizeWithoutVal} + \fun{size}~ (\fun{getValue}~out) \\
+    & \text{Calculate the size of a UTxO entry}
+\end{align*}
+\caption{Value Size}
+\label{fig:min-val-calc}
+\end{figure*}
+
+The $\fun{size}$ function returns the estimated size of a $\Value$ term. It is constant in the
+case where the value contains only ada. If there are other types of tokens in the
+term, the size depends on
+
+\begin{itemize}
+  \item the number of distinct asset types (asset IDs)
+  \item the number of distinct policy IDs, and
+  \item the sum of the lengths of distinct asset names of the tokens.
+\end{itemize}
+
+The parameter $\fun{minUTxOValue}$ specifies the min-ada value for a UTxO containing
+only ada. This type of UTxO varies in size somewhat (eg. Byron style addresses
+may be a different length than Shelley ones), but we estimate the size of the most commonly
+used type of ada-only UTxO as the constant value $\mathsf{adaOnlyUTxOSize}$.
+This constant is in fact an upper bound on UTxOs which have have only Shelley credentials.
+
+We use this size estimate
+to calculate what $\fun{minUTxOValue}$ implies to be the min-ada value requirement
+\emph{per word} of UTxO data.
+
+The function $\fun{adaPerUTxOWord}$ performs this calculation by dividing the
+min-ada value by the ada-only UTxO size.
+
+The $\mathsf{utxoEntrySizeWithoutVal}$ is the constant representing 
+the size of a UTxO entry, not counting the size of the $\Value$ term it contains.
+Here, again, the actual size of a UTxO (excluding the $\Value$) can vary, but
+we use an upper bound on the size of Shelley-credential UTxOs.
+
+The function $\fun{utxoEntrySize}$ estimates the size of an arbitrary ShelleyMA-era
+UTxO. It adds the size estimate of the $\Value$ term in a UTxO and the
+$\mathsf{utxoEntrySizeWithoutVal}$ constant.
+
+The constants used in the implementation of the Alonzo era are as follows :
+
+\begin{itemize}
+  \item $(k_0, k_1, k_2, k_3, k_4) = (2, 6, 12, 28, 8)$
+  \item $\mathsf{utxoEntrySizeWithoutVal} = 27$ words (8 bytes)
+  \item $\mathsf{adaOnlyUTxOSize} = 27$ words (8 bytes)
+  \item $\mathsf{MaxValSize} = 4000$ bytes, ie. 500 words.
+\end{itemize}

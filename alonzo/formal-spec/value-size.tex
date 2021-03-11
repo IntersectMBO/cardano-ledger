@@ -34,9 +34,16 @@ is accounted for in the size calculation.
   Get datHashSize from heapwords on the code
 \end{note}
 
-How much memory is used exactly is an implementation detail, with the current constants, in Haskell words (8 bytes):
+There is a change of constant value from the ShelleyMA era, specifically:
 
 \begin{itemize}
-  \item $\mathsf{JustDatHashSize} = $
-  \item $\mathsf{NothingSize} = $
+  \item $\mathsf{adaOnlyUTxOSize} = 29$ instead of $27$
+  \item $\mathsf{k_0} = 2$ instead of $0$
+\end{itemize}
+
+Additionally, the new constants used in Alonzo have values :
+
+\begin{itemize}
+  \item $\mathsf{JustDatHashSize} = $ words
+  \item $\mathsf{NothingSize} = $ words
 \end{itemize}
