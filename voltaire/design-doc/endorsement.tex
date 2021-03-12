@@ -17,7 +17,7 @@ can follow the blockchain from its inception (that is, from the genesis block),
 the new node software must also be prepared to handle any previous version of
 the protocol, that is from version 1.0 (Byron) through all intermediate versions to the current protocol version.
 
-There are three obvious ways that could enable an \emph{endorser} to endorse a protocol version upgrade.  A decision needs
+There are several obvious ways that could enable an \emph{endorser} to endorse a protocol version upgrade.  A decision needs
 to be made on which of these to use.
 
 \begin{description}
@@ -28,7 +28,12 @@ to be made on which of these to use.
   [Automatic endorsement.]  The new software submits a signed transaction on-chain that confirms the maximum protocol version that it is
   able to accept.
 \item
-  [Automatic endorsement by block.]  Each block includes the protocol version that is used by the pool that minted it.
+  [Automatic endorsement by statistical count of blocks produced.]  Each block includes the protocol version that is used by the pool that minted it.  This can be used to
+  estimate the percentage of stake that is controlled by upgraded pools.
+\item
+  [Automatic endorsement by stake.]  Each block includes the protocol version that is used by the pool that minted it.  A map is used
+  to record the most recent protocol version that is being used by each pool.  The total stake that is controlled by upgraded pools can then
+  be calculated at the time of endorsement using the stake snapshot.
 \end{description}
 
 % In  cases, the transaction will need to be signed by the stake pool operational key.
@@ -40,7 +45,7 @@ Manual endorsement allows endorsers to have better control over
 the timing of their endorsement (for example, when testing a new node version)
 and to endorse specific proposals rather than a protocol version (so avoiding issues if two proposals
 mistakenly refer to the same protocol version).  However, some
-endorsements may be missed, and consequently some upgrade proposals may not be enacted
+endorsements may be missed, and consequently some upgrade proposals might not be enacted
 even though nodes are actually able to handle the new protocol.
 Automating endorsements by block production reduces the number of transactions that are needed (and so reduces overhead costs for pool operators),
 but unless the stake snapshot is used, this will only give a statistical measure of the upgrade status (some percentage of blocks have been produced by
@@ -51,7 +56,7 @@ pools that have upgraded).
 \subsection{Tallying the Endorsements}
 
 Endorsements are tallied following the deadline that is given in the proposal.
-If there are sufficient endorsements for the proposal, then it will be carried
+If there is sufficient endorsement for the proposal, then it will be carried
 forward for enactment.  While the endorsement deadline is technically
 independent of the voting deadline, in practice it will usually be later than the
 voting deadline. That is, first the vote will be taken, then pools will indicate
@@ -64,7 +69,7 @@ In contrast to voting, the total amount of stake that has been delegated for blo
 threshold. \khcomment{I think it makes sense to
   use the same snapshot that is used for normal block production rather than the
   most recent delegation snapshot, but this should be discussed.}
-To avoid chain forks, the minimum threshold for endorsement should be no less than 50\%
-of the block producing stake.
-If statistical block production is used, then the threshold should be set as a percentage of blocks that have been produced.
+To avoid chain forks, the minimum threshold for endorsement must not be less than 50\%
+of the block producing stake, but may need to be higher to account for statistical variation or any errors etc.
+If statistical block production is used, then the threshold should be set as a percentage of the blocks that have been produced.
 This threshold should be set conservatively (e.g. a minimum of 60\% of the blocks produced).

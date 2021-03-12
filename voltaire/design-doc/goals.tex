@@ -139,6 +139,7 @@ On-chain requirements may be split into mandatory and optional requirements.
 
 \pagebreak
 \subsection{Security Requirements}
+\label{sect:security}
 
 The primary security risks are: subversion of votes by a small group; subversion of on-chain proposal submission; denial-of-service.
 
@@ -147,13 +148,13 @@ An attacker may obtain control of the blockchain by pooling votes as a delegate 
 proposals that are in the general interest.   This attack is mitigated by:
   \begin{inparaenum}
   \item
-    requiring endorsement of protocol changes by stake pool operators, so that multiple distinct stakeholder groups are required to enact a proposal;
+    requiring endorsement of protocol changes by stake pools, so that multiple distinct stakeholder groups are required to enact a proposal;
   \item
     setting high thresholds for vote acceptance, and basing these thresholds on active participation;
   \item
-    ensuring that all ada holders can easily participate in vote delegation, including setting low costs for participation;
+    ensuring that all ada holders can easily participate in vote delegation, including setting low costs for participation\khcomment{and not locking tokens};
   \item
-    never permanently transferring voting rights to delegates, and allowing vote delegation to be easily changed;
+    never permanently transferring voting rights to delegates, and allowing vote delegation to be easily changed by the ada holder;
   \item
     separating submitter and delegate groups;
   \item
@@ -167,15 +168,15 @@ subverting members of the submitter group.
 This attack is mitigated by:
   \begin{inparaenum}
   \item
-    Setting a sufficient quorum for counter-signing proposal submission;
+    Setting a sufficiently large quorum for counter-signing proposal submission;
   \item
-    Making the submitter group sufficiently large that it becomes difficult to control;
+    Making the submitter group sufficiently large that it becomes difficult to exert control;
   \item
     Separating submitter and delegate groups, so that proposals are not enacted without scrutiny;
   \item
     Linking off-chain and on-chain proposals, so that it is clear when a proposal has not followed proper process;
   \item
-    Designing a process that allows submitters to be replaced where they are not acting in the best interest of the community.
+    Designing an election process that allows submitters to be replaced where they are not acting in the best interest of the community.
   \end{inparaenum}
 
 
@@ -198,14 +199,15 @@ It would also be possible to charge fees for proposal submission (perhaps on a r
 
 \pagebreak
 \subsection{Performance Requirements}
+\label{sect:performance}
 
 The solution must:
 
 \begin{itemize}
 \item
-  avoid significant increases in memory requirements;
+  avoid significant increases in memory requirements over previous versions of the node software;
 \item
-  avoid significant impact on normal block production times;
+  avoid significant impact on normal block production times, for example by requiring excessive indivisible processing at specific times;
 \item
   avoid significant increases in transaction volumes.
 \end{itemize}

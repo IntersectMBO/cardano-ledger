@@ -2,10 +2,13 @@
 \section{Proposal Submission}
 \label{sect:submission}
 
-Proposals are submitted by a member of a submitter group.  They are counter-signed by a quorum of submitter keys.\khcomment{Difficult question: who controls registration/de-registration of submitter keys.}\khcomment{How do we ensure that there are always enough submitters in existence.}\khcomment{The quorum may be a protocol parameter.}
-No fee is charged for proposal submission.\khcomment{This may need to be discussed.}
-A submitter may submit any number of proposals in a single epoch.
-\khcomment{This assumes that submitters will not spam the blockchain.}
+Proposals are submitted by a member of a submitter group.  They must be counter-signed by a quorum of submitter keys, where the quorum is specified by the \texttt{ProposalQuorum} parameter.
+\khcomment{Difficult question: who controls registration/de-registration of submitter keys.}\khcomment{How do we
+ensure that there are always enough submitters in existence.}\khcomment{The
+quorum may be a protocol parameter.}  No fee is charged for proposal
+submission.\khcomment{This may need to be discussed.}  A submitter may submit
+any number of proposals in a single epoch.
+\khcomment{This assumes that submitters are trustworthy and will not collectively spam the blockchain.}
 
 \subsection{Format}
 
@@ -15,13 +18,13 @@ Each proposal has a header and a body.  % and must be signed\khcomment{Submittin
 
 \begin{verbatim}
 "header": {
-  "proposal" : ProposalHash,
-  "voteby" : Slot,
-  "votethreshold" : Threshold,
-  "endorseby" : Optional Slot,
+  "proposal"         : ProposalHash,
+  "voteby"           : Slot,
+  "votethreshold"    : Threshold,
+  "endorseby"        : Optional Slot,
   "endorsethreshold" : Optional Threshold,
-  "enact" : Epoch,
-  "submitter" : KeyHash
+  "enact"            : Epoch,
+  "submitter"        : KeyHash
 }
 \end{verbatim}
 
@@ -43,7 +46,7 @@ The proposal submitter must belong to the correct submitter group.  \khcomment{D
 The body of the proposal is specific to the proposal type.
 
 \newpage
-\paragraph{Parameter Update Body.}  The proposal format is identical to that used for Shelley/Allegra/Mary/Alonzo. \TODO{Check the format.}  Multiple parameters may be changed in a single proposal if required.
+\paragraph{Parameter Update Body.}  The proposal format is identical to that used for Shelley/Allegra/Mary/Alonzo. \TODO{Check the concrete format.}  Multiple parameters may be changed in a single proposal if required.
 Parameters are checked for validity on enactment, rather than on submission, so it is possible to submit a proposal that will change parameters following a future protocol version upgrade, for example.
 
 
@@ -55,22 +58,26 @@ Parameters are checked for validity on enactment, rather than on submission, so 
 }
 \end{verbatim}
 
-\paragraph{Protocol Version Upgrade Body.}  The format is also identical to that used for Shelley/Allegra/Mary/Alonzo.
+\paragraph{Protocol Version Upgrade Body.}  The format is slightly changed from that used for Shelley/Allegra/Mary/Alonzo.
 
 
 \begin{verbatim}
 "body": {
-  "Major" : Integer,
-  "Minor" : Integer,
-  "Genesis" : Hash
+  "Major"       : Integer,
+  "Minor"       : Integer,
+  "Genesis"     : Hash,
+  "CodeVersion" : [Hash]
 }
 \end{verbatim}
 
-Node software only needs to comply with the new protocol rules.  It does not need to be a specific version, for example, and we do not check a software hash.
+The major and minor protocol version numbers identify the new protocol.  The genesis parameter hashes the genesis file, so ensuring that consistent initial protocol parameters are used.
+The proposal also includes a list of hashes that can be used to identify one or more reference versions of the node software that implement the new protocol (e.g. as references to a specific git commit).
+Node operators are not required to use one of these versions -- any software that follows the protocol rules may be be used.
+\khcomment{These could also be hashed in the genesis file?}
+% Node software only needs to comply with the new protocol rules.  It does not need to be a specific version, for example, and we do not check a software hash.
+\khcomment{I assume that the new set of protocol parameters etc. is encoded in the genesis hash so do not need to be explicitly included here?}
 
-\khcomment{I assume that the new set of parameters is encoded in the genesis hash?}
-
-\khcomment{We might also need to include some hash here that can be verified by the system?}
+% \khcomment{We might also need to include some hash here that can be verified by the system?} % Dealt woth
 
 \paragraph{Central Funds Transfer Body.}  The format is also identical to that used for Shelley/Allegra/Mary/Alonzo.
 A single proposal may cover multiple funds transfers.  These are enacted in the order they are encountered.
@@ -79,21 +86,21 @@ that a set of transfers (for Catalyst funds, for instance), may  need to broken 
 
 \begin{verbatim}
 "body": {
-  "from" : Treasury/Reserves,
-  "to" : Optional Treasury/Reserves,
+  "from"      : "Treasury"/"Reserves",
+  "to"        : Optional "Treasury"/"Reserves",
   "toAddress" : Optional Address,
-  "amount" : Nat
+  "amount"    : Nat
 }
 \end{verbatim}
 
 Funds may be transferred from either the treasury or the reserves pot, and sent to either an address, or to the treasury/reserves pot.
-Transfers from treasury to treasury or from reserves to reserves are not permitted.  All transfers must be of a positive amount (including zero).
-Multiple transfers may be made in a single epoch.  This allows for proper accounting, where eg different kinds of transfer must
-be authorised by different groups of individual.
+Transfers from treasury to treasury or from reserves to reserves are not permitted.  All transfers must be for a positive amount (including zero).
+Multiple transfers may be made in a single epoch.  This allows for proper accounting, where e.g. different kinds of transfer must
+be authorised by different groups.
 
 Errors in transfers between reserves and treasury, or vice-versa, may be corrected by constructing a reverse transfer that cancels the original error.
-This cannot happen for transfers to addresses, of course.  Any errors must be corrected by the owner of the address, who must either explicitly transfer
-the funds to reserves or treasury, or else transfer the funds to a holding account. \khcomment{There is no way to transfer back at the moment!}
+This cannot happen for transfers to addresses.  Any errors in such transfers, must be corrected by the owner of the address, who must either explicitly transfer
+the funds to reserves or treasury, or else transfer the funds to a holding account. \khcomment{There is no way to transfer back to treasury/reserves at the moment!}
 
 \subsection{Proposal Signing}
 
