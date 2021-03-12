@@ -46,6 +46,7 @@ import Cardano.Binary
     FullByteString (..),
     ToCBOR (..),
     toCBOR,
+    serializeEncoding,
   )
 import Cardano.Ledger.Compactible (Compactible (..))
 import Codec.CBOR.Decoding (Decoder)
@@ -75,6 +76,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (Property, counterexample, testProperty, (===))
 
+-- | Check that: deserialize . serialize = id
 roundtrip ::
   (Eq a, Show a) =>
   (a -> Encoding) ->
@@ -101,6 +103,31 @@ roundtrip' enc dec a = case deserialiseFromBytes dec bs of
   Right (bs', a')
     | Lazy.null bs' ->
       a === a' bs
+    | otherwise ->
+      counterexample ("left-over bytes: " <> show bs') False
+  Left e ->
+    counterexample (show e) False
+  where
+    bs = toLazyByteString (enc a)
+
+-- | Check that: serialize . deserialize . serialize = serialize
+roundtrip2 ::
+  (a -> Encoding) ->
+  (forall s. Decoder s a) ->
+  a ->
+  Property
+roundtrip2 enc dec = roundtrip2' enc (const <$> dec)
+
+roundtrip2' ::
+  -- | @enc@
+  (a -> Encoding) ->
+  (forall s. Decoder s (Lazy.ByteString -> a)) ->
+  a ->
+  Property
+roundtrip2' enc dec a = case deserialiseFromBytes dec bs of
+  Right (bs', a')
+    | Lazy.null bs' ->
+      serializeEncoding (enc a) === serializeEncoding (enc (a' bs))
     | otherwise ->
       counterexample ("left-over bytes: " <> show bs') False
   Left e ->
@@ -155,7 +182,7 @@ prop_roundtrip_LedgerState :: Ledger.LedgerState Mock.C -> Property
 prop_roundtrip_LedgerState = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_NewEpochState :: Ledger.NewEpochState Mock.C -> Property
-prop_roundtrip_NewEpochState = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
+prop_roundtrip_NewEpochState = roundtrip2 toCBOR fromCBOR
 
 prop_roundtrip_MultiSig :: Ledger.MultiSig Mock.C_Crypto -> Property
 prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
