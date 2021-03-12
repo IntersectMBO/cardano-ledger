@@ -1,3 +1,5 @@
+cabal-version: 2.2
+
 name:                cardano-crypto-wrapper
 version:             1.3.0
 synopsis:            Cryptographic primitives used in the Cardano project
@@ -9,14 +11,39 @@ copyright:           2019 IOHK
 category:            Currency
 build-type:          Simple
 extra-source-files:  README.md
-cabal-version:       >=1.10
 
 flag development
     description: Disable `-Werror`
     default: False
     manual: True
 
+common base
+  build-depends:      base >= 4.12 && < 4.15
+
+common project-config
+  default-language:   Haskell2010
+  default-extensions: NoImplicitPrelude
+
+  ghc-options:        -Weverything
+                      -Wno-all-missed-specialisations
+                      -Wno-missing-import-lists
+                      -Wno-safe
+                      -Wno-unsafe
+
+  if impl(ghc >= 8.8)
+    ghc-options:      -Wno-missing-deriving-strategies
+
+  if impl(ghc >= 8.10)
+    ghc-options:      -Wno-missing-safe-haskell-mode
+                      -Wno-prepositive-qualified-module
+                      -Wunused-packages
+
+  if (!flag(development))
+    ghc-options:      -Werror
+
 library
+  import:             base, project-config
+
   hs-source-dirs:      src
   exposed-modules:
                        Cardano.Crypto
@@ -47,8 +74,7 @@ library
                        Cardano.Crypto.Signing.Safe.PassPhrase
                        Cardano.Crypto.Signing.Safe.SafeSigner
 
-  build-depends:       base
-                     , aeson
+  build-depends:       aeson
                      , base16-bytestring >= 1
                      , base64-bytestring
                      , base64-bytestring-type
@@ -66,23 +92,9 @@ library
                      , nothunks
                      , text
 
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-
-  ghc-options:         -Weverything
-                       -Wno-all-missed-specialisations
-                       -Wno-missing-import-lists
-                       -Wno-safe
-                       -Wno-unsafe
-  if impl(ghc >=8.8)
-    ghc-options:       -Wno-missing-deriving-strategies
-  if impl(ghc >=8.10)
-    ghc-options:       -Wno-missing-safe-haskell-mode
-                       -Wno-prepositive-qualified-module
-  if (!flag(development))
-    ghc-options:         -Werror
-
 test-suite test
+  import:             base, project-config
+
   hs-source-dirs:      test
   main-is:             test.hs
   type:                exitcode-stdio-1.0
@@ -103,8 +115,7 @@ test-suite test
                        Test.Cardano.Crypto.Signing.Safe
                        Test.Cardano.Crypto.Signing.Signing
 
-  build-depends:       base
-                     , bytestring
+  build-depends:       bytestring
                      , cardano-binary
                      , cardano-binary-test
                      , cardano-crypto
@@ -116,22 +127,6 @@ test-suite test
                      , hedgehog
                      , memory
                      , text
-
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-
-  ghc-options:         -Weverything
-                       -Wno-all-missed-specialisations
-                       -Wno-missing-import-lists
-                       -Wno-safe
-                       -Wno-unsafe
-  if impl(ghc >=8.8)
-    ghc-options:       -Wno-missing-deriving-strategies
-  if impl(ghc >=8.10)
-    ghc-options:       -Wno-missing-safe-haskell-mode
-                       -Wno-prepositive-qualified-module
-  if (!flag(development))
-    ghc-options:         -Werror
 
   ghc-options:         -threaded
                        -rtsopts

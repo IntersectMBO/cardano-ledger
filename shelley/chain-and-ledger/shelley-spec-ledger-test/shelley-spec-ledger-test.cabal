@@ -1,3 +1,5 @@
+cabal-version: 2.2
+
 name:                shelley-spec-ledger-test
 version:             0.1.0.0
 description:         Test helpers from shelley-spec-ledger exposed to other packages
@@ -5,7 +7,6 @@ license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
 build-type:          Simple
-cabal-version:       >=1.8
 
 extra-source-files:
   cddl-files/shelley.cddl
@@ -21,7 +22,27 @@ flag development
     default: False
     manual: True
 
+common base
+  build-depends:      base >= 4.12 && < 4.15
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+
+  if (!flag(development))
+    ghc-options:      -Werror
+
+  if impl(ghc >= 8.10)
+    ghc-options:      -Wunused-packages
+
 library
+  import:             base, project-config
+
   hs-source-dirs:
       src
       test
@@ -65,26 +86,14 @@ library
       Test.Shelley.Spec.Ledger.Rules.TestPool
       Test.Shelley.Spec.Ledger.Rules.TestPoolreap
       Test.Shelley.Spec.Ledger.ShelleyTranslation
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-  if (!flag(development))
-    ghc-options:
-      -Werror
   build-depends:
-    base,
     base16-bytestring >= 1,
-    bech32,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
     cardano-crypto-test,
     cardano-crypto-wrapper,
     cardano-crypto,
-    cardano-crypto-praos,
     cardano-ledger-byron,
     cardano-ledger-byron-test,
     cardano-prelude-test,
@@ -94,13 +103,11 @@ library
     containers,
     data-default-class,
     directory,
-    groups,
     generic-random,
     hedgehog-quickcheck,
     hedgehog,
     iproute,
     nothunks,
-    prettyprinter,
     process-extras,
     QuickCheck >= 2.13.2,
     shelley-spec-ledger,
@@ -114,9 +121,11 @@ library
     transformers
 
 test-suite shelley-spec-ledger-test
-    type:                exitcode-stdio-1.0
-    main-is:             Tests.hs
-    other-modules:
+  import:             base, project-config
+
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  other-modules:
       Test.Control.Iterate.SetAlgebra
       Test.Shelley.Spec.Ledger.Address.Bootstrap
       Test.Shelley.Spec.Ledger.Address.CompactAddr
@@ -157,30 +166,20 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.UnitTests
       Test.TestScenario
 
-    hs-source-dirs:      test
-    ghc-options:
+  hs-source-dirs:      test
+  ghc-options:
       -threaded
       -rtsopts
       -with-rtsopts=-N
-      -Wall
-      -Wcompat
-      -Wincomplete-record-updates
-      -Wincomplete-uni-patterns
-      -Wredundant-constraints
       -- We set a bound here so that we're alerted of potential space
       -- leaks in our generators (or test) code.
       --
       -- The 4 megabytes stack bound and 200 megabytes heap bound were
       -- determined ad-hoc.
       "-with-rtsopts=-K4m -M250m"
-    if (!flag(development))
-      ghc-options:
-        -Werror
-    build-depends:
+  build-depends:
       aeson,
-      base,
       base16-bytestring >= 1,
-      bech32,
       binary,
       bytestring,
       cardano-binary,
@@ -189,8 +188,8 @@ test-suite shelley-spec-ledger-test
       cardano-crypto-test,
       cardano-crypto-wrapper,
       cardano-crypto,
-      cardano-ledger-byron,
       cardano-ledger-byron-test,
+      cardano-ledger-byron,
       cardano-prelude-test,
       cardano-prelude,
       cardano-slotting,
@@ -198,10 +197,9 @@ test-suite shelley-spec-ledger-test
       containers,
       data-default-class,
       groups,
-      hedgehog-quickcheck,
       hedgehog,
+      hedgehog-quickcheck,
       iproute,
-      mtl,
       prettyprinter,
       QuickCheck,
       scientific,
@@ -213,11 +211,13 @@ test-suite shelley-spec-ledger-test
       tasty-hunit,
       tasty-quickcheck,
       tasty,
-      time,
+      time, 
       transformers
 
 
 benchmark mainbench
+  import:             base, project-config
+
   type:             exitcode-stdio-1.0
   hs-source-dirs:
     bench
@@ -232,7 +232,6 @@ benchmark mainbench
     Test.Shelley.Spec.Ledger.Examples.Cast
 
   build-depends:
-    base,
     bytestring,
     cardano-crypto-class,
     cardano-crypto-praos,
@@ -243,7 +242,7 @@ benchmark mainbench
     data-default-class,
     deepseq,
     mtl,
-    prettyprinter,
+    -- prettyprinter,
     QuickCheck,
     shelley-spec-ledger-test,
     shelley-spec-ledger,
@@ -254,12 +253,4 @@ benchmark mainbench
       -threaded
       -rtsopts
       -with-rtsopts=-N
-      -Wall
-      -Wcompat
-      -Wincomplete-record-updates
-      -Wincomplete-uni-patterns
-      -Wredundant-constraints
       -O
-  if (!flag(development))
-    ghc-options:
-      -Werror

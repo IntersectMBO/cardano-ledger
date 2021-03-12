@@ -1,4 +1,4 @@
-cabal-version:       3.0
+cabal-version: 3.0
 
 name:                cardano-ledger-alonzo
 version:             0.1.0.0
@@ -14,11 +14,29 @@ copyright:           2020 Input Output (Hong Kong) Ltd.
 category:            Network
 build-type:          Simple
 
-library
+common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+
+common project-config
+  default-language:   Haskell2010
+
   -- We make use of features requiring ghc >= 8.10. In order to allow CI to
   -- still build the 'all' component, simply make this non-buildable.
   if impl(ghc < 8.10)
     buildable: False
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wpartial-fields
+                      -Wredundant-constraints
+
+  if impl(ghc >= 8.10)
+    ghc-options:      -Wunused-packages
+
+library
+  import:             base, project-config
+
   exposed-modules:
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
@@ -31,10 +49,8 @@ library
     Cardano.Ledger.Alonzo.TxBody
     Cardano.Ledger.Alonzo.TxWitness
   build-depends:
-    base >=4.14 && <4.15,
     bytestring,
     cardano-binary,
-    cardano-crypto-class,
     cardano-ledger-shelley-ma,
     cardano-prelude,
     cardano-slotting,
@@ -50,45 +66,26 @@ library
     transformers
   hs-source-dirs:
     src
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-  default-language:    Haskell2010
 
 library test
-  if impl(ghc < 8.10)
-    buildable: False
+  import:             base, project-config
+
   visibility: public
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Serialisation.Generators
   build-depends:
-    base >=4.14 && <4.15,
-    cardano-crypto-class,
     cardano-ledger-alonzo,
     cardano-ledger-shelley-ma-test,
-    plutus-ledger-api,
     plutus-tx,
     QuickCheck,
     shelley-spec-ledger-test,
     shelley-spec-ledger,
   hs-source-dirs:
     test/lib
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-  default-language:    Haskell2010
 
 test-suite tests
-  if impl(ghc < 8.10)
-    buildable: False
+  import:             base, project-config
+
   type:                exitcode-stdio-1.0
   main-is:             Tests.hs
   hs-source-dirs:
@@ -96,29 +93,14 @@ test-suite tests
   other-modules:
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
   build-depends:
-    base >=4.14 && <4.15,
     base16-bytestring,
     bytestring,
-    containers,
     cardano-binary,
     cardano-ledger-alonzo,
     cardano-ledger-shelley-ma-test,
-    plutus-ledger-api,
-    plutus-tx,
     QuickCheck,
-    small-steps,
     shelley-spec-ledger,
     shelley-spec-ledger-test,
-    tasty-hunit,
     tasty-quickcheck,
     tasty,
-    -- cardano-ledger-alonzo:test
     test
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-  default-language:    Haskell2010
