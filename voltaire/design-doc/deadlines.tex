@@ -1,8 +1,5 @@
 \section{Deadlines and Stability Windows}
-
-% \subsection{Deadlines}
-
-% \subsection{Timing and Stability Windows}
+\label{sect:deadlines}
 
 In order to ensure the stability and security of the blockchain, it is essential that updates are known sufficiently in advance of an epoch boundary.
 Independent deadlines may be set for voting and endorsement.  These deadlines must respect these timing and stability constraints.
@@ -21,3 +18,9 @@ The constraints are as follows.
   Enactment & At a specific epoch boundary & \\
   \hline
 \end{tabular}
+
+As described in Appendix~\ref{sect:parameters}, limits on these settings are captured by specific non-updatable protocol parameters:
+\texttt{LatestEndorsementDeadline},
+\texttt{LatestVotingDeadline},
+\texttt{LatestProposalDeadline}.
+These define the relative slots in an epoch by which the specified events must be carried out.  They may be derived from security parameters.
