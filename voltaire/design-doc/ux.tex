@@ -11,8 +11,8 @@ The voting centre displays a list of registered delegates, and allows them to de
 fees are paid for registration and for vote delegation.  The ada holder may choose to participate in the off-chain discussion and voting process for any
 parameter update or funds transfer. They will receive ada rewards for their participation.
 Voting rights are proportional to the ada that is held, both in Catalyst and on-chain.  However, there may be lag in the Catalyst system.\khcomment{It would be possible to export the vote snapshot at each epoch,
-  so that the Catalyst system could be kept up to date.  At present, I think the stake transfer is manual -- this would need to be automated, and there might need to be some changes to the Jormungandr system
-  so that it could easily record the changes.}
+  so that the Catalyst system could be kept up to date.  At present, the stake transfer is manual and uses a \texttt{db-sync} snapshot -- this would need to be automated, and there might need to be some changes to the Jormungandr system
+  so that it could easily record dynamic stake changes.  Token locking information might also need to be recorded.}
 
 \paragraph{Catalyst Process.}
 

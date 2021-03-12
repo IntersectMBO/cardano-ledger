@@ -25,6 +25,8 @@ Delegates may choose to vote on any active proposal prior to the specified vote 
 Following the deadline, all votes are tallied.  If a proposal does not receive sufficient vote, then
 it will be automatically rejected.  Otherwise, it is automatically accepted, and passed on for
 automatic enactment.
+In order to ensure the stability of the chain, voting must be completed sufficiently before the update takes
+effect.  This period has been fixed at \texttt{LatetstVotingDeadline} slots prior to the epoch where the proposed is enacted.\todo{Determine this setting!}
 
 \begin{figure}
   \includegraphics[trim=0 90 0 80,clip,width=\textwidth]{Workflow2}
@@ -38,7 +40,7 @@ except that the proposal must also be \emph{endorsed} by sufficient block-produc
 The same process applies to both major and minor protocol version upgrades.
 The deadline for endorsement must be given in the original proposal submission.
 In order to ensure the stability of the chain, endorsement must happen sufficiently before the update takes
-effect.  This has been fixed at $XX$ slots prior to the epoch where the proposed is enacted.\khcomment{Determine this!}
+effect.  This has been fixed at \texttt{LatestEndorsementDeadline} slots prior to the epoch where the proposed is enacted.\todo{Determine this setting!}
 If a proposal does not pass the endorsement threshold then it will be rejected at this point, otherwise it will be
 passed on for automatic enactment.  It is anticipated that endorsement will be automatic, based on the percentage of stake that
 is controlled by upgraded stake pools.

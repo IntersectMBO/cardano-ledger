@@ -1,0 +1,45 @@
+\section{New Protocol Parameters}
+\label{sec:parameters}
+
+\begin{tabular}{||p{2in}|p{2.8in}|p{0.5in}|p{0.4in}||}
+  \hline\hline
+  \textbf{Parameter} & \textbf{Description} & \textbf{Initial Setting} & \textbf{Updat\-able}
+  \\\hline
+  \texttt{MinVote} & Minimum Allowable Threshold for Voting & 50\% & Y
+  \\\hline
+  \texttt{MinEndorse} & Minimum Allowable Threshold for Endorsement & 75\% & Y
+  \\\hline
+  \texttt{MaxEnact} & How far in Advance of Enactment can a Proposal be Submitted & 3 epochs & Y
+  \\\hline
+  \texttt{ProposalQuorum} & What is the Minimum Number of Signatories that is Required on a Proposal & ? & Y
+  \\\hline
+  \texttt{MaxDelegateRetire} & How far in Advance can a Delegate Announce their Retirement & 5 epochs & Y
+  \\\hline
+  \texttt{MinDelegateRetire} & How far in Advance must a Delegate Announce their Retirement & 0 epochs & N
+  \\\hline
+  \texttt{LatestEndorsementDeadline} & By Which Slot in an Epoch must a Proposal be Endorsed if it is to be Enacted & ? & N
+  \\\hline
+  \texttt{LatestVotingDeadline} & By Which Slot in an Epoch must a Proposal be Voted on if it is to be Enacted & ? & N
+  \\\hline
+  \hline
+\end{tabular}
+
+The \texttt{ProposalQuorum} setting will need to be a sensible proportion of the submitter group. Note that \texttt{MinDelegateRetire} may be built in to the protocol rather than a parameter.
+
+
+\section{New Genesis File Settings}
+\label{sec:genesis}
+
+Some additions need to be made to the genesis file.
+
+
+\begin{tabular}{||p{1in}|p{4.7in}||}
+  \hline\hline
+  \textbf{Setting} & \textbf{Description}
+  \\\hline
+  \texttt{submitters} & List of hashes of public keys for the submitter group
+  \\\hline
+  \hline
+\end{tabular}
+
+The \texttt{submitters} entry gives a list of public keys for the initial submitter set.  This can be modified by registering additional submitters.

@@ -73,8 +73,8 @@ proposals and the formal on-chain proposal.  This process may include providing 
 \subsection{Proposal Implementors (Off-Chain)}
 
 Proposal Implementors transform accepted proposals that have been voted on by ada holders into formal proposals that can be submitted on chain.
-They are responsible for providing necessary documentation, and for compliance with the required processes.  This may include producing an acceptable formal proposal
-\footnote{CIP}
+They are responsible for providing necessary documentation, and for compliance with the required processes.  This may include producing an acceptable formal on-chain proposal,
+updating the off-chain parameter documentation,
 and meeting any necessary verification/traceability requirements.  For simple parameter updates or funds transfers, implementation may be in the form of a single JSON
 file that fully describes the proposal. Protocol version upgrades will also require the corresponding software implementation.
 
@@ -112,3 +112,5 @@ threshold of endorsement is required for a proposal to be enacted.
 
 Electors determine who belongs to the submitter group.  The composition of this group is to be determined.  It might be formed by direct election off-chain, by
 nomination from an agreed group, by submission of an on-chain proposal.  In some systems, it may even be unnecessary.
+One possibility is to have a self-perpetuating and renewing submitter group, so that submitters nominate and sign for additional members, or remove existing members.
+\khcomment{This needs to be agreed.}
