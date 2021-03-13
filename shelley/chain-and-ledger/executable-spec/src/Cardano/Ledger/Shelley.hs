@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -26,6 +27,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut (..),
     UsesValue,
   )
+import qualified Data.ByteString as BS
 import Data.Proxy
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
@@ -36,7 +38,6 @@ import Shelley.Spec.Ledger.Tx
     TxBody,
     TxOut (..),
     ValidateScript (..),
-    nativeMultiSigTag,
     validateNativeMultiSigScript,
   )
 
@@ -76,11 +77,18 @@ type instance Core.Tx (ShelleyEra c) = Tx (ShelleyEra c)
 -- Ledger data instances
 --------------------------------------------------------------------------------
 
+-- | Magic number "memorialized" in the ValidateScript class under the method:
+--   scriptPrefixTag:: Core.Script era -> Bs.ByteString, for the Shelley Era.
+nativeMultiSigTag :: BS.ByteString
+nativeMultiSigTag = "\00"
+
 instance
   (CryptoClass.Crypto c, UsesTxBody (ShelleyEra c)) =>
   ValidateScript (ShelleyEra c)
   where
-  scriptPrefixTag _proxy = nativeMultiSigTag -- "\x00"
+  scriptPrefixTag _script = nativeMultiSigTag
+
+  -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
   validateScript = validateNativeMultiSigScript
 
 -- using the default instance of hashScript

@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodi
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Era (Crypto (..), ValidateScript(hashScript))
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (pattern AuxiliaryData)
@@ -43,7 +43,6 @@ import Shelley.Spec.Ledger.PParams
     pattern Update,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx(ValidateScript(hashScript))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),

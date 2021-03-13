@@ -28,6 +28,7 @@ module Cardano.Ledger.Alonzo.Scripts
     ppExUnits,
     ppCostModel,
     ppPrices,
+    isPlutusScript,
     -- alwaysSucceeds,
     -- alwaysFails,
   )
@@ -121,6 +122,10 @@ pattern PlutusScript x <-
 
 -- alwaysSucceeds n = PlutusScript(alwaysSucceedingNAryFunction n)
 -- alwaysFails n = PlutusScript (alwaysFailingNAryFunction n)
+
+isPlutusScript :: Script era -> Bool
+isPlutusScript (ScriptConstr (Memo (PlutusScriptRaw _) _)) = True
+isPlutusScript (ScriptConstr (Memo (NativeScriptRaw _) _)) = False
 
 -- ===========================================
 

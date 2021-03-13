@@ -67,7 +67,7 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
  in Cardano.Ledger.ShelleyMA.Scripts:
 
  `type instance Core.Script (AllegraEra c) = Timelock (AllegraEra c)`
- `type instance ValidateScript (ShelleyMAEra ma c) = ...`
+ `instance ValidateScript (ShelleyMAEra ma c) where ...`
 ------------------------------------------------------------------------------}
 
 instance (CryptoClass.Crypto c) => ScriptClass (AllegraEra c) where

@@ -15,7 +15,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -50,13 +49,12 @@ module Shelley.Spec.Ledger.Tx
         txWitsBytes
       ),
     WitVKey (..),
-    ValidateScript (..),
+    ValidateScript (..), -- reexported from Cardano.Ledger.Era
     txwitsScript,
     extractKeyHashWitnessSet,
     addrWits',
     evalNativeMultiSigScript,
     hashMultiSigScript,
-    nativeMultiSigTag,
     validateNativeMultiSigScript,
     TransTx,
     TransWitnessSet,
@@ -80,12 +78,10 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
-import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.SafeHash (EraIndependentTx, HashAnnotated, SafeToHash (..))
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Constraint (Constraint)
 import Data.Foldable (fold)
@@ -437,32 +433,6 @@ instance
 
 -- ===============================================================
 
--- | Typeclass for script data types. Allows for script validation and hashing.
---   You must understand the role of SafeToHash and scriptPrefixTag to make new instances.
---   'scriptPrefixTag' is a magic number representing the tag of the script language. For
---   each new script language defined, a new tag is chosen and the tag is included in the script
---   hash for a script. The safeToHash constraint ensures that Scripts are never reserialised.
-class
-  (Era era, SafeToHash (Core.Script era)) =>
-  ValidateScript era
-  where
-  scriptPrefixTag :: Proxy era -> BS.ByteString
-  validateScript :: Core.Script era -> Core.Tx era -> Bool
-  hashScript :: Core.Script era -> ScriptHash (Crypto era)
-  -- ONE SHOULD NOT OVERIDE THE hashScript DEFAULT METHOD
-  -- UNLESS YOU UNDERSTAND THE SafeToHash class, AND THE ROLE OF THE scriptPrefixTag
-  hashScript =
-    ScriptHash . Hash.castHash
-      . Hash.hashWith
-        (\x -> scriptPrefixTag (Proxy @era) <> originalBytes x)
-  isNativeScript :: Core.Script era -> Bool
-  isNativeScript _ = True
-
--- | Magic number "memorialized" in the ValidateScript class under the method:
---   scriptPrefixTag:: Proxy era -> Bs.ByteString, for the Shelley Era.
-nativeMultiSigTag :: BS.ByteString
-nativeMultiSigTag = "\00"
-
 -- | Hashes native multi-signature script.
 hashMultiSigScript ::
   forall era.
@@ -473,11 +443,6 @@ hashMultiSigScript ::
   ScriptHash (Crypto era)
 hashMultiSigScript x = hashScript @era x
 
-{-
-  ScriptHash
-    . Hash.castHash
-    . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
--}
 -- ========================================
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of

@@ -11,6 +11,7 @@
 
 module Cardano.Ledger.Alonzo.Rules.Utxos where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx
@@ -21,10 +22,12 @@ import Cardano.Ledger.Shelley.Constraints
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.State.Transition.Extended
+import Data.Coders
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
@@ -173,6 +176,27 @@ data UtxosPredicateFailure era
   | UpdateFailure (PredicateFailure (Core.EraRule "PPUP" era))
   deriving
     (Generic)
+
+instance
+  ( Typeable era,
+    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
+  ToCBOR (UtxosPredicateFailure era)
+  where
+  toCBOR (ValidationTagMismatch v) = encode (Sum ValidationTagMismatch 0 !> To v)
+  toCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 1 !> To pf)
+
+instance
+  ( Typeable era,
+    FromCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
+  FromCBOR (UtxosPredicateFailure era)
+  where
+  fromCBOR = decode (Summands "UtxosPredicateFailure" dec)
+    where
+      dec 0 = SumD ValidationTagMismatch <! From
+      dec 1 = SumD UpdateFailure <! From
+      dec n = Invalid n
 
 deriving stock instance
   ( Shelley.TransUTxOState Show era,

@@ -8,6 +8,9 @@ import Cardano.Binary
 import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData, Data)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate)
+import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
+import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure)
+import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (CostModel, Tx)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
@@ -16,21 +19,18 @@ import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Shelley.Spec.Ledger.Metadata (Metadata)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (roundTrip, roundTripAnn)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-trippingAnn ::
-  ( Eq t,
-    Show t,
-    ToCBOR t,
-    FromCBOR (Annotator t)
-  ) =>
-  t ->
+trippingF ::
+  (Eq src, Show src, Show target, ToCBOR src) =>
+  (src -> Either target (BSL.ByteString, src)) ->
+  src ->
   Property
-trippingAnn x = case roundTripAnn x of
+trippingF f x = case f x of
   Right (remaining, y) | BSL.null remaining -> x === y
   Right (remaining, _) ->
     counterexample
@@ -46,6 +46,19 @@ trippingAnn x = case roundTripAnn x of
           ]
       )
       False
+
+trippingAnn ::
+  ( Eq t,
+    Show t,
+    ToCBOR t,
+    FromCBOR (Annotator t)
+  ) =>
+  t ->
+  Property
+trippingAnn x = trippingF roundTripAnn x
+
+tripping :: (Eq src, Show src, ToCBOR src, FromCBOR src) => src -> Property
+tripping x = trippingF roundTrip x
 
 tests :: TestTree
 tests =
@@ -70,5 +83,12 @@ tests =
       testProperty "alonzo/PParamUpdate" $
         trippingAnn @(PParamsUpdate (AlonzoEra C_Crypto)),
       testProperty "alonzo/AuxiliaryData" $
-        trippingAnn @(AuxiliaryData (AlonzoEra C_Crypto))
+        trippingAnn @(AuxiliaryData (AlonzoEra C_Crypto)),
+      -- testProperty "alonzo/AlonzoPredFail" $
+      --   tripping @(AlonzoPredFail (AlonzoEra C_Crypto)),
+
+      testProperty "alonzo/UtxoPredicateFailure" $
+        tripping @(UtxoPredicateFailure (AlonzoEra C_Crypto)),
+      testProperty "alonzo/UtxosPredicateFailure" $
+        tripping @(UtxosPredicateFailure (AlonzoEra C_Crypto))
     ]

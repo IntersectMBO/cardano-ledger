@@ -99,7 +99,8 @@ import Cardano.Ledger.Alonzo.TxWitness
   )
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (isNativeScript))
 import Cardano.Ledger.Mary.Value (AssetName, PolicyID (..), Value (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
@@ -145,7 +146,6 @@ import Shelley.Spec.Ledger.Credential (Credential (ScriptHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
 import Shelley.Spec.Ledger.Keys (KeyRole (Witness))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx (ValidateScript (isNativeScript))
 import Shelley.Spec.Ledger.TxBody (DelegCert (..), Delegation (..), TxIn (..), Wdrl (..), WitVKey, unWdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
@@ -454,7 +454,24 @@ data ScriptPurpose crypto
   | Spending !(TxIn crypto)
   | Rewarding !(RewardAcnt crypto) -- Not sure if this is the right type.
   | Certifying !(DCert crypto)
-  deriving (Eq)
+  deriving (Eq, Show, Generic, NoThunks)
+
+instance (Typeable c, CC.Crypto c) => ToCBOR (ScriptPurpose c) where
+  toCBOR (Minting x) = encode (Sum Minting 0 !> To x)
+  toCBOR (Spending x) = encode (Sum Spending 1 !> To x)
+  toCBOR (Rewarding x) = encode (Sum Rewarding 2 !> To x)
+  toCBOR (Certifying x) = encode (Sum Certifying 3 !> To x)
+
+instance (Typeable c, CC.Crypto c) => FromCBOR (ScriptPurpose c) where
+  fromCBOR = decode (Summands "ScriptPurpose" dec)
+    where
+      dec 0 = SumD Minting <! From
+      dec 1 = SumD Spending <! From
+      dec 2 = SumD Rewarding <! From
+      dec 3 = SumD Certifying <! From
+      dec n = Invalid n
+
+-- =======================================
 
 class Indexable elem container where
   indexOf :: elem -> container -> Word64

@@ -14,7 +14,7 @@ import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), PParamsUpdate, upd
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
-import Cardano.Ledger.Alonzo.Scripts (Script)
+import Cardano.Ledger.Alonzo.Scripts (Script, isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (Tx)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
@@ -23,6 +23,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
     UsesTxOut (..),
@@ -55,11 +56,12 @@ instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c)
 
 instance API.PraosCrypto c => API.GetLedgerView (AlonzoEra c)
 
-instance
-  (CC.Crypto c) =>
-  Shelley.ValidateScript (AlonzoEra c)
-  where
-  scriptPrefixTag _proxy = "\x00"
+instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
+  isNativeScript x = not (isPlutusScript x)
+  scriptPrefixTag script =
+    if isPlutusScript script
+      then "\x01"
+      else nativeMultiSigTag -- "\x00"
   validateScript = error "TODO: implement validateScript"
 
 -- use the default method for hashScript

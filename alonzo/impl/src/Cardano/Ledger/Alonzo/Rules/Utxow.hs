@@ -33,9 +33,9 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.SafeHash (EraIndependentData, SafeHash)
-import Control.Iterate.SetAlgebra (domain, eval, range, (◁))
+import Control.Iterate.SetAlgebra (domain, eval, (◁))
 import Control.State.Transition.Extended
 import Data.Coders
 import qualified Data.Map.Strict as Map
@@ -55,7 +55,7 @@ import Shelley.Spec.Ledger.STS.Utxow
     shelleyStyleWitness,
   )
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
-import Shelley.Spec.Ledger.Tx (TxIn (..), ValidateScript (..))
+import Shelley.Spec.Ledger.Tx (TxIn (..))
 
 -- =====================================================
 
@@ -63,7 +63,7 @@ import Shelley.Spec.Ledger.Tx (TxIn (..), ValidateScript (..))
 --   failure type of the Shelley Era, as they share some failure modes.
 data AlonzoPredFail era
   = Embed (UtxowPredicateFailure era)
-  | NoRedeemableScript (Set (Script era))
+  | UnRedeemableScripts [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
   | MissingNeededScriptHash (Set (ScriptHash (Crypto era)))
   | DataHashSetsDontAgree
       (Set (DataHash (Crypto era)))
@@ -107,7 +107,7 @@ encodePredFail ::
   AlonzoPredFail era ->
   Encode 'Open (AlonzoPredFail era)
 encodePredFail (Embed x) = Sum Embed 0 !> E toCBOR x
-encodePredFail (NoRedeemableScript x) = Sum NoRedeemableScript 1 !> To x
+encodePredFail (UnRedeemableScripts x) = Sum UnRedeemableScripts 1 !> To x
 encodePredFail (MissingNeededScriptHash x) = Sum MissingNeededScriptHash 2 !> To x
 encodePredFail (DataHashSetsDontAgree x y) = Sum DataHashSetsDontAgree 3 !> To x !> To y
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
@@ -126,14 +126,13 @@ instance
 decodePredFail ::
   ( Era era,
     FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
-    FromCBOR (Script era),
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era)
   ) =>
   Word ->
   Decode 'Open (AlonzoPredFail era)
 decodePredFail 0 = SumD Embed <! D fromCBOR
-decodePredFail 1 = SumD NoRedeemableScript <! From
+decodePredFail 1 = SumD UnRedeemableScripts <! From
 decodePredFail 2 = SumD MissingNeededScriptHash <! From
 decodePredFail 3 = SumD DataHashSetsDontAgree <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
@@ -203,7 +202,7 @@ alonzoStyleWitness = do
       sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
       sphs = scriptsNeeded utxo tx
       unredeemed = filter (checkScriptData tx utxo) sphs
-  null unredeemed ?! NoRedeemableScript (range (txscripts (getField @"wits" tx)))
+  null unredeemed ?! UnRedeemableScripts unredeemed
 
   let txScriptSet = Map.keysSet scriptWitMap
       needed = Set.fromList [script | (_purpose, script) <- sphs]

@@ -43,7 +43,7 @@ import Cardano.Ledger.Core (Script)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Era (Era (..),ValidateScript (..))
 import Data.List (permutations)
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -53,7 +53,6 @@ import Data.Word (Word64)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyPair (..), KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState (KeyPairs)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx (ValidateScript (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants

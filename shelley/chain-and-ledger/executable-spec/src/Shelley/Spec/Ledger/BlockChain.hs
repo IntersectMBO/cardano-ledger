@@ -148,7 +148,7 @@ import Shelley.Spec.Ledger.Serialization
     runByteBuilder,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (TransTx, Tx (..), ValidateScript, decodeWits, segwitTx, txWitsBytes)
+import Shelley.Spec.Ledger.Tx (TransTx, Tx (..), decodeWits, segwitTx, txWitsBytes)
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- =======================================================

@@ -18,9 +18,10 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Mary.Value (Value, policies, policyID)
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
     UsesTxBody,
@@ -48,12 +49,7 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx
-  ( Tx,
-    TxOut (..),
-    ValidateScript (..),
-    nativeMultiSigTag,
-  )
+import Shelley.Spec.Ledger.Tx (Tx, TxOut (..))
 
 -- | The Shelley Mary/Allegra eras
 --   The uninhabited type that indexes both the Mary and Allegra Eras.
@@ -151,9 +147,10 @@ type instance
 -- Ledger data instances
 --------------------------------------------------------------------------------
 
--- since timelock scripts are a strict backwards compatible extension of
---  Multisig scripts, we can use the same 'scriptPrefixTag' tag here as
--- we did for the ValidateScript instance in Multisig
+-- Since Timelock scripts are a strictly backwards compatible extension of
+-- Multisig scripts, we can use the same 'scriptPrefixTag' tag here as
+-- we did for the ValidateScript instance in Multisig which is imported
+-- from:  Cardano.Ledger.Shelley(nativeMultiSigTag)
 
 instance
   ( CryptoClass.Crypto c,
@@ -163,8 +160,8 @@ instance
   ) =>
   ValidateScript (ShelleyMAEra ma c)
   where
-  scriptPrefixTag _proxy = nativeMultiSigTag -- "\x00"
-  validateScript s tx = validateTimelock s tx
+  scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
+  validateScript script tx = validateTimelock script tx
 
 -- Uses the default instance of hashScript
 

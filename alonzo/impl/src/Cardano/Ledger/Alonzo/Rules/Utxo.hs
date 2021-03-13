@@ -30,7 +30,7 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody, TxOut)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import qualified Cardano.Ledger.Mary.Value as Alonzo (Value)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams,
@@ -82,7 +82,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley
-import Shelley.Spec.Ledger.Tx (TxIn, ValidateScript)
+import Shelley.Spec.Ledger.Tx (TxIn)
 import Shelley.Spec.Ledger.TxBody (unWdrl)
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
