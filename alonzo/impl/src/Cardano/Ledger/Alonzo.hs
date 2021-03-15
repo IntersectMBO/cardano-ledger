@@ -63,8 +63,7 @@ instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
       then "\x01"
       else nativeMultiSigTag -- "\x00"
   validateScript = error "TODO: implement validateScript"
-
--- use the default method for hashScript
+  -- hashScript x = ...  We use the default method for hashScript
 
 instance
   ( CC.Crypto c

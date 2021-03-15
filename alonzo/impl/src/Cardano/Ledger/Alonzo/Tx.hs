@@ -118,6 +118,7 @@ import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val (coin, (<+>), (<×>)))
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Coders
+import Control.DeepSeq (NFData (..))
 import Data.List (foldl')
 import qualified Data.Map as Map
 import Data.Maybe (isJust, maybeToList)
@@ -454,7 +455,7 @@ data ScriptPurpose crypto
   | Spending !(TxIn crypto)
   | Rewarding !(RewardAcnt crypto) -- Not sure if this is the right type.
   | Certifying !(DCert crypto)
-  deriving (Eq, Show, Generic, NoThunks)
+  deriving (Eq, Show, Generic, NoThunks, NFData)
 
 instance (Typeable c, CC.Crypto c) => ToCBOR (ScriptPurpose c) where
   toCBOR (Minting x) = encode (Sum Minting 0 !> To x)

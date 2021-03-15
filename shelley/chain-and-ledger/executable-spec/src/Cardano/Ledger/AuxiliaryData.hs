@@ -24,7 +24,6 @@ where
 import Cardano.Binary (FromCBOR, ToCBOR)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
--- import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.SafeHash
   ( EraIndependentAuxiliaryData,
     SafeHash,

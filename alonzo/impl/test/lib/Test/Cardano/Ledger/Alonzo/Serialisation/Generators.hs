@@ -140,7 +140,7 @@ instance Mock c => Arbitrary (Tx (AlonzoEra c)) where
 instance Mock c => Arbitrary (Script (AlonzoEra c)) where
   arbitrary =
     frequency
-      [ -- (1, pure PlutusScript) -- Until we have one of these we never generate one.
+      [ -- (1, pure PlutusScript) -- TODO  Until we have one of these we never generate one.
         (9, NativeScript <$> arbitrary)
       ]
 
@@ -238,7 +238,7 @@ instance Mock c => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
 instance Mock c => Arbitrary (AlonzoPredFail (AlonzoEra c)) where
   arbitrary =
     oneof
-      [ Embed <$> arbitrary,
+      [ WrappedShelleyEraFailure <$> arbitrary,
         UnRedeemableScripts <$> arbitrary,
         MissingNeededScriptHash <$> arbitrary,
         DataHashSetsDontAgree <$> arbitrary <*> arbitrary,

@@ -224,7 +224,7 @@ data Delegation crypto = Delegation
   { _delegator :: !(StakeCredential crypto),
     _delegatee :: !(KeyHash 'StakePool crypto)
   }
-  deriving (Eq, Generic, Show)
+  deriving (Eq, Generic, Show, NFData)
 
 instance NoThunks (Delegation crypto)
 
@@ -567,14 +567,14 @@ data DelegCert crypto
     DeRegKey !(StakeCredential crypto)
   | -- | A stake delegation certificate.
     Delegate !(Delegation crypto)
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, NFData)
 
 data PoolCert crypto
   = -- | A stake pool registration certificate.
     RegPool !(PoolParams crypto)
   | -- | A stake pool retirement certificate.
     RetirePool !(KeyHash 'StakePool crypto) !EpochNo
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq,NFData)
 
 -- | Genesis key delegation certificate
 data GenesisDelegCert crypto
@@ -582,10 +582,10 @@ data GenesisDelegCert crypto
       !(KeyHash 'Genesis crypto)
       !(KeyHash 'GenesisDelegate crypto)
       !(Hash crypto (VerKeyVRF crypto))
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq,NFData)
 
 data MIRPot = ReservesMIR | TreasuryMIR
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, NFData)
 
 deriving instance NoThunks MIRPot
 
@@ -606,7 +606,7 @@ instance FromCBOR MIRPot where
 data MIRTarget crypto
   = StakeAddressesMIR (Map (Credential 'Staking crypto) DeltaCoin)
   | SendToOppositePotMIR Coin
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq,NFData)
 
 deriving instance NoThunks (MIRTarget crypto)
 
@@ -633,7 +633,7 @@ data MIRCert crypto = MIRCert
   { mirPot :: MIRPot,
     mirRewards :: MIRTarget crypto
   }
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq,NFData)
 
 instance
   CC.Crypto crypto =>
@@ -659,7 +659,7 @@ data DCert crypto
   | DCertPool !(PoolCert crypto)
   | DCertGenesis !(GenesisDelegCert crypto)
   | DCertMir !(MIRCert crypto)
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, NFData)
 
 instance NoThunks (DelegCert crypto)
 

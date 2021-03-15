@@ -84,6 +84,9 @@ tests =
         trippingAnn @(PParamsUpdate (AlonzoEra C_Crypto)),
       testProperty "alonzo/AuxiliaryData" $
         trippingAnn @(AuxiliaryData (AlonzoEra C_Crypto)),
+
+      -- TODO, this test does not work because of (FromCBOR(Annotator x)) issues
+      -- when we get that ironed out, we should put the test back in.
       -- testProperty "alonzo/AlonzoPredFail" $
       --   tripping @(AlonzoPredFail (AlonzoEra C_Crypto)),
 
