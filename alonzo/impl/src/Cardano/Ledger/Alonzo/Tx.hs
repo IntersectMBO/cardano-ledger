@@ -116,9 +116,9 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val (coin, (<+>), (<×>)))
+import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Coders
-import Control.DeepSeq (NFData (..))
 import Data.List (foldl')
 import qualified Data.Map as Map
 import Data.Maybe (isJust, maybeToList)

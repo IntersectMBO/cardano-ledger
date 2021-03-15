@@ -20,7 +20,15 @@ import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices (..), Script (..), Tag (..))
+import Cardano.Ledger.Alonzo.Scripts
+  ( CostModel (..),
+    ExUnits (..),
+    Prices (..),
+    Script (..),
+    Tag (..),
+    alwaysFails,
+    alwaysSucceeds,
+  )
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( TxOut (..),
@@ -140,8 +148,9 @@ instance Mock c => Arbitrary (Tx (AlonzoEra c)) where
 instance Mock c => Arbitrary (Script (AlonzoEra c)) where
   arbitrary =
     frequency
-      [ -- (1, pure PlutusScript) -- TODO  Until we have one of these we never generate one.
-        (9, NativeScript <$> arbitrary)
+      [ (1, pure (alwaysSucceeds 1)),
+        (1, pure (alwaysFails 1)),
+        (10, NativeScript <$> arbitrary)
       ]
 
 -- ==========================

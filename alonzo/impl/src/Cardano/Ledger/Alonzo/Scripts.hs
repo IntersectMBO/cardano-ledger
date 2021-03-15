@@ -29,8 +29,8 @@ module Cardano.Ledger.Alonzo.Scripts
     ppCostModel,
     ppPrices,
     isPlutusScript,
-    -- alwaysSucceeds,
-    -- alwaysFails,
+    alwaysSucceeds,
+    alwaysFails,
   )
 where
 
@@ -56,17 +56,20 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
--- import qualified Plutus.V1.Ledger.Examples as Plutus(alwaysSucceedingNAryFunction,alwaysFailingNAryFunction)
-import qualified Codec.Serialise as Serial (Serialise (..))
+import qualified Codec.Serialise as CS (Serialise (..))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Short as Short (ShortByteString, fromShort)
 import Data.Coders
 import Data.Map (Map)
 import Data.MemoBytes
 import Data.Typeable
 import Data.Word (Word64)
+import qualified Flat as Flat (unflat)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
+import Numeric.Natural (Natural)
+import qualified Plutus.V1.Ledger.Examples as Plutus (alwaysFailingNAryFunction, alwaysSucceedingNAryFunction)
 import qualified Plutus.V1.Ledger.Scripts as Plutus (Script)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 
@@ -120,8 +123,15 @@ pattern PlutusScript x <-
 
 {-# COMPLETE NativeScript, PlutusScript #-}
 
--- alwaysSucceeds n = PlutusScript(alwaysSucceedingNAryFunction n)
--- alwaysFails n = PlutusScript (alwaysFailingNAryFunction n)
+getPlutus :: Short.ShortByteString -> Plutus.Script
+getPlutus flatBytes =
+  case Flat.unflat (Short.fromShort flatBytes) of
+    Right x -> x
+    Left err -> error ("Unflattening the alwaysSucceeds or alwaysFails Plutus script failed\n" ++ show err)
+
+alwaysSucceeds, alwaysFails :: Typeable (Crypto era) => Natural -> Script era
+alwaysSucceeds n = PlutusScript (getPlutus (Plutus.alwaysSucceedingNAryFunction n))
+alwaysFails n = PlutusScript (getPlutus (Plutus.alwaysFailingNAryFunction n))
 
 isPlutusScript :: Script era -> Bool
 isPlutusScript (ScriptConstr (Memo (PlutusScriptRaw _) _)) = True
@@ -250,7 +260,7 @@ instance forall era. (Typeable (Crypto era), Typeable era) => ToCBOR (ScriptRaw 
 
 encodeScript :: (Typeable (Crypto era)) => ScriptRaw era -> Encode 'Open (ScriptRaw era)
 encodeScript (NativeScriptRaw i) = Sum NativeScriptRaw 0 !> To i
-encodeScript (PlutusScriptRaw s) = Sum PlutusScriptRaw 1 !> E Serial.encode s
+encodeScript (PlutusScriptRaw s) = Sum PlutusScriptRaw 1 !> E CS.encode s
 
 instance
   (CC.Crypto (Crypto era), Typeable (Crypto era), Typeable era) =>
@@ -260,7 +270,7 @@ instance
     where
       decodeScript :: Word -> Decode 'Open (Annotator (ScriptRaw era))
       decodeScript 0 = Ann (SumD NativeScriptRaw) <*! From
-      decodeScript 1 = Ann (SumD PlutusScriptRaw) <*! Ann (D Serial.decode)
+      decodeScript 1 = Ann (SumD PlutusScriptRaw) <*! Ann (D CS.decode)
       decodeScript n = Invalid n
 
 -- ============================================================

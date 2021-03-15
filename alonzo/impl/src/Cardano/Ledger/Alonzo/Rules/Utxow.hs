@@ -126,7 +126,7 @@ instance
 
 decodePredFail ::
   ( Era era,
-    FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
+    FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)), -- TODO, we should be able to get rid of this constraint
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era)
   ) =>
@@ -202,8 +202,9 @@ alonzoStyleWitness = do
   let utxo = _utxo u'
       sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
       sphs = scriptsNeeded utxo tx
-      unredeemed = let ans = (filter (checkScriptData tx utxo) sphs)
-                   in seq (rnf ans) ans
+      unredeemed =
+        let ans = (filter (checkScriptData tx utxo) sphs)
+         in seq (rnf ans) ans
   null unredeemed ?! UnRedeemableScripts unredeemed
 
   let txScriptSet = Map.keysSet scriptWitMap

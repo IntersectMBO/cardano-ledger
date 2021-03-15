@@ -58,6 +58,7 @@ library
     containers,
     data-default,
     deepseq,
+    flat,
     nothunks,
     plutus-ledger-api,
     plutus-tx,

@@ -10,7 +10,8 @@ import Cardano.Ledger.Alonzo.Data (AuxiliaryData, Data)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure)
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
+-- TODO resolve the problem with the Utxow predicate failure type, so we will need this import
+-- import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (CostModel, Tx)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
@@ -84,14 +85,15 @@ tests =
         trippingAnn @(PParamsUpdate (AlonzoEra C_Crypto)),
       testProperty "alonzo/AuxiliaryData" $
         trippingAnn @(AuxiliaryData (AlonzoEra C_Crypto)),
-
       -- TODO, this test does not work because of (FromCBOR(Annotator x)) issues
       -- when we get that ironed out, we should put the test back in.
       -- testProperty "alonzo/AlonzoPredFail" $
-      --   tripping @(AlonzoPredFail (AlonzoEra C_Crypto)),
+      --   trippingAnn @(AlonzoPredFail (AlonzoEra C_Crypto)),
 
       testProperty "alonzo/UtxoPredicateFailure" $
         tripping @(UtxoPredicateFailure (AlonzoEra C_Crypto)),
       testProperty "alonzo/UtxosPredicateFailure" $
-        tripping @(UtxosPredicateFailure (AlonzoEra C_Crypto))
+        tripping @(UtxosPredicateFailure (AlonzoEra C_Crypto)),
+      testProperty "Script" $
+        trippingAnn @(Script (AlonzoEra C_Crypto))
     ]

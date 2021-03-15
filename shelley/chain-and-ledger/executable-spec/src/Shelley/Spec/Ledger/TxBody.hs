@@ -574,7 +574,7 @@ data PoolCert crypto
     RegPool !(PoolParams crypto)
   | -- | A stake pool retirement certificate.
     RetirePool !(KeyHash 'StakePool crypto) !EpochNo
-  deriving (Show, Generic, Eq,NFData)
+  deriving (Show, Generic, Eq, NFData)
 
 -- | Genesis key delegation certificate
 data GenesisDelegCert crypto
@@ -582,7 +582,7 @@ data GenesisDelegCert crypto
       !(KeyHash 'Genesis crypto)
       !(KeyHash 'GenesisDelegate crypto)
       !(Hash crypto (VerKeyVRF crypto))
-  deriving (Show, Generic, Eq,NFData)
+  deriving (Show, Generic, Eq, NFData)
 
 data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq, NFData)
@@ -606,7 +606,7 @@ instance FromCBOR MIRPot where
 data MIRTarget crypto
   = StakeAddressesMIR (Map (Credential 'Staking crypto) DeltaCoin)
   | SendToOppositePotMIR Coin
-  deriving (Show, Generic, Eq,NFData)
+  deriving (Show, Generic, Eq, NFData)
 
 deriving instance NoThunks (MIRTarget crypto)
 
@@ -633,7 +633,7 @@ data MIRCert crypto = MIRCert
   { mirPot :: MIRPot,
     mirRewards :: MIRTarget crypto
   }
-  deriving (Show, Generic, Eq,NFData)
+  deriving (Show, Generic, Eq, NFData)
 
 instance
   CC.Crypto crypto =>
