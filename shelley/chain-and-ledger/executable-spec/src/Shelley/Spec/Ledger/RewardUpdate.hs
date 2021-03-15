@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -28,7 +29,9 @@ import Data.Coders
   ( Decode (..),
     Encode (..),
     decode,
+    decodeStrictSeq,
     encode,
+    encodeFoldable,
     mapDecode,
     mapEncode,
     setDecode,
@@ -40,12 +43,13 @@ import Data.Default.Class (def)
 import Data.Foldable (fold)
 import Data.Group (invert)
 import Data.Kind (Type)
-import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM, foldlM')
 import Data.Ratio ((%))
+import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -86,9 +90,6 @@ type RewardAns c =
   ( Map (Credential 'Staking c) (Set (Reward c)),
     Map (KeyHash 'StakePool c) Likelihood
   )
-
--- | We pulse on the list of these pairs
-type PulseItem c = (KeyHash 'StakePool c, PoolParams c)
 
 -- | The provenance we collect
 type KeyHashPoolProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
@@ -270,7 +271,7 @@ rewardStakePool ::
   Monad m =>
   FreeVars c ->
   RewardAns c ->
-  (KeyHash 'StakePool c, PoolParams c) ->
+  PoolParams c ->
   ProvM (KeyHashPoolProvenance c) m (RewardAns c)
 rewardStakePool
   ( FreeVars
@@ -290,8 +291,9 @@ rewardStakePool
       }
     )
   (m1, m2)
-  (hk, pparams) = do
-    let blocksProduced = Map.lookup hk b
+  pparams = do
+    let hk = _poolId pparams
+        blocksProduced = Map.lookup hk b
         actgr@(Stake s) = poolStake hk delegs stake
         Coin pstake = fold s
         sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
@@ -321,7 +323,7 @@ data RewardPulser c (m :: Type -> Type) ans where
     (ans ~ RewardAns c, m ~ ProvM (KeyHashPoolProvenance c) ShelleyBase) =>
     !Int ->
     !(FreeVars c) ->
-    ![PulseItem c] ->
+    !(StrictSeq (PoolParams c)) ->
     !ans ->
     RewardPulser c m ans
 
@@ -332,9 +334,9 @@ data RewardPulser c (m :: Type -> Type) ans where
 instance Pulsable (RewardPulser crypto) where
   done (RSLP _n _free zs _ans) = null zs
   current (RSLP _ _ _ ans) = ans
-  pulseM (ll@(RSLP _ _ [] _)) = pure ll
+  pulseM ll@(RSLP _ _ StrictSeq.Empty _) = pure ll
   pulseM (RSLP n free balance ans) = do
-    let (steps, balance') = List.splitAt n balance
+    let !(steps, !balance') = StrictSeq.splitAt n balance
     ans' <- foldlM' (rewardStakePool free) ans steps
     pure (RSLP n free balance' ans')
   completeM (RSLP _ free balance ans) = foldlM' (rewardStakePool free) ans balance
@@ -350,10 +352,13 @@ instance NFData (Pulser c) where
 
 instance (CC.Crypto c) => ToCBOR (Pulser c) where
   toCBOR (RSLP n free balance ans) =
-    encode (Rec RSLP !> To n !> To free !> To balance !> To ans)
+    encode (Rec RSLP !> To n !> To free !> E encodeFoldable balance !> To ans)
 
 instance (CC.Crypto c) => FromCBOR (Pulser c) where
-  fromCBOR = decode (RecD RSLP <! From <! From <! From <! From)
+  fromCBOR =
+    decode
+      ( RecD RSLP <! From <! From <! D (decodeStrictSeq fromCBOR) <! From
+      )
 
 -- =========================================================================
 

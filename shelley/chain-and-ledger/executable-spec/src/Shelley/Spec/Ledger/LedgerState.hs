@@ -141,6 +141,7 @@ import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
@@ -1258,7 +1259,12 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           (getField @"_a0" pr)
           (getField @"_nOpt" pr)
       pulser :: Pulser (Crypto era)
-      pulser = RSLP pulseSize free (Map.toList poolParams) (Map.empty, Map.empty)
+      pulser =
+        RSLP
+          pulseSize
+          free
+          (StrictSeq.fromList $ Map.elems poolParams)
+          (Map.empty, Map.empty)
    in (Pulsing rewsnap pulser)
 
 -- Phase 2
