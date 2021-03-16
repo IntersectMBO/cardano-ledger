@@ -25,6 +25,7 @@ module Cardano.Ledger.Core
     PParams,
     PParamsDelta,
     Tx,
+    Witnesses,
 
     -- * Constraint synonyms
     ChainData,
@@ -65,6 +66,10 @@ type family PParamsDelta era :: Type
 
 -- | The transaction type which might vary from one Era to another
 type family Tx era :: Type
+
+-- | The set of witnesses in a Tx
+type family Witnesses era :: Type
+
 
 -- | Common constraints
 --

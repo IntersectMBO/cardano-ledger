@@ -38,6 +38,7 @@ import Shelley.Spec.Ledger.Tx
     TxBody,
     TxOut (..),
     ValidateScript (..),
+    WitnessSet,
     validateNativeMultiSigScript,
   )
 
@@ -72,6 +73,8 @@ type instance Core.AuxiliaryData (ShelleyEra c) = Metadata (ShelleyEra c)
 type instance Core.PParams (ShelleyEra c) = PParams (ShelleyEra c)
 
 type instance Core.Tx (ShelleyEra c) = Tx (ShelleyEra c)
+
+type instance Core.Witnesses (ShelleyEra c) = WitnessSet (ShelleyEra c)
 
 --------------------------------------------------------------------------------
 -- Ledger data instances

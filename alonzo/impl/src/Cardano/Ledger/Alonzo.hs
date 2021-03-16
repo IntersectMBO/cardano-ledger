@@ -101,6 +101,9 @@ type instance Core.PParams (AlonzoEra c) = PParams (AlonzoEra c)
 
 type instance Core.Tx (AlonzoEra c) = Tx (AlonzoEra c)
 
+type instance Core.Witnesses (AlonzoEra c) = TxWitness (AlonzoEra c)
+
+
 instance CC.Crypto c => UsesValue (AlonzoEra c)
 
 instance

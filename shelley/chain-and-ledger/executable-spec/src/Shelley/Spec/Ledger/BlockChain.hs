@@ -19,6 +19,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Shelley.Spec.Ledger.BlockChain
   ( HashHeader (..),
@@ -82,7 +83,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
-import Cardano.Ledger.SafeHash (EraIndependentBlockBody)
+import Cardano.Ledger.SafeHash (EraIndependentBlockBody, SafeToHash(..))
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
@@ -105,6 +106,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import GHC.Records(HasField(..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -148,7 +150,11 @@ import Shelley.Spec.Ledger.Serialization
     runByteBuilder,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (TransTx, Tx (..), decodeWits, segwitTx, txWitsBytes)
+{-
+import Shelley.Spec.Ledger.Tx (TransTx,
+    -- Tx (..),
+    decodeWits, segwitTx, txWitsBytes)
+-}
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- =======================================================
@@ -163,7 +169,7 @@ deriving newtype instance CC.Crypto crypto => ToCBOR (HashHeader crypto)
 deriving newtype instance CC.Crypto crypto => FromCBOR (HashHeader crypto)
 
 data TxSeq era = TxSeq'
-  { txSeqTxns' :: !(StrictSeq (Tx era)),
+  { txSeqTxns' :: !(StrictSeq (Core.Tx era)),
     txSeqBodyBytes :: BSL.ByteString,
     txSeqWitsBytes :: BSL.ByteString,
     txSeqMetadataBytes :: BSL.ByteString
@@ -184,19 +190,31 @@ deriving via
      ]
     (TxSeq era)
   instance
-    TransTx NoThunks era => NoThunks (TxSeq era)
+    (Typeable era,NoThunks (Core.Tx era)) => NoThunks (TxSeq era)
 
 deriving stock instance
-  (Era era, TransTxSeq Show era) =>
+  Show (Core.Tx era)  =>
   Show (TxSeq era)
 
 deriving stock instance
-  (Era era, TransTxSeq Eq era) =>
+  Eq (Core.Tx era)  =>
   Eq (TxSeq era)
 
-pattern TxSeq ::
-  (UsesTxBody era, UsesAuxiliary era, UsesScript era) =>
-  StrictSeq (Tx era) ->
+witnessBytes :: forall era.
+ ( SafeToHash (Core.Witnesses era),
+    HasField "witnessSet" (Core.Tx era) (Core.Witnesses era)
+ ) => (Core.Tx era) -> BSL.ByteString
+witnessBytes coretx =
+    BSL.fromStrict $
+    originalBytes @(Core.Witnesses era) $
+    getField @"witnessSet" coretx
+
+pattern TxSeq :: forall era.
+  ( Era era, UsesTxBody era, UsesAuxiliary era, UsesScript era,
+    SafeToHash (Core.Witnesses era),
+    HasField "witnessSet" (Core.Tx era) (Core.Witnesses era)
+  ) =>
+  StrictSeq (Core.Tx era) ->
   TxSeq era
 pattern TxSeq xs <-
   TxSeq' xs _ _ _
@@ -213,11 +231,11 @@ pattern TxSeq xs <-
        in TxSeq'
             { txSeqTxns' = txns,
               txSeqBodyBytes =
-                serializeEncoding . encodeFoldableEncoder (toCBOR . _body) $ txns,
-              txSeqWitsBytes = serializeFoldable $ txWitsBytes . _witnessSet <$> txns,
+                serializeEncoding . encodeFoldableEncoder (toCBOR . getField @"body") $ txns,
+              txSeqWitsBytes = serializeFoldable $ witnessBytes @era <$> txns,
               txSeqMetadataBytes =
                 serializeEncoding . encodeFoldableMapEncoder metaChunk $
-                  _metadata <$> txns
+                 getField @"auxiliaryData"  <$> txns
             }
 
 {-# COMPLETE TxSeq #-}
@@ -537,15 +555,15 @@ data Block era
 type TransBlock c era = TransTxSeq c era
 
 deriving stock instance
-  (Era era, TransBlock Show era) =>
+  (Era era, Show (Core.Tx era)) =>
   Show (Block era)
 
 deriving stock instance
-  (Era era, TransBlock Eq era) =>
+  (Era era, Eq (Core.Tx era)) =>
   Eq (Block era)
 
 deriving anyclass instance
-  (Era era, TransBlock NoThunks era) =>
+  (Era era, NoThunks (Core.Tx era)) =>
   NoThunks (Block era)
 
 pattern Block :: Era era => BHeader (Crypto era) -> TxSeq era -> Block era
@@ -579,9 +597,10 @@ type BlockAnn era =
   )
 
 blockDecoder ::
-  ( ToCBOR (Core.TxBody era),
-    ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Script era),
+  ( -- ToCBOR (Core.TxBody era),
+    -- ToCBOR (Core.AuxiliaryData era),
+    -- ToCBOR (Core.Script era),
+    FromCBOR (Annotator (Core.Witnesses era)), -- ADDED THIS TO TAKE THE PLACE of decodeWits
     BlockAnn era,
     ValidateScript era
   ) =>
@@ -593,18 +612,31 @@ blockDecoder lax = annotatorSlice $
     txns <- txSeqDecoder lax
     pure $ Block' <$> header <*> txns
 
-txSeqDecoder ::
-  ( ToCBOR (Core.TxBody era),
-    ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Script era),
-    BlockAnn era,
-    ValidateScript era
+
+segwitTxDummy :: forall era.
+  (--  Era era
+    -- ToCBOR (Core.TxBody era),
+    -- ToCBOR (Core.AuxiliaryData era)
+  ) =>
+  Annotator (Core.TxBody era) ->
+  Annotator (Core.Witnesses era) ->
+  Maybe (Annotator (Core.AuxiliaryData era)) ->
+  Annotator (Core.Tx era)
+segwitTxDummy = undefined
+
+txSeqDecoder :: forall era.
+  ( -- ToCBOR (Core.TxBody era),
+    -- ToCBOR (Core.AuxiliaryData era),
+    -- ToCBOR (Core.Script era),
+    FromCBOR (Annotator (Core.Witnesses era)), -- ADDED THIS TO TAKE THE PLACE of decodeWits
+    BlockAnn era
+    -- ValidateScript era
   ) =>
   Bool ->
   forall s. Decoder s (Annotator (TxSeq era))
 txSeqDecoder lax = do
   (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
-  (wits, witsAnn) <- withSlice $ decodeSeq decodeWits
+  (wits, witsAnn) <- withSlice $ decodeSeq fromCBOR {- decodeWits -}
   let b = length bodies
       w = length wits
 
@@ -632,7 +664,7 @@ txSeqDecoder lax = do
           <> show w
           <> ")"
     )
-  let txns = sequenceA $ StrictSeq.forceToStrict $ Seq.zipWith3 segwitTx bodies wits metadata
+  let txns = sequenceA $ StrictSeq.forceToStrict $ Seq.zipWith3 (segwitTxDummy @era) bodies wits metadata
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 instance
@@ -640,6 +672,7 @@ instance
     ToCBOR (Core.TxBody era),
     ToCBOR (Core.Script era),
     ToCBOR (Core.AuxiliaryData era),
+    FromCBOR (Annotator (Core.Witnesses era)), -- ADDED THIS TO TAKE THE PLACE of decodeWits
     ValidateScript era
   ) =>
   FromCBOR (Annotator (Block era))
@@ -652,7 +685,7 @@ instance (Era era, TransBlock ToCBOR era, Typeable era) => ToCBOR (LaxBlock era)
   toCBOR (LaxBlock x) = toCBOR x
 
 deriving stock instance
-  (Era era, TransBlock Show era) =>
+  (Era era, Show (Core.Tx era)) =>
   Show (LaxBlock era)
 
 instance
@@ -661,6 +694,7 @@ instance
     ToCBOR (Core.TxBody era),
     ToCBOR (Core.Script era),
     ToCBOR (Core.AuxiliaryData era),
+    FromCBOR (Annotator (Core.Witnesses era)), -- ADDED THIS TO TAKE THE PLACE of decodeWits
     ValidateScript era
   ) =>
   FromCBOR (Annotator (LaxBlock era))

@@ -49,7 +49,7 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx (Tx, TxOut (..))
+import Shelley.Spec.Ledger.Tx (Tx, TxOut (..),WitnessSet)
 
 -- | The Shelley Mary/Allegra eras
 --   The uninhabited type that indexes both the Mary and Allegra Eras.
@@ -142,6 +142,10 @@ type instance
 type instance
   Core.Tx (ShelleyMAEra (ma :: MaryOrAllegra) c) =
     Tx (ShelleyMAEra (ma :: MaryOrAllegra) c)
+
+type instance
+  Core.Witnesses (ShelleyMAEra (ma :: MaryOrAllegra) c) =
+    WitnessSet (ShelleyMAEra (ma :: MaryOrAllegra) c)
 
 --------------------------------------------------------------------------------
 -- Ledger data instances

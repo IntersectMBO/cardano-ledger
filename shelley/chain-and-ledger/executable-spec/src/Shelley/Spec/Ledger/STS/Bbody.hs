@@ -23,6 +23,8 @@ where
 
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.SafeHash(SafeToHash)
+
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -63,7 +65,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
-import Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.Tx (Tx,WitnessSet)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data BBODY era
@@ -117,7 +119,11 @@ instance
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
-    HasField "_d" (Core.PParams era) UnitInterval
+    HasField "_d" (Core.PParams era) UnitInterval,
+
+    Core.Witnesses era ~ WitnessSet era,
+    Core.Tx era ~ Tx era,
+    SafeToHash (WitnessSet era)
   ) =>
   STS (BBODY era)
   where
@@ -148,7 +154,11 @@ bbodyTransition ::
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
-    HasField "_d" (Core.PParams era) UnitInterval
+    HasField "_d" (Core.PParams era) UnitInterval,
+
+    Core.Witnesses era ~ WitnessSet era,
+    Core.Tx era ~ Tx era,
+    SafeToHash (WitnessSet era)
   ) =>
   TransitionRule (BBODY era)
 bbodyTransition =
