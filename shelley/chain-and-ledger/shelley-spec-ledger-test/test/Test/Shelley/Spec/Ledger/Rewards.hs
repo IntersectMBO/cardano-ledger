@@ -28,15 +28,17 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Iterate.SetAlgebra (eval, (◁))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
-import Control.Provenance (preservesJust, preservesNothing, ProvM, runProvM, runWithProvM)
+import Control.Provenance (ProvM, preservesJust, preservesNothing, runProvM, runWithProvM)
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Proxy
+import Data.Pulse (Pulsable (..))
 import Data.Ratio (Ratio, (%))
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
@@ -92,6 +94,13 @@ import Shelley.Spec.Ledger.PParams
     ProtVer (..),
     emptyPParams,
   )
+import Shelley.Spec.Ledger.RewardUpdate
+  ( FreeVars (..),
+    KeyHashPoolProvenance,
+    Pulser,
+    RewardAns,
+    RewardPulser (RSLP),
+  )
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood,
     NonMyopic,
@@ -112,9 +121,9 @@ import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils
-  ( testGlobals,
+  ( runShelleyBase,
+    testGlobals,
     unsafeMkUnitInterval,
-    runShelleyBase,
   )
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCaseInfo)
@@ -130,15 +139,7 @@ import Test.Tasty.QuickCheck
     testProperty,
     withMaxSuccess,
   )
-import Data.Set(Set)
-import Shelley.Spec.Ledger.RewardUpdate
-  ( KeyHashPoolProvenance,
-    RewardAns,
-    Pulser,
-    RewardPulser(RSLP),
-    FreeVars(..),
-  )
-import Data.Pulse(Pulsable(..))
+
 -- ========================================================================
 -- Bounds and Constants --
 
@@ -309,19 +310,20 @@ rewardsBoundedByPot _ = property $ do
             pools
       totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
-      rs = runShelleyBase $
-        runProvM $
-          reward
-            (_d pp, _a0 pp, _nOpt pp)
-            bs
-            rewardPot
-            rewardAcnts
-            poolParams
-            (Stake stake)
-            delegs
-            totalLovelace
-            asc
-            slotsPerEpoch
+      rs =
+        runShelleyBase $
+          runProvM $
+            reward
+              (_d pp, _a0 pp, _nOpt pp)
+              bs
+              rewardPot
+              rewardAcnts
+              poolParams
+              (Stake stake)
+              delegs
+              totalLovelace
+              asc
+              slotsPerEpoch
   pure $
     counterexample
       ( mconcat
@@ -376,19 +378,20 @@ rewardsProvenance _ = generate $ do
             pools
       totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
-      (_, prov) = runShelleyBase $
-        runWithProvM def $
-          reward
-            (_d pp, _a0 pp, _nOpt pp)
-            bs
-            rewardPot
-            rewardAcnts
-            poolParams
-            (Stake stake)
-            delegs
-            totalLovelace
-            asc
-            slotsPerEpoch
+      (_, prov) =
+        runShelleyBase $
+          runWithProvM def $
+            reward
+              (_d pp, _a0 pp, _nOpt pp)
+              bs
+              rewardPot
+              rewardAcnts
+              poolParams
+              (Stake stake)
+              delegs
+              totalLovelace
+              asc
+              slotsPerEpoch
   pure (show (snd (Map.findMin prov)))
 
 -- Analog to getRewardInfo, but does not produce Provenance
@@ -424,7 +427,6 @@ sameWithOrWithoutProvenance globals newepochstate = with == without
   where
     (with, _) = getRewardInfo globals newepochstate
     without = justRewardInfo globals newepochstate
-
 
 nothingInNothingOut ::
   forall era.
@@ -671,9 +673,8 @@ createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm)
         nonMyopicOld = (updateNonMyopic nm _R newLikelihoods)
       }
 
-
-oldEqualsNew:: forall era. (Core.PParams era ~ PParams era) => NewEpochState era -> Bool
-oldEqualsNew  newepochstate  = old == new
+oldEqualsNew :: forall era. (Core.PParams era ~ PParams era) => NewEpochState era -> Bool
+oldEqualsNew newepochstate = old == new
   where
     globals = testGlobals
     epochstate = nesEs newepochstate
@@ -691,8 +692,8 @@ oldEqualsNew  newepochstate  = old == new
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
 
-oldEqualsNewOn:: forall era. (Core.PParams era ~ PParams era) => NewEpochState era -> Bool
-oldEqualsNewOn  newepochstate  = old == new
+oldEqualsNewOn :: forall era. (Core.PParams era ~ PParams era) => NewEpochState era -> Bool
+oldEqualsNewOn newepochstate = old == new
   where
     globals = testGlobals
     epochstate = nesEs newepochstate
@@ -703,7 +704,7 @@ oldEqualsNewOn  newepochstate  = old == new
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
-    (unAggregated,_) = runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
+    (unAggregated, _) = runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new_with_zeros = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
     new = Map.filter (/= Coin 0) new_with_zeros
@@ -757,8 +758,7 @@ rewardPulser
       Coin activeStake = fold . unStake $ stake
       free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r slotsPerEpoch pp_d pp_a0 pp_nOpt)
       pulser :: Pulser c
-      pulser = RSLP 2 free (Map.toList poolParams) (Map.empty, Map.empty)
-
+      pulser = RSLP 2 free (StrictSeq.fromList $ Map.elems poolParams) (Map.empty, Map.empty)
 
 -- ==================================================================
 
