@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -16,7 +17,18 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), Data (..))
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices (..), Script (..), Tag (..))
+import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
+import Cardano.Ledger.Alonzo.Scripts
+  ( CostModel (..),
+    ExUnits (..),
+    Prices (..),
+    Script (..),
+    Tag (..),
+    alwaysFails,
+    alwaysSucceeds,
+  )
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( TxOut (..),
@@ -134,7 +146,12 @@ instance Mock c => Arbitrary (Tx (AlonzoEra c)) where
       <*> arbitrary
 
 instance Mock c => Arbitrary (Script (AlonzoEra c)) where
-  arbitrary = frequency [(1, pure PlutusScript), (9, NativeScript <$> arbitrary)]
+  arbitrary =
+    frequency
+      [ (1, pure (alwaysSucceeds 1)),
+        (1, pure (alwaysFails 1)),
+        (10, NativeScript <$> arbitrary)
+      ]
 
 -- ==========================
 --
@@ -197,3 +214,51 @@ instance Arbitrary (PParamsUpdate era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+instance Mock c => Arbitrary (UtxosPredicateFailure (AlonzoEra c)) where
+  arbitrary =
+    oneof
+      [ ValidationTagMismatch <$> arbitrary,
+        UpdateFailure <$> arbitrary
+      ]
+
+instance Mock c => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
+  arbitrary =
+    oneof
+      [ (BadInputsUTxO) <$> arbitrary,
+        OutsideValidityIntervalUTxO <$> arbitrary <*> arbitrary,
+        MaxTxSizeUTxO <$> arbitrary <*> arbitrary,
+        pure InputSetEmptyUTxO,
+        FeeTooSmallUTxO <$> arbitrary <*> arbitrary,
+        (ValueNotConservedUTxO) <$> arbitrary <*> arbitrary,
+        (OutputTooSmallUTxO) <$> arbitrary,
+        (UtxosFailure) <$> arbitrary,
+        (WrongNetwork) <$> arbitrary <*> arbitrary,
+        (WrongNetworkWithdrawal) <$> arbitrary <*> arbitrary,
+        (OutputBootAddrAttrsTooBig) <$> arbitrary,
+        pure TriesToForgeADA,
+        (OutputTooBigUTxO) <$> arbitrary,
+        FeeNotBalancedUTxO <$> arbitrary <*> arbitrary,
+        ScriptsNotPaidUTxO <$> arbitrary,
+        ExUnitsTooSmallUTxO <$> arbitrary <*> arbitrary,
+        FeeContainsNonADA <$> arbitrary
+      ]
+
+instance Mock c => Arbitrary (AlonzoPredFail (AlonzoEra c)) where
+  arbitrary =
+    oneof
+      [ WrappedShelleyEraFailure <$> arbitrary,
+        UnRedeemableScripts <$> arbitrary,
+        MissingNeededScriptHash <$> arbitrary,
+        DataHashSetsDontAgree <$> arbitrary <*> arbitrary,
+        PPViewHashesDontMatch <$> arbitrary <*> arbitrary
+      ]
+
+instance Mock c => Arbitrary (ScriptPurpose c) where
+  arbitrary =
+    oneof
+      [ Minting <$> arbitrary,
+        Spending <$> arbitrary,
+        Rewarding <$> arbitrary,
+        Certifying <$> arbitrary
+      ]

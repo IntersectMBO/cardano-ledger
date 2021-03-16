@@ -22,7 +22,7 @@ where
 import Cardano.Binary (serialize)
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (Crypto, ValidateScript(..))
 import Cardano.Ledger.SafeHash (EraIndependentTxBody, SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
@@ -88,7 +88,6 @@ import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     TxIn (..),
-    ValidateScript (..),
     WitnessSet,
     WitnessSetHKD (..),
   )

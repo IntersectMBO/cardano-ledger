@@ -11,21 +11,23 @@
 
 module Cardano.Ledger.Alonzo.Rules.Utxos where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import qualified Cardano.Ledger.Mary.Value as Mary
 import Cardano.Ledger.Shelley.Constraints
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.State.Transition.Extended
+import Data.Coders
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
@@ -63,7 +65,7 @@ instance
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era)))
   ) =>
   STS (UTXOS era)
   where
@@ -78,7 +80,6 @@ instance
 utxosTransition ::
   forall era.
   ( UsesTxOut era,
-    UsesScript era,
     Core.Script era ~ Script era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
@@ -90,9 +91,8 @@ utxosTransition ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    HasField "mint" (Core.TxBody era) (Mary.Value (Crypto era)),
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
@@ -176,6 +176,27 @@ data UtxosPredicateFailure era
   | UpdateFailure (PredicateFailure (Core.EraRule "PPUP" era))
   deriving
     (Generic)
+
+instance
+  ( Typeable era,
+    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
+  ToCBOR (UtxosPredicateFailure era)
+  where
+  toCBOR (ValidationTagMismatch v) = encode (Sum ValidationTagMismatch 0 !> To v)
+  toCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 1 !> To pf)
+
+instance
+  ( Typeable era,
+    FromCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
+  FromCBOR (UtxosPredicateFailure era)
+  where
+  fromCBOR = decode (Summands "UtxosPredicateFailure" dec)
+    where
+      dec 0 = SumD ValidationTagMismatch <! From
+      dec 1 = SumD UpdateFailure <! From
+      dec n = Invalid n
 
 deriving stock instance
   ( Shelley.TransUTxOState Show era,

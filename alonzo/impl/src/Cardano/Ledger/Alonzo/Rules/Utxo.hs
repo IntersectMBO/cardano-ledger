@@ -30,7 +30,7 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody, TxOut)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import qualified Cardano.Ledger.Mary.Value as Alonzo (Value)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams,
@@ -82,7 +82,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley
-import Shelley.Spec.Ledger.Tx (TxIn, ValidateScript)
+import Shelley.Spec.Ledger.Tx (TxIn)
 import Shelley.Spec.Ledger.TxBody (unWdrl)
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
@@ -259,7 +259,6 @@ utxoTransition ::
     UsesPParams era,
     HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
-    HasField "vldt" (Alonzo.TxBody era) ValidityInterval,
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_minUTxOValue" (Core.PParams era) Coin,
@@ -321,8 +320,8 @@ utxoTransition = do
       (Set.fromList wdrlsWrongNetwork)
 
   -- TODO remove this?
-  -- This came from the ShelleyMA eras, I don't think it applies here.
-  -- It does not appear in the Alonzo specification
+  -- It does not appear in the Alonzo specification. SHOULD IT STAY?
+  -- TooSmallness is always denominated in Coin, so why are we using Val.pointwise?
   let minUTxOValue = getField @"_minUTxOValue" pp
       outputsTooSmall =
         filter
@@ -345,9 +344,7 @@ utxoTransition = do
       totExunits = getField @"totExunits" tx
   totExunits <= maxTxEx ?! ExUnitsTooSmallUTxO maxTxEx totExunits
 
-  -- TODO remove this?
-  -- This came from the ShelleyMA eras, I don't think it applies here.
-  -- It does not appear in the Alonzo specification
+  -- This does not appear in the Alonzo specification. But the test should be in every Era.
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =

@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -10,8 +11,10 @@ module Cardano.Ledger.Alonzo where
 
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), PParamsUpdate, updatePParams)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (Script)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
+import Cardano.Ledger.Alonzo.Scripts (Script, isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (Tx)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
@@ -20,6 +23,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
     UsesTxOut (..),
@@ -52,12 +56,15 @@ instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c)
 
 instance API.PraosCrypto c => API.GetLedgerView (AlonzoEra c)
 
-instance
-  (CC.Crypto c) =>
-  Shelley.ValidateScript (AlonzoEra c)
-  where
+instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
+  isNativeScript x = not (isPlutusScript x)
+  scriptPrefixTag script =
+    if isPlutusScript script
+      then "\x01"
+      else nativeMultiSigTag -- "\x00"
   validateScript = error "TODO: implement validateScript"
-  hashScript = error "TODO: implement hashScript"
+
+-- hashScript x = ...  We use the default method for hashScript
 
 instance
   ( CC.Crypto c
@@ -106,7 +113,7 @@ instance
 
   mergePPUpdates _ = updatePParams
 
-instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) where
+instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
   validateAuxiliaryData = error ("NO validateAuxiliaryData yet.") -- TODO Fill this in
 
@@ -120,9 +127,9 @@ instance API.PraosCrypto c => API.ShelleyBasedEra (AlonzoEra c)
 
 type instance Core.EraRule "UTXOS" (AlonzoEra c) = Alonzo.UTXOS (AlonzoEra c)
 
-type instance Core.EraRule "UTXO" (AlonzoEra c) = STUB () () () () Shelley.ShelleyBase
+type instance Core.EraRule "UTXO" (AlonzoEra c) = Alonzo.AlonzoUTXO (AlonzoEra c)
 
-type instance Core.EraRule "UTXOW" (AlonzoEra c) = STUB () () () () Shelley.ShelleyBase
+type instance Core.EraRule "UTXOW" (AlonzoEra c) = Alonzo.AlonzoUTXOW (AlonzoEra c)
 
 type LEDGERSTUB c =
   STUB

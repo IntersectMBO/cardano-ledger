@@ -1,8 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Support for multiple (Shelley-based) eras in the ledger.
@@ -15,11 +18,13 @@ module Cardano.Ledger.Era
     translateEra',
     translateEraMaybe,
     WellFormed,
+    ValidateScript (..),
   )
 where
 
 -- imports for the WellFormed constraint
-
+import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
@@ -27,9 +32,11 @@ import Cardano.Ledger.SafeHash
   ( EraIndependentAuxiliaryData,
     EraIndependentTxBody,
     HashAnnotated (..),
+    SafeToHash (..),
   )
 import Cardano.Ledger.Val (Val)
 import Control.Monad.Except (Except, runExcept)
+import qualified Data.ByteString as BS
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
 import Data.Map (Map)
@@ -42,7 +49,7 @@ import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Scripts (ScriptHash)
+import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 
 --------------------------------------------------------------------------------
 -- Era
@@ -56,6 +63,31 @@ class
   Era e
   where
   type Crypto e :: Type
+
+-----------------------------------------------------------------------------
+-- Script Validation
+-----------------------------------------------------------------------------
+
+-- | Typeclass for script data types. Allows for script validation and hashing.
+--   You must understand the role of SafeToHash and scriptPrefixTag to make new instances.
+--   'scriptPrefixTag' is a magic number representing the tag of the script language. For
+--   each new script language defined, a new tag is chosen and the tag is included in the script
+--   hash for a script. The safeToHash constraint ensures that Scripts are never reserialised.
+class
+  (Era era, SafeToHash (Core.Script era)) =>
+  ValidateScript era
+  where
+  scriptPrefixTag :: Core.Script era -> BS.ByteString
+  validateScript :: Core.Script era -> Core.Tx era -> Bool
+  hashScript :: Core.Script era -> ScriptHash (Crypto era)
+  -- ONE SHOULD NOT OVERIDE THE hashScript DEFAULT METHOD
+  -- UNLESS YOU UNDERSTAND THE SafeToHash class, AND THE ROLE OF THE scriptPrefixTag
+  hashScript =
+    ScriptHash . Hash.castHash
+      . Hash.hashWith
+        (\x -> scriptPrefixTag @era x <> originalBytes x)
+  isNativeScript :: Core.Script era -> Bool
+  isNativeScript _ = True
 
 --------------------------------------------------------------------------------
 -- Era translation
@@ -157,6 +189,7 @@ type WellFormed era =
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "minted" (Core.TxBody era) (Set (ScriptHash (Crypto era))),
+    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
     -- Tx
     HasField "body" (Core.Tx era) (Core.TxBody era),
     HasField "auxiliaryData" (Core.Tx era) (StrictMaybe (Core.AuxiliaryData era)),

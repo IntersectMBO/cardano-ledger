@@ -24,7 +24,7 @@ module Cardano.Ledger.Alonzo.Data
     hashData,
     -- $
     AuxiliaryData (AuxiliaryData, scripts, dats, txMD),
-    AuxiliaryDataHash,
+    AuxiliaryDataHash (..),
     -- $
     ppPlutusData,
     ppData,
@@ -33,6 +33,7 @@ module Cardano.Ledger.Alonzo.Data
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Pretty
@@ -59,7 +60,7 @@ import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
--- import Plutus.V1.Ledger.Scripts
+-- import Plutus.V1.Ledger.Scripts-- Supply the HasField and Validate instances for Alonzo
 import qualified Language.PlutusTx as Plutus
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.Metadata (Metadata)
@@ -183,8 +184,6 @@ newtype AuxiliaryData era = AuxiliaryDataConstr (MemoBytes (AuxiliaryDataRaw era
   deriving newtype (ToCBOR, SafeToHash)
 
 instance (Crypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c
-
-type AuxiliaryDataHash crypto = SafeHash crypto EraIndependentAuxiliaryData
 
 deriving instance Eq (Core.Script era) => Eq (AuxiliaryData era)
 

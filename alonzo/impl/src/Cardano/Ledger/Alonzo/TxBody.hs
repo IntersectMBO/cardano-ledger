@@ -53,7 +53,7 @@ module Cardano.Ledger.Alonzo.TxBody
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash, DataHash)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -158,6 +158,8 @@ pattern TxOut addr vl dh <-
         dh
 
 {-# COMPLETE TxOut #-}
+
+-- ======================================
 
 type WitnessPPDataHash crypto = SafeHash crypto EraIndependentWitnessPPData
 
@@ -541,15 +543,6 @@ instance HasField "txfee" (TxBody era) Coin where
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = _update m
 
-instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
-  getField (TxOutCompact a _ _) = a
-
-instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
-  getField (TxOutCompact a _ _) = decompactAddr a
-
-instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
-  getField (TxOutCompact _ v _) = fromCompact v
-
 instance (Crypto era ~ c) => HasField "mint" (TxBody era) (Mary.Value c) where
   getField (TxBodyConstr (Memo m _)) = _mint m
 
@@ -561,6 +554,30 @@ instance (Crypto era ~ c) => HasField "minted" (TxBody era) (Set (ScriptHash c))
 
 instance HasField "vldt" (TxBody era) ValidityInterval where
   getField (TxBodyConstr (Memo m _)) = _vldt m
+
+instance
+  c ~ (Crypto era) =>
+  HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash c))
+  where
+  getField (TxBodyConstr (Memo m _)) = _adHash m
+
+instance
+  c ~ (Crypto era) =>
+  HasField "sdHash" (TxBody era) (StrictMaybe (WitnessPPDataHash c))
+  where
+  getField (TxBodyConstr (Memo m _)) = _sdHash m
+
+instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
+  getField (TxOutCompact a _ _) = a
+
+instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
+  getField (TxOutCompact a _ _) = decompactAddr a
+
+instance c ~ (Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
+  getField (TxOutCompact _ _ datahash) = datahash
+
+instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
+  getField (TxOutCompact _ v _) = fromCompact v
 
 -- ===================================================
 
@@ -595,8 +612,11 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u mnt sdh axh) _)) =
       ("update", ppStrictMaybe ppUpdate u),
       ("mint", ppValue mnt),
       ("sdHash", ppStrictMaybe ppSafeHash sdh),
-      ("adHash", ppStrictMaybe ppSafeHash axh)
+      ("adHash", ppStrictMaybe ppAuxDataHash axh)
     ]
+
+ppAuxDataHash :: AuxiliaryDataHash crypto -> PDoc
+ppAuxDataHash (AuxiliaryDataHash axh) = ppSafeHash axh
 
 instance
   ( Era era,

@@ -18,9 +18,10 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Mary.Value (Value, policies, policyID)
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
     UsesTxBody,
@@ -34,7 +35,6 @@ import Cardano.Ledger.ShelleyMA.AuxiliaryData
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     ValidityInterval,
-    hashTimelockScript,
     validateTimelock,
   )
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
@@ -49,11 +49,7 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx
-  ( Tx,
-    TxOut (..),
-    ValidateScript (..),
-  )
+import Shelley.Spec.Ledger.Tx (Tx, TxOut (..))
 
 -- | The Shelley Mary/Allegra eras
 --   The uninhabited type that indexes both the Mary and Allegra Eras.
@@ -151,6 +147,11 @@ type instance
 -- Ledger data instances
 --------------------------------------------------------------------------------
 
+-- Since Timelock scripts are a strictly backwards compatible extension of
+-- Multisig scripts, we can use the same 'scriptPrefixTag' tag here as
+-- we did for the ValidateScript instance in Multisig which is imported
+-- from:  Cardano.Ledger.Shelley(nativeMultiSigTag)
+
 instance
   ( CryptoClass.Crypto c,
     UsesTxBody (ShelleyMAEra ma c),
@@ -159,14 +160,16 @@ instance
   ) =>
   ValidateScript (ShelleyMAEra ma c)
   where
-  validateScript s tx = validateTimelock s tx
-  hashScript s = hashTimelockScript s
+  scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
+  validateScript script tx = validateTimelock script tx
+
+-- Uses the default instance of hashScript
 
 instance
   ( CryptoClass.Crypto c,
     Core.AnnotatedData (Core.Script (ShelleyMAEra ma c))
   ) =>
-  ValidateAuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c)
+  ValidateAuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c) c
   where
   validateAuxiliaryData (AuxiliaryData md as) = deepseq as $ all validMetadatum md
   hashAuxiliaryData aux = AuxiliaryDataHash (hashAnnotated aux)
