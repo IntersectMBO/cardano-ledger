@@ -85,6 +85,7 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- with meaningful delegation certificates.
 instance
   ( EraGen era,
+    Core.Tx era ~ Tx era,
     ShelleyTest era,
     UsesTxBody era,
     UsesTxOut era,

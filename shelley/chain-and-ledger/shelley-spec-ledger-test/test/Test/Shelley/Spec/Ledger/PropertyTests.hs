@@ -65,6 +65,7 @@ minimalPropertyTests ::
   forall era.
   ( EraGen era,
     ShelleyTest era,
+    Core.Tx era ~ Tx era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
@@ -104,6 +105,7 @@ propertyTests ::
   forall era.
   ( EraGen era,
     ShelleyTest era,
+    Core.Tx era ~ Tx era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),

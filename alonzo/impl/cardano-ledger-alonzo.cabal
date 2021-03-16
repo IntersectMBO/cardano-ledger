@@ -45,6 +45,7 @@ library
     Cardano.Ledger.Alonzo.Rules.Utxo
     Cardano.Ledger.Alonzo.Rules.Utxos
     Cardano.Ledger.Alonzo.Rules.Utxow
+    Cardano.Ledger.Alonzo.Rules.Ledger
     Cardano.Ledger.Alonzo.Scripts
     Cardano.Ledger.Alonzo.Tx
     Cardano.Ledger.Alonzo.TxBody

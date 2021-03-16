@@ -30,14 +30,6 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesPParams,
-    UsesScript,
-    UsesTxBody,
-    UsesTxOut,
-    UsesValue,
-  )
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -74,8 +66,8 @@ import Shelley.Spec.Ledger.STS.Utxo
 import Shelley.Spec.Ledger.STS.Utxow (UTXOW, UtxowPredicateFailure)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import Shelley.Spec.Ledger.Tx (Tx (..))
-import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody, TransTxId)
+import Shelley.Spec.Ledger.Tx (Tx (..), body')
+import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody)
 
 data LEDGER era
 
@@ -145,13 +137,11 @@ instance
       )
 
 instance
-  ( UsesValue era,
-    UsesScript era,
-    UsesTxBody era,
-    UsesTxOut era,
-    UsesAuxiliary era,
-    UsesPParams era,
-    TransTxId Show era,
+  ( Show (Core.Script era), -- All these Show instances arise because
+    Show (Core.TxBody era), -- renderAssertionViolation, turns them into strings
+    Show (Core.AuxiliaryData era),
+    Show (Core.PParams era),
+    Core.Tx era ~ Tx era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
@@ -199,9 +189,7 @@ instance
 
 ledgerTransition ::
   forall era.
-  ( UsesScript era,
-    UsesTxBody era,
-    UsesAuxiliary era,
+  ( Core.Tx era ~ Tx era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
@@ -221,7 +209,7 @@ ledgerTransition = do
       TRC
         ( DelegsEnv slot txIx pp tx account,
           dpstate,
-          StrictSeq.fromStrict $ getField @"certs" $ _body tx
+          StrictSeq.fromStrict $ getField @"certs" $ body' tx
         )
 
   let DPState dstate pstate = dpstate

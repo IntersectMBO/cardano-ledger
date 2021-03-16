@@ -28,7 +28,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased, UsesAuxiliary, UsesPParams, UsesScript, UsesTxBody)
+import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.State.Transition
@@ -90,15 +90,13 @@ data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: SlotNo,
     delegsIx :: Ix,
     delegspp :: Core.PParams era,
-    delegsTx :: Tx era,
+    delegsTx :: Core.Tx era,
     delegsAccount :: AccountState
   }
 
 deriving stock instance
-  ( UsesPParams era,
-    UsesScript era,
-    UsesTxBody era,
-    UsesAuxiliary era
+  ( Show (Core.Tx era),
+    Show (Core.PParams era)
   ) =>
   Show (DelegsEnv era)
 
@@ -122,6 +120,7 @@ deriving stock instance
 
 instance
   ( ShelleyBased era,
+    Core.Tx era ~ Tx era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     Embed (Core.EraRule "DELPL" era) (DELEGS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
@@ -190,6 +189,7 @@ instance
 delegsTransition ::
   forall era.
   ( ShelleyBased era,
+    Core.Tx era ~ Tx era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     Embed (Core.EraRule "DELPL" era) (DELEGS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
