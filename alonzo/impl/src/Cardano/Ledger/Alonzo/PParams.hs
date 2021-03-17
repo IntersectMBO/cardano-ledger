@@ -35,7 +35,7 @@ module Cardano.Ledger.Alonzo.PParams
 where
 
 import Cardano.Binary
-  ( Annotator,
+  ( Encoding,
     FromCBOR (..),
     ToCBOR (..),
     encodePreEncoded,
@@ -52,7 +52,6 @@ import Cardano.Ledger.SafeHash
     HashAnnotated (..),
     SafeToHash (..),
   )
-import Control.Applicative (liftA2)
 import Control.DeepSeq (NFData)
 import Data.ByteString.Short (fromShort)
 import Data.Coders
@@ -64,10 +63,9 @@ import Data.Coders
     decode,
     encode,
     field,
-    mapDecodeA,
     mapEncode,
     (!>),
-    (<*!),
+    (<!),
   )
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity (..))
@@ -94,6 +92,7 @@ import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
 import Shelley.Spec.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
+    mapFromCBOR,
     mapToCBOR,
     ratioFromCBOR,
     ratioToCBOR,
@@ -220,33 +219,33 @@ instance (Era era) => ToCBOR (PParams era) where
 
 instance
   (Era era) =>
-  FromCBOR (Annotator (PParams era))
+  FromCBOR (PParams era)
   where
   fromCBOR =
     decode $
-      Ann (RecD PParams)
-        <*! Ann From -- _minfeeA         :: Integer
-        <*! Ann From -- _minfeeB         :: Natural
-        <*! Ann From -- _maxBBSize       :: Natural
-        <*! Ann From -- _maxTxSize       :: Natural
-        <*! Ann From -- _maxBHSize       :: Natural
-        <*! Ann From -- _keyDeposit      :: Coin
-        <*! Ann From -- _poolDeposit     :: Coin
-        <*! Ann From -- _eMax            :: EpochNo
-        <*! Ann From -- _nOpt            :: Natural
-        <*! Ann (D ratioFromCBOR) -- _a0              :: Rational
-        <*! Ann From -- _rho             :: UnitInterval
-        <*! Ann From -- _tau             :: UnitInterval
-        <*! Ann From -- _d               :: UnitInterval
-        <*! Ann From -- _extraEntropy    :: Nonce
-        <*! Ann (D fromCBORGroup) -- _protocolVersion :: ProtVer
-        <*! Ann From -- _minPoolCost     :: Natural
+      RecD PParams
+        <! From -- _minfeeA         :: Integer
+        <! From -- _minfeeB         :: Natural
+        <! From -- _maxBBSize       :: Natural
+        <! From -- _maxTxSize       :: Natural
+        <! From -- _maxBHSize       :: Natural
+        <! From -- _keyDeposit      :: Coin
+        <! From -- _poolDeposit     :: Coin
+        <! From -- _eMax            :: EpochNo
+        <! From -- _nOpt            :: Natural
+        <! (D ratioFromCBOR) -- _a0 :: Rational
+        <! From -- _rho             :: UnitInterval
+        <! From -- _tau             :: UnitInterval
+        <! From -- _d               :: UnitInterval
+        <! From -- _extraEntropy    :: Nonce
+        <! (D fromCBORGroup) -- _protocolVersion :: ProtVer
+        <! From -- _minPoolCost     :: Natural
         -- new/updated for alonzo
-        <*! Ann From -- _adaPerUTxOByte  :: Coin
-        <*! mapDecodeA (Ann From) From -- _costmdls :: (Map Language CostModel)
-        <*! Ann From -- _prices = prices',
-        <*! Ann From -- _maxTxExUnits = maxTxExUnits',
-        <*! Ann From -- _maxBlockExUnits = maxBlockExUnits'
+        <! From -- _adaPerUTxOByte  :: Coin
+        <! (D mapFromCBOR) -- _costmdls :: (Map Language CostModel)
+        <! From -- _prices = prices',
+        <! From -- _maxTxExUnits = maxTxExUnits',
+        <! From -- _maxBlockExUnits = maxBlockExUnits'
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams era
@@ -307,29 +306,31 @@ encodePParamsUpdate ::
   Encode ('Closed 'Sparse) (PParamsUpdate era)
 encodePParamsUpdate ppup =
   Keyed PParams
-    !> omitStrictMaybe 0 (_minfeeA ppup)
-    !> omitStrictMaybe 1 (_minfeeB ppup)
-    !> omitStrictMaybe 2 (_maxBBSize ppup)
-    !> omitStrictMaybe 3 (_maxTxSize ppup)
-    !> omitStrictMaybe 4 (_maxBHSize ppup)
-    !> omitStrictMaybe 5 (_keyDeposit ppup)
-    !> omitStrictMaybe 6 (_poolDeposit ppup)
-    !> omitStrictMaybe 7 (_eMax ppup)
-    !> omitStrictMaybe 8 (_nOpt ppup)
-    !> Omit isSNothing (Key 9 (E (ratioToCBOR . fromSJust) (_a0 ppup)))
-    !> omitStrictMaybe 10 (_rho ppup)
-    !> omitStrictMaybe 11 (_tau ppup)
-    !> omitStrictMaybe 12 (_d ppup)
-    !> omitStrictMaybe 13 (_extraEntropy ppup)
-    !> omitStrictMaybe 14 (_protocolVersion ppup)
-    !> omitStrictMaybe 15 (_minPoolCost ppup)
-    !> omitStrictMaybe 16 (_adaPerUTxOByte ppup)
-    !> omitStrictMaybe 17 (_costmdls ppup)
-    !> omitStrictMaybe 18 (_prices ppup)
-    !> omitStrictMaybe 19 (_maxTxExUnits ppup)
-    !> omitStrictMaybe 20 (_maxBlockExUnits ppup)
+    !> omitStrictMaybe 0 (_minfeeA ppup) toCBOR
+    !> omitStrictMaybe 1 (_minfeeB ppup) toCBOR
+    !> omitStrictMaybe 2 (_maxBBSize ppup) toCBOR
+    !> omitStrictMaybe 3 (_maxTxSize ppup) toCBOR
+    !> omitStrictMaybe 4 (_maxBHSize ppup) toCBOR
+    !> omitStrictMaybe 5 (_keyDeposit ppup) toCBOR
+    !> omitStrictMaybe 6 (_poolDeposit ppup) toCBOR
+    !> omitStrictMaybe 7 (_eMax ppup) toCBOR
+    !> omitStrictMaybe 8 (_nOpt ppup) toCBOR
+    !> omitStrictMaybe 9 (_a0 ppup) ratioToCBOR
+    !> omitStrictMaybe 10 (_rho ppup) toCBOR
+    !> omitStrictMaybe 11 (_tau ppup) toCBOR
+    !> omitStrictMaybe 12 (_d ppup) toCBOR
+    !> omitStrictMaybe 13 (_extraEntropy ppup) toCBOR
+    !> omitStrictMaybe 14 (_protocolVersion ppup) toCBOR
+    !> omitStrictMaybe 15 (_minPoolCost ppup) toCBOR
+    !> omitStrictMaybe 16 (_adaPerUTxOByte ppup) toCBOR
+    !> omitStrictMaybe 17 (_costmdls ppup) mapToCBOR
+    !> omitStrictMaybe 18 (_prices ppup) toCBOR
+    !> omitStrictMaybe 19 (_maxTxExUnits ppup) toCBOR
+    !> omitStrictMaybe 20 (_maxBlockExUnits ppup) toCBOR
   where
-    omitStrictMaybe key x = Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
+    omitStrictMaybe ::
+      Word -> StrictMaybe a -> (a -> Encoding) -> Encode ('Closed 'Sparse) (StrictMaybe a)
+    omitStrictMaybe key x enc = Omit isSNothing (Key key (E (enc . fromSJust) x))
 
 instance (Era era) => ToCBOR (PParamsUpdate era) where
   toCBOR ppup = encode (encodePParamsUpdate ppup)
@@ -361,51 +362,34 @@ emptyPParamsUpdate =
       _maxBlockExUnits = SNothing
     }
 
--- ===============================================================================
--- To deserialise the Sparse encoding (produced by encodePParamsUpdate) where
--- 1) only the 'x' part of the (SJust x) has been serialized, and
--- 2) some fields only have FormCBOR(Annotated instances),
--- we need special functions for constructing Field decoders that handle both cases.
-
--- | if we have a normal (FromCBOR field) instance we use fieldNorm
-fieldNorm :: (StrictMaybe field -> b -> b) -> Decode w field -> Field (Annotator b)
-fieldNorm update dec = Field (liftA2 update) (decode (Ann (Map SJust dec)))
-
--- | if we only have a (FromCBOR (Annotator field)) instance we use fieldAnn
-fieldAnn ::
-  (StrictMaybe field -> b -> b) ->
-  Decode w (Annotator field) ->
-  Field (Annotator b)
-fieldAnn update dec = Field (liftA2 update) (do x <- decode dec; pure (SJust <$> x))
-
-updateField :: Word -> Field (Annotator (PParamsUpdate era))
-updateField 0 = fieldNorm (\x up -> up {_minfeeA = x}) From
-updateField 1 = fieldNorm (\x up -> up {_minfeeB = x}) From
-updateField 2 = fieldNorm (\x up -> up {_maxBBSize = x}) From
-updateField 3 = fieldNorm (\x up -> up {_maxTxSize = x}) From
-updateField 4 = fieldNorm (\x up -> up {_maxBHSize = x}) From
-updateField 5 = fieldNorm (\x up -> up {_keyDeposit = x}) From
-updateField 6 = fieldNorm (\x up -> up {_poolDeposit = x}) From
-updateField 7 = fieldNorm (\x up -> up {_eMax = x}) From
-updateField 8 = fieldNorm (\x up -> up {_nOpt = x}) From
-updateField 9 = fieldNorm (\x up -> up {_a0 = x}) (D ratioFromCBOR)
-updateField 10 = fieldNorm (\x up -> up {_rho = x}) From
-updateField 11 = fieldNorm (\x up -> up {_tau = x}) From
-updateField 12 = fieldNorm (\x up -> up {_d = x}) From
-updateField 13 = fieldNorm (\x up -> up {_extraEntropy = x}) From
-updateField 14 = fieldNorm (\x up -> up {_protocolVersion = x}) From
-updateField 15 = fieldNorm (\x up -> up {_minPoolCost = x}) From
-updateField 16 = fieldNorm (\x up -> up {_adaPerUTxOByte = x}) From
-updateField 17 = fieldAnn (\x up -> up {_costmdls = x}) (mapDecodeA (Ann From) From)
-updateField 18 = fieldNorm (\x up -> up {_prices = x}) From
-updateField 19 = fieldNorm (\x up -> up {_maxTxExUnits = x}) From
-updateField 20 = fieldNorm (\x up -> up {_maxBlockExUnits = x}) From
+updateField :: Word -> Field (PParamsUpdate era)
+updateField 0 = field (\x up -> up {_minfeeA = SJust x}) From
+updateField 1 = field (\x up -> up {_minfeeB = SJust x}) From
+updateField 2 = field (\x up -> up {_maxBBSize = SJust x}) From
+updateField 3 = field (\x up -> up {_maxTxSize = SJust x}) From
+updateField 4 = field (\x up -> up {_maxBHSize = SJust x}) From
+updateField 5 = field (\x up -> up {_keyDeposit = SJust x}) From
+updateField 6 = field (\x up -> up {_poolDeposit = SJust x}) From
+updateField 7 = field (\x up -> up {_eMax = SJust x}) From
+updateField 8 = field (\x up -> up {_nOpt = SJust x}) From
+updateField 9 = field (\x up -> up {_a0 = x}) (D $ SJust <$> ratioFromCBOR)
+updateField 10 = field (\x up -> up {_rho = SJust x}) From
+updateField 11 = field (\x up -> up {_tau = SJust x}) From
+updateField 12 = field (\x up -> up {_d = SJust x}) From
+updateField 13 = field (\x up -> up {_extraEntropy = SJust x}) From
+updateField 14 = field (\x up -> up {_protocolVersion = SJust x}) From
+updateField 15 = field (\x up -> up {_minPoolCost = SJust x}) From
+updateField 16 = field (\x up -> up {_adaPerUTxOByte = SJust x}) From
+updateField 17 = field (\x up -> up {_costmdls = x}) (D $ SJust <$> mapFromCBOR)
+updateField 18 = field (\x up -> up {_prices = SJust x}) From
+updateField 19 = field (\x up -> up {_maxTxExUnits = SJust x}) From
+updateField 20 = field (\x up -> up {_maxBlockExUnits = SJust x}) From
 updateField k = field (\_x up -> up) (Invalid k)
 
-instance (Era era) => FromCBOR (Annotator (PParamsUpdate era)) where
+instance (Era era) => FromCBOR (PParamsUpdate era) where
   fromCBOR =
     decode
-      (SparseKeyed "PParamsUpdate" (pure emptyPParamsUpdate) updateField [])
+      (SparseKeyed "PParamsUpdate" emptyPParamsUpdate updateField [])
 
 -- =================================================================
 
@@ -421,8 +405,8 @@ instance NoThunks (ProposedPPUpdates era)
 instance Era era => ToCBOR (ProposedPPUpdates era) where
   toCBOR (ProposedPPUpdates m) = mapToCBOR m
 
-instance Era era => FromCBOR (Annotator (ProposedPPUpdates era)) where
-  fromCBOR = (ProposedPPUpdates <$>) <$> (decode (mapDecodeA (Ann From) From)) -- splitMapFromCBOR fromCBOR fromCBOR
+instance Era era => FromCBOR (ProposedPPUpdates era) where
+  fromCBOR = ProposedPPUpdates <$> mapFromCBOR
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty
@@ -507,13 +491,12 @@ pattern OtherView n <- LangDepViewConstr (Memo (RawOtherView cm) _)
 
 {-# COMPLETE PlutusView {- OtherView -} #-}
 
-instance (Typeable era) => FromCBOR (Annotator (LangDepView era)) where
+instance (Typeable era) => FromCBOR (LangDepView era) where
   fromCBOR = decode $ Summands "LangDepView" decodeTag
     where
-      decodeTag :: Word -> Decode 'Open (Annotator (LangDepView era))
-      decodeTag 0 = Ann (SumD PlutusView) <*! From
-      -- Since CostModel has only (FromCBOR (Annotator CostModel) insatnce
-      -- decodeTag 1 = Ann (SumD OtherView) <*! (Ann From)
+      decodeTag :: Word -> Decode 'Open (LangDepView era)
+      decodeTag 0 = SumD PlutusView <! From
+      -- decodeTag 1 = SumD OtherView <! From
       -- Since Int has FromCBOR instance
       decodeTag n = Invalid n
 

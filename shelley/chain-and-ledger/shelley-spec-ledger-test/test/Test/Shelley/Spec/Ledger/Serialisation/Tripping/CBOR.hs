@@ -179,7 +179,7 @@ prop_roundtrip_PrtclState :: STS.PrtclState Mock.C_Crypto -> Property
 prop_roundtrip_PrtclState = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_LedgerState :: Ledger.LedgerState Mock.C -> Property
-prop_roundtrip_LedgerState = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
+prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_NewEpochState :: Ledger.NewEpochState Mock.C -> Property
 prop_roundtrip_NewEpochState = roundtrip2 toCBOR fromCBOR

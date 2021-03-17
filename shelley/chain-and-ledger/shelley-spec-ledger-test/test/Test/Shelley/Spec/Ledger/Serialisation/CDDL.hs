@@ -89,8 +89,8 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(TxIn ShelleyC) n "transaction_input",
       cddlTest' @(Metadata ShelleyE) n "transaction_metadata",
       cddlTest' @(MultiSig ShelleyC) n "multisig_script",
-      cddlTest' @(Update ShelleyE) n "update",
-      cddlTest' @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",
+      cddlTest @(Update ShelleyE) n "update",
+      cddlTest @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",
       cddlTest @(PParamsUpdate ShelleyE) n "protocol_param_update",
       cddlTest' @(Tx ShelleyE) n "transaction",
       cddlTest' @(LaxBlock ShelleyE) n "block"

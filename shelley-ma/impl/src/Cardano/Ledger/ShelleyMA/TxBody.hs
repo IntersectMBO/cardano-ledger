@@ -75,8 +75,7 @@ import Data.Coders
     decode,
     decodeSet,
     decodeStrictSeq,
-    fieldA,
-    fieldAA,
+    field,
     (!>),
   )
 import qualified Data.Map as Map
@@ -112,8 +111,8 @@ type FamsFrom era =
     Show (Value era),
     DecodeNonNegative (Value era),
     DecodeMint (Value era),
-    FromCBOR (Annotator (Core.PParams era)),
-    FromCBOR (Annotator (PParamsDelta era)),
+    FromCBOR (Core.PParams era),
+    FromCBOR (PParamsDelta era),
     FromCBOR (Value era),
     FromCBOR (Annotator (Script era)) -- Arises becaause DCert memoizes its bytes
   )
@@ -165,15 +164,21 @@ deriving instance
   (NoThunks (Value era), NoThunks (PParamsDelta era)) =>
   NoThunks (TxBodyRaw era)
 
-instance (FamsFrom era) => FromCBOR (Annotator (TxBodyRaw era)) where
+instance (FamsFrom era) => FromCBOR (TxBodyRaw era) where
   fromCBOR =
     decode
       ( SparseKeyed
           "TxBodyRaw"
-          (pure initial)
+          initial
           bodyFields
           [(0, "inputs"), (1, "outputs"), (2, "txfee")]
       )
+
+instance
+  (FamsFrom era) =>
+  FromCBOR (Annotator (TxBodyRaw era))
+  where
+  fromCBOR = pure <$> fromCBOR
 
 isSNothing :: StrictMaybe a -> Bool
 isSNothing SNothing = True
@@ -211,18 +216,18 @@ txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frg
     !> encodeKeyedStrictMaybe 8 bot
     !> Omit isZero (Key 9 (E encodeMint frge))
 
-bodyFields :: FamsFrom era => Word -> Field (Annotator (TxBodyRaw era))
-bodyFields 0 = fieldA (\x tx -> tx {inputs = x}) (D (decodeSet fromCBOR))
-bodyFields 1 = fieldA (\x tx -> tx {outputs = x}) (D (decodeStrictSeq fromCBOR))
-bodyFields 2 = fieldA (\x tx -> tx {txfee = x}) From
-bodyFields 3 = fieldA (\x tx -> tx {vldt = (vldt tx) {invalidHereafter = x}}) (D (SJust <$> fromCBOR))
-bodyFields 4 = fieldA (\x tx -> tx {certs = x}) (D (decodeStrictSeq fromCBOR))
-bodyFields 5 = fieldA (\x tx -> tx {wdrls = x}) From
-bodyFields 6 = fieldAA (\x tx -> tx {update = x}) (D (fmap SJust <$> fromCBOR))
-bodyFields 7 = fieldA (\x tx -> tx {adHash = x}) (D (SJust <$> fromCBOR))
-bodyFields 8 = fieldA (\x tx -> tx {vldt = (vldt tx) {invalidBefore = x}}) (D (SJust <$> fromCBOR))
-bodyFields 9 = fieldA (\x tx -> tx {mint = x}) (D decodeMint)
-bodyFields n = fieldA (\_ t -> t) (Invalid n)
+bodyFields :: FamsFrom era => Word -> Field (TxBodyRaw era)
+bodyFields 0 = field (\x tx -> tx {inputs = x}) (D (decodeSet fromCBOR))
+bodyFields 1 = field (\x tx -> tx {outputs = x}) (D (decodeStrictSeq fromCBOR))
+bodyFields 2 = field (\x tx -> tx {txfee = x}) From
+bodyFields 3 = field (\x tx -> tx {vldt = (vldt tx) {invalidHereafter = x}}) (D (SJust <$> fromCBOR))
+bodyFields 4 = field (\x tx -> tx {certs = x}) (D (decodeStrictSeq fromCBOR))
+bodyFields 5 = field (\x tx -> tx {wdrls = x}) From
+bodyFields 6 = field (\x tx -> tx {update = x}) (D (SJust <$> fromCBOR))
+bodyFields 7 = field (\x tx -> tx {adHash = x}) (D (SJust <$> fromCBOR))
+bodyFields 8 = field (\x tx -> tx {vldt = (vldt tx) {invalidBefore = x}}) (D (SJust <$> fromCBOR))
+bodyFields 9 = field (\x tx -> tx {mint = x}) (D decodeMint)
+bodyFields n = field (\_ t -> t) (Invalid n)
 
 initial :: (Val (Value era)) => TxBodyRaw era
 initial =

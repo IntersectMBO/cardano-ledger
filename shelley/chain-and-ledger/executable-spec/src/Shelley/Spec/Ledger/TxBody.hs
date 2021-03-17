@@ -117,12 +117,11 @@ import Data.Coders
     Density (..),
     Dual (..),
     Encode (..),
-    Field (..),
+    Field,
     Wrapped (..),
     decode,
     encode,
-    fieldA,
-    fieldAA,
+    field,
     (!>),
   )
 import Data.Constraint (Constraint)
@@ -705,18 +704,25 @@ deriving instance (Era era, TransTxBody Show era) => Show (TxBodyRaw era)
 instance
   ( FromCBOR (Core.TxOut era),
     Era era,
-    FromCBOR (Annotator (PParamsDelta era))
+    FromCBOR (PParamsDelta era),
+    ToCBOR (PParamsDelta era)
   ) =>
-  FromCBOR (Annotator (TxBodyRaw era))
+  FromCBOR (TxBodyRaw era)
   where
   fromCBOR =
     decode
       ( SparseKeyed
           "TxBody"
-          (pure baseTxBodyRaw)
+          baseTxBodyRaw
           boxBody
           [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")]
       )
+
+instance
+  (TransTxBody FromCBOR era, ToCBOR (PParamsDelta era), Era era) =>
+  FromCBOR (Annotator (TxBodyRaw era))
+  where
+  fromCBOR = pure <$> fromCBOR
 
 -- =================================================================
 -- Composable components for building TxBody optional sparse serialisers.
@@ -731,20 +737,7 @@ instance
 --   Like this: (Omit isNothing (Key v (ED omitStrictNothingDual x))).
 --   Neither the Omit or the key is needed for Decoders.
 omitStrictNothingDual :: (FromCBOR t, ToCBOR t) => Dual (StrictMaybe t)
-omitStrictNothingDual =
-  Dual
-    (toCBOR . fromJust . strictMaybeToMaybe)
-    (SJust <$> fromCBOR)
-
-encodeStrictNothing ::
-  ToCBOR t =>
-  StrictMaybe t ->
-  Encode ('Closed 'Dense) (StrictMaybe t)
-encodeStrictNothing = E $ toCBOR . fromJust . strictMaybeToMaybe
-
-decodeStrictNothingA ::
-  FromCBOR (Annotator a) => Decode ('Closed 'Dense) (Annotator (StrictMaybe a))
-decodeStrictNothingA = fmap SJust <$> From
+omitStrictNothingDual = Dual (toCBOR . fromJust . strictMaybeToMaybe) (SJust <$> fromCBOR)
 
 isSNothing :: StrictMaybe a -> Bool
 isSNothing SNothing = True
@@ -756,25 +749,26 @@ isSNothing _ = False
 boxBody ::
   ( Era era,
     FromCBOR (Core.TxOut era),
-    FromCBOR (Annotator (PParamsDelta era))
+    FromCBOR (PParamsDelta era),
+    ToCBOR (PParamsDelta era)
   ) =>
   Word ->
-  Field (Annotator (TxBodyRaw era))
-boxBody 0 = fieldA (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
-boxBody 1 = fieldA (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
-boxBody 4 = fieldA (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
-boxBody 5 = fieldA (\x tx -> tx {_wdrlsX = x}) From
-boxBody 2 = fieldA (\x tx -> tx {_txfeeX = x}) From
-boxBody 3 = fieldA (\x tx -> tx {_ttlX = x}) From
-boxBody 6 = fieldAA (\x tx -> tx {_txUpdateX = x}) decodeStrictNothingA
-boxBody 7 = fieldA (\x tx -> tx {_mdHashX = x}) (DD omitStrictNothingDual)
-boxBody n = fieldA (\_ t -> t) (Invalid n)
+  Field (TxBodyRaw era)
+boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
+boxBody 1 = field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
+boxBody 4 = field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
+boxBody 5 = field (\x tx -> tx {_wdrlsX = x}) From
+boxBody 2 = field (\x tx -> tx {_txfeeX = x}) From
+boxBody 3 = field (\x tx -> tx {_ttlX = x}) From
+boxBody 6 = field (\x tx -> tx {_txUpdateX = x}) (DD omitStrictNothingDual)
+boxBody 7 = field (\x tx -> tx {_mdHashX = x}) (DD omitStrictNothingDual)
+boxBody n = field (\_ t -> t) (Invalid n)
 
 -- | Tells how to serialise each field, and what tag to label it with in the
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
 txSparse ::
-  (TransTxBody ToCBOR era, Era era) =>
+  (TransTxBody ToCBOR era, FromCBOR (PParamsDelta era), Era era) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
@@ -785,7 +779,7 @@ txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
     !> Key 3 (To ttl)
     !> Omit null (Key 4 (E encodeFoldable cert))
     !> Omit (null . unWdrl) (Key 5 (To wdrl))
-    !> Omit isSNothing (Key 6 (encodeStrictNothing update))
+    !> Omit isSNothing (Key 6 (ED omitStrictNothingDual update))
     !> Omit isSNothing (Key 7 (ED omitStrictNothingDual hash))
 
 -- The initial TxBody. We will overide some of these fields as we build a TxBody,
@@ -805,7 +799,7 @@ baseTxBodyRaw =
 
 instance
   ( Era era,
-    FromCBOR (Annotator (PParamsDelta era)),
+    FromCBOR (PParamsDelta era),
     TransTxBody ToCBOR era
   ) =>
   ToCBOR (TxBodyRaw era)
@@ -835,13 +829,14 @@ deriving via
   instance
     ( Era era,
       FromCBOR (Core.TxOut era),
-      FromCBOR (Annotator (PParamsDelta era))
+      FromCBOR (PParamsDelta era),
+      ToCBOR (PParamsDelta era)
     ) =>
     FromCBOR (Annotator (TxBody era))
 
 -- | Pattern for use by external users
 pattern TxBody ::
-  (Era era, FromCBOR (Annotator (PParamsDelta era)), TransTxBody ToCBOR era) =>
+  (Era era, FromCBOR (PParamsDelta era), TransTxBody ToCBOR era) =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (Core.TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
