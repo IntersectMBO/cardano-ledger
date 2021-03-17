@@ -129,6 +129,7 @@ collisionFreeComplete ::
   ( EraGen era,
     ShelleyTest era,
     TransValue ToCBOR era,
+    Core.Tx era ~ Tx era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
@@ -162,6 +163,7 @@ adaPreservationChain ::
   forall era.
   ( EraGen era,
     ShelleyTest era,
+    Core.Tx era ~ Tx era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
@@ -293,6 +295,7 @@ potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
 potsSumIncreaseWdrlsPerTx ::
   forall era.
   ( ChainProperty era,
+    Core.Tx era ~ Tx era,
     UsesTxOut era,
     UsesPParams era,
     TransValue ToCBOR era,
@@ -332,6 +335,7 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
 potsSumIncreaseByRewardsPerTx ::
   ( ChainProperty era,
     UsesTxOut era,
+    Core.Tx era ~ Tx era,
     UsesPParams era,
     TransValue ToCBOR era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
@@ -376,6 +380,7 @@ potsRewardsDecreaseByWdrlsPerTx ::
   ( ChainProperty era,
     UsesPParams era,
     UsesTxOut era,
+    Core.Tx era ~ Tx era,
     TransValue ToCBOR era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
@@ -427,6 +432,7 @@ preserveBalance ::
   ( ChainProperty era,
     UsesPParams era,
     UsesTxOut era,
+    Core.Tx era ~ Tx era,
     TransValue ToCBOR era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
@@ -477,6 +483,7 @@ preserveBalanceRestricted ::
   ( ChainProperty era,
     UsesPParams era,
     UsesTxOut era,
+    Core.Tx era ~ Tx era,
     TransValue ToCBOR era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
@@ -522,6 +529,7 @@ preserveOutputsTx ::
   forall era.
   ( ChainProperty era,
     UsesTxOut era,
+    Core.Tx era ~ Tx era,
     UsesPParams era,
     TransValue ToCBOR era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
@@ -555,6 +563,7 @@ eliminateTxInputs ::
   forall era.
   ( ChainProperty era,
     UsesTxOut era,
+    Core.Tx era ~ Tx era,
     UsesPParams era,
     TransValue ToCBOR era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
@@ -589,6 +598,7 @@ newEntriesAndUniqueTxIns ::
   forall era.
   ( ChainProperty era,
     UsesTxOut era,
+    Core.Tx era ~ Tx era,
     UsesPParams era,
     TransValue ToCBOR era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
@@ -633,6 +643,7 @@ requiredMSigSignaturesSubset ::
   forall era.
   ( EraGen era,
     UsesTxOut era,
+    Core.Tx era ~ Tx era,
     UsesPParams era,
     TransValue ToCBOR era,
     ChainProperty era,
@@ -867,6 +878,7 @@ ledgerTraceFromBlock ::
   ( ChainProperty era,
     UsesTxOut era,
     UsesPParams era,
+    Core.Tx era ~ Tx era,
     TransValue ToCBOR era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
