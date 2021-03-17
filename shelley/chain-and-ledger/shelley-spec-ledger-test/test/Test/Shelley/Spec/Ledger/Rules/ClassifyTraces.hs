@@ -84,7 +84,7 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.PParams as PParams (Update)
 import Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
-import Shelley.Spec.Ledger.Tx (Tx (..))
+import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet)
 import Shelley.Spec.Ledger.TxBody
   ( TxIn,
     Wdrl (..),
@@ -113,6 +113,8 @@ relevantCasesAreCovered ::
   ( EraGen era,
     ShelleyTest era,
     ChainProperty era,
+    Core.Tx era ~ Tx era,
+    Core.Witnesses era ~ WitnessSet era,
     QC.HasTrace (CHAIN era) (GenEnv era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -134,6 +136,8 @@ relevantCasesAreCoveredForTrace ::
   forall era.
   ( ChainProperty era,
     UsesTxOut era,
+    Core.Witnesses era ~ WitnessSet era,
+    Core.Tx era ~ Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))

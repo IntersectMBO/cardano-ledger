@@ -163,6 +163,7 @@ import Shelley.Spec.Ledger.Tx
   ( Tx,
     TxIn,
     pattern TxIn,
+    WitnessSet,
   )
 import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.TxBody
@@ -514,10 +515,12 @@ mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
       sig = signedKES () kpDiff bhb hotKey
    in BHeader bhb sig
 
-mkBlock ::
+mkBlock :: forall era r.
   ( UsesTxBody era,
     UsesScript era,
     UsesAuxiliary era,
+    Core.Tx era ~ Tx era,
+    Core.Witnesses era ~ WitnessSet era,
     Mock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -540,16 +543,18 @@ mkBlock ::
   OCert (Crypto era) ->
   Block era
 mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
-  let bodySize = fromIntegral $ bBodySize $ (TxSeq . StrictSeq.fromList) txns
-      bodyHash = bbHash $ TxSeq $ StrictSeq.fromList txns
+  let bodySize = fromIntegral $ bBodySize $ (TxSeq @era . StrictSeq.fromList) txns
+      bodyHash = bbHash $ TxSeq @era $ StrictSeq.fromList txns
       bh = mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash
-   in Block bh (TxSeq $ StrictSeq.fromList txns)
+   in Block bh (TxSeq @era $ StrictSeq.fromList txns)
 
 -- | Create a block with a faked VRF result.
-mkBlockFakeVRF ::
+mkBlockFakeVRF :: forall era r.
   ( UsesTxBody era,
     UsesScript era,
     UsesAuxiliary era,
+    Core.Witnesses era ~ WitnessSet era,
+    Core.Tx era ~ Tx era,
     ExMock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -595,8 +600,8 @@ mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0
               (WithResult leaderNonce (fromIntegral $ unitIntervalToNatural l))
               (fst $ vrf pkeys)
           )
-          (fromIntegral $ bBodySize $ (TxSeq . StrictSeq.fromList) txns)
-          (bbHash $ TxSeq $ StrictSeq.fromList txns)
+          (fromIntegral $ bBodySize $ (TxSeq @era . StrictSeq.fromList) txns)
+          (bbHash $ TxSeq @era $ StrictSeq.fromList txns)
           oCert
           (ProtVer 0 0)
       kpDiff = kesPeriod - c0
@@ -606,7 +611,7 @@ mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0
         Just hkey -> hkey
       sig = signedKES () kpDiff bhb hotKey
       bh = BHeader bhb sig
-   in Block bh (TxSeq $ StrictSeq.fromList txns)
+   in Block bh (TxSeq @era $ StrictSeq.fromList txns)
 
 -- | We provide our own nonces to 'mkBlock', which we then wish to recover as
 -- the output of the VRF functions. In general, however, we just derive them

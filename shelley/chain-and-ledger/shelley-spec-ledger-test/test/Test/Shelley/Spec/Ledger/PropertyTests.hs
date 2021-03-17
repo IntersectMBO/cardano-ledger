@@ -31,6 +31,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update (..))
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
+import Shelley.Spec.Ledger.Tx(WitnessSet)
 import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
@@ -66,6 +67,7 @@ minimalPropertyTests ::
   ( EraGen era,
     ShelleyTest era,
     Core.Tx era ~ Tx era,
+    Core.Witnesses era ~ WitnessSet era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
@@ -106,6 +108,7 @@ propertyTests ::
   ( EraGen era,
     ShelleyTest era,
     Core.Tx era ~ Tx era,
+    Core.Witnesses era ~ WitnessSet era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),

@@ -231,7 +231,8 @@ checkPreservation SourceSignalTarget {source, target} =
 -- then the total rewards should change only by withdrawals
 checkWithdrawlBound ::
   ( ChainProperty era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Core.Tx era ~ Tx era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -261,7 +262,8 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
 -- increases by Withdrawals min Fees (for all transactions in a block)
 utxoDepositsIncreaseByFeesWithdrawals ::
   ( ChainProperty era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Core.Tx era ~ Tx era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -278,7 +280,8 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
 -- increases by sum of withdrawals for all transactions in a block
 potsSumIncreaseWdrlsPerBlock ::
   ( ChainProperty era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Core.Tx era ~ Tx era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -684,6 +687,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
 noDoubleSpend ::
   forall era.
   ( ChainProperty era,
+    Core.Tx era ~ Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -712,7 +716,8 @@ noDoubleSpend SourceSignalTarget {signal} =
 
 withdrawals ::
   ( ChainProperty era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Core.Tx era ~ Tx era
   ) =>
   Block era ->
   Coin
@@ -726,7 +731,8 @@ withdrawals block =
     $ (txSeqTxns' . bbody) block
 
 txFees ::
-  ( ChainProperty era
+  ( ChainProperty era,
+    Core.Tx era ~ Tx era
   ) =>
   Block era ->
   Coin
@@ -770,7 +776,8 @@ poolProperties ::
     ShelleyTest era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Core.Tx era ~ Tx era
   ) =>
   Property
 poolProperties =
@@ -788,7 +795,8 @@ poolRetirement ::
   ( ChainProperty era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_eMax" (Core.PParams era) EpochNo,
-    HasField "_minPoolCost" (Core.PParams era) Coin
+    HasField "_minPoolCost" (Core.PParams era) Coin,
+    Core.Tx era ~ Tx era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -807,7 +815,8 @@ poolRegistration ::
   ( ChainProperty era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_eMax" (Core.PParams era) EpochNo,
-    HasField "_minPoolCost" (Core.PParams era) Coin
+    HasField "_minPoolCost" (Core.PParams era) Coin,
+    Core.Tx era ~ Tx era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -823,7 +832,8 @@ poolStateIsInternallyConsistent ::
   ( ChainProperty era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_eMax" (Core.PParams era) EpochNo,
-    HasField "_minPoolCost" (Core.PParams era) Coin
+    HasField "_minPoolCost" (Core.PParams era) Coin,
+    Core.Tx era ~ Tx era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -845,7 +855,8 @@ delegProperties ::
     ShelleyTest era,
     QC.HasTrace (CHAIN era) (GenEnv era),
     ChainProperty era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Core.Tx era ~ Tx era
   ) =>
   Property
 delegProperties =
@@ -910,7 +921,8 @@ poolTraceFromBlock ::
   ( ChainProperty era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_eMax" (Core.PParams era) EpochNo,
-    HasField "_minPoolCost" (Core.PParams era) Coin
+    HasField "_minPoolCost" (Core.PParams era) Coin,
+    Core.Tx era ~ Tx era
   ) =>
   ChainState era ->
   Block era ->
@@ -937,7 +949,8 @@ poolTraceFromBlock chainSt block =
 delegTraceFromBlock ::
   forall era.
   ( ChainProperty era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Core.Tx era ~ Tx era
   ) =>
   ChainState era ->
   Block era ->
@@ -969,7 +982,11 @@ delegTraceFromBlock chainSt block =
 -- (in the same way that the CHAIN rule TICKs the slot before processing
 -- transactions with the LEDGERS rule)
 ledgerTraceBase ::
-  (Era era, GetLedgerView era, ApplyBlock era) =>
+  ( Era era,
+    GetLedgerView era,
+    ApplyBlock era,
+    Core.Tx era ~ Tx era
+  ) =>
   ChainState era ->
   Block era ->
   ( ChainState era,

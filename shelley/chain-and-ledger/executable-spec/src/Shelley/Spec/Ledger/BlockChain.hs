@@ -33,6 +33,7 @@ module Shelley.Spec.Ledger.BlockChain
     Block (Block, Block'),
     LaxBlock (..),
     TxSeq (TxSeq, txSeqTxns', TxSeq'),
+    txSeqTxns,
     HashBBody (..),
     bhHash,
     bbHash,
@@ -84,7 +85,6 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Cardano.Ledger.SafeHash (EraIndependentBlockBody, SafeToHash(..))
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -200,6 +200,7 @@ deriving stock instance
   Eq (Core.Tx era)  =>
   Eq (TxSeq era)
 
+
 witnessBytes :: forall era.
  ( SafeToHash (Core.Witnesses era),
     HasField "witnessSet" (Core.Tx era) (Core.Witnesses era)
@@ -210,7 +211,7 @@ witnessBytes coretx =
     getField @"witnessSet" coretx
 
 pattern TxSeq :: forall era.
-  ( Era era, UsesTxBody era, UsesAuxiliary era, UsesScript era,
+  ( Era era, ToCBOR (Core.TxBody era),ToCBOR (Core.Script era), ToCBOR (Core.AuxiliaryData era),
     SafeToHash (Core.Witnesses era),
     HasField "witnessSet" (Core.Tx era) (Core.Witnesses era)
   ) =>
@@ -239,6 +240,10 @@ pattern TxSeq xs <-
             }
 
 {-# COMPLETE TxSeq #-}
+
+txSeqTxns :: TxSeq era -> StrictSeq(Core.Tx era)
+txSeqTxns (TxSeq' ts _ _ _) = ts
+
 
 instance
   Era era =>

@@ -77,6 +77,8 @@ type TxGen era =
 genBlock ::
   forall era.
   ( ShelleyTest era,
+    Core.Witnesses era ~ WitnessSet era,
+    Core.Tx era ~ Tx era,
     ApplyBlock era,
     Mock (Crypto era),
     GetLedgerView era,
@@ -97,6 +99,8 @@ genBlockWithTxGen ::
   forall era.
   ( ShelleyTest era,
     Mock (Crypto era),
+    Core.Tx era ~ Tx era,
+    Core.Witnesses era ~ WitnessSet era,
     GetLedgerView era,
     ApplyBlock era
   ) =>

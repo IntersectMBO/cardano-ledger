@@ -88,6 +88,8 @@ instance
     UsesTxBody era,
     UsesTxOut era,
     UsesValue era,
+    Core.Tx era ~ Tx era,
+    Core.Witnesses era ~ WitnessSet era,
     UsesAuxiliary era,
     Mock (Crypto era),
     ApplyBlock era,
