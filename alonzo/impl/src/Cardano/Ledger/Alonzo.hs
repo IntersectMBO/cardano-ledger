@@ -17,6 +17,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script, isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (Tx)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
+import Cardano.Ledger.Alonzo.TxWitness(TxWitness)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC

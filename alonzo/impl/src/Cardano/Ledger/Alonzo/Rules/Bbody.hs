@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Alonzo.Bbody
+module Cardano.Ledger.Alonzo.Rules.Bbody
 {-
   ( BBODY,
     BbodyState (..),
@@ -23,6 +23,7 @@ module Cardano.Ledger.Alonzo.Bbody
 -}
 where
 
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
@@ -54,6 +55,7 @@ import Shelley.Spec.Ledger.BlockChain
     hBbsize,
     incrBlocks,
     issuerIDfromBHBody,
+    txSeqTxns,
   )
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
@@ -72,7 +74,7 @@ import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 -- import changes
 
 -- import Shelley.Spec.Ledger.Tx (Tx)
-import Cardano.Ledger.Alonzo.Tx(Tx)
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo(Tx)
 
 import Cardano.Ledger.Alonzo.Rules.Ledger(AlonzoLEDGER)
 import Shelley.Spec.Ledger.STS.Bbody
@@ -88,23 +90,31 @@ import Data.Kind(Type)
 data AlonzoBBODY era
 
 
+-- HasField "totExunits" (Tx era) ExUnits
+-- totExunits = getField @"totExunits" tx
+
+
+
 bbodyTransition ::
   forall (someBBODY:: Type -> Type) era.
-  ( STS (someBBODY era),
+  ( -- Conditions that the Abstract someBBODY must meet
+    STS (someBBODY era),
     Signal (someBBODY era) ~ Block era,
     PredicateFailure (someBBODY era) ~ BbodyPredicateFailure era,
     BaseM (someBBODY era) ~ ShelleyBase,
     State (someBBODY era) ~ BbodyState era,
     Environment (someBBODY era) ~ BbodyEnv era,
 
-    Core.Tx era ~ Shelley.Tx era,
-
-
+    -- Conditions to be an instance of STS
     Embed (Core.EraRule "LEDGERS" era) (someBBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
-    HasField "_d" (Core.PParams era) UnitInterval
+
+    -- Conditions to define the rule in this Era
+    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "totExunits" (Core.Tx era) ExUnits,
+    Era era -- supplies WellFormed HasField, and Crypto constraints
   ) =>
   TransitionRule (someBBODY era)
 bbodyTransition =
@@ -115,7 +125,7 @@ bbodyTransition =
                Block (BHeader bhb _) txsSeq
                )
            ) -> do
-        let TxSeq txs = txsSeq
+        let txs = txSeqTxns txsSeq
             actualBodySize = bBodySize txsSeq
             actualBodyHash = bbHash txsSeq
 
@@ -137,6 +147,9 @@ bbodyTransition =
           ei <- asks epochInfo
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
+
+        let tots:: ExUnits
+            tots = foldr (<>) mempty (fmap (getField @"totExunits") txs)
         pure $
           BbodyState @era
             ls'
@@ -146,39 +159,35 @@ bbodyTransition =
                 b
             )
 
-
-
-
-{-
 instance
-  ( UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era,
+  ( Era era,
+    Core.Tx era ~ Alonzo.Tx era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    Embed (Core.EraRule "LEDGERS" era) (BBODY era),
+    Embed (Core.EraRule "LEDGERS" era) (AlonzoBBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Alonzo.Tx era),
     HasField "_d" (Core.PParams era) UnitInterval
   ) =>
-  STS (BBODY era)
+  STS (AlonzoBBODY era)
   where
   type
-    State (BBODY era) =
+    State (AlonzoBBODY era) =
       BbodyState era
 
   type
-    Signal (BBODY era) =
+    Signal (AlonzoBBODY era) =
       Block era
 
-  type Environment (BBODY era) = BbodyEnv era
+  type Environment (AlonzoBBODY era) = BbodyEnv era
 
-  type BaseM (BBODY era) = ShelleyBase
+  type BaseM (AlonzoBBODY era) = ShelleyBase
 
-  type PredicateFailure (BBODY era) = BbodyPredicateFailure era
+  type PredicateFailure (AlonzoBBODY era) = BbodyPredicateFailure era
 
   initialRules = []
-  transitionRules = [bbodyTransition]
+  transitionRules = [bbodyTransition @AlonzoBBODY]
+
 
 instance
   ( Era era,
@@ -188,8 +197,6 @@ instance
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era
   ) =>
-  Embed ledgers (BBODY era)
+  Embed ledgers (AlonzoBBODY era)
   where
   wrapFailed = LedgersFailure
-
--}
