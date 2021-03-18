@@ -80,7 +80,14 @@ module Cardano.Ledger.Alonzo.Tx
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (toCBOR),
+    encodeListLen,
+    encodeNull,
+    serialize,
+    serializeEncoding,
+  )
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, getLanguageView)
@@ -118,7 +125,8 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
-import qualified Data.ByteString.Short as SBS (length)
+import qualified Data.ByteString.Lazy as LBS (toStrict)
+import qualified Data.ByteString.Short as SBS (length, toShort)
 import Data.Coders
 import Data.List (foldl')
 import qualified Data.Map as Map
@@ -808,18 +816,15 @@ alonzoSeqTx ::
   ) =>
   Annotator (Core.TxBody era) ->
   Annotator (TxWitness era) ->
-  Annotator Bool ->
+  Bool ->
   Maybe (Annotator (Core.AuxiliaryData era)) ->
   Annotator (Tx era)
 alonzoSeqTx
   bodyAnn
   witsAnn
-  isvalAnn
-  metaAnn = undefined
-
-{-
-Annotator $ \bytes ->
-    let body = runAnnotator bodyAnn bytes
+  isval
+  metaAnn = Annotator $ \bytes ->
+    let bodyb = runAnnotator bodyAnn bytes
         witnessSet = runAnnotator witsAnn bytes
         metadata = flip runAnnotator bytes <$> metaAnn
         wrappedMetadataBytes = case metadata of
@@ -827,13 +832,8 @@ Annotator $ \bytes ->
           Just b -> serialize b
         fullBytes =
           (serializeEncoding $ encodeListLen 3)
-            <> serialize body
+            <> serialize bodyb
             <> serialize witnessSet
             <> wrappedMetadataBytes
-     in Tx'
-          { _bodyS = body,
-            _witnessSetS = witnessSet,
-            _metadataS = maybeToStrictMaybe metadata,
-            txFullBytes = fullBytes
-          }
--}
+        shortBytes = SBS.toShort (LBS.toStrict fullBytes)
+     in TxConstr (Memo (TxRaw bodyb witnessSet (IsValidating isval) (maybeToStrictMaybe metadata)) shortBytes)

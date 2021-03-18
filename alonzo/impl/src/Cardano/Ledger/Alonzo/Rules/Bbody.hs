@@ -21,7 +21,7 @@ where
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (Tx)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (BlockDecoding, Era (Crypto))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -110,6 +110,7 @@ bbodyTransition ::
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
     -- Conditions to define the rule in this Era
+    BlockDecoding era,
     HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
     HasField "totExunits" (Core.Tx era) ExUnits,
@@ -171,7 +172,8 @@ instance
     Era era,
     Core.Tx era ~ Alonzo.Tx era,
     HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_maxBlockExUnits" (Core.PParams era) ExUnits
+    HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
+    BlockDecoding era
   ) =>
   STS (AlonzoBBODY era)
   where
