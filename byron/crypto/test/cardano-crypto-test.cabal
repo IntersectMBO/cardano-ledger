@@ -60,5 +60,5 @@ library
                      , cardano-prelude
                      , cardano-prelude-test
                      , cryptonite
-                     , hedgehog >= 1.0.5
+                     , hedgehog >= 1.0.4
                      , memory

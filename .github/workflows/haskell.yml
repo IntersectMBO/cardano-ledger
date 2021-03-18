@@ -13,10 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # WARNING Do not remove ghc-8.6.5 until doctests are working for ghc-8.10.x.
-        # Doctests for ghc-8.10.x are currently disabled via the CPP in DoctestDiscover.hs files
-        # See See https://gitlab.haskell.org/ghc/ghc/-/issues/19421
-        ghc: ["8.6.5", "8.10.4"]
+        ghc: ["8.10.4"]
         os: [ubuntu-latest]
 
     steps:

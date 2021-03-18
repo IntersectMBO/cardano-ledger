@@ -124,7 +124,7 @@ test-suite test
                      , cardano-prelude-test
                      , cryptonite
                      , formatting
-                     , hedgehog >= 1.0.5
+                     , hedgehog >= 1.0.4
                      , memory
                      , text
 
