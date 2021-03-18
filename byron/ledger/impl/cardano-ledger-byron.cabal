@@ -277,7 +277,7 @@ test-suite cardano-ledger-byron-test
                      , filepath
                      , formatting
                      , generic-monoid
-                     , hedgehog
+                     , hedgehog >= 1.0.5
                      , microlens
                      , resourcet
                      , small-steps
@@ -315,7 +315,7 @@ test-suite epoch-validation-normal-form-test
                      , cardano-prelude-test
                      , directory
                      , filepath
-                     , hedgehog
+                     , hedgehog >= 1.0.5
                      , resourcet
                      , silently
                      , streaming

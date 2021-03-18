@@ -127,7 +127,7 @@ library
                      , filepath
                      , formatting
                      , generic-monoid
-                     , hedgehog
+                     , hedgehog >= 1.0.5
                      , microlens
                      , resourcet
                      , small-steps
