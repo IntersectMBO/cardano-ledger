@@ -19,10 +19,12 @@ module Cardano.Ledger.Era
     translateEraMaybe,
     WellFormed,
     ValidateScript (..),
+    TxSeqAble (..),
   )
 where
 
 -- imports for the WellFormed constraint
+import Cardano.Binary (Annotator)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible (Compactible)
@@ -88,6 +90,21 @@ class
         (\x -> scriptPrefixTag @era x <> originalBytes x)
   isNativeScript :: Core.Script era -> Bool
   isNativeScript _ = True
+
+----------------------------------------------------------------------------
+-- Block Creation
+-- To create Blocks one has to recover a (Core.Tx) from 4 bytestrings
+-- Stores in a TxSeq. This method tells how to do this.
+----------------------------------------------------------------------------
+
+class TxSeqAble era where
+  seqTx ::
+    Annotator (Core.TxBody era) ->
+    Annotator (Core.Witnesses era) ->
+    Annotator Bool ->
+    Maybe (Annotator (Core.AuxiliaryData era)) ->
+    Annotator (Core.Tx era)
+  seqIsValidating :: Core.Tx era -> Bool
 
 --------------------------------------------------------------------------------
 -- Era translation

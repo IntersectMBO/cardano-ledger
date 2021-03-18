@@ -70,7 +70,6 @@ type family Tx era :: Type
 -- | The set of witnesses in a Tx
 type family Witnesses era :: Type
 
-
 -- | Common constraints
 --
 -- NOTE: 'Ord' is not included, as 'Ord' for a 'Block' or a 'NewEpochState'

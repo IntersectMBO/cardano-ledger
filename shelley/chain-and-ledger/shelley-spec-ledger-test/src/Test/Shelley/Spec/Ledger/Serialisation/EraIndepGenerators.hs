@@ -136,6 +136,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkBlock,
     mkBlockHeader,
     mkOCert,
+    PreAlonzo,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
@@ -792,8 +793,7 @@ genBlock ::
   ( UsesTxBody era,
     UsesScript era,
     UsesAuxiliary era,
-    Core.Tx era ~ Tx era,
-    Core.Witnesses era ~ WitnessSet era,
+    PreAlonzo era,
     ScriptClass era,
     Mock (Crypto era),
     Arbitrary (WitnessSet era),
@@ -831,8 +831,7 @@ instance
   ( UsesTxBody era,
     UsesScript era,
     UsesAuxiliary era,
-    Core.Tx era ~ Tx era,
-    Core.Witnesses era ~ WitnessSet era,
+    PreAlonzo era,
     Mock (Crypto era),
     ValidateScript era,
     Arbitrary (Core.TxBody era),
@@ -847,8 +846,7 @@ instance
 instance
   ( UsesTxBody era,
     UsesAuxiliary era,
-    Core.Tx era ~ Tx era,
-    Core.Witnesses era ~ WitnessSet era,
+    PreAlonzo era,
     EraGen era,
     Mock (Crypto era),
     ValidateScript era,

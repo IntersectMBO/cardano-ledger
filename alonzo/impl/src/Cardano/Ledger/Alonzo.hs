@@ -15,9 +15,9 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script, isPlutusScript)
-import Cardano.Ledger.Alonzo.Tx (Tx)
+import Cardano.Ledger.Alonzo.Tx (IsValidating (..), Tx, alonzoSeqTx, isValidating')
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
-import Cardano.Ledger.Alonzo.TxWitness(TxWitness)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -104,7 +104,6 @@ type instance Core.Tx (AlonzoEra c) = Tx (AlonzoEra c)
 
 type instance Core.Witnesses (AlonzoEra c) = TxWitness (AlonzoEra c)
 
-
 instance CC.Crypto c => UsesValue (AlonzoEra c)
 
 instance
@@ -120,6 +119,10 @@ instance
 instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
   validateAuxiliaryData = error ("NO validateAuxiliaryData yet.") -- TODO Fill this in
+
+instance CC.Crypto c => TxSeqAble (AlonzoEra c) where
+  seqTx body wit isval aux = alonzoSeqTx body wit isval aux
+  seqIsValidating tx = case isValidating' tx of IsValidating b -> b
 
 instance API.PraosCrypto c => API.ShelleyBasedEra (AlonzoEra c)
 

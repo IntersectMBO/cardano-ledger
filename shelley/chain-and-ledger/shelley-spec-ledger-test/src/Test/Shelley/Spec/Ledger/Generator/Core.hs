@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
@@ -46,18 +47,19 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     mkGenKey,
     genesisAccountState,
     genCoin,
+    PreAlonzo,
   )
 where
 
+import Cardano.Binary(ToCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.VRF (evalCertified)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Era (Crypto (..),TxSeqAble)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
-    UsesScript,
     UsesTxBody,
     UsesTxOut (..),
   )
@@ -204,6 +206,15 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 
 -- ==================================================
+
+type PreAlonzo era =
+  ( Core.Witnesses era ~ WitnessSet era,
+    Core.Tx era ~ Tx era,
+    TxSeqAble era,
+    ToCBOR (Core.AuxiliaryData era)
+  )
+
+-- =========================================
 
 data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
   { cold :: KeyPair r v,
@@ -517,10 +528,7 @@ mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
 
 mkBlock :: forall era r.
   ( UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era,
-    Core.Tx era ~ Tx era,
-    Core.Witnesses era ~ WitnessSet era,
+    PreAlonzo era,
     Mock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -551,10 +559,8 @@ mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF :: forall era r.
   ( UsesTxBody era,
-    UsesScript era,
     UsesAuxiliary era,
-    Core.Witnesses era ~ WitnessSet era,
-    Core.Tx era ~ Tx era,
+    PreAlonzo era,
     ExMock (Crypto era)
   ) =>
   -- | Hash of previous block

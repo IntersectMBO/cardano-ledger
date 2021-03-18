@@ -208,7 +208,6 @@ pattern WitnessSet {addrWits, scriptWits, bootWits} <-
 instance SafeToHash (WitnessSetHKD Identity era) where
   originalBytes = BSL.toStrict . txWitsBytes
 
-
 -- | Exports the relevant parts from a (WintessSetHKD Identity era) for
 --     use by the pretty printer without all the horrible constraints.
 --     Uses the non-exported WitnessSet' constructor.
@@ -364,10 +363,12 @@ segwitTx
           }
 
 instance
-  (Typeable era,
-   FromCBOR (Annotator (Core.Script era)),
-   ValidateScript era
-  ) => FromCBOR (Annotator (WitnessSetHKD Identity era)) where
+  ( Typeable era,
+    FromCBOR (Annotator (Core.Script era)),
+    ValidateScript era
+  ) =>
+  FromCBOR (Annotator (WitnessSetHKD Identity era))
+  where
   fromCBOR = decodeWits
 
 decodeWits ::

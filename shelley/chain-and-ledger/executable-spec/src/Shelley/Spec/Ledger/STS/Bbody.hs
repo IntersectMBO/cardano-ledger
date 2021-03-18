@@ -22,10 +22,9 @@ module Shelley.Spec.Ledger.STS.Bbody
 where
 
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.SafeHash(SafeToHash)
-
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
+import Cardano.Ledger.Era (Era (Crypto), TxSeqAble)
+import Cardano.Ledger.SafeHash (SafeToHash)
+import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -65,7 +64,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
-import Shelley.Spec.Ledger.Tx (Tx,WitnessSet)
+import Shelley.Spec.Ledger.Tx (Tx, WitnessSet)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data BBODY era
@@ -112,7 +111,6 @@ instance
 
 instance
   ( UsesTxBody era,
-    UsesScript era,
     UsesAuxiliary era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
@@ -120,10 +118,10 @@ instance
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
     HasField "_d" (Core.PParams era) UnitInterval,
-
     Core.Witnesses era ~ WitnessSet era,
     Core.Tx era ~ Tx era,
-    SafeToHash (WitnessSet era)
+    SafeToHash (WitnessSet era),
+    TxSeqAble era
   ) =>
   STS (BBODY era)
   where
@@ -148,17 +146,16 @@ bbodyTransition ::
   forall era.
   ( STS (BBODY era),
     UsesTxBody era,
-    UsesScript era,
     UsesAuxiliary era,
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
     HasField "_d" (Core.PParams era) UnitInterval,
-
     Core.Witnesses era ~ WitnessSet era,
     Core.Tx era ~ Tx era,
-    SafeToHash (WitnessSet era)
+    SafeToHash (WitnessSet era),
+    TxSeqAble era
   ) =>
   TransitionRule (BBODY era)
 bbodyTransition =

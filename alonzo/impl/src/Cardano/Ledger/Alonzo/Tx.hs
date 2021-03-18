@@ -76,6 +76,7 @@ module Cardano.Ledger.Alonzo.Tx
     -- Pretty
     ppIsValidating,
     ppTx,
+    alonzoSeqTx,
   )
 where
 
@@ -796,3 +797,43 @@ deriving via
       Val (Core.Value era)
     ) =>
     FromCBOR (Annotator (Tx era))
+
+-- ====================================
+-- for making an instance of (TxSeqAble era)
+
+alonzoSeqTx ::
+  ( Era era,
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.AuxiliaryData era)
+  ) =>
+  Annotator (Core.TxBody era) ->
+  Annotator (TxWitness era) ->
+  Annotator Bool ->
+  Maybe (Annotator (Core.AuxiliaryData era)) ->
+  Annotator (Tx era)
+alonzoSeqTx
+  bodyAnn
+  witsAnn
+  isvalAnn
+  metaAnn = undefined
+
+{-
+Annotator $ \bytes ->
+    let body = runAnnotator bodyAnn bytes
+        witnessSet = runAnnotator witsAnn bytes
+        metadata = flip runAnnotator bytes <$> metaAnn
+        wrappedMetadataBytes = case metadata of
+          Nothing -> serializeEncoding encodeNull
+          Just b -> serialize b
+        fullBytes =
+          (serializeEncoding $ encodeListLen 3)
+            <> serialize body
+            <> serialize witnessSet
+            <> wrappedMetadataBytes
+     in Tx'
+          { _bodyS = body,
+            _witnessSetS = witnessSet,
+            _metadataS = maybeToStrictMaybe metadata,
+            txFullBytes = fullBytes
+          }
+-}

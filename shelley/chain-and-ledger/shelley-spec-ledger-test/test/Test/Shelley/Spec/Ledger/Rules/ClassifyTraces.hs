@@ -84,7 +84,7 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.PParams as PParams (Update)
 import Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
-import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet)
+import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
   ( TxIn,
     Wdrl (..),
@@ -98,7 +98,7 @@ import Test.QuickCheck
     property,
     withMaxSuccess,
   )
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv,PreAlonzo)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
@@ -113,8 +113,7 @@ relevantCasesAreCovered ::
   ( EraGen era,
     ShelleyTest era,
     ChainProperty era,
-    Core.Tx era ~ Tx era,
-    Core.Witnesses era ~ WitnessSet era,
+    PreAlonzo era,
     QC.HasTrace (CHAIN era) (GenEnv era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -136,8 +135,7 @@ relevantCasesAreCoveredForTrace ::
   forall era.
   ( ChainProperty era,
     UsesTxOut era,
-    Core.Witnesses era ~ WitnessSet era,
-    Core.Tx era ~ Tx era,
+    PreAlonzo era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))

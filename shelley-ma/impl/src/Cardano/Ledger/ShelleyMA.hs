@@ -18,7 +18,7 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era, TxSeqAble (..), ValidateScript (..))
 import Cardano.Ledger.Mary.Value (Value, policies, policyID)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
@@ -49,7 +49,7 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx (Tx, TxOut (..),WitnessSet)
+import Shelley.Spec.Ledger.Tx (Tx, TxOut (..), WitnessSet, segwitTx)
 
 -- | The Shelley Mary/Allegra eras
 --   The uninhabited type that indexes both the Mary and Allegra Eras.
@@ -168,6 +168,15 @@ instance
   validateScript script tx = validateTimelock script tx
 
 -- Uses the default instance of hashScript
+
+instance
+  ( CryptoClass.Crypto c,
+    MAClass ma c
+  ) =>
+  TxSeqAble (ShelleyMAEra ma c)
+  where
+  seqTx body wit _isval aux = segwitTx body wit aux
+  seqIsValidating _ = True
 
 instance
   ( CryptoClass.Crypto c,

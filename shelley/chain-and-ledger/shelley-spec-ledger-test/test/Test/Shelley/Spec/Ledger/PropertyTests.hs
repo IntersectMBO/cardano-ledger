@@ -31,7 +31,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update (..))
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
-import Shelley.Spec.Ledger.Tx(WitnessSet)
 import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
@@ -43,7 +42,7 @@ import Test.Shelley.Spec.Ledger.Address.CompactAddr
     propDecompactShelleyLazyAddr,
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv,PreAlonzo)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
@@ -66,8 +65,7 @@ minimalPropertyTests ::
   forall era.
   ( EraGen era,
     ShelleyTest era,
-    Core.Tx era ~ Tx era,
-    Core.Witnesses era ~ WitnessSet era,
+    PreAlonzo era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
@@ -107,8 +105,7 @@ propertyTests ::
   forall era.
   ( EraGen era,
     ShelleyTest era,
-    Core.Tx era ~ Tx era,
-    Core.Witnesses era ~ WitnessSet era,
+    PreAlonzo era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),

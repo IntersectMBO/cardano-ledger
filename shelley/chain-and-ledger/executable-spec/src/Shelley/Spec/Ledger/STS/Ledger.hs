@@ -137,8 +137,8 @@ instance
       )
 
 instance
-  ( Show (Core.Script era),        -- All these Show instances arise because
-    Show (Core.TxBody era),        -- renderAssertionViolation, turns them into strings
+  ( Show (Core.Script era), -- All these Show instances arise because
+    Show (Core.TxBody era), -- renderAssertionViolation, turns them into strings
     Show (Core.AuxiliaryData era),
     Show (Core.PParams era),
     Core.Tx era ~ Tx era,
