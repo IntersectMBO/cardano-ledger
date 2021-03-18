@@ -30,18 +30,13 @@ common project-config
   default-extensions: NoImplicitPrelude
 
   ghc-options:        -Weverything
-                      -Weverything
                       -Wno-all-missed-specialisations
+                      -Wno-missing-deriving-strategies
                       -Wno-missing-import-lists
+                      -Wno-missing-safe-haskell-mode
+                      -Wno-prepositive-qualified-module
                       -Wno-safe
                       -Wno-unsafe
-
-  if impl(ghc >= 8.8)
-    ghc-options:      -Wno-missing-deriving-strategies
-
-  if impl(ghc >= 8.10)
-    ghc-options:      -Wno-missing-safe-haskell-mode
-                      -Wno-prepositive-qualified-module
                       -Wunused-packages
 
   if (!flag(development))
