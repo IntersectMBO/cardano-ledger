@@ -47,7 +47,7 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
         minGenesisUTxOouts
       ),
   )
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..),PreAlonzo)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
@@ -85,6 +85,7 @@ genChainState n ge =
 -- | Benchmark generating a block given a chain state.
 genBlock ::
   ( Mock (Crypto era),
+    PreAlonzo era,
     ShelleyTest era,
     ShelleyLedgerSTS era,
     GetLedgerView era,

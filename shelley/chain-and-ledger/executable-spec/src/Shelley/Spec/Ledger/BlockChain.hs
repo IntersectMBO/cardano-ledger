@@ -329,7 +329,11 @@ bbHash (TxSeq' _ bodies wits md vs) =
       ( hashPart bodies
           <> hashPart wits
           <> hashPart md
-          <> (if seqHasValidating @era then hashPart vs else mempty) -- PreAlonzo Era's do not include the IsValidating Tags in the hash
+          <> (if seqHasValidating @era then hashPart vs else mempty)
+          -- PreAlonzo Era's do not have an IsValidating field. For those
+          -- Eras, seqHasValidating method of BlockDecoding returns False,
+          -- In that case the hashPart of IsValidating bytes is the empty ByteString.
+          -- So the effect is that those bytes have no effect on the hash in PreAlonzo Eras.
       )
   where
     hashStrict :: ByteString -> Hash (Crypto era) ByteString
@@ -629,8 +633,17 @@ pattern Block h txns <-
 -- | Given a size and a mapping from indices to maybe metadata,
 --  return a sequence whose size is the size paramater and
 --  whose non-Nothing values correspond to the values in the mapping.
-constructMetadata :: Int -> Map Int a -> Seq (Maybe a)
-constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1])
+--  Also test that every key in the given map is in an appropriate range.
+constructMetadata ::
+  forall era s.
+  (Int -> Bool) ->
+  Int ->
+  Map Int (Annotator (Core.AuxiliaryData era)) ->
+  Decoder s (Seq (Maybe (Annotator (Core.AuxiliaryData era))))
+constructMetadata inRange n md =
+  if not (all inRange (Map.keysSet md))
+    then fail ("Some AuxiliaryData index is not in range [0 .. " ++ show (n -1) ++ "]")
+    else pure (fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1]))
 
 constructIsValidating :: Int -> Set.Set Int -> Seq Bool
 constructIsValidating numTx txsFailingValidation =
@@ -663,6 +676,7 @@ blockDecoder lax = annotatorSlice $
     txns <- txSeqDecoder lax
     pure $ Block' <$> header <*> txns
 
+-- | Decode a TxSeq, used in decoding a Block.
 txSeqDecoder ::
   forall era.
   ( BlockDecoding era,
@@ -675,15 +689,13 @@ txSeqDecoder lax = do
   (wits, witsAnn) <- withSlice $ decodeSeq fromCBOR
   (isvalSet, isvalAnn) <- withSlice $ decodeSet fromCBOR
   let b = length bodies
+      inRange x = (0 <= x) && (x <= (b -1))
       w = length wits
       vs = constructIsValidating b isvalSet
-
-  (metadata, metadataAnn) <-
-    withSlice $
-      constructMetadata b
-        <$> decodeMap fromCBOR fromCBOR
-  let m = length metadata
-
+  (metadata, metadataAnn) <- withSlice $
+    do
+      m <- decodeMap fromCBOR fromCBOR
+      constructMetadata @era inRange b m
   unless
     (lax || b == w)
     ( fail $
@@ -694,14 +706,9 @@ txSeqDecoder lax = do
           <> ")"
     )
   unless
-    (lax || b == m) -- TODO since 'm' is constructed by constructMetadata with parameter 'b'
-    ( fail $ -- isnt it always true that b==m?
-        "mismatch between transaction bodies ("
-          <> show b
-          <> ") and metadata ("
-          <> show w
-          <> ")"
-    )
+    (lax || all inRange isvalSet)
+    (fail ("Some IsValidating index is not in [0 .. " ++ show (b -1) ++ "]: " ++ show isvalSet))
+
   let txns = sequenceA $ StrictSeq.forceToStrict $ Seq.zipWith4 (seqTx @era) bodies wits vs metadata
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn <*> isvalAnn
 
