@@ -19,7 +19,7 @@ module Cardano.Ledger.Era
     translateEraMaybe,
     WellFormed,
     ValidateScript (..),
-    TxSeqAble (..),
+    BlockDecoding (..),
   )
 where
 
@@ -92,19 +92,21 @@ class
   isNativeScript _ = True
 
 ----------------------------------------------------------------------------
--- Block Creation
--- To create Blocks one has to recover a (Core.Tx) from 4 bytestrings
--- Stores in a TxSeq. This method tells how to do this.
+-- Block Decoding
+-- To decode Blocks one has to recover a (Core.Tx) from 4 bytestrings
+-- stored in a TxSeq. This method gives part of the solution of how to do this.
+-- The other part is the function Shelley.Spec.Ledger.BlockChain(txSeqDecoder)
 ----------------------------------------------------------------------------
 
-class TxSeqAble era where
+class BlockDecoding era where
   seqTx ::
     Annotator (Core.TxBody era) ->
     Annotator (Core.Witnesses era) ->
-    Annotator Bool ->
+    Bool ->
     Maybe (Annotator (Core.AuxiliaryData era)) ->
     Annotator (Core.Tx era)
   seqIsValidating :: Core.Tx era -> Bool
+  seqHasValidating :: Bool
 
 --------------------------------------------------------------------------------
 -- Era translation
@@ -213,6 +215,7 @@ type WellFormed era =
     HasField "scriptWits" (Core.Tx era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
     HasField "bootWits" (Core.Tx era) (Set (BootstrapWitness (Crypto era))),
     HasField "txsize" (Core.Tx era) Integer,
+    HasField "witnessSet" (Core.Tx era) (Core.Witnesses era),
     -- TxOut
     HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     HasField "value" (Core.TxOut era) (Core.Value era),

@@ -19,7 +19,7 @@ import Cardano.Ledger.AuxiliaryData
   )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Era (Crypto), TxSeqAble (..), ValidateScript (..))
+import Cardano.Ledger.Era (BlockDecoding (..), Era (Crypto), ValidateScript (..))
 import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, makeHashWithExplicitProxys)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
@@ -96,9 +96,10 @@ instance
 
 -- hashScript s = ... using the default instance of hashScript
 
-instance CryptoClass.Crypto c => TxSeqAble (ShelleyEra c) where
+instance CryptoClass.Crypto c => BlockDecoding (ShelleyEra c) where
   seqTx body wit _isval aux = segwitTx body wit aux
-  seqIsValidating _ = True
+  seqIsValidating _ = True -- In ShelleyEra all Tx are IsValidating
+  seqHasValidating = False -- But Tx does not have an IsValidating field
 
 instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) c where
   validateAuxiliaryData (Metadata m) = all validMetadatum m

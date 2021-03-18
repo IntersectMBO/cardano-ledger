@@ -18,7 +18,7 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto, Era, TxSeqAble (..), ValidateScript (..))
+import Cardano.Ledger.Era (BlockDecoding (..), Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Mary.Value (Value, policies, policyID)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
@@ -173,10 +173,11 @@ instance
   ( CryptoClass.Crypto c,
     MAClass ma c
   ) =>
-  TxSeqAble (ShelleyMAEra ma c)
+  BlockDecoding (ShelleyMAEra ma c)
   where
   seqTx body wit _isval aux = segwitTx body wit aux
-  seqIsValidating _ = True
+  seqIsValidating _ = True -- In (ShelleyMAEra ma c) all Tx are IsValidating
+  seqHasValidating = False -- But Tx does not have an IsValidating field
 
 instance
   ( CryptoClass.Crypto c,

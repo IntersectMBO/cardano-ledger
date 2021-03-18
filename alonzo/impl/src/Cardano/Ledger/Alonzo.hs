@@ -120,9 +120,10 @@ instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
   validateAuxiliaryData = error ("NO validateAuxiliaryData yet.") -- TODO Fill this in
 
-instance CC.Crypto c => TxSeqAble (AlonzoEra c) where
+instance CC.Crypto c => BlockDecoding (AlonzoEra c) where
   seqTx body wit isval aux = alonzoSeqTx body wit isval aux
   seqIsValidating tx = case isValidating' tx of IsValidating b -> b
+  seqHasValidating = True -- Tx in AlonzoEra has an IsValidating field
 
 instance API.PraosCrypto c => API.ShelleyBasedEra (AlonzoEra c)
 

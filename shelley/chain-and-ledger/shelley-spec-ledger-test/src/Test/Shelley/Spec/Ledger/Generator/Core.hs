@@ -57,10 +57,9 @@ import Cardano.Crypto.VRF (evalCertified)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..),TxSeqAble)
+import Cardano.Ledger.Era (Crypto (..),BlockDecoding)
 import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesTxBody,
+  ( UsesTxBody,
     UsesTxOut (..),
   )
 import Control.Monad (replicateM)
@@ -210,7 +209,7 @@ import Test.Shelley.Spec.Ledger.Utils
 type PreAlonzo era =
   ( Core.Witnesses era ~ WitnessSet era,
     Core.Tx era ~ Tx era,
-    TxSeqAble era,
+    BlockDecoding era,
     ToCBOR (Core.AuxiliaryData era)
   )
 
@@ -559,7 +558,6 @@ mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF :: forall era r.
   ( UsesTxBody era,
-    UsesAuxiliary era,
     PreAlonzo era,
     ExMock (Crypto era)
   ) =>

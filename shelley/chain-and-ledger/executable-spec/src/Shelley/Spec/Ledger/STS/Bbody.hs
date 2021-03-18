@@ -22,7 +22,7 @@ module Shelley.Spec.Ledger.STS.Bbody
 where
 
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto), TxSeqAble)
+import Cardano.Ledger.Era (BlockDecoding, Era (Crypto))
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Control.Monad.Trans.Reader (asks)
@@ -121,7 +121,7 @@ instance
     Core.Witnesses era ~ WitnessSet era,
     Core.Tx era ~ Tx era,
     SafeToHash (WitnessSet era),
-    TxSeqAble era
+    BlockDecoding era
   ) =>
   STS (BBODY era)
   where
@@ -146,7 +146,6 @@ bbodyTransition ::
   forall era.
   ( STS (BBODY era),
     UsesTxBody era,
-    UsesAuxiliary era,
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
@@ -155,7 +154,7 @@ bbodyTransition ::
     Core.Witnesses era ~ WitnessSet era,
     Core.Tx era ~ Tx era,
     SafeToHash (WitnessSet era),
-    TxSeqAble era
+    BlockDecoding era
   ) =>
   TransitionRule (BBODY era)
 bbodyTransition =
