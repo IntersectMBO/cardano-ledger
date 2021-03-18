@@ -172,8 +172,8 @@ data TxSeq era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Core.Tx era)),
     txSeqBodyBytes :: BSL.ByteString,
     txSeqWitsBytes :: BSL.ByteString,
-    txSeqMetadataBytes :: BSL.ByteString,
-    txSeqIsValidatingBytes :: BSL.ByteString
+    txSeqMetadataBytes :: BSL.ByteString, -- bytes representing a map of index -> metadata. missing indices have Nothing for metadata
+    txSeqIsValidatingBytes :: BSL.ByteString -- bytes representing a set of integers. these are the indices of transactions with isValidation=false.
   }
   deriving (Generic)
 
@@ -324,7 +324,7 @@ bbHash ::
   HashBBody (Crypto era)
 bbHash (TxSeq' _ bodies wits md vs) =
   (UnsafeHashBBody . coerce) $
-    hashStrict (hashPart bodies <> hashPart wits <> hashPart md <> hashPart vs)
+    hashStrict (hashPart bodies <> hashPart wits <> hashPart md <> hashPart vs) -- changing in alonzo
   where
     hashStrict :: ByteString -> Hash (Crypto era) ByteString
     hashStrict = Hash.hashWith id
@@ -626,6 +626,11 @@ pattern Block h txns <-
 constructMetadata :: Int -> Map Int a -> Seq (Maybe a)
 constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1])
 
+constructIsValidating :: Int -> Set Int -> Seq Bool
+constructIsValidating numTx txsFailingValidation =
+  fmap (x -> not (Set.member x txsFailingVlidation)) (Seq.fromList [0 .. n-1])
+
+
 instance
   Era era =>
   ToCBOR (Block era)
@@ -663,7 +668,6 @@ txSeqDecoder ::
 txSeqDecoder lax = do
   (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
   (wits, witsAnn) <- withSlice $ decodeSeq fromCBOR
-  (isval, isvalAnn) <- withSlice $ decodeSeq (pure <$> fromCBOR)
   let b = length bodies
       w = length wits
       v = length isval
@@ -673,6 +677,8 @@ txSeqDecoder lax = do
       constructMetadata b
         <$> decodeMap fromCBOR fromCBOR
   let m = length metadata
+
+  isval <- constructIsValidating b . Set.fromFoldable <$> decodeSeq fromCBOR
 
   unless
     (lax || b == w)
