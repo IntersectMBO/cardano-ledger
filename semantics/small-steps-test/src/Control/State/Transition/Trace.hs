@@ -123,6 +123,7 @@ mkTrace env initState sigs = Trace env initState sigs'
 -- |
 -- >>> :set -XTypeFamilies
 -- >>> import Control.State.Transition (initialRules, transitionRules)
+-- >>> import Control.State.Transition.Extended (STS (..))
 -- >>> :{
 -- data DUMMY
 -- data DummyPredicateFailure = CeciNEstPasUnePredicateFailure deriving (Eq, Show)
@@ -343,6 +344,7 @@ preStatesAndSignals NewestFirst tr
 -- >>> :set -XTypeFamilies
 -- >>> :set -XTypeApplications
 -- >>> import Control.State.Transition (initialRules, transitionRules, judgmentContext)
+-- >>> import Control.State.Transition.Extended (TRC (..))
 -- >>> import Data.Functor.Identity
 -- >>> :{
 -- data ADDER

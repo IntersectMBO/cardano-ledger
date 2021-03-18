@@ -53,6 +53,8 @@ module Control.State.Transition.Extended
 
     -- * Random thing
     Threshold (..),
+
+    sfor_,
   )
 where
 

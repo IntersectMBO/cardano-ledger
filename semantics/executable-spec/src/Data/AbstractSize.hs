@@ -48,6 +48,7 @@ import GHC.Natural (Natural)
 -- Examples:
 --
 -- >>> :set -XOverloadedLists
+-- >>> import Data.Typeable (typeOf)
 -- >>> abstractSize [(typeOf (undefined:: Char), 10)] 'a'
 -- 10
 --
@@ -105,6 +106,7 @@ type AccountingMap = Map TypeRep Size
 -- fromList [[Int]]
 --
 -- >>> :set -XDeriveGeneric
+-- >>> import GHC.Generics (Generic)
 -- >>> data Foo = Foo [Int] (Char, Char) deriving (Generic)
 -- >>> instance HasTypeReps Foo
 -- >>> typeReps $ Foo [1, 2] ('a', 'b')
