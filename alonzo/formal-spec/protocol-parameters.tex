@@ -2,13 +2,13 @@
 \label{sec:protocol-parameters}
 
 We require the following types (see Figure~\ref{fig:defs:protocol-parameters})
-in addition to those that are already defined in the Shelley specification~\cite{XX}. \TODO{Add the citation}
+in addition to those that are already defined in the Shelley specification~\cite{shelley_spec}.
 
 \vspace{12pt}
 \begin{tabular}{lp{5in}}
   $\Language$ &
-  This represents the language name/tag (including the
-  version number).
+  This represents the language name/tag, including the
+  version number.
   \\
   $\ExUnits$ &
   A term of this type contains two integer values,
@@ -24,18 +24,10 @@ in addition to those that are already defined in the Shelley specification~\cite
   \\
   $\Prices$ &
   A term of this type comprises two integer values that correspond to the components of $\ExUnits$,
-  $\var{pr_{mem}, pr_{steps})}$:
+  $\var{(pr_{mem}, pr_{steps})}$:
   $pr_{mem}$ is the price (in Ada) per unit of memory, and $pr_{steps}$ is the price (in Ada) per
   reduction step. This is used to calculate the Ada cost for a specific script execution.
 \end{tabular}
-\vspace{12pt}
-
-We also need a number of additional protocol parameters and accessor functions: ...\todo{List these.}
-
-\begin{tabular}{||l|l||}
-  \textbf{Item} & \textbf{Use} \\
-  \
-  \end{tabular}
 
 \subsection{Language Versions and Backwards Compatibility Requirements}
 \label{sec:versions}
@@ -47,7 +39,7 @@ The interpreter is provided with the (language- and version-specific) arguments 
 It is necessary for the ledger to be capable of executing scripts in languages it ever supported.
 This implies that it is necessary to maintain all forms of ledger
 data that is needed by any past or current language, which constrains future ledger designs.
-Introducing a new language will require a major protocol version update, since the datatypes need to support the new language and the ledger rules must be updated to use the new interpreter.
+Introducing a new language will require a protocol version update, since the datatypes need to support the new language and the ledger rules must be updated to use the new interpreter.
 
 \subsection{Determinism of Script Evaluation}
 \label{sec:determinism}
@@ -60,7 +52,7 @@ period between transaction
 submission and completion of the script processing.
 %
 In order to achieve this,
-any data that is passed to the interpreter must be determined by the transaction itself.
+any data that is passed to the interpreter must be determined by the transaction body itself.
 The transaction therefore includes a hash of any data that is not determined by the transaction or the UTXO.
 When the transaction is processed, as part of the UTXOW rule, this hash is compared with a hash of the data that is passed to the interpreter. This
 ensures that scripts are only executed if they have been provided with the intended data.
@@ -93,7 +85,7 @@ The parameters are used to ensure that the time and memory that are required to 
   \emph{Abstract types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad}r}
+    \begin{array}{r@{~\in~}l@{\qquad\qquad\qquad}r}
       \var{cm} & \CostMod & \text{Coefficients for the cost model} \\
       \var{ldv} & \LangDepView & \text{Language-dependent view of the protocol parameters}
     \end{array}
@@ -107,7 +99,7 @@ The parameters are used to ensure that the time and memory that are required to 
       & \{\Plutus, \dotsb\}
       & \text{Script Language}
       \\
-      \var{pr_{mem}, pr_{steps})}
+      \var{(pr_{mem}, pr_{steps})}
       & \Prices
       & \Coin \times \Coin
       & \text {Coefficients for $\ExUnits$ prices}

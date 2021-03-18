@@ -6,7 +6,7 @@ structure to enable native scripts to validate
 the minting of tokens, spending outputs, verifying certificates, and
 verifying withdrawals.
 %
-Figure \ref{fig:defs:utxo-shelley-1} gives the modified transaction types.
+Figure \ref{fig:defs:utxo-shelley-1} gives the modified transaction types and helper functions.
 We make the following changes and additions:
 
 \begin{itemize}
@@ -19,7 +19,7 @@ We make the following changes and additions:
 
   \item $\Data$ is a type for communicating data to script.  It is kept abstract here.
 
-  \item $\Script$ is a sum type covering all possible scripts, both native and non-native.
+  \item $\Script$ is the type of all scripts, both native and non-native.
 
   \item $\IsValidating$ is a tag that indicates that a transaction
   expects that all its non-native scripts will be validated.
@@ -48,12 +48,20 @@ We make the following changes and additions:
 
 \end{itemize}
 
+We add the following helper functions:
+
+\begin{itemize}
+  \item $\fun{language}$ selects the language of a non-native script.
+  \item $\fun{hashData}$ hashes a value of type $\Data$.
+  \item $\fun{hashWitnessPPData}$ hashes the protocol parameters and witnesses relevant to script execution.
+\end{itemize}
+
 \begin{figure*}[htb]
   \emph{Abstract types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\quad\quad\quad\quad}r}
-      \var{sdh} &\WitnessPPDataHash & \text{Script data hash}\\
+      \var{wph} &\WitnessPPDataHash & \text{Script data hash}\\
       \var{plc} & \ScriptPlutus & \text{Plutus core scripts} \\
       \var{d} & \Data & \text{Generic script data}
     \end{array}
@@ -99,7 +107,7 @@ We make the following changes and additions:
     \fun{hashWitnessPPData}&~{pp}~{langs}~{rdmrs}~=~ \\
                           &\begin{cases}
                             \Nothing & rdmrs~=~\emptyset \land langs~=~\emptyset \\
-                            \fun{hash} (rdmrs, \{ \fun{hashLanguagePP}~pp~l \mid l \in langs \}) & \text{otherwise}
+                            \fun{hash} (rdmrs, \{ \fun{getLanguageView}~pp~l \mid l \in langs \}) & \text{otherwise}
                           \end{cases}
     \nextdef
     \fun{getCoin}& \in \TxOut \to \Coin \\
@@ -135,6 +143,7 @@ We make the following changes and additions:
        & \times ~\Slot^? \times \Slot^? & \fun{txvldt} & \text{Validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
        & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
+       & \times ~\hldiff{\powerset{\VKey}} & \hldiff{\fun{extraKeys}} & \text{VKeys passed to scripts}\\
        & \times ~\hldiff{\WitnessPPDataHash^?} & \hldiff{\fun{wppHash}} & \text{Hash of script-related data}\\
        & \times ~\AuxiliaryDataHash^? & \fun{txADhash} & \text{Auxiliary data hash}\\
     \end{array}
@@ -190,16 +199,22 @@ a transaction (as a set) versus how redeemers are included
   For details on how a script finds its redeemer, see Section~\ref{sec:scripts-inputs}.
 \end{description}
 
-\subsection{Goguen transactions}
+\subsection{Transactions}
 We have also made the following changes to
 the body of the transaction:
 
 \begin{itemize}
+  \item There is a set of \emph{fee inputs} that is used to cover transaction fees
+    \emph{in case the transaction contains non-native scripts}. In case the same itput is mentioned both as
+    a regular and a fee input, it still counts as being spent just once, so there is no need to prevent this.
+    It is in the transaction creator's best interest to keep the two sets of inputs disjoint, to minimize fees.
+  \item There is a new field called $\fun{extraKeys}$ that is used to specify a set of signers that are passed
+    to scripts, in addition to the ones required by VKey addresses. The keys included also need to sign the transaction.
   \item We include a hash of some script-related data, specifically the redeemers and protocol parameters,
-    with accessor $\fun{sdHash}$.
+    with accessor $\fun{wppHash}$.
 \end{itemize}
 
-A complete Goguen transaction comprises:
+A complete transaction comprises:
 
 \begin{enumerate}
   \item the transaction body,
@@ -235,7 +250,7 @@ The owner of any tokens that are spent as part of a given transaction
 must sign the transaction body. This means that
 the owners of tokens that are spent by the transaction will have
 signed their selection of the inputs that will be put in the fee pot in case of script validation failure, and
-thus have had the opportunity to check the outcome of those scripts before signing the body.
+thus have had the opportunity to check the outcome of those scripts before signing the transaction body.
 
 \subsection{Fee charges in the event of script validation failure}
 
