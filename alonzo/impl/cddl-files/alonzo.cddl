@@ -72,7 +72,7 @@ transaction_input = [ transaction_id : $hash32
 transaction_output =
   [ address
   , amount : value
-  , data_hash : $hash32 / null ; New
+  , ? data_hash : $hash32 ; New
   ]
 
 script_data_hash = $hash32 ; New
@@ -236,7 +236,7 @@ plutus_data_constr = (0, integer, [ * plutus_data ]) ; New
 plutus_data_map    = (1, { * plutus_data => plutus_data }) ; New
 plutus_data_list   = (2, [ * plutus_data ]) ; New
 plutus_data_int    = (3, integer) ; New
-plutus_data_bytes  = (4, bytes) ; New
+plutus_data_bytes  = (4, bytes .size (0..64)) ; New
 
 redeemer = [ tag: redeemer_tag, index: uint, data: plutus_data, ex_units: ex_units ] ; New
 redeemer_tag = ; New

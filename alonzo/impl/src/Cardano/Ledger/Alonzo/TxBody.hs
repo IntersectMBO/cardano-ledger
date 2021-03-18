@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -56,7 +57,14 @@ module Cardano.Ledger.Alonzo.TxBody
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary
+  ( DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeBreakOr,
+    decodeListLenOrIndef,
+    encodeListLen,
+  )
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible
@@ -117,8 +125,6 @@ import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Network,
     StrictMaybe (..),
-    maybeToStrictMaybe,
-    strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
@@ -421,13 +427,17 @@ instance
   ) =>
   ToCBOR (TxOut era)
   where
-  toCBOR (TxOutCompact addr cv dh) =
-    encode $
-      Rec
-        (TxOutCompact @era)
-        !> To addr
-        !> To cv
-        !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) dh
+  toCBOR (TxOutCompact addr cv mdh) =
+    case mdh of
+      SNothing ->
+        encodeListLen 2
+          <> toCBOR addr
+          <> toCBOR cv
+      SJust dh ->
+        encodeListLen 3
+          <> toCBOR addr
+          <> toCBOR cv
+          <> toCBOR dh
 
 instance
   ( Era era,
@@ -437,12 +447,30 @@ instance
   ) =>
   FromCBOR (TxOut era)
   where
-  fromCBOR =
-    decode $
-      RecD TxOutCompact
-        <! From
-        <! D decodeNonNegative
-        <! D (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
+  fromCBOR = do
+    lenOrIndef <- decodeListLenOrIndef
+    case lenOrIndef of
+      Nothing -> do
+        a <- fromCBOR
+        cv <- decodeNonNegative
+        decodeBreakOr >>= \case
+          True -> pure $ TxOutCompact a cv SNothing
+          False -> do
+            dh <- fromCBOR
+            decodeBreakOr >>= \case
+              True -> pure $ TxOutCompact a cv (SJust dh)
+              False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
+      Just 2 ->
+        TxOutCompact
+          <$> fromCBOR
+          <*> decodeNonNegative
+          <*> pure SNothing
+      Just 3 ->
+        TxOutCompact
+          <$> fromCBOR
+          <*> decodeNonNegative
+          <*> (SJust <$> fromCBOR)
+      Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
 
 encodeTxBodyRaw ::
   ( Era era,
