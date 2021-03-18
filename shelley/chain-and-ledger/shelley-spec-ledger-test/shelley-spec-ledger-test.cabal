@@ -133,6 +133,7 @@ test-suite shelley-spec-ledger-test
       Test.Shelley.Spec.Ledger.Examples.Federation
       Test.Shelley.Spec.Ledger.Examples.Init
       Test.Shelley.Spec.Ledger.Examples.GenesisDelegation
+      Test.Shelley.Spec.Ledger.Examples.NetworkID
       Test.Shelley.Spec.Ledger.Examples.Mir
       Test.Shelley.Spec.Ledger.Examples.MirTransfer
       Test.Shelley.Spec.Ledger.Examples.PoolLifetime

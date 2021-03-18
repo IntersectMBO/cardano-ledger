@@ -5,6 +5,7 @@
 module Shelley.Spec.Ledger.HardForks
   ( aggregatedRewards,
     allowMIRTransfer,
+    validatePoolRewardAccountNetID,
   )
 where
 
@@ -29,3 +30,11 @@ allowMIRTransfer ::
   pp ->
   Bool
 allowMIRTransfer pp = pvMajor (getField @"_protocolVersion" pp) > 4
+
+-- | Starting with protocol version 5, we will validate the network ID
+-- for the reward account listed in stake pool registration certificates.
+validatePoolRewardAccountNetID ::
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Bool
+validatePoolRewardAccountNetID pp = pvMajor (getField @"_protocolVersion" pp) > 4

@@ -25,6 +25,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
 import Control.State.Transition
@@ -42,16 +43,19 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin)
+import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (PState (..))
+import Shelley.Spec.Ledger.PParams (ProtVer)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     PoolCert (..),
     PoolParams (..),
+    getRwdNetwork,
   )
 
 data POOL (era :: Type)
@@ -75,6 +79,10 @@ data PoolPredicateFailure era
   | StakePoolCostTooLowPOOL
       !Coin -- The stake pool cost listed in the Pool Registration Certificate
       !Coin -- The minimum stake pool cost listed in the protocol parameters
+  | WrongNetworkPOOL
+      !Network -- Actual Network ID
+      !Network -- Network ID listed in Pool Registration Certificate
+      !(KeyHash 'StakePool (Crypto era)) -- Stake Pool ID
   deriving (Show, Eq, Generic)
 
 instance NoThunks (PoolPredicateFailure era)
@@ -82,7 +90,8 @@ instance NoThunks (PoolPredicateFailure era)
 instance
   ( Typeable era,
     HasField "_minPoolCost" (Core.PParams era) Coin,
-    HasField "_eMax" (Core.PParams era) EpochNo
+    HasField "_eMax" (Core.PParams era) EpochNo,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   STS (POOL era)
   where
@@ -110,6 +119,8 @@ instance
       encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR ct
     StakePoolCostTooLowPOOL pc mc ->
       encodeListLen 3 <> toCBOR (3 :: Word8) <> toCBOR pc <> toCBOR mc
+    WrongNetworkPOOL a b c ->
+      encodeListLen 4 <> toCBOR (4 :: Word8) <> toCBOR a <> toCBOR b <> toCBOR c
 
 instance
   (Era era) =>
@@ -132,12 +143,18 @@ instance
         pc <- fromCBOR
         mc <- fromCBOR
         pure (3, StakePoolCostTooLowPOOL pc mc)
+      4 -> do
+        actualNetID <- fromCBOR
+        suppliedNetID <- fromCBOR
+        poolID <- fromCBOR
+        pure (4, WrongNetworkPOOL actualNetID suppliedNetID poolID)
       k -> invalidKey k
 
 poolDelegationTransition ::
   ( Typeable era,
     HasField "_minPoolCost" (Core.PParams era) Coin,
-    HasField "_eMax" (Core.PParams era) EpochNo
+    HasField "_eMax" (Core.PParams era) EpochNo,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   TransitionRule (POOL era)
 poolDelegationTransition = do
@@ -146,6 +163,12 @@ poolDelegationTransition = do
   case c of
     DCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
+
+      when (HardForks.validatePoolRewardAccountNetID pp) $ do
+        actualNetID <- liftSTS $ asks networkId
+        let suppliedNetID = getRwdNetwork (_poolRAcnt poolParam)
+        actualNetID == suppliedNetID
+          ?! WrongNetworkPOOL actualNetID suppliedNetID (_poolId poolParam)
 
       let poolCost = _poolCost poolParam
           minPoolCost = getField @"_minPoolCost" pp
