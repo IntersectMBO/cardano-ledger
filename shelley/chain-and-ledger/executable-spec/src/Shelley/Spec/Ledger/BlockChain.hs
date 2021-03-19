@@ -292,13 +292,15 @@ instance
   toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes isvalidBytes) =
     encodePreEncoded $
       BSL.toStrict $
-        bodyBytes <> witsBytes <> metadataBytes <> isvalidBytes
-  encodedGroupSizeExpr size _proxy =
+        bodyBytes <> witsBytes <> metadataBytes
+          <> isvalidBytes -- this should do the branch (conditionally added)
+  encodedGroupSizeExpr size _proxy =  -- this should do the branch
     encodedSizeExpr size (Proxy :: Proxy ByteString)
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
-  listLen _ = 3
-  listLenBound _ = 3
+      + encodedSizeExpr size (Proxy :: Proxy ByteString) -- conditionally added
+  listLen _ = 3  -- this should do the branch (4)
+  listLenBound _ = 3  -- this should do the branch (4)
 
 -- | Hash of block body
 newtype HashBBody crypto = UnsafeHashBBody {unHashBody :: (Hash crypto EraIndependentBlockBody)}
