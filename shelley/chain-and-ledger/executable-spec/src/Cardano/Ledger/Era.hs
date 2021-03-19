@@ -222,6 +222,7 @@ type WellFormed era =
     -- HashAnnotated
     HashAnnotated (Core.AuxiliaryData era) EraIndependentAuxiliaryData (Crypto era),
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
+    BlockDecoding era,
     Val (Core.Value era),
     Compactible (Core.Value era) -- TxOut stores a CompactForm(Core.Value)
   )
