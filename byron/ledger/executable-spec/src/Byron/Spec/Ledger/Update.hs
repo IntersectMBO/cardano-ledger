@@ -262,10 +262,12 @@ inMap key v m = case Map.lookup key m of
 
 -- | Invert a map
 --
---   Examples:
+--  Examples:
 --
---   >>> invertMap (Map.fromList [('a', 1 :: Int), ('b', 2), ('c', 3), ('d', 1)])
---   fromList [(1,fromList "ad"),(2,fromList "b"),(3,fromList "c")]
+--  >>> import qualified Data.Map.Strict as Map
+--  >>> import Byron.Spec.Ledger.Update (invertMap)
+--  >>> invertMap (Map.fromList [('a', 1 :: Int), ('b', 2), ('c', 3), ('d', 1)])
+--  fromList [(1,fromList "ad"),(2,fromList "b"),(3,fromList "c")]
 invertMap
   :: (Ord k, Ord v)
   => Map k v
@@ -280,6 +282,7 @@ invertMap
 --
 --   Examples:
 --
+--   >>> import qualified Data.Map.Strict as Map
 --   >>> invertBijection (Map.fromList [('a', 1 :: Int), ('b', 2), ('c', 3)])
 --   fromList [(1,'a'),(2,'b'),(3,'c')]
 invertBijection
