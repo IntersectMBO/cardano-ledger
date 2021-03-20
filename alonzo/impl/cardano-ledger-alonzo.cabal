@@ -43,10 +43,12 @@ library
     Cardano.Ledger.Alonzo.Scripts
     Cardano.Ledger.Alonzo.Tx
     Cardano.Ledger.Alonzo.TxBody
+    Cardano.Ledger.Alonzo.TxInfo
     Cardano.Ledger.Alonzo.TxWitness
   build-depends:
     bytestring,
     cardano-binary,
+    cardano-crypto-class,
     cardano-ledger-shelley-ma,
     cardano-prelude,
     cardano-slotting,

@@ -118,7 +118,8 @@ import Cardano.Ledger.Pretty
     ppString,
   )
 import Cardano.Ledger.SafeHash
-  ( HashAnnotated,
+  ( EraIndependentTx,
+    HashAnnotated,
     SafeToHash,
     hashAnnotated,
   )
@@ -209,7 +210,9 @@ instance
   NoThunks (TxRaw era)
 
 newtype Tx era = TxConstr (MemoBytes (TxRaw era))
-  deriving newtype (ToCBOR)
+  deriving newtype (SafeToHash, ToCBOR)
+
+instance (c ~ Crypto era, Era era) => HashAnnotated (Tx era) EraIndependentTx c
 
 deriving newtype instance
   ( Era era,
