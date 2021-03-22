@@ -24,7 +24,7 @@ import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..))
 import Cardano.Ledger.Core as Core (TxBody, Value)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
+import qualified Cardano.Ledger.Mary.Value as Mary (Value (..),PolicyID(..),AssetName(..))
 import Cardano.Ledger.SafeHash
 -- import Cardano.Chain.Common.Address(Address)  -- Need to add this to the cabal file
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
@@ -33,6 +33,17 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Data.ByteString as BS (ByteString)
 import Data.ByteString.Short as SBS (fromShort)
 import qualified Data.Set as Set
+import qualified Data.Map as Map
+
+
+import Shelley.Spec.Ledger.Address (Addr (..), BootstrapAddress (..))
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
+import Shelley.Spec.Ledger.Keys (KeyHash (..))
+import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
+import Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (..))
+
 -- ==============================================
 -- Import Plutus stuff in the qualified Module P
 
@@ -50,13 +61,11 @@ import qualified Plutus.V1.Ledger.Slot as P (SlotRange)
 import qualified Plutus.V1.Ledger.Tx as P (TxOut (..), TxOutRef (..), TxOutType (..))
 import qualified Plutus.V1.Ledger.TxId as P (TxId (..))
 import qualified Plutus.V1.Ledger.Value as P (Value (..))
-import Shelley.Spec.Ledger.Address (Addr (..), BootstrapAddress (..))
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
-import Shelley.Spec.Ledger.Keys (KeyHash (..))
-import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
-import Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (..))
+import qualified Plutus.V1.Ledger.Ada as P(adaSymbol,adaToken)
+import qualified Plutus.V1.Ledger.Value as P(CurrencySymbol(..),TokenName(..),singleton,unionWith)
+
+import qualified Language.PlutusTx as P(Data(..))
+import qualified Language.PlutusTx.IsData.Class as P(IsData(..))
 
 -- =========================================================
 
@@ -111,8 +120,21 @@ transTxOut (TxOut (AddrBootstrap (BootstrapAddress _ad)) val datahash) =
     (transValue @(Crypto era) val)
     (P.PayToScript (transDataHash datahash))
 
+transPolicyID :: Mary.PolicyID crypto -> P.CurrencySymbol
+transPolicyID (Mary.PolicyID (ScriptHash (UnsafeHash x))) = P.CurrencySymbol (fromShort x)
+
+transAssetName :: Mary.AssetName -> P.TokenName
+transAssetName (Mary.AssetName bs) = P.TokenName bs
+
 transValue :: forall c. Mary.Value c -> P.Value
-transValue (Mary.Value _coin _mp) = undefined -- TODO complete this
+transValue (Mary.Value n mp) = Map.foldlWithKey' accum1 justada mp
+   where accum1 ans sym mp2 = Map.foldlWithKey' accum2 ans mp2
+            where accum2 ans2 tok quantity =
+                      P.unionWith
+                        (+)
+                        ans2
+                        (P.singleton (transPolicyID sym) (transAssetName tok) quantity)
+         justada = (P.singleton P.adaSymbol P.adaToken n)
 
 transKeyHash :: KeyHash d c -> P.PubKeyHash
 transKeyHash (KeyHash (UnsafeHash h)) = P.PubKeyHash (fromShort h)
@@ -153,3 +175,6 @@ transTx tx =
     fee = txfee' tbody
     forge = mint' tbody
     interval = vldt' tbody
+
+txInfoToData :: P.TxInfo -> P.Data
+txInfoToData x = P.toData x
