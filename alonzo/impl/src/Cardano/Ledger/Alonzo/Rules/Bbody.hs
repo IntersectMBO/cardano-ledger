@@ -18,6 +18,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody
   )
 where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (Tx)
 import qualified Cardano.Ledger.Core as Core
@@ -33,9 +34,11 @@ import Control.State.Transition
     trans,
     (?!),
   )
+import Data.Coders
 import Data.Kind (Type)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -87,7 +90,26 @@ deriving anyclass instance
   (Era era, NoThunks (PredicateFailure (Core.EraRule "LEDGERS" era))) =>
   NoThunks (AlonzoBbodyPredFail era)
 
--- TODO  Do we need CBOR instances? he shelley (BbodyPredicateFailure era) doesn't seem to have one.
+instance
+  ( Typeable era,
+    ToCBOR (BbodyPredicateFailure era)
+  ) =>
+  ToCBOR (AlonzoBbodyPredFail era)
+  where
+  toCBOR (ShelleyInAlonzoPredFail x) = encode (Sum ShelleyInAlonzoPredFail 0 !> To x)
+  toCBOR (TooManyExUnits x y) = encode (Sum TooManyExUnits 1 !> To x !> To y)
+
+instance
+  ( Typeable era,
+    FromCBOR (BbodyPredicateFailure era) -- TODO why is there no FromCBOR for (BbodyPredicateFailure era)
+  ) =>
+  FromCBOR (AlonzoBbodyPredFail era)
+  where
+  fromCBOR = decode (Summands "AlonzoBbodyPredFail" dec)
+    where
+      dec 0 = SumD ShelleyInAlonzoPredFail <! From
+      dec 1 = SumD TooManyExUnits <! From <! From
+      dec n = Invalid n
 
 -- ========================================
 -- The STS instance
@@ -110,7 +132,6 @@ bbodyTransition ::
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
     -- Conditions to define the rule in this Era
-    BlockDecoding era,
     HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
     HasField "totExunits" (Core.Tx era) ExUnits,
@@ -141,7 +162,9 @@ bbodyTransition =
 
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
-        -- easier than differentiating here.
+        -- easier than differentiating here. -- TODO move this computation inside 'incrBlocks' where it belongs.
+        -- Here we make an assumption that 'incrBlocks' must enforce, better for it to be done in 'incrBlocks'
+        -- where we can see that the assumption is enforced.
         let hkAsStakePool = coerceKeyRole . issuerIDfromBHBody $ bhb
             slot = bheaderSlotNo bhb
         firstSlotNo <- liftSTS $ do

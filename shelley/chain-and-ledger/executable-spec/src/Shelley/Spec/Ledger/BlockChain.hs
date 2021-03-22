@@ -153,11 +153,6 @@ import Shelley.Spec.Ledger.Serialization
     runByteBuilder,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
-{-
-import Shelley.Spec.Ledger.Tx (TransTx,
-    -- Tx (..),
-    decodeWits, segwitTx, txWitsBytes)
--}
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- =======================================================
@@ -251,7 +246,6 @@ getValidatingIndexes txns = snd (foldl accum (0, Set.empty) txns)
 pattern TxSeq ::
   forall era.
   ( Era era,
-    BlockDecoding era,
     SafeToHash (Core.Witnesses era)
   ) =>
   StrictSeq (Core.Tx era) ->
@@ -697,8 +691,8 @@ txSeqDecoder lax = do
   (metadata, metadataAnn) <- withSlice $
     do
       m <- decodeMap fromCBOR fromCBOR
-      unless
-        (lax || all inRange (Map.keysSet m))
+      unless -- TODO this PR introduces this new test, That didn't used to run in the Shelley
+        (lax || all inRange (Map.keysSet m)) -- Era,  Is it possible there might be some blocks, that should have been caught on the chain?
         (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b -1)))
       pure (constructMetadata @era b m)
 
