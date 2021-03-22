@@ -72,6 +72,7 @@ import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Examples as Plutus (alwaysFailingNAryFunction, alwaysSucceedingNAryFunction)
 import qualified Plutus.V1.Ledger.Scripts as Plutus (Script)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Serialization (mapFromCBOR)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -181,14 +182,8 @@ instance NFData CostModel
 
 deriving instance ToCBOR CostModel
 
--- This is needed to derive the FromCBOR (Annotator CostModel) instance
-instance FromCBOR (Annotator (Map ByteString Integer)) where
-  fromCBOR = pure <$> fromCBOR
-
-deriving via
-  Mem (Map ByteString Integer)
-  instance
-    FromCBOR (Annotator CostModel)
+instance FromCBOR CostModel where
+  fromCBOR = CostModel <$> mapFromCBOR
 
 -- CostModel is not parameterized by Crypto or Era so we use the
 -- hashWithCrypto function, rather than hashAnnotated

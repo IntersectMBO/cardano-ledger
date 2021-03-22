@@ -86,7 +86,7 @@ applyTxEra ::
   ( Era era,
     ApplyTx era,
     Default (Core.PParams era),
-    FromCBOR (Annotator (MempoolState era))
+    FromCBOR (MempoolState era)
   ) =>
   Proxy era ->
   FilePath ->
@@ -98,7 +98,7 @@ applyTxEra p lsFile txFile = env loadRes go
     loadRes = do
       state <-
         either (\err -> error $ "Failed to decode state: " <> show err) id
-          . decodeAnnotator "state" fromCBOR
+          . decodeFullDecoder "state" fromCBOR
           <$> BSL.readFile lsFile
       tx <-
         either (\err -> error $ "Failed to decode tx: " <> show err) id

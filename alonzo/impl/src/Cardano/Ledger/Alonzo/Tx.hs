@@ -333,7 +333,7 @@ instance Era era => FromCBOR (Annotator (WitnessPPDataRaw era)) where
     decode
       ( Ann (RecD WitnessPPDataRaw)
           <*! mapDecodeA (Ann From) From
-          <*! setDecodeA From
+          <*! setDecodeA (Ann From)
       )
 
 newtype WitnessPPData era = WitnessPPDataConstr (MemoBytes (WitnessPPDataRaw era))
@@ -752,7 +752,7 @@ instance
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (Annotator (Core.TxBody era)),
     FromCBOR (Annotator (Core.AuxiliaryData era)),
-    Core.AnnotatedData (PParamsDelta era),
+    FromCBOR (PParamsDelta era),
     ToCBOR (Core.Script era),
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era),
@@ -782,7 +782,7 @@ deriving via
       FromCBOR (Annotator (Core.Script era)),
       FromCBOR (Annotator (Core.TxBody era)),
       FromCBOR (Annotator (Core.AuxiliaryData era)),
-      Core.AnnotatedData (PParamsDelta era),
+      FromCBOR (PParamsDelta era),
       ToCBOR (Core.Script era),
       Typeable (Core.Script era),
       Typeable (Core.AuxiliaryData era),

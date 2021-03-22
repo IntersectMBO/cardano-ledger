@@ -123,12 +123,10 @@ import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈),
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coders
-  ( Annotator (..),
-    Decode (Ann, From, RecD),
+  ( Decode (From, RecD),
     decode,
     decodeRecordNamed,
     (<!),
-    (<*!),
   )
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
@@ -256,8 +254,7 @@ import Shelley.Spec.Ledger.TxBody
     witKeyHash,
   )
 import Shelley.Spec.Ledger.UTxO
-  ( TransUTxO,
-    UTxO (..),
+  ( UTxO (..),
     balance,
     totalDeposits,
     txinLookup,
@@ -502,30 +499,10 @@ instance (TransEpoch ToCBOR era) => ToCBOR (EpochState era) where
     encodeListLen 6 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR r <> toCBOR p <> toCBOR n
 
 instance
-  ( FromCBOR (Annotator (Core.PParams era)),
-    TransValue FromCBOR era,
-    TransUTxO FromCBOR era,
-    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
-    FromCBOR (Annotator (State (Core.EraRule "PPUP" era))),
-    Era era
-  ) =>
-  FromCBOR (Annotator (EpochState era))
-  where
-  fromCBOR =
-    decode $
-      Ann (RecD EpochState)
-        <*! Ann From
-        <*! Ann From
-        <*! From
-        <*! From
-        <*! From
-        <*! Ann From
-
-instance
   ( FromCBOR (Core.PParams era),
     TransValue FromCBOR era,
-    TransUTxO FromCBOR era,
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
+    FromCBOR (Core.TxOut era),
     FromCBOR (State (Core.EraRule "PPUP" era)),
     Era era
   ) =>
@@ -571,16 +548,6 @@ instance NoThunks (PParamsDelta era) => NoThunks (PPUPState era)
 instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (PPUPState era) where
   toCBOR (PPUPState ppup fppup) =
     encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
-
-instance
-  (Era era, FromCBOR (Annotator (PParamsDelta era))) =>
-  FromCBOR (Annotator (PPUPState era))
-  where
-  fromCBOR =
-    decode $
-      Ann (RecD PPUPState)
-        <*! From
-        <*! From
 
 instance
   (Era era, FromCBOR (PParamsDelta era)) =>
@@ -639,24 +606,8 @@ instance
 
 instance
   ( TransValue FromCBOR era,
-    TransUTxO FromCBOR era,
-    FromCBOR (Annotator (State (Core.EraRule "PPUP" era))),
-    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
-  ) =>
-  FromCBOR (Annotator (UTxOState era))
-  where
-  fromCBOR =
-    decode $
-      Ann (RecD UTxOState)
-        <*! Ann From
-        <*! Ann From
-        <*! Ann From
-        <*! From
-
-instance
-  ( TransValue FromCBOR era,
-    TransUTxO FromCBOR era,
     FromCBOR (State (Core.EraRule "PPUP" era)),
+    FromCBOR (Core.TxOut era),
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
   ) =>
   FromCBOR (UTxOState era)
@@ -711,8 +662,9 @@ instance
 
 instance
   ( Era era,
-    TransUTxO FromCBOR era,
     FromCBOR (Core.PParams era),
+    FromCBOR (Core.TxOut era),
+    FromCBOR (Core.Value era),
     FromCBOR (State (Core.EraRule "PPUP" era))
   ) =>
   FromCBOR (NewEpochState era)
@@ -726,24 +678,6 @@ instance
         <! From
         <! From
         <! From
-
-instance
-  ( Era era,
-    TransUTxO FromCBOR era,
-    FromCBOR (Annotator (Core.PParams era)),
-    FromCBOR (Annotator (State (Core.EraRule "PPUP" era)))
-  ) =>
-  FromCBOR (Annotator (NewEpochState era))
-  where
-  fromCBOR = do
-    decode $
-      Ann (RecD NewEpochState)
-        <*! Ann From
-        <*! Ann From
-        <*! Ann From
-        <*! From
-        <*! Ann From
-        <*! Ann From
 
 getGKeys ::
   NewEpochState era ->
@@ -787,21 +721,8 @@ instance
 instance
   ( Era era,
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
-    TransUTxO FromCBOR era,
-    FromCBOR (Annotator (State (Core.EraRule "PPUP" era)))
-  ) =>
-  FromCBOR (Annotator (LedgerState era))
-  where
-  fromCBOR =
-    decode $
-      Ann (RecD LedgerState)
-        <*! From
-        <*! Ann From
-
-instance
-  ( Era era,
-    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
-    TransUTxO FromCBOR era,
+    FromCBOR (Core.TxOut era),
+    FromCBOR (Core.Value era),
     FromCBOR (State (Core.EraRule "PPUP" era))
   ) =>
   FromCBOR (LedgerState era)

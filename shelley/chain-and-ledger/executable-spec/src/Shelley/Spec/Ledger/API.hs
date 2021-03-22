@@ -10,7 +10,7 @@ module Shelley.Spec.Ledger.API
   )
 where
 
-import Cardano.Ledger.Core (AnnotatedData, ChainData)
+import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -44,7 +44,7 @@ class
     UsesTxOut era,
     UsesPParams era,
     ChainData (State (Core.EraRule "PPUP" era)),
-    AnnotatedData (State (Core.EraRule "PPUP" era))
+    SerialisableData (State (Core.EraRule "PPUP" era))
   ) =>
   ShelleyBasedEra era
 

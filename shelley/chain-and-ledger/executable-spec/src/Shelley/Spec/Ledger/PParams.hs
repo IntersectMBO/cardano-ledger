@@ -45,11 +45,9 @@ import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Coders
-  ( Annotator (..),
-    Decode (Ann, Emit, From, RecD),
+  ( Decode (From, RecD),
     decode,
-    mapDecodeA,
-    (<*!),
+    (<!),
   )
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
@@ -265,12 +263,6 @@ instance (Era era) => FromCBOR (PParams era) where
         <*> fromCBOR -- _minUTxOValue    :: Natural
         <*> fromCBOR -- _minPoolCost     :: Natural
 
--- | Annotated decoder instance for PParams. This is not needed in the Shelley
--- era, since PParams can be decoded without their annotation. But future eras
--- will require the annotation.
-instance Era era => FromCBOR (Annotator (PParams era)) where
-  fromCBOR = pure <$> fromCBOR
-
 instance ToJSON (PParams era) where
   toJSON pp =
     Aeson.object
@@ -361,10 +353,10 @@ instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (Update era) where
     encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
 
 instance
-  (Era era, FromCBOR (Annotator (PParamsDelta era))) =>
-  FromCBOR (Annotator (Update era))
+  (Era era, FromCBOR (PParamsDelta era)) =>
+  FromCBOR (Update era)
   where
-  fromCBOR = decode $ Ann (RecD Update) <*! From <*! Ann From
+  fromCBOR = decode $ RecD Update <! From <! From
 
 data PPUpdateEnv era = PPUpdateEnv SlotNo (GenDelegs era)
   deriving (Show, Eq, Generic)
@@ -462,9 +454,6 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
       (fail $ "duplicate keys: " <> show fields)
     pure $ foldr ($) emptyPParamsUpdate (snd <$> mapParts)
 
-instance Era era => FromCBOR (Annotator (PParamsUpdate era)) where
-  fromCBOR = pure <$> fromCBOR
-
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
   = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (PParamsDelta era))
@@ -483,15 +472,6 @@ instance
   ToCBOR (ProposedPPUpdates era)
   where
   toCBOR (ProposedPPUpdates m) = mapToCBOR m
-
-instance
-  (Era era, FromCBOR (Annotator (PParamsDelta era))) =>
-  FromCBOR (Annotator (ProposedPPUpdates era))
-  where
-  fromCBOR =
-    decode $
-      Ann (Emit ProposedPPUpdates)
-        <*! mapDecodeA (Ann From) From
 
 instance
   (Era era, FromCBOR (PParamsDelta era)) =>

@@ -20,7 +20,7 @@ module Shelley.Spec.Ledger.API.Validation
   )
 where
 
-import Cardano.Ledger.Core (AnnotatedData, ChainData)
+import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -51,7 +51,7 @@ class
     ChainData (BHeader (Crypto era)),
     AnnotatedData (BHeader (Crypto era)),
     ChainData (NewEpochState era),
-    AnnotatedData (NewEpochState era),
+    SerialisableData (NewEpochState era),
     ChainData (BlockTransitionError era),
     ChainData (STS.PredicateFailure (STS.CHAIN era)),
     STS (Core.EraRule "TICK" era),

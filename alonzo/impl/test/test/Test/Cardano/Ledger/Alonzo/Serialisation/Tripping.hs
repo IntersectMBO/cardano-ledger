@@ -78,11 +78,11 @@ tests =
       testProperty "alonzo/Tx" $
         trippingAnn @(Tx (AlonzoEra C_Crypto)),
       testProperty "alonzo/CostModel" $
-        trippingAnn @CostModel,
+        tripping @CostModel,
       testProperty "alonzo/PParams" $
-        trippingAnn @(PParams (AlonzoEra C_Crypto)),
-      testProperty "alonzo/PParamUpdate" $
-        trippingAnn @(PParamsUpdate (AlonzoEra C_Crypto)),
+        tripping @(PParams (AlonzoEra C_Crypto)),
+      testProperty "alonzo/PParamsUpdate" $
+        tripping @(PParamsUpdate (AlonzoEra C_Crypto)),
       testProperty "alonzo/AuxiliaryData" $
         trippingAnn @(AuxiliaryData (AlonzoEra C_Crypto)),
       -- TODO, this test does not work because of (FromCBOR(Annotator x)) issues

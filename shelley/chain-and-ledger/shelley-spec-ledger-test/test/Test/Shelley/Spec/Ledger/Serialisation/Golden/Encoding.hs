@@ -769,7 +769,7 @@ tests =
                   )
               )
           e = EpochNo 0
-       in checkEncodingCBORAnnotated
+       in checkEncodingCBOR
             "full_update"
             (Update ppup e)
             ( (T $ TkListLen 2)
@@ -1314,7 +1314,7 @@ tests =
               es
               (SJust ru)
               pd
-       in checkEncodingCBORAnnotated
+       in checkEncodingCBOR
             "new_epoch_state"
             nes
             ( T (TkListLen 6)
