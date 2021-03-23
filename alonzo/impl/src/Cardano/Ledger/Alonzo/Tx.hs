@@ -46,6 +46,8 @@ module Cardano.Ledger.Alonzo.Tx
     Tx (Tx, body, wits, isValidating, auxiliaryData),
     body',
     wits',
+    txdats',
+    txscripts',
     isValidating',
     auxiliaryData',
     TxBody (..),
