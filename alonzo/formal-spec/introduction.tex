@@ -6,6 +6,7 @@ This document describes the extensions to the multi-asset formal ledger specific
 required for the support of non-native scripts, in particular Plutus Core. This underpins future Plutus development: there should be minimal changes to these ledger rules to support future non-native languages.
 %
 The two major extensions that are described here are:
+
 \begin{inparaenum}
 \item
 the introduction
@@ -14,6 +15,7 @@ of \emph{non-native} scripts, i.e. scripts that are not evaluated internally by 
   additions to the Shelley-era UTxO (unspent transaction output) model that are needed to support Plutus
   constructs (the ``extended UTxO'' model).
 \end{inparaenum}
+
 This document defines these extensions as changes to the multi-asset structured transition system,
 using the same notation and conventions that were used for the multi-asset specification~\cite{shelley_ma_spec}.
 As with the multi-asset formal specification, these rules will be implemented in the form of an executable ledger specification that will then be
@@ -29,7 +31,6 @@ based on e.g. the size of the transaction that includes the script.
 
 In contrast, \emph{non-native} scripts can perform arbitrary
 (and, in principle, Turing-complete) computations.
-In order to bound execution costs to a pre-determined constant, we use a standard ``fuel'' approach.
 We require transactions that use non-native scripts
 to have a budget in terms of a number of abstract $\ExUnits$.
 This budget gives a quantitative bound on resource usage in terms of a number of specific metrics, including memory usage or abstract execution steps.
@@ -41,10 +42,47 @@ $\CostMod$, which depends on the language and is provided as a protocol paramete
 This allows execution costs (and so transaction fees) to be varied without requiring a major protocol version change (``hard fork'').
 This may be used, for example, if a more efficient interpreter is produced.
 
+The approach we use to bound execution costs to a pre-determined constant is
+distinct from the usual ``gas'' model~\cite{XX}.\TODO{And this one, please!} in the following notable ways :
+
+\begin{itemize}
+  \item The exact budget to run a script is expressed in terms of computational resources,
+  and included in the transaction data. This resource budget can be computed before submitting a transaction.
+  In contrast with the gas model, where the budget is expressed indirectly,
+  in terms of an upper bound on the fee the author is willing to pay for execution of the
+  contract (eg. their total available funds).
+
+  \item The exact total fee a transaction is paying is also specified in the transaction data.
+  For a transaction to be valid, this fee must cover the script-running resource budget at the current price.
+  If the fee is not sufficient to cover the resource budget specified (eg. if the resource price increased),
+  the transaction is considered invalid and \emph{will not appear on the ledger (will not be included in a valid block)}.
+  No fees will be collected in this case.
+  This is in contrast with the gas model, where, if prices go up, a greater fee will be charged - up to
+  the maximum available funds, even if they are not sufficient to cover the cost of the execution of the contract.
+
+  \item If a script validates having used less resources than the budget specified by the
+  transaction, the fee for the whole budget is still collected. Unlike the gas model, where
+  the exact fee is not known at the time of transaction submission.
+
+  \item The user specifies the UTxO entries containing funds intended to pay fees.
+  The total amount of funds in entries marked for-fees must cover the specified transaction fee.
+  The UTxO entries may, however, contain more funds than the fee amount. In the case that a script carried by a transaction fails
+  to validate, a larger fee (than the one specified in the transaction) may be collected.
+  The amount of the fee collected is the total funds in all the UTxOs marked for fee payment.
+  This scheme is similar to the upper bound on the transaction fee that is used by the gas model,
+  however, it only applies in the case of script failure in our model.
+\end{itemize}
+
+Another important point to make about both native and non-native scripts on Cardano is that
+running scripts in all languages will be supported indefinitely whenever possible.
+Making it impossible to run a script in a particular scripting language
+makes UTxO entries locked by that script unspendable.
+
 \subsection{Extended UTxO}
 
 The specification of the extended UTxO model follows the description that was given in~\cite{plutus_eutxo}.
 All transaction outputs that are locked by non-native scripts must include the hash of an additional ``datum''. The actual datum needs to be supplied in the body of the transaction, and can be used to encode state, for example.
 While this datum could instead have been stored directly in the UTxO, our choice of storing it in the transaction body improves space efficiency in the implementation by reducing the UTxO storage requirements. The datum is passed to a script that validates that the output is spent correctly.
+
 All transactions also need to supply a \emph{redeemer} for all items that are validated by a script. This is an additional piece of data that is passed to the script, and that could be considered as a form of user-input to the script. Note that the same script could be used for multiple different purposes in the same transaction, so in general it might be necessary to include more than one redeemer per script.
 There will, however, always be at least one redeemer per script.

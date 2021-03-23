@@ -12,12 +12,12 @@
         \False & \text{otherwise}
       \end{cases}
                  \nextdef
-    & \fun{exunits} \in \Tx \to \ExUnits \\
-    & \fun{exunits}~\var{tx} = \sum_{\wcard \mapsto (\wcard, eu) \in \fun{txrdmrs}~(\fun{txwits}~tx)} eu
+    & \fun{totExunits} \in \Tx \to \ExUnits \\
+    & \fun{totExunits}~\var{tx} = \sum_{\wcard \mapsto (\wcard, eu) \in \fun{txrdmrs}~(\fun{txwits}~tx)} eu
     \nextdef
     & \fun{feesOK} \in \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo~= \\
-    &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{exunits}~tx \neq (0, 0) \Rightarrow \\
+    &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{totExunits}~tx \neq (0, 0) \Rightarrow \\
     &~~~~~~(\forall (a, \wcard, \_) \in \fun{range}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo}), \neg \fun{isNonNativeScriptAddress}~tx~a) \\
     &~~~~~~\wedge~ \var{balance} \in \Coin \\
     &~~~~~~      \wedge~ \var{balance} \geq \txfee{txb}) \\
@@ -35,7 +35,7 @@
     &\fun{minfee} \in \PParams \to \Tx \to \Coin \\
     &\fun{minfee}~\var{pp}~\var{tx} = \\
     &~~(\fun{a}~\var{pp}) \cdot \fun{txSize}~\var{tx} + (\fun{b}~\var{pp}) +
-    \hldiff{\fun{txscriptfee}~(\fun{prices}~{pp})~(\fun{txexunits}~(\fun{txbody}~{tx}))}
+    \hldiff{\fun{txscriptfee}~(\fun{prices}~{pp})~(\fun{totExunits}~(\fun{txbody}~{tx}))}
   \end{align*}
   \caption{Functions related to fees}
   \label{fig:functions:utxo}
@@ -47,7 +47,7 @@ We have added or changed several functions that deal with fees as shown in Figur
   \item $\fun{isNonNativeScriptAddress}$ is a predicate that checks
   whether an address is used as a script address with a non-native
   script.
-  \item $\fun{exunits}$ calculates the total $\ExUnits$ in a transaction.
+  \item $\fun{totExunits}$ calculates the total $\ExUnits$ in a transaction.
   \item The predicate $\fun{feesOK}$ checks whether the transaction is
   paying the necessary fees, and that it does it correctly. That is, it checks that:
   \begin{enumerate}[label=({\roman*})]
@@ -78,10 +78,13 @@ retrieve all the data that is relevant to Plutus script validation.
 These include:
 
 \begin{itemize}
+\item $\Time$ is the system time
 \item
-  $\ScriptPurpose$ captures the exact purpose a script is used
-  for, for example spending a specific output or minting with a
-  specific policy.
+  $\ScriptPurpose$ is a sum type of all parts of a transaction that may
+  require a script witness to validate. Note that this contains the data
+  (eg. a certificate $c \in \fun{txcerts}~{txb}$,
+  or a transaction input $tin \in \fun{txcerts}~{txb}$) of the item being validated,
+  not just a tag indicating the type.
 \item
   $\fun{indexof}$ is a helper function that finds the index of a given certificate, value, input, or
   withdrawal in a list, finite map, or set of such objects.
@@ -92,6 +95,16 @@ These include:
 
 
 \begin{figure}[htb]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{}lr}
+      \var{tm}
+      & \Time
+      & \text{System time}
+    \end{array}
+  \end{equation*}
+  %
   \emph{Derived types}
   %
   \begin{equation*}
@@ -137,6 +150,12 @@ These include:
 Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used for script validation.
 
 \begin{itemize}
+\item $\fun{slotToTime}$ translates a slot number to system time if possible.
+If it is not possible to do this translation, $\Nothing$ is returned.
+The reason it may not be possible to translate is that the slot number
+is too far in the future for the system to accurately
+predict the exact time to which it refers.
+
 \item
   $\fun{valContext}$ constructs the validation context.
   This includes all the necessary transaction and chain state data that needs to be passed to the script interpreter.
@@ -155,19 +174,63 @@ Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used
   Note that script execution stops if the full budget has been spent before validation is complete.
 \end{itemize}
 
-\begin{note}
-  \textbf{Know your contract arguments}
+
+\textbf{Slot to time translation.}
+One of the inputs to scripts is the transaction validity interval (recall here that
+they do not actually see the current slot number). The length of a
+slot may change in a future era. In this case, for a script written in a previous
+era, if we were to pass the transaction validity interval expressed as slot numbers,
+we get that
+
+\begin{itemize}
+  \item the script logic is expressed in terms of slot numbers
+  which likely assume the slot length of the era in which it was created
+  \item the slot numbers in the validity interval of the transaction are used
+  assuming slot length of the current era
+\end{itemize}
+
+Therefore, the slot numbers inside the contract and the slot numbers in the transaction
+map differently onto points in time. The ledger does not have access to data (or conversion functions)
+that is needed to convert transaction validity interval slots numbers to slots numbers
+that correspond to the contracts world view. To address this, we decided to pass
+non-native contracts (in all languages and all eras) the system time instead of slot numbers.
+The conversion function is implemented by consensus (see~\cite{shelley_consensus}),
+which has the information to do this correctly for
+
+\begin{itemize}
+  \item all slots prior to the current slot
+  \item a number of slots after the current slot (this number is determined by
+  the consensus's forecast window)
+\end{itemize}
+
+\textbf{Validation context construction.}
+  As additional non-native scripting languages become supported in the future, scripts of different
+  languages may expect different (or differently structured) validation context, ie. different
+  representation of transaction and chain state data.
+  The $\fun{valContext}$ function will be implemented differently
+  for each new language, with the construction of the validation context
+  dependent on both the language of the script being validated and the ledger/transaction structure
+  of the current era.
+
+  In order to ensure that running scripts of all script languages is supported indefinitely across
+  future eras, the $\fun{valContext}$ function must be total (ie. always produce
+  a validation context). Recall here that while \emph{running} all scripts must be supported across
+  all future ledger changes,
+  it is not a requirement that every script must \emph{validate} within the context of some transaction. \newline
+
+\textbf{Know your contract arguments.}
   A Plutus validator script may receive either a list of three terms of type $\Data$, in case it validates the spending of script outputs
   or two terms (redeemer and context, with no datum), for all other uses.
   Script authors must keep this in mind when writing scripts, since the ledger call to the interpreter is oblivious to what
   arguments are required.
-\end{note}
 
 \begin{figure*}[htb]
   \emph{Abstract Script Validation Functions}
   %
   \begin{align*}
-     &\fun{valContext} \in \UTxO \to \Tx \to \ScriptPurpose \to \Data \\
+     &\fun{slotToTime} \in \Slot \to \Time^? \\
+     &\text{Translate slot number to system time or fail} \\~\\
+     &\fun{valContext} \in \Language \to \UTxO \to \Tx \to \ScriptPurpose \to \Data \\
      &\text{Build Validation Data} \\~\\
      &\fun{runPLCScript} \in \CostMod \to\ScriptPlutus \to
     \seqof{\Data} \to \ExUnits \to \IsValidating \\
@@ -220,7 +283,7 @@ and the current item being validated.
     \nextdef
     & \fun{collectNNScriptInputs} \in \PParams \to \Tx \to \UTxO \to \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
     & \fun{collectNNScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
-    & ~~\fun{toList} \{ (\var{script}, (d; \fun{valContext}~\var{utxo}~\var{tx}~\var{sp}; \fun{getData}~tx~utxo~sp), \var{eu}, \var{cm}) \mid \\
+    & ~~\fun{toList} \{ (\var{script}, (d; \fun{valContext}~(\fun{language}~{script})~\var{utxo}~\var{tx}~\var{sp}; \fun{getData}~tx~utxo~sp), \var{eu}, \var{cm}) \mid \\
     & ~~~~(\var{sp}, \var{scriptHash}) \in \fun{scriptsNeeded}~{utxo}~{tx}, \\
     & ~~~~(\var{d}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
@@ -420,6 +483,20 @@ This rule has the following changes:
 \begin{enumerate}
   \item The transaction pays fees correctly, as defined above;
 
+  \item The end of the transaction validity interval is translatable into
+  system time (ie. within the consensus's forecast window). This is checked
+  by $\fun{slotToTime}$, which returns $\Nothing$ if the end slot is outside.
+  Note that we do not need to check that the start slot can be converted to
+  time, because all pasts slots can be converted into time correctly.
+
+  \item $\fun{adaPerUTxOWord}$ is now a protocol parameter explicitly, the
+  $\fun{utxoEntrySize}$ calculation is defined differently than for ShelleyMA
+  (see Section~\ref{sec:value-size})
+
+  \item $\fun{maxValPerc}$ is now also a protocol parameter (not a constant).
+  It represents a percentage (not a size in bytes) of the total transaction
+  size that the size of a $\Value$ in an output can be.
+
  \item The execution unit budget for a transaction is within the maximum
   permitted number of units for a transaction;
 
@@ -434,7 +511,8 @@ UTXOS rule.
     \inference[UTxO-inductive]
     {
       \var{txb}\leteq\txbody{tx} &
-      \fun{ininterval}~\var{slot}~(\fun{txvldt}{tx}) \\
+      \fun{ininterval}~\var{slot}~(\fun{txvldt}~{tx}) \\
+      \hldiff{\var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx}} & \hldiff{\fun{slotToTime}~i_f \neq \Nothing} \\
       \txins{txb} \neq \emptyset
       & \hldiff{\fun{feesOK}~pp~tx~utxo}
       & \txins{txb} \subseteq \dom \var{utxo}
@@ -443,14 +521,17 @@ UTXOS rule.
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
       \forall txout \in \txouts{txb}, \\
-      txout \geq \fun{coinToValue}(\fun{outputSize}~{txout} * \fun{adaPerUTxOByte}~pp) \\~
+      \fun{getValue}~txout \geq \fun{coinToValue}(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp}) \\~
+      \\
+      \forall txout \in \txouts{txb},\\
+      \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ \fun{quot}~((\fun{maxTxSize}~pp) * (\fun{maxValPerc}~pp))~100} \\~
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
       \\
       \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\
-      \hldiff{\fun{txexunits}~{txb} \leq \fun{maxTxExUnits}~{pp}}
+      \hldiff{\fun{totExunits}~{tx} \leq \fun{maxTxExUnits}~{pp}}
       \\
       ~
       \\
@@ -593,9 +674,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \var{txw}\leteq\fun{txwits}~{tx} \\
       (utxo, \wcard, \wcard, \wcard) \leteq \var{utxoSt} \\
       \var{witsKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
-      \dom (\txwitsVKey{txw}) \}\\
-      \hldiff{\var{extraKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
-      \fun{extraKeys}~txb \}}\\~\\
+      \dom (\txwitsVKey{txw}) \}\\~\\
       \hldiff{\forall \var{s} \in \range (\fun{txscripts}~{txw}) \cap \ScriptNative,
       \fun{runNativeScript}~\var{s}~\var{tx}}\\~\\
       \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}, \fun{checkRedeemers}~tx~utxo~sph} \\
@@ -605,7 +684,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
       \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\
-      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \cup \hldiff{extraKeyHashes} \subseteq \var{witsKeyHashes}
+      \hldiff{\fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \cup \fun{reqSignerHashes}~txb \subseteq \var{witsKeyHashes}}
       \\~\\
       genSig \leteq
       \left\{

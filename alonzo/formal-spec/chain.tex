@@ -81,7 +81,7 @@ block (obtained from the protocol parameter).
       &
       \var{fSlot} \leteq \fun{firstSlot}~(\epoch{slot})
       \\~\\
-      \hldiff{\sum_{tx\in txs} \fun{txexunits}~(\txbody~{tx}) \leq \fun{maxBlockExUnits}~\var{pp}}
+      \hldiff{\sum_{tx\in txs} \fun{totExunits}~{tx} \leq \fun{maxBlockExUnits}~\var{pp}}
       \\~\\
       {
         {\begin{array}{c}
@@ -130,10 +130,10 @@ remain unchanged during the transition.
   \emph{Types and Constants}
   %
   \begin{align*}
-      & \NewParams ~=~ (\Language \mapsto \CostMod) \times \Prices \times \ExUnits \times \ExUnits \\
+      & \NewParams ~=~ (\Language \mapsto \CostMod) \times \Prices \times \ExUnits \times \ExUnits \times \N \times \Coin \\
       & \text{the type of new parameters to add for Goguen}
       \nextdef
-      & \mathsf{ivPP} ~\in~ \NewParams \\
+      & \var{ivPP} ~\in~ \NewParams \\
       & \text{the initial values for new Goguen parameters}
   \end{align*}
   \emph{Shelley to Goguen Transition Functions}
@@ -142,7 +142,7 @@ remain unchanged during the transition.
       & \fun{toGoguen} \in \ShelleyChainState \to \ChainState \\
       & \fun{toGoguen}~\var{chainstate} =~\var{chainstate'} \\
       &~~\where \\
-      &~~~~\var{chainstate'}_{pparams}~=~\var{pp}\cup \mathsf{ivPP}\\
+      &~~~~\var{chainstate'}_{pparams}~=~(\var{pp}\cup \var{ivPP})~ - ~\var{minUTxOValue}\\
       & \text{transform Shelley chain state to Goguen state}
   \end{align*}
   \caption{Shelley to Goguen State Transtition}

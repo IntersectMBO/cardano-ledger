@@ -26,8 +26,6 @@
 \usepackage{enumerate}
 \usepackage{comments} \newcommand{\khcomment}[1]{\comment{KH}{#1}}
 
-\setlength{\parindent}{0pt}
-
 
 %%
 %% Package `semantic` can be used for writing inference rules.
@@ -85,6 +83,8 @@
 \newcommand{\ShelleyPParams}{\type{ShelleyPParams}}
 \newcommand{\NewParams}{\type{NewParams}}
 \newcommand{\Slot}{\type{Slot}}
+\newcommand{\MemoryEstimate}{\type{MemoryEstimate}}
+\newcommand{\Time}{\type{Time}}
 \newcommand{\SlotsPrior}{\ensuremath{\mathsf{SlotsPrior}}}
 \newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
 \newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
@@ -359,6 +359,8 @@
 \include{ledger}
 
 \include{chain}
+
+\include{value-size}
 
 
 \addcontentsline{toc}{section}{References}
