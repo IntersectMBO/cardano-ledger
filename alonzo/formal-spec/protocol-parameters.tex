@@ -76,10 +76,20 @@ $\var{prices}$ parameter. This is a parameter that applies to all
 scripts and that cannot be varied for individual languages. This parameter
 reflects the real-world costs in terms of energy usage, hardware resources etc.
 
+In Alonzo, the protocol parameter $\var{minUTxOValue}$ is deprecated, and replaced by
+$\var{adaPerUTxOWord}$. This specifies directly the deposit required for storing
+bytes of data on the ledger in the form of UTxO entries.
+
 \textbf{Limiting Script Execution Costs.}
 The $\var{maxTxExUnits}$ and $\var{maxBlockExUnits}$ protocol parameters are
 used to limit the total per-transaction and per-block resource use. These only apply to non-native scripts.
 The parameters are used to ensure that the time and memory that are required to verify a block are bounded.
+
+\textbf{Value size limit as a protocol parameter.}
+The new parameter $\var{maxValPerc}$ replaces the constant $\mathsf{MaxValPerc}$
+used (in the ShelleyMA era) to limit the size of the the $\Value$ part of an output in a
+serialised transaction.
+It is expressed as a percentage, and therefore should not be set to be $>~100$.
 
 \begin{figure*}[htb]
   \emph{Abstract types}
@@ -111,14 +121,30 @@ The parameters are used to ensure that the time and memory that are required to 
     \end{array}
   \end{equation*}
   %
-  \emph{Protocol Parameters}
+  \emph{Deprecated Protocol Parameters}
   %
   \begin{equation*}
       \begin{array}{r@{~\in~}l@{\qquad}r}
-        \var{costmdls} \mapsto (\Language \mapsto \CostMod) & \PParams & \text{Script exec. cost model}\\
-        \var{prices} \mapsto \Prices & \PParams & \text{Coefficients for $\ExUnits$ prices} \\
-        \var{maxTxExUnits} \mapsto \ExUnits & \PParams & \text{Max. total tx script exec. resources}\\
-        \var{maxBlockExUnits} \mapsto \ExUnits & \PParams & \text{Max. total block script exec. resources}\\
+        \var{minUTxOValue} \mapsto \Coin & \PParams & \text{Min. amount of ada each UTxO must contain}
+      \end{array}
+  \end{equation*}
+  %
+  \emph{New Protocol Parameters}
+  %
+  \begin{equation*}
+      \begin{array}{r@{~\in~}l@{\qquad}r}
+        \var{costmdls} \mapsto (\Language \mapsto \CostMod) & \PParams \\
+        % & \text{Script exec. cost model}\\
+        \var{prices} \mapsto \Prices & \PParams \\
+        % & \text{Coefficients for $\ExUnits$ prices} \\
+        \var{maxTxExUnits} \mapsto \ExUnits & \PParams \\
+        % & \text{Max. total tx script exec. resources}\\
+        \var{maxBlockExUnits} \mapsto \ExUnits & \PParams \\
+        % & \text{Max. total block script exec. resources}\\
+        \var{maxValPerc} \mapsto \N & \PParams \\
+        % & \text{Max perc. of total tx size a value can be}\\
+        \var{adaPerUTxOWord} \mapsto \Coin & \PParams \\
+        % & \text{Min. ada per word (8 bytes) a UTxO entry must contain}
       \end{array}
   \end{equation*}
   %

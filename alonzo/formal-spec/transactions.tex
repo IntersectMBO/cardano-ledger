@@ -143,7 +143,7 @@ We add the following helper functions:
        & \times ~\Slot^? \times \Slot^? & \fun{txvldt} & \text{Validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
        & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
-       & \times ~\hldiff{\powerset{\VKey}} & \hldiff{\fun{extraKeys}} & \text{VKeys passed to scripts}\\
+       & \times ~\hldiff{\powerset{\KeyHash}} & \hldiff{\fun{reqSignerHashes}} & \text{Hashes of VKeys passed to scripts}\\
        & \times ~\hldiff{\WitnessPPDataHash^?} & \hldiff{\fun{wppHash}} & \text{Hash of script-related data}\\
        & \times ~\AuxiliaryDataHash^? & \fun{txADhash} & \text{Auxiliary data hash}\\
     \end{array}
@@ -208,8 +208,15 @@ the body of the transaction:
     \emph{in case the transaction contains non-native scripts}. In case the same itput is mentioned both as
     a regular and a fee input, it still counts as being spent just once, so there is no need to prevent this.
     It is in the transaction creator's best interest to keep the two sets of inputs disjoint, to minimize fees.
-  \item There is a new field called $\fun{extraKeys}$ that is used to specify a set of signers that are passed
-    to scripts, in addition to the ones required by VKey addresses. The keys included also need to sign the transaction.
+  \item There is a new field called $\fun{reqSignerHashes}$ that is used to specify a set of signers (via the
+    hashes of their VKeys) that the scripts a transaction is carrying expect to have signed the transaction.
+    These signatures are required in addition to the ones required by VKey addresses, and
+    these keys are passed to the Plutus scipts during validation.
+
+    Unlike signatures required by MSig scripts, the signatures of the keys
+    (whose hashes are) included
+    in this field can never be stripped from the transaction. This is because
+    the hashes of the signing keys are listed inside the signed body.
   \item We include a hash of some script-related data, specifically the redeemers and protocol parameters,
     with accessor $\fun{wppHash}$.
 \end{itemize}

@@ -1,0 +1,42 @@
+\section{Output Size}
+\label{sec:value-size}
+
+Figure \ref{fig:test} gives the formula for calculating the size of a UTxO entry
+in the Alonzo era. In addition to the data found in the UTxO in the ShelleyMA
+era, the hash of a datum (or $\Nothing$) is added to the output type, which
+is accounted for in the size calculation.
+
+\begin{figure*}[h]
+  \emph{Constants}
+  \begin{align*}
+  & \mathsf{JustDatHashSize} \in \MemoryEstimate \\
+  & \text{The size of a datum hash wrapped in $\DataHash^?$} \\~
+  \\
+  & \mathsf{NothingSize} \in \MemoryEstimate \\
+  & \text{The size of $\Nothing$ wrapped in $\DataHash^?$}
+  \end{align*}
+  %
+  \emph{Helper Functions}
+  \begin{align*}
+    & \fun{datHashSize} \in \DataHash^? \to \MemoryEstimate \\
+    & \fun{datHashSize}~ \Nothing = \mathsf{NothingSize} \\
+    & \fun{datHashSize}~ \wcard = \mathsf{JustDatHashSize} \\
+    & \text{Return the size of $\DataHash^?$} \\~\\
+    & \fun{utxoEntrySize} \in \TxOut \to \MemoryEstimate \\
+    & \fun{utxoEntrySize}~\var{(tout, d)} = \mathsf{utxoEntrySizeWithoutVal} + (\fun{size} (\fun{getValue}~tout)) + \mathsf{datHashSize}~d \\
+    & \text{Calculate the size of a UTxO entry}
+  \end{align*}
+  \caption{Value Size}
+  \label{fig:test}
+\end{figure*}
+
+\begin{note}
+  Get datHashSize from heapwords on the code
+\end{note}
+
+How much memory is used exactly is an implementation detail, with the current constants, in Haskell words (8 bytes):
+
+\begin{itemize}
+  \item $\mathsf{JustDatHashSize} = $
+  \item $\mathsf{NothingSize} = $
+\end{itemize}
