@@ -22,6 +22,7 @@ module Cardano.Ledger.Alonzo.Data
   ( Data (Data, ..),
     DataHash,
     hashData,
+    getPlutusData,
     -- $
     AuxiliaryData (AuxiliaryData, scripts, dats, txMD),
     AuxiliaryDataHash (..),
@@ -115,6 +116,9 @@ pattern Data p <-
   DataConstr (Memo p _)
   where
     Data p = DataConstr (memoBytes (To p))
+
+getPlutusData :: Data era -> Plutus.Data
+getPlutusData (DataConstr (Memo d _)) = d
 
 -- =============================================================================
 

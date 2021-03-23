@@ -11,7 +11,20 @@ module Cardano.Ledger.Alonzo.TxInfo where
 -- Types used in the Alonzo Era, needed to make TxInfo
 
 import Cardano.Crypto.Hash.Class (Hash (UnsafeHash))
-import Cardano.Ledger.Alonzo.Data (Data (..))
+import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
+-- import Cardano.Chain.Common.Address(Address)  -- Need to add this to the cabal file
+
+-- ==============================================
+-- Import Plutus stuff in the qualified Module P
+
+import qualified Cardano.Ledger.Alonzo.FakePlutus as P
+  ( Address (..),
+    Credential (..),
+    StakingHash (..),
+    TxInInfo (..),
+    TxInfo (..),
+    TxOut (..),
+  )
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( inputs',
@@ -22,12 +35,12 @@ import Cardano.Ledger.Alonzo.TxBody
     vldt',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..))
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.Core as Core (TxBody, TxOut, Value)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.SafeHash
--- import Cardano.Chain.Common.Address(Address)  -- Need to add this to the cabal file
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -35,15 +48,11 @@ import Data.ByteString as BS (ByteString)
 import Data.ByteString.Short as SBS (fromShort)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
--- ==============================================
--- Import Plutus stuff in the qualified Module P
-
 import qualified Language.PlutusTx as P (Data (..))
 import qualified Language.PlutusTx.IsData.Class as P (IsData (..))
 import qualified Plutus.V1.Ledger.Ada as P (adaSymbol, adaToken)
-import qualified Plutus.V1.Ledger.Address as P (Address (..))
-import qualified Plutus.V1.Ledger.Contexts as P (TxInInfo (..), TxInfo (..))
 import qualified Plutus.V1.Ledger.Crypto as P (PubKeyHash (..))
 import qualified Plutus.V1.Ledger.Interval as P
   ( Extended (..),
@@ -51,26 +60,56 @@ import qualified Plutus.V1.Ledger.Interval as P
     LowerBound (..),
     UpperBound (..),
   )
-import qualified Plutus.V1.Ledger.Scripts as P (DatumHash (..), ValidatorHash (..))
+import qualified Plutus.V1.Ledger.Scripts as P (Datum (..), DatumHash (..), ValidatorHash (..))
 import qualified Plutus.V1.Ledger.Slot as P (SlotRange)
-import qualified Plutus.V1.Ledger.Tx as P (TxOut (..), TxOutRef (..), TxOutType (..))
+import qualified Plutus.V1.Ledger.Tx as P (TxOutRef (..))
 import qualified Plutus.V1.Ledger.TxId as P (TxId (..))
 import qualified Plutus.V1.Ledger.Value as P (CurrencySymbol (..), TokenName (..), Value (..), singleton, unionWith)
-import Shelley.Spec.Ledger.Address (Addr (..), BootstrapAddress (..))
+import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
-import Shelley.Spec.Ledger.Keys (KeyHash (..))
+import Shelley.Spec.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))
+import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
-import Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (..))
+import Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (..), WitVKey (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- =========================================================
+
+-- | The _ptrs field of the DState (State of staking pool delegations and rewards)
+type PtrMap crypto = Map.Map Ptr (Credential 'Staking crypto)
+
+transDataHash :: StrictMaybe (DataHash c) -> Maybe P.DatumHash
+transDataHash (SJust safe) = Just (transDataHash' safe)
+transDataHash SNothing = Nothing
+
+transDataHash' :: (DataHash c) -> P.DatumHash
+transDataHash' safe = (P.DatumHash (transSafeHash safe))
+
+transKeyHash :: KeyHash d c -> P.PubKeyHash
+transKeyHash (KeyHash (UnsafeHash h)) = P.PubKeyHash (fromShort h)
+
+transScriptHash :: ScriptHash i -> P.ValidatorHash
+transScriptHash (ScriptHash (UnsafeHash h)) = P.ValidatorHash (fromShort h)
 
 transSafeHash :: SafeHash c i -> BS.ByteString
 transSafeHash safe = case extractHash safe of UnsafeHash b -> fromShort b
 
 transTxId :: TxId era -> P.TxId
 transTxId (TxId safe) = P.TxId (transSafeHash safe)
+
+-- =====================
+
+transStakeCred :: Credential keyrole crypto -> BS.ByteString
+transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = (fromShort kh)
+transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) = (fromShort kh)
+
+transStakeReference :: (PtrMap crypto) -> StakeReference crypto -> Maybe P.StakingHash
+transStakeReference _mp (StakeRefBase cred) = Just (P.StakingHash (transStakeCred cred))
+transStakeReference mp (StakeRefPtr ptr) =
+  case Map.lookup ptr mp of
+    Nothing -> Nothing
+    Just cred -> Just (P.StakingHash (transStakeCred cred))
+transStakeReference _mp StakeRefNull = Nothing
 
 transVI :: ValidityInterval -> P.SlotRange
 transVI (ValidityInterval SNothing SNothing) =
@@ -100,42 +139,40 @@ transTxIn ::
     Core.TxOut era ~ Alonzo.TxOut era
   ) =>
   UTxO era ->
+  PtrMap (Crypto era) ->
   TxIn (Crypto era) ->
   P.TxInInfo
-transTxIn (UTxO mp) txin =
+transTxIn (UTxO mp) ptrmap txin =
   P.TxInInfo
     (transTxIn' txin)
-    (Just (transAddr addr, undefined, dhash)) -- TODO Where does the redemmer hash come from?
+    (transAddr ptrmap addr)
     valout
+    dhash
   where
     txout = case Map.lookup txin mp of Just out -> out; Nothing -> error ("txin not in UTxO")
     valout = transValue (getField @"value" txout)
     addr = getField @"address" txout
     dhash = case getField @"datahash" txout of
-      SNothing -> P.DatumHash "\00" -- TODO get a DatumHash fro SNothing?
-      SJust (safehash) -> P.DatumHash (transSafeHash safehash)
+      SNothing -> Nothing
+      SJust (safehash) -> Just (P.DatumHash (transSafeHash safehash))
 
-transAddr :: Addr crypto -> P.ValidatorHash
-transAddr (Addr _net (KeyHashObj (KeyHash (UnsafeHash kh))) _stake) = P.ValidatorHash (fromShort kh)
-transAddr (Addr _net (ScriptHashObj (ScriptHash (UnsafeHash kh))) _stake) = P.ValidatorHash (fromShort kh)
-transAddr (AddrBootstrap _bootaddr) = P.ValidatorHash undefined -- TODO get a hash from a Bootstrap address.
+transCred :: Credential keyrole crypto -> P.Credential
+transCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (fromShort kh))
+transCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (fromShort kh))
 
-transTxOut :: forall era. (Era era, Value era ~ Mary.Value (Crypto era)) => Alonzo.TxOut era -> P.TxOut
-transTxOut (Alonzo.TxOut (Addr _network (ScriptHashObj sh) _stake) val datahash) =
+transAddr :: PtrMap crypto -> Addr crypto -> P.Address
+transAddr ptrmap (Addr _net object stake) = P.Address (transCred object) (transStakeReference ptrmap stake)
+transAddr _ptrmap (AddrBootstrap _bootaddr) = P.Address (P.PubKeyCredential (P.PubKeyHash undefined)) Nothing -- TODO get a hash from a Bootstrap address.
+
+transTxOut ::
+  forall era.
+  ( Era era,
+    Value era ~ Mary.Value (Crypto era)
+  ) =>
+  PtrMap (Crypto era) ->
+  Alonzo.TxOut era ->
   P.TxOut
-    (P.ScriptAddress (transScriptHash sh))
-    (transValue @(Crypto era) val)
-    (P.PayToScript (transDataHash datahash))
-transTxOut (Alonzo.TxOut (Addr _network (KeyHashObj kh) _stake) val datahash) =
-  P.TxOut
-    (P.PubKeyAddress (transKeyHash kh))
-    (transValue @(Crypto era) val)
-    (P.PayToScript (transDataHash datahash))
-transTxOut (Alonzo.TxOut (AddrBootstrap (BootstrapAddress _ad)) val datahash) =
-  P.TxOut
-    (P.PubKeyAddress (P.PubKeyHash undefined)) -- TODO BootstrapAddress into ByteString
-    (transValue @(Crypto era) val)
-    (P.PayToScript (transDataHash datahash))
+transTxOut ptrmap (Alonzo.TxOut addr val datahash) = P.TxOut (transAddr ptrmap addr) (transValue @(Crypto era) val) (transDataHash datahash)
 
 transPolicyID :: Mary.PolicyID crypto -> P.CurrencySymbol
 transPolicyID (Mary.PolicyID (ScriptHash (UnsafeHash x))) = P.CurrencySymbol (fromShort x)
@@ -155,15 +192,7 @@ transValue (Mary.Value n mp) = Map.foldlWithKey' accum1 justada mp
             (P.singleton (transPolicyID sym) (transAssetName tok) quantity)
     justada = (P.singleton P.adaSymbol P.adaToken n)
 
-transKeyHash :: KeyHash d c -> P.PubKeyHash
-transKeyHash (KeyHash (UnsafeHash h)) = P.PubKeyHash (fromShort h)
-
-transScriptHash :: ScriptHash i -> P.ValidatorHash
-transScriptHash (ScriptHash (UnsafeHash h)) = P.ValidatorHash (fromShort h)
-
-transDataHash :: StrictMaybe (DataHash c) -> P.DatumHash
-transDataHash (SJust safe) = P.DatumHash (transSafeHash safe)
-transDataHash SNothing = P.DatumHash "\00" -- TODO THIS IS PROBABLY WRONG
+-- ===================================
 
 transTx ::
   forall era.
@@ -173,18 +202,18 @@ transTx ::
     Value era ~ Mary.Value (Crypto era)
   ) =>
   UTxO era ->
+  PtrMap (Crypto era) ->
   Tx era ->
   P.TxInfo
-transTx utxo tx =
+transTx utxo ptrmap tx =
   P.TxInfo
-    (map (transTxIn utxo) (Set.toList allinputs))
-    (map transTxOut (foldr (:) [] outs))
+    (map (transTxIn utxo ptrmap) (Set.toList allinputs))
+    (map (transTxOut ptrmap) (foldr (:) [] outs))
     (transValue (inject @(Mary.Value (Crypto era)) fee))
     (transValue forge)
     (transVI interval)
-    [] -- MonetaryPolicyHash ???
-    [] -- PubKeyHash ???
-    [] -- Auxiliary Data and hashes
+    (Set.foldl (\ans vk -> (getWitVKeyHash vk) : ans) [] vkkeyset)
+    (map transDataPair datpairs)
     (P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody)))
   where
     tbody = body' tx
@@ -196,12 +225,15 @@ transTx utxo tx =
     fee = txfee' tbody
     forge = mint' tbody
     interval = vldt' tbody
+    vkkeyset = txwitsVKey' (wits' tx)
+    datpairs = Map.toList (txdats' (wits' tx))
 
 txInfoToData :: P.TxInfo -> P.Data
 txInfoToData x = P.toData x
 
--- | valContext collects info from the Tx and the UTxO and translates it into
---   a 'Data', which the Plutus language knows how to interpret.
+-- | valContext collects info from the Tx and the UTxO and the PtrMap and
+--   translates it into a 'Data', which the Plutus language knows how to interpret.
+--   The UTxO and the PtrMap are used to 'resolve' the TxIn and the StakeRefPtr's
 valContext ::
   ( Era era,
     Core.TxOut era ~ Alonzo.TxOut era,
@@ -209,7 +241,16 @@ valContext ::
     Value era ~ Mary.Value (Crypto era)
   ) =>
   UTxO era ->
+  PtrMap (Crypto era) ->
   Tx era ->
   ScriptPurpose (Crypto era) ->
   [Data era]
-valContext utxo tx _sp = [Data (txInfoToData (transTx utxo tx))]
+valContext utxo ptrmap tx _sp = [Data (txInfoToData (transTx utxo ptrmap tx))]
+
+---
+
+getWitVKeyHash :: (CC.Crypto crypto, Typeable kr) => WitVKey kr crypto -> P.PubKeyHash
+getWitVKeyHash = P.PubKeyHash . fromShort . (\(UnsafeHash x) -> x) . (\(KeyHash x) -> x) . hashKey . (\(WitVKey x _) -> x)
+
+transDataPair :: (DataHash c, Data era) -> (P.DatumHash, P.Datum)
+transDataPair (x, y) = (transDataHash' x, P.Datum (getPlutusData y))
