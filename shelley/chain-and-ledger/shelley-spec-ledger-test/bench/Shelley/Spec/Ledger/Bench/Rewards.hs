@@ -43,6 +43,7 @@ import qualified Shelley.Spec.Ledger.LedgerState as LS
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainState, chainNes, totalAda)
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 import Test.QuickCheck (Gen)

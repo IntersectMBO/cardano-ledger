@@ -63,6 +63,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
+import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley (UtxoEnv)
 import Shelley.Spec.Ledger.TxBody (TransTxBody, TransTxId)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
@@ -85,7 +86,7 @@ validateInput ::
     Mock (Crypto era),
     Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
     QC.HasTrace (API.LEDGERS era) (GenEnv era),
-    API.ApplyBlock era,
+    API.ApplyBlock era Shelley.UtxoEnv,
     API.GetLedgerView era,
     ShelleyLedgerSTS era
   ) =>
@@ -99,7 +100,7 @@ genValidateInput ::
     Mock (Crypto era),
     Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
     QC.HasTrace (API.LEDGERS era) (GenEnv era),
-    API.ApplyBlock era,
+    API.ApplyBlock era Shelley.UtxoEnv,
     API.GetLedgerView era,
     ShelleyLedgerSTS era
   ) =>
@@ -113,11 +114,11 @@ genValidateInput n = do
 
 benchValidate ::
   forall era.
-  API.ApplyBlock era =>
+  API.ApplyBlock era Shelley.UtxoEnv =>
   ValidateInput era ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state block) =
-  case API.applyBlock @era globals state block of
+  case API.applyBlock @era @Shelley.UtxoEnv globals state block of
     Right x -> pure x
     Left x -> error (show x)
 
@@ -126,7 +127,7 @@ applyBlock ::
   ( TransTxId Show era,
     TransTxBody NFData era,
     TransValue NFData era,
-    API.ApplyBlock era,
+    API.ApplyBlock era Shelley.UtxoEnv,
     NFData (Core.PParams era),
     NFData (State (Core.EraRule "PPUP" era))
   ) =>
@@ -134,17 +135,18 @@ applyBlock ::
   Int ->
   Int
 applyBlock (ValidateInput globals state block) n =
-  case API.applyBlock @era globals state block of
+  case API.applyBlock @era @Shelley.UtxoEnv globals state block of
     Right x -> seq (rnf x) (n + 1)
     Left x -> error (show x)
 
 benchreValidate ::
-  ( API.ApplyBlock era
+  forall era.
+  ( API.ApplyBlock era Shelley.UtxoEnv
   ) =>
   ValidateInput era ->
   NewEpochState era
 benchreValidate (ValidateInput globals state block) =
-  API.reapplyBlock globals state block
+  API.reapplyBlock @era @Shelley.UtxoEnv globals state block
 
 -- ==============================================================
 
@@ -187,7 +189,7 @@ genUpdateInputs ::
     API.GetLedgerView era,
     Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
     QC.HasTrace (API.LEDGERS era) (GenEnv era),
-    API.ApplyBlock era
+    API.ApplyBlock era Shelley.UtxoEnv
   ) =>
   Int ->
   IO (UpdateInputs (Crypto era))

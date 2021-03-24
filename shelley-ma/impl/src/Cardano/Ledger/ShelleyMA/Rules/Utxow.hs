@@ -51,7 +51,7 @@ instance
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXO" era) ~ Tx era,
     -- Supply the HasField and Validate instances for Mary and Allegra (which match Shelley)
-    ShelleyStyleWitnessNeeds era
+    ShelleyStyleWitnessNeeds era UtxoEnv
   ) =>
   STS (UTXOW era)
   where

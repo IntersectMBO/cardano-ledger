@@ -1,8 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -26,6 +28,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Arrow (left)
@@ -43,13 +46,16 @@ import Control.State.Transition.Extended
   )
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
+import GHC.Records (HasField)
 import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
 import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
+import Shelley.Spec.Ledger.Keys (GenDelegs)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv, LedgersPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx)
 
@@ -66,9 +72,11 @@ class
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ MempoolState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
-    PredicateFailure (Core.EraRule "LEDGERS" era) ~ LedgersPredicateFailure era
+    PredicateFailure (Core.EraRule "LEDGERS" era) ~ LedgersPredicateFailure era,
+    HasField "pparamsUE" (utxoenv era) (Core.PParams era),
+    HasField "genDelegsUE" (utxoenv era) (GenDelegs (Crypto era))
   ) =>
-  ApplyTx era
+  ApplyTx era utxoenv
   where
   applyTxs ::
     MonadError (ApplyTxError era) m =>
@@ -89,7 +97,7 @@ class
     where
       mempoolEnv = mkMempoolEnv state slot
 
-instance PraosCrypto c => ApplyTx (ShelleyEra c)
+instance PraosCrypto c => ApplyTx (ShelleyEra c) UtxoEnv
 
 type MempoolEnv era = Ledgers.LedgersEnv era
 

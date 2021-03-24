@@ -1,8 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -29,16 +31,19 @@ import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import GHC.Generics (Generic)
+import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain
+import Shelley.Spec.Ledger.Keys (GenDelegs)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import Shelley.Spec.Ledger.STS.EraMapping ()
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
 {-------------------------------------------------------------------------------
@@ -63,9 +68,11 @@ class
     BaseM (Core.EraRule "BBODY" era) ~ ShelleyBase,
     Environment (Core.EraRule "BBODY" era) ~ STS.BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ STS.BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block era
+    Signal (Core.EraRule "BBODY" era) ~ Block era,
+    HasField "pparamsUE" (utxoenv era) (Core.PParams era),
+    HasField "genDelegsUE" (utxoenv era) (GenDelegs (Crypto era))
   ) =>
-  ApplyBlock era
+  ApplyBlock era utxoenv
   where
   -- | Apply the header level ledger transition.
   --
@@ -142,7 +149,7 @@ class
           (LedgerState.esLState $ LedgerState.nesEs state)
           (LedgerState.nesBcur state)
 
-instance PraosCrypto crypto => ApplyBlock (ShelleyEra crypto)
+instance PraosCrypto crypto => ApplyBlock (ShelleyEra crypto) UtxoEnv
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks

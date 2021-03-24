@@ -4,6 +4,7 @@
 module Main where
 
 import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Test.Cardano.Ledger.Allegra ()
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)

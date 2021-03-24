@@ -163,7 +163,7 @@ type ChainProperty era =
   ( ShelleyBased era,
     Mock (Crypto era),
     ShelleyUtxoSTS era,
-    ApplyBlock era,
+    ApplyBlock era UtxoEnv,
     GetLedgerView era
   )
 

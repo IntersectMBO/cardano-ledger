@@ -19,6 +19,7 @@ import Cardano.Ledger.Alonzo.Data (Data, DataHash)
 import Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure)
+import Cardano.Ledger.Alonzo.Rules.Utxos (UtxoEnv (..))
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
@@ -49,7 +50,6 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
-import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow
   ( ShelleyStyleWitnessNeeds,
     UtxowPredicateFailure (..),
@@ -184,13 +184,13 @@ alonzoStyleWitness ::
     PredicateFailure (utxow era) ~ AlonzoPredFail era,
     STS (utxow era),
     -- Supply the HasField and Validate instances for Alonzo
-    ShelleyStyleWitnessNeeds era,
+    ShelleyStyleWitnessNeeds era UtxoEnv,
     AlonzoStyleAdditions era
   ) =>
   TransitionRule (utxow era)
 alonzoStyleWitness = do
   _u <- shelleyStyleWitness WrappedShelleyEraFailure
-  (TRC (UtxoEnv _slot pp _stakepools _genDelegs, u', tx)) <- judgmentContext
+  (TRC (UtxoEnv _slot pp _stakepools _genDelegs _ptrs, u', tx)) <- judgmentContext
   let txbody = getField @"body" (tx :: Core.Tx era)
 
   let scriptWitMap = getField @"scriptWits" tx
@@ -253,7 +253,7 @@ instance
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXO" era) ~ Tx era,
     -- Supply the HasField and Validate instances for Alonzo
-    ShelleyStyleWitnessNeeds era, -- supplies a subset of those needed. All the old Shelley Needs still apply.
+    ShelleyStyleWitnessNeeds era UtxoEnv, -- supplies a subset of those needed. All the old Shelley Needs still apply.
     AlonzoStyleAdditions era
   ) =>
   STS (AlonzoUTXOW era)

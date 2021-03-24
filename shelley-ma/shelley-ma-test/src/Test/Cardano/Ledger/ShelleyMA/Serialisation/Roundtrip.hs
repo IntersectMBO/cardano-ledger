@@ -27,6 +27,7 @@ import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Proxy (Proxy (Proxy))
 import Data.Typeable (typeRep)
 import Shelley.Spec.Ledger.API (ApplyTx, ApplyTxError)
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Test.Cardano.Ledger.EraBuffet
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
   ( roundTrip,
@@ -83,7 +84,7 @@ property x =
 allprops ::
   forall e.
   ( ShelleyBased e,
-    ApplyTx e,
+    ApplyTx e UtxoEnv,
     Arbitrary (Core.TxBody e),
     Arbitrary (Core.AuxiliaryData e),
     Arbitrary (Core.Value e),

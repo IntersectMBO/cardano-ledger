@@ -230,13 +230,15 @@ instance
 -- =================================================
 --  State Transition System Instances
 
-type ShelleyStyleWitnessNeeds era =
+type ShelleyStyleWitnessNeeds era utxoenv =
   ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "pparamsUE" (utxoenv era) (Core.PParams era),
+    HasField "genDelegsUE" (utxoenv era) (GenDelegs (Crypto era)),
     ValidateAuxiliaryData era (Crypto era),
     ValidateScript era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
@@ -257,28 +259,30 @@ initialLedgerStateUTXOW = do
 --   Note the 'embed' argument lifts from the simple Shelley (UtxowPredicateFailure) to
 --   the PredicateFailure (type family) of the context of where it is called.
 shelleyStyleWitness ::
-  forall era utxow.
+  forall era utxow utxoenv.
   ( Era era,
     BaseM (utxow era) ~ ShelleyBase,
     Embed (Core.EraRule "UTXO" era) (utxow era),
-    Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
+    Environment (Core.EraRule "UTXO" era) ~ utxoenv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXO" era) ~ Core.Tx era,
-    Environment (utxow era) ~ UtxoEnv era,
+    Environment (utxow era) ~ utxoenv era,
     State (utxow era) ~ UTxOState era,
     Signal (utxow era) ~ Core.Tx era,
     -- PredicateFailure (utxow era) ~ UtxowPredicateFailure era,
     STS (utxow era),
-    ShelleyStyleWitnessNeeds era
+    ShelleyStyleWitnessNeeds era utxoenv
   ) =>
   (UtxowPredicateFailure era -> PredicateFailure (utxow era)) ->
   TransitionRule (utxow era)
 shelleyStyleWitness embed = do
-  (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
+  (TRC (utxoEnv, u, tx)) <- judgmentContext
   let txbody = getField @"body" tx
       utxo = _utxo u
       witsKeyHashes = witsFromTxWitnesses @era tx
       auxdata = getField @"auxiliaryData" tx
+      pp = getField @"pparamsUE" utxoEnv
+      genDelegs = getField @"genDelegsUE" utxoEnv
 
   -- check scripts
   let failedScripts =
@@ -343,7 +347,7 @@ shelleyStyleWitness embed = do
     ?! (embed (MIRInsufficientGenesisSigsUTXOW genSig))
 
   trans @(Core.EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
+    TRC (utxoEnv, u, tx)
 
 instance
   ( Era era,
@@ -359,12 +363,13 @@ instance
     Core.Tx era ~ Tx era,
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (UTXOW era),
+    -- Fix Core.Tx to the Shelley Era
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXO" era) ~ Tx era,
     PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
     -- Supply the HasField and Validate instances for Shelley
-    ShelleyStyleWitnessNeeds era
+    ShelleyStyleWitnessNeeds era UtxoEnv
   ) =>
   STS (UTXOW era)
   where

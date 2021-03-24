@@ -16,7 +16,7 @@
 module Cardano.Ledger.Alonzo.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
-import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxosPredicateFailure)
+import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxoEnv (..), UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Tx
   ( Tx (..),
@@ -81,7 +81,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
-import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley
 import Shelley.Spec.Ledger.Tx (TxIn)
 import Shelley.Spec.Ledger.TxBody (unWdrl)
 import Shelley.Spec.Ledger.UTxO
@@ -252,7 +251,7 @@ utxoTransition ::
     ValidateScript era,
     -- instructions for calling UTXOS from AlonzoUTXO
     Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
-    Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
+    Environment (Core.EraRule "UTXOS" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (Core.EraRule "UTXOS" era) ~ Tx era,
     -- We leave Core.PParams abstract
@@ -275,7 +274,7 @@ utxoTransition ::
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp stakepools _genDelegs, u, tx) <- judgmentContext
+  TRC (UtxoEnv slot pp stakepools _genDelegs _ptrs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _deposits _fees _ppup = u
 
   let txb = txbody tx
@@ -367,7 +366,7 @@ instance
   ( ValidateScript era,
     -- Instructions needed to call the UTXOS transition from this one.
     Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
-    Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
+    Environment (Core.EraRule "UTXOS" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (Core.EraRule "UTXOS" era) ~ Tx era,
     -- We leave Core.PParams abstract
@@ -394,7 +393,7 @@ instance
   type Signal (AlonzoUTXO era) = Tx era
   type
     Environment (AlonzoUTXO era) =
-      Shelley.UtxoEnv era
+      UtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase
   type
     PredicateFailure (AlonzoUTXO era) =

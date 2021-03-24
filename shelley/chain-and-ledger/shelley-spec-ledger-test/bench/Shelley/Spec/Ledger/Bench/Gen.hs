@@ -35,6 +35,7 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
   )
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.Tx (TxIn)
 import Test.QuickCheck (generate)
 import Test.Shelley.Spec.Ledger.BenchmarkFunctions (ledgerEnv)
@@ -90,7 +91,7 @@ genBlock ::
     GetLedgerView era,
     Core.EraRule "LEDGERS" era ~ LEDGERS era,
     QC.HasTrace (LEDGERS era) (GenEnv era),
-    ApplyBlock era
+    ApplyBlock era UtxoEnv
   ) =>
   GenEnv era ->
   ChainState era ->

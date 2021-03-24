@@ -4,6 +4,7 @@
 
 import Cardano.Crypto.Libsodium (sodiumInit)
 import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Pretty (prettyTest)

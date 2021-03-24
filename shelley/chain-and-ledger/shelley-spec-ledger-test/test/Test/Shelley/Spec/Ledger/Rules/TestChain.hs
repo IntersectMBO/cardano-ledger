@@ -969,7 +969,7 @@ delegTraceFromBlock chainSt block =
 -- (in the same way that the CHAIN rule TICKs the slot before processing
 -- transactions with the LEDGERS rule)
 ledgerTraceBase ::
-  (Era era, GetLedgerView era, ApplyBlock era) =>
+  (Era era, GetLedgerView era, ApplyBlock era UtxoEnv) =>
   ChainState era ->
   Block era ->
   ( ChainState era,

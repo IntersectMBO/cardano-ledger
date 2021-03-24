@@ -120,12 +120,12 @@ import Shelley.Spec.Ledger.UTxO
 
 data UTXO era
 
-data UtxoEnv era
-  = UtxoEnv
-      SlotNo
-      (Core.PParams era)
-      (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)))
-      (GenDelegs (Crypto era))
+data UtxoEnv era = UtxoEnv
+  { slotUE :: SlotNo,
+    pparamsUE :: (Core.PParams era),
+    poolsUE :: (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
+    genDelegsUE :: (GenDelegs (Crypto era))
+  }
 
 deriving instance Show (Core.PParams era) => Show (UtxoEnv era)
 

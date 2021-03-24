@@ -60,6 +60,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.Rewards (likelihood)
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen as QC

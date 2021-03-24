@@ -21,10 +21,11 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
+import Control.SetAlgebra (Bimap)
 import Control.State.Transition.Extended
 import Data.Coders
 import Data.Foldable (toList)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict (Map)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
@@ -33,17 +34,30 @@ import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Coin (Coin)
+import Shelley.Spec.Ledger.Credential (Credential)
+import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
-import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
-import Shelley.Spec.Ledger.TxBody (DCert, TxIn (..), Wdrl)
+import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.TxBody (DCert, PoolParams, Ptr, TxIn (..), Wdrl)
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits)
 
 --------------------------------------------------------------------------------
 -- The UTXOS transition system
 --------------------------------------------------------------------------------
+
+-- | The UTXO Environment in the Alonzo Era
+data UtxoEnv era = UtxoEnv
+  { slotUE :: SlotNo,
+    pparamsUE :: (Core.PParams era),
+    poolsUE :: (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
+    genDelegsUE :: (GenDelegs (Crypto era)),
+    ptrsUE :: Bimap Ptr (Credential 'Staking (Crypto era))
+  }
+
+deriving instance Show (Core.PParams era) => Show (UtxoEnv era)
 
 data UTXOS era
 
@@ -64,7 +78,7 @@ instance
     Core.TxBody era ~ Alonzo.TxBody era,
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "_costmdls" (Core.PParams era) (Map Language CostModel),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era)))
   ) =>
   STS (UTXOS era)
@@ -92,13 +106,13 @@ utxosTransition ::
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "_costmdls" (Core.PParams era) (Map Language CostModel),
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   TransitionRule (UTXOS era)
 utxosTransition =
-  judgmentContext >>= \(TRC (UtxoEnv _ pp _ _, UTxOState utxo _ _ _, tx)) ->
+  judgmentContext >>= \(TRC (UtxoEnv _ pp _ _ _ptrs, UTxOState utxo _ _ _, tx)) ->
     let sLst = collectNNScriptInputs pp tx utxo
         scriptEvalResult = evalScripts @era sLst
      in if scriptEvalResult
@@ -123,7 +137,7 @@ scriptsValidateTransition ::
   TransitionRule (UTXOS era)
 scriptsValidateTransition = do
   TRC
-    ( UtxoEnv slot pp poolParams genDelegs,
+    ( UtxoEnv slot pp poolParams genDelegs _ptrs,
       UTxOState utxo deposited fees pup,
       tx
       ) <-

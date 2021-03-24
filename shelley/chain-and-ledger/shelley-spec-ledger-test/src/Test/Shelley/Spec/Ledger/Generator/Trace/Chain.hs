@@ -90,7 +90,7 @@ instance
     UsesValue era,
     UsesAuxiliary era,
     Mock (Crypto era),
-    ApplyBlock era,
+    ApplyBlock era UtxoEnv,
     GetLedgerView era,
     ShelleyLedgerSTS era,
     ShelleyChainSTS era,

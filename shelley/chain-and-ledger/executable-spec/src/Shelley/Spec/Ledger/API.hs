@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
@@ -34,8 +35,8 @@ import Shelley.Spec.Ledger.API.Wallet as X
 class
   ( PraosCrypto (Crypto era),
     GetLedgerView era,
-    ApplyBlock era,
-    ApplyTx era,
+    ApplyBlock era utxoenv,
+    ApplyTx era utxoenv,
     CanStartFromGenesis era,
     UsesValue era,
     UsesScript era,
@@ -46,6 +47,6 @@ class
     ChainData (State (Core.EraRule "PPUP" era)),
     SerialisableData (State (Core.EraRule "PPUP" era))
   ) =>
-  ShelleyBasedEra era
+  ShelleyBasedEra era utxoenv
 
-instance PraosCrypto crypto => ShelleyBasedEra (ShelleyEra crypto)
+instance PraosCrypto crypto => ShelleyBasedEra (ShelleyEra crypto) UtxoEnv

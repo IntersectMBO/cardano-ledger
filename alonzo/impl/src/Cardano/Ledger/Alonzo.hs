@@ -12,7 +12,7 @@ module Cardano.Ledger.Alonzo where
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), PParamsUpdate, updatePParams)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS, UtxoEnv (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script, isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (Tx)
@@ -50,9 +50,9 @@ import qualified Shelley.Spec.Ledger.Tx as Shelley
 -- | The Alonzo era
 data AlonzoEra c
 
-instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c)
+instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) Alonzo.UtxoEnv
 
-instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c)
+instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c) Alonzo.UtxoEnv
 
 instance API.PraosCrypto c => API.GetLedgerView (AlonzoEra c)
 
@@ -117,7 +117,7 @@ instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
   validateAuxiliaryData = error ("NO validateAuxiliaryData yet.") -- TODO Fill this in
 
-instance API.PraosCrypto c => API.ShelleyBasedEra (AlonzoEra c)
+instance API.PraosCrypto c => API.ShelleyBasedEra (AlonzoEra c) Alonzo.UtxoEnv
 
 -------------------------------------------------------------------------------
 -- Era Mapping

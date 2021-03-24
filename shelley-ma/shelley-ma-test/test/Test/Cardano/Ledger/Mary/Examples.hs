@@ -20,6 +20,7 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState (..),
   )
 import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)

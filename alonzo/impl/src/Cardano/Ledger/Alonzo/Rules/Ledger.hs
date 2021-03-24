@@ -21,6 +21,7 @@ module Cardano.Ledger.Alonzo.Rules.Ledger
   )
 where
 
+import Cardano.Ledger.Alonzo.Rules.Utxos (UtxoEnv (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail, AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Tx (IsValidating (..), Tx (..))
 import qualified Cardano.Ledger.Core as Core
@@ -53,9 +54,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..), DelegsPredicateFailure)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..), LedgerPredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Utxo
-  ( UtxoEnv (..),
-  )
 import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody)
 
 -- =======================================
@@ -100,12 +98,13 @@ ledgerTransition = do
 
   let DPState dstate pstate = dpstate
       genDelegs = _genDelegs dstate
+      ptrs = _ptrs dstate
       stpools = _pParams pstate
 
   utxoSt' <-
     trans @(Core.EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv @era slot pp stpools genDelegs,
+        ( UtxoEnv @era slot pp stpools genDelegs ptrs,
           utxoSt,
           tx
         )

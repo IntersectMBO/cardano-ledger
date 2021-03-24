@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -17,9 +18,9 @@ import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 
 type AllegraEra = ShelleyMAEra 'Allegra
 
-instance PraosCrypto c => ApplyTx (AllegraEra c)
+instance PraosCrypto c => ApplyTx (AllegraEra c) UtxoEnv
 
-instance PraosCrypto c => ApplyBlock (AllegraEra c)
+instance PraosCrypto c => ApplyBlock (AllegraEra c) UtxoEnv
 
 instance PraosCrypto c => GetLedgerView (AllegraEra c)
 
@@ -60,4 +61,4 @@ instance
       genDelegs = sgGenDelegs sg
       pp = sgProtocolParams sg
 
-instance PraosCrypto c => ShelleyBasedEra (AllegraEra c)
+instance PraosCrypto c => ShelleyBasedEra (AllegraEra c) UtxoEnv

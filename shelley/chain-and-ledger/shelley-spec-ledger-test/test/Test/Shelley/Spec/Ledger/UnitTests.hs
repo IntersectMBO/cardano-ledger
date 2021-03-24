@@ -48,6 +48,7 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
