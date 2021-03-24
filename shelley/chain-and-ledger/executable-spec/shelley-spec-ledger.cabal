@@ -30,12 +30,10 @@ common project-config
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
                       -Wpartial-fields
+                      -Wunused-packages
 
   if (!flag(development))
     ghc-options:      -Werror
-
-  if impl(ghc >= 8.10)
-    ghc-options:      -Wunused-packages
 
 library
   import:             base, project-config

@@ -33,19 +33,15 @@ common project-config
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
+                      -Wunused-packages
 
   if (!flag(development))
     ghc-options:      -Werror
 
-  if impl(ghc >= 8.10)
-    ghc-options:      -Wunused-packages
-
 library
   import:             base, project-config
-
-  hs-source-dirs:
-      src
-      test
+  hs-source-dirs:     src
+                      test
   exposed-modules:
     Test.Cardano.Crypto.VRF.Fake
     Test.Shelley.Spec.Ledger.BenchmarkFunctions

@@ -29,22 +29,13 @@ common project-config
                       -Wincomplete-uni-patterns
                       -Wpartial-fields
                       -Wredundant-constraints
-
-  if impl(ghc >= 8.10)
-    ghc-options:      -Wunused-packages
+                      -Wunused-packages
 
 library
   import:             base, project-config
-
-  -- We make use of features requiring ghc >= 8.10. In order to allow CI to
-  -- still build the 'all' component, simply make this non-buildable.
-  if impl(ghc < 8.10)
-    buildable: False
-  hs-source-dirs:      src
-  exposed-modules:
-    Test.Cardano.Ledger.TestableEra
-  build-depends:
-    shelley-spec-ledger
+  hs-source-dirs:     src
+  exposed-modules:    Test.Cardano.Ledger.TestableEra
+  build-depends:      shelley-spec-ledger
 
 benchmark bench
   import:             base, project-config

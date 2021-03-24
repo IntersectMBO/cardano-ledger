@@ -31,16 +31,10 @@ common project-config
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
+                      -Wno-unused-packages
                
   if (!flag(development))
     ghc-options:      -Werror
-
-  if impl(ghc >= 8.10)
-    ghc-options:      -Wunused-packages
-
-common doctest
-  if impl(ghc < 8.10)
-    build-depends:    doctest
 
 library
   import:             base, project-config
@@ -78,28 +72,6 @@ library
                      -- Local deps
                      , small-steps
                      , small-steps-test
-
-test-suite doctests
-  import:             base, project-config
-                    , doctest
-
-  hs-source-dirs:     test
-  main-is:            DoctestDiscover.hs
-  type:               exitcode-stdio-1.0
-  default-language:   Haskell2010
-  build-tool-depends: doctest-discover:doctest-discover
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wredundant-constraints
-                      -threaded
-
-  if (!flag(development))
-    ghc-options:      -Werror
-
-  if impl(ghc >= 8.10)
-    ghc-options:      -Wunused-packages
 
 test-suite byron-spec-ledger-test
   import:             base, project-config
