@@ -160,7 +160,7 @@ type ShelleyStyleWitnessNeeds era =
 type AlonzoStyleAdditions era =
   ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))), -- BE SURE AND ADD THESE INSTANCES
     HasField "txdatahash" (Core.Tx era) (Map.Map (DataHash (Crypto era)) (Data era)),
-    HasField "sdHash" (Core.TxBody era) (StrictMaybe (WitnessPPDataHash (Crypto era)))
+    HasField "wppHash" (Core.TxBody era) (StrictMaybe (WitnessPPDataHash (Crypto era)))
   )
 
 -- | A somewhat generic STS transitionRule function for the Alonzo Era.
@@ -232,7 +232,7 @@ alonzoStyleWitness = do
         ]
       rdmrs wit = Map.map fst (txrdmrs wit)
       computedPPhash = hashWitnessPPData pp (Set.fromList languages) (rdmrs (wits' tx))
-      bodyPPhash = getField @"sdHash" txbody
+      bodyPPhash = getField @"wppHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
   pure u'
 

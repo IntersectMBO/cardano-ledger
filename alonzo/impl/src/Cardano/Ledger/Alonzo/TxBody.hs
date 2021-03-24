@@ -30,7 +30,7 @@ module Cardano.Ledger.Alonzo.TxBody
         txvldt,
         txUpdates,
         mint,
-        sdHash,
+        wppHash,
         adHash
       ),
     inputs',
@@ -42,7 +42,7 @@ module Cardano.Ledger.Alonzo.TxBody
     vldt',
     update',
     mint',
-    sdHash',
+    wppHash',
     adHash',
     AlonzoBody,
     EraIndependentWitnessPPData,
@@ -176,7 +176,7 @@ data TxBodyRaw era = TxBodyRaw
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
     -- Operations on the TxBody in the AlonzoEra depend upon this.
-    _sdHash :: !(StrictMaybe (WitnessPPDataHash (Crypto era))),
+    _wppHash :: !(StrictMaybe (WitnessPPDataHash (Crypto era))),
     _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era)))
   }
   deriving (Generic, Typeable)
@@ -270,7 +270,7 @@ pattern TxBody
     txvldt,
     txUpdates,
     mint,
-    sdHash,
+    wppHash,
     adHash
   } <-
   TxBodyConstr
@@ -285,7 +285,7 @@ pattern TxBody
             _vldt = txvldt,
             _update = txUpdates,
             _mint = mint,
-            _sdHash = sdHash,
+            _wppHash = wppHash,
             _adHash = adHash
           }
         _
@@ -301,7 +301,7 @@ pattern TxBody
       vldtX
       updateX
       mintX
-      sdHashX
+      wppHashX
       adHashX =
         TxBodyConstr $
           memoBytes
@@ -316,7 +316,7 @@ pattern TxBody
                   vldtX
                   updateX
                   mintX
-                  sdHashX
+                  wppHashX
                   adHashX
             )
 
@@ -340,7 +340,7 @@ vldt' :: TxBody era -> ValidityInterval
 update' :: TxBody era -> StrictMaybe (Update era)
 adHash' :: TxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
 mint' :: TxBody era -> Value (Crypto era)
-sdHash' :: TxBody era -> StrictMaybe (WitnessPPDataHash (Crypto era))
+wppHash' :: TxBody era -> StrictMaybe (WitnessPPDataHash (Crypto era))
 inputs' (TxBodyConstr (Memo raw _)) = _inputs raw
 
 inputs_fee' (TxBodyConstr (Memo raw _)) = _inputs_fee raw
@@ -361,7 +361,7 @@ adHash' (TxBodyConstr (Memo raw _)) = _adHash raw
 
 mint' (TxBodyConstr (Memo raw _)) = _mint raw
 
-sdHash' (TxBodyConstr (Memo raw _)) = _sdHash raw
+wppHash' (TxBodyConstr (Memo raw _)) = _wppHash raw
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -414,7 +414,7 @@ encodeTxBodyRaw
       _vldt = ValidityInterval bot top,
       _update,
       _mint,
-      _sdHash,
+      _wppHash,
       _adHash
     } =
     Keyed
@@ -431,7 +431,7 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 6 _update
       !> encodeKeyedStrictMaybe 8 bot
       !> Omit isZero (Key 9 (E encodeMint _mint))
-      !> encodeKeyedStrictMaybe 11 _sdHash
+      !> encodeKeyedStrictMaybe 11 _wppHash
       !> encodeKeyedStrictMaybe 12 _adHash
     where
       encodeKeyedStrictMaybe key x =
@@ -510,7 +510,7 @@ instance
           (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
-      bodyFields 11 = field (\x tx -> tx {_sdHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 11 = field (\x tx -> tx {_wppHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 12 =
         field
           (\x tx -> tx {_adHash = x})
@@ -578,9 +578,9 @@ instance
 
 instance
   c ~ (Crypto era) =>
-  HasField "sdHash" (TxBody era) (StrictMaybe (WitnessPPDataHash c))
+  HasField "wppHash" (TxBody era) (StrictMaybe (WitnessPPDataHash c))
   where
-  getField (TxBodyConstr (Memo m _)) = _sdHash m
+  getField (TxBodyConstr (Memo m _)) = _wppHash m
 
 instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
   getField (TxOutCompact a _ _) = a
@@ -626,7 +626,7 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u mnt sdh axh) _)) =
       ("vldt", ppValidityInterval vi),
       ("update", ppStrictMaybe ppUpdate u),
       ("mint", ppValue mnt),
-      ("sdHash", ppStrictMaybe ppSafeHash sdh),
+      ("wppHash", ppStrictMaybe ppSafeHash sdh),
       ("adHash", ppStrictMaybe ppAuxDataHash axh)
     ]
 
