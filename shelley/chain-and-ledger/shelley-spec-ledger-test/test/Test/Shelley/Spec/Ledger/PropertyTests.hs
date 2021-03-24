@@ -42,7 +42,7 @@ import Test.Shelley.Spec.Ledger.Address.CompactAddr
     propDecompactShelleyLazyAddr,
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv,PreAlonzo)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
@@ -65,7 +65,7 @@ minimalPropertyTests ::
   forall era.
   ( EraGen era,
     ShelleyTest era,
-    Core.Tx era ~ Tx era,
+    PreAlonzo era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
@@ -105,7 +105,7 @@ propertyTests ::
   forall era.
   ( EraGen era,
     ShelleyTest era,
-    Core.Tx era ~ Tx era,
+    PreAlonzo era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),

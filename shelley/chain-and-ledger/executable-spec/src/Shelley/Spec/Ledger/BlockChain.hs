@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
@@ -32,6 +33,7 @@ module Shelley.Spec.Ledger.BlockChain
     Block (Block, Block'),
     LaxBlock (..),
     TxSeq (TxSeq, txSeqTxns', TxSeq'),
+    txSeqTxns,
     HashBBody (..),
     bhHash,
     bbHash,
@@ -52,6 +54,7 @@ module Shelley.Spec.Ledger.BlockChain
     incrBlocks,
     mkSeed,
     checkLeaderValue,
+    coreAuxDataBytes,
   )
 where
 
@@ -81,9 +84,8 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era
-import Cardano.Ledger.SafeHash (EraIndependentBlockBody)
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
+import Cardano.Ledger.Era (BlockDecoding (..), Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.SafeHash (EraIndependentBlockBody, SafeToHash (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -93,8 +95,6 @@ import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
-import Data.Constraint (Constraint)
-import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -102,9 +102,11 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 import Data.Typeable
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -112,6 +114,7 @@ import Shelley.Spec.Ledger.BaseTypes
     FixedPoint,
     Nonce (..),
     Seed (..),
+    StrictMaybe (..),
     activeSlotLog,
     activeSlotVal,
     intervalValue,
@@ -142,13 +145,14 @@ import Shelley.Spec.Ledger.Serialization
     decodeMap,
     decodeRecordNamed,
     decodeSeq,
+    decodeSet,
+    encodeFoldable,
     encodeFoldableEncoder,
     encodeFoldableMapEncoder,
     listLenInt,
     runByteBuilder,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (TransTx, Tx (..), decodeWits, segwitTx, txWitsBytes)
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- =======================================================
@@ -163,18 +167,15 @@ deriving newtype instance CC.Crypto crypto => ToCBOR (HashHeader crypto)
 deriving newtype instance CC.Crypto crypto => FromCBOR (HashHeader crypto)
 
 data TxSeq era = TxSeq'
-  { txSeqTxns' :: !(StrictSeq (Tx era)),
+  { txSeqTxns' :: !(StrictSeq (Core.Tx era)),
     txSeqBodyBytes :: BSL.ByteString,
     txSeqWitsBytes :: BSL.ByteString,
-    txSeqMetadataBytes :: BSL.ByteString
+    txSeqMetadataBytes :: BSL.ByteString,
+    -- bytes representing a (Map index metadata). Missing indices have SNothing for metadata
+    txSeqIsValidatingBytes :: BSL.ByteString
+    -- bytes representing a set of integers. These are the indices of transactions with isValidating == False.
   }
   deriving (Generic)
-
-type TransTxSeq (c :: Type -> Constraint) era =
-  ( c (Core.Script era),
-    c (Core.TxBody era),
-    c (Core.AuxiliaryData era)
-  )
 
 deriving via
   AllowThunksIn
@@ -184,58 +185,121 @@ deriving via
      ]
     (TxSeq era)
   instance
-    TransTx NoThunks era => NoThunks (TxSeq era)
+    (Typeable era, NoThunks (Core.Tx era)) => NoThunks (TxSeq era)
 
 deriving stock instance
-  (Era era, TransTxSeq Show era) =>
+  Show (Core.Tx era) =>
   Show (TxSeq era)
 
 deriving stock instance
-  (Era era, TransTxSeq Eq era) =>
+  Eq (Core.Tx era) =>
   Eq (TxSeq era)
 
+-- ===========================
+-- Getting bytes from pieces of a Core.Tx
+
+coreWitnessBytes ::
+  forall era.
+  ( SafeToHash (Core.Witnesses era),
+    HasField "witnessSet" (Core.Tx era) (Core.Witnesses era)
+  ) =>
+  (Core.Tx era) ->
+  ByteString
+coreWitnessBytes coretx =
+  originalBytes @(Core.Witnesses era) $
+    getField @"witnessSet" coretx
+
+coreBodyBytes ::
+  forall era.
+  ( SafeToHash (Core.TxBody era),
+    HasField "body" (Core.Tx era) (Core.TxBody era)
+  ) =>
+  (Core.Tx era) ->
+  ByteString
+coreBodyBytes coretx =
+  originalBytes @(Core.TxBody era) $
+    getField @"body" coretx
+
+coreAuxDataBytes ::
+  forall era.
+  ( SafeToHash (Core.AuxiliaryData era),
+    HasField "auxiliaryData" (Core.Tx era) (StrictMaybe (Core.AuxiliaryData era))
+  ) =>
+  (Core.Tx era) ->
+  StrictMaybe ByteString
+coreAuxDataBytes coretx = getbytes <$> getField @"auxiliaryData" @(Core.Tx era) coretx
+  where
+    getbytes auxdata = originalBytes @(Core.AuxiliaryData era) auxdata
+
+-- | Return a set of indexes i, such that seqIsValidating(txns !! i)==False
+getValidatingIndexes :: forall era. BlockDecoding era => StrictSeq (Core.Tx era) -> Set.Set Int
+getValidatingIndexes txns = snd (foldl accum (0, Set.empty) txns)
+  where
+    accum (n, set) txn =
+      if not (seqIsValidating @era txn)
+        then (n + 1, Set.insert n set)
+        else (n + 1, set)
+
+-- ===========================
+
+-- | Constuct a TxSeq (with all it bytes) from just Core.Tx's
 pattern TxSeq ::
-  (UsesTxBody era, UsesAuxiliary era, UsesScript era) =>
-  StrictSeq (Tx era) ->
+  forall era.
+  ( Era era,
+    SafeToHash (Core.Witnesses era)
+  ) =>
+  StrictSeq (Core.Tx era) ->
   TxSeq era
 pattern TxSeq xs <-
-  TxSeq' xs _ _ _
+  TxSeq' xs _ _ _ _
   where
     TxSeq txns =
       let serializeFoldable x =
             serializeEncoding $
-              encodeFoldableEncoder (encodePreEncoded . BSL.toStrict) x
-          metaChunk index m =
-            ( \metadata ->
-                toCBOR index <> toCBOR metadata
-            )
-              <$> strictMaybeToMaybe m
+              encodeFoldableEncoder encodePreEncoded x
+          metaChunk index m = encodePair <$> strictMaybeToMaybe m
+            where
+              encodePair metadata = toCBOR index <> encodePreEncoded metadata
        in TxSeq'
             { txSeqTxns' = txns,
-              txSeqBodyBytes =
-                serializeEncoding . encodeFoldableEncoder (toCBOR . _body) $ txns,
-              txSeqWitsBytes = serializeFoldable $ txWitsBytes . _witnessSet <$> txns,
+              -- bytes encoding Seq(Core.TxBody era)
+              txSeqBodyBytes = serializeFoldable $ coreBodyBytes @era <$> txns,
+              -- bytes encoding Seq(Core.Witnesses era)
+              txSeqWitsBytes = serializeFoldable $ coreWitnessBytes @era <$> txns,
+              -- bytes encoding a (Map Int (Core.AuxiliaryData))
               txSeqMetadataBytes =
                 serializeEncoding . encodeFoldableMapEncoder metaChunk $
-                  _metadata <$> txns
+                  coreAuxDataBytes @era <$> txns,
+              -- bytes encoding a (Set Int) Indexes where IsValidating is False.
+              txSeqIsValidatingBytes =
+                ( adjustBlockDecoding @era
+                    (serializeEncoding $ encodeFoldable $ getValidatingIndexes @era txns)
+                    mempty
+                )
             }
 
 {-# COMPLETE TxSeq #-}
 
+txSeqTxns :: TxSeq era -> StrictSeq (Core.Tx era)
+txSeqTxns (TxSeq' ts _ _ _ _) = ts
+
 instance
-  Era era =>
+  forall era.
+  (Era era, BlockDecoding era) =>
   ToCBORGroup (TxSeq era)
   where
-  toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes) =
+  toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes isvalidBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes
+          <> (adjustBlockDecoding @era isvalidBytes mempty)
   encodedGroupSizeExpr size _proxy =
     encodedSizeExpr size (Proxy :: Proxy ByteString)
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
-  listLen _ = 3
-  listLenBound _ = 3
+      + (adjustBlockDecoding @era (encodedSizeExpr size (Proxy :: Proxy ByteString)) 0)
+  listLen _ = 3 + (adjustBlockDecoding @era 1 0)
+  listLenBound _ = 3 + (adjustBlockDecoding @era 1 0)
 
 -- | Hash of block body
 newtype HashBBody crypto = UnsafeHashBBody {unHashBody :: (Hash crypto EraIndependentBlockBody)}
@@ -254,15 +318,29 @@ bhHash ::
   HashHeader crypto
 bhHash = HashHeader . (Hash.hashWithSerialiser @(CC.HASH crypto) toCBOR)
 
+-- | PreAlonzo Era's do not have an IsValidating field. For those
+--     Eras, the 'seqHasValidating' method of BlockDecoding returns False,
+--     There are a number of cases where we need to 'adjust' computations. For example
+--     in hashing a Block, the hashPart of the IsValidating bytes, must be the empty ByteString.
+--     So the effect is that those bytes have no effect on the hash in PreAlonzo Eras.
+--     The ToCBOR instance of Block, needs similar adjusments
+adjustBlockDecoding :: forall era x. BlockDecoding era => x -> x -> x
+adjustBlockDecoding yes no = if (seqHasValidating @era) then yes else no
+
 -- | Hash a given block body
 bbHash ::
   forall era.
-  Era era =>
+  (Era era) =>
   TxSeq era ->
   HashBBody (Crypto era)
-bbHash (TxSeq' _ bodies wits md) =
+bbHash (TxSeq' _ bodies wits md vs) =
   (UnsafeHashBBody . coerce) $
-    hashStrict (hashPart bodies <> hashPart wits <> hashPart md)
+    hashStrict
+      ( hashPart bodies
+          <> hashPart wits
+          <> hashPart md
+          <> (adjustBlockDecoding @era (hashPart vs) mempty)
+      )
   where
     hashStrict :: ByteString -> Hash (Crypto era) ByteString
     hashStrict = Hash.hashWith id
@@ -534,21 +612,19 @@ data Block era
   = Block' !(BHeader (Crypto era)) !(TxSeq era) BSL.ByteString
   deriving (Generic)
 
-type TransBlock c era = TransTxSeq c era
-
 deriving stock instance
-  (Era era, TransBlock Show era) =>
+  (Era era, Show (Core.Tx era)) =>
   Show (Block era)
 
 deriving stock instance
-  (Era era, TransBlock Eq era) =>
+  (Era era, Eq (Core.Tx era)) =>
   Eq (Block era)
 
 deriving anyclass instance
-  (Era era, TransBlock NoThunks era) =>
+  (Era era, NoThunks (Core.Tx era)) =>
   NoThunks (Block era)
 
-pattern Block :: Era era => BHeader (Crypto era) -> TxSeq era -> Block era
+pattern Block :: (Era era) => BHeader (Crypto era) -> TxSeq era -> Block era
 pattern Block h txns <-
   Block' h txns _
   where
@@ -562,27 +638,34 @@ pattern Block h txns <-
 
 -- | Given a size and a mapping from indices to maybe metadata,
 --  return a sequence whose size is the size paramater and
---  whose non-Nothing values correspond no the values in the mapping.
-constructMetadata :: Int -> Map Int a -> Seq (Maybe a)
-constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1])
+--  whose non-Nothing values correspond to the values in the mapping.
+constructMetadata ::
+  forall era.
+  Int ->
+  Map Int (Annotator (Core.AuxiliaryData era)) ->
+  (Seq (Maybe (Annotator (Core.AuxiliaryData era))))
+constructMetadata n md = (fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1]))
+
+constructIsValidating :: Int -> Set.Set Int -> Seq Bool
+constructIsValidating numTx txsFailingValidation =
+  fmap (\x -> not (Set.member x txsFailingValidation)) (Seq.fromList [0 .. numTx - 1])
 
 instance
-  (Era era, TransBlock ToCBOR era) =>
+  Era era =>
   ToCBOR (Block era)
   where
   toCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
 
+-- | The parts of the Tx in Blocks that have to have FromCBOR(Annotator x) instances.
+--   These are exactly the parts that are SafeToHash.
 type BlockAnn era =
-  ( FromCBOR (Annotator (Core.Script era)),
-    FromCBOR (Annotator (Core.TxBody era)),
-    FromCBOR (Annotator (Core.AuxiliaryData era))
+  ( FromCBOR (Annotator (Core.TxBody era)),
+    FromCBOR (Annotator (Core.AuxiliaryData era)),
+    FromCBOR (Annotator (Core.Witnesses era))
   )
 
 blockDecoder ::
-  ( ToCBOR (Core.TxBody era),
-    ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Script era),
-    BlockAnn era,
+  ( BlockAnn era,
     ValidateScript era
   ) =>
   Bool ->
@@ -593,27 +676,29 @@ blockDecoder lax = annotatorSlice $
     txns <- txSeqDecoder lax
     pure $ Block' <$> header <*> txns
 
+-- | Decode a TxSeq, used in decoding a Block.
 txSeqDecoder ::
-  ( ToCBOR (Core.TxBody era),
-    ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Script era),
-    BlockAnn era,
-    ValidateScript era
-  ) =>
+  forall era.
+  (Era era, BlockAnn era) =>
   Bool ->
   forall s. Decoder s (Annotator (TxSeq era))
 txSeqDecoder lax = do
   (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
-  (wits, witsAnn) <- withSlice $ decodeSeq decodeWits
+  (wits, witsAnn) <- withSlice $ decodeSeq fromCBOR
   let b = length bodies
+      inRange x = (0 <= x) && (x <= (b -1))
       w = length wits
+  (metadata, metadataAnn) <- withSlice $
+    do
+      m <- decodeMap fromCBOR fromCBOR
+      unless -- TODO this PR introduces this new test, That didn't used to run in the Shelley
+        (lax || all inRange (Map.keysSet m)) -- Era,  Is it possible there might be some blocks, that should have been caught on the chain?
+        (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b -1)))
+      pure (constructMetadata @era b m)
 
-  (metadata, metadataAnn) <-
-    withSlice $
-      constructMetadata b
-        <$> decodeMap fromCBOR fromCBOR
-  let m = length metadata
-
+  -- In a PreAlonzo Era, there is nothing left to decode from after getting metadata
+  (isValSet, isvalAnn) <- adjustBlockDecoding @era (withSlice $ decodeSet fromCBOR) (pure (Set.empty, pure mempty))
+  let vs = constructIsValidating b isValSet
   unless
     (lax || b == w)
     ( fail $
@@ -624,16 +709,11 @@ txSeqDecoder lax = do
           <> ")"
     )
   unless
-    (lax || b == m)
-    ( fail $
-        "mismatch between transaction bodies ("
-          <> show b
-          <> ") and metadata ("
-          <> show w
-          <> ")"
-    )
-  let txns = sequenceA $ StrictSeq.forceToStrict $ Seq.zipWith3 segwitTx bodies wits metadata
-  pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
+    (lax || all inRange isValSet)
+    (fail ("Some IsValidating index is not in the range: 0 .. " ++ show (b -1) ++ ", " ++ show isValSet))
+
+  let txns = sequenceA $ StrictSeq.forceToStrict $ Seq.zipWith4 (seqTx @era) bodies wits vs metadata
+  pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn <*> isvalAnn
 
 instance
   ( BlockAnn era,
@@ -648,11 +728,11 @@ instance
 
 newtype LaxBlock era = LaxBlock (Block era)
 
-instance (Era era, TransBlock ToCBOR era, Typeable era) => ToCBOR (LaxBlock era) where
+instance (Era era, Typeable era) => ToCBOR (LaxBlock era) where
   toCBOR (LaxBlock x) = toCBOR x
 
 deriving stock instance
-  (Era era, TransBlock Show era) =>
+  (Era era, Show (Core.Tx era)) =>
   Show (LaxBlock era)
 
 instance
@@ -685,12 +765,12 @@ slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 bheader ::
-  Era era =>
+  (Era era) =>
   Block era ->
   BHeader (Crypto era)
 bheader (Block bh _) = bh
 
-bbody :: Era era => Block era -> TxSeq era
+bbody :: (Era era) => Block era -> TxSeq era
 bbody (Block _ txs) = txs
 
 bhbody ::

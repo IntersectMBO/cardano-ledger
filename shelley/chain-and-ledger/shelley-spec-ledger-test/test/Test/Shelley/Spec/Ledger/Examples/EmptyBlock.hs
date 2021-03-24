@@ -11,7 +11,7 @@ module Test.Shelley.Spec.Ledger.Examples.EmptyBlock
 where
 
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Nonce)
@@ -41,6 +41,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkBlockFakeVRF,
     mkOCert,
     zero,
+    PreAlonzo,
   )
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
 
@@ -52,10 +53,9 @@ initStEx1 = initSt (UTxO Map.empty)
 blockEx1 ::
   forall era.
   ( HasCallStack,
+    PreAlonzo era,
     ExMock (Crypto era),
-    UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era
+    UsesTxBody era
   ) =>
   Block era
 blockEx1 =
@@ -75,17 +75,16 @@ blockEx1 =
 blockNonce ::
   forall era.
   ( HasCallStack,
+    PreAlonzo era,
     ExMock (Crypto era),
-    UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era
+    UsesTxBody era
   ) =>
   Nonce
 blockNonce = getBlockNonce (blockEx1 @era)
 
 expectedStEx1 ::
   forall era.
-  (ShelleyTest era, ExMock (Crypto era)) =>
+  (ShelleyTest era, ExMock (Crypto era),PreAlonzo era) =>
   ChainState era
 expectedStEx1 =
   (evolveNonceUnfrozen (blockNonce @era))
@@ -99,5 +98,5 @@ expectedStEx1 =
 --
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
-exEmptyBlock :: (ShelleyTest era, ExMock (Crypto era)) => CHAINExample era
+exEmptyBlock :: (ShelleyTest era, ExMock (Crypto era),PreAlonzo era) => CHAINExample era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

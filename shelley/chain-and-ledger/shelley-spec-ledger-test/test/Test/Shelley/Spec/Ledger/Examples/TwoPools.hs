@@ -134,6 +134,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkBlockFakeVRF,
     mkOCert,
     zero,
+    PreAlonzo,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
@@ -153,7 +154,8 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 type TwoPoolsConstraints era =
   ( ShelleyTest era,
     ExMock (Crypto era),
-    Core.TxBody era ~ TxBody era
+    Core.TxBody era ~ TxBody era,
+    PreAlonzo era
   )
 
 aliceInitCoin :: Coin

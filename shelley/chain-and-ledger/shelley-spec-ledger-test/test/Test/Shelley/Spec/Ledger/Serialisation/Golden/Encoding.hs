@@ -30,7 +30,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.SafeHash (EraIndependentTxBody, SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
@@ -189,6 +189,7 @@ import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
+import Test.Shelley.Spec.Ledger.Generator.Core(PreAlonzo)
 import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   ( ToTokens (..),
     checkEncoding,
@@ -360,9 +361,8 @@ testHeaderHash =
 testBHB ::
   forall era crypto.
   ( Era era,
+    PreAlonzo era,
     UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era,
     ExMock crypto,
     crypto ~ Crypto era
   ) =>
@@ -389,7 +389,7 @@ testBHB =
           )
           (fst $ testVRF @crypto),
       bsize = 0,
-      bhash = bbHash @era $ TxSeq StrictSeq.empty,
+      bhash = bbHash @era $ TxSeq @era StrictSeq.empty,
       bheaderOCert =
         OCert
           (snd $ testKESKeys @crypto)
@@ -405,10 +405,9 @@ testBHB =
 testBHBSigTokens ::
   forall era.
   ( Era era,
+    PreAlonzo era,
     ExMock (Crypto era),
-    UsesTxBody era,
-    UsesAuxiliary era,
-    UsesScript era
+    UsesTxBody era
   ) =>
   Tokens ->
   Tokens
@@ -1134,7 +1133,7 @@ tests =
           txns = TxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated
             "rich_block"
-            (Block bh txns)
+            (Block @C bh txns)
             ( (T $ TkListLen 4)
                 -- header
                 <> S bh

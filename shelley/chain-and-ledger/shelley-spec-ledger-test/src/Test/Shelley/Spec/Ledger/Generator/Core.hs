@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
@@ -46,19 +47,19 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     mkGenKey,
     genesisAccountState,
     genCoin,
+    PreAlonzo,
   )
 where
 
+import Cardano.Binary(ToCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.VRF (evalCertified)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Era (Crypto (..),BlockDecoding)
 import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesScript,
-    UsesTxBody,
+  ( UsesTxBody,
     UsesTxOut (..),
   )
 import Control.Monad (replicateM)
@@ -163,6 +164,7 @@ import Shelley.Spec.Ledger.Tx
   ( Tx,
     TxIn,
     pattern TxIn,
+    WitnessSet,
   )
 import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.TxBody
@@ -203,6 +205,15 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 
 -- ==================================================
+
+type PreAlonzo era =
+  ( Core.Witnesses era ~ WitnessSet era,
+    Core.Tx era ~ Tx era,
+    BlockDecoding era,
+    ToCBOR (Core.AuxiliaryData era)
+  )
+
+-- =========================================
 
 data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
   { cold :: KeyPair r v,
@@ -514,10 +525,9 @@ mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
       sig = signedKES () kpDiff bhb hotKey
    in BHeader bhb sig
 
-mkBlock ::
+mkBlock :: forall era r.
   ( UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era,
+    PreAlonzo era,
     Mock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -540,16 +550,15 @@ mkBlock ::
   OCert (Crypto era) ->
   Block era
 mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
-  let bodySize = fromIntegral $ bBodySize $ (TxSeq . StrictSeq.fromList) txns
-      bodyHash = bbHash $ TxSeq $ StrictSeq.fromList txns
+  let bodySize = fromIntegral $ bBodySize $ (TxSeq @era . StrictSeq.fromList) txns
+      bodyHash = bbHash $ TxSeq @era $ StrictSeq.fromList txns
       bh = mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash
-   in Block bh (TxSeq $ StrictSeq.fromList txns)
+   in Block bh (TxSeq @era $ StrictSeq.fromList txns)
 
 -- | Create a block with a faked VRF result.
-mkBlockFakeVRF ::
+mkBlockFakeVRF :: forall era r.
   ( UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era,
+    PreAlonzo era,
     ExMock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -595,8 +604,8 @@ mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0
               (WithResult leaderNonce (fromIntegral $ unitIntervalToNatural l))
               (fst $ vrf pkeys)
           )
-          (fromIntegral $ bBodySize $ (TxSeq . StrictSeq.fromList) txns)
-          (bbHash $ TxSeq $ StrictSeq.fromList txns)
+          (fromIntegral $ bBodySize $ (TxSeq @era . StrictSeq.fromList) txns)
+          (bbHash $ TxSeq @era $ StrictSeq.fromList txns)
           oCert
           (ProtVer 0 0)
       kpDiff = kesPeriod - c0
@@ -606,7 +615,7 @@ mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0
         Just hkey -> hkey
       sig = signedKES () kpDiff bhb hotKey
       bh = BHeader bhb sig
-   in Block bh (TxSeq $ StrictSeq.fromList txns)
+   in Block bh (TxSeq @era $ StrictSeq.fromList txns)
 
 -- | We provide our own nonces to 'mkBlock', which we then wish to recover as
 -- the output of the VRF functions. In general, however, we just derive them

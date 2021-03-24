@@ -19,7 +19,7 @@ import Cardano.Ledger.AuxiliaryData
   )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (BlockDecoding (..), Era (Crypto), ValidateScript (..))
 import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, makeHashWithExplicitProxys)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
@@ -37,7 +37,8 @@ import Shelley.Spec.Ledger.Tx
   ( Tx,
     TxBody,
     TxOut (..),
-    ValidateScript (..),
+    WitnessSet,
+    segwitTx,
     validateNativeMultiSigScript,
   )
 
@@ -73,6 +74,8 @@ type instance Core.PParams (ShelleyEra c) = PParams (ShelleyEra c)
 
 type instance Core.Tx (ShelleyEra c) = Tx (ShelleyEra c)
 
+type instance Core.Witnesses (ShelleyEra c) = WitnessSet (ShelleyEra c)
+
 --------------------------------------------------------------------------------
 -- Ledger data instances
 --------------------------------------------------------------------------------
@@ -91,7 +94,12 @@ instance
   -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
   validateScript = validateNativeMultiSigScript
 
--- using the default instance of hashScript
+-- hashScript s = ... using the default instance of hashScript
+
+instance CryptoClass.Crypto c => BlockDecoding (ShelleyEra c) where
+  seqTx body wit _isval aux = segwitTx body wit aux
+  seqIsValidating _ = True -- In ShelleyEra all Tx are IsValidating
+  seqHasValidating = False -- But Tx does not have an IsValidating field
 
 instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) c where
   validateAuxiliaryData (Metadata m) = all validMetadatum m

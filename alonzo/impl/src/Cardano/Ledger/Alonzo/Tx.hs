@@ -76,10 +76,18 @@ module Cardano.Ledger.Alonzo.Tx
     -- Pretty
     ppIsValidating,
     ppTx,
+    alonzoSeqTx,
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (toCBOR),
+    encodeListLen,
+    encodeNull,
+    serialize,
+    serializeEncoding,
+  )
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, getLanguageView)
@@ -117,7 +125,8 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
-import qualified Data.ByteString.Short as SBS (length)
+import qualified Data.ByteString.Lazy as LBS (toStrict)
+import qualified Data.ByteString.Short as SBS (length, toShort)
 import Data.Coders
 import Data.List (foldl')
 import qualified Data.Map as Map
@@ -304,6 +313,9 @@ instance c ~ (Crypto era) => HasField "bootWits" (Tx era) (Set (BootstrapWitness
 
 instance c ~ (Crypto era) => HasField "txdatahash" (Tx era) (Map.Map (DataHash c) (Data era)) where
   getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txdats' x
+
+instance HasField "witnessSet" (Tx era) (TxWitness era) where
+  getField (TxConstr (Memo (TxRaw _ witset _ _) _)) = witset
 
 -- =========================================================
 -- Figure 2: Definitions for Transactions
@@ -793,3 +805,35 @@ deriving via
       Val (Core.Value era)
     ) =>
     FromCBOR (Annotator (Tx era))
+
+-- ====================================
+-- for making an instance of (TxSeqAble era)
+
+alonzoSeqTx ::
+  ( Era era,
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.AuxiliaryData era)
+  ) =>
+  Annotator (Core.TxBody era) ->
+  Annotator (TxWitness era) ->
+  Bool ->
+  Maybe (Annotator (Core.AuxiliaryData era)) ->
+  Annotator (Tx era)
+alonzoSeqTx
+  bodyAnn
+  witsAnn
+  isval
+  metaAnn = Annotator $ \bytes ->
+    let bodyb = runAnnotator bodyAnn bytes
+        witnessSet = runAnnotator witsAnn bytes
+        metadata = flip runAnnotator bytes <$> metaAnn
+        wrappedMetadataBytes = case metadata of
+          Nothing -> serializeEncoding encodeNull
+          Just b -> serialize b
+        fullBytes =
+          (serializeEncoding $ encodeListLen 3)
+            <> serialize bodyb
+            <> serialize witnessSet
+            <> wrappedMetadataBytes
+        shortBytes = SBS.toShort (LBS.toStrict fullBytes)
+     in TxConstr (Memo (TxRaw bodyb witnessSet (IsValidating isval) (maybeToStrictMaybe metadata)) shortBytes)

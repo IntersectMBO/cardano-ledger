@@ -62,7 +62,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
   )
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..),PreAlonzo)
 import Test.Shelley.Spec.Ledger.Generator.EraGen
   ( EraGen (..),
     genUtxo0,
@@ -88,6 +88,7 @@ instance
     UsesTxBody era,
     UsesTxOut era,
     UsesValue era,
+    PreAlonzo era,
     UsesAuxiliary era,
     Mock (Crypto era),
     ApplyBlock era,
