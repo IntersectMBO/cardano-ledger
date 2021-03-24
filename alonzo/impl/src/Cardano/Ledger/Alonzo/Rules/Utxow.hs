@@ -36,7 +36,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.SafeHash (EraIndependentData, SafeHash)
 import Control.DeepSeq (NFData (..))
-import Control.Iterate.SetAlgebra (domain, eval, (◁))
+import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
 import qualified Data.Map.Strict as Map
@@ -48,7 +48,8 @@ import Shelley.Spec.Ledger.BaseTypes
   ( ShelleyBase,
     StrictMaybe (..),
   )
-import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
+import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.LedgerState (UTxOState (..), unWitHashes, witsFromTxWitnesses)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow
   ( ShelleyStyleWitnessNeeds,
@@ -76,6 +77,7 @@ data AlonzoPredFail era
       -- ^ The PPHash in the TxBody
       !(StrictMaybe (WitnessPPDataHash (Crypto era)))
       -- ^ Computed from the current Protocol Parameters
+  | MissingRequiredSigners (Set (KeyHash 'Witness (Crypto era)))
 
 deriving instance
   ( Era era,
@@ -112,6 +114,7 @@ encodePredFail (UnRedeemableScripts x) = Sum UnRedeemableScripts 1 !> To x
 encodePredFail (MissingNeededScriptHash x) = Sum MissingNeededScriptHash 2 !> To x
 encodePredFail (DataHashSetsDontAgree x y) = Sum DataHashSetsDontAgree 3 !> To x !> To y
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
+encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 5 !> To x
 
 instance
   ( Era era,
@@ -137,6 +140,7 @@ decodePredFail 1 = SumD UnRedeemableScripts <! From
 decodePredFail 2 = SumD MissingNeededScriptHash <! From
 decodePredFail 3 = SumD DataHashSetsDontAgree <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
+decodePredFail 5 = SumD MissingRequiredSigners <! From
 decodePredFail n = Invalid n
 
 -- =============================================
@@ -185,7 +189,9 @@ alonzoStyleWitness ::
     STS (utxow era),
     -- Supply the HasField and Validate instances for Alonzo
     ShelleyStyleWitnessNeeds era,
-    AlonzoStyleAdditions era
+    AlonzoStyleAdditions era,
+    -- New transaction body fields needed for Alonzo
+    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era)))
   ) =>
   TransitionRule (utxow era)
 alonzoStyleWitness = do
@@ -224,6 +230,11 @@ alonzoStyleWitness = do
       inputHashes = Set.fromList utxoHashes
   txHashes == inputHashes ?! DataHashSetsDontAgree txHashes inputHashes
 
+  let reqSignerHashes' = getField @"reqSignerHashes" txbody
+      witsKeyHashes = unWitHashes $ witsFromTxWitnesses @era tx
+  eval (reqSignerHashes' ⊆ witsKeyHashes)
+    ?! MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes)
+
   let languages =
         [ l
           | (_hash, script) <- Map.toList scriptWitMap,
@@ -252,6 +263,8 @@ instance
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXO" era) ~ Tx era,
+    -- New transaction body fields needed for Alonzo
+    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
     -- Supply the HasField and Validate instances for Alonzo
     ShelleyStyleWitnessNeeds era, -- supplies a subset of those needed. All the old Shelley Needs still apply.
     AlonzoStyleAdditions era

@@ -131,6 +131,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
       <*> genMintValues @c
       <*> arbitrary
       <*> arbitrary
