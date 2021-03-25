@@ -34,7 +34,7 @@ library
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
     Cardano.Ledger.Alonzo.FakePlutus
-    Cardano.Ledger.Alonzo.RunPlutus
+    Cardano.Ledger.Alonzo.PlutusScriptApi
     Cardano.Ledger.Alonzo.Language
     Cardano.Ledger.Alonzo.PParams
     Cardano.Ledger.Alonzo.Rules.Utxo

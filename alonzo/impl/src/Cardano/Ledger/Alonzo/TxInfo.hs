@@ -132,9 +132,9 @@ transCred :: Credential keyrole crypto -> P.Credential
 transCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (fromShort kh))
 transCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (fromShort kh))
 
-transAddr :: Addr crypto -> P.Address
-transAddr (Addr _net object stake) = P.Address (transCred object) (transStakeReference stake)
-transAddr (AddrBootstrap _bootaddr) = P.Address (P.PubKeyCredential (P.PubKeyHash undefined)) Nothing -- TODO get a hash from a Bootstrap address.
+transAddr :: Addr crypto -> Maybe P.Address
+transAddr (Addr _net object stake) = Just (P.Address (transCred object) (transStakeReference stake))
+transAddr (AddrBootstrap _bootaddr) = Nothing
 
 -- ===============================
 -- Translate ValidityIntervals
@@ -178,7 +178,9 @@ consTranslatedTxIn ::
 consTranslatedTxIn (UTxO mp) txin answer =
   case Map.lookup txin mp of
     Nothing -> answer
-    Just txout -> (P.TxInInfo (transTxIn' txin) (P.TxOut (transAddr addr) valout dhash)) : answer
+    Just txout -> case (transAddr addr) of
+      Just ad -> (P.TxInInfo (transTxIn' txin) (P.TxOut ad valout dhash)) : answer
+      Nothing -> answer
       where
         valout = transValue (getField @"value" txout)
         addr = getField @"address" txout
@@ -186,14 +188,21 @@ consTranslatedTxIn (UTxO mp) txin answer =
           SNothing -> Nothing
           SJust (safehash) -> Just (P.DatumHash (transSafeHash safehash))
 
-transTxOut ::
+-- | Given a TxOut, translate it and cons the result onto the answer list. It is
+--   possible the address part is a Bootstrap Address, in that case just return the answer.
+--   I.e. don't include Bootstrap Addresses in the answer.
+consTranslatedTxOut ::
   forall era.
   ( Era era,
     Value era ~ Mary.Value (Crypto era)
   ) =>
   Alonzo.TxOut era ->
-  P.TxOut
-transTxOut (Alonzo.TxOut addr val datahash) = P.TxOut (transAddr addr) (transValue @(Crypto era) val) (transDataHash datahash)
+  [P.TxOut] ->
+  [P.TxOut]
+consTranslatedTxOut (Alonzo.TxOut addr val datahash) answer =
+  case (transAddr addr) of
+    Just ad -> (P.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash)) : answer
+    Nothing -> answer
 
 -- ==================================
 -- translate Values
@@ -261,7 +270,7 @@ transTx ::
 transTx utxo tx =
   P.TxInfo
     { P.txInfoInputs = foldr (consTranslatedTxIn utxo) [] (Set.toList allinputs),
-      P.txInfoOutputs = (map (transTxOut) (foldr (:) [] outs)),
+      P.txInfoOutputs = foldr consTranslatedTxOut [] (foldr (:) [] outs),
       P.txInfoFee = (transValue (inject @(Mary.Value (Crypto era)) fee)),
       P.txInfoForge = (transValue forge),
       P.txInfoDCert = (foldr (\c ans -> transDCert c : ans) [] (certs' tbody)),

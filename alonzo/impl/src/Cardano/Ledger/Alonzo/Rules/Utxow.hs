@@ -17,17 +17,15 @@ module Cardano.Ledger.Alonzo.Rules.Utxow where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (Data, DataHash)
 import Cardano.Ledger.Alonzo.PParams (PParams)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (checkScriptData, language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
     Tx,
-    checkScriptData,
     hashWitnessPPData,
     isNonNativeScriptAddress,
-    language,
-    scriptsNeeded,
     wits',
   )
 import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)

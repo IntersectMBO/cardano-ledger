@@ -35,7 +35,6 @@ module Cardano.Ledger.Alonzo.Tx
     DataHash,
     IsValidating (..),
     hashData,
-    language,
     nonNativeLanguages,
     hashWitnessPPData,
     getCoin,
@@ -68,13 +67,6 @@ module Cardano.Ledger.Alonzo.Tx
     -- Figure 7
     valContext,
     runPLCScript,
-    -- Figure 8
-    getData,
-    collectNNScriptInputs,
-    evalScripts,
-    -- Figure 12
-    scriptsNeeded,
-    checkScriptData,
     -- Pretty
     ppIsValidating,
     ppTx,
@@ -564,6 +556,7 @@ runPLCScript ::
   (IsValidating, ExUnits)
 runPLCScript _cost _script _data _exunits = (IsValidating True, ExUnits 0 0) -- TODO FIX THIS
 
+{-
 -- ===============================================================
 -- From the specification, Figure 8 "Scripts and their Arguments"
 -- ===============================================================
@@ -630,82 +623,7 @@ evalScripts ((AlonzoScript.PlutusScript s, ds, units, cost) : rest) =
   b && evalScripts rest
   where
     (IsValidating b, _exunits) = runPLCScript cost (AlonzoScript.PlutusScript s) ds units
-
--- ===================================================================
--- From Specification, Figure 12 "UTXOW helper functions"
-
--- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
-scriptsNeeded ::
-  forall era.
-  ( Era era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
-  ) =>
-  UTxO era ->
-  Tx era ->
-  [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
-scriptsNeeded (UTxO utxomap) tx = spend ++ reward ++ cert ++ minted
-  where
-    txb = txbody tx
-    !spend = foldl' accum [] (getField @"inputs" txb)
-      where
-        accum !ans !i =
-          case Map.lookup i utxomap of
-            Nothing -> ans
-            Just txout ->
-              case getValidatorHash (getField @"address" txout) of
-                Nothing -> ans
-                Just hash -> (Spending i, hash) : ans
-
-    !reward = foldl' accum [] (Map.keys m2)
-      where
-        (Wdrl m2) = getField @"wdrls" txb
-        accum !ans !accnt = case getRwdCred accnt of -- TODO  IS THIS RIGHT?
-          (ScriptHashObj hash) -> (Rewarding accnt, hash) : ans
-          _ -> ans
-
-    !cert = foldl addOnlyCwitness [] (getField @"certs" txb)
-
-    !minted = foldr (\hash ans -> (Minting (PolicyID hash), hash) : ans) [] valuePolicyHashes
-      where
-        valuePolicyHashes = getField @"minted" txb
-
--- We only find certificate witnesses in Delegating and Deregistration DCerts
--- that have ScriptHashObj credentials.
-addOnlyCwitness ::
-  [(ScriptPurpose crypto, ScriptHash crypto)] ->
-  DCert crypto ->
-  [(ScriptPurpose crypto, ScriptHash crypto)]
-addOnlyCwitness !ans (DCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
-  (Certifying $ DCertDeleg c, hk) : ans
-addOnlyCwitness !ans (DCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =
-  (Certifying $ DCertDeleg c, hk) : ans
-addOnlyCwitness !ans _ = ans
-
--- This is called checkRedeemers in the Speicifcation
-checkScriptData ::
-  forall era.
-  ( ValidateScript era,
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
-  ) =>
-  Tx era ->
-  UTxO era ->
-  (ScriptPurpose (Crypto era), ScriptHash (Crypto era)) ->
-  Bool
-checkScriptData tx utxo (sp, _h) = any ok scripts
-  where
-    scripts = txscripts' (getField @"wits" tx)
-    isSpending (Spending _) = True
-    isSpending _ = False
-    ok s =
-      isNativeScript @era s
-        || ( isJust (indexedRdmrs tx sp)
-               && (not (isSpending sp) || not (null (getData tx utxo sp)))
-           )
+-}
 
 -- =======================================================
 

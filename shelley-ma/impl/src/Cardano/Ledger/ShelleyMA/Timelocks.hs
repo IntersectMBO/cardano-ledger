@@ -25,6 +25,7 @@ module Cardano.Ledger.ShelleyMA.Timelocks
     pattern TimelockConstr,
     inInterval,
     showTimelock,
+    evalTimelock,
     validateTimelock,
     ValidityInterval (..),
     encodeVI,
