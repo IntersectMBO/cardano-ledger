@@ -58,28 +58,3 @@ library
                      , microlens-th
                      , small-steps
                      , small-steps-test
-
-test-suite chain-rules-test
-  import:             base, project-config
-
-  hs-source-dirs:      test
-  main-is:             Main.hs
-  other-modules:       Test.Byron.Spec.Chain.STS.Properties
-                     , Test.Byron.AbstractSize.Properties
-  type:                exitcode-stdio-1.0
-  default-language:    Haskell2010
-  build-depends:       containers
-                     , data-ordlist
-                     , hedgehog >= 1.0
-                     , microlens
-                     , tasty
-                     , tasty-hedgehog
-                     , tasty-hunit
-                     -- local deps
-                     , byron-spec-chain
-                     , byron-spec-ledger
-                     , small-steps
-                     , small-steps-test
-
-  -- See `byron-spec-ledger.cabal` for an explanation of the options below.
-  ghc-options:         "-with-rtsopts=-K4m -M300m"

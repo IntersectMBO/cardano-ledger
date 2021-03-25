@@ -86,25 +86,3 @@ library test
     shelley-spec-ledger,
   hs-source-dirs:
     test/lib
-
-test-suite tests
-  import:             base, project-config
-
-  type:                exitcode-stdio-1.0
-  main-is:             Tests.hs
-  hs-source-dirs:
-    test/test
-  other-modules:
-    Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
-  build-depends:
-    base16-bytestring,
-    bytestring,
-    cardano-binary,
-    cardano-ledger-alonzo,
-    cardano-ledger-shelley-ma-test,
-    QuickCheck,
-    shelley-spec-ledger,
-    shelley-spec-ledger-test,
-    tasty-quickcheck,
-    tasty,
-    test

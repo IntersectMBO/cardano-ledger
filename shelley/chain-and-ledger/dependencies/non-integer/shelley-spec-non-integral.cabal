@@ -44,21 +44,3 @@ library
 
   exposed-modules:       Shelley.Spec.NonIntegral
   hs-source-dirs: src
-
-test-suite shelley-spec-non-integral-test
-  import:             base, project-config
-
-  type:                exitcode-stdio-1.0
-  main-is:             Tests.hs
-  other-modules:       Tests.Shelley.Spec.NonIntegral
-  hs-source-dirs:      test
-  ghc-options:
-    -O2
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
-  if (!flag(development))
-    build-depends:
-      shelley-spec-non-integral,
-      QuickCheck

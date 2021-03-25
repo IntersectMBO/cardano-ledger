@@ -35,12 +35,8 @@ common project-config
   if (!flag(development))
     ghc-options:      -Werror
 
-  if impl(ghc >= 8.10)
-    ghc-options:      -Wunused-packages
-
 common doctest
-  if impl(ghc < 8.10)
-    build-depends:    doctest
+  build-depends:      doctest
 
 library
   import:             base, project-config
@@ -95,44 +91,7 @@ test-suite doctests
                       -Wredundant-constraints
                       -threaded
 
+  build-depends:      small-steps
+
   if (!flag(development))
     ghc-options:      -Werror
-
-  if impl(ghc >= 8.10)
-    ghc-options:      -Wunused-packages
-
-test-suite byron-spec-ledger-test
-  import:             base, project-config
-
-  hs-source-dirs: test
-  main-is: Main.hs
-  other-modules: Test.Byron.Spec.Ledger.Core.Generators.Properties
-               , Test.Byron.Spec.Ledger.Delegation.Examples
-               , Test.Byron.Spec.Ledger.Delegation.Properties
-               , Test.Byron.Spec.Ledger.AbstractSize.Properties
-               , Test.Byron.Spec.Ledger.Update.Examples
-               , Test.Byron.Spec.Ledger.Update.Properties
-               , Test.Byron.Spec.Ledger.Relation.Properties
-               , Test.Byron.Spec.Ledger.UTxO.Properties
-  type: exitcode-stdio-1.0
-  default-language:    Haskell2010
-  build-depends: bimap >=0.4 && <0.5
-               , containers
-               , hedgehog >= 1.0
-               , microlens
-               , microlens-th
-               , tasty
-               , tasty-hunit
-               , tasty-hedgehog
-               , Unique >= 0.4.7.6
-               -- Local deps
-               , byron-spec-ledger
-               , small-steps
-               , small-steps-test
-
-  -- We set a bound here so that we're alerted of potential space
-  -- leaks in our generators (or test) code.
-  --
-  -- The 4 megabytes stack bound and 150 megabytes heap bound were
-  -- determined ad-hoc.
-  ghc-options:        "-with-rtsopts=-K4m -M150m"

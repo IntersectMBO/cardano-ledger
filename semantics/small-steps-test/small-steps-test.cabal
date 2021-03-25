@@ -33,12 +33,8 @@ common project-config
   if (!flag(development))
     ghc-options:      -Werror
 
-  if impl(ghc >= 8.10)
-    ghc-options:      -Wunused-packages
-
 common doctest
-  if impl(ghc < 8.10)
-    build-depends:    doctest
+  build-depends:      doctest
 
 library
   import:             base, project-config
@@ -71,32 +67,4 @@ test-suite doctests
   type:               exitcode-stdio-1.0
   default-language:   Haskell2010
   build-tool-depends: doctest-discover:doctest-discover
-  ghc-options:        -threaded
-
-test-suite examples
-  import:             base, project-config
-
-  hs-source-dirs:      test
-  main-is:             examples/Main.hs
-  other-modules:       Control.State.Transition.Examples.Sum
-  other-modules:       Control.State.Transition.Examples.GlobalSum
-                     , Control.State.Transition.Examples.CommitReveal
-  type:                exitcode-stdio-1.0
-  default-language:    Haskell2010
-  build-depends:       containers
-                     , hedgehog >= 1.0
-                     , mtl
-                     , tasty
-                     , tasty-hedgehog
-                     , tasty-expected-failure
-                     , QuickCheck
-                     , tasty-quickcheck
-                     , tasty-hunit
-                     , Unique
-                     -- IOHK deps
-                     , cardano-crypto-class
-                     , cardano-binary
-                     -- Local deps
-                     , small-steps
-                     , small-steps-test
   ghc-options:        -threaded
