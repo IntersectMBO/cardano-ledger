@@ -151,7 +151,9 @@ data PParams' f era = PParams
     -- | Max total script execution resources units allowed per tx
     _maxTxExUnits :: !(HKD f ExUnits),
     -- | Max total script execution resources units allowed per block
-    _maxBlockExUnits :: !(HKD f ExUnits)
+    _maxBlockExUnits :: !(HKD f ExUnits),
+    -- | Max size of a Value in an output
+    _maxValSize :: !(HKD f Natural)
   }
   deriving (Generic)
 
@@ -189,7 +191,8 @@ instance (Era era) => ToCBOR (PParams era) where
         _costmdls = costmdls',
         _prices = prices',
         _maxTxExUnits = maxTxExUnits',
-        _maxBlockExUnits = maxBlockExUnits'
+        _maxBlockExUnits = maxBlockExUnits',
+        _maxValSize = maxValSize'
       } =
       encode
         ( Rec (PParams @Identity)
@@ -215,6 +218,7 @@ instance (Era era) => ToCBOR (PParams era) where
             !> To prices'
             !> To maxTxExUnits'
             !> To maxBlockExUnits'
+            !> To maxValSize'
         )
 
 instance
@@ -246,6 +250,7 @@ instance
         <! From -- _prices = prices',
         <! From -- _maxTxExUnits = maxTxExUnits',
         <! From -- _maxBlockExUnits = maxBlockExUnits'
+        <! From -- maxValSize :: Natural
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams era
@@ -272,7 +277,8 @@ emptyPParams =
       _costmdls = mempty,
       _prices = Prices (Coin 0) (Coin 0),
       _maxTxExUnits = ExUnits 0 0,
-      _maxBlockExUnits = ExUnits 0 0
+      _maxBlockExUnits = ExUnits 0 0,
+      _maxValSize = 0
     }
 
 instance Default (PParams era) where
@@ -321,12 +327,13 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 12 (_d ppup) toCBOR
     !> omitStrictMaybe 13 (_extraEntropy ppup) toCBOR
     !> omitStrictMaybe 14 (_protocolVersion ppup) toCBOR
-    !> omitStrictMaybe 15 (_minPoolCost ppup) toCBOR
-    !> omitStrictMaybe 16 (_adaPerUTxOByte ppup) toCBOR
-    !> omitStrictMaybe 17 (_costmdls ppup) mapToCBOR
-    !> omitStrictMaybe 18 (_prices ppup) toCBOR
-    !> omitStrictMaybe 19 (_maxTxExUnits ppup) toCBOR
-    !> omitStrictMaybe 20 (_maxBlockExUnits ppup) toCBOR
+    !> omitStrictMaybe 16 (_minPoolCost ppup) toCBOR
+    !> omitStrictMaybe 17 (_adaPerUTxOByte ppup) toCBOR
+    !> omitStrictMaybe 18 (_costmdls ppup) mapToCBOR
+    !> omitStrictMaybe 19 (_prices ppup) toCBOR
+    !> omitStrictMaybe 20 (_maxTxExUnits ppup) toCBOR
+    !> omitStrictMaybe 21 (_maxBlockExUnits ppup) toCBOR
+    !> omitStrictMaybe 22 (_maxValSize ppup) toCBOR
   where
     omitStrictMaybe ::
       Word -> StrictMaybe a -> (a -> Encoding) -> Encode ('Closed 'Sparse) (StrictMaybe a)
@@ -359,7 +366,8 @@ emptyPParamsUpdate =
       _costmdls = SNothing,
       _prices = SNothing,
       _maxTxExUnits = SNothing,
-      _maxBlockExUnits = SNothing
+      _maxBlockExUnits = SNothing,
+      _maxValSize = SNothing
     }
 
 updateField :: Word -> Field (PParamsUpdate era)
@@ -378,12 +386,13 @@ updateField 11 = field (\x up -> up {_tau = SJust x}) From
 updateField 12 = field (\x up -> up {_d = SJust x}) From
 updateField 13 = field (\x up -> up {_extraEntropy = SJust x}) From
 updateField 14 = field (\x up -> up {_protocolVersion = SJust x}) From
-updateField 15 = field (\x up -> up {_minPoolCost = SJust x}) From
-updateField 16 = field (\x up -> up {_adaPerUTxOByte = SJust x}) From
-updateField 17 = field (\x up -> up {_costmdls = x}) (D $ SJust <$> mapFromCBOR)
-updateField 18 = field (\x up -> up {_prices = SJust x}) From
-updateField 19 = field (\x up -> up {_maxTxExUnits = SJust x}) From
-updateField 20 = field (\x up -> up {_maxBlockExUnits = SJust x}) From
+updateField 16 = field (\x up -> up {_minPoolCost = SJust x}) From
+updateField 17 = field (\x up -> up {_adaPerUTxOByte = SJust x}) From
+updateField 18 = field (\x up -> up {_costmdls = x}) (D $ SJust <$> mapFromCBOR)
+updateField 19 = field (\x up -> up {_prices = SJust x}) From
+updateField 20 = field (\x up -> up {_maxTxExUnits = SJust x}) From
+updateField 21 = field (\x up -> up {_maxBlockExUnits = SJust x}) From
+updateField 22 = field (\x up -> up {_maxValSize = SJust x}) From
 updateField k = field (\_x up -> up) (Invalid k)
 
 instance (Era era) => FromCBOR (PParamsUpdate era) where
@@ -435,7 +444,8 @@ updatePParams pp ppup =
       _costmdls = fromMaybe' (_costmdls pp) (_costmdls ppup),
       _prices = fromMaybe' (_prices pp) (_prices ppup),
       _maxTxExUnits = fromMaybe' (_maxTxExUnits pp) (_maxTxExUnits ppup),
-      _maxBlockExUnits = fromMaybe' (_maxBlockExUnits pp) (_maxBlockExUnits ppup)
+      _maxBlockExUnits = fromMaybe' (_maxBlockExUnits pp) (_maxBlockExUnits ppup),
+      _maxValSize = fromMaybe' (_maxValSize pp) (_maxValSize ppup)
     }
   where
     fromMaybe' :: a -> StrictMaybe a -> a

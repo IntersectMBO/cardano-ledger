@@ -123,7 +123,6 @@ import qualified Data.ByteString.Lazy as LBS (toStrict)
 import qualified Data.ByteString.Short as SBS (length, toShort)
 import Data.Coders
 import qualified Data.Map as Map
-import Data.Maybe (catMaybes)
 import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq

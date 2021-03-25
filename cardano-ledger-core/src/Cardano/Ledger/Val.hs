@@ -18,6 +18,7 @@ module Cardano.Ledger.Val
     scale,
     invert,
     sumVal,
+    adaOnly,
     DecodeNonNegative (..),
     DecodeMint (..),
     EncodeMint (..),
@@ -87,6 +88,10 @@ sumVal xs = foldl (<+>) mempty xs
 
 invert :: Val t => t -> t
 invert x = (-1 :: Integer) <×> x
+
+-- returns a Value containing only the coin (ada) tokens from the input Value
+adaOnly :: Val v => v -> Bool
+adaOnly v = (inject . coin) v == v
 
 instance Val Coin where
   n <×> (Coin x) = Coin $ (fromIntegral n) * x

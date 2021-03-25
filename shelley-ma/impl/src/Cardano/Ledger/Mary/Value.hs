@@ -55,6 +55,7 @@ import Control.DeepSeq (NFData (..))
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Short as SBS
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
 import Data.CanonicalMaps
@@ -111,7 +112,7 @@ instance FromCBOR AssetName where
   fromCBOR = do
     an <- fromCBOR
     if BS.length an > 32
-      then cborError $ DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeUtf8 an)
+      then cborError $ DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeUtf8 $ BS16.encode an)
       else pure . AssetName $ an
 
 -- | Policy ID
