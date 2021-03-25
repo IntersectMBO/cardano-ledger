@@ -25,6 +25,7 @@ import Test.Shelley.Spec.Ledger.Examples (testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Examples.EmptyBlock (exEmptyBlock)
 import Test.Shelley.Spec.Ledger.Examples.GenesisDelegation (genesisDelegExample)
+import Test.Shelley.Spec.Ledger.Examples.NetworkID (testPoolNetworkId)
 import Test.Shelley.Spec.Ledger.Examples.Mir (mirExample)
 import Test.Shelley.Spec.Ledger.Examples.MirTransfer (testMIRTransfer)
 import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (poolLifetimeExample)
@@ -55,7 +56,8 @@ chainExamples =
       updatesExample,
       genesisDelegExample,
       mirExample,
-      testMIRTransfer
+      testMIRTransfer,
+      testPoolNetworkId
     ]
 
 multisigExamples :: TestTree
