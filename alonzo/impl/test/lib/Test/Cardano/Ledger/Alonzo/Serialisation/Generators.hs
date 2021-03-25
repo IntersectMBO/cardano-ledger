@@ -38,6 +38,8 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
+import Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
 import qualified Language.PlutusTx as Plutus
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
@@ -81,6 +83,9 @@ instance Arbitrary RdmrPtr where
 
 instance Arbitrary ExUnits where
   arbitrary = ExUnits <$> arbitrary <*> arbitrary
+
+instance (Era era) => Arbitrary (Redeemers era) where
+  arbitrary = Redeemers <$> arbitrary
 
 instance
   ( Era era,
@@ -263,3 +268,14 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
         Rewarding <$> arbitrary,
         Certifying <$> arbitrary
       ]
+
+data MaybeLangDepView c = MaybeLangDepView {unMLDV :: Maybe (LangDepView (AlonzoEra c))}
+
+instance Mock c => Arbitrary (MaybeLangDepView c) where
+  arbitrary = MaybeLangDepView <$> (getLanguageView <$> arbitrary <*> arbitrary)
+
+instance Mock c => Arbitrary (WitnessPPData (AlonzoEra c)) where
+  arbitrary =
+    WitnessPPData
+      <$> arbitrary
+      <*> (Set.fromList . (mapMaybe unMLDV) <$> arbitrary)

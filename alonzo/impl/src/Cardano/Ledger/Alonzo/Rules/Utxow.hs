@@ -240,8 +240,7 @@ alonzoStyleWitness = do
             isNativeScript @era script,
             Just l <- [language @era script]
         ]
-      rdmrs wit = Map.map fst (txrdmrs wit)
-      computedPPhash = hashWitnessPPData pp (Set.fromList languages) (rdmrs (wits' tx))
+      computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits' $ tx)
       bodyPPhash = getField @"wppHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
   pure u'

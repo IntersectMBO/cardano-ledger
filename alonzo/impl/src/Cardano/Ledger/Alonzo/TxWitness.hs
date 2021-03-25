@@ -20,6 +20,11 @@
 
 module Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
+    Redeemers
+      ( Redeemers,
+        Redeemers'
+      ),
+    unRedeemers,
     TxWitness
       ( TxWitness,
         txwitsVKey,
@@ -62,7 +67,6 @@ import Data.Coders
 import Data.Map.Strict (Map)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics
@@ -105,13 +109,45 @@ instance FromCBOR RdmrPtr where
 --      (Map (DataHash (Crypto era)) (Data era))
 --      (Map RdmrPtr (Data era, ExUnits))
 
+newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
+  deriving (Eq, Show, Generic, Typeable)
+  deriving newtype (NoThunks)
+
+newtype Redeemers era = RedeemersConstr (MemoBytes (RedeemersRaw era))
+  deriving newtype (Eq, Show, ToCBOR, NoThunks, Typeable)
+
+-- =====================================================
+-- Pattern for Redeemers
+
+pattern Redeemers' ::
+  Map RdmrPtr (Data era, ExUnits) ->
+  Redeemers era
+pattern Redeemers' rs' <-
+  RedeemersConstr (Memo (RedeemersRaw rs') _)
+
+{-# COMPLETE Redeemers' #-}
+
+pattern Redeemers ::
+  Era era =>
+  Map RdmrPtr (Data era, ExUnits) ->
+  Redeemers era
+pattern Redeemers rs <-
+  RedeemersConstr (Memo (RedeemersRaw rs) _)
+  where
+    Redeemers rs' = RedeemersConstr . memoBytes $ Rec RedeemersRaw !> mapEncode rs'
+
+{-# COMPLETE Redeemers #-}
+
+unRedeemers :: Redeemers era -> Map RdmrPtr (Data era, ExUnits)
+unRedeemers (Redeemers' rs) = rs
+
 -- | Internal 'TxWitness' type, lacking serialised bytes.
 data TxWitnessRaw era = TxWitnessRaw
   { _txwitsVKey :: Set (WitVKey 'Witness (Crypto era)),
     _txwitsBoot :: Set (BootstrapWitness (Crypto era)),
     _txscripts :: Map (ScriptHash (Crypto era)) (Core.Script era),
     _txdats :: Map (DataHash (Crypto era)) (Data era),
-    _txrdmrs :: Map RdmrPtr (Data era, ExUnits)
+    _txrdmrs :: Redeemers era
   }
   deriving (Generic, Typeable)
 
@@ -151,7 +187,7 @@ pattern TxWitness' ::
   Set (BootstrapWitness (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
   Map (DataHash (Crypto era)) (Data era) ->
-  Map RdmrPtr (Data era, ExUnits) ->
+  Redeemers era ->
   TxWitness era
 pattern TxWitness' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} <-
   TxWitnessConstr
@@ -165,7 +201,7 @@ pattern TxWitness ::
   Set (BootstrapWitness (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
   Map (DataHash (Crypto era)) (Data era) ->
-  Map RdmrPtr (Data era, ExUnits) ->
+  Redeemers era ->
   TxWitness era
 pattern TxWitness {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
   TxWitnessConstr
@@ -177,29 +213,6 @@ pattern TxWitness {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
         $ encodeWitnessRaw witsVKey' witsBoot' witsScript' witsDat' witsRdmr'
 
 {-# COMPLETE TxWitness #-}
-
--- ======================================================================
-
--- | Right-biased semigroup - if there are (somehow) multiple entries either for
--- a given 'ScriptHash' or a given 'Data', this will bias to the entry on the
--- right. Note that this should not happen in practise.
-instance
-  (Era era, ToCBOR (Core.Script era)) =>
-  Semigroup (TxWitness era)
-  where
-  TxWitness a b c d e <> TxWitness a' b' c' d' e' =
-    TxWitness
-      (a `Set.union` a')
-      (b `Set.union` b')
-      (c <> c')
-      (d <> d')
-      (e <> e')
-
-instance
-  (Era era, ToCBOR (Core.Script era)) =>
-  Monoid (TxWitness era)
-  where
-  mempty = TxWitness mempty mempty mempty mempty mempty
 
 -- =======================================================
 -- Virtual HasField instances for the accessors
@@ -217,7 +230,7 @@ instance
   where
   getField (TxWitnessConstr (Memo (TxWitnessRaw _ _ _ d _) _)) = d
 
-instance HasField "txrdmrs" (TxWitness era) (Map RdmrPtr (Data era, ExUnits)) where
+instance HasField "txrdmrs" (TxWitness era) (Redeemers era) where
   getField (TxWitnessConstr (Memo (TxWitnessRaw _ _ _ _ r) _)) = r
 
 --------------------------------------------------------------------------------
@@ -230,7 +243,7 @@ encodeWitnessRaw ::
   Set (BootstrapWitness (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
   Map (DataHash (Crypto era)) (Data era) ->
-  Map RdmrPtr (Data era, ExUnits) ->
+  Redeemers era ->
   Encode ('Closed 'Dense) (TxWitnessRaw era)
 encodeWitnessRaw a b c d e =
   Rec TxWitnessRaw
@@ -238,7 +251,7 @@ encodeWitnessRaw a b c d e =
     !> setEncode b
     !> mapEncode c
     !> mapEncode d
-    !> mapEncode e
+    !> To e
 
 -- TxWitness includes a field with type: (Map RdmrPtr (Data era, ExUnits))
 -- We only have a (ToCBOR (Annotator (Data era))) instance, so we need a special
@@ -246,6 +259,20 @@ encodeWitnessRaw a b c d e =
 -- instance. We have to be careful since the map is encodedwith 'mapToCBOR' and the
 -- decoder needs to be consistent with that encoding. So we use
 -- fromMapXA From (fromPairAX From From)  to decode that field
+
+instance
+  (Era era) =>
+  FromCBOR (Annotator (RedeemersRaw era))
+  where
+  fromCBOR =
+    decode $
+      Ann (RecD RedeemersRaw)
+        <*! mapDecodeA (Ann From) (pairDecodeA From (Ann From))
+
+deriving via
+  (Mem (RedeemersRaw era))
+  instance
+    (Era era) => FromCBOR (Annotator (Redeemers era))
 
 instance
   ( Era era,
@@ -263,7 +290,7 @@ instance
         <*! setDecodeA From
         <*! mapDecodeA (Ann From) From
         <*! mapDecodeA (Ann From) From
-        <*! mapDecodeA (Ann From) (pairDecodeA From (Ann From))
+        <*! From
 
 deriving via
   (Mem (TxWitnessRaw era))
@@ -283,7 +310,7 @@ ppRdmrPtr (RdmrPtr tag w) = ppSexp "RdmrPtr" [ppTag tag, ppWord64 w]
 instance PrettyA RdmrPtr where prettyA = ppRdmrPtr
 
 ppTxWitness :: (Era era, PrettyA (Core.Script era)) => TxWitness era -> PDoc
-ppTxWitness (TxWitnessConstr (Memo (TxWitnessRaw vk wb sc da rd) _)) =
+ppTxWitness (TxWitnessConstr (Memo (TxWitnessRaw vk wb sc da (Redeemers rd)) _)) =
   ppRecord
     "TxWitness"
     [ ("txwitsVKey", ppSet ppWitVKey vk),

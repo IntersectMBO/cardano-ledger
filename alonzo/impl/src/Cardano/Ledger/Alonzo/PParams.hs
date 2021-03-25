@@ -543,8 +543,5 @@ getLanguageView ::
   forall era.
   PParams era ->
   Language ->
-  LangDepView era
-getLanguageView pp PlutusV1 =
-  case Map.lookup PlutusV1 (_costmdls pp) of
-    Just x -> (PlutusView x)
-    Nothing -> error ("CostModel map does not have cost for language: " ++ show PlutusV1)
+  Maybe (LangDepView era)
+getLanguageView pp PlutusV1 = PlutusView <$> Map.lookup PlutusV1 (_costmdls pp)

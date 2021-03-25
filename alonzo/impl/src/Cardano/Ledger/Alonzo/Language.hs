@@ -36,10 +36,14 @@ instance ToCBOR Language where
   toCBOR PlutusV1 = toCBOR (0 :: Int)
 
 instance FromCBOR Language where
-  fromCBOR = do n <- decodeWord64; case n of { 0 -> pure PlutusV1; m -> invalidKey (fromIntegral m) }
+  fromCBOR = do
+    n <- decodeWord64
+    case n of
+      0 -> pure PlutusV1
+      m -> invalidKey (fromIntegral m)
 
 nonNativeLanguages :: Set.Set Language
-nonNativeLanguages = Set.insert PlutusV1 Set.empty
+nonNativeLanguages = Set.singleton PlutusV1
 
 -- ==================================
 
