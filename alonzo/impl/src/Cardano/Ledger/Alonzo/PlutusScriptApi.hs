@@ -66,6 +66,8 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- From the specification, Figure 8 "Scripts and their Arguments"
 -- ===============================================================
 
+-- | Get the Data associated with a ScriptPurpose. Only the Spending
+--   ScriptPurpose contains Data. The null list is returned for the other kinds.
 getData ::
   forall era.
   ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era)))
@@ -117,7 +119,7 @@ collectNNScriptInputs pp tx utxo =
 
 language :: Era era => AlonzoScript.Script era -> Maybe Language
 language (AlonzoScript.PlutusScript _) = Just PlutusV1
-language (AlonzoScript.NativeScript _) = Nothing
+language (AlonzoScript.TimelockScript _) = Nothing
 
 evalScripts ::
   forall era.
@@ -128,7 +130,7 @@ evalScripts ::
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)] ->
   Bool
 evalScripts _tx [] = True
-evalScripts tx ((AlonzoScript.NativeScript timelock, _, _, _) : rest) =
+evalScripts tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
   evalTimelock vhks (Alonzo.vldt' (body' tx)) timelock && evalScripts tx rest
   where
     vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
@@ -138,7 +140,14 @@ evalScripts tx ((AlonzoScript.PlutusScript pscript, ds, units, cost) : rest) =
 -- ===================================================================
 -- From Specification, Figure 12 "UTXOW helper functions"
 
--- This is called checkRedeemers in the Speicifcation
+-- This is called checkRedeemers in the Specification
+
+-- | Check that a script has whatever associated Data that it requires.
+--     There are several ways this can happen
+--     1) The script is Not a twoPhase script, so it doesn't need any data
+--     2) The _txrdmrs Map of the TxWitness, contains Data for the script AND, either of the following
+--        a) It is not a Spending script  OR
+--        b) If it is a Spending Script, we can getData for it.
 checkScriptData ::
   forall era.
   ( ValidateScript era,

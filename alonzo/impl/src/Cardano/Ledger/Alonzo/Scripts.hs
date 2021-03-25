@@ -17,7 +17,7 @@
 
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
-    Script (ScriptConstr, NativeScript, PlutusScript),
+    Script (ScriptConstr, TimelockScript, PlutusScript),
     ExUnits (..),
     CostModel (CostModel),
     Prices (..),
@@ -93,7 +93,7 @@ instance NoThunks Tag
 
 -- | Scripts in the Alonzo Era without original bytes.
 data ScriptRaw era
-  = NativeScriptRaw (Timelock (Crypto era))
+  = TimelockScriptRaw (Timelock (Crypto era))
   | PlutusScriptRaw (Plutus.Script)
   deriving (Eq, Show, Generic, Ord)
 
@@ -110,11 +110,11 @@ newtype Script era = ScriptConstr (MemoBytes (ScriptRaw era))
 
 deriving via (Mem (ScriptRaw era)) instance (Era era) => FromCBOR (Annotator (Script era))
 
-pattern NativeScript :: Typeable (Crypto era) => Timelock (Crypto era) -> Script era
-pattern NativeScript x <-
-  ScriptConstr (Memo (NativeScriptRaw x) _)
+pattern TimelockScript :: Typeable (Crypto era) => Timelock (Crypto era) -> Script era
+pattern TimelockScript x <-
+  ScriptConstr (Memo (TimelockScriptRaw x) _)
   where
-    NativeScript x = ScriptConstr (memoBytes (encodeScript (NativeScriptRaw x)))
+    TimelockScript x = ScriptConstr (memoBytes (encodeScript (TimelockScriptRaw x)))
 
 pattern PlutusScript :: Typeable (Crypto era) => Plutus.Script -> Script era
 pattern PlutusScript x <-
@@ -122,7 +122,7 @@ pattern PlutusScript x <-
   where
     PlutusScript x = ScriptConstr (memoBytes (encodeScript (PlutusScriptRaw x)))
 
-{-# COMPLETE NativeScript, PlutusScript #-}
+{-# COMPLETE TimelockScript, PlutusScript #-}
 
 getPlutus :: Short.ShortByteString -> Plutus.Script
 getPlutus flatBytes =
@@ -136,7 +136,7 @@ alwaysFails n = PlutusScript (getPlutus (Plutus.alwaysFailingNAryFunction n))
 
 isPlutusScript :: Script era -> Bool
 isPlutusScript (ScriptConstr (Memo (PlutusScriptRaw _) _)) = True
-isPlutusScript (ScriptConstr (Memo (NativeScriptRaw _) _)) = False
+isPlutusScript (ScriptConstr (Memo (TimelockScriptRaw _) _)) = False
 
 -- ===========================================
 
@@ -254,7 +254,7 @@ instance forall era. (Typeable (Crypto era), Typeable era) => ToCBOR (ScriptRaw 
 -}
 
 encodeScript :: (Typeable (Crypto era)) => ScriptRaw era -> Encode 'Open (ScriptRaw era)
-encodeScript (NativeScriptRaw i) = Sum NativeScriptRaw 0 !> To i
+encodeScript (TimelockScriptRaw i) = Sum TimelockScriptRaw 0 !> To i
 encodeScript (PlutusScriptRaw s) = Sum PlutusScriptRaw 1 !> E CS.encode s
 
 instance
@@ -264,7 +264,7 @@ instance
   fromCBOR = decode (Summands "Alonzo Script" decodeScript)
     where
       decodeScript :: Word -> Decode 'Open (Annotator (ScriptRaw era))
-      decodeScript 0 = Ann (SumD NativeScriptRaw) <*! From
+      decodeScript 0 = Ann (SumD TimelockScriptRaw) <*! From
       decodeScript 1 = Ann (SumD PlutusScriptRaw) <*! Ann (D CS.decode)
       decodeScript n = Invalid n
 
@@ -278,7 +278,7 @@ instance PrettyA Tag where prettyA = ppTag
 
 ppScriptRaw :: ScriptRaw era -> PDoc
 ppScriptRaw (PlutusScriptRaw _) = ppString "PlutusScript"
-ppScriptRaw (NativeScriptRaw x) = ppTimelock x
+ppScriptRaw (TimelockScriptRaw x) = ppTimelock x
 
 ppScript :: Script era -> PDoc
 ppScript (ScriptConstr (Memo raw _)) = ppScriptRaw raw

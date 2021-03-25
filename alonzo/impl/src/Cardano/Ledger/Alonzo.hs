@@ -15,7 +15,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
-import Cardano.Ledger.Alonzo.Tx (Tx, body', wits', IsValidating (..), alonzoSeqTx, isValidating')
+import Cardano.Ledger.Alonzo.Tx (IsValidating (..), Tx, alonzoSeqTx, body', isValidating', wits')
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut, vldt')
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
@@ -66,7 +66,7 @@ instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
     if isPlutusScript script
       then "\x01"
       else nativeMultiSigTag -- "\x00"
-  validateScript (NativeScript timelock) tx = evalTimelock vhks (vldt' (body' tx)) timelock
+  validateScript (TimelockScript timelock) tx = evalTimelock vhks (vldt' (body' tx)) timelock
     where
       vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
   validateScript (PlutusScript _) _tx = False -- Plutus scripts are stripped out an run in function evalScripts

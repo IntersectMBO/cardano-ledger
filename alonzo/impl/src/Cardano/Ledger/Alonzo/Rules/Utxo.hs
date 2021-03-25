@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Tx
   ( Tx (..),
-    isNonNativeScriptAddress,
+    isTwoPhaseScriptAddress,
     minfee,
     txbody,
   )
@@ -210,7 +210,7 @@ instance
 feesOK ::
   forall era.
   ( Era era,
-    ValidateScript era, -- isNonNativeScriptAddress
+    ValidateScript era, -- isTwoPhaseScriptAddress
     Core.TxOut era ~ Alonzo.TxOut era, -- balance requires this,
     HasField "totExunits" (Core.Tx era) ExUnits, -- minfee requires this
     HasField
@@ -231,7 +231,7 @@ feesOK pp tx (UTxO m) = do
       fees = getField @"txinputs_fee" txb -- Inputs allocated to pay theFee
       utxoFees = eval (fees ◁ m) -- restrict Utxo to those inputs we use to pay fees.
       bal = balance @era (UTxO utxoFees)
-      nonNative txout = isNonNativeScriptAddress @era tx (getField @"address" txout)
+      nonNative txout = isTwoPhaseScriptAddress @era tx (getField @"address" txout)
       minimumFee = minfee @era pp tx
   -- Part 1
   (Val.coin bal >= theFee) ?! FeeNotBalancedUTxO (Val.coin bal) theFee

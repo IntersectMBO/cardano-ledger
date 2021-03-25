@@ -12,8 +12,6 @@ module Cardano.Ledger.Alonzo.TxInfo where
 
 import Cardano.Crypto.Hash.Class (Hash (UnsafeHash))
 import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
--- import Cardano.Chain.Common.Address(Address)  -- Need to add this to the cabal file
-
 -- ==============================================
 -- Import Plutus stuff in the qualified Module P
 
@@ -26,7 +24,7 @@ import qualified Cardano.Ledger.Alonzo.FakePlutus as P
     TxInfo (..),
     TxOut (..),
   )
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script)
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( certs',
@@ -53,7 +51,7 @@ import Data.ByteString.Short as SBS (fromShort, toShort)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import qualified Flat as Flat (flat, unflat)
+import qualified Flat as Flat (flat)
 import GHC.Records (HasField (..))
 import qualified Language.PlutusCore.Evaluation.Machine.ExMemory as P (ExCPU (..), ExMemory (..))
 import qualified Language.PlutusTx as P (Data (..))
@@ -78,21 +76,18 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))
 import Shelley.Spec.Ledger.Keys (KeyHash (..), hashKey)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
-import Shelley.Spec.Ledger.TxBody (DCert (..), DelegCert (..), Delegation (..), PoolCert (..), PoolParams (..), TxId (..), TxIn (..), Wdrl (..), WitVKey (..))
+import Shelley.Spec.Ledger.TxBody
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    PoolCert (..),
+    PoolParams (..),
+    TxId (..),
+    TxIn (..),
+    Wdrl (..),
+    WitVKey (..),
+  )
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
-
--- =====================================================================
-
-evalPlutusScript :: CostModel -> ExUnits -> P.Script -> [P.Data] -> Bool
-evalPlutusScript cost units (P.Script x) ds =
-  case P.evaluateScriptRestricting
-    P.Quiet
-    (transCostModel cost)
-    (transExUnits units)
-    (toShort (Flat.flat x))
-    ds of
-    (_, Left _) -> False
-    (_, Right ()) -> True
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
@@ -163,7 +158,7 @@ transVI (ValidityInterval (SJust (SlotNo i)) (SJust (SlotNo j))) =
 transTxIn' :: CC.Crypto c => TxIn c -> P.TxOutRef
 transTxIn' (TxIn txid nat) = P.TxOutRef (transTxId txid) (fromIntegral nat)
 
--- | Given a TxIn, lookit up in the UTxO. If it exists, translate it and cons the result
+-- | Given a TxIn, look it up in the UTxO. If it exists, translate it and cons the result
 --   onto the answer list. If does not exist in the UTxO, just return the answer list.
 consTranslatedTxIn ::
   forall era.
@@ -255,8 +250,16 @@ getWitVKeyHash = P.PubKeyHash . fromShort . (\(UnsafeHash x) -> x) . (\(KeyHash 
 transDataPair :: (DataHash c, Data era) -> (P.DatumHash, P.Datum)
 transDataPair (x, y) = (transDataHash' x, P.Datum (getPlutusData y))
 
+transCostModel :: CostModel -> P.CostModelParameters
+transCostModel (CostModel mp) = Map.foldlWithKey' (\ans bytes n -> Map.insert (show bytes) n ans) Map.empty mp
+
+transExUnits :: ExUnits -> P.ExBudget
+transExUnits (ExUnits mem steps) = P.ExBudget (P.ExCPU (fromIntegral steps)) (P.ExMemory (fromIntegral mem))
+
 -- ===================================
 
+-- | Compute a Digest of the current transaction to pass to the script
+--   This is the major component of the valContext function.
 transTx ::
   forall era.
   ( Era era,
@@ -293,8 +296,9 @@ transTx utxo tx =
     vkkeyset = txwitsVKey' (wits' tx)
     datpairs = Map.toList (txdats' (wits' tx))
 
-txInfoToData :: P.TxInfo -> P.Data
-txInfoToData x = P.toData x
+-- ===============================================================
+-- From the specification, Figure 7 "Script Validation, cont."
+-- ===============================================================
 
 -- | valContext collects info from the Tx and the UTxO an
 --   translates it into a 'Data', which the Plutus language knows how to interpret.
@@ -311,10 +315,20 @@ valContext ::
   [Data era]
 valContext utxo tx _sp = [Data (txInfoToData (transTx utxo tx))]
 
-----------------------------
+txInfoToData :: P.TxInfo -> P.Data
+txInfoToData x = P.toData x
 
-transCostModel :: CostModel -> P.CostModelParameters
-transCostModel (CostModel mp) = Map.foldlWithKey' (\ans bytes n -> Map.insert (show bytes) n ans) Map.empty mp
+-- An analog to evalPlutusScript, is called runPLCScript in the Specification
+-- evalPlutusScript, has slighlty different types for its parameters.
 
-transExUnits :: ExUnits -> P.ExBudget
-transExUnits (ExUnits mem steps) = P.ExBudget (P.ExCPU (fromIntegral steps)) (P.ExMemory (fromIntegral mem))
+-- | Run a Plutus Script, given the script and the bounds on resources it is allocated.
+evalPlutusScript :: CostModel -> ExUnits -> P.Script -> [P.Data] -> Bool
+evalPlutusScript cost units (P.Script x) ds =
+  case P.evaluateScriptRestricting
+    P.Quiet
+    (transCostModel cost)
+    (transExUnits units)
+    (toShort (Flat.flat x))
+    ds of
+    (_, Left _) -> False
+    (_, Right ()) -> True
