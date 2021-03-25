@@ -34,6 +34,7 @@ library
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
     Cardano.Ledger.Alonzo.FakePlutus
+    Cardano.Ledger.Alonzo.RunPlutus
     Cardano.Ledger.Alonzo.Language
     Cardano.Ledger.Alonzo.PParams
     Cardano.Ledger.Alonzo.Rules.Utxo
@@ -60,6 +61,7 @@ library
     nothunks,
     plutus-ledger-api,
     plutus-tx,
+    plutus-core,
     serialise,
     shelley-spec-ledger,
     small-steps,

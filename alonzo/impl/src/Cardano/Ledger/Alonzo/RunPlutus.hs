@@ -5,43 +5,38 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module RunPlutus where
+module Cardano.Ledger.Alonzo.RunPlutus where
 
-import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), Prices, scriptfee)
-import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..), Tag (..))
+import Cardano.Ledger.Alonzo.Data (getPlutusData)
+import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..))
+import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..))
 import Cardano.Ledger.Alonzo.Tx
-  ( CostModel (..),
-    Data (..),
-    DataHash (..),
+  ( Data,
+    DataHash,
     IsValidating (..),
     ScriptPurpose (..),
     Tx (..),
     indexedRdmrs,
     scriptsNeeded,
     txdats',
-    txscripts',
   )
-import Cardano.Ledger.Alonzo.TxBody (TxBody (..))
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..))
-import Cardano.Ledger.Alonzo.TxInfo (valContext)
+import Cardano.Ledger.Alonzo.TxInfo (evalPlutusScript, valContext)
 import Cardano.Ledger.Core as Core hiding (Tx)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
-import Data.ByteString as BS (ByteString)
-import Data.ByteString.Short as SBS (fromShort)
-import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (isJust, maybeToList)
+import Data.Maybe (maybeToList)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe, strictMaybeToMaybe)
+import qualified Plutus.V1.Ledger.Scripts as Plutus (Script)
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
-import Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (..), Wdrl (..))
+import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
+import Shelley.Spec.Ledger.TxBody (TxIn (..), Wdrl (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- ===============================================================
@@ -100,29 +95,35 @@ collectNNScriptInputs ::
   Core.PParams era ->
   Tx era ->
   UTxO era ->
-  [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
+  [(Plutus.Script, [Data era], ExUnits, CostModel)]
 collectNNScriptInputs pp tx utxo =
   [ (script, d : (valContext utxo tx sp ++ getData tx utxo sp), eu, cost)
     | (sp, scripthash) <- scriptsNeeded utxo tx, -- TODO, IN specification ORDER IS WRONG
       (d, eu) <- maybeToList (indexedRdmrs tx sp),
-      script <- maybeToList (Map.lookup scripthash (txscripts' (getField @"wits" tx))),
-      cost <- case language script of
-        Nothing -> []
-        Just lang -> maybeToList (Map.lookup lang (getField @"_costmdls" pp))
+      script <- onlytwoPhaseScripts tx scripthash, -- maybeToList (Map.lookup scripthash (txscripts' (getField @"wits" tx))),
+      cost <- maybeToList (Map.lookup PlutusV1 (getField @"_costmdls" pp))
   ]
 
-language :: Typeable (Crypto era) => AlonzoScript.Script era -> Maybe Language
-language (AlonzoScript.NativeScript _) = Nothing
-language (AlonzoScript.PlutusScript _) = Just PlutusV1
+-- | return only the scripts that use two-phase validation (Here that means Plutus scripts)
+onlytwoPhaseScripts ::
+  ( Era era,
+    Script era ~ AlonzoScript.Script era
+  ) =>
+  Tx era ->
+  ScriptHash (Crypto era) ->
+  [Plutus.Script]
+onlytwoPhaseScripts tx scripthash =
+  case Map.lookup scripthash (getField @"scriptWits" tx) of
+    Just (AlonzoScript.PlutusScript pscript) -> [pscript]
+    Just (AlonzoScript.NativeScript _) -> []
+    Nothing -> []
 
 evalScripts ::
   Typeable (Crypto era) =>
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)] ->
   Bool
 evalScripts [] = True
-evalScripts ((AlonzoScript.NativeScript _timelock, _, _, _) : rest) =
-  evalScripts rest
-evalScripts ((AlonzoScript.PlutusScript s, ds, units, cost) : rest) =
-  b && evalScripts rest
-  where
-    (IsValidating b, _exunits) = runPLCScript cost (AlonzoScript.PlutusScript s) ds units
+-- We may safely skip over the Timelock scripts
+evalScripts ((AlonzoScript.NativeScript _, _, _, _) : rest) = evalScripts rest
+evalScripts ((AlonzoScript.PlutusScript pscript, ds, units, cost) : rest) =
+  evalPlutusScript cost units pscript (map getPlutusData ds) && evalScripts rest
