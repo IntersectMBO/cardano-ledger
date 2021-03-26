@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Genesis.NonAvvmBalances
@@ -22,7 +23,13 @@ import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary (DecoderError)
+import Cardano.Binary
+  ( DecoderError
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , encodeListLen
+  , enforceSize
+  )
 import Cardano.Chain.Common
   ( Address
   , Lovelace
@@ -50,6 +57,16 @@ instance Monad m => ToJSON m GenesisNonAvvmBalances where
 
 instance MonadError SchemaError m => FromJSON m GenesisNonAvvmBalances where
   fromJSON = fmap GenesisNonAvvmBalances . fromJSON
+
+instance ToCBOR GenesisNonAvvmBalances where
+  toCBOR (GenesisNonAvvmBalances gnab)
+    = encodeListLen 1
+      <> toCBOR @(Map Address Lovelace) gnab
+
+instance FromCBOR GenesisNonAvvmBalances where
+  fromCBOR = do
+    enforceSize "GenesisNonAvvmBalances" 1
+    GenesisNonAvvmBalances <$> fromCBOR @(Map Address Lovelace)
 
 data NonAvvmBalancesError
   = NonAvvmBalancesLovelaceError LovelaceError

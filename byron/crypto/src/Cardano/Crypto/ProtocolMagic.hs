@@ -19,6 +19,8 @@ module Cardano.Crypto.ProtocolMagic
   )
 where
 
+import Control.Monad.Fail (fail)
+
 import Cardano.Prelude
 
 import qualified Data.Aeson as A
@@ -26,8 +28,13 @@ import Data.Aeson ((.:), (.=))
 import NoThunks.Class (NoThunks)
 import Text.JSON.Canonical (FromJSON(..), JSValue(..), ToJSON(..), expected)
 
-import Cardano.Binary (Annotated(..), FromCBOR, ToCBOR)
-
+import Cardano.Binary
+  ( Annotated(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeTag
+  , encodeTag
+  )
 
 -- | Magic number which should differ for different clusters. It's
 --   defined here, because it's used for signing. It also used for other
@@ -91,6 +98,18 @@ data RequiresNetworkMagic
   = RequiresNoMagic
   | RequiresMagic
   deriving (Show, Eq, Generic, NFData, NoThunks)
+
+instance ToCBOR RequiresNetworkMagic where
+  toCBOR = \case
+    RequiresNoMagic -> encodeTag 0
+    RequiresMagic   -> encodeTag 1
+
+instance FromCBOR RequiresNetworkMagic where
+  fromCBOR = decodeTag >>= \case
+    0   -> return RequiresNoMagic
+    1   -> return RequiresMagic
+    tag -> fail $ "RequiresNetworkMagic: unknown tag " ++ show tag
+
 
 -- Aeson JSON instances
 -- N.B @RequiresNetworkMagic@'s ToJSON & FromJSON instances do not round-trip.

@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
@@ -24,6 +25,7 @@ import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ReportSchemaErrors(..), ToJSON(..))
 
+import Cardano.Binary
 import Cardano.Chain.Common (KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate
   ( ACertificate(delegateVK, issuerVK)
@@ -56,6 +58,16 @@ instance MonadError SchemaError m => FromJSON m GenesisDelegation where
         "GenesisDelegation"
         (Just $ "Error: " <> formatToString build err)
       Right delegation -> pure delegation
+
+instance ToCBOR GenesisDelegation where
+  toCBOR (UnsafeGenesisDelegation gd)
+    = encodeListLen 1
+      <> toCBOR @(Map KeyHash Certificate) gd
+
+instance FromCBOR GenesisDelegation where
+  fromCBOR = do
+    enforceSize "GenesisDelegation" 1
+    UnsafeGenesisDelegation <$> fromCBOR @(Map KeyHash Certificate)
 
 data GenesisDelegationError
   = GenesisDelegationDuplicateIssuer

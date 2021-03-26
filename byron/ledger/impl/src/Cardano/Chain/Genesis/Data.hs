@@ -38,6 +38,7 @@ import Text.JSON.Canonical
   , renderCanonicalJSON
   )
 
+import Cardano.Binary
 import Cardano.Chain.Common (BlockCount (..))
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
@@ -116,6 +117,44 @@ instance B.Buildable GenesisDataError where
     GenesisDataIOError err ->
       bprint ("Failed with " . stext . " when tried to read GenesisData file")
         (show err)
+
+instance ToCBOR GenesisData where
+  toCBOR
+    (GenesisData
+      gdGenesisKeyHashes_
+      gdHeavyDelegation_
+      gdStartTime_
+      gdNonAvvmBalances_
+      gdProtocolParameters_
+      gdK_
+      gdProtocolMagicId_
+      gdAvvmDistr_
+    ) = mconcat [
+            encodeListLen 8
+          , toCBOR @GenesisKeyHashes gdGenesisKeyHashes_
+          , toCBOR @GenesisDelegation gdHeavyDelegation_
+          , toCBOR {- @UTCTime -} gdStartTime_
+          , toCBOR @GenesisNonAvvmBalances gdNonAvvmBalances_
+          , toCBOR @ProtocolParameters gdProtocolParameters_
+          , toCBOR @BlockCount gdK_
+          , toCBOR @ProtocolMagicId gdProtocolMagicId_
+          , toCBOR @GenesisAvvmBalances gdAvvmDistr_
+          ]
+
+instance FromCBOR GenesisData where
+  fromCBOR = do
+    enforceSize "GenesisData" 8
+    GenesisData
+      <$> fromCBOR @GenesisKeyHashes
+      <*> fromCBOR @GenesisDelegation
+      <*> fromCBOR -- @UTCTime
+      <*> fromCBOR @GenesisNonAvvmBalances
+      <*> fromCBOR @ProtocolParameters
+      <*> fromCBOR @BlockCount
+      <*> fromCBOR @ProtocolMagicId
+      <*> fromCBOR @GenesisAvvmBalances
+
+
 
 -- | Parse @GenesisData@ from a JSON file and annotate with Canonical JSON hash
 readGenesisData

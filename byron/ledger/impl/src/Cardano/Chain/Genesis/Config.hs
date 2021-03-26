@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.Genesis.Config
   ( Config(..)
@@ -27,7 +29,14 @@ import Cardano.Prelude
 import Data.Time (UTCTime)
 import NoThunks.Class (NoThunks (..))
 
-import Cardano.Binary (Annotated(..), Raw)
+import Cardano.Binary
+  ( Annotated(..)
+  , Raw
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , encodeListLen
+  , enforceSize
+  )
 import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Genesis.Data
@@ -149,3 +158,27 @@ data ConfigurationError
   | GenesisHashDecodeError Text
   -- ^ An error occured while decoding the genesis hash.
   deriving (Show)
+
+instance ToCBOR Config where
+  toCBOR
+    (Config
+      configGenesisData_
+      configGenesisHash_
+      configReqNetMagic_
+      configUTxOConfiguration_
+    ) = mconcat [
+            encodeListLen 4
+          , toCBOR @GenesisData configGenesisData_
+          , toCBOR @GenesisHash configGenesisHash_
+          , toCBOR @RequiresNetworkMagic configReqNetMagic_
+          , toCBOR @UTxOConfiguration configUTxOConfiguration_
+          ]
+
+instance FromCBOR Config where
+  fromCBOR = do
+    enforceSize "Config" 4
+    Config
+      <$> fromCBOR @GenesisData
+      <*> fromCBOR @GenesisHash
+      <*> fromCBOR @RequiresNetworkMagic
+      <*> fromCBOR @UTxOConfiguration
