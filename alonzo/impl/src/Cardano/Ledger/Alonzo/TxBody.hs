@@ -29,8 +29,9 @@ module Cardano.Ledger.Alonzo.TxBody
         txfee,
         txvldt,
         txUpdates,
+        reqSignerHashes,
         mint,
-        sdHash,
+        wppHash,
         adHash
       ),
     inputs',
@@ -41,8 +42,9 @@ module Cardano.Ledger.Alonzo.TxBody
     txfee',
     vldt',
     update',
+    reqSignerHashes',
     mint',
-    sdHash',
+    wppHash',
     adHash',
     AlonzoBody,
     EraIndependentWitnessPPData,
@@ -66,6 +68,7 @@ import Cardano.Ledger.Pretty
     ppAddr,
     ppCoin,
     ppDCert,
+    ppKeyHash,
     ppRecord,
     ppSafeHash,
     ppSet,
@@ -109,6 +112,7 @@ import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
+import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.TxBody (TxIn (..), Wdrl (Wdrl), unWdrl)
@@ -172,11 +176,12 @@ data TxBodyRaw era = TxBodyRaw
     _txfee :: !Coin,
     _vldt :: !ValidityInterval,
     _update :: !(StrictMaybe (Update era)),
+    _reqSignerHashes :: Set (KeyHash 'Witness (Crypto era)),
     _mint :: !(Value (Crypto era)),
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
     -- Operations on the TxBody in the AlonzoEra depend upon this.
-    _sdHash :: !(StrictMaybe (WitnessPPDataHash (Crypto era))),
+    _wppHash :: !(StrictMaybe (WitnessPPDataHash (Crypto era))),
     _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era)))
   }
   deriving (Generic, Typeable)
@@ -256,6 +261,7 @@ pattern TxBody ::
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
+  Set (KeyHash 'Witness (Crypto era)) ->
   Value (Crypto era) ->
   StrictMaybe (WitnessPPDataHash (Crypto era)) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
@@ -269,8 +275,9 @@ pattern TxBody
     txfee,
     txvldt,
     txUpdates,
+    reqSignerHashes,
     mint,
-    sdHash,
+    wppHash,
     adHash
   } <-
   TxBodyConstr
@@ -284,8 +291,9 @@ pattern TxBody
             _txfee = txfee,
             _vldt = txvldt,
             _update = txUpdates,
+            _reqSignerHashes = reqSignerHashes,
             _mint = mint,
-            _sdHash = sdHash,
+            _wppHash = wppHash,
             _adHash = adHash
           }
         _
@@ -300,8 +308,9 @@ pattern TxBody
       txfeeX
       vldtX
       updateX
+      reqSignerHashesX
       mintX
-      sdHashX
+      wppHashX
       adHashX =
         TxBodyConstr $
           memoBytes
@@ -315,8 +324,9 @@ pattern TxBody
                   txfeeX
                   vldtX
                   updateX
+                  reqSignerHashesX
                   mintX
-                  sdHashX
+                  wppHashX
                   adHashX
             )
 
@@ -338,9 +348,10 @@ txfee' :: TxBody era -> Coin
 wdrls' :: TxBody era -> Wdrl (Crypto era)
 vldt' :: TxBody era -> ValidityInterval
 update' :: TxBody era -> StrictMaybe (Update era)
+reqSignerHashes' :: TxBody era -> Set (KeyHash 'Witness (Crypto era))
 adHash' :: TxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
 mint' :: TxBody era -> Value (Crypto era)
-sdHash' :: TxBody era -> StrictMaybe (WitnessPPDataHash (Crypto era))
+wppHash' :: TxBody era -> StrictMaybe (WitnessPPDataHash (Crypto era))
 inputs' (TxBodyConstr (Memo raw _)) = _inputs raw
 
 inputs_fee' (TxBodyConstr (Memo raw _)) = _inputs_fee raw
@@ -357,11 +368,13 @@ vldt' (TxBodyConstr (Memo raw _)) = _vldt raw
 
 update' (TxBodyConstr (Memo raw _)) = _update raw
 
+reqSignerHashes' (TxBodyConstr (Memo raw _)) = _reqSignerHashes raw
+
 adHash' (TxBodyConstr (Memo raw _)) = _adHash raw
 
 mint' (TxBodyConstr (Memo raw _)) = _mint raw
 
-sdHash' (TxBodyConstr (Memo raw _)) = _sdHash raw
+wppHash' (TxBodyConstr (Memo raw _)) = _wppHash raw
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -413,13 +426,14 @@ encodeTxBodyRaw
       _txfee,
       _vldt = ValidityInterval bot top,
       _update,
+      _reqSignerHashes,
       _mint,
-      _sdHash,
+      _wppHash,
       _adHash
     } =
     Keyed
-      ( \i ifee o f t c w u b mi sh ah ->
-          TxBodyRaw i ifee o c w f (ValidityInterval b t) u mi sh ah
+      ( \i ifee o f t c w u b rsh mi sh ah ->
+          TxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah
       )
       !> Key 0 (E encodeFoldable _inputs)
       !> Key 13 (E encodeFoldable _inputs_fee)
@@ -430,8 +444,9 @@ encodeTxBodyRaw
       !> Omit (null . unWdrl) (Key 5 (To _wdrls))
       !> encodeKeyedStrictMaybe 6 _update
       !> encodeKeyedStrictMaybe 8 bot
+      !> Key 14 (E encodeFoldable _reqSignerHashes)
       !> Omit isZero (Key 9 (E encodeMint _mint))
-      !> encodeKeyedStrictMaybe 11 _sdHash
+      !> encodeKeyedStrictMaybe 11 _wppHash
       !> encodeKeyedStrictMaybe 12 _adHash
     where
       encodeKeyedStrictMaybe key x =
@@ -479,6 +494,7 @@ instance
           (ValidityInterval SNothing SNothing)
           SNothing
           mempty
+          mempty
           SNothing
           SNothing
       bodyFields :: (Word -> Field (TxBodyRaw era))
@@ -505,12 +521,13 @@ instance
           (D (decodeStrictSeq fromCBOR))
       bodyFields 5 = field (\x tx -> tx {_wdrls = x}) From
       bodyFields 6 = field (\x tx -> tx {_update = x}) (D (SJust <$> fromCBOR))
+      bodyFields 14 = field (\x tx -> tx {_reqSignerHashes = x}) (D (decodeSet fromCBOR))
       bodyFields 8 =
         field
           (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
-      bodyFields 11 = field (\x tx -> tx {_sdHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 11 = field (\x tx -> tx {_wppHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 12 =
         field
           (\x tx -> tx {_adHash = x})
@@ -558,6 +575,12 @@ instance HasField "txfee" (TxBody era) Coin where
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = _update m
 
+instance
+  (Crypto era ~ c) =>
+  HasField "reqSignerHashes" (TxBody era) (Set (KeyHash 'Witness c))
+  where
+  getField (TxBodyConstr (Memo m _)) = _reqSignerHashes m
+
 instance (Crypto era ~ c) => HasField "mint" (TxBody era) (Mary.Value c) where
   getField (TxBodyConstr (Memo m _)) = _mint m
 
@@ -578,9 +601,9 @@ instance
 
 instance
   c ~ (Crypto era) =>
-  HasField "sdHash" (TxBody era) (StrictMaybe (WitnessPPDataHash c))
+  HasField "wppHash" (TxBody era) (StrictMaybe (WitnessPPDataHash c))
   where
-  getField (TxBodyConstr (Memo m _)) = _sdHash m
+  getField (TxBodyConstr (Memo m _)) = _wppHash m
 
 instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
   getField (TxOutCompact a _ _) = a
@@ -614,7 +637,7 @@ ppTxBody ::
   ) =>
   TxBody era ->
   PDoc
-ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u mnt sdh axh) _)) =
+ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u rsh mnt sdh axh) _)) =
   ppRecord
     "TxBody(Mary or Allegra)"
     [ ("inputs", ppSet ppTxIn i),
@@ -625,8 +648,9 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u mnt sdh axh) _)) =
       ("txfee", ppCoin fee),
       ("vldt", ppValidityInterval vi),
       ("update", ppStrictMaybe ppUpdate u),
+      ("reqSignerHashes", ppSet ppKeyHash rsh),
       ("mint", ppValue mnt),
-      ("sdHash", ppStrictMaybe ppSafeHash sdh),
+      ("wppHash", ppStrictMaybe ppSafeHash sdh),
       ("adHash", ppStrictMaybe ppAuxDataHash axh)
     ]
 
