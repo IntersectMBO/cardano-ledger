@@ -92,6 +92,7 @@ getData tx (UTxO m) sp = case sp of
               Nothing -> []
               Just d -> [d]
 
+-- | Collect the inputs (Data, execution budget, costModel) for all twoPhase scripts.
 collectNNScriptInputs ::
   ( Era era,
     Core.Script era ~ AlonzoScript.Script era,
@@ -113,8 +114,7 @@ collectNNScriptInputs pp tx utxo =
    in [ (script, d : (valContext txinfo sp ++ getData tx utxo sp), eu, cost)
         | (sp, scripthash) <- scriptsNeeded utxo tx, -- TODO, IN specification ORDER IS WRONG
           (d, eu) <- maybeToList (indexedRdmrs tx sp),
-          script <- -- onlytwoPhaseScripts tx scripthash
-            maybeToList (Map.lookup scripthash (txscripts' (getField @"wits" tx))),
+          script <- maybeToList (Map.lookup scripthash (txscripts' (getField @"wits" tx))),
           cost <- maybeToList (Map.lookup PlutusV1 (getField @"_costmdls" pp))
       ]
 
@@ -122,6 +122,9 @@ language :: Era era => AlonzoScript.Script era -> Maybe Language
 language (AlonzoScript.PlutusScript _) = Just PlutusV1
 language (AlonzoScript.TimelockScript _) = Nothing
 
+-- | evaluate a list of scripts, All scripts in the list must be True.
+--   There are two kinds of scripts, evaluate each kind using the
+--   appropriate mechanism.
 evalScripts ::
   forall era.
   ( Era era,
@@ -144,35 +147,30 @@ evalScripts tx ((AlonzoScript.PlutusScript pscript, ds, units, cost) : rest) =
 -- This is called checkRedeemers in the Specification
 
 -- | Check that a script has whatever associated Data that it requires.
---     There are several ways this can happen
---     1) The script is Not a twoPhase script, so it doesn't need any data
---     2) The _txrdmrs Map of the TxWitness, contains Data for the script AND, either of the following
---        a) It is not a Spending script  OR
---        b) If it is a Spending Script, we can getData for it.
+--     There are several things need to test this:
+--     1) The hash appears in the script map in the Witnesses
+--     2) The script is Not a twoPhase script, so it doesn't need any data
+--     3) The script is a twoPhase script, and the _txrdmrs Map of the TxWitness,
+--        contains Data for the script.
 checkScriptData ::
   forall era.
   ( ValidateScript era,
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   Tx era ->
-  UTxO era ->
+  -- UTxO era ->   -- TODO check that we really don't use the UTxO
   (ScriptPurpose (Crypto era), ScriptHash (Crypto era)) ->
   Bool
-checkScriptData tx utxo (sp, _h) = any ok scripts
-  where
-    scripts = txscripts' (getField @"wits" tx)
-    isSpending (Spending _) = True
-    isSpending _ = False
-    ok s =
-      isNativeScript @era s
-        || ( isJust (indexedRdmrs tx sp)
-               && (not (isSpending sp) || not (null (getData tx utxo sp)))
-           )
+checkScriptData tx {- utxo -} (sp, h) =
+  case Map.lookup h (txscripts' (getField @"wits" tx)) of
+    Nothing -> False
+    Just s -> if isNativeScript @era s then True else isJust (indexedRdmrs tx sp)
 
 -- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
+
+-- Collect information (purpose and hash) about all the scripts in a Tx.
 scriptsNeeded ::
   forall era.
   ( Era era,
@@ -199,7 +197,7 @@ scriptsNeeded (UTxO utxomap) tx = spend ++ reward ++ cert ++ minted
     !reward = foldl' accum [] (Map.keys m2)
       where
         (Wdrl m2) = getField @"wdrls" txb
-        accum !ans !accnt = case getRwdCred accnt of -- TODO  IS THIS RIGHT?
+        accum !ans !accnt = case getRwdCred accnt of
           (ScriptHashObj hash) -> (Rewarding accnt, hash) : ans
           _ -> ans
 

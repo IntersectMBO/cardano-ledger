@@ -34,12 +34,12 @@ import Cardano.Ledger.Alonzo.TxBody
     inputs_fee',
     mint',
     outputs',
+    reqSignerHashes',
     txfee',
     vldt',
     wdrls',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..))
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.Core as Core (TxBody, TxOut, Value)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
@@ -51,6 +51,7 @@ import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.ByteString as BS (ByteString)
 import Data.ByteString.Short as SBS (fromShort, toShort)
 import qualified Data.Map as Map
+import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import qualified Flat as Flat (flat)
@@ -160,9 +161,9 @@ transVI (ValidityInterval (SJust (SlotNo i)) (SJust (SlotNo j))) =
 transTxIn' :: CC.Crypto c => TxIn c -> P.TxOutRef
 transTxIn' (TxIn txid nat) = P.TxOutRef (transTxId txid) (fromIntegral nat)
 
--- | Given a TxIn, look it up in the UTxO. If it exists, translate it and cons the result
---   onto the answer list. If does not exist in the UTxO, just return the answer list.
-consTranslatedTxIn ::
+-- | Given a TxIn, look it up in the UTxO. If it exists, translate it and return
+--   (Just translation). If does not exist in the UTxO, return Nothing.
+transTxIn ::
   forall era.
   ( Era era,
     Value era ~ Mary.Value (Crypto era),
@@ -170,14 +171,13 @@ consTranslatedTxIn ::
   ) =>
   UTxO era ->
   TxIn (Crypto era) ->
-  [P.TxInInfo] ->
-  [P.TxInInfo]
-consTranslatedTxIn (UTxO mp) txin answer =
+  Maybe (P.TxInInfo)
+transTxIn (UTxO mp) txin =
   case Map.lookup txin mp of
-    Nothing -> answer
+    Nothing -> Nothing
     Just txout -> case (transAddr addr) of
-      Just ad -> (P.TxInInfo (transTxIn' txin) (P.TxOut ad valout dhash)) : answer
-      Nothing -> answer
+      Just ad -> Just (P.TxInInfo (transTxIn' txin) (P.TxOut ad valout dhash))
+      Nothing -> Nothing
       where
         valout = transValue (getField @"value" txout)
         addr = getField @"address" txout
@@ -185,21 +185,20 @@ consTranslatedTxIn (UTxO mp) txin answer =
           SNothing -> Nothing
           SJust (safehash) -> Just (P.DatumHash (transSafeHash safehash))
 
--- | Given a TxOut, translate it and cons the result onto the answer list. It is
---   possible the address part is a Bootstrap Address, in that case just return the answer.
+-- | Given a TxOut, translate it and return (Just transalation). It is
+--   possible the address part is a Bootstrap Address, in that case return Nothing
 --   I.e. don't include Bootstrap Addresses in the answer.
-consTranslatedTxOut ::
+transTxOut ::
   forall era.
   ( Era era,
     Value era ~ Mary.Value (Crypto era)
   ) =>
   Alonzo.TxOut era ->
-  [P.TxOut] ->
-  [P.TxOut]
-consTranslatedTxOut (Alonzo.TxOut addr val datahash) answer =
+  Maybe (P.TxOut)
+transTxOut (Alonzo.TxOut addr val datahash) =
   case (transAddr addr) of
-    Just ad -> (P.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash)) : answer
-    Nothing -> answer
+    Just ad -> Just (P.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
+    Nothing -> Nothing
 
 -- ==================================
 -- translate Values
@@ -283,14 +282,15 @@ transTx ::
   P.TxInfo
 transTx utxo tx =
   P.TxInfo
-    { P.txInfoInputs = foldr (consTranslatedTxIn utxo) [] (Set.toList allinputs),
-      P.txInfoOutputs = foldr consTranslatedTxOut [] (foldr (:) [] outs),
+    { P.txInfoInputs = mapMaybe (transTxIn utxo) (Set.toList (inputs' tbody)),
+      P.txInfoInputsFees = mapMaybe (transTxIn utxo) (Set.toList (inputs_fee' tbody)),
+      P.txInfoOutputs = mapMaybe transTxOut (foldr (:) [] outs),
       P.txInfoFee = (transValue (inject @(Mary.Value (Crypto era)) fee)),
       P.txInfoForge = (transValue forge),
       P.txInfoDCert = (foldr (\c ans -> transDCert c : ans) [] (certs' tbody)),
       P.txInfoWdrl = transWdrl (wdrls' tbody),
       P.txInfoValidRange = (transVI interval),
-      P.txInfoSignatories = (Set.foldl (\ans vk -> (getWitVKeyHash vk) : ans) [] vkkeyset),
+      P.txInfoSignatories = map transKeyHash (Set.toList (reqSignerHashes' tbody)),
       P.txInfoData = (map transDataPair datpairs),
       P.txInfoId = (P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody)))
     }
@@ -299,12 +299,10 @@ transTx utxo tx =
     _witnesses = wits' tx
     _isval = isValidating' tx
     _auxdat = auxiliaryData' tx
-    allinputs = Set.union (inputs' tbody) (inputs_fee' tbody)
     outs = outputs' tbody
     fee = txfee' tbody
     forge = mint' tbody
     interval = vldt' tbody
-    vkkeyset = txwitsVKey' (wits' tx)
     datpairs = Map.toList (txdats' (wits' tx))
 
 -- ===============================================================

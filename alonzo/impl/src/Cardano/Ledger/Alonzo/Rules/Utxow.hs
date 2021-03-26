@@ -208,7 +208,7 @@ alonzoStyleWitness = do
       sphs = scriptsNeeded utxo tx
       unredeemed =
         -- A script is unredeemed, is we can't find the Data that it requires to execute.
-        let ans = (filter (not . checkScriptData tx utxo) sphs)
+        let ans = (filter (not . checkScriptData tx) sphs)
          in seq (rnf ans) ans
   null unredeemed ?! UnRedeemableScripts unredeemed
 

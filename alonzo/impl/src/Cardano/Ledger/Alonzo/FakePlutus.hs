@@ -55,8 +55,10 @@ data TxOut = TxOut
   }
 
 data TxInfo = TxInfo
-  { -- | Transaction inputs
+  { -- | Transaction inputs NOT used to pay fees
     txInfoInputs :: [TxInInfo],
+    -- | Transaction inputs designated to pay fees
+    txInfoInputsFees :: [TxInInfo],
     -- | Transaction outputs
     txInfoOutputs :: [TxOut],
     -- | The fee paid by this transaction.

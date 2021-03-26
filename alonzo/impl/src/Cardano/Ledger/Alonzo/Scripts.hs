@@ -19,7 +19,7 @@ module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
     Script (ScriptConstr, TimelockScript, PlutusScript),
     ExUnits (..),
-    CostModel (CostModel),
+    CostModel (CostModel, ..),
     Prices (..),
     hashCostModel,
     scriptfee,
