@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Tx
     wits',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), vldt')
-import Cardano.Ledger.Alonzo.TxInfo (evalPlutusScript, valContext)
+import Cardano.Ledger.Alonzo.TxInfo (evalPlutusScript, transTx, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts')
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
@@ -109,13 +109,14 @@ collectNNScriptInputs ::
   UTxO era ->
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
 collectNNScriptInputs pp tx utxo =
-  [ (script, d : (valContext utxo tx sp ++ getData tx utxo sp), eu, cost)
-    | (sp, scripthash) <- scriptsNeeded utxo tx, -- TODO, IN specification ORDER IS WRONG
-      (d, eu) <- maybeToList (indexedRdmrs tx sp),
-      script <- -- onlytwoPhaseScripts tx scripthash
-        maybeToList (Map.lookup scripthash (txscripts' (getField @"wits" tx))),
-      cost <- maybeToList (Map.lookup PlutusV1 (getField @"_costmdls" pp))
-  ]
+  let txinfo = transTx utxo tx
+   in [ (script, d : (valContext txinfo sp ++ getData tx utxo sp), eu, cost)
+        | (sp, scripthash) <- scriptsNeeded utxo tx, -- TODO, IN specification ORDER IS WRONG
+          (d, eu) <- maybeToList (indexedRdmrs tx sp),
+          script <- -- onlytwoPhaseScripts tx scripthash
+            maybeToList (Map.lookup scripthash (txscripts' (getField @"wits" tx))),
+          cost <- maybeToList (Map.lookup PlutusV1 (getField @"_costmdls" pp))
+      ]
 
 language :: Era era => AlonzoScript.Script era -> Maybe Language
 language (AlonzoScript.PlutusScript _) = Just PlutusV1

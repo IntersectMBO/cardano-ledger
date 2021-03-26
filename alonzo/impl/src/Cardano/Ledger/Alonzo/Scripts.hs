@@ -176,6 +176,8 @@ pattern CostModel m <-
   where
     CostModel m = CostModelConstr (memoBytes (To m))
 
+{-# COMPLETE CostModel #-}
+
 instance NoThunks CostModel
 
 instance NFData CostModel

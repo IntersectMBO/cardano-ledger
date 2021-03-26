@@ -98,67 +98,14 @@ data DCert
   | -- | Another really terse Digest
     DCertMir
 
-{-
-transDCert (DCertDeleg (RegKey stkcred)) = P.DCertDelegRegKey  undefined
-transDCert (DCertDeleg (DeRegKey stkcred)) = P.DCertDelegRegDeKey  undefined
-transDCert (DCertDeleg (Delegate stkcred keyhash)) =  P.DCertDelegDelegate undefined undefined
-transDCert (DCertPool (RegPool pp)) = P.DCertPoolRegister undefined undefined
-transDCert (DCertPool (RetirePool keyhash epochni)) = P.DCertPoolRetire undefined undefined
-transDCert (DCertGenesis _) = P.DCertGenesis
-transDCert (DCertMir _) = P.DCertMir
+data ScriptPurpose
+  = Minting CurrencySymbol
+  | Spending TxOutRef
+  | Rewarding StakingCredential
+  | Certifying DCert
 
- Missing
-_certs :: !(StrictSeq (DCert (Crypto era))),
-    _wdrls :: !(Wdrl (Crypto era)),
+data Context = Context TxInfo ScriptPurpose
 
-data DCert crypto
-  = DCertDeleg !(DelegCert crypto)
-  | DCertPool !(PoolCert crypto)
-  | DCertGenesis !(GenesisDelegCert crypto)
-  | DCertMir !(MIRCert crypto)
-
-data DelegCert crypto
-  = -- | A stake key registration certificate.
-    RegKey !(StakeCredential crypto)
-  | -- | A stake key deregistration certificate.
-    DeRegKey !(StakeCredential crypto)
-  | -- | A stake delegation certificate.
-    Delegate !(Delegation crypto)
-
-data PoolCert crypto
-  = -- | A stake pool registration certificate.
-    RegPool !(PoolParams crypto)
-  | -- | A stake pool retirement certificate.
-    RetirePool !(KeyHash 'StakePool crypto) !EpochNo
-  deriving (Show, Generic, Eq, NFData)
-
-data PoolParams crypto = PoolParams
-  { _poolId :: !(KeyHash 'StakePool crypto),
-    _poolVrf :: !(Hash crypto (VerKeyVRF crypto)),
-
-data MIRCert crypto = MIRCert
-  { mirPot :: MIRPot,
-    mirRewards :: MIRTarget crypto
-
-data MIRCert crypto = MIRCert
-  { mirPot :: MIRPot,
-    mirRewards :: MIRTarget crypto
-
-data MIRPot = ReservesMIR | TreasuryMIR
-  deriving (Show, Generic, Eq, NFData)
-
--- | The delegation of one stake key to another.
-data Delegation crypto = Delegation
-  { _delegator :: !(StakeCredential crypto),
-    _delegatee :: !(KeyHash 'StakePool crypto)
-  }
-
-data RewardAcnt crypto = RewardAcnt
-  { getRwdNetwork :: !Network,
-    getRwdCred :: !(Credential 'Staking crypto)
-  }
--}
-
-instance IsData TxInfo where
-  toData _txinfo = undefined
-  fromData _dat = Nothing
+instance IsData Context where
+  toData (Context _ _) = undefined
+  fromData _ctxdata = Nothing

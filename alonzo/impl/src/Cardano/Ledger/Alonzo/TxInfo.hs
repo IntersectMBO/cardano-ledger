@@ -17,8 +17,10 @@ import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 
 import qualified Cardano.Ledger.Alonzo.FakePlutus as P
   ( Address (..),
+    Context (..),
     Credential (..),
     DCert (..),
+    ScriptPurpose (..),
     StakingCredential (..),
     TxInInfo (..),
     TxInfo (..),
@@ -257,6 +259,15 @@ transExUnits :: ExUnits -> P.ExBudget
 transExUnits (ExUnits mem steps) = P.ExBudget (P.ExCPU (fromIntegral steps)) (P.ExMemory (fromIntegral mem))
 
 -- ===================================
+-- translate Script Purpose
+
+transScriptPurpose :: CC.Crypto crypto => ScriptPurpose crypto -> P.ScriptPurpose
+transScriptPurpose (Minting policyid) = P.Minting (transPolicyID policyid)
+transScriptPurpose (Spending txin) = P.Spending (transTxIn' txin)
+transScriptPurpose (Rewarding (RewardAcnt _network cred)) = P.Rewarding (P.StakingHash (transStakeCred cred))
+transScriptPurpose (Certifying dcert) = P.Certifying (transDCert dcert)
+
+-- ===================================
 
 -- | Compute a Digest of the current transaction to pass to the script
 --   This is the major component of the valContext function.
@@ -304,19 +315,11 @@ transTx utxo tx =
 --   translates it into a 'Data', which the Plutus language knows how to interpret.
 --   The UTxO and the PtrMap are used to 'resolve' the TxIn and the StakeRefPtr's
 valContext ::
-  ( Era era,
-    Core.TxOut era ~ Alonzo.TxOut era,
-    Core.TxBody era ~ Alonzo.TxBody era,
-    Value era ~ Mary.Value (Crypto era)
-  ) =>
-  UTxO era ->
-  Tx era ->
+  Era era =>
+  P.TxInfo ->
   ScriptPurpose (Crypto era) ->
   [Data era]
-valContext utxo tx _sp = [Data (txInfoToData (transTx utxo tx))]
-
-txInfoToData :: P.TxInfo -> P.Data
-txInfoToData x = P.toData x
+valContext txinfo sp = [Data (P.toData (P.Context txinfo (transScriptPurpose sp)))]
 
 -- An analog to evalPlutusScript, is called runPLCScript in the Specification
 -- evalPlutusScript, has slighlty different types for its parameters.
