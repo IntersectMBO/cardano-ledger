@@ -14,10 +14,10 @@ import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), PParamsUpdate, upd
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
-import Cardano.Ledger.Alonzo.Scripts (Script, isPlutusScript)
-import Cardano.Ledger.Alonzo.Tx (IsValidating (..), Tx, alonzoSeqTx, isValidating')
-import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
+import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
+import Cardano.Ledger.Alonzo.Tx (IsValidating (..), Tx, alonzoSeqTx, body', isValidating', wits')
+import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut, vldt')
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -30,8 +30,10 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut (..),
     UsesValue,
   )
+import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
 import Control.State.Transition.Extended (STUB)
 import qualified Control.State.Transition.Extended as STS
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
@@ -47,6 +49,7 @@ import qualified Shelley.Spec.Ledger.STS.Snap as Shelley
 import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
 import qualified Shelley.Spec.Ledger.STS.Upec as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
+import Shelley.Spec.Ledger.TxBody (witKeyHash)
 
 -- | The Alonzo era
 data AlonzoEra c
@@ -63,9 +66,11 @@ instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
     if isPlutusScript script
       then "\x01"
       else nativeMultiSigTag -- "\x00"
-  validateScript = error "TODO: implement validateScript"
-
--- hashScript x = ...  We use the default method for hashScript
+  validateScript (TimelockScript timelock) tx = evalTimelock vhks (vldt' (body' tx)) timelock
+    where
+      vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
+  validateScript (PlutusScript _) _tx = False -- Plutus scripts are stripped out an run in function evalScripts
+  -- hashScript x = ...  We use the default method for hashScript
 
 instance
   ( CC.Crypto c

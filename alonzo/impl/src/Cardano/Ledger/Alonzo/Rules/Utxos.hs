@@ -13,12 +13,22 @@ module Cardano.Ledger.Alonzo.Rules.Utxos where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Language (Language)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (collectNNScriptInputs, evalScripts)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx
+  ( CostModel,
+    DataHash,
+    IsValidating (..),
+    Tx (..),
+    txbody,
+    txins,
+    txouts,
+  )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints
+import Cardano.Ledger.Mary.Value (Value)
+import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.State.Transition.Extended
@@ -50,16 +60,16 @@ data UTXOS era
 instance
   forall era.
   ( Era era,
-    UsesAuxiliary era,
-    UsesTxBody era,
-    UsesTxOut era,
-    UsesValue era,
-    UsesPParams era,
+    Eq (Core.PParams era),
+    Show (Core.PParams era),
+    Show (PParamsDelta era),
+    Eq (PParamsDelta era),
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     Core.Script era ~ Script era,
+    Core.Value era ~ Value (Crypto era),
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.TxBody era ~ Alonzo.TxBody era,
     HasField "_keyDeposit" (Core.PParams era) Coin,
@@ -79,13 +89,15 @@ instance
 
 utxosTransition ::
   forall era.
-  ( UsesTxOut era,
+  ( Era era,
     Core.Script era ~ Script era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Core.TxOut era ~ Alonzo.TxOut era,
+    Core.Value era ~ Value (Crypto era),
+    Core.TxBody era ~ Alonzo.TxBody era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -100,14 +112,15 @@ utxosTransition ::
 utxosTransition =
   judgmentContext >>= \(TRC (UtxoEnv _ pp _ _, UTxOState utxo _ _ _, tx)) ->
     let sLst = collectNNScriptInputs pp tx utxo
-        scriptEvalResult = evalScripts @era sLst
+        scriptEvalResult = evalScripts @era tx sLst
      in if scriptEvalResult
           then scriptsValidateTransition
           else scriptsNotValidateTransition
 
 scriptsValidateTransition ::
   forall era.
-  ( UsesTxOut era,
+  ( Show (Core.Value era), -- Arises because of the use of (∪) from SetAlgebra, needs Show to report errors.
+    Era era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
@@ -153,7 +166,7 @@ scriptsValidateTransition = do
 
 scriptsNotValidateTransition ::
   forall era.
-  ( UsesTxOut era,
+  ( Era era,
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   TransitionRule (UTXOS era)
@@ -200,14 +213,12 @@ instance
 
 deriving stock instance
   ( Shelley.TransUTxOState Show era,
-    TransValue Show era,
     Show (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   Show (UtxosPredicateFailure era)
 
 deriving stock instance
   ( Shelley.TransUTxOState Eq era,
-    TransValue Eq era,
     Eq (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   Eq (UtxosPredicateFailure era)

@@ -17,17 +17,15 @@ module Cardano.Ledger.Alonzo.Rules.Utxow where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (Data, DataHash)
 import Cardano.Ledger.Alonzo.PParams (PParams)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (checkScriptData, language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
     Tx,
-    checkScriptData,
     hashWitnessPPData,
-    isNonNativeScriptAddress,
-    language,
-    scriptsNeeded,
+    isTwoPhaseScriptAddress,
     wits',
   )
 import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
@@ -209,7 +207,8 @@ alonzoStyleWitness = do
       sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
       sphs = scriptsNeeded utxo tx
       unredeemed =
-        let ans = (filter (checkScriptData tx utxo) sphs)
+        -- A script is unredeemed, is we can't find the Data that it requires to execute.
+        let ans = (filter (not . checkScriptData tx) sphs)
          in seq (rnf ans) ans
   null unredeemed ?! UnRedeemableScripts unredeemed
 
@@ -224,7 +223,7 @@ alonzoStyleWitness = do
         [ h
           | (_input, output) <- Map.toList smallUtxo,
             SJust h <- [getField @"datahash" output],
-            isNonNativeScriptAddress @era tx (getField @"address" output)
+            isTwoPhaseScriptAddress @era tx (getField @"address" output)
         ]
       txHashes = domain (getField @"txdatahash" tx)
       inputHashes = Set.fromList utxoHashes

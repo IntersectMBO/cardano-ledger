@@ -151,7 +151,7 @@ instance Mock c => Arbitrary (Script (AlonzoEra c)) where
     frequency
       [ (1, pure (alwaysSucceeds 1)),
         (1, pure (alwaysFails 1)),
-        (10, NativeScript <$> arbitrary)
+        (10, TimelockScript <$> arbitrary)
       ]
 
 -- ==========================
