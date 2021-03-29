@@ -49,12 +49,11 @@ import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.ByteString as BS (ByteString)
-import Data.ByteString.Short as SBS (fromShort, toShort)
+import Data.ByteString.Short as SBS (ShortByteString, fromShort)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import qualified Flat as Flat (flat)
 import GHC.Records (HasField (..))
 import qualified Language.PlutusCore.Evaluation.Machine.ExMemory as P (ExCPU (..), ExMemory (..))
 import qualified Language.PlutusTx as P (Data (..))
@@ -68,7 +67,7 @@ import qualified Plutus.V1.Ledger.Interval as P
     LowerBound (..),
     UpperBound (..),
   )
-import qualified Plutus.V1.Ledger.Scripts as P (Datum (..), DatumHash (..), Script (..), ValidatorHash (..))
+import qualified Plutus.V1.Ledger.Scripts as P (Datum (..), DatumHash (..), ValidatorHash (..))
 import qualified Plutus.V1.Ledger.Slot as P (SlotRange)
 import qualified Plutus.V1.Ledger.Tx as P (TxOutRef (..))
 import qualified Plutus.V1.Ledger.TxId as P (TxId (..))
@@ -319,17 +318,18 @@ valContext ::
   [Data era]
 valContext txinfo sp = [Data (P.toData (P.Context txinfo (transScriptPurpose sp)))]
 
--- An analog to evalPlutusScript, is called runPLCScript in the Specification
--- evalPlutusScript, has slighlty different types for its parameters.
+-- The runPLCScript in the Specification has a slightly different type
+-- than the one in the implementation below. Made necessary by the the type
+-- of P.evaluateScriptRestricting which is the interface to Plutus
 
 -- | Run a Plutus Script, given the script and the bounds on resources it is allocated.
-evalPlutusScript :: CostModel -> ExUnits -> P.Script -> [P.Data] -> Bool
-evalPlutusScript cost units (P.Script x) ds =
+runPLCScript :: CostModel -> SBS.ShortByteString -> ExUnits -> [P.Data] -> Bool
+runPLCScript cost scriptbytestring units ds =
   case P.evaluateScriptRestricting
     P.Quiet
     (transCostModel cost)
     (transExUnits units)
-    (toShort (Flat.flat x))
+    scriptbytestring
     ds of
     (_, Left _) -> False
     (_, Right ()) -> True

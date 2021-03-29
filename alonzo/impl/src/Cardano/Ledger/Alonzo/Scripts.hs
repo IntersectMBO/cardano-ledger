@@ -59,18 +59,16 @@ import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import qualified Codec.Serialise as CS (Serialise (..))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Short as Short (ShortByteString, fromShort)
+import Data.ByteString.Short (ShortByteString)
 import Data.Coders
 import Data.Map (Map)
 import Data.MemoBytes
 import Data.Typeable
 import Data.Word (Word64)
-import qualified Flat as Flat (unflat)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Examples as Plutus (alwaysFailingNAryFunction, alwaysSucceedingNAryFunction)
-import qualified Plutus.V1.Ledger.Scripts as Plutus (Script)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR)
 
@@ -94,7 +92,7 @@ instance NoThunks Tag
 -- | Scripts in the Alonzo Era without original bytes.
 data ScriptRaw era
   = TimelockScriptRaw (Timelock (Crypto era))
-  | PlutusScriptRaw (Plutus.Script)
+  | PlutusScriptRaw (ShortByteString) -- A Plutus.V1.Ledger.Scripts(Script) that has been 'Flat'ened
   deriving (Eq, Show, Generic, Ord)
 
 deriving via
@@ -116,7 +114,7 @@ pattern TimelockScript x <-
   where
     TimelockScript x = ScriptConstr (memoBytes (encodeScript (TimelockScriptRaw x)))
 
-pattern PlutusScript :: Typeable (Crypto era) => Plutus.Script -> Script era
+pattern PlutusScript :: Typeable (Crypto era) => ShortByteString -> Script era
 pattern PlutusScript x <-
   ScriptConstr (Memo (PlutusScriptRaw x) _)
   where
@@ -124,15 +122,9 @@ pattern PlutusScript x <-
 
 {-# COMPLETE TimelockScript, PlutusScript #-}
 
-getPlutus :: Short.ShortByteString -> Plutus.Script
-getPlutus flatBytes =
-  case Flat.unflat (Short.fromShort flatBytes) of
-    Right x -> x
-    Left err -> error ("Unflattening the alwaysSucceeds or alwaysFails Plutus script failed\n" ++ show err)
-
 alwaysSucceeds, alwaysFails :: Typeable (Crypto era) => Natural -> Script era
-alwaysSucceeds n = PlutusScript (getPlutus (Plutus.alwaysSucceedingNAryFunction n))
-alwaysFails n = PlutusScript (getPlutus (Plutus.alwaysFailingNAryFunction n))
+alwaysSucceeds n = PlutusScript (Plutus.alwaysSucceedingNAryFunction n)
+alwaysFails n = PlutusScript (Plutus.alwaysFailingNAryFunction n)
 
 isPlutusScript :: Script era -> Bool
 isPlutusScript (ScriptConstr (Memo (PlutusScriptRaw _) _)) = True
@@ -257,7 +249,7 @@ instance forall era. (Typeable (Crypto era), Typeable era) => ToCBOR (ScriptRaw 
 
 encodeScript :: (Typeable (Crypto era)) => ScriptRaw era -> Encode 'Open (ScriptRaw era)
 encodeScript (TimelockScriptRaw i) = Sum TimelockScriptRaw 0 !> To i
-encodeScript (PlutusScriptRaw s) = Sum PlutusScriptRaw 1 !> E CS.encode s
+encodeScript (PlutusScriptRaw s) = Sum PlutusScriptRaw 1 !> To s -- Use the ToCBOR instance of ShortByteString
 
 instance
   (CC.Crypto (Crypto era), Typeable (Crypto era), Typeable era) =>
