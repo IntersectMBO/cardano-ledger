@@ -5,6 +5,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Crypto.Signing.Redeem.Compact
@@ -32,6 +34,12 @@ import NoThunks.Class (NoThunks (..), InspectHeap (..))
 import Text.JSON.Canonical
   (FromObjectKey(..), JSValue(..), ToObjectKey(..), toJSString)
 
+import Cardano.Binary
+  ( FromCBOR(..)
+  , ToCBOR(..)
+  , enforceSize
+  , encodeListLen
+  )
 import Cardano.Crypto.Signing.Redeem.VerificationKey
   ( RedeemVerificationKey (..)
   , fromAvvmVK
@@ -49,6 +57,25 @@ data CompactRedeemVerificationKey =
   deriving (Eq, Generic, Show)
   deriving NoThunks via InspectHeap CompactRedeemVerificationKey
   deriving anyclass NFData
+
+instance ToCBOR CompactRedeemVerificationKey where
+  toCBOR (CompactRedeemVerificationKey a b c d)
+    = mconcat [
+        encodeListLen 4
+      , toCBOR @Word64 a
+      , toCBOR @Word64 b
+      , toCBOR @Word64 c
+      , toCBOR @Word64 d
+      ]
+
+instance FromCBOR CompactRedeemVerificationKey where
+  fromCBOR = do
+    enforceSize "CompactRedeemVerificationKey" 1
+    CompactRedeemVerificationKey
+      <$> fromCBOR @Word64
+      <*> fromCBOR @Word64
+      <*> fromCBOR @Word64
+      <*> fromCBOR @Word64
 
 getCompactRedeemVerificationKey :: Get CompactRedeemVerificationKey
 getCompactRedeemVerificationKey =

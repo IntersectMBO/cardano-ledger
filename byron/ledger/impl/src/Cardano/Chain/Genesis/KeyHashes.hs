@@ -21,6 +21,7 @@ import Formatting.Buildable (Buildable(..))
 import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
+import Cardano.Binary
 import Cardano.Chain.Common (KeyHash)
 
 
@@ -41,3 +42,11 @@ instance Monad m => ToJSON m GenesisKeyHashes where
 instance MonadError SchemaError m => FromJSON m GenesisKeyHashes where
   fromJSON =
     fmap (GenesisKeyHashes . M.keysSet) . fromJSON @m @(Map KeyHash Word16)
+
+instance ToCBOR GenesisKeyHashes where
+  toCBOR (GenesisKeyHashes gkh) = encodeListLen 1 <> toCBOR @(Set KeyHash) gkh
+
+instance FromCBOR GenesisKeyHashes where
+  fromCBOR = do
+    enforceSize "GenesisKeyHashes" 1
+    GenesisKeyHashes <$> fromCBOR @(Set KeyHash)

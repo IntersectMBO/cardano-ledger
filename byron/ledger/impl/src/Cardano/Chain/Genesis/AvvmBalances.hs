@@ -2,7 +2,9 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Genesis.AvvmBalances
@@ -15,6 +17,12 @@ import Cardano.Prelude
 import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
+import Cardano.Binary
+  ( FromCBOR(..)
+  , ToCBOR(..)
+  , enforceSize
+  , encodeListLen
+  )
 import Cardano.Chain.Common (Lovelace)
 import Cardano.Crypto.Signing.Redeem (CompactRedeemVerificationKey)
 
@@ -43,3 +51,13 @@ instance MonadError SchemaError m => FromJSON m GenesisAvvmBalances where
     -- n.b. both the strict and lazy 'Map' modules utilize the same 'Map' data
     -- type which is what makes something like this possible.
     fromJSON = fmap (GenesisAvvmBalances . forceElemsToWHNF) . fromJSON
+
+instance ToCBOR GenesisAvvmBalances where
+  toCBOR (GenesisAvvmBalances gab)
+    = encodeListLen 1
+      <> toCBOR @(Map CompactRedeemVerificationKey Lovelace) gab
+
+instance FromCBOR GenesisAvvmBalances where
+  fromCBOR = do
+    enforceSize "GenesisAvvmBalances" 1
+    GenesisAvvmBalances <$> fromCBOR @(Map CompactRedeemVerificationKey Lovelace)
