@@ -21,15 +21,15 @@ module Cardano.Ledger.Alonzo
   )
 where
 
-import Cardano.Ledger.Alonzo.Data (getPlutusData,AuxiliaryData (..))
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), getPlutusData)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), PParamsUpdate, updatePParams)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (IsValidating (..), Tx, alonzoSeqTx, body', isValidating', wits')
-import Cardano.Ledger.Alonzo.TxInfo(validPlutusdata)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (..), vldt')
+import Cardano.Ledger.Alonzo.TxInfo (validPlutusdata, validScript)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import qualified Cardano.Ledger.Core as Core
@@ -44,7 +44,6 @@ import Cardano.Ledger.Shelley.Constraints
     UsesValue,
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
-import Control.DeepSeq (deepseq)
 import Control.State.Transition.Extended (STUB)
 import qualified Control.State.Transition.Extended as STS
 import qualified Data.Set as Set
@@ -139,10 +138,9 @@ instance
 instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
   validateAuxiliaryData (AuxiliaryData metadata scrips plutusdata) =
-    deepseq scrips $
-      ( all validMetadatum metadata
-          && all (validPlutusdata . getPlutusData) plutusdata
-      )
+    all validMetadatum metadata
+      && all validScript scrips
+      && all (validPlutusdata . getPlutusData) plutusdata
 
 instance CC.Crypto c => EraModule.BlockDecoding (AlonzoEra c) where
   seqTx body wit isval aux = alonzoSeqTx body wit isval aux

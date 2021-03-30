@@ -47,13 +47,13 @@ import Cardano.Ledger.Pretty
     ppInteger,
     ppList,
     ppLong,
+    ppMap,
+    ppMetadatum,
     ppPair,
     ppSet,
     ppSexp,
     ppStrictSeq,
-    ppMap,
     ppWord64,
-    ppMetadatum,
   )
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
@@ -62,12 +62,12 @@ import Cardano.Ledger.SafeHash
     hashAnnotated,
   )
 import Data.Coders
+import Data.Map (Map)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
-import Data.Map(Map)
 import GHC.Generics (Generic)
 -- import Plutus.V1.Ledger.Scripts-- Supply the HasField and Validate instances for Alonzo
 import qualified Language.PlutusTx as Plutus
@@ -142,7 +142,6 @@ data AuxiliaryDataRaw era = AuxiliaryDataRaw
   { txMD' :: !(Map Word64 Metadatum),
     scripts' :: !(StrictSeq (Core.Script era)),
     dats' :: !(Set (Data era))
-
   }
   deriving (Generic)
 
