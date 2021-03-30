@@ -50,6 +50,7 @@ benchmark bench
   build-depends:
     bytestring,
     cardano-binary,
+    cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,
     containers,

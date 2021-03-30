@@ -1,10 +1,9 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ConstraintKinds #-}
-
 
 -- |
 -- Module      : Test.Shelley.Spec.Ledger.Examples.Combinators
@@ -47,6 +46,8 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
   )
 where
 
+import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -58,7 +59,9 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, StrictMaybe(..), (⭒))
+import GHC.Records (HasField (..))
+import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval, (⭒))
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     Block (..),
@@ -69,7 +72,6 @@ import Shelley.Spec.Ledger.BlockChain
     lastAppliedHash,
     prevHashToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ptr,
@@ -93,8 +95,8 @@ import Shelley.Spec.Ledger.LedgerState
     NewEpochState (..),
     PPUPState (..),
     PState (..),
+    PulsingRewUpdate (..),
     RewardUpdate (..),
-    PulsingRewUpdate(..),
     UTxOState (..),
     applyRUpd,
   )
@@ -105,9 +107,6 @@ import Shelley.Spec.Ledger.Tx (TxIn)
 import Shelley.Spec.Ledger.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.UTxO (txins, txouts)
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
-import Numeric.Natural (Natural)
-import qualified Cardano.Ledger.Core as Core
-import GHC.Records (HasField (..))
 
 -- ==================================================
 
@@ -499,7 +498,7 @@ rewardUpdate ::
   ChainState era
 rewardUpdate ru cs = cs {chainNes = nes'}
   where
-    nes' = (chainNes cs) {nesRu = SJust(Complete ru)}
+    nes' = (chainNes cs) {nesRu = SJust (Complete ru)}
 
 -- | = Pulser
 --

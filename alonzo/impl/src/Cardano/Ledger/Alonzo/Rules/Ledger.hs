@@ -23,6 +23,7 @@ where
 
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail, AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Tx (IsValidating (..), Tx (..))
+import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
@@ -42,7 +43,6 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Records (HasField, getField)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState

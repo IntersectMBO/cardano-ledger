@@ -15,12 +15,15 @@ module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 import Cardano.Binary (serialize')
 import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto (DSIGN, VRF)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
+import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
@@ -42,13 +45,11 @@ import Shelley.Spec.Ledger.Address
   )
 import Shelley.Spec.Ledger.BaseTypes hiding ((==>))
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
-import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -81,8 +82,8 @@ import Shelley.Spec.Ledger.Tx
     TxBody (..),
     TxIn (..),
     TxOut (..),
-    WitnessSetHKD (..),
     WitnessSet,
+    WitnessSetHKD (..),
     _ttl,
   )
 import Shelley.Spec.Ledger.TxBody
@@ -120,7 +121,6 @@ import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-import Data.Default.Class (def)
 
 -- ========================================================================================
 

@@ -37,6 +37,10 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Hashes
+  ( EraIndependentAuxiliaryData,
+    EraIndependentData,
+  )
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -49,9 +53,7 @@ import Cardano.Ledger.Pretty
     ppSexp,
   )
 import Cardano.Ledger.SafeHash
-  ( EraIndependentAuxiliaryData,
-    EraIndependentData,
-    HashAnnotated,
+  ( HashAnnotated,
     SafeHash,
     SafeToHash,
     hashAnnotated,

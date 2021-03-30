@@ -19,6 +19,7 @@ import qualified Cardano.Crypto.VRF as Crypto
 -- Arbitrary(NewEpochState era)
 -- instance (EraGen (ShelleyEra C))
 
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -55,7 +56,6 @@ import Shelley.Spec.Ledger.BaseTypes
     mkActiveSlotCoeff,
     unitIntervalToRational,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),

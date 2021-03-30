@@ -56,10 +56,15 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Hashes
+  ( EraIndependentTxBody,
+    EraIndependentWitnessPPData,
+  )
 import Cardano.Ledger.Mary.Value (Value (..), policies, policyID, ppValue)
 import qualified Cardano.Ledger.Mary.Value as Mary
 import Cardano.Ledger.Pretty
@@ -80,9 +85,7 @@ import Cardano.Ledger.Pretty
     ppWdrl,
   )
 import Cardano.Ledger.SafeHash
-  ( EraIndependentTxBody,
-    EraIndependentWitnessPPData,
-    HashAnnotated,
+  ( HashAnnotated,
     SafeHash,
     SafeToHash,
   )
@@ -109,7 +112,6 @@ import GHC.Stack (HasCallStack)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))

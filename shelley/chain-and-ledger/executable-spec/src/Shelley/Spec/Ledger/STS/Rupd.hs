@@ -23,6 +23,7 @@ module Shelley.Spec.Ledger.STS.Rupd
   )
 where
 
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Slotting.EpochInfo.API (epochInfoRange)
@@ -52,7 +53,6 @@ import Shelley.Spec.Ledger.BaseTypes
     randomnessStabilisationWindow,
     securityParameter,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,

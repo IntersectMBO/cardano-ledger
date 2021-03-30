@@ -15,8 +15,10 @@ module Test.Shelley.Spec.Ledger.Examples.Mir
   )
 where
 
+import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
@@ -25,11 +27,9 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (Nonce, StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
-import Shelley.Spec.Ledger.Coin (Coin (..), toDeltaCoin)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -157,7 +157,9 @@ sufficientMIRWits = mirWits [0 .. 4]
 insufficientMIRWits :: (CryptoClass.Crypto c) => [KeyPair 'Witness c]
 insufficientMIRWits = mirWits [0 .. 3]
 
-txEx1 :: forall c. (Mock c) =>
+txEx1 ::
+  forall c.
+  (Mock c) =>
   [KeyPair 'Witness c] ->
   MIRPot ->
   Tx (ShelleyEra c)

@@ -6,6 +6,7 @@ module Test.Shelley.Spec.Ledger.Examples.MirTransfer
   )
 where
 
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
@@ -25,7 +26,6 @@ import Shelley.Spec.Ledger.API
     MIRTarget (..),
     Ptr (..),
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyRole (..),
     hashKey,

@@ -46,10 +46,11 @@ import Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
     Prices (..),
   )
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era
+import Cardano.Ledger.Hashes (EraIndependentPParamView)
 import Cardano.Ledger.SafeHash
-  ( EraIndependentPParamView,
-    HashAnnotated (..),
+  ( HashAnnotated (..),
     SafeToHash (..),
   )
 import Control.DeepSeq (NFData)
@@ -85,7 +86,6 @@ import Shelley.Spec.Ledger.BaseTypes
     interval0,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))

@@ -16,6 +16,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestDeleg
   )
 where
 
+import Cardano.Ledger.Coin (addDeltaCoin, pattern Coin)
 import Control.SetAlgebra (dom, eval, rng, (∈), (∉), (◁))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
@@ -29,7 +30,6 @@ import Data.List (foldl')
 import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup, (\\))
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
 import Shelley.Spec.Ledger.API (DELEG)
-import Shelley.Spec.Ledger.Coin (pattern Coin, addDeltaCoin)
 import Shelley.Spec.Ledger.LedgerState
   ( DState (..),
     InstantaneousRewards (..),

@@ -22,10 +22,8 @@ import Cardano.Ledger.Core
     Value,
   )
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.SafeHash
-  ( EraIndependentTxBody,
-    HashAnnotated,
-  )
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
 import Control.DeepSeq (NFData)
 import Data.Kind (Constraint, Type)

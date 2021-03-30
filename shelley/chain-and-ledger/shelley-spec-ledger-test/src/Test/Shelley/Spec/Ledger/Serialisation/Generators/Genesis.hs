@@ -10,6 +10,7 @@ import Cardano.Crypto.DSIGN.Class
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.VRF.Class
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto (DSIGN, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
@@ -30,7 +31,6 @@ import Hedgehog.Range (Range)
 import qualified Hedgehog.Range as Range
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes hiding (Seed)
-import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.Keys

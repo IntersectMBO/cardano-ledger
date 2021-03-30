@@ -7,11 +7,13 @@
 
 module BenchUTxOAggregate where
 
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (toCompact)
+import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (compile, compute, run)
-import Control.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
 import Control.Monad (replicateM)
+import Control.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
@@ -19,7 +21,6 @@ import qualified Data.Sequence as Seq
 import Shelley.Spec.Ledger.Address
   ( Addr (..),
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.CompactAddr (compactAddr)
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -47,7 +48,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Shelley.Spec.Ledger.Examples.Cast (alicePoolParams)
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators (mkDummyHash)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
-import Cardano.Ledger.SafeHash(unsafeMakeSafeHash)
 
 genTestCase ::
   Int -> -- The size of the utxo
@@ -57,12 +57,12 @@ genTestCase numUTxO numAddr = do
   addrs :: [Addr C_Crypto] <- replicateM numAddr arbitrary
   let packedAddrs = Seq.fromList addrs
   txOuts <- replicateM numUTxO $ do
-      i <- choose (0, numAddr -1)
-      let addr = Seq.index packedAddrs i
-      pure $
-        TxOutCompact
-          (compactAddr addr)
-          (fromJust $ toCompact $ Val.inject (Coin $ fromIntegral i))
+    i <- choose (0, numAddr -1)
+    let addr = Seq.index packedAddrs i
+    pure $
+      TxOutCompact
+        (compactAddr addr)
+        (fromJust $ toCompact $ Val.inject (Coin $ fromIntegral i))
   let mktxid i = TxId (unsafeMakeSafeHash (mkDummyHash i))
   let mktxin i = TxIn (mktxid i) (fromIntegral i)
   let utxo = Map.fromList $ zip (mktxin <$> [1 ..]) txOuts

@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Mary.Golden
   )
 where
 
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (scaledMinDeposit)
@@ -17,7 +18,6 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Char (chr)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
@@ -46,20 +46,20 @@ pid3 =
     hashScript @(MaryEra StandardCrypto) $
       RequireAllOf (StrictSeq.fromList [RequireTimeExpire (SlotNo 1)])
 
--- |The smallest asset name has length zero
+-- | The smallest asset name has length zero
 smallestName :: AssetName
 smallestName = AssetName $ BS.pack ""
 
--- |The small asset names have length one
+-- | The small asset names have length one
 smallName :: Char -> AssetName
 smallName c = AssetName . BS.pack $ [c]
 
--- |The largest asset names have length thirty-two
+-- | The largest asset names have length thirty-two
 largestName :: Char -> AssetName
 largestName c = AssetName . BS.pack $ c : "0123456789ABCDEFGHIJ0123456789A"
 
--- |This is the current value of the protocol parameter
--- at the time this comment was written, namely one Ada.
+-- | This is the current value of the protocol parameter
+--  at the time this comment was written, namely one Ada.
 minUTxO :: Coin
 minUTxO = Coin $ 1000 * 1000
 

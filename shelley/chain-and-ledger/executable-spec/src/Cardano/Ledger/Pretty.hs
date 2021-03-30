@@ -21,6 +21,7 @@ import Cardano.Chain.Common
   )
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -55,7 +56,6 @@ import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Shelley.Spec.Ledger.BaseTypes (ActiveSlotCoeff, DnsName, FixedPoint, Globals (..), Network (..), Nonce (..), Port (..), StrictMaybe (..), UnitInterval, Url (..), activeSlotLog, activeSlotVal, dnsToText)
 import Shelley.Spec.Ledger.BlockChain (HashHeader (..), LastAppliedBlock (..))
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), decompactAddr)
 import Shelley.Spec.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),

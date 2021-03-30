@@ -38,9 +38,11 @@ where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (Script, Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -56,7 +58,7 @@ import Cardano.Ledger.Pretty
     ppUpdate,
     ppWdrl,
   )
-import Cardano.Ledger.SafeHash (EraIndependentTxBody, HashAnnotated, SafeToHash)
+import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Shelley.Constraints (PParamsDelta, TransValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
@@ -87,7 +89,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Serialization (encodeFoldable)
 import Shelley.Spec.Ledger.TxBody

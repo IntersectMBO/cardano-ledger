@@ -45,9 +45,10 @@ import Cardano.Binary
     FromCBOR (..),
     FullByteString (..),
     ToCBOR (..),
-    toCBOR,
     serializeEncoding,
+    toCBOR,
   )
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
@@ -56,7 +57,6 @@ import Codec.CBOR.Write (toLazyByteString)
 import qualified Data.ByteString.Lazy as Lazy
 import Data.Maybe (fromJust)
 import qualified Shelley.Spec.Ledger.API as Ledger
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import Shelley.Spec.Ledger.RewardUpdate
@@ -187,7 +187,7 @@ prop_roundtrip_NewEpochState = roundtrip2 toCBOR fromCBOR
 prop_roundtrip_MultiSig :: Ledger.MultiSig Mock.C_Crypto -> Property
 prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_metadata :: Ledger.Metadata  Mock.C -> Property
+prop_roundtrip_metadata :: Ledger.Metadata Mock.C -> Property
 prop_roundtrip_metadata = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_ShelleyGenesis :: ShelleyGenesis Mock.C -> Property

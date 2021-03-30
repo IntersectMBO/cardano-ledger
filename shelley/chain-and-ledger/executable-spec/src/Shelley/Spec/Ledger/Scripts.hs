@@ -31,13 +31,9 @@ import Cardano.Binary
     FromCBOR (fromCBOR),
     ToCBOR,
   )
-import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
-import Cardano.Ledger.SafeHash (EraIndependentScript, SafeToHash (..))
-import Control.DeepSeq (NFData)
-import Data.Aeson
+import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Data.ByteString.Short (ShortByteString)
 import Data.Coders (Encode (..), (!>))
 import Data.MemoBytes

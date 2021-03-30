@@ -21,6 +21,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData (..))
@@ -61,7 +62,6 @@ import Shelley.Spec.Ledger.BaseTypes
     ShelleyBase,
     UnitInterval,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( SnapShots (..),

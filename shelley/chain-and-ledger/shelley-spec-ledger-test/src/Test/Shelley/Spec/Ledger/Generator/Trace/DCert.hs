@@ -20,6 +20,7 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.DCert
   )
 where
 
+import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Val ((<×>))
@@ -64,7 +65,6 @@ import Shelley.Spec.Ledger.API
     Ptr (..),
   )
 import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
-import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -13,6 +14,7 @@ module Shelley.Spec.Ledger.STS.Snap
   )
 where
 
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Control.State.Transition
@@ -22,7 +24,9 @@ import Control.State.Transition
     judgmentContext,
   )
 import GHC.Generics (Generic)
+import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
+import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
@@ -49,7 +53,9 @@ instance (UsesTxOut era, UsesValue era) => STS (SNAP era) where
   transitionRules = [snapTransition]
 
 snapTransition ::
-  UsesValue era =>
+  ( UsesValue era,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+  ) =>
   TransitionRule (SNAP era)
 snapTransition = do
   TRC (lstate, s, _) <- judgmentContext

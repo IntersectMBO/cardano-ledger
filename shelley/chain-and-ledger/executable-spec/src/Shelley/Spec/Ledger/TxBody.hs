@@ -90,11 +90,17 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, Crypto)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.SafeHash
+  ( HashAnnotated,
+    SafeHash,
+    SafeToHash,
+  )
 import Cardano.Ledger.Shelley.Constraints (PParamsDelta, TransValue)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude
@@ -160,7 +166,6 @@ import Shelley.Spec.Ledger.BaseTypes
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin)
 import Shelley.Spec.Ledger.CompactAddr
   ( CompactAddr,
     compactAddr,
@@ -186,7 +191,6 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (Update)
-import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization
   ( CBORGroup (..),
     CborSeq (..),

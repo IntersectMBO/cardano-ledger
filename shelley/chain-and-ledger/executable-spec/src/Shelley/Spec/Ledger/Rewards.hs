@@ -53,6 +53,11 @@ import Cardano.Binary
     encodeListLen,
     encodeWord,
   )
+import Cardano.Ledger.Coin
+  ( Coin (..),
+    coinToRational,
+    rationalToCoinViaFloor,
+  )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -83,11 +88,6 @@ import Shelley.Spec.Ledger.BaseTypes
     activeSlotVal,
     invalidKey,
     unitIntervalToRational,
-  )
-import Shelley.Spec.Ledger.Coin
-  ( Coin (..),
-    coinToRational,
-    rationalToCoinViaFloor,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)

@@ -51,6 +51,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash as CH
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Era
@@ -82,7 +83,6 @@ import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe, strictMaybeToMaybe)
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
@@ -327,7 +327,8 @@ scriptsNeeded ::
   ( Era era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   UTxO era ->
   Core.Tx era ->
@@ -353,7 +354,7 @@ scriptsNeeded u tx =
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript ::
-  Era era =>
+  (HasField "address" (Core.TxOut era) (Addr crypto0)) =>
   Set (TxIn (Crypto era)) ->
   UTxO era ->
   Set (TxIn (Crypto era))

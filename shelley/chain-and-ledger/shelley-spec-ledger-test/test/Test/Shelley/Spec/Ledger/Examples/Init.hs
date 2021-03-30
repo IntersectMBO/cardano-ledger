@@ -17,6 +17,7 @@ module Test.Shelley.Spec.Ledger.Examples.Init
   )
 where
 
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
@@ -30,7 +31,6 @@ import Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),

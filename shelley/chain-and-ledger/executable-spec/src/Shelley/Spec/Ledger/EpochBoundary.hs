@@ -35,6 +35,12 @@ module Shelley.Spec.Ledger.EpochBoundary
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.Coin
+  ( Coin (..),
+    coinToRational,
+    rationalToCoinViaFloor,
+  )
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Val ((<+>), (<×>))
@@ -52,11 +58,6 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.Coin
-  ( Coin (..),
-    coinToRational,
-    rationalToCoinViaFloor,
-  )
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
@@ -104,7 +105,7 @@ deriving newtype instance
 -- | Sum up all the Coin for each staking Credential
 aggregateUtxoCoinByCredential ::
   forall era.
-  Era era =>
+  (Era era, HasField "address" (Core.TxOut era) (Addr (Crypto era))) =>
   Map Ptr (Credential 'Staking (Crypto era)) ->
   UTxO era ->
   Map (Credential 'Staking (Crypto era)) Coin ->

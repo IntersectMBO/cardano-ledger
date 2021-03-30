@@ -19,6 +19,7 @@ module Shelley.Spec.Ledger.STS.PoolReap
   )
 where
 
+import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -39,7 +40,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),

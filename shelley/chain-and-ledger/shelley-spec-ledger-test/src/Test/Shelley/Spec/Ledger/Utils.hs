@@ -72,6 +72,7 @@ import Cardano.Crypto.VRF
     genKeyVRF,
   )
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -122,7 +123,6 @@ import Shelley.Spec.Ledger.BaseTypes
     mkUnitInterval,
   )
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, bhbody, bheader)
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyPair,

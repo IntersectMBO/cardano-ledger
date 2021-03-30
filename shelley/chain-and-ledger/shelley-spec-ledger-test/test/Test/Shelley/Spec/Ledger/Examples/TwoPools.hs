@@ -19,6 +19,12 @@ module Test.Shelley.Spec.Ledger.Examples.TwoPools
   )
 where
 
+import Cardano.Ledger.Coin
+  ( Coin (..),
+    DeltaCoin (..),
+    rationalToCoinViaFloor,
+    toDeltaCoin,
+  )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
@@ -51,12 +57,6 @@ import Shelley.Spec.Ledger.BlockChain
     bheader,
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.Coin
-  ( Coin (..),
-    DeltaCoin (..),
-    rationalToCoinViaFloor,
-    toDeltaCoin,
-  )
 import Shelley.Spec.Ledger.Credential (Credential, Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
@@ -65,8 +65,8 @@ import Shelley.Spec.Ledger.Delegation.Certificates
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
-  ( RewardUpdate (..),
-    PulsingRewUpdate (..),
+  ( PulsingRewUpdate (..),
+    RewardUpdate (..),
     completeStep,
     emptyRewardUpdate,
   )
@@ -130,11 +130,11 @@ import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (makePulser)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
+    PreAlonzo,
     genesisCoins,
     mkBlockFakeVRF,
     mkOCert,
     zero,
-    PreAlonzo,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
@@ -776,12 +776,13 @@ pulserEx9 ::
   (ExMock (Crypto era), TwoPoolsConstraints era) =>
   PParams era ->
   PulsingRewUpdate (Crypto era)
-pulserEx9 pp = makePulser
-                 (EB.BlocksMade $
-                   Map.fromList
-                     [(hk Cast.alicePoolKeys, 2), (hk Cast.bobPoolKeys, 1)]
-                 )
-                 expectedStEx8'
+pulserEx9 pp =
+  makePulser
+    ( EB.BlocksMade $
+        Map.fromList
+          [(hk Cast.alicePoolKeys, 2), (hk Cast.bobPoolKeys, 1)]
+    )
+    expectedStEx8'
   where
     expectedStEx8' = C.setPrevPParams pp (expectedStEx8 @era)
 
@@ -860,13 +861,13 @@ twoPoolsExample =
     "two pools"
     [ testCase "create non-aggregated pulser" $ testCHAINExample twoPools9,
       testCase "non-aggregated pulser is correct" $
-        ((Complete (rewardUpdateEx9 @C ppEx rsEx9Agg))
-          @?=
-          (runShelleyBase . runProvM . completeStep $ pulserEx9 @C ppEx)),
+        ( (Complete (rewardUpdateEx9 @C ppEx rsEx9Agg))
+            @?= (runShelleyBase . runProvM . completeStep $ pulserEx9 @C ppEx)
+        ),
       testCase "aggregated pulser is correct" $
-        ((Complete (rewardUpdateEx9 @C ppProtVer3 rsEx9Agg))
-          @?=
-          (runShelleyBase . runProvM . completeStep $ pulserEx9 @C ppProtVer3)),
+        ( (Complete (rewardUpdateEx9 @C ppProtVer3 rsEx9Agg))
+            @?= (runShelleyBase . runProvM . completeStep $ pulserEx9 @C ppProtVer3)
+        ),
       testCase "create aggregated pulser" $ testCHAINExample twoPools9Agg,
       testCase "create legacy aggregatedRewards" $ testAggregateRewardsLegacy,
       testCase "create new aggregatedRewards" $ testAggregateRewardsNew

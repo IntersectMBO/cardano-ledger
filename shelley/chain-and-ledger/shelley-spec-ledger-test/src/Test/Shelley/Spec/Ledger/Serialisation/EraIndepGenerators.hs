@@ -41,6 +41,7 @@ import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Coin (DeltaCoin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -88,7 +89,6 @@ import Shelley.Spec.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
-import Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState
@@ -131,12 +131,12 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( KeySpace (KeySpace_),
+    PreAlonzo,
     geKeySpace,
     ksCoreNodes,
     mkBlock,
     mkBlockHeader,
     mkOCert,
-    PreAlonzo,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)

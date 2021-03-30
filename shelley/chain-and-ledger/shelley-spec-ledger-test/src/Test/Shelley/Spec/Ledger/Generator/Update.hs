@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Generator.Update
   )
 where
 
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era (Crypto)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -33,7 +34,6 @@ import Shelley.Spec.Ledger.BaseTypes
     UnitInterval,
     mkNonceFromNumber,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),

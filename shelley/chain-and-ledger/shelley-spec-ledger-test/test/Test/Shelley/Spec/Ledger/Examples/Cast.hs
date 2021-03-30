@@ -38,6 +38,7 @@ module Test.Shelley.Spec.Ledger.Examples.Cast
   )
 where
 
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
@@ -49,7 +50,6 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     textToUrl,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ptr (..),

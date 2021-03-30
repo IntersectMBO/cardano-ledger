@@ -106,6 +106,13 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Coin
+  ( Coin (..),
+    DeltaCoin (..),
+    addDeltaCoin,
+    rationalToCoinViaFloor,
+    toDeltaCoin,
+  )
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -163,13 +170,6 @@ import Shelley.Spec.Ledger.BaseTypes
     activeSlotVal,
     intervalValue,
     unitIntervalToRational,
-  )
-import Shelley.Spec.Ledger.Coin
-  ( Coin (..),
-    DeltaCoin (..),
-    addDeltaCoin,
-    rationalToCoinViaFloor,
-    toDeltaCoin,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -863,7 +863,8 @@ diffWitHashes (WitHashes x) (WitHashes x') =
 -- | Extract the witness hashes from the Transaction.
 witsFromTxWitnesses ::
   ( Era era,
-    HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era)))
+    HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era))),
+    HasField "bootWits" (Core.Tx era) (Set (BootstrapWitness (Crypto era)))
   ) =>
   Core.Tx era ->
   WitHashes (Crypto era)
@@ -884,7 +885,8 @@ witsVKeyNeeded ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   UTxO era ->
   Core.Tx era ->
@@ -945,7 +947,8 @@ verifiedWits ::
   forall era.
   ( Era era,
     HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era))),
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
+    HasField "bootWits" (Core.Tx era) (Set (BootstrapWitness (Crypto era)))
   ) =>
   Core.Tx era ->
   Either [VKey 'Witness (Crypto era)] ()
@@ -1016,7 +1019,7 @@ reapRewards dStateRewards withdrawals =
 
 stakeDistr ::
   forall era.
-  Era era =>
+  (Era era, HasField "address" (Core.TxOut era) (Addr (Crypto era))) =>
   UTxO era ->
   DState (Crypto era) ->
   PState (Crypto era) ->
@@ -1317,7 +1320,7 @@ updateNES
 
 returnRedeemAddrsToReserves ::
   forall era.
-  Era era =>
+  (Era era, HasField "address" (Core.TxOut era) (Addr (Crypto era))) =>
   EpochState era ->
   EpochState era
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}

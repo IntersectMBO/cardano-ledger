@@ -81,7 +81,8 @@ import Cardano.Binary
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
-import Cardano.Ledger.SafeHash (EraIndependentTx, HashAnnotated, SafeToHash (..))
+import Cardano.Ledger.Hashes (EraIndependentTx)
+import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..))
 import qualified Data.ByteString.Lazy as BSL
 import Data.Constraint (Constraint)
 import Data.Foldable (fold)
