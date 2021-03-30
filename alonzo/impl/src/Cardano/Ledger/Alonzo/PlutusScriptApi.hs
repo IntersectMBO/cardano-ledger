@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Tx
     wits',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), vldt')
-import Cardano.Ledger.Alonzo.TxInfo (evalPlutusScript, transTx, valContext)
+import Cardano.Ledger.Alonzo.TxInfo (runPLCScript, transTx, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts')
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
@@ -139,7 +139,7 @@ evalScripts tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
   where
     vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
 evalScripts tx ((AlonzoScript.PlutusScript pscript, ds, units, cost) : rest) =
-  evalPlutusScript cost units pscript (map getPlutusData ds) && evalScripts tx rest
+  runPLCScript cost pscript units (map getPlutusData ds) && evalScripts tx rest
 
 -- ===================================================================
 -- From Specification, Figure 12 "UTXOW helper functions"
