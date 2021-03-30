@@ -39,7 +39,7 @@ module Cardano.Ledger.Alonzo.Tx
     hashWitnessPPData,
     getCoin,
     EraIndependentWitnessPPData,
-    WitnessPPData,
+    WitnessPPData (WitnessPPData),
     WitnessPPDataHash,
     -- Figure 3
     Tx (Tx, body, wits, isValidating, auxiliaryData),
@@ -91,9 +91,11 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
+    Redeemers (..),
     TxWitness (..),
     ppTxWitness,
     txrdmrs,
+    unRedeemers,
   )
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
@@ -120,17 +122,12 @@ import qualified Data.ByteString.Lazy as LBS (toStrict)
 import qualified Data.ByteString.Short as SBS (length, toShort)
 import Data.Coders
 import qualified Data.Map as Map
+import Data.Maybe (catMaybes)
 import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-  ( elemAt,
-    findIndex,
-    map,
-    null,
-    union,
-  )
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -321,11 +318,11 @@ getCoin (TxOut _ v _) = coin v
 
 data WitnessPPDataRaw era
   = WitnessPPDataRaw
-      !(Map.Map RdmrPtr (Data era)) -- From the witnesses
+      !(Redeemers era) -- From the witnesses
       !(Set (LangDepView era)) -- From the Porotocl parameters
   deriving (Show, Eq, Generic, Typeable)
 
-deriving instance NoThunks (WitnessPPDataRaw era)
+deriving instance Typeable era => NoThunks (WitnessPPDataRaw era)
 
 instance Era era => ToCBOR (WitnessPPDataRaw era) where
   toCBOR (WitnessPPDataRaw m s) = encode (Rec WitnessPPDataRaw !> To m !> To s)
@@ -334,7 +331,7 @@ instance Era era => FromCBOR (Annotator (WitnessPPDataRaw era)) where
   fromCBOR =
     decode
       ( Ann (RecD WitnessPPDataRaw)
-          <*! mapDecodeA (Ann From) From
+          <*! From
           <*! setDecodeA (Ann From)
       )
 
@@ -349,16 +346,16 @@ deriving via
 
 pattern WitnessPPData ::
   Era era =>
-  Map.Map RdmrPtr (Data era) ->
+  Redeemers era ->
   Set (LangDepView era) ->
   WitnessPPData era
-pattern WitnessPPData mp s <-
-  WitnessPPDataConstr (Memo (WitnessPPDataRaw mp s) _)
+pattern WitnessPPData r s <-
+  WitnessPPDataConstr (Memo (WitnessPPDataRaw r s) _)
   where
-    WitnessPPData mp s =
+    WitnessPPData r s =
       WitnessPPDataConstr
         . memoBytes
-        $ (Rec WitnessPPDataRaw !> mapEncode mp !> setEncode s)
+        $ (Rec WitnessPPDataRaw !> To r !> setEncode s)
 
 instance (c ~ Crypto era) => HashAnnotated (WitnessPPData era) EraIndependentWitnessPPData c
 
@@ -367,14 +364,16 @@ hashWitnessPPData ::
   Era era =>
   PParams era ->
   Set Language ->
-  Map.Map RdmrPtr (Data era) ->
+  Redeemers era ->
   StrictMaybe (WitnessPPDataHash (Crypto era))
 hashWitnessPPData pp langs rdmrs =
-  if Map.null rdmrs && Set.null langs
+  if (Map.null $ unRedeemers rdmrs) && Set.null langs
     then SNothing
     else
-      let newset = Set.map (getLanguageView pp) langs
+      let newset = mapMaybeSet (getLanguageView pp) langs
        in SJust (hashAnnotated (WitnessPPData rdmrs newset))
+  where
+    mapMaybeSet f = Set.foldr (\x acc -> maybe acc (`Set.insert` acc) (f x)) mempty
 
 -- ===============================================================
 -- From the specification, Figure 5 "Functions related to fees"
@@ -434,7 +433,7 @@ minfee pp tx =
 instance HasField "totExunits" (Tx era) ExUnits where
   getField tx = foldl (<>) mempty (snd $ unzip (Map.elems trd))
     where
-      trd = getField @"txrdmrs" (getField @"wits" tx)
+      trd = unRedeemers $ getField @"txrdmrs" (getField @"wits" tx)
 
 -- The specification uses "validatorHash" to extract ScriptHash from
 -- an Addr. But not every Addr has a ScriptHash. In particular KeyHashObj
@@ -525,8 +524,9 @@ indexedRdmrs ::
   Tx era ->
   ScriptPurpose (Crypto era) ->
   Maybe (Data era, ExUnits)
-indexedRdmrs tx sp = Map.lookup policyid (txrdmrs' . getField @"wits" $ tx)
+indexedRdmrs tx sp = Map.lookup policyid rdmrs
   where
+    rdmrs = unRedeemers $ txrdmrs' . getField @"wits" $ tx
     policyid = rdptr @era (getField @"body" tx) sp
 
 -- =======================================================

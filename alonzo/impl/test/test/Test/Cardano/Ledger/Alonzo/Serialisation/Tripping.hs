@@ -13,7 +13,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure)
 -- TODO resolve the problem with the Utxow predicate failure type, so we will need this import
 -- import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
 import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (CostModel, Tx)
+import Cardano.Ledger.Alonzo.Tx (CostModel, Tx, WitnessPPData)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -95,5 +95,7 @@ tests =
       testProperty "alonzo/UtxosPredicateFailure" $
         tripping @(UtxosPredicateFailure (AlonzoEra C_Crypto)),
       testProperty "Script" $
-        trippingAnn @(Script (AlonzoEra C_Crypto))
+        trippingAnn @(Script (AlonzoEra C_Crypto)),
+      testProperty "WitnessPPData" $
+        trippingAnn @(WitnessPPData (AlonzoEra C_Crypto))
     ]

@@ -78,6 +78,7 @@ library test
   build-depends:
     cardano-ledger-alonzo,
     cardano-ledger-shelley-ma-test,
+    containers,
     plutus-tx,
     QuickCheck,
     shelley-spec-ledger-test,
