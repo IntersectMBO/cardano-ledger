@@ -5,7 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Shelley.Spec.Ledger.Coin
+module Cardano.Ledger.Coin
   ( Coin (..),
     CompactForm (..),
     DeltaCoin (..),

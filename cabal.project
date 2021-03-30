@@ -8,6 +8,7 @@ packages:
   byron/ledger/impl/test
   byron/crypto
   byron/crypto/test
+  cardano-ledger-core
   cardano-ledger-test
   semantics/executable-spec
   semantics/small-steps-test

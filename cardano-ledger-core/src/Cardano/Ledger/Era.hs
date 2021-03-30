@@ -27,13 +27,17 @@ where
 import Cardano.Binary (Annotator)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.SafeHash
+import Cardano.Ledger.Hashes
   ( EraIndependentAuxiliaryData,
     EraIndependentTxBody,
-    HashAnnotated (..),
+    ScriptHash (..),
+  )
+import Cardano.Ledger.SafeHash
+  ( HashAnnotated (..),
     SafeToHash (..),
   )
 import Cardano.Ledger.Val (Val)
@@ -42,16 +46,12 @@ import qualified Data.ByteString as BS
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
 import Data.Map (Map)
+import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 import GHC.Records (HasField (..))
-import Shelley.Spec.Ledger.Address (Addr)
-import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
-import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 
 --------------------------------------------------------------------------------
 -- Era
@@ -71,10 +71,11 @@ class
 -----------------------------------------------------------------------------
 
 -- | Typeclass for script data types. Allows for script validation and hashing.
---   You must understand the role of SafeToHash and scriptPrefixTag to make new instances.
---   'scriptPrefixTag' is a magic number representing the tag of the script language. For
---   each new script language defined, a new tag is chosen and the tag is included in the script
---   hash for a script. The safeToHash constraint ensures that Scripts are never reserialised.
+--   You must understand the role of SafeToHash and scriptPrefixTag to make new
+--   instances. 'scriptPrefixTag' is a magic number representing the tag of the
+--   script language. For each new script language defined, a new tag is chosen
+--   and the tag is included in the script hash for a script. The safeToHash
+--   constraint ensures that Scripts are never reserialised.
 class
   (Era era, SafeToHash (Core.Script era)) =>
   ValidateScript era
@@ -213,11 +214,9 @@ type WellFormed era =
     HasField "body" (Core.Tx era) (Core.TxBody era),
     HasField "auxiliaryData" (Core.Tx era) (StrictMaybe (Core.AuxiliaryData era)),
     HasField "scriptWits" (Core.Tx era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
-    HasField "bootWits" (Core.Tx era) (Set (BootstrapWitness (Crypto era))),
     HasField "txsize" (Core.Tx era) Integer,
     HasField "witnessSet" (Core.Tx era) (Core.Witnesses era),
     -- TxOut
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     HasField "value" (Core.TxOut era) (Core.Value era),
     -- HashAnnotated
     HashAnnotated (Core.AuxiliaryData era) EraIndependentAuxiliaryData (Crypto era),

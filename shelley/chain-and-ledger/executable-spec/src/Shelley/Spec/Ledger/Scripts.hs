@@ -34,6 +34,7 @@ import Cardano.Binary
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.SafeHash (EraIndependentScript, SafeToHash (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson
@@ -119,23 +120,6 @@ pattern RequireMOf n ms <-
       MultiSigConstr $ memoBytes (Sum RequireMOf' 3 !> To n !> E encodeFoldable ms)
 
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
-
-newtype ScriptHash crypto
-  = ScriptHash (Hash.Hash (ADDRHASH crypto) EraIndependentScript)
-  deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NFData, NoThunks)
-
-deriving newtype instance
-  CC.Crypto crypto =>
-  ToCBOR (ScriptHash crypto)
-
-deriving newtype instance
-  CC.Crypto crypto =>
-  FromCBOR (ScriptHash crypto)
-
-deriving newtype instance ToJSON (ScriptHash crypto)
-
-deriving newtype instance CC.Crypto crypto => FromJSON (ScriptHash crypto)
 
 instance
   CC.Crypto crypto =>

@@ -24,10 +24,8 @@ where
 import Cardano.Binary (FromCBOR, ToCBOR)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.SafeHash
-  ( EraIndependentAuxiliaryData,
-    SafeHash,
-  )
+import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
+import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
 import NoThunks.Class (NoThunks (..))
 

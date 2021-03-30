@@ -25,9 +25,9 @@ module Cardano.Ledger.Val
 where
 
 import Cardano.Binary (Decoder, Encoding, decodeWord64, toCBOR)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Data.Group (Abelian)
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 
 class
   ( Abelian t,
