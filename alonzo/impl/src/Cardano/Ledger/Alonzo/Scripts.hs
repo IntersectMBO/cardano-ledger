@@ -104,7 +104,7 @@ instance NFData (ScriptRaw era)
 
 -- | Scripts in the Alonzo Era, a combination of Timelock and Plutus Scripts.
 newtype Script era = ScriptConstr (MemoBytes (ScriptRaw era))
-  deriving newtype (Eq, Show, Generic, Ord, NoThunks, ToCBOR, SafeToHash)
+  deriving newtype (Eq, Show, Generic, Ord, NoThunks, ToCBOR, SafeToHash, NFData)
 
 deriving via (Mem (ScriptRaw era)) instance (Era era) => FromCBOR (Annotator (Script era))
 

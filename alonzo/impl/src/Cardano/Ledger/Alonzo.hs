@@ -7,22 +7,34 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Alonzo where
+module Cardano.Ledger.Alonzo
+  ( AlonzoEra,
+    Self,
+    TxOut,
+    Value,
+    TxBody,
+    Script,
+    AuxiliaryData,
+    PParams,
+    PParamsDelta,
+    Tx,
+  )
+where
 
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), PParamsUpdate, updatePParams)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (IsValidating (..), Tx, alonzoSeqTx, body', isValidating', wits')
-import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut, vldt')
+import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (..), vldt')
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era
-import Cardano.Ledger.Mary.Value (Value)
+import qualified Cardano.Ledger.Era as EraModule
+import qualified Cardano.Ledger.Mary.Value as V (Value)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.Shelley.Constraints
@@ -31,12 +43,14 @@ import Cardano.Ledger.Shelley.Constraints
     UsesValue,
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
+import Control.DeepSeq (deepseq)
 import Control.State.Transition.Extended (STUB)
 import qualified Control.State.Transition.Extended as STS
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import Shelley.Spec.Ledger.Metadata (Metadata (..), validMetadatum)
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Bbody as Shelley
 import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
@@ -83,11 +97,11 @@ instance
 
 instance CC.Crypto c => UsesTxOut (AlonzoEra c) where
   -- makeTxOut :: Proxy era -> Addr (Crypto era) -> Value era -> TxOut era
-  makeTxOut = error "TODO: implement makeTxOut"
+  makeTxOut _proxy addr val = TxOut addr val Shelley.SNothing
 
 instance
   (CC.Crypto c) =>
-  Era (AlonzoEra c)
+  EraModule.Era (AlonzoEra c)
   where
   type Crypto (AlonzoEra c) = c
 
@@ -97,7 +111,7 @@ type instance Core.TxBody (AlonzoEra c) = TxBody (AlonzoEra c)
 
 type instance Core.TxOut (AlonzoEra c) = TxOut (AlonzoEra c)
 
-type instance Core.Value (AlonzoEra c) = Value c
+type instance Core.Value (AlonzoEra c) = V.Value c
 
 type instance Core.Script (AlonzoEra c) = Script (AlonzoEra c)
 
@@ -123,9 +137,13 @@ instance
 
 instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
-  validateAuxiliaryData = error ("NO validateAuxiliaryData yet.") -- TODO Fill this in
+  validateAuxiliaryData (AuxiliaryData scrips plutusdata metadata) =
+    deepseq scrips $
+      ( all (\(Metadata d) -> all validMetadatum d) metadata
+          && all (const False) plutusdata -- TODO what do we do with plutusdata?
+      )
 
-instance CC.Crypto c => BlockDecoding (AlonzoEra c) where
+instance CC.Crypto c => EraModule.BlockDecoding (AlonzoEra c) where
   seqTx body wit isval aux = alonzoSeqTx body wit isval aux
   seqIsValidating tx = case isValidating' tx of IsValidating b -> b
   seqHasValidating = True -- Tx in AlonzoEra has an IsValidating field
@@ -205,3 +223,9 @@ type instance Core.EraRule "TICKF" (AlonzoEra c) = Shelley.TICKF (AlonzoEra c)
 type instance Core.EraRule "TICKN" (AlonzoEra _c) = API.TICKN
 
 type instance Core.EraRule "UPEC" (AlonzoEra c) = Shelley.UPEC (AlonzoEra c)
+
+-- Self-Describing type synomyms
+
+type Self c = AlonzoEra c
+
+type Value era = V.Value (EraModule.Crypto era)

@@ -5,7 +5,7 @@
 module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 
 import Cardano.Binary
-import Cardano.Ledger.Alonzo
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData, Data)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)

@@ -15,12 +15,9 @@ module Test.Shelley.Spec.Ledger.Serialisation.Golden.Address
 where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), hashFromBytes, sizeHash)
-import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
-import Cardano.Crypto.KES.Sum
-import Cardano.Crypto.VRF.Simple (SimpleVRF)
-import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Data.Binary as B
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
@@ -55,16 +52,9 @@ import Cardano.Ledger.Shelley(ShelleyEra)
 -- Crypto family as used in production Shelley
 -- This should match that defined at https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
 
-data ShelleyCrypto
+type ShelleyCrypto = StandardCrypto
 
-instance Cardano.Ledger.Crypto.Crypto ShelleyCrypto where
-  type DSIGN ShelleyCrypto = Ed25519DSIGN
-  type KES ShelleyCrypto = Sum7KES Ed25519DSIGN Blake2b_256
-  type VRF ShelleyCrypto = SimpleVRF
-  type HASH ShelleyCrypto = Blake2b_256
-  type ADDRHASH ShelleyCrypto = Blake2b_224
-
-type Shelley = ShelleyEra ShelleyCrypto
+type Shelley = ShelleyEra StandardCrypto
 
 tests :: TestTree
 tests =

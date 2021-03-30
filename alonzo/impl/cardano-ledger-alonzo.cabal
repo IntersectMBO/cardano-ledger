@@ -47,6 +47,7 @@ library
     Cardano.Ledger.Alonzo.TxBody
     Cardano.Ledger.Alonzo.TxInfo
     Cardano.Ledger.Alonzo.TxWitness
+    Cardano.Ledger.DescribeEras
   build-depends:
     bytestring,
     cardano-binary,

@@ -9,7 +9,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.ShelleyMA where
+module Cardano.Ledger.ShelleyMA
+  ( ShelleyMAEra,
+    MaryOrAllegra (..),
+    TxOut,
+    TxBody,
+    AuxiliaryData,
+    Shelley.PParams,
+    Tx,
+  )
+where
 
 import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
