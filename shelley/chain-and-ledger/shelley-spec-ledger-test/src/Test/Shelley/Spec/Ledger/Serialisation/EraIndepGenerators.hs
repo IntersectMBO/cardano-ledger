@@ -100,19 +100,19 @@ import Shelley.Spec.Ledger.RewardProvenance
     RewardProvenance (..),
     RewardProvenancePool (..),
   )
+import Shelley.Spec.Ledger.RewardUpdate
+  ( FreeVars (..),
+    Pulser,
+    PulsingRewUpdate (..),
+    RewardPulser (..),
+    RewardSnapShot (..),
+  )
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     LogWeight (..),
     PerformanceEstimate (..),
     Reward (..),
     RewardType (..),
-  )
-import Shelley.Spec.Ledger.RewardUpdate
-  ( RewardSnapShot(..),
-    FreeVars(..),
-    RewardPulser(..),
-    Pulser,
-    PulsingRewUpdate(..),
   )
 import qualified Shelley.Spec.Ledger.STS.Deleg as STS
 import qualified Shelley.Spec.Ledger.STS.Delegs as STS
@@ -911,41 +911,52 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-
 instance (Mock crypto) => Arbitrary (PulsingRewUpdate crypto) where
-   arbitrary = oneof [ Complete <$> arbitrary
-                     , Pulsing <$> arbitrary <*> arbitrary
-                     ]
+  arbitrary =
+    oneof
+      [ Complete <$> arbitrary,
+        Pulsing <$> arbitrary <*> arbitrary
+      ]
+
 instance
   Mock crypto =>
   Arbitrary (RewardSnapShot crypto)
   where
-  arbitrary = RewardSnapShot
-                 <$> arbitrary <*> arbitrary <*> arbitrary
-                 <*> arbitrary <*> arbitrary <*> arbitrary
-                 <*> arbitrary <*> arbitrary <*> arbitrary  <*>  arbitrary
+  arbitrary =
+    RewardSnapShot
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance
   Mock crypto =>
   Arbitrary (FreeVars crypto)
   where
-  arbitrary = FreeVars
-          <$> arbitrary {- b -}
-          <*> arbitrary {- delegs -}
-          <*> arbitrary {- stake -}
-          <*> arbitrary {- addrsRew -}
-          <*> arbitrary {- totalStake -}
-          <*> arbitrary {- activeStake -}
-          <*> arbitrary {- asc -}
-          <*> arbitrary {- totalBlocks -}
-          <*> arbitrary {- r -}
-          <*> (EpochSize <$> arbitrary) {- slotsPerEpoch -}
-          <*> arbitrary {- pp_d -}
-          <*> arbitrary {- pp_a0 -}
-          <*> arbitrary {- pp_nOpt -}
+  arbitrary =
+    FreeVars
+      <$> arbitrary {- b -}
+      <*> arbitrary {- delegs -}
+      <*> arbitrary {- stake -}
+      <*> arbitrary {- addrsRew -}
+      <*> arbitrary {- totalStake -}
+      <*> arbitrary {- activeStake -}
+      <*> arbitrary {- asc -}
+      <*> arbitrary {- totalBlocks -}
+      <*> arbitrary {- r -}
+      <*> (EpochSize <$> arbitrary {- slotsPerEpoch -})
+      <*> arbitrary {- pp_d -}
+      <*> arbitrary {- pp_a0 -}
+      <*> arbitrary {- pp_nOpt -}
 
 instance
   Mock crypto =>
   Arbitrary (Pulser crypto)
   where
-  arbitrary =  RSLP  <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
