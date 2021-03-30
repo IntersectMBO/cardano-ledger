@@ -21,13 +21,14 @@ module Cardano.Ledger.Alonzo
   )
 where
 
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..))
+import Cardano.Ledger.Alonzo.Data (getPlutusData,AuxiliaryData (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), PParamsUpdate, updatePParams)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (IsValidating (..), Tx, alonzoSeqTx, body', isValidating', wits')
+import Cardano.Ledger.Alonzo.TxInfo(validPlutusdata)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (..), vldt')
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
@@ -50,7 +51,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
-import Shelley.Spec.Ledger.Metadata (Metadata (..), validMetadatum)
+import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Bbody as Shelley
 import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
@@ -137,10 +138,10 @@ instance
 
 instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
-  validateAuxiliaryData (AuxiliaryData scrips plutusdata metadata) =
+  validateAuxiliaryData (AuxiliaryData metadata scrips plutusdata) =
     deepseq scrips $
-      ( all (\(Metadata d) -> all validMetadatum d) metadata
-          && all (const False) plutusdata -- TODO what do we do with plutusdata?
+      ( all validMetadatum metadata
+          && all (validPlutusdata . getPlutusData) plutusdata
       )
 
 instance CC.Crypto c => EraModule.BlockDecoding (AlonzoEra c) where

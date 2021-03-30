@@ -47,10 +47,13 @@ import Cardano.Ledger.Pretty
     ppInteger,
     ppList,
     ppLong,
-    ppMetadata,
     ppPair,
     ppSet,
     ppSexp,
+    ppStrictSeq,
+    ppMap,
+    ppWord64,
+    ppMetadatum,
   )
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
@@ -60,13 +63,16 @@ import Cardano.Ledger.SafeHash
   )
 import Data.Coders
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
+import Data.Word (Word64)
+import Data.Map(Map)
 import GHC.Generics (Generic)
 -- import Plutus.V1.Ledger.Scripts-- Supply the HasField and Validate instances for Alonzo
 import qualified Language.PlutusTx as Plutus
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
-import Shelley.Spec.Ledger.Metadata (Metadata)
+import Shelley.Spec.Ledger.Metadata (Metadatum)
 
 -- =====================================================================
 -- Plutus.Data is the type that Plutus expects as data.
@@ -133,9 +139,10 @@ hashData d = hashAnnotated d
 -- Version without serialized bytes
 
 data AuxiliaryDataRaw era = AuxiliaryDataRaw
-  { scripts' :: Set (Core.Script era),
-    dats' :: Set (Data era),
-    txMD' :: Set (Metadata era)
+  { txMD' :: !(Map Word64 Metadatum),
+    scripts' :: !(StrictSeq (Core.Script era)),
+    dats' :: !(Set (Data era))
+
   }
   deriving (Generic)
 
@@ -157,15 +164,15 @@ instance
 
 encodeRaw ::
   (ToCBOR (Core.Script era), Typeable era) =>
-  Set (Core.Script era) ->
+  Map Word64 Metadatum ->
+  StrictSeq (Core.Script era) ->
   Set (Data era) ->
-  Set (Metadata era) ->
   Encode ('Closed 'Dense) (AuxiliaryDataRaw era)
-encodeRaw s d m =
+encodeRaw m s d =
   ( Rec AuxiliaryDataRaw
-      !> setEncode s
+      !> mapEncode m
+      !> E encodeFoldable s
       !> setEncode d
-      !> setEncode m
   )
 
 instance
@@ -178,8 +185,8 @@ instance
   fromCBOR =
     decode
       ( Ann (RecD AuxiliaryDataRaw)
-          <*! setDecodeA From
-          <*! setDecodeA From
+          <*! Ann mapDecode
+          <*! D (sequence <$> decodeStrictSeq fromCBOR)
           <*! setDecodeA From
       )
 
@@ -208,17 +215,17 @@ deriving via
 
 pattern AuxiliaryData ::
   (Era era, ToCBOR (Core.Script era), Ord (Core.Script era)) =>
-  Set (Core.Script era) ->
+  Map Word64 Metadatum ->
+  StrictSeq (Core.Script era) ->
   Set (Data era) ->
-  Set (Metadata era) ->
   AuxiliaryData era
-pattern AuxiliaryData {scripts, dats, txMD} <-
-  AuxiliaryDataConstr (Memo (AuxiliaryDataRaw scripts dats txMD) _)
+pattern AuxiliaryData {txMD, scripts, dats} <-
+  AuxiliaryDataConstr (Memo (AuxiliaryDataRaw txMD scripts dats) _)
   where
-    AuxiliaryData s d m =
+    AuxiliaryData m s d =
       AuxiliaryDataConstr
         ( memoBytes
-            (encodeRaw s d m)
+            (encodeRaw m s d)
         )
 
 {-# COMPLETE AuxiliaryData #-}
@@ -240,7 +247,7 @@ ppData (DataConstr (Memo x _)) = ppSexp "Data" [ppPlutusData x]
 instance PrettyA (Data era) where prettyA = ppData
 
 ppAuxiliaryData :: (PrettyA (Core.Script era)) => AuxiliaryData era -> PDoc
-ppAuxiliaryData (AuxiliaryDataConstr (Memo (AuxiliaryDataRaw s d m) _)) =
-  ppSexp "AuxiliaryData" [ppSet prettyA s, ppSet ppData d, ppSet ppMetadata m]
+ppAuxiliaryData (AuxiliaryDataConstr (Memo (AuxiliaryDataRaw m s d) _)) =
+  ppSexp "AuxiliaryData" [ppMap ppWord64 ppMetadatum m, ppStrictSeq prettyA s, ppSet ppData d]
 
 instance (PrettyA (Core.Script era)) => PrettyA (AuxiliaryData era) where prettyA = ppAuxiliaryData

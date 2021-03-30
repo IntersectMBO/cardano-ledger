@@ -49,8 +49,8 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import Data.ByteString as BS (ByteString)
-import Data.ByteString.Short as SBS (ShortByteString, fromShort)
+import Data.ByteString as BS (ByteString, length)
+import Data.ByteString.Short as SBS (ShortByteString,fromShort, toShort)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
@@ -90,6 +90,8 @@ import Shelley.Spec.Ledger.TxBody
     WitVKey (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import qualified Flat as Flat (unflat)
+import qualified Data.ByteString.Short as Short (ShortByteString, fromShort)
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
@@ -333,3 +335,20 @@ runPLCScript cost scriptbytestring units ds =
     ds of
     (_, Left _) -> False
     (_, Right ()) -> True
+
+
+validPlutusdata :: P.Data -> Bool
+validPlutusdata (P.Constr _n ds) = all validPlutusdata ds
+validPlutusdata (P.Map ds) =
+   all (\ (x,y) -> validPlutusdata x && validPlutusdata y) ds
+validPlutusdata (P.List ds) = all validPlutusdata ds
+validPlutusdata (P.I _n) = True
+validPlutusdata (P.B bs) = BS.length bs <= 64
+
+
+-- | A ByteString represents a valid P.Script if it can be unflattened
+validPlutusScript :: Short.ShortByteString -> Bool
+validPlutusScript flatBytes =
+  case Flat.unflat (Short.fromShort flatBytes) of
+    Right (_x :: P.Script) -> True
+    Left _err -> False
