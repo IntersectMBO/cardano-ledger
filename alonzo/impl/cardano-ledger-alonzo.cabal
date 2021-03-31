@@ -104,7 +104,6 @@ test-suite tests
     bytestring,
     cardano-binary,
     cardano-ledger-alonzo,
-    cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     QuickCheck,
     shelley-spec-ledger,

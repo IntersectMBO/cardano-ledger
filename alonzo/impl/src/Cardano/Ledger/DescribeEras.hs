@@ -34,7 +34,8 @@ type DescribesShelley era =
     Core.Script era ~ Shelley.Script era,
     Core.AuxiliaryData era ~ Shelley.AuxiliaryData era,
     Core.PParams era ~ Shelley.PParams era,
-    Core.Tx era ~ Shelley.Tx era
+    Core.Tx era ~ Shelley.Tx era,
+    Core.PParamsDelta era ~ Shelley.PParamsDelta era
   )
 
 type DescribesAllegra era =
@@ -45,7 +46,8 @@ type DescribesAllegra era =
     Core.Script era ~ Allegra.Script era,
     Core.AuxiliaryData era ~ Allegra.AuxiliaryData era,
     Core.PParams era ~ Shelley.PParams era,
-    Core.Tx era ~ Shelley.Tx era
+    Core.Tx era ~ Shelley.Tx era,
+    Core.PParamsDelta era ~ Shelley.PParamsDelta era
   )
 
 type DescribesMary era =
@@ -56,7 +58,8 @@ type DescribesMary era =
     Core.Script era ~ Allegra.Script era,
     Core.AuxiliaryData era ~ Allegra.AuxiliaryData era,
     Core.PParams era ~ Shelley.PParams era,
-    Core.Tx era ~ Shelley.Tx era
+    Core.Tx era ~ Shelley.Tx era,
+    Core.PParamsDelta era ~ Shelley.PParamsDelta era
   )
 
 type DescribesAlonzo era =
@@ -67,7 +70,8 @@ type DescribesAlonzo era =
     Core.Script era ~ Alonzo.Script era,
     Core.AuxiliaryData era ~ Alonzo.AuxiliaryData era,
     Core.PParams era ~ Alonzo.PParams era,
-    Core.Tx era ~ Alonzo.Tx era
+    Core.Tx era ~ Alonzo.Tx era,
+    Core.PParamsDelta era ~ Alonzo.PParamsDelta era
   )
 
 -- | If an instance for this class compiles, then era meets whatever superclass its given.
