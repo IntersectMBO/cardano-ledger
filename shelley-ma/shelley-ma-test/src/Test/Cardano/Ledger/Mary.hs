@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import Cardano.Ledger.ShelleyMA.TxBody (StrictMaybe, TxBody (..))
+import Cardano.Ledger.ShelleyMA.TxBody (StrictMaybe, TxBody (TxBody))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import qualified Data.ByteString.Char8 as BS
