@@ -26,7 +26,7 @@ import qualified Cardano.Ledger.Alonzo.FakePlutus as P
     TxInfo (..),
     TxOut (..),
   )
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..))
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( certs',
@@ -49,12 +49,15 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import Data.ByteString as BS (ByteString)
+import Control.DeepSeq (deepseq)
+import Data.ByteString as BS (ByteString, length)
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
+import qualified Data.ByteString.Short as Short (ShortByteString, fromShort)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import qualified Flat as Flat (unflat)
 import GHC.Records (HasField (..))
 import qualified Language.PlutusCore.Evaluation.Machine.ExMemory as P (ExCPU (..), ExMemory (..))
 import qualified Language.PlutusTx as P (Data (..))
@@ -68,7 +71,7 @@ import qualified Plutus.V1.Ledger.Interval as P
     LowerBound (..),
     UpperBound (..),
   )
-import qualified Plutus.V1.Ledger.Scripts as P (Datum (..), DatumHash (..), ValidatorHash (..))
+import qualified Plutus.V1.Ledger.Scripts as P (Datum (..), DatumHash (..), Script (..), ValidatorHash (..))
 import qualified Plutus.V1.Ledger.Slot as P (SlotRange)
 import qualified Plutus.V1.Ledger.Tx as P (TxOutRef (..))
 import qualified Plutus.V1.Ledger.TxId as P (TxId (..))
@@ -333,3 +336,26 @@ runPLCScript cost scriptbytestring units ds =
     ds of
     (_, Left _) -> False
     (_, Right ()) -> True
+
+validPlutusdata :: P.Data -> Bool
+validPlutusdata (P.Constr _n ds) = all validPlutusdata ds
+validPlutusdata (P.Map ds) =
+  all (\(x, y) -> validPlutusdata x && validPlutusdata y) ds
+validPlutusdata (P.List ds) = all validPlutusdata ds
+validPlutusdata (P.I _n) = True
+validPlutusdata (P.B bs) = BS.length bs <= 64
+
+-- | A ByteString represents a valid P.Script if it can be unflattened
+validPlutusScript :: Short.ShortByteString -> Bool
+validPlutusScript flatBytes =
+  case Flat.unflat (Short.fromShort flatBytes) of
+    Right (_x :: P.Script) -> True
+    Left _err -> False
+
+-- | Test that every Alonzo script represents a real Script.
+--     Run deepseq to see that there are no infinite computations and that
+--     every Plutus Script unflattens into a real P.Script
+validScript :: Era era => Script era -> Bool
+validScript scrip = deepseq scrip $ case scrip of
+  TimelockScript _ -> True
+  PlutusScript bytes -> validPlutusScript bytes

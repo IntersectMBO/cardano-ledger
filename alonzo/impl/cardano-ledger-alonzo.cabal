@@ -47,6 +47,7 @@ library
     Cardano.Ledger.Alonzo.TxBody
     Cardano.Ledger.Alonzo.TxInfo
     Cardano.Ledger.Alonzo.TxWitness
+    Cardano.Ledger.DescribeEras
   build-depends:
     bytestring,
     cardano-binary,
@@ -58,6 +59,7 @@ library
     containers,
     data-default,
     deepseq,
+    flat,
     nothunks,
     plutus-ledger-api,
     plutus-tx,
@@ -103,7 +105,6 @@ test-suite tests
     bytestring,
     cardano-binary,
     cardano-ledger-alonzo,
-    cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     QuickCheck,
     shelley-spec-ledger,
