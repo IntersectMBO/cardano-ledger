@@ -70,7 +70,7 @@ instance ToCBOR CompactRedeemVerificationKey where
 
 instance FromCBOR CompactRedeemVerificationKey where
   fromCBOR = do
-    enforceSize "CompactRedeemVerificationKey" 1
+    enforceSize "CompactRedeemVerificationKey" 4
     CompactRedeemVerificationKey
       <$> fromCBOR @Word64
       <*> fromCBOR @Word64

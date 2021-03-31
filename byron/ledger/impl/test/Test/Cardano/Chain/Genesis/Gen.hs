@@ -3,6 +3,7 @@ module Test.Cardano.Chain.Genesis.Gen
   , genCanonicalGenesisDelegation
   , genGenesisData
   , genGenesisHash
+  , genConfig
   , genFakeAvvmOptions
   , genGenesisAvvmBalances
   , genGenesisDelegation
@@ -29,7 +30,8 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Common (BlockCount(..))
 import Cardano.Chain.Genesis
-  ( FakeAvvmOptions(..)
+  ( Config(..)
+  , FakeAvvmOptions(..)
   , GenesisAvvmBalances(..)
   , GenesisData(..)
   , GenesisDelegation(..)
@@ -56,8 +58,17 @@ import Test.Cardano.Crypto.Gen
   ( genProtocolMagic
   , genProtocolMagicId
   , genCompactRedeemVerificationKey
-  , genTextHash
+  , genTextHash, genRequiresNetworkMagic
   )
+import Test.Cardano.Chain.UTxO.Gen (genUTxOConfiguration)
+
+genConfig :: ProtocolMagicId -> Gen Config
+genConfig pm =
+  Config
+    <$> genGenesisData pm
+    <*> genGenesisHash
+    <*> genRequiresNetworkMagic
+    <*> genUTxOConfiguration
 
 genCanonicalGenesisData :: ProtocolMagicId -> Gen GenesisData
 genCanonicalGenesisData pm =

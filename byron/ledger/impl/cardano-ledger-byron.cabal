@@ -221,6 +221,7 @@ test-suite cardano-ledger-byron-test
 
                        Test.Cardano.Chain.Epoch.File
 
+                       Test.Cardano.Chain.Genesis.CBOR
                        Test.Cardano.Chain.Genesis.Dummy
                        Test.Cardano.Chain.Genesis.Example
                        Test.Cardano.Chain.Genesis.Gen
