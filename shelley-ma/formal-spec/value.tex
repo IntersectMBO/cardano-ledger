@@ -35,29 +35,37 @@ fees, rewards, treasury, and the proof of stake protocol.
   %
   \begin{align*}
     \mathsf{adaPolicy} \in& ~\PolicyID & \text{Ada Policy ID} \\
-    \mathsf{adaName} \in& ~\AssetName & \text{Ada Asset Name}
+    \mathsf{adaName} \in& ~\AssetName & \text{Ada Asset Name} \\
+    \mathsf{size} \in& ~\Value\to\MemoryEstimate & \text{the size of a Value}
   \end{align*}
   \emph{Helper Functions}
   %
   \begin{align*}
-    & \fun{coinToValue} \in \Coin\to \Value \\
-    & \fun{coinToValue}~c = \lambda~\var{pid}~\var{aname}.
+    & \fun{inject} \in \Coin\to \Value \\
+    & \fun{inject}~c = \lambda~\var{pid}~\var{aname}.
       \begin{cases}
         c & \var{pid} = \mathsf{adaPolicy}~\text{and}~\var{aname} = \mathsf{adaName} \\
         0 & \text{otherwise}
       \end{cases}
     \nextdef
-    & \fun{valueToCoin} \in \Value \to \Coin \\
-    & \fun{valueToCoin}~v = v~\mathsf{adaPolicy}~\mathsf{adaName}
+    & \fun{coin} \in \Value \to \Coin \\
+    & \fun{coin}~v = v~\mathsf{adaPolicy}~\mathsf{adaName}
+    \nextdef \fun{inject} \circ \fun{coin}
+    & \fun{adaOnly} \in \Value \to \Bool \\
+    & \fun{adaOnly}~v =
+      \begin{cases}
+        \True & \fun{inject} \circ \fun{coin} = \fun{id}_{\Value} \\
+        \False & \text{otherwise}
+      \end{cases}
   \end{align*}
   \caption{Type Definitions and auxiliary functions for Value}
   \label{fig:defs:value}
 \end{figure*}
 
 \subsection*{Representing Multi-asset Types and Values}
-An \emph{Asset} comprises a set of different \emph{Asset Classes}, each of which has
-a unique identifier, $\AssetName$. We will refer to a pair of a $\PolicyID$ and an
+We will refer to a pair of a $\PolicyID$ and an
 $\AssetName$ as an $\AssetID$. The $\AssetID$ for Ada is $(\mathsf{adaPolicy}, \mathsf{adaName})$.
+This is symbolic only, no actual minting policy for Ada exists.
 
 The set of tokens that are referred to by the underlying monetary
 policy represents the coinage that the asset supports. A multi-asset
@@ -89,8 +97,23 @@ $\PolicyID$ and $\AssetName$ to $\Quantity$.
     It is not possible to mint any token with the $\PolicyID$ $\mathsf{adaPolicy}$, which means that every
     token in the UTxO belonging to $\mathsf{adaPolicy}$ will have $\AssetName$ $\mathsf{adaName}$.
 
-  \item $\fun{coinToValue}$ and $\fun{valueToCoin}$ convert between the two types,
-  by taking a $\Coin$ to a $\Value$ that only contains Ada, and extracting the amount of Ada from a $\Value$ respectively.
+  \item $\mathsf{size}$ returns the size (in units of memory, eg. bytes or words) of a $\Value$.
+  We give this function, alongside implementation-specific constants we have used in it in Section \ref{sec:value-size}.
+
+  \item $\fun{inject}$ and $\fun{coin}$ convert between the two types,
+  by building a $\Value$ that only contains Ada given by the input, and extracting
+  the amount of Ada as (a $\Coin$) from a $\Value$ respectively.
+  Note that composed as
+
+  \[\fun{coin} \circ \fun{inject} = \fun{id}_{\Coin}\]
+
+  these functions give the identity on $\Coin$, but composed in the opposite order as
+
+  \[\fun{inject} \circ \fun{coin}\]
+
+  they return a $\Value$ containing only the Ada tokens contained in the original $\Value$.
+
+  \item $\fun{adaOnly}$ returns $\True$ if a given $\Value$ contains only Ada.
 \end{itemize}
 
 \subsection*{Value Operations and Partial Order}

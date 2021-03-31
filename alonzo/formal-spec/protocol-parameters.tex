@@ -86,10 +86,9 @@ used to limit the total per-transaction and per-block resource use. These only a
 The parameters are used to ensure that the time and memory that are required to verify a block are bounded.
 
 \textbf{Value size limit as a protocol parameter.}
-The new parameter $\var{maxValPerc}$ replaces the constant $\mathsf{MaxValPerc}$
+The new parameter $\var{maxValSize}$ replaces the constant $\mathsf{maxValSize}$
 used (in the ShelleyMA era) to limit the size of the the $\Value$ part of an output in a
 serialised transaction.
-It is expressed as a percentage, and therefore should not be set to be $>~100$.
 
 \begin{figure*}[htb]
   \emph{Abstract types}
@@ -141,8 +140,8 @@ It is expressed as a percentage, and therefore should not be set to be $>~100$.
         % & \text{Max. total tx script exec. resources}\\
         \var{maxBlockExUnits} \mapsto \ExUnits & \PParams \\
         % & \text{Max. total block script exec. resources}\\
-        \var{maxValPerc} \mapsto \N & \PParams \\
-        % & \text{Max perc. of total tx size a value can be}\\
+        \var{maxValSize} \mapsto \N & \PParams \\
+        % & \text{Max size a value can be}\\
         \var{adaPerUTxOWord} \mapsto \Coin & \PParams \\
         % & \text{Min. ada per word (8 bytes) a UTxO entry must contain}
       \end{array}
