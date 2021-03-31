@@ -195,11 +195,13 @@ instance Arbitrary (PParams era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary (PParamsUpdate era) where
   arbitrary =
     PParams
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

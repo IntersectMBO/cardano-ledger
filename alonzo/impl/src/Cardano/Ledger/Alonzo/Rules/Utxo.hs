@@ -36,10 +36,10 @@ import qualified Cardano.Ledger.Mary.Value as Alonzo (Value)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams,
   )
-import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed, scaledMinDeposit)
+import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), inInterval)
-import Cardano.Ledger.Val (coin, (<×>))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Prelude (HeapWords (..))
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (⊆), (◁), (➖))
 import Control.Monad.Trans.Reader (asks)
@@ -64,7 +64,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Int (Int64)
 import GHC.Records
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
@@ -78,6 +77,7 @@ import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
   ( Network,
     ShelleyBase,
+    StrictMaybe (..),
     networkId,
   )
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
@@ -92,19 +92,43 @@ import Shelley.Spec.Ledger.UTxO
     unUTxO,
   )
 
--- | Compute an estimate of the size of storing one UTxO entry.
---
--- We need to estimate the size of storing 1 extra entry in the UTxO
--- @type UTxO = Map (TxIn (Crypto era)) (TxOut era)@
--- TxIn = (SafeHash,Word64), so sizeTxIn = sizeSafeHash + 8 bytes
--- So one extra entry adds ( sizeSafeHash + 8 + sizeTxOut + mapOverhead )
--- All this is computed by outputSize. Remember this is an estimate that
--- just needs to be proportional to the actual size.
-outputSize :: Era era => TxOut era -> Int64
-outputSize txout = sizeSafeHash + 8 + BSL.length (serialize txout) + mapOverhead
+-- Size of the datum hash attached to the output (could be Nothing)
+datHashSize :: TxOut era -> Integer
+datHashSize out = error "need heapwords instance"
   where
-    sizeSafeHash = 36
-    mapOverhead = 14
+    _ = getField @"datahash" out
+
+-- | Compute an estimate of the size of storing one UTxO entry.
+-- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
+utxoEntrySize :: Era era => TxOut era -> Integer
+utxoEntrySize txout
+  | Val.adaOnly v =
+    -- no non-ada assets, no hash datum case
+    case dh of
+      SNothing -> adaOnlyUTxOSize
+      _ -> adaOnlyUTxOSize + datHashSize txout
+  -- add the size of Value and the size of datum hash (if present) to base UTxO size
+  -- max function is a safeguard (in case calculation returns a smaller size than an ada-only entry)
+  | otherwise = max adaOnlyUTxOSize (utxoEntrySizeWithoutVal + Val.size v + datHashSize txout)
+  where
+    v = getField @"value" txout
+    dh = getField @"datahash" txout
+    -- lengths obtained from tracing on HeapWords of inputs and outputs
+    -- obtained experimentally, and number used here
+    -- units are Word64s
+    txoutLenNoVal = 14
+    txinLen = 7
+
+    -- unpacked CompactCoin Word64 size in Word64s
+    coinSize :: Integer
+    coinSize = fromIntegral $ heapWords (CompactCoin 0)
+
+    -- size of UTxO entry excluding the Value part
+    utxoEntrySizeWithoutVal :: Integer
+    utxoEntrySizeWithoutVal = 6 + txoutLenNoVal + txinLen
+
+    -- size of commont UTxO with only ada and no datum
+    adaOnlyUTxOSize = utxoEntrySizeWithoutVal + coinSize
 
 -- ============================================
 
@@ -261,11 +285,11 @@ utxoTransition ::
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_minUTxOValue" (Core.PParams era) Coin,
     HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_adaPerUTxOByte" (Core.PParams era) Coin,
+    HasField "_maxValSize" (Core.PParams era) Natural,
     -- We fix Core.Tx, Core.Value, Core.TxBody, and Core.TxOut
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Alonzo.Value (Crypto era),
@@ -297,11 +321,16 @@ utxoTransition = do
   -- the check `adaPolicy ∉ supp mint tx` in the spec.
   Val.coin (getField @"mint" txb) == Val.zero ?! TriesToForgeADA
 
+  -- use serialized length of Value because this Value size is being limited inside a serialized Tx
   let outputs = Map.elems $ unUTxO (txouts @era txb)
-      ok out =
-        coin (getField @"value" out)
-          >= (outputSize out <×> getField @"_adaPerUTxOByte" pp)
-      outputsTooBig = filter (not . ok) outputs
+      maxValSize = getField @"_maxValSize" pp
+      outputsTooBig =
+        filter
+          ( \out ->
+              let v = getField @"value" out
+               in (fromIntegral . BSL.length . serialize) v > maxValSize
+          )
+          outputs
   null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
 
   ni <- liftSTS $ asks networkId
@@ -319,10 +348,8 @@ utxoTransition = do
       ni
       (Set.fromList wdrlsWrongNetwork)
 
-  -- TODO remove this?
-  -- It does not appear in the Alonzo specification. SHOULD IT STAY?
-  -- TooSmallness is always denominated in Coin, so why are we using Val.pointwise?
-  let minUTxOValue = getField @"_minUTxOValue" pp
+  -- pointwise is used because non-ada amounts must be >= 0 too
+  let (Coin adaPerUTxOByte) = getField @"_adaPerUTxOByte" pp
       outputsTooSmall =
         filter
           ( \out ->
@@ -331,7 +358,7 @@ utxoTransition = do
                     Val.pointwise
                       (>=)
                       v
-                      (Val.inject $ scaledMinDeposit v minUTxOValue)
+                      (Val.inject $ Coin (utxoEntrySize out * adaPerUTxOByte))
           )
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
@@ -377,11 +404,12 @@ instance
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_minUTxOValue" (Core.PParams era) Coin,
+    HasField "_adaPerUTxOByte" (Core.PParams era) Coin,
     HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_adaPerUTxOByte" (Core.PParams era) Coin,
+    HasField "_maxValSize" (Core.PParams era) Natural,
     -- We fix Core.Value, Core.TxBody, and Core.TxOut
     Core.Value era ~ Alonzo.Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
