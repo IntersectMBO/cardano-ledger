@@ -522,10 +522,10 @@ UTXOS rule.
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
       \forall txout \in \txouts{txb}, \\
-      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp})} \\~
+      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp)} \\~
       \\
       \forall txout \in \txouts{txb},\\
-      \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ (\fun{maxTxSize}~pp) * (\fun{maxValSize}~pp) \\~
+      \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ (\fun{maxTxSize}~pp) * (\fun{maxValSize}~pp)} \\~
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
       \\
@@ -649,6 +649,15 @@ We have made the following changes and additions to the UTXOW preconditions:
     The hash of the subset of protocol parameter values that have been included in the transaction body is the same as
     the hash of the same subset of protocol parameters that are currently contained in the ledger;
 
+    \item A check that ensures that the list of scripts paired with their input data (context, datum and redeemer)
+    has the same number of elements as the set of scripts needed for each script purpose. Note that the same
+    script may appear more than once in both the list and the set, as it can be used for different purposes, and therefore
+    run separately for each, with different input data. Note also that by construction, the output of
+    the $\fun{collectNNScriptInputs}$ function should have exactly the same collection of scripts as
+    the $\fun{scriptsNeeded}$ function output - this check is in place to catch discrepancies in this construction.
+    \begin{note}
+      Note that $\fun{collectNNScriptInputs}$ is called twice, here and in UTXO. We need to avoid this.
+    \end{note}
 \end{itemize}
 
 If these conditions are all satisfied, then the resulting UTxO state change is fully determined
@@ -708,6 +717,8 @@ by the UTXO transition (the application of which is also part of the conditions)
       (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
       \hldiff{\fun{wppHash}~{txb}~=~\fun{hashWitnessPPData}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})}
+      \\~\\
+      \hldiff{\|~\fun{scriptsNeeded}~\var{utxo}~\var{tx}~\|~=~\|~\fun{collectNNScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo}~\|}
       \\~\\
       {
         \begin{array}{r}
