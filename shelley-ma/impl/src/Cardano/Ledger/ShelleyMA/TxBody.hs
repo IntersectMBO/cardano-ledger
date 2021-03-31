@@ -2,11 +2,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -18,10 +16,22 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.ShelleyMA.TxBody
-  ( TxBody (TxBody, TxBodyConstr),
+  ( TxBody
+      ( TxBody,
+        TxBodyConstr,
+        TxBody',
+        adHash',
+        certs',
+        inputs',
+        mint',
+        outputs',
+        txfee',
+        update',
+        vldt',
+        wdrls'
+      ),
     TxBodyRaw (..),
     FamsFrom,
     FamsTo,
@@ -284,7 +294,7 @@ instance (c ~ Crypto era, Era era) => HashAnnotated (TxBody era) EraIndependentT
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
 pattern TxBody ::
-  (Val (Value era), FamsTo era) =>
+  FamsTo era =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
@@ -295,14 +305,52 @@ pattern TxBody ::
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Value era ->
   TxBody era
-pattern TxBody i o d w fee vi u m mint <-
-  TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)
+pattern TxBody inputs outputs certs wdrls txfee vldt update adHash mint <-
+  TxBodyConstr
+    ( Memo
+        TxBodyRaw {inputs, outputs, certs, wdrls, txfee, vldt, update, adHash, mint}
+        _
+      )
   where
-    TxBody i o d w fee vi u m mint =
+    TxBody inputs outputs certs wdrls txfee vldt update adHash mint =
       TxBodyConstr $
-        memoBytes $ txSparse (TxBodyRaw i o d w fee vi u m mint)
+        memoBytes $
+          txSparse
+            TxBodyRaw {inputs, outputs, certs, wdrls, txfee, vldt, update, adHash, mint}
 
 {-# COMPLETE TxBody #-}
+
+-- | This pattern is for deconstruction only but accompanied with fields and
+-- projection functions.
+pattern TxBody' ::
+  Set (TxIn (Crypto era)) ->
+  StrictSeq (TxOut era) ->
+  StrictSeq (DCert (Crypto era)) ->
+  Wdrl (Crypto era) ->
+  Coin ->
+  ValidityInterval ->
+  StrictMaybe (Update era) ->
+  StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  Value era ->
+  TxBody era
+pattern TxBody' {inputs', outputs', certs', wdrls', txfee', vldt', update', adHash', mint'} <-
+  TxBodyConstr
+    ( Memo
+        TxBodyRaw
+          { inputs = inputs',
+            outputs = outputs',
+            certs = certs',
+            wdrls = wdrls',
+            txfee = txfee',
+            vldt = vldt',
+            update = update',
+            adHash = adHash',
+            mint = mint'
+          }
+        _
+      )
+
+{-# COMPLETE TxBody' #-}
 
 -- ==================================================================
 -- Promote the fields of TxBodyRaw to be fields of TxBody. Either
