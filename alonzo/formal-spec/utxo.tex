@@ -164,10 +164,10 @@ predict the exact time to which it refers.
   is required because different languages have different expectations of the
   format and contents of the summary $\Data$ term.
   It has a $\UTxO$ as its argument to recover the full information of the inputs of the transaction,
-  but only the inputs of the transaction are provided to scripts.
+  but only the inputs of the transaction are provided to scripts. For details, see~\ref{sec:txinfo}
 
 \item
-  $\fun{valContext}$ constructs the \emph{validation context}. A validation context is 
+  $\fun{valContext}$ constructs the \emph{validation context}. A validation context is
   a $\Data$ term which encodes both the summary of the transaction and ledger information
   (this is supplied by the $\fun{txInfo}$ summarization function), and the script purpose.
 
