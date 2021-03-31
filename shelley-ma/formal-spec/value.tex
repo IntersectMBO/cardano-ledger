@@ -41,15 +41,22 @@ fees, rewards, treasury, and the proof of stake protocol.
   \emph{Helper Functions}
   %
   \begin{align*}
-    & \fun{coinToValue} \in \Coin\to \Value \\
-    & \fun{coinToValue}~c = \lambda~\var{pid}~\var{aname}.
+    & \fun{inject} \in \Coin\to \Value \\
+    & \fun{inject}~c = \lambda~\var{pid}~\var{aname}.
       \begin{cases}
         c & \var{pid} = \mathsf{adaPolicy}~\text{and}~\var{aname} = \mathsf{adaName} \\
         0 & \text{otherwise}
       \end{cases}
     \nextdef
-    & \fun{valueToCoin} \in \Value \to \Coin \\
-    & \fun{valueToCoin}~v = v~\mathsf{adaPolicy}~\mathsf{adaName}
+    & \fun{coin} \in \Value \to \Coin \\
+    & \fun{coin}~v = v~\mathsf{adaPolicy}~\mathsf{adaName}
+    \nextdef \fun{inject} \circ \fun{coin}
+    & \fun{adaOnly} \in \Value \to \Bool \\
+    & \fun{adaOnly}~v =
+      \begin{cases}
+        \True & \fun{inject} \circ \fun{coin} = \fun{id}_{\Value} \\
+        \False & \text{otherwise}
+      \end{cases}
   \end{align*}
   \caption{Type Definitions and auxiliary functions for Value}
   \label{fig:defs:value}
@@ -93,8 +100,20 @@ $\PolicyID$ and $\AssetName$ to $\Quantity$.
   \item $\mathsf{size}$ returns the size (in units of memory, eg. bytes or words) of a $\Value$.
   We give this function, alongside implementation-specific constants we have used in it in Section \ref{sec:value-size}.
 
-  \item $\fun{coinToValue}$ and $\fun{valueToCoin}$ convert between the two types,
-  by taking a $\Coin$ to a $\Value$ that only contains Ada, and extracting the amount of Ada from a $\Value$ respectively.
+  \item $\fun{inject}$ and $\fun{coin}$ convert between the two types,
+  by building a $\Value$ that only contains Ada given by the input, and extracting
+  the amount of Ada as (a $\Coin$) from a $\Value$ respectively.
+  Note that composed as
+
+  \[\fun{coin} \circ \fun{inject} = \fun{id}_{\Coin}\]
+
+  these functions give the identity on $\Coin$, but composed in the opposite order as
+
+  \[\fun{inject} \circ \fun{coin}\]
+
+  they return a $\Value$ containing only the Ada tokens contained in the original $\Value$.
+
+  \item $\fun{adaOnly}$ returns $\True$ if a given $\Value$ contains only Ada.
 \end{itemize}
 
 \subsection*{Value Operations and Partial Order}

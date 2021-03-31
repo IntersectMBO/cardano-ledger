@@ -18,9 +18,9 @@
     & \fun{feesOK} \in \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo~= \\
     &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{totExunits}~tx \neq (0, 0) \Rightarrow \\
-    &~~~~~~(\forall (a, \wcard, \_) \in \fun{range}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo}), \neg \fun{isNonNativeScriptAddress}~tx~a) \\
-    &~~~~~~\wedge~ \var{balance} \in \Coin \\
-    &~~~~~~      \wedge~ \var{balance} \geq \txfee{txb}) \\
+    &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo}), \neg \fun{isNonNativeScriptAddress}~tx~a) \\
+    &~~~~~~\wedge~ \fun{adaOnly}~\var{balance} \\
+    &~~~~~~      \wedge~ \var{balance} \geq \txfee{txb})) \\
     &~~      \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
     & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo})
@@ -493,9 +493,10 @@ This rule has the following changes:
   $\fun{utxoEntrySize}$ calculation is defined differently than for ShelleyMA
   (see Section~\ref{sec:value-size})
 
-  \item $\fun{maxValPerc}$ is now also a protocol parameter (not a constant).
-  It represents a percentage (not a size in bytes) of the total transaction
-  size that the size of a $\Value$ in an output can be.
+  \item $\fun{maxValSize}$ is now also a protocol parameter (not a constant).
+  It represents a size (in bytes) of the total transaction
+  size that the size of a $\Value$ in an output can be. Otherwise, this check is
+  the same as in ShelleyMA.
 
  \item The execution unit budget for a transaction is within the maximum
   permitted number of units for a transaction;
@@ -521,10 +522,10 @@ UTXOS rule.
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
       \forall txout \in \txouts{txb}, \\
-      \fun{getValue}~txout \geq \fun{coinToValue}(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp}) \\~
+      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp})} \\~
       \\
       \forall txout \in \txouts{txb},\\
-      \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ \fun{quot}~((\fun{maxTxSize}~pp) * (\fun{maxValPerc}~pp))~100} \\~
+      \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ (\fun{maxTxSize}~pp) * (\fun{maxValSize}~pp) \\~
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
       \\

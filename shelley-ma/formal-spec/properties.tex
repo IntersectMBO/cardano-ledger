@@ -10,7 +10,7 @@ The properties of this section are modifications and additions to the properties
     \Val(x \in \Value) = x
 \end{equation*}
 \begin{equation*}
-    \Val(x \in \Coin) = \fun{coinToValue}~x
+    \Val(x \in \Coin) = \fun{inject}~x
 \end{equation*}
 \begin{equation*}
     \Val((\wcard\mapsto (y \in \Value))^{*}) = \sum y
@@ -26,7 +26,7 @@ The properties of this section are modifications and additions to the properties
   \begin{equation*}
     \Val(s) + wm = \Val(s')
   \end{equation*}
-  where $wm = \fun{coinToValue} (\fun{wbalance}~(\fun{txwdrls}~{t})) + \fun{mint}~(\fun{txbody}~{t})$.
+  where $wm = \fun{inject} (\fun{wbalance}~(\fun{txwdrls}~{t})) + \fun{mint}~(\fun{txbody}~{t})$.
 \end{lemma}
 \begin{proof}
   The proof is identical to the corresponding one in the previous
@@ -75,14 +75,14 @@ transactions in a block, for which we write $\fun{mint}(b)$.
   \end{equation*}
   then
   \begin{equation*}
-    \fun{valueToCoin}(\Val(s)) = \fun{valueToCoin}(\Val(s'))
+    \fun{coin}(\Val(s)) = \fun{coin}(\Val(s'))
   \end{equation*}
 \end{theorem}
 \begin{proof}
   The hypothesis implies that for all transactions $tx$ included in
   $b$, there exist some $e_{tx}, s_{tx}$ and $s'_{tx}$ such that
   $e_{tx}\vdash s_{tx}\trans{utxo}{tx}s'_{tx}$, so
-  $\fun{valueToCoin}(\fun{mint}~tx) = 0$ for all transactions included
-  in $b$. This implies $\fun{valueToCoin}(\fun{mint}(b)) = 0$, so the
+  $\fun{coin}(\fun{mint}~tx) = 0$ for all transactions included
+  in $b$. This implies $\fun{coin}(\fun{mint}(b)) = 0$, so the
   claim follows by Lemma~\ref{thm:chain-pres-of-value}.
 \end{proof}

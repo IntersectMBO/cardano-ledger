@@ -28,7 +28,7 @@
     \end{cases}
     \nextdef
     & \fun{getCoin} \in \TxOut \to \Coin \\
-    & \fun{getCoin}~{(\wcard,~\var{out})} ~=~\fun{valueToCoin}~\var{out}
+    & \fun{getCoin}~{(\wcard,~\var{out})} ~=~\fun{coin}~\var{out}
     \nextdef
     & \fun{ubalance} \in \UTxO \to \hldiff{\Value} \\
     & \fun{ubalance} ~ utxo = \hldiff{\sum_{\wcard\mapsto\var{u}\in~\var{utxo}} \fun{getValue}~\var{u}}
@@ -39,12 +39,12 @@
     & \fun{consumed} \in \PParams \to \UTxO \to \TxBody \to \hldiff{\Value} \\
     & \consumed{pp}{utxo}{txb} = \\
     & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} ~+~ \hldiff{\fun{mint}~\var{txb}} \\
-    &~~+~\hldiff{\fun{coinToValue}}(\fun{wbalance}~(\fun{txwdrls}~{txb})~+~ \keyRefunds{pp}{txb})
+    &~~+~\hldiff{\fun{inject}}(\fun{wbalance}~(\fun{txwdrls}~{txb})~+~ \keyRefunds{pp}{txb})
     \nextdef
     & \fun{produced} \in \PParams \to \StakePools \to \TxBody \to \hldiff{\Value} \\
     & \fun{produced}~\var{pp}~\var{stpools}~\var{txb} = \\
     &~~\ubalance{(\fun{outs}~{txb})} \\
-    &~~+ \hldiff{\fun{coinToValue}}(\txfee{txb} + \totalDeposits{pp}{stpools}{(\txcerts{txb})})
+    &~~+ \hldiff{\fun{inject}}(\txfee{txb} + \totalDeposits{pp}{stpools}{(\txcerts{txb})})
   \end{align*}
   \caption{UTxO Calculations}
   \label{fig:functions:utxo}
@@ -74,7 +74,7 @@ UTxO transition system with multi-assets:
 
   \item The $\fun{consumed}$ and $\fun{produced}$ calculations are similar to their Shelley
     counterparts, with the following changes: 1) They return elements of $\Value$, which
-    the administrative fields of type $\Coin$ have to be converted to, via $\fun{coinToValue}$.
+    the administrative fields of type $\Coin$ have to be converted to, via $\fun{inject}$.
     2) $\fun{consumed}$ also contains the $\fun{mint}$ field of the transaction.
     This is explained below.
 \end{itemize}
@@ -174,7 +174,7 @@ $\Coin$.
       ~\\
       \hldiff{\forall txout \in \txouts{txb},} \\
       \hldiff{\fun{getValue}~txout \geq} \\
-      \hldiff{\fun{coinToValue}~(\fun{max}~(\var{minUTxOValue}~pp,~\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp))} \\~
+      \hldiff{\fun{inject}~(\fun{max}~(\var{minUTxOValue}~pp,~\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp))} \\~
       \\
       \hldiff{\forall txout \in \txouts{txb},} \\
       \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~\mathsf{MaxValSize}} \\~\\

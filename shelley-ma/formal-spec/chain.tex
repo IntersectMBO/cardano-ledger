@@ -73,7 +73,7 @@ UTxO that is nested deeply inside the chain state with the provided function.
   %
   \begin{align*}
       & \fun{mkUTxO} ~\in~ \ShelleyUTxO  \to \UTxO  \\
-      & \fun{mkUTxO}~\var{utxo} ~=~ \{~ \var{txin} \mapsto (a,\fun{coinToValue}~c) ~\vert~
+      & \fun{mkUTxO}~\var{utxo} ~=~ \{~ \var{txin} \mapsto (a,\fun{inject}~c) ~\vert~
       \var{txin} \mapsto \var{(a,c)}\in ~\var{utxo}~\}
       \nextdef
       & \fun{toMA} \in ~ \ShelleyChainState \to \ChainState \\

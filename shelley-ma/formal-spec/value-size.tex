@@ -61,14 +61,14 @@ The function $\fun{serSize}$, unlike the functions $\fun{size}$ and $\fun{utxoEn
 
     One reason for this design decision is that the $\fun{serSize}$ function is used constrain
     the serialized representation of the transaction (in particular, the size
-    of $\Value$ terms in outputs), whereas the min-ada requirement is about
+    of $\Value$ terms in outputs), whereas the min-Ada requirement is about
     the in-memory representation size. Moreover, a transparently-calculated size estimate
     is not necessary for limiting the size of values in outputs, since this size-bound
     check does not place any additional accounting/monetary constranits on transaction construction,
-    unlike the min-ada requirement.
+    unlike the min-Ada requirement.
 
 Figure \ref{fig:min-val-calc} gives the types of constants used in the estimation
-of the size of a UTxO entry, and the associated min-ada-value.
+of the size of a UTxO entry, and the associated min-Ada-value.
 
 \begin{figure*}[h]
   \emph{Constants}
@@ -86,13 +86,14 @@ of the size of a UTxO entry, and the associated min-ada-value.
     & \fun{size} \in \Value \to \MemoryEstimate \\
     & \fun{size}~\var{vl} ~=~
     \begin{cases}
-      k_0 & \fun{coinToValue}~(\fun{getCoin}~vl)~=~vl \\
-      k_1 + \fun{quot}~ (((\fun{numAssets}~vl) * k_2) + (\fun{sumALs}~vl) + ((\fun{numPids}~vl) * k_3) + (k_4 - 1))~k_4 & \text{otherwise} \\
+      k_0 & \fun{adaOnly}~vl~=~vl \\
+      k_1 + \lfloor~ (((\fun{numAssets}~vl) * k_2) + (\fun{sumALs}~vl) & \\
+      ~~~~~~ + ((\fun{numPids}~vl) * k_3) + (k_4 - 1)))~ /~ k_4~\rfloor & \text{otherwise} \\
     \end{cases} \\
     & \text{Calculate the size of a $\Value$}
     \nextdef
     & \fun{adaPerUTxOWord}~\in \PParams \to \Coin \\
-    & \fun{adaPerUTxOWord}~pp = \fun{quot}~ (\fun{minUTxOValue}~pp,~ \mathsf{adaOnlyUTxOSize}) \\
+    & \fun{adaPerUTxOWord}~pp = \lfloor~ (\fun{minUTxOValue}~pp~/~ \mathsf{adaOnlyUTxOSize})~ \rfloor \\
     & \text{Calculate the cost of storing a memory unit of data as a UTxO entry}
     \nextdef
     & \fun{utxoEntrySize} \in \TxOut \to \MemoryEstimate \\
@@ -104,7 +105,7 @@ of the size of a UTxO entry, and the associated min-ada-value.
 \end{figure*}
 
 The $\fun{size}$ function returns the estimated size of a $\Value$ term. It is constant in the
-case where the value contains only ada. If there are other types of tokens in the
+case where the value contains only Ada. If there are other types of tokens in the
 term, the size depends on
 
 \begin{itemize}
@@ -113,20 +114,20 @@ term, the size depends on
   \item the sum of the lengths of distinct asset names of the tokens.
 \end{itemize}
 
-The parameter $\fun{minUTxOValue}$ specifies the min-ada value for a UTxO containing
-only ada. This type of UTxO varies in size somewhat (eg. Byron style addresses
+The parameter $\fun{minUTxOValue}$ specifies the min-Ada value for a UTxO containing
+only Ada. This type of UTxO varies in size somewhat (eg. Byron style addresses
 may be a different length than Shelley ones), but we estimate the size of the most commonly
-used type of ada-only UTxO as the constant value $\mathsf{adaOnlyUTxOSize}$.
+used type of Ada-only UTxO as the constant value $\mathsf{adaOnlyUTxOSize}$.
 This constant is in fact an upper bound on UTxOs which have have only Shelley credentials.
 
 We use this size estimate
-to calculate what $\fun{minUTxOValue}$ implies to be the min-ada value requirement
+to calculate what $\fun{minUTxOValue}$ implies to be the min-Ada value requirement
 \emph{per word} of UTxO data.
 
 The function $\fun{adaPerUTxOWord}$ performs this calculation by dividing the
-min-ada value by the ada-only UTxO size.
+min-Ada value by the Ada-only UTxO size.
 
-The $\mathsf{utxoEntrySizeWithoutVal}$ is the constant representing 
+The $\mathsf{utxoEntrySizeWithoutVal}$ is the constant representing
 the size of a UTxO entry, not counting the size of the $\Value$ term it contains.
 Here, again, the actual size of a UTxO (excluding the $\Value$) can vary, but
 we use an upper bound on the size of Shelley-credential UTxOs.
