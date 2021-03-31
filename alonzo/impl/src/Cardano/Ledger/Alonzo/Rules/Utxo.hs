@@ -321,13 +321,13 @@ utxoTransition = do
   -- the check `adaPolicy ∉ supp mint tx` in the spec.
   Val.coin (getField @"mint" txb) == Val.zero ?! TriesToForgeADA
 
+  -- use serialized length of Value because this Value size is being limited inside a serialized Tx
   let outputs = Map.elems $ unUTxO (txouts @era txb)
       maxValSize = getField @"_maxValSize" pp
       outputsTooBig =
         filter
           ( \out ->
               let v = getField @"value" out
-               -- use serialized length because this Value size is being limited inside a serialized Tx
                in (fromIntegral . BSL.length . serialize) v > maxValSize
           )
           outputs
