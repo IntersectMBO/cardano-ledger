@@ -327,6 +327,7 @@ utxoTransition = do
         filter
           ( \out ->
               let v = getField @"value" out
+               -- use serialized length because this Value size is being limited inside a serialized Tx
                in (fromIntegral . BSL.length . serialize) v > maxValSize
           )
           outputs
