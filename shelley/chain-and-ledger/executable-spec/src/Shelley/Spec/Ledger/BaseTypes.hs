@@ -59,8 +59,6 @@ import Cardano.Binary
     DecoderError (..),
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
-    decodeBreakOr,
-    decodeListLenOrIndef,
     encodeListLen,
   )
 import Cardano.Crypto.Hash
@@ -68,7 +66,6 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, cborError)
 import Cardano.Slotting.EpochInfo
-import qualified Control.Monad.Fail
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Binary.Put as B
@@ -77,6 +74,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Coders (invalidKey)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
+import Data.Maybe.Strict
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (Scientific)
 import Data.Text (Text)
@@ -213,78 +211,6 @@ instance SignableRepresentation Seed where
 a ==> b = not a || b
 
 infix 1 ==>
-
--- | Strict 'Maybe'.
---
--- TODO move to @cardano-prelude@
-data StrictMaybe a
-  = SNothing
-  | SJust !a
-  deriving (Eq, Ord, Show, Generic, Functor, Foldable, Traversable)
-
-instance NoThunks a => NoThunks (StrictMaybe a)
-
-instance NFData a => NFData (StrictMaybe a)
-
-instance Applicative StrictMaybe where
-  pure = SJust
-
-  SJust f <*> m = fmap f m
-  SNothing <*> _m = SNothing
-
-  SJust _m1 *> m2 = m2
-  SNothing *> _m2 = SNothing
-
-instance Monad StrictMaybe where
-  SJust x >>= k = k x
-  SNothing >>= _ = SNothing
-
-  (>>) = (*>)
-
-  return = SJust
-
-instance Control.Monad.Fail.MonadFail StrictMaybe where
-  fail _ = SNothing
-
-instance ToCBOR a => ToCBOR (StrictMaybe a) where
-  toCBOR SNothing = encodeListLen 0
-  toCBOR (SJust x) = encodeListLen 1 <> toCBOR x
-
-instance FromCBOR a => FromCBOR (StrictMaybe a) where
-  fromCBOR = do
-    maybeN <- decodeListLenOrIndef
-    case maybeN of
-      Just 0 -> pure SNothing
-      Just 1 -> SJust <$> fromCBOR
-      Just _ -> fail "too many elements in length-style decoding of StrictMaybe."
-      Nothing -> do
-        isBreak <- decodeBreakOr
-        if isBreak
-          then pure SNothing
-          else do
-            x <- fromCBOR
-            isBreak2 <- decodeBreakOr
-            if isBreak2
-              then pure (SJust x)
-              else fail "too many elements in break-style decoding of StrictMaybe."
-
-instance ToJSON a => ToJSON (StrictMaybe a) where
-  toJSON = toJSON . strictMaybeToMaybe
-
-instance FromJSON a => FromJSON (StrictMaybe a) where
-  parseJSON v = maybeToStrictMaybe <$> parseJSON v
-
-strictMaybeToMaybe :: StrictMaybe a -> Maybe a
-strictMaybeToMaybe SNothing = Nothing
-strictMaybeToMaybe (SJust x) = Just x
-
-maybeToStrictMaybe :: Maybe a -> StrictMaybe a
-maybeToStrictMaybe Nothing = SNothing
-maybeToStrictMaybe (Just x) = SJust x
-
-fromSMaybe :: a -> StrictMaybe a -> a
-fromSMaybe d SNothing = d
-fromSMaybe _ (SJust x) = x
 
 --
 -- Helper functions for text with a 64 byte bound

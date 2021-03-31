@@ -37,7 +37,6 @@ common project-config
 
 library
   import:             base, project-config
-
   exposed-modules:
     Cardano.Ledger.AuxiliaryData
     Cardano.Ledger.Compactible
@@ -144,6 +143,7 @@ library
     scientific,
     shelley-spec-non-integral,
     small-steps,
+    strict-containers,
     text,
     time,
     transformers

@@ -16,7 +16,8 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (HASH)
-import Cardano.Ledger.Era (Crypto,ValidateScript(..))
+import Cardano.Ledger.Era (Crypto, ValidateScript (..))
+import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesTxOut)
 import Cardano.Slotting.Slot (SlotNo)
 import Data.Coerce (coerce)
@@ -31,7 +32,7 @@ import Shelley.Spec.Ledger.Address (toAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.PParams (PParams, Update)
-import Shelley.Spec.Ledger.Tx( TxId (TxId) )
+import Shelley.Spec.Ledger.Tx (TxId (TxId))
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck (Gen)
@@ -44,7 +45,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.Presets (someKeyPairs)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, someScripts)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
-import Cardano.Ledger.SafeHash(unsafeMakeSafeHash)
 
 {------------------------------------------------------------------------------
  An EraGen instance makes it possible to run the Shelley property tests

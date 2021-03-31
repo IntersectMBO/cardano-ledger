@@ -25,7 +25,7 @@ import Data.Sequence.Strict (StrictSeq, fromList, fromStrict)
 import qualified Data.Sequence.Strict as SS
 import qualified Data.Text as Text
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..), UnitInterval, interval0)
+import Shelley.Spec.Ledger.BaseTypes (Network (..), UnitInterval, interval0)
 import Shelley.Spec.Ledger.Keys (KeyHash (..))
 import Shelley.Spec.Ledger.Slot (BlockNo, EpochNo)
 
@@ -94,9 +94,6 @@ instance Default (KeyHash a b) where
 
 instance Default (SS.StrictSeq t) where
   def = SS.Empty
-
-instance Default (StrictMaybe t) where
-  def = SNothing
 
 instance Default Short.ShortByteString where
   def = Short.empty

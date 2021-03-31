@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -9,13 +10,12 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE  DeriveAnyClass #-}
 
 -- | MemoBytes is an abstration for a datetype that encodes its own serialization.
 --   The idea is to use a newtype around a MemoBytes non-memoizing version.
@@ -32,6 +32,7 @@ module Data.MemoBytes
     roundTripMemo,
   )
 where
+
 import Cardano.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
@@ -39,22 +40,22 @@ import Cardano.Binary
     encodePreEncoded,
     withSlice,
   )
-import Data.ByteString.Short (ShortByteString, fromShort, toShort)
-import qualified Data.ByteString.Lazy as Lazy
-import Data.ByteString.Lazy (toStrict,fromStrict)
-import Data.Typeable
-import Data.Coders(runE, Encode, encode,)
+import Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import Codec.CBOR.Write (toLazyByteString)
 import Control.DeepSeq (NFData (..))
+import Data.ByteString.Lazy (fromStrict, toStrict)
+import qualified Data.ByteString.Lazy as Lazy
+import Data.ByteString.Short (ShortByteString, fromShort, toShort)
+import Data.Coders (Encode, encode, runE)
+import Data.Typeable
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..),AllowThunksIn(..))
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Prelude hiding (span)
-import Codec.CBOR.Read(DeserialiseFailure,deserialiseFromBytes)
 
 -- ========================================================================
 
 data MemoBytes t = Memo {memotype :: !t, memobytes :: ShortByteString}
-   deriving (NoThunks) via AllowThunksIn '["memobytes"] (MemoBytes t)
+  deriving (NoThunks) via AllowThunksIn '["memobytes"] (MemoBytes t)
 
 deriving instance NFData t => NFData (MemoBytes t)
 
@@ -90,8 +91,8 @@ printMemo x = putStrLn (showMemo x)
 memoBytes :: Encode w t -> MemoBytes t
 memoBytes t = Memo (runE t) (shorten (toLazyByteString (encode t)))
 
-roundTripMemo:: (FromCBOR t) => MemoBytes t -> Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, MemoBytes t)
+roundTripMemo :: (FromCBOR t) => MemoBytes t -> Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, MemoBytes t)
 roundTripMemo (Memo _t bytes) =
-             case deserialiseFromBytes fromCBOR (fromStrict (fromShort bytes)) of
-                Left err -> Left err
-                Right(leftover, newt) -> Right(leftover,Memo newt bytes)
+  case deserialiseFromBytes fromCBOR (fromStrict (fromShort bytes)) of
+    Left err -> Left err
+    Right (leftover, newt) -> Right (leftover, Memo newt bytes)

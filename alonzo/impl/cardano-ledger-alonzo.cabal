@@ -64,6 +64,7 @@ library
     serialise,
     shelley-spec-ledger,
     small-steps,
+    strict-containers,
     text,
     transformers
   hs-source-dirs:

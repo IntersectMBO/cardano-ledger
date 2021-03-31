@@ -109,6 +109,7 @@ library
     shelley-spec-ledger,
     small-steps-test,
     small-steps,
+    strict-containers,
     tasty-hunit,
     tasty-quickcheck,
     tasty,
@@ -204,6 +205,7 @@ test-suite shelley-spec-ledger-test
       shelley-spec-ledger,
       small-steps-test,
       small-steps,
+      strict-containers,
       tasty-hedgehog,
       tasty-hunit,
       tasty-quickcheck,
@@ -239,12 +241,12 @@ benchmark mainbench
     data-default-class,
     deepseq,
     mtl,
-    -- prettyprinter,
     QuickCheck,
     shelley-spec-ledger-test,
     shelley-spec-ledger,
     small-steps,
     small-steps-test,
+    strict-containers,
     transformers
   ghc-options:
       -threaded

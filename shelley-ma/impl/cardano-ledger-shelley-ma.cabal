@@ -67,6 +67,7 @@ library
     primitive,
     shelley-spec-ledger,
     small-steps,
+    strict-containers,
     text,
     transformers
   hs-source-dirs: src

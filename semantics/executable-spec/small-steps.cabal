@@ -57,15 +57,16 @@ library
                      , ansi-wl-pprint
                      , base >=4.11 && <5
                      , bytestring
-                     , cardano-prelude
                      , cborg
                      , containers
                      , cryptonite
                      , data-default-class
                      , deepseq
+                     , formatting
                      , free
                      , mtl
                      , nothunks
+                     , strict-containers
                      , text
                      , transformers >= 0.5
                      -- IOHK deps
