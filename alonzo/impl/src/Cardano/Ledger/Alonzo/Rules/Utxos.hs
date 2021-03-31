@@ -25,6 +25,7 @@ import Cardano.Ledger.Alonzo.Tx
     txouts,
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value)
@@ -42,7 +43,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), strictMaybeToMaybe)
-import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.LedgerState
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (Update)

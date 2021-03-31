@@ -30,10 +30,12 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto (HASH, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
-import Cardano.Ledger.SafeHash (EraIndependentTxBody, unsafeMakeSafeHash)
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (forceElemsToWHNF)
@@ -56,7 +58,6 @@ import GHC.Natural (Natural)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Serialization

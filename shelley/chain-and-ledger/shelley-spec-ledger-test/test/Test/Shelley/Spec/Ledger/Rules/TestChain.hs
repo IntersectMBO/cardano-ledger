@@ -22,6 +22,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
 where
 
 import Cardano.Binary (ToCBOR)
+import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (TransValue, UsesPParams, UsesTxOut, UsesValue)
@@ -66,7 +67,6 @@ import Shelley.Spec.Ledger.BlockChain
     bhbody,
     bheaderSlotNo,
   )
-import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.LedgerState hiding (circulation)
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)

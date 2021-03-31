@@ -17,10 +17,12 @@ import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
     ValidateAuxiliaryData (..),
   )
+import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (BlockDecoding (..), Era (Crypto), ValidateScript (..))
-import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, makeHashWithExplicitProxys)
+import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
+import Cardano.Ledger.SafeHash (makeHashWithExplicitProxys)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
     UsesTxBody,
@@ -29,7 +31,6 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import qualified Data.ByteString as BS
 import Data.Proxy
-import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
 import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, updatePParams)
 import Shelley.Spec.Ledger.Scripts (MultiSig)

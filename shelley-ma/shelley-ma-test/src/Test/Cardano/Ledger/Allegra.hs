@@ -21,6 +21,7 @@ where
 
 import Cardano.Binary (serializeEncoding', toCBOR)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
@@ -41,7 +42,6 @@ import Data.Sequence.Strict (StrictSeq (..), fromList)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API (KeyRole (Witness))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Keys (KeyHash)
 import Shelley.Spec.Ledger.PParams (PParams, Update)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut, Wdrl)

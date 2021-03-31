@@ -51,8 +51,8 @@ library
     bytestring,
     cardano-binary,
     cardano-crypto-class,
+    cardano-ledger-core,
     cardano-ledger-shelley-ma,
-    cardano-prelude,
     cardano-slotting,
     containers,
     data-default,
@@ -78,6 +78,7 @@ library test
     Test.Cardano.Ledger.Alonzo.Serialisation.Generators
   build-depends:
     cardano-ledger-alonzo,
+    cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     containers,
     plutus-tx,
@@ -101,6 +102,7 @@ test-suite tests
     bytestring,
     cardano-binary,
     cardano-ledger-alonzo,
+    cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     QuickCheck,
     shelley-spec-ledger,

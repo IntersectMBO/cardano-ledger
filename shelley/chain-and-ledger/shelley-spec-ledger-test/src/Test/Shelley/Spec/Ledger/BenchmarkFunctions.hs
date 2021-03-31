@@ -30,6 +30,7 @@ where
 -- Cypto and Era stuff
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -49,7 +50,6 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
 import Shelley.Spec.Ledger.Keys

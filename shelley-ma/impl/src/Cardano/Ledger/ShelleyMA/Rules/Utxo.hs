@@ -16,6 +16,7 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
+import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints
@@ -65,7 +66,6 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     networkId,
   )
-import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.LedgerState (PPUPState)
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)

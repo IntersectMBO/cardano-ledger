@@ -8,6 +8,8 @@
 
 module Test.Cardano.Ledger.Mary.Value (valTests, ass, pol) where
 
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact, toCompact)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
@@ -17,6 +19,7 @@ import Cardano.Ledger.Mary.Value
     lookup,
   )
 import Cardano.Ledger.Val (Val (..), invert)
+import Control.Monad (replicateM)
 import Data.ByteString (ByteString)
 import Data.CanonicalMaps
   ( CanonicalZero (..),
@@ -25,17 +28,14 @@ import Data.CanonicalMaps
   )
 import Data.Map.Strict (empty, singleton)
 import qualified Data.Map.Strict as Map
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import System.IO.Unsafe (unsafePerformIO)
+import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (scale)
-import qualified Test.QuickCheck as QC
-import Control.Monad (replicateM)
 import Prelude hiding (lookup)
-import Cardano.Ledger.Compactible (toCompact, fromCompact)
 
 -- =================================================================================
 -- Alternate implementations of insert to be benchmarked.
@@ -130,14 +130,14 @@ genTriple genAmount = (,,) <$> genPolicyID <*> genAssetName <*> genAmount
 
 genMap :: Gen Integer -> Gen [(PolicyID C_Crypto, AssetName, Integer)] -- Most maps have 1 or 2 Assets
 genMap genAmount = do
-  len <- frequency [(1,pure 0),(4,pure 1),(5,pure 2),(2,pure 3),(1,pure 4)]
+  len <- frequency [(1, pure 0), (4, pure 1), (5, pure 2), (2, pure 3), (1, pure 4)]
   vectorOf len (genTriple genAmount)
 
-genValue :: Gen Integer ->  Gen (Value C_Crypto)
+genValue :: Gen Integer -> Gen (Value C_Crypto)
 genValue genAmount = valueFromList <$> genMap genAmount <*> genAmount
 
 instance Arbitrary (Value C_Crypto) where
-  arbitrary = genValue (choose (-2,10))
+  arbitrary = genValue (choose (-2, 10))
   shrink _ = []
 
 instance Arbitrary AssetName where
@@ -284,23 +284,24 @@ valueGroup =
 valueGroupTests :: TestTree
 valueGroupTests = testGroup "value is a group" (map (\(f, n) -> testProperty n f) valueGroup)
 
-compactRoundTrip ::  Property
+compactRoundTrip :: Property
 compactRoundTrip = forAll gen $ \v ->
-  counterexample (show $ toCompact v)
-  (Just v === fmap fromCompact (toCompact v))
+  counterexample
+    (show $ toCompact v)
+    (Just v === fmap fromCompact (toCompact v))
   where
-  gen = do
-   pids <- replicateM 3 (pure <$> genPolicyID)
-   ans <- replicateM 3 (pure <$> genAssetName)
-   -- this ensures we get some collisions among asset names and among pids
-   numTriples <- QC.choose (3,30)
-   triples <- replicateM numTriples $ do
-     pid <- QC.oneof pids
-     an <- QC.oneof ans
-     q <- QC.choose (0,100)
-     pure ((pid, an, q))
-   q <- QC.choose (0,100)
-   pure (valueFromList triples q)
+    gen = do
+      pids <- replicateM 3 (pure <$> genPolicyID)
+      ans <- replicateM 3 (pure <$> genAssetName)
+      -- this ensures we get some collisions among asset names and among pids
+      numTriples <- QC.choose (3, 30)
+      triples <- replicateM numTriples $ do
+        pid <- QC.oneof pids
+        an <- QC.oneof ans
+        q <- QC.choose (0, 100)
+        pure ((pid, an, q))
+      q <- QC.choose (0, 100)
+      pure (valueFromList triples q)
 
 compactTest :: TestTree
 compactTest = testProperty "fromCompact . toCompact == id" compactRoundTrip

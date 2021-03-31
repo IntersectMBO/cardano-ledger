@@ -25,16 +25,6 @@ module Cardano.Ledger.SafeHash
     extractHash,
     hashSafeList,
     Safe (..),
-    EraIndependentTx,
-    EraIndependentTxBody,
-    EraIndependentBlockBody,
-    EraIndependentMetadata,
-    EraIndependentScript,
-    EraIndependentData,
-    EraIndependentScriptData,
-    EraIndependentAuxiliaryData,
-    EraIndependentPParamView,
-    EraIndependentWitnessPPData,
     unsafeMakeSafeHash,
   )
 where
@@ -154,30 +144,6 @@ hashAnnotated x = makeHashWithExplicitProxys (Proxy @c) (Proxy @i) x
 class SafeToHash x => HashWithCrypto x index | x -> index where
   hashWithCrypto :: forall crypto. HasAlgorithm crypto => Proxy crypto -> x -> SafeHash crypto index
   hashWithCrypto proxy y = makeHashWithExplicitProxys proxy (Proxy @index) y
-
--- ==============================================================
--- We export a bunch of uninhabited types to use as
--- idexes that are Era independent
-
-data EraIndependentTx
-
-data EraIndependentTxBody
-
-data EraIndependentBlockBody
-
-data EraIndependentMetadata
-
-data EraIndependentAuxiliaryData
-
-data EraIndependentScript
-
-data EraIndependentData
-
-data EraIndependentScriptData
-
-data EraIndependentPParamView
-
-data EraIndependentWitnessPPData
 
 -- ======================================================================
 

@@ -85,7 +85,8 @@ import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (BlockDecoding (..), Crypto, Era, ValidateScript (..))
-import Cardano.Ledger.SafeHash (EraIndependentBlockBody, SafeToHash (..))
+import Cardano.Ledger.Hashes (EraIndependentBlockBody)
+import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)

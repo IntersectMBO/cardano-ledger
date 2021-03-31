@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -9,7 +10,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ConstraintKinds #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
@@ -51,13 +51,14 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   )
 where
 
-import Cardano.Binary(ToCBOR)
+import Cardano.Binary (ToCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.VRF (evalCertified)
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..),BlockDecoding)
+import Cardano.Ledger.Era (BlockDecoding, Crypto (..))
 import Cardano.Ledger.Shelley.Constraints
   ( UsesTxBody,
     UsesTxOut (..),
@@ -102,7 +103,6 @@ import Shelley.Spec.Ledger.BlockChain
     pattern Block,
     pattern BlockHash,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     pattern KeyHashObj,
@@ -163,8 +163,8 @@ import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( Tx,
     TxIn,
-    pattern TxIn,
     WitnessSet,
+    pattern TxIn,
   )
 import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.TxBody
@@ -525,7 +525,8 @@ mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
       sig = signedKES () kpDiff bhb hotKey
    in BHeader bhb sig
 
-mkBlock :: forall era r.
+mkBlock ::
+  forall era r.
   ( UsesTxBody era,
     PreAlonzo era,
     Mock (Crypto era)
@@ -556,7 +557,8 @@ mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
    in Block bh (TxSeq @era $ StrictSeq.fromList txns)
 
 -- | Create a block with a faked VRF result.
-mkBlockFakeVRF :: forall era r.
+mkBlockFakeVRF ::
+  forall era r.
   ( UsesTxBody era,
     PreAlonzo era,
     ExMock (Crypto era)

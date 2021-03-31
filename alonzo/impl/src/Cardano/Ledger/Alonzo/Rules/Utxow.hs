@@ -32,7 +32,8 @@ import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
-import Cardano.Ledger.SafeHash (EraIndependentData, SafeHash)
+import Cardano.Ledger.Hashes (EraIndependentData)
+import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
 import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
 import Control.State.Transition.Extended

@@ -17,9 +17,10 @@ module Test.Shelley.Spec.Ledger.Examples.PoolLifetime
   )
 where
 
-
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
@@ -44,14 +45,12 @@ import Shelley.Spec.Ledger.BlockChain
     bheader,
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
     PoolDistr (..),
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( NewEpochState (..),
@@ -59,7 +58,7 @@ import Shelley.Spec.Ledger.LedgerState
     RewardUpdate (..),
     decayFactor,
     emptyRewardUpdate,
-    startStep
+    startStep,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
@@ -181,10 +180,11 @@ txbodyEx1 =
             ++ [ DCertMir
                    ( MIRCert
                        ReservesMIR
-                       ( StakeAddressesMIR $ Map.fromList
-                           [ (Cast.carlSHK, toDeltaCoin carlMIR),
-                             (Cast.dariaSHK, toDeltaCoin dariaMIR)
-                           ]
+                       ( StakeAddressesMIR $
+                           Map.fromList
+                             [ (Cast.carlSHK, toDeltaCoin carlMIR),
+                               (Cast.dariaSHK, toDeltaCoin dariaMIR)
+                             ]
                        )
                    )
                ]

@@ -10,12 +10,14 @@ module Test.Cardano.Ledger.Mary.Examples.MultiAssets
   )
 where
 
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
     PolicyID (..),
     Value (..),
   )
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
@@ -29,8 +31,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.Coin (Coin (..))
-import Cardano.Ledger.SafeHash(hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyPair (..), asWitness, hashKey)
 import Shelley.Spec.Ledger.LedgerState (AccountState (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)

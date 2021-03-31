@@ -26,9 +26,11 @@ import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.SafeHash (EraIndependentTxBody, SafeHash, extractHash, hashAnnotated)
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Prelude (LByteString)
@@ -84,7 +86,6 @@ import Shelley.Spec.Ledger.BlockChain
     seedEta,
     seedL,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,
@@ -188,8 +189,8 @@ import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
+import Test.Shelley.Spec.Ledger.Generator.Core (PreAlonzo)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
-import Test.Shelley.Spec.Ledger.Generator.Core(PreAlonzo)
 import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   ( ToTokens (..),
     checkEncoding,

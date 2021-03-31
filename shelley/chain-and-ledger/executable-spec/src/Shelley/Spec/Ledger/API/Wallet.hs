@@ -21,6 +21,7 @@ module Shelley.Spec.Ledger.API.Wallet
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
@@ -44,7 +45,6 @@ import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed, UnitInterval)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -91,7 +91,7 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
   forall era.
-  UsesValue era =>
+  (UsesValue era, HasField "address" (Core.TxOut era) (Addr (Crypto era))) =>
   Globals ->
   NewEpochState era ->
   PoolDistr (Crypto era)
@@ -126,7 +126,8 @@ getTotalStake globals ss =
 getNonMyopicMemberRewards ::
   ( UsesValue era,
     HasField "_a0" (Core.PParams era) Rational,
-    HasField "_nOpt" (Core.PParams era) Natural
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   Globals ->
   NewEpochState era ->
@@ -199,7 +200,11 @@ getNonMyopicMemberRewards globals ss creds =
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
 currentSnapshot ::
-  UsesValue era => NewEpochState era -> EB.SnapShot (Crypto era)
+  ( UsesValue era,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+  ) =>
+  NewEpochState era ->
+  EB.SnapShot (Crypto era)
 currentSnapshot ss =
   stakeDistr utxo dstate pstate
   where

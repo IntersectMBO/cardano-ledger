@@ -16,8 +16,11 @@ import Cardano.Binary (serialize)
 import Cardano.Crypto.VRF (VRFAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -50,8 +53,6 @@ import Shelley.Spec.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
-import Cardano.Ledger.SafeHash (EraIndependentTxBody, hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     Hash,

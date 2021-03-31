@@ -40,6 +40,7 @@ import Cardano.Binary
     toCBOR,
   )
 import qualified Cardano.Crypto.Hash.Class as Hash
+import Cardano.Ledger.Coin (Coin (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppCoin, ppInteger, ppList, ppLong, ppScriptHash, ppSexp)
@@ -91,7 +92,6 @@ import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
 import Prettyprinter (hsep)
-import Shelley.Spec.Ledger.Coin (Coin (..), integerToWord64)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.Serialization (decodeMap, encodeMap)
 import Prelude hiding (lookup)

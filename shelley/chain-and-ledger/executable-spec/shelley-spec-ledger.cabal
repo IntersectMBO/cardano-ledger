@@ -38,16 +38,9 @@ common project-config
 library
   import:             base, project-config
   exposed-modules:
-    Cardano.Ledger.AuxiliaryData
-    Cardano.Ledger.Compactible
-    Cardano.Ledger.Core
-    Cardano.Ledger.Crypto
-    Cardano.Ledger.Era
     Cardano.Ledger.Pretty
-    Cardano.Ledger.SafeHash
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.Constraints
-    Cardano.Ledger.Val
     Shelley.Spec.Ledger.Address
     Shelley.Spec.Ledger.Address.Bootstrap
     Shelley.Spec.Ledger.API
@@ -58,7 +51,6 @@ library
     Shelley.Spec.Ledger.API.Wallet
     Shelley.Spec.Ledger.BaseTypes
     Shelley.Spec.Ledger.BlockChain
-    Shelley.Spec.Ledger.Coin
     Shelley.Spec.Ledger.CompactAddr
     Shelley.Spec.Ledger.Credential
     Shelley.Spec.Ledger.Delegation.Certificates
@@ -124,6 +116,7 @@ library
     cardano-crypto-class,
     cardano-crypto-wrapper,
     cardano-ledger-byron,
+    cardano-ledger-core,
     cardano-prelude,
     cardano-slotting,
     cborg,
@@ -136,7 +129,6 @@ library
     mtl,
     network,
     nothunks,
-    partial-order,
     prettyprinter,
     primitive >= 0.7.1.0,
     quiet,

@@ -15,6 +15,7 @@ import Cardano.Binary
     decodeDouble,
     encodeDouble,
   )
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Control.DeepSeq (NFData)
@@ -33,7 +34,6 @@ import Data.Word (Word64)
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))

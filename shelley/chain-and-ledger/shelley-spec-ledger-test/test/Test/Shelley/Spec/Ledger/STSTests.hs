@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.STSTests
   ( chainExamples,
@@ -9,11 +9,11 @@ module Test.Shelley.Spec.Ledger.STSTests
   )
 where
 
+import Cardano.Ledger.Coin (Coin (..))
 import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
 import Shelley.Spec.Ledger.Keys (asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState (WitHashes (..))
@@ -25,9 +25,9 @@ import Test.Shelley.Spec.Ledger.Examples (testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Examples.EmptyBlock (exEmptyBlock)
 import Test.Shelley.Spec.Ledger.Examples.GenesisDelegation (genesisDelegExample)
-import Test.Shelley.Spec.Ledger.Examples.NetworkID (testPoolNetworkId)
 import Test.Shelley.Spec.Ledger.Examples.Mir (mirExample)
 import Test.Shelley.Spec.Ledger.Examples.MirTransfer (testMIRTransfer)
+import Test.Shelley.Spec.Ledger.Examples.NetworkID (testPoolNetworkId)
 import Test.Shelley.Spec.Ledger.Examples.PoolLifetime (poolLifetimeExample)
 import Test.Shelley.Spec.Ledger.Examples.PoolReReg (poolReRegExample)
 import Test.Shelley.Spec.Ledger.Examples.TwoPools (twoPoolsExample)

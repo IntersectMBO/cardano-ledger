@@ -5,6 +5,10 @@ module Shelley.Spec.Ledger.API.Types
   )
 where
 
+import Cardano.Ledger.Coin as X
+  ( Coin (..),
+    word64ToCoin,
+  )
 import Shelley.Spec.Ledger.Address as X
   ( Addr (..),
     RewardAcnt (..),
@@ -33,10 +37,6 @@ import Shelley.Spec.Ledger.BlockChain as X
     bhHash,
     bhbody,
     bheader,
-  )
-import Shelley.Spec.Ledger.Coin as X
-  ( Coin (..),
-    word64ToCoin,
   )
 import Shelley.Spec.Ledger.Credential as X
   ( Credential (..),

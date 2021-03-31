@@ -21,9 +21,11 @@ where
 
 import Cardano.Binary (serialize)
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, ValidateScript (..))
-import Cardano.Ledger.SafeHash (EraIndependentTxBody, SafeHash, hashAnnotated)
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -61,7 +63,6 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     maybeToStrictMaybe,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyHash,

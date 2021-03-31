@@ -13,6 +13,7 @@ module Shelley.Spec.Ledger.Bench.Rewards
 where
 
 import Cardano.Crypto.VRF (hashVerKeyVRF)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Reader (runReader, runReaderT)
@@ -30,12 +31,11 @@ import Shelley.Spec.Ledger.Address
     mkRwdAcnt,
   )
 import Shelley.Spec.Ledger.BaseTypes
-  ( Globals (epochInfo,activeSlotCoeff,securityParameter),
+  ( Globals (activeSlotCoeff, epochInfo, securityParameter),
     Network (Testnet),
     StrictMaybe (..),
     truncateUnitInterval,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesisStaking (..))
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (Staking))

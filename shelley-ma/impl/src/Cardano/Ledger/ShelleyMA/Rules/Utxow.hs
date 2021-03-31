@@ -12,10 +12,12 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
 import Cardano.Ledger.ShelleyMA.TxBody ()
 import Control.State.Transition.Extended
+import GHC.Records (HasField)
+import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.LedgerState (UTxOState)
 import qualified Shelley.Spec.Ledger.STS.Ledger as Shelley
@@ -45,6 +47,7 @@ instance
   forall era.
   ( -- Fix Core.Tx to the Allegra and Mary Era
     Core.Tx era ~ Tx era,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (UTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,

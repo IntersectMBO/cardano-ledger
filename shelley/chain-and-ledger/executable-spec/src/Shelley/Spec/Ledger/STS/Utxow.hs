@@ -66,6 +66,8 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
+import Shelley.Spec.Ledger.Address (Addr)
+import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.BaseTypes
   ( ShelleyBase,
     StrictMaybe (..),
@@ -237,6 +239,7 @@ type ShelleyStyleWitnessNeeds era =
     HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     ValidateAuxiliaryData era (Crypto era),
     ValidateScript era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
@@ -269,7 +272,8 @@ shelleyStyleWitness ::
     Signal (utxow era) ~ Core.Tx era,
     -- PredicateFailure (utxow era) ~ UtxowPredicateFailure era,
     STS (utxow era),
-    ShelleyStyleWitnessNeeds era
+    ShelleyStyleWitnessNeeds era,
+    HasField "bootWits" (Core.Tx era) (Set (BootstrapWitness (Crypto era)))
   ) =>
   (UtxowPredicateFailure era -> PredicateFailure (utxow era)) ->
   TransitionRule (utxow era)
@@ -364,7 +368,8 @@ instance
     Signal (Core.EraRule "UTXO" era) ~ Tx era,
     PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
     -- Supply the HasField and Validate instances for Shelley
-    ShelleyStyleWitnessNeeds era
+    ShelleyStyleWitnessNeeds era,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   STS (UTXOW era)
   where

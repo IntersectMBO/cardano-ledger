@@ -18,6 +18,7 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
+import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -29,7 +30,6 @@ import Data.Maybe (fromMaybe)
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API.Protocol
 import Shelley.Spec.Ledger.API.Types
-import Shelley.Spec.Ledger.Coin (CompactForm (CompactCoin))
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (UnsafeCompactAddr))
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.STS.Chain (pparamsToChainChecksData)

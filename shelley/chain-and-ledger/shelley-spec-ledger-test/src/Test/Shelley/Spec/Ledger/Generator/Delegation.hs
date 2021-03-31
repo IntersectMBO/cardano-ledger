@@ -19,6 +19,7 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
   )
 where
 
+import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
@@ -66,7 +67,6 @@ import Shelley.Spec.Ledger.API
   )
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (interval0)
-import Shelley.Spec.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.Keys
   ( coerceKeyRole,

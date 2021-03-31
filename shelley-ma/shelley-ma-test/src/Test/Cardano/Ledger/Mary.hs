@@ -12,6 +12,7 @@
 module Test.Cardano.Ledger.Mary () where -- export the EraGen instance for MaryEra
 
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core (AuxiliaryData, Value)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
@@ -38,7 +39,6 @@ import Data.Sequence.Strict (StrictSeq (..), (<|), (><))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
 import Shelley.Spec.Ledger.Tx (TxIn, TxOut (..), hashScript)
 import Shelley.Spec.Ledger.TxBody (DCert, Wdrl)
@@ -252,7 +252,7 @@ addTokens = addTokens' StrictSeq.Empty
   where
     addTokens' tooLittleLovelace pparams ts (o@(TxOut a v) :<| os) =
       if Val.coin v < scaledMinDeposit v (_minUTxOValue pparams)
-        then addTokens' (o :<| tooLittleLovelace ) pparams ts os
+        then addTokens' (o :<| tooLittleLovelace) pparams ts os
         else (Just $ tooLittleLovelace >< TxOut a (v <> ts) <| os)
     addTokens' _ _ _ StrictSeq.Empty = Nothing
 
@@ -278,8 +278,8 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
   mint <- genMint
   let (mint', outs') = case addTokens pparams mint outs of
-                         Nothing -> (mempty, outs)
-                         Just os -> (mint, os)
+        Nothing -> (mempty, outs)
+        Just os -> (mint, os)
       ps = map (\p -> (Map.!) policyIndex p) (Set.toList $ policies mint)
   pure $
     ( TxBody

@@ -23,7 +23,9 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude
@@ -43,12 +45,10 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
-import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
     KeyRole (..),

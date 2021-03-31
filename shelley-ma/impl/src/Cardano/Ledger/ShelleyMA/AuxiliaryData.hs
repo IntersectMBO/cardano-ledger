@@ -25,6 +25,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -35,7 +36,7 @@ import Cardano.Ledger.Pretty
     ppWord64,
     text,
   )
-import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, HashAnnotated, SafeToHash)
+import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Codec.CBOR.Decoding
   ( TokenType
       ( TypeListLen,

@@ -22,6 +22,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Control.Monad.Trans.Reader (asks)
@@ -41,7 +42,6 @@ import Shelley.Spec.Ledger.BaseTypes
     ShelleyBase,
     invalidKey,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.Keys

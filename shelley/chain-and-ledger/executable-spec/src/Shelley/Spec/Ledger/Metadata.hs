@@ -34,9 +34,9 @@ import Cardano.Binary
     withSlice,
   )
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash
-  ( EraIndependentAuxiliaryData,
-    HashAnnotated,
+  ( HashAnnotated,
     SafeHash,
     SafeToHash (..),
     hashAnnotated,

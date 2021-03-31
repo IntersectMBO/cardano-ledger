@@ -39,7 +39,7 @@ import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.SafeHash (EraIndependentTxBody)
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.Arrow (left, right)
 import Control.Monad.Except

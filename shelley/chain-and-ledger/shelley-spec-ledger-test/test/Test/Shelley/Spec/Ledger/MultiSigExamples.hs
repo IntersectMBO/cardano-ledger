@@ -18,6 +18,7 @@ module Test.Shelley.Spec.Ledger.MultiSigExamples
 where
 
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
@@ -44,7 +45,6 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     maybeToStrictMaybe,
   )
-import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential
   ( pattern KeyHashObj,
     pattern ScriptHashObj,
