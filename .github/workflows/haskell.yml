@@ -19,9 +19,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Select build directory
-      run: echo "CABAL_BUILDDIR=dist" >> $GITHUB_ENV
-
     - name: Install pkgconfiglite (Windows)
       if: matrix.os == 'windows-latest'
       run: choco install -y pkgconfiglite
@@ -66,18 +63,11 @@ jobs:
         echo "LIBSODIUM_PATH=$LIBSODIUM_PATH"
         echo "$LIBSODIUM_PATH" >> $GITHUB_PATH
 
-    - name: Select optimal cabal version
-      run: |
-        case "$OS" in
-          Windows_NT)   echo "CABAL_VERSION=3.4.0.0-rc5"  >> $GITHUB_ENV;;
-          *)            echo "CABAL_VERSION=3.4.0.0"      >> $GITHUB_ENV;;
-        esac
-
     - uses: haskell/actions/setup@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: ${{ env.CABAL_VERSION }}
+        cabal-version: 3.4.0.0
 
     - name: Patch GHC 8.10.2 linker
       if: matrix.os == 'windows-latest'
@@ -97,7 +87,7 @@ jobs:
       run: cabal update
 
     - name: Cabal Configure
-      run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+      run: cabal configure --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
     - uses: actions/cache@v2
       if: matrix.os != 'macos-latest'
@@ -123,13 +113,13 @@ jobs:
         echo "$HOME/.cabal/bin" >> $GITHUB_PATH
 
     - name: Install dependencies
-      run: cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
+      run: cabal build all --only-dependencies
 
     - name: Build
-      run: cabal build all --builddir="$CABAL_BUILDDIR"
+      run: cabal build all
 
     - name: Run doctests
-      run: cabal-docspec --builddir="$CABAL_BUILDDIR"
+      run: cabal-docspec
 
     - name: Git clone
       run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
@@ -137,4 +127,4 @@ jobs:
     - name: Run tests
       run: |
         export CARDANO_MAINNET_MIRROR="$(pwd)/cardano-mainnet-mirror/epochs"
-        cabal test all --builddir="$CABAL_BUILDDIR"
+        cabal test all
