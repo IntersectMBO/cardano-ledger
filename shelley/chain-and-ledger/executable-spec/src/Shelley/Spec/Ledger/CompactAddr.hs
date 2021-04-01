@@ -46,6 +46,9 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 newtype CompactAddr crypto = UnsafeCompactAddr ShortByteString
   deriving (Eq, Ord)
 
+instance CC.Crypto c => Show (CompactAddr c) where
+  show c = show (decompactAddr c)
+
 compactAddr :: Addr crypto -> CompactAddr crypto
 compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
 

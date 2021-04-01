@@ -124,7 +124,7 @@ utxosTransition =
 
 scriptsValidateTransition ::
   forall era.
-  ( Show (Core.Value era), -- Arises because of the use of (∪) from SetAlgebra, needs Show to report errors.
+  ( Show (Core.Value era), -- Arises because of the use of (∪) from SetAlgebra, needs Show to report problems.
     Era era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,

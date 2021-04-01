@@ -94,18 +94,21 @@ data AlonzoPredFail era
 
 deriving instance
   ( Era era,
-    Show (PredicateFailure (Core.EraRule "UTXO" era)) -- The Shelley UtxowPredicateFailure needs this to Show
+    Show (PredicateFailure (Core.EraRule "UTXO" era)), -- The Shelley UtxowPredicateFailure needs this to Show
+    Show (Core.Script era)
   ) =>
   Show (AlonzoPredFail era)
 
 deriving instance
   ( Era era,
-    Eq (PredicateFailure (Core.EraRule "UTXO" era)) -- The Shelley UtxowPredicateFailure needs this to Eq
+    Eq (PredicateFailure (Core.EraRule "UTXO" era)), -- The Shelley UtxowPredicateFailure needs this to Eq
+    Eq (Core.Script era)
   ) =>
   Eq (AlonzoPredFail era)
 
 instance
   ( Era era,
+    NoThunks (Core.Script era),
     NoThunks (PredicateFailure (Core.EraRule "UTXO" era))
   ) =>
   NoThunks (AlonzoPredFail era)
@@ -114,7 +117,8 @@ instance
   ( Era era,
     ToCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     Typeable (Core.AuxiliaryData era),
-    Typeable (Core.Script era)
+    Typeable (Core.Script era),
+    ToCBOR (Core.Script era)
   ) =>
   ToCBOR (AlonzoPredFail era)
   where
@@ -142,7 +146,8 @@ instance
     FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     FromCBOR (Script era),
     Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era)
+    Typeable (Core.AuxiliaryData era),
+    FromCBOR (Core.Script era)
   ) =>
   FromCBOR (AlonzoPredFail era)
   where
