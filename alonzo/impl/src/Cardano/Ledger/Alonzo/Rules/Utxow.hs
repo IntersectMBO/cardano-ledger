@@ -201,7 +201,7 @@ alonzoStyleWitness ::
   TransitionRule (utxow era)
 alonzoStyleWitness = do
   _u <- shelleyStyleWitness WrappedShelleyEraFailure
-  (TRC (UtxoEnv _slot pp _stakepools _genDelegs, u', tx)) <- judgmentContext
+  (TRC (ue@(UtxoEnv _slot pp _stakepools _genDelegs), u', tx)) <- judgmentContext
   let txbody = getField @"body" (tx :: Core.Tx era)
 
   let scriptWitMap = getField @"scriptWits" tx
@@ -246,13 +246,14 @@ alonzoStyleWitness = do
   let languages =
         [ l
           | (_hash, script) <- Map.toList scriptWitMap,
-            isNativeScript @era script,
+            (not . isNativeScript @era) script,
             Just l <- [language @era script]
         ]
       computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits' $ tx)
       bodyPPhash = getField @"wppHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
-  pure u'
+
+  trans @(Core.EraRule "UTXO" era) $ TRC (ue, u', tx)
 
 -- ====================================
 -- Make the STS instance

@@ -83,7 +83,7 @@ instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
   validateScript (TimelockScript timelock) tx = evalTimelock vhks (vldt' (body' tx)) timelock
     where
       vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
-  validateScript (PlutusScript _) _tx = False -- Plutus scripts are stripped out an run in function evalScripts
+  validateScript (PlutusScript _) _tx = True -- Plutus scripts are stripped out an run in function evalScripts
   -- hashScript x = ...  We use the default method for hashScript
 
 instance
