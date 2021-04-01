@@ -44,6 +44,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
+import qualified Data.Text as T (pack)
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
@@ -192,7 +193,7 @@ instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary
 
 instance Arbitrary CostModel where
-  arbitrary = CostModel <$> arbitrary
+  arbitrary = (CostModel . (Map.mapKeys T.pack)) <$> arbitrary
 
 instance Arbitrary (PParams era) where
   arbitrary =

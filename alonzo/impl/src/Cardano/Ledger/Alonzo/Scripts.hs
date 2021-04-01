@@ -45,12 +45,12 @@ import Cardano.Ledger.Pretty
     PrettyA (..),
     ppCoin,
     ppInteger,
-    ppLong,
     ppMap,
     ppRecord,
     ppSexp,
     ppString,
     ppWord64,
+    text,
   )
 import Cardano.Ledger.SafeHash
   ( HashWithCrypto (..),
@@ -60,11 +60,11 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
-import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
 import Data.Map (Map)
 import Data.MemoBytes
+import Data.Text (Text)
 import Data.Typeable
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
@@ -144,7 +144,7 @@ pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `o
 -- Cost Model needs to preserve its serialization bytes as
 -- it is going to be hashed. Thus we make it a newtype around a MemoBytes
 
-newtype CostModel = CostModelConstr (MemoBytes (Map ByteString Integer))
+newtype CostModel = CostModelConstr (MemoBytes (Map Text Integer))
   deriving (Eq, Generic, Show, Ord)
   deriving newtype (SafeToHash)
 
@@ -153,7 +153,7 @@ newtype CostModel = CostModelConstr (MemoBytes (Map ByteString Integer))
 
 instance HashWithCrypto CostModel CostModel
 
-pattern CostModel :: Map ByteString Integer -> CostModel
+pattern CostModel :: Map Text Integer -> CostModel
 pattern CostModel m <-
   CostModelConstr (Memo m _)
   where
@@ -274,7 +274,7 @@ instance PrettyA ExUnits where prettyA = ppExUnits
 
 ppCostModel :: CostModel -> PDoc
 ppCostModel (CostModelConstr (Memo m _)) =
-  ppSexp "CostModel" [ppMap ppLong ppInteger m]
+  ppSexp "CostModel" [ppMap text ppInteger m]
 
 instance PrettyA CostModel where prettyA = ppCostModel
 

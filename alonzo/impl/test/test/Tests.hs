@@ -1,5 +1,6 @@
 module Main where
 
+import Test.Cardano.Ledger.Alonzo.Examples.Utxow (plutusScriptExamples, utxowExamples)
 import Test.Cardano.Ledger.Alonzo.Golden as Golden
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
@@ -11,7 +12,9 @@ tests =
     "Alonzo tests"
     [ Tripping.tests,
       CDDL.tests 5,
-      Golden.goldenUTxOEntryMinAda
+      Golden.goldenUTxOEntryMinAda,
+      plutusScriptExamples,
+      utxowExamples
     ]
 
 main :: IO ()
