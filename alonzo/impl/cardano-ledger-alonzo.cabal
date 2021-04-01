@@ -106,6 +106,7 @@ test-suite tests
     cardano-binary,
     cardano-ledger-alonzo,
     cardano-ledger-shelley-ma-test,
+    plutus-tx,
     QuickCheck,
     shelley-spec-ledger,
     shelley-spec-ledger-test,

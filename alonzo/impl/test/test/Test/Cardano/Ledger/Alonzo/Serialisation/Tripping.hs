@@ -1,12 +1,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 
 import Cardano.Binary
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData, Data)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData, Data (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure)
@@ -16,8 +17,10 @@ import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (CostModel, Tx, WitnessPPData)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
+import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
+import qualified Language.PlutusTx as Plutus
 import Shelley.Spec.Ledger.Metadata (Metadata)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (roundTrip, roundTripAnn)
@@ -61,6 +64,15 @@ trippingAnn x = trippingF roundTripAnn x
 tripping :: (Eq src, Show src, ToCBOR src, FromCBOR src) => src -> Property
 tripping x = trippingF roundTrip x
 
+-- ==========================
+-- Catch errors in toolong bytestrings
+
+toolong :: BS.ByteString
+toolong = "1234567890-=`~@#$%^&*()_+qwertyuiopQWERTYUIOPasdfghjklASDFGHJKLzxcvbnmZXCVBNM"
+
+badData :: Data (AlonzoEra C_Crypto)
+badData = Data $ Plutus.List [Plutus.I 34, Plutus.B toolong]
+
 tests :: TestTree
 tests =
   testGroup
@@ -69,6 +81,7 @@ tests =
         trippingAnn @(Script (AlonzoEra C_Crypto)),
       testProperty "alonzo/Data" $
         trippingAnn @(Data (AlonzoEra C_Crypto)),
+      testProperty "alonzo/Data/CatchToolong" (expectFailure (trippingAnn badData)),
       testProperty "alonzo/Metadata" $
         trippingAnn @(Metadata (AlonzoEra C_Crypto)),
       testProperty "alonzo/TxWitness" $

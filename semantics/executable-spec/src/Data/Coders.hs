@@ -34,6 +34,7 @@ module Data.Coders
     (!>),
     (<!),
     (<*!),
+    (<?),
     Density (..),
     Wrapped (..),
     Annotator (..),
@@ -494,16 +495,23 @@ data Decode (w :: Wrapped) t where
   -- The next two could be generalized to any (Applicative f) rather than Annotator
   Ann :: Decode w t -> Decode w (Annotator t)
   ApplyAnn :: Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
+  -- A function to Either can raise an error when applied by returning (Left errorMessage)
+  ApplyErr ::  Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
 
 infixl 4 <!
 
 infixl 4 <*!
+
+infixl 4 <?
 
 (<!) :: Decode w1 (a -> t) -> Decode ('Closed w) a -> Decode w1 t
 x <! y = ApplyD x y
 
 (<*!) :: Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
 x <*! y = ApplyAnn x y
+
+(<?) :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
+f <? y = ApplyErr f y
 
 hsize :: Decode w t -> Int
 hsize (Summands _ _) = 1
@@ -520,6 +528,7 @@ hsize (Emit _) = 0
 hsize (SparseKeyed _ _ _ _) = 1
 hsize (Ann x) = hsize x
 hsize (ApplyAnn f x) = hsize f + hsize x
+hsize (ApplyErr f x) = hsize f + hsize x
 
 decode :: Decode w t -> Decoder s t
 decode x = fmap snd (decodE x)
@@ -549,6 +558,12 @@ decodeCount (ApplyD cn g) n = do
   (i, f) <- decodeCount cn (n + hsize g)
   y <- decodeClosed g
   pure (i, f y)
+decodeCount (ApplyErr cn g) n = do
+  (i, f) <- decodeCount cn (n + hsize g)
+  y <- decodeClosed g
+  case f y of
+    Right z -> pure(i,z)
+    Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack $ message)
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
 
@@ -573,6 +588,12 @@ decodeClosed (ApplyAnn g x) = do
   f <- decodeClosed g
   y <- decodeClosed x
   pure (f <*> y)
+decodeClosed (ApplyErr cn g) = do
+  f <- decodeClosed cn
+  y <- decodeClosed g
+  case f y of
+    Right z -> pure z
+    Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack $ message)
 
 decodeSparse ::
   Typeable a =>

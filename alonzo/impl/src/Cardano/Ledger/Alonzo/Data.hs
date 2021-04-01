@@ -33,7 +33,7 @@ module Cardano.Ledger.Alonzo.Data
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), withSlice)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -61,6 +61,11 @@ import Cardano.Ledger.SafeHash
     SafeToHash,
     hashAnnotated,
   )
+-- import Plutus.V1.Ledger.Scripts-- Supply the HasField and Validate instances for Alonzo
+
+import qualified Data.ByteString as BS (ByteString, length)
+import Data.ByteString.Lazy (toStrict)
+import Data.ByteString.Short (toShort)
 import Data.Coders
 import Data.Map (Map)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -69,7 +74,6 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
--- import Plutus.V1.Ledger.Scripts-- Supply the HasField and Validate instances for Alonzo
 import qualified Language.PlutusTx as Plutus
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.Metadata (Metadatum)
@@ -87,8 +91,14 @@ instance FromCBOR (Annotator Plutus.Data) where
       decPlutus 1 = Ann (SumD Plutus.Map) <*! listDecodeA (pairDecodeA From From)
       decPlutus 2 = Ann (SumD Plutus.List) <*! listDecodeA From
       decPlutus 3 = Ann (SumD Plutus.I <! From)
-      decPlutus 4 = Ann (SumD Plutus.B <! From)
+      decPlutus 4 = Ann (SumD checkPlutusByteString <? From)
       decPlutus n = Invalid n
+
+checkPlutusByteString :: BS.ByteString -> Either String Plutus.Data
+checkPlutusByteString s =
+  if BS.length s <= 64
+    then Right (Plutus.B s)
+    else Left ("Plutus Bytestring in Plutus Data has length greater than 64: " ++ show (BS.length s) ++ "\n  " ++ show s)
 
 instance ToCBOR Plutus.Data where
   toCBOR x = encode (encPlutus x)
@@ -109,11 +119,18 @@ newtype Data era = DataConstr (MemoBytes Plutus.Data)
   deriving (Eq, Ord, Generic, Show)
   deriving newtype (SafeToHash, ToCBOR)
 
+{-
 deriving via
   (Mem Plutus.Data)
   instance
     (Era era) =>
     FromCBOR (Annotator (Data era))
+-}
+
+instance Typeable era => FromCBOR (Annotator (Data era)) where
+  fromCBOR = do
+    (Annotator getT, Annotator getBytes) <- withSlice fromCBOR
+    pure (Annotator (\fullbytes -> DataConstr (Memo (getT fullbytes) (toShort (toStrict (getBytes fullbytes))))))
 
 instance (Crypto era ~ c) => HashAnnotated (Data era) EraIndependentData c
 
