@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (checkScriptData, language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure)
-import Cardano.Ledger.Alonzo.Scripts (Script)
+import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
     Tx,
@@ -77,6 +77,9 @@ data AlonzoPredFail era
       !(StrictMaybe (WitnessPPDataHash (Crypto era)))
       -- ^ Computed from the current Protocol Parameters
   | MissingRequiredSigners (Set (KeyHash 'Witness (Crypto era)))
+  | -- | Scripts that failed
+    Phase1ScriptWitnessNotValidating
+      !(Set (Script era))
 
 deriving instance
   ( Era era,
@@ -114,6 +117,7 @@ encodePredFail (MissingNeededScriptHash x) = Sum MissingNeededScriptHash 2 !> To
 encodePredFail (DataHashSetsDontAgree x y) = Sum DataHashSetsDontAgree 3 !> To x !> To y
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
 encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 5 !> To x
+encodePredFail (Phase1ScriptWitnessNotValidating x) = Sum Phase1ScriptWitnessNotValidating 6 !> To x
 
 instance
   ( Era era,
@@ -129,6 +133,7 @@ instance
 decodePredFail ::
   ( Era era,
     FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)), -- TODO, we should be able to get rid of this constraint
+    FromCBOR (Script era),
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era)
   ) =>
@@ -140,6 +145,7 @@ decodePredFail 2 = SumD MissingNeededScriptHash <! From
 decodePredFail 3 = SumD DataHashSetsDontAgree <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 5 = SumD MissingRequiredSigners <! From
+decodePredFail 6 = SumD Phase1ScriptWitnessNotValidating <! From
 decodePredFail n = Invalid n
 
 -- =============================================
@@ -201,8 +207,10 @@ alonzoStyleWitness = do
   let scriptWitMap = getField @"scriptWits" tx
       failedScripts = Map.foldr accum [] scriptWitMap
         where
-          accum script bad = if validateScript @era script tx then bad else script : bad
-  null failedScripts ?! error ("Scripts don't validate")
+          accum script@(TimelockScript _) bad =
+            if validateScript @era script tx then bad else script : bad
+          accum (PlutusScript _) bad = bad
+  null failedScripts ?! (Phase1ScriptWitnessNotValidating $ Set.fromList failedScripts)
 
   let utxo = _utxo u'
       sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
