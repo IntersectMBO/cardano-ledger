@@ -48,6 +48,7 @@ library
     Cardano.Ledger.Era
     Cardano.Ledger.Hashes
     Cardano.Ledger.SafeHash
+    Cardano.Ledger.Tx
     Cardano.Ledger.Val
 
   build-depends:
