@@ -1,0 +1,120 @@
+\pagebreak
+\section{Extensions to Enable Governance for Native Tokens}
+\label{sect:native-tokens}
+
+This appendix considers how these mechanisms could potentially be extended to enable
+governance mechanisms for native tokens, for example to govern the supply of specific tokens.
+Major changes might be needed compared with the general PUP system.  These issues are discussed below.
+
+\subsection{Integration with Off-Chain Mechanisms}
+
+Any desired mechanism, including informal ones or side-chains, could be used to initiate ideation and discussion or for
+initial voting.  This might include Catalyst, provided that a suitable way to obtain snapshots could be devised.
+A purely on-chain mechanism would probably be sufficient for most native tokens governance, however.
+
+\subsection{Proposals}
+
+The proposal submission mechanism would need to be adapted for native tokens.
+
+\begin{itemize}
+\item
+  Proposals would need to be restricted to the correct native token.  This could be done by embedding the monetary policy script hash in the proposal.
+\item
+  Proposals would be restricted to relevant governance issues rather than protocol parameters, protocol updates or central funds transfers.
+  These issues could include:
+  \begin{inparaenum}
+  \item
+    parameter settings related to the monetary policy script (which could be a smart script once Plutus core is deployed);
+  \item
+    decisions on increasing/reducing the supply of one or more tokens;
+  \item
+    decisions on transferring tokens to specific accounts (e.g. a ``treasury'');
+  \item
+    decisions on who can authorise the minting or burning of new tokens (and, of what types), including new signing policies (if this is possible in future);
+  \item
+    decisions on whether to issue new tokens.
+  \end{inparaenum}
+\item
+  Proposals would need to be signed by a quorum of submitters.  The obvious approach is to use the minting policy script.
+\end{itemize}
+
+
+\subsection{Voter Registration}
+
+Since native tokens are always associated with UTxOs, the same vote key
+registration mechanism could be used as for Cardano.  There might be no need to
+register for each different kind of native token.  However, such an approach
+would only allow one delegation from each address (so the same delegation would
+cover Cardano and native tokens votes), which could create
+confusion/opportunities for subversion.  A solution might be to hold native
+tokens separately from large ada holdings, so creating granular voting rights.
+The alternative of allowing multiple voter registrations potentially creates
+clutter, and may require some internal fields to be arbitrary sized.
+
+\subsection{Vote Delegation}
+
+The standard delegate system might be overly complicated for most native tokens.
+However, voters could register as delegates so that they could cast their votes
+directly.  This would carry some fee for the registration and vote transactions.
+Alternatively, the token issuer could register standard Yes/No delegates, and
+ensure that these always voted in the required way.  A voting centre could hide
+the complexities of delegate registration.  Care would need to be taken to
+distinguish delegates for Cardano and non-Cardano purposes.  Conceivably, a
+single delegate could vote for different native tokens on behalf of a single
+token holder.
+
+\subsection{Snapshots, Tallies and Thresholds}
+
+\paragraph{Snapshots.}
+Unlike ada, native tokens can be minted or burnt at any point in time, meaning
+that the token supply for any native token could fluctuate significantly.  At
+present, the total circulation of each native token is never calculated.
+Real-time circulation calculations in the ledger are probably not practical from
+an efficiency (and therefore security) perspective.  The simplest solution would
+be to take voting snapshots for native tokens at the same time as for ada (at
+each epoch boundary).
+
+\paragraph{Circulation.}
+Native tokens will typically be minted en-masse, and then issued piecemeal.
+This needs to be considered in calculating the total supply and voting
+thresholds for each token.  Tokens that are held by the token issuer and have
+never been issued should probably not count towards the circulation (they are
+equivalent to the Cardano reserve).  Similarly tokens that have been returned to
+the issuer should not be counted in the circulation, even if they have not been
+burnt (they have been returned to the reserve).  Finally, tokens might be held
+within special-purpose accounts (e.g. as the equivalent of the Cardano
+treasury), and should not be counted towards circulation.  This implies either
+imposing some structure on token accounts, or else providing customisable rules for
+each asset class.
+
+\paragraph{Performance Issues.}
+One major issue that must be addressed is the need to maintain multiple voting
+credential maps (one for each native token).  This could have significant memory
+implications as well as increased execution time.  In order to avoid slow-downs,
+it might be necessary to create/update credential maps incrementally (e.g. when
+tokens were issued/transferred/burnt).
+
+\paragraph{Differential  Voting Rights.}
+Different kinds of tokens may have different voting rights.  For example, a
+currency might have Class A and Class B tokens, where Class A tokens have full
+voting rights and Class B tokens have partial or no voting rights.  This could
+create complications in calculating voting thresholds.  One solution might be to
+separate tokens into different asset class, where a vote on one asset class
+could govern decisions on another asset class.  So Class A tokens might be able
+to take governance decisions on Class B, but not vice-versa, for example.
+Similar considerations apply to Non-Fungible Tokens, adding specific kinds of
+value to these tokens.
+
+\paragraph{Thresholds.}
+Unlike Cardano, there is no need to set minimum voting thresholds.  These can be
+set on each proposal as required.
+
+\subsection{Endorsement.}
+
+Since native tokens cannot affect the Cardano protocol itself, there is no need for an endorsement mechanism
+for native token proposals.
+
+\subsection{Automated Enactment.}
+
+Automated enactment might be implemented by calling suitable Plutus smart contracts, for example.  Unlike
+Cardano, it is not necessary for automated enactment to be tied to an epoch boundary.
