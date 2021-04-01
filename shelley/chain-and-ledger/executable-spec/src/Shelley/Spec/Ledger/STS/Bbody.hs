@@ -151,7 +151,6 @@ bbodyTransition ::
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
     HasField "_d" (Core.PParams era) UnitInterval,
     Core.Witnesses era ~ WitnessSet era,
-    Core.Tx era ~ Tx era,
     SafeToHash (WitnessSet era)
   ) =>
   TransitionRule (BBODY era)

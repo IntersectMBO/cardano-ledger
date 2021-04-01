@@ -17,7 +17,11 @@
 -- We make the assertion that the transaction format is independent between
 -- eras, varying only in its components. Thus a transaction consists of a body,
 -- witnesses, and any auxiliary data.
-module Cardano.Ledger.Tx (Tx (Tx, body, wits, auxiliaryData)) where
+module Cardano.Ledger.Tx
+  ( Tx (Tx, body, wits, auxiliaryData),
+    unsafeConstructTxWithBytes,
+  )
+where
 
 import Cardano.Binary
   ( Annotator (Annotator),
@@ -28,6 +32,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentTx)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
+import qualified Data.ByteString.Short as SBS
 import Data.Coders
   ( Decode (Ann, D, From, RecD),
     Density (Dense),
@@ -129,6 +134,8 @@ pattern Tx {body, wits, auxiliaryData} <-
   where
     Tx b w a = TxConstr $ memoBytes (encodeTxRaw $ TxRaw b w a)
 
+{-# COMPLETE Tx #-}
+
 --------------------------------------------------------------------------------
 -- Field accessors
 --------------------------------------------------------------------------------
@@ -147,6 +154,9 @@ instance
   HasField "wits" (Tx era) wits
   where
   getField (TxConstr (Memo (TxRaw _ w _) _)) = w
+
+instance HasField "txsize" (Tx era) Integer where
+  getField (TxConstr (Memo _ bytes)) = fromIntegral $ SBS.length bytes
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -192,3 +202,19 @@ deriving via
       FromCBOR (Annotator (Core.Witnesses era))
     ) =>
     FromCBOR (Annotator (Tx era))
+
+-- | Construct a Tx containing the explicit serialised bytes.
+--
+--   This function is marked as unsafe since it makes no guarantee that the
+--   represented bytes are indeed the correct serialisation of the transaction.
+--   Thus, when calling this function, the caller is responsible for making this
+--   guarantee.
+--
+--   The only intended use case for this is for segregated witness.
+unsafeConstructTxWithBytes ::
+  Core.TxBody era ->
+  Core.Witnesses era ->
+  StrictMaybe (Core.AuxiliaryData era) ->
+  SBS.ShortByteString ->
+  Tx era
+unsafeConstructTxWithBytes b w a bytes = TxConstr (Memo (TxRaw b w a) bytes)

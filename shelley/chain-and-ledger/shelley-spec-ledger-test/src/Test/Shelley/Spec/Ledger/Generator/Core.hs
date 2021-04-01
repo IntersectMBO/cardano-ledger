@@ -58,7 +58,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (BlockDecoding, Crypto (..))
+import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley.Constraints
   ( UsesTxBody,
     UsesTxOut (..),
@@ -209,7 +209,6 @@ import Test.Shelley.Spec.Ledger.Utils
 type PreAlonzo era =
   ( Core.Witnesses era ~ WitnessSet era,
     Core.Tx era ~ Tx era,
-    BlockDecoding era,
     ToCBOR (Core.AuxiliaryData era)
   )
 

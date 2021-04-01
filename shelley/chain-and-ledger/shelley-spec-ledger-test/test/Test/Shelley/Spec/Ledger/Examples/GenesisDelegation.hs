@@ -158,10 +158,10 @@ txEx1 ::
       (Hash.Hash (CryptoClass.HASH c) EraIndependentTxBody)
   ) =>
   Tx (ShelleyEra c)
-txEx1 = Tx txbodyEx1 wits SNothing
+txEx1 = Tx txbodyEx1 txwits SNothing
   where
-    wits :: WitnessSet (ShelleyEra c)
-    wits =
+    txwits :: WitnessSet (ShelleyEra c)
+    txwits =
       mempty
         { addrWits =
             makeWitnessesVKey @c

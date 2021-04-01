@@ -204,7 +204,7 @@ delegsTransition = do
   case certificates of
     Empty -> do
       let ds = _dstate dpstate
-          wdrls_ = unWdrl $ getField @"wdrls" (_body tx)
+          wdrls_ = unWdrl . getField @"wdrls" $ getField @"body" tx
           rewards = _rewards ds
 
       isSubmapOf wdrls_ rewards -- wdrls_ ⊆ rewards

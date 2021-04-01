@@ -437,11 +437,11 @@ testWitnessNotIncluded =
           SNothing
           SNothing
       tx = Tx @C txbody mempty SNothing
-      wits = Set.singleton (asWitness $ hashKey $ vKey alicePay)
+      txwits = Set.singleton (asWitness $ hashKey $ vKey alicePay)
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW $
-              WitHashes wits
+              WitHashes txwits
         ]
         tx
 
@@ -459,11 +459,11 @@ testSpendNotOwnedUTxO =
           SNothing
       aliceWit = makeWitnessVKey (hashAnnotated txbody) alicePay
       tx = Tx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
-      wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
+      txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW $
-              WitHashes wits
+              WitHashes txwits
         ]
         tx
 
@@ -491,14 +491,14 @@ testWitnessWrongUTxO =
           SNothing
       aliceWit = makeWitnessVKey (hashAnnotated tx2body) alicePay
       tx = Tx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
-      wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
+      txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
             InvalidWitnessesUTXOW
               [asWitness $ vKey alicePay],
           UtxowFailure $
             MissingVKeyWitnessesUTXOW $
-              WitHashes wits
+              WitHashes txwits
         ]
         tx
 
@@ -515,8 +515,8 @@ testEmptyInputSet =
           (SlotNo 0)
           SNothing
           SNothing
-      wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb) [aliceStake]}
-      tx = Tx txb wits SNothing
+      txwits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb) [aliceStake]}
+      tx = Tx txb txwits SNothing
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
         (utxoState, dpState')
@@ -575,9 +575,9 @@ testInvalidWintess =
           SNothing
           SNothing
       txb' = txb {_ttl = SlotNo 2}
-      wits :: Shelley.Spec.Ledger.Tx.WitnessSet C
-      wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb') [alicePay]}
-      tx = Tx @C txb wits SNothing
+      txwits :: Shelley.Spec.Ledger.Tx.WitnessSet C
+      txwits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb') [alicePay]}
+      tx = Tx @C txb txwits SNothing
       errs =
         [ UtxowFailure $
             InvalidWitnessesUTXOW
@@ -601,9 +601,9 @@ testWithdrawalNoWit =
           (SlotNo 0)
           SNothing
           SNothing
-      wits :: Shelley.Spec.Ledger.Tx.WitnessSet C
-      wits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashAnnotated txb) alicePay}
-      tx = Tx @C txb wits SNothing
+      txwits :: Shelley.Spec.Ledger.Tx.WitnessSet C
+      txwits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashAnnotated txb) alicePay}
+      tx = Tx @C txb txwits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
         [ UtxowFailure . MissingVKeyWitnessesUTXOW $ WitHashes missing
@@ -627,7 +627,7 @@ testWithdrawalWrongAmt =
           (SlotNo 0)
           SNothing
           SNothing
-      wits =
+      txwits =
         mempty
           { addrWits =
               makeWitnessesVKey @C_Crypto
@@ -636,7 +636,7 @@ testWithdrawalWrongAmt =
           }
       rAcnt = mkVKeyRwdAcnt Testnet bobStake
       dpState' = addReward dpState (getRwdCred rAcnt) (Coin 10)
-      tx = Tx @C txb wits SNothing
+      tx = Tx @C txb txwits SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
    in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
 
@@ -723,8 +723,8 @@ testProducedOverMaxWord64 =
           (SlotNo 100)
           SNothing
           SNothing
-      wits = mempty {addrWits = makeWitnessesVKey @C_Crypto (hashAnnotated txbody) [alicePay]}
-      tx = Tx @C txbody wits SNothing
+      txwits = mempty {addrWits = makeWitnessesVKey @C_Crypto (hashAnnotated txbody) [alicePay]}
+      tx = Tx @C txbody txwits SNothing
       st = runShelleyBase $ applySTSTest @(LEDGER C) (TRC (ledgerEnv, (utxoState, dpState), tx))
    in -- We test that the serialization of the predicate failure does not return bottom
       serialize' st @?= serialize' st

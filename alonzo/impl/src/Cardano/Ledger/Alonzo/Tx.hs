@@ -300,7 +300,7 @@ instance c ~ (Crypto era) => HasField "bootWits" (Tx era) (Set (BootstrapWitness
 instance c ~ (Crypto era) => HasField "txdatahash" (Tx era) (Map.Map (DataHash c) (Data era)) where
   getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txdats' x
 
-instance HasField "witnessSet" (Tx era) (TxWitness era) where
+instance HasField "wits" (Tx era) (TxWitness era) where
   getField (TxConstr (Memo (TxRaw _ witset _ _) _)) = witset
 
 -- =========================================================

@@ -22,6 +22,7 @@ import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Tx (Tx (..))
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -31,6 +32,7 @@ import Data.Maybe (fromJust)
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.API
   ( Addr,
     Credential (..),
@@ -41,7 +43,6 @@ import Shelley.Spec.Ledger.API
     PoolCert (..),
     PoolParams (..),
     RewardAcnt (..),
-    Tx (..),
     TxBody (..),
     TxIn (..),
     TxOut (..),
@@ -63,7 +64,6 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     vKey,
   )
-import Shelley.Spec.Ledger.LedgerState (txsize)
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx
@@ -91,7 +91,7 @@ sizeTest ::
   Integer ->
   Assertion
 sizeTest _ b16 tx s = do
-  (Base16.encode (serialize tx) @?= b16) >> (txsize tx @?= s)
+  (Base16.encode (serialize tx) @?= b16) >> (getField @"txsize" tx @?= s)
 
 alicePay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
 alicePay = KeyPair @'Payment @crypto vk sk
@@ -184,12 +184,12 @@ type BodySignable era = DSignable (Crypto era) (Hash (Crypto era) EraIndependent
 txSimpleUTxO :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txSimpleUTxO =
   Tx
-    { _body = txbSimpleUTxO,
-      _witnessSet =
+    { body = txbSimpleUTxO,
+      wits =
         mempty
           { addrWits = makeWitnessesVKey (hashAnnotated $ txbSimpleUTxO @c) [alicePay]
           },
-      _metadata = SNothing
+      auxiliaryData = SNothing
     }
 
 txSimpleUTxOBytes16 :: BSL.ByteString
@@ -224,8 +224,8 @@ txbMutiUTxO =
 txMutiUTxO :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txMutiUTxO =
   Tx
-    { _body = txbMutiUTxO,
-      _witnessSet =
+    { body = txbMutiUTxO,
+      wits =
         mempty
           { addrWits =
               makeWitnessesVKey
@@ -234,7 +234,7 @@ txMutiUTxO =
                   bobPay
                 ]
           },
-      _metadata = SNothing
+      auxiliaryData = SNothing
     }
 
 txMutiUTxOBytes16 :: BSL.ByteString
@@ -257,12 +257,12 @@ txbRegisterStake =
 txRegisterStake :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txRegisterStake =
   Tx
-    { _body = txbRegisterStake,
-      _witnessSet =
+    { body = txbRegisterStake,
+      wits =
         mempty
           { addrWits = makeWitnessesVKey (hashAnnotated $ txbRegisterStake @c) [alicePay]
           },
-      _metadata = SNothing
+      auxiliaryData = SNothing
     }
 
 txRegisterStakeBytes16 :: BSL.ByteString
@@ -289,15 +289,15 @@ txbDelegateStake =
 txDelegateStake :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txDelegateStake =
   Tx
-    { _body = txbDelegateStake,
-      _witnessSet =
+    { body = txbDelegateStake,
+      wits =
         mempty
           { addrWits =
               makeWitnessesVKey
                 (hashAnnotated $ txbDelegateStake @c)
                 [asWitness alicePay, asWitness bobStake]
           },
-      _metadata = SNothing
+      auxiliaryData = SNothing
     }
 
 txDelegateStakeBytes16 :: BSL.ByteString
@@ -320,15 +320,15 @@ txbDeregisterStake =
 txDeregisterStake :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txDeregisterStake =
   Tx
-    { _body = txbDeregisterStake,
-      _witnessSet =
+    { body = txbDeregisterStake,
+      wits =
         mempty
           { addrWits =
               makeWitnessesVKey
                 (hashAnnotated $ txbDeregisterStake @c)
                 [alicePay @(Crypto (ShelleyEra c))]
           },
-      _metadata = SNothing
+      auxiliaryData = SNothing
     }
 
 txDeregisterStakeBytes16 :: BSL.ByteString
@@ -351,12 +351,12 @@ txbRegisterPool =
 txRegisterPool :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txRegisterPool =
   Tx
-    { _body = txbRegisterPool,
-      _witnessSet =
+    { body = txbRegisterPool,
+      wits =
         mempty
           { addrWits = makeWitnessesVKey (hashAnnotated $ txbRegisterPool @c) [alicePay]
           },
-      _metadata = SNothing
+      auxiliaryData = SNothing
     }
 
 txRegisterPoolBytes16 :: BSL.ByteString
@@ -379,12 +379,12 @@ txbRetirePool =
 txRetirePool :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txRetirePool =
   Tx
-    { _body = txbRetirePool,
-      _witnessSet =
+    { body = txbRetirePool,
+      wits =
         mempty
           { addrWits = makeWitnessesVKey (hashAnnotated $ txbRetirePool @c) [alicePay]
           },
-      _metadata = SNothing
+      auxiliaryData = SNothing
     }
 
 txRetirePoolBytes16 :: BSL.ByteString
@@ -411,12 +411,12 @@ txbWithMD =
 txWithMD :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txWithMD =
   Tx
-    { _body = txbWithMD,
-      _witnessSet =
+    { body = txbWithMD,
+      wits =
         mempty
           { addrWits = makeWitnessesVKey (hashAnnotated $ txbWithMD @c) [alicePay]
           },
-      _metadata = SJust md
+      auxiliaryData = SJust md
     }
 
 txWithMDBytes16 :: BSL.ByteString
@@ -448,8 +448,8 @@ txbWithMultiSig =
 txWithMultiSig :: forall c. Mock c => Tx (ShelleyEra c)
 txWithMultiSig =
   Tx
-    { _body = txbWithMultiSig,
-      _witnessSet =
+    { body = txbWithMultiSig,
+      wits =
         mempty
           { addrWits =
               makeWitnessesVKey
@@ -457,7 +457,7 @@ txWithMultiSig =
                 [alicePay, bobPay],
             scriptWits = Map.singleton (hashScript @(ShelleyEra c) msig) msig
           },
-      _metadata = SNothing
+      auxiliaryData = SNothing
     }
 
 txWithMultiSigBytes16 :: BSL.ByteString
@@ -480,15 +480,15 @@ txbWithWithdrawal =
 txWithWithdrawal :: forall c. (Cr.Crypto c, BodySignable (ShelleyEra c)) => Tx (ShelleyEra c)
 txWithWithdrawal =
   Tx
-    { _body = txbWithWithdrawal,
-      _witnessSet =
+    { body = txbWithWithdrawal,
+      wits =
         mempty
           { addrWits =
               makeWitnessesVKey
                 (hashAnnotated $ txbWithWithdrawal @c)
                 [asWitness alicePay, asWitness aliceStake]
           },
-      _metadata = SNothing
+      auxiliaryData = SNothing
     }
 
 txWithWithdrawalBytes16 :: BSL.ByteString
@@ -512,7 +512,7 @@ sizeTests =
       testCase "deregister stake key" $ sizeTest p txDeregisterStakeBytes16 txDeregisterStake 90,
       testCase "register stake pool" $ sizeTest p txRegisterPoolBytes16 txRegisterPool 154,
       testCase "retire stake pool" $ sizeTest p txRetirePoolBytes16 txRetirePool 89,
-      testCase "metadata" $ sizeTest p txWithMDBytes16 txWithMD 96,
+      testCase "auxiliaryData" $ sizeTest p txWithMDBytes16 txWithMD 96,
       testCase "multisig" $ sizeTest p txWithMultiSigBytes16 txWithMultiSig 141,
       testCase "reward withdrawal" $ sizeTest p txWithWithdrawalBytes16 txWithWithdrawal 116
     ]

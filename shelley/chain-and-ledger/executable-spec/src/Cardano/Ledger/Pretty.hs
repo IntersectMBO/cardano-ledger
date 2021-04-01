@@ -45,6 +45,7 @@ import Data.Text (Text)
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Natural (Natural)
+import GHC.Records
 import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
@@ -799,17 +800,17 @@ instance PrettyA (Metadata era) where prettyA = ppMetadata
 ppTx ::
   ( PrettyA (Core.TxBody era),
     PrettyA (Core.AuxiliaryData era),
-    PrettyA (Core.Script era),
+    PrettyA (Core.Witnesses era),
     Era era
   ) =>
   Tx era ->
   PDoc
-ppTx (Tx' body witset meta _) =
+ppTx tx =
   ppRecord
     "Tx"
-    [ ("body", prettyA body),
-      ("witnessSet", ppWitnessSetHKD witset),
-      ("metadata", ppStrictMaybe prettyA meta)
+    [ ("body", prettyA $ getField @"body" tx),
+      ("witnessSet", prettyA $ getField @"wits" tx),
+      ("metadata", ppStrictMaybe prettyA $ getField @"auxiliaryData" tx)
     ]
 
 ppBootstrapWitness :: Crypto crypto => BootstrapWitness crypto -> PDoc
@@ -835,7 +836,7 @@ ppWitnessSetHKD x =
 instance
   ( PrettyA (Core.TxBody era),
     PrettyA (Core.AuxiliaryData era),
-    PrettyA (Core.Script era),
+    PrettyA (Core.Witnesses era),
     Era era
   ) =>
   PrettyA (Tx era)

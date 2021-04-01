@@ -32,6 +32,7 @@ import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
+import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.API
   ( ScriptHash,
     UTXOW,
@@ -184,9 +185,9 @@ makeTx ::
   Map (ScriptHash c) (MultiSig c) ->
   Maybe (Metadata (ShelleyEra c)) ->
   Tx (ShelleyEra c)
-makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
+makeTx txBody keyPairs msigs = Tx txBody txWits . maybeToStrictMaybe
   where
-    wits =
+    txWits =
       mempty
         { addrWits = makeWitnessesVKey (hashAnnotated $ txBody) keyPairs,
           scriptWits = msigs
@@ -245,7 +246,7 @@ initialUTxOState aliceKeep msigs =
               (asWitness <$> [Cast.alicePay, Cast.bobPay])
               Map.empty
               Nothing
-       in ( txid @(ShelleyEra c) $ _body tx,
+       in ( txid @(ShelleyEra c) $ getField @"body" tx,
             runShelleyBase $
               applySTSTest @(UTXOW (ShelleyEra c))
                 ( TRC

@@ -35,7 +35,6 @@ import Cardano.Ledger.Shelley.Constraints
     UsesAuxiliary,
     UsesPParams,
     UsesScript,
-    UsesTxBody,
     UsesTxOut,
     UsesValue,
   )
@@ -89,7 +88,6 @@ import Shelley.Spec.Ledger.LedgerState
     keyRefunds,
     minfee,
     produced,
-    txsize,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
@@ -279,6 +277,7 @@ instance
     UsesScript era,
     UsesAuxiliary era,
     UsesPParams era,
+    Show (Core.Witnesses era),
     Core.TxBody era ~ TxBody era,
     Core.PParams era ~ PParams era,
     Core.Tx era ~ Tx era,
@@ -322,18 +321,15 @@ instance
        in PostCondition
             "Should preserve value in the UTxO state"
             ( \(TRC (_, us, tx)) us' ->
-                utxoBalance us <> withdrawals (_body tx) == utxoBalance us'
+                utxoBalance us <> withdrawals (getField @"body" tx) == utxoBalance us'
             )
     ]
 
 utxoInductive ::
   forall era utxo.
   ( UsesAuxiliary era,
-    UsesScript era,
-    UsesTxBody era,
     UsesTxOut era,
     STS (utxo era),
-    Core.Tx era ~ Tx era,
     Embed (Core.EraRule "PPUP" era) (utxo era),
     BaseM (utxo era) ~ ShelleyBase,
     Environment (utxo era) ~ UtxoEnv era,
@@ -359,7 +355,7 @@ utxoInductive ::
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo deposits' fees ppup = u
-  let txb = _body tx
+  let txb = getField @"body" tx
 
   getField @"ttl" txb >= slot ?! ExpiredUTxO (getField @"ttl" txb) slot
   -- the ttl field marks the top of an open interval, so it must be
@@ -419,7 +415,7 @@ utxoInductive = do
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
-      txSize_ = txsize tx
+      txSize_ = getField @"txsize" tx
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
   let refunded = keyRefunds pp txb

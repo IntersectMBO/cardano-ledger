@@ -105,7 +105,7 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
   )
 import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
-import Shelley.Spec.Ledger.Tx (Tx (..), ValidateScript, WitVKey, hashScript, validateScript)
+import Shelley.Spec.Ledger.Tx (Tx, ValidateScript, WitVKey, WitnessSet, hashScript, validateScript)
 import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody, TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
@@ -314,13 +314,13 @@ shelleyStyleWitness embed = do
   -- check metadata hash
   case (getField @"adHash" txbody, auxdata) of
     (SNothing, SNothing) -> pure ()
-    (SJust mdh, SNothing) -> failBecause $ (embed (MissingTxMetadata mdh))
+    (SJust mdh, SNothing) -> failBecause $ embed (MissingTxMetadata mdh)
     (SNothing, SJust md') ->
       failBecause $
         embed (MissingTxBodyMetadataHash (hashAuxiliaryData @era md'))
     (SJust mdh, SJust md') -> do
       hashAuxiliaryData @era md' == mdh
-        ?! (embed (ConflictingMetadataHash mdh (hashAuxiliaryData @era md')))
+        ?! embed (ConflictingMetadataHash mdh (hashAuxiliaryData @era md'))
 
       -- check metadata value sizes
       when (SoftForks.validMetadata pp) $
@@ -329,8 +329,8 @@ shelleyStyleWitness embed = do
   -- check genesis keys signatures for instantaneous rewards certificates
   let genDelegates =
         Set.fromList $
-          fmap (asWitness . genDelegKeyHash) $
-            Map.elems genMapping
+          asWitness . genDelegKeyHash
+            <$> Map.elems genMapping
       (WitHashes khAsSet) = witsKeyHashes
       genSig = eval (genDelegates ∩ khAsSet)
       mirCerts =
@@ -359,8 +359,8 @@ instance
   wrapFailed = UtxoFailure
 
 instance
-  ( -- Fix Core.Tx to the Shelley Era
-    Core.Tx era ~ Tx era,
+  ( -- Fix Core.Witnesses to the Shelley Era
+    Core.Witnesses era ~ WitnessSet era,
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (UTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,

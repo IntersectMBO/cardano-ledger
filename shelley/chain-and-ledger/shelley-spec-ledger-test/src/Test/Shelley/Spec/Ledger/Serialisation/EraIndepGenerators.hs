@@ -775,28 +775,27 @@ instance
 
 genTx ::
   ( UsesTxBody era,
-    UsesScript era,
     UsesAuxiliary era,
-    Arbitrary (WitnessSet era),
     Arbitrary (Core.TxBody era),
-    Arbitrary (Core.AuxiliaryData era)
+    Arbitrary (Core.AuxiliaryData era),
+    ToCBOR (Core.Witnesses era),
+    Arbitrary (Core.Witnesses era)
   ) =>
   Gen (Tx era)
 genTx =
   Tx
     <$> arbitrary
-    <*> (resize maxTxWits arbitrary)
+    <*> resize maxTxWits arbitrary
     <*> arbitrary
 
 genBlock ::
   forall era.
   ( UsesTxBody era,
-    UsesScript era,
     UsesAuxiliary era,
     PreAlonzo era,
     ScriptClass era,
     Mock (Crypto era),
-    Arbitrary (WitnessSet era),
+    Arbitrary (Core.Witnesses era),
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.AuxiliaryData era)
   ) =>

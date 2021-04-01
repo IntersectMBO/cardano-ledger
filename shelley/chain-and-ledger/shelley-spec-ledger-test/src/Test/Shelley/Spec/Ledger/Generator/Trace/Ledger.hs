@@ -52,7 +52,7 @@ import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.Tx (Tx, WitnessSet)
 import Shelley.Spec.Ledger.TxBody (DCert, Ix, TxIn)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -85,7 +85,7 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- with meaningful delegation certificates.
 instance
   ( EraGen era,
-    Core.Tx era ~ Tx era,
+    Core.Witnesses era ~ WitnessSet era,
     ShelleyTest era,
     UsesTxBody era,
     UsesTxOut era,
