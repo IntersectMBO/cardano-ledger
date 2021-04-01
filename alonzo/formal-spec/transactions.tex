@@ -127,7 +127,7 @@ We add the following helper functions:
        & (\VKey \mapsto \Sig) & \fun{txwitsVKey} & \text{VKey signatures}\\
        & \times ~(\ScriptHash \mapsto \Script)  & \fun{txscripts} & \text{All scripts}\\
        & \times~ \hldiff{(\DataHash \mapsto \Data)} & \hldiff{\fun{txdats}} & \text{All datum objects}\\
-       & \times ~\hldiff{(\RdmrPtr \mapsto \Data \times \ExUnits)}& \hldiff{\fun{txrdmrs}}& \text{Redeemers/budget}\\
+       & \times ~\hldiff{(\RdmrPtr \mapsto \Data^? \times \ExUnits)}& \hldiff{\fun{txrdmrs}}& \text{Redeemers/budget}\\
     \end{array}
   \end{equation*}
   %
@@ -179,7 +179,9 @@ in a transaction that is needed for witnessing, namely:
   \item VKey signatures;
   \item a map of scripts indexed by their hashes, including non-native scripts;
   \item a map of terms of type $\Data$ indexed by their hashes, containing all required datum objects; and
-  \item a map of $\Data$ and $\ExUnits$ values indexed by $\RdmrPtr$, containing the redeemers and execution units budgets.
+  \item a map of a part of a $\Data^?$ object and an $\ExUnits$ value indexed by $\RdmrPtr$,
+  containing the redeemers and execution units budgets. Note that redeemers are optional, while
+  execution units are not. 
 \end{itemize}
 
 Note that there is a difference between the way scripts and datum objects are included in

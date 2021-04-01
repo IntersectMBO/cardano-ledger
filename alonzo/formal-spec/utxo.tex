@@ -47,7 +47,8 @@ We have added or changed several functions that deal with fees as shown in Figur
   \item $\fun{isNonNativeScriptAddress}$ is a predicate that checks
   whether an address is used as a script address with a non-native
   script.
-  \item $\fun{totExunits}$ calculates the total $\ExUnits$ in a transaction.
+  \item $\fun{totExunits}$ calculates the total $\ExUnits$ in a transaction by summing
+  the per-script units stored in the indexed redeemer structure
   \item The predicate $\fun{feesOK}$ checks whether the transaction is
   paying the necessary fees, and that it does it correctly. That is, it checks that:
   \begin{enumerate}[label=({\roman*})]
@@ -90,7 +91,8 @@ These include:
   withdrawal in a list, finite map, or set of such objects.
   It assumes there is some ordering on each of these structures.
 \item
-  $\fun{indexedRdmrs}$ indexes the redeemers by the purpose they are used for.
+  $\fun{indexedRdmrs}$ indexes the pair of a redeemer and an $\ExUnits$ value
+  for a given script by its script purpose (eg. the input, or certificate, etc.)
 \end{itemize}
 
 
@@ -126,10 +128,11 @@ These include:
   %
   \emph{Indexing functions}
   \begin{align*}
-    &\fun{indexedRdmrs} \in \Tx \to \ScriptPurpose \to \Data^?\\
+    &\fun{indexedRdmrs} \in \Tx \to \ScriptPurpose \to (\seqof{\Data}~\times~\ExUnits)\\
     &\fun{indexedRdmrs}~tx~sp =
       \begin{cases}
-        d & rdptr \mapsto d \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
+        ([], \var{eu}) & rdptr \mapsto (\Nothing, \var{eu}) \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
+        ([d], \var{eu}) & rdptr \mapsto (\var{d}, \var{eu}) \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
         \Nothing & \text{otherwise}
       \end{cases} \\
     & ~~\where \\
@@ -156,11 +159,18 @@ The reason it may not be possible to translate is that the slot number
 is too far in the future for the system to accurately
 predict the exact time to which it refers.
 
+\item $\fun{txInfo}$ summarizes all the necessary transaction and chain state info
+  that needs to be passed to the script interpreter. The $\Language$ argument
+  is required because different languages have different expectations of the
+  format and contents of the summary $\Data$ term.
+  It has a $\UTxO$ as its argument to recover the full information of the inputs of the transaction,
+  but only the inputs of the transaction are provided to scripts. For details, see~\ref{sec:txinfo}
+
 \item
-  $\fun{valContext}$ constructs the validation context.
-  This includes all the necessary transaction and chain state data that needs to be passed to the script interpreter.
-    It has a $\UTxO$ as its argument to recover the full information of the inputs of the transaction,
-    but only the inputs of the transaction are provided to scripts.
+  $\fun{valContext}$ constructs the \emph{validation context}. A validation context is
+  a $\Data$ term which encodes both the summary of the transaction and ledger information
+  (this is supplied by the $\fun{txInfo}$ summarization function), and the script purpose.
+
 \item
   $\fun{runPLCScript}$ validates Plutus scripts. It takes the following
   arguments:
@@ -170,8 +180,10 @@ predict the exact time to which it refers.
   \item A list of terms of type $\Data$ that will be passed to the script; and
   \item the execution unit budget.
   \end{itemize}
-  It outputs the validation result (as a Boolean).
+  It outputs the validation result.
   Note that script execution stops if the full budget has been spent before validation is complete.
+  It is left abstract because it is implemented as part of the native script interpreter, not the ledger.
+  The interpreter called depends on the language of the script.
 \end{itemize}
 
 
@@ -205,18 +217,22 @@ which has the information to do this correctly for
 
 \textbf{Validation context construction.}
   As additional non-native scripting languages become supported in the future, scripts of different
-  languages may expect different (or differently structured) validation context, ie. different
-  representation of transaction and chain state data.
-  The $\fun{valContext}$ function will be implemented differently
-  for each new language, with the construction of the validation context
+  languages may expect different (or differently structured) transaction and ledger data summary.
+  The $\fun{txInfo}$ function will be implemented differently
+  for each new language. So, the construction is
   dependent on both the language of the script being validated and the ledger/transaction structure
   of the current era.
 
   In order to ensure that running scripts of all script languages is supported indefinitely across
-  future eras, the $\fun{valContext}$ function must be total (ie. always produce
-  a validation context). Recall here that while \emph{running} all scripts must be supported across
+  future eras, the $\fun{txInfo}$ function must be total.
+  Recall here that while \emph{running} all scripts must be supported across
   all future ledger changes,
-  it is not a requirement that every script must \emph{validate} within the context of some transaction. \newline
+  it is not a requirement that every script must \emph{validate} within the context of some transaction.
+
+  The $\fun{txInfo}$ output is computed once for the whole transaction. The output of the function
+  $\fun{valContext}$ is computed separately for each script purpose.
+  The script purpose is passed to it
+  to allow the script to reference itself via its hash, and to be aware of what it is validating.
 
 \textbf{Know your contract arguments.}
   A Plutus validator script may receive either a list of three terms of type $\Data$, in case it validates the spending of script outputs
@@ -230,8 +246,10 @@ which has the information to do this correctly for
   \begin{align*}
      &\fun{slotToTime} \in \Slot \to \Time^? \\
      &\text{Translate slot number to system time or fail} \\~\\
-     &\fun{valContext} \in \Language \to \UTxO \to \Tx \to \ScriptPurpose \to \Data \\
-     &\text{Build Validation Data} \\~\\
+     &\fun{txInfo} \in \Language \to \UTxO \to \Tx \to \Data \\
+     &\text{Summarizes transaction data} \\~\\
+     &\fun{valContext} \in \Data \to \ScriptPurpose \to \Data \\
+     &\text{Pairs transaction data with a script purpose} \\~\\
      &\fun{runPLCScript} \in \CostMod \to\ScriptPlutus \to
     \seqof{\Data} \to \ExUnits \to \IsValidating \\
      &\text{Validate a Plutus script, taking resource limits into account}
@@ -251,26 +269,46 @@ Figure \ref{fig:functions:script2} contains the functions used to
 match scripts with their corresponding inputs and pass them to the
 evaluator.
 
+\begin{itemize}
+  \item $\fun{getData}$ looks for a datum associated with a given script purpose. Note that
+  only an $\TxIn$-type script purpose can result in finding an associated datum hash.
+  In no datum is found, an empty list is returned. A list containing the found datum
+  is returned otherwise.
+
+  \item $\fun{collectNNScriptInputs}$ builds a list of scripts, paired with their
+  inputs. Specifically, each tuple in the list contains :
+
+  \begin{itemize}
+  \item the script;
+
+  \item the validation context, built by the $\fun{valContext}$ function using
+  the transaction summary built by $\fun{txInfo}$, together with the current item being validated;
+
+  \item the hash of the required datum, if any (returned by the $\fun{getData}$ function,
+  wrapped in a list type instead of a $\Data^?$ type).
+
+  \item a pair, returned by the $\fun{indexedRdmrs}$ function, of
+  \begin{itemize}
+    \item a list of $\Data$, containing exactly one or zero elements (this
+    is not checked here, however, see~\ref{fig:functions:script1}). This list
+    contains the optional redeemer if there is one.
+    \item an $\ExUnits$ value, which is mandatory for all scripts
+  \end{itemize}
+
+  \item $\fun{evalScripts}$ evaluates a whole list of scripts paired with all their
+  inputs by calling the native script validator function, $\fun{runPLCScript}$
+
+  \item $\fun{runNativeScript}$ replaces the $\fun{validateScript}$ function,
+  to diffentiate running native and non-native scripts. The definition is the
+  same as in the ShelleyMA specification.
+\end{itemize}
+
 Note that no ``checks'' are performed within these functions.
 Missing validators, missing inputs, incorrect hashes, the wrong type of script etc,
 are caught during the application of the UTXOW rule (before these functions are ever applied).
 %
-Various items of data are involved in building the inputs for script validation:
 
-\begin{itemize}
-\item The hash of the validator script;
-
-\item The hash of the required datum, if any;
-
-\item The corresponding full validator and datum object, which are looked up in transaction witnesses;
-
-\item The redeemer, which is contained in the transaction's indexed redeemer structure
-and which is located using the $\fun{indexedRdmrs}$ function; and
-
-\item the validation data, built using the UTxO, the transaction itself,
-and the current item being validated.
 \end{itemize}
-
 
 \begin{figure}[htb]
   \begin{align*}
@@ -283,20 +321,22 @@ and the current item being validated.
     \nextdef
     & \fun{collectNNScriptInputs} \in \PParams \to \Tx \to \UTxO \to \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
     & \fun{collectNNScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
-    & ~~\fun{toList} \{ (\var{script}, (d; \fun{valContext}~(\fun{language}~{script})~\var{utxo}~\var{tx}~\var{sp}; \fun{getData}~tx~utxo~sp), \var{eu}, \var{cm}) \mid \\
+    & ~~\fun{toList} \{ (\var{script}, (\fun{valContext}~\var{txinfo}~\var{sp}~++~ \fun{getData}~tx~utxo~sp~++~\var{d}), \var{eu}, \var{cm}) \mid \\
     & ~~~~(\var{sp}, \var{scriptHash}) \in \fun{scriptsNeeded}~{utxo}~{tx}, \\
-    & ~~~~(\var{d}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
-    & ~~~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp} \}
+    & ~~~~(\var{d}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
+    & ~~~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp} \} \\
+    & \where \\
+    & ~~~~~~~ \var{txinfo}~=~\fun{txInfo}~(\fun{language}~{script})~\var{utxo}~\var{tx} \\
     \nextdef
-    & \fun{evalScripts} \in \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \to \Bool \\
+    & \fun{evalScripts} \in \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \to \IsValidating \\
     & \fun{evalScripts}~\epsilon = \True \\
     & \fun{evalScripts}~((\var{sc}, \var{d}, \var{eu}, \var{cm});\Gamma) =
       \llbracket sc \rrbracket_{cm,\var{eu}} d \land \fun{evalScripts}~\Gamma
     \nextdef
     &\fun{runNativeScript} \in\ScriptNative \to \Tx \to \IsValidating
   \end{align*}
-  \caption{Scripts and their Arguments}
+  \caption{Scripts and their arguments}
   \label{fig:functions:script2}
 \end{figure}
 
@@ -501,7 +541,8 @@ This rule has the following changes:
  \item The execution unit budget for a transaction is within the maximum
   permitted number of units for a transaction;
 
-  \item The UTXOS state transition is valid.
+  \item The UTXOS state transition is valid (this is the transition that runs the
+  non-native scripts)
 \end{enumerate}
 
 The resulting state transition is defined entirely by the application of the
@@ -522,10 +563,10 @@ UTXOS rule.
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
       \forall txout \in \txouts{txb}, \\
-      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp})} \\~
+      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp)} \\~
       \\
       \forall txout \in \txouts{txb},\\
-      \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ (\fun{maxTxSize}~pp) * (\fun{maxValSize}~pp) \\~
+      \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ (\fun{maxTxSize}~pp) * (\fun{maxValSize}~pp)} \\~
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
       \\
@@ -601,9 +642,29 @@ UTXOS rule.
 \subsection{Witnessing}
 \label{sec:wits}
 
-Because of two-phase transaction validation, non-native script validation is not part of transaction witnessing.
+Because of two-phase transaction validation, non-native script validation is not part of phase one of transaction witnessing
+(it is done in phase 2, once the rest of the transaction is validated).
 However, native script validation does remain part of transaction witnessing.
-When witnessing a transaction, we therefore need to validate only the native scripts.
+When witnessing a transaction in phase one, we therefore need to validate only the native scripts.
+
+We construct the following helper functions :
+
+\begin{itemize}
+  \item $\fun{scriptsNeeded}$ assembles the all the $\ScriptPurpose$ terms
+  for validation of every transaction action that requires script validation,
+  paired with the hashes of corresponding the witnessing scripts.
+  This function collects hashes of both native and non-native scripts.
+
+  \item $\fun{checkRedeemers}$ returns $\True$ if, for the given script purpose,
+  whenever the script it points to is non-native, the transaction contains an associated entry
+  in the indexed redeemers structure.
+  Recall that redeemers are optional to include, so there may be a $\Nothing$ in place of
+  a redeemer. Execution units are mandatory for all scripts, so each script purpose
+  should have an associated entry specifying the $\ExUnits$ value.
+
+  \item $\fun{languages}$ returns the set of (non-native) script languages
+  of all the scripts included in the transaction
+\end{itemize}
 
 \begin{figure}[htb]
   \begin{align*}
@@ -620,8 +681,8 @@ When witnessing a transaction, we therefore need to validate only the native scr
     & ~~~~~~~ \var{txb}~=~\txbody{tx}
     \nextdef
     & \hspace{-1cm}\fun{checkRedeemers} \in \Tx \to \UTxO \to (\ScriptPurpose \times \ScriptHash) \to \Bool \\
-    & \hspace{-1cm}\fun{checkRedeemers}~\var{tx}~\var{utxo}~(\var{sp},\var{h})~=~ \exists s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx)\\
-    \land & ~ (s \in \ScriptNonNative~\Rightarrow \fun{indexedRdmrs}~tx~sp \neq \Nothing) \\
+    & \hspace{-1cm}\fun{checkRedeemers}~\var{tx}~\var{utxo}~(\var{sp},\var{h})~=~ \forall s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx),\\
+    & (s \in \ScriptNonNative~\Rightarrow \fun{indexedRdmrs}~tx~sp \neq \Nothing) \\
     \nextdef
     & \hspace{-1cm}\fun{languages} \in \TxWitness \to \powerset{\Language} \\
     & \hspace{-1cm}\fun{languages}~\var{txw}~=~
@@ -637,18 +698,32 @@ We have made the following changes and additions to the UTXOW preconditions:
 
 \item All the native scripts in the transaction validate;
 
-  \item For every item that needs to be validated by a non-native script, the transaction contains
-    a redeemer;
+\item The transaction contains exactly those scripts that are required for witnessing and no
+additional ones;
 
     \item The datums included in the witnesses are exactly those that are required for validating;
 
-    \item The transaction contains exactly those scripts that are required for witnessing and no
-    additional ones;
+    \item For every item that needs to be validated by a non-native script, the transaction contains
+      an entry in the indexed redeemer structure (ie. the execution units for it are specified);
+
+    \item The signatures of the keys whose hashes are specified in the
+    $\fun{reqSignerHashes}$ field in a transaction
+    have all indeed signed it;
 
     \item
     The hash of the subset of protocol parameter values that have been included in the transaction body is the same as
     the hash of the same subset of protocol parameters that are currently contained in the ledger;
 
+    \item A check that ensures that the list of scripts paired with their input data (context, datum and redeemer)
+    has the same number of elements as the set of scripts needed for each script purpose. Note that the same
+    script may appear more than once in both the list and the set, as it can be used for different purposes, and therefore
+    run separately for each, with different input data. Note also that by construction, the output of
+    the $\fun{collectNNScriptInputs}$ function should have exactly the same collection of scripts as
+    the $\fun{scriptsNeeded}$ function output - this check is in place to catch discrepancies in this construction.
+    \begin{note}
+      Note that $\fun{collectNNScriptInputs}$ is called twice, here and in UTXO. We need to avoid this.
+      ALSO we need to audit the $\fun{wppHash}$ function
+    \end{note}
 \end{itemize}
 
 If these conditions are all satisfied, then the resulting UTxO state change is fully determined
@@ -678,10 +753,10 @@ by the UTXO transition (the application of which is also part of the conditions)
       \dom (\txwitsVKey{txw}) \}\\~\\
       \hldiff{\forall \var{s} \in \range (\fun{txscripts}~{txw}) \cap \ScriptNative,
       \fun{runNativeScript}~\var{s}~\var{tx}}\\~\\
-      \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}, \fun{checkRedeemers}~tx~utxo~sph} \\
       \hldiff{\{ s \mid (\_, s) \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}\} = \dom (\fun{txscripts}~{txw})} \\
       \hldiff{\{ h \mid (\_ \mapsto (a, \_, h)) \in \txins{txb} \restrictdom \var{utxo}, \fun{isNonNativeScriptAddress}~{tx}~{a}\} =} \\
-      \hldiff{\dom (\fun{txdats}~{txw})}
+      \hldiff{\dom (\fun{txdats}~{txw})} \\
+      \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx},~ \fun{checkRedeemers}~tx~utxo~sph}
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
       \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\
@@ -708,6 +783,8 @@ by the UTXO transition (the application of which is also part of the conditions)
       (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
       \hldiff{\fun{wppHash}~{txb}~=~\fun{hashWitnessPPData}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})}
+      \\~\\
+      \hldiff{\|~\fun{scriptsNeeded}~\var{utxo}~\var{tx}~\|~=~\|~\fun{collectNNScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo}~\|}
       \\~\\
       {
         \begin{array}{r}
