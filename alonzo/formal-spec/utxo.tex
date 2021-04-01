@@ -300,7 +300,7 @@ evaluator.
 
   \item $\fun{runNativeScript}$ replaces the $\fun{validateScript}$ function,
   to diffentiate running native and non-native scripts. The definition is the
-  same as in the Shelley specification.
+  same as in the ShelleyMA specification.
 \end{itemize}
 
 Note that no ``checks'' are performed within these functions.
@@ -655,8 +655,9 @@ We construct the following helper functions :
   paired with the hashes of corresponding the witnessing scripts.
   This function collects hashes of both native and non-native scripts.
 
-  \item $\fun{checkRedeemers}$ returns $\True$ if the transaction contains an entry
-  in the indexed redeemers structure associated with a given $\ScriptPurpose$.
+  \item $\fun{checkRedeemers}$ returns $\True$ if, for the given script purpose,
+  whenever the script it points to is non-native, the transaction contains an associated entry
+  in the indexed redeemers structure.
   Recall that redeemers are optional to include, so there may be a $\Nothing$ in place of
   a redeemer. Execution units are mandatory for all scripts, so each script purpose
   should have an associated entry specifying the $\ExUnits$ value.
@@ -680,8 +681,8 @@ We construct the following helper functions :
     & ~~~~~~~ \var{txb}~=~\txbody{tx}
     \nextdef
     & \hspace{-1cm}\fun{checkRedeemers} \in \Tx \to \UTxO \to (\ScriptPurpose \times \ScriptHash) \to \Bool \\
-    & \hspace{-1cm}\fun{checkRedeemers}~\var{tx}~\var{utxo}~(\var{sp},\var{h})~=~ \exists s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx)\\
-    \land & ~ (s \in \ScriptNonNative~\Rightarrow \fun{indexedRdmrs}~tx~sp \neq \Nothing) \\
+    & \hspace{-1cm}\fun{checkRedeemers}~\var{tx}~\var{utxo}~(\var{sp},\var{h})~=~ \forall s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx),\\
+    & (s \in \ScriptNonNative~\Rightarrow \fun{indexedRdmrs}~tx~sp \neq \Nothing) \\
     \nextdef
     & \hspace{-1cm}\fun{languages} \in \TxWitness \to \powerset{\Language} \\
     & \hspace{-1cm}\fun{languages}~\var{txw}~=~
