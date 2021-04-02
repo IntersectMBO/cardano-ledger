@@ -36,6 +36,7 @@ import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
 import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.Coders
 import qualified Data.Map.Strict as Map
@@ -44,8 +45,10 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Records
 import Shelley.Spec.Ledger.BaseTypes
-  ( ShelleyBase,
+  ( Network,
+    ShelleyBase,
     StrictMaybe (..),
+    networkId,
   )
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..), unWitHashes, witsFromTxWitnesses)
@@ -80,6 +83,10 @@ data AlonzoPredFail era
   | -- | Scripts that failed
     Phase1ScriptWitnessNotValidating
       !(Set (Script era))
+  | -- | Wrong Network ID in body
+    WrongNetworkInTxBody
+      !Network -- Actual Network ID
+      !Network -- Network ID in transaction body
 
 deriving instance
   ( Era era,
@@ -118,6 +125,7 @@ encodePredFail (DataHashSetsDontAgree x y) = Sum DataHashSetsDontAgree 3 !> To x
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
 encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 5 !> To x
 encodePredFail (Phase1ScriptWitnessNotValidating x) = Sum Phase1ScriptWitnessNotValidating 6 !> To x
+encodePredFail (WrongNetworkInTxBody x y) = Sum WrongNetworkInTxBody 7 !> To x !> To y
 
 instance
   ( Era era,
@@ -146,6 +154,7 @@ decodePredFail 3 = SumD DataHashSetsDontAgree <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 5 = SumD MissingRequiredSigners <! From
 decodePredFail 6 = SumD Phase1ScriptWitnessNotValidating <! From
+decodePredFail 7 = SumD WrongNetworkInTxBody <! From <! From
 decodePredFail n = Invalid n
 
 -- =============================================
@@ -169,7 +178,8 @@ type ShelleyStyleWitnessNeeds era =
 type AlonzoStyleAdditions era =
   ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))), -- BE SURE AND ADD THESE INSTANCES
     HasField "txdatahash" (Core.Tx era) (Map.Map (DataHash (Crypto era)) (Data era)),
-    HasField "wppHash" (Core.TxBody era) (StrictMaybe (WitnessPPDataHash (Crypto era)))
+    HasField "wppHash" (Core.TxBody era) (StrictMaybe (WitnessPPDataHash (Crypto era))),
+    HasField "txnetworkid" (Core.TxBody era) (StrictMaybe Network)
   )
 
 -- | A somewhat generic STS transitionRule function for the Alonzo Era.
@@ -252,6 +262,12 @@ alonzoStyleWitness = do
       computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits' $ tx)
       bodyPPhash = getField @"wppHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
+
+  actualNetID <- liftSTS $ asks networkId
+  let bodyNetID = getField @"txnetworkid" txbody
+  case bodyNetID of
+    SNothing -> pure ()
+    SJust bid -> actualNetID == bid ?! WrongNetworkInTxBody actualNetID bid
 
   trans @(Core.EraRule "UTXO" era) $ TRC (ue, u', tx)
 
