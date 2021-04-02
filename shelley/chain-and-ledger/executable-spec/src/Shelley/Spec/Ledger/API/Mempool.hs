@@ -51,12 +51,11 @@ import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv, LedgersPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import Shelley.Spec.Ledger.Tx (Tx)
 
 -- TODO #1304: add reapplyTxs
 class
-  ( ChainData (Tx era),
-    AnnotatedData (Tx era),
+  ( ChainData (Core.Tx era),
+    AnnotatedData (Core.Tx era),
     Eq (ApplyTxError era),
     Show (ApplyTxError era),
     Typeable (ApplyTxError era),
@@ -65,7 +64,7 @@ class
     BaseM (Core.EraRule "LEDGERS" era) ~ ShelleyBase,
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ MempoolState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
     PredicateFailure (Core.EraRule "LEDGERS" era) ~ LedgersPredicateFailure era
   ) =>
   ApplyTx era
@@ -74,14 +73,14 @@ class
     MonadError (ApplyTxError era) m =>
     Globals ->
     SlotNo ->
-    Seq (Tx era) ->
+    Seq (Core.Tx era) ->
     NewEpochState era ->
     m (NewEpochState era)
   default applyTxs ::
     (MonadError (ApplyTxError era) m) =>
     Globals ->
     SlotNo ->
-    Seq (Tx era) ->
+    Seq (Core.Tx era) ->
     NewEpochState era ->
     m (NewEpochState era)
   applyTxs globals slot txs state =
@@ -164,13 +163,13 @@ applyTxsTransition ::
     BaseM (Core.EraRule "LEDGERS" era) ~ ShelleyBase,
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ MempoolState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
     PredicateFailure (Core.EraRule "LEDGERS" era) ~ LedgersPredicateFailure era,
     MonadError (ApplyTxError era) m
   ) =>
   Globals ->
   MempoolEnv era ->
-  Seq (Tx era) ->
+  Seq (Core.Tx era) ->
   MempoolState era ->
   m (MempoolState era)
 applyTxsTransition globals env txs state =

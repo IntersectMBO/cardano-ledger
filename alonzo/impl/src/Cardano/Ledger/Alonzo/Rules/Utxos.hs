@@ -43,6 +43,7 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), strictMaybeToMaybe)
+import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
 import Shelley.Spec.Ledger.LedgerState
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (Update)
@@ -63,6 +64,7 @@ instance
     Eq (Core.PParams era),
     Show (Core.PParams era),
     Show (PParamsDelta era),
+    Show (CompactAddr (Crypto era)),
     Eq (PParamsDelta era),
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
@@ -90,6 +92,7 @@ instance
 utxosTransition ::
   forall era.
   ( Era era,
+    Show (CompactAddr (Crypto era)),
     Core.Script era ~ Script era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
@@ -119,7 +122,8 @@ utxosTransition =
 
 scriptsValidateTransition ::
   forall era.
-  ( Show (Core.Value era), -- Arises because of the use of (∪) from SetAlgebra, needs Show to report errors.
+  ( Show (Core.Value era), -- Arises because of the use of (∪) from SetAlgebra, needs Show to report problems.
+    Show (CompactAddr (Crypto era)),
     Era era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,

@@ -136,12 +136,12 @@ deriving stock instance
   ) =>
   Eq (TxOut era)
 
-instance
-  ( Show (Core.Value era)
+deriving instance
+  ( Show (CompactAddr (Crypto era)),
+    Show (Core.Value era),
+    Show (CompactForm (Core.Value era))
   ) =>
   Show (TxOut era)
-  where
-  show = error "Not yet implemented"
 
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
@@ -205,7 +205,11 @@ instance
   NoThunks (TxBodyRaw era)
 
 deriving instance
-  (Era era, Show (Core.Value era), Show (PParamsDelta era)) =>
+  ( Era era,
+    Show (Core.Value era),
+    Show (PParamsDelta era),
+    Show (CompactAddr (Crypto era))
+  ) =>
   Show (TxBodyRaw era)
 
 newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
@@ -231,7 +235,8 @@ deriving instance
   ( Era era,
     Compactible (Core.Value era),
     Show (Core.Value era),
-    Show (PParamsDelta era)
+    Show (PParamsDelta era),
+    Show (CompactAddr (Crypto era))
   ) =>
   Show (TxBody era)
 
@@ -475,7 +480,7 @@ encodeTxBodyRaw
 
       fromSJust :: StrictMaybe a -> a
       fromSJust (SJust x) = x
-      fromSJust SNothing = error "SNothing in fromSJust"
+      fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing"
 
 instance
   forall era.

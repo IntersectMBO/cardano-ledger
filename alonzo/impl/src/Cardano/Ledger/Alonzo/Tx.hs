@@ -475,24 +475,22 @@ instance (Typeable c, CC.Crypto c) => FromCBOR (ScriptPurpose c) where
 -- =======================================
 
 class Indexable elem container where
-  indexOf :: elem -> container -> Word64
-  atIndex :: Word64 -> container -> elem
+  indexOf :: elem -> container -> StrictMaybe Word64
 
 instance Ord k => Indexable k (Set k) where
-  indexOf n set = fromIntegral $ Set.findIndex n set
-  atIndex i set = Set.elemAt (fromIntegral i) set
+  indexOf n set = case Set.lookupIndex n set of
+    Just x -> SJust (fromIntegral x)
+    Nothing -> SNothing
 
 instance Eq k => Indexable k (StrictSeq k) where
   indexOf n seqx = case StrictSeq.findIndexL (== n) seqx of
-    Just m -> fromIntegral m
-    Nothing -> error "Not found in StrictSeq"
-  atIndex i seqx = case StrictSeq.lookup (fromIntegral i) seqx of
-    Just element -> element
-    Nothing -> error ("No elem at index " ++ show i)
+    Just m -> SJust (fromIntegral m)
+    Nothing -> SNothing
 
 instance Ord k => Indexable k (Map.Map k v) where
-  indexOf n mp = fromIntegral $ Map.findIndex n mp
-  atIndex i mp = fst (Map.elemAt (fromIntegral i) mp) -- If one needs the value, on can use Map.Lookup
+  indexOf n mp = case Map.lookupIndex n mp of
+    Just x -> SJust (fromIntegral x)
+    Nothing -> SNothing
 
 rdptr ::
   forall era.
@@ -503,11 +501,11 @@ rdptr ::
   ) =>
   Core.TxBody era ->
   ScriptPurpose (Crypto era) ->
-  RdmrPtr
-rdptr txb (Minting (PolicyID hash)) = RdmrPtr Mint (indexOf hash ((getField @"minted" txb) :: Set (ScriptHash (Crypto era))))
-rdptr txb (Spending txin) = RdmrPtr Spend (indexOf txin (getField @"inputs" txb))
-rdptr txb (Rewarding racnt) = RdmrPtr Rewrd (indexOf racnt (unWdrl (getField @"wdrls" txb)))
-rdptr txb (Certifying d) = RdmrPtr Cert (indexOf d (getField @"certs" txb))
+  StrictMaybe RdmrPtr
+rdptr txb (Minting (PolicyID hash)) = RdmrPtr Mint <$> (indexOf hash ((getField @"minted" txb) :: Set (ScriptHash (Crypto era))))
+rdptr txb (Spending txin) = RdmrPtr Spend <$> (indexOf txin (getField @"inputs" txb))
+rdptr txb (Rewarding racnt) = RdmrPtr Rewrd <$> (indexOf racnt (unWdrl (getField @"wdrls" txb)))
+rdptr txb (Certifying d) = RdmrPtr Cert <$> (indexOf d (getField @"certs" txb))
 
 getMapFromValue :: Value crypto -> Map.Map (PolicyID crypto) (Map.Map AssetName Integer)
 getMapFromValue (Value _ m) = m
@@ -523,10 +521,11 @@ indexedRdmrs ::
   Tx era ->
   ScriptPurpose (Crypto era) ->
   Maybe (Data era, ExUnits)
-indexedRdmrs tx sp = Map.lookup rdptr' rdmrs
-  where
-    rdmrs = unRedeemers $ txrdmrs' . getField @"wits" $ tx
-    rdptr' = rdptr @era (getField @"body" tx) sp
+indexedRdmrs tx sp = case rdptr @era (getField @"body" tx) sp of
+  SNothing -> Nothing
+  SJust policyid -> Map.lookup policyid rdmrs
+    where
+      rdmrs = unRedeemers $ txrdmrs' . getField @"wits" $ tx
 
 -- =======================================================
 

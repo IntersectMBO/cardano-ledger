@@ -41,6 +41,7 @@ import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import qualified Language.PlutusTx as Plutus
+import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -231,7 +232,7 @@ instance Mock c => Arbitrary (UtxosPredicateFailure (AlonzoEra c)) where
         UpdateFailure <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
+instance (Show (CompactAddr c), Mock c) => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
   arbitrary =
     oneof
       [ (BadInputsUTxO) <$> arbitrary,
@@ -253,7 +254,7 @@ instance Mock c => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
         FeeContainsNonADA <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (AlonzoPredFail (AlonzoEra c)) where
+instance (Show (CompactAddr c), Mock c) => Arbitrary (AlonzoPredFail (AlonzoEra c)) where
   arbitrary =
     oneof
       [ WrappedShelleyEraFailure <$> arbitrary,

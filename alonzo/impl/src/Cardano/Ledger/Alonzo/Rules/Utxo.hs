@@ -80,6 +80,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     networkId,
   )
+import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley
 import Shelley.Spec.Ledger.Tx (TxIn)
@@ -274,6 +275,7 @@ utxoTransition ::
   forall era.
   ( Era era,
     ValidateScript era,
+    Show (CompactAddr (Crypto era)),
     -- instructions for calling UTXOS from AlonzoUTXO
     Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
@@ -392,6 +394,7 @@ utxoTransition = do
 instance
   forall era.
   ( ValidateScript era,
+    Show (CompactAddr (Crypto era)),
     -- Instructions needed to call the UTXOS transition from this one.
     Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,

@@ -87,16 +87,19 @@ data AlonzoPredFail era
     WrongNetworkInTxBody
       !Network -- Actual Network ID
       !Network -- Network ID in transaction body
+  | ScriptsDidNotValidate [Core.Script era]
 
 deriving instance
   ( Era era,
-    Show (PredicateFailure (Core.EraRule "UTXO" era)) -- The Shelley UtxowPredicateFailure needs this to Show
+    Show (PredicateFailure (Core.EraRule "UTXO" era)), -- The Shelley UtxowPredicateFailure needs this to Show
+    Show (Core.Script era)
   ) =>
   Show (AlonzoPredFail era)
 
 deriving instance
   ( Era era,
-    Eq (PredicateFailure (Core.EraRule "UTXO" era)) -- The Shelley UtxowPredicateFailure needs this to Eq
+    Eq (PredicateFailure (Core.EraRule "UTXO" era)), -- The Shelley UtxowPredicateFailure needs this to Eq
+    Eq (Core.Script era)
   ) =>
   Eq (AlonzoPredFail era)
 
@@ -104,7 +107,8 @@ instance
   ( Era era,
     ToCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     Typeable (Core.AuxiliaryData era),
-    Typeable (Core.Script era)
+    Typeable (Core.Script era),
+    ToCBOR (Core.Script era)
   ) =>
   ToCBOR (AlonzoPredFail era)
   where
@@ -114,7 +118,8 @@ encodePredFail ::
   ( Era era,
     ToCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era)
+    Typeable (Core.AuxiliaryData era),
+    ToCBOR (Core.Script era)
   ) =>
   AlonzoPredFail era ->
   Encode 'Open (AlonzoPredFail era)
@@ -126,13 +131,15 @@ encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x
 encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 5 !> To x
 encodePredFail (Phase1ScriptWitnessNotValidating x) = Sum Phase1ScriptWitnessNotValidating 6 !> To x
 encodePredFail (WrongNetworkInTxBody x y) = Sum WrongNetworkInTxBody 7 !> To x !> To y
+encodePredFail (ScriptsDidNotValidate x) = Sum ScriptsDidNotValidate 8 !> To x
 
 instance
   ( Era era,
     FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     FromCBOR (Script era),
     Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era)
+    Typeable (Core.AuxiliaryData era),
+    FromCBOR (Core.Script era)
   ) =>
   FromCBOR (AlonzoPredFail era)
   where
@@ -143,7 +150,8 @@ decodePredFail ::
     FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)), -- TODO, we should be able to get rid of this constraint
     FromCBOR (Script era),
     Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era)
+    Typeable (Core.AuxiliaryData era),
+    FromCBOR (Core.Script era)
   ) =>
   Word ->
   Decode 'Open (AlonzoPredFail era)
@@ -155,6 +163,7 @@ decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 5 = SumD MissingRequiredSigners <! From
 decodePredFail 6 = SumD Phase1ScriptWitnessNotValidating <! From
 decodePredFail 7 = SumD WrongNetworkInTxBody <! From <! From
+decodePredFail 8 = SumD ScriptsDidNotValidate <! From
 decodePredFail n = Invalid n
 
 -- =============================================

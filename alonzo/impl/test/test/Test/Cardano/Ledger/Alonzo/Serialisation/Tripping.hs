@@ -65,7 +65,7 @@ tripping :: (Eq src, Show src, ToCBOR src, FromCBOR src) => src -> Property
 tripping x = trippingF roundTrip x
 
 -- ==========================
--- Catch errors in toolong bytestrings
+-- Catch violations ofbytestrings that are toolong.
 
 toolong :: BS.ByteString
 toolong = "1234567890-=`~@#$%^&*()_+qwertyuiopQWERTYUIOPasdfghjklASDFGHJKLzxcvbnmZXCVBNM"
