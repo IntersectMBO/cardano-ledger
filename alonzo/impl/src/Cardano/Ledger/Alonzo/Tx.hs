@@ -523,10 +523,10 @@ indexedRdmrs ::
   Tx era ->
   ScriptPurpose (Crypto era) ->
   Maybe (Data era, ExUnits)
-indexedRdmrs tx sp = Map.lookup policyid rdmrs
+indexedRdmrs tx sp = Map.lookup rdptr' rdmrs
   where
     rdmrs = unRedeemers $ txrdmrs' . getField @"wits" $ tx
-    policyid = rdptr @era (getField @"body" tx) sp
+    rdptr' = rdptr @era (getField @"body" tx) sp
 
 -- =======================================================
 
