@@ -112,7 +112,7 @@ collectNNScriptInputs ::
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
 collectNNScriptInputs pp tx utxo =
   let txinfo = transTx utxo tx
-   in [ (script, d : (valContext txinfo sp ++ getData tx utxo sp), eu, cost)
+   in [ (script, d : (valContext txinfo sp : getData tx utxo sp), eu, cost)
         | (sp, scripthash) <- scriptsNeeded utxo tx, -- TODO, IN specification ORDER IS WRONG
           (d, eu) <- maybeToList (indexedRdmrs tx sp),
           script <- maybeToList (Map.lookup scripthash (txscripts' (getField @"wits" tx))),

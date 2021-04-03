@@ -318,8 +318,8 @@ valContext ::
   Era era =>
   P.TxInfo ->
   ScriptPurpose (Crypto era) ->
-  [Data era]
-valContext txinfo sp = [Data (P.toData (P.Context txinfo (transScriptPurpose sp)))]
+  Data era
+valContext txinfo sp = Data (P.toData (P.Context txinfo (transScriptPurpose sp)))
 
 -- The runPLCScript in the Specification has a slightly different type
 -- than the one in the implementation below. Made necessary by the the type
