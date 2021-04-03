@@ -32,7 +32,8 @@ module Cardano.Ledger.Alonzo.TxBody
         reqSignerHashes,
         mint,
         wppHash,
-        adHash
+        adHash,
+        txnetworkid
       ),
     inputs',
     inputs_fee',
@@ -46,6 +47,7 @@ module Cardano.Ledger.Alonzo.TxBody
     mint',
     wppHash',
     adHash',
+    txnetworkid',
     AlonzoBody,
     EraIndependentWitnessPPData,
     WitnessPPDataHash,
@@ -74,6 +76,7 @@ import Cardano.Ledger.Pretty
     ppCoin,
     ppDCert,
     ppKeyHash,
+    ppNetwork,
     ppRecord,
     ppSafeHash,
     ppSet,
@@ -111,7 +114,7 @@ import GHC.Records (HasField (..))
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.Address (Addr)
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import Shelley.Spec.Ledger.BaseTypes (Network, StrictMaybe (..))
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
@@ -184,7 +187,8 @@ data TxBodyRaw era = TxBodyRaw
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
     -- Operations on the TxBody in the AlonzoEra depend upon this.
     _wppHash :: !(StrictMaybe (WitnessPPDataHash (Crypto era))),
-    _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era)))
+    _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
+    _txnetworkid :: !(StrictMaybe Network)
   }
   deriving (Generic, Typeable)
 
@@ -267,6 +271,7 @@ pattern TxBody ::
   Value (Crypto era) ->
   StrictMaybe (WitnessPPDataHash (Crypto era)) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
+  StrictMaybe (Network) ->
   TxBody era
 pattern TxBody
   { inputs,
@@ -280,7 +285,8 @@ pattern TxBody
     reqSignerHashes,
     mint,
     wppHash,
-    adHash
+    adHash,
+    txnetworkid
   } <-
   TxBodyConstr
     ( Memo
@@ -296,7 +302,8 @@ pattern TxBody
             _reqSignerHashes = reqSignerHashes,
             _mint = mint,
             _wppHash = wppHash,
-            _adHash = adHash
+            _adHash = adHash,
+            _txnetworkid = txnetworkid
           }
         _
       )
@@ -313,7 +320,8 @@ pattern TxBody
       reqSignerHashesX
       mintX
       wppHashX
-      adHashX =
+      adHashX
+      txnetworkidX =
         TxBodyConstr $
           memoBytes
             ( encodeTxBodyRaw $
@@ -330,6 +338,7 @@ pattern TxBody
                   mintX
                   wppHashX
                   adHashX
+                  txnetworkidX
             )
 
 {-# COMPLETE TxBody #-}
@@ -356,6 +365,8 @@ mint' :: TxBody era -> Value (Crypto era)
 wppHash' :: TxBody era -> StrictMaybe (WitnessPPDataHash (Crypto era))
 inputs' (TxBodyConstr (Memo raw _)) = _inputs raw
 
+txnetworkid' :: TxBody era -> StrictMaybe Network
+
 inputs_fee' (TxBodyConstr (Memo raw _)) = _inputs_fee raw
 
 outputs' (TxBodyConstr (Memo raw _)) = _outputs raw
@@ -377,6 +388,8 @@ adHash' (TxBodyConstr (Memo raw _)) = _adHash raw
 mint' (TxBodyConstr (Memo raw _)) = _mint raw
 
 wppHash' (TxBodyConstr (Memo raw _)) = _wppHash raw
+
+txnetworkid' (TxBodyConstr (Memo raw _)) = _txnetworkid raw
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -431,11 +444,12 @@ encodeTxBodyRaw
       _reqSignerHashes,
       _mint,
       _wppHash,
-      _adHash
+      _adHash,
+      _txnetworkid
     } =
     Keyed
-      ( \i ifee o f t c w u b rsh mi sh ah ->
-          TxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah
+      ( \i ifee o f t c w u b rsh mi sh ah ni ->
+          TxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah ni
       )
       !> Key 0 (E encodeFoldable _inputs)
       !> Key 13 (E encodeFoldable _inputs_fee)
@@ -450,6 +464,7 @@ encodeTxBodyRaw
       !> Omit isZero (Key 9 (E encodeMint _mint))
       !> encodeKeyedStrictMaybe 11 _wppHash
       !> encodeKeyedStrictMaybe 12 _adHash
+      !> encodeKeyedStrictMaybe 15 _txnetworkid
     where
       encodeKeyedStrictMaybe key x =
         Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
@@ -499,6 +514,7 @@ instance
           mempty
           SNothing
           SNothing
+          SNothing
       bodyFields :: (Word -> Field (TxBodyRaw era))
       bodyFields 0 =
         field
@@ -534,6 +550,7 @@ instance
         field
           (\x tx -> tx {_adHash = x})
           (D (SJust <$> fromCBOR))
+      bodyFields 15 = field (\x tx -> tx {_txnetworkid = x}) (D (SJust <$> fromCBOR))
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =
         [ (0, "inputs"),
@@ -607,6 +624,9 @@ instance
   where
   getField (TxBodyConstr (Memo m _)) = _wppHash m
 
+instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
+  getField (TxBodyConstr (Memo m _)) = _txnetworkid m
+
 instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
   getField (TxOutCompact a _ _) = a
 
@@ -639,9 +659,9 @@ ppTxBody ::
   ) =>
   TxBody era ->
   PDoc
-ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u rsh mnt sdh axh) _)) =
+ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u rsh mnt sdh axh ni) _)) =
   ppRecord
-    "TxBody(Mary or Allegra)"
+    "TxBody(Alonzo)"
     [ ("inputs", ppSet ppTxIn i),
       ("inputs_fee", ppSet ppTxIn ifee),
       ("outputs", ppStrictSeq ppTxOut o),
@@ -653,7 +673,8 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u rsh mnt sdh axh) _
       ("reqSignerHashes", ppSet ppKeyHash rsh),
       ("mint", ppValue mnt),
       ("wppHash", ppStrictMaybe ppSafeHash sdh),
-      ("adHash", ppStrictMaybe ppAuxDataHash axh)
+      ("adHash", ppStrictMaybe ppAuxDataHash axh),
+      ("txnetworkid", ppStrictMaybe ppNetwork ni)
     ]
 
 ppAuxDataHash :: AuxiliaryDataHash crypto -> PDoc
