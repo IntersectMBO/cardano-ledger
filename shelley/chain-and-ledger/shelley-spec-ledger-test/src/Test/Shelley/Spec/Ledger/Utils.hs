@@ -84,8 +84,9 @@ import Cardano.Slotting.EpochInfo
   ( epochInfoEpoch,
     epochInfoFirst,
     epochInfoSize,
-    fixedSizeEpochInfo,
+    fixedEpochInfo,
   )
+import Cardano.Slotting.Time (mkSlotLength)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace
@@ -296,7 +297,7 @@ unsafeMkUnitInterval r =
 testGlobals :: Globals
 testGlobals =
   Globals
-    { epochInfo = fixedSizeEpochInfo $ EpochSize 100,
+    { epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1),
       slotsPerKESPeriod = 20,
       stabilityWindow = 33,
       randomnessStabilisationWindow = 33,
