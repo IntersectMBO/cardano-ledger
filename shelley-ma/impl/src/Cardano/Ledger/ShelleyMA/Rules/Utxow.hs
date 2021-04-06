@@ -27,7 +27,7 @@ import Shelley.Spec.Ledger.STS.Utxow
     UtxowPredicateFailure (..),
     shelleyStyleWitness,
   )
-import Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.Tx (Tx, WitnessSet)
 
 -- ==============================================================================
 --   We want to reuse the same rules for Mary and Allegra. We accomplish this
@@ -45,8 +45,8 @@ data UTXOW era
 
 instance
   forall era.
-  ( -- Fix Core.Tx to the Allegra and Mary Era
-    Core.Tx era ~ Tx era,
+  ( -- Fix Core.Witnesses to the Allegra and Mary Era
+    Core.Witnesses era ~ WitnessSet era,
     HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (UTXOW era),

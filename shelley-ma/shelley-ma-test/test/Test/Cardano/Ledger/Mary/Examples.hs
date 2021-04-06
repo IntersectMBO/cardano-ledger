@@ -44,7 +44,7 @@ testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
   checkTrace @(LEDGER MaryTest) runShelleyBase env $
     pure (def {_utxo = utxo}, def) .- tx .-> expectedSt'
   where
-    txFee = getField @"txfee" (_body tx)
+    txFee = getField @"txfee" (getField @"body" tx)
     expectedSt' = (def {_utxo = expectedUTxO, _fees = txFee}, def)
 testMaryNoDelegLEDGER utxo tx env predicateFailure@(Left _) = do
   let st = runShelleyBase $ applySTSTest @(LEDGER MaryTest) (TRC (env, (def {_utxo = utxo}, def), tx))

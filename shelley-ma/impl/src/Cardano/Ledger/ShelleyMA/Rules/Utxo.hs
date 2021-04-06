@@ -225,11 +225,8 @@ utxoTransition ::
   forall era.
   ( UsesTxBody era,
     UsesTxOut era,
-    UsesAuxiliary era,
     UsesValue era,
-    UsesScript era,
     STS (UTXO era),
-    Core.Tx era ~ Tx era,
     Embed (Core.EraRule "PPUP" era) (UTXO era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
@@ -251,7 +248,7 @@ utxoTransition ::
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo deposits' fees ppup = u
-  let txb = _body tx
+  let txb = getField @"body" tx
 
   inInterval slot (getField @"vldt" txb)
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
@@ -332,7 +329,7 @@ utxoTransition = do
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
-      txSize_ = Shelley.txsize tx
+      txSize_ = getField @"txsize" tx
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
   let refunded = Shelley.keyRefunds pp txb
