@@ -82,7 +82,7 @@ instance
   type BaseM (UTXOS era) = ShelleyBase
   type Environment (UTXOS era) = UtxoEnv era
   type State (UTXOS era) = UTxOState era
-  type Signal (UTXOS era) = Tx era
+  type Signal (UTXOS era) = ValidatedTx era
   type PredicateFailure (UTXOS era) = UtxosPredicateFailure era
 
   transitionRules = [utxosTransition]

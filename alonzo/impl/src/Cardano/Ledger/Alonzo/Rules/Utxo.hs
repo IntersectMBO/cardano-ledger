@@ -231,7 +231,7 @@ feesOK ::
   ( Era era,
     ValidateScript era, -- isTwoPhaseScriptAddress
     Core.TxOut era ~ Alonzo.TxOut era, -- balance requires this,
-    HasField "totExunits" (Core.Tx era) ExUnits, -- minfee requires this
+    HasField "totExunits" (Core.TxInBlock era) ExUnits, -- minfee requires this
     HasField
       "txinputs_fee" -- to get inputs to pay the fees
       (Core.TxBody era)
@@ -242,7 +242,7 @@ feesOK ::
     HasField "address" (Alonzo.TxOut era) (Addr (Crypto era))
   ) =>
   Core.PParams era ->
-  Core.Tx era ->
+  Core.TxInBlock era ->
   UTxO era ->
   Rule (AlonzoUTXO era) 'Transition ()
 feesOK pp tx (UTxO m) = do
@@ -278,7 +278,7 @@ utxoTransition ::
     Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
-    Signal (Core.EraRule "UTXOS" era) ~ Tx era,
+    Signal (Core.EraRule "UTXOS" era) ~ TxInBlock era,
     -- We leave Core.PParams abstract
     UsesPParams era,
     HasField "_minfeeA" (Core.PParams era) Natural,
@@ -295,7 +295,7 @@ utxoTransition ::
     Core.Value era ~ Alonzo.Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
     Core.TxOut era ~ Alonzo.TxOut era,
-    Core.Tx era ~ Alonzo.Tx era
+    Core.TxInBlock era ~ Alonzo.ValidatedTx era
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
@@ -396,7 +396,7 @@ instance
     Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
-    Signal (Core.EraRule "UTXOS" era) ~ Tx era,
+    Signal (Core.EraRule "UTXOS" era) ~ ValidatedTx era,
     -- We leave Core.PParams abstract
     UsesPParams era,
     HasField "_keyDeposit" (Core.PParams era) Coin,
@@ -414,12 +414,12 @@ instance
     Core.Value era ~ Alonzo.Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
     Core.TxOut era ~ Alonzo.TxOut era,
-    Core.Tx era ~ Alonzo.Tx era
+    Core.Tx era ~ Alonzo.ValidatedTx era
   ) =>
   STS (AlonzoUTXO era)
   where
   type State (AlonzoUTXO era) = Shelley.UTxOState era
-  type Signal (AlonzoUTXO era) = Tx era
+  type Signal (AlonzoUTXO era) = ValidatedTx era
   type
     Environment (AlonzoUTXO era) =
       Shelley.UtxoEnv era

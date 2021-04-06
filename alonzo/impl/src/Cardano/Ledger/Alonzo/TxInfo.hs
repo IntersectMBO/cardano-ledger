@@ -284,7 +284,7 @@ transTx ::
     Value era ~ Mary.Value (Crypto era)
   ) =>
   UTxO era ->
-  Tx era ->
+  ValidatedTx era ->
   P.TxInfo
 transTx utxo tx =
   P.TxInfo

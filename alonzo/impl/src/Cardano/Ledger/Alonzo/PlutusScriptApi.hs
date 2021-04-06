@@ -73,7 +73,7 @@ getData ::
   forall era.
   ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era)))
   ) =>
-  Tx era ->
+  ValidatedTx era ->
   UTxO era ->
   ScriptPurpose (Crypto era) ->
   [Data era]
@@ -107,7 +107,7 @@ collectNNScriptInputs ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Core.PParams era ->
-  Tx era ->
+  ValidatedTx era ->
   UTxO era ->
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
 collectNNScriptInputs pp tx utxo =
@@ -131,7 +131,7 @@ evalScripts ::
   ( Era era,
     Alonzo.TxBody era ~ Core.TxBody era
   ) =>
-  Tx era ->
+  ValidatedTx era ->
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)] ->
   Bool
 evalScripts _tx [] = True
@@ -160,7 +160,7 @@ checkScriptData ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
-  Tx era ->
+  ValidatedTx era ->
   -- UTxO era ->   -- TODO check that we really don't use the UTxO
   (ScriptPurpose (Crypto era), ScriptHash (Crypto era)) ->
   Bool
@@ -181,7 +181,7 @@ scriptsNeeded ::
     HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   UTxO era ->
-  Tx era ->
+  ValidatedTx era ->
   [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
 scriptsNeeded (UTxO utxomap) tx = spend ++ reward ++ cert ++ minted
   where

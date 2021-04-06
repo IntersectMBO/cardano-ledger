@@ -187,7 +187,7 @@ alonzoStyleWitness ::
   forall era utxow.
   ( Era era,
     -- Fix some Core types to the Alonzo Era
-    Core.Tx era ~ Tx era, -- scriptsNeeded, checkScriptData etc. are fixed at Alonzo.Tx
+    Core.Tx era ~ ValidatedTx era, -- scriptsNeeded, checkScriptData etc. are fixed at Alonzo.Tx
     Core.PParams era ~ PParams era,
     Core.Script era ~ Script era,
     -- Allow UTXOW to call UTXO
@@ -279,14 +279,14 @@ data AlonzoUTXOW era
 instance
   forall era.
   ( -- Fix some Core types to the Alonzo Era
-    Core.Tx era ~ Tx era,
+    Core.Tx era ~ ValidatedTx era,
     Core.PParams era ~ PParams era,
     Core.Script era ~ Script era,
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ Tx era,
+    Signal (Core.EraRule "UTXO" era) ~ ValidatedTx era,
     -- New transaction body fields needed for Alonzo
     HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
     -- Supply the HasField and Validate instances for Alonzo
@@ -296,7 +296,7 @@ instance
   STS (AlonzoUTXOW era)
   where
   type State (AlonzoUTXOW era) = UTxOState era
-  type Signal (AlonzoUTXOW era) = Tx era
+  type Signal (AlonzoUTXOW era) = ValidatedTx era
   type Environment (AlonzoUTXOW era) = UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type

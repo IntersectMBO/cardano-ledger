@@ -158,7 +158,7 @@ import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 -- =======================================================
 
 -- | The hash of a Block Header
-newtype HashHeader crypto = HashHeader {unHashHeader :: (Hash crypto (BHeader crypto))}
+newtype HashHeader crypto = HashHeader {unHashHeader :: Hash crypto (BHeader crypto)}
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 

@@ -191,9 +191,9 @@ instance
     Embed (Core.EraRule "LEDGERS" era) (AlonzoBBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Alonzo.Tx era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Alonzo.ValidatedTx era),
     Era era,
-    Core.Tx era ~ Alonzo.Tx era,
+    Core.Tx era ~ Alonzo.ValidatedTx era,
     HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
     BlockDecoding era

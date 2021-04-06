@@ -118,14 +118,14 @@ instance
     Show (Core.PParams era),
     Show (Core.Value era),
     Show (PParamsDelta era),
-    Core.Tx era ~ Tx era,
+    Core.Tx era ~ ValidatedTx era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
     Embed (Core.EraRule "DELEGS" era) (AlonzoLEDGER era),
     Embed (Core.EraRule "UTXOW" era) (AlonzoLEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    Signal (Core.EraRule "UTXOW" era) ~ ValidatedTx era,
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
@@ -139,7 +139,7 @@ instance
   type
     State (AlonzoLEDGER era) =
       (UTxOState era, DPState (Crypto era))
-  type Signal (AlonzoLEDGER era) = Tx era
+  type Signal (AlonzoLEDGER era) = ValidatedTx era
   type Environment (AlonzoLEDGER era) = LedgerEnv era
   type BaseM (AlonzoLEDGER era) = ShelleyBase
   type PredicateFailure (AlonzoLEDGER era) = LedgerPredicateFailure era
