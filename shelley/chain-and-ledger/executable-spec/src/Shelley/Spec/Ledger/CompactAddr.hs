@@ -44,7 +44,7 @@ import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 newtype CompactAddr crypto = UnsafeCompactAddr ShortByteString
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 compactAddr :: Addr crypto -> CompactAddr crypto
 compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr

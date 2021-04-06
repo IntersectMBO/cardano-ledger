@@ -51,19 +51,18 @@ import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.DeepSeq (deepseq)
 import Data.ByteString as BS (ByteString, length)
-import Data.ByteString.Short as SBS (ShortByteString, fromShort)
-import qualified Data.ByteString.Short as Short (ShortByteString, fromShort)
+import Data.ByteString.Short (fromShort)
+import qualified Data.ByteString.Short as Short (ShortByteString)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import qualified Flat as Flat (unflat)
 import GHC.Records (HasField (..))
 import qualified Language.PlutusCore.Evaluation.Machine.ExMemory as P (ExCPU (..), ExMemory (..))
 import qualified Language.PlutusTx as P (Data (..))
 import qualified Language.PlutusTx.IsData.Class as P (IsData (..))
 import qualified Plutus.V1.Ledger.Ada as P (adaSymbol, adaToken)
-import qualified Plutus.V1.Ledger.Api as P (CostModelParameters, ExBudget (..), VerboseMode (..), evaluateScriptRestricting)
+import qualified Plutus.V1.Ledger.Api as P (CostModelParameters, ExBudget (..), VerboseMode (..), evaluateScriptRestricting, validateScript)
 import qualified Plutus.V1.Ledger.Crypto as P (PubKeyHash (..))
 import qualified Plutus.V1.Ledger.Interval as P
   ( Extended (..),
@@ -71,7 +70,7 @@ import qualified Plutus.V1.Ledger.Interval as P
     LowerBound (..),
     UpperBound (..),
   )
-import qualified Plutus.V1.Ledger.Scripts as P (Datum (..), DatumHash (..), Script (..), ValidatorHash (..))
+import qualified Plutus.V1.Ledger.Scripts as P (Datum (..), DatumHash (..), ValidatorHash (..))
 import qualified Plutus.V1.Ledger.Slot as P (SlotRange)
 import qualified Plutus.V1.Ledger.Tx as P (TxOutRef (..))
 import qualified Plutus.V1.Ledger.TxId as P (TxId (..))
@@ -326,7 +325,7 @@ valContext txinfo sp = Data (P.toData (P.Context txinfo (transScriptPurpose sp))
 -- of P.evaluateScriptRestricting which is the interface to Plutus
 
 -- | Run a Plutus Script, given the script and the bounds on resources it is allocated.
-runPLCScript :: CostModel -> SBS.ShortByteString -> ExUnits -> [P.Data] -> Bool
+runPLCScript :: CostModel -> Short.ShortByteString -> ExUnits -> [P.Data] -> Bool
 runPLCScript cost scriptbytestring units ds =
   case P.evaluateScriptRestricting
     P.Quiet
@@ -345,17 +344,10 @@ validPlutusdata (P.List ds) = all validPlutusdata ds
 validPlutusdata (P.I _n) = True
 validPlutusdata (P.B bs) = BS.length bs <= 64
 
--- | A ByteString represents a valid P.Script if it can be unflattened
-validPlutusScript :: Short.ShortByteString -> Bool
-validPlutusScript flatBytes =
-  case Flat.unflat (Short.fromShort flatBytes) of
-    Right (_x :: P.Script) -> True
-    Left _err -> False
-
 -- | Test that every Alonzo script represents a real Script.
 --     Run deepseq to see that there are no infinite computations and that
 --     every Plutus Script unflattens into a real P.Script
-validScript :: Era era => Script era -> Bool
-validScript scrip = deepseq scrip $ case scrip of
-  TimelockScript _ -> True
-  PlutusScript bytes -> validPlutusScript bytes
+validScript :: Script era -> Bool
+validScript scrip = case scrip of
+  TimelockScript sc -> deepseq sc $ True
+  PlutusScript bytes -> P.validateScript bytes

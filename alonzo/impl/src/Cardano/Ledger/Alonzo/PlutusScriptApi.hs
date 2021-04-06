@@ -119,7 +119,7 @@ collectNNScriptInputs pp tx utxo =
           cost <- maybeToList (Map.lookup PlutusV1 (getField @"_costmdls" pp))
       ]
 
-language :: Era era => AlonzoScript.Script era -> Maybe Language
+language :: AlonzoScript.Script era -> Maybe Language
 language (AlonzoScript.PlutusScript _) = Just PlutusV1
 language (AlonzoScript.TimelockScript _) = Nothing
 
