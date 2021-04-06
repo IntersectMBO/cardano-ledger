@@ -75,7 +75,7 @@ data Config = Config
     , configUTxOConfiguration :: !UTxOConfiguration
     -- ^ Extra local data used in UTxO validation rules
     }
-  deriving (Generic, NoThunks)
+  deriving (Generic, Eq, Show, NoThunks)
 
 configGenesisHeaderHash :: Config -> HeaderHash
 configGenesisHeaderHash = genesisHeaderHash . configGenesisHash

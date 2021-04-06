@@ -57,6 +57,7 @@ import Test.Cardano.Chain.UTxO.Gen
   , genTxSigData
   , genTxValidationError
   , genTxWitness
+  , genUTxOConfiguration
   , genUTxOError
   , genUTxOValidationError
   )
@@ -280,6 +281,15 @@ ts_roundTripUTxOError =
 ts_roundTripUTxOValidationError :: TSProperty
 ts_roundTripUTxOValidationError =
   eachOfTS 50 genUTxOValidationError roundTripsCBORShow
+
+
+--------------------------------------------------------------------------------
+-- UTxOConfiguration
+--------------------------------------------------------------------------------
+
+ts_roundTripUTxOConfiguration :: TSProperty
+ts_roundTripUTxOConfiguration =
+  eachOfTS 500 genUTxOConfiguration roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------

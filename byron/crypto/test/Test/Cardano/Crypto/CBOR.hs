@@ -45,6 +45,7 @@ import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   ( deprecatedGoldenDecode
   , goldenTestCBOR
   , roundTripsCBORBuildable
+  , roundTripsCBORShow
   )
 import Test.Cardano.Crypto.Gen
 
@@ -55,6 +56,15 @@ import Test.Cardano.Crypto.Gen
 
 roundTripProtocolMagicAeson :: Property
 roundTripProtocolMagicAeson = eachOf 1000 genProtocolMagic roundTripsAesonShow
+
+
+--------------------------------------------------------------------------------
+-- RequiresNetworkMagic
+--------------------------------------------------------------------------------
+
+roundTripRequiresNetworkMagicCBOR :: Property
+roundTripRequiresNetworkMagicCBOR =
+  eachOf 100 genRequiresNetworkMagic roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------
@@ -70,6 +80,14 @@ roundTripVerificationKeyCBOR = eachOf 1000 genVerificationKey roundTripsCBORBuil
 
 roundTripVerificationKeyAeson :: Property
 roundTripVerificationKeyAeson = eachOf 1000 genVerificationKey roundTripsAesonBuildable
+
+
+--------------------------------------------------------------------------------
+-- VerificationKey
+--------------------------------------------------------------------------------
+
+roundTripCompactRedeemVerificationKeyCBOR :: Property
+roundTripCompactRedeemVerificationKeyCBOR = eachOf 1000 genCompactRedeemVerificationKey roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------
@@ -230,6 +248,7 @@ roundTripAbstractHashCBOR =
 roundTripAbstractHashAeson :: Property
 roundTripAbstractHashAeson =
   eachOf 1000 genUnitAbstractHash roundTripsAesonBuildable
+
 
 --------------------------------------------------------------------------------
 -- PassPhrase
