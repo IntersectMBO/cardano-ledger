@@ -13,7 +13,7 @@ module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks) where
 import Cardano.Binary
 import Cardano.Ledger.Allegra (AllegraEra)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Era, ValidateScript)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.DeepSeq (NFData (..))
@@ -38,7 +38,6 @@ import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.Slot (SlotNo (SlotNo))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
-import Cardano.Ledger.Era(ValidateScript)
 
 type ShelleyBench = ShelleyEra C_Crypto
 

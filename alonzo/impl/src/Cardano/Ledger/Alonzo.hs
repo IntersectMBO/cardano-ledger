@@ -92,7 +92,8 @@ instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
     where
       vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
   validateScript (PlutusScript scr) _tx = Plutus.validateScript scr
-  -- hashScript x = ...  We use the default method for hashScript
+
+-- hashScript x = ...  We use the default method for hashScript
 
 instance
   ( CC.Crypto c
