@@ -46,6 +46,7 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import qualified Data.ByteString as BS
 import Data.Proxy
+import Shelley.Spec.Ledger.BlockChain (bbHash)
 import qualified Shelley.Spec.Ledger.BlockChain as Shelley
   ( TxSeq (..),
     txSeqTxns,
@@ -115,6 +116,7 @@ instance CryptoClass.Crypto c => SupportsSegWit (ShelleyEra c) where
   type TxSeq (ShelleyEra c) = Shelley.TxSeq (ShelleyEra c)
   fromTxSeq = Shelley.txSeqTxns
   toTxSeq = Shelley.TxSeq
+  hashTxSeq = bbHash
 
 instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) c where
   validateAuxiliaryData (Metadata m) = all validMetadatum m

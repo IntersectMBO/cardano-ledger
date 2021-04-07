@@ -57,6 +57,7 @@ import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
 import qualified Shelley.Spec.Ledger.BlockChain as Shelley
   ( TxSeq (..),
+    bbHash,
     txSeqTxns,
   )
 import Shelley.Spec.Ledger.Keys (KeyRole (Witness))
@@ -190,6 +191,7 @@ instance
   type TxSeq (ShelleyMAEra ma c) = Shelley.TxSeq (ShelleyMAEra ma c)
   fromTxSeq = Shelley.txSeqTxns
   toTxSeq = Shelley.TxSeq
+  hashTxSeq = Shelley.bbHash
 
 instance
   ( CryptoClass.Crypto c,

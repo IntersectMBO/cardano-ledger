@@ -800,8 +800,7 @@ instance PrettyA (Metadata era) where prettyA = ppMetadata
 ppTx ::
   ( PrettyA (Core.TxBody era),
     PrettyA (Core.AuxiliaryData era),
-    PrettyA (Core.Witnesses era),
-    Era era
+    PrettyA (Core.Witnesses era)
   ) =>
   Tx era ->
   PDoc

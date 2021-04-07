@@ -21,7 +21,7 @@ where
 
 import Cardano.Binary (serialize')
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesTxBody,
     UsesTxOut,
@@ -61,6 +61,7 @@ import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
     TxSeq (..),
     bhbody,
+    bheader,
     bheaderSlotNo,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -245,8 +246,7 @@ scriptCredentialCertsRatio certs =
 -- | Extract the certificates from the transactions
 certsByTx ::
   forall era.
-  ( UsesTxBody era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   [Tx era] ->
   [[DCert (Crypto era)]]
@@ -276,16 +276,14 @@ txScriptOutputsRatio txoutsList =
           txouts
 
 hasWithdrawal ::
-  ( UsesTxBody era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+  ( HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   Tx era ->
   Bool
 hasWithdrawal = not . null . unWdrl . (getField @"wdrls") . getField @"body"
 
 hasPParamUpdate ::
-  ( ChainProperty era,
-    HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))
+  ( HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))
   ) =>
   Tx era ->
   Bool
@@ -314,7 +312,8 @@ onlyValidLedgerSignalsAreGenerated ::
     Show (Core.PParams era),
     QC.HasTrace (LEDGER era) (GenEnv era),
     Default (State (Core.EraRule "PPUP" era)),
-    Show (Core.Witnesses era)
+    Show (Core.Witnesses era),
+    TxInBlock era ~ Tx era
   ) =>
   Property
 onlyValidLedgerSignalsAreGenerated =
@@ -341,7 +340,8 @@ propAbstractSizeBoundsBytes ::
     ChainProperty era,
     QC.HasTrace (LEDGER era) (GenEnv era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    Default (State (Core.EraRule "PPUP" era))
+    Default (State (Core.EraRule "PPUP" era)),
+    TxInBlock era ~ Tx era
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
@@ -371,7 +371,8 @@ propAbstractSizeNotTooBig ::
     UsesTxOut era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     QC.HasTrace (LEDGER era) (GenEnv era),
-    Default (State (Core.EraRule "PPUP" era))
+    Default (State (Core.EraRule "PPUP" era)),
+    TxInBlock era ~ Tx era
   ) =>
   Property
 propAbstractSizeNotTooBig = property $ do
@@ -427,5 +428,5 @@ epochsInTrace bs =
     fromEpoch = atEpoch . blockSlot $ head bs
     toEpoch = atEpoch . blockSlot $ last bs
     EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfo) testGlobals undefined
-    blockSlot (Block bh _) = (bheaderSlotNo . bhbody) bh
+    blockSlot = bheaderSlotNo . bhbody . bheader
     atEpoch (SlotNo s) = s `div` slotsPerEpoch

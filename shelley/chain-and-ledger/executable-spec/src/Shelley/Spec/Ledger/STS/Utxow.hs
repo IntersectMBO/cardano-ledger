@@ -36,7 +36,7 @@ import Cardano.Ledger.AuxiliaryData
     hashAuxiliaryData,
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩))
@@ -236,7 +236,8 @@ type ShelleyStyleWitnessNeeds era =
   ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era))),
+    HasField "addrWits" (TxInBlock era) (Set (WitVKey 'Witness (Crypto era))),
+    HasField "bootWits" (TxInBlock era) (Set (BootstrapWitness (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "address" (Core.TxOut era) (Addr (Crypto era)),
@@ -266,14 +267,13 @@ shelleyStyleWitness ::
     Embed (Core.EraRule "UTXO" era) (utxow era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ Core.Tx era,
+    Signal (Core.EraRule "UTXO" era) ~ TxInBlock era,
     Environment (utxow era) ~ UtxoEnv era,
     State (utxow era) ~ UTxOState era,
-    Signal (utxow era) ~ Core.Tx era,
+    Signal (utxow era) ~ TxInBlock era,
     -- PredicateFailure (utxow era) ~ UtxowPredicateFailure era,
     STS (utxow era),
-    ShelleyStyleWitnessNeeds era,
-    HasField "bootWits" (Core.Tx era) (Set (BootstrapWitness (Crypto era)))
+    ShelleyStyleWitnessNeeds era
   ) =>
   (UtxowPredicateFailure era -> PredicateFailure (utxow era)) ->
   TransitionRule (utxow era)
@@ -361,11 +361,12 @@ instance
 instance
   ( -- Fix Core.Witnesses to the Shelley Era
     Core.Witnesses era ~ WitnessSet era,
+    TxInBlock era ~ Core.Tx era,
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (UTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ Tx era,
+    Signal (Core.EraRule "UTXO" era) ~ TxInBlock era,
     PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
     -- Supply the HasField and Validate instances for Shelley
     ShelleyStyleWitnessNeeds era,

@@ -32,6 +32,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Hashes
   ( EraIndependentAuxiliaryData,
+    EraIndependentBlockBody,
     EraIndependentTxBody,
     ScriptHash (..),
   )
@@ -80,7 +81,7 @@ class
   ValidateScript era
   where
   scriptPrefixTag :: Core.Script era -> BS.ByteString
-  validateScript :: Core.Script era -> Core.Tx era -> Bool
+  validateScript :: Core.Script era -> TxInBlock era -> Bool
   hashScript :: Core.Script era -> ScriptHash (Crypto era)
   -- ONE SHOULD NOT OVERIDE THE hashScript DEFAULT METHOD
   -- UNLESS YOU UNDERSTAND THE SafeToHash class, AND THE ROLE OF THE scriptPrefixTag
@@ -124,6 +125,13 @@ class SupportsSegWit era where
 
   fromTxSeq :: TxSeq era -> StrictSeq (TxInBlock era)
   toTxSeq :: StrictSeq (TxInBlock era) -> TxSeq era
+
+  -- | Get the block body hash from the TxSeq. Note that this is not a regular
+  -- "hash the stored bytes" function since the block body hash forms a small
+  -- Merkle tree.
+  hashTxSeq ::
+    TxSeq era ->
+    Hash.Hash (CryptoClass.HASH (Crypto era)) EraIndependentBlockBody
 
 --------------------------------------------------------------------------------
 -- Era translation
@@ -226,12 +234,12 @@ type WellFormed era =
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "minted" (Core.TxBody era) (Set (ScriptHash (Crypto era))),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    -- Tx
-    HasField "body" (Core.Tx era) (Core.TxBody era),
-    HasField "wits" (Core.Tx era) (Core.Witnesses era),
-    HasField "auxiliaryData" (Core.Tx era) (StrictMaybe (Core.AuxiliaryData era)),
-    HasField "txsize" (Core.Tx era) Integer,
-    HasField "scriptWits" (Core.Tx era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
+    -- TxInBlock
+    HasField "body" (TxInBlock era) (Core.TxBody era),
+    HasField "wits" (TxInBlock era) (Core.Witnesses era),
+    HasField "auxiliaryData" (TxInBlock era) (StrictMaybe (Core.AuxiliaryData era)),
+    HasField "txsize" (TxInBlock era) Integer,
+    HasField "scriptWits" (TxInBlock era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
     -- TxOut
     HasField "value" (Core.TxOut era) (Core.Value era),
     -- HashAnnotated

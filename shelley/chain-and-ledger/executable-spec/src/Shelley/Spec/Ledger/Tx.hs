@@ -357,7 +357,7 @@ validateNativeMultiSigScript msig tx =
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
-  TransTx ToCBOR era =>
+  Core.Witnesses era ~ WitnessSet era =>
   Tx era ->
   Map (ScriptHash (Crypto era)) (Core.Script era)
 txwitsScript = getField @"scriptWits"

@@ -30,7 +30,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -66,7 +66,6 @@ import Shelley.Spec.Ledger.STS.Utxo
 import Shelley.Spec.Ledger.STS.Utxow (UTXOW, UtxowPredicateFailure)
 import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody)
 
 data LEDGER era
@@ -137,17 +136,15 @@ instance
       )
 
 instance
-  ( Show (Core.TxBody era), -- renderAssertionViolation, turns them into strings
-    Show (Core.AuxiliaryData era),
-    Show (Core.Witnesses era),
-    Show (Core.PParams era),
+  ( Show (Core.PParams era),
+    Show (TxInBlock era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
@@ -161,7 +158,7 @@ instance
   type
     State (LEDGER era) =
       (UTxOState era, DPState (Crypto era))
-  type Signal (LEDGER era) = Tx era
+  type Signal (LEDGER era) = TxInBlock era
   type Environment (LEDGER era) = LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
   type PredicateFailure (LEDGER era) = LedgerPredicateFailure era
@@ -195,8 +192,9 @@ ledgerTransition ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "body" (TxInBlock era) (Core.TxBody era)
   ) =>
   TransitionRule (LEDGER era)
 ledgerTransition = do

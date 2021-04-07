@@ -53,7 +53,6 @@ import Shelley.Spec.Ledger.STS.Ledger
     LedgerPredicateFailure,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo)
-import Shelley.Spec.Ledger.Tx (Tx)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data LEDGERS era
@@ -108,14 +107,14 @@ instance
     Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
-    Signal (Core.EraRule "LEDGER" era) ~ Tx era,
+    Signal (Core.EraRule "LEDGER" era) ~ TxInBlock era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Default (LedgerState era)
   ) =>
   STS (LEDGERS era)
   where
   type State (LEDGERS era) = LedgerState era
-  type Signal (LEDGERS era) = Seq (Tx era)
+  type Signal (LEDGERS era) = Seq (TxInBlock era)
   type Environment (LEDGERS era) = LedgersEnv era
   type BaseM (LEDGERS era) = ShelleyBase
   type PredicateFailure (LEDGERS era) = LedgersPredicateFailure era
@@ -127,7 +126,7 @@ ledgersTransition ::
   ( Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
-    Signal (Core.EraRule "LEDGER" era) ~ Tx era
+    Signal (Core.EraRule "LEDGER" era) ~ TxInBlock era
   ) =>
   TransitionRule (LEDGERS era)
 ledgersTransition = do

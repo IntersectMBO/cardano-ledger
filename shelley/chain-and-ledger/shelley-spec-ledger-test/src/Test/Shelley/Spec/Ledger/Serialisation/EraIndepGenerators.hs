@@ -216,9 +216,6 @@ instance CC.Crypto crypto => Arbitrary (BootstrapWitness crypto) where
 instance CC.Crypto crypto => Arbitrary (HashHeader crypto) where
   arbitrary = HashHeader <$> genHash
 
-instance CC.Crypto crypto => Arbitrary (HashBBody crypto) where
-  arbitrary = UnsafeHashBBody <$> genHash
-
 instance (Typeable kr, CC.Crypto crypto) => Arbitrary (WitVKey kr crypto) where
   arbitrary =
     WitVKey

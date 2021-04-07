@@ -291,7 +291,6 @@ getKeyHashFromRegPool _ = Nothing
 
 txup ::
   forall era.
-  Era era =>
   HasField "update" (Core.TxBody era) (StrictMaybe (Update era)) =>
   Core.Tx era ->
   Maybe (Update era)
@@ -323,15 +322,16 @@ scriptCred (ScriptHashObj hs) = Just hs
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
 scriptsNeeded ::
-  forall era.
+  forall era tx.
   ( Era era,
+    HasField "body" tx (Core.TxBody era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   UTxO era ->
-  Core.Tx era ->
+  tx ->
   Set (ScriptHash (Crypto era))
 scriptsNeeded u tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . (getField @"address")) u'')
@@ -344,7 +344,7 @@ scriptsNeeded u tx =
           scriptStakeCred
           (filter requiresVKeyWitness certificates)
       )
-    `Set.union` (getField @"minted" txbody) -- This might be Set.empty in some Eras.
+    `Set.union` getField @"minted" txbody -- This might be Set.empty in some Eras.
   where
     txbody = getField @"body" tx
     withdrawals = unWdrl $ getField @"wdrls" $ txbody

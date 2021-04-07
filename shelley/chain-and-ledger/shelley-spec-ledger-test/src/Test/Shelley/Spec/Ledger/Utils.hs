@@ -77,6 +77,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..))
+import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Prelude (Coercible, asks)
 import Cardano.Slotting.EpochInfo
@@ -122,7 +123,7 @@ import Shelley.Spec.Ledger.BaseTypes
     mkNonceFromOutputVRF,
     mkUnitInterval,
   )
-import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, bhbody, bheader)
+import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, TxSeq, bhbody, bheader)
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyPair,
@@ -152,6 +153,8 @@ type ShelleyTest era =
     UsesScript era,
     UsesAuxiliary era,
     UsesPParams era,
+    Era.TxSeq era ~ TxSeq era,
+    Era.TxInBlock era ~ Tx era,
     TxOut era ~ Core.TxOut era,
     PParams era ~ Core.PParams era,
     PParamsDelta era ~ PParamsUpdate era,
