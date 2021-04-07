@@ -19,7 +19,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (Tx)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (BlockDecoding, Era (Crypto))
@@ -175,7 +175,7 @@ bbodyTransition =
         let txTotal, ppMax :: ExUnits
             txTotal = foldr (<>) mempty (fmap (getField @"totExunits") txs)
             ppMax = getField @"_maxBlockExUnits" pp
-        txTotal <= ppMax ?! TooManyExUnits txTotal ppMax
+        pointWiseExUnits (<=) txTotal ppMax ?! TooManyExUnits txTotal ppMax
 
         pure $
           BbodyState @era

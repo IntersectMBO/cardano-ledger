@@ -31,6 +31,7 @@ module Cardano.Ledger.Alonzo.Scripts
     isPlutusScript,
     alwaysSucceeds,
     alwaysFails,
+    pointWiseExUnits,
   )
 where
 
@@ -137,7 +138,7 @@ data ExUnits = ExUnits
   { exUnitsMem :: !Word64,
     exUnitsSteps :: !Word64
   }
-  deriving (Eq, Generic, Show, Ord)
+  deriving (Eq, Generic, Show) -- It is deliberate thate there is NO ORD instance.
 
 instance NoThunks ExUnits
 
@@ -148,6 +149,11 @@ instance Semigroup ExUnits where
 
 instance Monoid ExUnits where
   mempty = ExUnits 0 0
+
+-- | It is deliberate that there is no ORD instace for EXUnits. Use this function
+--   to compare if one ExUnit is pointwise compareable to another.
+pointWiseExUnits :: (Word64 -> Word64 -> Bool) -> ExUnits -> ExUnits -> Bool
+pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `oper` s2)
 
 -- =====================================
 -- Cost Model needs to preserve its serialization bytes as

@@ -17,7 +17,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxosPredicateFailure)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx
   ( Tx (..),
     isTwoPhaseScriptAddress,
@@ -369,7 +369,7 @@ utxoTransition = do
 
   let maxTxEx = getField @"_maxTxExUnits" pp
       totExunits = getField @"totExunits" tx
-  totExunits <= maxTxEx ?! ExUnitsTooSmallUTxO maxTxEx totExunits
+  pointWiseExUnits (<=) totExunits maxTxEx ?! ExUnitsTooSmallUTxO maxTxEx totExunits
 
   -- This does not appear in the Alonzo specification. But the test should be in every Era.
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
