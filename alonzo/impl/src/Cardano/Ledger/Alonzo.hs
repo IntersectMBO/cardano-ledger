@@ -48,6 +48,7 @@ import Control.State.Transition.Extended (STUB)
 import qualified Control.State.Transition.Extended as STS
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import qualified Plutus.V1.Ledger.Api as Plutus (validateScript)
 import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
@@ -83,8 +84,9 @@ instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
   validateScript (TimelockScript timelock) tx = evalTimelock vhks (vldt' (body' tx)) timelock
     where
       vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
-  validateScript (PlutusScript _) _tx = True -- Plutus scripts are stripped out an run in function evalScripts
-  -- hashScript x = ...  We use the default method for hashScript
+  validateScript (PlutusScript scr) _tx = Plutus.validateScript scr
+
+-- hashScript x = ...  We use the default method for hashScript
 
 instance
   ( CC.Crypto c
