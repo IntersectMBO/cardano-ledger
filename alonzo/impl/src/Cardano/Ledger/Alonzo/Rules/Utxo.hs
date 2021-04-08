@@ -16,7 +16,7 @@
 module Cardano.Ledger.Alonzo.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
-import Cardano.Ledger.Alonzo.Data (datHashSize)
+import Cardano.Ledger.Alonzo.Data (dataHashSize)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Tx
@@ -101,10 +101,10 @@ utxoEntrySize txout
     -- no non-ada assets, no hash datum case
     case dh of
       SNothing -> adaOnlyUTxOSize
-      _ -> adaOnlyUTxOSize + datHashSize dh
+      _ -> adaOnlyUTxOSize + dataHashSize dh
   -- add the size of Value and the size of datum hash (if present) to base UTxO size
   -- max function is a safeguard (in case calculation returns a smaller size than an ada-only entry)
-  | otherwise = max adaOnlyUTxOSize (utxoEntrySizeWithoutVal + Val.size v + datHashSize dh)
+  | otherwise = max adaOnlyUTxOSize (utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh)
   where
     v = getField @"value" txout
     dh = getField @"datahash" txout

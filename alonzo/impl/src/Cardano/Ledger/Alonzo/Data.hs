@@ -23,7 +23,7 @@ module Cardano.Ledger.Alonzo.Data
     DataHash,
     hashData,
     getPlutusData,
-    datHashSize,
+    dataHashSize,
     -- $
     AuxiliaryData (AuxiliaryData, scripts, dats, txMD),
     AuxiliaryDataHash (..),
@@ -140,8 +140,8 @@ hashData :: Era era => Data era -> DataHash (Crypto era)
 hashData d = hashAnnotated d
 
 -- Size of the datum hash attached to the output (could be Nothing)
-datHashSize :: (CC.Crypto c) => StrictMaybe (DataHash c) -> Integer
-datHashSize dh = fromIntegral $ heapWords dh
+dataHashSize :: (CC.Crypto c) => StrictMaybe (DataHash c) -> Integer
+dataHashSize dh = fromIntegral $ heapWords dh
 
 instance (CC.Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
   heapWords SNothing = heapWords0
