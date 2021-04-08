@@ -257,15 +257,15 @@ feesOK pp tx (UTxO m) = do
   (minimumFee <= theFee) ?! FeeTooSmallUTxO minimumFee theFee
   -- Part 2
   if (getField @"totExunits" tx) == (ExUnits 0 0)
-     then pure ()
-     else do
-       -- Part 3
-       not (any nonNative utxoFees) ?! ScriptsNotPaidUTxO (UTxO (Map.filter nonNative utxoFees))
-       -- Part 4
-       (Val.coin bal >= theFee) ?! FeeNotBalancedUTxO (Val.coin bal) theFee
-       -- Part 5
-       Val.inject (Val.coin bal) == bal ?! FeeContainsNonADA bal
-       pure ()
+    then pure ()
+    else do
+      -- Part 3
+      not (any nonNative utxoFees) ?! ScriptsNotPaidUTxO (UTxO (Map.filter nonNative utxoFees))
+      -- Part 4
+      (Val.coin bal >= theFee) ?! FeeNotBalancedUTxO (Val.coin bal) theFee
+      -- Part 5
+      Val.inject (Val.coin bal) == bal ?! FeeContainsNonADA bal
+      pure ()
 
 -- ================================================================
 
