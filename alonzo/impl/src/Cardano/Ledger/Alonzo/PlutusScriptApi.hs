@@ -26,7 +26,7 @@ import Cardano.Ledger.Alonzo.Tx
   ( Data,
     DataHash,
     ScriptPurpose (..),
-    Tx (..),
+    ValidatedTx (..),
     body',
     getValidatorHash,
     indexedRdmrs,

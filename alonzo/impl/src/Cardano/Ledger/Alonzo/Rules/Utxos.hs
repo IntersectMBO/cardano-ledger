@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Tx
   ( CostModel,
     DataHash,
     IsValidating (..),
-    Tx (..),
+    ValidatedTx (..),
     txbody,
     txins,
     txouts,

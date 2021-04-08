@@ -343,7 +343,7 @@ pattern TxBody
 
 {-# COMPLETE TxBody #-}
 
-instance (c ~ Crypto era, Era era) => HashAnnotated (TxBody era) EraIndependentTxBody c
+instance (c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 -- ==============================================================================
 -- We define these accessor functions manually, because if we define them using

@@ -42,7 +42,7 @@ module Cardano.Ledger.Alonzo.Tx
     WitnessPPData (WitnessPPData),
     WitnessPPDataHash,
     -- Figure 3
-    Tx (Tx, body, wits, isValidating, auxiliaryData),
+    ValidatedTx (ValidatedTx, body, wits, isValidating, auxiliaryData),
     body',
     wits',
     txdats',
@@ -67,7 +67,8 @@ module Cardano.Ledger.Alonzo.Tx
     -- Pretty
     ppIsValidating,
     ppTx,
-    alonzoSeqTx,
+    -- Segwit
+    segwitTx,
   )
 where
 
@@ -82,7 +83,13 @@ import Cardano.Binary
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, getLanguageView)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), Prices, Tag (..), scriptfee)
+import Cardano.Ledger.Alonzo.Scripts
+  ( CostModel,
+    ExUnits (..),
+    Prices,
+    Tag (..),
+    scriptfee,
+  )
 import Cardano.Ledger.Alonzo.TxBody
   ( EraIndependentWitnessPPData,
     TxBody (..),
@@ -123,6 +130,11 @@ import qualified Data.ByteString.Lazy as LBS (toStrict)
 import qualified Data.ByteString.Short as SBS (length, toShort)
 import Data.Coders
 import qualified Data.Map as Map
+import Data.Maybe.Strict
+  ( StrictMaybe (..),
+    maybeToStrictMaybe,
+    strictMaybeToMaybe,
+  )
 import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -136,7 +148,6 @@ import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe, strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Credential (Credential (ScriptHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
 import Shelley.Spec.Ledger.Keys (KeyRole (Witness))
@@ -152,7 +163,7 @@ newtype IsValidating = IsValidating Bool
   deriving (Eq, Show, Generic)
   deriving newtype (NoThunks)
 
-data TxRaw era = TxRaw
+data ValidatedTxRaw era = ValidatedTxRaw
   { _body :: !(Core.TxBody era),
     _wits :: !(TxWitness era),
     _isValidating :: !IsValidating,
@@ -169,7 +180,7 @@ deriving instance
     Eq (PParamsDelta era),
     Compactible (Core.Value era)
   ) =>
-  Eq (TxRaw era)
+  Eq (ValidatedTxRaw era)
 
 deriving instance
   ( Era era,
@@ -180,7 +191,7 @@ deriving instance
     Show (Core.Value era),
     Show (PParamsDelta era)
   ) =>
-  Show (TxRaw era)
+  Show (ValidatedTxRaw era)
 
 instance
   ( Era era,
@@ -190,9 +201,9 @@ instance
     NoThunks (Core.Value era),
     NoThunks (PParamsDelta era)
   ) =>
-  NoThunks (TxRaw era)
+  NoThunks (ValidatedTxRaw era)
 
-newtype ValidatedTx era = TxConstr (MemoBytes (TxRaw era))
+newtype ValidatedTx era = ValidatedTxConstr (MemoBytes (ValidatedTxRaw era))
   deriving newtype (SafeToHash, ToCBOR)
 
 instance (c ~ Crypto era, Era era) => HashAnnotated (ValidatedTx era) EraIndependentTx c
@@ -229,7 +240,7 @@ deriving newtype instance
   ) =>
   NoThunks (ValidatedTx era)
 
-pattern Tx ::
+pattern ValidatedTx ::
   ( Era era,
     ToCBOR (Core.AuxiliaryData era),
     ToCBOR (Core.TxBody era)
@@ -239,10 +250,10 @@ pattern Tx ::
   IsValidating ->
   StrictMaybe (Core.AuxiliaryData era) ->
   ValidatedTx era
-pattern Tx {body, wits, isValidating, auxiliaryData} <-
-  TxConstr
+pattern ValidatedTx {body, wits, isValidating, auxiliaryData} <-
+  ValidatedTxConstr
     ( Memo
-        TxRaw
+        ValidatedTxRaw
           { _body = body,
             _wits = wits,
             _isValidating = isValidating,
@@ -251,7 +262,8 @@ pattern Tx {body, wits, isValidating, auxiliaryData} <-
         _
       )
   where
-    Tx b w v a = TxConstr $ memoBytes (encodeTxRaw $ TxRaw b w v a)
+    ValidatedTx b w v a =
+      ValidatedTxConstr $ memoBytes (encodeTxRaw $ ValidatedTxRaw b w v a)
 
 -- We define these accessor functions manually, because if we define them using
 -- the record syntax in the Tx pattern, they inherit the constraints
@@ -259,21 +271,24 @@ pattern Tx {body, wits, isValidating, auxiliaryData} <-
 -- constraint as a precondition. This is unnecessary, as one can see below.
 
 body' :: ValidatedTx era -> Core.TxBody era
-body' (TxConstr (Memo (TxRaw b _ _ _) _)) = b
+body' (ValidatedTxConstr (Memo (ValidatedTxRaw b _ _ _) _)) = b
 
 wits' :: ValidatedTx era -> TxWitness era
-wits' (TxConstr (Memo (TxRaw _ x _ _) _)) = x
+wits' (ValidatedTxConstr (Memo (ValidatedTxRaw _ x _ _) _)) = x
 
 isValidating' :: ValidatedTx era -> IsValidating
-isValidating' (TxConstr (Memo (TxRaw _ _ x _) _)) = x
+isValidating' (ValidatedTxConstr (Memo (ValidatedTxRaw _ _ x _) _)) = x
 
 auxiliaryData' :: ValidatedTx era -> StrictMaybe (Core.AuxiliaryData era)
-auxiliaryData' (TxConstr (Memo (TxRaw _ _ _ x) _)) = x
+auxiliaryData' (ValidatedTxConstr (Memo (ValidatedTxRaw _ _ _ x) _)) = x
 
 -- ===================================
 -- WellFormed instances
 
-instance aux ~ (Core.AuxiliaryData era) => HasField "auxiliaryData" (ValidatedTx era) (StrictMaybe aux) where
+instance
+  aux ~ Core.AuxiliaryData era =>
+  HasField "auxiliaryData" (ValidatedTx era) (StrictMaybe aux)
+  where
   getField txr = auxiliaryData' txr
 
 instance (body ~ Core.TxBody era) => HasField "body" (ValidatedTx era) body where
@@ -282,23 +297,32 @@ instance (body ~ Core.TxBody era) => HasField "body" (ValidatedTx era) body wher
 instance HasField "isValidating" (ValidatedTx era) IsValidating where
   getField txr = isValidating' txr
 
-instance c ~ (Crypto era) => HasField "addrWits" (ValidatedTx era) (Set (WitVKey 'Witness c)) where
-  getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txwitsVKey' x
+instance
+  c ~ Crypto era =>
+  HasField "addrWits" (ValidatedTx era) (Set (WitVKey 'Witness c))
+  where
+  getField (ValidatedTxConstr (Memo (ValidatedTxRaw _ x _ _) _)) = txwitsVKey' x
 
 instance
-  (c ~ (Crypto era), script ~ Core.Script era) =>
+  (c ~ Crypto era, script ~ Core.Script era) =>
   HasField "scriptWits" (ValidatedTx era) (Map.Map (ScriptHash c) script)
   where
-  getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txscripts' x
+  getField (ValidatedTxConstr (Memo (ValidatedTxRaw _ x _ _) _)) = txscripts' x
 
-instance c ~ (Crypto era) => HasField "bootWits" (ValidatedTx era) (Set (BootstrapWitness c)) where
-  getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txwitsBoot' x
+instance
+  c ~ Crypto era =>
+  HasField "bootWits" (ValidatedTx era) (Set (BootstrapWitness c))
+  where
+  getField (ValidatedTxConstr (Memo (ValidatedTxRaw _ x _ _) _)) = txwitsBoot' x
 
-instance c ~ (Crypto era) => HasField "txdatahash" (ValidatedTx era) (Map.Map (DataHash c) (Data era)) where
-  getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txdats' x
+instance
+  c ~ Crypto era =>
+  HasField "txdatahash" (ValidatedTx era) (Map.Map (DataHash c) (Data era))
+  where
+  getField (ValidatedTxConstr (Memo (ValidatedTxRaw _ x _ _) _)) = txdats' x
 
 instance HasField "wits" (ValidatedTx era) (TxWitness era) where
-  getField (TxConstr (Memo (TxRaw _ witset _ _) _)) = witset
+  getField (ValidatedTxConstr (Memo (ValidatedTxRaw _ witset _ _) _)) = witset
 
 -- =========================================================
 -- Figure 2: Definitions for Transactions
@@ -377,8 +401,8 @@ hashWitnessPPData pp langs rdmrs =
 
 isTwoPhaseScriptAddress ::
   forall era.
-  (Era era, ValidateScript era) =>
-  Core.Tx era ->
+  (ValidateScript era) =>
+  ValidatedTx era ->
   Addr (Crypto era) ->
   Bool
 isTwoPhaseScriptAddress tx addr =
@@ -400,22 +424,22 @@ txins txb = Set.union (getField @"inputs" txb) (getField @"txinputs_fee" txb)
 
 -- | txsize computes the length of the serialised bytes
 instance HasField "txsize" (ValidatedTx era) Integer where
-  getField (TxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
+  getField (ValidatedTxConstr (Memo _ bytes)) = fromIntegral (SBS.length bytes)
 
 minfee ::
   ( HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
-    HasField "totExunits" (Core.Tx era) ExUnits,
-    HasField "txsize" (Core.Tx era) Integer
+    HasField "totExunits" tx ExUnits,
+    HasField "txsize" tx Integer
   ) =>
   Core.PParams era ->
-  Core.Tx era ->
+  tx ->
   Coin
 minfee pp tx =
   (getField @"txsize" tx <×> a pp)
     <+> b pp
-    <+> (scriptfee (getField @"_prices" pp) allExunits)
+    <+> scriptfee (getField @"_prices" pp) allExunits
   where
     a protparam = Coin (fromIntegral (getField @"_minfeeA" protparam))
     b protparam = Coin (fromIntegral (getField @"_minfeeB" protparam))
@@ -440,7 +464,7 @@ getValidatorHash (Addr _network (ScriptHashObj hash) _ref) = Just hash
 getValidatorHash _ = Nothing
 
 txbody :: ValidatedTx era -> Core.TxBody era
-txbody (TxConstr (Memo TxRaw {_body = b} _)) = b
+txbody (ValidatedTxConstr (Memo ValidatedTxRaw {_body = b} _)) = b
 
 -- ===============================================================
 -- Operations on scripts from specification
@@ -541,7 +565,7 @@ ppTx ::
   ) =>
   ValidatedTx era ->
   PDoc
-ppTx (TxConstr (Memo (TxRaw b w iv aux) _)) =
+ppTx (ValidatedTxConstr (Memo (ValidatedTxRaw b w iv aux) _)) =
   ppRecord
     "Tx"
     [ ("body", prettyA b),
@@ -573,10 +597,10 @@ encodeTxRaw ::
     ToCBOR (Core.AuxiliaryData era),
     ToCBOR (Core.TxBody era)
   ) =>
-  TxRaw era ->
-  Encode ('Closed 'Dense) (TxRaw era)
-encodeTxRaw TxRaw {_body, _wits, _isValidating, _auxiliaryData} =
-  Rec TxRaw
+  ValidatedTxRaw era ->
+  Encode ('Closed 'Dense) (ValidatedTxRaw era)
+encodeTxRaw ValidatedTxRaw {_body, _wits, _isValidating, _auxiliaryData} =
+  Rec ValidatedTxRaw
     !> To _body
     !> To _wits
     !> To _isValidating
@@ -597,11 +621,11 @@ instance
     Show (Core.Value era),
     Val (Core.Value era)
   ) =>
-  FromCBOR (Annotator (TxRaw era))
+  FromCBOR (Annotator (ValidatedTxRaw era))
   where
   fromCBOR =
     decode $
-      Ann (RecD TxRaw)
+      Ann (RecD ValidatedTxRaw)
         <*! From
         <*! From
         <*! Ann From
@@ -611,7 +635,7 @@ instance
           )
 
 deriving via
-  Mem (TxRaw era)
+  Mem (ValidatedTxRaw era)
   instance
     ( Era era,
       FromCBOR (Annotator (Core.Script era)),
@@ -629,20 +653,17 @@ deriving via
     ) =>
     FromCBOR (Annotator (ValidatedTx era))
 
--- ====================================
--- for making an instance of (TxSeqAble era)
-
-alonzoSeqTx ::
+segwitTx ::
   ( Era era,
     ToCBOR (Core.TxBody era),
     ToCBOR (Core.AuxiliaryData era)
   ) =>
   Annotator (Core.TxBody era) ->
   Annotator (TxWitness era) ->
-  Bool ->
+  IsValidating ->
   Maybe (Annotator (Core.AuxiliaryData era)) ->
   Annotator (ValidatedTx era)
-alonzoSeqTx
+segwitTx
   bodyAnn
   witsAnn
   isval
@@ -654,9 +675,18 @@ alonzoSeqTx
           Nothing -> serializeEncoding encodeNull
           Just b -> serialize b
         fullBytes =
-          (serializeEncoding $ encodeListLen 3)
+          serializeEncoding (encodeListLen 3)
             <> serialize bodyb
             <> serialize witnessSet
             <> wrappedMetadataBytes
         shortBytes = SBS.toShort (LBS.toStrict fullBytes)
-     in TxConstr (Memo (TxRaw bodyb witnessSet (IsValidating isval) (maybeToStrictMaybe metadata)) shortBytes)
+     in ValidatedTxConstr
+          ( Memo
+              ( ValidatedTxRaw
+                  bodyb
+                  witnessSet
+                  isval
+                  (maybeToStrictMaybe metadata)
+              )
+              shortBytes
+          )
