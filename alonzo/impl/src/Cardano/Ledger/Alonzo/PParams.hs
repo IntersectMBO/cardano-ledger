@@ -281,14 +281,55 @@ emptyPParams =
       _maxValSize = 0
     }
 
+-- | Since ExUnits does not have an Ord instance, we have to roll this Ord instance by hand.
+-- IF THE ORDER OR TYPES OF THE FIELDS OF PParams changes, this instance may need adusting.
+instance Ord (PParams' StrictMaybe era) where
+  compare x y =
+    (_minfeeA x, _minfeeA y)
+      <== (_minfeeB x, _minfeeB y)
+      <== (_maxBBSize x, _maxBBSize y)
+      <== (_maxTxSize x, _maxTxSize y)
+      <== (_maxBHSize x, _maxBHSize y)
+      <== (_keyDeposit x, _keyDeposit y)
+      <== (_poolDeposit x, _poolDeposit y)
+      <== (_eMax x, _eMax y)
+      <== (_nOpt x, _nOpt y)
+      <== (_a0 x, _a0 y)
+      <== (_rho x, _rho y)
+      <== (_tau x, _tau y)
+      <== (_d x, _d y)
+      <== (_extraEntropy x, _extraEntropy y)
+      <== (_protocolVersion x, _protocolVersion y)
+      <== (_minPoolCost x, _minPoolCost y)
+      <== (_adaPerUTxOByte x, _adaPerUTxOByte y)
+      <== (_costmdls x, _costmdls y)
+      <== (_prices x, _prices y)
+      <== ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
+              LT -> LT
+              GT -> GT
+              EQ -> case compareEx (_maxBlockExUnits x) (_maxBlockExUnits y) of
+                LT -> LT
+                GT -> GT
+                EQ -> (_maxValSize x, _maxValSize y) <== EQ
+          )
+
+infixr 4 <==
+
+(<==) :: Ord a => (a, a) -> Ordering -> Ordering
+(x, y) <== z = case compare x y of LT -> LT; GT -> GT; EQ -> z
+
+compareEx :: StrictMaybe ExUnits -> StrictMaybe ExUnits -> Ordering
+compareEx SNothing SNothing = EQ
+compareEx SNothing (SJust _) = LT
+compareEx (SJust _) SNothing = GT
+compareEx (SJust (ExUnits m1 s1)) (SJust (ExUnits m2 s2)) = compare (m1, s1) (m2, s2)
+
 instance Default (PParams era) where
   def = emptyPParams
 
 deriving instance Eq (PParams' StrictMaybe era)
 
 deriving instance Show (PParams' StrictMaybe era)
-
-deriving instance Ord (PParams' StrictMaybe era)
 
 deriving instance NFData (PParams' StrictMaybe era)
 
