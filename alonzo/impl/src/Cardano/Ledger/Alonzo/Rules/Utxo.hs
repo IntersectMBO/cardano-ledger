@@ -16,6 +16,7 @@
 module Cardano.Ledger.Alonzo.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
+import Cardano.Ledger.Alonzo.Data (dataHashSize)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx
@@ -92,12 +93,6 @@ import Shelley.Spec.Ledger.UTxO
     unUTxO,
   )
 
--- Size of the datum hash attached to the output (could be Nothing)
-datHashSize :: TxOut era -> Integer
-datHashSize out = error "need heapwords instance"
-  where
-    _ = getField @"datahash" out
-
 -- | Compute an estimate of the size of storing one UTxO entry.
 -- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
 utxoEntrySize :: Era era => TxOut era -> Integer
@@ -106,10 +101,10 @@ utxoEntrySize txout
     -- no non-ada assets, no hash datum case
     case dh of
       SNothing -> adaOnlyUTxOSize
-      _ -> adaOnlyUTxOSize + datHashSize txout
+      _ -> adaOnlyUTxOSize + dataHashSize dh
   -- add the size of Value and the size of datum hash (if present) to base UTxO size
   -- max function is a safeguard (in case calculation returns a smaller size than an ada-only entry)
-  | otherwise = max adaOnlyUTxOSize (utxoEntrySizeWithoutVal + Val.size v + datHashSize txout)
+  | otherwise = max adaOnlyUTxOSize (utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh)
   where
     v = getField @"value" txout
     dh = getField @"datahash" txout

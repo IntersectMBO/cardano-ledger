@@ -23,6 +23,7 @@ module Cardano.Ledger.Alonzo.Data
     DataHash,
     hashData,
     getPlutusData,
+    dataHashSize,
     -- $
     AuxiliaryData (AuxiliaryData, scripts, dats, txMD),
     AuxiliaryDataHash (..),
@@ -36,6 +37,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes
   ( EraIndependentAuxiliaryData,
@@ -61,6 +63,7 @@ import Cardano.Ledger.SafeHash
     SafeToHash,
     hashAnnotated,
   )
+import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
 import Data.Coders
 import Data.Map (Map)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -72,6 +75,7 @@ import GHC.Generics (Generic)
 -- import Plutus.V1.Ledger.Scripts-- Supply the HasField and Validate instances for Alonzo
 import qualified Language.PlutusTx as Plutus
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Metadata (Metadatum)
 
 -- =====================================================================
@@ -134,6 +138,14 @@ type DataHash crypto = SafeHash crypto EraIndependentData
 
 hashData :: Era era => Data era -> DataHash (Crypto era)
 hashData d = hashAnnotated d
+
+-- Size of the datum hash attached to the output (could be Nothing)
+dataHashSize :: (CC.Crypto c) => StrictMaybe (DataHash c) -> Integer
+dataHashSize dh = fromIntegral $ heapWords dh
+
+instance (CC.Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
+  heapWords SNothing = heapWords0
+  heapWords (SJust a) = heapWords1 a
 
 -- =============================================================================
 -- Version without serialized bytes
