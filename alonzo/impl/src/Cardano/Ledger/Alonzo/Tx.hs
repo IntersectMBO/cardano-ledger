@@ -124,7 +124,7 @@ import Cardano.Ledger.SafeHash
     hashAnnotated,
   )
 import Cardano.Ledger.Shelley.Constraints
-import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val (coin, (<+>), (<×>)))
+import Cardano.Ledger.Val (Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString.Lazy as LBS (toStrict)
 import qualified Data.ByteString.Short as SBS (length, toShort)
@@ -605,53 +605,6 @@ encodeTxRaw ValidatedTxRaw {_body, _wits, _isValidating, _auxiliaryData} =
     !> To _wits
     !> To _isValidating
     !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) _auxiliaryData
-
-instance
-  ( Era era,
-    FromCBOR (Annotator (Core.Script era)),
-    FromCBOR (Annotator (Core.TxBody era)),
-    FromCBOR (Annotator (Core.AuxiliaryData era)),
-    FromCBOR (PParamsDelta era),
-    ToCBOR (Core.Script era),
-    Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era),
-    Compactible (Core.Value era),
-    DecodeNonNegative (Core.Value era),
-    DecodeMint (Core.Value era),
-    Show (Core.Value era),
-    Val (Core.Value era)
-  ) =>
-  FromCBOR (Annotator (ValidatedTxRaw era))
-  where
-  fromCBOR =
-    decode $
-      Ann (RecD ValidatedTxRaw)
-        <*! From
-        <*! From
-        <*! Ann From
-        <*! D
-          ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe fromCBOR
-          )
-
-deriving via
-  Mem (ValidatedTxRaw era)
-  instance
-    ( Era era,
-      FromCBOR (Annotator (Core.Script era)),
-      FromCBOR (Annotator (Core.TxBody era)),
-      FromCBOR (Annotator (Core.AuxiliaryData era)),
-      FromCBOR (PParamsDelta era),
-      ToCBOR (Core.Script era),
-      Typeable (Core.Script era),
-      Typeable (Core.AuxiliaryData era),
-      Compactible (Core.Value era),
-      DecodeNonNegative (Core.Value era),
-      DecodeMint (Core.Value era),
-      Show (Core.Value era),
-      Val (Core.Value era)
-    ) =>
-    FromCBOR (Annotator (ValidatedTx era))
 
 segwitTx ::
   ( Era era,
