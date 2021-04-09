@@ -116,6 +116,9 @@ To reduce the possibility of abuse, the policy must comply with a minimum quorum
 \khcomment{Using multi-sig potentially allows policies to be defined as described above.  This simplifies the system by removing the need for a separate Elector group,
   but is perhaps open to abuse of power?}
 
+Note that the process described here intrinsically supports automation.  Signatories can be automated agents if desired rather than individuals.  This also allows integration into a full on-chain voting mechanism in the longer term, as with Priviledge.  The outcome of an off-chain or on-chain vote may be to construct a signed on-chain proposal for subsequent enactment.  Ultimately, if the process is purely on-chain, then the vote outcome could be embedded as the authorisation for the proposal submission without needing to construct or maintain special submitter keys.  This would improve some aspects of security, but would mean that either: i) a proposal would need to be formalised prior to the initial voting round (which might be impractical for e.g. protocol upgrades or some forms of funds transfers); or else ii) delegates would need to confirm that the proposal that was enacted was equivalent to the one that was originally agreed.
+
+
 \subsection{Proposal Identifiers}
 \label{sect:proposalid}
 
@@ -139,3 +142,25 @@ There are three obvious ways to construct an identifier.
   The transaction identifier is used to identify the proposal.  This has the advantage that it is already available on-chain, and is guaranteed to be unique.  However, it cannot be
   referred to prior to on-chain proposal submission.
 \end{description}
+
+\subsection{Extension to Differentiated Submitter Groups}
+
+This design assumes a single self-perpetuating or elected submitter group.  It
+would be possible to differentiate proposals, so that specific kinds of proposal
+could be submitted by different groups.  For example, a group might have
+authority to submit a proposal that changed specific parameters, that authorised
+funds transfers up to some amount, that transferred balances between reserves
+and treasury, or between treasury and specific nominated accounts.  The obvious
+way to do this would be to embed general Plutus scripts in the submission
+authorisation (or to allow Plutus scripts to construct proposals).  This could
+involve some changes to ledger rules (including perhaps changes to script
+plumbing), so should probably be seen as an extension to the base design, rather
+than a core requirement.  \todo{Consider whether a script can be used for
+  proposal submission rather than embedded signatures.  Does the two-phase Plutus process cause unwanted delays?}
+
+For such an approach to be feasible, it would be necessary to determine whether
+a proposal was permitted to be signed by a specific group (i.e. the proposal
+would need to be automatically checked and validated against the group
+credentials).  It would also be necessary to set thresholds and quora
+differently for different kinds of proposal.  These thresholds would need to be
+independently validated through security audit.
