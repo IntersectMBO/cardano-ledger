@@ -13,7 +13,7 @@
       \end{cases}
                  \nextdef
     & \fun{totExunits} \in \Tx \to \ExUnits \\
-    & \fun{totExunits}~\var{tx} = \sum_{\wcard \mapsto (\wcard, eu) \in \fun{txrdmrs}~(\fun{txwits}~tx)} eu
+    & \fun{totExunits}~\var{tx} = \sum_{\wcard \mapsto (\wcard, ~eu) \in \fun{txrdmrs}~(\fun{txwits}~tx)} eu
     \nextdef
     & \fun{feesOK} \in \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo~= \\
@@ -240,8 +240,8 @@ which has the information to do this correctly for
   \emph{Notation}
   %
   \begin{align*}
-    \llbracket \var{script_v} \rrbracket_{\var{cm},\var{exunits}}~\var{d}
-    &=& \fun{runPLCScript} ~{cm}~\var{script_v}~\var{d}~\var{exunits}
+    \llbracket \var{script_v} \rrbracket_{\var{cm},\var{eu}}~\var{d}
+    &=& \fun{runPLCScript} ~{cm}~\var{script_v}~\var{d}~\var{eu}
   \end{align*}
   \caption{Script Validation, cont.}
   \label{fig:defs:functions-valid}
@@ -289,7 +289,7 @@ and the current item being validated.
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
     & ~~~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp} \}
     \nextdef
-    & \fun{evalScripts} \in \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \to \Bool \\
+    & \fun{evalScripts} \in \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \to \IsValidating \\
     & \fun{evalScripts}~\epsilon = \True \\
     & \fun{evalScripts}~((\var{sc}, \var{d}, \var{eu}, \var{cm});\Gamma) =
       \llbracket sc \rrbracket_{cm,\var{eu}} d \land \fun{evalScripts}~\Gamma
@@ -325,7 +325,7 @@ slot leader to:
 \begin{enumerate}
   \item Correctly apply the $\IsValidating$ tag;
   \item Include all transactions that validate within the block,
-  \textit{even when there is a 2nd step script validation failure};
+  \textit{even when there is a 2nd phase script validation failure};
   \item Exclude any transactions that are invalid in some way \textit{other than 2nd step script validation failure}.
 \end{enumerate}
 
