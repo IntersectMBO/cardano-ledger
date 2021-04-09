@@ -3,7 +3,43 @@
 
 This section covers some key design issues that have been discussed, and explains how they have been resolved.
 
-\subsection*{Issue 1.}
+\newcounter{issue}
+
+\stepcounter{issue}
+\subsection*{Issue \theissue{}: Should voies be based purely on stake?}
+
+\subsubsection*{Description of Issue.}
+
+Basing voting power purely on the stake that is held potentially disenfranchises some groups that have a
+significant investment in the ecosystem.  While block production relies on \emph{Proof of Stake},
+it is not necessarily clear that voting should follow the same principle.  There c
+
+\subsubsection*{Alternative Solutions.}
+
+\begin{enumerate}
+\item
+  \emph{Votes are based on stake.}  This is the obvious solution.
+\item
+  \emph{Votes are based on fees paid.}  This enfranchises the users of the system.
+\item
+  \emph{Votes are based on transaction volume.}  This also enfranchises users.
+\item
+  \emph{Votes are based on identity.}  This creates a more democratic system.
+\item
+  \emph{Hybrid.}  For example, part of the vote is based on stake, part on the fees paid, in some pre-determined proportion.
+\end{enumerate}
+
+\subsubsection*{Chosen Resolution.}
+
+We will use the obvious solution (Option 1: stake-derived voting).  This fits
+with the existing stake delegation design, so simplifying the design and
+implementation, and minimising the number of new mechanisms that are required.
+It also simplifies security concerns -- it is not possible for a cabal to take
+over the blockchain, without first gaining the authorisation of the majority of
+the held stake.
+
+\stepcounter{issue}
+\subsection*{Issue \theissue{}.}
 
 \subsubsection*{Description of Issue.}
 
