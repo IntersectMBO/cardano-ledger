@@ -218,14 +218,14 @@ instance
   ) =>
   NoThunks (UtxoPredicateFailure era)
 
--- | feesOK is a predicate with 4 parts:
---   - Check that the fee is greater than the minimum fee for the transaction
---   - The fee inputs do not belong to non-native script addresses
---   - The fee inputs are sufficient to cover the fee marked in the transaction
---   - The fee inputs do not contain any non-ADA part
---
+-- | feesOK is a predicate with several parts. Some parts only apply in special circumstances.
+--   1) The fee paid is >= the minimum fee
+--   2) If the total ExUnits are 0 in both Memory and Steps, no further part needs to be checked.
+--   3) The fee inputs do not belong to non-native script addresses
+--   4) The fee inputs are sufficient to cover the fee marked in the transaction
+--   5) The fee inputs do not contain any non-ADA part
 --   As a TransitionRule it will return (), and raise an error (rather than
---   return) if any of the 4 parts are False.
+--   return) if any of the required parts are False.
 feesOK ::
   forall era.
   ( Era era,
@@ -238,7 +238,8 @@ feesOK ::
       (Set (TxIn (Crypto era))),
     HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
-    HasField "_prices" (Core.PParams era) Prices
+    HasField "_prices" (Core.PParams era) Prices,
+    HasField "address" (Alonzo.TxOut era) (Addr (Crypto era))
   ) =>
   Core.PParams era ->
   Core.Tx era ->
@@ -253,14 +254,18 @@ feesOK pp tx (UTxO m) = do
       nonNative txout = isTwoPhaseScriptAddress @era tx (getField @"address" txout)
       minimumFee = minfee @era pp tx
   -- Part 1
-  (Val.coin bal >= theFee) ?! FeeNotBalancedUTxO (Val.coin bal) theFee
-  -- Part 2
-  not (any nonNative utxoFees) ?! ScriptsNotPaidUTxO (UTxO (Map.filter nonNative utxoFees))
-  -- Part 3
   (minimumFee <= theFee) ?! FeeTooSmallUTxO minimumFee theFee
-  -- Part 4
-  Val.inject (Val.coin bal) == bal ?! FeeContainsNonADA bal
-  pure ()
+  -- Part 2
+  if (getField @"totExunits" tx) == (ExUnits 0 0)
+    then pure ()
+    else do
+      -- Part 3
+      not (any nonNative utxoFees) ?! ScriptsNotPaidUTxO (UTxO (Map.filter nonNative utxoFees))
+      -- Part 4
+      (Val.coin bal >= theFee) ?! FeeNotBalancedUTxO (Val.coin bal) theFee
+      -- Part 5
+      Val.inject (Val.coin bal) == bal ?! FeeContainsNonADA bal
+      pure ()
 
 -- ================================================================
 
