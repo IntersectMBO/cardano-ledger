@@ -1,0 +1,86 @@
+\pagebreak
+\section{Efficiency Concerns}
+\label{sect:efficiency}
+
+This appendix considers possible efficiency concerns.  Overall, the design will lead to some (limited) increase in memory
+usage (proportional to the number of registered vote addresses), plus some additional transaction costs.
+Proposal submission and enactment should carry minimal additional costs compared with the current manual process.
+Additional costs are associated with vote snapshots, registration, vote delegation, and vote tallying.
+These costs are bounded by the product of the number of vote delegations and the number of active proposals.
+Overall, the costs are manageable and proportionate, provided that there are not a large number of active proposals.
+It may be advisable, however, to group a set of proposals under a single vote.
+
+\subsection{Proposals and Proposal Submission}
+
+A single proposal needs to be submitted with appropriate signatures.  The cost of this submission should be no greater than
+a normal transaction submission.  Proposals need to be stored for voting and enactment.  An in-memory hash is sufficient
+for each proposal up to the point of enactment.  This hash could be recorded on-chain.
+
+Assuming that the majority of the submitter group is honest, then the number of proposals that are under consideration
+at any point in time should be small and finite.  By setting time limits on enactment, this number can be controlled.
+
+Since there is likely to be at most only one or two active protocol upgrade proposals, and a small number of active parameter
+changes, the most significant pressure is likely to come from funds transfer proposals (``MIRs'').  Because only a relatively
+small number of transfers can be included in a single proposal\footnote{Around 100-200}\todo{check this number},
+a single high-level funding decision could, in principle, result in several on-chain proposals.
+Submitters should take care over the number of such proposals, and consider submitting them over multiple epochs, if possible.
+If this is expected to be common, then it may be sensible for a single vote to activate a group of proposals.
+This will reduce the number of vote transactions, as well as reducing the risk of voter fatigue (or only part of a group
+being authorised).
+
+
+% It is necessary to avoid ``flooding'', where many junk proposals are subm.
+
+\subsection{Vote Snapshots}
+
+It is necessary to take vote snapshots before tallying votes.  Since different
+credentials are used for vote and stake delegation, this is in addition to the
+usual stake snapshot.  Unlike stake delegation, only a single active snapshot is required.
+It is not necessary to calculate this during the epoch transition, provided that it is available
+at the point at which any votes are tallied.  It follows that the snapshot could be calculated
+incrementally, if desired.  This would reduce calculation pressure.  There are approximately 420,000
+registered stake addresses\footnote{2021-04-09}.  Storing a similar number of vote addresses would require approx. 15MB of
+memory\khcomment{assuming 28 bytes for an address hash, 4 bytes for a value, and 4 bytes for a header word.}.
+
+\subsection{Vote Delegation}
+
+A one-off cost (time/ada/chain growth) is paid for registering each vote delegation
+key.  This will be similar to the cost that is paid for e.g. registering a stake key.
+At most one key must be registered for each active payment credential.
+Certificates are registered on-chain.  There is no direct impact on the size of
+the UTxO.  A similar cost is paid each time a vote delegation is made or changed.
+
+\subsection{Delegates and Voting}
+
+A one-off cost (time/ada/chain growth) is paid for registering each delegate.
+This will be similar to the cost that is paid for e.g. registering a stake key.
+Delegates must also submit votes.  There will be one vote transaction per delegate per proposal.
+Assuming that there is a small number of active proposals and the number of delegates is
+significantly less than the number of registered voters, we can estimate the typical number of
+votes per epoch to be less than 10,000. This would be covered by around 500s of total transaction time.
+
+\subsection{Vote Tallying}
+
+Tallying the vote involves summing the delegations that have been made in favour of each active proposal.  Since delegation can be
+changed up to the point where a tally is taken, this must be done after the tally point and prior to enactment.
+In the worst case, each tally involves adding the stake that is associated each delegated vote (potentially \emph{420,000}
+additions).  This can, in principle, be parallelised and provided that sufficient time is available between the tally
+and the proposal enactment, can be carried out incrementally.  Limiting the number of active proposals will also
+limit the total computational time.
+The total possible delegation can be pre-calculated from the snapshot, so should not add significantly to performance costs.
+
+\subsection{Endorsement}
+
+Automatic endorsement carries minimal time overhead.  As each block is produced, the corresponding  pool identifier needs to be
+recorded.  The total stake that is prepared to upgrade needs to be calculated prior to the endorsement.  Assuming that there are
+approximately \emph{2k} block producing pools and \emph{k} is 2,500 or less, this will involve a maximum of 2,500 additions,
+which should have negligible performance impact.
+
+\subsection{Enactment}
+
+Automatic endorsement carries minimal time overhead.  As each block is produced, the corresponding  pool identifier needs to be
+recorded.  The total stake that is prepared to upgrade needs to be calculated prior to the endorsement.  Assuming that there are
+approximately \emph{2k} block producing pools and \emph{k} is 2,500 or less, this will involve a maximum of 2,500 additions,
+which should have negligible performance impact.
+
+\subsection{Voting Centre}
