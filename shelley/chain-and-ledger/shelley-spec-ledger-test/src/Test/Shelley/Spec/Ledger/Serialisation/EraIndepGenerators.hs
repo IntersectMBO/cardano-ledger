@@ -216,9 +216,6 @@ instance CC.Crypto crypto => Arbitrary (BootstrapWitness crypto) where
 instance CC.Crypto crypto => Arbitrary (HashHeader crypto) where
   arbitrary = HashHeader <$> genHash
 
-instance CC.Crypto crypto => Arbitrary (HashBBody crypto) where
-  arbitrary = UnsafeHashBBody <$> genHash
-
 instance (Typeable kr, CC.Crypto crypto) => Arbitrary (WitVKey kr crypto) where
   arbitrary =
     WitVKey
@@ -775,28 +772,27 @@ instance
 
 genTx ::
   ( UsesTxBody era,
-    UsesScript era,
     UsesAuxiliary era,
-    Arbitrary (WitnessSet era),
     Arbitrary (Core.TxBody era),
-    Arbitrary (Core.AuxiliaryData era)
+    Arbitrary (Core.AuxiliaryData era),
+    ToCBOR (Core.Witnesses era),
+    Arbitrary (Core.Witnesses era)
   ) =>
   Gen (Tx era)
 genTx =
   Tx
     <$> arbitrary
-    <*> (resize maxTxWits arbitrary)
+    <*> resize maxTxWits arbitrary
     <*> arbitrary
 
 genBlock ::
   forall era.
   ( UsesTxBody era,
-    UsesScript era,
     UsesAuxiliary era,
     PreAlonzo era,
     ScriptClass era,
     Mock (Crypto era),
-    Arbitrary (WitnessSet era),
+    Arbitrary (Core.Witnesses era),
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.AuxiliaryData era)
   ) =>

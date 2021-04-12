@@ -163,14 +163,14 @@ txEx1 ::
   [KeyPair 'Witness c] ->
   MIRPot ->
   Tx (ShelleyEra c)
-txEx1 wits pot =
+txEx1 txwits pot =
   Tx
     (txbodyEx1 pot)
     mempty
       { addrWits =
           makeWitnessesVKey
             (hashAnnotated $ txbodyEx1 @(ShelleyEra c) pot)
-            ([asWitness Cast.alicePay] <> wits)
+            ([asWitness Cast.alicePay] <> txwits)
       }
     SNothing
 
@@ -180,11 +180,11 @@ blockEx1' ::
   [KeyPair 'Witness (Crypto (ShelleyEra c))] ->
   MIRPot ->
   Block (ShelleyEra c)
-blockEx1' wits pot =
+blockEx1' txwits pot =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10)
-    [txEx1 wits pot]
+    [txEx1 txwits pot]
     (SlotNo 10)
     (BlockNo 1)
     (nonce0 @(Crypto (ShelleyEra c)))
@@ -207,9 +207,9 @@ expectedStEx1' ::
   [KeyPair 'Witness (Crypto (ShelleyEra c))] ->
   MIRPot ->
   ChainState (ShelleyEra c)
-expectedStEx1' wits pot =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx1' @c wits pot))
-    . C.newLab (blockEx1' wits pot)
+expectedStEx1' txwits pot =
+  C.evolveNonceUnfrozen (getBlockNonce (blockEx1' @c txwits pot))
+    . C.newLab (blockEx1' txwits pot)
     . C.feesAndDeposits feeTx1 (_keyDeposit ppEx)
     . C.newUTxO (txbodyEx1 pot)
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) 0 1)

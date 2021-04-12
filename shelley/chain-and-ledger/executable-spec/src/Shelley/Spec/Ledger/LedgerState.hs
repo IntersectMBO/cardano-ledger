@@ -62,7 +62,6 @@ module Shelley.Spec.Ledger.LedgerState
     nullWitHashes,
     diffWitHashes,
     minfee,
-    txsize,
     txsizeBound,
     produced,
     consumed,
@@ -128,7 +127,6 @@ import Control.DeepSeq (NFData)
 import Control.Provenance (ProvM, liftProv)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
-import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coders
   ( Decode (From, RecD),
     decode,
@@ -169,6 +167,7 @@ import Shelley.Spec.Ledger.BaseTypes
     UnitInterval,
     activeSlotVal,
     intervalValue,
+    strictMaybeToMaybe,
     unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
@@ -260,7 +259,6 @@ import Shelley.Spec.Ledger.UTxO
     txinLookup,
     txins,
     txouts,
-    txup,
     verifyWitVKey,
   )
 
@@ -752,10 +750,6 @@ genesisState genDelegs0 utxo0 =
   where
     dState = def {_genDelegs = GenDelegs genDelegs0}
 
--- | Implementation of abstract transaction size
-txsize :: Tx era -> Integer
-txsize = fromIntegral . BSL.length . txFullBytes
-
 -- | Convenience Function to bound the txsize function.
 -- | It can be helpful for coin selection.
 txsizeBound ::
@@ -774,12 +768,12 @@ txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
     addrHashLen = 28
     addrHeader = 1
     address = 2 + addrHeader + 2 * addrHashLen
-    txbody = body' tx
+    txbody = getField @"body" tx
     numInputs = toInteger . length . getField @"inputs" $ txbody
     inputSize = smallArray + uint + hashObj
     numOutputs = toInteger . length . getField @"outputs" $ txbody
     outputSize = smallArray + uint + address
-    rest = fromIntegral $ BSL.length (txFullBytes tx)
+    rest = getField @"txsize" tx
 
 -- | Minimum fee calculation
 minfee ::
@@ -792,7 +786,7 @@ minfee ::
 minfee pp tx =
   Coin $
     fromIntegral (getField @"_minfeeA" pp)
-      * txsize tx + fromIntegral (getField @"_minfeeB" pp)
+      * getField @"txsize" tx + fromIntegral (getField @"_minfeeB" pp)
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
@@ -863,10 +857,10 @@ diffWitHashes (WitHashes x) (WitHashes x') =
 -- | Extract the witness hashes from the Transaction.
 witsFromTxWitnesses ::
   ( Era era,
-    HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era))),
-    HasField "bootWits" (Core.Tx era) (Set (BootstrapWitness (Crypto era)))
+    HasField "addrWits" tx (Set (WitVKey 'Witness (Crypto era))),
+    HasField "bootWits" tx (Set (BootstrapWitness (Crypto era)))
   ) =>
-  Core.Tx era ->
+  tx ->
   WitHashes (Crypto era)
 witsFromTxWitnesses coreTx =
   WitHashes $
@@ -880,8 +874,9 @@ witsFromTxWitnesses coreTx =
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded ::
-  forall era.
+  forall era tx.
   ( Era era,
+    HasField "body" tx (Core.TxBody era),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -889,7 +884,7 @@ witsVKeyNeeded ::
     HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   UTxO era ->
-  Core.Tx era ->
+  tx ->
   GenDelegs (Crypto era) ->
   WitHashes (Crypto era)
 witsVKeyNeeded utxo' tx genDelegs =
@@ -939,21 +934,28 @@ witsVKeyNeeded utxo' tx genDelegs =
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
     updateKeys :: Set (KeyHash 'Witness (Crypto era))
-    updateKeys = asWitness `Set.map` propWits (txup tx) genDelegs
+    updateKeys =
+      asWitness
+        `Set.map` propWits
+          ( strictMaybeToMaybe $
+              getField @"update" txbody
+          )
+          genDelegs
 
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
 verifiedWits ::
-  forall era.
+  forall era tx.
   ( Era era,
-    HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era))),
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    HasField "bootWits" (Core.Tx era) (Set (BootstrapWitness (Crypto era)))
+    HasField "addrWits" tx (Set (WitVKey 'Witness (Crypto era))),
+    HasField "bootWits" tx (Set (BootstrapWitness (Crypto era))),
+    HasField "body" tx (Core.TxBody era),
+    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
-  Core.Tx era ->
+  tx ->
   Either [VKey 'Witness (Crypto era)] ()
 verifiedWits tx =
-  case (failed <> failedBootstrap) of
+  case failed <> failedBootstrap of
     [] -> Right ()
     nonEmpty -> Left nonEmpty
   where

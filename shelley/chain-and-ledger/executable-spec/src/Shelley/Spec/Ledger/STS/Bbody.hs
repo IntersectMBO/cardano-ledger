@@ -22,7 +22,9 @@ module Shelley.Spec.Ledger.STS.Bbody
 where
 
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (fromTxSeq, hashTxSeq))
+import qualified Cardano.Ledger.Era as Era
+import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Control.Monad.Trans.Reader (asks)
@@ -46,10 +48,7 @@ import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
     Block (..),
-    HashBBody,
-    TxSeq (..),
     bBodySize,
-    bbHash,
     hBbsize,
     incrBlocks,
     issuerIDfromBHBody,
@@ -63,8 +62,9 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
+import Shelley.Spec.Ledger.Serialization (ToCBORGroup)
 import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
-import Shelley.Spec.Ledger.Tx (Tx, WitnessSet)
+import Shelley.Spec.Ledger.Tx (WitnessSet)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data BBODY era
@@ -86,8 +86,8 @@ data BbodyPredicateFailure era
       !Int -- Actual Body Size
       !Int -- Claimed Body Size in Header
   | InvalidBodyHashBBODY
-      !(HashBBody (Crypto era)) -- Actual Hash
-      !(HashBBody (Crypto era)) -- Claimed Hash
+      !(Hash (Crypto era) EraIndependentBlockBody) -- Actual Hash
+      !(Hash (Crypto era) EraIndependentBlockBody) -- Claimed Hash
   | LedgersFailure (PredicateFailure (Core.EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -112,14 +112,14 @@ instance
 instance
   ( UsesTxBody era,
     UsesAuxiliary era,
+    ToCBORGroup (Era.TxSeq era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Era.TxInBlock era),
     HasField "_d" (Core.PParams era) UnitInterval,
     Core.Witnesses era ~ WitnessSet era,
-    Core.Tx era ~ Tx era,
     SafeToHash (WitnessSet era)
   ) =>
   STS (BBODY era)
@@ -145,14 +145,12 @@ bbodyTransition ::
   forall era.
   ( STS (BBODY era),
     UsesTxBody era,
+    ToCBORGroup (Era.TxSeq era),
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era),
-    HasField "_d" (Core.PParams era) UnitInterval,
-    Core.Witnesses era ~ WitnessSet era,
-    Core.Tx era ~ Tx era,
-    SafeToHash (WitnessSet era)
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Era.TxInBlock era),
+    HasField "_d" (Core.PParams era) UnitInterval
   ) =>
   TransitionRule (BBODY era)
 bbodyTransition =
@@ -163,9 +161,9 @@ bbodyTransition =
                Block (BHeader bhb _) txsSeq
                )
            ) -> do
-        let TxSeq txs = txsSeq
+        let txs = fromTxSeq @era txsSeq
             actualBodySize = bBodySize txsSeq
-            actualBodyHash = bbHash txsSeq
+            actualBodyHash = hashTxSeq @era txsSeq
 
         actualBodySize == fromIntegral (hBbsize bhb)
           ?! WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ hBbsize bhb)

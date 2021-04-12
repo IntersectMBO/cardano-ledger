@@ -58,7 +58,9 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (BlockDecoding, Crypto (..))
+import Cardano.Ledger.Era (Crypto (..))
+import qualified Cardano.Ledger.Era as Era
+import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesTxBody,
     UsesTxOut (..),
@@ -90,7 +92,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (BHeader),
     Block (Block),
-    HashBBody,
     HashHeader,
     TxSeq (..),
     bBodySize,
@@ -112,6 +113,7 @@ import Shelley.Spec.Ledger.Credential
   )
 import Shelley.Spec.Ledger.Keys
   ( HasKeyRole (coerceKeyRole),
+    Hash,
     KeyHash,
     KeyPair (..),
     KeyRole (..),
@@ -209,8 +211,8 @@ import Test.Shelley.Spec.Ledger.Utils
 type PreAlonzo era =
   ( Core.Witnesses era ~ WitnessSet era,
     Core.Tx era ~ Tx era,
-    BlockDecoding era,
-    ToCBOR (Core.AuxiliaryData era)
+    ToCBOR (Core.AuxiliaryData era),
+    Era.TxSeq era ~ TxSeq era
   )
 
 -- =========================================
@@ -497,7 +499,7 @@ mkBlockHeader ::
   -- | Block size
   Natural ->
   -- | Block body hash
-  HashBBody crypto ->
+  Hash crypto EraIndependentBlockBody ->
   BHeader crypto
 mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
   let (_, (sHot, _)) = head $ hot pkeys

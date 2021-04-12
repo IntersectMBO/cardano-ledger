@@ -18,20 +18,15 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Shelley.Spec.Ledger.Tx
   ( -- transaction
     Tx
       ( Tx,
-        Tx',
-        _body,
-        _witnessSet,
-        _metadata,
-        TxPrime,
-        body',
-        witnessSet',
-        metadata',
-        txFullBytes
+        body,
+        wits,
+        auxiliaryData
       ),
     TxBody (..),
     TxOut (..),
@@ -67,7 +62,6 @@ import Cardano.Binary
     Decoder,
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
-    annotatorSlice,
     decodeWord,
     encodeListLen,
     encodeMapLen,
@@ -81,9 +75,10 @@ import Cardano.Binary
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
-import Cardano.Ledger.Hashes (EraIndependentTx)
-import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..))
+import Cardano.Ledger.SafeHash (SafeToHash (..))
+import Cardano.Ledger.Tx
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Short as SBS
 import Data.Constraint (Constraint)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
@@ -99,10 +94,8 @@ import GHC.Records (HasField (..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.BaseTypes
-  ( StrictMaybe,
-    invalidKey,
+  ( invalidKey,
     maybeToStrictMaybe,
-    strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Keys
@@ -110,10 +103,7 @@ import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
     decodeMapContents,
-    decodeNullMaybe,
-    decodeRecordNamed,
     encodeFoldable,
-    encodeNullMaybe,
   )
 import Shelley.Spec.Ledger.TxBody
   ( TxBody (..),
@@ -190,7 +180,7 @@ pattern WitnessSet {addrWits, scriptWits, bootWits} <-
       let encodeMapElement ix enc x =
             if null x then Nothing else Just (encodeWord ix <> enc x)
           l =
-            catMaybes $
+            catMaybes
               [ encodeMapElement 0 encodeFoldable awits,
                 encodeMapElement 1 encodeFoldable scriptWitMap,
                 encodeMapElement 2 encodeFoldable bootstrapWits
@@ -220,132 +210,46 @@ prettyWitnessSetParts ::
   )
 prettyWitnessSetParts (WitnessSet' a b c _) = (a, b, c)
 
--- | A fully formed transaction.
-data Tx era = Tx'
-  { _bodyS :: !(Core.TxBody era),
-    _witnessSetS :: !(WitnessSet era),
-    _metadataS :: !(StrictMaybe (Core.AuxiliaryData era)),
-    txFullBytes :: BSL.ByteString
-  }
-  deriving (Generic)
-
--- Usually we derive SafetToHash instances, but since (Tx era) preserves its serialisation
--- bytes we can just extract them here, and make an explicit SafeToHash instance.
-
-instance SafeToHash (Tx era) where
-  originalBytes = BSL.toStrict . txFullBytes -- TODO Use MemoBytes to define Tx, so we can derive this
-
 type TransTx (c :: Type -> Constraint) era =
   (Era era, c (Core.Script era), c (Core.TxBody era), c (Core.AuxiliaryData era))
 
-deriving via
-  AllowThunksIn
-    '[ "txFullBytes"
-     ]
-    (Tx era)
-  instance
-    (TransTx NoThunks era) => NoThunks (Tx era)
-
-deriving instance
-  TransTx Show era =>
-  Show (Tx era)
-
-deriving instance
-  TransTx Eq era =>
-  Eq (Tx era)
-
-pattern TxPrime ::
-  Core.TxBody era ->
-  WitnessSet era ->
-  StrictMaybe (Core.AuxiliaryData era) ->
-  Tx era
-pattern TxPrime {body', witnessSet', metadata'} <-
-  Tx' body' witnessSet' metadata' _
-
-{-# COMPLETE TxPrime #-}
-
-pattern Tx ::
-  TransTx ToCBOR era =>
-  Core.TxBody era ->
-  WitnessSet era ->
-  StrictMaybe (Core.AuxiliaryData era) ->
-  Tx era
-pattern Tx {_body, _witnessSet, _metadata} <-
-  Tx' _body _witnessSet _metadata _
-  where
-    Tx body witnessSet metadata =
-      let bodyBytes = serialize body
-          wrappedMetadataBytes =
-            serializeEncoding $
-              encodeNullMaybe toCBOR (strictMaybeToMaybe metadata)
-          fullBytes =
-            (serializeEncoding $ encodeListLen 3)
-              <> bodyBytes
-              <> serialize witnessSet
-              <> wrappedMetadataBytes
-       in Tx'
-            { _bodyS = body,
-              _witnessSetS = witnessSet,
-              _metadataS = metadata,
-              txFullBytes = fullBytes
-            }
-
-{-# COMPLETE Tx #-}
-
--- =====================================
--- WellFormed instances
-
-instance (Era era, c ~ Crypto era) => HashAnnotated (Tx era) EraIndependentTx c
-
-instance body ~ (Core.TxBody era) => HasField "body" (Tx era) body where
-  getField (Tx' body _ _ _) = body
-
-instance HasField "witnessSet" (Tx era) (WitnessSetHKD Identity era) where
-  getField (Tx' _ wits _ _) = wits
-
 instance
-  aux ~ Core.AuxiliaryData era =>
-  HasField "auxiliaryData" (Tx era) (StrictMaybe aux)
-  where
-  getField (Tx' _ _ auxdata _) = auxdata
-
-instance
-  c ~ (Crypto era) =>
+  (c ~ Crypto era, Core.Witnesses era ~ WitnessSet era) =>
   HasField "addrWits" (Tx era) (Set (WitVKey 'Witness c))
   where
-  getField (Tx' _ (WitnessSet' a _b _c _) _ _) = a
+  getField = addrWits' . getField @"wits"
 
 instance
-  (c ~ (Crypto era), script ~ Core.Script era) =>
+  ( c ~ Crypto era,
+    script ~ Core.Script era,
+    Core.Witnesses era ~ WitnessSet era
+  ) =>
   HasField "scriptWits" (Tx era) (Map (ScriptHash c) script)
   where
-  getField (Tx' _ (WitnessSet' _a b _c _) _ _) = b
+  getField = scriptWits' . getField @"wits"
 
 instance
-  c ~ (Crypto era) =>
+  (c ~ Crypto era, Core.Witnesses era ~ WitnessSet era) =>
   HasField "bootWits" (Tx era) (Set (BootstrapWitness c))
   where
-  getField (Tx' _ (WitnessSet' _a _b c _) _ _) = c
-
-instance HasField "txsize" (Tx era) Integer where
-  getField x = (fromIntegral . BSL.length . txFullBytes) x
+  getField = bootWits' . getField @"wits"
 
 -- =====================================
 
 segwitTx ::
-  ( Era era,
-    ToCBOR (Core.TxBody era),
+  ( ToCBOR (Core.TxBody era),
+    ToCBOR (Core.Witnesses era),
     ToCBOR (Core.AuxiliaryData era)
   ) =>
   Annotator (Core.TxBody era) ->
-  Annotator (WitnessSet era) ->
+  Annotator (Core.Witnesses era) ->
   Maybe (Annotator (Core.AuxiliaryData era)) ->
   Annotator (Tx era)
 segwitTx
   bodyAnn
   witsAnn
   metaAnn = Annotator $ \bytes ->
-    let body = runAnnotator bodyAnn bytes
+    let body' = runAnnotator bodyAnn bytes
         witnessSet = runAnnotator witsAnn bytes
         metadata = flip runAnnotator bytes <$> metaAnn
         wrappedMetadataBytes = case metadata of
@@ -353,15 +257,14 @@ segwitTx
           Just b -> serialize b
         fullBytes =
           (serializeEncoding $ encodeListLen 3)
-            <> serialize body
+            <> serialize body'
             <> serialize witnessSet
             <> wrappedMetadataBytes
-     in Tx'
-          { _bodyS = body,
-            _witnessSetS = witnessSet,
-            _metadataS = maybeToStrictMaybe metadata,
-            txFullBytes = fullBytes
-          }
+     in unsafeConstructTxWithBytes
+          body'
+          witnessSet
+          (maybeToStrictMaybe metadata)
+          (SBS.toShort . BSL.toStrict $ fullBytes)
 
 instance
   ( Typeable era,
@@ -412,38 +315,6 @@ decodeWits = do
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 
-instance
-  Typeable era =>
-  ToCBOR (Tx era)
-  where
-  toCBOR tx = encodePreEncoded . BSL.toStrict $ txFullBytes tx
-
-instance
-  ( FromCBOR (Annotator (Core.TxBody era)),
-    ValidateScript era,
-    ToCBOR (Core.Script era),
-    FromCBOR (Annotator (Core.Script era)),
-    FromCBOR (Annotator (Core.AuxiliaryData era))
-  ) =>
-  FromCBOR (Annotator (Tx era))
-  where
-  fromCBOR = annotatorSlice $
-    decodeRecordNamed "Tx" (const 3) $ do
-      body <- fromCBOR
-      wits <- decodeWits
-      meta <-
-        ( decodeNullMaybe fromCBOR ::
-            Decoder s (Maybe (Annotator (Core.AuxiliaryData era)))
-          )
-      pure $
-        Annotator $ \fullBytes bytes ->
-          Tx'
-            { _bodyS = runAnnotator body fullBytes,
-              _witnessSetS = runAnnotator wits fullBytes,
-              _metadataS = maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta,
-              txFullBytes = bytes
-            }
-
 -- ===============================================================
 
 -- | Hashes native multi-signature script.
@@ -475,22 +346,21 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
-  TransTx ToCBOR era =>
+  (TransTx ToCBOR era, Core.Witnesses era ~ WitnessSet era) =>
   MultiSig (Crypto era) ->
   Tx era ->
   Bool
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
   where
-    witsSet = _witnessSet tx
-    vhks = Set.map witKeyHash (addrWits' witsSet)
+    vhks = Set.map witKeyHash (getField @"addrWits" tx)
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
-  TransTx ToCBOR era =>
+  Core.Witnesses era ~ WitnessSet era =>
   Tx era ->
   Map (ScriptHash (Crypto era)) (Core.Script era)
-txwitsScript = scriptWits' . _witnessSet
+txwitsScript = getField @"scriptWits"
 
 extractKeyHashWitnessSet ::
   forall (r :: KeyRole) crypto.

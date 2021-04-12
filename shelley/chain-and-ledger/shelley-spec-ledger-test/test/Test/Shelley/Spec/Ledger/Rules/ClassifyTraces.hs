@@ -19,12 +19,11 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   )
 where
 
-import Cardano.Binary (ToCBOR, serialize')
+import Cardano.Binary (serialize')
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
 import Cardano.Ledger.Shelley.Constraints
-  ( UsesScript,
-    UsesTxBody,
+  ( UsesTxBody,
     UsesTxOut,
   )
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -62,6 +61,7 @@ import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
     TxSeq (..),
     bhbody,
+    bheader,
     bheaderSlotNo,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -98,7 +98,7 @@ import Test.QuickCheck
     property,
     withMaxSuccess,
   )
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv,PreAlonzo)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv, PreAlonzo)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
@@ -188,7 +188,7 @@ relevantCasesAreCoveredForTrace tr = do
             60
           ),
           ( "at least 10% of transactions have script TxOuts",
-            0.1 < txScriptOutputsRatio @era (map (getField @"outputs" . _body) txs),
+            0.1 < txScriptOutputsRatio @era (map (getField @"outputs" . getField @"body") txs),
             20
           ),
           ( "at least 10% of `DCertDeleg` certificates have script credentials",
@@ -246,14 +246,11 @@ scriptCredentialCertsRatio certs =
 -- | Extract the certificates from the transactions
 certsByTx ::
   forall era.
-  ( UsesTxBody era,
-    UsesScript era,
-    ToCBOR (Core.AuxiliaryData era),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   [Tx era] ->
   [[DCert (Crypto era)]]
-certsByTx txs = toList . (getField @"certs") . _body <$> txs
+certsByTx txs = toList . (getField @"certs") . getField @"body" <$> txs
 
 ratioInt :: Int -> Int -> Double
 ratioInt x y =
@@ -279,36 +276,30 @@ txScriptOutputsRatio txoutsList =
           txouts
 
 hasWithdrawal ::
-  ( UsesTxBody era,
-    UsesScript era,
-    ToCBOR (Core.AuxiliaryData era),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+  ( HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   Tx era ->
   Bool
-hasWithdrawal = not . null . unWdrl . (getField @"wdrls") . _body
+hasWithdrawal = not . null . unWdrl . (getField @"wdrls") . getField @"body"
 
 hasPParamUpdate ::
-  ( ChainProperty era,
-    HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))
+  ( HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))
   ) =>
   Tx era ->
   Bool
 hasPParamUpdate tx =
-  ppUpdates . getField @"update" . _body $ tx
+  ppUpdates . getField @"update" . getField @"body" $ tx
   where
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
 hasMetadata ::
-  ( UsesTxBody era,
-    UsesScript era,
-    ToCBOR (Core.AuxiliaryData era)
+  ( UsesTxBody era
   ) =>
   Tx era ->
   Bool
 hasMetadata tx =
-  f . getField @"adHash" . _body $ tx
+  f . getField @"adHash" . getField @"body" $ tx
   where
     f SNothing = False
     f (SJust _) = True
@@ -320,7 +311,9 @@ onlyValidLedgerSignalsAreGenerated ::
     ChainProperty era,
     Show (Core.PParams era),
     QC.HasTrace (LEDGER era) (GenEnv era),
-    Default (State (Core.EraRule "PPUP" era))
+    Default (State (Core.EraRule "PPUP" era)),
+    Show (Core.Witnesses era),
+    TxInBlock era ~ Tx era
   ) =>
   Property
 onlyValidLedgerSignalsAreGenerated =
@@ -347,7 +340,8 @@ propAbstractSizeBoundsBytes ::
     ChainProperty era,
     QC.HasTrace (LEDGER era) (GenEnv era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    Default (State (Core.EraRule "PPUP" era))
+    Default (State (Core.EraRule "PPUP" era)),
+    TxInBlock era ~ Tx era
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
@@ -377,7 +371,8 @@ propAbstractSizeNotTooBig ::
     UsesTxOut era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     QC.HasTrace (LEDGER era) (GenEnv era),
-    Default (State (Core.EraRule "PPUP" era))
+    Default (State (Core.EraRule "PPUP" era)),
+    TxInBlock era ~ Tx era
   ) =>
   Property
 propAbstractSizeNotTooBig = property $ do
@@ -433,5 +428,5 @@ epochsInTrace bs =
     fromEpoch = atEpoch . blockSlot $ head bs
     toEpoch = atEpoch . blockSlot $ last bs
     EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfo) testGlobals undefined
-    blockSlot (Block bh _) = (bheaderSlotNo . bhbody) bh
+    blockSlot = bheaderSlotNo . bhbody . bheader
     atEpoch (SlotNo s) = s `div` slotsPerEpoch

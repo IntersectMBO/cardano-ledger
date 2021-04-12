@@ -259,11 +259,11 @@ makeSimpleTx ::
   TxBody B ->
   [KeyPair 'Witness B_Crypto] ->
   Tx B
-makeSimpleTx body keysAddr =
+makeSimpleTx txbody keysAddr =
   Tx
-    body
+    txbody
     mempty
-      { addrWits = makeWitnessesVKey (hashAnnotated body) keysAddr
+      { addrWits = makeWitnessesVKey (hashAnnotated txbody) keysAddr
       }
     SNothing
 

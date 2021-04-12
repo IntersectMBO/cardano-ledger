@@ -12,7 +12,7 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era (Crypto), TxInBlock)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
 import Cardano.Ledger.ShelleyMA.TxBody ()
 import Control.State.Transition.Extended
@@ -27,7 +27,7 @@ import Shelley.Spec.Ledger.STS.Utxow
     UtxowPredicateFailure (..),
     shelleyStyleWitness,
   )
-import Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.Tx (WitnessSet)
 
 -- ==============================================================================
 --   We want to reuse the same rules for Mary and Allegra. We accomplish this
@@ -45,21 +45,21 @@ data UTXOW era
 
 instance
   forall era.
-  ( -- Fix Core.Tx to the Allegra and Mary Era
-    Core.Tx era ~ Tx era,
+  ( -- Fix Core.Witnesses to the Allegra and Mary Era
+    Core.Witnesses era ~ WitnessSet era,
     HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (UTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ Tx era,
+    Signal (Core.EraRule "UTXO" era) ~ TxInBlock era,
     -- Supply the HasField and Validate instances for Mary and Allegra (which match Shelley)
     ShelleyStyleWitnessNeeds era
   ) =>
   STS (UTXOW era)
   where
   type State (UTXOW era) = UTxOState era
-  type Signal (UTXOW era) = Tx era
+  type Signal (UTXOW era) = TxInBlock era
   type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
   type

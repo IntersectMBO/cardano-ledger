@@ -20,19 +20,21 @@ import Cardano.Ledger.Alonzo.Data (dataHashSize)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx
-  ( Tx (..),
+  ( ValidatedTx (..),
     isTwoPhaseScriptAddress,
     minfee,
     txbody,
   )
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (Tx)
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
 import Cardano.Ledger.Alonzo.TxBody
   ( TxOut (..),
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody, TxOut)
+import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era, TxInBlock, ValidateScript (..))
+import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Mary.Value as Alonzo (Value)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams,
@@ -231,7 +233,7 @@ feesOK ::
   ( Era era,
     ValidateScript era, -- isTwoPhaseScriptAddress
     Core.TxOut era ~ Alonzo.TxOut era, -- balance requires this,
-    HasField "totExunits" (Core.Tx era) ExUnits, -- minfee requires this
+    Era.TxInBlock era ~ Alonzo.ValidatedTx era,
     HasField
       "txinputs_fee" -- to get inputs to pay the fees
       (Core.TxBody era)
@@ -242,7 +244,7 @@ feesOK ::
     HasField "address" (Alonzo.TxOut era) (Addr (Crypto era))
   ) =>
   Core.PParams era ->
-  Core.Tx era ->
+  TxInBlock era ->
   UTxO era ->
   Rule (AlonzoUTXO era) 'Transition ()
 feesOK pp tx (UTxO m) = do
@@ -278,7 +280,7 @@ utxoTransition ::
     Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
-    Signal (Core.EraRule "UTXOS" era) ~ Tx era,
+    Signal (Core.EraRule "UTXOS" era) ~ TxInBlock era,
     -- We leave Core.PParams abstract
     UsesPParams era,
     HasField "_minfeeA" (Core.PParams era) Natural,
@@ -294,8 +296,8 @@ utxoTransition ::
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Alonzo.Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
-    Core.TxOut era ~ Alonzo.TxOut era,
-    Core.Tx era ~ Alonzo.Tx era
+    TxInBlock era ~ Alonzo.ValidatedTx era,
+    Era.TxSeq era ~ Alonzo.TxSeq era
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
@@ -313,7 +315,7 @@ utxoTransition = do
   eval (txins @era txb ⊆ dom utxo)
     ?! BadInputsUTxO (eval (txins @era txb ➖ dom utxo))
 
-  let consumed_ = consumed pp utxo txb
+  let consumed_ = consumed @era pp utxo txb
       produced_ = Shelley.produced @era pp stakepools txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
@@ -396,7 +398,7 @@ instance
     Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
-    Signal (Core.EraRule "UTXOS" era) ~ Tx era,
+    Signal (Core.EraRule "UTXOS" era) ~ ValidatedTx era,
     -- We leave Core.PParams abstract
     UsesPParams era,
     HasField "_keyDeposit" (Core.PParams era) Coin,
@@ -414,12 +416,13 @@ instance
     Core.Value era ~ Alonzo.Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
     Core.TxOut era ~ Alonzo.TxOut era,
-    Core.Tx era ~ Alonzo.Tx era
+    Era.TxSeq era ~ Alonzo.TxSeq era,
+    Era.TxInBlock era ~ Alonzo.ValidatedTx era
   ) =>
   STS (AlonzoUTXO era)
   where
   type State (AlonzoUTXO era) = Shelley.UTxOState era
-  type Signal (AlonzoUTXO era) = Tx era
+  type Signal (AlonzoUTXO era) = ValidatedTx era
   type
     Environment (AlonzoUTXO era) =
       Shelley.UtxoEnv era

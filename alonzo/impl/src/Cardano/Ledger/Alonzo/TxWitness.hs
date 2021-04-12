@@ -63,6 +63,7 @@ import Cardano.Ledger.Pretty
     ppWitVKey,
     ppWord64,
   )
+import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Data.Coders
 import Data.Map.Strict (Map)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -152,7 +153,7 @@ data TxWitnessRaw era = TxWitnessRaw
   deriving (Generic, Typeable)
 
 newtype TxWitness era = TxWitnessConstr (MemoBytes (TxWitnessRaw era))
-  deriving newtype (ToCBOR)
+  deriving newtype (SafeToHash, ToCBOR)
 
 -- =====================================================
 -- TxWitness instances

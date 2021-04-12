@@ -7,6 +7,7 @@ module Test.Shelley.Spec.Ledger.Shrinkers where
 
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Tx
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Data.Foldable (toList)
@@ -24,7 +25,6 @@ import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxBody
 import Test.QuickCheck (shrinkIntegral, shrinkList)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)

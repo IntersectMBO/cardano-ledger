@@ -56,7 +56,7 @@ import Cardano.Ledger.Pretty
     ppStrictMaybe,
   )
 import Cardano.Ledger.SafeHash (SafeToHash)
-import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesTxBody)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Control.DeepSeq (NFData (..))
@@ -94,8 +94,7 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
-    WitnessSetHKD (..),
-    addrWits',
+    WitVKey,
   )
 import Shelley.Spec.Ledger.TxBody
   ( witKeyHash,
@@ -298,18 +297,17 @@ evalFPS timelock vhks txb = evalTimelock vhks (getField @"vldt" txb) timelock
 validateTimelock ::
   forall era.
   ( UsesTxBody era,
-    UsesScript era,
     HasField "vldt" (Core.TxBody era) ValidityInterval,
-    ToCBOR (Core.AuxiliaryData era)
+    HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era)))
   ) =>
   Timelock (Crypto era) ->
   Tx era ->
   Bool
-validateTimelock lock tx = evalFPS @era lock vhks (_body tx)
+validateTimelock lock tx = evalFPS @era lock vhks (getField @"body" tx)
   where
     -- THIS IS JUST A STUB. WHO KNOWS IF
-    witsSet = _witnessSet tx -- IT COMPUTES THE RIGHT WITNESS SET.
-    vhks = Set.map witKeyHash (addrWits' witsSet)
+    -- IT COMPUTES THE RIGHT WITNESS SET.
+    vhks = Set.map witKeyHash (getField @"addrWits" tx)
 
 showTimelock :: CC.Crypto crypto => Timelock crypto -> String
 showTimelock (RequireTimeStart (SlotNo i)) = "(Start >= " ++ show i ++ ")"

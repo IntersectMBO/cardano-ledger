@@ -28,7 +28,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (BlockDecoding (..), Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Mary.Value (Value, policies, policyID)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
@@ -55,10 +55,16 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
+import qualified Shelley.Spec.Ledger.BlockChain as Shelley
+  ( TxSeq (..),
+    bbHash,
+    txSeqTxns,
+  )
+import Shelley.Spec.Ledger.Keys (KeyRole (Witness))
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx (Tx, TxOut (..), WitnessSet, segwitTx)
+import Shelley.Spec.Ledger.Tx (Tx, TxOut (..), WitVKey, WitnessSet)
 
 -- | The Shelley Mary/Allegra eras
 --   The uninhabited type that indexes both the Mary and Allegra Eras.
@@ -83,7 +89,7 @@ class
   MAClass (x :: MaryOrAllegra) c
   where
   type MAValue (x :: MaryOrAllegra) c :: Type
-  getScriptHash :: Proxy x -> MAValue x c -> (Set.Set (ScriptHash c))
+  getScriptHash :: Proxy x -> MAValue x c -> Set.Set (ScriptHash c)
 
 instance CryptoClass.Crypto c => MAClass 'Mary c where
   type MAValue 'Mary c = Value c
@@ -149,10 +155,6 @@ type instance
     Shelley.PParams (ShelleyMAEra (ma :: MaryOrAllegra) c)
 
 type instance
-  Core.Tx (ShelleyMAEra (ma :: MaryOrAllegra) c) =
-    Tx (ShelleyMAEra (ma :: MaryOrAllegra) c)
-
-type instance
   Core.Witnesses (ShelleyMAEra (ma :: MaryOrAllegra) c) =
     WitnessSet (ShelleyMAEra (ma :: MaryOrAllegra) c)
 
@@ -169,7 +171,8 @@ instance
   ( CryptoClass.Crypto c,
     UsesTxBody (ShelleyMAEra ma c),
     Core.AnnotatedData (Core.AuxiliaryData (ShelleyMAEra ma c)),
-    (HasField "vldt" (Core.TxBody (ShelleyMAEra ma c)) ValidityInterval)
+    HasField "vldt" (Core.TxBody (ShelleyMAEra ma c)) ValidityInterval,
+    HasField "addrWits" (Tx (ShelleyMAEra ma c)) (Set.Set (WitVKey 'Witness c))
   ) =>
   ValidateScript (ShelleyMAEra ma c)
   where
@@ -182,11 +185,13 @@ instance
   ( CryptoClass.Crypto c,
     MAClass ma c
   ) =>
-  BlockDecoding (ShelleyMAEra ma c)
+  SupportsSegWit (ShelleyMAEra ma c)
   where
-  seqTx body wit _isval aux = segwitTx body wit aux
-  seqIsValidating _ = True -- In (ShelleyMAEra ma c) all Tx are IsValidating
-  seqHasValidating = False -- But Tx does not have an IsValidating field
+  type TxInBlock (ShelleyMAEra ma c) = Tx (ShelleyMAEra ma c)
+  type TxSeq (ShelleyMAEra ma c) = Shelley.TxSeq (ShelleyMAEra ma c)
+  fromTxSeq = Shelley.txSeqTxns
+  toTxSeq = Shelley.TxSeq
+  hashTxSeq = Shelley.bbHash
 
 instance
   ( CryptoClass.Crypto c,

@@ -46,6 +46,7 @@ library
     Cardano.Ledger.Alonzo.Tx
     Cardano.Ledger.Alonzo.TxBody
     Cardano.Ledger.Alonzo.TxInfo
+    Cardano.Ledger.Alonzo.TxSeq
     Cardano.Ledger.Alonzo.TxWitness
     Cardano.Ledger.DescribeEras
   build-depends:

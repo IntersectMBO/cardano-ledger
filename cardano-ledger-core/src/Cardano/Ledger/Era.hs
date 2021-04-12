@@ -19,12 +19,11 @@ module Cardano.Ledger.Era
     translateEraMaybe,
     WellFormed,
     ValidateScript (..),
-    BlockDecoding (..),
+    -- $segWit
+    SupportsSegWit (..),
   )
 where
 
--- imports for the WellFormed constraint
-import Cardano.Binary (Annotator)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Coin (Coin)
@@ -33,6 +32,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Hashes
   ( EraIndependentAuxiliaryData,
+    EraIndependentBlockBody,
     EraIndependentTxBody,
     ScriptHash (..),
   )
@@ -81,7 +81,7 @@ class
   ValidateScript era
   where
   scriptPrefixTag :: Core.Script era -> BS.ByteString
-  validateScript :: Core.Script era -> Core.Tx era -> Bool
+  validateScript :: Core.Script era -> TxInBlock era -> Bool
   hashScript :: Core.Script era -> ScriptHash (Crypto era)
   -- ONE SHOULD NOT OVERIDE THE hashScript DEFAULT METHOD
   -- UNLESS YOU UNDERSTAND THE SafeToHash class, AND THE ROLE OF THE scriptPrefixTag
@@ -92,22 +92,46 @@ class
   isNativeScript :: Core.Script era -> Bool
   isNativeScript _ = True
 
-----------------------------------------------------------------------------
--- Block Decoding
--- To decode Blocks one has to recover a (Core.Tx) from 4 bytestrings
--- stored in a TxSeq. This method gives part of the solution of how to do this.
--- The other part is the function Shelley.Spec.Ledger.BlockChain(txSeqDecoder)
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Segregated Witness
+--------------------------------------------------------------------------------
 
-class BlockDecoding era where
-  seqTx ::
-    Annotator (Core.TxBody era) ->
-    Annotator (Core.Witnesses era) ->
-    Bool ->
-    Maybe (Annotator (Core.AuxiliaryData era)) ->
-    Annotator (Core.Tx era)
-  seqIsValidating :: Core.Tx era -> Bool
-  seqHasValidating :: Bool
+-- $segWit
+-- * Segregated Witness
+--
+-- The idea of segretated witnessing is to alter the encoding of transactions in
+-- a block such that the witnesses (the information needed to verify the
+-- validity of the transactions) can be stored separately from the body (the
+-- information needed to update the ledger state). In this way, a node which
+-- only cares about replaying transactions need not even decode the witness
+-- information.
+--
+-- In order to do this, we introduce two concepts:
+-- - A 'TxSeq`, which represents the decoded structure of a sequence of
+--   transactions as represented in the encoded block; that is, with witnessing,
+--   metadata and other non-body parts split separately.
+-- - A 'TxInBlock', which represents a transaction as included in a block. In
+--   general, we expect this to be the same as a normal 'Tx'. However, we know
+--   that in future eras it will include extra data not present when the
+--   transaction is first created.
+
+-- | Indicates that an era supports segregated witnessing.
+--
+--   This class is embodies an isomorphism between 'TxSeq era' and 'StrictSeq
+--   (TxInBlock era)', witnessed by 'fromTxSeq' and 'toTxSeq'.
+class SupportsSegWit era where
+  type TxSeq era :: Type
+  type TxInBlock era :: Type
+
+  fromTxSeq :: TxSeq era -> StrictSeq (TxInBlock era)
+  toTxSeq :: StrictSeq (TxInBlock era) -> TxSeq era
+
+  -- | Get the block body hash from the TxSeq. Note that this is not a regular
+  -- "hash the stored bytes" function since the block body hash forms a small
+  -- Merkle tree.
+  hashTxSeq ::
+    TxSeq era ->
+    Hash.Hash (CryptoClass.HASH (Crypto era)) EraIndependentBlockBody
 
 --------------------------------------------------------------------------------
 -- Era translation
@@ -210,18 +234,18 @@ type WellFormed era =
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "minted" (Core.TxBody era) (Set (ScriptHash (Crypto era))),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    -- Tx
-    HasField "body" (Core.Tx era) (Core.TxBody era),
-    HasField "auxiliaryData" (Core.Tx era) (StrictMaybe (Core.AuxiliaryData era)),
-    HasField "scriptWits" (Core.Tx era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
-    HasField "txsize" (Core.Tx era) Integer,
-    HasField "witnessSet" (Core.Tx era) (Core.Witnesses era),
+    -- TxInBlock
+    HasField "body" (TxInBlock era) (Core.TxBody era),
+    HasField "wits" (TxInBlock era) (Core.Witnesses era),
+    HasField "auxiliaryData" (TxInBlock era) (StrictMaybe (Core.AuxiliaryData era)),
+    HasField "txsize" (TxInBlock era) Integer,
+    HasField "scriptWits" (TxInBlock era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
     -- TxOut
     HasField "value" (Core.TxOut era) (Core.Value era),
     -- HashAnnotated
     HashAnnotated (Core.AuxiliaryData era) EraIndependentAuxiliaryData (Crypto era),
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
-    BlockDecoding era,
+    SupportsSegWit era,
     Val (Core.Value era),
     Compactible (Core.Value era) -- TxOut stores a CompactForm(Core.Value)
   )
@@ -242,6 +266,6 @@ others where the concrete type (Update and WitnessSet) will have to be made into
    -- import Shelley.Spec.Ledger.Tx(WitnessSet)
    -- import Cardano.Ledger.Alonzo.Scripts (ExUnits)
    -- HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-   -- HasField "witnessSet" (Core.Tx era) (WitnessSet era),
+   -- HasField "wits" (Core.Tx era) (WitnessSet era),
    -- HasField "exUnits" (Core.Tx era) ExUnits,
 -}

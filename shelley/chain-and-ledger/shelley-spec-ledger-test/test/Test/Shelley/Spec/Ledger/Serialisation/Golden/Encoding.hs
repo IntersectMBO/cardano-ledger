@@ -947,7 +947,11 @@ tests =
           w = makeWitnessVKey @C_Crypto txbh testKey1
        in checkEncodingCBORAnnotated
             "tx_min"
-            (Tx txb (mempty {addrWits = Set.singleton w} :: Shelley.Spec.Ledger.Tx.WitnessSet C) SNothing)
+            ( Tx @(ShelleyEra C_Crypto)
+                txb
+                (mempty {addrWits = Set.singleton w} :: Shelley.Spec.Ledger.Tx.WitnessSet C)
+                SNothing
+            )
             ( T (TkListLen 3)
                 <> S txb
                 <> T (TkMapLen 1)
@@ -970,12 +974,12 @@ tests =
           txbh = (hashAnnotated txb)
           w = makeWitnessVKey @C_Crypto txbh testKey1
           s = Map.singleton (hashScript @C testScript) (testScript @C_Crypto)
-          wits :: Shelley.Spec.Ledger.Tx.WitnessSet C
-          wits = mempty {addrWits = Set.singleton w, scriptWits = s}
+          txwits :: Shelley.Spec.Ledger.Tx.WitnessSet C
+          txwits = mempty {addrWits = Set.singleton w, scriptWits = s}
           md = (MD.Metadata @C) $ Map.singleton 17 (MD.I 42)
        in checkEncodingCBORAnnotated
             "tx_full"
-            (Tx txb wits (SJust md))
+            (Tx @(ShelleyEra C_Crypto) txb txwits (SJust md))
             ( T (TkListLen 3)
                 <> S txb
                 <> T (TkMapLen 2)

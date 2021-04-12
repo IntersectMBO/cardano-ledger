@@ -33,8 +33,8 @@ module Shelley.Spec.Ledger.BlockChain
     Block (Block, Block'),
     LaxBlock (..),
     TxSeq (TxSeq, txSeqTxns', TxSeq'),
+    constructMetadata,
     txSeqTxns,
-    HashBBody (..),
     bhHash,
     bbHash,
     hashHeaderToNonce,
@@ -84,7 +84,8 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (BlockDecoding (..), Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
@@ -103,7 +104,6 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
 import Data.Typeable
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -146,20 +146,19 @@ import Shelley.Spec.Ledger.Serialization
     decodeMap,
     decodeRecordNamed,
     decodeSeq,
-    decodeSet,
-    encodeFoldable,
     encodeFoldableEncoder,
     encodeFoldableMapEncoder,
     listLenInt,
     runByteBuilder,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
+import Shelley.Spec.Ledger.Tx (segwitTx)
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- =======================================================
 
 -- | The hash of a Block Header
-newtype HashHeader crypto = HashHeader {unHashHeader :: (Hash crypto (BHeader crypto))}
+newtype HashHeader crypto = HashHeader {unHashHeader :: Hash crypto (BHeader crypto)}
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 
@@ -171,10 +170,8 @@ data TxSeq era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Core.Tx era)),
     txSeqBodyBytes :: BSL.ByteString,
     txSeqWitsBytes :: BSL.ByteString,
-    txSeqMetadataBytes :: BSL.ByteString,
+    txSeqMetadataBytes :: BSL.ByteString
     -- bytes representing a (Map index metadata). Missing indices have SNothing for metadata
-    txSeqIsValidatingBytes :: BSL.ByteString
-    -- bytes representing a set of integers. These are the indices of transactions with isValidating == False.
   }
   deriving (Generic)
 
@@ -202,13 +199,13 @@ deriving stock instance
 coreWitnessBytes ::
   forall era.
   ( SafeToHash (Core.Witnesses era),
-    HasField "witnessSet" (Core.Tx era) (Core.Witnesses era)
+    HasField "wits" (Core.Tx era) (Core.Witnesses era)
   ) =>
   (Core.Tx era) ->
   ByteString
 coreWitnessBytes coretx =
   originalBytes @(Core.Witnesses era) $
-    getField @"witnessSet" coretx
+    getField @"wits" coretx
 
 coreBodyBytes ::
   forall era.
@@ -232,15 +229,6 @@ coreAuxDataBytes coretx = getbytes <$> getField @"auxiliaryData" @(Core.Tx era) 
   where
     getbytes auxdata = originalBytes @(Core.AuxiliaryData era) auxdata
 
--- | Return a set of indexes i, such that seqIsValidating(txns !! i)==False
-getValidatingIndexes :: forall era. BlockDecoding era => StrictSeq (Core.Tx era) -> Set.Set Int
-getValidatingIndexes txns = snd (foldl accum (0, Set.empty) txns)
-  where
-    accum (n, set) txn =
-      if not (seqIsValidating @era txn)
-        then (n + 1, Set.insert n set)
-        else (n + 1, set)
-
 -- ===========================
 
 -- | Constuct a TxSeq (with all it bytes) from just Core.Tx's
@@ -252,7 +240,7 @@ pattern TxSeq ::
   StrictSeq (Core.Tx era) ->
   TxSeq era
 pattern TxSeq xs <-
-  TxSeq' xs _ _ _ _
+  TxSeq' xs _ _ _
   where
     TxSeq txns =
       let serializeFoldable x =
@@ -270,46 +258,29 @@ pattern TxSeq xs <-
               -- bytes encoding a (Map Int (Core.AuxiliaryData))
               txSeqMetadataBytes =
                 serializeEncoding . encodeFoldableMapEncoder metaChunk $
-                  coreAuxDataBytes @era <$> txns,
-              -- bytes encoding a (Set Int) Indexes where IsValidating is False.
-              txSeqIsValidatingBytes =
-                ( adjustBlockDecoding @era
-                    (serializeEncoding $ encodeFoldable $ getValidatingIndexes @era txns)
-                    mempty
-                )
+                  coreAuxDataBytes @era <$> txns
             }
 
 {-# COMPLETE TxSeq #-}
 
 txSeqTxns :: TxSeq era -> StrictSeq (Core.Tx era)
-txSeqTxns (TxSeq' ts _ _ _ _) = ts
+txSeqTxns (TxSeq' ts _ _ _) = ts
 
 instance
   forall era.
-  (Era era, BlockDecoding era) =>
+  (Era era) =>
   ToCBORGroup (TxSeq era)
   where
-  toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes isvalidBytes) =
+  toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes
-          <> (adjustBlockDecoding @era isvalidBytes mempty)
   encodedGroupSizeExpr size _proxy =
     encodedSizeExpr size (Proxy :: Proxy ByteString)
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
-      + (adjustBlockDecoding @era (encodedSizeExpr size (Proxy :: Proxy ByteString)) 0)
-  listLen _ = 3 + (adjustBlockDecoding @era 1 0)
-  listLenBound _ = 3 + (adjustBlockDecoding @era 1 0)
-
--- | Hash of block body
-newtype HashBBody crypto = UnsafeHashBBody {unHashBody :: (Hash crypto EraIndependentBlockBody)}
-  deriving stock (Show, Eq, Ord)
-  deriving newtype (NoThunks)
-
-deriving newtype instance CC.Crypto crypto => ToCBOR (HashBBody crypto)
-
-deriving newtype instance CC.Crypto crypto => FromCBOR (HashBBody crypto)
+  listLen _ = 3
+  listLenBound _ = 3
 
 -- | Hash a given block header
 bhHash ::
@@ -317,30 +288,20 @@ bhHash ::
   CC.Crypto crypto =>
   BHeader crypto ->
   HashHeader crypto
-bhHash = HashHeader . (Hash.hashWithSerialiser @(CC.HASH crypto) toCBOR)
-
--- | PreAlonzo Era's do not have an IsValidating field. For those
---     Eras, the 'seqHasValidating' method of BlockDecoding returns False,
---     There are a number of cases where we need to 'adjust' computations. For example
---     in hashing a Block, the hashPart of the IsValidating bytes, must be the empty ByteString.
---     So the effect is that those bytes have no effect on the hash in PreAlonzo Eras.
---     The ToCBOR instance of Block, needs similar adjusments
-adjustBlockDecoding :: forall era x. BlockDecoding era => x -> x -> x
-adjustBlockDecoding yes no = if (seqHasValidating @era) then yes else no
+bhHash = HashHeader . Hash.hashWithSerialiser @(CC.HASH crypto) toCBOR
 
 -- | Hash a given block body
 bbHash ::
   forall era.
   (Era era) =>
   TxSeq era ->
-  HashBBody (Crypto era)
-bbHash (TxSeq' _ bodies wits md vs) =
-  (UnsafeHashBBody . coerce) $
+  Hash (Crypto era) EraIndependentBlockBody
+bbHash (TxSeq' _ bodies wits md) =
+  coerce $
     hashStrict
       ( hashPart bodies
           <> hashPart wits
           <> hashPart md
-          <> (adjustBlockDecoding @era (hashPart vs) mempty)
       )
   where
     hashStrict :: ByteString -> Hash (Crypto era) ByteString
@@ -358,13 +319,20 @@ data BHeader crypto = BHeader'
   }
   deriving (Generic)
 
-deriving via AllowThunksIn '["bHeaderBytes"] (BHeader crypto) instance CC.Crypto crypto => NoThunks (BHeader crypto)
+deriving via
+  AllowThunksIn '["bHeaderBytes"] (BHeader crypto)
+  instance
+    CC.Crypto crypto => NoThunks (BHeader crypto)
 
 deriving instance CC.Crypto crypto => Eq (BHeader crypto)
 
 deriving instance CC.Crypto crypto => Show (BHeader crypto)
 
-pattern BHeader :: CC.Crypto crypto => BHBody crypto -> SignedKES crypto (BHBody crypto) -> BHeader crypto
+pattern BHeader ::
+  CC.Crypto crypto =>
+  BHBody crypto ->
+  SignedKES crypto (BHBody crypto) ->
+  BHeader crypto
 pattern BHeader bHeaderBody' bHeaderSig' <-
   BHeader' {bHeaderBody', bHeaderSig'}
   where
@@ -386,7 +354,7 @@ instance
   encodedSizeExpr size proxy =
     1
       + encodedSizeExpr size (bHeaderBody' <$> proxy)
-      + KES.encodedSigKESSizeExpr ((KES.getSig . bHeaderSig') <$> proxy)
+      + KES.encodedSigKESSizeExpr (KES.getSig . bHeaderSig' <$> proxy)
 
 instance
   CC.Crypto crypto =>
@@ -499,7 +467,7 @@ data BHBody crypto = BHBody
     -- | Size of the block body
     bsize :: !Natural,
     -- | Hash of block body
-    bhash :: !(HashBBody crypto),
+    bhash :: !(Hash crypto EraIndependentBlockBody),
     -- | operational certificate
     bheaderOCert :: !(OCert crypto),
     -- | protocol version
@@ -551,7 +519,7 @@ instance
       + VRF.encodedVerKeyVRFSizeExpr (bheaderVrfVk <$> proxy)
       + encodedSizeExpr size (bheaderEta <$> proxy)
       + encodedSizeExpr size (bheaderL <$> proxy)
-      + encodedSizeExpr size ((toWord64 . bsize) <$> proxy)
+      + encodedSizeExpr size (toWord64 . bsize <$> proxy)
       + encodedSizeExpr size (bhash <$> proxy)
       + encodedSizeExpr size (bheaderOCert <$> proxy)
       + encodedSizeExpr size (bprotver <$> proxy)
@@ -610,22 +578,26 @@ bnonce :: BHBody crypto -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
 data Block era
-  = Block' !(BHeader (Crypto era)) !(TxSeq era) BSL.ByteString
+  = Block' !(BHeader (Crypto era)) !(Era.TxSeq era) BSL.ByteString
   deriving (Generic)
 
 deriving stock instance
-  (Era era, Show (Core.Tx era)) =>
+  (Era era, Show (Era.TxSeq era)) =>
   Show (Block era)
 
 deriving stock instance
-  (Era era, Eq (Core.Tx era)) =>
+  (Era era, Eq (Era.TxSeq era)) =>
   Eq (Block era)
 
 deriving anyclass instance
-  (Era era, NoThunks (Core.Tx era)) =>
+  (Era era, NoThunks (Era.TxSeq era)) =>
   NoThunks (Block era)
 
-pattern Block :: (Era era) => BHeader (Crypto era) -> TxSeq era -> Block era
+pattern Block ::
+  (Era era, ToCBORGroup (Era.TxSeq era)) =>
+  BHeader (Crypto era) ->
+  Era.TxSeq era ->
+  Block era
 pattern Block h txns <-
   Block' h txns _
   where
@@ -644,12 +616,8 @@ constructMetadata ::
   forall era.
   Int ->
   Map Int (Annotator (Core.AuxiliaryData era)) ->
-  (Seq (Maybe (Annotator (Core.AuxiliaryData era))))
-constructMetadata n md = (fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1]))
-
-constructIsValidating :: Int -> Set.Set Int -> Seq Bool
-constructIsValidating numTx txsFailingValidation =
-  fmap (\x -> not (Set.member x txsFailingValidation)) (Seq.fromList [0 .. numTx - 1])
+  Seq (Maybe (Annotator (Core.AuxiliaryData era)))
+constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1])
 
 instance
   Era era =>
@@ -662,25 +630,16 @@ instance
 type BlockAnn era =
   ( FromCBOR (Annotator (Core.TxBody era)),
     FromCBOR (Annotator (Core.AuxiliaryData era)),
-    FromCBOR (Annotator (Core.Witnesses era))
+    FromCBOR (Annotator (Core.Witnesses era)),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.AuxiliaryData era),
+    ToCBOR (Core.Witnesses era)
   )
-
-blockDecoder ::
-  ( BlockAnn era,
-    ValidateScript era
-  ) =>
-  Bool ->
-  forall s. Decoder s (Annotator (Block era))
-blockDecoder lax = annotatorSlice $
-  decodeRecordNamed "Block" (const 4) $ do
-    header <- fromCBOR
-    txns <- txSeqDecoder lax
-    pure $ Block' <$> header <*> txns
 
 -- | Decode a TxSeq, used in decoding a Block.
 txSeqDecoder ::
   forall era.
-  (Era era, BlockAnn era) =>
+  BlockAnn era =>
   Bool ->
   forall s. Decoder s (Annotator (TxSeq era))
 txSeqDecoder lax = do
@@ -697,9 +656,6 @@ txSeqDecoder lax = do
         (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b -1)))
       pure (constructMetadata @era b m)
 
-  -- In a PreAlonzo Era, there is nothing left to decode from after getting metadata
-  (isValSet, isvalAnn) <- adjustBlockDecoding @era (withSlice $ decodeSet fromCBOR) (pure (Set.empty, pure mempty))
-  let vs = constructIsValidating b isValSet
   unless
     (lax || b == w)
     ( fail $
@@ -709,40 +665,62 @@ txSeqDecoder lax = do
           <> show w
           <> ")"
     )
-  unless
-    (lax || all inRange isValSet)
-    (fail ("Some IsValidating index is not in the range: 0 .. " ++ show (b -1) ++ ", " ++ show isValSet))
 
-  let txns = sequenceA $ StrictSeq.forceToStrict $ Seq.zipWith4 (seqTx @era) bodies wits vs metadata
-  pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn <*> isvalAnn
+  let txns =
+        sequenceA $
+          StrictSeq.forceToStrict $
+            Seq.zipWith3 segwitTx bodies wits metadata
+  pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
+
+instance
+  (BlockAnn era, Typeable era) =>
+  FromCBOR (Annotator (TxSeq era))
+  where
+  fromCBOR = txSeqDecoder False
 
 instance
   ( BlockAnn era,
-    ToCBOR (Core.TxBody era),
-    ToCBOR (Core.Script era),
-    ToCBOR (Core.AuxiliaryData era),
-    ValidateScript era
+    ValidateScript era,
+    FromCBOR (Annotator (Era.TxSeq era))
   ) =>
   FromCBOR (Annotator (Block era))
   where
-  fromCBOR = blockDecoder False
+  fromCBOR = annotatorSlice $
+    decodeRecordNamed "Block" (const 4) $ do
+      header <- fromCBOR
+      txns <- fromCBOR
+      pure $ Block' <$> header <*> txns
 
+-- | A block in which we do not validate the matched encoding of parts of the
+--   segwit. TODO This is purely a test concern, and as such should be moved out
+--   of the library.
 newtype LaxBlock era = LaxBlock (Block era)
+
+blockDecoder ::
+  ( BlockAnn era,
+    ValidateScript era,
+    Era.TxSeq era ~ TxSeq era
+  ) =>
+  Bool ->
+  forall s. Decoder s (Annotator (Block era))
+blockDecoder lax = annotatorSlice $
+  decodeRecordNamed "Block" (const 4) $ do
+    header <- fromCBOR
+    txns <- txSeqDecoder lax
+    pure $ Block' <$> header <*> txns
 
 instance (Era era, Typeable era) => ToCBOR (LaxBlock era) where
   toCBOR (LaxBlock x) = toCBOR x
 
 deriving stock instance
-  (Era era, Show (Core.Tx era)) =>
+  (Era era, Show (Era.TxSeq era)) =>
   Show (LaxBlock era)
 
 instance
   ( Era era,
     BlockAnn era,
-    ToCBOR (Core.TxBody era),
-    ToCBOR (Core.Script era),
-    ToCBOR (Core.AuxiliaryData era),
-    ValidateScript era
+    ValidateScript era,
+    Era.TxSeq era ~ TxSeq era
   ) =>
   FromCBOR (Annotator (LaxBlock era))
   where
@@ -756,23 +734,19 @@ bHeaderSize ::
 bHeaderSize = BS.length . serialize'
 
 bBodySize ::
-  forall era.
-  (Era era) =>
-  TxSeq era ->
-  Int
+  ToCBORGroup txSeq => txSeq -> Int
 bBodySize = BS.length . serializeEncoding' . toCBORGroup
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 bheader ::
-  (Era era) =>
   Block era ->
   BHeader (Crypto era)
-bheader (Block bh _) = bh
+bheader (Block' bh _ _) = bh
 
-bbody :: (Era era) => Block era -> TxSeq era
-bbody (Block _ txs) = txs
+bbody :: Block era -> Era.TxSeq era
+bbody (Block' _ txs _) = txs
 
 bhbody ::
   CC.Crypto crypto =>

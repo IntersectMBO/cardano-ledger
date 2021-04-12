@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -23,7 +24,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailur
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
-    Tx,
+    ValidatedTx,
     hashWitnessPPData,
     isTwoPhaseScriptAddress,
     wits',
@@ -31,7 +32,7 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
@@ -43,7 +44,9 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import GHC.Generics (Generic)
 import GHC.Records
+import NoThunks.Class
 import Shelley.Spec.Ledger.BaseTypes
   ( Network,
     ShelleyBase,
@@ -87,6 +90,7 @@ data AlonzoPredFail era
     WrongNetworkInTxBody
       !Network -- Actual Network ID
       !Network -- Network ID in transaction body
+  deriving (Generic)
 
 deriving instance
   ( Era era,
@@ -99,6 +103,12 @@ deriving instance
     Eq (PredicateFailure (Core.EraRule "UTXO" era)) -- The Shelley UtxowPredicateFailure needs this to Eq
   ) =>
   Eq (AlonzoPredFail era)
+
+instance
+  ( Era era,
+    NoThunks (PredicateFailure (Core.EraRule "UTXO" era))
+  ) =>
+  NoThunks (AlonzoPredFail era)
 
 instance
   ( Era era,
@@ -187,19 +197,19 @@ alonzoStyleWitness ::
   forall era utxow.
   ( Era era,
     -- Fix some Core types to the Alonzo Era
-    Core.Tx era ~ Tx era, -- scriptsNeeded, checkScriptData etc. are fixed at Alonzo.Tx
+    TxInBlock era ~ ValidatedTx era, -- scriptsNeeded, checkScriptData etc. are fixed at Alonzo.Tx
     Core.PParams era ~ PParams era,
     Core.Script era ~ Script era,
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (utxow era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ Core.Tx era,
+    Signal (Core.EraRule "UTXO" era) ~ ValidatedTx era,
     -- Asumptions needed since we are going to fix utxow when we use this in an STS Era
     BaseM (utxow era) ~ ShelleyBase,
     Environment (utxow era) ~ UtxoEnv era,
     State (utxow era) ~ UTxOState era,
-    Signal (utxow era) ~ Core.Tx era,
+    Signal (utxow era) ~ ValidatedTx era,
     PredicateFailure (utxow era) ~ AlonzoPredFail era,
     STS (utxow era),
     -- Supply the HasField and Validate instances for Alonzo
@@ -212,7 +222,7 @@ alonzoStyleWitness ::
 alonzoStyleWitness = do
   _u <- shelleyStyleWitness WrappedShelleyEraFailure
   (TRC (ue@(UtxoEnv _slot pp _stakepools _genDelegs), u', tx)) <- judgmentContext
-  let txbody = getField @"body" (tx :: Core.Tx era)
+  let txbody = getField @"body" (tx :: TxInBlock era)
 
   let scriptWitMap = getField @"scriptWits" tx
       failedScripts = Map.foldr accum [] scriptWitMap
@@ -279,14 +289,14 @@ data AlonzoUTXOW era
 instance
   forall era.
   ( -- Fix some Core types to the Alonzo Era
-    Core.Tx era ~ Tx era,
+    TxInBlock era ~ ValidatedTx era,
     Core.PParams era ~ PParams era,
     Core.Script era ~ Script era,
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ Tx era,
+    Signal (Core.EraRule "UTXO" era) ~ ValidatedTx era,
     -- New transaction body fields needed for Alonzo
     HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
     -- Supply the HasField and Validate instances for Alonzo
@@ -296,7 +306,7 @@ instance
   STS (AlonzoUTXOW era)
   where
   type State (AlonzoUTXOW era) = UTxOState era
-  type Signal (AlonzoUTXOW era) = Tx era
+  type Signal (AlonzoUTXOW era) = ValidatedTx era
   type Environment (AlonzoUTXOW era) = UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type

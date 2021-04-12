@@ -24,8 +24,10 @@ module Cardano.Ledger.Core
     AuxiliaryData,
     PParams,
     PParamsDelta,
-    Tx,
     Witnesses,
+
+    -- * Re-exported fixed Tx
+    Tx,
 
     -- * Constraint synonyms
     ChainData,
@@ -38,6 +40,7 @@ module Cardano.Ledger.Core
 where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
+import {-# SOURCE #-} Cardano.Ledger.Tx (Tx)
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import GHC.TypeLits (Symbol)
@@ -63,9 +66,6 @@ type family PParams era :: Type
 
 -- | The type of updates to Protocol parameters
 type family PParamsDelta era :: Type
-
--- | The transaction type which might vary from one Era to another
-type family Tx era :: Type
 
 -- | The set of witnesses in a Tx
 type family Witnesses era :: Type

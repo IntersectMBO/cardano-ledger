@@ -22,10 +22,10 @@ module Cardano.Ledger.Alonzo.Rules.Ledger
 where
 
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail, AlonzoUTXOW)
-import Cardano.Ledger.Alonzo.Tx (IsValidating (..), Tx (..))
+import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..))
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
 import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import Control.State.Transition
   ( Assertion (..),
@@ -53,6 +53,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..), DelegsPredicateFailure)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..), LedgerPredicateFailure (..))
+import qualified Shelley.Spec.Ledger.STS.Ledgers as Shelley
 import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
   )
@@ -67,7 +68,7 @@ data AlonzoLEDGER era
 --   make it concrete. Depends only on the "certs" and "isValidating" HasField instances.
 ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
-  ( Signal (someLEDGER era) ~ Core.Tx era,
+  ( Signal (someLEDGER era) ~ TxInBlock era,
     State (someLEDGER era) ~ (UTxOState era, DPState (Crypto era)),
     Environment (someLEDGER era) ~ LedgerEnv era,
     Embed (Core.EraRule "UTXOW" era) (someLEDGER era),
@@ -77,9 +78,9 @@ ledgerTransition ::
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
+    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "isValidating" (Core.Tx era) IsValidating,
+    HasField "isValidating" (TxInBlock era) IsValidating,
     Era era
   ) =>
   TransitionRule (someLEDGER era)
@@ -118,14 +119,14 @@ instance
     Show (Core.PParams era),
     Show (Core.Value era),
     Show (PParamsDelta era),
-    Core.Tx era ~ Tx era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
+    TxInBlock era ~ ValidatedTx era,
     Embed (Core.EraRule "DELEGS" era) (AlonzoLEDGER era),
     Embed (Core.EraRule "UTXOW" era) (AlonzoLEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    Signal (Core.EraRule "UTXOW" era) ~ ValidatedTx era,
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
@@ -139,7 +140,7 @@ instance
   type
     State (AlonzoLEDGER era) =
       (UTxOState era, DPState (Crypto era))
-  type Signal (AlonzoLEDGER era) = Tx era
+  type Signal (AlonzoLEDGER era) = ValidatedTx era
   type Environment (AlonzoLEDGER era) = LedgerEnv era
   type BaseM (AlonzoLEDGER era) = ShelleyBase
   type PredicateFailure (AlonzoLEDGER era) = LedgerPredicateFailure era
@@ -181,3 +182,12 @@ instance
   Embed (AlonzoUTXOW era) (AlonzoLEDGER era)
   where
   wrapFailed = UtxowFailure
+
+instance
+  ( Era era,
+    STS (AlonzoLEDGER era),
+    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era
+  ) =>
+  Embed (AlonzoLEDGER era) (Shelley.LEDGERS era)
+  where
+  wrapFailed = Shelley.LedgerFailure

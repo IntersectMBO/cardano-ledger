@@ -34,6 +34,7 @@ where
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo, WithOrigin (..))
@@ -116,6 +117,7 @@ import Shelley.Spec.Ledger.STS.Prtcl
   )
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickPredicateFailure)
 import Shelley.Spec.Ledger.STS.Tickn
+import Shelley.Spec.Ledger.Serialization (ToCBORGroup)
 import Shelley.Spec.Ledger.Slot (EpochNo)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
@@ -254,7 +256,8 @@ instance
     HasField "_maxBBSize" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "_extraEntropy" (Core.PParams era) Nonce,
-    HasField "_d" (Core.PParams era) UnitInterval
+    HasField "_d" (Core.PParams era) UnitInterval,
+    ToCBORGroup (Era.TxSeq era)
   ) =>
   STS (CHAIN era)
   where
@@ -335,7 +338,8 @@ chainTransition ::
     HasField "_maxBBSize" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "_extraEntropy" (Core.PParams era) Nonce,
-    HasField "_d" (Core.PParams era) UnitInterval
+    HasField "_d" (Core.PParams era) UnitInterval,
+    ToCBORGroup (Era.TxSeq era)
   ) =>
   TransitionRule (CHAIN era)
 chainTransition =

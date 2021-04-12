@@ -20,9 +20,12 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (Tx)
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
+import Cardano.Ledger.Alonzo.TxSeq (txSeqTxns)
+import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (BlockDecoding, Era (Crypto))
+import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..), TxInBlock)
+import qualified Cardano.Ledger.Era as Era
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -48,11 +51,9 @@ import Shelley.Spec.Ledger.BlockChain
     BHeader (..),
     Block (..),
     bBodySize,
-    bbHash,
     hBbsize,
     incrBlocks,
     issuerIDfromBHBody,
-    txSeqTxns,
   )
 import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState (LedgerState)
@@ -130,12 +131,13 @@ bbodyTransition ::
     Embed (Core.EraRule "LEDGERS" era) (someBBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (TxInBlock era),
     -- Conditions to define the rule in this Era
     HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
-    HasField "totExunits" (Core.Tx era) ExUnits,
-    Era era -- supplies WellFormed HasField, and Crypto constraints
+    Era era, -- supplies WellFormed HasField, and Crypto constraints
+    Era.TxSeq era ~ Alonzo.TxSeq era,
+    Era.TxInBlock era ~ Alonzo.ValidatedTx era
   ) =>
   TransitionRule (someBBODY era)
 bbodyTransition =
@@ -148,23 +150,30 @@ bbodyTransition =
            ) -> do
         let txs = txSeqTxns txsSeq
             actualBodySize = bBodySize txsSeq
-            actualBodyHash = bbHash txsSeq
+            actualBodyHash = hashTxSeq @era txsSeq
 
         actualBodySize == fromIntegral (hBbsize bhb)
-          ?! (ShelleyInAlonzoPredFail $ WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ hBbsize bhb))
+          ?! ShelleyInAlonzoPredFail
+            ( WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ hBbsize bhb)
+            )
 
         actualBodyHash == bhash bhb
-          ?! (ShelleyInAlonzoPredFail $ InvalidBodyHashBBODY @era actualBodyHash (bhash bhb))
+          ?! ShelleyInAlonzoPredFail
+            ( InvalidBodyHashBBODY @era actualBodyHash (bhash bhb)
+            )
 
         ls' <-
           trans @(Core.EraRule "LEDGERS" era) $
             TRC (LedgersEnv (bheaderSlotNo bhb) pp account, ls, StrictSeq.fromStrict txs)
 
-        -- Note that this may not actually be a stake pool - it could be a genesis key
-        -- delegate. However, this would only entail an overhead of 7 counts, and it's
-        -- easier than differentiating here. -- TODO move this computation inside 'incrBlocks' where it belongs.
-        -- Here we make an assumption that 'incrBlocks' must enforce, better for it to be done in 'incrBlocks'
-        -- where we can see that the assumption is enforced.
+        -- Note that this may not actually be a stake pool - it could be a
+        -- genesis key delegate. However, this would only entail an overhead of
+        -- 7 counts, and it's easier than differentiating here.
+        --
+        -- TODO move this computation inside 'incrBlocks' where it belongs. Here
+        -- we make an assumption that 'incrBlocks' must enforce, better for it
+        -- to be done in 'incrBlocks' where we can see that the assumption is
+        -- enforced.
         let hkAsStakePool = coerceKeyRole . issuerIDfromBHBody $ bhb
             slot = bheaderSlotNo bhb
         firstSlotNo <- liftSTS $ do
@@ -191,12 +200,14 @@ instance
     Embed (Core.EraRule "LEDGERS" era) (AlonzoBBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Alonzo.Tx era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Alonzo.ValidatedTx era),
     Era era,
-    Core.Tx era ~ Alonzo.Tx era,
+    TxInBlock era ~ Alonzo.ValidatedTx era,
     HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
-    BlockDecoding era
+    Era.TxSeq era ~ Alonzo.TxSeq era,
+    Era.TxInBlock era ~ Alonzo.ValidatedTx era,
+    SupportsSegWit era
   ) =>
   STS (AlonzoBBODY era)
   where

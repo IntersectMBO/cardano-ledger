@@ -34,7 +34,7 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (BlockDecoding (..), ValidateScript (..))
+import Cardano.Ledger.Era (SupportsSegWit (..), ValidateScript (..))
 import qualified Cardano.Ledger.Era as E (Era (Crypto))
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash (makeHashWithExplicitProxys)
@@ -46,13 +46,17 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import qualified Data.ByteString as BS
 import Data.Proxy
+import Shelley.Spec.Ledger.BlockChain (bbHash)
+import qualified Shelley.Spec.Ledger.BlockChain as Shelley
+  ( TxSeq (..),
+    txSeqTxns,
+  )
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate, updatePParams)
 import qualified Shelley.Spec.Ledger.PParams as SPP (PParams)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
   ( WitnessSet,
-    segwitTx,
     validateNativeMultiSigScript,
   )
 import qualified Shelley.Spec.Ledger.Tx as STx (Tx, TxBody, TxOut (..))
@@ -87,8 +91,6 @@ type instance Core.AuxiliaryData (ShelleyEra c) = Metadata (ShelleyEra c)
 
 type instance Core.PParams (ShelleyEra c) = SPP.PParams (ShelleyEra c)
 
-type instance Core.Tx (ShelleyEra c) = STx.Tx (ShelleyEra c)
-
 type instance Core.Witnesses (ShelleyEra c) = WitnessSet (ShelleyEra c)
 
 --------------------------------------------------------------------------------
@@ -109,12 +111,12 @@ instance
   -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
   validateScript = validateNativeMultiSigScript
 
--- hashScript s = ... using the default instance of hashScript
-
-instance CryptoClass.Crypto c => BlockDecoding (ShelleyEra c) where
-  seqTx body wit _isval aux = segwitTx body wit aux
-  seqIsValidating _ = True -- In ShelleyEra all Tx are IsValidating
-  seqHasValidating = False -- But Tx does not have an IsValidating field
+instance CryptoClass.Crypto c => SupportsSegWit (ShelleyEra c) where
+  type TxInBlock (ShelleyEra c) = Tx (ShelleyEra c)
+  type TxSeq (ShelleyEra c) = Shelley.TxSeq (ShelleyEra c)
+  fromTxSeq = Shelley.txSeqTxns
+  toTxSeq = Shelley.TxSeq
+  hashTxSeq = bbHash
 
 instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) c where
   validateAuxiliaryData (Metadata m) = all validMetadatum m

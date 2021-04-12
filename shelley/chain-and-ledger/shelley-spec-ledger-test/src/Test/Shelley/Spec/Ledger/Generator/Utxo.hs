@@ -137,10 +137,10 @@ showBalance
   (LedgerEnv _ _ pparams _)
   (UTxOState utxo _ _ _)
   (DPState _ (PState stakepools _ _))
-  (Tx body _ _) =
-    "\n\nConsumed: " ++ show (consumed pparams utxo body)
+  (Tx txBody _ _) =
+    "\n\nConsumed: " ++ show (consumed pparams utxo txBody)
       ++ "  Produced: "
-      ++ show (produced @era pparams stakepools body)
+      ++ show (produced @era pparams stakepools txBody)
 
 --  ========================================================================
 
@@ -224,10 +224,10 @@ genTx
       -------------------------------------------------------------------------
       -- Gather Key Witnesses and Scripts, prepare a constructor for Tx Wits
       -------------------------------------------------------------------------
-      let wits = spendWits ++ wdrlWits ++ certWits ++ updateWits
+      let txWits = spendWits ++ wdrlWits ++ certWits ++ updateWits
           scripts = mkScriptWits @era spendScripts (certScripts ++ wdrlScripts)
           mkTxWits' =
-            mkTxWits ksIndexedPaymentKeys ksIndexedStakingKeys wits scripts
+            mkTxWits @era ksIndexedPaymentKeys ksIndexedStakingKeys txWits scripts
               . hashAnnotated
       -------------------------------------------------------------------------
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
@@ -281,7 +281,7 @@ genTx
       -- We add now repeatedly add inputs until the process converges.
       converge
         remainderCoin
-        wits
+        txWits
         (scripts `Map.union` scripts')
         ksKeyPairs
         ksMSigScripts
@@ -336,9 +336,7 @@ deltaZero initialfee minAda addr =
 genNextDelta ::
   forall era.
   ( EraGen era,
-    UsesTxBody era,
     UsesTxOut era,
-    UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
@@ -393,7 +391,7 @@ genNextDelta
                     }
               else -- add a new input to cover the fee
               do
-                let Tx txBody _ _ = tx
+                let txBody = getField @"body" tx
                     utxo' :: UTxO era
                     utxo' =
                       -- Remove possible inputs from Utxo, if they already
@@ -419,7 +417,7 @@ genNextDelta
                         ksIndexedStakingKeys
                         vkeyPairs
                         (mkScriptWits @era msigPairs mempty)
-                        (hashAnnotated (_body tx))
+                        (hashAnnotated txBody)
                 pure $
                   delta
                     { extraWitnesses = extraWitnesses <> newWits,
@@ -445,9 +443,7 @@ genNextDelta
 genNextDeltaTilFixPoint ::
   forall era.
   ( EraGen era,
-    UsesTxBody era,
     UsesTxOut era,
-    UsesAuxiliary era,
     Mock (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
@@ -474,7 +470,8 @@ applyDelta ::
     UsesTxBody era,
     UsesAuxiliary era,
     Mock (Crypto era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    Core.Witnesses era ~ WitnessSet era
   ) =>
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
@@ -486,27 +483,28 @@ applyDelta
   neededKeys
   neededScripts
   KeySpace_ {ksIndexedPaymentKeys, ksIndexedStakingKeys}
-  tx@(Tx body _wits _md)
+  tx
   (Delta deltafees extraIn _extraWits change extraKeys extraScripts) =
     --fix up the witnesses here?
     -- Adds extraInputs, extraWitnesses, and change from delta to tx
-    let outputs' = (getField @"outputs" body) StrictSeq.|> change
+    let txBody = getField @"body" tx
+        outputs' = getField @"outputs" txBody StrictSeq.|> change
         body2 =
           (updateEraTxBody @era)
-            body
+            txBody
             deltafees
-            (getField @"inputs" body <> extraIn)
+            (getField @"inputs" txBody <> extraIn)
             outputs'
         kw = neededKeys <> extraKeys
         sw = neededScripts <> mkScriptWits @era extraScripts mempty
         newWitnessSet =
-          mkTxWits
+          mkTxWits @era
             ksIndexedPaymentKeys
             ksIndexedStakingKeys
             kw
             sw
             (hashAnnotated body2)
-     in tx {_body = body2, _witnessSet = newWitnessSet}
+     in tx {body = body2, wits = newWitnessSet}
 
 fix :: (Eq d, Monad m) => (d -> m d) -> d -> m d
 fix f d = do d1 <- f d; if d1 == d then pure d else fix f d1
@@ -517,7 +515,8 @@ converge ::
     UsesTxOut era,
     UsesAuxiliary era,
     Mock (Crypto era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    Core.Witnesses era ~ WitnessSet era
   ) =>
   Coin ->
   [KeyPair 'Witness (Crypto era)] ->
@@ -725,12 +724,12 @@ genWithdrawals
       toRewardAcnt (rwd, coinx) = (RewardAcnt Testnet rwd, coinx)
       genWrdls wdrls_ = do
         selectedWrdls <- map toRewardAcnt <$> QC.sublistOf wdrls_
-        let wits =
+        let txwits =
               mkWdrlWits @era ksIndexedStakeScripts ksIndexedStakingKeys
                 . getRwdCred
                 . fst
                 <$> selectedWrdls
-        return (selectedWrdls, Either.partitionEithers wits)
+        return (selectedWrdls, Either.partitionEithers txwits)
 
 -- | Collect witnesses needed for reward withdrawals.
 mkWdrlWits ::
