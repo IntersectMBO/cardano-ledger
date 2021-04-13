@@ -2,11 +2,12 @@
 \label{sec:crypto-details}
 
 \subsection{Hashing}
-The hashing algorithm for all verification keys and multi-signature scripts is BLAKE2b-224.
+The hashing algorithm for all verification keys and multi-signature scripts is BLAKE2b-224\footnote{Note that for the signature 
+and verification algorithms, as well as the proving and verification algorithms of VRFs, we use the hash function as defined in the IETF standard (see Section~\ref{sec:app-addresses}).}.
 Explicitly, this is the payment and stake credentials (Figure~\ref{fig:defs:addresses}),
 the genesis keys and their delegates (Figure~\ref{fig:ts-types:pp-update}),
 stake pool verification keys (Figure~\ref{fig:delegation-transitions}),
-and VRF verification keys (Figure~\ref{fig:delegation-defs}).
+and VRF verification keys (Figure~\ref{fig:delegation-defs}). 
 
 Everywhere else we use BLAKE2b-256.
 In the CDDL specification in Appendix~\ref{sec:cddl},
@@ -14,7 +15,21 @@ $\mathsf{hash28}$ refers to BLAKE2b-224 and
 and $\mathsf{hash32}$ refers to BLAKE2b-256.
 BLAKE2 is specified in RFC 7693 \cite{rfcBLAKE2}.
 
+The properties that we seek out of BRAKE2b algorithm are those of a 
+cryptographically safe hash function. In particular, these (informal) properties
+are:
+\begin{description}
+\item[Preimage resistance] It should be hard to find a message with a given hash value.
+\item[Second preimage resistance] Given one message, it should be hard to find another message with the same hash value.
+\item[Collision resistance] It should be hard to find two messages with the same hash value. 
+\end{description}
+
+In practice, several cryptographic protocols use hash functions as random oracles. 
+BLAKE2 provides indifferentiability from a random oracle. However, the properties of 
+our scheme do not depend on it.  
+
 \subsection{Addresses}
+\label{sec:app-addresses}
 The \fun{sign} and \fun{verify} functions from Figure~\ref{fig:crypto-defs-shelley}
 use Ed25519. See \cite{rfcEdDSA}.
 
