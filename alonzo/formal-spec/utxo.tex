@@ -276,7 +276,7 @@ which has the information to do this correctly for
      &\text{Translate slot number to system time or fail} \\~\\
      &\fun{txInfo} \in \Language \to \UTxO \to \Tx \to \TxInfo \\
      &\text{Summarizes transaction data} \\~\\
-     &\fun{valContext} \in \Data \to \ScriptPurpose \to \Data \\
+     &\fun{valContext} \in \TxInfo \to \ScriptPurpose \to \Data \\
      &\text{Pairs transaction data with a script purpose} \\~\\
      &\fun{runPLCScript} \in \CostMod \to\ScriptPlutus \to
     \seqof{\Data} \to \ExUnits \to \IsValidating \\
@@ -316,7 +316,8 @@ evaluator.
   wrapped in a list type instead of a $\Data^?$ type).
 
   \item a pair, returned by the $\fun{indexedRdmrs}$ function, of a redeemer
-  and an $\ExUnits$ amount.
+  and an $\ExUnits$ amount. We are assuming this pair is not $\Nothing$ here
+  because that must have already been checked by the UTXOW rule.
 
   \item $\fun{evalScripts}$ evaluates a whole list of scripts paired with all their
   inputs by calling the native script validator function, $\fun{runPLCScript}$
