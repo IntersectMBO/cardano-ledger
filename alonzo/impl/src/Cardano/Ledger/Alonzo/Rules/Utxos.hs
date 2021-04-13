@@ -13,7 +13,11 @@ module Cardano.Ledger.Alonzo.Rules.Utxos where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Language (Language)
-import Cardano.Ledger.Alonzo.PlutusScriptApi (collectNNScriptInputs, evalScripts)
+import Cardano.Ledger.Alonzo.PlutusScriptApi
+  ( CollectError,
+    collectTwoPhaseScriptInputs,
+    evalScripts,
+  )
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx
   ( CostModel,
@@ -38,7 +42,6 @@ import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
@@ -110,12 +113,14 @@ utxosTransition ::
   ) =>
   TransitionRule (UTXOS era)
 utxosTransition =
-  judgmentContext >>= \(TRC (UtxoEnv _ pp _ _, UTxOState utxo _ _ _, tx)) ->
-    let sLst = collectNNScriptInputs pp tx utxo
-        scriptEvalResult = evalScripts @era tx sLst
-     in if scriptEvalResult
-          then scriptsValidateTransition
-          else scriptsNotValidateTransition
+  judgmentContext >>= \(TRC (UtxoEnv _ pp _ _, st@(UTxOState utxo _ _ _), tx)) -> do
+    case collectTwoPhaseScriptInputs pp tx utxo of
+      Right sLst ->
+        let scriptEvalResult = evalScripts @era tx sLst
+         in if scriptEvalResult
+              then scriptsValidateTransition
+              else scriptsNotValidateTransition
+      Left info -> (failBecause $ ShouldNeverHappenScriptInputsNotFound info) >> pure st
 
 scriptsValidateTransition ::
   forall era.
@@ -186,21 +191,29 @@ data UtxosPredicateFailure era
     --   here is that provided on the transaction (whereas evaluation of the
     --   scripts gives the opposite.)
     ValidationTagMismatch IsValidating
+  | -- | We could not find all the necessary inputs for a Plutus Script.
+    --         Previous PredicateFailure tests should make this impossible, but the
+    --         consequences of not detecting this means scripts get dropped, so things
+    --         might validate that shouldn't. So we double check in the function
+    --         collectTwoPhaseScriptInputs, it should find data for every Script.
+    ShouldNeverHappenScriptInputsNotFound [CollectError (Crypto era)]
   | UpdateFailure (PredicateFailure (Core.EraRule "PPUP" era))
   deriving
     (Generic)
 
 instance
-  ( Typeable era,
+  ( Era era,
     ToCBOR (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   ToCBOR (UtxosPredicateFailure era)
   where
   toCBOR (ValidationTagMismatch v) = encode (Sum ValidationTagMismatch 0 !> To v)
-  toCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 1 !> To pf)
+  toCBOR (ShouldNeverHappenScriptInputsNotFound cs) =
+    encode (Sum (ShouldNeverHappenScriptInputsNotFound @era) 1 !> To cs)
+  toCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 2 !> To pf)
 
 instance
-  ( Typeable era,
+  ( Era era,
     FromCBOR (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   FromCBOR (UtxosPredicateFailure era)
@@ -208,7 +221,8 @@ instance
   fromCBOR = decode (Summands "UtxosPredicateFailure" dec)
     where
       dec 0 = SumD ValidationTagMismatch <! From
-      dec 1 = SumD UpdateFailure <! From
+      dec 1 = SumD (ShouldNeverHappenScriptInputsNotFound @era) <! From
+      dec 2 = SumD UpdateFailure <! From
       dec n = Invalid n
 
 deriving stock instance

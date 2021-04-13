@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -15,9 +17,12 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
     scriptsNeeded,
     checkScriptData,
     language,
+    CollectError (..),
+    collectTwoPhaseScriptInputs,
   )
 where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..))
@@ -37,17 +42,21 @@ import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..)
 import Cardano.Ledger.Alonzo.TxInfo (runPLCScript, transTx, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts')
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
+import Data.Coders
 import Data.List (foldl')
 import qualified Data.Map as Map
 import Data.Maybe (isJust, maybeToList)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import GHC.Generics
 import GHC.Records (HasField (..))
+import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Credential (Credential (ScriptHashObj))
@@ -118,6 +127,85 @@ collectNNScriptInputs pp tx utxo =
           script <- maybeToList (Map.lookup scripthash (txscripts' (getField @"wits" tx))),
           cost <- maybeToList (Map.lookup PlutusV1 (getField @"_costmdls" pp))
       ]
+
+-- ========================================================================
+
+-- | When collecting inputs for twophase scripts, 3 things can go wrong.
+data CollectError crypto
+  = NoRedeemer !(ScriptPurpose crypto)
+  | NoWitness !(ScriptHash crypto)
+  | NoCostModel !Language
+  deriving (Eq, Show, Generic, NoThunks)
+
+instance (CC.Crypto crypto) => ToCBOR (CollectError crypto) where
+  toCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
+  toCBOR (NoWitness x) = encode $ Sum NoWitness 1 !> To x
+  toCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
+
+instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
+  fromCBOR = decode (Summands "CollectError" dec)
+    where
+      dec 0 = SumD NoRedeemer <! From
+      dec 1 = SumD NoWitness <! From
+      dec 2 = SumD NoCostModel <! From
+      dec n = Invalid n
+
+-- | Collect the inputs for twophase scripts. If any script can't find ist data return
+--     a list of CollectError, if all goes well return a list of quadruples with the inputs.
+--     Previous PredicateFailure tests should ensure we find Data for every script, BUT
+--     the consequences of not finding Data means scripts can get dropped, so things
+--     might validate that shouldn't. So we double check that every Script has its Data, and
+--     if that is not the case, a PredicateFailure is raised in the Utxos rule.
+collectTwoPhaseScriptInputs ::
+  ( Era era,
+    Core.Script era ~ AlonzoScript.Script era,
+    Core.TxOut era ~ Alonzo.TxOut era,
+    Core.TxBody era ~ Alonzo.TxBody era,
+    Core.Value era ~ Mary.Value (Crypto era),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
+  Core.PParams era ->
+  Tx era ->
+  UTxO era ->
+  Either [CollectError (Crypto era)] [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
+collectTwoPhaseScriptInputs pp tx utxo =
+  case Map.lookup PlutusV1 (getField @"_costmdls" pp) of
+    Nothing -> Left [NoCostModel PlutusV1]
+    Just cost -> merge (apply cost) (map redeemer needed) (map getscript needed) (Right [])
+  where
+    txinfo = transTx utxo tx
+    needed = scriptsNeeded utxo tx
+    redeemer (sp, _) =
+      case indexedRdmrs tx sp of
+        Just (d, eu) -> Right (sp, d, eu)
+        Nothing -> Left (NoRedeemer sp)
+    getscript (_, hash) =
+      case Map.lookup hash (txscripts' (getField @"wits" tx)) of
+        Just script -> Right script
+        Nothing -> Left (NoWitness hash)
+    apply cost (sp, d, eu) script = (script, d : (valContext txinfo sp) : (getData tx utxo sp), eu, cost)
+
+-- | Merge two lists (either of which may have failures, i.e. (Left _)), collect all the failures
+--   but if there are none, use 'f' to construct a success.
+merge :: forall t1 t2 a1 a2. (t1 -> t2 -> a1) -> [Either a2 t1] -> [Either a2 t2] -> Either [a2] [a1] -> Either [a2] [a1]
+merge _f [] [] answer = answer
+merge _f [] (_ : _) answer = answer
+merge _f (_ : _) [] answer = answer
+merge f (x : xs) (y : ys) zs = merge f xs ys (gg x y zs)
+  where
+    gg :: Either a2 t1 -> Either a2 t2 -> Either [a2] [a1] -> Either [a2] [a1]
+    gg (Right a) (Right b) (Right cs) = Right (f a b : cs) -- The one place a success occurs.
+    gg (Left a) (Right _) (Right _) = Left [a]
+    gg (Right _) (Left b) (Right _) = Left [b]
+    gg (Left a) (Left b) (Right _) = Left [a, b]
+    gg (Right _) (Right _) (Left cs) = Left cs
+    gg (Right _) (Left b) (Left cs) = Left (b : cs)
+    gg (Left a) (Right _) (Left cs) = Left (a : cs)
+    gg (Left a) (Left b) (Left cs) = Left (a : b : cs)
 
 language :: AlonzoScript.Script era -> Maybe Language
 language (AlonzoScript.PlutusScript _) = Just PlutusV1
