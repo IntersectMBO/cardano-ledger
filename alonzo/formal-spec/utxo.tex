@@ -79,7 +79,9 @@ retrieve all the data that is relevant to Plutus script validation.
 These include:
 
 \begin{itemize}
-\item $\Time$ is the system time
+\item $\UTCTime$ is the system time (UTC time zone)
+\item $\EpochInfo$ is a consensus-level parameter needed to compute the system time
+\item $\SystemStart$ is another consensus-level parameter needed to compute the system time
 \item
   $\ScriptPurpose$ is a sum type of all parts of a transaction that may
   require a script witness to validate. Note that this contains the data
@@ -92,7 +94,10 @@ These include:
   It assumes there is some ordering on each of these structures.
 \item
   $\fun{indexedRdmrs}$ indexes the pair of a redeemer and an $\ExUnits$ value
-  for a given script by its script purpose (eg. the input, or certificate, etc.)
+  for a given script by its script purpose (eg. the input, or certificate, etc.),
+  and $\Nothing$ if no associated data is found.
+  It uses the script purpose to generate the $\RdmrPtr$ key,
+  then find the corresponding entry in the redeemer structure.
 \end{itemize}
 
 
@@ -102,8 +107,14 @@ These include:
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{}lr}
       \var{tm}
-      & \Time
-      & \text{System time}
+      & \UTCTime
+      & \text{System time} \\
+      \var{ei}
+      & \EpochInfo
+      & \text{Epoch info} \\
+      \var{st}
+      & \SystemStart
+      & \text{System start time}
     \end{array}
   \end{equation*}
   %
@@ -128,11 +139,10 @@ These include:
   %
   \emph{Indexing functions}
   \begin{align*}
-    &\fun{indexedRdmrs} \in \Tx \to \ScriptPurpose \to (\seqof{\Data}~\times~\ExUnits)\\
+    &\fun{indexedRdmrs} \in \Tx \to \ScriptPurpose \to (\Redeemer~\times~\ExUnits)^?\\
     &\fun{indexedRdmrs}~tx~sp =
       \begin{cases}
-        ([], \var{eu}) & rdptr \mapsto (\Nothing, \var{eu}) \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
-        ([d], \var{eu}) & rdptr \mapsto (\var{d}, \var{eu}) \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
+        (d, \var{eu}) & \var{rdptr} \mapsto (\var{d}, \var{eu}) \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
         \Nothing & \text{otherwise}
       \end{cases} \\
     & ~~\where \\
@@ -153,7 +163,10 @@ These include:
 Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used for script validation.
 
 \begin{itemize}
-\item $\fun{slotToTime}$ translates a slot number to system time if possible.
+\item $\fun{epochInfoSlotToUTCTime}$ translates a slot number to system time if possible.
+This translation is implemented by the consensus algorithm (not the ledger), and requires
+two additional parameters to do this.
+
 If it is not possible to do this translation, $\Nothing$ is returned.
 The reason it may not be possible to translate is that the slot number
 is too far in the future for the system to accurately
@@ -162,7 +175,7 @@ predict the exact time to which it refers.
 \item $\fun{txInfo}$ summarizes all the necessary transaction and chain state info
   that needs to be passed to the script interpreter. The $\Language$ argument
   is required because different languages have different expectations of the
-  format and contents of the summary $\Data$ term.
+  format and contents of the $\TxInfo$ summary.
   It has a $\UTxO$ as its argument to recover the full information of the inputs of the transaction,
   but only the inputs of the transaction are provided to scripts. For details, see~\ref{sec:txinfo}
 
@@ -240,13 +253,26 @@ which has the information to do this correctly for
   Script authors must keep this in mind when writing scripts, since the ledger call to the interpreter is oblivious to what
   arguments are required.
 
+  Datum objects are required for all output-locking non-native scripts. That is, a
+  non-native script-locked output that does not include a datum hash is unspendable.
+  Non-output scripts do not expect datum objects - that is, it is not possible to pass
+  a datum to a script used for another purpose (certificate, etc.). Redeemers
+  are required for all non-native scripts.
+
 \begin{figure*}[htb]
+  \emph{Abstract Script Validation Types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\quad\quad\quad\quad}r}
+      \var{txinfo} &\TxInfo & \text{Language-specific summary of transaction data}\\
+    \end{array}
+  \end{equation*}
   \emph{Abstract Script Validation Functions}
   %
   \begin{align*}
-     &\fun{slotToTime} \in \Slot \to \Time^? \\
+     &\fun{epochInfoSlotToUTCTime} \in \EpochInfo \to \SystemStart \to \Slot \to \UTCTime^? \\
      &\text{Translate slot number to system time or fail} \\~\\
-     &\fun{txInfo} \in \Language \to \UTxO \to \Tx \to \Data \\
+     &\fun{txInfo} \in \Language \to \UTxO \to \Tx \to \TxInfo \\
      &\text{Summarizes transaction data} \\~\\
      &\fun{valContext} \in \Data \to \ScriptPurpose \to \Data \\
      &\text{Pairs transaction data with a script purpose} \\~\\
@@ -287,13 +313,8 @@ evaluator.
   \item the hash of the required datum, if any (returned by the $\fun{getData}$ function,
   wrapped in a list type instead of a $\Data^?$ type).
 
-  \item a pair, returned by the $\fun{indexedRdmrs}$ function, of
-  \begin{itemize}
-    \item a list of $\Data$, containing exactly one or zero elements (this
-    is not checked here, however, see~\ref{fig:functions:script1}). This list
-    contains the optional redeemer if there is one.
-    \item an $\ExUnits$ value, which is mandatory for all scripts
-  \end{itemize}
+  \item a pair, returned by the $\fun{indexedRdmrs}$ function, of a redeemer
+  and an $\ExUnits$ amount.
 
   \item $\fun{evalScripts}$ evaluates a whole list of scripts paired with all their
   inputs by calling the native script validator function, $\fun{runPLCScript}$
@@ -321,7 +342,7 @@ are caught during the application of the UTXOW rule (before these functions are 
     \nextdef
     & \fun{collectNNScriptInputs} \in \PParams \to \Tx \to \UTxO \to \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
     & \fun{collectNNScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
-    & ~~\fun{toList} \{ (\var{script}, (\fun{valContext}~\var{txinfo}~\var{sp}~++~ \fun{getData}~tx~utxo~sp~++~\var{d}), \var{eu}, \var{cm}) \mid \\
+    & ~~\fun{toList} \{ (\var{script}, (\fun{valContext}~\var{txinfo}~\var{sp}~++~ \fun{getData}~tx~utxo~sp~++~[\var{d}]), \var{eu}, \var{cm}) \mid \\
     & ~~~~(\var{sp}, \var{scriptHash}) \in \fun{scriptsNeeded}~{utxo}~{tx}, \\
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
     & ~~~~(\var{d}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
@@ -525,7 +546,7 @@ This rule has the following changes:
 
   \item The end of the transaction validity interval is translatable into
   system time (ie. within the consensus's forecast window). This is checked
-  by $\fun{slotToTime}$, which returns $\Nothing$ if the end slot is outside.
+  by $\fun{epochInfoSlotToUTCTime}$, which returns $\Nothing$ if the end slot is outside.
   Note that we do not need to check that the start slot can be converted to
   time, because all pasts slots can be converted into time correctly.
 
@@ -554,7 +575,7 @@ UTXOS rule.
     {
       \var{txb}\leteq\txbody{tx} &
       \fun{ininterval}~\var{slot}~(\fun{txvldt}~{tx}) \\
-      \hldiff{\var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx}} & \hldiff{\fun{slotToTime}~i_f \neq \Nothing} \\
+      \hldiff{\var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx}} & \hldiff{\fun{epochInfoSlotToUTCTime}~\wcard~\wcard~i_f \neq \Nothing} \\
       \txins{txb} \neq \emptyset
       & \hldiff{\fun{feesOK}~pp~tx~utxo}
       & \txins{txb} \subseteq \dom \var{utxo}
@@ -658,9 +679,6 @@ We construct the following helper functions :
   \item $\fun{checkRedeemers}$ returns $\True$ if, for the given script purpose,
   whenever the script it points to is non-native, the transaction contains an associated entry
   in the indexed redeemers structure.
-  Recall that redeemers are optional to include, so there may be a $\Nothing$ in place of
-  a redeemer. Execution units are mandatory for all scripts, so each script purpose
-  should have an associated entry specifying the $\ExUnits$ value.
 
   \item $\fun{languages}$ returns the set of (non-native) script languages
   of all the scripts included in the transaction
@@ -701,10 +719,14 @@ We have made the following changes and additions to the UTXOW preconditions:
 \item The transaction contains exactly those scripts that are required for witnessing and no
 additional ones;
 
-    \item The datums included in the witnesses are exactly those that are required for validating;
+    \item The datums included in the witnesses are exactly those that are required for validating. That is,
+    datums for all output-locking non-native scripts for the payment credentials of the addresses of the
+    UTxOs the transaction is spending must have attached datum objects. This check will also fail if
+    the datum hash fields of such UTxOs are $\Nothing$, as $\Nothing$ is not a
+    hash of a datum (and therefore is not a key of the $\DataHash$-indexed map).
 
     \item For every item that needs to be validated by a non-native script, the transaction contains
-      an entry in the indexed redeemer structure (ie. the execution units for it are specified);
+      an entry in the indexed redeemer structure (ie. the execution units are redeemer for it are specified);
 
     \item The signatures of the keys whose hashes are specified in the
     $\fun{reqSignerHashes}$ field in a transaction
