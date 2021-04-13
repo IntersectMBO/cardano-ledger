@@ -80,8 +80,10 @@ These include:
 
 \begin{itemize}
 \item $\UTCTime$ is the system time (UTC time zone)
-\item $\EpochInfo$ is a consensus-level parameter needed to compute the system time
-\item $\SystemStart$ is another consensus-level parameter needed to compute the system time
+\item $\EpochInfo$ is a consensus-level parameter needed to compute the system time. Within
+the Alonzo era, this is constant, with value $\mathsf{epochInfo}$
+\item $\SystemStart$ is another consensus-level parameter needed to compute the system time. Within
+the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
 \item
   $\ScriptPurpose$ is a sum type of all parts of a transaction that may
   require a script witness to validate. Note that this contains the data
@@ -102,19 +104,19 @@ These include:
 
 
 \begin{figure}[htb]
-  \emph{Abstract types}
+  \emph{Abstract types and constants of these types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{}lr}
       \var{tm}
       & \UTCTime
-      & \text{System time} \\
-      \var{ei}
+      & \text{System time (variable)} \\
+      \mathsf{epochInfo}
       & \EpochInfo
-      & \text{Epoch info} \\
-      \var{st}
+      & \text{Epoch info (constant within Alonzo)} \\
+      \mathsf{systemTime}
       & \SystemStart
-      & \text{System start time}
+      & \text{System start time (constant within Alonzo)}
     \end{array}
   \end{equation*}
   %
@@ -575,7 +577,8 @@ UTXOS rule.
     {
       \var{txb}\leteq\txbody{tx} &
       \fun{ininterval}~\var{slot}~(\fun{txvldt}~{tx}) \\
-      \hldiff{\var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx}} & \hldiff{\fun{epochInfoSlotToUTCTime}~\wcard~\wcard~i_f \neq \Nothing} \\
+      \hldiff{\var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx}} &
+      \hldiff{\fun{epochInfoSlotToUTCTime}~\mathsf{epochInfo}~\mathsf{systemTime}~i_f \neq \Nothing} \\
       \txins{txb} \neq \emptyset
       & \hldiff{\fun{feesOK}~pp~tx~utxo}
       & \txins{txb} \subseteq \dom \var{utxo}
@@ -726,7 +729,7 @@ additional ones;
     hash of a datum (and therefore is not a key of the $\DataHash$-indexed map).
 
     \item For every item that needs to be validated by a non-native script, the transaction contains
-      an entry in the indexed redeemer structure (ie. the execution units are redeemer for it are specified);
+      an entry in the indexed redeemer structure (ie. the execution units and redeemer for it are specified);
 
     \item The signatures of the keys whose hashes are specified in the
     $\fun{reqSignerHashes}$ field in a transaction
