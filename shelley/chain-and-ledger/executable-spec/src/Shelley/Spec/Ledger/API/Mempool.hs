@@ -6,6 +6,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -20,15 +21,22 @@ module Shelley.Spec.Ledger.API.Mempool
     MempoolEnv,
     MempoolState,
     applyTxsTransition,
+
+    -- * Exports for compatibility
+    applyTxs,
+    mkMempoolEnv,
+    mkMempoolState,
+    overNewEpochState,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Era (Crypto, TxInBlock)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
-import Control.Arrow (left)
+import Control.Arrow (ArrowChoice (right), left)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
@@ -41,6 +49,7 @@ import Control.State.Transition.Extended
     TRC (..),
     applySTS,
   )
+import Data.Functor ((<&>))
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
@@ -48,11 +57,10 @@ import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv, LedgersPredicateFailure)
-import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
+import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv, LedgerPredicateFailure)
+import qualified Shelley.Spec.Ledger.STS.Ledger as Ledger
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
--- TODO #1304: add reapplyTxs
 class
   ( ChainData (Core.Tx era),
     AnnotatedData (Core.Tx era),
@@ -60,39 +68,97 @@ class
     Show (ApplyTxError era),
     Typeable (ApplyTxError era),
     SerialisableData (ApplyTxError era),
-    STS (Core.EraRule "LEDGERS" era),
-    BaseM (Core.EraRule "LEDGERS" era) ~ ShelleyBase,
-    Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
-    State (Core.EraRule "LEDGERS" era) ~ MempoolState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
-    PredicateFailure (Core.EraRule "LEDGERS" era) ~ LedgersPredicateFailure era
+    STS (Core.EraRule "LEDGER" era),
+    BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
+    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
+    State (Core.EraRule "LEDGER" era) ~ MempoolState era,
+    Signal (Core.EraRule "LEDGER" era) ~ TxInBlock era,
+    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era
   ) =>
   ApplyTx era
   where
-  applyTxs ::
+  -- | Validate a transaction against a mempool state, and return both the new
+  -- mempool state and a "validated" 'TxInBlock'.
+  --
+  -- The meaning of being "validated" depends on the era. In general, a
+  -- 'TxInBlock' has had all checks run, and can now only fail due to checks
+  -- which depend on the state; most notably, that UTxO inputs disappear.
+  applyTx ::
     MonadError (ApplyTxError era) m =>
     Globals ->
-    SlotNo ->
-    Seq (Core.Tx era) ->
-    NewEpochState era ->
-    m (NewEpochState era)
-  default applyTxs ::
-    (MonadError (ApplyTxError era) m) =>
+    MempoolEnv era ->
+    MempoolState era ->
+    Core.Tx era ->
+    m (MempoolState era, TxInBlock era)
+  default applyTx ::
+    Core.Tx era ~ TxInBlock era =>
+    MonadError (ApplyTxError era) m =>
     Globals ->
-    SlotNo ->
-    Seq (Core.Tx era) ->
-    NewEpochState era ->
-    m (NewEpochState era)
-  applyTxs globals slot txs state =
-    overNewEpochState (applyTxsTransition globals mempoolEnv txs) state
-    where
-      mempoolEnv = mkMempoolEnv state slot
+    MempoolEnv era ->
+    MempoolState era ->
+    Core.Tx era ->
+    m (MempoolState era, TxInBlock era)
+  applyTx globals env state tx =
+    let res =
+          flip runReader globals
+            . applySTS @(Core.EraRule "LEDGER" era)
+            $ TRC (env, state, tx)
+     in liftEither
+          . left (ApplyTxError . join)
+          . right (,tx)
+          $ res
+
+  -- | Reapply a 'TxInBlock'.
+  --
+  --   This applies the (validated) transaction to a new mempool state. It may
+  --   fail due to the mempool state changing (for example, a needed output
+  --   having already been spent). It should not fail due to any static check
+  --   (such as cryptographic checks).
+  --
+  --   Implementations of this function may optionally skip the performance of
+  --   any static checks. This is not required, but strongly encouraged since
+  --   this function will be called each time the mempool revalidates
+  --   transactions against a new mempool state.
+  applyTxInBlock ::
+    MonadError (ApplyTxError era) m =>
+    Globals ->
+    MempoolEnv era ->
+    MempoolState era ->
+    TxInBlock era ->
+    m (MempoolState era)
+  default applyTxInBlock ::
+    Core.Tx era ~ TxInBlock era =>
+    MonadError (ApplyTxError era) m =>
+    Globals ->
+    MempoolEnv era ->
+    MempoolState era ->
+    TxInBlock era ->
+    m (MempoolState era)
+  applyTxInBlock globals env state tx =
+    let res =
+          flip runReader globals
+            . applySTS @(Core.EraRule "LEDGER" era)
+            $ TRC (env, state, tx)
+     in liftEither
+          . left (ApplyTxError . join)
+          $ res
+
+  -- | Extract the underlying `Tx` from the `TxInBlock`.
+  extractTx :: TxInBlock era -> Core.Tx era
+  default extractTx ::
+    Core.Tx era ~ TxInBlock era =>
+    TxInBlock era ->
+    Core.Tx era
+  extractTx = id
 
 instance PraosCrypto c => ApplyTx (ShelleyEra c)
 
-type MempoolEnv era = Ledgers.LedgersEnv era
+type MempoolEnv era = Ledger.LedgerEnv era
 
-type MempoolState = LedgerState.LedgerState
+type MempoolState era =
+  ( LedgerState.UTxOState era,
+    LedgerState.DPState (Crypto era)
+  )
 
 -- | Construct the environment used to validate transactions from the full
 -- ledger state.
@@ -116,10 +182,11 @@ mkMempoolEnv
     { LedgerState.nesEs
     }
   slot =
-    Ledgers.LedgersEnv
-      { Ledgers.ledgersSlotNo = slot,
-        Ledgers.ledgersPp = LedgerState.esPp nesEs,
-        Ledgers.ledgersAccount = LedgerState.esAccountState nesEs
+    Ledger.LedgerEnv
+      { Ledger.ledgerSlotNo = slot,
+        Ledger.ledgerIx = 0,
+        Ledger.ledgerPp = LedgerState.esPp nesEs,
+        Ledger.ledgerAccount = LedgerState.esAccountState nesEs
       }
 
 -- | Construct a mempool state from the wider ledger state.
@@ -129,21 +196,26 @@ mkMempoolEnv
 --   a new block).
 mkMempoolState :: NewEpochState era -> MempoolState era
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
-  LedgerState.esLState nesEs
+  (_utxoState, _delegationState)
+  where
+    LedgerState.LedgerState
+      { LedgerState._utxoState,
+        LedgerState._delegationState
+      } = LedgerState.esLState nesEs
 
-data ApplyTxError era = ApplyTxError [PredicateFailure (Core.EraRule "LEDGERS" era)]
+data ApplyTxError era = ApplyTxError [PredicateFailure (Core.EraRule "LEDGER" era)]
 
 deriving stock instance
-  (Eq (PredicateFailure (Core.EraRule "LEDGERS" era))) =>
+  (Eq (PredicateFailure (Core.EraRule "LEDGER" era))) =>
   Eq (ApplyTxError era)
 
 deriving stock instance
-  (Show (PredicateFailure (Core.EraRule "LEDGERS" era))) =>
+  (Show (PredicateFailure (Core.EraRule "LEDGER" era))) =>
   Show (ApplyTxError era)
 
 instance
   ( ShelleyBased era,
-    ToCBOR (PredicateFailure (Core.EraRule "LEDGERS" era))
+    ToCBOR (PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   ToCBOR (ApplyTxError era)
   where
@@ -151,20 +223,33 @@ instance
 
 instance
   ( ShelleyBased era,
-    FromCBOR (PredicateFailure (Core.EraRule "LEDGERS" era))
+    FromCBOR (PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   FromCBOR (ApplyTxError era)
   where
   fromCBOR = ApplyTxError <$> fromCBOR
 
+-- | Old 'applyTxs'
+applyTxs ::
+  ApplyTx era =>
+  MonadError (ApplyTxError era) m =>
+  Globals ->
+  SlotNo ->
+  Seq (Core.Tx era) ->
+  NewEpochState era ->
+  m (NewEpochState era)
+applyTxs
+  globals
+  slot
+  txs
+  state =
+    overNewEpochState (applyTxsTransition globals mempoolEnv txs) state
+    where
+      mempoolEnv = mkMempoolEnv state slot
+
 applyTxsTransition ::
   forall era m.
-  ( STS (Core.EraRule "LEDGERS" era),
-    BaseM (Core.EraRule "LEDGERS" era) ~ ShelleyBase,
-    Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
-    State (Core.EraRule "LEDGERS" era) ~ MempoolState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
-    PredicateFailure (Core.EraRule "LEDGERS" era) ~ LedgersPredicateFailure era,
+  ( ApplyTx era,
     MonadError (ApplyTxError era) m
   ) =>
   Globals ->
@@ -173,13 +258,10 @@ applyTxsTransition ::
   MempoolState era ->
   m (MempoolState era)
 applyTxsTransition globals env txs state =
-  let res =
-        flip runReader globals
-          . applySTS @(Core.EraRule "LEDGERS" era)
-          $ TRC (env, state, txs)
-   in liftEither
-        . left (ApplyTxError . join)
-        $ res
+  foldM
+    (\st tx -> fst <$> applyTx globals env st tx)
+    state
+    txs
 
 -- | Transform a function over mempool states to one over the full
 -- 'NewEpochState'.
@@ -189,9 +271,12 @@ overNewEpochState ::
   NewEpochState era ->
   f (NewEpochState era)
 overNewEpochState f st = do
-  res <- f $ mkMempoolState st
-  pure $
-    st
-      { LedgerState.nesEs =
-          (LedgerState.nesEs st) {LedgerState.esLState = res}
-      }
+  f (mkMempoolState st)
+    <&> \(us, ds) ->
+      st
+        { LedgerState.nesEs =
+            (LedgerState.nesEs st)
+              { LedgerState.esLState =
+                  LedgerState.LedgerState us ds
+              }
+        }
