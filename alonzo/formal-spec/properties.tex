@@ -22,7 +22,7 @@ This appendix collects the main formal properties that the new ledger rules are 
 \item
   \emph{Fee Movement.}
   If a transaction is accepted and marked as paying fees only
-  (i.e. $\fun{txvaltag}\, tx = \True$), then the only change to the ledger
+  (i.e. $\fun{txvaltag}\, tx = \False$), then the only change to the ledger
   when processing the transaction is that the inputs marked for paying
   fees are moved to the fee pot.
 \item
@@ -46,8 +46,23 @@ This appendix collects the main formal properties that the new ledger rules are 
 \item
   \todo{\emph{Cost consistency.} - no transaction exceeds the specified resource bounds.}
 \item
+  \emph{Cost Increase.} if a transaction is valid, it will remain valid if you increase the execution units
+\item
+  \emph{Cost Lower Bound.} if a transaction contains at least one valid script, it must have at least one execution unit
+\item
   \todo{\emph{Backwards Compatibility.} Any transaction that was accepted in a previous version of the ledger rules
     has exactly the same cost and effect, except that the transaction output is extended.}
+\item \emph{UTxO-changing transitions.} Only the UTXOS transition affects the ledger UTxO in Alonzo.
+For Shelley/ShelleyMA, only the UTXO transition does.
+\item \emph{Run all scripts.} All scripts attached to a transaction are run
+\item \emph{Scripts are run on correct inputs.}
+  A script is run for everything witnessed with a non-native script, and the script will
+get all the correct inputs, which must be present.
+\item \emph{Determinism of script validation.} In an otherwise valid transaction which remains valid
+  despite ledger state changes, the outcome
+  of script validation is not affected by these ledger state changes.
+\item \emph{Script inputs are fixed.} All data that a non-native script gets as input
+is fixed either by being signed in a transaction, or fixed by its hash living on the ledger
 \item
   ... \todo{Anything else?}
 \end{enumerate}
