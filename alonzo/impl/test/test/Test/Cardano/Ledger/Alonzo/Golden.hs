@@ -10,9 +10,8 @@ module Test.Cardano.Ledger.Alonzo.Golden
 where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
-import Cardano.Ledger.ShelleyMA.Rules.Utxo (scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import qualified Data.ByteString.Char8 as BS
 import Data.Char (chr)
@@ -25,8 +24,14 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Cardano.Ledger.Mary.Golden
 
-goldenScaledMinDeposit :: TestTree
-goldenScaledMinDeposit =
+
+adaPerUTxOWordLocal :: Coin
+
+calcMinUTxO :: TxOut era -> Coin
+calcMinUTxO tout = Coin (utxoEntrySize tout * adaPerUTxOWordLocal)
+
+goldenUTxOEntryMinAda :: TestTree
+goldenUTxOEntryMinAda =
   testGroup
     "golden tests - UTxOEntryMinAda"
     [ testCase "one policy, one (smallest) name, no datum hash" $

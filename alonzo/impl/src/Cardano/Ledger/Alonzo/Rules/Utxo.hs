@@ -290,7 +290,7 @@ utxoTransition ::
     HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_adaPerUTxOByte" (Core.PParams era) Coin,
+    HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxValSize" (Core.PParams era) Natural,
     -- We fix Core.Tx, Core.Value, Core.TxBody, and Core.TxOut
     Core.TxOut era ~ Alonzo.TxOut era,
@@ -351,7 +351,7 @@ utxoTransition = do
       (Set.fromList wdrlsWrongNetwork)
 
   -- pointwise is used because non-ada amounts must be >= 0 too
-  let (Coin adaPerUTxOByte) = getField @"_adaPerUTxOByte" pp
+  let (Coin adaPerUTxOWord) = getField @"_adaPerUTxOWord" pp
       outputsTooSmall =
         filter
           ( \out ->
@@ -360,7 +360,7 @@ utxoTransition = do
                     Val.pointwise
                       (>=)
                       v
-                      (Val.inject $ Coin (utxoEntrySize out * adaPerUTxOByte))
+                      (Val.inject $ Coin (utxoEntrySize out * adaPerUTxOWord))
           )
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
@@ -406,11 +406,11 @@ instance
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_adaPerUTxOByte" (Core.PParams era) Coin,
+    HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_adaPerUTxOByte" (Core.PParams era) Coin,
+    HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxValSize" (Core.PParams era) Natural,
     -- We fix Core.Value, Core.TxBody, and Core.TxOut
     Core.Value era ~ Alonzo.Value (Crypto era),
