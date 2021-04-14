@@ -23,6 +23,8 @@ import Shelley.Spec.Ledger.Tx (hashScript)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 --
 -- Golden Tests for the scaled MinUTxO function
@@ -58,6 +60,10 @@ smallName c = AssetName . BS.pack $ [c]
 largestName :: Char -> AssetName
 largestName c = AssetName . BS.pack $ c : "0123456789ABCDEFGHIJ0123456789A"
 
+-- | try using a real asset name the way the CLI handles input
+realName :: AssetName
+realName = Text.encodeUtf8 . Text.pack "ATADAcoin"
+
 -- | This is the current value of the protocol parameter
 --  at the time this comment was written, namely one Ada.
 minUTxO :: Coin
@@ -83,6 +89,15 @@ goldenScaledMinDeposit =
           )
           minUTxO
           @?= Coin 1444443,
+      testCase "one policy, one (real) name" $
+        scaledMinDeposit
+          ( Value 1444443 $
+              Map.singleton
+                pid1
+                (Map.fromList [(realName, 1)])
+          )
+          minUTxO
+          @?= Coin 1481480,
       testCase "one policy, three (small) name" $
         scaledMinDeposit
           ( Value 1555554 $
