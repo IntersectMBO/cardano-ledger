@@ -39,6 +39,7 @@ let
         packages.cardano-ledger-shelley-ma-test.components.tests.cardano-ledger-shelley-ma-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         packages.small-steps.configureFlags = [ "--ghc-option=-Werror" ];
         packages.shelley-spec-ledger-test.components.tests.shelley-spec-ledger-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
+        packages.cardano-ledger-alonzo.components.tests.cardano-ledger-alonzo-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         enableLibraryProfiling = profiling;
         # Disable doctests for now (waiting for https://github.com/input-output-hk/haskell.nix/pull/427):
         packages.small-steps.components.tests.doctests.buildable = lib.mkForce false;

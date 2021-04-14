@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -34,7 +35,11 @@ module Cardano.Ledger.Alonzo.Data
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), TokenType (..), peekTokenType)
+import Cardano.Ledger.Alonzo.Scripts
+  ( Script (..),
+    isPlutusScript,
+  )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -60,23 +65,28 @@ import Cardano.Ledger.Pretty
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeHash,
-    SafeToHash,
+    SafeToHash (..),
     hashAnnotated,
   )
 import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
 import Data.Coders
+import qualified Data.Foldable as Foldable
+import qualified Data.List as List
 import Data.Map (Map)
+import Data.Maybe (mapMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
--- import Plutus.V1.Ledger.Scripts-- Supply the HasField and Validate instances for Alonzo
 import qualified Language.PlutusTx as Plutus
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Metadata (Metadatum)
+import Shelley.Spec.Ledger.Serialization (mapFromCBOR)
 
 -- =====================================================================
 -- Plutus.Data is the type that Plutus expects as data.
@@ -88,7 +98,9 @@ instance FromCBOR (Annotator Plutus.Data) where
     where
       decPlutus :: Word -> Decode 'Open (Annotator Plutus.Data)
       decPlutus 0 = Ann (SumD Plutus.Constr) <*! (Ann From) <*! listDecodeA From
-      decPlutus 1 = Ann (SumD Plutus.Map) <*! listDecodeA (pairDecodeA From From)
+      decPlutus 1 =
+        Ann (SumD Plutus.Map)
+          <*! (D $ decodeMapContentsTraverse fromCBOR fromCBOR)
       decPlutus 2 = Ann (SumD Plutus.List) <*! listDecodeA From
       decPlutus 3 = Ann (SumD Plutus.I <! From)
       decPlutus 4 = Ann (SumD Plutus.B <! From)
@@ -98,7 +110,9 @@ instance ToCBOR Plutus.Data where
   toCBOR x = encode (encPlutus x)
     where
       encPlutus (Plutus.Constr tag args) = Sum Plutus.Constr 0 !> To tag !> listEncode args
-      encPlutus (Plutus.Map pairs) = Sum Plutus.Map 1 !> listEncode pairs
+      encPlutus (Plutus.Map pairs) =
+        Sum Plutus.Map 1
+          !> E encodeFoldableMapPairs pairs
       encPlutus (Plutus.List xs) = Sum Plutus.List 2 !> listEncode xs
       encPlutus (Plutus.I i) = Sum Plutus.I 3 !> To i
       encPlutus (Plutus.B bytes) = Sum Plutus.B 4 !> To bytes
@@ -166,7 +180,9 @@ deriving via InspectHeapNamed "AuxiliaryDataRaw" (AuxiliaryDataRaw era) instance
 instance
   ( Typeable era,
     Ord (Core.Script era),
-    ToCBOR (Core.Script era)
+    Core.Script era ~ Script era,
+    ToCBOR (Core.Script era),
+    Typeable (Crypto era)
   ) =>
   ToCBOR (AuxiliaryDataRaw era)
   where
@@ -174,32 +190,94 @@ instance
     encode (encodeRaw s d m)
 
 encodeRaw ::
-  (ToCBOR (Core.Script era), Typeable era) =>
+  ( Core.Script era ~ Script era,
+    Typeable (Crypto era),
+    Typeable era
+  ) =>
   Map Word64 Metadatum ->
   StrictSeq (Core.Script era) ->
   Set (Data era) ->
-  Encode ('Closed 'Dense) (AuxiliaryDataRaw era)
-encodeRaw m s d =
-  ( Rec AuxiliaryDataRaw
-      !> mapEncode m
-      !> E encodeFoldable s
-      !> setEncode d
+  Encode ('Closed 'Sparse) (AuxiliaryDataRaw era)
+encodeRaw metadata allScripts dataSet =
+  ( Tag 259 $
+      Keyed
+        (\m tss pss d -> AuxiliaryDataRaw m (StrictSeq.fromList $ tss <> pss) d)
+        !> Omit null (Key 0 $ mapEncode metadata)
+        !> Omit null (Key 1 $ E (encodeFoldable . mapMaybe getTimelock) timelocks)
+        !> Omit null (Key 2 $ E (encodeFoldable . mapMaybe getPlutus) plutusScripts)
+        !> Omit null (Key 3 $ setEncode dataSet)
   )
+  where
+    getTimelock (TimelockScript x) = Just x
+    getTimelock _ = Nothing
+    getPlutus (PlutusScript x) = Just x
+    getPlutus _ = Nothing
+    (plutusScripts, timelocks) =
+      List.partition
+        isPlutusScript
+        (Foldable.toList allScripts)
 
 instance
   ( Era era,
     Ord (Core.Script era),
-    FromCBOR (Annotator (Core.Script era))
+    FromCBOR (Annotator (Core.Script era)),
+    Core.Script era ~ Script era
   ) =>
   FromCBOR (Annotator (AuxiliaryDataRaw era))
   where
   fromCBOR =
-    decode
-      ( Ann (RecD AuxiliaryDataRaw)
-          <*! Ann mapDecode
-          <*! D (sequence <$> decodeStrictSeq fromCBOR)
-          <*! setDecodeA From
-      )
+    peekTokenType >>= \case
+      TypeMapLen -> decodeShelley
+      TypeMapLen64 -> decodeShelley
+      TypeMapLenIndef -> decodeShelley
+      TypeListLen -> decodeShelleyMA
+      TypeListLen64 -> decodeShelleyMA
+      TypeListLenIndef -> decodeShelleyMA
+      TypeTag -> decodeAlonzo
+      TypeTag64 -> decodeAlonzo
+      _ -> error "Failed to decode AuxiliaryData"
+    where
+      decodeShelley =
+        decode
+          ( Ann (Emit AuxiliaryDataRaw)
+              <*! Ann (D mapFromCBOR)
+              <*! Ann (Emit StrictSeq.empty)
+              <*! Ann (Emit Set.empty)
+          )
+      decodeShelleyMA =
+        decode
+          ( Ann (RecD AuxiliaryDataRaw)
+              <*! Ann (D mapFromCBOR)
+              <*! ( D $
+                      sequence
+                        <$> decodeStrictSeq
+                          (fmap TimelockScript <$> fromCBOR)
+                  )
+              <*! Ann (Emit Set.empty)
+          )
+      decodeAlonzo =
+        decode $
+          TagD 259 $
+            SparseKeyed "AuxiliaryData" (pure emptyAuxData) auxDataField []
+
+      auxDataField :: Word -> Field (Annotator (AuxiliaryDataRaw era))
+      auxDataField 0 = fieldA (\x ad -> ad {txMD' = x}) (D mapFromCBOR)
+      auxDataField 1 =
+        fieldAA
+          (\x ad -> ad {scripts' = scripts' ad <> (TimelockScript <$> x)})
+          (D (sequence <$> decodeStrictSeq fromCBOR))
+      auxDataField 2 =
+        fieldA
+          (\x ad -> ad {scripts' = scripts' ad <> (PlutusScript <$> x)})
+          (D (decodeStrictSeq fromCBOR))
+      auxDataField 3 =
+        fieldAA
+          (\x ad -> ad {dats' = x})
+          (setDecodeA From)
+      auxDataField n = field (\_ t -> t) (Invalid n)
+
+emptyAuxData :: AuxiliaryDataRaw era
+emptyAuxData = AuxiliaryDataRaw mempty mempty mempty
 
 -- ================================================================================
 -- Version with serialized bytes.
@@ -220,12 +298,17 @@ deriving via
   instance
     ( Era era,
       Ord (Core.Script era),
-      FromCBOR (Annotator (Core.Script era))
+      FromCBOR (Annotator (Core.Script era)),
+      Script era ~ Core.Script era -- FIXME: this smells fishy
     ) =>
     FromCBOR (Annotator (AuxiliaryData era))
 
 pattern AuxiliaryData ::
-  (Era era, ToCBOR (Core.Script era), Ord (Core.Script era)) =>
+  ( Era era,
+    ToCBOR (Core.Script era),
+    Core.Script era ~ Script era,
+    Ord (Core.Script era)
+  ) =>
   Map Word64 Metadatum ->
   StrictSeq (Core.Script era) ->
   Set (Data era) ->

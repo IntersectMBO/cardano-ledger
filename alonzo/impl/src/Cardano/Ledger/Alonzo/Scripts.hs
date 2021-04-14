@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -35,7 +36,7 @@ module Cardano.Ledger.Alonzo.Scripts
   )
 where
 
-import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto))
@@ -65,7 +66,7 @@ import Data.Coders
 import Data.Map (Map)
 import Data.MemoBytes
 import Data.Typeable
-import Data.Word (Word64)
+import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
@@ -83,7 +84,7 @@ data Tag
     Cert
   | -- | Validates withdrawl from a reward account
     Rewrd
-  deriving (Eq, Generic, Ord, Show)
+  deriving (Eq, Generic, Ord, Show, Enum, Bounded)
 
 instance NoThunks Tag
 
@@ -203,22 +204,23 @@ scriptfee (Prices pr_mem pr_steps) (ExUnits mem steps) =
 -- Serialisation
 --------------------------------------------------------------------------------
 
+tagToWord8 :: Tag -> Word8
+tagToWord8 = toEnum . fromEnum
+
+word8ToTag :: Word8 -> Maybe Tag
+word8ToTag e
+  | fromEnum e > fromEnum (maxBound :: Tag) = Nothing
+  | fromEnum e < fromEnum (minBound :: Tag) = Nothing
+  | otherwise = Just $ toEnum (fromEnum e)
+
 instance ToCBOR Tag where
-  toCBOR = encode . encodeTag
-    where
-      encodeTag Spend = Sum Spend 0
-      encodeTag Mint = Sum Mint 1
-      encodeTag Cert = Sum Cert 2
-      encodeTag Rewrd = Sum Rewrd 3
+  toCBOR = toCBOR . tagToWord8
 
 instance FromCBOR Tag where
-  fromCBOR = decode $ Summands "Tag" decodeTag
-    where
-      decodeTag 0 = SumD Spend
-      decodeTag 1 = SumD Mint
-      decodeTag 2 = SumD Cert
-      decodeTag 3 = SumD Rewrd
-      decodeTag n = Invalid n
+  fromCBOR =
+    word8ToTag <$> fromCBOR >>= \case
+      Nothing -> cborError $ DecoderErrorCustom "Tag" "Unknown redeemer tag"
+      Just n -> pure n
 
 instance ToCBOR ExUnits where
   toCBOR (ExUnits m s) = encode $ Rec ExUnits !> To m !> To s

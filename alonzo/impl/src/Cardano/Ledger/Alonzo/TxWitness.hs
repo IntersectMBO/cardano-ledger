@@ -44,11 +44,16 @@ module Cardano.Ledger.Alonzo.TxWitness
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Alonzo.Data (Data, DataHash, ppData)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag, ppExUnits, ppTag)
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    encodeListLen,
+    serializeEncoding',
+  )
+import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData, ppData)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag, isPlutusScript, ppExUnits, ppTag)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era (Crypto), ValidateScript, hashScript)
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -64,9 +69,13 @@ import Cardano.Ledger.Pretty
     ppWord64,
   )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
+import qualified Data.ByteString.Short as SBS
 import Data.Coders
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
+import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
@@ -76,6 +85,7 @@ import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
+import Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import Shelley.Spec.Ledger.TxBody (WitVKey)
 
 -- ==========================================
@@ -88,11 +98,16 @@ data RdmrPtr
 
 instance NoThunks RdmrPtr
 
-instance ToCBOR RdmrPtr where
-  toCBOR (RdmrPtr t w) = encode $ Rec RdmrPtr !> To t !> To w
+instance ToCBORGroup RdmrPtr where
+  listLen _ = 2
+  listLenBound _ = 2
+  toCBORGroup (RdmrPtr t w) = toCBOR t <> toCBOR w
+  encodedGroupSizeExpr size_ _proxy =
+    encodedSizeExpr size_ (Proxy :: Proxy Tag)
+      + encodedSizeExpr size_ (Proxy :: Proxy Word64)
 
-instance FromCBOR RdmrPtr where
-  fromCBOR = decode $ RecD RdmrPtr <! From <! From
+instance FromCBORGroup RdmrPtr where
+  fromCBORGroup = RdmrPtr <$> fromCBOR <*> fromCBOR
 
 -- ====================================================================
 -- In the Spec, TxWitness has 4 logical fields. Here in the implementation
@@ -135,12 +150,24 @@ pattern Redeemers ::
 pattern Redeemers rs <-
   RedeemersConstr (Memo (RedeemersRaw rs) _)
   where
-    Redeemers rs' = RedeemersConstr . memoBytes $ Rec RedeemersRaw !> mapEncode rs'
+    Redeemers rs' =
+      let enc = encodeFoldableEncoder $ \(ptr, (dats, exs)) ->
+            encodeListLen 4
+              <> toCBORGroup ptr
+              <> toCBOR dats
+              <> toCBOR exs
+       in RedeemersConstr $
+            Memo
+              (RedeemersRaw rs')
+              (SBS.toShort . serializeEncoding' . enc . Map.assocs $ rs')
 
 {-# COMPLETE Redeemers #-}
 
 unRedeemers :: Redeemers era -> Map RdmrPtr (Data era, ExUnits)
 unRedeemers (Redeemers' rs) = rs
+
+nullRedeemers :: Redeemers era -> Bool
+nullRedeemers = Map.null . unRedeemers
 
 -- | Internal 'TxWitness' type, lacking serialised bytes.
 data TxWitnessRaw era = TxWitnessRaw
@@ -197,7 +224,7 @@ pattern TxWitness' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} <-
 {-# COMPLETE TxWitness' #-}
 
 pattern TxWitness ::
-  (Era era, ToCBOR (Core.Script era)) =>
+  (Era era, Core.Script era ~ Script era) =>
   Set (WitVKey 'Witness (Crypto era)) ->
   Set (BootstrapWitness (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
@@ -239,36 +266,50 @@ instance HasField "txrdmrs" (TxWitness era) (Redeemers era) where
 --------------------------------------------------------------------------------
 
 encodeWitnessRaw ::
-  (Era era, ToCBOR (Core.Script era), ToCBOR (Data era)) =>
+  (Era era, Core.Script era ~ Script era, ToCBOR (Data era)) =>
   Set (WitVKey 'Witness (Crypto era)) ->
   Set (BootstrapWitness (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
   Map (DataHash (Crypto era)) (Data era) ->
   Redeemers era ->
-  Encode ('Closed 'Dense) (TxWitnessRaw era)
-encodeWitnessRaw a b c d e =
-  Rec TxWitnessRaw
-    !> setEncode a
-    !> setEncode b
-    !> mapEncode c
-    !> mapEncode d
-    !> To e
-
--- TxWitness includes a field with type: (Map RdmrPtr (Data era, ExUnits))
--- We only have a (ToCBOR (Annotator (Data era))) instance, so we need a special
--- way to decode a Map where one half of its range has only a (FromCBOR (Annotator _))
--- instance. We have to be careful since the map is encodedwith 'mapToCBOR' and the
--- decoder needs to be consistent with that encoding. So we use
--- fromMapXA From (fromPairAX From From)  to decode that field
+  Encode ('Closed 'Sparse) (TxWitnessRaw era)
+encodeWitnessRaw vkeys boots scripts dats rdmrs =
+  Keyed
+    (\a b c d e f -> TxWitnessRaw a b (c <> d) e f)
+    !> Omit null (Key 0 $ setEncode vkeys)
+    !> Omit null (Key 2 $ setEncode boots)
+    !> Omit
+      null
+      (Key 1 $ E (encodeFoldable . mapMaybe unwrapTS . Map.elems) timelocks)
+    !> Omit
+      null
+      (Key 3 $ E (encodeFoldable . mapMaybe unwrapPS . Map.elems) plutusScripts)
+    !> Omit null (Key 4 $ E (encodeFoldable . Map.elems) dats)
+    !> Omit nullRedeemers (Key 5 $ To rdmrs)
+  where
+    unwrapTS (TimelockScript x) = Just x
+    unwrapTS _ = Nothing
+    unwrapPS (PlutusScript x) = Just x
+    unwrapPS _ = Nothing
+    (plutusScripts, timelocks) = Map.partition isPlutusScript scripts
 
 instance
   (Era era) =>
   FromCBOR (Annotator (RedeemersRaw era))
   where
-  fromCBOR =
-    decode $
-      Ann (RecD RedeemersRaw)
-        <*! mapDecodeA (Ann From) (pairDecodeA From (Ann From))
+  fromCBOR = fmap RedeemersRaw <$> dec
+    where
+      dec :: forall s. Decoder s (Annotator (Map RdmrPtr (Data era, ExUnits)))
+      dec = do
+        entries <- fmap sequence . decodeList
+          . decodeRecordNamed "redeemer" (const 4)
+          $ do
+            rdmrPtr <- fromCBORGroup
+            dat <- fromCBOR
+            ex <- fromCBOR
+            let f x y z = (x, (y, z))
+            pure $ f <$> pure rdmrPtr <*> dat <*> pure ex
+        pure $ Map.fromList <$> entries
 
 deriving via
   (Mem (RedeemersRaw era))
@@ -277,28 +318,68 @@ deriving via
 
 instance
   ( Era era,
-    FromCBOR (Annotator (Core.Script era)),
     ToCBOR (Data era),
     ToCBOR (Core.Script era),
-    Typeable (Core.Script era)
+    Typeable (Core.Script era),
+    ValidateScript era,
+    Core.Script era ~ Script era
   ) =>
   FromCBOR (Annotator (TxWitnessRaw era))
   where
   fromCBOR =
     decode $
-      Ann (RecD TxWitnessRaw)
-        <*! setDecodeA From
-        <*! setDecodeA From
-        <*! mapDecodeA (Ann From) From
-        <*! mapDecodeA (Ann From) From
-        <*! From
+      SparseKeyed
+        "TxWitness"
+        (pure emptyTxWitness)
+        txWitnessField
+        []
+    where
+      emptyTxWitness = TxWitnessRaw mempty mempty mempty mempty emptyRedeemers
+      emptyRedeemers = Redeemers mempty
+
+      txWitnessField :: Word -> Field (Annotator (TxWitnessRaw era))
+      txWitnessField 0 =
+        fieldAA
+          (\x wits -> wits {_txwitsVKey = x})
+          (setDecodeA From)
+      txWitnessField 2 =
+        fieldAA
+          (\x wits -> wits {_txwitsBoot = x})
+          (setDecodeA From)
+      txWitnessField 1 =
+        fieldAA
+          addScripts
+          (listDecodeA (fmap TimelockScript <$> From))
+      txWitnessField 3 =
+        fieldA
+          addScripts
+          (fmap PlutusScript <$> listDecode)
+      txWitnessField 4 =
+        fieldAA
+          (\x wits -> wits {_txdats = x})
+          (fmap (keyBy hashData) <$> listDecodeA From)
+      txWitnessField 5 = fieldAA (\x wits -> wits {_txrdmrs = x}) From
+      txWitnessField n = field (\_ t -> t) (Invalid n)
+
+      addScripts :: [Script era] -> TxWitnessRaw era -> TxWitnessRaw era
+      addScripts x wits = wits {_txscripts = getKeys ([] :: [era]) x <> _txscripts wits}
+      getKeys ::
+        forall proxy e.
+        ValidateScript e =>
+        proxy e ->
+        [Core.Script e] ->
+        Map (ScriptHash (Crypto e)) (Core.Script e)
+      getKeys _ = keyBy (hashScript @e)
+
+      keyBy :: forall a b. Ord b => (a -> b) -> [a] -> Map b a
+      keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 
 deriving via
   (Mem (TxWitnessRaw era))
   instance
     ( Era era,
-      FromCBOR (Annotator (Core.Script era)),
-      ToCBOR (Core.Script era)
+      ValidateScript era,
+      Core.Script era ~ Script era
     ) =>
     FromCBOR (Annotator (TxWitness era))
 

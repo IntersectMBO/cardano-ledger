@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -31,10 +32,11 @@ import Cardano.Binary
     withSlice,
   )
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx, segwitTx)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.SafeHash (SafeToHash, originalBytes)
 import Control.Monad (unless)
@@ -189,6 +191,8 @@ instance
     ToCBOR (Core.Script era),
     ToCBOR (Core.TxBody era),
     ToCBOR (Core.Witnesses era),
+    ValidateScript era,
+    Core.Script era ~ Script era,
     Era era
   ) =>
   FromCBOR (Annotator (TxSeq era))
