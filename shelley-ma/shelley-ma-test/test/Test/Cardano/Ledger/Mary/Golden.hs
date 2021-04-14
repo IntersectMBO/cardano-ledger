@@ -62,7 +62,7 @@ largestName c = AssetName . BS.pack $ c : "0123456789ABCDEFGHIJ0123456789A"
 
 -- | try using a real asset name the way the CLI handles input
 realName :: AssetName
-realName = Text.encodeUtf8 . Text.pack "ATADAcoin"
+realName = AssetName (Text.encodeUtf8 . Text.pack) "ATADAcoin"
 
 -- | This is the current value of the protocol parameter
 --  at the time this comment was written, namely one Ada.
