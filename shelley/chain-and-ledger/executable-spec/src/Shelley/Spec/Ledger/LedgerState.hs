@@ -125,7 +125,7 @@ import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Provenance (ProvM, liftProv)
-import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, range, (∈), (∪+), (▷), (◁))
+import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
 import Data.Coders
   ( Decode (From, RecD),
@@ -1059,7 +1059,7 @@ applyRUpd
           (aggregateRewards pr $ rs ru)
       as' =
         as
-          { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold (range unregRU),
+          { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold unregRU,
             _reserves = addDeltaCoin (_reserves as) (deltaR ru)
           }
       ls' =
