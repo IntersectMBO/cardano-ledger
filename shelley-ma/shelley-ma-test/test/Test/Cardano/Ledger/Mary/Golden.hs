@@ -18,13 +18,13 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Char (chr)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 
 --
 -- Golden Tests for the scaled MinUTxO function
@@ -62,7 +62,7 @@ largestName c = AssetName . BS.pack $ c : "0123456789ABCDEFGHIJ0123456789A"
 
 -- | try using a real asset name the way the CLI handles input
 realName :: AssetName
-realName = AssetName (Text.encodeUtf8 . Text.pack) "ATADAcoin"
+realName = AssetName $ (Text.encodeUtf8 . Text.pack) "ATADAcoin"
 
 -- | This is the current value of the protocol parameter
 --  at the time this comment was written, namely one Ada.
