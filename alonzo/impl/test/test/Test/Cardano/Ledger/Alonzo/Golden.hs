@@ -23,9 +23,14 @@ import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Cardano.Ledger.Mary.Golden
+import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
 
-
+-- | ada cost of storing a word8 of data as a UTxO entry, assuming no change to minUTxOValue
 adaPerUTxOWordLocal :: Coin
+adaPerUTxOWordLocal = Coin $ quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
+  where
+    utxoEntrySizeWithoutValLocal = 29
+    minUTxOValueShelleyMA = 1000000
 
 calcMinUTxO :: TxOut era -> Coin
 calcMinUTxO tout = Coin (utxoEntrySize tout * adaPerUTxOWordLocal)
