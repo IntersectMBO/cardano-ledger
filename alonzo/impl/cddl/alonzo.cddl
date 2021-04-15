@@ -1,9 +1,0 @@
-; Alonzo Types
-
-move_instantaneous_reward = [ 0 / 1, { * stake_credential => delta_coin } / coin ]
-; The first field determines where the funds are drawn from.
-; 0 denotes the reserves, 1 denotes the treasury.
-; If the second field is a map, funds are moved to stake credentials,
-; otherwise the funds are given to the other accounting pot.
-
-delta_coin = int

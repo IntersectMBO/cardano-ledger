@@ -169,7 +169,7 @@ collectTwoPhaseScriptInputs ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Core.PParams era ->
-  Tx era ->
+  ValidatedTx era ->
   UTxO era ->
   Either [CollectError (Crypto era)] [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs pp tx utxo =

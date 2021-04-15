@@ -31,22 +31,25 @@ trippingF ::
   (src -> Either target (BSL.ByteString, src)) ->
   src ->
   Property
-trippingF f x = case f x of
-  Right (remaining, y) | BSL.null remaining -> x === y
-  Right (remaining, _) ->
-    counterexample
-      ("Unconsumed trailing bytes:\n" <> BSL.unpack remaining)
-      False
-  Left stuff ->
-    counterexample
-      ( concat
-          [ "Failed to decode: ",
-            show stuff,
-            "\nbytes: ",
-            show (Base16.encode (serialize x))
-          ]
-      )
-      False
+trippingF f x =
+  case f x of
+    Right (remaining, y)
+      | BSL.null remaining ->
+        x === y
+    Right (remaining, _) ->
+      counterexample
+        ("Unconsumed trailing bytes:\n" <> BSL.unpack remaining)
+        False
+    Left stuff ->
+      counterexample
+        ( concat
+            [ "Failed to decode: ",
+              show stuff,
+              "\nbytes: ",
+              show (Base16.encode (serialize x))
+            ]
+        )
+        False
 
 trippingAnn ::
   ( Eq t,

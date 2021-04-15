@@ -9,7 +9,7 @@ is accounted for in the size calculation.
 \begin{figure*}[h]
   \emph{Constants}
   \begin{align*}
-  & \mathsf{JustDatHashSize} \in \MemoryEstimate \\
+  & \mathsf{JustDataHashSize} \in \MemoryEstimate \\
   & \text{The size of a datum hash wrapped in $\DataHash^?$} \\~
   \\
   & \mathsf{NothingSize} \in \MemoryEstimate \\
@@ -18,12 +18,12 @@ is accounted for in the size calculation.
   %
   \emph{Helper Functions}
   \begin{align*}
-    & \fun{datHashSize} \in \DataHash^? \to \MemoryEstimate \\
-    & \fun{datHashSize}~ \Nothing = \mathsf{NothingSize} \\
-    & \fun{datHashSize}~ \wcard = \mathsf{JustDatHashSize} \\
+    & \fun{dataHashSize} \in \DataHash^? \to \MemoryEstimate \\
+    & \fun{dataHashSize}~ \Nothing = \mathsf{NothingSize} \\
+    & \fun{dataHashSize}~ \wcard = \mathsf{JustDataHashSize} \\
     & \text{Return the size of $\DataHash^?$} \\~\\
     & \fun{utxoEntrySize} \in \TxOut \to \MemoryEstimate \\
-    & \fun{utxoEntrySize}~\var{(tout, d)} = \mathsf{utxoEntrySizeWithoutVal} + (\fun{size} (\fun{getValue}~tout)) + \mathsf{datHashSize}~d \\
+    & \fun{utxoEntrySize}~\var{(tout, d)} = \mathsf{utxoEntrySizeWithoutVal} + (\fun{size} (\fun{getValue}~tout)) + \mathsf{dataHashSize}~d \\
     & \text{Calculate the size of a UTxO entry}
   \end{align*}
   \caption{Value Size}
@@ -31,7 +31,7 @@ is accounted for in the size calculation.
 \end{figure*}
 
 \begin{note}
-  Get datHashSize from heapwords on the code
+  Get dataHashSize from heapwords on the code
 \end{note}
 
 There is a change of constant value from the ShelleyMA era, specifically:
@@ -44,6 +44,6 @@ There is a change of constant value from the ShelleyMA era, specifically:
 Additionally, the new constants used in Alonzo have values :
 
 \begin{itemize}
-  \item $\mathsf{JustDatHashSize} = $ words
+  \item $\mathsf{JustDataHashSize} = $ words
   \item $\mathsf{NothingSize} = $ words
 \end{itemize}
