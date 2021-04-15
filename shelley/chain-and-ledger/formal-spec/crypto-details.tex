@@ -29,3 +29,55 @@ See Figure~\ref{fig:rules:ocert}.
 The \fun{verifyVrf} function from Figure~\ref{fig:defs-vrf}
 uses ECVRF-ED25519-SHA512-Elligator2 as described in the draft IETF specification
 \cite{rfcVRFDraft}.
+
+\subsection{Multi-Signatures}
+As presented in Figure~\ref{fig:types-msig}, Shelley realizes multi-signatures 
+in a native way, via a script-like DSL. One defines the conditions required to 
+validate a multi-signature, and the script takes care of verifying the 
+correctness of the request. It does so in a na\"ive way, i.e. checking every 
+signature individually. For instance, if the requirement is to have $n$ valid 
+signatures out of some set $\mathcal{V}$ of public keys, the na\"ive 
+script-based solution checks if: (i) the number of submitted signatures is 
+greater or equal to $n$, (ii) the distinct verification keys are part of the set 
+$\mathcal{V}$, and (iii) at least $n$ signatures are valid. However, there are 
+more efficient ways to achieve this using more advanced multi-signature schemes, 
+that allow for aggregating both the signatures and the verification procedure. 
+This results in less data to be stored on-chain, and a cheaper verification 
+procedure. Several schemes provide these properties~\cite{musigBoneh, musig, 
+musig2, pixel}, and we are currently investigating which would be the best fit 
+for the Cardano ecosystem. We formally introduce multi-signature schemes.
+
+\sloppy
+A multi-signature scheme~\cite{musigs} is defined as a tuple of algorithms 
+$\textsf{MS} = (\textsf{MS-Setup}, \textsf{MS-KG}, \textsf{MS-AVK}, 
+\allowbreak\textsf{MS-Sign}, \textsf{MS-ASign}, \textsf{MS-Verify)}$ such that 
+$\Pi\leftarrow\textsf{MS-Setup}(1^k)$ generates public parameters---where $k$ is 
+the security parameter. Given the public parameters, one can generate a 
+verification-signing key pair calling, 
+$(\mathsf{vk,sk})\leftarrow\textsf{MS-KG}(\Pi)$. A multi-signature scheme 
+provides a signing and an aggregate functionality. Mainly
+\begin{itemize}
+\item $\sigma\leftarrow\textsf{MS-Sign}(\Pi, \mathsf{sk}, m)$, produces a 
+signature, $\sigma$, over a message $m$ using signing key $\mathsf{sk}$, and
+\item $\tilde{\sigma}\leftarrow\textsf{MS-ASig}(\Pi, m, \mathcal{V, S)}$, where 
+given a message $m$, a set of signatures, $\mathcal{S}$, over the message $m$, 
+and the corresponding set of verification keys, $\mathcal{V}$, aggregates all 
+signatures into a single, aggregate signature $\tilde{\sigma}$. 
+\end{itemize}
+
+To generate an aggregate verification key, the verifier calls the function 
+$\mathsf{avk}\leftarrow\textsf{MS-AVK}(\Pi, \mathcal{V})$, which given input a 
+set of verification keys, $\mathcal{V}$, returns an aggregate verification key 
+that can be used for the verification of the aggregate siganture: 
+$\textsf{MS-Verify}(\Pi, \mathsf{avk}, m, 
+\tilde{\sigma})\in\{\textsf{true},\textsf{false}\}$. 
+
+Note the distinction between multi-signature schemes (as described above) and 
+multi-signatures as defined in Figure~\ref{fig:types-msig}. In 
+Figure~\ref{fig:types-msig} we allow scripts to consider valid the 
+\type{RequireAllOf}, \type{RequireAnyOf} or \type{RequireMOfN} typed signatures. 
+In the definition above, given a set of public keys $\mathcal{V}$, a signature 
+is considered valid if \textit{all} key owners participate. However, such 
+multi-signature schemes together with a simple script-like DSL can achieve the 
+properties defined in Figure~\ref{fig:types-msig} while still providing the 
+benefits of a simple verification procedure, and a smaller signature size. 
