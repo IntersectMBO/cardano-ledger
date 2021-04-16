@@ -6,6 +6,14 @@
 -- Description : Golden Tests for the Mary era
 module Test.Cardano.Ledger.Mary.Golden
   ( goldenScaledMinDeposit,
+    pid1,
+    pid2,
+    pid3,
+    smallName,
+    smallestName,
+    realName,
+    minUTxO,
+    largestName
   )
 where
 

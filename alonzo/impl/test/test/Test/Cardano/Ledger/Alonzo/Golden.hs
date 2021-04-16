@@ -11,60 +11,65 @@ where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import qualified Data.ByteString.Char8 as BS
+import Cardano.Ledger.Mary.Value (Value (..))
 import Data.Char (chr)
 import qualified Data.Map.Strict as Map
-import qualified Data.Sequence.Strict as StrictSeq
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (hashScript)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Cardano.Ledger.Mary.Golden
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
+import Test.Shelley.Spec.Ledger.Examples.Cast (aliceAddr, bobAddr, carlAddr)
+import Cardano.Ledger.Alonzo.Data (hashData, Data (..))
+import Language.PlutusTx (Data (..))
+import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
+import Test.Cardano.Ledger.Mary.Golden
+    ( pid1,
+    pid2,
+    pid3,
+    smallName,
+    smallestName,
+    minUTxO,
+    largestName )
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 
 -- | ada cost of storing a word8 of data as a UTxO entry, assuming no change to minUTxOValue
-adaPerUTxOWordLocal :: Coin
-adaPerUTxOWordLocal = Coin $ quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
+adaPerUTxOWordLocal :: Integer
+adaPerUTxOWordLocal = quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
   where
     utxoEntrySizeWithoutValLocal = 29
-    minUTxOValueShelleyMA = 1000000
+    Coin minUTxOValueShelleyMA = minUTxO
 
-calcMinUTxO :: TxOut era -> Coin
+calcMinUTxO :: TxOut (AlonzoEra StandardCrypto) -> Coin
 calcMinUTxO tout = Coin (utxoEntrySize tout * adaPerUTxOWordLocal)
 
+-- | (heapWords of a DataHash) * adaPerUTxOWordLocal is 344820
 goldenUTxOEntryMinAda :: TestTree
 goldenUTxOEntryMinAda =
   testGroup
     "golden tests - UTxOEntryMinAda"
-    [ testCase "one policy, one (smallest) name, no datum hash" $
-        scaledMinDeposit
-          ( Value 1407406 $
+    [ testCase "one policy, one (smallest) name, yes datum hash" $
+        calcMinUTxO
+          (TxOut carlAddr ( Value 1407406 $
               Map.singleton pid1 (Map.fromList [(smallestName, 1)])
-          )
-          minUTxO
-          @?= Coin 1407406,
-      testCase "one policy, one (smallest) name, yes datum hash" $
-          scaledMinDeposit
-            ( Value 1407406 $
+          ) (SJust $ hashData @(AlonzoEra StandardCrypto) (Data (List []))) )
+          @?= Coin 1655136,
+      testCase "one policy, one (smallest) name, no datum hash" $
+          calcMinUTxO
+            (TxOut bobAddr ( Value 1407406 $
                 Map.singleton pid1 (Map.fromList [(smallestName, 1)])
-            )
-            minUTxO
-            @?= Coin 1407406,
+            ) SNothing )
+            @?= Coin 1310316,
       testCase "one policy, one (small) name" $
-        scaledMinDeposit
-          ( Value 1444443 $
+        calcMinUTxO
+          (TxOut aliceAddr ( Value 1444443 $
               Map.singleton
                 pid1
                 (Map.fromList [(smallName '1', 1)])
-          )
-          minUTxO
-          @?= Coin 1444443,
-      testCase "one policy, three (small) name" $
-        scaledMinDeposit
-          ( Value 1555554 $
+          ) SNothing )
+          @?= Coin 1344798,
+      testCase "one policy, three (small) names" $
+        calcMinUTxO
+          (TxOut aliceAddr ( Value 1555554 $
               Map.singleton
                 pid1
                 ( Map.fromList
@@ -73,21 +78,19 @@ goldenUTxOEntryMinAda =
                       (smallName '3', 1)
                     ]
                 )
-          )
-          minUTxO
-          @?= Coin 1555554,
+          ) SNothing )
+          @?= Coin 1448244,
       testCase "one policy, one (largest) name" $
-        scaledMinDeposit
-          ( Value 1555554 $
+        calcMinUTxO
+          (TxOut carlAddr ( Value 1555554 $
               Map.singleton
                 pid1
                 (Map.fromList [(largestName 'a', 1)])
-          )
-          minUTxO
-          @?= Coin 1555554,
-      testCase "one policy, three (largest) name" $
-        scaledMinDeposit
-          ( Value 1962961 $
+          ) SNothing )
+          @?= Coin 1448244,
+      testCase "one policy, three (largest) name, with hash" $
+        calcMinUTxO
+          (TxOut carlAddr ( Value 1962961 $
               Map.singleton
                 pid1
                 ( Map.fromList
@@ -96,12 +99,11 @@ goldenUTxOEntryMinAda =
                       (largestName 'c', 1)
                     ]
                 )
-          )
-          minUTxO
-          @?= Coin 1962961,
+          ) (SJust $ hashData @(AlonzoEra StandardCrypto) (Data (Constr 0 [(Constr 0 [])]))) )
+          @?= Coin 2172366,
       testCase "two policies, one (smallest) name" $
-        scaledMinDeposit
-          ( Value 1592591 $
+        calcMinUTxO
+          (TxOut aliceAddr ( Value 1592591 $
               Map.fromList
                 [ ( pid1,
                     (Map.fromList [(smallestName, 1)])
@@ -110,12 +112,24 @@ goldenUTxOEntryMinAda =
                     (Map.fromList [(smallestName, 1)])
                   )
                 ]
-          )
-          minUTxO
-          @?= Coin 1592591,
+          ) SNothing )
+          @?= Coin 1482726,
+      testCase "two policies, one (smallest) name, with hash" $
+        calcMinUTxO
+          (TxOut aliceAddr ( Value 1592591 $
+              Map.fromList
+                [ ( pid1,
+                    (Map.fromList [(smallestName, 1)])
+                  ),
+                  ( pid2,
+                    (Map.fromList [(smallestName, 1)])
+                  )
+                ]
+          ) (SJust $ hashData @(AlonzoEra StandardCrypto) (Data (Constr 0 []))) )
+          @?= Coin 1827546,
       testCase "two policies, two (small) names" $
-        scaledMinDeposit
-          ( Value 1629628 $
+        calcMinUTxO
+          (TxOut bobAddr ( Value 1629628 $
               Map.fromList
                 [ ( pid1,
                     (Map.fromList [(smallName '1', 1)])
@@ -124,12 +138,11 @@ goldenUTxOEntryMinAda =
                     (Map.fromList [(smallName '2', 1)])
                   )
                 ]
-          )
-          minUTxO
-          @?= Coin 1629628,
+          ) SNothing )
+          @?= Coin 1517208,
       testCase "three policies, ninety-six (small) names" $
-        scaledMinDeposit
-          ( Value 7407400 $
+        calcMinUTxO
+          (TxOut aliceAddr ( Value 7407400 $
               Map.fromList
                 [ ( pid1,
                     (Map.fromList $ map ((,1) . smallName . chr) [32 .. 63])
@@ -141,7 +154,6 @@ goldenUTxOEntryMinAda =
                     (Map.fromList $ map ((,1) . smallName . chr) [96 .. 127])
                   )
                 ]
-          )
-          minUTxO
-          @?= Coin 7407400
+          ) SNothing)
+          @?= Coin 6896400
     ]

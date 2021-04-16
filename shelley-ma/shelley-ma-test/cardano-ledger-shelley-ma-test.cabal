@@ -50,6 +50,7 @@ library
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip
+    Test.Cardano.Ledger.Mary.Golden
   -- other-extensions:
   build-depends:
     array,
@@ -88,7 +89,6 @@ test-suite cardano-ledger-shelley-ma-test
       Test.Cardano.Ledger.Mary.Examples
       Test.Cardano.Ledger.Mary.Examples.Cast
       Test.Cardano.Ledger.Mary.Examples.MultiAssets
-      Test.Cardano.Ledger.Mary.Golden
       Test.Cardano.Ledger.Mary.Translation
       Test.Cardano.Ledger.Mary.Value
       Test.Cardano.Ledger.Allegra.Translation
