@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Mary.Golden
     smallestName,
     realName,
     minUTxO,
-    largestName
+    largestName,
   )
 where
 

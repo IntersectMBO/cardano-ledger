@@ -45,12 +45,12 @@ library
     Test.Cardano.Ledger.TranslationTools
     Test.Cardano.Ledger.EraBuffet
     Test.Cardano.Ledger.Mary
+    Test.Cardano.Ledger.Mary.Golden
     Test.Cardano.Ledger.Allegra
     Test.Cardano.Ledger.ShelleyMA.TxBody
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip
-    Test.Cardano.Ledger.Mary.Golden
   -- other-extensions:
   build-depends:
     array,

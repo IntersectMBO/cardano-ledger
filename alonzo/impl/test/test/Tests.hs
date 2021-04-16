@@ -1,8 +1,8 @@
 module Main where
 
+import Test.Cardano.Ledger.Alonzo.Golden as Golden
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
-import Test.Cardano.Ledger.Alonzo.Golden as Golden
 import Test.Tasty
 
 tests :: TestTree

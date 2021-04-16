@@ -92,8 +92,7 @@ library test
     plutus-tx,
     QuickCheck,
     shelley-spec-ledger-test,
-    shelley-spec-ledger,
-    cardano-ledger-shelley-ma-test
+    shelley-spec-ledger
   hs-source-dirs:
     test/lib
 
@@ -105,9 +104,9 @@ test-suite cardano-ledger-alonzo-test
   hs-source-dirs:
     test/test
   other-modules:
+    Test.Cardano.Ledger.Alonzo.Golden
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
     Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
-    Test.Cardano.Ledger.Alonzo.Golden
   build-depends:
     base16-bytestring,
     bytestring,
@@ -116,17 +115,13 @@ test-suite cardano-ledger-alonzo-test
     cardano-ledger-shelley-ma,
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
+    containers,
+    plutus-tx,
     QuickCheck,
     shelley-spec-ledger,
     shelley-spec-ledger-test,
-    tasty-quickcheck,
-    tasty,
-    text,
-    test,
-    shelley-spec-ledger-test,
-    cardano-ledger-core,
-    cardano-ledger-shelley-ma,
     strict-containers,
-    containers,
+    tasty,
     tasty-hunit,
-    plutus-tx
+    tasty-quickcheck,
+    test
