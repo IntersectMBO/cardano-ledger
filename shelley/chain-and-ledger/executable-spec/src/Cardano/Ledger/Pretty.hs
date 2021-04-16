@@ -114,7 +114,7 @@ import Shelley.Spec.Ledger.RewardUpdate
   ( FreeVars (..),
     Pulser,
     PulsingRewUpdate (..),
-    RewardAns,
+    RewardAns (..),
     RewardPulser (..),
     RewardSnapShot (..),
     RewardUpdate (..),
@@ -466,11 +466,12 @@ ppFreeVars (FreeVars b1 del stake1 addrs total active asc1 blocks r1 slots d a0 
     ]
 
 ppAns :: RewardAns crypto -> PDoc
-ppAns mappair =
-  ppPair
-    (ppMap ppCredential (ppSet ppReward))
-    (ppMap ppKeyHash ppLikelihood)
-    mappair
+ppAns (RewardAns x y) =
+  ppSexp'
+    mempty
+    [ (ppMap ppCredential (ppSet ppReward)) x,
+      (ppMap ppKeyHash ppLikelihood) y
+    ]
 
 ppRewardPulser :: Pulser crypto -> PDoc
 ppRewardPulser (RSLP n free items ans) =

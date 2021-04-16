@@ -95,7 +95,7 @@ import Shelley.Spec.Ledger.RewardUpdate
   ( FreeVars (..),
     KeyHashPoolProvenance,
     Pulser,
-    RewardAns,
+    RewardAns (..),
     RewardPulser (RSLP),
   )
 import Shelley.Spec.Ledger.Rewards
@@ -312,7 +312,7 @@ rewardsBoundedByPot _ = property $ do
             pools
       totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
-      rs =
+      (RewardAns rs _) =
         runShelleyBase $
           runProvM $
             reward
@@ -349,7 +349,7 @@ rewardsBoundedByPot _ = property $ do
             show slotsPerEpoch
           ]
       )
-      (sumRewards pp (fst rs) < rewardPot)
+      (sumRewards pp rs < rewardPot)
 
 -- =================================================
 -- tests when running rewards with provenance
@@ -784,7 +784,7 @@ rewardPulser
       Coin activeStake = fold . unStake $ stake
       free = (FreeVars b delegs stake addrsRew totalStake activeStake asc totalBlocks r slotsPerEpoch pp_d pp_a0 pp_nOpt)
       pulser :: Pulser c
-      pulser = RSLP 2 free (StrictSeq.fromList $ Map.elems poolParams) (Map.empty, Map.empty)
+      pulser = RSLP 2 free (StrictSeq.fromList $ Map.elems poolParams) (RewardAns Map.empty Map.empty)
 
 -- ==================================================================
 
