@@ -216,7 +216,7 @@ instance
 
 -- | Snapshots of the stake distribution.
 data SnapShots crypto = SnapShots
-  { _pstakeMark :: !(SnapShot crypto),
+  { _pstakeMark :: SnapShot crypto,
     _pstakeSet :: !(SnapShot crypto),
     _pstakeGo :: !(SnapShot crypto),
     _feeSS :: !Coin
