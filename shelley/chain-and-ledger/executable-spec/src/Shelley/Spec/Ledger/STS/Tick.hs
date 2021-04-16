@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -32,6 +33,7 @@ import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfo)
+import Shelley.Spec.Ledger.EpochBoundary (SnapShots (_pstakeMark))
 import Shelley.Spec.Ledger.Keys (GenDelegs (..))
 import Shelley.Spec.Ledger.LedgerState (DPState (..), DState (..), EpochState (..), FutureGenDeleg (..), LedgerState (..), NewEpochState (..), PulsingRewUpdate)
 import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH, NewEpochPredicateFailure)
@@ -167,6 +169,12 @@ bheadTransition = do
     judgmentContext
 
   nes' <- validatingTickTransition @TICK nes slot
+
+  -- Here we force the evaluation of the mark snapshot.
+  -- We do NOT force it in the TICKF and TICKN rule
+  -- so that it can remain a thunk when the consensus
+  -- layer computes the ledger view across the epoch boundary.
+  let !_ = _pstakeMark . esSnapshots . nesEs $ nes'
 
   ru'' <-
     trans @(Core.EraRule "RUPD" era) $
