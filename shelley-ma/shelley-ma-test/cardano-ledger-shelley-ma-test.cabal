@@ -127,4 +127,3 @@ test-suite cardano-ledger-shelley-ma-test
       tasty-hunit,
       tasty-quickcheck,
       tasty,
-      text,
