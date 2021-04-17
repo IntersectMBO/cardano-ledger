@@ -1,5 +1,6 @@
 module Main where
 
+import Test.Cardano.Ledger.Alonzo.Golden as Golden
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import Test.Tasty
@@ -9,7 +10,8 @@ tests =
   testGroup
     "Alonzo tests"
     [ Tripping.tests,
-      CDDL.tests 5
+      CDDL.tests 5,
+      Golden.goldenUTxOEntryMinAda
     ]
 
 main :: IO ()

@@ -6,6 +6,14 @@
 -- Description : Golden Tests for the Mary era
 module Test.Cardano.Ledger.Mary.Golden
   ( goldenScaledMinDeposit,
+    pid1,
+    pid2,
+    pid3,
+    smallName,
+    smallestName,
+    realName,
+    minUTxO,
+    largestName,
   )
 where
 
@@ -18,6 +26,8 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Char (chr)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
@@ -58,6 +68,10 @@ smallName c = AssetName . BS.pack $ [c]
 largestName :: Char -> AssetName
 largestName c = AssetName . BS.pack $ c : "0123456789ABCDEFGHIJ0123456789A"
 
+-- | try using a real asset name the way the CLI handles input
+realName :: AssetName
+realName = AssetName $ (Text.encodeUtf8 . Text.pack) "ATADAcoin"
+
 -- | This is the current value of the protocol parameter
 --  at the time this comment was written, namely one Ada.
 minUTxO :: Coin
@@ -83,6 +97,15 @@ goldenScaledMinDeposit =
           )
           minUTxO
           @?= Coin 1444443,
+      testCase "one policy, one (real) name" $
+        scaledMinDeposit
+          ( Value 1444443 $
+              Map.singleton
+                pid1
+                (Map.fromList [(realName, 1)])
+          )
+          minUTxO
+          @?= Coin 1481480,
       testCase "one policy, three (small) name" $
         scaledMinDeposit
           ( Value 1555554 $
