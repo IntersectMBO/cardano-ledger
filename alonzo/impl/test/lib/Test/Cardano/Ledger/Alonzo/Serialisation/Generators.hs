@@ -271,7 +271,7 @@ instance Mock c => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
         (OutputTooBigUTxO) <$> arbitrary,
         FeeNotBalancedUTxO <$> arbitrary <*> arbitrary,
         ScriptsNotPaidUTxO <$> arbitrary,
-        ExUnitsTooSmallUTxO <$> arbitrary <*> arbitrary,
+        ExUnitsTooBigUTxO <$> arbitrary <*> arbitrary,
         FeeContainsNonADA <$> arbitrary
       ]
 
