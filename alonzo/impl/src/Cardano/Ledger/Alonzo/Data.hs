@@ -82,8 +82,8 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import qualified Language.PlutusTx as Plutus
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
+import qualified PlutusTx as Plutus
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Metadata (Metadatum)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR)
