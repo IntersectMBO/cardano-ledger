@@ -8,12 +8,9 @@
 module Cardano.Ledger.Alonzo.TxInfo where
 
 -- =============================================
--- Types used in the Alonzo Era, needed to make TxInfo
 
 import Cardano.Crypto.Hash.Class (Hash (UnsafeHash))
 import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
--- ==============================================
-
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..))
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
