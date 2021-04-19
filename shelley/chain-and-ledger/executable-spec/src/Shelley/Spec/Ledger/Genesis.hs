@@ -41,6 +41,7 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (forceElemsToWHNF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochSize (..))
+import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
@@ -442,9 +443,11 @@ mkShelleyGlobals genesis epochInfo maxMajorPV =
       randomnessStabilisationWindow,
       securityParameter = k,
       slotsPerKESPeriod = sgSlotsPerKESPeriod genesis,
-      stabilityWindow
+      stabilityWindow,
+      systemStart
     }
   where
+    systemStart = SystemStart $ sgSystemStart genesis
     k = sgSecurityParam genesis
     stabilityWindow =
       computeStabilityWindow k (sgActiveSlotCoeff genesis)

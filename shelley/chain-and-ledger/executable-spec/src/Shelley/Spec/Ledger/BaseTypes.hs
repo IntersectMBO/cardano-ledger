@@ -66,6 +66,7 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, cborError)
 import Cardano.Slotting.EpochInfo
+import Cardano.Slotting.Time (SystemStart)
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Binary.Put as B
@@ -343,7 +344,9 @@ data Globals = Globals
     -- "Ouroboros Praos: An adaptively-secure, semi-synchronous proof-of-stake protocol"
     activeSlotCoeff :: !ActiveSlotCoeff,
     -- | The network ID
-    networkId :: !Network
+    networkId :: !Network,
+    -- | System start time
+    systemStart :: !SystemStart
   }
   deriving (Show, Generic)
 
