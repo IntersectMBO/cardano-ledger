@@ -340,14 +340,6 @@ instance NoThunks (PParamsUpdate era)
 -- writing only those fields where the field is (SJust x), that is the role of
 -- the local function (omitStrictMaybe key x)
 
-fromSJust :: StrictMaybe a -> a
-fromSJust (SJust x) = x
-fromSJust SNothing = error "SNothing in fromSJust"
-
-isSNothing :: StrictMaybe a -> Bool
-isSNothing SNothing = True
-isSNothing (SJust _) = False
-
 encodePParamsUpdate ::
   PParamsUpdate era ->
   Encode ('Closed 'Sparse) (PParamsUpdate era)
@@ -379,6 +371,14 @@ encodePParamsUpdate ppup =
     omitStrictMaybe ::
       Word -> StrictMaybe a -> (a -> Encoding) -> Encode ('Closed 'Sparse) (StrictMaybe a)
     omitStrictMaybe key x enc = Omit isSNothing (Key key (E (enc . fromSJust) x))
+
+    fromSJust :: StrictMaybe a -> a
+    fromSJust (SJust x) = x
+    fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
+
+    isSNothing :: StrictMaybe a -> Bool
+    isSNothing SNothing = True
+    isSNothing (SJust _) = False
 
 instance (Era era) => ToCBOR (PParamsUpdate era) where
   toCBOR ppup = encode (encodePParamsUpdate ppup)

@@ -18,6 +18,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
     poolProperties,
     -- Test Delegation
     delegProperties,
+    forAllChainTrace,
   )
 where
 
