@@ -230,7 +230,7 @@ the body of the transaction:
   \item We include a hash of some script-related data, specifically the redeemers and protocol parameters,
     with accessor $\fun{wppHash}$.
 
-  \item We include the ID of the network on which the transaction lives, $\fun{txnetworkid}$. 
+  \item We include the ID of the network on which the transaction lives, $\fun{txnetworkid}$.
   This is in addition to the network ID's already included in the reward and output addresses.
 \end{itemize}
 
@@ -243,7 +243,7 @@ A complete transaction comprises:
   that are executed during the script execution phase validate.
   The correctness of the tag is verified as part of the ledger rules, and the block is
   deemed to be invalid if it is applied incorrectly.
-  If it is set to \False, then the block can be re-applied without script re-validation.
+  If it is set to $\False$, then the block can be re-applied without script re-validation.
   This tag cannot be signed, since it is applied by the block producer.
   \item any transaction metadata.
 \end{enumerate}

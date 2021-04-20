@@ -105,7 +105,7 @@ serialised transaction.
     \begin{array}{r@{~\in~}l@{\quad=\quad}l@{\qquad}r}
       \var{lg}
       & \Language
-      & \{\PlutusV1, \dotsb\}
+      & \{\PlutusVI, \dotsb\}
       & \text{Script Language}
       \\
       \var{(pr_{mem}, pr_{steps})}
@@ -157,7 +157,7 @@ serialised transaction.
   %
   \begin{align*}
     & \fun{getLanguageView} \in \PParams \to \Language \to \LangDepView \\
-    & \fun{getLanguageView}~\var{pp}~\PlutusV1 = \{\PlutusV1\} \restrictdom \fun{costmdls}~{pp}
+    & \fun{getLanguageView}~\var{pp}~\PlutusVI = \{\PlutusVI\} \restrictdom \fun{costmdls}~{pp}
   \end{align*}
   %
   \caption{Definitions Used in Protocol Parameters}
