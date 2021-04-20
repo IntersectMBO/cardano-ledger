@@ -42,10 +42,10 @@ We make the following changes and additions:
   \item $\Tag$ lets us differentiate what a script
   can validate, i.e. \\
   \begin{tabular}{l@{~to validate~}l}
-  $\mathsf{inputTag}$ & spending a script UTxO entry; \\
-  $\mathsf{mintTag}$ & minting tokens; \\
-  $\mathsf{certTag}$  & certificates with script credentials; and  \\
-  $\mathsf{wdrlTag}$ & reward withdrawals from script addresses.
+  $\mathsf{Spend}$ & spending a script UTxO entry; \\
+  $\mathsf{Mint}$ & minting tokens; \\
+  $\mathsf{Cert}$  & certificates with script credentials; and  \\
+  $\mathsf{Rewrd}$ & reward withdrawals from script addresses.
   \end{tabular}
 
   \item $\RdmrPtr$ is a pair of a tag and an index. This type is
@@ -96,7 +96,7 @@ We add the following helper functions:
       \\
       \var{tag}
       & \Tag
-      & \{\mathsf{inputTag},~\mathsf{mintTag},~\mathsf{certTag},~\mathsf{wdrlTag}\}
+      & \{\mathsf{Spend},~\mathsf{Mint},~\mathsf{Cert},~\mathsf{Rewrd}\}
       \\
       \var{rdptr}
       & \RdmrPtr
@@ -154,6 +154,7 @@ We add the following helper functions:
        & \times ~\hldiff{\powerset{\KeyHash}} & \hldiff{\fun{reqSignerHashes}} & \text{Hashes of VKeys passed to scripts}\\
        & \times ~\hldiff{\WitnessPPDataHash^?} & \hldiff{\fun{wppHash}} & \text{Hash of script-related data}\\
        & \times ~\AuxiliaryDataHash^? & \fun{txADhash} & \text{Auxiliary data hash}\\
+       & \times ~\hldiff{\Network^?} & \hldiff{\fun{txnetworkid}} & \text{Tx network ID}\\
     \end{array}
   \end{equation*}
   %
@@ -171,8 +172,8 @@ We add the following helper functions:
       \var{tx} ~\in~ \Tx ~=~
       & \TxBody & \fun{txbody} & \text{Body}\\
       & \times ~\TxWitness & \fun{txwits} & \text{Witnesses}\\
-      & \times ~\hldiff{\IsValidating} & \hldiff{\fun{txvaltag}}&\text{Validation tag}\\
-      & \times ~\AuxiliaryData^? & \fun{txAD}&\text{Auxiliary data}\\
+      & \times ~\hldiff{\IsValidating} & \hldiff{\fun{isValidating}}&\text{Validation tag}\\
+      & \times ~\AuxiliaryData^? & \fun{auxiliaryData}&\text{Auxiliary data}\\
     \end{array}
   \end{equation*}
   \caption{Definitions for transactions, cont.}
@@ -228,6 +229,9 @@ the body of the transaction:
     the hashes of the signing keys are listed inside the signed body.
   \item We include a hash of some script-related data, specifically the redeemers and protocol parameters,
     with accessor $\fun{wppHash}$.
+
+  \item We include the ID of the network on which the transaction lives, $\fun{txnetworkid}$. 
+  This is in addition to the network ID's already included in the reward and output addresses.
 \end{itemize}
 
 A complete transaction comprises:
@@ -239,10 +243,17 @@ A complete transaction comprises:
   that are executed during the script execution phase validate.
   The correctness of the tag is verified as part of the ledger rules, and the block is
   deemed to be invalid if it is applied incorrectly.
-  If it is set to \emph{false}, then the block can be re-applied without script re-validation.
+  If it is set to \False, then the block can be re-applied without script re-validation.
   This tag cannot be signed, since it is applied by the block producer.
   \item any transaction metadata.
 \end{enumerate}
+
+Note that unlike in Shelley or ShelleyMA eras, transactions inside blocks and transactions
+a user submits are now of different types. A transaction inside a block is composed of
+the user-submitted transaction paired with the $\IsValidating$ tag, which is
+added by the block producer. The user cannot
+add their own tag because of how this tag is used in transaction validation, see
+Section~\ref{sec:two-phase}.
 
 \subsection{Additional Role of Signatures on TxBody}
 
