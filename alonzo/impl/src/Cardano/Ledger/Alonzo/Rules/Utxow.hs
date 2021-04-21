@@ -228,6 +228,8 @@ alonzoStyleWitness = do
   (TRC (ue@(UtxoEnv _slot pp _stakepools _genDelegs), u', tx)) <- judgmentContext
   let txbody = getField @"body" (tx :: TxInBlock era)
 
+-- missing "number collected scripts is the same as size of sphs" check
+
   let scriptWitMap = getField @"scriptWits" tx
       failedScripts = Map.foldr accum [] scriptWitMap
         where
@@ -241,6 +243,7 @@ alonzoStyleWitness = do
       sphs = scriptsNeeded utxo tx
       unredeemed =
         -- A script is unredeemed, is we can't find the Data that it requires to execute.
+        -- ^^ if this check is meant to check BOTH datums and redeemers, change "unredeemed" terminology
         let ans = (filter (not . checkScriptData tx) sphs)
          in seq (rnf ans) ans
   null unredeemed ?! UnRedeemableScripts unredeemed
@@ -273,6 +276,7 @@ alonzoStyleWitness = do
             (not . isNativeScript @era) script,
             Just l <- [language @era script]
         ]
+  -- ^^ this should be a separate function and return a Set
       computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits' $ tx)
       bodyPPhash = getField @"wppHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
@@ -282,6 +286,7 @@ alonzoStyleWitness = do
   case bodyNetID of
     SNothing -> pure ()
     SJust bid -> actualNetID == bid ?! WrongNetworkInTxBody actualNetID bid
+    -- ^^ Move network id body check to UTXO transition
 
   trans @(Core.EraRule "UTXO" era) $ TRC (ue, u', tx)
 

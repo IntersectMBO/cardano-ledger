@@ -92,6 +92,8 @@ instance
 instance (API.PraosCrypto c) => API.GetLedgerView (AlonzoEra c)
 
 instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
+  -- ^^ runNativeScript replaces the validateScript function, and continues to run only native scripts
+  -- there is no need for a function that runs both, because phase 1 and 2 scripts are run at different times 
   isNativeScript x = not (isPlutusScript x)
   scriptPrefixTag script =
     if isPlutusScript script

@@ -596,3 +596,6 @@ getLanguageView ::
   Language ->
   Maybe (LangDepView era)
 getLanguageView pp PlutusV1 = PlutusView <$> Map.lookup PlutusV1 (_costmdls pp)
+--  why is this a Maybe LangDepView ?? In the spec, the map is filtered instead :
+-- getLanguageView ∈ PParams → Language → LangDepView
+-- getLanguageView pp PlutusV1 = {PlutusV1} <| costmdls pp

@@ -91,6 +91,7 @@ import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
     txins,
+    -- ^^ the txins map is the one from Shelley - it should be the one implemented in Tx.hs in Alonzo (line 419)
     txouts,
     unUTxO,
   )
@@ -259,7 +260,7 @@ feesOK pp tx (UTxO m) = do
   (minimumFee <= theFee) ?! FeeTooSmallUTxO minimumFee theFee
   -- Part 2
   if (getField @"totExunits" tx) == (ExUnits 0 0)
-    then pure ()
+    -- ^^ this check is wrong, it should check that txrdmrs is non-empty
     else do
       -- Part 3
       not (any nonNative utxoFees) ?! ScriptsNotPaidUTxO (UTxO (Map.filter nonNative utxoFees))
@@ -267,6 +268,7 @@ feesOK pp tx (UTxO m) = do
       (Val.coin bal >= theFee) ?! FeeNotBalancedUTxO (Val.coin bal) theFee
       -- Part 5
       Val.inject (Val.coin bal) == bal ?! FeeContainsNonADA bal
+      -- ^^ this should be "adaOnly bal"
       pure ()
 
 -- ================================================================
@@ -308,6 +310,8 @@ utxoTransition = do
 
   inInterval slot (getField @"vldt" txb)
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
+
+  -- system time conversion within forecast range check is not implemented
 
   not (Set.null (txins @era txb)) ?! InputSetEmptyUTxO
 
@@ -384,6 +388,7 @@ utxoTransition = do
           )
           outputs
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
+  -- ^^ should I add this check to the spec?
 
   trans @(Core.EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 

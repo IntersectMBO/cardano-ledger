@@ -176,6 +176,8 @@ data AuxiliaryDataRaw era = AuxiliaryDataRaw
   { txMD' :: !(Map Word64 Metadatum),
     scripts' :: !(StrictSeq (Core.Script era)),
     dats' :: !(Set (Data era))
+    -- why is one a list and the other a set?
+    -- should i change this in the spec or here?
   }
   deriving (Generic)
 

@@ -277,6 +277,7 @@ transScriptPurpose (Certifying dcert) = P.Certifying (transDCert dcert)
 -- | Compute a Digest of the current transaction to pass to the script
 --   This is the major component of the valContext function.
 transTx ::
+-- this should be a different function for each language, this is specifically for PlutusV1
   forall era.
   ( Era era,
     Core.TxOut era ~ Alonzo.TxOut era,

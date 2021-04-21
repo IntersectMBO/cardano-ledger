@@ -204,6 +204,7 @@ instance
   NoThunks (ValidatedTxRaw era)
 
 newtype ValidatedTx era = ValidatedTxConstr (MemoBytes (ValidatedTxRaw era))
+-- ^^ should I rename the Tx type in the spec to ValidatedTx (and explain)?
   deriving newtype (SafeToHash, ToCBOR)
 
 instance (c ~ Crypto era, Era era) => HashAnnotated (ValidatedTx era) EraIndependentTx c
@@ -390,9 +391,11 @@ hashWitnessPPData pp langs rdmrs =
   if (Map.null $ unRedeemers rdmrs) && Set.null langs
     then SNothing
     else
+      -- type signature would help here
       let newset = mapMaybeSet (getLanguageView pp) langs
        in SJust (hashAnnotated (WitnessPPData rdmrs newset))
   where
+    -- type signature for clarity
     mapMaybeSet f = Set.foldr (\x acc -> maybe acc (`Set.insert` acc) (f x)) mempty
 
 -- ===============================================================

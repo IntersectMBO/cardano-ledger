@@ -126,6 +126,7 @@ instance FromCBORGroup RdmrPtr where
 --      (Map RdmrPtr (Data era, ExUnits))
 
 newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
+-- Should be the alias "Redeemer" instead of Data
   deriving (Eq, Show, Generic, Typeable)
   deriving newtype (NoThunks)
 
@@ -173,8 +174,11 @@ nullRedeemers = Map.null . unRedeemers
 data TxWitnessRaw era = TxWitnessRaw
   { _txwitsVKey :: Set (WitVKey 'Witness (Crypto era)),
     _txwitsBoot :: Set (BootstrapWitness (Crypto era)),
+    -- ^^ both keys and bootstraps as sets here, in the spec there are no bootstrap, 
+    -- and the keys are a map Key -> Sig. Should I change this?
     _txscripts :: Map (ScriptHash (Crypto era)) (Core.Script era),
     _txdats :: Map (DataHash (Crypto era)) (Data era),
+    -- This Data should be replaced with the Datum alias
     _txrdmrs :: Redeemers era
   }
   deriving (Generic, Typeable)

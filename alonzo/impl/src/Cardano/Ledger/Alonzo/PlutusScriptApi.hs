@@ -104,6 +104,7 @@ getData tx (UTxO m) sp = case sp of
 
 -- | Collect the inputs (Data, execution budget, costModel) for all twoPhase scripts.
 collectNNScriptInputs ::
+-- ^^ this is not used anywhere
   ( Era era,
     Core.Script era ~ AlonzoScript.Script era,
     Core.TxOut era ~ Alonzo.TxOut era,
@@ -157,6 +158,7 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
 --     might validate that shouldn't. So we double check that every Script has its Data, and
 --     if that is not the case, a PredicateFailure is raised in the Utxos rule.
 collectTwoPhaseScriptInputs ::
+-- why is this different than, and used instead of collectNNScriptInputs??
   ( Era era,
     Core.Script era ~ AlonzoScript.Script era,
     Core.TxOut era ~ Alonzo.TxOut era,
@@ -188,6 +190,7 @@ collectTwoPhaseScriptInputs pp tx utxo =
         Just script -> Right script
         Nothing -> Left (NoWitness hash)
     apply cost (sp, d, eu) script = (script, d : (valContext txinfo sp) : (getData tx utxo sp), eu, cost)
+    -- wrong order arguments, should be (context, datum, redeemer)
 
 -- | Merge two lists (either of which may have failures, i.e. (Left _)), collect all the failures
 --   but if there are none, use 'f' to construct a success.
@@ -215,6 +218,8 @@ language (AlonzoScript.TimelockScript _) = Nothing
 --   There are two kinds of scripts, evaluate each kind using the
 --   appropriate mechanism.
 evalScripts ::
+-- ^^ this should be only for Plutus scripts, as by the time this is called,
+-- all native scripts must have been evaluated (phase 1)
   forall era.
   ( Era era,
     Alonzo.TxBody era ~ Core.TxBody era
@@ -242,6 +247,8 @@ evalScripts tx ((AlonzoScript.PlutusScript pscript, ds, units, cost) : rest) =
 --     3) The script is a twoPhase script, and the _txrdmrs Map of the TxWitness,
 --        contains Data for the script.
 checkScriptData ::
+-- ^^ This looks like it is also meant to check that the tx is carrying the right datum for a (nonnative) script
+-- this is why UTxO is needed (to get the datum hashes from the outputs)
   forall era.
   ( ValidateScript era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
