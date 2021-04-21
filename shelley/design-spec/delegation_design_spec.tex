@@ -1059,7 +1059,7 @@ on the same transaction, and due to the nature of UTxO accounting, the
 same transaction cannot be included in the ledger again.
 %
 For certificates, we do essentially the same thing: the witness for a
-certificate is a signature (or script input) for not just the script, but for the entire
+certificate is a signature (or script input) for not just the certificate, but for the entire
 transaction body. This means that, provided the transaction spends at
 least one input, we inherit the inherent replay protection of UTxO
 accounting. The validity rules for transactions will explicitly require each
