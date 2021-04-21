@@ -106,7 +106,7 @@ library
                      Shelley.Spec.Ledger.API.Types
   hs-source-dirs: src
   build-depends:
-    aeson,
+    aeson >= 1.5.6.0,
     base16-bytestring >= 1,
     bech32,
     binary,

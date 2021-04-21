@@ -148,7 +148,7 @@ library
                        Cardano.Chain.Update.SystemTag
                        Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
 
-  build-depends:       aeson
+  build-depends:       aeson >= 1.5.6.0
                      , base58-bytestring
                      , bimap >=0.4 && <0.5
                      , binary

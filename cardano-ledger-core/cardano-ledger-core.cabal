@@ -52,7 +52,7 @@ library
     Cardano.Ledger.Val
 
   build-depends:
-    aeson,
+    aeson >= 1.5.6.0,
     bytestring,
     cardano-binary,
     cardano-crypto-class,

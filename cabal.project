@@ -1,4 +1,4 @@
-index-state: 2021-02-15T00:00:00Z
+index-state: 2021-04-21T01:05:08Z
 
 packages:
   alonzo/impl
@@ -74,5 +74,4 @@ source-repository-package
     prettyprinter-configurable
 
 allow-newer:
-  monoidal-containers:aeson,
   size-based:template-haskell
