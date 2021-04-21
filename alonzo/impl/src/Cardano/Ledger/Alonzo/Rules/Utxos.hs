@@ -46,7 +46,7 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), strictMaybeToMaybe)
-import Shelley.Spec.Ledger.LedgerState
+import Shelley.Spec.Ledger.LedgerState()
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
@@ -251,3 +251,25 @@ instance
   Embed (PPUP era) (UTXOS era)
   where
   wrapFailed = UpdateFailure
+
+
+-- =================================================================
+
+{-
+constructValidated :: UtxoEnv era -> UTxOState era -> Core.Tx era -> ValidatedTx era
+constructValidated env st tx = case collectTwoPhaseScriptInputs pp tx utxo of
+  Left errs -> error (show errs)
+  Right sLst ->
+    let scriptEvalResult = evalScripts @era tx sLst
+        newState =
+          runTransitionRule (TRC (env, st, tx)) $
+            if scriptEvalResult
+              then scriptsValidateTransition
+              else scriptsNotValidateTransition
+     in ValidatedTx
+          (getField @"body" tx)
+          (getField @"wits" tx)
+          (IsValidating scriptEvalResult)
+          (getField @"auxiliaryData" tx)
+
+-}
