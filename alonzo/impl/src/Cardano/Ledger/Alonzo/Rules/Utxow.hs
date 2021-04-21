@@ -16,7 +16,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxow where
 -- import Shelley.Spec.Ledger.UTxO(UTxO(..))
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Alonzo.Data (Data, DataHash)
+import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (checkScriptData, language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
@@ -192,7 +192,6 @@ type ShelleyStyleWitnessNeeds era =
 --   (in addition to ShelleyStyleWitnessNeeds)
 type AlonzoStyleAdditions era =
   ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))), -- BE SURE AND ADD THESE INSTANCES
-    HasField "txdatahash" (Core.Tx era) (Map.Map (DataHash (Crypto era)) (Data era)),
     HasField "wppHash" (Core.TxBody era) (StrictMaybe (WitnessPPDataHash (Crypto era))),
     HasField "txnetworkid" (Core.TxBody era) (StrictMaybe Network)
   )
@@ -259,7 +258,7 @@ alonzoStyleWitness = do
             SJust h <- [getField @"datahash" output],
             isTwoPhaseScriptAddress @era tx (getField @"address" output)
         ]
-      txHashes = domain (getField @"txdatahash" tx)
+      txHashes = domain (txdats . wits' $ tx)
       inputHashes = Set.fromList utxoHashes
   txHashes == inputHashes ?! DataHashSetsDontAgree txHashes inputHashes
 

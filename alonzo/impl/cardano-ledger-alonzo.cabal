@@ -72,6 +72,7 @@ library
     shelley-spec-ledger,
     small-steps,
     strict-containers,
+    text,
     transformers
   hs-source-dirs:
     src
@@ -90,7 +91,8 @@ library test
     plutus-tx,
     QuickCheck,
     shelley-spec-ledger-test,
-    shelley-spec-ledger
+    shelley-spec-ledger,
+    text,
   hs-source-dirs:
     test/lib
 
@@ -104,6 +106,7 @@ test-suite cardano-ledger-alonzo-test
   other-modules:
     Test.Cardano.Ledger.Alonzo.Golden
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
+    Test.Cardano.Ledger.Alonzo.Examples.Utxow
     Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
   build-depends:
     base16-bytestring,
@@ -114,8 +117,13 @@ test-suite cardano-ledger-alonzo-test
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     containers,
+    data-default-class,
+    plutus-core,
     plutus-tx,
+    plutus-ledger-api,
     QuickCheck,
+    small-steps,
+    small-steps-test,
     shelley-spec-ledger,
     shelley-spec-ledger-test,
     strict-containers,

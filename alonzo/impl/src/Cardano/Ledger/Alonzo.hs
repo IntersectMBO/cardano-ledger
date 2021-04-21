@@ -104,7 +104,8 @@ instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
       timelock
     where
       vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
-  validateScript (PlutusScript _) _tx = False
+  -- TODO check if instead we should filter plutus scripts before calling
+  validateScript (PlutusScript _) _tx = True
 
 -- To run a PlutusScript use Cardano.Ledger.Alonzo.TxInfo(runPLCScript)
 -- To run any Alonzo Script use Cardano.Ledger.Alonzo.PlutusScriptApi(evalScripts)

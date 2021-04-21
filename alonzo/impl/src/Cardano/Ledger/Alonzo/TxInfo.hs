@@ -42,8 +42,6 @@ import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
--- Import Plutus stuff in the qualified Module P
-
 import qualified Plutus.V1.Ledger.Ada as P (adaSymbol, adaToken)
 import qualified Plutus.V1.Ledger.Address as P (Address (..))
 import qualified Plutus.V1.Ledger.Api as P
@@ -52,6 +50,7 @@ import qualified Plutus.V1.Ledger.Api as P
     ExBudget (..),
     VerboseMode (..),
     evaluateScriptRestricting,
+    validateAndCreateCostModel,
     validateScript,
   )
 import qualified Plutus.V1.Ledger.Contexts as P
@@ -74,6 +73,7 @@ import qualified Plutus.V1.Ledger.Slot as P (SlotRange)
 import qualified Plutus.V1.Ledger.Tx as P (TxOutRef (..))
 import qualified Plutus.V1.Ledger.TxId as P (TxId (..))
 import qualified Plutus.V1.Ledger.Value as P (CurrencySymbol (..), TokenName (..), Value (..), singleton, unionWith)
+import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as P (defaultCostModel)
 import qualified PlutusCore.Evaluation.Machine.ExMemory as P (ExCPU (..), ExMemory (..))
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx.IsData.Class as P (IsData (..))
@@ -255,7 +255,10 @@ transDataPair :: (DataHash c, Data era) -> (P.DatumHash, P.Datum)
 transDataPair (x, y) = (transDataHash' x, P.Datum (getPlutusData y))
 
 transCostModel :: CostModel -> P.CostModel
-transCostModel (CostModel _mp) = undefined -- Map.foldlWithKey' (\ans bytes n -> Map.insert (show bytes) n ans) Map.empty mp
+transCostModel (CostModel mp) =
+  case P.validateAndCreateCostModel mp of
+    Nothing -> P.defaultCostModel -- TODO validation should be before this
+    Just cm -> cm
 
 transExUnits :: ExUnits -> P.ExBudget
 transExUnits (ExUnits mem steps) = P.ExBudget (P.ExCPU (fromIntegral steps)) (P.ExMemory (fromIntegral mem))

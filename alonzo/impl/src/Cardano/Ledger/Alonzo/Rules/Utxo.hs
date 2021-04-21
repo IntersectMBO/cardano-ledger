@@ -188,7 +188,7 @@ data UtxoPredicateFailure era
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
       !(UTxO era)
-  | ExUnitsTooSmallUTxO
+  | ExUnitsTooBigUTxO
       !ExUnits
       -- ^ Max EXUnits from the protocol parameters
       !ExUnits
@@ -371,7 +371,7 @@ utxoTransition = do
 
   let maxTxEx = getField @"_maxTxExUnits" pp
       totExunits = getField @"totExunits" tx
-  pointWiseExUnits (<=) totExunits maxTxEx ?! ExUnitsTooSmallUTxO maxTxEx totExunits
+  pointWiseExUnits (<=) totExunits maxTxEx ?! ExUnitsTooBigUTxO maxTxEx totExunits
 
   -- This does not appear in the Alonzo specification. But the test should be in every Era.
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
@@ -497,8 +497,8 @@ encFail (FeeNotBalancedUTxO a b) =
   Sum FeeNotBalancedUTxO 13 !> To a !> To b
 encFail (ScriptsNotPaidUTxO a) =
   Sum ScriptsNotPaidUTxO 14 !> To a
-encFail (ExUnitsTooSmallUTxO a b) =
-  Sum ExUnitsTooSmallUTxO 15 !> To a !> To b
+encFail (ExUnitsTooBigUTxO a b) =
+  Sum ExUnitsTooBigUTxO 15 !> To a !> To b
 encFail (FeeContainsNonADA a) =
   Sum FeeContainsNonADA 16 !> To a
 
@@ -525,7 +525,7 @@ decFail 11 = SumD TriesToForgeADA
 decFail 12 = SumD (OutputTooBigUTxO) <! D (decodeList fromCBOR)
 decFail 13 = SumD FeeNotBalancedUTxO <! From <! From
 decFail 14 = SumD ScriptsNotPaidUTxO <! From
-decFail 15 = SumD ExUnitsTooSmallUTxO <! From <! From
+decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From
 decFail 16 = SumD FeeContainsNonADA <! From
 decFail n = Invalid n
 
