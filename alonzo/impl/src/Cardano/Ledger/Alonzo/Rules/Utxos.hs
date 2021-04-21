@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -29,6 +30,7 @@ import Cardano.Ledger.Alonzo.Tx
     txouts,
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -36,6 +38,8 @@ import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
+import Control.Monad.Except (MonadError (throwError))
+import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import Data.Coders
 import Data.Foldable (toList)
@@ -45,8 +49,13 @@ import Data.Set (Set)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), strictMaybeToMaybe)
-import Shelley.Spec.Ledger.LedgerState()
+import Shelley.Spec.Ledger.BaseTypes
+  ( Globals,
+    ShelleyBase,
+    StrictMaybe (..),
+    strictMaybeToMaybe,
+  )
+import Shelley.Spec.Ledger.LedgerState
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
@@ -252,24 +261,63 @@ instance
   where
   wrapFailed = UpdateFailure
 
-
 -- =================================================================
 
-{-
-constructValidated :: UtxoEnv era -> UTxOState era -> Core.Tx era -> ValidatedTx era
-constructValidated env st tx = case collectTwoPhaseScriptInputs pp tx utxo of
-  Left errs -> error (show errs)
-  Right sLst ->
-    let scriptEvalResult = evalScripts @era tx sLst
-        newState =
-          runTransitionRule (TRC (env, st, tx)) $
-            if scriptEvalResult
-              then scriptsValidateTransition
-              else scriptsNotValidateTransition
-     in ValidatedTx
-          (getField @"body" tx)
-          (getField @"wits" tx)
-          (IsValidating scriptEvalResult)
-          (getField @"auxiliaryData" tx)
-
--}
+constructValidated ::
+  forall era m.
+  ( MonadError [UtxosPredicateFailure era] m,
+    Era era,
+    Eq (Core.PParams era),
+    Show (Core.PParams era),
+    Show (PParamsDelta era),
+    Eq (PParamsDelta era),
+    ToCBOR (Core.AuxiliaryData era),
+    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
+    Embed (Core.EraRule "PPUP" era) (UTXOS era),
+    Core.Script era ~ Script era,
+    Core.TxOut era ~ Alonzo.TxOut era,
+    Core.Value era ~ Value (Crypto era),
+    Core.TxBody era ~ Alonzo.TxBody era,
+    Core.Witnesses era ~ Alonzo.TxWitness era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+  ) =>
+  Globals ->
+  UtxoEnv era ->
+  UTxOState era ->
+  Core.Tx era ->
+  m (UTxOState era, ValidatedTx era)
+constructValidated globals env@(UtxoEnv _ pp _ _) st tx =
+  case collectTwoPhaseScriptInputs pp tx utxo of
+    Left errs -> throwError [ShouldNeverHappenScriptInputsNotFound errs]
+    Right sLst ->
+      let scriptEvalResult = evalScripts @era tx sLst
+          vTx =
+            ValidatedTx
+              (getField @"body" tx)
+              (getField @"wits" tx)
+              (IsValidating scriptEvalResult)
+              (getField @"auxiliaryData" tx)
+          (newState, errs) =
+            flip runReader globals . runTransitionRule (TRC (env, st, vTx)) $
+              if scriptEvalResult
+                then scriptsValidateTransition
+                else scriptsNotValidateTransition
+       in case errs of
+            [] -> pure (vTx, newState)
+            _ -> throwError errs
+  where
+    runTransitionRule :: RuleInterpreter
+    runTransitionRule = applyRuleInternal ValidateAll runSTS
+    runSTS :: STSInterpreter
+    runSTS = applySTSInternal AssertionsOff runTransitionRule
+    utxo = _utxo st
