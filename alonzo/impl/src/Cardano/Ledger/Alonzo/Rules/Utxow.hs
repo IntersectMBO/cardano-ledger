@@ -79,7 +79,7 @@ data AlonzoPredFail era
   | MissingRequiredSigners (Set (KeyHash 'Witness (Crypto era)))
   | -- | Scripts that failed
     Phase1ScriptWitnessNotValidating
-      !(Set (Script era))
+      !(Set (ScriptHash (Crypto era)))
   deriving (Generic)
 
 deriving instance
@@ -133,10 +133,8 @@ encodePredFail (Phase1ScriptWitnessNotValidating x) = Sum Phase1ScriptWitnessNot
 instance
   ( Era era,
     FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
-    FromCBOR (Script era),
     Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era),
-    FromCBOR (Core.Script era)
+    Typeable (Core.AuxiliaryData era)
   ) =>
   FromCBOR (AlonzoPredFail era)
   where
@@ -145,7 +143,6 @@ instance
 decodePredFail ::
   ( Era era,
     FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)), -- TODO, we should be able to get rid of this constraint
-    FromCBOR (Script era),
     Typeable (Core.Script era),
     Typeable (Core.AuxiliaryData era)
   ) =>
@@ -219,7 +216,9 @@ alonzoStyleWitness = do
       failedScripts = Map.foldr accum [] scriptWitMap
         where
           accum script@(TimelockScript _) bad =
-            if validateScript @era script tx then bad else script : bad
+            if validateScript @era script tx
+              then bad
+              else (hashScript @era script) : bad
           accum (PlutusScript _) bad = bad
   null failedScripts ?! (Phase1ScriptWitnessNotValidating $ Set.fromList failedScripts)
 
