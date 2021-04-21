@@ -36,7 +36,7 @@ to have a budget in terms of a number of abstract $\ExUnits$.
 This budget gives a quantitative bound on resource usage in terms of a number of specific metrics, including memory usage or abstract execution steps.
 The budget is then used as part of the transaction fee calculation.
 
-Every scripting language
+Every non-native scripting language
 converts the calculated execution cost into a number of $\ExUnits$ using a cost model,
 $\CostMod$, which depends on the language and is provided as a protocol parameter.
 This allows execution costs (and so transaction fees) to be varied without requiring a major protocol version change (``hard fork'').
@@ -77,6 +77,15 @@ Another important point to make about both native and non-native scripts on Card
 running scripts in all languages will be supported indefinitely whenever possible.
 Making it impossible to run a script in a particular scripting language
 makes UTxO entries locked by that script unspendable.
+
+We use the terms Plutus, $\PlutusVI$, and ``non-native scripting language'' in this specification
+somewhat interchangably. The reason for this is that while we intend for the infrastructure
+set up in this document to be somewhat language-agnostic (in particular,
+able to support multiple versions of Plutus), it only gives all the details for
+the first and (currenly only) non-native script language, $\PlutusVI$,
+the introduction of which represents the
+start of the Alonzo era.
+
 
 \subsection{Extended UTxO}
 

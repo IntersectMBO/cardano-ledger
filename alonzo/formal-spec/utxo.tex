@@ -17,7 +17,7 @@
     \nextdef
     & \fun{feesOK} \in \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo~= \\
-    &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{totExunits}~tx \neq (0, 0) \Rightarrow \\
+    &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
     &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo}), \neg \fun{isNonNativeScriptAddress}~tx~a) \\
     &~~~~~~\wedge~ \fun{adaOnly}~\var{balance} \\
     &~~~~~~      \wedge~ \var{balance} \geq \txfee{txb})) \\
@@ -54,11 +54,15 @@ We have added or changed several functions that deal with fees as shown in Figur
   \begin{enumerate}[label=({\roman*})]
     \item the fee amount that the transaction states it is paying suffices to cover
     the minimum fee that the transaction is obligated to pay; and if the transaction uses non-native scripts, that
-    \item the fee-marked inputs do not belong to non-native script addresses;
+    \item the fee-marked inputs do not belong to non-native script addresses (that is, they
+    belong to either a native script address, or a key hash one);
     \item all the fee-marked inputs contain strictly Ada and no other kinds of token; and
     \item the fee-marked inputs are sufficient to cover the fee amount that is stated
     in the transaction.
   \end{enumerate}
+  Note that checking that a transaction is carrying redeemers is the most simple way to
+  check that it is carrying non-native scripts. A separate check is done in the rule prior to
+  calling the $\fun{feesOK}$ function that ensure that this is the case.
   \item The function $\fun{txins}$ returns the UTxO keys of transaction inputs.
   \item $\fun{txscriptfee}$ calculates the fee that a transaction must pay for script
   execution based on the amount of $\ExUnits$ it has budgeted, and the prices in the current protocol parameters
@@ -126,7 +130,7 @@ the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{sp}
       & \ScriptPurpose
-      & \PolicyID \uniondistinct \UTxOIn \uniondistinct \AddrRWD \uniondistinct \DCert
+      & \PolicyID \uniondistinct \TxIn \uniondistinct \AddrRWD \uniondistinct \DCert
 %      & \text{item the script is validated for}
     \end{array}
   \end{equation*}
@@ -135,7 +139,7 @@ the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
   \begin{align*}
     &\fun{indexof} \in \DCert \to \seqof{\DCert} \to \Ix\\
     &\fun{indexof} \in \AddrRWD \to \Wdrl \to \Ix\\
-    &\fun{indexof} \in \UTxOIn \to \powerset{\TxIn} \to \Ix\\
+    &\fun{indexof} \in \TxIn \to \powerset{\TxIn} \to \Ix\\
     &\fun{indexof} \in \PolicyID \to \Value \to \Ix
   \end{align*}
   %
@@ -150,10 +154,10 @@ the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
     & ~~\where \\
     & ~~\quad \var{txb} = \txbody{tx} \\
     & ~~\quad \var{rdptr} = \begin{cases}
-        (\mathsf{certTag},\fun{indexof}~\var{sp}~(\fun{txcerts}~{txb}))   & \var{sp}~\in~\DCert \\
-        (\mathsf{wdrlTag},\fun{indexof}~\var{sp}~(\fun{txwdrls}~{txb}))   & \var{sp}~\in~\AddrRWD \\
-        (\mathsf{mintTag},\fun{indexof}~\var{sp}~(\fun{mint}~{txb}))    & \var{sp}~\in~\PolicyID \\
-        (\mathsf{inputTag},\fun{indexof}~\var{sp}~(\fun{txinputs}~{txb})) & \var{sp}~\in~\UTxOIn
+        (\mathsf{Cert},\fun{indexof}~\var{sp}~(\fun{txcerts}~{txb}))   & \var{sp}~\in~\DCert \\
+        (\mathsf{Rewrd},\fun{indexof}~\var{sp}~(\fun{txwdrls}~{txb}))   & \var{sp}~\in~\AddrRWD \\
+        (\mathsf{Mint},\fun{indexof}~\var{sp}~(\fun{mint}~{txb}))    & \var{sp}~\in~\PolicyID \\
+        (\mathsf{Spend},\fun{indexof}~\var{sp}~(\fun{txinputs}~{txb})) & \var{sp}~\in~\TxIn
       \end{cases}
   \end{align*}
   \caption{Indexing script and data objects}
@@ -192,8 +196,8 @@ predict the exact time to which it refers.
   \begin{itemize}
   \item A cost model, that is used to calculate the $\ExUnits$ that are needed for script execution;
   \item A script to execute;
-  \item A list of terms of type $\Data$ that will be passed to the script; and
-  \item the execution unit budget.
+  \item the execution unit budget; and
+  \item A list of terms of type $\Data$ that will be passed to the script.
   \end{itemize}
   It outputs the validation result.
   Note that script execution stops if the full budget has been spent before validation is complete.
@@ -221,7 +225,7 @@ map differently onto points in time. The ledger does not have access to data (or
 that is needed to convert transaction validity interval slots numbers to slots numbers
 that correspond to the contracts world view. To address this, we decided to pass
 non-native contracts (in all languages and all eras) the system time instead of slot numbers.
-The conversion function is implemented by consensus (see~\cite{shelley_consensus}),
+The conversion function is implemented by consensus (see~\cite{cardano_consensus}),
 which has the information to do this correctly for
 
 \begin{itemize}
@@ -278,8 +282,8 @@ which has the information to do this correctly for
      &\text{Summarizes transaction data} \\~\\
      &\fun{valContext} \in \TxInfo \to \ScriptPurpose \to \Data \\
      &\text{Pairs transaction data with a script purpose} \\~\\
-     &\fun{runPLCScript} \in \CostMod \to\ScriptPlutus \to
-    \seqof{\Data} \to \ExUnits \to \IsValidating \\
+     &\fun{runPLCScript} \in \CostMod \to\ScriptPlutus \to \ExUnits \to
+    \seqof{\Data} \to \IsValidating \\
      &\text{Validate a Plutus script, taking resource limits into account}
   \end{align*}
   %
@@ -287,7 +291,7 @@ which has the information to do this correctly for
   %
   \begin{align*}
     \llbracket \var{script_v} \rrbracket_{\var{cm},\var{eu}}~\var{d}
-    &=& \fun{runPLCScript} ~{cm}~\var{script_v}~\var{d}~\var{eu}
+    &=& \fun{runPLCScript} ~{cm}~\var{script_v}~\var{eu}~\var{d}
   \end{align*}
   \caption{Script Validation, cont.}
   \label{fig:defs:functions-valid}
@@ -345,7 +349,7 @@ are caught during the application of the UTXOW rule (before these functions are 
     \nextdef
     & \fun{collectNNScriptInputs} \in \PParams \to \Tx \to \UTxO \to \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
     & \fun{collectNNScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
-    & ~~\fun{toList} \{ (\var{script}, (\fun{valContext}~\var{txinfo}~\var{sp}~++~ \fun{getData}~tx~utxo~sp~++~[\var{d}]), \var{eu}, \var{cm}) \mid \\
+    & ~~\fun{toList} \{ (\var{script}, ([\fun{valContext}~\var{txinfo}~\var{sp}]~++~ \fun{getData}~tx~utxo~sp~++~[\var{d}]), \var{eu}, \var{cm}) \mid \\
     & ~~~~(\var{sp}, \var{scriptHash}) \in \fun{scriptsNeeded}~{utxo}~{tx}, \\
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
     & ~~~~(\var{d}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
@@ -456,7 +460,7 @@ In this case, the states of the UTxO, fee
     \\
     ~
     \\
-    \fun{txvaltag}~\var{tx} = \fun{evalScripts}~\var{sLst} = \True
+    \fun{isValidating}~\var{tx} = \fun{evalScripts}~\var{sLst} = \True
     \\~\\
     {
       \begin{array}{r}
@@ -507,7 +511,7 @@ In this case, the states of the UTxO, fee
     \\
     ~
     \\
-    \fun{txvaltag}~\var{tx} = \fun{evalScripts}~\var{sLst} = \False
+    \fun{isValidating}~\var{tx} = \fun{evalScripts}~\var{sLst} = \False
     }
     {
     \begin{array}{l}
@@ -562,6 +566,9 @@ This rule has the following changes:
   size that the size of a $\Value$ in an output can be. Otherwise, this check is
   the same as in ShelleyMA.
 
+  \item The network ID field in the transaction body must match the
+  network ID constant 
+
  \item The execution unit budget for a transaction is within the maximum
   permitted number of units for a transaction;
 
@@ -595,8 +602,9 @@ UTXOS rule.
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
       \\
-      \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId
-      \\
+      \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId \\
+      \hldiff{\fun{txnetworkid}~\var{txb}~=~\NetworkId}
+      \\~\\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\
       \hldiff{\fun{totExunits}~{tx} \leq \fun{maxTxExUnits}~{pp}}
       \\
@@ -802,7 +810,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \\~\\
       \var{adh}\leteq\fun{txADhash}~\var{txb}
       &
-      \var{ad}\leteq\fun{txAD}~\var{tx}
+      \var{ad}\leteq\fun{auxiliaryData}~\var{tx}
       \\
       (\var{adh}=\Nothing \land \var{ad}=\Nothing)
       \lor
