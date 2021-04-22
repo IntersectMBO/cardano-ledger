@@ -1,5 +1,6 @@
 module Main where
 
+import Test.Cardano.Ledger.Alonzo.Examples.Bbody (bbodyExamples)
 import Test.Cardano.Ledger.Alonzo.Examples.Utxow (plutusScriptExamples, utxowExamples)
 import Test.Cardano.Ledger.Alonzo.Golden as Golden
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
@@ -16,6 +17,7 @@ tests =
       CDDL.tests 5,
       Golden.goldenUTxOEntryMinAda,
       plutusScriptExamples,
+      bbodyExamples,
       utxowExamples
     ]
 

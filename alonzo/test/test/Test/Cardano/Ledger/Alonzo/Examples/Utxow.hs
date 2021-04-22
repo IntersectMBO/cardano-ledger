@@ -4,16 +4,13 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.Examples.Utxow
-  ( plutusScriptExamples,
-    utxowExamples,
-  )
-where
+module Test.Cardano.Ledger.Alonzo.Examples.Utxow where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
+import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
@@ -25,10 +22,12 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import Cardano.Ledger.Alonzo.Tx
   ( IsValidating (..),
+    ScriptPurpose (..),
     ValidatedTx (..),
     hashWitnessPPData,
   )
 import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
+import Cardano.Ledger.Alonzo.TxInfo (transTx, valContext)
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
     Redeemers (..),
@@ -53,6 +52,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as P
   ( EvaluationError (..),
     ExBudget (..),
@@ -142,19 +142,58 @@ initUTxO =
   UTxO $
     Map.fromList
       [ (TxIn genesisId 0, alwaysSucceedsOutput),
-        (TxIn genesisId 1, alwaysFailsOutput),
-        (TxIn genesisId 2, feeOutput)
+        (TxIn genesisId 1, feeOutput), -- fee output for validatingTx, example 1
+        (TxIn genesisId 2, feeOutput), -- fee output for notValidatingTx, example 2
+        (TxIn genesisId 3, feeOutput), -- fee output for validatingTxWithCert, example 3
+        (TxIn genesisId 4, feeOutput), -- fee output for notValidatingTxWithCert, example 4
+        (TxIn genesisId 5, feeOutput), -- fee output for validatingTxWithWithdrawal, example 5
+        (TxIn genesisId 6, feeOutput), -- fee output for notValidatingTxWithWithdrawal, example 6
+        (TxIn genesisId 7, feeOutput), -- fee output for validatingTxWithMint, example 7
+        (TxIn genesisId 8, feeOutput), -- fee output for notValidatingTxWithMint, example 8
+        (TxIn genesisId 9, alwaysFailsOutput)
       ]
 
-initUtxoSt :: UTxOState A
-initUtxoSt = UTxOState initUTxO (Coin 0) (Coin 0) def
+initialUtxoSt :: UTxOState A
+initialUtxoSt = UTxOState initUTxO (Coin 0) (Coin 0) def
+
+-- | This is a helper type for the expectedUTxO function.
+--  IsSpend indicates that we created a transaction which
+--  successfully spends an output locked by a Plutus script.
+data IsSpend = IsSpend | IsNotSpend
+
+-- | This is a helper type for the expectedUTxO function.
+--  ExpectSuccess indicates that we created a valid transaction
+--  where the IsValidating flag is true.
+data Expect = ExpectSuccess (TxBody A) (TxOut A) IsSpend | ExpectFailure
+
+-- | In each of our main eight examples, the UTxO map obtained
+-- by applying the transaction is straightforward. This function
+-- captures the logic.
+--
+-- | We always expect the alwaysFailsOutput to remain in the UTxO map.
+-- Each of the eight example transactions below will consume one of the
+-- feeInputs, given by the feeInputs index.
+-- The transactions where IsValidating is True will create a transaction output.
+-- Additionally, the alwaysFailsOutput will be consumed in the IsSpend case.
+expectedUTxO :: Expect -> Natural -> UTxO A
+expectedUTxO ex feeInputIndex =
+  UTxO . Map.fromList $
+    (TxIn genesisId 9, alwaysFailsOutput) : sOut ++ feeOuts
+  where
+    sOut = case ex of
+      ExpectSuccess txb newOut IsSpend ->
+        [(TxIn (txid @A txb) 0, newOut)]
+      ExpectSuccess txb newOut IsNotSpend ->
+        [(TxIn (txid @A txb) 0, newOut), (TxIn genesisId 0, alwaysSucceedsOutput)]
+      ExpectFailure -> [(TxIn genesisId 0, alwaysSucceedsOutput)]
+    feeOuts = fmap (\x -> (TxIn genesisId x, feeOutput)) [x | x <- [1 .. 8], x /= feeInputIndex]
 
 -- =========================================================================
 --  Example 1: Process a SPEND transaction with a succeeding Plutus script.
 -- =========================================================================
 
 datumExample1 :: Data A
-datumExample1 = Data (Plutus.I 0)
+datumExample1 = Data (Plutus.I 123)
 
 redeemerExample1 :: Data A
 redeemerExample1 = Data (Plutus.I 42)
@@ -178,7 +217,7 @@ validatingBody :: TxBody A
 validatingBody =
   TxBody
     (Set.singleton $ TxIn genesisId 0) --inputs
-    (Set.singleton $ TxIn genesisId 2) --txinputs_fee
+    (Set.singleton $ TxIn genesisId 1) --txinputs_fee
     (StrictSeq.singleton outEx1) --outputs
     StrictSeq.empty --txcerts
     (Wdrl mempty) --txwdrls
@@ -207,12 +246,7 @@ validatingTx =
     SNothing
 
 utxoEx1 :: UTxO A
-utxoEx1 =
-  UTxO $
-    Map.fromList
-      [ (TxIn genesisId 1, alwaysFailsOutput),
-        (TxIn (txid @A validatingBody) 0, outEx1)
-      ]
+utxoEx1 = expectedUTxO (ExpectSuccess validatingBody outEx1 IsSpend) 1
 
 utxoStEx1 :: UTxOState A
 utxoStEx1 = UTxOState utxoEx1 (Coin 0) (Coin 5) def
@@ -230,7 +264,7 @@ redeemerExample2 = Data (Plutus.I 1)
 notValidatingRedeemers :: Redeemers A
 notValidatingRedeemers =
   Redeemers $
-    Map.singleton (RdmrPtr Spend 0) (redeemerExample2, ExUnits 5000 5000)
+    Map.singleton (RdmrPtr Spend 1) (redeemerExample2, ExUnits 5000 5000)
 
 alwaysFailsOutput :: TxOut A
 alwaysFailsOutput =
@@ -245,7 +279,7 @@ outEx2 = TxOut feeAddr (Val.inject $ Coin 3995) SNothing
 notValidatingBody :: TxBody A
 notValidatingBody =
   TxBody
-    (Set.singleton $ TxIn genesisId 1) --inputs
+    (Set.singleton $ TxIn genesisId 9) --inputs
     (Set.singleton $ TxIn genesisId 2) --txinputs_fee
     (StrictSeq.singleton outEx2) --outputs
     StrictSeq.empty --txcerts
@@ -275,12 +309,7 @@ notValidatingTx =
     SNothing
 
 utxoEx2 :: UTxO A
-utxoEx2 =
-  UTxO $
-    Map.fromList
-      [ (TxIn genesisId 0, alwaysSucceedsOutput),
-        (TxIn genesisId 1, alwaysFailsOutput)
-      ]
+utxoEx2 = expectedUTxO ExpectFailure 2
 
 utxoStEx2 :: UTxOState A
 utxoStEx2 = UTxOState utxoEx2 (Coin 0) (Coin 1000) def
@@ -307,7 +336,7 @@ validatingBodyWithCert :: TxBody A
 validatingBodyWithCert =
   TxBody
     mempty --inputs
-    (Set.singleton $ TxIn genesisId 2) --txinputs_fee
+    (Set.singleton $ TxIn genesisId 3) --txinputs_fee
     (StrictSeq.singleton outEx3) --outputs
     (StrictSeq.fromList [DCertDeleg (DeRegKey scriptStakeCredSuceed)]) --txcerts
     (Wdrl mempty) --txwdrls
@@ -336,13 +365,7 @@ validatingTxWithCert =
     SNothing
 
 utxoEx3 :: UTxO A
-utxoEx3 =
-  UTxO $
-    Map.fromList
-      [ (TxIn genesisId 0, alwaysSucceedsOutput),
-        (TxIn genesisId 1, alwaysFailsOutput),
-        (TxIn (txid @A validatingBodyWithCert) 0, outEx3)
-      ]
+utxoEx3 = expectedUTxO (ExpectSuccess validatingBodyWithCert outEx3 IsNotSpend) 3
 
 utxoStEx3 :: UTxOState A
 utxoStEx3 = UTxOState utxoEx3 (Coin 0) (Coin 5) def
@@ -369,7 +392,7 @@ notValidatingBodyWithCert :: TxBody A
 notValidatingBodyWithCert =
   TxBody
     mempty --inputs
-    (Set.singleton $ TxIn genesisId 2) --txinputs_fee
+    (Set.singleton $ TxIn genesisId 4) --txinputs_fee
     (StrictSeq.singleton outEx4) --outputs
     (StrictSeq.fromList [DCertDeleg (DeRegKey scriptStakeCredFail)]) --txcerts
     (Wdrl mempty) --txwdrls
@@ -402,12 +425,7 @@ notValidatingTxWithCert =
     SNothing
 
 utxoEx4 :: UTxO A
-utxoEx4 =
-  UTxO $
-    Map.fromList
-      [ (TxIn genesisId 0, alwaysSucceedsOutput),
-        (TxIn genesisId 1, alwaysFailsOutput)
-      ]
+utxoEx4 = expectedUTxO ExpectFailure 4
 
 utxoStEx4 :: UTxOState A
 utxoStEx4 = UTxOState utxoEx4 (Coin 0) (Coin 1000) def
@@ -431,7 +449,7 @@ validatingBodyWithWithdrawal :: TxBody A
 validatingBodyWithWithdrawal =
   TxBody
     mempty --inputs
-    (Set.singleton $ TxIn genesisId 2) --txinputs_fee
+    (Set.singleton $ TxIn genesisId 5) --txinputs_fee
     (StrictSeq.singleton outEx5) --outputs
     StrictSeq.empty
     ( Wdrl $
@@ -468,13 +486,7 @@ validatingTxWithWithdrawal =
     SNothing
 
 utxoEx5 :: UTxO A
-utxoEx5 =
-  UTxO $
-    Map.fromList
-      [ (TxIn genesisId 0, alwaysSucceedsOutput),
-        (TxIn genesisId 1, alwaysFailsOutput),
-        (TxIn (txid @A validatingBodyWithWithdrawal) 0, outEx5)
-      ]
+utxoEx5 = expectedUTxO (ExpectSuccess validatingBodyWithWithdrawal outEx5 IsNotSpend) 5
 
 utxoStEx5 :: UTxOState A
 utxoStEx5 = UTxOState utxoEx5 (Coin 0) (Coin 5) def
@@ -498,7 +510,7 @@ notValidatingBodyWithWithdrawal :: TxBody A
 notValidatingBodyWithWithdrawal =
   TxBody
     mempty --inputs
-    (Set.singleton $ TxIn genesisId 2) --txinputs_fee
+    (Set.singleton $ TxIn genesisId 6) --txinputs_fee
     (StrictSeq.singleton outEx6) --outputs
     StrictSeq.empty
     ( Wdrl $
@@ -535,12 +547,7 @@ notValidatingTxWithWithdrawal =
     SNothing
 
 utxoEx6 :: UTxO A
-utxoEx6 =
-  UTxO $
-    Map.fromList
-      [ (TxIn genesisId 0, alwaysSucceedsOutput),
-        (TxIn genesisId 1, alwaysFailsOutput)
-      ]
+utxoEx6 = expectedUTxO ExpectFailure 6
 
 utxoStEx6 :: UTxOState A
 utxoStEx6 = UTxOState utxoEx6 (Coin 0) (Coin 1000) def
@@ -561,7 +568,7 @@ mintEx7 =
     Map.singleton pidEx7 (Map.singleton an 1)
 
 outEx7 :: TxOut A
-outEx7 = TxOut feeAddr (mintEx7 <+> (Val.inject $ Coin 995)) SNothing
+outEx7 = TxOut feeAddr (mintEx7 <+> Val.inject (Coin 995)) SNothing
 
 redeemerExample7 :: Data A
 redeemerExample7 = Data (Plutus.I 42)
@@ -575,7 +582,7 @@ validatingBodyWithMint :: TxBody A
 validatingBodyWithMint =
   TxBody
     mempty --inputs
-    (Set.singleton $ TxIn genesisId 2) --txinputs_fee
+    (Set.singleton $ TxIn genesisId 7) --txinputs_fee
     (StrictSeq.singleton outEx7) --outputs
     StrictSeq.empty
     (Wdrl mempty)
@@ -608,13 +615,7 @@ validatingTxWithMint =
     SNothing
 
 utxoEx7 :: UTxO A
-utxoEx7 =
-  UTxO $
-    Map.fromList
-      [ (TxIn genesisId 0, alwaysSucceedsOutput),
-        (TxIn genesisId 1, alwaysFailsOutput),
-        (TxIn (txid @A validatingBodyWithMint) 0, outEx7)
-      ]
+utxoEx7 = expectedUTxO (ExpectSuccess validatingBodyWithMint outEx7 IsNotSpend) 7
 
 utxoStEx7 :: UTxOState A
 utxoStEx7 = UTxOState utxoEx7 (Coin 0) (Coin 5) def
@@ -632,7 +633,7 @@ mintEx8 =
     Map.singleton pidEx8 (Map.singleton an 1)
 
 outEx8 :: TxOut A
-outEx8 = TxOut feeAddr (mintEx8 <+> (Val.inject $ Coin 995)) SNothing
+outEx8 = TxOut feeAddr (mintEx8 <+> Val.inject (Coin 995)) SNothing
 
 redeemerExample8 :: Data A
 redeemerExample8 = Data (Plutus.I 0)
@@ -646,7 +647,7 @@ notValidatingBodyWithMint :: TxBody A
 notValidatingBodyWithMint =
   TxBody
     mempty --inputs
-    (Set.singleton $ TxIn genesisId 2) --txinputs_fee
+    (Set.singleton $ TxIn genesisId 8) --txinputs_fee
     (StrictSeq.singleton outEx8) --outputs
     StrictSeq.empty
     (Wdrl mempty)
@@ -679,12 +680,7 @@ notValidatingTxWithMint =
     SNothing
 
 utxoEx8 :: UTxO A
-utxoEx8 =
-  UTxO $
-    Map.fromList
-      [ (TxIn genesisId 0, alwaysSucceedsOutput),
-        (TxIn genesisId 1, alwaysFailsOutput)
-      ]
+utxoEx8 = expectedUTxO ExpectFailure 8
 
 utxoStEx8 :: UTxOState A
 utxoStEx8 = UTxOState utxoEx8 (Coin 0) (Coin 1000) def
@@ -732,48 +728,64 @@ testUTXOW initSt tx predicateFailure@(Left _) = do
   let st = runShelleyBase $ applySTSTest @(AlonzoUTXOW A) (TRC (utxoEnv, initSt, tx))
   st @?= predicateFailure
 
+collectTwoPhaseScriptInputsOutputOrdering :: Assertion
+collectTwoPhaseScriptInputsOutputOrdering =
+  collectTwoPhaseScriptInputs pp validatingTx initUTxO
+    @?= Right
+      [ ( alwaysSucceeds 3,
+          [redeemerExample1, context, datumExample1],
+          ExUnits 5000 5000,
+          CostModel mempty
+        )
+      ]
+  where
+    context = valContext (transTx initUTxO validatingTx) (Spending $ TxIn genesisId 0)
+
 utxowExamples :: TestTree
 utxowExamples =
   testGroup
     "utxow examples"
     [ testCase "validating SPEND script" $
         testUTXOW
-          initUtxoSt
+          initialUtxoSt
           validatingTx
           (Right utxoStEx1),
       testCase "not validating SPEND script" $
         testUTXOW
-          initUtxoSt
+          initialUtxoSt
           notValidatingTx
           (Right utxoStEx2),
       testCase "validating CERT script" $
         testUTXOW
-          initUtxoSt
+          initialUtxoSt
           validatingTxWithCert
           (Right utxoStEx3),
       testCase "not validating CERT script" $
         testUTXOW
-          initUtxoSt
+          initialUtxoSt
           notValidatingTxWithCert
           (Right utxoStEx4),
       testCase "validating WITHDRAWAL script" $
         testUTXOW
-          initUtxoSt
+          initialUtxoSt
           validatingTxWithWithdrawal
           (Right utxoStEx5),
       testCase "not validating WITHDRAWAL script" $
         testUTXOW
-          initUtxoSt
+          initialUtxoSt
           notValidatingTxWithWithdrawal
           (Right utxoStEx6),
       testCase "validating MINT script" $
         testUTXOW
-          initUtxoSt
+          initialUtxoSt
           validatingTxWithMint
           (Right utxoStEx7),
       testCase "not validating MINT script" $
         testUTXOW
-          initUtxoSt
+          initialUtxoSt
           notValidatingTxWithMint
-          (Right utxoStEx8)
+          (Right utxoStEx8),
+      testCase
+        "collectTwoPhaseScriptInputs output order"
+        collectTwoPhaseScriptInputsOutputOrdering
     ]

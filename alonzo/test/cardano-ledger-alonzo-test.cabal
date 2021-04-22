@@ -68,6 +68,7 @@ test-suite cardano-ledger-alonzo-test
     base16-bytestring,
     bytestring,
     cardano-binary,
+    cardano-crypto-class,
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-shelley-ma,
