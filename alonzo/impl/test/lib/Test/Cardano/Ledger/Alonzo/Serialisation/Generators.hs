@@ -192,8 +192,14 @@ instance Arbitrary Language where
 instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary
 
+newtype AlphaString = AlphaString {unAlphaString :: String}
+  deriving (Show, Eq, Ord)
+
+instance Arbitrary AlphaString where
+  arbitrary = AlphaString <$> listOf (elements ['a' .. 'z'])
+
 instance Arbitrary CostModel where
-  arbitrary = (CostModel . (Map.mapKeys T.pack)) <$> arbitrary
+  arbitrary = (CostModel . (Map.mapKeys (T.pack . unAlphaString))) <$> arbitrary
 
 instance Arbitrary (PParams era) where
   arbitrary =

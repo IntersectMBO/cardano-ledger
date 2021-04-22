@@ -70,6 +70,7 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
+import qualified Plutus.V1.Ledger.Api as Plutus (validateCostModelParams)
 import qualified Plutus.V1.Ledger.Examples as Plutus (alwaysFailingNAryFunction, alwaysSucceedingNAryFunction)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR)
 
@@ -167,8 +168,14 @@ instance NFData CostModel
 
 deriving instance ToCBOR CostModel
 
+checkCostModel :: Map Text Integer -> Either String CostModel
+checkCostModel cm =
+  if Plutus.validateCostModelParams cm
+    then Right (CostModel cm)
+    else Left ("Invalid cost model: " ++ show cm)
+
 instance FromCBOR CostModel where
-  fromCBOR = CostModel <$> mapFromCBOR
+  fromCBOR = decode $ SumD checkCostModel <? (D mapFromCBOR)
 
 -- CostModel is not parameterized by Crypto or Era so we use the
 -- hashWithCrypto function, rather than hashAnnotated

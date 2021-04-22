@@ -50,6 +50,7 @@ import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Plutus.V1.Ledger.Api as P
@@ -62,7 +63,7 @@ import Plutus.V1.Ledger.Examples
   ( alwaysFailingNAryFunction,
     alwaysSucceedingNAryFunction,
   )
-import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as P (defaultCostModel)
+import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as P (defaultCostModelParams)
 import qualified PlutusCore.Evaluation.Machine.ExMemory as P (ExCPU (..), ExMemory (..))
 import qualified PlutusTx as Plutus
 import Shelley.Spec.Ledger.Address (Addr (..))
@@ -699,7 +700,7 @@ plutusScriptExamples =
     [ testCase "always true" $
         case P.evaluateScriptRestricting
           P.Verbose
-          P.defaultCostModel
+          costModel
           (P.ExBudget (P.ExCPU 1) (P.ExMemory 2))
           (alwaysSucceedingNAryFunction 0)
           [] of
@@ -708,7 +709,7 @@ plutusScriptExamples =
       testCase "always false" $
         case P.evaluateScriptRestricting
           P.Verbose
-          P.defaultCostModel
+          costModel
           (P.ExBudget (P.ExCPU 1) (P.ExMemory 2))
           (alwaysFailingNAryFunction 0)
           [] of
@@ -716,6 +717,8 @@ plutusScriptExamples =
           (_, Left e) -> assertBool ("Not the script failure we expected: " <> show e) False
           (_, Right _) -> assertBool "This script should have failed" False
     ]
+  where
+    costModel = fromMaybe (error "corrupt default cost model") P.defaultCostModelParams
 
 testUTXOW ::
   UTxOState A ->
