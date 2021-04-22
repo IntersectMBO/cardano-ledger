@@ -55,7 +55,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.LedgerState
+import Shelley.Spec.Ledger.LedgerState (PPUPState (..), UTxOState (..), keyRefunds)
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
@@ -313,7 +313,7 @@ constructValidated globals env@(UtxoEnv _ pp _ _) st tx =
                 then scriptsValidateTransition
                 else scriptsNotValidateTransition
        in case errs of
-            [] -> pure (vTx, newState)
+            [] -> pure (newState, vTx)
             _ -> throwError errs
   where
     runTransitionRule :: RuleInterpreter
