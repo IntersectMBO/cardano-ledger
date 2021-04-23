@@ -3,12 +3,13 @@
 \label{sect:submission}
 
 Proposals are submitted by a member of a submitter group.  They must be counter-signed by a quorum of submitter keys, where the quorum is specified by the \texttt{ProposalQuorum} parameter.
-\khcomment{Difficult question: who controls registration/de-registration of submitter keys.}\khcomment{How do we
-ensure that there are always enough submitters in existence.}\khcomment{The
-quorum may be a protocol parameter.}  No fee is charged for proposal
+\khcomment{Difficult question: who controls registration/de-registration of submitter keys.}\pkcomment{How about an on-chain vote by ada holders?}\khcomment{How do we
+ensure that there are always enough submitters in existence.}\pkcomment{We should have an option to reboot this set by a vote from ada holders, in case there are not enough (active) submitters}\khcomment{The
+quorum may be a protocol parameter.}\pkcomment{with an enforced sensible range in $(0,1)$}  No fee is charged for proposal
 submission.\khcomment{This may need to be discussed.}  A submitter may submit
 any number of proposals in a single epoch.
 \khcomment{This assumes that submitters are trustworthy and will not collectively spam the blockchain.}
+\pkcomment{Depending on how we accumulate the counter signatures (including all of them in the transaction with the proposal, which requires off chain coordination between the submitters, or collecting them in susequent transactions) it might also be possible for a single submitter to spam the chain}
 
 \subsection{Format}
 
@@ -26,14 +27,15 @@ Each proposal has a header and a body.  % and must be signed\khcomment{Submittin
   "enact"            : Epoch,
   "submitter"        : KeyHash
 }
-\end{verbatim}
+\end{verbatim}\pkcomment{Do we need \texttt{Slot}, or \texttt{Epoch}?}
 
 The \texttt{proposal} field allows the proposal to be tied to a corresponding off-chain proposal (see Appendix~\ref{sect:relating-off-and-on-chain} and Section~\ref{sect:proposalid}).  The \texttt{voteby} and \texttt{endorseby} fields specify deadlines.
 Votes and endorsements must be received prior to the specified slot if they are to be counted.  The endorsement deadline is optional.
-\khcomment{Arguably, to avoid performance issues, tallying should either happen at epoch boundaries or in a separate thread.}
+\khcomment{Arguably, to avoid performance issues, tallying should either happen at epoch boundaries or in a separate thread.}\pkcomment{Yes, same as for calculating the stake distribution and the rewards}
 In order to avoid zombie proposals that could disrupt operations, deadlines must be set within a reasonable time period after submission (e.g. within 3 epochs).
 Voting and endorsement slots and thresholds are completely independent, so a voting deadline may be set before/after/at the same time as an endorsement deadline.
 Deadlines can never be set in the past.
+The enactment has to be after the deadlines doe voting and endorsing.
 %
 The \texttt{votethreshold} and \texttt{endorsethreshold} fields allow specific thresholds to be set for voting and endorsement, respectively.  This allows the type of proposal to be differentiated on a per-proposal basis
 (e.g. a protocol version upgrade may require a higher vote threshold than a simple parameter change).
@@ -93,8 +95,8 @@ that a set of transfers (for Catalyst funds, for instance), may  need to broken 
 }
 \end{verbatim}
 
-Funds may be transferred from either the treasury or the reserves pot, and sent to either an address, or to the treasury/reserves pot.
-Transfers from treasury to treasury or from reserves to reserves are not permitted.  All transfers must be for a positive amount (including zero).
+Funds may be transferred from either the treasury or the reserves, and sent to either an address, or to the treasury/reserves.
+Transfers from treasury to treasury or from reserves to reserves are not permitted.  All transfers must be for a positive amount (including zero\pkcomment{Why do we want to allow zero here?}).
 Multiple transfers may be made in a single epoch.  This allows for proper accounting, where e.g. different kinds of transfer must
 be authorised by different groups.
 
@@ -108,7 +110,7 @@ All update and proposals must be signed when they are submitted.  A proposal mus
 policy that conforms to the existing \emph{multi-sig} transaction mechanism.  This enables the use of standard transaction witnessing.
 % where the quorum is a protocol parameter
 The signing policy is then provided as an updatable protocol parameter.  This gives a great deal of flexibility to define and change submission policies.
-To reduce the possibility of abuse, the policy must comply with a minimum quorum size should be hard-wired into the protocol.
+To reduce the possibility of abuse, the policy must comply with a minimum quorum size, which should be hard-wired into the protocol.
 
 
 \khcomment{The obvious approach is to use transaction witnessing and a multi-sig approach, as described here.  That implies a change to the submission process, and also that
@@ -122,8 +124,8 @@ Note that the process described here intrinsically supports automation.  Signato
 \subsection{Proposal Identifiers}
 \label{sect:proposalid}
 
-Each proposal has a unique identifier that is used for voting, endorsement and enactment.  It may also be used to refer to the proposal in the off-chain process (eg to provide its
-status, encourage voting etc).  At a minimum, uniqueness must be enforced between submission and enactment, but it will be simplest to have full uniqueness, since the blockchain will need to record
+Each proposal has a unique identifier that is used for voting, endorsement, and enactment.  It may also be used to refer to the proposal in the off-chain process (eg to provide its
+status, encourage voting, etc).  At a minimum, uniqueness must be enforced between submission and enactment, but it will be simplest to have full uniqueness, since the blockchain will need to record
 details of each proposal indefinitely.
 
 There are three obvious ways to construct an identifier.

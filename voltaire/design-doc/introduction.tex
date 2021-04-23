@@ -18,7 +18,7 @@ There are three places where genesis keys are currently used.
   the software that is being used by block producing nodes (``stake pools''), and acknowledged by sufficient pools upgrading to the new software version.
 \item
   \textbf{Transfers from/to Reserves/Treasury:}
-  A funds transfer may be made directly from eiher the reserves or treasury pots to a nomrmal address, between the reserves and treasury pots (in either direction), or from a normal address to the treasury pot.  This is referred to in the existing Cardano documentation as an ``MIR'' transfer (Move Instantaneous Rewards).
+  A funds transfer may be made directly from eiher the reserves or treasury pots to a normal address, between the reserves and treasury pots (in either direction), or from a normal address to the treasury pot.  This is referred to in the existing Cardano documentation as an ``MIR'' transfer (Move Instantaneous Rewards).
 \end{itemize}
 
 All of these issues must be devolved to a decentralised governance process.
@@ -71,7 +71,7 @@ The off-chain process involves five key stages:
   Proposals to change protocol versions may involve significant software development, and therefore need to be funded by the Catalyst fund or some other means.
 \end{enumerate}
 
-Each of these off-chain stages may follow formally defined processes, and may be partially automated.  Generally, they will be driven by convention and rules.  A detailed governance structure is necessary to ensure that necessary business can
+Each of these off-chain stages may follow a formally defined processes, and may be partially automated.  Generally, they will be driven by convention and rules.  A detailed governance structure is necessary to ensure that business can
 be transacted in an efficient and effective way, without risking loss of control to a small non-representative group, and so negating the purpose of decentralised governance.
 The processes and structures may evolve over time.  Some of the issues are discussed in Appendix~\ref{sect:off-chain}.
 
@@ -84,12 +84,12 @@ since it may not always be possible to stop or reverse actions once they are ini
 
 \begin{enumerate}
 \item
-  \textbf{Submission.}  A formal proposal is submitted on-chain by one of a group of submitters.  The proposal must be in the agreed format, and must include deadlines for voting, endorsement and enactment.
+  \textbf{Submission.}  A formal proposal is submitted on-chain by one of a group of submitters.  The proposal must be in the agreed format, and must include deadlines for voting, endorsement, and enactment.
 \item
-  \textbf{Voting.}  The proposal is voted on and the votes are tallied.  If sufficient votes are obtained by the stated deadline, then the proposal is approved for enactment.
+  \textbf{Voting.}  The proposal is voted on and the votes are tallied.  If sufficient votes are obtained by the stated deadline, then the proposal is \emph{approved} for enactment.
 \item
   \textbf{Endorsement.}  If the proposal involves a change to the protocol, then stake pool operators must upgrade their nodes to the correct version.  This will signal their readiness to run the new protocol.
-  Assuming that sufficient endorsement is obtained by the deadline, then the proposal is endorsed for enactment.
+  Assuming that sufficient endorsement is obtained by the deadline, then the proposal is \emph{endorsed} for enactment.
 \item
   \textbf{Enactment.}  Proposals that have been approved (and endorsed, if necessary) are processed fully automatically at the corresponding epoch boundary.
 \end{enumerate}
@@ -115,9 +115,9 @@ A number of stakeholder groups are involved in the governance process.  The key 
   This will give them limited or no governance rights.  Their needs should, however, be considered when changes are made to protocol parameters.
   \item
   \textbf{Exchanges and other Proxy Ada Holders:}
-  Exchanges and similar organisations hold Ada on behalf of other parties.  It is important from both a regulatory and a technical perspective that they do not hold excessive
-  power, since this will work against the requirements of decentralisation.  They require a safe, secure and robust blockchain so that they may operate successfully on
-  behalf of their clients.
+  Exchanges and similar organisations hold Ada on behalf of other parties.  They require a safe, secure and robust blockchain so that they may operate successfully on
+  behalf of their clients.  It is important from both a regulatory and a technical perspective that they do not hold excessive
+  power, since this will work against the requirements of decentralisation.
 \end{itemize}
 
 The network should be able to evolve in a way that meets the best long-term needs of all these stakeholders, while maintaining the integrity, stability and longevity of

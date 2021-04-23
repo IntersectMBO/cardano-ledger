@@ -39,17 +39,17 @@ We can identify a number of distinct groups that may be involved in proposal sub
   \hline \hline
 \end{tabular}
 
-\subsection{General Ada Holdera (Off-Chain and On-Chain)}
+\subsection{General Ada Holders (Off-Chain and On-Chain)}
 
 General Ada holders may make informal proposals and discuss them using an off-chain mechanism.  They vote on the acceptance of these proposals
 either on-chain or off-chain, in proportion to the ada that they hold.  They may delegate their stake for voting purposes to on-chain representatives,
-who will vote on their behalf for or against submitted proposals.  This vote delegation may be changed at any time.
+who will vote on their behalf for or against submitted proposals.  This vote delegation may be changed at any time\pkcomment{We should clarify whether this includes changing the delegation \emph{after} delegates have voted. I think it would be good to allow this}.
 
 \subsection{Executive Team (Off-Chain)}
 
 The Executive Team is responsible for managing proposals, prioritising them for discussion and voting, monitoring the voting process and the
 voting outcome, ensuring that the proposal is properly implemented and submitted on-chain, and reporting back on proposal enactment.
-It is also responsible for ensuring that the correct process is followed for the type of proposal.  It may be possible to automate part or all of this process.
+It is also responsible for ensuring that the correct process is followed for the type of proposal.  It may be possible to automate part or all of this process eventually.
 
 \subsection{Security Experts (Off-Chain)}
 
@@ -82,7 +82,7 @@ file that fully describes the proposal. Protocol version upgrades will also requ
 
 Submitters are permitted to submit proposals on-chain.  Each proposal must be signed by a quorum of submitters, who verify the submitted
 proposal, checking that it is in the correct format, conforms to the original proposal, and meets other process requirements.
-Submitters are appointed by endorsers.  Depending on the governance design, the submitter group might be restricted to a few members,
+Submitters are appointed by endorsers\pkcomment{I think this is should be electors, not endorsers?}.  Depending on the governance design, the submitter group might be restricted to a few members,
 be an elected or appointed group, be limited by ada holding, or be limited to endorsers, delegates or another group.
 
 \subsection{Delegates (On-Chain)}
@@ -99,7 +99,7 @@ delegates that represent their political opinions without considering their abil
 block producers.  Delegates must track any discussions and ensure that the proposals meet the required
 security and other concerns.
 
-\subsection{Endorsers (On-Chain, May not be needed)}
+\subsection{Endorsers (On-Chain, May not be needed\pkcomment{why not?})}
 
 The role of an endorser is to confirm that they are ready to upgrade to a new
 version of the Cardano protocol.  All stake pools are endorsers.  In line with
@@ -110,7 +110,7 @@ threshold of endorsement is required for a proposal to be enacted.
 
 \subsection{Electors (Off-chain or On-Chain)}
 
-Electors determine who belongs to the submitter group.  The composition of this group is to be determined.  It might be formed by direct election off-chain, by
+Electors determine who belongs to the submitter group.  The composition of this group is to be determined.  It might be formed by direct election off-chain\pkcomment{If it is an off-chain election, how do we ensure the correct result is recorded on the chain?}, by
 nomination from an agreed group, by submission of an on-chain proposal.  In some systems, it may even be unnecessary.
 One possibility is to have a self-perpetuating and renewing submitter group, so that submitters nominate and sign for additional members, or remove existing members.
 \khcomment{This needs to be agreed.}
