@@ -88,6 +88,9 @@ stakePtrs creds =
       | (i, cred) <- zip [0 ..] creds
     ]
 
+-- | Create a UTxO set containing 'noBase' base stake credentials and any
+-- pointer credentials passed in 'ptrMap'. For each credential, there will be
+-- 'dupFactor' entries in the UTxO.
 utxo :: Word64 -> Map Ptr c -> Int -> UTxO TestEra
 utxo noBase ptrMap dupFactor =
   UTxO $
@@ -105,7 +108,34 @@ data AggTestSetup = AggTestSetup
     atsUTxO :: !(UTxO TestEra)
   }
 
-sizedAggTestSetup :: Word64 -> Word64 -> Int -> AggTestSetup
+-- | Construct the relevant UTxO and pointer map to test
+-- 'aggregateUtxoCoinByCredential'.
+--
+-- There are three parameters to this:
+-- - The number of distinct 'StakeRefBase' outputs present in the UTxO.
+-- - The number of distinct 'StakeRefPtr' outputs present in the UTxO, and the
+--   corresponding size of the pointer map.
+-- - The "duplication factor". This represents the number of 'TxIn's pointing to
+--   outputs with a given stake address. Thus with a duplication factor of 1,
+--   there will be only one "coin" per credential, and little aggregation. With
+--   a factor of 10, there will be 10 coins that must be aggregated.
+--
+--   Note that this corresponds to two situations in real usage: multiple
+--   transactions paying to the same address, and multiple addresses sharing the
+--   same stake credential. These scenarios are identical for benchmarking
+--   purposes, and hence we roll them into one.
+--
+-- There is one potential missing parameter; the number of unstaked addresses
+-- present. These contribute to the size of the UTxO but not to any aggregation
+-- cost.
+sizedAggTestSetup ::
+  -- | Number of distinct base stake credentials
+  Word64 ->
+  -- | Number of distinct pointer stake credentials
+  Word64 ->
+  -- | Duplication factor
+  Int ->
+  AggTestSetup
 sizedAggTestSetup noBase noPtr dupFactor = AggTestSetup pm ut
   where
     pm = stakePtrs $ stakeCreds noPtr
