@@ -246,3 +246,95 @@ url = {https://github.com/input-output-hk/plutus/tree/master/docs/extended-utxo}
   institution = {RFC Editor},
   url = {https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06}
 }
+
+@article{musig2,
+  author    = {Jonas Nick and
+               Tim Ruffing and
+               Yannick Seurin},
+  title     = {MuSig2: Simple Two-Round Schnorr Multi-Signatures},
+  journal   = {{IACR} Cryptol. ePrint Arch.},
+  volume    = {2020},
+  pages     = {1261},
+  year      = {2020},
+  url       = {https://eprint.iacr.org/2020/1261},
+  timestamp = {Fri, 30 Oct 2020 16:40:33 +0100},
+  biburl    = {https://dblp.org/rec/journals/iacr/NickRS20.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@article{musig,
+  author    = {Gregory Maxwell and
+               Andrew Poelstra and
+               Yannick Seurin and
+               Pieter Wuille},
+  title     = {Simple Schnorr multi-signatures with applications to Bitcoin},
+  journal   = {Des. Codes Cryptogr.},
+  volume    = {87},
+  number    = {9},
+  pages     = {2139--2164},
+  year      = {2019},
+  url       = {https://doi.org/10.1007/s10623-019-00608-x},
+  doi       = {10.1007/s10623-019-00608-x},
+  timestamp = {Mon, 23 Sep 2019 17:26:44 +0200},
+  biburl    = {https://dblp.org/rec/journals/dcc/MaxwellPSW19.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@inproceedings{pixel,
+  author    = {Manu Drijvers and
+               Sergey Gorbunov and
+               Gregory Neven and
+               Hoeteck Wee},
+  editor    = {Srdjan Capkun and
+               Franziska Roesner},
+  title     = {Pixel: Multi-signatures for Consensus},
+  booktitle = {29th {USENIX} Security Symposium, {USENIX} Security 2020, August 12-14,
+               2020},
+  pages     = {2093--2110},
+  publisher = {{USENIX} Association},
+  year      = {2020},
+  url       = {https://www.usenix.org/conference/usenixsecurity20/presentation/drijvers},
+  timestamp = {Fri, 29 Jan 2021 22:08:55 +0100},
+  biburl    = {https://dblp.org/rec/conf/uss/Drijvers0NW20.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@inproceedings{musigBoneh,
+  author    = {Dan Boneh and
+               Manu Drijvers and
+               Gregory Neven},
+  editor    = {Thomas Peyrin and
+               Steven D. Galbraith},
+  title     = {Compact Multi-signatures for Smaller Blockchains},
+  booktitle = {Advances in Cryptology - {ASIACRYPT} 2018 - 24th International Conference
+               on the Theory and Application of Cryptology and Information Security,
+               Brisbane, QLD, Australia, December 2-6, 2018, Proceedings, Part {II}},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {11273},
+  pages     = {435--464},
+  publisher = {Springer},
+  year      = {2018},
+  url       = {https://doi.org/10.1007/978-3-030-03329-3\_15},
+  doi       = {10.1007/978-3-030-03329-3\_15},
+  timestamp = {Tue, 14 May 2019 10:00:40 +0200},
+  biburl    = {https://dblp.org/rec/conf/asiacrypt/BonehDN18.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@inproceedings{musigs,
+author = {Micali, Silvio and Ohta, Kazuo and Reyzin, Leonid},
+title = {Accountable-Subgroup Multisignatures: Extended Abstract},
+year = {2001},
+isbn = {1581133855},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/501983.502017},
+doi = {10.1145/501983.502017},
+abstract = {Formal models and security proofs are especially important for multisignatures: in contrast to threshold signatures, no precise definitions were ever provided for such schemes, and some proposals were subsequently broken.In this paper, we formalize and implement a variant of multi-signature schemes, Accountable-Subgroup Multisignatures (ASM). In essence, ASM schemes enable any subgroup, S, of a given group, G, of potential signers, to sign efficiently a message M so that the signature provably reveals the identities of the signers in S to any verifier.Specifically, we provide:The first formal model of security for multisignature schemes that explicitly includes key generation (without relying on trusted third parties);A protocol, based on Schnorr's signature scheme [33], that is both provable and efficient:Only three rounds of communication are required per signature.The signing time per signer is the same as for the single-signer Schnorr scheme, regardless of the number of signers.The verification time is only slightly greater than that for the single-signer Schnorr scheme.The signature length is the same as for the single signer Schnorr scheme, regardless of the number of signers.Our proof of security relies on random oracles and the hardness of the Discrete Log Problem.},
+booktitle = {Proceedings of the 8th ACM Conference on Computer and Communications Security},
+pages = {245-254},
+numpages = {10},
+keywords = {digital signature, multisignature},
+location = {Philadelphia, PA, USA},
+series = {CCS '01}
+}

@@ -82,7 +82,7 @@ type.
 \end{figure}
 
 When we get to the blockchain layer validation, we will use
-key evolving signatures (KES) according to the MMM scheme \cite{cryptoeprint:2001:034}.
+key evolving signatures (KES).
 This is another asymmetric key cryptographic scheme, also relying on
 the use of public and private key pairs.
 These signature schemes provide forward cryptographic security, meaning that a
@@ -210,5 +210,58 @@ are required to sign
   \caption{Multi-signature via Native Scripts}
   \label{fig:types-msig}
 \end{figure*}
+
+
+%\subsection{Verifiable Random Functions (VRF)}
+%\label{sec:defs-vrf}
+Figure~\ref{fig:defs-vrf} shows the cryptographic abstractions needed for Verifiable Random Functions (VRF). VRFs allow key-pair owners, $(sk, vk)\in \KeyPair$, to evaluate a pseudorandom function in a provable way given a randomness seed. Any party with access to the verification key, $vk$, the randomness seed, the proof and the generated randomness can indeed verify that the value is pseudorandom. 
+
+\begin{figure}[htb]
+  %
+  \emph{Abstract types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{seed} & \Seed  & \text{seed for pseudo-random number generator}\\
+      \var{prf} & \Proof  & \text{VRF proof}\\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract functions ($T$ an arbitrary type)}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \seedOp & \Seed \to \Seed \to \Seed & \text{binary seed operation} \\
+      \vrf{\T}{}{} & \SKey \to \Seed \to \T\times\Proof
+                   & \text{verifiable random function} \\
+                   %
+      \verifyVrf{\T}{}{}{} & \VKey \to \Seed \to \Proof\times\T \to \Bool
+                           & \text{verify vrf proof} \\
+                           %
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Derived Types}
+  \begin{align*}
+    \PoolDistr = \KeyHash_{pool} \mapsto \left([0, 1]\times\KeyHash_{vrf}\right)
+      \text{ \hspace{1cm}stake pool distribution}
+  \end{align*}
+  %
+
+  \emph{Constraints}
+  \begin{align*}
+    & \forall (sk, vk) \in \KeyPair,~ seed \in \Seed,~
+    \verifyVrf{T}{vk}{seed}{\left(\vrf{T}{sk}{seed}\right)}
+  \end{align*}
+  %
+  \emph{Constants}
+  \begin{align*}
+    & 0_{seed} \in \Seed & \text{neutral seed element} \\
+    & \Seedl \in \Seed & \text{leader seed constant} \\
+    & \Seede \in \Seed & \text{nonce seed constant}\\
+  \end{align*}
+
+  \caption{VRF definitions}
+  \label{fig:defs-vrf}
+\end{figure}
 
 \clearpage
