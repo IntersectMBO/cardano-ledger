@@ -25,7 +25,7 @@ import Cardano.Ledger.Alonzo.Tx
     minfee,
     txbody,
   )
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx, txins)
 import Cardano.Ledger.Alonzo.TxBody
   ( TxOut (..),
     txnetworkid',
@@ -91,7 +91,6 @@ import Shelley.Spec.Ledger.TxBody (unWdrl)
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
-    txins,
     txouts,
     unUTxO,
   )
@@ -314,11 +313,11 @@ utxoTransition = do
   inInterval slot (getField @"vldt" txb)
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
 
-  not (Set.null (txins @era txb)) ?! InputSetEmptyUTxO
+  not (Set.null (Alonzo.txins @era txb)) ?! InputSetEmptyUTxO
 
   feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
-  eval (txins @era txb ⊆ dom utxo)
-    ?! BadInputsUTxO (eval (txins @era txb ➖ dom utxo))
+  eval (Alonzo.txins @era txb ⊆ dom utxo)
+    ?! BadInputsUTxO (eval (Alonzo.txins @era txb ➖ dom utxo))
 
   let consumed_ = consumed @era pp utxo txb
       produced_ = Shelley.produced @era pp stakepools txb
