@@ -45,12 +45,10 @@ import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Ada as P (adaSymbol, adaToken)
 import qualified Plutus.V1.Ledger.Address as P (Address (..))
 import qualified Plutus.V1.Ledger.Api as P
-  ( CostModel,
-    DCert (..),
+  ( DCert (..),
     ExBudget (..),
     VerboseMode (..),
     evaluateScriptRestricting,
-    validateAndCreateCostModel,
     validateScript,
   )
 import qualified Plutus.V1.Ledger.Contexts as P
@@ -73,7 +71,6 @@ import qualified Plutus.V1.Ledger.Slot as P (SlotRange)
 import qualified Plutus.V1.Ledger.Tx as P (TxOutRef (..))
 import qualified Plutus.V1.Ledger.TxId as P (TxId (..))
 import qualified Plutus.V1.Ledger.Value as P (CurrencySymbol (..), TokenName (..), Value (..), singleton, unionWith)
-import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as P (defaultCostModel)
 import qualified PlutusCore.Evaluation.Machine.ExMemory as P (ExCPU (..), ExMemory (..))
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx.IsData.Class as P (IsData (..))
@@ -254,12 +251,6 @@ getWitVKeyHash = P.PubKeyHash . fromShort . (\(UnsafeHash x) -> x) . (\(KeyHash 
 transDataPair :: (DataHash c, Data era) -> (P.DatumHash, P.Datum)
 transDataPair (x, y) = (transDataHash' x, P.Datum (getPlutusData y))
 
-transCostModel :: CostModel -> P.CostModel
-transCostModel (CostModel mp) =
-  case P.validateAndCreateCostModel mp of
-    Nothing -> P.defaultCostModel -- TODO validation should be before this
-    Just cm -> cm
-
 transExUnits :: ExUnits -> P.ExBudget
 transExUnits (ExUnits mem steps) = P.ExBudget (P.ExCPU (fromIntegral steps)) (P.ExMemory (fromIntegral mem))
 
@@ -331,10 +322,10 @@ valContext txinfo sp = Data (P.toData (P.ScriptContext txinfo (transScriptPurpos
 
 -- | Run a Plutus Script, given the script and the bounds on resources it is allocated.
 runPLCScript :: CostModel -> SBS.ShortByteString -> ExUnits -> [P.Data] -> Bool
-runPLCScript cost scriptbytestring units ds =
+runPLCScript (CostModel cost) scriptbytestring units ds =
   case P.evaluateScriptRestricting
     P.Quiet
-    (transCostModel cost)
+    cost
     (transExUnits units)
     scriptbytestring
     ds of
