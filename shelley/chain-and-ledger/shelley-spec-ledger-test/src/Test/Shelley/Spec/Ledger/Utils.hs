@@ -84,8 +84,9 @@ import Cardano.Slotting.EpochInfo
   ( epochInfoEpoch,
     epochInfoFirst,
     epochInfoSize,
-    fixedSizeEpochInfo,
+    fixedEpochInfo,
   )
+import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace
@@ -100,6 +101,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
 import Data.Sequence (Seq)
+import Data.Time.Clock.POSIX
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.API
   ( ApplyBlock,
@@ -296,7 +298,7 @@ unsafeMkUnitInterval r =
 testGlobals :: Globals
 testGlobals =
   Globals
-    { epochInfo = fixedSizeEpochInfo $ EpochSize 100,
+    { epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1),
       slotsPerKESPeriod = 20,
       stabilityWindow = 33,
       randomnessStabilisationWindow = 33,
@@ -306,7 +308,8 @@ testGlobals =
       maxMajorPV = 1000,
       maxLovelaceSupply = 45 * 1000 * 1000 * 1000 * 1000 * 1000,
       activeSlotCoeff = mkActiveSlotCoeff . unsafeMkUnitInterval $ 0.9,
-      networkId = Testnet
+      networkId = Testnet,
+      systemStart = SystemStart $ posixSecondsToUTCTime 0
     }
 
 runShelleyBase :: ShelleyBase a -> a
