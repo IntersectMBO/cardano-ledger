@@ -7,7 +7,7 @@ They may delegate these voting rights to any registered delegate, who is expecte
 Only registered delegates may actually vote on a proposal, but any ada holder may choose to register if they choose to do so.
 They may then allocate their own vote as they wish, as well as that of any other ada holder who delegates to them.
 \khcomment{There is potentially a transaction cost to voting.  This needs to be considered carefully for acceptability.  Unlike block production, there may be no direct return from voting, so
-this may restrict participation if done wrongly.}
+this may restrict participation if done wrongly.}\pkcomment{We'll probably need to have a good look at what the researchers have to say on incentives for all the roles}
 
 
 \subsection{Delegate Address Registration/De-Registration}
@@ -39,7 +39,7 @@ retire but have their vote counted.
   \hline
 \end{tabular}
 
-A witness is required for the delegate key. \khcomment{Confirm.}  The registration comes into effect as soon as the transaction is accepted on-chain.
+A witness is required for the delegate key. \khcomment{Confirm.}\pkcomment{I don't think so; we do not require a witness for stake address registration, and this should be similar}  The registration comes into effect as soon as the transaction is accepted on-chain.
 \khcomment{We could ask for pledge here, but this sounds a bit like vote buying?}
 
 \paragraph{De-Registration Certificate.} Delegate de-registration certificates must include:
