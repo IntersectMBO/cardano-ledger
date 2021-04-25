@@ -25,9 +25,10 @@ import Cardano.Ledger.Alonzo.Tx
     minfee,
     txbody,
   )
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx, txins)
 import Cardano.Ledger.Alonzo.TxBody
   ( TxOut (..),
+    txnetworkid',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody, TxOut)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
@@ -90,7 +91,6 @@ import Shelley.Spec.Ledger.TxBody (unWdrl)
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
-    txins,
     txouts,
     unUTxO,
   )
@@ -195,6 +195,10 @@ data UtxoPredicateFailure era
       -- ^ EXUnits supplied
   | -- | The inputs marked for use as fees contain non-ADA tokens
     FeeContainsNonADA !(Core.Value era)
+  | -- | Wrong Network ID in body
+    WrongNetworkInTxBody
+      !Network -- Actual Network ID
+      !Network -- Network ID in transaction body
   deriving (Generic)
 
 deriving stock instance
@@ -309,11 +313,11 @@ utxoTransition = do
   inInterval slot (getField @"vldt" txb)
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
 
-  not (Set.null (txins @era txb)) ?! InputSetEmptyUTxO
+  not (Set.null (Alonzo.txins @era txb)) ?! InputSetEmptyUTxO
 
   feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
-  eval (txins @era txb ⊆ dom utxo)
-    ?! BadInputsUTxO (eval (txins @era txb ➖ dom utxo))
+  eval (Alonzo.txins @era txb ⊆ dom utxo)
+    ?! BadInputsUTxO (eval (Alonzo.txins @era txb ➖ dom utxo))
 
   let consumed_ = consumed @era pp utxo txb
       produced_ = Shelley.produced @era pp stakepools txb
@@ -349,6 +353,9 @@ utxoTransition = do
     ?! WrongNetworkWithdrawal
       ni
       (Set.fromList wdrlsWrongNetwork)
+  case txnetworkid' txb of
+    SNothing -> pure ()
+    SJust bid -> ni == bid ?! WrongNetworkInTxBody ni bid
 
   -- pointwise is used because non-ada amounts must be >= 0 too
   let (Coin adaPerUTxOWord) = getField @"_adaPerUTxOWord" pp
@@ -501,6 +508,8 @@ encFail (ExUnitsTooBigUTxO a b) =
   Sum ExUnitsTooBigUTxO 15 !> To a !> To b
 encFail (FeeContainsNonADA a) =
   Sum FeeContainsNonADA 16 !> To a
+encFail (WrongNetworkInTxBody a b) =
+  Sum WrongNetworkInTxBody 17 !> To a !> To b
 
 decFail ::
   ( Era era,
@@ -527,6 +536,7 @@ decFail 13 = SumD FeeNotBalancedUTxO <! From <! From
 decFail 14 = SumD ScriptsNotPaidUTxO <! From
 decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From
 decFail 16 = SumD FeeContainsNonADA <! From
+decFail 17 = SumD WrongNetworkInTxBody <! From <! From
 decFail n = Invalid n
 
 instance
