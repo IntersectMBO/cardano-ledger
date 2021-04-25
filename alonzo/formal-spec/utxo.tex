@@ -567,7 +567,7 @@ This rule has the following changes:
   the same as in ShelleyMA.
 
   \item The network ID field in the transaction body must match the
-  network ID constant 
+  network ID constant
 
  \item The execution unit budget for a transaction is within the maximum
   permitted number of units for a transaction;
@@ -600,6 +600,7 @@ UTXOS rule.
       \forall txout \in \txouts{txb},\\
       \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ (\fun{maxTxSize}~pp) * (\fun{maxValSize}~pp)} \\~
       \\
+      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, a \in \AddrBS \to \fun{bootstrapAttrsSize}~a \leq 64 \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
       \\
       \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId \\
