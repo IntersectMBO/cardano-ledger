@@ -29,9 +29,8 @@ import Cardano.Binary
     ToCBOR (toCBOR),
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Hashes (EraIndependentTx)
-import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
+import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.SafeHash (SafeToHash)
 import qualified Data.ByteString.Short as SBS
 import Data.Coders
   ( Decode (Ann, D, From, RecD),
@@ -84,8 +83,6 @@ instance
 
 newtype Tx era = TxConstr (MemoBytes (TxRaw era))
   deriving newtype (SafeToHash, ToCBOR)
-
-instance (c ~ Crypto era, Era era) => HashAnnotated (Tx era) EraIndependentTx c
 
 deriving newtype instance
   ( Era era,
