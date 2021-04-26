@@ -65,12 +65,11 @@ import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxBody (TransTxBody, TransTxId)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv,PreAlonzo)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv, PreAlonzo)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest, testGlobals)
-
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 
@@ -172,7 +171,7 @@ instance NFData (ChainDepState c) where
   rnf (ChainDepState _ _ _) = ()
 
 instance NFData Globals where
-  rnf (Globals _ _ _ _ _ _ _ _ _ _ _) = ()
+  rnf (Globals _ _ _ _ _ _ _ _ _ _ _ _) = ()
 
 instance NFData (ChainTransitionError c) where
   rnf _ = ()

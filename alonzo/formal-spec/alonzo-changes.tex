@@ -84,7 +84,7 @@
 \newcommand{\NewParams}{\type{NewParams}}
 \newcommand{\Slot}{\type{Slot}}
 \newcommand{\MemoryEstimate}{\type{MemoryEstimate}}
-\newcommand{\Time}{\type{Time}}
+\newcommand{\UTCTime}{\type{UTCTime}}
 \newcommand{\SlotsPrior}{\ensuremath{\mathsf{SlotsPrior}}}
 \newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
 \newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
@@ -166,19 +166,22 @@
 \newcommand{\AuxiliaryData}{\type{AuxiliaryData}}
 \newcommand{\Metadata}{\type{Metadata}}
 \newcommand{\DataHash}{\type{DataHash}}
+\newcommand{\TxInfo}{\type{TxInfo}}
+\newcommand{\Datum}{\type{Datum}}
+\newcommand{\Redeemer}{\type{Redeemer}}
+\newcommand{\EpochInfo}{\type{EpochInfo}}
+\newcommand{\SystemStart}{\type{SystemStart}}
 \newcommand{\ScriptHash}{\type{ScriptHash}}
 \newcommand{\PolicyID}{\type{PolicyID}}
 \newcommand{\LangDepView}{\type{LangDepView}}
 \newcommand{\WitnessPPDataHash}{\type{WitnessPPDataHash}}
 \newcommand{\Script}{\type{Script}}
 \newcommand{\ScriptPlutus}{\type{Script}_{plc}}
-\newcommand{\Plutus}{\mathsf{Plutus}}
-\newcommand{\PlutusII}{\mathsf{PlutusV2}}
+\newcommand{\PlutusVI}{\type{PlutusV1}}
+\newcommand{\PlutusVII}{\type{PlutusV2}}
 \newcommand{\ScriptNative}{\type{Script^{native}}}
 \newcommand{\ScriptNonNative}{\type{Script^{non-native}}}
 \newcommand{\ScriptV}{\type{Script_{v}}}
-\newcommand{\Datum}{\type{Datum}}
-\newcommand{\Rdmr}{\type{Rdmr}}
 \newcommand{\ScriptPurpose}{\type{ScriptPurpose}}
 \newcommand{\Rdmrs}{\type{Rdmrs}}
 \newcommand{\DorR}{\type{DorR}}
@@ -203,7 +206,8 @@
 \newcommand{\TxInScr}{\type{TxInScr}}
 \newcommand{\Info}{\type{Info}}
 \newcommand{\ExUnits}{\type{ExUnits}}
-\newcommand{\CostMod}{\type{CostMod}}
+\newcommand{\CostMod}{\type{CostModel}}
+\newcommand{\Network}{\type{Network}}
 \newcommand{\Prices}{\type{Prices}}
 \newcommand{\IsFee}{\type{IsFee}}
 \newcommand{\TxOut}{\type{TxOut}}
@@ -363,6 +367,8 @@
 \include{value-size}
 
 \include{txinfo}
+
+\include{constants}
 
 
 \addcontentsline{toc}{section}{References}

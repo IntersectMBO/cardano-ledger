@@ -36,8 +36,8 @@ to have a budget in terms of a number of abstract $\ExUnits$.
 This budget gives a quantitative bound on resource usage in terms of a number of specific metrics, including memory usage or abstract execution steps.
 The budget is then used as part of the transaction fee calculation.
 
-Every scripting language
-converts the calculated execution cost into a number of $\ExUnits$s using a cost model,
+Every non-native scripting language
+converts the calculated execution cost into a number of $\ExUnits$ using a cost model,
 $\CostMod$, which depends on the language and is provided as a protocol parameter.
 This allows execution costs (and so transaction fees) to be varied without requiring a major protocol version change (``hard fork'').
 This may be used, for example, if a more efficient interpreter is produced.
@@ -78,10 +78,19 @@ running scripts in all languages will be supported indefinitely whenever possibl
 Making it impossible to run a script in a particular scripting language
 makes UTxO entries locked by that script unspendable.
 
+We use the terms Plutus, $\PlutusVI$, and ``non-native scripting language'' in this specification
+somewhat interchangably. The reason for this is that while we intend for the infrastructure
+set up in this document to be somewhat language-agnostic (in particular,
+able to support multiple versions of Plutus), it only gives all the details for
+the first and (currenly only) non-native script language, $\PlutusVI$,
+the introduction of which represents the
+start of the Alonzo era.
+
+
 \subsection{Extended UTxO}
 
 The specification of the extended UTxO model follows the description that was given in~\cite{plutus_eutxo}.
-All transaction outputs that are locked by non-native scripts must include the hash of an additional ``datum''. The actual datum needs to be supplied in the body of the transaction, and can be used to encode state, for example.
+All transaction outputs that are locked by non-native scripts must include the hash of an additional ``datum''. The actual datum needs to be supplied by the transaction spending that output, and can be used to encode state, for example.
 While this datum could instead have been stored directly in the UTxO, our choice of storing it in the transaction body improves space efficiency in the implementation by reducing the UTxO storage requirements. The datum is passed to a script that validates that the output is spent correctly.
 
 All transactions also need to supply a \emph{redeemer} for all items that are validated by a script. This is an additional piece of data that is passed to the script, and that could be considered as a form of user-input to the script. Note that the same script could be used for multiple different purposes in the same transaction, so in general it might be necessary to include more than one redeemer per script.

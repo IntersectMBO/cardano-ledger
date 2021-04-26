@@ -36,7 +36,7 @@ In the $\Language$ type, each \emph{version} of a language is considered to be a
 be different).
 Each such language needs to be interpreted by a language-specific interpreter that is called from the ledger implementation.
 The interpreter is provided with the (language- and version-specific) arguments that it requires.
-It is necessary for the ledger to be capable of executing scripts in languages it ever supported.
+It is necessary for the ledger to be capable of executing scripts in all languages it has ever supported.
 This implies that it is necessary to maintain all forms of ledger
 data that is needed by any past or current language, which constrains future ledger designs.
 Introducing a new language will require a protocol version update, since the datatypes need to support the new language and the ledger rules must be updated to use the new interpreter.
@@ -53,7 +53,7 @@ submission and completion of the script processing.
 %
 In order to achieve this,
 any data that is passed to the interpreter must be determined by the transaction body itself.
-The transaction therefore includes a hash of any data that is not determined by the transaction or the UTXO.
+The transaction body therefore includes a hash of any such data that is not uniquely determined by other parts of the transaction body or the UTXO.
 When the transaction is processed, as part of the UTXOW rule, this hash is compared with a hash of the data that is passed to the interpreter. This
 ensures that scripts are only executed if they have been provided with the intended data.
 
@@ -105,7 +105,7 @@ serialised transaction.
     \begin{array}{r@{~\in~}l@{\quad=\quad}l@{\qquad}r}
       \var{lg}
       & \Language
-      & \{\Plutus, \dotsb\}
+      & \{\PlutusVI, \dotsb\}
       & \text{Script Language}
       \\
       \var{(pr_{mem}, pr_{steps})}
@@ -157,7 +157,7 @@ serialised transaction.
   %
   \begin{align*}
     & \fun{getLanguageView} \in \PParams \to \Language \to \LangDepView \\
-    & \fun{getLanguageView}~\var{pp}~\Plutus = \{\Plutus\} \restrictdom \fun{costmdls}~{pp}
+    & \fun{getLanguageView}~\var{pp}~\PlutusVI = \{\PlutusVI\} \restrictdom \fun{costmdls}~{pp}
   \end{align*}
   %
   \caption{Definitions Used in Protocol Parameters}

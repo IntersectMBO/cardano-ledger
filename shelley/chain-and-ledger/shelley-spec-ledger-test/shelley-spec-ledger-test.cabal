@@ -46,6 +46,7 @@ library
     Test.Cardano.Crypto.VRF.Fake
     Test.Shelley.Spec.Ledger.BenchmarkFunctions
     Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+    Test.Shelley.Spec.Ledger.Examples.Cast
     Test.Shelley.Spec.Ledger.Generator.Block
     Test.Shelley.Spec.Ledger.Generator.Constants
     Test.Shelley.Spec.Ledger.Generator.Core
@@ -70,6 +71,7 @@ library
     Test.Shelley.Spec.Ledger.Shrinkers
     Test.Shelley.Spec.Ledger.Utils
     Test.Shelley.Spec.Ledger.PropertyTests
+    Test.Shelley.Spec.Ledger.Rules.TestChain
     Test.TestScenario
   other-modules:
       Test.Shelley.Spec.Ledger.Address.Bootstrap
@@ -77,7 +79,6 @@ library
       Test.Shelley.Spec.Ledger.ByronTranslation
       Test.Shelley.Spec.Ledger.Examples.Federation
       Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
-      Test.Shelley.Spec.Ledger.Rules.TestChain
       Test.Shelley.Spec.Ledger.Rules.TestDeleg
       Test.Shelley.Spec.Ledger.Rules.TestPool
       Test.Shelley.Spec.Ledger.Rules.TestPoolreap

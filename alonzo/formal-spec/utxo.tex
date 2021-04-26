@@ -13,11 +13,11 @@
       \end{cases}
                  \nextdef
     & \fun{totExunits} \in \Tx \to \ExUnits \\
-    & \fun{totExunits}~\var{tx} = \sum_{\wcard \mapsto (\wcard, eu) \in \fun{txrdmrs}~(\fun{txwits}~tx)} eu
+    & \fun{totExunits}~\var{tx} = \sum_{\wcard \mapsto (\wcard, ~eu) \in \fun{txrdmrs}~(\fun{txwits}~tx)} eu
     \nextdef
     & \fun{feesOK} \in \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo~= \\
-    &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{totExunits}~tx \neq (0, 0) \Rightarrow \\
+    &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
     &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo}), \neg \fun{isNonNativeScriptAddress}~tx~a) \\
     &~~~~~~\wedge~ \fun{adaOnly}~\var{balance} \\
     &~~~~~~      \wedge~ \var{balance} \geq \txfee{txb})) \\
@@ -54,11 +54,15 @@ We have added or changed several functions that deal with fees as shown in Figur
   \begin{enumerate}[label=({\roman*})]
     \item the fee amount that the transaction states it is paying suffices to cover
     the minimum fee that the transaction is obligated to pay; and if the transaction uses non-native scripts, that
-    \item the fee-marked inputs do not belong to non-native script addresses;
+    \item the fee-marked inputs do not belong to non-native script addresses (that is, they
+    belong to either a native script address, or a key hash one);
     \item all the fee-marked inputs contain strictly Ada and no other kinds of token; and
     \item the fee-marked inputs are sufficient to cover the fee amount that is stated
     in the transaction.
   \end{enumerate}
+  Note that checking that a transaction is carrying redeemers is the most simple way to
+  check that it is carrying non-native scripts. A separate check is done in the rule prior to
+  calling the $\fun{feesOK}$ function that ensure that this is the case.
   \item The function $\fun{txins}$ returns the UTxO keys of transaction inputs.
   \item $\fun{txscriptfee}$ calculates the fee that a transaction must pay for script
   execution based on the amount of $\ExUnits$ it has budgeted, and the prices in the current protocol parameters
@@ -79,7 +83,11 @@ retrieve all the data that is relevant to Plutus script validation.
 These include:
 
 \begin{itemize}
-\item $\Time$ is the system time
+\item $\UTCTime$ is the system time (UTC time zone)
+\item $\EpochInfo$ is a consensus-level parameter needed to compute the system time. Within
+the Alonzo era, this is constant, with value $\mathsf{epochInfo}$
+\item $\SystemStart$ is another consensus-level parameter needed to compute the system time. Within
+the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
 \item
   $\ScriptPurpose$ is a sum type of all parts of a transaction that may
   require a script witness to validate. Note that this contains the data
@@ -92,18 +100,27 @@ These include:
   It assumes there is some ordering on each of these structures.
 \item
   $\fun{indexedRdmrs}$ indexes the pair of a redeemer and an $\ExUnits$ value
-  for a given script by its script purpose (eg. the input, or certificate, etc.)
+  for a given script by its script purpose (eg. the input, or certificate, etc.),
+  and $\Nothing$ if no associated data is found.
+  It uses the script purpose to generate the $\RdmrPtr$ key,
+  then find the corresponding entry in the redeemer structure.
 \end{itemize}
 
 
 \begin{figure}[htb]
-  \emph{Abstract types}
+  \emph{Abstract types and constants of these types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{}lr}
       \var{tm}
-      & \Time
-      & \text{System time}
+      & \UTCTime
+      & \text{System time (variable)} \\
+      \mathsf{epochInfo}
+      & \EpochInfo
+      & \text{Epoch info (constant within Alonzo)} \\
+      \mathsf{systemTime}
+      & \SystemStart
+      & \text{System start time (constant within Alonzo)}
     \end{array}
   \end{equation*}
   %
@@ -113,7 +130,7 @@ These include:
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{sp}
       & \ScriptPurpose
-      & \PolicyID \uniondistinct \UTxOIn \uniondistinct \AddrRWD \uniondistinct \DCert
+      & \PolicyID \uniondistinct \TxIn \uniondistinct \AddrRWD \uniondistinct \DCert
 %      & \text{item the script is validated for}
     \end{array}
   \end{equation*}
@@ -122,26 +139,25 @@ These include:
   \begin{align*}
     &\fun{indexof} \in \DCert \to \seqof{\DCert} \to \Ix\\
     &\fun{indexof} \in \AddrRWD \to \Wdrl \to \Ix\\
-    &\fun{indexof} \in \UTxOIn \to \powerset{\TxIn} \to \Ix\\
+    &\fun{indexof} \in \TxIn \to \powerset{\TxIn} \to \Ix\\
     &\fun{indexof} \in \PolicyID \to \Value \to \Ix
   \end{align*}
   %
   \emph{Indexing functions}
   \begin{align*}
-    &\fun{indexedRdmrs} \in \Tx \to \ScriptPurpose \to (\seqof{\Data}~\times~\ExUnits)\\
+    &\fun{indexedRdmrs} \in \Tx \to \ScriptPurpose \to (\Redeemer~\times~\ExUnits)^?\\
     &\fun{indexedRdmrs}~tx~sp =
       \begin{cases}
-        ([], \var{eu}) & rdptr \mapsto (\Nothing, \var{eu}) \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
-        ([d], \var{eu}) & rdptr \mapsto (\var{d}, \var{eu}) \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
+        (d, \var{eu}) & \var{rdptr} \mapsto (\var{d}, \var{eu}) \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
         \Nothing & \text{otherwise}
       \end{cases} \\
     & ~~\where \\
     & ~~\quad \var{txb} = \txbody{tx} \\
     & ~~\quad \var{rdptr} = \begin{cases}
-        (\mathsf{certTag},\fun{indexof}~\var{sp}~(\fun{txcerts}~{txb}))   & \var{sp}~\in~\DCert \\
-        (\mathsf{wdrlTag},\fun{indexof}~\var{sp}~(\fun{txwdrls}~{txb}))   & \var{sp}~\in~\AddrRWD \\
-        (\mathsf{mintTag},\fun{indexof}~\var{sp}~(\fun{mint}~{txb}))    & \var{sp}~\in~\PolicyID \\
-        (\mathsf{inputTag},\fun{indexof}~\var{sp}~(\fun{txinputs}~{txb})) & \var{sp}~\in~\UTxOIn
+        (\mathsf{Cert},\fun{indexof}~\var{sp}~(\fun{txcerts}~{txb}))   & \var{sp}~\in~\DCert \\
+        (\mathsf{Rewrd},\fun{indexof}~\var{sp}~(\fun{txwdrls}~{txb}))   & \var{sp}~\in~\AddrRWD \\
+        (\mathsf{Mint},\fun{indexof}~\var{sp}~(\fun{mint}~{txb}))    & \var{sp}~\in~\PolicyID \\
+        (\mathsf{Spend},\fun{indexof}~\var{sp}~(\fun{txinputs}~{txb})) & \var{sp}~\in~\TxIn
       \end{cases}
   \end{align*}
   \caption{Indexing script and data objects}
@@ -153,7 +169,10 @@ These include:
 Figure~\ref{fig:defs:functions-valid} shows the abstract functions that are used for script validation.
 
 \begin{itemize}
-\item $\fun{slotToTime}$ translates a slot number to system time if possible.
+\item $\fun{epochInfoSlotToUTCTime}$ translates a slot number to system time if possible.
+This translation is implemented by the consensus algorithm (not the ledger), and requires
+two additional parameters to do this.
+
 If it is not possible to do this translation, $\Nothing$ is returned.
 The reason it may not be possible to translate is that the slot number
 is too far in the future for the system to accurately
@@ -162,7 +181,7 @@ predict the exact time to which it refers.
 \item $\fun{txInfo}$ summarizes all the necessary transaction and chain state info
   that needs to be passed to the script interpreter. The $\Language$ argument
   is required because different languages have different expectations of the
-  format and contents of the summary $\Data$ term.
+  format and contents of the $\TxInfo$ summary.
   It has a $\UTxO$ as its argument to recover the full information of the inputs of the transaction,
   but only the inputs of the transaction are provided to scripts. For details, see~\ref{sec:txinfo}
 
@@ -177,8 +196,8 @@ predict the exact time to which it refers.
   \begin{itemize}
   \item A cost model, that is used to calculate the $\ExUnits$ that are needed for script execution;
   \item A script to execute;
-  \item A list of terms of type $\Data$ that will be passed to the script; and
-  \item the execution unit budget.
+  \item the execution unit budget; and
+  \item A list of terms of type $\Data$ that will be passed to the script.
   \end{itemize}
   It outputs the validation result.
   Note that script execution stops if the full budget has been spent before validation is complete.
@@ -206,7 +225,7 @@ map differently onto points in time. The ledger does not have access to data (or
 that is needed to convert transaction validity interval slots numbers to slots numbers
 that correspond to the contracts world view. To address this, we decided to pass
 non-native contracts (in all languages and all eras) the system time instead of slot numbers.
-The conversion function is implemented by consensus (see~\cite{shelley_consensus}),
+The conversion function is implemented by consensus (see~\cite{cardano_consensus}),
 which has the information to do this correctly for
 
 \begin{itemize}
@@ -240,26 +259,39 @@ which has the information to do this correctly for
   Script authors must keep this in mind when writing scripts, since the ledger call to the interpreter is oblivious to what
   arguments are required.
 
+  Datum objects are required for all output-locking non-native scripts. That is, a
+  non-native script-locked output that does not include a datum hash is unspendable.
+  Non-output scripts do not expect datum objects - that is, it is not possible to pass
+  a datum to a script used for another purpose (certificate, etc.). Redeemers
+  are required for all non-native scripts.
+
 \begin{figure*}[htb]
+  \emph{Abstract Script Validation Types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\quad\quad\quad\quad}r}
+      \var{txinfo} &\TxInfo & \text{Language-specific summary of transaction data}\\
+    \end{array}
+  \end{equation*}
   \emph{Abstract Script Validation Functions}
   %
   \begin{align*}
-     &\fun{slotToTime} \in \Slot \to \Time^? \\
+     &\fun{epochInfoSlotToUTCTime} \in \EpochInfo \to \SystemStart \to \Slot \to \UTCTime^? \\
      &\text{Translate slot number to system time or fail} \\~\\
-     &\fun{txInfo} \in \Language \to \UTxO \to \Tx \to \Data \\
+     &\fun{txInfo} \in \Language \to \UTxO \to \Tx \to \TxInfo \\
      &\text{Summarizes transaction data} \\~\\
-     &\fun{valContext} \in \Data \to \ScriptPurpose \to \Data \\
+     &\fun{valContext} \in \TxInfo \to \ScriptPurpose \to \Data \\
      &\text{Pairs transaction data with a script purpose} \\~\\
-     &\fun{runPLCScript} \in \CostMod \to\ScriptPlutus \to
-    \seqof{\Data} \to \ExUnits \to \IsValidating \\
+     &\fun{runPLCScript} \in \CostMod \to\ScriptPlutus \to \ExUnits \to
+    \seqof{\Data} \to \IsValidating \\
      &\text{Validate a Plutus script, taking resource limits into account}
   \end{align*}
   %
   \emph{Notation}
   %
   \begin{align*}
-    \llbracket \var{script_v} \rrbracket_{\var{cm},\var{exunits}}~\var{d}
-    &=& \fun{runPLCScript} ~{cm}~\var{script_v}~\var{d}~\var{exunits}
+    \llbracket \var{script_v} \rrbracket_{\var{cm},\var{eu}}~\var{d}
+    &=& \fun{runPLCScript} ~{cm}~\var{script_v}~\var{eu}~\var{d}
   \end{align*}
   \caption{Script Validation, cont.}
   \label{fig:defs:functions-valid}
@@ -287,13 +319,9 @@ evaluator.
   \item the hash of the required datum, if any (returned by the $\fun{getData}$ function,
   wrapped in a list type instead of a $\Data^?$ type).
 
-  \item a pair, returned by the $\fun{indexedRdmrs}$ function, of
-  \begin{itemize}
-    \item a list of $\Data$, containing exactly one or zero elements (this
-    is not checked here, however, see~\ref{fig:functions:script1}). This list
-    contains the optional redeemer if there is one.
-    \item an $\ExUnits$ value, which is mandatory for all scripts
-  \end{itemize}
+  \item a pair, returned by the $\fun{indexedRdmrs}$ function, of a redeemer
+  and an $\ExUnits$ amount. We are assuming this pair is not $\Nothing$ here
+  because that must have already been checked by the UTXOW rule.
 
   \item $\fun{evalScripts}$ evaluates a whole list of scripts paired with all their
   inputs by calling the native script validator function, $\fun{runPLCScript}$
@@ -321,7 +349,7 @@ are caught during the application of the UTXOW rule (before these functions are 
     \nextdef
     & \fun{collectNNScriptInputs} \in \PParams \to \Tx \to \UTxO \to \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
     & \fun{collectNNScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
-    & ~~\fun{toList} \{ (\var{script}, (\fun{valContext}~\var{txinfo}~\var{sp}~++~ \fun{getData}~tx~utxo~sp~++~\var{d}), \var{eu}, \var{cm}) \mid \\
+    & ~~\fun{toList} \{ (\var{script}, ([\fun{valContext}~\var{txinfo}~\var{sp}]~++~ \fun{getData}~tx~utxo~sp~++~[\var{d}]), \var{eu}, \var{cm}) \mid \\
     & ~~~~(\var{sp}, \var{scriptHash}) \in \fun{scriptsNeeded}~{utxo}~{tx}, \\
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
     & ~~~~(\var{d}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
@@ -365,7 +393,7 @@ slot leader to:
 \begin{enumerate}
   \item Correctly apply the $\IsValidating$ tag;
   \item Include all transactions that validate within the block,
-  \textit{even when there is a 2nd step script validation failure};
+  \textit{even when there is a 2nd phase script validation failure};
   \item Exclude any transactions that are invalid in some way \textit{other than 2nd step script validation failure}.
 \end{enumerate}
 
@@ -432,7 +460,7 @@ In this case, the states of the UTxO, fee
     \\
     ~
     \\
-    \fun{txvaltag}~\var{tx} = \fun{evalScripts}~\var{sLst} = \True
+    \fun{isValidating}~\var{tx} = \fun{evalScripts}~\var{sLst} = \True
     \\~\\
     {
       \begin{array}{r}
@@ -483,7 +511,7 @@ In this case, the states of the UTxO, fee
     \\
     ~
     \\
-    \fun{txvaltag}~\var{tx} = \fun{evalScripts}~\var{sLst} = \False
+    \fun{isValidating}~\var{tx} = \fun{evalScripts}~\var{sLst} = \False
     }
     {
     \begin{array}{l}
@@ -525,7 +553,7 @@ This rule has the following changes:
 
   \item The end of the transaction validity interval is translatable into
   system time (ie. within the consensus's forecast window). This is checked
-  by $\fun{slotToTime}$, which returns $\Nothing$ if the end slot is outside.
+  by $\fun{epochInfoSlotToUTCTime}$, which returns $\Nothing$ if the end slot is outside.
   Note that we do not need to check that the start slot can be converted to
   time, because all pasts slots can be converted into time correctly.
 
@@ -537,6 +565,9 @@ This rule has the following changes:
   It represents a size (in bytes) of the total transaction
   size that the size of a $\Value$ in an output can be. Otherwise, this check is
   the same as in ShelleyMA.
+
+  \item The network ID field in the transaction body must match the
+  network ID constant 
 
  \item The execution unit budget for a transaction is within the maximum
   permitted number of units for a transaction;
@@ -554,7 +585,8 @@ UTXOS rule.
     {
       \var{txb}\leteq\txbody{tx} &
       \fun{ininterval}~\var{slot}~(\fun{txvldt}~{tx}) \\
-      \hldiff{\var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx}} & \hldiff{\fun{slotToTime}~i_f \neq \Nothing} \\
+      \hldiff{\var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx}} &
+      \hldiff{\fun{epochInfoSlotToUTCTime}~\mathsf{epochInfo}~\mathsf{systemTime}~i_f \neq \Nothing} \\
       \txins{txb} \neq \emptyset
       & \hldiff{\fun{feesOK}~pp~tx~utxo}
       & \txins{txb} \subseteq \dom \var{utxo}
@@ -570,8 +602,9 @@ UTXOS rule.
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
       \\
-      \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId
-      \\
+      \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId \\
+      \hldiff{\fun{txnetworkid}~\var{txb}~=~\NetworkId}
+      \\~\\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\
       \hldiff{\fun{totExunits}~{tx} \leq \fun{maxTxExUnits}~{pp}}
       \\
@@ -658,9 +691,6 @@ We construct the following helper functions :
   \item $\fun{checkRedeemers}$ returns $\True$ if, for the given script purpose,
   whenever the script it points to is non-native, the transaction contains an associated entry
   in the indexed redeemers structure.
-  Recall that redeemers are optional to include, so there may be a $\Nothing$ in place of
-  a redeemer. Execution units are mandatory for all scripts, so each script purpose
-  should have an associated entry specifying the $\ExUnits$ value.
 
   \item $\fun{languages}$ returns the set of (non-native) script languages
   of all the scripts included in the transaction
@@ -701,10 +731,14 @@ We have made the following changes and additions to the UTXOW preconditions:
 \item The transaction contains exactly those scripts that are required for witnessing and no
 additional ones;
 
-    \item The datums included in the witnesses are exactly those that are required for validating;
+    \item The datums included in the witnesses are exactly those that are required for validating. That is,
+    datums for all output-locking non-native scripts for the payment credentials of the addresses of the
+    UTxOs the transaction is spending must have attached datum objects. This check will also fail if
+    the datum hash fields of such UTxOs are $\Nothing$, as $\Nothing$ is not a
+    hash of a datum (and therefore is not a key of the $\DataHash$-indexed map).
 
     \item For every item that needs to be validated by a non-native script, the transaction contains
-      an entry in the indexed redeemer structure (ie. the execution units for it are specified);
+      an entry in the indexed redeemer structure (ie. the execution units and redeemer for it are specified);
 
     \item The signatures of the keys whose hashes are specified in the
     $\fun{reqSignerHashes}$ field in a transaction
@@ -776,7 +810,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \\~\\
       \var{adh}\leteq\fun{txADhash}~\var{txb}
       &
-      \var{ad}\leteq\fun{txAD}~\var{tx}
+      \var{ad}\leteq\fun{auxiliaryData}~\var{tx}
       \\
       (\var{adh}=\Nothing \land \var{ad}=\Nothing)
       \lor

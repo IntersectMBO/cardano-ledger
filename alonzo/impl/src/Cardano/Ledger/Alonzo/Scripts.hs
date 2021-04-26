@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -35,7 +36,7 @@ module Cardano.Ledger.Alonzo.Scripts
   )
 where
 
-import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto))
@@ -44,12 +45,12 @@ import Cardano.Ledger.Pretty
     PrettyA (..),
     ppCoin,
     ppInteger,
-    ppLong,
     ppMap,
     ppRecord,
     ppSexp,
     ppString,
     ppWord64,
+    text,
   )
 import Cardano.Ledger.SafeHash
   ( HashWithCrypto (..),
@@ -59,16 +60,17 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
-import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
 import Data.Map (Map)
 import Data.MemoBytes
+import Data.Text (Text)
 import Data.Typeable
-import Data.Word (Word64)
+import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
+import qualified Plutus.V1.Ledger.Api as Plutus (validateCostModelParams)
 import qualified Plutus.V1.Ledger.Examples as Plutus (alwaysFailingNAryFunction, alwaysSucceedingNAryFunction)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR)
 
@@ -83,7 +85,7 @@ data Tag
     Cert
   | -- | Validates withdrawl from a reward account
     Rewrd
-  deriving (Eq, Generic, Ord, Show)
+  deriving (Eq, Generic, Ord, Show, Enum, Bounded)
 
 instance NoThunks Tag
 
@@ -143,7 +145,7 @@ pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `o
 -- Cost Model needs to preserve its serialization bytes as
 -- it is going to be hashed. Thus we make it a newtype around a MemoBytes
 
-newtype CostModel = CostModelConstr (MemoBytes (Map ByteString Integer))
+newtype CostModel = CostModelConstr (MemoBytes (Map Text Integer))
   deriving (Eq, Generic, Show, Ord)
   deriving newtype (SafeToHash)
 
@@ -152,7 +154,7 @@ newtype CostModel = CostModelConstr (MemoBytes (Map ByteString Integer))
 
 instance HashWithCrypto CostModel CostModel
 
-pattern CostModel :: Map ByteString Integer -> CostModel
+pattern CostModel :: Map Text Integer -> CostModel
 pattern CostModel m <-
   CostModelConstr (Memo m _)
   where
@@ -166,8 +168,14 @@ instance NFData CostModel
 
 deriving instance ToCBOR CostModel
 
+checkCostModel :: Map Text Integer -> Either String CostModel
+checkCostModel cm =
+  if Plutus.validateCostModelParams cm
+    then Right (CostModel cm)
+    else Left ("Invalid cost model: " ++ show cm)
+
 instance FromCBOR CostModel where
-  fromCBOR = CostModel <$> mapFromCBOR
+  fromCBOR = decode $ SumD checkCostModel <? (D mapFromCBOR)
 
 -- CostModel is not parameterized by Crypto or Era so we use the
 -- hashWithCrypto function, rather than hashAnnotated
@@ -203,22 +211,23 @@ scriptfee (Prices pr_mem pr_steps) (ExUnits mem steps) =
 -- Serialisation
 --------------------------------------------------------------------------------
 
+tagToWord8 :: Tag -> Word8
+tagToWord8 = toEnum . fromEnum
+
+word8ToTag :: Word8 -> Maybe Tag
+word8ToTag e
+  | fromEnum e > fromEnum (maxBound :: Tag) = Nothing
+  | fromEnum e < fromEnum (minBound :: Tag) = Nothing
+  | otherwise = Just $ toEnum (fromEnum e)
+
 instance ToCBOR Tag where
-  toCBOR = encode . encodeTag
-    where
-      encodeTag Spend = Sum Spend 0
-      encodeTag Mint = Sum Mint 1
-      encodeTag Cert = Sum Cert 2
-      encodeTag Rewrd = Sum Rewrd 3
+  toCBOR = toCBOR . tagToWord8
 
 instance FromCBOR Tag where
-  fromCBOR = decode $ Summands "Tag" decodeTag
-    where
-      decodeTag 0 = SumD Spend
-      decodeTag 1 = SumD Mint
-      decodeTag 2 = SumD Cert
-      decodeTag 3 = SumD Rewrd
-      decodeTag n = Invalid n
+  fromCBOR =
+    word8ToTag <$> fromCBOR >>= \case
+      Nothing -> cborError $ DecoderErrorCustom "Tag" "Unknown redeemer tag"
+      Just n -> pure n
 
 instance ToCBOR ExUnits where
   toCBOR (ExUnits m s) = encode $ Rec ExUnits !> To m !> To s
@@ -272,7 +281,7 @@ instance PrettyA ExUnits where prettyA = ppExUnits
 
 ppCostModel :: CostModel -> PDoc
 ppCostModel (CostModelConstr (Memo m _)) =
-  ppSexp "CostModel" [ppMap ppLong ppInteger m]
+  ppSexp "CostModel" [ppMap text ppInteger m]
 
 instance PrettyA CostModel where prettyA = ppCostModel
 

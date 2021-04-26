@@ -45,6 +45,7 @@ library
     Test.Cardano.Ledger.TranslationTools
     Test.Cardano.Ledger.EraBuffet
     Test.Cardano.Ledger.Mary
+    Test.Cardano.Ledger.Mary.Golden
     Test.Cardano.Ledger.Allegra
     Test.Cardano.Ledger.ShelleyMA.TxBody
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
@@ -88,7 +89,6 @@ test-suite cardano-ledger-shelley-ma-test
       Test.Cardano.Ledger.Mary.Examples
       Test.Cardano.Ledger.Mary.Examples.Cast
       Test.Cardano.Ledger.Mary.Examples.MultiAssets
-      Test.Cardano.Ledger.Mary.Golden
       Test.Cardano.Ledger.Mary.Translation
       Test.Cardano.Ledger.Mary.Value
       Test.Cardano.Ledger.Allegra.Translation

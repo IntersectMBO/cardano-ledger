@@ -16,7 +16,7 @@ validation tag is verified, and where script fees are collected.
     \label{eq:ledger}
     \inference[ledger-V]
     {
-      \fun{txvaltag}~{tx} = \True \\~\\
+      \fun{isValidating}~{tx} = \True \\~\\
       {
         \begin{array}{c}
           \var{slot} \\
@@ -74,7 +74,7 @@ validation tag is verified, and where script fees are collected.
     \label{eq:ledger}
     \inference[ledger-NV]
     {
-      \fun{txvaltag}~{tx} = \False \\~\\
+      \fun{isValidating}~{tx} = \False \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
       (\_, \_, \_, \_, \_, \var{genDelegs}, \_) \leteq \var{dstate} \\
       (\var{poolParams}, \_, \_) \leteq \var{pstate} \\

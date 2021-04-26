@@ -25,9 +25,10 @@ import Cardano.Ledger.Alonzo.Tx
     minfee,
     txbody,
   )
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx, txins)
 import Cardano.Ledger.Alonzo.TxBody
   ( TxOut (..),
+    txnetworkid',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody, TxOut)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
@@ -90,7 +91,6 @@ import Shelley.Spec.Ledger.TxBody (unWdrl)
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
     balance,
-    txins,
     txouts,
     unUTxO,
   )
@@ -188,13 +188,17 @@ data UtxoPredicateFailure era
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
       !(UTxO era)
-  | ExUnitsTooSmallUTxO
+  | ExUnitsTooBigUTxO
       !ExUnits
       -- ^ Max EXUnits from the protocol parameters
       !ExUnits
       -- ^ EXUnits supplied
   | -- | The inputs marked for use as fees contain non-ADA tokens
     FeeContainsNonADA !(Core.Value era)
+  | -- | Wrong Network ID in body
+    WrongNetworkInTxBody
+      !Network -- Actual Network ID
+      !Network -- Network ID in transaction body
   deriving (Generic)
 
 deriving stock instance
@@ -290,7 +294,7 @@ utxoTransition ::
     HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_adaPerUTxOByte" (Core.PParams era) Coin,
+    HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxValSize" (Core.PParams era) Natural,
     -- We fix Core.Tx, Core.Value, Core.TxBody, and Core.TxOut
     Core.TxOut era ~ Alonzo.TxOut era,
@@ -309,11 +313,11 @@ utxoTransition = do
   inInterval slot (getField @"vldt" txb)
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
 
-  not (Set.null (txins @era txb)) ?! InputSetEmptyUTxO
+  not (Set.null (Alonzo.txins @era txb)) ?! InputSetEmptyUTxO
 
   feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
-  eval (txins @era txb ⊆ dom utxo)
-    ?! BadInputsUTxO (eval (txins @era txb ➖ dom utxo))
+  eval (Alonzo.txins @era txb ⊆ dom utxo)
+    ?! BadInputsUTxO (eval (Alonzo.txins @era txb ➖ dom utxo))
 
   let consumed_ = consumed @era pp utxo txb
       produced_ = Shelley.produced @era pp stakepools txb
@@ -349,9 +353,12 @@ utxoTransition = do
     ?! WrongNetworkWithdrawal
       ni
       (Set.fromList wdrlsWrongNetwork)
+  case txnetworkid' txb of
+    SNothing -> pure ()
+    SJust bid -> ni == bid ?! WrongNetworkInTxBody ni bid
 
   -- pointwise is used because non-ada amounts must be >= 0 too
-  let (Coin adaPerUTxOByte) = getField @"_adaPerUTxOByte" pp
+  let (Coin adaPerUTxOWord) = getField @"_adaPerUTxOWord" pp
       outputsTooSmall =
         filter
           ( \out ->
@@ -360,7 +367,7 @@ utxoTransition = do
                     Val.pointwise
                       (>=)
                       v
-                      (Val.inject $ Coin (utxoEntrySize out * adaPerUTxOByte))
+                      (Val.inject $ Coin (utxoEntrySize out * adaPerUTxOWord))
           )
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
@@ -371,7 +378,7 @@ utxoTransition = do
 
   let maxTxEx = getField @"_maxTxExUnits" pp
       totExunits = getField @"totExunits" tx
-  pointWiseExUnits (<=) totExunits maxTxEx ?! ExUnitsTooSmallUTxO maxTxEx totExunits
+  pointWiseExUnits (<=) totExunits maxTxEx ?! ExUnitsTooBigUTxO maxTxEx totExunits
 
   -- This does not appear in the Alonzo specification. But the test should be in every Era.
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
@@ -406,11 +413,11 @@ instance
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_adaPerUTxOByte" (Core.PParams era) Coin,
+    HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_adaPerUTxOByte" (Core.PParams era) Coin,
+    HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxValSize" (Core.PParams era) Natural,
     -- We fix Core.Value, Core.TxBody, and Core.TxOut
     Core.Value era ~ Alonzo.Value (Crypto era),
@@ -497,10 +504,12 @@ encFail (FeeNotBalancedUTxO a b) =
   Sum FeeNotBalancedUTxO 13 !> To a !> To b
 encFail (ScriptsNotPaidUTxO a) =
   Sum ScriptsNotPaidUTxO 14 !> To a
-encFail (ExUnitsTooSmallUTxO a b) =
-  Sum ExUnitsTooSmallUTxO 15 !> To a !> To b
+encFail (ExUnitsTooBigUTxO a b) =
+  Sum ExUnitsTooBigUTxO 15 !> To a !> To b
 encFail (FeeContainsNonADA a) =
   Sum FeeContainsNonADA 16 !> To a
+encFail (WrongNetworkInTxBody a b) =
+  Sum WrongNetworkInTxBody 17 !> To a !> To b
 
 decFail ::
   ( Era era,
@@ -525,8 +534,9 @@ decFail 11 = SumD TriesToForgeADA
 decFail 12 = SumD (OutputTooBigUTxO) <! D (decodeList fromCBOR)
 decFail 13 = SumD FeeNotBalancedUTxO <! From <! From
 decFail 14 = SumD ScriptsNotPaidUTxO <! From
-decFail 15 = SumD ExUnitsTooSmallUTxO <! From <! From
+decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From
 decFail 16 = SumD FeeContainsNonADA <! From
+decFail 17 = SumD WrongNetworkInTxBody <! From <! From
 decFail n = Invalid n
 
 instance

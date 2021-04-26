@@ -18,6 +18,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
     poolProperties,
     -- Test Delegation
     delegProperties,
+    forAllChainTrace,
   )
 where
 
@@ -31,6 +32,7 @@ import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Prelude (HasField (..))
 import Cardano.Slotting.Slot (EpochNo)
+import Control.Provenance (runProvM)
 import Control.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
 import Control.State.Transition
 import Control.State.Transition.Trace
@@ -44,7 +46,7 @@ import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Foldable (fold, foldl', toList)
-import qualified Data.Map.Strict as Map (isSubmapOf)
+import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
@@ -60,6 +62,7 @@ import Shelley.Spec.Ledger.API
     LEDGER,
     UtxoEnv,
   )
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (..),
     Block (..),
@@ -69,12 +72,15 @@ import Shelley.Spec.Ledger.BlockChain
     bheader,
     bheaderSlotNo,
   )
+import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState hiding (circulation)
-import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.PParams (PParams' (..), ProtVer)
+import Shelley.Spec.Ledger.Rewards (sumRewards)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Pool (POOL, PoolEnv (..))
+import Shelley.Spec.Ledger.STS.Upec (votedValue)
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxBody
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
@@ -166,6 +172,7 @@ adaPreservationChain ::
   forall era.
   ( EraGen era,
     ShelleyTest era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
@@ -210,26 +217,139 @@ adaPreservationChain =
 
 -- ADA should be preserved for all state transitions in the generated trace
 checkPreservation ::
-  UsesValue era =>
+  ( UsesValue era,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Era.TxSeq era ~ TxSeq era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    UsesPParams era
+  ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
-checkPreservation SourceSignalTarget {source, target} =
+checkPreservation SourceSignalTarget {source, target, signal} =
   counterexample
     ( mconcat
-        [ "\nsource pots\n",
-          show (totalAdaPots source),
-          "\ntarget pots\n",
-          show (totalAdaPots target),
-          "\nsource total\n",
-          show sourceTotal,
-          "\ntarget total\n",
-          show targetTotal
-        ]
+        ( [ "\nPots before block\n",
+            show (totalAdaPots source),
+            "\n\nPots after block\n",
+            show (totalAdaPots target),
+            "\n\nTotal lovelace before block\n",
+            show sourceTotal,
+            "\n\nTotal lovelace after block\n",
+            show targetTotal,
+            "\n\nEpoch before block\n",
+            show (nesEL . chainNes $ source),
+            "\n\nEpoch after block\n",
+            show (nesEL . chainNes $ target),
+            "\n\nCurrent protocol parameters\n",
+            show currPP,
+            "\n\nReward Accounts before update\n",
+            show oldRAs,
+            "\n\nReward Accounts after update\n",
+            show newRAs,
+            "\n\nMIR\n",
+            show mir,
+            "\n\nRegistered Reserves MIR total\n",
+            show (fold regMirRes),
+            "\n\nUnregistered Reserves MIR total\n",
+            show (fold unRegMirRes),
+            "\n\nRegistered Treasury MIR total\n",
+            show (fold regMirTre),
+            "\n\nUnregistered Treasury MIR total\n",
+            show (fold unRegMirTre),
+            "\n\nPools Retiring This epoch\n",
+            show (Map.filter (\e -> e == (nesEL . chainNes $ source)) (_retiring . _pstate . _delegationState $ lsOld)),
+            "\n\ntxs\n"
+          ]
+            ++ obligationMsgs
+            ++ rewardUpdateMsgs
+            ++ txs
+        )
     )
     $ sourceTotal === targetTotal
   where
     sourceTotal = totalAda source
     targetTotal = totalAda target
+
+    currPP = esPp . nesEs . chainNes $ source
+    prevPP = esPrevPp . nesEs . chainNes $ source
+
+    ru' = nesRu . chainNes $ source
+    lsOld = esLState . nesEs . chainNes $ source
+    lsNew = esLState . nesEs . chainNes $ target
+    pools = _pParams . _pstate . _delegationState $ lsOld
+    oldRAs = _rewards . _dstate . _delegationState $ lsOld
+    newRAs = _rewards . _dstate . _delegationState $ lsNew
+
+    proposal = votedValue (proposals . _ppups . _utxoState $ lsOld) currPP 5
+    obligationMsgs = case proposal of
+      Nothing -> []
+      Just proposal' ->
+        let Coin oblgCurr = obligation currPP oldRAs pools
+            Coin oblgNew = obligation proposal' oldRAs pools
+            obligationDiff = oblgCurr - oblgNew
+         in [ "\n\nProposed protocol parameter update\n",
+              show proposal',
+              "\n\nObligation Diff\n",
+              show obligationDiff
+            ]
+
+    mir = _irwd . _dstate . _delegationState $ lsOld
+    isRegistered kh _ = Map.member kh oldRAs
+    (regMirRes, unRegMirRes) = Map.partitionWithKey isRegistered (iRReserves mir)
+    (regMirTre, unRegMirTre) = Map.partitionWithKey isRegistered (iRTreasury mir)
+
+    rewardUpdateMsgs = case ru' of
+      SNothing -> []
+      SJust ru'' ->
+        let ru = runShelleyBase . runProvM . completeRupd $ ru''
+            regRewards = Map.filterWithKey (\kh _ -> Map.member kh oldRAs) (rs ru)
+         in [ "\n\nSum of new rewards\n",
+              show (sumRewards prevPP (rs ru)),
+              "\n\nNew rewards\n",
+              show (rs ru),
+              "\n\nSum of new registered rewards\n",
+              show (sumRewards prevPP regRewards),
+              "\n\nChange in Fees\n",
+              show (deltaF ru),
+              "\n\nChange in Treasury\n",
+              show (deltaT ru),
+              "\n\nChange in Reserves\n",
+              show (deltaR ru),
+              "\n\nNet effect of reward update\n",
+              show $
+                deltaT ru
+                  <> deltaF ru
+                  <> deltaR ru
+                  <> (toDeltaCoin $ sumRewards prevPP (rs ru))
+            ]
+
+    txs' = toList $ (txSeqTxns' . bbody) signal
+    txs = map dispTx (zip txs' [0 :: Int ..])
+
+    dispTx (tx, ix) =
+      "\nTransaction " ++ show ix
+        ++ "\nfee :"
+        ++ (show $ getField @"txfee" $ getField @"body" tx)
+        ++ "\nwithdrawals: "
+        ++ (show $ getField @"wdrls" $ getField @"body" tx)
+        ++ "\ncerts: "
+        ++ (show . (map dispCert) . toList $ getField @"certs" $ getField @"body" tx)
+        ++ "\n"
+
+    dispCert (DCertDeleg (RegKey kh)) = "regkey " <> show kh
+    dispCert (DCertDeleg (DeRegKey kh)) = "deregkey " <> show kh
+    dispCert (DCertDeleg (Delegate (Delegation _ _))) = "deleg"
+    dispCert (DCertPool (RegPool p)) =
+      if (_poolId p) `Map.member` pools
+        then ("PoolReg" <> (show . _poolId $ p))
+        else "Pool Re-Reg"
+    dispCert (DCertPool (RetirePool _ _)) = "retire"
+    dispCert (DCertGenesis (GenesisDelegCert _ _ _)) = "gen"
+    dispCert (DCertMir _) = "mir"
 
 -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
 -- then the total rewards should change only by withdrawals

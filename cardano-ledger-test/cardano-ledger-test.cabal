@@ -46,10 +46,12 @@ benchmark bench
   main-is:          Main.hs
   other-modules:
     Bench.Cardano.Ledger.ApplyTx
+    Bench.Cardano.Ledger.EpochBoundary
     Bench.Cardano.Ledger.Serialisation.Generators
   build-depends:
     bytestring,
     cardano-binary,
+    cardano-crypto-class,
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,

@@ -14,6 +14,12 @@ copyright:           2020 Input Output (Hong Kong) Ltd.
 category:            Network
 build-type:          Simple
 
+
+extra-source-files:
+  cddl-files/alonzo.cddl
+  cddl-files/mock/crypto.cddl
+  cddl-files/mock/extras.cddl
+
 common base                         { build-depends: base                             >= 4.12       && < 4.15     }
 
 common project-config
@@ -33,7 +39,6 @@ library
   exposed-modules:
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
-    Cardano.Ledger.Alonzo.FakePlutus
     Cardano.Ledger.Alonzo.PlutusScriptApi
     Cardano.Ledger.Alonzo.Language
     Cardano.Ledger.Alonzo.PParams
@@ -87,10 +92,11 @@ library test
     QuickCheck,
     shelley-spec-ledger-test,
     shelley-spec-ledger,
+    text,
   hs-source-dirs:
     test/lib
 
-test-suite tests
+test-suite cardano-ledger-alonzo-test
   import:             base, project-config
 
   type:                exitcode-stdio-1.0
@@ -98,16 +104,30 @@ test-suite tests
   hs-source-dirs:
     test/test
   other-modules:
+    Test.Cardano.Ledger.Alonzo.Golden
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
+    Test.Cardano.Ledger.Alonzo.Examples.Utxow
+    Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
   build-depends:
     base16-bytestring,
     bytestring,
     cardano-binary,
     cardano-ledger-alonzo,
+    cardano-ledger-shelley-ma,
+    cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
+    containers,
+    data-default-class,
+    plutus-core,
+    plutus-tx,
+    plutus-ledger-api,
     QuickCheck,
+    small-steps,
+    small-steps-test,
     shelley-spec-ledger,
     shelley-spec-ledger-test,
-    tasty-quickcheck,
+    strict-containers,
     tasty,
+    tasty-hunit,
+    tasty-quickcheck,
     test

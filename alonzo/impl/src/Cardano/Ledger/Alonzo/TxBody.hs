@@ -114,7 +114,12 @@ import GHC.Records (HasField (..))
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.Address (Addr)
-import Shelley.Spec.Ledger.BaseTypes (Network, StrictMaybe (..))
+import Shelley.Spec.Ledger.BaseTypes
+  ( Network,
+    StrictMaybe (..),
+    maybeToStrictMaybe,
+    strictMaybeToMaybe,
+  )
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
@@ -136,12 +141,24 @@ deriving stock instance
   ) =>
   Eq (TxOut era)
 
+viewCompactTxOut ::
+  forall era.
+  (Era era) =>
+  TxOut era ->
+  (Addr (Crypto era), Core.Value era, StrictMaybe (DataHash (Crypto era)))
+viewCompactTxOut (TxOutCompact bs c dh) = (addr, val, dh)
+  where
+    addr = decompactAddr bs
+    val = fromCompact c
+
 instance
-  ( Show (Core.Value era)
+  ( Era era,
+    Show (Core.Value era),
+    Show (CompactForm (Core.Value era))
   ) =>
   Show (TxOut era)
   where
-  show = error "Not yet implemented"
+  show = show . viewCompactTxOut
 
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
@@ -205,7 +222,10 @@ instance
   NoThunks (TxBodyRaw era)
 
 deriving instance
-  (Era era, Show (Core.Value era), Show (PParamsDelta era)) =>
+  ( Era era,
+    Show (Core.Value era),
+    Show (PParamsDelta era)
+  ) =>
   Show (TxBodyRaw era)
 
 newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
@@ -407,14 +427,13 @@ instance
         (TxOutCompact @era)
         !> To addr
         !> To cv
-        !> To dh
+        !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) dh
 
 instance
   ( Era era,
     DecodeNonNegative (Core.Value era),
     Show (Core.Value era),
-    Compactible (Core.Value era),
-    ToCBOR (PParamsDelta era)
+    Compactible (Core.Value era)
   ) =>
   FromCBOR (TxOut era)
   where
@@ -423,7 +442,7 @@ instance
       RecD TxOutCompact
         <! From
         <! D decodeNonNegative
-        <! From
+        <! D (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
 
 encodeTxBodyRaw ::
   ( Era era,
@@ -451,8 +470,12 @@ encodeTxBodyRaw
       ( \i ifee o f t c w u b rsh mi sh ah ni ->
           TxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah ni
       )
-      !> Key 0 (E encodeFoldable _inputs)
-      !> Key 13 (E encodeFoldable _inputs_fee)
+      -- A note on key strangeness:
+      -- a Mary era input is expected to convert into an Alonzo era fee input.
+      -- Since Mary era inputs are on key 0, we're turning this into the key
+      -- used for fee inputs. A new key, 13, is being used for inputs in alonzo.
+      !> Key 13 (E encodeFoldable _inputs)
+      !> Key 0 (E encodeFoldable _inputs_fee)
       !> Key 1 (E encodeFoldable _outputs)
       !> Key 2 (To _txfee)
       !> encodeKeyedStrictMaybe 3 top
@@ -463,7 +486,7 @@ encodeTxBodyRaw
       !> Key 14 (E encodeFoldable _reqSignerHashes)
       !> Omit isZero (Key 9 (E encodeMint _mint))
       !> encodeKeyedStrictMaybe 11 _wppHash
-      !> encodeKeyedStrictMaybe 12 _adHash
+      !> encodeKeyedStrictMaybe 7 _adHash
       !> encodeKeyedStrictMaybe 15 _txnetworkid
     where
       encodeKeyedStrictMaybe key x =
@@ -475,7 +498,7 @@ encodeTxBodyRaw
 
       fromSJust :: StrictMaybe a -> a
       fromSJust (SJust x) = x
-      fromSJust SNothing = error "SNothing in fromSJust"
+      fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing"
 
 instance
   forall era.
@@ -516,11 +539,11 @@ instance
           SNothing
           SNothing
       bodyFields :: (Word -> Field (TxBodyRaw era))
-      bodyFields 0 =
+      bodyFields 13 =
         field
           (\x tx -> tx {_inputs = x})
           (D (decodeSet fromCBOR))
-      bodyFields 13 =
+      bodyFields 0 =
         field
           (\x tx -> tx {_inputs_fee = x})
           (D (decodeSet fromCBOR))
@@ -539,17 +562,14 @@ instance
           (D (decodeStrictSeq fromCBOR))
       bodyFields 5 = field (\x tx -> tx {_wdrls = x}) From
       bodyFields 6 = field (\x tx -> tx {_update = x}) (D (SJust <$> fromCBOR))
-      bodyFields 14 = field (\x tx -> tx {_reqSignerHashes = x}) (D (decodeSet fromCBOR))
+      bodyFields 7 = field (\x tx -> tx {_adHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 8 =
         field
           (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
       bodyFields 11 = field (\x tx -> tx {_wppHash = x}) (D (SJust <$> fromCBOR))
-      bodyFields 12 =
-        field
-          (\x tx -> tx {_adHash = x})
-          (D (SJust <$> fromCBOR))
+      bodyFields 14 = field (\x tx -> tx {_reqSignerHashes = x}) (D (decodeSet fromCBOR))
       bodyFields 15 = field (\x tx -> tx {_txnetworkid = x}) (D (SJust <$> fromCBOR))
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =

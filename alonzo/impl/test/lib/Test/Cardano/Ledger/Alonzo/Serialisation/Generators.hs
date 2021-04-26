@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -35,12 +36,16 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
-import qualified Language.PlutusTx as Plutus
+import qualified Data.Text as T (pack)
+import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -69,6 +74,7 @@ instance Arbitrary Plutus.Data where
 instance
   ( UsesScript era,
     Ord (Core.Script era),
+    Core.Script era ~ Script era,
     Arbitrary (Core.Script era)
   ) =>
   Arbitrary (AuxiliaryData era)
@@ -92,6 +98,8 @@ instance
     UsesValue era,
     Mock (Crypto era),
     Arbitrary (Core.Script era),
+    Script era ~ Core.Script era,
+    ValidateScript era,
     UsesScript era
   ) =>
   Arbitrary (TxWitness era)
@@ -100,9 +108,24 @@ instance
     TxWitness
       <$> arbitrary
       <*> arbitrary
+      <*> genScripts
+      <*> genData
       <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+
+keyBy :: Ord k => (a -> k) -> [a] -> Map k a
+keyBy f xs = Map.fromList ((\x -> (f x, x)) <$> xs)
+
+genScripts ::
+  forall era.
+  ( Core.Script era ~ Script era,
+    ValidateScript era,
+    Arbitrary (Script era)
+  ) =>
+  Gen (Map (ScriptHash (Crypto era)) (Core.Script era))
+genScripts = keyBy (hashScript @era) <$> (arbitrary :: Gen [Core.Script era])
+
+genData :: forall era. Era era => Gen (Map (DataHash (Crypto era)) (Data era))
+genData = keyBy hashData <$> arbitrary
 
 instance HasAlgorithm c => Arbitrary (SafeHash c i) where
   arbitrary = unsafeMakeSafeHash <$> arbitrary
@@ -169,8 +192,14 @@ instance Arbitrary Language where
 instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary
 
+newtype AlphaString = AlphaString {unAlphaString :: String}
+  deriving (Show, Eq, Ord)
+
+instance Arbitrary AlphaString where
+  arbitrary = AlphaString <$> listOf (elements ['a' .. 'z'])
+
 instance Arbitrary CostModel where
-  arbitrary = CostModel <$> arbitrary
+  arbitrary = (CostModel . (Map.mapKeys (T.pack . unAlphaString))) <$> arbitrary
 
 instance Arbitrary (PParams era) where
   arbitrary =
@@ -249,7 +278,7 @@ instance Mock c => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
         (OutputTooBigUTxO) <$> arbitrary,
         FeeNotBalancedUTxO <$> arbitrary <*> arbitrary,
         ScriptsNotPaidUTxO <$> arbitrary,
-        ExUnitsTooSmallUTxO <$> arbitrary <*> arbitrary,
+        ExUnitsTooBigUTxO <$> arbitrary <*> arbitrary,
         FeeContainsNonADA <$> arbitrary
       ]
 

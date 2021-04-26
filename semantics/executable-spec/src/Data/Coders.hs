@@ -34,6 +34,7 @@ module Data.Coders
     (!>),
     (<!),
     (<*!),
+    (<?),
     Density (..),
     Wrapped (..),
     Annotator (..),
@@ -59,6 +60,7 @@ module Data.Coders
     wrapCBORArray,
     encodePair,
     encodeFoldable,
+    encodeFoldableMapPairs,
     decodeCollectionWithLen,
     decodeCollection,
     encodeFoldableEncoder,
@@ -67,6 +69,7 @@ module Data.Coders
     decodeMap,
     decodeMapContents,
     decodeMapTraverse,
+    decodeMapContentsTraverse,
     dualList, -- Dual values for export
     dualSeq,
     dualSet,
@@ -103,7 +106,7 @@ import Cardano.Binary
     DecoderError (DecoderErrorCustom),
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
-    TokenType (TypeNull),
+    TokenType (..),
     decodeBreakOr,
     decodeListLenOrIndef,
     decodeMapLenOrIndef,
@@ -119,12 +122,13 @@ import Cardano.Binary
     matchSize,
     peekTokenType,
   )
-import Codec.CBOR.Decoding (Decoder)
-import Codec.CBOR.Encoding (Encoding)
+import Codec.CBOR.Decoding (Decoder, decodeTag, decodeTag64)
+import Codec.CBOR.Encoding (Encoding, encodeTag)
 import Control.Applicative (liftA2)
-import Control.Monad (replicateM, unless)
+import Control.Monad (replicateM, unless, when)
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
+import Numeric.Natural (Natural)
 import qualified Data.Map as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -237,8 +241,19 @@ decodeCollectionWithLen lenOrIndef el = do
 encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
 encodeFoldable = encodeFoldableEncoder toCBOR
 
+-- Encodes a sequence of pairs as a cbor map
+encodeFoldableMapPairs :: (ToCBOR a, ToCBOR b, Foldable f) => f (a,b) -> Encoding
+encodeFoldableMapPairs = encodeFoldableEncoderAs wrapCBORMap $
+  \(a,b) -> toCBOR a <> toCBOR b
+
 encodeFoldableEncoder :: (Foldable f) => (a -> Encoding) -> f a -> Encoding
-encodeFoldableEncoder encoder xs = wrapCBORArray len contents
+encodeFoldableEncoder = encodeFoldableEncoderAs wrapCBORArray
+
+encodeFoldableEncoderAs :: (Foldable f) =>
+  (Word -> Encoding -> Encoding) ->
+  (a -> Encoding) ->
+   f a -> Encoding
+encodeFoldableEncoderAs wrap encoder xs = wrap len contents
   where
     (len, contents) = foldl' go (0, mempty) xs
     go (!l, !enc) next = (l + 1, enc <> encoder next)
@@ -283,8 +298,15 @@ decodeMapTraverse ::
   Decoder s (t b) ->
   Decoder s (t (Map.Map a b))
 decodeMapTraverse decodeKey decodeValue =
-  fmap Map.fromList . sequenceA
-    <$> decodeMapContents decodeInlinedPair
+  fmap Map.fromList <$> decodeMapContentsTraverse decodeKey decodeValue
+
+decodeMapContentsTraverse ::
+  (Applicative t) =>
+  Decoder s (t a) ->
+  Decoder s (t b) ->
+  Decoder s (t [(a,b)])
+decodeMapContentsTraverse decodeKey decodeValue =
+  sequenceA <$> decodeMapContents decodeInlinedPair
   where
     decodeInlinedPair = getCompose $ (,) <$> Compose decodeKey <*> Compose decodeValue
 
@@ -408,6 +430,7 @@ data Encode (w :: Wrapped) t where
   E :: (t -> Encoding) -> t -> Encode ('Closed 'Dense) t
   ED :: Dual t -> t -> Encode ('Closed 'Dense) t
   OmitC :: t -> Encode w t
+  Tag :: Word -> Encode ('Closed x) t -> Encode ('Closed x) t
   Omit :: (t -> Bool) -> Encode ('Closed 'Sparse) t -> Encode ('Closed 'Sparse) t
   Key :: Word -> Encode ('Closed 'Dense) t -> Encode ('Closed 'Sparse) t
   ApplyE :: Encode w (a -> t) -> Encode ('Closed r) a -> Encode w t
@@ -430,6 +453,7 @@ runE (E _ x) = x
 runE (ED _ x) = x
 runE (OmitC x) = x
 runE (Omit _ x) = runE x
+runE (Tag _ x) = runE x
 runE (Key _ x) = runE x
 runE (Keyed cn) = cn
 
@@ -442,6 +466,7 @@ gsize (ApplyE f x) = gsize f + gsize x
 gsize (ED _ _) = 1
 gsize (OmitC _) = 0
 gsize (Omit p x) = if p (runE x) then 0 else gsize x
+gsize (Tag _ _) = 1
 gsize (Key _ x) = gsize x
 gsize (Keyed _) = 0
 
@@ -457,6 +482,7 @@ encode sym = encodeCountPrefix 0 sym
     encodeCountPrefix _ (E enc x) = enc x
     encodeCountPrefix _ (ED (Dual enc _) x) = enc x
     encodeCountPrefix _ (OmitC _) = mempty
+    encodeCountPrefix n (Tag tag x) = encodeTag tag <> encodeCountPrefix n x
     encodeCountPrefix n (Key tag x) = encodeWord tag <> encodeCountPrefix n x
     encodeCountPrefix n (Omit p x) =
       if p (runE x) then mempty else encodeCountPrefix n x
@@ -471,6 +497,7 @@ encode sym = encodeCountPrefix 0 sym
         encodeClosed (OmitC _) = mempty
         encodeClosed (Omit p x) =
           if p (runE x) then mempty else encodeClosed x
+        encodeClosed (Tag tag x) = encodeTag tag <> encodeClosed x
         encodeClosed (Key tag x) = encodeWord tag <> encodeClosed x
         encodeClosed (Keyed _) = mempty
 
@@ -490,20 +517,28 @@ data Decode (w :: Wrapped) t where
   Invalid :: Word -> Decode w t
   Map :: (a -> b) -> Decode w a -> Decode w b
   DD :: Dual t -> Decode ('Closed 'Dense) t
+  TagD :: Word -> Decode ('Closed x) t -> Decode ('Closed x) t
   Emit :: t -> Decode w t
   -- The next two could be generalized to any (Applicative f) rather than Annotator
   Ann :: Decode w t -> Decode w (Annotator t)
   ApplyAnn :: Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
+  -- A function to Either can raise an error when applied by returning (Left errorMessage)
+  ApplyErr ::  Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
 
 infixl 4 <!
 
 infixl 4 <*!
+
+infixl 4 <?
 
 (<!) :: Decode w1 (a -> t) -> Decode ('Closed w) a -> Decode w1 t
 x <! y = ApplyD x y
 
 (<*!) :: Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
 x <*! y = ApplyAnn x y
+
+(<?) :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
+f <? y = ApplyErr f y
 
 hsize :: Decode w t -> Int
 hsize (Summands _ _) = 1
@@ -518,8 +553,10 @@ hsize (Invalid _) = 0
 hsize (Map _ x) = hsize x
 hsize (Emit _) = 0
 hsize (SparseKeyed _ _ _ _) = 1
+hsize (TagD _ _) = 1
 hsize (Ann x) = hsize x
 hsize (ApplyAnn f x) = hsize f + hsize x
+hsize (ApplyErr f x) = hsize f + hsize x
 
 decode :: Decode w t -> Decoder s t
 decode x = fmap snd (decodE x)
@@ -538,6 +575,9 @@ decodeCount (Invalid k) _ = invalidKey k
 decodeCount (Map f x) n = do (m, y) <- decodeCount x n; pure (m, f y)
 decodeCount (DD (Dual _enc dec)) n = (n,) <$> dec
 decodeCount (Emit x) n = pure (n, x)
+decodeCount (TagD expectedTag decoder) n = do
+  assertTag expectedTag
+  decodeCount decoder n
 decodeCount (SparseKeyed name initial pick required) n =
   (n + 1,) <$> decodeSparse name initial pick required
 decodeCount (Ann x) n = do (m, y) <- decodeCount x n; pure (m, pure y)
@@ -549,6 +589,12 @@ decodeCount (ApplyD cn g) n = do
   (i, f) <- decodeCount cn (n + hsize g)
   y <- decodeClosed g
   pure (i, f y)
+decodeCount (ApplyErr cn g) n = do
+  (i, f) <- decodeCount cn (n + hsize g)
+  y <- decodeClosed g
+  case f y of
+    Right z -> pure(i,z)
+    Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack $ message)
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
 
@@ -566,6 +612,9 @@ decodeClosed (Invalid k) = invalidKey k
 decodeClosed (Map f x) = f <$> decodeClosed x
 decodeClosed (DD (Dual _enc dec)) = dec
 decodeClosed (Emit n) = pure n
+decodeClosed (TagD expectedTag decoder) = do
+  assertTag expectedTag
+  decodeClosed decoder
 decodeClosed (SparseKeyed name initial pick required) =
   decodeSparse name initial pick required
 decodeClosed (Ann x) = fmap pure (decodeClosed x)
@@ -573,6 +622,12 @@ decodeClosed (ApplyAnn g x) = do
   f <- decodeClosed g
   y <- decodeClosed x
   pure (f <*> y)
+decodeClosed (ApplyErr cn g) = do
+  f <- decodeClosed cn
+  y <- decodeClosed g
+  case f y of
+    Right z -> pure z
+    Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack $ message)
 
 decodeSparse ::
   Typeable a =>
@@ -764,6 +819,16 @@ mapDecodeA k v = D (decodeMapTraverse (decode k) (decode v))
 --------------------------------------------------------------------------------
 -- Utility functions for working with CBOR
 --------------------------------------------------------------------------------
+
+assertTag :: Word -> Decoder s ()
+assertTag tag = do
+  t <- peekTokenType >>= \case
+    TypeTag -> fromIntegral <$> decodeTag
+    TypeTag64 -> fromIntegral <$> decodeTag64
+    _ -> cborError ("expected tag" :: String)
+  when (t /= (fromIntegral tag :: Natural)) $
+    cborError ("expecteg tag " <> show tag <> " but got tag " <> show t)
+
 
 -- | Convert a @Buildable@ error into a 'cborg' decoder error
 cborError :: Buildable e => e -> Decoder s a

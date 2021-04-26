@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -105,15 +106,17 @@ deriving newtype instance
 -- | Sum up all the Coin for each staking Credential
 aggregateUtxoCoinByCredential ::
   forall era.
-  (Era era, HasField "address" (Core.TxOut era) (Addr (Crypto era))) =>
+  ( Era era,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+  ) =>
   Map Ptr (Credential 'Staking (Crypto era)) ->
   UTxO era ->
   Map (Credential 'Staking (Crypto era)) Coin ->
   Map (Credential 'Staking (Crypto era)) Coin
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
-  Map.foldr accum initial u
+  Map.foldl' accum initial u
   where
-    accum out ans =
+    accum !ans out =
       case (getField @"address" out, getField @"value" out) of
         (Addr _ _ (StakeRefPtr p), c) ->
           case Map.lookup p ptrs of
@@ -216,7 +219,7 @@ instance
 
 -- | Snapshots of the stake distribution.
 data SnapShots crypto = SnapShots
-  { _pstakeMark :: !(SnapShot crypto),
+  { _pstakeMark :: SnapShot crypto,
     _pstakeSet :: !(SnapShot crypto),
     _pstakeGo :: !(SnapShot crypto),
     _feeSS :: !Coin

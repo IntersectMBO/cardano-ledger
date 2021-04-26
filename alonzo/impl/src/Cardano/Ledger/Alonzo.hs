@@ -56,7 +56,6 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
 import qualified Data.Set as Set
-import qualified Plutus.V1.Ledger.Api as Plutus (validateScript)
 import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
@@ -90,7 +89,7 @@ instance
 
 -- instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c)
 
-instance API.PraosCrypto c => API.GetLedgerView (AlonzoEra c)
+instance (API.PraosCrypto c) => API.GetLedgerView (AlonzoEra c)
 
 instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
   isNativeScript x = not (isPlutusScript x)
@@ -105,8 +104,11 @@ instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
       timelock
     where
       vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
-  validateScript (PlutusScript scr) _tx = Plutus.validateScript scr
+  -- TODO check if instead we should filter plutus scripts before calling
+  validateScript (PlutusScript _) _tx = True
 
+-- To run a PlutusScript use Cardano.Ledger.Alonzo.TxInfo(runPLCScript)
+-- To run any Alonzo Script use Cardano.Ledger.Alonzo.PlutusScriptApi(evalScripts)
 -- hashScript x = ...  We use the default method for hashScript
 
 instance
@@ -118,8 +120,7 @@ instance
   -- initialState :: ShelleyGenesis era -> AdditionalGenesisConfig era -> NewEpochState era
   initialState _ _ = error "TODO: implement initialState"
 
-instance CC.Crypto c => UsesTxOut (AlonzoEra c) where
-  -- makeTxOut :: Proxy era -> Addr (Crypto era) -> Value era -> TxOut era
+instance (CC.Crypto c) => UsesTxOut (AlonzoEra c) where
   makeTxOut _proxy addr val = TxOut addr val Shelley.SNothing
 
 type instance Core.TxOut (AlonzoEra c) = TxOut (AlonzoEra c)

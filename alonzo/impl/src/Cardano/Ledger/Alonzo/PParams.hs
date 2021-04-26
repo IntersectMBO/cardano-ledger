@@ -143,7 +143,7 @@ data PParams' f era = PParams
     -- new/updated for alonzo
 
     -- | Cost in ada per byte of UTxO storage (instead of _minUTxOValue)
-    _adaPerUTxOByte :: !(HKD f Coin),
+    _adaPerUTxOWord :: !(HKD f Coin),
     -- | Cost models for non-native script languages
     _costmdls :: !(HKD f (Map Language CostModel)),
     -- | Prices of execution units (for non-native script languages)
@@ -187,7 +187,7 @@ instance (Era era) => ToCBOR (PParams era) where
         _protocolVersion = protocolVersion',
         _minPoolCost = minPoolCost',
         -- new/updated for alonzo
-        _adaPerUTxOByte = adaPerUTxOByte',
+        _adaPerUTxOWord = adaPerUTxOWord',
         _costmdls = costmdls',
         _prices = prices',
         _maxTxExUnits = maxTxExUnits',
@@ -213,7 +213,7 @@ instance (Era era) => ToCBOR (PParams era) where
             !> E toCBORGroup protocolVersion'
             !> To minPoolCost'
             -- new/updated for alonzo
-            !> To adaPerUTxOByte'
+            !> To adaPerUTxOWord'
             !> mapEncode costmdls'
             !> To prices'
             !> To maxTxExUnits'
@@ -245,7 +245,7 @@ instance
         <! (D fromCBORGroup) -- _protocolVersion :: ProtVer
         <! From -- _minPoolCost     :: Natural
         -- new/updated for alonzo
-        <! From -- _adaPerUTxOByte  :: Coin
+        <! From -- _adaPerUTxOWord  :: Coin
         <! (D mapFromCBOR) -- _costmdls :: (Map Language CostModel)
         <! From -- _prices = prices',
         <! From -- _maxTxExUnits = maxTxExUnits',
@@ -273,7 +273,7 @@ emptyPParams =
       _protocolVersion = ProtVer 0 0,
       _minPoolCost = mempty,
       -- new/updated for alonzo
-      _adaPerUTxOByte = Coin 0,
+      _adaPerUTxOWord = Coin 0,
       _costmdls = mempty,
       _prices = Prices (Coin 0) (Coin 0),
       _maxTxExUnits = ExUnits 0 0,
@@ -301,7 +301,7 @@ instance Ord (PParams' StrictMaybe era) where
       <== (_extraEntropy x, _extraEntropy y)
       <== (_protocolVersion x, _protocolVersion y)
       <== (_minPoolCost x, _minPoolCost y)
-      <== (_adaPerUTxOByte x, _adaPerUTxOByte y)
+      <== (_adaPerUTxOWord x, _adaPerUTxOWord y)
       <== (_costmdls x, _costmdls y)
       <== (_prices x, _prices y)
       <== ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
@@ -340,14 +340,6 @@ instance NoThunks (PParamsUpdate era)
 -- writing only those fields where the field is (SJust x), that is the role of
 -- the local function (omitStrictMaybe key x)
 
-fromSJust :: StrictMaybe a -> a
-fromSJust (SJust x) = x
-fromSJust SNothing = error "SNothing in fromSJust"
-
-isSNothing :: StrictMaybe a -> Bool
-isSNothing SNothing = True
-isSNothing (SJust _) = False
-
 encodePParamsUpdate ::
   PParamsUpdate era ->
   Encode ('Closed 'Sparse) (PParamsUpdate era)
@@ -369,7 +361,7 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 13 (_extraEntropy ppup) toCBOR
     !> omitStrictMaybe 14 (_protocolVersion ppup) toCBOR
     !> omitStrictMaybe 16 (_minPoolCost ppup) toCBOR
-    !> omitStrictMaybe 17 (_adaPerUTxOByte ppup) toCBOR
+    !> omitStrictMaybe 17 (_adaPerUTxOWord ppup) toCBOR
     !> omitStrictMaybe 18 (_costmdls ppup) mapToCBOR
     !> omitStrictMaybe 19 (_prices ppup) toCBOR
     !> omitStrictMaybe 20 (_maxTxExUnits ppup) toCBOR
@@ -379,6 +371,14 @@ encodePParamsUpdate ppup =
     omitStrictMaybe ::
       Word -> StrictMaybe a -> (a -> Encoding) -> Encode ('Closed 'Sparse) (StrictMaybe a)
     omitStrictMaybe key x enc = Omit isSNothing (Key key (E (enc . fromSJust) x))
+
+    fromSJust :: StrictMaybe a -> a
+    fromSJust (SJust x) = x
+    fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
+
+    isSNothing :: StrictMaybe a -> Bool
+    isSNothing SNothing = True
+    isSNothing (SJust _) = False
 
 instance (Era era) => ToCBOR (PParamsUpdate era) where
   toCBOR ppup = encode (encodePParamsUpdate ppup)
@@ -403,7 +403,7 @@ emptyPParamsUpdate =
       _protocolVersion = SNothing,
       _minPoolCost = SNothing,
       -- new/updated for alonzo
-      _adaPerUTxOByte = SNothing,
+      _adaPerUTxOWord = SNothing,
       _costmdls = SNothing,
       _prices = SNothing,
       _maxTxExUnits = SNothing,
@@ -428,7 +428,7 @@ updateField 12 = field (\x up -> up {_d = SJust x}) From
 updateField 13 = field (\x up -> up {_extraEntropy = SJust x}) From
 updateField 14 = field (\x up -> up {_protocolVersion = SJust x}) From
 updateField 16 = field (\x up -> up {_minPoolCost = SJust x}) From
-updateField 17 = field (\x up -> up {_adaPerUTxOByte = SJust x}) From
+updateField 17 = field (\x up -> up {_adaPerUTxOWord = SJust x}) From
 updateField 18 = field (\x up -> up {_costmdls = x}) (D $ SJust <$> mapFromCBOR)
 updateField 19 = field (\x up -> up {_prices = SJust x}) From
 updateField 20 = field (\x up -> up {_maxTxExUnits = SJust x}) From
@@ -481,7 +481,7 @@ updatePParams pp ppup =
       _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
       _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup),
       -- new/updated for alonzo
-      _adaPerUTxOByte = fromMaybe' (_adaPerUTxOByte pp) (_adaPerUTxOByte ppup),
+      _adaPerUTxOWord = fromMaybe' (_adaPerUTxOWord pp) (_adaPerUTxOWord ppup),
       _costmdls = fromMaybe' (_costmdls pp) (_costmdls ppup),
       _prices = fromMaybe' (_prices pp) (_prices ppup),
       _maxTxExUnits = fromMaybe' (_maxTxExUnits pp) (_maxTxExUnits ppup),

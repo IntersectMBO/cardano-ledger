@@ -9,16 +9,13 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Shelley.Spec.Ledger.Rewards (rewardTests, C, defaultMain) where
+module Test.Shelley.Spec.Ledger.Rewards (rewardTests, C, defaultMain, newEpochProp) where
 
 import Cardano.Binary (toCBOR)
 import qualified Cardano.Crypto.DSIGN as Crypto
 import Cardano.Crypto.Hash (MD5, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
--- Arbitrary(NewEpochState era)
--- instance (EraGen (ShelleyEra C))
-
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
@@ -125,7 +122,7 @@ import Test.Shelley.Spec.Ledger.Utils
     testGlobals,
     unsafeMkUnitInterval,
   )
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty -- (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCaseInfo)
 import Test.Tasty.QuickCheck
   ( Gen,
@@ -138,7 +135,12 @@ import Test.Tasty.QuickCheck
     property,
     testProperty,
     withMaxSuccess,
+    (===),
   )
+import Test.Shelley.Spec.Ledger.Rules.TestChain(forAllChainTrace)
+import Control.State.Transition.Trace(SourceSignalTarget (..), sourceSignalTargets)
+import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
+import Cardano.Ledger.Pretty(PrettyA(..))
 
 -- ========================================================================
 -- Bounds and Constants --
@@ -422,8 +424,8 @@ sameWithOrWithoutProvenance ::
   (Core.PParams era ~ PParams era) =>
   Globals ->
   NewEpochState era ->
-  Bool
-sameWithOrWithoutProvenance globals newepochstate = with == without
+  Property
+sameWithOrWithoutProvenance globals newepochstate = with === without
   where
     (with, _) = getRewardInfo globals newepochstate
     without = justRewardInfo globals newepochstate
@@ -432,8 +434,9 @@ nothingInNothingOut ::
   forall era.
   (Core.PParams era ~ PParams era) =>
   NewEpochState era ->
-  Bool
+  Property
 nothingInNothingOut newepochstate =
+  counterexample "nothingInNothingOut fails" $
   runReader
     (preservesNothing $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
     globals
@@ -454,8 +457,9 @@ justInJustOut ::
   forall era.
   (Core.PParams era ~ PParams era) =>
   NewEpochState era ->
-  Bool
+  Property
 justInJustOut newepochstate =
+  counterexample "justInJustOut fails" $
   runReader
     (preservesJust def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
     globals
@@ -541,9 +545,10 @@ rewardOnePool
           else Map.insert
       potentialRewards =
         f (getRwdCred $ _poolRAcnt pool) lReward mRewards
-      rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
+      rewards' = Map.filter (/= Coin 0) $ (eval (addrsRew ◁ potentialRewards))
 
-rewardOld ::
+
+rewardOld :: forall era.
   PParams era ->
   BlocksMade (Crypto era) ->
   Coin ->
@@ -573,6 +578,7 @@ rewardOld
     where
       totalBlocks = sum b
       Coin activeStake = fold . unStake $ stake
+      results :: [(KeyHash 'StakePool (Crypto era),Maybe (Map (Credential 'Staking (Crypto era)) Coin),Likelihood)]
       results = do
         (hk, pparams) <- Map.toList poolParams
         let sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
@@ -605,7 +611,7 @@ rewardOld
         if HardForks.aggregatedRewards pp
           then Map.unionsWith (<>)
           else Map.unions
-      rewards' = f . catMaybes $ fmap (\(_, x, _) -> x) results
+      rewards' = f . catMaybes $ fmap (\ (_, x, _) -> x) results
       hs = Map.fromList $ fmap (\(hk, _, l) -> (hk, l)) results
 
 data RewardUpdateOld crypto = RewardUpdateOld
@@ -673,8 +679,11 @@ createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm)
         nonMyopicOld = (updateNonMyopic nm _R newLikelihoods)
       }
 
-oldEqualsNew :: forall era. (Core.PParams era ~ PParams era) => NewEpochState era -> Bool
-oldEqualsNew newepochstate = old == new
+oldEqualsNew :: forall era.
+   ( era ~ C,
+     Core.PParams era ~ PParams era
+   ) => NewEpochState era -> Property
+oldEqualsNew newepochstate = counterexample (show(prettyA newepochstate)++"\n new = "++show new++"\n old = "++show old) (old===new)
   where
     globals = testGlobals
     epochstate = nesEs newepochstate
@@ -686,14 +695,15 @@ oldEqualsNew newepochstate = old == new
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
     unAggregated = runReader (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
+    old :: Map (Credential 'Staking (Crypto era)) Coin
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new_with_zeros = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
     new = Map.filter (/= Coin 0) new_with_zeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
 
-oldEqualsNewOn :: forall era. (Core.PParams era ~ PParams era) => NewEpochState era -> Bool
-oldEqualsNewOn newepochstate = old == new
+oldEqualsNewOn :: forall era. (Core.PParams era ~ PParams era) => NewEpochState era -> Property
+oldEqualsNewOn newepochstate = old === new
   where
     globals = testGlobals
     epochstate = nesEs newepochstate
@@ -705,11 +715,27 @@ oldEqualsNewOn newepochstate = old == new
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
     (unAggregated, _) = runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
+    old :: Map (Credential 'Staking (Crypto era)) Coin
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new_with_zeros = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
     new = Map.filter (/= Coin 0) new_with_zeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
+
+
+lastElem :: [a] -> Maybe a
+lastElem [a] = Just a
+lastElem [] = Nothing
+lastElem (_ : xs) = lastElem xs
+
+-- | Provide a legitimate NewEpochState to make an test Property
+newEpochProp :: Word64 -> (NewEpochState C -> Property) -> Property
+newEpochProp tracelen propf = withMaxSuccess 100 $
+  forAllChainTrace @C tracelen $ \tr ->
+     case (lastElem (sourceSignalTargets tr)) of
+       Just(SourceSignalTarget {target}) -> propf (chainNes target)
+       _ -> True === True
+
 
 -- ================================================================
 
@@ -762,17 +788,18 @@ rewardPulser
 
 -- ==================================================================
 
+chainlen :: Word64
+chainlen = 20 -- 50 -- 43 -- 37 -- 25 -- 50 -- 100
+
 rewardTests :: TestTree
 rewardTests =
   testGroup
     "Reward Tests"
-    [ testProperty
-        "Sum of rewards is bounded by reward pot"
-        (withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))),
-      testProperty "provenance does not affect result" (sameWithOrWithoutProvenance @C testGlobals),
-      testProperty "ProvM preserves Nothing" (nothingInNothingOut @C),
-      testProperty "ProvM preserves Just" (justInJustOut @C),
-      testProperty "oldstyle (aggregate immediately) matches newstyle (late aggregation) with provenance off style" (oldEqualsNew @C),
-      testProperty "oldstyle (aggregate immediately) matches newstyle (late aggregation) with provenance on style" (oldEqualsNewOn @C),
+    [ testProperty "Sum of rewards is bounded by reward pot" (withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))),
+      testProperty "provenance does not affect result" (newEpochProp 100 (sameWithOrWithoutProvenance @C testGlobals)),
+      testProperty "ProvM preserves Nothing" (newEpochProp 100 (nothingInNothingOut @C)),
+      testProperty "ProvM preserves Just" (newEpochProp 100 (justInJustOut @C)),
+      testProperty "oldstyle (aggregate immediately) matches newstyle (late aggregation) with provenance off style" (newEpochProp chainlen (oldEqualsNew @C)) ,
+      testProperty "oldstyle (aggregate immediately) matches newstyle (late aggregation) with provenance on style" (newEpochProp chainlen (oldEqualsNewOn @C)),
       testCaseInfo "Reward Provenance works" (rewardsProvenance (Proxy @C))
     ]

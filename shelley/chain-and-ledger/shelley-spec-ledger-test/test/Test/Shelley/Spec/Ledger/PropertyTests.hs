@@ -24,7 +24,7 @@ import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (..))
-import Shelley.Spec.Ledger.API (CHAIN, DPState, DelegsEnv, Tx, UTxOState, UtxoEnv)
+import Shelley.Spec.Ledger.API (CHAIN, DPState, DelegsEnv, Tx, PPUPState, UTxOState, UtxoEnv)
 import Shelley.Spec.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
@@ -77,6 +77,7 @@ minimalPropertyTests ::
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -118,6 +119,7 @@ propertyTests ::
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),

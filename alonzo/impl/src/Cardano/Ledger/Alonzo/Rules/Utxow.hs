@@ -16,7 +16,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxow where
 -- import Shelley.Spec.Ledger.UTxO(UTxO(..))
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Alonzo.Data (Data, DataHash)
+import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (checkScriptData, language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
@@ -37,7 +37,6 @@ import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
 import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.Coders
 import qualified Data.Map.Strict as Map
@@ -47,12 +46,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class
-import Shelley.Spec.Ledger.BaseTypes
-  ( Network,
-    ShelleyBase,
-    StrictMaybe (..),
-    networkId,
-  )
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..), unWitHashes, witsFromTxWitnesses)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
@@ -86,26 +80,25 @@ data AlonzoPredFail era
   | -- | Scripts that failed
     Phase1ScriptWitnessNotValidating
       !(Set (Script era))
-  | -- | Wrong Network ID in body
-    WrongNetworkInTxBody
-      !Network -- Actual Network ID
-      !Network -- Network ID in transaction body
   deriving (Generic)
 
 deriving instance
   ( Era era,
-    Show (PredicateFailure (Core.EraRule "UTXO" era)) -- The Shelley UtxowPredicateFailure needs this to Show
+    Show (PredicateFailure (Core.EraRule "UTXO" era)), -- The Shelley UtxowPredicateFailure needs this to Show
+    Show (Core.Script era)
   ) =>
   Show (AlonzoPredFail era)
 
 deriving instance
   ( Era era,
-    Eq (PredicateFailure (Core.EraRule "UTXO" era)) -- The Shelley UtxowPredicateFailure needs this to Eq
+    Eq (PredicateFailure (Core.EraRule "UTXO" era)), -- The Shelley UtxowPredicateFailure needs this to Eq
+    Eq (Core.Script era)
   ) =>
   Eq (AlonzoPredFail era)
 
 instance
   ( Era era,
+    NoThunks (Core.Script era),
     NoThunks (PredicateFailure (Core.EraRule "UTXO" era))
   ) =>
   NoThunks (AlonzoPredFail era)
@@ -114,7 +107,8 @@ instance
   ( Era era,
     ToCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     Typeable (Core.AuxiliaryData era),
-    Typeable (Core.Script era)
+    Typeable (Core.Script era),
+    ToCBOR (Core.Script era)
   ) =>
   ToCBOR (AlonzoPredFail era)
   where
@@ -135,14 +129,14 @@ encodePredFail (DataHashSetsDontAgree x y) = Sum DataHashSetsDontAgree 3 !> To x
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
 encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 5 !> To x
 encodePredFail (Phase1ScriptWitnessNotValidating x) = Sum Phase1ScriptWitnessNotValidating 6 !> To x
-encodePredFail (WrongNetworkInTxBody x y) = Sum WrongNetworkInTxBody 7 !> To x !> To y
 
 instance
   ( Era era,
     FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
     FromCBOR (Script era),
     Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era)
+    Typeable (Core.AuxiliaryData era),
+    FromCBOR (Core.Script era)
   ) =>
   FromCBOR (AlonzoPredFail era)
   where
@@ -164,7 +158,6 @@ decodePredFail 3 = SumD DataHashSetsDontAgree <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 5 = SumD MissingRequiredSigners <! From
 decodePredFail 6 = SumD Phase1ScriptWitnessNotValidating <! From
-decodePredFail 7 = SumD WrongNetworkInTxBody <! From <! From
 decodePredFail n = Invalid n
 
 -- =============================================
@@ -187,9 +180,7 @@ type ShelleyStyleWitnessNeeds era =
 --   (in addition to ShelleyStyleWitnessNeeds)
 type AlonzoStyleAdditions era =
   ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))), -- BE SURE AND ADD THESE INSTANCES
-    HasField "txdatahash" (Core.Tx era) (Map.Map (DataHash (Crypto era)) (Data era)),
-    HasField "wppHash" (Core.TxBody era) (StrictMaybe (WitnessPPDataHash (Crypto era))),
-    HasField "txnetworkid" (Core.TxBody era) (StrictMaybe Network)
+    HasField "wppHash" (Core.TxBody era) (StrictMaybe (WitnessPPDataHash (Crypto era)))
   )
 
 -- | A somewhat generic STS transitionRule function for the Alonzo Era.
@@ -254,7 +245,7 @@ alonzoStyleWitness = do
             SJust h <- [getField @"datahash" output],
             isTwoPhaseScriptAddress @era tx (getField @"address" output)
         ]
-      txHashes = domain (getField @"txdatahash" tx)
+      txHashes = domain (txdats . wits' $ tx)
       inputHashes = Set.fromList utxoHashes
   txHashes == inputHashes ?! DataHashSetsDontAgree txHashes inputHashes
 
@@ -272,12 +263,6 @@ alonzoStyleWitness = do
       computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits' $ tx)
       bodyPPhash = getField @"wppHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
-
-  actualNetID <- liftSTS $ asks networkId
-  let bodyNetID = getField @"txnetworkid" txbody
-  case bodyNetID of
-    SNothing -> pure ()
-    SJust bid -> actualNetID == bid ?! WrongNetworkInTxBody actualNetID bid
 
   trans @(Core.EraRule "UTXO" era) $ TRC (ue, u', tx)
 
