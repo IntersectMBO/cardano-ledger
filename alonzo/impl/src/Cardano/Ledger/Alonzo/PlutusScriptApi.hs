@@ -189,7 +189,8 @@ collectTwoPhaseScriptInputs pp tx utxo =
       case Map.lookup hash (txscripts' (getField @"wits" tx)) of
         Just script -> Right script
         Nothing -> Left (NoWitness hash)
-    apply cost (sp, d, eu) script = (script, d : (valContext txinfo sp) : (getData tx utxo sp), eu, cost)
+    apply cost (sp, d, eu) script =
+      (script, getData tx utxo sp ++ (d : [valContext txinfo sp]), eu, cost)
 
 -- | Merge two lists (either of which may have failures, i.e. (Left _)), collect all the failures
 --   but if there are none, use 'f' to construct a success.

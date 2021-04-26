@@ -733,7 +733,7 @@ collectTwoPhaseScriptInputsOutputOrdering =
   collectTwoPhaseScriptInputs pp validatingTx initUTxO
     @?= Right
       [ ( alwaysSucceeds 3,
-          [redeemerExample1, context, datumExample1],
+          [datumExample1, redeemerExample1, context],
           ExUnits 5000 5000,
           CostModel mempty
         )
