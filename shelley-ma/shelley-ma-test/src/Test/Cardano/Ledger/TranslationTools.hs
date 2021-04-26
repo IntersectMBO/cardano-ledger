@@ -12,7 +12,6 @@ module Test.Cardano.Ledger.TranslationTools
   , expectDecodeFailure
   ) where
 
-
 import Cardano.Ledger.Era (PreviousEra, TranslateEra (..), TranslationContext)
 
 import Cardano.Binary
@@ -25,6 +24,7 @@ import Cardano.Binary
    )
 import Test.Tasty.HUnit (Assertion, assertFailure)
 import Control.Monad.Except (runExcept)
+import qualified Data.ByteString.Base16.Lazy as B16
 
 translate ::
   forall era f.
@@ -75,8 +75,13 @@ decodeTest _ x = case decodeFull (serialize x) :: Either DecoderError b of
 -- Tests that the type a can be decoded as b
 decodeTestAnn :: forall a b proxy. (ToCBOR a, FromCBOR (Annotator b))
    => proxy b -> a -> Assertion
-decodeTestAnn _ x = case decodeAnnotator mempty fromCBOR (serialize x) :: Either DecoderError b of
-  Left e -> assertFailure $ show e
+decodeTestAnn _ x =
+   let bytes = serialize x
+       decoded = decodeAnnotator mempty fromCBOR bytes :: Either DecoderError b
+    in case decoded of
+  Left e -> assertFailure $ 
+       "\nerror: " <> show e
+    <> "\nbytes: " <> show (B16.encode bytes) <> "\n"
   Right _ -> return ()
 
 -- Tests that a decoder error happens

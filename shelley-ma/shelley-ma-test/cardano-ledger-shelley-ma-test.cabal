@@ -55,6 +55,7 @@ library
   build-depends:
     array,
     base >=4.9 && <4.15,
+    base16-bytestring,
     bytestring,
     cardano-binary,
     cardano-crypto-class,

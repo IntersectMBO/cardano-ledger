@@ -13,7 +13,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -24,8 +23,6 @@ module Cardano.Ledger.Alonzo.PParams
     PParams,
     emptyPParams,
     ProtVer (..),
-    ProposedPPUpdates (..),
-    emptyPPPUpdates,
     PParamsUpdate,
     emptyPParamsUpdate,
     updatePParams,
@@ -86,7 +83,6 @@ import Shelley.Spec.Ledger.BaseTypes
     interval0,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
 import Shelley.Spec.Ledger.Serialization
@@ -444,23 +440,6 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
 -- =================================================================
 
 -- | Update operation for protocol parameters structure @PParams
-newtype ProposedPPUpdates era
-  = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (PParamsUpdate era))
-  deriving (Show, Eq, Generic)
-
-instance NFData (ProposedPPUpdates era)
-
-instance NoThunks (ProposedPPUpdates era)
-
-instance Era era => ToCBOR (ProposedPPUpdates era) where
-  toCBOR (ProposedPPUpdates m) = mapToCBOR m
-
-instance Era era => FromCBOR (ProposedPPUpdates era) where
-  fromCBOR = ProposedPPUpdates <$> mapFromCBOR
-
-emptyPPPUpdates :: ProposedPPUpdates era
-emptyPPPUpdates = ProposedPPUpdates Map.empty
-
 updatePParams :: PParams era -> PParamsUpdate era -> PParams era
 updatePParams pp ppup =
   PParams
