@@ -89,6 +89,11 @@ We add the following helper functions:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{vi}
+      & \ValidityInterval
+      & \Slot^? \times \Slot^?
+%      & \text{validity interval}
+      \\
       \var{txout}
       & \TxOut
       & \Addr \times \Value \times \hldiff{\DataHash^?}
@@ -111,7 +116,8 @@ We add the following helper functions:
     \fun{language}& \in \ScriptNonNative \to \Language\\
     \fun{hashData}& \in \Data \to \DataHash
     \nextdef
-    \fun{hashWitnessPPData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Redeemer \times \ExUnits) \to \WitnessPPDataHash^? \\
+    \fun{hashWitnessPPData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Redeemer \times \ExUnits)\\
+    & ~~~~ \to \WitnessPPDataHash^? \\
     \fun{hashWitnessPPData}&~{pp}~{langs}~{rdmrs}~=~ \\
                           &\begin{cases}
                             \Nothing & rdmrs~=~\emptyset \land langs~=~\emptyset \\
@@ -148,7 +154,7 @@ We add the following helper functions:
       & \times~ \seqof{\DCert} & \fun{txcerts}& \text{Certificates}\\
        & \times ~\Value  & \fun{mint} &\text{A minted value}\\
        & \times ~\Coin & \fun{txfee} &\text{Non-script fee}\\
-       & \times ~\Slot^? \times \Slot^? & \fun{txvldt} & \text{Validity interval}\\
+       & \times ~\ValidityInterval & \fun{txvldt} & \text{Validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
        & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
        & \times ~\hldiff{\powerset{\KeyHash}} & \hldiff{\fun{reqSignerHashes}} & \text{Hashes of VKeys passed to scripts}\\
@@ -180,7 +186,7 @@ We add the following helper functions:
   \label{fig:defs:utxo-shelley-2}
 \end{figure*}
 
-\bfseries{Auxiliary Data. }
+\textbf{Auxiliary Data. }
 Figure \ref{fig:defs:utxo-shelley-2} gives the Alonzo era auxiliary data found in a transaction.
 In addition to a list of scripts and a metadata object, transaction auxiliary data now
 contains a set of datum objects.

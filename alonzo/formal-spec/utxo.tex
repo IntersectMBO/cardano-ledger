@@ -282,8 +282,8 @@ which has the information to do this correctly for
      &\text{Summarizes transaction data} \\~\\
      &\fun{valContext} \in \TxInfo \to \ScriptPurpose \to \Data \\
      &\text{Pairs transaction data with a script purpose} \\~\\
-     &\fun{runPLCScript} \in \CostMod \to\ScriptPlutus \to \ExUnits \to
-    \seqof{\Data} \to \IsValidating \\
+     &\fun{runPLCScript} \in \ScriptPlutus \to \seqof{\Data} \to \ExUnits \to \CostMod \to
+     \IsValidating \\
      &\text{Validate a Plutus script, taking resource limits into account}
   \end{align*}
   %
@@ -291,7 +291,7 @@ which has the information to do this correctly for
   %
   \begin{align*}
     \llbracket \var{script_v} \rrbracket_{\var{cm},\var{eu}}~\var{d}
-    &=& \fun{runPLCScript} ~{cm}~\var{script_v}~\var{eu}~\var{d}
+    &=& \fun{runPLCScript} ~\var{script_v}~\var{d}~\var{eu}~{cm}
   \end{align*}
   \caption{Script Validation, cont.}
   \label{fig:defs:functions-valid}
@@ -302,26 +302,35 @@ match scripts with their corresponding inputs and pass them to the
 evaluator.
 
 \begin{itemize}
-  \item $\fun{getData}$ looks for a datum associated with a given script purpose. Note that
+  \item $\fun{getDatum}$ looks for a datum associated with a given script purpose. Note that
   only an $\TxIn$-type script purpose can result in finding an associated datum hash.
   In no datum is found, an empty list is returned. A list containing the found datum
   is returned otherwise.
 
-  \item $\fun{collectNNScriptInputs}$ builds a list of scripts, paired with their
+  \item $\fun{collectTwoPhaseScriptInputs}$ builds a list of scripts, paired with their
   inputs. Specifically, each tuple in the list contains :
 
   \begin{itemize}
   \item the script;
 
-  \item the validation context, built by the $\fun{valContext}$ function using
-  the transaction summary built by $\fun{txInfo}$, together with the current item being validated;
+  \item a list of the following script arguments, in this order:
 
-  \item the hash of the required datum, if any (returned by the $\fun{getData}$ function,
-  wrapped in a list type instead of a $\Data^?$ type).
+  \begin{itemize}
+    \item the hash of the required datum, if any (returned by the $\fun{getDatum}$ function,
+    wrapped in a list type instead of a $\Data^?$ type).
 
-  \item a pair, returned by the $\fun{indexedRdmrs}$ function, of a redeemer
-  and an $\ExUnits$ amount. We are assuming this pair is not $\Nothing$ here
-  because that must have already been checked by the UTXOW rule.
+    \item a redeemer, returned as the first term of the pair by the $\fun{indexedRdmrs}$ function.
+    and an $\ExUnits$ amount. We are assuming this value is not $\Nothing$ here
+    because that must have already been checked by the UTXOW rule.
+
+    \item the validation context, built by the $\fun{valContext}$ function using
+    the transaction summary built by $\fun{txInfo}$, together with the current item being validated;
+  \end{itemize}
+
+  \item an $\ExUnits$ amount, which is the second term of the pair returned by the $\fun{indexedRdmrs}$ function.
+
+  \item the cost model for $\PlutusVI$, specified in the protocol parameters
+  \end{itemize}
 
   \item $\fun{evalScripts}$ evaluates a whole list of scripts paired with all their
   inputs by calling the native script validator function, $\fun{runPLCScript}$
@@ -334,25 +343,23 @@ evaluator.
 Note that no ``checks'' are performed within these functions.
 Missing validators, missing inputs, incorrect hashes, the wrong type of script etc,
 are caught during the application of the UTXOW rule (before these functions are ever applied).
-%
-
-\end{itemize}
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{getData} \in \Tx \to \UTxO \to \ScriptPurpose \to \seqof{\Data} \\
-    & \fun{getData}~{tx}~{utxo}~{sp}~=~
+    & \fun{getDatum} \in \Tx \to \UTxO \to \ScriptPurpose \to \seqof{\Data} \\
+    & \fun{getDatum}~{tx}~{utxo}~{sp}~=~
       \begin{cases}
         [\var{d}] & \var{sp} \mapsto (\_, \_, h_d) \in \var{utxo}, \var{h_d}\mapsto \var{d} \in \fun{txdats}~(\fun{txwits}~tx) \\
         \epsilon  & \text{otherwise}
       \end{cases}
     \nextdef
-    & \fun{collectNNScriptInputs} \in \PParams \to \Tx \to \UTxO \to \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
-    & \fun{collectNNScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
-    & ~~\fun{toList} \{ (\var{script}, ([\fun{valContext}~\var{txinfo}~\var{sp}]~++~ \fun{getData}~tx~utxo~sp~++~[\var{d}]), \var{eu}, \var{cm}) \mid \\
+    & \fun{collectTwoPhaseScriptInputs} \in \PParams \to \Tx \to \UTxO \to \\
+    & ~~~~ \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
+    & \fun{collectTwoPhaseScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
+    & ~~\fun{toList} \{ (\var{script}, (\fun{getDatum}~tx~utxo~sp~++~[~\var{rdmr};~\fun{valContext}~\var{txinfo}~\var{sp}~]), \var{eu}, \var{cm}) \mid \\
     & ~~~~(\var{sp}, \var{scriptHash}) \in \fun{scriptsNeeded}~{utxo}~{tx}, \\
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
-    & ~~~~(\var{d}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
+    & ~~~~(\var{rdmr}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
     & ~~~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp} \} \\
     & \where \\
     & ~~~~~~~ \var{txinfo}~=~\fun{txInfo}~(\fun{language}~{script})~\var{utxo}~\var{tx} \\
@@ -428,7 +435,7 @@ There are two rules, corresponding to the two possible state changes of the
 UTxO state in the UTXOS transition system (Figure~\ref{fig:rules:utxo-state-upd}).
 %
 In both cases, the $\fun{evalScripts}$ function is called upon to verify that the $\IsValidating$
-tag has been applied correctly. The function $\fun{collectNNScriptInputs}$ is used to build
+tag has been applied correctly. The function $\fun{collectTwoPhaseScriptInputs}$ is used to build
 the inputs $\var{sLst}$ for the $\fun{evalScripts}$ function.
 %
 The first rule
@@ -456,7 +463,7 @@ In this case, the states of the UTxO, fee
     \inference[Scripts-Yes]
     {
     \var{txb}\leteq\txbody{tx} &
-    \var{sLst} := \fun{collectNNScriptInputs}~\var{pp}~\var{tx}~\var{utxo}
+    \var{sLst} := \fun{collectTwoPhaseScriptInputs}~\var{pp}~\var{tx}~\var{utxo}
     \\
     ~
     \\
@@ -507,7 +514,7 @@ In this case, the states of the UTxO, fee
     \inference[Scripts-No]
     {
     \var{txb}\leteq\txbody{tx} &
-    \var{sLst} := \fun{collectNNScriptInputs}~\var{pp}~\var{tx}~\var{utxo}
+    \var{sLst} := \fun{collectTwoPhaseScriptInputs}~\var{pp}~\var{tx}~\var{utxo}
     \\
     ~
     \\
@@ -606,7 +613,7 @@ UTXOS rule.
       \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId \\
       \hldiff{\fun{txnetworkid}~\var{txb}~=~\NetworkId}
       \\~\\
-      \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\
+      \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\~\\
       \hldiff{\fun{totExunits}~{tx} \leq \fun{maxTxExUnits}~{pp}}
       \\
       ~
@@ -689,7 +696,7 @@ We construct the following helper functions :
   paired with the hashes of corresponding the witnessing scripts.
   This function collects hashes of both native and non-native scripts.
 
-  \item $\fun{checkRedeemers}$ returns $\True$ if, for the given script purpose,
+  \item $\fun{checkScriptData}$ returns $\True$ if, for the given script purpose,
   whenever the script it points to is non-native, the transaction contains an associated entry
   in the indexed redeemers structure.
 
@@ -711,8 +718,8 @@ We construct the following helper functions :
     & \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx}
     \nextdef
-    & \hspace{-1cm}\fun{checkRedeemers} \in \Tx \to \UTxO \to (\ScriptPurpose \times \ScriptHash) \to \Bool \\
-    & \hspace{-1cm}\fun{checkRedeemers}~\var{tx}~\var{utxo}~(\var{sp},\var{h})~=~ \forall s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx),\\
+    & \hspace{-1cm}\fun{checkScriptData} \in \Tx \to \UTxO \to (\ScriptPurpose \times \ScriptHash) \to \Bool \\
+    & \hspace{-1cm}\fun{checkScriptData}~\var{tx}~\var{utxo}~(\var{sp},\var{h})~=~ \forall s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx),\\
     & (s \in \ScriptNonNative~\Rightarrow \fun{indexedRdmrs}~tx~sp \neq \Nothing) \\
     \nextdef
     & \hspace{-1cm}\fun{languages} \in \TxWitness \to \powerset{\Language} \\
@@ -753,10 +760,10 @@ additional ones;
     has the same number of elements as the set of scripts needed for each script purpose. Note that the same
     script may appear more than once in both the list and the set, as it can be used for different purposes, and therefore
     run separately for each, with different input data. Note also that by construction, the output of
-    the $\fun{collectNNScriptInputs}$ function should have exactly the same collection of scripts as
+    the $\fun{collectTwoPhaseScriptInputs}$ function should have exactly the same collection of scripts as
     the $\fun{scriptsNeeded}$ function output - this check is in place to catch discrepancies in this construction.
     \begin{note}
-      Note that $\fun{collectNNScriptInputs}$ is called twice, here and in UTXO. We need to avoid this.
+      Note that $\fun{collectTwoPhaseScriptInputs}$ is called twice, here and in UTXO. We need to avoid this.
       ALSO we need to audit the $\fun{wppHash}$ function
     \end{note}
 \end{itemize}
@@ -791,7 +798,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \hldiff{\{ s \mid (\_, s) \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}\} = \dom (\fun{txscripts}~{txw})} \\
       \hldiff{\{ h \mid (\_ \mapsto (a, \_, h)) \in \txins{txb} \restrictdom \var{utxo}, \fun{isNonNativeScriptAddress}~{tx}~{a}\} =} \\
       \hldiff{\dom (\fun{txdats}~{txw})} \\
-      \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx},~ \fun{checkRedeemers}~tx~utxo~sph}
+      \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx},~ \fun{checkScriptData}~tx~utxo~sph}
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
       \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\
@@ -819,7 +826,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \\~\\
       \hldiff{\fun{wppHash}~{txb}~=~\fun{hashWitnessPPData}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})}
       \\~\\
-      \hldiff{\|~\fun{scriptsNeeded}~\var{utxo}~\var{tx}~\|~=~\|~\fun{collectNNScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo}~\|}
+      \hldiff{\|~\fun{scriptsNeeded}~\var{utxo}~\var{tx}~\|~=~\|~\fun{collectTwoPhaseScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo}~\|}
       \\~\\
       {
         \begin{array}{r}
