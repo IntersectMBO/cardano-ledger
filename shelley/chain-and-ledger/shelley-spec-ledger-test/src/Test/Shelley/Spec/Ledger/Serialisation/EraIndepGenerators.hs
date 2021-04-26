@@ -857,7 +857,7 @@ instance
 
 instance
   ( Era era,
-    Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGERS" era))
+    Arbitrary (STS.PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   Arbitrary (ApplyTxError era)
   where

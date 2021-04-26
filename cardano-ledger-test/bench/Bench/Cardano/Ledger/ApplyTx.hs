@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -29,7 +30,7 @@ import Shelley.Spec.Ledger.API
     ApplyTx,
     Coin (..),
     Globals,
-    LedgersEnv (..),
+    LedgerEnv (..),
     MempoolEnv,
     MempoolState,
     Tx,
@@ -57,10 +58,11 @@ type MaryBench = MaryEra C_Crypto
 -- state shouldn't matter much.
 applyTxMempoolEnv :: Default (Core.PParams era) => MempoolEnv era
 applyTxMempoolEnv =
-  LedgersEnv
-    { ledgersSlotNo = SlotNo 71,
-      ledgersPp = def,
-      ledgersAccount = AccountState (Coin 45000000000) (Coin 45000000000)
+  LedgerEnv
+    { ledgerSlotNo = SlotNo 71,
+      ledgerIx = 0,
+      ledgerPp = def,
+      ledgerAccount = AccountState (Coin 45000000000) (Coin 45000000000)
     }
 
 data ApplyTxRes era = ApplyTxRes

@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -34,7 +35,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx
-  ( ValidatedTx,
+  ( ValidatedTx (..),
     body',
     wits',
   )
@@ -55,6 +56,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesValue,
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
+import Cardano.Ledger.Tx (Tx (Tx))
 import qualified Data.Set as Set
 import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
@@ -85,9 +87,16 @@ instance
 -- TODO we cannot have this instance until we rewrite the mempool API to reflect
 -- the difference between Tx and TxInBlock
 
--- instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c)
+instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
+  applyTx = undefined
+  applyTxInBlock = undefined
 
--- instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c)
+  -- TODO implement this without reserialisation by extracting the various
+  -- bytestring parts.
+  extractTx ValidatedTx {body, wits, auxiliaryData} =
+    Tx body wits auxiliaryData
+
+instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c)
 
 instance (API.PraosCrypto c) => API.GetLedgerView (AlonzoEra c)
 
@@ -127,8 +136,6 @@ type instance Core.TxOut (AlonzoEra c) = TxOut (AlonzoEra c)
 
 type instance Core.TxBody (AlonzoEra c) = TxBody (AlonzoEra c)
 
-type instance Core.TxOut (AlonzoEra c) = TxOut (AlonzoEra c)
-
 type instance Core.Value (AlonzoEra c) = V.Value c
 
 type instance Core.Script (AlonzoEra c) = Script (AlonzoEra c)
@@ -165,7 +172,7 @@ instance CC.Crypto c => EraModule.SupportsSegWit (AlonzoEra c) where
   toTxSeq = Alonzo.TxSeq
   hashTxSeq = Alonzo.hashTxSeq
 
--- instance API.PraosCrypto c => API.ShelleyBasedEra (AlonzoEra c)
+instance API.PraosCrypto c => API.ShelleyBasedEra (AlonzoEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping

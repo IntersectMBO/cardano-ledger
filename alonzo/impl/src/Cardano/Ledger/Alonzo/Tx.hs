@@ -265,6 +265,8 @@ pattern ValidatedTx {body, wits, isValidating, auxiliaryData} <-
     ValidatedTx b w v a =
       ValidatedTxConstr $ memoBytes (encodeTxRaw $ ValidatedTxRaw b w v a)
 
+{-# COMPLETE ValidatedTx #-}
+
 -- We define these accessor functions manually, because if we define them using
 -- the record syntax in the Tx pattern, they inherit the constraints
 -- (Era era, ToCBOR (Core.AuxiliaryData era),ToCBOR (Core.TxBody era))
