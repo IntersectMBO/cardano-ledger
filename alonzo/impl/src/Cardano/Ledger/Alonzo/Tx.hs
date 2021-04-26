@@ -109,7 +109,6 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (isNativeScript))
-import Cardano.Ledger.Hashes (EraIndependentTx)
 import Cardano.Ledger.Mary.Value (AssetName, PolicyID (..), Value (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
@@ -205,8 +204,6 @@ instance
 
 newtype ValidatedTx era = ValidatedTxConstr (MemoBytes (ValidatedTxRaw era))
   deriving newtype (SafeToHash, ToCBOR)
-
-instance (c ~ Crypto era, Era era) => HashAnnotated (ValidatedTx era) EraIndependentTx c
 
 deriving newtype instance
   ( Era era,

@@ -11,7 +11,6 @@
 module Cardano.Ledger.Hashes
   ( -- * Era-independent hash type identifiers.
     -- $eraIndep
-    EraIndependentTx,
     EraIndependentTxBody,
     EraIndependentBlockBody,
     EraIndependentMetadata,
@@ -43,8 +42,6 @@ import NoThunks.Class (NoThunks (..))
 --   the exact structure that makes up a "block" will differ from era to era. We
 --   still want to share the same namespace for the identifiers. Consequently we
 --   define some era-independent indices here.
-
-data EraIndependentTx
 
 data EraIndependentTxBody
 
