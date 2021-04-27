@@ -720,7 +720,7 @@ We construct the following helper functions :
     \nextdef
     & \hspace{-1cm}\fun{checkScriptData} \in \Tx \to \UTxO \to (\ScriptPurpose \times \ScriptHash) \to \Bool \\
     & \hspace{-1cm}\fun{checkScriptData}~\var{tx}~\var{utxo}~(\var{sp},\var{h})~=~ \forall s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx),\\
-    & (s \in \ScriptNonNative~\Rightarrow \fun{indexedRdmrs}~tx~sp \neq \Nothing) \\
+    & (s \in \ScriptNonNative~\Rightarrow \fun{txrdmrs}~tx~sp \neq \{\}) \\
     \nextdef
     & \hspace{-1cm}\fun{languages} \in \TxWitness \to \powerset{\Language} \\
     & \hspace{-1cm}\fun{languages}~\var{txw}~=~
