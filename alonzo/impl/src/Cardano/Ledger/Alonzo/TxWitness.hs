@@ -25,6 +25,7 @@ module Cardano.Ledger.Alonzo.TxWitness
         Redeemers'
       ),
     unRedeemers,
+    nullRedeemers,
     TxWitness
       ( TxWitness,
         txwitsVKey,
