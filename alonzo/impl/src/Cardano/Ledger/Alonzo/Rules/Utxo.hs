@@ -47,6 +47,7 @@ import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), inInterval)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (HeapWords (..))
+import Cardano.Slotting.EpochInfo.API (epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (⊆), (◁), (➖))
 import Control.Monad.Trans.Reader (asks)
@@ -85,7 +86,9 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Network,
     ShelleyBase,
     StrictMaybe (..),
+    epochInfoWithErr,
     networkId,
+    systemStart,
   )
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley
@@ -106,7 +109,7 @@ utxoEntrySize txout
     -- no non-ada assets, no hash datum case
     case dh of
       SNothing -> adaOnlyUTxOSize
-      _ -> adaOnlyUTxOSize + dataHashSize dh
+      SJust _ -> adaOnlyUTxOSize + dataHashSize dh
   -- add the size of Value and the size of datum hash (if present) to base UTxO size
   -- max function is a safeguard (in case calculation returns a smaller size than an ada-only entry)
   | otherwise = max adaOnlyUTxOSize (utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh)
@@ -202,6 +205,8 @@ data UtxoPredicateFailure era
     WrongNetworkInTxBody
       !Network -- Actual Network ID
       !Network -- Network ID in transaction body
+  | OutsideForecast
+      !SlotNo -- slot number outside consensus forecast range
   deriving (Generic)
 
 deriving stock instance
@@ -312,9 +317,18 @@ utxoTransition = do
   let Shelley.UTxOState utxo _deposits _fees _ppup = u
 
   let txb = txbody tx
+  let vi@(ValidityInterval _ i_f) = getField @"vldt" txb
 
-  inInterval slot (getField @"vldt" txb)
+  inInterval slot vi
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
+
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfoWithErr
+  case i_f of
+    SNothing -> pure ()
+    SJust ifj -> case (epochInfoSlotToUTCTime ei sysSt ifj) of
+      Left _ -> failBecause (OutsideForecast ifj) -- error translating slot
+      Right _ -> pure ()
 
   not (Set.null (Alonzo.txins @era txb)) ?!# InputSetEmptyUTxO
 
@@ -513,6 +527,8 @@ encFail (FeeContainsNonADA a) =
   Sum FeeContainsNonADA 16 !> To a
 encFail (WrongNetworkInTxBody a b) =
   Sum WrongNetworkInTxBody 17 !> To a !> To b
+encFail (OutsideForecast a) =
+  Sum OutsideForecast 18 !> To a
 
 decFail ::
   ( Era era,
@@ -540,6 +556,7 @@ decFail 14 = SumD ScriptsNotPaidUTxO <! From
 decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From
 decFail 16 = SumD FeeContainsNonADA <! From
 decFail 17 = SumD WrongNetworkInTxBody <! From <! From
+decFail 18 = SumD OutsideForecast <! From
 decFail n = Invalid n
 
 instance

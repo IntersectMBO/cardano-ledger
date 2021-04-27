@@ -27,7 +27,7 @@ import Cardano.Ledger.Alonzo.Tx
     hashWitnessPPData,
   )
 import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
-import Cardano.Ledger.Alonzo.TxInfo (transTx, valContext)
+import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
     Redeemers (..),
@@ -44,14 +44,18 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Slotting.EpochInfo (fixedEpochInfo)
+import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS
 import Data.Default.Class (def)
+import Data.Functor.Identity
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as P
   ( EvaluationError (..),
@@ -72,7 +76,7 @@ import Shelley.Spec.Ledger.Credential (Credential (..), StakeCredential, StakeRe
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyPair (..), KeyRole (..), hashKey)
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Shelley.Spec.Ledger.Slot (EpochInfo, EpochSize (..), SlotNo (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -92,6 +96,12 @@ type A = AlonzoEra C_Crypto
 -- =======================
 -- Setup the initial state
 -- =======================
+
+testEpochInfo :: EpochInfo Identity
+testEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
+
+testSystemStart :: SystemStart
+testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 
 pp :: PParams A
 pp =
@@ -730,7 +740,7 @@ testUTXOW initSt tx predicateFailure@(Left _) = do
 
 collectTwoPhaseScriptInputsOutputOrdering :: Assertion
 collectTwoPhaseScriptInputsOutputOrdering =
-  collectTwoPhaseScriptInputs pp validatingTx initUTxO
+  collectTwoPhaseScriptInputs testEpochInfo testSystemStart pp validatingTx initUTxO
     @?= Right
       [ ( alwaysSucceeds 3,
           [datumExample1, redeemerExample1, context],
@@ -739,7 +749,7 @@ collectTwoPhaseScriptInputsOutputOrdering =
         )
       ]
   where
-    context = valContext (transTx initUTxO validatingTx) (Spending $ TxIn genesisId 0)
+    context = valContext (txInfo testEpochInfo testSystemStart initUTxO validatingTx) (Spending $ TxIn genesisId 0)
 
 utxowExamples :: TestTree
 utxowExamples =

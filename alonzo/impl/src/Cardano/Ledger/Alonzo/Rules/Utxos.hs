@@ -40,7 +40,7 @@ import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.Monad.Except (MonadError (throwError))
-import Control.Monad.Trans.Reader (runReader)
+import Control.Monad.Trans.Reader (asks, runReader)
 import Control.State.Transition.Extended
 import Data.Coders
 import Data.Foldable (toList)
@@ -54,7 +54,9 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Globals,
     ShelleyBase,
     StrictMaybe (..),
+    epochInfo,
     strictMaybeToMaybe,
+    systemStart,
   )
 import Shelley.Spec.Ledger.LedgerState (PPUPState (..), UTxOState (..), keyRefunds)
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
@@ -108,6 +110,10 @@ utxosTransition ::
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
+    Eq (Core.PParams era),
+    Show (Core.PParams era),
+    Show (PParamsDelta era),
+    Eq (PParamsDelta era),
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
@@ -133,6 +139,10 @@ scriptsValidateTransition ::
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
+    Eq (Core.PParams era),
+    Show (Core.PParams era),
+    Show (PParamsDelta era),
+    Eq (PParamsDelta era),
     Core.Script era ~ Script era,
     Core.TxBody era ~ Alonzo.TxBody era,
     Core.TxOut era ~ Alonzo.TxOut era,
@@ -161,7 +171,9 @@ scriptsValidateTransition = do
             (toList $ getField @"certs" txb)
         )
           Val.<-> refunded
-  case collectTwoPhaseScriptInputs pp tx utxo of
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfo
+  case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       evalScripts @era tx sLst
         ?!# ValidationTagMismatch (getField @"isValidating" tx)
@@ -181,18 +193,30 @@ scriptsValidateTransition = do
 scriptsNotValidateTransition ::
   forall era.
   ( Era era,
+    Eq (Core.PParams era),
+    Show (Core.PParams era),
+    Show (PParamsDelta era),
+    Eq (PParamsDelta era),
+    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
+    Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Core.Script era ~ Script era,
     Core.TxBody era ~ Alonzo.TxBody era,
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Value (Crypto era),
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin
   ) =>
   TransitionRule (UTXOS era)
 scriptsNotValidateTransition = do
   TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _), tx) <- judgmentContext
   let txb = txbody tx
-  case collectTwoPhaseScriptInputs pp tx utxo of
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfo
+  case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       not (evalScripts @era tx sLst)
         ?!# ValidationTagMismatch (getField @"isValidating" tx)
@@ -306,7 +330,7 @@ constructValidated ::
   Core.Tx era ->
   m (UTxOState era, ValidatedTx era)
 constructValidated globals env@(UtxoEnv _ pp _ _) st tx =
-  case collectTwoPhaseScriptInputs pp tx utxo of
+  case collectTwoPhaseScriptInputs ei sysS pp tx utxo of
     Left errs -> throwError [ShouldNeverHappenScriptInputsNotFound errs]
     Right sLst ->
       let scriptEvalResult = evalScripts @era tx sLst
@@ -330,3 +354,5 @@ constructValidated globals env@(UtxoEnv _ pp _ _) st tx =
     runSTS :: STSInterpreter
     runSTS = applySTSInternal AssertionsOff runTransitionRule
     utxo = _utxo st
+    sysS = systemStart globals
+    ei = epochInfo globals

@@ -40,6 +40,7 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     ShelleyBase,
+    epochInfo,
     invalidKey,
   )
 import Shelley.Spec.Ledger.Credential (Credential)

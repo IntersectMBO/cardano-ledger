@@ -44,7 +44,7 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), Network, ShelleyBase, invalidKey, networkId)
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), Network, ShelleyBase, epochInfo, invalidKey, networkId)
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (PState (..))
