@@ -24,6 +24,7 @@ import Cardano.Ledger.Alonzo.Tx
     isTwoPhaseScriptAddress,
     minfee,
     txbody,
+    wits',
   )
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx, txins)
 import Cardano.Ledger.Alonzo.TxBody
@@ -32,6 +33,7 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody, TxOut)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txrdmrs'), nullRedeemers)
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock, ValidateScript (..))
@@ -262,7 +264,7 @@ feesOK pp tx (UTxO m) = do
   -- Part 1
   (minimumFee <= theFee) ?! FeeTooSmallUTxO minimumFee theFee
   -- Part 2
-  if (getField @"totExunits" tx) == (ExUnits 0 0)
+  if nullRedeemers . txrdmrs' . wits' $ tx
     then pure ()
     else do
       -- Part 3
