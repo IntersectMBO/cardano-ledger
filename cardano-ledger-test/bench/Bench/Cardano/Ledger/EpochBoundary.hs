@@ -20,6 +20,7 @@ import Control.DeepSeq (NFData (..))
 import Criterion
 import Data.ByteString (ByteString)
 import Data.Functor ((<&>))
+import Data.List (genericReplicate)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -112,22 +113,19 @@ utxo ::
   Int ->
   UTxO TestEra
 utxo noUnstaked noBase ptrMap dupFactor =
-  UTxO $
-    Map.fromList
-      ( [ (txIn, txOut)
-          | txIn <- sTxIns,
-            txOut <- allTxs
-        ]
-      )
-      `Map.union` Map.fromAscList [(txIn, txOutUnstaked) | txIn <- uTxIns]
+  UTxO . Map.fromAscList $
+    txIns
+      `zip` ( genericReplicate noUnstaked txOutUnstaked
+                <> cycleTimes dupFactor stakedTxs
+            )
   where
-    (uTxIns, sTxIns) =
-      splitAt (fromIntegral noUnstaked) $
-        take (fromIntegral noUnstaked + (dupFactor * length allTxs)) txIns
-
     txOutB = txOutsFromCreds $ stakeCreds noBase
     txOutP = txOutsFromPtrs $ Map.keys ptrMap
-    allTxs = txOutP ++ txOutB
+    stakedTxs = txOutP ++ txOutB
+
+    cycleTimes _ [] = []
+    cycleTimes 1 xs = xs
+    cycleTimes n xs = xs ++ cycleTimes (n - 1) xs
 
 data AggTestSetup = AggTestSetup
   { atsPtrMap :: !(Map Ptr (StakeCredential TestCrypto)),
@@ -173,12 +171,6 @@ aggregateUtxoBench =
   bgroup
     "aggregateUtxoCoinByCredential"
     [ bgroup
-        -- "setup"
-        -- [ bench "small" $ whnf (sizedAggTestSetup 40000 1000 0) 5,
-        --   bench "medium" $ whnf (sizedAggTestSetup 400000 10000 0) 5,
-        --   bench "mainnet" $ whnf (sizedAggTestSetup 4000000 100000 0) 5
-        -- ],
-        -- bgroup
         "duplication"
         [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . whnf go,
           env (pure $ sizedAggTestSetup 0 10 0 100) $ bench "10/0 * 100" . whnf go,
@@ -204,7 +196,8 @@ aggregateUtxoBench =
           env (pure $ sizedAggTestSetup 0 100000 0 1) $ bench "100000/0" . whnf go,
           env (pure $ sizedAggTestSetup 0 1000000 0 1) $ bench "1000000/0" . whnf go
         ],
-      env (pure $ sizedAggTestSetup 4000000 100000 0 5) $ bench "mainnet" . whnf go
+      env (pure $ sizedAggTestSetup 4000000 100000 0 5) $ bench "mainnet" . whnf go,
+      env (pure $ sizedAggTestSetup 8000000 200000 0 5) $ bench "mainnet*2" . whnf go
     ]
   where
     go AggTestSetup {atsPtrMap, atsUTxO} =
