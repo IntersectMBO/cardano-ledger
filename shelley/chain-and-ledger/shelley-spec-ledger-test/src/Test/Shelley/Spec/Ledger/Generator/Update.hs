@@ -7,15 +7,25 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Update
   ( genPParams,
     genUpdate,
+    genShelleyPParamsDelta,
+    genM,
+    genDecentralisationParam,
   )
 where
 
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Core as Core(PParams,PParamsDelta)
 import Cardano.Ledger.Era (Crypto)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -53,11 +63,12 @@ import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
     ProtVer (..),
+    PParamsUpdate,
     pattern ProposedPPUpdates,
     pattern Update,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen,frequency)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -70,10 +81,12 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Utils
   ( GenesisKeyPair,
-    ShelleyTest,
     epochFromSlotNo,
     unsafeMkUnitInterval,
   )
+import Cardano.Ledger.Core(PParamsDelta)
+
+-- ====================================
 
 genRationalInThousands :: HasCallStack => Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
@@ -87,7 +100,7 @@ genIntervalInThousands :: HasCallStack => Word64 -> Word64 -> Gen UnitInterval
 genIntervalInThousands lower upper =
   unsafeMkUnitInterval <$> genRatioWord64InThousands lower upper
 
-genPParams :: HasCallStack => Constants -> Gen (PParams era)
+genPParams :: Constants -> Gen (PParams era)
 genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
   mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
     <*> genNatural 0 maxMinFeeB -- _minfeeB
@@ -204,65 +217,78 @@ genNextProtocolVersion pp = do
   where
     ProtVer m n = _protocolVersion pp
 
--- | Generate a proposal for protocol parameter updates for all the given genesis keys.
--- Return an empty update if it is too late in the epoch for updates.
-genPPUpdate ::
-  HasCallStack =>
-  ShelleyTest era =>
+
+genM :: Gen a -> Gen (StrictMaybe a)
+genM gen = frequency[(1,SJust <$> gen),(2,pure SNothing)]
+
+-- | This is only good in the Shelley Era, used to define the genEraPParamsDelta method for (EraGen (ShelleyEra c))
+genShelleyPParamsDelta:: forall era.
+  ( PParams era ~ Core.PParams era,
+    Core.PParamsDelta era ~ PParamsUpdate era
+  ) =>
   Constants ->
   PParams era ->
+  Gen (PParamsDelta era)
+genShelleyPParamsDelta (c@Constants {maxMinFeeA, maxMinFeeB}) pp = do
+  -- TODO generate Maybe types so not all updates are full
+  minFeeA <- genM $ genNatural 0 maxMinFeeA
+  minFeeB <- genM $ genNatural 0 maxMinFeeB
+  maxBBSize <- genM $ genNatural low hi
+  maxTxSize <- genM $ genNatural low hi
+  maxBHSize <- genM $ genNatural low hi
+  keyDeposit <- genM $ genKeyDeposit
+  poolDeposit <- genM $ genPoolDeposit
+  eMax <- genM $ genEMax c
+  nopt <- genM $ genNOpt
+  a0 <- genM $ genA0
+  rho <- genM $ genRho
+  tau <- genM $ genTau
+  d <- genM $ genDecentralisationParam
+  extraEntropy <- genM $ genExtraEntropy
+  protocolVersion <- genM $ genNextProtocolVersion pp
+  minUTxOValue <- genM $ genMinUTxOValue
+  minPoolCost <- genM $ genMinPoolCost
+  pure(PParams
+          { _minfeeA = minFeeA,
+            _minfeeB = minFeeB,
+            _maxBBSize = maxBBSize,
+            _maxTxSize = maxTxSize,
+            _maxBHSize = maxBHSize,
+            _keyDeposit = keyDeposit,
+            _poolDeposit = poolDeposit,
+            _eMax = eMax,
+            _nOpt = nopt,
+            _a0 = a0,
+            _rho = rho,
+            _tau = tau,
+            _d = d,
+            _extraEntropy = extraEntropy,
+            _protocolVersion = protocolVersion,
+            _minUTxOValue = minUTxOValue,
+            _minPoolCost = minPoolCost
+          })
+
+-- | Generate a proposal for protocol parameter updates for all the given genesis keys.
+-- Return an empty update if it is too late in the epoch for updates.
+genPPUpdate :: forall era.
+  (EraGen era) =>
+  Constants ->
+  Core.PParams era ->
   [KeyHash 'Genesis (Crypto era)] ->
   Gen (ProposedPPUpdates era)
-genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) pp genesisKeys = do
-  -- TODO generate Maybe tyes so not all updates are full
-  minFeeA <- genNatural 0 maxMinFeeA
-  minFeeB <- genNatural 0 maxMinFeeB
-  maxBBSize <- genNatural low hi
-  maxTxSize <- genNatural low hi
-  maxBHSize <- genNatural low hi
-  keyDeposit <- genKeyDeposit
-  poolDeposit <- genPoolDeposit
-  eMax <- genEMax c
-  nopt <- genNOpt
-  a0 <- genA0
-  rho <- genRho
-  tau <- genTau
-  d <- genDecentralisationParam
-  extraEntropy <- genExtraEntropy
-  protocolVersion <- genNextProtocolVersion pp
-  minUTxOValue <- genMinUTxOValue
-  minPoolCost <- genMinPoolCost
-  let pps =
-        PParams
-          { _minfeeA = SJust minFeeA,
-            _minfeeB = SJust minFeeB,
-            _maxBBSize = SJust maxBBSize,
-            _maxTxSize = SJust maxTxSize,
-            _maxBHSize = SJust maxBHSize,
-            _keyDeposit = SJust keyDeposit,
-            _poolDeposit = SJust poolDeposit,
-            _eMax = SJust eMax,
-            _nOpt = SJust nopt,
-            _a0 = SJust a0,
-            _rho = SJust rho,
-            _tau = SJust tau,
-            _d = SJust d,
-            _extraEntropy = SJust extraEntropy,
-            _protocolVersion = SJust protocolVersion,
-            _minUTxOValue = SJust minUTxOValue,
-            _minPoolCost = SJust minPoolCost
-          }
+genPPUpdate constants pp genesisKeys = do
+  pps <- genEraPParamsDelta @era constants pp
   let ppUpdate = zip genesisKeys (repeat pps)
   pure $ ProposedPPUpdates . Map.fromList $ ppUpdate
 
 -- | Generate an @Update (where all the given nodes participate)
-genUpdateForNodes ::
-  (HasCallStack, ShelleyTest era) =>
+genUpdateForNodes :: forall era.
+  (EraGen era) =>
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
   [KeyPair 'Genesis (Crypto era)] ->
-  PParams era ->
+  Core.PParams era ->
   Gen (Maybe (Update era))
 genUpdateForNodes c s e coreKeys pp =
   Just <$> (Update <$> genPPUpdate_ <*> pure e')
@@ -271,14 +297,15 @@ genUpdateForNodes c s e coreKeys pp =
     genPPUpdate_ = genPPUpdate c pp genesisKeys
     e' = if tooLateInEpoch s then e + 1 else e
 
+
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::
-  (HasCallStack, ShelleyTest era) =>
+  (EraGen era) =>
   Constants ->
   SlotNo ->
   [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->
   Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
-  PParams era ->
+  Core.PParams era ->
   (UTxOState era, DPState (Crypto era)) ->
   Gen (Maybe (Update era), [KeyPair 'Witness (Crypto era)])
 genUpdate

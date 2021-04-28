@@ -78,6 +78,7 @@ import Data.Maybe (mapMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics
@@ -183,6 +184,21 @@ data TxWitnessRaw era = TxWitnessRaw
 newtype TxWitness era = TxWitnessConstr (MemoBytes (TxWitnessRaw era))
   deriving newtype (SafeToHash, ToCBOR)
 
+instance (Era era, Core.Script era ~ Script era) => Semigroup (TxWitness era) where
+  (<>) (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _)) y
+    | (Set.null a && Set.null b && Map.null c && Map.null d && Map.null e) =
+      y
+  (<>) y (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _))
+    | (Set.null a && Set.null b && Map.null c && Map.null d && Map.null e) =
+      y
+  (<>)
+    (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _))
+    (TxWitnessConstr (Memo (TxWitnessRaw u v w x (Redeemers' y)) _)) =
+      TxWitness (a <> u) (b <> v) (c <> w) (d <> x) (Redeemers (e <> y))
+
+instance (Era era, Core.Script era ~ Script era) => Monoid (TxWitness era) where
+  mempty = TxWitness mempty mempty mempty mempty (Redeemers mempty)
+
 -- =====================================================
 -- TxWitness instances
 
@@ -261,6 +277,18 @@ instance
 
 instance HasField "txrdmrs" (TxWitness era) (Redeemers era) where
   getField (TxWitnessConstr (Memo (TxWitnessRaw _ _ _ _ r) _)) = r
+
+instance
+  (Crypto era ~ crypto) =>
+  HasField "addrWits" (TxWitness era) (Set (WitVKey 'Witness crypto))
+  where
+  getField (TxWitnessConstr (Memo (TxWitnessRaw w _ _ _ _) _)) = w
+
+instance
+  (Core.Script era ~ script, Crypto era ~ crypto) =>
+  HasField "scriptWits" (TxWitness era) (Map (ScriptHash crypto) script)
+  where
+  getField (TxWitnessConstr (Memo (TxWitnessRaw _ _ s _ _) _)) = s
 
 --------------------------------------------------------------------------------
 -- Serialisation

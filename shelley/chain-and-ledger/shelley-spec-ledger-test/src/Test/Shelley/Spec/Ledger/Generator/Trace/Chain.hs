@@ -36,10 +36,10 @@ import Control.State.Transition.Trace.Generator.QuickCheck
     HasTrace,
     envGen,
     interpretSTS,
-    shrinkSignal,
     sigGen,
   )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
+import Data.Default.Class(Default)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -62,39 +62,41 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
   )
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..),PreAlonzo)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
+
+import Test.Shelley.Spec.Ledger.Generator.Presets (genesisDelegs0)
+-- import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock) -- TODO FIX ME
+import Test.Shelley.Spec.Ledger.Utils
+  ( maxLLSupply,
+    mkHash,
+  )
+import Cardano.Ledger.Era(SupportsSegWit(TxSeq))
+import Shelley.Spec.Ledger.BaseTypes(UnitInterval)
+import Shelley.Spec.Ledger.Serialization(ToCBORGroup)
 import Test.Shelley.Spec.Ledger.Generator.EraGen
   ( EraGen (..),
     genUtxo0,
-  )
-import Test.Shelley.Spec.Ledger.Generator.Presets (genesisDelegs0)
-import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
-import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
-import Test.Shelley.Spec.Ledger.Utils
-  ( ShelleyChainSTS,
-    ShelleyLedgerSTS,
-    ShelleyTest,
-    maxLLSupply,
-    mkHash,
+    MinLEDGER_STS,
+    MinCHAIN_STS,
   )
 
 -- ======================================================
+
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
   ( EraGen era,
-    ShelleyTest era,
     UsesTxBody era,
     UsesTxOut era,
     UsesValue era,
-    PreAlonzo era,
+    ToCBORGroup (TxSeq era),
     UsesAuxiliary era,
     Mock (Crypto era),
     ApplyBlock era,
     GetLedgerView era,
-    ShelleyLedgerSTS era,
-    ShelleyChainSTS era,
+    MinLEDGER_STS era,
+    MinCHAIN_STS era,
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
@@ -109,6 +111,7 @@ instance
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
+    HasField "_d" (Core.PParams era) UnitInterval,
     QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
   ) =>
   HasTrace (CHAIN era) (GenEnv era)
@@ -117,7 +120,7 @@ instance
 
   sigGen ge _env st = genBlock ge st
 
-  shrinkSignal = shrinkBlock
+  shrinkSignal = (\ _x -> []) -- shrinkBlock -- TO DO FIX ME
 
   type BaseEnv (CHAIN era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
@@ -135,7 +138,7 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era a.
-  ( ShelleyTest era,
+  ( Default (State (Core.EraRule "PPUP" era)),
     EraGen era
   ) =>
   GenEnv era ->
@@ -144,10 +147,10 @@ mkGenesisChainState ::
 mkGenesisChainState ge@(GenEnv _ constants) (IRC _slotNo) = do
   utxo0 <- genUtxo0 ge
 
-  pParams <- genPParams constants
+  pParams <- genEraPParams @era constants
 
   pure . Right . withRewards $
-    initialShelleyState
+    initialShelleyState @era
       (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
       epoch0
       utxo0
@@ -190,7 +193,9 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
-  ShelleyTest era =>
+  ( Era era,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+  ) =>
   ShelleyGenesisStaking (Crypto era) ->
   ChainState era ->
   ChainState era

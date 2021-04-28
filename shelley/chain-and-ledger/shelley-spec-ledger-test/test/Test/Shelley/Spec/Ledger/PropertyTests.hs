@@ -11,6 +11,20 @@
 module Test.Shelley.Spec.Ledger.PropertyTests
   ( propertyTests,
     minimalPropertyTests,
+
+    relevantCasesAreCovered,
+    delegProperties,
+    poolProperties,
+    removedAfterPoolreap,
+    adaPreservationChain,
+    collisionFreeComplete,
+    onlyValidLedgerSignalsAreGenerated,
+    onlyValidChainSignalsAreGenerated,
+    -- Crypto era only
+    propCompactAddrRoundTrip,
+    propCompactSerializationAgree,
+    propDecompactAddrLazy,
+    propDecompactShelleyLazyAddr,
   )
 where
 
@@ -24,14 +38,14 @@ import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (..))
-import Shelley.Spec.Ledger.API (CHAIN, DPState, DelegsEnv, Tx, PPUPState, UTxOState, UtxoEnv)
+import Shelley.Spec.Ledger.API (CHAIN, DPState, DelegsEnv, PPUPState, UTxOState, UtxoEnv)
 import Shelley.Spec.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update (..))
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
-import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl)
+import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl, WitVKey)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
@@ -42,7 +56,7 @@ import Test.Shelley.Spec.Ledger.Address.CompactAddr
     propDecompactShelleyLazyAddr,
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv,PreAlonzo)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
@@ -57,15 +71,20 @@ import Test.Shelley.Spec.Ledger.Rules.TestChain
     removedAfterPoolreap,
   )
 import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
-import Test.Shelley.Spec.Ledger.Utils (ChainProperty, ShelleyTest)
+import Test.Shelley.Spec.Ledger.Utils (ChainProperty)
+import Cardano.Ledger.Era(SupportsSegWit(TxInBlock))
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
+
+import Shelley.Spec.Ledger.Keys(KeyRole(Witness))
+import Shelley.Spec.Ledger.Scripts(ScriptHash)
+import Data.Map(Map)
+
+-- =====================================================================
 
 minimalPropertyTests ::
   forall era.
   ( EraGen era,
-    ShelleyTest era,
-    PreAlonzo era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
@@ -76,12 +95,13 @@ minimalPropertyTests ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+
     Show (State (Core.EraRule "PPUP" era))
   ) =>
   TestTree
@@ -105,8 +125,6 @@ minimalPropertyTests =
 propertyTests ::
   forall era.
   ( EraGen era,
-    ShelleyTest era,
-    PreAlonzo era,
     TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
@@ -118,12 +136,14 @@ propertyTests ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "addrWits" (Core.Witnesses era) (Set (WitVKey 'Witness (Crypto era))),
+    HasField "scriptWits" (Core.Witnesses era)  (Map (ScriptHash (Crypto era)) (Core.Script era)),
     Show (State (Core.EraRule "PPUP" era))
   ) =>
   TestTree

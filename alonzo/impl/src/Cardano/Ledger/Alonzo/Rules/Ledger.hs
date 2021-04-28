@@ -26,7 +26,6 @@ import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..))
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
-import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -118,7 +117,7 @@ instance
     Show (Core.AuxiliaryData era),
     Show (Core.PParams era),
     Show (Core.Value era),
-    Show (PParamsDelta era),
+    Show (Core.PParamsDelta era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
     TxInBlock era ~ ValidatedTx era,

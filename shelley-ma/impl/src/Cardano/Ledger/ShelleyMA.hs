@@ -44,7 +44,6 @@ import Cardano.Ledger.ShelleyMA.AuxiliaryData
   )
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
-    ValidityInterval,
     validateTimelock,
   )
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
@@ -60,11 +59,12 @@ import qualified Shelley.Spec.Ledger.BlockChain as Shelley
     bbHash,
     txSeqTxns,
   )
-import Shelley.Spec.Ledger.Keys (KeyRole (Witness))
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx (Tx, TxOut (..), WitVKey, WitnessSet)
+import Shelley.Spec.Ledger.Tx (Tx, TxOut (..), WitnessSet)
+
+-- ========================================
 
 -- | The Shelley Mary/Allegra eras
 --   The uninhabited type that indexes both the Mary and Allegra Eras.
@@ -118,14 +118,10 @@ instance CryptoClass.Crypto c => UsesTxOut (ShelleyMAEra 'Mary c) where
 instance CryptoClass.Crypto c => UsesTxOut (ShelleyMAEra 'Allegra c) where
   makeTxOut _ a v = TxOut a v
 
-instance
-  (MAClass ma c) =>
-  UsesPParams (ShelleyMAEra ma c)
-  where
-  type
-    PParamsDelta (ShelleyMAEra ma c) =
-      Shelley.PParamsUpdate (ShelleyMAEra ma c)
+instance CryptoClass.Crypto c => UsesPParams (ShelleyMAEra 'Mary c) where
+  mergePPUpdates _ = Shelley.updatePParams
 
+instance CryptoClass.Crypto c => UsesPParams (ShelleyMAEra 'Allegra c) where
   mergePPUpdates _ = Shelley.updatePParams
 
 --------------------------------------------------------------------------------
@@ -158,6 +154,10 @@ type instance
   Core.Witnesses (ShelleyMAEra (ma :: MaryOrAllegra) c) =
     WitnessSet (ShelleyMAEra (ma :: MaryOrAllegra) c)
 
+type instance
+  Core.PParamsDelta (ShelleyMAEra (ma :: MaryOrAllegra) c) =
+    Shelley.PParamsUpdate (ShelleyMAEra (ma :: MaryOrAllegra) c)
+
 --------------------------------------------------------------------------------
 -- Ledger data instances
 --------------------------------------------------------------------------------
@@ -170,14 +170,12 @@ type instance
 instance
   ( CryptoClass.Crypto c,
     UsesTxBody (ShelleyMAEra ma c),
-    Core.AnnotatedData (Core.AuxiliaryData (ShelleyMAEra ma c)),
-    HasField "vldt" (Core.TxBody (ShelleyMAEra ma c)) ValidityInterval,
-    HasField "addrWits" (Tx (ShelleyMAEra ma c)) (Set.Set (WitVKey 'Witness c))
+    Core.AnnotatedData (Core.AuxiliaryData (ShelleyMAEra ma c))
   ) =>
   ValidateScript (ShelleyMAEra ma c)
   where
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
-  validateScript script tx = validateTimelock script tx
+  validateScript script tx = validateTimelock @(ShelleyMAEra ma c) script tx
 
 -- Uses the default instance of hashScript
 

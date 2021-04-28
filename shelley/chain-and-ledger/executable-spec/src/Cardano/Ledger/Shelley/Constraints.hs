@@ -15,6 +15,7 @@ import Cardano.Ledger.Core
     AuxiliaryData,
     ChainData,
     PParams,
+    PParamsDelta,
     Script,
     SerialisableData,
     TxBody,
@@ -25,7 +26,6 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
-import Control.DeepSeq (NFData)
 import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy)
 import GHC.Records (HasField)
@@ -89,14 +89,11 @@ class
     Show (PParams era),
     SerialisableData (PParams era),
     ChainData (PParamsDelta era),
-    NFData (PParamsDelta era),
     Ord (PParamsDelta era),
     SerialisableData (PParamsDelta era)
   ) =>
   UsesPParams era
   where
-  type PParamsDelta era :: Type
-
   mergePPUpdates ::
     proxy era ->
     PParams era ->

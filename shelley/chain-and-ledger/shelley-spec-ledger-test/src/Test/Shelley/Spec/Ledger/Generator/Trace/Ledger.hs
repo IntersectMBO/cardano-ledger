@@ -10,6 +10,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ConstraintKinds #-}
+
 -- The HasTrace instance relies on test generators and so cannot
 -- be included with the LEDGER STS
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -45,14 +47,12 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
     genesisState,
   )
-import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Delegs (DelegsEnv)
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv, DelplPredicateFailure)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (Tx, WitnessSet)
 import Shelley.Spec.Ledger.TxBody (DCert, Ix, TxIn)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -61,17 +61,16 @@ import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), genCoin)
 import Test.Shelley.Spec.Ledger.Generator.EraGen
   ( EraGen (..),
     genUtxo0,
+    MinLEDGER_STS,
   )
 import Test.Shelley.Spec.Ledger.Generator.Presets (genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS)
-import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Utils
-  ( ShelleyLedgerSTS,
-    ShelleyTest,
-    applySTSTest,
+  ( applySTSTest,
     runShelleyBase,
   )
+import Cardano.Ledger.Era(SupportsSegWit(TxInBlock))
 
 -- ======================================================
 
@@ -85,14 +84,12 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- with meaningful delegation certificates.
 instance
   ( EraGen era,
-    Core.Witnesses era ~ WitnessSet era,
-    ShelleyTest era,
     UsesTxBody era,
     UsesTxOut era,
     UsesValue era,
     UsesAuxiliary era,
     Mock (Crypto era),
-    ShelleyLedgerSTS era,
+    MinLEDGER_STS era,
     TransValue ToCBOR era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
@@ -103,26 +100,27 @@ instance
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Tx era,
+    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    Show (State (Core.EraRule "PPUP" era))
+    Show (State (Core.EraRule "PPUP" era)),
+    Show (TxInBlock era)
   ) =>
   TQC.HasTrace (LEDGER era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
     LedgerEnv <$> pure (SlotNo 0)
       <*> pure 0
-      <*> genPParams geConstants
+      <*> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
-  sigGen = genTx
+  sigGen genenv env state = unsafeApplyTx <$> genTx genenv env state
 
-  shrinkSignal _ = []
+  shrinkSignal _ = []  -- TODO add some kind of Shrinker?
 
   type BaseEnv (LEDGER era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
@@ -130,13 +128,12 @@ instance
 instance
   forall era.
   ( EraGen era,
-    ShelleyTest era,
     UsesTxBody era,
     UsesTxOut era,
     UsesValue era,
     UsesAuxiliary era,
     Mock (Crypto era),
-    ShelleyLedgerSTS era,
+    MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
@@ -145,13 +142,14 @@ instance
     Embed (Core.EraRule "DELEG" era) (DELPL era),
     Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era))
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   TQC.HasTrace (LEDGERS era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
     LedgersEnv <$> pure (SlotNo 0)
-      <*> genPParams geConstants
+      <*> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
   -- a LEDGERS signal is a sequence of LEDGER signals
@@ -168,12 +166,12 @@ instance
       pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
       where
         genAndApplyTx ::
-          (UTxOState era, DPState (Crypto era), [Tx era]) ->
+          (UTxOState era, DPState (Crypto era), [TxInBlock era]) ->
           Ix ->
-          Gen (UTxOState era, DPState (Crypto era), [Tx era])
+          Gen (UTxOState era, DPState (Crypto era), [TxInBlock era])
         genAndApplyTx (u, dp, txs) ix = do
           let ledgerEnv = LedgerEnv slotNo ix pParams reserves
-          tx <- genTx ge ledgerEnv (u, dp)
+          tx <- unsafeApplyTx <$> genTx ge ledgerEnv (u, dp)
 
           let res =
                 runShelleyBase $
@@ -199,7 +197,6 @@ instance
 mkGenesisLedgerState ::
   forall a era.
   ( UsesValue era,
-    UsesTxOut era,
     EraGen era,
     Default (State (Core.EraRule "PPUP" era))
   ) =>

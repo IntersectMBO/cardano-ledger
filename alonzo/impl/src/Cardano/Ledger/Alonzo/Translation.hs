@@ -19,7 +19,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language)
-import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), PParamsUpdate)
+import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate, extendPP)
 import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits, Prices)
 import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
@@ -207,64 +207,15 @@ translateTxOut ::
 translateTxOut (Shelley.TxOutCompact addr value) =
   TxOutCompact addr value SNothing
 
+-- extendPP with type: extendPP :: Shelley.PParams' f era1 -> ... -> PParams' f era2
+-- Is general enough to work for both
+-- (PParams era)       = (PParams' Identity era)    and
+-- (PParamsUpdate era) = (PParams' StrictMaybe era)
+
 translatePParams ::
   AlonzoGenesis -> Shelley.PParams (MaryEra c) -> PParams (AlonzoEra c)
-translatePParams ctx pp =
-  PParams
-    { _minfeeA = API._minfeeA pp,
-      _minfeeB = API._minfeeB pp,
-      _maxBBSize = API._maxBBSize pp,
-      _maxTxSize = API._maxTxSize pp,
-      _maxBHSize = API._maxBHSize pp,
-      _keyDeposit = API._keyDeposit pp,
-      _poolDeposit = API._poolDeposit pp,
-      _eMax = API._eMax pp,
-      _nOpt = API._nOpt pp,
-      _a0 = API._a0 pp,
-      _rho = API._rho pp,
-      _tau = API._tau pp,
-      _d = API._d pp,
-      _extraEntropy = API._extraEntropy pp,
-      _protocolVersion = API._protocolVersion pp,
-      _minPoolCost = API._minPoolCost pp,
-      --added in Alonzo
-      _adaPerUTxOWord = adaPerUTxOWord ctx,
-      _costmdls = costmdls ctx,
-      _prices = prices ctx,
-      _maxTxExUnits = maxTxExUnits ctx,
-      _maxBlockExUnits = maxBlockExUnits ctx,
-      _maxValSize = maxValSize ctx,
-      _collateralPercentage = collateralPercentage ctx,
-      _maxCollateralInputs = maxCollateralInputs ctx
-    }
+translatePParams (AlonzoGenesis ada cost price mxTx mxBl mxV c mxC) pp = extendPP pp ada cost price mxTx mxBl mxV c mxC
 
 translatePParamsUpdate ::
   Shelley.PParamsUpdate (MaryEra c) -> PParamsUpdate (AlonzoEra c)
-translatePParamsUpdate pp =
-  PParams
-    { _minfeeA = API._minfeeA pp,
-      _minfeeB = API._minfeeB pp,
-      _maxBBSize = API._maxBBSize pp,
-      _maxTxSize = API._maxTxSize pp,
-      _maxBHSize = API._maxBHSize pp,
-      _keyDeposit = API._keyDeposit pp,
-      _poolDeposit = API._poolDeposit pp,
-      _eMax = API._eMax pp,
-      _nOpt = API._nOpt pp,
-      _a0 = API._a0 pp,
-      _rho = API._rho pp,
-      _tau = API._tau pp,
-      _d = API._d pp,
-      _extraEntropy = API._extraEntropy pp,
-      _protocolVersion = API._protocolVersion pp,
-      _minPoolCost = API._minPoolCost pp,
-      --added in Alonzo
-      _adaPerUTxOWord = SNothing,
-      _costmdls = SNothing,
-      _prices = SNothing,
-      _maxTxExUnits = SNothing,
-      _maxBlockExUnits = SNothing,
-      _maxValSize = SNothing,
-      _collateralPercentage = SNothing,
-      _maxCollateralInputs = SNothing
-    }
+translatePParamsUpdate pp = extendPP pp SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing

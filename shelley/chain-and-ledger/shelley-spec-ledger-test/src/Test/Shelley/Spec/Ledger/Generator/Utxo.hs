@@ -28,9 +28,7 @@ import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
-    UsesAuxiliary,
     UsesScript,
-    UsesTxBody,
     UsesTxOut (..),
     UsesValue,
   )
@@ -49,7 +47,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
-import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API
   ( DCert,
     ScriptHash,
@@ -83,15 +80,9 @@ import Shelley.Spec.Ledger.LedgerState
     _ptrs,
     _rewards,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Delpl (DelplEnv)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
-import Shelley.Spec.Ledger.Tx
-  ( Tx (..),
-    TxIn (..),
-    WitnessSet,
-    WitnessSetHKD (..),
-  )
+import Shelley.Spec.Ledger.Tx(Tx(..), TxIn (..))
 import Shelley.Spec.Ledger.TxBody (Wdrl (..))
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
@@ -117,30 +108,36 @@ import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombination)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS, genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, Split (..))
+import Test.Shelley.Spec.Ledger.Utils (Split (..))
+import Cardano.Ledger.Era(Era)
+import NoThunks.Class()  -- Instances only
 
 -- =======================================================
 
 showBalance ::
   forall era.
-  ( ShelleyTest era,
+  ( Era era,
+    Show (Core.Value era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin
   ) =>
   LedgerEnv era ->
   UTxOState era ->
   DPState (Crypto era) ->
-  Tx era ->
+  Core.Tx era ->
   String
 showBalance
   (LedgerEnv _ _ pparams _)
   (UTxOState utxo _ _ _)
   (DPState _ (PState stakepools _ _))
-  (Tx txBody _ _) =
-    "\n\nConsumed: " ++ show (consumed pparams utxo txBody)
-      ++ "  Produced: "
-      ++ show (produced @era pparams stakepools txBody)
+  tx =  "\n\nConsumed: " ++ show (consumed pparams utxo txBody)
+         ++ "  Produced: "
+         ++ show (produced @era pparams stakepools txBody)
+    where txBody = getField @"body" tx
+
 
 --  ========================================================================
 
@@ -163,9 +160,9 @@ showBalance
 
 genTx ::
   forall era.
-  ( HasCallStack,
-    ShelleyTest era,
-    EraGen era,
+  ( EraGen era,
+    UsesTxOut era, -- arises genInputs
+    UsesValue era, -- arises calcOutputsFromBalance
     Mock (Crypto era),
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
@@ -176,7 +173,7 @@ genTx ::
   GenEnv era ->
   LedgerEnv era ->
   (UTxOState era, DPState (Crypto era)) ->
-  Gen (Tx era)
+  Gen (Core.Tx era)
 genTx
   ge@( GenEnv
          keySpace@KeySpace_
@@ -295,7 +292,7 @@ genTx
 data Delta era = Delta
   { dfees :: Coin,
     extraInputs :: Set.Set (TxIn (Crypto era)),
-    extraWitnesses :: WitnessSet era,
+    extraWitnesses :: Core.Witnesses era,
     change :: Core.TxOut era,
     deltaVKeys :: [KeyPair 'Witness (Crypto era)],
     deltaScripts :: [(Core.Script era, Core.Script era)]
@@ -304,7 +301,12 @@ data Delta era = Delta
 -- | - We need this instance to know when delta has stopped growing. We don't
 --  actually need to compare all the fields, because if the extraInputs has not
 --  changed then the Scripts and keys will not have changed.
-instance (UsesTxOut era, UsesScript era, TransValue Eq era) => Eq (Delta era) where
+instance
+  ( UsesTxOut era,
+    UsesScript era,
+    TransValue Eq era,
+    Eq (Core.Witnesses era)
+  ) => Eq (Delta era) where
   a == b =
     dfees a == dfees b
       && extraInputs a == extraInputs b
@@ -316,7 +318,8 @@ instance (UsesTxOut era, UsesScript era, TransValue Eq era) => Eq (Delta era) wh
 deltaZero ::
   forall era.
   ( UsesScript era,
-    UsesTxOut era
+    UsesTxOut era,
+    Monoid (Core.Witnesses era)
   ) =>
   Coin ->
   Coin ->
@@ -341,9 +344,9 @@ genNextDelta ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   UTxO era ->
-  PParams era ->
+  Core.PParams era ->
   KeySpace era ->
-  Tx era ->
+  Core.Tx era ->
   Delta era ->
   Gen (Delta era)
 genNextDelta
@@ -370,11 +373,11 @@ genNextDelta
               encodedLen extraWitnesses
             ]
 
-        deltaFee = draftSize <×> Coin (fromIntegral (_minfeeA pparams))
+        deltaFee = draftSize <×> Coin (fromIntegral (getField @"_minfeeA" pparams))
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change
-        minAda = _minUTxOValue pparams
+        minAda = getField @"_minUTxOValue" pparams
      in if remainingFee <= Coin 0 -- we've paid for all the fees
           then pure delta -- we're done
           else -- the change covers what we need, so shift Coin from change to dfees.
@@ -412,7 +415,7 @@ genNextDelta
                     then error "Not enough money in the world"
                     else pure ()
                 let newWits =
-                      mkTxWits
+                      mkTxWits @era
                         ksIndexedPaymentKeys
                         ksIndexedStakingKeys
                         vkeyPairs
@@ -451,15 +454,15 @@ genNextDeltaTilFixPoint ::
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
   UTxO era ->
-  PParams era ->
+  Core.PParams era ->
   KeySpace era ->
-  Tx era ->
+  Core.Tx era ->
   Gen (Delta era)
 genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx = do
   addr <- genRecipients @era 1 keys scripts
   fix
     (genNextDelta utxo pparams keySpace tx)
-    (deltaZero initialfee (safetyOffset <+> _minUTxOValue pparams) (head addr))
+    (deltaZero initialfee (safetyOffset <+> getField @"_minUTxOValue" pparams) (head addr))
   where
     -- add a small offset here to ensure outputs above minUtxo value
     safetyOffset = Coin 5
@@ -467,18 +470,15 @@ genNextDeltaTilFixPoint initialfee keys scripts utxo pparams keySpace tx = do
 applyDelta ::
   forall era.
   ( EraGen era,
-    UsesTxBody era,
-    UsesAuxiliary era,
     Mock (Crypto era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    Core.Witnesses era ~ WitnessSet era
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
   KeySpace era ->
-  Tx era ->
+  Core.Tx era ->
   Delta era ->
-  Tx era
+  Core.Tx era
 applyDelta
   neededKeys
   neededScripts
@@ -511,12 +511,9 @@ fix f d = do d1 <- f d; if d1 == d then pure d else fix f d1
 
 converge ::
   ( EraGen era,
-    UsesTxBody era,
     UsesTxOut era,
-    UsesAuxiliary era,
     Mock (Crypto era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    Core.Witnesses era ~ WitnessSet era
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Coin ->
   [KeyPair 'Witness (Crypto era)] ->
@@ -524,10 +521,10 @@ converge ::
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
   UTxO era ->
-  PParams era ->
+  Core.PParams era ->
   KeySpace era ->
-  Tx era ->
-  Gen (Tx era)
+  Core.Tx era ->
+  Gen (Core.Tx era)
 converge
   initialfee
   neededKeys
@@ -584,25 +581,22 @@ mkTxWits ::
   [KeyPair 'Witness (Crypto era)] ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
   SafeHash (Crypto era) EraIndependentTxBody ->
-  WitnessSet era
+  Core.Witnesses era
 mkTxWits
   indexedPaymentKeys
   indexedStakingKeys
   awits
   msigs
   txBodyHash =
-    WitnessSet
-      { addrWits =
-          makeWitnessesVKey txBodyHash awits
+     genEraWitnesses @era
+        (makeWitnessesVKey txBodyHash awits
             `Set.union` makeWitnessesFromScriptKeys
               txBodyHash
               ( indexedPaymentKeysAsWitnesses
                   `Map.union` indexedStakingKeysAsWitnesses
               )
-              msigSignatures,
-        scriptWits = msigs,
-        bootWits = mempty
-      }
+              msigSignatures)
+        msigs
     where
       indexedPaymentKeysAsWitnesses =
         Map.fromAscList

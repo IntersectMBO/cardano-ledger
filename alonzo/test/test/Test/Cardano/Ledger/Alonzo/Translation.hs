@@ -20,7 +20,7 @@ import Cardano.Ledger.Era (TranslateEra (..))
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA
 import qualified Shelley.Spec.Ledger.API as API
-import Test.Cardano.Ledger.Allegra ()
+import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.EraBuffet
   ( MaryEra,
     StandardCrypto,

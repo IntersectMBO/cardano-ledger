@@ -33,6 +33,7 @@ import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.Tx (decodeWits)
+import Shelley.Spec.Ledger.PParams()
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Example

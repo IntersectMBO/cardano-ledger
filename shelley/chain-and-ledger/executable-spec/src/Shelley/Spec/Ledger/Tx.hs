@@ -158,6 +158,8 @@ instance
   (Era era, Core.AnnotatedData (Core.Script era)) =>
   Semigroup (WitnessSetHKD Identity era)
   where
+  (WitnessSet' a b c _) <> y | Set.null a && Map.null b && Set.null c = y
+  y <> (WitnessSet' a b c _) | Set.null a && Map.null b && Set.null c = y
   (WitnessSet a b c) <> (WitnessSet a' b' c') =
     WitnessSet (a <> a') (b <> b') (c <> c')
 
@@ -220,6 +222,12 @@ instance
   getField = addrWits' . getField @"wits"
 
 instance
+  (c ~ Crypto era, Core.Witnesses era ~ WitnessSet era) =>
+  HasField "addrWits" (WitnessSet era) (Set (WitVKey 'Witness c))
+  where
+  getField = addrWits'
+
+instance
   ( c ~ Crypto era,
     script ~ Core.Script era,
     Core.Witnesses era ~ WitnessSet era
@@ -227,6 +235,15 @@ instance
   HasField "scriptWits" (Tx era) (Map (ScriptHash c) script)
   where
   getField = scriptWits' . getField @"wits"
+
+instance
+  ( c ~ Crypto era,
+    script ~ Core.Script era,
+    Core.Witnesses era ~ WitnessSet era
+  ) =>
+  HasField "scriptWits" (WitnessSet era) (Map (ScriptHash c) script)
+  where
+  getField = scriptWits'
 
 instance
   (c ~ Crypto era, Core.Witnesses era ~ WitnessSet era) =>

@@ -25,7 +25,6 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (fromTxSeq, hashTxSeq))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
-import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -64,7 +63,6 @@ import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import Shelley.Spec.Ledger.Serialization (ToCBORGroup)
 import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
-import Shelley.Spec.Ledger.Tx (WitnessSet)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data BBODY era
@@ -122,9 +120,7 @@ instance
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Era.TxInBlock era),
-    HasField "_d" (Core.PParams era) UnitInterval,
-    Core.Witnesses era ~ WitnessSet era,
-    SafeToHash (WitnessSet era)
+    HasField "_d" (Core.PParams era) UnitInterval
   ) =>
   STS (BBODY era)
   where

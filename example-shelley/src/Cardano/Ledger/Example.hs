@@ -22,6 +22,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
+import Shelley.Spec.Ledger.PParams()
 import Cardano.Ledger.SafeHash (makeHashWithExplicitProxys)
 import Cardano.Ledger.Shelley.Constraints (UsesPParams (..), UsesTxOut (..), UsesValue, UsesTxBody)
 import Cardano.Ledger.Val (Val ((<->)))
@@ -119,6 +120,8 @@ type instance Core.AuxiliaryData (ExampleEra c) = Metadata (ExampleEra c)
 
 type instance Core.PParams (ExampleEra c) = SPP.PParams (ExampleEra c)
 
+type instance Core.PParamsDelta (ExampleEra c) = SPP.PParamsUpdate (ExampleEra c)
+
 type instance Core.Witnesses (ExampleEra c) = WitnessSet (ExampleEra c)
 
 --------------------------------------------------------------------------------
@@ -129,10 +132,6 @@ instance
   (CryptoClass.Crypto c) =>
   UsesPParams (ExampleEra c)
   where
-  type
-    PParamsDelta (ExampleEra c) =
-      SPP.PParamsUpdate (ExampleEra c)
-
   mergePPUpdates _ = SPP.updatePParams
 
 nativeMultiSigTag :: BS.ByteString

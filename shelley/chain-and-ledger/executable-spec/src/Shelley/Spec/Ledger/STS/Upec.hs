@@ -21,7 +21,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.Constraints
   ( ShelleyBased,
     UsesAuxiliary,
-    UsesPParams (PParamsDelta, mergePPUpdates),
+    UsesPParams (mergePPUpdates),
     UsesScript,
     UsesTxBody,
     UsesValue,
@@ -82,7 +82,7 @@ instance
     HasField "_maxBHSize" (Core.PParams era) Natural,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer)
+    HasField "_protocolVersion" (Core.PParamsDelta era) (StrictMaybe ProtVer)
   ) =>
   STS (UPEC era)
   where
@@ -134,7 +134,7 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
       votes =
         Map.foldr
           (\vote tally -> Map.insert vote (incrTally vote tally) tally)
-          (Map.empty :: Map (PParamsDelta era) Int)
+          (Map.empty :: Map (Core.PParamsDelta era) Int)
           pup
       consensus = Map.filter (>= quorumN) votes
    in case length consensus of

@@ -68,6 +68,7 @@ import Cardano.Binary
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
@@ -100,7 +101,6 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash,
   )
-import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
   ( DecodeNonNegative,

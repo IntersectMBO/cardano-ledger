@@ -23,11 +23,12 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Era as Era (TxSeq)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.Constraints (UsesPParams (PParamsDelta))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Codec.Binary.Bech32
@@ -57,7 +58,14 @@ import Shelley.Spec.Ledger.Address
   )
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Shelley.Spec.Ledger.BaseTypes (ActiveSlotCoeff, DnsName, FixedPoint, Globals (..), Network (..), Nonce (..), Port (..), StrictMaybe (..), UnitInterval, Url (..), activeSlotLog, activeSlotVal, dnsToText)
-import Shelley.Spec.Ledger.BlockChain (HashHeader (..), LastAppliedBlock (..))
+import Shelley.Spec.Ledger.BlockChain
+  ( BHBody (..),
+    BHeader (..),
+    Block (..),
+    HashHeader (..),
+    LastAppliedBlock (..),
+    PrevHash (..),
+  )
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), decompactAddr)
 import Shelley.Spec.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
@@ -397,6 +405,51 @@ instance PrettyA (LastAppliedBlock c) where prettyA = ppLastAppliedBlock
 instance PrettyA (HashHeader c) where prettyA = ppHashHeader
 
 instance PrettyA t => PrettyA (WithOrigin t) where prettyA = ppWithOrigin prettyA
+
+ppBHBody :: Crypto c => BHBody c -> PDoc
+ppBHBody (BHBody bn sn prev vk vrfvk eta l size hash ocert protver) =
+  ppRecord
+    "BHBody"
+    [ ("BlockNo", ppBlockNo bn),
+      ("SlotNo", ppSlotNo sn),
+      ("Prev", ppPrevHash prev),
+      ("VKey", ppVKey vk),
+      ("VerKeyVRF", viaShow vrfvk), -- The next 3 are type families
+      ("Eta", viaShow eta),
+      ("L", viaShow l),
+      ("size", ppNatural size),
+      ("Hash", ppHash hash),
+      ("OCert", ppOCert ocert),
+      ("ProtVersion", ppProtVer protver)
+    ]
+
+ppPrevHash :: PrevHash c -> PDoc
+ppPrevHash GenesisHash = ppString "GenesisHash"
+ppPrevHash (BlockHash x) = ppSexp "BlockHashppHashHeader" [ppHashHeader x]
+
+ppBHeader :: Crypto c => BHeader c -> PDoc
+ppBHeader (BHeader bh sig) =
+  ppRecord
+    "BHeader"
+    [ ("Body", ppBHBody bh),
+      ("Sig", viaShow sig)
+    ]
+
+ppBlock :: (Era era, PrettyA (Era.TxSeq era)) => Block era -> PDoc
+ppBlock (Block' bh seqx _) =
+  ppRecord
+    "Block"
+    [ ("Header", ppBHeader bh),
+      ("TxSeq", prettyA seqx)
+    ]
+
+instance Crypto c => PrettyA (BHBody c) where prettyA = ppBHBody
+
+instance Crypto c => PrettyA (BHeader c) where prettyA = ppBHeader
+
+instance PrettyA (PrevHash c) where prettyA = ppPrevHash
+
+instance (Era era, PrettyA (Era.TxSeq era)) => PrettyA (Block era) where prettyA = ppBlock
 
 -- =================================
 -- Shelley.Spec.Ledger.LedgerState.Delegation.Certificates

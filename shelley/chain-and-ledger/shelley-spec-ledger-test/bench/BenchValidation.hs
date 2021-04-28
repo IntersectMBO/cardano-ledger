@@ -65,11 +65,13 @@ import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxBody (TransTxBody, TransTxId)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv, PreAlonzo)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.Utils (ShelleyLedgerSTS, ShelleyTest, testGlobals)
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals) -- Use Another constraint, so this works in all Eras
+import Test.Shelley.Spec.Ledger.Generator.EraGen(MinLEDGER_STS)
+
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 
@@ -82,13 +84,12 @@ instance NFData (ValidateInput era) where
 validateInput ::
   ( EraGen era,
     ShelleyTest era,
-    PreAlonzo era,
     Mock (Crypto era),
     Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
     QC.HasTrace (API.LEDGERS era) (GenEnv era),
     API.ApplyBlock era,
     API.GetLedgerView era,
-    ShelleyLedgerSTS era
+    MinLEDGER_STS era
   ) =>
   Int ->
   IO (ValidateInput era)
@@ -97,13 +98,12 @@ validateInput utxoSize = genValidateInput utxoSize
 genValidateInput ::
   ( EraGen era,
     ShelleyTest era,
-    PreAlonzo era,
     Mock (Crypto era),
     Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
     QC.HasTrace (API.LEDGERS era) (GenEnv era),
     API.ApplyBlock era,
     API.GetLedgerView era,
-    ShelleyLedgerSTS era
+    MinLEDGER_STS era
   ) =>
   Int ->
   IO (ValidateInput era)
@@ -185,8 +185,7 @@ genUpdateInputs ::
   ( EraGen era,
     Mock (Crypto era),
     ShelleyTest era,
-    PreAlonzo era,
-    ShelleyLedgerSTS era,
+    MinLEDGER_STS era,
     API.GetLedgerView era,
     Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
     QC.HasTrace (API.LEDGERS era) (GenEnv era),

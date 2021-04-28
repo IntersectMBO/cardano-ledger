@@ -38,15 +38,21 @@ library
 
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Serialisation.Generators
+    Test.Cardano.Ledger.Alonzo.AlonzoEraGen
   build-depends:
+    cardano-binary,
     cardano-ledger-alonzo,
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
+    cardano-ledger-shelley-ma,
+    cardano-slotting,
     containers,
+    hashable,
     plutus-tx,
     QuickCheck,
     shelley-spec-ledger-test,
     shelley-spec-ledger,
+    strict-containers,
     text,
   hs-source-dirs:
     lib
@@ -59,6 +65,7 @@ test-suite cardano-ledger-alonzo-test
   hs-source-dirs:
     test
   other-modules:
+    Test.Cardano.Ledger.Alonzo.Trials
     Test.Cardano.Ledger.Alonzo.Golden
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
     Test.Cardano.Ledger.Alonzo.Examples.Bbody

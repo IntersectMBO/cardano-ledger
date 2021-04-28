@@ -16,6 +16,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 module Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( ScriptClass (..),
@@ -33,6 +34,7 @@ module Test.Shelley.Spec.Ledger.Generator.ScriptClass
     mkScriptCombinations,
     combinedScripts,
     someScripts,
+    baseScripts,
     scriptKeyCombinations,
     scriptKeyCombination,
   )
@@ -59,6 +61,7 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
   )
 import Test.Shelley.Spec.Ledger.Utils (mkKeyPair)
+import Cardano.Ledger.Shelley.Constraints (UsesScript)
 
 {------------------------------------------------------------------------------
   ScriptClass defines the operations that enable an Era's scripts to
@@ -66,10 +69,9 @@ import Test.Shelley.Spec.Ledger.Utils (mkKeyPair)
 ------------------------------------------------------------------------------}
 
 class
-  ( Eq (Script era),
+  ( UsesScript era,
     ValidateScript era,
-    CC.Crypto (Crypto era),
-    Era era
+    CC.Crypto (Crypto era)
   ) =>
   ScriptClass era
   where
@@ -84,6 +86,7 @@ class
  -----------------------------------------------------------------------------}
 
 data Quantifier t = AllOf [t] | AnyOf [t] | MOf Int [t] | Leaf t
+  deriving Functor
 
 anyOf :: forall era. ScriptClass era => Proxy era -> [Script era] -> Script era
 anyOf prox xs = unQuantify prox $ AnyOf xs
@@ -93,6 +96,8 @@ allOf prox xs = unQuantify prox $ AllOf xs
 
 mOf :: forall era. ScriptClass era => Proxy era -> Int -> [Script era] -> Script era
 mOf prox m xs = unQuantify prox $ MOf m xs
+
+
 
 {------------------------------------------------------------------------------
   Compute lists of keyHashes

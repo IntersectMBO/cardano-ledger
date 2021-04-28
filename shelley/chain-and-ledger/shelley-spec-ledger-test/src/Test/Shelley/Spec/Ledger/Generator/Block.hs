@@ -6,11 +6,13 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Block
   ( genBlock,
     genBlockWithTxGen,
     tickChainState,
+    TxInBlock,
   )
 where
 
@@ -51,57 +53,61 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     getKESPeriodRenewalNo,
     mkBlock,
     mkOCert,
-    PreAlonzo,
   )
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
 import Test.Shelley.Spec.Ledger.Utils
-  ( ShelleyLedgerSTS,
-    ShelleyTest,
-    epochFromSlotNo,
+  ( epochFromSlotNo,
     maxKESIterations,
     runShelleyBase,
     slotFromEpoch,
     testGlobals,
   )
+import Cardano.Ledger.Era(SupportsSegWit(TxSeq,TxInBlock))
+import Test.Shelley.Spec.Ledger.Generator.EraGen(EraGen(..), MinLEDGER_STS)
+import Shelley.Spec.Ledger.BaseTypes(UnitInterval)
+import GHC.Records(HasField(getField))
+import Shelley.Spec.Ledger.Serialization(ToCBORGroup)
+import qualified Cardano.Ledger.Era as Era(TxInBlock)
+
 
 -- ======================================================
 
 -- | Type alias for a transaction generator
 type TxGen era =
-  PParams era ->
+  Core.PParams era ->
   AccountState ->
   LedgerState era ->
   SlotNo ->
-  Gen (Seq (Tx era))
+  Gen (Seq (Era.TxInBlock era))
 
 -- | Generate a valid block.
 genBlock ::
   forall era.
-  ( ShelleyTest era,
-    PreAlonzo era,
+  ( MinLEDGER_STS era,
+    ToCBORGroup (TxSeq era),
     ApplyBlock era,
     Mock (Crypto era),
     GetLedgerView era,
-    ShelleyLedgerSTS era,
-    QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
+    QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era),
+    EraGen era
   ) =>
   GenEnv era ->
   ChainState era ->
   Gen (Block era)
 genBlock ge = genBlockWithTxGen genTxs ge
   where
+    genTxs :: TxGen era
     genTxs pp reserves ls s = do
-      let ledgerEnv = LedgersEnv s pp reserves
-
+      let ledgerEnv = LedgersEnv @era s pp reserves
       sigGen @(Core.EraRule "LEDGERS" era) ge ledgerEnv ls
 
 genBlockWithTxGen ::
   forall era.
-  ( ShelleyTest era,
+  ( ToCBORGroup (TxSeq era),
     Mock (Crypto era),
-    PreAlonzo era,
     GetLedgerView era,
-    ApplyBlock era
+    ApplyBlock era,
+    EraGen era
   ) =>
   TxGen era ->
   GenEnv era ->
@@ -167,7 +173,7 @@ genBlockWithTxGen
 selectNextSlotWithLeader ::
   forall era.
   ( Mock (Crypto era),
-    ShelleyTest era,
+    EraGen era,
     GetLedgerView era,
     ApplyBlock era
   ) =>
@@ -182,7 +188,8 @@ selectNextSlotWithLeader
   startSlot =
     List.find (const True) . catMaybes $
       selectNextSlotWithLeaderThisEpoch
-        <$> (startSlot : [slotFromEpoch x | x <- [startEpoch + 1 ..]])
+        <$> (startSlot : [slotFromEpoch x | x <- [startEpoch + 1 .. startEpoch + 4]])
+            -- If we can't find a leader in the next N Epochs, some thing is wrong, N=4 should be large enough.
     where
       startEpoch = epochFromSlotNo startSlot
       selectNextSlotWithLeaderThisEpoch ::
@@ -227,7 +234,9 @@ selectNextSlotWithLeader
           (GenDelegs cores) = (_genDelegs . _dstate) dpstate
           firstEpochSlot = slotFromEpoch (epochFromSlotNo slotNo)
           f = activeSlotCoeff testGlobals
-          d = (_d . esPp . nesEs . chainNes) chainSt
+          getUnitInterval :: Core.PParams era -> UnitInterval
+          getUnitInterval pp = getField @"_d" pp
+          d = (getUnitInterval . esPp . nesEs . chainNes) chainSt
 
           isLeader poolHash vrfKey =
             let y = VRF.evalCertified @(VRF (Crypto era)) () (mkSeed seedL slotNo epochNonce) vrfKey

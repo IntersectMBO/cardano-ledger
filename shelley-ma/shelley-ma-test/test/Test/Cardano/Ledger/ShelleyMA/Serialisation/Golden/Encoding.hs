@@ -17,7 +17,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..), ValidateScript (hashScript))
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
-import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
+import Cardano.Ledger.Core(PParamsDelta)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),

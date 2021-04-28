@@ -67,7 +67,6 @@ import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.TxBody (Ix)
@@ -79,6 +78,7 @@ import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..), genDCert)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombination)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
+import GHC.Records(HasField(getField))
 
 -- | This is a non-spec STS used to generate a sequence of certificates with
 -- witnesses.
@@ -103,12 +103,11 @@ instance
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
-    Core.PParams era ~ PParams era
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
   STS (CERTS era)
   where
-  type Environment (CERTS era) = (SlotNo, Ix, PParams era, AccountState)
+  type Environment (CERTS era) = (SlotNo, Ix, Core.PParams era, AccountState)
   type State (CERTS era) = (DPState (Crypto era), Ix)
   type Signal (CERTS era) = Maybe (DCert (Crypto era), CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
@@ -123,8 +122,7 @@ certsTransition ::
   ( Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
-    Core.PParams era ~ PParams era
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
   TransitionRule (CERTS era)
 certsTransition = do
@@ -156,13 +154,11 @@ instance
   wrapFailed = CertsFailure
 
 instance
-  ( Era era,
-    EraGen era,
+  ( EraGen era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
-    Core.PParams era ~ PParams era
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
   QC.HasTrace (CERTS era) (GenEnv era)
   where
@@ -192,15 +188,14 @@ instance
 -- deposits and refunds required.
 genDCerts ::
   forall era.
-  ( Embed (Core.EraRule "DELPL" era) (CERTS era),
+  ( EraGen era,
+    Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
-    Core.PParams era ~ PParams era,
-    EraGen era
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
   GenEnv era ->
-  PParams era ->
+  Core.PParams era ->
   DPState (Crypto era) ->
   SlotNo ->
   Natural ->
@@ -238,7 +233,7 @@ genDCerts
     pure
       ( StrictSeq.fromList certs,
         totalDeposits pparams (_pParams (_pstate dpState)) certs,
-        (length deRegStakeCreds) <×> (_keyDeposit pparams),
+        (length deRegStakeCreds) <×> (getField @"_keyDeposit" pparams),
         lastState_,
         ( concat (keyCredAsWitness <$> keyCreds'),
           extractScriptCred <$> scriptCreds

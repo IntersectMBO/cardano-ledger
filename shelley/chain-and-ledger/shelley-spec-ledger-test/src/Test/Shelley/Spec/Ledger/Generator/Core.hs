@@ -58,8 +58,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..))
-import qualified Cardano.Ledger.Era as Era
+import Cardano.Ledger.Era (Crypto (..),TxInBlock)
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesTxBody,
@@ -93,9 +92,7 @@ import Shelley.Spec.Ledger.BlockChain
   ( BHeader (BHeader),
     Block (Block),
     HashHeader,
-    TxSeq (..),
     bBodySize,
-    bbHash,
     mkSeed,
     seedEta,
     seedL,
@@ -163,8 +160,7 @@ import Shelley.Spec.Ledger.Slot
     (*-),
   )
 import Shelley.Spec.Ledger.Tx
-  ( Tx,
-    TxIn,
+  ( TxIn,
     WitnessSet,
     pattern TxIn,
   )
@@ -194,7 +190,6 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
   ( GenesisKeyPair,
-    ShelleyTest,
     epochFromSlotNo,
     evolveKESUntil,
     maxKESIterations,
@@ -206,13 +201,16 @@ import Test.Shelley.Spec.Ledger.Utils
     unsafeMkUnitInterval,
   )
 
--- ==================================================
 
+import Shelley.Spec.Ledger.Serialization(ToCBORGroup)
+import Cardano.Ledger.Era(SupportsSegWit(toTxSeq,hashTxSeq))
+import qualified Cardano.Ledger.Era as Era(TxSeq)
+
+
+-- | For use in the Serialisation and Example Tests, which assume Shelley, Allegra, or Mary Eras.
 type PreAlonzo era =
   ( Core.Witnesses era ~ WitnessSet era,
-    Core.Tx era ~ Tx era,
-    ToCBOR (Core.AuxiliaryData era),
-    Era.TxSeq era ~ TxSeq era
+    ToCBOR (Core.AuxiliaryData era)
   )
 
 -- =========================================
@@ -530,7 +528,7 @@ mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
 mkBlock ::
   forall era r.
   ( UsesTxBody era,
-    PreAlonzo era,
+    ToCBORGroup (Era.TxSeq era),
     Mock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -538,7 +536,7 @@ mkBlock ::
   -- | All keys in the stake pool
   AllIssuerKeys (Crypto era) r ->
   -- | Transactions to record
-  [Tx era] ->
+  [TxInBlock era] ->
   -- | Current slot
   SlotNo ->
   -- | Block number/chain length/chain "difficulty"
@@ -553,16 +551,17 @@ mkBlock ::
   OCert (Crypto era) ->
   Block era
 mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
-  let bodySize = fromIntegral $ bBodySize $ (TxSeq @era . StrictSeq.fromList) txns
-      bodyHash = bbHash $ TxSeq @era $ StrictSeq.fromList txns
+  let txseq = (toTxSeq @era . StrictSeq.fromList) txns
+      bodySize = fromIntegral $ bBodySize $ txseq
+      bodyHash = hashTxSeq @era txseq
       bh = mkBlockHeader prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash
-   in Block bh (TxSeq @era $ StrictSeq.fromList txns)
+   in Block bh txseq
 
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
   forall era r.
   ( UsesTxBody era,
-    PreAlonzo era,
+    ToCBORGroup (Era.TxSeq era),
     ExMock (Crypto era)
   ) =>
   -- | Hash of previous block
@@ -570,7 +569,7 @@ mkBlockFakeVRF ::
   -- | All keys in the stake pool
   AllIssuerKeys (Crypto era) r ->
   -- | Transactions to record
-  [Tx era] ->
+  [TxInBlock era] ->
   -- | Current slot
   SlotNo ->
   -- | Block number/chain length/chain "difficulty"
@@ -593,6 +592,7 @@ mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0
       KeyPair vKeyCold _ = cold pkeys
       nonceNonce = mkSeed seedEta s enonce
       leaderNonce = mkSeed seedL s enonce
+      txseq = toTxSeq @era (StrictSeq.fromList txns)
       bhb =
         BHBody
           blockNo
@@ -608,8 +608,8 @@ mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0
               (WithResult leaderNonce (fromIntegral $ unitIntervalToNatural l))
               (fst $ vrf pkeys)
           )
-          (fromIntegral $ bBodySize $ (TxSeq @era . StrictSeq.fromList) txns)
-          (bbHash $ TxSeq @era $ StrictSeq.fromList txns)
+          (fromIntegral $ bBodySize $ txseq)
+          (hashTxSeq @era txseq)
           oCert
           (ProtVer 0 0)
       kpDiff = kesPeriod - c0
@@ -619,7 +619,7 @@ mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0
         Just hkey -> hkey
       sig = signedKES () kpDiff bhb hotKey
       bh = BHeader bhb sig
-   in Block bh (TxSeq @era $ StrictSeq.fromList txns)
+   in Block bh txseq
 
 -- | We provide our own nonces to 'mkBlock', which we then wish to recover as
 -- the output of the VRF functions. In general, however, we just derive them
@@ -689,7 +689,8 @@ genesisCoins genesisTxId outs =
 -- | Apply a transaction body as a state transition function on the ledger state.
 applyTxBody ::
   forall era.
-  ( ShelleyTest era,
+  ( Era era,
+    Show (Core.TxOut era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField

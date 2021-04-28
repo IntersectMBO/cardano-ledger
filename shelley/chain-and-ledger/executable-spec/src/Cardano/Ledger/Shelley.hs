@@ -20,7 +20,7 @@ module Cardano.Ledger.Shelley
     Script,
     AuxiliaryData,
     PParams,
-    PParamsDelta,
+    Core.PParamsDelta,
     Tx,
     Witnesses,
     nativeMultiSigTag,
@@ -52,8 +52,7 @@ import qualified Shelley.Spec.Ledger.BlockChain as Shelley
     txSeqTxns,
   )
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
-import Shelley.Spec.Ledger.PParams (PParamsUpdate, updatePParams)
-import qualified Shelley.Spec.Ledger.PParams as SPP (PParams)
+import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, updatePParams)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.Tx
   ( WitnessSet,
@@ -72,7 +71,6 @@ instance CryptoClass.Crypto c => UsesTxOut (ShelleyEra c) where
   makeTxOut _ a v = STx.TxOut a v
 
 instance CryptoClass.Crypto c => UsesPParams (ShelleyEra c) where
-  type PParamsDelta (ShelleyEra c) = PParamsUpdate (ShelleyEra c)
   mergePPUpdates _ = updatePParams
 
 --------------------------------------------------------------------------------
@@ -89,9 +87,11 @@ type instance Core.Script (ShelleyEra c) = MultiSig c
 
 type instance Core.AuxiliaryData (ShelleyEra c) = Metadata (ShelleyEra c)
 
-type instance Core.PParams (ShelleyEra c) = SPP.PParams (ShelleyEra c)
+type instance Core.PParams (ShelleyEra c) = PParams (ShelleyEra c)
 
 type instance Core.Witnesses (ShelleyEra c) = WitnessSet (ShelleyEra c)
+
+type instance Core.PParamsDelta (ShelleyEra c) = PParamsUpdate (ShelleyEra c)
 
 --------------------------------------------------------------------------------
 -- Ledger data instances
@@ -140,7 +140,5 @@ type Tx era = STx.Tx era
 type TxOut era = STx.TxOut era
 
 type TxBody era = STx.TxBody era
-
-type PParams era = SPP.PParams era
 
 type Witnesses era = WitnessSet (E.Crypto era)
