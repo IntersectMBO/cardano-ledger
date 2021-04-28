@@ -16,6 +16,7 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.ShelleyMA ()
 import qualified Cardano.Ledger.Val as Val
+import Control.DeepSeq (NFData (..))
 import Criterion
 import Data.ByteString (ByteString)
 import Data.Functor ((<&>))
@@ -32,7 +33,7 @@ import Shelley.Spec.Ledger.Credential
     PaymentCredential,
     Ptr (..),
     StakeCredential,
-    StakeReference (StakeRefBase, StakeRefPtr),
+    StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
   )
 import Shelley.Spec.Ledger.EpochBoundary (aggregateUtxoCoinByCredential)
 import Shelley.Spec.Ledger.Keys (VKey (..), hashKey)
@@ -57,22 +58,33 @@ txIns = [0 ..] <&> TxInCompact txId
           (Proxy @EraIndependentTxBody)
           ("Galadriel" :: ByteString)
 
+-- | Unstaked address
+txOutUnstaked :: TxOut TestEra
+txOutUnstaked =
+  TxOutCompact @TestEra
+    (compactAddr $ Addr Testnet payCred StakeRefNull)
+    (fromJust . toCompact . Val.inject $ Coin 1000)
+
 -- | Generate TxOuts for each stake credential.
 txOutsFromCreds :: [StakeCredential TestCrypto] -> [TxOut TestEra]
 txOutsFromCreds creds =
   [ TxOutCompact
       (compactAddr $ Addr Testnet payCred (StakeRefBase cred))
-      (fromJust . toCompact . Val.inject $ Coin 100)
+      coinVal
     | cred <- creds
   ]
+  where
+    coinVal = fromJust . toCompact . Val.inject $ Coin 100
 
 txOutsFromPtrs :: [Ptr] -> [TxOut TestEra]
 txOutsFromPtrs ptrs =
   [ TxOutCompact
       (compactAddr $ Addr Testnet payCred (StakeRefPtr ptr))
-      (fromJust . toCompact . Val.inject $ Coin 200)
+      coinVal
     | ptr <- ptrs
   ]
+  where
+    coinVal = fromJust . toCompact . Val.inject $ Coin 200
 
 -- | Generate n stake credentials
 stakeCreds :: Word64 -> [StakeCredential TestCrypto]
@@ -88,25 +100,42 @@ stakePtrs creds =
       | (i, cred) <- zip [0 ..] creds
     ]
 
--- | Create a UTxO set containing 'noBase' base stake credentials and any
--- pointer credentials passed in 'ptrMap'. For each credential, there will be
--- 'dupFactor' entries in the UTxO.
-utxo :: Word64 -> Map Ptr c -> Int -> UTxO TestEra
-utxo noBase ptrMap dupFactor =
+-- | Create a UTxO set containing 'noUnstaked' unstaked TxOuts, 'noBase'
+-- base stake credentials and any pointer credentials passed in 'ptrMap'. For
+-- each credential, there will be 'dupFactor' entries in the UTxO.
+utxo ::
+  -- | Number of unstaked outputs
+  Word64 ->
+  -- | Number of distinct base stake credentials
+  Word64 ->
+  Map Ptr c ->
+  Int ->
+  UTxO TestEra
+utxo noUnstaked noBase ptrMap dupFactor =
   UTxO $
     Map.fromList
-      [ (txIn, txOut)
-        | let txOutB = txOutsFromCreds $ stakeCreds noBase,
-          let txOutP = txOutsFromPtrs $ Map.keys ptrMap,
-          let allTxs = txOutP ++ txOutB,
-          txIn <- take (dupFactor * length allTxs) txIns,
-          txOut <- allTxs
-      ]
+      ( [ (txIn, txOut)
+          | txIn <- sTxIns,
+            txOut <- allTxs
+        ]
+      )
+      `Map.union` Map.fromAscList [(txIn, txOutUnstaked) | txIn <- uTxIns]
+  where
+    (uTxIns, sTxIns) =
+      splitAt (fromIntegral noUnstaked) $
+        take (fromIntegral noUnstaked + (dupFactor * length allTxs)) txIns
+
+    txOutB = txOutsFromCreds $ stakeCreds noBase
+    txOutP = txOutsFromPtrs $ Map.keys ptrMap
+    allTxs = txOutP ++ txOutB
 
 data AggTestSetup = AggTestSetup
   { atsPtrMap :: !(Map Ptr (StakeCredential TestCrypto)),
     atsUTxO :: !(UTxO TestEra)
   }
+
+instance NFData AggTestSetup where
+  rnf (AggTestSetup p u) = seq p (seq u ())
 
 -- | Construct the relevant UTxO and pointer map to test
 -- 'aggregateUtxoCoinByCredential'.
@@ -124,11 +153,9 @@ data AggTestSetup = AggTestSetup
 --   transactions paying to the same address, and multiple addresses sharing the
 --   same stake credential. These scenarios are identical for benchmarking
 --   purposes, and hence we roll them into one.
---
--- There is one potential missing parameter; the number of unstaked addresses
--- present. These contribute to the size of the UTxO but not to any aggregation
--- cost.
 sizedAggTestSetup ::
+  -- | Number of unstaked addresses
+  Word64 ->
   -- | Number of distinct base stake credentials
   Word64 ->
   -- | Number of distinct pointer stake credentials
@@ -136,23 +163,48 @@ sizedAggTestSetup ::
   -- | Duplication factor
   Int ->
   AggTestSetup
-sizedAggTestSetup noBase noPtr dupFactor = AggTestSetup pm ut
+sizedAggTestSetup noUnstaked noBase noPtr dupFactor = AggTestSetup pm ut
   where
     pm = stakePtrs $ stakeCreds noPtr
-    ut = utxo noBase pm dupFactor
+    ut = utxo noUnstaked noBase pm dupFactor
 
 aggregateUtxoBench :: Benchmark
 aggregateUtxoBench =
   bgroup
     "aggregateUtxoCoinByCredential"
-    [ bench "100/100" $ whnf go (sizedAggTestSetup 100 100 1),
-      bench "10/10 * 100" $ whnf go (sizedAggTestSetup 10 10 100),
-      bench "100/100 * 10" $ whnf go (sizedAggTestSetup 100 100 10),
-      bench "1000/1000" $ whnf go (sizedAggTestSetup 1000 1000 1),
-      bench "1000/1000 * 10" $ whnf go (sizedAggTestSetup 1000 1000 10),
-      bench "10000/1000" $ whnf go (sizedAggTestSetup 10000 1000 1),
-      bench "1000/10000" $ whnf go (sizedAggTestSetup 1000 10000 1),
-      bench "10000/10000" $ whnf go (sizedAggTestSetup 10000 10000 1)
+    [ bgroup
+        -- "setup"
+        -- [ bench "small" $ whnf (sizedAggTestSetup 40000 1000 0) 5,
+        --   bench "medium" $ whnf (sizedAggTestSetup 400000 10000 0) 5,
+        --   bench "mainnet" $ whnf (sizedAggTestSetup 4000000 100000 0) 5
+        -- ],
+        -- bgroup
+        "duplication"
+        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . whnf go,
+          env (pure $ sizedAggTestSetup 0 10 0 100) $ bench "10/0 * 100" . whnf go,
+          env (pure $ sizedAggTestSetup 0 100 0 10) $ bench "100/0 * 10" . whnf go
+        ],
+      bgroup
+        "ptr"
+        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . whnf go,
+          env (pure $ sizedAggTestSetup 0 500 500 1) $ bench "500/500" . whnf go
+        ],
+      bgroup
+        "utxo"
+        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "0 1000/0" . whnf go,
+          env (pure $ sizedAggTestSetup 1000 1000 0 1) $ bench "1000 1000/0" . whnf go,
+          env (pure $ sizedAggTestSetup 10000 1000 0 1) $ bench "10000 1000/0" . whnf go,
+          env (pure $ sizedAggTestSetup 100000 1000 0 1) $ bench "100000 1000/0" . whnf go
+        ],
+      bgroup
+        "size"
+        [ env (pure $ sizedAggTestSetup 0 100 0 1) $ bench "100/0" . whnf go,
+          env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . whnf go,
+          env (pure $ sizedAggTestSetup 0 10000 0 1) $ bench "10000/0" . whnf go,
+          env (pure $ sizedAggTestSetup 0 100000 0 1) $ bench "100000/0" . whnf go,
+          env (pure $ sizedAggTestSetup 0 1000000 0 1) $ bench "1000000/0" . whnf go
+        ],
+      env (pure $ sizedAggTestSetup 4000000 100000 0 5) $ bench "mainnet" . whnf go
     ]
   where
     go AggTestSetup {atsPtrMap, atsUTxO} =
