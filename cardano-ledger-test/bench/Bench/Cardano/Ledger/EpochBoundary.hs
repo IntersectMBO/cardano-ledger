@@ -186,7 +186,8 @@ aggregateUtxoBench =
         [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "0 1000/0" . whnf go,
           env (pure $ sizedAggTestSetup 1000 1000 0 1) $ bench "1000 1000/0" . whnf go,
           env (pure $ sizedAggTestSetup 10000 1000 0 1) $ bench "10000 1000/0" . whnf go,
-          env (pure $ sizedAggTestSetup 100000 1000 0 1) $ bench "100000 1000/0" . whnf go
+          env (pure $ sizedAggTestSetup 100000 1000 0 1) $ bench "100000 1000/0" . whnf go,
+          env (pure $ sizedAggTestSetup 1000000 1000 0 1) $ bench "1000000 1000/0" . whnf go
         ],
       bgroup
         "size"
@@ -196,8 +197,12 @@ aggregateUtxoBench =
           env (pure $ sizedAggTestSetup 0 100000 0 1) $ bench "100000/0" . whnf go,
           env (pure $ sizedAggTestSetup 0 1000000 0 1) $ bench "1000000/0" . whnf go
         ],
-      env (pure $ sizedAggTestSetup 4000000 100000 0 5) $ bench "mainnet" . whnf go,
-      env (pure $ sizedAggTestSetup 8000000 200000 0 5) $ bench "mainnet*2" . whnf go
+      bgroup
+        "mainnet"
+        [ env (pure $ sizedAggTestSetup 4000000 100000 0 5) $ bench "current" . whnf go,
+          env (pure $ sizedAggTestSetup 4000000 500000 0 1) $ bench "current no dup" . whnf go,
+          env (pure $ sizedAggTestSetup 8000000 200000 0 5) $ bench "2x" . whnf go
+        ]
     ]
   where
     go AggTestSetup {atsPtrMap, atsUTxO} =
