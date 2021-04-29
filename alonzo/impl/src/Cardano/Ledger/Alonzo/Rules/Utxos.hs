@@ -116,21 +116,15 @@ utxosTransition ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
   ) =>
   TransitionRule (UTXOS era)
 utxosTransition =
-  judgmentContext >>= \(TRC (UtxoEnv _ pp _ _, st@(UTxOState utxo _ _ _), tx)) -> do
-    case collectTwoPhaseScriptInputs pp tx utxo of
-      Right sLst ->
-        let scriptEvalResult = evalScripts @era tx sLst
-         in if scriptEvalResult
-              then scriptsValidateTransition
-              else scriptsNotValidateTransition
-      Left info -> (failBecause $ ShouldNeverHappenScriptInputsNotFound info) >> pure st
+  judgmentContext >>= \(TRC (_, _, tx)) -> do
+    case getField @"isValidating" tx of
+      IsValidating True -> scriptsValidateTransition
+      IsValidating False -> scriptsNotValidateTransition
 
 scriptsValidateTransition ::
   forall era.
@@ -140,13 +134,17 @@ scriptsValidateTransition ::
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
+    Core.Script era ~ Script era,
+    Core.TxBody era ~ Alonzo.TxBody era,
     Core.TxOut era ~ Alonzo.TxOut era,
+    Core.Value era ~ Value (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
   ) =>
   TransitionRule (UTXOS era)
 scriptsValidateTransition = do
@@ -165,8 +163,11 @@ scriptsValidateTransition = do
             (toList $ getField @"certs" txb)
         )
           Val.<-> refunded
-  getField @"isValidating" tx == IsValidating True
-    ?!# ValidationTagMismatch (getField @"isValidating" tx)
+  case collectTwoPhaseScriptInputs pp tx utxo of
+    Right sLst ->
+      evalScripts @era tx sLst
+        ?!# ValidationTagMismatch (getField @"isValidating" tx)
+    Left info -> failBecause (ShouldNeverHappenScriptInputsNotFound info)
   pup' <-
     trans @(Core.EraRule "PPUP" era) $
       TRC
@@ -182,12 +183,22 @@ scriptsValidateTransition = do
 scriptsNotValidateTransition ::
   forall era.
   ( Era era,
-    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    Core.Script era ~ Script era,
+    Core.TxBody era ~ Alonzo.TxBody era,
+    Core.TxOut era ~ Alonzo.TxOut era,
+    Core.Value era ~ Value (Crypto era),
+    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
   ) =>
   TransitionRule (UTXOS era)
 scriptsNotValidateTransition = do
-  TRC (_, us@(UTxOState utxo _ fees _), tx) <- judgmentContext
+  TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _), tx) <- judgmentContext
   let txb = txbody tx
+  case collectTwoPhaseScriptInputs pp tx utxo of
+    Right sLst ->
+      not (evalScripts @era tx sLst)
+        ?!# ValidationTagMismatch (getField @"isValidating" tx)
+    Left info -> failBecause (ShouldNeverHappenScriptInputsNotFound info)
   getField @"isValidating" tx == IsValidating False
     ?!# ValidationTagMismatch (getField @"isValidating" tx)
   pure $
