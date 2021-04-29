@@ -37,6 +37,7 @@ module Control.State.Transition.Extended
     Embed (..),
     (?!),
     (?!:),
+    labeledPred,
     failBecause,
     judgmentContext,
     trans,
@@ -232,6 +233,7 @@ data Clause sts (rtype :: RuleType) a where
     (State sub -> a) ->
     Clause sts rtype a
   Predicate ::
+    [Label] ->
     Either e a ->
     -- Type of failure to return if the predicate fails
     (e -> PredicateFailure sts) ->
@@ -242,12 +244,16 @@ deriving instance Functor (Clause sts rtype)
 
 type Rule sts rtype = F (Clause sts rtype)
 
+-- | Label for a predicate. This can be used to control which predicates get
+-- run.
+type Label = String
+
 -- | Oh noes!
 --
 --   This takes a condition (a boolean expression) and a failure and results in
 --   a clause which will throw that failure if the condition fails.
 (?!) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
-cond ?! orElse = liftF $ Predicate (if cond then Right () else Left ()) (const orElse) ()
+cond ?! orElse = liftF $ Predicate [] (if cond then Right () else Left ()) (const orElse) ()
 
 infix 1 ?!
 
@@ -258,7 +264,16 @@ failBecause = (False ?!)
 --
 --   We interpret this as "What?" "No!" "Because:"
 (?!:) :: Either e () -> (e -> PredicateFailure sts) -> Rule sts ctx ()
-cond ?!: orElse = liftF $ Predicate cond orElse ()
+cond ?!: orElse = liftF $ Predicate [] cond orElse ()
+
+labeledPred :: [Label] -> Bool -> PredicateFailure sts -> Rule sts ctx ()
+labeledPred lbls cond orElse =
+  liftF $
+    Predicate
+      lbls
+      (if cond then Right () else Left ())
+      (const orElse)
+      ()
 
 trans ::
   Embed sub super => RuleContext rtype sub -> Rule super rtype (State sub)
@@ -292,7 +307,7 @@ data AssertionPolicy
 data ValidationPolicy
   = ValidateAll
   | ValidateNone
-  deriving (Eq, Show)
+  | ValidateSuchThat ([Label] -> Bool)
 
 data ApplySTSOpts = ApplySTSOpts
   { -- | Enable assertions during STS processing.
@@ -302,7 +317,6 @@ data ApplySTSOpts = ApplySTSOpts
     -- | Validation policy
     asoValidation :: ValidationPolicy
   }
-  deriving (Eq, Show)
 
 type STSInterpreter =
   forall s m rtype.
@@ -408,16 +422,22 @@ applyRuleInternal vp goSTS jc r = flip runStateT [] $ foldF runClause r
     runClause :: Clause s rtype a -> MonadState.StateT [PredicateFailure s] m a
     runClause (Lift f next) = next <$> lift f
     runClause (GetCtx next) = pure $ next jc
-    runClause (Predicate cond orElse val) = case vp of
-      ValidateAll -> do
-        case catchError cond throwError of
-          Left err -> modify (orElse err :) >> pure val
-          Right x -> pure x
-      ValidateNone -> pure val
+    runClause (Predicate lbls cond orElse val) =
+      if validateIf lbls
+        then do
+          case catchError cond throwError of
+            Left err -> modify (orElse err :) >> pure val
+            Right x -> pure x
+        else pure val
     runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
       (ss, sfails) <- lift $ goSTS subCtx
       traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> concat sfails
       pure $ next ss
+
+    validateIf lbls = case vp of
+      ValidateAll -> True
+      ValidateNone -> False
+      ValidateSuchThat f -> f lbls
 
 applySTSInternal ::
   forall s m rtype.
