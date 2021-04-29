@@ -39,6 +39,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock, ValidateScript (..))
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Mary.Value as Alonzo (Value)
+import Cardano.Ledger.Rules.ValidationMode ((?!#))
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams,
   )
@@ -315,7 +316,7 @@ utxoTransition = do
   inInterval slot (getField @"vldt" txb)
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
 
-  not (Set.null (Alonzo.txins @era txb)) ?! InputSetEmptyUTxO
+  not (Set.null (Alonzo.txins @era txb)) ?!# InputSetEmptyUTxO
 
   feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
   eval (Alonzo.txins @era txb ⊆ dom utxo)
@@ -327,7 +328,7 @@ utxoTransition = do
 
   -- Check that the mint field does not try to mint ADA. This is equivalent to
   -- the check `adaPolicy ∉ supp mint tx` in the spec.
-  Val.coin (getField @"mint" txb) == Val.zero ?! TriesToForgeADA
+  Val.coin (getField @"mint" txb) == Val.zero ?!# TriesToForgeADA
 
   -- use serialized length of Value because this Value size is being limited inside a serialized Tx
   let outputs = Map.elems $ unUTxO (txouts @era txb)
@@ -346,18 +347,18 @@ utxoTransition = do
         filter
           (\a -> getNetwork a /= ni)
           (fmap (getField @"address") $ toList $ getField @"outputs" txb)
-  null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
+  null addrsWrongNetwork ?!# WrongNetwork ni (Set.fromList addrsWrongNetwork)
   let wdrlsWrongNetwork =
         filter
           (\a -> getRwdNetwork a /= ni)
           (Map.keys . unWdrl . getField @"wdrls" $ txb)
   null wdrlsWrongNetwork
-    ?! WrongNetworkWithdrawal
+    ?!# WrongNetworkWithdrawal
       ni
       (Set.fromList wdrlsWrongNetwork)
   case txnetworkid' txb of
     SNothing -> pure ()
-    SJust bid -> ni == bid ?! WrongNetworkInTxBody ni bid
+    SJust bid -> ni == bid ?!# WrongNetworkInTxBody ni bid
 
   -- pointwise is used because non-ada amounts must be >= 0 too
   let (Coin adaPerUTxOWord) = getField @"_adaPerUTxOWord" pp
@@ -392,7 +393,7 @@ utxoTransition = do
               _ -> False
           )
           outputs
-  null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
+  null outputsAttrsTooBig ?!# OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   trans @(Core.EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 

@@ -35,6 +35,7 @@ import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value)
+import Cardano.Ledger.Rules.ValidationMode ((?!#))
 import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
@@ -165,7 +166,7 @@ scriptsValidateTransition = do
         )
           Val.<-> refunded
   getField @"isValidating" tx == IsValidating True
-    ?! ValidationTagMismatch (getField @"isValidating" tx)
+    ?!# ValidationTagMismatch (getField @"isValidating" tx)
   pup' <-
     trans @(Core.EraRule "PPUP" era) $
       TRC
@@ -188,7 +189,7 @@ scriptsNotValidateTransition = do
   TRC (_, us@(UTxOState utxo _ fees _), tx) <- judgmentContext
   let txb = txbody tx
   getField @"isValidating" tx == IsValidating False
-    ?! ValidationTagMismatch (getField @"isValidating" tx)
+    ?!# ValidationTagMismatch (getField @"isValidating" tx)
   pure $
     us
       { _utxo = eval (getField @"txinputs_fee" txb ⋪ utxo),

@@ -34,6 +34,7 @@ import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentData)
+import Cardano.Ledger.Rules.ValidationMode ((?!#))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
 import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
@@ -220,7 +221,7 @@ alonzoStyleWitness = do
               then bad
               else (hashScript @era script) : bad
           accum (PlutusScript _) bad = bad
-  null failedScripts ?! (Phase1ScriptWitnessNotValidating $ Set.fromList failedScripts)
+  null failedScripts ?!# Phase1ScriptWitnessNotValidating (Set.fromList failedScripts)
 
   let utxo = _utxo u'
       sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
@@ -251,7 +252,7 @@ alonzoStyleWitness = do
   let reqSignerHashes' = getField @"reqSignerHashes" txbody
       witsKeyHashes = unWitHashes $ witsFromTxWitnesses @era tx
   eval (reqSignerHashes' ⊆ witsKeyHashes)
-    ?! MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes)
+    ?!# MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes)
 
   let languages =
         [ l
