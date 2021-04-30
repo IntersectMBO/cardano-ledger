@@ -4,6 +4,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -50,6 +52,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import qualified Cardano.Ledger.Era as EraModule
 import qualified Cardano.Ledger.Mary.Value as V (Value)
+import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.Shelley.Constraints
@@ -60,7 +63,10 @@ import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
 import Cardano.Ledger.Tx (Tx (Tx))
 import Control.Arrow (left)
+import Control.Monad (join)
 import Control.Monad.Except (liftEither, runExcept)
+import Control.Monad.Reader (runReader)
+import Control.State.Transition.Extended (TRC (TRC))
 import qualified Data.Set as Set
 import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
@@ -122,7 +128,13 @@ instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
       stake = (_pParams . _pstate) dpstate
       utxoenv = API.UtxoEnv slot pp stake delegs
 
-  applyTxInBlock = undefined
+  applyTxInBlock globals env state tx =
+    let res =
+          flip runReader globals
+            . applySTSNonStatic
+              @(Core.EraRule "LEDGER" (AlonzoEra c))
+            $ TRC (env, state, tx)
+     in liftEither . left (API.ApplyTxError . join) $ res
 
   extractTx ValidatedTx {body, wits, auxiliaryData} =
     Tx body wits auxiliaryData
