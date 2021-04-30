@@ -30,8 +30,10 @@ import Cardano.Ledger.Alonzo.PParams
   )
 import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
 import qualified Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
+import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (UtxosFailure))
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS, constructValidated)
+import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (WrappedShelleyEraFailure))
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx
@@ -57,11 +59,22 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
 import Cardano.Ledger.Tx (Tx (Tx))
+import Control.Arrow (left)
+import Control.Monad.Except (liftEither, runExcept)
 import qualified Data.Set as Set
 import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import Shelley.Spec.Ledger.LedgerState
+  ( DPState (..),
+    DState (..),
+    PState (..),
+  )
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
+import Shelley.Spec.Ledger.STS.Ledger
+  ( LedgerEnv (..),
+    LedgerPredicateFailure (UtxowFailure),
+  )
 import qualified Shelley.Spec.Ledger.STS.Mir as Shelley
 import qualified Shelley.Spec.Ledger.STS.Newpp as Shelley
 import qualified Shelley.Spec.Ledger.STS.Ocert as Shelley
@@ -70,8 +83,11 @@ import qualified Shelley.Spec.Ledger.STS.Rupd as Shelley
 import qualified Shelley.Spec.Ledger.STS.Snap as Shelley
 import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
 import qualified Shelley.Spec.Ledger.STS.Upec as Shelley
+import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (UtxoFailure))
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import Shelley.Spec.Ledger.TxBody (witKeyHash)
+
+-- =====================================================
 
 -- | The Alonzo era
 data AlonzoEra c
@@ -84,15 +100,30 @@ instance
   where
   type Crypto (AlonzoEra c) = c
 
--- TODO we cannot have this instance until we rewrite the mempool API to reflect
--- the difference between Tx and TxInBlock
-
 instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
-  applyTx = undefined
+  applyTx globals (LedgerEnv slot _ix pp _accnt) (utxostate, dpstate) tx =
+    do
+      (utxostate2, vtx) <-
+        liftEither
+          . left
+            ( API.ApplyTxError
+                . fmap
+                  ( UtxowFailure
+                      . WrappedShelleyEraFailure
+                      . UtxoFailure
+                      . UtxosFailure
+                  )
+            )
+          . runExcept
+          $ Alonzo.constructValidated globals utxoenv utxostate tx
+      pure ((utxostate2, dpstate), vtx)
+    where
+      delegs = (_genDelegs . _dstate) dpstate
+      stake = (_pParams . _pstate) dpstate
+      utxoenv = API.UtxoEnv slot pp stake delegs
+
   applyTxInBlock = undefined
 
-  -- TODO implement this without reserialisation by extracting the various
-  -- bytestring parts.
   extractTx ValidatedTx {body, wits, auxiliaryData} =
     Tx body wits auxiliaryData
 

@@ -32,11 +32,9 @@ import Cardano.Ledger.Alonzo.Tx
     DataHash,
     ScriptPurpose (..),
     ValidatedTx (..),
-    body',
     getValidatorHash,
     indexedRdmrs,
     txdats',
-    wits',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), vldt')
 import Cardano.Ledger.Alonzo.TxInfo (runPLCScript, transTx, valContext)
@@ -79,10 +77,11 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- | Get the Data associated with a ScriptPurpose. Only the Spending
 --   ScriptPurpose contains Data. The null list is returned for the other kinds.
 getData ::
-  forall era.
-  ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era)))
+  forall era tx.
+  ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "wits" tx (TxWitness era)
   ) =>
-  ValidatedTx era ->
+  tx ->
   UTxO era ->
   ScriptPurpose (Crypto era) ->
   [Data era]
@@ -157,6 +156,7 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
 --     might validate that shouldn't. So we double check that every Script has its Data, and
 --     if that is not the case, a PredicateFailure is raised in the Utxos rule.
 collectTwoPhaseScriptInputs ::
+  forall era tx.
   ( Era era,
     Core.Script era ~ AlonzoScript.Script era,
     Core.TxOut era ~ Alonzo.TxOut era,
@@ -166,10 +166,12 @@ collectTwoPhaseScriptInputs ::
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "body" tx (Core.TxBody era),
+    HasField "wits" tx (TxWitness era)
   ) =>
   Core.PParams era ->
-  ValidatedTx era ->
+  tx ->
   UTxO era ->
   Either [CollectError (Crypto era)] [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs pp tx utxo =
@@ -215,18 +217,20 @@ language (AlonzoScript.TimelockScript _) = Nothing
 --   There are two kinds of scripts, evaluate each kind using the
 --   appropriate mechanism.
 evalScripts ::
-  forall era.
+  forall era tx.
   ( Era era,
-    Alonzo.TxBody era ~ Core.TxBody era
+    Alonzo.TxBody era ~ Core.TxBody era,
+    HasField "body" tx (Core.TxBody era),
+    HasField "wits" tx (TxWitness era)
   ) =>
-  ValidatedTx era ->
+  tx ->
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)] ->
   Bool
 evalScripts _tx [] = True
 evalScripts tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
-  evalTimelock vhks (Alonzo.vldt' (body' tx)) timelock && evalScripts tx rest
+  evalTimelock vhks (Alonzo.vldt' (getField @"body" tx)) timelock && evalScripts tx rest
   where
-    vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
+    vhks = Set.map witKeyHash (txwitsVKey' (getField @"wits" tx))
 evalScripts tx ((AlonzoScript.PlutusScript pscript, ds, units, cost) : rest) =
   runPLCScript cost pscript units (map getPlutusData ds) && evalScripts tx rest
 
@@ -261,19 +265,20 @@ checkScriptData tx {- utxo -} (sp, h) =
 
 -- Collect information (purpose and hash) about all the scripts in a Tx.
 scriptsNeeded ::
-  forall era.
+  forall era tx.
   ( Era era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
+    HasField "body" tx (Core.TxBody era)
   ) =>
   UTxO era ->
-  ValidatedTx era ->
+  tx ->
   [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
 scriptsNeeded (UTxO utxomap) tx = spend ++ reward ++ cert ++ minted
   where
-    txb = body' tx
+    txb = getField @"body" tx
     !spend = foldl' accum [] (getField @"inputs" txb)
       where
         accum !ans !i =

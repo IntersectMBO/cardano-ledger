@@ -532,13 +532,15 @@ getMapFromValue (Value _ m) = m
 
 -- | Find the Data and ExUnits assigned to a script.
 indexedRdmrs ::
-  forall era.
+  forall era tx.
   ( Era era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "wits" tx (TxWitness era), -- Generalized over tx, so tx can be Tx or TxInBlock
+    HasField "body" tx (Core.TxBody era)
   ) =>
-  ValidatedTx era ->
+  tx ->
   ScriptPurpose (Crypto era) ->
   Maybe (Data era, ExUnits)
 indexedRdmrs tx sp = case rdptr @era (getField @"body" tx) sp of

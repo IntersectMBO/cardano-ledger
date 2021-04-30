@@ -51,9 +51,14 @@ module Control.State.Transition.Extended
     applySTSIndifferently,
     reapplySTS,
 
+    -- * Exported to allow running rules independently
+    applySTSInternal,
+    applyRuleInternal,
+    RuleInterpreter,
+    STSInterpreter,
+
     -- * Random thing
     Threshold (..),
-
     sfor_,
   )
 where
@@ -502,20 +507,21 @@ newtype Threshold a = Threshold a
 -- Utils
 ------------------------------------------------------------------------------}
 
-
 -- | A stub rule with no transitions to use as a placeholder
 data STUB (e :: Type) (st :: Type) (si :: Type) (f :: Type) (m :: Type -> Type)
 
 instance
-  ( Eq f
-  , Monad m
-  , Show f
-  , Typeable e
-  , Typeable f
-  , Typeable si
-  , Typeable st
-  , Typeable m
-  ) => STS (STUB e st si f m) where
+  ( Eq f,
+    Monad m,
+    Show f,
+    Typeable e,
+    Typeable f,
+    Typeable si,
+    Typeable st,
+    Typeable m
+  ) =>
+  STS (STUB e st si f m)
+  where
   type Environment (STUB e st si f m) = e
   type State (STUB e st si f m) = st
   type Signal (STUB e st si f m) = si
@@ -524,7 +530,6 @@ instance
 
   transitionRules = []
   initialRules = []
-
 
 -- | Map each element of a structure to an action, evaluate these actions from
 -- left to right, and ignore the results. For a version that doesn't ignore the

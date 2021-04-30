@@ -25,6 +25,7 @@ import Cardano.Ledger.Alonzo.TxBody
     wdrls',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..))
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (TxBody, TxOut, Value)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -268,14 +269,16 @@ transScriptPurpose (Certifying dcert) = P.Certifying (transDCert dcert)
 -- | Compute a Digest of the current transaction to pass to the script
 --   This is the major component of the valContext function.
 transTx ::
-  forall era.
+  forall era tx.
   ( Era era,
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.TxBody era ~ Alonzo.TxBody era,
-    Value era ~ Mary.Value (Crypto era)
+    Value era ~ Mary.Value (Crypto era),
+    HasField "body" tx (Core.TxBody era),
+    HasField "wits" tx (TxWitness era)
   ) =>
   UTxO era ->
-  ValidatedTx era ->
+  tx ->
   P.TxInfo
 transTx utxo tx =
   P.TxInfo
@@ -292,15 +295,13 @@ transTx utxo tx =
       P.txInfoId = (P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody)))
     }
   where
-    tbody = body' tx
-    _witnesses = wits' tx
-    _isval = isValidating' tx
-    _auxdat = auxiliaryData' tx
+    tbody = getField @"body" tx
+    _witnesses = getField @"wits" tx
     outs = outputs' tbody
     fee = txfee' tbody
     forge = mint' tbody
     interval = vldt' tbody
-    datpairs = Map.toList (txdats' (wits' tx))
+    datpairs = Map.toList (txdats' _witnesses)
 
 -- ===============================================================
 -- From the specification, Figure 7 "Script Validation, cont."

@@ -49,6 +49,7 @@ library
     Shelley.Spec.Ledger.API.Protocol
     Shelley.Spec.Ledger.API.Validation
     Shelley.Spec.Ledger.API.Wallet
+    Shelley.Spec.Ledger.API.Mempool
     Shelley.Spec.Ledger.BaseTypes
     Shelley.Spec.Ledger.BlockChain
     Shelley.Spec.Ledger.CompactAddr
@@ -102,8 +103,7 @@ library
     Shelley.Spec.Ledger.Tx
     Shelley.Spec.Ledger.TxBody
     Shelley.Spec.Ledger.UTxO
-  other-modules:     Shelley.Spec.Ledger.API.Mempool
-                     Shelley.Spec.Ledger.API.Types
+  other-modules:      Shelley.Spec.Ledger.API.Types
   hs-source-dirs: src
   build-depends:
     aeson,
