@@ -37,7 +37,9 @@ module Control.State.Transition.Extended
     Embed (..),
     (?!),
     (?!:),
+    Label,
     labeledPred,
+    labeledPredE,
     failBecause,
     judgmentContext,
     trans,
@@ -253,7 +255,7 @@ type Label = String
 --   This takes a condition (a boolean expression) and a failure and results in
 --   a clause which will throw that failure if the condition fails.
 (?!) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
-cond ?! orElse = liftF $ Predicate [] (if cond then Right () else Left ()) (const orElse) ()
+(?!) = labeledPred []
 
 infix 1 ?!
 
@@ -264,8 +266,10 @@ failBecause = (False ?!)
 --
 --   We interpret this as "What?" "No!" "Because:"
 (?!:) :: Either e () -> (e -> PredicateFailure sts) -> Rule sts ctx ()
-cond ?!: orElse = liftF $ Predicate [] cond orElse ()
+(?!:) = labeledPredE []
 
+-- | Labeled predicate. This may be used to control which predicates are run
+-- using 'ValidateSuchThat'.
 labeledPred :: [Label] -> Bool -> PredicateFailure sts -> Rule sts ctx ()
 labeledPred lbls cond orElse =
   liftF $
@@ -274,6 +278,14 @@ labeledPred lbls cond orElse =
       (if cond then Right () else Left ())
       (const orElse)
       ()
+
+-- | Labeled predicate with an explanation
+labeledPredE ::
+  [Label] ->
+  Either e () ->
+  (e -> PredicateFailure sts) ->
+  Rule sts ctx ()
+labeledPredE lbls cond orElse = liftF $ Predicate lbls cond orElse ()
 
 trans ::
   Embed sub super => RuleContext rtype sub -> Rule super rtype (State sub)
