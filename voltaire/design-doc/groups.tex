@@ -43,7 +43,7 @@ We can identify a number of distinct groups that may be involved in proposal sub
 
 General Ada holders may make informal proposals and discuss them using an off-chain mechanism.  They vote on the acceptance of these proposals
 either on-chain or off-chain, in proportion to the ada that they hold.  They may delegate their stake for voting purposes to on-chain representatives,
-who will vote on their behalf for or against submitted proposals.  This vote delegation may be changed at any time\pkcomment{We should clarify whether this includes changing the delegation \emph{after} delegates have voted. I think it would be good to allow this}.
+who will vote on their behalf for or against submitted proposals.  This vote delegation may be changed at any time\pkcomment{We should clarify whether this includes changing the delegation \emph{after} delegates have voted. I think it would be good to allow this}\khcomment{Yes, the design allows that up to the vote deadline}.
 
 \subsection{Executive Team (Off-Chain)}
 
@@ -82,7 +82,7 @@ file that fully describes the proposal. Protocol version upgrades will also requ
 
 Submitters are permitted to submit proposals on-chain.  Each proposal must be signed by a quorum of submitters, who verify the submitted
 proposal, checking that it is in the correct format, conforms to the original proposal, and meets other process requirements.
-Submitters are appointed by endorsers\pkcomment{I think this is should be electors, not endorsers?}.  Depending on the governance design, the submitter group might be restricted to a few members,
+Submitters are appointed by electors.  Depending on the governance design, the submitter group might be restricted to a few members,
 be an elected or appointed group, be limited by ada holding, or be limited to endorsers, delegates or another group.
 
 \subsection{Delegates (On-Chain)}
@@ -99,7 +99,7 @@ delegates that represent their political opinions without considering their abil
 block producers.  Delegates must track any discussions and ensure that the proposals meet the required
 security and other concerns.
 
-\subsection{Endorsers (On-Chain, May not be needed\pkcomment{why not?})}
+\subsection{Endorsers}
 
 The role of an endorser is to confirm that they are ready to upgrade to a new
 version of the Cardano protocol.  All stake pools are endorsers.  In line with
@@ -107,6 +107,9 @@ the principle of proof-of-stake, the weight of their endorsement is proportional
 to the stake that they control.  In order to ensure that the blockchain will
 make progress, and that the main chain will not split, a sufficient stake
 threshold of endorsement is required for a proposal to be enacted.
+The design assumes that endorsement will be automated by recording the stake that
+is associated with upgraded pools (Section~\ref{sect:endorsement}).
+
 
 \subsection{Electors (Off-chain or On-Chain)}
 

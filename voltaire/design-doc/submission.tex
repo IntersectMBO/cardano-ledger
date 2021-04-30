@@ -3,13 +3,14 @@
 \label{sect:submission}
 
 Proposals are submitted by a member of a submitter group.  They must be counter-signed by a quorum of submitter keys, where the quorum is specified by the \texttt{ProposalQuorum} parameter.
-\khcomment{Difficult question: who controls registration/de-registration of submitter keys.}\pkcomment{How about an on-chain vote by ada holders?}\khcomment{How do we
+\khcomment{Difficult question: who controls registration/de-registration of submitter keys.}\pkcomment{How about an on-chain vote by ada holders?}\khcomment{That isn't possible without extending the design, of course...  You could include this as an update proposal, of course, but who submits the proposal and how do you avoid the submitter group then vetoing changes?}\khcomment{How do we
 ensure that there are always enough submitters in existence.}\pkcomment{We should have an option to reboot this set by a vote from ada holders, in case there are not enough (active) submitters}\khcomment{The
-quorum may be a protocol parameter.}\pkcomment{with an enforced sensible range in $(0,1)$}  No fee is charged for proposal
+quorum may be a protocol parameter.}\pkcomment{with an enforced sensible range in $(0,1)$}\khcomment{Yes.  I was expecting an integer value, though.  Consider the edge case where there are only a few submitters, or awkward cases where the number of submitters changes. Do you round up or down?}  No fee is charged for proposal
 submission.\khcomment{This may need to be discussed.}  A submitter may submit
 any number of proposals in a single epoch.
 \khcomment{This assumes that submitters are trustworthy and will not collectively spam the blockchain.}
 \pkcomment{Depending on how we accumulate the counter signatures (including all of them in the transaction with the proposal, which requires off chain coordination between the submitters, or collecting them in susequent transactions) it might also be possible for a single submitter to spam the chain}
+\khcomment{The obvious approach is to use multi-sig transactions, or similar.  That would prevent multiple proposals from spamming the chain [you might be able to resubmit the same proposal, of course].  Requiring multiple transactions would be more problematic.}
 
 \subsection{Format}
 
@@ -27,11 +28,12 @@ Each proposal has a header and a body.  % and must be signed\khcomment{Submittin
   "enact"            : Epoch,
   "submitter"        : KeyHash
 }
-\end{verbatim}\pkcomment{Do we need \texttt{Slot}, or \texttt{Epoch}?}
+\end{verbatim}\pkcomment{Do we need \texttt{Slot}, or \texttt{Epoch}?}\khcomment{You want Slot, because that is what matters for consistent voting [I assume you want the current speed of enactment]}
 
 The \texttt{proposal} field allows the proposal to be tied to a corresponding off-chain proposal (see Appendix~\ref{sect:relating-off-and-on-chain} and Section~\ref{sect:proposalid}).  The \texttt{voteby} and \texttt{endorseby} fields specify deadlines.
 Votes and endorsements must be received prior to the specified slot if they are to be counted.  The endorsement deadline is optional.
-\khcomment{Arguably, to avoid performance issues, tallying should either happen at epoch boundaries or in a separate thread.}\pkcomment{Yes, same as for calculating the stake distribution and the rewards}
+%\khcomment{Arguably, to avoid performance issues, tallying should either happen at epoch boundaries or in a separate thread.}\pkcomment{Yes, same as for calculating the stake distribution and the rewards}
+To avoid performance issues, tallying must be spread over time, eg in a separate thread or using a ``pulsing'' calculation.\pkcomment{Yes, same as for calculating the stake distribution and the rewards}
 In order to avoid zombie proposals that could disrupt operations, deadlines must be set within a reasonable time period after submission (e.g. within 3 epochs).
 Voting and endorsement slots and thresholds are completely independent, so a voting deadline may be set before/after/at the same time as an endorsement deadline.
 Deadlines can never be set in the past.
@@ -96,7 +98,7 @@ that a set of transfers (for Catalyst funds, for instance), may  need to broken 
 \end{verbatim}
 
 Funds may be transferred from either the treasury or the reserves, and sent to either an address, or to the treasury/reserves.
-Transfers from treasury to treasury or from reserves to reserves are not permitted.  All transfers must be for a positive amount (including zero\pkcomment{Why do we want to allow zero here?}).
+Transfers from treasury to treasury or from reserves to reserves are not permitted.  All transfers must be for a positive amount (including zero\pkcomment{Why do we want to allow zero here?})\khcomment{I was assuming that this might be needed for accounting or automation reasons}.
 Multiple transfers may be made in a single epoch.  This allows for proper accounting, where e.g. different kinds of transfer must
 be authorised by different groups.
 
