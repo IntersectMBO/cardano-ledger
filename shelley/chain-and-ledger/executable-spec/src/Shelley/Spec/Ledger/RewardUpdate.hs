@@ -44,8 +44,8 @@ import Data.Default.Class (def)
 import Data.Foldable (fold)
 import Data.Group (invert)
 import Data.Kind (Type)
-import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM, foldlM')
 import Data.Ratio ((%))
@@ -55,7 +55,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
-import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
+import NoThunks.Class (NoThunks (..), allNoThunks)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
@@ -86,10 +86,20 @@ import Shelley.Spec.Ledger.TxBody (PoolParams (..))
 -- ===============================================================
 
 -- | The result of reward calculation is a pair of aggregate Maps.
-type RewardAns c =
-  ( Map (Credential 'Staking c) (Set (Reward c)),
-    Map (KeyHash 'StakePool c) Likelihood
-  )
+data RewardAns c
+  = RewardAns
+      !(Map (Credential 'Staking c) (Set (Reward c)))
+      !(Map (KeyHash 'StakePool c) Likelihood)
+  deriving (Show, Eq, Generic)
+  deriving (NFData)
+
+instance NoThunks (RewardAns crypto)
+
+instance CC.Crypto c => ToCBOR (RewardAns c) where
+  toCBOR (RewardAns x y) = toCBOR (x, y)
+
+instance CC.Crypto c => FromCBOR (RewardAns c) where
+  fromCBOR = (\(x, y) -> RewardAns x y) <$> fromCBOR
 
 -- | The provenance we collect
 type KeyHashPoolProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
@@ -210,11 +220,10 @@ data FreeVars crypto = FreeVars
     slotsPerEpoch :: !EpochSize,
     pp_d :: !UnitInterval, -- The last three fields come from some version of PParams
     pp_a0 :: !Rational,
-    pp_nOpt :: Natural
+    pp_nOpt :: !Natural
   }
   deriving (Eq, Show, Generic)
-
-deriving via InspectHeapNamed "FreeVars" (FreeVars crypto) instance NoThunks (FreeVars crypto)
+  deriving (NoThunks)
 
 instance NFData (FreeVars crypto)
 
@@ -290,7 +299,7 @@ rewardStakePool
         pp_nOpt
       }
     )
-  (m1, m2)
+  (RewardAns m1 m2)
   pparams = do
     let hk = _poolId pparams
         blocksProduced = Map.lookup hk b
@@ -304,10 +313,10 @@ rewardStakePool
             (leaderProbability asc sigma pp_d)
             slotsPerEpoch
     case blocksProduced of
-      Nothing -> pure (m1, Map.insert hk ls m2)
+      Nothing -> pure $ RewardAns m1 (Map.insert hk ls m2)
       Just n -> do
         m <- rewardOnePool (pp_d, pp_a0, pp_nOpt) r n totalBlocks pparams actgr sigma sigmaA (Coin totalStake) addrsRew
-        pure (Map.unionWith Set.union m m1, Map.insert hk ls m2)
+        pure $ RewardAns (Map.unionWith Set.union m m1) (Map.insert hk ls m2)
 
 -- ================================================================
 
@@ -345,7 +354,15 @@ deriving instance Eq ans => Eq (RewardPulser c m ans)
 
 deriving instance Show ans => Show (RewardPulser c m ans)
 
-deriving via InspectHeapNamed "RewardPulser" (Pulser c) instance NoThunks (Pulser c)
+instance NoThunks (Pulser c) where
+  showTypeOf _ = "RewardPulser"
+  wNoThunks ctxt (RSLP n free balance ans) =
+    allNoThunks
+      [ noThunks ctxt n,
+        noThunks ctxt free,
+        noThunks ctxt balance,
+        noThunks ctxt ans
+      ]
 
 instance NFData (Pulser c) where
   rnf (RSLP n1 c1 b1 a1) = seq (rnf n1) (seq (rnf c1) (seq (rnf b1) (rnf a1)))

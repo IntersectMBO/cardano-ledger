@@ -104,6 +104,7 @@ import Shelley.Spec.Ledger.RewardUpdate
   ( FreeVars (..),
     Pulser,
     PulsingRewUpdate (..),
+    RewardAns (..),
     RewardPulser (..),
     RewardSnapShot (..),
   )
@@ -955,4 +956,4 @@ instance
   Mock crypto =>
   Arbitrary (Pulser crypto)
   where
-  arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> (RewardAns <$> arbitrary <*> arbitrary)
