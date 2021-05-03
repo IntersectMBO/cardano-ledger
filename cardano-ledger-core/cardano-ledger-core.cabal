@@ -47,6 +47,7 @@ library
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
     Cardano.Ledger.Hashes
+    Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash
     Cardano.Ledger.Tx
     Cardano.Ledger.Val

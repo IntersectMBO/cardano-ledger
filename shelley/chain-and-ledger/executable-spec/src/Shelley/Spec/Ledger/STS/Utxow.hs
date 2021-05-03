@@ -37,6 +37,7 @@ import Cardano.Ledger.AuxiliaryData
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
+import Cardano.Ledger.Rules.ValidationMode (failBecauseS, (?!#), (?!#:))
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩))
@@ -47,7 +48,6 @@ import Control.State.Transition
     STS (..),
     TRC (..),
     TransitionRule,
-    failBecause,
     judgmentContext,
     liftSTS,
     trans,
@@ -291,10 +291,10 @@ shelleyStyleWitness embed = do
               hashScript @era validator /= hs
                 || not (validateScript @era validator tx)
           )
-          (Map.toList $ (getField @"scriptWits" tx))
+          (Map.toList (getField @"scriptWits" tx))
   case failedScripts of
     [] -> pure ()
-    fs -> failBecause $ embed $ ScriptWitnessNotValidatingUTXOW $ Set.fromList $ fmap fst fs
+    fs -> failBecauseS $ embed $ ScriptWitnessNotValidatingUTXOW $ Set.fromList $ fmap fst fs
 
   let sNeeded = scriptsNeeded utxo tx
       sReceived = Map.keysSet (getField @"scriptWits" tx)
@@ -302,29 +302,30 @@ shelleyStyleWitness embed = do
     ?! embed (MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived))
 
   -- check VKey witnesses
-  verifiedWits @era tx ?!: (embed . InvalidWitnessesUTXOW)
+  verifiedWits @era tx ?!#: (embed . InvalidWitnessesUTXOW)
 
   let needed = witsVKeyNeeded @era utxo tx genDelegs
       missingWitnesses = diffWitHashes needed witsKeyHashes
-      haveNeededWitnesses = case nullWitHashes missingWitnesses of
-        True -> Right ()
-        False -> Left missingWitnesses
+      haveNeededWitnesses =
+        if nullWitHashes missingWitnesses
+          then Right ()
+          else Left missingWitnesses
   haveNeededWitnesses ?!: (embed . MissingVKeyWitnessesUTXOW)
 
   -- check metadata hash
   case (getField @"adHash" txbody, auxdata) of
     (SNothing, SNothing) -> pure ()
-    (SJust mdh, SNothing) -> failBecause $ embed (MissingTxMetadata mdh)
+    (SJust mdh, SNothing) -> failBecauseS $ embed (MissingTxMetadata mdh)
     (SNothing, SJust md') ->
-      failBecause $
+      failBecauseS $
         embed (MissingTxBodyMetadataHash (hashAuxiliaryData @era md'))
     (SJust mdh, SJust md') -> do
       hashAuxiliaryData @era md' == mdh
-        ?! embed (ConflictingMetadataHash mdh (hashAuxiliaryData @era md'))
+        ?!# embed (ConflictingMetadataHash mdh (hashAuxiliaryData @era md'))
 
       -- check metadata value sizes
       when (SoftForks.validMetadata pp) $
-        validateAuxiliaryData @era md' ?! embed InvalidMetadata
+        validateAuxiliaryData @era md' ?!# embed InvalidMetadata
 
   -- check genesis keys signatures for instantaneous rewards certificates
   let genDelegates =
