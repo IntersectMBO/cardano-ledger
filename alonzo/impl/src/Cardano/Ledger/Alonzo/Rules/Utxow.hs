@@ -78,9 +78,6 @@ data AlonzoPredFail era
       !(StrictMaybe (WitnessPPDataHash (Crypto era)))
       -- ^ Computed from the current Protocol Parameters
   | MissingRequiredSigners (Set (KeyHash 'Witness (Crypto era)))
-  | -- | Scripts that failed
-    Phase1ScriptWitnessNotValidating
-      !(Set (ScriptHash (Crypto era)))
   deriving (Generic)
 
 deriving instance
@@ -129,7 +126,6 @@ encodePredFail (MissingNeededScriptHash x) = Sum MissingNeededScriptHash 2 !> To
 encodePredFail (DataHashSetsDontAgree x y) = Sum DataHashSetsDontAgree 3 !> To x !> To y
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
 encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 5 !> To x
-encodePredFail (Phase1ScriptWitnessNotValidating x) = Sum Phase1ScriptWitnessNotValidating 6 !> To x
 
 instance
   ( Era era,
@@ -155,7 +151,6 @@ decodePredFail 2 = SumD MissingNeededScriptHash <! From
 decodePredFail 3 = SumD DataHashSetsDontAgree <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 5 = SumD MissingRequiredSigners <! From
-decodePredFail 6 = SumD Phase1ScriptWitnessNotValidating <! From
 decodePredFail n = Invalid n
 
 -- =============================================
@@ -212,16 +207,6 @@ alonzoStyleWitness = do
   (TRC (UtxoEnv _slot pp _stakepools _genDelegs, u', tx)) <- judgmentContext
   let txbody = getField @"body" (tx :: TxInBlock era)
 
-  let scriptWitMap = getField @"scriptWits" tx
-      failedScripts = Map.foldr accum [] scriptWitMap
-        where
-          accum script@(TimelockScript _) bad =
-            if validateScript @era script tx
-              then bad
-              else (hashScript @era script) : bad
-          accum (PlutusScript _) bad = bad
-  null failedScripts ?!# Phase1ScriptWitnessNotValidating (Set.fromList failedScripts)
-
   let utxo = _utxo u'
       sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
       sphs = scriptsNeeded utxo tx
@@ -231,7 +216,8 @@ alonzoStyleWitness = do
          in seq (rnf ans) ans
   null unredeemed ?! UnRedeemableScripts unredeemed
 
-  let txScriptSet = Map.keysSet scriptWitMap
+  let scriptWitMap = getField @"scriptWits" tx
+      txScriptSet = Map.keysSet scriptWitMap
       needed = Set.fromList [script | (_purpose, script) <- sphs]
   needed == txScriptSet ?! MissingNeededScriptHash (Set.difference needed txScriptSet)
 
