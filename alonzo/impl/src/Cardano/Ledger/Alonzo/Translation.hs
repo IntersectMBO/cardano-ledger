@@ -201,10 +201,6 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.ProposedPPUpdates where
   translateEra _ctxt (API.ProposedPPUpdates ppup) =
     return $ API.ProposedPPUpdates $ fmap translatePParamsUpdate ppup
 
-translateTxBody ::
-  ShelleyMA.TxBody (MaryEra c) -> TxBody (AlonzoEra c)
-translateTxBody = undefined
-
 translateTxOut ::
   Core.TxOut (MaryEra c) -> Core.TxOut (AlonzoEra c)
 translateTxOut (Shelley.TxOutCompact addr value) =
