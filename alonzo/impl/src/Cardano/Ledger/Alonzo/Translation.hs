@@ -22,7 +22,7 @@ import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), PParamsUpdate)
 import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits, Prices)
 import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..))
-import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era
@@ -33,7 +33,6 @@ import Cardano.Ledger.Era
   )
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Mary (MaryEra)
-import qualified Cardano.Ledger.ShelleyMA.TxBody as ShelleyMA
 import qualified Cardano.Ledger.Tx as LTX
 import Control.Monad.Except (Except, throwError)
 import Data.Map.Strict (Map)
