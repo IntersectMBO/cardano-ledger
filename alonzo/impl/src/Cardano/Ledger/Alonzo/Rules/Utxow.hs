@@ -66,7 +66,6 @@ import Shelley.Spec.Ledger.Tx (TxIn (..))
 data AlonzoPredFail era
   = WrappedShelleyEraFailure !(UtxowPredicateFailure era)
   | UnRedeemableScripts ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
-  | MissingNeededScriptHash (Set (ScriptHash (Crypto era)))
   | DataHashSetsDontAgree
       !(Set (DataHash (Crypto era)))
       -- ^ from the Tx
@@ -122,10 +121,9 @@ encodePredFail ::
   Encode 'Open (AlonzoPredFail era)
 encodePredFail (WrappedShelleyEraFailure x) = Sum WrappedShelleyEraFailure 0 !> E toCBOR x
 encodePredFail (UnRedeemableScripts x) = Sum UnRedeemableScripts 1 !> To x
-encodePredFail (MissingNeededScriptHash x) = Sum MissingNeededScriptHash 2 !> To x
-encodePredFail (DataHashSetsDontAgree x y) = Sum DataHashSetsDontAgree 3 !> To x !> To y
-encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
-encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 5 !> To x
+encodePredFail (DataHashSetsDontAgree x y) = Sum DataHashSetsDontAgree 2 !> To x !> To y
+encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 3 !> To x !> To y
+encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 4 !> To x
 
 instance
   ( Era era,
@@ -147,10 +145,9 @@ decodePredFail ::
   Decode 'Open (AlonzoPredFail era)
 decodePredFail 0 = SumD WrappedShelleyEraFailure <! D fromCBOR
 decodePredFail 1 = SumD UnRedeemableScripts <! From
-decodePredFail 2 = SumD MissingNeededScriptHash <! From
-decodePredFail 3 = SumD DataHashSetsDontAgree <! From <! From
-decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
-decodePredFail 5 = SumD MissingRequiredSigners <! From
+decodePredFail 2 = SumD DataHashSetsDontAgree <! From <! From
+decodePredFail 3 = SumD PPViewHashesDontMatch <! From <! From
+decodePredFail 4 = SumD MissingRequiredSigners <! From
 decodePredFail n = Invalid n
 
 -- =============================================
@@ -216,11 +213,6 @@ alonzoStyleWitness = do
          in seq (rnf ans) ans
   null unredeemed ?! UnRedeemableScripts unredeemed
 
-  let scriptWitMap = getField @"scriptWits" tx
-      txScriptSet = Map.keysSet scriptWitMap
-      needed = Set.fromList [script | (_purpose, script) <- sphs]
-  needed == txScriptSet ?! MissingNeededScriptHash (Set.difference needed txScriptSet)
-
   let inputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
       smallUtxo = eval (inputs ◁ utxo) :: Map.Map (TxIn (Crypto era)) (Core.TxOut era)
       utxoHashes :: [SafeHash (Crypto era) EraIndependentData]
@@ -241,7 +233,7 @@ alonzoStyleWitness = do
 
   let languages =
         [ l
-          | (_hash, script) <- Map.toList scriptWitMap,
+          | (_hash, script) <- Map.toList (getField @"scriptWits" tx),
             (not . isNativeScript @era) script,
             Just l <- [language @era script]
         ]
@@ -251,7 +243,6 @@ alonzoStyleWitness = do
 
   -- The shelleyStyleWitness calls the UTXO rule
   shelleyStyleWitness WrappedShelleyEraFailure
-
 
 -- ====================================
 -- Make the STS instance
