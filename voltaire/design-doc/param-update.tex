@@ -24,7 +24,11 @@
 \usepackage{tikz}
 \usepackage{booktabs}
 \usepackage{enumerate}
+\usepackage{paralist} %% In-para enumeration -- KH
+\usepackage{enumitem} %% Enumeration args -- KH
+\usepackage{fancyvrb}
 \usepackage{comments}
+
 \newcommand{\khcomment}[1]{\comment{KH}{#1}}
 \newcommand{\pkcomment}[1]{\comment{PK}{#1}}
 
@@ -49,19 +53,13 @@
    Andre Knispel \quad \texttt{andre.knispel@iohk.io}
    % TOOO: Order by main author - currently alphabetical
 }
-\DueDate{30$^{\textrm{th}}$ April 2021}
+\DueDate{30$^{\textrm{th}}$ June 2021}
 \SubmissionDate{}{}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
 \Version{PUP-1.0.0}
 \Project{Voltaire Ledger}
 \DisseminationDR
-
-%% In-para enumeration -- KH
-\usepackage{paralist}
-
-%% Enumeration args -- KH
-\usepackage{enumitem}
 
 \begin{document}
 
@@ -121,5 +119,8 @@
 
 \clearpage
 \input{expert-ballots}
+
+\clearpage
+\input{security-audit}
 
 \end{document}

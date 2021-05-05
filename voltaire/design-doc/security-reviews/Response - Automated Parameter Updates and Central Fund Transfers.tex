@@ -1,0 +1,333 @@
+%&pdfLaTeX
+% !TEX encoding = UTF-8 Unicode
+\documentclass{article}
+\usepackage{ifxetex}
+\ifxetex
+\usepackage{fontspec}
+\setmainfont[Mapping=tex-text]{STIXGeneral}
+\else
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\fi
+\usepackage{textcomp}
+
+\usepackage{amssymb}
+\usepackage{fancyhdr}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\usepackage{color}
+
+\definecolor{color02}{rgb}{0.98,0.01,0.03}
+\definecolor{color03}{rgb}{0.98,0.01,0.03}
+
+\begin{document}
+
+\textbf{Review of The Design of the Cardano Ledger with Automated Parameter Updates 
+and Central Fund Transfers (April 30, 2021 version)}
+
+\vspace{12pt}
+\begin{center}
+\textbf{Possible Current Issues: }
+\end{center}
+
+\vspace{12pt}
+\baselineskip=12pt
+\leftskip=0pt
+- Some questions about stake snapshot versus vote delegation: p19, Fig 2: In the 
+figure, the snapshot of the stake distribution is concurrent to the delegates voting. 
+However, in the real execution the snapshot must be before the voting, right? Or 
+else how could pools that are making blocks know whether a vote is valid and should 
+be included in a block? From p30, Fig 7 the snapshot is before voting, which makes 
+sense. However two questions:
+
+\parindent=18pt
+(1) Can delegations change during vote casting time, or once voting period begins 
+delegation changes do not count? From Fig 7 it seems the latter is true. However, 
+in Section 7.3 (Tallying Votes) it says ``total vote... is the sum of all active 
+delegations at the point that the vote is tallied'', which feels it implies the 
+former.
+
+\vspace{12pt}
+\parindent=0pt
+{\color{color02} Delegations and vote choices can change at any time prior to the 
+vote deadline.  We will adjust Figure 7.}
+
+\vspace{12pt}
+\parindent=18pt
+(2) There may be edge cases to consider. For example: Suppose at the time of the 
+stake snapshot I have some ada. However, after the snapshot I sell my ada. Should 
+I still be able to redelegate my vote?
+
+\vspace{12pt}
+\parindent=0pt
+{\color{color03} This is inevitable with a snapshot approach.  Likewise not being 
+able to vote immediately that ada is acquired.  It is, of course, consistent with 
+block production (I can earn rewards after I have sold my ada), so carries no greater 
+risk.  The alternative (compute a snapshot for each vote) would be very inefficient 
+(repeated snapshotting, which we need to avoid if possible), and also leads to 
+``buy significant ada, vote, sell ada''.  Token locking helps solve that, but reduces 
+participation, which is highly undesirable (and could reduce security/lead to lack 
+of progress, depending on how totals were calculated).  Overall, the edge cases 
+are likely to be minor, with less serious consequences than the alternative.}
+
+\vspace{12pt}
+- p23, Option 3 (transaction identifier is used to identify the proposal): This 
+can be dangerous, since the location the proposal ends up on chain is not fixed 
+until it is part of common prefix. If there are multiple concurrent proposals this 
+can lead to people accidentally voting for the wrong proposal (or worse, malicious 
+pools can exploit this for their advantage).
+
+\vspace{12pt}
+{\color{color02} Noted.   It would be unlikely, of course, but the proposal contains 
+additional information that tie to a specific set of actions, so this could be 
+hashed, for example.}
+
+{\color{color02} Pools don't vote, but delegates could be malicious.}
+
+\vspace{12pt}
+- Section 8 and 9: It is not very clear right now whether multiple protocol version 
+changes can happen in a single epoch.
+
+\parindent=18pt
+(1) Might there be issues if this can happen?
+
+\vspace{12pt}
+\parindent=0pt
+{\color{color02} Only one could be adopted (the change can only be one Hamming 
+distance from the current protocol version).  All minor version changes are equivalent, 
+as are all major version changes,}
+
+{\color{color02} so the only possible ambiguity comes where there is a conflict 
+between a major and a minor upgrade.  The current design resolves this mechanically 
+through temporal ordering, but an alternative would be for eg a major upgrade to 
+override a minor upgrade (in which case the minor upgrade would never happen).}
+
+\vspace{12pt}
+\parindent=18pt
+(2) If it can happen, Section 9.2 which says ``multiple update proposals...are 
+enacted strictly in the order that they were submitted'' should also include ``and 
+enacted in the order of the protocol version for protocol version changes''.
+
+\vspace{12pt}
+\parindent=0pt
+{\color{color02} That is not necessary.  See above.  It probably also doesn't work 
+technically (AFAIK, the hard fork combinator will only process one upgrade at an 
+epoch boundary --- I will check its semantics!).}
+
+\vspace{24pt}
+\begin{center}
+\textbf{Security concerns:}
+\end{center}
+
+\vspace{12pt}
+\baselineskip=12pt
+\leftskip=0pt
+- p14, ``resolve conflicts between proposals automatically'' - There should be 
+a lot of care taken when going this route, since a voter can vote for one proposal 
+A without knowledge about another proposal B. The two proposals might not even 
+conflict, but just not synergise well. For example, if A reduces the max size of 
+a block and B increases the max size of a transaction, then together they may cause 
+undesirable consequences (e.g. too few transactions allowed in a block).
+
+\parindent=18pt
+-\texttt{>} Perhaps a way to combat this is allow a proposal to declare a ``conflict 
+set'', e.g. a proposal A is not compatible with another proposal B, if B modifies 
+parameter x. 
+
+\vspace{12pt}
+\parindent=0pt
+{\color{color02} This solution would require knowledge of all other proposals (which 
+would be impractical), and would only work for a rational/honest submitter set. 
+ If we assume a rational/honest submitter group, however, then we can assume that}
+
+{\color{color02} they will anyway have resolved the conflict, in which case this 
+is not really necessary.  The only solution I can envisage is to automatically 
+check for inconsistencies, but that is difficult to achieve with the current parameter 
+design (you would perhaps need logical constraints on each parameter to define 
+possible conflicts).  Or we can rely on rational/honest voters to detect possible 
+conflicts.}
+
+\vspace{12pt}
+\parindent=18pt
+-\texttt{>} Another thing to be careful about is that temporal orderings might 
+not be reliable, since the order of blocks can be (at least slightly) influenced 
+by malicious parties.
+
+\vspace{12pt}
+\parindent=0pt
+{\color{color02} Noted.  We can assume that the submitter group is honest and aware 
+of possible malicious influence.}
+
+\vspace{12pt}
+- p15, Security Requirements: Another issue that would be good to address is that 
+it seems stake pools have a big power over voting. For example, suppose there is 
+a proposal that is desirable for normal users of the system, except many stake 
+pools do not like this proposal. Then, it may be possible for these stake pools 
+to ensure that this proposal is never put onto the blockchain, or at least delay 
+this proposal until e.g. the vote deadline. 
+
+\parindent=18pt
+-\texttt{>}  Of course, by the security assumption, honest stake pools will include 
+even proposals they do not like, but this may not be the case for rational stake 
+pools.
+
+\vspace{12pt}
+\parindent=0pt
+{\color{color02} To be clear, stake pools endorse, but don't vote or submit proposals. 
+ The vote and endorsement deadlines are absolute, so there can be no delay (a proposal 
+is either accepted at the deadline or it is not - everything else is irrelevant).}
+
+{\color{color02} Endorsement is limited to protocol upgrades, so pools have no 
+direct control over parameter updates - submitters and delegators have all the 
+power.  }
+
+\vspace{12pt}
+{\color{color02} A pool that doesn't endorse a protocol upgrade will become disconnected 
+from the main chain.  So it's important to avoid chain splits that sufficient pools 
+endorse a proposal (as defined by the endorsement threshold).  }
+
+{\color{color02} There is no way to force a pool to upgrade.  So yes, they do collectively 
+have power of veto on protocol upgrades.  That is seen as reasonable - they bear 
+the cost of maintaining the network}
+
+{\color{color02} and have technical knowledge of the impact of an upgrade.  However, 
+if the upgrade was in the interest of the chain, and stakeholders agreed on this, 
+they could choose to re-delegate their stake}
+
+{\color{color02} to pools that would upgrade (even forming new pools).  So no group 
+of pools could postpone an honest upgrade indefinitely (even 100\% ``dishonesty'' 
+can be overcome by forming new pools).}
+
+\vspace{12pt}
+{\color{color02} In practice, pools are unlikely to oppose an upgrade unless there 
+are technical issues with it.}
+
+\vspace{12pt}
+- p18, Submitters: For decentralisation it is important to ensure that submitters 
+is not restricted to too few members.
+
+\vspace{12pt}
+{\color{color02} Noted and agreed.  There will be a practical limit on numbers 
+(how many signatures can be included in a transaction), but this will be around 
+200-400.}
+
+{\color{color02} There is a requirement to limit the size of the submitter group 
+to avoid ``flooding'' (a denial of service where honest proposals are swamped by 
+dishonest ones, so voters are overwhelmed by choice/cost).}
+
+\vspace{12pt}
+- p22, ``Central Funds Transfer Body'' - Since there is no UTxO with the treasury/reserves, 
+one must be careful about accounting to avoid double-spending. 
+
+\vspace{12pt}
+{\color{color02} Noted.  There are existing formal accounting rules/properties 
+that are followed for manual funds transfers, including overall preservation of 
+ada.  These need to be preserved.}
+
+\vspace{12pt}
+- p23, comment on using multisig for submitter signing: Depending on the size of 
+the submitter group, one must be careful about the signatures not exceeding max 
+transaction size.
+
+\vspace{12pt}
+{\color{color02} Yes.  This limits the number of signatories.  The same issue applies 
+to a specialised proposal format.}
+
+\vspace{24pt}
+\begin{center}
+\textbf{Questions/Comments/Suggestions:}
+\end{center}
+
+\vspace{12pt}
+\baselineskip=12pt
+\leftskip=0pt
+- p12, section 1.4 - Here can also say that exchanges/proxy holders can declare 
+themselves as not holding any stake (their address should clearly indicate this)
+
+\vspace{12pt}
+{\color{color02} At present they don't.  There is an address format for this purpose, 
+but it is unused, and cannot be enforced.}
+
+\vspace{12pt}
+- p21, the comment on submitters being trustworthy: Perhaps we can use a similar 
+method to choosing slot leaders to choose the submitters, so we use the same assumption 
+of honest majority of stake as the cryptographic security.
+
+\vspace{12pt}
+{\color{color02} Full randomness doesn't work for this purpose.  A submitter has 
+to be prepared to submit a proposal, to collate counter-signatures, and to pay 
+any fees.}
+
+\vspace{12pt}
+- p21, the comment on setting minimal thresholds for vote enactment''. I agree 
+there must be some kind of limit of how low a vote threshold can be, or else there 
+could be proposals that are enacted even if very few people voted on it. An idea 
+is to require that a proposal must *both* (1) have a number of ``yes'' votes that 
+is above the vote threshold, and (2) have a number of ``no'' votes that is lower 
+than the vote threshold. This means a proposal with low threshold can be outvoted 
+if a problem is found with it, and also makes use of the ``no'' vote (by Section 
+7.1, at the moment, there is no point of casting a ``no'' vote as this is the same 
+as not voting.
+
+\vspace{12pt}
+- p23, comment on collision resistance: Yes, collision resistance is required.
+
+\vspace{12pt}
+{\color{color02} Thank you.}
+
+\vspace{12pt}
+- p25, the ``Confirm.'' and ``Confirm this.'' comments: Should be ``yes'' to both.
+
+\vspace{12pt}
+{\color{color02} Thank you.}
+
+\vspace{12pt}
+- p31, comment on recording the tally on chain: Yes, I believe it could be good 
+for performance, similar to recording the result of scripts.
+
+\vspace{12pt}
+{\color{color02} Thank you.  We will note this.}
+
+\vspace{12pt}
+\begin{center}
+\textbf{Typos/Minor:}
+\end{center}
+
+\baselineskip=12pt
+\leftskip=0pt
+{\color{color02} Thank you. We will apply these.}
+
+\vspace{12pt}
+- p4 ``There c'' (unfinished sentence)
+
+\vspace{12pt}
+- p9 ``nomrmal'' -\texttt{>} ``normal''
+
+\vspace{12pt}
+- p19 ``where the proposed...'' -\texttt{>} ``where the proposal...''
+
+\vspace{12pt}
+- p23 ``All update'' -\texttt{>} ``All updates''
+
+\vspace{12pt}
+- p27 Missing citation at ``...from the Shelley delegation design document...''
+
+\vspace{12pt}
+- p28 ``...refer to a vote credential that is must be...'' -\texttt{>} ``refer 
+to a vote credential that must be...''
+
+\vspace{12pt}
+- p28 Missing citation at ``...stake address references (see ?)...''
+
+\vspace{12pt}
+- p34 Missing citation in Section 9.1 after ``hard fork combinator''
+
+\vspace{12pt}
+- p35 Missing descriptions in table
+
+\vspace{12pt}
+- p36 ``prpgress'' -\texttt{>} ``progress''
+
+\newpage
+
+\end{document}

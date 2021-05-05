@@ -1,0 +1,103 @@
+Review of The Design of the Cardano Ledger with Automated Parameter
+Updates and Central Fund Transfers (April 30, 2021 version)
+
+Possible Current Issues:
+
+- Some questions about stake snapshot versus vote delegation: p19, Fig
+	2: In the figure, the snapshot of the stake distribution is concurrent
+	to the delegates voting. However, in the real execution the snapshot
+	must be before the voting, right? Or else how could pools that are
+	making blocks know whether a vote is valid and should be included in a
+	block? From p30, Fig 7 the snapshot is before voting, which makes
+	sense. However two questions: (1) Can delegations change during vote
+	casting time, or once voting period begins delegation changes do not
+	count? From Fig 7 it seems the latter is true. However, in Section 7.3
+	(Tallying Votes) it says “total vote… is the sum of all active
+	delegations at the point that the vote is tallied”, which feels it
+	implies the former.  (2) There may be edge cases to consider. For
+	example: Suppose at the time of the stake snapshot I have some
+	ada. However, after the snapshot I sell my ada. Should I still be able
+	to redelegate my vote?
+
+- p23, Option 3 (transaction identifier is used to identify the
+  proposal): This can be dangerous, since the location the proposal ends
+  up on chain is not fixed until it is part of common prefix. If there
+  are multiple concurrent proposals this can lead to people accidentally
+  voting for the wrong proposal (or worse, malicious pools can exploit
+  this for their advantage).
+
+- Section 8 and 9: It is not very clear right now whether multiple
+	protocol version changes can happen in a single epoch.  (1) Might
+	there be issues if this can happen?  (2) If it can happen, Section 9.2
+	which says “multiple update proposals…are enacted strictly in the
+	order that they were submitted” should also include “and enacted in
+	the order of the protocol version for protocol version changes”.
+
+
+Security concerns:
+
+- p14, “resolve conflicts between proposals automatically” - There
+should be a lot of care taken when going this route, since a voter can
+vote for one proposal A without knowledge about another proposal B. The
+two proposals might not even conflict, but just not synergise well. For
+example, if A reduces the max size of a block and B increases the max
+size of a transaction, then together they may cause undesirable
+consequences (e.g. too few transactions allowed in a block).  -> Perhaps
+a way to combat this is allow a proposal to declare a “conflict set”,
+e.g. a proposal A is not compatible with another proposal B, if B
+modifies parameter x.  -> Another thing to be careful about is that
+temporal orderings might not be reliable, since the order of blocks can
+be (at least slightly) influenced by malicious parties.
+
+- p15, Security Requirements: Another issue that would be good to
+address is that it seems stake pools have a big power over voting. For
+example, suppose there is a proposal that is desirable for normal users
+of the system, except many stake pools do not like this proposal. Then,
+it may be possible for these stake pools to ensure that this proposal is
+never put onto the blockchain, or at least delay this proposal until
+e.g. the vote deadline.  -> Of course, by the security assumption,
+honest stake pools will include even proposals they do not like, but
+this may not be the case for rational stake pools.
+
+- p18, Submitters: For decentralisation it is important to ensure that
+  submitters is not restricted to too few members.
+
+- p22, “Central Funds Transfer Body” - Since there is no UTxO with the
+  treasury/reserves, one must be careful about accounting to avoid
+  double-spending.
+
+- p23, comment on using multisig for submitter signing: Depending on the
+  size of the submitter group, one must be careful about the signatures
+  not exceeding max transaction size.
+
+
+Questions/Comments/Suggestions:
+
+- p12, section 1.4 - Here can also say that exchanges/proxy holders can
+  declare themselves as not holding any stake (their address should
+  clearly indicate this)
+
+- p21, the comment on submitters being trustworthy: Perhaps we can use a
+  similar method to choosing slot leaders to choose the submitters, so
+  we use the same assumption of honest majority of stake as the
+  cryptographic security.
+
+- p21, the comment on setting minimal thresholds for vote enactment”. I
+  agree there must be some kind of limit of how low a vote threshold can
+  be, or else there could be proposals that are enacted even if very few
+  people voted on it. An idea is to require that a proposal must *both*
+  (1) have a number of “yes” votes that is above the vote threshold, and
+  (2) have a number of “no” votes that is lower than the vote
+  threshold. This means a proposal with low threshold can be outvoted if
+  a problem is found with it, and also makes use of the “no” vote (by
+  Section 7.1, at the moment, there is no point of casting a “no” vote
+  as this is the same as not voting.
+
+- p23, comment on collision resistance: Yes, collision resistance is
+  required.
+
+- p25, the “Confirm.” and “Confirm this.” comments: Should be “yes” to
+  both.
+
+- p31, comment on recording the tally on chain: Yes, I believe it could
+  be good for performance, similar to recording the result of scripts.
