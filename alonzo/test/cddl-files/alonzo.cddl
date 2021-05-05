@@ -54,7 +54,7 @@ transaction_body =
  , ? 4 : [* certificate]
  , ? 5 : withdrawals
  , ? 6 : update
- , ? 7 : metadata_hash
+ , ? 7 : auxiliary_data_hash
  , ? 8 : uint                    ; validity interval start
  , ? 9 : mint
  , ? 11 : script_data_hash       ; New
@@ -176,7 +176,7 @@ relay =
   // multi_host_name
   ]
 
-pool_metadata = [url, metadata_hash]
+pool_metadata = [url, pool_metadata_hash]
 url = tstr .size (0..64)
 
 withdrawals = { * reward_account => coin }
@@ -330,4 +330,5 @@ pool_keyhash          = $hash28
 genesishash           = $hash28
 
 vrf_keyhash           = $hash32
-metadata_hash         = $hash32
+auxiliary_data_hash   = $hash32
+pool_metadata_hash    = $hash32
