@@ -53,24 +53,24 @@ distinct from the usual ``gas'' model~\cite{XX}.\TODO{And this one, please!} in 
   contract (eg. their total available funds).
 
   \item The exact total fee a transaction is paying is also specified in the transaction data.
-  For a transaction to be valid, this fee must cover the script-running resource budget at the current price.
+  For a transaction to be valid, this fee must cover the script-running resource budget at the current price,
+  as well as the size-based part of the required fee.
   If the fee is not sufficient to cover the resource budget specified (eg. if the resource price increased),
   the transaction is considered invalid and \emph{will not appear on the ledger (will not be included in a valid block)}.
   No fees will be collected in this case.
   This is in contrast with the gas model, where, if prices go up, a greater fee will be charged - up to
   the maximum available funds, even if they are not sufficient to cover the cost of the execution of the contract.
 
-  \item If a script validates having used less resources than the budget specified by the
-  transaction, the fee for the whole budget is still collected. Unlike the gas model, where
-  the exact fee is not known at the time of transaction submission.
+  \item The user specifies the UTxO entries containing funds sufficient to cover a percentage
+  (usually $100$ or more) of the total transaction fee.
+  These inputs are only collected \emph{in the case of script validation failure},
+  and are called \emph{collateral inputs}. In the case of 
+  script validation success, the fee specified in the fee field of the transaction is collected,
+  but the collateral is not.
 
-  \item The user specifies the UTxO entries containing funds intended to pay fees.
-  The total amount of funds in entries marked for-fees must cover the specified transaction fee.
-  The UTxO entries may, however, contain more funds than the fee amount. In the case that a script carried by a transaction fails
-  to validate, a larger fee (than the one specified in the transaction) may be collected.
-  The amount of the fee collected is the total funds in all the UTxOs marked for fee payment.
-  This scheme is similar to the upper bound on the transaction fee that is used by the gas model,
-  however, it only applies in the case of script failure in our model.
+  This scheme is different from the gas model in that the exact payment collected in
+  both the case of script validation success and validation failure is known ahead of time,
+  though the collected fees are differnent in the two cases.
 \end{itemize}
 
 Another important point to make about both native and non-native scripts on Cardano is that
