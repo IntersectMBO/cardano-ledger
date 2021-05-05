@@ -175,7 +175,7 @@ scriptsValidateTransition = do
     Right sLst ->
       evalScripts @era tx sLst
         ?!# ValidationTagMismatch (getField @"isValidating" tx)
-    Left info -> failBecause (ShouldNeverHappenScriptInputsNotFound info)
+    Left info -> failBecause (CollectErrors info)
   pup' <-
     trans @(Core.EraRule "PPUP" era) $
       TRC
@@ -218,7 +218,7 @@ scriptsNotValidateTransition = do
     Right sLst ->
       not (evalScripts @era tx sLst)
         ?!# ValidationTagMismatch (getField @"isValidating" tx)
-    Left info -> failBecause (ShouldNeverHappenScriptInputsNotFound info)
+    Left info -> failBecause (CollectErrors info)
   getField @"isValidating" tx == IsValidating False
     ?!# ValidationTagMismatch (getField @"isValidating" tx)
   pure $
@@ -237,7 +237,7 @@ data UtxosPredicateFailure era
     --         consequences of not detecting this means scripts get dropped, so things
     --         might validate that shouldn't. So we double check in the function
     --         collectTwoPhaseScriptInputs, it should find data for every Script.
-    ShouldNeverHappenScriptInputsNotFound [CollectError (Crypto era)]
+    CollectErrors [CollectError (Crypto era)]
   | UpdateFailure (PredicateFailure (Core.EraRule "PPUP" era))
   deriving
     (Generic)
@@ -249,8 +249,8 @@ instance
   ToCBOR (UtxosPredicateFailure era)
   where
   toCBOR (ValidationTagMismatch v) = encode (Sum ValidationTagMismatch 0 !> To v)
-  toCBOR (ShouldNeverHappenScriptInputsNotFound cs) =
-    encode (Sum (ShouldNeverHappenScriptInputsNotFound @era) 1 !> To cs)
+  toCBOR (CollectErrors cs) =
+    encode (Sum (CollectErrors @era) 1 !> To cs)
   toCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 2 !> To pf)
 
 instance
@@ -262,7 +262,7 @@ instance
   fromCBOR = decode (Summands "UtxosPredicateFailure" dec)
     where
       dec 0 = SumD ValidationTagMismatch <! From
-      dec 1 = SumD (ShouldNeverHappenScriptInputsNotFound @era) <! From
+      dec 1 = SumD (CollectErrors @era) <! From
       dec 2 = SumD UpdateFailure <! From
       dec n = Invalid n
 
@@ -328,7 +328,7 @@ constructValidated ::
   m (UTxOState era, ValidatedTx era)
 constructValidated globals env@(UtxoEnv _ pp _ _) st tx =
   case collectTwoPhaseScriptInputs ei sysS pp tx utxo of
-    Left errs -> throwError [ShouldNeverHappenScriptInputsNotFound errs]
+    Left errs -> throwError [CollectErrors errs]
     Right sLst ->
       let scriptEvalResult = evalScripts @era tx sLst
           vTx =
