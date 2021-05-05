@@ -140,7 +140,8 @@ example1UTxO =
         (TxIn genesisId 15, UTXOW.collateralOutput),
         (TxIn genesisId 6, UTXOW.someOutput),
         (TxIn genesisId 17, UTXOW.collateralOutput),
-        (TxIn genesisId 8, UTXOW.someOutput)
+        (TxIn genesisId 8, UTXOW.someOutput),
+        (TxIn genesisId 100, UTXOW.timelockOut)
       ]
 
 example1UtxoSt :: UTxOState A
