@@ -10,11 +10,17 @@ the proposal, and may even change the set of parameters that can be updated.
 
 \subsection{Protocol version changes (``Hard Forks'')}
 
-Protocol version upgrades never decrement the protocol version.  They must increment either the major or minor version.  If the major version is
-incremented, then the minor version may be set to any required value (usually this will be zero).  Software upgrades must accept all legitimate prior protocol versions.
+Protocol version upgrades never decrement the protocol version.  They must increment either the current major or the current minor version by one.
+If the major version is incremented, then the minor version must be set to zero.
+% may be set to any required value (usually this will be zero).
+Software upgrades must accept all prior protocol versions (both major and minor) that have been successfully enacted.
 When a protocol version proposal is enacted, then all nodes will synchronise to the new protocol version using the ``hard fork combinator''~\cite{hardfork-combinator}.
 Block production and verification will continue at the start of the next epoch using the rules that are in force for the new protocol version.
-The only possible conflict is where two or more properly approved and endorsed proposals increment both the major and the minor version number in the same epoch.  In this case, the major version change will always succeed, regardless of the order in which they are enacted.
+
+\paragraph{Major version changes override minor version changes.}
+Under these rules, the only possible conflict is where one or more properly approved and endorsed proposal increments the major version and another increments the
+minor version in the same epoch.  In this case, the major version change will always succeed, regardless of the order in which the proposals are enacted: if the major version change is enacted first,
+then any subsequent minor version change will be invalidated.  Conversely if the minor version upgrade is enacted first, then it will be overridden by the subsequent major version upgrade.
 
 \subsection{Prioritisation of Enactment}
 

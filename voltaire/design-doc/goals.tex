@@ -130,7 +130,7 @@ On-chain requirements may be split into mandatory and optional requirements.
 \item
   allow multiple proposals to be in-flight and enacted in a single epoch;
 \item
-  resolve conflicts between proposals automatically (e.g. using temporal ordering, or some other consistent and predictable mechanism);
+  resolve conflicts between proposals automatically (e.g. using temporal ordering\footnote{Taking into account that this can only be absolutely determined once the chain becomes stable}, or some other consistent and predictable mechanism)\footnote{Note: this assumes that voters are aware of all active proposals, and have sufficient technical knowledge to resolve conflicts themselves.  Although it would be possible for a proposal to explicitly declare a conflict set, this could not be relied on to give an accurate assessment, and on-chain detection of potential conflicts could be complex and inefficient. It might, however, be possible for a suitable UI to present potentially conflicting proposals to voters, with reasons, and allow them to take the final decision.};
 \item
   (perhaps, allow different thresholds to be set for different kinds of proposal);
 \item
@@ -149,6 +149,8 @@ proposals that are in the general interest.   This attack is mitigated by:
   \begin{inparaenum}
   \item
     requiring endorsement of protocol changes by stake pools, so that multiple distinct stakeholder groups are required to enact a proposal;
+  \item
+    ensuring that voter and stake pool groups are distinct, and there is independent delegation for voting and block production;
   \item
     setting high thresholds for vote acceptance, and basing these thresholds on active participation;
   \item

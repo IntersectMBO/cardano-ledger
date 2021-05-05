@@ -82,8 +82,12 @@ file that fully describes the proposal. Protocol version upgrades will also requ
 
 Submitters are permitted to submit proposals on-chain.  Each proposal must be signed by a quorum of submitters, who verify the submitted
 proposal, checking that it is in the correct format, conforms to the original proposal, and meets other process requirements.
-Submitters are appointed by electors.  Depending on the governance design, the submitter group might be restricted to a few members,
+Submitters are appointed by electors.  Depending on the governance design, the submitter group might % be restricted to a few members,
 be an elected or appointed group, be limited by ada holding, or be limited to endorsers, delegates or another group.
+It is important for dececentralisation that the group is not restricted to too few members.
+However, to avoid overwhelming voters by ``flooding'' the system with voting choices, it is also important to limit the number of proposals that can
+be submitted, which is most easily done by limiting the number of submitters.  This implies that the required quorum should be a significant percentage
+of the submitter group.
 
 \subsection{Delegates (On-Chain)}
 

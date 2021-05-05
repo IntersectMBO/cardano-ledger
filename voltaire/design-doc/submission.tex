@@ -105,6 +105,8 @@ be authorised by different groups.
 Errors in transfers between reserves and treasury, or vice-versa, may be corrected by constructing a reverse transfer that cancels the original error.
 This cannot happen for transfers to addresses.  Any errors in such transfers, must be corrected by the owner of the address, who must either explicitly transfer
 the funds to reserves or treasury, or else transfer the funds to a holding account. \khcomment{There is no way to transfer back to treasury/reserves at the moment!}
+Note that ledger rules ensure that the treasury and reserves may never decrease below zero (even temporarily), so that a ``double-spending attack'' is not possible.
+\khcomment{Jared to confirm.}
 
 \subsection{Proposal Signing}
 
@@ -113,6 +115,7 @@ policy that conforms to the existing \emph{multi-sig} transaction mechanism.  Th
 % where the quorum is a protocol parameter
 The signing policy is then provided as an updatable protocol parameter.  This gives a great deal of flexibility to define and change submission policies.
 To reduce the possibility of abuse, the policy must comply with a minimum quorum size, which should be hard-wired into the protocol.
+Note that limits on transaction size will limit the maximum quorum size (currently to around 500 signatories).
 
 
 \khcomment{The obvious approach is to use transaction witnessing and a multi-sig approach, as described here.  That implies a change to the submission process, and also that
