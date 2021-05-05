@@ -11,7 +11,6 @@
 module Cardano.Ledger.Alonzo.PlutusScriptApi
   ( -- Figure 8
     getData,
-    collectNNScriptInputs,
     evalScripts,
     -- Figure 12
     scriptsNeeded,
@@ -48,7 +47,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
 import Data.Coders
 import Data.List (foldl')
 import qualified Data.Map as Map
-import Data.Maybe (isJust, maybeToList)
+import Data.Maybe (isJust)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -100,32 +99,6 @@ getData tx (UTxO m) sp = case sp of
             case Map.lookup hash (txdats' (getField @"wits" tx)) of
               Nothing -> []
               Just d -> [d]
-
--- | Collect the inputs (Data, execution budget, costModel) for all twoPhase scripts.
-collectNNScriptInputs ::
-  ( Era era,
-    Core.Script era ~ AlonzoScript.Script era,
-    Core.TxOut era ~ Alonzo.TxOut era,
-    Core.TxBody era ~ Alonzo.TxBody era,
-    Core.Value era ~ Mary.Value (Crypto era),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
-  ) =>
-  Core.PParams era ->
-  ValidatedTx era ->
-  UTxO era ->
-  [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
-collectNNScriptInputs pp tx utxo =
-  let txinfo = transTx utxo tx
-   in [ (script, d : (valContext txinfo sp : getData tx utxo sp), eu, cost)
-        | (sp, scripthash) <- scriptsNeeded utxo tx, -- TODO, IN specification ORDER IS WRONG
-          (d, eu) <- maybeToList (indexedRdmrs tx sp),
-          script <- maybeToList (Map.lookup scripthash (txscripts' (getField @"wits" tx))),
-          cost <- maybeToList (Map.lookup PlutusV1 (getField @"_costmdls" pp))
-      ]
 
 -- ========================================================================
 
@@ -189,7 +162,8 @@ collectTwoPhaseScriptInputs pp tx utxo =
       case Map.lookup hash (txscripts' (getField @"wits" tx)) of
         Just script -> Right script
         Nothing -> Left (NoWitness hash)
-    apply cost (sp, d, eu) script = (script, d : (valContext txinfo sp) : (getData tx utxo sp), eu, cost)
+    apply cost (sp, d, eu) script =
+      (script, getData tx utxo sp ++ (d : [valContext txinfo sp]), eu, cost)
 
 -- | Merge two lists (either of which may have failures, i.e. (Left _)), collect all the failures
 --   but if there are none, use 'f' to construct a success.

@@ -61,6 +61,7 @@ test-suite cardano-ledger-alonzo-test
   other-modules:
     Test.Cardano.Ledger.Alonzo.Golden
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
+    Test.Cardano.Ledger.Alonzo.Examples.Bbody
     Test.Cardano.Ledger.Alonzo.Examples.Utxow
     Test.Cardano.Ledger.Alonzo.Translation
     Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
@@ -68,6 +69,7 @@ test-suite cardano-ledger-alonzo-test
     base16-bytestring,
     bytestring,
     cardano-binary,
+    cardano-crypto-class,
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-shelley-ma,

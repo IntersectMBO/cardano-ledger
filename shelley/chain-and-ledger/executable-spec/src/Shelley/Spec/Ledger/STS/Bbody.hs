@@ -76,6 +76,10 @@ deriving stock instance
   TransLedgerState Show era =>
   Show (BbodyState era)
 
+deriving stock instance
+  TransLedgerState Eq era =>
+  Eq (BbodyState era)
+
 data BbodyEnv era = BbodyEnv
   { bbodyPp :: Core.PParams era,
     bbodyAccount :: AccountState
