@@ -14,6 +14,7 @@ Protocol version upgrades never decrement the protocol version.  They must incre
 incremented, then the minor version may be set to any required value (usually this will be zero).  Software upgrades must accept all legitimate prior protocol versions.
 When a protocol version proposal is enacted, then all nodes will synchronise to the new protocol version using the ``hard fork combinator''~\cite{hardfork-combinator}.
 Block production and verification will continue at the start of the next epoch using the rules that are in force for the new protocol version.
+The only possible conflict is where two or more properly approved and endorsed proposals increment both the major and the minor version number in the same epoch.  In this case, the major version change will always succeed, regardless of the order in which they are enacted.
 
 \subsection{Prioritisation of Enactment}
 

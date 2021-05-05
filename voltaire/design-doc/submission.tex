@@ -49,7 +49,7 @@ The proposal submitter must belong to the correct submitter group.  \khcomment{D
 
 The body of the proposal is specific to the proposal type.
 
-\newpage
+% \newpage
 \paragraph{Parameter Update Body.}  The proposal format is identical to that used for Shelley/Allegra/Mary/Alonzo. \TODO{Check the concrete format.}  Multiple parameters may be changed in a single proposal if required.
 Parameters are checked for validity on enactment, rather than on submission, so it is possible to submit a proposal that will change parameters following a future protocol version upgrade, for example.
 
@@ -135,17 +135,22 @@ There are three obvious ways to construct an identifier.
 \begin{description}
 \item
   [Option 1.]
-  An explicit identifier that is assigned manually, and is included in the proposal submission.  This could be tied, if desired, directly to the off-chain proposal/discussion.
+  An explicit identifier that is included in the proposal submission.  This could be tied, if desired, directly to the off-chain proposal/discussion.
   Care needs to be taken to ensure uniqueness of any manually assigned proposal identifier.  This is shown above as the \texttt{proposal} field.
 \item
   [Option 2.]
   The identifier is constructed by hashing the submitted proposal.  This allows proposals to be identified before submission as well as during voting and enactment.  This property may be
-  useful to connect off-chain and on-chain mechanisms for example.  \emph{Collision resistance} is required for the hash. \khcomment{Confirm this.}
+  useful to connect off-chain and on-chain mechanisms for example.  \emph{Collision resistance} is required for the hash. % \khcomment{Confirm this.}  Confirmed.
 \item
   [Option 3.]
   The transaction identifier is used to identify the proposal.  This has the advantage that it is already available on-chain, and is guaranteed to be unique.  However, it cannot be
-  referred to prior to on-chain proposal submission.
+  referred to prior to on-chain proposal submission.  Moreover, the transaction identifier cannot be relied on until the chain is stable, potentially creating confusion/an opportunity for attack.  \emph{Security cincerns therefore rule this option out.}
 \end{description}
+
+It is proposed to use Option 2, but to also include an explicit reference.  This allows
+the formal proposal to be linked to off-chain or on-chain discussions and/or votes.
+The reference does necessarily not need to be unique -- a single discussion or outline vote could
+lead to multiple on-chain proposals.
 
 \subsection{Extension to Differentiated Submitter Groups}
 
