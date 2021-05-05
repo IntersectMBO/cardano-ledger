@@ -14,6 +14,7 @@
 
 module Cardano.Ledger.Alonzo.Rules.Bbody
   ( AlonzoBBODY,
+    AlonzoBbodyPredFail (..),
     bbodyTransition,
   )
 where
