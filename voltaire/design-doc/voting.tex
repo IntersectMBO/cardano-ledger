@@ -11,6 +11,7 @@ Each \emph{registered} delegate (see Section~\ref{sect:registration}) may vote e
 where the vote is tallied.  Any changes after that point in time are not considered.  If a delegate chooses not to vote on a proposal, that is considered to be
 a vote against the proposal.  Votes are submitted in the form of an on-chain transaction, and may incur fees.  The transaction needs to include:
 
+\begin{center}
 \begin{tabular}{||l|p{3in}|l||}
   \hline\hline
   proposal id & The unique identifier for the proposal, derived from the submission & 32 bytes
@@ -21,6 +22,7 @@ a vote against the proposal.  Votes are submitted in the form of an on-chain tra
   \\\hline
   \hline
 \end{tabular}
+\end{center}
 
 This ensures that there is a public and traceable record of each delegate's actual vote.
 
@@ -30,6 +32,9 @@ This ensures that there is a public and traceable record of each delegate's actu
 Stake snapshots are taken at the start of each epoch.  These snapshots are currently used only for block production purposes, but they will be reused here for governance purposes.
 The stake snapshot that is taken at the start of an epoch will be used for all delegated votes that are tallied at the end of the epoch.
 The same stake snapshot that is used for block production is also used for endorsement.
+As with block production, using fixed snapshots means that there will be a
+slight delay before a change in stake will be effective for voting purposes.
+However, this brings major efficiency advantages (it is not necessary to calculate specific snapshots per vote).
 
 \begin{figure}
   \includegraphics[trim=0 150 0 80,clip,width=\textwidth]{Stake-Snapshots}
