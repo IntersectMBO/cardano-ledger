@@ -21,12 +21,11 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx
   ( ValidatedTx (..),
-    isTwoPhaseScriptAddress,
     minfee,
     txbody,
     wits',
   )
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx, txins)
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
 import Cardano.Ledger.Alonzo.TxBody
   ( TxOut (..),
     txnetworkid',
@@ -76,7 +75,7 @@ import GHC.Records
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address
-  ( Addr (AddrBootstrap),
+  ( Addr (..),
     RewardAcnt,
     bootstrapAddressAttrsSize,
     getNetwork,
@@ -90,6 +89,7 @@ import Shelley.Spec.Ledger.BaseTypes
     networkId,
     systemStart,
   )
+import Shelley.Spec.Ledger.Credential (Credential (..))
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley
 import Shelley.Spec.Ledger.Tx (TxIn)
@@ -186,7 +186,7 @@ data UtxoPredicateFailure era
   | -- | list of supplied bad transaction outputs
     OutputTooBigUTxO
       ![Core.TxOut era]
-  | FeeNotBalancedUTxO
+  | InsufficientCollateral
       !Coin
       -- ^ balance computed
       !Coin
@@ -200,13 +200,17 @@ data UtxoPredicateFailure era
       !ExUnits
       -- ^ EXUnits supplied
   | -- | The inputs marked for use as fees contain non-ADA tokens
-    FeeContainsNonADA !(Core.Value era)
+    CollateralContainsNonADA !(Core.Value era)
   | -- | Wrong Network ID in body
     WrongNetworkInTxBody
       !Network -- Actual Network ID
       !Network -- Network ID in transaction body
   | OutsideForecast
       !SlotNo -- slot number outside consensus forecast range
+  | -- | There are too many collateral inputs
+    TooManyCollateralInputs
+      !Natural -- Max allowed collateral inputs
+      !Natural -- Number of collateral inputs
   deriving (Generic)
 
 deriving stock instance
@@ -232,11 +236,19 @@ instance
   ) =>
   NoThunks (UtxoPredicateFailure era)
 
+-- | Returns true for VKey locked addresses, and false for any kind of
+-- script-locked address.
+isKeyHashAddr :: Addr crypto -> Bool
+isKeyHashAddr (AddrBootstrap _) = True
+isKeyHashAddr (Addr _ (KeyHashObj _) _) = True
+isKeyHashAddr _ = False
+
 -- | feesOK is a predicate with several parts. Some parts only apply in special circumstances.
 --   1) The fee paid is >= the minimum fee
 --   2) If the total ExUnits are 0 in both Memory and Steps, no further part needs to be checked.
---   3) The fee inputs do not belong to non-native script addresses
---   4) The fee inputs are sufficient to cover the fee marked in the transaction
+--   3) The collateral consists only of VKey addresses
+--   4) The collateral is sufficient to cover the appropriate percentage of the
+--      fee marked in the transaction
 --   5) The fee inputs do not contain any non-ADA part
 --   As a TransitionRule it will return (), and raise an error (rather than
 --   return) if any of the required parts are False.
@@ -247,12 +259,13 @@ feesOK ::
     Core.TxOut era ~ Alonzo.TxOut era, -- balance requires this,
     Era.TxInBlock era ~ Alonzo.ValidatedTx era,
     HasField
-      "txinputs_fee" -- to get inputs to pay the fees
+      "collateral" -- to get inputs to pay the fees
       (Core.TxBody era)
       (Set (TxIn (Crypto era))),
     HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
+    HasField "_collateralPercentage" (Core.PParams era) Natural,
     HasField "address" (Alonzo.TxOut era) (Addr (Crypto era))
   ) =>
   Core.PParams era ->
@@ -262,11 +275,12 @@ feesOK ::
 feesOK pp tx (UTxO m) = do
   let txb = getField @"body" tx
       theFee = getField @"txfee" txb -- Coin supplied to pay fees
-      fees = getField @"txinputs_fee" txb -- Inputs allocated to pay theFee
-      utxoFees = eval (fees ◁ m) -- restrict Utxo to those inputs we use to pay fees.
-      bal = balance @era (UTxO utxoFees)
-      nonNative txout = isTwoPhaseScriptAddress @era tx (getField @"address" txout)
+      collateral = getField @"collateral" txb -- Inputs allocated to pay theFee
+      utxoCollateral = eval (collateral ◁ m) -- restrict Utxo to those inputs we use to pay fees.
+      bal = balance @era (UTxO utxoCollateral)
+      vKeyLocked txout = isKeyHashAddr (getField @"address" txout)
       minimumFee = minfee @era pp tx
+      collPerc = getField @"_collateralPercentage" pp
   -- Part 1
   (minimumFee <= theFee) ?! FeeTooSmallUTxO minimumFee theFee
   -- Part 2
@@ -274,11 +288,14 @@ feesOK pp tx (UTxO m) = do
     then pure ()
     else do
       -- Part 3
-      not (any nonNative utxoFees) ?! ScriptsNotPaidUTxO (UTxO (Map.filter nonNative utxoFees))
+      all vKeyLocked utxoCollateral
+        ?! ScriptsNotPaidUTxO
+          (UTxO (Map.filter (not . vKeyLocked) utxoCollateral))
       -- Part 4
-      (Val.coin bal >= theFee) ?! FeeNotBalancedUTxO (Val.coin bal) theFee
+      (Val.scale (100 :: Natural) (Val.coin bal) >= Val.scale collPerc theFee)
+        ?! InsufficientCollateral (Val.coin bal) theFee
       -- Part 5
-      Val.inject (Val.coin bal) == bal ?! FeeContainsNonADA bal
+      Val.inject (Val.coin bal) == bal ?! CollateralContainsNonADA bal
       pure ()
 
 -- ================================================================
@@ -304,6 +321,8 @@ utxoTransition ::
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxValSize" (Core.PParams era) Natural,
+    HasField "_collateralPercentage" (Core.PParams era) Natural,
+    HasField "_maxCollateralInputs" (Core.PParams era) Natural,
     -- We fix Core.Tx, Core.Value, Core.TxBody, and Core.TxOut
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Alonzo.Value (Crypto era),
@@ -317,7 +336,11 @@ utxoTransition = do
   let Shelley.UTxOState utxo _deposits _fees _ppup = u
 
   let txb = txbody tx
-  let vi@(ValidityInterval _ i_f) = getField @"vldt" txb
+      vi@(ValidityInterval _ i_f) = getField @"vldt" txb
+      inputsAndCollateral =
+        Set.union
+          (getField @"inputs" txb)
+          (getField @"collateral" txb)
 
   inInterval slot vi
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
@@ -330,11 +353,11 @@ utxoTransition = do
       Left _ -> failBecause (OutsideForecast ifj) -- error translating slot
       Right _ -> pure ()
 
-  not (Set.null (Alonzo.txins @era txb)) ?!# InputSetEmptyUTxO
+  not (Set.null (getField @"inputs" txb)) ?!# InputSetEmptyUTxO
 
   feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
-  eval (Alonzo.txins @era txb ⊆ dom utxo)
-    ?! BadInputsUTxO (eval (Alonzo.txins @era txb ➖ dom utxo))
+  eval (inputsAndCollateral ⊆ dom utxo)
+    ?! BadInputsUTxO (eval (inputsAndCollateral ➖ dom utxo))
 
   let consumed_ = consumed @era pp utxo txb
       produced_ = Shelley.produced @era pp stakepools txb
@@ -409,6 +432,10 @@ utxoTransition = do
           outputs
   null outputsAttrsTooBig ?!# OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
+  let maxColl = getField @"_maxCollateralInputs" pp
+      numColl = fromIntegral . Set.size $ getField @"collateral" txb
+  numColl <= maxColl ?! TooManyCollateralInputs maxColl numColl
+
   trans @(Core.EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 
 --------------------------------------------------------------------------------
@@ -436,6 +463,8 @@ instance
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxValSize" (Core.PParams era) Natural,
+    HasField "_collateralPercentage" (Core.PParams era) Natural,
+    HasField "_maxCollateralInputs" (Core.PParams era) Natural,
     -- We fix Core.Value, Core.TxBody, and Core.TxOut
     Core.Value era ~ Alonzo.Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
@@ -517,18 +546,20 @@ encFail (TriesToForgeADA) =
   Sum TriesToForgeADA 11
 encFail (OutputTooBigUTxO outs) =
   Sum (OutputTooBigUTxO @era) 12 !> E encodeFoldable outs
-encFail (FeeNotBalancedUTxO a b) =
-  Sum FeeNotBalancedUTxO 13 !> To a !> To b
+encFail (InsufficientCollateral a b) =
+  Sum InsufficientCollateral 13 !> To a !> To b
 encFail (ScriptsNotPaidUTxO a) =
   Sum ScriptsNotPaidUTxO 14 !> To a
 encFail (ExUnitsTooBigUTxO a b) =
   Sum ExUnitsTooBigUTxO 15 !> To a !> To b
-encFail (FeeContainsNonADA a) =
-  Sum FeeContainsNonADA 16 !> To a
+encFail (CollateralContainsNonADA a) =
+  Sum CollateralContainsNonADA 16 !> To a
 encFail (WrongNetworkInTxBody a b) =
   Sum WrongNetworkInTxBody 17 !> To a !> To b
 encFail (OutsideForecast a) =
   Sum OutsideForecast 18 !> To a
+encFail (TooManyCollateralInputs a b) =
+  Sum TooManyCollateralInputs 19 !> To a !> To b
 
 decFail ::
   ( Era era,
@@ -551,12 +582,13 @@ decFail 9 = SumD (WrongNetworkWithdrawal) <! From <! D (decodeSet fromCBOR)
 decFail 10 = SumD (OutputBootAddrAttrsTooBig) <! D (decodeList fromCBOR)
 decFail 11 = SumD TriesToForgeADA
 decFail 12 = SumD (OutputTooBigUTxO) <! D (decodeList fromCBOR)
-decFail 13 = SumD FeeNotBalancedUTxO <! From <! From
+decFail 13 = SumD InsufficientCollateral <! From <! From
 decFail 14 = SumD ScriptsNotPaidUTxO <! From
 decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From
-decFail 16 = SumD FeeContainsNonADA <! From
+decFail 16 = SumD CollateralContainsNonADA <! From
 decFail 17 = SumD WrongNetworkInTxBody <! From <! From
 decFail 18 = SumD OutsideForecast <! From
+decFail 19 = SumD TooManyCollateralInputs <! From <! From
 decFail n = Invalid n
 
 instance

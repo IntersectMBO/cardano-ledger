@@ -26,7 +26,6 @@ import Cardano.Ledger.Alonzo.Tx
     IsValidating (..),
     ValidatedTx (..),
     txbody,
-    txins,
     txouts,
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
@@ -121,7 +120,7 @@ utxosTransition ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
   ) =>
   TransitionRule (UTXOS era)
@@ -149,7 +148,6 @@ scriptsValidateTransition ::
     Core.Value era ~ Value (Crypto era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
@@ -184,7 +182,7 @@ scriptsValidateTransition = do
         (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ getField @"update" txb)
   pure $
     UTxOState
-      { _utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts @era txb),
+      { _utxo = eval ((getField @"inputs" txb ⋪ utxo) ∪ txouts @era txb),
         _deposited = deposited <> depositChange,
         _fees = fees <> getField @"txfee" txb,
         _ppups = pup'
@@ -205,7 +203,7 @@ scriptsNotValidateTransition ::
     Core.TxBody era ~ Alonzo.TxBody era,
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Value (Crypto era),
-    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin
@@ -225,8 +223,8 @@ scriptsNotValidateTransition = do
     ?!# ValidationTagMismatch (getField @"isValidating" tx)
   pure $
     us
-      { _utxo = eval (getField @"txinputs_fee" txb ⋪ utxo),
-        _fees = fees <> Val.coin (balance @era (eval (getField @"txinputs_fee" txb ◁ utxo)))
+      { _utxo = eval (getField @"collateral" txb ⋪ utxo),
+        _fees = fees <> Val.coin (balance @era (eval (getField @"collateral" txb ◁ utxo)))
       }
 
 data UtxosPredicateFailure era
@@ -321,7 +319,6 @@ constructValidated ::
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   Globals ->

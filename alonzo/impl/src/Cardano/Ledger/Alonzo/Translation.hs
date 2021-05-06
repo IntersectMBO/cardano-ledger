@@ -69,7 +69,9 @@ data AlonzoGenesis = AlonzoGenesis
     prices :: Prices,
     maxTxExUnits :: ExUnits,
     maxBlockExUnits :: ExUnits,
-    maxValSize :: Natural
+    maxValSize :: Natural,
+    collateralPercentage :: Natural,
+    maxCollateralInputs :: Natural
   }
   deriving (Eq)
 
@@ -231,7 +233,9 @@ translatePParams ctx pp =
       _prices = prices ctx,
       _maxTxExUnits = maxTxExUnits ctx,
       _maxBlockExUnits = maxBlockExUnits ctx,
-      _maxValSize = maxValSize ctx
+      _maxValSize = maxValSize ctx,
+      _collateralPercentage = collateralPercentage ctx,
+      _maxCollateralInputs = maxCollateralInputs ctx
     }
 
 translatePParamsUpdate ::
@@ -260,5 +264,7 @@ translatePParamsUpdate pp =
       _prices = SNothing,
       _maxTxExUnits = SNothing,
       _maxBlockExUnits = SNothing,
-      _maxValSize = SNothing
+      _maxValSize = SNothing,
+      _collateralPercentage = SNothing,
+      _maxCollateralInputs = SNothing
     }
