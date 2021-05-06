@@ -8,7 +8,7 @@ ensure that there are always enough submitters in existence.}\pkcomment{We shoul
 quorum may be a protocol parameter.}\pkcomment{with an enforced sensible range in $(0,1)$}\khcomment{Yes.  I was expecting an integer value, though.  Consider the edge case where there are only a few submitters, or awkward cases where the number of submitters changes. Do you round up or down?}  No fee is charged for proposal
 submission.\khcomment{This may need to be discussed.}  A submitter may submit
 any number of proposals in a single epoch.
-\khcomment{This assumes that submitters are trustworthy and will not collectively spam the blockchain.}
+\khcomment{This assumes that submitters are trustworthy and will not collectively spam the blockchain.  One possible solution is to use percentage of voting stake to choose the composition of this group as a subset of the delegator group.  Doing so removes one balance in the system, however (delegates propose the business that they will vote on, so potentially creating a power bloc).}
 \pkcomment{Depending on how we accumulate the counter signatures (including all of them in the transaction with the proposal, which requires off chain coordination between the submitters, or collecting them in susequent transactions) it might also be possible for a single submitter to spam the chain}
 \khcomment{The obvious approach is to use multi-sig transactions, or similar.  That would prevent multiple proposals from spamming the chain [you might be able to resubmit the same proposal, of course].  Requiring multiple transactions would be more problematic.}
 
