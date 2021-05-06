@@ -86,3 +86,29 @@ Likewise, the fifth option would allow proposals to pass with very little positi
 achieved with just over 5\% of the delegated stake).
 The Priviledge project has developed further metrics that could be used to set the thresholds based on e.g. the proposal type and the
 impact on the system.
+
+\subsubsection*{Low Thresholds and Explicit Negative Voting}
+
+One option is to require both positive and negative thresholds for a vote.  This might allow lower voting thresholds.
+This approach has a number of disadvantages, however:
+
+\begin{itemize}
+\item
+  The thresholds could not, anyway, be lowered significantly (or perhaps at all) without permitting unrepresentative outcomes in terms of
+  favourable stake -- lower thresholds could only be accepted for certain kinds of proposal -- setting thresholds below 50\% would be hazardous, for example;
+\item
+  Delegates who control other delegation are already socially motivated to vote.  Delegators will remove their delegation from delegates who consistently fail to vote,
+  and may require explanations for any proposal where no vote is given.
+\item
+  It imposes a per-vote transaction cost on normal ada holders who have chosen to register as their own delegates, and this may not be sustainable for small holders.
+  This then works to reduce the number of ada holders who choose to register as delegates, consequently increasing centralisation\footnote{This assumes there is no compensation or incentive to encourage voting.}
+  (Conversely, normal ada holders who do register as delegates must be positively in favour of/against a proposal by paying the requisite fee -- this acts as a deliberate drag
+  to ensure some conservativism/stability in the system).
+\item
+  It adds complication and opportunities for gaming (eg with careful setting of thresholds);
+\item
+  Votes are registered on chain.  It may be socially unacceptable for a normal ada holder to vote explicitly against a proposal.  This allows an individual to have a ``silent'' negative vote.
+\item
+  Care needs to be taken over increasing execution costs. Tallies are potentially a critical point of performance failure, and this could perhaps double
+  the cost for each tally.  High tally costs could even mean that some proposals were rejected (if they were not completed by the required deadlines, for example).
+\end{itemize}
