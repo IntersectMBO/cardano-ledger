@@ -50,7 +50,7 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS
 import Data.Default.Class (def)
-import Data.Functor.Identity
+import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import qualified Data.Sequence.Strict as StrictSeq

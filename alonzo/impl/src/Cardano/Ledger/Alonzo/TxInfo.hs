@@ -34,13 +34,13 @@ import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val (Val (..))
-import Cardano.Slotting.EpochInfo
+import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (deepseq)
 import Data.ByteString as BS (ByteString, length)
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
-import Data.Functor.Identity
+import Data.Functor.Identity (Identity, runIdentity)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set

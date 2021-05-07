@@ -44,10 +44,10 @@ import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
-import Cardano.Slotting.EpochInfo
+import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Coders
-import Data.Functor.Identity
+import Data.Functor.Identity (Identity)
 import Data.List (foldl')
 import qualified Data.Map as Map
 import Data.Maybe (isJust)
