@@ -1,11 +1,17 @@
 \section{Comparison with the approach taken by the Priviledge Project}
 \label{sect:priviledge}
 
-The EU Priviledge project aims to produce a blockchain-agnostic fully decentralised voting system.
+The EU PriviLedge project aims to produce a blockchain-agnostic fully decentralised voting system.
 Its design is described in~\ref{Priviledge}, and has been used to inform the design that is described here.
-The PUP design limits itself to on-chain submission, voting and enactment of proposals, using an alternative mechanism
-for ideation, dicussion, and general voting.  In contrast, the Priviledge design also covers on-chain ideation and voting.
-The key differences between the PUP mechanism and the one that has been produced for the EU Priviledge project are:
+The PUP design limits itself to on-chain submission, voting and enactment of proposals as they need to be
+adapted for use in the Cardano blockchain, leaving the ideation, discussion, and general voting phases open to off-chain solutions.
+In contrast, the Priviledge design also covers on-chain ideation and voting.
+As already described, it would be possible to provide on-chain ideation and voting phases in future, adapted from the PriviLedge
+mechanisms to take into account the specific Cardano requirements in terms of functionality, efficiency and security.
+
+\subsection{Key Differences between the PUP and PriviLedge Mechanisms}
+
+The key differences between the PUP mechanism and the one that has been produced for the EU PriviLedge project are shown in the table below.
 
 \begin{tabular}{||p{3in}|p{3in}||}
   \hline\hline
@@ -24,6 +30,13 @@ The key differences between the PUP mechanism and the one that has been produced
   Allows votes to be removed prior to tally & Allows votes and delegations to be changed prior to tally (equivalent effect) \\\hline
   Allows multiple voting rounds for each proposal & Allows only one on-chain voting round for a proposal \\\hline
   Allows  vote stake snapshots to be taken at arbitrary points & Takes vote snapshots at fixed points \\\hline
+  \hline
+\end{tabular}
+
+\begin{tabular}{||p{3in}|p{3in}||}
+  \hline\hline
+  \textbf{Priviledge} & \textbf{PUP}
+  \\\hline
   Explicit proposal prioritisation -- order of enactment can be specified  & Submission-based prioritisation -- proposals are enacted in order of submission \\\hline
   Proposals can be cancelled & Proposals cannot be cancelled once they are approved and endorsed \\\hline
   Includes software upgrades (not just protocol upgrades) & Does not consider software upgrades, except where these are protocol version changes \\\hline

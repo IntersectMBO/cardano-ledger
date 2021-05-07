@@ -50,11 +50,15 @@ it is necessary to link the off-chain and on-chain processes.
 \label{fig:workflows}
 \end{figure}
 
+\emph{Note that the design of the on-chain submission and enactment process allows for the first part of this process to be changed for an on-chain one in future
+  (eg one based on the Priviledge design -- see comparison in Appendix~\ref{sect:priviledge}) or a side-chain (see Appendix~\ref{side-chain}) by making small technical
+  changes to the submission process to link proposals and by adding additional on-chain mechanisms to record discussions, initial votes, formal approvals etc.}
+
 
 \newpage
 \subsection{Off-Chain Process}
 
-The off-chain process involves five key stages:
+The off-chain process involves five key stages (which may overlap or involve iterations):
 
 \begin{enumerate}
 \item
@@ -73,52 +77,57 @@ The off-chain process involves five key stages:
 
 Each of these off-chain stages may follow its own formally defined proces, and may be partially automated.  Generally, the processes will be driven by convention and rules.  A detailed governance structure is necessary to ensure that business can
 be transacted in an efficient and effective way, without risking loss of control to a small non-representative group, and so negating the purpose of decentralised governance.
-The processes and structures may evolve over time.  Some of the issues are discussed in Appendix~\ref{sect:off-chain}.
+The processes and structures may evolve over time.  Some of the issues are discussed in Appendix~\ref{sect:off-chain}.  The PUP design assumes that these general governance
+issues have been satisfactorily resolved, and that a mandate has been obtained to submit, ratify, and enact specific formal proposals on-chain.
 
 
 \newpage
 \subsection{On-Chain Process}
 
-Once a proposal has been implemented in the required form, it may be submitted for enactment on-chain.  The on-chain process involves four key stages that are fully automated.  Extreme care needs to be taken with these processes,
+Once a proposal has been implemented in the required form, it may be submitted for enactment on-chain.  The on-chain process involves four key stages that are managed automatically in accordance with formal ledger rules.  Extreme care needs to be taken with these processes,
 since it may not always be possible to stop or reverse actions once they are initiated.
 
 \begin{enumerate}
 \item
-  \textbf{Submission.}  A formal proposal is submitted on-chain by one of a group of submitters.  The proposal must be in the agreed format, and must include deadlines for voting, endorsement, and enactment.
+  \textbf{Submission.}  A formal proposal is \emph{submitted} on-chain by one of a group of designated \emph{submitters}.  The proposal must be in the agreed format, and must include deadlines for voting, endorsement, and enactment.  It must be counter-signed, as described below.  Invalid proposals will be rejected.
 \item
-  \textbf{Voting.}  The proposal is voted on and the votes are tallied.  If sufficient votes are obtained by the stated deadline, then the proposal is \emph{approved} for enactment.
+  \textbf{Voting.}  The proposal is voted on and the votes are \emph{tallied}.  If sufficient votes are obtained by the stated deadline, then the proposal is \emph{approved} for enactment.
 \item
-  \textbf{Endorsement.}  If the proposal involves a change to the protocol, then stake pool operators must upgrade their nodes to the correct version.  This will signal their readiness to run the new protocol.
+  \textbf{Endorsement.}  If the proposal involves a change to the protocol, then stake pool operators must upgrade their nodes to a version of the software that will accept the new protocol.  This will signal their readiness to run the new protocol, thereby endorsing the proposal.
   Assuming that sufficient endorsement is obtained by the deadline, then the proposal is \emph{endorsed} for enactment.
 \item
-  \textbf{Enactment.}  Proposals that have been approved (and endorsed, if necessary) are processed fully automatically at the corresponding epoch boundary.
+  \textbf{Enactment.}  Proposals that have been approved (and also endorsed, if necessary) are processed fully automatically, so \emph{enacting} the proposal.
+  Valid parameter changes and protocol version upgrades come into effect at the corresponding epoch boundary.  Valid funds transfers may be enacted at a different
+  point in time.
 \end{enumerate}
 
 \newpage
 \subsection{Key Stakeholder Groups}
 
-A number of stakeholder groups are involved in the governance process.  The key ones are:
+As described in Section~\ref{sect:groups}, a number of stakeholder groups are involved in the governance process.  The key ones are:
 
 \begin{itemize}
 \item
   \textbf{Normal Ada Holders:}
   Normal Ada holders are invested in the Cardano ecosystem in financial and other ways.
-   In order to ensure fully decentralised governance, the goal of the PUP design is that normal Ada holders should have the ultimate governance power. They may, however, choose to delegate this to specialists when dealing with more technical issues, for example.
+   In order to ensure fully decentralised governance, the goal of the PUP design is that normal Ada holders should have the ultimate governance power. They may, however, choose to delegate this to specialists when dealing with more technical issues, for example.   In order to ensure long-term stability of the system, other groups may also act as checks/balances.
 %  This ensures fully decentralised governance.
   \item
   \textbf{Stake Pool Operators:}
   Stake pool operators have the responsibility for maintaining the Cardano network.  They are heavily invested in the Cardano ecosystem through the commitment of their time, money and other resources.
   In addition to other voting rights, they need to maintain software compatibility with the latest version of the Cardano blockchain protocol.
+  They will have the ultimate decision on whether to progress protocol upgrades.
   \item
   \textbf{End-Users:}
-  These are individuals or organisations who use the Cardano blockchain to process transactions etc.  They may hold minimal ada, perhaps only on a transient basis.
-  This will give them limited or no governance rights.  Their needs should, however, be considered when changes are made to protocol parameters.
+  These are individuals or organisations who use the Cardano blockchain to process transactions etc. (which may be e.g. DeFi applications).
+  They may hold minimal ada, perhaps only on a transient basis.
+  This will give them limited or no governance rights.  Their needs should, however, be considered when changes are made to protocol parameters or
+  protocol upgrades are made.
   \item
   \textbf{Exchanges and other Proxy Ada Holders:}
   Exchanges and similar organisations hold Ada on behalf of other parties.  They require a safe, secure and robust blockchain so that they may operate successfully on
   behalf of their clients.  It is important from both a regulatory and a technical perspective that they do not hold excessive
-  power, since this will work against the requirements of decentralisation.
-  They could voluntarily declare their intention via eg ``enterprise'' addresses, which would not have voting rights. However, experience shows that this mechanism is essentially unused for block production, so it might be similarly ineffective for voting.
+  power, since this will work against the principle of decentralisation.\footnote{They could voluntarily declare their intention via eg ``enterprise'' addresses, which would not have voting rights. However, experience shows that this mechanism is essentially unused for block production, so it might be similarly ineffective for voting.}
 \end{itemize}
 
 The network should be able to evolve in a way that meets the best long-term needs of all these stakeholders, while maintaining the integrity, stability and longevity of
