@@ -20,7 +20,7 @@
     &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
     &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collateral}~{txb} \restrictdom \var{utxo}), \fun{paymentHK}~a \in \AddrVKey) \\
     &~~~~~~\wedge~ \fun{adaOnly}~\var{balance} \\
-    &~~~~~~\wedge~ \var{balance} \geq \fun{quot}~(\minfee~{pp}~{tx} * (\fun{collateralPercent}~pp))~100)) \\
+    &~~~~~~\wedge~ \var{balance} \geq \fun{quot}~(\txfee~{txb} * (\fun{collateralPercent}~pp))~100)) \\
     &~~      \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
     & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{collateral}~{txb} \restrictdom \var{utxo})
@@ -54,7 +54,7 @@ We have added or changed several functions that deal with fees and collateral as
     \item the collateral inputs are strictly in key-hash addresses;
     \item all the collateral inputs contain strictly Ada and no other kinds of token; and
     \item the collateral inputs are sufficient to cover the percentage of the
-    minimum fee amount specified by the protocol parameter $\fun{collateralPercent}$
+    transaction fee amount specified by the protocol parameter $\fun{collateralPercent}$
   \end{enumerate}
   Note that checking that a transaction is carrying redeemers is the most simple way to
   check that it is carrying non-native scripts. A separate check is done in the rule prior to
@@ -593,7 +593,7 @@ UTXOS rule.
       \hldiff{\fun{epochInfoSlotToUTCTime}~\mathsf{epochInfo}~\mathsf{systemTime}~i_f \neq \Nothing} \\
       \txins{txb} \neq \emptyset
       & \hldiff{\fun{feesOK}~pp~tx~utxo}
-      & \txins{txb} \subseteq \dom \var{utxo}
+      & \txins{txb}~\cup~\fun{collateral}~{txb}~ \subseteq~ \dom \var{utxo}
       \\
       \consumed{pp}{utxo}{txb} = ~\produced{pp}{poolParams}~{txb}
       \\~\\
@@ -690,7 +690,7 @@ We construct the following helper functions :
 \begin{itemize}
   \item $\fun{witsVKeyNeeded}$ is a Shelley function adjusted to include
   keys that are specified in the $\fun{reqSignerHashes}$ field of the transaction,
-  as well as keys locking the collateral inputs of the transaction
+  as well as keys locking the collateral inputs of the transaction.
 
   \item $\fun{scriptsNeeded}$ assembles the all the $\ScriptPurpose$ terms
   for validation of every transaction action that requires script validation,
@@ -718,8 +718,8 @@ We construct the following helper functions :
     \cup & ~~(\AddrVKey \cap \fun{certWitsNeeded}~{tx}) \\
     \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\var{genDelegs} \\
     \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
-    \cup & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\fun{collateral}~{tx} \} \\
-    \cup & ~~\fun{reqSignerHashes}~\var{tx}
+    \cup & ~~\hldiff{\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\fun{collateral}~{tx} \}} \\
+    \cup & ~~\hldiff{\fun{reqSignerHashes}~\var{tx}}
     \nextdef
     & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to \powerset (\ScriptPurpose \times \ScriptHash) \\
     & \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\

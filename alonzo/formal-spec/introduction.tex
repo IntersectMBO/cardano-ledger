@@ -64,13 +64,13 @@ distinct from the usual ``gas'' model~\cite{XX}.\TODO{And this one, please!} in 
   \item The user specifies the UTxO entries containing funds sufficient to cover a percentage
   (usually $100$ or more) of the total transaction fee.
   These inputs are only collected \emph{in the case of script validation failure},
-  and are called \emph{collateral inputs}. In the case of 
+  and are called \emph{collateral inputs}. In the case of
   script validation success, the fee specified in the fee field of the transaction is collected,
   but the collateral is not.
 
   This scheme is different from the gas model in that the exact payment collected in
   both the case of script validation success and validation failure is known ahead of time,
-  though the collected fees are differnent in the two cases.
+  though the collected fees are different in the two cases.
 \end{itemize}
 
 Another important point to make about both native and non-native scripts on Cardano is that
