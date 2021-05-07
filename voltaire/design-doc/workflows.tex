@@ -37,7 +37,7 @@ effect.  This period has been fixed at \texttt{LatestVotingDeadline} slots prior
 
 \paragraph{Protocol Version Updates (Hard Forks).}  These follow the process described above,
 except that the proposal must also be \emph{endorsed} by sufficient block-producing stake
-(where endorsement indicates the readiness of the stake pool operator to upgrade to the new protocol version).
+(where endorsement indicates the readiness of the stake pool to conform with the new protocol version).
 The same process applies to both major and minor protocol version upgrades.
 The deadline for endorsement must be given in the original proposal submission.
 In order to ensure the stability of the chain, endorsement must happen sufficiently before the update takes
@@ -48,7 +48,7 @@ is controlled by upgraded stake pools.
 % through manual confirmation by each stake pool operator, though it would be possible
 % to automate this by monitoring software versions.\khcomment{Jared has defined an automated process.}
 While the endorsement deadline will usually be after the voting deadline, this is not technically necessary, and the deadlines could
-in principle be contemporaneous, or even reversed.
+in principle be contemporaneous, or even in the reverse order.
 
 \paragraph{Rejected Proposals.}   Once it has been rejected, a proposal is never enacted on-chain.
 An equivalent proposal may, however, be submitted, in which case the new proposal must go through the same voting and enactment process

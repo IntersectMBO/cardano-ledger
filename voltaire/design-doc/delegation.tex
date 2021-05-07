@@ -2,21 +2,21 @@
 \section{Vote Delegation (On-Chain)}
 \label{sect:delegation}
 
-All ada holders will have on-chain voting rights, in direct proportion to the exact number of lovelace that they hold.
+All ada holders will have on-chain voting rights, in direct proportion to the exact integral number of lovelace that they hold.
 They may delegate these voting rights to any registered delegate, who is expected to act faithfully on their behalf.
-Only registered delegates may actually vote on a proposal, but any ada holder may choose to register if they choose to do so.
+Only registered delegates may actually vote on a proposal, but any ada holder may choose to register as a delegate if they choose to do so.
 They may then allocate their own vote as they wish, as well as that of any other ada holder who delegates to them.
 \khcomment{There is potentially a transaction cost to voting.  This needs to be considered carefully for acceptability.  Unlike block production, there may be no direct return from voting, so
 this may restrict participation if done wrongly.}\pkcomment{We'll probably need to have a good look at what the researchers have to say on incentives for all the roles}
 \khcomment{Agreed!}
-
+Ada holders may delegate their
+vote to any registered delegate by submitting a vote delegation transaction that includes the registered delegate address.\khcomment{How do voters know about the available delegates?  They will need to advertise themselves somehow in the voting centre.}
+Ada holders may change this delegation at any point in time simply by submitting a new vote delegation transaction.  When votes are tallied, the most recent delegation choice that has been made \emph{prior to the deadline} by each ada holder is considered to be the effective delegation.
 
 \subsection{Delegate Address Registration/De-Registration}
 \label{sect:registration}
 
-Delegates must register themselves on-chain.  Ada holders may delegate their
-vote to any registered delegate by submitting a vote delegation transaction that includes the registered delegate address.\khcomment{How do voters know about the available delegates?  They will need to advertise themselves somehow in the voting centre.}
-Ada holders may change this delegation at any point in time simply by submitting a new vote delegation transaction.  When votes are tallied, the most recent delegation choice is considered.
+Delegates must register themselves on-chain.
 A deposit is taken when a delegate registers.  Delegates may choose to de-register at any time by submitting a de-registration transaction.  The de-registration takes effect
 at the specified future time (which is always an epoch boundary).  Protocol parameters govern the least and greatest notice that must be given for de-registration.  When a delegate de-registers, their deposit is returned,
 the address becomes void, and any vote delegation to that address is no longer considered when calculating votes or thresholds.  This means that votes cannot be allocated for a future proposal, and the delegate then
@@ -24,21 +24,25 @@ retire but have their vote counted.
 
 \paragraph{Delegate Keys.} Potential delegates must generate a secure key. The following elements are required.
 
+\begin{center}
 \begin{tabular}{||l|p{3in}|l||}
   \hline\hline
   \\\hline
   \hline
 \end{tabular}
+\end{center}
 \khcomment{Determine what's required here.}
 
 \paragraph{Registration Certificate.} The delegate registration certificate must include:
 
+\begin{center}
 \begin{tabular}{||l|p{3in}|l||}
   \hline\hline
   Delegate public key hash\khcomment{The delegate key structure needs to be confirmed}  & Unique identifier & 32 bytes
   \\\hline
   \hline
 \end{tabular}
+\end{center}
 
 %% Remove the note about the witness.
 % A witness is required for the delegate key. \khcomment{Confirm.}\pkcomment{I don't think so; we do not require a witness for stake address registration, and this should be similar}
@@ -47,6 +51,7 @@ The registration comes into effect as soon as the transaction is accepted on-cha
 
 \paragraph{De-Registration Certificate.} Delegate de-registration certificates must include:
 
+\begin{center}
 \begin{tabular}{||l|p{3in}|l||}
   \hline\hline
   Delegate public key hash & Unique identifier & 32 bytes
@@ -55,10 +60,12 @@ The registration comes into effect as soon as the transaction is accepted on-cha
   \\\hline
   \hline
 \end{tabular}
+\end{center}
 
 A witness is required for the delegate key. % \khcomment{Confirm this.} Confirmed.
 
 De-registration takes effect from the retirement date (at a specific epoch boundary that may be no sooner than the end of the current epoch, and no more than \emph{maxDelegateRetire} epochs in the future.\khcomment{This needs to be defined, and the size confirmed above.}  Retirement on an epoch boundary ensures that stakeholders do not mistakenly delegate their vote to delegates that will retire before the end of the current epoch.
+Vote delegations to a retired delegate are treated in the same way as those to delegates that choose not to vote on a specific issue.
 
 \subsection{Vote Delegation}
 
@@ -66,6 +73,7 @@ Ada stakeholders delegate their vote by issuing an on-chain transaction.  As wit
 
 Vote delegation certificates must include:
 
+\begin{center}
 \begin{tabular}{||l|p{3in}|l||}
   \hline\hline
   Vote address & Identifies the stake that is to be delegated  & 32 bytes
@@ -74,6 +82,7 @@ Vote delegation certificates must include:
   \\\hline
   \hline
 \end{tabular}
+\end{center}
 As with stake delegation, posting a vote delegation certificate requires a witness for the delegating vote address.
 % As,source.
 There is no corresponding vote delegation revocation certificate. If a user wishes to change their delegation choice to a different delegate (which might be themselves),

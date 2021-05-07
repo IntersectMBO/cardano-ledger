@@ -1,0 +1,21 @@
+\section{Possible Extension to Differentiated Submitter Groups}
+
+This design assumes a single group of submitters.  It
+would instead be possible to differentiate proposals, so that specific kinds of proposal
+could be submitted by different sub-groups.  For example, a sub-group of submitters might have
+authority to submit a proposal that changed specific parameters, that authorised
+funds transfers up to some amount, that transferred balances between reserves
+and treasury, or between treasury and specific nominated accounts.  The obvious
+way to do this would be to embed general Plutus scripts in the submission
+authorisation (or to allow Plutus scripts to construct proposals).  This could
+involve some changes to ledger rules (including perhaps changes to script
+plumbing), so should probably be seen as an extension to the base design, rather
+than a core requirement.  \todo{Consider whether a script can be used for
+  proposal submission rather than embedded signatures.  Does the two-phase Plutus process cause unwanted delays?}
+
+For such an approach to be feasible, it would be necessary to determine whether
+a proposal was permitted to be signed by a specific sub-group (i.e. the proposal
+would need to be automatically checked and validated against the group
+credentials).  It would also be necessary to set thresholds and quora
+differently for different kinds of proposal.  These thresholds would need to be
+independently validated through security audit.

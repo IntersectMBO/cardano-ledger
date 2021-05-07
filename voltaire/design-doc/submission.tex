@@ -20,7 +20,7 @@ Each proposal has a header and a body.  % and must be signed\khcomment{Submittin
 
 \begin{verbatim}
 "header": {
-  "proposal"         : ProposalHash,
+  "linked"           : ProposalHash,
   "voteby"           : Slot,
   "votethreshold"    : Threshold,
   "endorseby"        : Optional Slot,
@@ -30,8 +30,8 @@ Each proposal has a header and a body.  % and must be signed\khcomment{Submittin
 }
 \end{verbatim}\pkcomment{Do we need \texttt{Slot}, or \texttt{Epoch}?}\khcomment{You want Slot, because that is what matters for consistent voting [I assume you want the current speed of enactment]}
 
-The \texttt{proposal} field allows the proposal to be tied to a corresponding off-chain proposal (see Appendix~\ref{sect:relating-off-and-on-chain} and Section~\ref{sect:proposalid}).  The \texttt{voteby} and \texttt{endorseby} fields specify deadlines.
-Votes and endorsements must be received prior to the specified slot if they are to be counted.  The endorsement deadline is optional.
+The \texttt{linked} field allows the proposal to be linked with the previous off-chain or on-chain acceptance (see Appendix~\ref{sect:relating-off-and-on-chain} and Section~\ref{sect:proposalid}), so enabling a chain of approval.  The \texttt{voteby} and \texttt{endorseby} fields specify deadlines.
+Votes and endorsements must be received prior to the specified slot if they are to be counted.  The endorsement deadline is only required for protocol version upgrades.
 %\khcomment{Arguably, to avoid performance issues, tallying should either happen at epoch boundaries or in a separate thread.}\pkcomment{Yes, same as for calculating the stake distribution and the rewards}
 To avoid performance issues, tallying must be spread over time, eg in a separate thread or using a ``pulsing'' calculation.\pkcomment{Yes, same as for calculating the stake distribution and the rewards}
 In order to avoid zombie proposals that could disrupt operations, deadlines must be set within a reasonable time period after submission (e.g. within 3 epochs).
@@ -51,7 +51,9 @@ The body of the proposal is specific to the proposal type.
 
 % \newpage
 \paragraph{Parameter Update Body.}  The proposal format is identical to that used for Shelley/Allegra/Mary/Alonzo. \TODO{Check the concrete format.}  Multiple parameters may be changed in a single proposal if required.
-Parameters are checked for validity on enactment, rather than on submission, so it is possible to submit a proposal that will change parameters following a future protocol version upgrade, for example.
+All parameters in a proposal must comply with \emph{validity} rules both on submission and on enactment.
+% Parameters are checked for validity on enactment, rather than on submission, so it is possible to submit a proposal that will change parameters following a future protocol version upgrade, for example.
+% \khcomment{Consider this carefully. We do need to allow initial parameters to be set.}
 
 
 \begin{verbatim}
@@ -114,7 +116,8 @@ All proposals must be signed when they are submitted.  A proposal must be counte
 policy that conforms to the existing \emph{multi-sig} transaction mechanism.  This enables the use of standard transaction witnessing.
 % where the quorum is a protocol parameter
 The signing policy is then provided as an updatable protocol parameter.  This gives a great deal of flexibility to define and change submission policies.
-To reduce the possibility of abuse, the policy must comply with a minimum quorum size, which should be hard-wired into the protocol.
+To reduce the possibility of abuse, the policy must comply with a minimum quorum size, which must be hard-wired into the protocol as a non-updatable
+parameter.
 Note that limits on transaction size will limit the maximum quorum size (currently to around 500 signatories).
 
 
@@ -123,7 +126,7 @@ Note that limits on transaction size will limit the maximum quorum size (current
 \khcomment{Using multi-sig potentially allows policies to be defined as described above.  This simplifies the system by removing the need for a separate Elector group,
   but is perhaps open to abuse of power?}
 
-Note that the process described here intrinsically supports automation.  Signatories can be automated agents if desired rather than individuals.  This also allows integration into a full on-chain voting mechanism in the longer term, as with Priviledge.  The outcome of an off-chain or on-chain vote may be to construct a signed on-chain proposal for subsequent enactment.  Ultimately, if the process is purely on-chain, then the vote outcome could be embedded as the authorisation for the proposal submission without needing to construct or maintain special submitter keys.  This would improve some aspects of security, but would mean that either: i) a proposal would need to be formalised prior to the initial voting round (which might be impractical for e.g. protocol upgrades or some forms of funds transfers); or else ii) delegates would need to confirm that the proposal that was enacted was equivalent to the one that was originally agreed.
+Note that the process described here intrinsically supports automation.  Signatories can be automated agents if desired rather than individuals.  This also allows integration into a full on-chain voting mechanism in the longer term, e.g. by adopting the PriviLedge mechanisms.  The outcome of an off-chain or on-chain vote may be to construct a signed on-chain proposal for subsequent enactment.  Ultimately, if the process is purely on-chain, then the vote outcome could be embedded as the authorisation for the proposal submission without needing to construct or maintain special submitter keys.  This would improve some aspects of security, but would mean that either: i) a proposal would need to be formalised prior to the initial voting round (which might be impractical for e.g. protocol upgrades or some forms of funds transfers); or else ii) delegates would need to confirm that the proposal that was enacted was equivalent to the one that was originally agreed.
 
 
 \subsection{Proposal Identifiers}
@@ -155,24 +158,32 @@ the formal proposal to be linked to off-chain or on-chain discussions and/or vot
 The reference does necessarily not need to be unique -- a single discussion or outline vote could
 lead to multiple on-chain proposals.
 
-\subsection{Extension to Differentiated Submitter Groups}
+\subsection{Proposal Validity Rules}
+\label{sect:validity}
 
-This design assumes a single self-perpetuating or elected submitter group.  It
-would be possible to differentiate proposals, so that specific kinds of proposal
-could be submitted by different groups.  For example, a group might have
-authority to submit a proposal that changed specific parameters, that authorised
-funds transfers up to some amount, that transferred balances between reserves
-and treasury, or between treasury and specific nominated accounts.  The obvious
-way to do this would be to embed general Plutus scripts in the submission
-authorisation (or to allow Plutus scripts to construct proposals).  This could
-involve some changes to ledger rules (including perhaps changes to script
-plumbing), so should probably be seen as an extension to the base design, rather
-than a core requirement.  \todo{Consider whether a script can be used for
-  proposal submission rather than embedded signatures.  Does the two-phase Plutus process cause unwanted delays?}
+A proposal is checked for validity at two points:
+\begin{enumerate}
+\item
+  on submission;
+\item
+  on enactment.
+\end{enumerate}
 
-For such an approach to be feasible, it would be necessary to determine whether
-a proposal was permitted to be signed by a specific group (i.e. the proposal
-would need to be automatically checked and validated against the group
-credentials).  It would also be necessary to set thresholds and quora
-differently for different kinds of proposal.  These thresholds would need to be
-independently validated through security audit.
+Invalid proposals are immediately rejected and never enacted.
+
+A proposal is \emph{valid} if it satisfies all of the following conditions:
+
+\begin{enumerate}
+\item
+  it is syntactically well-formed;
+\item
+  all parameter values are within permitted ranges (e.g. all funds transfers are positive);
+\item
+  it has been (counter-)signed by a sufficient quorum of signatories;
+\item
+  all deadlines are sufficiently far in the future, and none is too far in the future (see Section~\ref{sect:deadlines});
+\item
+  protocol version upgrades correctly increment the version number against the current protocol version (see Section~\ref{sect:upgrades});
+\item
+  all validity conditions that apply to a specific class of proposal are also met.
+\end{enumerate}

@@ -89,37 +89,36 @@ On-chain requirements may be split into mandatory and optional requirements.
 
 \begin{enumerate}
 \item
-  allow changes to be made to any updatable protocol parameter, in any legal way;
+  allow changes to be made to any updatable protocol parameter, in any valid way;
 \item
-  allow major/minor protocol versions to be upgraded;
+  allow major/minor protocol versions to be upgraded, so enabling control over ``hard forks'';
 \item
-  allow the fulfilment of all kinds of central funds transfers;
+  allow the fulfilment of all kinds of ``central funds transfers'' to/from reserves/treasury pots;
 \item
   not require the use of genesis keys or genesis key delegates in any part of the protocol;
 \item
-  allow separate per-proposal deadlines to be set for voting and endorsement;
+  allow separate per-proposal deadlines to be set for voting, endorsement and enactment;
 \item
-  ensure that deadlines are reasonable;
-\item
-  allow an epoch to be chosen for enactment of a proposal;
+  ensure that deadlines are reasonable -- there is sufficient time for vote tallying, and parameter changes
+  are enacted at specific epoch boundaries, for example;
 % \item
-%   be able to faithfully enact the governance decisions that have been taken off-chain.
+%  allow an epoch to be chosen for enactment of a proposal;
 \item
-  be secure;
+  be secure, so that users maintain trust in the integrity and stability of the blockchain;
 \item
-  be efficient;
+  be efficient, so that the primary economic purpose of the blockchain is not compromised by governance-related business;
 \item
-  meet the Cardano blockchain stability window requirements;
+  meet all the necessary Cardano blockchain stability window requirements;
 \item
-  allow delegation of voting rights from ada holders to a dedicated group;
+  allow delegation of voting rights from ada holders to a dedicated group of delegates;
 \item
-  assign voting and endorsement rights in proportion to the amount of ada that is controlled;
+  assign voting and endorsement rights in proportion to the amount of ada that is controlled by the corresponding ada holder/delegate/stake pool;
 \item
-  where the proposal changes the protocol version, check that sufficient stake pools have upgraded to a compatible software version, to avoid causing a hard fork;
+  where the proposal changes the protocol version, verify that sufficient stake pools have upgraded to a compatible software version, in order to avoid causing unwanted chain forks;
 \item
   prevent denial-of-service attacks by limiting the proposal submission rate;
 \item
-  avoid increasing memory requirements significantly;
+  avoid signficant increases in memory and storage requirements;
 \item
   avoid service interruptions by ensuring that computation for vote tallying etc does not impact normal block production;
 \item
@@ -143,7 +142,7 @@ On-chain requirements may be split into mandatory and optional requirements.
 \subsection{Security Requirements}
 \label{sect:security}
 
-The primary security risks are: subversion of votes by a small group; subversion of on-chain proposal submission; denial-of-service.
+The primary security risks that have been identified are: subversion of votes by a small group; subversion of on-chain proposal submission; and denial-of-service.
 
 \paragraph{Vote Subversion.}
 An attacker may obtain control of the blockchain by pooling votes as a delegate (or as part of a voting bloc), and then proceed to enact proposals that act against the interest of the blockchain, or to block
@@ -164,6 +163,10 @@ proposals that are in the general interest.   This attack is mitigated by:
   \item
     providing tracking mechanisms to tie on-chain proposals to properly debated off-chain discussion and voting.
   \end{inparaenum}
+
+  As with block production, it may also be necessary to limit the total amount of ada (and therefore vote) that can be controlled by a single delegate.
+  This issue is not addressed by the current design\footnote{The obvious approach is to ensure a minimum number of delegates, and to tie this to
+    some incentives mechanism, as with block production, but this has not been studied.}.
 
 \paragraph{Subversion of On-Chain Submissions.}
 Only properly submitted and signed proposals will be enacted.  An attacker could gain control of the blockchain by controlling the submission process through
@@ -186,20 +189,25 @@ This attack is mitigated by:
 
 \paragraph{Denial of Service.}
 By flooding the system with bad proposals (including ones that have a long voting or enactment deadlines), it becomes difficult to identify the
-proposals that need to be progressed.  Large numbers of in-flight proposals will also impact timing and memory performance, and perhaps prevent transaction submission.
+proposals that need to be progressed.
+Large numbers of in-flight proposals will also impact timing and memory performance, and perhaps prevent transaction submission, so reducing
+the effectiveness of the blockchain as a whole.
 %
 This attack is mitigated by:
   \begin{inparaenum}
   \item
     Restricting the size of the submitter group;
   \item
-    Requiring a quorum of counter-signatures for each proposal;
+    Requiring a sufficient quorum of counter-signatures for each proposal;
   \item
     Tying on-chain proposals to off-chain discussion;
   \item
+    Ensuring that only valid proposals are submitted;
+  \item
     Restricting deadlines, so that they cannot be too far in the future.
   \end{inparaenum}
-It would also be possible to charge fees for proposal submission (perhaps on a refundable basis if the proposal was accepted).
+  It would also be possible to e.g. charge fees for proposal submission (perhaps on a refundable basis if the proposal was accepted);
+  to filter new proposals so that only sufficiently different proposals could be submitted.
 
 \pagebreak
 \subsection{Performance Requirements}
@@ -225,9 +233,13 @@ Suitable performance mitigations include:
   Limiting the number of simultaneously active proposals through a small submitter group
   -- this will, in turn, reduce the number of votes that need to be tallied (time and memory),  the number of proposals that need to be recorded (memory), and the number of proposals that need to be enacted at an epoch boundary (time);
 \item
-  Using a delegate system to reduce the number of vote transactions (network);
+  Using a delegate system to reduce the number of vote-related transactions (network);
 \item
   Tallying votes in the background, so that normal block production and verification is not affected (time);
 \item
-  Requiring vote and endorsement outcomes to be calculated ahead of the epoch boundary (time and memory).
+  Requiring vote and endorsement outcomes to be calculated sufficiently ahead of the epoch boundary (time and memory);
+\item
+  Processing parameter update and protocol upgrade enactments ahead of the epoch boundary (e.g. as a ``shadow state'' that could then permit an atomic update to the protocol parameters);
+\item
+  Processing central funds transfers lazily after the epoch boundary (this is consistent with the current approach to MIR transfers).
 \end{enumerate}

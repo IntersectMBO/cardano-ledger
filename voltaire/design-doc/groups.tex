@@ -42,7 +42,7 @@ We can identify a number of distinct groups that may be involved in proposal sub
 \subsection{General Ada Holders (Off-Chain and On-Chain)}
 
 General Ada holders may make informal proposals and discuss them using an off-chain mechanism.  They vote on the acceptance of these proposals
-either on-chain or off-chain, in proportion to the ada that they hold.  They may delegate their stake for voting purposes to on-chain representatives,
+both on-chain and off-chain, in proportion to the ada that they hold.  They may delegate their stake for voting purposes to on-chain representatives,
 who will vote on their behalf for or against submitted proposals.  This vote delegation may be changed at any time\pkcomment{We should clarify whether this includes changing the delegation \emph{after} delegates have voted. I think it would be good to allow this}\khcomment{Yes, the design allows that up to the vote deadline}.
 
 \subsection{Executive Team (Off-Chain)}
@@ -56,27 +56,31 @@ It is also responsible for ensuring that the correct process is followed for the
 Security Experts evaluate proposals, provide advice on possible attack vectors, and suggest improvements to mitigate security risks.
 Their input may not be necessary on some simple parameter changes, but is always necessary for protocol version changes.
 They may also evaluate security threats and may, in extremis, produce proposals that bypass some of the usual governance processes
-(eg where open discussion could lead to a major risk of loss to the blockchain).
+(eg where open discussion could lead to a major risk of loss to the blockchain).  This creates a risk that needs to be
+considered as part of the design of an effective governance system.
 
 \subsection{Other Expert Groups (Off-Chain)}
 
 Other Expert Groups may be called on to provide advice or reports to inform general ada holders or other groups that are involved in the
 governance process.  This could include performance issues, technical blockchain expertise, economic advice, advice on implementation etc.
+This advice is critical if rational decisions are to be taken on technical issues.
 
 \subsection{Proposal Editors (Off-Chain)}
 
-Proposal Editors\footnote{Currently CIP Editors, where CIP stands for Cardano Improvement Proposal.} ensure that proposals are documented correctly, and that they are recorded in the
+Proposal Editors\footnote{Currently CIP Editors, where CIP stands for Cardano Improvement Proposal.} ensure that proposals are documented correctly, and that they are recorded in a
 permanent repository.
 This provides a persistent record of the rationale for each proposal, and allows traceability between informal off-chain
-proposals and the formal on-chain proposal.  This process may include providing hashes or other information to support traceability.
+proposals and the formal on-chain proposal.  This process may include providing hashes or other information to support traceability,
+ensuring that proposals are valid, that conflicts between proposals are identified, and that appropriate technical input and
+guidance is obtained where necessary.
 
 \subsection{Proposal Implementors (Off-Chain)}
 
 Proposal Implementors transform accepted proposals that have been voted on by ada holders into formal proposals that can be submitted on chain.
 They are responsible for providing necessary documentation, and for compliance with the required processes.  This may include producing an acceptable formal on-chain proposal,
 updating the off-chain parameter documentation,
-and meeting any necessary verification/traceability requirements.  For simple parameter updates or funds transfers, implementation may be in the form of a single JSON
-file that fully describes the proposal. Protocol version upgrades will also require the corresponding software implementation.
+and meeting any necessary verification/traceability requirements.  For simple parameter updates or funds transfers, the implementation may be in the form of a single
+source file\footnote{Currently in JSON format.} that fully describes the proposal. Protocol version upgrades will also require the corresponding software implementation.
 
 \subsection{Submitters (On-Chain)}
 
@@ -88,12 +92,14 @@ It is important for dececentralisation that the group is not restricted to too f
 However, to avoid overwhelming voters by ``flooding'' the system with voting choices, it is also important to limit the number of proposals that can
 be submitted, which is most easily done by limiting the number of submitters.  This implies that the required quorum should be a significant percentage
 of the submitter group.
+\emph{Since this group controls what is ultimately voted on, care needs to be taken over its composition and accountability.}
 
 \subsection{Delegates (On-Chain)}
 
 Delegates vote on whether an on-chain proposal should proceed.  The weight of
 their vote is in proportion to the stake that has been delegated to them by
-normal ada holders, including themselves.  They are expected to be responsible
+normal ada holders, including themselves, as determined at the point when a vote is tallied.
+They are expected to be responsible
 experts, to represent those who have chosen to delegate vote to them, and will
 be respected community members.  Although in many cases delegates may also be
 stake pool operators, the separation of vote delegation from delegation for
@@ -103,16 +109,16 @@ delegates that represent their political opinions without considering their abil
 block producers.  Delegates must track any discussions and ensure that the proposals meet the required
 security and other concerns.
 
-\subsection{Endorsers}
+\subsection{Endorsers (On-Chain)}
 
 The role of an endorser is to confirm that they are ready to upgrade to a new
-version of the Cardano protocol.  All stake pools are endorsers.  In line with
+version of the Cardano protocol.  All stake pools act as endorsers.  In line with
 the principle of proof-of-stake, the weight of their endorsement is proportional
 to the stake that they control.  In order to ensure that the blockchain will
 make progress, and that the main chain will not split, a sufficient stake
 threshold of endorsement is required for a proposal to be enacted.
 The design assumes that endorsement will be automated by recording the stake that
-is associated with upgraded pools (Section~\ref{sect:endorsement}).
+is associated with upgraded pools as they produce blocks (Section~\ref{sect:endorsement}).
 
 
 \subsection{Electors (Off-chain or On-Chain)}
