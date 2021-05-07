@@ -214,6 +214,7 @@ instance CC.Crypto c => EraModule.SupportsSegWit (AlonzoEra c) where
   fromTxSeq = Alonzo.txSeqTxns
   toTxSeq = Alonzo.TxSeq
   hashTxSeq = Alonzo.hashTxSeq
+  numSegComponents = 4
 
 instance API.PraosCrypto c => API.ShelleyBasedEra (AlonzoEra c)
 

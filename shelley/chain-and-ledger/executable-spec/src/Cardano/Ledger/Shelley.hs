@@ -117,6 +117,7 @@ instance CryptoClass.Crypto c => SupportsSegWit (ShelleyEra c) where
   fromTxSeq = Shelley.txSeqTxns
   toTxSeq = Shelley.TxSeq
   hashTxSeq = bbHash
+  numSegComponents = 3
 
 instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) c where
   validateAuxiliaryData (Metadata m) = all validMetadatum m
