@@ -34,13 +34,17 @@ import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val (Val (..))
+import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (deepseq)
 import Data.ByteString as BS (ByteString, length)
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
+import Data.Functor.Identity (Identity, runIdentity)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
+import Data.Time.Clock (UTCTime (..))
 import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Ada as P (adaSymbol, adaToken)
@@ -115,8 +119,8 @@ transSafeHash safe = case extractHash safe of UnsafeHash b -> fromShort b
 transHash :: Hash h a -> BS.ByteString
 transHash (UnsafeHash h) = fromShort h
 
-transTxId :: TxId era -> P.TxId
-transTxId (TxId safe) = P.TxId (transSafeHash safe)
+txInfoId :: TxId era -> P.TxId
+txInfoId (TxId safe) = P.TxId (transSafeHash safe)
 
 transStakeCred :: Credential keyrole crypto -> BS.ByteString
 transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = (fromShort kh)
@@ -137,34 +141,59 @@ transAddr (AddrBootstrap _bootaddr) = Nothing
 
 -- ===============================
 -- Translate ValidityIntervals
-
-transVI :: ValidityInterval -> P.SlotRange
-transVI (ValidityInterval SNothing SNothing) =
+-- TODO remove this function when we are using transVITime instead
+transVI ::
+  EpochInfo Identity ->
+  SystemStart ->
+  ValidityInterval ->
+  P.SlotRange
+transVI _ _ (ValidityInterval SNothing SNothing) =
   P.Interval
     (P.LowerBound P.NegInf True)
     (P.UpperBound P.PosInf False)
-transVI (ValidityInterval (SJust (SlotNo i)) SNothing) =
+transVI _ _ (ValidityInterval (SJust (SlotNo i)) SNothing) =
   P.Interval
     (P.LowerBound (P.Finite (fromIntegral i)) True)
     (P.UpperBound P.PosInf False)
-transVI (ValidityInterval SNothing (SJust (SlotNo i))) =
+transVI _ _ (ValidityInterval SNothing (SJust (SlotNo i))) =
   P.Interval
     (P.LowerBound P.NegInf True)
     (P.UpperBound (P.Finite (fromIntegral i)) False)
-transVI (ValidityInterval (SJust (SlotNo i)) (SJust (SlotNo j))) =
+transVI _ _ (ValidityInterval (SJust (SlotNo i)) (SJust (SlotNo j))) =
   P.Interval
     (P.LowerBound (P.Finite (fromIntegral i)) True)
     (P.UpperBound (P.Finite (fromIntegral j)) False)
 
+-- ===============================
+-- Translate ValidityIntervals to UTCTime
+
+data TimeInterval = TimeInterval (StrictMaybe UTCTime) (StrictMaybe UTCTime)
+
+-- | translate a validity interval to a UTCTime interval
+-- | TODO use this function instead of transVI
+transVITime ::
+  EpochInfo Identity ->
+  SystemStart ->
+  ValidityInterval ->
+  TimeInterval
+transVITime _ _ (ValidityInterval SNothing SNothing) =
+  TimeInterval SNothing SNothing
+transVITime ei sysS (ValidityInterval (SJust i) SNothing) =
+  TimeInterval (SJust (runIdentity $ epochInfoSlotToUTCTime ei sysS i)) SNothing
+transVITime ei sysS (ValidityInterval SNothing (SJust i)) =
+  TimeInterval SNothing (SJust (runIdentity $ epochInfoSlotToUTCTime ei sysS i))
+transVITime ei sysS (ValidityInterval (SJust i) (SJust j)) =
+  TimeInterval (SJust (runIdentity $ epochInfoSlotToUTCTime ei sysS i)) (SJust (runIdentity $ epochInfoSlotToUTCTime ei sysS j))
+
 -- ========================================
 -- translate TxIn and TxOut
 
-transTxIn' :: CC.Crypto c => TxIn c -> P.TxOutRef
-transTxIn' (TxIn txid nat) = P.TxOutRef (transTxId txid) (fromIntegral nat)
+txInfoIn' :: CC.Crypto c => TxIn c -> P.TxOutRef
+txInfoIn' (TxIn txid nat) = P.TxOutRef (txInfoId txid) (fromIntegral nat)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it and return
 --   (Just translation). If does not exist in the UTxO, return Nothing.
-transTxIn ::
+txInfoIn ::
   forall era.
   ( Era era,
     Value era ~ Mary.Value (Crypto era),
@@ -173,11 +202,11 @@ transTxIn ::
   UTxO era ->
   TxIn (Crypto era) ->
   Maybe (P.TxInInfo)
-transTxIn (UTxO mp) txin =
+txInfoIn (UTxO mp) txin =
   case Map.lookup txin mp of
     Nothing -> Nothing
     Just txout -> case (transAddr addr) of
-      Just ad -> Just (P.TxInInfo (transTxIn' txin) (P.TxOut ad valout dhash))
+      Just ad -> Just (P.TxInInfo (txInfoIn' txin) (P.TxOut ad valout dhash))
       Nothing -> Nothing
       where
         valout = transValue (getField @"value" txout)
@@ -189,14 +218,14 @@ transTxIn (UTxO mp) txin =
 -- | Given a TxOut, translate it and return (Just transalation). It is
 --   possible the address part is a Bootstrap Address, in that case return Nothing
 --   I.e. don't include Bootstrap Addresses in the answer.
-transTxOut ::
+txInfoOut ::
   forall era.
   ( Era era,
     Value era ~ Mary.Value (Crypto era)
   ) =>
   Alonzo.TxOut era ->
   Maybe (P.TxOut)
-transTxOut (Alonzo.TxOut addr val datahash) =
+txInfoOut (Alonzo.TxOut addr val datahash) =
   case (transAddr addr) of
     Just ad -> Just (P.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
     Nothing -> Nothing
@@ -260,7 +289,7 @@ transExUnits (ExUnits mem steps) = P.ExBudget (P.ExCPU (fromIntegral steps)) (P.
 
 transScriptPurpose :: CC.Crypto crypto => ScriptPurpose crypto -> P.ScriptPurpose
 transScriptPurpose (Minting policyid) = P.Minting (transPolicyID policyid)
-transScriptPurpose (Spending txin) = P.Spending (transTxIn' txin)
+transScriptPurpose (Spending txin) = P.Spending (txInfoIn' txin)
 transScriptPurpose (Rewarding (RewardAcnt _network cred)) = P.Rewarding (P.StakingHash (transStakeCred cred))
 transScriptPurpose (Certifying dcert) = P.Certifying (transDCert dcert)
 
@@ -268,7 +297,7 @@ transScriptPurpose (Certifying dcert) = P.Certifying (transDCert dcert)
 
 -- | Compute a Digest of the current transaction to pass to the script
 --   This is the major component of the valContext function.
-transTx ::
+txInfo ::
   forall era tx.
   ( Era era,
     Core.TxOut era ~ Alonzo.TxOut era,
@@ -277,19 +306,21 @@ transTx ::
     HasField "body" tx (Core.TxBody era),
     HasField "wits" tx (TxWitness era)
   ) =>
+  EpochInfo Identity ->
+  SystemStart ->
   UTxO era ->
   tx ->
   P.TxInfo
-transTx utxo tx =
+txInfo ei sysS utxo tx =
   P.TxInfo
-    { P.txInfoInputs = mapMaybe (transTxIn utxo) (Set.toList (inputs' tbody)),
-      P.txInfoInputsFees = mapMaybe (transTxIn utxo) (Set.toList (inputs_fee' tbody)),
-      P.txInfoOutputs = mapMaybe transTxOut (foldr (:) [] outs),
+    { P.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (inputs' tbody)),
+      P.txInfoInputsFees = mapMaybe (txInfoIn utxo) (Set.toList (inputs_fee' tbody)),
+      P.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
       P.txInfoFee = (transValue (inject @(Mary.Value (Crypto era)) fee)),
       P.txInfoForge = (transValue forge),
       P.txInfoDCert = (foldr (\c ans -> transDCert c : ans) [] (certs' tbody)),
       P.txInfoWdrl = Map.toList (transWdrl (wdrls' tbody)),
-      P.txInfoValidRange = (transVI interval),
+      P.txInfoValidRange = (transVI ei sysS interval), -- TODO replace with transVITime when possible
       P.txInfoSignatories = map transKeyHash (Set.toList (reqSignerHashes' tbody)),
       P.txInfoData = (map transDataPair datpairs),
       P.txInfoId = (P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody)))

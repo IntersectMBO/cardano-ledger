@@ -69,6 +69,7 @@ library
     small-steps,
     strict-containers,
     text,
+    time,
     transformers
   hs-source-dirs:
     src

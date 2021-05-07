@@ -121,6 +121,7 @@ import Shelley.Spec.Ledger.BaseTypes
     Nonce,
     ShelleyBase,
     UnitInterval,
+    epochInfo,
     mkActiveSlotCoeff,
     mkNonceFromOutputVRF,
     mkUnitInterval,
@@ -298,7 +299,7 @@ unsafeMkUnitInterval r =
 testGlobals :: Globals
 testGlobals =
   Globals
-    { epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1),
+    { epochInfoWithErr = fixedEpochInfo (EpochSize 100) (mkSlotLength 1),
       slotsPerKESPeriod = 20,
       stabilityWindow = 33,
       randomnessStabilisationWindow = 33,

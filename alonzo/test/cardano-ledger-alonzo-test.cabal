@@ -75,6 +75,7 @@ test-suite cardano-ledger-alonzo-test
     cardano-ledger-shelley-ma,
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
+    cardano-slotting,
     containers,
     data-default-class,
     plutus-core,
@@ -88,4 +89,5 @@ test-suite cardano-ledger-alonzo-test
     strict-containers,
     tasty,
     tasty-hunit,
-    tasty-quickcheck
+    tasty-quickcheck,
+    time

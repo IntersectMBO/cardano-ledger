@@ -44,7 +44,6 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -428,13 +427,13 @@ validateGenesis
 
 mkShelleyGlobals ::
   ShelleyGenesis era ->
-  EpochInfo Identity ->
+  EpochInfo (Either Text) ->
   Natural ->
   Globals
-mkShelleyGlobals genesis epochInfo maxMajorPV =
+mkShelleyGlobals genesis epochInfoAc maxMajorPV =
   Globals
     { activeSlotCoeff = sgActiveSlotCoeff genesis,
-      epochInfo = epochInfo,
+      epochInfoWithErr = epochInfoAc,
       maxKESEvo = sgMaxKESEvolutions genesis,
       maxLovelaceSupply = sgMaxLovelaceSupply genesis,
       maxMajorPV = maxMajorPV,

@@ -31,9 +31,10 @@ import Shelley.Spec.Ledger.Address
     mkRwdAcnt,
   )
 import Shelley.Spec.Ledger.BaseTypes
-  ( Globals (activeSlotCoeff, epochInfo, securityParameter),
+  ( Globals (activeSlotCoeff, securityParameter),
     Network (Testnet),
     StrictMaybe (..),
+    epochInfo,
     truncateUnitInterval,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))

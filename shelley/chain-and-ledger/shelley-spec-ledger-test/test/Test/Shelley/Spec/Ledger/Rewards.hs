@@ -49,6 +49,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
     activeSlotVal,
+    epochInfo,
     intervalValue,
     mkActiveSlotCoeff,
     unitIntervalToRational,

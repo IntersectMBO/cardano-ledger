@@ -50,6 +50,7 @@ module Shelley.Spec.Ledger.BaseTypes
 
     -- * STS Base
     Globals (..),
+    epochInfo,
     ShelleyBase,
   )
 where
@@ -67,6 +68,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, cborError)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Time (SystemStart)
+import Control.Exception (throw)
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Binary.Put as B
@@ -82,6 +84,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Word (Word16, Word64, Word8)
+import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
@@ -319,7 +322,7 @@ activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
 --------------------------------------------------------------------------------
 
 data Globals = Globals
-  { epochInfo :: !(EpochInfo Identity),
+  { epochInfoWithErr :: !(EpochInfo (Either Text)),
     slotsPerKESPeriod :: !Word64,
     -- | The window size in which our chosen chain growth property
     --   guarantees at least k blocks. From the paper
@@ -353,6 +356,15 @@ data Globals = Globals
 instance NoThunks Globals
 
 type ShelleyBase = ReaderT Globals Identity
+
+epochInfo :: Globals -> EpochInfo Identity
+epochInfo = (hoistEpochInfo (either (throw . EpochErr) pure)) . epochInfoWithErr
+
+newtype EpochErr = EpochErr Text
+
+deriving instance Show EpochErr
+
+instance Exception EpochErr
 
 data Network
   = Testnet

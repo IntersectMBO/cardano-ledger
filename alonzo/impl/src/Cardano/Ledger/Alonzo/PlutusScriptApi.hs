@@ -36,7 +36,7 @@ import Cardano.Ledger.Alonzo.Tx
     txdats',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), vldt')
-import Cardano.Ledger.Alonzo.TxInfo (runPLCScript, transTx, valContext)
+import Cardano.Ledger.Alonzo.TxInfo (runPLCScript, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts')
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -44,7 +44,10 @@ import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
+import Cardano.Slotting.EpochInfo (EpochInfo)
+import Cardano.Slotting.Time (SystemStart)
 import Data.Coders
+import Data.Functor.Identity (Identity)
 import Data.List (foldl')
 import qualified Data.Map as Map
 import Data.Maybe (isJust)
@@ -143,16 +146,18 @@ collectTwoPhaseScriptInputs ::
     HasField "body" tx (Core.TxBody era),
     HasField "wits" tx (TxWitness era)
   ) =>
+  EpochInfo Identity ->
+  SystemStart ->
   Core.PParams era ->
   tx ->
   UTxO era ->
   Either [CollectError (Crypto era)] [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
-collectTwoPhaseScriptInputs pp tx utxo =
+collectTwoPhaseScriptInputs ei sysS pp tx utxo =
   case Map.lookup PlutusV1 (getField @"_costmdls" pp) of
     Nothing -> Left [NoCostModel PlutusV1]
     Just cost -> merge (apply cost) (map redeemer needed) (map getscript needed) (Right [])
   where
-    txinfo = transTx utxo tx
+    txinfo = txInfo ei sysS utxo tx
     needed = scriptsNeeded utxo tx
     redeemer (sp, _) =
       case indexedRdmrs tx sp of

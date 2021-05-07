@@ -56,7 +56,7 @@ import Shelley.Spec.Ledger.API
     Delegation (..),
     LEDGER,
   )
-import Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo), StrictMaybe (..))
+import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), epochInfo)
 import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
     TxSeq (..),
