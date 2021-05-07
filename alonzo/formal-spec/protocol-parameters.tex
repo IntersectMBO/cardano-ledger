@@ -94,10 +94,13 @@ used (in the ShelleyMA era) to limit the size of the the $\Value$ part of an out
 serialised transaction.
 
 \textbf{Collateral inputs.}
-Recall that collateral inputs are used to cover the transaction fees in the case
-that a non-native script fails.
+Collateral inputs in a transaction are used to cover the transaction fees in the case
+that a non-native script fails (see Section~\ref{sec:transctions}).
+The term \emph{collateral} refers to the total ada contained in the UTxOs referenced 
+by collateral inputs.
+
 The parameter $\var{collateralPercent}$ is used to specify the percentage of
-the total transaction fee its collateral inputs must (at minimum) cover. The
+the total transaction fee its collateral must (at minimum) cover. The
 collateral inputs must not themselves be locked by a script. That is, they must
 be VK inputs. The parameter $\var{maxCollInputs}$ is used to limit, additionally,
 the total number of collateral inputs, and thus the total number of additional

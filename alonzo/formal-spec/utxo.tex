@@ -51,9 +51,9 @@ We have added or changed several functions that deal with fees and collateral as
   \begin{enumerate}[label=({\roman*})]
     \item the fee amount that the transaction states it is paying suffices to cover
     the minimum fee that the transaction is obligated to pay; and if the transaction uses non-native scripts, that
-    \item the collateral inputs are strictly in key-hash addresses;
-    \item all the collateral inputs contain strictly Ada and no other kinds of token; and
-    \item the collateral inputs are sufficient to cover the percentage of the
+    \item the collateral inputs refer only to UTxOs with key-hash addresses;
+    \item all the collateral inputs refer to UTxOs containing Ada only and no other kinds of token; and
+    \item the collateral provided is sufficient to cover the percentage of the
     transaction fee amount specified by the protocol parameter $\fun{collateralPercent}$
   \end{enumerate}
   Note that checking that a transaction is carrying redeemers is the most simple way to
@@ -387,7 +387,7 @@ In general, there is no way to check \emph{a-priori} that the budget that has be
 This can only be done by actually running the scripts. From the perspective of the ledger, there is no difference
 between a script that exhausts the $\ExUnits$ budget during validation, and one that fails to validate.
 If a transaction contains a failing script, the only change to the ledger that is made
-is to collect all inputs provided as collateral.
+is that the collateral is collected into the fee pot.
 
 It is always in the interest of the slot leader to have the new block validate,
 and for it to contain only valid transactions. This motivates the
@@ -690,7 +690,7 @@ We construct the following helper functions :
 \begin{itemize}
   \item $\fun{witsVKeyNeeded}$ is a Shelley function adjusted to include
   keys that are specified in the $\fun{reqSignerHashes}$ field of the transaction,
-  as well as keys locking the collateral inputs of the transaction.
+  as well as keys locking the UTxOs to which the collateral inputs of the transaction point.
 
   \item $\fun{scriptsNeeded}$ assembles the all the $\ScriptPurpose$ terms
   for validation of every transaction action that requires script validation,

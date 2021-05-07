@@ -222,16 +222,18 @@ a transaction (as a set) versus how redeemers are included
 \end{description}
 
 \subsection{Transactions}
+\label{sec:transctions}
 We have also made the following changes to
 the body of the transaction:
 
 \begin{itemize}
-  \item There is a set of \emph{collateral inputs} that is used to cover a percentage of
+  \item The new field $\fun{collateral}$ is used to specify the \emph{collateral inputs}
+    that are collected (into the fee pot) to cover a percentage of
     transaction fees (usually $100$ percent or more)
     \emph{in case the transaction contains failing non-native scripts}. They are not collected otherwise.
     The purpose of these is to cover the resource use costs incurred by block producers running not only
     scripts that validate, but the failing one also. Only the inputs that are locked by VKeys can
-    be used as collateral, and they must only contain ada.
+    be used for collateral, and they must only contain ada.
 
     It is permitted to use the same inputs as both a collateral and a regular inputs, as exactly
     one set of inputs is ever collected : collateral ones in the case of script failure, and regular inputs
@@ -258,7 +260,7 @@ A complete transaction is comprised of:
 \begin{enumerate}
   \item the transaction body,
   \item all the information that is needed to witness transactions,
-  \item the $\IsValidating$ tag, which indicates whether all scripts with all inputs
+  \item the $\IsValidating$ tag, which indicates whether all scripts
   that are executed during the script execution phase validate.
   The correctness of the tag is verified as part of the ledger rules, and the block is
   deemed to be invalid if it is applied incorrectly.
@@ -291,9 +293,3 @@ The hash of the indexed redeemer structure and the protocol parameters that are 
 script interpreters are included in the body of the transaction. In the future, other parts of the ledger
 state may also need to be included in this hash, if they are passed as
 arguments to new script interpreter.
-
-The owner of any tokens that are spent as part of a given transaction
-must sign the transaction body. This means that
-the owners of tokens that are spent by the transaction will have
-signed their selection of the inputs that will be put in the fee pot in case of script validation failure, and
-thus have had the opportunity to check the outcome of those scripts before signing the transaction body.
