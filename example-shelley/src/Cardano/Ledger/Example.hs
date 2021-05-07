@@ -151,6 +151,7 @@ instance CryptoClass.Crypto c => SupportsSegWit (ExampleEra c) where
   fromTxSeq = Shelley.txSeqTxns
   toTxSeq = Shelley.TxSeq
   hashTxSeq = Shelley.bbHash
+  numSegComponents = 3
 
 instance CryptoClass.Crypto c => ValidateAuxiliaryData (ExampleEra c) c where
   hashAuxiliaryData metadata = AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @c) index metadata)

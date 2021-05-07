@@ -51,6 +51,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
+import Data.Word (Word64)
 import GHC.Records (HasField (..))
 
 --------------------------------------------------------------------------------
@@ -132,6 +133,9 @@ class SupportsSegWit era where
   hashTxSeq ::
     TxSeq era ->
     Hash.Hash (CryptoClass.HASH (Crypto era)) EraIndependentBlockBody
+
+  -- | The number of segregated components
+  numSegComponents :: Word64
 
 --------------------------------------------------------------------------------
 -- Era translation

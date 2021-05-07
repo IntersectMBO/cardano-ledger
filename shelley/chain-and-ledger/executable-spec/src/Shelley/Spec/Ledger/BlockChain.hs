@@ -679,17 +679,23 @@ instance
   fromCBOR = txSeqDecoder False
 
 instance
+  forall era.
   ( BlockAnn era,
     ValidateScript era,
+    Era.SupportsSegWit era,
     FromCBOR (Annotator (Era.TxSeq era))
   ) =>
   FromCBOR (Annotator (Block era))
   where
   fromCBOR = annotatorSlice $
-    decodeRecordNamed "Block" (const 4) $ do
+    decodeRecordNamed "Block" (const blockSize) $ do
       header <- fromCBOR
       txns <- fromCBOR
       pure $ Block' <$> header <*> txns
+    where
+      blockSize =
+        1 -- header
+          + fromIntegral (Era.numSegComponents @era)
 
 -- | A block in which we do not validate the matched encoding of parts of the
 --   segwit. TODO This is purely a test concern, and as such should be moved out

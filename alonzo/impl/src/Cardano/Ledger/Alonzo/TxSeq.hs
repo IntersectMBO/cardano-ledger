@@ -271,8 +271,10 @@ nonValidatingIndices (StrictSeq.fromStrict -> xs) =
 --
 -- This function operates much as the inverse of 'nonValidatingIndices'.
 alignedValidFlags :: Int -> [Int] -> Seq.Seq IsValidating
-alignedValidFlags n [] = Seq.replicate n $ IsValidating True
-alignedValidFlags n (x : xs) =
-  Seq.replicate (n - x) (IsValidating True)
-    Seq.>< IsValidating False
-    Seq.<| alignedValidFlags (n - x - 1) xs
+alignedValidFlags = alignedValidFlags' (-1)
+  where
+    alignedValidFlags' _ n [] = Seq.replicate n $ IsValidating True
+    alignedValidFlags' prev n (x : xs) =
+      Seq.replicate (x - prev - 1) (IsValidating True)
+        Seq.>< IsValidating False
+        Seq.<| alignedValidFlags' x (n - (x - prev)) xs

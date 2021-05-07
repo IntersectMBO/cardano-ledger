@@ -192,6 +192,7 @@ instance
   fromTxSeq = Shelley.txSeqTxns
   toTxSeq = Shelley.TxSeq
   hashTxSeq = Shelley.bbHash
+  numSegComponents = 3
 
 instance
   ( CryptoClass.Crypto c,
