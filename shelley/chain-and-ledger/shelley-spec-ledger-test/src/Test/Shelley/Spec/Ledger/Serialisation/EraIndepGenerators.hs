@@ -45,11 +45,10 @@ import Cardano.Ledger.Coin (DeltaCoin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
+import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript)
 import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesScript,
+  ( UsesScript,
     UsesTxBody,
     UsesTxOut,
     UsesValue,
@@ -125,23 +124,18 @@ import qualified Shelley.Spec.Ledger.STS.Ppup as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS
+import Shelley.Spec.Ledger.Serialization (ToCBORGroup)
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
 import Test.QuickCheck (Arbitrary, arbitrary, genericShrink, listOf, oneof, recursivelyShrink, resize, shrink, vectorOf)
 import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( KeySpace (KeySpace_),
-    PreAlonzo,
-    geKeySpace,
-    ksCoreNodes,
-    mkBlock,
-    mkBlockHeader,
+  ( mkBlockHeader,
     mkOCert,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
-import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
-import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass)
+import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
     genSignature,
@@ -772,12 +766,13 @@ instance
   shrink _ = []
 
 genTx ::
-  ( UsesTxBody era,
-    UsesAuxiliary era,
+  ( Era era,
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.AuxiliaryData era),
-    ToCBOR (Core.Witnesses era),
-    Arbitrary (Core.Witnesses era)
+    Arbitrary (Core.Witnesses era),
+    ToCBOR (Core.AuxiliaryData era), -- for Tx Pattern
+    ToCBOR (Core.TxBody era), -- for Tx Pattern
+    ToCBOR (Core.Witnesses era) -- for Tx Pattern
   ) =>
   Gen (Tx era)
 genTx =
@@ -788,53 +783,24 @@ genTx =
 
 genBlock ::
   forall era.
-  ( UsesTxBody era,
-    UsesAuxiliary era,
-    PreAlonzo era,
-    ScriptClass era,
+  ( Era era,
+    ToCBORGroup (TxSeq era),
     Mock (Crypto era),
-    Arbitrary (Core.Witnesses era),
-    Arbitrary (Core.TxBody era),
-    Arbitrary (Core.AuxiliaryData era)
+    Arbitrary (TxInBlock era)
   ) =>
   Gen (Block era)
-genBlock = do
-  let KeySpace_ {ksCoreNodes} = geKeySpace (genEnv p)
-  prevHash <- arbitrary :: Gen (HashHeader (Crypto era))
-  allPoolKeys <- elements (map snd ksCoreNodes)
-  txs <- listOf (genTx @era)
-  curSlotNo <- SlotNo <$> choose (0, 10)
-  curBlockNo <- BlockNo <$> choose (0, 100)
-  epochNonce <- arbitrary :: Gen Nonce
-  let kesPeriod = 1
-      keyRegKesPeriod = 1
-      ocert = mkOCert allPoolKeys 1 (KESPeriod kesPeriod)
-  return $
-    mkBlock
-      prevHash
-      allPoolKeys
-      txs
-      curSlotNo
-      curBlockNo
-      epochNonce
-      kesPeriod
-      keyRegKesPeriod
-      ocert
-  where
-    p :: Proxy era
-    p = Proxy
+genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 
 instance
-  ( UsesTxBody era,
-    UsesScript era,
-    UsesAuxiliary era,
-    PreAlonzo era,
-    Mock (Crypto era),
-    ValidateScript era,
+  ( Era era,
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.AuxiliaryData era),
-    Arbitrary (Core.Script era)
+    Arbitrary (Core.Script era),
+    Arbitrary (Core.Witnesses era),
+    ToCBOR (Core.AuxiliaryData era), -- for Tx Pattern
+    ToCBOR (Core.TxBody era), -- for Tx Pattern
+    ToCBOR (Core.Witnesses era) -- for Tx Pattern
   ) =>
   Arbitrary (Tx era)
   where
@@ -842,15 +808,10 @@ instance
 
 instance
   ( UsesTxBody era,
-    UsesAuxiliary era,
-    PreAlonzo era,
-    EraGen era,
+    ToCBORGroup (TxSeq era),
+    SupportsSegWit era,
     Mock (Crypto era),
-    ValidateScript era,
-    Arbitrary (Core.TxBody era),
-    Arbitrary (Core.Value era),
-    Arbitrary (Core.AuxiliaryData era),
-    Arbitrary (Core.Script era)
+    Arbitrary (TxInBlock era)
   ) =>
   Arbitrary (Block era)
   where

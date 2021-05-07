@@ -17,10 +17,12 @@ import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (CostModel, WitnessPPData)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
+import qualified Cardano.Ledger.Tx as LTX
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import qualified PlutusTx as Plutus
+import Shelley.Spec.Ledger.BlockChain (Block)
 import Shelley.Spec.Ledger.Metadata (Metadata)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (roundTrip, roundTripAnn)
@@ -111,5 +113,9 @@ tests =
       testProperty "Script" $
         trippingAnn @(Script (AlonzoEra C_Crypto)),
       testProperty "WitnessPPData" $
-        trippingAnn @(WitnessPPData (AlonzoEra C_Crypto))
+        trippingAnn @(WitnessPPData (AlonzoEra C_Crypto)),
+      testProperty "alonzo/Tx" $
+        trippingAnn @(LTX.Tx (AlonzoEra C_Crypto)),
+      testProperty "alonzo/Block" $
+        trippingAnn @(Block (AlonzoEra C_Crypto))
     ]
