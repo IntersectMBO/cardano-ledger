@@ -38,6 +38,7 @@ module Control.State.Transition.Extended
     (?!),
     (?!:),
     Label,
+    Event(..),
     labeledPred,
     labeledPredE,
     failBecause,
@@ -222,7 +223,9 @@ class (STS sub, BaseM sub ~ BaseM super) => Embed sub super where
 instance STS sts => Embed sts sts where
   wrapFailed = id
 
-data Event
+data Event 
+  = NewPoolParam
+  | NewFuturePoolParam
 
 data EventPolicy =
     EventPolicyReturn

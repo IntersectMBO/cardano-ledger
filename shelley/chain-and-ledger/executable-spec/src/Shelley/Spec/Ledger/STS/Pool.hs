@@ -30,14 +30,15 @@ import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
 import Control.State.Transition
-  ( STS (..),
+  ( Event (..),
+    STS (..),
     TRC (..),
     TransitionRule,
     failBecause,
     judgmentContext,
     liftSTS,
-    (?!),
     tellEvent,
+    (?!),
   )
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
@@ -177,7 +178,7 @@ poolDelegationTransition = do
 
       let hk = _poolId poolParam
       if eval (hk ∉ dom stpools)
-        then do 
+        then do
           -- register new, Pool-Reg
           tellEvent NewPoolParam
           pure $
