@@ -346,7 +346,7 @@ constructValidated globals env@(UtxoEnv _ pp _ _) st tx =
             _ -> throwError errs
   where
     runTransitionRule :: RuleInterpreter
-    runTransitionRule = applyRuleInternal ValidateAll runSTS
+    runTransitionRule = applyRuleInternal EPDiscard ValidateAll runSTS
     runSTS :: STSInterpreter
     runSTS = applySTSInternal AssertionsOff runTransitionRule
     utxo = _utxo st
