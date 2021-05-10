@@ -10,12 +10,17 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs)
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW)
+import Cardano.Ledger.Alonzo.PlutusScriptApi
+  ( CollectError (..),
+    collectTwoPhaseScriptInputs,
+  )
+import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..), AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
-    Script,
+    Script (..),
     Tag (..),
     alwaysFails,
     alwaysSucceeds,
@@ -26,7 +31,11 @@ import Cardano.Ledger.Alonzo.Tx
     ValidatedTx (..),
     hashWitnessPPData,
   )
-import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
+import Cardano.Ledger.Alonzo.TxBody
+  ( TxBody (..),
+    TxOut (..),
+    WitnessPPDataHash,
+  )
 import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
@@ -35,13 +44,14 @@ import Cardano.Ledger.Alonzo.TxWitness
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era (ValidateScript (..))
+import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
     PolicyID (..),
     Value (..),
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
@@ -56,6 +66,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as P
   ( EvaluationError (..),
@@ -67,15 +78,32 @@ import Plutus.V1.Ledger.Examples
   ( alwaysFailingNAryFunction,
     alwaysSucceedingNAryFunction,
   )
-import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as P (defaultCostModelParams)
-import qualified PlutusCore.Evaluation.Machine.ExMemory as P (ExCPU (..), ExMemory (..))
+import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as P
+  ( defaultCostModelParams,
+  )
+import qualified PlutusCore.Evaluation.Machine.ExMemory as P
+  ( ExCPU (..),
+    ExMemory (..),
+  )
 import qualified PlutusTx as Plutus
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
-import Shelley.Spec.Ledger.Credential (Credential (..), StakeCredential, StakeReference (..))
-import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyPair (..), KeyRole (..), hashKey)
+import Shelley.Spec.Ledger.Credential
+  ( Credential (..),
+    StakeCredential,
+    StakeReference (..),
+  )
+import Shelley.Spec.Ledger.Keys
+  ( GenDelegs (..),
+    KeyHash,
+    KeyPair (..),
+    KeyRole (..),
+    asWitness,
+    hashKey,
+  )
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
+import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
 import Shelley.Spec.Ledger.Slot (EpochInfo, EpochSize (..), SlotNo (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
@@ -154,6 +182,58 @@ someOutput =
     (Val.inject $ Coin 1000)
     SNothing
 
+alwaysSucceedsHash1 :: ScriptHash C_Crypto
+alwaysSucceedsHash1 = hashScript @A $ alwaysSucceeds 1
+
+alwaysSucceedsHash2 :: ScriptHash C_Crypto
+alwaysSucceedsHash2 = hashScript @A $ alwaysSucceeds 2
+
+alwaysSucceedsHash3 :: ScriptHash C_Crypto
+alwaysSucceedsHash3 = hashScript @A $ alwaysSucceeds 3
+
+alwaysFailsHash0 :: ScriptHash C_Crypto
+alwaysFailsHash0 = hashScript @A $ alwaysFails 0
+
+alwaysFailsHash1 :: ScriptHash C_Crypto
+alwaysFailsHash1 = hashScript @A $ alwaysFails 1
+
+timelockKeys :: KeyPair 'Payment C_Crypto
+timelockKeys = KeyPair vk sk
+  where
+    (sk, vk) = mkKeyPair @C_Crypto (1, 2, 3, 4, 5)
+
+timelockScript :: Word64 -> Script A
+timelockScript s =
+  TimelockScript $
+    RequireAllOf $
+      StrictSeq.fromList
+        [ RequireSignature . asWitness . hashKey . vKey $ timelockKeys,
+          RequireTimeExpire (SlotNo $ 100 + s)
+        ]
+
+timelockHash0 :: ScriptHash C_Crypto
+timelockHash0 = hashScript @A $ timelockScript 0
+
+timelockHash1 :: ScriptHash C_Crypto
+timelockHash1 = hashScript @A $ timelockScript 1
+
+timelockHash2 :: ScriptHash C_Crypto
+timelockHash2 = hashScript @A $ timelockScript 2
+
+timelockAddr :: Addr C_Crypto
+timelockAddr = Addr Testnet pCred sCred
+  where
+    (_ssk, svk) = mkKeyPair @C_Crypto (0, 0, 0, 0, 3)
+    pCred = ScriptHashObj timelockHash0
+    sCred = StakeRefBase . KeyHashObj . hashKey $ svk
+
+timelockOut :: TxOut A
+timelockOut =
+  TxOut
+    timelockAddr
+    (Val.inject $ Coin 1)
+    SNothing
+
 initUTxO :: UTxO A
 initUTxO =
   UTxO $
@@ -163,6 +243,7 @@ initUTxO =
       ]
         ++ map (\i -> (TxIn genesisId i, someOutput)) [3 .. 8]
         ++ map (\i -> (TxIn genesisId i, collateralOutput)) [11 .. 18]
+        ++ [(TxIn genesisId 100, timelockOut)]
 
 initialUtxoSt :: UTxOState A
 initialUtxoSt = UTxOState initUTxO (Coin 0) (Coin 0) def
@@ -217,6 +298,9 @@ validatingRedeemersEx1 =
 outEx1 :: TxOut A
 outEx1 = TxOut someAddr (Val.inject $ Coin 4995) SNothing
 
+hashWPPD :: Redeemers A -> StrictMaybe (WitnessPPDataHash C_Crypto)
+hashWPPD rs = hashWitnessPPData pp (Set.singleton PlutusV1) rs
+
 validatingBody :: TxBody A
 validatingBody =
   TxBody
@@ -228,9 +312,9 @@ validatingBody =
     (Coin 5) --txfee
     (ValidityInterval SNothing SNothing) --txvldt
     SNothing --txUpdates
-    mempty -- reqSignerHashes
+    (Set.singleton . asWitness . hashKey . vKey $ someKeys) -- reqSignerHashes
     mempty --mint
-    (hashWitnessPPData pp (Set.singleton PlutusV1) validatingRedeemersEx1) --wppHash
+    (hashWPPD validatingRedeemersEx1) --wppHash
     SNothing --adHash
     SNothing --network id
 
@@ -242,7 +326,7 @@ validatingTx =
       { txwitsVKey = Set.singleton $ makeWitnessVKey (hashAnnotated validatingBody) someKeys,
         txwitsBoot = mempty,
         txscripts =
-          Map.singleton (hashScript @A $ alwaysSucceeds 3) (alwaysSucceeds 3),
+          Map.singleton alwaysSucceedsHash3 (alwaysSucceeds 3),
         txdats = Map.singleton (hashData datumExample1) datumExample1,
         txrdmrs = validatingRedeemersEx1
       }
@@ -293,7 +377,7 @@ notValidatingBody =
     SNothing --txUpdates
     mempty -- reqSignerHashes
     mempty --mint
-    (hashWitnessPPData pp (Set.singleton PlutusV1) notValidatingRedeemers) --wppHash
+    (hashWPPD notValidatingRedeemers) --wppHash
     SNothing --adHash
     SNothing --network id
 
@@ -305,7 +389,7 @@ notValidatingTx =
       { txwitsVKey = Set.singleton $ makeWitnessVKey (hashAnnotated notValidatingBody) someKeys,
         txwitsBoot = mempty,
         txscripts =
-          Map.singleton (hashScript @A $ alwaysFails 0) (alwaysFails 0),
+          Map.singleton alwaysFailsHash0 (alwaysFails 0),
         txdats = Map.singleton (hashData datumExample2) datumExample2,
         txrdmrs = notValidatingRedeemers
       }
@@ -334,7 +418,7 @@ validatingRedeemersEx3 =
     Map.singleton (RdmrPtr Cert 0) (redeemerExample3, ExUnits 5000 5000)
 
 scriptStakeCredSuceed :: StakeCredential C_Crypto
-scriptStakeCredSuceed = ScriptHashObj $ hashScript @A $ alwaysSucceeds 2
+scriptStakeCredSuceed = ScriptHashObj alwaysSucceedsHash2
 
 validatingBodyWithCert :: TxBody A
 validatingBodyWithCert =
@@ -349,7 +433,7 @@ validatingBodyWithCert =
     SNothing --txUpdates
     mempty -- reqSignerHashes
     mempty --mint
-    (hashWitnessPPData pp (Set.singleton PlutusV1) validatingRedeemersEx3) --wppHash
+    (hashWPPD validatingRedeemersEx3) --wppHash
     SNothing --adHash
     SNothing --network id
 
@@ -361,7 +445,7 @@ validatingTxWithCert =
       { txwitsVKey = Set.singleton $ makeWitnessVKey (hashAnnotated validatingBodyWithCert) someKeys,
         txwitsBoot = mempty,
         txscripts =
-          Map.singleton (hashScript @A $ alwaysSucceeds 2) (alwaysSucceeds 2),
+          Map.singleton alwaysSucceedsHash2 (alwaysSucceeds 2),
         txdats = mempty,
         txrdmrs = validatingRedeemersEx3
       }
@@ -390,7 +474,7 @@ notValidatingRedeemersEx4 =
     Map.singleton (RdmrPtr Cert 0) (redeemerExample4, ExUnits 5000 5000)
 
 scriptStakeCredFail :: StakeCredential C_Crypto
-scriptStakeCredFail = ScriptHashObj $ hashScript @A $ alwaysFails 1
+scriptStakeCredFail = ScriptHashObj alwaysFailsHash1
 
 notValidatingBodyWithCert :: TxBody A
 notValidatingBodyWithCert =
@@ -405,7 +489,7 @@ notValidatingBodyWithCert =
     SNothing --txUpdates
     mempty -- reqSignerHashes
     mempty --mint
-    (hashWitnessPPData pp (Set.singleton PlutusV1) notValidatingRedeemersEx4) --wppHash
+    (hashWPPD notValidatingRedeemersEx4) --wppHash
     SNothing --adHash
     SNothing --network id
 
@@ -421,7 +505,7 @@ notValidatingTxWithCert =
               someKeys,
         txwitsBoot = mempty,
         txscripts =
-          Map.singleton (hashScript @A $ alwaysFails 1) (alwaysFails 1),
+          Map.singleton alwaysFailsHash1 (alwaysFails 1),
         txdats = mempty,
         txrdmrs = notValidatingRedeemersEx4
       }
@@ -466,7 +550,7 @@ validatingBodyWithWithdrawal =
     SNothing --txUpdates
     mempty -- reqSignerHashes
     mempty --mint
-    (hashWitnessPPData pp (Set.singleton PlutusV1) validatingRedeemersEx5) --wppHash
+    (hashWPPD validatingRedeemersEx5) --wppHash
     SNothing --adHash
     SNothing --network id
 
@@ -482,7 +566,7 @@ validatingTxWithWithdrawal =
               someKeys,
         txwitsBoot = mempty,
         txscripts =
-          Map.singleton (hashScript @A $ alwaysSucceeds 2) (alwaysSucceeds 2),
+          Map.singleton alwaysSucceedsHash2 (alwaysSucceeds 2),
         txdats = mempty,
         txrdmrs = validatingRedeemersEx5
       }
@@ -527,7 +611,7 @@ notValidatingBodyWithWithdrawal =
     SNothing --txUpdates
     mempty -- reqSignerHashes
     mempty --mint
-    (hashWitnessPPData pp (Set.singleton PlutusV1) notValidatingRedeemersEx6) --wppHash
+    (hashWPPD notValidatingRedeemersEx6) --wppHash
     SNothing --adHash
     SNothing --network id
 
@@ -543,7 +627,7 @@ notValidatingTxWithWithdrawal =
               someKeys,
         txwitsBoot = mempty,
         txscripts =
-          Map.singleton (hashScript @A $ alwaysFails 1) (alwaysFails 1),
+          Map.singleton alwaysFailsHash1 (alwaysFails 1),
         txdats = mempty,
         txrdmrs = notValidatingRedeemersEx6
       }
@@ -556,12 +640,12 @@ utxoEx6 = expectedUTxO ExpectFailure 6
 utxoStEx6 :: UTxOState A
 utxoStEx6 = UTxOState utxoEx6 (Coin 0) (Coin 1000) def
 
--- ==============================================================================
+-- =============================================================================
 --  Example 7: Process a MINT transaction with a succeeding Plutus script.
--- ==============================================================================
+-- =============================================================================
 
 pidEx7 :: PolicyID C_Crypto
-pidEx7 = PolicyID $ hashScript @A $ alwaysSucceeds 2
+pidEx7 = PolicyID alwaysSucceedsHash2
 
 an :: AssetName
 an = AssetName $ BS.pack "an"
@@ -595,7 +679,7 @@ validatingBodyWithMint =
     SNothing --txUpdates
     mempty -- reqSignerHashes
     mintEx7 --mint
-    (hashWitnessPPData pp (Set.singleton PlutusV1) validatingRedeemersEx7) --wppHash
+    (hashWPPD validatingRedeemersEx7) --wppHash
     SNothing --adHash
     SNothing --network id
 
@@ -611,7 +695,7 @@ validatingTxWithMint =
               someKeys,
         txwitsBoot = mempty,
         txscripts =
-          Map.singleton (hashScript @A $ alwaysSucceeds 2) (alwaysSucceeds 2),
+          Map.singleton alwaysSucceedsHash2 (alwaysSucceeds 2),
         txdats = mempty,
         txrdmrs = validatingRedeemersEx7
       }
@@ -629,7 +713,7 @@ utxoStEx7 = UTxOState utxoEx7 (Coin 0) (Coin 5) def
 -- ==============================================================================
 
 pidEx8 :: PolicyID C_Crypto
-pidEx8 = PolicyID $ hashScript @A $ alwaysFails 1
+pidEx8 = PolicyID alwaysFailsHash1
 
 mintEx8 :: Value C_Crypto
 mintEx8 =
@@ -660,7 +744,7 @@ notValidatingBodyWithMint =
     SNothing --txUpdates
     mempty -- reqSignerHashes
     mintEx8 --mint
-    (hashWitnessPPData pp (Set.singleton PlutusV1) notValidatingRedeemersEx8) --wppHash
+    (hashWPPD notValidatingRedeemersEx8) --wppHash
     SNothing --adHash
     SNothing --network id
 
@@ -676,7 +760,7 @@ notValidatingTxWithMint =
               someKeys,
         txwitsBoot = mempty,
         txscripts =
-          Map.singleton (hashScript @A $ alwaysFails 1) (alwaysFails 1),
+          Map.singleton alwaysFailsHash1 (alwaysFails 1),
         txdats = mempty,
         txrdmrs = notValidatingRedeemersEx8
       }
@@ -688,6 +772,427 @@ utxoEx8 = expectedUTxO ExpectFailure 8
 
 utxoStEx8 :: UTxOState A
 utxoStEx8 = UTxOState utxoEx8 (Coin 0) (Coin 1000) def
+
+-- ====================================================================================
+--  Example 9: Process a transaction with a succeeding script in every place possible,
+--  and also with succeeding timelock scripts.
+-- ====================================================================================
+
+validatingRedeemersEx9 :: Redeemers A
+validatingRedeemersEx9 =
+  Redeemers . Map.fromList $
+    [ (RdmrPtr Spend 0, (Data (Plutus.I 101), ExUnits 5000 5000)),
+      (RdmrPtr Cert 1, (Data (Plutus.I 102), ExUnits 5000 5000)),
+      (RdmrPtr Rewrd 1, (Data (Plutus.I 103), ExUnits 5000 5000)),
+      (RdmrPtr Mint 1, (Data (Plutus.I 104), ExUnits 5000 5000))
+    ]
+
+pidEx9 :: PolicyID C_Crypto
+pidEx9 = PolicyID timelockHash1
+
+mintEx9 :: Value C_Crypto
+mintEx9 =
+  Value 0 $
+    Map.fromList
+      [ (pidEx7, Map.singleton an 1),
+        (pidEx9, Map.singleton an 1)
+      ]
+
+outEx9 :: TxOut A
+outEx9 = TxOut someAddr (mintEx9 <+> Val.inject (Coin 4996)) SNothing
+
+timelockStakeCred :: StakeCredential C_Crypto
+timelockStakeCred = ScriptHashObj timelockHash2
+
+validatingBodyManyScripts :: TxBody A
+validatingBodyManyScripts =
+  TxBody
+    (Set.fromList [TxIn genesisId 1, TxIn genesisId 100]) --inputs
+    (Set.singleton $ TxIn genesisId 11) --collateral
+    (StrictSeq.singleton outEx9) --outputs
+    ( StrictSeq.fromList
+        [ DCertDeleg (DeRegKey timelockStakeCred),
+          DCertDeleg (DeRegKey scriptStakeCredSuceed)
+        ] --txcerts
+    )
+    ( Wdrl $
+        Map.fromList
+          [ (RewardAcnt Testnet scriptStakeCredSuceed, Coin 0),
+            (RewardAcnt Testnet timelockStakeCred, Coin 0)
+          ] --txwdrls
+    )
+    (Coin 5) --txfee
+    (ValidityInterval SNothing (SJust $ SlotNo 1)) --txvldt
+    SNothing --txUpdates
+    mempty -- reqSignerHashes
+    mintEx9 --mint
+    (hashWPPD validatingRedeemersEx9) --wppHash
+    SNothing --adHash
+    SNothing --network id
+
+validatingTxManyScripts :: ValidatedTx A
+validatingTxManyScripts =
+  ValidatedTx
+    validatingBodyManyScripts
+    TxWitness
+      { txwitsVKey =
+          Set.fromList
+            [ makeWitnessVKey (hashAnnotated validatingBodyManyScripts) someKeys,
+              makeWitnessVKey (hashAnnotated validatingBodyManyScripts) timelockKeys
+            ],
+        txwitsBoot = mempty,
+        txscripts =
+          Map.fromList
+            [ (alwaysSucceedsHash3, alwaysSucceeds 3),
+              (alwaysSucceedsHash2, alwaysSucceeds 2),
+              (timelockHash0, timelockScript 0),
+              (timelockHash1, timelockScript 1),
+              (timelockHash2, timelockScript 2)
+            ],
+        txdats = Map.singleton (hashData datumExample1) datumExample1,
+        txrdmrs = validatingRedeemersEx9
+      }
+    (IsValidating True)
+    SNothing
+
+utxoEx9 :: UTxO A
+utxoEx9 = UTxO utxo
+  where
+    utxo =
+      Map.insert (TxIn (txid @A validatingBodyManyScripts) 0) outEx9 $
+        Map.filterWithKey
+          (\k _ -> k /= (TxIn genesisId 1) && k /= (TxIn genesisId 100))
+          (unUTxO initUTxO)
+
+utxoStEx9 :: UTxOState A
+utxoStEx9 = UTxOState utxoEx9 (Coin 0) (Coin 5) def
+
+-- =======================
+-- Invalid Transactions
+-- =======================
+
+incorrectNetworkIDTxBody :: TxBody A
+incorrectNetworkIDTxBody =
+  TxBody
+    (Set.singleton $ TxIn genesisId 3) --inputs
+    mempty --collateral
+    (StrictSeq.singleton (TxOut someAddr (Val.inject $ Coin 995) SNothing)) --outputs
+    StrictSeq.empty --txcerts
+    (Wdrl mempty) --txwdrls
+    (Coin 5) --txfee
+    (ValidityInterval SNothing SNothing) --txvldt
+    SNothing --txUpdates
+    mempty -- reqSignerHashes
+    mempty --mint
+    SNothing --wppHash
+    SNothing --adHash
+    (SJust Mainnet) --network id
+
+incorrectNetworkIDTx :: ValidatedTx A
+incorrectNetworkIDTx =
+  ValidatedTx
+    incorrectNetworkIDTxBody
+    TxWitness
+      { txwitsVKey =
+          Set.singleton $
+            makeWitnessVKey (hashAnnotated incorrectNetworkIDTxBody) someKeys,
+        txwitsBoot = mempty,
+        txscripts = mempty,
+        txdats = mempty,
+        txrdmrs = Redeemers mempty
+      }
+    (IsValidating True)
+    SNothing
+
+extraneousKeyHash :: KeyHash 'Witness C_Crypto
+extraneousKeyHash = hashKey . snd . mkKeyPair @C_Crypto $ (0, 0, 0, 0, 99)
+
+missingRequiredWitnessTxBody :: TxBody A
+missingRequiredWitnessTxBody =
+  TxBody
+    (Set.singleton $ TxIn genesisId 3) --inputs
+    mempty --collateral
+    (StrictSeq.singleton (TxOut someAddr (Val.inject $ Coin 995) SNothing)) --outputs
+    StrictSeq.empty --txcerts
+    (Wdrl mempty) --txwdrls
+    (Coin 5) --txfee
+    (ValidityInterval SNothing SNothing) --txvldt
+    SNothing --txUpdates
+    (Set.singleton extraneousKeyHash) -- reqSignerHashes
+    mempty --mint
+    SNothing --wppHash
+    SNothing --adHash
+    (SJust Testnet) --network id
+
+missingRequiredWitnessTx :: ValidatedTx A
+missingRequiredWitnessTx =
+  ValidatedTx
+    missingRequiredWitnessTxBody
+    TxWitness
+      { txwitsVKey =
+          Set.singleton $
+            makeWitnessVKey (hashAnnotated missingRequiredWitnessTxBody) someKeys,
+        txwitsBoot = mempty,
+        txscripts = mempty,
+        txdats = mempty,
+        txrdmrs = Redeemers mempty
+      }
+    (IsValidating True)
+    SNothing
+
+missingRedeemerTxBody :: TxBody A
+missingRedeemerTxBody =
+  TxBody
+    (Set.singleton $ TxIn genesisId 1) --inputs
+    (Set.singleton $ TxIn genesisId 11) --collateral
+    (StrictSeq.singleton outEx1) --outputs
+    StrictSeq.empty --txcerts
+    (Wdrl mempty) --txwdrls
+    (Coin 5) --txfee
+    (ValidityInterval SNothing SNothing) --txvldt
+    SNothing --txUpdates
+    (Set.singleton . asWitness . hashKey . vKey $ someKeys) -- reqSignerHashes
+    mempty --mint
+    (hashWPPD (Redeemers mempty)) --wppHash
+    SNothing --adHash
+    SNothing --network id
+
+missingRedeemerTx :: ValidatedTx A
+missingRedeemerTx =
+  ValidatedTx
+    missingRedeemerTxBody
+    TxWitness
+      { txwitsVKey =
+          Set.singleton $
+            makeWitnessVKey (hashAnnotated missingRedeemerTxBody) someKeys,
+        txwitsBoot = mempty,
+        txscripts =
+          Map.singleton alwaysSucceedsHash3 (alwaysSucceeds 3),
+        txdats = Map.singleton (hashData datumExample1) datumExample1,
+        txrdmrs = Redeemers mempty
+      }
+    (IsValidating True)
+    SNothing
+
+wrongRedeemerHashTx :: ValidatedTx A
+wrongRedeemerHashTx =
+  ValidatedTx
+    missingRedeemerTxBody
+    TxWitness
+      { txwitsVKey =
+          Set.singleton $
+            makeWitnessVKey (hashAnnotated missingRedeemerTxBody) someKeys,
+        txwitsBoot = mempty,
+        txscripts =
+          Map.singleton alwaysSucceedsHash3 (alwaysSucceeds 3),
+        txdats = Map.singleton (hashData datumExample1) datumExample1,
+        txrdmrs = validatingRedeemersEx1
+      }
+    (IsValidating True)
+    SNothing
+
+missing1phaseScriptWitnessTx :: ValidatedTx A
+missing1phaseScriptWitnessTx =
+  ValidatedTx
+    validatingBodyManyScripts
+    TxWitness
+      { txwitsVKey =
+          Set.fromList
+            [ makeWitnessVKey (hashAnnotated validatingBodyManyScripts) someKeys,
+              makeWitnessVKey (hashAnnotated validatingBodyManyScripts) timelockKeys
+            ],
+        txwitsBoot = mempty,
+        txscripts =
+          Map.fromList
+            [ (alwaysSucceedsHash3, alwaysSucceeds 3),
+              (alwaysSucceedsHash2, alwaysSucceeds 2),
+              -- intentionally missing -> (timelockHash0, timelockScript 0),
+              (timelockHash1, timelockScript 1),
+              (timelockHash2, timelockScript 2)
+            ],
+        txdats = Map.singleton (hashData datumExample1) datumExample1,
+        txrdmrs = validatingRedeemersEx9
+      }
+    (IsValidating True)
+    SNothing
+
+missing2phaseScriptWitnessTx :: ValidatedTx A
+missing2phaseScriptWitnessTx =
+  ValidatedTx
+    validatingBodyManyScripts
+    TxWitness
+      { txwitsVKey =
+          Set.fromList
+            [ makeWitnessVKey (hashAnnotated validatingBodyManyScripts) someKeys,
+              makeWitnessVKey (hashAnnotated validatingBodyManyScripts) timelockKeys
+            ],
+        txwitsBoot = mempty,
+        txscripts =
+          Map.fromList
+            [ (alwaysSucceedsHash3, alwaysSucceeds 3),
+              -- intentionally missing -> (alwaysSucceedsHash2, alwaysSucceeds 2),
+              (timelockHash0, timelockScript 0),
+              (timelockHash1, timelockScript 1),
+              (timelockHash2, timelockScript 2)
+            ],
+        txdats = Map.singleton (hashData datumExample1) datumExample1,
+        txrdmrs = validatingRedeemersEx9
+      }
+    (IsValidating True)
+    SNothing
+
+misPurposedRedeemer :: Redeemers A
+misPurposedRedeemer =
+  Redeemers $
+    -- The label *should* be Spend, not Mint
+    Map.singleton (RdmrPtr Mint 1) (redeemerExample1, ExUnits 5000 5000)
+
+wrongRedeemerLabelTxBody :: TxBody A
+wrongRedeemerLabelTxBody =
+  TxBody
+    (Set.singleton $ TxIn genesisId 1) --inputs
+    (Set.singleton $ TxIn genesisId 11) --collateral
+    (StrictSeq.singleton outEx1) --outputs
+    StrictSeq.empty --txcerts
+    (Wdrl mempty) --txwdrls
+    (Coin 5) --txfee
+    (ValidityInterval SNothing SNothing) --txvldt
+    SNothing --txUpdates
+    (Set.singleton . asWitness . hashKey . vKey $ someKeys) -- reqSignerHashes
+    mempty --mint
+    (hashWPPD misPurposedRedeemer) --wppHash
+    SNothing --adHash
+    SNothing --network id
+
+wrongRedeemerLabelTx :: ValidatedTx A
+wrongRedeemerLabelTx =
+  ValidatedTx
+    wrongRedeemerLabelTxBody
+    TxWitness
+      { txwitsVKey =
+          Set.singleton $
+            makeWitnessVKey (hashAnnotated wrongRedeemerLabelTxBody) someKeys,
+        txwitsBoot = mempty,
+        txscripts =
+          Map.singleton alwaysSucceedsHash3 (alwaysSucceeds 3),
+        txdats = Map.singleton (hashData datumExample1) datumExample1,
+        txrdmrs = misPurposedRedeemer
+      }
+    (IsValidating True)
+    SNothing
+
+missingDatumTx :: ValidatedTx A
+missingDatumTx =
+  ValidatedTx
+    validatingBody
+    TxWitness
+      { txwitsVKey =
+          Set.singleton $
+            makeWitnessVKey (hashAnnotated validatingBody) someKeys,
+        txwitsBoot = mempty,
+        txscripts =
+          Map.singleton alwaysSucceedsHash3 (alwaysSucceeds 3),
+        txdats = mempty,
+        txrdmrs = validatingRedeemersEx1
+      }
+    (IsValidating True)
+    SNothing
+
+phase1FailureTx :: ValidatedTx A
+phase1FailureTx =
+  ValidatedTx
+    validatingBodyManyScripts
+    TxWitness
+      { txwitsVKey =
+          Set.singleton $
+            makeWitnessVKey (hashAnnotated validatingBodyManyScripts) someKeys,
+        txwitsBoot = mempty,
+        txscripts =
+          Map.fromList
+            [ (alwaysSucceedsHash3, alwaysSucceeds 3),
+              (alwaysSucceedsHash2, alwaysSucceeds 2),
+              (timelockHash0, timelockScript 0),
+              (timelockHash1, timelockScript 1),
+              (timelockHash2, timelockScript 2)
+            ],
+        txdats = Map.singleton (hashData datumExample1) datumExample1,
+        txrdmrs = validatingRedeemersEx9
+      }
+    (IsValidating True)
+    SNothing
+
+mislabelValidAsInvalid :: ValidatedTx A
+mislabelValidAsInvalid =
+  ValidatedTx
+    validatingBody
+    TxWitness
+      { txwitsVKey =
+          Set.singleton $
+            makeWitnessVKey (hashAnnotated validatingBody) someKeys,
+        txwitsBoot = mempty,
+        txscripts =
+          Map.singleton alwaysSucceedsHash3 (alwaysSucceeds 3),
+        txdats = Map.singleton (hashData datumExample1) datumExample1,
+        txrdmrs = validatingRedeemersEx1
+      }
+    (IsValidating False)
+    SNothing
+
+mislabelInvalidAsValid :: ValidatedTx A
+mislabelInvalidAsValid =
+  ValidatedTx
+    notValidatingBody
+    TxWitness
+      { txwitsVKey =
+          Set.singleton $
+            makeWitnessVKey (hashAnnotated notValidatingBody) someKeys,
+        txwitsBoot = mempty,
+        txscripts =
+          Map.singleton alwaysFailsHash0 (alwaysFails 0),
+        txdats = Map.singleton (hashData datumExample2) datumExample2,
+        txrdmrs = notValidatingRedeemers
+      }
+    (IsValidating True)
+    SNothing
+
+validatingRedeemersTooManyExUnits :: Redeemers A
+validatingRedeemersTooManyExUnits =
+  Redeemers $
+    Map.singleton (RdmrPtr Spend 0) (redeemerExample1, ExUnits 1000001 5000)
+
+tooManyExUnitsTxBody :: TxBody A
+tooManyExUnitsTxBody =
+  TxBody
+    (Set.singleton $ TxIn genesisId 1) --inputs
+    (Set.singleton $ TxIn genesisId 11) --collateral
+    (StrictSeq.singleton outEx1) --outputs
+    StrictSeq.empty --txcerts
+    (Wdrl mempty) --txwdrls
+    (Coin 5) --txfee
+    (ValidityInterval SNothing SNothing) --txvldt
+    SNothing --txUpdates
+    (Set.singleton . asWitness . hashKey . vKey $ someKeys) -- reqSignerHashes
+    mempty --mint
+    (hashWPPD validatingRedeemersTooManyExUnits) --wppHash
+    SNothing --adHash
+    SNothing --network id
+
+tooManyExUnitsTx :: ValidatedTx A
+tooManyExUnitsTx =
+  ValidatedTx
+    tooManyExUnitsTxBody
+    TxWitness
+      { txwitsVKey =
+          Set.singleton $
+            makeWitnessVKey (hashAnnotated tooManyExUnitsTxBody) someKeys,
+        txwitsBoot = mempty,
+        txscripts =
+          Map.singleton alwaysSucceedsHash3 (alwaysSucceeds 3),
+        txdats = Map.singleton (hashData datumExample1) datumExample1,
+        txrdmrs = validatingRedeemersTooManyExUnits
+      }
+    (IsValidating True)
+    SNothing
 
 -- =======
 --  Tests
@@ -752,46 +1257,220 @@ utxowExamples :: TestTree
 utxowExamples =
   testGroup
     "utxow examples"
-    [ testCase "validating SPEND script" $
-        testUTXOW
-          initialUtxoSt
-          validatingTx
-          (Right utxoStEx1),
-      testCase "not validating SPEND script" $
-        testUTXOW
-          initialUtxoSt
-          notValidatingTx
-          (Right utxoStEx2),
-      testCase "validating CERT script" $
-        testUTXOW
-          initialUtxoSt
-          validatingTxWithCert
-          (Right utxoStEx3),
-      testCase "not validating CERT script" $
-        testUTXOW
-          initialUtxoSt
-          notValidatingTxWithCert
-          (Right utxoStEx4),
-      testCase "validating WITHDRAWAL script" $
-        testUTXOW
-          initialUtxoSt
-          validatingTxWithWithdrawal
-          (Right utxoStEx5),
-      testCase "not validating WITHDRAWAL script" $
-        testUTXOW
-          initialUtxoSt
-          notValidatingTxWithWithdrawal
-          (Right utxoStEx6),
-      testCase "validating MINT script" $
-        testUTXOW
-          initialUtxoSt
-          validatingTxWithMint
-          (Right utxoStEx7),
-      testCase "not validating MINT script" $
-        testUTXOW
-          initialUtxoSt
-          notValidatingTxWithMint
-          (Right utxoStEx8),
+    [ testGroup
+        "valid transactions"
+        [ testCase "validating SPEND script" $
+            testUTXOW
+              initialUtxoSt
+              validatingTx
+              (Right utxoStEx1),
+          testCase "not validating SPEND script" $
+            testUTXOW
+              initialUtxoSt
+              notValidatingTx
+              (Right utxoStEx2),
+          testCase "validating CERT script" $
+            testUTXOW
+              initialUtxoSt
+              validatingTxWithCert
+              (Right utxoStEx3),
+          testCase "not validating CERT script" $
+            testUTXOW
+              initialUtxoSt
+              notValidatingTxWithCert
+              (Right utxoStEx4),
+          testCase "validating WITHDRAWAL script" $
+            testUTXOW
+              initialUtxoSt
+              validatingTxWithWithdrawal
+              (Right utxoStEx5),
+          testCase "not validating WITHDRAWAL script" $
+            testUTXOW
+              initialUtxoSt
+              notValidatingTxWithWithdrawal
+              (Right utxoStEx6),
+          testCase "validating MINT script" $
+            testUTXOW
+              initialUtxoSt
+              validatingTxWithMint
+              (Right utxoStEx7),
+          testCase "not validating MINT script" $
+            testUTXOW
+              initialUtxoSt
+              notValidatingTxWithMint
+              (Right utxoStEx8),
+          testCase "validating scripts everywhere" $
+            testUTXOW
+              initialUtxoSt
+              validatingTxManyScripts
+              (Right utxoStEx9)
+        ],
+      testGroup
+        "invalid transactions"
+        [ testCase "wrong network ID" $
+            testUTXOW
+              initialUtxoSt
+              incorrectNetworkIDTx
+              ( Left
+                  [ [ WrappedShelleyEraFailure
+                        (UtxoFailure (WrongNetworkInTxBody Testnet Mainnet))
+                    ]
+                  ]
+              ),
+          testCase "missing required key witness" $
+            testUTXOW
+              initialUtxoSt
+              missingRequiredWitnessTx
+              ( Left [[(MissingRequiredSigners . Set.singleton) extraneousKeyHash]]
+              ),
+          testCase "missing redeemer" $
+            testUTXOW
+              initialUtxoSt
+              missingRedeemerTx
+              ( Left
+                  [ [ WrappedShelleyEraFailure . UtxoFailure
+                        . UtxosFailure
+                        . CollectErrors
+                        $ [NoRedeemer (Spending (TxIn genesisId 1))],
+                      UnRedeemableScripts
+                        [ ( Spending (TxIn genesisId 1),
+                            alwaysSucceedsHash3
+                          )
+                        ]
+                    ]
+                  ]
+              ),
+          testCase "wrong redeemer hash" $
+            testUTXOW
+              initialUtxoSt
+              wrongRedeemerHashTx
+              ( Left
+                  [ [ PPViewHashesDontMatch
+                        (hashWPPD (Redeemers mempty))
+                        (hashWPPD validatingRedeemersEx1)
+                    ]
+                  ]
+              ),
+          testCase "missing 1-phase script witness" $
+            testUTXOW
+              initialUtxoSt
+              missing1phaseScriptWitnessTx
+              ( Left
+                  [ [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
+                        [ NoRedeemer (Spending (TxIn genesisId 100)),
+                          NoWitness (timelockHash0)
+                        ],
+                      WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
+                        timelockHash0,
+                      UnRedeemableScripts [(Spending $ TxIn genesisId 100, timelockHash0)]
+                    ]
+                  ]
+              ),
+          testCase "missing 2-phase script witness" $
+            testUTXOW
+              initialUtxoSt
+              missing2phaseScriptWitnessTx
+              ( Left
+                  [ [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
+                        [ NoWitness alwaysSucceedsHash2,
+                          NoWitness alwaysSucceedsHash2,
+                          NoWitness alwaysSucceedsHash2
+                        ],
+                      WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
+                        alwaysSucceedsHash2,
+                      UnRedeemableScripts
+                        [ ( Rewarding
+                              ( RewardAcnt
+                                  { getRwdNetwork = Testnet,
+                                    getRwdCred = ScriptHashObj alwaysSucceedsHash2
+                                  }
+                              ),
+                            alwaysSucceedsHash2
+                          ),
+                          ( Certifying . DCertDeleg . DeRegKey . ScriptHashObj $
+                              alwaysSucceedsHash2,
+                            alwaysSucceedsHash2
+                          ),
+                          ( Minting (PolicyID {policyID = alwaysSucceedsHash2}),
+                            alwaysSucceedsHash2
+                          )
+                        ]
+                    ]
+                  ]
+              ),
+          testCase "redeemer with incorrect label" $
+            testUTXOW
+              initialUtxoSt
+              wrongRedeemerLabelTx
+              ( Left
+                  [ [ WrappedShelleyEraFailure . UtxoFailure
+                        . UtxosFailure
+                        . CollectErrors
+                        $ [NoRedeemer (Spending (TxIn genesisId 1))],
+                      UnRedeemableScripts
+                        [ ( Spending (TxIn genesisId 1),
+                            alwaysSucceedsHash3
+                          )
+                        ]
+                    ]
+                  ]
+              ),
+          testCase "missing datum" $
+            testUTXOW
+              initialUtxoSt
+              missingDatumTx
+              ( Left
+                  [ [ DataHashSetsDontAgree
+                        mempty
+                        (Set.singleton $ hashData datumExample1)
+                    ]
+                  ]
+              ),
+          testCase "phase 1 script failure" $
+            testUTXOW
+              initialUtxoSt
+              phase1FailureTx
+              ( Left
+                  [ [ WrappedShelleyEraFailure . ScriptWitnessNotValidatingUTXOW $
+                        Set.fromList [timelockHash0, timelockHash1, timelockHash2]
+                    ]
+                  ]
+              ),
+          testCase "valid transaction marked as invalid" $
+            testUTXOW
+              initialUtxoSt
+              mislabelValidAsInvalid
+              ( Left
+                  [ [ WrappedShelleyEraFailure
+                        ( UtxoFailure
+                            (UtxosFailure (ValidationTagMismatch (IsValidating False)))
+                        )
+                    ]
+                  ]
+              ),
+          testCase "invalid transaction marked as valid" $
+            testUTXOW
+              initialUtxoSt
+              mislabelInvalidAsValid
+              ( Left
+                  [ [ WrappedShelleyEraFailure
+                        (UtxoFailure (UtxosFailure (ValidationTagMismatch (IsValidating True))))
+                    ]
+                  ]
+              ),
+          testCase "too many execution units for tx" $
+            testUTXOW
+              initialUtxoSt
+              tooManyExUnitsTx
+              ( Left
+                  [ [ WrappedShelleyEraFailure . UtxoFailure $
+                        ExUnitsTooBigUTxO
+                          (ExUnits {exUnitsMem = 1000000, exUnitsSteps = 1000000})
+                          (ExUnits {exUnitsMem = 1000001, exUnitsSteps = 5000})
+                    ]
+                  ]
+              )
+        ],
       testCase
         "collectTwoPhaseScriptInputs output order"
         collectTwoPhaseScriptInputsOutputOrdering

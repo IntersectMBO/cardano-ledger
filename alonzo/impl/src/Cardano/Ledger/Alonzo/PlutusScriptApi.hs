@@ -158,7 +158,15 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
     Just cost -> merge (apply cost) (map redeemer needed) (map getscript needed) (Right [])
   where
     txinfo = txInfo ei sysS utxo tx
-    needed = scriptsNeeded utxo tx
+    needed = filter knownToNotBe1Phase $ scriptsNeeded utxo tx
+    -- The formal spec achieves the same filtering as knownToNotBe1Phase
+    -- by use of the (partial) language function, which is not defined
+    -- on 1-phase scripts.
+    knownToNotBe1Phase (_, sh) =
+      case sh `Map.lookup` (txscripts' $ getField @"wits" tx) of
+        Just (AlonzoScript.PlutusScript _) -> True
+        Just (AlonzoScript.TimelockScript _) -> False
+        Nothing -> True
     redeemer (sp, _) =
       case indexedRdmrs tx sp of
         Just (d, eu) -> Right (sp, d, eu)

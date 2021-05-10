@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -136,8 +135,7 @@ instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
             $ TRC (env, state, tx)
      in liftEither . left (API.ApplyTxError . join) $ res
 
-  extractTx ValidatedTx {body, wits, auxiliaryData} =
-    Tx body wits auxiliaryData
+  extractTx ValidatedTx {body = b, wits = w, auxiliaryData = a} = Tx b w a
 
 instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c)
 
