@@ -18,15 +18,12 @@
     & \fun{feesOK} \in \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo~= \\
     &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
-    &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo}), \neg \fun{isNonNativeScriptAddress}~tx~a) \\
+    &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collateral}~{txb} \restrictdom \var{utxo}), \fun{paymentHK}~a \in \AddrVKey) \\
     &~~~~~~\wedge~ \fun{adaOnly}~\var{balance} \\
-    &~~~~~~      \wedge~ \var{balance} \geq \txfee{txb})) \\
+    &~~~~~~\wedge~ \var{balance} \geq \fun{quot}~(\txfee~{txb} * (\fun{collateralPercent}~pp))~100)) \\
     &~~      \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
-    & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{txinputs_{fee}}~{txb} \restrictdom \var{utxo})
-    \nextdef
-    & \fun{txins} \in \TxBody \to \powerset{\TxId \times \Ix} \\
-    & \fun{txins} ~\var{txb} = \fun{txinputs}~txb \cup \fun{txinputs_{fee}}~txb
+    & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{collateral}~{txb} \restrictdom \var{utxo})
     \nextdef
     & \fun{txscriptfee} \in \Prices \to \ExUnits \to \Coin \\
     & \fun{txscriptfee}~(pr_{mem}, pr_{steps})~ (\var{mem, steps})
@@ -37,11 +34,11 @@
     &~~(\fun{a}~\var{pp}) \cdot \fun{txSize}~\var{tx} + (\fun{b}~\var{pp}) +
     \hldiff{\fun{txscriptfee}~(\fun{prices}~{pp})~(\fun{totExunits}~(\fun{txbody}~{tx}))}
   \end{align*}
-  \caption{Functions related to fees}
+  \caption{Functions related to fees and collateral}
   \label{fig:functions:utxo}
 \end{figure*}
 
-We have added or changed several functions that deal with fees as shown in Figure \ref{fig:functions:utxo}.
+We have added or changed several functions that deal with fees and collateral as shown in Figure \ref{fig:functions:utxo}.
 
 \begin{itemize}
   \item $\fun{isNonNativeScriptAddress}$ is a predicate that checks
@@ -54,16 +51,14 @@ We have added or changed several functions that deal with fees as shown in Figur
   \begin{enumerate}[label=({\roman*})]
     \item the fee amount that the transaction states it is paying suffices to cover
     the minimum fee that the transaction is obligated to pay; and if the transaction uses non-native scripts, that
-    \item the fee-marked inputs do not belong to non-native script addresses (that is, they
-    belong to either a native script address, or a key hash one);
-    \item all the fee-marked inputs contain strictly Ada and no other kinds of token; and
-    \item the fee-marked inputs are sufficient to cover the fee amount that is stated
-    in the transaction.
+    \item the collateral inputs refer only to UTxOs with key-hash addresses;
+    \item all the collateral inputs refer to UTxOs containing Ada only and no other kinds of token; and
+    \item the collateral provided is sufficient to cover the percentage of the
+    transaction fee amount specified by the protocol parameter $\fun{collateralPercent}$
   \end{enumerate}
   Note that checking that a transaction is carrying redeemers is the most simple way to
   check that it is carrying non-native scripts. A separate check is done in the rule prior to
   calling the $\fun{feesOK}$ function that ensure that this is the case.
-  \item The function $\fun{txins}$ returns the UTxO keys of transaction inputs.
   \item $\fun{txscriptfee}$ calculates the fee that a transaction must pay for script
   execution based on the amount of $\ExUnits$ it has budgeted, and the prices in the current protocol parameters
   for each component of $\ExUnits$.
@@ -360,7 +355,8 @@ are caught during the application of the UTXOW rule (before these functions are 
     & ~~~~(\var{sp}, \var{scriptHash}) \in \fun{scriptsNeeded}~{utxo}~{tx}, \\
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
     & ~~~~(\var{rdmr}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
-    & ~~~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp} \} \\
+    & ~~~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp}, \\
+    & ~~~~\var{script} \in \ScriptNonNative \} \\
     & \where \\
     & ~~~~~~~ \var{txinfo}~=~\fun{txInfo}~(\fun{language}~{script})~\var{utxo}~\var{tx} \\
     \nextdef
@@ -391,7 +387,7 @@ In general, there is no way to check \emph{a-priori} that the budget that has be
 This can only be done by actually running the scripts. From the perspective of the ledger, there is no difference
 between a script that exhausts the $\ExUnits$ budget during validation, and one that fails to validate.
 If a transaction contains a failing script, the only change to the ledger that is made
-is to collect all inputs that have been marked for fees.
+is that the collateral is collected into the fee pot.
 
 It is always in the interest of the slot leader to have the new block validate,
 and for it to contain only valid transactions. This motivates the
@@ -450,10 +446,9 @@ In this case, the states of the UTxO, fee
 
   \begin{enumerate}
     \item All the
-    UTxO entries corresponding to the transaction inputs selected for covering
-    fees are removed;
+    UTxO entries corresponding to the collateral inputs are removed;
 
-    \item The sum total of the value of the marked UTxO entries
+    \item The sum total of the value of the collateral UTxO entries
     is added to the fee pot.
   \end{enumerate}
 
@@ -502,7 +497,7 @@ In this case, the states of the UTxO, fee
       \trans{utxos}{tx}
       \left(
       \begin{array}{r}
-        \varUpdate{\var{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{slot}~{txb}}}  \\
+        \varUpdate{\var{(\txins{txb} \subtractdom \var{utxo}) \cup \outs~{txb}}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
         \varUpdate{\var{fees} + \txfee{txb}} \\
         \varUpdate{\var{pup'}} \\
@@ -539,9 +534,9 @@ In this case, the states of the UTxO, fee
       \trans{utxos}{tx}
       \left(
       \begin{array}{r}
-        \varUpdate{\var{\fun{txinputs_{fee}}~{txb} \subtractdom \var{utxo}}}  \\
+        \varUpdate{\var{\fun{collateral}~{txb} \subtractdom \var{utxo}}}  \\
         \var{deposits} \\
-        \varUpdate{\var{fees} + \fun{ubalance}~(\fun{txinputs_{fee}}~{txb}\restrictdom \var{utxo})} \\
+        \varUpdate{\var{fees} + \fun{ubalance}~(\fun{collateral}~{txb}\restrictdom \var{utxo})} \\
         \var{pup} \\
       \end{array}
       \right)
@@ -556,7 +551,7 @@ transition rule for the UTXO transition type.
 This rule has the following changes:
 
 \begin{enumerate}
-  \item The transaction pays fees correctly, as defined above;
+  \item The transaction pays fees and supplies collateral ada correctly, as defined above;
 
   \item The end of the transaction validity interval is translatable into
   system time (ie. within the consensus's forecast window). This is checked
@@ -579,6 +574,8 @@ This rule has the following changes:
  \item The execution unit budget for a transaction is within the maximum
   permitted number of units for a transaction;
 
+  \item The number of maximum allowed collateral inputs is not exceeded
+
   \item The UTXOS state transition is valid (this is the transition that runs the
   non-native scripts)
 \end{enumerate}
@@ -596,7 +593,7 @@ UTXOS rule.
       \hldiff{\fun{epochInfoSlotToUTCTime}~\mathsf{epochInfo}~\mathsf{systemTime}~i_f \neq \Nothing} \\
       \txins{txb} \neq \emptyset
       & \hldiff{\fun{feesOK}~pp~tx~utxo}
-      & \txins{txb} \subseteq \dom \var{utxo}
+      & \txins{txb}~\cup~\fun{collateral}~{txb}~ \subseteq~ \dom \var{utxo}
       \\
       \consumed{pp}{utxo}{txb} = ~\produced{pp}{poolParams}~{txb}
       \\~\\
@@ -614,7 +611,7 @@ UTXOS rule.
       \hldiff{\fun{txnetworkid}~\var{txb}~=~\NetworkId}
       \\~\\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\~\\
-      \hldiff{\fun{totExunits}~{tx} \leq \fun{maxTxExUnits}~{pp}}
+      \hldiff{\fun{totExunits}~{tx} \leq \fun{maxTxExUnits}~{pp}} &  \hldiff{\| \fun{collateral}~{tx} \| \leq \fun{maxCollInputs}~{pp}}
       \\
       ~
       \\
@@ -691,6 +688,10 @@ When witnessing a transaction in phase one, we therefore need to validate only t
 We construct the following helper functions :
 
 \begin{itemize}
+  \item $\fun{witsVKeyNeeded}$ is a Shelley function adjusted to include
+  keys that are specified in the $\fun{reqSignerHashes}$ field of the transaction,
+  as well as keys locking the UTxOs to which the collateral inputs of the transaction point.
+
   \item $\fun{scriptsNeeded}$ assembles the all the $\ScriptPurpose$ terms
   for validation of every transaction action that requires script validation,
   paired with the hashes of corresponding the witnessing scripts.
@@ -706,6 +707,20 @@ We construct the following helper functions :
 
 \begin{figure}[htb]
   \begin{align*}
+    & \hspace{-0.8cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\KeyHashGen\mapsto\VKey) \to
+      \powerset{\KeyHash} \\
+    & \text{required key hashes} \\
+    &  \hspace{-0.8cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{genDelegs} = \\
+    & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\fun{txinsVKey}~{tx} \} \\
+    \cup & ~~
+           \{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
+      \restrictdom \txwdrls{tx}\}\\
+    \cup & ~~(\AddrVKey \cap \fun{certWitsNeeded}~{tx}) \\
+    \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\var{genDelegs} \\
+    \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
+    \cup & ~~\hldiff{\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\fun{collateral}~{tx} \}} \\
+    \cup & ~~\hldiff{\fun{reqSignerHashes}~\var{tx}}
+    \nextdef
     & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to \powerset (\ScriptPurpose \times \ScriptHash) \\
     & \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
     & ~~\{ (\var{i}, \fun{validatorHash}~a) \mid i \mapsto (a, \wcard, \wcard) \in \var{utxo},
@@ -802,7 +817,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
       \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\
-      \hldiff{\fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \cup \fun{reqSignerHashes}~txb \subseteq \var{witsKeyHashes}}
+      \hldiff{\fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq \var{witsKeyHashes}}
       \\~\\
       genSig \leteq
       \left\{

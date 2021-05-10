@@ -59,8 +59,8 @@
 
 
 Figure~\ref{fig:rules:bbody} includes an additional check that the sum of the
-script fees that are paid by all transactions in a block does not exceed the maximum total fees per
-block (obtained from the protocol parameter).
+execution units of all transactions in a block does not exceed the maximum total units per
+block (specified in a protocol parameter).
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:bbody}
@@ -130,7 +130,8 @@ remain unchanged during the transition.
   \emph{Types and Constants}
   %
   \begin{align*}
-      & \NewParams ~=~ (\Language \mapsto \CostMod) \times \Prices \times \ExUnits \times \ExUnits \times \N \times \Coin \\
+      & \NewParams ~=~ (\Language \mapsto \CostMod) \times \Prices \times \ExUnits \times \ExUnits \\
+      & ~~~~~~~~ \times \N \times \Coin \times \N \times \N \\
       & \text{the type of new parameters to add for Goguen}
       \nextdef
       & \var{ivPP} ~\in~ \NewParams \\

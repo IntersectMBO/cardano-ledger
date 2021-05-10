@@ -93,6 +93,19 @@ The new parameter $\var{maxValSize}$ replaces the constant $\mathsf{maxValSize}$
 used (in the ShelleyMA era) to limit the size of the the $\Value$ part of an output in a
 serialised transaction.
 
+\textbf{Collateral inputs.}
+Collateral inputs in a transaction are used to cover the transaction fees in the case
+that a non-native script fails (see Section~\ref{sec:transctions}).
+The term \emph{collateral} refers to the total ada contained in the UTxOs referenced 
+by collateral inputs.
+
+The parameter $\var{collateralPercent}$ is used to specify the percentage of
+the total transaction fee its collateral must (at minimum) cover. The
+collateral inputs must not themselves be locked by a script. That is, they must
+be VK inputs. The parameter $\var{maxCollInputs}$ is used to limit, additionally,
+the total number of collateral inputs, and thus the total number of additional
+signatures that must be checked during validation.
+
 \begin{figure*}[htb]
   \emph{Abstract types}
   %
@@ -151,6 +164,10 @@ serialised transaction.
         % & \text{Max size a value can be}\\
         \var{adaPerUTxOWord} \mapsto \Coin & \PParams \\
         % & \text{Min. ada per word (8 bytes) a UTxO entry must contain}
+        \var{collateralPercent} \mapsto \N & \PParams \\
+        % & \text{Percentage of Tx fee which collateral must cover}
+        \var{maxCollInputs} \mapsto \N & \PParams \\
+        % & \text{Maximum number of VK inputs that can be used to cover collateral}
       \end{array}
   \end{equation*}
   %
@@ -164,7 +181,7 @@ serialised transaction.
   %
   \begin{align*}
     & \fun{getLanguageView} \in \PParams \to \Language \to \LangDepView \\
-    & \fun{getLanguageView}~\var{pp}~\PlutusVI = \var{costmdls}~\mapsto~\{\PlutusVI\} \restrictdom \fun{costmdls}~{pp}
+    & \fun{getLanguageView}~\var{pp}~\PlutusVI = \var{costmdls}~\mapsto~ (\fun{costmdls}~{pp}~\{\PlutusVI\})
   \end{align*}
   %
   \caption{Definitions Used in Protocol Parameters}

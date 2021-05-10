@@ -57,7 +57,8 @@ We make the following changes and additions:
 We add the following helper functions:
 
 \begin{itemize}
-  \item $\fun{language}$ selects the language of a non-native script.
+  \item $\fun{language}$ selects the language of a non-native script, and $\Nothing$ in case
+  the script is native.
   \item $\fun{hashData}$ hashes a value of type $\Data$.
   \item $\fun{hashWitnessPPData}$ hashes the protocol parameters and witnesses relevant to script execution.
 \end{itemize}
@@ -113,7 +114,7 @@ We add the following helper functions:
   \emph{Helper Functions}
   %
   \begin{align*}
-    \fun{language}& \in \ScriptNonNative \to \Language\\
+    \fun{language}& \in \Script \to \Language^?\\
     \fun{hashData}& \in \Data \to \DataHash
     \nextdef
     \fun{hashWitnessPPData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Redeemer \times \ExUnits)\\
@@ -149,11 +150,11 @@ We add the following helper functions:
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
       \var{txbody} ~\in~ \TxBody ~=~
       & \powerset{\TxIn} & \fun{txinputs}& \text{Inputs}\\
-      & \times \hldiff{\powerset{\TxIn}} & \hldiff{\fun{txinputs_{fee}}}& \text{Fee inputs}\\
-      &\times ~(\Ix \mapsto \TxOut) & \fun{txouts}& \text{Outputs}\\
+      & \times ~\hldiff{\powerset{\TxIn}} & \hldiff{\fun{collateral}} & \text{Collateral inputs}\\
+      & \times ~(\Ix \mapsto \TxOut) & \fun{txouts}& \text{Outputs}\\
       & \times~ \seqof{\DCert} & \fun{txcerts}& \text{Certificates}\\
        & \times ~\Value  & \fun{mint} &\text{A minted value}\\
-       & \times ~\Coin & \fun{txfee} &\text{Non-script fee}\\
+       & \times ~\Coin & \fun{txfee} &\text{Total fee}\\
        & \times ~\ValidityInterval & \fun{txvldt} & \text{Validity interval}\\
        & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
        & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
@@ -221,14 +222,23 @@ a transaction (as a set) versus how redeemers are included
 \end{description}
 
 \subsection{Transactions}
+\label{sec:transctions}
 We have also made the following changes to
 the body of the transaction:
 
 \begin{itemize}
-  \item There is a set of \emph{fee inputs} that is used to cover transaction fees
-    \emph{in case the transaction contains non-native scripts}. In case the same itput is mentioned both as
-    a regular and a fee input, it still counts as being spent just once, so there is no need to prevent this.
-    It is in the transaction creator's best interest to keep the two sets of inputs disjoint, to minimize fees.
+  \item The new field $\fun{collateral}$ is used to specify the \emph{collateral inputs}
+    that are collected (into the fee pot) to cover a percentage of
+    transaction fees (usually $100$ percent or more)
+    \emph{in case the transaction contains failing non-native scripts}. They are not collected otherwise.
+    The purpose of these is to cover the resource use costs incurred by block producers running not only
+    scripts that validate, but the failing one also. Only the inputs that are locked by VKeys can
+    be used for collateral, and they must only contain ada.
+
+    It is permitted to use the same inputs as both collateral and a regular inputs, as exactly
+    one set of inputs is ever collected : collateral ones in the case of script failure, and regular inputs
+    in the case when all scripts validate.
+
   \item There is a new field called $\fun{reqSignerHashes}$ that is used to specify a set of signers (via the
     hashes of their VKeys) that the scripts a transaction is carrying expect to have signed the transaction.
     These signatures are required in addition to the ones required by VKey addresses, and
@@ -250,7 +260,7 @@ A complete transaction is comprised of:
 \begin{enumerate}
   \item the transaction body,
   \item all the information that is needed to witness transactions,
-  \item the $\IsValidating$ tag, which indicates whether all scripts with all inputs
+  \item the $\IsValidating$ tag, which indicates whether all scripts
   that are executed during the script execution phase validate.
   The correctness of the tag is verified as part of the ledger rules, and the block is
   deemed to be invalid if it is applied incorrectly.
@@ -283,25 +293,3 @@ The hash of the indexed redeemer structure and the protocol parameters that are 
 script interpreters are included in the body of the transaction. In the future, other parts of the ledger
 state may also need to be included in this hash, if they are passed as
 arguments to new script interpreter.
-
-The owner of any tokens that are spent as part of a given transaction
-must sign the transaction body. This means that
-the owners of tokens that are spent by the transaction will have
-signed their selection of the inputs that will be put in the fee pot in case of script validation failure, and
-thus have had the opportunity to check the outcome of those scripts before signing the transaction body.
-
-\subsection{Fee charges in the event of script validation failure}
-
-We have considered two ways to prevent all the Ada that exists in the transaction outputs from being transferred to
-the fee pot if script validation fails:
-%
-\begin{enumerate}
-  \item programmatically select the inputs that will be used to pay fees;
-  \item allow the user to decide which inputs will be used to pay fees.
-\end{enumerate}
-%
-In order to maximise flexibility, we have chosen to use the second option.
-This also allows users to provide their own programmatic solutions to choosing the inputs that are used to pay fees.
-
-Only the inputs that are locked by VKeys or native scripts can
-be used to pay fees.

@@ -17,14 +17,14 @@ This appendix collects the main formal properties that the new ledger rules are 
 \item
   \emph{General Accounting.}
   The \emph{general accounting} property\todo{Reference or explain this} holds for any transaction,
-  whether it is fully processed or just paying fees. In particular,
+  whether it is fully processed or just paying collateral. In particular,
   this implies that the total amount of Ada in the system is constant.
 \item
   \emph{Fee Movement.}
-  If a transaction is accepted and marked as paying fees only
+  If a transaction is accepted and marked as paying collateral only
   (i.e. $\fun{isValidating}\, tx = \False$), then the only change to the ledger
-  when processing the transaction is that the inputs marked for paying
-  fees are moved to the fee pot.
+  when processing the transaction is that the collateral inputs
+  are moved to the fee pot.
 \item
   \emph{Transaction Validation.}
   If a Shelley transaction is accepted, it is fully processed.\todo{What does this mean? Is this: Transaction consistency - any transaction that is successfully validated can be executed successfully by the interpreter.}
