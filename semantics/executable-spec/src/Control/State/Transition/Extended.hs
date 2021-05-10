@@ -44,6 +44,7 @@ module Control.State.Transition.Extended
     judgmentContext,
     trans,
     liftSTS,
+    tellEvent,
 
     -- * Apply STS
     AssertionPolicy (..),
@@ -71,14 +72,16 @@ import Control.Monad (when)
 import Control.Monad.Except (MonadError (..))
 import Control.Monad.Free.Church
 import Control.Monad.Identity (Identity (..))
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State.Strict (modify, runStateT)
-import qualified Control.Monad.Trans.State.Strict as MonadState
+import Control.Monad.Trans.Class (lift, MonadTrans)
+import Control.Monad.Trans.State.Strict (StateT(..))
+import Control.Monad.Writer.CPS (WriterT, runWriterT)
+import Control.Monad.Writer.Class (MonadWriter (..))
+import Control.Monad.State.Class (MonadState (..), modify)
 import Data.Data (Data, Typeable)
 import Data.Default.Class (Default, def)
 import Data.Foldable (find, traverse_)
-import Data.Functor ((<&>))
-import Data.Kind (Type)
+import Data.Functor ((<&>), ($>))
+import Data.Kind (Type, Constraint)
 import Data.Proxy (Proxy (..))
 import Data.Typeable (typeRep)
 import NoThunks.Class (NoThunks (..))
@@ -219,6 +222,35 @@ class (STS sub, BaseM sub ~ BaseM super) => Embed sub super where
 instance STS sts => Embed sts sts where
   wrapFailed = id
 
+data Event
+
+data EventPolicy =
+    EventPolicyReturn
+  | EventPolicyDiscard
+
+data SingEP ep where
+  EPReturn  :: SingEP 'EventPolicyReturn
+  EPDiscard :: SingEP 'EventPolicyDiscard
+
+type family EventReturnType ep a :: Type where
+  EventReturnType 'EventPolicyReturn a = (a, [Event])
+  EventReturnType _ a = a
+
+type family EventConstraintType e m :: Constraint where
+  EventConstraintType 'EventPolicyReturn m = MonadWriter [Event] m
+  EventConstraintType _ _ = ()
+
+class InterpretEvent (ep :: EventPolicy) m where
+  interpretEvent :: EventConstraintType ep m => Event -> m ()
+
+instance Applicative m => InterpretEvent 'EventPolicyDiscard m where
+  {-# INLINE interpretEvent #-}
+  interpretEvent = const (pure ())
+
+instance InterpretEvent 'EventPolicyReturn (RuleInterpreterT s m) where
+  {-# INLINE interpretEvent #-}
+  interpretEvent = tell . pure
+
 data Clause sts (rtype :: RuleType) a where
   Lift ::
     STS sts =>
@@ -233,6 +265,10 @@ data Clause sts (rtype :: RuleType) a where
     RuleContext rtype sub ->
     -- Subsequent computation with state introduced
     (State sub -> a) ->
+    Clause sts rtype a
+  Writer ::
+    Event ->
+    a ->
     Clause sts rtype a
   Predicate ::
     [Label] ->
@@ -353,7 +389,7 @@ applySTSOpts ::
   m (State s, [[PredicateFailure s]])
 applySTSOpts ApplySTSOpts {asoAssertions, asoValidation} ctx =
   let goRule :: RuleInterpreter
-      goRule = applyRuleInternal asoValidation goSTS
+      goRule = applyRuleInternal EPDiscard asoValidation goSTS
       goSTS :: STSInterpreter
       goSTS = applySTSInternal asoAssertions goRule
    in goSTS ctx
@@ -416,22 +452,45 @@ applySTSIndifferently =
           asoValidation = ValidateAll
         }
 
+newtype RuleInterpreterT s m a = RuleInterpreterT (StateT [PredicateFailure s] (WriterT [Event] m) a)
+  deriving (MonadWriter [Event], Monad, Applicative, Functor)
+
+deriving instance (x ~ [PredicateFailure s], Monad m) => MonadState x (RuleInterpreterT s m)
+
+instance MonadTrans (RuleInterpreterT s) where
+  lift = RuleInterpreterT . lift . lift
+
+runRuleInterpreterT :: forall s m a. RuleInterpreterT s m a -> [PredicateFailure s] -> m ((a, [PredicateFailure s]), [Event])
+runRuleInterpreterT (RuleInterpreterT m) s = runWriterT $ runStateT m s 
+
 -- | Apply a rule even if its predicates fail.
 --
 --   If the rule successfully applied, the list of predicate failures will be
 --   empty.
 applyRuleInternal ::
-  forall s m rtype.
+  forall (ep :: EventPolicy) s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
+  SingEP ep ->
   ValidationPolicy ->
   -- | Interpreter for subsystems
   STSInterpreter ->
   RuleContext rtype s ->
   Rule s rtype (State s) ->
-  m (State s, [PredicateFailure s])
-applyRuleInternal vp goSTS jc r = flip runStateT [] $ foldF runClause r
+  m (EventReturnType ep (State s, [PredicateFailure s]))
+applyRuleInternal ep vp goSTS jc r = 
+  case ep of
+    EPReturn -> flip (runRuleInterpreterT @s) [] $ foldF runClause r
+    EPDiscard -> flip runStateT [] $ foldF runClause r
   where
-    runClause :: Clause s rtype a -> MonadState.StateT [PredicateFailure s] m a
+    runClause :: forall f t a.
+      ( f ~ t m
+      , MonadState [PredicateFailure s] f
+      , EventConstraintType ep f
+      , MonadTrans t
+      , InterpretEvent ep f
+      )
+      => Clause s rtype a
+      -> t m a
     runClause (Lift f next) = next <$> lift f
     runClause (GetCtx next) = pure $ next jc
     runClause (Predicate lbls cond orElse val) =
@@ -445,7 +504,8 @@ applyRuleInternal vp goSTS jc r = flip runStateT [] $ foldF runClause r
       (ss, sfails) <- lift $ goSTS subCtx
       traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> concat sfails
       pure $ next ss
-
+    runClause (Writer w a) = do
+      interpretEvent @ep w $> a
     validateIf lbls = case vp of
       ValidateAll -> True
       ValidateNone -> False
@@ -588,3 +648,9 @@ straverse_ f = foldr c (pure ())
 sfor_ :: (Foldable t, Applicative f) => t a -> (a -> f b) -> f ()
 {-# INLINE sfor_ #-}
 sfor_ = flip straverse_
+
+tellEvent ::
+  Event ->
+  Rule sts ctx ()
+tellEvent e = liftF $ Writer e ()
+

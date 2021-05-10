@@ -37,6 +37,7 @@ import Control.State.Transition
     judgmentContext,
     liftSTS,
     (?!),
+    tellEvent,
   )
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
@@ -176,13 +177,15 @@ poolDelegationTransition = do
 
       let hk = _poolId poolParam
       if eval (hk ∉ dom stpools)
-        then -- register new, Pool-Reg
-
+        then do 
+          -- register new, Pool-Reg
+          tellEvent NewPoolParam
           pure $
             ps
               { _pParams = eval (_pParams ps ∪ singleton hk poolParam)
               }
         else do
+          tellEvent NewFuturePoolParam
           pure $
             ps
               { _fPParams = eval (_fPParams ps ⨃ singleton hk poolParam),
