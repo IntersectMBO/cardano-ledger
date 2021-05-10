@@ -18,6 +18,7 @@ module Test.Shelley.Spec.Ledger.Generator.Presets
     genesisDelegs0,
     someKeyPairs,
     keyPairs,
+    issuerKeys,
   )
 where
 

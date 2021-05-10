@@ -60,6 +60,7 @@ library
     cardano-slotting,
     containers,
     data-default,
+    data-default-class,
     deepseq,
     mtl,
     nothunks,

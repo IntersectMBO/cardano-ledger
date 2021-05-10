@@ -52,6 +52,7 @@ import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
+
 --------------------------------------------------------------------------------
 -- Translation from Mary to Alonzo
 --
@@ -205,7 +206,7 @@ translateTxOut (Shelley.TxOutCompact addr value) =
 -- (PParamsUpdate era) = (PParams' StrictMaybe era)
 
 translatePParams ::
-  AlonzoGenesis -> Shelley.PParams (MaryEra c) -> PParams (AlonzoEra c)
+  AlonzoGenesis -> Shelley.PParams era -> PParams (AlonzoEra c)
 translatePParams = flip extendPPWithGenesis
 
 translatePParamsUpdate ::

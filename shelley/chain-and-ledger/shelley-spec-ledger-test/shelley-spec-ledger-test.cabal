@@ -118,6 +118,7 @@ library
     tasty,
     text,
     time,
+    mtl,
     transformers
 
 test-suite shelley-spec-ledger-test

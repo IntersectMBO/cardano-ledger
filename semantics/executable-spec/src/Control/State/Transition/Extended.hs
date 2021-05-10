@@ -462,13 +462,15 @@ applySTSInternal ::
 applySTSInternal ap goRule ctx =
   successOrFirstFailure <$> applySTSInternal' rTypeRep ctx
   where
+    successOrFirstFailure :: forall a b. [(a, [b])] -> (a, [[b]])
     successOrFirstFailure xs =
       case find (null . snd) xs of
         Nothing ->
           case xs of
-            [] -> error "applySTSInternal was called with an empty set of rules"
+            [] -> error $ "applySTSInternal @(" <> show (typeRep (Proxy :: Proxy s)) <> ") was called with an empty set of rules"
             (s, _) : _ -> (s, snd <$> xs)
         Just (s, _) -> (s, [])
+
 
     applySTSInternal' ::
       SRuleType rtype ->

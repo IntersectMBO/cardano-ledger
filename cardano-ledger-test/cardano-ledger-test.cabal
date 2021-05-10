@@ -40,17 +40,49 @@ library
     Test.Cardano.Ledger.Generic.Indexed
     Test.Cardano.Ledger.Generic.Updaters
     Test.Cardano.Ledger.TestableEra
+    Test.Cardano.Ledger.ModelChain
+    Test.Cardano.Ledger.ModelChain.Properties
+    Test.Cardano.Ledger.ModelChain.Utils
+    Test.Cardano.Ledger.Elaborators.Alonzo
+    Test.Cardano.Ledger.Elaborators.Shelley
+
+  build-depends:
+    shelley-spec-ledger,
+    groups,
+    containers,
+    transformers,
+    cardano-ledger-core,
+    cardano-ledger-shelley-ma,
+    cardano-slotting,
+    strict-containers,
+    tasty,
+    mtl,
+    tasty-quickcheck,
+    time,
+    cardano-crypto-class,
+    data-default-class,
+    cardano-binary,
+    lens,
+    shelley-spec-ledger-test,
+    cardano-ledger-alonzo,
+    small-steps
+
   build-depends:
     bytestring,
+    cardano-binary,
     cardano-crypto-class,
     cardano-ledger-alonzo,
     cardano-ledger-core,
     cardano-ledger-shelley-ma,
+    cardano-ledger-shelley-ma-test,
     cardano-slotting,
     containers,
+    criterion,
     data-default-class,
+    deepseq,
     plutus-ledger-api,
     plutus-tx,
+    QuickCheck,
     shelley-spec-ledger,
     shelley-spec-ledger-test,
     small-steps,

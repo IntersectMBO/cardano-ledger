@@ -15,6 +15,7 @@ import Test.Cardano.Ledger.Examples.TwoPhaseValidation
   )
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
+import Test.Cardano.Ledger.ModelChain.Properties (newUnitTests)
 
 -- ====================================================================================
 
@@ -30,7 +31,8 @@ mainTests =
     "STS Tests"
     [ alonzoUTXOWexamples,
       alonzoBBODYexamples,
-      collectOrderingAlonzo
+      collectOrderingAlonzo,
+      newUnitTests
     ]
 
 -- main entry point

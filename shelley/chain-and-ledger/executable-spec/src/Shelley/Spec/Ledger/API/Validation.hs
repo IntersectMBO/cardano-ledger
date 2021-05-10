@@ -3,9 +3,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -25,7 +29,6 @@ import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
@@ -40,10 +43,12 @@ import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import Shelley.Spec.Ledger.STS.EraMapping ()
 import Shelley.Spec.Ledger.Slot (SlotNo)
+import Data.Bifunctor
 
 {-------------------------------------------------------------------------------
   Block validation API
 -------------------------------------------------------------------------------}
+
 
 class
   ( ChainData (Block era),
@@ -67,6 +72,44 @@ class
   ) =>
   ApplyBlock era
   where
+
+  -- | Apply the header level ledger transition.
+  --
+  -- This handles checks and updates that happen on a slot tick, as well as a
+  -- few header level checks, such as size constraints.
+  applyTickOpts
+    :: ApplySTSOpts
+    -> Globals
+    -> NewEpochState era
+    -> SlotNo
+    -> (NewEpochState era, [[PredicateFailure (Core.EraRule "TICK" era)]])
+  default applyTickOpts
+    :: ApplySTSOpts
+    -> Globals
+    -> NewEpochState era
+    -> SlotNo
+    -> (NewEpochState era, [[PredicateFailure (Core.EraRule "TICK" era)]])
+  applyTickOpts opts globals state hdr = flip runReader globals $ applySTSOpts @(Core.EraRule "TICK" era) opts
+      ( TRC ((), state, hdr) )
+  {-# INLINE applyTickOpts #-}
+
+  -- | Apply the block level ledger transition.
+  applyBlockOpts
+    :: ApplySTSOpts
+    -> Globals
+    -> NewEpochState era
+    -> Block era
+    -> (NewEpochState era, [[PredicateFailure (Core.EraRule "BBODY" era)]])
+  applyBlockOpts opts globals state blk
+      = first (updateNewEpochState state)
+      $ flip runReader globals
+      $ applySTSOpts @(Core.EraRule "BBODY" era) opts
+      $ TRC (mkBbodyEnv state, bbs, blk)
+    where
+      bbs = getBBodyState state
+  {-# INLINE applyBlockOpts #-}
+
+
   -- | Apply the header level ledger transition.
   --
   -- This handles checks and updates that happen on a slot tick, as well as a
@@ -81,13 +124,15 @@ class
     NewEpochState era ->
     SlotNo ->
     NewEpochState era
-  applyTick globals state hdr =
-    either err id . flip runReader globals
-      . applySTS @(Core.EraRule "TICK" era)
-      $ TRC ((), state, hdr)
+  applyTick globals state hdr = case applyTickOpts defaultOpts globals state hdr of
+        (st, []) -> st
+        (_, pfs) -> error $ "Panic! applyTick failed: " <> show pfs
     where
-      err :: Show a => a -> b
-      err msg = error $ "Panic! applyTick failed: " <> show msg
+      defaultOpts = ApplySTSOpts
+        { asoAssertions = AssertionsOff,
+          asoValidation = ValidateAll
+        }
+  {-# INLINE applyTick #-}
 
   -- | Apply the block level ledger transition.
   applyBlock ::
@@ -102,19 +147,15 @@ class
     NewEpochState era ->
     Block era ->
     m (NewEpochState era)
-  applyBlock globals state blk =
-    liftEither
-      . right (updateNewEpochState state)
-      . left (BlockTransitionError . join)
-      $ res
+  applyBlock globals state blk = liftEither $ case applyBlockOpts defaultOpts globals state blk of
+        (st, []) -> Right st
+        (_, pfs) -> Left . BlockTransitionError $ join pfs
     where
-      res =
-        flip runReader globals . applySTS @(Core.EraRule "BBODY" era) $
-          TRC (mkBbodyEnv state, bbs, blk)
-      bbs =
-        STS.BbodyState
-          (LedgerState.esLState $ LedgerState.nesEs state)
-          (LedgerState.nesBcur state)
+      defaultOpts = ApplySTSOpts
+        { asoAssertions = AssertionsOff,
+          asoValidation = ValidateAll
+        }
+  {-# INLINE applyBlock #-}
 
   -- | Re-apply a ledger block to the same state it has been applied to before.
   --
@@ -131,16 +172,20 @@ class
     NewEpochState era ->
     Block era ->
     NewEpochState era
-  reapplyBlock globals state blk =
-    updateNewEpochState state res
+  reapplyBlock globals state blk = runReader reapplyBlock' globals
     where
-      res =
-        flip runReader globals . reapplySTS @(Core.EraRule "BBODY" era) $
+      reapplyBlock' =
+        updateNewEpochState state <$> res
+      res = reapplySTS @(Core.EraRule "BBODY" era) $
           TRC (mkBbodyEnv state, bbs, blk)
-      bbs =
-        STS.BbodyState
-          (LedgerState.esLState $ LedgerState.nesEs state)
-          (LedgerState.nesBcur state)
+      bbs = getBBodyState state
+  {-# INLINE reapplyBlock #-}
+
+getBBodyState :: NewEpochState era -> STS.BbodyState era
+getBBodyState state = STS.BbodyState
+        (LedgerState.esLState $ LedgerState.nesEs state)
+        (LedgerState.nesBcur state)
+{-# INLINE getBBodyState #-}
 
 instance PraosCrypto crypto => ApplyBlock (ShelleyEra crypto)
 
