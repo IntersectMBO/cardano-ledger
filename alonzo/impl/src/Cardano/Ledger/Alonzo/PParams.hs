@@ -149,7 +149,12 @@ data PParams' f era = PParams
     -- | Max total script execution resources units allowed per block
     _maxBlockExUnits :: !(HKD f ExUnits),
     -- | Max size of a Value in an output
-    _maxValSize :: !(HKD f Natural)
+    _maxValSize :: !(HKD f Natural),
+    -- | Percentage of the txfee which must be provided as collateral when
+    -- including non-native scripts.
+    _collateralPercentage :: !(HKD f Natural),
+    -- | Maximum number of collateral inputs allowed in a transaction
+    _maxCollateralInputs :: !(HKD f Natural)
   }
   deriving (Generic)
 
@@ -188,7 +193,9 @@ instance (Era era) => ToCBOR (PParams era) where
         _prices = prices',
         _maxTxExUnits = maxTxExUnits',
         _maxBlockExUnits = maxBlockExUnits',
-        _maxValSize = maxValSize'
+        _maxValSize = maxValSize',
+        _collateralPercentage = collateralPercentage',
+        _maxCollateralInputs = maxCollateralInputs'
       } =
       encode
         ( Rec (PParams @Identity)
@@ -215,6 +222,8 @@ instance (Era era) => ToCBOR (PParams era) where
             !> To maxTxExUnits'
             !> To maxBlockExUnits'
             !> To maxValSize'
+            !> To collateralPercentage'
+            !> To maxCollateralInputs'
         )
 
 instance
@@ -247,6 +256,8 @@ instance
         <! From -- _maxTxExUnits = maxTxExUnits',
         <! From -- _maxBlockExUnits = maxBlockExUnits'
         <! From -- maxValSize :: Natural
+        <! From -- collateralPercentage :: Natural
+        <! From -- maxCollateralInputs :: Natural
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams era
@@ -274,7 +285,9 @@ emptyPParams =
       _prices = Prices (Coin 0) (Coin 0),
       _maxTxExUnits = ExUnits 0 0,
       _maxBlockExUnits = ExUnits 0 0,
-      _maxValSize = 0
+      _maxValSize = 0,
+      _collateralPercentage = 150,
+      _maxCollateralInputs = 5
     }
 
 -- | Since ExUnits does not have an Ord instance, we have to roll this Ord instance by hand.
@@ -363,6 +376,8 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 20 (_maxTxExUnits ppup) toCBOR
     !> omitStrictMaybe 21 (_maxBlockExUnits ppup) toCBOR
     !> omitStrictMaybe 22 (_maxValSize ppup) toCBOR
+    !> omitStrictMaybe 23 (_collateralPercentage ppup) toCBOR
+    !> omitStrictMaybe 24 (_maxCollateralInputs ppup) toCBOR
   where
     omitStrictMaybe ::
       Word -> StrictMaybe a -> (a -> Encoding) -> Encode ('Closed 'Sparse) (StrictMaybe a)
@@ -404,7 +419,9 @@ emptyPParamsUpdate =
       _prices = SNothing,
       _maxTxExUnits = SNothing,
       _maxBlockExUnits = SNothing,
-      _maxValSize = SNothing
+      _maxValSize = SNothing,
+      _collateralPercentage = SNothing,
+      _maxCollateralInputs = SNothing
     }
 
 updateField :: Word -> Field (PParamsUpdate era)
@@ -430,6 +447,8 @@ updateField 19 = field (\x up -> up {_prices = SJust x}) From
 updateField 20 = field (\x up -> up {_maxTxExUnits = SJust x}) From
 updateField 21 = field (\x up -> up {_maxBlockExUnits = SJust x}) From
 updateField 22 = field (\x up -> up {_maxValSize = SJust x}) From
+updateField 23 = field (\x up -> up {_collateralPercentage = SJust x}) From
+updateField 24 = field (\x up -> up {_maxCollateralInputs = SJust x}) From
 updateField k = field (\_x up -> up) (Invalid k)
 
 instance (Era era) => FromCBOR (PParamsUpdate era) where
@@ -465,7 +484,9 @@ updatePParams pp ppup =
       _prices = fromMaybe' (_prices pp) (_prices ppup),
       _maxTxExUnits = fromMaybe' (_maxTxExUnits pp) (_maxTxExUnits ppup),
       _maxBlockExUnits = fromMaybe' (_maxBlockExUnits pp) (_maxBlockExUnits ppup),
-      _maxValSize = fromMaybe' (_maxValSize pp) (_maxValSize ppup)
+      _maxValSize = fromMaybe' (_maxValSize pp) (_maxValSize ppup),
+      _collateralPercentage = fromMaybe' (_collateralPercentage pp) (_collateralPercentage ppup),
+      _maxCollateralInputs = fromMaybe' (_maxCollateralInputs pp) (_maxCollateralInputs ppup)
     }
   where
     fromMaybe' :: a -> StrictMaybe a -> a

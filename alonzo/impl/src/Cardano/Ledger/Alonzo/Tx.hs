@@ -57,7 +57,6 @@ module Cardano.Ledger.Alonzo.Tx
     txbody,
     minfee,
     isTwoPhaseScriptAddress,
-    txins,
     Shelley.txouts,
     -- Figure 6
     txrdmrs,
@@ -411,15 +410,6 @@ isTwoPhaseScriptAddress tx addr =
       case Map.lookup hash (getField @"scriptWits" tx) of
         Nothing -> False
         Just scr -> not (isNativeScript @era scr)
-
--- | The keys of all the inputs of the TxBody (both the inputs for fees, and the normal inputs).
-txins ::
-  ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
-  ) =>
-  Core.TxBody era ->
-  Set (TxIn (Crypto era))
-txins txb = Set.union (getField @"inputs" txb) (getField @"txinputs_fee" txb)
 
 -- | txsize computes the length of the serialised bytes
 instance HasField "txsize" (ValidatedTx era) Integer where

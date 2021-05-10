@@ -23,7 +23,7 @@ module Cardano.Ledger.Alonzo.TxBody
     TxBody
       ( TxBody,
         inputs,
-        txinputs_fee,
+        collateral,
         outputs,
         txcerts,
         txwdrls,
@@ -37,7 +37,7 @@ module Cardano.Ledger.Alonzo.TxBody
         txnetworkid
       ),
     inputs',
-    inputs_fee',
+    collateral',
     outputs',
     certs',
     wdrls',
@@ -197,7 +197,7 @@ type WitnessPPDataHash crypto = SafeHash crypto EraIndependentWitnessPPData
 
 data TxBodyRaw era = TxBodyRaw
   { _inputs :: !(Set (TxIn (Crypto era))),
-    _inputs_fee :: !(Set (TxIn (Crypto era))),
+    _collateral :: !(Set (TxIn (Crypto era))),
     _outputs :: !(StrictSeq (TxOut era)),
     _certs :: !(StrictSeq (DCert (Crypto era))),
     _wdrls :: !(Wdrl (Crypto era)),
@@ -301,7 +301,7 @@ pattern TxBody ::
   TxBody era
 pattern TxBody
   { inputs,
-    txinputs_fee,
+    collateral,
     outputs,
     txcerts,
     txwdrls,
@@ -318,7 +318,7 @@ pattern TxBody
     ( Memo
         TxBodyRaw
           { _inputs = inputs,
-            _inputs_fee = txinputs_fee,
+            _collateral = collateral,
             _outputs = outputs,
             _certs = txcerts,
             _wdrls = txwdrls,
@@ -336,7 +336,7 @@ pattern TxBody
   where
     TxBody
       inputsX
-      inputs_feeX
+      collateralX
       outputsX
       certsX
       wdrlsX
@@ -353,7 +353,7 @@ pattern TxBody
             ( encodeTxBodyRaw $
                 TxBodyRaw
                   inputsX
-                  inputs_feeX
+                  collateralX
                   outputsX
                   certsX
                   wdrlsX
@@ -378,7 +378,7 @@ instance (c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
 inputs' :: TxBody era -> Set (TxIn (Crypto era))
-inputs_fee' :: TxBody era -> Set (TxIn (Crypto era))
+collateral' :: TxBody era -> Set (TxIn (Crypto era))
 outputs' :: TxBody era -> StrictSeq (TxOut era)
 certs' :: TxBody era -> StrictSeq (DCert (Crypto era))
 txfee' :: TxBody era -> Coin
@@ -393,7 +393,7 @@ inputs' (TxBodyConstr (Memo raw _)) = _inputs raw
 
 txnetworkid' :: TxBody era -> StrictMaybe Network
 
-inputs_fee' (TxBodyConstr (Memo raw _)) = _inputs_fee raw
+collateral' (TxBodyConstr (Memo raw _)) = _collateral raw
 
 outputs' (TxBodyConstr (Memo raw _)) = _outputs raw
 
@@ -481,7 +481,7 @@ encodeTxBodyRaw ::
 encodeTxBodyRaw
   TxBodyRaw
     { _inputs,
-      _inputs_fee,
+      _collateral,
       _outputs,
       _certs,
       _wdrls,
@@ -498,12 +498,8 @@ encodeTxBodyRaw
       ( \i ifee o f t c w u b rsh mi sh ah ni ->
           TxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah ni
       )
-      -- A note on key strangeness:
-      -- a Mary era input is expected to convert into an Alonzo era fee input.
-      -- Since Mary era inputs are on key 0, we're turning this into the key
-      -- used for fee inputs. A new key, 13, is being used for inputs in alonzo.
-      !> Key 13 (E encodeFoldable _inputs)
-      !> Key 0 (E encodeFoldable _inputs_fee)
+      !> Key 0 (E encodeFoldable _inputs)
+      !> Key 13 (E encodeFoldable _collateral)
       !> Key 1 (E encodeFoldable _outputs)
       !> Key 2 (To _txfee)
       !> encodeKeyedStrictMaybe 3 top
@@ -567,13 +563,13 @@ instance
           SNothing
           SNothing
       bodyFields :: (Word -> Field (TxBodyRaw era))
-      bodyFields 13 =
+      bodyFields 0 =
         field
           (\x tx -> tx {_inputs = x})
           (D (decodeSet fromCBOR))
-      bodyFields 0 =
+      bodyFields 13 =
         field
-          (\x tx -> tx {_inputs_fee = x})
+          (\x tx -> tx {_collateral = x})
           (D (decodeSet fromCBOR))
       bodyFields 1 =
         field
@@ -625,7 +621,7 @@ instance
 -- HasField instances to be consistent with earlier Eras
 
 instance (Crypto era ~ c) => HasField "inputs" (TxBody era) (Set (TxIn c)) where
-  getField (TxBodyConstr (Memo m _)) = Set.union (_inputs m) (_inputs_fee m)
+  getField (TxBodyConstr (Memo m _)) = _inputs m
 
 instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
   getField (TxBodyConstr (Memo m _)) = _outputs m
@@ -651,8 +647,8 @@ instance
 instance (Crypto era ~ c) => HasField "mint" (TxBody era) (Mary.Value c) where
   getField (TxBodyConstr (Memo m _)) = _mint m
 
-instance (Crypto era ~ c) => HasField "txinputs_fee" (TxBody era) (Set (TxIn c)) where
-  getField (TxBodyConstr (Memo m _)) = _inputs_fee m
+instance (Crypto era ~ c) => HasField "collateral" (TxBody era) (Set (TxIn c)) where
+  getField (TxBodyConstr (Memo m _)) = _collateral m
 
 instance (Crypto era ~ c) => HasField "minted" (TxBody era) (Set (ScriptHash c)) where
   getField (TxBodyConstr (Memo m _)) = Set.map policyID (policies (_mint m))

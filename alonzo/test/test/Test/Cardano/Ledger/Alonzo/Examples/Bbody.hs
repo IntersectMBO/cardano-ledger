@@ -11,10 +11,8 @@ where
 
 import Cardano.Crypto.VRF (evalCertified)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
+import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY)
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx)
 import Cardano.Ledger.Alonzo.TxSeq (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Coin (Coin (..))
@@ -67,17 +65,8 @@ type A = AlonzoEra C_Crypto
 -- Setup the initial state
 -- =======================
 
-pp :: PParams A
-pp =
-  def
-    { _costmdls = Map.singleton PlutusV1 (CostModel mempty),
-      _maxValSize = 1000000000,
-      _maxTxExUnits = ExUnits 1000000 1000000,
-      _maxBlockExUnits = ExUnits 1000000 1000000
-    }
-
 bbodyEnv :: BbodyEnv A
-bbodyEnv = BbodyEnv pp def
+bbodyEnv = BbodyEnv UTXOW.pp def
 
 -- =======
 --  Tests
@@ -140,11 +129,18 @@ example1UTxO :: UTxO A
 example1UTxO =
   UTxO $
     Map.fromList
-      [ (TxIn genesisId 9, UTXOW.alwaysFailsOutput),
-        (TxIn (txid @A UTXOW.validatingBody) 0, UTXOW.outEx1),
+      [ (TxIn (txid @A UTXOW.validatingBody) 0, UTXOW.outEx1),
         (TxIn (txid @A UTXOW.validatingBodyWithCert) 0, UTXOW.outEx3),
         (TxIn (txid @A UTXOW.validatingBodyWithWithdrawal) 0, UTXOW.outEx5),
-        (TxIn (txid @A UTXOW.validatingBodyWithMint) 0, UTXOW.outEx7)
+        (TxIn (txid @A UTXOW.validatingBodyWithMint) 0, UTXOW.outEx7),
+        (TxIn genesisId 11, UTXOW.collateralOutput),
+        (TxIn genesisId 2, UTXOW.alwaysFailsOutput),
+        (TxIn genesisId 13, UTXOW.collateralOutput),
+        (TxIn genesisId 4, UTXOW.someOutput),
+        (TxIn genesisId 15, UTXOW.collateralOutput),
+        (TxIn genesisId 6, UTXOW.someOutput),
+        (TxIn genesisId 17, UTXOW.collateralOutput),
+        (TxIn genesisId 8, UTXOW.someOutput)
       ]
 
 example1UtxoSt :: UTxOState A

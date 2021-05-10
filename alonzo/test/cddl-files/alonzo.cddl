@@ -47,7 +47,7 @@ operational_cert =
 protocol_version = (uint, uint)
 
 transaction_body =
- { 0 : set<transaction_input>    ; Fee inputs (previously this was inputs)
+ { 0 : set<transaction_input>    ; inputs
  , 1 : [* transaction_output]
  , 2 : coin                      ; fee
  , ? 3 : uint                    ; time to live
@@ -58,7 +58,7 @@ transaction_body =
  , ? 8 : uint                    ; validity interval start
  , ? 9 : mint
  , ? 11 : script_data_hash       ; New
- , ? 13 : set<transaction_input> ; Non-fee inputs ; New
+ , ? 13 : set<transaction_input> ; Collateral ; new
  , ? 14 : required_signers       ; New
  , ? 15 : network_id             ; New
  }

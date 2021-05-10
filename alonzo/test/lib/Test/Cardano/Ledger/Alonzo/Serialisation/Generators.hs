@@ -226,11 +226,15 @@ instance Arbitrary (PParams era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary (PParamsUpdate era) where
   arbitrary =
     PParams
       <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -276,10 +280,10 @@ instance Mock c => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
         (OutputBootAddrAttrsTooBig) <$> arbitrary,
         pure TriesToForgeADA,
         (OutputTooBigUTxO) <$> arbitrary,
-        FeeNotBalancedUTxO <$> arbitrary <*> arbitrary,
+        InsufficientCollateral <$> arbitrary <*> arbitrary,
         ScriptsNotPaidUTxO <$> arbitrary,
         ExUnitsTooBigUTxO <$> arbitrary <*> arbitrary,
-        FeeContainsNonADA <$> arbitrary
+        CollateralContainsNonADA <$> arbitrary
       ]
 
 instance Mock c => Arbitrary (AlonzoPredFail (AlonzoEra c)) where
