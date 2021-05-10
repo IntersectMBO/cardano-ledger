@@ -22,6 +22,7 @@ import Shelley.Spec.Ledger.BaseTypes as X
     Nonce (..),
     Port (..),
     StrictMaybe (..),
+    epochInfo,
   )
 import Shelley.Spec.Ledger.BlockChain as X
   ( BHBody (..),
