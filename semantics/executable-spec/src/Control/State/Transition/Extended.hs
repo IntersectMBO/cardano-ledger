@@ -247,17 +247,6 @@ type family EventConstraintType e m :: Constraint where
   EventConstraintType 'EventPolicyReturn m = MonadWriter [Event] m
   EventConstraintType _ _ = ()
 
-class InterpretEvent (ep :: EventPolicy) m where
-  interpretEvent :: EventConstraintType ep m => Event -> m ()
-
-instance Applicative m => InterpretEvent 'EventPolicyDiscard m where
-  {-# INLINE interpretEvent #-}
-  interpretEvent = const (pure ())
-
-instance InterpretEvent 'EventPolicyReturn (RuleInterpreterT s m) where
-  {-# INLINE interpretEvent #-}
-  interpretEvent = tell . pure
-
 data Clause sts (rtype :: RuleType) a where
   Lift ::
     STS sts =>
@@ -494,7 +483,6 @@ applyRuleInternal ep vp goSTS jc r =
       , MonadState [PredicateFailure s] f
       , EventConstraintType ep f
       , MonadTrans t
-      , InterpretEvent ep f
       )
       => Clause s rtype a
       -> t m a
@@ -511,8 +499,9 @@ applyRuleInternal ep vp goSTS jc r =
       (ss, sfails) <- lift $ goSTS subCtx
       traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> concat sfails
       pure $ next ss
-    runClause (Writer w a) = do
-      interpretEvent @ep w $> a
+    runClause (Writer w a) = case ep of
+      EPReturn -> tell [w] $> a
+      EPDiscard -> pure a
     validateIf lbls = case vp of
       ValidateAll -> True
       ValidateNone -> False
