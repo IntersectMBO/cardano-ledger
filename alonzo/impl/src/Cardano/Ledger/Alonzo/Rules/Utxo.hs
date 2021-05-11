@@ -183,7 +183,7 @@ data UtxoPredicateFailure era
     OutputBootAddrAttrsTooBig
       ![Core.TxOut era]
   | TriesToForgeADA
-  | -- | list of supplied bad transaction outputs
+  | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
     OutputTooBigUTxO
       ![(Int, Int, Core.TxOut era)]
   | InsufficientCollateral

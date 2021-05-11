@@ -12,8 +12,6 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}  -- TODO FIX ME
-
 module Test.Shelley.Spec.Ledger.Generator.Utxo
   ( genTx,
     Delta (..),
@@ -367,17 +365,16 @@ genNextDelta
         -- increase when we add the delta to the tx?
         draftSize =
           sum
-            [ 5 :: Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
-              --12 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens
-              20 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens  THIS IS NEW FIX ME
+            [ 5 :: Integer,  -- safety net in case the coin or a list prefix rolls over into a larger encoding
+              20 :: Integer, -- Fudge factor, Sometimes we need extra buffer when minting tokens.
+                             -- 20 has been empirically determined to make non failing Txs
               encodedLen (max dfees (Coin 0)) - 1,
               foldr (\a b -> b + encodedLen a) 0 extraInputs,
               encodedLen change,
               encodedLen extraWitnesses
             ]
-
         deltaFee = draftSize <×> Coin (fromIntegral (getField @"_minfeeA" pparams))
-                   <+> Coin (fromIntegral (getField @"_minfeeB" pparams))  -- TODO THIS IS NEW FIX ME
+                   <+> Coin (fromIntegral (getField @"_minfeeB" pparams))  -- This is usually very small, so might not have much effect.
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change
