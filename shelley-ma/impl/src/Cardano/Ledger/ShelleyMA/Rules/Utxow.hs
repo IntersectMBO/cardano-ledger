@@ -6,8 +6,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
--- The STS instance for UTXOW is technically an orphan.
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
@@ -19,7 +17,10 @@ import Control.State.Transition.Extended
 import GHC.Records (HasField)
 import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.LedgerState (UTxOState)
+import Shelley.Spec.Ledger.LedgerState
+  ( UTxOState,
+    witsVKeyNeeded,
+  )
 import qualified Shelley.Spec.Ledger.STS.Ledger as Shelley
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.STS.Utxow
@@ -65,7 +66,7 @@ instance
   type
     PredicateFailure (UTXOW era) =
       UtxowPredicateFailure era
-  transitionRules = [shelleyStyleWitness id]
+  transitionRules = [shelleyStyleWitness witsVKeyNeeded id]
 
   -- The ShelleyMA Era uses the same PredicateFailure type
   -- as Shelley, so the 'embed' function is identity

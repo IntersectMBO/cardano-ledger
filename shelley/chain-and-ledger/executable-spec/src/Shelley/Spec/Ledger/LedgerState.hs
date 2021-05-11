@@ -68,6 +68,7 @@ module Shelley.Spec.Ledger.LedgerState
     verifiedWits,
     witsVKeyNeeded,
     witsFromTxWitnesses,
+    propWits,
 
     -- * DelegationState
     keyRefunds,
