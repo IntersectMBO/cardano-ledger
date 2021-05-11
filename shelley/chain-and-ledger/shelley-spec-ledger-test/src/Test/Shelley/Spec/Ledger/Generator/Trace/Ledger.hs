@@ -71,7 +71,7 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
   )
 import Cardano.Ledger.Era(SupportsSegWit(TxInBlock))
-import Debug.Trace
+
 -- ======================================================
 
 genAccountState :: Constants -> Gen AccountState
@@ -178,8 +178,7 @@ instance
                   applySTSTest @(Core.EraRule "LEDGER" era)
                     (TRC (ledgerEnv, (u, dp), tx))
           pure $ case res of
-            Left pf ->
-              trace ("\nPF = "++show pf) (error ("LEDGER sigGen: " <> show pf))
+            Left pf -> (error ("LEDGER sigGen: " <> show pf))
             Right (u', dp') ->
               (u', dp', tx : txs)
 

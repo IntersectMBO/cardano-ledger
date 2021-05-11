@@ -174,7 +174,8 @@ genAlonzoPParamsDelta constants pp = do
   price <- genM (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
   mxTx <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   mxBl <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  -- This cannot be too small. In Shelley it is a Constant 4000
+  -- Not too small for mxV, if this is too small then any Tx with Value
+  -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
   mxV <- genM (genNatural 4000 5000)
   let c = SJust 150
       mxC = SJust 10
@@ -191,7 +192,7 @@ genAlonzoPParams constants = do
   price <- (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
   mxTx <- (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   mxBl <- (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  mxV <- pure 10000 -- (genNatural 10000 50000) -- This can't be too small
+  mxV <- (genNatural 4000 10000) -- This can't be too small. Shelley uses Hard coded 4000
   let c = 150
       mxC = 10
   pure (Alonzo.extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)

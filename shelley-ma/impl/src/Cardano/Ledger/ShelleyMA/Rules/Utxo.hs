@@ -45,7 +45,7 @@ import Data.Coders
     encodeFoldable,
     invalidKey,
   )
-import Data.Foldable (fold, toList)
+import Data.Foldable (fold, foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -160,7 +160,7 @@ data UtxoPredicateFailure era
       !Network -- the expected network id
       !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      ![Core.TxOut era] -- list of supplied transaction outputs that are too small
+      ![(Coin, Coin, Core.TxOut era)] -- list of triples (minUTxO,scaled minUTxo,transaction output) where the value in the output is too small
   | UpdateFailure !(PredicateFailure (Core.EraRule "PPUP" era)) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
       ![Core.TxOut era] -- list of supplied bad transaction outputs
@@ -292,17 +292,14 @@ utxoTransition = do
 
   let outputs = Map.elems $ unUTxO (txouts @era txb)
       minUTxOValue = getField @"_minUTxOValue" pp
-      outputsTooSmall =
-        filter
-          ( \out ->
-              let v = getField @"value" out
-               in not $
-                    Val.pointwise
-                      (>=)
-                      v
-                      (Val.inject $ scaledMinDeposit v minUTxOValue)
-          )
-          outputs
+      outputsTooSmall = foldl' accum [] outputs
+        where
+          accum ans out =
+            let v = getField @"value" out
+                scaled = scaledMinDeposit v minUTxOValue
+             in if Val.pointwise (>=) v (Val.inject $ scaled)
+                  then ans
+                  else (minUTxOValue, scaled, out) : ans
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   let outputsTooBig =
