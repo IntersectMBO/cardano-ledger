@@ -49,7 +49,7 @@ where
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Script, Value)
+import Cardano.Ledger.Core (PParamsDelta, Script, Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
@@ -69,7 +69,7 @@ import Cardano.Ledger.Pretty
     ppWdrl,
   )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
-import Cardano.Ledger.Shelley.Constraints (PParamsDelta, TransValue)
+import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
   ( DecodeMint (..),

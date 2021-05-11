@@ -39,8 +39,8 @@ import Cardano.Binary
     encodeWord,
   )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core (PParamsDelta)
 import Cardano.Ledger.Era
-import Cardano.Ledger.Shelley.Constraints (UsesPParams (PParamsDelta))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -83,6 +83,8 @@ import Shelley.Spec.Ledger.Serialization
     ratioToCBOR,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+
+-- ====================================================================
 
 -- | Higher Kinded Data
 type family HKD f a where

@@ -28,6 +28,10 @@ module Cardano.Ledger.Alonzo.PParams
     updatePParams,
     getLanguageView,
     LangDepView (..),
+    retractPP,
+    extendPP,
+    ppPParams,
+    ppPParamsUpdate,
   )
 where
 
@@ -37,15 +41,32 @@ import Cardano.Binary
     ToCBOR (..),
     encodePreEncoded,
   )
-import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Language (Language (PlutusV1), ppLanguage)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
     Prices (..),
+    ppCostModel,
+    ppExUnits,
+    ppPrices,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentPParamView)
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (prettyA),
+    ppCoin,
+    ppEpochNo,
+    ppMap,
+    ppNatural,
+    ppNonce,
+    ppProtVer,
+    ppRational,
+    ppRecord,
+    ppStrictMaybe,
+    ppUnitInterval,
+  )
 import Cardano.Ledger.SafeHash
   ( HashAnnotated (..),
     SafeToHash (..),
@@ -85,6 +106,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
+import qualified Shelley.Spec.Ledger.PParams as Shelley (PParams' (..))
 import Shelley.Spec.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
@@ -596,3 +618,107 @@ getLanguageView ::
   Language ->
   Maybe (LangDepView era)
 getLanguageView pp PlutusV1 = PlutusView <$> Map.lookup PlutusV1 (_costmdls pp)
+
+-- Usefull in tests and in translating from earlier Era to the Alonzo Era.
+
+-- | Turn an PParams' into a Shelley.Params'
+retractPP :: (HKD f Coin) -> PParams' f era2 -> Shelley.PParams' f era1
+retractPP
+  c
+  (PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP _ _ _ _ _ _ _ _) =
+    (Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv c mnP)
+
+-- | Given the missing pieces Turn a Shelley.PParams' into an Params'
+extendPP ::
+  Shelley.PParams' f era1 ->
+  (HKD f Coin) ->
+  (HKD f (Map Language CostModel)) ->
+  (HKD f Prices) ->
+  (HKD f ExUnits) ->
+  (HKD f ExUnits) ->
+  (HKD f Natural) ->
+  (HKD f Natural) ->
+  (HKD f Natural) ->
+  PParams' f era2
+extendPP
+  (Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv _ mnP)
+  ada
+  cost
+  price
+  mxTx
+  mxBl
+  mxV
+  col
+  mxCol =
+    PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP ada cost price mxTx mxBl mxV col mxCol
+
+-- ======================================================
+-- Pretty instances
+
+ppPParams :: PParams' Identity era -> PDoc
+ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
+  ppRecord
+    "PParams"
+    [ ("minfeeA", ppNatural feeA),
+      ("minfeeB", ppNatural feeB),
+      ("maxBBSize", ppNatural mbb),
+      ("maxTxSize", ppNatural mtx),
+      ("maxBHSize", ppNatural mbh),
+      ("keyDeposit", ppCoin kd),
+      ("poolDeposit", ppCoin pd),
+      ("eMax", ppEpochNo em),
+      ("nOpt", ppNatural no),
+      ("a0", ppRational a0),
+      ("rho", ppUnitInterval rho),
+      ("tau", ppUnitInterval tau),
+      ("d", ppUnitInterval d),
+      ("extraEntropy", ppNonce ex),
+      ("protocolVersion", ppProtVer pv),
+      ("minPoolCost", ppCoin mpool),
+      ("adaPerWord", ppCoin ada),
+      ("costmdls", ppMap ppLanguage ppCostModel cost),
+      ("prices", ppPrices prices),
+      ("maxTxExUnits", ppExUnits mxEx),
+      ("maxBlockExUnits", ppExUnits mxBEx),
+      ("maxValSize", ppNatural mxV),
+      ("collateral%", ppNatural c),
+      ("maxCollateralInputs", ppNatural mxC)
+    ]
+
+instance PrettyA (PParams' Identity era) where
+  prettyA = ppPParams
+
+ppPParamsUpdate :: PParams' StrictMaybe era -> PDoc
+ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
+  ppRecord
+    "PParams"
+    [ ("minfeeA", lift ppNatural feeA),
+      ("minfeeB", lift ppNatural feeB),
+      ("maxBBSize", lift ppNatural mbb),
+      ("maxTxSize", lift ppNatural mtx),
+      ("maxBHSize", lift ppNatural mbh),
+      ("keyDeposit", lift ppCoin kd),
+      ("poolDeposit", lift ppCoin pd),
+      ("eMax", lift ppEpochNo em),
+      ("nOpt", lift ppNatural no),
+      ("a0", lift ppRational a0),
+      ("rho", lift ppUnitInterval rho),
+      ("tau", lift ppUnitInterval tau),
+      ("d", lift ppUnitInterval d),
+      ("extraEntropy", lift ppNonce ex),
+      ("protocolVersion", lift ppProtVer pv),
+      ("minPoolCost", lift ppCoin mpool),
+      ("adaPerWord", lift ppCoin ada),
+      ("costmdls", lift (ppMap ppLanguage ppCostModel) cost),
+      ("prices", lift ppPrices prices),
+      ("maxTxExUnits", lift ppExUnits mxEx),
+      ("maxBlockExUnits", lift ppExUnits mxBEx),
+      ("maxValSize", lift ppNatural mxV),
+      ("collateral%", lift ppNatural c),
+      ("maxCollateralInputs", lift ppNatural mxC)
+    ]
+  where
+    lift pp x = ppStrictMaybe pp x
+
+instance PrettyA (PParams' StrictMaybe era) where
+  prettyA = ppPParamsUpdate

@@ -121,7 +121,6 @@ import Cardano.Ledger.SafeHash
     SafeToHash,
     hashAnnotated,
   )
-import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Val (Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString.Lazy as LBS (toStrict)
@@ -175,7 +174,7 @@ deriving instance
     Eq (Core.Script era),
     Eq (Core.TxBody era),
     Eq (Core.Value era),
-    Eq (PParamsDelta era),
+    Eq (Core.PParamsDelta era),
     Compactible (Core.Value era)
   ) =>
   Eq (ValidatedTxRaw era)
@@ -187,7 +186,7 @@ deriving instance
     Show (Core.Script era),
     Show (Core.TxBody era),
     Show (Core.Value era),
-    Show (PParamsDelta era)
+    Show (Core.PParamsDelta era)
   ) =>
   Show (ValidatedTxRaw era)
 
@@ -197,7 +196,7 @@ instance
     NoThunks (Core.Script era),
     NoThunks (Core.TxBody era),
     NoThunks (Core.Value era),
-    NoThunks (PParamsDelta era)
+    NoThunks (Core.PParamsDelta era)
   ) =>
   NoThunks (ValidatedTxRaw era)
 
@@ -210,7 +209,7 @@ deriving newtype instance
     Eq (Core.Script era),
     Eq (Core.TxBody era),
     Eq (Core.Value era),
-    Eq (PParamsDelta era),
+    Eq (Core.PParamsDelta era),
     Compactible (Core.Value era)
   ) =>
   Eq (ValidatedTx era)
@@ -222,7 +221,7 @@ deriving newtype instance
     Show (Core.Script era),
     Show (Core.TxBody era),
     Show (Core.Value era),
-    Show (PParamsDelta era)
+    Show (Core.PParamsDelta era)
   ) =>
   Show (ValidatedTx era)
 
@@ -232,7 +231,7 @@ deriving newtype instance
     NoThunks (Core.Script era),
     NoThunks (Core.TxBody era),
     NoThunks (Core.Value era),
-    NoThunks (PParamsDelta era)
+    NoThunks (Core.PParamsDelta era)
   ) =>
   NoThunks (ValidatedTx era)
 
@@ -325,8 +324,8 @@ instance HasField "wits" (ValidatedTx era) (TxWitness era) where
 -- =========================================================
 -- Figure 2: Definitions for Transactions
 
-getCoin :: UsesValue era => TxOut era -> Coin
-getCoin (TxOut _ v _) = coin v
+getCoin :: (Era era) => TxOut era -> Coin
+getCoin txout = coin (getField @"value" txout)
 
 -- ========================================================================
 -- A WitnessPPDataHash is the hash of two things. The first part comes from

@@ -44,9 +44,9 @@ library
   exposed-modules:
     Test.Cardano.Ledger.TranslationTools
     Test.Cardano.Ledger.EraBuffet
-    Test.Cardano.Ledger.Mary
+    Test.Cardano.Ledger.MaryEraGen
     Test.Cardano.Ledger.Mary.Golden
-    Test.Cardano.Ledger.Allegra
+    Test.Cardano.Ledger.AllegraEraGen
     Test.Cardano.Ledger.ShelleyMA.TxBody
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators

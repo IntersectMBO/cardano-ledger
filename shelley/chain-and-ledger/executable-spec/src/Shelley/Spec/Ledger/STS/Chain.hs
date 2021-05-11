@@ -103,10 +103,7 @@ import Shelley.Spec.Ledger.LedgerState
     updateNES,
     _genDelegs,
   )
-import Shelley.Spec.Ledger.PParams
-  ( PParams,
-    ProtVer (..),
-  )
+import Shelley.Spec.Ledger.PParams (ProtVer (..))
 import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv (..), BbodyPredicateFailure, BbodyState (..))
 import Shelley.Spec.Ledger.STS.Prtcl
   ( PRTCL,
@@ -187,15 +184,14 @@ instance
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
-  ( Default (State (Core.EraRule "PPUP" era)),
-    Core.PParams era ~ PParams era
+  ( Default (State (Core.EraRule "PPUP" era))
   ) =>
   WithOrigin (LastAppliedBlock (Crypto era)) ->
   EpochNo ->
   UTxO era ->
   Coin ->
   Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
-  PParams era ->
+  Core.PParams era ->
   Nonce ->
   ChainState era
 initialShelleyState lab e utxo reserves genDelegs pp initNonce =

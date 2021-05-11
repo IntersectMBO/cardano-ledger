@@ -35,7 +35,6 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
-import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.Monad.Except (MonadError (throwError))
@@ -76,8 +75,8 @@ instance
   ( Era era,
     Eq (Core.PParams era),
     Show (Core.PParams era),
-    Show (PParamsDelta era),
-    Eq (PParamsDelta era),
+    Show (Core.PParamsDelta era),
+    Eq (Core.PParamsDelta era),
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
@@ -111,8 +110,8 @@ utxosTransition ::
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Eq (Core.PParams era),
     Show (Core.PParams era),
-    Show (PParamsDelta era),
-    Eq (PParamsDelta era),
+    Show (Core.PParamsDelta era),
+    Eq (Core.PParamsDelta era),
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
@@ -140,8 +139,8 @@ scriptsValidateTransition ::
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Eq (Core.PParams era),
     Show (Core.PParams era),
-    Show (PParamsDelta era),
-    Eq (PParamsDelta era),
+    Show (Core.PParamsDelta era),
+    Eq (Core.PParamsDelta era),
     Core.Script era ~ Script era,
     Core.TxBody era ~ Alonzo.TxBody era,
     Core.TxOut era ~ Alonzo.TxOut era,
@@ -193,8 +192,8 @@ scriptsNotValidateTransition ::
   ( Era era,
     Eq (Core.PParams era),
     Show (Core.PParams era),
-    Show (PParamsDelta era),
-    Eq (PParamsDelta era),
+    Show (Core.PParamsDelta era),
+    Eq (Core.PParamsDelta era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
@@ -301,8 +300,8 @@ constructValidated ::
     Era era,
     Eq (Core.PParams era),
     Show (Core.PParams era),
-    Show (PParamsDelta era),
-    Eq (PParamsDelta era),
+    Show (Core.PParamsDelta era),
+    Eq (Core.PParamsDelta era),
     ToCBOR (Core.AuxiliaryData era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,

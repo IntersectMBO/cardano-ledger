@@ -7,13 +7,16 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Cardano.Ledger.Mary () where -- export the EraGen instance for MaryEra
+-- | Export the EraGen instance for MaryEra, as well as some reusable functions for future Eras
+module Test.Cardano.Ledger.MaryEraGen (genMint,maryGenesisValue,policyIndex,addTokens) where
+
 
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core (AuxiliaryData, Value)
+import qualified Cardano.Ledger.Core as Core (AuxiliaryData, Value, PParams, TxOut)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Mary.Value
@@ -21,11 +24,6 @@ import Cardano.Ledger.Mary.Value
     PolicyID (..),
     Value (..),
     policies,
-  )
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesPParams,
-    UsesValue,
   )
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
@@ -42,7 +40,7 @@ import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
 import Shelley.Spec.Ledger.Tx (TxIn, TxOut (..), hashScript)
 import Shelley.Spec.Ledger.TxBody (DCert, Wdrl)
-import Test.Cardano.Ledger.Allegra
+import Test.Cardano.Ledger.AllegraEraGen
   ( genValidityInterval,
     quantifyTL,
     someLeaf,
@@ -54,12 +52,20 @@ import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), genInteger)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..),MinGenTxout(..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( ScriptClass (..),
     exponential,
   )
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
+import Test.Shelley.Spec.Ledger.Generator.Update(genShelleyPParamsDelta)
+import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
+import Shelley.Spec.Ledger.Tx(pattern WitnessSet)
+import Data.Proxy(Proxy(..))
+import GHC.Records(HasField(getField))
+import Cardano.Ledger.Val((<+>))
+import Control.Monad (replicateM)
+
 
 {------------------------------------------------------------------------------
  EraGen instance for MaryEra - This instance makes it possible to run the
@@ -80,12 +86,15 @@ instance (CryptoClass.Crypto c) => ScriptClass (MaryEra c) where
   unQuantify _ = unQuantifyTL
 
 instance (CryptoClass.Crypto c, Mock c) => EraGen (MaryEra c) where
-  genGenesisValue (GenEnv _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
-    Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
+  genGenesisValue = maryGenesisValue
   genEraTxBody _ge = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
   updateEraTxBody (TxBody _in _out cert wdrl _txfee vi upd meta mint) fee ins outs =
     TxBody ins outs cert wdrl fee vi upd meta mint
+  genEraPParamsDelta = genShelleyPParamsDelta
+  genEraPParams = genPParams
+  genEraWitnesses setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
+  unsafeApplyTx x = x
 
 genAuxiliaryData ::
   Mock crypto =>
@@ -96,6 +105,11 @@ genAuxiliaryData Constants {frequencyTxWithMetadata} =
     [ (frequencyTxWithMetadata, SJust <$> arbitrary),
       (100 - frequencyTxWithMetadata, pure SNothing)
     ]
+
+-- | Carefully crafted to apply in any Era where Core.Value is Value
+maryGenesisValue :: forall era crypto. CryptoClass.Crypto crypto =>  GenEnv era -> Gen(Value crypto)
+maryGenesisValue (GenEnv _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
+    Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
 
 --------------------------------------------------------
 -- Permissionless Tokens                              --
@@ -197,6 +211,7 @@ genYellow = do
       let an = AssetName . BS.pack $ "yellow" <> show x
       pure $ (an, y)
 
+-- | Carefully crafted to apply in any Era where Core.Value is Value
 -- | This map allows us to lookup a minting policy by the policy ID.
 policyIndex :: CryptoClass.Crypto c => Map (PolicyID c) (Timelock c)
 policyIndex =
@@ -237,32 +252,36 @@ genMint = do
 -- END Permissionless Tokens --
 -------------------------------
 
--- | Attempt to Add tokens to a non-empty list of transaction outputs.
+
+-- | Carefully crafted to apply to any Era where Core.Value is Value
+-- We attempt to Add tokens to a non-empty list of transaction outputs.
 -- It will add them to the first output that has enough lovelace
 -- to meet the minUTxO requirment, if such an output exists.
-addTokens ::
-  ( Core.Value era ~ Value (Crypto era),
-    EraGen era
+addTokens :: forall era.
+  ( EraGen era,
+    Core.Value era ~ Value (Crypto era)
   ) =>
-  PParams era ->
+  Proxy era ->
+  StrictSeq (Core.TxOut era) ->  -- This is an accumuating parameter
+  Core.PParams era ->
   Value (Crypto era) ->
-  StrictSeq (TxOut era) ->
-  Maybe (StrictSeq (TxOut era))
-addTokens = addTokens' StrictSeq.Empty
-  where
-    addTokens' tooLittleLovelace pparams ts (o@(TxOut a v) :<| os) =
-      if Val.coin v < scaledMinDeposit v (_minUTxOValue pparams)
-        then addTokens' (o :<| tooLittleLovelace) pparams ts os
-        else (Just $ tooLittleLovelace >< TxOut a (v <> ts) <| os)
-    addTokens' _ _ _ StrictSeq.Empty = Nothing
+  StrictSeq (Core.TxOut era) ->
+  Maybe (StrictSeq (Core.TxOut era))
+addTokens proxy tooLittleLovelace pparams ts (txout :<| os) =
+      let v = getField @"value" txout
+      in if Val.coin v < scaledMinDeposit v (getField @"_minUTxOValue" pparams)
+            then addTokens proxy (txout :<| tooLittleLovelace) pparams ts os
+            else (Just $ tooLittleLovelace >< addValToTxOut @era ts txout <| os)
+addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
 
+
+-- | This function is only good in the Mary Era
 genTxBody ::
   forall era.
-  ( UsesValue era,
+  ( EraGen era,
     Core.Value era ~ Value (Crypto era),
-    UsesPParams era,
-    UsesAuxiliary era,
-    EraGen era
+    Core.PParams era ~ PParams era,
+    Core.TxOut era ~ TxOut era
   ) =>
   PParams era ->
   SlotNo ->
@@ -277,7 +296,7 @@ genTxBody ::
 genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
   mint <- genMint
-  let (mint', outs') = case addTokens pparams mint outs of
+  let (mint', outs') = case addTokens (Proxy @era) StrictSeq.Empty pparams mint outs of
         Nothing -> (mempty, outs)
         Just os -> (mint, os)
       ps = map (\p -> (Map.!) policyIndex p) (Set.toList $ policies mint)
@@ -303,3 +322,12 @@ instance Split (Value era) where
       ( take (fromIntegral m) ((Value (n `div` m) mp) : (repeat (Value (n `div` m) Map.empty))),
         Coin (n `rem` m)
       )
+
+
+instance Mock c => MinGenTxout (MaryEra c) where
+  calcEraMinUTxO _txout pp = (_minUTxOValue pp)
+  addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
+  genEraTxOut genVal addrs = do
+     values <- replicateM (length addrs) genVal
+     let  makeTxOut (addr,val) = TxOut addr val
+     pure (makeTxOut <$> zip addrs values)

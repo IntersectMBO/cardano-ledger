@@ -41,6 +41,7 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( TxIn (..),
     TxOut (..),
+    WitnessSetHKD(WitnessSet)
   )
 import Shelley.Spec.Ledger.TxBody (TxBody (TxBody, _inputs, _outputs, _txfee), Wdrl (..))
 import qualified Shelley.Spec.Ledger.STS.Utxo as STS
@@ -61,6 +62,11 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain ()
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
+import Test.Shelley.Spec.Ledger.Generator.Update(genShelleyPParamsDelta,genPParams)
+import Shelley.Spec.Ledger.PParams(PParams'(..))
+import Test.Shelley.Spec.Ledger.Generator.EraGen(MinGenTxout(..))
+import Cardano.Ledger.Val((<+>))
+import Control.Monad (replicateM)
 
 {------------------------------------------------------------------------------
   ExampleEra instances for EraGen and ScriptClass
@@ -69,7 +75,8 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
 instance
   ( PraosCrypto c,
     DSIGN.Signable (DSIGN c) ~ SignableRepresentation,
-    KES.Signable (KES c) ~ SignableRepresentation
+    KES.Signable (KES c) ~ SignableRepresentation,
+    MinGenTxout(ExampleEra c)
   ) =>
   EraGen (ExampleEra c)
   where
@@ -81,6 +88,9 @@ instance
       genCoin minGenesisOutputVal maxGenesisOutputVal
   genEraTxBody _ge = genTxBody
   genEraAuxiliaryData = genMetadata
+  genEraPParamsDelta = genShelleyPParamsDelta
+  genEraPParams = genPParams
+  genEraWitnesses setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
 
   updateEraTxBody body fee ins outs =
     body
@@ -88,6 +98,8 @@ instance
         _inputs = ins,
         _outputs = outs
       }
+  unsafeApplyTx x = x
+
 
 instance CC.Crypto c => ScriptClass (ExampleEra c) where
   basescript _proxy = RequireSignature
@@ -153,3 +165,12 @@ instance Mock c => Arbitrary (TxBody (ExampleEra c)) where
 instance Mock c => Arbitrary (STS.UtxoPredicateFailure (ExampleEra c)) where
   arbitrary = genericArbitraryU
   shrink _ = []
+
+
+instance Mock c => MinGenTxout (ExampleEra c) where
+  calcEraMinUTxO _txout pp = (_minUTxOValue pp)
+  addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
+  genEraTxOut genVal addrs = do
+     values <- replicateM (length addrs) genVal
+     let  makeTxOut (addr,val) = TxOut addr val
+     pure (makeTxOut <$> zip addrs values)

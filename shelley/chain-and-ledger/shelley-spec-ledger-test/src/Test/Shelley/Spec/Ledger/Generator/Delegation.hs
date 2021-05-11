@@ -34,7 +34,6 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set ((\\))
 import qualified Data.Set as Set
-import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
   ( AccountState (..),
@@ -56,8 +55,6 @@ import Shelley.Spec.Ledger.API
     MIRPot (..),
     MIRTarget (..),
     Network (..),
-    PParams,
-    PParams' (..),
     PState (..),
     PoolCert (..),
     PoolParams (..),
@@ -89,6 +86,11 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Test.Shelley.Spec.Ledger.Utils
+import GHC.Records(HasField(..))
+import Shelley.Spec.Ledger.BaseTypes(UnitInterval)
+import Shelley.Spec.Ledger.PParams(ProtVer)
+
+-- ======================================================
 
 data CertCred era
   = CoreKeyCred [GenesisKeyPair (Crypto era)]
@@ -110,11 +112,10 @@ deriving instance (Era era, Show (Core.Script era)) => Show (CertCred era)
 --
 -- Note: we register keys and pools more often than deregistering/retiring them,
 -- and we generate more delegations than registrations of keys/pools.
-genDCert ::
-  (HasCallStack, Era era, EraGen era) =>
+genDCert :: forall era. EraGen era =>
   Constants ->
   KeySpace era ->
-  PParams era ->
+  Core.PParams era ->
   AccountState ->
   DPState (Crypto era) ->
   SlotNo ->
@@ -144,7 +145,7 @@ genDCert
   slot =
     QC.frequency
       [ (frequencyRegKeyCert, genRegKeyCert c ksKeyPairs ksMSigScripts dState),
-        (frequencyRegPoolCert, genRegPool ksStakePools ksKeyPairs (_minPoolCost pparams)),
+        (frequencyRegPoolCert, genRegPool ksStakePools ksKeyPairs (getField @"_minPoolCost" pparams)),
         (frequencyDelegationCert, genDelegation c ksKeyPairs ksMSigScripts dpState),
         ( frequencyGenesisDelegationCert,
           genGenesisDelegation ksCoreNodes ksGenesisDelegates dpState
@@ -165,9 +166,7 @@ genDCert
       pState = _pstate dpState
 
 -- | Generate a RegKey certificate
-genRegKeyCert ::
-  forall era.
-  (HasCallStack, Era era, EraGen era) =>
+genRegKeyCert :: forall era. ValidateScript era =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
@@ -211,8 +210,7 @@ genRegKeyCert
 -- | Generate a DeRegKey certificate along with the staking credential, which is
 -- needed to witness the certificate.
 genDeRegKeyCert ::
-  forall era.
-  (HasCallStack, Era era, EraGen era) =>
+  forall era. ValidateScript era =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
@@ -265,9 +263,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
 --
 -- Returns nothing if there are no registered staking credentials or no
 -- registered pools.
-genDelegation ::
-  forall era.
-  (HasCallStack, Era era, EraGen era) =>
+genDelegation :: forall era. ValidateScript era =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
@@ -315,7 +311,7 @@ genDelegation
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
-  (HasCallStack, Era era) =>
+  (Era era) =>
   -- | Core nodes
   [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
@@ -356,7 +352,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
 -- | Generate PoolParams and the key witness.
 genStakePool ::
   forall crypto.
-  (HasCallStack, CC.Crypto crypto) =>
+  (CC.Crypto crypto) =>
   -- | Available keys for stake pool registration
   [AllIssuerKeys crypto 'StakePool] ->
   -- | KeyPairs containing staking keys to act as owners/reward account
@@ -396,7 +392,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
 
 -- | Generate `RegPool` and the key witness.
 genRegPool ::
-  (HasCallStack, Era era) =>
+  (Era era) =>
   [AllIssuerKeys (Crypto era) 'StakePool] ->
   KeyPairs (Crypto era) ->
   Coin ->
@@ -413,8 +409,8 @@ genRegPool poolKeys keyPairs minPoolCost = do
 -- constructed value, return the keypair which corresponds to the selected
 -- `KeyHash`, by doing a lookup in the set of `availableKeys`.
 genRetirePool ::
-  HasCallStack =>
-  PParams era ->
+  HasField "_eMax" (Core.PParams era) EpochNo =>
+  Core.PParams era ->
   [AllIssuerKeys (Crypto era) 'StakePool] ->
   PState (Crypto era) ->
   SlotNo ->
@@ -442,16 +438,16 @@ genRetirePool pp poolKeys pState slot =
         (List.find (\x -> hk x == hk') poolKeys)
     EpochNo cepoch = epochFromSlotNo slot
     epochLow = cepoch + 1
-    EpochNo retirementBound = _eMax pp
+    EpochNo retirementBound = getField @"_eMax" pp
     epochHigh = cepoch + retirementBound - 1
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewardsAccounts ::
-  (HasCallStack, Era era) =>
+  (Era era, HasField "_d" (Core.PParams era) UnitInterval) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
-  PParams era ->
+  Core.PParams era ->
   AccountState ->
   DState (Crypto era) ->
   Gen (Maybe (DCert (Crypto era), CertCred era))
@@ -480,7 +476,7 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
   pure $
     if -- Discard this generator (by returning Nothing) if:
     -- we are in full decentralisation mode (d=0) when IR certs are not allowed
-    _d pparams == interval0
+    getField @"_d" pparams == interval0
       -- or when we don't have keys available for generating an IR cert
       || null credCoinMap
       -- or it's too late in the epoch for IR certs
@@ -496,11 +492,11 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
 
 -- | Generate an InstantaneousRewards Transfer
 genInstantaneousRewardsTransfer ::
-  (HasCallStack, Era era) =>
+  (HasField "_d" (Core.PParams era) UnitInterval, Era era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
-  PParams era ->
+  Core.PParams era ->
   AccountState ->
   DState (Crypto era) ->
   Gen (Maybe (DCert (Crypto era), CertCred era))
@@ -521,7 +517,7 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
   pure $
     if -- Discard this generator (by returning Nothing) if:
     -- we are in full decentralisation mode (d=0) when IR certs are not allowed
-    _d pparams == interval0
+    getField @"_d" pparams == interval0
       -- or it's too late in the epoch for IR certs
       || tooLateInEpoch s
       then Nothing
@@ -532,11 +528,14 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
           )
 
 genInstantaneousRewards ::
-  (HasCallStack, Era era) =>
+  ( Era era,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_d" (Core.PParams era) UnitInterval
+  ) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
-  PParams era ->
+  Core.PParams era ->
   AccountState ->
   DState (Crypto era) ->
   Gen (Maybe (DCert (Crypto era), CertCred era))

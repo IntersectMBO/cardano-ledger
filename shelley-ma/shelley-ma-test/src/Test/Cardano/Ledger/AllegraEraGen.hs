@@ -8,9 +8,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Cardano.Ledger.Allegra
+module Test.Cardano.Ledger.AllegraEraGen
   ( -- export EraGen instance for AllegraEra and helpers shared with MaryEra
     quantifyTL,
     unQuantifyTL,
@@ -35,6 +37,8 @@ import Cardano.Ledger.ShelleyMA.TxBody
   ( TxBody (..),
     ValidityInterval (ValidityInterval),
   )
+import Shelley.Spec.Ledger.Tx(pattern WitnessSet)
+import Cardano.Ledger.Allegra(AllegraEra)
 import Cardano.Ledger.Val (Val (zero))
 import Cardano.Slotting.Slot (SlotNo (SlotNo))
 import Data.Hashable (hash)
@@ -44,18 +48,23 @@ import Shelley.Spec.Ledger.API (KeyRole (Witness))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Keys (KeyHash)
 import Shelley.Spec.Ledger.PParams (PParams, Update)
-import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut, Wdrl)
-import Test.Cardano.Ledger.EraBuffet (AllegraEra)
+import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut(..), Wdrl)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck (Gen, arbitrary, frequency)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), genCoin)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..),MinGenTxout(..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( Quantifier (..),
     ScriptClass (..),
   )
+import Test.Shelley.Spec.Ledger.Generator.Update(genShelleyPParamsDelta)
+import Test.Shelley.Spec.Ledger.Generator.Core(genCoin)
+import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
+import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Cardano.Ledger.Val((<+>))
+import Control.Monad (replicateM)
 
 -- ==========================================================
 
@@ -84,6 +93,10 @@ instance (CryptoClass.Crypto c, Mock c) => EraGen (AllegraEra c) where
   genEraAuxiliaryData = genAuxiliaryData
   updateEraTxBody (TxBody _in _out cert wdrl _txfee vi upd ad forge) fee ins outs =
     TxBody ins outs cert wdrl fee vi upd ad forge
+  genEraPParamsDelta = genShelleyPParamsDelta
+  genEraPParams = genPParams
+  genEraWitnesses setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
+  unsafeApplyTx x = x
 
 genTxBody ::
   forall era.
@@ -118,6 +131,14 @@ genTxBody _pparams slot ins outs cert wdrl fee upd ad = do
         mint,
       [] -- Allegra does not need any additional script witnesses
     )
+
+instance Mock c => MinGenTxout (AllegraEra c) where
+  calcEraMinUTxO _txout pp = (_minUTxOValue pp)
+  addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
+  genEraTxOut genVal addrs = do
+     values <- replicateM (length addrs) genVal
+     let  makeTxOut (addr,val) = TxOut addr val
+     pure (makeTxOut <$> zip addrs values)
 
 {------------------------------------------------------------------------------
   ShelleyMA helpers, shared by Allegra and Mary

@@ -11,7 +11,6 @@ module Test.Shelley.Spec.Ledger.Examples.EmptyBlock
 where
 
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Nonce)
@@ -53,9 +52,8 @@ initStEx1 = initSt (UTxO Map.empty)
 blockEx1 ::
   forall era.
   ( HasCallStack,
-    PreAlonzo era,
-    ExMock (Crypto era),
-    UsesTxBody era
+    ShelleyTest era,
+    ExMock (Crypto era)
   ) =>
   Block era
 blockEx1 =
@@ -76,8 +74,8 @@ blockNonce ::
   forall era.
   ( HasCallStack,
     PreAlonzo era,
-    ExMock (Crypto era),
-    UsesTxBody era
+    ShelleyTest era,
+    ExMock (Crypto era)
   ) =>
   Nonce
 blockNonce = getBlockNonce (blockEx1 @era)

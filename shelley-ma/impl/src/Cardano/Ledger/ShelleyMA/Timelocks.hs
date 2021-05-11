@@ -44,7 +44,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era
+import Cardano.Ledger.Era (Era (Crypto), TxInBlock)
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -92,10 +92,7 @@ import Shelley.Spec.Ledger.Serialization
   ( decodeStrictSeq,
     encodeFoldable,
   )
-import Shelley.Spec.Ledger.Tx
-  ( Tx (..),
-    WitVKey,
-  )
+import Shelley.Spec.Ledger.Tx (WitVKey)
 import Shelley.Spec.Ledger.TxBody
   ( witKeyHash,
   )
@@ -298,15 +295,13 @@ validateTimelock ::
   forall era.
   ( UsesTxBody era,
     HasField "vldt" (Core.TxBody era) ValidityInterval,
-    HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era)))
+    HasField "addrWits" (TxInBlock era) (Set (WitVKey 'Witness (Crypto era)))
   ) =>
   Timelock (Crypto era) ->
-  Tx era ->
+  TxInBlock era ->
   Bool
 validateTimelock lock tx = evalFPS @era lock vhks (getField @"body" tx)
   where
-    -- THIS IS JUST A STUB. WHO KNOWS IF
-    -- IT COMPUTES THE RIGHT WITNESS SET.
     vhks = Set.map witKeyHash (getField @"addrWits" tx)
 
 showTimelock :: CC.Crypto crypto => Timelock crypto -> String

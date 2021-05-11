@@ -19,9 +19,9 @@ module Shelley.Spec.Ledger.STS.Newpp
 where
 
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints (PParamsDelta)
 import Control.State.Transition
   ( STS (..),
     TRC (..),

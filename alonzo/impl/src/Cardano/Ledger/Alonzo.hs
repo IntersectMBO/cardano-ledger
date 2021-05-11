@@ -37,15 +37,11 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS, constructVa
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (WrappedShelleyEraFailure))
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
-import Cardano.Ledger.Alonzo.Tx
-  ( ValidatedTx (..),
-    body',
-    wits',
-  )
-import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (..), vldt')
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
+import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (validPlutusdata, validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'))
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -59,14 +55,13 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut (..),
     UsesValue,
   )
-import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
+import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Tx (Tx (Tx))
 import Control.Arrow (left)
 import Control.Monad (join)
 import Control.Monad.Except (liftEither, runExcept)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
-import qualified Data.Set as Set
 import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import Shelley.Spec.Ledger.LedgerState
@@ -90,7 +85,6 @@ import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
 import qualified Shelley.Spec.Ledger.STS.Upec as Shelley
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (UtxoFailure))
 import qualified Shelley.Spec.Ledger.Tx as Shelley
-import Shelley.Spec.Ledger.TxBody (witKeyHash)
 
 -- =====================================================
 
@@ -147,14 +141,7 @@ instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
     if isPlutusScript script
       then "\x01"
       else nativeMultiSigTag -- "\x00"
-  validateScript (TimelockScript timelock) tx =
-    evalTimelock
-      vhks
-      (vldt' (body' tx))
-      timelock
-    where
-      vhks = Set.map witKeyHash (txwitsVKey' (wits' tx))
-  -- TODO check if instead we should filter plutus scripts before calling
+  validateScript (TimelockScript script) tx = validateTimelock @(AlonzoEra c) script tx
   validateScript (PlutusScript _) _tx = True
 
 -- To run a PlutusScript use Cardano.Ledger.Alonzo.TxInfo(runPLCScript)
@@ -187,16 +174,11 @@ type instance Core.PParams (AlonzoEra c) = PParams (AlonzoEra c)
 
 type instance Core.Witnesses (AlonzoEra c) = TxWitness (AlonzoEra c)
 
+type instance Core.PParamsDelta (AlonzoEra c) = PParamsUpdate (AlonzoEra c)
+
 instance CC.Crypto c => UsesValue (AlonzoEra c)
 
-instance
-  (CC.Crypto c) =>
-  UsesPParams (AlonzoEra c)
-  where
-  type
-    PParamsDelta (AlonzoEra c) =
-      PParamsUpdate (AlonzoEra c)
-
+instance (CC.Crypto c) => UsesPParams (AlonzoEra c) where
   mergePPUpdates _ = updatePParams
 
 instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
@@ -277,3 +259,5 @@ type instance Core.EraRule "UPEC" (AlonzoEra c) = Shelley.UPEC (AlonzoEra c)
 type Self c = AlonzoEra c
 
 type Value era = V.Value (EraModule.Crypto era)
+
+type PParamsDelta era = PParamsUpdate era

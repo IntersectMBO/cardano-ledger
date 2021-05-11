@@ -9,6 +9,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
+
+{- | Currently this uses the trace mechansim to check that computing rewards has
+a required set of properties. It works only in the Shelley Era. It could be
+generalized, and then moved to the Generator/Trace/ directory which computes
+property tests in all eras.
+-}
 module Test.Shelley.Spec.Ledger.Rewards (rewardTests, C, defaultMain, newEpochProp) where
 
 import Cardano.Binary (toCBOR)
@@ -142,6 +148,7 @@ import Test.Shelley.Spec.Ledger.Rules.TestChain(forAllChainTrace)
 import Control.State.Transition.Trace(SourceSignalTarget (..), sourceSignalTargets)
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Cardano.Ledger.Pretty(PrettyA(..))
+
 
 -- ========================================================================
 -- Bounds and Constants --
@@ -728,6 +735,7 @@ lastElem :: [a] -> Maybe a
 lastElem [a] = Just a
 lastElem [] = Nothing
 lastElem (_ : xs) = lastElem xs
+
 
 -- | Provide a legitimate NewEpochState to make an test Property
 newEpochProp :: Word64 -> (NewEpochState C -> Property) -> Property

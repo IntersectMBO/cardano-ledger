@@ -71,6 +71,8 @@ class
 -- Script Validation
 -----------------------------------------------------------------------------
 
+-- HasField "scriptWits" (ValidatedTx era) (Map.Map (ScriptHash c) script)
+
 -- | Typeclass for script data types. Allows for script validation and hashing.
 --   You must understand the role of SafeToHash and scriptPrefixTag to make new
 --   instances. 'scriptPrefixTag' is a magic number representing the tag of the
@@ -78,7 +80,10 @@ class
 --   and the tag is included in the script hash for a script. The safeToHash
 --   constraint ensures that Scripts are never reserialised.
 class
-  (Era era, SafeToHash (Core.Script era)) =>
+  ( Era era,
+    SafeToHash (Core.Script era),
+    HasField "body" (TxInBlock era) (Core.TxBody era)
+  ) =>
   ValidateScript era
   where
   scriptPrefixTag :: Core.Script era -> BS.ByteString
@@ -133,9 +138,10 @@ class SupportsSegWit era where
   hashTxSeq ::
     TxSeq era ->
     Hash.Hash (CryptoClass.HASH (Crypto era)) EraIndependentBlockBody
-
   -- | The number of segregated components
   numSegComponents :: Word64
+  -- | Use unsafeApplyTx only for Tests. The real applyTx is an STS rule
+  -- that performs phase 1 validation, as well as the injection into TxInBlock.
 
 --------------------------------------------------------------------------------
 -- Era translation

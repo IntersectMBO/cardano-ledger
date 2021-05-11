@@ -101,7 +101,7 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash,
   )
-import Cardano.Ledger.Shelley.Constraints (PParamsDelta, TransValue)
+import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude
   ( HeapWords (..),
@@ -693,12 +693,12 @@ deriving instance TransTxBody NoThunks era => NoThunks (TxBodyRaw era)
 
 type TransTxBody (c :: Type -> Constraint) era =
   ( c (Core.TxOut era),
-    c (PParamsDelta era),
+    c (Core.PParamsDelta era),
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
   )
 
 deriving instance
-  (CC.Crypto (Crypto era), NFData (PParamsDelta era)) =>
+  (CC.Crypto (Crypto era), NFData (Core.PParamsDelta era)) =>
   NFData (TxBodyRaw era)
 
 deriving instance (Era era, TransTxBody Eq era) => Eq (TxBodyRaw era)
@@ -708,8 +708,8 @@ deriving instance (Era era, TransTxBody Show era) => Show (TxBodyRaw era)
 instance
   ( FromCBOR (Core.TxOut era),
     Era era,
-    FromCBOR (PParamsDelta era),
-    ToCBOR (PParamsDelta era)
+    FromCBOR (Core.PParamsDelta era),
+    ToCBOR (Core.PParamsDelta era)
   ) =>
   FromCBOR (TxBodyRaw era)
   where
@@ -723,7 +723,7 @@ instance
       )
 
 instance
-  (TransTxBody FromCBOR era, ToCBOR (PParamsDelta era), Era era) =>
+  (TransTxBody FromCBOR era, ToCBOR (Core.PParamsDelta era), Era era) =>
   FromCBOR (Annotator (TxBodyRaw era))
   where
   fromCBOR = pure <$> fromCBOR
@@ -753,8 +753,8 @@ isSNothing _ = False
 boxBody ::
   ( Era era,
     FromCBOR (Core.TxOut era),
-    FromCBOR (PParamsDelta era),
-    ToCBOR (PParamsDelta era)
+    FromCBOR (Core.PParamsDelta era),
+    ToCBOR (Core.PParamsDelta era)
   ) =>
   Word ->
   Field (TxBodyRaw era)
@@ -772,7 +772,7 @@ boxBody n = field (\_ t -> t) (Invalid n)
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
 txSparse ::
-  (TransTxBody ToCBOR era, FromCBOR (PParamsDelta era), Era era) =>
+  (TransTxBody ToCBOR era, FromCBOR (Core.PParamsDelta era), Era era) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
@@ -803,7 +803,7 @@ baseTxBodyRaw =
 
 instance
   ( Era era,
-    FromCBOR (PParamsDelta era),
+    FromCBOR (Core.PParamsDelta era),
     TransTxBody ToCBOR era
   ) =>
   ToCBOR (TxBodyRaw era)
@@ -821,7 +821,7 @@ deriving newtype instance
   (TransTxBody NoThunks era, Typeable era) => NoThunks (TxBody era)
 
 deriving newtype instance
-  (CC.Crypto (Crypto era), NFData (PParamsDelta era)) =>
+  (CC.Crypto (Crypto era), NFData (Core.PParamsDelta era)) =>
   NFData (TxBody era)
 
 deriving instance (Era era, TransTxBody Show era) => Show (TxBody era)
@@ -833,14 +833,14 @@ deriving via
   instance
     ( Era era,
       FromCBOR (Core.TxOut era),
-      FromCBOR (PParamsDelta era),
-      ToCBOR (PParamsDelta era)
+      FromCBOR (Core.PParamsDelta era),
+      ToCBOR (Core.PParamsDelta era)
     ) =>
     FromCBOR (Annotator (TxBody era))
 
 -- | Pattern for use by external users
 pattern TxBody ::
-  (Era era, FromCBOR (PParamsDelta era), TransTxBody ToCBOR era) =>
+  (Era era, FromCBOR (Core.PParamsDelta era), TransTxBody ToCBOR era) =>
   Set (TxIn (Crypto era)) ->
   StrictSeq (Core.TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->

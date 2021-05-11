@@ -113,14 +113,12 @@ import Cardano.Ledger.Coin
     toDeltaCoin,
   )
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.SafeHash (HashAnnotated, extractHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Constraints
-  ( TransValue,
-    UsesPParams (PParamsDelta),
-  )
+import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
@@ -754,13 +752,16 @@ genesisState genDelegs0 utxo0 =
 -- | Convenience Function to bound the txsize function.
 -- | It can be helpful for coin selection.
 txsizeBound ::
-  forall era out.
+  forall era out tx.
   ( HasField "outputs" (Core.TxBody era) (StrictSeq out),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "body" tx (Core.TxBody era),
+    HasField "txsize" tx Integer
   ) =>
-  Tx era ->
+  Proxy era ->
+  tx ->
   Integer
-txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
+txsizeBound Proxy tx = numInputs * inputSize + numOutputs * outputSize + rest
   where
     uint = 5
     smallArray = 1

@@ -35,9 +35,6 @@ module Test.Shelley.Spec.Ledger.Utils
     GenesisKeyPair,
     getBlockNonce,
     ShelleyTest,
-    ShelleyUtxoSTS,
-    ShelleyLedgerSTS,
-    ShelleyChainSTS,
     ChainProperty,
     Split (..),
   )
@@ -100,18 +97,11 @@ import Data.Functor ((<&>))
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
-import Data.Sequence (Seq)
 import Data.Time.Clock.POSIX
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.API
   ( ApplyBlock,
-    CHAIN,
-    ChainState,
-    DPState,
     GetLedgerView,
-    LedgerEnv,
-    LedgerState,
-    LedgersEnv,
     PParams,
   )
 import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
@@ -137,10 +127,8 @@ import Shelley.Spec.Ledger.Keys
     vKey,
     pattern KeyPair,
   )
-import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
-import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx, TxOut, WitnessSet)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -148,6 +136,24 @@ import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
   )
+import Cardano.Ledger.Era(SupportsSegWit(TxInBlock))
+
+type ChainProperty era =
+  ( UsesTxOut era,
+    UsesPParams era,
+    UsesValue era,
+    UsesTxBody era,
+    UsesAuxiliary era,
+    Mock (Crypto era),
+    ApplyBlock era,
+    GetLedgerView era,
+    Show (TxInBlock era),
+    Eq (TxInBlock era)
+  )
+
+
+
+-- ================================================
 
 type ShelleyTest era =
   ( UsesTxBody era,
@@ -160,51 +166,13 @@ type ShelleyTest era =
     Era.TxInBlock era ~ Tx era,
     TxOut era ~ Core.TxOut era,
     PParams era ~ Core.PParams era,
-    PParamsDelta era ~ PParamsUpdate era,
+    Core.PParamsDelta era ~ PParamsUpdate era,
     Core.Witnesses era ~ WitnessSet era,
     Split (Core.Value era),
     Default (State (Core.EraRule "PPUP" era)),
     Core.AnnotatedData (Core.Witnesses era)
   )
 
-type ChainProperty era =
-  ( ShelleyBased era,
-    Mock (Crypto era),
-    ShelleyUtxoSTS era,
-    ApplyBlock era,
-    GetLedgerView era
-  )
-
-type ShelleyUtxoSTS era =
-  ( STS (Core.EraRule "UTXOW" era),
-    BaseM (Core.EraRule "UTXOW" era) ~ ShelleyBase,
-    State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
-    Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
-    Signal (Core.EraRule "UTXOW" era) ~ Tx era
-  )
-
-type ShelleyLedgerSTS era =
-  ( STS (Core.EraRule "LEDGER" era),
-    BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
-    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
-    Signal (Core.EraRule "LEDGER" era) ~ Tx era,
-    STS (Core.EraRule "LEDGERS" era),
-    BaseM (Core.EraRule "LEDGERS" era) ~ ShelleyBase,
-    Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
-    State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Tx era)
-  )
-
-type ShelleyChainSTS era =
-  ( STS (CHAIN era),
-    BaseM (CHAIN era) ~ ShelleyBase,
-    Environment (CHAIN era) ~ (),
-    State (CHAIN era) ~ ChainState era,
-    Signal (CHAIN era) ~ Block era
-  )
 
 class Split v where
   vsplit :: v -> Integer -> ([v], Coin)

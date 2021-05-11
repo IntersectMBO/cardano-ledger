@@ -27,13 +27,14 @@ import Shelley.Spec.Ledger.API
     Update,
   )
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.PParams (PParams,PParams'(..))
 import Shelley.Spec.Ledger.STS.EraMapping ()
 import Shelley.Spec.Ledger.Scripts (MultiSig (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( TxIn (..),
     TxOut (..),
+    pattern WitnessSet,
   )
 import Shelley.Spec.Ledger.TxBody (TxBody (TxBody, _inputs, _outputs, _txfee), Wdrl (..))
 import Test.QuickCheck (Gen)
@@ -43,7 +44,8 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genCoin,
     genNatural,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..),MinGenTxout(..))
 import Test.Shelley.Spec.Ledger.Generator.Metadata (genMetadata)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( Quantifier (..),
@@ -51,6 +53,10 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   )
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
+import Test.Shelley.Spec.Ledger.Generator.Update(genShelleyPParamsDelta)
+import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
+import Cardano.Ledger.Val((<+>))
+import Control.Monad (replicateM)
 
 {------------------------------------------------------------------------------
   ShelleyEra instances for EraGen and ScriptClass
@@ -78,6 +84,12 @@ instance
         _inputs = ins,
         _outputs = outs
       }
+  genEraPParamsDelta = genShelleyPParamsDelta
+  genEraPParams = genPParams
+
+  genEraWitnesses setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
+  unsafeApplyTx x = x
+
 
 instance CC.Crypto c => ScriptClass (ShelleyEra c) where
   basescript _proxy = RequireSignature
@@ -127,3 +139,12 @@ genTimeToLive :: SlotNo -> Gen SlotNo
 genTimeToLive currentSlot = do
   ttl <- genNatural 50 100
   pure $ currentSlot + SlotNo (fromIntegral ttl)
+
+
+instance Mock c => MinGenTxout (ShelleyEra c) where
+  calcEraMinUTxO _txout pp = (_minUTxOValue pp)
+  addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
+  genEraTxOut genVal addrs = do
+     values <- replicateM (length addrs) genVal
+     let  makeTxOut (addr,val) = TxOut addr val
+     pure (makeTxOut <$> zip addrs values)
