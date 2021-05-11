@@ -50,6 +50,7 @@ module Control.State.Transition.Extended
     trans,
     liftSTS,
     tellEvent,
+    tellEvents,
 
     -- * Apply STS
     AssertionPolicy (..),
@@ -231,8 +232,8 @@ data Event
   = NewPoolParam
   | NewFuturePoolParam
 
-data EventPolicy =
-    EventPolicyReturn
+data EventPolicy 
+  = EventPolicyReturn
   | EventPolicyDiscard
 
 data SingEP ep where
@@ -263,7 +264,7 @@ data Clause sts (rtype :: RuleType) a where
     (State sub -> a) ->
     Clause sts rtype a
   Writer ::
-    Event ->
+    [Event] ->
     a ->
     Clause sts rtype a
   Predicate ::
@@ -448,16 +449,16 @@ applySTSIndifferently =
           asoValidation = ValidateAll
         }
 
-newtype RuleInterpreterT s m a = RuleInterpreterT (StateT [PredicateFailure s] (WriterT [Event] m) a)
+newtype RuleEventLoggerT s m a = RuleEventLoggerT (StateT [PredicateFailure s] (WriterT [Event] m) a)
   deriving (MonadWriter [Event], Monad, Applicative, Functor)
 
-deriving instance (x ~ [PredicateFailure s], Monad m) => MonadState x (RuleInterpreterT s m)
+deriving instance (x ~ [PredicateFailure s], Monad m) => MonadState x (RuleEventLoggerT s m)
 
-instance MonadTrans (RuleInterpreterT s) where
-  lift = RuleInterpreterT . lift . lift
+instance MonadTrans (RuleEventLoggerT s) where
+  lift = RuleEventLoggerT . lift . lift
 
-runRuleInterpreterT :: forall s m a. RuleInterpreterT s m a -> [PredicateFailure s] -> m ((a, [PredicateFailure s]), [Event])
-runRuleInterpreterT (RuleInterpreterT m) s = runWriterT $ runStateT m s 
+runRuleEventLoggerT :: forall s m a. RuleEventLoggerT s m a -> [PredicateFailure s] -> m ((a, [PredicateFailure s]), [Event])
+runRuleEventLoggerT (RuleEventLoggerT m) s = runWriterT $ runStateT m s 
 
 -- | Apply a rule even if its predicates fail.
 --
@@ -475,7 +476,7 @@ applyRuleInternal ::
   m (EventReturnType ep (State s, [PredicateFailure s]))
 applyRuleInternal ep vp goSTS jc r = 
   case ep of
-    EPReturn -> flip (runRuleInterpreterT @s) [] $ foldF runClause r
+    EPReturn -> flip (runRuleEventLoggerT @s) [] $ foldF runClause r
     EPDiscard -> flip runStateT [] $ foldF runClause r
   where
     runClause :: forall f t a.
@@ -500,7 +501,7 @@ applyRuleInternal ep vp goSTS jc r =
       traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> concat sfails
       pure $ next ss
     runClause (Writer w a) = case ep of
-      EPReturn -> tell [w] $> a
+      EPReturn -> tell w $> a
       EPDiscard -> pure a
     validateIf lbls = case vp of
       ValidateAll -> True
@@ -648,5 +649,9 @@ sfor_ = flip straverse_
 tellEvent ::
   Event ->
   Rule sts ctx ()
-tellEvent e = liftF $ Writer e ()
+tellEvent e = tellEvents [e]
 
+tellEvents ::
+  [Event] ->
+  Rule sts ctx ()
+tellEvents es = liftF $ Writer es ()
