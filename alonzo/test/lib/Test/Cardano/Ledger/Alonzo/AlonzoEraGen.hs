@@ -138,10 +138,8 @@ genAlonzoTxBody _genenv pparams currentslot input txOuts certs wdrls fee updates
   validityInterval <- genValidityInterval currentslot
   return
     ( TxBody
-        -- non fee inputs
-        Set.empty -- TODO do something better here (use genenv ?)
-        -- inputs for fees
         input
+        Set.empty -- collaeral -- TODO do something better here (use genenv ?)
         txouts'
         certs
         wdrls
@@ -176,7 +174,7 @@ genAlonzoPParamsDelta constants pp = do
   price <- genM (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
   mxTx <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   mxBl <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  mxV <- genM (genNatural 1 10000)
+  mxV <- genM (genNatural 4000 5000) -- Not too small
   let c = SJust 150
       mxC = SJust 10
   pure (Alonzo.extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
@@ -192,7 +190,7 @@ genAlonzoPParams constants = do
   price <- (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
   mxTx <- (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   mxBl <- (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  mxV <- (genNatural 10000 50000) -- This can't be too small
+  mxV <- pure 10000 -- (genNatural 10000 50000) -- This can't be too small
   let c = 150
       mxC = 10
   pure (Alonzo.extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
@@ -205,8 +203,9 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraAuxiliaryData = genAux
   genGenesisValue = maryGenesisValue
   genEraTxBody = genAlonzoTxBody
-  updateEraTxBody txb coinx txin txout =
-    txb {inputs = txin, txfee = coinx, outputs = txout}
+  updateEraTxBody txb coinx txin txout = new
+    where
+      new = txb {inputs = txin, txfee = coinx, outputs = txout}
   genEraPParamsDelta = genAlonzoPParamsDelta
   genEraPParams = genAlonzoPParams
   genEraWitnesses setWitVKey mapScriptWit = TxWitness setWitVKey Set.empty mapScriptWit Map.empty (Redeemers Map.empty)

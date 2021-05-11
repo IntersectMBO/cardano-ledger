@@ -65,7 +65,7 @@ import Data.Coders
     (<!),
   )
 import Data.Coerce (coerce)
-import Data.Foldable (toList)
+import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -185,7 +185,7 @@ data UtxoPredicateFailure era
   | TriesToForgeADA
   | -- | list of supplied bad transaction outputs
     OutputTooBigUTxO
-      ![Core.TxOut era]
+      ![(Int, Int, Core.TxOut era)]
   | InsufficientCollateral
       !Coin
       -- ^ balance computed
@@ -370,13 +370,14 @@ utxoTransition = do
   -- use serialized length of Value because this Value size is being limited inside a serialized Tx
   let outputs = Map.elems $ unUTxO (txouts @era txb)
       maxValSize = getField @"_maxValSize" pp
-      outputsTooBig =
-        filter
-          ( \out ->
-              let v = getField @"value" out
-               in (fromIntegral . BSL.length . serialize) v > maxValSize
-          )
-          outputs
+      outputsTooBig = foldl' accum [] outputs
+        where
+          accum ans out =
+            let v = getField @"value" out
+                size = (fromIntegral . BSL.length . serialize) v
+             in if size > maxValSize
+                  then (fromIntegral size, fromIntegral maxValSize, out) : ans
+                  else ans
   null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
 
   ni <- liftSTS $ asks networkId

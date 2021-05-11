@@ -31,6 +31,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace, forAllTrac
 import Data.Default.Class (Default (def))
 import qualified Data.Map as Map
 import Data.Proxy (Proxy (..))
+import GHC.Natural
 import Shelley.Spec.Ledger.API (ApplyBlock)
 import Shelley.Spec.Ledger.API.Protocol (GetLedgerView)
 import Shelley.Spec.Ledger.API.Validation (ApplyBlock)
@@ -46,6 +47,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.QuickCheck
+import Test.QuickCheck.Random (mkQCGen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
@@ -96,6 +98,7 @@ import Test.Shelley.Spec.Ledger.Utils
     testGlobals,
   )
 import Test.Tasty
+import Test.Tasty.QuickCheck
 
 kps = take 10 $ keyPairs @TestCrypto (geConstants ag)
 
@@ -227,3 +230,21 @@ type T = TestCrypto
 
 main :: IO ()
 main = defaultMain tests
+
+cgen = mkQCGen 174256
+
+-- 174256 on 23 try
+-- 2 fails on 5 try
+-- 6 fails on 1st try
+
+go =
+  defaultMain
+    ( localOption
+        (QuickCheckReplay (Just 6))
+        (testProperty "ADA" $ adaPreservationChain @(AlonzoEra TestCrypto))
+    )
+
+maxvalsize :: Natural
+maxvalsize = 10000
+
+testPropertyAdaPreservation = (testProperty "Property test preserves ADA" $ adaPreservationChain @(AlonzoEra TestCrypto))

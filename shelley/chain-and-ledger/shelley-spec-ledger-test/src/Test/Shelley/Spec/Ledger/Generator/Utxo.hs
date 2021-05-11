@@ -12,6 +12,8 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}  -- TODO FIX ME
+
 module Test.Shelley.Spec.Ledger.Generator.Utxo
   ( genTx,
     Delta (..),
@@ -366,7 +368,8 @@ genNextDelta
         draftSize =
           sum
             [ 5 :: Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
-              12 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens
+              --12 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens
+              20 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens  THIS IS NEW FIX ME
               encodedLen (max dfees (Coin 0)) - 1,
               foldr (\a b -> b + encodedLen a) 0 extraInputs,
               encodedLen change,
@@ -374,6 +377,7 @@ genNextDelta
             ]
 
         deltaFee = draftSize <×> Coin (fromIntegral (getField @"_minfeeA" pparams))
+                   <+> Coin (fromIntegral (getField @"_minfeeB" pparams))  -- TODO THIS IS NEW FIX ME
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change
@@ -488,7 +492,7 @@ applyDelta
     --fix up the witnesses here?
     -- Adds extraInputs, extraWitnesses, and change from delta to tx
     let txBody = getField @"body" tx
-        outputs' = getField @"outputs" txBody StrictSeq.|> change
+        outputs' = (getField @"outputs" txBody) StrictSeq.|> change
         body2 =
           (updateEraTxBody @era)
             txBody

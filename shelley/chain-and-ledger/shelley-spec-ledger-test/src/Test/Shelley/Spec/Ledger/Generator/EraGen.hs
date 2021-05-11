@@ -189,7 +189,7 @@ type MinGenTxBody era =
     FromCBOR(Annotator (Core.TxBody era)) -- arises because some pattern Constructors deserialize
   )
 
-class MinGenTxout era where
+class Show (Core.TxOut era) => MinGenTxout era where
   calcEraMinUTxO :: Core.TxOut era -> Core.PParams era -> Coin
   addValToTxOut :: Core.Value era -> Core.TxOut era -> Core.TxOut era
   genEraTxOut :: Gen (Core.Value era) -> [Addr (Crypto era)] -> Gen [Core.TxOut era]
