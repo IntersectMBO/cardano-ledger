@@ -174,8 +174,9 @@ genAlonzoPParamsDelta constants pp = do
   price <- genM (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
   mxTx <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   mxBl <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  mxV <- genM (genNatural 4000 5000) -- Not too small, if this is too small then any Tx with Value
+  -- Not too small for mxV, if this is too small then any Tx with Value
   -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
+  mxV <- genM (genNatural 4000 5000)
   let c = SJust 150
       mxC = SJust 10
   pure (Alonzo.extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
