@@ -368,8 +368,9 @@ genNextDelta
         draftSize =
           sum
             [ 5 :: Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
-              --12 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens
-              20 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens  THIS IS NEW FIX ME
+              -- Fudge factor, Sometimes we need extra buffer when minting tokens.
+              -- 20 has been empirically determined to make non failing Txs
+              20 :: Integer,
               encodedLen (max dfees (Coin 0)) - 1,
               foldr (\a b -> b + encodedLen a) 0 extraInputs,
               encodedLen change,

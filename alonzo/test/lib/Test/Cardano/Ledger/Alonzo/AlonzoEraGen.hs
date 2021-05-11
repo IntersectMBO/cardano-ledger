@@ -174,7 +174,8 @@ genAlonzoPParamsDelta constants pp = do
   price <- genM (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
   mxTx <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   mxBl <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  mxV <- genM (genNatural 4000 5000) -- Not too small
+  -- This cannot be too small. In Shelley it is a Constant 4000
+  mxV <- genM (genNatural 4000 5000)
   let c = SJust 150
       mxC = SJust 10
   pure (Alonzo.extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
