@@ -17,6 +17,7 @@
 
 module Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators
   ( mkDummyHash,
+    genCoherentBlock,
     genHash,
     genShelleyAddress,
     genByronAddress,
@@ -126,16 +127,21 @@ import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS
 import Shelley.Spec.Ledger.Serialization (ToCBORGroup)
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass)
 import Test.QuickCheck (Arbitrary, arbitrary, genericShrink, listOf, oneof, recursivelyShrink, resize, shrink, vectorOf)
 import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( mkBlockHeader,
+  ( KeySpace (KeySpace_),
     mkOCert,
+    geKeySpace,
+    ksCoreNodes,
+    mkBlock,
+    mkBlockHeader,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
-import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys)
+import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
     genSignature,
@@ -790,6 +796,50 @@ genBlock ::
   ) =>
   Gen (Block era)
 genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
+
+-- | For some purposes, a totally random block generator may not be suitable.
+-- There are tests in the ouroboros-network repository, for instance, that
+-- perform some integrity checks on the generated blocks.
+--
+-- For other purposes, such as the serialization tests in this repository,
+-- 'genBlock' is more appropriate.
+--
+-- This generator uses 'mkBlock' provide more coherent blocks.
+genCoherentBlock ::
+  forall era.
+  ( Era era,
+    ToCBORGroup (TxSeq era),
+    Mock (Crypto era),
+    ScriptClass era,
+    UsesTxBody era,
+    Arbitrary (TxInBlock era)
+  ) =>
+  Gen (Block era)
+genCoherentBlock = do
+  let KeySpace_ {ksCoreNodes} = geKeySpace (genEnv p)
+  prevHash <- arbitrary :: Gen (HashHeader (Crypto era))
+  allPoolKeys <- elements (map snd ksCoreNodes)
+  txs <- arbitrary
+  curSlotNo <- SlotNo <$> choose (0, 10)
+  curBlockNo <- BlockNo <$> choose (0, 100)
+  epochNonce <- arbitrary :: Gen Nonce
+  let kesPeriod = 1
+      keyRegKesPeriod = 1
+      ocert = mkOCert allPoolKeys 1 (KESPeriod kesPeriod)
+  return $
+    mkBlock
+      prevHash
+      allPoolKeys
+      txs
+      curSlotNo
+      curBlockNo
+      epochNonce
+      kesPeriod
+      keyRegKesPeriod
+      ocert
+  where
+    p :: Proxy era
+    p = Proxy
 
 instance
   ( Era era,
