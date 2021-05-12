@@ -105,9 +105,16 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
   )
 import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
-import Shelley.Spec.Ledger.Tx (Tx, ValidateScript, WitVKey, WitnessSet, hashScript, validateScript)
+import Shelley.Spec.Ledger.Tx
+  ( Tx,
+    ValidateScript,
+    WitVKey,
+    WitnessSet,
+    hashScript,
+    validateScript,
+  )
 import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody, TxIn, Wdrl)
-import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
+import Shelley.Spec.Ledger.UTxO (UTxO, scriptsNeeded)
 
 -- =========================================
 
@@ -257,6 +264,13 @@ initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
   trans @(Core.EraRule "UTXO" era) $ IRC (UtxoEnv slots pp stakepools genDelegs)
 
+-- | Function which collects VKey witnesses.
+type CollectVKeyWitnesses era =
+  UTxO era ->
+  TxInBlock era ->
+  GenDelegs (Crypto era) ->
+  WitHashes (Crypto era)
+
 -- | A generic Utxow witnessing function designed to be use across many Eras.
 --   Note the 'embed' argument lifts from the simple Shelley (UtxowPredicateFailure) to
 --   the PredicateFailure (type family) of the context of where it is called.
@@ -275,9 +289,10 @@ shelleyStyleWitness ::
     STS (utxow era),
     ShelleyStyleWitnessNeeds era
   ) =>
+  CollectVKeyWitnesses era ->
   (UtxowPredicateFailure era -> PredicateFailure (utxow era)) ->
   TransitionRule (utxow era)
-shelleyStyleWitness embed = do
+shelleyStyleWitness collectVKeyWitnesses embed = do
   (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
   let txbody = getField @"body" tx
       utxo = _utxo u
@@ -304,7 +319,7 @@ shelleyStyleWitness embed = do
   -- check VKey witnesses
   verifiedWits @era tx ?!#: (embed . InvalidWitnessesUTXOW)
 
-  let needed = witsVKeyNeeded @era utxo tx genDelegs
+  let needed = collectVKeyWitnesses utxo tx genDelegs
       missingWitnesses = diffWitHashes needed witsKeyHashes
       haveNeededWitnesses =
         if nullWitHashes missingWitnesses
@@ -380,5 +395,5 @@ instance
   type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
   type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
-  transitionRules = [shelleyStyleWitness id]
+  transitionRules = [shelleyStyleWitness witsVKeyNeeded id]
   initialRules = [initialLedgerStateUTXOW]

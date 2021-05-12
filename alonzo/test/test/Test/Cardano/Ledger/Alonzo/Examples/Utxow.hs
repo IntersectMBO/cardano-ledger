@@ -86,6 +86,7 @@ import qualified PlutusCore.Evaluation.Machine.ExMemory as P
     ExMemory (..),
   )
 import qualified PlutusTx as Plutus
+import Shelley.Spec.Ledger.API (WitHashes (WitHashes))
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Shelley.Spec.Ledger.Credential
@@ -312,7 +313,7 @@ validatingBody =
     (Coin 5) --txfee
     (ValidityInterval SNothing SNothing) --txvldt
     SNothing --txUpdates
-    (Set.singleton . asWitness . hashKey . vKey $ someKeys) -- reqSignerHashes
+    mempty -- reqSignerHashes
     mempty --mint
     (hashWPPD validatingRedeemersEx1) --wppHash
     SNothing --adHash
@@ -1194,6 +1195,21 @@ tooManyExUnitsTx =
     (IsValidating True)
     SNothing
 
+missingCollateralSig :: ValidatedTx A
+missingCollateralSig =
+  ValidatedTx
+    validatingBody
+    TxWitness
+      { txwitsVKey = mempty,
+        txwitsBoot = mempty,
+        txscripts =
+          Map.singleton alwaysSucceedsHash3 (alwaysSucceeds 3),
+        txdats = Map.singleton (hashData datumExample1) datumExample1,
+        txrdmrs = validatingRedeemersEx1
+      }
+    (IsValidating True)
+    SNothing
+
 -- =======
 --  Tests
 -- =======
@@ -1467,6 +1483,24 @@ utxowExamples =
                         ExUnitsTooBigUTxO
                           (ExUnits {exUnitsMem = 1000000, exUnitsSteps = 1000000})
                           (ExUnits {exUnitsMem = 1000001, exUnitsSteps = 5000})
+                    ]
+                  ]
+              ),
+          testCase "missing signature for collateral input" $
+            testUTXOW
+              initialUtxoSt
+              missingCollateralSig
+              ( Left
+                  [ [ WrappedShelleyEraFailure
+                        ( MissingVKeyWitnessesUTXOW
+                            ( WitHashes
+                                ( Set.fromList
+                                    [ asWitness $
+                                        hashKey (vKey someKeys)
+                                    ]
+                                )
+                            )
+                        )
                     ]
                   ]
               )
