@@ -7,6 +7,8 @@
 -- Embed instances for (AlonzoEra TestCrypto)
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+-- | Export several sets of property tests for the Alonzo Era.
+--     Also expert some functions that can be used to debug the Alonzo Era property test generators.
 module Test.Cardano.Ledger.Alonzo.Trials
   ( alonzoPropertyTests,
     fastPropertyTests,
@@ -34,8 +36,6 @@ module Test.Cardano.Ledger.Alonzo.Trials
     payscript,
     stakescript,
     scripts,
-    getN,
-    m23,
   )
 where
 
@@ -90,7 +90,8 @@ import Test.Shelley.Spec.Ledger.PropertyTests
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
--- ========================================================
+-- ======================================================================
+-- These instances are needed to make property tests in the Alonzo era
 
 instance Embed (AlonzoBBODY (AlonzoEra TestCrypto)) (CHAIN (AlonzoEra TestCrypto)) where
   wrapFailed = BbodyFailure
@@ -98,6 +99,13 @@ instance Embed (AlonzoBBODY (AlonzoEra TestCrypto)) (CHAIN (AlonzoEra TestCrypto
 instance Embed (AlonzoUTXOW (AlonzoEra TestCrypto)) (LEDGER (AlonzoEra TestCrypto)) where
   wrapFailed = UtxowFailure
 
+-- ======================================================================================
+-- It is incredably hard to debug property test generators.  These functions mimic the
+-- set up of a property test, so one can inspect some randomly generatated transactions
+
+-- | Different property test generators depend upon a wide variety of of inputs. This function generates random
+--     versions of all these inputs, and lets the user select which of these inputs he needs to make a generator.
+--     See genAlonzoTx and genAlonzoBlock as examples of its use.
 genstuff ::
   (EraGen era, Default (State (Core.EraRule "PPUP" era))) =>
   proxy era ->
@@ -138,6 +146,7 @@ genstuff proxy f =
 ap :: Proxy (AlonzoEra TestCrypto)
 ap = Proxy @(AlonzoEra TestCrypto)
 
+-- An initial (mostly empty) LedgerEnv
 ledgerEnv :: forall era. Default (Core.PParams era) => LedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) 0 def (AccountState (Coin 0) (Coin 0))
 
@@ -157,7 +166,7 @@ genShelleyBlock :: Gen (Block (ShelleyEra TestCrypto))
 genShelleyBlock = genstuff (Proxy @(ShelleyEra TestCrypto)) (\genv cs _nep _ep _ls _pp _utxo _dp _d _p -> genBlock genv cs)
 
 -- ==================================================================================================
--- Scripts are generated when we call genEnv. They are stored fields inside the GenEnv structure.
+-- Scripts are generated when we call genEnv. They are stored in fields inside the GenEnv structure.
 -- scripts, payscript, and stakescript let one observe the 'nth' generated script. Very usefull
 -- when debugging a Scriptic instance.
 
@@ -165,11 +174,11 @@ keys :: KeySpace (AlonzoEra TestCrypto)
 _constants :: Constants
 (GenEnv keys _constants) = genEnv (Proxy @(AlonzoEra TestCrypto))
 
--- in scripts n ranges over [0..149]
+-- In scripts, n ranges over [0..149]
 scripts :: Int -> (PDoc, PDoc)
 scripts n = (\(x, y) -> (ppScript x, ppScript y)) ((ksMSigScripts keys) !! n)
 
--- in payscript and stakescript n ranges over [0..29]
+-- In payscript and stakescript, n ranges over [0..29]
 payscript :: Int -> (String, PDoc)
 payscript n = (\(x, (y, _z)) -> (show x, ppScript y)) ((Map.toList (ksIndexedPayScripts keys)) !! n)
 
@@ -177,10 +186,9 @@ stakescript :: Int -> (String, PDoc)
 stakescript n = (\(x, (y, _z)) -> (show x, ppScript y)) ((Map.toList (ksIndexedStakeScripts keys)) !! n)
 
 -- ====================================================================================
+-- A few sets of property tests we can use to run in different Scenarios.
 
--- delegTest :: TestTree
--- delegTest = localOption (QuickCheckReplay (Just 6)) (testProperty "Delegation Properties" (delegProperties @(AlonzoEra TestCrypto)))
-
+-- | The same property tests run in all the other Eras, specialized to the Alonzo Era.
 alonzoPropertyTests :: TestTree
 alonzoPropertyTests =
   testGroup
@@ -188,6 +196,7 @@ alonzoPropertyTests =
     [ propertyTests @(AlonzoEra TestCrypto)
     ]
 
+-- | A select subset of all the property tests
 fastPropertyTests :: TestTree
 fastPropertyTests =
   testGroup
@@ -195,6 +204,10 @@ fastPropertyTests =
     [ testProperty "Chain and Ledger traces cover the relevant cases" (withMaxSuccess 50 (relevantCasesAreCovered @(AlonzoEra TestCrypto))),
       testProperty "total amount of Ada is preserved (Chain)" (withMaxSuccess 50 (adaPreservationChain @(AlonzoEra TestCrypto)))
     ]
+
+-- ============================================================================
+-- When debugging property tests failures, it is usefull to run a test
+-- with a given replay value. go and go2 are templates for how to do this.
 
 go :: Int -> IO (Maybe ())
 go n =
@@ -218,21 +231,3 @@ go2 =
         -- (propertyTests  @(AlonzoEra TestCrypto))
         -- (testProperty "Delegation Properties" (delegProperties @(AlonzoEra TestCrypto)))
     )
-
-getN :: Ord k => Int -> Map.Map k t -> Gen [t]
-getN 0 _ = pure []
-getN num m =
-  let n = Map.size m
-   in if n == 0
-        then pure []
-        else
-          ( do
-              i <- choose (0, n -1)
-              let (k, y) = Map.elemAt i m
-                  m2 = Map.delete k m
-              ys <- getN (num -1) m2
-              pure (y : ys)
-          )
-
-m23 :: Int -> IO [Int]
-m23 n = generate $ getN n (Map.fromList [(i, i) | i <- [(1 :: Int) .. 23]])

@@ -16,6 +16,7 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
   ( genTx,
     Delta (..),
     showBalance,
+    getNRandomPairs,
   )
 where
 
@@ -557,6 +558,20 @@ ruffle k items = do
   where
     pickIndex = QC.choose (0, length items - 1)
 
+-- | Return 'num' random pairs from the map 'm'. If the size of 'm' is less than 'num' return 'size m' pairs.
+getNRandomPairs :: Ord k => Int -> Map.Map k t -> Gen[(k,t)]
+getNRandomPairs 0 _ = pure []
+getNRandomPairs num m =
+  let n = Map.size m
+  in if n==0
+        then pure []
+        else (do
+          i <- QC.choose (0,n-1)
+          let (k,y) = Map.elemAt i m
+              m2 = Map.delete k m
+          ys <- getNRandomPairs (num-1) m2
+          pure ((k,y):ys))
+
 mkScriptWits ::
   forall era.
   EraGen era =>
@@ -672,7 +687,7 @@ genInputs ::
     )
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   numInputs <- QC.choose (minNumGenInputs, maxNumGenInputs)
-  selectedUtxo <- ruffle numInputs (Map.toList utxo)
+  selectedUtxo <- getNRandomPairs numInputs utxo
 
   let (inputs, witnesses) = unzip (witnessedInput <$> selectedUtxo)
   return
@@ -795,7 +810,7 @@ genPtrAddrs ds addrs = do
   let pointers = forwards (_ptrs ds)
 
   n <- QC.choose (0, min (Map.size pointers) (length addrs))
-  pointerList <- ruffle n (Map.keys pointers)
+  pointerList <- map fst <$> getNRandomPairs n pointers
 
   let addrs' = zipWith baseAddrToPtrAddr (take n addrs) pointerList
 
