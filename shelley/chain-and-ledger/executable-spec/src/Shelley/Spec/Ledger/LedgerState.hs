@@ -153,7 +153,7 @@ import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
-import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash, isBootstrapRedeemer)
+import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Shelley.Spec.Ledger.Address.Bootstrap
   ( BootstrapWitness (..),
     bootstrapWitKeyHash,
@@ -169,6 +169,7 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
     unitIntervalToRational,
   )
+import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), isBootstrapRedeemer)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
@@ -1325,7 +1326,7 @@ updateNES
 
 returnRedeemAddrsToReserves ::
   forall era.
-  (Era era, HasField "address" (Core.TxOut era) (Addr (Crypto era))) =>
+  (Era era, HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era))) =>
   EpochState era ->
   EpochState era
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
@@ -1336,7 +1337,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     (redeemers, nonredeemers) =
       Map.partition
         ( \out ->
-            isBootstrapRedeemer (getField @"address" out)
+            isBootstrapRedeemer (getField @"compactAddress" out)
         )
         utxo
     acnt = esAccountState es
