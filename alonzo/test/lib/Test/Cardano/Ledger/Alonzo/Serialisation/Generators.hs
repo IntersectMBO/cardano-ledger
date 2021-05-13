@@ -42,7 +42,6 @@ import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import qualified Data.Text as T (pack)
 import qualified PlutusTx as Plutus
@@ -304,13 +303,8 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
         Certifying <$> arbitrary
       ]
 
-data MaybeLangDepView c = MaybeLangDepView {unMLDV :: Maybe (LangDepView (AlonzoEra c))}
-
-instance Mock c => Arbitrary (MaybeLangDepView c) where
-  arbitrary = MaybeLangDepView <$> (getLanguageView <$> arbitrary <*> arbitrary)
-
 instance Mock c => Arbitrary (WitnessPPData (AlonzoEra c)) where
   arbitrary =
     WitnessPPData
       <$> arbitrary
-      <*> (Set.fromList . (mapMaybe unMLDV) <$> arbitrary)
+      <*> (Set.singleton <$> (getLanguageView <$> arbitrary <*> arbitrary))

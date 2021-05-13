@@ -111,22 +111,6 @@ instance ToCBORGroup RdmrPtr where
 instance FromCBORGroup RdmrPtr where
   fromCBORGroup = RdmrPtr <$> fromCBOR <*> fromCBOR
 
--- ====================================================================
--- In the Spec, TxWitness has 4 logical fields. Here in the implementation
--- we make two physical modifications.
--- 1) The witsVKey field of TxWitness is specified as a (Map VKey Signature)
---    for efficiency this is stored as a (Set WitVKey) where WitVKey is
---    logically a triple (VKey,Signature,VKeyHash).
--- 2) We add a 5th field _witsBoot to be backwards compatible with
---    earlier Eras: Byron, Mary, Allegra
--- So logically things look like this
---   data TxWitness = TxWitness
---      (Set (WitVKey 'Witness (Crypto era)))
---      (Set (BootstrapWitness (Crypto era)))
---      (Map (ScriptHash (Crypto era)) (Core.Script era))
---      (Map (DataHash (Crypto era)) (Data era))
---      (Map RdmrPtr (Data era, ExUnits))
-
 newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
   deriving (Eq, Show, Generic, Typeable)
   deriving newtype (NoThunks)
@@ -170,6 +154,22 @@ unRedeemers (Redeemers' rs) = rs
 
 nullRedeemers :: Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
+
+-- ====================================================================
+-- In the Spec, TxWitness has 4 logical fields. Here in the implementation
+-- we make two physical modifications.
+-- 1) The witsVKey field of TxWitness is specified as a (Map VKey Signature)
+--    for efficiency this is stored as a (Set WitVKey) where WitVKey is
+--    logically a triple (VKey,Signature,VKeyHash).
+-- 2) We add a 5th field _witsBoot to be backwards compatible with
+--    earlier Eras: Byron, Mary, Allegra
+-- So logically things look like this
+--   data TxWitness = TxWitness
+--      (Set (WitVKey 'Witness (Crypto era)))
+--      (Set (BootstrapWitness (Crypto era)))
+--      (Map (ScriptHash (Crypto era)) (Core.Script era))
+--      (Map (DataHash (Crypto era)) (Data era))
+--      (Map RdmrPtr (Data era, ExUnits))
 
 -- | Internal 'TxWitness' type, lacking serialised bytes.
 data TxWitnessRaw era = TxWitnessRaw
