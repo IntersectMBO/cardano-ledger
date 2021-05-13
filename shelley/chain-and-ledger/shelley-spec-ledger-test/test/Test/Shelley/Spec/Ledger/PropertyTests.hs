@@ -53,7 +53,7 @@ import Test.Shelley.Spec.Ledger.Address.CompactAddr
   ( propCompactAddrRoundTrip,
     propCompactSerializationAgree,
     propDecompactAddrLazy,
-    propDecompactShelleyLazyAddr,
+    propDecompactShelleyLazyAddr, propIsBootstrapRedeemer
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
@@ -117,7 +117,8 @@ minimalPropertyTests =
         [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(Crypto era)),
           TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
           TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @(Crypto era)),
-          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era))
+          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era)),
+          TQC.testProperty "isBootstrapRedeemer is equivalent for CompactAddr and Addr" (propIsBootstrapRedeemer @(Crypto era))
         ]
     ]
 
@@ -199,6 +200,7 @@ propertyTests =
         [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(Crypto era)),
           TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
           TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @(Crypto era)),
-          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era))
+          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era)),
+          TQC.testProperty "isBootstrapRedeemer is equivalent for CompactAddr and Addr" (propIsBootstrapRedeemer @(Crypto era))
         ]
     ]
