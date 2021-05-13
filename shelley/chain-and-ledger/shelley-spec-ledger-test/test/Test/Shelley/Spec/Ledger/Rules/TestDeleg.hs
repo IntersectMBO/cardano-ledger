@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -17,6 +18,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestDeleg
 where
 
 import Cardano.Ledger.Coin (addDeltaCoin, pattern Coin)
+import qualified Cardano.Ledger.Core as Core (PParams)
 import Control.SetAlgebra (dom, eval, rng, (∈), (∉), (◁))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
@@ -29,11 +31,15 @@ import Data.Foldable (fold)
 import Data.List (foldl')
 import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup, (\\))
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
+import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.API (DELEG)
+import qualified Shelley.Spec.Ledger.HardForks as HardForks (allowMIRTransfer)
 import Shelley.Spec.Ledger.LedgerState
   ( DState (..),
     InstantaneousRewards (..),
   )
+import Shelley.Spec.Ledger.PParams (ProtVer)
+import Shelley.Spec.Ledger.STS.Deleg (DelegEnv (..))
 import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),
     MIRTarget (..),
@@ -122,9 +128,11 @@ rewardsSumInvariant
               (null (Map.filter (/= Coin 0) $ targetRewards `Map.difference` sourceRewards))
           ]
 
-checkInstantaneousRewards :: SourceSignalTarget (DELEG era) -> Property
+checkInstantaneousRewards ::
+  (HasField "_protocolVersion" (Core.PParams era) ProtVer) =>
+  DelegEnv era -> SourceSignalTarget (DELEG era) -> Property
 checkInstantaneousRewards
-  SourceSignalTarget {source, signal, target} =
+  denv SourceSignalTarget {source, signal, target} =
     case signal of
       DCertMir (MIRCert ReservesMIR (StakeAddressesMIR irwd)) ->
         conjoin
@@ -133,9 +141,20 @@ checkInstantaneousRewards
               (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ _irwd target)),
             counterexample
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
-              ( (fold $ (iRReserves $ _irwd source) Map.\\ irwd)
-                  `addDeltaCoin` (fold irwd)
-                  == (fold $ (iRReserves $ _irwd target))
+              (
+                if (HardForks.allowMIRTransfer . ppDE $ denv)
+                  -- * In the Alonzo era, repeated fields are added
+                  then
+                    ( (fold $ iRReserves $ _irwd source)
+                        `addDeltaCoin` (fold irwd)
+                        == (fold $ (iRReserves $ _irwd target))
+                    )
+                  -- * Prior to the Alonzo era, repeated fields overridden
+                  else
+                    ( (fold $ (iRReserves $ _irwd source) Map.\\ irwd)
+                        `addDeltaCoin` (fold irwd)
+                        == (fold $ (iRReserves $ _irwd target))
+                    )
               )
           ]
       DCertMir (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
@@ -144,10 +163,21 @@ checkInstantaneousRewards
               "a TreasuryMIR certificate should add all entries to the `irwd` mapping"
               (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ _irwd target)),
             counterexample
-              "a TreasuryMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
-              ( (fold $ (iRTreasury $ _irwd source) Map.\\ irwd)
-                  `addDeltaCoin` (fold irwd)
-                  == (fold $ (iRTreasury $ _irwd target))
+              "a TreasuryMIR certificate should add* the total value to the `irwd` map"
+              (
+                if (HardForks.allowMIRTransfer . ppDE $ denv)
+                  -- * In the Alonzo era, repeated fields are added
+                  then
+                    ( (fold $ iRTreasury $ _irwd source)
+                        `addDeltaCoin` (fold irwd)
+                        == (fold $ (iRTreasury $ _irwd target))
+                    )
+                  -- * Prior to the Alonzo era, repeated fields overridden
+                  else
+                    ( (fold $ (iRTreasury $ _irwd source) Map.\\ irwd)
+                        `addDeltaCoin` (fold irwd)
+                        == (fold $ (iRTreasury $ _irwd target))
+                    )
               )
           ]
       _ -> property ()

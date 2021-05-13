@@ -950,20 +950,22 @@ delegProperties =
     conjoin $
       map chainProp (sourceSignalTargets tr)
   where
-    delegProp :: SourceSignalTarget (DELEG era) -> Property
-    delegProp delegSst =
+    delegProp :: DelegEnv era -> SourceSignalTarget (DELEG era) -> Property
+    delegProp denv delegSst =
       conjoin $
         [ TestDeleg.keyRegistration delegSst,
           TestDeleg.keyDeRegistration delegSst,
           TestDeleg.keyDelegation delegSst,
           TestDeleg.rewardsSumInvariant delegSst,
-          TestDeleg.checkInstantaneousRewards delegSst
+          TestDeleg.checkInstantaneousRewards denv delegSst
         ]
     chainProp :: SourceSignalTarget (CHAIN era) -> Property
     chainProp (SourceSignalTarget {source = chainSt, signal = block}) =
-      let delegTr = snd $ delegTraceFromBlock chainSt block
+      let delegInfo = delegTraceFromBlock chainSt block
+          delegEnv = fst delegInfo
+          delegTr = snd delegInfo
           delegSsts = sourceSignalTargets delegTr
-       in conjoin (map delegProp delegSsts)
+       in conjoin (map (delegProp delegEnv) delegSsts)
 
 ----------------------------------------------------------------------
 -- Projections of CHAIN Trace
@@ -1035,14 +1037,14 @@ delegTraceFromBlock ::
   ) =>
   ChainState era ->
   Block era ->
-  (ChainState era, Trace (DELEG era))
+  (DelegEnv era, Trace (DELEG era))
 delegTraceFromBlock chainSt block =
-  ( tickedChainSt,
+  ( delegEnv,
     runShelleyBase $
       Trace.closure @(DELEG era) delegEnv delegSt0 blockCerts
   )
   where
-    (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
+    (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
     certs = concatMap (reverse . toList . getField @"certs" . getField @"body")
     blockCerts = filter delegCert (certs txs)
     delegEnv =

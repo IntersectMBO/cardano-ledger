@@ -12,12 +12,11 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}  -- TODO FIX ME
-
 module Test.Shelley.Spec.Ledger.Generator.Utxo
   ( genTx,
     Delta (..),
     showBalance,
+    getNRandomPairs,
   )
 where
 
@@ -113,6 +112,7 @@ import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
 import Cardano.Ledger.Era(Era)
 import NoThunks.Class()  -- Instances only
+
 
 -- =======================================================
 
@@ -247,12 +247,15 @@ genTx
               -- generating a transaction. If we get unexplained failures one
               -- might investigate changing these constants.
 
-      -- Occasionally we have a transaction generated with insufficient inputs
-      -- to cover the deposits. In this case we discard the test case.
-      !_ <- when (coin spendingBalance <= Coin 0) discard
       outputAddrs <-
         genRecipients @era (length inputs + n) ksKeyPairs ksMSigScripts
           >>= genPtrAddrs (_dstate dpState')
+
+      -- Occasionally we have a transaction generated with insufficient inputs
+      -- to cover the deposits. In this case we discard the test case.
+      let enough = (length outputAddrs) <×> (getField @"_minUTxOValue" pparams)
+      !_ <- when (coin spendingBalance < coin enough) discard
+
       -------------------------------------------------------------------------
       -- Build a Draft Tx and repeatedly add to Delta until all fees are
       -- accounted for.
@@ -367,17 +370,17 @@ genNextDelta
         -- increase when we add the delta to the tx?
         draftSize =
           sum
-            [ 5 :: Integer, -- safety net in case the coin or a list prefix rolls over into a larger encoding
-              --12 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens
-              20 :: Integer, -- TODO the size calculation somehow needs extra buffer when minting tokens  THIS IS NEW FIX ME
+            [ 5 :: Integer,  -- safety net in case the coin or a list prefix rolls over into a larger encoding
+              -- Fudge factor, Sometimes we need extra buffer when minting tokens.
+              -- 20 has been empirically determined to make non failing Txs
+              20 :: Integer,
               encodedLen (max dfees (Coin 0)) - 1,
               foldr (\a b -> b + encodedLen a) 0 extraInputs,
               encodedLen change,
               encodedLen extraWitnesses
             ]
-
         deltaFee = draftSize <×> Coin (fromIntegral (getField @"_minfeeA" pparams))
-                   <+> Coin (fromIntegral (getField @"_minfeeB" pparams))  -- TODO THIS IS NEW FIX ME
+                   <+> Coin (fromIntegral (getField @"_minfeeB" pparams))  -- This is usually very small, so might not have much effect.
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change
@@ -413,11 +416,14 @@ genNextDelta
                 -- fail. We try and keep this from happening by using feedback:
                 -- adding to the number of ouputs (in the call to genRecipients)
                 -- in genTx above. Adding to the outputs means in the next cycle
-                -- the size of the UTxO will grow.
-                _ <-
-                  if null inputs
-                    then error "Not enough money in the world"
-                    else pure ()
+                -- the size of the UTxO will grow. In rare cases, this cannot be avoided
+                -- So we discard this test case. This should happen very rarely.
+                -- If it does happen, It is NOT a test failure, but an inadequacy in the
+                -- testing framework to generate almost-random transactions that aways succeed every time.
+                -- Experience suggests that this happens less than 1% of the time, and does not lead to backtracking.
+
+                !_ <- when (null inputs) discard
+
                 let newWits =
                       mkTxWits @era
                         ksIndexedPaymentKeys
@@ -552,6 +558,20 @@ ruffle k items = do
   where
     pickIndex = QC.choose (0, length items - 1)
 
+-- | Return 'num' random pairs from the map 'm'. If the size of 'm' is less than 'num' return 'size m' pairs.
+getNRandomPairs :: Ord k => Int -> Map.Map k t -> Gen[(k,t)]
+getNRandomPairs 0 _ = pure []
+getNRandomPairs num m =
+  let n = Map.size m
+  in if n==0
+        then pure []
+        else (do
+          i <- QC.choose (0,n-1)
+          let (k,y) = Map.elemAt i m
+              m2 = Map.delete k m
+          ys <- getNRandomPairs (num-1) m2
+          pure ((k,y):ys))
+
 mkScriptWits ::
   forall era.
   EraGen era =>
@@ -667,7 +687,7 @@ genInputs ::
     )
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   numInputs <- QC.choose (minNumGenInputs, maxNumGenInputs)
-  selectedUtxo <- ruffle numInputs (Map.toList utxo)
+  selectedUtxo <- getNRandomPairs numInputs utxo
 
   let (inputs, witnesses) = unzip (witnessedInput <$> selectedUtxo)
   return
@@ -790,7 +810,7 @@ genPtrAddrs ds addrs = do
   let pointers = forwards (_ptrs ds)
 
   n <- QC.choose (0, min (Map.size pointers) (length addrs))
-  pointerList <- ruffle n (Map.keys pointers)
+  pointerList <- map fst <$> getNRandomPairs n pointers
 
   let addrs' = zipWith baseAddrToPtrAddr (take n addrs) pointerList
 
