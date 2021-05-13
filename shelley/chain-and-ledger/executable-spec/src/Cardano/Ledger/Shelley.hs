@@ -35,7 +35,7 @@ import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (SupportsSegWit (..), ValidateScript (..))
-import qualified Cardano.Ledger.Era as E (Era (Crypto))
+import qualified Cardano.Ledger.Era as E (Era (Crypto), TranslationContext)
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash (makeHashWithExplicitProxys)
 import Cardano.Ledger.Shelley.Constraints
@@ -72,6 +72,8 @@ instance CryptoClass.Crypto c => UsesTxOut (ShelleyEra c) where
 
 instance CryptoClass.Crypto c => UsesPParams (ShelleyEra c) where
   mergePPUpdates _ = updatePParams
+
+type instance E.TranslationContext (ShelleyEra c) = ()
 
 --------------------------------------------------------------------------------
 -- Core instances

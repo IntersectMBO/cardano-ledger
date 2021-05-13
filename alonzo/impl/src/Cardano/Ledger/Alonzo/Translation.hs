@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -37,6 +39,8 @@ import qualified Cardano.Ledger.Tx as LTX
 import Control.Monad.Except (Except, throwError)
 import Data.Map.Strict (Map)
 import Data.Text (Text)
+import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
   ( EpochState (..),
@@ -73,7 +77,7 @@ data AlonzoGenesis = AlonzoGenesis
     collateralPercentage :: Natural,
     maxCollateralInputs :: Natural
   }
-  deriving (Eq)
+  deriving (Eq, Generic, NoThunks)
 
 type instance PreviousEra (AlonzoEra c) = MaryEra c
 
