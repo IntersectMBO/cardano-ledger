@@ -335,6 +335,7 @@ utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp stakepools _genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _deposits _fees _ppup = u
 
+  {- (,i_f) := txvldttx -}
   let txb = txbody tx
       vi@(ValidityInterval _ i_f) = getField @"vldt" txb
       inputsAndCollateral =
@@ -342,9 +343,11 @@ utxoTransition = do
           (getField @"inputs" txb)
           (getField @"collateral" txb)
 
+  {- ininterval slot (txvldt tx)  -}
   inInterval slot vi
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
 
+  {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfoWithErr
   case i_f of
@@ -353,18 +356,24 @@ utxoTransition = do
       Left _ -> failBecause (OutsideForecast ifj) -- error translating slot
       Right _ -> pure ()
 
+  {- txins txb ≠ ∅ -}
   not (Set.null (getField @"inputs" txb)) ?!# InputSetEmptyUTxO
 
+  {- feesOKp p tx utxo -}
   feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
+
+  {- (txins txb) ∪ (collateral txb)  ⊆ dom utxo -}
   eval (inputsAndCollateral ⊆ dom utxo)
     ?! BadInputsUTxO (eval (inputsAndCollateral ➖ dom utxo))
 
+  {- consumedpp utxo txb = producedpp poolParams txb  -}
   let consumed_ = consumed @era pp utxo txb
       produced_ = Shelley.produced @era pp stakepools txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
-  -- Check that the mint field does not try to mint ADA. This is equivalent to
-  -- the check `adaPolicy ∉ supp mint tx` in the spec.
+  {- adaID  ∉ supp mint tx -}
+  -- Check that the mint field does not try to mint ADA.
+  -- Here in the implementation, we store the adaId policyID in the coin field of the value.
   Val.coin (getField @"mint" txb) == Val.zero ?!# TriesToForgeADA
 
   -- use serialized length of Value because this Value size is being limited inside a serialized Tx
@@ -380,12 +389,15 @@ utxoTransition = do
                   else ans
   null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
 
+  {- ∀(_→(a,_)) ∈ txouts txb, netId a = NetworkId -}
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
         filter
           (\a -> getNetwork a /= ni)
           (fmap (getField @"address") $ toList $ getField @"outputs" txb)
   null addrsWrongNetwork ?!# WrongNetwork ni (Set.fromList addrsWrongNetwork)
+
+  {- ∀(a → _) ∈ txwdrls txb, netId a = NetworkId -}
   let wdrlsWrongNetwork =
         filter
           (\a -> getRwdNetwork a /= ni)
@@ -394,18 +406,20 @@ utxoTransition = do
     ?!# WrongNetworkWithdrawal
       ni
       (Set.fromList wdrlsWrongNetwork)
+
+  {- txnetworkid txb = NetworkId -}
   case txnetworkid' txb of
     SNothing -> pure ()
     SJust bid -> ni == bid ?!# WrongNetworkInTxBody ni bid
 
-  -- pointwise is used because non-ada amounts must be >= 0 too
+  {- ∀ txout ∈ txoutstxb, getValuetxout ≥ inject(uxoEntrySizetxout ∗ adaPerUTxOWordp p) -}
   let (Coin adaPerUTxOWord) = getField @"_adaPerUTxOWord" pp
       outputsTooSmall =
         filter
           ( \out ->
               let v = getField @"value" out
                in not $
-                    Val.pointwise
+                    Val.pointwise -- pointwise is used because non-ada amounts must be >= 0 too
                       (>=)
                       v
                       (Val.inject $ Coin (utxoEntrySize out * adaPerUTxOWord))
@@ -413,15 +427,17 @@ utxoTransition = do
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
+  {-  ∀ txout ∈ txoutstxb, serSize(getValuetxout) ≤ (maxTxSizep p)∗(maxValSizep p) -}
   let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
       txSize_ = getField @"txsize" tx
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
+  {- totExunits tx ≤ maxTxExUnits pp  -}
   let maxTxEx = getField @"_maxTxExUnits" pp
       totExunits = getField @"totExunits" tx
   pointWiseExUnits (<=) totExunits maxTxEx ?! ExUnitsTooBigUTxO maxTxEx totExunits
 
-  -- This does not appear in the Alonzo specification. But the test should be in every Era.
+  {-  ∀ ( _ → (a,)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =
@@ -433,6 +449,7 @@ utxoTransition = do
           outputs
   null outputsAttrsTooBig ?!# OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
+  {- ‖collateraltx‖  ≤  maxCollInputs pp -}
   let maxColl = getField @"_maxCollateralInputs" pp
       numColl = fromIntegral . Set.size $ getField @"collateral" txb
   numColl <= maxColl ?! TooManyCollateralInputs maxColl numColl
