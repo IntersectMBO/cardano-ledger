@@ -8,6 +8,7 @@ module Shelley.Spec.Ledger.CompactAddr
     decompactAddr,
     CompactAddr (..),
     substring,
+    isBootstrapRedeemer,
   )
 where
 
@@ -214,3 +215,11 @@ getPayCred :: CC.Crypto crypto => Word8 -> GetShort (PaymentCredential crypto)
 getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash
+
+isBootstrapRedeemer :: CompactAddr crypto -> Bool
+isBootstrapRedeemer (UnsafeCompactAddr bytes) =
+  testBit header byron -- AddrBootstrap
+    && addrType == 2 -- ATRedeem
+  where
+    addrType = SBS.index bytes (SBS.length bytes - 6)
+    header = SBS.index bytes 0
