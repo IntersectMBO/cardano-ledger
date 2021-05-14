@@ -58,7 +58,7 @@ nightlyTests =
   testGroup
     "Alonzo tests"
     [ alonzoPropertyTests, -- These are the full property tests
-      CDDL.tests 10
+      CDDL.tests 50
     ]
 
 -- main entry point
